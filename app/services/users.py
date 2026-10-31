@@ -49,6 +49,8 @@ from datetime import datetime
 from sqlalchemy import Select, delete, func, or_, select, update
 from sqlalchemy.orm import Session
 
+from cordware.graph import Outcome
+
 from app.auth.identity import AuthenticatedUser
 from app.auth.roles import is_super_admin, super_admin_configured
 from app.db.models import (
@@ -60,7 +62,7 @@ from app.db.models import (
     User,
 )
 from app.logging_config import get_logger
-from app.services import audit
+from app.services import audit, directory_accounts
 from app.services.email_identity import normalize_email
 
 log = get_logger(__name__)
@@ -996,6 +998,33 @@ def _lock_and_check_owners(
     return mine
 
 
+def _invite_principal(db: Session, email: str, outcome: Outcome | None) -> str | None:
+    """The object id an invite binds, or ``None`` when the lookup did not
+    run; raises when the directory refuses the address."""
+    if outcome is None or outcome.status == "ERROR":
+        return None
+    account = directory_accounts.account_of(outcome)
+    if account is None:
+        ambiguous = outcome.status == "AMBIGUOUS"
+        raise UserOperationError(
+            code="ambiguous_in_directory" if ambiguous else "not_in_directory",
+            message=(
+                f"{email} matches more than one directory account."
+                if ambiguous
+                else f"{email} is not in the institution's directory, so they could not sign in."
+            ),
+        )
+    holder = db.execute(
+        select(User).where(User.external_principal_id == account.object_id)
+    ).scalars().first()
+    if holder is not None:
+        raise UserOperationError(
+            code="account_exists",
+            message=f"{email} is the same person as the account {holder.email}.",
+        )
+    return account.object_id
+
+
 def invite(
     db: Session,
     *,
@@ -1003,6 +1032,7 @@ def invite(
     email: str,
     is_operator: bool = True,
     is_sys_admin: bool = False,
+    directory: Outcome | None = None,
     correlation_id: str | None = None,
 ) -> User:
     """Pre-seed a ``users`` row before the invitee's first Entra
@@ -1010,7 +1040,17 @@ def invite(
     rows; raises ``UserOperationError(code="duplicate")`` when a
     row already exists. Sys-admin invitees implicitly get
     ``is_operator=True``, and inviting one grants the admin flag, so
-    it takes the same super-admin guard as ``promote``."""
+    it takes the same super-admin guard as ``promote``.
+
+    **Checked against the directory** (segment 19Z, accounts item):
+    ``directory`` is the address's lookup outcome, ``None`` when none
+    ran. An address that resolves to one account binds its object id as
+    ``external_principal_id``, the id sign-in matches first, so the
+    person finds this row whichever address they sign in with. Not
+    found (``not_in_directory``), ambiguous (``ambiguous_in_directory``)
+    and an account another row already holds (``account_exists``) are
+    refused. With no outcome, or an error, the row is created unbound,
+    as before, and binds at its first sign-in."""
     email_normalised = email.strip()
     if not email_normalised or "@" not in email_normalised:
         raise UserOperationError(
@@ -1031,6 +1071,8 @@ def invite(
             ),
         )
 
+    principal_id = _invite_principal(db, email_normalised, directory)
+
     if is_sys_admin:
         _guard_actor_super_admin(actor)
         is_operator = True
@@ -1038,6 +1080,7 @@ def invite(
         email=email_normalised,
         is_operator=is_operator,
         is_sys_admin=is_sys_admin,
+        external_principal_id=principal_id,
     )
     db.add(user)
     db.flush()
@@ -1051,6 +1094,7 @@ def invite(
                 "email": user.email,
                 "is_operator": is_operator,
                 "is_sys_admin": is_sys_admin,
+                "directory_verified": principal_id is not None,
             }
         ),
         refs={"target_user_id": user.id},

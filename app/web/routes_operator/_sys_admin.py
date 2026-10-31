@@ -39,6 +39,8 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Resp
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from cordware.identity import is_local
+
 from app.web import urls
 from app.auth.roles import super_admin_configured
 from app.db.models import User
@@ -46,6 +48,7 @@ from app.db.session import get_db
 from app.services import (
     account_listing,
     audit,
+    directory_accounts,
     invitations,
     operator_settings,
     permissions,
@@ -56,7 +59,7 @@ from app.services import (
 from app.web import views
 from app.web.deps import request_correlation_id, require_sys_admin
 from app.web.return_to import ReturnTarget, resolve_return_to
-from app.web.routes_operator._shared import _templates
+from app.web.routes_operator._shared import _templates, directory_or_none
 
 
 router = APIRouter()
@@ -290,6 +293,7 @@ _ONE_YEAR = 365 * 24 * 60 * 60
 def sys_admin_users(
     request: Request,
     invite_error: str | None = Query(default=None),
+    invite_unchecked: str | None = Query(default=None),
     toggle_error: str | None = Query(default=None),
     refused: int | None = Query(default=None),
     selected: int | None = Query(default=None),
@@ -390,6 +394,7 @@ def sys_admin_users(
                 user.is_super_admin or not super_admin_configured()
             ),
             "invite_error": invite_error,
+            "invite_unchecked": bool(invite_unchecked),
             # A refused batch names its row: the email is looked up, the
             # reason comes from the view's own table, never from the URL.
             "toggle_message": views.account_refusal_message(
@@ -483,6 +488,7 @@ def _users_redirect(
     selected_user_id: int | None = None,
     view: str = "",
     refused_user_id: int | None = None,
+    invite_unchecked: bool = False,
 ) -> RedirectResponse:
     """Back to Accounts. ``view`` is the query the action form posted
     (admin_pages_refine Item 1): parsed and re-encoded rather than
@@ -500,6 +506,8 @@ def _users_redirect(
         params.append(f"refused={refused_user_id}")
     if selected_user_id is not None:
         params.append(f"selected={selected_user_id}")
+    if invite_unchecked:
+        params.append("invite_unchecked=1")
     if params:
         url = f"{url}?{'&'.join(params)}"
     return urls.redirect(request, url=url, status_code=status.HTTP_303_SEE_OTHER)
@@ -718,6 +726,13 @@ def invite_user(
     actor: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
+    # Checked against the directory on the inviting admin's own token
+    # (segment 19Z, accounts item); no token or a failed lookup checks
+    # nothing, and the row is created unbound, as before. A local run's
+    # directory is the five fake people, and the accounts invited there
+    # are made up, so it checks nothing either.
+    directory = None if is_local() else directory_or_none(request)
+    outcome = directory_accounts.look_up_one(directory, email)
     try:
         invited = users_service.invite(
             db,
@@ -725,9 +740,13 @@ def invite_user(
             email=email,
             is_operator=True,
             is_sys_admin=invite_as_sys_admin == "true",
+            directory=outcome,
         )
     except users_service.UserOperationError as exc:
         url = f"{_ACCOUNTS_URL}?invite_error={quote(exc.code, safe='')}"
         return urls.redirect(request, url=url, status_code=status.HTTP_303_SEE_OTHER)
     # Selected, so its chip turns on whatever chips are remembered.
-    return _users_redirect(request, selected_user_id=invited.id)
+    return _users_redirect(
+        request, selected_user_id=invited.id,
+        invite_unchecked=invited.external_principal_id is None,
+    )

@@ -77,6 +77,8 @@ None is shown on an empty roster. All three are mutually exclusive, none is tick
 
 ## Judgment calls — decided
 
+- **A local run's invite checks nothing** (accounts item, 2026-10-31): its directory is the five fake people and the accounts invited there are made up, so refusing them would stop local work; the refusals are tested with the fake directory injected.
+
 - **Refuse, not skip, a row already on the roster** (author, 2026-10-31). A silent skip hides a typo'd name. Refusing names the row, and the operator removes it from the file.
 - **The exclusivity script and Upload's gating land with the wiring** (2026-10-31). In the scaffold, Append is disabled, so the replace tick's delete-confirm pairing alone gates Upload, exactly as before.
 - **Held upload unchanged.** An append that asks (a group-answer loss on Relationships) holds the file as replace does. The ask carries the append tick.
