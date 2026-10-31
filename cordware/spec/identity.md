@@ -261,6 +261,15 @@ Email Address Checker; directory lookups only.
 - **No dependency.** Requests go through the standard library;
   `GraphDirectory` takes the transport as a parameter, so the tests never
   touch the network.
+- **Looking addresses up.** `look_up_all(directory, keys, *, budget,
+  workers=4)` looks each distinct key up once, `workers` at a time, within
+  `budget` seconds, and `classify` turns what the directory returned into
+  an `Outcome`: `OK`, `USE_PRIMARY`, `FOUND_NO_PRIMARY`, `NOT_FOUND`,
+  `AMBIGUOUS` or `ERROR`. A lookup unfinished at the budget is `ERROR`
+  (`timeout`), and a refused sign-in stops every lookup not yet started.
+  Built for the Email Address Checker (`utilityapps/spec/email_check.md`
+  "Classification"), and shared from segment 21F with RRW's roster
+  upload.
 - **Logging.** Logger `cordware.graph`: `graph.request_failed`, a
   warning carrying `kind` and `status` only, never the address, the
   query or the token.

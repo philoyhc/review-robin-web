@@ -9,17 +9,26 @@ directory could not be asked, which says nothing about the address.
 
 from __future__ import annotations
 
-import threading
 from collections.abc import Iterable
-from concurrent.futures import ThreadPoolExecutor, wait
 from dataclasses import dataclass
 
-from cordware.graph import Directory, DirectoryUser, GraphError
+from cordware import graph
+from cordware.graph import (  # noqa: F401  (re-exported: the checker's vocabulary)
+    RESOLVED,
+    SIGN_IN_KINDS,
+    Directory,
+    DirectoryUser,
+    GraphError,
+    Outcome,
+    classify,
+)
+from cordware.graph import error_outcome as _error
 from utilityapps.email_check import csvio
 
 STATUSES = ("OK", "USE_PRIMARY", "FOUND_NO_PRIMARY", "NOT_FOUND", "AMBIGUOUS", "INVALID_INPUT", "ERROR")
-#: Statuses whose row names one account, so it can join a duplicate group.
-RESOLVED = frozenset({"OK", "USE_PRIMARY", "FOUND_NO_PRIMARY"})
+# `RESOLVED` (a row naming one account, so it can join a duplicate group),
+# `SIGN_IN_KINDS`, `Outcome` and `classify` are `cordware.graph`'s, shared
+# with RRW's roster upload from segment 21F.
 #: Alias lookup is not built (spec phase 2), so every run says so.
 COVERAGE = "BASIC_ONLY"
 #: Lookups in flight at once: conservative, as spec §10 asks.
@@ -29,9 +38,6 @@ WORKERS = 4
 #: under App Service's front-end limit of about 230 s, so throttling
 #: cannot lose the whole export (diff-reviewer, `#3411`).
 BUDGET = 120.0
-#: Failures that mean the token, not the address: the first stops every
-#: lookup not yet started, as each would fail the same way.
-SIGN_IN_KINDS = frozenset({"unauthorized", "forbidden"})
 #: The page's batches (segment U2): at most this many keys per lookup
 #: request, each request under its own budget.
 BATCH_MAX = 25
@@ -46,18 +52,6 @@ _FIELD_MAX = 512
 
 
 @dataclass(frozen=True)
-class Outcome:
-    """What one address came to: a status, how it matched, and the account."""
-
-    status: str
-    match_type: str
-    user: DirectoryUser | None = None
-    note: str = ""
-    #: For `ERROR`: the `GraphError` kind, which the log may carry.
-    error_kind: str = ""
-
-
-@dataclass(frozen=True)
 class Result:
     csv: str
     counts: dict[str, int]
@@ -67,63 +61,11 @@ class Result:
     error_kinds: tuple[str, ...]
 
 
-def classify(key: str, users: list[DirectoryUser]) -> Outcome:
-    """One address against what the directory returned for it."""
-    distinct = {u.id: u for u in users}
-    if not distinct:
-        return Outcome("NOT_FOUND", "NONE", note="No user-directory match")
-    if len(distinct) > 1:
-        return Outcome("AMBIGUOUS", "MULTIPLE", note=f"{len(distinct)} accounts match")
-    (user,) = distinct.values()
-    mail = (user.mail or "").lower()
-    if mail and mail == key:
-        return Outcome("OK", "PRIMARY_MAIL", user)
-    if user.user_principal_name.lower() == key:
-        if mail:
-            return Outcome("USE_PRIMARY", "UPN", user)
-        return Outcome("FOUND_NO_PRIMARY", "UPN", user, note="The account has no primary email")
-    # The directory matched on neither field as this compares them: name
-    # no winner rather than guess (spec §5).
-    return Outcome("AMBIGUOUS", "MULTIPLE", note="The match is neither the account's mail nor its UPN")
-
-
-def _error(kind: str) -> Outcome:
-    advice = "sign out and in again" if kind in SIGN_IN_KINDS else "try again later"
-    if kind == "incomplete":
-        # The page stopped before sending this key (segment U2).
-        return Outcome("ERROR", "NONE", note=f"Not looked up: the check stopped first; {advice}", error_kind=kind)
-    return Outcome("ERROR", "NONE", note=f"Lookup incomplete ({kind}); {advice}", error_kind=kind)
-
-
 def look_up_all(
     directory: Directory, keys: Iterable[str], *, budget: float = BUDGET
 ) -> dict[str, Outcome]:
-    keys = list(dict.fromkeys(keys))
-    stopped: list[str] = []  # the sign-in failure that stopped the run
-    lock = threading.Lock()
-
-    def look_up(key: str) -> Outcome:
-        with lock:
-            if stopped:
-                return _error(stopped[0])
-        try:
-            return classify(key, directory.find_users(key))
-        except GraphError as exc:
-            if exc.kind in SIGN_IN_KINDS:
-                with lock:
-                    stopped[:1] = stopped[:1] or [exc.kind]
-            return _error(exc.kind)
-
-    pool = ThreadPoolExecutor(max_workers=WORKERS)
-    futures = {key: pool.submit(look_up, key) for key in keys}
-    wait(futures.values(), timeout=budget)
-    # Past the budget: cancel what has not started; what is mid-request
-    # finishes on its own and is dropped.
-    pool.shutdown(wait=False, cancel_futures=True)
-    return {
-        key: future.result() if future.done() and not future.cancelled() else _error("timeout")
-        for key, future in futures.items()
-    }
+    """`cordware.graph.look_up_all` at the checker's own pace (`WORKERS`)."""
+    return graph.look_up_all(directory, keys, budget=budget, workers=WORKERS)
 
 
 def outcome_json(outcome: Outcome) -> dict:
