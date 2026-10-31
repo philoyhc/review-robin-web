@@ -202,8 +202,13 @@ or not, gets `404`. `/health` is never gated.
   so it is never committed to this repository (`.gitignore` keeps a local
   copy out), and the deployment keeps it.
 - **Its format:** Markdown; a list item (`-`, `*` or `+`, at any depth)
-  whose first word is an address, backticked or not, names that address;
-  the rest of the item, and every other line, is free prose.
+  whose first word is an address names that address. The word may be
+  backticked or in angle brackets, and trailing `.,;:` is dropped; what
+  is left must be one plain address (a Markdown link is not). The rest
+  of the item, and every other line, is free prose. HTML comments and
+  fenced code blocks are not read, so commenting an entry out removes it.
+- **A file that cannot be read** names nobody, as no file does, and is
+  logged; the count of addresses read is logged at the first request.
 - **Read once per process**, so a change to the list ships with a
   deployment. No file names nobody.
 - **Retired** when the rosters gate the screens (1B items 3–5).

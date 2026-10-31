@@ -100,3 +100,45 @@ def test_a_local_run_answers_anyone(monkeypatch: pytest.MonkeyPatch) -> None:
     signed_in(monkeypatch, None)
     assert TestClient(ops_app()).get("/").status_code == 200
     assert TestClient(support_app()).get("/").status_code == 200
+
+
+def test_comments_and_fenced_code_do_not_name_anyone() -> None:
+    text = """- kept@example.edu
+<!--
+- commented.out@example.edu
+-->
+<!-- - one.line@example.edu -->
+```
+- fenced@example.edu
+```
+~~~
+- tilde.fenced@example.edu
+~~~
+- after@example.edu
+<!-- unterminated
+- tail@example.edu
+"""
+    assert web_pages.parse_preview_list(text) == frozenset({"kept@example.edu", "after@example.edu"})
+
+
+@pytest.mark.parametrize(
+    ("item", "address"),
+    [
+        ("- end.dot@example.edu.", "end.dot@example.edu"),
+        ("- <angled@example.edu>", "angled@example.edu"),
+        ("+ `tight@example.edu`(RF)", "tight@example.edu"),
+        ("- two@at@example.edu", None),
+        ("- no-domain@example", None),
+        ("- [linked@example.edu](mailto:linked@example.edu)", None),
+    ],
+)
+def test_an_item_s_first_word_is_trimmed_then_must_be_one_address(item: str, address: str | None) -> None:
+    assert web_pages.parse_preview_list(item) == (frozenset({address}) if address else frozenset())
+
+
+def test_an_unreadable_list_names_nobody(tmp_path: Path) -> None:
+    (tmp_path / "bad.md").write_bytes(b"- \xff\xfe@example.edu\n")
+    web_pages.preview_addresses.cache_clear()
+    assert web_pages.preview_addresses(tmp_path / "bad.md") == frozenset()
+    assert web_pages.preview_addresses(tmp_path) == frozenset()  # a directory
+    web_pages.preview_addresses.cache_clear()

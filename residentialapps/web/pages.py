@@ -5,6 +5,7 @@ boundaries"), so what both need lives here."""
 
 from __future__ import annotations
 
+import logging
 import re
 from functools import lru_cache
 from pathlib import Path
@@ -13,29 +14,62 @@ from fastapi import HTTPException, Request
 
 from cordware.identity import Identity, current_identity, is_local
 
+log = logging.getLogger("residentialapps.web")
+
 # The preview list: a Markdown file beside the `residentialapps/` package,
 # put there by a deployment's build (Cordware keeps the list and ships it
 # with each release). It never lives in this repository: it names real
 # people, and `.gitignore` keeps a local copy out.
 PREVIEW_FILE = Path(__file__).resolve().parents[2] / "residential_preview.md"
-# A list item whose first word is an address, backticked or not:
-# "- someone@example.edu" or "* `someone@example.edu` (RF, Tower A)".
-_LIST_ADDRESS = re.compile(r"^\s*[-*+]\s+`?([^\s`@,;]+@[^\s`,;]+)`?(?=[\s,;]|$)")
+# A list item's first word: "- someone@example.edu" or
+# "* `someone@example.edu` (RF, Tower A)".
+_LIST_ITEM = re.compile(r"^\s*[-*+]\s+(\S+)")
+_ADDRESS = re.compile(r"[^@\s<>()\[\]]+@[^@\s<>()\[\]]+\.[^@\s<>()\[\]]+")
+# What Markdown hides: an HTML comment (unterminated, to the end), so
+# commenting an entry out removes it.
+_COMMENT = re.compile(r"<!--.*?(?:-->|\Z)", re.DOTALL)
+_FENCE = re.compile(r"^\s*(```|~~~)")
+
+
+def _first_address(line: str) -> str | None:
+    match = _LIST_ITEM.match(line)
+    if match is None:
+        return None
+    word = match.group(1)
+    if word.startswith("`"):
+        word = word[1:].split("`", 1)[0]
+    word = word.strip("<>").rstrip(".,;:")
+    return word.lower() if _ADDRESS.fullmatch(word) else None
+
+
+def parse_preview_list(text: str) -> frozenset[str]:
+    """The addresses a preview list names, folded: each list item whose
+    first word is an address. Comments and fenced code are not read."""
+    addresses: set[str] = set()
+    fenced = False
+    for line in _COMMENT.sub("", text).splitlines():
+        if _FENCE.match(line):
+            fenced = not fenced
+        elif not fenced and (address := _first_address(line)):
+            addresses.add(address)
+    return frozenset(addresses)
 
 
 @lru_cache(maxsize=4)
 def preview_addresses(path: Path) -> frozenset[str]:
-    """The addresses the preview list names, folded. Read once per
-    process, so a change ships with a deployment. No file names nobody."""
+    """The addresses the preview list at ``path`` names. Read once per
+    process, so a change ships with a deployment. No file, or one that
+    cannot be read, names nobody."""
     try:
         text = path.read_text(encoding="utf-8")
     except FileNotFoundError:
         return frozenset()
-    return frozenset(
-        match.group(1).strip().lower()
-        for line in text.splitlines()
-        if (match := _LIST_ADDRESS.match(line))
-    )
+    except (OSError, UnicodeDecodeError):
+        log.warning("residential preview list unreadable; admitting only the super-admin")
+        return frozenset()
+    addresses = parse_preview_list(text)
+    log.info("residential preview list: %d address(es)", len(addresses))
+    return addresses
 
 
 def is_previewer(identity: Identity | None, path: Path | None = None) -> bool:
