@@ -201,8 +201,10 @@ or not, gets `404`. `/health` is never gated.
   package. A deployment's build puts it there; the file names real people,
   so it is never committed to this repository (`.gitignore` keeps a local
   copy out), and the deployment keeps it.
-- **Its format:** Markdown; a list item (`-`, `*` or `+`, at any depth)
-  whose first word is an address names that address. The word may be
+- **Its format:** Markdown; a top-level list item (`-`, `*` or `+` at
+  the left margin) whose first word is an address names that address.
+  Indented lines are never read, so a nested item or an indented example
+  names nobody. The word may be
   backticked or in angle brackets, and trailing `.,;:` is dropped; what
   is left must be one plain address (a Markdown link is not). The rest
   of the item, and every other line, is free prose. HTML comments and

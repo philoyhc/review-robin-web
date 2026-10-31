@@ -21,16 +21,19 @@ log = logging.getLogger("residentialapps.web")
 # with each release). It never lives in this repository: it names real
 # people, and `.gitignore` keeps a local copy out.
 PREVIEW_FILE = Path(__file__).resolve().parents[2] / "residential_preview.md"
-# A list item's first word: "- someone@example.edu" or
-# "* `someone@example.edu` (RF, Tower A)".
-_LIST_ITEM = re.compile(r"^\s*[-*+]\s+(\S+)")
+# A top-level list item's first word, at the left margin:
+# "- someone@example.edu" or "* `someone@example.edu` (RF, Tower A)".
+# Indented items are never read, so a nested example, an indented fence
+# or an indented code block cannot name anyone.
+_LIST_ITEM = re.compile(r"^[-*+][ \t]+(\S+)")
 _ADDRESS = re.compile(r"[^@\s<>()\[\]]+@[^@\s<>()\[\]]+\.[^@\s<>()\[\]]+")
 # What Markdown hides: an HTML comment (unterminated, to the end), so
 # commenting an entry out removes it.
 _COMMENT = re.compile(r"<!--.*?(?:-->|\Z)", re.DOTALL)
-# A fence opens on three or more backticks or tildes and closes only on a
-# run of the same character at least as long, alone on its line.
-_FENCE = re.compile(r"^\s{0,3}(`{3,}|~{3,})(.*)$")
+# A fence opens on three or more backticks or tildes, at any indentation,
+# and closes only on a run of the same character at least as long, alone
+# on its line. Reading more as fenced only ever reads fewer addresses.
+_FENCE = re.compile(r"^\s*(`{3,}|~{3,})(.*)$")
 
 
 def _first_address(line: str) -> str | None:
@@ -45,8 +48,9 @@ def _first_address(line: str) -> str | None:
 
 
 def parse_preview_list(text: str) -> frozenset[str]:
-    """The addresses a preview list names, folded: each list item whose
-    first word is an address. Comments and fenced code are not read."""
+    """The addresses a preview list names, folded: each top-level list
+    item whose first word is an address. Indented lines, comments and
+    fenced code are not read."""
     addresses: set[str] = set()
     fence: str | None = None
     for line in _COMMENT.sub("", text).splitlines():

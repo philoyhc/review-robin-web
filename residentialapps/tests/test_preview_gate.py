@@ -24,7 +24,7 @@ Who may open the placeholder screens. One address per list item.
 * RA.Two@Example.edu
 - not an address, a note
 - staff.three@example.edu, trailing prose
-  - `nested@example.edu`
+  - `nested@example.edu` is indented, so not read
 
 Prose naming prose@example.edu is not a list item.
 """
@@ -54,7 +54,7 @@ def person(*, mail: str | None = None, upn: str | None = None, email: str | None
 
 def test_the_list_reads_list_items_whose_first_word_is_an_address(preview_file: Path) -> None:
     assert web_pages.preview_addresses(preview_file) == frozenset(
-        {"rf.one@example.edu", "ra.two@example.edu", "staff.three@example.edu", "nested@example.edu"}
+        {"rf.one@example.edu", "ra.two@example.edu", "staff.three@example.edu"}
     )
 
 
@@ -67,7 +67,7 @@ def test_no_file_names_nobody(tmp_path: Path) -> None:
     [
         person(mail="rf.one@example.edu"),
         person(mail="RA.two@EXAMPLE.edu"),
-        person(upn="nested@example.edu", mail="someone.else@example.edu"),
+        person(upn="ra.two@example.edu", mail="someone.else@example.edu"),
         person(mail="staff.three@example.edu"),
         person(email="boss@example.edu"),  # the platform super-admin, unlisted
     ],
@@ -83,7 +83,8 @@ def test_a_previewer_reaches_both_applications(
 
 @pytest.mark.parametrize(
     "identity",
-    [None, person(mail="prose@example.edu"), person(mail="rf.one@example.edu.sg"), person()],
+    [None, person(mail="prose@example.edu"), person(mail="nested@example.edu"),
+     person(mail="rf.one@example.edu.sg"), person()],
 )
 def test_anyone_else_gets_404_and_health_still_answers(
     preview_file: Path, monkeypatch: pytest.MonkeyPatch, identity: Identity | None
@@ -158,3 +159,16 @@ def test_a_fence_closes_only_on_its_own_marker_at_least_as_long() -> None:
 - open.again@example.edu
 """
     assert web_pages.parse_preview_list(text) == frozenset({"open.again@example.edu"})
+
+
+def test_indented_lines_never_name_anyone() -> None:
+    text = """- parent item
+
+    ```
+    - in.indented.fence@example.edu
+    ```
+        - in.indented.code@example.edu
+  - nested.item@example.edu
+- top.level@example.edu
+"""
+    assert web_pages.parse_preview_list(text) == frozenset({"top.level@example.edu"})
