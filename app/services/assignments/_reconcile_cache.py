@@ -75,8 +75,9 @@ from app.services.rules.fields import FIELD_MAP
 #: findings E2): a group boundary's blank catch-all group stopped
 #: counting as the reviewer's own. ``v5`` (2026-10-22, findings E1): a
 #: disabled Composite child, or a Composite with none enabled, stopped
-#: applying.
-STAMP_VERSION = "v5"
+#: applying. ``v6`` (2026-10-31, segment 21F): self-review compares
+#: directory accounts, and the roster digest carries them.
+STAMP_VERSION = "v6"
 
 
 @dataclass(frozen=True)
@@ -171,8 +172,9 @@ def _side_attributes(side: str) -> tuple[str, ...]:
 
 
 def _roster_digest(rows: Iterable[Any], *, side: str) -> list[list[Any]]:
-    """One list per row: its id, its ``status``, then every addressable
-    attribute for ``side``.
+    """One list per row: its id, its ``status``, its directory account
+    (segment 21F: self-review compares accounts before addresses), then
+    every addressable attribute for ``side``.
 
     Sorted by id here rather than trusting the caller's ordering, so
     the stamp does not depend on which query loaded the rows.
@@ -186,7 +188,12 @@ def _roster_digest(rows: Iterable[Any], *, side: str) -> list[list[Any]]:
     """
     attributes = _side_attributes(side)
     return [
-        [row.id, row.status, *(getattr(row, attr) for attr in attributes)]
+        [
+            row.id,
+            row.status,
+            getattr(row, "directory_object_id", None),
+            *(getattr(row, attr) for attr in attributes),
+        ]
         for row in sorted(rows, key=lambda r: r.id)
     ]
 

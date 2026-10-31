@@ -92,6 +92,32 @@ def test_an_import_binds_each_resolved_address_and_counts_the_check(
     }
 
 
+def test_a_quick_setup_upload_binds_too(
+    client: TestClient, db: Session, directory: FakeDirectory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.web.routes_operator import _quick_setup
+
+    monkeypatch.setattr(_quick_setup, "directory_or_none", lambda request: directory)
+    session = _session(client, db, "dir-quick")
+    for roster, csv in (
+        ("reviewers", "ReviewerName,ReviewerEmail\nJane,e0123456@example.edu\n"),
+        ("reviewees", "RevieweeName,RevieweeEmail\nJane,jane.tan@example.edu\n"),
+        ("observers", "ObserverName,ObserverEmail\nJane,e0123456@example.edu\n"),
+    ):
+        response = client.post(
+            f"/operator/sessions/{session.public_id}/quick-setup/{roster}",
+            files={"file": (f"{roster}.csv", csv.encode(), "text/csv")},
+            follow_redirects=False,
+        )
+        assert response.status_code in (200, 303), response.text[:300]
+    for model in (Reviewer, Reviewee, Observer):
+        assert _bound(_row(db, model, session.id)) == JANE
+    event = db.execute(
+        select(AuditEvent).where(AuditEvent.event_type == "reviewers.imported")
+    ).scalar_one()
+    assert event.detail["counts"]["directory_by_upn"] == 1
+
+
 def test_anonymous_reviewee_identifiers_are_neither_looked_up_nor_counted(
     client: TestClient, db: Session, directory: FakeDirectory
 ) -> None:
@@ -247,3 +273,24 @@ def test_an_import_with_no_address_to_check_shows_nothing(
     )
     text = client.get(f"/operator/sessions/{session.public_id}/reviewees?unlocked=1").text
     assert "data-directory-check" not in text
+
+
+def test_several_rosters_share_one_lookup_and_are_counted_apart(
+    directory: FakeDirectory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Quick Setup and rehydrate save several rosters in one request: one
+    lookup under one budget, so the request stays inside the front end's
+    limit (Codex, #3430), and each roster counts its own addresses."""
+    from app.services import csv_imports
+
+    calls: list[list[str]] = []
+    real = directory_accounts.look_up_all
+    monkeypatch.setattr(
+        directory_accounts, "look_up_all", lambda d, keys, **kw: calls.append(keys) or real(d, keys, **kw)
+    )
+    reviewers, reviewees = csv_imports.directory_checks(
+        directory, [["e0123456@example.edu"], ["jane.tan@example.edu", "nobody@example.edu"]]
+    )
+    assert len(calls) == 1
+    assert reviewers.counts["directory_by_upn"] == 1 and reviewers.counts["directory_not_found"] == 0
+    assert reviewees.counts["directory_by_mail"] == 1 and reviewees.counts["directory_not_found"] == 1

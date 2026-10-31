@@ -17,14 +17,13 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Observer, Reviewee, Reviewer, ReviewSession, User
 from app.db.session import get_db
 from app.services import date_formatting
 from app.services import participants
-from app.services.email_identity import normalize_email
 from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
 from app.services import sessions as sessions_service
@@ -67,8 +66,8 @@ def reviewer_dashboard(
     email match against the reviewers / email-identified
     reviewees / observers rosters. Inactive rows are excluded —
     deactivation is the operator's "soft remove"."""
-    user_email = normalize_email(user.email)
-    if not user_email:
+    viewer = participants.Viewer.of(user)
+    if not viewer.email:
         return _templates.TemplateResponse(
             request,
             "reviewer/dashboard.html",
@@ -86,7 +85,7 @@ def reviewer_dashboard(
             .where(
                 Reviewer.status == "active",
                 ReviewSession.status != lifecycle.SessionStatus.archived.value,
-                func.lower(func.trim(Reviewer.email)) == user_email,
+                viewer.clause(Reviewer, Reviewer.email),
             )
         ).all()
     )
@@ -97,8 +96,7 @@ def reviewer_dashboard(
             .where(
                 Reviewee.status == "active",
                 ReviewSession.status != lifecycle.SessionStatus.archived.value,
-                func.lower(func.trim(Reviewee.email_or_identifier))
-                == user_email,
+                viewer.clause(Reviewee, Reviewee.email_or_identifier),
             )
         ).all()
     )
@@ -109,7 +107,7 @@ def reviewer_dashboard(
             .where(
                 Observer.status == "active",
                 ReviewSession.status != lifecycle.SessionStatus.archived.value,
-                func.lower(func.trim(Observer.email)) == user_email,
+                viewer.clause(Observer, Observer.email),
             )
         ).all()
     )
@@ -124,7 +122,11 @@ def reviewer_dashboard(
             roles_by_session[s.id].append(role)
 
     for reviewer, s in reviewer_rows:
-        reviewer_by_session[s.id] = reviewer
+        # The lowest id, as ``require_reviewer_in_session`` picks it:
+        # since segment 21F one account can hold two rows (Codex, #3430).
+        held = reviewer_by_session.get(s.id)
+        if held is None or reviewer.id < held.id:
+            reviewer_by_session[s.id] = reviewer
         _add(s, "reviewer")
     for reviewee, s in reviewee_rows:
         # The /results gate's own predicate: a reviewee carried under a

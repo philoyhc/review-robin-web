@@ -31,5 +31,10 @@ def may_name_session(
     if user_can_view_session(db, user, review_session.id):
         return True
     return bool(
-        participants.disclosable_roles(db, user.email, session_id=review_session.id)
+        participants.disclosable_roles(
+            db,
+            user.email,
+            principal_id=getattr(user, "signed_in_principal_id", None),
+            session_id=review_session.id,
+        )
     )

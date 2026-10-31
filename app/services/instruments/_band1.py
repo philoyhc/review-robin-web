@@ -1290,21 +1290,36 @@ def find_sample_in_scope_reviewee(
             # a Link rule, or an inactive reviewee row, can take the
             # ``(R, R)`` pair out of ``pairs`` while the reviewer's
             # group-mates stay, and the group is still the reviewer's
-            # own. Candidates are narrowed by normalized address, and
-            # ``is_self_review`` still decides each one.
-            from app.services.email_identity import normalize_email
+            # own. Candidates are narrowed by normalized address or by
+            # directory account (segment 21F: Jane by UPN on one roster,
+            # by mail on the other), and ``is_self_review`` still decides
+            # each one.
+            from app.services.email_identity import normalize_email, normalize_object_id
 
             by_address: dict[str, list[Any]] = {}
+            by_account: dict[str, list[Any]] = {}
             for e in roster_reviewees:
                 by_address.setdefault(
                     normalize_email(e.email_or_identifier), []
                 ).append(e)
+                if e.directory_object_id:
+                    by_account.setdefault(
+                        normalize_object_id(e.directory_object_id), []
+                    ).append(e)
             from app.services.responses import is_catch_all_key
+
+            def _candidates(r: Any) -> list[Any]:
+                found = by_address.get(normalize_email(r.email), [])
+                if r.directory_object_id:
+                    found = found + by_account.get(
+                        normalize_object_id(r.directory_object_id), []
+                    )
+                return found
 
             self_groups = {
                 (r.id, _group_key(r, e))
                 for r in reviewers
-                for e in by_address.get(normalize_email(r.email), [])
+                for e in _candidates(r)
                 if is_self_review(r, e)
                 and not is_catch_all_key(_group_key(r, e))
             }

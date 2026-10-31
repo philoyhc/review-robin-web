@@ -81,11 +81,29 @@ class DirectoryCheck:
 def directory_check(directory: Any, addresses: list[str | None]) -> DirectoryCheck:
     """Resolve an import's addresses through ``directory`` (``None``:
     nothing checked) for `_save` to store and count (segment 21F)."""
-    outcomes = directory_accounts.resolve(directory, addresses)
-    return DirectoryCheck(
-        accounts=directory_accounts.accounts(outcomes),
-        counts=directory_accounts.counts(outcomes, addresses, checked=directory is not None),
+    return directory_checks(directory, [addresses])[0]
+
+
+def directory_checks(
+    directory: Any, rosters: list[list[str | None]]
+) -> list[DirectoryCheck]:
+    """`directory_check` for several rosters saved by one request (Quick
+    Setup, rehydrate): one lookup under one budget, so the request stays
+    inside the front end's limit however many rosters it carries (Codex,
+    #3430). Each roster is counted over its own addresses."""
+    outcomes = directory_accounts.resolve(
+        directory, [address for addresses in rosters for address in addresses]
     )
+    found = directory_accounts.accounts(outcomes)
+    return [
+        DirectoryCheck(
+            accounts=found,
+            counts=directory_accounts.counts(
+                outcomes, addresses, checked=directory is not None
+            ),
+        )
+        for addresses in rosters
+    ]
 
 @dataclass
 class ParseResult:

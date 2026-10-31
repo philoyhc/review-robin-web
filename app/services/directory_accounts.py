@@ -141,13 +141,17 @@ def rebind(
     old: str | None,
     new: str | None,
     resolve: Callable[[str], Account | None] | None,
-) -> None:
+) -> list[str | None] | None:
     """A roster row's address edited from ``old`` to ``new``: the same
     address (folded) keeps its binding; another resolves afresh, and
     without a lookup, or not found, the binding is cleared, never kept
-    (segment 21F; Codex, #3424)."""
+    (segment 21F; Codex, #3424). Returns ``[old, new]`` object IDs for
+    the audit's ``changes`` when the account the row admits moved."""
     if key(old) == key(new):
-        return
+        return None
+    before = getattr(row, "directory_object_id", None)
     account = resolve(new) if (resolve is not None and new) else None
     for name, value in columns(account).items():
         setattr(row, name, value)
+    after = getattr(row, "directory_object_id", None)
+    return None if before == after else [before, after]

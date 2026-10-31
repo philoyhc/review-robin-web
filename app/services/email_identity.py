@@ -74,3 +74,27 @@ def normalize_email(value: str | None) -> str:
     directly.
     """
     return (value or "").strip().lower()
+
+
+def normalize_object_id(value: str | None) -> str:
+    """The comparison key for a directory object ID (segment 21F):
+    stripped and lower-cased, as an Entra GUID may arrive in either case.
+    Empty for a missing one, which matches nothing."""
+    return (value or "").strip().lower()
+
+
+def same_identity(
+    a_object_id: str | None, a_address: str | None, b_object_id: str | None, b_address: str | None
+) -> bool:
+    """Whether two roster rows name one person (segment 21F): both bound
+    to directory accounts, and the accounts are one; else the same
+    address, folded. A bound row and an unbound one fall back to the
+    address. Every same-person comparison across rosters reads this:
+    `participants.same_person`, both self-review tests, the instrument
+    preview and the Full Matrix count."""
+    a_bound = normalize_object_id(a_object_id)
+    b_bound = normalize_object_id(b_object_id)
+    if a_bound and b_bound:
+        return a_bound == b_bound
+    a_key = normalize_email(a_address)
+    return bool(a_key) and a_key == normalize_email(b_address)

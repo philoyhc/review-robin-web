@@ -15,7 +15,7 @@ from app.config import settings
 from app.db.models import User
 from app.db.session import get_db
 from app.logging_config import get_logger
-from app.web.deps import find_user
+from app.web.deps import find_user, stamp_principal
 from app.web import views
 from app.web.return_to import resolve_return_to
 from app.web import urls
@@ -61,7 +61,12 @@ def me_debug(
         # Once per request: the back link and the top bar both ask.
         if not looked_up:
             try:
-                looked_up.append(find_user(db, user, move_email=False))
+                found = find_user(db, user, move_email=False)
+                if found is not None:
+                    # The back link's session check matches by account
+                    # too (segment 21F), so it needs this request's principal.
+                    stamp_principal(found, user)
+                looked_up.append(found)
             except SQLAlchemyError:
                 # Logged: this page is where a broken sign-in is diagnosed.
                 log.warning("user lookup failed", exc_info=True)

@@ -13,7 +13,7 @@ of its tight coupling to the helpers in this slice).
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 from urllib.parse import urlencode
 
@@ -31,6 +31,8 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
+
+from cordware.graph import Directory
 
 from app.web import urls
 from app.db.models import ReviewSession, User
@@ -60,8 +62,10 @@ from app.web.deps import (
 from app.web.routes_operator._shared import (
     _require_response_loss_ack,
     acknowledged_loss,
+    directory_or_none,
     release_hold,
     render_session_home,
+    roster_address,
     session_payload_error,
 )
 
@@ -366,6 +370,7 @@ async def create_session(
         acknowledge_response_loss=None,
         replacing=False,
         correlation_id=correlation_id,
+        directory=directory_or_none(request),
     )
     if refusal is not None:
         return await quick_setup_error_redirect(refusal.kind)
@@ -438,6 +443,10 @@ class _SlotRefusal:
     failure: _SlotFailure
 
 
+#: The slots a directory check runs on (segment 21F).
+_ROSTER_KINDS = ("reviewers", "reviewees", "observers")
+
+
 @dataclass(frozen=True)
 class _StagedSlot:
     """A file that passed every check, held until the save. A roster
@@ -450,6 +459,8 @@ class _StagedSlot:
     rows: list = field(default_factory=list)
     field_labels: dict | None = None
     content: bytes = b""
+    #: A roster's directory check (segment 21F), run before the save unit.
+    directory: csv_imports.DirectoryCheck | None = None
 
 
 class _UnitRefused(Exception):
@@ -575,6 +586,7 @@ async def _run_quick_setup(
     replacing: bool,
     correlation_id: str | None = None,
     acknowledge_instrument_deletion: str | None = None,
+    directory: Directory | None = None,
 ) -> _SlotRefusal | None:
     """Check every attached file, then save every one in one unit.
 
@@ -610,6 +622,7 @@ async def _run_quick_setup(
         replacing=replacing,
         correlation_id=correlation_id,
         acknowledge_instrument_deletion=acknowledge_instrument_deletion,
+        directory=directory,
     )
 
 
@@ -625,6 +638,7 @@ async def _run_quick_setup_contents(
     replacing: bool,
     correlation_id: str | None = None,
     acknowledge_instrument_deletion: str | None = None,
+    directory: Directory | None = None,
 ) -> _SlotRefusal | None:
     """:func:`_run_quick_setup` on bytes already read, in slot order:
     the submit-all route feeds it files a refused submit held (segment
@@ -650,6 +664,21 @@ async def _run_quick_setup_contents(
     )
     if isinstance(staged, _SlotRefusal):
         return staged
+    # Segment 21F: each roster's addresses resolved through the directory
+    # on the operator's token, as the Setup pages' import does: after
+    # the checks, so a refused file is not looked up, and before the
+    # save unit, so no lookup waits under the session lock.
+    # One lookup for every roster in the submit, under one budget (Codex,
+    # #3430).
+    rosters = [i for i, item in enumerate(staged) if item.kind in _ROSTER_KINDS]
+    checks = await run_in_threadpool(
+        csv_imports.directory_checks,
+        directory,
+        [[roster_address(row) for row in staged[i].rows] for i in rosters],
+    )
+    staged = list(staged)
+    for i, check in zip(rosters, checks, strict=True):
+        staged[i] = replace(staged[i], directory=check)
     try:
         await run_in_threadpool(
             _save_uploads,
@@ -929,16 +958,24 @@ def _save_slot(
     }
     if item.kind == "reviewers":
         csv_imports.save_reviewers(
-            db, rows=item.rows, field_labels_captured=item.field_labels, **common
+            db,
+            rows=item.rows,
+            field_labels_captured=item.field_labels,
+            directory=item.directory,
+            **common,
         )
         return len(item.rows)
     elif item.kind == "reviewees":
         csv_imports.save_reviewees(
-            db, rows=item.rows, field_labels_captured=item.field_labels, **common
+            db,
+            rows=item.rows,
+            field_labels_captured=item.field_labels,
+            directory=item.directory,
+            **common,
         )
         return len(item.rows)
     elif item.kind == "observers":
-        csv_imports.save_observers(db, rows=item.rows, **common)
+        csv_imports.save_observers(db, rows=item.rows, directory=item.directory, **common)
         return len(item.rows)
     elif item.kind == "relationships":
         # Parsed again against the rosters as they now stand inside the
@@ -1082,6 +1119,7 @@ async def _single_slot(
         acknowledge_response_loss=acknowledge_response_loss,
         replacing=True,
         acknowledge_instrument_deletion=acknowledge_instrument_deletion,
+        directory=directory_or_none(request),
     )
     return _slot_response(
         request,
@@ -1281,6 +1319,7 @@ async def quick_setup_submit_all(
         acknowledge_response_loss=acknowledge_response_loss,
         replacing=True,
         acknowledge_instrument_deletion=acknowledge_instrument_deletion,
+        directory=directory_or_none(request),
     )
     held_names, token = _settle_hold(
         db,

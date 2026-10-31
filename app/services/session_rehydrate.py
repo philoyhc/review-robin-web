@@ -531,6 +531,7 @@ def rehydrate_session(
     user: User,
     correlation_id: str | None = None,
     today: _dt.date | None = None,
+    directory: Any = None,
 ) -> RehydrateOutcome:
     """Rebuild a live session from a complete extract file set.
 
@@ -545,6 +546,10 @@ def rehydrate_session(
 
     Assumes the caller has already run :func:`analyze_rehydrate_set` on the
     same set and got a clean verdict; the parsers here still fail safe.
+
+    ``directory`` is the operator's (segment 21F): each roster's addresses
+    are resolved through it as an import's are, since an extract carries
+    no binding. ``None`` checks nothing, and every row matches by mail.
     """
     from app.schemas.sessions import SessionCreate
     from app.services import audit, csv_imports, relationships, sessions
@@ -609,10 +614,27 @@ def rehydrate_session(
                 + "; ".join(_describe_apply_error(e) for e in settings_errors)
             )
 
-        # 2. Rosters.
+        # 2. Rosters, all parsed first, so their addresses are resolved in
+        # one lookup under one budget (segment 21F; Codex, #3430).
         reviewers_parse = csv_imports.parse_reviewer_csv(resolved["reviewers"])
         if reviewers_parse.is_blocked:
             raise RehydrateError("reviewers.csv failed validation.")
+        reviewees_parse = csv_imports.parse_reviewee_csv(resolved["reviewees"])
+        if reviewees_parse.is_blocked:
+            raise RehydrateError("reviewees.csv failed validation.")
+        observers_parse = None
+        if "observers" in resolved:
+            observers_parse = csv_imports.parse_observer_csv(resolved["observers"])
+            if observers_parse.is_blocked:
+                raise RehydrateError("observers.csv failed validation.")
+        reviewers_check, reviewees_check, observers_check = csv_imports.directory_checks(
+            directory,
+            [
+                [row.email for row in reviewers_parse.rows],
+                [row.email_or_identifier for row in reviewees_parse.rows],
+                [row.email for row in observers_parse.rows] if observers_parse else [],
+            ],
+        )
         csv_imports.save_reviewers(
             db,
             session=review_session,
@@ -621,11 +643,9 @@ def rehydrate_session(
             filename="reviewers.csv",
             correlation_id=correlation_id or "",
             field_labels_captured=reviewers_parse.field_labels,
+            directory=reviewers_check,
         )
 
-        reviewees_parse = csv_imports.parse_reviewee_csv(resolved["reviewees"])
-        if reviewees_parse.is_blocked:
-            raise RehydrateError("reviewees.csv failed validation.")
         csv_imports.save_reviewees(
             db,
             session=review_session,
@@ -634,12 +654,10 @@ def rehydrate_session(
             filename="reviewees.csv",
             correlation_id=correlation_id or "",
             field_labels_captured=reviewees_parse.field_labels,
+            directory=reviewees_check,
         )
 
-        if "observers" in resolved:
-            observers_parse = csv_imports.parse_observer_csv(resolved["observers"])
-            if observers_parse.is_blocked:
-                raise RehydrateError("observers.csv failed validation.")
+        if observers_parse is not None:
             csv_imports.save_observers(
                 db,
                 session=review_session,
@@ -647,6 +665,7 @@ def rehydrate_session(
                 rows=observers_parse.rows,
                 filename="observers.csv",
                 correlation_id=correlation_id or "",
+                directory=observers_check,
             )
 
         # 3. Relationships — resolve against the just-imported rosters.

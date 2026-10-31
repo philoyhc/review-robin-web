@@ -258,3 +258,23 @@ def test_rehydrate_refuses_a_used_rule_set_the_card_cant_show(db: Session) -> No
         session_rehydrate.rehydrate_session(db, files=_file_set(db, rs), user=user)
 
     assert "rule the card can't show" in str(exc_info.value)
+
+
+def test_rehydrate_resolves_roster_addresses_through_the_directory(db: Session) -> None:
+    """Segment 21F: an extract carries no binding, so a rehydrate resolves
+    each roster address as an import does, and a reviewer given by UPN
+    comes back bound to the account."""
+    from cordware.graph import FakeDirectory
+
+    rs, user = _seed(db)
+    db.execute(select(Reviewer).where(Reviewer.session_id == rs.id)).scalar_one().email = "e0123456@example.edu"
+    db.flush()
+    files = _file_set(db, rs)
+
+    outcome = session_rehydrate.rehydrate_session(db, files=files, user=user, directory=FakeDirectory())
+    reviewer = db.execute(
+        select(Reviewer).where(Reviewer.session_id == outcome.session.id)
+    ).scalar_one()
+    assert reviewer.email == "e0123456@example.edu"
+    assert reviewer.directory_object_id == "11111111-1111-4111-8111-111111111111"
+    assert reviewer.directory_mail == "jane.tan@example.edu"

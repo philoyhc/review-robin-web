@@ -124,7 +124,9 @@ def visible_audiences(db: Session, user: User) -> frozenset[str]:
     # Mirrors ``require_operator``: sys-admin implies operator (F4).
     if user.is_operator or user.is_sys_admin:
         audiences.add(OPERATOR)
-    audiences |= participants.disclosable_roles(db, user.email)
+    audiences |= participants.disclosable_roles(
+        db, user.email, principal_id=getattr(user, "signed_in_principal_id", None)
+    )
     return frozenset(audiences)
 
 
@@ -147,7 +149,9 @@ def guide_is_reachable(db: Session, user: User) -> bool:
     """
     if user.is_operator or user.is_sys_admin:
         return True
-    return bool(participants.disclosable_roles(db, user.email))
+    return bool(participants.disclosable_roles(
+        db, user.email, principal_id=getattr(user, "signed_in_principal_id", None)
+    ))
 
 
 def visible_sections(db: Session, user: User) -> frozenset[str]:

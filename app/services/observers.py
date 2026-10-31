@@ -282,6 +282,7 @@ def create_observer(
             {
                 "observer_id": observer.id,
                 "email": clean_email,
+                "directory_object_id": observer.directory_object_id,
                 "display_name": clean_display_name,
                 "status": clean_status,
                 "tag_1": clean_tag_1,
@@ -393,12 +394,14 @@ def update_observer(
             setattr(observer, field, new_value)
         # Segment 21F: a changed address rebinds, or loses its binding.
         if "email" in changes:
-            directory_accounts.rebind(
+            moved = directory_accounts.rebind(
                 observer,
                 old=changes["email"][0],  # type: ignore[arg-type]
                 new=changes["email"][1],  # type: ignore[arg-type]
                 resolve=resolve_account,
             )
+            if moved is not None:
+                changes["directory_object_id"] = moved
         db.flush()
         audit.write_event(
             db,
