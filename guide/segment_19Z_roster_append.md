@@ -110,6 +110,8 @@ Upsert rungs (2026-10-31): rung 7 rode with the amendment (`#3438`), rung 8 `#34
   - Two rows at one address in one roster: a merge updates the lower one, and Validate's `duplicate_email` already flags the pair.
   - A bound row matched by address whose address now resolves to another account keeps its binding, where replace would rebind it.
 
+**Walkthrough** (2026-10-31): the author's basic browser check passed; the full check is `guide/walkthrough_19Z_rosters.md` (local, then the real tenant). The close waits on it.
+
 ## PR ladder
 
 1. **This plan.** Prose only.
