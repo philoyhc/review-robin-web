@@ -119,6 +119,10 @@ class ParseResult:
     # ``(source_type, source_field)``. Empty for a header with no
     # suffixes; the save step reconciles (upsert present, clear absent).
     field_labels: dict[tuple[str, str], str] = field(default_factory=dict)
+    # Segment 19Z: the header's canonical columns, so a merge can tell an
+    # absent Status column (keep each row's status) from one the parser
+    # defaulted to ``active``.
+    columns: frozenset[str] = frozenset()
 
     @property
     def is_blocked(self) -> bool:
@@ -642,7 +646,9 @@ def parse_reviewer_csv(content: bytes) -> ParseResult:
         seen_emails[normalize_email(email)] = (index, name)
         parsed.append(row)
 
-    return ParseResult(rows=parsed, issues=issues, field_labels=captured_labels)
+    return ParseResult(
+        rows=parsed, issues=issues, field_labels=captured_labels, columns=frozenset(fieldnames)
+    )
 
 
 def parse_reviewee_csv(content: bytes) -> ParseResult:
@@ -772,7 +778,9 @@ def parse_reviewee_csv(content: bytes) -> ParseResult:
         seen_identifiers[normalize_email(identifier)] = (index, name)
         parsed.append(row)
 
-    return ParseResult(rows=parsed, issues=issues, field_labels=captured_labels)
+    return ParseResult(
+        rows=parsed, issues=issues, field_labels=captured_labels, columns=frozenset(fieldnames)
+    )
 
 
 def parse_observer_csv(content: bytes) -> ParseResult:
@@ -932,7 +940,7 @@ def parse_observer_csv(content: bytes) -> ParseResult:
         seen_emails[normalize_email(email)] = index
         parsed.append(row)
 
-    return ParseResult(rows=parsed, issues=issues)
+    return ParseResult(rows=parsed, issues=issues, columns=frozenset(fieldnames))
 
 
 def is_comparable_identity(identifier: str | None, name: str | None) -> bool:
@@ -1068,6 +1076,132 @@ def append_conflicts(
             )
         )
     return issues
+
+
+def merge_conflicts(
+    *,
+    kind: str,
+    rows: Sequence[ReviewerImportRow | RevieweeImportRow | ObserverImportRow],
+    directory: DirectoryCheck | None = None,
+) -> list[ValidationIssue]:
+    """The rows a merge into ``kind``'s roster refuses (segment 19Z,
+    upsert amendment): two file rows whose addresses resolved to one
+    directory account, so one person twice. Two rows at one address are
+    already the parser's within-file duplicate."""
+    spec = _IDENTITY_ROSTERS[kind]
+    first: dict[str, int] = {}
+    issues: list[ValidationIssue] = []
+    for index, row in enumerate(rows, start=1):
+        address = getattr(row, spec["row_attr"]) or ""
+        account = (
+            directory.accounts.get(directory_accounts.key(address) or "")
+            if directory is not None
+            else None
+        )
+        if account is None:
+            continue
+        held = first.setdefault(normalize_object_id(account.object_id), index)
+        if held != index:
+            issues.append(
+                ValidationIssue(
+                    severity=Severity.error,
+                    source=kind,
+                    row_number=index,
+                    field=spec["field"],
+                    message=(
+                        f"{spec['field']} '{address}' is the same directory "
+                        f"account as row {held}."
+                    ),
+                    problem=f"{spec['field']} is a directory account named twice in the file",
+                )
+            )
+    return issues
+
+
+#: What a merge never writes from a file: the row's session and address.
+_MERGE_KEEPS = frozenset({"session_id", "email", "email_or_identifier"})
+
+
+def _merge_rows(
+    db: Session,
+    *,
+    session: ReviewSession,
+    user: User,
+    model: Any,
+    kind: str,
+    existing: list[Any],
+    rows: list[Any],
+    to_kwargs: Any,
+    directory: DirectoryCheck | None,
+    status_given: bool,
+    correlation_id: str,
+) -> tuple[int, int, int, set[str]]:
+    """Merge ``rows`` into ``existing`` (segment 19Z, upsert amendment).
+    Returns ``(added, updated, unchanged, changed_fields)``.
+
+    A row matches an existing one by its folded address, or by the
+    directory account its address resolved to; the lowest id answers a
+    roster already holding two. A matched row takes every non-blank
+    cell, Status only when the file has the column, and keeps its
+    address; an unbound row whose own address resolved is bound. Each
+    updated row writes its ``*.updated`` event. Any other row is added."""
+    spec = _IDENTITY_ROSTERS[kind]
+    by_address: dict[str, Any] = {}
+    by_account: dict[str, Any] = {}
+    for held in sorted(existing, key=lambda r: r.id):
+        by_address.setdefault(normalize_email(getattr(held, spec["model_attr"])), held)
+        if held.directory_object_id:
+            by_account.setdefault(normalize_object_id(held.directory_object_id), held)
+    added = updated = unchanged = 0
+    changed_fields: set[str] = set()
+    for row in rows:
+        kwargs = to_kwargs(row, session.id)
+        address = kwargs.get(spec["model_attr"])
+        account = (
+            directory.accounts.get(directory_accounts.key(address) or "")
+            if directory is not None
+            else None
+        )
+        held = by_address.get(normalize_email(address))
+        if held is None and account is not None:
+            held = by_account.get(normalize_object_id(account.object_id))
+        if held is None:
+            if directory is not None:
+                kwargs.update(directory_accounts.columns(account))
+            db.add(model(**kwargs))
+            added += 1
+            continue
+        changes: dict[str, list[object]] = {}
+        for name, value in kwargs.items():
+            if name in _MERGE_KEEPS or value is None:
+                continue
+            if name == "status" and not status_given:
+                continue
+            if getattr(held, name) != value:
+                changes[name] = [getattr(held, name), value]
+        if account is not None and not held.directory_object_id:
+            for name, value in directory_accounts.columns(account).items():
+                if getattr(held, name) != value:
+                    changes[name] = [getattr(held, name), value]
+        if not changes:
+            unchanged += 1
+            continue
+        for name, (_, value) in changes.items():
+            setattr(held, name, value)
+        changed_fields.update(changes)
+        audit.write_event(
+            db,
+            event_type=f"{spec['label']}.updated",
+            summary=f"Updated {spec['label']} {getattr(held, spec['model_attr'])} (merge)",
+            actor_user_id=user.id,
+            session=session,
+            payload=audit.changes(changes),
+            refs={f"{spec['label']}_id": held.id},
+            correlation_id=correlation_id,
+        )
+        updated += 1
+    db.flush()
+    return added, updated, unchanged, changed_fields
 
 
 def _identity_holders(
@@ -1387,6 +1521,8 @@ def save_reviewers(
     field_labels_captured: dict[tuple[str, str], str] | None = None,
     directory: DirectoryCheck | None = None,
     append: bool = False,
+    merge: bool = False,
+    columns: frozenset[str] = frozenset(),
 ) -> tuple[int, int]:
     # One commit for the roster and its labels, so the lock taken by
     # the gate holds to the end and a refusal can't follow a committed
@@ -1406,6 +1542,8 @@ def save_reviewers(
             to_kwargs=_reviewer_to_kwargs,
             directory=directory,
             append=append,
+            merge=merge,
+            columns=columns,
         )
         # Segment 19C Item 1 — reconcile reviewer friendly labels from
         # the roster header (upsert present, clear absent). ``None`` = a
@@ -1418,7 +1556,7 @@ def save_reviewers(
                 captured=field_labels_captured,
                 user=user,
                 correlation_id=correlation_id,
-                clear_absent=not append,
+                clear_absent=not (append or merge),
             )
     return result
 
@@ -1434,13 +1572,32 @@ def save_reviewees(
     field_labels_captured: dict[tuple[str, str], str] | None = None,
     directory: DirectoryCheck | None = None,
     append: bool = False,
+    merge: bool = False,
+    columns: frozenset[str] = frozenset(),
+    acknowledged_loss: int | None = None,
 ) -> tuple[int, int]:
+    from app.services import responses as responses_service
     from app.services.instruments import seed_display_fields_from_reviewees
 
     # One commit for the roster, its display fields and its labels, as
     # in ``save_reviewers`` (findings Bc4).
     with unit_of_work.atomic(db):
         lifecycle.require_editable(db, session)
+        # A merge can move a reviewee between groups by a tag change
+        # (segment 19Z): snapshot the partitions, and after the save ask
+        # before clearing any group that gained a member, as the
+        # reviewee row editor does.
+        groups_before = (
+            responses_service.snapshot_group_partitions(
+                db,
+                session_id=session.id,
+                instrument_ids=responses_service.session_group_instrument_ids(
+                    db, session_id=session.id, source_type="reviewee"
+                ),
+            )
+            if merge
+            else {}
+        )
         result = _save(
             db,
             session=session,
@@ -1454,7 +1611,19 @@ def save_reviewees(
             to_kwargs=_reviewee_to_kwargs,
             directory=directory,
             append=append,
+            merge=merge,
+            columns=columns,
         )
+        if merge:
+            from app.services.assignments import recompute_self_review_classification
+
+            responses_service.clear_changed_groups(
+                db,
+                session_id=session.id,
+                before=groups_before,
+                acknowledged_loss=acknowledged_loss,
+            )
+            recompute_self_review_classification(db, session_id=session.id)
         # Lazy-seed display fields for any populated reviewee slots
         # (profile_link / tag_1..3) — see guide/unfinished_business item #14.
         seed_display_fields_from_reviewees(db, session)
@@ -1468,7 +1637,7 @@ def save_reviewees(
                 captured=field_labels_captured,
                 user=user,
                 correlation_id=correlation_id,
-                clear_absent=not append,
+                clear_absent=not (append or merge),
             )
     return result
 
@@ -1483,6 +1652,8 @@ def save_observers(
     correlation_id: str,
     directory: DirectoryCheck | None = None,
     append: bool = False,
+    merge: bool = False,
+    columns: frozenset[str] = frozenset(),
 ) -> tuple[int, int]:
     lifecycle.require_not_archived(db, session)
     return _save(
@@ -1498,6 +1669,8 @@ def save_observers(
         to_kwargs=_observer_to_kwargs,
         directory=directory,
         append=append,
+        merge=merge,
+        columns=columns,
     )
 
 
@@ -1552,10 +1725,17 @@ def _save(
     to_kwargs: Any,
     directory: DirectoryCheck | None = None,
     append: bool = False,
+    merge: bool = False,
+    columns: frozenset[str] = frozenset(),
 ) -> tuple[int, int]:
     """Replace ``model``'s roster with ``rows``, or with ``append`` add
     them and keep every row, assignment and response already there
     (segment 19Z). Returns ``(replaced, new)``; an append replaces 0.
+
+    With ``merge`` (the upsert amendment) a row already on the roster
+    is updated and any other added (`_merge_rows`); ``new`` counts the
+    rows added. Two file rows on one directory account refuse it
+    (`merge_conflicts`), before anything is written.
 
     An append is refused, before anything is written, by any row
     `append_conflicts` names (`AppendConflict`). It runs here, under
@@ -1567,6 +1747,11 @@ def _save(
         )
         if conflicts:
             raise AppendConflict(conflicts)
+    if merge:
+        conflicts = merge_conflicts(kind=source_label, rows=rows, directory=directory)
+        if conflicts:
+            raise AppendConflict(conflicts)
+    keeps = append or merge
     lifecycle.invalidate_if_validated(
         db,
         review_session=session,
@@ -1581,21 +1766,21 @@ def _save(
     # omitted, not zeroed.
     cascaded_assignment_count = (
         _count_assignments(db, session.id)
-        if _reaches_assignments(model) and not append
+        if _reaches_assignments(model) and not keeps
         else None
     )
     # Before the delete below: the FK cascade is the database's, so
     # counting afterwards reads 0. Same mechanism as `_delete_all`.
     cascaded_relationship_count = (
         _count_relationships(db, session.id)
-        if roster_bulk.reaches_relationships(model) and not append
+        if roster_bulk.reaches_relationships(model) and not keeps
         else None
     )
 
     existing_rows = list(
         db.execute(select(model).where(model.session_id == session.id)).scalars()
     )
-    if append:
+    if keeps:
         replaced, kept = 0, len(existing_rows)
     else:
         replaced, kept = len(existing_rows), 0
@@ -1604,7 +1789,24 @@ def _save(
             db.delete(row)
         db.flush()
 
-    for row in rows:
+    merged = (
+        _merge_rows(
+            db,
+            session=session,
+            user=user,
+            model=model,
+            kind=source_label,
+            existing=existing_rows,
+            rows=rows,
+            to_kwargs=to_kwargs,
+            directory=directory,
+            status_given="Status" in columns,
+            correlation_id=correlation_id,
+        )
+        if merge
+        else None
+    )
+    for row in rows if merged is None else []:
         kwargs = to_kwargs(row, session.id)
         if directory is not None:
             # Segment 21F: the account the row's address resolved to, or
@@ -1622,15 +1824,22 @@ def _save(
         db,
         event_type=event_type,
         summary=(
-            f"Appended {len(rows)} {source_label} (kept {kept})"
+            f"Merged {source_label}: {merged[0]} added, {merged[1]} updated"
+            if merged is not None
+            else f"Appended {len(rows)} {source_label} (kept {kept})"
             if append
             else f"Imported {len(rows)} {source_label} (replaced {replaced})"
         ),
         actor_user_id=user.id,
         session=session,
         payload=audit.counts(
-            new=len(rows),
-            **({"kept": kept} if append else {"replaced": replaced}),
+            **(
+                {"new": merged[0], "updated": merged[1], "unchanged": merged[2]}
+                if merged is not None
+                else {"new": len(rows), "kept": kept}
+                if append
+                else {"new": len(rows), "replaced": replaced}
+            ),
             **(
                 {"cascaded_assignments": cascaded_assignment_count}
                 if cascaded_assignment_count is not None
@@ -1649,7 +1858,11 @@ def _save(
             **(directory.counts if directory is not None else {}),
         ),
         context=(
-            {**({"filename": filename} if filename else {}), **({"mode": "append"} if append else {})}
+            {
+                **({"filename": filename} if filename else {}),
+                **({"mode": "append"} if append else {}),
+                **({"mode": "upsert"} if merge else {}),
+            }
             or None
         ),
         correlation_id=correlation_id,
@@ -1666,6 +1879,7 @@ def _save(
                 "new": len(rows),
                 "replaced": replaced,
                 **({"mode": "append", "kept": kept} if append else {}),
+                **({"mode": "upsert"} if merge else {}),
                 **(
                     {"cascaded_assignments": cascaded_assignment_count}
                     if cascaded_assignment_count is not None
@@ -1680,7 +1894,7 @@ def _save(
             },
         ),
     )
-    return replaced, len(rows)
+    return replaced, (merged[0] if merged is not None else len(rows))
 
 
 def _detach_outbox_if_reviewers(

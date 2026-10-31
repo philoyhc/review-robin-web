@@ -284,7 +284,9 @@ def parse_relationship_csv(
         seen_pairs[(reviewer.id, reviewee.id)] = index
         parsed.append(row)
 
-    return ParseResult(rows=parsed, issues=issues, field_labels=captured_labels)
+    return ParseResult(
+        rows=parsed, issues=issues, field_labels=captured_labels, columns=frozenset(fieldnames)
+    )
 
 
 @dataclass(frozen=True)
@@ -416,6 +418,8 @@ def save_relationships(
     field_labels_captured: dict[tuple[str, str], str] | None = None,
     acknowledged_loss: int | None = None,
     append: bool = False,
+    merge: bool = False,
+    columns: frozenset[str] = frozenset(),
 ) -> tuple[int, int]:
     """Wipe-and-replace the session's relationships table from the
     parsed rows. Returns ``(replaced, new)``.
@@ -430,6 +434,11 @@ def save_relationships(
     are added; a pair already a relationship refuses the whole file
     (`AppendConflict`), checked under the session lock before anything
     is written. The header's labels are upserted and none cleared.
+
+    With ``merge`` (the upsert amendment) a pair already a relationship
+    takes the row's non-blank tags, and its Status when the file has the
+    column, writing ``relationship.updated``; any other pair is added.
+    The group-clear ask covers a tag change as it covers a new pair.
     """
     # One commit for the replace, its display fields and its labels, so
     # the label reconcile's gate can't refuse after a committed replace
@@ -456,7 +465,7 @@ def save_relationships(
             ).scalars()
         )
         before = pair_context_groups_before(db, session_id=session.id)
-        if append:
+        if append or merge:
             replaced, kept = 0, len(existing_rows)
         else:
             replaced, kept = len(existing_rows), 0
@@ -464,12 +473,43 @@ def save_relationships(
                 db.delete(row)
             db.flush()
 
+        added, updated, unchanged = 0, 0, 0
+        held_pairs = {(r.reviewer_id, r.reviewee_id): r for r in existing_rows} if merge else {}
         for row in rows:
-            db.add(_relationship_to_orm(row, session.id))
+            held = held_pairs.get((row.reviewer_id, row.reviewee_id))
+            if held is None:
+                db.add(_relationship_to_orm(row, session.id))
+                added += 1
+                continue
+            changes: dict[str, list[object]] = {}
+            for name in ("tag_1", "tag_2", "tag_3", "status"):
+                value = getattr(row, name)
+                if value is None or (name == "status" and "Status" not in columns):
+                    continue
+                if getattr(held, name) != value:
+                    changes[name] = [getattr(held, name), value]
+            if not changes:
+                unchanged += 1
+                continue
+            for name, (_, value) in changes.items():
+                setattr(held, name, value)
+            audit.write_event(
+                db,
+                event_type="relationship.updated",
+                summary=f"Updated relationship #{held.id} (merge)",
+                actor_user_id=user.id,
+                session=session,
+                payload=audit.changes(changes),
+                refs={"relationship_id": held.id},
+                correlation_id=correlation_id,
+            )
+            updated += 1
         db.flush()
         context = {"filename": filename} if filename else {}
         if append:
             context["mode"] = "append"
+        if merge:
+            context["mode"] = "upsert"
         context.update(
             clear_redrawn_groups(
                 db,
@@ -485,14 +525,22 @@ def save_relationships(
             db,
             event_type="relationships.imported",
             summary=(
-                f"Appended {len(rows)} relationships (kept {kept})"
+                f"Merged relationships: {added} added, {updated} updated"
+                if merge
+                else f"Appended {len(rows)} relationships (kept {kept})"
                 if append
                 else f"Imported {len(rows)} relationships (replaced {replaced})"
             ),
             actor_user_id=user.id,
             session=session,
             payload=audit.counts(
-                new=len(rows), **({"kept": kept} if append else {"replaced": replaced})
+                **(
+                    {"new": added, "updated": updated, "unchanged": unchanged}
+                    if merge
+                    else {"new": len(rows), "kept": kept}
+                    if append
+                    else {"new": len(rows), "replaced": replaced}
+                )
             ),
             context=context or None,
             correlation_id=correlation_id,
@@ -516,9 +564,9 @@ def save_relationships(
                 captured=field_labels_captured,
                 user=user,
                 correlation_id=correlation_id,
-                clear_absent=not append,
+                clear_absent=not (append or merge),
             )
-    return replaced, len(rows)
+    return replaced, (added if merge else len(rows))
 
 
 def _relationship_to_orm(
