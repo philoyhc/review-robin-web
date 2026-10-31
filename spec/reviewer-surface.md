@@ -1157,6 +1157,10 @@ each slightly differently:
   lowest id, as the gate's. SQLite's `lower()` is ASCII-only
   while Postgres's is Unicode-aware, so the two sides agree on ASCII
   addresses only.
+- **Role chip strip** (`build_role_chips`,
+  `app/web/routes_reviewer/_shared.py`) — matches each roster through
+  `Viewer.matches` in `id` order, so its reviewer pill describes the
+  lowest-id row, the one the gate opens.
 - **Invitation landing** (`/me/invite/{token}`,
   `app/web/routes_reviewer/_invite.py`) — matches the invited row
   through `Viewer.matches`, after `invitations.lookup_invitation_by_token`

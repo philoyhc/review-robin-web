@@ -183,6 +183,54 @@ def test_two_rows_on_one_account_resolve_to_the_same_row_everywhere(
     assert shown == [first.id]
 
 
+def test_the_chip_strip_describes_the_row_the_gate_opens(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The chip strip's reviewer pill is computed from the lowest-id row,
+    as the gate and the dashboard pick it, and each of its three role
+    lookups is ordered by id: an unordered scan returns rows in whatever
+    order the database chooses (spec-writer at the 21F close)."""
+    from sqlalchemy import event
+
+    from app.services import responses as responses_service
+    from app.web.routes_reviewer._shared import build_role_chips
+
+    session = _open_session(db, "match-chips")
+    first = Reviewer(session_id=session.id, name="Jane", email="e0123456@example.edu", directory_object_id=JANE_OID)
+    db.add(first)
+    db.flush()
+    db.add(Reviewer(session_id=session.id, name="Jane", email="jane.tan@example.edu", directory_object_id=JANE_OID))
+    db.add(Observer(session_id=session.id, email="e0123456@example.edu", directory_object_id=JANE_OID))
+    db.commit()
+    user = User(email="jane.tan@example.edu")
+    user.signed_in_principal_id = JANE_OID  # type: ignore[attr-defined]
+
+    shown: list[int] = []
+    real = responses_service.session_pill_for_reviewer
+    monkeypatch.setattr(
+        responses_service,
+        "session_pill_for_reviewer",
+        lambda db, *, reviewer, session_id: shown.append(reviewer.id) or real(db, reviewer=reviewer, session_id=session_id),
+    )
+    roster_selects: list[str] = []
+
+    def capture(conn, cursor, statement, parameters, context, executemany):
+        head = statement.split("WHERE")[0]
+        if any(f"FROM {t}" in head for t in ("reviewers", "reviewees", "observers")):
+            roster_selects.append(statement)
+
+    engine = db.get_bind()
+    event.listen(engine, "before_cursor_execute", capture)
+    try:
+        build_role_chips(db, user=user, review_session=session, active_role="reviewer")
+    finally:
+        event.remove(engine, "before_cursor_execute", capture)
+
+    assert shown == [first.id]
+    assert len(roster_selects) >= 3
+    assert all("ORDER BY" in sql for sql in roster_selects[:3])
+
+
 # --- one person across rosters ---
 
 
