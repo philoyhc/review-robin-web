@@ -178,8 +178,8 @@ Every combination starts and answers both health paths it mounts (ruling 5):
 
 | `CORDWARE_APPS` | Mounts |
 |---|---|
-| `residentialops` | Residential Operations alone; `/` redirects to `/residentialops/` |
-| `supportlogs` | Support Logs alone; `/` redirects to `/supportlogs/` |
+| `residentialops` | Residential Operations alone; `/` lists it |
+| `supportlogs` | Support Logs alone; `/` lists it |
 | `residentialops,supportlogs` | Both; `/` lists both |
 | unset | RRW and both; `/` lists all three |
 

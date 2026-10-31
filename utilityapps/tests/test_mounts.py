@@ -29,8 +29,10 @@ def test_registry_entry() -> None:
 def test_runs_alone() -> None:
     client = TestClient(host_with(("utilities",))[0])
     assert client.get(HEALTH).json() == {"status": "ok"}
+    # `/` lists the lone application rather than redirecting to it
+    # (author, 2026-10-31).
     landing = client.get("/", follow_redirects=False)
-    assert landing.status_code == 302 and landing.headers["location"] == "/utilities/"
+    assert landing.status_code == 200 and '<a href="/utilities/">Utilities</a>' in landing.text
     assert client.get("/reviewrobin/health").status_code == 404
     assert client.get("/supportlogs/health").status_code == 404
 

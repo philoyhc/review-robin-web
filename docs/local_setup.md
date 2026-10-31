@@ -177,8 +177,8 @@ the only way RRW is served (segments 21A and 21D;
 defines RRW's `create_app()`. The host's `CORDWARE_APPS` setting chooses
 what it mounts. Unset, it mounts RRW and the two Residential applications
 (`/residentialops`, `/supportlogs`), and `/` lists all three; set
-`CORDWARE_APPS=reviewrobin` to mount RRW alone, when `/` redirects to
-`/reviewrobin/`; set it empty
+`CORDWARE_APPS=reviewrobin` to mount RRW alone, when `/` lists it alone,
+linking to `/reviewrobin/`; set it empty
 (`CORDWARE_APPS=`) to run the host alone, which serves its landing page
 at `/` ("No applications are running here.") and `/health`.
 
