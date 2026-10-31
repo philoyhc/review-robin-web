@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "operator/partials/_roster_address.html" import account_address %}
 
 {% block title %}Accounts Management — Admin{% endblock %}
 {% block body_class %}ui-v2{% endblock %}
@@ -335,7 +336,7 @@
                        {% if selected_user_id and selected_user_id == row.id %}checked{% endif %}>
               {% endif %}
             </td>
-            <td><code>{{ row.email }}</code></td>
+            <td>{{ account_address(row.verified, row.email) }}</td>
             <td>{{ row.display_name or "—" }}</td>
             <td>{{ row.created_at | format_date }}</td>
             <td>

@@ -41,7 +41,7 @@ from app.db.models import (
     User,
 )
 from app.services.email_identity import normalize_email
-from app.services.users import WorkspaceUserRow
+from app.services.users import WorkspaceUserRow, is_verified
 
 __all__ = [
     "CATEGORIES",
@@ -225,6 +225,7 @@ def list_accounts_page(
             sole_owner_count=user_sole.get(user.id, 0),
             has_history=bool(has_history),
             category=row_category,
+            verified=is_verified(user),
         )
         for user, has_history, row_category in page
     ]

@@ -23,6 +23,8 @@ one level over).
 
 from __future__ import annotations
 
+import re
+
 import csv
 import io
 
@@ -134,7 +136,7 @@ def test_the_creator_is_the_first_owner_and_cannot_be_removed(
 ) -> None:
     body = client.get("/operator/sessions/new").text
     card = _card(body)
-    assert f"<code>{CREATOR}</code>" in card
+    assert re.search(rf"<code(?: [^>]*)?>{re.escape(CREATOR)}</code>", card)  # plain or the pill (19Z)
     assert "<td>owner</td>" in card
     assert "Remove" not in card, "a session always keeps one owner"
 

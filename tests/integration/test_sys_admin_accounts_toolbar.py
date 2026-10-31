@@ -7,6 +7,8 @@ the URL.
 """
 from __future__ import annotations
 
+import re
+
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
@@ -65,10 +67,9 @@ def _chip(body: str, key: str) -> str:
 
 
 def _emails(body: str) -> set[str]:
-    return {
-        cell.split("</code>", 1)[0]
-        for cell in body.split('id="users-table"', 1)[-1].split("<td><code>")[1:]
-    }
+    """The table's addresses, plain or a verified account's pill (19Z)."""
+    table = body.split('id="users-table"', 1)[-1]
+    return set(re.findall(r"<td><code(?: [^>]*)?>([^<]+)</code>", table))
 
 
 @pytest.fixture

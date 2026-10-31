@@ -293,6 +293,13 @@ def _write_email_change(db: Session, target: User, new_email: str) -> None:
     )
 
 
+def is_verified(user: User) -> bool:
+    """Whether ``user`` is bound to its person in the directory (19Z,
+    accounts item): an Entra object id from a checked invite or a
+    sign-in."""
+    return bool((user.external_principal_id or "").strip())
+
+
 @dataclass(frozen=True)
 class WorkspaceUserRow:
     id: int
@@ -308,6 +315,8 @@ class WorkspaceUserRow:
     # The Accounts chip the row sits under (``account_listing.CATEGORIES``),
     # which decides its role controls (admin_pages_refine Item 2).
     category: str = ""
+    # Bound to its person in the directory (19Z, accounts item).
+    verified: bool = False
 
 
 class UserOperationError(ValueError):
