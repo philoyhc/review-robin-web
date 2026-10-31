@@ -22,9 +22,30 @@
           That doesn't look like a valid email address.
         {% elif invite_error == "requires_super_admin" %}
           Only a super-admin can invite someone as a sys-admin.
+        {% elif invite_error == "not_in_directory" %}
+          That address isn't in the institution's directory, so they
+          couldn't sign in. Check it, or try their other address.
+        {% elif invite_error == "ambiguous_in_directory" %}
+          That address matches more than one directory account. Use
+          their sign-in name (UPN) instead.
+        {% elif invite_error == "account_exists" %}
+          That address belongs to someone who already has an account
+          here, under another address. Use that row instead.
         {% else %}
           Couldn't add that user. Try again.
         {% endif %}
+      </p>
+    </div>
+  {% endif %}
+
+  {# Created, but the directory could not be asked (segment 19Z, accounts
+     item): the account binds to its person at their first sign-in. #}
+  {% if invite_unchecked %}
+    <div class="card banner-scroll-target" role="status">
+      <p>
+        Invited, but the address couldn't be checked against the
+        directory just now. It is matched to its person when they first
+        sign in.
       </p>
     </div>
   {% endif %}

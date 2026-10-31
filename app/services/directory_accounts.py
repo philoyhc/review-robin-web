@@ -83,6 +83,15 @@ def accounts(outcomes: Mapping[str, Outcome]) -> dict[str, Account]:
     return {k: a for k, a in found.items() if a is not None}
 
 
+def look_up_one(directory: Directory | None, address: str) -> Outcome | None:
+    """One address's directory outcome, or ``None`` when nothing was
+    asked: no directory, or a value that is not an address."""
+    k = key(address)
+    if k is None or directory is None:
+        return None
+    return look_up_all(directory, [k], budget=BUDGET).get(k)
+
+
 def resolver(directory: Directory | None) -> Callable[[str], Account | None]:
     """One address resolved on demand, for the single-row add and edit."""
 
