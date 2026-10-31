@@ -188,7 +188,9 @@ def test_the_script_holds_back_for_an_unpreviewed_column(client: TestClient) -> 
     assert 'body.error === "no_graph"' in text
     assert "end(stopped)" in text and 'end("")' not in text
     # The column is fixed for the run, and the previewed one is posted (Codex, #3421).
-    assert "column.disabled = true" in text and "column.value = previewed" in text
+    assert "column.disabled = true" in text
+    # Every submit re-enables it: the outcomes post and the no_graph fallback (Codex, #3421).
+    assert text.count("column.disabled = false; column.value = previewed;") == 3
 
 
 def test_a_refused_sign_in_marks_the_rest_with_its_kind(client: TestClient, directory: Recording) -> None:

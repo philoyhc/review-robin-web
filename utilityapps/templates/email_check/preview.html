@@ -138,6 +138,7 @@
                 if (response.status === 503 && body.error === "no_graph" && !done) {
                   // No directory access: the plain post shows the preview's alert.
                   done = true;
+                  if (column) { column.disabled = false; column.value = previewed; }
                   form.action = checkUrl;
                   form.submit();
                   return null;
