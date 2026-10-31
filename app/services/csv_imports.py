@@ -29,7 +29,7 @@ from app.logging_config import get_logger
 from app.schemas.observer_cohort_rule import CohortRuleSet
 from app.schemas.validation import Severity, ValidationIssue
 from app.services import audit, field_labels, field_label_csv
-from app.services import roster_bulk, unit_of_work
+from app.services import directory_accounts, roster_bulk, unit_of_work
 from app.services import invitations as invitations_service
 from app.services import session_lifecycle as lifecycle
 from app.services.email_identity import EMAIL_RE, normalize_email
@@ -66,6 +66,26 @@ _ROSTER_COLUMNS: dict[str, frozenset[str]] = {
     ),
 }
 
+
+@dataclass(frozen=True)
+class DirectoryCheck:
+    """An import's directory check (segment 21F): the accounts its
+    addresses resolved to, keyed by lookup key, and the counts its audit
+    event records."""
+
+    accounts: dict[str, directory_accounts.Account]
+    counts: dict[str, int]
+
+
+
+def directory_check(directory: Any, addresses: list[str | None]) -> DirectoryCheck:
+    """Resolve an import's addresses through ``directory`` (``None``:
+    nothing checked) for `_save` to store and count (segment 21F)."""
+    outcomes = directory_accounts.resolve(directory, addresses)
+    return DirectoryCheck(
+        accounts=directory_accounts.accounts(outcomes),
+        counts=directory_accounts.counts(outcomes, addresses, checked=directory is not None),
+    )
 
 @dataclass
 class ParseResult:
@@ -1277,6 +1297,7 @@ def save_reviewers(
     filename: str,
     correlation_id: str,
     field_labels_captured: dict[tuple[str, str], str] | None = None,
+    directory: DirectoryCheck | None = None,
 ) -> tuple[int, int]:
     # One commit for the roster and its labels, so the lock taken by
     # the gate holds to the end and a refusal can't follow a committed
@@ -1294,6 +1315,7 @@ def save_reviewers(
             filename=filename,
             correlation_id=correlation_id,
             to_kwargs=_reviewer_to_kwargs,
+            directory=directory,
         )
         # Segment 19C Item 1 — reconcile reviewer friendly labels from
         # the roster header (upsert present, clear absent). ``None`` = a
@@ -1319,6 +1341,7 @@ def save_reviewees(
     filename: str,
     correlation_id: str,
     field_labels_captured: dict[tuple[str, str], str] | None = None,
+    directory: DirectoryCheck | None = None,
 ) -> tuple[int, int]:
     from app.services.instruments import seed_display_fields_from_reviewees
 
@@ -1337,6 +1360,7 @@ def save_reviewees(
             filename=filename,
             correlation_id=correlation_id,
             to_kwargs=_reviewee_to_kwargs,
+            directory=directory,
         )
         # Lazy-seed display fields for any populated reviewee slots
         # (profile_link / tag_1..3) — see guide/unfinished_business item #14.
@@ -1363,6 +1387,7 @@ def save_observers(
     rows: list[ObserverImportRow],
     filename: str,
     correlation_id: str,
+    directory: DirectoryCheck | None = None,
 ) -> tuple[int, int]:
     lifecycle.require_not_archived(db, session)
     return _save(
@@ -1376,6 +1401,7 @@ def save_observers(
         filename=filename,
         correlation_id=correlation_id,
         to_kwargs=_observer_to_kwargs,
+        directory=directory,
     )
 
 
@@ -1428,6 +1454,7 @@ def _save(
     filename: str,
     correlation_id: str,
     to_kwargs: Any,
+    directory: DirectoryCheck | None = None,
 ) -> tuple[int, int]:
     lifecycle.invalidate_if_validated(
         db,
@@ -1462,7 +1489,17 @@ def _save(
     db.flush()
 
     for row in rows:
-        db.add(model(**to_kwargs(row, session.id)))
+        kwargs = to_kwargs(row, session.id)
+        if directory is not None:
+            # Segment 21F: the account the row's address resolved to, or
+            # none (unresolved, not checked, or not an address).
+            address = kwargs.get("email") or kwargs.get("email_or_identifier")
+            kwargs.update(
+                directory_accounts.columns(
+                    directory.accounts.get(directory_accounts.key(address) or "")
+                )
+            )
+        db.add(model(**kwargs))
     db.flush()
 
     audit.write_event(
@@ -1487,6 +1524,9 @@ def _save(
                 if cascaded_relationship_count is not None
                 else {}
             ),
+            # Segment 21F: what the directory check came to, over the
+            # file's distinct addresses. Omitted when the caller ran none.
+            **(directory.counts if directory is not None else {}),
         ),
         context={"filename": filename} if filename else None,
         correlation_id=correlation_id,

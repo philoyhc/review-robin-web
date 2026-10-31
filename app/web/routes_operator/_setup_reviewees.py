@@ -41,6 +41,7 @@ from app.web.deps import (
     require_session_operator,
 )
 from app.web.routes_operator._shared import (
+    account_resolver,
     _setup_row_window,
     _handle_import,
     dismiss_held_upload,
@@ -450,6 +451,7 @@ def reviewees_create(
             status=status_value,
             user=user,
             correlation_id=request_correlation_id(),
+            resolve_account=account_resolver(request),
         )
     except RevieweeOperationError as exc:
         return _render_reviewees_page(
@@ -541,6 +543,7 @@ def reviewees_update(
             user=user,
             correlation_id=request_correlation_id(),
             acknowledged_loss=acknowledged_loss(acknowledge_response_loss),
+            resolve_account=account_resolver(request),
         )
     except RevieweeOperationError as exc:
         return _render_reviewees_page(

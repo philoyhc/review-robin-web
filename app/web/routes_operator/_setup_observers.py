@@ -50,6 +50,7 @@ from app.web.deps import (
     request_correlation_id,
 )
 from app.web.routes_operator._shared import (
+    account_resolver,
     _setup_row_window,
     _redirect_keeping_selection,
     _row_action_anchor,
@@ -57,6 +58,7 @@ from app.web.routes_operator._shared import (
     _require_selected_response_loss_ack,
     _require_not_archived,
     _templates,
+    directory_or_none,
     dismiss_held_upload,
     hold_for_ask,
     read_upload,
@@ -460,6 +462,7 @@ def observers_create(
             cohort_rule=rule.payload,
             user=user,
             correlation_id=request_correlation_id(),
+            resolve_account=account_resolver(request),
         )
     except ObserverOperationError as exc:
         return _render_observers_page(
@@ -541,6 +544,7 @@ def observers_update(
             cohort_rule=rule.payload,
             user=user,
             correlation_id=request_correlation_id(),
+            resolve_account=account_resolver(request),
         )
     except ObserverOperationError as exc:
         return _render_observers_page(
@@ -990,6 +994,12 @@ async def observers_import_submit(
     # that cannot occur, and 400d when they could not — the `if
     # existing > 0:` block it guarded went with it.
 
+    # Segment 21F: each address resolved through the directory first.
+    directory_check = await run_in_threadpool(
+        csv_imports.directory_check,
+        directory_or_none(request),
+        [row.email for row in result.rows],
+    )
     # The service locks the session row (findings Bc4): wait for it off
     # the event loop.
     await run_in_threadpool(
@@ -1000,6 +1010,7 @@ async def observers_import_submit(
         rows=result.rows,
         filename=upload.filename or "",
         correlation_id=request_correlation_id(),
+        directory=directory_check,
     )
     release_hold(db, token=upload.token, user=user, review_session=review_session)
     # Open, like the failure path above and like `delete-all`: one rule

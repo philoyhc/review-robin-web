@@ -25,11 +25,14 @@ Audit events registered in ``EVENT_SCHEMAS``:
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Reviewer, ReviewSession, User
 from app.services import audit, csv_imports
+from app.services import directory_accounts
 from app.services import session_lifecycle as lifecycle
 from app.services.email_identity import looks_like_email, normalize_email
 from app.services.roster_bulk import bulk_delete, bulk_set_status
@@ -146,6 +149,7 @@ def create_reviewer(
     status: str = "active",
     user: User,
     correlation_id: str | None = None,
+    resolve_account: Callable[[str], directory_accounts.Account | None] | None = None,
 ) -> Reviewer:
     """Insert a new Reviewer row. Rejects duplicate emails within
     the session (case-insensitive match). Returns the persisted
@@ -207,6 +211,10 @@ def create_reviewer(
         tag_1=clean_tag_1,
         tag_2=clean_tag_2,
         tag_3=clean_tag_3,
+        # Segment 21F: the account the address resolves to, if any.
+        **directory_accounts.columns(
+            resolve_account(clean_email) if resolve_account is not None else None
+        ),
     )
     db.add(reviewer)
     db.flush()
@@ -251,6 +259,7 @@ def update_reviewer(
     status: str | object = _UNSET,
     user: User,
     correlation_id: str | None = None,
+    resolve_account: Callable[[str], directory_accounts.Account | None] | None = None,
 ) -> dict[str, list[object]]:
     """Field-level update. Only emits ``reviewer.updated`` if at
     least one field actually changed; the changes envelope carries
@@ -333,6 +342,14 @@ def update_reviewer(
 
     for field, (_, new_value) in changes.items():
         setattr(reviewer, field, new_value)
+    # Segment 21F: a changed address rebinds, or loses its binding.
+    if "email" in changes:
+        directory_accounts.rebind(
+            reviewer,
+            old=changes["email"][0],  # type: ignore[arg-type]
+            new=changes["email"][1],  # type: ignore[arg-type]
+            resolve=resolve_account,
+        )
     db.flush()
 
     # ``Assignment.is_self_review`` is keyed off ``reviewer.email``

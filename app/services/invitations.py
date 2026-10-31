@@ -30,6 +30,7 @@ from app.db.models import (
 )
 from app.logging_config import get_logger
 from app.services import audit, email_templates
+from app.services import directory_accounts
 from app.services import session_lifecycle as lifecycle
 
 log = get_logger(__name__)
@@ -384,7 +385,7 @@ def send_invitation(
         reviewer_id=reviewer.id,
         invitation_id=invitation.id,
         kind=INVITATION_KIND,
-        to_email=reviewer.email,
+        to_email=directory_accounts.recipient(reviewer),
         cc_emails=cc_emails,
         bcc_emails=bcc_emails,
         subject=subject[:_SUBJECT_MAX],
@@ -858,7 +859,7 @@ def send_reminder(
         reviewer_id=reviewer.id,
         invitation_id=invitation.id,
         kind=REMINDER_KIND,
-        to_email=reviewer.email,
+        to_email=directory_accounts.recipient(reviewer),
         cc_emails=cc_emails,
         bcc_emails=bcc_emails,
         subject=subject[:_SUBJECT_MAX],
@@ -1092,7 +1093,7 @@ def queue_responses_received(
                 status="queued",
             )
             db.add(outbox)
-        outbox.to_email = reviewer.email
+        outbox.to_email = directory_accounts.recipient(reviewer)
         outbox.cc_emails = cc_emails
         outbox.bcc_emails = bcc_emails
         outbox.subject = subject[:_SUBJECT_MAX]
