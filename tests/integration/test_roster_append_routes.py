@@ -137,3 +137,38 @@ def test_an_append_needs_no_response_loss_acknowledgment(
     appended = _upload(client, url, None, append="true", held_token=held)
     assert appended.status_code == 303, appended.text[:400]
     assert _addresses(db, "reviewers", s.id) == ["ann@example.edu", "bea@example.edu"]
+
+
+def _relationships_session(client: TestClient, db: Session, code: str):
+    s = _session(client, db, code=code)
+    s.relationships_enabled = True
+    db.commit()
+    base = f"/operator/sessions/{s.public_id}"
+    _upload(client, f"{base}/reviewers/import", b"ReviewerName,ReviewerEmail\nAl,al@example.edu\nBo,bo@example.edu\n")
+    _upload(client, f"{base}/reviewees/import", b"RevieweeName,RevieweeEmail\nCy,cy@example.edu\n")
+    assert _upload(client, f"{base}/relationships/import", b"ReviewerEmail,RevieweeEmail\nal@example.edu,cy@example.edu\n").status_code == 303
+    return s, f"{base}/relationships/import"
+
+
+def _pairs(db: Session, session_id: int) -> int:
+    from app.db.models import Relationship
+
+    db.expire_all()
+    return len(db.execute(select(Relationship).where(Relationship.session_id == session_id)).scalars().all())
+
+
+def test_relationships_append_adds_a_pair_and_refuses_a_held_one(client: TestClient, db: Session) -> None:
+    s, url = _relationships_session(client, db, "apr-rel")
+    new = b"ReviewerEmail,RevieweeEmail\nbo@example.edu,cy@example.edu\n"
+    held = b"ReviewerEmail,RevieweeEmail\nAL@example.edu,cy@example.edu\n"
+
+    refused = _upload(client, url, held, append="true")
+    assert refused.status_code == 400
+    assert "already a relationship" in refused.text
+    assert _pairs(db, s.id) == 1
+
+    asked = _upload(client, url, new, append="true", confirm_replace="true")
+    assert asked.status_code == 400 and "not both" in asked.text
+
+    assert _upload(client, url, new, append="true").status_code == 303
+    assert _pairs(db, s.id) == 2

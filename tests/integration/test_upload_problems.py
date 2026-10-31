@@ -214,7 +214,7 @@ def test_a_relationships_replace_without_the_tick_says_so(
     )
 
     assert response.status_code == 400
-    assert "Tick the replacement-confirmation box just above Upload" in response.text
+    assert "Tick replace or append just above Upload" in response.text
 
 
 def test_a_clean_page_has_no_banner(client: TestClient, db: Session) -> None:

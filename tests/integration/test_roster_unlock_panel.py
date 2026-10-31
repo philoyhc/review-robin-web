@@ -334,9 +334,8 @@ def test_each_confirm_key_appears_exactly_once(
     body = _markup(_get(client, rs, page, "?unlocked=1"))
     for key in ("delete-all", "replace-roster"):
         # The Upload card's replace and append ticks share their key
-        # (19Z), so either opens the one Upload; Relationships' append
-        # tick is not wired yet.
-        ticks = 2 if key == "replace-roster" and page != "relationships" else 1
+        # (19Z), so either opens the one Upload.
+        ticks = 2 if key == "replace-roster" else 1
         assert body.count(f'data-delete-confirm="{key}"') == ticks, key
         assert body.count(f'data-delete-btn="{key}"') == 1, key
 
