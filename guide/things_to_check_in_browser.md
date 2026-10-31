@@ -29,6 +29,23 @@ P5) or the Rehydrate round trip (D28).
 These need real Easy Auth claims, so they are checks for an Azure
 deployment, not a local run.
 
+- **What they prove.** A real sign-in carries the account's directory
+  principal id. The first sign-in records it on the user's row, and
+  later sign-ins find the row by that id before the email
+  (`app/services/users.py`). So an address change keeps the row. Fake
+  auth never records one, which is why a local run can't show it.
+- **Where.** The institutional deployment,
+  `https://cordware.nus.edu.sg/reviewrobin/`, live since 2026-10-31.
+  The dev slot is dormant.
+- **What they need.**
+  - Rows 1 and 2: NUS IT changing the primary email of a test account
+    in the tenant. Ask first, then work in this order: sign in, have IT
+    change the email, send row 2's invite, sign in again.
+  - Row 3: a second NUS account that has never signed in to Review
+    Robin.
+- **Where to look.** The event names below are in the sys-admin audit
+  log.
+
 - [ ] **A changed email keeps the account.** Sign in as an operator, have
   the tenant change that account's primary email, and sign in again:
   the same sessions, flags and SMTP settings are there, and the
