@@ -58,7 +58,15 @@ concluding** (decision 2026-09-05) and independent of each other.
    address the stub below introduces.
    **Plan:** `guide/segment_20_operator_polish_and_documentation.md`.
 
-3. **19X — Refinements from browser runs** (not gated on Azure). A
+3. **21F — Roster addresses resolved through the directory** (not gated
+   on Azure). At upload each roster address is looked up through Graph;
+   a resolved row stores the account and matches its person by object
+   ID, so rosters given by sign-in name work. Ruled 2026-10-31 over
+   matching mail-or-UPN at sign-in, which one account's mail being
+   another's UPN makes unsafe.
+   **Plan:** `guide/segment_21F_directory_rosters.md`.
+
+4. **19X — Refinements from browser runs** (not gated on Azure). A
    standing segment for small follow-ups from the author's browser
    runs, one item each. Items 1–3 closed 2026-10-19, Items 4–9 on
    2026-10-20 and Items 10–13 on 2026-10-22. None open; add one per
