@@ -129,15 +129,16 @@ by one.
   It takes 1–25 keys (`check.BATCH_MAX`), each already a lookup key.
   It answers `{"outcomes": {key: outcome}}`, `no-store`, each request
   under its own 60 s budget (`check.BATCH_BUDGET`).
-  - Refusals: another content type `415`, too large `413`, bad JSON or
+  - Refusals: another content type `415`, too large or no `Content-Length` `413`, bad JSON or
     keys `400`, no delegated token `503`. On the `503` the page falls back
     to the plain post, which shows the preview's alert.
 - **When the last key is back,** the page posts the file, the column and
   the outcomes (`outcomes`, JSON) to `/check`. The result is built from
   them and nothing is looked up again. Outcomes are checked for shape against
   the file, not for truth (they come from the super-admin's own page): a key the file lacks, an unknown status or
-  match type, `INVALID_INPUT`, an account that doesn't fit its status, or
-  a field over 512 characters re-renders the upload page with a `400`.
+  match type, `INVALID_INPUT`, an account or an error kind that doesn't fit
+  its status, a field over 512 characters, or outcomes that aren't JSON
+  re-renders the upload page with a `400`.
 - **A key with no outcome** is `ERROR`, kind `incomplete`: a lookup
   request failed and the page stopped. A refused sign-in in any answer
   stops the page, which posts `stopped` with that kind, and the keys not
