@@ -41,7 +41,7 @@ None is shown on an empty roster. All three are mutually exclusive, none is tick
 
 **Rejected:** *looking up the roster's unbound rows on an upsert*, to catch an existing row the directory never resolved. It can double the lookup on a 1,500-row roster inside one 120-second budget. The cost is a gap: an existing row the directory never resolved, matched by a file address for the same person, is added as a second row that nothing flags (Codex, `#3438`).
 
-**Item: matched addresses as pills** (author, 2026-10-31, after production went live on RRW `920f5c7`). In the three roster tables and the Assignments table, an address bound to a directory account reads as the plain display pill (`pill pill-count`), its case kept, with a "Matched to a directory account" tooltip. Any other address stays plain code. One macro, `operator/partials/_roster_address.html`, renders all five cells.
+**Item: matched addresses as pills** (author, 2026-10-31, after production went live on RRW `920f5c7`). In the three roster tables and the Assignments table, an address bound to a directory account reads as the plain display pill (`pill pill-count`), its case kept, with a "Matched to a directory account" tooltip. Any other address stays plain code. One macro, `operator/partials/_roster_address.html`, renders all five cells. Relationships and the Invitations / Responses pages stay plain: the item names the three roster tables and Assignments, and a later ask can widen it.
 
 ## Semantics — upsert
 
@@ -125,8 +125,8 @@ Upsert rungs (2026-10-31): rung 7 rode with the amendment (`#3438`), rung 8 `#34
 7. **The Validate warning.** The three `*.duplicate_account` soft rules, with tests. Must not touch the upload cards.
 8. **Upsert scaffold.** The merge tick on append's line on the four cards ("Yes, append to, [ ] merge with the existing roster."), drawn and disabled, in the same exclusive group. Wording settled on the page.
 9. **Upsert in the services.** `mode="upsert"` through `_save` and `save_relationships`: matching (address, pair, account), blank-keeps, Status only when its column is present, the name check, per-row `*.updated` events, and the counts. Service tests. Must not touch a route.
-11. **Matched addresses as pills** (the item above). Must not touch a route or service.
 10. **Wire upsert on the four cards, then close.** Wiring, the tag-change group-clear ask on the person rosters, route tests; the cumulative `diff-reviewer` read of rungs 7–10 (base: `main` before rung 7). Then the close: `spec-writer` on the doc-impact specs, and the author's browser check of each card.
+11. **Matched addresses as pills** (the item above). Must not touch a route or service.
 
 ## Definition of done
 
@@ -165,7 +165,7 @@ Upsert rungs (2026-10-31): rung 7 rode with the amendment (`#3438`), rung 8 `#34
 - `spec/csv_contracts.md` — §3: append and upsert modes for the four importers, the already-on-the-roster rule, matching on upsert, blank-keeps, label upsert, and the audit `context`.
 - `spec/assignments.md` — an append leaves assignments in place and marks them stale; the table's address cells show a bound address as a pill.
 - `docs/security_posture.md` — the replace tick's description gains its Append counterpart.
-- `spec/ui_elements.md` — "Delete-confirm standard": the replace tick is no longer `required`; a key may sit on more than one box (the pairing opens its button while any is ticked); the `data-exclusive-tick` group.
+- `spec/ui_elements.md` — "Delete-confirm standard": the replace tick is no longer `required`; a key may sit on more than one box (the pairing opens its button while any is ticked); the `data-exclusive-tick` group; §9 gains the `pill-address` modifier (a pill on a roster `<code>` address, case and size kept).
 - `spec/operator_button_audit.md` — the Upload rows open on either tick; the second shared confirm-checkbox script (`data-exclusive-tick`).
 - `spec/extract_data.md` — the pairing's unique-key note, which a shared Upload key now qualifies.
 - `spec/validate_page.md` — the three `*.duplicate_account` soft rules (upsert amendment).
