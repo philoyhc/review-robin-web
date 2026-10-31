@@ -624,10 +624,11 @@ def test_a_roster_with_no_relationships_reads_exactly_as_before(
     # `Relationships` nav tab and a status pill on every roster page, so
     # an unscoped search reports a mention that was always there.
     phrases = re.findall(
-        r"(?:Yes, delete the existing|Yes, replace the existing|Yes, append to the existing)[^.]*",
+        r"(?:Yes, delete the existing|Yes, replace the existing|Yes, append to)[^.]*",
         re.sub(r"<[^>]+>", " ", flat),
     )
-    # Delete-all, then the Upload card's replace and append ticks (19Z).
+    # Delete-all, then the Upload card's replace tick and its append /
+    # merge line (19Z).
     assert len(phrases) == 3, phrases
     for phrase in phrases:
         assert "relationship" not in phrase.lower(), phrase

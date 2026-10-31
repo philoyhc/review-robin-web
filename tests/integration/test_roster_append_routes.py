@@ -235,3 +235,28 @@ def test_an_append_onto_an_empty_roster_is_just_the_roster(client: TestClient, d
     event = db.execute(select(AuditEvent).where(AuditEvent.event_type == "reviewers.imported")).scalar_one()
     assert "mode" not in (event.detail.get("context") or {})
     assert _addresses(db, "reviewers", s.id) == ["ann@example.edu"]
+
+
+@pytest.mark.parametrize("kind", ["reviewers", "reviewees", "relationships", "observers"])
+def test_the_merge_tick_shares_appends_line_drawn_and_disabled(client: TestClient, db: Session, kind: str) -> None:
+    """Rung 8's scaffold (author, 2026-10-31): "Yes, append to, [ ] merge
+    with the existing roster." Merge is in the exclusive group, disabled
+    until it is wired, and nothing is shown on an empty roster."""
+    import re
+
+    if kind == "relationships":
+        s, _ = _relationships_session(client, db, f"apr-merge-{kind}")
+    else:
+        s = _session(client, db, code=f"apr-merge-{kind}")
+    page_url = f"/operator/sessions/{s.public_id}/{kind}?unlocked=1"
+    if kind != "relationships":
+        assert 'name="merge"' not in client.get(page_url).text
+        _upload(client, f"/operator/sessions/{s.public_id}/{kind}/import", FILES[kind][0])
+    page = client.get(page_url).text
+    line = re.search(r'<div class="confirm-label upload-mode-line">(.*?)</div>', page, re.S)
+    assert line, "no append / merge line"
+    body = line.group(1)
+    assert 'name="append"' in body and "Yes, append to," in body
+    merge = re.search(r'<input[^>]*name="merge"[^>]*>', body).group(0)
+    assert "disabled" in merge and 'data-exclusive-tick="upload-mode"' in merge
+    assert "merge with the existing roster." in body
