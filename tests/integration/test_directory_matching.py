@@ -157,6 +157,32 @@ def test_the_dashboard_and_role_disclosure_follow_the_account(db: Session, as_us
     assert disclosable_roles(db, "e0123456@example.edu", principal_id=None) == frozenset()
 
 
+def test_two_rows_on_one_account_resolve_to_the_same_row_everywhere(
+    db: Session, as_user, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Jane by UPN and by mail on one reviewer roster: the dashboard shows
+    the row the gate admits, the lowest id (`require_reviewer_in_session`
+    orders by id; Codex, #3430)."""
+    from app.services import responses as responses_service
+
+    session = _open_session(db, "match-twice")
+    first = Reviewer(session_id=session.id, name="Jane", email="e0123456@example.edu", directory_object_id=JANE_OID)
+    db.add(first)
+    db.flush()
+    db.add(Reviewer(session_id=session.id, name="Jane", email="jane.tan@example.edu", directory_object_id=JANE_OID))
+    db.commit()
+    shown: list[int] = []
+    real = responses_service.session_pill_for_reviewer
+
+    def spy(db, *, reviewer, session_id):
+        shown.append(reviewer.id)
+        return real(db, reviewer=reviewer, session_id=session_id)
+
+    monkeypatch.setattr(responses_service, "session_pill_for_reviewer", spy)
+    assert as_user("jane.tan@example.edu", JANE_OID).get("/me").status_code == 200
+    assert shown == [first.id]
+
+
 # --- one person across rosters ---
 
 

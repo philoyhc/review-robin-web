@@ -122,7 +122,11 @@ def reviewer_dashboard(
             roles_by_session[s.id].append(role)
 
     for reviewer, s in reviewer_rows:
-        reviewer_by_session[s.id] = reviewer
+        # The lowest id, as ``require_reviewer_in_session`` picks it:
+        # since segment 21F one account can hold two rows (Codex, #3430).
+        held = reviewer_by_session.get(s.id)
+        if held is None or reviewer.id < held.id:
+            reviewer_by_session[s.id] = reviewer
         _add(s, "reviewer")
     for reviewee, s in reviewee_rows:
         # The /results gate's own predicate: a reviewee carried under a
