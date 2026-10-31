@@ -49,6 +49,7 @@ Graph from application code is proved (Cordware's first release, 2026-10-31). Th
   - Residential's matching, which has its own plan.
 - **Copying a session** carries the stored account fields.
 - **The single-row add forms** resolve their one address the same way.
+- **An address edit rebinds.** `update_reviewer`, `update_reviewee` and `update_observer` resolve the new address the same way. Without a lookup (no token, or not found) the old binding is cleared, never kept: a row edited from Alice's address to Bob's must not stay bound to Alice (Codex, `#3424`). An edit that leaves the address unchanged, folded, keeps the binding.
 
 ## Judgment calls — decided
 
@@ -65,6 +66,7 @@ Taken 2026-10-31 at `2bb3e01`.
 | SQL roster filters on one address | 3 in `services/participants.py` | `grep -n "func.lower(func.trim(" app/services/participants.py` |
 | Roster CSV parsers | 3 (`parse_reviewer_csv`, `parse_reviewee_csv`, `parse_observer_csv`) | `grep -n "^def parse_.*_csv" app/services/csv_imports.py` |
 | Roster row constructors | 6 (3 single-add services, 3 in `session_clone.py`) | `grep -rn "Reviewer(\|Observer(\|Reviewee(" app/services --include=*.py` |
+| Roster address edits | 3 (`update_reviewer`, `update_reviewee`, `update_observer`) | `grep -rn "def update_reviewer\|def update_reviewee\|def update_observer" app/services` |
 | Held-upload routes | 4 setup modules | `grep -rln "HeldUpload\|held_upload" app/web/routes_operator --include=*.py` |
 | Models touched | 3 (`reviewer`, `reviewee`, `observer`) | `ls app/db/models/{reviewer,reviewee,observer}.py` |
 
@@ -78,7 +80,8 @@ Taken 2026-10-31 at `2bb3e01`.
      - the lookup in the three preview paths;
      - the preview's outcome counts, with the wording settled on the page first (scaffold);
      - storing the account on save;
-     - the single-add forms.
+     - the single-add forms;
+     - address edits rebinding, or clearing the binding.
    - Must not change any gate.
 5. **Matching by account.** The 14 sites and 3 SQL filters prefer the object ID, then fall back to mail. Tests include two negative cases: `FAKE_USERS`' `office@` collision, where the account whose UPN is the roster's mail is not admitted; and a persisted principal ID that differs from the token's, which binds nothing. Last build rung, so `diff-reviewer` reads 2–5.
 6. **Close.** `spec-writer` on the doc-impact specs, then the author's browser check of a UPN roster on the real tenant.
@@ -89,6 +92,7 @@ Taken 2026-10-31 at `2bb3e01`.
 - The `office@` collision admits neither the wrong account by UPN nor anyone by an `AMBIGUOUS` binding (test).
 - A user row whose stored principal ID belongs to an earlier holder of its email does not admit a new account to rows bound to the earlier one (test).
 - An unresolved, external or anonymous row matches exactly as before (tests).
+- Editing a bound row's address rebinds it, or clears the binding when the new address doesn't resolve. The old account loses access and the new one gains it, for all three roster types (tests).
 - With no token, the upload proceeds unchecked and says so (test).
 - The new columns survive `alembic downgrade base` and `upgrade head` on Postgres (CI).
 - `## Doc impact` section present and current
