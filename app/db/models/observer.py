@@ -44,6 +44,11 @@ class Observer(Base, TimestampMixin):
     display_name: Mapped[str | None] = mapped_column(String(255))
     status: Mapped[str] = mapped_column(String(32), default="active", nullable=False)
     tag_1: Mapped[str | None] = mapped_column(String(255))
+    # The directory account the address resolved to at upload (segment
+    # 21F); all three empty when it did not resolve. The object ID binds.
+    directory_object_id: Mapped[str | None] = mapped_column(String(64), index=True)
+    directory_mail: Mapped[str | None] = mapped_column(String(320))
+    directory_upn: Mapped[str | None] = mapped_column(String(320))
     cohort_rule: Mapped[dict[str, Any] | None] = mapped_column(
         JSON, nullable=True
     )

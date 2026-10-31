@@ -638,3 +638,26 @@ def test_a_clone_leaves_the_preview_member_ids_behind(db: Session) -> None:
     ).scalar_one()
     assert copied.band2_state == {"sample_reviewee_name": "E One"}
     assert instrument.band2_state["sample_group_member_ids"] == [7, 8]
+
+
+def test_clone_all_carries_each_rows_directory_account(db: Session) -> None:
+    """A roster row's resolved account copies with it (segment 21F), so a
+    duplicated session's rows still bind to the same people."""
+    source, op = _source_session(db, "clone-dir")
+    account = {
+        "directory_object_id": "11111111-1111-4111-8111-111111111111",
+        "directory_mail": "jane.tan@example.edu",
+        "directory_upn": "e0123456@example.edu",
+    }
+    for model in (Reviewer, Reviewee):
+        row = db.execute(select(model).where(model.session_id == source.id)).scalar_one()
+        for name, value in account.items():
+            setattr(row, name, value)
+    db.add(Observer(session_id=source.id, email="e0123456@example.edu", **account))
+    db.commit()
+
+    clone = session_clone.clone_session(db, source=source, user=op, mode="all")
+
+    for model in (Reviewer, Reviewee, Observer):
+        row = db.execute(select(model).where(model.session_id == clone.id)).scalar_one()
+        assert {name: getattr(row, name) for name in account} == account, model.__name__

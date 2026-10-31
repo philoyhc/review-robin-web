@@ -27,6 +27,11 @@ class Reviewee(Base, TimestampMixin):
     tag_1: Mapped[str | None] = mapped_column(String(255))
     tag_2: Mapped[str | None] = mapped_column(String(255))
     tag_3: Mapped[str | None] = mapped_column(String(255))
+    # The directory account the address resolved to at upload (segment
+    # 21F); all three empty when it did not resolve. The object ID binds.
+    directory_object_id: Mapped[str | None] = mapped_column(String(64), index=True)
+    directory_mail: Mapped[str | None] = mapped_column(String(320))
+    directory_upn: Mapped[str | None] = mapped_column(String(320))
     results_acknowledged_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
