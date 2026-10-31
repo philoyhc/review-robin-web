@@ -184,3 +184,39 @@ def test_no_token_is_an_error_not_an_empty_directory(token: str | None) -> None:
     headers = {} if token is None else {graph.TOKEN_HEADER: token}
     with pytest.raises(GraphError, match="no_token"):
         graph.directory_for(_request(headers), settings)
+
+
+# --- the shared lookup (segment 21F) ---
+
+
+def test_look_up_all_classifies_each_distinct_key_once() -> None:
+    asked: list[str] = []
+
+    class Recording(FakeDirectory):
+        def find_users(self, address: str) -> list[DirectoryUser]:
+            asked.append(address)
+            return super().find_users(address)
+
+    jane = next(u for u in graph.FAKE_USERS if u.mail and u.mail.startswith("jane"))
+    outcomes = graph.look_up_all(
+        Recording(),
+        [jane.mail, jane.user_principal_name, jane.mail, "office@example.edu", "nobody@example.edu"],
+        budget=10,
+    )
+    assert sorted(asked) == sorted({jane.mail, jane.user_principal_name, "office@example.edu", "nobody@example.edu"})
+    assert outcomes[jane.mail].status == "OK" and outcomes[jane.mail].user == jane
+    assert outcomes[jane.user_principal_name].status == "USE_PRIMARY"
+    # One account's mail is another's UPN: the directory sees both, so no winner.
+    assert outcomes["office@example.edu"].status == "AMBIGUOUS"
+    assert outcomes["nobody@example.edu"].status == "NOT_FOUND"
+
+
+def test_a_refused_sign_in_stops_the_rest() -> None:
+    class Refusing:
+        def find_users(self, address: str) -> list[DirectoryUser]:
+            raise GraphError("unauthorized")
+
+    outcomes = graph.look_up_all(Refusing(), ["a@x.edu", "b@x.edu"], budget=10, workers=1)
+    assert {o.status for o in outcomes.values()} == {"ERROR"}
+    assert {o.error_kind for o in outcomes.values()} == {"unauthorized"}
+    assert "sign out and in again" in outcomes["b@x.edu"].note

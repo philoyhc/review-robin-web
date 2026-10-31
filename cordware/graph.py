@@ -7,9 +7,10 @@ the user's delegated Graph token in `X-MS-TOKEN-AAD-ACCESS-TOKEN`; with
 fake auth on there is no token, and `directory_for` answers from a fixed
 fake directory of invented accounts instead.
 
-Only directory lookups are built, for the Email Address Checker. A
-failure is a `GraphError` with a `kind`, never an empty answer: a caller
-must not read "could not ask" as "nobody there".
+Only directory lookups are built: the Email Address Checker's, shared
+from segment 21F with RRW's roster upload as `look_up_all` and
+`classify` below. A failure is a `GraphError` with a `kind`, never an
+empty answer: a caller must not read "could not ask" as "nobody there".
 
 The standard library makes the requests: nothing here needs a dependency
 the applications do not already have. `GraphDirectory` takes the
@@ -21,10 +22,12 @@ from __future__ import annotations
 import http.client
 import json
 import logging
+import threading
 import time
 import urllib.error
 import urllib.request
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
+from concurrent.futures import ThreadPoolExecutor, wait
 from dataclasses import dataclass
 from typing import Protocol
 from urllib.parse import urlencode
@@ -248,3 +251,90 @@ def directory_for(request: HTTPConnection, settings: IdentitySettings | None = N
     if not token:
         raise _logged(GraphError("no_token"))
     return GraphDirectory(token)
+
+
+# --- Looking addresses up (Utilities segment U1; shared from segment 21F) ---
+
+#: Statuses whose outcome names one account.
+RESOLVED = frozenset({"OK", "USE_PRIMARY", "FOUND_NO_PRIMARY"})
+#: Failures that mean the token, not the address: the first stops every
+#: lookup not yet started, as each would fail the same way.
+SIGN_IN_KINDS = frozenset({"unauthorized", "forbidden"})
+#: Lookups in flight at once by default: conservative.
+WORKERS = 4
+
+
+@dataclass(frozen=True)
+class Outcome:
+    """What one address came to: a status, how it matched, and the account."""
+
+    status: str
+    match_type: str
+    user: DirectoryUser | None = None
+    note: str = ""
+    #: For `ERROR`: the failure's kind, which a log may carry.
+    error_kind: str = ""
+
+
+def classify(key: str, users: list[DirectoryUser]) -> Outcome:
+    """One address (a lookup key, already folded) against what the
+    directory returned for it."""
+    distinct = {u.id: u for u in users}
+    if not distinct:
+        return Outcome("NOT_FOUND", "NONE", note="No user-directory match")
+    if len(distinct) > 1:
+        return Outcome("AMBIGUOUS", "MULTIPLE", note=f"{len(distinct)} accounts match")
+    (user,) = distinct.values()
+    mail = (user.mail or "").lower()
+    if mail and mail == key:
+        return Outcome("OK", "PRIMARY_MAIL", user)
+    if user.user_principal_name.lower() == key:
+        if mail:
+            return Outcome("USE_PRIMARY", "UPN", user)
+        return Outcome("FOUND_NO_PRIMARY", "UPN", user, note="The account has no primary email")
+    # The directory matched on neither field as this compares them: name
+    # no winner rather than guess.
+    return Outcome("AMBIGUOUS", "MULTIPLE", note="The match is neither the account's mail nor its UPN")
+
+
+def error_outcome(kind: str) -> Outcome:
+    """An `ERROR` outcome of ``kind``, with advice the user can act on."""
+    advice = "sign out and in again" if kind in SIGN_IN_KINDS else "try again later"
+    if kind == "incomplete":
+        # The checker's page stopped before sending this key (segment U2).
+        return Outcome("ERROR", "NONE", note=f"Not looked up: the check stopped first; {advice}", error_kind=kind)
+    return Outcome("ERROR", "NONE", note=f"Lookup incomplete ({kind}); {advice}", error_kind=kind)
+
+
+def look_up_all(
+    directory: Directory, keys: Iterable[str], *, budget: float, workers: int = WORKERS
+) -> dict[str, Outcome]:
+    """Each distinct key looked up once, ``workers`` at a time, within
+    ``budget`` seconds. A lookup not finished by then is `ERROR`
+    (`timeout`); a refused sign-in stops every lookup not yet started."""
+    keys = list(dict.fromkeys(keys))
+    stopped: list[str] = []  # the sign-in failure that stopped the run
+    lock = threading.Lock()
+
+    def look_up(key: str) -> Outcome:
+        with lock:
+            if stopped:
+                return error_outcome(stopped[0])
+        try:
+            return classify(key, directory.find_users(key))
+        except GraphError as exc:
+            if exc.kind in SIGN_IN_KINDS:
+                with lock:
+                    stopped[:1] = stopped[:1] or [exc.kind]
+            return error_outcome(exc.kind)
+
+    pool = ThreadPoolExecutor(max_workers=workers)
+    futures = {key: pool.submit(look_up, key) for key in keys}
+    wait(futures.values(), timeout=budget)
+    # Past the budget: cancel what has not started; what is mid-request
+    # finishes on its own and is dropped.
+    pool.shutdown(wait=False, cancel_futures=True)
+    return {
+        key: future.result() if future.done() and not future.cancelled() else error_outcome("timeout")
+        for key, future in futures.items()
+    }

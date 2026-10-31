@@ -99,7 +99,9 @@ then nine result columns in this order (`RESULT_COLUMNS`): `status`,
 ## Lookup
 
 Each distinct key is looked up once, at most four at a time
-(`check.WORKERS`), through `cordware.graph`'s `find_users`: one query
+(`check.WORKERS`), through `cordware.graph`'s `look_up_all`,
+`classify` and `find_users` (shared with RRW's roster upload from
+segment 21F): one query
 matching `mail` or `userPrincipalName`. With fake auth on a local run
 that is the fake directory. Alias lookup is not built, so every row's
 `lookup_coverage` is `BASIC_ONLY`.
