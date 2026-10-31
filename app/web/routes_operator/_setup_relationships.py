@@ -137,7 +137,8 @@ async def relationships_import_submit(
     )
 
     existing = relationships_service.existing_count(db, review_session.id)
-    appending = append == "true"
+    # An append onto an empty roster is just the roster (19Z).
+    appending = append == "true" and existing > 0
     # 19P.3 rung 4 — `panel_open=True` on BOTH in-place 400 paths. A
     # refused file's problems render inside the upload card, which is
     # inside the Unlock panel, and a 400
@@ -1035,7 +1036,6 @@ def _render_relationships_page(
                 "relationships",
                 issues,
                 missing_confirm=missing_confirm,
-                offers_append=True,
                 both_ticks=both_ticks,
             ),
             "missing_confirm": missing_confirm,

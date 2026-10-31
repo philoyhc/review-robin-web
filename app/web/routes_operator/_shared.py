@@ -1062,7 +1062,10 @@ async def _handle_import(
         list_key = "reviewees"
         list_items = assignments.list_reviewees(db, review_session.id)
 
-    appending = append == "true"
+    # An append onto an empty roster is just the roster (plan,
+    # Decision): only a direct POST can send one, as the card shows no
+    # ticks there.
+    appending = append == "true" and existing > 0
 
     def render(
         status_code: int = status.HTTP_200_OK,
@@ -1125,7 +1128,6 @@ async def _handle_import(
                 result.issues,
                 missing_confirm=missing_confirm,
                 missing_response_ack=missing_response_ack,
-                offers_append=True,
                 both_ticks=both_ticks,
             ),
             "filename": upload.filename,

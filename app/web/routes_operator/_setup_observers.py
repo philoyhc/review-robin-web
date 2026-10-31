@@ -326,7 +326,6 @@ def _render_observers_page(
                 "observers",
                 issues,
                 missing_confirm=missing_confirm,
-                offers_append=True,
                 both_ticks=both_ticks,
             ),
             "filename": filename,
@@ -947,7 +946,8 @@ async def observers_import_submit(
             )
         )
     existing = csv_imports.existing_observer_count(db, review_session.id)
-    appending = append == "true"
+    # An append onto an empty roster is just the roster (19Z).
+    appending = append == "true" and existing > 0
 
     def render(
         status_code: int = status.HTTP_200_OK,

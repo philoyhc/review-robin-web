@@ -59,6 +59,19 @@ Taken 2026-10-31 at `02636177`.
 | Test files using `confirm_replace` | 33 | `grep -rl "confirm_replace" tests --include=*.py \| wc -l` |
 | Specs and docs naming replace semantics | 10 live (`spec/` 9, `docs/security_posture.md`) | `grep -rlni "wipe-and-replace\|replace the existing\|confirm_replace" spec docs` |
 
+## Status
+
+Open. Plan `#3433`; rung 2 `#3434` (copy `#3435`), rung 3 `#3436`, rungs 4–5 `#3437`. Rung 5 rode with rung 4 so it was not left unpushed in the container.
+
+The one `diff-reviewer` read of `02636177..3f540f2` found nothing that deletes, cascades, or writes before a refusal. Its findings were handled in `#3437`:
+- **Diverged from Semantics: cross-roster identity.** The name check still leaves out the appended roster's own rows, as on replace. Any row whose address is already on that roster is refused as "already on the roster" whatever its name, so the only difference is which message is shown.
+- **Refusal wording.** The account refusal names the existing row's roster, not its row number: *"… is the same directory account as a reviewer already on the roster."* The spec follows the code.
+- **The deferred two-rows entry narrows less than Semantics says.** `append_conflicts` compares appended rows with existing ones, so two file rows on one account still pass, on append as on replace.
+- **An append onto an empty roster is saved as a plain upload**, as the Decision says. Only a direct POST can send one.
+- **One ask sentence** names both ticks. No card is left with the replace tick alone.
+- **Tests added:** a Relationships append that meets the group-clear ask; an append looks up only the file's addresses.
+- **Specs the build touched beyond Doc impact:** `spec/ui_elements.md`, `spec/operator_button_audit.md`, `spec/extract_data.md`. Bullets added.
+
 ## PR ladder
 
 1. **This plan.** Prose only.
@@ -73,7 +86,7 @@ Taken 2026-10-31 at `02636177`.
 - With a roster present, each of the four cards offers a replace tick and an append tick, both unticked. Ticking one unticks the other, and both ticks posted together are refused (tests).
 - An append keeps every existing row, assignment, response and friendly label, and adds the file's rows (tests).
 - A file row already on the roster refuses the file and names the row; so does an appended row bound to an account already on the roster (tests).
-- The cross-roster name check covers this roster's existing rows on append (test).
+- ~~The cross-roster name check covers this roster's existing rows on append (test).~~ It doesn't need to: an address already on the roster is refused whatever its name (`## Status`).
 - On append, only the appended rows' addresses are looked up, and the counts cover only them (test).
 - The audit event records `mode: append` (test).
 - `## Doc impact` section present and current
@@ -100,4 +113,7 @@ Taken 2026-10-31 at `02636177`.
 - `spec/csv_contracts.md` — §3: append mode for the four importers, the already-on-the-roster rule, cross-roster identity on append, label upsert, and the audit `context`.
 - `spec/assignments.md` — an append leaves assignments in place and marks them stale.
 - `docs/security_posture.md` — the replace tick's description gains its Append counterpart.
+- `spec/ui_elements.md` — "Delete-confirm standard": the replace tick is no longer `required`; a key may sit on more than one box (the pairing opens its button while any is ticked); the `data-exclusive-tick` group.
+- `spec/operator_button_audit.md` — the Upload rows open on either tick; the second shared confirm-checkbox script (`data-exclusive-tick`).
+- `spec/extract_data.md` — the pairing's unique-key note, which a shared Upload key now qualifies.
 - `guide/todo_master.md` — the queue entry, deleted at close.

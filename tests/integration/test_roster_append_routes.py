@@ -172,3 +172,66 @@ def test_relationships_append_adds_a_pair_and_refuses_a_held_one(client: TestCli
 
     assert _upload(client, url, new, append="true").status_code == 303
     assert _pairs(db, s.id) == 2
+
+
+def test_a_relationships_append_that_redraws_an_answered_group_asks_first(
+    client: TestClient, db: Session
+) -> None:
+    """Appending Ed into group y (Cy and Di answered) redraws y: the
+    group-clear ask comes back with the append tick still ticked and the
+    file held, and the count answers it."""
+    import re
+
+    from .test_relationship_group_clear_asks_first import _base, _seed
+
+    session = _seed(db, client, "apr-rel-clear")
+    url = f"{_base(session)}/import"
+    csv = b"ReviewerEmail,RevieweeEmail,PairContextTag1\nrae@example.edu,ed@example.edu,y\n"
+
+    asked = _upload(client, url, csv, append="true")
+    assert asked.status_code == 400
+    assert "data-group-clear-banner" in asked.text
+    assert re.search(r'name="append" value="true"\s+checked', asked.text)
+    assert 'name="confirm_replace" value="true" checked' not in asked.text
+    assert _held(db) == 1
+    count = re.search(r'name="acknowledge_response_loss"\s+value="(\d+)"', asked.text).group(1)
+    assert _pairs(db, session.id) == 4
+
+    answered = _upload(
+        client, url, None, append="true", acknowledge_response_loss=count, held_token=_token(asked.text)
+    )
+    assert answered.status_code == 303, answered.text[:400]
+    assert _pairs(db, session.id) == 5
+    assert _held(db) == 0
+
+
+def test_an_append_looks_up_only_the_files_addresses(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from cordware.graph import FakeDirectory
+    from app.web.routes_operator import _shared
+
+    asked: list[str] = []
+
+    class Recording(FakeDirectory):
+        def find_users(self, address: str):
+            asked.append(address)
+            return super().find_users(address)
+
+    s = _session(client, db, code="apr-lookup")
+    url = f"/operator/sessions/{s.public_id}/reviewers/import"
+    _upload(client, url, FILES["reviewers"][0])
+    monkeypatch.setattr(_shared, "directory_or_none", lambda request: Recording())
+    assert _upload(client, url, FILES["reviewers"][1], append="true").status_code == 303
+    assert asked == ["bea@example.edu"]
+
+
+def test_an_append_onto_an_empty_roster_is_just_the_roster(client: TestClient, db: Session) -> None:
+    from app.db.models import AuditEvent
+
+    s = _session(client, db, code="apr-empty")
+    url = f"/operator/sessions/{s.public_id}/reviewers/import"
+    assert _upload(client, url, FILES["reviewers"][0], append="true", confirm_replace="true").status_code == 303
+    event = db.execute(select(AuditEvent).where(AuditEvent.event_type == "reviewers.imported")).scalar_one()
+    assert "mode" not in (event.detail.get("context") or {})
+    assert _addresses(db, "reviewers", s.id) == ["ann@example.edu"]
