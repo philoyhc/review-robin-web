@@ -15,12 +15,15 @@ row W1).
 
 from __future__ import annotations
 
-from sqlalchemy import func, select
+from dataclasses import dataclass
+from typing import Any
+
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.db.models import Observer, Reviewee, Reviewer, ReviewSession
 from app.services import visibility_policies
-from app.services.email_identity import looks_like_email, normalize_email
+from app.services.email_identity import looks_like_email, normalize_email, normalize_object_id
 from app.services.session_lifecycle import SessionStatus
 
 _ARCHIVED = SessionStatus.archived.value
@@ -31,6 +34,63 @@ _ARCHIVED = SessionStatus.archived.value
 REVIEWER = "reviewer"
 OBSERVER = "observer"
 REVIEWEE = "reviewee"
+
+
+@dataclass(frozen=True)
+class Viewer:
+    """Who a roster row is matched against (segment 21F): the signed-in
+    person's mail, folded, and the principal ID of **this request's**
+    sign-in, folded, never the one stored on ``users``: a row found by
+    email can carry an earlier holder's (Codex, #3424). ``None`` for no
+    principal, and for the fake user, whose ID is one shared constant."""
+
+    email: str
+    principal_id: str | None = None
+
+    @classmethod
+    def of(cls, user: Any) -> Viewer:
+        """The viewer behind a ``users`` row, with the principal ID
+        `get_or_create_user` stamped on it for this request."""
+        return cls.from_parts(
+            getattr(user, "email", None), getattr(user, "signed_in_principal_id", None)
+        )
+
+    @classmethod
+    def from_parts(cls, email: str | None, principal_id: str | None = None) -> Viewer:
+        principal = normalize_object_id(principal_id) or None
+        return cls(email=normalize_email(email), principal_id=principal)
+
+    def matches(self, row: Any, address: str | None) -> bool:
+        """Whether ``row`` (its ``address`` as written) is this viewer's.
+        A row bound to a directory account is the account's alone; any
+        other row matches by mail, as before segment 21F."""
+        bound = normalize_object_id(getattr(row, "directory_object_id", None))
+        if bound:
+            return self.principal_id is not None and bound == self.principal_id
+        return bool(self.email) and normalize_email(address) == self.email
+
+    def clause(self, model: Any, address_column: Any) -> Any:
+        """`matches` as a SQL condition on ``model``'s rows."""
+        by_mail = and_(
+            model.directory_object_id.is_(None),
+            func.lower(func.trim(address_column)) == normalize_email(self.email),
+        )
+        if self.principal_id is None:
+            return by_mail
+        by_account = func.lower(model.directory_object_id) == self.principal_id
+        return or_(by_account, by_mail)
+
+
+def same_person(a: Any, a_address: str | None, b: Any, b_address: str | None) -> bool:
+    """Whether two roster rows name one person (segment 21F): bound to the
+    same directory account, or else the same address, folded. A bound row
+    and an unbound one fall back to the address."""
+    a_bound = normalize_object_id(getattr(a, "directory_object_id", None))
+    b_bound = normalize_object_id(getattr(b, "directory_object_id", None))
+    if a_bound and b_bound:
+        return a_bound == b_bound
+    a_key = normalize_email(a_address)
+    return bool(a_key) and a_key == normalize_email(b_address)
 
 
 def is_email_identified(reviewee: Reviewee) -> bool:
@@ -50,7 +110,11 @@ def is_email_identified(reviewee: Reviewee) -> bool:
 
 
 def disclosable_roles(
-    db: Session, email: str | None, *, session_id: int | None = None
+    db: Session,
+    email: str | None,
+    *,
+    principal_id: str | None = None,
+    session_id: int | None = None,
 ) -> frozenset[str]:
     """Which participant roles may be *disclosed* to this viewer,
     across every session, or on one session when ``session_id`` is
@@ -94,6 +158,9 @@ def disclosable_roles(
     normalized = normalize_email(email)
     if not normalized or not looks_like_email(normalized):
         return frozenset()
+    # Segment 21F: a row bound to a directory account matches that
+    # account's principal; any other row, the mail.
+    viewer = Viewer.from_parts(email, principal_id)
 
     held: set[str] = set()
 
@@ -104,14 +171,14 @@ def disclosable_roles(
     reviewer_query = (
         select(Reviewer.id)
         .join(ReviewSession, ReviewSession.id == Reviewer.session_id)
-        .where(func.lower(func.trim(Reviewer.email)) == normalized)
+        .where(viewer.clause(Reviewer, Reviewer.email))
         .where(Reviewer.status == "active")
         .where(ReviewSession.status != _ARCHIVED)
     )
     observer_query = (
         select(Observer.id)
         .join(ReviewSession, ReviewSession.id == Observer.session_id)
-        .where(func.lower(func.trim(Observer.email)) == normalized)
+        .where(viewer.clause(Observer, Observer.email))
         .where(Observer.status == "active")
         .where(ReviewSession.status != _ARCHIVED)
     )
@@ -135,7 +202,7 @@ def disclosable_roles(
     reviewee_query = (
         select(Reviewee, ReviewSession)
         .join(ReviewSession, ReviewSession.id == Reviewee.session_id)
-        .where(func.lower(func.trim(Reviewee.email_or_identifier)) == normalized)
+        .where(viewer.clause(Reviewee, Reviewee.email_or_identifier))
         .where(Reviewee.status == "active")
     )
     if session_id is not None:

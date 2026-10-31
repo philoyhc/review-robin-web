@@ -38,7 +38,7 @@ from app.schemas.rules import (
     Rule,
     RuleSetSchema,
 )
-from app.services.email_identity import normalize_email
+from app.services.email_identity import normalize_email, normalize_object_id
 from app.services.rules.fields import (
     reset_pair_context_lookup,
     set_pair_context_lookup,
@@ -318,6 +318,12 @@ def _pair_identity_key(pair: tuple[object, object]) -> tuple[int, int]:
 
 
 def _is_self_review(reviewer: object, reviewee: object) -> bool:
+    # Segment 21F: two rows bound to directory accounts are one person
+    # exactly when the accounts are one.
+    a_account = normalize_object_id(getattr(reviewer, "directory_object_id", None))
+    b_account = normalize_object_id(getattr(reviewee, "directory_object_id", None))
+    if a_account and b_account:
+        return a_account == b_account
     a = normalize_email(getattr(reviewer, "email", ""))
     b = normalize_email(getattr(reviewee, "email_or_identifier", ""))
     if not a or not b:

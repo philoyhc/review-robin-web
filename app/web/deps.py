@@ -125,6 +125,16 @@ def find_user(
     return users.find_signed_in_user(db, current_user, move_email=move_email)
 
 
+def _stamp_principal(user: User, current_user: AuthenticatedUser) -> None:
+    """Carry **this request's** principal ID on the row for the roster
+    matchers (segment 21F; ``participants.Viewer``). Never the stored
+    ``external_principal_id``: a row found by email can hold an earlier
+    holder's (Codex, #3424). Not for the fake user, whose ID is one
+    shared constant. A plain attribute, not a column: it lives for this
+    request's ``User`` instance and is never written."""
+    user.signed_in_principal_id = None if current_user.is_fake else current_user.principal_id  # type: ignore[attr-defined]
+
+
 def get_or_create_user(
     request: Request,
     current_user: AuthenticatedUser = Depends(get_current_user),
@@ -138,6 +148,7 @@ def get_or_create_user(
 
     user = find_user(db, current_user)
     if user is not None:
+        _stamp_principal(user, current_user)
         _reassert_super_admin(db, user)
         _stash_display_timezone(request, user)
         _stash_guide_visibility(request, db, user)
@@ -182,6 +193,7 @@ def get_or_create_user(
     db.add(user)
     db.commit()
     db.refresh(user)
+    _stamp_principal(user, current_user)
     _stash_display_timezone(request, user)
     _stash_guide_visibility(request, db, user)
     return user
@@ -384,10 +396,10 @@ def require_reviewer_in_session(
             Reviewer.status == "active",
         )
     ).scalars()
-    user_email = normalize_email(user.email)
+    viewer = participants.Viewer.of(user)
     matched: Reviewer | None = None
     for r in reviewer:
-        if normalize_email(r.email) == user_email:
+        if viewer.matches(r, r.email):
             matched = r
             break
     if matched is None:
@@ -428,7 +440,7 @@ def require_reviewee_in_session(
     """
     review_session = _participant_session_or_404(db, session_id)
 
-    user_email = normalize_email(user.email)
+    viewer = participants.Viewer.of(user)
     candidates = db.execute(
         select(Reviewee).where(
             Reviewee.session_id == review_session.id,
@@ -439,7 +451,7 @@ def require_reviewee_in_session(
     for r in candidates:
         if not participants.is_email_identified(r):
             continue
-        if normalize_email(r.email_or_identifier) == user_email:
+        if viewer.matches(r, r.email_or_identifier):
             matched = r
             break
     if matched is None:
@@ -523,7 +535,7 @@ def require_observer_in_session(
     """
     review_session = _participant_session_or_404(db, session_id)
 
-    user_email = normalize_email(user.email)
+    viewer = participants.Viewer.of(user)
     candidates = db.execute(
         select(Observer).where(
             Observer.session_id == review_session.id,
@@ -532,7 +544,7 @@ def require_observer_in_session(
     ).scalars()
     matched: Observer | None = None
     for o in candidates:
-        if normalize_email(o.email) == user_email:
+        if viewer.matches(o, o.email):
             matched = o
             break
     if matched is None:

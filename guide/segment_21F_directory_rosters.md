@@ -82,6 +82,12 @@ Rung 4 split at build (2026-10-31): a roster import has no preview step; it save
 - **4a** resolves addresses at the import's save, the single add and the edit, with no UI. It stores the account, sends mail to the directory's mail, and records the counts in the import's audit event (`directory_*`).
 - **4b** shows those counts on the Setup page, read from the latest import's event. The wording is settled on the page first.
 
+Rung 5, decided at build (2026-10-31):
+- **This request's principal reaches the matchers** as `users.signed_in_principal_id`, a plain attribute `get_or_create_user` stamps on the row each request. It is not a column, and never the stored `external_principal_id`. The fake user gets none.
+- **One rule:** `participants.Viewer`. A bound row matches only that principal; an unbound row matches by mail. The rule covers the three gates, the chip strip, the dashboard, invitation acceptance and role disclosure.
+- **Self-review** (assignments, including group membership, and the rules engine) treats two rows bound to one account as one person.
+- **The cross-table name check stays address-based.** It guards two names on one address, and an import's rows aren't resolved until after it runs. A person entered by UPN and by mail under two names is not flagged; self-review and matching still treat them as one.
+
 ## PR ladder
 
 1. **This plan.** Prose only.

@@ -26,19 +26,25 @@ from app.db.models import (
 )
 from app.services import audit
 from app.services import session_lifecycle as lifecycle
-from app.services.email_identity import normalize_email
+from app.services.email_identity import normalize_email, normalize_object_id
 from app.services.instruments import _instrument_label
 from app.services.roster_status import is_active, status_is_active
 
 
 def is_self_review(reviewer: Reviewer, reviewee: Reviewee) -> bool:
     return _is_self_review_pair(
-        reviewer.email, reviewee.email_or_identifier
+        reviewer.email,
+        reviewee.email_or_identifier,
+        reviewer.directory_object_id,
+        reviewee.directory_object_id,
     )
 
 
 def _is_self_review_pair(
-    reviewer_email: str, reviewee_identifier: str
+    reviewer_email: str,
+    reviewee_identifier: str,
+    reviewer_object_id: str | None = None,
+    reviewee_object_id: str | None = None,
 ) -> bool:
     """The pair-level test on the two strings it actually reads.
 
@@ -49,6 +55,12 @@ def _is_self_review_pair(
     address can never be a self-review, and the comparison is over
     ``normalize_email`` on both sides.
     """
+    # Segment 21F: two rows bound to directory accounts are one person
+    # exactly when the accounts are one, whatever addresses they were
+    # written with (Jane's UPN on the reviewer roster, her mail on the
+    # reviewee roster).
+    if reviewer_object_id and reviewee_object_id:
+        return normalize_object_id(reviewer_object_id) == normalize_object_id(reviewee_object_id)
     if "@" not in reviewee_identifier:
         return False
     return normalize_email(reviewer_email) == normalize_email(
@@ -88,6 +100,8 @@ Seven slots, traced 19S Item 3: the group key needs ``id``,
     reviewer_email: str
     reviewee: Reviewee
     is_self_review: bool
+    #: The reviewer's directory account, if bound (segment 21F).
+    reviewer_object_id: str | None = None
 
 
 def classify_self_review(
@@ -141,6 +155,7 @@ def classify_self_review(
                 reviewer_email=reviewer.email,
                 reviewee=reviewee,
                 is_self_review=assignment.is_self_review,
+                reviewer_object_id=reviewer.directory_object_id,
             )
             for assignment, reviewer, reviewee in rows
         ],
@@ -174,12 +189,17 @@ def classify_self_review_pairs(
     # negative id, so the boundary and pair-context lookups are the
     # ones the real rows use and are loaded once.
     roster_by_email: dict[str, list[Reviewee]] = {}
+    roster_by_account: dict[str, list[Reviewee]] = {}
     for reviewee in db.execute(
         select(Reviewee).where(Reviewee.session_id == session_id)
     ).scalars():
         if "@" in reviewee.email_or_identifier:
             roster_by_email.setdefault(
                 normalize_email(reviewee.email_or_identifier), []
+            ).append(reviewee)
+        if reviewee.directory_object_id:
+            roster_by_account.setdefault(
+                normalize_object_id(reviewee.directory_object_id), []
             ).append(reviewee)
     membership: list[AssignmentPair] = []
     seen: set[tuple[int, int]] = set()
@@ -188,7 +208,26 @@ def classify_self_review_pairs(
         if slot in seen:
             continue
         seen.add(slot)
-        for own in roster_by_email.get(normalize_email(pair.reviewer_email), []):
+        # Segment 21F: the reviewer's own rows by address or by account,
+        # kept only where the pair rule agrees (two bound rows on
+        # different accounts share no membership, whatever the address).
+        candidates = {
+            r.id: r
+            for r in [
+                *roster_by_email.get(normalize_email(pair.reviewer_email), []),
+                *roster_by_account.get(
+                    normalize_object_id(pair.reviewer_object_id), []
+                ),
+            ]
+        }
+        for own in candidates.values():
+            if not _is_self_review_pair(
+                pair.reviewer_email,
+                own.email_or_identifier,
+                pair.reviewer_object_id,
+                own.directory_object_id,
+            ):
+                continue
             membership.append(
                 AssignmentPair(
                     id=-(len(membership) + 1),
@@ -198,6 +237,7 @@ def classify_self_review_pairs(
                     reviewer_email=pair.reviewer_email,
                     reviewee=own,
                     is_self_review=True,
+                    reviewer_object_id=pair.reviewer_object_id,
                 )
             )
     keys = group_keys(
@@ -220,7 +260,10 @@ def classify_self_review_pairs(
         if group_key is None:
             # Individual-scoped instrument.
             result[pair.id] = _is_self_review_pair(
-                pair.reviewer_email, pair.reviewee.email_or_identifier
+                pair.reviewer_email,
+                pair.reviewee.email_or_identifier,
+                pair.reviewer_object_id,
+                pair.reviewee.directory_object_id,
             )
         else:
             # Group-scoped: whole-group rule.
@@ -292,6 +335,8 @@ def recompute_self_review_classification(
             Assignment.reviewee_id,
             Assignment.is_self_review,
             Reviewer.email,
+            # Before ``Reviewee``: the passes below unpack the tail.
+            Reviewer.directory_object_id,
             Reviewee,
             Reviewer.status,
             Assignment.include,
@@ -311,6 +356,7 @@ def recompute_self_review_classification(
             reviewer_email=reviewer_email,
             reviewee=reviewee,
             is_self_review=bool(stored),
+            reviewer_object_id=reviewer_object_id,
         )
         for (
             row_id,
@@ -319,6 +365,7 @@ def recompute_self_review_classification(
             reviewee_id,
             stored,
             reviewer_email,
+            reviewer_object_id,
             reviewee,
             _reviewer_status,
             _include,

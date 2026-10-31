@@ -74,3 +74,10 @@ def normalize_email(value: str | None) -> str:
     directly.
     """
     return (value or "").strip().lower()
+
+
+def normalize_object_id(value: str | None) -> str:
+    """The comparison key for a directory object ID (segment 21F):
+    stripped and lower-cased, as an Entra GUID may arrive in either case.
+    Empty for a missing one, which matches nothing."""
+    return (value or "").strip().lower()

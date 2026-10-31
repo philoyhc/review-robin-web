@@ -30,7 +30,6 @@ from app.db.models import (
 from app.services import participants
 from app.services import responses as responses_service
 from app.services import visibility_policies
-from app.services.email_identity import normalize_email
 from app.services import session_lifecycle as lifecycle
 from app.web import views
 from app.web import urls
@@ -143,8 +142,8 @@ def build_role_chips(
     Chips render in :data:`_ROLE_PRIORITY` order regardless of
     which role is active, so the lineup is consistent across
     surfaces."""
-    user_email = normalize_email(user.email)
-    if not user_email:
+    viewer = participants.Viewer.of(user)
+    if not viewer.email:
         return []
 
     # All three role matches fold through ``normalize_email`` in
@@ -161,7 +160,7 @@ def build_role_chips(
                     Reviewer.status == "active",
                 )
             ).scalars()
-            if normalize_email(r.email) == user_email
+            if viewer.matches(r, r.email)
         ),
         None,
     )
@@ -175,7 +174,7 @@ def build_role_chips(
     ).scalars():
         if not participants.is_email_identified(r):
             continue
-        if normalize_email(r.email_or_identifier) == user_email:
+        if viewer.matches(r, r.email_or_identifier):
             reviewee_match = r
             break
 
@@ -188,7 +187,7 @@ def build_role_chips(
                     Observer.status == "active",
                 )
             ).scalars()
-            if normalize_email(o.email) == user_email
+            if viewer.matches(o, o.email)
         ),
         None,
     )
