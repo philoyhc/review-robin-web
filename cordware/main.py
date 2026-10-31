@@ -29,7 +29,7 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 from cordware.identity import is_local, missing_header_count, super_admin_configured
 from cordware.logging import configure_logging
 from cordware.settings import IdentitySettings, identity_settings
-from cordware import app_icons
+from cordware.web import app_icons
 from cordware.web.landing import LandingLink, add_landing_page
 
 log = logging.getLogger("cordware")
@@ -45,7 +45,7 @@ class AppEntry:
     ``logger`` and its children are stamped with the application's
     name. ``title`` is how the host's landing page names it; empty, the
     page uses the registry name. ``icon`` is the favicon the landing page
-    draws before that name (`cordware/app_icons.py`); empty, none. It is
+    draws before that name (`cordware/web/app_icons.py`); empty, none. It is
     presentation, not identity, so two entries differing only in it are
     equal."""
 

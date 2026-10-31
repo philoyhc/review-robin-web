@@ -32,7 +32,7 @@ point.
 | `factory` | `"module:attribute"` string naming a zero-argument callable that returns a complete ASGI application. |
 | `logger` | Logger-name prefix the application logs under (see Logging). |
 | `title` | How the landing page names the application. Defaults to empty, and the page then shows the registry name. |
-| `icon` | The favicon the landing page draws before the title, an inline SVG data URI (`cordware/app_icons.py`). Defaults to empty: no icon. Not part of an entry's equality. Each registered application's is a copy of its own templates' favicon, held to it by `cordware/tests/test_landing.py` (author, 2026-10-31). |
+| `icon` | The favicon the landing page draws before the title, an inline SVG data URI (`cordware/web/app_icons.py`). Defaults to empty: no icon. Not part of an entry's equality. Each registered application's is a copy of its own templates' favicon, held to it by `cordware/tests/test_landing.py` (author, 2026-10-31). |
 
 - Four entries, in this order:
 
