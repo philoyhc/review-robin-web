@@ -292,7 +292,8 @@
                 <fieldset class="upload-mode">
                   <legend class="visually-hidden">What the upload does with the existing reviewees</legend>
                   <label class="confirm-label">
-                    <input type="checkbox" name="confirm_replace" value="true" required{% if confirm_replace_checked %} checked{% endif %}
+                    <input type="checkbox" name="confirm_replace" value="true"{% if confirm_replace_checked %} checked{% endif %}
+                           data-exclusive-tick="upload-mode"
                            data-delete-confirm="replace-roster">
                     {# Names what the replace destroys, like the
                        Danger Zone and the selected-rows delete
@@ -310,13 +311,15 @@
                     <span class="pill pill-empty">{{ status_pills.relationship_count }} relationship{% if status_pills.relationship_count != 1 %}s{% endif %}</span>
                     involving them{% endif %}.</span>
                   </label>
-                  {# 19Z scaffold: drawn, not wired. Append is the replace tick's
-                     sibling, its own field (`append`), unticked by default as replace
-                     is (author, 2026-10-31). The wiring rung makes the two mutually
-                     exclusive (ticking one unticks the other; both may be unticked)
-                     and lets either enable Upload. Disabled until then. #}
+                  {# 19Z: the replace tick's sibling, its own field (`append`), unticked
+                     by default as replace is (author, 2026-10-31). The two share an
+                     exclusive group, so ticking one unticks the other and both may be
+                     unticked, and share the delete-confirm key, so Upload enables
+                     while either is ticked (`base.html`). With both ticked anyway (no
+                     script), the route refuses rather than guess. #}
                   <label class="confirm-label">
-                    <input type="checkbox" name="append" value="true" disabled>
+                    <input type="checkbox" name="append" value="true"{% if append_checked %} checked{% endif %}
+                           data-exclusive-tick="upload-mode" data-delete-confirm="replace-roster">
                     <span>Yes, append to the existing
                     <span class="pill pill-empty">{{ existing_count }} reviewee{% if existing_count != 1 %}s{% endif %}</span>.</span>
                   </label>

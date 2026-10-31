@@ -78,6 +78,8 @@ async def reviewers_import_submit(
     file: UploadFile | None = File(default=None),
     held_token: str | None = Form(default=None),
     confirm_replace: str | None = Form(default=None),
+    # Segment 19Z: the card's append tick, beside the replace tick.
+    append: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
@@ -88,6 +90,7 @@ async def reviewers_import_submit(
         file=file,
         held_token=held_token,
         confirm_replace=confirm_replace,
+        append=append,
         acknowledge_response_loss=acknowledge_response_loss,
         review_session=review_session,
         user=user,

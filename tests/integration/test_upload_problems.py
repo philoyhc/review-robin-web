@@ -188,9 +188,10 @@ def test_a_replace_without_the_tick_says_so(
 
     assert response.status_code == 400
     assert "data-upload-problems" in response.text
+    # The three person rosters offer the append tick too (19Z), so the
+    # ask names both.
     assert (
-        "Tick the replacement-confirmation box just above Upload, then "
-        "upload again."
+        "Tick replace or append just above Upload, then upload again."
     ) in response.text
     assert "data-upload-problem-lines" not in response.text
 
