@@ -1140,7 +1140,7 @@ directory account matches only that account's principal for this
 request. Every other row matches by **case-insensitive email equality**,
 folded by `normalize_email` in `app/services/email_identity.py`: strip
 whitespace, then `str.lower` (deliberately not `casefold()`, which would
-merge distinct mailboxes such as `ß` and `ss`). Three callers apply it,
+merge distinct mailboxes such as `ß` and `ss`). Four callers apply it,
 each slightly differently:
 
 - **Session surface** — `require_reviewer_in_session` in
@@ -1157,6 +1157,10 @@ each slightly differently:
   lowest id, as the gate's. SQLite's `lower()` is ASCII-only
   while Postgres's is Unicode-aware, so the two sides agree on ASCII
   addresses only.
+- **Role chip strip** (`build_role_chips`,
+  `app/web/routes_reviewer/_shared.py`) — matches each roster through
+  `Viewer.matches` in `id` order, so its reviewer pill describes the
+  lowest-id row, the one the gate opens.
 - **Invitation landing** (`/me/invite/{token}`,
   `app/web/routes_reviewer/_invite.py`) — matches the invited row
   through `Viewer.matches`, after `invitations.lookup_invitation_by_token`
@@ -1624,14 +1628,16 @@ chip. Each chip carries:
 | `active` | `bool` | `True` for `active_role`, which the route knows from its own URL — full color, no anchor |
 | `enabled` | `bool` | `True` when the role's surface is currently reachable |
 
-Membership is matched on `user.email` with both sides folded through
-`normalize_email` in Python, never a SQL `lower()` (whose behavior
-differs between SQLite and Postgres); the fold itself is the one
-§ *Identity matching* defines, and is part of this contract. The
+Membership is matched in Python through `Viewer.matches`, never a SQL
+`lower()` (whose behavior differs between SQLite and Postgres): a row
+bound to a directory account by this request's principal, any other
+row by `user.email` folded through `normalize_email`. The rule is the
+one § *Identity matching* defines, and is part of this contract. The
 matches are an `active` `Reviewer` by `email`, an `active` `Reviewee`
 that passes `participants.is_email_identified` by
 `email_or_identifier` (confidential and non-email reviewees never
-match), and an `active` `Observer` by `email`.
+match), and an `active` `Observer` by `email`, each the first in `id`
+order, as the gates take it.
 
 Reachability mirrors the dashboard's `role_links.enabled` logic, for
 all three roles rather than only the reviewer:

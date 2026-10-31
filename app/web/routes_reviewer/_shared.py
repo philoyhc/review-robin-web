@@ -146,6 +146,10 @@ def build_role_chips(
     if not viewer.email:
         return []
 
+    # Lowest id first in all three, as the gates pick: one account can
+    # hold two rows in a roster (Jane by mail and by UPN), and the strip
+    # must describe the row the surface opens.
+    #
     # All three role matches fold through ``normalize_email`` in
     # Python so the reviewer / reviewee / observer branches use one
     # convention (audit S2 — the reviewee branch always had to loop
@@ -159,6 +163,7 @@ def build_role_chips(
                     Reviewer.session_id == review_session.id,
                     Reviewer.status == "active",
                 )
+                .order_by(Reviewer.id)
             ).scalars()
             if viewer.matches(r, r.email)
         ),
@@ -171,6 +176,7 @@ def build_role_chips(
             Reviewee.session_id == review_session.id,
             Reviewee.status == "active",
         )
+        .order_by(Reviewee.id)
     ).scalars():
         if not participants.is_email_identified(r):
             continue
@@ -186,6 +192,7 @@ def build_role_chips(
                     Observer.session_id == review_session.id,
                     Observer.status == "active",
                 )
+                .order_by(Observer.id)
             ).scalars()
             if viewer.matches(o, o.email)
         ),

@@ -261,8 +261,8 @@ chip strip, invitation acceptance and role disclosure
   self-review test (assignments, group membership, the rules engine, the
   instrument preview and the Full Matrix count) uses it. The cross-roster
   name check (`spec/csv_contracts.md` §3.1) stays address-based.
-- **Two rows, one account, one roster.** The gates and the dashboard take
-  the lowest-id row, so the choice holds across requests. Whether an
+- **Two rows, one account, one roster.** The gates, the dashboard and the
+  chip strip take the lowest-id row, so the choice holds across requests. Whether an
   upload refuses or Validate flags such duplicates is undecided.
 - **Mail to a bound row** goes to the directory's mail
   (`directory_accounts.recipient`), since a row given by UPN may take no
