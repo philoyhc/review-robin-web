@@ -30,7 +30,12 @@ The four cards are Reviewers, Reviewees, Relationships and Observers. An empty r
 
 After append shipped (`#3437`), the author asked for upsert too, ruled "go with the defaults" on all fourteen questions, and took the recommendation on matching (2026-10-31).
 
-**A third tick, "Yes, update the existing N reviewers and add new ones",** beside replace and append on the four cards. All three are mutually exclusive and none is ticked by default. A file row already on the roster updates that row; any other row is added, as in append. Rows absent from the file are kept.
+**A third tick, "merge", sharing append's line** on the four cards (author, 2026-10-31):
+
+> `[ ] Yes, replace the existing N reviewers …`
+> `[ ] Yes, append to, [ ] merge with the existing roster.`
+
+None is shown on an empty roster. All three are mutually exclusive, none is ticked by default, and Upload stays disabled until one is. Merge is the upsert: a file row already on the roster updates that row, and any other row is added, as in append. Rows absent from the file are kept.
 
 **And a Validate warning for two rows on one directory account,** on each person roster. It lifts the deferred entry's Validate half into this segment, so a second row for one person is flagged however it arrived: upsert, append, replace or the Add form.
 
@@ -104,7 +109,7 @@ The one `diff-reviewer` read of `02636177..3f540f2` found nothing that deletes, 
 5. **Wire Relationships.** The same, with the group-answer ask. This is the last build rung, so `diff-reviewer` reads rungs 2–5.
 6. ~~**Close.**~~ Moved to rung 10 by the upsert amendment.
 7. **The Validate warning.** The three `*.duplicate_account` soft rules, with tests. Must not touch the upload cards.
-8. **Upsert scaffold.** The third tick on the four cards, drawn and disabled, in the same exclusive group. Wording settled on the page.
+8. **Upsert scaffold.** The merge tick on append's line on the four cards ("Yes, append to, [ ] merge with the existing roster."), drawn and disabled, in the same exclusive group. Wording settled on the page.
 9. **Upsert in the services.** `mode="upsert"` through `_save` and `save_relationships`: matching (address, pair, account), blank-keeps, Status only when its column is present, the name check, per-row `*.updated` events, and the counts. Service tests. Must not touch a route.
 10. **Wire upsert on the four cards, then close.** Wiring, the tag-change group-clear ask on the person rosters, route tests; the cumulative `diff-reviewer` read of rungs 7–10 (base: `main` before rung 7). Then the close: `spec-writer` on the doc-impact specs, and the author's browser check of each card.
 
@@ -116,7 +121,7 @@ The one `diff-reviewer` read of `02636177..3f540f2` found nothing that deletes, 
 - ~~The cross-roster name check covers this roster's existing rows on append (test).~~ It doesn't need to: an address already on the roster is refused whatever its name (`## Status`).
 - On append, only the appended rows' addresses are looked up, and the counts cover only them (test).
 - The audit event records `mode: append` (test).
-- Each card offers a third tick, "update the existing … and add new ones", exclusive with the other two (tests).
+- Each card offers a merge tick on append's line, exclusive with the other two and hidden on an empty roster (tests).
 - An upsert updates matched rows (by address, pair, or bound account, keeping the stored address), adds the rest, keeps absent rows, and leaves blank cells and absent columns as they were (tests).
 - An upsert's Status, name and tag changes behave as Semantics — upsert says, the tag change asking first (tests).
 - Validate warns, without blocking, on two active rows bound to one account in a roster (tests).
