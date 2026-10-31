@@ -155,3 +155,28 @@ def test_create_without_javascript_saves_the_typed_owner(
     expect(owners).to_have_text(
         [FAKE_OPERATOR_EMAIL, COLLEAGUE_EMAIL], use_inner_text=True
     )
+
+
+def test_a_staged_verified_owner_reads_as_the_pill(page: Page, api: httpx.Client) -> None:
+    """19Z, accounts item: a candidate the picker marks `data-verified`
+    stages as the pill, as Session Home's Owners card shows it; an
+    unmarked one as plain code. The marks are set on the page, so the
+    test holds whoever the server binds."""
+    sign_in(api, COLLEAGUE_EMAIL)
+    sign_in(api, SECOND_COLLEAGUE_EMAIL)
+    page.goto(app_url("/operator/sessions/new"))
+    page.locator(f'#session-owners-candidates option[value="{COLLEAGUE_EMAIL}"]').evaluate(
+        "el => el.setAttribute('data-verified', '')"
+    )
+    page.locator(f'#session-owners-candidates option[value="{SECOND_COLLEAGUE_EMAIL}"]').evaluate(
+        "el => el.removeAttribute('data-verified')"
+    )
+    table = page.locator("#session-owners-table")
+    for email in (COLLEAGUE_EMAIL, SECOND_COLLEAGUE_EMAIL):
+        page.locator("#session-owners-email").fill(email)
+        page.locator("#session-owners-add").click()
+    verified = table.locator("tr").filter(has_text=COLLEAGUE_EMAIL).locator("code")
+    expect(verified).to_have_class("pill pill-count pill-address")
+    expect(verified).to_have_attribute("title", "Matched to a directory account")
+    plain = table.locator("tr").filter(has_text=SECOND_COLLEAGUE_EMAIL).locator("code")
+    expect(plain).not_to_have_attribute("class", re.compile("pill"))

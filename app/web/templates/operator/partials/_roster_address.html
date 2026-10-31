@@ -5,5 +5,17 @@
    pill, its case kept; any other address stays plain code, matching by
    the address as written. #}
 {% macro roster_address(row, address) -%}
-<code{% if row.directory_object_id %} class="pill pill-count pill-address" title="Matched to a directory account" data-directory-matched{% endif %}>{{ address }}</code>
+{{ matched_address(row.directory_object_id, address) }}
+{%- endmacro %}
+
+{# An account's address (19Z, accounts item): verified when the account
+   is bound to its person in the directory, at a checked invite or at a
+   sign-in (`users.external_principal_id`). The Accounts table, the
+   Owners card and the New session owners picker show it. #}
+{% macro account_address(verified, address) -%}
+{{ matched_address(verified, address) }}
+{%- endmacro %}
+
+{% macro matched_address(matched, address) -%}
+<code{% if matched %} class="pill pill-count pill-address" title="Matched to a directory account" data-directory-matched{% endif %}>{{ address }}</code>
 {%- endmacro %}

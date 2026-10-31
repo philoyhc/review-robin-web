@@ -111,3 +111,75 @@ def test_a_local_run_checks_nothing(db: Session, client: TestClient, monkeypatch
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
     response = _invite(client, "made.up@example.edu")
     assert _row(db, "made.up@example.edu") is not None and response.headers["location"].endswith("invite_unchecked=1")
+
+
+def test_a_lookup_error_creates_the_row_unbound(
+    db: Session, client: TestClient, monkeypatch: pytest.MonkeyPatch, directory: None
+) -> None:
+    """An ERROR outcome (the fake directory's throttled address) never refuses."""
+    _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
+    response = _invite(client, "throttled@example.edu")
+    row = _row(db, "throttled@example.edu")
+    assert row is not None and row.external_principal_id is None
+    assert response.headers["location"].endswith("invite_unchecked=1")
+
+
+def test_the_audit_records_the_object_id_bound(
+    db: Session, client: TestClient, monkeypatch: pytest.MonkeyPatch, directory: None
+) -> None:
+    _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
+    _invite(client, "jane.tan@example.edu")
+    event = db.execute(select(AuditEvent).where(AuditEvent.event_type == "workspace.user_invited")).scalar_one()
+    assert event.detail["snapshot"]["external_principal_id"] == JANE
+
+
+def test_the_object_id_is_matched_in_any_case(db: Session, monkeypatch: pytest.MonkeyPatch) -> None:
+    """21F's rule: an Entra GUID may arrive in either case. An invite binds
+    it folded; an account already holding it in another case is the same
+    person; sign-in finds the row whichever case the header carries."""
+    from cordware.graph import DirectoryUser, FakeDirectory
+
+    from app.auth.identity import AuthenticatedUser
+    from app.services import users
+    from app.services.directory_accounts import look_up_one
+
+    upper = JANE.upper()
+    shouting = FakeDirectory((DirectoryUser(upper, "Jane Tan", "jane.tan@example.edu", "e0123456@example.edu"),))
+    actor = User(email="alice@example.edu", is_operator=True, is_sys_admin=True)
+    db.add(actor)
+    db.commit()
+    invited = users.invite(db, actor=actor, email="jane.tan@example.edu",
+                           directory=lambda: look_up_one(shouting, "jane.tan@example.edu"))
+    assert invited.external_principal_id == JANE  # folded
+    with pytest.raises(users.UserOperationError) as refused:
+        users.invite(db, actor=actor, email="e0123456@example.edu",
+                     directory=lambda: look_up_one(shouting, "e0123456@example.edu"))
+    assert refused.value.code == "account_exists"
+    found = users.find_signed_in_user(db, AuthenticatedUser(principal_id=upper, email="jane.tan@example.edu", name="Jane"))
+    assert found is not None and found.id == invited.id
+
+
+def test_the_cheap_refusals_come_before_the_lookup(
+    db: Session, client: TestClient, monkeypatch: pytest.MonkeyPatch, directory: None
+) -> None:
+    """A duplicate is refused without asking the directory, and a plain
+    admin's sys-admin invite says why before any lookup."""
+    from app.services import directory_accounts
+
+    asked: list[str] = []
+    real = directory_accounts.look_up_one
+    monkeypatch.setattr(directory_accounts, "look_up_one", lambda d, a: asked.append(a) or real(d, a))
+    _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
+    _invite(client, "jane.tan@example.edu")
+    assert _invite(client, "jane.tan@example.edu").headers["location"].endswith("invite_error=duplicate")
+    assert asked == ["jane.tan@example.edu"]  # once, for the first invite
+
+
+def test_the_fake_sign_in_s_id_is_no_one_s(db: Session) -> None:
+    from cordware.settings import identity_settings
+
+    from app.services.users import is_verified
+
+    assert not is_verified(User(email="dev@example.edu", external_principal_id=identity_settings.fake_auth_principal_id))
+    assert not is_verified(User(email="dev@example.edu", external_principal_id="  "))
+    assert is_verified(User(email="dev@example.edu", external_principal_id=JANE))

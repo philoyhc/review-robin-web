@@ -61,16 +61,19 @@
         );
       }
 
-      function labelFor(email) {
+      function optionFor(email) {
         var list = input.list;
-        if (!list) return '';
+        if (!list) return null;
         for (var i = 0; i < list.options.length; i += 1) {
           var option = list.options[i];
-          if (option.value.toLowerCase() === email.toLowerCase()) {
-            return option.textContent.trim();
-          }
+          if (option.value.toLowerCase() === email.toLowerCase()) return option;
         }
-        return '';
+        return null;
+      }
+
+      function labelFor(email) {
+        var option = optionFor(email);
+        return option ? option.textContent.trim() : '';
       }
 
       function cell(row, text) {
@@ -85,6 +88,14 @@
         row.setAttribute('data-owners-row', '');
         var code = document.createElement('code');
         code.textContent = email;
+        // A candidate bound to its person in the directory reads as the
+        // pill, as on Session Home's Owners card (19Z, accounts item).
+        var option = optionFor(email);
+        if (option && option.hasAttribute('data-verified')) {
+          code.className = 'pill pill-count pill-address';
+          code.title = 'Matched to a directory account';
+          code.setAttribute('data-directory-matched', '');
+        }
         cell(row).appendChild(code);
         var label = labelFor(email);
         cell(row, label && label.toLowerCase() !== email.toLowerCase() ? label : '—');

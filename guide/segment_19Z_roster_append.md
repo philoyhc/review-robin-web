@@ -137,7 +137,7 @@ Upsert rungs (2026-10-31): rung 7 rode with the amendment (`#3438`), rung 8 `#34
 12. **Pills on Relationships, Invitations and Responses** (the widening). Same macro; must not touch a route or service.
 13. **Accounts: this item's plan.** Prose only.
 14. **Verify on invite.** `users.invite` takes the lookup's outcome: binds the object ID, refuses the three cases; the route hands in the directory; the invite card names a refusal. Service and route tests. Must not touch the pills.
-15. **Verified accounts as pills.** The Accounts table, Owners card and New session owners picker take the pill. Must not touch a service.
+15. **Verified accounts as pills.** The Accounts table, Owners card and New session owners picker take the pill. Must not touch a service. *(At build, 2026-10-31: the Accounts and Owners rows are service-built, so each row shape gained a display-only `verified` field; no behavior changed.)*
 
 ## Definition of done
 
@@ -186,7 +186,7 @@ Upsert rungs (2026-10-31): rung 7 rode with the amendment (`#3438`), rung 8 `#34
 - `spec/operations_pages.md` — the Invitations and Responses tables and their drill-ins show a bound address as a pill (pills item, widened).
 - `spec/architecture.md` — "Audit-event detail schema": the `*.imported` counts `new` / `kept` (append) and `new` / `updated` / `unchanged` (upsert) with `context.mode`, and the per-row `*.updated` events a merge writes.
 - `guide/deferred_consolidated.md` — "Two rows in one roster bound to one account": its Validate half shipped; the entry narrows to refusing at upload (at close).
-- `spec/permissions.md` — an invite is checked against the directory: bound on a match, refused when not found, ambiguous or already held (accounts item).
+- `spec/permissions.md` — an invite is checked against the directory: bound on a match, refused when not found, ambiguous or already held, the three codes and the "not checked" notice joining the Invite errors; a bound invite is never absorbed at sign-in (`get_or_create_user`, the absorb sentences), and the principal match is case-insensitive (accounts item).
 - `spec/settings_inventory.md` — `users.external_principal_id` can also be set by a verified invite (accounts item).
 - `spec/session_owners.md` — the Owners card and the New session picker show a verified owner's address as a pill (accounts item).
 - `guide/todo_master.md` — the queue entry, deleted at close.

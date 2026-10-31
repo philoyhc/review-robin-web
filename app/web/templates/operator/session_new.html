@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "operator/partials/_roster_address.html" import account_address %}
 {% from "operator/partials/_datetime_field.html" import datetime_field %}
 
 {% block title %}Create New Session — Review Robin Web{% endblock %}
@@ -257,7 +258,7 @@
             <th class="col-shrink">Action</th>
           </tr>
           <tr>
-            <td><code>{{ user.email }}</code></td>
+            <td>{{ account_address(account_verified(user), user.email) }}</td>
             <td>{{ user.display_name or "—" }}</td>
             <td>owner</td>
             <td>—</td>
@@ -274,7 +275,7 @@
                  autocomplete="off" placeholder="email">
           <datalist id="session-owners-candidates">
             {% for candidate in new_session_owner_candidates %}
-              <option value="{{ candidate.email }}">{{ candidate.display_label }}</option>
+              <option value="{{ candidate.email }}"{% if account_verified(candidate) %} data-verified{% endif %}>{{ candidate.display_label }}</option>
             {% endfor %}
           </datalist>
           <div class="card-action-row">
