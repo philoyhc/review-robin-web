@@ -59,10 +59,10 @@ concluding** (decision 2026-09-05) and independent of each other.
    **Plan:** `guide/segment_20_operator_polish_and_documentation.md`.
 
 3. **19Z — Append to a roster** (not gated on Azure). The four roster
-   pages' Upload cards gain an Append tick beside the replace tick, so a
-   late batch adds rows without deleting assignments or responses.
-   Three open questions for the author: a row already on the roster,
-   two ticks or a radio pair, two rows on one account.
+   pages' Upload cards gain an append tick beside the replace tick
+   (mutually exclusive, neither ticked by default), so a late batch adds
+   rows without deleting assignments or responses. A row already on the roster, or on an account already
+   there, refuses the file (author, 2026-10-31).
    **Plan:** `guide/segment_19Z_roster_append.md`.
 
 4. **19X — Refinements from browser runs** (not gated on Azure). A
