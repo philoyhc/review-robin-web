@@ -28,7 +28,7 @@ Email (§17) is out of scope: delegated Graph `Mail.Send` is a deployment prereq
 
 - **Item 1's gate:** no wiring item starts until the author approves the screens. Each later item may change a page only as far as real data requires; anything further goes back to the author.
 - **Sample data is labeled** on every placeholder and lives in one module, `residentialapps/residentialops/sample_leave.py`, deleted in one place by items 2–5.
-- **Placeholders answer only on a local run**, behind 1B's `placeholders_local_only`, until wired.
+- **Placeholders answer only on a local run**, behind 1B's `placeholders_local_only`, until wired. *(2026-10-31: renamed `placeholders_previewers_only`; deployed, they also answer previewers, `residentialapps/spec/applications.md`, "The preview gate".)*
 - **Viewing as.** Placeholders cannot know the viewer's role before identity (1B item 3), so each page renders for one sample viewer named on it (an RA, Chloe Lim; a first approver, Daniel Koh; the admin, Rachel Yeo; the Master, Sam Lee). A labeled sample switch changes viewer (`?as=`) on the landing, the staff pages and, since the audit below, the RA pages, one RA per state worth seeing; it is a card beside the title, not a banner (`residentialapps/spec/residentialops_ui.md` §9), and goes with the sample module, as does Leave policy's switch previewing each appeal mode in this browser.
 - **Phone first:** a mobile-critical page is designed at 390 px and widened; a desktop-oriented one is designed at 1280 px and kept usable on a phone (`residentialapps/spec/applications.md`).
 - **Paths and names** follow the page map: `/ra-leave/…` for RAs, `/ra-leave/staff/…` for staff, `/ra-leave/admin/…` for sys admins (author, 2026-10-28); route names prefixed `residentialops_leave_`.

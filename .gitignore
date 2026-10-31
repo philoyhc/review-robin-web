@@ -41,3 +41,7 @@ Thumbs.db
 !.claude/skills/
 !.claude/hooks/
 !.claude/settings.json
+
+# Residential Apps preview list: real addresses, kept by Cordware and
+# shipped with its releases, never committed here (residentialapps/web/pages.py).
+/residential_preview.md

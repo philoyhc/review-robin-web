@@ -204,7 +204,7 @@ form's end, and the main action is a full-width Primary on the page
 As `residentialops_ui.md` §9:
 - a **Sample data** chip;
 - one sample module;
-- local runs only;
+- local runs, and previewers deployed (`residentialapps/spec/applications.md`, "The preview gate");
 - disabled controls, except the live forms of §4.
 
 A **Sample viewer** card on every sample page (not the not-registered

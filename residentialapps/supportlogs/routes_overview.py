@@ -14,9 +14,9 @@ from starlette.responses import Response
 
 from residentialapps.supportlogs import sample_support as sample
 from residentialapps.supportlogs.pages import gated
-from residentialapps.web.pages import placeholders_local_only
+from residentialapps.web.pages import placeholders_previewers_only
 
-router = APIRouter(dependencies=[Depends(placeholders_local_only)])
+router = APIRouter(dependencies=[Depends(placeholders_previewers_only)])
 
 OVERVIEW = (sample.SENIOR, *sample.VIEW)
 

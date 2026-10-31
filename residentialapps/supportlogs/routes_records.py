@@ -21,10 +21,10 @@ from starlette.responses import RedirectResponse, Response
 
 from residentialapps.supportlogs import sample_support as sample
 from residentialapps.supportlogs.pages import forbidden, gated, query, records_unlocked
-from residentialapps.web.pages import placeholders_local_only
+from residentialapps.web.pages import placeholders_previewers_only
 from residentialapps.web.urls import url_path
 
-router = APIRouter(dependencies=[Depends(placeholders_local_only)])
+router = APIRouter(dependencies=[Depends(placeholders_previewers_only)])
 
 UNKNOWN = "?"  # a staff name or student id that is no one's: never widened to all
 

@@ -1,21 +1,146 @@
-"""What both applications' pages share: the local-only gate for
-placeholders and the account's initials (segment 1D, rung 1). Neither
-application may import the other (`residentialapps/spec/architecture.md`,
-"Import boundaries"), so what both need lives here."""
+"""What both applications' pages share: the preview gate for placeholders
+and the account's initials (segment 1D, rung 1). Neither application may
+import the other (`residentialapps/spec/architecture.md`, "Import
+boundaries"), so what both need lives here."""
 
 from __future__ import annotations
 
-from fastapi import HTTPException
+import logging
+import re
+from functools import lru_cache
+from pathlib import Path
 
-from cordware.identity import is_local
+from fastapi import HTTPException, Request
+
+from cordware.identity import Identity, current_identity, is_local
+
+log = logging.getLogger("residentialapps.web")
+
+# The preview list: a Markdown file beside the `residentialapps/` package,
+# put there by a deployment's build (Cordware keeps the list and ships it
+# with each release). It never lives in this repository: it names real
+# people, and `.gitignore` keeps a local copy out.
+PREVIEW_FILE = Path(__file__).resolve().parents[2] / "residential_preview.md"
+# A top-level list item's first word, at the left margin:
+# "- someone@example.edu" or "* `someone@example.edu` (RF, Tower A)".
+# Indented items are never read, so a nested example, an indented fence
+# or an indented code block cannot name anyone.
+_LIST_ITEM = re.compile(r"^[-*+][ \t]+(\S+)")
+_ADDRESS = re.compile(r"[^@\s<>()\[\]]+@[^@\s<>()\[\]]+\.[^@\s<>()\[\]]+")
+# A fence opens on three or more backticks or tildes, at any indentation,
+# and closes only on a run of the same character at least as long, alone
+# on its line, indented no deeper than the opener (three spaces for one
+# at the margin). Reading more as fenced only ever reads fewer addresses.
+_FENCE = re.compile(r"^( *)(`{3,}|~{3,})(.*)$")
+_OPEN, _CLOSE = "<!--", "-->"
 
 
-def placeholders_local_only() -> None:
+def _first_address(line: str) -> str | None:
+    match = _LIST_ITEM.match(line)
+    if match is None:
+        return None
+    word = match.group(1)
+    if word.startswith("`"):
+        word = word[1:].split("`", 1)[0]
+    word = word.strip("<>").rstrip(".,;:")
+    return word.lower() if _ADDRESS.fullmatch(word) else None
+
+
+def _leaves_comment_open(text: str) -> bool:
+    """Whether ``text``, read outside a comment, ends inside one."""
+    while (start := text.find(_OPEN)) >= 0:
+        end = text.find(_CLOSE, start + len(_OPEN))
+        if end < 0:
+            return True
+        text = text[end + len(_CLOSE):]
+    return False
+
+
+def _closes_fence(match: re.Match[str] | None, fence: tuple[str, int]) -> bool:
+    marker, indent = fence
+    return bool(
+        match
+        and len(match.group(1)) <= max(3, indent)
+        and match.group(2)[0] == marker[0]
+        and len(match.group(2)) >= len(marker)
+        and not match.group(3).strip()
+    )
+
+
+def parse_preview_list(text: str) -> frozenset[str]:
+    """The addresses a preview list names, folded: each top-level list
+    item whose first word is an address. Indented lines, comments and
+    fenced code are not read.
+
+    One pass, line by line. Fences are matched on the raw line, so a
+    comment never opens or closes one, and inside a fence nothing is a
+    comment. Comments only ever remove: a line is read up to its first
+    `<!--`, and nothing on a line that ends a comment is read."""
+    addresses: set[str] = set()
+    fence: tuple[str, int] | None = None  # the opener's marker and indent
+    in_comment = False
+    for line in text.expandtabs(4).splitlines():
+        match = _FENCE.match(line)
+        if fence is not None:
+            if _closes_fence(match, fence):
+                fence = None
+            continue
+        if in_comment:
+            end = line.find(_CLOSE)
+            if end >= 0:
+                in_comment = _leaves_comment_open(line[end + len(_CLOSE):])
+            continue
+        if match and not (match.group(2)[0] == "`" and "`" in match.group(3)):
+            fence = (match.group(2), len(match.group(1)))
+            continue
+        head, opened, tail = line.partition(_OPEN)
+        if opened:
+            in_comment = _leaves_comment_open(_OPEN + tail)
+        if address := _first_address(head):
+            addresses.add(address)
+    return frozenset(addresses)
+
+
+@lru_cache(maxsize=4)
+def preview_addresses(path: Path) -> frozenset[str]:
+    """The addresses the preview list at ``path`` names. Read once per
+    process, so a change ships with a deployment. No file, or one that
+    cannot be read, names nobody."""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return frozenset()
+    except (OSError, UnicodeDecodeError):
+        log.warning("residential preview list unreadable; admitting only the super-admin")
+        return frozenset()
+    addresses = parse_preview_list(text)
+    log.info("residential preview list: %d address(es)", len(addresses))
+    return addresses
+
+
+def is_previewer(identity: Identity | None, path: Path | None = None) -> bool:
+    """The platform super-admin, or an account whose mail, sign-in name
+    (UPN) or address the preview list (`PREVIEW_FILE` unless given)
+    names."""
+    if identity is None:
+        return False
+    if identity.is_super_admin:
+        return True
+    listed = preview_addresses(path or PREVIEW_FILE)
+    return any(
+        address is not None and address.strip().lower() in listed
+        for address in (identity.mail, identity.upn, identity.email)
+    )
+
+
+def placeholders_previewers_only(request: Request) -> None:
     """Placeholder screens show sample data and enforce no access rules
-    yet, so they answer only on a local run (`APP_ENV=local`). Deployed,
-    they are 404 until the items that wire them; a router depends on this
-    until then."""
-    if not is_local():
+    yet. On a local run (`APP_ENV=local`) they answer anyone; deployed,
+    only a previewer (`is_previewer`), and 404 for everyone else, until
+    the items that wire them. A router depends on this until then."""
+    if is_local():
+        return
+    if not is_previewer(current_identity(request)):
         raise HTTPException(status_code=404)
 
 

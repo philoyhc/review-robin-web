@@ -13,7 +13,7 @@ from starlette.responses import Response
 from cordware.identity import current_identity
 from residentialapps.residentialops import sample_data, sample_leave
 from residentialapps.web.pages import initials
-from residentialapps.web.pages import placeholders_local_only as placeholders_local_only  # for the routes
+from residentialapps.web.pages import placeholders_previewers_only as placeholders_previewers_only  # for the routes
 from residentialapps.web.urls import templates
 
 TEMPLATES = templates([Path(__file__).resolve().parent / "templates"])
