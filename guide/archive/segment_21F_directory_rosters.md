@@ -76,26 +76,23 @@ Taken 2026-10-31 at `2bb3e01`.
 
 ## Status
 
-Open. Plan `#3424`, rung 2 `#3425`, rung 3 `#3427`.
+Closed 2026-10-31. Plan `#3424`; rungs 2 `#3425`, 3 `#3427`, 4a `#3428`, 4b `#3429`, 5 `#3430`.
 
-Rung 4 split at build (2026-10-31): a roster import has no preview step; it saves on submit and redirects. So:
-- **4a** resolves addresses at the import's save, the single add and the edit, with no UI. It stores the account, sends mail to the directory's mail, and records the counts in the import's audit event (`directory_*`).
-- **4b** shows those counts on the Setup page, read from the latest import's event. The wording is settled on the page first.
+**What the ladder became.**
+- **Rung 4 split.** A roster import has no preview step: it saves on submit. So resolution happens at the save (4a), and the counts go to the import's audit event (`directory_*`). The Setup page reads them back as one line (4b).
+- **Every upload path resolves**, not only the Setup pages the plan named. That covers Quick Setup and rehydrate (each submit makes one lookup under one budget), plus the single add and the edit.
 
-Rung 5, decided at build (2026-10-31):
-- **This request's principal reaches the matchers** as `users.signed_in_principal_id`, a plain attribute `get_or_create_user` stamps on the row each request. It is not a column, and never the stored `external_principal_id`. The fake user gets none.
-- **One rule:** `participants.Viewer`. A bound row matches only that principal; an unbound row matches by mail. The rule covers the three gates, the chip strip, the dashboard, invitation acceptance and role disclosure.
-- **Self-review** (assignments, including group membership, and the rules engine) treats two rows bound to one account as one person.
-- **The cross-table name check stays address-based.** It guards two names on one address, and an import's rows aren't resolved until after it runs. A person entered by UPN and by mail under two names is not flagged; self-review and matching still treat them as one.
+**Decisions confirmed at build.**
+- **The principal.** This request's principal reaches the matchers as `users.signed_in_principal_id`, a plain attribute that `deps.stamp_principal` sets every request. It is not a column and never the stored `external_principal_id`, and the fake user gets none. The rule is `participants.Viewer`: a bound row matches only that principal, an unbound row matches by mail.
+- **Same person.** One rule, `email_identity.same_identity`, decides it everywhere: both self-review tests, the instrument preview's group lookup and the Full Matrix count. `participants.same_person` is its row form. The reconcile stamp carries the account (`STAMP_VERSION` `v6`).
+- **Diverged from the definition of done.** The cross-table name check stays address-based. It runs before an import resolves, so a person entered by UPN and by mail under two names is not flagged. Matching and self-review still treat them as one.
+- **Two rows on one account.** One account can hold two rows in one roster. The gates and the dashboard take the lowest id. Whether to refuse such rows is deferred (`guide/deferred_consolidated.md`, "Two rows in one roster bound to one account").
+- **Audit and mail.** Bindings are audited: the `*.created` snapshot, and `changes` on an edit that moves one. Mail to a bound row goes to the directory's mail.
+- **No backfill.** No deployment held bound rows before rung 5 (author, 2026-10-31).
 
-Rung 5's `diff-reviewer` read of the cumulative diff (`ddb61b2..HEAD`) found no authorization hole. It found 11 items, all handled in `#3430`:
-- **Self-review by account, everywhere.** The instrument preview's group lookup and the Full Matrix count still keyed on the address. Both now read `email_identity.same_identity`, as do both self-review tests and `participants.same_person`, its row form.
-- **Quick Setup and rehydrate resolve too.** Both saved rosters unbound, and a rehydrate dropped every binding. The plan named only the Setup pages; the ruling "at upload" covers every upload path.
-- **Bindings are audited.** `*.created` snapshots `directory_object_id`, and an edit that moves it records it in `changes`.
-- **`/me/debug` stamps the principal**, so its back link works for a bound row.
-- **One account can hold two rows in one roster** (Jane by mail and by UPN). The gates now take the lowest id, so the choice holds across requests. Refusing such duplicates is an open question.
-- Tests added: the reviewer gate, and an edit that moves access from one account to the other.
-- Two items are recorded, not changed. The fake user binds nothing, so locally only the unbound path can be exercised; the bound path needs the real tenant. And `cordware/identity.py` reads the email from `preferred_username` when the email claim is absent, so the `office@` protection depends on the tenant issuing that claim.
+**Reads.** One `diff-reviewer` read of `ddb61b2..bea4beac` found no authorization hole and 11 items. All were handled in `#3430`, which listed them. Codex then found four more on that PR: the shared lookup budget, the dashboard row, the stamp, and the backfill.
+
+**Owed.** The author's check on the real tenant. Fake auth binds nothing, so no local run covers the bound path. It is a stub in `guide/todo_master.md`. A related risk: `cordware/identity.py` reads the email from `preferred_username` when the email claim is absent, so the `office@` protection depends on the tenant issuing that claim.
 
 ## PR ladder
 
@@ -133,7 +130,7 @@ Rung 5's `diff-reviewer` read of the cumulative diff (`ddb61b2..HEAD`) found no 
 
 - ~~Invitations for a row resolved by UPN~~ go to the directory's mail (author, 2026-10-31).
 - ~~Offer to rewrite UPN cells at upload~~: no (author, 2026-10-31).
-- Should an upload refuse, or Validate flag, two rows in one roster bound to the same account? The gates pick the lowest id until this is ruled. The author decides.
+- ~~Refuse two rows in one roster bound to one account~~: unruled, deferred (`guide/deferred_consolidated.md`).
 
 ## Out of scope
 
@@ -150,4 +147,8 @@ Rung 5's `diff-reviewer` read of the cumulative diff (`ddb61b2..HEAD`) found no 
 - `spec/audience_and_identity_model.md` — the identity-match rule: account first, then mail (rung 5).
 - `spec/participant_model.md` — the reviewee and observer gates' match (rung 5).
 - `spec/architecture.md` — "Identity is Cordware's": RRW's direct `cordware.graph` imports (`app/services/directory_accounts.py`, `app/web/routes_operator/_shared.py`) (rung 5).
+- `spec/setup_pages.md` — the three roster pages' directory-check line under the import card (rung 4b).
+- `spec/quick_setup_card_spec.md` — each roster slot's addresses resolved before the save unit, in one lookup per submit (rung 5).
+- `spec/rehydrate.md` — the rebuilt rosters resolved through the operator's directory, since an extract carries no binding (rung 5).
+- `spec/reviewer-surface.md` — the dashboard and gate take the lowest-id row when one account holds two (rung 5).
 - `guide/todo_master.md` — the queue entry, deleted at close.

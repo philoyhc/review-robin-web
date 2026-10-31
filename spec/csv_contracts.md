@@ -360,6 +360,39 @@ Reviewees side (idempotent display-field seeding off populated
 argument reconciles the tag friendly labels from the header (§1a):
 upsert present, clear absent.
 
+**Directory resolution (all three roster importers).** A roster import
+has no preview step: it saves on submit. At the save, each distinct
+address is resolved through the importing operator's delegated Graph
+token (`cordware.graph.look_up_all`, `cordware/spec/identity.md`
+"Graph"; the caller builds the check with
+`csv_imports.directory_check` and passes it to the save as
+`directory=`).
+
+- **Bound or not.** A row whose address resolves to exactly one account
+  (`OK`, `USE_PRIMARY` or `FOUND_NO_PRIMARY`,
+  `utilityapps/spec/email_check.md` "Classification") stores
+  `directory_object_id`, `directory_mail` and `directory_upn` beside the
+  address as written. Any other outcome (`NOT_FOUND`, `AMBIGUOUS`,
+  `ERROR`, no delegated token, a lookup unfinished at the time budget,
+  or an identifier that is not an address) stores none of them, and the
+  row matches by mail. The address column is never rewritten. Matching
+  is `spec/audience_and_identity_model.md` "Identity match".
+- **No token** (or fake auth off on a local run) checks nothing and the
+  import proceeds.
+- **Audit counts.** The `*.imported` event's `counts` gains, over the
+  file's distinct addresses: `directory_by_mail`, `directory_by_upn`
+  (`USE_PRIMARY` and `FOUND_NO_PRIMARY`), `directory_not_found`,
+  `directory_ambiguous`, `directory_not_checked`. Omitted when the
+  caller ran no check. An unchecked address counts under
+  `directory_not_checked`.
+- **Setup page line.** The latest import's counts show as one line under
+  the import card (`spec/setup_pages.md`).
+- **Re-upload re-resolves.** A replace replaces the bindings with the
+  file's; there is no bulk re-resolve of existing rosters.
+- **Not covered.** The cross-roster identity check above stays
+  address-based: it guards two names on one address, and the rows are
+  not resolved until after it runs.
+
 ### 3.2 Relationships — `relationships.py`
 
 `parse_relationship_csv(content, *, reviewers, reviewees,
@@ -457,7 +490,7 @@ both round-trip.
 | `CohortRule` shape | Non-blank cell must be valid JSON **and** pass `CohortRuleSet.model_validate` → per-row error otherwise; a typed operator (`IS` / `IS NOT` / `CONTAINS` / `DOES NOT CONTAIN`) needs a non-blank `operand_value`, since `CONTAINS ""` would match every row. Blank cell → `cohort_rule = NULL`. |
 
 **Save:** `save_observers(...)` wipe-and-replace within the session's
-observer roster. Emits `observers.imported` audit event on success.
+observer roster, resolving addresses as §3.1 (*Directory resolution*). Emits `observers.imported` audit event on success.
 Bulk delete: `delete_all_observers(db, *, review_session, user,
 correlation_id)` — emits `observers.deleted_all`.
 

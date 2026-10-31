@@ -1039,6 +1039,26 @@ Path B (immediate download), and the TTL. Then re-take its Blast
 radius and follow its PR ladder, scaffold first.
 
 
+#### Two rows in one roster bound to one account (21F close, 2026-10-31)
+
+**Ships.** An upload, or the Validate page, flags or refuses two rows
+in one roster that resolve to the same directory account: Jane listed
+once by mail and once by sign-in name. The duplicate-address check
+cannot see it, since the two addresses differ.
+
+**Why deferred.** Segment 21F's directory check runs at the save,
+after validation, so catching the pair means either resolving at
+validation or a post-save warning. Meanwhile the gates and the `/me`
+dashboard take the lowest-id row, so the person sees one row
+consistently (`guide/archive/segment_21F_directory_rosters.md` §
+Status). Open since `#3430`, unruled.
+
+**Lift trigger.** An operator's roster lists one person both ways, or
+an invitation sent to the second row opens the first row's surface.
+
+**Wire-up.** The author rules: refuse at upload, or a Validate soft
+warning. Either reads `directory_object_id` across one roster's rows.
+
 ### Assignment rules
 
 #### Include or rule out whole groups by their members' tags (author, 2026-10-18)

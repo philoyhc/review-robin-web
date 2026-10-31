@@ -22,13 +22,20 @@ All three rosters carry the same `status` column with `active` / `inactive` valu
 
 ### Identity matching
 
-The participant gates (`require_reviewer_in_session`, `require_reviewee_in_session`, `require_observer_in_session` in `app/web/deps.py`) compare the authenticated user's email against the roster column **case-insensitively**, through `normalize_email` in `app/services/email_identity.py`: strip surrounding whitespace, then `str.lower`. It is deliberately not `casefold`, which folds `ß` to `ss` and so would merge two distinct mailboxes into one identity.
+The participant gates (`require_reviewer_in_session`, `require_reviewee_in_session`, `require_observer_in_session` in `app/web/deps.py`) match a row through `participants.Viewer.matches` (`app/services/participants.py`); the rule, and why it is never the stored principal ID, is `spec/audience_and_identity_model.md` "Identity match". In short:
 
-- **Reviewer**: `normalize_email(Reviewer.email) == normalize_email(user.email)`.
-- **Reviewee**: `normalize_email(Reviewee.email_or_identifier) == normalize_email(user.email)` **and** the identifier passes `participants.is_email_identified(reviewee)` (i.e. parses as an email). Reviewees with confidential / opaque identifiers cannot reach the reviewee surface by construction — there is no email inbox to authenticate against.
-- **Observer**: `normalize_email(Observer.email) == normalize_email(user.email)`.
+- **A row bound to a directory account** (`directory_object_id`, stored at upload) matches only the person whose current request's principal ID equals it.
+- **Any other row** matches the authenticated user's email against the roster column **case-insensitively**, through `normalize_email` in `app/services/email_identity.py`: strip surrounding whitespace, then `str.lower`. It is deliberately not `casefold`, which folds `ß` to `ss` and so would merge two distinct mailboxes into one identity.
 
-The same case-insensitive email match is the basis for the cross-role union (§5 below).
+The gates differ only in the row and address column:
+
+- **Reviewer**: `Reviewer.email`.
+- **Reviewee**: `Reviewee.email_or_identifier` **and** the identifier passes `participants.is_email_identified(reviewee)` (i.e. parses as an email). Reviewees with confidential / opaque identifiers cannot reach the reviewee surface by construction — there is no email inbox to authenticate against.
+- **Observer**: `Observer.email`.
+
+Each gate walks the session's active rows in `id` order and takes the first match, so one account holding two rows in a roster always lands on the lowest-id row.
+
+The same match (`Viewer.clause`, its SQL form) is the basis for the cross-role union (§5 below).
 
 ---
 
@@ -115,7 +122,7 @@ The release-window columns (`sessions.responses_release_at` + `sessions.response
 
 The `/me` dashboard (`reviewer_dashboard` in `app/web/routes_reviewer/_dashboard.py`) unions the three rosters into a single table, one row per session the user touches in any participant role. The reviewer-dashboard contract is documented in `spec/reviewer-surface.md`; this section covers the participant-model layer specifically.
 
-**Union rule.** For the signed-in user, the dashboard runs three queries (reviewer / reviewee-with-email-identification / observer, `status = active` only, case-insensitive email match) and merges by `session_id`. Each row carries the `roles` list — a subset of `["reviewer", "reviewee", "observer"]` in that priority order.
+**Union rule.** For the signed-in user, the dashboard runs three queries (reviewer / reviewee-with-email-identification / observer, `status = active` only, matched as above) and merges by `session_id`. Each row carries the `roles` list — a subset of `["reviewer", "reviewee", "observer"]` in that priority order.
 
 **The reviewee role additionally requires a currently-resolving grant.** An active, email-identified reviewee row is necessary but not sufficient: `visibility_policies.reviewee_has_current_grant(db, session)` must also return `True`, meaning at least one instrument in the session has a `reviewee` policy row whose mode resolves **inside the open response-release window** — a reviewee grant is after-release only. With no such grant the `reviewee` entry never enters `roles`, so there is no pill, no link, and no reachable surface: `/results` answers the same bare 404 a stranger gets.
 
