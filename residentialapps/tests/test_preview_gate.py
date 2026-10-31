@@ -142,3 +142,19 @@ def test_an_unreadable_list_names_nobody(tmp_path: Path) -> None:
     assert web_pages.preview_addresses(tmp_path / "bad.md") == frozenset()
     assert web_pages.preview_addresses(tmp_path) == frozenset()  # a directory
     web_pages.preview_addresses.cache_clear()
+
+
+def test_a_fence_closes_only_on_its_own_marker_at_least_as_long() -> None:
+    text = """~~~markdown
+```
+- inner.backticks@example.edu
+```
+- still.fenced@example.edu
+~~~
+````
+```
+- short.inner@example.edu
+````
+- open.again@example.edu
+"""
+    assert web_pages.parse_preview_list(text) == frozenset({"open.again@example.edu"})

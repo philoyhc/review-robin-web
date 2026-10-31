@@ -28,7 +28,9 @@ _ADDRESS = re.compile(r"[^@\s<>()\[\]]+@[^@\s<>()\[\]]+\.[^@\s<>()\[\]]+")
 # What Markdown hides: an HTML comment (unterminated, to the end), so
 # commenting an entry out removes it.
 _COMMENT = re.compile(r"<!--.*?(?:-->|\Z)", re.DOTALL)
-_FENCE = re.compile(r"^\s*(```|~~~)")
+# A fence opens on three or more backticks or tildes and closes only on a
+# run of the same character at least as long, alone on its line.
+_FENCE = re.compile(r"^\s{0,3}(`{3,}|~{3,})(.*)$")
 
 
 def _first_address(line: str) -> str | None:
@@ -46,11 +48,21 @@ def parse_preview_list(text: str) -> frozenset[str]:
     """The addresses a preview list names, folded: each list item whose
     first word is an address. Comments and fenced code are not read."""
     addresses: set[str] = set()
-    fenced = False
+    fence: str | None = None
     for line in _COMMENT.sub("", text).splitlines():
-        if _FENCE.match(line):
-            fenced = not fenced
-        elif not fenced and (address := _first_address(line)):
+        match = _FENCE.match(line)
+        if fence is not None:
+            if (
+                match
+                and match.group(1)[0] == fence[0]
+                and len(match.group(1)) >= len(fence)
+                and not match.group(2).strip()
+            ):
+                fence = None
+            continue
+        if match and not (match.group(1)[0] == "`" and "`" in match.group(2)):
+            fence = match.group(1)
+        elif address := _first_address(line):
             addresses.add(address)
     return frozenset(addresses)
 
