@@ -162,6 +162,11 @@ nothing in this repository can reach it. The last public statement of
 that strategy is `docs/archive/cordware_repository_strategy_v0.8.md`
 §5.
 
+**The public address** (author, 2026-10-30): the institutional gateway
+sends the applications the App Service's own host name, so that host sets
+`CORDWARE_PUBLIC_ORIGIN` (segment 21E) rather than trusting a forwarded
+header. The value is kept privately with the deployment.
+
 **One Azure host** (author, 2026-10-24): the dev slot is not revived for
 the institutional release. Segment 21D's live check under real Easy
 Auth runs on that release ("CI/CD workflow" above). This document stays
@@ -176,7 +181,8 @@ restart the app after a change.
 | Variable | Default | Purpose |
 |---|---|---|
 | `APP_ENV` | `local` | Environment name. Any value other than `local` activates the fail-fast startup checks (`validate_critical_settings`). |
-| `CORDWARE_APPS` | unset | The applications the Cordware host mounts, comma-separated (`cordware/main.py`). Unset mounts every registered application (`reviewrobin`, `residentialops`, `supportlogs`), so a slot that serves RRW alone sets `reviewrobin`; an empty value runs the host alone, with its landing page and `/health`. |
+| `CORDWARE_APPS` | unset | The applications the Cordware host mounts, comma-separated (`cordware/main.py`). Unset mounts every registered application (`reviewrobin`, `residentialops`, `supportlogs`, `utilities`), so a slot that serves RRW alone sets `reviewrobin`; an empty value runs the host alone, with its landing page and `/health`. |
+| `CORDWARE_PUBLIC_ORIGIN` | unset | The address users reach the host at, `https://host[:port]` (`cordware/spec/host.md`). Set, every request's scheme and host are rewritten to it, so invitation links and trailing-slash redirects name it. Needed behind a gateway that sends the App Service's own host name; this slot, reached directly, leaves it unset. |
 | `RRW_DATABASE_URL` | unset | RRW's database connection string, app-prefixed like Residential's; wins over `DATABASE_URL` set in the same source (the environment is read before `.env`). The name the institutional host uses. |
 | `DATABASE_URL` | local SQLite | The older name, read when `RRW_DATABASE_URL` is unset; what this slot and CI use. Postgres in deployed environments — see "Database configuration" below. |
 | `LOG_LEVEL` | `INFO` | Root log level for the structured-logging setup, which the Cordware host owns (`cordware/logging.py`, segment 21A). |

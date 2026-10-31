@@ -5,7 +5,8 @@ small, general-purpose institutional tools that belong to neither Review
 Robin nor Residential Apps. Its first tool, the Email Address Checker, is
 built (segment U1, closed 2026-10-30). Production carries its runtime code
 from 2026-10-30: Cordware's import rules split `utilityapps/` and import
-everything but its prose and tests. `/utilities/health` is excluded from
+everything but its prose and tests. The import of 2026-10-31 brought the
+favicon below. `/utilities/health` is excluded from
 sign-in. The application stays switched off until its first release, which
 waits on Cordware's release deploy. The real-tenant smoke test is
 Cordware's, at that release.
