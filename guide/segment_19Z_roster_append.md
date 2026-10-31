@@ -162,8 +162,8 @@ Upsert rungs (2026-10-31): rung 7 rode with the amendment (`#3438`), rung 8 `#34
 - ~~A file row already on the roster~~: refused (author, 2026-10-31).
 - ~~Two ticks or a radio pair~~: two mutually exclusive ticks, neither ticked by default (author, 2026-10-31, after first ruling a radio pair).
 - ~~Two rows on one account on append~~: refused (author, 2026-10-31).
-- **An invite whose lookup could not run** (no directory token, a Graph error, a local run without a directory): refuse, or create it unverified and plain? Recommendation: create it plain, with a line saying it was not checked, as rosters do for "not checked"; the person still binds at first sign-in. Author decides.
-- **Sign-in as verification:** count an account that has signed in as verified (recommended: Entra admitted them), or only one bound at invite? Author decides.
+- ~~An invite whose lookup could not run~~: created unverified and plain, the card saying it was not checked; the person binds at first sign-in (author, 2026-10-31).
+- ~~Sign-in as verification~~: an account that has signed in counts as verified (author, 2026-10-31).
 
 ## Out of scope
 
