@@ -58,7 +58,14 @@ concluding** (decision 2026-09-05) and independent of each other.
    address the stub below introduces.
    **Plan:** `guide/segment_20_operator_polish_and_documentation.md`.
 
-3. **19X — Refinements from browser runs** (not gated on Azure). A
+3. **19Z — Append to a roster** (not gated on Azure). The four roster
+   pages' Upload cards gain an Append tick beside the replace tick, so a
+   late batch adds rows without deleting assignments or responses.
+   Three open questions for the author: a row already on the roster,
+   two ticks or a radio pair, two rows on one account.
+   **Plan:** `guide/segment_19Z_roster_append.md`.
+
+4. **19X — Refinements from browser runs** (not gated on Azure). A
    standing segment for small follow-ups from the author's browser
    runs, one item each. Items 1–3 closed 2026-10-19, Items 4–9 on
    2026-10-20 and Items 10–13 on 2026-10-22. None open; add one per
