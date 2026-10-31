@@ -232,4 +232,18 @@ def test_an_unchecked_import_says_so(
         follow_redirects=False,
     )
     text = client.get(f"/operator/sessions/{session.public_id}/observers?unlocked=1").text
-    assert "wasn't checked against" in text and "the directory" in text
+    assert "checked against the directory" in text and "Importing the file again" in text
+    assert "no directory access" not in text  # the counts can't tell why (Codex, #3429)
+
+
+def test_an_import_with_no_address_to_check_shows_nothing(
+    client: TestClient, db: Session, directory: FakeDirectory
+) -> None:
+    session = _session(client, db, "dir-page-anon")
+    client.post(
+        f"/operator/sessions/{session.public_id}/reviewees/import",
+        files={"file": ("e.csv", b"RevieweeName,RevieweeEmail\nAnon,STU-0001\n", "text/csv")},
+        follow_redirects=False,
+    )
+    text = client.get(f"/operator/sessions/{session.public_id}/reviewees?unlocked=1").text
+    assert "data-directory-check" not in text

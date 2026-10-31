@@ -17,6 +17,14 @@ from sqlalchemy.orm import Session
 
 from app.db.models import AuditEvent, ReviewSession
 
+_COUNT_KEYS = (
+    "directory_by_mail",
+    "directory_by_upn",
+    "directory_not_found",
+    "directory_ambiguous",
+    "directory_not_checked",
+)
+
 _EVENT = {
     "reviewers": "reviewers.imported",
     "reviewees": "reviewees.imported",
@@ -54,6 +62,10 @@ def last_directory_check(
     ).scalar_one_or_none()
     counts = (event.detail or {}).get("counts", {}) if event is not None else {}
     if "directory_not_checked" not in counts:
+        return None
+    # An import with no address to check (anonymous identifiers only)
+    # has nothing to report (Codex, #3429).
+    if not any(counts.get(k, 0) for k in _COUNT_KEYS):
         return None
     return DirectoryCheck(
         at=event.created_at,
