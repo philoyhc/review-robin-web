@@ -255,6 +255,15 @@ permissions.
   (`cordware/spec/host.md`). RRW does not re-check it.
 - An application imports `cordware.identity`,
   never `cordware.main` (`cordware/spec/host.md` "Import boundary").
+- **Directory lookups are Cordware's too** (`cordware/graph.py`,
+  `cordware/spec/identity.md` "Graph"). RRW imports it directly in
+  `app/services/directory_accounts.py` (the lookup and its outcomes, for
+  roster upload), `app/web/routes_operator/_shared.py` and
+  `app/web/routes_operator/_quick_setup.py` (the operator's `Directory`,
+  from `directory_for`; none without a delegated token). Services receive
+  a `Directory` (or `None`) and never read a request. Roster matching by
+  directory account is `spec/audience_and_identity_model.md` "Identity
+  match".
 
 **Static assets** — `app/web/static/`, served by the one `StaticFiles`
 mount at `/static` (`app/main.py`). It exists for the Guide's
@@ -898,6 +907,12 @@ count. The slots are **not the same on every event**:
 | `reviewers.imported` / `reviewees.imported` | `new`, `replaced`, `cascaded_assignments`, `cascaded_relationships` |
 | `reviewers.deleted_all` / `reviewees.deleted_all` | `deleted`, `cascaded_assignments`, `cascaded_relationships` |
 | `reviewer.bulk_deleted` / `reviewee.bulk_deleted` | `deleted`, `cascaded_assignments`, `cascaded_responses`, `cascaded_relationships` |
+
+The import events (`reviewers.` / `reviewees.` / `observers.imported`)
+also carry `directory_by_mail`, `directory_by_upn`,
+`directory_not_found`, `directory_ambiguous` and `directory_not_checked`
+in `counts` when the import ran a directory check
+(`spec/csv_contracts.md` §3.1).
 
 `cascaded_responses` rides the **bulk delete alone**
 (`app/services/roster_bulk.py`) — a roster import or delete-all

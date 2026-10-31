@@ -57,8 +57,8 @@ The reviewee is a live participant audience with a full results
 surface:
 
 - A `require_reviewee_in_session` gate in `app/web/deps.py` that
-  matches a signed-in user to an active Reviewee row by
-  case-insensitive email equality. The surface itself is gated by
+  matches a signed-in user to an active Reviewee row (**Identity
+  match**, below). The surface itself is gated by
   **`require_reviewee_with_current_grant`**, which composes
   that roster check with a currently-resolving visibility grant
   (`visibility_policies.reviewee_has_current_grant`); without one the
@@ -223,6 +223,55 @@ Per-session role granularity beyond `"owner"` (e.g.
 `session_operators.role` already admits `"manager"`, and nothing
 writes it.
 
+## Identity match
+
+How a signed-in person is matched to a roster row (reviewer, reviewee or
+observer). It applies to the three gates, the reviewer dashboard and its
+chip strip, invitation acceptance and role disclosure
+(`participants.disclosable_roles`); one rule, `participants.Viewer`
+(`app/services/participants.py`), decides.
+
+- **A row bound to a directory account** (`directory_object_id` set)
+  matches only the person whose **current request's** authenticated
+  principal ID (the Entra object ID Easy Auth supplies) equals it,
+  case-insensitively. A request with no principal ID, or the fake
+  user's, matches no bound row.
+- **Any other row** matches by mail: the signed-in email against the
+  address as written, folded (`strip()` then `lower()`).
+- **Never the stored principal.** The comparison is never with
+  `users.external_principal_id`: a `users` row found by email can carry
+  an earlier holder's principal ID, and a bound row must not follow an
+  address to a new account. `get_or_create_user` carries this request's
+  ID on the row for the request (`deps.stamp_principal`, a plain
+  attribute, not a column).
+- **Never the sign-in name.** A signed-in person is not matched by their
+  mail or UPN against a roster address at sign-in: Entra does not keep
+  one account's mail distinct from another's UPN, so an entry meant for
+  one account would admit the other. The directory sees that collision
+  as `AMBIGUOUS` at upload and binds nothing.
+- **How a row becomes bound** is the upload's resolution
+  (`spec/csv_contracts.md` §3.1, *Directory resolution*). Resolution
+  runs at every roster write: Setup import, single add and edit, Quick
+  Setup and rehydrate. An address edit keeps the binding when the folded
+  address is unchanged; otherwise it re-resolves, and without a lookup
+  or a unique account clears the binding, never keeps it.
+- **One person across rosters.** Two rows bound to the same account are
+  one person; otherwise the folded address decides
+  (`participants.same_person`, `email_identity.same_identity`). Every
+  self-review test (assignments, group membership, the rules engine, the
+  instrument preview and the Full Matrix count) uses it. The cross-roster
+  name check (`spec/csv_contracts.md` §3.1) stays address-based.
+- **Two rows, one account, one roster.** The gates and the dashboard take
+  the lowest-id row, so the choice holds across requests. Whether an
+  upload refuses or Validate flags such duplicates is undecided.
+- **Mail to a bound row** goes to the directory's mail
+  (`directory_accounts.recipient`), since a row given by UPN may take no
+  mail.
+- **Unchanged.** The allowlists (`OPERATOR_EMAILS`, `SYS_ADMIN_EMAILS`,
+  `SUPER_ADMIN_EMAILS`) have no upload step and stay mail-only;
+  external reviewers, guests and anonymous reviewee identifiers never
+  resolve and match as before.
+
 ## Identity model: Reviewer-as-form-respondent (Model A, middle position)
 
 The relationship between the reviewer and the app is a deliberate
@@ -353,7 +402,7 @@ fake identity, which it refuses outside `APP_ENV=local`
   elevated role — sign in via institutional SSO (MS365 in current
   deployments). No operator content is reachable without auth.
 - **Reviewees** and **observers** sign in the same way and are
-  matched to their roster row by case-insensitive email.
+  matched to their roster row by **Identity match** (below).
 - **Reviewers** sign in via institutional SSO by default; magic
   links are an enhancement supporting cases where SSO is unavailable
   (e.g., external reviewers from outside the institution). The

@@ -1021,6 +1021,29 @@ is the Upload card — both are tenants of the Unlock panel, which is
 suppressed as a whole. Observers' predicate is not `is_editable` at
 all; see its § *Lifecycle gate*. `spec/lifecycle.md` §5.
 
+### The Upload card's directory-check line
+
+The Reviewers, Reviewees and Observers upload cards show one muted line
+for the latest import, from `partials/_directory_check.html`
+(`data-directory-check`), under any upload-problems banner and above the
+form. It reads the counts the import's audit event recorded
+(`views.last_directory_check`, `spec/csv_contracts.md` §3.1), so it
+survives the redirect after the save and shows for any viewer of the
+card.
+
+- **Checked** (the directory answered for at least one address): the
+  time, then the counts matched by mail, by sign-in name, not found,
+  ambiguous, and not checked (shown only when non-zero), then a closing
+  sentence that not-found and ambiguous addresses still work by the
+  address as written.
+- **Not checked** (every address unchecked): one sentence saying the
+  addresses weren't checked against the directory, so rows match by the
+  address as written, and that importing again tries again. It names no
+  cause, because no directory access and failed lookups look the same in
+  the counts.
+- **Nothing** for an import with no counts (one that ran no check) or
+  with no address to check (anonymous reviewee identifiers only).
+
 ### The Upload card's replace
 
 `POST /operator/sessions/{id}/{roster}/import` replaces the whole

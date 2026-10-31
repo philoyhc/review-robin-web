@@ -45,6 +45,20 @@ its own order below, in which `preferred_username` (often the UPN) comes
 before the `email` claim. All three new fields default to `None`, so an
 `Identity` built without them is as before.
 
+**Matching a person.** An application that keeps a roster of directory
+accounts matches a signed-in person on `principal_id`, the object ID,
+never on `email` or `upn` against an address written in the roster:
+Entra does not keep one account's mail distinct from another account's
+sign-in name, and the fake directory models exactly that collision
+(`FAKE_USERS` in `cordware/graph.py`). RRW resolves each roster address
+to an account at upload and compares the object ID with the current
+request's `principal_id`; a row with no account matches by `email`
+(`spec/audience_and_identity_model.md` "Identity match"). The fake
+identity's `principal_id` is one shared constant and binds nothing.
+`email` falls back to `preferred_username` when no email claim is
+issued (table below), so a deployment must issue the email claim for
+mail-only matching, and the allowlists, to compare mail.
+
 Computed properties, never stored:
 
 - `display_label` is `name`, else `email`, else `""`.
@@ -268,8 +282,9 @@ Email Address Checker; directory lookups only.
   `AMBIGUOUS` or `ERROR`. A lookup unfinished at the budget is `ERROR`
   (`timeout`), and a refused sign-in stops every lookup not yet started.
   Built for the Email Address Checker (`utilityapps/spec/email_check.md`
-  "Classification"), and shared from segment 21F with RRW's roster
-  upload.
+  "Classification"), and shared with RRW's roster upload, which binds a
+  row only to a `RESOLVED` outcome (`OK`, `USE_PRIMARY`,
+  `FOUND_NO_PRIMARY`).
 - **Logging.** Logger `cordware.graph`: `graph.request_failed`, a
   warning carrying `kind` and `status` only, never the address, the
   query or the token.

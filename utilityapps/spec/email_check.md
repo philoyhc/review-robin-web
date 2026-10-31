@@ -8,9 +8,12 @@ The checker's contract: what it reads, what it shows before checking, and
 what it writes. The pages and where they mount are
 `utilityapps/spec/utilities.md`. The code is
 `utilityapps/email_check/csvio.py` (CSV in and out),
-`utilityapps/email_check/check.py` (lookup and classification) and
+`utilityapps/email_check/check.py` (the check: each row classified,
+duplicate groups, the budget) and
 `utilityapps/email_check/routes.py` (the pages). The directory is the
-host's (`cordware/spec/identity.md` "Graph").
+host's (`cordware/spec/identity.md` "Graph"): the lookup (`look_up_all`),
+the classification below (`classify`) and the `Outcome` shape live in
+`cordware/graph.py`, and RRW's roster upload reads the same ones.
 
 ## Access
 
@@ -100,8 +103,7 @@ then nine result columns in this order (`RESULT_COLUMNS`): `status`,
 
 Each distinct key is looked up once, at most four at a time
 (`check.WORKERS`), through `cordware.graph`'s `look_up_all`,
-`classify` and `find_users` (shared with RRW's roster upload from
-segment 21F): one query
+`classify` and `find_users`: one query
 matching `mail` or `userPrincipalName`. With fake auth on a local run
 that is the fake directory. Alias lookup is not built, so every row's
 `lookup_coverage` is `BASIC_ONLY`.

@@ -1133,25 +1133,33 @@ would reopen it.
 
 ## Identity matching
 
-A signed-in user is matched to `Reviewer` rows by **case-insensitive
-email equality**, folded by `normalize_email` in
-`app/services/email_identity.py`: strip whitespace, then `str.lower`
-(deliberately not `casefold()`, which would merge distinct mailboxes
-such as `ß` and `ss`). Three callers apply it, each slightly
-differently:
+A signed-in user is matched to `Reviewer` rows by
+`participants.Viewer` (`app/services/participants.py`;
+`spec/audience_and_identity_model.md` "Identity match"). A row bound to a
+directory account matches only that account's principal for this
+request. Every other row matches by **case-insensitive email equality**,
+folded by `normalize_email` in `app/services/email_identity.py`: strip
+whitespace, then `str.lower` (deliberately not `casefold()`, which would
+merge distinct mailboxes such as `ß` and `ss`). Three callers apply it,
+each slightly differently:
 
 - **Session surface** — `require_reviewer_in_session` in
-  `app/web/deps.py` folds both sides in Python and admits only
+  `app/web/deps.py` matches in Python and admits only
   `status == "active"` rows; inactive / removed reviewers get a 404.
+  When one account holds two active rows in the session (one given by
+  mail, one by sign-in name), the gate takes the **lowest id**, so the
+  same row answers on every request.
 - **Dashboard** (`/me`, `app/web/routes_reviewer/_dashboard.py`) —
-  matches in SQL, `func.lower(func.trim(Reviewer.email)) == normalize_email(user.email)`
+  matches in SQL through `Viewer.clause`: a bound row by principal, an
+  unbound row by `func.lower(func.trim(Reviewer.email)) == normalize_email(user.email)`
   (and the same on reviewee and observer rows),
-  also `status == "active"` only. SQLite's `lower()` is ASCII-only
+  also `status == "active"` only. Its reviewer row per session is the
+  lowest id, as the gate's. SQLite's `lower()` is ASCII-only
   while Postgres's is Unicode-aware, so the two sides agree on ASCII
   addresses only.
 - **Invitation landing** (`/me/invite/{token}`,
-  `app/web/routes_reviewer/_invite.py`) — folds both sides through
-  `normalize_email`, after `invitations.lookup_invitation_by_token`
+  `app/web/routes_reviewer/_invite.py`) — matches the invited row
+  through `Viewer.matches`, after `invitations.lookup_invitation_by_token`
   has resolved only an `active` reviewer's invitation on a session
   that is not `archived` (an archived session's token answers the same
   404). An inactive reviewer is treated as if not a reviewer at all: their token answers 404 as an unknown one does — the
@@ -1160,10 +1168,13 @@ differently:
   `invitation.opened` event). An active reviewer's token followed by
   someone else gets the 403 mismatch page.
 
-A user can have at most one active `Reviewer` row per session. A
-session can have multiple reviewers, each tied to a distinct user.
+A session can have multiple reviewers, each tied to a distinct user. A
+user holds at most one reviewer row by address (a duplicate address is
+refused), but one directory account can hold two rows given by different
+addresses; the lowest-id rule above resolves it. Whether to refuse such
+duplicates at upload is undecided.
 
-The same **case-insensitive email equality** rule applies to
+The same rule applies to
 `Reviewee.email_or_identifier` (for `require_reviewee_in_session`)
 and `Observer.email` (for `require_observer_in_session`) — see
 `app/web/deps.py`. The `/me` dashboard uses the same pattern for
@@ -1257,8 +1268,8 @@ invitation token) or via "Your reviews" from any session-scoped
 chrome. Lists **every session the signed-in user touches in any
 participant role** (reviewer / reviewee / observer), as a
 cross-role union. The query hits all three rosters
-(`reviewers`, `reviewees`, `observers`) with case-insensitive email
-matching; only `status == "active"` rows contribute; an **archived
+(`reviewers`, `reviewees`, `observers`) matched as
+*Identity matching* above; only `status == "active"` rows contribute; an **archived
 session is left out** for every role; the
 result is deduplicated per session and sorted newest-created first
 (`created_at`, then `id`), so an operator's edit never moves a row.
@@ -1508,7 +1519,7 @@ for the gate semantics.
 
 1. the roster check from `require_reviewee_in_session` — an active
    Reviewee row whose `email_or_identifier` is a valid email matching
-   the user's, case-insensitively; confidential reviewees (non-email
+   the user (*Identity matching*); confidential reviewees (non-email
    identifiers) never pass; **and**
 2. `visibility_policies.reviewee_has_current_grant` — at least one
    instrument granting them a mode inside the open response-release
@@ -1555,7 +1566,7 @@ captured as a `{page_n}` value.
 
 **Gate** — `require_observer_in_session` in `app/web/deps.py`:
 the authenticated user must have an active Observer row whose
-`email` matches (case-insensitive). On mismatch: a bare **HTTP 404**,
+`email` matches the user (*Identity matching*). On mismatch: a bare **HTTP 404**,
 byte-identical to an unknown session id. Not a 403, and no role-naming
 `detail` — either confirms the session exists to a caller who should
 not learn that.
@@ -1761,9 +1772,10 @@ Behaviour:
    emails. An ordinary reminder reuses the current link; only one that
    falls back to a fresh invitation (no current link on file, as after a
    Regenerate) rotates it.
-3. **Email match check** — case-insensitive comparison of the
-   signed-in email against the invited reviewer's `Reviewer.email`,
-   both sides through `normalize_email` (strip + `str.lower`).
+3. **Identity match check** — the invited `Reviewer` row against the
+   signed-in user (*Identity matching*): a row bound to a directory
+   account by principal, any other by `Reviewer.email` through
+   `normalize_email` (strip + `str.lower`).
    On mismatch, render `invite_mismatch.html` (HTTP 403; see
    "Invitation-mismatch page" below).
 4. On match, stamp `Invitation.opened_at` once (idempotent on
