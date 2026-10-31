@@ -443,6 +443,10 @@ class _SlotRefusal:
     failure: _SlotFailure
 
 
+#: The slots a directory check runs on (segment 21F).
+_ROSTER_KINDS = ("reviewers", "reviewees", "observers")
+
+
 @dataclass(frozen=True)
 class _StagedSlot:
     """A file that passed every check, held until the save. A roster
@@ -664,19 +668,17 @@ async def _run_quick_setup_contents(
     # on the operator's token, as the Setup pages' import does: after
     # the checks, so a refused file is not looked up, and before the
     # save unit, so no lookup waits under the session lock.
-    staged = [
-        replace(
-            item,
-            directory=await run_in_threadpool(
-                csv_imports.directory_check,
-                directory,
-                [roster_address(row) for row in item.rows],
-            ),
-        )
-        if item.kind in ("reviewers", "reviewees", "observers")
-        else item
-        for item in staged
-    ]
+    # One lookup for every roster in the submit, under one budget (Codex,
+    # #3430).
+    rosters = [i for i, item in enumerate(staged) if item.kind in _ROSTER_KINDS]
+    checks = await run_in_threadpool(
+        csv_imports.directory_checks,
+        directory,
+        [[roster_address(row) for row in staged[i].rows] for i in rosters],
+    )
+    staged = list(staged)
+    for i, check in zip(rosters, checks, strict=True):
+        staged[i] = replace(staged[i], directory=check)
     try:
         await run_in_threadpool(
             _save_uploads,

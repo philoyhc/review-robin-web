@@ -273,3 +273,24 @@ def test_an_import_with_no_address_to_check_shows_nothing(
     )
     text = client.get(f"/operator/sessions/{session.public_id}/reviewees?unlocked=1").text
     assert "data-directory-check" not in text
+
+
+def test_several_rosters_share_one_lookup_and_are_counted_apart(
+    directory: FakeDirectory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Quick Setup and rehydrate save several rosters in one request: one
+    lookup under one budget, so the request stays inside the front end's
+    limit (Codex, #3430), and each roster counts its own addresses."""
+    from app.services import csv_imports
+
+    calls: list[list[str]] = []
+    real = directory_accounts.look_up_all
+    monkeypatch.setattr(
+        directory_accounts, "look_up_all", lambda d, keys, **kw: calls.append(keys) or real(d, keys, **kw)
+    )
+    reviewers, reviewees = csv_imports.directory_checks(
+        directory, [["e0123456@example.edu"], ["jane.tan@example.edu", "nobody@example.edu"]]
+    )
+    assert len(calls) == 1
+    assert reviewers.counts["directory_by_upn"] == 1 and reviewers.counts["directory_not_found"] == 0
+    assert reviewees.counts["directory_by_mail"] == 1 and reviewees.counts["directory_not_found"] == 1
