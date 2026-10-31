@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "operator/partials/_roster_address.html" import roster_address %}
 {% from "operator/partials/_field_label_header.html" import field_label_header %}
 
 {% block title %}Responses — {{ session.name }}{% endblock %}
@@ -179,7 +180,7 @@
               <a href="{{ url('/operator/sessions/' ~ session.public_id ~ '/responses/' ~ row.reviewee.id ~ '/detail') }}">
                 <strong>{{ row.reviewee.name }}</strong>
               </a><br>
-              <code>{{ row.reviewee.email_or_identifier }}</code>
+              {{ roster_address(row.reviewee, row.reviewee.email_or_identifier) }}
             </td>
             {% if col_data["tag-1"] %}<td class="tag-col tag-col-1" data-sort-value="{{ row.reviewee.tag_1 or '' }}">{{ row.reviewee.tag_1 or "" }}</td>{% endif %}
             {% if col_data["tag-2"] %}<td class="tag-col tag-col-2" data-sort-value="{{ row.reviewee.tag_2 or '' }}">{{ row.reviewee.tag_2 or "" }}</td>{% endif %}

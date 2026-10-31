@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "operator/partials/_roster_address.html" import roster_address %}
 {% import "operator/partials/_page_guidance.html" as page_guidance %}
 {% from "operator/partials/_field_label_header.html" import field_label_header, field_label_canonical_subtext %}
 
@@ -905,14 +906,14 @@
               </td>
               <td data-sort-value="{{ reviewer.name if reviewer else '' }}">
                 {% if reviewer %}
-                  {{ reviewer.name }}<br><code>{{ reviewer.email }}</code>
+                  {{ reviewer.name }}<br>{{ roster_address(reviewer, reviewer.email) }}
                 {% else %}
                   <span class="muted">(deleted reviewer)</span>
                 {% endif %}
               </td>
               <td data-sort-value="{{ reviewee.name if reviewee else '' }}">
                 {% if reviewee %}
-                  {{ reviewee.name }}<br><code>{{ reviewee.email_or_identifier }}</code>
+                  {{ reviewee.name }}<br>{{ roster_address(reviewee, reviewee.email_or_identifier) }}
                 {% else %}
                   <span class="muted">(deleted reviewee)</span>
                 {% endif %}
