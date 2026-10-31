@@ -265,9 +265,11 @@ Email Address Checker; directory lookups only.
   warning carrying `kind` and `status` only, never the address, the
   query or the token.
 
-Not yet proved from application code: a call through the Web App's
-egress, and the token's refresh once it expires (about an hour). Both
-are Cordware's private deployment checks.
+Proved from application code on 2026-10-31, at Cordware's first
+release (its private records): the Email Address Checker's lookups go
+through the Web App's own egress and classify staff and student accounts
+alike. Not yet exercised: the token's refresh once it expires (about an
+hour), and an address that is only a secondary alias.
 
 ## Tests
 
