@@ -277,10 +277,13 @@ the signature for the loads a single rule still owns.
 | `session.no_code` | session | error | Missing `ReviewSession.code`. |
 | `reviewers.empty` | reviewers | error | Zero reviewer rows. |
 | `reviewers.duplicate_email` | reviewers | error | Same email appears on 2+ reviewer rows. |
+| `reviewers.duplicate_account` | reviewers | warning | Two or more active rows bound to one directory account (`directory_object_id`): one person entered twice, by mail and by sign-in name, each address passing the duplicate rule. One issue per account, naming its addresses, anchored at the first row's `#reviewer-row-{id}`. Severity is warning (non-blocking): the gates and the dashboard take the lowest id. Inactive rows are not counted. |
 | `reviewees.empty` | reviewees | error | Zero reviewee rows. |
 | `reviewees.duplicate_id` | reviewees | error | Same `email_or_identifier` appears on 2+ reviewee rows. |
+| `reviewees.duplicate_account` | reviewees | warning | As `reviewers.duplicate_account`, for reviewees (anchor `#reviewee-row-{id}`). |
 | `reviewees.unreachable_for_results` | reviewees | warning | At least one active reviewee has a non-email `email_or_identifier` — those reviewees can never reach `/me/sessions/{id}/results` because identity matching requires an email-shaped identifier. One umbrella issue carrying the count; Fix link deep-links to the first unreachable reviewee's `#reviewee-row-{id}` on the Reviewees Setup page. Severity is warning (non-blocking), gate is `setup`. |
 | `observers.duplicate_email` | observers | error | Same email appears on 2+ observer rows. `uq_observer_session_email` refuses a second row on write — observers carry the only DB-level uniqueness of the three rosters — so this reports a row predating the constraint, or one written by a path around the services. |
+| `observers.duplicate_account` | observers | warning | As `reviewers.duplicate_account`, for observers (anchor `#observer-row-{id}`). |
 | `reviewers.cross_roster_identity` | reviewers | error | A reviewer's email is held in another roster under a *different* name. |
 | `reviewees.cross_roster_identity` | reviewees | error | As above, for a reviewee. |
 | `observers.cross_roster_identity` | observers | error | As above, for an observer. |

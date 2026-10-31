@@ -26,6 +26,34 @@ The four cards are Reviewers, Reviewees, Relationships and Observers. An empty r
 - *Merge (upsert by address).* Updating an existing row's name or tags from the file is a third mode with its own rules: which columns a blank cell clears, and whether a status change is meant. Out of scope.
 - *Append from Quick Setup.* Quick Setup fills a new or empty session. Out of scope.
 
+## Decision — amendment: upsert (author, 2026-10-31)
+
+After append shipped (`#3437`), the author asked for upsert too, ruled "go with the defaults" on all fourteen questions, and took the recommendation on matching (2026-10-31).
+
+**A third tick, "merge", sharing append's line** on the four cards (author, 2026-10-31):
+
+> `[ ] Yes, replace the existing N reviewers …`
+> `[ ] Yes, append to, [ ] merge with the existing roster.`
+
+None is shown on an empty roster. All three are mutually exclusive, none is ticked by default, and Upload stays disabled until one is. Merge is the upsert: a file row already on the roster updates that row, and any other row is added, as in append. Rows absent from the file are kept.
+
+**And a Validate warning for two rows on one directory account,** on each person roster. It lifts the deferred entry's Validate half into this segment, so a second row for one person is flagged however it arrived (upsert, append, replace or the Add form), as long as both rows are bound to the account.
+
+**Rejected:** *looking up the roster's unbound rows on an upsert*, to catch an existing row the directory never resolved. It can double the lookup on a 1,500-row roster inside one 120-second budget. The cost is a gap: an existing row the directory never resolved, matched by a file address for the same person, is added as a second row that nothing flags (Codex, `#3438`).
+
+## Semantics — upsert
+
+- **Matching.** A row matches by its folded address; on Relationships, by its resolved pair. A new address is a new row, and an address change stays a single-row edit. A file row whose address resolves to a directory account bound on the roster updates that bound row and **keeps its stored address**, since matching and mail already follow the account. An unresolved file address, or an unbound existing row, can't be matched by account, so the row is added. The Validate warning names the pair only when both rows are bound. An unbound existing row stays unflagged until something binds it: re-uploading the roster with replace, or editing its address (Codex, `#3438`).
+- **Blank cells and absent columns keep the existing value.** A file can carry only the columns it changes; nothing is cleared by an upsert. Observers' cohort rule is a column like any other.
+- **Status** changes only where the Status column is present. Deactivating a reviewer or reviewee excludes their assignments, as the single-row edit does.
+- **A name change applies** if it passes the cross-roster name check, which on upsert compares against every roster with the updated row's own old name set aside. A failure refuses the file, naming the row.
+- **A tag change that redraws an answered group** asks first, holding the file, as Relationships' group-clear ask does: the same count-carrying tick and the same refusal-then-re-offer.
+- **Two file rows for one person** (a folded address, or one directory account) refuse the file, as the within-file duplicate rule does.
+- **Labels** in the header are upserted and none cleared, as on append.
+- **Audit.** The `*.imported` event counts `new`, `updated` and `unchanged`, with `context.mode = "upsert"`. Each updated row also writes its `*.updated` event with the `changes` envelope, so a row's history stays row by row.
+- **Where.** The four roster cards only; Quick Setup and rehydrate are unchanged, as with append.
+- **The Validate warning** (`reviewers.duplicate_account`, `reviewees.duplicate_account`, `observers.duplicate_account`): soft, so it never blocks Validate. It lists two or more active rows bound to one `directory_object_id`.
+
 ## Semantics
 
 - **The ticks.** Replace keeps `confirm_replace=true`; Append posts its own field, `append=true`. A script on the card makes them exclusive. On the server, neither tick keeps today's ask, and the upload is held. Both ticks (only a direct POST, or no script) is refused with its own message. Upload stays disabled until one is ticked, as the replace tick's delete-confirm pairing does today. Replace's label still names every loss (rows, assignments, responses, relationships).
@@ -79,7 +107,11 @@ The one `diff-reviewer` read of `02636177..3f540f2` found nothing that deletes, 
 3. **The append mode in the services.** `append=True` through `_save` and `save_relationships`, the already-on-the-roster check, label upsert, the audit `context`, and tests at the service level. Must not touch any route.
 4. **Wire Reviewers, Reviewees and Observers.** The exclusivity script, and Upload enabled by either tick. `_handle_import` and the observers import read `append`, refuse both ticks, and hold the file through an ask. The ask's sentence names both ticks. Route tests cover: append keeps every assignment and response; a row already on the roster refuses; both ticks refuse; neither tick asks.
 5. **Wire Relationships.** The same, with the group-answer ask. This is the last build rung, so `diff-reviewer` reads rungs 2–5.
-6. **Close.** `spec-writer` on the doc-impact specs, then the author's browser check of each card.
+6. ~~**Close.**~~ Moved to rung 10 by the upsert amendment.
+7. **The Validate warning.** The three `*.duplicate_account` soft rules, with tests. Must not touch the upload cards.
+8. **Upsert scaffold.** The merge tick on append's line on the four cards ("Yes, append to, [ ] merge with the existing roster."), drawn and disabled, in the same exclusive group. Wording settled on the page.
+9. **Upsert in the services.** `mode="upsert"` through `_save` and `save_relationships`: matching (address, pair, account), blank-keeps, Status only when its column is present, the name check, per-row `*.updated` events, and the counts. Service tests. Must not touch a route.
+10. **Wire upsert on the four cards, then close.** Wiring, the tag-change group-clear ask on the person rosters, route tests; the cumulative `diff-reviewer` read of rungs 7–10 (base: `main` before rung 7). Then the close: `spec-writer` on the doc-impact specs, and the author's browser check of each card.
 
 ## Definition of done
 
@@ -89,6 +121,10 @@ The one `diff-reviewer` read of `02636177..3f540f2` found nothing that deletes, 
 - ~~The cross-roster name check covers this roster's existing rows on append (test).~~ It doesn't need to: an address already on the roster is refused whatever its name (`## Status`).
 - On append, only the appended rows' addresses are looked up, and the counts cover only them (test).
 - The audit event records `mode: append` (test).
+- Each card offers a merge tick on append's line, exclusive with the other two and hidden on an empty roster (tests).
+- An upsert updates matched rows (by address, pair, or bound account, keeping the stored address), adds the rest, keeps absent rows, and leaves blank cells and absent columns as they were (tests).
+- An upsert's Status, name and tag changes behave as Semantics — upsert says, the tag change asking first (tests).
+- Validate warns, without blocking, on two active rows bound to one account in a roster (tests).
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 19Z` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
@@ -103,17 +139,19 @@ The one `diff-reviewer` read of `02636177..3f540f2` found nothing that deletes, 
 
 ## Out of scope
 
-- **Merge / upsert** of existing rows from a file. Rejected above.
+- ~~**Merge / upsert** of existing rows from a file. Rejected above.~~ Taken in by the 2026-10-31 amendment.
 - **Append from Quick Setup** or the New session page. Those fill empty rosters.
 - **Append after activation.** Append uses replace's editable states. Adding people to a live session is the single-row Add form's job.
 
 ## Doc impact
 
-- `spec/setup_pages.md` — the Upload card's Append tick, exclusivity and copy, for the four roster pages.
-- `spec/csv_contracts.md` — §3: append mode for the four importers, the already-on-the-roster rule, cross-roster identity on append, label upsert, and the audit `context`.
+- `spec/setup_pages.md` — the Upload card's Append and Upsert ticks, exclusivity and copy, for the four roster pages.
+- `spec/csv_contracts.md` — §3: append and upsert modes for the four importers, the already-on-the-roster rule, matching on upsert, blank-keeps, label upsert, and the audit `context`.
 - `spec/assignments.md` — an append leaves assignments in place and marks them stale.
 - `docs/security_posture.md` — the replace tick's description gains its Append counterpart.
 - `spec/ui_elements.md` — "Delete-confirm standard": the replace tick is no longer `required`; a key may sit on more than one box (the pairing opens its button while any is ticked); the `data-exclusive-tick` group.
 - `spec/operator_button_audit.md` — the Upload rows open on either tick; the second shared confirm-checkbox script (`data-exclusive-tick`).
 - `spec/extract_data.md` — the pairing's unique-key note, which a shared Upload key now qualifies.
+- `spec/validate_page.md` — the three `*.duplicate_account` soft rules (upsert amendment).
+- `guide/deferred_consolidated.md` — "Two rows in one roster bound to one account": its Validate half shipped; the entry narrows to refusing at upload (at close).
 - `guide/todo_master.md` — the queue entry, deleted at close.

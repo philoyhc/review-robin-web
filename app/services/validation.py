@@ -31,7 +31,7 @@ from app.db.models import (
 )
 from app.schemas.validation import Severity, ValidationIssue
 from app.services.csv_imports import is_comparable_identity
-from app.services.email_identity import normalize_email
+from app.services.email_identity import normalize_email, normalize_object_id
 from app.services.instruments import _instrument_label
 from app.services.participants import is_email_identified
 
@@ -492,6 +492,62 @@ def _check_reviewees_duplicate_id(
                 message=f"Duplicate reviewee identifier '{ident}' ({len(dupes)} rows)",
                 fix_anchor=f"#reviewee-row-{dupes[0].id}",
             )
+
+
+def _duplicate_accounts(
+    rows: Iterable[Any], *, source: str, label: str, address_attr: str
+) -> Iterable[ValidationIssue]:
+    """Two or more active rows in one roster bound to one directory
+    account (segment 19Z): one person entered twice, by mail and by
+    sign-in name, since each address passes the duplicate-address rule.
+    The gates and the dashboard take the lowest id, so the warning names
+    the rows rather than blocking; an inactive row is not counted. Rows
+    arrive ordered by id, so the first is the one that answers."""
+    by_account: dict[str, list[Any]] = {}
+    for row in rows:
+        if row.status == "active" and row.directory_object_id:
+            by_account.setdefault(normalize_object_id(row.directory_object_id), []).append(row)
+    for dupes in by_account.values():
+        if len(dupes) > 1:
+            addresses = ", ".join(f"'{getattr(row, address_attr)}'" for row in dupes)
+            yield ValidationIssue(
+                severity=Severity.warning,
+                source=source,
+                field=address_attr,
+                message=(
+                    f"{len(dupes)} {label} rows are one directory account: {addresses}"
+                ),
+                fix_anchor=f"#{label}-row-{dupes[0].id}",
+            )
+
+
+def _check_reviewers_duplicate_account(
+    db: Session, review_session: ReviewSession, inputs: ValidationInputs
+) -> Iterable[ValidationIssue]:
+    return _duplicate_accounts(inputs.reviewers, source="reviewers", label="reviewer", address_attr="email")
+
+
+def _check_reviewees_duplicate_account(
+    db: Session, review_session: ReviewSession, inputs: ValidationInputs
+) -> Iterable[ValidationIssue]:
+    return _duplicate_accounts(
+        inputs.reviewees, source="reviewees", label="reviewee", address_attr="email_or_identifier"
+    )
+
+
+def _check_observers_duplicate_account(
+    db: Session, review_session: ReviewSession, inputs: ValidationInputs
+) -> Iterable[ValidationIssue]:
+    return _duplicate_accounts(inputs.observers, source="observers", label="observer", address_attr="email")
+
+
+_DUPLICATE_ACCOUNT_WHY = (
+    "A roster address is resolved through the directory at upload, and a "
+    "row bound to an account admits only that account. Two rows on one "
+    "account are one person entered twice, by mail and by sign-in name; "
+    "the person sees the lower row only. Non-blocking: remove or "
+    "deactivate the row that should not be there."
+)
 
 
 def _check_reviewees_unreachable_for_results(
@@ -1117,6 +1173,15 @@ REGISTERED_RULES: tuple[ValidationRule, ...] = (
         check=_check_reviewers_duplicate_email,
     ),
     ValidationRule(
+        key="reviewers.duplicate_account",
+        source="reviewers",
+        severity=Severity.warning,
+        why=_DUPLICATE_ACCOUNT_WHY,
+        fix_url=_reviewers_url,
+        fix_page_label="Reviewers Setup",
+        check=_check_reviewers_duplicate_account,
+    ),
+    ValidationRule(
         key="reviewees.empty",
         source="reviewees",
         severity=Severity.error,
@@ -1141,6 +1206,15 @@ REGISTERED_RULES: tuple[ValidationRule, ...] = (
         fix_url=_reviewees_url,
         fix_page_label="Reviewees Setup",
         check=_check_reviewees_duplicate_id,
+    ),
+    ValidationRule(
+        key="reviewees.duplicate_account",
+        source="reviewees",
+        severity=Severity.warning,
+        why=_DUPLICATE_ACCOUNT_WHY,
+        fix_url=_reviewees_url,
+        fix_page_label="Reviewees Setup",
+        check=_check_reviewees_duplicate_account,
     ),
     ValidationRule(
         key="reviewees.unreachable_for_results",
@@ -1175,6 +1249,15 @@ REGISTERED_RULES: tuple[ValidationRule, ...] = (
         fix_url=_observers_url,
         fix_page_label="Observers Setup",
         check=_check_observers_duplicate_email,
+    ),
+    ValidationRule(
+        key="observers.duplicate_account",
+        source="observers",
+        severity=Severity.warning,
+        why=_DUPLICATE_ACCOUNT_WHY,
+        fix_url=_observers_url,
+        fix_page_label="Observers Setup",
+        check=_check_observers_duplicate_account,
     ),
     ValidationRule(
         key="reviewers.cross_roster_identity",
