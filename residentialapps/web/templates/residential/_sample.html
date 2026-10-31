@@ -8,7 +8,7 @@
    (author, 2026-10-31). Linked, it jumps to the card at the page's end;
    unlinked on a page without one. #}
 {% macro viewing_chip(me, what="", linked=true) -%}
-  {% if linked %}<a class="chip chip-info" href="#sample-viewer">{% else %}<span class="chip chip-info">{% endif %}Viewing as {{ me }}{% if what %}, {{ what }}{% endif %}{% if linked %} ▾</a>{% else %}</span>{% endif %}
+  {% if linked %}<a class="chip chip-info chip-viewing" href="#sample-viewer">{% else %}<span class="chip chip-info chip-viewing">{% endif %}Viewing as {{ me }}{% if what %}, {{ what }}{% endif %}{% if linked %}<span aria-hidden="true" class="caret"> ▾</span></a>{% else %}</span>{% endif %}
 {%- endmacro %}
 
 {# The line a choice list gives ``me``. #}

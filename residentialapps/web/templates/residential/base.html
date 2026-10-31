@@ -183,6 +183,8 @@
       .card .sub { margin: 0 0 12px; }
       .chip { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 9999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
       .chip-info { background: var(--chip-info-bg); color: var(--chip-info-fg); }
+      /* "Viewing as" carries the viewer's whole line, so it wraps on a phone. */
+      .chip-viewing { white-space: normal; }
       .chip-warn { background: var(--chip-warn-bg); color: var(--chip-warn-fg); }
       .chip-ok { background: var(--chip-ok-bg); color: var(--chip-ok-fg); }
       .chip-mute { background: var(--chip-mute-bg); color: var(--chip-mute-fg); }
