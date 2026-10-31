@@ -301,6 +301,7 @@ def apply_import(
     captured: dict[tuple[str, str], str],
     user: User,
     correlation_id: str | None = None,
+    clear_absent: bool = True,
 ) -> None:
     """Reconcile one roster's friendly labels from a CSV import.
 
@@ -314,6 +315,10 @@ def apply_import(
     ``(source_type, source_field)`` (as produced by
     ``field_label_csv.normalize_headers``); only the matching
     ``source_type`` entries are consulted.
+
+    An **append** (segment 19Z) passes ``clear_absent=False``: the file
+    adds rows to a roster it is not the whole truth for, so the labels
+    its header names are upserted and every other label is kept.
 
     Segment 19C Item 1 — the fourth write path into
     ``session_field_labels`` alongside the per-page editor. Storage is
@@ -333,7 +338,7 @@ def apply_import(
                 user=user,
                 correlation_id=correlation_id,
             )
-        else:
+        elif clear_absent:
             clear(
                 db,
                 session,

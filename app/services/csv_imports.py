@@ -32,7 +32,7 @@ from app.services import audit, field_labels, field_label_csv
 from app.services import directory_accounts, roster_bulk, unit_of_work
 from app.services import invitations as invitations_service
 from app.services import session_lifecycle as lifecycle
-from app.services.email_identity import EMAIL_RE, normalize_email
+from app.services.email_identity import EMAIL_RE, normalize_email, normalize_object_id
 
 log = get_logger(__name__)
 
@@ -1000,6 +1000,76 @@ _IDENTITY_MODELS = {
 }
 
 
+class AppendConflict(Exception):
+    """An append refused at its save, under the session lock (segment
+    19Z): a file row already on the roster, or on a directory account
+    already there. ``issues`` name the rows, as `append_conflicts`
+    reports them, so a caller renders them as the file's problems."""
+
+    def __init__(self, issues: list[ValidationIssue]) -> None:
+        super().__init__(f"{len(issues)} row(s) already on the roster")
+        self.issues = issues
+
+
+def append_conflicts(
+    db: Session,
+    *,
+    session_id: int,
+    kind: str,
+    rows: Sequence[ReviewerImportRow | RevieweeImportRow | ObserverImportRow],
+    directory: DirectoryCheck | None = None,
+) -> list[ValidationIssue]:
+    """The rows an append to ``kind``'s roster refuses (segment 19Z;
+    author, 2026-10-31): a row whose folded address is already on the
+    roster, and a row whose address resolved, in ``directory``, to an
+    account a row on the roster is bound to. The within-file duplicate
+    rule, extended to the rows already saved. Rows are numbered as the
+    parser numbers them, from 1."""
+    spec = _IDENTITY_ROSTERS[kind]
+    model = _IDENTITY_MODELS[kind]
+    held = list(
+        db.execute(select(model).where(model.session_id == session_id)).scalars()
+    )
+    addresses = {
+        normalize_email(getattr(row, spec["model_attr"])) for row in held
+    } - {""}
+    accounts = {
+        normalize_object_id(row.directory_object_id)
+        for row in held
+        if row.directory_object_id
+    }
+    issues: list[ValidationIssue] = []
+    for index, row in enumerate(rows, start=1):
+        address = getattr(row, spec["row_attr"]) or ""
+        if normalize_email(address) in addresses:
+            problem = f"{spec['field']} is already on the roster"
+            message = f"{spec['field']} '{address}' is already on the roster."
+        else:
+            account = (
+                directory.accounts.get(directory_accounts.key(address) or "")
+                if directory is not None
+                else None
+            )
+            if account is None or normalize_object_id(account.object_id) not in accounts:
+                continue
+            problem = f"{spec['field']} is a directory account already on the roster"
+            message = (
+                f"{spec['field']} '{address}' is the same directory account "
+                f"as a {spec['label']} already on the roster."
+            )
+        issues.append(
+            ValidationIssue(
+                severity=Severity.error,
+                source=kind,
+                row_number=index,
+                field=spec["field"],
+                message=message,
+                problem=problem,
+            )
+        )
+    return issues
+
+
 def _identity_holders(
     db: Session, *, session_id: int, exclude: frozenset[str]
 ) -> dict[str, list[tuple[str, str]]]:
@@ -1316,6 +1386,7 @@ def save_reviewers(
     correlation_id: str,
     field_labels_captured: dict[tuple[str, str], str] | None = None,
     directory: DirectoryCheck | None = None,
+    append: bool = False,
 ) -> tuple[int, int]:
     # One commit for the roster and its labels, so the lock taken by
     # the gate holds to the end and a refusal can't follow a committed
@@ -1334,6 +1405,7 @@ def save_reviewers(
             correlation_id=correlation_id,
             to_kwargs=_reviewer_to_kwargs,
             directory=directory,
+            append=append,
         )
         # Segment 19C Item 1 — reconcile reviewer friendly labels from
         # the roster header (upsert present, clear absent). ``None`` = a
@@ -1346,6 +1418,7 @@ def save_reviewers(
                 captured=field_labels_captured,
                 user=user,
                 correlation_id=correlation_id,
+                clear_absent=not append,
             )
     return result
 
@@ -1360,6 +1433,7 @@ def save_reviewees(
     correlation_id: str,
     field_labels_captured: dict[tuple[str, str], str] | None = None,
     directory: DirectoryCheck | None = None,
+    append: bool = False,
 ) -> tuple[int, int]:
     from app.services.instruments import seed_display_fields_from_reviewees
 
@@ -1379,6 +1453,7 @@ def save_reviewees(
             correlation_id=correlation_id,
             to_kwargs=_reviewee_to_kwargs,
             directory=directory,
+            append=append,
         )
         # Lazy-seed display fields for any populated reviewee slots
         # (profile_link / tag_1..3) — see guide/unfinished_business item #14.
@@ -1393,6 +1468,7 @@ def save_reviewees(
                 captured=field_labels_captured,
                 user=user,
                 correlation_id=correlation_id,
+                clear_absent=not append,
             )
     return result
 
@@ -1406,6 +1482,7 @@ def save_observers(
     filename: str,
     correlation_id: str,
     directory: DirectoryCheck | None = None,
+    append: bool = False,
 ) -> tuple[int, int]:
     lifecycle.require_not_archived(db, session)
     return _save(
@@ -1420,6 +1497,7 @@ def save_observers(
         correlation_id=correlation_id,
         to_kwargs=_observer_to_kwargs,
         directory=directory,
+        append=append,
     )
 
 
@@ -1473,7 +1551,22 @@ def _save(
     correlation_id: str,
     to_kwargs: Any,
     directory: DirectoryCheck | None = None,
+    append: bool = False,
 ) -> tuple[int, int]:
+    """Replace ``model``'s roster with ``rows``, or with ``append`` add
+    them and keep every row, assignment and response already there
+    (segment 19Z). Returns ``(replaced, new)``; an append replaces 0.
+
+    An append is refused, before anything is written, by any row
+    `append_conflicts` names (`AppendConflict`). It runs here, under
+    the session lock the caller holds, so a row added since the
+    caller's own check is caught too."""
+    if append:
+        conflicts = append_conflicts(
+            db, session_id=session.id, kind=source_label, rows=rows, directory=directory
+        )
+        if conflicts:
+            raise AppendConflict(conflicts)
     lifecycle.invalidate_if_validated(
         db,
         review_session=session,
@@ -1484,27 +1577,32 @@ def _save(
     # Nothing in `assignments` references an observer, so their events
     # omit the key rather than count rows they never delete (findings
     # S10). The same omitted-not-zero rule as `cascaded_relationships`.
+    # An append deletes nothing, so it cascades nothing: the counts are
+    # omitted, not zeroed.
     cascaded_assignment_count = (
         _count_assignments(db, session.id)
-        if _reaches_assignments(model)
+        if _reaches_assignments(model) and not append
         else None
     )
     # Before the delete below: the FK cascade is the database's, so
     # counting afterwards reads 0. Same mechanism as `_delete_all`.
     cascaded_relationship_count = (
         _count_relationships(db, session.id)
-        if roster_bulk.reaches_relationships(model)
+        if roster_bulk.reaches_relationships(model) and not append
         else None
     )
 
     existing_rows = list(
         db.execute(select(model).where(model.session_id == session.id)).scalars()
     )
-    replaced = len(existing_rows)
-    _detach_outbox_if_reviewers(db, model=model, session_id=session.id, rows=existing_rows)
-    for row in existing_rows:
-        db.delete(row)
-    db.flush()
+    if append:
+        replaced, kept = 0, len(existing_rows)
+    else:
+        replaced, kept = len(existing_rows), 0
+        _detach_outbox_if_reviewers(db, model=model, session_id=session.id, rows=existing_rows)
+        for row in existing_rows:
+            db.delete(row)
+        db.flush()
 
     for row in rows:
         kwargs = to_kwargs(row, session.id)
@@ -1523,12 +1621,16 @@ def _save(
     audit.write_event(
         db,
         event_type=event_type,
-        summary=f"Imported {len(rows)} {source_label} (replaced {replaced})",
+        summary=(
+            f"Appended {len(rows)} {source_label} (kept {kept})"
+            if append
+            else f"Imported {len(rows)} {source_label} (replaced {replaced})"
+        ),
         actor_user_id=user.id,
         session=session,
         payload=audit.counts(
             new=len(rows),
-            replaced=replaced,
+            **({"kept": kept} if append else {"replaced": replaced}),
             **(
                 {"cascaded_assignments": cascaded_assignment_count}
                 if cascaded_assignment_count is not None
@@ -1546,7 +1648,10 @@ def _save(
             # file's distinct addresses. Omitted when the caller ran none.
             **(directory.counts if directory is not None else {}),
         ),
-        context={"filename": filename} if filename else None,
+        context=(
+            {**({"filename": filename} if filename else {}), **({"mode": "append"} if append else {})}
+            or None
+        ),
         correlation_id=correlation_id,
     )
 
@@ -1560,6 +1665,7 @@ def _save(
                 "source": source_label,
                 "new": len(rows),
                 "replaced": replaced,
+                **({"mode": "append", "kept": kept} if append else {}),
                 **(
                     {"cascaded_assignments": cascaded_assignment_count}
                     if cascaded_assignment_count is not None
