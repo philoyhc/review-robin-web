@@ -78,6 +78,13 @@ is the author's call.
    there, refuses the file (author, 2026-10-31).
    **Plan:** `guide/segment_19Z_roster_append.md`.
 
+5. **20B — Symmetric review** (not gated on Azure). A session setting
+   under which the Reviewers roster is the only one edited and every
+   write mirrors to Reviewees; on only while both rosters are empty, off
+   any time. The Reviewees page stays, read-only (recommended); the
+   setup export carries the Reviewers roster alone.
+   **Plan:** `guide/segment_20B_symmetric_review.md`.
+
 ### Stubs
 
 Small items with no plan doc; each fits one PR and its reasoning fits
