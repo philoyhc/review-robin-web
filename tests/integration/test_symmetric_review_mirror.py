@@ -320,3 +320,21 @@ def test_an_email_correction_keeps_an_operator_exclusion(client: TestClient, db:
     db.expire_all()
     row = db.get(Assignment, row.id)
     assert (row.is_self_review, row.include) == (True, False)
+
+
+def test_the_per_row_relationship_count_includes_the_mirror(client: TestClient, db: Session) -> None:
+    from app.db.models import Relationship
+    from app.services import roster_bulk
+
+    review_session = _session(client, db, "sym-m-rel-row")
+    ann = _add(db, review_session, "ann@example.edu")
+    bob = _add(db, review_session, "bob@example.edu")
+    by_reviewer = {e.mirrors_reviewer_id: e for e in _assert_mirrored(db, review_session)}
+    # Bob -> Ann alone: deleting Ann takes it, through her mirror.
+    db.add(Relationship(session_id=review_session.id, reviewer_id=bob.id, reviewee_id=by_reviewer[ann.id].id))
+    # Ann -> Ann counts once for her.
+    db.add(Relationship(session_id=review_session.id, reviewer_id=ann.id, reviewee_id=by_reviewer[ann.id].id))
+    db.commit()
+    counts = roster_bulk.relationships_per_row(db, model=Reviewer, session_id=review_session.id)
+    assert counts == {ann.id: 2, bob.id: 1}
+    assert roster_bulk.relationship_cascade_count(db, model=Reviewer, ids=[ann.id]) == 2

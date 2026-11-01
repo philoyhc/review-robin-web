@@ -235,6 +235,8 @@ def relationships_per_row(
     column = _RELATIONSHIP_FK.get(model)
     if column is None:
         return {}
+    if model is Reviewer:
+        return _reviewer_relationships_per_row(db, session_id=session_id)
     rows = db.execute(
         select(column, func.count())
         .select_from(Relationship)
@@ -242,6 +244,26 @@ def relationships_per_row(
         .group_by(column)
     ).all()
     return {int(row_id): int(n) for row_id, n in rows}
+
+
+def _reviewer_relationships_per_row(db: Session, *, session_id: int) -> dict[int, int]:
+    """Per reviewer, the relationships deleting them takes: their own,
+    plus, under symmetric review (segment 20B), those of the reviewee
+    that mirrors them (Codex on #3489). A relationship joining a person
+    to themselves counts once. Ticking both ends of one relationship
+    counts it twice in the browser's sum; the server's loss gate
+    (``relationship_cascade_count``) counts it once."""
+    rows = db.execute(
+        select(Relationship.id, Relationship.reviewer_id, Reviewee.mirrors_reviewer_id)
+        .select_from(Relationship)
+        .join(Reviewee, Reviewee.id == Relationship.reviewee_id)
+        .where(Relationship.session_id == session_id)
+    ).all()
+    counts: dict[int, int] = {}
+    for _id, reviewer_id, mirrored_reviewer_id in rows:
+        for row_id in {reviewer_id, mirrored_reviewer_id} - {None}:
+            counts[int(row_id)] = counts.get(int(row_id), 0) + 1
+    return counts
 
 
 def relationship_cascade_count(
