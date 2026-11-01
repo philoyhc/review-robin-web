@@ -32,10 +32,13 @@ A peer review where every participant both gives and receives feedback is a comm
 
 ## Semantics
 
-- **One reconcile, not N mirrors.** One service function, `sync_reviewees_from_reviewers(db, session)`, matches the rosters by address (case-insensitive):
+- **One reconcile, not N mirrors.** One service function, `sync_reviewees_from_reviewers(db, session)`, matches each reviewee to its reviewer by a stored link, `reviewees.mirrors_reviewer_id` (a nullable foreign key to `reviewers.id`):
   - it adds missing reviewees, updates their fields and status, and deletes reviewees whose reviewer is gone, through the existing reviewee delete and its cascade and confirmations;
   - every reviewer writer calls it before committing (Blast radius lists them);
-  - matching by address keeps each reviewee's `id`, so assignments and responses survive an edit.
+  - the link survives an address change: correcting a reviewer's address updates the same reviewee in place, so its `id`, assignments and responses are kept (Codex on `#3482`).
+  - The mode turns on only with both rosters empty, so every mirrored reviewee is created by the reconcile and carries the link from the start.
+  - Turning the mode off clears the links, leaving ordinary rows.
+  - The key is `ON DELETE SET NULL`. The reconcile deletes a gone reviewer's reviewee itself, through the reviewee cascade. The key's rule only keeps a reviewer delete that bypasses the reconcile from failing on Postgres.
   
   Rejected: mirroring inside each writer, which would repeat the same logic in eight places that can drift apart.
 - **Tags and their labels mirror too.** The three tag slots' labels (`session_field_label`) are copied, so a rule on `Reviewee.tag_1` means what `Reviewer.tag_1` means.
@@ -51,7 +54,7 @@ A peer review where every participant both gives and receives feedback is a comm
 
 ## Judgment calls — decided
 
-- Matching key is the address, not the row `id`: the two rosters have separate ids, and the address is what an operator sees and what self-review already matches on.
+- **Matching key is a stored link, not the address** (2026-11-01, Codex on `#3482`). With address matching, an address correction would read as one person removed and another added, and the reviewee delete cascades to assignments, responses and relationships. The link costs one nullable column. Matching by `id` alone is impossible, since the two rosters number their rows separately.
 
 ## Blast radius (measured)
 
@@ -65,7 +68,7 @@ Taken 2026-11-01 at `2accb87`:
 
 1. **Scaffold** (`CLAUDE.md`, consequential UI): the checkbox, the Session details toggle, the greyed Reviewees slot and the read-only Reviewees page with its note. All inert, with no column. It must not touch a service.
 2. **The column and the toggle:**
-   - `sessions.symmetric_review` (migration);
+   - `sessions.symmetric_review` and `reviewees.mirrors_reviewer_id` (one migration);
    - its writer, with the empty-rosters rule and audit event;
    - the Settings CSV row;
    - the toggle wired.
@@ -78,7 +81,7 @@ Taken 2026-11-01 at `2accb87`:
 
 ## Definition of done
 
-- With the mode on, every writer leaves both rosters with the same people, fields and status, and a test covers each writer.
+- With the mode on, every writer leaves both rosters with the same people, fields and status, and a test covers each writer. A test changes a reviewer's address and checks that the reviewee keeps its `id` and responses.
 - The mode can be turned on only with both rosters empty, and off at any time. The Settings CSV round-trips it.
 - The Reviewees page renders read-only with its note, and its write routes answer 409 while the mode is on.
 - The setup export has no reviewees file while the mode is on, and a re-import rebuilds the reviewees.
@@ -109,6 +112,6 @@ Taken 2026-11-01 at `2accb87`:
 - `spec/operator_ui_concept.md` — the Add new session checkbox (rung 1).
 - `spec/extract_data.md` — the setup export without the reviewees file (rung 4).
 - `spec/assignments.md` — self-review under the mode: the instrument's toggle decides (rung 5).
-- `spec/architecture.md` — the reconcile and the audit event's `EVENT_SCHEMAS` entry (rungs 2, 3).
+- `spec/architecture.md` — `reviewees.mirrors_reviewer_id`, the reconcile, and the audit event's `EVENT_SCHEMAS` entry (rungs 2, 3).
 - `app/web/templates/guide.html` — a paragraph on symmetric review (rung 5).
 - `guide/todo_master.md` — the queue entry (at close).
