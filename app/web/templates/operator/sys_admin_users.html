@@ -68,17 +68,25 @@
     <p class="muted">
       Pre-seed a user row before the invitee first signs in. When
       they sign in via Entra (matched by email), they land on the
-      operator lobby directly.
+      operator lobby directly. Search the institution's directory by
+      name or address, or type the address.
     </p>
     <form method="post"
           action="{{ url('/operator/sys-admin/users/invite') }}"
           id="invite-form">
       <p>
+        {# Directory search (19Z, invite-from-the-directory item): the
+           box takes a name or an address, and `invite-directory-options`
+           offers the directory's matches as it is typed (wired at rung 19;
+           inert until then). The invite itself still checks the address. #}
         <label>
-          Email
-          <input type="email" name="email" id="invite-email" required
-                 placeholder="alice@example.edu">
+          Name or email
+          <input type="text" name="email" id="invite-email" required
+                 autocomplete="off" spellcheck="false"
+                 list="invite-directory-options"
+                 placeholder="A name, or alice@example.edu">
         </label>
+        <datalist id="invite-directory-options" data-directory-options></datalist>
       </p>
       {# One row: the role chip top-left, Cancel then Invite on the
          right (author, 2026-10-14; `.card-action-row`). Granting the
