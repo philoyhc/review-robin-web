@@ -1063,29 +1063,60 @@ warning. Either reads `directory_object_id` across one roster's rows.
 
 #### Include or rule out whole groups by their members' tags (author, 2026-10-18)
 
-> Recorded in `guide/group_membership_rules.md` as a deferred idea,
-> unplanned. Raised while planning `guide/archive/pair_context_tags_further_clarify.md`.
+> A deferred idea, unplanned, raised while planning
+> `guide/archive/pair_context_tags_further_clarify.md`. Folded in here
+> from its own note on 2026-11-01 (author).
 
-**Ships.** On a Group instrument, groups form as usual. Then a group is
-included or ruled out whole when at least one member carries a given
-reviewee tag, reviewer tag or relationship tag. The likely shape is a
-separate Exceptions block on the Band 1 card, applied after the Links.
+**Ships.** On a Group instrument (Link 3, unit of review Group), groups
+form as usual. Then a group is **included** if at least one member
+carries a given tag or tag value, and **ruled out** if one does. The tag
+is a member's reviewee tag, a member's reviewer tag (where groups hold
+people who are also reviewers, as in peer review), or the relationship
+tag on the pair between the reviewer and a member (a conflict of
+interest with any one member ruling out the group).
 
-**Why deferred.** It asks the card to do a second job, a special
-inclusion or exclusion on top of normal formation (author, 2026-10-18).
-That is a new block, a new Generate step and open questions on what
-Include adds. No session needs it yet.
+**Why the card cannot say it today.** Links 1 and 2 judge one reviewer,
+one reviewee or one pair before groups form, so a Link 2 rule on a
+member's tag drops that member, not the group. A Link 2 relationship-tag
+`IS` keeps pairs one by one and is refused beside Group; `IS NOT` drops
+only that member's row, deliberately
+(`guide/archive/assignment_rule_clarify.md` Item 2).
+
+**Likely shape.** The card is being asked to do two jobs: normal
+formation (Links 1–3), and a special inclusion or exclusion on top of it
+(author, 2026-10-18). So a separate **Exceptions** block on the Band 1
+card, applied after the Links: each rule an action (Include / Exclude),
+a tag (roster or relationship) with `IS` *v* or `IS FILLED`, and a scope
+(*this pair*, or on a Group instrument *the whole group*); the result is
+formation + includes − excludes, an exclude winning, run after groups
+form, so no Link-level Group guard is needed.
+
+**Why deferred.** A new block, a new Generate step and open questions on
+what Include adds; no session needs it yet.
+
+**Open questions, if lifted.**
+1. Does Include **add** (impose a pair the Links did not form) or
+   **narrow**, as today's Link 2 pair-tag `IS` does?
+2. "Only these pairs" needs an empty formation: a "No one" state on the
+   Links, or "all Links Not set plus an Include means only the includes".
+3. Do relationship tags leave the Links altogether? Then
+   `guide/archive/pair_context_tags_further_clarify.md` Item 1, which
+   kept them in Link 2, is superseded or reworked.
+4. Self-review: how a whole-group include meets the instrument's
+   self-review toggle and the exclude-self-reviews chip.
+5. Generate and staleness: the exceptions run inside Prepare / Generate
+   and the reconcile stamp, as must the group-clear rules when a group's
+   membership changes.
 
 **Lift trigger** (proposed; the author's call). Any one of:
 
 - an operator needs a whole-group conflict-of-interest or must-review
   rule;
-- a change reopens where relationship tags live (Open question 3 in
-  `guide/group_membership_rules.md`; `guide/archive/pair_context_tags_further_clarify.md`
-  Item 1, closed 2026-10-18, kept them in Link 2).
+- a change reopens where relationship tags live (Open question 3).
 
-**Wire-up.** Turn the idea doc into a plan: settle its Open questions,
-then take the blast radius and cut the ladder, scaffold first.
+**Wire-up.** A plan in the shape of `guide/segment_plan_template.md`:
+settle the Open questions, take the blast radius, cut the ladder,
+scaffold first.
 
 ---
 

@@ -10,6 +10,11 @@ Segment 14B: this segment's remaining scope is *documentation of a
 real deployment*, and writing it against a host that does not yet
 exist produces a guide that has to be rewritten the day it does.
 
+*State, 2026-11-01:* the host is provisioned, deployed and serving
+Review Robin since 2026-10-31. What remains of "concluded" is its
+verification and retiring the personal web app, both the author's call;
+the segment starts when the author says the gate has passed.
+
 Everything in the original §18 list that does **not** need the host is
 now out of this segment — either already shipped (four items, audited
 below) or moved out — three to **19E**, and the technical-support contact to a stub in
