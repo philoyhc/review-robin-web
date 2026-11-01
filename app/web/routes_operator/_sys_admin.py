@@ -59,7 +59,7 @@ from app.services import (
 from app.web import views
 from app.web.deps import request_correlation_id, require_sys_admin
 from app.web.return_to import ReturnTarget, resolve_return_to
-from app.web.routes_operator._shared import _templates, directory_or_none
+from app.web.routes_operator._shared import _templates, directory_or_none, directory_search_response
 
 
 router = APIRouter()
@@ -725,27 +725,9 @@ def invite_directory_search(
     q: str = "",
     actor: User = Depends(require_sys_admin),
 ) -> JSONResponse:
-    """The invite box's picker (19Z, invite from the directory): up to ten
-    people whose name, surname, mail or sign-in name starts with ``q``,
-    asked on the admin's own token. ``available`` is false when the
-    directory cannot be asked, so the box says so rather than "no
-    match", and ``reason`` says why (the failure's kind, status and
-    Graph's error code), for the admin to read. Not audited (author,
-    2026-11-01)."""
-    found = directory_accounts.search(directory_or_none(request), q)
-    answer: dict[str, object] = {
-        "available": found.people is not None,
-        "people": [
-            {"name": p.name, "mail": p.mail, "upn": p.upn, "address": p.address}
-            for p in (found.people or [])
-        ],
-    }
-    if found.reason:
-        answer["reason"] = found.reason
-    return JSONResponse(
-        answer,
-        headers={"Cache-Control": "no-store"},
-    )
+    """The invite box's picker (19Z, invite from the directory), asked on
+    the admin's own token (`_shared.directory_search_response`)."""
+    return directory_search_response(directory_or_none(request), q)
 
 
 @router.post("/sys-admin/users/invite")

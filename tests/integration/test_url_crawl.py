@@ -289,6 +289,7 @@ ROUTES: dict[str, tuple[Visit, ...]] = {
     _SESSION: _EVERY_STATE,
     f"{_SESSION}/edit": (Visit("alice", 308),),
     f"{_SESSION}/reviewers": _EVERY_STATE,
+    f"{_SESSION}/directory-search": _PAGE,
     f"{_SESSION}/reviewees": _EVERY_STATE,
     f"{_SESSION}/relationships": _EVERY_STATE,
     f"{_SESSION}/observers": _EVERY_STATE,
