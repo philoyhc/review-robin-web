@@ -703,7 +703,7 @@ async def _run_quick_setup_contents(
             user=user,
             staged=staged,
             correlation_id=correlation_id or request_correlation_id(),
-            turn_symmetric_on=settings_symmetric is True,
+            symmetric_target=settings_symmetric,
             acknowledged_deletions=(
                 acknowledged_loss(acknowledge_instrument_deletion)
                 if replacing
@@ -895,7 +895,7 @@ def _save_uploads(
     correlation_id: str,
     acknowledged_deletions: int | None = None,
     acknowledged_group_loss: int = 0,
-    turn_symmetric_on: bool = False,
+    symmetric_target: bool | None = None,
 ) -> None:
     """Save every checked file in one ``unit_of_work.atomic``: the
     per-entity savers nest inside it, so nothing commits until the last
@@ -917,13 +917,18 @@ def _save_uploads(
             # logged as flipped again (Codex on #3002).
             session_guard.lock_session(db, review_session)
             # Segment 20B — Settings save last (``SLOT_ORDER``), so a file
-            # turning symmetric review on beside empty rosters turns it on
-            # here, first, and this submit's reviewers mirror. Under the
-            # lock, so the empty-roster check and the flip are the unit's
-            # (Codex on #3490); a refused unit rolls it back with the rest.
-            if turn_symmetric_on:
-                sessions.turn_symmetric_review_on_for_import(
-                    db, review_session, user=user, correlation_id=correlation_id
+            # that sets symmetric review sets it here, first: turned on
+            # beside empty rosters, this submit's reviewers mirror; turned
+            # off, its Reviewees file saves. Under the lock, so the
+            # empty-roster check and the flip are the unit's (Codex on
+            # #3490); a refused unit rolls it back with the rest.
+            if symmetric_target is not None:
+                sessions.set_symmetric_review_for_import(
+                    db,
+                    review_session,
+                    symmetric_target,
+                    user=user,
+                    correlation_id=correlation_id,
                 )
             before = {
                 field_name: getattr(review_session, field_name)
@@ -965,9 +970,12 @@ def _save_uploads(
                     correlation_id=correlation_id,
                 )
     except lifecycle.SessionStateConflict as exc:
-        raise _UnitRefused(
-            _SlotRefusal(current, _SlotFailure("lifecycle"))
-        ) from exc
+        # Segment 20B: a turn-on committed since the checks refuses a
+        # Reviewees file under the lock (Codex on #3490).
+        reason = (
+            "symmetric_reviewees" if exc.code == "symmetric_review" else "lifecycle"
+        )
+        raise _UnitRefused(_SlotRefusal(current, _SlotFailure(reason))) from exc
 
 
 def _save_slot(

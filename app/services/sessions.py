@@ -661,21 +661,29 @@ def symmetric_review_after_settings(
     return review_session.symmetric_review or not has_roster_rows(db, review_session.id)
 
 
-def turn_symmetric_review_on_for_import(
+def set_symmetric_review_for_import(
     db: Session,
     review_session: ReviewSession,
+    target: bool,
     *,
     user: User,
     correlation_id: str | None = None,
 ) -> None:
-    """Turn symmetric review on ahead of an import whose Settings file
-    turns it on (20B). Quick Setup saves Settings last, so without this
-    the same submit's reviewers would save first, leave the rosters
-    non-empty, and keep the mode off. A no-op beside roster rows.
-    Flushes; the caller's unit commits or rolls it back."""
-    if review_session.symmetric_review or has_roster_rows(db, review_session.id):
+    """Set symmetric review ahead of an import whose Settings file sets
+    it (20B). Quick Setup saves Settings last, so without this the same
+    submit's rosters would save under the old mode: reviewers saved
+    first would leave the rosters non-empty and keep the mode off, and a
+    Reviewees file would be refused by a mode its own Settings file
+    turns off. Turning on is a no-op beside roster rows; turning off
+    clears the mirror links. Call it under the session lock. Flushes;
+    the caller's unit commits or rolls it back."""
+    if review_session.symmetric_review == target:
         return
-    review_session.symmetric_review = True
+    if target and has_roster_rows(db, review_session.id):
+        return
+    if not target:
+        clear_mirror_links(db, review_session.id)
+    review_session.symmetric_review = target
     db.flush()
     audit.write_event(
         db,
@@ -683,7 +691,7 @@ def turn_symmetric_review_on_for_import(
         summary=f"Session {review_session.code} feature toggle(s) updated",
         actor_user_id=user.id,
         session=review_session,
-        payload=audit.changes({"symmetric_review": [False, True]}),
+        payload=audit.changes({"symmetric_review": [not target, target]}),
         reason="settings_import",
         correlation_id=correlation_id,
     )

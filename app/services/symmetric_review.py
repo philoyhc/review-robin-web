@@ -153,6 +153,25 @@ def sync_reviewees_from_reviewers(
     recompute_self_review_classification(db, session_id=review_session.id)
 
 
+def refuse_reviewee_write(review_session: ReviewSession) -> None:
+    """Refuse a Reviewees write under symmetric review, decided on the
+    row re-read under the session lock: call it right after
+    ``lifecycle.require_editable``. The routes' gate
+    (``require_reviewees_editable_session``) reads the flag before the
+    lock, so a turn-on committed in between would otherwise let an
+    unlinked reviewee in (Codex on #3490). Only the paths that create
+    reviewees need it: the mode turns on only beside empty rosters, so
+    no other Reviewees write can race it."""
+    from app.services.session_guard import SessionStateConflict
+
+    if review_session.symmetric_review:
+        raise SessionStateConflict(
+            "Under symmetric review the reviewees mirror the reviewers; "
+            "edit the Reviewers roster.",
+            code="symmetric_review",
+        )
+
+
 def _mirror_labels(db: Session, review_session: ReviewSession) -> None:
     """The reviewee tag labels follow the reviewers', so a rule on
     ``Reviewee.tag_1`` means what ``Reviewer.tag_1`` means."""

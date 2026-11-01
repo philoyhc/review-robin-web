@@ -115,7 +115,7 @@ A peer review where every participant both gives and receives feedback is a comm
   - **Fixed in rung 4:**
     - the Reviewees row editor rendered under the mode;
     - mirrored reviewees never seeded reviewee display fields;
-    - Quick Setup's turn-on sat in the route (now `sessions.turn_symmetric_review_on_for_import`, audited);
+    - Quick Setup's turn-on sat in the route (now `sessions.set_symmetric_review_for_import`, audited);
     - duplicate addresses in the clone adoption;
     - Rehydrate still parsed and looked up `reviewees.csv`;
     - Quick Setup's refusal didn't match the outcome (now `sessions.symmetric_review_after_settings`, with the pre-scan three-valued);

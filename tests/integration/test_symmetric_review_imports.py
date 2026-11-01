@@ -274,3 +274,41 @@ def test_rehydrate_still_requires_reviewees_csv_with_the_mode_off(client: TestCl
     report = session_rehydrate.analyze_rehydrate_set(db, files=files, user=user)
     assert not report.ok
     assert any("reviewees.csv" in e for e in report.errors)
+
+
+def test_a_turn_on_committed_after_the_route_gate_still_refuses(client: TestClient, db: Session) -> None:
+    """The route reads the flag before the lock; the service re-reads it
+    under the lock, so a turn-on committed in between refuses the
+    reviewee (Codex on #3490)."""
+    import pytest
+    from sqlalchemy import update
+
+    from app.services import reviewees as reviewees_service
+    from app.services.csv_imports import parse_reviewee_csv, save_reviewees
+    from app.services.session_guard import SessionStateConflict
+
+    review_session = _session(client, db, "sym-i-race", on=False)
+    user = _user(db)
+    # Another request turns the mode on; this one still holds the stale row.
+    db.execute(
+        update(ReviewSession).where(ReviewSession.id == review_session.id).values(symmetric_review=True)
+    )
+    db.commit()
+    db.expire_all()
+    review_session.__dict__["symmetric_review"] = False  # the route's stale read
+    with pytest.raises(SessionStateConflict):
+        reviewees_service.create_reviewee(
+            db, review_session=review_session, name="X", email_or_identifier="x@example.edu", user=user
+        )
+    db.rollback()
+    with pytest.raises(SessionStateConflict):
+        save_reviewees(
+            db,
+            session=review_session,
+            user=user,
+            rows=parse_reviewee_csv(REVIEWEES_CSV).rows,
+            filename="e.csv",
+            correlation_id="",
+        )
+    db.rollback()
+    assert _reviewees(db, review_session) == []
