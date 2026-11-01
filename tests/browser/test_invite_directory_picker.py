@@ -132,3 +132,14 @@ def test_after_a_comma_the_search_starts_again_and_a_pick_keeps_the_list(page: P
     expect(option.first).to_have_attribute(
         "value", "someone@example.edu, Arun Kumar <arun.kumar@example.edu>"
     )
+
+
+def test_after_a_comma_with_no_space_the_pick_keeps_the_text_as_typed(page: Page) -> None:
+    page.goto(app_url(ACCOUNTS))
+    box = page.locator("#invite-email")
+    box.fill("someone@example.edu,")
+    box.press_sequentially("Arun")
+    option = page.locator("#invite-directory-options option")
+    expect(option.first).to_have_attribute(
+        "value", "someone@example.edu,Arun Kumar <arun.kumar@example.edu>"
+    )

@@ -27,6 +27,9 @@ from .test_sys_admin_users import _bootstrap_sys_admin
         ("Tan, Jane <jane@x.edu>, b@x.edu", ["Tan, Jane <jane@x.edu>", "b@x.edu"]),
         ("a@x.edu, , b@x.edu,", ["a@x.edu", "b@x.edu"]),
         ("a@x.edu, trailing name", ["a@x.edu", "trailing name"]),
+        # A stray word stays its own entry; it never sinks the address after it.
+        ("alice@x.edu, Arun, carol@x.edu", ["alice@x.edu", "Arun", "carol@x.edu"]),
+        ("Bob, Tan, Jane <j@x.edu>", ["Bob", "Tan, Jane <j@x.edu>"]),
         ("", [""]),
     ],
 )
@@ -91,3 +94,59 @@ def test_a_refusal_code_from_the_url_is_never_shown(client: TestClient, monkeypa
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
     page = client.get("/operator/sys-admin/users?invited=0&invite_refused=%3Cb%3Ebold%3C%2Fb%3E:x%40y.edu").text
     assert "couldn&#39;t be invited" in page and "<b>bold</b>" not in page
+
+
+def test_a_duplicate_inside_the_list_is_refused_the_second_time(
+    db: Session, client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
+    response = _invite(client, "dup@example.edu, Dup@Example.edu")
+    query = parse_qs(urlsplit(response.headers["location"]).query)
+    assert query["invited"] == ["1"] and query["invite_refused"] == ["duplicate:Dup@Example.edu"]
+
+
+def test_the_directory_is_asked_about_the_whole_list_at_once(
+    db: Session, client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """One budget for the request, not one per address (diff-reviewer)."""
+    from app.services import directory_accounts
+    from cordware.graph import FakeDirectory
+
+    calls: list[list[str]] = []
+    real = directory_accounts.look_up_all
+
+    def counting(directory, keys, *, budget):
+        calls.append(list(keys))
+        return real(directory, keys, budget=budget)
+
+    monkeypatch.setattr(directory_accounts, "look_up_all", counting)
+    monkeypatch.setattr(_sys_admin, "directory_or_none", lambda request: FakeDirectory())
+    monkeypatch.setattr(_sys_admin, "is_local", lambda: False)
+    _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
+    _invite(client, "jane.tan@example.edu, arun.kumar@example.edu")
+    assert calls == [["jane.tan@example.edu", "arun.kumar@example.edu"]]
+
+
+def test_a_plain_admin_s_sys_admin_list_asks_the_directory_nothing(
+    db: Session, client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Every entry is refused `requires_super_admin` before any lookup."""
+    from cordware.graph import FakeDirectory
+    from cordware.settings import identity_settings
+
+    from app.services import directory_accounts
+
+    asked: list[str] = []
+    monkeypatch.setattr(directory_accounts, "look_up_all", lambda d, keys, *, budget: asked.extend(keys) or {})
+    monkeypatch.setattr(_sys_admin, "directory_or_none", lambda request: FakeDirectory())
+    monkeypatch.setattr(_sys_admin, "is_local", lambda: False)
+    _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
+    monkeypatch.setattr(identity_settings, "super_admin_emails", ["boss@example.edu"])
+    response = client.post(
+        "/operator/sys-admin/users/invite",
+        data={"email": "jane.tan@example.edu, arun.kumar@example.edu", "invite_as_sys_admin": "true"},
+        follow_redirects=False,
+    )
+    query = parse_qs(urlsplit(response.headers["location"]).query)
+    assert query["invited"] == ["0"] and asked == []
+    assert all(r.startswith("requires_super_admin:") for r in query["invite_refused"])

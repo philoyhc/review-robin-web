@@ -1236,7 +1236,9 @@ and the admin would retype the rest.
 ### Semantics
 
 - A piece with no `@` joins the piece after it, so `Tan, Jane
-  <jane@x.edu>` stays one entry; blank pieces are dropped.
+  <jane@x.edu>` stays one entry; blank pieces are dropped. *(At build:
+  only when the two read as one `Name <address>`; otherwise the word is
+  its own entry, refused.)*
 - A duplicate inside the list is refused as `duplicate` on its second
   appearance, as on its own.
 
@@ -1271,6 +1273,15 @@ the behavior that changes.
 ### Open questions
 
 None.
+
+### Status
+
+Open, one PR. One `diff-reviewer` read of `45da761..ec8fef3`; acted on in the same PR:
+- **A stray word sank the address after it** (`a@x, Arun, c@x` lost `c@x`): a no-`@` piece now joins the next only when the two read as one `Name <address>` (Semantics amended).
+- **Fifty lookups, each with its own 120 s budget**, could outrun the front end: the directory is asked about the list at once (`directory_accounts.resolve`, one budget), and only about addresses past `invite`'s cheap refusals, as a lone invite is.
+- **The picker assumed one space after a comma**, which hid matches: it keeps the spacing as typed.
+- The audit events share the request's correlation id; the specs name the list's `invite_unchecked=<n>`; the banner's cap reads `INVITE_LIST_MAX`; a duplicate inside a list is tested.
+- Recorded, not changed: the banner's counts and addresses come from the URL, so a crafted link can show a false summary (no markup: escaped, codes never echoed), as the single invite's `invite_error` banner already can.
 
 ### Out of scope
 

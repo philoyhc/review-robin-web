@@ -172,8 +172,11 @@ def test_the_cheap_refusals_come_before_the_lookup(
     from app.services import directory_accounts
 
     asked: list[str] = []
-    real = directory_accounts.look_up_one
-    monkeypatch.setattr(directory_accounts, "look_up_one", lambda d, a: asked.append(a) or real(d, a))
+    real = directory_accounts.look_up_all
+    monkeypatch.setattr(
+        directory_accounts, "look_up_all",
+        lambda d, keys, *, budget: asked.extend(keys) or real(d, keys, budget=budget),
+    )
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
     _invite(client, "jane.tan@example.edu")
     assert _invite(client, "jane.tan@example.edu").headers["location"].endswith("invite_error=duplicate")
@@ -227,7 +230,7 @@ def test_an_unbound_picked_invite_keeps_the_picked_name(
 
 @pytest.mark.parametrize(
     "text",
-    ["Tan, Jane <a@b.edu> extra", "Jane Tan <jane.tan@example.edu", "not an address @ all"],
+    ["Jane <a@b.edu> extra", "Jane Tan <jane.tan@example.edu", "not an address @ all"],
 )
 def test_text_that_is_not_one_address_is_refused_not_invited_unchecked(
     db: Session, client: TestClient, monkeypatch: pytest.MonkeyPatch, directory: None, text: str

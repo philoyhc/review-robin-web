@@ -308,7 +308,7 @@ the operation-level mappings.
 | `self_action` | **400** | `_sys_admin._handle_toggle` |
 | `requires_super_admin` on Promote / Demote | **403** | same |
 | `last_admin`, `owns_sessions`, `has_history`, `still_owner`, `sole_owner`, `protected_super_admin`, on the single-row routes | **409** | same |
-| every Invite error (`invalid_email`, `duplicate`, `requires_super_admin`, `too_many`) | **303** back to the page with `?invite_error=<code>`, which renders a banner; a list of several instead lands with `?invited=<n>` and one `invite_refused=<code>:<address>` per refusal, the banner's reasons taken from the code, never echoing it | `_sys_admin.invite_user` |
+| every Invite error (`invalid_email`, `duplicate`, `requires_super_admin`, `too_many`) | **303** back to the page with `?invite_error=<code>`, which renders a banner; a list of several instead lands with `?invited=<n>`, `invite_unchecked=<n>` when any could not be checked against the directory, and one `invite_refused=<code>:<address>` per refusal, the banner's reasons taken from the code, never echoing it | `_sys_admin.invite_user` |
 | any other Accounts bulk refusal (§4.1) | **303** back with `?toggle_error=<code>&refused=<id>`, which renders a banner | `_sys_admin.bulk_account_action` |
 | `last_owner` on remove-owner | **409** (the card disables that Remove, so only a direct POST or a concurrent remove reaches it) | `_session_home.session_owners_remove` |
 | every other owner error on `owners/add` / `owners/{user_id}/remove` (`not_in_workspace`, `already_owner`, `not_owner`, `self_only`) | **303** back to `#owners-card` with `?owners_error=<code>` | same |

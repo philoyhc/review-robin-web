@@ -33,8 +33,8 @@
           That address belongs to someone who already has an account
           here, under another address. Use that row instead.
         {% elif invite_error == "too_many" %}
-          That's more than 50 addresses. Invite them in smaller groups;
-          no one was invited.
+          That's more than {{ invite_list_max }} addresses. Invite them in
+          smaller groups; no one was invited.
         {% else %}
           Couldn't add that user. Try again.
         {% endif %}
@@ -195,9 +195,12 @@
         function split() {
           var value = email.value || "";
           var cut = value.lastIndexOf(",");
-          return cut < 0
-            ? { head: "", tail: value.trim() }
-            : { head: value.slice(0, cut + 1) + " ", tail: value.slice(cut + 1).trim() };
+          if (cut < 0) return { head: "", tail: value.trim() };
+          // The head keeps the spacing as typed after the comma, so the
+          // box's text stays a prefix of each option's value.
+          var after = value.slice(cut + 1);
+          var tail = after.trim();
+          return { head: value.slice(0, value.length - after.trimStart().length), tail: tail };
         }
         function fill(people, head) {
           options.textContent = "";

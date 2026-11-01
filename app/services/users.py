@@ -46,7 +46,7 @@ and session ownership.
 from __future__ import annotations
 
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, replace as dataclass_replace
 from datetime import datetime
 
@@ -1040,20 +1040,28 @@ INVITE_LIST_MAX = 50
 
 def split_invite_list(text: str) -> list[str]:
     """The entries of a comma-separated invite (19X Item 14). A piece with
-    no "@" cannot be an address, so it joins the piece after it: a name
-    written "Tan, Jane <jane@example.edu>" stays one entry. Blank pieces
-    are dropped; text with no entries is one empty entry, which the
-    invite refuses."""
+    no "@" joins the piece after it only when the two read as one
+    "Name <address>", so a name written "Tan, Jane <jane@example.edu>"
+    stays one entry while a stray word ("Arun", typed and never picked)
+    stays its own entry, to be refused, and never sinks the address after
+    it. Blank pieces are dropped; text with no entries is one empty entry,
+    which the invite refuses."""
     entries: list[str] = []
     carry = ""
     for piece in text.split(","):
-        joined = f"{carry},{piece}" if carry.strip() else piece
-        if "@" in piece:
-            if joined.strip():
-                entries.append(joined.strip())
+        if not piece.strip():
+            continue
+        if carry and "@" in piece and _NAMED_ADDRESS.match(f"{carry},{piece}".strip()):
+            entries.append(f"{carry},{piece}".strip())
             carry = ""
+            continue
+        if carry:
+            entries.append(carry.strip())
+            carry = ""
+        if "@" in piece:
+            entries.append(piece.strip())
         else:
-            carry = joined
+            carry = piece
     if carry.strip():
         entries.append(carry.strip())
     return entries or [""]
@@ -1067,6 +1075,11 @@ class InviteOutcome:
     user: User | None = None
     code: str | None = None
 
+    @property
+    def unchecked(self) -> bool:
+        """Made, but not bound to a directory account."""
+        return self.user is not None and self.user.external_principal_id is None
+
 
 def invite_list(
     db: Session,
@@ -1074,19 +1087,36 @@ def invite_list(
     actor: User,
     text: str,
     is_sys_admin: bool = False,
-    look_up: Callable[[str], Outcome | None] | None = None,
+    resolve: Callable[[list[str]], Mapping[str, Outcome]] | None = None,
     correlation_id: str | None = None,
 ) -> list[InviteOutcome]:
     """Invite every entry of a comma-separated list (19X Item 14), each as
     `invite` does on its own and committed on its own, so one refusal
-    stops none of the rest. ``look_up`` asks the directory about one
-    address. More than `INVITE_LIST_MAX` entries invites none of them."""
+    stops none of the rest. ``resolve`` asks the directory about every
+    address at once, under one time budget (`directory_accounts.resolve`),
+    keyed as `directory_accounts.key`; an address it did not finish is
+    invited unchecked. More than `INVITE_LIST_MAX` entries invites none."""
     entries = split_invite_list(text)
     if len(entries) > INVITE_LIST_MAX:
         return [InviteOutcome(address="", code="too_many")]
+    split = [split_named_address(entry) for entry in entries]
+    # Only addresses that pass `invite`'s cheap refusals are asked about,
+    # as a lone invite asks only after them (19Z, accounts item).
+    try:
+        if is_sys_admin:
+            _guard_actor_super_admin(actor)
+        can_grant = True
+    except UserOperationError:
+        can_grant = False
+    askable = [
+        address for _, address in split
+        if can_grant and looks_like_email(address) and db.execute(
+            select(User.id).where(func.lower(User.email) == normalize_email(address))
+        ).first() is None
+    ]
+    found = resolve(askable) if resolve and askable else None
     outcomes: list[InviteOutcome] = []
-    for entry in entries:
-        name, address = split_named_address(entry)
+    for name, address in split:
         try:
             user = invite(
                 db,
@@ -1094,7 +1124,10 @@ def invite_list(
                 email=address,
                 is_operator=True,
                 is_sys_admin=is_sys_admin,
-                directory=(lambda a=address: look_up(a)) if look_up else None,
+                directory=(
+                    (lambda a=address: found.get(directory_accounts.key(a) or ""))
+                    if found is not None else None
+                ),
                 display_name=name,
                 correlation_id=correlation_id,
             )

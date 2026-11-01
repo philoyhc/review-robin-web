@@ -399,9 +399,10 @@ def sys_admin_users(
             "invite_unchecked": bool(invite_unchecked),
             # A list invite's summary (19X Item 14): how many were made,
             # how many unchecked, and each refused address with its code.
-            "invited_count": invited,
+            "invited_count": max(invited, 0) if invited is not None else None,
+            "invite_list_max": users_service.INVITE_LIST_MAX,
             "invite_unchecked_count": int(invite_unchecked) if (invite_unchecked or "").isdigit() else 0,
-            "invite_refusals": views.invite_refusals(invite_refused or []),
+            "invite_refusals": views.invite_refusals((invite_refused or [])[: users_service.INVITE_LIST_MAX]),
             # A refused batch names its row: the email is looked up, the
             # reason comes from the view's own table, never from the URL.
             "toggle_message": views.account_refusal_message(
@@ -751,16 +752,18 @@ def invite_user(
     # are made up, so it checks nothing either. The picker fills
     # "Name <address>"; the address in the brackets is the one invited.
     # Several, comma-separated, are invited one by one (19X Item 14).
-    def look_up(address: str):
+    # Every address is asked at once, under the one budget a request has.
+    def resolve(addresses: list[str]):
         directory = None if is_local() else directory_or_none(request)
-        return directory_accounts.look_up_one(directory, address)
+        return directory_accounts.resolve(directory, addresses) if directory else None
 
     outcomes = users_service.invite_list(
         db,
         actor=actor,
         text=email,
         is_sys_admin=invite_as_sys_admin == "true",
-        look_up=look_up,
+        resolve=resolve,
+        correlation_id=request_correlation_id(),
     )
     # The new rows are not selected (19X Item 14, author): the table
     # stays as the admin left it.
@@ -769,12 +772,9 @@ def invite_user(
         if only.user is None:
             url = f"{_ACCOUNTS_URL}?invite_error={quote(only.code or '', safe='')}"
             return urls.redirect(request, url=url, status_code=status.HTTP_303_SEE_OTHER)
-        return _users_redirect(
-            request, invite_unchecked=only.user.external_principal_id is None
-        )
-    made = [o for o in outcomes if o.user is not None]
-    params = [f"invited={len(made)}"]
-    unchecked = sum(1 for o in made if o.user.external_principal_id is None)
+        return _users_redirect(request, invite_unchecked=only.unchecked)
+    params = [f"invited={sum(1 for o in outcomes if o.user is not None)}"]
+    unchecked = sum(1 for o in outcomes if o.unchecked)
     if unchecked:
         params.append(f"invite_unchecked={unchecked}")
     params += [
