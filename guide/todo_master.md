@@ -61,15 +61,7 @@ is the author's call.
    14B's send path reads them).
    **Plan:** `guide/segment_14C_email_related_ui.md`.
 
-3. **20A — Operator polish + documentation.** A **currency pass**
-   over the in-app Guide, `docs/known_limitations.md` and
-   `docs/operations_runbook.md` against the deployed host, and the
-   **technical-support contact** (its mechanism can be built now; the
-   address waits for the gate). The administrator guide and the
-   institutional troubleshooting are Cordware's (2026-11-01).
-   **Plan:** `guide/segment_20A_operator_polish_and_documentation.md`.
-
-4. **19Z — Append to a roster** (not gated on Azure). The four roster
+3. **19Z — Append to a roster** (not gated on Azure). The four roster
    pages' Upload cards gain an append tick beside the replace tick
    (mutually exclusive, neither ticked by default), so a late batch adds
    rows without deleting assignments or responses. Append shipped
@@ -78,7 +70,7 @@ is the author's call.
    there, refuses the file (author, 2026-10-31).
    **Plan:** `guide/segment_19Z_roster_append.md`.
 
-5. **20B — Symmetric review** (not gated on Azure). A session setting
+4. **20B — Symmetric review** (not gated on Azure). A session setting
    under which the Reviewers roster is the only one edited and every
    write mirrors to Reviewees; on only while both rosters are empty, off
    any time. The Reviewees page stays, read-only, Unlock panel included; the

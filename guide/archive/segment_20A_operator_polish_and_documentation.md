@@ -117,7 +117,13 @@ Closed 2026-11-01 in one PR. Intended versus done:
   - `docs/known_limitations.md`: the deployment section was rewritten to the institutional host, and the dev slot's F1, public-database, plain-secret and no-log-workspace entries were struck. Its email entry now waits on the choice of sender, not on Azure.
   - `docs/operations_runbook.md`: re-scoped. The host's procedures belong to the private repository; the in-app administration and a host-neutral health check stay. `guide/post_azure_todo_checklist.md` item 2's row for it is done.
   - `app/web/templates/guide.html`: three passages said people are matched by "the address they sign in with". They now describe what happens: the upload binds a row to its directory account, by mail or sign-in name, and only an unbound row matches by sign-in mail (`spec/audience_and_identity_model.md`, "Identity match").
-- **Reads:** one `diff-reviewer` read; its findings are in the PR.
+- **Reads:** one `diff-reviewer` read. It found no blocking defect and nine smaller findings, all acted on:
+  - softened claims the public repository cannot check (the log workspace, the host's health-path exclusions, "a push deploys nothing");
+  - a Guide note that a sign-in name needs the directory at save time;
+  - the runbook's allowlist rule and Accounts Management guards stated exactly;
+  - the SMTP-key rotation note restored.
+  
+  It also saw `docs/security_posture.md` still describing the NUS host before it served, which is post-Azure item 2's.
 
 ## Open questions
 

@@ -18,8 +18,8 @@ holds on any host. For symptom-driven diagnosis of the application see
 GET https://<host>/reviewrobin/health  →  {"status": "ok"}
 ```
 
-Each mounted application's health path is excluded from Easy Auth, so
-it answers without sign-in. A non-200 means the worker is not up, or
+Each mounted application's health path is meant to be excluded from
+Easy Auth (the host's setting), so it answers without sign-in. A non-200 means the worker is not up, or
 the application is switched off on the host.
 
 ## Logs
@@ -34,20 +34,36 @@ Access is a **three-tier hierarchy** (Segment 18S): operator
 (`users.is_operator`) ⊂ admin (`users.is_sys_admin`) ⊂ super-admin
 (derived from the `SUPER_ADMIN_EMAILS` App Setting, never a DB column —
 `app/auth/roles.py`). The `OPERATOR_EMAILS` / `SYS_ADMIN_EMAILS` App
-Settings seed the two columns **on a user's first sign-in only**; a
-super-admin self-heals to full rights on every sign-in. Name people by
-their **mail address**: the host reads the mail claim, which can differ
-from the sign-in name. An admin listed after their first sign-in is not
+Settings seed the two columns **only when a person's account row is
+created** at sign-in; a super-admin self-heals to full rights on every
+sign-in. Name people by their **mail address**: the host reads the mail
+claim, which can differ from the sign-in name. Someone listed after
+their row exists (they signed in, or were invited, first) is not
 promoted by the list; promote them on Accounts Management instead.
 
-**In-app management shipped (Segment 18S).** The Sys Admin → Accounts
-Management page (`/operator/sys-admin/users`) admits, revokes, promotes,
-demotes, and removes accounts (`app/services/users.py`), so revoking
-access is no longer a manual DB `UPDATE`. Guards: promote/demote require a
-super-admin actor; demote/revoke/remove refuse a super-admin *target*
-(`protected_super_admin`) and can't drop below the last-admin floor.
-Remove also refuses anyone who created a session or acted in the audit
-log (`has_history`): to take someone's access away, revoke it.
+**In-app management (Segment 18S).** The Sys Admin → Accounts Management
+page (`/operator/sys-admin/users`) invites, admits, revokes, promotes,
+demotes and removes accounts (`app/services/users.py`). Its guards:
+
+- nobody acts on their own row (`self_action`);
+- promoting, demoting or inviting an admin needs a super-admin, once a
+  super-admin is configured; until then any admin can;
+- a super-admin target is refused (`protected_super_admin`);
+- demote and remove keep at least one admin (`last_admin`);
+- revoke, and a demote that would take operator access, refuse while
+  the person still owns sessions (`still_owner`): clear them with
+  *Remove from all sessions* first;
+- remove refuses anyone who owns a session (`owns_sessions`), created
+  one or acted in the audit log (`has_history`). To take someone's
+  access away, revoke it.
+
+## Secrets the app reads
+
+`SMTP_ENCRYPTION_KEY` is needed by no page since segment 14C Item 1
+removed the Settings page's SMTP cards. It still decrypts any SMTP
+password saved before then, so keep it set where one exists: rotating
+it leaves those passwords undecryptable. How the host stores and
+rotates settings is the host's documentation.
 
 ## Backups and data
 

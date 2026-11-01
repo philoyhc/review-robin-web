@@ -15,13 +15,14 @@ the dev slot's F1 plan, public database, plain-setting secrets and
 missing log workspace no longer describe the service, and are struck.
 
 - **Single environment.** One production environment, with no staging
-  slot. A release is dispatched by hand from the private repository; a
-  push to `main` here deploys nothing.
+  slot. A release is dispatched by hand from the private repository, and
+  production takes no push from here. (The dormant dev slot's push
+  workflow is disabled in GitHub's settings.)
 - **Production lags `main`.** It runs one imported RRW commit, so a
   merge here reaches it only with the next import and release.
-- **No APM.** Logs are structured JSON and reach the platform's log
-  workspace, but no Application Insights SDK is wired in, so there are
-  no traces or per-request metrics beyond the platform's own.
+- **No APM.** Logs are structured JSON, and no Application Insights SDK
+  is wired in, so there are no traces or per-request metrics beyond
+  what the host's platform collects.
 
 ## Authentication / access
 

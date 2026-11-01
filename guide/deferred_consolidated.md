@@ -1168,7 +1168,7 @@ scaffold first.
 
 **Ships.** `OPERATOR_CONTACT_EMAIL`, today shown only on `/about`'s
 access-request link, also appears on the chrome footer, the error pages
-and the invitation landing (`reviewer/invite_mismatch.html`), as a
+and the invitation-mismatch page (`reviewer/invite_mismatch.html`), as a
 "something looks broken" address distinct from a session's help contact.
 Unset renders nothing.
 
