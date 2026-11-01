@@ -78,9 +78,9 @@ is the author's call.
    **Plan:** `guide/segment_20B_symmetric_review.md`.
 
 5. **20C — Refinements** (not gated). Small follow-ups from the author's
-   browser runs, one item each: checkboxes before their labels (Item 2).
-   Item 1 (verified names as pills on the New session Owners card) is
-   done.
+   browser runs, one item each. Items 1 (verified names as pills on
+   the New session Owners card) and 2 (checkboxes before their labels)
+   are done; the segment stays open for further refinements.
    **Plan:** `guide/segment_20C_refinements.md`.
 
 ### Stubs

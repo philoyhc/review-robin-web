@@ -675,7 +675,10 @@ everywhere, so "you can click this" reads the same way on every control.
 > **`<input type="checkbox">` / `<input type="radio">`** — left native.
 > No treatment is specified, deliberately: a restyled checkbox has to
 > reimplement the indeterminate, focus and forced-colors states the
-> platform already ships.
+> platform already ships. **The box comes before its label text**, in
+> the markup and so on screen and to a screen reader: "☐ Observers tab
+> and page", never the reverse. A chip toggle (`.tag-chip` around a
+> visually hidden box) is outside the rule, since its box is not seen.
 
 > **Label** — `display: block`, `--fs-small` at weight 500 in
 > `--text-body`, with `margin: var(--space-3) 0 var(--space-1) 0`: 12px

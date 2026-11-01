@@ -75,6 +75,21 @@ def test_new_session_bottom_row_ui_settings_over_quick_setup_left(
     assert 'form="create-session-form"' in ui_card
 
 
+def test_new_session_ui_toggles_put_the_checkbox_first(client: TestClient) -> None:
+    """20C Item 2: each toggle's checkbox precedes its text, as every
+    other checkbox in the app does (`spec/ui_elements.md`)."""
+    body = client.get("/operator/sessions/new").text
+    card = body[body.find('id="user-interface-settings"'):]
+    for name, text in (
+        ("relationships_enabled", "Relationships tab and page"),
+        ("observers_enabled", "Observers tab and page"),
+    ):
+        box = card.find(f'name="{name}"')
+        label = card.find(text)
+        assert -1 not in (box, label)
+        assert box < label, f"{text}: the checkbox must come first"
+
+
 def test_new_session_quick_setup_has_no_lock_toggle(
     client: TestClient,
 ) -> None:

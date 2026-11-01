@@ -77,6 +77,15 @@ A second scan, of a `<label for=…>` placed before its own checkbox, found **0*
 
 The comment above `.ui-settings-row` in `base.html` describes the checkbox "inline after" the text and changes with it. Tests: `tests/integration/test_quick_setup_new_session.py` reads the card's classes, not the order.
 
+### Status
+
+Done 2026-11-01 in one PR, as laddered. The two labels put the box first, and the `base.html` comment and the `spec/ui_elements.md` rule say so. `tests/integration/test_quick_setup_new_session.py` pins the order. The rule records that chip toggles (`.tag-chip`, a visually hidden box) are outside it. Reads: one `diff-reviewer` read. It found no defect, and confirmed by its own scan that no other checkbox puts its text first.
+- **The count was corrected:** it found **62** label-wrapped checkboxes, not 59, 22 of them chip toggles. The Blast radius's 59 is an undercount, though its conclusion holds.
+- **The dated count left the spec rule,** which keeps the rule and the chip exemption.
+- **This Status** records the read.
+
+All fixed in the same PR.
+
 ### PR ladder
 
 1. **One PR:** the two labels, the `base.html` comment, a test that each checkbox precedes its text, and the `spec/ui_elements.md` rule.
