@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, User
-from app.services import audit, unit_of_work
+from app.services import audit, symmetric_review, unit_of_work
 from app.services import session_lifecycle as lifecycle
 
 #: Every field a reviewer can be shown of themselves, in roster order.
@@ -181,6 +181,9 @@ def set_self_fields(
         payload=audit.changes({spec.column: [old, new]}),
         correlation_id=correlation_id,
     )
+    if participant == "reviewer":
+        # 20B — under symmetric review the reviewees' list follows.
+        symmetric_review.sync_reviewees_from_reviewers(db, review_session)
     unit_of_work.commit(db)
 
 

@@ -32,7 +32,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Reviewer, ReviewSession, User
 from app.services import audit, csv_imports
-from app.services import directory_accounts
+from app.services import directory_accounts, symmetric_review
 from app.services import session_lifecycle as lifecycle
 from app.services.email_identity import looks_like_email, normalize_email
 from app.services.roster_bulk import bulk_delete, bulk_set_status
@@ -240,6 +240,8 @@ def create_reviewer(
         ),
         correlation_id=correlation_id,
     )
+    # 20B — under symmetric review the reviewee roster follows.
+    symmetric_review.sync_reviewees_from_reviewers(db, reviewer.session)
     db.commit()
     return reviewer
 
@@ -379,6 +381,8 @@ def update_reviewer(
         refs={"reviewer_id": reviewer.id},
         correlation_id=correlation_id,
     )
+    # 20B — under symmetric review the reviewee roster follows.
+    symmetric_review.sync_reviewees_from_reviewers(db, reviewer.session)
     db.commit()
     return changes
 

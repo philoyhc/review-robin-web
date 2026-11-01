@@ -28,7 +28,7 @@ from app.db.models import (
     ReviewSession,
     User,
 )
-from app.services import audit
+from app.services import audit, symmetric_review
 from app.services import invitations as invitations_service
 from app.services import session_lifecycle as lifecycle
 
@@ -175,6 +175,9 @@ def bulk_set_status(
         context=context,
         correlation_id=correlation_id,
     )
+    if model is Reviewer:
+        # 20B — under symmetric review the reviewee roster follows.
+        symmetric_review.sync_reviewees_from_reviewers(db, review_session)
     db.commit()
     return flipped_ids
 
@@ -427,5 +430,8 @@ def bulk_delete(
         context=context,
         correlation_id=correlation_id,
     )
+    if model is Reviewer:
+        # 20B — under symmetric review the reviewee roster follows.
+        symmetric_review.sync_reviewees_from_reviewers(db, review_session)
     db.commit()
     return deleted, assignments, responses

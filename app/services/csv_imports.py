@@ -28,7 +28,7 @@ from app.schemas.imports import (
 from app.logging_config import get_logger
 from app.schemas.observer_cohort_rule import CohortRuleSet
 from app.schemas.validation import Severity, ValidationIssue
-from app.services import audit, field_labels, field_label_csv
+from app.services import audit, field_labels, field_label_csv, symmetric_review
 from app.services import directory_accounts, roster_bulk, unit_of_work
 from app.services import invitations as invitations_service
 from app.services import session_lifecycle as lifecycle
@@ -1622,6 +1622,9 @@ def save_reviewers(
                 correlation_id=correlation_id,
                 clear_absent=not (append or merge),
             )
+            # 20B — the labels a reviewer import carries reach the
+            # mirrored reviewees too (``_save`` reconciled the rows).
+            symmetric_review.sync_reviewees_from_reviewers(db, session)
     return result
 
 
@@ -1957,6 +1960,9 @@ def _save(
             },
         ),
     )
+    if model is Reviewer:
+        # 20B — under symmetric review the reviewee roster follows.
+        symmetric_review.sync_reviewees_from_reviewers(db, session)
     return replaced, (merged[0] if merged is not None else len(rows))
 
 
@@ -2136,6 +2142,9 @@ def _delete_all(
         ),
         correlation_id=correlation_id,
     )
+    if model is Reviewer:
+        # 20B — under symmetric review the reviewee roster follows.
+        symmetric_review.sync_reviewees_from_reviewers(db, review_session)
     db.commit()
     log.info(
         "roster deleted",

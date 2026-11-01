@@ -52,6 +52,7 @@ from app.services import (
 from app.services import session_lifecycle as lifecycle
 from app.services import session_owners, session_tags
 from app.services import sessions as sessions_service
+from app.services import symmetric_review as symmetric_review_service
 from app.services import unit_of_work
 from app.services.responses import GroupAnswersWouldClear
 from app.web import breadcrumbs, views
@@ -1508,6 +1509,9 @@ def _save_field_labels(
                     user=user,
                     correlation_id=correlation_id,
                 )
+        if source_type == "reviewer":
+            # 20B — under symmetric review the reviewee labels follow.
+            symmetric_review_service.sync_reviewees_from_reviewers(db, review_session)
 
 
 # ------------------------------------------------------------------ #
