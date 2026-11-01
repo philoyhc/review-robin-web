@@ -24,6 +24,7 @@ from urllib.parse import urlsplit
 
 from fastapi import FastAPI
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from starlette.middleware.gzip import GZipMiddleware
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from cordware.identity import is_local, missing_header_count, super_admin_configured
@@ -188,6 +189,13 @@ def parse_public_origin(raw: str | None, *, local: bool) -> PublicOrigin | None:
     if port != _DEFAULT_PORTS[scheme]:
         netloc += f":{port}"
     return PublicOrigin(scheme=scheme, host=host, port=port, netloc=netloc)
+
+
+#: Bodies smaller than this go out as they are: compressing them saves
+#: less than the header costs.
+GZIP_MINIMUM_SIZE = 1000
+#: zlib's default level: most of level 9's saving at a fraction of its CPU.
+GZIP_LEVEL = 6
 
 
 class PublicOriginMiddleware:
@@ -364,6 +372,12 @@ def create_app(
 
     for entry, sub_app in mounted:
         host.mount(entry.path, sub_app)
+    # Compression for every response the host serves: nothing in front of
+    # it compresses (RRW `guide/post_azure_todo_checklist.md` item 4, the
+    # lobby measured 338 kB uncompressed on 2026-11-01). Starlette skips a
+    # small body, a client that does not accept gzip, an already-encoded
+    # response and already-compressed types (`application/zip`).
+    host.add_middleware(GZipMiddleware, minimum_size=GZIP_MINIMUM_SIZE, compresslevel=GZIP_LEVEL)
     # Outermost, and only when set: unset, the host is as it was.
     if origin is not None:
         host.add_middleware(PublicOriginMiddleware, origin=origin)

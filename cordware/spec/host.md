@@ -160,6 +160,33 @@ TLS ended in front of it. Read once with `CORDWARE_APPS`.
 A link built with no request has no origin to read; segment 14B's worker
 owns that when it lands.
 
+## Compression
+
+The host compresses its responses with Starlette's `GZipMiddleware`,
+inside `PublicOriginMiddleware` and around every mount, so the landing
+page, `/health` and every application are covered by one setting. Nothing
+in front of it compresses: the gateway and App Service pass bodies through
+(the lobby measured 338 kB uncompressed on 2026-11-01, RRW
+`guide/post_azure_todo_checklist.md` item 4).
+
+- **When it compresses:** the request's `Accept-Encoding` includes `gzip`,
+  the body is at least `GZIP_MINIMUM_SIZE` (1,000 bytes), and the response
+  is not already encoded.
+- **What it leaves alone:** Starlette's excluded types, among them
+  `application/zip`, images and `text/event-stream`, so a Zip all or an
+  image is not compressed twice.
+- **Streamed responses** (the CSV extracts) are compressed chunk by
+  chunk and lose their `Content-Length`; browsers decode them as before.
+  A `206` partial response is never compressed.
+- **Level:** `GZIP_LEVEL`, zlib's default 6.
+- **Starlette 1.5 or later** (`pyproject.toml`): earlier releases exclude
+  only `text/event-stream`, so a zip would be compressed again.
+- **Considered: BREACH.** Compressed HTML that carries a secret beside
+  attacker-chosen text can leak the secret through response sizes. RRW
+  pages carry no CSRF token and authenticate by Easy Auth's cookie, not a
+  body value; the one secret in HTML is an invitation link on an
+  operator-only page. Accepted (2026-11-01).
+
 ## `/health`
 
 - The host's own route: `GET /health` returns `{"status": "ok"}`, route name

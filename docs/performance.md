@@ -90,7 +90,8 @@ session they dominate:
 - **The lobby is ~1,590 KB at every size** — 1,003 filler sessions,
   independent of the session being viewed. It is the largest response
   the app sends and 81 ms of its 96 ms is Python. Finding 5's
-  compression case is unaffected by the re-set and still unactioned.
+  compression case is unaffected by the re-set; it was actioned on
+  2026-11-01, when the host began gzipping responses.
 - **79–112 queries per session page at every size** — Session Home 79,
   Assignments 92, Validate 112, identical at 20,000 rows and at
   200,000. Fixed cost, not roster cost. **Attributed in Finding 6**:
@@ -370,6 +371,12 @@ step, about 5 s; the recompute (2.5 s, with `normalize_email` called
 884,400 times) is the next.
 
 ## Finding 5 — nothing is compressed
+
+**Actioned 2026-11-01.** The institutional host confirmed it: the lobby
+went out as 338 kB with no `Content-Encoding` (author, devtools). The
+Cordware host now gzips every response (`cordware/spec/host.md`,
+"Compression"; `guide/post_azure_todo_checklist.md` item 4). The
+diagnosis below is as it stood before.
 
 `app/main.py` installs no compression middleware, so every response goes
 out as plain text however the client asks for it:
@@ -683,6 +690,7 @@ needed no design.
    feedback or a background job as much as it needs speed. *Taken
    2026-09-22 as 19S Item 3 — the insert and the self-review recompute;
    the feedback followed on 2026-10-01 (Finding 4).*
-5. **Turn on compression** and 6. **Precompute the pair sort key** are
-   still open; they are carried, with their figures and triggers, in the
-   ledger entry named at the head of this document.
+5. **Turn on compression**: done 2026-11-01, at the host (Finding 5).
+6. **Precompute the pair sort key** is still open; it is carried, with
+   its figures and trigger, in the ledger entry named at the head of this
+   document.

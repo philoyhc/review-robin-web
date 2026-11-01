@@ -10,7 +10,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 import pytest
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.testclient import TestClient
 
 from cordware.main import REGISTRY, AppEntry, PublicOrigin, create_app, parse_apps, parse_public_origin
@@ -304,3 +304,52 @@ def test_an_invalid_origin_refuses_to_start(monkeypatch: pytest.MonkeyPatch, raw
     monkeypatch.setenv("CORDWARE_PUBLIC_ORIGIN", raw)
     with pytest.raises(ValueError, match="CORDWARE_PUBLIC_ORIGIN"):
         create_app(apps=("u",), registry=URL_STUB)
+
+
+# --- Compression ---------------------------------------------------------
+
+BIG_PAGE = "<p>" + "Review Robin " * 500 + "</p>"
+
+
+def stub_bodies() -> FastAPI:
+    stub = FastAPI()
+
+    @stub.get("/page")
+    def page() -> Response:
+        return Response(BIG_PAGE, media_type="text/html")
+
+    @stub.get("/archive")
+    def archive() -> Response:
+        return Response(b"PK" + b"\0" * 5000, media_type="application/zip")
+
+    return stub
+
+
+GZIP_STUB = {"g": AppEntry(path="/g", factory=f"{__name__}:stub_bodies", logger="stub_g")}
+
+
+def _gzip_host() -> TestClient:
+    return TestClient(create_app(apps=("g",), registry=GZIP_STUB))
+
+
+def test_a_large_page_is_gzipped_when_the_client_accepts_it() -> None:
+    reply = _gzip_host().get("/g/page", headers={"accept-encoding": "gzip"})
+    assert reply.headers["content-encoding"] == "gzip"
+    assert reply.headers["vary"].lower() == "accept-encoding"
+    assert int(reply.headers["content-length"]) < len(BIG_PAGE) // 5
+    assert reply.text == BIG_PAGE  # the client decodes it to the same page
+
+
+def test_a_client_that_does_not_accept_gzip_gets_the_page_as_is() -> None:
+    reply = _gzip_host().get("/g/page", headers={"accept-encoding": "identity"})
+    assert "content-encoding" not in reply.headers
+    assert reply.text == BIG_PAGE
+
+
+def test_small_bodies_and_archives_are_not_compressed() -> None:
+    client = _gzip_host()
+    health = client.get("/health", headers={"accept-encoding": "gzip"})
+    assert "content-encoding" not in health.headers
+    archive = client.get("/g/archive", headers={"accept-encoding": "gzip"})
+    assert "content-encoding" not in archive.headers
+    assert archive.content.startswith(b"PK")

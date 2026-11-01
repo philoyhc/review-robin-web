@@ -668,9 +668,7 @@ per-card. No schema change.
 > candidates and questions when it moved there from `guide/`; segment
 > 19R's close asked that a measured candidate not become a queue.
 
-**Ships.** Any of: compression middleware, which the lobby measured at
-~1,590 KB where gzip sends 95 KB (16.5×) and the roster pages 6–7×
-(`docs/performance.md` Finding 5); a pair sort key computed once per
+**Ships.** Either of: a pair sort key computed once per
 person rather than once per pair (0.87 s → 0.31 s at 1,000 × 1,000); and
 a faster Prepare (about 14 s at 200 × 200, its button already saying it
 is preparing since 2026-10-01), whose measured first step is a
@@ -685,15 +683,16 @@ page (19R Item 2 cached it, so most renders no longer pay); whether the
 less than the others; and what the institutional front end does with a
 long Prepare POST.
 
-**Lift trigger.** Compression: the header check
-(`curl -sI -H 'Accept-Encoding: gzip'` against the institutional host)
-showing no compression, or a page measured slow there. The sort key:
+**Lift trigger.** The sort key:
 only inside a wider engine change. Prepare: an operator report of a
 Prepare that looks hung or times out, which also answers the long-POST
 question.
 
-**Wire-up.** Compression is one middleware line in the host
-(`cordware/main.py`) or the app; the sort key is in the rules engine's
+(Compression left this entry on 2026-11-01: its trigger fired, an
+uncompressed 338 kB lobby on the institutional host, and the host now
+gzips; `docs/performance.md` Finding 5.)
+
+**Wire-up.** The sort key is in the rules engine's
 pair build; Prepare's verify is in `app/services/assignments/`. Each is
 its own one-PR item with a re-take on `tools/bench_roster_scale.py`.
 
@@ -1252,7 +1251,8 @@ and need their own careful pass.
 ### 3. Other inherited debt (deferred, not strictly infra)
 
 (Extracting `base.html`'s stylesheet is not tracked here: it is option 3
-of `guide/post_azure_todo_checklist.md` item 4, pending a measurement.)
+of `guide/post_azure_todo_checklist.md` item 4, which chose compression
+instead on 2026-11-01.)
 
 - **Email aliases and identity in RRW** (2026-10-30, from
   `residentialapps/docs/residentialapps_email_identity_matching.md`). RRW
