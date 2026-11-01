@@ -677,10 +677,8 @@ everywhere, so "you can click this" reads the same way on every control.
 > reimplement the indeterminate, focus and forced-colors states the
 > platform already ships. **The box comes before its label text**, in
 > the markup and so on screen and to a screen reader: "☐ Observers tab
-> and page", never the reverse. A scan on 2026-11-01 found 57 of 59
-> label-wrapped checkboxes already so, and fixed the other two (segment
-> 20C Item 2). A chip toggle (`.tag-chip` around a visually hidden box)
-> is outside the rule, since its box is not seen.
+> and page", never the reverse. A chip toggle (`.tag-chip` around a
+> visually hidden box) is outside the rule, since its box is not seen.
 
 > **Label** — `display: block`, `--fs-small` at weight 500 in
 > `--text-body`, with `margin: var(--space-3) 0 var(--space-1) 0`: 12px
