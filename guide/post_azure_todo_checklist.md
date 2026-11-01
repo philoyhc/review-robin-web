@@ -23,9 +23,13 @@ note, not a task.
 
 **State, 2026-11-01.** The institutional host is provisioned and has
 served Review Robin since 2026-10-31 (the first release with migrations).
-Items 1 and 2 can be worked now; items 7–10 wait on the email choices
-in `guide/email_and_scheduling.md` rather than on the host; items 3, 5
-and 6, settled earlier, are removed (their numbers are not reused).
+Item 2 can be worked now; items 7–10 wait on the email choices
+in `guide/email_and_scheduling.md` rather than on the host; items 1, 3,
+5 and 6 are settled and removed (their numbers are not reused). Item 1,
+the visibility constraint's migration log, was read 2026-11-01 from the
+release that first migrated the deployed database (2026-10-31):
+`normalized 0 instrument_view_policies row(s)`, on an empty database,
+so no operator needed telling.
 
 **This is not a runbook.** It does not describe how to deploy. It
 describes what is owed *after* deploying, in an order nobody has fixed
@@ -45,37 +49,6 @@ has in fact run the app locally with fake auth from early on (`CLAUDE.md`
 only if it needs what a deployment adds. Items of this
 kind leave as soon as they are settled and do not wait for the
 cutover.
-
----
-
-## 1. Read the visibility constraint's migration log on the deployed database, before any participant-facing window opens
-
-**Status:** open. Blocked on the deployment.
-
-**What.** When the deployment runs `alembic upgrade head`, read the line
-migration `e5c1a9d3b7f2` logs: `ck_view_policy_cell: normalized N
-instrument_view_policies row(s) before adding the constraint`, with
-the row ids when N is not zero.
-
-**Why.** This replaces reading the retired Visibility grid audit card on
-real data (`guide/archive/visibility_cell_constraint.md`). The card existed to find
-`instrument_view_policies` rows the per-cell rule refuses, above all an
-**observer** grant of `Raw` or `Anonymized` on **Session ongoing**, an
-observer reading individual responses while the review is still
-running. The migration now rewrites any such row to the nearest legal
-cell (the 2026-10-05 ruling) before adding a constraint that stops one
-being stored again. It has only run against fixtures, and only real
-data says whether N is zero. A row whose audience is none of the three
-stops the upgrade with its ids instead.
-
-**Done when.** The line has been read on the deployed database and
-recorded with the date. If N is not zero, the operator who owns each
-listed row's session has been told that its visibility changed, since
-the rewrite narrows a grant without asking them.
-
-**Where this came from.** `guide/archive/segment_19C_refinements.md`
-Item 10 planned the card's first real run; `guide/archive/visibility_cell_constraint.md`
-retired the card for the constraint.
 
 ---
 
