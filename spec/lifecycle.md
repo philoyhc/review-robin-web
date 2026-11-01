@@ -327,6 +327,17 @@ status and can only refuse more than the route's, which stays as the
 cheap first answer. The lobby's bulk Delete skips a row the guard
 refuses, as it skips a `ready` one up front.
 
+**The wait for the lock is bounded** on Postgres (`LOCK_TIMEOUT_MS`,
+5 s; `docs/database.md`, "The session lock and its timeout"). A request
+still waiting then raises `SessionBusy`, which is not a
+`SessionStateConflict`: the state did not refuse. An app-level handler
+renders it as the 409 page, "Someone else is changing this session right
+now. Try again in a moment.", from operator and reviewer routes alike;
+the reviewer's Save, Submit, Clear and Recall do not turn it into their
+in-form refusal banner (accepted 2026-11-01: the wait means an operator
+held the session for over 5 s). Prepare's failure record names it as an
+unexpected error.
+
 ### 3.2 `_require_response_loss_ack(db, session, ack)`
 
 Raises **HTTP 400 Bad Request** when responses already exist and
@@ -1033,7 +1044,10 @@ the page entirely.
   invite and reminder passes decide, send and record **one entry per
   transaction**, re-locking before the next (findings Bc3, ruled
   2026-10-07). A second racer re-reads after the first commits and
-  no-ops. The schedule saves take the same lock first, before reading
+  no-ops, if the first commits within the lock's 5 s bound (§3.1);
+  otherwise the observer's pass stops quietly at the first trigger that
+  meets the busy lock, writing no `session.scheduled_event_failed`, and
+  the page renders as usual. The next visit tries again. The schedule saves take the same lock first, before reading
   anything (the Session Home save, the lobby's row expander and the
   Settings import, each before its editability gate), and hold it until the schedule is written,
   so the editability gate, the stored schedule and the sent-entry

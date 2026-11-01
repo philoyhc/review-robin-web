@@ -163,6 +163,9 @@ three-layer separation (mirrors CLAUDE.md "Architecture at a glance"):
    `session_lifecycle.py` (`spec/lifecycle.md` §3.1) and an app-level
    handler renders the refusal as the 409 page, so a route needs no
    `try`. A route's own `_require_*` check is only an early refusal.
+   On Postgres `lock_session` waits at most 5 s for the lock, then
+   raises `SessionBusy`, also rendered as the 409 page
+   (`spec/lifecycle.md` §3.1, `docs/database.md`).
 
 3. **Models** (`app/db/models/`) are SQLAlchemy 2.x declarative
    classes using `Mapped[]` / `mapped_column`. **No

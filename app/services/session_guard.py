@@ -14,7 +14,8 @@ from __future__ import annotations
 
 from typing import Callable
 
-from sqlalchemy import select
+from sqlalchemy import select, text
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession
@@ -33,6 +34,32 @@ class SessionStateConflict(LifecycleError):
     lock, does not allow it. Rendered as a 409 by the app-level handler
     (``app/web/error_handlers.py``), the status the routes' own gates
     have always answered with."""
+
+
+#: How long a request waits for another's session lock before it gives
+#: up with :class:`SessionBusy` (author, 2026-11-01; `docs/database.md`):
+#: long enough to ride out a normal save or import, far inside the
+#: gateway's 120 s request limit. Postgres only; SQLite never waits.
+LOCK_TIMEOUT_MS = 5000
+
+#: Postgres's SQLSTATE for ``lock_timeout`` expiring (``lock_not_available``).
+_LOCK_NOT_AVAILABLE = "55P03"
+
+BUSY_MESSAGE = (
+    "Someone else is changing this session right now. "
+    "Try again in a moment."
+)
+
+
+class SessionBusy(Exception):
+    """Another request held the session lock for longer than
+    :data:`LOCK_TIMEOUT_MS`. Rendered as a 409 by the app-level handler
+    (``app/web/error_handlers.py``). Not a :class:`SessionStateConflict`:
+    the state did not refuse, so the routes that turn a state refusal
+    into their own message must not catch it."""
+
+    def __init__(self) -> None:
+        super().__init__(BUSY_MESSAGE)
 
 
 def lock_session(
@@ -70,12 +97,35 @@ def lock_session(
     # row, and the app's sessions do not autoflush, so an unflushed edit
     # would otherwise be silently dropped.
     db.flush()
-    return db.execute(
+    statement = (
         select(ReviewSession)
         .where(ReviewSession.id == session.id)
         .with_for_update(read=shared, key_share=not shared)
         .execution_options(populate_existing=True)
-    ).scalar_one()
+    )
+    if db.get_bind().dialect.name != "postgresql":
+        return db.execute(statement).scalar_one()
+    # Bound the wait for this lock alone (`docs/database.md`). Inside a
+    # savepoint, so a timeout rolls back only the attempt and the caller's
+    # transaction stays usable; the setting is put back afterwards so
+    # later statements in the transaction wait as they did before.
+    try:
+        with db.begin_nested():
+            before = db.execute(text("SELECT current_setting('lock_timeout')")).scalar_one()
+            db.execute(
+                text("SELECT set_config('lock_timeout', :value, true)"),
+                {"value": f"{LOCK_TIMEOUT_MS}ms"},
+            )
+            locked = db.execute(statement).scalar_one()
+            db.execute(
+                text("SELECT set_config('lock_timeout', :value, true)"),
+                {"value": before},
+            )
+    except OperationalError as exc:
+        if getattr(exc.orig, "sqlstate", None) == _LOCK_NOT_AVAILABLE:
+            raise SessionBusy() from exc
+        raise
+    return locked
 
 
 def require_state(

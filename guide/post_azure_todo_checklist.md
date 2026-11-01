@@ -25,7 +25,10 @@ note, not a task.
 served Review Robin since 2026-10-31 (the first release with migrations).
 Item 2 can be worked now; items 7–10 wait on the email choices
 in `guide/email_and_scheduling.md` rather than on the host; items 1, 3,
-5 and 6 are settled and removed (their numbers are not reused). Item 1,
+5, 6 and 11 are settled and removed (their numbers are not reused).
+Item 11, the session-lock bound, closed 2026-11-01 at 5 s, answered
+with the 409 page (`docs/database.md`, "The session lock and its
+timeout"). Item 1,
 the visibility constraint's migration log, was read 2026-11-01 from the
 release that first migrated the deployed database (2026-10-31):
 `normalized 0 instrument_view_policies row(s)`, on an empty database,
@@ -35,7 +38,7 @@ instance**, Always On, and one `uvicorn` process; the gateway in front
 allows 120 s per request (raised from its 20 s default) inside App
 Service's fixed 230 s; the Postgres server sets no `lock_timeout` or
 `statement_timeout`; and the email app registration holds delegated
-Graph permissions only. Items 4, 7, 10 and 11 carry what each settles.
+Graph permissions only. Items 4, 7 and 10 carry what each settles.
 
 **This is not a runbook.** It does not describe how to deploy. It
 describes what is owed *after* deploying, in an order nobody has fixed
@@ -426,52 +429,3 @@ tenant grants, and make its docstring and the spec say the same thing.
 
 **Done when** the docstring and `spec/email_infra_options.md` name the
 same permission, and that permission is the one the tenant granted.
-
-## 11. Bound the session-lock wait with a Postgres `lock_timeout`
-
-**Status:** open, **awaiting Azure** (author, 2026-10-08; the open
-question of `guide/archive/segment_19U_post_assessment_7oct.md` Item 1).
-
-**What is there.** Every state-gated save, lifecycle transition,
-operator invitation action and scheduled pass takes `SELECT … FOR NO
-KEY UPDATE` on the session row (`lock_session` in
-`app/services/session_guard.py`) and holds it to its commit (19U Item 1,
-findings Bc4, Bc5, Bc8). Nothing bounds the wait: a request that holds
-the lock and stalls — a slow import, a hung connection — makes every
-other request on that session wait until it ends. SQLite, which local
-runs and the default test run use, never blocks; the `ci-postgres` job
-runs the suite on Postgres (`TEST_DATABASE_URL`, `tests/conftest.py`),
-where a two-connection test can show the wait.
-
-**Why it waits here.** The bound depends on the deployed database and
-host: the Azure Postgres server, the worker count, and the App Service
-request timeout it must sit well inside. So does where it is set — per
-role (`ALTER ROLE … SET lock_timeout`), per connection (`connect_args`
-in `app/db/session.py`), or per lock (`SET LOCAL` before the
-`FOR NO KEY UPDATE`).
-
-**What the deployment says (read 2026-11-01).**
-- **The request ceiling.** The gateway in front allows **120 s** per
-  request (raised that day from its 20 s default), inside App Service's
-  fixed 230 s.
-- **No server-wide bound.** The Postgres server leaves `lock_timeout`,
-  `statement_timeout` and `idle_in_transaction_session_timeout` at `0`,
-  so nothing bounds a lock wait unless the app sets it.
-- **Concurrency.** One instance runs one `uvicorn` process, and the
-  server's connection limit is far above what one process opens.
-
-So the bound is the app's to set, and it should be a few seconds, far
-inside 120 s: a request that waits longer for a session lock is better
-answered with the 409 page than left hanging.
-
-**Do, with the deployment.** Choose the value and where it is set.
-Decide what a timeout answers: today Postgres's `LockNotAvailable`
-would surface as a 500, where the 409 page ("someone else is changing
-this session; try again") is probably the right answer. Record the
-setting in `docs/database.md`.
-
-**Done when** a request blocked behind a held session lock on the
-deployed Postgres fails within the chosen bound with the chosen answer;
-a two-connection test in the `ci-postgres` suite holds the lock in one
-transaction and asserts that bound and answer from the other; and
-`docs/database.md` states the setting.

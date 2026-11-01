@@ -1,6 +1,6 @@
 """Global error handling — Segment 14A PR 2.
 
-Four exception handlers, registered via ``register_error_handlers``
+Five exception handlers, registered via ``register_error_handlers``
 from ``create_app``:
 
 * ``StarletteHTTPException`` — every ``HTTPException`` a route raises
@@ -10,6 +10,9 @@ from ``create_app``:
 * ``SessionStateConflict`` — a service's lifecycle-state gate,
   decided under the session lock (findings Bc4), renders the same
   409 page a route's own gate does, so no route needs a ``try``.
+* ``SessionBusy`` — another request held the session lock past
+  ``LOCK_TIMEOUT_MS`` (``docs/database.md``): the 409 page, asking the
+  operator to try again.
 * ``RequestValidationError`` — a malformed query / path parameter
   renders the same page as a 400 rather than a JSON 422 body.
 * ``Exception`` — any *unhandled* error (a reviewer-save or export
@@ -38,7 +41,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.responses import Response
 
 from app.logging_config import get_logger
-from app.services.session_guard import SessionStateConflict
+from app.services.session_guard import SessionBusy, SessionStateConflict
 from app.web import urls
 
 log = get_logger(__name__)
@@ -185,6 +188,17 @@ async def _session_state_conflict_handler(
     return _render_error(request, status.HTTP_409_CONFLICT, str(exc))
 
 
+async def _session_busy_handler(request: Request, exc: SessionBusy) -> Response:
+    """Another request held the session lock past its bound
+    (``docs/database.md``): the 409 page, asking the operator to try
+    again."""
+    log.warning(
+        "session lock wait timed out",
+        extra={"event": "session.lock_timeout", "path": urls.app_path(request), "method": request.method},
+    )
+    return _render_error(request, status.HTTP_409_CONFLICT, str(exc))
+
+
 async def _validation_exception_handler(
     request: Request, exc: RequestValidationError
 ) -> Response:
@@ -203,11 +217,12 @@ async def _unhandled_exception_handler(
 
 
 def register_error_handlers(app: FastAPI) -> None:
-    """Wire the four handlers onto ``app``."""
+    """Wire the five handlers onto ``app``."""
     app.add_exception_handler(StarletteHTTPException, _http_exception_handler)
     app.add_exception_handler(
         SessionStateConflict, _session_state_conflict_handler
     )
+    app.add_exception_handler(SessionBusy, _session_busy_handler)
     app.add_exception_handler(
         RequestValidationError, _validation_exception_handler
     )
