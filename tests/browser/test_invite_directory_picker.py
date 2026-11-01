@@ -20,7 +20,10 @@ def test_a_name_offers_the_directory_s_people(page: Page) -> None:
     box.press_sequentially("Jane")
     expect(options).to_have_count(1)
     expect(options.first).to_have_attribute("value", "jane.tan@example.edu")
-    expect(options.first).to_have_attribute("label", "Jane Tan <jane.tan@example.edu>")
+    # Her sign-in name differs from her mail, so the label keeps it.
+    expect(options.first).to_have_attribute(
+        "label", "Jane Tan <jane.tan@example.edu> · e0123456@example.edu"
+    )
     expect(page.locator("[data-directory-status]")).to_be_hidden()
 
     # A pick puts the address in the box, and the offer stands.
@@ -66,3 +69,16 @@ def test_an_answer_for_old_text_is_dropped(page: Page) -> None:
     page.wait_for_timeout(500)
     expect(page.locator("#invite-directory-options option")).to_have_count(0)
     expect(page.locator("[data-directory-status]")).to_be_hidden()
+
+
+def test_a_sign_in_name_search_keeps_its_match_in_the_label(page: Page) -> None:
+    page.goto(app_url(ACCOUNTS))
+    page.locator("#invite-email").press_sequentially("e0123")
+    option = page.locator("#invite-directory-options option")
+    expect(option).to_have_count(1)
+    assert "e0123456@example.edu" in (option.first.get_attribute("label") or "")
+
+    # Arun's sign-in name is his mail: nothing added.
+    page.locator("#invite-email").fill("Arun")
+    page.locator("#invite-email").dispatch_event("input")
+    expect(option.first).to_have_attribute("label", "Arun Kumar <arun.kumar@example.edu>")

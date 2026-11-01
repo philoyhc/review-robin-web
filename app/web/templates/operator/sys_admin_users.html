@@ -164,9 +164,16 @@
           people.forEach(function (person) {
             var option = document.createElement("option");
             option.value = person.address;
-            option.label = person.name
+            // The browser filters the list again against what is typed,
+            // by value and label, so a sign-in name (UPN) the directory
+            // matched on stays in the label when it is not the address.
+            var label = person.name
               ? person.name + " <" + person.address + ">"
               : person.address;
+            if (person.upn && person.upn.toLowerCase() !== person.address.toLowerCase()) {
+              label += " · " + person.upn;
+            }
+            option.label = label;
             options.appendChild(option);
             offered[person.address.toLowerCase()] = true;
           });
