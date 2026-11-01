@@ -26,7 +26,7 @@ Taken 2026-11-01 at `9f53b78`: two templates (`session_new.html`, `partials/_own
 Done 2026-11-01 in one PR, as laddered.
 - **Test:** the integration test checks the verified creator's pill. The test client's sign-in always stamps a principal, so the unverified branch is left to Accounts' tests of the same macro.
 - **Browser test:** the staged-row check names its candidates on the page, as it already marks them verified.
-- **Reads:** one `diff-reviewer` read; its findings are in the PR.
+- **Reads:** one `diff-reviewer` read. It found no code defect. Its small findings were a stale comment on `account_name`, the spec's missing nameless case and this Status block's bookkeeping; all are fixed in the same PR.
 
 ### PR ladder
 
