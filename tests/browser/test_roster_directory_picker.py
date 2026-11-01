@@ -65,3 +65,20 @@ def test_no_match_says_so_under_the_box(page: Page, new_session: Callable[[], st
     expect(page.locator("tr [data-directory-status]").first).to_have_text(
         "No one in the directory matches that."
     )
+
+
+def test_a_help_contact_pick_fills_name_and_address(page: Page) -> None:
+    """Rung 21: one box, filled with "Name <address>", the form the
+    placeholder shows and `$help_contact` reads best in."""
+    page.goto(app_url("/operator/sessions/new"))
+    box = page.locator("#help_contact")
+    box.press_sequentially("Jane")
+    options = page.locator("#directory-contact-options option")
+    expect(options).to_have_count(1)
+    expect(options.first).to_have_attribute("value", "Jane Tan <jane.tan@example.edu>")
+    expect(options.first).to_have_attribute("label", "e0123456@example.edu")
+    box.fill("Jane Tan <jane.tan@example.edu>")
+    box.dispatch_event("input")
+    page.wait_for_timeout(500)
+    expect(box).to_have_value("Jane Tan <jane.tan@example.edu>")
+    expect(page.locator("[data-directory-group] [data-directory-status]")).to_be_hidden()

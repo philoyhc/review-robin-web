@@ -11,20 +11,32 @@
    `data-directory-status` sibling says when the directory cannot be
    asked or matches no one.
 
+   A help-contact box (rung 21) is one box, `data-directory-field="contact"`
+   and `list="directory-contact-options"`, inside a `data-directory-group`
+   that holds its status line: a pick fills it with "Name <address>", the
+   form `$help_contact` reads best in (author, 2026-11-01).
+
    Call once per page, after the rows: `directory_picker(search_url)`. #}
 {% macro directory_picker(search_url) -%}
 <datalist id="directory-name-options"></datalist>
 <datalist id="directory-address-options"></datalist>
+<datalist id="directory-contact-options"></datalist>
 <script>
   (function () {
     var searchUrl = {{ search_url | tojson }};
     var nameList = document.getElementById("directory-name-options");
     var addressList = document.getElementById("directory-address-options");
+    var contactList = document.getElementById("directory-contact-options");
     var people = [];
     var asked = 0;
     var timer = null;
 
-    function rowOf(box) { return box.closest("tr") || box.parentNode; }
+    function rowOf(box) {
+      return box.closest("[data-directory-group], tr") || box.parentNode;
+    }
+    function named(person) {
+      return person.name ? person.name + " <" + person.address + ">" : person.address;
+    }
     function other(box, field) {
       return rowOf(box).querySelector('[data-directory-field="' + field + '"]');
     }
@@ -47,6 +59,7 @@
       people = found;
       nameList.textContent = "";
       addressList.textContent = "";
+      contactList.textContent = "";
       found.forEach(function (person) {
         var upn = person.upn && person.upn.toLowerCase() !== person.address.toLowerCase()
           ? person.upn : "";
@@ -55,6 +68,7 @@
         }
         option(addressList, person.address,
                [person.name, upn].filter(Boolean).join(" · "));
+        option(contactList, named(person), upn);
       });
     }
     // The person a box's value picks, if exactly one.
@@ -62,7 +76,9 @@
       var value = (box.value || "").trim().toLowerCase();
       var field = box.getAttribute("data-directory-field");
       var hits = people.filter(function (person) {
-        return (field === "name" ? person.name : person.address).toLowerCase() === value;
+        var own = field === "name" ? person.name
+          : field === "contact" ? named(person) : person.address;
+        return (own || "").toLowerCase() === value;
       });
       return hits.length === 1 ? hits[0] : null;
     }
@@ -108,7 +124,8 @@
         if (person) {
           // A pick: fill the other box, and ask nothing more.
           var field = box.getAttribute("data-directory-field");
-          var target = other(box, field === "name" ? "address" : "name");
+          var target = field === "contact" ? null
+            : other(box, field === "name" ? "address" : "name");
           if (target) target.value = field === "name" ? person.address : person.name;
           say(box, "");
           return;

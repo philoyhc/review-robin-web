@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% from "operator/partials/_roster_address.html" import account_address, account_name %}
 {% from "operator/partials/_datetime_field.html" import datetime_field %}
+{% from "operator/partials/_directory_picker.html" import directory_picker %}
 
 {% block title %}{{ session.name }} — Review Robin Web{% endblock %}
 {% block body_class %}ui-v2{% endblock %}
@@ -256,14 +257,19 @@
 
       <div class="fill-col" style="min-width: 0;">
         <div class="page-grid" style="margin: 0;">
-          <div>
+          {# The directory picker (19Z, invite from the directory, rung
+             21): a pick fills "Name <address>". #}
+          <div data-directory-group>
             <label for="mock-help-contact">Help contact (optional)</label>
             <div class="config-value" data-display-only>{{ session.help_contact or "—" }}</div>
             <input type="text" id="mock-help-contact" name="help_contact"
                    maxlength="320" data-edit-only
                    form="config-save-{{ session.id }}"
                    value="{{ session.help_contact or '' }}"
+                   data-directory-field="contact" list="directory-contact-options"
+                   autocomplete="off"
                    placeholder="e.g. Prof. X &lt;x@example.edu&gt;">
+            <p class="muted directory-status" data-directory-status role="status" hidden></p>
           </div>
           <div>
             <label for="mock-timezone">Timezone</label>
@@ -799,4 +805,5 @@
   </script>
   {# The head script's render hold ends here, after the restore has run. #}
   <div id="rrw-seat-restored" hidden></div>
+  {{ directory_picker(url("/operator/directory-search")) }}
 {% endblock %}
