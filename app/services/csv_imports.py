@@ -28,7 +28,7 @@ from app.schemas.imports import (
 from app.logging_config import get_logger
 from app.schemas.observer_cohort_rule import CohortRuleSet
 from app.schemas.validation import Severity, ValidationIssue
-from app.services import audit, field_labels, field_label_csv
+from app.services import audit, field_labels, field_label_csv, symmetric_review
 from app.services import directory_accounts, roster_bulk, unit_of_work
 from app.services import invitations as invitations_service
 from app.services import session_lifecycle as lifecycle
@@ -1365,9 +1365,21 @@ def cross_table_identity_conflict(
     if not is_comparable_identity(identifier, name):
         return None
     holders = _identity_holders(
-        db, session_id=session_id, exclude=frozenset({kind})
+        db, session_id=session_id, exclude=_with_mirrors(db, session_id, {kind})
     ).get(normalize_email(identifier), [])
     return _first_disagreeing_holder(holders, name)
+
+
+def _with_mirrors(db: Session, session_id: int, kinds: set[str] | frozenset[str]) -> frozenset[str]:
+    """``kinds``, plus the Reviewees roster when a Reviewers write is
+    checked under symmetric review (segment 20B): every reviewee there
+    mirrors a reviewer, so a reviewer's own mirror never conflicts with
+    a correction of their name, and the reconcile carries it over."""
+    if "reviewers" in kinds and db.execute(
+        select(ReviewSession.symmetric_review).where(ReviewSession.id == session_id)
+    ).scalar_one_or_none():
+        return frozenset(kinds) | {"reviewees"}
+    return frozenset(kinds)
 
 
 def check_cross_table_identity(
@@ -1449,7 +1461,7 @@ def check_incoming_identity(
         )
 
     existing = _identity_holders(
-        db, session_id=session_id, exclude=frozenset(incoming)
+        db, session_id=session_id, exclude=_with_mirrors(db, session_id, set(incoming))
     )
     uploaded = {
         kind: _incoming_holders(kind, rows) for kind, rows in incoming.items()
@@ -1580,6 +1592,7 @@ def save_reviewers(
     append: bool = False,
     merge: bool = False,
     columns: frozenset[str] = frozenset(),
+    acknowledged_loss: int | None = None,
 ) -> tuple[int, int]:
     # One commit for the roster and its labels, so the lock taken by
     # the gate holds to the end and a refusal can't follow a committed
@@ -1602,10 +1615,11 @@ def save_reviewers(
             merge=merge,
             columns=columns,
         )
-        if merge:
+        if merge and not session.symmetric_review:
             # A merge can bind a reviewer to the account a reviewee holds
             # under another address, which makes their pair a self-review
-            # (Codex, #3440).
+            # (Codex, #3440). Under symmetric review the reconcile below
+            # recomputes once the mirror carries the change too.
             from app.services.assignments import recompute_self_review_classification
 
             recompute_self_review_classification(db, session_id=session.id)
@@ -1622,6 +1636,13 @@ def save_reviewers(
                 correlation_id=correlation_id,
                 clear_absent=not (append or merge),
             )
+        # 20B — under symmetric review the reviewee roster follows, with
+        # the labels this import carries. A merge's tag changes that
+        # redraw answered groups ask first (``acknowledged_loss``), as a
+        # Reviewees merge does.
+        symmetric_review.sync_reviewees_from_reviewers(
+            db, session, acknowledged_loss=acknowledged_loss
+        )
     return result
 
 
@@ -2136,6 +2157,9 @@ def _delete_all(
         ),
         correlation_id=correlation_id,
     )
+    if model is Reviewer:
+        # 20B — under symmetric review the reviewee roster follows.
+        symmetric_review.sync_reviewees_from_reviewers(db, review_session)
     db.commit()
     log.info(
         "roster deleted",

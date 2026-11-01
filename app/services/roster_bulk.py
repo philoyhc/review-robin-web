@@ -28,7 +28,7 @@ from app.db.models import (
     ReviewSession,
     User,
 )
-from app.services import audit
+from app.services import audit, symmetric_review
 from app.services import invitations as invitations_service
 from app.services import session_lifecycle as lifecycle
 
@@ -175,6 +175,9 @@ def bulk_set_status(
         context=context,
         correlation_id=correlation_id,
     )
+    if model is Reviewer:
+        # 20B — under symmetric review the reviewee roster follows.
+        symmetric_review.sync_reviewees_from_reviewers(db, review_session)
     db.commit()
     return flipped_ids
 
@@ -232,6 +235,8 @@ def relationships_per_row(
     column = _RELATIONSHIP_FK.get(model)
     if column is None:
         return {}
+    if model is Reviewer:
+        return _reviewer_relationships_per_row(db, session_id=session_id)
     rows = db.execute(
         select(column, func.count())
         .select_from(Relationship)
@@ -239,6 +244,26 @@ def relationships_per_row(
         .group_by(column)
     ).all()
     return {int(row_id): int(n) for row_id, n in rows}
+
+
+def _reviewer_relationships_per_row(db: Session, *, session_id: int) -> dict[int, int]:
+    """Per reviewer, the relationships deleting them takes: their own,
+    plus, under symmetric review (segment 20B), those of the reviewee
+    that mirrors them (Codex on #3489). A relationship joining a person
+    to themselves counts once. Ticking both ends of one relationship
+    counts it twice in the browser's sum; the server's loss gate
+    (``relationship_cascade_count``) counts it once."""
+    rows = db.execute(
+        select(Relationship.id, Relationship.reviewer_id, Reviewee.mirrors_reviewer_id)
+        .select_from(Relationship)
+        .join(Reviewee, Reviewee.id == Relationship.reviewee_id)
+        .where(Relationship.session_id == session_id)
+    ).all()
+    counts: dict[int, int] = {}
+    for _id, reviewer_id, mirrored_reviewer_id in rows:
+        for row_id in {reviewer_id, mirrored_reviewer_id} - {None}:
+            counts[int(row_id)] = counts.get(int(row_id), 0) + 1
+    return counts
 
 
 def relationship_cascade_count(
@@ -260,12 +285,29 @@ def relationship_cascade_count(
     column = _RELATIONSHIP_FK.get(model)
     if column is None or not ids:
         return 0
+    condition = column.in_(ids)
+    mirrors = _mirrored_reviewee_ids(db, model=model, ids=ids)
+    if mirrors:
+        condition = condition | Relationship.reviewee_id.in_(mirrors)
     return int(
         db.execute(
             select(func.count())
             .select_from(Relationship)
-            .where(column.in_(ids))
+            .where(condition)
         ).scalar_one()
+    )
+
+
+def _mirrored_reviewee_ids(db: Session, *, model: type, ids: list[int]) -> list[int]:
+    """The reviewees that mirror these reviewers under symmetric review
+    (segment 20B). Deleting a reviewer deletes its mirror too, so the
+    cascade counts and the loss gate count both sides (Codex on #3489)."""
+    if model is not Reviewer or not ids:
+        return []
+    return list(
+        db.execute(
+            select(Reviewee.id).where(Reviewee.mirrors_reviewer_id.in_(ids))
+        ).scalars()
     )
 
 
@@ -283,8 +325,12 @@ def cascade_counts(
     column = _ASSIGNMENT_FK.get(model)
     if column is None or not ids:
         return 0, 0
+    condition = column.in_(ids)
+    mirrors = _mirrored_reviewee_ids(db, model=model, ids=ids)
+    if mirrors:
+        condition = condition | Assignment.reviewee_id.in_(mirrors)
     assignment_ids = list(
-        db.execute(select(Assignment.id).where(column.in_(ids))).scalars()
+        db.execute(select(Assignment.id).where(condition)).scalars()
     )
     if not assignment_ids:
         return 0, 0
@@ -427,5 +473,8 @@ def bulk_delete(
         context=context,
         correlation_id=correlation_id,
     )
+    if model is Reviewer:
+        # 20B — under symmetric review the reviewee roster follows.
+        symmetric_review.sync_reviewees_from_reviewers(db, review_session)
     db.commit()
     return deleted, assignments, responses

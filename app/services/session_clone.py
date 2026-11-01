@@ -40,7 +40,7 @@ from app.db.models import (
     SessionTag,
     User,
 )
-from app.services import audit
+from app.services import audit, symmetric_review
 from app.services.instruments._field_refs import repoint_sort, repoint_widths
 from app.services.instruments import copy_view_policies
 from app.services.instruments._band2 import portable_band2_state
@@ -363,6 +363,13 @@ def clone_session(
                     skip=set(_SKIP_BASE) | _SKIP_REVIEWEE | {"session_id"},
                 ),
             )
+            # 20B — a mirror link names the source's reviewer; point it at
+            # the copy (Codex on #3489), or the reconcile would replace
+            # the reviewee and cascade away its copied relationships.
+            if reviewee.mirrors_reviewer_id is not None:
+                new_reviewee.mirrors_reviewer_id = reviewer_map.get(
+                    reviewee.mirrors_reviewer_id
+                )
             db.add(new_reviewee)
             db.flush()
             reviewee_map[reviewee.id] = new_reviewee.id
@@ -435,6 +442,9 @@ def clone_session(
         context={"mode": mode, "clone_code": clone.code},
         correlation_id=correlation_id,
     )
+    # 20B — a symmetric clone's copied reviewees are adopted by address
+    # and linked to their reviewers.
+    symmetric_review.sync_reviewees_from_reviewers(db, clone)
     db.commit()
     db.refresh(clone)
     return clone

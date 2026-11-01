@@ -80,6 +80,15 @@ A peer review where every participant both gives and receives feedback is a comm
   - **Pages:** the preview is gone, and the pages read the setting. New session's box greys the Reviewees slot in the browser while ticked. Session Home's chip is fixed off once a roster has rows.
   
   Until rung 3 lands, nothing mirrors yet: a session with the mode on has a read-only Reviewees page and no way to fill it.
+- **Rung 3 (the reconcile), 2026-11-01.** `app/services/symmetric_review.py`'s `sync_reviewees_from_reviewers` matches on `mirrors_reviewer_id`. It adopts an unlinked reviewee by address (a clone's copy), so its assignments survive, and otherwise adds, updates or deletes. Reviewee tag labels and `reviewee_self_fields` follow the reviewers', with `email` mapped to `email_or_identifier`.
+  - **Callers:** every reviewer writer calls it before committing:
+    - `reviewers.create_reviewer` and `update_reviewer`;
+    - `roster_bulk`'s status and delete paths;
+    - `csv_imports._save`, `save_reviewers` (after its labels) and `_delete_all`;
+    - `session_clone`;
+    - `participant_info.set_self_fields`;
+    - the reviewer label save.
+  - **Found at build:** Quick Setup saves Settings *last* (`SLOT_ORDER`), not first as Semantics assumed. So a Settings CSV turning the mode on in the same submit as a Reviewers file leaves it off (the lock-on-data rule). The Create box has no such problem, since the session starts with the mode on. Rung 4 settles the Quick Setup case.
 
 ## Blast radius (measured)
 

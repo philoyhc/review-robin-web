@@ -100,12 +100,14 @@ def test_every_cancel_is_secondary() -> None:
 #: the Relationships group-clear banner on the Upload card; the Danger
 #: Zone's has the link only. Quick Setup's third is the lapsed-hold
 #: banner's link. The Reviewees Upload card's group-clear banner, for a
-#: merge (segment 19Z), has the same two forms.
+#: merge (segment 19Z), has the same two forms, and so has the Reviewers
+#: card's, which a merge under symmetric review raises (segment 20B).
 PINNED_DISMISSES = {
     "operator/partials/_quick_setup_card.html": 3,
     "operator/partials/_upload_problems.html": 2,
     "operator/session_relationships.html": 3,
     "operator/session_reviewees.html": 2,
+    "operator/session_reviewers.html": 2,
 }
 
 

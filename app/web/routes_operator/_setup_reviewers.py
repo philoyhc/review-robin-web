@@ -29,6 +29,7 @@ from app.services import assignments, csv_imports, participant_info
 from app.services import reviewers as reviewers_service
 from app.services import roster_bulk
 from app.services import session_lifecycle as lifecycle
+from app.services.responses import GroupAnswersWouldClear
 from app.services.reviewers import ReviewerOperationError
 from app.web import breadcrumbs, views
 from app.web.deps import (
@@ -38,6 +39,7 @@ from app.web.deps import (
 )
 from app.web.routes_operator._shared import (
     account_resolver,
+    acknowledged_loss,
     _setup_row_window,
     _handle_import,
     dismiss_held_upload,
@@ -137,6 +139,9 @@ def _render_reviewers_page(
     focus_id: int | None = None,
     edit_values: dict[str, str] | None = None,
     edit_error: str | None = None,
+    # 20B — under symmetric review a tag edit that would clear group
+    # answers on the mirrored reviewee re-offers itself with the count.
+    edit_confirm_group_clear: int | None = None,
     selected_ids: set[int] | None = None,
     http_status: int = status.HTTP_200_OK,
 ) -> HTMLResponse:
@@ -365,6 +370,7 @@ def _render_reviewers_page(
             "panel_open": panel_open,
             "edit_values": edit_values,
             "edit_error": edit_error,
+            "edit_confirm_group_clear": edit_confirm_group_clear,
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Reviewers"
             ),
@@ -496,6 +502,7 @@ def reviewers_update(
     tag_2: str = Form(default=""),
     tag_3: str = Form(default=""),
     status_value: str = Form(default="active", alias="status"),
+    acknowledge_response_loss: str = Form(default=""),
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
@@ -505,6 +512,15 @@ def reviewers_update(
 ) -> HTMLResponse | RedirectResponse:
     _require_editable(review_session)
     reviewer = _require_reviewer_in_session(db, review_session, reviewer_id)
+    edit_values = {
+        "name": name,
+        "email": email,
+        "profile_link": profile_link,
+        "tag_1": tag_1,
+        "tag_2": tag_2,
+        "tag_3": tag_3,
+        "status": status_value,
+    }
     try:
         reviewers_service.update_reviewer(
             db,
@@ -519,6 +535,12 @@ def reviewers_update(
             user=user,
             correlation_id=request_correlation_id(),
             resolve_account=account_resolver(request),
+            # 20B — the mirrored reviewee's group answers, asked first.
+            acknowledged_loss=(
+                acknowledged_loss(acknowledge_response_loss)
+                if review_session.symmetric_review
+                else None
+            ),
         )
     except ReviewerOperationError as exc:
         return _render_reviewers_page(
@@ -527,16 +549,26 @@ def reviewers_update(
             user=user,
             review_session=review_session,
             edit_id=reviewer_id,
-            edit_values={
-                "name": name,
-                "email": email,
-                "profile_link": profile_link,
-                "tag_1": tag_1,
-                "tag_2": tag_2,
-                "tag_3": tag_3,
-                "status": status_value,
-            },
+            edit_values=edit_values,
             edit_error=exc.message,
+            http_status=status.HTTP_400_BAD_REQUEST,
+        )
+    except GroupAnswersWouldClear as exc:
+        # 20B — refuse, then re-offer, as the reviewee row editor does:
+        # roll the edit back and show the count with a tick.
+        db.rollback()
+        return _render_reviewers_page(
+            request=request,
+            db=db,
+            user=user,
+            review_session=review_session,
+            edit_id=reviewer_id,
+            status_filter=filter_status,
+            search=filter_q,
+            offset=filter_offset,
+            edit_values=edit_values,
+            edit_error=str(exc),
+            edit_confirm_group_clear=exc.count,
             http_status=status.HTTP_400_BAD_REQUEST,
         )
     return _redirect_keeping_selection(request,

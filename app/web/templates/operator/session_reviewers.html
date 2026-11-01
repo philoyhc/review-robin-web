@@ -72,6 +72,17 @@
           {% if edit_error %}
             <span class="row-editor-error">{{ edit_error }}</span>
           {% endif %}
+          {# 20B — under symmetric review a tag edit that would clear the
+             mirrored reviewee's group answers offers itself again, as
+             the Reviewees row editor does. #}
+          {% if edit_confirm_group_clear %}
+            <label class="row-editor-error">
+              <input type="checkbox" form="reviewer-edit-form"
+                     name="acknowledge_response_loss"
+                     value="{{ edit_confirm_group_clear }}">
+              Yes, clear them
+            </label>
+          {% endif %}
           {# Save then Cancel, which is what the card this replaced
              rendered. The first draft of this macro flipped them without
              meaning to; the order is user-visible, and the three sibling
@@ -429,6 +440,31 @@
                 <input type="hidden" id="reviewers-import-ack"
                        name="acknowledge_response_loss" value="true">
               {% endif %}
+            {% endif %}
+
+            {# 20B — under symmetric review a merge that redraws mirrored
+               reviewees' answered groups asks first, as a Reviewees merge
+               does: the count and its tick in the banner, the file held. #}
+            {% if group_clear and group_clear.surface == "import" %}
+              <div class="banner banner-error" role="alert"
+                   data-group-clear-banner>
+                <p class="banner-lead">{{ group_clear.message }}</p>
+                <label class="confirm-label">
+                  <input type="checkbox" name="acknowledge_group_clear"
+                         value="{{ group_clear.count }}">
+                  <span>Yes, clear them</span>
+                </label>
+                <div class="banner-actions">
+                  {% if held_upload %}
+                    <button type="submit" class="btn secondary"
+                            formaction="{{ url(reviewers_base_url) }}/import/dismiss"
+                            formnovalidate>Dismiss</button>
+                  {% else %}
+                    <a class="btn secondary"
+                       href="{{ url(reviewers_base_url) }}?unlocked=1#upload-csv">Dismiss</a>
+                  {% endif %}
+                </div>
+              </div>
             {% endif %}
 
             <div class="unlock-col-actions">

@@ -52,6 +52,7 @@ from app.services import (
 from app.services import session_lifecycle as lifecycle
 from app.services import session_owners, session_tags
 from app.services import sessions as sessions_service
+from app.services import symmetric_review as symmetric_review_service
 from app.services import unit_of_work
 from app.services.responses import GroupAnswersWouldClear
 from app.web import breadcrumbs, views
@@ -1386,7 +1387,9 @@ async def _handle_import(
     if merging:
         extra["merge"] = True
         extra["columns"] = result.columns
-        if kind == "reviewees":
+        # 20B — a Reviewers merge redraws mirrored reviewees' groups under
+        # symmetric review, so it asks as a Reviewees merge does.
+        if kind == "reviewees" or (kind == "reviewers" and review_session.symmetric_review):
             extra["acknowledged_loss"] = acknowledged_loss(acknowledge_group_clear)
     # The service locks the session row (findings Bc4): wait for it off
     # the event loop.
@@ -1508,6 +1511,9 @@ def _save_field_labels(
                     user=user,
                     correlation_id=correlation_id,
                 )
+        if source_type == "reviewer":
+            # 20B — under symmetric review the reviewee labels follow.
+            symmetric_review_service.sync_reviewees_from_reviewers(db, review_session)
 
 
 # ------------------------------------------------------------------ #
