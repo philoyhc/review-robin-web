@@ -9,6 +9,9 @@ description = "Web-based structured review-cycle application"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115",
+    # GZipMiddleware skips zip archives and images only from 1.5
+    # (cordware/spec/host.md, "Compression").
+    "starlette>=1.5",
     "uvicorn[standard]>=0.30",
     "gunicorn>=22",
     "jinja2>=3.1",

@@ -353,4 +353,3 @@ def test_small_bodies_and_archives_are_not_compressed() -> None:
     archive = client.get("/g/archive", headers={"accept-encoding": "gzip"})
     assert "content-encoding" not in archive.headers
     assert archive.content.startswith(b"PK")
-

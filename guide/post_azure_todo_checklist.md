@@ -119,7 +119,7 @@ recorded nowhere the person executing that plan would look.
 host).** The Sessions lobby: `Content-Length: 337506`, **no
 `Content-Encoding`**, 338 kB transferred of 338 kB, 110 ms on campus.
 Nothing between the app and the browser compresses (`Server: uvicorn`).
-The page has grown from September's 216 KB.
+The page has grown from September's 216 kB.
 
 **Decided (author, 2026-11-01): option 2, compression.** Built at the
 host rather than in `app/main.py`: Starlette's `GZipMiddleware` in

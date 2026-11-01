@@ -23,8 +23,8 @@ from dataclasses import dataclass, field
 from urllib.parse import urlsplit
 
 from fastapi import FastAPI
-from starlette.middleware.gzip import GZipMiddleware
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from starlette.middleware.gzip import GZipMiddleware
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from cordware.identity import is_local, missing_header_count, super_admin_configured

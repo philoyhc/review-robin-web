@@ -175,7 +175,17 @@ in front of it compresses: the gateway and App Service pass bodies through
 - **What it leaves alone:** Starlette's excluded types, among them
   `application/zip`, images and `text/event-stream`, so a Zip all or an
   image is not compressed twice.
+- **Streamed responses** (the CSV extracts) are compressed chunk by
+  chunk and lose their `Content-Length`; browsers decode them as before.
+  A `206` partial response is never compressed.
 - **Level:** `GZIP_LEVEL`, zlib's default 6.
+- **Starlette 1.5 or later** (`pyproject.toml`): earlier releases exclude
+  only `text/event-stream`, so a zip would be compressed again.
+- **Considered: BREACH.** Compressed HTML that carries a secret beside
+  attacker-chosen text can leak the secret through response sizes. RRW
+  pages carry no CSRF token and authenticate by Easy Auth's cookie, not a
+  body value; the one secret in HTML is an invitation link on an
+  operator-only page. Accepted (2026-11-01).
 
 ## `/health`
 
