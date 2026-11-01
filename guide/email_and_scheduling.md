@@ -31,8 +31,11 @@ started), `guide/post_azure_todo_checklist.md` items 7–10,
 - **On Azure,** delegated `Mail.Send` and `User.ReadBasic.All` have
   tenant-wide consent, sign-in asks for `offline_access`, and a delegated
   `POST /me/sendMail` from a user's token answered `202` and was delivered
-  (Cordware's Azure progress record, 2026-10-31). The Web App runs with
-  Always On. No Cordware workflow runs on a schedule.
+  (Cordware's Azure progress record, 2026-10-31). **No application
+  permission** is granted, so a shared-mailbox send needs choice 2's ask
+  (read 2026-11-01). The Web App runs with Always On, on **one instance
+  with one `uvicorn` process** (read 2026-11-01). No Cordware workflow
+  runs on a schedule.
 
 ## The disagreement to settle
 
@@ -70,7 +73,9 @@ does not.
      Worse, but honest.
 3. **A real clock, inside the app.** The Web App is Always On, so a small
    background loop can run the existing scheduled-event pass every few
-   minutes, with a lock so only one worker runs it. No new Azure resource,
+   minutes, with a lock so only one worker runs it. Today there is one
+   instance and one process, so the lock guards a future scale-out rather
+   than today's host. No new Azure resource,
    and it reuses the code and audit rows that fire today on page views.
    It needs a base URL for links, from `CORDWARE_PUBLIC_ORIGIN`, and a
    retry with a terminal state (`guide/post_azure_todo_checklist.md`
