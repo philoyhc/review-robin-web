@@ -21,6 +21,13 @@ Rejected: *render staged rows server-side.* The stager is client-side by design 
 
 Taken 2026-11-01 at `9f53b78`: two templates (`session_new.html`, `partials/_owners_stager_js.html`; `grep -rln _owners_stager_js app/web/templates` → one includer), and the two tests that read the New session Owners card (`grep -rln "session-owners" tests` → `tests/integration/test_session_new_owners_card.py` and the browser test `tests/browser/test_tags_and_create.py`; `test_session_home_owners_card.py` and `test_session_new_tags_card.py` also match but test other cards).
 
+### Status
+
+Done 2026-11-01 in one PR, as laddered.
+- **Test:** the integration test checks the verified creator's pill. The test client's sign-in always stamps a principal, so the unverified branch is left to Accounts' tests of the same macro.
+- **Browser test:** the staged-row check names its candidates on the page, as it already marks them verified.
+- **Reads:** one `diff-reviewer` read; its findings are in the PR.
+
 ### PR ladder
 
 1. **One PR:** the two templates, a test that the creator's verified name renders as the pill, and an assertion in `tests/browser/test_tags_and_create.py` that a verified staged row's name is a pill.

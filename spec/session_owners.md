@@ -31,7 +31,10 @@ fields of its details card instead (19U Item 2).
 
 - **Table**: the creator's row first (Email / Name / Role "owner" /
   Added "—"), no Remove — a session always keeps its first owner. Rows
-  staged below it carry a Remove.
+  staged below it carry a Remove. A verified account's address and name
+  read as pills, as on Session Home's card (`account_address`,
+  `account_name`); a staged row takes them from its candidate's
+  `data-verified`, built client-side.
 - **Candidates**: `session_owners.new_session_owner_candidates` — every
   workspace operator (`is_operator OR is_sys_admin`) except the
   creator. No session exists yet, so there is no owner set to exclude

@@ -98,7 +98,19 @@
         }
         cell(row).appendChild(code);
         var label = labelFor(email);
-        cell(row, label && label.toLowerCase() !== email.toLowerCase() ? label : '—');
+        var name = label && label.toLowerCase() !== email.toLowerCase() ? label : '';
+        if (name && option && option.hasAttribute('data-verified')) {
+          // A verified name is the same pill, as account_name renders it on
+          // Session Home's Owners card and Accounts (20C Item 1).
+          var pill = document.createElement('span');
+          pill.className = 'pill pill-count pill-address';
+          pill.title = 'Matched to a directory account';
+          pill.setAttribute('data-directory-matched', '');
+          pill.textContent = name;
+          cell(row).appendChild(pill);
+        } else {
+          cell(row, name || '—');
+        }
         cell(row, 'owner');
         cell(row, '—');
         var action = cell(row);

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "operator/partials/_roster_address.html" import account_address %}
+{% from "operator/partials/_roster_address.html" import account_address, account_name %}
 {% from "operator/partials/_datetime_field.html" import datetime_field %}
 {% from "operator/partials/_directory_picker.html" import directory_picker %}
 
@@ -265,7 +265,7 @@
           </tr>
           <tr>
             <td>{{ account_address(account_verified(user), user.email) }}</td>
-            <td>{{ user.display_name or "—" }}</td>
+            <td>{{ account_name(account_verified(user), user.display_name) }}</td>
             <td>owner</td>
             <td>—</td>
             <td class="col-shrink">—<input type="hidden" name="owners"
