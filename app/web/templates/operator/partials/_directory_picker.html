@@ -8,8 +8,10 @@
    name, and a sign-in name that differs, beneath). Picking one fills the
    other box from the same person when that box is empty or still holds
    what the picker last put there, so an edit row's own address (or a
-   reviewee's identifier) is never overwritten; both stay editable. A name two people
-   share fills no address, since the pick cannot say which. A box's
+   reviewee's identifier) is never overwritten; both stay editable. A name
+   two people share is offered once per person as "Name <address>", so a
+   pick says which; the name box then keeps the name alone (author,
+   2026-11-01). Typing a shared name in full picks no one. A box's
    `data-directory-status` sibling says when the directory cannot be
    asked or matches no one.
 
@@ -62,11 +64,20 @@
       nameList.textContent = "";
       addressList.textContent = "";
       contactList.textContent = "";
+      var seen = {};
+      found.forEach(function (person) {
+        var key = (person.name || "").toLowerCase();
+        seen[key] = (seen[key] || 0) + 1;
+      });
       found.forEach(function (person) {
         var upn = person.upn && person.upn.toLowerCase() !== person.address.toLowerCase()
           ? person.upn : "";
         if (person.name) {
-          option(nameList, person.name, person.address);
+          if (seen[person.name.toLowerCase()] > 1) {
+            option(nameList, named(person), upn);
+          } else {
+            option(nameList, person.name, person.address);
+          }
         }
         option(addressList, person.address,
                [person.name, upn].filter(Boolean).join(" · "));
@@ -82,6 +93,12 @@
           : field === "contact" ? named(person) : person.address;
         return (own || "").toLowerCase() === value;
       });
+      if (field === "name" && hits.length !== 1) {
+        // A shared name's option carries its address.
+        hits = people.filter(function (person) {
+          return named(person).toLowerCase() === value;
+        });
+      }
       return hits.length === 1 ? hits[0] : null;
     }
     function search(box) {
@@ -126,6 +143,8 @@
         if (person) {
           // A pick: fill the other box, and ask nothing more.
           var field = box.getAttribute("data-directory-field");
+          // A shared name's "Name <address>" leaves the name alone.
+          if (field === "name" && box.value.trim() !== person.name) box.value = person.name;
           var target = field === "contact" ? null
             : other(box, field === "name" ? "address" : "name");
           var value = field === "name" ? person.address : person.name;

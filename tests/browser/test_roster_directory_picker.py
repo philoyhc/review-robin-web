@@ -110,3 +110,37 @@ def test_a_pick_never_overwrites_an_address_already_there(
     name.fill("Arun Kumar")
     name.dispatch_event("input")
     expect(address).to_have_value("arun.kumar@example.edu")
+
+
+def test_a_shared_name_is_offered_per_person_and_a_pick_fills_its_address(
+    page: Page, new_session: Callable[[], str]
+) -> None:
+    """Two people named alike (author, 2026-11-01): each is offered as
+    "Name <address>", and a pick keeps the name alone and fills that
+    person's address."""
+    page.goto(app_url(f"/operator/sessions/{new_session()}/reviewers?add=1"))
+    page.route(
+        "**/directory-search*",
+        lambda route: route.fulfill(json={"available": True, "people": [
+            {"name": "Wei Tan", "mail": "wei.tan@example.edu", "upn": "e0000001@example.edu",
+             "address": "wei.tan@example.edu"},
+            {"name": "Wei Tan", "mail": "wei.tan2@example.edu", "upn": "wei.tan2@example.edu",
+             "address": "wei.tan2@example.edu"},
+        ]}),
+    )
+    name = page.locator('tr input[name="name"][data-directory-field]')
+    address = page.locator('tr input[name="email"][data-directory-field]')
+    name.press_sequentially("Wei")
+    options = page.locator("#directory-name-options option")
+    expect(options).to_have_count(2)
+    expect(options.nth(1)).to_have_attribute("value", "Wei Tan <wei.tan2@example.edu>")
+
+    # Typing the shared name in full picks no one.
+    name.fill("Wei Tan")
+    name.dispatch_event("input")
+    expect(address).to_have_value("")
+
+    name.fill("Wei Tan <wei.tan2@example.edu>")
+    name.dispatch_event("input")
+    expect(name).to_have_value("Wei Tan")
+    expect(address).to_have_value("wei.tan2@example.edu")
