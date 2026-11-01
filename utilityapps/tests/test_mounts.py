@@ -81,15 +81,18 @@ def test_log_records_are_stamped_utilities() -> None:
 def test_favicon_is_the_amber_wrench_and_alerts_keep_the_status_hue() -> None:
     """Author's ruling, 2026-10-30: the favicon is a white wrench on an
     amber `#b45309` rounded tile, and nothing on the page is painted with
-    the accent, alerts least of all."""
+    the accent, alerts least of all. Since 2026-11-01 the wrench is filled
+    and runs off the bottom-right of the tile, the style of RRW's robin."""
     page = TestClient(host_with(("utilities",))[0]).get("/utilities/").text
     icon = page[page.index('<link rel="icon"') :]
     icon = icon[: icon.index('</svg>">') + 8]
     for part in (
         "viewBox='0 0 32 32'",
-        "rx='7' fill='%23b45309'",
-        "translate(7 7) scale(0.75)",
-        "stroke='%23fff' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'",
+        "rx='7'",
+        "fill='%23b45309'",
+        "clip-path='url(%23t)'",
+        "scale(-1.75 1.75)",
+        "fill='%23fff' stroke='%23fff'",
     ):
         assert part in icon, part
     style = page[page.index("<style>") : page.index("</style>")]

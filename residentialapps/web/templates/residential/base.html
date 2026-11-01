@@ -4,15 +4,16 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}{{ area }}{% endblock %} · {{ app_name }}</title>
-    {# Favicon: the application's accent behind a white glyph, inline SVG
-       as RRW's is: a house for Residential Operations, a lined notepad for
-       Support Logs (author, 2026-10-27). #}
+    {# Favicon: the application's accent behind a white glyph that runs off
+       the bottom-right of the tile, inline SVG as RRW's robin is: a house
+       for Residential Operations, a ruled log sheet for Support Logs
+       (author, 2026-11-01; sources kept in Cordware's private records). #}
     {% if app_key == "supportlogs" %}
     <link rel="icon" type="image/svg+xml"
-          href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230f766e'/><rect x='9' y='7' width='14' height='18' rx='2' fill='none' stroke='%23fff' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/><path d='M12.5 12h7M12.5 16h7M12.5 20h4' fill='none' stroke='%23fff' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+          href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><clipPath id='t'><rect width='32' height='32' rx='7'/></clipPath></defs><g clip-path='url(%23t)'><rect width='32' height='32' fill='%230f766e'/><rect x='7' y='5.5' width='34' height='38' rx='3.5' fill='%23fff'/><rect x='11.5' y='12' width='24' height='2.8' rx='1.4' fill='%230f766e'/><rect x='11.5' y='18' width='24' height='2.8' rx='1.4' fill='%230f766e'/><rect x='11.5' y='24' width='14' height='2.8' rx='1.4' fill='%230f766e'/></g></svg>">
     {% elif app_key == "residentialops" %}
     <link rel="icon" type="image/svg+xml"
-          href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%23a21caf'/><path d='M7 16l9-8 9 8M10 13.5V24h12V13.5M14.5 24v-5h3v5' fill='none' stroke='%23fff' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+          href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><clipPath id='t'><rect width='32' height='32' rx='7'/></clipPath></defs><g clip-path='url(%23t)'><rect width='32' height='32' fill='%23a21caf'/><path d='M15.5 6.5 L37 25 L33 25 L33 40 L7 40 L7 21.5 L3.5 21.5 Z' fill='%23fff' stroke='%23fff' stroke-width='1.6' stroke-linejoin='round'/><rect x='14' y='27' width='6.5' height='12' rx='1.5' fill='%23a21caf'/></g></svg>">
     {% endif %}
     {# The theme is RRW's: the same storage key, so one choice holds across
        the host's applications. Applied before the stylesheet, so a saved

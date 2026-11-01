@@ -165,7 +165,7 @@ def test_the_viewer_switch_lists_every_viewer(client: TestClient) -> None:
     assert 'href="/" aria-current="true"' in card
 
 
-def test_support_logs_is_teal_with_its_notepad(client: TestClient) -> None:
+def test_support_logs_is_teal_with_its_log_sheet(client: TestClient) -> None:
     page = client.get("/").text
     assert 'data-app="supportlogs"' in page and "fill='%230f766e'" in page
     assert ':root[data-app="supportlogs"] {\n        --accent: #0f766e;' in page

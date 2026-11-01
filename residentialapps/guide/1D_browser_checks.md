@@ -337,7 +337,7 @@ you would act on?*
 ### C1. Chrome
 
 - [ ] **Teal throughout**: top bar, tabs, primary buttons, focus rings;
-  the favicon is a notepad on teal; dark mode is readable.
+  the favicon is a log sheet on teal; dark mode is readable.
 - [ ] **Tabs follow the viewer**: Hui Min Home alone; Nadia Home,
   Overview, Consultation check; Rachel Access, Configuration, Audit log.
 - [ ] **The switcher** (top left) lists only *Support Logs* for Daniel,
