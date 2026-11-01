@@ -199,3 +199,42 @@ def test_a_reviewees_file_is_accepted_when_the_settings_turn_the_mode_off(
     assert response.status_code == 303, response.text
     db.refresh(review_session)
     assert review_session.symmetric_review is False
+
+
+def test_a_symmetric_setup_bundle_round_trips_in_one_submit(client: TestClient, db: Session) -> None:
+    """The bundle carries no reviewees, so its relationships are checked
+    against the reviewers that will mirror (Codex on #3490)."""
+    from app.db.models import Relationship
+
+    source = _session(client, db, "sym-i-bundle-src")
+    user = _user(db)
+    ann = reviewers.create_reviewer(db, review_session=source, name="Ann", email="ann@example.edu", user=user)
+    reviewers.create_reviewer(db, review_session=source, name="Bob", email="bob@example.edu", user=user)
+    bob_reviewee = next(e for e in _reviewees(db, source) if e.email_or_identifier == "bob@example.edu")
+    source.relationships_enabled = True
+    db.add(Relationship(session_id=source.id, reviewer_id=ann.id, reviewee_id=bob_reviewee.id))
+    db.commit()
+    data, _counts = zip_bundle.build_setup_bundle(db, source)
+    bundle = zipfile.ZipFile(io.BytesIO(data))
+
+    def member(suffix: str) -> bytes:
+        [name] = [n for n in bundle.namelist() if n.endswith(suffix)]
+        return bundle.read(name)
+
+    target = _session(client, db, "sym-i-bundle-target", on=False)
+    response = client.post(
+        f"/operator/sessions/{target.public_id}/quick-setup/submit-all",
+        files={
+            "reviewers_file": ("r.csv", member("_reviewers.csv"), "text/csv"),
+            "relationships_file": ("rel.csv", member("_relationships.csv"), "text/csv"),
+            "settings_file": ("s.csv", member("_settings.csv"), "text/csv"),
+        },
+        data={"confirm_replace": "true"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    db.expire_all()
+    db.refresh(target)
+    assert target.symmetric_review is True
+    assert len(_reviewees(db, target)) == 2
+    assert db.execute(select(Relationship).where(Relationship.session_id == target.id)).scalars().all()

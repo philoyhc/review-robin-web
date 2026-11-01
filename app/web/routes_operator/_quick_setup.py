@@ -659,9 +659,10 @@ async def _run_quick_setup_contents(
         if "settings" in contents
         else None
     )
-    if "reviewees" in contents and sessions.symmetric_review_after_settings(
+    symmetric = sessions.symmetric_review_after_settings(
         db, review_session, settings_symmetric
-    ):
+    )
+    if "reviewees" in contents and symmetric:
         return _SlotRefusal("reviewees", _SlotFailure("symmetric_reviewees"))
 
     # In the threadpool too: a Settings file with a short row is
@@ -675,6 +676,7 @@ async def _run_quick_setup_contents(
         confirm_replace=confirm_replace,
         acknowledge_response_loss=acknowledge_response_loss,
         replacing=replacing,
+        symmetric=symmetric,
     )
     if isinstance(staged, _SlotRefusal):
         return staged
@@ -693,16 +695,6 @@ async def _run_quick_setup_contents(
     staged = list(staged)
     for i, check in zip(rosters, checks, strict=True):
         staged[i] = replace(staged[i], directory=check)
-    # Segment 20B — Settings save last (``SLOT_ORDER``), so a file turning
-    # symmetric review on beside empty rosters turns it on first, and this
-    # submit's reviewers mirror. A refused unit rolls it back with the rest.
-    # One correlation id for the turn-on and the save, which group as one
-    # request.
-    correlation_id = correlation_id or request_correlation_id()
-    if settings_symmetric is True:
-        sessions.turn_symmetric_review_on_for_import(
-            db, review_session, user=user, correlation_id=correlation_id
-        )
     try:
         await run_in_threadpool(
             _save_uploads,
@@ -711,6 +703,7 @@ async def _run_quick_setup_contents(
             user=user,
             staged=staged,
             correlation_id=correlation_id or request_correlation_id(),
+            turn_symmetric_on=settings_symmetric is True,
             acknowledged_deletions=(
                 acknowledged_loss(acknowledge_instrument_deletion)
                 if replacing
@@ -773,6 +766,7 @@ def _check_uploads(
     confirm_replace: str | None,
     acknowledge_response_loss: str | None,
     replacing: bool,
+    symmetric: bool = False,
 ) -> list[_StagedSlot] | _SlotRefusal:
     """Every gate before the save, for every attached file, before
     anything is written. Not lock-free: a short-row Settings file's
@@ -832,12 +826,23 @@ def _check_uploads(
                     incoming_reviewees=reviewees.rows if reviewees else None,
                 )
             )
+            # Segment 20B — under symmetric review this submit's reviewers
+            # become its reviewees, so the file is checked against them
+            # rather than the roster they will replace (Codex on #3490).
+            mirrored = symmetric and reviewers is not None and reviewees is None
+            if mirrored:
+                roster_reviewees = [
+                    relationships_service.IncomingReviewee(
+                        id=-index, email_or_identifier=row.email
+                    )
+                    for index, row in enumerate(reviewers.rows, start=1)
+                ]
             result = relationships_service.parse_relationship_csv(
                 contents[kind],
                 reviewers=roster_reviewers,
                 reviewees=roster_reviewees,
                 reviewers_uploaded=reviewers is not None,
-                reviewees_uploaded=reviewees is not None,
+                reviewees_uploaded=reviewees is not None or mirrored,
             )
             if result.is_blocked or any(
                 issue.severity == "error" for issue in result.issues
@@ -890,6 +895,7 @@ def _save_uploads(
     correlation_id: str,
     acknowledged_deletions: int | None = None,
     acknowledged_group_loss: int = 0,
+    turn_symmetric_on: bool = False,
 ) -> None:
     """Save every checked file in one ``unit_of_work.atomic``: the
     per-entity savers nest inside it, so nothing commits until the last
@@ -910,6 +916,15 @@ def _save_uploads(
             # request turned on since this one loaded the session is not
             # logged as flipped again (Codex on #3002).
             session_guard.lock_session(db, review_session)
+            # Segment 20B — Settings save last (``SLOT_ORDER``), so a file
+            # turning symmetric review on beside empty rosters turns it on
+            # here, first, and this submit's reviewers mirror. Under the
+            # lock, so the empty-roster check and the flip are the unit's
+            # (Codex on #3490); a refused unit rolls it back with the rest.
+            if turn_symmetric_on:
+                sessions.turn_symmetric_review_on_for_import(
+                    db, review_session, user=user, correlation_id=correlation_id
+                )
             before = {
                 field_name: getattr(review_session, field_name)
                 for field_name in sessions.FEATURE_TOGGLE_FOR_ROSTER.values()
