@@ -113,10 +113,26 @@ recorded nowhere the person executing that plan would look.
 
 ## 4. The inline stylesheet: measure what a page costs on the wire, then decide
 
-**Status:** open. The institutional host serves (2026-10-31), so the
-measurement can be taken now, in a signed-in browser's devtools: Easy
-Auth guards every page, so the `curl` below would see only the sign-in
-redirect, and it names the dormant dev slot.
+**Status:** measured and decided; open until the deployed check below.
+
+**Measured 2026-11-01 (author, signed-in browser on the institutional
+host).** The Sessions lobby: `Content-Length: 337506`, **no
+`Content-Encoding`**, 338 kB transferred of 338 kB, 110 ms on campus.
+Nothing between the app and the browser compresses (`Server: uvicorn`).
+The page has grown from September's 216 KB.
+
+**Decided (author, 2026-11-01): option 2, compression.** Built at the
+host rather than in `app/main.py`: Starlette's `GZipMiddleware` in
+`cordware/main.py` wraps every mount, so RRW, Residential and Utilities
+gain it from one setting (`cordware/spec/host.md`, "Compression").
+Option 3 stays unchosen; the rule below against landing it alongside
+still holds, so extraction needs a fresh measurement of its own.
+
+**Remaining.** After the next release, the same devtools reading on the
+lobby shows `Content-Encoding: gzip` and a transferred size near a
+quarter of the page's. Then this item is removed.
+
+*The measurement as it was planned, before the host existed:*
 
 **Moved here whole from `guide/archive/segment_19K_assessment_moves.md` Item 9
 on 2026-09-12**, so that Segment 19K no longer waits on a header. The

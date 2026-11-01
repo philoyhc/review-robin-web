@@ -1252,7 +1252,8 @@ and need their own careful pass.
 ### 3. Other inherited debt (deferred, not strictly infra)
 
 (Extracting `base.html`'s stylesheet is not tracked here: it is option 3
-of `guide/post_azure_todo_checklist.md` item 4, pending a measurement.)
+of `guide/post_azure_todo_checklist.md` item 4, which chose compression
+instead on 2026-11-01.)
 
 - **Email aliases and identity in RRW** (2026-10-30, from
   `residentialapps/docs/residentialapps_email_identity_matching.md`). RRW

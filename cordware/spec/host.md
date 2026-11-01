@@ -160,6 +160,23 @@ TLS ended in front of it. Read once with `CORDWARE_APPS`.
 A link built with no request has no origin to read; segment 14B's worker
 owns that when it lands.
 
+## Compression
+
+The host compresses its responses with Starlette's `GZipMiddleware`,
+inside `PublicOriginMiddleware` and around every mount, so the landing
+page, `/health` and every application are covered by one setting. Nothing
+in front of it compresses: the gateway and App Service pass bodies through
+(the lobby measured 338 kB uncompressed on 2026-11-01, RRW
+`guide/post_azure_todo_checklist.md` item 4).
+
+- **When it compresses:** the request's `Accept-Encoding` includes `gzip`,
+  the body is at least `GZIP_MINIMUM_SIZE` (1,000 bytes), and the response
+  is not already encoded.
+- **What it leaves alone:** Starlette's excluded types, among them
+  `application/zip`, images and `text/event-stream`, so a Zip all or an
+  image is not compressed twice.
+- **Level:** `GZIP_LEVEL`, zlib's default 6.
+
 ## `/health`
 
 - The host's own route: `GET /health` returns `{"status": "ok"}`, route name
