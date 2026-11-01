@@ -10,90 +10,13 @@
     <h1>Settings</h1>
   </div>
 
-  {# 19T Item 16 entry 3 — two columns: the SMTP card on the left (its
-     "Bring your own SMTP" intro folded in below the header), Date & time
-     and Clear all settings (SMTP) stacked on the right. `.bottom-grid` with a
-     `.bottom-left` stack per side (spec/ui_elements.md §10): each side
-     keeps its own height, and the pair collapses to one column at 800px. #}
+  {# 14C Item 1 (2026-11-01) — the per-operator SMTP cards retired: the
+     send path is Microsoft Graph, as the operator or as a dedicated
+     mailbox, so there is nothing for an operator to configure. Their
+     storage stays (spec/settings_inventory.md). Date & time stands alone
+     at half width (`.bottom-grid`, spec/ui_elements.md §10) until 14C
+     Item 2's Email settings card joins it. #}
   <div class="bottom-grid">
-  <div class="bottom-left">
-  {# Save button starts disabled and only enables once the operator
-     has touched any input — the disabled→enabled→disabled cycle
-     across the Save reload replaces a flash banner. #}
-  <div class="card">
-    <h2>Email send (SMTP)</h2>
-    {% if not user.smtp_host %}
-      <p>
-        <strong>Bring your own SMTP.</strong>
-        Review Robin sends invitation and reminder emails through your
-        own Outlook / Office 365 mailbox (the "send-as-me" identity
-        model). Configure your SMTP credentials below before you can
-        activate sends from the Manage Invitations page.
-      </p>
-      <p class="muted">
-        Most Outlook accounts need an
-        <a href="https://support.microsoft.com/en-us/account-billing/manage-app-passwords-for-two-step-verification-d6dc8c6d-4bf7-4851-ad95-6d07799387e9"
-           target="_blank" rel="noopener">app password</a>
-        rather than your sign-in password. Generate one once and paste
-        it into the App password field.
-      </p>
-    {% endif %}
-    <form method="post" action="{{ url('/operator/settings') }}" id="operator-settings-form">
-      {% if return_to_raw %}
-        <input type="hidden" name="return_to" value="{{ return_to_raw }}">
-      {% endif %}
-      <div class="page-grid">
-        <div>
-          <label for="smtp_host">SMTP host</label>
-          <input type="text" id="smtp_host" name="smtp_host"
-                 maxlength="255"
-                 placeholder="smtp.office365.com"
-                 value="{{ user.smtp_host or '' }}">
-
-          <label for="smtp_port">SMTP port</label>
-          <input type="number" id="smtp_port" name="smtp_port"
-                 placeholder="587"
-                 value="{{ user.smtp_port or '' }}">
-
-          <label for="smtp_encryption">Encryption</label>
-          <select id="smtp_encryption" name="smtp_encryption">
-            <option value=""{% if not user.smtp_encryption %} selected{% endif %}>—</option>
-            {% for mode in encryption_modes %}
-              <option value="{{ mode }}"{% if user.smtp_encryption == mode %} selected{% endif %}>{{ mode }}</option>
-            {% endfor %}
-          </select>
-        </div>
-
-        <div class="fill-col">
-          <label for="smtp_username">From email (= SMTP username)</label>
-          <input type="email" id="smtp_username" name="smtp_username"
-                 maxlength="320"
-                 placeholder="reviews@your-org.edu"
-                 value="{{ user.smtp_username or '' }}">
-
-          <label for="smtp_password">App password
-            <span class="muted">— {% if has_password %}set{% else %}not set{% endif %}</span>
-          </label>
-          <input type="password" id="smtp_password" name="smtp_password"
-                 placeholder="{% if has_password %}leave blank to keep existing{% else %}paste your app password{% endif %}">
-
-          <label for="smtp_from_display_name">From display name (optional)</label>
-          <input type="text" id="smtp_from_display_name"
-                 name="smtp_from_display_name"
-                 maxlength="255"
-                 placeholder="e.g. Course Reviews"
-                 value="{{ user.smtp_from_display_name or '' }}">
-        </div>
-      </div>
-
-      <div style="display: flex; justify-content: flex-end; gap: 16px; margin-top: 20px;">
-        <a class="btn secondary" href="{{ url(return_to_url) }}">Cancel</a>
-        <button class="btn secondary" type="submit" id="settings-save-button" disabled>Save</button>
-      </div>
-    </form>
-  </div>
-  </div>
-
   <div class="bottom-left">
   {# Segment 18B PR 2 — per-operator default display timezone.
      Searchable <datalist> over every IANA zone name. The signed-in
@@ -103,8 +26,7 @@
      the label is where the chosen zone is made explicit. #}
   {# Segment 19C Item 2 — the Display mode (light / dark) control moved to a
      chrome toggle (top-right, reaches participants too — see guide/ux_theme.md),
-     so the settings card was retired and Date & time returned to full width;
-     since 19T Item 16 entry 3 it heads the right column. #}
+     so the settings card was retired. #}
   <div class="card" id="timezone-settings">
     <h2>Date &amp; time</h2>
     <p class="muted">
@@ -196,33 +118,6 @@
       input.addEventListener("change", update);
     })();
   </script>
-
-  <div class="card danger-zone" id="danger-zone">
-    <h2>Clear all settings (SMTP)</h2>
-    <p>
-      Wipes every SMTP field on this account. Existing outbox rows are
-      not affected. You can re-enter credentials any time.
-    </p>
-    <form method="post" action="{{ url('/operator/settings/clear') }}">
-      {% if return_to_raw %}
-        <input type="hidden" name="return_to" value="{{ return_to_raw }}">
-      {% endif %}
-      <p>
-        <label style="font-weight: normal;">
-          <input type="checkbox" name="confirm" value="true" required
-                 data-delete-confirm="clear-settings">
-          Yes, delete every SMTP setting on this account.
-        </label>
-      </p>
-      {# Disabled-until-checked (app-wide data-delete-confirm standard,
-         spec/ui_elements.md §4); the route re-checks confirm. #}
-      <div style="display: flex; justify-content: flex-end;">
-        <button class="btn destructive" type="submit"
-                data-delete-btn="clear-settings"
-                disabled aria-disabled="true">Clear all settings</button>
-      </div>
-    </form>
-  </div>
   </div>
   </div>
 
@@ -232,14 +127,4 @@
      retires the RuleSet half. PR 5.2 drops the underlying
      ``operator_rule_sets`` table. #}
 
-  <script>
-    (function () {
-      var form = document.getElementById("operator-settings-form");
-      var save = document.getElementById("settings-save-button");
-      if (!form || !save) return;
-      function enable() { save.disabled = false; }
-      form.addEventListener("input", enable);
-      form.addEventListener("change", enable);
-    })();
-  </script>
 {% endblock %}

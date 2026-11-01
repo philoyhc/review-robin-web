@@ -79,12 +79,11 @@ log (`has_history`): to take someone's access away, revoke it.
 `DATABASE_URL` lives in two places that must hold identical
 values — the App Service App Setting and the GitHub Actions
 `DATABASE_URL` secret. Rotate both together, then restart the
-app. `SMTP_ENCRYPTION_KEY` is needed now: the operator Settings
-page stores each operator's SMTP credentials encrypted with it,
-even though no transport sends mail yet. It is an App Setting
-only, since no workflow reads it. Rotating it leaves the stored
-SMTP passwords undecryptable, so each operator re-enters theirs
-afterwards. There is no Key Vault indirection yet (deferred — see
+app. `SMTP_ENCRYPTION_KEY` is no longer needed by any page: the
+operator Settings page's SMTP cards retired (segment 14C Item 1).
+It still decrypts any SMTP password saved before then, so keep it
+set where one exists; rotating it leaves those undecryptable. It is
+an App Setting only, since no workflow reads it. There is no Key Vault indirection yet (deferred — see
 `docs/security_posture.md`).
 
 ## Re-running a failed deploy

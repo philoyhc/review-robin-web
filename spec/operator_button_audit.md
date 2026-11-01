@@ -664,10 +664,11 @@ Source: `app/web/templates/operator/operator_settings.html`.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 92 | Email send (SMTP) form | Cancel | `<a>` | `btn secondary` | Secondary | Returns to `?return_to=<path>` |
-| 93 | Email send (SMTP) form | Save | `<button type="submit">` | `btn secondary` | Secondary | Disabled until input touched |
 | 93a | Date & time card | Save timezone | `<button type="submit">` | `btn secondary` | Secondary | Posts `/operator/settings/timezone`; persists the `display_timezone` preference |
-| 94 | Clear all settings (SMTP) | Clear all settings | `<button type="submit">` | `btn destructive` | Destructive | Posts `/operator/settings/clear`; disabled until its "Yes, delete every SMTP setting on this account." box is ticked (`data-delete-confirm="clear-settings"`), and the route answers 400 without `confirm=true` |
+
+Rows 92–94, the Email send (SMTP) form's Cancel and Save and the Clear
+all settings (SMTP) button, are retired with those cards (segment 14C
+Item 1); the numbers are not reused.
 
 ---
 
@@ -729,7 +730,7 @@ canonical role definition is the `.back-link` row in
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 104 | Page top (above the SMTP form card) | ← Back to {{ return_to_label }} | `<a>` | `back-link` | Return-to (`.back-link`) | |
+| 104 | Page top (above the Date & time card) | ← Back to {{ return_to_label }} | `<a>` | `back-link` | Return-to (`.back-link`) | |
 
 ---
 
