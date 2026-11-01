@@ -21,12 +21,18 @@ on a host belongs here. Each item names what to do, where to do it, and
 **how to tell it is done** — a checklist item nobody can settle is a
 note, not a task.
 
+**State, 2026-11-01.** The institutional host is provisioned and has
+served Review Robin since 2026-10-31 (the first release with migrations).
+Items 1 and 2 can be worked now; items 7–10 wait on the email choices
+in `guide/email_and_scheduling.md` rather than on the host; items 3, 5
+and 6, settled earlier, are removed (their numbers are not reused).
+
 **This is not a runbook.** It does not describe how to deploy. It
 describes what is owed *after* deploying, in an order nobody has fixed
 yet.
 
-**Admission widened by the author, 2026-09-11.** Item 3 is the first
-entry here whose blocker is *a* deploy rather than *the* institutional
+**Admission widened by the author, 2026-09-11.** Item 3 (since
+settled and removed) was the first entry here whose blocker is *a* deploy rather than *the* institutional
 one — a UI behaviour no test can reach, waiting on the dev slot.
 Recorded rather than quietly filed, because the rule above says
 "blocked on the deployment itself" and this is blocked on something
@@ -124,15 +130,7 @@ to list the Azure-deployment documents and found that nothing tracked
 what the cutover would do to them: an obligation created by a plan,
 recorded nowhere the person executing that plan would look.
 
-
 ---
-
-## 3. ~~Verify the navigation busy indicator in a browser~~ — settled, removed 2026-10-16
-
-Seen on the dev slot when 19J closed (2026-09-11; `guide/archive/segment_19J_assessment_moves.md`
-19J.4, 19J.7, 19J.8). The chip-edge row is partly pinned by `tests/browser/test_chip_edge_rendered.py` (the lobby's chips and the Guide's samples), which fails without the 2026-10-10 edge fix: the recorded pass had not caught it.
-The one row with no recorded pass, the session-nav hover, moved to
-`guide/things_to_check_in_browser.md`, since a local browser settles it.
 
 ## 4. The inline stylesheet: measure what a page costs on the wire, then decide
 
@@ -288,16 +286,6 @@ it.)
   segment; this entry is the evidence, not the build.
 
 ---
-
-## 5. ~~Verify Session Home's Owners card and the tag typeahead in a browser~~ — settled, moved 2026-10-16
-
-Checked locally by the author on 2026-10-01. The rows, which the browser tests cite, now live in
-`guide/archive/browser_test.md` ("Appendix — the rows the author checked").
-
-## 6. ~~Verify the Instruments response-field rows, action row and small fixes in a browser~~ — settled, moved 2026-10-16
-
-Checked locally by the author on 2026-10-01. The rows, which the browser tests cite, now live in
-`guide/archive/browser_test.md` ("Appendix — the rows the author checked").
 
 ## 7. Give scheduled sends a trigger that does not wait for a page view
 

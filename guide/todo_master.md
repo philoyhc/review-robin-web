@@ -35,7 +35,10 @@ Two sibling registers hold the open work that is not queued here:
 ### Queued segments
 
 14B and 20 are **gated on the institutional Azure deployment
-concluding** (decision 2026-09-05) and independent of each other.
+concluding** (decision 2026-09-05) and independent of each other. The
+host is provisioned and serving Review Robin since 2026-10-31; whether
+the deployment has *concluded* (verified, the personal web app retired)
+is the author's call.
 
 1. **14B — Email infrastructure (send activation + backends).** All
    email *wiring*. Parts A → E are sequential: SMTP send activation →
@@ -43,8 +46,10 @@ concluding** (decision 2026-09-05) and independent of each other.
    per-deployment from-identity defaults → generalised Outbox
    diagnostic surface. Parts F → H are independent backend swaps
    (Microsoft Graph, Azure Communication Services, a third-party
-   transactional service), shipped as a deployment needs them. Not
-   started until the host exists with a sending identity; meanwhile
+   transactional service), shipped as a deployment needs them. The host
+   has served Review Robin since 2026-10-31; what 14B now waits on is a
+   sending identity and the author's three choices in
+   `guide/email_and_scheduling.md`. Meanwhile
    invitations are covered by the operator's own email (access is
    roster + sign-in), and the real gap is targeted reminders.
    **Plan:** `guide/segment_14B_email_infrastructure.md`.
