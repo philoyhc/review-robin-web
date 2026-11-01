@@ -263,12 +263,29 @@ def relationship_cascade_count(
     column = _RELATIONSHIP_FK.get(model)
     if column is None or not ids:
         return 0
+    condition = column.in_(ids)
+    mirrors = _mirrored_reviewee_ids(db, model=model, ids=ids)
+    if mirrors:
+        condition = condition | Relationship.reviewee_id.in_(mirrors)
     return int(
         db.execute(
             select(func.count())
             .select_from(Relationship)
-            .where(column.in_(ids))
+            .where(condition)
         ).scalar_one()
+    )
+
+
+def _mirrored_reviewee_ids(db: Session, *, model: type, ids: list[int]) -> list[int]:
+    """The reviewees that mirror these reviewers under symmetric review
+    (segment 20B). Deleting a reviewer deletes its mirror too, so the
+    cascade counts and the loss gate count both sides (Codex on #3489)."""
+    if model is not Reviewer or not ids:
+        return []
+    return list(
+        db.execute(
+            select(Reviewee.id).where(Reviewee.mirrors_reviewer_id.in_(ids))
+        ).scalars()
     )
 
 
@@ -286,8 +303,12 @@ def cascade_counts(
     column = _ASSIGNMENT_FK.get(model)
     if column is None or not ids:
         return 0, 0
+    condition = column.in_(ids)
+    mirrors = _mirrored_reviewee_ids(db, model=model, ids=ids)
+    if mirrors:
+        condition = condition | Assignment.reviewee_id.in_(mirrors)
     assignment_ids = list(
-        db.execute(select(Assignment.id).where(column.in_(ids))).scalars()
+        db.execute(select(Assignment.id).where(condition)).scalars()
     )
     if not assignment_ids:
         return 0, 0

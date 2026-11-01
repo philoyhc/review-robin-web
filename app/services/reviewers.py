@@ -363,7 +363,11 @@ def update_reviewer(
     # reviewer is reviewing may need re-classification — recompute
     # against the whole session (the canonical helper handles the
     # whole-group rule for us).
-    if "email" in changes:
+    # Under symmetric review the reconcile below recomputes once both the
+    # reviewer and the mirrored reviewee carry the new address: computed
+    # here, between the two, the pair would read as two people and lose
+    # an operator's exclusion (Codex on #3489).
+    if "email" in changes and not reviewer.session.symmetric_review:
         from app.services.assignments import (
             recompute_self_review_classification,
         )

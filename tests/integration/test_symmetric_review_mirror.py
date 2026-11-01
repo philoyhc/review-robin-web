@@ -244,3 +244,79 @@ def test_a_mirrored_tag_change_asks_before_clearing_group_answers(
     accepted = client.post(path, data={**form, "acknowledge_response_loss": count}, follow_redirects=False)
     assert accepted.status_code == 303
     assert responses() == 4 - int(count)
+
+
+def _answered(db: Session, review_session: ReviewSession, reviewer: Reviewer, reviewee: Reviewee):
+    import datetime as dt
+
+    from app.db.models import Assignment, InstrumentResponseField, Response
+    from app.services.instruments import ensure_default_instrument
+
+    instrument = ensure_default_instrument(db, review_session)
+    field = InstrumentResponseField(
+        instrument_id=instrument.id, field_key=f"q{reviewer.id}_{reviewee.id}", label="Q",
+        _inline_data_type="Integer", _inline_response_type="Likert5", order=0,
+    )
+    db.add(field)
+    db.flush()
+    row = Assignment(session_id=review_session.id, reviewer_id=reviewer.id,
+                     reviewee_id=reviewee.id, instrument_id=instrument.id)
+    db.add(row)
+    db.flush()
+    db.add(Response(assignment_id=row.id, response_field_id=field.id, value="3",
+                    saved_at=dt.datetime(2026, 11, 1, tzinfo=dt.timezone.utc), version=1))
+    db.commit()
+    return instrument, row
+
+
+def test_a_full_clone_keeps_its_relationships(client: TestClient, db: Session) -> None:
+    from app.db.models import Relationship
+
+    review_session = _session(client, db, "sym-m-clone-rel")
+    review_session.relationships_enabled = True
+    ann = _add(db, review_session, "ann@example.edu")
+    _add(db, review_session, "bob@example.edu")
+    by_email = {e.email_or_identifier: e for e in _assert_mirrored(db, review_session)}
+    db.add(Relationship(session_id=review_session.id, reviewer_id=ann.id,
+                        reviewee_id=by_email["bob@example.edu"].id))
+    db.commit()
+    clone = session_clone.clone_session(db, source=review_session, user=_user(db), mode="all")
+    _assert_mirrored(db, clone)
+    assert db.execute(select(Relationship).where(Relationship.session_id == clone.id)).scalars().all()
+
+
+def test_a_selected_delete_counts_answers_about_the_person(client: TestClient, db: Session) -> None:
+    from app.services import roster_bulk
+
+    review_session = _session(client, db, "sym-m-loss")
+    ann = _add(db, review_session, "ann@example.edu")
+    bob = _add(db, review_session, "bob@example.edu")
+    ann_reviewee = next(
+        e for e in _assert_mirrored(db, review_session) if e.mirrors_reviewer_id == ann.id
+    )
+    _answered(db, review_session, bob, ann_reviewee)
+    # Ann wrote nothing; Bob's answer about her goes with her.
+    assert roster_bulk.cascade_counts(db, model=Reviewer, ids=[ann.id]) == (1, 1)
+    response = client.post(
+        f"/operator/sessions/{review_session.public_id}/reviewers/bulk-delete",
+        data={"reviewer_ids": [str(ann.id)], "confirm": "true"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 400
+
+
+def test_an_email_correction_keeps_an_operator_exclusion(client: TestClient, db: Session) -> None:
+    from app.db.models import Assignment
+
+    review_session = _session(client, db, "sym-m-excl")
+    reviewer = _add(db, review_session, "ann@example.edu")
+    [reviewee] = _assert_mirrored(db, review_session)
+    instrument, row = _answered(db, review_session, reviewer, reviewee)
+    instrument.self_reviews_active = True
+    row.is_self_review = True
+    row.include = False
+    db.commit()
+    reviewers.update_reviewer(db, reviewer=reviewer, email="ann.tan@example.edu", user=_user(db))
+    db.expire_all()
+    row = db.get(Assignment, row.id)
+    assert (row.is_self_review, row.include) == (True, False)

@@ -1615,10 +1615,11 @@ def save_reviewers(
             merge=merge,
             columns=columns,
         )
-        if merge:
+        if merge and not session.symmetric_review:
             # A merge can bind a reviewer to the account a reviewee holds
             # under another address, which makes their pair a self-review
-            # (Codex, #3440).
+            # (Codex, #3440). Under symmetric review the reconcile below
+            # recomputes once the mirror carries the change too.
             from app.services.assignments import recompute_self_review_classification
 
             recompute_self_review_classification(db, session_id=session.id)

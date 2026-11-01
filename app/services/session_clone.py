@@ -363,6 +363,13 @@ def clone_session(
                     skip=set(_SKIP_BASE) | _SKIP_REVIEWEE | {"session_id"},
                 ),
             )
+            # 20B — a mirror link names the source's reviewer; point it at
+            # the copy (Codex on #3489), or the reconcile would replace
+            # the reviewee and cascade away its copied relationships.
+            if reviewee.mirrors_reviewer_id is not None:
+                new_reviewee.mirrors_reviewer_id = reviewer_map.get(
+                    reviewee.mirrors_reviewer_id
+                )
             db.add(new_reviewee)
             db.flush()
             reviewee_map[reviewee.id] = new_reviewee.id
