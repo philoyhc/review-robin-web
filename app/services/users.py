@@ -1033,6 +1033,79 @@ def split_named_address(text: str) -> tuple[str | None, str]:
     return (match["name"].strip() or None), match["address"]
 
 
+#: The most addresses one invite takes: each is a directory lookup on the
+#: admin's token, done while they wait.
+INVITE_LIST_MAX = 50
+
+
+def split_invite_list(text: str) -> list[str]:
+    """The entries of a comma-separated invite (19X Item 14). A piece with
+    no "@" cannot be an address, so it joins the piece after it: a name
+    written "Tan, Jane <jane@example.edu>" stays one entry. Blank pieces
+    are dropped; text with no entries is one empty entry, which the
+    invite refuses."""
+    entries: list[str] = []
+    carry = ""
+    for piece in text.split(","):
+        joined = f"{carry},{piece}" if carry.strip() else piece
+        if "@" in piece:
+            if joined.strip():
+                entries.append(joined.strip())
+            carry = ""
+        else:
+            carry = joined
+    if carry.strip():
+        entries.append(carry.strip())
+    return entries or [""]
+
+
+@dataclass(frozen=True)
+class InviteOutcome:
+    """One entry of an invite: the row made, or why not."""
+
+    address: str
+    user: User | None = None
+    code: str | None = None
+
+
+def invite_list(
+    db: Session,
+    *,
+    actor: User,
+    text: str,
+    is_sys_admin: bool = False,
+    look_up: Callable[[str], Outcome | None] | None = None,
+    correlation_id: str | None = None,
+) -> list[InviteOutcome]:
+    """Invite every entry of a comma-separated list (19X Item 14), each as
+    `invite` does on its own and committed on its own, so one refusal
+    stops none of the rest. ``look_up`` asks the directory about one
+    address. More than `INVITE_LIST_MAX` entries invites none of them."""
+    entries = split_invite_list(text)
+    if len(entries) > INVITE_LIST_MAX:
+        return [InviteOutcome(address="", code="too_many")]
+    outcomes: list[InviteOutcome] = []
+    for entry in entries:
+        name, address = split_named_address(entry)
+        try:
+            user = invite(
+                db,
+                actor=actor,
+                email=address,
+                is_operator=True,
+                is_sys_admin=is_sys_admin,
+                directory=(lambda a=address: look_up(a)) if look_up else None,
+                display_name=name,
+                correlation_id=correlation_id,
+            )
+        except UserOperationError as exc:
+            db.rollback()
+            outcomes.append(InviteOutcome(address=address, code=exc.code))
+        else:
+            outcomes.append(InviteOutcome(address=address, user=user))
+    return outcomes
+
+
 def _invite_account(
     db: Session, email: str, outcome: Outcome | None
 ) -> directory_accounts.Account | None:

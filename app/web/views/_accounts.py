@@ -251,3 +251,26 @@ def account_refusal_message(code: str, email: str | None) -> str:
     if reason is None or ("{email}" in reason and not email):
         return "Couldn't apply that change."
     return f"Nothing changed: {reason.format(email=email)}."
+
+
+# Why one entry of a list invite was refused (19X Item 14), by the
+# service's code. The address comes back from the URL, so it is shown
+# escaped and cut to an address's length; the code never is.
+_INVITE_REFUSALS = {
+    "duplicate": "already has an account here",
+    "invalid_email": "isn't one whole email address",
+    "requires_super_admin": "only a super-admin can invite a sys-admin",
+    "not_in_directory": "isn't in the institution's directory",
+    "ambiguous_in_directory": "matches more than one directory account",
+    "account_exists": "belongs to someone with an account under another address",
+}
+
+
+def invite_refusals(entries: list[str]) -> list[tuple[str, str]]:
+    """``(address, reason)`` for each ``code:address`` a list invite
+    refused; an unknown code reads "couldn't be invited"."""
+    refusals = []
+    for entry in entries:
+        code, _, address = entry.partition(":")
+        refusals.append((address[:320] or "(blank)", _INVITE_REFUSALS.get(code, "couldn't be invited")))
+    return refusals

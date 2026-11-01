@@ -294,6 +294,8 @@ def sys_admin_users(
     request: Request,
     invite_error: str | None = Query(default=None),
     invite_unchecked: str | None = Query(default=None),
+    invited: int | None = Query(default=None),
+    invite_refused: list[str] | None = Query(default=None),
     toggle_error: str | None = Query(default=None),
     refused: int | None = Query(default=None),
     selected: int | None = Query(default=None),
@@ -395,6 +397,11 @@ def sys_admin_users(
             ),
             "invite_error": invite_error,
             "invite_unchecked": bool(invite_unchecked),
+            # A list invite's summary (19X Item 14): how many were made,
+            # how many unchecked, and each refused address with its code.
+            "invited_count": invited,
+            "invite_unchecked_count": int(invite_unchecked) if (invite_unchecked or "").isdigit() else 0,
+            "invite_refusals": views.invite_refusals(invite_refused or []),
             # A refused batch names its row: the email is looked up, the
             # reason comes from the view's own table, never from the URL.
             "toggle_message": views.account_refusal_message(
@@ -743,27 +750,36 @@ def invite_user(
     # directory is the five fake people, and the accounts invited there
     # are made up, so it checks nothing either. The picker fills
     # "Name <address>"; the address in the brackets is the one invited.
-    name, address = users_service.split_named_address(email)
-
-    def look_up():
+    # Several, comma-separated, are invited one by one (19X Item 14).
+    def look_up(address: str):
         directory = None if is_local() else directory_or_none(request)
         return directory_accounts.look_up_one(directory, address)
 
-    try:
-        invited = users_service.invite(
-            db,
-            actor=actor,
-            email=address,
-            is_operator=True,
-            is_sys_admin=invite_as_sys_admin == "true",
-            directory=look_up,
-            display_name=name,
-        )
-    except users_service.UserOperationError as exc:
-        url = f"{_ACCOUNTS_URL}?invite_error={quote(exc.code, safe='')}"
-        return urls.redirect(request, url=url, status_code=status.HTTP_303_SEE_OTHER)
-    # Selected, so its chip turns on whatever chips are remembered.
-    return _users_redirect(
-        request, selected_user_id=invited.id,
-        invite_unchecked=invited.external_principal_id is None,
+    outcomes = users_service.invite_list(
+        db,
+        actor=actor,
+        text=email,
+        is_sys_admin=invite_as_sys_admin == "true",
+        look_up=look_up,
     )
+    # The new rows are not selected (19X Item 14, author): the table
+    # stays as the admin left it.
+    if len(outcomes) == 1:
+        only = outcomes[0]
+        if only.user is None:
+            url = f"{_ACCOUNTS_URL}?invite_error={quote(only.code or '', safe='')}"
+            return urls.redirect(request, url=url, status_code=status.HTTP_303_SEE_OTHER)
+        return _users_redirect(
+            request, invite_unchecked=only.user.external_principal_id is None
+        )
+    made = [o for o in outcomes if o.user is not None]
+    params = [f"invited={len(made)}"]
+    unchecked = sum(1 for o in made if o.user.external_principal_id is None)
+    if unchecked:
+        params.append(f"invite_unchecked={unchecked}")
+    params += [
+        f"invite_refused={quote(f'{o.code}:{o.address}', safe='')}"
+        for o in outcomes if o.user is None
+    ]
+    url = f"{_ACCOUNTS_URL}?{'&'.join(params)}"
+    return urls.redirect(request, url=url, status_code=status.HTTP_303_SEE_OTHER)

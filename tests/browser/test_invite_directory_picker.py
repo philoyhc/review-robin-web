@@ -119,3 +119,16 @@ def test_an_expired_sign_in_says_to_sign_in_again(page: Page) -> None:
     expect(page.locator("[data-directory-status]")).to_have_text(
         "Your sign-in's directory access has expired. Sign out and back in, then search again."
     )
+
+
+def test_after_a_comma_the_search_starts_again_and_a_pick_keeps_the_list(page: Page) -> None:
+    """19X Item 14: several invitees, comma-separated."""
+    page.goto(app_url(ACCOUNTS))
+    box = page.locator("#invite-email")
+    box.fill("someone@example.edu, ")
+    box.press_sequentially("Arun")
+    option = page.locator("#invite-directory-options option")
+    expect(option).to_have_count(1)
+    expect(option.first).to_have_attribute(
+        "value", "someone@example.edu, Arun Kumar <arun.kumar@example.edu>"
+    )

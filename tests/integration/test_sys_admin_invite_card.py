@@ -93,4 +93,4 @@ def test_the_invite_box_takes_a_name_and_offers_directory_matches(
     assert 'type="text" name="email" id="invite-email" required' in body
     assert 'list="invite-directory-options"' in body
     assert '<datalist id="invite-directory-options" data-directory-options></datalist>' in body
-    assert "Name or email" in body
+    assert "Names or emails, separated by commas" in body
