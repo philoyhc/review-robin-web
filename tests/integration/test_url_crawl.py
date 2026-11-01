@@ -317,6 +317,7 @@ ROUTES: dict[str, tuple[Visit, ...]] = {
     "/operator/sys-admin/sessions/{session_id}/outbox": _PAGE,
     "/operator/sys-admin/users": _PAGE,
     "/operator/sys-admin/users/search-options": _PAGE,
+    "/operator/sys-admin/users/directory-search": _PAGE,
 }
 
 

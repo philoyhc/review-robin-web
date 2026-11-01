@@ -220,3 +220,39 @@ def test_a_refused_sign_in_stops_the_rest() -> None:
     assert {o.status for o in outcomes.values()} == {"ERROR"}
     assert {o.error_kind for o in outcomes.values()} == {"unauthorized"}
     assert "sign out and in again" in outcomes["b@x.edu"].note
+
+
+def test_a_search_asks_startswith_on_name_surname_mail_and_upn() -> None:
+    """RRW segment 19Z, invite from the directory: a picker's search."""
+    script = Script(ok(JANE))
+    users = directory(script).search_users("o'b")
+    assert users == [DirectoryUser("u1", "Jane Tan", "jane.tan@example.edu", "e0123456@example.edu")]
+    url, headers, _ = script.calls[0]
+    query = parse_qs(urlsplit(url).query)
+    assert query["$filter"] == [
+        "startswith(displayName,'o''b') or startswith(surname,'o''b') "
+        "or startswith(mail,'o''b') or startswith(userPrincipalName,'o''b')"
+    ]
+    assert query["$top"] == ["10"] and query["$select"] == ["id,displayName,mail,userPrincipalName"]
+    assert headers["Authorization"] == "Bearer tok"
+
+
+def test_a_search_s_failures_raise_as_a_lookup_s_do() -> None:
+    with pytest.raises(GraphError) as raised:
+        directory(Script(Response(403, {}, b""))).search_users("jan")
+    assert raised.value.kind == "forbidden"
+
+
+@pytest.mark.parametrize(
+    ("prefix", "names"),
+    [
+        ("jan", ["Jane Tan"]),
+        ("TAN", ["Jane Tan"]),  # the surname, any case
+        ("e01", ["Jane Tan"]),  # the sign-in name
+        ("office", ["Wei Ling Lim", "Office Desk"]),
+        ("zz", []),
+        ("", []),
+    ],
+)
+def test_the_fake_directory_searches_by_prefix(prefix: str, names: list[str]) -> None:
+    assert [u.display_name for u in FakeDirectory().search_users(prefix)] == names
