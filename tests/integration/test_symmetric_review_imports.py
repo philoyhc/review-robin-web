@@ -312,3 +312,24 @@ def test_a_turn_on_committed_after_the_route_gate_still_refuses(client: TestClie
         )
     db.rollback()
     assert _reviewees(db, review_session) == []
+
+
+def test_a_relationships_upload_is_checked_against_the_mirroring_reviewers(
+    client: TestClient, db: Session
+) -> None:
+    from app.services import relationships as relationships_service
+    from app.services.csv_imports import parse_reviewer_csv
+
+    review_session = _session(client, db, "sym-i-rel-svc", on=False)
+    incoming = parse_reviewer_csv(REVIEWERS_CSV).rows
+    content = b"ReviewerEmail,RevieweeEmail\nann@example.edu,bob@example.edu\nann@example.edu,zed@example.edu\n"
+    result = relationships_service.parse_relationship_upload(
+        db, review_session.id, content, incoming_reviewers=incoming, symmetric=True
+    )
+    problems = [i.problem for i in result.issues if i.severity == "error"]
+    # Bob is a reviewer, so he is a reviewee; Zed is neither.
+    assert problems == ["RevieweeEmail is not in the uploaded Reviewers file (symmetric review)"]
+    off = relationships_service.parse_relationship_upload(
+        db, review_session.id, content, incoming_reviewers=incoming, symmetric=False
+    )
+    assert len([i for i in off.issues if i.severity == "error"]) == 2

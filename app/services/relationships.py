@@ -71,6 +71,7 @@ def parse_relationship_csv(
     reviewees: Sequence[Reviewee | IncomingReviewee],
     reviewers_uploaded: bool = False,
     reviewees_uploaded: bool = False,
+    reviewees_mirrored: bool = False,
 ) -> ParseResult:
     """Parse a Relationships CSV against the session's existing rosters.
 
@@ -92,7 +93,9 @@ def parse_relationship_csv(
     (:func:`rosters_for_relationships`), so an unknown email names that
     file instead of the roster. Its rows then carry stand-in ids: such
     a parse checks, and the save must parse again once the rosters are
-    written.
+    written. ``reviewees_mirrored`` says the reviewees stand for the
+    uploaded Reviewers file under symmetric review (segment 20B), so an
+    unknown reviewee names that file.
     """
 
     source = "relationships"
@@ -188,13 +191,19 @@ def parse_relationship_csv(
                     field="RevieweeEmail",
                     message=(
                         f"Unknown reviewee '{reviewee_email}' — not in "
+                        f"the uploaded Reviewers file (symmetric review)."
+                        if reviewees_mirrored
+                        else f"Unknown reviewee '{reviewee_email}' — not in "
                         f"the uploaded Reviewees file."
                         if reviewees_uploaded
                         else f"Unknown reviewee '{reviewee_email}' — "
                         f"import reviewees first."
                     ),
                     problem=(
-                        "RevieweeEmail is not in the uploaded Reviewees file"
+                        "RevieweeEmail is not in the uploaded Reviewers file "
+                        "(symmetric review)"
+                        if reviewees_mirrored
+                        else "RevieweeEmail is not in the uploaded Reviewees file"
                         if reviewees_uploaded
                         else "RevieweeEmail is not on the Reviewees roster "
                         "(import reviewees first)"
@@ -344,6 +353,47 @@ def rosters_for_relationships(
         else list(list_reviewees(db, session_id))
     )
     return reviewers, reviewees
+
+
+def parse_relationship_upload(
+    db: Session,
+    session_id: int,
+    content: bytes,
+    *,
+    incoming_reviewers: Sequence[ReviewerImportRow] | None = None,
+    incoming_reviewees: Sequence[RevieweeImportRow] | None = None,
+    symmetric: bool = False,
+) -> ParseResult:
+    """Check a Relationships file uploaded beside roster files, before
+    any of them saves: against each uploaded roster, else the session's
+    (:func:`rosters_for_relationships`).
+
+    Under symmetric review (segment 20B) the uploaded reviewers are also
+    the reviewees, so with a Reviewers file and no Reviewees file the
+    file is checked against the reviewers' addresses rather than the
+    roster they will replace (Codex on #3490)."""
+    reviewers, reviewees = rosters_for_relationships(
+        db,
+        session_id,
+        incoming_reviewers=incoming_reviewers,
+        incoming_reviewees=incoming_reviewees,
+    )
+    mirrored = (
+        symmetric and incoming_reviewers is not None and incoming_reviewees is None
+    )
+    if mirrored:
+        reviewees = [
+            IncomingReviewee(id=-index, email_or_identifier=row.email)
+            for index, row in enumerate(incoming_reviewers, start=1)
+        ]
+    return parse_relationship_csv(
+        content,
+        reviewers=reviewers,
+        reviewees=reviewees,
+        reviewers_uploaded=incoming_reviewers is not None,
+        reviewees_uploaded=incoming_reviewees is not None,
+        reviewees_mirrored=mirrored,
+    )
 
 
 def existing_count(db: Session, session_id: int) -> int:

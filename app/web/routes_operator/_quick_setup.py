@@ -818,31 +818,13 @@ def _check_uploads(
         elif kind == "relationships":
             reviewers = parsed.get("reviewers")
             reviewees = parsed.get("reviewees")
-            roster_reviewers, roster_reviewees = (
-                relationships_service.rosters_for_relationships(
-                    db,
-                    review_session.id,
-                    incoming_reviewers=reviewers.rows if reviewers else None,
-                    incoming_reviewees=reviewees.rows if reviewees else None,
-                )
-            )
-            # Segment 20B — under symmetric review this submit's reviewers
-            # become its reviewees, so the file is checked against them
-            # rather than the roster they will replace (Codex on #3490).
-            mirrored = symmetric and reviewers is not None and reviewees is None
-            if mirrored:
-                roster_reviewees = [
-                    relationships_service.IncomingReviewee(
-                        id=-index, email_or_identifier=row.email
-                    )
-                    for index, row in enumerate(reviewers.rows, start=1)
-                ]
-            result = relationships_service.parse_relationship_csv(
+            result = relationships_service.parse_relationship_upload(
+                db,
+                review_session.id,
                 contents[kind],
-                reviewers=roster_reviewers,
-                reviewees=roster_reviewees,
-                reviewers_uploaded=reviewers is not None,
-                reviewees_uploaded=reviewees is not None or mirrored,
+                incoming_reviewers=reviewers.rows if reviewers else None,
+                incoming_reviewees=reviewees.rows if reviewees else None,
+                symmetric=symmetric,
             )
             if result.is_blocked or any(
                 issue.severity == "error" for issue in result.issues
