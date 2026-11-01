@@ -17,8 +17,8 @@
 {%- endmacro %}
 
 {# A verified account's name (author, 2026-10-31), on Accounts and Session
-   Home's Owners card: the same pill in the body font; a missing name stays
-   a plain dash. #}
+   Home's Owners card: the same pill in the body font at the small size
+   (2026-11-01); a missing name stays a plain dash. #}
 {% macro account_name(verified, name) -%}
 {% if not name %}—{% elif verified %}<span class="pill pill-count pill-address" title="Matched to a directory account" data-directory-matched>{{ name }}</span>{% else %}{{ name }}{% endif %}
 {%- endmacro %}

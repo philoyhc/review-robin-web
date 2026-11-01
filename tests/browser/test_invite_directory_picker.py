@@ -161,3 +161,25 @@ def test_a_page_renews_the_token_once_in_45_minutes(page: Page) -> None:
     page.reload()
     page.wait_for_load_state("networkidle")
     assert len(refreshes) == 2
+
+
+def test_a_verified_name_pill_is_the_small_size(page: Page) -> None:
+    """A verified name (``account_name`` in ``_roster_address.html``) is a
+    pill at ``--fs-small``, not the body size, so it no longer stands out
+    from the address pill and the rest of the row (author, 2026-11-01).
+    The local run has no verified account, so the pill is placed in a
+    real Accounts cell with the macro's own classes."""
+    page.goto(app_url(ACCOUNTS))
+    sizes = page.evaluate(
+        """() => {
+          const cell = document.querySelector('table tbody tr td:nth-child(3)');
+          const pill = document.createElement('span');
+          pill.className = 'pill pill-count pill-address';
+          pill.textContent = 'Jane Tan';
+          cell.appendChild(pill);
+          const root = parseFloat(getComputedStyle(document.documentElement).fontSize);
+          return {pill: parseFloat(getComputedStyle(pill).fontSize), cell: parseFloat(getComputedStyle(cell).fontSize), root};
+        }"""
+    )
+    assert sizes["pill"] == sizes["root"] * 0.875
+    assert sizes["pill"] < sizes["cell"]
