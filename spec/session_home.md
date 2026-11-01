@@ -227,13 +227,13 @@ placement:
 | Tile | DOM column | Condition |
 |---|---|---|
 | Reviewers | col 1, top | always |
-| Reviewees | col 1, bottom | always |
+| Reviewees | col 1, bottom | always, except under `symmetric_review` (the Reviewers file carries the roster) |
 | Relationships | col 2, top | always |
 | Observers | col 2, second | `observers_enabled` |
 | Session settings | col 2, third | always |
 | Zip all | col 2, bottom | always |
 
-The Observers tile is gated on `review_session.observers_enabled` — when the toggle is off the right column collapses to Relationships → Session settings → Zip all. The tile greys out its Download button when observer count is 0. The `GET /operator/sessions/{id}/export/observers.csv` route emits a `session.observers_extracted` audit event. The Zip-all bundle (`build_setup_bundle`) includes `{code}_observers.csv` as a member only when `observers_enabled`.
+The Observers tile is gated on `review_session.observers_enabled` — when the toggle is off the right column collapses to Relationships → Session settings → Zip all. The tile greys out its Download button when observer count is 0. The `GET /operator/sessions/{id}/export/observers.csv` route emits a `session.observers_extracted` audit event. The Zip-all bundle (`build_setup_bundle`) includes `{code}_observers.csv` as a member only when `observers_enabled`. Under `symmetric_review` the Reviewees tile and the bundle's Reviewees member are absent (`spec/extract_data.md`).
 
 **This card is setup-side only.** Its Zip-all bundle carries the four
 setup CSVs and nothing else, exported as `{code}_setup.zip`. The
@@ -439,6 +439,16 @@ no sub-card, `.card` or `.bottom-grid`; Owners is a card of its own
   guard against orphaning data. Such a chip is a fixed switch
   (`.tag-chip.is-fixed`, `spec/ui_elements.md` §9): solid, with no edge
   or pointer and a lock glyph.
+- **Rosters** (`#config-symmetric-review`, a `role="group"` labeled
+  "Rosters") — one chip, **Symmetric review** (`symmetric_review`), in
+  the same chip style: the Reviewers roster is also the Reviewees roster
+  (`spec/architecture.md`, "Symmetric review"). It turns **on only while
+  both rosters are empty**: once either has a row and the mode is off,
+  the edit-mode checkbox renders disabled and the chip `is-fixed`, titled
+  "The rosters have rows, so symmetric review stays off." **Off is always
+  allowed**, and leaves two ordinary rosters. It is a group of its own, not
+  one of the optional tabs, since it adds no tab. The same gate as
+  the other two chips (`/config` refuses a non-editable session) applies.
 
 **Edit affordance behavior:**
 
@@ -532,7 +542,10 @@ level with it above the Danger Zone. It
 renders five wired slots — Reviewers, Reviewees, Relationships,
 Observers, Session settings — whatever the session's feature toggles
 say; an upload that gives Observers or Relationships rows turns that
-tab on. The functional spec is
+tab on. Under `symmetric_review` the Reviewees slot is **greyed out**: its
+file input is disabled and it states the reason ("Symmetric review:
+reviewees are the reviewers. Upload the Reviewers roster.",
+`spec/quick_setup_card_spec.md`). The functional spec is
 `spec/quick_setup_card_spec.md`.
 
 Layout: a 2-column grid — Reviewers

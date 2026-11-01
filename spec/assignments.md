@@ -555,7 +555,15 @@ that stops being a self-review comes back on unless either side is
 inactive, and a row that becomes one is switched off when its
 instrument's `self_reviews_active` is off. A manual exclusion on a row that stops
 being a self-review is therefore not kept, as Generate does not keep
-one either. When the recompute changes any `include`, it writes
+one either. **Under `symmetric_review`** every person is also their own reviewee,
+so each can be paired with themselves, and each instrument's Self review
+toggle (`self_reviews_active`) decides that pair; nothing else is added. The
+reconcile (`symmetric_review.sync_reviewees_from_reviewers`) runs the
+recompute itself, after the mirror is flushed. A reviewer email edit leaves
+the recompute to it (`reviewers.update_reviewer`, a merge import) because
+run between the reviewer's change and the reviewee's, the pair would read as two
+people, and an operator's exclusion of that self-review would be re-included.
+It is kept across the correction. When the recompute changes any `include`, it writes
 `assignments.include_reconciled` with the counts. Every downstream reader (extracts,
 audit counters, the in-app `Assignments`-page status
 blocks, the `set_instrument_self_reviews_active` toggle

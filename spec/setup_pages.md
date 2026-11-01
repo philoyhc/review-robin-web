@@ -1401,6 +1401,16 @@ CSV header copy lists `ReviewerName`, `ReviewerEmail` required;
 `ProfileLink`, `ReviewerTag1..3`, `Status` optional (§3.1 in
 `spec/csv_contracts.md`).
 
+**Under `symmetric_review` this is the only roster editor.** Every write
+here is mirrored to Reviewees in the same transaction
+(`spec/architecture.md`, "Symmetric review"), so the Reviewers delete
+confirmations also name the reviewee loss: **Delete all** and a replacing
+upload add "Each is also deleted as a reviewee (symmetric review)." to their
+text, and a selection delete adds " — each also as a reviewee (symmetric
+review)" to its confirmation and counts the mirrored reviewees'
+assignments, responses and relationships in its loss gate, result and
+audit (`roster_bulk`). No extra step.
+
 ### What a reviewer sees of their own entry
 
 The setting is `sessions.reviewer_self_fields`; its keys, default and
@@ -1471,6 +1481,16 @@ suppression predicate is `is_editable`.
 
 CSV header copy lists `RevieweeName`, `RevieweeEmail` required;
 `ProfileLink`, `RevieweeTag1..3`, `Status` optional.
+
+**Under `symmetric_review` the page is read-only.** The tab stays and the
+table shows the mirrored rows, but the Unlock panel (the self-fields card,
+`Upload Reviewees`, the tag-label editor and the `Danger Zone`) and every row
+control are gone, and a banner links to Reviewers, the roster to edit. Every
+Reviewees write route (`require_reviewees_editable_session`) answers **409**
+whatever the lifecycle, and no row editor renders. The reviewee-only state
+(results acknowledgment, `/results` reachability, the directory match) still
+shows. The tag labels and the self-fields list are the reviewers' (§ *What a
+reviewee sees of their own entry*).
 
 ### What a reviewee sees of their own entry
 

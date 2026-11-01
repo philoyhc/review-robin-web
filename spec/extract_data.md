@@ -1180,6 +1180,14 @@ reviewers to download yet" and so on.
 | Session settings | `settings.csv` | `{code}_settings.csv` | `session.settings_extracted` |
 | Zip all | `bundle.zip` | `{code}_setup.zip` | `session.setup_bundle_extracted` |
 
+**Under `symmetric_review` the card carries the Reviewers roster alone.**
+The reviewees mirror the reviewers (`spec/architecture.md`, "Symmetric
+review"), so the Reviewees row is absent and `bundle.zip` has no reviewees
+member; the Zip all member count follows. The Settings CSV carries
+`session.symmetric_review`, so a re-import rebuilds the reviewees from the
+Reviewers file (`spec/csv_contracts.md` §3.1). The `reviewees.csv` route
+itself is unchanged.
+
 ## Cross-cutting behaviours
 
 **Chip-state persistence.** Every chip on the four canned-lens

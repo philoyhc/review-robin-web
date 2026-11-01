@@ -729,6 +729,50 @@ per reminder sent, plus `context.fell_back`, the number that fell back
 to `send_invitation`. The per-row Send reminder emits the same event
 with one entry.
 
+### Symmetric review
+
+With `sessions.symmetric_review` on, the Reviewers roster is the only one
+edited and the Reviewees roster mirrors it, so a session where everyone
+reviews everyone is set up from one roster. Both rosters still exist, so
+assignments, responses and results keep their reviewee rows. Setup surfaces
+are in `spec/setup_pages.md`, `spec/session_home.md` and
+`spec/quick_setup_card_spec.md`; the setting is in `spec/settings_inventory.md` §2.
+
+- **The link.** `reviewees.mirrors_reviewer_id` (`Reviewee` model; nullable
+  FK to `reviewers.id`, `ON DELETE SET NULL`; Alembic `b2f8d4a6c1e9`, with
+  `sessions.symmetric_review`) ties each mirrored reviewee to its reviewer. A
+  reviewer's address correction therefore updates the same reviewee in place,
+  keeping its `id`, assignments and responses. The reconcile deletes a gone
+  reviewer's reviewee itself; the key's rule only stops a reviewer delete that
+  bypasses it from failing on Postgres. Turning the mode off clears the links.
+- **One reconcile, not a mirror per writer.**
+  `app/services/symmetric_review.py::sync_reviewees_from_reviewers(db, session)`
+  adds, updates (fields, status, tags, directory match) and deletes reviewees to
+  match the reviewers, copies the three reviewee tag labels and
+  `reviewee_self_fields` from the reviewers', seeds the instruments' reviewee
+  display field for a slot the change newly fills (so a deleted field stays
+  deleted), clears the answers of a group a mirrored tag change redraws
+  (asking first where the caller can: `acknowledged_loss`), and then recomputes
+  the self-review classification (`spec/assignments.md`). An unlinked reviewee
+  (a copy made by a clone) is adopted by address, else dropped. A no-op while
+  the mode is off. Reviewee-only state (`results_acknowledged_at`) is kept.
+- **Callers.** Every reviewer writer calls it before it commits:
+  `reviewers.create_reviewer` / `update_reviewer`, `roster_bulk`'s status and
+  delete paths, `csv_imports`' reviewer save, merge and delete-all, the
+  reviewer label save, `session_clone`, and `participant_info.set_self_fields`.
+  A new writer of reviewers owes the call.
+- **Audit.** A flip of the setting is a `session.feature_toggled` event
+  (`changes` envelope, with the other two toggles; `reason` slot). Quick
+  Setup's flip ahead of a Settings file carries `reason="settings_import"`.
+  The mirror writes **no audit rows of its own**: its creates, updates and
+  deletes are consequences of the reviewer write, which is audited, as a
+  bulk delete's cascaded assignments are counted in its event.
+- **Reviewee writes refuse.** Every Reviewees write route answers 409 under
+  the mode (`require_reviewees_editable_session`). The two writers that
+  create reviewees (`reviewees.create_reviewee`, `csv_imports.save_reviewees`)
+  re-check the flag under the session lock (`refuse_reviewee_write`), so a
+  turn-on committed after the route's check still refuses.
+
 ### Pair-level context
 
 Per-pair context (three `tag_N` slots — e.g. "morning interview",

@@ -147,7 +147,7 @@ current upload returns no blocking errors.
 what the commit actually does. It writes nothing; it reads the database only
 to derive the preview's unique name and code. The report carries:
 
-- **Completeness** — the four required files present
+- **Completeness** — the required files present (three under `symmetric_review`)
   ([§4](#4-required-file-set)), `settings.csv`'s header exact,
   `responses.csv` carrying its 21-column header, `reviewers.csv` /
   `reviewees.csv` carrying their email column, and `relationships.csv` /
@@ -220,7 +220,7 @@ the handler resolves files by name.
 |---|---|---|
 | `*_settings.csv` | `field,value,data_type` (`session_config_io._rows.HEADER`) | All config: session metadata, instruments + fields, rule sets, email overrides, data shapes |
 | `*_reviewers.csv` | `ReviewerName,ReviewerEmail,ReviewerTag1..3,ProfileLink,Status` | Reviewer population (tag columns may carry a `.<label>` friendly-label suffix) |
-| `*_reviewees.csv` | `RevieweeName,RevieweeEmail,RevieweeTag1..3,ProfileLink,Status` | Reviewee population (tag columns may carry a `.<label>` friendly-label suffix) |
+| `*_reviewees.csv` | `RevieweeName,RevieweeEmail,RevieweeTag1..3,ProfileLink,Status` | Reviewee population (tag columns may carry a `.<label>` friendly-label suffix). Not required when `settings.csv` turns `symmetric_review` on: the reviewers are the reviewees ([§6.3](#63-import-populations-and-regenerate-assignments)) |
 | `*_responses.csv` | the 21-column responses header (`responses_extract.HEADER`) | The response data + `SavedAt`/`SubmittedAt`/`Version` |
 
 Bundles exported before `ProfileLink`'s rename still re-import: rehydrate
@@ -384,6 +384,12 @@ instrument uses imports as stored.
    dedup rules as normal import: emails are stored as typed and compared
    case-insensitively; `reviewees` keep their `email_or_identifier`
    (non-email handles allowed).
+   **Under `symmetric_review`** (applied with `settings.csv`, before any
+   roster) `reviewees.csv` is not required by the pre-flight, which resolves
+   `responses.csv`'s reviewee references against `reviewers.csv`, and is
+   left unread if present: not parsed, looked up or saved. The Reviewers save mirrors the
+   reviewees (`spec/architecture.md`, "Symmetric review"), and the result's
+   reviewee count is the reviewers'.
 
    **Directory resolution.** An extract carries no directory binding
    (the roster CSVs hold only the address as written), so a rehydrate
