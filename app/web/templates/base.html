@@ -4036,6 +4036,13 @@
         font-size: inherit;
         margin-right: 0;
       }
+      /* The verified name's pill (Accounts, Session Home's Owners card) at
+         the small size, not the body size: at 16px it stood out from the
+         13px address pill beside it and the rest of the row (author,
+         2026-11-01). */
+      body.ui-v2 span.pill.pill-address {
+        font-size: var(--fs-small);
+      }
       body.ui-v2 .pill-count,
       body.ui-v2 .pill.pill-info {
         background: var(--status-info-bg);
