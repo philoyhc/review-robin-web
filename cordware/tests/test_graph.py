@@ -271,3 +271,12 @@ def test_a_failure_carries_graph_s_error_code_and_never_its_message(body: bytes,
 )
 def test_the_fake_directory_searches_by_prefix(prefix: str, names: list[str]) -> None:
     assert [u.display_name for u in FakeDirectory().search_users(prefix)] == names
+
+
+def test_a_search_is_asked_once_even_when_throttled() -> None:
+    """A picker asks again at the next pause; a search never waits out a
+    retry (diff-reviewer, 19Z)."""
+    script = Script(Response(429, {"Retry-After": "1"}, b""), Response(200, {}, b'{"value": []}'))
+    with pytest.raises(GraphError) as raised:
+        directory(script).search_users("jan")
+    assert raised.value.kind == "throttled" and len(script.calls) == 1

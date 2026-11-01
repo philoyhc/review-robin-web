@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% from "operator/partials/_roster_address.html" import account_address %}
 {% from "operator/partials/_datetime_field.html" import datetime_field %}
+{% from "operator/partials/_directory_picker.html" import directory_picker %}
 
 {% block title %}Create New Session — Review Robin Web{% endblock %}
 
@@ -50,10 +51,15 @@
              close datetime — participant-model viewing window
              (W14 + S12). #}
           <div class="page-grid" style="margin: 0 0 var(--space-3) 0;">
-            <div>
+            {# The directory picker (19Z, invite from the directory, rung
+               21): a pick fills "Name <address>". #}
+            <div data-directory-group>
               <label for="help_contact">Help contact (optional)</label>
               <input type="text" id="help_contact" name="help_contact" maxlength="320"
+                     data-directory-field="contact" list="directory-contact-options"
+                     autocomplete="off"
                      placeholder="e.g. Prof. X &lt;x@example.edu&gt;">
+              <p class="muted directory-status" data-directory-status role="status" hidden></p>
             </div>
             <div>
               <label for="display_timezone">Timezone</label>
@@ -293,4 +299,5 @@
   {% include "operator/partials/_tag_typeahead.html" %}
   {% include "operator/partials/_schedule_ordering_js.html" %}
   {% include "operator/partials/_timezone_preview.html" %}
+  {{ directory_picker(url("/operator/directory-search")) }}
 {% endblock %}

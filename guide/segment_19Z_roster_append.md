@@ -52,11 +52,11 @@ None is shown on an empty roster. All three are mutually exclusive, none is tick
 
 **Item: invite from the directory** (author, 2026-10-31, after the accounts item). Typing an address is error-prone; the invite box should find the person.
 
-- **Search as you type.** Three or more characters ask the directory, on the admin's own token, for up to 10 people whose name, mail or sign-in name starts with them (`cordware.graph`: a `search_users` beside `find_users`, and in `FakeDirectory`); the box offers "Name · mail · UPN", and choosing one fills the address. A typed address still works, and the invite's own check still decides. Sys-admins only, as the invite is; no token answers "search unavailable"; a local run searches the fake directory.
-- **The name comes with the binding.** An invite that binds an account stores the directory's display name on the row, from the lookup outcome the server already holds, never from the form, so Accounts shows the person, as a pill, before they sign in.
+- **Search as you type.** Three or more characters ask the directory, on the admin's own token, for up to 10 people whose name, mail or sign-in name starts with them (`cordware.graph`: a `search_users` beside `find_users`, and in `FakeDirectory`); the box offers "Name · mail · UPN", and choosing one fills the address. A typed address still works, and the invite's own check still decides. Sys-admins only, as the invite is; no token answers "search unavailable"; a local run searches the fake directory. *(At build: the search also matches surname, and a pick fills "Name <address>" (Judgment calls); the roster and help-contact rungs opened it to session and workspace operators, each on their own token.)*
+- **The name comes with the binding.** An invite that binds an account stores the directory's display name on the row, from the lookup outcome the server already holds, never from the form, so Accounts shows the person, as a pill, before they sign in. *(At build, 2026-11-01: with no directory answer, the name the picker filled is kept instead, capped at the column's 255; Judgment calls.)*
 - **No signed-in-or-not pill** (author, 2026-10-31): telling an invited account from a signed-in one needs a sign-in column and a migration, which the distinction is not worth.
 - **Widened to the roster rows** (author, 2026-11-01): the Reviewers, Reviewees and Observers add and edit rows search too. Typing in the name box or the address box offers matches, and picking one fills both: the address, and the name with the directory's display name, which the operator may edit before saving. A Reviewees identifier that is not an address is still typed freely. The save's own directory check (21F) binds the row as an upload does. Relationships keeps picking from the session's rosters.
-- **And the help contact** (author, 2026-11-01): the "Help contact (optional)" box on New session and on Session Home's details card searches too, a pick filling it with the person's address; it stays free text, so anything else may still be typed.
+- **And the help contact** (author, 2026-11-01): the "Help contact (optional)" box on New session and on Session Home's details card searches too, a pick filling it with the person's address *("Name <address>", rung 21)*; it stays free text, so anything else may still be typed.
 
 ## Semantics — upsert
 
@@ -132,6 +132,14 @@ Upsert rungs (2026-10-31): rung 7 rode with the amendment (`#3438`), rung 8 `#34
   - Two rows at one address in one roster: a merge updates the lower one, and Validate's `duplicate_email` already flags the pair.
   - A bound row matched by address whose address now resolves to another account keeps its binding, where replace would rebind it.
 
+Directory item (2026-11-01): rungs 17–21 in `#3455`, `#3456`, `#3457` (with follow-up `#3458`), `#3459` and rung 21's PR. The one `diff-reviewer` read of `b8b2b69..213d71ff` found, all handled in rung 21's PR:
+- **Text that was not one address skipped the directory check** (the box became `type="text"`): `invite` now refuses `invalid_email` unless `looks_like_email`.
+- **A roster pick overwrote the other box** on an exact match: it now fills only an empty box or the picker's own last fill, so an edit row's address or a reviewee's identifier stays.
+- **The picked name could exceed the column** (`String(255)`, a Postgres error): capped.
+- **A throttled search held a worker** through `Retry-After` waits: a search is asked once.
+- Plan drift (sys-admins only, the name's source, surname, the help-contact fill) annotated; `cordware/spec/identity.md` and `spec/operator_button_audit.md` bullets widened; `_directory.py` also maps to `spec/session_home.md`.
+- Recorded, not changed: the session-scoped search grants nothing the workspace one does not (both on the caller's own token); a missing token logs a warning per search.
+
 **Walkthrough** (2026-10-31): the author's basic browser check passed; the full check is `guide/walkthrough_19Z_rosters.md` (local, then the real tenant). The close waits on it.
 
 ## PR ladder
@@ -201,7 +209,7 @@ Upsert rungs (2026-10-31): rung 7 rode with the amendment (`#3438`), rung 8 `#34
 - `spec/assignments.md` — an append leaves assignments in place and marks them stale; the table's address cells show a bound address as a pill.
 - `docs/security_posture.md` — the replace tick's description gains its Append counterpart.
 - `spec/ui_elements.md` — "Delete-confirm standard": the replace tick is no longer `required`; a key may sit on more than one box (the pairing opens its button while any is ticked); the `data-exclusive-tick` group; §9 gains the `pill-address` modifier (a pill that keeps its text's case and size: on a roster or account `<code>` address, and on a verified account's name `<span>` in the body font).
-- `spec/operator_button_audit.md` — the Upload rows open on either tick; the second shared confirm-checkbox script (`data-exclusive-tick`).
+- `spec/operator_button_audit.md` — the Upload rows open on either tick; the second shared confirm-checkbox script (`data-exclusive-tick`); the Accounts invite rows name a box taking a name or `Name <address>` (directory item).
 - `spec/extract_data.md` — the pairing's unique-key note, which a shared Upload key now qualifies.
 - `spec/validate_page.md` — the three `*.duplicate_account` soft rules (upsert amendment).
 - `spec/operations_pages.md` — the Invitations and Responses tables and their drill-ins show a bound address as a pill (pills item, widened).
@@ -212,5 +220,5 @@ Upsert rungs (2026-10-31): rung 7 rode with the amendment (`#3438`), rung 8 `#34
 - `spec/session_owners.md` — the Owners card and the New session picker show a verified owner's address as a pill, and the Owners card the name too (accounts item).
 - `spec/operator_ui_concept.md` — Accounts Management: a verified account's address and name read as pills (accounts item); the invite box searches the directory (directory item).
 - `spec/session_home.md` — the details card's help-contact box searches the directory (directory item).
-- `cordware/spec/identity.md` — `search_users` beside `find_users`: prefix search, ten results, on the caller's token (directory item).
+- `cordware/spec/identity.md` — `search_users` beside `find_users`: prefix search on name, surname, mail and sign-in name, ten results, one attempt, on the caller's token; a failure's `reason` (kind, status, Graph's `error.code`), which the log line now carries (directory item).
 - `guide/todo_master.md` — the queue entry, deleted at close.

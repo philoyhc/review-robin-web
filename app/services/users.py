@@ -68,7 +68,7 @@ from app.db.models import (
 )
 from app.logging_config import get_logger
 from app.services import audit, directory_accounts
-from app.services.email_identity import normalize_email, normalize_object_id
+from app.services.email_identity import looks_like_email, normalize_email, normalize_object_id
 
 log = get_logger(__name__)
 
@@ -1095,7 +1095,9 @@ def invite(
     directory's display name; an unbound one, ``display_name`` (the name
     the picker filled), if any."""
     email_normalised = email.strip()
-    if not email_normalised or "@" not in email_normalised:
+    # A whole address, not merely text with an "@": an address the lookup
+    # cannot read would skip the directory check (diff-reviewer, 19Z).
+    if not looks_like_email(email_normalised):
         raise UserOperationError(
             code="invalid_email",
             message=f"'{email}' is not a valid email address.",
@@ -1120,11 +1122,14 @@ def invite(
     account = _invite_account(db, email_normalised, directory() if directory else None)
     principal_id = account.object_id if account else None
     # The directory's display name (19Z, invite from the directory), so
-    # the row reads as its person: a row that exists before its first
-    # sign-in takes no name from it.
-    display_name = ((account.name.strip() or None) if account else None) or (
-        (display_name or "").strip() or None
+    # the row reads as its person; with no directory answer, the name the
+    # picker filled. Sign-in never names an existing row, so this one
+    # stays until someone edits it. The column holds 255.
+    display_name = (
+        ((account.name.strip() or None) if account else None)
+        or ((display_name or "").strip() or None)
     )
+    display_name = display_name[:255] if display_name else None
     user = User(
         email=email_normalised,
         display_name=display_name,

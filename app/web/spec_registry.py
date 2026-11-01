@@ -83,7 +83,10 @@ SPEC_COVERAGE: dict[str, tuple[str, ...]] = {
     "app.web.routes_operator._setup_reviewees": ("spec/setup_pages.md",),
     "app.web.routes_operator._setup_relationships": ("spec/setup_pages.md",),
     "app.web.routes_operator._setup_observers": ("spec/setup_pages.md",),
-    "app.web.routes_operator._directory": ("spec/setup_pages.md",),  # the roster rows' picker
+    "app.web.routes_operator._directory": (
+        "spec/setup_pages.md",  # the roster rows' picker
+        "spec/session_home.md",  # the help-contact boxes' picker
+    ),
     "app.web.routes_operator._setup_invite": ("spec/email_template_editor.md",),
     "app.web.routes_operator._settings": (
         "spec/settings_inventory.md",

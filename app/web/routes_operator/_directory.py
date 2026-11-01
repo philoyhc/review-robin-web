@@ -1,8 +1,8 @@
-"""The directory pickers' search for a session's roster rows (segment
-19Z, invite from the directory, rung 20): the Reviewers, Reviewees and
-Observers add and edit rows ask it as the operator types a name or an
-address. Asked on the operator's own delegated token; a local run asks
-the fake directory."""
+"""The directory pickers' searches (segment 19Z, invite from the
+directory): a session's roster rows ask the session's (rung 20), and the
+"Help contact (optional)" boxes on New session and Session Home ask the
+workspace's (rung 21), since New session has no session yet. Asked on the
+operator's own delegated token; a local run asks the fake directory."""
 
 from __future__ import annotations
 
@@ -24,4 +24,11 @@ def roster_directory_search(
 ) -> JSONResponse:
     """Up to ten people for a roster row's picker; the session's operators
     only (`_shared.directory_search_response`)."""
+    return directory_search_response(directory_or_none(request), q)
+
+
+@router.get("/directory-search")
+def workspace_directory_search(request: Request, q: str = "") -> JSONResponse:
+    """Up to ten people for a help-contact box's picker; any workspace
+    operator (the package's `require_operator` gate)."""
     return directory_search_response(directory_or_none(request), q)

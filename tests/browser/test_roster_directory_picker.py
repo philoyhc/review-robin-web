@@ -65,3 +65,48 @@ def test_no_match_says_so_under_the_box(page: Page, new_session: Callable[[], st
     expect(page.locator("tr [data-directory-status]").first).to_have_text(
         "No one in the directory matches that."
     )
+
+
+def test_a_help_contact_pick_fills_name_and_address(page: Page) -> None:
+    """Rung 21: one box, filled with "Name <address>", the form the
+    placeholder shows and `$help_contact` reads best in."""
+    page.goto(app_url("/operator/sessions/new"))
+    box = page.locator("#help_contact")
+    box.press_sequentially("Jane")
+    options = page.locator("#directory-contact-options option")
+    expect(options).to_have_count(1)
+    expect(options.first).to_have_attribute("value", "Jane Tan <jane.tan@example.edu>")
+    expect(options.first).to_have_attribute("label", "e0123456@example.edu")
+    box.fill("Jane Tan <jane.tan@example.edu>")
+    box.dispatch_event("input")
+    page.wait_for_timeout(500)
+    expect(box).to_have_value("Jane Tan <jane.tan@example.edu>")
+    expect(page.locator("[data-directory-group] [data-directory-status]")).to_be_hidden()
+
+
+def test_a_pick_never_overwrites_an_address_already_there(
+    page: Page, new_session: Callable[[], str]
+) -> None:
+    """An edit row's own address (or a reviewee's identifier) stays when a
+    name is picked; one the picker filled itself is replaced."""
+    page.goto(app_url(f"/operator/sessions/{new_session()}/reviewees?add=1"))
+    name = page.locator('tr input[name="name"][data-directory-field]')
+    address = page.locator('tr input[name="email_or_identifier"][data-directory-field]')
+    address.fill("ANON-042")
+
+    name.press_sequentially("Jane")
+    expect(page.locator("#directory-name-options option")).to_have_count(1)
+    name.fill("Jane Tan")
+    name.dispatch_event("input")
+    expect(address).to_have_value("ANON-042")
+
+    # Cleared, a pick fills it; a second pick replaces the picker's own fill.
+    address.fill("")
+    name.dispatch_event("input")
+    expect(address).to_have_value("jane.tan@example.edu")
+    name.fill("Arun")
+    name.dispatch_event("input")
+    expect(page.locator("#directory-name-options option").first).to_have_attribute("value", "Arun Kumar")
+    name.fill("Arun Kumar")
+    name.dispatch_event("input")
+    expect(address).to_have_value("arun.kumar@example.edu")

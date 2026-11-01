@@ -75,3 +75,21 @@ def test_the_add_row_s_boxes_carry_the_picker(
     assert f"/operator/sessions/{review_session.public_id}/directory-search" in page
     # Not drawn when no row is being edited.
     assert "directory-name-options" not in client.get(f"/operator/sessions/{review_session.public_id}/{roster}").text
+
+
+def test_any_workspace_operator_finds_people_for_a_help_contact(client: TestClient, fake: None) -> None:
+    """New session has no session yet, so its picker asks the workspace's
+    search (rung 21)."""
+    found = client.get("/operator/directory-search", params={"q": "arun"})
+    assert found.status_code == 200 and found.headers["cache-control"] == "no-store"
+    assert [p["address"] for p in found.json()["people"]] == ["arun.kumar@example.edu"]
+
+
+def test_both_help_contact_boxes_carry_the_picker(client: TestClient, db: Session) -> None:
+    review_session = _session(client, db, "dirs-help")
+    for page in (client.get("/operator/sessions/new").text,
+                 client.get(f"/operator/sessions/{review_session.public_id}").text):
+        assert 'name="help_contact"' in page
+        assert 'data-directory-field="contact" list="directory-contact-options"' in page
+        assert 'id="directory-contact-options"' in page
+        assert "/operator/directory-search" in page
