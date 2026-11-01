@@ -48,3 +48,21 @@ def test_too_short_offers_nothing_and_no_match_says_so(page: Page) -> None:
     expect(page.locator("#invite-directory-options option")).to_have_count(1)
     page.click("[data-invite-cancel]")
     expect(page.locator("#invite-directory-options option")).to_have_count(0)
+
+
+def test_an_answer_for_old_text_is_dropped(page: Page) -> None:
+    """A slow answer arriving after the box was shortened fills nothing."""
+    page.goto(app_url(ACCOUNTS))
+    release: list = []
+    page.route("**/directory-search*", lambda route: release.append(route))
+    box = page.locator("#invite-email")
+    box.press_sequentially("Jane")
+    page.wait_for_timeout(500)
+    assert release, "the search was asked"
+    box.fill("ja")
+    box.dispatch_event("input")
+    page.wait_for_timeout(400)
+    release[0].continue_()
+    page.wait_for_timeout(500)
+    expect(page.locator("#invite-directory-options option")).to_have_count(0)
+    expect(page.locator("[data-directory-status]")).to_be_hidden()

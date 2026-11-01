@@ -204,6 +204,9 @@
             });
         }
         email.addEventListener("input", function () {
+          // Any edit retires an answer still on its way, so it cannot
+          // fill the list for text no longer in the box.
+          asked++;
           clearTimeout(timer);
           timer = setTimeout(search, 300);
         });
