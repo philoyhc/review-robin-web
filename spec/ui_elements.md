@@ -253,7 +253,7 @@ to CSS classes.
 > against a JS-off submit — **wherever the gate owns its form**: e.g.
 > the `Danger Zone`'s `delete-all` and the Upload card's
 > `replace-roster` on every roster page, Session Home's
-> `delete-data` / `delete-session`, and Settings' `clear-settings`.
+> `delete-data` / `delete-session`.
 >
 > **It is not `required` where the gate shares a form with
 > non-destructive submits**, and that is forced rather than an
@@ -898,7 +898,7 @@ One row per primitive. Colours and spacing come from tokens throughout.
 
 | Class | Notes |
 |---|---|
-| `.page-grid` | Equal-height two-column grid (`1fr 1fr`, `align-items: stretch`, 20px gap), collapsing to one column at 800px or narrower. Its callers pair fields more often than cards: field pairs inside Session Home's details card, on the Create page and in Operator Settings' SMTP form, the audit log's two-column filter strip, and the Rehydrate page's cards. Accounts Management's Invite by email and Accounts Overview cards are the card-pair caller: equal height is the intent, so the shorter card stretches. It has no placement classes: children fill the grid in source order. `.bottom-grid` is preferred for a new pairing of cards (see below). |
+| `.page-grid` | Equal-height two-column grid (`1fr 1fr`, `align-items: stretch`, 20px gap), collapsing to one column at 800px or narrower. Its callers pair fields more often than cards: field pairs inside Session Home's details card, on the Create page, the audit log's two-column filter strip, and the Rehydrate page's cards. Accounts Management's Invite by email and Accounts Overview cards are the card-pair caller: equal height is the intent, so the shorter card stretches. It has no placement classes: children fill the grid in source order. `.bottom-grid` is preferred for a new pairing of cards (see below). |
 | `.card-columns` | Two independent column stacks: a `1fr 1fr` grid at `align-items: start` with a 20px gap, whose children are *columns* that each stack their own cards, so a card growing in one column moves only what sits below it there. Children take `min-width: 0`, so a wide table or a long unbroken string cannot push a column past its half. It does not collapse at narrow widths. Callers: the Instruments page's guidance and Session status pair, and Email Template. |
 | `.bottom-grid` + `.bottom-left` | Two-column grid at `align-items: start`, so each side keeps its natural height instead of stretching to match the taller column. `.bottom-left` is the flex column for stacking several cards on one side. At 800px or narrower it collapses to one column with a 20px `row-gap`, since `.bottom-grid .card` zeroes the cards' own margins. |
 | `.card-action-row` | A right-flushed row for a card's own action, `--space-3` above it, as the card's **last child** (or the last child of the card's form). Used by the Owners card on the Create page and on Session Home, the Invitations reviewer drill-in's Review Progress card, and Accounts' Invite by email card. **`.card-action-lead`** is a first child that takes the row's free space (`margin-right: auto`) and sits at the line's top, so the buttons stay pinned right: the invite card's role chip. Absent the lead, the row is the plain right-aligned one. **`> .btn-pair`** on the row keeps the row's 12px gap and `justify-content: flex-end`, so a narrow card wraps the pair as one unit and a split pair keeps its second button flush right. |

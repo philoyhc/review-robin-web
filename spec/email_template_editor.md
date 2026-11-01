@@ -77,8 +77,9 @@ it defaults to `invitation`; any value outside the three kinds is a
 **Left card — composer** (`.card.email-composer`, `<h2>` "*Kind*
 email"). One `<form id="setupinvite-form" method="post">` to
 `…/setup-invite`, carrying a hidden `template`, two read-only muted
-rows — **From:** "(your configured SMTP From email — see Settings)",
-linking to `/operator/settings?return_to=…`, and **To:** "(sent
+rows — **From:** "(the sender is set when email sending is switched
+on)", with no link, since who sends is not settled
+(`guide/email_and_scheduling.md`), and **To:** "(sent
 individually to each reviewer)" — and four fields in fixed order:
 
 | Field | Control | Notes |

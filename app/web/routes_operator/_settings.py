@@ -29,8 +29,8 @@ router = APIRouter()
 
 
 def _settings_redirect_url(return_to_raw: str | None) -> str:
-    """Save / Clear keep the operator on the Settings page (so they
-    can verify their changes); the ``return_to`` query param rides
+    """The timezone save keeps the operator on the Settings page (so
+    they can verify the change); the ``return_to`` query param rides
     along on the redirect so the back-link stays wired through the
     Save → reload cycle."""
     if return_to_raw:

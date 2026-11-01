@@ -1,8 +1,9 @@
 """Per-operator settings — SMTP credentials + display preferences.
 
-Segment 11E PR 4 ships the operator-level Settings page at
-``/operator/settings`` that populates the seven ``users.smtp_*``
-columns. The ``EmailSettings`` dataclass returned by
+Segment 11E PR 4 shipped a Settings-page form populating the seven
+``users.smtp_*`` columns; segment 14C Item 1 retired it, keeping the
+columns and these functions for a deployment with an SMTP relay. The
+``EmailSettings`` dataclass returned by
 ``get_email_settings`` is the single shape a send-side caller will
 consume: ``transport_for(settings)`` (Segment 11E PR 5's transport
 factory) picks the backend from it. Nothing calls it yet; the Manage

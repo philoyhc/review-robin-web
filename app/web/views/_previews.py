@@ -343,18 +343,18 @@ def resolve_email_preview_tab(key: str) -> EmailPreviewTab:
 
 
 def email_preview_from_display(user: User) -> str:
-    """Format the From-header string the preview shows, given the
-    operator's SMTP credentials.
+    """Format the From-header string the preview shows.
 
-    Reads ``smtp_username`` / ``smtp_from_display_name`` directly off
-    the User row (no decryption — the displayed header doesn't need
-    the password). When the credentials aren't configured, returns a
-    placeholder pointing at Settings so the preview surfaces the
-    missing config rather than rendering an empty header.
+    Reads the kept ``smtp_username`` / ``smtp_from_display_name`` off
+    the User row (no decryption — the header doesn't need the
+    password). No page sets them since segment 14C Item 1, so an
+    operator without them sees a placeholder saying who sends is not
+    settled yet, rather than an empty header or a pointer to a
+    Settings card that no longer exists.
     """
     username = (user.smtp_username or "").strip()
     if not username:
-        return "(SMTP From not configured — see Settings)"
+        return "(the sender is set when email sending is switched on)"
     display_name = (user.smtp_from_display_name or "").strip()
     if display_name:
         return f"{display_name} <{username}>"

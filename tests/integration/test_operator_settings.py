@@ -107,6 +107,32 @@ def test_a_blank_password_keeps_the_stored_one(client: TestClient, db: Session, 
     assert after.smtp_host == "smtp2.example.edu" and after.smtp_password_encrypted == before
 
 
+def test_a_password_is_stored_as_typed(client: TestClient, db: Session, fernet_key: str) -> None:
+    """Outer spaces are kept (findings O3); whitespace alone keeps the
+    stored password, as a blank does."""
+    client.get("/operator/sessions")
+    user = _alice_row(db)
+    _configure(db, user, plaintext_password="  spaced  ")
+    assert _secrets.decrypt_password(_alice_row(db).smtp_password_encrypted) == "  spaced  "
+    _configure(db, user, plaintext_password="   ")
+    db.expire_all()
+    assert _secrets.decrypt_password(_alice_row(db).smtp_password_encrypted) == "  spaced  "
+
+
+def test_the_same_password_records_no_change(client: TestClient, db: Session, fernet_key: str) -> None:
+    """Re-saving an unchanged password writes no audit row (findings
+    O8: Fernet salts every encryption, so ciphertexts never match)."""
+    client.get("/operator/sessions")
+    user = _alice_row(db)
+    _configure(db, user)
+    _configure(db, user)
+    events = db.execute(
+        select(AuditEvent).where(AuditEvent.event_type == "operator_email_settings.updated")
+    ).scalars().all()
+    assert len(events) == 1
+    assert "smtp_password_changed" in str(events[0].detail)
+
+
 def test_clear_wipes_everything_and_audits(client: TestClient, db: Session, fernet_key: str) -> None:
     client.get("/operator/sessions")
     user = _alice_row(db)

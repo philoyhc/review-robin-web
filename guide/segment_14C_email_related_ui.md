@@ -71,7 +71,14 @@ Done 2026-11-01 in one PR, as laddered. Decisions confirmed at build:
 - `README.md` and `docs/deployment_dev.md` described the page too and
   gained bullets; `spec/operator_ui_concept.md` never described the
   Settings page, so its bullet is waived.
-- Reads: one `diff-reviewer` read; its findings are in the PR.
+- The composer's and Previews' **From** placeholder pointed at the
+  retired card; both now say the sender is set when sending is switched
+  on. The blast-radius grep was case-sensitive and missed them, and
+  `spec/email_template_editor.md` and `spec/ui_elements.md`.
+  `docs/known_limitations.md` needed nothing (its key mention holds).
+- Reads: one `diff-reviewer` read. It found the From placeholder, two
+  dropped service tests (O3 password-as-typed, O8 same password: ported
+  to direct calls), the two missed specs, and stale comments (fixed).
 
 ### PR ladder
 
@@ -109,6 +116,8 @@ None.
 - `docs/operations_runbook.md` — `SMTP_ENCRYPTION_KEY` no longer needed by a page (Item 1).
 - `docs/deployment_dev.md` — the same, in the App Settings table (Item 1).
 - `README.md` — the Settings page's row and the SMTP-key setup paragraph (Item 1).
+- `spec/email_template_editor.md` — the composer's From row no longer points at Settings (Item 1).
+- `spec/ui_elements.md` — the retired SMTP form dropped as a `.page-grid` caller and a confirm-gate example (Item 1).
 - `guide/todo_master.md` — the 14C entry (Item 1).
 
 ## Item 2 — An "Email settings" card
