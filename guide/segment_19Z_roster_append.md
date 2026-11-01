@@ -50,6 +50,14 @@ None is shown on an empty roster. All three are mutually exclusive, none is tick
 - **Verified** reads as an account with a non-blank `external_principal_id`: one bound at invite, or one that has signed in. The Accounts table, Session Home's Owners card and New session's owners picker show a verified address as the roster pill (`_roster_address.html`, "Matched to a directory account"); others stay plain code. No migration and no backfill: an account unbound today binds itself at its first sign-in, as it does now.
 
 
+**Item: invite from the directory** (author, 2026-10-31, after the accounts item). Typing an address is error-prone; the invite box should find the person.
+
+- **Search as you type.** Three or more characters ask the directory, on the admin's own token, for up to 10 people whose name, mail or sign-in name starts with them (`cordware.graph`: a `search_users` beside `find_users`, and in `FakeDirectory`); the box offers "Name · mail · UPN", and choosing one fills the address. A typed address still works, and the invite's own check still decides. Sys-admins only, as the invite is; no token answers "search unavailable"; a local run searches the fake directory.
+- **The name comes with the binding.** An invite that binds an account stores the directory's display name on the row, from the lookup outcome the server already holds, never from the form, so Accounts shows the person, as a pill, before they sign in.
+- **No signed-in-or-not pill** (author, 2026-10-31): telling an invited account from a signed-in one needs a sign-in column and a migration, which the distinction is not worth.
+
+## Semantics — upsert
+
 - **Matching.** A row matches by its folded address; on Relationships, by its resolved pair. A new address is a new row, and an address change stays a single-row edit. A file row whose address resolves to a directory account bound on the roster updates that bound row and **keeps its stored address**, since matching and mail already follow the account. An unresolved file address, or an unbound existing row, can't be matched by account, so the row is added. The Validate warning names the pair only when both rows are bound. An unbound existing row stays unflagged until something binds it: re-uploading the roster with replace, or editing its address (Codex, `#3438`).
 - **Blank cells and absent columns keep the existing value.** A file can carry only the columns it changes; nothing is cleared by an upsert. Observers' cohort rule is a column like any other.
 - **Status** changes only where the Status column is present. Deactivating a reviewer or reviewee excludes their assignments, as the single-row edit does.
@@ -138,6 +146,10 @@ Upsert rungs (2026-10-31): rung 7 rode with the amendment (`#3438`), rung 8 `#34
 13. **Accounts: this item's plan.** Prose only.
 14. **Verify on invite.** `users.invite` takes the lookup's outcome: binds the object ID, refuses the three cases; the route hands in the directory; the invite card names a refusal. Service and route tests. Must not touch the pills.
 15. **Verified accounts as pills.** The Accounts table, Owners card and New session owners picker take the pill. Must not touch a service. *(At build, 2026-10-31: the Accounts and Owners rows are service-built, so each row shape gained a display-only `verified` field; no behavior changed.)* *(Widened the same day, author: on Accounts and Session Home's Owners card the verified account's name takes the pill too, a `<span>` in the body font, `account_name`.)*
+16. **Invite from the directory: this item's plan.** Prose only.
+17. **Scaffold.** The invite box's picker (listbox, inert), settled on the page. Must not touch a route or service.
+18. **Directory search.** `search_users` (Graph `$filter` `startswith` on `displayName`, `mail` and `userPrincipalName`, `$top=10`, `$select`; and the fake), the sys-admin endpoint, tests. Smoke-tested on Azure before rung 19.
+19. **Wire the picker; store the name.** The picker asks the endpoint; an invite that binds stores the directory display name. Tests. The cumulative `diff-reviewer` read of rungs 17–19.
 
 ## Definition of done
 
@@ -152,6 +164,7 @@ Upsert rungs (2026-10-31): rung 7 rode with the amendment (`#3438`), rung 8 `#34
 - An upsert's Status, name and tag changes behave as Semantics — upsert says, the tag change asking first (tests).
 - Validate warns, without blocking, on two active rows bound to one account in a roster (tests).
 - A bound address is a display pill in the roster, Relationships, Assignments, Invitations and Responses tables and the two drill-ins; an unbound one is plain code (tests).
+- The invite box offers directory matches after three characters and fills the address; an invite that binds stores the directory's display name (tests).
 - An invite binds a resolved address's object ID and refuses not found, ambiguous and an account already held (tests); a verified account's address is a pill on Accounts, the Owners card and the New session picker, and its name a pill on Accounts and the Owners card (tests).
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 19Z` exits 0; any warning adjudicated
@@ -166,6 +179,7 @@ Upsert rungs (2026-10-31): rung 7 rode with the amendment (`#3438`), rung 8 `#34
 - ~~Two rows on one account on append~~: refused (author, 2026-10-31).
 - ~~An invite whose lookup could not run~~: created unverified and plain, the card saying it was not checked; the person binds at first sign-in (author, 2026-10-31).
 - ~~Sign-in as verification~~: an account that has signed in counts as verified (author, 2026-10-31).
+- ~~Invite from the directory — is a search audited?~~ No (author, 2026-11-01): it reads only what any signed-in member can see, and the invite that follows is audited.
 
 ## Out of scope
 
@@ -187,7 +201,8 @@ Upsert rungs (2026-10-31): rung 7 rode with the amendment (`#3438`), rung 8 `#34
 - `spec/architecture.md` — "Audit-event detail schema": the `*.imported` counts `new` / `kept` (append) and `new` / `updated` / `unchanged` (upsert) with `context.mode`, and the per-row `*.updated` events a merge writes.
 - `guide/deferred_consolidated.md` — "Two rows in one roster bound to one account": its Validate half shipped; the entry narrows to refusing at upload (at close).
 - `spec/permissions.md` — an invite is checked against the directory: bound on a match, refused when not found, ambiguous or already held, the three codes and the "not checked" notice joining the Invite errors; a bound invite is never absorbed at sign-in (`get_or_create_user`, the absorb sentences), and the principal match is case-insensitive (accounts item).
-- `spec/settings_inventory.md` — `users.external_principal_id` can also be set by a verified invite (accounts item).
+- `spec/settings_inventory.md` — `users.external_principal_id` can also be set by a verified invite (accounts item), and `users.display_name` written by one (directory item).
 - `spec/session_owners.md` — the Owners card and the New session picker show a verified owner's address as a pill, and the Owners card the name too (accounts item).
-- `spec/operator_ui_concept.md` — Accounts Management: a verified account's address and name read as pills (accounts item).
+- `spec/operator_ui_concept.md` — Accounts Management: a verified account's address and name read as pills (accounts item); the invite box searches the directory (directory item).
+- `cordware/spec/identity.md` — `search_users` beside `find_users`: prefix search, ten results, on the caller's token (directory item).
 - `guide/todo_master.md` — the queue entry, deleted at close.
