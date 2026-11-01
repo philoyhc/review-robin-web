@@ -78,7 +78,7 @@ through them and decide each one's fate. Line counts of the live documents taken
 | Document | Lines | The question it poses at cutover |
 |---|---|---|
 | `docs/deployment_dev.md` | 415 | Resource names, env vars, CI/CD and bootstrap for the **personal** slot. Rewrite for NUS, or retire and let the NUS material own it? |
-| `docs/operations_runbook.md` | 94 | Opens *"Scoped to the current single Azure **dev** slot"*. Re-scope. |
+| `docs/operations_runbook.md` | 94 | ~~Opens *"Scoped to the current single Azure **dev** slot"*. Re-scope.~~ **Done 2026-11-01** (segment 20A): re-scoped to in-app administration, with the host's procedures in the private deployment repository. |
 | `docs/troubleshooting.md` | 76 | Opens *"for the deployed dev slot"*. Re-scope. |
 | `docs/backup_restore.md` | 107 | Opens *"Scoped to the current single Azure **dev** slot"* — and backup policy is the one of these that an institutional host may dictate rather than leave to us. |
 | `docs/cli_setup.md` | 657 | Workstation CLI setup, **made generic 2026-10-24** when the NUS runbook it accompanied moved out of this repository: its personal-slot test (B.9) is what changes at cutover. |

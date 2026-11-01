@@ -1,7 +1,7 @@
 # Segment 20A — Operator polish and documentation
 
-**Status: RESERVED — does not start until the institutional Azure
-deployment has successfully concluded** (decision 2026-09-05). The
+**Status: CLOSED 2026-11-01.** It was reserved until the institutional
+Azure deployment had successfully concluded (decision 2026-09-05). The
 runbook for that deployment is kept privately with the deployment, not
 in this repository (since 2026-10-24); "concluded"
 means the NUS host is provisioned, deployed, serving, and verified,
@@ -14,8 +14,8 @@ exist produces a guide that has to be rewritten the day it does.
 Review Robin since 2026-10-31. Retiring the personal web app no longer
 belongs in the gate: the author left that environment dormant, not
 retired (2026-10-24, `guide/post_azure_todo_checklist.md` item 2). What
-remains of "concluded" is verification, the author's call, and the
-segment starts when the author says the gate has passed.
+remains of "concluded" is verification, the author's call. **The gate
+passed 2026-11-01** (author): the web app is verified to work in Azure.
 
 *Renamed and trimmed 2026-11-01 (author):* `segment_20_…` became
 `segment_20A_…`, and the items the private Cordware repository
@@ -94,7 +94,10 @@ had already shipped under other segments; three move out; three stay.
    documents themselves (`docs/deployment_dev.md`, the dev-slot framing
    in `docs/troubleshooting.md`) is `guide/post_azure_todo_checklist.md`
    item 2's, not this item's.
-4. **Technical-support contact** — absorbed from its
+4. ~~**Technical-support contact**~~ — deferred 2026-11-01 (author):
+   the users are a whitelisted group in a citizen project, and they know
+   whom to call. Recorded in `guide/deferred_consolidated.md`, "Contact
+   and support". Absorbed from its
    `guide/todo_master.md` stub: a deployment-wide "something looks
    broken" address, distinct from the per-session help contact. It
    reuses `OPERATOR_CONTACT_EMAIL` (open question 2), shown on the chrome
@@ -103,6 +106,24 @@ had already shipped under other segments; three move out; three stay.
    The mechanism needs no host and can be built before the gate. Only
    the address waits for it, and is set in Cordware's App Settings
    (its `spec/release.md`, "Release settings").
+
+## Status
+
+Closed 2026-11-01 in one PR. Intended versus done:
+
+- **Items 1 and 2** were removed or moved to Cordware before the build (above).
+- **Item 4** was deferred (above).
+- **Item 3**, the currency pass, was done against the deployed host:
+  - `docs/known_limitations.md`: the deployment section was rewritten to the institutional host, and the dev slot's F1, public-database, plain-secret and no-log-workspace entries were struck. Its email entry now waits on the choice of sender, not on Azure.
+  - `docs/operations_runbook.md`: re-scoped. The host's procedures belong to the private repository; the in-app administration and a host-neutral health check stay. `guide/post_azure_todo_checklist.md` item 2's row for it is done.
+  - `app/web/templates/guide.html`: three passages said people are matched by "the address they sign in with". They now describe what happens: the upload binds a row to its directory account, by mail or sign-in name, and only an unbound row matches by sign-in mail (`spec/audience_and_identity_model.md`, "Identity match").
+- **Reads:** one `diff-reviewer` read. It found no blocking defect and nine smaller findings, all acted on:
+  - softened claims the public repository cannot check (the log workspace, the host's health-path exclusions, "a push deploys nothing");
+  - a Guide note that a sign-in name needs the directory at save time;
+  - the runbook's allowlist rule and Accounts Management guards stated exactly;
+  - the SMTP-key rotation note restored.
+  
+  It also saw `docs/security_posture.md` still describing the NUS host before it served, which is post-Azure item 2's.
 
 ## Open questions
 
@@ -145,7 +166,8 @@ segment builds.
 - `docs/operations_runbook.md` — currency pass: in-app administration against the deployed host (what remains, 3).
 - `app/web/templates/guide.html` — currency pass: the real
   sign-in flow (what remains, 3).
-- `spec/settings_inventory.md` — §8: `OPERATOR_CONTACT_EMAIL` also shown on the footer, the error pages and the invalid-link landing (what remains, 4).
+- `spec/settings_inventory.md` — §8: `OPERATOR_CONTACT_EMAIL` also shown on the footer, the error pages and the invalid-link landing (what remains, 4). <!-- doc-impact-waived: item 4 deferred 2026-11-01; nothing about the setting changed -->
+- `docs/README.md` — the `operations_runbook.md` and `known_limitations.md` rows match the re-scoped files (what remains, 3).
 - `guide/todo_master.md` — delete the segment's queue entry (at close).
 
 ---

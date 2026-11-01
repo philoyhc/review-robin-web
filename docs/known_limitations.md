@@ -7,40 +7,22 @@ bugs — they trace to the Segment 14A plan and
 
 ## Deployment / infrastructure
 
-The entries below describe the **personal Azure dev slot**, the only
-environment that has served the app. Its deploys have been dormant
-since 2026-06-03 (`docs/deployment_dev.md`), and it is not being
-revived (author, 2026-10-24), so the entries apply only if it ever is.
-The **NUS environment is
-provisioned but not yet serving**: a P0V3 App Service and Key Vault
-behind private endpoints, a privately provisioned Postgres (no public
-access), an Application Gateway in front with its HTTPS listener and
-certificate, Log Analytics with Application Insights, and an in-VNet
-runner. It waits on public ingress through the institution's perimeter
-(recorded privately with the deployment), and on project-side
-work. RRW already runs under the Cordware host (Segment 21, closed
-2026-10-22); the integrated release that deploys it, with its
-production workflow, has not started
-(`docs/archive/cordware_repository_strategy_v0.8.md` §5). There the F1 and public-database
-entries do not apply, and the database URL is already a Key Vault
-reference; the app's logs reach Application Insights only once
-diagnostics are pointed at it.
+Review Robin has served from the institutional Azure tenant since
+2026-10-31, mounted under the Cordware host and deployed from a private
+repository that keeps the host's procedures. The personal dev slot is
+dormant (`docs/deployment_dev.md`). Re-read 2026-11-01 (segment 20A):
+the dev slot's F1 plan, public database, plain-setting secrets and
+missing log workspace no longer describe the service, and are struck.
 
-- **Single environment.** One Azure **dev** slot. There is no
-  staging slot and no production environment; no manual-approval
-  deploy gate. When the slot is live, a push to `main` deploys
-  straight to it.
-- **F1 (free) App Service plan.** No Always On — the app
-  cold-starts, so the first request after an idle period can
-  take several seconds. Limited CPU/memory.
-- **Public database access.** Postgres is reached over public
-  access with a firewall allow-list; no VNet integration or
-  private endpoints.
-- **Secrets as plain App Settings.** `DATABASE_URL` (and later
-  `SMTP_ENCRYPTION_KEY`) live as App Service App Settings and
-  GitHub Actions secrets — no Key Vault indirection.
-- **No Application Insights resource.** Logs are structured JSON
-  and ingestible, but no APM resource is wired up yet.
+- **Single environment.** One production environment, with no staging
+  slot. A release is dispatched by hand from the private repository, and
+  production takes no push from here. (The dormant dev slot's push
+  workflow is disabled in GitHub's settings.)
+- **Production lags `main`.** It runs one imported RRW commit, so a
+  merge here reaches it only with the next import and release.
+- **No APM.** Logs are structured JSON, and no Application Insights SDK
+  is wired in, so there are no traces or per-request metrics beyond
+  what the host's platform collects.
 
 ## Authentication / access
 
@@ -57,12 +39,12 @@ diagnostics are pointed at it.
 
 ## Functional scope
 
-- **Email not yet wired — deliberately, until Azure is provisioned.**
-  Invitation / reminder email delivery is Segment 14B; today the dev
-  outbox records what *would* be sent. This is a decision
-  (2026-09-05), not a gap waiting for attention: the dispatch leg
-  needs an in-tenant sending identity that exists only once the
-  institutional host is provisioned. Meanwhile email is optional —
+- **Email not yet wired.** No invitation, reminder or confirmation is
+  delivered: the outbox records what *would* be sent, and marks
+  invitations and reminders `sent` as it does. Sending is Segment 14B,
+  and waits on the choice of sender: Microsoft Graph as the operator
+  who clicks, or as a dedicated mailbox (`guide/email_and_scheduling.md`).
+  Meanwhile email is optional —
   access is roster + sign-in, so the operator's own email pointing
   at the app URL covers invitations (the in-app Guide at `/guide`,
   "Give reviewers access"). Reminders can already be targeted — the
@@ -80,7 +62,7 @@ diagnostics are pointed at it.
   logged and audited (`session.scheduled_event_failed`) and retried on the next
   visit; scheduled activation retries a fixed number of times, then
   stops.
-  Until a clock-driven trigger lands after the Azure cutover
+  Until a clock-driven trigger lands
   (`guide/post_azure_todo_checklist.md` item 7), open the lobby or
   Session Home at or after each scheduled time.
 - **Reviewer answers are not autosaved.** The reviewer surface

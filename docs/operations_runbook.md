@@ -1,58 +1,32 @@
 # Operations runbook
 
-Day-to-day procedures for operating the deployed Review Robin Web
-service. Scoped to the current single Azure **dev** slot — there
-is no production environment yet (see `docs/known_limitations.md`).
-The slot's deploys have been dormant since 2026-06-03: its workflow is
-disabled and it serves a build from then or earlier
-(`docs/deployment_dev.md`), and it is not being revived (author,
-2026-10-24). The procedures below apply only if it ever is; the
-institutional host's are kept privately with the deployment.
+Day-to-day procedures for operating Review Robin Web. Re-scoped
+2026-11-01 (segment 20A): the service runs on the institutional Azure
+host, mounted under Cordware, and that host's procedures (deploying a
+release, restarting, App Settings and secrets, logs, re-running a
+failed release) are kept in the private repository that deploys it, not
+here. The personal dev slot is dormant; its procedures are
+`docs/deployment_dev.md`'s.
 
-The NUS environment is provisioned but not yet serving. Its deploy
-path, App Settings, cutover steps and verified state are kept privately
-with the deployment, not in this repository; nothing below applies to
-it until cutover.
-
-For the resource names, CI/CD pipeline, and first-time bootstrap,
-see `docs/deployment_dev.md`. For symptom-driven diagnosis see
+What stays here is what an administrator does **in the app**, and what
+holds on any host. For symptom-driven diagnosis of the application see
 `docs/troubleshooting.md`.
-
-## Deploying a change
-
-When the slot is live, deployment is automatic: a push to `main`
-triggers the `build → migrate → deploy` GitHub Actions workflow. There
-is no manual step. While it is dormant nothing deploys; bring it back
-with `docs/deployment_dev.md` "Resuming the dev slot". `migrate` runs `alembic upgrade head` against Azure
-Postgres; if it fails the `deploy` job is skipped, so the app is
-never served against a stale schema.
-
-To deploy without a code change (e.g. to pick up a config edit),
-use the workflow's **Run workflow** (`workflow_dispatch`) button.
-
-## Restarting the app
-
-Azure Portal → App Service `app-review-robin-web-dev` →
-**Restart**. Needed after changing an App Setting (env var) —
-App Settings are read at process start.
 
 ## Health check
 
 ```text
-GET https://<app>.azurewebsites.net/health  →  {"status": "ok"}
+GET https://<host>/reviewrobin/health  →  {"status": "ok"}
 ```
 
-`/health` is excluded from Easy Auth, so it answers without
-sign-in. A non-200 (or a timeout past the F1 cold-start window)
-means the worker is not up — check the log stream.
+Each mounted application's health path is meant to be excluded from
+Easy Auth (the host's setting), so it answers without sign-in. A non-200 means the worker is not up, or
+the application is switched off on the host.
 
-## Viewing logs
+## Logs
 
-Three streams, all described in `docs/deployment_dev.md` →
-"Viewing logs": the GitHub Actions deploy log, the App Service
-Deployment Center log, and the live Application **Log stream**.
-Application logs are structured JSON (one object per line), each stamped
-with the application that wrote it — see `cordware/logging.py`.
+Application logs are structured JSON (one object per line), each
+stamped with the application that wrote it (`cordware/logging.py`).
+Where the host collects them is the host's documentation.
 
 ## Managing the operator / sys-admin allowlist
 
@@ -60,38 +34,36 @@ Access is a **three-tier hierarchy** (Segment 18S): operator
 (`users.is_operator`) ⊂ admin (`users.is_sys_admin`) ⊂ super-admin
 (derived from the `SUPER_ADMIN_EMAILS` App Setting, never a DB column —
 `app/auth/roles.py`). The `OPERATOR_EMAILS` / `SYS_ADMIN_EMAILS` App
-Settings seed the two columns **on a user's first sign-in only**; a
-super-admin self-heals to full rights on every sign-in. The full
-first-deploy bootstrap is in `docs/deployment_dev.md` → "Operator /
-sys-admin allowlist bootstrap".
+Settings seed the two columns **only when a person's account row is
+created** at sign-in; a super-admin self-heals to full rights on every
+sign-in. Name people by their **mail address**: the host reads the mail
+claim, which can differ from the sign-in name. Someone listed after
+their row exists (they signed in, or were invited, first) is not
+promoted by the list; promote them on Accounts Management instead.
 
-**In-app management shipped (Segment 18S).** The Sys Admin → Accounts
-Management page (`/operator/sys-admin/users`) admits, revokes, promotes,
-demotes, and removes accounts (`app/services/users.py`), so revoking
-access is no longer a manual DB `UPDATE`. Guards: promote/demote require a
-super-admin actor; demote/revoke/remove refuse a super-admin *target*
-(`protected_super_admin`) and can't drop below the last-admin floor.
-Remove also refuses anyone who created a session or acted in the audit
-log (`has_history`): to take someone's access away, revoke it.
+**In-app management (Segment 18S).** The Sys Admin → Accounts Management
+page (`/operator/sys-admin/users`) invites, admits, revokes, promotes,
+demotes and removes accounts (`app/services/users.py`). Its guards:
 
-## Rotating secrets
+- nobody acts on their own row (`self_action`);
+- promoting, demoting or inviting an admin needs a super-admin, once a
+  super-admin is configured; until then any admin can;
+- a super-admin target is refused (`protected_super_admin`);
+- demote and remove keep at least one admin (`last_admin`);
+- revoke, and a demote that would take operator access, refuse while
+  the person still owns sessions (`still_owner`): clear them with
+  *Remove from all sessions* first;
+- remove refuses anyone who owns a session (`owns_sessions`), created
+  one or acted in the audit log (`has_history`). To take someone's
+  access away, revoke it.
 
-`DATABASE_URL` lives in two places that must hold identical
-values — the App Service App Setting and the GitHub Actions
-`DATABASE_URL` secret. Rotate both together, then restart the
-app. `SMTP_ENCRYPTION_KEY` is no longer needed by any page: the
-operator Settings page's SMTP cards retired (segment 14C Item 1).
-It still decrypts any SMTP password saved before then, so keep it
-set where one exists; rotating it leaves those undecryptable. It is
-an App Setting only, since no workflow reads it. There is no Key Vault indirection yet (deferred — see
-`docs/security_posture.md`).
+## Secrets the app reads
 
-## Re-running a failed deploy
-
-GitHub → **Actions** → the failed run → **Re-run failed jobs**.
-Safe for transient failures (network, a one-off Azure login
-blip). If `migrate` failed on a real schema problem, fix the
-migration and push a new commit instead — don't just re-run.
+`SMTP_ENCRYPTION_KEY` is needed by no page since segment 14C Item 1
+removed the Settings page's SMTP cards. It still decrypts any SMTP
+password saved before then, so keep it set where one exists: rotating
+it leaves those passwords undecryptable. How the host stores and
+rotates settings is the host's documentation.
 
 ## Backups and data
 
