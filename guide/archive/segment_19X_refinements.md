@@ -10,6 +10,8 @@ A standing home for refinements too small for a segment of their own
 refinement items"). Items close independently; add one per finding. The
 segment closes when the author says no more are coming.
 
+**Closed 2026-11-01 at the author's word**, after fourteen items (Items 1–13 between 2026-10-19 and 2026-10-22; Item 14 on 2026-11-01, its comma-separated list withdrawn). Each item's Status records its reads.
+
 ## Item 1 — Delete all keeps its tick when the group-clear banner shows
 
 ### Opportunity
@@ -1274,14 +1276,20 @@ None.
 
 ### Status
 
-Open. **The comma-separated list is withdrawn** (author, 2026-11-01, after the browser check): a datalist suits one entry, not several, and doing it properly needs a suggestion list of the page's own, more code than a rare group invite is worth. Its code, banner, cap and tests came out in a second PR, so the ladder became two PRs; no selection stays. That PR's own `diff-reviewer` read found the removal complete, with only plan-wording nits, fixed. The list as it shipped in `#3461`, and its read:
+**Closed 2026-11-01.** Intended: no selection after an invite, and a
+comma-separated list. Done: **no selection** (`#3461`, kept). **The list
+was withdrawn** (author, after the browser check, `#3463`): a datalist
+suits one entry, not several, and a proper multi-entry picker is more
+code than a rare group invite is worth, so its service, banner, cap and
+tests came out and the box is back to one "Name or email". A follow-up
+fix for the list's picker was never merged.
 
-One `diff-reviewer` read of `45da761..ec8fef3`; acted on in the same PR:
-- **A stray word sank the address after it** (`a@x, Arun, c@x` lost `c@x`): a no-`@` piece now joins the next only when the two read as one `Name <address>` (Semantics amended).
-- **Fifty lookups, each with its own 120 s budget**, could outrun the front end: the directory is asked about the list at once (`directory_accounts.resolve`, one budget), and only about addresses past `invite`'s cheap refusals, as a lone invite is.
-- **The picker assumed one space after a comma**, which hid matches: it keeps the spacing as typed.
-- The audit events share the request's correlation id; the specs name the list's `invite_unchecked=<n>`; the banner's cap reads `INVITE_LIST_MAX`; a duplicate inside a list is tested.
-- Recorded, not changed: the banner's counts and addresses come from the URL, so a crafted link can show a false summary (no markup: escaped, codes never echoed), as the single invite's `invite_error` banner already can.
+**Reads:** two `diff-reviewer` reads. The list's (`45da761..ec8fef3`)
+found a stray word sinking the next address, fifty separately budgeted
+lookups and a picker that assumed one space after a comma, all fixed in
+`#3461` before the withdrawal made them moot. The withdrawal's found the
+removal complete, with plan-wording nits only, fixed. `spec-writer` at
+the close: see the segment close below.
 
 ### Out of scope
 
