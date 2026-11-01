@@ -7,7 +7,9 @@ Assignments, Invitations and Responses pages were slow), segment 19R
 shipped its three recommendations as Items 1–3 and Finding 6 as Item 5
 (`guide/archive/segment_19R_optimization_and_bugfixes.md`), and 19S
 Item 3 took Finding 4. What remains is the measured record, the method
-(`tools/bench_roster_scale.py`) and the axes that turned out fine. The
+(`tools/bench_roster_scale.py`) and the axes that turned out fine. Only
+the operator pages were measured, not the reviewer or participant pages,
+and browser-side cost only in two spot checks. The
 candidates still open, and the questions still asked, are in
 `guide/deferred_consolidated.md` ("Roster-scale performance:
 candidates and questions").
@@ -296,7 +298,7 @@ building ORM objects and the unit of work flushing them.
 A single click that blocks for 75 seconds with no progress feedback is
 indistinguishable from a hang, and the operator's natural response —
 clicking again — is the worst available move. Whether a request that long
-survives the deployed front end is a question for the dev slot, not for
+survives the deployed front end was then a question for the dev slot (now for the institutional host; see the ledger entry), not for
 this container.
 
 **Re-set 2026-09-21: this stands.** At the bench — 200 × 200 full
@@ -390,8 +392,8 @@ This is the one finding in this document that is cheap, global, and
 independent of everything else: server-rendered HTML with a 1,000-row
 table is the most compressible payload there is, and the lobby's 16.5×
 is the whole page weight problem. Whether the deployed front end adds
-its own `Content-Encoding` is a dev-slot question this container cannot
-answer — one `curl -sI -H 'Accept-Encoding: gzip'` against the dev slot
+its own `Content-Encoding` was a dev-slot question in 2026-09; one
+`curl -sI -H 'Accept-Encoding: gzip'` against the institutional host now
 settles it, and if it does not, the middleware is a one-line change.
 
 ## Finding 6 — the readiness report reloaded the session once per check
@@ -566,7 +568,7 @@ was measured, not projected: the hot path was stubbed and the same
 benchmark re-run on the same fixture — state B, 1,000 × 1,000, 200,000
 assignment rows, `validated`.
 
-| page | today | R1 alone | R2 alone | R1 + R2 + R3 |
+| page | 2026-09-20 | R1 alone | R2 alone | R1 + R2 + R3 |
 |---|---|---|---|---|
 | Session Home | 14.1 s | 3.7 s | 15.2 s | **0.49 s** |
 | Assignments | 23.2 s | 1.7 s | 23.6 s | **0.52 s** |
@@ -595,7 +597,7 @@ already in the codebase and already solves the part that looks hard:
 pair count against exactly such a hash, so nothing has to remember to
 invalidate on a roster edit, a rule edit or a re-pin.
 
-One trap for whoever picks this up: *18J Rec C*'s wire-up note in
+A trap noted at the time (still true of the ledger's text): *18J Rec C*'s wire-up note in
 `guide/deferred_consolidated.md` offers to mirror "the existing
 `cached_eligibility_stamp` pattern". Those columns do not exist — Wave 5
 PR 5.2 dropped them with the library tier, as
@@ -651,9 +653,9 @@ did not get faster. The queries were never where the time was.
 **Risk.** The group-scoped contract (Segment 13C): a group-scoped
 instrument counts **once per group**, not once per member. That is what
 resists a plain `GROUP BY`, and it is where a rewrite will get it wrong.
-Land `per_reviewee_coverage` first — it is the simpler of the two — and
-keep the Python implementation next to the SQL one until a parity test
-over a fixture that includes group-scoped instruments passes on both.
+19R landed `per_reviewee_coverage` first, the simpler of the two, and
+kept the Python implementation beside the SQL one until a parity test
+over a fixture with group-scoped instruments passed on both.
 
 ### R3 — count with `count()`
 
@@ -668,8 +670,8 @@ rollup, so this is R3 measured on its own.
 semantics. `session_response_count` is the one that needs care, because
 its full form deduplicates group fan-out; the `> 0` caller does not.
 
-**Do this one first.** It is hours, not days, and it is the only one of
-the three that needs no design.
+It was taken first: hours, not days, and the only one of the three that
+needed no design.
 
 ### Secondary, in descending order
 
@@ -680,13 +682,7 @@ the three that needs no design.
    one is a click, not a page, so the bar is different: it needs progress
    feedback or a background job as much as it needs speed. *Taken
    2026-09-22 as 19S Item 3 — the insert and the self-review recompute;
-   the feedback half was not.*
-5. **Turn on compression.** One middleware line, worth 1.49 MB on the
-   lobby alone and 6–16× on every page here. Confirm first what the dev
-   slot's front end already sends (`curl -sI -H 'Accept-Encoding: gzip'`),
-   since this container cannot see it. It is the only item that helps
-   every page and every roster size at once.
-6. **Precompute the pair sort key.** Sorting the 1M-pair list drops from
-   0.87 s to 0.31 s when the normalized email is computed once per person
-   rather than once per pair. Only worth doing inside a wider engine
-   change: on its own it removes a twelfth of what R1 removes entirely.
+   the feedback followed on 2026-10-01 (Finding 4).*
+5. **Turn on compression** and 6. **Precompute the pair sort key** are
+   still open; they are carried, with their figures and triggers, in the
+   ledger entry named at the head of this document.

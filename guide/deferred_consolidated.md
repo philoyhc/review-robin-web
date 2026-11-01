@@ -546,6 +546,12 @@ the Refresh button feeling sluggish (~>1s), or a synthetic
 benchmark on a representative roster confirms the cost
 model's projection.
 
+*Re-aimed 2026-09-21:* that benchmark exists (`docs/performance.md`)
+and confirms the projection, but Rec B's lazy generator short-circuits
+once `limit` matches accumulate, which serves the preview and not the
+staleness verdict (which needs the whole set). Rec C is the one the
+benchmark argues for; this trigger stays only for the preview path.
+
 **Wire-up.** New module function in
 `app/services/rules/engine.py`; `find_sample_in_scope_reviewee`
 in `app/services/instruments/_band1.py` switches over (currently
@@ -654,38 +660,42 @@ the `newModelRefreshBand2` loop). D2 also touches
 session-level roster into the page context once instead of
 per-card. No schema change.
 
+---
+
 #### Roster-scale performance: candidates and questions (moved from the responsiveness note, 2026-11-01)
 
 > The measured record is `docs/performance.md`. These were its open
 > candidates and questions when it moved there from `guide/`; segment
-> 19R's close asked that a measured candidate not become a queue, so
-> each waits for its trigger.
+> 19R's close asked that a measured candidate not become a queue.
 
-**Candidates.**
-- **Turn on compression.** No compression middleware exists: the lobby
-  ships ~1,590 KB where gzip would send 95 KB (16.5×), the roster pages
-  6–7× (`docs/performance.md` Finding 5). One middleware line, after
-  checking what the institutional front end already sends
-  (`curl -sI -H 'Accept-Encoding: gzip'`). *Trigger:* a page measured
-  slow on the deployed host, or the header check showing no compression.
-- **Precompute the pair sort key.** Sorting the pair list drops from
-  0.87 s to 0.31 s at 1,000 × 1,000 when the normalized email is
-  computed once per person. *Trigger:* only inside a wider engine change.
-- **Progress feedback for Prepare.** The insert halved (19S Item 3); the
-  feedback half was deliberately not taken. *Trigger:* an operator
-  report of a Prepare that looks hung.
+**Ships.** Any of: compression middleware, which the lobby measured at
+~1,590 KB where gzip sends 95 KB (16.5×) and the roster pages 6–7×
+(`docs/performance.md` Finding 5); a pair sort key computed once per
+person rather than once per pair (0.87 s → 0.31 s at 1,000 × 1,000); and
+a faster Prepare (about 14 s at 200 × 200, its button already saying it
+is preparing since 2026-10-01), whose measured first step is a
+column-projection `verify_self_review_classification` (about 5 s), then
+the recompute (2.5 s).
 
-**Questions still open.**
-1. **Is the staleness verdict worth its price on every page?** It is
-   displayed on Assignments and Validate; the other pages build the card
-   to render a summary count. (19R Item 2 cached it, which took the cost
-   off most renders.)
-2. **Should the `validated` state cost less than the others?** It is the
-   state an operator sits in while deciding to Activate, and the only one
-   that runs validation inline on six pages.
-3. **What does the deployed front end do with a long Prepare POST?**
-   Prepare is about 20 s at the 200 × 200 bench; answerable now on the
-   institutional host.
+**Why deferred.** Each is measured but unneeded at the sessions in use
+(about 100 × 100, the author's ruling of 2026-09-21), and three questions
+are still open: whether the staleness verdict is worth its price on every
+page (19R Item 2 cached it, so most renders no longer pay); whether the
+`validated` state, which runs validation inline on six pages, should cost
+less than the others; and what the institutional front end does with a
+long Prepare POST.
+
+**Lift trigger.** Compression: the header check
+(`curl -sI -H 'Accept-Encoding: gzip'` against the institutional host)
+showing no compression, or a page measured slow there. The sort key:
+only inside a wider engine change. Prepare: an operator report of a
+Prepare that looks hung or times out, which also answers the long-POST
+question.
+
+**Wire-up.** Compression is one middleware line in the host
+(`cordware/main.py`) or the app; the sort key is in the rules engine's
+pair build; Prepare's verify is in `app/services/assignments/`. Each is
+its own one-PR item with a re-take on `tools/bench_roster_scale.py`.
 
 ---
 
