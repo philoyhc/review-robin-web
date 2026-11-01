@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "operator/partials/_directory_picker.html" import directory_picker %}
 {% from "operator/partials/_roster_address.html" import roster_address %}
 {% import "operator/partials/_page_guidance.html" as page_guidance %}
 
@@ -798,13 +799,13 @@
           <tr class="observer-edit-row session-row-selected row-action-target"
               id="{{ row_editor_anchor }}">
             <td></td>
-            <td><input type="text" name="display_name"
+            <td><input type="text" name="display_name" data-directory-field="name" list="directory-name-options" autocomplete="off"
                        form="observer-edit-form"
                        value="{{ edit_values.display_name }}"
                        maxlength="255" placeholder="Name (optional)"></td>
-            <td><input type="email" name="email" form="observer-edit-form"
+            <td><input type="email" name="email" data-directory-field="address" list="directory-address-options" autocomplete="off" form="observer-edit-form"
                        value="{{ edit_values.email }}" maxlength="320"
-                       placeholder="Email" required></td>
+                       placeholder="Email" required><p class="muted directory-status" data-directory-status role="status" hidden></p></td>
             <td><input type="text" name="tag_1" form="observer-edit-form"
                        value="{{ edit_values.tag_1 }}" maxlength="255"></td>
             <td>
@@ -823,13 +824,13 @@
             <tr class="observer-edit-row session-row-selected row-action-target"
                 id="observer-row-{{ observer.id }}">
               <td></td>
-              <td><input type="text" name="display_name"
+              <td><input type="text" name="display_name" data-directory-field="name" list="directory-name-options" autocomplete="off"
                          form="observer-edit-form"
                          value="{{ edit_values.display_name }}"
                          maxlength="255" placeholder="Name (optional)"></td>
-              <td><input type="email" name="email" form="observer-edit-form"
+              <td><input type="email" name="email" data-directory-field="address" list="directory-address-options" autocomplete="off" form="observer-edit-form"
                          value="{{ edit_values.email }}" maxlength="320"
-                         required></td>
+                         required><p class="muted directory-status" data-directory-status role="status" hidden></p></td>
               <td><input type="text" name="tag_1" form="observer-edit-form"
                          value="{{ edit_values.tag_1 }}" maxlength="255"></td>
               <td>
@@ -1463,4 +1464,9 @@
      route contract each card posts to — `confirm` / `confirm_replace`,
      the 400s, the missing response-loss gate and why — is unchanged
      by the move and documented at the routes. #}
+  {# The roster row's directory picker (19Z, invite from the
+     directory, rung 20): only while a row is being added or edited. #}
+  {% if edit_mode %}
+    {{ directory_picker(url("/operator/sessions/" ~ session.public_id ~ "/directory-search")) }}
+  {% endif %}
 {% endblock %}

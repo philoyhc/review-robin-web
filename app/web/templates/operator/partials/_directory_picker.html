@@ -1,0 +1,121 @@
+{# A roster row's directory picker (segment 19Z, invite from the
+   directory, rung 20). An edit row's name box carries
+   `data-directory-field="name"` and `list="directory-name-options"`; its
+   address box `data-directory-field="address"` and
+   `list="directory-address-options"`. Either box, after a pause in typing
+   and from three characters, asks `search_url`; the name box offers each
+   match's name (its address beneath), the address box its address (its
+   name, and a sign-in name that differs, beneath). Picking one fills the
+   other box from the same person; both stay editable. A name two people
+   share fills no address, since the pick cannot say which. A box's
+   `data-directory-status` sibling says when the directory cannot be
+   asked or matches no one.
+
+   Call once per page, after the rows: `directory_picker(search_url)`. #}
+{% macro directory_picker(search_url) -%}
+<datalist id="directory-name-options"></datalist>
+<datalist id="directory-address-options"></datalist>
+<script>
+  (function () {
+    var searchUrl = {{ search_url | tojson }};
+    var nameList = document.getElementById("directory-name-options");
+    var addressList = document.getElementById("directory-address-options");
+    var people = [];
+    var asked = 0;
+    var timer = null;
+
+    function rowOf(box) { return box.closest("tr") || box.parentNode; }
+    function other(box, field) {
+      return rowOf(box).querySelector('[data-directory-field="' + field + '"]');
+    }
+    function statusOf(box) {
+      return rowOf(box).querySelector("[data-directory-status]");
+    }
+    function say(box, text) {
+      var line = statusOf(box);
+      if (!line) return;
+      line.textContent = text;
+      line.hidden = !text;
+    }
+    function option(list, value, label) {
+      var o = document.createElement("option");
+      o.value = value;
+      if (label) o.label = label;
+      list.appendChild(o);
+    }
+    function fill(found) {
+      people = found;
+      nameList.textContent = "";
+      addressList.textContent = "";
+      found.forEach(function (person) {
+        var upn = person.upn && person.upn.toLowerCase() !== person.address.toLowerCase()
+          ? person.upn : "";
+        if (person.name) {
+          option(nameList, person.name, person.address);
+        }
+        option(addressList, person.address,
+               [person.name, upn].filter(Boolean).join(" · "));
+      });
+    }
+    // The person a box's value picks, if exactly one.
+    function picked(box) {
+      var value = (box.value || "").trim().toLowerCase();
+      var field = box.getAttribute("data-directory-field");
+      var hits = people.filter(function (person) {
+        return (field === "name" ? person.name : person.address).toLowerCase() === value;
+      });
+      return hits.length === 1 ? hits[0] : null;
+    }
+    function search(box) {
+      var text = (box.value || "").trim();
+      if (text.length < 3) { fill([]); say(box, ""); return; }
+      var mine = ++asked;
+      fetch(searchUrl + "?q=" + encodeURIComponent(text), {
+        credentials: "same-origin",
+        headers: { "Accept": "application/json" }
+      })
+        .then(function (response) {
+          if (!response.ok) throw new Error(String(response.status));
+          return response.json();
+        })
+        .then(function (answer) {
+          if (mine !== asked) return;
+          if (!answer.available) {
+            fill([]);
+            // The sign-in's Graph token lasts about an hour, and nothing
+            // renews it yet: signing in again does.
+            say(box, /^(no_token|unauthorized)/.test(answer.reason || "")
+              ? "Your sign-in's directory access has expired. Sign out and back in to search."
+              : "The directory can't be searched just now.");
+            return;
+          }
+          fill(answer.people);
+          say(box, answer.people.length ? "" : "No one in the directory matches that.");
+        })
+        .catch(function () {
+          if (mine !== asked) return;
+          fill([]);
+          say(box, "The directory can't be searched just now.");
+        });
+    }
+
+    document.querySelectorAll("[data-directory-field]").forEach(function (box) {
+      box.addEventListener("input", function () {
+        // Any edit retires an answer still on its way.
+        asked++;
+        clearTimeout(timer);
+        var person = picked(box);
+        if (person) {
+          // A pick: fill the other box, and ask nothing more.
+          var field = box.getAttribute("data-directory-field");
+          var target = other(box, field === "name" ? "address" : "name");
+          if (target) target.value = field === "name" ? person.address : person.name;
+          say(box, "");
+          return;
+        }
+        timer = setTimeout(function () { search(box); }, 300);
+      });
+    });
+  })();
+</script>
+{%- endmacro %}

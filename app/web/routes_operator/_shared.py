@@ -21,7 +21,7 @@ from urllib.parse import urlencode
 
 from fastapi import Depends, HTTPException, Request, UploadFile, status
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
 from sqlalchemy import select
@@ -987,6 +987,26 @@ def directory_or_none(request: Request) -> Directory | None:
         return directory_for(request)
     except GraphError:
         return None
+
+
+def directory_search_response(directory: Directory | None, q: str) -> JSONResponse:
+    """A directory picker's answer (19Z, invite from the directory): up
+    to ten people whose name, surname, mail or sign-in name starts with
+    ``q``, each with the address a pick fills (the mail, else the UPN).
+    ``available`` is false when the directory cannot be asked, and
+    ``reason`` then says why. Never cached; not audited (author,
+    2026-11-01)."""
+    found = directory_accounts.search(directory, q)
+    answer: dict[str, object] = {
+        "available": found.people is not None,
+        "people": [
+            {"name": p.name, "mail": p.mail, "upn": p.upn, "address": p.address}
+            for p in (found.people or [])
+        ],
+    }
+    if found.reason:
+        answer["reason"] = found.reason
+    return JSONResponse(answer, headers={"Cache-Control": "no-store"})
 
 
 def account_resolver(request: Request):

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "operator/partials/_directory_picker.html" import directory_picker %}
 {% from "operator/partials/_roster_address.html" import roster_address %}
 {% from "_partials/profile_value.html" import profile_value with context %}
 {% import "operator/partials/_page_guidance.html" as page_guidance %}
@@ -950,13 +951,13 @@
                is BODY, without it the attribute takes. The fragment is
                deliberate (it is what stops the page landing at the top),
                so the caret is set in script instead. #}
-            <td><input type="text" name="name" form="reviewer-edit-form"
+            <td><input type="text" name="name" data-directory-field="name" list="directory-name-options" autocomplete="off" form="reviewer-edit-form"
                        class="row-editor-first-field"
                        value="{{ edit_values.name }}" maxlength="255"
                        placeholder="Name" required></td>
-            <td><input type="email" name="email" form="reviewer-edit-form"
+            <td><input type="email" name="email" data-directory-field="address" list="directory-address-options" autocomplete="off" form="reviewer-edit-form"
                        value="{{ edit_values.email }}" maxlength="320"
-                       placeholder="Email" required></td>
+                       placeholder="Email" required><p class="muted directory-status" data-directory-status role="status" hidden></p></td>
             {% if show_profile_link %}
               <td><input type="text" name="profile_link"
                          form="reviewer-edit-form"
@@ -993,12 +994,12 @@
             <tr class="reviewer-edit-row session-row-selected row-action-target"
                 id="reviewer-row-{{ reviewer.id }}">
               <td></td>
-              <td><input type="text" name="name" form="reviewer-edit-form"
+              <td><input type="text" name="name" data-directory-field="name" list="directory-name-options" autocomplete="off" form="reviewer-edit-form"
                          value="{{ edit_values.name }}" maxlength="255"
                          required></td>
-              <td><input type="email" name="email" form="reviewer-edit-form"
+              <td><input type="email" name="email" data-directory-field="address" list="directory-address-options" autocomplete="off" form="reviewer-edit-form"
                          value="{{ edit_values.email }}" maxlength="320"
-                         required></td>
+                         required><p class="muted directory-status" data-directory-status role="status" hidden></p></td>
               {% if show_profile_link %}
                 <td><input type="text" name="profile_link"
                            form="reviewer-edit-form"
@@ -1451,5 +1452,10 @@
         render();
       })();
     </script>
+  {% endif %}
+  {# The roster row's directory picker (19Z, invite from the
+     directory, rung 20): only while a row is being added or edited. #}
+  {% if edit_mode %}
+    {{ directory_picker(url("/operator/sessions/" ~ session.public_id ~ "/directory-search")) }}
   {% endif %}
 {% endblock %}

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "operator/partials/_directory_picker.html" import directory_picker %}
 {% from "operator/partials/_roster_address.html" import roster_address %}
 {% from "_partials/profile_value.html" import profile_value with context %}
 {% import "operator/partials/_page_guidance.html" as page_guidance %}
@@ -835,15 +836,15 @@
                target, which beats the attribute. The fragment is
                deliberate (it is what stops the page landing at the top),
                so the caret is set in script instead. #}
-            <td><input type="text" name="name" form="reviewee-edit-form"
+            <td><input type="text" name="name" data-directory-field="name" list="directory-name-options" autocomplete="off" form="reviewee-edit-form"
                        class="row-editor-first-field"
                        value="{{ edit_values.name }}" maxlength="255"
                        placeholder="Name" required></td>
-            <td><input type="text" name="email_or_identifier"
+            <td><input type="text" name="email_or_identifier" data-directory-field="address" list="directory-address-options" autocomplete="off"
                        form="reviewee-edit-form"
                        value="{{ edit_values.email_or_identifier }}"
                        maxlength="320" placeholder="Email / identifier"
-                       required></td>
+                       required><p class="muted directory-status" data-directory-status role="status" hidden></p></td>
             {% if show_profile_link %}
               <td><input type="text" name="profile_link"
                          form="reviewee-edit-form"
@@ -880,13 +881,13 @@
             <tr class="reviewee-edit-row session-row-selected row-action-target"
                 id="reviewee-row-{{ reviewee.id }}">
               <td></td>
-              <td><input type="text" name="name" form="reviewee-edit-form"
+              <td><input type="text" name="name" data-directory-field="name" list="directory-name-options" autocomplete="off" form="reviewee-edit-form"
                          value="{{ edit_values.name }}" maxlength="255"
                          required></td>
-              <td><input type="text" name="email_or_identifier"
+              <td><input type="text" name="email_or_identifier" data-directory-field="address" list="directory-address-options" autocomplete="off"
                          form="reviewee-edit-form"
                          value="{{ edit_values.email_or_identifier }}"
-                         maxlength="320" required></td>
+                         maxlength="320" required><p class="muted directory-status" data-directory-status role="status" hidden></p></td>
               {% if show_profile_link %}
                 <td><input type="text" name="profile_link"
                            form="reviewee-edit-form"
@@ -1358,4 +1359,9 @@
      409. The author's rule for rows — draft and validated edit,
      the rest do not, because "the thing is over" — is a rule
      about editing, and these are edits. #}
+  {# The roster row's directory picker (19Z, invite from the
+     directory, rung 20): only while a row is being added or edited. #}
+  {% if edit_mode %}
+    {{ directory_picker(url("/operator/sessions/" ~ session.public_id ~ "/directory-search")) }}
+  {% endif %}
 {% endblock %}
