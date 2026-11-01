@@ -179,7 +179,7 @@ Upsert rungs (2026-10-31): rung 7 rode with the amendment (`#3438`), rung 8 `#34
 - ~~Two rows on one account on append~~: refused (author, 2026-10-31).
 - ~~An invite whose lookup could not run~~: created unverified and plain, the card saying it was not checked; the person binds at first sign-in (author, 2026-10-31).
 - ~~Sign-in as verification~~: an account that has signed in counts as verified (author, 2026-10-31).
-- **Invite from the directory — is a search audited?** Recommendation: no. It reads only what `User.ReadBasic.All` already lets any signed-in member see, and the invite that follows is audited. Author decides.
+- ~~Invite from the directory — is a search audited?~~ No (author, 2026-11-01): it reads only what any signed-in member can see, and the invite that follows is audited.
 
 ## Out of scope
 
