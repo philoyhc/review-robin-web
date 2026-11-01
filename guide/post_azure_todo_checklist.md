@@ -29,7 +29,13 @@ in `guide/email_and_scheduling.md` rather than on the host; items 1, 3,
 the visibility constraint's migration log, was read 2026-11-01 from the
 release that first migrated the deployed database (2026-10-31):
 `normalized 0 instrument_view_policies row(s)`, on an empty database,
-so no operator needed telling.
+so no operator needed telling. Read the same day from the institutional
+host (Cordware's records hold the names): a Premium v3 plan, **one
+instance**, Always On, and one `uvicorn` process; the gateway in front
+allows 120 s per request (raised from its 20 s default) inside App
+Service's fixed 230 s; the Postgres server sets no `lock_timeout` or
+`statement_timeout`; and the email app registration holds delegated
+Graph permissions only. Items 4, 7, 10 and 11 carry what each settles.
 
 **This is not a runbook.** It does not describe how to deploy. It
 describes what is owed *after* deploying, in an order nobody has fixed
@@ -107,9 +113,10 @@ recorded nowhere the person executing that plan would look.
 
 ## 4. The inline stylesheet: measure what a page costs on the wire, then decide
 
-**Status:** open. Blocked on a deploy. The dev slot was enough, but it
-is not being revived (author, 2026-10-24), so this now waits for the
-institutional release.
+**Status:** open. The institutional host serves (2026-10-31), so the
+measurement can be taken now, in a signed-in browser's devtools: Easy
+Auth guards every page, so the `curl` below would see only the sign-in
+redirect, and it names the dormant dev slot.
 
 **Moved here whole from `guide/archive/segment_19K_assessment_moves.md` Item 9
 on 2026-09-12**, so that Segment 19K no longer waits on a header. The
@@ -141,9 +148,10 @@ is not a separate thing. Three of the four are operator pages; `/guide`
 is "operator **and participant** documentation"
 (`app/web/routes_guide.py`), so the cost is not the operator's alone.
 
-The deployment is an **F1 free App Service plan with no Always On**
-(`docs/known_limitations.md`), so this is not a surface where bandwidth
-and cold-start latency are free.
+The dev slot this was measured against was an **F1 free App Service
+plan with no Always On** (`docs/known_limitations.md`). The institutional
+host is a Premium v3 plan with Always On (read 2026-11-01), so cold
+starts are gone; the bytes on the wire are not.
 
 ### The measurement
 
@@ -278,6 +286,12 @@ depends on what the NUS App Service plan and network allow
 Operations pages and the lobby (findings L4), which narrows the gap but
 does not close it.
 
+**What the host allows (read 2026-11-01).** Always On, one instance and
+one `uvicorn` process, so a loop inside the app (the recommendation in
+`guide/email_and_scheduling.md`) would run exactly once and never idle
+out. It still wants a lock, since a later scale-out would add a second
+process.
+
 **Do, after the cutover.** Choose the trigger the deployment supports
 and run `observe_scheduled_events` from it for every session with a
 pending anchor. **Pass `build_invite_url`**, built from the deployment's
@@ -385,6 +399,11 @@ behavior depends on either.
 
 **Why it waits here.** Which permission is possible is the NUS tenant's
 answer, not the repository's (`spec/email_infra_options.md`, Option B).
+**The tenant's answer so far (read 2026-11-01):** the app registration
+holds delegated `Mail.Send` and `User.ReadBasic.All` with tenant-wide
+consent, and **no application permission**. So a delegated send works
+today; a shared-mailbox send waits on the ask in
+`guide/email_and_scheduling.md`, choice 2.
 
 **Do, with that answer.** Implement the stub to the permission the
 tenant grants, and make its docstring and the spec say the same thing.
@@ -414,6 +433,20 @@ request timeout it must sit well inside. So does where it is set — per
 role (`ALTER ROLE … SET lock_timeout`), per connection (`connect_args`
 in `app/db/session.py`), or per lock (`SET LOCAL` before the
 `FOR NO KEY UPDATE`).
+
+**What the deployment says (read 2026-11-01).**
+- **The request ceiling.** The gateway in front allows **120 s** per
+  request (raised that day from its 20 s default), inside App Service's
+  fixed 230 s.
+- **No server-wide bound.** The Postgres server leaves `lock_timeout`,
+  `statement_timeout` and `idle_in_transaction_session_timeout` at `0`,
+  so nothing bounds a lock wait unless the app sets it.
+- **Concurrency.** One instance runs one `uvicorn` process, and the
+  server's connection limit is far above what one process opens.
+
+So the bound is the app's to set, and it should be a few seconds, far
+inside 120 s: a request that waits longer for a session lock is better
+answered with the 409 page than left hanging.
 
 **Do, with the deployment.** Choose the value and where it is set.
 Decide what a timeout answers: today Postgres's `LockNotAvailable`
