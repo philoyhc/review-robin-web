@@ -756,14 +756,23 @@ are in `spec/setup_pages.md`, `spec/session_home.md` and
   the self-review classification (`spec/assignments.md`). An unlinked reviewee
   (a copy made by a clone) is adopted by address, else dropped. A no-op while
   the mode is off. Reviewee-only state (`results_acknowledged_at`) is kept.
-- **Callers.** Every reviewer writer calls it before it commits:
-  `reviewers.create_reviewer` / `update_reviewer`, `roster_bulk`'s status and
-  delete paths, `csv_imports`' reviewer save, merge and delete-all, the
-  reviewer label save, `session_clone`, and `participant_info.set_self_fields`.
+- **Callers.** Every writer of reviewers, or of what the mirror copies from
+  them, calls it before it commits:
+  - the services `reviewers.create_reviewer` / `update_reviewer`,
+    `roster_bulk`'s status and delete paths, `csv_imports`' reviewer save,
+    merge and delete-all, `session_clone`, `participant_info.set_self_fields`,
+    and the Settings CSV apply (`session_config_io.apply_session_config`,
+    whose reviewer self-fields and labels reach the mirror);
+  - the reviewer tag-label save, a route helper (`_shared._save_field_labels`).
+
   A new writer of reviewers owes the call.
-- **Audit.** A flip of the setting is a `session.feature_toggled` event
-  (`changes` envelope, with the other two toggles; `reason` slot). Quick
-  Setup's flip ahead of a Settings file carries `reason="settings_import"`.
+- **Audit.** A flip on Session Home (`sessions.update_session`) is a
+  `session.feature_toggled` event (`changes` envelope, with the other two
+  toggles; `reason` slot). Quick Setup's flip ahead of a Settings file carries
+  `reason="settings_import"`. As with the other two toggles, two paths set it
+  without that event:
+  - **Create:** `session.created` carries the new session.
+  - **A Settings CSV applied elsewhere** (Session Home's import, Rehydrate): it writes the flag directly.
   The mirror writes **no audit rows of its own**: its creates, updates and
   deletes are consequences of the reviewer write, which is audited, as a
   bulk delete's cascaded assignments are counted in its event.

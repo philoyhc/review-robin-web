@@ -1184,8 +1184,9 @@ reviewers to download yet" and so on.
 The reviewees mirror the reviewers (`spec/architecture.md`, "Symmetric
 review"), so the Reviewees row is absent and `bundle.zip` has no reviewees
 member; the Zip all member count follows. The Settings CSV carries
-`session.symmetric_review`, so a re-import rebuilds the reviewees from the
-Reviewers file (`spec/csv_contracts.md` §3.1). The `reviewees.csv` route
+`session.symmetric_review`, so a re-import into a session where the mode
+ends up on (both rosters empty, or the mode already on) rebuilds the
+reviewees from the Reviewers file (`spec/csv_contracts.md` §3.1, §3.3). The `reviewees.csv` route
 itself is unchanged.
 
 ## Cross-cutting behaviours

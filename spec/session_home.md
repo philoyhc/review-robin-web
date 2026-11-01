@@ -235,7 +235,7 @@ placement:
 
 The Observers tile is gated on `review_session.observers_enabled` — when the toggle is off the right column collapses to Relationships → Session settings → Zip all. The tile greys out its Download button when observer count is 0. The `GET /operator/sessions/{id}/export/observers.csv` route emits a `session.observers_extracted` audit event. The Zip-all bundle (`build_setup_bundle`) includes `{code}_observers.csv` as a member only when `observers_enabled`. Under `symmetric_review` the Reviewees tile and the bundle's Reviewees member are absent (`spec/extract_data.md`).
 
-**This card is setup-side only.** Its Zip-all bundle carries the four
+**This card is setup-side only.** Its Zip-all bundle carries the
 setup CSVs and nothing else, exported as `{code}_setup.zip`. The
 response-side downloads — the unified Responses CSV plus the Extract
 data cards' files — belong to a separate bundle at

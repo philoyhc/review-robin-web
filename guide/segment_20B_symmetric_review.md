@@ -137,6 +137,14 @@ A peer review where every participant both gives and receives feedback is a comm
   - **Create:** creating a session with the box ticked writes no toggle event, since `session.created` carries the session.
   - **The `reviewees.csv` export route:** left open; it serves the mirror.
   - **Unchanged:** the Reviewees tab stays plain (open question 2).
+- **Rung 5's cold read (`diff-reviewer`, its own read, since the rung reopens `app/` with the Guide paragraph).** It found seven spec-accuracy findings and no errors in the Guide paragraph. All seven are fixed in the rung:
+  - the Callers list missed the Settings CSV apply;
+  - the Audit bullet claimed every flip is an event;
+  - Rehydrate's "left unread" overstated it, since the readability scan still reads the file;
+  - three specs outside Doc impact (`spec/permissions.md`, `spec/roundtrip_coverage.md`, and `spec/rehydrate.md`'s restore table) named only the old toggles;
+  - the Extract Data re-import claim needed its condition;
+  - a stale "four setup CSVs";
+  - the inventory's §10 lock sentence.
 
 ## Blast radius (measured)
 
@@ -194,7 +202,9 @@ Taken 2026-11-01 at `2accb87`:
 - `spec/operator_ui_concept.md` — the Add new session checkbox (rung 1).
 - `spec/extract_data.md` — the setup export without the reviewees file (rung 4).
 - `spec/assignments.md` — self-review under the mode: the instrument's toggle decides (rung 5).
-- `spec/rehydrate.md` — §6.3: `reviewees.csv` left unread under the mode (rung 5; found by `spec-writer`).
+- `spec/rehydrate.md` — §4, §6.3 and the restore table: `reviewees.csv` optional and not imported under the mode (rung 5; found by `spec-writer`).
+- `spec/permissions.md` — the `require_reviewees_editable_session` gate (rung 5; found by the cold read).
+- `spec/roundtrip_coverage.md` — the `symmetric_review` row (rung 5; found by the cold read).
 - `spec/architecture.md` — `reviewees.mirrors_reviewer_id`, the reconcile, and the audit event's `EVENT_SCHEMAS` entry (rungs 2, 3).
 - `app/web/templates/guide.html` — a paragraph on symmetric review (rung 5).
 - `guide/todo_master.md` — the queue entry (at close).
