@@ -62,10 +62,11 @@ with the page.
   Approval chain, Applications, Appeals), each set its own. A detail page
   adds a back link instead of a breadcrumb, and marks the tab of the list
   it belongs to (`aria-current="true"`; author, 2026-10-29).
-- **The favicon** is the accent behind a white glyph, as inline SVG: a
-  house for Residential Operations, a lined notepad for Support Logs
-  (author, 2026-10-27, from the design canvas). The shared chrome picks it
-  by application; one icon serves both themes.
+- **The favicon** is the accent behind a white glyph that runs off the
+  bottom-right of the tile, as inline SVG: a house for Residential
+  Operations, a ruled log sheet for Support Logs (author, 2026-11-01, in the
+  style of RRW's robin; the 2026-10-27 outline icons before them). The
+  shared chrome picks it by application; one icon serves both themes.
 
 ## 3. Color
 
