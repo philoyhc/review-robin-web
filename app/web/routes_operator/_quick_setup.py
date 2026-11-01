@@ -651,6 +651,18 @@ async def _run_quick_setup_contents(
     first = next(iter(contents))
     if not lifecycle.is_editable(review_session):
         return _SlotRefusal(first, _SlotFailure("lifecycle"))
+    # Segment 20B — under symmetric review the reviewees mirror the
+    # reviewers, so a Reviewees file is refused when the mode will be on
+    # once this submit's Settings file (if any) applies.
+    settings_symmetric = (
+        session_config_io.settings_symmetric_review(contents["settings"])
+        if "settings" in contents
+        else None
+    )
+    if "reviewees" in contents and sessions.symmetric_review_after_settings(
+        db, review_session, settings_symmetric
+    ):
+        return _SlotRefusal("reviewees", _SlotFailure("symmetric_reviewees"))
 
     # In the threadpool too: a Settings file with a short row is
     # validated under the session lock (findings S3).
@@ -681,6 +693,16 @@ async def _run_quick_setup_contents(
     staged = list(staged)
     for i, check in zip(rosters, checks, strict=True):
         staged[i] = replace(staged[i], directory=check)
+    # Segment 20B — Settings save last (``SLOT_ORDER``), so a file turning
+    # symmetric review on beside empty rosters turns it on first, and this
+    # submit's reviewers mirror. A refused unit rolls it back with the rest.
+    # One correlation id for the turn-on and the save, which group as one
+    # request.
+    correlation_id = correlation_id or request_correlation_id()
+    if settings_symmetric is True:
+        sessions.turn_symmetric_review_on_for_import(
+            db, review_session, user=user, correlation_id=correlation_id
+        )
     try:
         await run_in_threadpool(
             _save_uploads,

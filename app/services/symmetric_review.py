@@ -98,16 +98,19 @@ def sync_reviewees_from_reviewers(
     # An unlinked reviewee can only come from a copy made outside the
     # reconcile (a clone or a rehydrate of both rosters): adopt it for the
     # reviewer with its address, so its assignments survive, else drop it.
-    unlinked = {
-        email_identity.normalize_email(r.email_or_identifier): r
-        for r in reviewees
-        if r.mirrors_reviewer_id is None
-    }
+    unlinked: dict[str, list[Reviewee]] = {}
+    for r in reviewees:
+        if r.mirrors_reviewer_id is None:
+            unlinked.setdefault(email_identity.normalize_email(r.email_or_identifier), []).append(r)
     changed = False
     for reviewer in reviewers:
         reviewee = by_link.pop(reviewer.id, None)
         if reviewee is None:
-            reviewee = unlinked.pop(email_identity.normalize_email(reviewer.email), None)
+            # Adopt the first unlinked reviewee with the address; a
+            # duplicate stays in ``unlinked`` and is dropped below.
+            candidates = unlinked.get(email_identity.normalize_email(reviewer.email))
+            if candidates:
+                reviewee = candidates.pop(0)
         if reviewee is None:
             reviewee = Reviewee(session_id=review_session.id)
             db.add(reviewee)
@@ -119,7 +122,7 @@ def sync_reviewees_from_reviewers(
             if getattr(reviewee, reviewee_field) != value:
                 setattr(reviewee, reviewee_field, value)
                 changed = True
-    for gone in [*by_link.values(), *unlinked.values()]:
+    for gone in [*by_link.values(), *(r for rows in unlinked.values() for r in rows)]:
         db.delete(gone)
         changed = True
     _mirror_labels(db, review_session)
@@ -133,6 +136,11 @@ def sync_reviewees_from_reviewers(
     db.flush()
     if not changed:
         return
+    # As a Reviewees upload does: a mirrored profile link or tag seeds
+    # its reviewee display field on the session's instruments.
+    from app.services.instruments import seed_display_fields_from_reviewees
+
+    seed_display_fields_from_reviewees(db, review_session)
     responses_service.clear_changed_groups(
         db,
         session_id=review_session.id,

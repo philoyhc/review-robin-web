@@ -123,15 +123,20 @@ def build_extract_data_context(
             public_id=review_session.public_id,
             code=code,
         ),
-        _entity_row(
-            key="reviewees",
-            label="Reviewees",
-            noun="reviewee",
-            count=reviewee_count,
-            public_id=review_session.public_id,
-            code=code,
-        ),
     ]
+    # Segment 20B — under symmetric review the reviewees mirror the
+    # reviewers, so the setup files carry the Reviewers roster alone.
+    if not review_session.symmetric_review:
+        col_one.append(
+            _entity_row(
+                key="reviewees",
+                label="Reviewees",
+                noun="reviewee",
+                count=reviewee_count,
+                public_id=review_session.public_id,
+                code=code,
+            )
+        )
     col_two = [
         _entity_row(
             key="relationships",
@@ -171,7 +176,8 @@ def build_extract_data_context(
     rows = col_one + col_two
 
     bundle_member_count = (
-        5 if review_session.observers_enabled else 4
+        (5 if review_session.observers_enabled else 4)
+        - (1 if review_session.symmetric_review else 0)
     )
     bundle = ExtractDataRow(
         key="bundle",

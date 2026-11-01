@@ -59,6 +59,33 @@ from app.services.session_config_io._apply_shared import (  # noqa: F401
 from app.services.session_config_io._rows import HEADER, Row
 from app.services.session_config_io._serialize import serialize_session_config
 
+
+def settings_symmetric_review(content: bytes) -> bool | None:
+    """What a Settings CSV sets symmetric review to (segment 20B):
+    ``True`` / ``False``, or ``None`` when the file has no such row.
+
+    Read before the file is applied, so Quick Setup can refuse a
+    Reviewees file beside it and turn the mode on before the rosters
+    save. Unreadable content reads as ``None``; the file's own checks
+    report it."""
+    import csv
+    import io
+
+    try:
+        text = content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return None
+    try:
+        for row in csv.reader(io.StringIO(text)):
+            if len(row) >= 2 and row[0].strip() == "session.symmetric_review":
+                return row[1].strip().lower() in {"true", "1", "yes"}
+    except csv.Error:
+        # A malformed file (a cell past the field limit, findings Dc8):
+        # its own parse check refuses it.
+        return None
+    return None
+    return False
+
 __all__ = [
     "ApplyError",
     "ApplyResult",
@@ -68,6 +95,7 @@ __all__ = [
     "apply_session_config",
     "instruments_deleted_by",
     "serialize_session_config",
+    "settings_symmetric_review",
     "split_rows",
     "validate_session_config",
 ]

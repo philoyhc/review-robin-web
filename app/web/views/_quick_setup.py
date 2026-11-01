@@ -552,6 +552,12 @@ def _quick_setup_error_message(
             "Tick the replacement-confirmation box just above "
             "Submit, then submit again."
         )
+    if reason == "symmetric_reviewees":
+        return (
+            "Nothing was imported. Under symmetric review the reviewees are "
+            "the reviewers: upload the Reviewers roster and leave the "
+            "Reviewees slot empty."
+        )
     if reason == "refused":
         return (
             f"The {label.lower()} file was refused, so none of the files "

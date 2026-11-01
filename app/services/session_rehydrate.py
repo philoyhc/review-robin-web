@@ -619,8 +619,14 @@ def rehydrate_session(
         reviewers_parse = csv_imports.parse_reviewer_csv(resolved["reviewers"])
         if reviewers_parse.is_blocked:
             raise RehydrateError("reviewers.csv failed validation.")
-        reviewees_parse = csv_imports.parse_reviewee_csv(resolved["reviewees"])
-        if reviewees_parse.is_blocked:
+        # Segment 20B — under symmetric review (applied with the settings,
+        # before any roster) the reviewers make the reviewees, so the
+        # extract's reviewees.csv is left unread: not parsed, not looked up.
+        symmetric = review_session.symmetric_review
+        reviewees_parse = (
+            None if symmetric else csv_imports.parse_reviewee_csv(resolved["reviewees"])
+        )
+        if reviewees_parse is not None and reviewees_parse.is_blocked:
             raise RehydrateError("reviewees.csv failed validation.")
         observers_parse = None
         if "observers" in resolved:
@@ -631,7 +637,7 @@ def rehydrate_session(
             directory,
             [
                 [row.email for row in reviewers_parse.rows],
-                [row.email_or_identifier for row in reviewees_parse.rows],
+                [row.email_or_identifier for row in reviewees_parse.rows] if reviewees_parse else [],
                 [row.email for row in observers_parse.rows] if observers_parse else [],
             ],
         )
@@ -646,16 +652,17 @@ def rehydrate_session(
             directory=reviewers_check,
         )
 
-        csv_imports.save_reviewees(
-            db,
-            session=review_session,
-            user=user,
-            rows=reviewees_parse.rows,
-            filename="reviewees.csv",
-            correlation_id=correlation_id or "",
-            field_labels_captured=reviewees_parse.field_labels,
-            directory=reviewees_check,
-        )
+        if reviewees_parse is not None:
+            csv_imports.save_reviewees(
+                db,
+                session=review_session,
+                user=user,
+                rows=reviewees_parse.rows,
+                filename="reviewees.csv",
+                correlation_id=correlation_id or "",
+                field_labels_captured=reviewees_parse.field_labels,
+                directory=reviewees_check,
+            )
 
         if observers_parse is not None:
             csv_imports.save_observers(
@@ -719,7 +726,11 @@ def rehydrate_session(
 
         counts = {
             "reviewers": len(reviewers_parse.rows),
-            "reviewees": len(reviewees_parse.rows),
+            "reviewees": (
+                len(reviewees_parse.rows)
+                if reviewees_parse is not None
+                else len(reviewers_parse.rows)
+            ),
             "responses": load_result.responses,
             "responses_dropped": load_result.dropped_count,
         }

@@ -648,6 +648,47 @@ def has_roster_rows(db: Session, session_id: int) -> bool:
     return False
 
 
+def symmetric_review_after_settings(
+    db: Session, review_session: ReviewSession, settings_value: bool | None
+) -> bool:
+    """Whether symmetric review is on once a Settings file carrying
+    ``settings_value`` (``None``: no such row) applies (20B): the import
+    leaves it off beside roster rows, as the toggle does."""
+    if settings_value is None:
+        return review_session.symmetric_review
+    if settings_value is False:
+        return False
+    return review_session.symmetric_review or not has_roster_rows(db, review_session.id)
+
+
+def turn_symmetric_review_on_for_import(
+    db: Session,
+    review_session: ReviewSession,
+    *,
+    user: User,
+    correlation_id: str | None = None,
+) -> None:
+    """Turn symmetric review on ahead of an import whose Settings file
+    turns it on (20B). Quick Setup saves Settings last, so without this
+    the same submit's reviewers would save first, leave the rosters
+    non-empty, and keep the mode off. A no-op beside roster rows.
+    Flushes; the caller's unit commits or rolls it back."""
+    if review_session.symmetric_review or has_roster_rows(db, review_session.id):
+        return
+    review_session.symmetric_review = True
+    db.flush()
+    audit.write_event(
+        db,
+        event_type="session.feature_toggled",
+        summary=f"Session {review_session.code} feature toggle(s) updated",
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.changes({"symmetric_review": [False, True]}),
+        reason="settings_import",
+        correlation_id=correlation_id,
+    )
+
+
 def clear_mirror_links(db: Session, session_id: int) -> None:
     """Turning symmetric review off leaves two ordinary rosters (20B)."""
     db.execute(
