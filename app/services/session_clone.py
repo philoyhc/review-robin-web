@@ -148,6 +148,10 @@ def clone_session(
         # along or the Setup pages would hide them).
         relationships_enabled=source.relationships_enabled,
         observers_enabled=source.observers_enabled,
+        # Segment 20B — symmetric review comes along; a full-setup clone
+        # copies the reviewers, and rung 3's reconcile rebuilds the
+        # reviewees from them.
+        symmetric_review=source.symmetric_review,
         # participant info — what each participant sees of their own
         # entry. All three columns, though Item 1 reads only the first.
         reviewer_self_fields=(

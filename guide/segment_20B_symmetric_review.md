@@ -59,6 +59,8 @@ A peer review where every participant both gives and receives feedback is a comm
 - **A reviewer delete warns about the reviewee side** (author's default, 2026-11-01). The mirrored reviewee is deleted through the reviewee cascade, but the Reviewees page's confirmations are read-only under the mode. So with the mode on, Reviewers' delete confirmations also count the reviewee side: its assignments, the responses about them and their relationships. That covers row delete, bulk delete, Delete all and a replacing upload. The counts join the existing confirm text, with no new step.
 - **Status mirrors** (author's default, 2026-11-01). Withdrawing a reviewer also withdraws them as a reviewee, so they stop being reviewed as well as reviewing: one person, one status.
 - **When the toggle can change** (author's default, 2026-11-01). It follows the Relationships and Observers toggles' gates, and the empty-rosters rule settles nearly every case. Turning it off stays allowed at any stage.
+- **A Settings CSV that would turn the mode on beside rows leaves it off** (2026-11-01, rung 2), rather than refusing the file. That is the lock-on-data rule `_locked_on` already applies to the other two toggles, and what Session Home's disabled box does. Refusing would block a whole import over one setting the operator can turn on once the rosters are emptied.
+- **The Reviewees tab stays plain** (2026-11-01, rung 2), pending the author's choice on open question 2. Rung 1's `marked` variant ("mirrored" pill) is one template line to restore.
 - **Rung 1 previews the mode-on states by `?symmetric_preview=plain|marked`** (2026-11-01). Without the column nothing can turn the mode on, and the tab's look (open question 2) has to be seen to be chosen. The parameter touches no service, and rung 2 deletes it.
 
 ## Status
@@ -71,6 +73,13 @@ A peer review where every participant both gives and receives feedback is a comm
   - the Reviewees tab, plain or marked "mirrored".
   
   The mode-on states show only under `?symmetric_preview=`, and only on the pages that pass it (New session, Session Home, Reviewees). Cumulative-diff base for the item's cold read: `6b3b0a0e`.
+- **Rung 2 (column and toggle), 2026-11-01.** The rung stores the setting:
+  - **Schema:** migration `b2f8d4a6c1e9` adds `sessions.symmetric_review` and `reviewees.mirrors_reviewer_id`.
+  - **Writers:** `SessionCreate` and `update_session` carry the setting. On is refused while either roster has rows (`sessions.has_roster_rows`), off clears the links (`sessions.clear_mirror_links`), and `session.feature_toggled` records the flip.
+  - **Settings CSV and clone:** the CSV gains `session.symmetric_review`, locked on data like the other toggles, and a clone copies the flag.
+  - **Pages:** the preview is gone, and the pages read the setting. New session's box greys the Reviewees slot in the browser while ticked. Session Home's chip is fixed off once a roster has rows.
+  
+  Until rung 3 lands, nothing mirrors yet: a session with the mode on has a read-only Reviewees page and no way to fill it.
 
 ## Blast radius (measured)
 

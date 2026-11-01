@@ -35,6 +35,18 @@ class Reviewee(Base, TimestampMixin):
     results_acknowledged_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    # Segment 20B: under symmetric review, the reviewer this reviewee
+    # mirrors. The reconcile matches on it, so an address correction
+    # updates the same row; turning the mode off clears it.
+    mirrors_reviewer_id: Mapped[int | None] = mapped_column(
+        ForeignKey(
+            "reviewers.id",
+            ondelete="SET NULL",
+            name="fk_reviewees_mirrors_reviewer_id_reviewers",
+        ),
+        index=True,
+        nullable=True,
+    )
 
     session: Mapped[ReviewSession] = relationship(back_populates="reviewees")
     assignments: Mapped[list[Assignment]] = relationship(

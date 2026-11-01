@@ -11,6 +11,8 @@ from app.db.models import (
     AuditEvent,
     Observer,
     Relationship,
+    Reviewee,
+    Reviewer,
     ReviewSession,
     SessionOperator,
     User,
@@ -89,6 +91,9 @@ def create_session(
         # Create / Edit Session pages.
         relationships_enabled=payload.relationships_enabled,
         observers_enabled=payload.observers_enabled,
+        # Segment 20B — a new session's rosters are empty, so the mode
+        # may start on.
+        symmetric_review=payload.symmetric_review,
         # Participant-model Phase 3 (W14 + S12) — Release-responses
         # window anchor + absolute close datetime. Route layer
         # parses + validates; the §8.2.2 anchor-null rule handles
@@ -211,6 +216,7 @@ _UPDATED_FIELDS = (
     "reminder_offsets",
     "relationships_enabled",
     "observers_enabled",
+    "symmetric_review",
     "responses_release_at",
     "responses_release_until",
 )
@@ -364,6 +370,17 @@ def update_session(
         ):
             review_session.observers_enabled = True
             del diffs["observers_enabled"]
+    # Segment 20B — symmetric review turns on only while both rosters
+    # are empty (Session Home renders the box disabled then; a direct
+    # call is a silent no-op, as the lock-on-data rule above is). Off
+    # is always allowed, and clears the mirror links.
+    if "symmetric_review" in diffs:
+        old, new = diffs["symmetric_review"]
+        if new is True and has_roster_rows(db, review_session.id):
+            review_session.symmetric_review = False
+            del diffs["symmetric_review"]
+        elif new is False:
+            clear_mirror_links(db, review_session.id)
     db.flush()
 
     # 18G Part 1 — when scheduled_activate_at changes, also emit a
@@ -415,7 +432,7 @@ def update_session(
     # alongside other field edits in the same save.
     toggle_changes = {
         f: diffs[f]
-        for f in ("relationships_enabled", "observers_enabled")
+        for f in ("relationships_enabled", "observers_enabled", "symmetric_review")
         if f in diffs
     }
     if toggle_changes:
@@ -618,6 +635,27 @@ def _has_relationships(db: Session, session_id: int) -> bool:
         .where(Relationship.session_id == session_id)
         .limit(1)
     ).scalar_one_or_none() is not None
+
+
+def has_roster_rows(db: Session, session_id: int) -> bool:
+    """Whether the Reviewers or the Reviewees roster has a row: the
+    condition that keeps symmetric review from turning on (20B)."""
+    for model in (Reviewer, Reviewee):
+        if db.execute(
+            select(model.id).where(model.session_id == session_id).limit(1)
+        ).scalar_one_or_none() is not None:
+            return True
+    return False
+
+
+def clear_mirror_links(db: Session, session_id: int) -> None:
+    """Turning symmetric review off leaves two ordinary rosters (20B)."""
+    db.execute(
+        Reviewee.__table__.update()
+        .where(Reviewee.session_id == session_id)
+        .where(Reviewee.mirrors_reviewer_id.is_not(None))
+        .values(mirrors_reviewer_id=None)
+    )
 
 
 def _has_observers(db: Session, session_id: int) -> bool:

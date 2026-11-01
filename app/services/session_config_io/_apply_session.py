@@ -58,7 +58,7 @@ def _apply_session_kv(
     if key == "self_reviews_active":
         plan.session_overrides[key] = _parse_bool(value, default=True)
         return
-    if key in {"relationships_enabled", "observers_enabled"}:
+    if key in {"relationships_enabled", "observers_enabled", "symmetric_review"}:
         # Segment 18P PR A1 — per-session feature toggles. Config,
         # not operator-typed identity, so force-applied (below) to
         # mirror the source — except that the lock-on-data rule holds
@@ -168,6 +168,7 @@ def _apply_session_metadata(
         "self_reviews_active",
         "relationships_enabled",
         "observers_enabled",
+        "symmetric_review",
         "reviewer_self_fields",
         "reviewee_self_fields",
         "observer_self_fields",
@@ -184,6 +185,8 @@ def _apply_session_metadata(
             continue
         if _locked_on(review_session, key, overrides[key]):
             continue
+        if key == "symmetric_review" and overrides[key] is False and review_session.symmetric_review:
+            sessions.clear_mirror_links(object_session(review_session), review_session.id)
         setattr(review_session, key, overrides[key])
         written += 1
     return written
@@ -193,7 +196,16 @@ def _locked_on(review_session: ReviewSession, key: str, new: object) -> bool:
     """Whether turning ``key`` off would orphan roster rows, so the
     import leaves it on: the lock-on-data rule
     ``sessions.update_session`` applies to the Session Home toggle
-    (``spec/participant_model.md`` §2)."""
+    (``spec/participant_model.md`` §2).
+
+    Symmetric review is locked the other way (20B): it turns on only
+    while both rosters are empty, so an import that would turn it on
+    beside rows leaves it off, as Session Home's disabled box does."""
+    if key == "symmetric_review":
+        if new is not True or getattr(review_session, key) is True:
+            return False
+        db = object_session(review_session)
+        return db is not None and sessions.has_roster_rows(db, review_session.id)
     if new is not False or getattr(review_session, key) is not True:
         return False
     db = object_session(review_session)
