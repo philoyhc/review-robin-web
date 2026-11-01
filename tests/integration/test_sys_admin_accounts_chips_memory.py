@@ -69,16 +69,15 @@ def test_a_chip_selected_turns_on_is_remembered(
     assert _on(client.get(ACCOUNTS).text) == ["operators", "unused"]
 
 
-def test_invite_lands_with_the_invitee_in_view(
+def test_invite_lands_on_the_table_as_the_admin_left_it(
     client: TestClient, admin: None
 ) -> None:
-    """The remembered chips may hide operators; Invite selects the new
-    row, which turns its chip on."""
+    """Invite selects no row (19X Item 14, author), so the remembered chips
+    stand even when they hide the new operator."""
     client.get(f"{ACCOUNTS}?show=unused")
     page = client.post(f"{ACCOUNTS}/invite", data={"email": "newbie@example.edu"})
     assert page.status_code == 200
-    assert "newbie@example.edu" in page.text
-    assert _on(page.text) == ["operators", "unused"]
+    assert _on(page.text) == ["unused"]
 
 
 def test_the_cookie_is_http_only_scoped_to_the_page_and_kept_a_year(
