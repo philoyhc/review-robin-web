@@ -25,8 +25,8 @@ like RRW's robin (author, 2026-11-01; the 2026-10-30 outline wrench before
 it), inline in `templates/utilities/base.html`.
 
 Rejected:
-- Cordware's black cord, which would make the tab identical to the landing
-  page's.
+- Cordware's black cord, which would have made the tab identical to the
+  landing page's (2026-10-30; the host's icon has since become a knot).
 - The cord on a colored tile, which is unreadable at 16 px.
 
 Amber can read as "warning", so alerts use the status token `--warn`, never

@@ -158,10 +158,10 @@ def test_each_application_has_its_own_favicon(host_client: TestClient) -> None:
     """A house in fuchsia for Residential Operations, a ruled log sheet in
     teal for Support Logs, each running off the tile as RRW's robin does
     (author, 2026-11-01); nothing for an application not yet given one."""
-    house, notepad = favicon("residentialops"), favicon("supportlogs")
+    house, sheet = favicon("residentialops"), favicon("supportlogs")
     assert house.startswith(SVG_DATA) and "fill='%23a21caf'" in house and "M15.5 6.5 L37 25" in house
-    assert notepad.startswith(SVG_DATA) and "fill='%230f766e'" in notepad and "width='34' height='38'" in notepad
-    assert "#" not in house + notepad  # every hash escaped, or the data URI ends early
+    assert sheet.startswith(SVG_DATA) and "fill='%230f766e'" in sheet and "width='34' height='38'" in sheet
+    assert "#" not in house + sheet  # every hash escaped, or the data URI ends early
     assert favicon("other") == ""
     assert f'href="{house}"' in host_client.get(f"{MOUNT}/rosters/").text
 

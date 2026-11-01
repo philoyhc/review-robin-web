@@ -111,10 +111,10 @@ counting a refusal. The details are the viewer's own, so the response is
 
 The landing template carries its own inline style and extends nothing of
 RRW's. Its favicon, inline SVG as the applications' are, is a white trefoil
-knot on a black rounded square, enlarged so its bottom-right lobes run off
+knot on a black rounded square, enlarged so its bottom-right lobe runs off
 the tile like the applications' glyphs (author, 2026-11-01; the 2026-10-29
-cord ring before it). The set's source files are in cordware's
-`docs/assets/favicons/`.
+cord ring before it). The set's source files are kept in Cordware's private
+records.
 
 ## `CORDWARE_APPS`
 
