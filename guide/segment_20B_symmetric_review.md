@@ -11,14 +11,20 @@ A peer review where every participant both gives and receives feedback is a comm
 - **A per-session setting, `symmetric_review`**, off by default. It is a **Symmetric review** checkbox on Add new session and a toggle on Session Home's Session details card, beside the Relationships and Observers toggles.
 - **While it is on, the Reviewers roster is the only one edited.** Every write to it is mirrored to the Reviewees roster in the same transaction: an upload (replace, append, merge), an add, an edit, a status change, a delete. Both rosters still exist in the database, so assignments, responses and results keep their reviewee rows unchanged.
 - **The Reviewees slot is greyed out** in Quick Setup, on Add new session and on Session Home, with the reason ("Symmetric review: reviewees are the reviewers").
-- **The Reviewees page stays, read-only** (the recommendation, below). Its tab stays, its upload card and row controls are replaced by a note linking to Reviewers, and its table shows the mirrored rows.
+- **The Reviewees page stays, read-only** (author, 2026-11-01). Its tab stays and its table shows the mirrored rows. **Everything in its Unlock panel is read-only too:**
+  - What reviewees see of their own entry;
+  - Upload Reviewees;
+  - the tag-labels editor;
+  - the Danger Zone.
+  
+  Its row controls go too. In their place, a note links to Reviewers.
 - **Turning it on needs both rosters empty.** Otherwise the toggle is disabled, with the reason. **Turning it off is always allowed**, and leaves two ordinary rosters that then differ only as the operator edits them.
 - **Export:**
   - the setup files carry the Reviewers roster only, and no reviewees file;
   - the Settings CSV carries `session.symmetric_review`;
   - a re-import (Duplicate, Rehydrate, Quick Setup) rebuilds the reviewees from the reviewers.
 
-**Recommended: keep the Reviewees page, read-only.** Rejected: *grey out the tab and make the page unreachable.*
+**Keep the Reviewees page, read-only** (recommended; chosen by the author, 2026-11-01). Rejected: *grey out the tab and make the page unreachable.*
 - The Reviewees page is where reviewee-only state shows: results acknowledgment, reachability for `/results` (the `reviewees.unreachable_for_results` warning) and the directory match.
 - Other pages link to reviewee rows (Responses, Assignments, Validate), and those links would land nowhere.
 - A visible mirror lets the operator check it, where a missing page asks them to trust it.
@@ -33,7 +39,8 @@ A peer review where every participant both gives and receives feedback is a comm
   
   Rejected: mirroring inside each writer, which would repeat the same logic in eight places that can drift apart.
 - **Tags and their labels mirror too.** The three tag slots' labels (`session_field_label`) are copied, so a rule on `Reviewee.tag_1` means what `Reviewer.tag_1` means.
-- **Kept per roster:** reviewee-only state (`results_acknowledged_at`) and the per-roster self-edit lists (`reviewer_self_fields`, `reviewee_self_fields`). A reviewer's self-edit of a mirrored field is a reviewer write and syncs.
+- **Kept per roster:** reviewee-only state (`results_acknowledged_at`).
+- **The self-edit list mirrors.** "What reviewees see of their own entry" is read-only under the mode, so `reviewee_self_fields` follows `reviewer_self_fields`: one person, one list of fields. A reviewer's self-edit of a mirrored field is a reviewer write and syncs.
 - **Self-review:** with symmetric review on, every person can be paired with themselves. Each instrument's existing Self review toggle decides that pair, and nothing new is added.
 - **Imports while on:**
   - a reviewees file in Quick Setup, or in a Rehydrate or Duplicate bundle, is refused with the reason;
@@ -83,7 +90,7 @@ Taken 2026-11-01 at `2accb87`:
 
 ## Open questions
 
-1. **The page: read-only (recommended) or hidden?** The author decides before rung 1.
+1. ~~**The page: read-only or hidden?**~~ **Read-only, Unlock panel included** (author, 2026-11-01).
 2. **The Reviewees tab's look while read-only:** normal, or marked (a lock or "mirrored")? Settled on the scaffold.
 3. **Reviewee-only columns in a future upload format,** if any appear: they would need a home on the Reviewers file. None exist today.
 

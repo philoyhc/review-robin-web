@@ -81,7 +81,7 @@ is the author's call.
 5. **20B — Symmetric review** (not gated on Azure). A session setting
    under which the Reviewers roster is the only one edited and every
    write mirrors to Reviewees; on only while both rosters are empty, off
-   any time. The Reviewees page stays, read-only (recommended); the
+   any time. The Reviewees page stays, read-only, Unlock panel included; the
    setup export carries the Reviewers roster alone.
    **Plan:** `guide/segment_20B_symmetric_review.md`.
 

@@ -108,10 +108,9 @@ had already shipped under other segments; three move out; three stay.
 
 1. ~~**Is `/guide` public?**~~ **No** (author, 2026-11-01): it stays
    behind sign-in, and so does the starter-template download
-   (`tests/integration/test_setup_template_download.py`). The author
-   added that it is meant for operators. Today reviewers, observers and
-   reviewees each see their own section (19F decision 6), so whether
-   participants keep those sections is still open.
+   (`tests/integration/test_setup_template_download.py`). It is for
+   operators and participants (author, 2026-11-01), as it is today:
+   each role sees its own sections (19F decision 6).
 2. ~~**Does the technical-support contact reuse `OPERATOR_CONTACT_EMAIL`?**~~
    **Yes** (author, 2026-11-01): one address, so item 4 shows the
    existing setting on the footer, the error pages and the invalid-link
