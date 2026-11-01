@@ -214,8 +214,8 @@ operator can:
 - **Archive and unarchive** sessions they own.
 - **Purge and archive** a session they own (operator-triggered
   hard delete of responses + rosters + audit log).
-- **Manage their own operator settings** — email-send (SMTP)
-  credentials and default display timezone.
+- **Manage their own operator settings** — default display
+  timezone.
 
 Operators do **not** see other operators' sessions in their lobby
 unless they have been added as a co-owner. Admins reach non-owned
@@ -958,16 +958,13 @@ Assignments page then reports the instrument's self-reviews as
 
 Distinct from per-session settings, each operator owns:
 
-- **Email-send credentials** — host, port, username, password,
-  display name, encryption mode. The password is encrypted at
-  rest with a deployment-managed key. Email send happens
-  "as the operator who initiated" — there is no shared
-  workspace-level sender.
 - **Default display timezone** — falls in when a new session is
   created.
 
-The operator's settings page also supports clear/reset of
-the SMTP section.
+Per-operator SMTP credentials are still stored (columns, encrypted
+password) but no page edits them since segment 14C Item 1; they may
+serve a deployment with an SMTP relay (`spec/settings_inventory.md`
+§1).
 
 ### 8.8 User-interface feature toggles
 
@@ -1188,16 +1185,14 @@ Setup card" the setup card, and [§12](#12-data-export) the files.
 
 ### 9.13 Operator settings
 
-The operator's Settings page (`/operator/settings`) carries their own
-email-send (SMTP) credentials, their default display timezone, and a
-confirm-gated **Clear all settings (SMTP)**. Every SMTP field but
-display name is required: until all are set, email reads as not
-configured. The Email send (SMTP) card sits alone in the left column,
-its "Bring your own SMTP" intro shown only until an SMTP host is saved;
-Date & time and Clear all settings (SMTP) stack on the right.
+The operator's Settings page (`/operator/settings`) carries one
+half-width card, **Date & time**, for their default display timezone.
+Its SMTP cards retired in segment 14C Item 1, once the choice of
+sender narrowed to Microsoft Graph; an **Email settings** card of
+per-operator toggles is planned beside it (14C Item 2).
 
-`spec/settings_inventory.md` §1 owns the stored fields, and
-`spec/email_infra_options.md` the SMTP option.
+`spec/settings_inventory.md` §1 owns the stored fields, the kept
+`smtp_*` columns among them.
 
 ### 9.14 Sys admin surface
 
@@ -1458,8 +1453,8 @@ them as auto-send captions.
 ### 11.5 Backend options
 
 Dispatch sits behind one pluggable transport seam, with one backend per
-deployment. Four options are in the design space: an SMTP relay using
-the operator's own credentials (Option A), Microsoft Graph (B), Azure
+deployment. Four options are in the design space: an SMTP relay
+(Option A), Microsoft Graph (B), Azure
 Communication Services (C) and a third-party transactional provider
 (D). `spec/email_infra_options.md` owns each option and its trade-offs.
 
@@ -1472,9 +1467,8 @@ reviewer's invitation stamps follow as if it had gone. A reviewer's
 submit queues the responses-received confirmation the same way but
 leaves it `queued`. An SMTP transport (STARTTLS or implicit TLS) and
 a Microsoft Graph stub exist behind the transport seam
-([§11.5](#115-backend-options)), and SMTP is the only transport an
-operator can configure ([§9.13](#913-operator-settings)), but the send
-path does not call either.
+([§11.5](#115-backend-options)), but the send path calls neither, and
+no page configures either ([§9.13](#913-operator-settings)).
 
 ---
 
@@ -1780,7 +1774,7 @@ participant surfaces, each by a case-insensitive email match against an
 grant ([§4.4](#44-reviewee)), and observer. An invitation token grants
 nothing on its own. Destructive actions take an explicit confirmation
 and write audit events, reviewer posts act only on the reviewer's own
-assignments, and SMTP passwords are encrypted at rest.
+assignments, and stored SMTP passwords are encrypted at rest.
 
 `spec/permissions.md` owns the gates, the per-route matrix and the
 failure codes, and `docs/security_posture.md` the security audit.

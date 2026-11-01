@@ -132,7 +132,7 @@ class SmtpEmailTransport:
         except smtplib.SMTPAuthenticationError as exc:
             return _failure(
                 "Authentication failed. Check the SMTP username and app "
-                "password on /operator/settings.",
+                "password.",
                 str(exc),
             )
         except smtplib.SMTPRecipientsRefused as exc:
@@ -153,7 +153,7 @@ class SmtpEmailTransport:
         except smtplib.SMTPConnectError as exc:
             return _failure(
                 "Couldn't connect to the SMTP server. Check the host "
-                "and port on /operator/settings.",
+                "and port.",
                 str(exc),
             )
         except (smtplib.SMTPException, OSError) as exc:

@@ -6,8 +6,9 @@ notifications) from its Azure App Service deployment.
 The pluggable-sender scaffolding the rest of this document
 describes is in place — `EmailTransport` Protocol +
 `SmtpEmailTransport` concrete implementation + typed-stub
-`GraphEmailTransport` placeholder + per-operator
-`/operator/settings` page for SMTP credentials. This document is
+`GraphEmailTransport` placeholder, over per-operator SMTP settings
+on the `users` table that no page edits since segment 14C Item 1
+(`spec/settings_inventory.md` §1). This document is
 the longer-term architectural target: **what the app needs in
 place so that adding any single email backend is a scoped piece
 of work, not a re-architecture of the invitation / reminder
@@ -139,9 +140,11 @@ only `"smtp"` is reachable; the `"graph"` / `"acs"` /
 Today's configuration is **per-operator**, not per-deployment —
 a "send-as-me" identity model, with credentials on the `users`
 table (encrypted at rest via Fernet, key from the
-`SMTP_ENCRYPTION_KEY` env var). The operator
-configures their own host / port / username / password / display
-name on `/operator/settings`.
+`SMTP_ENCRYPTION_KEY` env var). No page edits them: the
+`/operator/settings` SMTP cards retired in segment 14C Item 1, once
+the choice of sender narrowed to Microsoft Graph (as the operator or a
+dedicated mailbox, `guide/email_and_scheduling.md`). The columns and
+the transport stay for a deployment with an SMTP relay.
 
 Per-deployment defaults are a future addition for backends that
 don't naturally have a per-operator credential (Option C — ACS —
@@ -152,9 +155,8 @@ operator settings and tomorrow's per-deployment defaults:
   selection, loaded from environment variables at startup. Used
   when an operator's settings are blank or when a backend is
   intrinsically deployment-scoped.
-- **Per-operator overrides.** The existing `users.smtp_*` columns
-  + `/operator/settings` page. Used when send-as-me semantics
-  apply.
+- **Per-operator overrides.** The existing `users.smtp_*` columns,
+  with a form to edit them restored where send-as-me SMTP applies.
 - **Per-session overrides.** CC / BCC live on the email-template
   editor, keyed by template. There is no reply-to override.
 
@@ -310,9 +312,8 @@ the shared infrastructure above to support that backend.
 ### Option A — SMTP relay
 
 **Status.** Implemented — `SmtpEmailTransport` in
-`app/services/email_send.py`, with operator-facing UI on
-`/operator/settings` and per-operator credentials encrypted at
-rest via Fernet.
+`app/services/email_send.py`, with per-operator credentials
+encrypted at rest via Fernet. No page edits them (see Configuration).
 
 **What it is.** The app connects to a configured SMTP server
 with credentials and submits the email. The SMTP server can be:
@@ -326,8 +327,7 @@ with credentials and submits the email. The SMTP server can be:
 **Note on Azure outbound SMTP.** Microsoft blocks outbound SMTP
 on port 25 from Azure data centers since 2017. SMTP relay use
 must go through an authenticated relay service on port 587 or
-465. The app sets no port of its own: `/operator/settings` shows
-587 as the port field's placeholder, not a default, and a blank
+465. The app sets no port of its own: a blank
 port leaves the credentials incomplete, so nothing sends
 (`operator_settings.get_email_settings`). The operator picks
 STARTTLS (usual on 587) or implicit SSL (usual on 465) through the
@@ -335,8 +335,8 @@ STARTTLS (usual on 587) or implicit SSL (usual on 465) through the
 
 **Required configuration.**
 
-Today (per-operator on `users` table, populated via
-`/operator/settings`):
+Today (per-operator on `users` table; no page populates them since
+segment 14C Item 1):
 
 - `smtp_host`, `smtp_port`, `smtp_username`,
   `smtp_password_encrypted`, `smtp_encryption`,

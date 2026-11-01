@@ -57,6 +57,29 @@ and stay), and nine live specs or docs naming the cards
 `rrw_functional_spec.md`, `email_infra_options.md`, `README.md`,
 `known_limitations.md`, `operations_runbook.md`, `deployment_dev.md`.
 
+### Status
+
+Done 2026-11-01 in one PR, as laddered. Decisions confirmed at build:
+
+- The SMTP form's **Cancel** went with it; the back-link carries the
+  return. The `return_to` round-trip test now rides the Date & time
+  save.
+- The service-level SMTP tests stay (`save_email_settings` /
+  `clear_email_settings` / `get_email_settings`, called directly),
+  since the storage is kept; `test_bad_input_refused.py`'s SMTP-port
+  refusal went with its route.
+- `README.md` and `docs/deployment_dev.md` described the page too and
+  gained bullets; `spec/operator_ui_concept.md` never described the
+  Settings page, so its bullet is waived.
+- The composer's and Previews' **From** placeholder pointed at the
+  retired card; both now say the sender is set when sending is switched
+  on. The blast-radius grep was case-sensitive and missed them, and
+  `spec/email_template_editor.md` and `spec/ui_elements.md`.
+  `docs/known_limitations.md` needed nothing (its key mention holds).
+- Reads: one `diff-reviewer` read. It found the From placeholder, two
+  dropped service tests (O3 password-as-typed, O8 same password: ported
+  to direct calls), the two missed specs, and stale comments (fixed).
+
 ### PR ladder
 
 1. **One PR:** the template, the two routes, the tests, and the specs
@@ -86,11 +109,15 @@ None.
 ### Doc impact
 
 - `spec/settings_inventory.md` — the Settings page's surface without the SMTP cards; the `smtp_*` columns and `SMTP_ENCRYPTION_KEY` kept, unused, and why (Item 1).
-- `spec/operator_ui_concept.md` — the Settings page as Date & time alone (Item 1).
+- `spec/operator_ui_concept.md` — the Settings page as Date & time alone (Item 1). <!-- doc-impact-waived: the spec never describes the Settings page; its one SMTP line quotes the outbox page's copy, still true -->
 - `spec/operator_button_audit.md` — the SMTP Save, Cancel and Clear rows retired (Item 1).
 - `spec/rrw_functional_spec.md` — operator settings without SMTP (Item 1).
 - `spec/email_infra_options.md` — no per-operator SMTP page; the transport stays for other deployments (Item 1).
 - `docs/operations_runbook.md` — `SMTP_ENCRYPTION_KEY` no longer needed by a page (Item 1).
+- `docs/deployment_dev.md` — the same, in the App Settings table (Item 1).
+- `README.md` — the Settings page's row and the SMTP-key setup paragraph (Item 1).
+- `spec/email_template_editor.md` — the composer's From row no longer points at Settings (Item 1).
+- `spec/ui_elements.md` — the retired SMTP form dropped as a `.page-grid` caller and a confirm-gate example (Item 1).
 - `guide/todo_master.md` — the 14C entry (Item 1).
 
 ## Item 2 — An "Email settings" card

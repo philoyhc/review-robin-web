@@ -30,17 +30,25 @@ Stored on the `users` table. One row per authenticated principal
 Easy Auth). The same row backs every session that operator owns or
 co-operates.
 
-**Surface:** `/operator/settings`. The Email send (SMTP) form-card
-carries Cancel + Save (both Secondary); the page also carries a
-**Date & time** card (its own Save, Secondary) editing the
-`display_timezone` preference key, with a live worked-sample preview
-that names the selected zone in full; and a **Clear all settings (SMTP)**
-card (`.btn destructive`, `POST /operator/settings/clear`, behind a
-"Yes, delete…" confirm box the route re-checks) that wipes
-every SMTP field and resets `smtp_transport` to `smtp`, leaving
-`preferences` alone, audited as `operator_email_settings.cleared`. The
-`← Back to {{ return_to_label }}` chrome back-link returns the
-operator to wherever they came from (`?return_to=<path>`).
+**Surface:** `/operator/settings`. One half-width card, **Date &
+time** (its Save, Secondary), edits the `display_timezone` preference
+key, with a live worked-sample preview that names the selected zone in
+full. The `← Back to {{ return_to_label }}` chrome back-link returns
+the operator to wherever they came from (`?return_to=<path>`).
+
+**The `smtp_*` columns are kept, and nothing on the page edits them**
+(segment 14C Item 1, 2026-11-01). The Email send (SMTP) and Clear all
+settings (SMTP) cards and their routes (`POST /operator/settings`,
+`POST /operator/settings/clear`) retired once the choice of sender
+narrowed to Microsoft Graph, as the operator or as a dedicated mailbox:
+Microsoft 365 tenants typically block basic SMTP AUTH. The columns,
+`SMTP_ENCRYPTION_KEY` (§8), the service functions
+(`operator_settings.save_email_settings` / `clear_email_settings` /
+`get_email_settings`, the first two still audited as
+`operator_email_settings.updated` / `.cleared`) and `SmtpEmailTransport`
+stay, unused here, because a deployment outside Microsoft 365 with an
+SMTP relay could use them; restoring a form is the work, not a
+migration.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -58,9 +66,9 @@ operator to wherever they came from (`?return_to=<path>`).
 | `is_sys_admin` | `Boolean` | Admin flag gating the Sys Admin pages and the audit-log CSV. Seeded and edited as `is_operator`, from `SYS_ADMIN_EMAILS`. A super-admin (`SUPER_ADMIN_EMAILS`, §8) has both flags re-asserted on every sign-in. |
 | `preferences` | `JSON` | General per-operator preferences container. JSON object keyed by individual operator-level display preferences. First key `display_timezone` — the operator's default display timezone (an IANA zone name), edited on the **Date & time** card on `/operator/settings`. NULL / absent key = "no preference set" → consumer falls through to its in-code default (`UTC` for the timezone key). Future operator-level display settings become new keys, not new migrations. Operator surfaces render dates / times converted into this zone; the canonical render is bare `YYYY-MM-DD HH:MM` (no zone token) via the `format_datetime` Jinja filter — the card carries a worked sample that names the zone. The trailing zone token is behind one internal switch, `date_formatting.SHOW_ZONE_TOKEN` (off by default; flip + restart, no env var or migration). |
 
-**Send-as-me identity model.** The operator who initiates a send in
-Invitations sends from their own SMTP credentials. There is
-no shared mailbox.
+**Who sends** is not settled: Graph as the operator who clicks, or
+Graph as a dedicated mailbox (`guide/email_and_scheduling.md`). No
+send path calls a transport yet.
 
 **Canonical spec:** `spec/email_infra_options.md` for the wider
 email-infra story; `spec/operator_button_audit.md` Section 15 + 15-supplement
@@ -475,7 +483,7 @@ stay RRW's.
 | `SUPER_ADMIN_EMAILS` | empty | Comma-separated **super-admin** allowlist — the protected top tier. **Derived, not stored**: `is_super_admin` is computed from this list (case-insensitive; blank entries never count), never a DB column, so it can't drift or be flipped in-app. Set **only** via App Settings. Optional (not part of the boot fail-fast); a super-admin self-heals to full admin rights on every sign-in and can't be demoted/removed in-app. |
 | `RRW_DATABASE_URL` | unset | SQLAlchemy connection string for RRW's database. Wins over `DATABASE_URL` when both are set in the same source; as for every setting, the environment is read before `.env`, so an exported `DATABASE_URL` still beats an `RRW_DATABASE_URL` in `.env`. |
 | `DATABASE_URL` | `sqlite:///./review_robin_web.db` | The older name for the same setting, read when `RRW_DATABASE_URL` is unset. Postgres in deployed environments; SQLite locally / in tests. |
-| `SMTP_ENCRYPTION_KEY` | `None` | Symmetric Fernet key (Base64-urlsafe-encoded 32 bytes) used to encrypt operator SMTP passwords at rest. Generate with `cryptography.fernet.Fernet.generate_key()`. Fail-loud at encrypt / decrypt time, not at startup, so local dev / tests that don't touch Operator Settings don't need it set. |
+| `SMTP_ENCRYPTION_KEY` | `None` | Symmetric Fernet key (Base64-urlsafe-encoded 32 bytes) used to encrypt operator SMTP passwords at rest. Generate with `cryptography.fernet.Fernet.generate_key()`. Fail-loud at encrypt / decrypt time, not at startup. Nothing on a page needs it since the SMTP cards retired (§1); kept with the `smtp_*` columns it serves. |
 | `AUDIT_STRICT_MODE` | `False` | When `True`, `audit.write_event` raises on a detail-shape violation. Production stays `False` (logs + writes through). Test runner flips to `True` so drift surfaces in CI. |
 | `OPERATOR_CONTACT_EMAIL` | `None` | Optional contact address on `/about` (the signed-in-but-no-access landing). When set, the page renders a `mailto:` access-request link; when unset, generic copy. |
 | `LOG_LEVEL` | `INFO` | The host's setting, not RRW's: read by `CordwareSettings` (`cordware/main.py`), not `Settings`. Root level for the structured logging `configure_logging` (`cordware/logging.py`) sets up. Any standard `logging` level name; an unrecognized value falls back to `INFO`. |
@@ -611,7 +619,7 @@ below lists the fields.
 
 | § | Section | In CSV? | Where / why |
 |---|---------|---------|-------------|
-| §1 | Operator-level (`users` + SMTP) | ❌ | Per-operator credentials + identity, not per-session. Each operator configures their own. |
+| §1 | Operator-level (`users` + SMTP) | ❌ | Per-operator identity and preferences, plus the kept, unedited `smtp_*` columns; not per-session. |
 | §2 | Per-session metadata | ✅ All | `name`, `code`, `description`, `deadline`, `help_contact`, `display_timezone`, `self_reviews_active`, `relationships_enabled`, `observers_enabled`, `reviewer_self_fields`, `reviewee_self_fields`, `observer_self_fields`, plus the scheduled-event columns (`scheduled_activate_at`, `responses_release_at`, `responses_release_until`, `invite_offsets`, `reminder_offsets`, `archive_offset`, `retention_exception`, `retention_overrides`) → Settings CSV. `status`, `assignment_mode` and `activated_at` are machine-derived (excluded); `created_by_user_id` is identity, and `public_id` and `form_key` are a handle and a secret (excluded). On import the first five are fallback values and the rest are force-applied (above): each forced slot is session config rather than operator-typed identity, and a created session always has it set, so a fallback would never fire. The two feature toggles are forced except off while their roster has rows, which leaves them on (`spec/participant_model.md` §2). |
 | §3 | Email-template overrides | ✅ All | All 12 string keys + `responses_received_enabled` → Settings CSV. None / `""` / key-absent collapse to empty cell on export; importer treats empty as "use the default". |
 | §4 | Per-instrument | ✅ All | All operator-typed columns → Settings CSV, plus `accepting_responses`, which is lifecycle-set (Activate opens every instrument) and round-trips only for a faithful copy. **Instrument-level:** `name` / `short_label` / `description` / `order` / `accepting_responses` / `sort_display_fields` / `group_kind` / `rule_set_id` (resolved to `rule_set_name`) / `column_widths` (Band 2 drag-gripper widths) / `starts_new_page` (page-break flag) / `self_reviews_active` (the Self review toggle; a file without the row seeds it from the session's flag) / `intro_layout` (the intro layout chip; an absent row keeps the default) / `band2_state` (Band 2 chip selections + sample-reviewee pick; not the sample-group member ids, which name this session's reviewees). **Per response field:** `field_key` / `label` / `response_type` / `required` / `help_text` / `help_text_visible` / inline `data_type` / `min` / `max` / `step` / `list_csv` / `visible` / branching's `branch_parent` (by `field_key`) / `branch_op` / `branch_value` / `branch_mode` (`spec/csv_contracts.md` §3.3). **Per display field:** `source_type` / `source_field` / `visible` (a locked Name or Email row imports shown whatever its `visible` says). **Per-instrument visibility policy:** the `instruments[n].view_policies[<audience>].*` rows (the 3 × 2 chip grid — Reviewers / Reviewees / Observers × Session-ongoing / Responses-released, each cell taking the modes `spec/visibility_policy.md` §3.1 allows it, plus the reviewee and observer rows' `after_release_reviewer_identity`). The columns take only the values legal for their `(audience, window)` **cell**, not merely any word from the vocabulary: the import validates each cell against `_PER_CELL_VALID_MODES` and rejects the apply with a named error on an illegal one. The case that matters is an observer `raw` / `anonymized` grant on `while_ongoing`, which would show individual responses mid-review; the database refuses any illegal cell as well (`spec/visibility_policy.md` §3.1). An older bundle's retired reviewer `summarized` released cell is read as off instead. **Band 1 link rule:** `band1_touched_links` (the operator's hand-touched link set; an import whose list lacks any of `link1` / `link2` / `link3` leaves that instrument not set up). `deadline_closed_at`, `session_seq` and the `cached_reconcile_*` columns are machine-derived (excluded). `rule_set_id` is the sole source of truth for a pinned instrument. |

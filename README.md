@@ -35,8 +35,8 @@ decisions with rationale and trade-off and nothing else, are
 Per-session pages are organised into a Setup row + an Operations
 row, both anchored off Session Home in the per-session chrome.
 A workspace-level **Operator Settings** page sits behind the
-top-bar user menu (per-operator SMTP credentials + display
-timezone), not in the per-session chrome.
+top-bar user menu (the operator's default display timezone), not in
+the per-session chrome.
 
 #### Workspace pages
 
@@ -45,7 +45,7 @@ timezone), not in the per-session chrome.
 | `/operator/sessions` | Sessions lobby — selection-aware inline row-expander that edits a session's Name, Code, Deadline and Tags, free-form tagging (click-to-filter tag strip), one-click clone (full-setup or config-shell), client-side search, sortable columns, and **Purge and archive** (selective hard-delete of responses / rosters / audit log via `session_purge`, then archive). |
 | `/operator/sessions/archived` | Archived sessions — the live off-ramp: the lobby's **Purge and archive** and the Extract data page archive any session that is not activated (`ready`) or already archived, the Workflow card offers `Archive session` on a closed session, and unarchiving restores it to `draft`. |
 | `/operator/sessions/new` | Create a new session. |
-| `/operator/settings` | **Operator Settings** — per-operator SMTP credentials (encrypted at rest) + display timezone. Honours `?return_to=<path>` so the user-menu link returns to the calling page. |
+| `/operator/settings` | **Operator Settings** — the operator's default display timezone. Honours `?return_to=<path>` so the user-menu link returns to the calling page. |
 | `/operator/sys-admin` | Sys Admin chrome root (sys-admin-gated). |
 | `/operator/sys-admin/sessions` | Admin Sessions Diagnostics — also hosts the per-session **Outbox** drill-in. |
 | `/operator/sys-admin/sessions/{id}/outbox` | Inline per-session email outbox (sys-admin-gated). |
@@ -135,14 +135,6 @@ To sign in locally, set `ALLOW_FAKE_AUTH=true` plus
 `FAKE_AUTH_EMAIL` / `FAKE_AUTH_NAME` in your `.env` (see
 `.env.example`). In Azure, Easy Auth supplies the identity
 headers instead — see [`docs/security_posture.md`](docs/security_posture.md).
-
-To configure SMTP credentials from the operator Settings page,
-also set `SMTP_ENCRYPTION_KEY` (a Base64-urlsafe-encoded
-32-byte Fernet key — generate via
-`python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`).
-The key only matters when an operator actually saves SMTP
-credentials; tests / dev that don't touch the Settings page can
-skip it.
 
 ## Tests + lint
 

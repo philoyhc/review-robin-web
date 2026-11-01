@@ -282,18 +282,8 @@ def test_a_route_without_a_form_body_is_not_made_to_read_one(
     assert response.status_code == 200
 
 
-# --- O4: the SMTP port -------------------------------------------------------
-
-
-@pytest.mark.parametrize("port", ["0", "-1", "65536", "²", "99999999999999999999"])
-def test_an_out_of_range_smtp_port_is_refused(client: TestClient, port: str) -> None:
-    response = client.post(
-        "/operator/settings",
-        data={"smtp_host": "smtp.example.edu", "smtp_port": port},
-        follow_redirects=False,
-    )
-
-    assert response.status_code == 422
+# O4's SMTP-port refusal retired with the SMTP form and its route (14C
+# Item 1, 2026-11-01); a form that brings them back owns the check again.
 
 
 def test_a_plain_decimal_past_a_float_is_refused() -> None:

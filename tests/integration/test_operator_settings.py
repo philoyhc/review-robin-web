@@ -1,24 +1,15 @@
-"""Operator Settings page (Segment 11E PR 4).
+"""Operator Settings page (Segment 11E PR 4; 14C Item 1).
 
-Covers the round-trip through ``/operator/settings``:
-- GET renders the empty-state intro card when no credentials are
-  configured; renders the populated form when they are.
-- POST persists the form fields, encrypts the password at rest, and
-  emits the ``operator_email_settings.updated`` audit.
-- POST with a blank password preserves the existing ciphertext (so
-  the page can render the password field empty by default without
-  silently wiping a saved value).
-- POST /clear wipes every field + emits
-  ``operator_email_settings.cleared``.
-- ``operator_settings.get_email_settings`` returns ``None`` on a
-  partial config; returns a decrypted dataclass once complete.
-- Missing ``SMTP_ENCRYPTION_KEY`` is fail-loud at first encrypt /
-  decrypt rather than silent.
+The page carries the default timezone only: its per-operator SMTP cards
+and their two routes retired in 14C Item 1 (2026-11-01). The SMTP storage
+stays (``spec/settings_inventory.md``), so its service is tested here
+directly: save encrypts and audits, a blank password keeps the stored
+one, clear wipes and audits, ``get_email_settings`` is ``None`` until
+complete, and a missing ``SMTP_ENCRYPTION_KEY`` fails loudly.
 """
 
 from __future__ import annotations
 
-import re
 from collections.abc import Iterator
 
 import pytest
@@ -48,421 +39,118 @@ def _alice_row(db: Session) -> User:
     ).scalar_one()
 
 
-# ── GET ──────────────────────────────────────────────────────────────────
+# ── The page: the SMTP cards retired (14C Item 1) ─────────────────────────
 
 
-def test_settings_get_renders_empty_state_when_unconfigured(
-    client: TestClient, db: Session
+def test_settings_page_has_no_smtp_cards_and_date_time_stands_alone(
+    client: TestClient,
 ) -> None:
+    """The send path is Graph (as the operator or a dedicated mailbox), so
+    the page asks for no SMTP field and offers no Clear card; Date & time
+    is its one card, in the half-width grid."""
     body = client.get("/operator/settings").text
-    assert "<h1>Settings</h1>" in body
-    assert "Email send (SMTP)" in body
-    # Empty-state intro, inside the SMTP card: below its header, before
-    # the form (19T Item 16 entry 3 folded the separate card in).
-    assert "Bring your own SMTP" in body
-    header = body.index("<h2>Email send (SMTP)</h2>")
-    assert header < body.index("Bring your own SMTP") < body.index(
-        'id="operator-settings-form"'
-    )
-    # Password indicator reads "not set" before any save.
-    assert "not set" in body
+    for gone in ("Email send (SMTP)", "Clear all settings (SMTP)", 'name="smtp_host"',
+                 'id="operator-settings-form"', "Bring your own SMTP", "app password"):
+        assert gone not in body, gone
+    assert '<div class="card" id="timezone-settings">' in body
+    assert body.index('class="bottom-grid"') < body.index('id="timezone-settings"')
 
 
 def test_settings_display_mode_card_retired_toggle_in_chrome(
-    client: TestClient, db: Session
+    client: TestClient,
 ) -> None:
-    """Segment 19C Item 2 (W6) — the settings Display-mode card was retired in
-    favour of a chrome toggle; its ``.bottom-grid`` pairing with Date & time
-    went with it. The light/dark pill lives in the chrome instead."""
     body = client.get("/operator/settings").text
-    # Card gone; Date & time still present (in the right column since
-    # 19T Item 16 entry 3).
-    assert 'id="display-mode-settings"' not in body
-    assert "<h2>Display mode</h2>" not in body
-    assert 'id="timezone-settings"' in body
-    # The chrome toggle pill renders instead — two states, no System.
-    assert 'class="theme-toggle"' in body
-    assert 'data-theme-choice="light"' in body
-    assert 'data-theme-choice="dark"' in body
-    assert 'data-theme-choice="system"' not in body
+    assert "Display mode" not in body.split("<main", 1)[-1].split("</main>")[0]
 
 
-def test_settings_get_renders_populated_form_when_configured(
-    client: TestClient, db: Session, fernet_key: str
-) -> None:
-    client.post(
-        "/operator/settings",
-        data={
-            "smtp_host": "smtp.office365.com",
-            "smtp_port": "587",
-            "smtp_username": "alice@example.edu",
-            "smtp_password": "app-pw-1234",
-            "smtp_encryption": "starttls",
-            "smtp_from_display_name": "Alice's Reviews",
-        },
-        follow_redirects=False,
-    )
-    body = client.get("/operator/settings").text
-    assert 'value="smtp.office365.com"' in body
-    assert 'value="587"' in body
-    assert 'value="alice@example.edu"' in body
-    assert "Alice&#39;s Reviews" in body or "Alice's Reviews" in body
-    # Password reads "set" once persisted; plaintext never appears.
-    assert "<span class=\"muted\">— set</span>" in body
-    assert "app-pw-1234" not in body
-    # Empty-state intro disappears once host is set.
-    assert "Bring your own SMTP" not in body
+@pytest.mark.parametrize("path", ["/operator/settings", "/operator/settings/clear"])
+def test_the_smtp_routes_are_gone(client: TestClient, path: str) -> None:
+    response = client.post(path, data={"confirm": "true"}, follow_redirects=False)
+    assert response.status_code in (404, 405)
 
 
-def test_settings_two_columns_smtp_left_date_and_clear_right(
-    client: TestClient, db: Session
-) -> None:
-    """19T Item 16 entry 3 — one `.bottom-grid` pair of `.bottom-left`
-    stacks: the SMTP card alone in the left; Date & time then Clear all
-    settings in the right."""
-    from html.parser import HTMLParser
+# ── The kept storage: operator_settings (spec/settings_inventory.md) ──────
 
-    class _Columns(HTMLParser):
-        # Records, for each card of interest, the index of the
-        # `.bottom-grid` child it sits in, and each child's classes.
-        def __init__(self) -> None:
-            super().__init__()
-            self.stack: list[dict[str, str]] = []
-            self.column_of: dict[str, int] = {}
-            self.columns_seen = 0
-            self.column_classes: list[list[str]] = []
 
-        def handle_starttag(self, tag, attrs):
-            if tag != "div":
-                return
-            a = {k: v or "" for k, v in attrs}
-            if self.stack and "bottom-grid" in self.stack[-1].get(
-                "class", ""
-            ).split():
-                self.columns_seen += 1
-                a["_column"] = str(self.columns_seen)
-                self.column_classes.append(a.get("class", "").split())
-            self.stack.append(a)
-            if a.get("id") in ("timezone-settings", "danger-zone"):
-                self.column_of[a["id"]] = self._column()
-
-        def handle_endtag(self, tag):
-            if tag == "div" and self.stack:
-                self.stack.pop()
-
-        def handle_data(self, data):
-            if data.strip() == "Email send (SMTP)":
-                self.column_of["smtp"] = self._column()
-
-        def _column(self) -> int:
-            for a in reversed(self.stack):
-                if "_column" in a:
-                    return int(a["_column"])
-            return 0
-
-    body = client.get("/operator/settings").text
-    parser = _Columns()
-    parser.feed(body)
-    assert parser.columns_seen == 2
-    # Each side is a `.bottom-left` stack: a bare <div> would leave the
-    # two right-hand cards flush (`.bottom-grid .card` zeroes margins).
-    assert all("bottom-left" in c for c in parser.column_classes)
-    assert parser.column_of == {
-        "smtp": 1, "timezone-settings": 2, "danger-zone": 2,
+def _configure(db: Session, user: User, **overrides: object) -> None:
+    fields = {
+        "host": "smtp.office365.com", "port": 587, "username": "alice@example.edu",
+        "plaintext_password": "very-secret", "from_display_name": "Alice",
+        "encryption": "starttls",
     }
-    assert body.index('id="timezone-settings"') < body.index('id="danger-zone"')
+    fields.update(overrides)
+    operator_settings.save_email_settings(db, user=user, **fields)
 
 
-# ── POST /settings ───────────────────────────────────────────────────────
-
-
-def test_settings_save_persists_and_audits(
-    client: TestClient, db: Session, fernet_key: str
-) -> None:
-    response = client.post(
-        "/operator/settings",
-        data={
-            "smtp_host": "smtp.office365.com",
-            "smtp_port": "587",
-            "smtp_username": "alice@example.edu",
-            "smtp_password": "app-pw-abcd",
-            "smtp_encryption": "starttls",
-        },
-        follow_redirects=False,
-    )
-    assert response.status_code == 303
-    assert response.headers["location"] == "/operator/settings"
-
+def test_save_persists_encrypts_and_audits(client: TestClient, db: Session, fernet_key: str) -> None:
+    client.get("/operator/sessions")
     user = _alice_row(db)
-    assert user.smtp_host == "smtp.office365.com"
-    assert user.smtp_port == 587
-    assert user.smtp_username == "alice@example.edu"
-    assert user.smtp_encryption == "starttls"
-    assert user.smtp_password_encrypted is not None
-    # Stored value is ciphertext; plaintext is recoverable.
-    assert user.smtp_password_encrypted != b"app-pw-abcd"
-    assert _secrets.decrypt_password(user.smtp_password_encrypted) == "app-pw-abcd"
-
-    # Audit captures the diff but never logs the password bytes.
-    event = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "operator_email_settings.updated"
-        )
-    ).scalar_one()
-    changes = event.detail["changes"]
-    assert changes["smtp_host"] == [None, "smtp.office365.com"]
-    assert changes["smtp_port"] == [None, 587]
-    # Password change logged symbolically only.
-    assert changes["smtp_password_changed"] == [False, True]
-    assert "smtp_password_encrypted" not in changes
-
-
-def test_settings_save_blank_password_keeps_existing_ciphertext(
-    client: TestClient, db: Session, fernet_key: str
-) -> None:
-    client.post(
-        "/operator/settings",
-        data={
-            "smtp_host": "smtp.office365.com",
-            "smtp_port": "587",
-            "smtp_username": "alice@example.edu",
-            "smtp_password": "first-password",
-            "smtp_encryption": "starttls",
-        },
-        follow_redirects=False,
-    )
-    db.expire_all()
-    first_ciphertext = _alice_row(db).smtp_password_encrypted
-
-    # Save again with blank password — display name changes; password
-    # field empty must NOT wipe the saved ciphertext.
-    client.post(
-        "/operator/settings",
-        data={
-            "smtp_host": "smtp.office365.com",
-            "smtp_port": "587",
-            "smtp_username": "alice@example.edu",
-            "smtp_password": "",
-            "smtp_encryption": "starttls",
-            "smtp_from_display_name": "Updated name",
-        },
-        follow_redirects=False,
-    )
+    _configure(db, user)
     db.expire_all()
     user = _alice_row(db)
-    assert user.smtp_password_encrypted == first_ciphertext
-    assert user.smtp_from_display_name == "Updated name"
+    assert user.smtp_host == "smtp.office365.com" and user.smtp_port == 587
+    assert user.smtp_password_encrypted and b"very-secret" not in user.smtp_password_encrypted
+    assert _secrets.decrypt_password(user.smtp_password_encrypted) == "very-secret"
+    assert db.execute(
+        select(AuditEvent).where(AuditEvent.event_type == "operator_email_settings.updated")
+    ).scalar_one_or_none() is not None
 
 
-def test_settings_save_stores_the_password_as_typed(
-    client: TestClient, db: Session, fernet_key: str
-) -> None:
-    """Findings O3, ruled 2026-10-22: outer spaces are part of a
-    password, so it is stored as typed; whitespace alone still reads as
-    left blank and keeps the saved one."""
-    form = {
-        "smtp_host": "smtp.office365.com",
-        "smtp_port": "587",
-        "smtp_username": "alice@example.edu",
-        "smtp_encryption": "starttls",
-    }
-    client.post(
-        "/operator/settings",
-        data={**form, "smtp_password": " spaced pw "},
-        follow_redirects=False,
-    )
-    db.expire_all()
-    stored = _alice_row(db).smtp_password_encrypted
-    assert _secrets.decrypt_password(stored) == " spaced pw "
-
-    client.post(
-        "/operator/settings",
-        data={**form, "smtp_password": "   "},
-        follow_redirects=False,
-    )
-    db.expire_all()
-    assert _alice_row(db).smtp_password_encrypted == stored
-
-
-def test_settings_save_same_password_records_no_change(
-    client: TestClient, db: Session, fernet_key: str
-) -> None:
-    """Re-submitting the saved password is not a password change.
-    Fernet salts each encryption, so the old ciphertext comparison
-    always differed and every Save recorded one (findings O8)."""
-    form = {
-        "smtp_host": "smtp.office365.com",
-        "smtp_port": "587",
-        "smtp_username": "alice@example.edu",
-        "smtp_password": "same-password",
-        "smtp_encryption": "starttls",
-    }
-    client.post("/operator/settings", data=form, follow_redirects=False)
-    db.expire_all()
-    first_ciphertext = _alice_row(db).smtp_password_encrypted
-
-    client.post(
-        "/operator/settings",
-        data={**form, "smtp_from_display_name": "New name"},
-        follow_redirects=False,
-    )
-    db.expire_all()
-    assert _alice_row(db).smtp_password_encrypted == first_ciphertext
-    events = list(
-        db.execute(
-            select(AuditEvent)
-            .where(AuditEvent.event_type == "operator_email_settings.updated")
-            .order_by(AuditEvent.id)
-        ).scalars()
-    )
-    assert len(events) == 2
-    assert "smtp_password_changed" not in events[1].detail["changes"]
-    assert events[1].detail["changes"]["smtp_from_display_name"] == [
-        None,
-        "New name",
-    ]
-
-    # A Save with nothing changed, the password re-typed, writes nothing.
-    client.post(
-        "/operator/settings",
-        data={**form, "smtp_from_display_name": "New name"},
-        follow_redirects=False,
-    )
-    assert (
-        len(
-            db.execute(
-                select(AuditEvent).where(
-                    AuditEvent.event_type == "operator_email_settings.updated"
-                )
-            ).all()
-        )
-        == 2
-    )
-
-    # A different password still records the change.
-    client.post(
-        "/operator/settings",
-        data={**form, "smtp_password": "other-password"},
-        follow_redirects=False,
-    )
-    db.expire_all()
-    latest = db.execute(
-        select(AuditEvent)
-        .where(AuditEvent.event_type == "operator_email_settings.updated")
-        .order_by(AuditEvent.id.desc())
-        .limit(1)
-    ).scalar_one()
-    assert latest.detail["changes"]["smtp_password_changed"] == [False, True]
-    assert (
-        _secrets.decrypt_password(_alice_row(db).smtp_password_encrypted)
-        == "other-password"
-    )
-
-
-def test_settings_save_invalid_port_returns_422(
-    client: TestClient, db: Session, fernet_key: str
-) -> None:
-    response = client.post(
-        "/operator/settings",
-        data={"smtp_port": "not-a-port"},
-        follow_redirects=False,
-    )
-    assert response.status_code == 422
-
-
-def test_settings_save_invalid_encryption_returns_422(
-    client: TestClient, db: Session, fernet_key: str
-) -> None:
-    response = client.post(
-        "/operator/settings",
-        data={"smtp_encryption": "double-rot13"},
-        follow_redirects=False,
-    )
-    assert response.status_code == 422
-
-
-# ── POST /settings/clear ─────────────────────────────────────────────────
-
-
-def test_settings_clear_wipes_everything_and_audits(
-    client: TestClient, db: Session, fernet_key: str
-) -> None:
-    client.post(
-        "/operator/settings",
-        data={
-            "smtp_host": "smtp.office365.com",
-            "smtp_port": "587",
-            "smtp_username": "alice@example.edu",
-            "smtp_password": "x",
-            "smtp_encryption": "starttls",
-        },
-        follow_redirects=False,
-    )
-    response = client.post(
-        "/operator/settings/clear", data={"confirm": "true"}, follow_redirects=False
-    )
-    assert response.status_code == 303
-    assert response.headers["location"] == "/operator/settings"
-
+def test_a_blank_password_keeps_the_stored_one(client: TestClient, db: Session, fernet_key: str) -> None:
+    client.get("/operator/sessions")
     user = _alice_row(db)
-    assert user.smtp_host is None
-    assert user.smtp_port is None
-    assert user.smtp_username is None
-    assert user.smtp_password_encrypted is None
-    assert user.smtp_encryption is None
-    # Default "smtp" transport survives the clear — it's not a
-    # credential, just a backend selector.
-    assert user.smtp_transport == "smtp"
-
-    event = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "operator_email_settings.cleared"
-        )
-    ).scalar_one()
-    assert event.actor_user_id == user.id
+    _configure(db, user)
+    before = _alice_row(db).smtp_password_encrypted
+    _configure(db, user, plaintext_password="", host="smtp2.example.edu")
+    db.expire_all()
+    after = _alice_row(db)
+    assert after.smtp_host == "smtp2.example.edu" and after.smtp_password_encrypted == before
 
 
-def test_settings_clear_refuses_without_the_confirm(
-    client: TestClient, db: Session, fernet_key: str
-) -> None:
-    """The confirm box is the gate (spec/ui_elements.md §4): without it
-    the route clears nothing."""
-    client.post(
-        "/operator/settings",
-        data={"smtp_host": "smtp.office365.com", "smtp_port": "587"},
-        follow_redirects=False,
-    )
-    response = client.post("/operator/settings/clear", follow_redirects=False)
-    assert response.status_code == 400
-    assert _alice_row(db).smtp_host == "smtp.office365.com"
+def test_a_password_is_stored_as_typed(client: TestClient, db: Session, fernet_key: str) -> None:
+    """Outer spaces are kept (findings O3); whitespace alone keeps the
+    stored password, as a blank does."""
+    client.get("/operator/sessions")
+    user = _alice_row(db)
+    _configure(db, user, plaintext_password="  spaced  ")
+    assert _secrets.decrypt_password(_alice_row(db).smtp_password_encrypted) == "  spaced  "
+    _configure(db, user, plaintext_password="   ")
+    db.expire_all()
+    assert _secrets.decrypt_password(_alice_row(db).smtp_password_encrypted) == "  spaced  "
 
 
-def test_settings_clear_card_is_guarded(client: TestClient) -> None:
-    """The card's button ships disabled, paired with a "Yes, delete…"
-    box, under its "(SMTP)" header."""
-    body = client.get("/operator/settings").text
-    assert "<h2>Clear all settings (SMTP)</h2>" in body
-    box = re.search(r'<input[^>]*data-delete-confirm="clear-settings"[^>]*>', body)
-    assert box, "the clear card has no confirm box"
-    for attr in ('name="confirm"', 'value="true"', "required"):
-        assert attr in box.group(0), attr
-    button = re.search(r'<button[^>]*data-delete-btn="clear-settings"[^>]*>', body)
-    assert button, "the clear card has no paired button"
-    assert 'disabled aria-disabled="true"' in button.group(0)
-    assert "Yes, delete every SMTP setting on this account." in body
+def test_the_same_password_records_no_change(client: TestClient, db: Session, fernet_key: str) -> None:
+    """Re-saving an unchanged password writes no audit row (findings
+    O8: Fernet salts every encryption, so ciphertexts never match)."""
+    client.get("/operator/sessions")
+    user = _alice_row(db)
+    _configure(db, user)
+    _configure(db, user)
+    events = db.execute(
+        select(AuditEvent).where(AuditEvent.event_type == "operator_email_settings.updated")
+    ).scalars().all()
+    assert len(events) == 1
+    assert "smtp_password_changed" in str(events[0].detail)
 
 
-# ── operator_settings.get_email_settings ─────────────────────────────────
+def test_clear_wipes_everything_and_audits(client: TestClient, db: Session, fernet_key: str) -> None:
+    client.get("/operator/sessions")
+    user = _alice_row(db)
+    _configure(db, user)
+    operator_settings.clear_email_settings(db, user=user)
+    db.expire_all()
+    user = _alice_row(db)
+    assert user.smtp_host is None and user.smtp_password_encrypted is None
+    assert db.execute(
+        select(AuditEvent).where(AuditEvent.event_type == "operator_email_settings.cleared")
+    ).scalar_one_or_none() is not None
 
 
 def test_get_email_settings_returns_none_on_partial(
     client: TestClient, db: Session, fernet_key: str
 ) -> None:
-    """Missing app password — the credential set is incomplete, so
-    ``get_email_settings`` returns ``None`` rather than a half-baked
-    dataclass that the transport factory would unwrap."""
-    # Touch a route so the operator user row gets created via
-    # ``get_or_create_user``.
+    """Missing app password: ``get_email_settings`` returns ``None``
+    rather than a half-built dataclass."""
     client.get("/operator/sessions")
     user = _alice_row(db)
     user.smtp_host = "smtp.office365.com"
@@ -470,61 +158,33 @@ def test_get_email_settings_returns_none_on_partial(
     user.smtp_username = "alice@example.edu"
     user.smtp_encryption = "starttls"
     db.flush()
-
     assert operator_settings.get_email_settings(user) is None
 
 
 def test_get_email_settings_returns_decrypted_when_complete(
     client: TestClient, db: Session, fernet_key: str
 ) -> None:
-    client.post(
-        "/operator/settings",
-        data={
-            "smtp_host": "smtp.office365.com",
-            "smtp_port": "587",
-            "smtp_username": "alice@example.edu",
-            "smtp_password": "very-secret",
-            "smtp_encryption": "starttls",
-        },
-        follow_redirects=False,
-    )
-    db.expire_all()
+    client.get("/operator/sessions")
     user = _alice_row(db)
-    snap = operator_settings.get_email_settings(user)
-    assert snap is not None
-    assert snap.transport == "smtp"
-    assert snap.host == "smtp.office365.com"
-    assert snap.port == 587
-    assert snap.username == "alice@example.edu"
-    assert snap.password == "very-secret"
-    assert snap.encryption == "starttls"
-
-
-# ── _secrets fail-loud on missing key ────────────────────────────────────
+    _configure(db, user)
+    db.expire_all()
+    snap = operator_settings.get_email_settings(_alice_row(db))
+    assert snap is not None and snap.transport == "smtp"
+    assert (snap.host, snap.port, snap.username, snap.password, snap.encryption) == (
+        "smtp.office365.com", 587, "alice@example.edu", "very-secret", "starttls"
+    )
 
 
 def test_save_fails_loudly_when_encryption_key_missing(
     client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """No ``SMTP_ENCRYPTION_KEY`` configured + an attempt to save a
-    password ⇒ 500 with operator-actionable copy. The Settings page
-    GET still works (we don't pre-validate at boot)."""
+    """No ``SMTP_ENCRYPTION_KEY`` and a password to store: the service
+    raises rather than storing it in the clear. The page still loads."""
     monkeypatch.setattr(settings, "smtp_encryption_key", None)
-    # GET still loads.
     assert client.get("/operator/settings").status_code == 200
-    response = client.post(
-        "/operator/settings",
-        data={
-            "smtp_host": "smtp.office365.com",
-            "smtp_port": "587",
-            "smtp_username": "alice@example.edu",
-            "smtp_password": "x",
-            "smtp_encryption": "starttls",
-        },
-        follow_redirects=False,
-    )
-    assert response.status_code == 500
-    assert "SMTP_ENCRYPTION_KEY" in response.text
+    client.get("/operator/sessions")
+    with pytest.raises(_secrets.MissingEncryptionKey):
+        _configure(db, _alice_row(db), plaintext_password="x")
 
 
 # ── User-menu chrome link ────────────────────────────────────────────────
@@ -559,31 +219,24 @@ def test_settings_get_renders_back_link_to_origin(
     client: TestClient, db: Session
 ) -> None:
     """``?return_to=/operator/sessions`` resolves via
-    ``app.web.return_to`` and renders the back-link + Cancel target."""
+    ``app.web.return_to`` and renders the back-link. (The SMTP form's
+    Cancel retired with it, 14C Item 1.)"""
     body = client.get(
         "/operator/settings?return_to=/operator/sessions"
     ).text
     assert "&larr; Back to Sessions" in body
     assert 'class="back-link" href="/operator/sessions"' in body
-    # Cancel anchor in the form actions row points at the same URL.
-    assert (
-        '<a class="btn secondary" href="/operator/sessions">Cancel</a>' in body
-    )
 
 
-def test_settings_save_preserves_return_to_through_redirect(
-    client: TestClient, db: Session, fernet_key: str
+def test_timezone_save_preserves_return_to_through_redirect(
+    client: TestClient, db: Session
 ) -> None:
-    """The hidden ``return_to`` form input rides through the Save
-    redirect so the back-link stays wired after reload."""
+    """The hidden ``return_to`` input rides through the Date & time
+    save redirect so the back-link stays wired after reload."""
     response = client.post(
-        "/operator/settings",
+        "/operator/settings/timezone",
         data={
-            "smtp_host": "smtp.office365.com",
-            "smtp_port": "587",
-            "smtp_username": "alice@example.edu",
-            "smtp_password": "x",
-            "smtp_encryption": "starttls",
+            "display_timezone": "Asia/Singapore",
             "return_to": "/operator/sessions",
         },
         follow_redirects=False,

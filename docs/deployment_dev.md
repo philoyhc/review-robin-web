@@ -196,7 +196,7 @@ restart the app after a change.
 | `OPERATOR_CONTACT_EMAIL` | unset | Optional contact address shown on the `/about` access card. |
 | `ALLOW_FAKE_AUTH` | `false` | Local-only fake-identity escape hatch. **Must stay `false`** in any deployed environment. |
 | `FAKE_AUTH_EMAIL` / `FAKE_AUTH_NAME` / `FAKE_AUTH_PRINCIPAL_ID` / `FAKE_AUTH_OPERATOR` / `FAKE_AUTH_SYS_ADMIN` / `FAKE_AUTH_SUPER_ADMIN` | dev values | Tune the fake identity; inert unless `ALLOW_FAKE_AUTH=true`. `FAKE_AUTH_SUPER_ADMIN` (default on) makes the local fake operator a super-admin. |
-| `SMTP_ENCRYPTION_KEY` | unset | Fernet key encrypting operator SMTP passwords at rest. **Needed now**: the operator Settings page stores each operator's SMTP credentials, and saving them fails without a valid key (no transport sends mail yet; Segment 14B). Rotating it leaves stored passwords undecryptable, so operators re-enter theirs. |
+| `SMTP_ENCRYPTION_KEY` | unset | Fernet key encrypting operator SMTP passwords at rest. **No page needs it** since the Settings page's SMTP cards retired (segment 14C Item 1); it still decrypts any password saved before then, and rotating it leaves those undecryptable. |
 | `SCHEDULED_OPERATIONAL_LEAD_HOURS` | `1` | Minimum lead time, in hours, between now and a scheduled activation set at save, and between now and each resolved auto-send fire moment (`spec/settings_inventory.md` §2). |
 | `REVIEWER_NOTICE_MIN_HOURS` | `1` | Minimum `\|offset\|`, in hours, of each auto-send invite or reminder offset (`spec/settings_inventory.md` §2). |
 | `REHYDRATE_ENABLED` | `false` | Opens the Rehydrate surface. Off by default and deferred; the test suite turns it on. |

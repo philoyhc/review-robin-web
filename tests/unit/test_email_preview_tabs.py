@@ -76,11 +76,11 @@ def _user(
     )
 
 
-def test_from_display_unconfigured_user_returns_settings_pointer() -> None:
+def test_from_display_unconfigured_user_says_the_sender_is_unset() -> None:
     out = views.email_preview_from_display(_user())
 
-    assert "SMTP From not configured" in out
-    assert "Settings" in out
+    assert out == "(the sender is set when email sending is switched on)"
+    assert "Settings" not in out
 
 
 def test_from_display_username_only_returns_bare_username() -> None:
