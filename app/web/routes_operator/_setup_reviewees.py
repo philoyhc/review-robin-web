@@ -54,6 +54,7 @@ from app.web.routes_operator._shared import (
     _require_response_loss_ack,
     _save_field_labels,
     _templates,
+    symmetric_preview,
 )
 
 router = APIRouter()
@@ -159,6 +160,7 @@ def _render_reviewees_page(
     # always shipped collapsed would shut itself on every save — the
     # Lock control is what closes it.
     panel_open: bool = False,
+    symmetric_preview_variant: str | None = None,
     http_status: int = status.HTTP_200_OK,
 ) -> HTMLResponse:
     """Render the Reviewees Setup page — the reviewee-side mirror of
@@ -240,6 +242,7 @@ def _render_reviewees_page(
         {
             "user": user,
             "session": review_session,
+            "symmetric_preview": symmetric_preview_variant,
             "status_pills": views.session_status_pills(db, review_session),
             "reviewees": reviewees,
             "selected_ids": selected_ids or set(),
@@ -388,6 +391,7 @@ def reviewees_list(
     # doubles as the no-JS way in (the `<noscript>` link beside the
     # toggle).
     unlocked: int = 0,
+    symmetric_preview_raw: str | None = Query(default=None, alias="symmetric_preview"),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -405,6 +409,7 @@ def reviewees_list(
         focus_id=focus,
         selected_ids=set(selected),
         panel_open=bool(unlocked),
+        symmetric_preview_variant=symmetric_preview(symmetric_preview_raw),
     )
 
 

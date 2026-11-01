@@ -56,6 +56,22 @@ A peer review where every participant both gives and receives feedback is a comm
 
 - **Matching key is a stored link, not the address** (2026-11-01, Codex on `#3482`). With address matching, an address correction would read as one person removed and another added, and the reviewee delete cascades to assignments, responses and relationships. The link costs one nullable column. Matching by `id` alone is impossible, since the two rosters number their rows separately.
 
+- **A reviewer delete warns about the reviewee side** (author's default, 2026-11-01). The mirrored reviewee is deleted through the reviewee cascade, but the Reviewees page's confirmations are read-only under the mode. So with the mode on, Reviewers' delete confirmations also count the reviewee side: its assignments, the responses about them and their relationships. That covers row delete, bulk delete, Delete all and a replacing upload. The counts join the existing confirm text, with no new step.
+- **Status mirrors** (author's default, 2026-11-01). Withdrawing a reviewer also withdraws them as a reviewee, so they stop being reviewed as well as reviewing: one person, one status.
+- **When the toggle can change** (author's default, 2026-11-01). It follows the Relationships and Observers toggles' gates, and the empty-rosters rule settles nearly every case. Turning it off stays allowed at any stage.
+- **Rung 1 previews the mode-on states by `?symmetric_preview=plain|marked`** (2026-11-01). Without the column nothing can turn the mode on, and the tab's look (open question 2) has to be seen to be chosen. The parameter touches no service, and rung 2 deletes it.
+
+## Status
+
+- **Rung 1 (scaffold), 2026-11-01.** Built with these pieces, all inert:
+  - the New session checkbox, box first;
+  - a Rosters group with a Symmetric review chip on Session Home's details card;
+  - the greyed Reviewees Quick Setup slot;
+  - the read-only Reviewees page, with its banner pointing to Reviewers and the Unlock panel and row controls gone;
+  - the Reviewees tab, plain or marked "mirrored".
+  
+  The mode-on states show only under `?symmetric_preview=`, and only on the pages that pass it (New session, Session Home, Reviewees). Cumulative-diff base for the item's cold read: `6b3b0a0e`.
+
 ## Blast radius (measured)
 
 Taken 2026-11-01 at `2accb87`:

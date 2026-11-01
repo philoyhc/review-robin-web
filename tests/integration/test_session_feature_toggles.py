@@ -364,7 +364,10 @@ def test_session_home_renders_the_optional_setup_tabs_field(
 def _chips(body: str, mode: str) -> str:
     """The display- or edit-mode chip pair of the optional-tabs field."""
     field = body[body.index('id="config-optional-tabs"'):]
-    field = field[: field.index('<div class="fill-col"')]
+    # The field ends where the next one begins: 20B's Rosters group, or
+    # the details card's right column.
+    ends = [i for i in (field.find('id="config-symmetric-review"'), field.find('<div class="fill-col"')) if i != -1]
+    field = field[: min(ends)]
     marker = "<div data-display-only>" if mode == "display" else "<div data-edit-only>"
     start = field.index(marker)
     other = "<div data-edit-only>" if mode == "display" else '<div class="fill-col"'

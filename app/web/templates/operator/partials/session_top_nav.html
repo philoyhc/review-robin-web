@@ -34,7 +34,7 @@
     <a class="nav-tab{% if current_page == 'Reviewers' %} active{% endif %}"
        href="{{ url('/operator/sessions/' ~ session.public_id ~ '/reviewers') }}">Reviewers</a>
     <a class="nav-tab{% if current_page == 'Reviewees' %} active{% endif %}"
-       href="{{ url('/operator/sessions/' ~ session.public_id ~ '/reviewees') }}">Reviewees</a>
+       href="{{ url('/operator/sessions/' ~ session.public_id ~ '/reviewees') }}">Reviewees{% if symmetric_preview|default(none) == 'marked' %} <span class="pill pill-count" title="Mirrored from Reviewers" data-symmetric-mark>mirrored</span>{% endif %}</a>
     {# Relationships + Observers are optional Setup tabs — each
        gated by its own per-session toggle on Edit Session
        Details (User interface settings card).

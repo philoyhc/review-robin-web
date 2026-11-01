@@ -189,7 +189,8 @@
     <div class="bottom-left">
       <div class="card" id="user-interface-settings">
         <h3 style="margin-top: 0;">User interface settings</h3>
-        <p class="muted">Per-session toggles for the optional Setup tabs.</p>
+        <p class="muted">Per-session toggles for the optional Setup tabs, and
+          for symmetric review.</p>
         <div class="ui-settings-row">
           <label class="ui-setting">
             <input type="checkbox" name="relationships_enabled"
@@ -202,6 +203,18 @@
             Observers tab and page
           </label>
         </div>
+        {# 20B rung 1 — scaffold: inert (no ``name``, disabled) until rung 2
+           stores it. ``?symmetric_preview=`` shows it ticked. #}
+        <div class="ui-settings-row">
+          <label class="ui-setting">
+            <input type="checkbox" data-symmetric-review disabled
+                   {% if symmetric_preview %}checked{% endif %}>
+            Symmetric review
+          </label>
+        </div>
+        <p class="muted" style="margin-bottom: 0;">Symmetric review: everyone
+          reviews everyone. Upload the Reviewers roster only, and the app
+          makes the same people the reviewees.</p>
       </div>
       {% include "operator/partials/_quick_setup_card.html" %}
     </div>

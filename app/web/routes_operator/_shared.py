@@ -200,6 +200,20 @@ _REVERT_RETURN_TO = {
 }
 
 
+# 20B rung 1 — the symmetric-review scaffold. ``?symmetric_preview=``
+# ``plain`` or ``marked`` renders the mode-on states (the greyed
+# Reviewees slot, the read-only Reviewees page, and the Reviewees tab
+# unmarked or marked) so the author can judge them before the setting
+# exists. Inert: nothing reads or writes a setting. Rung 2 replaces it
+# with ``session.symmetric_review`` and deletes this.
+SYMMETRIC_PREVIEW_VALUES = ("plain", "marked")
+
+
+def symmetric_preview(raw: str | None) -> str | None:
+    """The scaffold's preview variant, or ``None`` for anything else."""
+    return raw if raw in SYMMETRIC_PREVIEW_VALUES else None
+
+
 def acknowledged_loss(raw: object) -> int:
     """The count a ``Yes, clear them`` tick was shown on a Save refused
     for clearing group answers (``acknowledge_response_loss``), or 0
@@ -1527,6 +1541,7 @@ def render_session_home(
     prepare_confirm: str | None = None,
     editing: bool = False,
     owners_error: str | None = None,
+    symmetric_preview_variant: str | None = None,
     http_status: int = status.HTTP_200_OK,
 ) -> HTMLResponse:
     """Render Session Home.
@@ -1559,6 +1574,7 @@ def render_session_home(
         {
             "user": user,
             "session": review_session,
+            "symmetric_preview": symmetric_preview_variant,
             "setup_rows": setup_rows,
             "status_pills": views.session_status_pills(db, review_session),
             "has_responses": lifecycle.session_has_responses(db, review_session),

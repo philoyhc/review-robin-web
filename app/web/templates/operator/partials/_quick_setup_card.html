@@ -36,7 +36,7 @@
    full-width ``banner-error`` above the slots, tied to its slot by
    id (``_quick_setup_error_message``).
 #}
-{% macro quick_setup_slot(slot, form_id, locked) -%}
+{% macro quick_setup_slot(slot, form_id, locked, mirrored=false) -%}
 <section class="quick-setup-slot"
          id="quick-setup-{{ slot.key }}"
          data-wire-target="quick-setup-{{ slot.key }}">
@@ -44,7 +44,17 @@
     {{ slot.label }}
     <span class="quick-setup-slot-action">Upload a CSV</span>
   </h3>
-  {% if slot.is_wired %}
+  {% if mirrored %}
+    {# 20B rung 1 — the Reviewees slot under symmetric review: greyed,
+       its reason in place of the file input (scaffold, shown by
+       ``?symmetric_preview=``). #}
+    <div class="quick-setup-slot-controls" data-symmetric-mirrored>
+      <input type="file" accept=".csv" disabled aria-disabled="true"
+             aria-describedby="quick-setup-{{ slot.key }}-mirrored">
+      <p class="muted" id="quick-setup-{{ slot.key }}-mirrored">Symmetric
+        review: reviewees are the reviewers. Upload the Reviewers roster.</p>
+    </div>
+  {% elif slot.is_wired %}
     {# Live slot — file upload. Submit lives at the bottom of the
        card, not per-slot. #}
     <div class="quick-setup-slot-controls">
@@ -203,12 +213,12 @@
     <div class="quick-setup-top-grid">
       <div class="quick-setup-top-grid-col">
         {% for slot in quick_setup.slots[:_split] %}
-          {{ quick_setup_slot(slot, submit_all_form_id, quick_setup.is_locked) }}
+          {{ quick_setup_slot(slot, submit_all_form_id, quick_setup.is_locked, mirrored=(slot.key == 'reviewees' and symmetric_preview|default(none))) }}
         {% endfor %}
       </div>
       <div class="quick-setup-top-grid-col">
         {% for slot in quick_setup.slots[_split:] %}
-          {{ quick_setup_slot(slot, submit_all_form_id, quick_setup.is_locked) }}
+          {{ quick_setup_slot(slot, submit_all_form_id, quick_setup.is_locked, mirrored=(slot.key == 'reviewees' and symmetric_preview|default(none))) }}
         {% endfor %}
       </div>
     </div>
