@@ -104,6 +104,22 @@
     {% include "operator/partials/_roster_lock_card.html" %}
   {% endwith %}
 
+  {# 20B rung 1 — the page under symmetric review, a scaffold shown by
+     ``?symmetric_preview=``: read-only, its Unlock panel (What reviewees
+     see, Upload, the tag labels, the Danger Zone) and row controls gone,
+     a note pointing to Reviewers. Set after the lock card, which keeps
+     its own lifecycle gate. Rung 4 makes it real. #}
+  {% if symmetric_preview %}
+    {% set is_editable = false %}
+    {% set unlock_available = false %}
+    <div class="banner banner-info" data-symmetric-mirrored>
+      <p class="banner-lead">Symmetric review: the reviewees are the reviewers.</p>
+      <p>This page shows them read-only. Add, edit or remove people on
+        <a href="{{ url('/operator/sessions/' ~ session.public_id ~ '/reviewers') }}">Reviewers</a>,
+        and each change appears here.</p>
+    </div>
+  {% endif %}
+
   {# 19P.3 rung 4 — page guidance leads the page, full width, with no
      `.card-columns` beside it. Its prose runs
      in two columns when open: at full width one measure is ~150

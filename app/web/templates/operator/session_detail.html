@@ -253,6 +253,30 @@
             </div>
           </div>
         </div>
+        {# 20B rung 1 — the Symmetric review toggle, a scaffold: inert in
+           both modes (no ``name``, nothing posts it) until rung 2 adds
+           ``session.symmetric_review``. ``?symmetric_preview=`` shows it
+           on. Its own group, not a tab: it decides that the Reviewers
+           roster is also the Reviewees roster. #}
+        <div id="config-symmetric-review" role="group"
+             aria-labelledby="config-symmetric-review-heading">
+          <label id="config-symmetric-review-heading">Rosters</label>
+          <div data-display-only>
+            <div class="col-chip-row">
+              <span class="pill pill-count tag-chip is-locked{% if symmetric_preview %} is-selected{% endif %}"
+                    role="checkbox" aria-checked="{{ 'true' if symmetric_preview else 'false' }}"
+                    aria-disabled="true" data-symmetric-review>Symmetric review</span>
+            </div>
+          </div>
+          <div data-edit-only>
+            <div class="col-chip-row">
+              <label class="pill pill-count tag-chip is-fixed"
+                     title="Reviewers are also the reviewees. On only while both rosters are empty.">
+                <input type="checkbox" class="visually-hidden" data-symmetric-review
+                       {% if symmetric_preview %}checked{% endif %} disabled>Symmetric review</label>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="fill-col" style="min-width: 0;">
