@@ -35,10 +35,11 @@ in Cordware's private records.
 
 ## 2. Addresses: sign-in name, mail and aliases
 
-- **At NUS the sign-in name and the mail differ.** The UPN reads like an
-  account number; the mail like a name. Easy Auth's `emailaddress` claim
-  is the mail, so admin lists and roster emails should hold mail
-  addresses.
+- **The sign-in name (UPN) may not be the email address.** Never assume
+  the two are the same, or that one can be derived from the other. Easy
+  Auth's `emailaddress` claim is the mail, so admin lists and roster
+  emails should hold mail addresses, and a match should try both the mail
+  and the UPN.
 - **Look a user up by mail with `$filter=mail eq '…'`.** `GET
   /users/{mail}` answers "not found"; only the UPN or the object ID works
   in the path.
