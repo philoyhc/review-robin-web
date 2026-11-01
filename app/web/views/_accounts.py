@@ -12,7 +12,8 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
-from urllib.parse import parse_qs, urlencode
+from typing import Any
+from urllib.parse import parse_qs, quote, urlencode
 
 from app.services.account_listing import CATEGORIES, SESSION_ROLES
 
@@ -264,6 +265,22 @@ _INVITE_REFUSALS = {
     "ambiguous_in_directory": "matches more than one directory account",
     "account_exists": "belongs to someone with an account under another address",
 }
+
+
+def invite_summary_query(outcomes: Sequence[Any]) -> str:
+    """A list invite's outcomes as the Accounts page's query (19X Item
+    14): ``invited=<n>``, ``invite_unchecked=<n>`` when any is unbound,
+    and one ``invite_refused=<code>:<address>`` per refusal, in order.
+    Each outcome is a `users.InviteOutcome`."""
+    params = [f"invited={sum(1 for o in outcomes if o.user is not None)}"]
+    unchecked = sum(1 for o in outcomes if o.unchecked)
+    if unchecked:
+        params.append(f"invite_unchecked={unchecked}")
+    params += [
+        f"invite_refused={quote(f'{o.code}:{o.address}', safe='')}"
+        for o in outcomes if o.user is None
+    ]
+    return "&".join(params)
 
 
 def invite_refusals(entries: list[str]) -> list[tuple[str, str]]:

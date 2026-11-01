@@ -773,13 +773,5 @@ def invite_user(
             url = f"{_ACCOUNTS_URL}?invite_error={quote(only.code or '', safe='')}"
             return urls.redirect(request, url=url, status_code=status.HTTP_303_SEE_OTHER)
         return _users_redirect(request, invite_unchecked=only.unchecked)
-    params = [f"invited={sum(1 for o in outcomes if o.user is not None)}"]
-    unchecked = sum(1 for o in outcomes if o.unchecked)
-    if unchecked:
-        params.append(f"invite_unchecked={unchecked}")
-    params += [
-        f"invite_refused={quote(f'{o.code}:{o.address}', safe='')}"
-        for o in outcomes if o.user is None
-    ]
-    url = f"{_ACCOUNTS_URL}?{'&'.join(params)}"
+    url = f"{_ACCOUNTS_URL}?{views.invite_summary_query(outcomes)}"
     return urls.redirect(request, url=url, status_code=status.HTTP_303_SEE_OTHER)
