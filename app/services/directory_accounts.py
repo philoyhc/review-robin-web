@@ -16,7 +16,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 
-from cordware.graph import RESOLVED, Directory, Outcome, look_up_all
+from cordware.graph import RESOLVED, Directory, GraphError, Outcome, look_up_all
 
 from app.services.email_identity import looks_like_email, normalize_email
 
@@ -90,6 +90,42 @@ def look_up_one(directory: Directory | None, address: str) -> Outcome | None:
     if k is None or directory is None:
         return None
     return look_up_all(directory, [k], budget=BUDGET).get(k)
+
+
+#: The fewest characters a picker's search asks the directory with (19Z,
+#: invite from the directory): fewer would match half the institution.
+SEARCH_MIN = 3
+
+
+@dataclass(frozen=True)
+class Person:
+    """One directory match as a picker offers it."""
+
+    name: str
+    mail: str | None
+    upn: str
+
+    @property
+    def address(self) -> str:
+        """What a pick fills an address box with: the mail, else the
+        sign-in name (an account with no mail)."""
+        return self.mail or self.upn
+
+
+def search(directory: Directory | None, text: str) -> list[Person] | None:
+    """The directory's matches for what a picker's box holds, or ``None``
+    when the directory cannot be asked (no token, or a failure). Text
+    shorter than `SEARCH_MIN` asks nothing and matches no one."""
+    prefix = text.strip()
+    if directory is None:
+        return None
+    if len(prefix) < SEARCH_MIN:
+        return []
+    try:
+        users = directory.search_users(prefix)
+    except GraphError:
+        return None
+    return [Person(name=u.display_name, mail=u.mail, upn=u.user_principal_name) for u in users]
 
 
 def resolver(directory: Directory | None) -> Callable[[str], Account | None]:

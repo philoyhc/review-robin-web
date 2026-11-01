@@ -719,6 +719,30 @@ def bulk_account_action(
     )
 
 
+@router.get("/sys-admin/users/directory-search")
+def invite_directory_search(
+    request: Request,
+    q: str = "",
+    actor: User = Depends(require_sys_admin),
+) -> JSONResponse:
+    """The invite box's picker (19Z, invite from the directory): up to ten
+    people whose name, surname, mail or sign-in name starts with ``q``,
+    asked on the admin's own token. ``available`` is false when the
+    directory cannot be asked, so the box says so rather than "no
+    match". Not audited (author, 2026-11-01)."""
+    people = directory_accounts.search(directory_or_none(request), q)
+    return JSONResponse(
+        {
+            "available": people is not None,
+            "people": [
+                {"name": p.name, "mail": p.mail, "upn": p.upn, "address": p.address}
+                for p in (people or [])
+            ],
+        },
+        headers={"Cache-Control": "no-store"},
+    )
+
+
 @router.post("/sys-admin/users/invite")
 def invite_user(
     request: Request, email: str = Form(...),

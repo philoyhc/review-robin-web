@@ -45,6 +45,8 @@ _SELECT = "id,displayName,mail,userPrincipalName"
 # More than one match is all a caller needs to know (`AMBIGUOUS`); a page
 # of five spares reading a directory's worth for a shared address.
 _TOP = 5
+#: How many people a picker's search returns (segment 19Z).
+SEARCH_TOP = 10
 # The longest `Retry-After` honored before giving up on that lookup.
 _MAX_WAIT = 30.0
 
@@ -74,6 +76,13 @@ class Directory(Protocol):
     def find_users(self, address: str) -> list[DirectoryUser]:
         """Every user whose `mail` or `userPrincipalName` is ``address``
         (exactly, as Graph compares), up to a small page."""
+        ...
+
+    def search_users(self, prefix: str) -> list[DirectoryUser]:
+        """Up to `SEARCH_TOP` users whose display name, surname, `mail`
+        or `userPrincipalName` starts with ``prefix`` (as Graph's
+        `startswith` compares: any case), for a picker as one types
+        (RRW segment 19Z, invite from the directory)."""
         ...
 
 
@@ -140,6 +149,18 @@ class GraphDirectory:
                 "$filter": f"mail eq {literal} or userPrincipalName eq {literal}",
                 "$select": _SELECT,
                 "$top": str(_TOP),
+            }
+        )
+        return _users(self._get(f"{GRAPH_ROOT}/users?{query}"))
+
+    def search_users(self, prefix: str) -> list[DirectoryUser]:
+        literal = odata_string(prefix)
+        fields = ("displayName", "surname", "mail", "userPrincipalName")
+        query = urlencode(
+            {
+                "$filter": " or ".join(f"startswith({field},{literal})" for field in fields),
+                "$select": _SELECT,
+                "$top": str(SEARCH_TOP),
             }
         )
         return _users(self._get(f"{GRAPH_ROOT}/users?{query}"))
@@ -236,6 +257,24 @@ class FakeDirectory:
             for user in self._users
             if key in {(user.mail or "").lower(), user.user_principal_name.lower()}
         ][:_TOP]
+
+    def search_users(self, prefix: str) -> list[DirectoryUser]:
+        key = prefix.strip().lower()
+        if key in FAKE_FAILURES:
+            kind = FAKE_FAILURES[key]
+            raise GraphError(kind, {"throttled": 429, "server": 503, "forbidden": 403}[kind])
+        if not key:
+            return []
+
+        def starts(user: DirectoryUser) -> bool:
+            names = user.display_name.lower()
+            surname = names.rsplit(" ", 1)[-1]
+            return any(
+                value.startswith(key)
+                for value in (names, surname, (user.mail or "").lower(), user.user_principal_name.lower())
+            )
+
+        return [user for user in self._users if starts(user)][:SEARCH_TOP]
 
 
 def directory_for(request: HTTPConnection, settings: IdentitySettings | None = None) -> Directory:
