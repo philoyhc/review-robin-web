@@ -45,8 +45,12 @@ def test_a_match_binds_the_person_and_keeps_the_address(
     row = _row(db, address)
     assert response.status_code == 303 and "invite_unchecked" not in response.headers["location"]
     assert row is not None and row.external_principal_id == JANE
+    # The directory's display name, so the row reads as its person (19Z,
+    # invite from the directory, rung 19).
+    assert row.display_name == "Jane Tan"
     event = db.execute(select(AuditEvent).where(AuditEvent.event_type == "workspace.user_invited")).scalar_one()
     assert event.detail["snapshot"]["directory_verified"] is True
+    assert event.detail["snapshot"]["display_name"] == "Jane Tan"
 
 
 @pytest.mark.parametrize(
@@ -81,6 +85,7 @@ def test_a_lookup_that_could_not_run_creates_the_row_unbound_and_says_so(
     response = _invite(client, "new@example.edu")  # no directory: nothing asked
     row = _row(db, "new@example.edu")
     assert row is not None and row.external_principal_id is None
+    assert row.display_name is None  # nothing to take a name from
     assert response.headers["location"].endswith("invite_unchecked=1")
     assert "couldn't be checked against the" in client.get(response.headers["location"]).text
 
