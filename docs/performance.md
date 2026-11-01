@@ -1,28 +1,28 @@
-# App responsiveness at roster scale — where the time actually goes
+# Performance at roster scale
 
-**Investigation only — not planned, not scoped, no lift trigger.** Asked
-2026-09-20: on a large session (1,000 reviewers, 1,000 reviewees) the
-Assignments, Invitations and Responses pages take a while to load, Session
-Home takes longer than it used to, and the Workflow actions are slow. *Is
-there still room to optimize?*
+**How the operator pages perform at roster scale, where the time goes,
+and how to measure it again.** Moved from `guide/` on 2026-11-01: it
+began on 2026-09-20 as an investigation (on a 1,000 × 1,000 session the
+Assignments, Invitations and Responses pages were slow), segment 19R
+shipped its three recommendations as Items 1–3 and Finding 6 as Item 5
+(`guide/archive/segment_19R_optimization_and_bugfixes.md`), and 19S
+Item 3 took Finding 4. What remains is the measured record, the method
+(`tools/bench_roster_scale.py`) and the axes that turned out fine. Only
+the operator pages were measured, not the reviewer or participant pages,
+and browser-side cost only in two spot checks. The
+candidates still open, and the questions still asked, are in
+`guide/deferred_consolidated.md` ("Roster-scale performance:
+candidates and questions").
 
-There is, and the room is not where the question implies. **This is not a
-database problem.** SQL is never more than 9% of any *slow* page measured
-below, no index is missing, and adding one would change nothing. Five of the six
-slow pages are slow for a single shared reason, and it is the same reason
-on all five.
-
-**That sentence is a 2026-09-20 reading of a pre-19R tree, and the bench
-section below inverts it** — see *"The composition has inverted, and the
-document's headline with it"*, which carries the figures: 19R moved the
-counting **into** SQL, so at the 200 × 200 bench SQL is **84% of
-Invitations** and 83% of Responses. It is kept as written because the
-investigation it heads was measured then, and because nothing regressed;
-what changed is which half of the page time is which. The next page-time
-question at this scale is a **query** question, and
-`guide/archive/codebase_assessment_22sep.md` §8 move 3 asks for it to be put to
-**real** data rather than to more code — a re-take this synthetic bench
-cannot stand in for.
+**The headline inverted after 19R.** Before it, SQL was never more than
+9% of a slow page: five of six slow pages were slow for one shared
+reason, recomputation in Python on every render. 19R moved the counting
+**into** SQL, so at the 200 × 200 bench SQL is **84% of Invitations**
+and 83% of Responses (*"The composition has inverted"* below). Nothing
+regressed; what changed is which half of the page time is which. The
+next page-time question at this scale is a **query** question, to be put
+to real data rather than to this synthetic bench
+(`guide/archive/codebase_assessment_22sep.md` §8 move 3).
 
 ## The bench, re-set 2026-09-21 — 200 × 200 full matrix
 
@@ -104,41 +104,6 @@ session reaching `ready` rather than the Validate warnings detour. The
 re-benched in the same run, except Prepare and Activate which are the
 2026-09-20 figures; its Setup relationships / observers pages 404
 because those features are off on that older fixture.
-
-## Later candidates
-
-Moved here from segment 19R's plan on 2026-09-21 — now
-`guide/archive/segment_19R_optimization_and_bugfixes.md` — so the
-segment carried only its own items and the measurements stay with the
-evidence.
-
-**They stay candidates.** At 19R's close both end-of-window reads asked
-that the existence of a measured candidate not be turned into a queue,
-so one is promoted to an item only when pilot scale or an operator
-report crosses its stated trigger. Prepare's insert is the exception
-under discussion, logged as entry **E1** of
-`guide/archive/segment_19S_post_assessment.md`.
-
-- ~~**Bulk-insert the generated pairs.**~~ *Done 2026-09-22 as 19S
-  Item 3, which also took the self-review recompute — Finding 4 has the
-  before / after. Progress feedback for what is left was deliberately
-  not bundled in, and is not queued.*
-- ~~**Find out what the 79–112 fixed queries per session page are.**~~
-  *Answered 2026-09-21 — Finding 6. The readiness report reloads the
-  session once per check, and Validate builds the whole report twice.
-  Scoped as **19R Item 5**, so it is no longer a candidate.*
-- **Turn on compression.** No compression middleware exists: the lobby
-  ships ~1,590 KB where gzip would send 95 KB (16.5×), the roster pages
-  6–7× — see Finding 5. One middleware line, **after** checking what
-  the dev slot's front end already sends
-  (`curl -sI -H 'Accept-Encoding: gzip'`), which this container cannot
-  see.
-- **Precompute the pair sort key.** Sorting the pair list drops from
-  0.87 s to 0.31 s at 1,000 × 1,000 when the normalized email is
-  computed once per person. Only worth doing inside a wider engine
-  change.
-
----
 
 ## How these numbers were taken
 
@@ -333,7 +298,7 @@ building ORM objects and the unit of work flushing them.
 A single click that blocks for 75 seconds with no progress feedback is
 indistinguishable from a hang, and the operator's natural response —
 clicking again — is the worst available move. Whether a request that long
-survives the deployed front end is a question for the dev slot, not for
+survives the deployed front end was then a question for the dev slot (now for the institutional host; see the ledger entry), not for
 this container.
 
 **Re-set 2026-09-21: this stands.** At the bench — 200 × 200 full
@@ -427,8 +392,8 @@ This is the one finding in this document that is cheap, global, and
 independent of everything else: server-rendered HTML with a 1,000-row
 table is the most compressible payload there is, and the lobby's 16.5×
 is the whole page weight problem. Whether the deployed front end adds
-its own `Content-Encoding` is a dev-slot question this container cannot
-answer — one `curl -sI -H 'Accept-Encoding: gzip'` against the dev slot
+its own `Content-Encoding` was a dev-slot question in 2026-09; one
+`curl -sI -H 'Accept-Encoding: gzip'` against the institutional host now
 settles it, and if it does not, the middleware is a one-line change.
 
 ## Finding 6 — the readiness report reloaded the session once per check
@@ -593,14 +558,17 @@ number — 44% of the observers page's 106 ms — which is the same point
 from the other end. A page is fast here exactly when it is not doing
 Python work per row.
 
-## Recommendations
+## Recommendations, as shipped
+
+*R1–R3 shipped as segment 19R Items 1–3 (2026-09-21 and 2026-09-22); the
+table below is the measured case made for them before they were built.*
 
 **Three changes take every page in this document under a second.** Each
 was measured, not projected: the hot path was stubbed and the same
 benchmark re-run on the same fixture — state B, 1,000 × 1,000, 200,000
 assignment rows, `validated`.
 
-| page | today | R1 alone | R2 alone | R1 + R2 + R3 |
+| page | 2026-09-20 | R1 alone | R2 alone | R1 + R2 + R3 |
 |---|---|---|---|---|
 | Session Home | 14.1 s | 3.7 s | 15.2 s | **0.49 s** |
 | Assignments | 23.2 s | 1.7 s | 23.6 s | **0.52 s** |
@@ -629,7 +597,7 @@ already in the codebase and already solves the part that looks hard:
 pair count against exactly such a hash, so nothing has to remember to
 invalidate on a roster edit, a rule edit or a re-pin.
 
-One trap for whoever picks this up: *18J Rec C*'s wire-up note in
+A trap noted at the time (still true of the ledger's text): *18J Rec C*'s wire-up note in
 `guide/deferred_consolidated.md` offers to mirror "the existing
 `cached_eligibility_stamp` pattern". Those columns do not exist — Wave 5
 PR 5.2 dropped them with the library tier, as
@@ -685,9 +653,9 @@ did not get faster. The queries were never where the time was.
 **Risk.** The group-scoped contract (Segment 13C): a group-scoped
 instrument counts **once per group**, not once per member. That is what
 resists a plain `GROUP BY`, and it is where a rewrite will get it wrong.
-Land `per_reviewee_coverage` first — it is the simpler of the two — and
-keep the Python implementation next to the SQL one until a parity test
-over a fixture that includes group-scoped instruments passes on both.
+19R landed `per_reviewee_coverage` first, the simpler of the two, and
+kept the Python implementation beside the SQL one until a parity test
+over a fixture with group-scoped instruments passed on both.
 
 ### R3 — count with `count()`
 
@@ -702,8 +670,8 @@ rollup, so this is R3 measured on its own.
 semantics. `session_response_count` is the one that needs care, because
 its full form deduplicates group fan-out; the `> 0` caller does not.
 
-**Do this one first.** It is hours, not days, and it is the only one of
-the three that needs no design.
+It was taken first: hours, not days, and the only one of the three that
+needed no design.
 
 ### Secondary, in descending order
 
@@ -714,67 +682,7 @@ the three that needs no design.
    one is a click, not a page, so the bar is different: it needs progress
    feedback or a background job as much as it needs speed. *Taken
    2026-09-22 as 19S Item 3 — the insert and the self-review recompute;
-   the feedback half was not.*
-5. **Turn on compression.** One middleware line, worth 1.49 MB on the
-   lobby alone and 6–16× on every page here. Confirm first what the dev
-   slot's front end already sends (`curl -sI -H 'Accept-Encoding: gzip'`),
-   since this container cannot see it. It is the only item that helps
-   every page and every roster size at once.
-6. **Precompute the pair sort key.** Sorting the 1M-pair list drops from
-   0.87 s to 0.31 s when the normalized email is computed once per person
-   rather than once per pair. Only worth doing inside a wider engine
-   change: on its own it removes a twelfth of what R1 removes entirely.
-
-### Sequencing, if any of this is adopted
-
-R3, then R1, then R2 — cheapest first, and each is independently
-shippable. R5 rides alongside whenever the dev-slot check comes back. R4
-is its own question because it is a workflow action rather than a page.
-This document remains an investigation: adopting any of it means a
-segment plan, where the ladder and the doc impact get written properly.
-
-**The relationship to work already scoped.** `guide/deferred_consolidated.md`
-carries *18J Rec B — Engine fast path* and *18J Rec C — Single-side
-predicate indexes*, both parked with the lift trigger "a pilot deployment
-scales past mid-three-digit reviewer / reviewee counts … or a synthetic
-benchmark on a representative roster confirms the cost model's projection."
-**This is that benchmark, and it confirms the projection.** But it also
-re-aims the two: Rec B's lazy generator short-circuits once `limit` matches
-accumulate, which serves the preview path and does *not* serve staleness,
-which needs the whole set. Rec C — intersecting id sets before materializing
-pairs — is the one that helps here, and the measurement above (narrow rule
-slower than no rule) is the argument for it.
-
-## Open questions
-
-1. ~~**Is a 1,000-person session real?**~~ *Answered by the author
-   2026-09-21: **100 × 100 is the likely upper limit**. A hundred people
-   to review is not crazy; the conditions under which a thousand are
-   each asked to do it are rare. The pilot's own sessions are 154. The
-   bench above is set at 200 × 200 full matrix on that basis, and
-   `guide/archive/roster_search_filter.md` — which left the same question open —
-   can take the same answer.*
-2. **Is the staleness verdict worth its price on every page?** It is
-   displayed on Assignments and Validate. The other four pages build the
-   card, and pay the engine walk, to render a summary count.
-3. **Should the `validated` state cost less than the others?** It is the
-   state an operator sits in while deciding to Activate, and it is the only
-   state that runs validation inline on six pages.
-4. **What does the deployed front end do with a long Prepare POST?** A
-   dev-slot question; this container cannot answer it. Still open at the
-   re-set: Prepare is **20 s at the bench**, not the 3.1 s an earlier
-   draft claimed from the wrong fixture.
-5. ~~**What are the 79–112 queries that every session page issues
-   regardless of size?**~~ *Answered 2026-09-21: `validate_session_setup`
-   is 54% of Session Home, 46% of Assignments and 76% of Validate,
-   because each of its 22 checks loads the rosters and instruments it
-   needs for itself, and Validate runs the whole report twice. Finding 6;
-   scoped as 19R Item 5.*
-
-## Out of scope
-
-- Any fix. This is an investigation; nothing here is scheduled.
-- The reviewer-facing surfaces and the participant pages — the report was
-  about the operator surfaces, and only those were measured.
-- Browser-side cost beyond the two spot checks above; no profiling of
-  layout, paint or the sort / column-chip handlers.
+   the feedback followed on 2026-10-01 (Finding 4).*
+5. **Turn on compression** and 6. **Precompute the pair sort key** are
+   still open; they are carried, with their figures and triggers, in the
+   ledger entry named at the head of this document.

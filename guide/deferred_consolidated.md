@@ -546,6 +546,12 @@ the Refresh button feeling sluggish (~>1s), or a synthetic
 benchmark on a representative roster confirms the cost
 model's projection.
 
+*Re-aimed 2026-09-21:* that benchmark exists (`docs/performance.md`)
+and confirms the projection, but Rec B's lazy generator short-circuits
+once `limit` matches accumulate, which serves the preview and not the
+staleness verdict (which needs the whole set). Rec C is the one the
+benchmark argues for; this trigger stays only for the preview path.
+
 **Wire-up.** New module function in
 `app/services/rules/engine.py`; `find_sample_in_scope_reviewee`
 in `app/services/instruments/_band1.py` switches over (currently
@@ -587,7 +593,7 @@ a handful of Leads) still runs past ~500ms, or a synthetic
 benchmark shows the worst case is realistic.
 
 **Re-aimed 2026-09-21 (19R Item 2).** The synthetic benchmark
-exists now (`guide/app_responsiveness.md`) and confirms the
+exists now (`docs/performance.md`) and confirms the
 worst case: a *narrower* rule costs **more**, 3.52s against
 2.29s, because the million-pair list is built and sorted
 before any rule is consulted. But 19R Item 2 cached the
@@ -653,6 +659,43 @@ the `newModelRefreshBand2` loop). D2 also touches
 `app/web/views/_instruments.py` to thread the
 session-level roster into the page context once instead of
 per-card. No schema change.
+
+---
+
+#### Roster-scale performance: candidates and questions (moved from the responsiveness note, 2026-11-01)
+
+> The measured record is `docs/performance.md`. These were its open
+> candidates and questions when it moved there from `guide/`; segment
+> 19R's close asked that a measured candidate not become a queue.
+
+**Ships.** Any of: compression middleware, which the lobby measured at
+~1,590 KB where gzip sends 95 KB (16.5×) and the roster pages 6–7×
+(`docs/performance.md` Finding 5); a pair sort key computed once per
+person rather than once per pair (0.87 s → 0.31 s at 1,000 × 1,000); and
+a faster Prepare (about 14 s at 200 × 200, its button already saying it
+is preparing since 2026-10-01), whose measured first step is a
+column-projection `verify_self_review_classification` (about 5 s), then
+the recompute (2.5 s).
+
+**Why deferred.** Each is measured but unneeded at the sessions in use
+(about 100 × 100, the author's ruling of 2026-09-21), and three questions
+are still open: whether the staleness verdict is worth its price on every
+page (19R Item 2 cached it, so most renders no longer pay); whether the
+`validated` state, which runs validation inline on six pages, should cost
+less than the others; and what the institutional front end does with a
+long Prepare POST.
+
+**Lift trigger.** Compression: the header check
+(`curl -sI -H 'Accept-Encoding: gzip'` against the institutional host)
+showing no compression, or a page measured slow there. The sort key:
+only inside a wider engine change. Prepare: an operator report of a
+Prepare that looks hung or times out, which also answers the long-POST
+question.
+
+**Wire-up.** Compression is one middleware line in the host
+(`cordware/main.py`) or the app; the sort key is in the rules engine's
+pair build; Prepare's verify is in `app/services/assignments/`. Each is
+its own one-PR item with a re-take on `tools/bench_roster_scale.py`.
 
 ---
 
@@ -1676,7 +1719,7 @@ being exotic and the investigation's conclusion changes."
 
 **The author has since answered it.** About **100 × 100** is the likely
 upper limit, and the benchmark is set at 200 × 200
-(`guide/app_responsiveness.md`, open question 1, 2026-09-21). At that
+(`docs/performance.md`, the bench re-set of 2026-09-21). At that
 size a whole roster fits on one page, so its option A, rendering every
 row and filtering in the browser, is viable. Nobody has asked for the
 conversion. It was archived on 2026-09-23, and this entry keeps its open

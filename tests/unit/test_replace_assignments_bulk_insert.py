@@ -205,7 +205,7 @@ def test_the_insert_constructs_no_assignment_objects(db: Session) -> None:
     (**4** on this fixture), the Core insert builds none.
 
     The measured cost was that construction, not the unit of work
-    (``guide/app_responsiveness.md`` Finding 4), which is also why
+    (``docs/performance.md`` Finding 4), which is also why
     ``bulk_save_objects`` and ``add_all`` were rejected: both would
     leave this count at 4.
     """

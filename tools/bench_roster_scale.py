@@ -3,7 +3,7 @@
 
 Seeds a synthetic session of a given size into a **local** Postgres, then times
 each operator page against it, separating SQL time from Python time and counting
-queries. The method behind `guide/app_responsiveness.md` (2026-09-20).
+queries. The method behind `docs/performance.md` (2026-09-20).
 
 Not in CI, and not a repo dependency: it needs a Postgres cluster you are willing
 to write to, which the test suite (in-memory SQLite) deliberately is not. The
