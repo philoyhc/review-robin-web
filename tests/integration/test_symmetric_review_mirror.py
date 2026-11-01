@@ -338,3 +338,32 @@ def test_the_per_row_relationship_count_includes_the_mirror(client: TestClient, 
     counts = roster_bulk.relationships_per_row(db, model=Reviewer, session_id=review_session.id)
     assert counts == {ann.id: 2, bob.id: 1}
     assert roster_bulk.relationship_cascade_count(db, model=Reviewer, ids=[ann.id]) == 2
+
+
+def test_a_name_correction_does_not_bring_back_a_deleted_display_field(
+    client: TestClient, db: Session
+) -> None:
+    """The mirror seeds only the display-field slots it newly fills
+    (Codex on #3490)."""
+    from app.db.models import InstrumentDisplayField
+    from app.services import instruments
+
+    review_session = _session(client, db, "sym-m-seed")
+    reviewer = _add(db, review_session, "ann@example.edu", tag_1="Red")
+
+    def tag_fields() -> list[InstrumentDisplayField]:
+        db.expire_all()
+        return list(db.execute(
+            select(InstrumentDisplayField).where(
+                InstrumentDisplayField.source_type == "reviewee",
+                InstrumentDisplayField.source_field == "tag_1",
+            )
+        ).scalars())
+
+    seeded = tag_fields()
+    assert seeded, "a newly filled tag seeds its display field"
+    for field in seeded:
+        instruments.delete_display_field(db, field=field, actor=_user(db))
+    db.commit()
+    reviewers.update_reviewer(db, reviewer=reviewer, name="Ann Tan", user=_user(db))
+    assert tag_fields() == []

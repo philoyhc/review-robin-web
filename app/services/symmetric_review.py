@@ -94,6 +94,7 @@ def sync_reviewees_from_reviewers(
             select(Reviewee).where(Reviewee.session_id == review_session.id).order_by(Reviewee.id)
         ).scalars()
     )
+    filled_before = _filled_display_slots(reviewees)
     by_link = {r.mirrors_reviewer_id: r for r in reviewees if r.mirrors_reviewer_id is not None}
     # An unlinked reviewee can only come from a copy made outside the
     # reconcile (a clone or a rehydrate of both rosters): adopt it for the
@@ -137,10 +138,18 @@ def sync_reviewees_from_reviewers(
     if not changed:
         return
     # As a Reviewees upload does: a mirrored profile link or tag seeds
-    # its reviewee display field on the session's instruments.
-    from app.services.instruments import seed_display_fields_from_reviewees
+    # its reviewee display field on the session's instruments. Only for a
+    # slot this change newly fills, so a name correction does not bring
+    # back a field the operator deleted (Codex on #3490).
+    newly_filled = _filled_display_slots(
+        db.execute(
+            select(Reviewee).where(Reviewee.session_id == review_session.id)
+        ).scalars()
+    ) - filled_before
+    if newly_filled:
+        from app.services.instruments import seed_display_fields_from_reviewees
 
-    seed_display_fields_from_reviewees(db, review_session)
+        seed_display_fields_from_reviewees(db, review_session, slots=newly_filled)
     responses_service.clear_changed_groups(
         db,
         session_id=review_session.id,
@@ -151,6 +160,19 @@ def sync_reviewees_from_reviewers(
     # and so can a delete (findings B7; Codex on #3489): after the
     # mirror is flushed, never before.
     recompute_self_review_classification(db, session_id=review_session.id)
+
+
+_DISPLAY_SLOTS = ("profile_link", "tag_1", "tag_2", "tag_3")
+
+
+def _filled_display_slots(reviewees) -> set[str]:
+    """The reviewee display-field slots any of these rows fills."""
+    reviewees = list(reviewees)
+    return {
+        slot
+        for slot in _DISPLAY_SLOTS
+        if any(getattr(r, slot) for r in reviewees)
+    }
 
 
 def refuse_reviewee_write(review_session: ReviewSession) -> None:
