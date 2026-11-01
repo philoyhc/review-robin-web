@@ -24,7 +24,7 @@ holds three kinds of check rather than 19K.3's two:
   queries and built every row as an object.
 * **ORM instances loaded** — the 19R Item 3 guards, which is where that
   cost is visible. ``spec/operations_pages.md`` "What these pages cost
-  to render" states the contract and ``guide/app_responsiveness.md``
+  to render" states the contract and ``docs/performance.md``
   carries the figures; the tests pin the shape (flat, and bounded),
   never the numbers, because a legitimately added query
   should not fail a test while the contract still holds.
@@ -164,7 +164,7 @@ def _count_orm_rows(db: Session, fn) -> int:
     cannot see: the rollups issued few queries and then built every
     ``Assignment`` and ``Response`` in the session as an object —
     408,027 of them for one render at a 1,000 x 1,000 roster
-    (``guide/app_responsiveness.md``). A rewrite that went back to
+    (``docs/performance.md``). A rewrite that went back to
     loading rows and counting them in Python would keep the query count
     flat and put the seconds straight back.
     """
@@ -417,7 +417,7 @@ def test_the_assignments_page_query_count_is_flat_in_the_roster(
     added query with the contract intact. What cannot change without the
     contract breaking is that the count does not move with the roster at
     all. If this fails, either the `LIMIT 200` or an index has gone —
-    and the figures in `guide/app_responsiveness.md` want re-taking
+    and the figures in `docs/performance.md` want re-taking
     either way.
     """
     small = _seeded(client, db, 4, code="QBSM")
@@ -448,7 +448,7 @@ def test_the_assignments_page_query_count_is_flat_in_the_roster(
         f"the Assignments page is no longer flat in the roster: "
         f"{small_q} queries at {small_assignments} assignments against "
         f"{large_q} at {large_assignments}. spec/operations_pages.md "
-        f"says the page is flat at every size; guide/app_responsiveness.md "
+        f"says the page is flat at every size; docs/performance.md "
         f"credits LIMIT 200 plus indexes — check whether one of those has "
         f"gone, and re-take the figures there."
     )

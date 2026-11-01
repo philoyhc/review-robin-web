@@ -7,7 +7,7 @@ persisted cache for the per-instrument staleness verdict —
 once per instrument on every render of Assignments, Validate and
 (on a ``validated`` session) the four pages carrying the workflow
 card. The engine's floor at a 1,000 x 1,000 roster is 2.29 s per
-instrument; ``guide/app_responsiveness.md`` has the measurement
+instrument; ``docs/performance.md`` has the measurement
 and ``guide/segment_19R_optimization_and_bugfixes.md`` Item 2 the
 design.
 

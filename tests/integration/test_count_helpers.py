@@ -2,7 +2,7 @@
 
 Five helpers answered *how many rows* with
 ``len(db.execute(select(Model.id)).all())`` — every id on the wire for
-one integer, which `guide/app_responsiveness.md` measured at 1.17 s of
+one integer, which `docs/performance.md` measured at 1.17 s of
 the Setup reviewers page's 2.4 s on a 200,000-row session.
 
 Each test compares the helper against **the shape it replaced**, rather

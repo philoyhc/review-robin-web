@@ -254,7 +254,7 @@ def validate_session(
         # between the run above and here mutates the session — the
         # branches in between only redirect. Hand the result over rather
         # than paying for an identical second run of all 22 rules
-        # (19R Item 5 rung 1; `guide/app_responsiveness.md` Finding 6).
+        # (19R Item 5 rung 1; `docs/performance.md` Finding 6).
         issues=issues,
     )
     response = _templates.TemplateResponse(

@@ -543,7 +543,7 @@ def _materialise_one_instrument(
     # half above: the ORM form built one Python object per pair —
     # 40,000 per instrument at the 200 x 200 / 2-instrument bench,
     # 80,000 across the session — and object construction, not SQL,
-    # was the measured cost (``guide/app_responsiveness.md`` Finding 4,
+    # was the measured cost (``docs/performance.md`` Finding 4,
     # 19S Item 3, which measured Prepare 26.7 s -> 13.1 s over this
     # change and the recompute below).
     #

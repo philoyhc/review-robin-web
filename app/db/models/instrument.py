@@ -346,7 +346,7 @@ class Instrument(Base, TimestampMixin):
     ``InstrumentReconcileState`` — *would regenerating change which
     pairs exist?* — against a content stamp of what the verdict is
     derived from (19R Item 2; the cost it removes is measured in
-    ``guide/app_responsiveness.md``).
+    ``docs/performance.md``).
 
     **Four columns, not a verdict and a stamp.** The surfaces render
     the whole state: ``app/web/views/_assignments.py`` reads

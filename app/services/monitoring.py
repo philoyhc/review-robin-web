@@ -589,7 +589,7 @@ def per_reviewee_coverage(
     every ``Assignment`` and every ``Response`` in the session as ORM
     objects and counting them in Python — which at a 1,000 x 1,000
     roster meant 408,027 instances for one render
-    (``guide/app_responsiveness.md``).
+    (``docs/performance.md``).
 
     Two levels of grouping, because "complete" is a property of an
     assignment and the row is a property of a reviewee:

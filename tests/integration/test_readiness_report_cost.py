@@ -1,6 +1,6 @@
 """What one page render costs the readiness report (19R Item 5).
 
-`guide/app_responsiveness.md` Finding 6 measured the Validate page
+`docs/performance.md` Finding 6 measured the Validate page
 running `validation.validate_session_setup` — all 22 registered rules —
 **twice** per render: once for the page's own issue table, and again
 inside `views.build_workflow_card_context` for the Workflow card. The

@@ -77,7 +77,7 @@ class ValidationInputs:
     Twenty-two checks each loading for themselves is how two of them
     come to disagree about what "the session's instruments" means. It
     is also why one run issued 43 queries for 21 distinct reads
-    (19R Item 5; ``guide/app_responsiveness.md`` Finding 6).
+    (19R Item 5; ``docs/performance.md`` Finding 6).
 
     **Measured, not guessed.** This carries exactly what more than one
     check loaded: the instrument list, the three rosters, the roster

@@ -633,7 +633,7 @@ materialize a row per assignment — its count is a `func.count`, not a
 `len()` over loaded objects — and the measure that catches a regression
 there is **ORM instances loaded**, not queries: an implementation that
 issues few queries can still build every `Assignment` and `Response` in
-the session as an object (`guide/app_responsiveness.md`).
+the session as an object (`docs/performance.md`).
 
 `per_reviewer_progress` keeps one Python path, for **group-scoped
 instruments and any instrument with a required governed field or a
@@ -657,7 +657,7 @@ stays in reserve.
 
 The Assignments, Invitations and Responses pages are **flat in the
 roster**: the query count does not move with the roster size. The
-per-size query counts are in `guide/app_responsiveness.md`,
+per-size query counts are in `docs/performance.md`,
 Finding 2.
 
 **Flat is the contract; the figures are the reading.** A legitimately

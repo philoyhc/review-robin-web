@@ -587,7 +587,7 @@ a handful of Leads) still runs past ~500ms, or a synthetic
 benchmark shows the worst case is realistic.
 
 **Re-aimed 2026-09-21 (19R Item 2).** The synthetic benchmark
-exists now (`guide/app_responsiveness.md`) and confirms the
+exists now (`docs/performance.md`) and confirms the
 worst case: a *narrower* rule costs **more**, 3.52s against
 2.29s, because the million-pair list is built and sorted
 before any rule is consulted. But 19R Item 2 cached the
@@ -653,6 +653,39 @@ the `newModelRefreshBand2` loop). D2 also touches
 `app/web/views/_instruments.py` to thread the
 session-level roster into the page context once instead of
 per-card. No schema change.
+
+#### Roster-scale performance: candidates and questions (moved from the responsiveness note, 2026-11-01)
+
+> The measured record is `docs/performance.md`. These were its open
+> candidates and questions when it moved there from `guide/`; segment
+> 19R's close asked that a measured candidate not become a queue, so
+> each waits for its trigger.
+
+**Candidates.**
+- **Turn on compression.** No compression middleware exists: the lobby
+  ships ~1,590 KB where gzip would send 95 KB (16.5×), the roster pages
+  6–7× (`docs/performance.md` Finding 5). One middleware line, after
+  checking what the institutional front end already sends
+  (`curl -sI -H 'Accept-Encoding: gzip'`). *Trigger:* a page measured
+  slow on the deployed host, or the header check showing no compression.
+- **Precompute the pair sort key.** Sorting the pair list drops from
+  0.87 s to 0.31 s at 1,000 × 1,000 when the normalized email is
+  computed once per person. *Trigger:* only inside a wider engine change.
+- **Progress feedback for Prepare.** The insert halved (19S Item 3); the
+  feedback half was deliberately not taken. *Trigger:* an operator
+  report of a Prepare that looks hung.
+
+**Questions still open.**
+1. **Is the staleness verdict worth its price on every page?** It is
+   displayed on Assignments and Validate; the other pages build the card
+   to render a summary count. (19R Item 2 cached it, which took the cost
+   off most renders.)
+2. **Should the `validated` state cost less than the others?** It is the
+   state an operator sits in while deciding to Activate, and the only one
+   that runs validation inline on six pages.
+3. **What does the deployed front end do with a long Prepare POST?**
+   Prepare is about 20 s at the 200 × 200 bench; answerable now on the
+   institutional host.
 
 ---
 
@@ -1676,7 +1709,7 @@ being exotic and the investigation's conclusion changes."
 
 **The author has since answered it.** About **100 × 100** is the likely
 upper limit, and the benchmark is set at 200 × 200
-(`guide/app_responsiveness.md`, open question 1, 2026-09-21). At that
+(`docs/performance.md`, the bench re-set of 2026-09-21). At that
 size a whole roster fits on one page, so its option A, rendering every
 row and filtering in the browser, is viable. Nobody has asked for the
 conversion. It was archived on 2026-09-23, and this entry keeps its open

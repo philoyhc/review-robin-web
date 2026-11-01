@@ -3,7 +3,7 @@
 ``staleness_by_instrument`` answers *would regenerating change which
 pairs exist?* by running the rules engine once per instrument, on every
 render. At a 1,000 x 1,000 roster the engine's floor is 2.29 s per
-instrument (``guide/app_responsiveness.md``), so the verdict is cached
+instrument (``docs/performance.md``), so the verdict is cached
 on ``instruments.cached_reconcile_*`` against a stamp of everything the
 verdict is derived from; a mismatch recomputes.
 

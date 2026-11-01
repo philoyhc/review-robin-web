@@ -5,7 +5,7 @@ recompute reads column tuples and writes one bulk statement.
 inside a regenerate and used to select the whole session as
 ``(Assignment, Reviewer, Reviewee)`` entities, mutating one boolean on
 each. At the 200 x 200 bench that is 80,000 ``Assignment`` objects per
-call (``guide/app_responsiveness.md`` Finding 4). It now selects the
+call (``docs/performance.md`` Finding 4). It now selects the
 ``AssignmentPair`` projection and writes the changed rows as one ORM
 bulk UPDATE keyed by primary key.
 
