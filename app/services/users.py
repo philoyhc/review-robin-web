@@ -46,7 +46,7 @@ and session ownership.
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace as dataclass_replace
 from datetime import datetime
 
 from sqlalchemy import Select, delete, func, or_, select, update
@@ -1019,9 +1019,12 @@ def _lock_and_check_owners(
     return mine
 
 
-def _invite_principal(db: Session, email: str, outcome: Outcome | None) -> str | None:
-    """The object id an invite binds, or ``None`` when the lookup did not
-    run; raises when the directory refuses the address."""
+def _invite_account(
+    db: Session, email: str, outcome: Outcome | None
+) -> directory_accounts.Account | None:
+    """The account an invite binds, its object id normalized, or ``None``
+    when the lookup did not run; raises when the directory refuses the
+    address."""
     if outcome is None or outcome.status == "ERROR":
         return None
     account = directory_accounts.account_of(outcome)
@@ -1044,7 +1047,7 @@ def _invite_principal(db: Session, email: str, outcome: Outcome | None) -> str |
             code="account_exists",
             message=f"{email} is the same person as the account {holder.email}.",
         )
-    return object_id
+    return dataclass_replace(account, object_id=object_id)
 
 
 def invite(
@@ -1097,9 +1100,15 @@ def invite(
     if is_sys_admin:
         _guard_actor_super_admin(actor)
         is_operator = True
-    principal_id = _invite_principal(db, email_normalised, directory() if directory else None)
+    account = _invite_account(db, email_normalised, directory() if directory else None)
+    principal_id = account.object_id if account else None
+    # The directory's display name (19Z, invite from the directory), so
+    # the row reads as its person: a row that exists before its first
+    # sign-in takes no name from it.
+    display_name = (account.name.strip() or None) if account else None
     user = User(
         email=email_normalised,
+        display_name=display_name,
         is_operator=is_operator,
         is_sys_admin=is_sys_admin,
         external_principal_id=principal_id,
@@ -1118,6 +1127,7 @@ def invite(
                 "is_sys_admin": is_sys_admin,
                 "directory_verified": principal_id is not None,
                 "external_principal_id": principal_id,
+                "display_name": display_name,
             }
         ),
         refs={"target_user_id": user.id},

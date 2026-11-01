@@ -33,6 +33,9 @@ class Account:
     object_id: str
     mail: str | None
     upn: str
+    #: The directory's display name; an invite stores it (19Z). Roster
+    #: rows do not.
+    name: str = ""
 
 
 #: The columns a roster row stores, empty when its address did not bind.
@@ -52,7 +55,10 @@ def account_of(outcome: Outcome | None) -> Account | None:
     if outcome is None or outcome.status not in RESOLVED or outcome.user is None:
         return None
     user = outcome.user
-    return Account(object_id=user.id, mail=user.mail, upn=user.user_principal_name)
+    return Account(
+        object_id=user.id, mail=user.mail, upn=user.user_principal_name,
+        name=user.display_name,
+    )
 
 
 def columns(account: Account | None) -> dict[str, str | None]:

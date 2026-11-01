@@ -150,10 +150,10 @@ Upsert rungs (2026-10-31): rung 7 rode with the amendment (`#3438`), rung 8 `#34
 15. **Verified accounts as pills.** The Accounts table, Owners card and New session owners picker take the pill. Must not touch a service. *(At build, 2026-10-31: the Accounts and Owners rows are service-built, so each row shape gained a display-only `verified` field; no behavior changed.)* *(Widened the same day, author: on Accounts and Session Home's Owners card the verified account's name takes the pill too, a `<span>` in the body font, `account_name`.)*
 16. **Invite from the directory: this item's plan.** Prose only.
 17. **Scaffold.** The invite box's picker (listbox, inert), settled on the page. Must not touch a route or service.
-18. **Directory search.** `search_users` (Graph `$filter` `startswith` on `displayName`, `mail` and `userPrincipalName`, `$top=10`, `$select`; and the fake), the sys-admin endpoint, tests. Smoke-tested on Azure before rung 19.
+18. **Directory search.** `search_users` (Graph `$filter` `startswith` on `displayName`, `mail` and `userPrincipalName`, `$top=10`, `$select`; and the fake), the sys-admin endpoint, tests. Smoke-tested on Azure before rung 19. *(Author, 2026-11-01: the Accounts picker, rung 19, is the test, so the box ships before the roster and help-contact rungs build on it.)*
 19. **Wire the picker; store the name.** The picker asks the endpoint; an invite that binds stores the directory display name. Tests.
 20. **The roster rows.** The picker on the Reviewers, Reviewees and Observers add and edit rows, both boxes searching, a pick filling address and name (editable); the endpoint opened to the session's operators. Tests.
-21. **The help contact.** The picker on New session's and Session Home's "Help contact (optional)" boxes, a pick filling the address; the endpoint opened to workspace operators (New session has no session yet). Tests. The cumulative `diff-reviewer` read of rungs 17–21.
+21. **The help contact.** The picker on New session's and Session Home's "Help contact (optional)" boxes, a pick filling the address *(author, 2026-11-01: "Name <address>", the form the box's placeholder shows, because `$help_contact` drops the value verbatim into "Questions? Contact …")*; the endpoint opened to workspace operators (New session has no session yet). Tests. The cumulative `diff-reviewer` read of rungs 17–21.
 
 ## Definition of done
 
@@ -168,7 +168,7 @@ Upsert rungs (2026-10-31): rung 7 rode with the amendment (`#3438`), rung 8 `#34
 - An upsert's Status, name and tag changes behave as Semantics — upsert says, the tag change asking first (tests).
 - Validate warns, without blocking, on two active rows bound to one account in a roster (tests).
 - A bound address is a display pill in the roster, Relationships, Assignments, Invitations and Responses tables and the two drill-ins; an unbound one is plain code (tests).
-- The invite box offers directory matches after three characters and fills the address; an invite that binds stores the directory's display name; on the three roster pages a pick from either box fills the address and an editable name; the help-contact boxes offer matches and a pick fills the address (tests).
+- The invite box offers directory matches after three characters and fills the address; an invite that binds stores the directory's display name; on the three roster pages a pick from either box fills the address and an editable name; the help-contact boxes offer matches and a pick fills "Name <address>" (tests).
 - An invite binds a resolved address's object ID and refuses not found, ambiguous and an account already held (tests); a verified account's address is a pill on Accounts, the Owners card and the New session picker, and its name a pill on Accounts and the Owners card (tests).
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 19Z` exits 0; any warning adjudicated

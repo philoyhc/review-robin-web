@@ -77,8 +77,9 @@
       <p>
         {# Directory search (19Z, invite-from-the-directory item): the
            box takes a name or an address, and `invite-directory-options`
-           offers the directory's matches as it is typed (wired at rung 19;
-           inert until then). The invite itself still checks the address. #}
+           offers the directory's matches as it is typed, each reading
+           "Name <address>"; picking one puts its address in the box. The
+           invite itself still checks the address. #}
         <label>
           Name or email
           <input type="text" name="email" id="invite-email" required
@@ -88,6 +89,7 @@
         </label>
         <datalist id="invite-directory-options" data-directory-options></datalist>
       </p>
+      <p class="muted" data-directory-status role="status" hidden></p>
       {# One row: the role chip top-left, Cancel then Invite on the
          right (author, 2026-10-14; `.card-action-row`). Granting the
          admin flag follows the Promote rule (``can_manage_admins``), so
@@ -142,6 +144,85 @@
           setTimeout(refresh, 0);
         });
         refresh();
+
+        // The directory picker (19Z, invite from the directory): after a
+        // pause in typing, three or more characters ask the directory, and
+        // its matches fill the datalist. Only the latest answer is shown.
+        var options = form.querySelector("[data-directory-options]");
+        var statusLine = form.querySelector("[data-directory-status]");
+        var searchUrl = {{ url('/operator/sys-admin/users/directory-search') | tojson }};
+        var timer = null;
+        var asked = 0;
+        var offered = {};
+        function say(text) {
+          statusLine.textContent = text;
+          statusLine.hidden = !text;
+        }
+        function fill(people) {
+          options.textContent = "";
+          offered = {};
+          people.forEach(function (person) {
+            var option = document.createElement("option");
+            option.value = person.address;
+            // The browser filters the list again against what is typed,
+            // by value and label, so a sign-in name (UPN) the directory
+            // matched on stays in the label when it is not the address.
+            var label = person.name
+              ? person.name + " <" + person.address + ">"
+              : person.address;
+            if (person.upn && person.upn.toLowerCase() !== person.address.toLowerCase()) {
+              label += " · " + person.upn;
+            }
+            option.label = label;
+            options.appendChild(option);
+            offered[person.address.toLowerCase()] = true;
+          });
+        }
+        function search() {
+          var text = (email.value || "").trim();
+          // A pick puts an offered address in the box: nothing to ask.
+          if (text.length < 3 || offered[text.toLowerCase()]) {
+            if (text.length < 3) { fill([]); say(""); }
+            return;
+          }
+          var mine = ++asked;
+          fetch(searchUrl + "?q=" + encodeURIComponent(text), {
+            credentials: "same-origin",
+            headers: { "Accept": "application/json" }
+          })
+            .then(function (response) {
+              if (!response.ok) throw new Error(String(response.status));
+              return response.json();
+            })
+            .then(function (answer) {
+              if (mine !== asked) return;
+              if (!answer.available) {
+                fill([]);
+                say("The directory can't be searched just now. Type the full address.");
+                return;
+              }
+              fill(answer.people);
+              say(answer.people.length ? "" : "No one in the directory matches that.");
+            })
+            .catch(function () {
+              if (mine !== asked) return;
+              fill([]);
+              say("The directory can't be searched just now. Type the full address.");
+            });
+        }
+        email.addEventListener("input", function () {
+          // Any edit retires an answer still on its way, so it cannot
+          // fill the list for text no longer in the box.
+          asked++;
+          clearTimeout(timer);
+          timer = setTimeout(search, 300);
+        });
+        form.addEventListener("reset", function () {
+          clearTimeout(timer);
+          asked++;
+          fill([]);
+          say("");
+        });
       })();
     </script>
   </div>
