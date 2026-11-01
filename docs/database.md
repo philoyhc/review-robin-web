@@ -87,6 +87,30 @@ Do **not** import from `sqlalchemy.dialects.postgresql` in `app/db/models/` —
 those imports break SQLite tests and tie the models to one dialect
 prematurely.
 
+## The session lock and its timeout
+
+State-gated saves, lifecycle transitions, operator invitation actions and
+the scheduled passes take `SELECT … FOR NO KEY UPDATE` on the session row
+(`lock_session` in `app/services/session_guard.py`) and hold it to their
+commit. On Postgres the wait for that lock is bounded by
+**`LOCK_TIMEOUT_MS`, 5 s** (author, 2026-11-01):
+
+- **Where it is set:** per lock, not per role or connection. `lock_session`
+  sets `lock_timeout` with `set_config(…, true)` inside a savepoint, takes
+  the lock, then puts the previous value back, so no other statement's
+  wait changes.
+- **What a timeout answers:** Postgres raises `lock_not_available`
+  (`55P03`); the savepoint rolls back, so the caller's transaction stays
+  usable, and `SessionBusy` renders the 409 page: "Someone else is
+  changing this session right now. Try again in a moment." It is logged
+  as `session.lock_timeout`.
+- **Why 5 s:** long enough to ride out a normal save or import holding the
+  lock, far inside the gateway's 120 s request limit and App Service's
+  230 s. The server itself sets no `lock_timeout` or `statement_timeout`.
+- **SQLite** never blocks (one writer), so the bound is Postgres-only;
+  `tests/integration/test_session_lock_timeout.py` holds the lock in one
+  connection and times the other out, in the `ci-postgres` job.
+
 ## Tests
 
 The session-scoped `engine` fixture in `tests/conftest.py` creates an
