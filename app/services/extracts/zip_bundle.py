@@ -131,6 +131,11 @@ def build_setup_bundle(
         observers = list(serialize_observers(db, review_session))
         members["observers"] = observers
         counts["observers"] = max(0, len(observers) - 1)
+    if review_session.symmetric_review:
+        # Segment 20B — the reviewees mirror the reviewers; a re-import
+        # rebuilds them from the Reviewers file and the settings row.
+        del members["reviewees"]
+        del counts["reviewees"]
     buffer = _write_archive(review_session, members)
     return buffer, counts
 

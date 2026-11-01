@@ -412,6 +412,23 @@ def require_relationships_enabled_session(
     return review_session
 
 
+def require_reviewees_editable_session(
+    review_session: ReviewSession = Depends(require_session_operator),
+) -> ReviewSession:
+    """Route gate for every Reviewees write (segment 20B): under symmetric
+    review the reviewees mirror the Reviewers roster, which is the only
+    one edited, so a reviewee write answers 409."""
+    if review_session.symmetric_review:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "Symmetric review: the reviewees are the reviewers. "
+                "Edit the Reviewers roster; the reviewees follow."
+            ),
+        )
+    return review_session
+
+
 def require_observers_enabled_session(
     review_session: ReviewSession = Depends(require_session_operator),
 ) -> ReviewSession:

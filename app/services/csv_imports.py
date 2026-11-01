@@ -1668,6 +1668,9 @@ def save_reviewees(
     # in ``save_reviewers`` (findings Bc4).
     with unit_of_work.atomic(db):
         lifecycle.require_editable(db, session)
+        from app.services.symmetric_review import refuse_reviewee_write
+
+        refuse_reviewee_write(session)
         # A merge can move a reviewee between groups by a tag change
         # (segment 19Z): snapshot the partitions, and after the save ask
         # before clearing any group that gained a member, as the

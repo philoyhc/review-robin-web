@@ -41,6 +41,7 @@ from app.web.deps import (
     require_session_operator,
 )
 from app.web.routes_operator._shared import (
+    require_reviewees_editable_session,
     account_resolver,
     _setup_row_window,
     _handle_import,
@@ -94,7 +95,7 @@ async def reviewees_import_submit(
     merge: str | None = Form(default=None),
     acknowledge_group_clear: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(require_reviewees_editable_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
@@ -120,7 +121,7 @@ async def reviewees_import_submit(
 @router.post("/sessions/{session_id}/reviewees/import/dismiss")
 def reviewees_import_dismiss(
     request: Request, held_token: str | None = Form(default=None),
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(require_reviewees_editable_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -169,9 +170,10 @@ def _render_reviewees_page(
     # ``archived`` (no revert form: ``/revert`` 409s from there).
     # Observers already passed this for its checkbox exception.
     is_archived = lifecycle.is_archived(review_session)
-    if not lifecycle.is_editable(review_session):
+    if not lifecycle.is_editable(review_session) or review_session.symmetric_review:
         # The editor renders only where `create` / `update` accept
-        # (`_require_editable`). Was `is_ready` (findings C3).
+        # (`_require_editable`). Was `is_ready` (findings C3). Under
+        # symmetric review they answer 409 (20B), so it renders nowhere.
         edit_id = None
         add_mode = False
 
@@ -442,7 +444,7 @@ def reviewees_create(
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(require_reviewees_editable_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
@@ -523,7 +525,7 @@ def reviewees_update(
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(require_reviewees_editable_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
@@ -601,7 +603,7 @@ def reviewees_update(
 )
 async def reviewees_save_self_fields(
     request: Request,
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(require_reviewees_editable_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -641,7 +643,7 @@ def reviewees_bulk_inactivate(
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(require_reviewees_editable_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -673,7 +675,7 @@ def reviewees_bulk_reactivate(
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(require_reviewees_editable_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -703,7 +705,7 @@ def reviewees_bulk_reactivate(
 def reviewees_delete_all(
     request: Request, confirm: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(require_reviewees_editable_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -752,7 +754,7 @@ _REVIEWEE_SLOTS: tuple[tuple[str, str], ...] = (
 )
 async def reviewees_save_field_labels(
     request: Request,
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(require_reviewees_editable_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -800,7 +802,7 @@ def reviewees_bulk_delete(
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(require_reviewees_editable_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:

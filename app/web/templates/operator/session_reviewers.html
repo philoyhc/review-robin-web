@@ -408,7 +408,7 @@
                   <span class="pill pill-empty">{{ roster_response_count }} reviewer response{% if roster_response_count != 1 %}s{% endif %}</span>{% endif %}{% if status_pills.relationship_count > 0 %}
                   and {% if not (assignment_count and assignment_count > 0) %}delete {% endif %}the
                   <span class="pill pill-empty">{{ status_pills.relationship_count }} relationship{% if status_pills.relationship_count != 1 %}s{% endif %}</span>
-                  involving them{% endif %}.</span>
+                  involving them{% endif %}.{% if session.symmetric_review %} Each is also deleted as a reviewee (symmetric review).{% endif %}</span>
                 </label>
                 {# 19Z: the replace tick's sibling, its own field (`append`), unticked
                    by default as replace is (author, 2026-10-31). The two share an
@@ -571,7 +571,7 @@
                 <span class="pill pill-empty">{{ roster_response_count }} reviewer response{% if roster_response_count != 1 %}s{% endif %}</span>{% endif %}{% if status_pills.relationship_count > 0 %}
                 and the
                 <span class="pill pill-empty">{{ status_pills.relationship_count }} relationship{% if status_pills.relationship_count != 1 %}s{% endif %}</span>
-                involving them{% endif %}.</span>
+                involving them{% endif %}.{% if session.symmetric_review %} Each is also deleted as a reviewee (symmetric review).{% endif %}</span>
               </label>
               {% if roster_response_count > 0 %}
                 <input type="hidden" id="reviewers-delete-all-ack"
@@ -1332,6 +1332,8 @@
                 // item's Semantics asks for.
                 (relationshipsIn(sel) > 0
                   ? " and the relationships involving them" : "") +
+                {# 20B — under symmetric review each is also a reviewee. #}
+                {{ (" — each also as a reviewee (symmetric review)" if session.symmetric_review else "") | tojson }} +
                 {# The route requires BOTH fields and 400s without the
                    acknowledgement, so it rides with the tick exactly as
                    it did in the card it came from. #}

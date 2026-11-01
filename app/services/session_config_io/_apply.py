@@ -212,6 +212,11 @@ def apply_session_config(
         user=user,
         correlation_id=correlation_id,
     )
+    # Segment 20B — under symmetric review a Settings file's reviewer
+    # self-fields and labels reach the mirrored reviewees too.
+    from app.services import symmetric_review
+
+    symmetric_review.sync_reviewees_from_reviewers(db, review_session)
     return ApplyResult(counts=counts, errors=[])
 
 

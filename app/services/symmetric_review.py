@@ -94,20 +94,24 @@ def sync_reviewees_from_reviewers(
             select(Reviewee).where(Reviewee.session_id == review_session.id).order_by(Reviewee.id)
         ).scalars()
     )
+    filled_before = _filled_display_slots(reviewees)
     by_link = {r.mirrors_reviewer_id: r for r in reviewees if r.mirrors_reviewer_id is not None}
     # An unlinked reviewee can only come from a copy made outside the
     # reconcile (a clone or a rehydrate of both rosters): adopt it for the
     # reviewer with its address, so its assignments survive, else drop it.
-    unlinked = {
-        email_identity.normalize_email(r.email_or_identifier): r
-        for r in reviewees
-        if r.mirrors_reviewer_id is None
-    }
+    unlinked: dict[str, list[Reviewee]] = {}
+    for r in reviewees:
+        if r.mirrors_reviewer_id is None:
+            unlinked.setdefault(email_identity.normalize_email(r.email_or_identifier), []).append(r)
     changed = False
     for reviewer in reviewers:
         reviewee = by_link.pop(reviewer.id, None)
         if reviewee is None:
-            reviewee = unlinked.pop(email_identity.normalize_email(reviewer.email), None)
+            # Adopt the first unlinked reviewee with the address; a
+            # duplicate stays in ``unlinked`` and is dropped below.
+            candidates = unlinked.get(email_identity.normalize_email(reviewer.email))
+            if candidates:
+                reviewee = candidates.pop(0)
         if reviewee is None:
             reviewee = Reviewee(session_id=review_session.id)
             db.add(reviewee)
@@ -119,7 +123,7 @@ def sync_reviewees_from_reviewers(
             if getattr(reviewee, reviewee_field) != value:
                 setattr(reviewee, reviewee_field, value)
                 changed = True
-    for gone in [*by_link.values(), *unlinked.values()]:
+    for gone in [*by_link.values(), *(r for rows in unlinked.values() for r in rows)]:
         db.delete(gone)
         changed = True
     _mirror_labels(db, review_session)
@@ -133,6 +137,19 @@ def sync_reviewees_from_reviewers(
     db.flush()
     if not changed:
         return
+    # As a Reviewees upload does: a mirrored profile link or tag seeds
+    # its reviewee display field on the session's instruments. Only for a
+    # slot this change newly fills, so a name correction does not bring
+    # back a field the operator deleted (Codex on #3490).
+    newly_filled = _filled_display_slots(
+        db.execute(
+            select(Reviewee).where(Reviewee.session_id == review_session.id)
+        ).scalars()
+    ) - filled_before
+    if newly_filled:
+        from app.services.instruments import seed_display_fields_from_reviewees
+
+        seed_display_fields_from_reviewees(db, review_session, slots=newly_filled)
     responses_service.clear_changed_groups(
         db,
         session_id=review_session.id,
@@ -143,6 +160,38 @@ def sync_reviewees_from_reviewers(
     # and so can a delete (findings B7; Codex on #3489): after the
     # mirror is flushed, never before.
     recompute_self_review_classification(db, session_id=review_session.id)
+
+
+_DISPLAY_SLOTS = ("profile_link", "tag_1", "tag_2", "tag_3")
+
+
+def _filled_display_slots(reviewees) -> set[str]:
+    """The reviewee display-field slots any of these rows fills."""
+    reviewees = list(reviewees)
+    return {
+        slot
+        for slot in _DISPLAY_SLOTS
+        if any(getattr(r, slot) for r in reviewees)
+    }
+
+
+def refuse_reviewee_write(review_session: ReviewSession) -> None:
+    """Refuse a Reviewees write under symmetric review, decided on the
+    row re-read under the session lock: call it right after
+    ``lifecycle.require_editable``. The routes' gate
+    (``require_reviewees_editable_session``) reads the flag before the
+    lock, so a turn-on committed in between would otherwise let an
+    unlinked reviewee in (Codex on #3490). Only the paths that create
+    reviewees need it: the mode turns on only beside empty rosters, so
+    no other Reviewees write can race it."""
+    from app.services.session_guard import SessionStateConflict
+
+    if review_session.symmetric_review:
+        raise SessionStateConflict(
+            "Under symmetric review the reviewees mirror the reviewers; "
+            "edit the Reviewers roster.",
+            code="symmetric_review",
+        )
 
 
 def _mirror_labels(db: Session, review_session: ReviewSession) -> None:

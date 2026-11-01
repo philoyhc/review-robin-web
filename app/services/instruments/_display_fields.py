@@ -19,6 +19,7 @@ PR 4 carves into ``_instrument_crud.py``).
 
 from __future__ import annotations
 
+from collections.abc import Collection
 from typing import Any, Literal
 
 from sqlalchemy import select
@@ -594,13 +595,19 @@ def _instruments_for_session(
 
 
 def seed_display_fields_from_reviewees(
-    db: Session, review_session: ReviewSession
+    db: Session,
+    review_session: ReviewSession,
+    *,
+    slots: Collection[str] | None = None,
 ) -> int:
     """Create reviewee-side display fields for any populated import slots.
 
     Inspects the session's reviewees for non-empty ``profile_link`` and
     ``tag_1/2/3`` values; for each instrument in the session, idempotently
     adds an ``InstrumentDisplayField`` row for each populated slot.
+    ``slots`` limits it to those reviewee fields: the symmetric-review
+    mirror seeds only the slots it newly fills, so an unrelated roster
+    edit does not bring back a field the operator deleted (segment 20B).
     Returns the total number of new display-field rows created.
     """
     sources: list[tuple[str, str]] = []
@@ -625,6 +632,8 @@ def seed_display_fields_from_reviewees(
         if found is not None:
             sources.append(("reviewee", f"tag_{slot}"))
 
+    if slots is not None:
+        sources = [source for source in sources if source[1] in slots]
     if not sources:
         return 0
     total = 0
