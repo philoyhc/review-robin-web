@@ -88,14 +88,20 @@
     function picked(box) {
       var value = (box.value || "").trim().toLowerCase();
       var field = box.getAttribute("data-directory-field");
-      var hits = people.filter(function (person) {
+      if (!value) return null;
+      // The name box picks only people with a name: a nameless account
+      // is offered (and picked) by its address alone.
+      var pool = field === "name"
+        ? people.filter(function (person) { return person.name; })
+        : people;
+      var hits = pool.filter(function (person) {
         var own = field === "name" ? person.name
           : field === "contact" ? named(person) : person.address;
         return (own || "").toLowerCase() === value;
       });
       if (field === "name" && hits.length !== 1) {
         // A shared name's option carries its address.
-        hits = people.filter(function (person) {
+        hits = pool.filter(function (person) {
           return named(person).toLowerCase() === value;
         });
       }
@@ -143,8 +149,12 @@
         if (person) {
           // A pick: fill the other box, and ask nothing more.
           var field = box.getAttribute("data-directory-field");
-          // A shared name's "Name <address>" leaves the name alone.
-          if (field === "name" && box.value.trim() !== person.name) box.value = person.name;
+          // A shared name's "Name <address>" leaves the name alone; a
+          // name typed in another case stays as typed.
+          if (field === "name" &&
+              box.value.trim().toLowerCase() !== person.name.toLowerCase()) {
+            box.value = person.name;
+          }
           var target = field === "contact" ? null
             : other(box, field === "name" ? "address" : "name");
           var value = field === "name" ? person.address : person.name;
