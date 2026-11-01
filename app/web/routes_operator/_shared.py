@@ -1387,7 +1387,9 @@ async def _handle_import(
     if merging:
         extra["merge"] = True
         extra["columns"] = result.columns
-        if kind == "reviewees":
+        # 20B — a Reviewers merge redraws mirrored reviewees' groups under
+        # symmetric review, so it asks as a Reviewees merge does.
+        if kind == "reviewees" or (kind == "reviewers" and review_session.symmetric_review):
             extra["acknowledged_loss"] = acknowledged_loss(acknowledge_group_clear)
     # The service locks the session row (findings Bc4): wait for it off
     # the event loop.

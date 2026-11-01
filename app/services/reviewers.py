@@ -263,6 +263,7 @@ def update_reviewer(
     user: User,
     correlation_id: str | None = None,
     resolve_account: Callable[[str], directory_accounts.Account | None] | None = None,
+    acknowledged_loss: int | None = None,
 ) -> dict[str, list[object]]:
     """Field-level update. Only emits ``reviewer.updated`` if at
     least one field actually changed; the changes envelope carries
@@ -381,8 +382,12 @@ def update_reviewer(
         refs={"reviewer_id": reviewer.id},
         correlation_id=correlation_id,
     )
-    # 20B — under symmetric review the reviewee roster follows.
-    symmetric_review.sync_reviewees_from_reviewers(db, reviewer.session)
+    # 20B — under symmetric review the reviewee roster follows; a tag
+    # change that redraws an answered group asks first, as the reviewee
+    # row editor does (``acknowledged_loss``).
+    symmetric_review.sync_reviewees_from_reviewers(
+        db, reviewer.session, acknowledged_loss=acknowledged_loss
+    )
     db.commit()
     return changes
 

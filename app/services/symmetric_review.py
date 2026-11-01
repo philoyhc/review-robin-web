@@ -51,14 +51,39 @@ _TAG_SLOTS = ("tag_1", "tag_2", "tag_3")
 _SELF_FIELD_KEY = {"email": "email_or_identifier"}
 
 
-def sync_reviewees_from_reviewers(db: Session, review_session: ReviewSession) -> None:
+def sync_reviewees_from_reviewers(
+    db: Session,
+    review_session: ReviewSession,
+    *,
+    acknowledged_loss: int | None = None,
+) -> None:
     """Bring the Reviewees roster into step with the Reviewers roster.
 
     A no-op unless symmetric review is on. Flushes; the caller commits.
+
+    A mirrored tag change moves a reviewee between groups, as a reviewee
+    edit would, so the reviewee-tag groups are snapshotted first and
+    ``responses.clear_changed_groups`` runs after: a group that gained a
+    member loses its answers. ``acknowledged_loss`` is the asking
+    caller's ``Yes, clear them`` count (the reviewer row editor, a merge
+    import); a mismatch raises ``GroupAnswersWouldClear`` for the caller
+    to roll back and ask. ``None`` clears without asking. Self-review
+    classification is recomputed after every change, since a mirrored
+    address or tag can move it.
     """
     if not review_session.symmetric_review:
         return
+    from app.services import responses as responses_service
+    from app.services.assignments import recompute_self_review_classification
+
     db.flush()
+    groups_before = responses_service.snapshot_group_partitions(
+        db,
+        session_id=review_session.id,
+        instrument_ids=responses_service.session_group_instrument_ids(
+            db, session_id=review_session.id, source_type="reviewee"
+        ),
+    )
     reviewers = list(
         db.execute(
             select(Reviewer).where(Reviewer.session_id == review_session.id).order_by(Reviewer.id)
@@ -78,7 +103,7 @@ def sync_reviewees_from_reviewers(db: Session, review_session: ReviewSession) ->
         for r in reviewees
         if r.mirrors_reviewer_id is None
     }
-    deleted_any = False
+    changed = False
     for reviewer in reviewers:
         reviewee = by_link.pop(reviewer.id, None)
         if reviewee is None:
@@ -86,14 +111,17 @@ def sync_reviewees_from_reviewers(db: Session, review_session: ReviewSession) ->
         if reviewee is None:
             reviewee = Reviewee(session_id=review_session.id)
             db.add(reviewee)
-        reviewee.mirrors_reviewer_id = reviewer.id
+            changed = True
+        if reviewee.mirrors_reviewer_id != reviewer.id:
+            reviewee.mirrors_reviewer_id = reviewer.id
         for reviewee_field, reviewer_field in MIRRORED_FIELDS:
             value = getattr(reviewer, reviewer_field)
             if getattr(reviewee, reviewee_field) != value:
                 setattr(reviewee, reviewee_field, value)
+                changed = True
     for gone in [*by_link.values(), *unlinked.values()]:
         db.delete(gone)
-        deleted_any = True
+        changed = True
     _mirror_labels(db, review_session)
     mirrored_self_fields = (
         [_SELF_FIELD_KEY.get(key, key) for key in review_session.reviewer_self_fields]
@@ -103,13 +131,18 @@ def sync_reviewees_from_reviewers(db: Session, review_session: ReviewSession) ->
     if review_session.reviewee_self_fields != mirrored_self_fields:
         review_session.reviewee_self_fields = mirrored_self_fields
     db.flush()
-    if deleted_any:
-        # Group self-review membership is read off the roster (findings
-        # B7), as ``roster_bulk.bulk_delete`` recomputes after a reviewee
-        # delete.
-        from app.services.assignments import recompute_self_review_classification
-
-        recompute_self_review_classification(db, session_id=review_session.id)
+    if not changed:
+        return
+    responses_service.clear_changed_groups(
+        db,
+        session_id=review_session.id,
+        before=groups_before,
+        acknowledged_loss=acknowledged_loss,
+    )
+    # A mirrored address or boundary tag can move the self-review flag,
+    # and so can a delete (findings B7; Codex on #3489): after the
+    # mirror is flushed, never before.
+    recompute_self_review_classification(db, session_id=review_session.id)
 
 
 def _mirror_labels(db: Session, review_session: ReviewSession) -> None:

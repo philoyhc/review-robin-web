@@ -159,3 +159,88 @@ def test_off_mirrors_nothing(client: TestClient, db: Session) -> None:
     review_session = _session(client, db, "sym-m-off", on=False)
     _add(db, review_session, "ann@example.edu")
     assert db.execute(select(Reviewee).where(Reviewee.session_id == review_session.id)).first() is None
+
+
+# --- Codex on #3489 ---------------------------------------------------------
+
+
+def test_a_name_correction_is_not_refused_by_the_own_mirror(client: TestClient, db: Session) -> None:
+    review_session = _session(client, db, "sym-m-rename")
+    reviewer = _add(db, review_session, "ann@example.edu")
+    reviewers.update_reviewer(db, reviewer=reviewer, name="Ann Tan", user=_user(db))
+    [reviewee] = _assert_mirrored(db, review_session)
+    assert reviewee.name == "Ann Tan"
+
+
+def test_an_address_correction_keeps_the_self_review_flag(client: TestClient, db: Session) -> None:
+    from app.db.models import Assignment
+    from app.services.instruments import ensure_default_instrument
+
+    review_session = _session(client, db, "sym-m-self")
+    reviewer = _add(db, review_session, "ann@example.edu")
+    [reviewee] = _assert_mirrored(db, review_session)
+    instrument = ensure_default_instrument(db, review_session)
+    db.add(Assignment(
+        session_id=review_session.id, reviewer_id=reviewer.id, reviewee_id=reviewee.id,
+        instrument_id=instrument.id, include=False, is_self_review=True,
+    ))
+    db.commit()
+    reviewers.update_reviewer(db, reviewer=reviewer, email="ann.tan@example.edu", user=_user(db))
+    db.expire_all()
+    row = db.execute(select(Assignment).where(Assignment.reviewer_id == reviewer.id)).scalar_one()
+    assert row.is_self_review is True
+
+
+def test_a_mirrored_tag_change_asks_before_clearing_group_answers(
+    client: TestClient, db: Session
+) -> None:
+    import datetime as dt
+    import re
+
+    from sqlalchemy import func
+
+    from app.db.models import Assignment, InstrumentResponseField, Response
+    from app.services import instruments as instruments_service
+    from app.services.instruments import ensure_default_instrument
+
+    review_session = _session(client, db, "sym-m-groups")
+    people = [
+        _add(db, review_session, f"{name.lower()}@example.edu", tag_1=team)
+        for name, team in (("Ann", "red"), ("Bo", "red"), ("Cy", "blue"), ("Di", "blue"))
+    ]
+    reviewees = _assert_mirrored(db, review_session)
+    instrument = ensure_default_instrument(db, review_session)
+    instrument.group_kind = instruments_service.encode_group_kind([("reviewee", "tag_1")])
+    field = InstrumentResponseField(
+        instrument_id=instrument.id, field_key="sym_rating", label="Rating",
+        _inline_data_type="Integer", _inline_response_type="Likert5", order=0,
+    )
+    db.add(field)
+    db.flush()
+    rows = [
+        Assignment(session_id=review_session.id, reviewer_id=people[0].id,
+                   reviewee_id=reviewee.id, instrument_id=instrument.id)
+        for reviewee in reviewees
+    ]
+    db.add_all(rows)
+    db.flush()
+    db.add_all(
+        Response(assignment_id=row.id, response_field_id=field.id, value="3",
+                 saved_at=dt.datetime(2026, 11, 1, tzinfo=dt.timezone.utc), version=1)
+        for row in rows
+    )
+    db.commit()
+
+    def responses() -> int:
+        db.expire_all()
+        return db.execute(select(func.count()).select_from(Response)).scalar_one()
+
+    path = f"/operator/sessions/{review_session.public_id}/reviewers/{people[0].id}/update"
+    form = {"name": "Ann", "email": "ann@example.edu", "tag_1": "blue", "status": "active"}
+    refused = client.post(path, data=form, follow_redirects=False)
+    assert refused.status_code == 400
+    assert "Yes, clear them" in refused.text and responses() == 4
+    count = re.search(r'name="acknowledge_response_loss"\s+value="(\d+)"', refused.text).group(1)
+    accepted = client.post(path, data={**form, "acknowledge_response_loss": count}, follow_redirects=False)
+    assert accepted.status_code == 303
+    assert responses() == 4 - int(count)

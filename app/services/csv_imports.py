@@ -1365,9 +1365,21 @@ def cross_table_identity_conflict(
     if not is_comparable_identity(identifier, name):
         return None
     holders = _identity_holders(
-        db, session_id=session_id, exclude=frozenset({kind})
+        db, session_id=session_id, exclude=_with_mirrors(db, session_id, {kind})
     ).get(normalize_email(identifier), [])
     return _first_disagreeing_holder(holders, name)
+
+
+def _with_mirrors(db: Session, session_id: int, kinds: set[str] | frozenset[str]) -> frozenset[str]:
+    """``kinds``, plus the Reviewees roster when a Reviewers write is
+    checked under symmetric review (segment 20B): every reviewee there
+    mirrors a reviewer, so a reviewer's own mirror never conflicts with
+    a correction of their name, and the reconcile carries it over."""
+    if "reviewers" in kinds and db.execute(
+        select(ReviewSession.symmetric_review).where(ReviewSession.id == session_id)
+    ).scalar_one_or_none():
+        return frozenset(kinds) | {"reviewees"}
+    return frozenset(kinds)
 
 
 def check_cross_table_identity(
@@ -1449,7 +1461,7 @@ def check_incoming_identity(
         )
 
     existing = _identity_holders(
-        db, session_id=session_id, exclude=frozenset(incoming)
+        db, session_id=session_id, exclude=_with_mirrors(db, session_id, set(incoming))
     )
     uploaded = {
         kind: _incoming_holders(kind, rows) for kind, rows in incoming.items()
@@ -1580,6 +1592,7 @@ def save_reviewers(
     append: bool = False,
     merge: bool = False,
     columns: frozenset[str] = frozenset(),
+    acknowledged_loss: int | None = None,
 ) -> tuple[int, int]:
     # One commit for the roster and its labels, so the lock taken by
     # the gate holds to the end and a refusal can't follow a committed
@@ -1622,9 +1635,13 @@ def save_reviewers(
                 correlation_id=correlation_id,
                 clear_absent=not (append or merge),
             )
-            # 20B — the labels a reviewer import carries reach the
-            # mirrored reviewees too (``_save`` reconciled the rows).
-            symmetric_review.sync_reviewees_from_reviewers(db, session)
+        # 20B — under symmetric review the reviewee roster follows, with
+        # the labels this import carries. A merge's tag changes that
+        # redraw answered groups ask first (``acknowledged_loss``), as a
+        # Reviewees merge does.
+        symmetric_review.sync_reviewees_from_reviewers(
+            db, session, acknowledged_loss=acknowledged_loss
+        )
     return result
 
 
@@ -1960,9 +1977,6 @@ def _save(
             },
         ),
     )
-    if model is Reviewer:
-        # 20B — under symmetric review the reviewee roster follows.
-        symmetric_review.sync_reviewees_from_reviewers(db, session)
     return replaced, (merged[0] if merged is not None else len(rows))
 
 
