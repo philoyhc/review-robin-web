@@ -312,9 +312,8 @@ the shared infrastructure above to support that backend.
 ### Option A — SMTP relay
 
 **Status.** Implemented — `SmtpEmailTransport` in
-`app/services/email_send.py`, with operator-facing UI on
-`/operator/settings` and per-operator credentials encrypted at
-rest via Fernet.
+`app/services/email_send.py`, with per-operator credentials
+encrypted at rest via Fernet. No page edits them (see Configuration).
 
 **What it is.** The app connects to a configured SMTP server
 with credentials and submits the email. The SMTP server can be:
@@ -328,8 +327,7 @@ with credentials and submits the email. The SMTP server can be:
 **Note on Azure outbound SMTP.** Microsoft blocks outbound SMTP
 on port 25 from Azure data centers since 2017. SMTP relay use
 must go through an authenticated relay service on port 587 or
-465. The app sets no port of its own: `/operator/settings` shows
-587 as the port field's placeholder, not a default, and a blank
+465. The app sets no port of its own: a blank
 port leaves the credentials incomplete, so nothing sends
 (`operator_settings.get_email_settings`). The operator picks
 STARTTLS (usual on 587) or implicit SSL (usual on 465) through the
