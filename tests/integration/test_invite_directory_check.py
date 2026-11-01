@@ -223,3 +223,27 @@ def test_an_unbound_picked_invite_keeps_the_picked_name(
     _invite(client, "New Person <new@example.edu>")  # no directory: nothing asked
     row = _row(db, "new@example.edu")
     assert row is not None and row.external_principal_id is None and row.display_name == "New Person"
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["Tan, Jane <a@b.edu> extra", "Jane Tan <jane.tan@example.edu", "not an address @ all"],
+)
+def test_text_that_is_not_one_address_is_refused_not_invited_unchecked(
+    db: Session, client: TestClient, monkeypatch: pytest.MonkeyPatch, directory: None, text: str
+) -> None:
+    """The box is a text box now, so anything but one whole address is
+    refused rather than skipping the directory check (diff-reviewer)."""
+    _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
+    response = _invite(client, text)
+    assert response.headers["location"].endswith("invite_error=invalid_email")
+    assert db.execute(select(User).where(User.email.contains("@"), User.email != "alice@example.edu")).first() is None
+
+
+def test_a_picked_name_is_kept_to_the_column_s_length(
+    db: Session, client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
+    _invite(client, "N" * 300 + " <long@example.edu>")
+    row = _row(db, "long@example.edu")
+    assert row is not None and len(row.display_name) == 255

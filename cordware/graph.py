@@ -173,11 +173,15 @@ class GraphDirectory:
                 "$top": str(SEARCH_TOP),
             }
         )
-        return _users(self._get(f"{GRAPH_ROOT}/users?{query}"))
+        # One attempt: a picker asks again at the next pause in typing, and
+        # a retry's wait would hold the request (and a worker) for longer
+        # than anyone waits for a suggestion.
+        return _users(self._get(f"{GRAPH_ROOT}/users?{query}", retries=0))
 
-    def _get(self, url: str) -> bytes:
-        for attempt in range(self._retries + 1):
-            last = attempt == self._retries
+    def _get(self, url: str, *, retries: int | None = None) -> bytes:
+        retries = self._retries if retries is None else retries
+        for attempt in range(retries + 1):
+            last = attempt == retries
             try:
                 reply = self._transport(url, self._headers, self._timeout)
             # `http.client.HTTPException` covers a body cut short

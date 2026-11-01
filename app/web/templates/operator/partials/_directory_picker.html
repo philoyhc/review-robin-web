@@ -6,7 +6,9 @@
    and from three characters, asks `search_url`; the name box offers each
    match's name (its address beneath), the address box its address (its
    name, and a sign-in name that differs, beneath). Picking one fills the
-   other box from the same person; both stay editable. A name two people
+   other box from the same person when that box is empty or still holds
+   what the picker last put there, so an edit row's own address (or a
+   reviewee's identifier) is never overwritten; both stay editable. A name two people
    share fills no address, since the pick cannot say which. A box's
    `data-directory-status` sibling says when the directory cannot be
    asked or matches no one.
@@ -126,7 +128,12 @@
           var field = box.getAttribute("data-directory-field");
           var target = field === "contact" ? null
             : other(box, field === "name" ? "address" : "name");
-          if (target) target.value = field === "name" ? person.address : person.name;
+          var value = field === "name" ? person.address : person.name;
+          if (target && (!target.value.trim() ||
+                         target.value === target.getAttribute("data-directory-filled"))) {
+            target.value = value;
+            target.setAttribute("data-directory-filled", value);
+          }
           say(box, "");
           return;
         }
