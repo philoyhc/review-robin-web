@@ -56,6 +56,7 @@ None is shown on an empty roster. All three are mutually exclusive, none is tick
 - **The name comes with the binding.** An invite that binds an account stores the directory's display name on the row, from the lookup outcome the server already holds, never from the form, so Accounts shows the person, as a pill, before they sign in.
 - **No signed-in-or-not pill** (author, 2026-10-31): telling an invited account from a signed-in one needs a sign-in column and a migration, which the distinction is not worth.
 - **Widened to the roster rows** (author, 2026-11-01): the Reviewers, Reviewees and Observers add and edit rows search too. Typing in the name box or the address box offers matches, and picking one fills both: the address, and the name with the directory's display name, which the operator may edit before saving. A Reviewees identifier that is not an address is still typed freely. The save's own directory check (21F) binds the row as an upload does. Relationships keeps picking from the session's rosters.
+- **And the help contact** (author, 2026-11-01): the "Help contact (optional)" box on New session and on Session Home's details card searches too, a pick filling it with the person's address; it stays free text, so anything else may still be typed.
 
 ## Semantics — upsert
 
@@ -151,7 +152,8 @@ Upsert rungs (2026-10-31): rung 7 rode with the amendment (`#3438`), rung 8 `#34
 17. **Scaffold.** The invite box's picker (listbox, inert), settled on the page. Must not touch a route or service.
 18. **Directory search.** `search_users` (Graph `$filter` `startswith` on `displayName`, `mail` and `userPrincipalName`, `$top=10`, `$select`; and the fake), the sys-admin endpoint, tests. Smoke-tested on Azure before rung 19.
 19. **Wire the picker; store the name.** The picker asks the endpoint; an invite that binds stores the directory display name. Tests.
-20. **The roster rows.** The picker on the Reviewers, Reviewees and Observers add and edit rows, both boxes searching, a pick filling address and name (editable); the endpoint opened to the session's operators. Tests. The cumulative `diff-reviewer` read of rungs 17–20.
+20. **The roster rows.** The picker on the Reviewers, Reviewees and Observers add and edit rows, both boxes searching, a pick filling address and name (editable); the endpoint opened to the session's operators. Tests.
+21. **The help contact.** The picker on New session's and Session Home's "Help contact (optional)" boxes, a pick filling the address; the endpoint opened to workspace operators (New session has no session yet). Tests. The cumulative `diff-reviewer` read of rungs 17–21.
 
 ## Definition of done
 
@@ -166,7 +168,7 @@ Upsert rungs (2026-10-31): rung 7 rode with the amendment (`#3438`), rung 8 `#34
 - An upsert's Status, name and tag changes behave as Semantics — upsert says, the tag change asking first (tests).
 - Validate warns, without blocking, on two active rows bound to one account in a roster (tests).
 - A bound address is a display pill in the roster, Relationships, Assignments, Invitations and Responses tables and the two drill-ins; an unbound one is plain code (tests).
-- The invite box offers directory matches after three characters and fills the address; an invite that binds stores the directory's display name; on the three roster pages a pick from either box fills the address and an editable name (tests).
+- The invite box offers directory matches after three characters and fills the address; an invite that binds stores the directory's display name; on the three roster pages a pick from either box fills the address and an editable name; the help-contact boxes offer matches and a pick fills the address (tests).
 - An invite binds a resolved address's object ID and refuses not found, ambiguous and an account already held (tests); a verified account's address is a pill on Accounts, the Owners card and the New session picker, and its name a pill on Accounts and the Owners card (tests).
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 19Z` exits 0; any warning adjudicated
@@ -206,5 +208,6 @@ Upsert rungs (2026-10-31): rung 7 rode with the amendment (`#3438`), rung 8 `#34
 - `spec/settings_inventory.md` — `users.external_principal_id` can also be set by a verified invite (accounts item), and `users.display_name` written by one (directory item).
 - `spec/session_owners.md` — the Owners card and the New session picker show a verified owner's address as a pill, and the Owners card the name too (accounts item).
 - `spec/operator_ui_concept.md` — Accounts Management: a verified account's address and name read as pills (accounts item); the invite box searches the directory (directory item).
+- `spec/session_home.md` — the details card's help-contact box searches the directory (directory item).
 - `cordware/spec/identity.md` — `search_users` beside `find_users`: prefix search, ten results, on the caller's token (directory item).
 - `guide/todo_master.md` — the queue entry, deleted at close.
