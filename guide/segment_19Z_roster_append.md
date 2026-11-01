@@ -55,6 +55,7 @@ None is shown on an empty roster. All three are mutually exclusive, none is tick
 - **Search as you type.** Three or more characters ask the directory, on the admin's own token, for up to 10 people whose name, mail or sign-in name starts with them (`cordware.graph`: a `search_users` beside `find_users`, and in `FakeDirectory`); the box offers "Name · mail · UPN", and choosing one fills the address. A typed address still works, and the invite's own check still decides. Sys-admins only, as the invite is; no token answers "search unavailable"; a local run searches the fake directory.
 - **The name comes with the binding.** An invite that binds an account stores the directory's display name on the row, from the lookup outcome the server already holds, never from the form, so Accounts shows the person, as a pill, before they sign in.
 - **No signed-in-or-not pill** (author, 2026-10-31): telling an invited account from a signed-in one needs a sign-in column and a migration, which the distinction is not worth.
+- **Widened to the roster rows** (author, 2026-11-01): the Reviewers, Reviewees and Observers add and edit rows search too. Typing in the name box or the address box offers matches, and picking one fills both: the address, and the name with the directory's display name, which the operator may edit before saving. A Reviewees identifier that is not an address is still typed freely. The save's own directory check (21F) binds the row as an upload does. Relationships keeps picking from the session's rosters.
 
 ## Semantics — upsert
 
@@ -149,7 +150,8 @@ Upsert rungs (2026-10-31): rung 7 rode with the amendment (`#3438`), rung 8 `#34
 16. **Invite from the directory: this item's plan.** Prose only.
 17. **Scaffold.** The invite box's picker (listbox, inert), settled on the page. Must not touch a route or service.
 18. **Directory search.** `search_users` (Graph `$filter` `startswith` on `displayName`, `mail` and `userPrincipalName`, `$top=10`, `$select`; and the fake), the sys-admin endpoint, tests. Smoke-tested on Azure before rung 19.
-19. **Wire the picker; store the name.** The picker asks the endpoint; an invite that binds stores the directory display name. Tests. The cumulative `diff-reviewer` read of rungs 17–19.
+19. **Wire the picker; store the name.** The picker asks the endpoint; an invite that binds stores the directory display name. Tests.
+20. **The roster rows.** The picker on the Reviewers, Reviewees and Observers add and edit rows, both boxes searching, a pick filling address and name (editable); the endpoint opened to the session's operators. Tests. The cumulative `diff-reviewer` read of rungs 17–20.
 
 ## Definition of done
 
@@ -164,7 +166,7 @@ Upsert rungs (2026-10-31): rung 7 rode with the amendment (`#3438`), rung 8 `#34
 - An upsert's Status, name and tag changes behave as Semantics — upsert says, the tag change asking first (tests).
 - Validate warns, without blocking, on two active rows bound to one account in a roster (tests).
 - A bound address is a display pill in the roster, Relationships, Assignments, Invitations and Responses tables and the two drill-ins; an unbound one is plain code (tests).
-- The invite box offers directory matches after three characters and fills the address; an invite that binds stores the directory's display name (tests).
+- The invite box offers directory matches after three characters and fills the address; an invite that binds stores the directory's display name; on the three roster pages a pick from either box fills the address and an editable name (tests).
 - An invite binds a resolved address's object ID and refuses not found, ambiguous and an account already held (tests); a verified account's address is a pill on Accounts, the Owners card and the New session picker, and its name a pill on Accounts and the Owners card (tests).
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 19Z` exits 0; any warning adjudicated
@@ -189,7 +191,7 @@ Upsert rungs (2026-10-31): rung 7 rode with the amendment (`#3438`), rung 8 `#34
 
 ## Doc impact
 
-- `spec/setup_pages.md` — the Upload card's Append and Upsert ticks, exclusivity and copy, for the four roster pages; the roster and Relationships tables show a bound address as a pill.
+- `spec/setup_pages.md` — the Upload card's Append and Upsert ticks, exclusivity and copy, for the four roster pages; the roster and Relationships tables show a bound address as a pill; the Reviewers, Reviewees and Observers add and edit rows search the directory from the name or the address box (directory item).
 - `spec/csv_contracts.md` — §3: append and upsert modes for the four importers, the already-on-the-roster rule, matching on upsert, blank-keeps, label upsert, and the audit `context`.
 - `spec/assignments.md` — an append leaves assignments in place and marks them stale; the table's address cells show a bound address as a pill.
 - `docs/security_posture.md` — the replace tick's description gains its Append counterpart.

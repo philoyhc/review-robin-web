@@ -80,3 +80,17 @@ def test_without_the_chip_the_row_holds_the_buttons_alone(
     row = form.split('<div class="card-action-row">', 1)[1]
     assert "data-invite-role-chip" not in row
     assert row.index("data-invite-cancel") < row.index("data-invite-submit")
+
+
+def test_the_invite_box_takes_a_name_and_offers_directory_matches(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """19Z, invite from the directory (scaffold): a text box that takes a
+    name or an address, tied to a datalist the search fills (empty until
+    it is wired)."""
+    monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
+    body = _page(client)
+    assert 'type="text" name="email" id="invite-email" required' in body
+    assert 'list="invite-directory-options"' in body
+    assert '<datalist id="invite-directory-options" data-directory-options></datalist>' in body
+    assert "Name or email" in body
