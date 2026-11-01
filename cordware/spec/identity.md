@@ -288,12 +288,29 @@ Email Address Checker; directory lookups only.
 - **Logging.** Logger `cordware.graph`: `graph.request_failed`, a
   warning carrying `kind` and `status` only, never the address, the
   query or the token.
+- **Renewing the token.** Easy Auth's Graph token lasts about an hour.
+  `/.auth/refresh` renews it from the refresh token Easy Auth also keeps
+  (the sign-in asks for `offline_access`), even after the access token has
+  expired; only the browser can call it, since it needs the Easy Auth
+  cookie. RRW's and Utilities' base templates carry the same
+  `<script data-graph-renewal>`:
+  - **On each page:** it calls `/.auth/refresh` in the background once
+    45 minutes have passed since the last attempt (`localStorage` key
+    `cordware.graphRenewedAt`), so the next request carries a fresh token.
+  - **`window.cordwareRenewGraph()`:** renews now and resolves `true` on
+    success. The directory pickers call it when a search answers
+    `no_token` or `unauthorized`, then search once more; only a failed
+    renewal tells the operator to sign out and in. The Email Address
+    Checker's result page calls it when a lookup was `unauthorized`.
+  - On a local run `/.auth/refresh` does not exist; the attempt fails
+    quietly and is stamped, so it is not repeated on every page.
 
 Proved from application code on 2026-10-31, at Cordware's first
 release (its private records): the Email Address Checker's lookups go
 through the Web App's own egress and classify staff and student accounts
-alike. Not yet exercised: the token's refresh once it expires (about an
-hour), and an address that is only a secondary alias.
+alike. `/.auth/refresh` was proved by hand on 2026-11-01 (`200`, and
+`/.auth/me`'s `expires_on` moved later). Not yet exercised: an address
+that is only a secondary alias.
 
 ## Tests
 

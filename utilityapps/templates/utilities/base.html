@@ -55,6 +55,32 @@
     footer { margin-top: 2rem; font-size: 0.9rem; }
     footer a { color: var(--muted); margin-right: 1rem; }
   </style>
+  <script data-graph-renewal>
+  // Graph token renewal (cordware/spec/identity.md, "Graph"). Easy
+  // Auth's delegated Graph token lasts about an hour; /.auth/refresh
+  // renews it from the longer-lived refresh token, even after it has
+  // expired. Each page asks once 45 minutes have passed since the last
+  // attempt, so what the page sends next carries a fresh token, and
+  // cordwareRenewGraph() lets a directory search renew and retry on
+  // "unauthorized". The same block is in RRW's and Utilities' base
+  // templates (cordware/tests/test_graph_renewal.py holds them equal).
+  (function () {
+    var KEY = "cordware.graphRenewedAt";
+    var EVERY = 45 * 60 * 1000;
+    function stamp() {
+      try { localStorage.setItem(KEY, String(Date.now())); } catch (e) { /* private mode */ }
+    }
+    window.cordwareRenewGraph = function () {
+      stamp();
+      return fetch("/.auth/refresh", { credentials: "same-origin" })
+        .then(function (response) { return response.ok; })
+        .catch(function () { return false; });
+    };
+    var last = 0;
+    try { last = Number(localStorage.getItem(KEY)) || 0; } catch (e) { /* private mode */ }
+    if (Date.now() - last > EVERY) window.cordwareRenewGraph();
+  })();
+  </script>
 </head>
 <body>
   <main>

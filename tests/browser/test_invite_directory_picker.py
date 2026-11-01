@@ -119,3 +119,45 @@ def test_an_expired_sign_in_says_to_sign_in_again(page: Page) -> None:
     expect(page.locator("[data-directory-status]")).to_have_text(
         "Your sign-in's directory access has expired. Sign out and back in, then search again."
     )
+
+
+def test_an_expired_token_is_renewed_and_the_search_asked_again(page: Page) -> None:
+    """Graph token renewal (cordware/spec/identity.md, "Graph"): the
+    first answer says the token expired; the picker renews it through
+    /.auth/refresh and asks once more, which the fake directory answers."""
+    refreshes: list[str] = []
+    answers = {"n": 0}
+
+    def refresh(route) -> None:
+        refreshes.append(route.request.url)
+        route.fulfill(status=200, body="")
+
+    def search(route) -> None:
+        answers["n"] += 1
+        if answers["n"] == 1:
+            route.fulfill(json={"available": False, "people": [], "reason": "unauthorized (401)"})
+        else:
+            route.continue_()
+
+    page.goto(app_url(ACCOUNTS))
+    page.route("**/.auth/refresh", refresh)
+    page.route("**/directory-search*", search)
+    page.locator("#invite-email").press_sequentially("Jane")
+    expect(page.locator("#invite-directory-options option")).to_have_count(1)
+    expect(page.locator("[data-directory-status]")).to_be_hidden()
+    assert len(refreshes) == 1
+
+
+def test_a_page_renews_the_token_once_in_45_minutes(page: Page) -> None:
+    refreshes: list[str] = []
+    page.route("**/.auth/refresh", lambda route: (refreshes.append(route.request.url), route.fulfill(status=200, body="")))
+    page.goto(app_url(ACCOUNTS))
+    page.wait_for_load_state("networkidle")
+    assert len(refreshes) == 1
+    page.reload()
+    page.wait_for_load_state("networkidle")
+    assert len(refreshes) == 1  # stamped: not again within 45 minutes
+    page.evaluate("localStorage.setItem('cordware.graphRenewedAt', String(Date.now() - 46 * 60 * 1000))")
+    page.reload()
+    page.wait_for_load_state("networkidle")
+    assert len(refreshes) == 2
