@@ -67,6 +67,7 @@ class _SettingsInfo:
     relationships_enabled: bool
     short_labels: set[str]
     field_keys: set[tuple[str, str]]  # (short_label, field_key)
+    symmetric_review: bool = False
 
 
 @dataclass
@@ -122,7 +123,7 @@ def _parse_settings(content: bytes) -> _SettingsInfo | None:
     if not rows or tuple(rows[0]) != ("field", "value", "data_type"):
         return None
     name = code = ""
-    observers_enabled = relationships_enabled = False
+    observers_enabled = relationships_enabled = symmetric_review = False
     short_label_by_index: dict[int, str] = {}
     field_keys_by_index: dict[int, set[str]] = {}
     for row in rows[1:]:
@@ -137,6 +138,8 @@ def _parse_settings(content: bytes) -> _SettingsInfo | None:
             observers_enabled = _bool_cell(value)
         elif field == "session.relationships_enabled":
             relationships_enabled = _bool_cell(value)
+        elif field == "session.symmetric_review":
+            symmetric_review = _bool_cell(value)
             continue
         m = _RX_SHORT_LABEL.match(field)
         if m is not None:
@@ -158,6 +161,7 @@ def _parse_settings(content: bytes) -> _SettingsInfo | None:
         relationships_enabled=relationships_enabled,
         short_labels=short_labels,
         field_keys=field_keys,
+        symmetric_review=symmetric_review,
     )
 
 
@@ -276,8 +280,9 @@ def analyze_rehydrate_set(
     warnings: list[str] = []
     resolved = _resolve_files(files)
 
-    # 1. Completeness — the four always-required files.
-    for kind in ("settings", "reviewers", "reviewees", "responses"):
+    # 1. Completeness — the always-required files. ``reviewees.csv`` is
+    # required below unless the settings turn symmetric review on.
+    for kind in ("settings", "reviewers", "responses"):
         if kind not in resolved:
             errors.append(
                 f"Missing {kind}.csv — rehydrate needs the full extract set."
@@ -298,11 +303,26 @@ def analyze_rehydrate_set(
         return RehydrateReport(ok=False, errors=errors, warnings=warnings)
 
     reviewer_emails = _emails_from_csv(resolved["reviewers"], "ReviewerEmail")
-    reviewee_emails = _emails_from_csv(resolved["reviewees"], "RevieweeEmail")
     if reviewer_emails is None:
         errors.append("reviewers.csv is missing its ReviewerEmail column.")
-    if reviewee_emails is None:
-        errors.append("reviewees.csv is missing its RevieweeEmail column.")
+    # Segment 20B — under symmetric review the reviewers are the
+    # reviewees, so a setup bundle carries no reviewees.csv and one that
+    # does is left unread (``rehydrate_session``); the responses'
+    # reviewee references resolve against the reviewers (Codex on #3490).
+    reviewee_source = "reviewees.csv"
+    reviewee_emails: set[str] | None
+    if settings.symmetric_review:
+        reviewee_emails = reviewer_emails
+        reviewee_source = "reviewers.csv (symmetric review)"
+    elif "reviewees" not in resolved:
+        errors.append(
+            "Missing reviewees.csv — rehydrate needs the full extract set."
+        )
+        reviewee_emails = None
+    else:
+        reviewee_emails = _emails_from_csv(resolved["reviewees"], "RevieweeEmail")
+        if reviewee_emails is None:
+            errors.append("reviewees.csv is missing its RevieweeEmail column.")
 
     # Conditional files — required when the settings imply them.
     if settings.observers_enabled and "observers" not in resolved:
@@ -356,7 +376,7 @@ def analyze_rehydrate_set(
     if unknown_reviewees:
         errors.append(
             f"{len(unknown_reviewees)} reviewee email(s) in responses.csv "
-            f"aren't in reviewees.csv: {_examples(unknown_reviewees)}."
+            f"aren't in {reviewee_source}: {_examples(unknown_reviewees)}."
         )
     if unknown_instruments:
         errors.append(

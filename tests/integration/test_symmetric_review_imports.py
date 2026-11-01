@@ -238,3 +238,39 @@ def test_a_symmetric_setup_bundle_round_trips_in_one_submit(client: TestClient, 
     assert target.symmetric_review is True
     assert len(_reviewees(db, target)) == 2
     assert db.execute(select(Relationship).where(Relationship.session_id == target.id)).scalars().all()
+
+
+def test_rehydrate_takes_a_symmetric_set_without_reviewees_csv(client: TestClient, db: Session) -> None:
+    """The setup bundle carries no reviewees.csv under the mode, so the
+    pre-flight neither requires it nor checks the responses' reviewees
+    against it (Codex on #3490)."""
+    review_session = _session(client, db, "sym-i-rehyd-nofile")
+    user = _user(db)
+    reviewers.create_reviewer(db, review_session=review_session, name="Ann", email="ann@example.edu", user=user)
+    files = {
+        "settings.csv": _csv([("field", "value", "data_type")] + [
+            (r.field, r.value, r.data_type) for r in serialize_session_config(db, review_session)
+        ]),
+        "reviewers.csv": _csv(serialize_reviewers(db, review_session)),
+        "responses.csv": _csv(serialize_responses(db, review_session)),
+    }
+    report = session_rehydrate.analyze_rehydrate_set(db, files=files, user=user)
+    assert report.ok, report.errors
+    assert report.preview["reviewees"] == 1
+    outcome = session_rehydrate.rehydrate_session(db, files=files, user=user)
+    assert [e.email_or_identifier for e in _reviewees(db, outcome.session)] == ["ann@example.edu"]
+
+
+def test_rehydrate_still_requires_reviewees_csv_with_the_mode_off(client: TestClient, db: Session) -> None:
+    review_session = _session(client, db, "sym-i-rehyd-off", on=False)
+    user = _user(db)
+    files = {
+        "settings.csv": _csv([("field", "value", "data_type")] + [
+            (r.field, r.value, r.data_type) for r in serialize_session_config(db, review_session)
+        ]),
+        "reviewers.csv": _csv(serialize_reviewers(db, review_session)),
+        "responses.csv": _csv(serialize_responses(db, review_session)),
+    }
+    report = session_rehydrate.analyze_rehydrate_set(db, files=files, user=user)
+    assert not report.ok
+    assert any("reviewees.csv" in e for e in report.errors)
