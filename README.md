@@ -131,6 +131,12 @@ applications at `/residentialops/` and `/supportlogs/` (each only a
 to RRW with `CORDWARE_APPS=reviewrobin`. `/health` is the Cordware host's
 own probe.
 
+The Cordware host gzips every response it serves, which is why
+`pyproject.toml` and `requirements.txt` pin **`starlette>=1.5`** beside
+FastAPI: from 1.5, Starlette's `GZipMiddleware` leaves zip archives and
+images alone, so a Zip all download is not compressed twice
+(`cordware/spec/host.md`, "Compression").
+
 To sign in locally, set `ALLOW_FAKE_AUTH=true` plus
 `FAKE_AUTH_EMAIL` / `FAKE_AUTH_NAME` in your `.env` (see
 `.env.example`). In Azure, Easy Auth supplies the identity
