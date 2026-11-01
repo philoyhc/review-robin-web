@@ -7,6 +7,7 @@ Residential Apps: one package, mounted under Cordware as two applications, **Res
 | `residentialops/` | Residential Operations: its factory (`main.py`, `create_app`) and routes |
 | `supportlogs/` | Support Logs: its factory and routes |
 | `tests/` | Residential's tests, including the mounted ones through its own host harness (`tests/_host.py`) |
+| `docs/graph_learnings.md` | Microsoft Graph as RRW and Utilities found it on the institutional host: reuse the host's client, sign-in name vs mail and aliases, token renewal, who can send email, and the limits to design around (learning notes, 2026-11-01) |
 | `docs/ra_leave_management_functional_spec_v0.4.md` | RA Leave functional spec (Residential Operations) |
 | `docs/resident_support_log_functional_spec_v0.3.md` | Support Logs functional spec |
 | `docs/residentialapps_email_identity_matching.md` | Email aliases and institutional identity matching: the email is a provisional hint, the Entra tenant/object ID the account key; exact trusted UPN and primary-email matching only, administrator correction otherwise (design note, 2026-10-30) |
