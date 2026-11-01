@@ -126,6 +126,7 @@
             // An expired Graph token: renew it once (base.html), then ask
             // again; only a failed renewal sends the operator to sign in.
             if (expired && !renewed && window.cordwareRenewGraph) {
+              fill([]);
               window.cordwareRenewGraph().then(function (ok) {
                 if (mine !== asked) return;
                 if (ok) { search(box, true); return; }

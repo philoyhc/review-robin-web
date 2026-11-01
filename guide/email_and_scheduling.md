@@ -85,8 +85,10 @@ does not.
 4. **Renew the delegated token.** Delegated sends need a live token.
    Built 2026-11-01: every page renews it through `/.auth/refresh` once 45
    minutes have passed, and the directory pickers renew and retry on
-   `unauthorized` (`cordware/spec/identity.md`, "Graph"). A delegated send
-   reuses `window.cordwareRenewGraph()` the same way.
+   `unauthorized` (`cordware/spec/identity.md`, "Graph"). Delegated sends
+   are not built; a send made by `fetch` could renew and retry with
+   `window.cordwareRenewGraph()` the same way, while a plain form POST
+   relies on the page-load renewal.
 
 ## Narrowed (author, 2026-11-01)
 

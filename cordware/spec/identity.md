@@ -303,7 +303,14 @@ Email Address Checker; directory lookups only.
     renewal tells the operator to sign out and in. The Email Address
     Checker's result page calls it when a lookup was `unauthorized`.
   - On a local run `/.auth/refresh` does not exist; the attempt fails
-    quietly and is stamped, so it is not repeated on every page.
+    quietly and is stamped, so it is not repeated on every page. A
+    redirect (an ended Easy Auth session) is not followed: the attempt
+    reports failure.
+  - **What it does not cover:** a server-side lookup with no page load
+    in between, such as a roster upload posted from a page opened over
+    an hour ago and never reloaded. That upload's lookups can still come
+    back `unauthorized`; reloading the page before uploading renews the
+    token.
 
 Proved from application code on 2026-10-31, at Cordware's first
 release (its private records): the Email Address Checker's lookups go
@@ -316,7 +323,11 @@ that is only a secondary alias.
 
 `cordware/tests/test_graph.py` covers the Graph helper: the query, each
 failure and its retries, the log line, the fake directory and
-`directory_for`. `cordware/tests/test_identity.py` covers the parser, the fake identity, every
+`directory_for`. `cordware/tests/test_graph_renewal.py` holds RRW's and
+Utilities' renewal scripts equal; the browser tests
+`tests/browser/test_invite_directory_picker.py` and
+`tests/browser/test_roster_directory_picker.py` cover renew-and-retry in
+both pickers and the 45-minute throttle. `cordware/tests/test_identity.py` covers the parser, the fake identity, every
 switch set per run, the dependency's signature, the guard, the log events and
 the super-admin reads. RRW's suite keeps exercising the re-export
 (`tests/integration/test_setup_template_download.py` passes settings to

@@ -185,3 +185,27 @@ def test_a_shared_name_pick_leaves_a_typed_address_and_typed_case_alone(
     name.fill("")
     name.fill("lab01@example.edu")
     expect(address).to_have_value("")
+
+
+def test_an_expired_token_is_renewed_and_the_roster_search_asked_again(
+    page: Page, new_session: Callable[[], str]
+) -> None:
+    """Graph token renewal (cordware/spec/identity.md, "Graph") in the
+    session pages' picker: an "unauthorized" answer renews through
+    /.auth/refresh and searches once more."""
+    refreshes: list[str] = []
+    answers = {"n": 0}
+
+    def search(route) -> None:
+        answers["n"] += 1
+        if answers["n"] == 1:
+            route.fulfill(json={"available": False, "people": [], "reason": "unauthorized (401)"})
+        else:
+            route.continue_()
+
+    page.goto(app_url(f"/operator/sessions/{new_session()}/reviewers?add=1"))
+    page.route("**/.auth/refresh", lambda route: (refreshes.append(route.request.url), route.fulfill(status=200, body="")))
+    page.route("**/directory-search*", search)
+    page.locator('tr input[name="name"][data-directory-field]').press_sequentially("Jane")
+    expect(page.locator("#directory-name-options option")).to_have_count(1)
+    assert len(refreshes) == 1

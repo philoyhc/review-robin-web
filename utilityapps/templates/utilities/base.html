@@ -72,7 +72,7 @@
     }
     window.cordwareRenewGraph = function () {
       stamp();
-      return fetch("/.auth/refresh", { credentials: "same-origin" })
+      return fetch("/.auth/refresh", { credentials: "same-origin", redirect: "manual" })
         .then(function (response) { return response.ok; })
         .catch(function () { return false; });
     };
