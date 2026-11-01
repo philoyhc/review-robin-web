@@ -96,24 +96,25 @@ had already shipped under other segments; three move out; three stay.
    item 2's, not this item's.
 4. **Technical-support contact** — absorbed from its
    `guide/todo_master.md` stub: a deployment-wide "something looks
-   broken" address, distinct from the per-session help contact. It is an
-   env var read through `app/config.py`, shown on the chrome footer, the
-   error pages and the invalid-link landing; **unset renders nothing**.
+   broken" address, distinct from the per-session help contact. It
+   reuses `OPERATOR_CONTACT_EMAIL` (open question 2), shown on the chrome
+   footer, the error pages and the invalid-link landing; **unset renders
+   nothing**.
    The mechanism needs no host and can be built before the gate. Only
    the address waits for it, and is set in Cordware's App Settings
    (its `spec/release.md`, "Release settings").
 
 ## Open questions
 
-1. **Is `/guide` public?** Deferred to this segment by
-   `tests/integration/test_setup_template_download.py`: every route
-   is behind sign-in, and the starter-template download stays gated
-   until this is answered. The author decides.
-2. **Does the technical-support contact reuse `OPERATOR_CONTACT_EMAIL`?**
-   That setting already exists, shown only on `/about`'s access-request
-   link (`spec/settings_inventory.md` §8). One address may serve both,
-   or the two may differ (asking for access versus reporting a fault).
-   The author decides, before item 4 is built.
+1. ~~**Is `/guide` public?**~~ **No** (author, 2026-11-01): it stays
+   behind sign-in, and so does the starter-template download
+   (`tests/integration/test_setup_template_download.py`). It is for
+   operators and participants (author, 2026-11-01), as it is today:
+   each role sees its own sections (19F decision 6).
+2. ~~**Does the technical-support contact reuse `OPERATOR_CONTACT_EMAIL`?**~~
+   **Yes** (author, 2026-11-01): one address, so item 4 shows the
+   existing setting on the footer, the error pages and the invalid-link
+   landing rather than adding one.
 
 ---
 
@@ -144,7 +145,7 @@ segment builds.
 - `docs/operations_runbook.md` — currency pass: in-app administration against the deployed host (what remains, 3).
 - `app/web/templates/guide.html` — currency pass: the real
   sign-in flow (what remains, 3).
-- `spec/settings_inventory.md` — §8 gains the technical-support contact's env var (what remains, 4).
+- `spec/settings_inventory.md` — §8: `OPERATOR_CONTACT_EMAIL` also shown on the footer, the error pages and the invalid-link landing (what remains, 4).
 - `guide/todo_master.md` — delete the segment's queue entry (at close).
 
 ---
