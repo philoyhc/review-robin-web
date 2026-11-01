@@ -187,9 +187,16 @@ in `duplicate_account_group`. Repeats of one key never make a group.
 ## Result
 
 The result page shows the row count, the count per status, the number of
-duplicate groups, a warning when any row is `ERROR` (to sign out and in
-again after a refusal, to try later or in smaller parts after a
-timeout, else to try later), and the alias caveat. The CSV is the page's download: a `data:` link holding it as
+duplicate groups, a warning when any row is `ERROR`, and the alias
+caveat. The warning depends on why:
+- **`unauthorized`:** the sign-in's directory access had expired. The
+  page renews it as it loads (`window.cordwareRenewGraph()`,
+  `cordware/spec/identity.md` "Graph") and says to check the file
+  again, and to sign out and in only if that fails too.
+- **`forbidden`:** the directory refused the sign-in; sign out and in
+  again, then check again.
+- **`timeout`:** try later, or in smaller parts.
+- **Anything else:** try later. The CSV is the page's download: a `data:` link holding it as
 UTF-8 with a BOM, named `email-check-results-YYYYMMDD.csv`. The server
 keeps no copy.
 

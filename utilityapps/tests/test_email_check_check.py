@@ -162,7 +162,19 @@ def test_the_result_page_says_to_sign_in_again_after_a_refusal(
 ) -> None:
     monkeypatch.setattr(routes, "directory_for", lambda request: Recording({"a@x.edu": GraphError("unauthorized")}))
     text = _post_check(client, b"email\r\na@x.edu\r\n").text
+    # An expired token: the page renews it and says to check again.
+    assert "this page is renewing it" in text
+    assert "window.cordwareRenewGraph()" in text
     assert "sign out and in again" in text
+
+
+def test_the_result_page_says_to_sign_in_again_after_a_forbidden(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(routes, "directory_for", lambda request: Recording({"a@x.edu": GraphError("forbidden")}))
+    text = _post_check(client, b"email\r\na@x.edu\r\n").text
+    assert "The directory refused your sign-in: sign out and in again" in text
+    assert "renewing" not in text
 
 
 def test_lookups_run_at_most_four_at_once() -> None:

@@ -107,7 +107,7 @@
       }
       return hits.length === 1 ? hits[0] : null;
     }
-    function search(box) {
+    function search(box, renewed) {
       var text = (box.value || "").trim();
       if (text.length < 3) { fill([]); say(box, ""); return; }
       var mine = ++asked;
@@ -122,10 +122,21 @@
         .then(function (answer) {
           if (mine !== asked) return;
           if (!answer.available) {
+            var expired = /^(no_token|unauthorized)/.test(answer.reason || "");
+            // An expired Graph token: renew it once (base.html), then ask
+            // again; only a failed renewal sends the operator to sign in.
+            if (expired && !renewed && window.cordwareRenewGraph) {
+              fill([]);
+              window.cordwareRenewGraph().then(function (ok) {
+                if (mine !== asked) return;
+                if (ok) { search(box, true); return; }
+                fill([]);
+                say(box, "Your sign-in's directory access has expired. Sign out and back in to search.");
+              });
+              return;
+            }
             fill([]);
-            // The sign-in's Graph token lasts about an hour, and nothing
-            // renews it yet: signing in again does.
-            say(box, /^(no_token|unauthorized)/.test(answer.reason || "")
+            say(box, expired
               ? "Your sign-in's directory access has expired. Sign out and back in to search."
               : "The directory can't be searched just now.");
             return;

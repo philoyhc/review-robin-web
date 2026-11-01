@@ -178,7 +178,7 @@
             offered[option.value.toLowerCase()] = true;
           });
         }
-        function search() {
+        function search(renewed) {
           var text = (email.value || "").trim();
           // A pick puts an offered address in the box: nothing to ask.
           if (text.length < 3 || offered[text.toLowerCase()]) {
@@ -199,9 +199,17 @@
               if (!answer.available) {
                 fill([]);
                 var reason = answer.reason || "";
-                // The sign-in's Graph token lasts about an hour, and
-                // nothing renews it yet: signing in again does.
+                // An expired Graph token: renew it once (base.html), then
+                // ask again; only a failed renewal says to sign in.
                 if (/^(no_token|unauthorized)/.test(reason)) {
+                  if (!renewed && window.cordwareRenewGraph) {
+                    window.cordwareRenewGraph().then(function (ok) {
+                      if (mine !== asked) return;
+                      if (ok) { search(true); return; }
+                      say("Your sign-in's directory access has expired. Sign out and back in, then search again.");
+                    });
+                    return;
+                  }
                   say("Your sign-in's directory access has expired. Sign out and back in, then search again.");
                   return;
                 }
@@ -225,7 +233,7 @@
           // fill the list for text no longer in the box.
           asked++;
           clearTimeout(timer);
-          timer = setTimeout(search, 300);
+          timer = setTimeout(function () { search(); }, 300);
         });
         form.addEventListener("reset", function () {
           clearTimeout(timer);

@@ -28,7 +28,7 @@
     {% endif %}
     {% if result.counts.ERROR %}
       <p class="error" role="alert">{{ result.counts.ERROR }} {{ "row's lookup" if result.counts.ERROR == 1 else "rows' lookups" }} didn't finish. They are marked <code>ERROR</code>, not <code>NOT_FOUND</code>.
-        {% if "unauthorized" in result.error_kinds or "forbidden" in result.error_kinds %}The directory refused your sign-in, which may have expired: sign out and in again, then check the file again.{% elif "timeout" in result.error_kinds %}The check ran out of time; check the file again later, or in smaller parts.{% else %}Check the file again later.{% endif %}</p>
+        {% if "unauthorized" in result.error_kinds %}Your sign-in's directory access had expired; this page is renewing it, so check the file again. If it fails again, sign out and in again.<script>if (window.cordwareRenewGraph) window.cordwareRenewGraph();</script>{% elif "forbidden" in result.error_kinds %}The directory refused your sign-in: sign out and in again, then check the file again.{% elif "timeout" in result.error_kinds %}The check ran out of time; check the file again later, or in smaller parts.{% else %}Check the file again later.{% endif %}</p>
     {% endif %}
     <p class="note">Aliases were not checked: an address that is only an alias shows as <code>NOT_FOUND</code> (<code>lookup_coverage</code> is <code>BASIC_ONLY</code>). <code>NOT_FOUND</code> is not a test of whether mail is delivered.</p>
     <div class="actions">
