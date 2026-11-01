@@ -467,7 +467,8 @@ def test_invite_creates_user_row_and_emits_audit(
     new_row = db.execute(
         select(User).where(User.email == "new@example.edu")
     ).scalar_one()
-    assert response.headers["location"] == f"/operator/sys-admin/users?selected={new_row.id}&invite_unchecked=1"  # no directory in tests: not checked
+    # Not selected (19X Item 14, author); no directory in tests: not checked.
+    assert response.headers["location"] == "/operator/sys-admin/users?invite_unchecked=1"
     assert new_row.is_operator is True
     assert new_row.is_sys_admin is False
 
@@ -1196,7 +1197,7 @@ def test_plain_sys_admin_can_still_invite_an_operator(
     row = db.execute(
         select(User).where(User.email == "carol@example.edu")
     ).scalar_one()
-    assert response.headers["location"] == f"/operator/sys-admin/users?selected={row.id}&invite_unchecked=1"  # no directory in tests: not checked
+    assert response.headers["location"] == "/operator/sys-admin/users?invite_unchecked=1"  # not selected; not checked
     assert row.is_sys_admin is False
 
 

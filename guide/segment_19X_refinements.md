@@ -1200,3 +1200,95 @@ under the participant row.
 
 - `spec/reviewer-surface.md` — the page header as title row, description, participant row; the closed banner alone under them; the `.rs-session-description` CSS entry (Item 13).
 - `guide/todo_master.md` — Items 10–13 in the 19X entry (Item 13).
+
+## Item 14 — Accounts › Invite: no selection, and several at once
+
+### Opportunity
+
+The author, 2026-11-01, using the directory picker (19Z) on Azure: an
+invite selects the new row, which moves the table off what the admin was
+looking at, and the box takes one person at a time. "Upon inviting
+someone, the person's row is automatically selected in the table: don't
+do that. Secondly, allow comma separated invitations … after a comma,
+directory search should activate again."
+
+### Decision
+
+- **No selection.** An invite lands on the table as the admin left it
+  (no `?selected=`).
+- **A comma-separated list.** `users.invite_list` splits it
+  (`split_invite_list`) and invites each entry as `invite` does, each
+  committed on its own, so one refusal stops none of the rest. At most
+  50 (`INVITE_LIST_MAX`): each entry is a directory lookup the admin
+  waits for, and over 50 invites none (`too_many`).
+- **The banner.** One entry keeps today's redirect and banners. Several
+  land with `?invited=<n>` and one `invite_refused=<code>:<address>` per
+  refusal; the page counts them and names each refused address with a
+  reason from its own table (`views.invite_refusals`), never echoing the
+  code.
+- **The picker.** The search reads what follows the last comma, and each
+  option's value keeps what comes before it, since a datalist pick
+  replaces the box's whole value.
+
+Rejected: *all or nothing*. A list with one typo would invite no one,
+and the admin would retype the rest.
+
+### Semantics
+
+- A piece with no `@` joins the piece after it, so `Tan, Jane
+  <jane@x.edu>` stays one entry; blank pieces are dropped. *(At build:
+  only when the two read as one `Name <address>`; otherwise the word is
+  its own entry, refused.)*
+- A duplicate inside the list is refused as `duplicate` on its second
+  appearance, as on its own.
+
+### Blast radius (measured)
+
+Taken 2026-11-01 at `45da761`: one route (`_sys_admin.invite_user`) and
+the page route's banner parameters; one template
+(`sys_admin_users.html`); one service (`users`), one view (`_accounts`);
+six test files posting the invite (`grep -rln "users/invite" tests/`);
+three specs naming the card (`grep -rln "Invite by email\|users/invite"
+spec/`), of which `operator_ui_concept.md` and `permissions.md` state
+the behavior that changes.
+
+### PR ladder
+
+1. **One PR:** the plan entry, the service, route and template, the
+   tests and the two specs.
+
+### Definition of done
+
+- An invite lands without `selected` (`tests/integration/test_sys_admin_users.py`).
+- A list invites each entry, names the refused, and caps at 50
+  (`tests/integration/test_invite_list.py`); after a comma the picker
+  searches again and a pick keeps the list
+  (`tests/browser/test_invite_directory_picker.py`).
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19X.14` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `guide/todo_master.md` 19X entry updated to drop this item; the entry itself goes only when the segment closes
+
+### Open questions
+
+None.
+
+### Status
+
+Open, one PR. One `diff-reviewer` read of `45da761..ec8fef3`; acted on in the same PR:
+- **A stray word sank the address after it** (`a@x, Arun, c@x` lost `c@x`): a no-`@` piece now joins the next only when the two read as one `Name <address>` (Semantics amended).
+- **Fifty lookups, each with its own 120 s budget**, could outrun the front end: the directory is asked about the list at once (`directory_accounts.resolve`, one budget), and only about addresses past `invite`'s cheap refusals, as a lone invite is.
+- **The picker assumed one space after a comma**, which hid matches: it keeps the spacing as typed.
+- The audit events share the request's correlation id; the specs name the list's `invite_unchecked=<n>`; the banner's cap reads `INVITE_LIST_MAX`; a duplicate inside a list is tested.
+- Recorded, not changed: the banner's counts and addresses come from the URL, so a crafted link can show a false summary (no markup: escaped, codes never echoed), as the single invite's `invite_error` banner already can.
+
+### Out of scope
+
+- The roster rows and help-contact pickers (19Z): one person per box.
+
+### Doc impact
+
+- `spec/operator_ui_concept.md` — Accounts: an invite takes one address or several, comma-separated, and selects no row; the list's banner (Item 14).
+- `spec/permissions.md` — the Invite row: a list of at most 50, `too_many`, one `workspace.user_invited` per row; the list's redirect parameters (Item 14).
+- `guide/todo_master.md` — Item 14 in the 19X entry (Item 14).
