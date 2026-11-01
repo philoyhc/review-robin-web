@@ -61,13 +61,13 @@ is the author's call.
    14B's send path reads them).
    **Plan:** `guide/segment_14C_email_related_ui.md`.
 
-3. **20 — Operator polish + documentation.** Documentation *of a real
-   deployment*, so it waits for one: the **administrator guide** for
-   the institutional host, the institutional half of
-   **troubleshooting**, a **currency pass** over the in-app Guide and
-   `docs/known_limitations.md`, and setting the technical-support
-   address the stub below introduces.
-   **Plan:** `guide/segment_20_operator_polish_and_documentation.md`.
+3. **20A — Operator polish + documentation.** A **currency pass**
+   over the in-app Guide, `docs/known_limitations.md` and
+   `docs/operations_runbook.md` against the deployed host, and the
+   **technical-support contact** (its mechanism can be built now; the
+   address waits for the gate). The administrator guide and the
+   institutional troubleshooting are Cordware's (2026-11-01).
+   **Plan:** `guide/segment_20A_operator_polish_and_documentation.md`.
 
 4. **19Z — Append to a roster** (not gated on Azure). The four roster
    pages' Upload cards gain an append tick beside the replace tick
@@ -104,16 +104,6 @@ the PR body unless it says otherwise.
   `cordware/spec/host.md` "Logging" says they are not yet built. Before
   any NUS deploy, since the logs are the host's only operational
   record.
-
-- **Technical-support contact (global)** *(filed 2026-05-03)*. A
-  deployment-wide "something looks broken" address, distinct from the
-  per-session help contact on `ReviewSession`
-  (`app/schemas/sessions.py`), for a reviewer hitting an auth failure,
-  a 500 or an invalid link. A new env var read through `app/config.py`,
-  shown on the chrome footer, the error pages and the invalid-link
-  landing; **unset renders nothing**, so the mechanism does not wait
-  for the deployment — only the address does, and setting it is
-  Segment 20's.
 
 - **`regenerate_token` leaves `last_reminder_at` standing** *(filed
   2026-09-18; the author answered **yes, clear it**, placement open)*.

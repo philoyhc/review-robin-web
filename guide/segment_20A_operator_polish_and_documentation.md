@@ -1,4 +1,4 @@
-# Segment 20 — Operator polish and documentation
+# Segment 20A — Operator polish and documentation
 
 **Status: RESERVED — does not start until the institutional Azure
 deployment has successfully concluded** (decision 2026-09-05). The
@@ -11,9 +11,15 @@ real deployment*, and writing it against a host that does not yet
 exist produces a guide that has to be rewritten the day it does.
 
 *State, 2026-11-01:* the host is provisioned, deployed and serving
-Review Robin since 2026-10-31. What remains of "concluded" is its
-verification and retiring the personal web app, both the author's call;
-the segment starts when the author says the gate has passed.
+Review Robin since 2026-10-31. Retiring the personal web app no longer
+belongs in the gate: the author left that environment dormant, not
+retired (2026-10-24, `guide/post_azure_todo_checklist.md` item 2). What
+remains of "concluded" is verification, the author's call, and the
+segment starts when the author says the gate has passed.
+
+*Renamed and trimmed 2026-11-01 (author):* `segment_20_…` became
+`segment_20A_…`, and the items the private Cordware repository
+documents left this plan (see "What remains").
 
 Everything in the original §18 list that does **not** need the host is
 now out of this segment — either already shipped (four items, audited
@@ -66,22 +72,48 @@ had already shipped under other segments; three move out; three stay.
 
 ## What remains in this segment
 
-1. **Administrator guide** for the institutional host — the single
-   document an administrator who is not the author reads to stand the
-   service up, grant access, and keep it running. Consolidates and
-   supersedes what is currently scattered; written against the real
-   tenant, not against `docs/deployment_dev.md`'s personal-Azure
-   topology.
-2. **Troubleshooting, institutional half** — the failure modes the NUS
-   host actually produces (Easy Auth / tenant, network policy, the
-   NUS deploy workflow), appended to `docs/troubleshooting.md`.
+1. ~~**Administrator guide** for the institutional host~~ — removed
+   2026-11-01: Cordware documents it. Standing the host up, its
+   settings, releases, rollback and the runner are Cordware's
+   `spec/cordware_setup.md` and `spec/release.md`, and what is asked of
+   IT is its `docs/it_ask.md`. RRW is public and cannot name those
+   resources. What an administrator does *in the app* (the allowlists,
+   Accounts Management) is `docs/operations_runbook.md`, which item 3
+   re-reads.
+2. ~~**Troubleshooting, institutional half**~~ — moved 2026-11-01 to
+   Cordware's `docs/troubleshooting.md`: Easy Auth behind the gateway,
+   the Graph token, the database NSG, the gateway timeout, and the
+   release and Azure-write failures. RRW's `docs/troubleshooting.md`
+   keeps the application's own failure modes.
 3. **Currency pass on the operator-facing docs** — the in-app Guide
-   (`app/web/templates/guide.html`, canonical since 19E rung 2) and
-   `docs/known_limitations.md` re-read against the deployed reality:
-   real URLs, real sign-in flow, and limitations that are still
-   limitations once the host exists.
-4. **The technical-support address itself** — set the env var 19C
-   Item 8 introduces to the real contact for the deployment.
+   (`app/web/templates/guide.html`, canonical since 19E rung 2),
+   `docs/known_limitations.md` and `docs/operations_runbook.md`, re-read
+   against the deployed reality: the real sign-in flow, the Graph
+   directory features, and limitations that are still limitations once
+   the host exists. Host-neutral wording only. Re-scoping the deployment
+   documents themselves (`docs/deployment_dev.md`, the dev-slot framing
+   in `docs/troubleshooting.md`) is `guide/post_azure_todo_checklist.md`
+   item 2's, not this item's.
+4. **Technical-support contact** — absorbed from its
+   `guide/todo_master.md` stub: a deployment-wide "something looks
+   broken" address, distinct from the per-session help contact. It is an
+   env var read through `app/config.py`, shown on the chrome footer, the
+   error pages and the invalid-link landing; **unset renders nothing**.
+   The mechanism needs no host and can be built before the gate. Only
+   the address waits for it, and is set in Cordware's App Settings
+   (its `spec/release.md`, "Release settings").
+
+## Open questions
+
+1. **Is `/guide` public?** Deferred to this segment by
+   `tests/integration/test_setup_template_download.py`: every route
+   is behind sign-in, and the starter-template download stays gated
+   until this is answered. The author decides.
+2. **Does the technical-support contact reuse `OPERATOR_CONTACT_EMAIL`?**
+   That setting already exists, shown only on `/about`'s access-request
+   link (`spec/settings_inventory.md` §8). One address may serve both,
+   or the two may differ (asking for access versus reporting a fault).
+   The author decides, before item 4 is built.
 
 ---
 
@@ -89,7 +121,10 @@ had already shipped under other segments; three move out; three stay.
 
 - Anything that can be written or built without the host. That is the
   whole point of the 2026-09-05 split: if it does not need the
-  deployment, it belongs in 19E / 19C, not here.
+  deployment, it belongs in 19E / 19C, not here. Item 4's mechanism is
+  the exception, kept beside the address it serves.
+- Anything that names NUS resources: it belongs in Cordware (author,
+  2026-11-01).
 - Re-doing the four items the audit found already shipped. A currency
   pass over the Guide / `known_limitations` is not a rewrite.
 - New feature work not in the workplan §18 list.
@@ -102,14 +137,14 @@ Written 2026-10-05 against "What remains" above. The plan is reserved,
 so `tools/close_check.py 20` reports these as not yet modified until the
 segment builds.
 
-- `docs/README.md` — a row for the new administrator guide (what remains,
-  1). Its filename is settled at build, and its own bullet lands then.
-- `docs/troubleshooting.md` — the institutional half appended: Easy Auth
-  and tenant, network policy, the NUS deploy workflow (what remains, 2).
+- `docs/README.md` — a row for the new administrator guide (what remains, 1). <!-- doc-impact-waived: item 1 removed 2026-11-01; Cordware documents the host -->
+- `docs/troubleshooting.md` — the institutional half appended (what remains, 2). <!-- doc-impact-waived: item 2 moved to Cordware's docs/troubleshooting.md, 2026-11-01 -->
 - `docs/known_limitations.md` — currency pass against the deployed host
   (what remains, 3).
-- `app/web/templates/guide.html` — currency pass: real URLs, the real
+- `docs/operations_runbook.md` — currency pass: in-app administration against the deployed host (what remains, 3).
+- `app/web/templates/guide.html` — currency pass: the real
   sign-in flow (what remains, 3).
+- `spec/settings_inventory.md` — §8 gains the technical-support contact's env var (what remains, 4).
 - `guide/todo_master.md` — delete the segment's queue entry (at close).
 
 ---
