@@ -125,6 +125,26 @@ A peer review where every participant both gives and receives feedback is a comm
   - **Recorded, not changed:** the mirror's audit rows (a judgment call above).
   - **Now stale, superseded by Status, not rewritten:** Semantics' "Duplicate and Rehydrate refuse a reviewees file". Duplicate takes no file, and Rehydrate leaves it unread.
   - **Owed at rung 5:** the spec lines.
+- **Codex on rung 4 (`#3490`), every finding fixed there.** It had six findings:
+  - the Quick Setup turn-on ran on the event loop before the session lock (now inside `_save_uploads`, under the lock);
+  - a symmetric setup bundle's Relationships file was checked against the empty Reviewees roster, so the bundle could not round-trip in one submit (now checked against the incoming reviewers).
+  - Rehydrate's pre-flight still required `reviewees.csv`, which a symmetric bundle no longer carries (now optional under the mode, with the responses' reviewees checked against the reviewers).
+  - the mirrored relationship roster was built in the Quick Setup route (now `relationships.parse_relationship_upload`);
+  - every mirrored change re-seeded reviewee display fields the operator had deleted (now only a newly filled slot seeds);
+  - a turn-on committed between the Reviewees route's gate and its lock let a reviewee in (now re-checked under the lock by `symmetric_review.refuse_reviewee_write`; Quick Setup sets the mode from its Settings file first, in either direction).
+- **Rung 5 (specs and Guide), 2026-11-01.** `spec-writer` wrote the Doc impact spec lines and added `spec/rehydrate.md` §6.3, which the plan had not named. Its flags were adjudicated:
+  - **Settings applies:** a Settings CSV applied outside Quick Setup writes the flag with no `session.feature_toggled` event, like the other two toggles.
+  - **Create:** creating a session with the box ticked writes no toggle event, since `session.created` carries the session.
+  - **The `reviewees.csv` export route:** left open; it serves the mirror.
+  - **Unchanged:** the Reviewees tab stays plain (open question 2).
+- **Rung 5's cold read (`diff-reviewer`, its own read, since the rung reopens `app/` with the Guide paragraph).** It found seven spec-accuracy findings and no errors in the Guide paragraph. All seven are fixed in the rung:
+  - the Callers list missed the Settings CSV apply;
+  - the Audit bullet claimed every flip is an event;
+  - Rehydrate's "left unread" overstated it, since the readability scan still reads the file;
+  - three specs outside Doc impact (`spec/permissions.md`, `spec/roundtrip_coverage.md`, and `spec/rehydrate.md`'s restore table) named only the old toggles;
+  - the Extract Data re-import claim needed its condition;
+  - a stale "four setup CSVs";
+  - the inventory's §10 lock sentence.
 
 ## Blast radius (measured)
 
@@ -182,6 +202,9 @@ Taken 2026-11-01 at `2accb87`:
 - `spec/operator_ui_concept.md` — the Add new session checkbox (rung 1).
 - `spec/extract_data.md` — the setup export without the reviewees file (rung 4).
 - `spec/assignments.md` — self-review under the mode: the instrument's toggle decides (rung 5).
+- `spec/rehydrate.md` — §4, §6.3 and the restore table: `reviewees.csv` optional and not imported under the mode (rung 5; found by `spec-writer`).
+- `spec/permissions.md` — the `require_reviewees_editable_session` gate (rung 5; found by the cold read).
+- `spec/roundtrip_coverage.md` — the `symmetric_review` row (rung 5; found by the cold read).
 - `spec/architecture.md` — `reviewees.mirrors_reviewer_id`, the reconcile, and the audit event's `EVENT_SCHEMAS` entry (rungs 2, 3).
 - `app/web/templates/guide.html` — a paragraph on symmetric review (rung 5).
 - `guide/todo_master.md` — the queue entry (at close).

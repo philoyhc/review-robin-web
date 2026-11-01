@@ -53,6 +53,7 @@ responses. See `spec/rehydrate.md`.
 | `scheduled_activate_at`, `responses_release_at`, `responses_release_until`, `invite_offsets`, `reminder_offsets`, `archive_offset` | ✅ | ❌ *(by design)* | Clone resets the schedule **on purpose** — a clone is a fresh cycle the operator re-schedules, like the deadline. Settings-CSV round-trips these for backup / restore |
 | `retention_exception`, `retention_overrides` | ✅ | ✅ | Clone copies retention config |
 | **`relationships_enabled`, `observers_enabled`** | ✅ | ✅ | Both paths carry them — a cloned "all"-mode session's copied observer / relationship rows would otherwise be hidden by a `False` toggle |
+| `symmetric_review` | ✅ | ✅ | Settings-CSV turns it on only while both rosters are empty, else leaves it off; off clears the mirror links (`spec/csv_contracts.md` §3.3). Clone copies the flag and points the copied reviewees' `mirrors_reviewer_id` at the copied reviewers |
 | `reviewer_self_fields` | ✅ | ✅ | Force-applied. The Settings CSV row `session.reviewer_self_fields` is a JSON list: blank restores NULL (the default), `[]` restores "nothing", so a cleared selection and an unset one stay distinct. Clone copies the column as it stands |
 | `reviewee_self_fields` | ✅ | ✅ | As `reviewer_self_fields`, row `session.reviewee_self_fields`: blank restores NULL (the default), `[]` restores "nothing" |
 | `observer_self_fields` | ✅ | ✅ | As `reviewer_self_fields`, row `session.observer_self_fields`: blank restores NULL (the default), `[]` restores "nothing" |

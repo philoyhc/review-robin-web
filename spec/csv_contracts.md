@@ -392,6 +392,13 @@ token (`cordware.graph.look_up_all`, `cordware/spec/identity.md`
 - **Not covered.** The cross-roster identity check above stays
   address-based: it guards two names on one address, and the rows are
   not resolved until after it runs.
+- **Symmetric review.** While `sessions.symmetric_review` is on the
+  Reviewees roster is a mirror of the Reviewers roster, so a Reviewees
+  file is never imported: the Reviewees page's upload answers 409 and Quick
+  Setup refuses the file (`spec/quick_setup_card_spec.md`); Rehydrate leaves
+  the extract's `reviewees.csv` unread. A Reviewers import mirrors into
+  Reviewees in the same transaction (`spec/architecture.md`, "Symmetric
+  review").
 
 ### 3.2 Relationships — `relationships.py`
 
@@ -705,7 +712,10 @@ and *force-apply* for every other config key it writes
 (timezone, the schedule anchors and offsets, the two UI toggles and
 the keys the form does not carry), where the CSV wins, except that a
 UI toggle whose roster has rows stays on (`spec/participant_model.md`
-§2). `assignment_mode`
+§2). `session.symmetric_review` is locked the other way: it turns on
+only while both rosters are empty, so a file that would turn it on beside
+roster rows leaves it off rather than refusing the file. Off always applies
+and clears the mirror links. `assignment_mode`
 and `status` are a third case, **defensively ignored on import** as
 machine-derived. `spec/settings_inventory.md` §10 carries the field
 lists.
@@ -1169,11 +1179,11 @@ while creating the session.
 | Surface | Direction | Service | Spec |
 |---|---|---|---|
 | Extract Setup card — Reviewers tile | Out | `serialize_reviewers` | `spec/session_home.md` §2 |
-| Extract Setup — Reviewees tile | Out | `serialize_reviewees` | same |
+| Extract Setup — Reviewees tile (absent when `symmetric_review`) | Out | `serialize_reviewees` | same |
 | Extract Setup — Relationships tile | Out | `serialize_relationships` | same |
 | Extract Setup — Observers tile (when `observers_enabled`) | Out | `serialize_observers` | same |
 | Extract Setup — Settings tile | Out | `serialize_session_config` (via `export_settings_csv`; the Zip all bundle's copy via `build_setup_bundle`) | same |
-| Extract Setup — Zip all tile | Out | `build_setup_bundle` — a zip of the Reviewers, Reviewees, Relationships and Settings CSVs, plus `{code}_observers.csv` when `observers_enabled` (`GET /export/bundle.zip`, filename `{code}_setup.zip`) | same |
+| Extract Setup — Zip all tile | Out | `build_setup_bundle` — a zip of the Reviewers, Reviewees, Relationships and Settings CSVs, less the Reviewees CSV when `symmetric_review` is on, plus `{code}_observers.csv` when `observers_enabled` (`GET /export/bundle.zip`, filename `{code}_setup.zip`) | same |
 | Extract data tab — Zip all button | Out | `build_responses_bundle` — always the unified Responses CSV; plus, for each intro chip that is on, the files that card's own button downloads under the same names (made safe as zip members, `spec/extract_data.md` "Zip member names") and as the card is configured: the By-instrument CSVs (`?by_instrument=0` omits), the Reviewer and Reviewee metadata CSVs (`?reviewer_metadata=0` / `?reviewee_metadata=0`), every saved Data shape's CSV (`?data_shapes=0`) and, when `observers_enabled`, `{code}_participant_tokens.csv` (`?tokens=0`); each card's own query rides as `?{flag}.{param}` (`spec/extract_data.md`, Extract all data card) (`GET /export/responses_bundle.zip`, filename `{code}_responses.zip`) | `spec/extract_data.md` |
 | Extract data tab — Data shaper Zip all button | Out | `build_data_shapes_bundle` — every saved Data shape's CSV, each named and built as its own Download (`GET /export/data_shapes_bundle.zip`, filename `{code}_data_shapes.zip`; 404 with no saved shape). Row order: per-individual rows active first, then name, email / identifier, id; per-tag-combo rows by their tag values in chip order | `spec/extract_data.md` |
 | Extract data tab — By-instrument Zip all button | Out | `build_by_instrument_bundle` — a zip of one wide-format CSV per instrument (`GET /export/by_instrument_bundle.zip`, filename `{code}_by_instrument.zip`; members named `{code}_by_instrument_{slug}.csv` where `{slug}` comes from the instrument's short label or the `Instrument_{session_seq}` fallback). Each member starts with a key/value meta block (instrument identity + per-response-field type/constraint rows + assignment count + pool / unit-of-review / self-review configuration) + blank row + wide data table (one row per assignment, columns = identity + tags + one per response field + SelfReview/SavedAt/SubmittedAt), rows sorted by `RevieweeName`, `ReviewerName`, `RevieweeEmail`, `ReviewerEmail`, then assignment id. | `spec/extract_data.md` |

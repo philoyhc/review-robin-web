@@ -57,7 +57,7 @@ Grounded in what the extract actually captures and what importers exist:
 | **Assignments** | derived (rule-generated) | ⚠️ no importer — regenerated from rules | Regenerate from imported rule sets. Never created to fit a response: a `responses.csv` row naming a pair the rules did not produce is dropped and reported |
 | **Responses** (the data) | `responses.csv` (in the responses bundle) | ✅ `responses_import.py` — Rehydrate's own; no operator-facing upload | Load through it ([§6.4](#64-load-responses)) |
 | Instrument visibility policies (`instrument_view_policies`) | `settings.csv` | ✅ | Apply as-is |
-| `relationships_enabled` / `observers_enabled` toggles | `settings.csv` | ✅ | Apply as-is |
+| `relationships_enabled` / `observers_enabled` / `symmetric_review` toggles | `settings.csv` | ✅ | Apply as-is; `symmetric_review` applies before any roster ([§6.3](#63-import-populations-and-regenerate-assignments)) |
 | Invitations, email outbox, `results_acknowledged_at`, participant tokens | not reconstructable / regenerated | — | Not restored ([§9](#9-limitations-and-known-gaps)) |
 
 Rows one to three, plus the two rows closed by the
@@ -68,10 +68,11 @@ row is the genuinely new work.
 ## Prerequisite: the settings round-trip covers visibility + toggles
 
 The per-instrument `instrument_view_policies` grid (the 3×2 visibility grid)
-and the session-level `relationships_enabled` / `observers_enabled` toggles
-round-trip through `settings.csv` — serialized by
+and the session-level `relationships_enabled` / `observers_enabled` /
+`symmetric_review` toggles round-trip through `settings.csv` — serialized by
 `session_config_io._serialize` (as `instruments[n].view_policies[audience].*`
-rows plus `session.relationships_enabled` / `session.observers_enabled`) and
+rows plus `session.relationships_enabled` / `session.observers_enabled` /
+`session.symmetric_review`) and
 restored by `_apply` within its instrument wipe-and-rebuild pass.
 
 Rehydrate therefore carries **no view-policy code of its own**: it
@@ -147,7 +148,7 @@ current upload returns no blocking errors.
 what the commit actually does. It writes nothing; it reads the database only
 to derive the preview's unique name and code. The report carries:
 
-- **Completeness** — the four required files present
+- **Completeness** — the required files present (three under `symmetric_review`)
   ([§4](#4-required-file-set)), `settings.csv`'s header exact,
   `responses.csv` carrying its 21-column header, `reviewers.csv` /
   `reviewees.csv` carrying their email column, and `relationships.csv` /
@@ -220,7 +221,7 @@ the handler resolves files by name.
 |---|---|---|
 | `*_settings.csv` | `field,value,data_type` (`session_config_io._rows.HEADER`) | All config: session metadata, instruments + fields, rule sets, email overrides, data shapes |
 | `*_reviewers.csv` | `ReviewerName,ReviewerEmail,ReviewerTag1..3,ProfileLink,Status` | Reviewer population (tag columns may carry a `.<label>` friendly-label suffix) |
-| `*_reviewees.csv` | `RevieweeName,RevieweeEmail,RevieweeTag1..3,ProfileLink,Status` | Reviewee population (tag columns may carry a `.<label>` friendly-label suffix) |
+| `*_reviewees.csv` | `RevieweeName,RevieweeEmail,RevieweeTag1..3,ProfileLink,Status` | Reviewee population (tag columns may carry a `.<label>` friendly-label suffix). Not required when `settings.csv` turns `symmetric_review` on: the reviewers are the reviewees ([§6.3](#63-import-populations-and-regenerate-assignments)) |
 | `*_responses.csv` | the 21-column responses header (`responses_extract.HEADER`) | The response data + `SavedAt`/`SubmittedAt`/`Version` |
 
 Bundles exported before `ProfileLink`'s rename still re-import: rehydrate
@@ -384,6 +385,13 @@ instrument uses imports as stored.
    dedup rules as normal import: emails are stored as typed and compared
    case-insensitively; `reviewees` keep their `email_or_identifier`
    (non-email handles allowed).
+   **Under `symmetric_review`** (applied with `settings.csv`, before any
+   roster) `reviewees.csv` is not required by the pre-flight, which resolves
+   `responses.csv`'s reviewee references against `reviewers.csv`. If
+   present it is only scanned for readability, as every file in the set is
+   ([§3](#3-entry-point-and-page)), and is not imported: not parsed as a roster, looked up or saved. The Reviewers save mirrors the
+   reviewees (`spec/architecture.md`, "Symmetric review"), and the result's
+   reviewee count is the reviewers'.
 
    **Directory resolution.** An extract carries no directory binding
    (the roster CSVs hold only the address as written), so a rehydrate
