@@ -188,3 +188,38 @@ def test_the_fake_sign_in_s_id_is_no_one_s(db: Session) -> None:
     assert not is_verified(User(email="dev@example.edu", external_principal_id=identity_settings.fake_auth_principal_id))
     assert not is_verified(User(email="dev@example.edu", external_principal_id="  "))
     assert is_verified(User(email="dev@example.edu", external_principal_id=JANE))
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("Jane Tan <jane.tan@example.edu>", ("Jane Tan", "jane.tan@example.edu")),
+        ("  <jane.tan@example.edu> ", (None, "jane.tan@example.edu")),
+        ("jane.tan@example.edu", (None, "jane.tan@example.edu")),
+        ("Tan, Jane <a@b.edu> extra", (None, "Tan, Jane <a@b.edu> extra")),
+    ],
+)
+def test_name_and_address_splits_only_the_picker_s_form(text: str, expected: tuple) -> None:
+    from app.services.users import split_named_address
+
+    assert split_named_address(text) == expected
+
+
+def test_a_picked_name_and_address_invites_the_address(
+    db: Session, client: TestClient, monkeypatch: pytest.MonkeyPatch, directory: None
+) -> None:
+    """The picker fills "Name <address>"; the directory's name wins."""
+    _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
+    response = _invite(client, "Jay T <jane.tan@example.edu>")
+    row = _row(db, "jane.tan@example.edu")
+    assert response.status_code == 303 and row is not None
+    assert row.external_principal_id == JANE and row.display_name == "Jane Tan"
+
+
+def test_an_unbound_picked_invite_keeps_the_picked_name(
+    db: Session, client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
+    _invite(client, "New Person <new@example.edu>")  # no directory: nothing asked
+    row = _row(db, "new@example.edu")
+    assert row is not None and row.external_principal_id is None and row.display_name == "New Person"

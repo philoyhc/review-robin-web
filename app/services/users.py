@@ -45,6 +45,7 @@ and session ownership.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from dataclasses import dataclass, replace as dataclass_replace
 from datetime import datetime
@@ -1019,6 +1020,19 @@ def _lock_and_check_owners(
     return mine
 
 
+_NAMED_ADDRESS = re.compile(r"^(?P<name>[^<>]*?)\s*<(?P<address>[^<>\s]+)>\s*$")
+
+
+def split_named_address(text: str) -> tuple[str | None, str]:
+    """``"Name <address>"``, as the invite box's directory picker fills it
+    (19Z, invite from the directory), split into its name (``None`` when
+    blank) and address; any other text is the address as given."""
+    match = _NAMED_ADDRESS.match(text.strip())
+    if match is None:
+        return None, text.strip()
+    return (match["name"].strip() or None), match["address"]
+
+
 def _invite_account(
     db: Session, email: str, outcome: Outcome | None
 ) -> directory_accounts.Account | None:
@@ -1058,6 +1072,7 @@ def invite(
     is_operator: bool = True,
     is_sys_admin: bool = False,
     directory: Callable[[], Outcome | None] | None = None,
+    display_name: str | None = None,
     correlation_id: str | None = None,
 ) -> User:
     """Pre-seed a ``users`` row before the invitee's first Entra
@@ -1076,7 +1091,9 @@ def invite(
     found (``not_in_directory``), ambiguous (``ambiguous_in_directory``)
     and an account another row already holds (``account_exists``) are
     refused. With no outcome, or an error, the row is created unbound,
-    as before, and binds at its first sign-in."""
+    as before, and binds at its first sign-in. A bound row takes the
+    directory's display name; an unbound one, ``display_name`` (the name
+    the picker filled), if any."""
     email_normalised = email.strip()
     if not email_normalised or "@" not in email_normalised:
         raise UserOperationError(
@@ -1105,7 +1122,9 @@ def invite(
     # The directory's display name (19Z, invite from the directory), so
     # the row reads as its person: a row that exists before its first
     # sign-in takes no name from it.
-    display_name = (account.name.strip() or None) if account else None
+    display_name = ((account.name.strip() or None) if account else None) or (
+        (display_name or "").strip() or None
+    )
     user = User(
         email=email_normalised,
         display_name=display_name,

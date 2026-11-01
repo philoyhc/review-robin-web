@@ -88,6 +88,8 @@ None is shown on an empty roster. All three are mutually exclusive, none is tick
 ## Judgment calls — decided
 
 - **A local run's invite checks nothing** (accounts item, 2026-10-31): its directory is the five fake people and the accounts invited there are made up, so refusing them would stop local work; the refusals are tested with the fake directory injected.
+- **A pick fills "Name <address>"** (author, 2026-11-01), as the directory shows it; the invite takes the address from the brackets, and the name only when the directory gave none (an unchecked invite).
+- **The search says why it failed** (2026-11-01): the kind, status and Graph's `error.code`, never its message; an expired or missing token tells the admin to sign in again, since nothing renews Easy Auth's hour-long Graph token yet.
 
 - **Refuse, not skip, a row already on the roster** (author, 2026-10-31). A silent skip hides a typo'd name. Refusing names the row, and the operator removes it from the file.
 - **The exclusivity script and Upload's gating land with the wiring** (2026-10-31). In the scaffold, Append is disabled, so the replace tick's delete-confirm pairing alone gates Upload, exactly as before.

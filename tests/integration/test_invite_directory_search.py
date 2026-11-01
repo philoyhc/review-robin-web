@@ -53,7 +53,8 @@ def test_a_directory_that_cannot_be_asked_reads_unavailable(
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
     monkeypatch.setattr(_sys_admin, "directory_or_none", lambda request: None if directory == "none" else FakeDirectory())
     q = "jan" if directory == "none" else "throttled@example.edu"
-    assert client.get(SEARCH, params={"q": q}).json() == {"available": False, "people": []}
+    reason = "no_token" if directory == "none" else "throttled (429)"
+    assert client.get(SEARCH, params={"q": q}).json() == {"available": False, "people": [], "reason": reason}
 
 
 def test_an_operator_who_is_not_a_sys_admin_is_refused(client: TestClient, fake: None) -> None:

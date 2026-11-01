@@ -729,16 +729,21 @@ def invite_directory_search(
     people whose name, surname, mail or sign-in name starts with ``q``,
     asked on the admin's own token. ``available`` is false when the
     directory cannot be asked, so the box says so rather than "no
-    match". Not audited (author, 2026-11-01)."""
-    people = directory_accounts.search(directory_or_none(request), q)
+    match", and ``reason`` says why (the failure's kind, status and
+    Graph's error code), for the admin to read. Not audited (author,
+    2026-11-01)."""
+    found = directory_accounts.search(directory_or_none(request), q)
+    answer: dict[str, object] = {
+        "available": found.people is not None,
+        "people": [
+            {"name": p.name, "mail": p.mail, "upn": p.upn, "address": p.address}
+            for p in (found.people or [])
+        ],
+    }
+    if found.reason:
+        answer["reason"] = found.reason
     return JSONResponse(
-        {
-            "available": people is not None,
-            "people": [
-                {"name": p.name, "mail": p.mail, "upn": p.upn, "address": p.address}
-                for p in (people or [])
-            ],
-        },
+        answer,
         headers={"Cache-Control": "no-store"},
     )
 
@@ -754,19 +759,23 @@ def invite_user(
     # (segment 19Z, accounts item); no token or a failed lookup checks
     # nothing, and the row is created unbound, as before. A local run's
     # directory is the five fake people, and the accounts invited there
-    # are made up, so it checks nothing either.
+    # are made up, so it checks nothing either. The picker fills
+    # "Name <address>"; the address in the brackets is the one invited.
+    name, address = users_service.split_named_address(email)
+
     def look_up():
         directory = None if is_local() else directory_or_none(request)
-        return directory_accounts.look_up_one(directory, email)
+        return directory_accounts.look_up_one(directory, address)
 
     try:
         invited = users_service.invite(
             db,
             actor=actor,
-            email=email,
+            email=address,
             is_operator=True,
             is_sys_admin=invite_as_sys_admin == "true",
             directory=look_up,
+            display_name=name,
         )
     except users_service.UserOperationError as exc:
         url = f"{_ACCOUNTS_URL}?invite_error={quote(exc.code, safe='')}"

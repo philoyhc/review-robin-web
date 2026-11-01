@@ -1,7 +1,8 @@
 """Sys Admin → Accounts: the invite box's directory picker (segment 19Z,
 invite from the directory, rung 19). The live server runs with fake auth,
-so the search asks the fake directory: typing a name offers its people as
-"Name <address>", and picking one puts the address in the box."""
+so the search asks the fake directory: typing a name offers its people,
+and picking one puts "Name <address>" in the box, which invites the
+address (author, 2026-11-01)."""
 
 from __future__ import annotations
 
@@ -19,18 +20,30 @@ def test_a_name_offers_the_directory_s_people(page: Page) -> None:
 
     box.press_sequentially("Jane")
     expect(options).to_have_count(1)
-    expect(options.first).to_have_attribute("value", "jane.tan@example.edu")
+    expect(options.first).to_have_attribute("value", "Jane Tan <jane.tan@example.edu>")
     # Her sign-in name differs from her mail, so the label keeps it.
-    expect(options.first).to_have_attribute(
-        "label", "Jane Tan <jane.tan@example.edu> · e0123456@example.edu"
-    )
+    expect(options.first).to_have_attribute("label", "e0123456@example.edu")
     expect(page.locator("[data-directory-status]")).to_be_hidden()
 
-    # A pick puts the address in the box, and the offer stands.
-    box.fill("jane.tan@example.edu")
+    # A pick puts "Name <address>" in the box, and the offer stands.
+    box.fill("Jane Tan <jane.tan@example.edu>")
+    box.dispatch_event("input")
     page.wait_for_timeout(500)
     expect(options).to_have_count(1)
     expect(page.locator("[data-invite-submit]")).to_be_enabled()
+
+
+def test_a_picked_name_and_address_invites_the_address(page: Page) -> None:
+    """The local run checks nothing, so the row takes the picked name."""
+    import uuid
+
+    address = f"picked-{uuid.uuid4().hex[:8]}@example.edu"
+    page.goto(app_url(ACCOUNTS))
+    page.fill("#invite-email", f"Pat Picked <{address}>")
+    with page.expect_navigation():
+        page.click("[data-invite-submit]")
+    row = page.locator("#users-table tr", has_text=address)
+    expect(row).to_contain_text("Pat Picked")
 
 
 def test_too_short_offers_nothing_and_no_match_says_so(page: Page) -> None:
@@ -76,9 +89,33 @@ def test_a_sign_in_name_search_keeps_its_match_in_the_label(page: Page) -> None:
     page.locator("#invite-email").press_sequentially("e0123")
     option = page.locator("#invite-directory-options option")
     expect(option).to_have_count(1)
-    assert "e0123456@example.edu" in (option.first.get_attribute("label") or "")
+    expect(option.first).to_have_attribute("label", "e0123456@example.edu")
 
     # Arun's sign-in name is his mail: nothing added.
     page.locator("#invite-email").fill("Arun")
     page.locator("#invite-email").dispatch_event("input")
-    expect(option.first).to_have_attribute("label", "Arun Kumar <arun.kumar@example.edu>")
+    expect(option.first).to_have_attribute("value", "Arun Kumar <arun.kumar@example.edu>")
+    assert option.first.get_attribute("label") is None
+
+
+def test_an_unavailable_directory_shows_its_reason(page: Page) -> None:
+    """The fake directory fails on its throttled address, as Graph would."""
+    page.goto(app_url(ACCOUNTS))
+    page.locator("#invite-email").press_sequentially("throttled@example.edu")
+    expect(page.locator("[data-directory-status]")).to_have_text(
+        "The directory can't be searched just now (throttled (429)). Type the full address."
+    )
+
+
+def test_an_expired_sign_in_says_to_sign_in_again(page: Page) -> None:
+    page.goto(app_url(ACCOUNTS))
+    page.route(
+        "**/directory-search*",
+        lambda route: route.fulfill(
+            json={"available": False, "people": [], "reason": "unauthorized (401) InvalidAuthenticationToken"}
+        ),
+    )
+    page.locator("#invite-email").press_sequentially("Jane")
+    expect(page.locator("[data-directory-status]")).to_have_text(
+        "Your sign-in's directory access has expired. Sign out and back in, then search again."
+    )
