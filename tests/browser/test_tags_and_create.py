@@ -166,10 +166,10 @@ def test_a_staged_verified_owner_reads_as_the_pill(page: Page, api: httpx.Client
     sign_in(api, SECOND_COLLEAGUE_EMAIL)
     page.goto(app_url("/operator/sessions/new"))
     page.locator(f'#session-owners-candidates option[value="{COLLEAGUE_EMAIL}"]').evaluate(
-        "el => el.setAttribute('data-verified', '')"
+        "el => { el.setAttribute('data-verified', ''); el.textContent = 'Colleague One'; }"
     )
     page.locator(f'#session-owners-candidates option[value="{SECOND_COLLEAGUE_EMAIL}"]').evaluate(
-        "el => el.removeAttribute('data-verified')"
+        "el => { el.removeAttribute('data-verified'); el.textContent = 'Colleague Two'; }"
     )
     table = page.locator("#session-owners-table")
     for email in (COLLEAGUE_EMAIL, SECOND_COLLEAGUE_EMAIL):
@@ -180,3 +180,9 @@ def test_a_staged_verified_owner_reads_as_the_pill(page: Page, api: httpx.Client
     expect(verified).to_have_attribute("title", "Matched to a directory account")
     plain = table.locator("tr").filter(has_text=SECOND_COLLEAGUE_EMAIL).locator("code")
     expect(plain).not_to_have_attribute("class", re.compile("pill"))
+    # 20C Item 1: a verified name is the pill too, an unverified one plain text.
+    named = table.locator("tr").filter(has_text=COLLEAGUE_EMAIL).locator("td").nth(1)
+    expect(named.locator("span.pill.pill-address")).to_have_text("Colleague One")
+    unnamed = table.locator("tr").filter(has_text=SECOND_COLLEAGUE_EMAIL).locator("td").nth(1)
+    expect(unnamed).to_have_text("Colleague Two")
+    expect(unnamed.locator("span.pill")).to_have_count(0)

@@ -141,6 +141,20 @@ def test_the_creator_is_the_first_owner_and_cannot_be_removed(
     assert "Remove" not in card, "a session always keeps one owner"
 
 
+def test_the_creators_verified_name_is_the_pill(client: TestClient, db: Session) -> None:
+    """20C Item 1: the creator's name reads as the pill when their account
+    is verified, as Session Home's Owners card shows it. (The test
+    client's sign-in stamps a principal, so the creator is verified; the
+    macro's unverified branch is covered on Accounts.)"""
+    client.get("/operator/sessions/new")
+    user = db.execute(select(User).where(User.email == CREATOR)).scalar_one()
+    user.display_name = "Alice Tan"
+    db.commit()
+    card = _card(client.get("/operator/sessions/new").text)
+    assert re.search(r'<span class="pill pill-count pill-address"[^>]*data-directory-matched>Alice Tan</span>', card)
+    assert "<td>Alice Tan</td>" not in card
+
+
 def test_the_picker_suggests_other_workspace_operators(
     client: TestClient, db: Session
 ) -> None:
