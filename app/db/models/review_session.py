@@ -206,6 +206,12 @@ class ReviewSession(Base, TimestampMixin):
     observers_enabled: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False, server_default=false()
     )
+    # Segment 20B — symmetric review: the Reviewers roster is the only
+    # one edited, and every write mirrors to Reviewees. On only while
+    # both rosters are empty (``sessions.update_session``); off any time.
+    symmetric_review: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, server_default=false()
+    )
 
     created_by_user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id"), index=True, nullable=False

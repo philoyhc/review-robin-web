@@ -104,12 +104,12 @@
     {% include "operator/partials/_roster_lock_card.html" %}
   {% endwith %}
 
-  {# 20B rung 1 — the page under symmetric review, a scaffold shown by
-     ``?symmetric_preview=``: read-only, its Unlock panel (What reviewees
-     see, Upload, the tag labels, the Danger Zone) and row controls gone,
-     a note pointing to Reviewers. Set after the lock card, which keeps
-     its own lifecycle gate. Rung 4 makes it real. #}
-  {% if symmetric_preview %}
+  {# 20B — the page under symmetric review: read-only, its Unlock panel
+     (What reviewees see, Upload, the tag labels, the Danger Zone) and
+     row controls gone, a note pointing to Reviewers. Set after the lock
+     card, which keeps its own lifecycle gate. The write routes refuse
+     too (rung 4). #}
+  {% if session.symmetric_review %}
     {% set is_editable = false %}
     {% set unlock_available = false %}
     <div class="banner banner-info" data-symmetric-mirrored>

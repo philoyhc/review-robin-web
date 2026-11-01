@@ -45,6 +45,9 @@ class SessionCreate(BaseModel):
     # ``guide/archive/participant_model_upgrade.md`` §3.8.
     relationships_enabled: bool = False
     observers_enabled: bool = False
+    # Segment 20B — symmetric review: the Reviewers roster is the only
+    # one edited, mirrored to Reviewees. On only while both are empty.
+    symmetric_review: bool = False
     # Participant-model Phase 3 (W14 + S12) — Release-responses
     # window. ``responses_release_at`` is the moment reviewees /
     # observers can start viewing collated responses;

@@ -203,12 +203,13 @@
             Observers tab and page
           </label>
         </div>
-        {# 20B rung 1 — scaffold: inert (no ``name``, disabled) until rung 2
-           stores it. ``?symmetric_preview=`` shows it ticked. #}
+        {# 20B — symmetric review. A new session's rosters are empty, so
+           the box is always open here. Ticked, it greys the Quick Setup
+           Reviewees slot in the browser (script below). #}
         <div class="ui-settings-row">
           <label class="ui-setting">
-            <input type="checkbox" data-symmetric-review disabled
-                   {% if symmetric_preview %}checked{% endif %}>
+            <input type="checkbox" name="symmetric_review" value="true"
+                   form="create-session-form" data-symmetric-review>
             Symmetric review
           </label>
         </div>
@@ -309,6 +310,25 @@
   </div>
 
   {% include "operator/partials/_owners_stager_js.html" %}
+  <script>
+    (function () {
+      // 20B — Symmetric review ticked: the Reviewees slot takes no file.
+      var box = document.querySelector("[data-symmetric-review]");
+      var slot = document.getElementById("quick-setup-reviewees");
+      if (!box || !slot) return;
+      var input = slot.querySelector('input[type="file"]');
+      var reason = slot.querySelector("[data-symmetric-reason]");
+      function sync() {
+        if (input) {
+          input.disabled = box.checked;
+          if (box.checked) input.value = "";
+        }
+        if (reason) reason.hidden = !box.checked;
+      }
+      box.addEventListener("change", sync);
+      sync();
+    })();
+  </script>
   {% include "operator/partials/_tag_typeahead.html" %}
   {% include "operator/partials/_schedule_ordering_js.html" %}
   {% include "operator/partials/_timezone_preview.html" %}

@@ -28,6 +28,7 @@ def _session() -> ReviewSession:
         deadline=AWARE,
         relationships_enabled=False,
         observers_enabled=False,
+        symmetric_review=False,
     )
 
 

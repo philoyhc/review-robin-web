@@ -165,6 +165,12 @@ def _session_rows(review_session: ReviewSession) -> list[Row]:
             _bool(review_session.observers_enabled),
             "boolean",
         ),
+        # Segment 20B — symmetric review.
+        Row(
+            "session.symmetric_review",
+            _bool(review_session.symmetric_review),
+            "boolean",
+        ),
         # participant info Item 1 — what reviewers see of their own
         # entry. Blank is the default (``NULL``); ``[]`` shows nothing,
         # which is why this is a JSON list, not a comma list.

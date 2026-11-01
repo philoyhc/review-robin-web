@@ -61,7 +61,6 @@ from app.web.routes_operator._shared import (
     parse_session_deadline,
     render_session_home,
     session_payload_error,
-    symmetric_preview,
 )
 
 
@@ -71,7 +70,6 @@ router = APIRouter()
 @router.get("/sessions/new", response_class=HTMLResponse)
 def new_session_form(
     request: Request,
-    symmetric_preview_raw: str | None = Query(default=None, alias="symmetric_preview"),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
@@ -81,7 +79,6 @@ def new_session_form(
         "operator/session_new.html",
         {
             "user": user,
-            "symmetric_preview": symmetric_preview(symmetric_preview_raw),
             "quick_setup": views.build_new_session_quick_setup_context(
                 db, user
             ),
@@ -118,7 +115,6 @@ def session_detail(
     prepare_confirm: str | None = Query(default=None),
     editing: bool = Query(default=False),
     owners_error: str | None = Query(default=None),
-    symmetric_preview_raw: str | None = Query(default=None, alias="symmetric_preview"),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -149,7 +145,6 @@ def session_detail(
         prepare_confirm=prepare_confirm,
         editing=editing,
         owners_error=owners_error,
-        symmetric_preview_variant=symmetric_preview(symmetric_preview_raw),
     )
 
 
@@ -193,6 +188,7 @@ def _apply_session_config_form(
     help_contact: str | None,
     relationships_enabled: bool,
     observers_enabled: bool,
+    symmetric_review: bool,
     responses_release_at: str | None,
     responses_release_until: str | None,
     correlation_id: str,
@@ -462,6 +458,7 @@ def _apply_session_config_form(
             reminder_offsets=parsed_reminder_offsets,
             relationships_enabled=relationships_enabled,
             observers_enabled=observers_enabled,
+            symmetric_review=symmetric_review,
             responses_release_at=parsed_responses_release_at,
             responses_release_until=parsed_responses_release_until,
         )
@@ -501,6 +498,7 @@ def session_config_submit(
     help_contact: str | None = Form(default=None),
     relationships_enabled: bool = Form(default=False),
     observers_enabled: bool = Form(default=False),
+    symmetric_review: bool = Form(default=False),
     responses_release_at: str | None = Form(default=None),
     responses_release_until: str | None = Form(default=None),
     tags: str = Form(default=""),
@@ -537,6 +535,7 @@ def session_config_submit(
         help_contact=help_contact,
         relationships_enabled=relationships_enabled,
         observers_enabled=observers_enabled,
+        symmetric_review=symmetric_review,
         responses_release_at=responses_release_at,
         responses_release_until=responses_release_until,
         correlation_id=correlation_id,

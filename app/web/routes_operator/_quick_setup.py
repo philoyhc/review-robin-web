@@ -86,6 +86,7 @@ async def create_session(
     help_contact: str | None = Form(default=None),
     relationships_enabled: bool = Form(default=False),
     observers_enabled: bool = Form(default=False),
+    symmetric_review: bool = Form(default=False),
     responses_release_at: str | None = Form(default=None),
     responses_release_until: str | None = Form(default=None),
     tags: str | None = Form(default=None),
@@ -245,6 +246,7 @@ async def create_session(
             reminder_offsets=parsed_reminder_offsets,
             relationships_enabled=relationships_enabled,
             observers_enabled=observers_enabled,
+            symmetric_review=symmetric_review,
             responses_release_at=parsed_responses_release_at,
             responses_release_until=parsed_responses_release_until,
         )
