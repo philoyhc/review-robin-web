@@ -1162,6 +1162,26 @@ scaffold first.
 
 ---
 
+### Contact and support
+
+#### A technical-support contact on every page (20A item 4, deferred 2026-11-01)
+
+**Ships.** `OPERATOR_CONTACT_EMAIL`, today shown only on `/about`'s
+access-request link, also appears on the chrome footer, the error pages
+and the invitation landing (`reviewer/invite_mismatch.html`), as a
+"something looks broken" address distinct from a session's help contact.
+Unset renders nothing.
+
+**Why deferred** (author, 2026-11-01). The users are a whitelisted group
+in a citizen project, and they know whom to call. A footer address tells
+them nothing new.
+
+**Lift trigger:** participants from outside the group that runs the
+service, or a support request that reached no one.
+
+**Wire-up.** No new setting: reuse `OPERATOR_CONTACT_EMAIL` (author,
+2026-11-01). Its value is set in the host's App Settings.
+
 ## Part B — Deferred infrastructure & platform hardening
 
 Infrastructure- and database-platform hardening that has been
