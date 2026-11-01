@@ -77,6 +77,10 @@ A second scan, of a `<label for=…>` placed before its own checkbox, found **0*
 
 The comment above `.ui-settings-row` in `base.html` describes the checkbox "inline after" the text and changes with it. Tests: `tests/integration/test_quick_setup_new_session.py` reads the card's classes, not the order.
 
+### Status
+
+Done 2026-11-01 in one PR, as laddered. The two labels put the box first, and the `base.html` comment and the `spec/ui_elements.md` rule say so. `tests/integration/test_quick_setup_new_session.py` pins the order. The rule records that chip toggles (`.tag-chip`, a visually hidden box) are outside it. Reads: one `diff-reviewer` read; its findings are in the PR.
+
 ### PR ladder
 
 1. **One PR:** the two labels, the `base.html` comment, a test that each checkbox precedes its text, and the `spec/ui_elements.md` rule.
