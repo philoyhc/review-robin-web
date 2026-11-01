@@ -1220,12 +1220,13 @@ directory search should activate again."
   (`split_invite_list`) and invites each entry as `invite` does, each
   committed on its own, so one refusal stops none of the rest. At most
   50 (`INVITE_LIST_MAX`): each entry is a directory lookup the admin
-  waits for, and over 50 invites none (`too_many`).
+  waits for, and over 50 invites none (`too_many`). *(Withdrawn
+  2026-11-01; Status.)*
 - **The banner.** One entry keeps today's redirect and banners. Several
   land with `?invited=<n>` and one `invite_refused=<code>:<address>` per
   refusal; the page counts them and names each refused address with a
   reason from its own table (`views.invite_refusals`), never echoing the
-  code.
+  code. *(Withdrawn 2026-11-01 with the list; Status.)*
 - **The picker.** The search reads what follows the last comma, and each
   option's value keeps what comes before it, since a datalist pick
   replaces the box's whole value.
@@ -1260,10 +1261,7 @@ the behavior that changes.
 ### Definition of done
 
 - An invite lands without `selected` (`tests/integration/test_sys_admin_users.py`).
-- A list invites each entry, names the refused, and caps at 50
-  (`tests/integration/test_invite_list.py`); after a comma the picker
-  searches again and a pick keeps the list
-  (`tests/browser/test_invite_directory_picker.py`).
+- ~~A list invites each entry, names the refused, and caps at 50; after a comma the picker searches again.~~ (withdrawn 2026-11-01; Status)
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 19X.14` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
@@ -1276,7 +1274,9 @@ None.
 
 ### Status
 
-Open, one PR. One `diff-reviewer` read of `45da761..ec8fef3`; acted on in the same PR:
+Open. **The comma-separated list is withdrawn** (author, 2026-11-01, after the browser check): a datalist suits one entry, not several, and doing it properly needs a suggestion list of the page's own, more code than a rare group invite is worth. Its code, banner, cap and tests came out in a second PR, so the ladder became two PRs; no selection stays. That PR's own `diff-reviewer` read found the removal complete, with only plan-wording nits, fixed. The list as it shipped in `#3461`, and its read:
+
+One `diff-reviewer` read of `45da761..ec8fef3`; acted on in the same PR:
 - **A stray word sank the address after it** (`a@x, Arun, c@x` lost `c@x`): a no-`@` piece now joins the next only when the two read as one `Name <address>` (Semantics amended).
 - **Fifty lookups, each with its own 120 s budget**, could outrun the front end: the directory is asked about the list at once (`directory_accounts.resolve`, one budget), and only about addresses past `invite`'s cheap refusals, as a lone invite is.
 - **The picker assumed one space after a comma**, which hid matches: it keeps the spacing as typed.
@@ -1289,6 +1289,6 @@ Open, one PR. One `diff-reviewer` read of `45da761..ec8fef3`; acted on in the sa
 
 ### Doc impact
 
-- `spec/operator_ui_concept.md` — Accounts: an invite takes one address or several, comma-separated, and selects no row; the list's banner (Item 14).
-- `spec/permissions.md` — the Invite row: a list of at most 50, `too_many`, one `workspace.user_invited` per row; the list's redirect parameters (Item 14).
+- `spec/operator_ui_concept.md` — Accounts: an invite selects no row (Item 14).
+- `spec/permissions.md` — the Invite row: a list of at most 50, `too_many`, one `workspace.user_invited` per row; the list's redirect parameters (Item 14). <!-- doc-impact-waived: the comma-separated list was withdrawn; the spec is back to one address -->
 - `guide/todo_master.md` — Item 14 in the 19X entry (Item 14).

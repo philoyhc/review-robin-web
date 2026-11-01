@@ -191,7 +191,7 @@ status.
 | Demote | **super-admin** | `self_action`, `requires_super_admin`, `protected_super_admin`, `last_admin` (target is the only admin), `still_owner` (target has no Operator flag and owns ≥1 session — the demote would take their operator access) | `sys_admin.role_demoted` |
 | Remove from all sessions | admin | `self_action`, `protected_super_admin`, `sole_owner` (target is the only owner of some session) | `workspace.user_detached_from_all_sessions` |
 | Delete user | admin | `self_action`, `protected_super_admin`, `last_admin`, `owns_sessions`, `has_history` (target created a session or acted in the audit log; an operator's access is taken away by Revoke) | `workspace.user_removed` |
-| Invite (pre-seed a `users` row before first sign-in; one address or several, comma-separated, each invited on its own, at most 50) | admin; **super-admin** to switch the role chip from `Invite as operator` to `Invite as sys-admin` (it posts `invite_as_sys_admin=true`), a chip the page renders only to an actor who could Promote | `invalid_email`, `duplicate` (case-insensitive), `requires_super_admin` (sys-admin chip only), `too_many` (over 50: none invited) | `workspace.user_invited`, one per row made |
+| Invite (pre-seed a `users` row before first sign-in) | admin; **super-admin** to switch the role chip from `Invite as operator` to `Invite as sys-admin` (it posts `invite_as_sys_admin=true`), a chip the page renders only to an actor who could Promote | `invalid_email`, `duplicate` (case-insensitive), `requires_super_admin` (sys-admin chip only) | `workspace.user_invited` |
 
 **No-super-tier fallback.** `requires_super_admin` engages only
 once a super-admin actually exists in the effective set; with
@@ -308,7 +308,7 @@ the operation-level mappings.
 | `self_action` | **400** | `_sys_admin._handle_toggle` |
 | `requires_super_admin` on Promote / Demote | **403** | same |
 | `last_admin`, `owns_sessions`, `has_history`, `still_owner`, `sole_owner`, `protected_super_admin`, on the single-row routes | **409** | same |
-| every Invite error (`invalid_email`, `duplicate`, `requires_super_admin`, `too_many`) | **303** back to the page with `?invite_error=<code>`, which renders a banner; a list of several instead lands with `?invited=<n>`, `invite_unchecked=<n>` when any could not be checked against the directory, and one `invite_refused=<code>:<address>` per refusal, the banner's reasons taken from the code, never echoing it | `_sys_admin.invite_user` |
+| every Invite error (`invalid_email`, `duplicate`, `requires_super_admin`) | **303** back to the page with `?invite_error=<code>`, which renders a banner | `_sys_admin.invite_user` |
 | any other Accounts bulk refusal (§4.1) | **303** back with `?toggle_error=<code>&refused=<id>`, which renders a banner | `_sys_admin.bulk_account_action` |
 | `last_owner` on remove-owner | **409** (the card disables that Remove, so only a direct POST or a concurrent remove reaches it) | `_session_home.session_owners_remove` |
 | every other owner error on `owners/add` / `owners/{user_id}/remove` (`not_in_workspace`, `already_owner`, `not_owner`, `self_only`) | **303** back to `#owners-card` with `?owners_error=<code>` | same |

@@ -32,9 +32,6 @@
         {% elif invite_error == "account_exists" %}
           That address belongs to someone who already has an account
           here, under another address. Use that row instead.
-        {% elif invite_error == "too_many" %}
-          That's more than {{ invite_list_max }} addresses. Invite them in
-          smaller groups; no one was invited.
         {% else %}
           Couldn't add that user. Try again.
         {% endif %}
@@ -42,33 +39,9 @@
     </div>
   {% endif %}
 
-  {# A list invite's summary (19X Item 14): how many were invited, and
-     each address refused with why. #}
-  {% if invited_count is not none %}
-    <div class="card banner-scroll-target" role="{{ 'alert' if invite_refusals else 'status' }}"
-         data-invite-summary>
-      <p>
-        Invited {{ invited_count }} {{ "person" if invited_count == 1 else "people" }}.
-        {% if invite_unchecked_count %}
-          {{ invite_unchecked_count }} couldn't be checked against the
-          directory just now; each is matched to its person at first
-          sign-in.
-        {% endif %}
-      </p>
-      {% if invite_refusals %}
-        <p>Not invited:</p>
-        <ul>
-          {% for address, reason in invite_refusals %}
-            <li><code>{{ address }}</code> {{ reason }}.</li>
-          {% endfor %}
-        </ul>
-      {% endif %}
-    </div>
-  {% endif %}
-
   {# Created, but the directory could not be asked (segment 19Z, accounts
      item): the account binds to its person at their first sign-in. #}
-  {% if invite_unchecked and invited_count is none %}
+  {% if invite_unchecked %}
     <div class="card banner-scroll-target" role="status">
       <p>
         Invited, but the address couldn't be checked against the
@@ -96,7 +69,7 @@
       Pre-seed a user row before the invitee first signs in. When
       they sign in via Entra (matched by email), they land on the
       operator lobby directly. Search the institution's directory by
-      name or address, or type the address; separate several with commas.
+      name or address, or type the address.
     </p>
     <form method="post"
           action="{{ url('/operator/sys-admin/users/invite') }}"
@@ -107,15 +80,13 @@
            offers the directory's matches as it is typed; picking one puts
            "Name <address>" in the box, as the directory shows it (author,
            2026-11-01). The invite takes the address from the brackets and
-           still checks it. Several may be invited at once, separated by
-           commas; the search reads what follows the last one (19X Item
-           14). #}
+           still checks it. #}
         <label>
-          Names or emails, separated by commas
+          Name or email
           <input type="text" name="email" id="invite-email" required
                  autocomplete="off" spellcheck="false"
                  list="invite-directory-options"
-                 placeholder="A name, or alice@example.edu, bob@example.edu">
+                 placeholder="A name, or alice@example.edu">
         </label>
         <datalist id="invite-directory-options" data-directory-options></datalist>
       </p>
@@ -188,29 +159,15 @@
           statusLine.textContent = text;
           statusLine.hidden = !text;
         }
-        // Several invitees, comma-separated (19X Item 14): the search
-        // reads what follows the last comma, and an option's value keeps
-        // what comes before it, since a pick replaces the box's whole
-        // value. The kept head also lets the browser's own filter match.
-        function split() {
-          var value = email.value || "";
-          var cut = value.lastIndexOf(",");
-          if (cut < 0) return { head: "", tail: value.trim() };
-          // The head keeps the spacing as typed after the comma, so the
-          // box's text stays a prefix of each option's value.
-          var after = value.slice(cut + 1);
-          var tail = after.trim();
-          return { head: value.slice(0, value.length - after.trimStart().length), tail: tail };
-        }
-        function fill(people, head) {
+        function fill(people) {
           options.textContent = "";
           offered = {};
           people.forEach(function (person) {
             var option = document.createElement("option");
-            // A pick fills its entry with "Name <address>".
-            option.value = (head || "") + (person.name
+            // A pick fills the box with "Name <address>".
+            option.value = person.name
               ? person.name + " <" + person.address + ">"
-              : person.address);
+              : person.address;
             // The browser filters the list again against what is typed,
             // by value and label, so a sign-in name (UPN) the directory
             // matched on stays in the label when it is not the address.
@@ -222,11 +179,12 @@
           });
         }
         function search() {
-          var parts = split();
-          var text = parts.tail;
-          // A pick puts an offered entry in the box: nothing to ask.
-          if (offered[(email.value || "").trim().toLowerCase()]) return;
-          if (text.length < 3) { fill([]); say(""); return; }
+          var text = (email.value || "").trim();
+          // A pick puts an offered address in the box: nothing to ask.
+          if (text.length < 3 || offered[text.toLowerCase()]) {
+            if (text.length < 3) { fill([]); say(""); }
+            return;
+          }
           var mine = ++asked;
           fetch(searchUrl + "?q=" + encodeURIComponent(text), {
             credentials: "same-origin",
@@ -253,7 +211,7 @@
                     ". Type the full address.");
                 return;
               }
-              fill(answer.people, parts.head);
+              fill(answer.people);
               say(answer.people.length ? "" : "No one in the directory matches that.");
             })
             .catch(function () {
