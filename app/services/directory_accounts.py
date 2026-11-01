@@ -118,20 +118,29 @@ class Person:
         return self.mail or self.upn
 
 
-def search(directory: Directory | None, text: str) -> list[Person] | None:
-    """The directory's matches for what a picker's box holds, or ``None``
-    when the directory cannot be asked (no token, or a failure). Text
+@dataclass(frozen=True)
+class Search:
+    """A picker's answer: the matches, or ``None`` with why not."""
+
+    people: list[Person] | None
+    reason: str | None = None
+
+
+def search(directory: Directory | None, text: str) -> Search:
+    """The directory's matches for what a picker's box holds; ``people``
+    is ``None`` when the directory cannot be asked, and ``reason`` says
+    why (`GraphError.reason`; ``no_token`` with no directory). Text
     shorter than `SEARCH_MIN` asks nothing and matches no one."""
     prefix = text.strip()
     if directory is None:
-        return None
+        return Search(None, "no_token")
     if len(prefix) < SEARCH_MIN:
-        return []
+        return Search([])
     try:
         users = directory.search_users(prefix)
-    except GraphError:
-        return None
-    return [Person(name=u.display_name, mail=u.mail, upn=u.user_principal_name) for u in users]
+    except GraphError as exc:
+        return Search(None, exc.reason)
+    return Search([Person(name=u.display_name, mail=u.mail, upn=u.user_principal_name) for u in users])
 
 
 def resolver(directory: Directory | None) -> Callable[[str], Account | None]:

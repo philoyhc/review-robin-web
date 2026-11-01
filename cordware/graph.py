@@ -22,6 +22,7 @@ from __future__ import annotations
 import http.client
 import json
 import logging
+import re
 import threading
 import time
 import urllib.error
@@ -65,11 +66,20 @@ class GraphError(Exception):
 
     KINDS = ("no_token", "unauthorized", "forbidden", "throttled", "server", "network", "bad_response")
 
-    def __init__(self, kind: str, status: int | None = None) -> None:
+    def __init__(self, kind: str, status: int | None = None, code: str | None = None) -> None:
         assert kind in self.KINDS, kind
         super().__init__(kind if status is None else f"{kind} ({status})")
         self.kind = kind
         self.status = status
+        #: Graph's own `error.code` when its reply carried one, such as
+        #: `Request_UnsupportedQuery`: an identifier, never its message,
+        #: which can echo the query.
+        self.code = code
+
+    @property
+    def reason(self) -> str:
+        """The kind, status and Graph's code, for an admin to read."""
+        return f"{self}{f' {self.code}' if self.code else ''}"
 
 
 class Directory(Protocol):
@@ -178,9 +188,9 @@ class GraphDirectory:
                 if 200 <= reply.status < 300:
                     return reply.body
                 if reply.status == 401:
-                    raise _logged(GraphError("unauthorized", 401))
+                    raise _logged(GraphError("unauthorized", 401, _error_code(reply.body)))
                 if reply.status == 403:
-                    raise _logged(GraphError("forbidden", 403))
+                    raise _logged(GraphError("forbidden", 403, _error_code(reply.body)))
                 if reply.status == 429:
                     wait = _retry_after(reply.headers)
                     error = GraphError("throttled", 429)
@@ -189,18 +199,33 @@ class GraphDirectory:
                 elif reply.status >= 500:
                     error, wait = GraphError("server", reply.status), 2.0**attempt
                 else:
-                    raise _logged(GraphError("bad_response", reply.status))
+                    raise _logged(GraphError("bad_response", reply.status, _error_code(reply.body)))
             if last:
                 raise _logged(error)
             self._sleep(wait)
         raise AssertionError("unreachable")
 
 
+_CODE = re.compile(r"[A-Za-z][A-Za-z0-9_.]{0,79}")
+
+
+def _error_code(body: bytes) -> str | None:
+    """Graph's `error.code` from a failed reply, when it is a plain
+    identifier; anything else, or a body that is not Graph's, is none."""
+    try:
+        code = json.loads(body)["error"]["code"]
+    except (ValueError, KeyError, TypeError):
+        return None
+    return code if isinstance(code, str) and _CODE.fullmatch(code) else None
+
+
 def _logged(error: GraphError) -> GraphError:
-    # The kind and status only: never the address, the query or the token.
+    # The kind, status and Graph's code only: never the address, the
+    # query, Graph's message or the token.
     log.warning(
-        "graph request failed",
-        extra={"event": "graph.request_failed", "kind": error.kind, "status": error.status},
+        "graph request failed: %s",
+        error.reason,
+        extra={"event": "graph.request_failed", "kind": error.kind, "status": error.status, "code": error.code},
     )
     return error
 

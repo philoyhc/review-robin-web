@@ -244,6 +244,21 @@ def test_a_search_s_failures_raise_as_a_lookup_s_do() -> None:
 
 
 @pytest.mark.parametrize(
+    ("body", "reason"),
+    [
+        (b'{"error": {"code": "Request_UnsupportedQuery", "message": "startswith(\'jan\') ..."}}',
+         "bad_response (400) Request_UnsupportedQuery"),
+        (b"not json", "bad_response (400)"),
+        (b'{"error": {"code": "has spaces <b>"}}', "bad_response (400)"),
+    ],
+)
+def test_a_failure_carries_graph_s_error_code_and_never_its_message(body: bytes, reason: str) -> None:
+    with pytest.raises(GraphError) as raised:
+        directory(Script(Response(400, {}, body))).search_users("jan")
+    assert raised.value.reason == reason
+
+
+@pytest.mark.parametrize(
     ("prefix", "names"),
     [
         ("jan", ["Jane Tan"]),
