@@ -278,7 +278,7 @@ directory of files, not an asset pipeline: CSS remains inline in
 fingerprinted, or versioned. The inline CSS is paid on every page, so
 the Cordware host gzips responses (`cordware/spec/host.md`,
 "Compression"; measured and decided in
-`guide/post_azure_todo_checklist.md` item 4). `app/` ships wholesale in the deploy
+`docs/performance.md` Finding 5). `app/` ships wholesale in the deploy
 artefact (`.github/workflows/main_app-review-robin-web-dev.yml`), so this directory needs no
 workflow change — and equally, anything left in it is shipped.
 `tests/integration/test_guide_screencaps.py` fails both ways: on a file a
