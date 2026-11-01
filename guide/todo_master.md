@@ -77,6 +77,11 @@ is the author's call.
    setup export carries the Reviewers roster alone.
    **Plan:** `guide/segment_20B_symmetric_review.md`.
 
+5. **20C — Refinements** (not gated). Small follow-ups from the author's
+   browser runs, one item each: verified names as pills on the New
+   session Owners card (Item 1); checkboxes before their labels (Item 2).
+   **Plan:** `guide/segment_20C_refinements.md`.
+
 ### Stubs
 
 Small items with no plan doc; each fits one PR and its reasoning fits
