@@ -82,6 +82,17 @@ does not.
    is a dependency of path 2's first half. `offline_access` is already in
    the sign-in scopes, so only the refresh test remains.
 
+## Narrowed (author, 2026-11-01)
+
+**The choice is between Graph as the operator and Graph as a dedicated
+mailbox.** SMTP drops out: institutional tenants typically block basic
+SMTP AUTH and app passwords under MFA, so even a dedicated mailbox would
+be reached through Graph. The per-operator SMTP cards on Settings retire
+(`guide/segment_14C_email_related_ui.md` Item 1), their storage kept for
+a deployment outside Microsoft 365, so choice 1's option (c) below means
+a dedicated mailbox over Graph. Per-operator email choices, such as
+keeping a copy in Sent Items, get their own card (14C Item 2).
+
 ## The author's choices
 
 1. **Who sends:** (a) split, as recommended; (b) delegated only, clock

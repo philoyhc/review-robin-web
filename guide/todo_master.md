@@ -55,7 +55,13 @@ is the author's call.
    **Plan:** `guide/segment_14B_email_infrastructure.md`.
    **Functional spec:** `spec/email_infra_options.md`.
 
-2. **20 — Operator polish + documentation.** Documentation *of a real
+2. **14C — Email-related UI** (not gated). The operator-facing email
+   controls: Item 1 retires the per-operator SMTP cards on Settings,
+   keeping their storage; Item 2 adds a half-width Email settings card
+   of toggles (scaffold first, wired as 14B's send path reads them).
+   **Plan:** `guide/segment_14C_email_related_ui.md`.
+
+3. **20 — Operator polish + documentation.** Documentation *of a real
    deployment*, so it waits for one: the **administrator guide** for
    the institutional host, the institutional half of
    **troubleshooting**, a **currency pass** over the in-app Guide and
@@ -63,7 +69,7 @@ is the author's call.
    address the stub below introduces.
    **Plan:** `guide/segment_20_operator_polish_and_documentation.md`.
 
-3. **19Z — Append to a roster** (not gated on Azure). The four roster
+4. **19Z — Append to a roster** (not gated on Azure). The four roster
    pages' Upload cards gain an append tick beside the replace tick
    (mutually exclusive, neither ticked by default), so a late batch adds
    rows without deleting assignments or responses. Append shipped
