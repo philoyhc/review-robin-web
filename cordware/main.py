@@ -373,8 +373,8 @@ def create_app(
     for entry, sub_app in mounted:
         host.mount(entry.path, sub_app)
     # Compression for every response the host serves: nothing in front of
-    # it compresses (RRW `guide/post_azure_todo_checklist.md` item 4, the
-    # lobby measured 338 kB uncompressed on 2026-11-01). Starlette skips a
+    # it compresses (`docs/performance.md` Finding 5: the lobby measured
+    # 338 kB uncompressed on 2026-11-01, 89 kB after). Starlette skips a
     # small body, a client that does not accept gzip, an already-encoded
     # response and already-compressed types (`application/zip`).
     host.add_middleware(GZipMiddleware, minimum_size=GZIP_MINIMUM_SIZE, compresslevel=GZIP_LEVEL)

@@ -372,10 +372,13 @@ step, about 5 s; the recompute (2.5 s, with `normalize_email` called
 
 ## Finding 5 — nothing is compressed
 
-**Actioned 2026-11-01.** The institutional host confirmed it: the lobby
-went out as 338 kB with no `Content-Encoding` (author, devtools). The
-Cordware host now gzips every response (`cordware/spec/host.md`,
-"Compression"; `guide/post_azure_todo_checklist.md` item 4). The
+**Actioned and confirmed 2026-11-01.** The institutional host confirmed
+the finding: the lobby went out as 338 kB with no `Content-Encoding`
+(author, devtools). The Cordware host now gzips every response
+(`cordware/spec/host.md`, "Compression"). After that release, the same
+reading showed `Content-Encoding: gzip`, `Content-Length: 88734`, **89.0
+kB transferred of 339 kB** (3.8×), 142 ms on campus. This finding is the
+record of that decision (it was the post-Azure checklist's item 4); the
 diagnosis below is as it stood before.
 
 `app/main.py` installs no compression middleware, so every response goes

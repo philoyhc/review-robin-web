@@ -167,7 +167,7 @@ inside `PublicOriginMiddleware` and around every mount, so the landing
 page, `/health` and every application are covered by one setting. Nothing
 in front of it compresses: the gateway and App Service pass bodies through
 (the lobby measured 338 kB uncompressed on 2026-11-01, RRW
-`guide/post_azure_todo_checklist.md` item 4).
+`docs/performance.md` Finding 5).
 
 - **When it compresses:** the request's `Accept-Encoding` includes `gzip`,
   the body is at least `GZIP_MINIMUM_SIZE` (1,000 bytes), and the response
