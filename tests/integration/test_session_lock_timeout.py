@@ -80,6 +80,15 @@ def test_an_uncontended_lock_leaves_the_timeout_as_it_was(engine: Engine, commit
         db.rollback()
 
 
+def test_a_timeout_the_transaction_set_itself_is_put_back(engine: Engine, committed_session: int) -> None:
+    """Not merely back to the server's default: whatever applied before."""
+    with Session(engine) as db:
+        db.execute(text("SET LOCAL lock_timeout = '2s'"))
+        lock_session(db, db.get(ReviewSession, committed_session))
+        assert _lock_timeout(db) == "2s"
+        db.rollback()
+
+
 def test_a_busy_session_renders_the_409_page() -> None:
     app = FastAPI()
     register_error_handlers(app)

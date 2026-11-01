@@ -52,6 +52,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import AuditEvent, ReviewSession
 from app.services import audit
+from app.services.session_guard import SessionBusy
 from app.services import session_lifecycle as lifecycle  # noqa: F401 — re-export for legacy ``monkeypatch.setattr("app.services.scheduled_events.lifecycle.activate_session", …)`` paths
 
 # Private names (single underscore) are part of the byte-stable
@@ -224,6 +225,34 @@ def observe_scheduled_events(
     pass) is the natural order below.
     """
     current = now or datetime.now(timezone.utc)
+    try:
+        _observe_all(
+            db,
+            session,
+            current=current,
+            correlation_id=correlation_id,
+            build_invite_url=build_invite_url,
+        )
+    except _SessionBusyPass:
+        # Another request held the session lock past its bound
+        # (``docs/database.md``): it may be doing this very work. Skip the
+        # rest of the pass rather than wait again for each trigger; the
+        # next page load tries again.
+        return
+
+
+class _SessionBusyPass(Exception):
+    """A trigger met a busy session: the pass stops, quietly."""
+
+
+def _observe_all(
+    db: Session,
+    session: ReviewSession,
+    *,
+    current: datetime,
+    correlation_id: str | None,
+    build_invite_url: Callable[[str], str] | None,
+) -> None:
     invites_ok = _run_guarded(
         db,
         session,
@@ -295,6 +324,17 @@ def _run_guarded(
         return True
     except audit.AuditDetailValidationError:
         raise
+    except SessionBusy:
+        # Contention, not a failure: no ``scheduled_event_failed`` row,
+        # and no second wait for the lock to write one.
+        db.rollback()
+        log.info(
+            "Scheduled %s trigger skipped for session %s: session busy",
+            trigger,
+            session_id,
+            extra={"event": "scheduled_event.session_busy", "trigger": trigger},
+        )
+        raise _SessionBusyPass() from None
     except Exception as exc:  # noqa: BLE001 — observer must keep page rendering
         db.rollback()
         log.exception(

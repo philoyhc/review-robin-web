@@ -351,3 +351,24 @@ def test_the_settings_import_route_gates_editability_under_the_lock(
 
     assert refusal(response).reason == "lifecycle"
     assert _count(db, session, "session.settings_imported") == 0
+
+
+def test_a_busy_session_skips_the_pass_without_a_failure_row(db: Session, monkeypatch) -> None:
+    """``SessionBusy`` (the lock bound, ``docs/database.md``) is contention,
+    not a failure: the pass stops quietly, with no
+    ``session.scheduled_event_failed`` row and no further triggers."""
+    from app.services.session_guard import SessionBusy
+
+    session = _ready_session_with_invitations(db, "busy-pass")
+    ran: list[str] = []
+
+    def busy(*_args, **_kwargs):
+        ran.append("invites")
+        raise SessionBusy()
+
+    monkeypatch.setattr(scheduled_events, "_observe_scheduled_invites", busy)
+    monkeypatch.setattr(scheduled_events, "_observe_scheduled_activation", lambda *a, **k: ran.append("activation"))
+    monkeypatch.setattr(scheduled_events, "_observe_scheduled_reminders", lambda *a, **k: ran.append("reminders"))
+    scheduled_events.observe_scheduled_events(db, session)
+    assert ran == ["invites"]
+    assert _count(db, session, scheduled_events.SCHEDULED_EVENT_FAILED) == 0
