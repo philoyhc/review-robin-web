@@ -66,6 +66,7 @@ The mockups (the author's design canvas, 2026-10-26) cover RA home, Apply, Reque
 - **Rosters, 2026-10-29** (author): who sees RA Leave reshaped 1B's roster screens (the Every slot card, Oversight, the RA roster's Neighborhood, chips, kept sorts, person boxes, Add new slot); recorded in 1B's `Status`, its item 1 approval standing.
 - **Polish, 2026-10-29** (author: "the optional polish"): drafts, 44 px touch targets on a phone, the outbox with Resend (an admin's resend goes from the admin's account, naming the original sender), a period selector on Precinct leave, a favicon.
 - **Item 1 approved, 2026-10-29** (author: "1C.1 browser checks can be considered done"); the wiring gate is open, on 1B's close. An audit of the item against the functional spec followed; its fixes landed in four PRs: consistency (`#3366`), an RA viewer switch and an appeal-mode preview (`#3367`), the appeal screens and §7.5's split (`#3368`), and missing information (`#3369`). Deferred: the timeline labels every staff remark as the RF's (wiring, item 4).
+- **2026-11-02, the shared header** (author): one rung added to item 1's ladder to build Residential's share of `docs/header_chrome.md`, after RRW segment 20D's rung 1 settles the markup the two families share.
 - **Reads, item 1:** 34 cold reads, one per code PR from rung 4 on, each answered in its own PR. What they caught that tests had not: appeal days counted twice (§7.5), a blackout list contradicting its form, a stray backslash in nine RA links, the switcher dropping the viewer, an assertion that could not fail, stale comments and spec wording.
 - **Iteration, 2026-10-28** (author): Leave policy reworked to the leave policy ruling (`residentialapps/guide/todo_master.md`): leave types with their own earning rule and cap, blackouts by week, appeals and their terms, cover required, named or confirmed. Entitlements follow the rules; its CSV carries adjustments only.
 
@@ -78,6 +79,8 @@ The mockups (the author's design canvas, 2026-10-26) cover RA home, Apply, Reque
 3. **Staff pages** (`/ra-leave/staff/`). Staff home, Awaiting my decision, Decide (first approval, final approval and a Master appeal), Decided, ~~Team leave~~ Precinct leave with its this-week summary; Appeals for those who may open them (added 2026-10-29).
 4. **Leave admin and conventions** (`/ra-leave/admin/`). ~~Cycles and entitlements, applications~~ Leave dashboard, Leave policy, Entitlements, Approval chain, Applications, Appeals (added 2026-10-29); `residentialapps/spec/residentialops_ui.md` extended from rungs 1–4. Last build rung: cumulative read.
 5+. Iteration until approved, each with its own read.
+
+**Added 2026-11-02, after approval: the shared header** (`docs/header_chrome.md`, author). One rung on `residentialapps/web/templates/residential/base.html`, which both applications use: the app icon replaces the colored square (§2); the avatar opens an account menu with who is signed in, the entries §4 names for Residential and Sign out, which the bar lacks today (§4); under 640 px the toggle and the name move into it (§2). The switcher and tabs stay as they are. Own read. Support Logs' share is 1D's; the top line's fallback is 1B's.
 
 **Items 2–5** get their rungs when 1B closes, from what the core turned out to be.
 
@@ -108,7 +111,7 @@ The mockups (the author's design canvas, 2026-10-26) cover RA home, Apply, Reque
 ## Doc impact
 
 - `residentialapps/spec/applications.md` — the RA Leave pages move from contract to built, with any path or name the screens settle (Item 1).
-- `residentialapps/spec/residentialops_ui.md` — extended with the conventions RA Leave's screens settle (Item 1).
+- `residentialapps/spec/residentialops_ui.md` — extended with the conventions RA Leave's screens settle (Item 1); §2's chrome to `docs/header_chrome.md`: the icon, the account menu and Sign out (Item 1, added 2026-11-02).
 - `residentialapps/spec/architecture.md` — `residentialapps/leave/` arrives, with its import boundary and its share of the `residentialops` database (Item 2).
 - `residentialapps/docs/ra_leave_management_functional_spec_v0.4.md` — revised to what shipped, including §2.5's mobile-critical approvers, already queued (at close).
 - `residentialapps/guide/todo_master.md` — the entries this segment finishes, deleted at close.

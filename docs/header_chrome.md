@@ -177,9 +177,12 @@ as today.
 
 **This file is the contract for all three.** The build is per application:
 
-- **Review Robin**: a segment plan in `guide/`, header only (§1).
-- **Residential**: its own plan under `residentialapps/guide/`, to this
-  file. Its share: the icon in place of the square (§2), Sign out and
+- **Review Robin**: `guide/segment_20D_header_chrome.md`, header only (§1).
+- **Residential**: its own plans, to this file: the bar in
+  `residentialapps/guide/segment_1C_ra_leave.md`, Support Logs' entries in
+  `residentialapps/guide/segment_1D_support_logs.md`, the role and the top
+  line in `residentialapps/guide/segment_1B_rosters_and_organization.md`.
+  Its share: the icon in place of the square (§2), Sign out and
   the account menu (§4), the top line's fallback to the workspace default
   (§6), and the toggle and name moving into the menu under 640 px. Its
   switcher and tabs stay as they are.

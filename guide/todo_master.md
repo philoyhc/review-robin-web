@@ -77,6 +77,12 @@ is the author's call.
    stays open for further refinements.
    **Plan:** `guide/segment_20C_refinements.md`.
 
+5. **20D — Header chrome** (not gated). Review Robin's header becomes
+   the shared top bar of `docs/header_chrome.md`, with the workspace's
+   institution name and an operator's Unit set by a sys admin; nothing
+   below the header changes. Residential's share is in its 1B–1D plans.
+   **Plan:** `guide/segment_20D_header_chrome.md`.
+
 ### Stubs
 
 Small items with no plan doc; each fits one PR and its reasoning fits
