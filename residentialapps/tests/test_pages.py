@@ -688,10 +688,16 @@ def test_the_bar_is_the_shared_header(host_client: TestClient, monkeypatch: pyte
     from cordware.settings import identity_settings
 
     page = host_client.get(f"{MOUNT}/rosters/").text
+    # Nobody signed in: no account menu, so no Sign out to offer.
+    assert 'aria-label="Account: ' not in page and "data-sign-out" not in page
+    page = host_client.get(
+        f"{MOUNT}/rosters/",
+        headers={"X-MS-CLIENT-PRINCIPAL-NAME": "chloe.lim@example.edu", "X-MS-CLIENT-PRINCIPAL-ID": "chloe-oid"},
+    ).text
     assert 'class="sq"' not in page
     assert '<span aria-hidden="true" class="tb-icon"></span>' in page
     assert '.tb-icon { background-image: url("data:image/svg+xml;' in page
-    assert 'aria-label="Account: ' in page
+    assert 'aria-label="Account: chloe.lim@example.edu"' in page
     assert 'href="/.auth/logout" data-sign-out>Sign out</a>' in page
     # The sample's Unit is set, so it is the top line.
     assert f'<span class="sw-unit">{sample_data.UNIT_NAME}</span>' in page

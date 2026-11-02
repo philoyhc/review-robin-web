@@ -44,7 +44,8 @@ with the page.
 - **On the left, the switcher**: the application's icon (its favicon),
   then the top line above the current area's name: the Unit's name, else
   the workspace default `CORDWARE_INSTITUTION_NAME`, else none
-  (`docs/header_chrome.md` §6). Its menu lists the areas the viewer reaches (Home, RA Leave, RA
+  (`docs/header_chrome.md` §6). The static switcher, on a page with no
+  areas (not registered), shows the icon and the area alone. Its menu lists the areas the viewer reaches (Home, RA Leave, RA
   Events; RA Leave admin, Rosters and setup and Sys admin for sys admins),
   RA Leave at the viewer's own side, RA's or staff's, then one link,
   **All applications**, to the host's landing page, which lists what

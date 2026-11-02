@@ -512,14 +512,17 @@
             <button type="button" data-theme-choice="light" aria-pressed="true">Light</button>
             <button type="button" data-theme-choice="dark" aria-pressed="false">Dark</button>
           </div>
-          {% set _who = viewer.display_label if viewer else "Not signed in" %}
-          <span class="acct"><span class="acct-name">{{ _who }}</span></span>
+          {% if viewer %}
+          {% set _who = viewer.display_label %}
+          {# The name beside the avatar is shown from 960 px; the summary's
+             label carries it for a screen reader, so it is hidden there. #}
+          <span class="acct"><span class="acct-name" aria-hidden="true">{{ _who }}</span></span>
           <details class="acct-menu" data-tb-menu>
             <summary aria-label="Account: {{ _who }}"><span class="avatar" aria-hidden="true">{{ initials }}</span></summary>
             <nav class="menu" aria-label="Account">
               <div class="mg who">
                 <strong>{{ _who }}</strong>
-                {% if viewer and viewer.email %}<span>{{ viewer.email }}</span>{% endif %}
+                {% if viewer.email %}<span>{{ viewer.email }}</span>{% endif %}
               </div>
               {# Under 640 px the toggle leaves the bar for here (§2). #}
               <div class="mg narrow-only">
@@ -533,6 +536,10 @@
               </div>
             </nav>
           </details>
+          {% else %}
+            {# Nobody signed in: no account to open, and nothing to sign out of. #}
+            <span class="acct"><span class="acct-name">Not signed in</span><span class="avatar" aria-hidden="true">?</span></span>
+          {% endif %}
         </div>
       </div>
     </header>
