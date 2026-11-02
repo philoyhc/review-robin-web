@@ -197,6 +197,14 @@ confirmation when a reviewer submits" box is ticked
 queued row (a second submit refreshes it). The row stays `queued`;
 nothing transmits it.
 
+**The same question for invitation and reminder rows** (added
+2026-11-02, with the honest outbox): every one written before the
+transport stays `queued`, including rows whose token a regenerate has
+since rotated (their link is dead) and rows a later send superseded. The
+dispatcher must not send those as they stand: decide whether it sends
+only each invitation's latest row on its current token, or none of the
+backlog. Rows written before 2026-11-02 still read `sent`.
+
 **Do, with the transport.** Decide first what happens to the rows
 queued before the transport existed — send them, drop them, or cut off
 by date — since some confirm submissions made long before. A recall,

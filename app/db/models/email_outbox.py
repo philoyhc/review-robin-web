@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 # Documented here so any future widening is a deliberate edit. Until
 # Segment 14B Part A wires the dispatch helper, the enqueue paths only
 # ever write ``"queued"``, and a row stays so until a transport sends it
-# (`guide/post_azure_todo_checklist.md` item 8, settled 2026-11-02);
+# (`guide/email_and_scheduling.md`, recommendation 1, settled 2026-11-02);
 # ``sending``, ``sent`` and ``failed`` are the transport's to write.
 EMAIL_OUTBOX_STATUSES: tuple[str, ...] = ("queued", "sending", "sent", "failed")
 EMAIL_OUTBOX_KINDS: tuple[str, ...] = ("invitation", "reminder", "responses_received")

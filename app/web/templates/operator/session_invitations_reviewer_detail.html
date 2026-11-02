@@ -90,14 +90,14 @@
              them real transport can produce; a new one renders here
              untouched (`constitution.md` II). The `!= "sent"` is still a
              judgement about one member: it names `sent` the only state
-             not worth a pill. If 14B's dispatch is asynchronous, every
-             card will wear an amber pill while a send is in flight, and
-             that is the line to revisit — not the render.
+             not worth a pill. Since 2026-11-02 every row stays `queued`
+             until a transport sends it, so every sent card wears a
+             `queued` pill until 14B's transport lands: that is the
+             honest reading (no email has left), so the line stays.
 
              **The chrome strip reading `NOT SENT` beside a failed send
-             is correct, not a contradiction to fix.** That pill counts
-             outbox rows with `status == "sent"` (`views/_setup.py:204`),
-             and a failed row is not one. So chrome says nothing was
+             is correct, not a contradiction to fix.** That pill reads
+             `Invitation.sent_at` (`views/_setup.py:204`). So chrome says nothing was
              delivered while the card says a send was attempted and
              failed — two true readings of one event, and this pill is
              what explains the other. #}

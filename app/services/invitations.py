@@ -3,8 +3,8 @@
 Segment 9.2 ships per-reviewer invitation tokens that route through the
 existing Easy Auth sign-in. Tokens are hashed with sha256 in the DB; the
 raw token is shown to the operator at outbox-write time and stored in
-the outbox row body for re-copy. No real SMTP — outbox rows synchronously
-flip ``queued → sent`` and are visible on a per-session operator page.
+the outbox row body for re-copy. No transport sends yet: outbox rows stay
+``queued`` and are visible on a per-session operator page.
 """
 from __future__ import annotations
 
@@ -323,7 +323,7 @@ def regenerate_all_tokens(
 
 
 # --------------------------------------------------------------------------- #
-# Send (write outbox row, flip status)
+# Send (record the send, queue the outbox row)
 # --------------------------------------------------------------------------- #
 
 
@@ -397,8 +397,8 @@ def send_invitation(
     db.flush()
 
     # The row stays ``queued`` until a transport sends it and stamps
-    # ``sent`` or ``failed`` (`guide/post_azure_todo_checklist.md` item 8,
-    # settled 2026-11-02). The invitation records that the operator sent
+    # ``sent`` or ``failed`` (`guide/email_and_scheduling.md`,
+    # recommendation 1, settled 2026-11-02). The invitation records that the operator sent
     # it: ``sent`` here means the send was recorded, not delivered.
     now = datetime.now(timezone.utc)
     invitation.status = "sent"
@@ -871,7 +871,7 @@ def send_reminder(
     db.add(outbox)
     db.flush()
 
-    # ``queued`` until a transport sends it (item 8, as for invitations).
+    # ``queued`` until a transport sends it, as for invitations.
     now = datetime.now(timezone.utc)
     invitation.last_reminder_at = now
     db.flush()

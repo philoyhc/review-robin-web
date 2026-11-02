@@ -1325,11 +1325,9 @@ def test_detail_page_after_regenerate_reports_the_current_token(
     # Exactly one em-dash: Send recorded is empty for the new token, Last
     # reminder still carries the old stamp.
     assert facts.count(_NO_DATE) == 1
-    # No delivery pill — but note this test cannot prove the gate: its
-    # outbox row is `sent`, which renders nothing under any gate.
-    # `test_regenerate_clears_a_stale_delivery_pill` is the one that
-    # discriminates.
-    assert _DELIVERY("sent") not in facts
+    # No delivery pill: the old token's outbox row is `queued`, which
+    # would render one, so this proves the pending-after-regenerate gate.
+    assert _DELIVERY("queued") not in facts
 
 
 def test_detail_page_shows_a_sent_link_as_it_resolves_now(
