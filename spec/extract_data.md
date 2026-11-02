@@ -1186,8 +1186,11 @@ review"), so the Reviewees row is absent and `bundle.zip` has no reviewees
 member; the Zip all member count follows. The Settings CSV carries
 `session.symmetric_review`, so a re-import into a session where the mode
 ends up on (both rosters empty, or the mode already on) rebuilds the
-reviewees from the Reviewers file (`spec/csv_contracts.md` §3.1, §3.3). The `reviewees.csv` route
-itself is unchanged.
+reviewees from the Reviewers file (`spec/csv_contracts.md` §3.1, §3.3). The `reviewees.csv`
+route answers 404 under the mode, because only the Reviewers roster is
+exported (author's ruling, 2026-11-02). This departs from the other
+card-hidden downloads: `observers.csv` and `participant_tokens.csv` still
+answer a deep link with their toggle off.
 
 ## Cross-cutting behaviours
 

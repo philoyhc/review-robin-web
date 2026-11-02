@@ -333,3 +333,12 @@ def test_a_relationships_upload_is_checked_against_the_mirroring_reviewers(
         db, review_session.id, content, incoming_reviewers=incoming, symmetric=False
     )
     assert len([i for i in off.issues if i.severity == "error"]) == 2
+
+
+def test_the_reviewees_download_misses_under_the_mode(client: TestClient, db: Session) -> None:
+    """Only the Reviewers roster is exported under symmetric review
+    (author, 2026-11-02); with the mode off the download still works."""
+    on = _session(client, db, "sym-i-dl-on")
+    off = _session(client, db, "sym-i-dl-off", on=False)
+    assert client.get(f"/operator/sessions/{on.public_id}/export/reviewees.csv").status_code == 404
+    assert client.get(f"/operator/sessions/{off.public_id}/export/reviewees.csv").status_code == 200
