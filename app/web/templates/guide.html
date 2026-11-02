@@ -311,19 +311,31 @@
     <p>
       If you already have the CSV files for the reviewers and reviewees (or
       Relationships, Observers, and Session settings), you may upload them in
-      advance using Quick setup. Indicate whether you will need the
-      Relationships and Observers tabs and pages. Note that sessions do not
-      need these to run (optional). You can set additional Owners (optional)
-      who are able to operate the session. Note that only existing users
-      with the Operator role in the workspace can be added. You can also
-      assign tags to the session.
+      advance using Quick setup.
+    </p>
+    <p>
+      Indicate whether you will need the Relationships and Observers tabs and
+      pages, or if this is a symmetric review where each reviewer is also a
+      reviewee and vice versa — in which case you will only need to
+      populate the reviewers roster, and the reviewees roster becomes
+      read-only. Note that these user interface settings are optional, and
+      can be changed later on Session home, with two limits: the
+      Relationships or Observers page cannot be turned off once it has rows,
+      and symmetric review can be turned on only while both rosters are
+      empty.
+    </p>
+    <p>
+      You can set additional Owners (optional) who are able to operate the
+      session. Note that only existing users with the Operator role in the
+      workspace can be added. You can also assign tags to the session.
     </p>
     <figure class="guide-figure">
       <img src="{{ url('/static/guide/create-session-quick-setup.png') }}"
            data-theme-variant="light" loading="lazy"
            alt="The foot of the Create session page: on the left, the User
-                interface settings card with its two toggles for the optional
-                Relationships and Observers tabs, above the Quick setup
+                interface settings card with three boxes in one row (Relationships
+                page, Observers page and Symmetric review) and the symmetric
+                review note, above the Quick setup
                 (optional) card with a file input for reviewers, reviewees,
                 relationships, observers and session settings; on the right,
                 the Tags (optional) card above the Owners (optional) card, which
@@ -331,8 +343,9 @@
       <img src="{{ url('/static/guide/create-session-quick-setup-dark.png') }}"
            data-theme-variant="dark" loading="lazy"
            alt="The foot of the Create session page: on the left, the User
-                interface settings card with its two toggles for the optional
-                Relationships and Observers tabs, above the Quick setup
+                interface settings card with three boxes in one row (Relationships
+                page, Observers page and Symmetric review) and the symmetric
+                review note, above the Quick setup
                 (optional) card with a file input for reviewers, reviewees,
                 relationships, observers and session settings; on the right,
                 the Tags (optional) card above the Owners (optional) card, which

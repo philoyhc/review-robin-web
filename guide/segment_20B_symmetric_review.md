@@ -150,6 +150,7 @@ A peer review where every participant both gives and receives feedback is a comm
   - The Reviewees tab's corner lock (`#3492`).
   - New session's three boxes are shortened to Relationships page / Observers page / Symmetric review, in one row.
   - Under the mode the `reviewees.csv` download answers 404, so only the Reviewers roster is exported. The same day the author also ruled open question 3 not admissible and confirmed no reviewee-side audit event.
+  - The Guide's Create session copy names the symmetric box, and its screencap shows the three-box card (the author's text and images, 2026-11-02).
 
 ## Blast radius (measured)
 
