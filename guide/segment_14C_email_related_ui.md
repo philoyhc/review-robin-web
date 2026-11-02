@@ -180,9 +180,51 @@ operator's own mailbox, not a session.
    mailbox's address), if it is not an App Setting? Not on this card,
    which is per operator.
 
+3. **Report emails** (filed 2026-11-02, author: "file the list in 14C for
+   the settings ui for now"): which of the candidates below the card
+   offers, and when. Author.
+
+### Candidate toggles: report emails, operator to operator
+
+Milestone reports an operator may opt into, one toggle each (or one per
+group), all off by default; per operator, not per session. Mail goes as
+the operator (ruling 2026-11-02), so what can send depends on what
+triggers it: an operator's click carries a token; the clock and a
+participant's action do not, so those wait for 14G.
+
+| Group | Report | Trigger, and so when | To |
+|---|---|---|---|
+| A | Invitations sent: *n* of *N*, failures with reasons | operator's Send all (14F) | the operator who clicked |
+| A | Reminders sent: *n* of *N* | operator's Remind (14F) | the same |
+| A | Queued confirmations sent: *n* | operator's Send confirmations (14F) | the same |
+| B | Lifecycle change by another owner: activated, reverted to draft, archived, unarchived, deleted | an operator's action (14F) | the other owners |
+| B | Destructive data action by another owner: responses or rosters purged, responses cleared | the same | the other owners |
+| B | Owner added or removed; responses released or release stopped | the same | the other owners |
+| C | Scheduled activation done, or failed after retries | the clock (14E + 14G) | all owners |
+| C | Deadline reached: *n* of *N* submitted | the same | all owners |
+| C | Release window opened or ended | the same | all owners |
+| C | A scheduled event or workflow run failed | the same | all owners |
+| D | Every reviewer has submitted (close early?) | a reviewer's submit (14G) | all owners |
+| D | Completion past 50 / 75 / 90 %, or a daily progress digest | the same | all owners |
+| D | A submission recalled near the deadline | the same | all owners |
+| D | Every reviewee has acknowledged results | a reviewee's action (14G) | all owners |
+| D | Operator-side due actions ("reminders due today") | the clock (14G) | all owners |
+
+- **Failures send at once** (persistent activation failure is the most
+  valuable row: nobody is looking when it happens); the rest may batch
+  into a daily digest.
+- **Until 14G ships**, groups C and D render disabled with the
+  deployment line the auto-send fields use (`guide/no_scheduling_fallback.md`).
+- Group A repeats what the page shows; it earns its place as a record, or
+  when the operator leaves before a long send finishes.
+- The last D row reverses the fallback note's proposed "no" to due
+  prompts by email; the author decides.
+
 ### Out of scope
 
 - The send path itself (14B) and the outbox page (14B Part E).
+- Building the reports: A and B ride 14F's transport, C and D 14G's.
+  This item lists and, later, stores the choices.
 
 ### Doc impact
 
