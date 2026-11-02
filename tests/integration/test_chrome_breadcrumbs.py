@@ -108,7 +108,7 @@ def test_breadcrumb_on_nested_operator_page_renders_three_tuple_trail(
     body = response.text
     assert '<a href="/operator/sessions">Sessions</a>' in body
     assert (
-        f'<a href="/operator/sessions/{review_session.public_id}">{review_session.name}</a>'
+        f'<a href="/operator/sessions/{review_session.public_id}" class="bc-mid">{review_session.name}</a>'
         in body
     )
     assert '<span aria-current="page">Reviewers</span>' in body
