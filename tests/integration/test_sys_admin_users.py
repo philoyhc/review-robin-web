@@ -1418,12 +1418,12 @@ def test_chrome_shows_super_admin_suffix(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The top-right chrome labels a super-admin as (super admin),
-    not (sys admin)."""
+    """The account menu labels a super-admin "super admin", not "sys
+    admin" (20D, `docs/header_chrome.md` §4)."""
     _bootstrap_super_admin(monkeypatch, email="alice@example.edu")
     body = client.get("/operator/sys-admin/users").text
-    assert "(super admin)" in body
-    assert "(sys admin)" not in body
+    assert "<span>super admin</span>" in body
+    assert "<span>sys admin</span>" not in body
 
 
 def test_chrome_shows_sys_admin_suffix_for_plain_admin(
@@ -1433,8 +1433,8 @@ def test_chrome_shows_sys_admin_suffix_for_plain_admin(
 ) -> None:
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
     body = client.get("/operator/sys-admin/users").text
-    assert "(sys admin)" in body
-    assert "(super admin)" not in body
+    assert "<span>sys admin</span>" in body
+    assert "<span>super admin</span>" not in body
 
 
 # --------------------------------------------------------------------------- #

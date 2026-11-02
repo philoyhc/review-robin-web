@@ -8,7 +8,8 @@ These static rules find every emission that skips it:
   top-level segment) appears only inside ``url(``, ``is_here(``,
   ``here_in(`` or ``here_under(``; a bare ``"/"`` link counts too.
 - **T2.** A templated ``href`` / ``action`` / ``formaction`` / ``src``
-  value starts with ``url(``.
+  value starts with ``url(``, or with ``host_url(`` for a path that is
+  the Cordware host's (the top bar's All applications, segment 20D).
 - **P1.** ``RedirectResponse(`` is built only in ``app/web/urls.py``.
 - **P2.** Every ``set_cookie`` passes ``path=cookie_path(...)``.
 - **P3.** Nothing but ``app/web/urls.py`` reads ``.url.path``; templates
@@ -40,13 +41,13 @@ APP = REPO / "app"
 TEMPLATES = APP / "web" / "templates"
 URLS_MODULE = "app/web/urls.py"
 
-_HELPERS = re.compile(r"\b(?:url|is_here|here_in|here_under)\(")
+_HELPERS = re.compile(r"\b(?:url|is_here|here_in|here_under|host_url)\(")
 # Jinja and HTML comments, CSS and script block comments, and script
 # line comments: none of them is emitted as a URL.
 _COMMENTS = re.compile(
     r"\{#.*?#\}|<!--.*?-->|/\*.*?\*/|^[ \t]*//[^\n]*", re.DOTALL | re.MULTILINE
 )
-_TEMPLATED_ATTR = re.compile(r"""\b(?:href|action|formaction|src)=(["'])\{[{%]-?\s*+(?!url\()""")
+_TEMPLATED_ATTR = re.compile(r"""\b(?:href|action|formaction|src)=(["'])\{[{%]-?\s*+(?!(?:host_)?url\()""")
 _BARE_ROOT_ATTR = re.compile(r"""\b(?:href|action|formaction|src)=(["'])/\1""")
 _URL_PATH = re.compile(r"\burl\.path\b")
 _HELPER_NAMES = r"(?:url|here|is_here|here_in|here_under)"

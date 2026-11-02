@@ -98,7 +98,10 @@ class _Links(HTMLParser):
             and self.within is not None
             and self.within in (dict(attrs).get("class") or "").split()
         )
-        if self.within is None or self.depth or entering:
+        # A link marked `data-host-link` is the Cordware host's own, so
+        # unprefixed by design (the top bar's All applications, 20D).
+        host_link = "data-host-link" in dict(attrs)
+        if (self.within is None or self.depth or entering) and not host_link:
             self.urls += [value for name, value in attrs if _is_url_attr(name) and value]
         if (self.depth or entering) and not void:
             self.depth += 1

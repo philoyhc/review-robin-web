@@ -473,43 +473,117 @@
         font-size: 0.95em;
       }
       a { color: var(--text-link); }
+      /* Segment 20D: the header, Cordware's shared top bar
+         (`docs/header_chrome.md`; `_partials/top_bar.html`). `.chrome`
+         keeps the header's one bottom line and the space under it, so
+         nothing below the line moves. */
       .chrome {
+        border-bottom: 1px solid var(--border-subtle);
+        padding-bottom: 8px;
+        margin-bottom: 24px;
+      }
+      .tb-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .tb-switch { position: relative; }
+      .tb-switch > summary,
+      .tb-switch.tb-static {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 44px;
+        padding: 4px 10px 4px 6px;
+        margin-left: -6px;
+        border-radius: 8px;
+      }
+      .tb-switch > summary,
+      .tb-acct > summary { cursor: pointer; list-style: none; }
+      .tb-switch > summary::-webkit-details-marker,
+      .tb-acct > summary::-webkit-details-marker { display: none; }
+      .tb-switch > summary:hover,
+      .tb-switch[open] > summary { background: var(--surface-muted); }
+      .tb-icon { flex: none; width: 28px; height: 28px; display: block; }
+      .tb-titles { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+      .tb-top {
+        font-size: 12px;
+        color: var(--text-subtle);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .tb-app { font-size: 16px; font-weight: 700; color: var(--text-body); white-space: nowrap; }
+      .tb-caret { font-size: 12px; color: var(--text-subtle); margin-left: 2px; }
+      .tb-right { display: flex; align-items: center; gap: 12px; }
+      .tb-name { font-size: 14px; color: var(--text-subtle); }
+      @media (max-width: 959px) { .tb-name { display: none; } }
+      .tb-acct { position: relative; }
+      .tb-acct > summary {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 44px;
+        min-height: 44px;
+        border-radius: 9999px;
+      }
+      .tb-avatar {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 9999px;
+        background: var(--selected-bg);
+        color: var(--selected-fg);
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .tb-menu {
+        position: absolute;
+        z-index: 20;
+        top: calc(100% + 4px);
+        left: -6px;
+        width: 270px;
+        background: var(--surface-card);
+        border: 1px solid var(--border-subtle);
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(17, 24, 39, 0.14);
+        padding: 6px 0;
+      }
+      .tb-menu-right { left: auto; right: 0; }
+      .tb-group + .tb-group { border-top: 1px solid var(--border-subtle); margin-top: 6px; padding-top: 6px; }
+      .tb-group-h {
+        padding: 6px 14px 4px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--text-subtle);
+      }
+      .tb-menu a {
         display: flex;
         justify-content: space-between;
-        align-items: flex-start;
-        border-bottom: 1px solid var(--border-subtle);
-        padding-bottom: 12px;
-        margin-bottom: 24px;
-        gap: 16px;
-      }
-      .chrome-left { display: flex; flex-direction: column; gap: 4px; }
-      .chrome-app-identity {
-        font-size: 0.85em;
-        color: var(--text-subtle);
+        align-items: center;
+        gap: 8px;
+        min-height: 44px;
+        padding: 0 14px;
+        font-size: 15px;
+        color: var(--text-body);
         text-decoration: none;
       }
+      .tb-menu a:hover { background: var(--surface-muted); }
+      .tb-menu a[aria-current] { font-weight: 700; }
+      .tb-menu small { font-size: 12px; color: var(--text-subtle); }
+      .tb-who { display: flex; flex-direction: column; gap: 2px; padding: 8px 14px; font-size: 13px; color: var(--text-subtle); }
+      .tb-who strong { font-size: 15px; color: var(--text-body); }
+      .chrome .breadcrumb { margin-top: 4px; }
       .breadcrumb { font-size: 0.95em; }
       .breadcrumb a { color: var(--text-link); text-decoration: none; }
       .breadcrumb a:hover { text-decoration: underline; }
       .breadcrumb span[aria-current="page"] { color: var(--text-body); font-weight: 600; }
       .breadcrumb-sep { color: var(--text-subtle); margin: 0 6px; }
-      .chrome-user {
-        font-size: 0.85em;
-        color: var(--text-subtle);
-        text-align: right;
-        line-height: 1.4;
-      }
-      .chrome-user .signout {
-        display: inline-block;
-        margin-top: 4px;
-        padding: 4px 10px;
-        border: 1px solid var(--border-default);
-        border-radius: 6px;
-        text-decoration: none;
-        color: var(--text-body);
-        font-size: 0.9em;
-      }
-      .chrome-user .signout:hover { background: var(--surface-muted); }
       .card {
         border: 2px solid var(--border-default);
         border-radius: 12px;
@@ -4241,12 +4315,6 @@
       /* Chrome — repaint to palette tokens; per-row accent on the
          active-tab marker; row tints at 5% accent. */
       body.ui-v2 .chrome { border-bottom-color: var(--border-subtle); }
-      body.ui-v2 .chrome-app-identity { color: var(--text-subtle); }
-      body.ui-v2 .chrome-user { color: var(--text-subtle); }
-      body.ui-v2 .chrome-user .signout {
-        border-color: var(--border-default);
-        color: var(--text-body);
-      }
       body.ui-v2 .breadcrumb-sep { color: var(--text-subtle); }
       body.ui-v2 .breadcrumb span[aria-current="page"] {
         color: var(--text-body);
@@ -4418,26 +4486,8 @@
         cursor: not-allowed;
         text-decoration: none;
       }
-      /* Inline link in the chrome user menu (e.g. About). Sits
-         between the identity line and the sign-out button. */
-      body.ui-v2 .chrome-user .chrome-link {
-        display: inline-block;
-        margin-top: var(--space-1);
-        margin-right: var(--space-2);
-        color: var(--text-link);
-        font-size: 0.9em;
-        text-decoration: none;
-      }
-      body.ui-v2 .chrome-user .chrome-link:hover { text-decoration: underline; }
       /* Light/dark Display-mode toggle pill (chrome, W6). Two segments; the
          active side fills --selected-bg. Compact; themes via tokens. */
-      /* Toggle sits inline after the app identity in the top-left chrome. */
-      .chrome-identity-row {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        flex-wrap: wrap;
-      }
       .theme-toggle {
         display: inline-flex;
         vertical-align: middle;
@@ -4463,14 +4513,6 @@
         color: var(--selected-fg);
       }
       .theme-toggle-opt:hover:not([aria-pressed="true"]) { color: var(--text-body); }
-      /* Reviewer top-bar variant — lighter chrome for reviewer-facing
-         pages per spec/visual_style_rrw.md "Reviewer-facing pages →
-         Top bar". Lighter "Review Robin" identity (no version), no
-         breadcrumb, and a "Your reviews" link to /me on every
-         participant page but /me itself. */
-      body.ui-v2.reviewer .chrome-app-identity {
-        font-weight: 500;
-      }
       /* Status-symbol indicators on the reviewer surface — replaces
          the inline-styled ✓ / ⚠ glyphs per spec/ui_elements.md §9. */
       body.ui-v2 .status-icon-complete {
@@ -5377,47 +5419,11 @@
        populated in the same tick is not reliably announced. #}
     <div class="rrw-busy" data-rrw-busy-bar hidden><div class="rrw-busy-fill"></div></div>
     <span class="visually-hidden" role="status" data-rrw-busy-status></span>
-    {# Operator top bar is the default; reviewer templates override
-       this block to render the lighter "Review Robin" chrome
-       (spec/visual_style_rrw.md "Reviewer-facing pages → Top bar"). #}
+    {# Segment 20D: the shared top bar (`docs/header_chrome.md`). The
+       participant pages override this block to include the same partial
+       with `participant_bar=true`. #}
     {% block top_bar %}
-      <div class="chrome">
-        <div class="chrome-left">
-          <div class="chrome-identity-row">
-            <span class="chrome-app-identity">Review Robin Web App (version {{ app_version }})</span>
-            {% include "_partials/theme_toggle.html" %}
-          </div>
-          {% include "_partials/breadcrumb.html" %}
-        </div>
-        {% if user %}
-          <div class="chrome-user">
-            <div>Signed in as {{ user.display_label }}{% if user.is_super_admin %} (super admin){% elif user.is_sys_admin %} (sys admin){% endif %}</div>
-            {# Operators only: Settings sits behind `require_operator`,
-               which bounces anyone else to /me (participant audit M8). #}
-            {% if (user.is_operator or user.is_sys_admin)
-                  and not is_here("/operator/settings") %}
-              <a class="chrome-link" href="{{ url('/operator/settings') }}?return_to={{ here() | urlencode }}">Settings</a>
-            {% endif %}
-            {% if user.is_sys_admin and not here_under("/operator/sys-admin") %}
-              <a class="chrome-link" href="{{ url('/operator/sys-admin') }}?return_to={{ here() | urlencode }}">Admin</a>
-            {% endif %}
-            {# 19F PR 3 — hidden for a viewer who resolves no Guide
-               audiences, who would only be bounced to /about. Tested as
-               `is not true` rather than a plain truth test so that a
-               page which never stamps the flag still renders the link:
-               the absence is cosmetic and routes_guide does the real
-               deciding, so failing open is the safe direction. #}
-            {% if not here_in("/guide", "/auth/me/debug")
-                  and request.state.guide_hidden is not true %}
-              <a class="chrome-link" href="{{ url('/guide') }}?return_to={{ here() | urlencode }}">Guide</a>
-            {% endif %}
-            {% if not here_in("/about", "/auth/me/debug") %}
-              <a class="chrome-link" href="{{ url('/about') }}?return_to={{ here() | urlencode }}">About</a>
-            {% endif %}
-            <a class="signout" href="/.auth/logout">Sign out</a>
-          </div>
-        {% endif %}
-      </div>
+      {% include "_partials/top_bar.html" %}
     {% endblock %}
 
     {# ``tabindex="-1"`` lets the skip link move keyboard focus into

@@ -20,28 +20,26 @@ def _create_session(client: TestClient, db: Session, *, code: str = "spring-2026
     ).scalar_one()
 
 
-def test_operator_chrome_renders_app_identity_user_card_and_signout(
+def test_operator_chrome_renders_the_shared_bar_and_account_menu(
     client: TestClient,
 ) -> None:
+    """Segment 20D: the shared top bar (`docs/header_chrome.md` §2, §4).
+    No version text, "Signed in as" or Sign out button in the bar; the
+    account menu holds them, About carrying ?return_to= and the version
+    beside it for an operator."""
     response = client.get("/operator/sessions")
     assert response.status_code == 200
     body = response.text
-    # Top-left identity is plain text now — the redundant link to
-    # /about was retired once the user menu's About link landed on
-    # the top-right (with ?return_to=).
-    assert (
-        '<span class="chrome-app-identity">Review Robin Web App (version dev)</span>'
-        in body
-    )
-    assert 'class="chrome-app-identity" href="/about"' not in body
-    # The right-side About link in the user menu carries the current
-    # path as ?return_to= so the About page renders a contextual
-    # back-link.
-    assert 'class="chrome-link" href="/about?return_to=' in body
-    assert "Signed in as Alice Example" in body
-    # No "(sys admin)" suffix for regular operators.
-    assert "(sys admin)" not in body
-    assert 'href="/.auth/logout"' in body
+    assert "Review Robin Web App" not in body
+    assert "Signed in as" not in body
+    assert 'class="signout"' not in body
+    assert 'class="tb-app">Review Robin' in body
+    assert 'aria-label="Account: Alice Example"' in body
+    assert 'href="/about?return_to=/operator/sessions">About <small>version dev</small></a>' in body
+    assert "<strong>Alice Example</strong>" in body
+    # No tier line for a regular operator.
+    assert "<span>sys admin</span>" not in body
+    assert 'href="/.auth/logout" data-sign-out' in body
     # Shared sort primitive (Segment 13B Part 2 PR 4) ships in
     # ``base.html`` so every page can opt into clickable sort
     # via the ``data-rrw-sortable`` annotation contract.
@@ -51,36 +49,33 @@ def test_operator_chrome_renders_app_identity_user_card_and_signout(
     assert "body.ui-v2 th.rrw-sortable" in body
 
 
-def test_chrome_user_card_marks_sys_admins_with_suffix(
+def test_the_account_menu_names_a_sys_admins_tier(
     client: TestClient,
     monkeypatch,
 ) -> None:
-    """Operators with ``is_sys_admin`` get a ``(sys admin)`` suffix
-    on their "Signed in as ..." label so they can tell at a glance
-    that they're running with elevated workspace privileges."""
+    """A sys admin's account menu says so under their name, as the
+    "(sys admin)" suffix on "Signed in as" did (`docs/header_chrome.md`
+    §4)."""
     from app.config import settings
 
     monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
     response = client.get("/operator/sessions")
     assert response.status_code == 200
-    assert "Signed in as Alice Example (sys admin)" in response.text
+    assert "<span>sys admin</span>" in response.text
 
 
-def test_reviewer_chrome_renders_lighter_top_bar_with_no_breadcrumb(
+def test_participant_pages_render_the_same_bar_with_no_breadcrumb(
     client: TestClient,
 ) -> None:
-    """Reviewer pages render the lighter "Review Robin" chrome variant
-    (Segment 11D PR C, D2): no version string, no /about link, and no
-    breadcrumb. The user card and sign-out remain."""
+    """Reviewer pages render the same bar (20D), with no breadcrumb row
+    (`docs/header_chrome.md` §5). The account menu and Sign out remain."""
     response = client.get("/me")
     assert response.status_code == 200
     body = response.text
     assert "Review Robin Web App" not in body
-    assert "version dev" not in body
-    assert 'class="chrome-app-identity">Review Robin</span>' in body
-    assert 'href="/about"' not in body
-    assert "Signed in as Alice Example" in body
-    assert 'href="/.auth/logout"' in body
+    assert 'class="tb-app">Review Robin' in body
+    assert "<strong>Alice Example</strong>" in body
+    assert 'href="/.auth/logout" data-sign-out' in body
     # No operator-style breadcrumb on the reviewer surface.
     assert 'class="breadcrumb"' not in body
 
@@ -208,8 +203,9 @@ def test_session_home_has_danger_zone_anchor(
 def test_chrome_user_card_shown_on_about(client: TestClient) -> None:
     # 18R Item 6: /about absorbed the /request-access role, so it now
     # renders WITH the signed-in identity (a stranger needs to see who
-    # they are + a Sign out affordance). The app-identity is still present.
+    # they are + a Sign out affordance). Since 20D the account menu
+    # names them and holds Sign out.
     response = client.get("/about")
     body = response.text
-    assert "Signed in as" in body
-    assert "Review Robin Web App (version dev)" in body
+    assert "<strong>Alice Example</strong>" in body
+    assert 'href="/.auth/logout" data-sign-out' in body

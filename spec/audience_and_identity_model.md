@@ -494,9 +494,9 @@ than moving the reader somewhere useful; `/about` has carried the
 "signed in but no access" copy. The link-hiding is
 cosmetic and fails **open** — a page that does not stamp the flag still
 renders the link, and following it lands on `/about` anyway. The
-participant chrome (`app/web/templates/reviewer/_top_bar.html`) renders
-the same Guide link behind the same flag as `base.html`, so the hiding
-applies on the participant pages too.
+participant pages render the same top bar
+(`app/web/templates/_partials/top_bar.html`, segment 20D), so the hiding
+applies there too.
 
 **This filter is not access control.** Nothing on `/guide` is
 privileged and the filter grants no one anything; it is an editorial

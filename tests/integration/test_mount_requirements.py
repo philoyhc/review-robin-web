@@ -109,10 +109,10 @@ def _nameless() -> AuthenticatedUser:
 @pytest.mark.parametrize(
     ("who", "path", "expected"),
     [
-        # base.html's chrome.
-        (_rae, "/operator/sessions", 'href="/.auth/logout"'),
-        # reviewer/_top_bar.html.
-        (_rae, "/me", 'class="signout" href="/.auth/logout"'),
+        # The shared top bar on an operator page (segment 20D).
+        (_rae, "/operator/sessions", 'href="/.auth/logout" data-sign-out'),
+        # The same bar on a participant page.
+        (_rae, "/me", 'href="/.auth/logout" data-sign-out'),
         # me_debug.html.
         (_rae, "/auth/me/debug", 'href="/.auth/logout"'),
         # error_handlers.py's 401 link, on error.html.
@@ -120,7 +120,7 @@ def _nameless() -> AuthenticatedUser:
         # error.html's check that a referrer is not the sign-in service.
         (_rae, "/operator/no/such/page", 'indexOf("/.auth/")'),
     ],
-    ids=["chrome", "reviewer-bar", "me-debug", "401-page", "error-page-script"],
+    ids=["chrome", "participant-bar", "me-debug", "401-page", "error-page-script"],
 )
 def test_easy_auths_paths_stay_the_hosts(
     make_mounted_client: Callable[[AuthenticatedUser], TestClient],

@@ -20,7 +20,7 @@ Today the applications look like two products:
   up to four text links and a Sign out button
   (`spec/visual_style_rrw.md`, "Non-session and reviewer chrome").
   Participants get a lighter variant
-  (`app/web/templates/reviewer/_top_bar.html`).
+  (`app/web/templates/reviewer/_top_bar.html`). <!-- path-ref-ok -->
 
 The direction is Residential's. One bar, the same in every application,
 with each application's own icon, accent and menu entries.

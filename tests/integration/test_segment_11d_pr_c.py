@@ -104,12 +104,11 @@ def test_reviewer_dashboard_chrome_drops_about_link_and_version(
     client: TestClient,
 ) -> None:
     body = client.get("/me").text
-    # Operator-style chrome details are gone from the reviewer top bar.
+    # The old text identity is gone; since 20D the version shows only in
+    # the account menu, beside About, for an operator (this client is
+    # one; `test_participant_chrome.py` covers a participant).
     assert "Review Robin Web App" not in body
-    assert "version dev" not in body
-    assert 'href="/about"' not in body
-    # Identity is the lighter "Review Robin" text-only span.
-    assert 'class="chrome-app-identity">Review Robin</span>' in body
+    assert 'class="tb-app">Review Robin' in body
 
 
 def test_reviewer_chrome_links_to_your_reviews_with_one_review(
@@ -132,10 +131,7 @@ def test_reviewer_chrome_links_to_your_reviews_with_one_review(
 
     rae_client = make_client(rae)
     body = rae_client.get(f"/me/sessions/{review_session.public_id}").text
-    assert (
-        'class="chrome-link" href="/me" data-your-reviews>Your reviews</a>'
-        in body
-    )
+    assert '<a href="/me" data-your-reviews>Your reviews</a>' in body
     assert "My Reviews" not in body
 
 
@@ -145,9 +141,11 @@ def test_the_dashboard_does_not_link_to_itself(
 ) -> None:
     response = make_client(rae).get("/me")
     assert response.status_code == 200
-    # The top bar rendered (so the absence below means something).
-    assert "Signed in as" in response.text
-    assert "data-your-reviews" not in response.text
+    # Since 20D the switcher lists it, marked current rather than
+    # linked as a way back (`docs/header_chrome.md` §3).
+    assert (
+        'data-your-reviews aria-current="page">Your reviews' in response.text
+    )
 
 
 # ── D5: status icons ────────────────────────────────────────────────────
@@ -468,8 +466,8 @@ def test_operator_preview_keeps_operator_chrome(
     body = get_full_preview_html(
         client, review_session.id, "r@example.edu"
     )
-    # Operator chrome present (Web App identity, breadcrumb).
-    assert "Review Robin Web App (version dev)" in body
+    # Operator chrome present (the shared bar, with its breadcrumb).
+    assert 'class="tb-app">Review Robin' in body
     assert 'class="breadcrumb"' in body
     # Reviewer body class branch is dropped on preview so the operator
     # surface doesn't pick up the .reviewer-scoped chrome rules.
