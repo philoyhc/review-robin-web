@@ -33,7 +33,7 @@ Setup and Operations are two parallel series of pages (see `spec/operator_ui_con
 Review Robin themes **light or dark**, chosen per-viewer and stored browser-local. The whole palette lives as `:root` colour tokens in `base.html`; `:root[data-theme="dark"]` redefines them (plus `color-scheme: dark`), so any surface built from tokens themes for free — the discipline is *use tokens, never raw hex* (the `guide/archive/ux_theme.md` sweep tokenised the app to make this hold).
 
 - **Two states, no OS-follow.** Light is the bare `:root`; Dark is an explicit `data-theme="dark"` on `<html>`. There is no `prefers-color-scheme` path — first paint is Light until the viewer picks Dark.
-- **The control** is a two-segment pill `[☀ Light | 🌙 Dark]` (`_partials/theme_toggle.html`) in the top-left chrome, inline after the app identity, in **both** the operator chrome and the reviewer top bar — so operators and participants share one control.
+- **The control** is a two-segment pill `[Light | Dark]` (`_partials/theme_toggle.html`), sized as Residential's, on the right of the shared top bar (segment 20D) for operators and participants alike; under 640 px it moves into the account menu, and on a phone or touch screen each side is 44 px tall.
 - **Browser-local**, never synced to the server; the storage key + no-FOUC mechanism are specced in `spec/settings_inventory.md` §7 (`rrw-theme`).
 
 ---
