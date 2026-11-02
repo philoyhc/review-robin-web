@@ -316,18 +316,31 @@ def test_an_owner_offers_remove_from_all_sessions_not_revoke(
     assert _expander_actions(page) == ["Promote", "Set unit"]
 
 
-def test_the_unit_group_is_inert_until_wired(page: Page, api: httpx.Client) -> None:
-    """20D rung 4 scaffold: an operator selection offers Unit, its input
-    capped at 80 characters, its button disabled until rung 5."""
-    first, _, unused = _setup(page, api)
+
+def _unit_cell(page: Page, email: str):
+    return page.locator(
+        f'tr[data-user-id]:has(code:text-is("{email}")) [data-unit-cell]'
+    )
+
+
+def test_set_unit_by_enter_sets_it_and_revokes_nothing(
+    page: Page, api: httpx.Client
+) -> None:
+    """20D: Enter in the Unit input presses Set unit, never the form's
+    first button, Revoke here (Codex on #3508)."""
+    first, second, unused = _setup(page, api)
     _tick(page, first)
+    _tick(page, second)
     expander = page.locator("#users-row-expander")
     expect(expander.locator("[data-unit-input]")).to_have_attribute("maxlength", "80")
-    expect(expander.locator('[data-expander-action="Set unit"]')).to_be_disabled()
-    # Inert means Enter in it submits nothing (Codex on #3508).
-    unit_input = expander.locator("[data-unit-input]")
-    expect(unit_input).to_be_disabled()
-    assert unit_input.get_attribute("form") is None
-    # A row with no role holds no Unit to set.
+    with page.expect_navigation():
+        expander.locator("[data-unit-input]").fill("Department of Example")
+        expander.locator("[data-unit-input]").press("Enter")
+    expect(_unit_cell(page, first)).to_have_text("Department of Example")
+    expect(_unit_cell(page, second)).to_have_text("Department of Example")
+    # Still operators: nothing was revoked.
+    expect(_operator_cell(page, first)).to_have_text("yes")
+    # A row with no role holds no Unit to set (several rows changed, so
+    # the page came back with nothing ticked).
     _tick(page, unused)
-    expect(expander.locator("[data-unit-input]")).to_have_count(0)
+    expect(page.locator("#users-row-expander [data-unit-input]")).to_have_count(0)

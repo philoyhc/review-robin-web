@@ -665,6 +665,46 @@ _BULK_ACTIONS: dict[str, str] = {
 }
 
 
+@router.post("/sys-admin/users/bulk-set-unit")
+def bulk_set_unit(
+    request: Request,
+    user_ids: list[int] = Form(default_factory=list),
+    unit: str = Form(default=""),
+    view: str = Form(default=""),
+    actor: User = Depends(require_sys_admin),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Set the selected operators' Unit, or clear it back to the
+    workspace default when empty (segment 20D, `docs/header_chrome.md`
+    §6), all or nothing (``users.set_unit``). Registered before
+    ``bulk-{action}``, which would otherwise take the path."""
+    try:
+        users_service.set_unit(
+            db,
+            actor=actor,
+            user_ids=user_ids,
+            unit=unit,
+            correlation_id=request_correlation_id(),
+        )
+    except users_service.UserOperationError as exc:
+        db.rollback()
+        if exc.code == "empty_selection":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
+            ) from exc
+        if exc.code == "not_found":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=exc.message
+            ) from exc
+        return _users_redirect(request,
+            error_code=exc.code, refused_user_id=exc.user_id, view=view
+        )
+    single = len(set(user_ids)) == 1
+    return _users_redirect(request,
+        selected_user_id=user_ids[0] if single else None, view=view
+    )
+
+
 @router.post("/sys-admin/users/bulk-{action}")
 def bulk_account_action(
     request: Request, action: str,

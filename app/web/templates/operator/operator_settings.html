@@ -119,17 +119,16 @@
     })();
   </script>
   </div>
-  {# Segment 20D rung 4 (scaffold): the operator's Unit, read-only here;
-     only a system admin sets it, on Accounts Management
-     (`docs/header_chrome.md` §6). Unset, the workspace default shows as
-     a display pill. Rung 5 reads the stored value. #}
+  {# Segment 20D: the operator's Unit, read-only here; only a system
+     admin sets it, on Accounts Management (`docs/header_chrome.md` §6).
+     Unset, the workspace default shows as a display pill. #}
   <div class="bottom-left">
   <div class="card" id="unit-settings">
     <h2>Unit</h2>
     {% set _default = institution_name() %}
     <p data-unit-line>
       Your unit:
-      {% if user.unit is defined and user.unit %}<strong>{{ user.unit }}</strong>
+      {% if user.unit %}<strong>{{ user.unit }}</strong>
       {% elif _default %}<span class="pill pill-count" title="The workspace default">{{ _default }}</span>
       {% else %}<span class="muted">none</span>{% endif %}
     </p>

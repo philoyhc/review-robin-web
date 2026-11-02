@@ -240,6 +240,8 @@ _REFUSAL_REASONS: dict[str, str] = {
     ),
     "last_admin": "that would leave the workspace with no sys-admin",
     "sole_owner": "a session {email} owns would be left with no owner",
+    "unit_not_operator": "{email} has no role, so has no unit",
+    "unit_too_long": "a unit is at most 80 characters",
 }
 
 

@@ -447,11 +447,11 @@
             </td>
             <td>{{ account_address(row.verified, row.email) }}</td>
             <td>{{ account_name(row.verified, row.display_name) }}</td>
-            {# 20D rung 4 (scaffold): an operator's Unit, the top line on
-               the sessions they create (`docs/header_chrome.md` §6);
-               unset, the workspace default as a display pill. #}
+            {# 20D: an operator's Unit, the top line on the sessions they
+               create (`docs/header_chrome.md` §6); unset, the workspace
+               default as a display pill. #}
             <td data-unit-cell>
-              {%- if row.unit is defined and row.unit %}{{ row.unit }}
+              {%- if row.unit %}{{ row.unit }}
               {%- elif _unit_default %}<span class="pill pill-count" title="The workspace default">{{ _unit_default }}</span>
               {%- else %}—{% endif -%}
             </td>
@@ -510,7 +510,8 @@
             "Remove from all sessions": "/bulk-remove-from-all-sessions",
             "Promote": "/bulk-promote",
             "Demote": "/bulk-demote",
-            "Delete": "/bulk-delete"
+            "Delete": "/bulk-delete",
+            "Set unit": "/bulk-set-unit"
           };
           var selectAll = document.getElementById("users-select-all");
           if (!table) return;
@@ -590,8 +591,8 @@
               if (!sel.some(hasHistory)) danger.push(["Delete", "destructive"]);
             }
             if (canManageAdmins && allOperators) admin.push(["Promote", "secondary"]);
-            // 20D rung 4 (scaffold): an operator's or admin's Unit. Inert
-            // until rung 5 wires its route.
+            // 20D: an operator's or admin's Unit (docs/header_chrome.md
+            // §6); an empty value clears it back to the default.
             var unit = every(sel, function (r) {
               return category(r) === "operators" || category(r) === "admins";
             }) ? [["Set unit", "secondary"]] : [];
@@ -634,22 +635,16 @@
               // `form=` + `name="user_ids"`; a button says only where.
               // Delete ships disabled: the confirm's pairing (base.html)
               // enables it on the tick, and a fresh panel is unticked.
-              // Inert in the scaffold: disabled and in no form, so Enter
-              // in it cannot submit the bulk form through its first
-              // button (Codex on #3508: that could be Revoke).
+              // The Unit's value joins the bulk form; Enter in it presses
+              // Set unit (the keydown handler below), never the form's
+              // first button, which could be Revoke (Codex on #3508).
               if (group[0] === "Unit:") {
                 html += '<input type="text" name="unit" maxlength="80"' +
-                  ' aria-label="Unit" disabled' +
+                  ' form="users-bulk-form" aria-label="Unit"' +
                   ' placeholder="Empty for the default" data-unit-input>';
               }
               group[1].forEach(function (a) {
                 var del = a[0] === "Delete";
-                if (a[0] === "Set unit") {
-                  html += '<button type="button" class="btn ' + a[1] + '"' +
-                    ' data-expander-action="Set unit" disabled' +
-                    ' aria-disabled="true">Set unit</button>';
-                  return;
-                }
                 html += '<button type="submit" class="btn ' + a[1] + '"' +
                   ' form="users-bulk-form" formaction="' + BASE + ROUTES[a[0]] + '"' +
                   ' data-expander-action="' + a[0] + '"' +
@@ -680,6 +675,14 @@
               .insertAdjacentElement("afterend", panel);
           }
 
+          document.addEventListener("keydown", function (e) {
+            var t = e.target;
+            if (e.key !== "Enter" || !t || !t.hasAttribute ||
+                !t.hasAttribute("data-unit-input")) return;
+            e.preventDefault();
+            var set = panel && panel.querySelector('[data-expander-action="Set unit"]');
+            if (set) set.click();
+          });
           document.addEventListener("change", function (e) {
             var t = e.target;
             if (!t) return;

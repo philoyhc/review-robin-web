@@ -330,6 +330,8 @@ class WorkspaceUserRow:
     category: str = ""
     # Bound to its person in the directory (19Z, accounts item).
     verified: bool = False
+    # The operator's Unit (segment 20D); None means the workspace default.
+    unit: str | None = None
 
 
 class UserOperationError(ValueError):
@@ -898,6 +900,81 @@ def apply_batch(
             _write_remove(db, actor, target, correlation_id)
     db.commit()
     return len(targets)
+
+
+#: The longest Unit the bar's top line takes (docs/header_chrome.md §6).
+UNIT_MAX_LENGTH = 80
+
+
+def normalize_unit(raw: str | None) -> str | None:
+    """A Unit as stored: trimmed, with inner runs of whitespace one space;
+    empty means none, the workspace default."""
+    unit = " ".join((raw or "").split())
+    return unit or None
+
+
+def set_unit(
+    db: Session,
+    *,
+    actor: User,
+    user_ids: list[int],
+    unit: str | None,
+    correlation_id: str | None = None,
+) -> int:
+    """Set (or, given an empty value, clear) the Unit of the selected
+    operators and admins, all or nothing (segment 20D,
+    `docs/header_chrome.md` §6). The caller is a system admin
+    (``require_sys_admin``); a row with no role is refused, as it shows
+    no top line of its own. Each row whose Unit changes is audited
+    ``workspace.user_unit_set``; one already holding the value is left
+    alone. Returns the number of rows changed."""
+    value = normalize_unit(unit)
+    if value is not None and len(value) > UNIT_MAX_LENGTH:
+        raise UserOperationError(
+            code="unit_too_long",
+            message=f"A unit is at most {UNIT_MAX_LENGTH} characters.",
+        )
+    ids = sorted(set(user_ids))
+    if not ids:
+        raise UserOperationError(
+            code="empty_selection", message="Select at least one account."
+        )
+    targets = list(db.execute(_batch_lock("set_unit", ids)).scalars())
+    found = {target.id for target in targets}
+    missing = [user_id for user_id in ids if user_id not in found]
+    if missing:
+        raise UserOperationError(
+            code="not_found", message=f"No account with id {missing[0]}."
+        )
+    for target in targets:
+        if not (target.is_operator or target.is_sys_admin):
+            raise UserOperationError(
+                code="unit_not_operator",
+                message=f"{target.email} is not an operator, so has no unit.",
+                user_id=target.id,
+            )
+    changed = 0
+    for target in targets:
+        old = target.unit
+        if old == value:
+            continue
+        target.unit = value
+        audit.write_event(
+            db,
+            event_type="workspace.user_unit_set",
+            summary=(
+                f"Set {target.email}'s unit to {value}"
+                if value
+                else f"Cleared {target.email}'s unit"
+            ),
+            actor_user_id=actor.id,
+            payload=audit.changes({"unit": [old, value]}),
+            refs={"target_user_id": target.id},
+            correlation_id=correlation_id,
+        )
+        changed += 1
+    db.commit()
+    return changed
 
 
 def _batch_lock(action: str, ids: list[int]) -> Select[tuple[User]]:
