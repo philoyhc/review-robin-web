@@ -40,8 +40,8 @@ missing log workspace no longer describe the service, and are struck.
 ## Functional scope
 
 - **Email not yet wired.** No invitation, reminder or confirmation is
-  delivered: the outbox records what *would* be sent, and marks
-  invitations and reminders `sent` as it does. Sending is Segment 14B,
+  delivered: the outbox records what *would* be sent, each row
+  `queued` until a transport sends it. Sending is Segment 14B,
   and waits on the choice of sender: Microsoft Graph as the operator
   who clicks, or as a dedicated mailbox (`guide/email_and_scheduling.md`).
   Meanwhile email is optional —

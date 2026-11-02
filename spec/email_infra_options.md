@@ -183,9 +183,9 @@ Today's `email_outbox` table is the audit log. Its shape:
 | `cc_emails` / `bcc_emails` | text, comma-separated | Populated from the editor's CC / BCC overrides at queue time. |
 | `subject` | text | The merged subject. |
 | `body` | text | The merged body. |
-| `status` | enum | Canonical set `EMAIL_OUTBOX_STATUSES` — `{queued, sending, sent, failed}`. Only `queued` and `sent` are ever persisted: the invitation and reminder paths write `queued` and flip it to `sent` in the same transaction, with no transport call, while a `responses_received` row stays `queued`. `sending` and `failed` exist for a dispatcher that does not yet run. |
+| `status` | enum | Canonical set `EMAIL_OUTBOX_STATUSES` — `{queued, sending, sent, failed}`. Only `queued` is persisted today: every path writes `queued`, and a row stays so until a transport sends it. `sending`, `sent` and `failed` are the dispatcher's, which does not yet run. |
 | `created_at` | timestamp | When the row was written. |
-| `sent_at` | timestamp | When the row flipped to `sent`; null while `queued`. |
+| `sent_at` | timestamp | When a transport sent the row; null while `queued`. |
 
 **A row outlives its reviewer — except when the session goes.** Both FK
 columns carry no `ON DELETE`, so the roster-delete and purge paths clear

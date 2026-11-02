@@ -39,8 +39,9 @@ class InvitationsRow:
     """The latest invitation outbox row's status, or ``"not sent"`` when
     no outbox row exists for this reviewer's invitation or the
     invitation is back at ``pending`` (a regenerate rotated its token). Today the value
-    set is ``{"not sent", "queued", "sent"}``; Segment 11C Part 2 widens
-    it to include ``"sending"`` and ``"failed"``."""
+    set is ``{"not sent", "queued"}``: rows stay ``queued`` until a
+    transport sends them, which adds ``"sending"``, ``"sent"`` and
+    ``"failed"`` (segment 14B)."""
     email_sent_at: datetime | None
     review_progress_state: str
     """``"not started"`` / ``"in progress"`` / ``"submitted"`` —

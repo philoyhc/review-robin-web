@@ -12,12 +12,11 @@ started), `guide/post_azure_todo_checklist.md` items 7–10,
 **No email is delivered, and nothing runs on a clock.**
 
 - **Sending is recorded, not done.** `send_invitation` and `send_reminder`
-  (`app/services/invitations.py`) write an `email_outbox` row and mark it
-  and the invitation `sent` at once; no transport is called. The
-  responses-received confirmation (`queue_responses_received`) stays
-  `queued` for good. The page says so ("no email is delivered until email
-  sending is switched on"); the rows do not, since they read `sent`
-  (`guide/post_azure_todo_checklist.md` item 8).
+  (`app/services/invitations.py`) write an `email_outbox` row, `queued`,
+  and record the send on the invitation; no transport is called. The
+  responses-received confirmation (`queue_responses_received`) is queued
+  the same way. Every row stays `queued` until a transport sends it
+  (honest since 2026-11-02, the checklist's former item 8).
 - **Transports exist, unused.** `app/services/email_send.py` has an SMTP
   transport over per-operator settings (`User.smtp_*`, the password
   encrypted with `SMTP_ENCRYPTION_KEY`) and a Graph transport that is a
@@ -55,10 +54,9 @@ does not.
 
 ## Recommendations
 
-1. **Make the outbox honest first.** A row stays `queued` until a
-   transport has sent it, and a failure is `failed` with its reason
-   (`guide/post_azure_todo_checklist.md` item 8). It needs no decision
-   below and every option builds on it.
+1. **Make the outbox honest first.** *Done 2026-11-02:* a row stays
+   `queued` until a transport has sent it; the transport, when it lands,
+   stamps `sent`, or `failed` with its reason.
 2. **Two send paths.**
    - **What a person sends** (Send invites, Send reminder, Send all) goes
      **delegated, as that operator**, through `/me/sendMail` on the token

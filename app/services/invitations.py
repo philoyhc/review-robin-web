@@ -3,8 +3,8 @@
 Segment 9.2 ships per-reviewer invitation tokens that route through the
 existing Easy Auth sign-in. Tokens are hashed with sha256 in the DB; the
 raw token is shown to the operator at outbox-write time and stored in
-the outbox row body for re-copy. No real SMTP — outbox rows synchronously
-flip ``queued → sent`` and are visible on a per-session operator page.
+the outbox row body for re-copy. No transport sends yet: outbox rows stay
+``queued`` and are visible on a per-session operator page.
 """
 from __future__ import annotations
 
@@ -323,7 +323,7 @@ def regenerate_all_tokens(
 
 
 # --------------------------------------------------------------------------- #
-# Send (write outbox row, flip status)
+# Send (record the send, queue the outbox row)
 # --------------------------------------------------------------------------- #
 
 
@@ -396,9 +396,11 @@ def send_invitation(
     db.add(outbox)
     db.flush()
 
+    # The row stays ``queued`` until a transport sends it and stamps
+    # ``sent`` or ``failed`` (`guide/email_and_scheduling.md`,
+    # recommendation 1, settled 2026-11-02). The invitation records that the operator sent
+    # it: ``sent`` here means the send was recorded, not delivered.
     now = datetime.now(timezone.utc)
-    outbox.status = "sent"
-    outbox.sent_at = now
     invitation.status = "sent"
     invitation.sent_at = now
     invitation.opened_at = None
@@ -766,10 +768,9 @@ def most_recent_invitation_status(
 
     The value set is the model's ``EMAIL_OUTBOX_STATUSES`` —
     ``queued`` / ``sending`` / ``sent`` / ``failed``. Only ``queued``
-    and ``sent`` are written today: ``send_invitation`` flips the row
-    to ``sent`` in the same call, so nothing yet produces ``sending``
-    or ``failed``. Segment 14B Part A lights up the real transport
-    that will (`app/db/models/email_outbox.py`).
+    is written today: a row stays ``queued`` until a transport sends
+    it, and segment 14B's transport stamps the rest
+    (`app/db/models/email_outbox.py`).
 
     Callers must not enumerate the values — render what comes back, so
     the widened set needs no second edit (`constitution.md` II).
@@ -870,9 +871,8 @@ def send_reminder(
     db.add(outbox)
     db.flush()
 
+    # ``queued`` until a transport sends it, as for invitations.
     now = datetime.now(timezone.utc)
-    outbox.status = "sent"
-    outbox.sent_at = now
     invitation.last_reminder_at = now
     db.flush()
     if commit:

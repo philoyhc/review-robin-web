@@ -691,9 +691,9 @@ is inactive or its session is archived), refuses with **403** + a dedicated page
 user's email doesn't match the invitation's reviewer email, and
 otherwise stamps `opened_at` once and 303s to `/me/sessions/{id}`.
 
-The `email_outbox` table is the dev-mode replacement for SMTP.
-Rows synchronously flip `queued → sent` when the operator clicks
-Send. Real SMTP / production email is deferred to Segment 14B;
+The `email_outbox` table records each email the app means to send.
+A row stays `queued` until a transport sends it and stamps `sent` or
+`failed`; none does yet. The send path is Segment 14B;
 the outbox table itself stays useful for debugging in any environment.
 
 ### Reminders

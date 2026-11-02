@@ -222,7 +222,7 @@ def test_reviewer_pre_open_page_renders_for_validated_session(
     assert "This review is not currently open." in body
 
 
-def test_send_writes_outbox_and_flips_to_sent(
+def test_send_records_the_invitation_and_queues_its_outbox_row(
     client: TestClient, db: Session
 ) -> None:
     session = _ready_session(client, db, code="send-1")
@@ -244,8 +244,10 @@ def test_send_writes_outbox_and_flips_to_sent(
         select(EmailOutbox).where(EmailOutbox.invitation_id == invitation.id)
     ).scalar_one()
     assert outbox.kind == "invitation"
-    assert outbox.status == "sent"
-    assert outbox.sent_at is not None
+    # Queued until a transport sends it: the row never claims a delivery
+    # that did not happen (post-Azure checklist item 8, settled 2026-11-02).
+    assert outbox.status == "queued"
+    assert outbox.sent_at is None
     assert outbox.to_email == "rae@example.edu"
     assert "/me/invite/" in outbox.body  # raw token URL embedded
 
@@ -706,9 +708,9 @@ def test_invitations_page_email_status_reflects_outbox_row(
     body = client.get(
         f"/operator/sessions/{session.public_id}/invitations"
     ).text
-    # After send: outbox row exists at status="sent" (today the queue
-    # path stamps sent immediately; Part 2 widens the value set).
-    assert ">sent</span>" in body
+    # After send: the outbox row exists, queued until a transport sends
+    # it (checklist item 8).
+    assert _DELIVERY("queued") in body
 
 
 def test_invitations_page_reviewer_name_links_to_drill_in(
@@ -1323,11 +1325,9 @@ def test_detail_page_after_regenerate_reports_the_current_token(
     # Exactly one em-dash: Send recorded is empty for the new token, Last
     # reminder still carries the old stamp.
     assert facts.count(_NO_DATE) == 1
-    # No delivery pill — but note this test cannot prove the gate: its
-    # outbox row is `sent`, which renders nothing under any gate.
-    # `test_regenerate_clears_a_stale_delivery_pill` is the one that
-    # discriminates.
-    assert _DELIVERY("sent") not in facts
+    # No delivery pill: the old token's outbox row is `queued`, which
+    # would render one, so this proves the pending-after-regenerate gate.
+    assert _DELIVERY("queued") not in facts
 
 
 def test_detail_page_shows_a_sent_link_as_it_resolves_now(
@@ -2634,7 +2634,7 @@ def test_regenerate_all_resets_the_table_and_the_sent_counter(
         f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
     )
     sent = client.get(f"/operator/sessions/{session.public_id}/invitations").text
-    assert ">sent</span>" in sent, "premise: the send shows in the table"
+    assert _DELIVERY("queued") in sent, "premise: the send shows in the table"
 
     response = client.post(
         f"/operator/sessions/{session.public_id}/invitations/regenerate-all",

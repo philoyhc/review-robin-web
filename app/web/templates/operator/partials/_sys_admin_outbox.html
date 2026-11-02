@@ -8,10 +8,8 @@
 <div id="outbox" class="card">
   <h2 style="margin-top: 0;">Outbox — {{ outbox_session.name }}</h2>
   <p class="muted">
-    Dev-mode email outbox. No real SMTP backend is wired up;
-    invitation and reminder rows are flipped <code>queued → sent</code>
-    synchronously when an operator clicks <em>Send</em>, and a
-    responses-received row stays <code>queued</code>. An invitation's
+    Email outbox. No transport sends email yet, so every row stays
+    <code>queued</code> until one does, whatever an operator clicked. An invitation's
     rendered body includes the raw invitation URL so you can copy it
     into a real client.
   </p>

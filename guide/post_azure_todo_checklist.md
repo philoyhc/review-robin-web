@@ -23,9 +23,13 @@ note, not a task.
 
 **State, 2026-11-01.** The institutional host is provisioned and has
 served Review Robin since 2026-10-31 (the first release with migrations).
-Item 2 can be worked now; items 7–10 wait on the email choices
+Item 2 can be worked now; items 7, 9 and 10 wait on the email choices
 in `guide/email_and_scheduling.md` rather than on the host; items 1, 3,
-4, 5, 6 and 11 are settled and removed (their numbers are not reused).
+4, 5, 6, 8 and 11 are settled and removed (their numbers are not reused).
+Item 8, the honest outbox, closed 2026-11-02 (author: "settle Item 8"):
+every outbox row stays `queued` until a transport sends it, and the
+invitation's `sent` records the operator's send, not a delivery; the
+transport stamps `sent` or `failed` when it lands.
 Item 4, page weight on the wire, closed 2026-11-01: the host now gzips,
 and the lobby went from 338 kB to 89 kB (`docs/performance.md`
 Finding 5).
@@ -181,32 +185,6 @@ out at their set time on the deployed app with no operator page open.
 Both the audit events' times and the outbox rows' times show it, and the
 links in the outbox rows open on the deployed host.
 
-## 8. Stamp outbox rows `queued` until a transport has sent them
-
-**Status:** open, **incomplete work awaiting Azure** (author's ruling,
-2026-10-02, on `guide/archive/findings_2026-10-01_corpus.md` H20).
-
-**What is wrong.** Nothing sends email yet: no caller reaches the
-transport in `app/services/email_send.py`. The send path still writes
-each outbox row `queued` and flips it to `sent` in the same call
-(`app/services/invitations.py`), so `sent` claims a delivery that never
-happened. Invitation status follows it.
-
-**Why it waits here.** The honest status needs the transport that
-makes it true. Segment 14B Part A wires the dispatch helper, and which
-backend it uses depends on what the NUS tenant allows
-(`spec/email_infra_options.md`).
-
-**Do, with the transport.** Leave the row `queued` until the transport
-reports success, then stamp `sent` (or `failed`, with
-`error_message`). Re-check every reader of `sent` — the invitation
-pills, the Workflow card captions, the Responses page — against the
-new timing. `README.md` and `docs/known_limitations.md` describe today's
-behavior until then.
-
-**Done when** a row reads `queued` until its message leaves, `sent`
-only after the transport confirms, and `failed` when it does not.
-
 ## 9. Send the responses-received confirmation
 
 **Status:** open, **incomplete work awaiting Azure** (author's ruling,
@@ -219,6 +197,14 @@ confirmation when a reviewer submits" box is ticked
 queued row (a second submit refreshes it). The row stays `queued`;
 nothing transmits it.
 
+**The same question for invitation and reminder rows** (added
+2026-11-02, with the honest outbox): every one written before the
+transport stays `queued`, including rows whose token a regenerate has
+since rotated (their link is dead) and rows a later send superseded. The
+dispatcher must not send those as they stand: decide whether it sends
+only each invitation's latest row on its current token, or none of the
+backlog. Rows written before 2026-11-02 still read `sent`.
+
 **Do, with the transport.** Decide first what happens to the rows
 queued before the transport existed — send them, drop them, or cut off
 by date — since some confirm submissions made long before. A recall,
@@ -226,7 +212,7 @@ a clear-all or Delete Data leaves its queued row in place too, so
 decide whether those are dropped or re-checked before sending. The
 dispatcher should claim a row (flip it to `sending`) before sending,
 since a resubmit rewrites a row that is still `queued`. Then send queued `responses_received` rows like any other,
-and stamp them per item 8.
+and stamp them `sent` or `failed` as the transport reports.
 
 **Done when** a reviewer who submits on a session set to "Send response
 confirmation" receives the confirmation, and one set to "Don't send
