@@ -186,7 +186,7 @@ A small, backend-agnostic service shaped like `rehydrate_stash` so a
   dev slot's workflow was deleted 2026-11-02) installs `requirements.txt`,
   so the added SDK ships automatically: **no release change is needed for
   the dependency.** Settings are the host's to set.
-- **App Settings** (the host's; listed in `docs/deployment.md`): `BLOB_BACKEND=azure`,
+- **App Settings** (the host's; to be added to `docs/deployment.md`'s table, P0.6): `BLOB_BACKEND=azure`,
   `BLOB_ACCOUNT_URL=https://<acct>.blob.core.windows.net`,
   `BLOB_CONTAINER=<name>`. No connection-string secret when using managed
   identity.

@@ -20,7 +20,9 @@ server holding each application's database.
 **This repository never deploys.** A private repository imports an
 allowlisted snapshot of one `main` commit whose CI is green, and
 releases it: build, then **migrate, then deploy**, so the application
-never runs against a stale schema. No cloud credential, deploy workflow
+never runs against a stale schema. A release is dispatched by hand,
+behind its own approval, and runs on whichever commit it imports; there
+is no staging slot. No cloud credential, deploy workflow
 or institutional identifier lives here, and nothing here can reach the
 deployment (`CONTRIBUTING.md`).
 
@@ -31,7 +33,9 @@ deployment (`CONTRIBUTING.md`).
   parses, and holds the delegated Microsoft Graph token the directory
   features use (`cordware/spec/identity.md`). The application has no
   login code and no password store (`docs/security_posture.md`). Each
-  mount's `/health` is excluded from sign-in.
+  mount's `/health` is meant to be excluded from sign-in, the host's
+  setting. A deep link through sign-in is Easy Auth's redirect, so it is
+  checked on a deployment, not in this repository's tests.
 - **The database:** PostgreSQL 16, reached through `RRW_DATABASE_URL`
   (`docs/database.md`). The release runs `alembic upgrade head` before
   the new code starts.
@@ -42,17 +46,23 @@ deployment (`CONTRIBUTING.md`).
   each stamped with its application (`cordware/logging.py`); the host
   collects them.
 
+**Nothing lives outside the database.** RRW keeps no session or cache
+state in memory or on disk between requests (no Redis, no cache tier, no
+blob store yet), so an instance can restart or a second be added without
+losing anything.
+
 ## Settings
 
 | Setting | Default | Purpose |
 |---|---|---|
-| `APP_ENV` | `local` | Anything but `local` turns on the startup checks (`validate_critical_settings`) and forbids fake auth. |
-| `RRW_DATABASE_URL` | unset | RRW's database. `DATABASE_URL` is the older name, read when this is unset (local runs and CI). |
+| `APP_ENV` | `local` | A deployment sets anything but `local`: that turns on the startup checks (`validate_critical_settings`), forbids fake auth, and logs `super_admin.unconfigured` when no super-admin is listed. |
+| `RRW_DATABASE_URL` | local SQLite file | RRW's database. `DATABASE_URL` is the older name; the environment is read before `.env`, so an exported `DATABASE_URL` beats an `RRW_DATABASE_URL` in `.env` (`spec/settings_inventory.md`). |
 | `CORDWARE_APPS` | every registered app | Which applications the host mounts, comma-separated; empty runs the host alone. |
 | `CORDWARE_PUBLIC_ORIGIN` | unset | The address users reach the host at, when a gateway sends the App Service's own host name (`cordware/spec/host.md`). |
 | `CORDWARE_INSTITUTION_NAME` | unset | The top bar's top line (`docs/header_chrome.md` §6); unset shows none. |
 | `OPERATOR_EMAILS` / `SYS_ADMIN_EMAILS` | empty | First-sign-in seeds for the operator and admin flags. Outside `local`, at least one must be set or RRW refuses to start (`docs/operations_runbook.md`). |
 | `SUPER_ADMIN_EMAILS` | empty | The protected top tier, derived on every request, never stored. |
+| `PARTICIPANT_TOKEN_SALT` | built-in default | The per-deployment salt in every participant token; a deployment should set its own (`spec/settings_inventory.md`). |
 | `OPERATOR_CONTACT_EMAIL` | unset | The contact shown on `/about`. |
 | `LOG_LEVEL` | `INFO` | The root log level (the host's logging). |
 | `SMTP_ENCRYPTION_KEY` | unset | Decrypts SMTP passwords saved before segment 14C Item 1; keep it where one exists. |
