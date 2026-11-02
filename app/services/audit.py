@@ -851,6 +851,8 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     ),
     "sys_admin.role_promoted": EventSchema(frozenset({"changes", "refs"})),
     "sys_admin.role_demoted": EventSchema(frozenset({"changes", "refs"})),
+    # Segment 20D — a system admin set or cleared an operator's Unit.
+    "workspace.user_unit_set": EventSchema(frozenset({"changes", "refs"})),
     # Segment 16B PR 2 — per-session owner management.
     # Session-scoped; carries ``refs.target_user_id`` for the
     # added / removed owner.

@@ -31,6 +31,7 @@ from jinja2 import pass_context
 from starlette.requests import HTTPConnection
 from starlette.responses import RedirectResponse
 
+from app.web.views import top_line
 from cordware.identity import institution_name
 
 
@@ -130,9 +131,11 @@ TEMPLATE_GLOBALS = {
 
 def install(templates: Jinja2Templates) -> Jinja2Templates:
     """Add the URL globals to a ``Jinja2Templates`` environment, and the
-    workspace's institution name, which the shared top bar reads on every
-    page (segment 20D, `docs/header_chrome.md` §6). This is the one hook
-    every RRW environment passes through, so the bar cannot miss it."""
+    two the shared top bar reads on every page: the workspace's
+    institution name and the page's resolved top line (segment 20D,
+    `docs/header_chrome.md` §6). This is the one hook every RRW
+    environment passes through, so the bar cannot miss them."""
     templates.env.globals.update(TEMPLATE_GLOBALS)
     templates.env.globals["institution_name"] = institution_name
+    templates.env.globals["top_line"] = top_line
     return templates

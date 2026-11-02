@@ -226,6 +226,7 @@ def list_accounts_page(
             has_history=bool(has_history),
             category=row_category,
             verified=is_verified(user),
+            unit=user.unit,
         )
         for user, has_history, row_category in page
     ]

@@ -9,15 +9,19 @@
    changes (§1).
 
    Context:
-     - user: the signed-in User, or None (no account menu then).
+     - user: the signed-in User, or None (no account menu then);
+       `bar_user` overrides it.
      - participant_bar: true on participant pages.
      - breadcrumbs: the operator pages' trail, rendered on its own row.
 #}
+{# `bar_user`, when a page passes it, is the viewer's `users` row where
+   `user` is something else (Sign-in details renders the header identity). #}
+{% set user = bar_user if bar_user is defined else user %}
 {% set _participant = participant_bar|default(false) %}
 {% set _operator = user and (user.is_operator or user.is_sys_admin) %}
-{# The top line (§6): the workspace's institution name, empty for none.
-   Rung 5 of 20D resolves an operator's Unit ahead of it. #}
-{% set _top_line = institution_name() %}
+{# The top line (§6): a Unit or the workspace's institution name, empty
+   for none (`app/web/views/_top_line.py` decides which). #}
+{% set _top_line = top_line(user) %}
 <div class="chrome">
   <div class="tb-bar">
     {% if user %}

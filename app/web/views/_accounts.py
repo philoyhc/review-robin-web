@@ -15,6 +15,7 @@ from dataclasses import dataclass, replace
 from urllib.parse import parse_qs, urlencode
 
 from app.services.account_listing import CATEGORIES, SESSION_ROLES
+from app.services.users import UNIT_MAX_LENGTH
 
 __all__ = [
     "ACCOUNT_CATEGORIES",
@@ -240,6 +241,8 @@ _REFUSAL_REASONS: dict[str, str] = {
     ),
     "last_admin": "that would leave the workspace with no sys-admin",
     "sole_owner": "a session {email} owns would be left with no owner",
+    "unit_not_operator": "{email} has no role, so has no unit",
+    "unit_too_long": f"a unit is at most {UNIT_MAX_LENGTH} characters",
 }
 
 

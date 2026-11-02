@@ -74,6 +74,7 @@ def reviewer_dashboard(
             {
                 "user": user,
                 "items": [],
+                "top_line_sessions": [],
                 "notice": views.me_notice(request.query_params.get("notice")),
             },
         )
@@ -288,6 +289,9 @@ def reviewer_dashboard(
         {
             "user": user,
             "items": items,
+            # The top line: one Unit when every listed session shares it
+            # (segment 20D, `app/web/views/_top_line.py`).
+            "top_line_sessions": ordered,
             "notice": views.me_notice(request.query_params.get("notice")),
         },
     )

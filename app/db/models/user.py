@@ -77,6 +77,12 @@ class User(Base, TimestampMixin):
     # reads or writes the column until 18B PR 2 lights it up.
     preferences: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
+    # Segment 20D: the operator's Unit, the top line of the bar on the
+    # sessions they create (docs/header_chrome.md §6). Set only by a
+    # system admin (``users.set_unit``); NULL means the workspace
+    # default, ``CORDWARE_INSTITUTION_NAME``.
+    unit: Mapped[str | None] = mapped_column(String(80), nullable=True)
+
     @property
     def display_label(self) -> str:
         """The canonical "who is this user" label — the display name if
