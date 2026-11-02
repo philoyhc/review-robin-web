@@ -146,6 +146,9 @@ A peer review where every participant both gives and receives feedback is a comm
   - the Extract Data re-import claim needed its condition;
   - a stale "four setup CSVs";
   - the inventory's §10 lock sentence.
+- **Refinements after the build (author's review, 2026-11-02).**
+  - The Reviewees tab's corner lock (`#3492`).
+  - New session's three boxes are shortened to Relationships page / Observers page / Symmetric review, in one row.
 
 ## Blast radius (measured)
 
