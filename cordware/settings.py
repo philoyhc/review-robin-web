@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
@@ -41,6 +41,14 @@ class IdentitySettings(BaseSettings):
     # Folds the fake account into the effective list while fake auth is
     # on, so the localhost user is a super-admin with no list set.
     fake_auth_super_admin: bool = True
+
+    # The hosting institution's name, the top line of every
+    # application's top bar (`docs/header_chrome.md` §6). Set only by the
+    # deployer; empty means no top line. Its real value lives in the
+    # private deployment, never in this repository.
+    institution_name: str = Field(
+        default="", validation_alias="CORDWARE_INSTITUTION_NAME"
+    )
 
     @field_validator("super_admin_emails", mode="before")
     @classmethod
