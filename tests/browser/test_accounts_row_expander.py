@@ -324,6 +324,10 @@ def test_the_unit_group_is_inert_until_wired(page: Page, api: httpx.Client) -> N
     expander = page.locator("#users-row-expander")
     expect(expander.locator("[data-unit-input]")).to_have_attribute("maxlength", "80")
     expect(expander.locator('[data-expander-action="Set unit"]')).to_be_disabled()
+    # Inert means Enter in it submits nothing (Codex on #3508).
+    unit_input = expander.locator("[data-unit-input]")
+    expect(unit_input).to_be_disabled()
+    assert unit_input.get_attribute("form") is None
     # A row with no role holds no Unit to set.
     _tick(page, unused)
     expect(expander.locator("[data-unit-input]")).to_have_count(0)

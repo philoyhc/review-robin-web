@@ -634,9 +634,12 @@
               // `form=` + `name="user_ids"`; a button says only where.
               // Delete ships disabled: the confirm's pairing (base.html)
               // enables it on the tick, and a fresh panel is unticked.
+              // Inert in the scaffold: disabled and in no form, so Enter
+              // in it cannot submit the bulk form through its first
+              // button (Codex on #3508: that could be Revoke).
               if (group[0] === "Unit:") {
                 html += '<input type="text" name="unit" maxlength="80"' +
-                  ' form="users-bulk-form" aria-label="Unit"' +
+                  ' aria-label="Unit" disabled' +
                   ' placeholder="Empty for the default" data-unit-input>';
               }
               group[1].forEach(function (a) {
