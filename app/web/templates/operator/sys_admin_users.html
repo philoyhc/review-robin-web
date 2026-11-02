@@ -414,11 +414,13 @@
           </th>
           <th>Email</th>
           <th>Name</th>
+          <th>Unit</th>
           <th>First sign-in</th>
           <th>Operator</th>
           <th>Admin</th>
           <th>Sessions</th>
         </tr>
+        {% set _unit_default = institution_name() %}
         {% for row in rows %}
           {% set is_self = row.id == user.id %}
           <tr data-user-id="{{ row.id }}"
@@ -445,6 +447,14 @@
             </td>
             <td>{{ account_address(row.verified, row.email) }}</td>
             <td>{{ account_name(row.verified, row.display_name) }}</td>
+            {# 20D rung 4 (scaffold): an operator's Unit, the top line on
+               the sessions they create (`docs/header_chrome.md` §6);
+               unset, the workspace default as a display pill. #}
+            <td data-unit-cell>
+              {%- if row.unit is defined and row.unit %}{{ row.unit }}
+              {%- elif _unit_default %}<span class="pill pill-count" title="The workspace default">{{ _unit_default }}</span>
+              {%- else %}—{% endif -%}
+            </td>
             <td>{{ row.created_at | format_date }}</td>
             <td>
               {% if row.is_operator %}
@@ -580,10 +590,16 @@
               if (!sel.some(hasHistory)) danger.push(["Delete", "destructive"]);
             }
             if (canManageAdmins && allOperators) admin.push(["Promote", "secondary"]);
+            // 20D rung 4 (scaffold): an operator's or admin's Unit. Inert
+            // until rung 5 wires its route.
+            var unit = every(sel, function (r) {
+              return category(r) === "operators" || category(r) === "admins";
+            }) ? [["Set unit", "secondary"]] : [];
             if (canManageAdmins && every(sel, function (r) {
               return category(r) === "admins" && !isSuper(r);
             })) admin.push(["Demote", "secondary"]);
-            return [["Operator:", operator], ["Admin:", admin], ["|", danger]]
+            return [["Operator:", operator], ["Admin:", admin], ["Unit:", unit],
+                    ["|", danger]]
               .filter(function (group) { return group[1].length; });
           }
           function buildPanel(sel) {
@@ -618,8 +634,19 @@
               // `form=` + `name="user_ids"`; a button says only where.
               // Delete ships disabled: the confirm's pairing (base.html)
               // enables it on the tick, and a fresh panel is unticked.
+              if (group[0] === "Unit:") {
+                html += '<input type="text" name="unit" maxlength="80"' +
+                  ' form="users-bulk-form" aria-label="Unit"' +
+                  ' placeholder="Empty for the default" data-unit-input>';
+              }
               group[1].forEach(function (a) {
                 var del = a[0] === "Delete";
+                if (a[0] === "Set unit") {
+                  html += '<button type="button" class="btn ' + a[1] + '"' +
+                    ' data-expander-action="Set unit" disabled' +
+                    ' aria-disabled="true">Set unit</button>';
+                  return;
+                }
                 html += '<button type="submit" class="btn ' + a[1] + '"' +
                   ' form="users-bulk-form" formaction="' + BASE + ROUTES[a[0]] + '"' +
                   ' data-expander-action="' + a[0] + '"' +

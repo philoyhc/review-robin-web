@@ -70,9 +70,9 @@ def test_two_operators_open_the_expander(
     # Grouped as the toolbar is, so each button says which role it changes.
     # Neither owns a session, so Revoke shows and Remove from all
     # sessions doesn't.
-    assert _expander_actions(page) == ["Revoke", "Promote", "Delete"]
+    assert _expander_actions(page) == ["Revoke", "Promote", "Set unit", "Delete"]
     assert expander.locator(".row-expander-group > .muted").all_inner_texts() == [
-        "Operator:", "Admin:", "|",
+        "Operator:", "Admin:", "Unit:", "|",
     ]
     for name in ("Revoke", "Promote"):
         expect(expander.locator(f'[data-expander-action="{name}"]')).to_be_enabled()
@@ -163,7 +163,7 @@ def test_a_narrow_row_wraps_between_groups_not_inside_one(
     _tick(page, first)
     _tick(page, second)
     groups = page.locator("#users-row-expander .row-expander-group")
-    expect(groups).to_have_count(3)
+    expect(groups).to_have_count(4)
     for group in groups.all():
         tops = group.evaluate(
             "g => Array.from(g.children).map(c => Math.round(c.getBoundingClientRect().top + c.getBoundingClientRect().height / 2))"
@@ -193,7 +193,7 @@ def test_a_wrapping_confirm_keeps_its_tick_by_the_first_line(page: Page) -> None
 
 
 def _operator_cell(page: Page, email: str):
-    return page.locator(f'tr[data-user-id]:has(code:text-is("{email}")) td').nth(4)
+    return page.locator(f'tr[data-user-id]:has(code:text-is("{email}")) td').nth(5)
 
 
 def test_revoking_two_operators_is_one_click(page: Page, api: httpx.Client) -> None:
@@ -292,10 +292,12 @@ def test_an_owner_offers_remove_from_all_sessions_not_revoke(
     page.reload()
     _tick(page, first)
     # A co-owner has history, so no Delete.
-    assert _expander_actions(page) == ["Remove from all sessions", "Promote"]
+    assert _expander_actions(page) == [
+        "Remove from all sessions", "Promote", "Set unit",
+    ]
     # With an operator who owns nothing, neither session control fits both.
     _tick(page, second)
-    assert _expander_actions(page) == ["Promote"]
+    assert _expander_actions(page) == ["Promote", "Set unit"]
 
     # Once the first is the session's sole owner, Remove from all
     # sessions can't succeed for them (a batch can't add owners), so it
@@ -311,4 +313,17 @@ def test_an_owner_offers_remove_from_all_sessions_not_revoke(
     assert response.status_code == 303, response.text
     page.goto(filtered)
     _tick(page, first)
-    assert _expander_actions(page) == ["Promote"]
+    assert _expander_actions(page) == ["Promote", "Set unit"]
+
+
+def test_the_unit_group_is_inert_until_wired(page: Page, api: httpx.Client) -> None:
+    """20D rung 4 scaffold: an operator selection offers Unit, its input
+    capped at 80 characters, its button disabled until rung 5."""
+    first, _, unused = _setup(page, api)
+    _tick(page, first)
+    expander = page.locator("#users-row-expander")
+    expect(expander.locator("[data-unit-input]")).to_have_attribute("maxlength", "80")
+    expect(expander.locator('[data-expander-action="Set unit"]')).to_be_disabled()
+    # A row with no role holds no Unit to set.
+    _tick(page, unused)
+    expect(expander.locator("[data-unit-input]")).to_have_count(0)

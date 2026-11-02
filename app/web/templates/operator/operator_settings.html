@@ -119,6 +119,28 @@
     })();
   </script>
   </div>
+  {# Segment 20D rung 4 (scaffold): the operator's Unit, read-only here;
+     only a system admin sets it, on Accounts Management
+     (`docs/header_chrome.md` §6). Unset, the workspace default shows as
+     a display pill. Rung 5 reads the stored value. #}
+  <div class="bottom-left">
+  <div class="card" id="unit-settings">
+    <h2>Unit</h2>
+    {% set _default = institution_name() %}
+    <p data-unit-line>
+      Your unit:
+      {% if user.unit is defined and user.unit %}<strong>{{ user.unit }}</strong>
+      {% elif _default %}<span class="pill pill-count" title="The workspace default">{{ _default }}</span>
+      {% else %}<span class="muted">none</span>{% endif %}
+    </p>
+    <p class="muted">
+      It is the top line of the bar on the sessions you create, for you,
+      your co-owners and their participants. A system admin sets it on
+      Accounts Management; when none is set, the workspace default
+      shows.
+    </p>
+  </div>
+  </div>
   </div>
 
   {# Wave 5 PR 5.1 — the operator-library cards row retired
