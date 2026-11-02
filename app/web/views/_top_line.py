@@ -10,6 +10,11 @@ Read from the page's template context, so no route has to pass it:
 - any other page: the viewer's own Unit if they are an operator, else the
   default.
 
+The keys are the ones every session page already passes (``session``, the
+`ReviewSession`); a page that names it otherwise falls through to the
+viewer's Unit, which is why `tests/integration/test_user_unit.py` checks a
+session page of each kind.
+
 The default is ``CORDWARE_INSTITUTION_NAME``; empty means no top line.
 The creator's Unit is read as the page renders, so a change shows on
 their existing sessions at once.
@@ -60,11 +65,12 @@ def resolve_top_line(
 
 
 @pass_context
-def top_line(context: Context) -> str:
-    """The template global the top bar calls."""
+def top_line(context: Context, viewer: Any = None) -> str:
+    """The template global the top bar calls, with the viewer it shows
+    (``user``, or a page's ``bar_user``)."""
     return resolve_top_line(
         default=institution_name(),
         review_session=context.get("session"),
         dashboard_sessions=context.get("top_line_sessions"),
-        viewer=context.get("user"),
+        viewer=viewer,
     )

@@ -451,7 +451,10 @@
                create (`docs/header_chrome.md` §6); unset, the workspace
                default as a display pill. #}
             <td data-unit-cell>
-              {%- if row.unit %}{{ row.unit }}
+              {#- Blank for an account with no role: it shows no top line
+                 of its own (a kept Unit stays unused off its sessions). #}
+              {%- if not (row.is_operator or row.is_sys_admin) %}
+              {%- elif row.unit %}{{ row.unit }}
               {%- elif _unit_default %}<span class="pill pill-count" title="The workspace default">{{ _unit_default }}</span>
               {%- else %}—{% endif -%}
             </td>
@@ -639,7 +642,8 @@
               // Set unit (the keydown handler below), never the form's
               // first button, which could be Revoke (Codex on #3508).
               if (group[0] === "Unit:") {
-                html += '<input type="text" name="unit" maxlength="80"' +
+                html += '<input type="text" name="unit" maxlength="' +
+                  {{ unit_max_length }} + '"' +
                   ' form="users-bulk-form" aria-label="Unit"' +
                   ' placeholder="Empty for the default" data-unit-input>';
               }

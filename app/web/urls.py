@@ -31,7 +31,7 @@ from jinja2 import pass_context
 from starlette.requests import HTTPConnection
 from starlette.responses import RedirectResponse
 
-from app.web.views._top_line import top_line
+from app.web.views import top_line
 from cordware.identity import institution_name
 
 

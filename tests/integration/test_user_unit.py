@@ -187,7 +187,10 @@ def test_an_operators_other_pages_show_their_own_unit(
 ) -> None:
     assert _top(client.get("/operator/sessions").text) == DEFAULT
     _set_unit(db, "alice@example.edu", "Department of Example")
-    for path in ("/operator/sessions", "/operator/settings", "/about", "/guide"):
+    for path in (
+        "/operator/sessions", "/operator/settings", "/about", "/guide",
+        "/auth/me/debug",
+    ):
         assert _top(client.get(path).text) == "Department of Example", path
 
 
@@ -255,3 +258,30 @@ def test_your_reviews_shows_the_default_when_sessions_differ(
         )
     )
     assert _top(pat.get("/me").text) == DEFAULT
+
+
+def test_sign_in_details_names_the_viewer_in_the_bar(client: TestClient) -> None:
+    """The page renders the header identity; the bar shows the row
+    (cold read of 20D): name, account label and Unit."""
+    client.get("/operator/sessions")
+    body = client.get("/auth/me/debug").text
+    assert 'aria-label="Account: Alice Example"' in body
+    assert "<strong>Alice Example</strong>" in body
+
+
+def test_an_account_with_no_role_has_a_blank_unit_cell(
+    client: TestClient, db: Session, monkeypatch
+) -> None:
+    """Plan Semantics: non-operators' cells are blank, even with a Unit
+    kept from when they were one."""
+    monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
+    client.get("/operator/sessions")
+    former = User(email="former@example.edu", unit="Old Dept")
+    db.add(former)
+    db.commit()
+    body = client.get(
+        "/operator/sys-admin/users?show=no_role&show=unused&q=former"
+    ).text
+    assert "former@example.edu" in body
+    assert "<td data-unit-cell></td>" in body
+    assert "Old Dept" not in body

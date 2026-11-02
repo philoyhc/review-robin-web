@@ -344,6 +344,7 @@ def sys_admin_users(
             "return_to_url": back.url,
             "return_to_label": back.label,
             "rows": page.rows,
+            "unit_max_length": users_service.UNIT_MAX_LENGTH,
             "account_view": view,
             # The whole workspace, for the empty-state wording: no
             # accounts at all reads differently from none matching.

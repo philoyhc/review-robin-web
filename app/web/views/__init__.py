@@ -42,6 +42,7 @@ from ._refused_write import (
 
 # Participant chrome, masked invite address and /me notices (M8, M9,
 # M11).
+from ._top_line import top_line
 from ._participant_chrome import (
     masked_email,
     me_notice,
@@ -306,6 +307,7 @@ from ._audit_log import (
 )
 
 __all__ = [
+    "top_line",
     "REFUSED_CLOSED",
     "REFUSED_NO_ASSIGNMENTS",
     "REFUSED_NOT_OPEN",

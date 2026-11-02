@@ -82,6 +82,9 @@ def me_debug(
         "me_debug.html",
         {
             "user": user,
+            # The top bar shows the viewer's row, which carries the name,
+            # the roles and the Unit the header identity lacks (20D).
+            "bar_user": viewer() or user,
             "claims": extract_claims(request),
             "return_to_url": return_to.url,
             "return_to_label": return_to.label,
