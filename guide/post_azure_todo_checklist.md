@@ -24,7 +24,8 @@ note, not a task.
 **State, 2026-11-01.** The institutional host is provisioned and has
 served Review Robin since 2026-10-31 (the first release with migrations).
 Items 7, 9 and 10 wait on the email choices in
-`guide/email_and_scheduling.md` rather than on the host; items 1, 2, 3,
+`guide/email_and_scheduling.md` rather than on the host; item 12, the dev
+slot's leftover deploy credentials, is the author's to remove; items 1, 2, 3,
 4, 5, 6, 8 and 11 are settled and removed (their numbers are not reused).
 Item 2, the Azure documents, closed 2026-11-02 (author: "move as much of
 it out of rrw repo as possible, keeping one document describing a general
@@ -199,3 +200,34 @@ tenant grants, and make its docstring and the spec say the same thing.
 
 **Done when** the docstring and `spec/email_infra_options.md` name the
 same permission, and that permission is the one the tenant granted.
+
+## 12. Remove the dev slot's deploy credentials
+
+**Status:** open, the author's (added 2026-11-02, when item 2 deleted the
+dev slot's deploy workflow).
+
+**What is left.** The deleted `main_app-review-robin-web-dev.yml` signed
+in to the personal Azure subscription by OIDC and migrated with a stored
+database URL. Its workflow is gone, but what it read is not, and no
+workflow in this repository reads any of it now (`.github/workflows/`
+uses no secret or variable):
+
+- **GitHub, this repository's Actions secrets** (Settings → Secrets and
+  variables → Actions):
+  - `AZUREAPPSERVICE_CLIENTID_BE4891FDE16B4522926171BF7D1D779F`
+  - `AZUREAPPSERVICE_TENANTID_3B9A113C68284F578982060D01073DFE`
+  - `AZUREAPPSERVICE_SUBSCRIPTIONID_4290DEED4C5F409AB737C5CF65DC8A20`
+  - `DATABASE_URL`, the personal slot's Postgres connection string, a
+    password included.
+- **Azure, the personal subscription:** the federated credential on the
+  app registration (or managed identity) whose client ID the first secret
+  holds, trusting this repository's `main`. Remove that credential; the
+  registration itself can stay with the dormant slot or go with it.
+- **Optionally, the personal slot's database password:** rotate it, or
+  retire the slot's Postgres server, since the value sat in a GitHub
+  secret. The slot stays dormant, not retired (author, 2026-10-24), so
+  this is the author's call.
+
+**Done when** this repository's Actions secrets list is empty (or holds
+none of the four), the federated credential is gone from the personal
+subscription, and a line here records the date.
