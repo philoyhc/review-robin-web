@@ -291,6 +291,14 @@ reads it from `app.config.settings.database_url`. Make sure your `.env`
 either uses the default SQLite URL or sets `DATABASE_URL` to something the
 driver can reach.
 
+### `no such table: users` (every page answers 500)
+The server opened a SQLite file with no schema in it: either migrations were
+never applied, or the server was started from a folder other than the repo
+root. The default `sqlite:///./review_robin_web.db` is relative to the
+working directory, so starting elsewhere makes a new, empty file. Start from
+the repo root and run `alembic upgrade head`
+([§10 I](#i-every-time-one-block-safe-to-re-run) does both).
+
 ### Pre-existing `review_robin_web.db` after pulling new migrations
 If you pulled new migrations and `alembic upgrade head` reports schema
 mismatches, the simplest fix in development is `rm review_robin_web.db &&
@@ -539,6 +547,42 @@ uvicorn cordware.main:app --reload  # then open http://127.0.0.1:8000/reviewrobi
 Expect `{"status": "ok"}` at `/reviewrobin/health`. That's the whole loop; from here the
 rest of this guide ([§5](#5-running-the-test-suite) onward) applies as
 written.
+
+### I. Every time: one block, safe to re-run
+
+After the first setup, and after every pull, this block brings the checkout
+up to date and starts the app. Each step skips what is already done, so
+re-running it costs only the install check. It calls the venv's own Python,
+so it needs no `Activate.ps1`.
+
+```powershell
+# Run from the repository root: the SQLite path (./review_robin_web.db) is relative
+Set-Location C:\GitHub\review-robin-web
+
+# Create venv if missing
+if (-not (Test-Path .venv)) { py -3.12 -m venv .venv }
+
+# Install deps into the venv
+.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
+
+# Create .env only if it doesn't exist (so you don't clobber real secrets)
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+
+# OPTIONAL: wipe the local DB first (deletes every local session).
+# Don't error if it's already gone. Uncomment to use.
+# Remove-Item review_robin_web.db -ErrorAction SilentlyContinue
+
+# Migrate: creates review_robin_web.db on the first run, applies new migrations after a pull
+.\.venv\Scripts\python.exe -m alembic upgrade head
+
+# Run
+.\.venv\Scripts\python.exe -m uvicorn cordware.main:app --reload
+# then open http://127.0.0.1:8000/reviewrobin/
+```
+
+Leave the wipe commented out unless you want a clean database. An upgrade
+that fails on an old local file is the usual reason
+([§8](#8-common-issues), "Pre-existing `review_robin_web.db`").
 
 ### Windows-specific gotchas
 
