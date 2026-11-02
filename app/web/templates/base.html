@@ -4526,6 +4526,11 @@
         color: var(--selected-fg);
       }
       .theme-toggle-opt:hover:not([aria-pressed="true"]) { color: var(--text-body); }
+      /* As Residential's: a 44 px target on a phone or a touch screen
+         (docs/header_chrome.md §7). */
+      @media (max-width: 639px), (pointer: coarse) {
+        .theme-toggle-opt { min-height: 44px; }
+      }
       /* Status-symbol indicators on the reviewer surface — replaces
          the inline-styled ✓ / ⚠ glyphs per spec/ui_elements.md §9. */
       body.ui-v2 .status-icon-complete {
