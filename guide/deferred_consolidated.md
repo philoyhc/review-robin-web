@@ -1330,6 +1330,28 @@ instead on 2026-11-01.)
 
 ---
 
+### Other email backends: Azure Communication Services, a third-party service
+
+*Filed 2026-11-02, when segment 14B was retired.* 14B's Parts G and H
+(`guide/archive/segment_14B_email_infrastructure.md`) would add an
+`EmailTransport` for Azure Communication Services or a transactional
+provider, each needing per-deployment sender defaults (its Part D). Not
+pursued: the author ruled that mail goes out as the operator over
+delegated Graph (`guide/segment_14F_manual_email.md`), with a dedicated
+mailbox over Graph as the only fallback (14G). **Lift trigger:** a
+deployment outside Microsoft 365, or a tenant that refuses Graph sending.
+
+### Reviewee and observer notifications; magic links (W20 / W21)
+
+*Filed 2026-11-02, from 14B's appendix.* Results-ready notices and
+acknowledgement nudges to reviewees and observers (W20), and magic-link
+landing for participants without an institutional account (W21); the
+detail is in the archived 14B appendix. Both need a send path:
+notifications by hand ride 14F, nudges on a clock wait for 14G, and
+magic links stay off while every participant signs in with Entra.
+**Lift trigger:** 14F shipped and an operator asking to notify
+reviewees, or an external participant who cannot sign in.
+
 ## Part C — Future possibilities (off-roadmap)
 
 Aspirational directions deliberately *not* on the roadmap. Each entry states the idea, why it is off the roadmap, what is being done instead, and what evidence would move it back on.

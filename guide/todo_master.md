@@ -34,34 +34,37 @@ Two sibling registers hold the open work that is not queued here:
 
 ### Queued segments
 
-14B and 20 are **gated on the institutional Azure deployment
-concluding** (decision 2026-09-05) and independent of each other. The
+20 is **gated on the institutional Azure deployment concluding**
+(decision 2026-09-05); 14G is gated on IT. 14B was retired 2026-11-02
+for 14E, 14F and 14G. The
 host is provisioned and serving Review Robin since 2026-10-31; whether
 the deployment has *concluded* (verified, the personal web app retired)
 is the author's call.
 
-1. **14B — Email infrastructure (send activation + backends).** All
-   email *wiring*. Parts A → E are sequential: SMTP send activation →
-   `correlation_id` strategy → bulk-send queue + worker →
-   per-deployment from-identity defaults → generalised Outbox
-   diagnostic surface. Parts F → H are independent backend swaps
-   (Microsoft Graph, Azure Communication Services, a third-party
-   transactional service), shipped as a deployment needs them. The host
-   has served Review Robin since 2026-10-31; what 14B now waits on is a
-   sending identity and the author's three choices in
-   `guide/email_and_scheduling.md`. Meanwhile
-   invitations are covered by the operator's own email (access is
-   roster + sign-in), and the real gap is targeted reminders.
-   **Plan:** `guide/segment_14B_email_infrastructure.md`.
-   **Functional spec:** `spec/email_infra_options.md`.
-
-2. **14C — Email-related UI** (not gated). The operator-facing email
+1. **14C — Email-related UI** (not gated). The operator-facing email
    controls. Item 1 (the SMTP cards retired) is done; Item 2 adds a
    half-width Email settings card of toggles (scaffold first, wired as
-   14B's send path reads them).
+   14F's send path reads them).
    **Plan:** `guide/segment_14C_email_related_ui.md`.
 
-3. **19Z — Append to a roster** (not gated on Azure). The four roster
+2. **14E — A clock for timed actions (no mail)** (not gated). An in-app
+   loop fires scheduled activation and the deadline close on time, with
+   no page view and nothing from IT.
+   **Plan:** `guide/segment_14E_clock.md`.
+
+3. **14F — Email by hand, as the operator** (not gated: the tenant
+   already grants delegated `Mail.Send`). Sends on the operator's click
+   through `/me/sendMail`; disables the auto-send fields and adds
+   due-action prompts while no mail goes on a clock.
+   **Plan:** `guide/segment_14F_manual_email.md`.
+
+4. **14G — Scheduled email** (gated on IT: offline sending as the
+   operator, else a dedicated mailbox). Sends due invitations, reminders
+   and confirmations from 14E's clock, and switches 14F's auto-send
+   fields back on. Planned when IT answers; see
+   `guide/no_scheduling_fallback.md`.
+
+5. **19Z — Append to a roster** (not gated on Azure). The four roster
    pages' Upload cards gain an append tick beside the replace tick
    (mutually exclusive, neither ticked by default), so a late batch adds
    rows without deleting assignments or responses. Append shipped
@@ -70,7 +73,7 @@ is the author's call.
    there, refuses the file (author, 2026-10-31).
    **Plan:** `guide/segment_19Z_roster_append.md`.
 
-4. **20C — Refinements** (not gated). Small follow-ups from the author's
+6. **20C — Refinements** (not gated). Small follow-ups from the author's
    browser runs, one item each. Items 1 (verified names as pills on
    the New session Owners card), 2 (checkboxes before their labels) and
    3 (verified names as the lobby's display pill) are done; the segment
@@ -149,11 +152,8 @@ the PR body unless it says otherwise.
 
 ### Sequencing notes
 
-- **11C Part 2 → 14B Part A** is the email pipeline: the
-  `email_outbox` schema landed inert in 11C Part 2 (migration
-  `c4f6a8b0d2e5`), and 14B Part A is its first writer.
-- **Within 14B**, Parts B–E build on Part A in order; Parts F–H are
-  independent of each other. Scheduled reminders (18G Part 3) already
-  fire into the dev outbox and go out once Part A lights the transport.
+- **The email pipeline:** the `email_outbox` schema landed inert in 11C
+  Part 2 (migration `c4f6a8b0d2e5`); 14F is its first sender, and 14G
+  adds mail on 14E's clock. 14E and 14F are independent of each other.
 - **20** is independent of the email pipeline but gated on the
   deployment, so it does not interleave with other work.

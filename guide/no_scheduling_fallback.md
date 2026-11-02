@@ -1,90 +1,58 @@
-# If scheduling stays infeasible: the manual fallback
+# While mail cannot go on a clock: the manual fallback
 
-**Opened 2026-11-02, at the author's request.** An action plan for the
-case where Review Robin never gets a clock that fires on its own, or never
-gets a way to send mail with nobody signed in. In that case every timed
-step is the operator's to take: activate, send invitations and reminders,
-close. Whether that case arises is decided by two requests to IT (offline
-sending as the operator, else a dedicated mailbox; kept privately with the
-deployment) and by the clock in `guide/post_azure_todo_checklist.md`
-item 7; `guide/email_and_scheduling.md` holds the choices. This note
-becomes a segment plan if it is taken up, and leaves when either path
-ships.
+**Opened 2026-11-02, at the author's request; revised the same day**
+(author: "just because you can't do scheduled emails, it doesn't follow
+you can't do scheduled actions"). A clock and a way to send with nobody
+signed in are **independent**:
 
-## Which times mislead, and which do not
+- **The clock is RRW's to build.** The host is Always On with one process,
+  so an in-app loop runs timed actions without IT: segment 14E.
+- **Mail with nobody signed in needs IT**: offline sending as the operator,
+  else a dedicated mailbox (two requests kept privately with the
+  deployment). If granted, segment 14G.
 
-Not every date field needs a clock. Some are **checked when someone
-arrives**, so they hold whatever runs in the background; others must
-**push** something at a time, and only happen when an operator next opens
-a page (`spec/lifecycle.md` §8).
+So "everything manual" narrows to the steps that send mail. This note says
+what changes while that is so; segment 14F builds it. It leaves when 14G
+ships, or when 14F has absorbed it.
 
-| Field | Kind | Without a clock |
+## Which timed steps hold
+
+| Step | Field | With 14E's clock, no mail on a clock |
 |---|---|---|
-| **End** (`deadline`) | Checked on arrival | **True.** A reviewer's save or submit after it is refused and the instruments close (`observe_deadline`, §4). Keep. |
-| **Release-from / release-until** (`responses_release_at` / `_until`) | Checked on arrival | **True.** The reviewee and observer pages test the window when they load. Keep. |
-| **Start** (`scheduled_activate_at`) | Pushes a state change | **Late.** The session opens on the first operator page view after it; a reviewer arriving earlier finds it not yet open. |
-| **Auto-send invites** (`invite_offsets`) | Pushes mail | **Late, or never.** Fires on an owner's page view, and sends only once a transport exists. |
-| **Auto-send reminders** (`reminder_offsets`) | Pushes mail | **Late, or never**, as invites. |
-| Auto-archive, auto-delete after archive | Push | Not built (`guide/deferred_consolidated.md`); nothing to change. |
+| Start (activation) | `scheduled_activate_at` | **On time**: a state change, no mail (14E) |
+| End (deadline close) | `deadline` | **On time**: late saves are refused on arrival already; 14E also closes the instruments at End |
+| Release-from / release-until | `responses_release_at` / `_until` | **Holds**: checked when a reviewee or observer loads the page |
+| Auto-archive, auto-delete after archive | not built | Would run on 14E's clock when built |
+| Auto-send invites | `invite_offsets` | **Manual**: needs a send path on a clock |
+| Auto-send reminders | `reminder_offsets` | **Manual**, as invites |
+| Responses-received confirmations | queued on submit | **Manual**: sent by an operator's action |
 
-So the fallback touches **three** fields, not every time box.
+## What changes while mail is manual (14F)
 
-## Recommendation
-
-1. **Make Start dependable without a clock.** Activation sends no mail, so
-   it needs no token: fire the scheduled activation on *any* request that
-   reaches the session, a reviewer's invite link or `/me` included, not
-   only an operator's page view. Then Start is "checked on arrival" like
-   End, and stays a live field. Small and in RRW's hands; worth doing
-   whatever IT answers.
-2. **Turn the two auto-send fields off, visibly, behind one deployment
-   setting** rather than deleting them. `RRW_SCHEDULED_SEND=off` (proposed
-   name; default off until a transport and a clock exist):
-   - the invite and reminder offset fields render disabled, with one line:
-     "Scheduled sending isn't available on this deployment; send from
-     Invitations when it's time";
-   - Quick Setup and the Settings CSV import keep reading the columns but
-     say the values are inert, so a file from another deployment
-     round-trips without loss;
-   - the Workflow card's auto-send caption drops its "System will dispatch
-     automatically" promise (it is also wrong today: checklist item 7).
-
-   Greying out beats removing: the values survive, nothing migrates, and
-   switching the setting on later restores them. It beats leaving them
-   live: an operator who sets a reminder for Friday 09:00 believes it
-   goes out.
-3. **Replace the promise with a prompt.** Where the schedule would have
-   acted, the operator pages say what is due:
-   - **Session Home / Workflow card:** "Reminders due: 12 reviewers have
-     not submitted, 2 days before End" with the Send reminders button;
-     "Start has passed" with Activate, on a session that has not opened
-     (should step 1 not ship).
-   - **The lobby:** a small "action due" marker on sessions with a due
-     step, so a busy operator sees them without opening each.
-   These read the same offsets the scheduler would have used, so an
-   operator's plan still drives the nudges.
-4. **Close stays manual, and that is fine.** End already refuses late
-   saves on arrival; Close session is the operator's tidy-up, as now.
-5. **Say so in the Guide and the reviewer-facing copy.** One Guide
-   section, "Running a session by hand": activate, send, remind, close,
-   release, with the order and the buttons. Reviewer invitations keep the
-   End date, which stays true.
-
-## Order, if taken up
-
-1. Start fires on any arrival (code + tests; `spec/lifecycle.md` §8.3).
-2. The setting and the disabled auto-send fields, scaffold-first: the
-   copy and the greyed fields, then the import and caption behavior.
-3. The due-action prompts on Session Home and the lobby.
-4. The Guide section and the spec sweep (`spec/lifecycle.md` §8,
-   `spec/settings_inventory.md`, `spec/workflow_card.md`).
+1. **The two auto-send fields render disabled** behind
+   `RRW_SCHEDULED_SEND=off`, with one line: "Scheduled sending isn't
+   available on this deployment; send from Invitations when it's time".
+   Their values are kept and the Settings CSV round-trips, so switching
+   the setting on with 14G restores them. Every other date field stays
+   live: none of them misleads once 14E ships.
+2. **The Workflow card drops "System will dispatch automatically"**, which
+   is also wrong today (checklist item 7).
+3. **Due-action prompts replace the promise.** Session Home says what is
+   due ("Reminders due: 12 reviewers have not submitted, 2 days before
+   End") beside its button; the lobby marks sessions with an action due.
+   They read the same offsets the operator set, so the plan still drives
+   the nudges.
+4. **Confirmations** wait for an operator's **Send queued confirmations**,
+   under the backlog rule in checklist item 9.
+5. **The Guide** gains "Running a session by hand": what is automatic
+   (Start, End, the release window) and what is the operator's (send,
+   remind, confirm, close, release).
 
 ## Open questions
 
-- **Default of the setting before IT answers.** Off is honest today (no
-  transport); the question is whether to flip it on when request 6 lands
-  but before the clock exists. Author.
-- **Do due-action prompts also go by email to the owner?** Not without a
-  transport; revisit with segment 14B.
-- **Per-deployment or per-session?** Proposed per-deployment: the
-  limitation is the host's, not the session's.
+- **When to switch the setting on:** with 14G only, or as soon as IT
+  grants offline sending (request 6) and 14G's first rung lands. Author.
+- **Do due-action prompts also go to the owner by email?** A manual send
+  to oneself adds little; proposed no. Author.
+- **Per deployment or per session?** Proposed per deployment: the
+  limitation is the host's.

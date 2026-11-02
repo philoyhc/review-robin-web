@@ -12,7 +12,7 @@ Where the rest of the contract lives: `spec/settings_inventory.md` §3
 inventories the stored keys; `spec/rrw_functional_spec.md` §11 states
 the invitation-and-email subsystem in user terms; `spec/operations_pages.md`
 owns the Invitations drill-in previews that render these templates;
-`spec/email_infra_options.md` and `guide/segment_14B_email_infrastructure.md`
+`spec/email_infra_options.md` and `guide/segment_14F_manual_email.md`
 own the dispatch leg. The design record is
 `guide/archive/segment_11E_email_template_editor.md`.
 
@@ -365,7 +365,7 @@ types are registered in `EVENT_SCHEMAS` (`spec/architecture.md`).
   buttons (#63–#67).
 - `spec/csv_contracts.md`, `spec/roundtrip_coverage.md` §"Coverage matrix — configuration" — the
   Settings-CSV carrier.
-- `spec/email_infra_options.md`, `guide/segment_14B_email_infrastructure.md`
+- `spec/email_infra_options.md`, `guide/segment_14F_manual_email.md`
   — the dispatch leg this editor feeds.
 - `guide/archive/segment_11E_email_template_editor.md` — design
   record and PR ladder.
