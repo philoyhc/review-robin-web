@@ -37,7 +37,7 @@ from ._shared import Unresolvable, _git
 # Until 2026-10-30 they did not match at all: Residential's 1A closed by
 # hand, because every bullet of its manifest read as naming no path.
 # `APP_DIRS` mirrors `tools/ci_lanes.py`'s, which a test holds it to.
-APP_DIRS = ("residentialapps", "utilityapps")
+APP_DIRS = ("applydesk", "residentialapps", "utilityapps")
 APP_PREFIX = "(?:(?:" + "|".join(APP_DIRS) + ")/)?"
 # The host's own `cordware/spec/` is a spec folder too (`ci_lanes.py`'s
 # prose folders), dropped the same way until 2026-10-30: 21A–21D's and
