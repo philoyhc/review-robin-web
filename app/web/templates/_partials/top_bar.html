@@ -15,7 +15,9 @@
 #}
 {% set _participant = participant_bar|default(false) %}
 {% set _operator = user and (user.is_operator or user.is_sys_admin) %}
-{% set _top_line = "" %}
+{# The top line (§6): the workspace's institution name, empty for none.
+   Rung 5 of 20D resolves an operator's Unit ahead of it. #}
+{% set _top_line = institution_name() %}
 <div class="chrome">
   <div class="tb-bar">
     {% if user %}

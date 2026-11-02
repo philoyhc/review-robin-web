@@ -17,8 +17,8 @@ users and permissions; nothing here decides what anyone may do.
 - `current_identity(request, settings=None)`: the same resolution, None
   instead of a 401, for a page that shows who is signed in.
 - `fake_auth()`, `app_env()`, `is_local()`, `is_super_admin_email()`,
-  `super_admin_configured()`, `super_admin_emails()`: host-level reads,
-  valid outside a request.
+  `super_admin_configured()`, `super_admin_emails()`,
+  `institution_name()`: host-level reads, valid outside a request.
 """
 
 from __future__ import annotations
@@ -101,6 +101,13 @@ def app_env(settings: IdentitySettings | None = None) -> str:
 
 def is_local(settings: IdentitySettings | None = None) -> bool:
     return app_env(settings) == "local"
+
+
+def institution_name(settings: IdentitySettings | None = None) -> str:
+    """`CORDWARE_INSTITUTION_NAME`, trimmed: the workspace default for
+    the top bar's top line (`docs/header_chrome.md` §6). Empty means no
+    top line."""
+    return _settings(settings).institution_name.strip()
 
 
 def _normalize_email(email: str) -> str:

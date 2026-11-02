@@ -660,3 +660,15 @@ def test_a_malformed_principal_gives_no_tenant_upn_or_mail() -> None:
 def test_a_blank_fake_tenant_is_no_tenant() -> None:
     user = resolve_identity(_request(), IdentitySettings(allow_fake_auth=True, fake_auth_tenant_id="  "))
     assert user.tenant_id is None
+
+
+def test_the_institution_name_reads_cordwares_own_variable(monkeypatch) -> None:
+    """`CORDWARE_INSTITUTION_NAME`, trimmed; unset is empty, meaning no top
+    line (`docs/header_chrome.md` §6)."""
+    monkeypatch.delenv("CORDWARE_INSTITUTION_NAME", raising=False)
+    assert identity_module.institution_name(IdentitySettings(_env_file=None)) == ""
+    monkeypatch.setenv("CORDWARE_INSTITUTION_NAME", "  Example University ")
+    assert (
+        identity_module.institution_name(IdentitySettings(_env_file=None))
+        == "Example University"
+    )
