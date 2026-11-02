@@ -16,8 +16,7 @@ sufficient for unit tests and local development.
 is enforced by the CI job at `.github/workflows/ci-postgres.yml` (every
 PR that changes more than prose, and every push to `main` — runs Alembic
 round-trip *and* the full pytest suite against Postgres)
-and, when the dev slot is live, by the migration-on-deploy step in
-`.github/workflows/main_app-review-robin-web-dev.yml` (every deploy).
+and by the release's migrate-before-deploy step (`docs/deployment.md`).
 
 If you do need a local Postgres for a Postgres-only investigation, install
 any local Postgres 16 you prefer (Postgres.app, Homebrew, native package,
@@ -141,11 +140,10 @@ teardown, so tests do not pollute each other.
 - **Local Postgres for development** — deferred (see §3.5 of
   `guide/archive/segment_05A.md`). SQLite is the local default; install your own
   Postgres only when a Postgres-only bug demands it.
-- **Azure Database for PostgreSQL Flexible Server** — provisioned in
-  Segment 5. When the dev slot is live, the dev App Service runs
-  migrations against it on every deploy via the `migrate` job in
-  `.github/workflows/main_app-review-robin-web-dev.yml`; that workflow
-  has been disabled since 2026-06-03 (`docs/deployment_dev.md`).
+- **Azure Database for PostgreSQL Flexible Server** — the host's,
+  migrated by each release before its code starts (`docs/deployment.md`).
+  The dormant dev slot's server and deploy workflow (deleted 2026-11-02)
+  are recorded with the deployment.
 - **Postgres-against-Docker CI** — `ci-postgres.yml` applies and
   round-trips migrations *and* runs the full pytest suite against a
   `postgres:16` service container on every PR that changes more than

@@ -1130,7 +1130,7 @@ answers.
   to `…/{roster}/import/dismiss`; that route deletes the hold and lands
   on `?unlocked=1#upload-csv`.
 - **Scope.** A hold belongs to one operator and one session and lapses
-  after an hour (`docs/backup_restore.md` § *Import files*). A token
+  after an hour (`docs/operations_runbook.md` § *Import files*). A token
   that names none reads as lapsed: "The file held from your last upload
   has expired. Choose it again."
 

@@ -394,12 +394,10 @@ What this means for the trust boundary:
 MSAL / OpenID Connect itself — it only reads the headers Easy Auth
 injects.*
 
-- **Dev Easy Auth config** (`app-review-robin-web-dev`): authentication
-  enabled, "Require authentication", unauthenticated → HTTP 302 to
-  Microsoft, token store enabled, `/health` set in
-  `globalValidation.excludedPaths` of the `authsettingsV2` resource;
-  `/reviewrobin/health` joins it when the dormant slot resumes
-  (`docs/deployment_dev.md` "Resuming the dev slot").
+- **Easy Auth config the host needs** (`docs/deployment.md`):
+  authentication enabled, "Require authentication", unauthenticated →
+  HTTP 302 to Microsoft, token store enabled, and each mount's `/health`
+  in `globalValidation.excludedPaths` of the `authsettingsV2` resource.
 - **Headers consumed** by `cordware/identity.py`:
   `X-MS-CLIENT-PRINCIPAL-NAME` (UPN/email),
   `X-MS-CLIENT-PRINCIPAL-ID` (Entra object id),
@@ -523,8 +521,8 @@ Defence against that footgun (segment 21C, enforced by the host):
   flags are honoured only for an identity marked `is_fake`, which
   Cordware sets only on the fake user, so they are inert in a
   deployed environment regardless.
-- `docs/deployment_dev.md` states it must not be enabled in App
-  Service config, and sets `APP_ENV` to a non-`local` value.
+- `docs/deployment.md` says it must stay off in a deployment, which
+  sets `APP_ENV` to a non-`local` value.
 
 Identity is interpreted by the host, not RRW: `cordware/identity.py`
 is the one Easy Auth parser, and `app/auth/identity.py` re-exports it
@@ -535,7 +533,8 @@ is the one Easy Auth parser, and `app/auth/identity.py` re-exports it
 The following are out of scope for the Segment 14A in-app
 hardening ladder — they need the Azure portal or a later segment.
 Tracked in `guide/deferred_consolidated.md`. The infrastructure rows
-describe the dormant dev slot (`docs/deployment_dev.md`). The NUS
+describe the dormant dev slot, whose notes are archived with the
+deployment. The NUS
 environment already has private endpoints for the Web App and Key Vault,
 a privately provisioned Postgres (no public access), VNet integration,
 an in-VNet runner, an Application Insights resource, and its database
@@ -546,7 +545,7 @@ yet (recorded privately with the deployment).
 |---|---|
 | Key Vault references for App Settings secrets | Deferred — secrets live as plain App Settings / GitHub secrets today |
 | VNet integration / private endpoints for Postgres | Deferred — public access + firewall allow-list today |
-| Staging slot + manual-approval production deploy gate | Not a slot: production is released privately, with its own approval gate (`docs/deployment_dev.md` "Production deployment") |
+| Staging slot + manual-approval production deploy gate | Not a slot: production is released privately, with its own approval gate (`docs/deployment.md`) |
 | Application Insights resource | Deferred — logs are already structured/JSON and ingestible once it exists (PR 1) |
 | Postgres-specific column types / `ENUM` / `JSONB` GIN indexes | Deferred infrastructure (`guide/deferred_consolidated.md`) |
 | CSV formula injection | Deferred — extracts write cells verbatim, participant answers included, so a spreadsheet evaluates a leading `=` / `+` / `-` / `@` (`spec/csv_contracts.md` §2) |

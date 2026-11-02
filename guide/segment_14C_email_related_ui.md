@@ -114,7 +114,7 @@ None.
 - `spec/rrw_functional_spec.md` — operator settings without SMTP (Item 1).
 - `spec/email_infra_options.md` — no per-operator SMTP page; the transport stays for other deployments (Item 1).
 - `docs/operations_runbook.md` — `SMTP_ENCRYPTION_KEY` no longer needed by a page (Item 1).
-- `docs/deployment_dev.md` — the same, in the App Settings table (Item 1).
+- ~~the dev slot's deployment notes — the same, in the App Settings table (Item 1)~~ (retired 2026-11-02; `docs/deployment.md` carries the line now)
 - `README.md` — the Settings page's row and the SMTP-key setup paragraph (Item 1).
 - `spec/email_template_editor.md` — the composer's From row no longer points at Settings (Item 1).
 - `spec/ui_elements.md` — the retired SMTP form dropped as a `.page-grid` caller and a confirm-gate example (Item 1).

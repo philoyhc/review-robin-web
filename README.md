@@ -9,10 +9,9 @@ forms via per-reviewer invitation links.
 Built as a FastAPI + Jinja + SQLAlchemy monolith, for Azure App
 Service (Linux, Python 3.12) against an Azure Postgres Flexible
 Server. RRW runs under the Cordware host (`cordware/`), which
-mounts it at `/reviewrobin`. The personal dev slot has been
-dormant since 2026-06-03
-([`docs/deployment_dev.md`](docs/deployment_dev.md) says how to
-resume it). Local dev runs against SQLite.
+mounts it at `/reviewrobin`, deployed from a private repository
+([`docs/deployment.md`](docs/deployment.md) says what it needs from
+its host). Local dev runs against SQLite.
 
 For the *why* — the class of problem RRW targets, the two
 projects that shaped it (an Excel/VBA predecessor and
@@ -197,9 +196,8 @@ README:
 - **[`docs/`](docs/)** — reference material about the running
   system ([`docs/README.md`](docs/README.md)). Includes
   `security_posture.md`, `database.md`,
-  `local_setup.md`, `deployment_dev.md`, plus the operations
-  set (`operations_runbook.md`, `troubleshooting.md`,
-  `backup_restore.md`, `known_limitations.md`).
+  `local_setup.md`, `deployment.md`, plus the operations
+  set (`operations_runbook.md`, `known_limitations.md`).
 - **[`guide/`](guide/)** — forward-looking plans, segment
   workplans, todos ([`guide/README.md`](guide/README.md)).
   Shipped segment plans live in
