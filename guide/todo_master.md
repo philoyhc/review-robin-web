@@ -61,7 +61,24 @@ is the author's call.
    14B's send path reads them).
    **Plan:** `guide/segment_14C_email_related_ui.md`.
 
-3. **19Z — Append to a roster** (not gated on Azure). The four roster
+3. **14E — A clock for timed actions (no mail)** (not gated). An in-app
+   loop fires scheduled activation and the deadline close on time, with
+   no page view and nothing from IT.
+   **Plan:** `guide/segment_14E_clock.md`.
+
+4. **14F — Email by hand, as the operator** (not gated: the tenant
+   already grants delegated `Mail.Send`). Sends on the operator's click
+   through `/me/sendMail`; disables the auto-send fields and adds
+   due-action prompts while no mail goes on a clock.
+   **Plan:** `guide/segment_14F_manual_email.md`.
+
+5. **14G — Scheduled email** (gated on IT: offline sending as the
+   operator, else a dedicated mailbox). Sends due invitations, reminders
+   and confirmations from 14E's clock, and switches 14F's auto-send
+   fields back on. Planned when IT answers; see
+   `guide/no_scheduling_fallback.md`.
+
+6. **19Z — Append to a roster** (not gated on Azure). The four roster
    pages' Upload cards gain an append tick beside the replace tick
    (mutually exclusive, neither ticked by default), so a late batch adds
    rows without deleting assignments or responses. Append shipped
@@ -70,7 +87,7 @@ is the author's call.
    there, refuses the file (author, 2026-10-31).
    **Plan:** `guide/segment_19Z_roster_append.md`.
 
-4. **20C — Refinements** (not gated). Small follow-ups from the author's
+7. **20C — Refinements** (not gated). Small follow-ups from the author's
    browser runs, one item each. Items 1 (verified names as pills on
    the New session Owners card), 2 (checkboxes before their labels) and
    3 (verified names as the lobby's display pill) are done; the segment
