@@ -32,7 +32,7 @@ REPO = Path(__file__).resolve().parents[1]
 # but its prose folders and top README are prose. Add a new app's folder
 # here when it is created: `test_every_top_level_folder_is_classified`
 # fails until then, and a registered app's package must be here too.
-APP_DIRS = ("residentialapps/", "utilityapps/")
+APP_DIRS = ("applydesk/", "residentialapps/", "utilityapps/")
 APP_PROSE = ("docs/", "guide/", "spec/")
 
 PROSE_DIRS = (
