@@ -109,12 +109,20 @@ def _here_under(context: Mapping[str, Any], prefix: str) -> bool:
     return app_path(context["request"]).startswith(prefix)
 
 
+def _host_url(path: str) -> str:
+    """A path that is the Cordware host's, not RRW's: emitted as written,
+    never prefixed (segment 20D; Residential's helper of the same name).
+    The top bar's All applications link is its one caller."""
+    return path
+
+
 TEMPLATE_GLOBALS = {
     "url": _url,
     "here": _here,
     "is_here": _is_here,
     "here_in": _here_in,
     "here_under": _here_under,
+    "host_url": _host_url,
 }
 
 

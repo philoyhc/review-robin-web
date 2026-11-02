@@ -13,7 +13,7 @@
    preview reuses this template and keeps the operator chrome (with
    its breadcrumb back to the session). #}
 {% block top_bar %}
-  {% if preview_mode %}{{ super() }}{% else %}{% include "reviewer/_top_bar.html" %}{% endif %}
+  {% if preview_mode %}{{ super() }}{% else %}{% with participant_bar = true %}{% include "_partials/top_bar.html" %}{% endwith %}{% endif %}
 {% endblock %}
 
 {% block content %}

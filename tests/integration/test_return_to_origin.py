@@ -145,13 +145,9 @@ def test_chrome_about_link_carries_current_path_as_return_to(
     client: TestClient,
 ) -> None:
     body = client.get("/operator/sessions").text
-    # The chrome About link is distinct from the chrome-app-identity anchor;
-    # it carries the current path as ``return_to`` so the About page can
-    # render a contextual back-link.
-    assert (
-        'class="chrome-link" href="/about?return_to=/operator/sessions">About</a>'
-        in body
-    )
+    # The account menu's About link carries the current path as
+    # ``return_to`` so the About page can render a contextual back-link.
+    assert 'href="/about?return_to=/operator/sessions">About' in body
 
 
 def test_chrome_skips_about_link_on_about_page(client: TestClient) -> None:

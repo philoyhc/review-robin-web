@@ -1,0 +1,95 @@
+{# Segment 20D: Review Robin's header, the shared Cordware top bar
+   (`docs/header_chrome.md` §2–§5). One partial for every viewer: the
+   operator pages render it from `base.html`'s `top_bar` block, the
+   participant pages include it with `participant_bar=true`, which only
+   drops the breadcrumb row (§5). Which entries show is decided by the
+   viewer's roles, not by the page.
+
+   Inside `.chrome`, whose bottom line is the header's: nothing below it
+   changes (§1).
+
+   Context:
+     - user: the signed-in User, or None (no account menu then).
+     - participant_bar: true on participant pages.
+     - breadcrumbs: the operator pages' trail, rendered on its own row.
+#}
+{% set _participant = participant_bar|default(false) %}
+{% set _operator = user and (user.is_operator or user.is_sys_admin) %}
+{% set _top_line = "" %}
+<div class="chrome">
+  <div class="tb-bar">
+    {% if user %}
+      <details class="tb-switch" data-tb-menu>
+        <summary aria-label="Switch area: Review Robin">
+          {% include "_partials/top_bar_icon.html" %}
+          <span class="tb-titles">{% if _top_line %}<span class="tb-top">{{ _top_line }}</span>{% endif %}<span class="tb-app">Review Robin <span aria-hidden="true" class="tb-caret">▾</span></span></span>
+        </summary>
+        <nav class="tb-menu" aria-label="Switch area">
+          <div class="tb-group">
+            <div class="tb-group-h">Review Robin</div>
+            {% if _operator %}
+              {% set _here = here_under('/operator/sessions') %}
+              <a href="{{ url('/operator/sessions') }}"{% if _here %} aria-current="page"{% endif %}>Sessions{% if _here %} <span aria-hidden="true">✓</span>{% endif %}</a>
+            {% endif %}
+            {% set _here = is_here('/me') %}
+            <a href="{{ url('/me') }}" data-your-reviews{% if _here %} aria-current="page"{% endif %}>Your reviews{% if _here %} <span aria-hidden="true">✓</span>{% endif %}</a>
+          </div>
+          <div class="tb-group">
+            <div class="tb-group-h">Cordware</div>
+            <a href="{{ host_url('/') }}" data-host-link>All applications</a>
+          </div>
+        </nav>
+      </details>
+    {% else %}
+      <div class="tb-switch tb-static">
+        {% include "_partials/top_bar_icon.html" %}
+        <span class="tb-titles">{% if _top_line %}<span class="tb-top">{{ _top_line }}</span>{% endif %}<span class="tb-app">Review Robin</span></span>
+      </div>
+    {% endif %}
+    <div class="tb-right">
+      {% include "_partials/theme_toggle.html" %}
+      {% if user %}
+        {% set _words = (user.display_name or "").split() %}
+        {% set _initials = ((_words[0][0] ~ (_words[-1][0] if _words|length > 1 else "")) if _words else user.email[0])|upper %}
+        <span class="tb-name">{{ user.display_label }}</span>
+        <details class="tb-acct" data-tb-menu>
+          <summary aria-label="Account: {{ user.display_label }}"><span class="tb-avatar" aria-hidden="true">{{ _initials }}</span></summary>
+          <nav class="tb-menu tb-menu-right" aria-label="Account">
+            <div class="tb-group tb-who">
+              <strong>{{ user.display_label }}</strong>
+              <span>{{ user.email }}</span>
+              {% if user.is_super_admin %}<span>super admin</span>{% elif user.is_sys_admin %}<span>sys admin</span>{% endif %}
+            </div>
+            <div class="tb-group">
+              {# Settings sits behind `require_operator`, which bounces
+                 anyone else to /me (participant audit M8). #}
+              {% if _operator and not is_here("/operator/settings") %}
+                <a href="{{ url('/operator/settings') }}?return_to={{ here() | urlencode }}">Settings</a>
+              {% endif %}
+              {% if user.is_sys_admin and not here_under("/operator/sys-admin") %}
+                <a href="{{ url('/operator/sys-admin') }}?return_to={{ here() | urlencode }}">Admin</a>
+              {% endif %}
+              {# 19F PR 3: hidden for a viewer who resolves no Guide
+                 audience. Tested as `is not true`, so a page that never
+                 stamps the flag still offers it: `routes_guide` does the
+                 real deciding, and failing open is the safe direction. #}
+              {% if not here_in("/guide", "/auth/me/debug")
+                    and request.state.guide_hidden is not true %}
+                <a href="{{ url('/guide') }}?return_to={{ here() | urlencode }}">Guide</a>
+              {% endif %}
+              {% if not here_in("/about", "/auth/me/debug") %}
+                <a href="{{ url('/about') }}?return_to={{ here() | urlencode }}">About{% if _operator and app_version is defined %} <small>version {{ app_version }}</small>{% endif %}</a>
+              {% endif %}
+            </div>
+            <div class="tb-group">
+              <a href="/.auth/logout" data-sign-out>Sign out</a>
+            </div>
+          </nav>
+        </details>
+      {% endif %}
+    </div>
+  </div>
+  {% if not _participant %}
+    {% include "_partials/breadcrumb.html" %}
+  {% endif %}
+</div>

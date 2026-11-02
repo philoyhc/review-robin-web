@@ -16,7 +16,7 @@
 {% block title %}{{ session.name }} — Results — Review Robin Web{% endblock %}
 
 {% block body_class %}ui-v2 reviewer{% endblock %}
-{% block top_bar %}{% include "reviewer/_top_bar.html" %}{% endblock %}
+{% block top_bar %}{% with participant_bar = true %}{% include "_partials/top_bar.html" %}{% endwith %}{% endblock %}
 
 {% block content %}
   <div class="rs-page-header">

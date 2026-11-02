@@ -160,10 +160,10 @@ def test_chrome_offers_the_guide_link_from_another_page(client: TestClient) -> N
 
 def test_chrome_omits_the_guide_link_on_the_guide_itself(client: TestClient) -> None:
     body = client.get("/guide").text
-    assert 'class="chrome-link" href="/guide' not in body
+    assert 'href="/guide?return_to=' not in body
     # /about's own link still shows — the two pages are siblings, not one
     # page absorbing the other.
-    assert 'class="chrome-link" href="/about' in body
+    assert 'href="/about?return_to=' in body
 
 
 
@@ -454,7 +454,7 @@ def test_the_chrome_hides_the_guide_link_for_a_no_audience_viewer(
     bounced them.
     """
     operator_body = make_client(bob).get("/about").text
-    assert 'class="chrome-link" href="/guide' in operator_body
+    assert 'href="/guide?return_to=' in operator_body
 
     stranger_body = make_client(
         AuthenticatedUser(
@@ -462,11 +462,11 @@ def test_the_chrome_hides_the_guide_link_for_a_no_audience_viewer(
             name="Nul", provider="aad",
         )
     ).get("/about").text
-    assert 'class="chrome-link" href="/guide' not in stranger_body
+    assert 'href="/guide?return_to=' not in stranger_body
     # And the identity line renders a name — /about depended on the
     # header-derived user until 19F PR 3, so this read "Signed in as "
     # with nothing after it, the same defect 19E rung 7 fixed on /guide.
-    assert "Signed in as Nul" in stranger_body
+    assert "<strong>Nul</strong>" in stranger_body
 
 
 def test_the_participant_chrome_gates_its_guide_link_like_base(
@@ -498,7 +498,7 @@ def test_the_participant_chrome_gates_its_guide_link_like_base(
     # `?return_to=` round-trip `base.html` gives it.
     holder = make_client(bob).get("/me").text
     assert 'href="/about' in holder
-    assert 'class="chrome-link" href="/guide?return_to=/me"' in holder
+    assert 'href="/guide?return_to=/me"' in holder
 
     # Resolves nothing → no link, exactly as before. This is the half
     # that must not regress: `/guide` bounces such a viewer to `/about`,

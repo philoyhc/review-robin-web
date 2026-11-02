@@ -1,9 +1,9 @@
 {# Light / dark Display-mode toggle (Segment 19C Item 2, W6). Browser-local:
    a two-segment pill whose active side reflects <html data-theme> (set before
    first paint by the no-FOUC script in base.html). Clicking writes
-   localStorage["rrw-theme"] and flips data-theme live. Shared by the operator
-   chrome (base.html) and the reviewer top bar (reviewer/_top_bar.html) — which
-   also covers the review surface — so operators AND participants get it.
+   localStorage["rrw-theme"] and flips data-theme live. Rendered by the shared
+   top bar (`_partials/top_bar.html`, segment 20D), so operators AND
+   participants get it.
    The pill CSS + the toggle JS live in base.html. #}
 <div class="theme-toggle" role="group" aria-label="Display mode">
   <button type="button" class="theme-toggle-opt" data-theme-choice="light"

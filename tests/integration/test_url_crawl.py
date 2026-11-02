@@ -125,7 +125,7 @@ def test_the_error_page_emits_only_prefixed_urls(mounted_client: TestClient, pat
 def test_the_operator_chrome_emits_only_prefixed_urls(mounted_client: TestClient) -> None:
     response = mounted_client.get(f"{MOUNT}/operator/sessions")
     assert response.status_code == 200
-    assert leaks(response, within="chrome-user") == []
+    assert leaks(response, within="chrome") == []
     # Settings, Admin, Guide and About each carry the page's app-relative
     # path as their return_to.
     for target in ("operator/settings", "operator/sys-admin", "guide", "about"):
@@ -151,7 +151,7 @@ def test_the_sys_admin_nav_emits_only_prefixed_urls(mounted_client: TestClient) 
 def test_the_participant_top_bar_emits_only_prefixed_urls(mounted_client: TestClient) -> None:
     response = mounted_client.get(f"{MOUNT}/me")
     assert response.status_code == 200
-    assert leaks(response, within="chrome-user") == []
+    assert leaks(response, within="chrome") == []
 
 
 def test_the_chrome_hides_its_own_page_under_the_mount(mounted_client: TestClient) -> None:
