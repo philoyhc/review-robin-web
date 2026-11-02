@@ -15,7 +15,7 @@ from starlette.responses import Response
 
 from cordware.identity import current_identity
 from residentialapps.supportlogs import sample_support as sample
-from residentialapps.web.pages import initials, top_line
+from residentialapps.web.pages import initials, split_areas, top_line
 from residentialapps.web.urls import templates
 
 TEMPLATES = templates([Path(__file__).resolve().parent / "templates"])
@@ -144,7 +144,8 @@ def render(
             "unit_name": sample.UNIT_NAME,
             "top_line": top_line(sample.UNIT_NAME),
             "area": area,
-            "areas": areas_for(me) if areas is None else areas,
+            # Sys admin is the account's, in its menu, not a place (§4).
+            **dict(zip(("areas", "account_links"), split_areas(areas_for(me) if areas is None else areas))),
             "tabs": tabs,
             "viewer": identity,
             "initials": initials(identity.display_label) if identity else "?",

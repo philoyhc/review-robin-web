@@ -478,7 +478,9 @@
   <body>
     <header class="topbar">
       <div class="tb-in">
-        {% if not areas %}
+        {# Static only on a page that offers no place and no account entry
+           (not registered); otherwise the menu, for All applications. #}
+        {% if not areas and not account_links %}
           <div class="switch static">
             {% if app_icon %}<span aria-hidden="true" class="tb-icon"></span>{% endif %}
             <span class="sw-t"><span class="sw-app">{{ area }}</span></span>
@@ -490,6 +492,7 @@
             <span class="sw-t">{% if top_line %}<span class="sw-unit">{{ top_line }}</span>{% endif %}<span class="sw-app">{{ area }} <span aria-hidden="true" class="caret">▾</span></span></span>
           </summary>
           <nav class="menu" aria-label="Switch area">
+            {% if areas %}
             <div class="mg">
               <div class="mg-h">{{ app_name }}</div>
               {% for item in areas %}
@@ -500,6 +503,7 @@
                 {% endif %}
               {% endfor %}
             </div>
+            {% endif %}
             <div class="mg">
               <div class="mg-h">Cordware</div>
               <a href="{{ host_url('/') }}">All applications</a>
@@ -524,6 +528,13 @@
                 <strong>{{ _who }}</strong>
                 {% if viewer.email %}<span>{{ viewer.email }}</span>{% endif %}
               </div>
+              {# The account's entries, each omitted on its own area (§4). #}
+              {% set _entries = (account_links or ())|rejectattr("label", "equalto", area)|list %}
+              {% if _entries %}
+              <div class="mg">
+                {% for item in _entries %}<a href="{{ url(item.path) }}">{{ item.label }}</a>{% endfor %}
+              </div>
+              {% endif %}
               {# Under 640 px the toggle leaves the bar for here (§2). #}
               <div class="mg narrow-only">
                 <div class="theme-toggle" role="group" aria-label="Display mode">

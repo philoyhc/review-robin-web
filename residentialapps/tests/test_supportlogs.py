@@ -14,6 +14,7 @@ import pytest
 from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 
+from residentialapps.supportlogs import pages as sample_pages
 from residentialapps.supportlogs import sample_support as sample
 from residentialapps.supportlogs.main import create_app
 from residentialapps.tests._host import host_with
@@ -140,8 +141,26 @@ def test_the_switcher_shows_the_areas_the_viewer_reaches(client: TestClient) -> 
         return re.findall(r'href="[^"]*"[^>]*>([^<]+?)\s*(?:<|$)', menu)[:-1]  # less All applications
 
     assert areas(client.get("/").text) == ["Support Logs"]
-    assert areas(client.get(at("/sys-admin/", "Rachel Yeo")).text) == ["Sys admin"]
-    assert areas(client.get(at("/sys-admin/", "Platform super-admin")).text) == ["Sys admin"]
+    # Sys admin is the account's, not a place (author, 2026-11-02): an
+    # administrator alone keeps the switcher, for All applications.
+    assert areas(client.get(at("/sys-admin/", "Rachel Yeo")).text) == []
+    assert areas(client.get(at("/sys-admin/", "Platform super-admin")).text) == []
+
+
+def test_sys_admin_is_in_the_account_menu(client: TestClient) -> None:
+    signed_in = {"X-MS-CLIENT-PRINCIPAL-NAME": "rachel@example.edu", "X-MS-CLIENT-PRINCIPAL-ID": "rachel-oid"}
+
+    def account(path: str, name: str) -> str:
+        return client.get(at(path, name), headers=signed_in).text.split('aria-label="Account"')[1].split("</nav>")[0]
+
+    # No sample viewer holds Sys admin beside another page, so it shows
+    # only where it is omitted, on its own area; Residential Operations'
+    # staff test shows the entry itself. The split is the shared helper's.
+    assert web_pages.split_areas(sample_pages.areas_for(sample.viewer("Rachel Yeo")))[1] == (
+        {"label": "Sys admin", "path": "/sys-admin/" + sample.as_query(sample.viewer("Rachel Yeo"))},
+    )
+    assert ">Sys admin</a>" not in account("/sys-admin/", "Rachel Yeo")
+    assert ">Sys admin</a>" not in account("/", "Priya Raman")
 
 
 def test_every_link_keeps_the_sample_viewer(client: TestClient) -> None:

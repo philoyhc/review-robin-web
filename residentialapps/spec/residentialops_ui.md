@@ -46,7 +46,7 @@ with the page.
   the workspace default `CORDWARE_INSTITUTION_NAME`, else none
   (`docs/header_chrome.md` §6). The static switcher, on a page with no
   areas (not registered), shows the icon and the area alone. Its menu lists the areas the viewer reaches (Home, RA Leave, RA
-  Events; RA Leave admin, Rosters and setup and Sys admin for sys admins),
+  Events; RA Leave admin and Rosters and setup for sys admins),
   RA Leave at the viewer's own side, RA's or staff's, then one link,
   **All applications**, to the host's landing page, which lists what
   Cordware mounts (author, 2026-10-26). An application cannot see the
@@ -58,7 +58,9 @@ with the page.
   moves into the account menu under 640 px; initials, with the viewer's
   name beside them from 960 px. The initials open the **account menu**:
   who is signed in (their role once identity is wired, 1B item 3), then
-  **Sign out** (`/.auth/logout`). One menu open at a time; Escape or a
+  **Sys admin** for sys admins (the account's, not a place, as Review
+  Robin's Settings and Admin are; omitted on its own area; author,
+  2026-11-02), then **Sign out** (`/.auth/logout`). One menu open at a time; Escape or a
   click outside closes it (`docs/header_chrome.md` §4, §7).
 - **Under the bar, the area's page tabs**, with short labels, scrolling
   sideways on a phone. Rosters and setup's are Home, Assignments, Staff
