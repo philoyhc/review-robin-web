@@ -41,19 +41,27 @@ so its chrome is one slim top bar at every width and no bottom bar, which
 would compete with a phone browser's own toolbar. The bar scrolls away
 with the page.
 
-- **On the left, the switcher**: the Unit's name above the current area's
-  name. Its menu lists the areas the viewer reaches (Home, RA Leave, RA
-  Events; RA Leave admin, Rosters and setup and Sys admin for sys admins),
+- **On the left, the switcher**: the application's icon (its favicon),
+  then the top line above the current area's name: the Unit's name, else
+  the workspace default `CORDWARE_INSTITUTION_NAME`, else none
+  (`docs/header_chrome.md` §6). The static switcher, on a page with no
+  areas (not registered), shows the icon and the area alone. Its menu lists the areas the viewer reaches (Home, RA Leave, RA
+  Events; RA Leave admin and Rosters and setup for sys admins),
   RA Leave at the viewer's own side, RA's or staff's, then one link,
   **All applications**, to the host's landing page, which lists what
   Cordware mounts (author, 2026-10-26). An application cannot see the
   host's mounts without importing `cordware.main`, which it may not, nor
   read another application's permissions; the landing page knows both. A
   page with no areas (not registered) shows the switcher static.
-- **On the right, the Light/Dark toggle and the account**: the toggle at
-  every width, sharing RRW's `rrw-theme` choice so one choice holds across
-  the host; initials, with the viewer's name beside them from 960 px, and their role
-  once identity is wired (1B item 3).
+- **On the right, the Light/Dark toggle and the account**: the toggle,
+  sharing RRW's `rrw-theme` choice so one choice holds across the host,
+  moves into the account menu under 640 px; initials, with the viewer's
+  name beside them from 960 px. The initials open the **account menu**:
+  who is signed in (their role once identity is wired, 1B item 3), then
+  **Sys admin** for sys admins (the account's, not a place, as Review
+  Robin's Settings and Admin are; omitted on its own area; author,
+  2026-11-02), then **Sign out** (`/.auth/logout`). One menu open at a time; Escape or a
+  click outside closes it (`docs/header_chrome.md` §4, §7).
 - **Under the bar, the area's page tabs**, with short labels, scrolling
   sideways on a phone. Rosters and setup's are Home, Assignments, Staff
   roster and RA roster (§7); RA Leave's split by audience (`residentialapps/spec/applications.md`):

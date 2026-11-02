@@ -25,7 +25,9 @@ def page() -> Iterator[Page]:
     client = TestClient(create_app())
 
     def serve(route: Route) -> None:
-        response = client.get(route.request.url.removeprefix(ORIGIN))
+        # Easy Auth's headers pass through, so a test can sign someone in.
+        signed_in = {k: v for k, v in route.request.headers.items() if k.lower().startswith("x-ms-client-principal")}
+        response = client.get(route.request.url.removeprefix(ORIGIN), headers=signed_in)
         route.fulfill(
             status=response.status_code,
             body=response.content,

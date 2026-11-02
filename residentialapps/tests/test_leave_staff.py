@@ -240,9 +240,15 @@ def test_review_fixes_on_the_staff_side(monkeypatch) -> None:
     assert sample_leave.by_id("L-0101").stage == "Pending final approval"
     assert "L-0101" in [a.id for a, _ in sample_leave.queue("Rachel Yeo")]
     # The switcher lists what a staff viewer reaches, keeping `?as=`.
-    menu = c.get(STAFF + RACHEL).text.split('aria-label="Switch area"')[1].split("</nav>")[0]
-    assert 'href="/ra-leave/staff/?as=Rachel%20Yeo"' in menu and 'href="/sys-admin/"' in menu
-    assert "/sys-admin/" not in c.get(STAFF).text.split('aria-label="Switch area"')[1].split("</nav>")[0]
+    # Sys admin is the account's, in the account menu (author, 2026-11-02).
+    signed_in = {"X-MS-CLIENT-PRINCIPAL-NAME": "rachel@example.edu", "X-MS-CLIENT-PRINCIPAL-ID": "rachel-oid"}
+    page = c.get(STAFF + RACHEL, headers=signed_in).text
+    menu = page.split('aria-label="Switch area"')[1].split("</nav>")[0]
+    account = page.split('aria-label="Account"')[1].split("</nav>")[0]
+    assert 'href="/ra-leave/staff/?as=Rachel%20Yeo"' in menu and "/sys-admin/" not in menu
+    assert 'href="/sys-admin/">Sys admin</a>' in account
+    page = c.get(STAFF, headers=signed_in).text
+    assert "/sys-admin/" not in page.split('aria-label="Account"')[1].split("</nav>")[0]
 
 
 def test_leave_shows_only_to_staff_who_oversee_ras(monkeypatch) -> None:

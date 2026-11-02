@@ -12,7 +12,7 @@ from pathlib import Path
 
 from fastapi import HTTPException, Request
 
-from cordware.identity import Identity, current_identity, is_local
+from cordware.identity import Identity, current_identity, institution_name, is_local
 
 log = logging.getLogger("residentialapps.web")
 
@@ -142,6 +142,27 @@ def placeholders_previewers_only(request: Request) -> None:
         return
     if not is_previewer(current_identity(request)):
         raise HTTPException(status_code=404)
+
+
+#: Areas that are the account's, not places: they sit in the account menu,
+#: as Review Robin's Settings and Admin do (author, 2026-11-02).
+ACCOUNT_AREAS = frozenset({"Sys admin"})
+
+
+def split_areas(areas):
+    """The switcher's places and the account menu's entries, from one list
+    of areas (`docs/header_chrome.md` §3, §4)."""
+    places = tuple(a for a in areas if a["label"] not in ACCOUNT_AREAS)
+    account = tuple(a for a in areas if a["label"] in ACCOUNT_AREAS)
+    return places, account
+
+
+def top_line(unit_name: str | None) -> str:
+    """The bar's top line (`docs/header_chrome.md` §6, RRW segment 20D):
+    the top-level Unit's name when it is set, else the workspace default,
+    `CORDWARE_INSTITUTION_NAME`; empty means no top line. Until segment 1B
+    item 4 stores the Unit, each application passes its sample's."""
+    return (unit_name or "").strip() or institution_name()
 
 
 def initials(label: str) -> str:

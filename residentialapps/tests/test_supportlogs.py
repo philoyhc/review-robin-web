@@ -14,6 +14,7 @@ import pytest
 from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 
+from residentialapps.supportlogs import pages as sample_pages
 from residentialapps.supportlogs import sample_support as sample
 from residentialapps.supportlogs.main import create_app
 from residentialapps.tests._host import host_with
@@ -140,8 +141,26 @@ def test_the_switcher_shows_the_areas_the_viewer_reaches(client: TestClient) -> 
         return re.findall(r'href="[^"]*"[^>]*>([^<]+?)\s*(?:<|$)', menu)[:-1]  # less All applications
 
     assert areas(client.get("/").text) == ["Support Logs"]
-    assert areas(client.get(at("/sys-admin/", "Rachel Yeo")).text) == ["Sys admin"]
-    assert areas(client.get(at("/sys-admin/", "Platform super-admin")).text) == ["Sys admin"]
+    # Sys admin is the account's, not a place (author, 2026-11-02): an
+    # administrator alone keeps the switcher, for All applications.
+    assert areas(client.get(at("/sys-admin/", "Rachel Yeo")).text) == []
+    assert areas(client.get(at("/sys-admin/", "Platform super-admin")).text) == []
+
+
+def test_sys_admin_is_in_the_account_menu(client: TestClient) -> None:
+    signed_in = {"X-MS-CLIENT-PRINCIPAL-NAME": "rachel@example.edu", "X-MS-CLIENT-PRINCIPAL-ID": "rachel-oid"}
+
+    def account(path: str, name: str) -> str:
+        return client.get(at(path, name), headers=signed_in).text.split('aria-label="Account"')[1].split("</nav>")[0]
+
+    # No sample viewer holds Sys admin beside another page, so it shows
+    # only where it is omitted, on its own area; Residential Operations'
+    # staff test shows the entry itself. The split is the shared helper's.
+    assert web_pages.split_areas(sample_pages.areas_for(sample.viewer("Rachel Yeo")))[1] == (
+        {"label": "Sys admin", "path": "/sys-admin/" + sample.as_query(sample.viewer("Rachel Yeo"))},
+    )
+    assert ">Sys admin</a>" not in account("/sys-admin/", "Rachel Yeo")
+    assert ">Sys admin</a>" not in account("/", "Priya Raman")
 
 
 def test_every_link_keeps_the_sample_viewer(client: TestClient) -> None:
@@ -155,7 +174,8 @@ def test_every_link_keeps_the_sample_viewer(client: TestClient) -> None:
         card = page.split('aria-label="Sample viewer"')[1].split("</nav>")[0]
         rest = page.replace(card, "")
         for link in re.findall(r'\bhref="([^"]*)"', FAVICON.sub("", rest)):
-            assert link in ("/", "#sample-viewer") or "as=" + quote(name) in link, (path, link)
+            # Sign out (the host's, RRW segment 20D) carries no viewer either.
+            assert link in ("/", "#sample-viewer", "/.auth/logout") or "as=" + quote(name) in link, (path, link)
         assert rest.count("<form") == rest.count(f'<input type="hidden" name="as" value="{name}">'), path
 
 
@@ -202,7 +222,7 @@ def test_mounted_pages_stay_under_the_mount() -> None:
         page = mounted.get(MOUNT + path)
         assert page.status_code in (200, 403), path
         for link in LINK.findall(FAVICON.sub("", page.text)):
-            assert link == "/" or link.startswith((f"{MOUNT}/", "#")), (path, link)
+            assert link in ("/", "/.auth/logout") or link.startswith((f"{MOUNT}/", "#")), (path, link)
     redirect = mounted.get(MOUNT + at("/", "Rachel Yeo"), follow_redirects=False)
     assert redirect.headers["location"] == MOUNT + at("/sys-admin/", "Rachel Yeo")
 

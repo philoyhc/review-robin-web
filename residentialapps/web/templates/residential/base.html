@@ -8,12 +8,14 @@
        the bottom-right of the tile, inline SVG as RRW's robin is: a house
        for Residential Operations, a ruled log sheet for Support Logs
        (author, 2026-11-01; sources kept in Cordware's private records). #}
-    {% if app_key == "supportlogs" %}
+    {# One source per application for the tab and the bar's icon
+       (`docs/header_chrome.md` §2, RRW segment 20D). #}
+    {% if app_key == "supportlogs" %}{% set app_icon = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><clipPath id='t'><rect width='32' height='32' rx='7'/></clipPath></defs><g clip-path='url(%23t)'><rect width='32' height='32' fill='%230f766e'/><rect x='7' y='5.5' width='34' height='38' rx='3.5' fill='%23fff'/><rect x='11.5' y='12' width='24' height='2.8' rx='1.4' fill='%230f766e'/><rect x='11.5' y='18' width='24' height='2.8' rx='1.4' fill='%230f766e'/><rect x='11.5' y='24' width='14' height='2.8' rx='1.4' fill='%230f766e'/></g></svg>" %}
+    {% elif app_key == "residentialops" %}{% set app_icon = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><clipPath id='t'><rect width='32' height='32' rx='7'/></clipPath></defs><g clip-path='url(%23t)'><rect width='32' height='32' fill='%23a21caf'/><path d='M15.5 6.5 L37 25 L33 25 L33 40 L7 40 L7 21.5 L3.5 21.5 Z' fill='%23fff' stroke='%23fff' stroke-width='1.6' stroke-linejoin='round'/><rect x='14' y='27' width='6.5' height='12' rx='1.5' fill='%23a21caf'/></g></svg>" %}
+    {% else %}{% set app_icon = "" %}{% endif %}
+    {% if app_icon %}
     <link rel="icon" type="image/svg+xml"
-          href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><clipPath id='t'><rect width='32' height='32' rx='7'/></clipPath></defs><g clip-path='url(%23t)'><rect width='32' height='32' fill='%230f766e'/><rect x='7' y='5.5' width='34' height='38' rx='3.5' fill='%23fff'/><rect x='11.5' y='12' width='24' height='2.8' rx='1.4' fill='%230f766e'/><rect x='11.5' y='18' width='24' height='2.8' rx='1.4' fill='%230f766e'/><rect x='11.5' y='24' width='14' height='2.8' rx='1.4' fill='%230f766e'/></g></svg>">
-    {% elif app_key == "residentialops" %}
-    <link rel="icon" type="image/svg+xml"
-          href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><clipPath id='t'><rect width='32' height='32' rx='7'/></clipPath></defs><g clip-path='url(%23t)'><rect width='32' height='32' fill='%23a21caf'/><path d='M15.5 6.5 L37 25 L33 25 L33 40 L7 40 L7 21.5 L3.5 21.5 Z' fill='%23fff' stroke='%23fff' stroke-width='1.6' stroke-linejoin='round'/><rect x='14' y='27' width='6.5' height='12' rx='1.5' fill='%23a21caf'/></g></svg>">
+          href="{{ app_icon | safe }}">
     {% endif %}
     {# The theme is RRW's: the same storage key, so one choice holds across
        the host's applications. Applied before the stylesheet, so a saved
@@ -125,9 +127,12 @@
       .switch.static { display: flex; align-items: center; gap: 10px; min-height: 44px; }
       .switch > summary::-webkit-details-marker { display: none; }
       .switch > summary:hover, .switch[open] > summary { background: var(--accent-tint); }
-      .sq { flex: none; width: 12px; height: 12px; border-radius: 3px; background: var(--accent); }
+      /* The app icon, the favicon itself (docs/header_chrome.md §2), as a
+         background so the image is not a second link the crawl reads. */
+      .tb-icon { flex: none; width: 28px; height: 28px; display: block; background: center / contain no-repeat; }
+      {% if app_icon %}.tb-icon { background-image: url("{{ app_icon | safe }}"); }{% endif %}
       .sw-t { display: flex; flex-direction: column; line-height: 1.2; }
-      .sw-unit { font-size: 12px; color: var(--text-subtle); }
+      .sw-unit { font-size: 12px; color: var(--text-subtle); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .sw-app { font-size: 16px; font-weight: 700; }
       .caret { font-size: 12px; color: var(--text-subtle); margin-left: 2px; }
       .menu {
@@ -157,6 +162,22 @@
       .avatar {
         display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px;
         border-radius: 9999px; background: var(--accent); color: var(--on-accent); font-size: 13px; font-weight: 700;
+      }
+      /* The account menu (docs/header_chrome.md §4, RRW segment 20D): the
+         avatar opens it; who is signed in, then Sign out. */
+      .acct-menu { position: relative; }
+      .acct-menu > summary {
+        display: flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px;
+        border-radius: 9999px; cursor: pointer; list-style: none;
+      }
+      .acct-menu > summary::-webkit-details-marker { display: none; }
+      .acct-menu .menu { left: auto; right: 0; }
+      .who { display: flex; flex-direction: column; gap: 2px; padding: 8px 14px; font-size: 13px; color: var(--text-subtle); }
+      .who strong { font-size: 15px; color: var(--text-body); }
+      .narrow-only { display: none; padding: 8px 14px; }
+      @media (max-width: 639px) {
+        .right > .theme-toggle { display: none; }
+        .narrow-only { display: block; }
       }
       .tabs { border-bottom: 1px solid var(--border-subtle); background: var(--surface-page); }
       .tabs-in { display: flex; gap: 4px; max-width: 1232px; margin: 0 auto; padding: 0 8px; overflow-x: auto; scrollbar-width: none; }
@@ -457,18 +478,21 @@
   <body>
     <header class="topbar">
       <div class="tb-in">
-        {% if not areas %}
+        {# Static only on a page that offers no place and no account entry
+           (not registered); otherwise the menu, for All applications. #}
+        {% if not areas and not account_links %}
           <div class="switch static">
-            <span aria-hidden="true" class="sq"></span>
+            {% if app_icon %}<span aria-hidden="true" class="tb-icon"></span>{% endif %}
             <span class="sw-t"><span class="sw-app">{{ area }}</span></span>
           </div>
         {% else %}
-        <details class="switch">
+        <details class="switch" data-tb-menu>
           <summary aria-label="Switch area: {{ area }}">
-            <span aria-hidden="true" class="sq"></span>
-            <span class="sw-t"><span class="sw-unit">{{ unit_name }}</span><span class="sw-app">{{ area }} <span aria-hidden="true" class="caret">▾</span></span></span>
+            {% if app_icon %}<span aria-hidden="true" class="tb-icon"></span>{% endif %}
+            <span class="sw-t">{% if top_line %}<span class="sw-unit">{{ top_line }}</span>{% endif %}<span class="sw-app">{{ area }} <span aria-hidden="true" class="caret">▾</span></span></span>
           </summary>
           <nav class="menu" aria-label="Switch area">
+            {% if areas %}
             <div class="mg">
               <div class="mg-h">{{ app_name }}</div>
               {% for item in areas %}
@@ -479,6 +503,7 @@
                 {% endif %}
               {% endfor %}
             </div>
+            {% endif %}
             <div class="mg">
               <div class="mg-h">Cordware</div>
               <a href="{{ host_url('/') }}">All applications</a>
@@ -492,8 +517,38 @@
             <button type="button" data-theme-choice="dark" aria-pressed="false">Dark</button>
           </div>
           {% if viewer %}
-            <span class="acct"><span class="acct-name">{{ viewer.display_label }}</span><span class="avatar" aria-hidden="true">{{ initials }}</span></span>
+          {% set _who = viewer.display_label %}
+          {# The name beside the avatar is shown from 960 px; the summary's
+             label carries it for a screen reader, so it is hidden there. #}
+          <span class="acct"><span class="acct-name" aria-hidden="true">{{ _who }}</span></span>
+          <details class="acct-menu" data-tb-menu>
+            <summary aria-label="Account: {{ _who }}"><span class="avatar" aria-hidden="true">{{ initials }}</span></summary>
+            <nav class="menu" aria-label="Account">
+              <div class="mg who">
+                <strong>{{ _who }}</strong>
+                {% if viewer.email %}<span>{{ viewer.email }}</span>{% endif %}
+              </div>
+              {# The account's entries, each omitted on its own area (§4). #}
+              {% set _entries = (account_links or ())|rejectattr("label", "equalto", area)|list %}
+              {% if _entries %}
+              <div class="mg">
+                {% for item in _entries %}<a href="{{ url(item.path) }}">{{ item.label }}</a>{% endfor %}
+              </div>
+              {% endif %}
+              {# Under 640 px the toggle leaves the bar for here (§2). #}
+              <div class="mg narrow-only">
+                <div class="theme-toggle" role="group" aria-label="Display mode">
+                  <button type="button" data-theme-choice="light" aria-pressed="true">Light</button>
+                  <button type="button" data-theme-choice="dark" aria-pressed="false">Dark</button>
+                </div>
+              </div>
+              <div class="mg">
+                <a href="{{ host_url('/.auth/logout') }}" data-sign-out>Sign out</a>
+              </div>
+            </nav>
+          </details>
           {% else %}
+            {# Nobody signed in: no account to open, and nothing to sign out of. #}
             <span class="acct"><span class="acct-name">Not signed in</span><span class="avatar" aria-hidden="true">?</span></span>
           {% endif %}
         </div>
@@ -612,6 +667,31 @@
           });
         });
         sync();
+      })();
+    </script>
+    <script>
+      // The bar's two menus (docs/header_chrome.md §7): one open at a time;
+      // Escape closes the open one and returns focus to its summary; a
+      // click outside closes it. Without this they still open and close.
+      (function () {
+        var menus = document.querySelectorAll("details[data-tb-menu]");
+        Array.prototype.forEach.call(menus, function (m) {
+          m.addEventListener("toggle", function () {
+            if (!m.open) return;
+            Array.prototype.forEach.call(menus, function (o) { if (o !== m) o.open = false; });
+          });
+        });
+        document.addEventListener("keydown", function (e) {
+          if (e.key !== "Escape") return;
+          Array.prototype.forEach.call(menus, function (m) {
+            if (m.open) { m.open = false; m.querySelector("summary").focus(); }
+          });
+        });
+        document.addEventListener("click", function (e) {
+          Array.prototype.forEach.call(menus, function (m) {
+            if (m.open && !m.contains(e.target)) m.open = false;
+          });
+        });
       })();
     </script>
     <script>

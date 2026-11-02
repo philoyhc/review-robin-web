@@ -679,3 +679,31 @@ def test_a_page_without_the_card_keeps_the_chip_unlinked(both: TestClient) -> No
     page = both.get("/residentialops/ra-leave/staff/decide/L-0103?as=Rachel%20Yeo").text
     assert '<span class="chip chip-info chip-viewing">Viewing as ' in page and 'href="#sample-viewer"' not in page
     assert 'id="sample-viewer"' not in page
+
+
+def test_the_bar_is_the_shared_header(host_client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    """`docs/header_chrome.md` §2, §4 and §6, Residential's share, landed
+    with RRW segment 20D: the app icon in place of the square, an account
+    menu with Sign out, and the top line from the Unit, else the default."""
+    from cordware.settings import identity_settings
+
+    page = host_client.get(f"{MOUNT}/rosters/").text
+    # Nobody signed in: no account menu, so no Sign out to offer.
+    assert 'aria-label="Account: ' not in page and "data-sign-out" not in page
+    page = host_client.get(
+        f"{MOUNT}/rosters/",
+        headers={"X-MS-CLIENT-PRINCIPAL-NAME": "chloe.lim@example.edu", "X-MS-CLIENT-PRINCIPAL-ID": "chloe-oid"},
+    ).text
+    assert 'class="sq"' not in page
+    assert '<span aria-hidden="true" class="tb-icon"></span>' in page
+    assert '.tb-icon { background-image: url("data:image/svg+xml;' in page
+    assert 'aria-label="Account: chloe.lim@example.edu"' in page
+    assert 'href="/.auth/logout" data-sign-out>Sign out</a>' in page
+    # The sample's Unit is set, so it is the top line.
+    assert f'<span class="sw-unit">{sample_data.UNIT_NAME}</span>' in page
+    # With no Unit, the workspace default; with neither, no top line.
+    monkeypatch.setattr(identity_settings, "institution_name", "Example University")
+    assert web_pages.top_line("") == "Example University"
+    assert web_pages.top_line("  Hall  ") == "Hall"
+    monkeypatch.setattr(identity_settings, "institution_name", "")
+    assert web_pages.top_line(None) == ""
