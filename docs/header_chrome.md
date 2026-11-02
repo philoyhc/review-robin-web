@@ -115,39 +115,41 @@ At most one thin row, the application's to fill:
   crumbs collapse to "…". Below the header's line nothing changes (§1).
 - **Participants**: no row.
 
-## 6. The institution name
+## 6. The top line: institution, or the operator's unit
 
-**One name per workspace, set by Cordware, overridden where an
-application serves a neighboring unit** (author, 2026-11-02). One
-deployment may host a department next door that has no deployment of its
-own; its people should see their own name, not the host's.
+**One name per workspace, set by Cordware; in Review Robin and ApplyDesk
+an operator's unit replaces it** (author, 2026-11-02). One deployment may
+host a department next door that has no deployment of its own; its people
+should see their own name, not the host's. A courtesy, kept simple.
 
 ### Where it is set
 
 | Layer | Set by | Holds |
 |---|---|---|
 | **Workspace default** | The deployer: a Cordware platform setting, `CORDWARE_INSTITUTION_NAME`, read by every application through Cordware's settings as `APP_ENV` is today | The hosting institution, e.g. "Example University". Empty means no top line |
-| **Review Robin, per operator** | An admin, on the account's row in Accounts Management | A neighboring unit's name, for that operator. Empty means the default |
-| **ApplyDesk, per operator** | As Review Robin | As Review Robin |
-| **Residential, per deployment's data** | Rosters and setup, where the top-level Unit is named | The top-level Unit's name |
+| **Review Robin, the operator's Unit** | A sys admin, on the account's row in Accounts Management | A new field on the operator's account, e.g. "Department of Example". Empty means the default |
+| **ApplyDesk, the operator's Unit** | As Review Robin | As Review Robin |
+| **Residential** | Its own setup, where the top-level Unit is named | The top-level Unit's name |
 
-- **Admins edit overrides; operators don't.** An override names who
-  people see the operator as working for, so it is an admin's call. An
-  operator sees theirs, read-only, on Settings.
-- **Every change is audited**: the override as a `changes` envelope on the
-  user, under a new event type registered in `EVENT_SCHEMAS`.
+- **Only a sys admin edits Unit.** An operator sees theirs, read-only, on
+  Settings, and cannot change it; nor is it set per session.
+- **Every change is audited**: a `changes` envelope on the user, under a
+  new event type registered in `EVENT_SCHEMAS`.
 - **Length**: at most 80 characters, trimmed; the bar truncates it.
 
 ### Which name a page shows
 
-Review Robin and ApplyDesk resolve per page:
+Review Robin and ApplyDesk:
 
 | Page | Name shown |
 |---|---|
-| A session's pages, operator or participant | The override of the session's creator, else the default |
-| An operator's other pages (lobby, Settings, Admin, Create session) | The viewer's own override, else the default |
-| A participant's Your reviews | The default, unless every session listed resolves to the same override |
-| About, Guide, Sign-in details | The viewer's own override if an operator, else the default |
+| A session's pages, operator or participant | The Unit of the operator who **created** the session, else the default. Co-owners do not change it |
+| An operator's other pages (lobby, Settings, Admin, Create session) | The viewer's own Unit, else the default |
+| A participant's Your reviews | The default, unless every session listed resolves to the same Unit |
+| About, Guide, Sign-in details | The viewer's own Unit if an operator, else the default |
+
+The creator's Unit is read when the page renders, so a sys admin's change
+shows on that operator's existing sessions at once.
 
 **Residential**: the top-level Unit's name when it is set and differs
 from the default; otherwise the default. In practice that is the college,
@@ -171,18 +173,18 @@ as today.
   bars become one partial with different entries, retiring the separate
   reviewer bar; Residential keeps its own partial to the same contract.
 
-## 8. Open questions
+## 8. Residential and ApplyDesk
 
-1. **A session's name when its operators disagree.** The creator's
-   override is proposed. The alternative, the name stamped on the session
-   at creation and editable on Session Home, is steadier but adds a
-   column and a control.
-2. **Should an operator edit their own override?** Proposed no (§6).
-3. **Residential's share of the work.** The icon swap and Sign out are
-   Residential's; whether they land with Review Robin's slices or on
-   Residential's own plan.
-4. **ApplyDesk.** It does not exist yet; this fixes its bar and its
-   override only so it is born matching.
+**This file is the contract for all three.** The build is per application:
+
+- **Review Robin**: a segment plan in `guide/`, header only (§1).
+- **Residential**: its own plan under `residentialapps/guide/`, to this
+  file. Its share: the icon in place of the square (§2), Sign out and
+  the account menu (§4), the top line's fallback to the workspace default
+  (§6), and the toggle and name moving into the menu under 640 px. Its
+  switcher and tabs stay as they are.
+- **ApplyDesk** does not exist yet; §2–§6 fix its bar and its Unit so it
+  is born matching.
 
 ## 9. Done when
 
@@ -190,9 +192,10 @@ as today.
   own icon.
 - Review Robin's bar shows no version, no "Signed in as", no inline
   links; everything they offered is in the account menu.
-- With `CORDWARE_INSTITUTION_NAME` unset, no page shows a top line in
-  Review Robin; set, every page does; an operator with an override sees
-  it on their sessions, and so do those sessions' participants.
+- With `CORDWARE_INSTITUTION_NAME` unset and no Units, no page shows a
+  top line in Review Robin; set, every page does. An operator given a
+  Unit sees it on the sessions they created, and so do those sessions'
+  participants and co-owners; operators cannot edit it.
 - In Review Robin, a page compared before and after differs only above
   the header's bottom line.
 - The browser checks: both menus by keyboard, light and dark, at 390 px
