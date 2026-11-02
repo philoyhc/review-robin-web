@@ -80,6 +80,11 @@ is the author's call.
    stays open for further refinements.
    **Plan:** `guide/segment_20C_refinements.md`.
 
+7. **22C — A type checker: pyright** (not gated). Pyright in basic mode
+   over application code, fixed cluster by cluster, then a CI gate;
+   ruff's rule set widened first.
+   **Plan:** `guide/segment_22C_pyright.md`.
+
 ### Stubs
 
 Small items with no plan doc; each fits one PR and its reasoning fits
