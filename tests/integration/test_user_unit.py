@@ -285,3 +285,23 @@ def test_an_account_with_no_role_has_a_blank_unit_cell(
     assert "former@example.edu" in body
     assert "<td data-unit-cell></td>" in body
     assert "Old Dept" not in body
+
+
+@pytest.mark.parametrize("child", ["outbox", "audit-log"])
+def test_sys_admin_session_diagnostics_show_the_creators_unit(
+    client: TestClient, db: Session, monkeypatch, child: str
+) -> None:
+    """Codex on #3509: these pass the session under their own keys."""
+    monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
+    review_session = _session(client, db, f"unit-diag-{child}")
+    _set_unit(db, "alice@example.edu", "Admin Dept")
+    creator = _user(db, "alice@example.edu")
+    other = _operator(db, "creator@example.edu")
+    review_session.created_by_user_id = other.id
+    other.unit = "Creator Dept"
+    db.commit()
+    assert creator.unit == "Admin Dept"
+    body = client.get(
+        f"/operator/sys-admin/sessions/{review_session.public_id}/{child}"
+    ).text
+    assert _top(body) == "Creator Dept"

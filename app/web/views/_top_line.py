@@ -10,8 +10,9 @@ Read from the page's template context, so no route has to pass it:
 - any other page: the viewer's own Unit if they are an operator, else the
   default.
 
-The keys are the ones every session page already passes (``session``, the
-`ReviewSession`); a page that names it otherwise falls through to the
+The keys are the ones the session pages already pass: ``session``, and
+the sys-admin diagnostics' ``outbox_session`` and ``audit_session``
+(Codex on #3509). A page that names it otherwise falls through to the
 viewer's Unit, which is why `tests/integration/test_user_unit.py` checks a
 session page of each kind.
 
@@ -64,13 +65,25 @@ def resolve_top_line(
     return default
 
 
+#: Template-context keys that carry the page's `ReviewSession`.
+SESSION_KEYS: tuple[str, ...] = ("session", "outbox_session", "audit_session")
+
+
+def _page_session(context: Context) -> ReviewSession | None:
+    for key in SESSION_KEYS:
+        value = context.get(key)
+        if isinstance(value, ReviewSession):
+            return value
+    return None
+
+
 @pass_context
 def top_line(context: Context, viewer: Any = None) -> str:
     """The template global the top bar calls, with the viewer it shows
     (``user``, or a page's ``bar_user``)."""
     return resolve_top_line(
         default=institution_name(),
-        review_session=context.get("session"),
+        review_session=_page_session(context),
         dashboard_sessions=context.get("top_line_sessions"),
         viewer=viewer,
     )
