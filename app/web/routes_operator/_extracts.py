@@ -153,6 +153,12 @@ def export_reviewees_csv(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> StreamingResponse:
+    # Segment 20B (author, 2026-11-02): under symmetric review only the
+    # Reviewers roster is exported; the Settings CSV carries the mode, so
+    # an import rebuilds the reviewees. The Extract Data card has no
+    # Reviewees row then, and a deep link misses as a disabled tab does.
+    if review_session.symmetric_review:
+        raise HTTPException(status_code=404)
     rows = list(serialize_reviewees(db, review_session))
     body_count = max(0, len(rows) - 1)
 
