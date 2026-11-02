@@ -1,6 +1,6 @@
 # ApplyDesk — Functional Specification
 
-**Version:** 0.6b (v0.6a plus the author's rulings of 2 November 2026: hard Application deadline, withdrawal window, Entra-only participants, sizing)  
+**Version:** 0.6b (v0.6a plus the author's rulings of 2 November 2026: hard Application deadline, withdrawal window, Entra-only participants, sizing; and the implementation review's comments)  
 **Date:** 2 November 2026  
 **Status:** Reviewed functional baseline. Suitable for agent planning and explicitly bounded implementation slices; unresolved policy/engineering decisions below must not be invented by an agent. Not a blanket implementation authorization.  
 **Application name:** ApplyDesk  
@@ -14,6 +14,12 @@
 - **Withdrawal window:** withdrawal is available only until the exercise's timeline is completed (§6).
 - **Entra only:** every participant (applicant, referee, assessor, operator) signs in with Entra. External or magic-link access is out of scope unless a separate access model is approved later (§2.1).
 - **Sizing:** sized for three likely scenarios, with the per-application assessor cap lowered from 500 to **50** and a tested design envelope added (§7.8). Panels may also serve as referee nomination pools. Large peer-review exercises belong in Review Robin.
+- **From the implementation review:**
+  - **The email-sender constraint:** delegated `Mail.Send` only, so there is no unattended sending (§7.4, G5).
+  - **Embargoes:** enforced on read, without a scheduler (§8.2, G7).
+  - **RRW form-engine reuse:** decided at G1, by a shared package or an explicit fork (§10.2).
+  - **File storage:** new infrastructure, with PDPA retention settled before real documents (§5.3, G8).
+  - **Corrections:** the registry `icon` (§10), and the handoff note moved to §15.
 
 ## 1. Purpose and scope
 
@@ -91,7 +97,7 @@ An authorized operator can create an exercise and configure:
 11. Outcome import/publication settings and applicant-facing result templates.
 12. Export schema and operator access (within standard, stable export conventions).
 
-An exercise can be drafted, validated, published/opened, closed to new submissions, and eventually archived. Validation should flag missing forms, invalid deadline ordering, mismatched reviewer requirements and unsafe visibility configurations. Changes to a published exercise must respect existing submitted applications and form versions. **Edits to published exercise details require applicant-facing change communication, including an announcement email**; the exact material-change definition, recipients, safe message content, dispatch, failure/retry behavior and treatment of trivial edits must be settled before this behavior is built. Do not silently alter exercise details or interpret every autosave/keystroke as a send instruction.
+An exercise can be drafted, validated, published/opened, closed to new submissions, and eventually archived. Validation should flag missing forms, invalid deadline ordering, mismatched reviewer requirements and unsafe visibility configurations. Changes to a published exercise must respect existing submitted applications and form versions. **Edits to published exercise details require applicant-facing change communication, including an announcement email** (sent by the editing operator's delegated identity unless G5 approves another sender); the exact material-change definition, recipients, safe message content, dispatch, failure/retry behavior and treatment of trivial edits must be settled before this behavior is built. Do not silently alter exercise details or interpret every autosave/keystroke as a send instruction.
 
 ### 4.1 Contributor categories
 
@@ -129,7 +135,8 @@ For each application retain the form version or immutable published form schema 
 - Provide malware/unsafe-file scanning strategy before production use, including quarantine and refusal semantics; do not assume existing storage permissions are sufficient.
 - Downloads use authenticated, short-lived server-authorized access (or equivalent), with no public blob URLs.
 - Attachments belong to a specific application/submission revision and visibility section; replacement and deletion actions are audited.
-- Retention, purge and backup implications require explicit policy before production data is accepted.
+- Retention, purge and backup implications require explicit policy before production data is accepted. Retention must satisfy the PDPA before any real applicant document arrives.
+- **This is new infrastructure.** Nothing on Cordware stores files today. The private Blob container, its access identity, malware scanning (likely Microsoft Defender for Storage, at a cost), quotas and backups all need IT's agreement. Raise them with IT early, in parallel with building, through the private repository's infrastructure process.
 
 ## 6. Application lifecycle
 
@@ -177,6 +184,16 @@ An invited referee or assessor can accept or decline. Record decline date, optio
 **Applicant dispatch** calls Microsoft Graph `/me/sendMail` using the signed-in applicant's delegated token, after invitation preview and affirmative send. Only selected/authorized contributors can be targeted. Graph `202 Accepted` means processing accepted, **not** delivered. The applicant must be signed in; neither operator nor scheduled worker can impersonate that applicant.
 
 **Operator dispatch** uses an independently authorized sending path (e.g., signed-in operator delegated `Mail.Send`); a shared mailbox/unattended sender is **not** available by assumption. Record sender, recipient, authorization, message/template version, attempt and result; retries must avoid uncontrolled duplicates. Invitation links point to authenticated, assignment-authorized views; possessing a link is never sufficient permission. `cordware.graph` supports directory lookup but production send-helper functionality still requires implementation.
+
+**What the deployment allows today.** The Cordware app registration holds **delegated Graph permissions only**: `Mail.Send` and `User.ReadBasic.All`, consented tenant-wide. It holds **no application permissions**. Mail can therefore go out only as a person signed in at that moment, never from a shared or unattended mailbox. RRW's Graph mail transport is still a stub. So:
+
+- **Every send happens in a signed-in request.**
+  - **Applicant-initiated sends** run in the applicant's request.
+  - **Operator-initiated sends** run in the operator's, including invitations, reminders, announcements and outcome notices.
+  - **Scheduled sends** can follow RRW's precedent of a lazy observer: due messages go out when an operator next opens the exercise, on that operator's token.
+- **Anything truly unattended**, such as a timed release notice when no operator is present or a reminder sweep, needs a decision at G5 between two options:
+  - accept operator-present sending;
+  - ask IT for an application `Mail.Send` permission scoped to one mailbox.
 
 ### 7.5 Confidentiality, waiver and release
 
@@ -244,7 +261,7 @@ Prefer standard CSV (UTF-8) and machine-readable metadata; offer an Excel-friend
 
 ### 8.2 Downstream outcome handoff
 
-Operator may enter or import a minimal outcome file keyed by stable application ID, e.g. optional operator-defined outcome label, applicant-visible outcome text, next-step instructions and optional effective/publication date. The system validates the file, previews changes, rejects conflicting/unknown IDs and requires explicit operator confirmation. Imported outcomes are **unpublished** until the operator releases them. Outcome embargoes and scheduled publication windows **are required**. Operators can correct or withdraw already released outcomes; preserve the prior published value, timestamps, affected recipients and a complete audit trail. Detailed semantics of correction, recipient notification and publication-window enforcement remain to be designed. Re-import, correction and release/withdrawal must be audited.
+Operator may enter or import a minimal outcome file keyed by stable application ID, e.g. optional operator-defined outcome label, applicant-visible outcome text, next-step instructions and optional effective/publication date. The system validates the file, previews changes, rejects conflicting/unknown IDs and requires explicit operator confirmation. Imported outcomes are **unpublished** until the operator releases them. Outcome embargoes and scheduled publication windows **are required**. Enforce them **on read**: an outcome whose release time has not passed is hidden from every applicant view, download and export, with no background job needed. Only a notification at release time needs a sender (§7.4). Operators can correct or withdraw already released outcomes; preserve the prior published value, timestamps, affected recipients and a complete audit trail. Detailed semantics of correction, recipient notification and publication-window enforcement remain to be designed. Re-import, correction and release/withdrawal must be audited.
 
 No internal selection scores, rankings or committee decision processes are mandated. The outcome interface is a communication handoff, not a selection engine.
 
@@ -271,7 +288,7 @@ Edits to published exercise details must **trigger an announcement email**, in a
 
 ### 9.2 Notifications beyond the applicant's own invitations
 
-The portal itself is the authoritative record of updates. **Announcement emails on published exercise-detail changes are required**; other email notifications about published announcements/outcomes follow per-exercise settings and require a separately approved sender model; they must not assume the applicant remains signed in. Notifications should contain minimal sensitive information and link back to the authenticated portal.
+The portal itself is the authoritative record of updates. **Announcement emails on published exercise-detail changes are required** (sender per §7.4 and G5); other email notifications about published announcements/outcomes follow per-exercise settings and require a separately approved sender model; they must not assume the applicant remains signed in. Notifications should contain minimal sensitive information and link back to the authenticated portal.
 
 ## 10. Proposed technical placement
 
@@ -284,6 +301,7 @@ The public canonical development repository gains a top-level `applydesk/` packa
 | Factory | `applydesk.main:create_app` |
 | Logger prefix | `applydesk` |
 | Title | `ApplyDesk` |
+| Icon | an `app_icons` entry (every `AppEntry` in `cordware/main.py` requires one) |
 | Health | `GET /applydesk/health` |
 
 Naming of internal package subfolders remains open; a possible layout is `applydesk/{main.py,identity.py,models/,services/,web/,templates/,tests/,spec/,docs/,guide/,alembic/}`. Respect the repository's existing spec/guide/docs and segment-based development model, but do not introduce scaffolding solely to fill out an idealized tree.
@@ -302,7 +320,9 @@ Naming of internal package subfolders remains open; a possible layout is `applyd
 
 ### 10.2 Reuse strategy
 
-Review Robin is the primary functional reference for applicant forms and assessor instruments, including field definitions, conditional validation, layouts and tabular output. ApplyDesk deliberately excludes RRW's generalized assignment-rule engine; assessors are assigned individually, through explicit whole-panel generation, or from validated CSV rows, with an optional later roster-to-assignment CSV generator. Review Robin also offers precedents for assignment lifecycle, audit, exports and session configuration. **Do not import RRW's private business modules into ApplyDesk.** First build against a documented ApplyDesk contract; extract genuinely shared form or validation primitives only after both use cases demonstrate the same abstraction and the dependency boundary can be tested.
+Review Robin is the primary functional reference for applicant forms and assessor instruments, including field definitions, conditional validation, layouts and tabular output. ApplyDesk deliberately excludes RRW's generalized assignment-rule engine; assessors are assigned individually, through explicit whole-panel generation, or from validated CSV rows, with an optional later roster-to-assignment CSV generator. Review Robin also offers precedents for assignment lifecycle, audit, exports and session configuration. **Do not import RRW's private business modules into ApplyDesk.** First build against a documented ApplyDesk contract. **G1 decides how RRW's form engine is reused**, before any form code is written. RRW's instrument editor is large; its main template alone exceeds 5,000 lines. Copying it creates a fork that drifts, and "extract later" means the copy happens first. G1 therefore chooses between two options, and records the choice:
+- extract the field schema, validation and rendering into an in-repo package with its own tests, on which both RRW and ApplyDesk depend;
+- accept an explicit, documented fork.
 
 ## 11. Security, privacy and operational requirements
 
@@ -399,10 +419,6 @@ Defer advanced multi-round assessor allocation and inter-rater analytics, sophis
 - **Offline selection:** operator exports applications, selects externally, imports a validated outcome file, then publishes; applicants do not see draft outcomes or internal processing artifacts.
 - **Communication-only continuation:** operator posts a timeline announcement explaining delays even when no outcome data has yet been imported.
 
----
-
-**Handoff note:** §15 supplies explicit agent gates, invariants and phased slices. Unresolved decisions still require author approval; this document is a functional baseline, not blanket authorization to code all features.
-
 ### 14.1 Additional reviewer-cap scenarios (retained from v0.4)
 
 - **Ranked surplus:** applicant nominates and ranks ten potential referees; operator selects three, inviting only those three. An attempt to authorize a sixth active/fulfilled referee must fail even if ten were nominated.
@@ -414,6 +430,8 @@ Defer advanced multi-round assessor allocation and inter-rater analytics, sophis
 
 
 ## 15. Coding-agent handoff controls (reviewed 2 November 2026)
+
+**Handoff note:** this section supplies explicit agent gates, invariants and phased slices. Unresolved decisions still require author approval; this document is a functional baseline, not blanket authorization to code all features.
 
 This section is an **implementation control**, not a replacement for the product decisions above. Use §13.1 as the adopted behavior, §13.2 as open decisions, and this section to avoid filling gaps silently. The earlier design history is not a license to resurrect retired models or quotas.
 
@@ -429,14 +447,14 @@ This section is an **implementation control**, not a replacement for the product
 
 | Gate | Required decision or investigation | Safe work before resolution |
 |---|---|---|
-| **G1 — RRW forms** | Exact field-type/validation/branching parity and authoring UI for applicant forms and up to 3 assessor instruments; document deviations from RRW | Form schema prototypes, inventory, isolated field validation tests |
+| **G1 — RRW forms** | Exact field-type/validation/branching parity and authoring UI for applicant forms and up to 3 assessor instruments; document deviations from RRW; shared package versus explicit fork (§10.2) | Form schema prototypes, inventory, isolated field validation tests |
 | **G2 — Published changes** | Form-version migration/immutability, material vs trivial edit, announcement audience, batching and failure handling | Unpublished exercise editing; versioned configuration storage |
 | **G3 — Stage/reopen/reviews** | When official Review stage starts (it is also the hard submission deadline); what completes the timeline and so closes withdrawal; early-review version binding; whether an old response remains valid after resubmission and who confirms reuse; how in-progress reviews behave | Explicit stage state model, read-only historical submission/review snapshots, isolated lifecycle tests |
 | **G4 — Withdrawal/allowance** | Whether withdrawn submissions consume the 1–5 per-applicant allowance, whether reapplication reuses an existing application record, and race-safe counting at submit | Submit/withdraw event history and non-destructive withdrawal UI; do not implement ambiguous new-application eligibility rules |
-| **G5 — Email delivery** | Operator-authorized sender, reminder sender, Graph token handling, idempotency, retries, audience and rate limits; distinguish Graph acceptance from delivery | Fake/outbox transport and user-confirmed applicant-send prototype |
+| **G5 — Email delivery** | Operator-present sending versus an IT-granted application `Mail.Send` (§7.4); operator-authorized sender, reminder sender, Graph token handling, idempotency, retries, audience and rate limits; distinguish Graph acceptance from delivery | Fake/outbox transport and user-confirmed applicant-send prototype |
 | **G6 — Panels/import** | Exact CSV formats, bad-row behavior, assignment/instrument obligation merge rules, bulk atomicity and duplicate handling | Panel/member schema, directory validation, preview of deterministic assignments, small-batch tests |
-| **G7 — Publication** | Embargo timezone and scheduler, correction/withdrawal semantics, effects on already-delivered notices or downloads | Draft outcome model and explicit operator preview/manual publish path |
-| **G8 — External access/storage** | Invite-list revocation after application exists; blob identity permissions, scanning, quotas, retention, backups and high-volume export execution | Local fake-storage interface, access-policy tests, manifests and streaming prototypes |
+| **G7 — Publication** | Embargo timezone (enforced on read, §8.2) and release-time notification, correction/withdrawal semantics, effects on already-delivered notices or downloads | Draft outcome model and explicit operator preview/manual publish path |
+| **G8 — External access/storage** | Invite-list revocation after application exists; IT agreement for the new storage (§5.3); PDPA retention; blob identity permissions, scanning, quotas, retention, backups and high-volume export execution | Local fake-storage interface, access-policy tests, manifests and streaming prototypes |
 
 An agent encountering a gate must either (a) work on the safe bounded portion, (b) record a specific proposed decision for author review, or (c) stop that dependent slice. It must not quietly choose the missing behavior and call the implementation complete.
 
