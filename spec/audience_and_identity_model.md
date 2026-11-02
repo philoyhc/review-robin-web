@@ -351,9 +351,11 @@ session's `description`, shown at the top of the reviewer surface on
 every visit (plain text, not only the first visit). The contact line is
 `help_contact`, shown as "Questions? Contact …" on the reviewer surface
 and in the default invitation, reminder and responses-received emails;
-each drops the line when it is unset. The institution name is **not built** and is
-deferred (`guide/deferred_consolidated.md`, "Institution name and magic
-links").
+each drops the line when it is unset. The institution name shows as the
+top bar's top line since segment 20D (`docs/header_chrome.md` §6); beside
+the session name in the header it is deferred
+(`guide/deferred_consolidated.md`, "Institution name beside the session
+name").
 
 What operators **cannot** configure:
 
@@ -410,8 +412,8 @@ fake identity, which it refuses outside `APP_ENV=local`
   reviewer to SSO; after authenticating, they are deep-linked to
   the relevant response surface.
 
-Magic links are **not built** and are deferred with the institution
-name above: today a reviewer signs in through
+Magic links are **not built** and are deferred, with their own plan
+(`guide/magic_links.md`): today a reviewer signs in through
 institutional SSO only. When built, they are an explicit fallback,
 not the primary mode.
 The "tokenized link replaces auth" pattern is **not** the model;

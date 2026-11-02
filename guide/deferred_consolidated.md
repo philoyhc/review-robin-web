@@ -755,8 +755,8 @@ decisions about which row to keep.
   reports the clusters, prompts on which row to keep, then
   enforces the unique index.
 - OR a future code change adds a new write path on one of
-  these tables (e.g. a Segment 14B magic-link landing route
-  inserts a participant row) — ship Slice D as the
+  these tables (e.g. a magic-link landing route,
+  `guide/magic_links.md`, inserts a participant row) — ship Slice D as the
   unique-index variant before that path lands, so the new
   surface can't regress.
 - OR pilot feedback surfaces a duplicate-identity bug we
@@ -1341,16 +1341,14 @@ delegated Graph (`guide/segment_14F_manual_email.md`), with a dedicated
 mailbox over Graph as the only fallback (14G). **Lift trigger:** a
 deployment outside Microsoft 365, or a tenant that refuses Graph sending.
 
-### Reviewee and observer notifications; magic links (W20 / W21)
+### Reviewee and observer notifications (W20)
 
 *Filed 2026-11-02, from 14B's appendix.* Results-ready notices and
-acknowledgement nudges to reviewees and observers (W20), and magic-link
-landing for participants without an institutional account (W21); the
-detail is in the archived 14B appendix. Both need a send path:
-notifications by hand ride 14F, nudges on a clock wait for 14G, and
-magic links stay off while every participant signs in with Entra.
-**Lift trigger:** 14F shipped and an operator asking to notify
-reviewees, or an external participant who cannot sign in.
+acknowledgement nudges to reviewees and observers; the detail is in the
+archived 14B appendix. Notifications by hand ride 14F; nudges on a clock
+wait for 14G. Magic-link landings for them (W21) are in
+`guide/magic_links.md`. **Lift trigger:** 14F shipped and an operator
+asking to notify reviewees.
 
 ## Part C — Future possibilities (off-roadmap)
 
@@ -1805,16 +1803,16 @@ a deployment, so they don't belong in that checklist.
 **Lift trigger:** a pilot operator on Safari or using a screen reader, or
 an accessibility review before the pilot opens.
 
-### Institution name and magic links (findings F11, author's ruling 2026-10-02)
+### Institution name beside the session name (findings F11, author's ruling 2026-10-02)
 
 `spec/audience_and_identity_model.md` names an institution name beside
-the session name in the reviewer page header, and magic links as the
-sign-in fallback for reviewers without institutional SSO. Neither is
-built: no column or setting carries an institution name, and reviewers
-sign in through Easy Auth only. (The spec's welcome message and contact
-line are built, as the session's `description` and `help_contact`.)
-The spec marks both as deferred and points here.
+the session name in the reviewer page header. Partly met since segment
+20D: `CORDWARE_INSTITUTION_NAME`, or the session creator's Unit, is the
+top bar's top line on every page, the reviewer's included. Not built: the
+name beside the session name in the page header itself. (The spec's
+welcome message and contact line are built, as the session's
+`description` and `help_contact`.) Magic links, once filed here too, have
+their own deferred plan: `guide/magic_links.md` (2026-11-02).
 
-**Lift trigger:** a pilot session with external reviewers who have no
-institutional account (magic links), or an operator asking for their
-institution's name on the reviewer page.
+**Lift trigger:** an operator asking for the name beside the session name
+as well as in the top bar.
