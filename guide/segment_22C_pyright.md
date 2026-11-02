@@ -1,0 +1,195 @@
+# Segment 22C — A type checker: pyright
+
+**Opened:** 2026-11-02, from the author's brief (placed as
+`guide/pyright_adoption_plan.md` in `#3520`, revised into this plan the <!-- path-ref-ok -->
+same day) · **Theme:** a compiler-style reject on every edit, gated in CI
+once the app code is clean · **Related:**
+`guide/archive/segment_22A_ci_lanes.md` (the lanes the gate joins),
+`CONTRIBUTING.md` (what gates a merge), `.claude/skills/babysit-merge/SKILL.md`
+
+## Opportunity
+
+Nothing enforces `CLAUDE.md`'s "prefer explicit types". `ruff` runs its
+default rules (pyflakes and pycodestyle errors only), and no type checker
+runs anywhere: not in the session-start hook, not in `ci.yml`, not in the
+`babysit-merge` gate. The code is most of the way there already: models
+are SQLAlchemy 2.x `Mapped[]` throughout, and about 95% of `def`s in
+`app/` carry return annotations. A checker is the cheapest feedback loop
+an agent's edits can get.
+
+Pyright 1.1.414 in `basic` mode, `pythonVersion = "3.12"`, under the
+project `.venv` (SQLAlchemy 2.1.5) finds **289 errors in 70 files** of
+application code (`app/`, `cordware/`, `residentialapps/`, `utilityapps/`,
+less their `tests/` folders), in about 40 s. Test code adds 1,964 more:
+1,879 under `tests/` and 85 in the three packages' own `tests/`.
+
+## Decision
+
+**Pyright, basic mode, gating application code only**, fixed cluster by
+cluster before the gate goes on, so the gate starts at zero and stays
+there. Test code and strict mode come later, each in its own plan.
+
+- **Scope:** `include` the four packages and `exclude` every `tests/`
+  folder, so "the gate" means one thing: the code that ships. The
+  author's brief included the packages' own `tests/` but not `tests/`;
+  either all test code is gated or none (2026-11-02).
+- **Versions pinned:** `pyright==1.1.414` in the `dev` extra, and the
+  SQLAlchemy floor raised to `>=2.1` in `pyproject.toml` and
+  `requirements.txt`. Error counts move with both: 2.1 types `Select`
+  and `Result` differently from 2.0, and a gate has to give the same
+  answer on every machine.
+- **Lint rules widened first:** `ruff`'s `select` grows to
+  `E, F, I, B, UP, SIM` in its own rung, before the type fixes, so their
+  diffs are not mixed with reformatting.
+
+Rejected: *mypy.* Slower, and its SQLAlchemy support was a plugin now
+retired; pyright reads 2.x `Mapped[]` natively. Rejected: *gating now
+with a baseline file of known errors.* 289 errors in 70 files is a
+handful of PRs, and a baseline file is a second list to keep in step.
+
+## Semantics
+
+The five clusters, in the order the ladder fixes them. Counts are
+approximate where a diagnostic could sit in two clusters; the command in
+`## Blast radius` re-takes them.
+
+- **A. Two Protocols declare writable attributes (39).** `GroupKeyable`
+  (`app/services/responses/_group_reconciliation.py`) and `BranchField`
+  (`app/services/responses/_branching.py`) state their fields as plain
+  attributes. A writable Protocol member is invariant, and a model's
+  `Mapped[int]` is not `int`, so `Assignment` and
+  `InstrumentResponseField` fail to match (`"id" is invariant because it
+  is mutable`). **Fix:** declare each member as a read-only `@property`.
+  Not `Sequence[Assignment]`: `GroupKeyable` exists so the
+  `AssignmentPair` projection shares `group_keys` (19S Item 3).
+- **B. SQLAlchemy 2.0 spellings under 2.1 (about 50).**
+  `Select[tuple[User]]` is the 2.0 form; under 2.1 it makes `.scalars()`
+  yield `tuple[User]` (`_batch_lock` in `app/services/users.py`,
+  `_eligibility_lock` in `app/services/session_owners.py`): annotate
+  `Select[User]`. `.rowcount` on a bare `Result` (12) needs
+  `CursorResult`. Unpacking `Row` as an entity, and
+  `TypeEngine[Any].length` (narrow to `sa.String` first), are the rest.
+- **C. `X | None` used where `X` is required (about 85).** Each is a
+  candidate latent bug: narrow where the value cannot be `None` (an
+  early 404 through the existing deps, or an assert with its reason), and
+  fix the caller where it can. Never a blanket assert. A narrowing that
+  changes behavior (a new 404, a new raise) is named in its PR body.
+- **D. `LogRecord` extra attributes.** All 13 sit in test code, so this
+  cluster moves out of scope, with the tests.
+- **E. The residue (about 115), read one by one.** `sorted(key=str.lower)`
+  over optional keys, invariance (`dict[int, Reviewee | Reviewer]` passed
+  as `dict[int, object]`: take a `Mapping`), loose parameter annotations
+  in `_generate.py` and `_band1.py`, and the larger files
+  (`session_rehydrate.py`, `residentialops/sample_leave.py`,
+  `_setup_observers.py`). A `# pyright: ignore[rule]` carries a one-line
+  reason; fixing is the default.
+
+## Judgment calls — decided
+
+- Basic mode, not strict, for the first gate: strict on 289 files of
+  existing code is a rewrite (2026-11-02).
+- Test code excluded from the first gate; it is checked by running it
+  until its own plan (2026-11-02).
+- One `diff-reviewer` read for the fix rungs together, as one item
+  (`CLAUDE.md` "Where work runs"), not one per rung as the brief had it;
+  the ruff rung takes its own (2026-11-02).
+
+## Blast radius (measured)
+
+Taken 2026-11-02 at `3df7a365`, pyright 1.1.414, SQLAlchemy 2.1.5.
+
+| What | Count | Command |
+|---|---|---|
+| Errors, application code | 289 in 70 files | `pyright --outputjson` with the rung 1 config, errors outside `*/tests/*` |
+| Errors, the four packages with their `tests/` (the brief's scope) | 374 in 316 files | the same, without the `tests` exclude |
+| Errors, `tests/` | 1,879 in 599 files | `include = ["tests"]` |
+| By package (application code) | `app/services` 180, `app/web` 83, `residentialapps` 16, `utilityapps` 10 | `collections.Counter` over the file paths |
+| Docs naming the lint command | 7 | `grep -rln "ruff check" --include=*.md . \| grep -v "archive\|\.venv"` (README, CLAUDE/AGENTS, CONTRIBUTING, `docs/local_setup.md`, the skill, `new_project_practices_setup.md`) |
+| `ci.yml` jobs running `ruff check .` | 2 (`test`, `residential`) | `grep -n "ruff check" .github/workflows/ci.yml` |
+| `cordware/` application files (strict, later) | 9 | `find cordware -name "*.py" -not -path "*/tests/*" \| wc -l` |
+
+To re-take, under the project `.venv`:
+
+```bash
+pyright --outputjson > /tmp/pyright.json
+python3 -c "import json,collections;d=json.load(open('/tmp/pyright.json'));print(d['summary']);print(collections.Counter(x.get('rule') for x in d['generalDiagnostics'] if x['severity']=='error').most_common())"
+```
+
+## PR ladder
+
+1. **Config and pins.** `[tool.pyright]` in `pyproject.toml`
+   (`include` the four packages, `exclude` `.venv`, `**/__pycache__`,
+   `**/tests`; `pythonVersion = "3.12"`; `typeCheckingMode = "basic"`);
+   `pyright==1.1.414` in the `dev` extra; `sqlalchemy>=2.1` in
+   `pyproject.toml` and `requirements.txt`. `README.md`, `CLAUDE.md`
+   and `AGENTS.md` ("Common commands") and `docs/local_setup.md` gain
+   `pyright` beside `ruff check .`. The session-start hook runs
+   `pyright --version` once, so the Node download it does on first use
+   happens at session start, not mid-gate. Not in CI yet. Code: its own
+   read (it touches `.claude/hooks/`).
+2. **Ruff rules widened.** `[tool.ruff.lint] select = ["E", "F", "I",
+   "B", "UP", "SIM"]` and `ruff check --fix`, then the findings `--fix`
+   leaves, by hand. Nothing else in the PR. Its own read, of the config
+   and the hand fixes; the mechanical diff is summarized per rule in the
+   PR body.
+3. **Cluster A**, the two Protocols. Item 2 starts here: record the main
+   SHA in this PR's body for the cumulative read.
+4. **Cluster B**, services, then routes if it splits.
+5. **Cluster C**, one PR per package if it is large; behavior changes
+   listed in each body.
+6. **Cluster E.** The last build rung of Item 2: `diff-reviewer` on the
+   cumulative diff since rung 3's base.
+7. **The gate.** When `pyright` exits 0: a `Type check` step
+   (`run: pyright`) after `Lint` in the `test` and `residential` jobs of
+   `ci.yml`, not in `prose` (`tools/ci_lanes.py` needs no change: only
+   the lanes that lint run it); `pyright` added to the pre-PR gate in
+   `CLAUDE.md` and `AGENTS.md` ("Where work runs"), in `CONTRIBUTING.md`'s
+   checklist and lane notes, and in the `babysit-merge` skill. `actionlint`
+   is not run in this repository; CI's own run is the check.
+8. **Close.** Plan compacted and archived; the two later plans filed.
+
+## Definition of done
+
+- `pyright` exits 0 on `main` with the rung 1 config (CI's `Type check`
+  step on the closing PR).
+- `ci.yml`'s `test` and `residential` jobs run `pyright`; `prose` does not.
+- `CLAUDE.md`, `AGENTS.md`, `CONTRIBUTING.md` and the `babysit-merge`
+  skill name `pyright` in the pre-PR gate; the twins are identical.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 22C` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `guide/todo_master.md` entries deleted; plan moved to `guide/archive/` + index row
+
+## Open questions
+
+- **Rung 2's rule set:** all six families at once, or `I` and `UP` first
+  (mechanical) and `B` and `SIM` after (judgment)? Author, at rung 2.
+- **Tests:** gate them later with the two optional-access rules relaxed
+  and ratcheted back per directory (`tests/unit/` first), or leave test
+  code to running it? Its own plan; author.
+- **Strict mode** after the gate, per package (`strict = ["cordware"]`
+  first, then `app/services`, then `app/web`)? Its own plan; author.
+
+## Out of scope
+
+- Test code (1,964 errors, mostly `reportOptionalMemberAccess` and
+  `reportOptionalSubscript` on fixtures typed `Foo | None`), with cluster
+  D: the open question above.
+- Strict mode: the open question above.
+- Changing any behavior except where a cluster C narrowing does, named in
+  its PR body.
+
+## Doc impact
+
+- `pyproject.toml` — `[tool.pyright]`, the pins, `[tool.ruff.lint]` (rungs 1, 2).
+- `requirements.txt` — the SQLAlchemy floor (rung 1).
+- `README.md` — `pyright` among the commands and the dev dependencies (rung 1).
+- `CLAUDE.md` — "Common commands" (rung 1) and the pre-PR gate in "Where work runs" (rung 7); `AGENTS.md` copied.
+- `AGENTS.md` — the twin, copied from `CLAUDE.md` (rungs 1, 7).
+- `docs/local_setup.md` — `pyright` beside `ruff check .` (rung 1).
+- `.claude/hooks/session-start.sh` — warm pyright's Node download (rung 1).
+- `.github/workflows/ci.yml` — the `Type check` step (rung 7).
+- `CONTRIBUTING.md` — the checklist and lane notes (rung 7).
+- `.claude/skills/babysit-merge/SKILL.md` — `pyright` in Stage 1 (rung 7).
+- `guide/todo_master.md` — delete the segment's entry at close.
