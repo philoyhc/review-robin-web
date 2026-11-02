@@ -81,8 +81,8 @@ def test_new_session_ui_toggles_put_the_checkbox_first(client: TestClient) -> No
     body = client.get("/operator/sessions/new").text
     card = body[body.find('id="user-interface-settings"'):]
     for name, text in (
-        ("relationships_enabled", "Relationships tab and page"),
-        ("observers_enabled", "Observers tab and page"),
+        ("relationships_enabled", "Relationships page"),
+        ("observers_enabled", "Observers page"),
     ):
         box = card.find(f'name="{name}"')
         label = card.find(text)

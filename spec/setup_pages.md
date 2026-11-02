@@ -24,8 +24,9 @@ canonical description, alongside the per-page idiosyncrasies.
 **Relationships page gate.** Every Relationships Setup route
 (`app/web/routes_operator/_setup_relationships.py`) is gated by
 `require_relationships_enabled_session`, which answers 404 unless
-`session.relationships_enabled` is on — the **Relationships tab and
-page** toggle, set beside the Observers one (below). The
+`session.relationships_enabled` is on — the **Relationships page**
+toggle on New session (Session Home's **Relationships** chip), set beside
+the Observers one (below). The
 permission check runs first.
 
 **Observers page gate.** The Observers Setup page routes

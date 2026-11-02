@@ -179,11 +179,11 @@
      only thing that spaces them.
 
      Every card's inputs associate with ``create-session-form`` above via
-     the HTML ``form=`` attribute, so any uploads, the two toggles,
+     the HTML ``form=`` attribute, so any uploads, the three boxes,
      the tags and the owners submit alongside the
      session details and feed ``POST /operator/sessions`` after the
      session row is created. There's no session row yet, so Quick Setup
-     is always unlocked (counts 0) and neither toggle is ever
+     is always unlocked (counts 0) and no box is ever
      locked-on-data. #}
   <div class="bottom-grid">
     <div class="bottom-left">
@@ -195,27 +195,26 @@
           <label class="ui-setting">
             <input type="checkbox" name="relationships_enabled"
                    form="create-session-form">
-            Relationships tab and page
+            Relationships page
           </label>
           <label class="ui-setting">
             <input type="checkbox" name="observers_enabled"
                    form="create-session-form">
-            Observers tab and page
+            Observers page
           </label>
-        </div>
-        {# 20B — symmetric review. A new session's rosters are empty, so
-           the box is always open here. Ticked, it greys the Quick Setup
-           Reviewees slot in the browser (script below). #}
-        <div class="ui-settings-row">
+          {# 20B — symmetric review. A new session's rosters are empty, so
+             the box is always open here. Ticked, it greys the Quick Setup
+             Reviewees slot in the browser (script below). The three short
+             labels share one row (author, 2026-11-02). #}
           <label class="ui-setting">
             <input type="checkbox" name="symmetric_review" value="true"
                    form="create-session-form" data-symmetric-review>
             Symmetric review
           </label>
         </div>
-        <p class="muted">Symmetric review: everyone
-          reviews everyone. Upload the Reviewers roster only, and the app
-          makes the same people the reviewees.</p>
+        <p class="muted">Symmetric review: the reviewers are also the
+          reviewees. Upload the Reviewers roster only, and the app makes the
+          same people the reviewees.</p>
       </div>
       {% include "operator/partials/_quick_setup_card.html" %}
     </div>
