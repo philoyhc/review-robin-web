@@ -1,5 +1,5 @@
 """Symmetric review: the Reviewees roster mirrors the Reviewers roster
-(segment 20B, ``guide/segment_20B_symmetric_review.md``).
+(segment 20B, ``guide/archive/segment_20B_symmetric_review.md``).
 
 While ``ReviewSession.symmetric_review`` is on, the Reviewers roster is the
 only one edited. Every service that writes reviewers calls

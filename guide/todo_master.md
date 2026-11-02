@@ -70,14 +70,7 @@ is the author's call.
    there, refuses the file (author, 2026-10-31).
    **Plan:** `guide/segment_19Z_roster_append.md`.
 
-4. **20B — Symmetric review** (not gated on Azure). A session setting
-   under which the Reviewers roster is the only one edited and every
-   write mirrors to Reviewees; on only while both rosters are empty, off
-   any time. The Reviewees page stays, read-only, Unlock panel included; the
-   setup export carries the Reviewers roster alone.
-   **Plan:** `guide/segment_20B_symmetric_review.md`.
-
-5. **20C — Refinements** (not gated). Small follow-ups from the author's
+4. **20C — Refinements** (not gated). Small follow-ups from the author's
    browser runs, one item each. Items 1 (verified names as pills on
    the New session Owners card), 2 (checkboxes before their labels) and
    3 (verified names as the lobby's display pill) are done; the segment
