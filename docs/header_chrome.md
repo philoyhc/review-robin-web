@@ -25,6 +25,11 @@ Today the applications look like two products:
 The direction is Residential's. One bar, the same in every application,
 with each application's own icon, accent and menu entries.
 
+**In Review Robin, only the header changes** (author, 2026-11-02): what
+sits above its first horizontal line today, the `.chrome` block. Nothing
+below that line changes: not the session nav card, the status strip, page
+headings or any page body.
+
 ## 2. The bar
 
 One row, scrolling away with the page, at every width.
@@ -102,10 +107,12 @@ lacks.
 At most one thin row, the application's to fill:
 
 - **Residential and Support Logs**: the area's page tabs, unchanged.
-- **Review Robin**: the **breadcrumb**, moved out of the bar
-  (`app/web/templates/_partials/breadcrumb.html`), rendered only where a
-  page has one, so the lobby has no row. Under 640 px the middle crumbs
-  collapse to "…". The session nav card stays in the page, unchanged.
+- **Review Robin**: the **breadcrumb**
+  (`app/web/templates/_partials/breadcrumb.html`), on its own row inside
+  the header, under the bar and above the header's one bottom line, where
+  it sits today under the app identity. No line between the bar and the
+  breadcrumb. Rendered only where a page has one. Under 640 px the middle
+  crumbs collapse to "…". Below the header's line nothing changes (§1).
 - **Participants**: no row.
 
 ## 6. The institution name
@@ -186,5 +193,7 @@ as today.
 - With `CORDWARE_INSTITUTION_NAME` unset, no page shows a top line in
   Review Robin; set, every page does; an operator with an override sees
   it on their sessions, and so do those sessions' participants.
+- In Review Robin, a page compared before and after differs only above
+  the header's bottom line.
 - The browser checks: both menus by keyboard, light and dark, at 390 px
   and at desktop width.
