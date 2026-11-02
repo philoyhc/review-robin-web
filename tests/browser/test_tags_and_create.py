@@ -182,7 +182,9 @@ def test_a_staged_verified_owner_reads_as_the_pill(page: Page, api: httpx.Client
     expect(plain).not_to_have_attribute("class", re.compile("pill"))
     # 20C Item 1: a verified name is the pill too, an unverified one plain text.
     named = table.locator("tr").filter(has_text=COLLEAGUE_EMAIL).locator("td").nth(1)
-    expect(named.locator("span.pill.pill-address")).to_have_text("Colleague One")
+    named_pill = named.locator("span[data-directory-matched]")
+    expect(named_pill).to_have_text("Colleague One")
+    expect(named_pill).to_have_class("pill pill-count")  # 20C Item 3: not pill-address
     unnamed = table.locator("tr").filter(has_text=SECOND_COLLEAGUE_EMAIL).locator("td").nth(1)
     expect(unnamed).to_have_text("Colleague Two")
     expect(unnamed.locator("span.pill")).to_have_count(0)

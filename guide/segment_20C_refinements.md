@@ -13,7 +13,7 @@ On Accounts Management and Session Home's Owners card, a verified account's name
 ### Decision
 
 - The creator's row uses `account_name(account_verified(user), user.display_name)`.
-- A staged row's name cell is the same pill when its candidate `<option>` carries `data-verified`: a `<span class="pill pill-count pill-address">` with the same title and `data-directory-matched`, built with `textContent`, as the stager builds the address pill. Unverified and nameless rows stay as they are (plain name, or "—").
+- A staged row's name cell is the same pill when its candidate `<option>` carries `data-verified`: a `<span class="pill pill-count pill-address">` with the same title and `data-directory-matched`, built with `textContent`, as the stager builds the address pill. Unverified and nameless rows stay as they are (plain name, or "—"). *(Item 3, 2026-11-02: now `pill pill-count`, without `pill-address`.)*
 
 Rejected: *render staged rows server-side.* The stager is client-side by design (nothing saves until Create session), and it already makes the address pill this way.
 
@@ -27,6 +27,7 @@ Done 2026-11-01 in one PR, as laddered.
 - **Test:** the integration test checks the verified creator's pill. The test client's sign-in always stamps a principal, so the unverified branch is left to Accounts' tests of the same macro.
 - **Browser test:** the staged-row check names its candidates on the page, as it already marks them verified.
 - **Reads:** one `diff-reviewer` read. It found no code defect. Its small findings were a stale comment on `account_name`, the spec's missing nameless case and this Status block's bookkeeping; all are fixed in the same PR.
+- **Superseded by Item 3 (2026-11-02):** the name is now the plain display pill, not `pill-address`; the two size rulings below no longer apply.
 - **Size, 2026-11-02 (author).** A verified name's pill keeps the row's own size, as an unverified name, the role and the date beside it do. This reverses the 2026-11-01 small size, which made a matched name smaller than the rest of the row on Accounts and both Owners cards. Only the email, in the code face, stays smaller.
 
 ### PR ladder
@@ -112,3 +113,53 @@ None.
 ### Doc impact
 
 - `spec/ui_elements.md` — a checkbox precedes its label text, with the scan's count (Item 2).
+
+## Item 3 — Verified names as the lobby's display pill
+
+### Opportunity
+
+On Accounts and both Owners cards a verified name was a case-keeping pill in the body font, first at the small size (2026-11-01), then at the row's size (2026-11-02, Item 1 Status). The author's Azure check found both read wrong. It was the only pill drawn at body size, while the lobby shows the same person, a session's creator, as the plain display pill (`pill pill-count`: tiny size, medium weight, uppercase).
+
+### Decision
+
+A verified name is the plain display pill, as the lobby's creator is (author, 2026-11-02). `pill-address` stays on the `<code>` address alone, where case and the code face matter. *Rejected:* keeping the address modifier on names at any size. It made names the one body-size pill in rows of small ones.
+
+### Semantics
+
+- **Unverified name:** plain text, so the pill keeps meaning "matched to a directory account", as on the address.
+- **Missing name:** "—".
+- **A staged row on New session:** it takes the same pill client-side.
+
+### Blast radius (measured)
+
+Taken 2026-11-02 at `be89716`: `grep -rn "pill-address" app/web/templates` → the macro's name `<span>` (`partials/_roster_address.html`) and the stager's staged name (`partials/_owners_stager_js.html`) change; the `<code>` address pill in both, and its `base.html` rule, stay. `grep -rln "pill pill-count pill-address" tests` → three integration and two browser tests.
+
+### PR ladder
+
+1. **One PR:** the `account_name` macro, the stager's staged row, the comments, `spec/session_owners.md`, and the tests that pinned the old markup or size.
+
+### Definition of done
+
+- `account_name` and the stager render `pill pill-count` (integration tests pin the class string; the browser test pins the staged row's class and the pill's uppercase, smaller-than-the-row size)
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 20C.3` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `guide/todo_master.md` 20C entry updated to drop this item; the entry itself goes only when the segment closes
+
+### Status
+
+Built 2026-11-02 in one PR. It reverses Item 1's two size rulings.
+- **Reads:** one `diff-reviewer` read. It found no code defect. Fixed in the same PR: stale 19Z and Item 1 prose naming `pill-address` on the name, the weight, this block's blast radius, the `todo_master` entry, and an exact class pin on the staged name.
+
+### Open questions
+
+None.
+
+### Out of scope
+
+- The address pill (`<code>`), which keeps its case and the code face.
+
+### Doc impact
+
+- `spec/session_owners.md` — a verified name is the plain display pill, the address its case-keeping pill (Item 3).

@@ -46,7 +46,7 @@ def test_the_accounts_table_pills_a_verified_account(
     assert "Bound@Example.edu" in PILL.findall(page)  # case kept
     assert "<code>plain@example.edu</code>" in page
     # The name too (author, 2026-10-31): the pill for a verified account.
-    assert '<span class="pill pill-count pill-address" title="Matched to a directory account" data-directory-matched>Bea Bound</span>' in page
+    assert '<span class="pill pill-count" title="Matched to a directory account" data-directory-matched>Bea Bound</span>' in page
     assert "<td>Pat Plain</td>" in page
     nameless = page[page.index("nameless@example.edu</code>"):]
     assert nameless.split("<td>", 2)[1].startswith("—</td>")
@@ -65,7 +65,7 @@ def test_the_owners_card_pills_a_verified_owner(client: TestClient, db: Session)
     bob.display_name = "Bob Bound"
     db.commit()
     page = _home(client, review_session)
-    assert '<span class="pill pill-count pill-address" title="Matched to a directory account" data-directory-matched>Bob Bound</span>' in page
+    assert '<span class="pill pill-count" title="Matched to a directory account" data-directory-matched>Bob Bound</span>' in page
 
 
 def test_the_new_session_picker_marks_a_verified_candidate(client: TestClient, db: Session) -> None:

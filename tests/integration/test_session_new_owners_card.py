@@ -151,7 +151,7 @@ def test_the_creators_verified_name_is_the_pill(client: TestClient, db: Session)
     user.display_name = "Alice Tan"
     db.commit()
     card = _card(client.get("/operator/sessions/new").text)
-    assert re.search(r'<span class="pill pill-count pill-address"[^>]*data-directory-matched>Alice Tan</span>', card)
+    assert re.search(r'<span class="pill pill-count"[^>]*data-directory-matched>Alice Tan</span>', card)
     assert "<td>Alice Tan</td>" not in card
 
 

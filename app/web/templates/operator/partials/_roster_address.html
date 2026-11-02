@@ -18,11 +18,11 @@
 
 {# A verified account's name (author, 2026-10-31), on Accounts, Session
    Home's Owners card and the New session Owners card, whose stager
-   builds the same span for a staged row (20C Item 1): the same pill in
-   the body font at the row's own size, as an unverified name is
-   (2026-11-02); a missing name stays a plain dash. #}
+   builds the same span for a staged row (20C Item 1): the plain display
+   pill, as the lobby shows a session's creator (20C Item 3, author
+   2026-11-02); an unverified name stays plain text, a missing one a dash. #}
 {% macro account_name(verified, name) -%}
-{% if not name %}—{% elif verified %}<span class="pill pill-count pill-address" title="Matched to a directory account" data-directory-matched>{{ name }}</span>{% else %}{{ name }}{% endif %}
+{% if not name %}—{% elif verified %}<span class="pill pill-count" title="Matched to a directory account" data-directory-matched>{{ name }}</span>{% else %}{{ name }}{% endif %}
 {%- endmacro %}
 
 {% macro matched_address(matched, address) -%}
