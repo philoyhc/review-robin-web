@@ -6,11 +6,6 @@
 > plan only when a lift trigger below fires. Until then every participant
 > signs in with Entra (`spec/audience_and_identity_model.md`).
 
-**Ask IT first.** Entra B2B guest accounts would let external people sign
-in through Easy Auth like everyone else, with no change to the app. Build
-what follows only if guests are refused, or per-person invites do not
-scale.
-
 ## What a magic link is here
 
 A participant without an institutional account (an external evaluator, a
@@ -19,29 +14,40 @@ proves possession of the email account; it does not bypass identity
 (`spec/audience_and_identity_model.md`: "tokenized link replaces auth" is
 not the model). It is a fallback, never the primary sign-in.
 
-## The approach assumed: Easy Auth allows anonymous; the app enforces sign-in
+## The approach assumed: a guest session inside the app
 
-Chosen by the author, 2026-11-02 (the second of the two ways past Easy
-Auth). Easy Auth's unauthenticated action becomes *allow*, still passing
-identity headers when someone is signed in, and Cordware refuses any
-request without an identity except on the paths that admit a guest.
+Chosen by the author, 2026-11-02. Opening the link starts a guest session
+that RRW and Cordware issue and check themselves; the participant never
+holds an Entra account.
 
-- **Why not excluded paths** (the first way): each guest path would be an
-  Easy Auth exception, set by hand per mount; one rule in Cordware covers
-  every application and is tested in CI.
-- **The cost:** the app becomes the gate. A bug in Cordware's check opens
-  pages Easy Auth used to guard, so the check needs its own tests (every
-  route refuses no-identity unless marked guest-allowed), and the host's
-  troubleshooting gains a row for it.
-- **Who changes it:** the Easy Auth setting is the author's (Cloud Shell),
-  with a security sign-off first: review content becomes reachable by
-  people outside the tenant.
+- **Rejected: Entra B2B guests.** IT invites each external person as a
+  guest account, who then signs in through Easy Auth like everyone else,
+  with no change to the app. It costs IT effort per guest (or a
+  self-service invite flow) and depends on IT allowing guests for the
+  app. Still worth asking IT before this plan is taken up: if guests are
+  allowed and few, they may make it unnecessary.
+- **Still needed: a way past Easy Auth**, which today requires sign-in on
+  every path but `/health`, so a guest never reaches the app. Undecided
+  (open questions):
+  - *exclude the magic-link paths* (e.g. `/reviewrobin/m/…`) from Easy
+    Auth, as `/health` is: a setting the author can make in Cloud Shell.
+    It must cover every page a guest may reach, not only the landing, and
+    on those paths the app then checks sign-in itself;
+  - *or allow anonymous* everywhere and have Cordware refuse a request
+    with no identity except on guest-allowed paths: one rule tested in
+    CI, but the app becomes the gate, and a bug in its check opens pages
+    Easy Auth used to guard.
+
+  Either opens part of the host to people outside the tenant, so either
+  needs a security sign-off first.
 
 ## What has to be built
 
-1. **Cordware: the gate.** A host-level dependency that answers 302 to
-   sign-in for a request with no identity, except on guest-allowed paths;
-   a guest identity type, accepted only where a route says so.
+1. **Cordware: a guest identity.** A guest identity type in
+   `cordware/identity.py`, read from the guest cookie and accepted only
+   where a route says so; with *allow anonymous*, also the host-level gate
+   that sends a request with no identity to sign-in, except on
+   guest-allowed paths, with tests that every other route refuses it.
 2. **RRW: the link.** A random token, stored hashed (as invitation tokens
    are), bound to one participant in one session, time-limited, revocable,
    audited on issue, use and revoke.
@@ -86,6 +92,8 @@ all is the institution's decision.
 
 ## Open questions, for when it is taken up
 
+- The way past Easy Auth: excluded paths or allow anonymous. Author, with
+  a security sign-off.
 - The participant-type shape (5).
 - Link lifetime and single use, and whether a one-time code is required.
 - Whether reviewees and observers get links at all, or reviewers only.
