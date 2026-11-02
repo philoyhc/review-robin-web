@@ -182,15 +182,11 @@ A small, backend-agnostic service shaped like `rehydrate_stash` so a
 
 ### P0.5 — Deploy + runtime wiring (workflow, App Service, managed identity) — (A)
 
-- **Deploy workflow (`main_app-review-robin-web-dev.yml`).** The build job
-  installs `requirements.txt`, so the added SDK ships automatically — **no
-  workflow edit needed for the dependency.** The workflow itself does *not*
-  set runtime config (it only uses `secrets.DATABASE_URL` in the migrate
-  job); leave it unchanged unless we choose to script app-settings via
-  `az webapp config appsettings set` (currently portal-managed — keep that
-  convention).
-- **App Service App Settings** (portal, per `docs/deployment_dev.md`
-  "Set as App Service App Settings"): `BLOB_BACKEND=azure`,
+- **The host's release** (the private deployment repository, since the
+  dev slot's workflow was deleted 2026-11-02) installs `requirements.txt`,
+  so the added SDK ships automatically: **no release change is needed for
+  the dependency.** Settings are the host's to set.
+- **App Settings** (the host's; listed in `docs/deployment.md`): `BLOB_BACKEND=azure`,
   `BLOB_ACCOUNT_URL=https://<acct>.blob.core.windows.net`,
   `BLOB_CONTAINER=<name>`. No connection-string secret when using managed
   identity.
@@ -209,19 +205,19 @@ A small, backend-agnostic service shaped like `rehydrate_stash` so a
 ### P0.6 — Provisioning + docs — (A) provisioning, (B) local-setup/Azurite
 
 - The provisioning list's §7 (retired 2026-10-03, kept privately with
-  the deployment since 2026-10-24; the live storage sentence is
-  `docs/architecture.md`'s "Storage") — said "RRW's application code
+  the deployment since 2026-10-24, as is the storage sentence that stood
+  in RRW's retired architecture document) — said "RRW's application code
   needs **no** blob storage (verified: no `azure-storage` dependency)".
   **This becomes stale the moment P0.1 lands.** Rewrite it to: a real
   storage-account line (SKU/redundancy/region), the private-container +
   MI-role-assignment steps, and the cost note.
-- `docs/deployment_dev.md` — add the three `BLOB_*` App Settings to the
-  env table + a note on the MI role assignment.
+- `docs/deployment.md` — add the three `BLOB_*` settings to its table; the
+  managed-identity role assignment is the host's to record.
 - `docs/local_setup.md` — add an **Azurite** section (Docker
   `mcr.microsoft.com/azure-storage/azurite` or `npm i -g azurite`; blob
   endpoint `127.0.0.1:10000`; `UseDevelopmentStorage=true`), plus the
   simpler `BLOB_BACKEND=filesystem` no-emulator path.
-- `docs/security_posture.md` / `docs/backup_restore.md` — update the
+- `docs/security_posture.md` / `docs/operations_runbook.md` — update the
   "storage is a deferred item / no blob storage configured" notes once the
   seam exists (SAS TTLs, private container, MI-over-keys).
 - `guide/deferred_consolidated.md` §1 — mark the storage-account + role-assignment
@@ -331,12 +327,13 @@ Concretely:
 - **New:** this file; cross-linked from `guide/blob_storage_candidates.md` +
   `guide/deferred_consolidated.md` §1 + `guide/todo_master.md` roadmap.
 - **Update on Phase 0:** `pyproject.toml`, `requirements.txt`,
-  `app/config.py`, `.env.example`, `docs/architecture.md` "Storage" (was the provisioning list's §7),
-  `docs/deployment_dev.md`, `docs/local_setup.md`,
+  `app/config.py`, `.env.example`, ~~`docs/architecture.md` "Storage"~~
+  (retired 2026-11-02, with the deployment now), `docs/deployment.md`,
+  `docs/local_setup.md`,
   `docs/security_posture.md`, `guide/deferred_consolidated.md` §1,
   `.github/workflows/` (+`ci-azurite.yml`).
 - **Update per consumer:** `spec/rehydrate.md` §3.3 (C1),
-  `docs/backup_restore.md` (C5), ~~the status file (each shipped slice)~~ (retired 2026-10-05),
+  `docs/operations_runbook.md` (C5), ~~the status file (each shipped slice)~~ (retired 2026-10-05),
   `guide/blob_storage_candidates.md` (flip uses from "candidate" to "shipped").
 
 ---

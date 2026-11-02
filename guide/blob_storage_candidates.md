@@ -15,7 +15,7 @@
 > exists to
 > **capture the candidate uses** so that, if and when blob storage is
 > wired in, the decision is made against a considered list rather
-> than reached for reflexively. It is a companion to `docs/backup_restore.md` (which
+> than reached for reflexively. It is a companion to `docs/operations_runbook.md` (which
 > records that exports are stream-only) and `spec/email_infra_options.md`
 > (the matching options analysis for the email backend).
 
@@ -32,11 +32,11 @@ should clear that bar on its own before it lands; several never will.
 | Need | Handled today by |
 |---|---|
 | Rehydrate Validate→Commit hand-off | `rehydrate_stashes.payload` — a zipped file set in a Postgres `bytea` (`LargeBinary`) column, TTL-swept (`spec/rehydrate.md` §3.3). Survives scale-out; **no blob store required**. |
-| CSV / ZIP extracts (`export/*.csv`, `bundle.zip`) | Generated on demand and **streamed** to the operator's browser; never written server-side, never retained (`docs/backup_restore.md`). |
+| CSV / ZIP extracts (`export/*.csv`, `bundle.zip`) | Generated on demand and **streamed** to the operator's browser; never written server-side, never retained (`docs/operations_runbook.md`). |
 | Uploaded roster / config / responses CSVs | Parsed **in memory** and discarded once the import completes; only the resulting rows persist. |
 | Reviewee / reviewer photos | `profile_link` is an **external URL** the operator supplies — the app hosts no image bytes. |
 | Operator SMTP password | `smtp_password_encrypted` — Fernet ciphertext in a `bytea` column, not a file. |
-| Deployment artifacts | Travel as GitHub Actions artifacts, not through the storage account, which is provisioned and earmarked for blob storage (`guide/segment_18Q_blob.md`) but unused (`docs/architecture.md` "Storage"). |
+| Deployment artifacts | Travel as GitHub Actions artifacts, not through the storage account, which is provisioned and earmarked for blob storage (`guide/segment_18Q_blob.md`) but unused (recorded privately with the deployment, 2026-11-02). |
 
 The line to hold: **small, transient, or already-in-Postgres** payloads
 stay where they are. Blob storage earns its place only when a payload is
@@ -104,7 +104,7 @@ trail while bounding Postgres growth. Pairs with the deferred JSON→JSONB
 work in `guide/deferred_consolidated.md` §2.
 
 ### 7. Backup / restore artifacts
-`docs/backup_restore.md` notes storage is a deferred item. **Blob would**
+`docs/operations_runbook.md` notes storage is a deferred item. **Blob would**
 give a place for DB dumps, point-in-time snapshot exports, or a
 "download everything" session archive — distinct from the platform-level
 Azure backup of the Postgres server itself.
@@ -223,7 +223,7 @@ the current stack lacks:
 
 ## See also
 
-- `docs/backup_restore.md` — exports are stream-only; storage deferred.
+- `docs/operations_runbook.md` — exports are stream-only; storage deferred.
 - `guide/deferred_consolidated.md` §1 — blob provisioning as Azure portal work.
 - `spec/rehydrate.md` §3.3 — the current `bytea` stash ("no blob storage
   required").

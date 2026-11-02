@@ -279,7 +279,7 @@ fingerprinted, or versioned. The inline CSS is paid on every page, so
 the Cordware host gzips responses (`cordware/spec/host.md`,
 "Compression"; measured and decided in
 `docs/performance.md` Finding 5). `app/` ships wholesale in the deploy
-artefact (`.github/workflows/main_app-review-robin-web-dev.yml`), so this directory needs no
+artefact (the host's release, `docs/deployment.md`), so this directory needs no
 workflow change — and equally, anything left in it is shipped.
 `tests/integration/test_guide_screencaps.py` fails both ways: on a file a
 template references but which is not committed, and on a committed file

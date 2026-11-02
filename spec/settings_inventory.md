@@ -503,7 +503,7 @@ deployment salt mixed into every participant token. Unset, it falls
 back to a fixed built-in default.
 
 **Canonical spec:** `docs/local_setup.md` (env-var setup),
-`docs/deployment_dev.md` (deployment-side configuration),
+`docs/deployment.md` (the settings a deployment sets),
 `docs/security_posture.md` (Easy Auth + `ALLOW_FAKE_AUTH`),
 `cordware/spec/identity.md` (the identity settings).
 

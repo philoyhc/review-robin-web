@@ -113,7 +113,7 @@ A refusal on any slot leaves every slot as it was: no file of the submit is appl
 - **A lapsed hold.** A submit naming a hold that has lapsed saves nothing, newly chosen files included. Home renders at 422 with a banner above the slots: "Nothing was saved. The files held from your last Submit have expired; choose them again."
 - **Ending the hold.** A save ends it, and so does any other refusal. So does the banner's Dismiss, which is then a submit of the card's form to `POST …/quick-setup/dismiss`; that route deletes the hold and lands on `#quick-setup`. A banner with nothing held keeps the in-place Dismiss above.
 - **Not covered.** The per-slot routes, which nothing in the UI posts to, and the New session page, which never asks, hold nothing.
-- **Scope and lifetime.** A hold belongs to one operator and one session, lapses after an hour, and skips a file over 1 MiB (`docs/backup_restore.md` § *Import files*).
+- **Scope and lifetime.** A hold belongs to one operator and one session, lapses after an hour, and skips a file over 1 MiB (`docs/operations_runbook.md` § *Import files*).
 
 ### Validation scope
 

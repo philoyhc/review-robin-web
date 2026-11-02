@@ -9,15 +9,16 @@ bugs — they trace to the Segment 14A plan and
 
 Review Robin has served from the institutional Azure tenant since
 2026-10-31, mounted under the Cordware host and deployed from a private
-repository that keeps the host's procedures. The personal dev slot is
-dormant (`docs/deployment_dev.md`). Re-read 2026-11-01 (segment 20A):
+repository that keeps the host's procedures (`docs/deployment.md`). The
+personal dev slot is dormant, its notes archived with the deployment
+(2026-11-02). Re-read 2026-11-01 (segment 20A):
 the dev slot's F1 plan, public database, plain-setting secrets and
 missing log workspace no longer describe the service, and are struck.
 
 - **Single environment.** One production environment, with no staging
   slot. A release is dispatched by hand from the private repository, and
   production takes no push from here. (The dormant dev slot's push
-  workflow is disabled in GitHub's settings.)
+  workflow was deleted 2026-11-02.)
 - **Production lags `main`.** It runs one imported RRW commit, so a
   merge here reaches it only with the next import and release.
 - **No APM.** Logs are structured JSON, and no Application Insights SDK
@@ -72,7 +73,7 @@ missing log workspace no longer describe the service, and are struck.
   unsaved answers without a prompt.
 - **No automatic data expiry.** Nothing is purged on a schedule;
   retention is entirely operator-driven (see
-  `docs/backup_restore.md`).
+  `docs/operations_runbook.md`).
 - **Restore is whole-database only.** No per-session restore;
   recovering one deleted session means a point-in-time restore
   of the entire server.

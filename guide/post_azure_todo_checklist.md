@@ -23,9 +23,16 @@ note, not a task.
 
 **State, 2026-11-01.** The institutional host is provisioned and has
 served Review Robin since 2026-10-31 (the first release with migrations).
-Item 2 can be worked now; items 7, 9 and 10 wait on the email choices
-in `guide/email_and_scheduling.md` rather than on the host; items 1, 3,
+Items 7, 9 and 10 wait on the email choices in
+`guide/email_and_scheduling.md` rather than on the host; items 1, 2, 3,
 4, 5, 6, 8 and 11 are settled and removed (their numbers are not reused).
+Item 2, the Azure documents, closed 2026-11-02 (author: "move as much of
+it out of rrw repo as possible, keeping one document describing a general
+picture"): `docs/deployment.md` is that picture; the dev slot's notes,
+topology and cost table, the database's backup and the host's diagnosis
+went to the private deployment repository; the workstation CLI guide was
+already there; the application's own data and failure modes joined
+`docs/operations_runbook.md`; the dev slot's deploy workflow was deleted.
 Item 8, the honest outbox, closed 2026-11-02 (author: "settle Item 8"):
 every outbox row stays `queued` until a transport sends it, and the
 invitation's `sent` records the operator's send, not a delivery; the
@@ -65,59 +72,6 @@ has in fact run the app locally with fake auth from early on (`CLAUDE.md`
 only if it needs what a deployment adds. Items of this
 kind leave as soon as they are settled and do not wait for the
 cutover.
-
----
-
-## 2. Re-scope the Azure deployment documents at the institutional cutover
-
-**Status:** open. Blocked on the deployment.
-
-**What.** The personal Azure environment is left dormant, not retired
-(author, 2026-10-24): it is not revived, and its resources stay. Once
-the institutional host serves, several documents describe a dormant
-environment as if it were the current one, and two more
-describe a plan that the outcome has either confirmed or replaced. Work
-through them and decide each one's fate. Line counts of the live documents taken 2026-10-08.
-
-| Document | Lines | The question it poses at cutover |
-|---|---|---|
-| `docs/deployment_dev.md` | 415 | Resource names, env vars, CI/CD and bootstrap for the **personal** slot. Rewrite for NUS, or retire and let the NUS material own it? |
-| `docs/operations_runbook.md` | 94 | ~~Opens *"Scoped to the current single Azure **dev** slot"*. Re-scope.~~ **Done 2026-11-01** (segment 20A): re-scoped to in-app administration, with the host's procedures in the private deployment repository. |
-| `docs/troubleshooting.md` | 76 | Opens *"for the deployed dev slot"*. Re-scope. |
-| `docs/backup_restore.md` | 107 | Opens *"Scoped to the current single Azure **dev** slot"* — and backup policy is the one of these that an institutional host may dictate rather than leave to us. |
-| `docs/cli_setup.md` | 657 | Workstation CLI setup, **made generic 2026-10-24** when the NUS runbook it accompanied moved out of this repository: its personal-slot test (B.9) is what changes at cutover. |
-| `docs/architecture.md` | 144 | Infra topology and the provisioned-resource cost table. Both change at cutover. |
-| `azure_ask.md` (root) | 258 | ~~The governance ask. Once IT has answered it, it stops being an ask and becomes a record — and it is **not indexed in `docs/README.md`** except inside another row's prose.~~ **Done 2026-10-25:** answered differently, it has left this repository for the private deployment repository's archive (strategy v1.0 §7). |
-
-**Why it cannot be done now.** Not for want of scheduling: the correct
-text depends on facts that do not exist yet. What the NUS environment is
-actually called, what IT owns versus what we own, whether backup policy
-is dictated to us, and whether the scale-up topology survives contact
-with the institutional host are all answers the deployment produces.
-Rewriting these documents before then would be guessing, and a confident
-guess in a runbook is worse than a stale sentence that says which
-environment it is about.
-
-**Why it cannot wait long afterwards.** These four are the documents
-someone reaches for when the deployed service misbehaves. A runbook
-describing the dormant environment is not merely out of date — it sends
-a person to a resource group that serves nothing while the service is
-down.
-
-**Done when.** No live document under `docs/` describes the personal
-Azure environment as current; each of the seven above has been rewritten,
-re-scoped or moved to `docs/archive/`, or has left this repository; and **`docs/README.md` has been
-re-taken against the folder**, since that index is hand-maintained and an
-archived file gets a row there rather than a separate archive index (the
-convention `archive/quickstart.md` already follows). A grep for the
-dormant slot's resource-group and web-app names should return only
-archived files, `docs/deployment_dev.md` as the dormant slot's record,
-and this line.
-
-**Where this came from.** A review of `docs/` on 2026-09-08 that set out
-to list the Azure-deployment documents and found that nothing tracked
-what the cutover would do to them: an obligation created by a plan,
-recorded nowhere the person executing that plan would look.
 
 ---
 

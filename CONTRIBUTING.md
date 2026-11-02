@@ -39,7 +39,7 @@ either CI workflow, and the institutional release migrates whichever
 `main` commit it takes. A Postgres-only migration failure that reaches
 `main` would first be discovered during a production migration. The dev
 slot has been dormant since 2026-06-03 and is not being revived
-(`docs/deployment_dev.md`); the policy holds for the institutional
+(its notes are archived with the deployment); the policy holds for the institutional
 release.
 
 **A prose-only PR doesn't run it at all.** CI classifies each pull

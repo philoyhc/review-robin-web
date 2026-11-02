@@ -157,5 +157,5 @@ page.
 - `spec/settings_inventory.md` — the `?quick_setup_report` query parameter.
 - `spec/architecture.md` — module map: the model, service, views module and route slice.
 - `docs/database.md` — the `issue_reports` table.
-- `docs/backup_restore.md` — "Import files" and "Data retention": a second short-lived store that quotes cell values.
+- `docs/operations_runbook.md` — "Import files" and "Data retention": a second short-lived store that quotes cell values.
 - `docs/security_posture.md` — reports are visible only to their operator, expire, and are reached by token only.

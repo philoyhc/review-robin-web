@@ -193,7 +193,7 @@ reject it.
 - **`docs/unenforced_conventions.md`** — the conventions deliberately left as guidance rather than a check, each with its reason, plus the queue of ones that could be derived now.
 - **`constitution.md`** — the six rules every change is held to (plan in / spec out; gates derived only from what the repository states; maker ≠ checker; human verifier, no autonomous loop; reasoning travels with the change; retire rather than mechanise badly). Derived from `rrw_sdd_in_practice.md` §6.
 - **`docs/security_posture.md`** / **`docs/database.md`** — deeper dives on those subsystems.
-- **`docs/local_setup.md`** / **`docs/deployment_dev.md`** — developer setup and dev-deploy notes.
+- **`docs/local_setup.md`** / **`docs/deployment.md`** — developer setup, and what RRW needs from the host that serves it.
 
 ## Where work runs
 

@@ -32,7 +32,7 @@ sections below.
 | GitHub Desktop | GUI for clone / branch / commit / push / PR without the command line; handles GitHub sign-in for you. See [§10](#10-windows-setting-up-a-new-machine-from-scratch) for the Windows walkthrough. |
 | GitHub CLI (`gh`) | Easier branch and PR workflows.                       |
 | Node.js (`node`) | `tests/integration/test_inline_scripts_parse.py` runs `node --check` on the templates' inline scripts and skips without it. CI has `node`, so install it to see those failures before CI does. |
-| Azure CLI (`az`) | Needed only if you administer the dev App Service (e.g. tweaking Easy Auth settings via `az webapp auth`). Not needed for day-to-day app development. |
+| Azure CLI (`az`) | Not needed for app development: the host is administered from the private deployment repository and Cloud Shell. |
 
 ### Not needed for day-to-day work
 
@@ -316,7 +316,7 @@ the suite and click through the app. The one thing a Codespace *can't* do
 is exercise **real Entra / Easy Auth sign-in** (those headers are injected
 by the Azure platform), which needs an Azure deployment: the
 institutional one, since the dev slot is dormant
-(`docs/deployment_dev.md`).
+(`docs/deployment.md`).
 
 | Task | In a Codespace? |
 |---|---|
@@ -613,7 +613,7 @@ that fails on an old local file is the usual reason
   `/auth/me` and `/auth/me/debug` routes do.
 - `docs/database.md` — model conventions, migration generation rules, the
   cross-dialect type policy, where Postgres lands.
-- `docs/deployment_dev.md` — the dev Azure App Service deployment.
+- `docs/deployment.md` — what RRW needs from the host that serves it.
 - `guide/` — segment-by-segment workplan (current and upcoming);
   shipped segment plans live in `guide/archive/`.
 - `CONTRIBUTING.md` — branch and PR workflow.

@@ -1226,7 +1226,7 @@ with the simplest acceptable infrastructure choices.
 - **Staging slot / environment.** *Superseded (author, 2026-10-24: one
   Azure host).* Production is released privately from a chosen `main`
   commit, not promoted through a dev or staging slot
-  (`docs/deployment_dev.md` "Production deployment").
+  (`docs/deployment.md`).
 - **Application Insights resource.** Segment 14A PR 1 ships
   structured logging that is App-Insights-ingestible;
   provisioning the resource and wiring its connection string is
@@ -1238,7 +1238,7 @@ with the simplest acceptable infrastructure choices.
   The NUS environment already has VNet integration, private endpoints
   for the Web App and Key Vault and a privately provisioned Postgres
   (recorded privately with the deployment), and the dormant slot is not
-  revived (`docs/deployment_dev.md` "CI/CD workflow").
+  revived (its notes archived with the deployment, 2026-11-02).
 
 The NUS database URLs are Key Vault references (2026-10-24); the
 Insights connection string is tracked privately with the deployment. Email dispatch is
