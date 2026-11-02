@@ -72,10 +72,11 @@
             <div class="tb-group">
               {# Settings sits behind `require_operator`, which bounces
                  anyone else to /me (participant audit M8). #}
-              {% if _operator and not is_here("/operator/settings") %}
+              {# None of the four on Sign-in details (§4). #}
+              {% if _operator and not here_in("/operator/settings", "/auth/me/debug") %}
                 <a href="{{ url('/operator/settings') }}?return_to={{ here() | urlencode }}">Settings</a>
               {% endif %}
-              {% if user.is_sys_admin and not here_under("/operator/sys-admin") %}
+              {% if user.is_sys_admin and not here_under("/operator/sys-admin") and not is_here("/auth/me/debug") %}
                 <a href="{{ url('/operator/sys-admin') }}?return_to={{ here() | urlencode }}">Admin</a>
               {% endif %}
               {# 19F PR 3: hidden for a viewer who resolves no Guide
