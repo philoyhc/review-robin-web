@@ -4477,7 +4477,8 @@
         text-decoration: none;
       }
       /* Light/dark Display-mode toggle pill (chrome, W6). Two segments; the
-         active side fills --selected-bg. Compact; themes via tokens. */
+         active side fills --selected-bg. Sized as Residential's
+         (residentialapps' base.html), words only (20D, author 2026-11-02). */
       .theme-toggle {
         display: inline-flex;
         vertical-align: middle;
@@ -4487,13 +4488,14 @@
       }
       .theme-toggle-opt {
         font: inherit;
-        font-size: 0.8em;
+        font-size: 12px;
         line-height: 1.6;
+        min-height: 28px;
         cursor: pointer;
         border: 0;
         background: transparent;
         color: var(--text-subtle);
-        padding: 0 10px;
+        padding: 2px 12px;
       }
       .theme-toggle-opt + .theme-toggle-opt {
         border-left: 1px solid var(--border-default);
