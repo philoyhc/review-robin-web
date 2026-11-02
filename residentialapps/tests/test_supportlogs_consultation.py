@@ -157,6 +157,6 @@ def test_mounted_consultation_pages_stay_under_the_mount() -> None:
         page = mounted.get("/supportlogs" + path)
         assert page.status_code == 200, path
         for link in re.findall(r'\b(?:href|action|formaction|src)="([^"]*)"', re.sub(r'<link rel="icon"[^>]*>', "", page.text)):
-            assert link == "/" or link.startswith(("/supportlogs/", "#")), (path, link)
+            assert link in ("/", "/.auth/logout") or link.startswith(("/supportlogs/", "#")), (path, link)
     back = mounted.get("/supportlogs/consultation/check?as=Marcus%20Tan&purpose=&emails=", follow_redirects=False)
     assert back.headers["location"] == "/supportlogs/consultation/?as=Marcus%20Tan"

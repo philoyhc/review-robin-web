@@ -12,7 +12,7 @@ from starlette.responses import Response
 
 from cordware.identity import current_identity
 from residentialapps.residentialops import sample_data, sample_leave
-from residentialapps.web.pages import initials
+from residentialapps.web.pages import initials, top_line
 from residentialapps.web.pages import placeholders_previewers_only as placeholders_previewers_only  # for the routes
 from residentialapps.web.urls import templates
 
@@ -132,6 +132,7 @@ def render(
             "app_key": "residentialops",
             "app_name": APP_NAME,
             "unit_name": sample_data.UNIT_NAME,
+            "top_line": top_line(sample_data.UNIT_NAME),
             "area": area,
             # A sys admin's pages default to the sample Leave admin's switcher
             # (§2), as RA Leave admin's do; a path of None is an area not

@@ -164,7 +164,7 @@ def test_mounted_records_stay_under_the_mount() -> None:
         page = mounted.get("/supportlogs" + path)
         assert page.status_code == 200, path
         for link in re.findall(r'\b(?:href|action|formaction|src)="([^"]*)"', re.sub(r'<link rel="icon"[^>]*>', "", page.text)):
-            assert link == "/" or link.startswith(("/supportlogs/", "#")), (path, link)
+            assert link in ("/", "/.auth/logout") or link.startswith(("/supportlogs/", "#")), (path, link)
     back = mounted.get("/supportlogs/students/records.csv", follow_redirects=False)
     assert back.headers["location"] == "/supportlogs/students/"
 
@@ -298,7 +298,7 @@ def test_mounted_senior_records_stay_under_the_mount() -> None:
         page = mounted.get("/supportlogs" + path)
         assert page.status_code == 200, path
         for link in re.findall(r'\b(?:href|action|formaction|src)="([^"]*)"', re.sub(r'<link rel="icon"[^>]*>', "", page.text)):
-            assert link == "/" or link.startswith(("/supportlogs/", "#")), (path, link)
+            assert link in ("/", "/.auth/logout") or link.startswith(("/supportlogs/", "#")), (path, link)
     back = mounted.get(f"/supportlogs/overview/records.csv?{SAM}", follow_redirects=False)
     assert back.headers["location"] == "/supportlogs/overview/records?as=Sam%20Lee"
 

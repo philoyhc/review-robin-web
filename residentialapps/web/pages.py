@@ -12,7 +12,7 @@ from pathlib import Path
 
 from fastapi import HTTPException, Request
 
-from cordware.identity import Identity, current_identity, is_local
+from cordware.identity import Identity, current_identity, institution_name, is_local
 
 log = logging.getLogger("residentialapps.web")
 
@@ -142,6 +142,14 @@ def placeholders_previewers_only(request: Request) -> None:
         return
     if not is_previewer(current_identity(request)):
         raise HTTPException(status_code=404)
+
+
+def top_line(unit_name: str | None) -> str:
+    """The bar's top line (`docs/header_chrome.md` §6, RRW segment 20D):
+    the top-level Unit's name when it is set, else the workspace default,
+    `CORDWARE_INSTITUTION_NAME`; empty means no top line. Until segment 1B
+    item 4 stores the Unit, each application passes its sample's."""
+    return (unit_name or "").strip() or institution_name()
 
 
 def initials(label: str) -> str:

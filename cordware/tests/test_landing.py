@@ -251,6 +251,7 @@ def test_an_application_s_icon_is_drawn_before_its_title() -> None:
 
 
 ICON = re.compile(r'<link rel="icon" type="image/svg\+xml"\s+href="([^"]+)"')
+RESIDENTIAL_ICON = re.compile(r'\{% set app_icon = "([^"]+)" %\}')
 REPO = Path(__file__).resolve().parents[2]
 
 
@@ -263,8 +264,10 @@ def _own_favicon(name: str) -> str:
     if name == "utilities":
         (icon,) = ICON.findall((REPO / "utilityapps/templates/utilities/base.html").read_text(encoding="utf-8"))
         return icon
+    # Residential sets each application's icon once, for the tab and the
+    # bar alike (RRW segment 20D).
     text = (REPO / "residentialapps/web/templates/residential/base.html").read_text(encoding="utf-8")
-    return ICON.findall(text[text.index(f'app_key == "{name}"'):])[0]
+    return RESIDENTIAL_ICON.findall(text[text.index(f'app_key == "{name}"'):])[0]
 
 
 @pytest.mark.parametrize("name", list(REGISTRY))

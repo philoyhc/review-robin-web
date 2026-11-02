@@ -155,7 +155,8 @@ def test_every_link_keeps_the_sample_viewer(client: TestClient) -> None:
         card = page.split('aria-label="Sample viewer"')[1].split("</nav>")[0]
         rest = page.replace(card, "")
         for link in re.findall(r'\bhref="([^"]*)"', FAVICON.sub("", rest)):
-            assert link in ("/", "#sample-viewer") or "as=" + quote(name) in link, (path, link)
+            # Sign out (the host's, RRW segment 20D) carries no viewer either.
+            assert link in ("/", "#sample-viewer", "/.auth/logout") or "as=" + quote(name) in link, (path, link)
         assert rest.count("<form") == rest.count(f'<input type="hidden" name="as" value="{name}">'), path
 
 
@@ -202,7 +203,7 @@ def test_mounted_pages_stay_under_the_mount() -> None:
         page = mounted.get(MOUNT + path)
         assert page.status_code in (200, 403), path
         for link in LINK.findall(FAVICON.sub("", page.text)):
-            assert link == "/" or link.startswith((f"{MOUNT}/", "#")), (path, link)
+            assert link in ("/", "/.auth/logout") or link.startswith((f"{MOUNT}/", "#")), (path, link)
     redirect = mounted.get(MOUNT + at("/", "Rachel Yeo"), follow_redirects=False)
     assert redirect.headers["location"] == MOUNT + at("/sys-admin/", "Rachel Yeo")
 
