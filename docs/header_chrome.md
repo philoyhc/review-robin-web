@@ -1,12 +1,13 @@
 # Header chrome: one top bar across Cordware's applications
 
-**Functional spec, proposed** (author, 2026-11-02). Not built. It sets
-what the top bar does in Review Robin, Residential Operations, Support
-Logs and the envisioned ApplyDesk, so a segment plan can cut it into
-slices. Mock-ups were reviewed in the session that wrote this. When it
-ships, the settled parts move into `spec/visual_style_rrw.md` ("Top bar",
-both of them) and `residentialapps/spec/residentialops_ui.md` §2, and this
-file is retired.
+**Functional spec, built** (author, 2026-11-02). It sets what the top bar
+does in Review Robin, Residential Operations, Support Logs and the
+envisioned ApplyDesk. Built the same day: Review Robin in segment 20D
+(#3505–#3510), Residential Operations and Support Logs in #3511. The
+settled parts are also stated in `spec/visual_style_rrw.md` ("Top bar")
+and `residentialapps/spec/residentialops_ui.md` §2; this file stays the
+shared contract, ApplyDesk's included. §1 describes the chrome it
+replaced.
 
 ## 1. Why
 
@@ -143,9 +144,9 @@ Review Robin and ApplyDesk:
 
 | Page | Name shown |
 |---|---|
-| A session's pages, operator or participant | The Unit of the operator who **created** the session, else the default. Co-owners do not change it |
+| A session's pages, operator or participant, Sessions Diagnostics' Outbox and Audit log included | The Unit of the operator who **created** the session, else the default. Co-owners do not change it |
 | An operator's other pages (lobby, Settings, Admin, Create session) | The viewer's own Unit, else the default |
-| A participant's Your reviews | The default, unless every session listed resolves to the same Unit |
+| Your reviews, whoever views it | The default, unless every session listed resolves to the same Unit (author, 2026-11-02: a session belongs to its creator's Unit; the viewer's own Unit plays no part here) |
 | About, Guide, Sign-in details | The viewer's own Unit if an operator, else the default |
 
 The creator's Unit is read when the page renders, so a sys admin's change
@@ -177,15 +178,16 @@ as today.
 
 **This file is the contract for all three.** The build is per application:
 
-- **Review Robin**: `guide/segment_20D_header_chrome.md`, header only (§1).
-- **Residential**: its own plans, to this file: the bar in
+- **Review Robin**: built, `guide/archive/segment_20D_header_chrome.md`, header only (§1).
+- **Residential**: built ahead of its plans, in #3511 (the plans record it): the bar in
   `residentialapps/guide/segment_1C_ra_leave.md`, Support Logs' entries in
   `residentialapps/guide/segment_1D_support_logs.md`, the role and the top
   line in `residentialapps/guide/segment_1B_rosters_and_organization.md`.
   Its share: the icon in place of the square (§2), Sign out and
   the account menu (§4), the top line's fallback to the workspace default
-  (§6), and the toggle and name moving into the menu under 640 px. Its
-  switcher and tabs stay as they are.
+  (§6), and the toggle moving into the menu under 640 px. Sys admin is an
+  account-menu entry, as Review Robin's Settings and Admin are (author,
+  2026-11-02). Its switcher's places and tabs stay as they are.
 - **ApplyDesk** does not exist yet; §2–§6 fix its bar and its Unit so it
   is born matching.
 

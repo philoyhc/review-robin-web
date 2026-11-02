@@ -512,6 +512,12 @@ perspective:
 - **Responses** are `(assignment, response_field)` rows: the
   reviewer's answer to one field on one instrument for one assigned
   reviewee.
+- **User** (`users`) carries, beside the identity and role columns, a
+  nullable `unit` (`String(80)`): the operator's Unit, which the top bar
+  shows as its top line on the sessions that operator created, in place of
+  the workspace's `CORDWARE_INSTITUTION_NAME`. Only a sys admin sets it
+  (`users.set_unit`), and the session's pages read the creator's value
+  when they render (`docs/header_chrome.md` §6; Alembic `c3e9a1f7d2b4`).
 
 ### Tabular response artifacts
 
@@ -1082,6 +1088,7 @@ canonical "no payload" marker.
 | `assignments.generated` | `counts` + `context` + `refs` | `{"session_id": 17, "session_code": "CS101", "refs": {"instrument_id": 7}, "counts": {"new": 104, "deleted": 0, "kept": 0, "responses_deleted": 0, "pairs": 104, "instruments": 1}, "context": {"mode": "rule_based"}}` |
 | `responses.saved` | `refs` + `counts` | `{"session_id": 17, "session_code": "CS101", "refs": {"reviewer_id": 42}, "counts": {"assignments_touched": 3, "responses_saved": 5}}` |
 | `instrument.display_fields_saved` | `set_changes` + `refs` | `{"session_id": 17, "session_code": "CS101", "refs": {"instrument_id": 7}, "set_changes": {"added": [], "removed": [], "updated": [...]}}` |
+| `workspace.user_unit_set` | `changes` + `refs` | `{"changes": {"unit": [null, "Department of Example"]}, "refs": {"target_user_id": 42}}` (no session identity; one event per row changed) |
 | `session.owner_added` | `snapshot` + `refs` | `{"session_id": 17, "session_code": "CS101", "refs": {"target_user_id": 42}, "snapshot": {"user_id": 42, "email": "bob@example.edu", "role": "owner"}}` |
 | `session.activation_scheduled` | `changes` | `{"session_id": 17, "session_code": "CS101", "changes": {"scheduled_activate_at": [null, "2026-06-01T09:00:00+00:00"]}}` |
 | `session.scheduled_activation_skipped` | `reason` + `context` | `{"session_id": 17, "session_code": "CS101", "reason": "not_validated", "context": {"scheduled_at": "2026-06-01T09:00:00+00:00", "status_at_fire": "draft"}}` |

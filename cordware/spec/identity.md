@@ -171,6 +171,7 @@ the host's.
 | `fake_auth()` | `FakeAuth(enabled, email)`: `ALLOW_FAKE_AUTH` and `FAKE_AUTH_EMAIL`. |
 | `app_env()` | `APP_ENV`. |
 | `is_local()` | `app_env() == "local"`. |
+| `institution_name()` | `CORDWARE_INSTITUTION_NAME`, trimmed: the workspace default for the top bar's top line; empty means none (`docs/header_chrome.md` §6). |
 | `super_admin_emails()` | The effective super-admin list: a tuple, normalized. |
 | `super_admin_configured()` | Whether that list is non-empty. |
 | `is_super_admin_email(email)` | Whether `email` is in that list. `None` or blank never is. |
@@ -210,6 +211,7 @@ applications import identity and never the entry point (`cordware/spec/host.md`
 | Setting | Default | Meaning |
 |---|---|---|
 | `APP_ENV` | `local` | The deployment's environment. Only `local` permits fake auth. |
+| `CORDWARE_INSTITUTION_NAME` | empty | The hosting institution's name, the top bar's top line in every application unless an application replaces it with a narrower one (Review Robin's operator Unit, Residential's top-level Unit). Set only by the deployer. |
 | `ALLOW_FAKE_AUTH` | `false` | Whether a request without Easy Auth headers is the fake identity. |
 | `FAKE_AUTH_PRINCIPAL_ID` | `local-dev` | The fake identity's `principal_id`. |
 | `FAKE_AUTH_EMAIL` | `operator@example.edu` | The fake identity's `email`. |

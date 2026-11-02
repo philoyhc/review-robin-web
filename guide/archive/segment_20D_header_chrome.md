@@ -50,6 +50,22 @@ Taken 2026-11-02 at `f8c5cad1`.
 | `chrome` lines in `base.html` | 45 | `grep -n chrome app/web/templates/base.html \| wc -l` |
 | Specs and docs naming "Review Robin Web App" | 6 | `grep -rln 'Review Robin Web App' spec docs \| wc -l` |
 
+## Status
+
+**Closed 2026-11-02.** PRs **#3505 → #3510**, the ladder as written, one rung each, plus a toggle refinement (#3510); Residential's share landed the same day in #3511, ahead of its 1C and 1D rungs.
+
+- **Rungs:** 1 the shared bar (#3505); 2 menus and narrow widths (#3506); 3 `CORDWARE_INSTITUTION_NAME` (#3507); 4 Unit scaffold (#3508); 5 Unit wired, migration `c3e9a1f7d2b4` (#3509). The Light/Dark toggle then took Residential's size, words only, 44 px on a phone or touch screen (#3510, author on the localhost check).
+- **Decisions confirmed at build:**
+  - The version sits beside About in the account menu, for operators only; participants never see it.
+  - Under 640 px only the toggle moves into the account menu: the name already heads it.
+  - Your reviews follows the listed sessions' Units, whoever views it, operators included (author: "the session belongs to the operator's unit if overriding the default, else default").
+  - Sessions Diagnostics' Outbox and Audit log count as the session's pages (Codex on #3509).
+  - Sys admin is an account entry, not a place, in Residential too (author: "Review Robin has it right").
+  - Sign-in details hands the bar the viewer's row (`bar_user`), since the page itself renders the header identity.
+  - A no-role account's Unit cell is blank, and its row offers no Unit control.
+- **Reads:** one cumulative `diff-reviewer` read at rung 5 (from `f5059446`): two defects (Sign-in details' bar had no name or Unit; a no-role account showed the default pill), fixed in #3509, plus minor tidying. Codex found two: Enter in the scaffold Unit input submitted the bulk form's first button, Revoke (#3508); the diagnostics pages named their session differently (#3509). The toggle refinement and Residential's header each took their own read; neither found a defect.
+- **Production:** `CORDWARE_INSTITUTION_NAME` set by the author in Cloud Shell (Cordware `guide/temp_todo.md`, cordware#163); it shows from the first release carrying 20D.
+
 ## PR ladder
 
 Code slices take one `diff-reviewer` read, at rung 5, on the cumulative diff from the base SHA rung 1's PR body records.

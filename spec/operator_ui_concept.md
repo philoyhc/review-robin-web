@@ -136,12 +136,13 @@ The **cross-session** admin grouping, carrying the three-tier operator / admin /
 
 Its surfaces:
 
-- **Accounts Management** (`/operator/sys-admin/users`, `sys_admin_users.html`) — the workspace allowlist: admit / revoke `is_operator`, promote / demote `is_sys_admin` (a super-admin actor, or any admin while none is configured), invite, delete users, and remove users from every session. Server-side guards in `app/services/users.py`.
+- **Accounts Management** (`/operator/sys-admin/users`, `sys_admin_users.html`) — the workspace allowlist: admit / revoke `is_operator`, promote / demote `is_sys_admin` (a super-admin actor, or any admin while none is configured), set an operator's Unit, invite, delete users, and remove users from every session. Server-side guards in `app/services/users.py`.
   Above the table, an **Invite by email** card and an **Accounts Overview** card sit side by side at equal height (`.page-grid`, stacked at 800px or narrower). A successful invite lands on the table as the admin left it: the new row is not selected (the redirect carries no `?selected=`), so remembered chips that hide it stay as they were. **Accounts Overview** is one line of count pills over the whole workspace, each pill holding its number and its label, and nothing else: **Operators** · **Admins** · **super-admins** · **No role** · **Unused**. The kinds count as their chips do (the same query); the super-admins are accounts the config names (`account_listing.count_super_admins`). Each label follows its count, *1 Operator* but *0 Operators* (No role and Unused read the same either way), and the pills keep the pill's capitals. No pill is a link.
   The **Workspace users** table is a server-filtered, paged preview table under the Setup pages' two-pane toolbar (`spec/setup_pages.md` § *The table toolbar*): the card's **Workspace users** heading at the top of the left half, level with the filter strip on the right, and the category chips (where those pages put column chips) then the pager at the left half's foot. Filtering, counting and paging run in SQL (`app/services/account_listing.py`), never in the browser.
   - **Chips** are on/off and partition the table, so every account is under exactly one. **Operators**: operator, not admin. **Admins**: sys-admin or super-admin; admins win, because an admin has operator access whatever its Operator flag says. **No role**: neither, with history: created a session, owns one, or acted in the audit log, each of which refuses Delete. **Unused**: neither, no history. Operators and Admins are on by default; after that the page remembers the chips last asked for (a cookie), so leaving the tab and coming back keeps them. Each chip's count is over the whole table, ignoring the Session role and the search, so it says what turning the chip on would add.
   - **Filter strip**: a **Session role** dropdown (`Any` / `Reviewer` / `Reviewee` / `Observer` / `Owner`), a search box with a typeahead (up to 200 emails and names of the accounts under the chips whose email or name contains what is typed, asked again as the box changes, so typing more narrows the list to any account), `Clear` (only while a role or search is active) and `Search`. A role matches the account's email, case-insensitively, on a roster row in any session; `Owner` matches a `session_operators` row. Search matches email and name. A chip submits as soon as it changes; the role and the search wait for `Search`. `Clear` drops the role and the search and keeps the chips.
-  - **Selection and the row expander.** Any number of rows tick (your own row shows `(self)`), with a select-all over the page; selection is page-local, so a chip, role, search or page change clears it. The expander (`spec/setup_pages.md` § *The row expander*) opens beneath the most recently ticked row with the count and only the controls that apply to the selection, grouped `Operator:` (Admit, Revoke, Remove from all sessions), `Admin:` (Promote, Demote) and `|` (Delete behind its confirm tick, offered only when no selected row has history; otherwise a line in the confirm's place says the user has sessions or audit-log activity and cannot be deleted). Each acts on every selected row, all or nothing (`spec/permissions.md` §4.1); which controls render for which chip is the button audit's, §19 (`spec/operator_button_audit.md`). A refusal returns to the page with a *Nothing changed* banner giving the reason, and the row's email where a row-level guard refused.
+  - **Selection and the row expander.** Any number of rows tick (your own row shows `(self)`), with a select-all over the page; selection is page-local, so a chip, role, search or page change clears it. The expander (`spec/setup_pages.md` § *The row expander*) opens beneath the most recently ticked row with the count and only the controls that apply to the selection, grouped `Operator:` (Admit, Revoke, Remove from all sessions), `Admin:` (Promote, Demote), `Unit:` (a text box, at most 80 characters, and **Set unit**; offered when every selected row is an operator or admin, and an empty box clears the Unit back to the workspace default) and `|` (Delete behind its confirm tick, offered only when no selected row has history; otherwise a line in the confirm's place says the user has sessions or audit-log activity and cannot be deleted). Each acts on every selected row, all or nothing (`spec/permissions.md` §4.1); which controls render for which chip is the button audit's, §19 (`spec/operator_button_audit.md`). A refusal returns to the page with a *Nothing changed* banner giving the reason, and the row's email where a row-level guard refused.
+  - **Unit column**, after Name: an operator's or admin's Unit (`users.unit`, the top line of the bar on the sessions they create; `docs/header_chrome.md` §6). Unset, the workspace default (`CORDWARE_INSTITUTION_NAME`) shows as a display pill; blank for an account with no role. Set only here, audited `workspace.user_unit_set`; an operator sees theirs read-only on Settings.
   - **Paging** is 200 rows a page and stays under a role or search, since a role can match every account; the roster pages' count line therefore shows here only when one page holds every match. `?offset=` clamps onto a page.
   - **The view lives in the URL** (`spec/settings_inventory.md` § *URL state*); only the chips are also remembered, for a URL that carries none. Row actions post it back as a hidden `view` field and their redirect restores it; an unknown chip or role is dropped and an out-of-range offset clamps, neither an error. `?selected=<id>` turns that row's chip on, as if clicked, so it stays on in every link the page renders, and, while the role and search still match the row, opens the page holding it.
   - **Empty states**: "No users in this workspace yet." when the table is empty; "No accounts match the chips above." when every chip is off; otherwise "No accounts match the current filter."
@@ -215,16 +216,16 @@ Below the chrome, a **status row** renders the at-a-glance session status, ident
 
 ## Cross-page chrome (top of every page)
 
-Every operator page (session-scoped or not) renders the same outer chrome before the session top nav and page body:
+Every page, operator or participant, session-scoped or not, renders the same header (`_partials/top_bar.html`; `docs/header_chrome.md` is the cross-application contract) before the session top nav and page body. Participant pages differ only in having no breadcrumb row. Visual treatment is `spec/visual_style_rrw.md` "Top bar".
 
-- **App identity (top left).** "Review Robin Web App (version {num})" rendered small as plain text (`.chrome-app-identity`, a `<span>`, not a link); `/about` is reached from the user card's link row. `{num}` is the `APP_VERSION` setting (`spec/settings_inventory.md`).
-- **Favicon.** An inline-SVG data URI in `base.html`'s `<link rel="icon">`: a white robin on RRW's primary blue (`--blue-strong`), in the 32×32 tile with corner radius 7 the other Cordware applications' icons use. `cordware/web/app_icons.py` carries the copy the host's landing page draws, held to this one by `cordware/tests/test_landing.py`. A real graphic asset would go under `app/web/static/`, served by the `/static` mount in `app/main.py`, with `href` pointed at its `/static/...` URL.
-- **User card (top right).** "Signed in as {user name}" plus a Sign-out control (`/.auth/logout`). A sys-admin's name carries a tier suffix — ` (super admin)` or ` (sys admin)`, the former winning when both apply — matching the three-tier model in `spec/audience_and_identity_model.md` §4.
-- **Breadcrumb trail** (below the app identity) reflecting the page's position in the surface hierarchy. Each segment except the current page is a link to that ancestor; the current page renders as a plain non-link label.
+- **Bar (one row, scrolls with the page).** Left: the Review Robin icon, then the **top line** (the Unit or the institution name, omitted when empty; `docs/header_chrome.md` §6) over "Review Robin ▾". The group opens the **switcher**: Sessions (operators and sys admins) and Your reviews, current one marked, then **All applications** under "Cordware". Right: the Light/Dark toggle, the viewer's name (from 960 px) and the avatar, which opens the **account menu**.
+- **Account menu.** The viewer's name, email and tier ("super admin" or "sys admin"); under 640 px the toggle; **Settings** (operators and sys admins), **Admin** (sys admins), **Guide** (not for a viewer who resolves no Guide audience) and **About** (with `{num}`, the `APP_VERSION` setting, for operators and sys admins; `spec/settings_inventory.md`), each carrying `?return_to=` and omitted on its own page; then **Sign out** (`/.auth/logout`). The version appears nowhere else on the bar.
+- **Favicon.** An inline-SVG data URI in `base.html`'s `<link rel="icon">`: a white robin on RRW's primary blue (`--blue-strong`), in the 32×32 tile with corner radius 7 the other Cordware applications' icons use. `cordware/web/app_icons.py` carries the copy the host's landing page draws, held to this one by `cordware/tests/test_landing.py`; the bar's icon is the same drawing. A real graphic asset would go under `app/web/static/`, served by the `/static` mount in `app/main.py`, with `href` pointed at its `/static/...` URL.
+- **Breadcrumb trail**, on its own row under the bar and inside the header, reflecting the page's position in the surface hierarchy; rendered only where a page has one. Each segment except the current page is a link to that ancestor; the current page renders as a plain non-link label. Under 640 px the middle crumbs collapse to "…".
   - Operator root: `Sessions` → `/operator/sessions`.
   - Reviewer root: `Reviewer` → `/me` (covered in `spec/reviewer-surface.md`).
 
-Visual treatment (typography, spacing, link colors) is per `spec/visual_style_general.md` ("Breadcrumb", "Links") and `spec/visual_style_rrw.md` (non-session operator top bar).
+Visual treatment (typography, spacing, link colors) is per `spec/visual_style_general.md` ("Breadcrumb", "Links") and `spec/visual_style_rrw.md`.
 
 ## Entry & landing
 
@@ -402,8 +403,7 @@ The outbox table is useful for debugging in any environment.
 
 ### `/about` — About
 
-Reached from the **chrome link row** in the user block (top right), not from the
-app-identity text — `.chrome-app-identity` is a `<span>`, not a link. Carries the
+Reached from the **account menu** (the avatar, top right); the bar's title is not a link. Carries the
 app description and the access note, so it renders usefully for a signed-in user
 with no role; there is no `/request-access` page.
 Takes `?return_to=` and renders a "← Back to {context}" affordance.
@@ -420,13 +420,12 @@ lobby means belongs to the lobby's own first-run card, not here.
 
 ### `/guide` — Guide
 
-The in-app documentation page. Sits **beside `/about`** in the same chrome link
-row and takes the same `?return_to=` treatment; the two are siblings and neither
+The in-app documentation page. Sits **beside `/about`** in the same account menu and takes the same `?return_to=` treatment; the two are siblings and neither
 absorbs the other. `/about` is identity and access — what this software is, who
 to contact. `/guide` is how to run a session; a participant's subtitle instead
 says what to expect in the reviews they take part in (`participant_chrome`).
 
-Suppressed on its own path, exactly as `/about` is, so the row never offers a
+Suppressed on its own path, exactly as `/about` is, so the menu never offers a
 link to the page already being viewed. **Also suppressed for a viewer who
 resolves no Guide audiences** — they would only be bounced to
 `/about`, and offering the link there would hand them a route straight back to
@@ -438,16 +437,13 @@ that dependency still renders the link, and the route's redirect is what
 actually decides. Failing closed would hide the Guide from operators on any
 page that missed the stamp — a worse error, and a silent one.
 
-**Both chromes carry the link, under the same condition.** `base.html` carries
-the operator chrome, which `/about`, `/guide` and `/auth/me/debug` show
-an operator or system admin; `reviewer/_top_bar.html` carries the
-participant surfaces (`/me`, the review surface, `/results`,
-`/collation`) and those shared pages for everyone else.
-**A change to the condition has to land in both files** — a reviewer or
-observer holding roster rows can reach `/guide`, so a chrome that omits the
+**Every viewer's menu carries the link, under the same condition.** One
+partial, `_partials/top_bar.html`, serves the operator pages and the
+participant surfaces (`/me`, the review surface, `/results`, `/collation`)
+alike, and `/about`, `/guide` and `/auth/me/debug` for everyone. A reviewer
+or observer holding roster rows can reach `/guide`, so a menu that omits the
 link leaves them no route to it from the pages they actually land on.
-`tests/integration/test_guide_scaffold.py` asserts each of them in both
-directions.
+`tests/integration/test_guide_scaffold.py` asserts it in both directions.
 
 **`/guide` is the canonical operator documentation.** Corrections belong here
 and not in any parallel quickstart document.

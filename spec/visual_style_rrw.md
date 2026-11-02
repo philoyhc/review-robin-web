@@ -72,7 +72,7 @@ Where the shipped treatment differs from `spec/visual_style_general.md`, **the a
 | Topic | General spec | Review Robin |
 |---|---|---|
 | **Focus** | Border color change, "no thick outline ring". | Text inputs, textareas and selects take the border change plus a 1px `--focus-ring-halo` shadow on `:focus`, **and** a 2px solid `--focus-ring` outline (1px offset) on `:focus-visible` — `base.html`'s `body.ui-v2 input[type="text"]:focus-visible` rule set. Sort buttons (`.rrw-sort-btn:focus-visible`) take a 2px `--focus-ring-strong` outline. |
-| **Links** | No underline at rest, underline on hover, "within prose: same treatment". | Chrome and navigation links follow the general rule (`.breadcrumb a`, `.back-link`, `.chrome-user .chrome-link`). `.chrome-app-identity` is plain text, not a link, and takes no hover underline. **Links in page content keep the browser's resting underline**: the base `a` rule sets only `--text-link`. |
+| **Links** | No underline at rest, underline on hover, "within prose: same treatment". | Chrome and navigation links follow the general rule (`.breadcrumb a`, `.back-link`, the bar's menu entries). The bar's titles are plain text, not links, and take no hover underline. **Links in page content keep the browser's resting underline**: the base `a` rule sets only `--text-link`. |
 | **Table row borders** | `border-subtle` 1px bottom border per row. | `--border-default` 1px bottom border on every `th` / `td` (`body.ui-v2 th, td`); padding, header fill and row hover are as the general spec. |
 | **Card heading gap** | H2 has 16px below it. | `--space-3` (12px) below an H2, in a card or out of one (`body.ui-v2 h2`, `body.ui-v2 .card h2`; `spec/ui_elements.md` §3). |
 | **Muted text tiers** | `text-secondary` and `text-muted`, two tiers. | One muted tier, `--text-subtle`, held to the AA floor; there is no lighter text tier (`spec/color_tokens.md` "The AA floor on text"). |
@@ -316,18 +316,30 @@ The two-row session chrome (Setup row, Operations row) **does not appear** on th
 
 #### Top bar
 
-The existing top bar pattern continues:
+**One shared bar** for every Review Robin page, operator or participant (`_partials/top_bar.html`; the cross-application contract is `docs/header_chrome.md`). It is the `.chrome` block, one row that scrolls away with the page, and its bottom line is the header's: nothing below it belongs to the bar.
 
-- **Left:** "Review Robin Web App (version …)" — small, in `--text-subtle`. App identity and version, modest.
-- **Right:** A small **user menu** containing, in order:
-  - "Signed in as [Operator Name]" (informational, not a link), with a " (super admin)" or " (sys admin)" suffix for a viewer holding that tier.
-  - Settings — opens Settings, with return-to-origin behavior (see below). Rendered for operators and sys admins only, since Settings sits behind the operator gate and anyone else is bounced to `/me?notice=organizers`. Not rendered on Settings itself, nor on Sign-in details (`/auth/me/debug`), which renders from the sign-in identity rather than the user row (it looks the row up only to choose between this chrome and the participant top bar), so Admin is absent there too.
-  - Admin — opens the Sys Admin pages, with return-to-origin behavior. Rendered for sys admins only, and not on the Sys Admin pages.
-  - Guide — opens the Guide, with return-to-origin behavior. Not rendered on `/guide` itself or for a viewer who resolves no Guide audience (the same fail-open flag as the reviewer top bar, below).
-  - About — opens About, with return-to-origin behavior. Not rendered on About itself.
-  - Sign out — ends the operator's session.
+- **Left:** the Review Robin icon (28 px, decorative) and two lines: the **top line** (12 px, `--text-subtle`; the viewer's Unit or the workspace institution name, omitted when empty; which one is `docs/header_chrome.md` §6) over "Review Robin ▾" (16 px, bold). The group is the **switcher**, a `details`/`summary` disclosure: first group "Review Robin", with **Sessions** (operators and sys admins) and **Your reviews**, the current one marked (✓ and `aria-current`); last group "Cordware", with **All applications**, the host's landing page, emitted through `host_url()`. With no signed-in viewer the group is static, without the ▾.
+- **Right:** the Light/Dark toggle, the viewer's name (from 960 px) and the **avatar** (initials), which opens the **account menu**, in order:
+  - The display name in bold, the email, and the tier ("super admin" or "sys admin") for a viewer holding one. Informational, not links; it lets a viewer on a shared computer confirm who is signed in.
+  - Under 640 px, the Light/Dark toggle (it leaves the bar at that width).
+  - **Settings**, opening Settings with return-to-origin behavior (below). Operators and sys admins only, since Settings sits behind the operator gate and anyone else is bounced to `/me?notice=organizers`. Not rendered on Settings itself or on Sign-in details (`/auth/me/debug`).
+  - **Admin**, opening the Sys Admin pages with return-to-origin behavior. Sys admins only, and not on the Sys Admin pages or Sign-in details.
+  - **Guide**, opening the Guide with return-to-origin behavior (`/guide?return_to=<path>`). Not rendered on `/guide` itself or on Sign-in details, nor for a viewer who resolves no Guide audience. That is the `request.state.guide_hidden` **hide** flag, and it **fails open**: an unset flag renders the link, because `/guide` itself bounces a viewer who resolves nothing to `/about`, so a stray link is cosmetic while a missing one hides a page someone is entitled to.
+  - **About**, with return-to-origin behavior and, for operators and sys admins, the version beside it. Not rendered on About itself or on Sign-in details.
+  - **Sign out** (`/.auth/logout`), last, in a group of its own.
+- **Top line.** The workspace default is `CORDWARE_INSTITUTION_NAME`; an operator's Unit (`users.unit`, set only by a sys admin) replaces it. Empty means no top line, and the app name sits alone. The text truncates with an ellipsis before the app name does, and is at most 80 characters. The page decides which name shows:
 
-The user menu can render as inline links (when the menu has three or four items) or as a dropdown triggered by clicking the operator name. Inline is preferred while the menu is small; promote to dropdown when it would otherwise crowd the top bar.
+  | Page | Name shown |
+  |---|---|
+  | A session's pages, operator or participant, **including the sys-admin diagnostics pages** (Outbox, Audit log) | The Unit of the operator who **created** the session, else the default. Co-owners do not change it |
+  | Your reviews, **whoever views it, operators included** | The Unit the listed sessions share, else the default (also when none are listed) |
+  | Any other page (lobby, Settings, Admin, Create session, About, Guide, Sign-in details) | The viewer's own Unit if an operator or sys admin, else the default |
+
+  The creator's Unit is read as the page renders, so a sys admin's change shows on existing sessions at once.
+- **No version and no inline links** sit on the bar; the account menu holds them.
+- **Menus** open on click, Enter or Space and close on Escape, on a click outside and when the other opens. The switcher, the avatar and every menu entry are at least 44 px tall. The switcher's `summary` is labeled "Switch area: Review Robin"; the avatar's "Account: {display name}".
+- **Breadcrumb row.** Operator pages render the breadcrumb (`_partials/breadcrumb.html`) on its own row inside the header, under the bar and above the header's bottom line, with no line between; only where a page has one. Participant pages render no row. Under 640 px the middle crumbs collapse to "…".
+- **Who sees what.** Which entries show follows the viewer's roles, not the page. About, the Guide and Sign-in details are shared with operators and show the bar without the breadcrumb row to everyone but an operator or system admin, who keep the breadcrumb row there (`views.uses_participant_chrome`).
 
 #### Return-to-origin behavior
 
@@ -344,13 +356,13 @@ This is a small piece of plumbing but it changes the affordance from "trip down 
 
 Non-session operator pages share a simple structure:
 
-1. **Top bar** (as above).
+1. **Top bar** (as above), then the breadcrumb row where the page has one.
 2. **Page body**:
    - Optional return-to-origin affordance (top-left of body).
    - **H1 page title** (not on Create or Rehydrate; see below).
    - Page content.
 
-The breadcrumb is at most two deep: `Sessions` on the lobby (and on Settings), `Sessions` → `New session` / `Archived` on the lobby's children (and `Sessions` → `Rehydrate session` on the rehydrate page, which is gated off by default); About, the Guide and the Sys Admin pages render none. The H1 and the user menu together orient the operator. **Create (`New session`) and the gated Rehydrate page carry no H1**: the breadcrumb's last segment names the page, and on Rehydrate the first card's H2 does too (Create's first card is "Session details").
+The breadcrumb is at most two deep: `Sessions` on the lobby (and on Settings), `Sessions` → `New session` / `Archived` on the lobby's children (and `Sessions` → `Rehydrate session` on the rehydrate page, which is gated off by default); About, the Guide and the Sys Admin pages render none. The H1 and the account menu together orient the operator. **Create (`New session`) and the gated Rehydrate page carry no H1**: the breadcrumb's last segment names the page, and on Rehydrate the first card's H2 does too (Create's first card is "Session details").
 
 #### Operator's Overview (Sessions list)
 
@@ -392,17 +404,7 @@ only.
 
 #### Top bar
 
-Reviewer-facing pages have a top bar, but lighter than the operator's:
-
-- **Left:** "Review Robin" — small, `--text-subtle`. App identity as a trust anchor. No version info (operators care about that; reviewers don't).
-- **Right:** A small **user menu** containing:
-  - "Signed in as [Reviewer Name]" — informational, with the same tier suffix as the operator's. Lets the reviewer confirm correct identity (important on shared computers, useful in institutions where SSO might silently log the wrong person in).
-  - "Your reviews" — link back to `/me` on every participant page but `/me` itself, whatever the number of sessions, so a one-session reviewer, a reviewee and an observer always have a way back ("Your reviews" is the dashboard's one name).
-  - "Guide" — opens the Guide (`/guide?return_to=<path>`, skipped on `/guide` itself and on Sign-in details), rendered only for a viewer who resolves at least one Guide audience. Gated on the same `request.state.guide_hidden` **hide** flag the operator chrome reads, and **fails open**: an unset flag renders the link, because `/guide` itself bounces a viewer who resolves nothing to `/about`, so a stray link is cosmetic while a missing one hides a page someone is entitled to.
-  - "About" — opens the About / access-help page (`/about?return_to=<path>`, skipped on `/about` itself and on Sign-in details), same as the operator chrome's About link.
-  - "Sign out" — ends the reviewer's session.
-
-The top bar is consistent across all reviewer pages. Its presence is what makes the reviewer surface recognizable as Review Robin across sessions. About, Guide and Sign-in details (`/auth/me/debug`) are shared with operators and show it to everyone but an operator or system admin, who keep the operator chrome there (`views.uses_participant_chrome`).
+Reviewer-facing pages carry the shared bar (see "Top bar" under the non-session operator pages), without the breadcrumb row. The viewer's roles decide the entries: a participant's switcher offers Your reviews and All applications, and their account menu offers Guide, About and Sign out. **Your reviews** is reachable from every participant page, whatever the number of sessions, so a one-session reviewer, a reviewee and an observer always have a way back ("Your reviews" is the dashboard's one name). The top line follows the sessions' Units ("Top bar" above; `docs/header_chrome.md` §6). The bar is the same on all reviewer pages; its presence is what makes the surface recognizable as Review Robin across sessions.
 
 Sign-in has no page of its own: it is Azure Easy Auth's (`spec/audience_and_identity_model.md` "Auth posture").
 
@@ -410,7 +412,7 @@ Sign-in has no page of its own: it is Azure Easy Auth's (`spec/audience_and_iden
 
 The reviewer's "home" after sign-in. A simple list of pending and recent reviews.
 
-**Chrome:** standard reviewer top bar + page body.
+**Chrome:** the shared top bar + page body.
 
 **Body:**
 
@@ -430,7 +432,7 @@ The main task surface, where the reviewer completes their evaluations.
 
 **Chrome:**
 
-- Standard reviewer top bar (Review Robin identity + user menu).
+- The shared top bar.
 - **Page header** with session context: the session name as H1, the deadline, the session description and the participant row. `spec/reviewer-surface.md` § *Page anatomy* (part 3) owns its contract. An institution name near the session name is **deferred**, not built (`spec/audience_and_identity_model.md` "Operator customization boundary").
 - **Page navigation** (only when the session has more than one instrument; see "Multi-instrument navigation" below).
 - **Form body.**
@@ -465,7 +467,7 @@ The chrome stops at the action row; what happens *inside* the form (table layout
 
 There is no separate thank-you page. A submit that closes out every assignment in the session lands on the reviewer's **summary page** (`/me/sessions/{id}/summary`); one that leaves assignments open returns to the review surface. `spec/reviewer-surface.md` owns both routes.
 
-**Chrome:** standard reviewer top bar + page body.
+**Chrome:** the shared top bar + page body.
 
 **Body (summary page):**
 
@@ -479,7 +481,7 @@ Tone: calm and brief. The reviewer is finished; the page should confirm what was
 
 Shown when a sign-in link is invalid, the session is not in Activated state, or the deadline has passed.
 
-**Chrome:** standard reviewer top bar (with whatever auth state applies — signed in or not) + page body.
+**Chrome:** the shared top bar (static, with no account menu, when no user is signed in) + page body.
 
 **Body:**
 
@@ -508,7 +510,7 @@ Some patterns from `visual_style_general.md` and the operator session chrome abo
 - **Color palette.** Same neutrals, same accents. Lifecycle accent colors are operator-only (reviewers don't see lifecycle); other accents (blue for action, green for completion, amber for warnings) apply across all surfaces.
 - **Typography.** Same type scale and font stack on all surfaces.
 - **Spacing.** Same 4px grid throughout.
-- **Top bar pattern.** Both operator and reviewer surfaces have a top bar with app identity (left) and user menu (right). Operator's says "Review Robin Web App (version dev)" because operators care about the version; reviewer's says "Review Robin" because they don't. Operator's user menu hosts Settings / Admin / Guide / About / Sign out, with Settings for operators and sys admins only and Admin for sys admins only; reviewer's user menu hosts Your reviews / Guide / About / Sign out, with Guide suppressed for a viewer who resolves no Guide audience. Same shape, different contents.
+- **Top bar.** One shared bar on every surface, with the same switcher and account menu; the viewer's roles decide which entries show, and only operator pages carry the breadcrumb row.
 
 The discipline: components and visual language are uniform; chrome and navigation patterns are audience-specific. An operator and a reviewer should recognize the same app from the visual style; a quick glance at the chrome should tell each which surface they're on.
 

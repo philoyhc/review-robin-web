@@ -49,7 +49,7 @@ shorthand:
 | **Inline text-button (`.btn-reset`)** | Single-line link-styled button used to revert a single field inside an editor without cancelling and exiting. (See `spec/ui_elements.md` §6.) |
 | **Icon button (`.btn-icon`)** | Borderless single-glyph affordance; the row pager's steps. (See `spec/ui_elements.md` §6.) |
 | **Return-to (`.back-link`)** | Top-of-body inline link to "wherever you came from" (`return_to_url` round-trip). Required on chrome-detour pages (Operator Settings, About) and on the Sys Admin child pages. (See `spec/ui_elements.md` §6.) |
-| **Chrome utility link** | Top-right chrome anchors — Sign-out (`signout`), Settings / Admin / Guide / About (`chrome-link`). Defined in `spec/ui_elements.md` §1, not in `.btn` family. |
+| **Account-menu entry** | The anchors in the top bar's account menu (`.tb-menu a`) — Settings / Admin / Guide / About and Sign out. Defined in `spec/ui_elements.md` §1 and `spec/visual_style_rrw.md` "Top bar", not in `.btn` family. |
 | **Chrome nav** | The two-row session top-nav tabs (`.nav-tab`). Lives in `spec/visual_style_rrw.md` "Operator session chrome", not in the `.btn` family. |
 | **Disabled** | Visual variant of any role — opacity 0.5, `cursor: not-allowed`, `aria-disabled="true"`; applied once, not again inside an already-faded locked strip. |
 | **Inline link** | `<a>` rendered without a `.btn` class; reads as a hyperlink, not a button. |
@@ -149,7 +149,7 @@ Source: `app/web/templates/operator/session_new.html`.
 | 14 | Session details form | Create session | `<button type="submit">` | `btn` | Primary | Posts to `POST /operator/sessions` |
 | 15 | Session details form | Cancel | `<a>` | `btn secondary` | Secondary | Returns to the sessions lobby |
 | 186 | Owners card | Add owner | `<button type="button">` | `btn secondary` | Secondary | Stages a row via `_owners_stager_js`; the card has no save of its own — **Create session** (#14) submits the staged set. Ships `hidden`, un-hidden by the stager script (`spec/session_owners.md` §3) |
-| 187 | Owners card | Remove (per staged row) | `<button type="button">` | `chrome-link` | **Not `.btn`, kept deliberately** — reuses the chrome nav's `chrome-link` class for an in-card control; no canonical role above covers a per-row remove, and the Owners cards' Removes (#187, #190) stay `chrome-link` rather than take one. The class has a base rule outside the chrome (`body.ui-v2 .chrome-link`: no background, border or padding, the link colour, a muted disabled state), so the button draws as a link. Removes a staged row client-side; nothing is written until **Create session**. Not present on the creator's fixed row |
+| 187 | Owners card | Remove (per staged row) | `<button type="button">` | `chrome-link` | **Not `.btn`, kept deliberately** — reuses the `chrome-link` class for an in-card control; no canonical role above covers a per-row remove, and the Owners cards' Removes (#187, #190) stay `chrome-link` rather than take one. The class has a base rule outside the chrome (`body.ui-v2 .chrome-link`: no background, border or padding, the link colour, a muted disabled state), so the button draws as a link. Removes a staged row client-side; nothing is written until **Create session**. Not present on the creator's fixed row |
 
 ---
 
@@ -694,19 +694,19 @@ here acts client-side; the card's bulk Save (#52) writes the rule.
 
 ---
 
-## Section 17 — Global chrome utility menu (every page)
+## Section 17 — Account menu (every page)
 
-Source: `app/web/templates/base.html` (chrome top-right). Renders
-on every page (operator + reviewer); only the operator view is
-enumerated here.
+Source: `app/web/templates/_partials/top_bar.html` (the avatar's menu).
+Renders on every page (operator + participant); only the operator view
+is enumerated here.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 100 | Chrome user menu | Settings | `<a>` | `chrome-link` | Chrome utility link | Operators and sys admins only (Settings sits behind `require_operator`). Round-trips via `?return_to=<path>`. Not rendered on `/operator/settings` itself |
-| 101 | Chrome user menu | About | `<a>` | `chrome-link` | Chrome utility link | Same `?return_to=<path>` pattern. Not rendered on `/about` itself |
-| 102 | Chrome user menu | Sign out | `<a>` | `signout` | Chrome utility link | Hits `/.auth/logout` (Easy Auth) |
-| 225 | Chrome user menu | Admin | `<a>` | `chrome-link` | Chrome utility link | Sys-admins only, and not on the `/operator/sys-admin` pages; same `?return_to=<path>` pattern |
-| 226 | Chrome user menu | Guide | `<a>` | `chrome-link` | Chrome utility link | Same `?return_to=<path>` pattern. Suppressed on `/guide` itself and for a viewer who resolves no Guide audiences (`spec/operator_ui_concept.md` "`/guide` — Guide") |
+| 100 | Account menu | Settings | `<a>` | `.tb-menu a` | Account-menu entry | Operators and sys admins only (Settings sits behind `require_operator`). Round-trips via `?return_to=<path>`. Not rendered on `/operator/settings` itself |
+| 101 | Account menu | About | `<a>` | `.tb-menu a` | Account-menu entry | Same `?return_to=<path>` pattern. Not rendered on `/about` itself |
+| 102 | Account menu | Sign out | `<a>` | `.tb-menu a` (`data-sign-out`) | Account-menu entry | Hits `/.auth/logout` (Easy Auth) |
+| 225 | Account menu | Admin | `<a>` | `.tb-menu a` | Account-menu entry | Sys-admins only, and not on the `/operator/sys-admin` pages; same `?return_to=<path>` pattern |
+| 226 | Account menu | Guide | `<a>` | `.tb-menu a` | Account-menu entry | Same `?return_to=<path>` pattern. Suppressed on `/guide` itself and for a viewer who resolves no Guide audiences (`spec/operator_ui_concept.md` "`/guide` — Guide") |
 
 ---
 
@@ -905,14 +905,14 @@ section.
 
 ### 1. "Return to where you came from" is one class
 
-Pages reached as a detour from the chrome — Operator Settings (#104),
+Pages reached as a detour from the account menu — Operator Settings (#104),
 About (#103), the Guide, and the Sys Admin pages (#111, #118, #247,
 #251) — carry a
 **`.back-link`**, rendered as
 `<a class="back-link" href="{{ return_to_url }}">← Back to
 {{ return_to_label }}</a>` at the top of the body, above the working
 cards. Settings, About and the Guide round-trip via `?return_to=<path>`
-from the chrome top-right utility menu (#100 / #101 / #226); the Admin
+from the account menu (#100 / #101 / #226); the Admin
 link (#225)
 carries the same param, which `/operator/sys-admin` remembers for both
 tabs (#111, #247), while Outbox and Audit log (#118, #251) go back to

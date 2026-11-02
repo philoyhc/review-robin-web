@@ -64,6 +64,7 @@ migration.
 | `smtp_transport` | `String(16)` | `smtp` (default; the only value supported). Reserved for other send backends (Microsoft Graph, ACS). |
 | `is_operator` | `Boolean` | Workspace operator allowlist flag; every operator route requires `is_operator` or `is_sys_admin`. Seeded once, on first sign-in, from `OPERATOR_EMAILS`; after that the column is authoritative and changes only on Accounts Management (`/operator/sys-admin/users`, `spec/permissions.md` §4.1). Not on the Operator Settings page. |
 | `is_sys_admin` | `Boolean` | Admin flag gating the Sys Admin pages and the audit-log CSV. Seeded and edited as `is_operator`, from `SYS_ADMIN_EMAILS`. A super-admin (`SUPER_ADMIN_EMAILS`, §8) has both flags re-asserted on every sign-in. |
+| `unit` | `String(80)`, nullable | The operator's Unit, the top bar's top line on the sessions they create (`docs/header_chrome.md` §6). Set or cleared **only by a sys admin**, on Accounts Management (`users.set_unit`; audited `workspace.user_unit_set`); the operator sees it read-only on Settings. Trimmed, whitespace collapsed, at most 80 characters; `NULL` means the workspace default (`CORDWARE_INSTITUTION_NAME`, §8). Alembic `c3e9a1f7d2b4`. |
 | `preferences` | `JSON` | General per-operator preferences container. JSON object keyed by individual operator-level display preferences. First key `display_timezone` — the operator's default display timezone (an IANA zone name), edited on the **Date & time** card on `/operator/settings`. NULL / absent key = "no preference set" → consumer falls through to its in-code default (`UTC` for the timezone key). Future operator-level display settings become new keys, not new migrations. Operator surfaces render dates / times converted into this zone; the canonical render is bare `YYYY-MM-DD HH:MM` (no zone token) via the `format_datetime` Jinja filter — the card carries a worked sample that names the zone. The trailing zone token is behind one internal switch, `date_formatting.SHOW_ZONE_TOKEN` (off by default; flip + restart, no env var or migration). |
 
 **Who sends** is not settled: Graph as the operator who clicks, or
@@ -469,7 +470,8 @@ stay RRW's.
 | Var | Default | Purpose |
 |---|---|---|
 | `APP_ENV` | `local` | `local` / `dev` / `prod`. Any value but `local` turns on the boot-time checks: RRW's startup fails when `OPERATOR_EMAILS` and `SYS_ADMIN_EMAILS` are both empty (`app/config.py`), and the host logs a warning when no super-admin is configured (`super_admin.unconfigured`, `cordware/spec/host.md`). Only `local` permits fake auth. |
-| `APP_VERSION` | `dev` | Labels the build in the operator top bar and on the About page. |
+| `APP_VERSION` | `dev` | Labels the build in the account menu (operators and sys admins) and on the About page. |
+| `CORDWARE_INSTITUTION_NAME` | empty | The workspace default for the top bar's top line, trimmed; empty means no top line. A Cordware platform setting read through `cordware.identity.institution_name()` (`cordware/spec/identity.md`); an operator's `users.unit` replaces it on their sessions (`docs/header_chrome.md` §6). |
 | `ALLOW_FAKE_AUTH` | `False` | When `True`, a request without Easy Auth headers is the fake user instead of a 401. **Enforced, not advisory:** with it on and `APP_ENV` not `local`, the host refuses to start (`cordware/spec/host.md` "Fake-auth guard"). |
 | `FAKE_AUTH_PRINCIPAL_ID` | `local-dev` | Fake-auth identity slot. |
 | `FAKE_AUTH_EMAIL` | `operator@example.edu` | Fake-auth identity slot. |

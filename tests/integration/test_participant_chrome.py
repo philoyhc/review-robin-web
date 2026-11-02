@@ -112,3 +112,15 @@ def test_about_names_the_dashboard_your_reviews(client: TestClient) -> None:
     body = client.get("/about").text
     assert '<a href="/me">Your reviews</a>' in body
     assert "My reviews" not in body
+
+
+def test_sign_in_details_offers_none_of_the_account_entries(
+    client: TestClient, monkeypatch
+) -> None:
+    """`docs/header_chrome.md` §4: no Settings, Admin, Guide or About on
+    Sign-in details, for an operator and a sys admin too (20D close)."""
+    monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
+    client.get("/about")
+    body = client.get("/auth/me/debug").text
+    for path in ("/operator/settings?", "/operator/sys-admin?", "/guide?", "/about?"):
+        assert f'href="{path}return_to=' not in body, path

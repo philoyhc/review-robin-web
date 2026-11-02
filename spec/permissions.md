@@ -216,6 +216,14 @@ expander (`spec/setup_pages.md` § *The row expander*): `POST
 taking the repeated `user_ids`, the page's `view` and, for Delete,
 `confirm`. Gate `require_sys_admin`; service `users.apply_batch`.
 
+**Set unit** (segment 20D) is its own route, `POST
+/operator/sys-admin/users/bulk-set-unit`, taking `user_ids`, `unit` and
+`view`; gate `require_sys_admin`, service `users.set_unit`. All or
+nothing: a row with neither flag is refused (`unit_not_operator`), a
+value over 80 characters too (`unit_too_long`); an empty value clears
+the Unit to the workspace default. It may include the admin's own row:
+a Unit names where someone works, not what they may do.
+
 - **All or nothing.** One refusal refuses the batch and nothing
   changes. Every row first takes its own guards from the table above,
   in that order, minus the two counts; Promote adds `not_operator` (the
