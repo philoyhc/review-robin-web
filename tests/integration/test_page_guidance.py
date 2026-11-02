@@ -517,14 +517,14 @@ def test_the_invitations_page_says_sends_are_not_delivered(
     client: TestClient, db: Session
 ) -> None:
     """Send records an invitation or reminder today, and its counters
-    move, but no email is delivered until Segment 14B ships (findings
-    F12). Without the note the page claims a send nobody received.
+    move, but no email is delivered until Segment 14F ships (findings
+    F12; 14F replaced 14B). Without the note the page claims a send nobody
+    received.
 
-    **This assertion is expected to fail when 14B lands** — that is the
+    **This assertion is expected to fail when 14F lands** — that is the
     point. The note becomes false the moment sending is switched on, and
     a red test is a better reminder than a comment nobody greps for.
-    `guide/segment_14B_email_infrastructure.md` carries the reciprocal
-    note.
+    `guide/segment_14F_manual_email.md` is where sending lands.
     """
     session_id = _session_id(client, db)
     public_id = db.get(ReviewSession, session_id).public_id

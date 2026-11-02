@@ -3,7 +3,7 @@
 **Opened:** 2026-11-01 · **Theme:** the operator-facing controls that
 email sending needs, now that the send path is Microsoft Graph rather
 than per-operator SMTP · **Related:**
-`guide/segment_14B_email_infrastructure.md` (the send wiring),
+`guide/segment_14F_manual_email.md` (the send wiring; 14B, archived, before it),
 `guide/email_and_scheduling.md` (where the choice of sender stands),
 `spec/settings_inventory.md`, `spec/operator_ui_concept.md`
 
@@ -21,7 +21,7 @@ confirm-gated **Clear all settings (SMTP)**. None of it can be used:
 the author narrowed the choice of sender to **Graph as the operator**
 or **Graph as a dedicated mailbox** (2026-11-01), institutional
 Microsoft 365 tenants typically block basic SMTP AUTH and app passwords
-under MFA (`guide/segment_14B_email_infrastructure.md`), and nothing
+under MFA (`guide/archive/segment_14B_email_infrastructure.md`), and nothing
 reads the settings today ("Nothing in the app calls this yet",
 `app/services/email_send.py`). The card tells operators to do work that
 leads nowhere.

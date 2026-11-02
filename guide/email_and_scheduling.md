@@ -3,7 +3,7 @@
 **Opened:** 2026-11-01, at the author's request after a survey of both
 repositories. A recommendation, not yet a plan: the three choices at the
 end are the author's, and a segment plan follows them. **Related:**
-`guide/segment_14B_email_infrastructure.md` (the email-wiring plan, not
+`guide/archive/segment_14B_email_infrastructure.md` (the email-wiring plan, retired 2026-11-02 for 14E / 14F / 14G; not
 started), `guide/post_azure_todo_checklist.md` items 7–10,
 `spec/email_infra_options.md`, `spec/lifecycle.md` §8.3.
 
@@ -114,4 +114,4 @@ keeping a copy in Sent Items, get their own card (14C Item 2).
 The honest outbox (1); the delegated path for clicks (2, first half) with
 token renewal (4); the clock (3), still firing what it fires today; the
 shared-mailbox path for clock mail (2, second half) when IT delivers. Each
-is its own PR or rung under segment 14B, which this note feeds.
+is its own PR or rung under segments 14E, 14F and 14G, which replaced 14B (2026-11-02).

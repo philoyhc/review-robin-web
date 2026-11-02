@@ -1,5 +1,22 @@
 # Segment 14B — Email infrastructure (send activation + backends)
 
+> **Retired 2026-11-02, superseded** (author: "archive 14B"), never built.
+> The author ruled that every email goes out as the operator (delegated
+> Graph), and that a clock and scheduled mail are independent, so the
+> work was re-cut:
+> - **Part A** (SMTP send activation) → `guide/segment_14F_manual_email.md`,
+>   as delegated Graph on the operator's click; **Parts B and E** (idempotent
+>   retry, the Outbox surface) ride with 14F.
+> - **Part C** (queue and worker) → not needed for Send all; timed work runs
+>   on `guide/segment_14E_clock.md`'s clock.
+> - **Parts D and F** (deployment sender defaults, application permission) →
+>   14G, scheduled email, if IT grants a dedicated mailbox
+>   (`guide/todo_master.md`).
+> - **Parts G and H** (Azure Communication Services, a third-party
+>   service) and **the appendix** (W20 / W21) → `guide/deferred_consolidated.md`.
+>
+> Kept as written below, as the record.
+
 > **Carved out of the original Segment 14 family (2026-05-11).**
 > Renamed from `segment_14-1_email_infra.md`. Production
 > hardening proper lives in **14A**

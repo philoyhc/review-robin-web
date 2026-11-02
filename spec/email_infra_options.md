@@ -598,5 +598,7 @@ switching backends is a configuration change.
 
 What is in place and what is pending, and the order the remaining
 work lands in, is plan content: it lives in
-`guide/segment_14B_email_infrastructure.md` `## Status`, which each
-Part's PR updates as it ships.
+`guide/segment_14F_manual_email.md` (delegated Graph on a click) and
+`guide/segment_14E_clock.md` (the clock), which replaced 14B
+(`guide/archive/segment_14B_email_infrastructure.md`, retired
+2026-11-02).

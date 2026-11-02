@@ -159,6 +159,7 @@ alongside its replacement.
 | `segment_13E_db_prep.md` | 209 | Segment 13E — DB prep for the 12C / 15D block. |
 | `segment_13F_more_db_prep.md` | 786 | Segment 13F — DB prep for the 16A / 16B / 18A / 18B / 18G ride-along. Five of seven PRs shipped (1 / 2 / 3 / 6 / 7); the two outstanding (PR 4 `reminder_settings`, PR 5 `retention_*`) plus the pending scheduled-lifecycle schema audit were folded into **Segment 18G Part 0 — Schema pre-positioning** on 2026-05-20 and the plan retired here. |
 | `segment_14A_production_hardening.md` | 588 | Segment 14A — production hardening (in-app ladder: logging, error handling, index review, permission audit, docs, deploy-workflow hardening). |
+| `segment_14B_email_infrastructure.md` | 480 | Segment 14B — email infrastructure (send activation + backends). Opened 2026-05-11, **retired 2026-11-02 unbuilt, superseded**: its SMTP send became 14F (delegated Graph on the operator's click), its worker gave way to 14E's clock, its application-permission and sender-default parts await 14G, and its other backends and the W20 / W21 appendix moved to `guide/deferred_consolidated.md`. |
 | `segment_15_operator_polish_and_documentation.md` | 138 | Segment 15 — operator polish + documentation (umbrella). |
 | `segment_15A_friendly_labels.md` | 670 | Segment 15A — pervasive friendly labels. |
 | `segment_15B_per_instrument_assignments.md` | 783 | Segment 15B — per-instrument assignments. |
