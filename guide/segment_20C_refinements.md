@@ -27,6 +27,7 @@ Done 2026-11-01 in one PR, as laddered.
 - **Test:** the integration test checks the verified creator's pill. The test client's sign-in always stamps a principal, so the unverified branch is left to Accounts' tests of the same macro.
 - **Browser test:** the staged-row check names its candidates on the page, as it already marks them verified.
 - **Reads:** one `diff-reviewer` read. It found no code defect. Its small findings were a stale comment on `account_name`, the spec's missing nameless case and this Status block's bookkeeping; all are fixed in the same PR.
+- **Size, 2026-11-02 (author).** A verified name's pill keeps the row's own size, as an unverified name, the role and the date beside it do. This reverses the 2026-11-01 small size, which made a matched name smaller than the rest of the row on Accounts and both Owners cards. Only the email, in the code face, stays smaller.
 
 ### PR ladder
 
