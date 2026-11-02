@@ -103,7 +103,12 @@ Closed 2026-11-02. Built as laddered in five rungs (`#3487`–`#3491`), then six
   - the item's cumulative diff from `6b3b0a0e`, at rung 4, with 15 findings: three already fixed by Codex, eleven fixed, one recorded as the audit call;
   - rung 5, with seven spec-accuracy findings, all fixed;
   - the tab lock (`#3492`), the New session labels (`#3494`), the export 404 (`#3495`) and the Guide copy (`#3498`): no code defects, and the prose findings were fixed in each PR.
-- **The close's `spec-writer` pass:** below.
+- **The close's `spec-writer` pass** made three small edits:
+  - New session's help text (`spec/operator_ui_concept.md`);
+  - the `reviewees.csv` 404 in the coverage table (`spec/csv_contracts.md`);
+  - a provenance clause dropped (`spec/extract_data.md`).
+
+  Its two flags were adjudicated: Semantics' stale "refused" is superseded by this Status, and the toggle event reuses `session.feature_toggled`'s existing `EVENT_SCHEMAS` entry.
 
 ## Blast radius (measured)
 

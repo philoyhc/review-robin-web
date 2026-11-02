@@ -1179,7 +1179,7 @@ while creating the session.
 | Surface | Direction | Service | Spec |
 |---|---|---|---|
 | Extract Setup card — Reviewers tile | Out | `serialize_reviewers` | `spec/session_home.md` §2 |
-| Extract Setup — Reviewees tile (absent when `symmetric_review`) | Out | `serialize_reviewees` | same |
+| Extract Setup — Reviewees tile (absent when `symmetric_review`, whose `reviewees.csv` route answers 404) | Out | `serialize_reviewees` | same |
 | Extract Setup — Relationships tile | Out | `serialize_relationships` | same |
 | Extract Setup — Observers tile (when `observers_enabled`) | Out | `serialize_observers` | same |
 | Extract Setup — Settings tile | Out | `serialize_session_config` (via `export_settings_csv`; the Zip all bundle's copy via `build_setup_bundle`) | same |

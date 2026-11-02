@@ -1,6 +1,6 @@
 """sessions.symmetric_review; reviewees.mirrors_reviewer_id
 
-Segment 20B rung 2 (``guide/segment_20B_symmetric_review.md``): a
+Segment 20B rung 2 (``guide/archive/segment_20B_symmetric_review.md``): a
 per-session Symmetric review setting, off by default, under which the
 Reviewers roster is the only one edited and every write mirrors to
 Reviewees. ``reviewees.mirrors_reviewer_id`` links a mirrored reviewee to
