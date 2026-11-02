@@ -159,3 +159,17 @@ def test_a_settings_csv_cannot_turn_it_on_beside_rows(client: TestClient, db: Se
     db.commit()
     db.refresh(target)
     assert target.symmetric_review is False
+
+
+def test_the_reviewees_tab_carries_a_corner_lock_only_under_the_mode(
+    client: TestClient, db: Session
+) -> None:
+    """Open question 2 (author, 2026-11-02): marked, without changing the
+    layout — a class whose glyph is absolutely positioned, plus a title
+    and screen-reader text."""
+    for code, form in (("sym-tab-on", {"symmetric_review": "true"}), ("sym-tab-off", {})):
+        on = bool(form)
+        review_session = _make_session(client, db, code, **form)
+        html = client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
+        marked = "is-mirrored" in html and "(mirrors Reviewers, read-only)" in html
+        assert marked is on, code

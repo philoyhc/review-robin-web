@@ -1010,6 +1010,23 @@
       .tab-strip-ops .nav-tab.active::after {
         background: var(--nav-marker-ops);
       }
+      /* Segment 20B — a read-only mirrored tab (Reviewees under
+         symmetric review): the fixed chips' lock glyph, pinned to the
+         tab's top-right corner and out of the flow, so no tab moves.
+         Sized and placed inside the tab's 12px / 14px padding, so it
+         cannot touch the label however narrow the strip.
+         ``::before``, since ``::after`` is the active-tab marker. */
+      .nav-tab.is-mirrored::before {
+        content: "";
+        position: absolute;
+        top: 3px;
+        right: 4px;
+        width: 0.6em;
+        height: 0.6em;
+        background: currentColor;
+        -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path d='M4 7V5a4 4 0 1 1 8 0v2h1v8H3V7h1zm2 0h4V5a2 2 0 1 0-4 0v2z'/></svg>") no-repeat center / contain;
+        mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path d='M4 7V5a4 4 0 1 1 8 0v2h1v8H3V7h1zm2 0h4V5a2 2 0 1 0-4 0v2z'/></svg>") no-repeat center / contain;
+      }
       .status-row {
         padding: 12px 16px;
         font-size: 0.9rem;
