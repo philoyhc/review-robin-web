@@ -60,8 +60,8 @@ A peer review where every participant both gives and receives feedback is a comm
 - **Status mirrors** (author's default, 2026-11-01). Withdrawing a reviewer also withdraws them as a reviewee, so they stop being reviewed as well as reviewing: one person, one status.
 - **When the toggle can change** (author's default, 2026-11-01). It follows the Relationships and Observers toggles' gates, and the empty-rosters rule settles nearly every case. Turning it off stays allowed at any stage.
 - **A Settings CSV that would turn the mode on beside rows leaves it off** (2026-11-01, rung 2), rather than refusing the file. That is the lock-on-data rule `_locked_on` already applies to the other two toggles, and what Session Home's disabled box does. Refusing would block a whole import over one setting the operator can turn on once the rosters are emptied.
-- **The Reviewees tab stays plain** (2026-11-01, rung 2), pending the author's choice on open question 2. Rung 1's `marked` variant ("mirrored" pill) is one template line to restore.
-- **Rehydrate leaves the extract's `reviewees.csv` unread under the mode** (2026-11-01, rung 4), rather than refusing it. Its input is the full extract, which always carries that file (the analyzer requires it), so refusing would make a symmetric session impossible to rehydrate. The settings apply first, so the reviewers save mirrors.
+- ~~**The Reviewees tab stays plain**~~ (2026-11-01, rung 2). Superseded by open question 2's answer: the tab carries a corner lock.
+- **Rehydrate leaves the extract's `reviewees.csv` unread under the mode** (2026-11-01, rung 4), rather than refusing it. Refusing would make a symmetric session impossible to rehydrate. *(Since `#3490`, a symmetric extract carries no `reviewees.csv`, and the analyzer no longer requires one.)* The settings apply first, so the reviewers save mirrors.
 - **The delete warning** (2026-11-01, rungs 3–4), narrowing default 2.
   - **Delete all and a replacing upload:** under the mode every assignment and relationship already has a reviewer, so their counts already include everything the reviewee side loses. Each gains a sentence that each person also goes as a reviewee.
   - **A selection delete:** it does lose more than its reviewer side. `roster_bulk`'s cascade counts take in the mirrored reviewees (Codex on `#3489`), so its loss gate, result and audit count both sides. Its browser text names the clause.
@@ -71,86 +71,39 @@ A peer review where every participant both gives and receives feedback is a comm
 
 ## Status
 
-- **Rung 1 (scaffold), 2026-11-01.** Built with these pieces, all inert:
-  - the New session checkbox, box first;
-  - a Rosters group with a Symmetric review chip on Session Home's details card;
-  - the greyed Reviewees Quick Setup slot;
-  - the read-only Reviewees page, with its banner pointing to Reviewers and the Unlock panel and row controls gone;
-  - the Reviewees tab, plain or marked "mirrored".
-  
-  The mode-on states show only under `?symmetric_preview=`, and only on the pages that pass it (New session, Session Home, Reviewees). Cumulative-diff base for the item's cold read: `6b3b0a0e`.
-- **Rung 2 (column and toggle), 2026-11-01.** The rung stores the setting:
-  - **Schema:** migration `b2f8d4a6c1e9` adds `sessions.symmetric_review` and `reviewees.mirrors_reviewer_id`.
-  - **Writers:** `SessionCreate` and `update_session` carry the setting. On is refused while either roster has rows (`sessions.has_roster_rows`), off clears the links (`sessions.clear_mirror_links`), and `session.feature_toggled` records the flip.
-  - **Settings CSV and clone:** the CSV gains `session.symmetric_review`, locked on data like the other toggles, and a clone copies the flag.
-  - **Pages:** the preview is gone, and the pages read the setting. New session's box greys the Reviewees slot in the browser while ticked. Session Home's chip is fixed off once a roster has rows.
-  
-  Until rung 3 lands, nothing mirrors yet: a session with the mode on has a read-only Reviewees page and no way to fill it.
-- **Rung 3 (the reconcile), 2026-11-01.** `app/services/symmetric_review.py`'s `sync_reviewees_from_reviewers` matches on `mirrors_reviewer_id`. It adopts an unlinked reviewee by address (a clone's copy), so its assignments survive, and otherwise adds, updates or deletes. Reviewee tag labels and `reviewee_self_fields` follow the reviewers', with `email` mapped to `email_or_identifier`.
-  - **Callers:** every reviewer writer calls it before committing:
-    - `reviewers.create_reviewer` and `update_reviewer`;
-    - `roster_bulk`'s status and delete paths;
-    - `csv_imports._save`, `save_reviewers` (after its labels) and `_delete_all`;
-    - `session_clone`;
-    - `participant_info.set_self_fields`;
-    - the reviewer label save.
-  - **Found at build:** Quick Setup saves Settings *last* (`SLOT_ORDER`), not first as Semantics assumed. So a Settings CSV turning the mode on in the same submit as a Reviewers file leaves it off (the lock-on-data rule). The Create box has no such problem, since the session starts with the mode on. Rung 4 settles the Quick Setup case.
-- **Rung 4 (read-only reviewees and imports), 2026-11-01.** The last build rung:
-  - **Routes:** every Reviewees POST route (ten) takes `require_reviewees_editable_session`, which answers 409 under the mode.
-  - **Quick Setup:**
-    - it refuses a Reviewees file (`symmetric_reviewees`) when the mode is on, or when the same submit's Settings file turns it on (`session_config_io.settings_symmetric_review`);
-    - when that file turns the mode on beside empty rosters, Quick Setup turns it on before the rosters save, so the reviewers mirror.
-  - **Export:** the setup bundle and the Extract Data setup card drop the Reviewees file.
-  - **Rehydrate:** it skips the reviewees save.
-  - **Delete warnings:** Reviewers' Delete all, replacing upload and selection delete warn that each person also goes as a reviewee.
-- **Codex on rung 3 (`#3489`), three passes, every finding fixed there.** The seven findings:
-  - the self-review recompute ran before the mirror;
-  - mirrored tag changes skipped the group-answer clear (now asked first, with a "Yes, clear them" on the Reviewers row editor and import);
-  - a name correction was refused by the person's own mirror;
-  - a clone's links pointed at the source;
-  - the selection-delete loss gate missed the mirror's answers;
-  - an email correction re-included an operator's exclusion.
-  - the Reviewers row's relationship count, which the selection confirmation sums, missed the mirror's relationships.
-- **Cold read (one `diff-reviewer` read of the cumulative diff from `6b3b0a0e`, at rung 4).** It found 15 findings:
-  - **Already fixed by Codex's pass on `#3489`:** three.
-  - **Fixed in rung 4:**
-    - the Reviewees row editor rendered under the mode;
-    - mirrored reviewees never seeded reviewee display fields;
-    - Quick Setup's turn-on sat in the route (now `sessions.set_symmetric_review_for_import`, audited);
-    - duplicate addresses in the clone adoption;
-    - Rehydrate still parsed and looked up `reviewees.csv`;
-    - Quick Setup's refusal didn't match the outcome (now `sessions.symmetric_review_after_settings`, with the pre-scan three-valued);
-    - a Settings CSV applied under the mode didn't re-sync;
-    - the 409 test covered six of ten routes;
-    - an inline style.
-  - **Recorded, not changed:** the mirror's audit rows (a judgment call above).
-  - **Now stale, superseded by Status, not rewritten:** Semantics' "Duplicate and Rehydrate refuse a reviewees file". Duplicate takes no file, and Rehydrate leaves it unread.
-  - **Owed at rung 5:** the spec lines.
-- **Codex on rung 4 (`#3490`), every finding fixed there.** It had six findings:
-  - the Quick Setup turn-on ran on the event loop before the session lock (now inside `_save_uploads`, under the lock);
-  - a symmetric setup bundle's Relationships file was checked against the empty Reviewees roster, so the bundle could not round-trip in one submit (now checked against the incoming reviewers).
-  - Rehydrate's pre-flight still required `reviewees.csv`, which a symmetric bundle no longer carries (now optional under the mode, with the responses' reviewees checked against the reviewers).
-  - the mirrored relationship roster was built in the Quick Setup route (now `relationships.parse_relationship_upload`);
-  - every mirrored change re-seeded reviewee display fields the operator had deleted (now only a newly filled slot seeds);
-  - a turn-on committed between the Reviewees route's gate and its lock let a reviewee in (now re-checked under the lock by `symmetric_review.refuse_reviewee_write`; Quick Setup sets the mode from its Settings file first, in either direction).
-- **Rung 5 (specs and Guide), 2026-11-01.** `spec-writer` wrote the Doc impact spec lines and added `spec/rehydrate.md` §6.3, which the plan had not named. Its flags were adjudicated:
-  - **Settings applies:** a Settings CSV applied outside Quick Setup writes the flag with no `session.feature_toggled` event, like the other two toggles.
-  - **Create:** creating a session with the box ticked writes no toggle event, since `session.created` carries the session.
-  - **The `reviewees.csv` export route:** left open at rung 5. The author ruled (2026-11-02) that only the Reviewers roster is exported, so it now answers 404 under the mode.
-  - **The Reviewees tab:** plain at rung 5. A follow-up PR marks it after the author's answer to open question 2 (2026-11-02); that PR takes its own cold read.
-- **Rung 5's cold read (`diff-reviewer`, its own read, since the rung reopens `app/` with the Guide paragraph).** It found seven spec-accuracy findings and no errors in the Guide paragraph. All seven are fixed in the rung:
-  - the Callers list missed the Settings CSV apply;
-  - the Audit bullet claimed every flip is an event;
-  - Rehydrate's "left unread" overstated it, since the readability scan still reads the file;
-  - three specs outside Doc impact (`spec/permissions.md`, `spec/roundtrip_coverage.md`, and `spec/rehydrate.md`'s restore table) named only the old toggles;
-  - the Extract Data re-import claim needed its condition;
-  - a stale "four setup CSVs";
-  - the inventory's §10 lock sentence.
-- **Refinements after the build (author's review, 2026-11-02).**
-  - The Reviewees tab's corner lock (`#3492`).
-  - New session's three boxes are shortened to Relationships page / Observers page / Symmetric review, in one row.
-  - Under the mode the `reviewees.csv` download answers 404, so only the Reviewers roster is exported. The same day the author also ruled open question 3 not admissible and confirmed no reviewee-side audit event.
-  - The Guide's Create session copy names the symmetric box, and its screencap shows the three-box card (the author's text and images, 2026-11-02).
+Closed 2026-11-02. Built as laddered in five rungs (`#3487`–`#3491`), then six refinements from the author's browser and Azure review (`#3492`–`#3498`).
+
+**Intended versus done:**
+- **The reconcile** (`app/services/symmetric_review.py`, `sync_reviewees_from_reviewers`) shipped as decided, matched on `reviewees.mirrors_reviewer_id`.
+  - **Callers:** every writer of reviewers, or of what the mirror copies from them, calls it. That includes the Settings CSV apply.
+  - **Adoption:** it adopts an unlinked reviewee by address, which is how a clone's copied rows keep their assignments.
+  - **After a change** it does three things:
+    - clears the answers of a group a mirrored tag change redraws, asking first where the caller can;
+    - seeds only the reviewee display-field slots it newly fills;
+    - recomputes self-review classification once, after the mirror is flushed.
+- **Imports diverged from Semantics.** Status supersedes it here; Semantics is not rewritten.
+  - **Quick Setup** saves Settings last (`SLOT_ORDER`), so it sets the mode from its Settings file first, in either direction, under the session lock (`sessions.set_symmetric_review_for_import`). It checks a Relationships file against the incoming reviewers (`relationships.parse_relationship_upload`) and refuses a Reviewees file (`symmetric_reviewees`).
+  - **Duplicate** takes no file.
+  - **Rehydrate** neither requires nor imports `reviewees.csv` under the mode.
+- **Read-only Reviewees:**
+  - **Routes:** all ten write routes answer 409 (`require_reviewees_editable_session`).
+  - **Locked re-check:** the two services that create reviewees re-check the mode under the lock (`refuse_reviewee_write`).
+  - **The tab:** it carries a corner lock (`.nav-tab.is-mirrored`), out of the flow.
+- **Export:** only the Reviewers roster is exported under the mode. The bundle and the Extract Data card leave the reviewees out, and `reviewees.csv` answers 404. The Settings CSV carries `session.symmetric_review`, so an import rebuilds the reviewees.
+- **New session:** the three boxes (Relationships page, Observers page, Symmetric review) share one row, with the author's help text and Guide copy.
+
+**Decisions confirmed at build:**
+- **The delete counts:** selection deletes count the mirrored side in the loss gate, the result and the audit.
+- **Audit:** the mirror writes no audit rows of its own; the author confirmed this.
+- **Turning on beside rows:** a Settings CSV that would do it leaves the mode off rather than refusing the file.
+
+**Reviews:**
+- **Codex** found seven findings on `#3489` and six on `#3490`. Each was fixed in its PR, and each fix carries a test that fails without it.
+- **`diff-reviewer`** did six reads:
+  - the item's cumulative diff from `6b3b0a0e`, at rung 4, with 15 findings: three already fixed by Codex, eleven fixed, one recorded as the audit call;
+  - rung 5, with seven spec-accuracy findings, all fixed;
+  - the tab lock (`#3492`), the New session labels (`#3494`), the export 404 (`#3495`) and the Guide copy (`#3498`): no code defects, and the prose findings were fixed in each PR.
+- **The close's `spec-writer` pass:** below.
 
 ## Blast radius (measured)
 
