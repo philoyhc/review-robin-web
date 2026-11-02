@@ -169,6 +169,12 @@ to CSS classes.
 > specificity (0,3,1) against `.nav-tab.disabled:hover`'s (0,3,0), so an
 > override loses on specificity wherever it sits.
 > Pinned by `tests/unit/test_session_nav_hover.py`.
+> **A mirrored tab carries a corner lock.** `.nav-tab.is-mirrored` (the
+> Reviewees tab under symmetric review, `spec/setup_pages.md`) draws the
+> fixed chips' lock glyph (§9) in `::before`, absolutely positioned
+> inside the tab's top-right padding, so the strip's layout is
+> unchanged. It takes the tab's own color through `currentColor`.
+> `::after` stays the active marker.
 
 > **Status strip (`.status-row`)** — horizontal compact strip of
 > setup and operations pills sitting inside the nav card.

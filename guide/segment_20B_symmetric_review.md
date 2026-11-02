@@ -65,6 +65,7 @@ A peer review where every participant both gives and receives feedback is a comm
 - **The delete warning** (2026-11-01, rungs 3–4), narrowing default 2.
   - **Delete all and a replacing upload:** under the mode every assignment and relationship already has a reviewer, so their counts already include everything the reviewee side loses. Each gains a sentence that each person also goes as a reviewee.
   - **A selection delete:** it does lose more than its reviewer side. `roster_bulk`'s cascade counts take in the mirrored reviewees (Codex on `#3489`), so its loss gate, result and audit count both sides. Its browser text names the clause.
+- **The tab's mark is a corner lock** (2026-11-02, after the author's "marked, without changing the layout"). It reuses the fixed chips' glyph (`spec/ui_elements.md` §9), positioned absolutely in the tab's corner, because the tabs share the strip equally and inline text would move the label. A "mirrored" word would need room.
 - **The mirror writes no audit rows of its own** (2026-11-01, cold read). Its creates, updates and deletes are consequences of the reviewer write, which is audited, as `bulk_delete`'s cascaded assignments and responses are counted inside its own event rather than given their own. A separate `reviewees.mirrored` event is one `EVENT_SCHEMAS` entry away if the author wants the reviewee side traced.
 - **Rung 1 previews the mode-on states by `?symmetric_preview=plain|marked`** (2026-11-01). Without the column nothing can turn the mode on, and the tab's look (open question 2) has to be seen to be chosen. The parameter touches no service, and rung 2 deletes it.
 
@@ -136,7 +137,7 @@ A peer review where every participant both gives and receives feedback is a comm
   - **Settings applies:** a Settings CSV applied outside Quick Setup writes the flag with no `session.feature_toggled` event, like the other two toggles.
   - **Create:** creating a session with the box ticked writes no toggle event, since `session.created` carries the session.
   - **The `reviewees.csv` export route:** left open; it serves the mirror.
-  - **Unchanged:** the Reviewees tab stays plain (open question 2).
+  - **The Reviewees tab:** plain at rung 5. A follow-up PR marks it after the author's answer to open question 2 (2026-11-02); that PR takes its own cold read.
 - **Rung 5's cold read (`diff-reviewer`, its own read, since the rung reopens `app/` with the Guide paragraph).** It found seven spec-accuracy findings and no errors in the Guide paragraph. All seven are fixed in the rung:
   - the Callers list missed the Settings CSV apply;
   - the Audit bullet claimed every flip is an event;
@@ -184,7 +185,7 @@ Taken 2026-11-01 at `2accb87`:
 ## Open questions
 
 1. ~~**The page: read-only or hidden?**~~ **Read-only, Unlock panel included** (author, 2026-11-01).
-2. **The Reviewees tab's look while read-only:** normal, or marked (a lock or "mirrored")? Settled on the scaffold.
+2. ~~**The Reviewees tab's look while read-only.**~~ **Marked, without changing the layout** (author, 2026-11-02): a corner lock glyph out of the flow, with a title.
 3. **Reviewee-only columns in a future upload format,** if any appear: they would need a home on the Reviewers file. None exist today.
 
 ## Out of scope
@@ -205,6 +206,7 @@ Taken 2026-11-01 at `2accb87`:
 - `spec/rehydrate.md` — §4, §6.3 and the restore table: `reviewees.csv` optional and not imported under the mode (rung 5; found by `spec-writer`).
 - `spec/permissions.md` — the `require_reviewees_editable_session` gate (rung 5; found by the cold read).
 - `spec/roundtrip_coverage.md` — the `symmetric_review` row (rung 5; found by the cold read).
+- `spec/ui_elements.md` — §2: the mirrored tab's corner lock (follow-up to open question 2).
 - `spec/architecture.md` — `reviewees.mirrors_reviewer_id`, the reconcile, and the audit event's `EVENT_SCHEMAS` entry (rungs 2, 3).
 - `app/web/templates/guide.html` — a paragraph on symmetric review (rung 5).
 - `guide/todo_master.md` — the queue entry (at close).

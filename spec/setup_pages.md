@@ -1482,8 +1482,10 @@ suppression predicate is `is_editable`.
 CSV header copy lists `RevieweeName`, `RevieweeEmail` required;
 `ProfileLink`, `RevieweeTag1..3`, `Status` optional.
 
-**Under `symmetric_review` the page is read-only.** The tab stays and the
-table shows the mirrored rows, but the Unlock panel (the self-fields card,
+**Under `symmetric_review` the page is read-only.** The tab stays, marked
+with the fixed chips' lock glyph in its top-right corner (`.nav-tab.is-mirrored`,
+out of the flow, so the strip's layout is unchanged; its title and its
+screen-reader name both "Reviewees (mirrors Reviewers, read-only)"), and the table shows the mirrored rows, but the Unlock panel (the self-fields card,
 `Upload Reviewees`, the tag-label editor and the `Danger Zone`) and every row
 control are gone, and a banner links to Reviewers, the roster to edit. Every
 Reviewees write route (`require_reviewees_editable_session`) answers **409**
