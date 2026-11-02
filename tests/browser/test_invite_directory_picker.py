@@ -163,21 +163,31 @@ def test_a_page_renews_the_token_once_in_45_minutes(page: Page) -> None:
     assert len(refreshes) == 2
 
 
-def test_a_verified_name_pill_keeps_the_row_size(page: Page) -> None:
-    """A verified name (``account_name`` in ``_roster_address.html``) is a
-    pill at the row's own size, as an unverified name, the role and the
-    date beside it are (author, 2026-11-02, reversing the 2026-11-01 small
-    size). The local run has no verified account, so the pill is placed in
-    a real Accounts cell with the macro's own classes."""
+def test_a_verified_name_is_the_lobby_display_pill(page: Page) -> None:
+    """A verified name (``account_name`` in ``_roster_address.html``) is the
+    plain display pill, as the lobby shows a session's creator: the pill's
+    small size and uppercase, not the address pill's inherited size and
+    case (20C Item 3, author 2026-11-02). The local run has no verified
+    account, so the pill is placed in a real Accounts cell with the
+    macro's own classes, beside a lobby-style pill for comparison."""
     page.goto(app_url(ACCOUNTS))
-    sizes = page.evaluate(
+    styles = page.evaluate(
         """() => {
           const cell = document.querySelector('table tbody tr td:nth-child(3)');
           const pill = document.createElement('span');
-          pill.className = 'pill pill-count pill-address';
+          pill.className = 'pill pill-count';
+          pill.setAttribute('data-directory-matched', '');
           pill.textContent = 'Jane Tan';
           cell.appendChild(pill);
-          return {pill: parseFloat(getComputedStyle(pill).fontSize), cell: parseFloat(getComputedStyle(cell).fontSize)};
+          const lobby = document.createElement('span');
+          lobby.className = 'pill pill-count';
+          lobby.textContent = 'Jane Tan';
+          document.body.appendChild(lobby);
+          const s = getComputedStyle(pill), l = getComputedStyle(lobby);
+          return {size: s.fontSize, lobbySize: l.fontSize, transform: s.textTransform,
+                  cell: getComputedStyle(cell).fontSize};
         }"""
     )
-    assert sizes["pill"] == sizes["cell"]
+    assert styles["size"] == styles["lobbySize"]
+    assert styles["transform"] == "uppercase"
+    assert float(styles["size"].rstrip("px")) < float(styles["cell"].rstrip("px"))

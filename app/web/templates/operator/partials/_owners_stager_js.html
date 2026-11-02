@@ -101,9 +101,10 @@
         var name = label && label.toLowerCase() !== email.toLowerCase() ? label : '';
         if (name && option && option.hasAttribute('data-verified')) {
           // A verified name is the same pill, as account_name renders it on
-          // Session Home's Owners card and Accounts (20C Item 1).
+          // Session Home's Owners card and Accounts (20C Items 1 and 3):
+          // the plain display pill, as the lobby shows a creator.
           var pill = document.createElement('span');
-          pill.className = 'pill pill-count pill-address';
+          pill.className = 'pill pill-count';
           pill.title = 'Matched to a directory account';
           pill.setAttribute('data-directory-matched', '');
           pill.textContent = name;
