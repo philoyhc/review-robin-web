@@ -85,6 +85,7 @@ Taken 2026-10-29 at `de0bf729`.
 - **Rung 8, 2026-10-30** (author: "We give the senior identifiable the facility to … upload logs and plans tagged to specific staff; download … by staff, by term, all; delete purged logs and plans, by staff, by term, all … all auditable; let purge be red outline"): Records across staff (`/overview/records`), senior only, behind Your records' lock: CSV downloads by staff, student and term (live), templates with a Staff column, an upload and Delete permanently (inert). Purge all stays Destructive, outline red. Who holds senior identifiable access (§17 Q4) is a go-live policy decision (author). Only senior identifiable access deletes (author, 2026-10-30): Sys admin's Delete permanently (rung 7) goes, its Audit log keeping the counts. Purged records filter by staff and by student, not by term (author: "allow delete by student though"); downloads, senior and staff alike, and a staff member's purge take a student too (author: "student filter for download and purge should also apply to staff"). An unknown staff name or student downloads nothing and matches no purge, and an unknown term reads as the current one: never widened to all. Deleting by student removes only that student's records, the rest of each purge staying (author: "delete students should only delete that student's records"); by staff alone, whole purges. Both confirmed by the author, 2026-10-30: no delete by term; a delete by staff takes each purge whole. The staff and student filters are Assignments' box of people, made live (author: "verified names/emails become pills"): `token_filter` in `residentialapps/web/templates/residential/_people.html` and the residential base's script, an unmatched name blocking the form.
 - **Rung 9, 2026-10-30** (author: "there's no data in the app tying students to their housing location … any capability that requires this identification is a deferred item"): open question 2 answered, a cluster being the core's Precinct. Overview's Clusters card, the student's cluster on a history, Sys admin's Clusters page and tab, and the sample's student-to-cluster map go; the administrative audit loses its cluster event. Hotspots, workload and coverage need no location and stay.
 - **Rung 10, 2026-10-30** (author: "rung 10"): the rulings on super-admin, sys admin and senior staff (`residentialapps/guide/todo_master.md`, 2026-10-30) on sample data. Senior staff get Who holds access (`/overview/access`, and a card below Hotspots on Overview's main column); Sys admin's Audit log counts each senior's reads with Senior identifiable (not a flag read as recipient, nor their own students as frontline), never whom; Access warns when no one holds Senior identifiable (`?preview=no-senior` shows it); Configuration carries the self-grant setting, off; a student's history offers Sharing on a staff member's behalf, the grant naming both. The sample audit gains three senior reads so the counts have something to count.
+- **2026-11-02, the shared header** (author): a rung added after 1C's, for Support Logs' share of `docs/header_chrome.md`.
 
 ## PR ladder
 
@@ -97,6 +98,8 @@ Taken 2026-10-29 at `de0bf729`.
 5. **Overview.** Senior staff's Overview tab: workload with load weighting, hotspots, clusters, due coverage (§10.2–10.6); senior student history; the support-activity audit (§11.3).
 6. **Consultation check and Sys admin.** A check run, its three states and reasons, the consultation record (§10.7–10.8); Sys admin: Access (above, Semantics), configured lists, the cluster list, the administrative audit (§3.3). `residentialapps/spec/supportlogs_ui.md` written from rungs 1–6.
 7+. Iteration until approved, each with its own read.
+
+**Added 2026-11-02: the shared header** (`docs/header_chrome.md`, author). After 1C's header rung, which changes the base both applications use: Support Logs' teal icon in place of the square; its Sys admin entry and Sign out in the account menu; its switcher and the four tabs checked under the new bar at 390 px. Own read.
 
 **Items 2–5** get their rungs when 1B closes.
 
@@ -130,7 +133,7 @@ Taken 2026-10-29 at `de0bf729`.
 
 ## Doc impact
 
-- `residentialapps/spec/supportlogs_ui.md` — new: the conventions Support Logs' screens settle, from the draft UI spec (Item 1).
+- `residentialapps/spec/supportlogs_ui.md` — new: the conventions Support Logs' screens settle, from the draft UI spec (Item 1); its chrome to `docs/header_chrome.md` (Item 1, added 2026-11-02).
 - `residentialapps/spec/applications.md` — the Support Logs page map, with any path the screens settle, from contract to built (Item 1).
 - `residentialapps/spec/residentialops_ui.md` — its pointer to Support Logs' UI spec, and the shared pieces moved to `residentialapps/web/` (Item 1).
 - `residentialapps/spec/architecture.md` — what `residentialapps/web/` holds for both applications (Item 1); the `supportlogs` models and their database (Item 2).
