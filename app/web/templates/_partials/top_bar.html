@@ -60,6 +60,9 @@
               <span>{{ user.email }}</span>
               {% if user.is_super_admin %}<span>super admin</span>{% elif user.is_sys_admin %}<span>sys admin</span>{% endif %}
             </div>
+            {# Under 640 px the bar's toggle leaves it for here (§2, §4);
+               the name already heads this menu. #}
+            <div class="tb-group tb-narrow">{% include "_partials/theme_toggle.html" %}</div>
             <div class="tb-group">
               {# Settings sits behind `require_operator`, which bounces
                  anyone else to /me (participant audit M8). #}

@@ -1,16 +1,21 @@
 {# Renders a breadcrumb trail from `breadcrumbs` (list of (label, href|None) tuples;
    hrefs are app-relative, and `url()` adds the mount prefix).
-   The last tuple has href=None and renders as a non-link span marking the current page. #}
+   The last tuple has href=None and renders as a non-link span marking the current page.
+   Under 640 px the middle crumbs collapse to "…" (segment 20D,
+   `docs/header_chrome.md` §5): they carry `bc-mid`, and the ellipsis
+   shows in their place. #}
 {% set crumbs = breadcrumbs|default([]) %}
 {% if crumbs %}
   <nav class="breadcrumb" aria-label="Breadcrumb">
     {% for label, href in crumbs %}
+      {% set _mid = not loop.first and not loop.last %}
+      {% if _mid and loop.index == 2 %}<span class="bc-ellipsis" aria-hidden="true">…</span><span class="breadcrumb-sep bc-ellipsis" aria-hidden="true">/</span>{% endif %}
       {% if href %}
-        <a href="{{ url(href) }}">{{ label }}</a>
+        <a href="{{ url(href) }}"{% if _mid %} class="bc-mid"{% endif %}>{{ label }}</a>
       {% else %}
-        <span aria-current="page">{{ label }}</span>
+        <span aria-current="page"{% if _mid %} class="bc-mid"{% endif %}>{{ label }}</span>
       {% endif %}
-      {% if not loop.last %}<span class="breadcrumb-sep" aria-hidden="true">/</span>{% endif %}
+      {% if not loop.last %}<span class="breadcrumb-sep{% if _mid %} bc-mid{% endif %}" aria-hidden="true">/</span>{% endif %}
     {% endfor %}
   </nav>
 {% endif %}
