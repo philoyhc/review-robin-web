@@ -113,19 +113,16 @@ The target is built in `app/web/routes_reviewer/_dashboard.py`.
 
 Top-to-bottom, the page renders:
 
-1. **Top bar (reviewer chrome variant)** — per
-   `spec/visual_style_rrw.md` "Reviewer-facing pages → Top bar". "Review
-   Robin" identity (no version, no breadcrumb), user menu with "Signed
-   in as …" + "Your reviews" (to `/me`, on every page but `/me`) +
-   optional **Guide** + **About** +
-   "Sign out". The About link (`/about?return_to=<path>`, skipped on
-   `/about` itself) matches the operator chrome's, so `/me` reaches the
-   About / access-help page the same way `/operator/sessions` does. The
-   Guide link (`/guide?return_to=<path>`) carries the operator chrome's
-   condition — the
-   `request.state.guide_hidden` hide flag, read fail-open — so it
-   renders for a viewer who resolves at least one Guide audience and is
-   absent for one who resolves none.
+1. **Top bar** — the shared bar (`_partials/top_bar.html`) with
+   `participant_bar=true`, per `spec/visual_style_rrw.md` "Top bar": no
+   breadcrumb row and no version. The switcher offers **Your reviews** (to
+   `/me`, on every page, marked on `/me`) and **All applications**; the
+   account menu shows the viewer's name and email, optional **Guide**,
+   **About** and **Sign out**. About and Guide carry `?return_to=<path>`
+   and are skipped on their own pages, as in the operator view. Guide
+   renders for a viewer who resolves at least one Guide audience (the
+   `request.state.guide_hidden` hide flag, read fail-open) and is absent
+   for one who resolves none.
 2. **Preview banner** — `body.ui-v2` only (operator preview mode
    reuses this template); rendered as `.banner.banner-info`.
 3. **Page header** — the title row, the session description and the
@@ -1205,9 +1202,9 @@ redirect to `/preview-surface/1`.
 
 In preview mode:
 
-- The chrome `top_bar` block calls `super()` so the operator chrome
+- The chrome `top_bar` block calls `super()` so the operator header
   (with breadcrumb back to the session) renders instead of the
-  reviewer top bar variant.
+  participant bar, which has no breadcrumb row.
 - `body_class` drops the `reviewer` modifier (stays `body.ui-v2`).
 - The preview-mode banner (`.banner.banner-info`) renders at the top
   of the body:
@@ -1811,9 +1808,8 @@ a 403, and unrelated to the session-scoped gates. Those answer 404 to
 anyone they refuse, but that is a caller in the wrong place rather than
 a normal flow.
 
-The mismatch page renders with the reviewer chrome variant
-(`body.ui-v2 reviewer`) so the operator's identity is suppressed
-from the top bar.
+The mismatch page renders with the participant bar (no breadcrumb row;
+`body.ui-v2 reviewer`).
 
 ---
 
@@ -1827,8 +1823,8 @@ from the top bar.
 | Action row, review-level slot, after the divider | `Submit` |
 | Danger Zone | `Clear all` — copy explains "every response across every page" |
 
-The top bar's links are `Your reviews`, `Guide`, `About` and
-`Sign out`.
+The top bar's entries are `Your reviews`, `All applications`, `Guide`,
+`About` and `Sign out`.
 
 ### Friendly short label vs. long description
 

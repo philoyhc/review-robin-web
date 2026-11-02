@@ -195,9 +195,8 @@ Two surfaces:
    self-only) and `clone` (which makes them owner of the new copy). No
    shadow editing — every config change is by a recorded owner.
 
-Surfaced in the chrome top-right user card via a `(super admin)` /
-`(sys admin)` suffix on the "Signed in as ..." label so elevated state is
-visible at a glance.
+Surfaced in the account menu (top right) as a "super admin" / "sys admin"
+line under the viewer's email, so elevated state is visible at a glance.
 
 Multi-tenancy + system-wide settings remain forward-looking.
 
@@ -383,8 +382,8 @@ The operator's relationship is straightforward:
 > management.
 
 This entails normal app-like patterns: a persistent identity in the
-top-right ("Signed in as..."), app-level navigation (Sessions,
-About, Settings), full chrome and structure on session-scoped pages.
+top-right (the avatar and its account menu), app-level navigation
+(Sessions, About, Settings), full chrome and structure on session-scoped pages.
 None of the trust-anchor concerns that constrain the reviewer
 surface apply here in the same way; the operator chose to use this
 app and uses it regularly.
@@ -422,8 +421,8 @@ the email account) but do not bypass identity.
 
 **Implication for chrome:** reviewer-facing chrome assumes the
 reviewer is authenticated whenever they see a response form. This
-means a small "Signed in as [Name]" affordance is appropriate
-(confirms correct identity) and a sign-out option exists (allows
+means a small identity affordance (the viewer's name, and the email in
+the account menu) is appropriate (confirms correct identity) and a sign-out option exists (allows
 the reviewer to leave cleanly on a shared computer). These are
 unobtrusive but present.
 
@@ -437,7 +436,7 @@ navigation patterns are audience-specific.
 | Audience | Surface | Chrome weight | Navigation richness |
 |---|---|---|---|
 | Operator (in session) | Per-session pages | Heavy: two-row chrome, status strip, lifecycle context | Rich: Setup pages, Operations pages, sub-pages |
-| Operator (out of session) | App-level pages | Light: minimal top bar, user menu | Sparse: Sessions, About, Settings |
+| Operator (out of session) | App-level pages | Light: the shared top bar, account menu | Sparse: Sessions, About, Settings |
 | Reviewer | Response surface | Light: page header, role-navigator chips | Sparse: `/me` dashboard, response form, summary |
 | Reviewee | Results surface | Same reviewer chrome with role-navigator chips | `/me/sessions/{id}/results` (live — raw / anonymized / summarized modes + Acknowledge card) |
 | Observer | Collation surface | Same reviewer chrome with role-navigator chips | `/me/sessions/{id}/collation` — per-instrument 3-row table (reviewer / reviewee aggregates + conditional CSV download) |

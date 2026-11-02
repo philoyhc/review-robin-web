@@ -56,24 +56,21 @@ to CSS classes.
 
 ### 1. Page chrome (top of every page)
 
-> **App identity bar** — a `.chrome` flex row: `.chrome-left` carries the
-> "Review Robin Web App (version …)" identity plus the theme toggle in a
-> `.chrome-identity-row`, with the breadcrumb below; `.chrome-user` on the
-> right carries the signed-in line, the `.chrome-link` detours (Settings /
-> Admin / Guide / About) and Sign out. Bottom border `--border-subtle`,
-> identity text and the signed-in line `--text-subtle`.
-> **Sign out is a bespoke chrome control, not a `.btn` role.** It ships
-> its own rule — `--border-default` (not `--btn-secondary-border`),
-> `--text-body`, `--surface-muted` on hover — so it reads as
-> Secondary-ish at chrome scale without joining the button vocabulary.
-> §6's roles govern page-scale buttons; this one is deliberately outside
-> them. Chrome scale, not page
-> scale — the
-> chrome's one control must not read as loudly as the page's default
-> button.
+> **Top bar** — `_partials/top_bar.html`, a `.chrome` block whose `.tb-bar`
+> row carries the switcher (`.tb-switch`: icon, `.tb-top` top line,
+> `.tb-app` title) on the left and, on the right, the theme toggle, the
+> viewer's name and the avatar (`.tb-acct`) that opens the account menu.
+> Both menus are `details` disclosures and share `.tb-menu`. Bottom border
+> `--border-subtle`; the top line and the name `--text-subtle`. The
+> contract is `spec/visual_style_rrw.md` "Top bar".
+> **Menu entries, Sign out included, are bespoke chrome controls, not
+> `.btn` roles.** They are plain `.tb-menu a` links at chrome scale, so the
+> chrome's controls do not read as loudly as the page's default button.
+> §6's roles govern page-scale buttons; these are deliberately outside
+> them.
 
-> **Breadcrumb** — `_partials/breadcrumb.html`, rendered inside
-> `.chrome-left`. `.breadcrumb` links in `--text-link`, the current
+> **Breadcrumb** — `_partials/breadcrumb.html`, rendered on its own row
+> inside `.chrome`, under `.tb-bar`. `.breadcrumb` links in `--text-link`, the current
 > segment a `span[aria-current="page"]` in `--text-body` semibold, and a
 > `.breadcrumb-sep` " / " in `--text-subtle`. No home icon and no other
 > ornamentation, per `visual_style_general.md` "Breadcrumb".
