@@ -1461,11 +1461,11 @@ Communication Services (C) and a third-party transactional provider
 ### 11.6 Dispatch
 
 No send hands a message to a mail server. An invitation or reminder
-send — manual or scheduled — renders the message, writes its outbox
-row and marks it `sent` at once, as a **dev-mode preview**; the
-reviewer's invitation stamps follow as if it had gone. A reviewer's
-submit queues the responses-received confirmation the same way but
-leaves it `queued`. An SMTP transport (STARTTLS or implicit TLS) and
+send — manual or scheduled — renders the message and writes its
+outbox row, which stays `queued` until a transport sends it; the
+reviewer's invitation records the send (`sent`, `sent_at`) as the
+operator's act, not a delivery. A reviewer's submit queues the
+responses-received confirmation the same way. An SMTP transport (STARTTLS or implicit TLS) and
 a Microsoft Graph stub exist behind the transport seam
 ([§11.5](#115-backend-options)), but the send path calls neither, and
 no page configures either ([§9.13](#913-operator-settings)).

@@ -396,9 +396,11 @@ def send_invitation(
     db.add(outbox)
     db.flush()
 
+    # The row stays ``queued`` until a transport sends it and stamps
+    # ``sent`` or ``failed`` (`guide/post_azure_todo_checklist.md` item 8,
+    # settled 2026-11-02). The invitation records that the operator sent
+    # it: ``sent`` here means the send was recorded, not delivered.
     now = datetime.now(timezone.utc)
-    outbox.status = "sent"
-    outbox.sent_at = now
     invitation.status = "sent"
     invitation.sent_at = now
     invitation.opened_at = None
@@ -766,10 +768,9 @@ def most_recent_invitation_status(
 
     The value set is the model's ``EMAIL_OUTBOX_STATUSES`` —
     ``queued`` / ``sending`` / ``sent`` / ``failed``. Only ``queued``
-    and ``sent`` are written today: ``send_invitation`` flips the row
-    to ``sent`` in the same call, so nothing yet produces ``sending``
-    or ``failed``. Segment 14B Part A lights up the real transport
-    that will (`app/db/models/email_outbox.py`).
+    is written today: a row stays ``queued`` until a transport sends
+    it, and segment 14B's transport stamps the rest
+    (`app/db/models/email_outbox.py`).
 
     Callers must not enumerate the values — render what comes back, so
     the widened set needs no second edit (`constitution.md` II).
@@ -870,9 +871,8 @@ def send_reminder(
     db.add(outbox)
     db.flush()
 
+    # ``queued`` until a transport sends it (item 8, as for invitations).
     now = datetime.now(timezone.utc)
-    outbox.status = "sent"
-    outbox.sent_at = now
     invitation.last_reminder_at = now
     db.flush()
     if commit:
