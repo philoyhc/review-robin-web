@@ -1064,7 +1064,7 @@ rehydrate", Dismiss a link back to the page).
 The Reviewers, Reviewees and Observers upload cards show one muted line
 for the latest import or recheck, whichever ran last, from
 `partials/_directory_check.html` (`data-directory-check`), below the
-card's actions row. It reads the counts that event's audit event
+card's actions row, 8px under the buttons (segment 20I Item 4). It reads the counts that event's audit event
 recorded (`views.last_directory_check`, `spec/csv_contracts.md` §3.1;
 `spec/architecture.md` for the recheck's), so it survives the redirect
 after the save and shows for any viewer of the card.
@@ -1128,7 +1128,8 @@ recheck binds the mirror). It submits its own form
 
 On the same three cards, Upload counts the directory check down from the
 page (segment 20H Item 6). A muted line under the directory-check line,
-below the actions row (`partials/_directory_countdown.html`,
+below the actions row, or 8px under the buttons when no line shows
+(segment 20I Item 4) (`partials/_directory_countdown.html`,
 `data-directory-countdown`) reads
 "Directory check: N more to go." and falls as each batch comes back.
 It is hidden until the count starts.

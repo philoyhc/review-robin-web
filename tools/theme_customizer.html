@@ -4266,6 +4266,17 @@
       body.ui-v2 #upload-csv > .form-help + .banner {
         margin-top: var(--space-4);
       }
+      /* 20I Item 4: the directory line (or, before any import, the
+         countdown) under the Upload card's buttons sits as far below
+         them as the line's paragraphs sit apart: their 6px margin plus
+         the text's half-leading, which a button lacks, so 8px. The
+         element before it is the upload form, or the recheck's empty
+         form when the button shows. Matched as the muted paragraph
+         after a form, not by its data attribute: tests find the line by
+         that attribute in the page's text, and this stylesheet is in it. */
+      body.ui-v2 #upload-csv > form + p.muted {
+        margin-top: var(--space-2);
+      }
       body.ui-v2 .banner.banner-info {
         border-color: var(--status-info-border);
         background: var(--status-info-bg);

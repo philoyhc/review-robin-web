@@ -67,7 +67,7 @@ is the author's call.
 5. **20I — Directory check follow-ups and refinements** (not gated).
    Opened 2026-11-03 from the banner and countdown checks; stays open
    for further refinements, as 20C did. Items 1 (the recheck), 2
-   (countdown batches) and 3 (banner spacing) are done; the segment
+   (countdown batches), 3 and 4 (spacing) are done; the segment
    closes when the author says no more refinements are coming.
    **Plan:** `guide/segment_20I_directory_check_followups.md`.
 
