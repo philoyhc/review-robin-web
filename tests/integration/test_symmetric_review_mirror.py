@@ -367,3 +367,52 @@ def test_a_name_correction_does_not_bring_back_a_deleted_display_field(
     db.commit()
     reviewers.update_reviewer(db, reviewer=reviewer, name="Ann Tan", user=_user(db))
     assert tag_fields() == []
+
+
+def test_a_replace_never_hands_a_removed_persons_reviewee_to_a_new_reviewer(
+    client: TestClient, db: Session
+) -> None:
+    """Findings register L2 (2026-11-02): a replace deletes every reviewer,
+    and the database's ``ON DELETE SET NULL`` clears each reviewee's link.
+    Rows already in the session's memory did not see that, and SQLite
+    reuses the deleted ids, so a new reviewer took over a removed person's
+    reviewee row, their results acknowledgement included. The sync reads
+    the links from the database now."""
+    from datetime import datetime, timezone
+
+    response = client.post(
+        "/operator/sessions",
+        data={"name": "Sym", "code": "sym-l2", "description": "", "symmetric_review": "true"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "sym-l2")
+    ).scalar_one()
+    owner = db.execute(select(User).order_by(User.id)).scalars().first()
+
+    def replace(body: str) -> None:
+        parsed = csv_imports.parse_reviewer_csv(body.encode())
+        assert not parsed.issues
+        csv_imports.save_reviewers(
+            db, session=review_session, user=owner, rows=parsed.rows,
+            filename="r.csv", correlation_id="c",
+        )
+        db.commit()
+
+    replace("ReviewerName,ReviewerEmail\nAnn,ann@example.edu\nBob,bob@example.edu\n")
+    ann = db.execute(
+        select(Reviewee).where(Reviewee.email_or_identifier == "ann@example.edu")
+    ).scalar_one()
+    ann.results_acknowledged_at = datetime.now(timezone.utc)
+    db.commit()
+
+    replace("ReviewerName,ReviewerEmail\nCarl,carl@example.edu\nDan,dan@example.edu\n")
+    db.expire_all()
+    reviewees = db.execute(
+        select(Reviewee).where(Reviewee.session_id == review_session.id)
+    ).scalars().all()
+    assert sorted(r.email_or_identifier for r in reviewees) == [
+        "carl@example.edu", "dan@example.edu",
+    ]
+    assert all(r.results_acknowledged_at is None for r in reviewees)
