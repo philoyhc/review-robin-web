@@ -4,7 +4,7 @@
 `guide/codebase_assessment_02nov.md`: a spec-vs-code audit, a defect read
 of the window's RRW changes, and a read of `residentialapps/`,
 `utilityapps/` and `cordware/` · **Read at:** `2ffb0f42` (#3521) ·
-**Open:** 11 of 11 rows.
+**Open:** 10 of 11 rows (M2 done in #3524).
 
 The checklist the fixes work through (author, 2026-11-02: "there should
 be a findings list that can serve as the checklist for fixes; this
@@ -35,7 +35,7 @@ None.
   the card's "not checked" count. *By reading; reproduced by the fix's
   test.* Code: a row the directory gave no answer for keeps its earlier
   binding.
-- **M2. Merge binds an unbound row to an account another row holds.**
+- ~~**M2**~~ — **Done in #3524**: merge refuses it in its planning pass, as append does (`tests/integration/test_roster_merge.py`). **Merge binds an unbound row to an account another row holds.**
   `_merge_rows`, the branch binding a held row with no account. Append
   refuses this case and merge refuses it within one file, but not
   against the saved roster; the gates pick the lowest id, so the other
