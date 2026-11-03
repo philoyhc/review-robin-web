@@ -1089,6 +1089,36 @@ card.
 - **Nothing** for an import with no counts (one that ran no check) or
   with no address to check (anonymous reviewee identifiers only).
 
+### The Upload card's directory-check countdown
+
+On the same three cards, Upload counts the directory check down from the
+page (segment 20H Item 6). A muted line under the directory-check line
+(`partials/_directory_countdown.html`, `data-directory-countdown`) reads
+"Directory check: N more to go." and falls as each address comes back.
+It is hidden until the count starts.
+
+- **Which addresses:** `POST /operator/sessions/{id}/directory-keys`
+  (`_directory.py`) takes the chosen file, or the held one, and the
+  roster's name. It parses the file with that roster's own upload parser
+  and answers the lookup keys with no answer kept. A file that does not
+  parse answers none, and the upload then shows the file's problems.
+- **The lookups:** `POST /operator/sessions/{id}/directory-lookup` takes
+  a JSON batch of up to 25 keys; the script sends one key at a time, four
+  in flight, as the Email Address Checker does. It answers each key's status and nothing about the
+  account, and it keeps each answer the server fetched in
+  `directory_lookups` for 15 minutes, per operator and session.
+- **The upload:** once the count reaches zero, the form submits as it
+  was. The upload reads the kept answers
+  (`directory_lookups.known_for`) and asks the directory only for the
+  rest, so the save binds only answers the server fetched. A failed
+  lookup is never kept, and the upload asks again.
+- **Stopping early:** a refused sign-in (expired or forbidden), a failed
+  request or no directory access stops the count and submits at once.
+  The upload then takes its usual path: the renew banner for an expired
+  sign-in, and a lookup of whatever is left otherwise.
+- **Without the script** the line never shows, and the upload checks
+  every address on the server as before.
+
 ### The Upload card's modes
 
 On all four roster pages (Reviewers, Reviewees, Relationships, Observers)

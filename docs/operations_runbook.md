@@ -123,9 +123,9 @@ The roster Upload card's countdown keeps no file, but it keeps the
 the upload that follows does not ask Graph again: per operator, session
 and address, the account an address resolved to (object ID, mail,
 sign-in name, display name), or that it was not found or ambiguous.
-An answer stands for 15 minutes. Stale ones are deleted by the sweep
-each countdown runs first, and every one goes with its session or its
-operator's `users` row.
+An answer is used for 15 minutes. After that it is ignored, and it is
+deleted by the sweep the next countdown (anyone's) runs first, or with
+its session or its operator's `users` row.
 
 ### Data retention
 

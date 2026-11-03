@@ -317,6 +317,15 @@ Open. Base for the cumulative read: `bb7443bf` (main before rung 1).
   `directory-keys` and `directory-lookup` in `_directory.py`; the three
   uploads hand the kept answers to `directory_check` as `known`.
   `tests/integration/test_directory_countdown.py`.
+- Rung 3 (last build rung): the page script in the partial, the spec
+  (`spec/setup_pages.md`, "The Upload card's directory-check countdown")
+  and `tests/browser/test_upload_directory_countdown.py`. Codex on rung 2:
+  the keys computation moved into the service; a concurrent answer yields
+  in a savepoint.
+- Dropped at build: "the cache never outlives the session's lock". Nothing
+  clears the cache on a lock; the 15-minute life bounds it, and an answer
+  is only ever the directory's, so a stale one is at worst one the next
+  upload asks again.
 
 ### Doc impact
 

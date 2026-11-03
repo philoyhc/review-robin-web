@@ -36,7 +36,7 @@ from app.db.models import (
     User,
 )
 from app.db.session import get_db
-from app.services import date_formatting, directory_accounts
+from app.services import csv_imports, date_formatting, directory_accounts
 from app.services import field_labels as field_labels_service
 from app.services.users import is_verified as users_service_is_verified
 from app.services import instruments as instruments_service
@@ -911,6 +911,15 @@ def account_resolver(request: Request):
     """The single-row add and edit's lookup (segment 21F): one address
     resolved on demand, through the operator's directory if there is one."""
     return directory_accounts.resolver(directory_or_none(request))
+
+
+#: The roster upload parsers by slot: Quick Setup dispatches through it,
+#: and the upload countdown's keys (20H Item 6) parse with the same one.
+ROSTER_PARSERS = {
+    "reviewers": csv_imports.parse_reviewer_csv,
+    "reviewees": csv_imports.parse_reviewee_csv,
+    "observers": csv_imports.parse_observer_csv,
+}
 
 
 def roster_address(row: object) -> str | None:

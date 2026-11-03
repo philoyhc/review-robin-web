@@ -18,14 +18,13 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
-from cordware.graph import look_up_all
-
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
 from app.services import csv_imports, directory_accounts, directory_lookups
 from app.web.deps import get_or_create_user, require_session_operator
 from app.web.roster_import import read_upload
 from app.web.routes_operator._shared import (
+    ROSTER_PARSERS,
     directory_or_none,
     directory_search_response,
     roster_address,
@@ -39,14 +38,6 @@ router = APIRouter()
 LOOKUP_BATCH_MAX = 25
 LOOKUP_BODY_MAX = 64 * 1024
 LOOKUP_BUDGET = 30.0
-
-#: The rosters whose Upload card counts down, with the parser each
-#: upload route uses, so the keys are the ones the upload will check.
-ROSTER_PARSERS = {
-    "reviewers": csv_imports.parse_reviewer_csv,
-    "reviewees": csv_imports.parse_reviewee_csv,
-    "observers": csv_imports.parse_observer_csv,
-}
 
 _NO_STORE = {"Cache-Control": "no-store"}
 
@@ -139,8 +130,10 @@ async def roster_directory_lookup(
     directory = directory_or_none(request)
     if directory is None:
         return _error(503, "no_graph")
-    outcomes = await run_in_threadpool(look_up_all, directory, keys, budget=LOOKUP_BUDGET)
-    directory_lookups.remember(db, user=user, session_id=review_session.id, outcomes=outcomes)
+    outcomes = await run_in_threadpool(
+        directory_lookups.look_up_and_keep,
+        db, directory, user=user, session_id=review_session.id, keys=keys, budget=LOOKUP_BUDGET,
+    )
     db.commit()
     return JSONResponse(
         {

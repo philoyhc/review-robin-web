@@ -398,7 +398,9 @@
               {% include "operator/partials/_directory_renew.html" %}
             {% endwith %}
             {% include "operator/partials/_directory_check.html" %}
-            {% include "operator/partials/_directory_countdown.html" %}
+            {% with directory_countdown_roster = "observers" %}
+              {% include "operator/partials/_directory_countdown.html" %}
+            {% endwith %}
 
             <form method="post" id="upload-csv-form"
                   action="{{ url(observers_base_url) }}/import"
