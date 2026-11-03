@@ -1,0 +1,93 @@
+# Findings — codebase assessment (2026-11-02)
+
+**Found by:** the three reads run beside
+`guide/codebase_assessment_02nov.md`: a spec-vs-code audit, a defect read
+of the window's RRW changes, and a read of `residentialapps/`,
+`utilityapps/` and `cordware/` · **Read at:** `2ffb0f42` (#3521) ·
+**Open:** 11 of 11 rows.
+
+The checklist the fixes work through (author, 2026-11-02: "there should
+be a findings list that can serve as the checklist for fixes; this
+should be SOP"). **Nothing in `app/` was edited by the reads**, and their
+scratch tests were not kept: a fix PR writes its own test. Strike a row
+when it is done, with the PR that did it, or mark it declined with the
+reason. Retire the file to `guide/archive/` when no row is open.
+
+**Ids:** **M** and **L** are defects, medium and low, as the assessment's
+§6 numbers them · **D** is spec drift, as its §3 does · **N** is a gap
+noted, not a defect. Ids restart per assessment. **Decides:** *code*
+means the code is wrong against a spec that is right; *author* means a
+choice between fixing the code and changing the contract; *spec* means
+the spec is wrong. Line numbers are at `2ffb0f42`.
+
+## 1. High
+
+None.
+
+## 2. Medium
+
+- **M1. A Replace with an expired Graph token unbinds every row it
+  re-adds.** `app/services/csv_imports.py` `_save`, with
+  `cordware/graph.py` `look_up_all`. Token renewal runs on page load, so
+  a Replace submitted after the token lapses resolves nothing, and every
+  row is saved without its directory account. A row given by sign-in
+  name stops admitting a person whose mail differs; the only signal is
+  the card's "not checked" count. *By reading; reproduced by the fix's
+  test.* Code: a row the directory gave no answer for keeps its earlier
+  binding.
+- **M2. Merge binds an unbound row to an account another row holds.**
+  `_merge_rows`, the branch binding a held row with no account. Append
+  refuses this case and merge refuses it within one file, but not
+  against the saved roster; the gates pick the lowest id, so the other
+  row's assignments and answers drop out of the person's view.
+  *Reproduced.* Code: refuse it as append does.
+
+## 3. Low
+
+- **L1. `acknowledged_loss` answers 500 on a 4,300-digit value.**
+  `app/web/routes_operator/_shared.py:212` calls `int()` on any run of
+  digits. Predates the window; 20B and 19Z added call sites.
+  *Reproduced.* Code: compare lengths first, as `oversized_ids` does.
+- **L2. SQLite only: a Replace under symmetric review can hand a removed
+  person's reviewee row to a new reviewer.**
+  `app/services/symmetric_review.py` `sync_reviewees_from_reviewers`:
+  rows in memory miss `ON DELETE SET NULL`, and SQLite reuses ids.
+  Postgres does not reuse ids. *Reproduced on SQLite.* Code: expire or
+  refresh the reviewee rows before building `by_link`.
+- **L3. A symmetric session's export, imported into a non-empty session,
+  leaves the reviewees alone without a notice.**
+  `app/services/zip_bundle.py:134` drops `reviewees.csv` by design, and
+  the import keeps the mode off beside existing rows. *By reading.*
+  Author: a notice on the import, or a line in the spec that says so.
+
+## 4. Spec drift
+
+All three are 19Z's pending spec pass (`guide/segment_19Z_roster_append.md`).
+
+- **D-a. The CSV contract says rosters never merge.**
+  `spec/csv_contracts.md` ("Wipe-and-replace, never merge"; "A roster
+  import is wipe-and-replace") against `save_reviewers`, `save_reviewees`,
+  `save_observers` and `save_relationships`, which take `append` and
+  `merge`. `spec/setup_pages.md` names neither tick. Spec.
+- **D-b. Three routes outside the permissions matrix.** The two
+  directory-search GETs in `app/web/routes_operator/_directory.py` and
+  the sys-admin one in `_sys_admin.py` appear in no spec, including
+  `spec/permissions.md`. Their gates are right. Spec.
+- **D-c. Graph search undocumented.** `cordware/spec/identity.md`
+  documents `find_users` but not `search_users` (`cordware/graph.py`,
+  `SEARCH_TOP = 10`). Spec.
+
+## 5. Noted
+
+- **N1. Residential's preview gate is tested at one route.**
+  `residentialapps/tests/test_preview_gate.py` checks `GET /` only; a new
+  router that forgot `Depends(placeholders_previewers_only)` would pass
+  CI. A route-walking test needs the included-router walk
+  `residentialapps/tests/test_applications.py` already uses. Code.
+- **N2. Residential's CSV writer has no formula-prefix guard**
+  (`residentialapps/supportlogs/routes_records.py:45`). Harmless while
+  the data is sample-only; needed before real data. The Email Address
+  Checker's `utilityapps/email_check/csvio.py` has one. Code, with the
+  wiring.
+- **N3. `residentialapps/README.md` says "nothing else is built yet"**,
+  beside about 60 placeholder screens. Spec (docs).

@@ -61,8 +61,11 @@ with no part in the window's builds:
 - a defect read of the window's RRW changes, with scratch tests;
 - a read of the three non-RRW packages.
 
-Their findings are §3, §5 and §6. Nothing was filed as a register, and
-nothing was edited.
+Their findings are §3, §5 and §6, and nothing was edited. **Updated
+2026-11-03:** every defect, drift and gap among them is now a row of
+`guide/findings_2026-11-02_assessment.md`, the checklist the fixes strike
+off; an assessment files one as standard practice from this snapshot on
+(author's ruling). Tables and SHA unchanged.
 
 **Development context:** a single author, with AI agents building. The
 author checks each change in a browser against a local run with fake
@@ -423,7 +426,8 @@ lines**: the trim three snapshots proposed shipped as corpus F11 (#3247).
 **Known open bugs at `2ffb0f42`: 0 high, 2 medium, 3 low**, from the
 defect read of the window's RRW changes. Three were reproduced by scratch
 tests (one on SQLite only), and two by reading.
-None is filed in a register; this section is the record.
+Each is a row of `guide/findings_2026-11-02_assessment.md`, where its fix is
+struck off.
 
 - **M1. An import with an expired Graph token unbinds every row it
   replaces** (by reading). `app/services/csv_imports.py` `_save`, with
