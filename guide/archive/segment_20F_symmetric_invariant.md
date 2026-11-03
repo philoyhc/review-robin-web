@@ -85,52 +85,49 @@ Taken 2026-11-03 at `a2d95aff`.
 
 ## Status
 
-**2026-11-03, rung 1.** Started at the author's word ("start 20F"). Main
-before rung 1 was `803ff768`, the base for the read at rung 3. L2's fix is
-`populate_existing` on the sync's reviewee query rather than an expire:
-it reloads the links for exactly the rows it reads.
+**Closed 2026-11-03.** PRs #3534 → #3537, then the close. Base for the
+item's read: `803ff768`.
 
-**Rung 2.** `reviewees.mirror_drift` in `validation/_rosters.py`,
-registered after `reviewees.duplicate_account`: 27 rules. Its fix link is
-Reviewers Setup, since a reviewer save re-runs the sync. One issue per
-row: a reviewer with none or several mirrors, a reviewee linked to no
-reviewer on the roster, a pair differing on a mirrored field.
+**Intended vs done.** All four decisions shipped; two changed form at
+build:
 
-**Rung 3: the guard checks commits, not source.** A scan for writers of
-`Reviewer` rows found 3 of the 10 sync callers: `_save`, `roster_bulk` and
-`update_reviewer` write through generic calls and attribute sets no text
-scan sees. The guard instead runs at every commit the integration suite
-makes: the `db` fixture checks each symmetric session's mirror on the
-test's connection (`tests/_mirror_guard.py`, the same faults as the rule)
-and fails the test at teardown if one was out of step. Six tests that
-break a mirror on purpose (the rule's five, and one built by hand) are
-marked `mirror_drift_expected`. Measured by removing each sync call in turn:
-the guard catches 8 of the 10. Of the other two, `session_clone` copies
-both rosters with their links re-pointed, so the mirror is in step
-without its sync; and the Settings apply's sync mirrors reviewer
-self-fields and labels, which the guard does not compare. That call had no
-test at all, so one now covers it, and it fails without the call. The item's read
-(rungs 1–3, cumulative since `803ff768`) found no code defect. Its prose
-findings are fixed: the spec's claim for the guard narrowed to row-writing
-paths through the `db` fixture, this plan's Decision, Semantics and ladder
-annotated for the guard's new form and `populate_existing`, the drift
-message naming the reviewer as Semantics says, and the anchor table's
-note. Codex on #3535 found three gaps in the rule's fix line, all fixed there: an
-unchanged reviewer save skipped the sync; the repair it then made wrote no
-audit row (now `reviewees.mirror_repaired`, from the counts the sync
-returns); and the sync never removed a second reviewee linked to the same
-reviewer.
+- **L2** (#3534): the sync reads the reviewee rows with
+  `populate_existing` rather than expiring them, so it reloads the
+  links of exactly the rows it reads.
+- **The rule** (#3535): `reviewees.mirror_drift`, registered after
+  `reviewees.duplicate_account` (27 rules), its fix link Reviewers Setup.
+  Codex found three gaps in that fix line, all fixed in the PR: an
+  unchanged reviewer save skipped the sync; the repair then made wrote
+  no audit row (now `reviewees.mirror_repaired`, from the counts the
+  sync returns); and the sync never removed a second reviewee linked to
+  one reviewer.
+- **The guard** (#3536) checks behavior, not source. A scan for writers
+  of `Reviewer` rows found 3 of the 10 sync callers, so the integration
+  `db` fixture instead runs `tests/_mirror_guard.py` at every root
+  commit and fails the test at teardown on a mirror out of step. Six
+  tests break a mirror on purpose and are marked
+  `mirror_drift_expected`. Removing each sync call in turn, the guard
+  catches 8 of 10: `session_clone` is in step by construction, and the
+  Settings apply's sync (self-fields and labels, which the guard does
+  not compare) gained its own test. On Postgres the guard first fired on
+  the savepoint the session lock releases mid-unit; it now checks only
+  at the end of a committed root transaction.
+- **L3** (#3537): the notice is on Quick Setup's submit-all, the one path
+  that takes a bundle into an existing session:
+  `?quick_setup_notice=kept_reviewees` and a dismissible `banner-info`.
 
-**Rung 4, L3's notice.** On a Quick Setup submit-all that saves a Settings
-file asking for symmetric review, while the mode stays off beside the
-session's roster rows and no Reviewees file came, the success redirect
-carries `?quick_setup_notice=kept_reviewees`, and the card shows a
-`banner-info` saying the reviewees were left as they were. The per-slot
-routes carry one file, so they cannot bring a bundle and do not ask. Its read
-found the condition and the copy right, and four gaps, all fixed: the banner
-lacked `banner-scroll-target` and a Dismiss (`spec/ui_elements.md` §5a), the
-URL-state table lacked the param, and three no-notice cases had no test. The
-build named two specs the plan did not, now in `## Doc impact`.
+**Reads.** Two `diff-reviewer` reads. Rungs 1–3 (cumulative): no code
+defect; prose findings fixed (the guard's claim narrowed, the plan
+annotated, the drift message names the reviewer). Rung 4: the condition
+and copy right; four gaps fixed (scroll target, Dismiss, the URL-state
+row, three no-notice tests). The build named two specs the plan had not,
+now in `## Doc impact`. The close's `spec-writer` pass added two lines to
+`spec/architecture.md` (the duplicate drop and `MirrorChanges`; the
+unchanged-save repair and its audit event) and found the other four specs
+current; its two flags (test machinery unspecified; the notice specified in
+the card spec rather than the CSV contract) need no change. `close_check 20F` passed; its notes (Setup routes and
+`_session_home` touched) are 20E's same-day splits and rung 4's query
+param, documented in `spec/settings_inventory.md`.
 
 ## PR ladder
 

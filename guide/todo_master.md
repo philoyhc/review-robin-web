@@ -85,22 +85,16 @@ is the author's call.
    ruff's rule set widened first.
    **Plan:** `guide/segment_22C_pyright.md`.
 
+8. **20G — The import's directory check, sturdier** (not gated). Hold
+   and ask to renew on a sign-in failure; normalized object ids; the
+   lookup measured.
+   **Plan:** `guide/segment_20G_directory_import_robustness.md`.
 
-8. **20F — Symmetric review, held by more than convention** (not
-   gated). A Validate rule and a test guard for the Reviewees mirror,
-   with the register's L2 and L3.
-   **Plan:** `guide/segment_20F_symmetric_invariant.md`.
-
-9. **20G — The import's directory check, sturdier** (not gated). Hold
-    and ask to renew on a sign-in failure; normalized object ids; the
-    lookup measured.
-    **Plan:** `guide/segment_20G_directory_import_robustness.md`.
-
-10. **20H — Follow-ups from the 19Z walkthrough** (not gated). The
-    single-row forms refuse a second row on one directory account; an
-    instrument label's wrong number after an add; audit events by
-    facility; Upload-card banners; the unreachable checks written down.
-    **Plan:** `guide/segment_20H_walkthrough_19Z_followups.md`.
+9. **20H — Follow-ups from the 19Z walkthrough** (not gated). The
+   single-row forms refuse a second row on one directory account; an
+   instrument label's wrong number after an add; audit events by
+   facility; Upload-card banners; the unreachable checks written down.
+   **Plan:** `guide/segment_20H_walkthrough_19Z_followups.md`.
 
 ### Stubs
 
@@ -112,7 +106,7 @@ the PR body unless it says otherwise.
   Residential preview gate tested at one route, its CSV formula guard,
   its README) are one PR each; the register is the checklist
   (`guide/findings_2026-11-02_assessment.md`). D-a to D-c ride 19Z's
-  close; L2 and L3 are 20F's.
+  close; L2 and L3 were fixed by 20F.
 
 - **21F on the real tenant** *(filed 2026-10-31, at segment 21F's
   close)*. The first Cordware deploy carrying 21F needs the author's

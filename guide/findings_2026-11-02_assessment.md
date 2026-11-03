@@ -48,19 +48,15 @@ None.
   `app/web/routes_operator/_shared.py:212` calls `int()` on any run of
   digits. Predates the window; 20B and 19Z added call sites.
   *Reproduced.* Code: compare lengths first, as `oversized_ids` does.
-- **L2. SQLite only: a Replace under symmetric review can hand a removed
-  person's reviewee row to a new reviewer.**
-  `app/services/symmetric_review.py` `sync_reviewees_from_reviewers`:
-  rows in memory miss `ON DELETE SET NULL`, and SQLite reuses ids.
-  Postgres does not reuse ids. *Reproduced on SQLite.* Code: expire or
-  refresh the reviewee rows before building `by_link`. Planned in 20F
-  (`guide/segment_20F_symmetric_invariant.md`).
-- **L3. A symmetric session's export, imported into a non-empty session,
-  leaves the reviewees alone without a notice.**
-  `app/services/zip_bundle.py:134` drops `reviewees.csv` by design, and
-  the import keeps the mode off beside existing rows. *By reading.*
-  Author: a notice on the import, or a line in the spec that says so.
-  Planned in 20F.
+- ~~**L2**~~ — **Done in #3534** (segment 20F): the sync reads the
+  reviewee rows with `populate_existing`, so a Replace on SQLite never
+  hands a removed person's reviewee to a new reviewer
+  (`tests/integration/test_symmetric_review_mirror.py`).
+- ~~**L3**~~ — **Done in #3537** (segment 20F): a Quick Setup submit-all
+  that brings a symmetric Settings file and no Reviewees file into a
+  session with roster rows says the reviewees were left as they were
+  (`spec/quick_setup_card_spec.md`; `spec/csv_contracts.md`, the Zip all
+  row).
 
 ## 4. Spec drift
 
