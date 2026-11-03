@@ -1112,10 +1112,12 @@ It is hidden until the count starts.
   (`directory_lookups.known_for`) and asks the directory only for the
   rest, so the save binds only answers the server fetched. A failed
   lookup is never kept, and the upload asks again.
-- **Stopping early:** a refused sign-in (expired or forbidden), a failed
-  request or no directory access stops the count and submits at once.
-  The upload then takes its usual path: the renew banner for an expired
-  sign-in, and a lookup of whatever is left otherwise.
+- **Stopping early:** any failed lookup (a refused sign-in, the
+  directory busy, timing out or failing), a failed request or no
+  directory access stops the count and submits at once, so the count is
+  never held up by a directory that is not answering. The upload then
+  takes its usual path: the renew banner for an expired sign-in, and a
+  lookup of whatever is left, within its own budget, otherwise.
 - **Without the script** the line never shows, and the upload checks
   every address on the server as before.
 

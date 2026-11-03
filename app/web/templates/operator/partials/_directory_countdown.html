@@ -11,9 +11,9 @@
    the upload reads the kept answers and asks the directory only for the
    rest. The page never sends an answer itself.
 
-   It stops early and submits at once on a refused sign-in (expired: the
-   upload then asks to renew, segment 20G), a failed request, or no
-   directory access; the upload looks up whatever is left. Without the script the
+   It stops early and submits at once on any failed lookup (an expired
+   sign-in: the upload then asks to renew, segment 20G), a failed
+   request, or no directory access; the upload looks up whatever is left. Without the script the
    line never shows and the upload checks every address on the server. #}
 <p class="muted" data-directory-countdown aria-live="polite" hidden>
   Directory check: <span data-directory-countdown-left>0</span> more to go.
@@ -112,11 +112,12 @@
           running -= 1;
           if (done) { return; }
           var outcome = (answer.outcomes || {})[key];
-          // A refused sign-in fails every lookup after it, so the count
-          // stops: an expired one makes the upload ask to renew (segment
-          // 20G); a forbidden one saves, unchecked.
-          if (outcome && outcome.status === 'ERROR'
-              && (outcome.error_kind === 'unauthorized' || outcome.error_kind === 'forbidden')) {
+          // Any failed lookup stops the count and uploads at once: a
+          // refused sign-in fails every lookup after it (expired: the
+          // upload asks to renew, segment 20G), and a directory timing out
+          // or failing would hold the count for 30 s a lookup. The upload
+          // then checks what is left within its own 120 s (Codex, #3555).
+          if (outcome && outcome.status === 'ERROR') {
             end();
             return;
           }

@@ -85,3 +85,36 @@ def test_the_upload_counts_down_then_reads_what_it_looked_up(
     assert looked_up == []
     assert _seen(page) == []
     expect(page.locator("[data-directory-check]")).to_contain_text("matched by mail")
+
+
+def test_a_failed_lookup_stops_the_count_and_uploads(
+    page: Page, new_session: Callable[[], str], tmp_path: Path
+) -> None:
+    """A directory timing out answers each lookup as an error: the count
+    stops at once rather than waiting out every address, and the upload
+    checks what is left within its own budget (Codex, #3555)."""
+    session_id = new_session()
+    roster = tmp_path / "reviewers.csv"
+    roster.write_text(
+        "ReviewerName,ReviewerEmail\n"
+        + "\n".join(f"P{i},{a}" for i, a in enumerate(ADDRESSES)) + "\n"
+    )
+    sent: list[str] = []
+
+    def time_out(route) -> None:
+        key = json.loads(route.request.post_data)["keys"][0]
+        sent.append(key)
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({"outcomes": {key: {"status": "ERROR", "error_kind": "timeout"}}}),
+        )
+
+    page.route("**/directory-lookup", time_out)
+    page.goto(app_url(f"/operator/sessions/{session_id}/reviewers?unlocked=1"))
+    page.locator("#upload-csv-form input[name=file]").set_input_files(str(roster))
+    with page.expect_navigation():
+        page.locator("#upload-csv-form .unlock-col-actions button[type=submit]").click()
+    page.wait_for_load_state("load")
+    assert 1 <= len(sent) <= 4  # the first answer stops the rest
+    expect(page.locator("[data-directory-check]")).to_contain_text("matched by mail")
