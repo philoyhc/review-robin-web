@@ -4,7 +4,7 @@
 `guide/codebase_assessment_02nov.md`: a spec-vs-code audit, a defect read
 of the window's RRW changes, and a read of `residentialapps/`,
 `utilityapps/` and `cordware/` · **Read at:** `2ffb0f42` (#3521) ·
-**Open:** none. Every row was done in #3524 → {PR} by 2026-11-03, N2
+**Open:** none. Every row was done in #3524 → #3543 by 2026-11-03, N2
 struck as not reproduced; archived the same day.
 
 The checklist the fixes work through (author, 2026-11-02: "there should
@@ -77,7 +77,7 @@ All three were taken by 19Z's close (`guide/archive/segment_19Z_roster_append.md
 
 ## 5. Noted
 
-- ~~**N1**~~ — **Done in {PR}**: a test walks every route both
+- ~~**N1**~~ — **Done in #3543**: a test walks every route both
   applications build, through the included routers, and fails on any but
   `/health` without the gate (`residentialapps/tests/test_preview_gate.py`).
 - ~~**N2**~~ — **Not reproduced**: `_cell` in
@@ -85,5 +85,5 @@ All three were taken by 19Z's close (`guide/archive/segment_19Z_roster_append.md
   since 2026-10-30 (6fe14dd4), tested by
   `test_a_cell_that_opens_like_a_formula_stays_text`. The assessment
   read a stale line.
-- ~~**N3**~~ — **Done in {PR}**: the README says what is built,
+- ~~**N3**~~ — **Done in #3543**: the README says what is built,
   placeholder screens on sample data behind the preview gate.
