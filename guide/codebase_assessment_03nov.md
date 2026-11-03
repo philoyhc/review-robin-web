@@ -133,9 +133,10 @@ by the same 979.
 | `cordware` | 24 (20 prior) | **5,254** | +998 (+23.4%), see above |
 | `utilityapps` | 32 | **3,072** | unchanged |
 
-**Test-to-production is 2.33**, from 2.36: production grew faster, and a
-third of its growth is 20E's package `__init__` re-export surface and
-module headers rather than behavior (§2, "Where the growth landed").
+**Test-to-production is 2.33**, from 2.36: production grew faster, and
+part of its growth is 20E's re-export surface rather than behavior — the
+two new packages' `__init__.py` files alone are 313 lines, a sixth of the
+window's production delta (§2, "Where the growth landed").
 
 **Tests: 8,265 passed, 11 skipped, 0 xfails** (was 8,111 / 7 / 0), at
 `cc364ed0` with `node` and Chromium present; `ruff check .` is clean. The
@@ -175,10 +176,12 @@ is `_rosters.py` (506). `responses/_core.py` gave 411 lines to
 `_rollups.py`. Templates: `operator/instruments_index.html` 7,203 (+8),
 `base.html` 6,789 (+28, the banner and button spacing).
 
-**Where the growth landed:** production churn is **+17 files, −2**. Of
-the 17, 14 are 20E's package members, carrying code that already existed;
-three are new behavior: `directory_lookups.py` (205), `directory_recheck.py`
-(181) and, by its content, `roster_import.py`'s directory steps. The
+**Where the growth landed:** production churn is **+17 files, −2**. The
+two removed are `csv_imports.py` and `validation.py`; 14 of the 17 added
+are 20E's moves (the two packages' 11 files, `roster_import.py`,
+`responses/_rollups.py`, `instruments/_preview.py`), carrying code that
+already existed. Three are new behavior: `directory_lookups.py` (205),
+`directory_recheck.py` (181) and the `DirectoryLookup` model. The
 window's `app/` diff is +7,835 / −5,313: most of it moved, not written.
 
 **Duplication** (`python3 tools/code_metrics.py`, blocks of 10+ lines):
@@ -366,7 +369,7 @@ shipped analogue.
 | 22C, pyright (fixes, then a gate) | +0–200 | 0 | nothing |
 | Blob storage (18Q) | +400–700 | +50–150 | a storage account |
 | Operator theming (stretch) | +150–300 | +100–200 | nothing |
-| **Projected floor** | **84,050–86,610** | **35,674–36,144** | |
+| **Projected floor** | **84,050–85,830** | **35,674–36,144** | |
 
 Excluded: Residential's wiring and RA Lifecycle (their own areas), the
 interoperability work (parked until a consumer exists), magic links, and
