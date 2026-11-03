@@ -3,6 +3,7 @@
 **Version:** 0.3  
 **Date:** 4 November 2026  
 **Status:** Planning and reconciliation instructions; no blanket authorization to implement or deploy  
+**Parked (author, 2026-11-04):** no implementation is planned; revisit when ApplyDesk or RA Lifecycle is further along. The rulings and review notes are the main spec's §13; §9 below says what they change here.  
 **Primary specification:** `cordware_interoperability_consolidated_spec_v0.3.md`  
 **Target repository path for primary specification:** `cordware/spec/interoperability_and_orchestration.md`  
 **Recommended path for this handoff:** `cordware/guide/interoperability_agent_handoff.md`
@@ -163,6 +164,30 @@ The following are **not** consolidated into the general interoperability protoco
 - The `res-apps` allocation solver's joint selection/matching, hard/soft constraints, manual pins/REDO, fairness scoring and migration to Residential Operations' term-specific assignments.
 
 Those retain their domain specs. They reuse this interoperability contract only when exchanging data with another mounted Cordware app.
+
+## 9. Review notes (2026-11-04)
+
+The rulings are the main spec's §13.1; what they change here:
+
+- **Nothing is built until the revisit.** The §3 report is still the
+  first deliverable then. A review against RRW `main` at `97908801`
+  already answers part of it: question 1 (New session commits the
+  session before its staged files are checked), question 2 (1 MiB and
+  5,000 rows per roster file; a duplicate `RevieweeEmail` is a blocking
+  error) and half of question 5 (`session_seq` + `field_key` is stable;
+  `instrument_{n}` is not). The report re-checks them against the
+  `main` of the day.
+- **v1 is roster-only.** Slice B's package carries no `settings.csv`,
+  and Slice E's D1 gate falls away for v1. The reviewee identifier is
+  the application ID.
+- **One operator in both apps.** Slices B, C and E test that a person
+  who is an operator in only one app gets no interoperability control
+  in it and `not_authorized` from the other.
+- **Slice A's source proof:** consider a host-supplied signer first
+  (main spec §13.4).
+- **Slice B and New session:** an atomic create + setup would also fix
+  the empty draft New session leaves today; whether the handoff may
+  change that page is the author's ruling, asked at the revisit.
 
 ---
 

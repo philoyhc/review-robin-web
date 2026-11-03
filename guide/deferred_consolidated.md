@@ -1379,6 +1379,24 @@ asking to notify reviewees.
 
 Aspirational directions deliberately *not* on the roadmap. Each entry states the idea, why it is off the roadmap, what is being done instead, and what evidence would move it back on.
 
+### Interoperability: ApplyDesk or RA Lifecycle ↔ Review Robin (author, 2026-11-04)
+
+**The idea.** One-click initiate → observe → retrieve between Cordware
+applications: a coordinating app creates a populated RRW draft, shows
+its status, and pulls its results
+(`cordware/docs/cordware_interoperability_consolidated_spec_v0.3.md`,
+with its agent handoff).
+
+**Why off the roadmap.** Neither consumer exists yet: ApplyDesk is a
+functional spec, and RA Lifecycle waits on Residential's core.
+
+**Instead.** The spec is parked in `cordware/docs/` with the author's
+rulings (§13): v1 sends rosters only, and one person must be an
+operator in both apps.
+
+**What brings it back.** ApplyDesk or RA Lifecycle further along; then
+start with the handoff's §3 reconciliation report.
+
 ### AG Grid (or an equivalent JS data-grid) for the reviewer surface
 
 **The idea.** Replace the reviewer surface's plain HTML
