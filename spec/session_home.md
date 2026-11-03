@@ -353,7 +353,12 @@ plain `<label>` above its value:
 - **Description** — below Name / Code in the left column; a
   `<textarea>` in edit mode, a `.config-value-multiline` block in
   display mode ("—" when null).
-- **Help contact / Timezone** — top-right. Timezone renders the
+- **Help contact / Timezone** — top-right. In edit mode the Help contact
+  box searches the directory as one types (three characters, up to 10
+  people: `GET /operator/directory-search`, any workspace operator, on
+  their own token), and a pick fills "Name <address>", the form the
+  box's placeholder shows. It stays free text; anything else may be
+  typed. The same box on New session behaves alike. Timezone renders the
   resolved zone as a compact GMT-offset + IANA id (e.g. "GMT+8
   Asia/Singapore") via `date_formatting.gmt_offset_zone_label`;
   edit mode is a datalist typeahead over the timezone options.
