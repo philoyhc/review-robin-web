@@ -259,3 +259,33 @@ def test_two_file_rows_landing_on_one_row_refuse_the_merge(db: Session) -> None:
             ReviewerImportRow(name="Jane", email="e0123456@example.edu", tag_1="B"),
         ], directory=directory)
     assert [i.row_number for i in refused.value.issues] == [2]
+
+
+def test_a_merge_that_would_bind_a_row_to_an_account_another_row_holds_is_refused(
+    db: Session,
+) -> None:
+    """Assessment 2026-11-02, M2: an unbound row matched by its address
+    whose address now resolves to an account another row is bound to
+    would put one person on the roster twice. Append refuses that;
+    merge now does too, before anything is written."""
+    review_session, owner = _session(db, "mrg-held-account")
+    db.add_all([
+        Reviewer(session_id=review_session.id, name="Jane", email="jane.tan@example.edu"),
+        Reviewer(
+            session_id=review_session.id, name="Jane", email="e0123456@example.edu",
+            directory_object_id=JANE_OID,
+        ),
+    ])
+    db.commit()
+    directory = DirectoryCheck(accounts={"jane.tan@example.edu": JANE}, counts={})
+    with pytest.raises(AppendConflict) as refused:
+        _merge_reviewers(db, review_session, owner,
+                         [ReviewerImportRow(name="Jane", email="jane.tan@example.edu", tag_1="X")],
+                         directory=directory)
+    issue = refused.value.issues[0]
+    assert issue.row_number == 1
+    assert issue.problem == "ReviewerEmail is a directory account already on the roster"
+    assert "e0123456@example.edu" in issue.message
+    db.rollback()
+    unbound = _reviewer(db, review_session.id, "jane.tan@example.edu")
+    assert (unbound.directory_object_id, unbound.tag_1) == (None, None)

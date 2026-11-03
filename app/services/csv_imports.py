@@ -1145,8 +1145,10 @@ def _merge_rows(
     directory account its address resolved to; the lowest id answers a
     roster already holding two. A matched row takes every non-blank
     cell, Status only where its cell was filled in (``status_given``),
-    and keeps its address; an unbound row whose own address resolved is bound. Each
-    updated row writes its ``*.updated`` event. Any other row is added.
+    and keeps its address; an unbound row whose own address resolved is bound,
+    unless another row already holds that account, which refuses the merge
+    as an append is refused (`AppendConflict`). Each updated row writes its
+    ``*.updated`` event. Any other row is added.
 
     A name change on a row matched by account is checked against the
     other rosters at the row's **kept** address, which the route's check
@@ -1215,6 +1217,26 @@ def _merge_rows(
                             f"as row {first}."
                         ),
                         problem=f"{spec['field']} names a {spec['label']} another row also names",
+                    )
+                )
+        if held is not None and account is not None and not held.directory_object_id:
+            other = by_account.get(normalize_object_id(account.object_id))
+            if other is not None and other.id != held.id:
+                # Binding this row would put a second row on an account
+                # the roster already holds: one person twice, which an
+                # append refuses too (assessment 2026-11-02, M2).
+                issues.append(
+                    ValidationIssue(
+                        severity=Severity.error,
+                        source=kind,
+                        row_number=index,
+                        field=spec["field"],
+                        message=(
+                            f"{spec['field']} '{address}' is the same directory "
+                            f"account as {spec['label']} "
+                            f"'{getattr(other, spec['model_attr'])}' already on the roster."
+                        ),
+                        problem=f"{spec['field']} is a directory account already on the roster",
                     )
                 )
         planned.append((held, row, kwargs, account))
