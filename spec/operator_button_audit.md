@@ -847,10 +847,17 @@ Notes:
     three severity chips after it (`.audit-filter-head`, row 277), then
     the event-type multi-select with its `Ctrl/Cmd-click to select
     multiple` hint.
-  - Right column flows actor email → From / To date selectors
-    side-by-side (each half-width, `.audit-filter-dates`), labelled
-    with the page's zone → Clear / Apply filters, right-aligned
-    (`.audit-filter-actions`), the last thing in the right column.
+  - Right column flows the **Event type filter** and actor email
+    side-by-side (each half-width, `.audit-filter-pair`) → From / To
+    date selectors side-by-side (each half-width, `.audit-filter-dates`),
+    labelled with the page's zone → Clear / Apply filters,
+    right-aligned (`.audit-filter-actions`), the last thing in the right
+    column.
+  - The **Event type filter** (`data-audit-event-filter`) narrows the
+    event-type list as it is typed: types not containing the text, any
+    case, are hidden, and a selected type stays shown. It has no `name`
+    and sends nothing; the log is filtered by what the list selects.
+    Without JavaScript it does nothing and the list is whole.
 - **Spacing.** `.audit-filter-form` keeps the form 16px below the
   card's description and 24px above the audit-log table; there are no
   inline styles in the filter strip.

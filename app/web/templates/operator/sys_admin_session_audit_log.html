@@ -83,8 +83,10 @@
              right-aligned. #}
           <div class="audit-filter-pair">
             <div>
-              {# 20H Item 3 — SCAFFOLD: inert, no ``name``, so nothing
-                 is sent; rung 2 wires it. #}
+              {# 20H Item 3: narrows the Event type list as it is typed
+                 (author, 2026-11-03). No ``name``: the log is still
+                 filtered by what the list selects, so nothing is sent.
+                 A selected type stays shown whatever the text. #}
               <label for="filter-event-text">Event type filter</label>
               <input type="text"
                      id="filter-event-text"
@@ -130,6 +132,25 @@
         </div>
       </div>
     </form>
+    <script>
+      // 20H Item 3 — the Event type filter narrows the list beside it:
+      // types not containing the text (any case) are hidden, and a
+      // selected one stays shown so a selection is never out of sight.
+      (function () {
+        var box = document.querySelector('[data-audit-event-filter]');
+        var list = document.getElementById('filter-event-type');
+        if (!box || !list) { return; }
+        function narrow() {
+          var text = box.value.trim().toLowerCase();
+          Array.prototype.forEach.call(list.options, function (option) {
+            option.hidden = !option.selected && text !== ''
+              && option.value.toLowerCase().indexOf(text) === -1;
+          });
+        }
+        box.addEventListener('input', narrow);
+        list.addEventListener('change', narrow);
+      })();
+    </script>
 
     {% if audit_log.rows %}
       {# `.table-scroll` (base.html): a table wider than its card

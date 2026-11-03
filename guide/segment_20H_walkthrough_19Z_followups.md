@@ -133,7 +133,7 @@ Taken 2026-11-03 at `49bb4a8c9`: one route (`sys_admin_session_audit_log` in `ap
 
 ### Definition of done
 
-- The audit log narrows to one facility's events by the chosen control, by test.
+- ~~The audit log narrows to one facility's events by the chosen control, by test.~~ *As ruled: typing narrows the Event type list to the matching types, by a browser test.*
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 20H.3` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
@@ -142,11 +142,23 @@ Taken 2026-11-03 at `49bb4a8c9`: one route (`sys_admin_session_audit_log` in `ap
 
 ### Open questions
 
-- ~~Search box, facility filter, or both~~: an Event type filter beside a halved Actor email box (author, 2026-11-03). Whether the multi-select stays: at the scaffold.
+- ~~Search box, facility filter, or both~~: an Event type filter beside a halved Actor email box (author, 2026-11-03), which narrows the list rather than the log; the multi-select stays (author, at the scaffold).
+
+### Status
+
+**Closed 2026-11-03.** Ruled before the scaffold: the Actor email box
+halves, an Event type filter on its left (author). Ruled at the scaffold:
+the filter narrows the Event type list, not the log, and the list stays.
+Rung 1 laid out `.audit-filter-pair`; rung 2 wired the box: types not
+containing the text are hidden, a selected type stays shown, and the box
+has no `name`, so the log is filtered by the list's selection as before.
+`tests/browser/test_audit_log_event_filter.py`. The strip is documented in
+`spec/operator_button_audit.md`, where its layout already lived, not
+`spec/operator_ui_concept.md`.
 
 ### Doc impact
 
-- `spec/operator_ui_concept.md` — the Sys Admin audit log's filter (Item 3).
+- ~~`spec/operator_ui_concept.md`~~ `spec/operator_button_audit.md` — the Sys Admin audit log's filter strip (Item 3). <!-- cites: spec/operator_ui_concept.md -->
 
 ## Item 4 — Banners on the roster Upload cards: placement and spacing
 
