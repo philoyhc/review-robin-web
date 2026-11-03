@@ -195,6 +195,11 @@ _REVERT_RETURN_TO = {
 }
 
 
+#: The most digits a ``Yes, clear them`` count is read with: more than
+#: any count of saved answers runs to.
+_MAX_COUNT_DIGITS = 18
+
+
 def acknowledged_loss(raw: object) -> int:
     """The count a ``Yes, clear them`` tick was shown on a Save refused
     for clearing group answers (``acknowledge_response_loss``), or 0
@@ -203,7 +208,15 @@ def acknowledged_loss(raw: object) -> int:
     (``responses.clear_changed_groups``)."""
     text = str(raw or "").strip()
     # ``isdecimal``, not ``isdigit``: ``"²"`` is a digit ``int`` refuses.
-    return int(text) if text.isdecimal() else 0
+    # Length first: ``int`` refuses a string past Python's 4,300-digit
+    # limit with a ``ValueError``, which answered 500 (findings register
+    # L1). No count of saved answers runs to 19 digits, so a longer one
+    # matches none and reads as no tick, as ``oversized_ids`` reasons.
+    # The zeros are stripped before ``int`` too: its limit counts them.
+    digits = text.lstrip("0")
+    if not text.isdecimal() or len(digits) > _MAX_COUNT_DIGITS:
+        return 0
+    return int(digits or "0")
 
 
 def observe_scheduled_events_on_load(
