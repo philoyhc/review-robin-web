@@ -192,3 +192,19 @@ def test_link3_cells_keep_their_markers_through_add_and_remove(
     expect(actions).to_have_count(1)
     expect(actions.first).to_have_text("X")
     expect(actions.first).to_be_disabled()
+
+
+def test_a_locked_cards_fallback_title_is_its_session_number(
+    page: Page, api: httpx.Client, new_session: Callable[[], str]
+) -> None:
+    """20H Item 2: a card locked with no short label showed
+    ``Instrument_{id}``, the workspace-wide key, until a reload drew
+    ``Instrument_{session_seq}`` (walkthrough A5: ``Instrument_4`` beside
+    ``Instrument_1``). The script now redraws it from the session number."""
+    new_session()  # another session's instruments push the ids ahead
+    session_id = new_session()
+    add_instrument(api, session_id)
+    card = open_unlocked(page, session_id, index=1)
+    card.locator("[data-instrument-lock-toggle]:visible").first.click()
+    expect(card).to_have_attribute("data-instrument-locked", "true")
+    expect(card.locator("[data-card-title-view]")).to_have_text("Instrument_2")

@@ -94,6 +94,21 @@ Taken 2026-11-03 at `49bb4a8c9`: the label's two forms, Python and SQL, pinned t
 
 - If it does not reproduce: close as not reproduced, with the steps tried (author).
 
+### Status
+
+**Closed 2026-11-03. Reproduced, then fixed.** The server always drew
+`Instrument_{session_seq}`; the Instruments page's script redrew a
+label-less card's title when the card locked, from
+`data-instrument-card`, the workspace-wide `id`. So any label-less card
+whose `id` differs from its `session_seq`, the walkthrough's new card
+among them, read `Instrument_{id}` once locked, until a reload. The card now carries
+`data-instrument-seq` and the script reads it.
+`tests/browser/test_builder_card.py::test_a_locked_cards_fallback_title_is_its_session_number`
+failed before the fix (`Instrument_3` for the second instrument) and
+passes after. No spec change: `spec/instruments.md` already states the
+rule. One read: no defect; no other client path draws the number, and
+cards are never built in the browser.
+
 ### Doc impact
 
 - `spec/instruments.md` — nothing expected; named in case the fix shows the label rule needs a line (Item 2). <!-- doc-impact-waived: only if the fix leaves the rule as written -->
@@ -118,7 +133,7 @@ Taken 2026-11-03 at `49bb4a8c9`: one route (`sys_admin_session_audit_log` in `ap
 
 ### Definition of done
 
-- The audit log narrows to one facility's events by the chosen control, by test.
+- ~~The audit log narrows to one facility's events by the chosen control, by test.~~ *As ruled: typing narrows the Event type list to the matching types, by a browser test.*
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 20H.3` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
@@ -127,11 +142,31 @@ Taken 2026-11-03 at `49bb4a8c9`: one route (`sys_admin_session_audit_log` in `ap
 
 ### Open questions
 
-- ~~Search box, facility filter, or both~~: an Event type filter beside a halved Actor email box (author, 2026-11-03). Whether the multi-select stays: at the scaffold.
+- ~~Search box, facility filter, or both~~: an Event type filter beside a halved Actor email box (author, 2026-11-03), which narrows the list rather than the log; the multi-select stays (author, at the scaffold).
+
+### Status
+
+**Closed 2026-11-03.** Ruled before the scaffold: the Actor email box
+halves, an Event type filter on its left (author). Ruled at the scaffold:
+the filter narrows the Event type list, not the log, and the list stays.
+Rung 1 laid out `.audit-filter-pair`; rung 2 wired the box, and the
+author refined it before merge: the box finds types and the list selects
+them. Typing narrows the list to the types beginning with the text; a
+click toggles one type and keeps the rest, so selections made under one
+filter survive the next and are sent together; the hint counts them.
+Clear is always shown, left of Apply filters. The box has no `name`, and
+Enter in it does nothing. `tests/browser/test_audit_log_event_filter.py`. The keyboard keeps the listbox's own behavior on the types in view,
+but never drops one the filter hides. The strip is
+documented in `spec/operator_button_audit.md`, where its layout already
+lived, not `spec/operator_ui_concept.md`. Two reads. Rungs 1–2: no code
+defect; the test now submits with text in the box, which it had cleared
+first, and Enter is held. The refinement: the keyboard dropped hidden
+selections, now put back, and two integration checks were tightened. Chromium only: Safari's handling of a hidden
+`<option>` is the author's to check.
 
 ### Doc impact
 
-- `spec/operator_ui_concept.md` — the Sys Admin audit log's filter (Item 3).
+- ~~`spec/operator_ui_concept.md`~~ `spec/operator_button_audit.md` — the Sys Admin audit log's filter strip (Item 3). <!-- cites: spec/operator_ui_concept.md -->
 
 ## Item 4 — Banners on the roster Upload cards: placement and spacing
 

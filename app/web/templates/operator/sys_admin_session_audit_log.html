@@ -73,25 +73,47 @@
               <option value="{{ value }}"{% if selected %} selected{% endif %}>{{ value }}</option>
             {% endfor %}
           </select>
-          <p class="form-help">Ctrl/Cmd-click to select multiple.</p>
+          {# Without the script a plain multi-select: Ctrl/Cmd-click. The
+             script makes a click toggle one type and says how many are
+             selected (20H Item 3, author 2026-11-03). #}
+          <p class="form-help" data-audit-event-hint>Ctrl/Cmd-click to select multiple.</p>
         </div>
         <div>
-          {# Right column: actor email, then the two date selectors
-             side by side (each half-width, read as days in the page's
-             zone), then the buttons, right-aligned. #}
-          <label for="filter-actor">Actor email</label>
-          <input type="text"
-                 id="filter-actor"
-                 name="actor"
-                 list="audit-actor-options"
-                 value="{{ filter_form.actor_email_value }}"
-                 autocomplete="off"
-                 placeholder="any actor">
-          <datalist id="audit-actor-options">
-            {% for email in filter_form.actor_options %}
-              <option value="{{ email }}"></option>
-            {% endfor %}
-          </datalist>
+          {# Right column: the event type filter and the actor email
+             side by side (each half-width; 20H Item 3, author
+             2026-11-03), then the two date selectors side by side (read
+             as days in the page's zone), then the buttons,
+             right-aligned. #}
+          <div class="audit-filter-pair">
+            <div>
+              {# 20H Item 3: narrows the Event type list to the types
+                 beginning with what is typed (author, 2026-11-03). No
+                 ``name``: the log is filtered by what the list selects,
+                 so nothing is sent; a selected type the text hides stays
+                 selected. #}
+              <label for="filter-event-text">Event type filter</label>
+              <input type="text"
+                     id="filter-event-text"
+                     autocomplete="off"
+                     placeholder="e.g. reviewer"
+                     data-audit-event-filter>
+            </div>
+            <div>
+              <label for="filter-actor">Actor email</label>
+              <input type="text"
+                     id="filter-actor"
+                     name="actor"
+                     list="audit-actor-options"
+                     value="{{ filter_form.actor_email_value }}"
+                     autocomplete="off"
+                     placeholder="any actor">
+              <datalist id="audit-actor-options">
+                {% for email in filter_form.actor_options %}
+                  <option value="{{ email }}"></option>
+                {% endfor %}
+              </datalist>
+            </div>
+          </div>
 
           <div class="audit-filter-dates">
             <div>
@@ -106,14 +128,75 @@
             </div>
           </div>
           <div class="btn-pair audit-filter-actions">
-            {% if filter_form.is_active %}
-              <a class="btn secondary" href="{{ url(filter_form.cleared_url) }}">Clear</a>
-            {% endif %}
+            {# Always shown, inline left of Apply filters (author,
+               2026-11-03): back to the unfiltered log. #}
+            <a class="btn secondary" data-audit-clear
+               href="{{ url(filter_form.cleared_url) }}">Clear</a>
             <button class="btn secondary" type="submit">Apply filters</button>
           </div>
         </div>
       </div>
     </form>
+    <script>
+      // 20H Item 3 (author, 2026-11-03). The Event type filter is a way
+      // to find types in the list; the list is where they are selected.
+      // - Typing narrows the list to the types beginning with the text
+      //   (any case). Hidden types keep their selection, and a selected
+      //   type that is hidden is still sent.
+      // - A click selects or unselects one type and leaves the others as
+      //   they are, so a type found with one filter stays selected while
+      //   another is found with the next.
+      // - The keyboard keeps the listbox's own behavior for the types on
+      //   view, but never drops a type the filter hides: those are
+      //   remembered and put back after each change.
+      // - The hint says how many types are selected.
+      (function () {
+        var box = document.querySelector('[data-audit-event-filter]');
+        var list = document.getElementById('filter-event-type');
+        var hint = document.querySelector('[data-audit-event-hint]');
+        if (!box || !list) { return; }
+        function narrow() {
+          var text = box.value.trim().toLowerCase();
+          Array.prototype.forEach.call(list.options, function (option) {
+            option.hidden = text !== '' && option.value.toLowerCase().indexOf(text) !== 0;
+          });
+        }
+        var hiddenChosen = {};
+        function remember() {
+          hiddenChosen = {};
+          Array.prototype.forEach.call(list.options, function (o) {
+            if (o.hidden && o.selected) { hiddenChosen[o.value] = true; }
+          });
+        }
+        function count() {
+          if (!hint) { return; }
+          var n = Array.prototype.filter.call(list.options, function (o) { return o.selected; }).length;
+          hint.textContent = 'Click a type to select or unselect it. '
+            + (n === 0 ? 'None selected: every type is shown.' : n + ' selected.');
+        }
+        list.addEventListener('mousedown', function (event) {
+          var option = event.target;
+          if (!option || option.tagName !== 'OPTION') { return; }
+          event.preventDefault();
+          option.selected = !option.selected;
+          list.focus();
+          count();
+        });
+        list.addEventListener('change', function () {
+          Array.prototype.forEach.call(list.options, function (o) {
+            if (o.hidden && hiddenChosen[o.value]) { o.selected = true; }
+          });
+          count();
+        });
+        box.addEventListener('input', function () { narrow(); remember(); });
+        // The box narrows the list; Enter in it would submit the form
+        // and lose the narrowing, so it does nothing here.
+        box.addEventListener('keydown', function (event) {
+          if (event.key === 'Enter') { event.preventDefault(); }
+        });
+        count();
+      })();
+    </script>
 
     {% if audit_log.rows %}
       {# `.table-scroll` (base.html): a table wider than its card

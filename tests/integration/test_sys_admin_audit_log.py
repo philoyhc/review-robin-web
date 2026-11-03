@@ -315,9 +315,13 @@ def test_audit_log_filter_strip_renders(
     assert 'name="to"' in body
     # The multiselect's hint is `.form-help`, not a bare
     # `<small class="muted">` (findings Ec6, 2026-10-05).
-    assert '<p class="form-help">Ctrl/Cmd-click to select multiple.</p>' in body
-    # No filter-reset ("Clear") link when no filter is active.
-    assert ">Clear</a>" not in body
+    assert (
+        '<p class="form-help" data-audit-event-hint>Ctrl/Cmd-click to select multiple.</p>'
+        in body
+    )
+    # The filter-reset ("Clear") link is always there, before Apply
+    # filters (20H Item 3, author 2026-11-03).
+    assert body.index(">Clear</a>") < body.index(">Apply filters</button>")
 
 
 def test_audit_log_filter_by_event_type_narrows_table(
@@ -345,8 +349,6 @@ def test_audit_log_filter_by_event_type_narrows_table(
     assert "<code>session.created</code>" not in body
     # Filter strip persists state — option marked selected.
     assert 'value="session.activated" selected' in body
-    # The filter-reset ("Clear") link shows up when a filter is active.
-    assert ">Clear</a>" in body
 
 
 def test_audit_log_filter_by_severity_narrows_table(
@@ -614,8 +616,9 @@ def test_audit_log_filter_unknown_event_type_silently_dropped(
         "?event_type=does.not.exist"
     )
     assert response.status_code == 200
-    # No filter-reset ("Clear") link since the filter parsed empty.
-    assert ">Clear</a>" not in response.text
+    # The filter parsed empty: the table is unfiltered.
+    assert "<code>session.created</code>" in response.text
+    assert "match the current filter" not in response.text
 
 
 def test_audit_log_pagination_carries_filter_state(
