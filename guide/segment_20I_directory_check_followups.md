@@ -84,6 +84,10 @@ Send batches of 10 keys, four in flight, and drop the count by each batch's size
 - `## Status` compacted to intended vs done; answered open questions collapsed
 - `guide/todo_master.md` 20I entry updated to drop this item; the entry itself goes only when the segment closes
 
+### Status
+
+**Closed 2026-11-03.** Intended vs done: as decided. `partials/_directory_countdown.html` sends batches of 10 (`batch`), four in flight, the count falling by each batch's size; one failed key in a batch stops the count, as one failed lookup did. Browser tests: 25 addresses go as 10, 10 and 5; a timing-out directory stops within four of six batches. The production timing is the author's check. `spec/setup_pages.md` "… countdown" updated in the same PR.
+
 ### Open questions
 
 None.

@@ -10,7 +10,7 @@
 
    On Upload the script asks `directory-keys` which of the file's
    addresses still need a lookup (parsed by the roster's own parser),
-   looks them up one per request, four in flight, through
+   looks them up in batches of ten, four in flight (20I Item 2), through
    `directory-lookup` (which keeps each answer the server fetched for
    fifteen minutes), and counts down. Then it submits the form as it was:
    the upload reads the kept answers and asks the directory only for the
@@ -35,6 +35,9 @@
     var keysUrl = {{ url('/operator/sessions/' ~ session.public_id ~ '/directory-keys') | tojson }};
     var lookupUrl = {{ url('/operator/sessions/' ~ session.public_id ~ '/directory-lookup') | tojson }};
     var workers = 4;
+    // Keys a request (20I Item 2): one round trip through the gateway
+    // per ten addresses, the count falling by each batch.
+    var batch = 10;
     var counted = false;
     var counting = false;
 
@@ -127,17 +130,17 @@
         if (done) { return; }
         if (next >= keys.length && running === 0) { end(); return; }
         while (running < workers && next < keys.length) {
-          send(keys[next]);
-          next += 1;
+          send(keys.slice(next, next + batch));
+          next += batch;
         }
       }
 
-      function send(key) {
+      function send(chunk) {
         running += 1;
         fetch(lookupUrl, {
           method: 'POST',
           headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
-          body: JSON.stringify({keys: [key]}),
+          body: JSON.stringify({keys: chunk}),
           credentials: 'same-origin'
         }).then(function (response) {
           if (!response.ok) { throw new Error('lookup ' + response.status); }
@@ -145,17 +148,20 @@
         }).then(function (answer) {
           running -= 1;
           if (done) { return; }
-          var outcome = (answer.outcomes || {})[key];
+          var outcomes = answer.outcomes || {};
           // Any failed lookup stops the count and uploads at once: a
           // refused sign-in fails every lookup after it (expired: the
           // upload asks to renew, segment 20G), and a directory timing out
-          // or failing would hold the count for 30 s a lookup. The upload
+          // or failing would hold the count for 30 s a batch. The upload
           // then checks what is left within its own 120 s (Codex, #3555).
-          if (outcome && outcome.status === 'ERROR') {
+          var failed = chunk.some(function (key) {
+            return outcomes[key] && outcomes[key].status === 'ERROR';
+          });
+          if (failed) {
             end();
             return;
           }
-          remaining -= 1;
+          remaining -= chunk.length;
           left.textContent = String(remaining);
           pump();
         }).catch(function () {

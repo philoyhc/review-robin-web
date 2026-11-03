@@ -1138,8 +1138,9 @@ It is hidden until the count starts.
   and answers the lookup keys with no answer kept. A file that does not
   parse answers none, and the upload then shows the file's problems.
 - **The lookups:** `POST /operator/sessions/{id}/directory-lookup` takes
-  a JSON batch of up to 25 keys; the script sends one key at a time, four
-  in flight, as the Email Address Checker does. It answers each key's
+  a JSON batch of up to 25 keys; the script sends batches of 10, four in
+  flight, and the count falls by each batch's size (segment 20I Item 2:
+  one key a request paid a gateway round trip per address). It answers each key's
   status and nothing about the account, and it keeps each answer the
   server fetched in `directory_lookups` for 15 minutes, per operator and
   session. With no key left to look up, the form submits at once.

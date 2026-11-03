@@ -66,8 +66,8 @@ is the author's call.
 
 5. **20I — Directory check follow-ups and refinements** (not gated).
    Opened 2026-11-03 from the banner and countdown checks; stays open
-   for further refinements, as 20C did. Item 1 (the recheck) is done;
-   Item 2 batches the countdown; Item 3 evens the banners' spacing.
+   for further refinements, as 20C did. Items 1 (the recheck) and 2
+   (countdown batches) are done; Item 3 evens the banners' spacing.
    **Plan:** `guide/segment_20I_directory_check_followups.md`.
 
 6. **22C — A type checker: pyright** (not gated). Pyright in basic mode
