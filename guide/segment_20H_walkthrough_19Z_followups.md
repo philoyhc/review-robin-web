@@ -152,9 +152,13 @@ the filter narrows the Event type list, not the log, and the list stays.
 Rung 1 laid out `.audit-filter-pair`; rung 2 wired the box: types not
 containing the text are hidden, a selected type stays shown, and the box
 has no `name`, so the log is filtered by the list's selection as before.
-`tests/browser/test_audit_log_event_filter.py`. The strip is documented in
-`spec/operator_button_audit.md`, where its layout already lived, not
-`spec/operator_ui_concept.md`.
+Enter in the box does nothing, so the narrowing is never lost to a
+submit. `tests/browser/test_audit_log_event_filter.py`. The strip is
+documented in `spec/operator_button_audit.md`, where its layout already
+lived, not `spec/operator_ui_concept.md`. One read (rungs 1–2): no code
+defect; the test now submits with text in the box, which it had cleared
+first, and Enter is held. Chromium only: Safari's handling of a hidden
+`<option>` is the author's to check.
 
 ### Doc impact
 

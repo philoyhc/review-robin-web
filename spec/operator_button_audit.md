@@ -856,7 +856,8 @@ Notes:
   - The **Event type filter** (`data-audit-event-filter`) narrows the
     event-type list as it is typed: types not containing the text, any
     case, are hidden, and a selected type stays shown. It has no `name`
-    and sends nothing; the log is filtered by what the list selects.
+    and sends nothing, and Enter in it does nothing; the log is filtered
+    by what the list selects.
     Without JavaScript it does nothing and the list is whole.
 - **Spacing.** `.audit-filter-form` keeps the form 16px below the
   card's description and 24px above the audit-log table; there are no

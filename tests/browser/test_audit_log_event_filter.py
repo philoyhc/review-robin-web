@@ -35,10 +35,14 @@ def test_typing_narrows_the_list_and_keeps_a_selection(
     assert "session.created" in shown  # the selection is never hidden
     assert any(v.startswith("reviewer.") for v in shown)
 
-    page.fill("[data-audit-event-filter]", "")
-    assert _visible(page) == everything
-    # The box has no name: Apply filters sends only the list's choice.
+    # Enter in the box does not submit: it is for narrowing.
+    page.press("[data-audit-event-filter]", "Enter")
+    expect(page.locator("[data-audit-event-filter]")).to_have_value("REVIEWER")
+    # The box has no name: Apply filters, with text still in it, sends
+    # only the list's choice.
     with page.expect_navigation():
         page.click("text=Apply filters")
-    assert "session.created" in page.url and "REVIEWER" not in page.url
-    expect(page.locator("[data-audit-event-filter]")).to_have_value("")
+    assert "session.created" in page.url and "reviewer" not in page.url.lower()
+
+    page.fill("[data-audit-event-filter]", "")
+    assert _visible(page) == everything
