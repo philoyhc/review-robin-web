@@ -4,8 +4,9 @@
    sign-in name is tied to that person's account; a row not found,
    ambiguous or not checked matches by its address, as before. Nothing
    shows for an import that ran no check or had no address to check. The
-   unchecked wording names no cause: no directory access and failed
-   lookups look the same in the counts (Codex, #3429). A replace keeps a
+   unchecked wording names the cause the import recorded (segment 20G;
+   `views._directory_check._REASONS`); an import from before 20G
+   recorded none, so its line names none (Codex, #3429). A replace keeps a
    not-checked row's earlier account, and says how many did (M1). #}
 {% if directory_check %}
   <p class="muted" data-directory-check>
@@ -16,11 +17,12 @@
       {{ directory_check.not_found }} not found,
       {{ directory_check.ambiguous }} ambiguous{% if directory_check.not_checked %},
       {{ directory_check.not_checked }} not checked{% if directory_check.kept %}
-      ({{ directory_check.kept }} kept the account an earlier import matched){% endif %}{% endif %}.
+      ({{ directory_check.kept }} kept the account an earlier import matched){% endif %}{% endif %}.{% if directory_check.not_checked and directory_check.reason %}
+      Not checked because {{ directory_check.reason }}.{% endif %}
       Not-found and ambiguous addresses still work; they match by the address as written.
     {% else %}
       The last import's addresses ({{ directory_check.at | format_datetime }}) weren't
-      checked against the directory, so its rows match by the address as written{% if directory_check.kept %},
+      checked against the directory{% if directory_check.reason %} because {{ directory_check.reason }}{% endif %}, so its rows match by the address as written{% if directory_check.kept %},
       except {{ directory_check.kept }} that kept the account an earlier import matched{% endif %}.
       Importing the file again tries the check again.
     {% endif %}

@@ -195,6 +195,7 @@ from ._instruments import (
 # Quick Setup card on Session Home + new-session preview variant
 # (sliced in PR 7).
 from ._quick_setup import (
+    DIRECTORY_SIGN_IN,
     QuickSetupContext,
     QuickSetupSlot,
     build_new_session_quick_setup_context,
@@ -373,6 +374,7 @@ __all__ = [
     "MissingRoster",
     "PreviewPickerContext",
     "PreviewPickerOption",
+    "DIRECTORY_SIGN_IN",
     "QuickSetupContext",
     "QuickSetupSlot",
     "RelationshipPrerequisites",

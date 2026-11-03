@@ -40,11 +40,14 @@ class DirectoryCheck:
     #: replace keeps such a row's earlier binding rather than dropping
     #: it (`_save`).
     unchecked: frozenset[str] = frozenset()
-    #: Why the check stopped on the sign-in, or ``None`` (segment 20G):
-    #: `directory_accounts.NO_TOKEN`, or the Graph kind (`unauthorized`,
-    #: `forbidden`). Renewing the sign-in can cure it; nothing reads it
-    #: yet.
+    #: ``"unauthorized"`` when Graph refused an expired token, which the
+    #: upload routes answer by holding the file and asking to renew
+    #: (segment 20G); ``None`` otherwise.
     stopped: str | None = None
+    #: Why any address went unchecked (`directory_accounts.NO_TOKEN`, or
+    #: Graph's failure kind), or ``None``; the import's audit event
+    #: records it so the card's line can name it (segment 20G).
+    unchecked_reason: str | None = None
 
 
 
@@ -75,6 +78,9 @@ def directory_checks(
                 outcomes, addresses, checked=directory is not None
             ),
             stopped=directory_accounts.sign_in_stop(
+                outcomes, addresses, checked=directory is not None
+            ),
+            unchecked_reason=directory_accounts.unchecked_reason(
                 outcomes, addresses, checked=directory is not None
             ),
         )

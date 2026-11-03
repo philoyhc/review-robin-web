@@ -462,6 +462,14 @@ class RehydrateError(Exception):
     half-rehydrated session survives (``spec/rehydrate.md`` §7)."""
 
 
+class RehydrateSignInStopped(RehydrateError):
+    """Graph refused the rosters' directory check on an expired token
+    (segment 20G). Nothing is created, as for any failure, but renewing
+    the sign-in cures it, so the page keeps the stashed set and asks to
+    renew and rehydrate again. No token at all checks nothing and the
+    rehydrate proceeds, as an import does."""
+
+
 def _settings_rows(content: bytes) -> tuple[list[Any], list[ApplyError]]:
     """Parse the 3-column ``field,value,data_type`` settings CSV into
     ``session_config_io.Row`` records for :func:`apply_session_config`,
@@ -661,6 +669,11 @@ def rehydrate_session(
                 [row.email for row in observers_parse.rows] if observers_parse else [],
             ],
         )
+        if any(c.stopped for c in (reviewers_check, reviewees_check, observers_check)):
+            raise RehydrateSignInStopped(
+                "Your sign-in to the directory had expired, so the rosters' "
+                "addresses could not be checked."
+            )
         csv_imports.save_reviewers(
             db,
             session=review_session,

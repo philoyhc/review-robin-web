@@ -16,12 +16,14 @@ from ._full_matrix import (
 
 
 
-_UNCHECKED_ONE = {
+#: One address the suite's directory (`cordware.graph.FakeDirectory`,
+#: segment 20G's default in `conftest.py`) does not know.
+_NOT_FOUND_ONE = {
     "directory_by_mail": 0,
     "directory_by_upn": 0,
-    "directory_not_found": 0,
+    "directory_not_found": 1,
     "directory_ambiguous": 0,
-    "directory_not_checked": 1,
+    "directory_not_checked": 0,
 }
 
 
@@ -105,9 +107,9 @@ def test_reviewer_import_writes_audit_event(client: TestClient, db: Session) -> 
         "replaced": 0,
         "cascaded_assignments": 0,
         "cascaded_relationships": 0,
-        # Segment 21F: no delegated token in the suite, so the one
-        # address goes unchecked; the counts still say so.
-        **_UNCHECKED_ONE,
+        # Segment 21F: the one address is checked, and the suite's
+        # directory does not know it.
+        **_NOT_FOUND_ONE,
     }
     assert event.detail["context"] == {"filename": "reviewers.csv"}
     assert "Imported 1 reviewers" in event.summary
@@ -199,9 +201,9 @@ def test_reviewer_import_replace_with_confirm_succeeds(
         "replaced": 1,
         "cascaded_assignments": 0,
         "cascaded_relationships": 0,
-        # Segment 21F: no delegated token in the suite, so the one
-        # address goes unchecked; the counts still say so.
-        **_UNCHECKED_ONE,
+        # Segment 21F: the one address is checked, and the suite's
+        # directory does not know it.
+        **_NOT_FOUND_ONE,
     }
     assert events[0].detail["context"] == {"filename": "reviewers.csv"}
 

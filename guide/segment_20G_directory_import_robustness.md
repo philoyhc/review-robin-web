@@ -59,10 +59,14 @@ Rejected: *a background job for every import now.* There is no clock yet
 
 ## Semantics
 
-- **What counts as sign-in:** `SIGN_IN_KINDS` as `look_up_all` uses it
+- **What counts as sign-in:** ~~`SIGN_IN_KINDS` as `look_up_all` uses it
   (`unauthorized`, `forbidden`), plus no token at all, which renewing can
   also cure. With fake auth nothing is looked up, so nothing asks to
-  renew.
+  renew.~~ *At rung 3's read (author, 2026-11-03): `unauthorized` only.
+  Renewing cures neither no token (the token store off, or a sign-in
+  without Graph) nor `forbidden` (consent or scope), so those save as
+  any other failure does and the card names why. The local fake
+  directory looks addresses up; its `denied@` answers `forbidden`.*
 - **Append and merge** hold and ask the same way; nothing is written.
 - **Quick Setup** refuses the whole submit with the same ask (it is
   all-or-nothing already); **rehydrate**, which saves into a new session,
@@ -99,11 +103,37 @@ fake directory's `denied@example.edu` answers `forbidden`, so a local run
 can show the renew state.
 
 **Rung 2, the scaffold.** `operator/partials/_directory_renew.html`: a
-`banner-warning` inside the upload form on Reviewers, Reviewees and
-Observers, and above the slots on Quick Setup's card
+`banner-warning` on the Reviewers, Reviewees and Observers upload cards
+(inside the form then, in the banner stack since #3546), and above the slots on Quick Setup's card
 (`QuickSetupContext.directory_renew`), with "Nothing was saved", an inert
 *Renew sign-in and upload* (Primary) and a Dismiss that ends the hold.
 Relationships has no directory check. Nothing sets the flag yet.
+
+**Between rungs 2 and 3, the banner audit** (author, 2026-11-03: "make an
+audit of all the banners that appear in these upload cards"): every
+upload-card banner now stacks under the card's intro, problems, renew,
+group clear (#3546); the group-clear ask had touched the tick fieldset.
+
+**Rung 3, wired.** The roster routes, Observers, Quick Setup's submit-all
+(reason `views.DIRECTORY_SIGN_IN`, one of `_ASKS`) and rehydrate
+(`RehydrateSignInStopped`, the stash kept) refuse on a sign-in stop and
+hold; the button renews through `cordwareRenewGraph()` and submits the
+named form again, a failed renewal saying to sign out and in. M1's
+keep-the-account path is now reached by an outage or throttling only.
+The integration suite's default directory is `FakeDirectory`
+(`conftest.py`), so "no token" is something a test asks for; two tests'
+counts changed with it.
+
+**Rung 3's read** (rungs 1–3, cumulative since `1f2dba51`): no blocking
+defect. Its design finding went to the author, who ruled that only an
+expired token (`unauthorized`) holds; no token and `forbidden` save. The
+plan's "the card names the kind" had no rung: the import now records
+`directory_unchecked` and the directory-check line names it. Also fixed:
+Quick Setup's per-slot routes (which hold nothing) show a slot banner to
+reload rather than a renew button with nothing behind it; stale comments,
+the fixture's advice, and the specs (`csv_contracts.md` §3.1,
+`setup_pages.md`, `quick_setup_card_spec.md`, `rehydrate.md`, and
+`cordware/spec/identity.md`'s "What it does not cover").
 
 ## PR ladder
 
@@ -136,9 +166,8 @@ Relationships has no directory check. Nothing sets the flag yet.
 
 ## Open questions
 
-- **Renew automatically?** The button could renew and resubmit without
-  asking. Proposed: a button, so the operator sees why. Author, at the
-  scaffold.
+- ~~**Renew automatically?**~~ A button (author, 2026-11-03, at the
+  scaffold).
 - **The budget:** keep 120 s, or lower it once the bench reports? After
   rung 5. Author.
 - **The real timing — taken** (author, 2026-11-03, 19Z walkthrough
@@ -159,6 +188,9 @@ Relationships has no directory check. Nothing sets the flag yet.
 
 - `spec/setup_pages.md` — the Upload card's renew-and-upload state (rungs 2–3).
 - `spec/csv_contracts.md` — §3.1: a sign-in stop saves nothing and holds the file (rung 3).
+- `spec/quick_setup_card_spec.md` — the sign-in stop holds the submit and shows the renew banner (rung 3).
+- `spec/rehydrate.md` — a sign-in stop keeps the stash and asks to renew (rung 3).
+- `cordware/spec/identity.md` — an upload's `unauthorized` is now asked to renew (rung 3).
 - `cordware/spec/identity.md` — object ids stored normalized; matching without case folding (rung 4).
 - `docs/performance.md` — the directory check's bench figures (rung 5).
 - `guide/todo_master.md` — delete the segment's entry at close.

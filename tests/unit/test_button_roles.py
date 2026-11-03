@@ -99,12 +99,14 @@ def test_every_cancel_is_secondary() -> None:
 #: forms (a link, or a submit that ends a held file's hold), and so does
 #: the Relationships group-clear banner on the Upload card; the Danger
 #: Zone's has the link only. Quick Setup's third is the lapsed-hold
-#: banner's link, its fourth the kept-reviewees notice's (segment 20F). The directory
-#: renew banner's Dismiss ends the hold, a submit (segment 20G). The Reviewees Upload card's group-clear banner, for a
-#: merge (segment 19Z), has the same two forms, and so has the Reviewers
-#: card's, which a merge under symmetric review raises (segment 20B).
+#: banner's link, its fourth the kept-reviewees notice's (segment 20F).
+#: The Reviewees Upload card's group-clear banner, for a merge (segment
+#: 19Z), has the same two forms, and so has the Reviewers card's, which a
+#: merge under symmetric review raises (segment 20B). The directory renew
+#: banner has two too: a submit that ends the hold, or a link where there
+#: is no hold to end (rehydrate; segment 20G).
 PINNED_DISMISSES = {
-    "operator/partials/_directory_renew.html": 1,
+    "operator/partials/_directory_renew.html": 2,
     "operator/partials/_quick_setup_card.html": 4,
     "operator/partials/_upload_problems.html": 2,
     "operator/session_relationships.html": 3,

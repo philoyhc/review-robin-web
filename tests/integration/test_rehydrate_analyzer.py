@@ -7,6 +7,8 @@ clean case and the common failure modes.
 
 from __future__ import annotations
 
+from cordware.graph import FakeDirectory
+
 import csv
 import datetime as dt
 import io
@@ -262,7 +264,7 @@ def test_a_cell_past_the_csv_field_limit_blocks_rather_than_raising(
             f"{kind}.csv: A cell is longer than 131,072 characters."
         ]
         with pytest.raises(RehydrateError, match=f"{kind}.csv"):
-            rehydrate_session(db, files=files, user=user)
+            rehydrate_session(db, files=files, user=user, directory=FakeDirectory())
 
 
 def test_derive_name_suffixes_on_collision(db: Session) -> None:

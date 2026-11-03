@@ -320,11 +320,12 @@ Email Address Checker; directory lookups only.
     quietly and is stamped, so it is not repeated on every page. A
     redirect (an ended Easy Auth session) is not followed: the attempt
     reports failure.
-  - **What it does not cover:** a server-side lookup with no page load
-    in between, such as a roster upload posted from a page opened over
-    an hour ago and never reloaded. That upload's lookups can still come
-    back `unauthorized`; reloading the page before uploading renews the
-    token.
+  - **A server-side lookup with no page load in between**, such as a
+    roster upload posted from a page opened over an hour ago, can still
+    come back `unauthorized`. RRW's upload then saves nothing, holds the
+    file and offers *Renew sign-in and upload*, which calls
+    `cordwareRenewGraph()` and submits again (segment 20G;
+    `spec/setup_pages.md` "The Upload card's renew ask" in RRW).
 
 Proved from application code on 2026-10-31, at Cordware's first
 release (its private records): the Email Address Checker's lookups go

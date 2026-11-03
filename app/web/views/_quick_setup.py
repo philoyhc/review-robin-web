@@ -35,6 +35,11 @@ from app.services import session_lifecycle as lifecycle
 from ._upload_problems import problem_kinds, problems_sentence
 
 
+#: The refusal reason a submit whose directory check stopped on the
+#: sign-in carries (segment 20G): it holds the files and asks to renew.
+DIRECTORY_SIGN_IN = "directory_sign_in"
+
+
 @dataclass(frozen=True)
 class QuickSetupSlot:
     """One slot inside the Quick Setup card on Session Home.
@@ -175,7 +180,7 @@ class QuickSetupContext:
     directory_renew: bool = False
     """The last submit's directory check stopped on the sign-in, so
     nothing was saved and the files are held; the card asks to renew and
-    submit again (segment 20G, scaffold: nothing sets it yet)."""
+    submit again (segment 20G)."""
 
     kept_reviewees: bool = False
     """The last submit's Settings file asked for symmetric review, which
@@ -274,8 +279,15 @@ def build_quick_setup_context(
         else 0
     )
 
+    # Segment 20G: a submit whose directory check stopped on the sign-in
+    # names no slot's fault. The card shows the renew banner instead,
+    # above the slots, and the submit's files are held.
+    # Only with files held: a per-slot route holds nothing, so there the
+    # slot's banner says it instead (`_quick_setup_error_message`).
+    renew = error_reason == DIRECTORY_SIGN_IN and bool(held)
+
     def _error_for(slot_key: str) -> str | None:
-        if error_kind != slot_key:
+        if error_kind != slot_key or renew:
             return None
         return _quick_setup_error_message(
             slot_key,
@@ -285,7 +297,7 @@ def build_quick_setup_context(
         )
 
     def _reason_for(slot_key: str) -> str | None:
-        return error_reason if error_kind == slot_key else None
+        return error_reason if error_kind == slot_key and not renew else None
 
     def _details_for(slot_key: str) -> tuple[str, ...]:
         # The route's own lines, already capped; never read from a URL.
@@ -409,8 +421,11 @@ def build_quick_setup_context(
         # The deletion ask is reached only with the replace tick on, so it
         # renders ticked again; a missing-tick ask leaves it to the
         # operator (author, 2026-10-19).
-        confirm_replace_checked=_deletion_count > 0,
+        # So does the renew ask: the replace gate ran before the check,
+        # so a submit that reached it had the tick on where one was owed.
+        confirm_replace_checked=_deletion_count > 0 or (renew and bool(held)),
         held_lost=held_lost,
+        directory_renew=renew,
         kept_reviewees=kept_reviewees,
     )
 
@@ -557,6 +572,9 @@ def _quick_setup_error_message(
       ``count`` saved group answers (findings S1). No tick: the card is
       locked whenever answers exist, so the sentence sends the operator
       to the Relationships page, which asks.
+    - ``DIRECTORY_SIGN_IN`` — Graph refused an expired token on a
+      route that holds nothing (segment 20G; submit-all holds and shows
+      the renew banner instead): reload the page and submit again.
     - ``"refused"`` — the Create page's code for a staged file it
       refused (findings O7): its lines are not carried, so the sentence
       sends the operator back to Quick Setup to see them.
@@ -585,6 +603,11 @@ def _quick_setup_error_message(
             "Nothing was imported. Under symmetric review the reviewees are "
             "the reviewers: upload the Reviewers roster and leave the "
             "Reviewees slot empty."
+        )
+    if reason == DIRECTORY_SIGN_IN:
+        return (
+            "Nothing was saved. Your sign-in to the directory had expired. "
+            "Reload the page, then submit again."
         )
     if reason == "refused":
         return (

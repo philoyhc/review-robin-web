@@ -15,6 +15,8 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from cordware.graph import FakeDirectory
+
 from app.db.models import (
     Assignment,
     Instrument,
@@ -125,7 +127,7 @@ def test_rollback_leaves_no_partial_session(
     monkeypatch.setattr(responses_import, "load_responses", _boom)
 
     with pytest.raises(RuntimeError):
-        session_rehydrate.rehydrate_session(db, files=files, user=user)
+        session_rehydrate.rehydrate_session(db, files=files, user=user, directory=FakeDirectory())
 
     # The partially-built session was hard-deleted — zero rows survive.
     assert (
@@ -171,7 +173,7 @@ def test_short_settings_rows_are_named_with_the_other_settings_errors(
     )
 
     with pytest.raises(session_rehydrate.RehydrateError) as exc_info:
-        session_rehydrate.rehydrate_session(db, files=files, user=user)
+        session_rehydrate.rehydrate_session(db, files=files, user=user, directory=FakeDirectory())
 
     message = str(exc_info.value)
     assert message.startswith("settings.csv failed to apply: ")
@@ -191,7 +193,8 @@ def test_orchestrator_lands_draft_with_note(db: Session) -> None:
     files = _file_set(db, rs)
 
     outcome = session_rehydrate.rehydrate_session(
-        db, files=files, user=user, today=dt.date(2026, 8, 15)
+        db, files=files, user=user, today=dt.date(2026, 8, 15),
+        directory=FakeDirectory(),
     )
     rehyd = outcome.session
     assert rehyd.status == "draft"
@@ -238,7 +241,7 @@ def test_rehydrate_keeps_a_rule_set_no_instrument_uses(db: Session) -> None:
     rs, user = _seed(db)
     _legacy_rule_set(db, rs)
 
-    outcome = session_rehydrate.rehydrate_session(db, files=_file_set(db, rs), user=user)
+    outcome = session_rehydrate.rehydrate_session(db, files=_file_set(db, rs), user=user, directory=FakeDirectory())
 
     copied = db.execute(
         select(SessionRuleSet).where(SessionRuleSet.session_id == outcome.session.id)
@@ -255,7 +258,7 @@ def test_rehydrate_refuses_a_used_rule_set_the_card_cant_show(db: Session) -> No
     db.flush()
 
     with pytest.raises(session_rehydrate.RehydrateError) as exc_info:
-        session_rehydrate.rehydrate_session(db, files=_file_set(db, rs), user=user)
+        session_rehydrate.rehydrate_session(db, files=_file_set(db, rs), user=user, directory=FakeDirectory())
 
     assert "rule the card can't show" in str(exc_info.value)
 

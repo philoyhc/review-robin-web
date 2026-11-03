@@ -1037,6 +1037,26 @@ clear's tick, a Dismiss that ends a hold) names `upload-csv-form` with
 margin 16px between banners and below the last (author, 2026-11-03).
 `tests/unit/test_upload_card_banners.py` pins the order.
 
+### The Upload card's renew ask
+
+On Reviewers, Reviewees and Observers, an upload whose directory check
+Graph refused on an expired token (`spec/csv_contracts.md` §3.1) saves
+nothing and answers 400 with the card again: the file held (segment 19W), the mode
+ticks as they were, and a `banner-warning` in the banner stack
+(`partials/_directory_renew.html`, `data-directory-renew`): "Nothing was
+saved. Your sign-in to the directory had expired, so the addresses could
+not be checked." Its **Renew sign-in and upload** (Primary) renews the
+delegated Graph token (`cordwareRenewGraph()`, `base.html`) and, when
+that answers, submits the form again with the held file. A renewal that
+fails shows a line asking to sign out and in again. **Dismiss** ends the
+hold. It is a button rather than an automatic renew, so the operator
+sees why the upload stopped (author, 2026-11-03). No other failure asks:
+renewing cures none of them, so they save and the directory-check line
+says why. Quick Setup's card
+shows the same banner above its slots ("Renew sign-in and submit"), and
+the Rehydrate page shows it in its upload card ("Renew sign-in and
+rehydrate", Dismiss a link back to the page).
+
 ### The Upload card's directory-check line
 
 The Reviewers, Reviewees and Observers upload cards show one muted line
@@ -1057,9 +1077,13 @@ card.
   addresses weren't checked against the directory, so rows match by the
   address as written (except those that kept the account an earlier
   import matched, counted when any did), and that importing again tries
-  again. It names no
-  cause, because no directory access and failed lookups look the same in
-  the counts.
+  again.
+- **Why** (segment 20G): either form names the cause the import recorded
+  (`directory_unchecked`, `spec/csv_contracts.md` §3.1) in words
+  (`views._directory_check._REASONS`): no directory access on this
+  sign-in, the directory refusing this account, an expired sign-in, the
+  directory busy, the check out of time, or the directory not answering.
+  An import from before 20G recorded none, and its line names none.
 - **Nothing** for an import with no counts (one that ran no check) or
   with no address to check (anonymous reviewee identifiers only).
 

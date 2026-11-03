@@ -44,6 +44,14 @@
        attribute). #}
     <div class="card">
       <h2>Upload, validate, rehydrate</h2>
+      {# Segment 20G: the rosters' directory check stopped on the
+         sign-in; the set stays stashed, so the renew button resubmits
+         the commit form. #}
+      {% with directory_renew_form = "rehydrate-commit-form",
+              directory_renew_action = "rehydrate",
+              directory_renew_dismiss_href = url("/operator/sessions/rehydrate") %}
+        {% include "operator/partials/_directory_renew.html" %}
+      {% endwith %}
       <form id="rehydrate-validate-form" method="post"
             action="{{ url('/operator/sessions/rehydrate/validate') }}"
             enctype="multipart/form-data">

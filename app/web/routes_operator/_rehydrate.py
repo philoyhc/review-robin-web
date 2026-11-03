@@ -42,6 +42,7 @@ from app.services.extracts import stream_csv
 from app.services.extracts.responses_import import serialize_dropped_responses
 from app.services.session_rehydrate import (
     RehydrateError,
+    RehydrateSignInStopped,
     RehydrateReport,
     analyze_rehydrate_set,
     pack_file_set,
@@ -67,6 +68,7 @@ def _render(
     report: RehydrateReport | None = None,
     token: str | None = None,
     outcome: dict[str, object] | None = None,
+    directory_renew: bool = False,
 ) -> HTMLResponse:
     return _templates.TemplateResponse(
         request,
@@ -77,6 +79,9 @@ def _render(
             "report": report,
             "token": token,
             "outcome": outcome,
+            # Segment 20G: the rosters' check stopped on the sign-in; the
+            # set stays stashed and the card asks to renew and rehydrate.
+            "directory_renew": directory_renew,
         },
     )
 
@@ -234,6 +239,10 @@ def rehydrate_commit(
             correlation_id=request_correlation_id(),
             directory=directory_or_none(request),
         )
+    except RehydrateSignInStopped:
+        # Nothing was created. Renewing the sign-in cures this one, so
+        # the stash and its token stay for the renew button's resubmit.
+        return _render(request, user, report=report, token=token, directory_renew=True)
     except RehydrateError as exc:
         # The service has already rolled back and removed the partial
         # session (spec/rehydrate.md §7); the operator gets its message

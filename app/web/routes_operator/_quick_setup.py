@@ -478,7 +478,7 @@ class _UnitRefused(Exception):
 #: The refusals a tick answers, which hold the submit's files (segment
 #: 19W): the replace tick (or the response-loss ack it stands for), and
 #: the Settings file's deletion count (findings S4).
-_ASKS = frozenset({"needs_confirm", "deletes_instruments"})
+_ASKS = frozenset({"needs_confirm", "deletes_instruments", views.DIRECTORY_SIGN_IN})
 
 
 @dataclass(frozen=True)
@@ -694,6 +694,11 @@ async def _run_quick_setup_contents(
         directory,
         [[roster_address(row) for row in staged[i].rows] for i in rosters],
     )
+    # Segment 20G: a check the sign-in stopped saves nothing. The submit's
+    # files are held (`_ASKS`) and the card asks to renew and submit again.
+    for i, check in zip(rosters, checks, strict=True):
+        if check.stopped:
+            return _SlotRefusal(staged[i].kind, _SlotFailure(views.DIRECTORY_SIGN_IN))
     staged = list(staged)
     for i, check in zip(rosters, checks, strict=True):
         staged[i] = replace(staged[i], directory=check)

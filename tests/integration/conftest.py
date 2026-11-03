@@ -322,3 +322,19 @@ def committed_client(
         yield TestClient(app)
     finally:
         app.dependency_overrides.clear()
+
+
+@pytest.fixture(autouse=True)
+def _signed_in_to_the_directory(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Segment 20G: every request reaches the directory as a signed-in
+    operator does, through `cordware.graph.FakeDirectory`, so an upload's
+    addresses are checked. A test that wants no token, or a failing
+    directory, patches the route module's own `directory_or_none` (the
+    routes import the name: `_shared`, `_quick_setup`,
+    `_setup_observers`, `_rehydrate`), or makes `_shared.directory_for`
+    raise `GraphError("no_token")` to reach every caller at once."""
+    from cordware.graph import FakeDirectory
+
+    from app.web.routes_operator import _shared
+
+    monkeypatch.setattr(_shared, "directory_for", lambda request, *a, **k: FakeDirectory())

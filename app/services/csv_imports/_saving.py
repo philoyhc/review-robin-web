@@ -473,6 +473,13 @@ def _save(
                 **({"filename": filename} if filename else {}),
                 **({"mode": "append"} if append else {}),
                 **({"mode": "upsert"} if merge else {}),
+                # Segment 20G: why addresses went unchecked, for the
+                # card's directory-check line to name.
+                **(
+                    {"directory_unchecked": directory.unchecked_reason}
+                    if directory is not None and directory.unchecked_reason
+                    else {}
+                ),
             }
             or None
         ),

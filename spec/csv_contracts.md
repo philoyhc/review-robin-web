@@ -377,15 +377,31 @@ token (`cordware.graph.look_up_all`, `cordware/spec/identity.md`
   address as written. Any other outcome (`NOT_FOUND`, `AMBIGUOUS`,
   `ERROR`, no delegated token, a lookup unfinished at the time budget,
   or an identifier that is not an address) stores none of them, and the
-  row matches by mail. **On a replace**, an address the directory gave no
-  answer for (`ERROR`, no delegated token, a lookup unfinished at the
+  row matches by mail. **On a replace**, an address the directory gave
+  no answer for (`ERROR`, no delegated token, a lookup unfinished at the
   budget) keeps the account the replaced row at the same folded address
   was bound to, unless the directory bound another of the file's rows to
   that account. An answered `NOT_FOUND` or `AMBIGUOUS` stores none. The
   address column is never rewritten. Matching
   is `spec/audience_and_identity_model.md` "Identity match".
-- **No token** (or fake auth off on a local run) checks nothing and the
-  import proceeds.
+- **An expired token saves nothing** (segment 20G). When Graph refuses
+  the operator's token as expired (`unauthorized`;
+  `DirectoryCheck.stopped`), the import writes nothing: renewing the
+  sign-in cures it. It holds the file and asks the operator to renew and
+  upload again (`spec/setup_pages.md` "The Upload card's renew ask").
+  Quick Setup's submit-all holds every file of the submit and asks the
+  same way, and rehydrate keeps its stashed set and asks to renew and
+  rehydrate.
+- **Every other failure saves** (author, 2026-11-03), since renewing
+  cures none of them: no delegated token (the token store off, or a
+  sign-in that did not ask for Graph), `forbidden` (consent or scope),
+  throttling, an outage, the budget. The rows save as above, and the
+  `*.imported` event's `context` records why as `directory_unchecked`
+  (`no_token`, or Graph's failure kind;
+  `directory_accounts.unchecked_reason`), which the card's line names.
+  The local fake directory answers every address but
+  `cordware.graph.FAKE_FAILURES`'s, one of which (`denied@`) is
+  `forbidden`.
 - **Audit counts.** The `*.imported` event's `counts` gains, over the
   file's distinct addresses: `directory_by_mail`, `directory_by_upn`
   (`USE_PRIMARY` and `FOUND_NO_PRIMARY`), `directory_not_found`,
