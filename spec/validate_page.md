@@ -281,6 +281,7 @@ the signature for the loads a single rule still owns.
 | `reviewees.empty` | reviewees | error | Zero reviewee rows. |
 | `reviewees.duplicate_id` | reviewees | error | Same `email_or_identifier` appears on 2+ reviewee rows. |
 | `reviewees.duplicate_account` | reviewees | warning | As `reviewers.duplicate_account`, for reviewees (anchor `#reviewee-row-{id}`). |
+| `reviewees.mirror_drift` | reviewees | error | Under symmetric review only: a reviewer with no reviewee linked to it (`mirrors_reviewer_id`) or with several, a reviewee linked to no reviewer on the roster, or a linked pair differing on a mirrored field (`symmetric_review.MIRRORED_FIELDS`, compared as the sync writes them). One issue per row; a reviewer's is anchored at `#reviewer-row-{id}`. The fix is on Reviewers Setup: any reviewer save re-runs the sync. Reports nothing with the mode off. |
 | `reviewees.unreachable_for_results` | reviewees | warning | At least one active reviewee has a non-email `email_or_identifier` — those reviewees can never reach `/me/sessions/{id}/results` because identity matching requires an email-shaped identifier. One umbrella issue carrying the count; Fix link deep-links to the first unreachable reviewee's `#reviewee-row-{id}` on the Reviewees Setup page. Severity is warning (non-blocking), gate is `setup`. |
 | `observers.duplicate_email` | observers | error | Same email appears on 2+ observer rows. `uq_observer_session_email` refuses a second row on write — observers carry the only DB-level uniqueness of the three rosters — so this reports a row predating the constraint, or one written by a path around the services. |
 | `observers.duplicate_account` | observers | warning | As `reviewers.duplicate_account`, for observers (anchor `#observer-row-{id}`). |
@@ -456,7 +457,7 @@ the issue points at a specific row. Conventions:
 
 | Source | Anchor pattern | Set by check |
 |---|---|---|
-| `reviewers` (row-specific) | `#reviewer-row-{id}` | `_check_reviewers_duplicate_email` |
+| `reviewers` (row-specific) | `#reviewer-row-{id}` | `_check_reviewers_duplicate_email`; `_check_reviewees_mirror_drift` (a reviewer's issue) |
 | `reviewees` (row-specific) | `#reviewee-row-{id}` | `_check_reviewees_duplicate_id`; `_check_reviewees_unreachable_for_results` (the first unreachable reviewee) |
 | `observers` (row-specific) | `#observer-row-{id}` | `_check_observers_duplicate_email` |
 | any roster (row-specific) | that roster's row anchor | `_cross_roster_identity_issues`, via the three `*.cross_roster_identity` rules |

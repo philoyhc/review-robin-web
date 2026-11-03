@@ -789,7 +789,9 @@ are in `spec/setup_pages.md`, `spec/session_home.md` and
     whose reviewer self-fields and labels reach the mirror);
   - the reviewer tag-label save, a route helper (`roster_import._save_field_labels`).
 
-  A new writer of reviewers owes the call.
+  A new writer of reviewers owes the call. Validate's
+  `reviewees.mirror_drift` (error, `spec/validate_page.md` §3.2) reports a
+  roster left out of step, so a writer that skipped it cannot reach Prepare.
 - **Audit.** A flip on Session Home (`sessions.update_session`) is a
   `session.feature_toggled` event (`changes` envelope, with the other two
   toggles; `reason` slot). Quick Setup's flip ahead of a Settings file carries

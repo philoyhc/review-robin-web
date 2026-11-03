@@ -84,6 +84,12 @@ before rung 1 was `803ff768`, the base for the read at rung 3. L2's fix is
 `populate_existing` on the sync's reviewee query rather than an expire:
 it reloads the links for exactly the rows it reads.
 
+**Rung 2.** `reviewees.mirror_drift` in `validation/_rosters.py`,
+registered after `reviewees.duplicate_account`: 27 rules. Its fix link is
+Reviewers Setup, since a reviewer save re-runs the sync. One issue per
+row: a reviewer with none or several mirrors, a reviewee linked to no
+reviewer on the roster, a pair differing on a mirrored field.
+
 ## PR ladder
 
 1. **L2.** The expire in `sync_reviewees_from_reviewers`, with the SQLite

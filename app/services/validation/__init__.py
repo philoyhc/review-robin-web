@@ -58,6 +58,8 @@ from app.services.validation._rosters import (
     _DUPLICATE_ACCOUNT_WHY,
     _check_reviewees_unreachable_for_results,
     _check_email_template_no_help_contact,
+    _check_reviewees_mirror_drift,
+    _MIRROR_DRIFT_WHY,
 )
 from app.services.validation._assignments import (
     _check_assignments_no_included_pairs,
@@ -116,6 +118,8 @@ __all__ = [
     "_DUPLICATE_ACCOUNT_WHY",
     "_check_reviewees_unreachable_for_results",
     "_check_email_template_no_help_contact",
+    "_check_reviewees_mirror_drift",
+    "_MIRROR_DRIFT_WHY",
     "_check_assignments_no_included_pairs",
     "_active_assignment_presence",
     "_included_instrument_ids",
