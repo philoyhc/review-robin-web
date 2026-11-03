@@ -31,6 +31,8 @@ _spec.loader.exec_module(ci_lanes)
         "utilityapps/README.md",
         "tools/README.md",
         "cordware/spec/README.md",
+        "cordware/docs/cordware_mobile_to_desktop.md",
+        "cordware/docs/README.md",
         "CLAUDE.md",
         "README.md",
     ],
