@@ -1,326 +1,87 @@
 {
-  "name": "codebase_assessment_02nov",
+  "name": "codebase_assessment_03nov",
   "config": "file",
   "loc_convention": "physical lines, git-tracked files only",
   "git": {
-    "head": "2ffb0f42",
-    "since": "00501f2e",
-    "merge_commits": 276,
-    "non_merge_commits": 520,
+    "head": "cc364ed0",
+    "since": "2ffb0f42",
+    "merge_commits": 37,
+    "non_merge_commits": 80,
     "pr_numbers": [
-      3230,
-      3238,
-      3243,
-      3249,
-      3250,
-      3251,
-      3252,
-      3253,
-      3254,
-      3255,
-      3256,
-      3257,
-      3258,
-      3259,
-      3260,
-      3261,
-      3262,
-      3263,
-      3264,
-      3265,
-      3266,
-      3267,
-      3268,
-      3269,
-      3270,
-      3271,
-      3272,
-      3273,
-      3274,
-      3275,
-      3276,
-      3277,
-      3278,
-      3279,
-      3280,
-      3281,
-      3282,
-      3283,
-      3284,
-      3285,
-      3286,
-      3287,
-      3288,
-      3289,
-      3290,
-      3291,
-      3292,
-      3293,
-      3294,
-      3295,
-      3296,
-      3297,
-      3298,
-      3299,
-      3300,
-      3301,
-      3302,
-      3303,
-      3304,
-      3305,
-      3306,
-      3307,
-      3308,
-      3309,
-      3310,
-      3311,
-      3312,
-      3313,
-      3314,
-      3315,
-      3316,
-      3317,
-      3318,
-      3319,
-      3320,
-      3321,
-      3322,
-      3323,
-      3324,
-      3325,
-      3326,
-      3327,
-      3328,
-      3329,
-      3330,
-      3331,
-      3332,
-      3333,
-      3334,
-      3335,
-      3336,
-      3337,
-      3338,
-      3339,
-      3340,
-      3341,
-      3342,
-      3343,
-      3344,
-      3345,
-      3346,
-      3347,
-      3348,
-      3349,
-      3350,
-      3351,
-      3352,
-      3353,
-      3354,
-      3355,
-      3356,
-      3357,
-      3358,
-      3359,
-      3360,
-      3361,
-      3362,
-      3363,
-      3364,
-      3365,
-      3366,
-      3367,
-      3368,
-      3369,
-      3370,
-      3371,
-      3372,
-      3373,
-      3374,
-      3375,
-      3376,
-      3377,
-      3378,
-      3379,
-      3380,
-      3381,
-      3382,
-      3383,
-      3384,
-      3385,
-      3386,
-      3387,
-      3388,
-      3389,
-      3390,
-      3391,
-      3392,
-      3393,
-      3394,
-      3395,
-      3396,
-      3397,
-      3398,
-      3399,
-      3400,
-      3401,
-      3402,
-      3403,
-      3404,
-      3405,
-      3406,
-      3407,
-      3408,
-      3409,
-      3410,
-      3411,
-      3412,
-      3413,
-      3414,
-      3415,
-      3416,
-      3417,
-      3418,
-      3419,
-      3420,
-      3421,
-      3422,
-      3423,
-      3424,
-      3425,
-      3426,
-      3427,
-      3428,
-      3429,
-      3430,
-      3431,
-      3432,
-      3433,
-      3434,
-      3435,
-      3436,
-      3437,
-      3438,
-      3439,
-      3440,
-      3441,
-      3442,
-      3443,
-      3444,
-      3445,
-      3446,
-      3447,
-      3448,
-      3449,
-      3450,
-      3451,
-      3452,
-      3453,
-      3454,
-      3455,
-      3456,
-      3457,
-      3458,
-      3459,
-      3460,
-      3461,
-      3462,
-      3463,
-      3464,
-      3465,
-      3466,
-      3467,
-      3468,
-      3469,
-      3470,
-      3471,
-      3472,
-      3473,
-      3474,
-      3475,
-      3476,
-      3477,
-      3478,
-      3479,
-      3480,
-      3481,
-      3482,
-      3483,
-      3484,
-      3485,
-      3486,
-      3487,
-      3488,
-      3489,
-      3490,
-      3491,
-      3492,
-      3493,
-      3494,
-      3495,
-      3496,
-      3497,
-      3498,
-      3499,
-      3500,
-      3501,
-      3502,
-      3503,
-      3504,
-      3505,
-      3506,
-      3507,
-      3508,
-      3509,
-      3510,
-      3511,
-      3512,
-      3513,
-      3514,
-      3515,
-      3516,
-      3517,
-      3518,
-      3519,
-      3520,
-      3521
+      3522,
+      3523,
+      3524,
+      3525,
+      3526,
+      3527,
+      3528,
+      3529,
+      3530,
+      3531,
+      3532,
+      3533,
+      3534,
+      3535,
+      3536,
+      3537,
+      3538,
+      3539,
+      3540,
+      3541,
+      3542,
+      3543,
+      3544,
+      3545,
+      3546,
+      3547,
+      3548,
+      3549,
+      3550,
+      3551,
+      3556,
+      3557,
+      3558,
+      3559,
+      3560,
+      3561,
+      3562
     ],
-    "pr_range": "#3230\u2013#3521",
-    "first_date": "2026-10-22",
-    "last_date": "2026-11-02"
+    "pr_range": "#3522\u2013#3562",
+    "first_date": "2026-11-02",
+    "last_date": "2026-11-04"
   },
   "areas": {
     "docs": {
-      "files": 339,
-      "loc": 178445
+      "files": 345,
+      "loc": 180394
     },
     "production": {
-      "files": 230,
-      "loc": 80965
+      "files": 245,
+      "loc": 82960
     },
     "migrations": {
-      "files": 99,
-      "loc": 8120
+      "files": 101,
+      "loc": 8240
     },
     "templates": {
-      "files": 71,
-      "loc": 34777
+      "files": 73,
+      "loc": 35304
     },
     "cordware": {
-      "files": 20,
-      "loc": 4256
+      "files": 24,
+      "loc": 5254
     },
     "residentialapps": {
       "files": 151,
-      "loc": 20444
+      "loc": 20482
     },
     "tests": {
-      "files": 606,
-      "loc": 190792
+      "files": 623,
+      "loc": 193541
     },
     "tooling": {
       "files": 16,
-      "loc": 12385
+      "loc": 12465
     },
     "utilityapps": {
       "files": 32,
@@ -329,33 +90,8 @@
   },
   "biggest_production": [
     {
-      "path": "app/services/csv_imports.py",
-      "loc": 2186,
-      "area": "production"
-    },
-    {
-      "path": "app/web/routes_operator/_shared.py",
-      "loc": 1677,
-      "area": "production"
-    },
-    {
-      "path": "app/services/responses/_core.py",
-      "loc": 1605,
-      "area": "production"
-    },
-    {
-      "path": "app/services/validation.py",
-      "loc": 1506,
-      "area": "production"
-    },
-    {
       "path": "app/web/routes_operator/_quick_setup.py",
-      "loc": 1492,
-      "area": "production"
-    },
-    {
-      "path": "app/services/instruments/_band1.py",
-      "loc": 1395,
+      "loc": 1505,
       "area": "production"
     },
     {
@@ -376,6 +112,31 @@
     {
       "path": "app/web/routes_operator/_instruments.py",
       "loc": 1334,
+      "area": "production"
+    },
+    {
+      "path": "app/services/session_lifecycle.py",
+      "loc": 1243,
+      "area": "production"
+    },
+    {
+      "path": "app/services/users.py",
+      "loc": 1241,
+      "area": "production"
+    },
+    {
+      "path": "app/services/audit.py",
+      "loc": 1227,
+      "area": "production"
+    },
+    {
+      "path": "app/web/routes_operator/_operations.py",
+      "loc": 1196,
+      "area": "production"
+    },
+    {
+      "path": "app/services/responses/_core.py",
+      "loc": 1194,
       "area": "production"
     }
   ],
@@ -588,6 +349,10 @@
       236,
       "migrations"
     ],
+    "alembic/versions/b7d4e2a9c1f3_add_directory_lookups.py": [
+      61,
+      "migrations"
+    ],
     "alembic/versions/b7d4f2a9c153_instruments_session_seq.py": [
       69,
       "migrations"
@@ -768,6 +533,10 @@
       220,
       "migrations"
     ],
+    "alembic/versions/e4b2c7a91d36_normalize_directory_object_ids.py": [
+      59,
+      "migrations"
+    ],
     "alembic/versions/e5a3b1f8d2c4_segment_18j_pr_iii_b4_drop_response_type_id_fk.py": [
       71,
       "migrations"
@@ -849,7 +618,7 @@
       "production"
     ],
     "app/db/models/__init__.py": [
-      54,
+      56,
       "production"
     ],
     "app/db/models/assignment.py": [
@@ -862,6 +631,10 @@
     ],
     "app/db/models/data_shape.py": [
       118,
+      "production"
+    ],
+    "app/db/models/directory_lookup.py": [
+      59,
       "production"
     ],
     "app/db/models/email_outbox.py": [
@@ -1021,15 +794,31 @@
       "production"
     ],
     "app/services/audit.py": [
-      1219,
+      1227,
       "production"
     ],
     "app/services/collation.py": [
       164,
       "production"
     ],
-    "app/services/csv_imports.py": [
-      2186,
+    "app/services/csv_imports/__init__.py": [
+      167,
+      "production"
+    ],
+    "app/services/csv_imports/_identity.py": [
+      458,
+      "production"
+    ],
+    "app/services/csv_imports/_modes.py": [
+      302,
+      "production"
+    ],
+    "app/services/csv_imports/_parse.py": [
+      904,
+      "production"
+    ],
+    "app/services/csv_imports/_saving.py": [
+      717,
       "production"
     ],
     "app/services/data_shapes.py": [
@@ -1041,7 +830,15 @@
       "production"
     ],
     "app/services/directory_accounts.py": [
-      217,
+      344,
+      "production"
+    ],
+    "app/services/directory_lookups.py": [
+      205,
+      "production"
+    ],
+    "app/services/directory_recheck.py": [
+      181,
       "production"
     ],
     "app/services/email_identity.py": [
@@ -1125,7 +922,7 @@
       "production"
     ],
     "app/services/instruments/_band1.py": [
-      1395,
+      1020,
       "production"
     ],
     "app/services/instruments/_band2.py": [
@@ -1150,6 +947,10 @@
     ],
     "app/services/instruments/_pagination.py": [
       275,
+      "production"
+    ],
+    "app/services/instruments/_preview.py": [
+      391,
       "production"
     ],
     "app/services/instruments/_response_fields.py": [
@@ -1177,7 +978,7 @@
       "production"
     ],
     "app/services/observers.py": [
-      603,
+      640,
       "production"
     ],
     "app/services/operator_settings.py": [
@@ -1193,7 +994,7 @@
       "production"
     ],
     "app/services/participants.py": [
-      221,
+      223,
       "production"
     ],
     "app/services/permissions.py": [
@@ -1209,7 +1010,7 @@
       "production"
     ],
     "app/services/responses/__init__.py": [
-      190,
+      194,
       "production"
     ],
     "app/services/responses/_branch_rule.py": [
@@ -1221,7 +1022,7 @@
       "production"
     ],
     "app/services/responses/_core.py": [
-      1605,
+      1194,
       "production"
     ],
     "app/services/responses/_form_keys.py": [
@@ -1232,12 +1033,16 @@
       484,
       "production"
     ],
+    "app/services/responses/_rollups.py": [
+      433,
+      "production"
+    ],
     "app/services/reviewees.py": [
-      577,
+      614,
       "production"
     ],
     "app/services/reviewers.py": [
-      489,
+      563,
       "production"
     ],
     "app/services/roster_bulk.py": [
@@ -1369,7 +1174,7 @@
       "production"
     ],
     "app/services/session_rehydrate.py": [
-      783,
+      796,
       "production"
     ],
     "app/services/session_tags.py": [
@@ -1385,7 +1190,7 @@
       "production"
     ],
     "app/services/symmetric_review.py": [
-      225,
+      271,
       "production"
     ],
     "app/services/text.py": [
@@ -1397,11 +1202,31 @@
       "production"
     ],
     "app/services/users.py": [
-      1239,
+      1241,
       "production"
     ],
-    "app/services/validation.py": [
-      1506,
+    "app/services/validation/__init__.py": [
+      146,
+      "production"
+    ],
+    "app/services/validation/_assignments.py": [
+      252,
+      "production"
+    ],
+    "app/services/validation/_inputs.py": [
+      180,
+      "production"
+    ],
+    "app/services/validation/_instruments.py": [
+      275,
+      "production"
+    ],
+    "app/services/validation/_registry.py": [
+      483,
+      "production"
+    ],
+    "app/services/validation/_rosters.py": [
+      506,
       "production"
     ],
     "app/services/visibility_policies.py": [
@@ -1421,7 +1246,7 @@
       "production"
     ],
     "app/web/deps.py": [
-      577,
+      579,
       "production"
     ],
     "app/web/downloads.py": [
@@ -1438,6 +1263,10 @@
     ],
     "app/web/return_to.py": [
       161,
+      "production"
+    ],
+    "app/web/roster_import.py": [
+      687,
       "production"
     ],
     "app/web/routes_about.py": [
@@ -1465,7 +1294,7 @@
       "production"
     ],
     "app/web/routes_operator/_directory.py": [
-      34,
+      244,
       "production"
     ],
     "app/web/routes_operator/_extract_data.py": [
@@ -1501,15 +1330,15 @@
       "production"
     ],
     "app/web/routes_operator/_quick_setup.py": [
-      1492,
+      1505,
       "production"
     ],
     "app/web/routes_operator/_rehydrate.py": [
-      294,
+      303,
       "production"
     ],
     "app/web/routes_operator/_session_home.py": [
-      803,
+      805,
       "production"
     ],
     "app/web/routes_operator/_settings.py": [
@@ -1521,23 +1350,23 @@
       "production"
     ],
     "app/web/routes_operator/_setup_observers.py": [
-      1170,
+      1193,
       "production"
     ],
     "app/web/routes_operator/_setup_relationships.py": [
-      1174,
+      1176,
       "production"
     ],
     "app/web/routes_operator/_setup_reviewees.py": [
-      843,
+      848,
       "production"
     ],
     "app/web/routes_operator/_setup_reviewers.py": [
-      822,
+      827,
       "production"
     ],
     "app/web/routes_operator/_shared.py": [
-      1677,
+      1072,
       "production"
     ],
     "app/web/routes_operator/_sys_admin.py": [
@@ -1629,7 +1458,7 @@
       "templates"
     ],
     "app/web/templates/base.html": [
-      6761,
+      6789,
       "templates"
     ],
     "app/web/templates/error.html": [
@@ -1645,7 +1474,7 @@
       "templates"
     ],
     "app/web/templates/operator/instruments_index.html": [
-      7196,
+      7204,
       "templates"
     ],
     "app/web/templates/operator/operator_settings.html": [
@@ -1657,11 +1486,19 @@
       "templates"
     ],
     "app/web/templates/operator/partials/_directory_check.html": [
-      25,
+      49,
+      "templates"
+    ],
+    "app/web/templates/operator/partials/_directory_countdown.html": [
+      178,
       "templates"
     ],
     "app/web/templates/operator/partials/_directory_picker.html": [
       185,
+      "templates"
+    ],
+    "app/web/templates/operator/partials/_directory_renew.html": [
+      67,
       "templates"
     ],
     "app/web/templates/operator/partials/_email_preview_region.html": [
@@ -1705,7 +1542,7 @@
       "templates"
     ],
     "app/web/templates/operator/partials/_quick_setup_card.html": [
-      344,
+      369,
       "templates"
     ],
     "app/web/templates/operator/partials/_roster_address.html": [
@@ -1785,15 +1622,15 @@
       "templates"
     ],
     "app/web/templates/operator/session_observers.html": [
-      1472,
+      1507,
       "templates"
     ],
     "app/web/templates/operator/session_rehydrate.html": [
-      163,
+      171,
       "templates"
     ],
     "app/web/templates/operator/session_relationships.html": [
-      1326,
+      1329,
       "templates"
     ],
     "app/web/templates/operator/session_responses.html": [
@@ -1805,11 +1642,11 @@
       "templates"
     ],
     "app/web/templates/operator/session_reviewees.html": [
-      1383,
+      1417,
       "templates"
     ],
     "app/web/templates/operator/session_reviewers.html": [
-      1499,
+      1533,
       "templates"
     ],
     "app/web/templates/operator/session_setupinvite.html": [
@@ -1829,7 +1666,7 @@
       "templates"
     ],
     "app/web/templates/operator/sys_admin_session_audit_log.html": [
-      224,
+      307,
       "templates"
     ],
     "app/web/templates/operator/sys_admin_session_outbox.html": [
@@ -1893,7 +1730,7 @@
       "production"
     ],
     "app/web/views/__init__.py": [
-      501,
+      506,
       "production"
     ],
     "app/web/views/_accounts.py": [
@@ -1909,7 +1746,7 @@
       "production"
     ],
     "app/web/views/_directory_check.py": [
-      77,
+      129,
       "production"
     ],
     "app/web/views/_extract_data.py": [
@@ -1969,7 +1806,7 @@
       "production"
     ],
     "app/web/views/_quick_setup.py": [
-      682,
+      733,
       "production"
     ],
     "app/web/views/_refused_write.py": [
@@ -2013,7 +1850,7 @@
       "production"
     ],
     "app/web/views/_validate.py": [
-      441,
+      442,
       "production"
     ],
     "app/web/views/_workflow_card.py": [
@@ -2030,6 +1867,22 @@
     ],
     "cordware/__init__.py": [
       6,
+      "cordware"
+    ],
+    "cordware/docs/README.md": [
+      11,
+      "cordware"
+    ],
+    "cordware/docs/cordware_interoperability_agent_handoff_v0.3.md": [
+      194,
+      "cordware"
+    ],
+    "cordware/docs/cordware_interoperability_consolidated_spec_v0.3.md": [
+      436,
+      "cordware"
+    ],
+    "cordware/docs/cordware_mobile_to_desktop.md": [
+      338,
       "cordware"
     ],
     "cordware/graph.py": [
@@ -2057,7 +1910,7 @@
       "cordware"
     ],
     "cordware/spec/identity.md": [
-      337,
+      356,
       "cordware"
     ],
     "cordware/tests/__init__.py": [
@@ -2109,7 +1962,7 @@
       "cordware"
     ],
     "docs/README.md": [
-      44,
+      47,
       "docs"
     ],
     "docs/archive/cordware_implementation_sequence.md": [
@@ -2164,10 +2017,6 @@
       215,
       "docs"
     ],
-    "docs/cordware_mobile_to_desktop.md": [
-      338,
-      "docs"
-    ],
     "docs/database.md": [
       253,
       "docs"
@@ -2189,11 +2038,11 @@
       "docs"
     ],
     "docs/operations_runbook.md": [
-      179,
+      188,
       "docs"
     ],
     "docs/performance.md": [
-      699,
+      729,
       "docs"
     ],
     "docs/sample_data/basic_cohort/README.md": [
@@ -2217,7 +2066,7 @@
       "docs"
     ],
     "docs/security_posture.md": [
-      551,
+      552,
       "docs"
     ],
     "docs/setup_codespaces.md": [
@@ -2229,7 +2078,7 @@
       "docs"
     ],
     "guide/README.md": [
-      72,
+      69,
       "docs"
     ],
     "guide/archive/18R_testing.md": [
@@ -2237,7 +2086,7 @@
       "docs"
     ],
     "guide/archive/README.md": [
-      266,
+      276,
       "docs"
     ],
     "guide/archive/admin_pages_refine.md": [
@@ -2332,6 +2181,10 @@
       269,
       "docs"
     ],
+    "guide/archive/codebase_assessment_22oct.md": [
+      496,
+      "docs"
+    ],
     "guide/archive/codebase_assessment_22sep.md": [
       447,
       "docs"
@@ -2418,6 +2271,10 @@
     ],
     "guide/archive/findings_2026-10-22_corpus.md": [
       239,
+      "docs"
+    ],
+    "guide/archive/findings_2026-11-02_assessment.md": [
+      89,
       "docs"
     ],
     "guide/archive/functional_spec.md": [
@@ -2988,6 +2845,10 @@
       865,
       "docs"
     ],
+    "guide/archive/segment_19Z_roster_append.md": [
+      205,
+      "docs"
+    ],
     "guide/archive/segment_20A_operator_polish_and_documentation.md": [
       216,
       "docs"
@@ -2996,8 +2857,32 @@
       175,
       "docs"
     ],
+    "guide/archive/segment_20C_refinements.md": [
+      165,
+      "docs"
+    ],
     "guide/archive/segment_20D_header_chrome.md": [
       110,
+      "docs"
+    ],
+    "guide/archive/segment_20E_file_splits.md": [
+      197,
+      "docs"
+    ],
+    "guide/archive/segment_20F_symmetric_invariant.md": [
+      177,
+      "docs"
+    ],
+    "guide/archive/segment_20G_directory_import_robustness.md": [
+      200,
+      "docs"
+    ],
+    "guide/archive/segment_20H_walkthrough_19Z_followups.md": [
+      337,
+      "docs"
+    ],
+    "guide/archive/segment_20I_directory_check_followups.md": [
+      148,
       "docs"
     ],
     "guide/archive/segment_21A_cordware_foundations.md": [
@@ -3124,6 +3009,10 @@
       181,
       "docs"
     ],
+    "guide/archive/walkthrough_19Z_rosters.md": [
+      154,
+      "docs"
+    ],
     "guide/archive/warnings_updates.md": [
       195,
       "docs"
@@ -3144,8 +3033,8 @@
       14,
       "docs"
     ],
-    "guide/codebase_assessment_22oct.md": [
-      496,
+    "guide/codebase_assessment_02nov.md": [
+      605,
       "docs"
     ],
     "guide/codex_assessment_30sep.md": [
@@ -3153,7 +3042,7 @@
       "docs"
     ],
     "guide/deferred_consolidated.md": [
-      1818,
+      1861,
       "docs"
     ],
     "guide/email_and_scheduling.md": [
@@ -3192,14 +3081,6 @@
       351,
       "docs"
     ],
-    "guide/segment_19Z_roster_append.md": [
-      224,
-      "docs"
-    ],
-    "guide/segment_20C_refinements.md": [
-      165,
-      "docs"
-    ],
     "guide/segment_22C_pyright.md": [
       195,
       "docs"
@@ -3221,11 +3102,7 @@
       "docs"
     ],
     "guide/todo_master.md": [
-      164,
-      "docs"
-    ],
-    "guide/walkthrough_19Z_rosters.md": [
-      145,
+      139,
       "docs"
     ],
     "new_project_practices_setup.md": [
@@ -3753,7 +3630,7 @@
       "residentialapps"
     ],
     "residentialapps/tests/test_preview_gate.py": [
-      211,
+      249,
       "residentialapps"
     ],
     "residentialapps/tests/test_sample_data.py": [
@@ -3849,7 +3726,7 @@
       "docs"
     ],
     "spec/architecture.md": [
-      1191,
+      1241,
       "docs"
     ],
     "spec/archive/README.md": [
@@ -3889,11 +3766,11 @@
       "docs"
     ],
     "spec/assignments.md": [
-      1523,
+      1537,
       "docs"
     ],
     "spec/audience_and_identity_model.md": [
-      552,
+      559,
       "docs"
     ],
     "spec/color_tokens.md": [
@@ -3901,7 +3778,7 @@
       "docs"
     ],
     "spec/csv_contracts.md": [
-      1256,
+      1370,
       "docs"
     ],
     "spec/email_infra_options.md": [
@@ -3913,7 +3790,7 @@
       "docs"
     ],
     "spec/extract_data.md": [
-      1271,
+      1273,
       "docs"
     ],
     "spec/instruments.md": [
@@ -3925,15 +3802,15 @@
       "docs"
     ],
     "spec/operations_pages.md": [
-      704,
+      706,
       "docs"
     ],
     "spec/operator_button_audit.md": [
-      1003,
+      1018,
       "docs"
     ],
     "spec/operator_ui_concept.md": [
-      534,
+      536,
       "docs"
     ],
     "spec/participant_model.md": [
@@ -3941,15 +3818,15 @@
       "docs"
     ],
     "spec/permissions.md": [
-      415,
+      426,
       "docs"
     ],
     "spec/quick_setup_card_spec.md": [
-      177,
+      180,
       "docs"
     ],
     "spec/rehydrate.md": [
-      643,
+      648,
       "docs"
     ],
     "spec/reviewer-surface.md": [
@@ -3969,11 +3846,11 @@
       "docs"
     ],
     "spec/session_home.md": [
-      671,
+      676,
       "docs"
     ],
     "spec/session_owners.md": [
-      251,
+      254,
       "docs"
     ],
     "spec/sessions_overview.md": [
@@ -3981,11 +3858,11 @@
       "docs"
     ],
     "spec/settings_inventory.md": [
-      670,
+      671,
       "docs"
     ],
     "spec/setup_pages.md": [
-      1972,
+      2191,
       "docs"
     ],
     "spec/sort_by_reviewee.md": [
@@ -3997,11 +3874,11 @@
       "docs"
     ],
     "spec/ui_elements.md": [
-      1311,
+      1332,
       "docs"
     ],
     "spec/validate_page.md": [
-      563,
+      565,
       "docs"
     ],
     "spec/visibility_policy.md": [
@@ -4019,6 +3896,10 @@
     "spec/workflow_card.md": [
       1002,
       "docs"
+    ],
+    "tests/_mirror_guard.py": [
+      67,
+      "tests"
     ],
     "tests/_mounted.py": [
       176,
@@ -4064,6 +3945,10 @@
       124,
       "tests"
     ],
+    "tests/browser/test_audit_log_event_filter.py": [
+      85,
+      "tests"
+    ],
     "tests/browser/test_band1_filled_empty.py": [
       465,
       "tests"
@@ -4081,7 +3966,7 @@
       "tests"
     ],
     "tests/browser/test_builder_card.py": [
-      194,
+      210,
       "tests"
     ],
     "tests/browser/test_builder_rows.py": [
@@ -4240,12 +4125,20 @@
       93,
       "tests"
     ],
+    "tests/browser/test_upload_banner_spacing.py": [
+      86,
+      "tests"
+    ],
+    "tests/browser/test_upload_directory_countdown.py": [
+      228,
+      "tests"
+    ],
     "tests/browser/test_vp_identity_chip.py": [
       122,
       "tests"
     ],
     "tests/conftest.py": [
-      195,
+      205,
       "tests"
     ],
     "tests/db/__init__.py": [
@@ -4270,6 +4163,10 @@
     ],
     "tests/db/test_19y_instruments_intro_layout.py": [
       73,
+      "tests"
+    ],
+    "tests/db/test_20g_normalize_directory_object_ids.py": [
+      95,
       "tests"
     ],
     "tests/db/test_a17_normalize_view_policy_cells.py": [
@@ -4405,7 +4302,7 @@
       "tests"
     ],
     "tests/integration/conftest.py": [
-      292,
+      340,
       "tests"
     ],
     "tests/integration/test_account_address_pill.py": [
@@ -4592,12 +4489,28 @@
       119,
       "tests"
     ],
+    "tests/integration/test_directory_countdown.py": [
+      258,
+      "tests"
+    ],
     "tests/integration/test_directory_matching.py": [
       276,
       "tests"
     ],
+    "tests/integration/test_directory_object_id_index.py": [
+      55,
+      "tests"
+    ],
+    "tests/integration/test_directory_recheck.py": [
+      483,
+      "tests"
+    ],
+    "tests/integration/test_directory_renew_banner.py": [
+      71,
+      "tests"
+    ],
     "tests/integration/test_directory_rosters.py": [
-      296,
+      548,
       "tests"
     ],
     "tests/integration/test_display_field_routes.py": [
@@ -4729,7 +4642,7 @@
       "tests"
     ],
     "tests/integration/test_import_routes.py": [
-      856,
+      858,
       "tests"
     ],
     "tests/integration/test_inactive_roster_pairs.py": [
@@ -5032,6 +4945,10 @@
       546,
       "tests"
     ],
+    "tests/integration/test_quick_setup_directory_renew.py": [
+      75,
+      "tests"
+    ],
     "tests/integration/test_quick_setup_has_responses.py": [
       177,
       "tests"
@@ -5073,7 +4990,7 @@
       "tests"
     ],
     "tests/integration/test_readiness_report_cost.py": [
-      376,
+      382,
       "tests"
     ],
     "tests/integration/test_reconcile_cache_wiring.py": [
@@ -5085,11 +5002,11 @@
       "tests"
     ],
     "tests/integration/test_rehydrate_analyzer.py": [
-      281,
+      283,
       "tests"
     ],
     "tests/integration/test_rehydrate_commit_route.py": [
-      446,
+      485,
       "tests"
     ],
     "tests/integration/test_rehydrate_gate.py": [
@@ -5097,7 +5014,7 @@
       "tests"
     ],
     "tests/integration/test_rehydrate_orchestrator.py": [
-      280,
+      283,
       "tests"
     ],
     "tests/integration/test_rehydrate_scaffold.py": [
@@ -5121,7 +5038,7 @@
       "tests"
     ],
     "tests/integration/test_relationship_group_clear_asks_first.py": [
-      606,
+      622,
       "tests"
     ],
     "tests/integration/test_relationship_self_review_recompute.py": [
@@ -5333,7 +5250,7 @@
       "tests"
     ],
     "tests/integration/test_roster_append_routes.py": [
-      263,
+      266,
       "tests"
     ],
     "tests/integration/test_roster_delete_outbox_unlink.py": [
@@ -5353,7 +5270,7 @@
       "tests"
     ],
     "tests/integration/test_roster_merge.py": [
-      261,
+      291,
       "tests"
     ],
     "tests/integration/test_roster_merge_routes.py": [
@@ -5648,20 +5565,24 @@
       182,
       "tests"
     ],
+    "tests/integration/test_single_row_same_account.py": [
+      152,
+      "tests"
+    ],
     "tests/integration/test_status_pill_parity.py": [
       229,
       "tests"
     ],
     "tests/integration/test_symmetric_review_imports.py": [
-      344,
+      470,
       "tests"
     ],
     "tests/integration/test_symmetric_review_mirror.py": [
-      369,
+      418,
       "tests"
     ],
     "tests/integration/test_symmetric_review_setting.py": [
-      175,
+      199,
       "tests"
     ],
     "tests/integration/test_sys_admin_accounts_batch.py": [
@@ -5681,7 +5602,7 @@
       "tests"
     ],
     "tests/integration/test_sys_admin_audit_log.py": [
-      829,
+      832,
       "tests"
     ],
     "tests/integration/test_sys_admin_chrome.py": [
@@ -5745,7 +5666,7 @@
       "tests"
     ],
     "tests/integration/test_upload_paths_keep_friendly_labels.py": [
-      571,
+      575,
       "tests"
     ],
     "tests/integration/test_upload_problems.py": [
@@ -5786,6 +5707,10 @@
     ],
     "tests/integration/test_validation_issue_parity.py": [
       179,
+      "tests"
+    ],
+    "tests/integration/test_validation_mirror_drift.py": [
+      194,
       "tests"
     ],
     "tests/integration/test_validation_routes.py": [
@@ -5841,6 +5766,10 @@
       "tests"
     ],
     "tests/unit/test_account_overview_pills.py": [
+      31,
+      "tests"
+    ],
+    "tests/unit/test_acknowledged_loss.py": [
       31,
       "tests"
     ],
@@ -5913,7 +5842,7 @@
       "tests"
     ],
     "tests/unit/test_button_roles.py": [
-      135,
+      139,
       "tests"
     ],
     "tests/unit/test_by_instrument_cohort_filter.py": [
@@ -5925,7 +5854,7 @@
       "tests"
     ],
     "tests/unit/test_ci_lanes.py": [
-      228,
+      231,
       "tests"
     ],
     "tests/unit/test_classify_self_review.py": [
@@ -6000,6 +5929,14 @@
       226,
       "tests"
     ],
+    "tests/unit/test_directory_object_id_normalized.py": [
+      26,
+      "tests"
+    ],
+    "tests/unit/test_directory_sign_in_stop.py": [
+      63,
+      "tests"
+    ],
     "tests/unit/test_discrete_step_values.py": [
       159,
       "tests"
@@ -6025,7 +5962,7 @@
       "tests"
     ],
     "tests/unit/test_email_identity_fold.py": [
-      442,
+      447,
       "tests"
     ],
     "tests/unit/test_email_preview_tabs.py": [
@@ -6078,6 +6015,10 @@
     ],
     "tests/unit/test_guide_indexes.py": [
       164,
+      "tests"
+    ],
+    "tests/unit/test_import_order.py": [
+      44,
       "tests"
     ],
     "tests/unit/test_incoming_identity.py": [
@@ -6416,6 +6357,10 @@
       27,
       "tests"
     ],
+    "tests/unit/test_upload_card_banners.py": [
+      91,
+      "tests"
+    ],
     "tests/unit/test_url_leaks.py": [
       205,
       "tests"
@@ -6453,11 +6398,11 @@
       "tooling"
     ],
     "tools/bench_roster_scale.py": [
-      732,
+      782,
       "tooling"
     ],
     "tools/ci_lanes.py": [
-      158,
+      160,
       "tooling"
     ],
     "tools/close_check.py": [
@@ -6505,7 +6450,7 @@
       "tooling"
     ],
     "tools/theme_customizer.html": [
-      6668,
+      6696,
       "tooling"
     ],
     "utilityapps/README.md": [
@@ -6637,5 +6582,5 @@
       "utilityapps"
     ]
   },
-  "prior": "codebase_assessment_22oct"
+  "prior": "codebase_assessment_02nov"
 }
