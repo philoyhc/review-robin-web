@@ -14,7 +14,7 @@ A row saved without a directory account (not found, ambiguous, or not checked be
 
 ### Decision
 
-**A "Check N unmatched again" button in the Upload card's actions row, left of Upload**, on Reviewers, Reviewees and Observers, with the **directory-check line and the countdown moved below the actions** (author, 2026-11-03). The card then reads in the order it is used: banners (stop and decide), the file and the ticks, the buttons, then what the last check found. The button is Secondary, as Upload is, and names the saved rows it acts on so it does not read as "retry the upload"; it ignores any chosen file and the ticks.
+**A "Recheck N unmatched" button in the Upload card's actions row, left of Upload**, on Reviewers, Reviewees and Observers, with the **directory-check line and the countdown moved below the actions** (author, 2026-11-03). The card then reads in the order it is used: banners (stop and decide), the file and the ticks, the buttons, then what the last check found. The button is Secondary, as Upload is, and names the saved rows it acts on so it does not read as "retry the upload"; it ignores any chosen file and the ticks.
 
 This **reverses 20G's placement** of the line ("under the card's banners and above the form", `spec/setup_pages.md`), back below the button as it sat before 20G; the banners stay in their stack under the intro.
 
@@ -26,8 +26,8 @@ Rejected: *the button beside the line, above the form* (this plan's first draft)
 
 ### Semantics
 
-- **Shown** when the roster has at least one unbound row with an address, labeled with the count ("Check 251 unmatched again"); absent otherwise, and the actions row is Upload alone.
-- **States:** wherever the single-row edit is allowed, since binding is what an edit's address change does. Open question for activated sessions.
+- **Shown** when the roster has at least one active unbound row with an address, labeled with the count, "Recheck 251 unmatched" (author, 2026-11-03); absent otherwise, and the actions row is Upload alone.
+- **States:** wherever the single-row edit is allowed, since binding is what an edit's address change does; activated sessions included (author, 2026-11-03: binding admits by account what the address already admits).
 - **A row that now resolves to an account another row holds** stays unbound, and the line counts it; 20H Item 1's rule, applied to a recheck.
 - **An expired sign-in** takes the renew banner (20G), as an upload does.
 
@@ -48,10 +48,13 @@ Taken 2026-11-03 at `215106150`: the directory line's partial (`app/web/template
 - `## Status` compacted to intended vs done; answered open questions collapsed
 - `guide/todo_master.md` 20I entry updated to drop this item; the entry itself goes only when the segment closes
 
+### Status
+
+- **Rung 1 (scaffold)**: the button, inert (`type="button"`, `data-directory-recheck`), left of Upload on the three rosters, counted by `views.unmatched_count`; the directory line and countdown below the form. Next: rung 2.
+
 ### Open questions
 
-- In an activated session, may the operator bind rows? Binding admits a person by account at sign-in, which the address already does; proposed yes. Author, at rung 1.
-- The label's exact words ("Check 251 unmatched again" proposed). Author, at the scaffold.
+None; both answered at rung 1 (activated sessions may bind; the label).
 
 ### Doc impact
 

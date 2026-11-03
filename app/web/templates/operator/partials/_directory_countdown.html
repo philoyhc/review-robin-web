@@ -1,5 +1,6 @@
 {# The upload's directory check, counted down from the page (segment
-   20H Item 6). Sits under the last import's directory line; the card
+   20H Item 6). Sits under the last import's directory line, below the
+   card's actions (20I Item 1); the card
    passes `directory_countdown_roster` (reviewers / reviewees /
    observers). Hidden until the script starts the count.
 
@@ -19,7 +20,8 @@
   Directory check: <span data-directory-countdown-left>0</span> more to go.
 </p>
 <script>
-  // The line sits above the form, so the script waits for the page.
+  // The script waits for the page, so it finds the form wherever the
+  // card puts the line (above it until 20I, below it since).
   document.addEventListener('DOMContentLoaded', function () {
     var line = document.querySelector('[data-directory-countdown]');
     var form = document.getElementById('upload-csv-form');

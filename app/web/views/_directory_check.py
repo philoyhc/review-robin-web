@@ -15,7 +15,8 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import AuditEvent, ReviewSession
+from app.db.models import AuditEvent, Observer, Reviewee, Reviewer, ReviewSession
+from app.services.email_identity import looks_like_email
 
 _COUNT_KEYS = (
     "directory_by_mail",
@@ -84,6 +85,33 @@ def last_directory_check(
         kept=counts.get("directory_kept", 0),
         reason=_reason_text(((event.detail or {}).get("context") or {}).get("directory_unchecked")),
     )
+
+
+#: Each roster's model and its address column, for :func:`unmatched_count`.
+_ROSTERS = {
+    "reviewers": (Reviewer, Reviewer.email),
+    "reviewees": (Reviewee, Reviewee.email_or_identifier),
+    "observers": (Observer, Observer.email),
+}
+
+
+def unmatched_count(db: Session, review_session: ReviewSession, kind: str) -> int:
+    """How many of the ``kind`` roster's active rows have an address and
+    no directory account: what the Upload card's recheck button names
+    (segment 20I Item 1), whatever import or form added them. Reviewees
+    with an anonymous identifier have no address to look up."""
+    roster = _ROSTERS.get(kind)
+    if roster is None:
+        return 0
+    model, address = roster
+    addresses = db.execute(
+        select(address).where(
+            model.session_id == review_session.id,
+            model.status == "active",
+            model.directory_object_id.is_(None),
+        )
+    ).scalars()
+    return sum(1 for value in addresses if looks_like_email(value))
 
 
 #: The card's words for why addresses went unchecked (segment 20G), by

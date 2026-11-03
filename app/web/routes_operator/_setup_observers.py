@@ -326,6 +326,7 @@ def _render_observers_page(
             ),
             "existing_count": existing_count,
             "directory_check": views.last_directory_check(db, review_session, "observers"),
+            "directory_unmatched": views.unmatched_count(db, review_session, "observers"),
             "upload_problems": views.upload_problems(
                 "observers",
                 issues,

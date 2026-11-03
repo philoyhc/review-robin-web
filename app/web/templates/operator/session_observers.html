@@ -397,10 +397,6 @@
             {% with directory_renew_dismiss_url = observers_base_url ~ "/import/dismiss", directory_renew_form = "upload-csv-form" %}
               {% include "operator/partials/_directory_renew.html" %}
             {% endwith %}
-            {% include "operator/partials/_directory_check.html" %}
-            {% with directory_countdown_roster = "observers" %}
-              {% include "operator/partials/_directory_countdown.html" %}
-            {% endwith %}
 
             <form method="post" id="upload-csv-form"
                   action="{{ url(observers_base_url) }}/import"
@@ -466,6 +462,13 @@
                  a class over an inline style. Same answer Reviewers
                  gave at 19P.1 rung 3c. #}
               <div class="unlock-col-actions">
+                {# 20I Item 1: rechecks the saved rows with an address and no
+                   directory account, whatever added them; it ignores the file
+                   and the ticks, so it is a plain button, not a submit. Inert
+                   until the recheck is wired (rung 2). #}
+                {% if directory_unmatched %}
+                  <button class="btn secondary" type="button" data-directory-recheck>Recheck {{ directory_unmatched }} unmatched</button>
+                {% endif %}
                 {% if existing_count and existing_count > 0 %}
                   <button class="btn secondary" type="submit"
                           data-delete-btn="replace-observers"
@@ -475,6 +478,12 @@
                 {% endif %}
               </div>
             </form>
+            {# Under the actions (20I Item 1, reversing 20G): what the last
+               check found, then the upload's countdown. #}
+            {% include "operator/partials/_directory_check.html" %}
+            {% with directory_countdown_roster = "observers" %}
+              {% include "operator/partials/_directory_countdown.html" %}
+            {% endwith %}
           </section>
         </div>
 
