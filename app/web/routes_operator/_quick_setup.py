@@ -1095,16 +1095,19 @@ def _slot_response(
     refusal: _SlotRefusal | None,
     held: dict[str, str] | None = None,
     held_token: str | None = None,
+    notice: str | None = None,
 ) -> HTMLResponse | RedirectResponse:
-    """Back to the slot on Session Home on success; on a refusal, Session
+    """Back to the slot on Session Home on success, with ``notice`` as
+    its ``quick_setup_notice`` code when there is one; on a refusal, Session
     Home rendered again at 422 with the slot's banner and the file's own
     lines, which a URL therefore never carries (findings O7). ``held``
     names the files an ask held, by slot, under ``held_token``
     (segment 19W)."""
 
     if refusal is None:
+        query = f"?quick_setup_notice={notice}" if notice else ""
         return urls.redirect(request,
-            url=f"/operator/sessions/{review_session.public_id}#quick-setup-{kind}",
+            url=f"/operator/sessions/{review_session.public_id}{query}#quick-setup-{kind}",
             status_code=status.HTTP_303_SEE_OTHER,
         )
     return render_session_home(
@@ -1125,6 +1128,18 @@ def _slot_response(
         ),
         http_status=status.HTTP_422_UNPROCESSABLE_ENTITY,
     )
+
+
+def _kept_reviewees(review_session: ReviewSession, contents: dict[str, bytes]) -> bool:
+    """Whether a saved submit's Settings file asked for symmetric review,
+    which stayed off beside the session's roster rows, while it brought
+    no Reviewees file: a symmetric session's setup bundle into a session
+    with rows, which leaves the reviewees as they were (segment 20F,
+    findings register L3). The operator is told so."""
+    if "settings" not in contents or "reviewees" in contents:
+        return False
+    asked = session_config_io.settings_symmetric_review(contents["settings"])
+    return asked is True and not review_session.symmetric_review
 
 
 async def _single_slot(
@@ -1369,6 +1384,11 @@ async def quick_setup_submit_all(
             refusal=refusal,
             held=held_names,
             held_token=token,
+            notice=(
+                "kept_reviewees"
+                if refusal is None and _kept_reviewees(review_session, contents)
+                else None
+            ),
         )
     return urls.redirect(request,
         url=f"/operator/sessions/{review_session.public_id}",

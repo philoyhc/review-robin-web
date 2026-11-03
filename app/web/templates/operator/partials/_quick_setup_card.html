@@ -205,6 +205,16 @@
         </div>
       </div>
     {% endif %}
+    {# A symmetric bundle into a session with rows (segment 20F, L3). #}
+    {% if quick_setup.kept_reviewees %}
+      <div class="banner banner-info" id="quick-setup-kept-reviewees-banner"
+           data-quick-setup-kept-reviewees>
+        <p class="banner-lead">Saved. The Settings file turns on symmetric
+          review, but it stays off here because this session already had
+          roster rows. The submit brought no Reviewees file, so this
+          session's reviewees were left as they were.</p>
+      </div>
+    {% endif %}
     {% for slot in quick_setup.slots %}
       {{ quick_setup_slot_banner(
            slot, submit_all_form_id, quick_setup.held_token,

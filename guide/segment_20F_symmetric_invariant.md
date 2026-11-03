@@ -121,6 +121,13 @@ audit row (now `reviewees.mirror_repaired`, from the counts the sync
 returns); and the sync never removed a second reviewee linked to the same
 reviewer.
 
+**Rung 4, L3's notice.** On a Quick Setup submit-all that saves a Settings
+file asking for symmetric review, while the mode stays off beside the
+session's roster rows and no Reviewees file came, the success redirect
+carries `?quick_setup_notice=kept_reviewees`, and the card shows a
+`banner-info` saying the reviewees were left as they were. The per-slot
+routes carry one file, so they cannot bring a bundle and do not ask.
+
 ## PR ladder
 
 1. **L2.** The ~~expire~~ `populate_existing` read in `sync_reviewees_from_reviewers`, with the SQLite

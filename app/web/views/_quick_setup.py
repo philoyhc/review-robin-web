@@ -172,6 +172,13 @@ class QuickSetupContext:
     operator's and session's), so nothing was saved; the card says so
     above the slots (segment 19W)."""
 
+    kept_reviewees: bool = False
+    """The last submit's Settings file asked for symmetric review, which
+    stayed off beside this session's roster rows, and it brought no
+    Reviewees file (a symmetric session's setup bundle carries none):
+    the card says the reviewees were left as they were (segment 20F,
+    findings register L3)."""
+
     external_form_id: str | None = None
     """When set, slot inputs are associated with this external form
     via the HTML ``form="..."`` attribute, and the partial skips
@@ -193,6 +200,7 @@ def build_quick_setup_context(
     held: dict[str, str] | None = None,
     held_token: str | None = None,
     held_lost: bool = False,
+    kept_reviewees: bool = False,
 ) -> QuickSetupContext:
     """Build the Quick Setup card context for Session Home.
 
@@ -398,6 +406,7 @@ def build_quick_setup_context(
         # operator (author, 2026-10-19).
         confirm_replace_checked=_deletion_count > 0,
         held_lost=held_lost,
+        kept_reviewees=kept_reviewees,
     )
 
 

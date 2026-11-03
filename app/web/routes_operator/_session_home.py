@@ -108,6 +108,7 @@ def session_detail(
     request: Request,
     quick_setup_error: str | None = Query(default=None),
     quick_setup_reason: str | None = Query(default=None),
+    quick_setup_notice: str | None = Query(default=None),
     super_status: str | None = Query(default=None),
     super_button: str | None = Query(default=None),
     super_step: str | None = Query(default=None),
@@ -138,6 +139,7 @@ def session_detail(
             **views.quick_setup_url_failure(
                 quick_setup_error, quick_setup_reason
             ),
+            kept_reviewees=quick_setup_notice == "kept_reviewees",
         ),
         super_failure=views.parse_super_failure(
             super_status, super_step, super_error, super_button

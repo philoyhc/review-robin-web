@@ -342,3 +342,70 @@ def test_the_reviewees_download_misses_under_the_mode(client: TestClient, db: Se
     off = _session(client, db, "sym-i-dl-off", on=False)
     assert client.get(f"/operator/sessions/{on.public_id}/export/reviewees.csv").status_code == 404
     assert client.get(f"/operator/sessions/{off.public_id}/export/reviewees.csv").status_code == 200
+
+
+def _bundle_files(db: Session, source: ReviewSession) -> dict[str, tuple[str, bytes, str]]:
+    data, _counts = zip_bundle.build_setup_bundle(db, source)
+    bundle = zipfile.ZipFile(io.BytesIO(data))
+
+    def member(suffix: str) -> bytes:
+        [name] = [n for n in bundle.namelist() if n.endswith(suffix)]
+        return bundle.read(name)
+
+    return {
+        "reviewers_file": ("r.csv", member("_reviewers.csv"), "text/csv"),
+        "settings_file": ("s.csv", member("_settings.csv"), "text/csv"),
+    }
+
+
+def test_a_symmetric_bundle_into_a_session_with_rows_says_its_reviewees_stay(
+    client: TestClient, db: Session
+) -> None:
+    """Findings register L3 (author, 2026-11-03: a notice). The bundle
+    carries no reviewees, and symmetric review stays off beside the
+    target's roster rows, so its reviewees are left as they were: the
+    page says so."""
+    source = _session(client, db, "sym-i-l3-src")
+    user = _user(db)
+    reviewers.create_reviewer(db, review_session=source, name="Ann", email="ann@example.edu", user=user)
+    db.commit()
+
+    target = _session(client, db, "sym-i-l3-target", on=False)
+    reviewers.create_reviewer(db, review_session=target, name="Kim", email="kim@example.edu", user=user)
+    db.add(Reviewee(session_id=target.id, name="Lee", email_or_identifier="lee@example.edu"))
+    db.commit()
+
+    response = client.post(
+        f"/operator/sessions/{target.public_id}/quick-setup/submit-all",
+        files=_bundle_files(db, source),
+        data={"confirm_replace": "true"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    assert "quick_setup_notice=kept_reviewees" in response.headers["location"]
+    db.expire_all()
+    db.refresh(target)
+    assert target.symmetric_review is False
+    assert [r.email_or_identifier for r in _reviewees(db, target)] == ["lee@example.edu"]
+    page = client.get(response.headers["location"].split("#")[0]).text
+    assert "data-quick-setup-kept-reviewees" in page
+    assert "reviewees were left as they were" in page
+
+
+def test_a_symmetric_bundle_into_an_empty_session_says_nothing(
+    client: TestClient, db: Session
+) -> None:
+    source = _session(client, db, "sym-i-l3e-src")
+    reviewers.create_reviewer(db, review_session=source, name="Ann", email="ann@example.edu", user=_user(db))
+    db.commit()
+    target = _session(client, db, "sym-i-l3e-target", on=False)
+    response = client.post(
+        f"/operator/sessions/{target.public_id}/quick-setup/submit-all",
+        files=_bundle_files(db, source),
+        data={"confirm_replace": "true"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    assert "quick_setup_notice" not in response.headers["location"]
+    page = client.get(f"/operator/sessions/{target.public_id}").text
+    assert "data-quick-setup-kept-reviewees" not in page
