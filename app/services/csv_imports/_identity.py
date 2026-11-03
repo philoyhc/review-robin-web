@@ -40,6 +40,11 @@ class DirectoryCheck:
     #: replace keeps such a row's earlier binding rather than dropping
     #: it (`_save`).
     unchecked: frozenset[str] = frozenset()
+    #: Why the check stopped on the sign-in, or ``None`` (segment 20G):
+    #: `directory_accounts.NO_TOKEN`, or the Graph kind (`unauthorized`,
+    #: `forbidden`). Renewing the sign-in can cure it; nothing reads it
+    #: yet.
+    stopped: str | None = None
 
 
 
@@ -67,6 +72,9 @@ def directory_checks(
                 outcomes, addresses, checked=directory is not None
             ),
             unchecked=directory_accounts.unchecked(
+                outcomes, addresses, checked=directory is not None
+            ),
+            stopped=directory_accounts.sign_in_stop(
                 outcomes, addresses, checked=directory is not None
             ),
         )

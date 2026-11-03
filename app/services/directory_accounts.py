@@ -19,7 +19,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 
-from cordware.graph import RESOLVED, Directory, GraphError, Outcome, look_up_all
+from cordware.graph import RESOLVED, SIGN_IN_KINDS, Directory, GraphError, Outcome, look_up_all
 
 from app.services.email_identity import looks_like_email, normalize_email
 
@@ -206,6 +206,32 @@ def unchecked(
     return frozenset(
         k for k in keys if (o := outcomes.get(k)) is None or o.status not in ANSWERED
     )
+
+
+#: Why a check stopped that renewing the sign-in can cure: Graph refused
+#: the token (`SIGN_IN_KINDS`), or there was no token to ask with.
+NO_TOKEN = "no_token"
+
+
+def sign_in_stop(
+    outcomes: Mapping[str, Outcome], addresses: Iterable[str | None], *, checked: bool
+) -> str | None:
+    """Why the check of ``addresses`` stopped on the sign-in, or ``None``
+    (segment 20G): `NO_TOKEN` when nothing could be asked (``checked``
+    false) and there was an address to ask about; else the first
+    `SIGN_IN_KINDS` kind among their outcomes, which `look_up_all` ends
+    every lookup not yet started with. Any other failure (throttling, an
+    outage, the budget) is not a sign-in stop."""
+    keys = [k for k in (key(a) for a in addresses) if k is not None]
+    if not keys:
+        return None
+    if not checked:
+        return NO_TOKEN
+    for k in keys:
+        outcome = outcomes.get(k)
+        if outcome is not None and outcome.error_kind in SIGN_IN_KINDS:
+            return outcome.error_kind
+    return None
 
 
 def binding(row: object) -> dict[str, str | None] | None:
