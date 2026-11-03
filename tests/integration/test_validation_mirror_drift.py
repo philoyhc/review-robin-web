@@ -70,7 +70,7 @@ def test_a_mirrored_field_that_differs_is_reported(client: TestClient, db: Sessi
     _reviewee(db, review_session, "ann@example.edu").name = "Anne"
     db.commit()
     assert _drift(db, review_session) == [
-        "Reviewee 'ann@example.edu' differs from its reviewer in name"
+        "Reviewee 'ann@example.edu' differs from its reviewer 'ann@example.edu' in name"
     ]
 
 
