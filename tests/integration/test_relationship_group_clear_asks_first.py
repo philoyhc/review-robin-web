@@ -195,6 +195,22 @@ def test_an_edit_into_an_answered_group_is_refused_then_goes_through(
     assert _responses(db) == 1
 
 
+def test_a_count_too_long_for_int_is_refused_not_a_500(
+    db: Session, client: TestClient
+) -> None:
+    """Findings register L1: ``int`` refuses a string past 4,300 digits,
+    so the tick's count answered 500. A count that long matches none, so
+    the change is refused and asks again, persisting nothing."""
+    session = _seed(db, client, "rgc-edit-long")
+    ann = _relationship(db, session.id, "Ann")
+    data = _edit("Ann", "y") | {"acknowledge_response_loss": "9" * 5000}
+    refused = client.post(f"{_base(session)}/{ann.id}/update", data=data, follow_redirects=False)
+    assert refused.status_code == 400
+    assert _line(3) in refused.text
+    assert _relationship(db, session.id, "Ann").tag_1 == "x"
+    assert _responses(db) == 4
+
+
 def test_a_refused_edit_keeps_the_view(db: Session, client: TestClient) -> None:
     session = _seed(db, client, "rgc-edit-view")
     ann = _relationship(db, session.id, "Ann")

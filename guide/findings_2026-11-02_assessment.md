@@ -44,10 +44,9 @@ None.
 
 ## 3. Low
 
-- **L1. `acknowledged_loss` answers 500 on a 4,300-digit value.**
-  `app/web/routes_operator/_shared.py:212` calls `int()` on any run of
-  digits. Predates the window; 20B and 19Z added call sites.
-  *Reproduced.* Code: compare lengths first, as `oversized_ids` does.
+- ~~**L1**~~ — **Done in #3542**: the count is compared by length,
+  leading zeros stripped, before `int()`; a longer one reads as no tick,
+  so the change asks again (`tests/unit/test_acknowledged_loss.py`).
 - ~~**L2**~~ — **Done in #3534** (segment 20F): the sync reads the
   reviewee rows with `populate_existing`, so a Replace on SQLite never
   hands a removed person's reviewee to a new reviewer
