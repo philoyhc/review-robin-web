@@ -1,12 +1,14 @@
 {# Segment 20G rung 2 — SCAFFOLD. A roster upload whose directory check
    stopped on the sign-in (`DirectoryCheck.stopped`: no token, or Graph
-   refused it) saves nothing, holds the file and shows this inside the
-   upload form, so the held file goes with the button's submit. The
-   button is inert until rung 3 wires it to `cordwareRenewGraph()` and a
-   resubmit. Shown while `directory_renew` is set; no route sets it yet. Dismiss
-   ends the hold, as the upload banners' Dismiss does. Outside its form
-   (Quick Setup's card), `directory_renew_form` names the form. The caller
-   passes `directory_renew_dismiss_url` app-relative or already through `url()`, which is idempotent; this applies it. #}
+   refused it) saves nothing, holds the file and shows this in the card's
+   banner stack, above the form (`spec/setup_pages.md` "The Upload card's
+   banners"). It sits outside the form, so `directory_renew_form` names it
+   and the held file goes with the buttons' submits. The renew button is
+   inert until rung 3 wires it to `cordwareRenewGraph()` and a resubmit.
+   Shown while `directory_renew` is set; no route sets it yet. Dismiss
+   ends the hold, as the upload banners' Dismiss does. The caller passes
+   `directory_renew_dismiss_url` app-relative or already through `url()`,
+   which is idempotent; this applies it. #}
 {% if directory_renew %}
   <div class="banner banner-warning banner-scroll-target" role="alert"
        data-directory-renew>

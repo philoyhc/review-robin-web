@@ -212,9 +212,41 @@
               Other columns are ignored.
             </p>
 
+            {# The card's banners stack here, under its intro and above the
+               form, in one order: problems, directory renew, group clear
+               (author, 2026-11-03). A control inside one names the form with
+               `form=`. #}
             {% with upload_problems_cancel_url = relationships_base_url ~ "?unlocked=1#upload-csv", upload_problems_dismiss_url = relationships_base_url ~ "/import/dismiss" %}
               {% include "operator/partials/_upload_problems.html" %}
             {% endwith %}
+            {# A replace refused for clearing group answers: the count,
+               and the tick that answers it inside the same banner
+               (browser run 2026-10-19); `confirm_replace` below stays
+               where it is. The file is held (segment 19W). #}
+            {% if group_clear and group_clear.surface == "import" %}
+              <div class="banner banner-error" role="alert"
+                   data-group-clear-banner>
+                <p class="banner-lead">{{ group_clear.message }}</p>
+                <label class="confirm-label">
+                  <input type="checkbox" form="upload-csv-form" name="acknowledge_response_loss"
+                         value="{{ group_clear.count }}">
+                  <span>Yes, clear them</span>
+                </label>
+                {# Dismiss (segment 19W; `spec/ui_elements.md` §5a): with
+                   the file held it ends the hold, else it reopens the
+                   card without the banner. #}
+                <div class="banner-actions">
+                  {% if held_upload %}
+                    <button type="submit" class="btn secondary" form="upload-csv-form"
+                            formaction="{{ url(relationships_base_url) }}/import/dismiss"
+                            formnovalidate>Dismiss</button>
+                  {% else %}
+                    <a class="btn secondary"
+                       href="{{ url(relationships_base_url) }}?unlocked=1#upload-csv">Dismiss</a>
+                  {% endif %}
+                </div>
+              </div>
+            {% endif %}
 
             <form method="post" id="upload-csv-form"
                   action="{{ url(relationships_base_url) }}/import"
@@ -253,35 +285,6 @@
                     <label for="relationships-upload-merge">merge with the existing roster.</label></span>
                   </div>
                 </fieldset>
-              {% endif %}
-
-              {# A replace refused for clearing group answers: the count,
-                 and the tick that answers it inside the same banner
-                 (browser run 2026-10-19); `confirm_replace` above stays
-                 where it is. The file is held (segment 19W). #}
-              {% if group_clear and group_clear.surface == "import" %}
-                <div class="banner banner-error" role="alert"
-                     data-group-clear-banner>
-                  <p class="banner-lead">{{ group_clear.message }}</p>
-                  <label class="confirm-label">
-                    <input type="checkbox" name="acknowledge_response_loss"
-                           value="{{ group_clear.count }}">
-                    <span>Yes, clear them</span>
-                  </label>
-                  {# Dismiss (segment 19W; `spec/ui_elements.md` §5a): with
-                     the file held it ends the hold, else it reopens the
-                     card without the banner. #}
-                  <div class="banner-actions">
-                    {% if held_upload %}
-                      <button type="submit" class="btn secondary"
-                              formaction="{{ url(relationships_base_url) }}/import/dismiss"
-                              formnovalidate>Dismiss</button>
-                    {% else %}
-                      <a class="btn secondary"
-                         href="{{ url(relationships_base_url) }}?unlocked=1#upload-csv">Dismiss</a>
-                    {% endif %}
-                  </div>
-                </div>
               {% endif %}
 
               <div class="unlock-col-actions">
