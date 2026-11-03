@@ -64,12 +64,12 @@ is the author's call.
    fields back on. Planned when IT answers; see
    `guide/no_scheduling_fallback.md`.
 
-5. **20C — Refinements** (not gated). Small follow-ups from the author's
-   browser runs, one item each. Items 1 (verified names as pills on
-   the New session Owners card), 2 (checkboxes before their labels) and
-   3 (verified names as the lobby's display pill) are done; the segment
-   stays open for further refinements.
-   **Plan:** `guide/segment_20C_refinements.md`.
+5. **20I — Directory check follow-ups and refinements** (not gated).
+   Opened 2026-11-03 from the banner and countdown checks; stays open
+   for further refinements, as 20C did. Item 1 rechecks a roster's
+   unmatched addresses on demand; Item 2 batches the countdown; Item 3
+   evens the banners' spacing.
+   **Plan:** `guide/segment_20I_directory_check_followups.md`.
 
 6. **22C — A type checker: pyright** (not gated). Pyright in basic mode
    over application code, fixed cluster by cluster, then a CI gate;
