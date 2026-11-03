@@ -140,7 +140,7 @@ Directory item (2026-11-01): rungs 17–21 in `#3455`, `#3456`, `#3457` (with fo
 - Plan drift (sys-admins only, the name's source, surname, the help-contact fill) annotated; `cordware/spec/identity.md` and `spec/operator_button_audit.md` bullets widened; `_directory.py` also maps to `spec/session_home.md`.
 - Recorded, not changed: the session-scoped search grants nothing the workspace one does not (both on the caller's own token); a missing token logs a warning per search.
 
-**Walkthrough** (2026-10-31): the author's basic browser check passed; the full check is `guide/walkthrough_19Z_rosters.md` (local, then the real tenant). The close waits on it.
+**Walkthrough** (2026-10-31): the author's basic browser check passed; the full check is `guide/archive/walkthrough_19Z_rosters.md` (local, then the real tenant). **Done 2026-11-03**: both parts passed; Part A's findings are 20H, Part B's timing is in 20G.
 
 ## PR ladder
 

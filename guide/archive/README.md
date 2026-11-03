@@ -30,6 +30,7 @@ edits — they are a rough size signal, not a tracked metric.
 
 | File | ~Lines | Covers |
 |---|---:|---|
+| `walkthrough_19Z_rosters.md` | 154 | The author's end-to-end walkthrough of 19Z (append, merge, the duplicate-account warning) on top of 21F: Part A locally against the fake directory, Part B on production against the real tenant. **Retired 2026-11-03**, both parts done: Part A's findings became segment 20H; Part B passed, counts only recorded, and its 1,500-row timing (about 56 s) went to 20G. |
 | `functional_spec.md` | 1174 | The technology-neutral functional specification — the contract the codebase assessments audit against. Moved here from `spec/` on 2026-05-11; its §21 / §22 / §23 numbering is still cited. |
 | `low_intensity_workplan_review_robin_web.md` | 1127 | The project's original low-intensity AI-assisted workplan — the first end-to-end plan. Superseded by the segment plans + `todo_master.md`. |
 | `major_refactor.md` | 1017 | The May 2026 refactor that split `routes_operator.py` and `views.py` into feature-area / by-concern packages. Still cited by `CLAUDE.md` for the slice-boundary rationale. |
