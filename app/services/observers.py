@@ -249,6 +249,18 @@ def create_observer(
             f"{holder_name!r} in this session — names must match.",
         )
 
+    # 20H Item 1: a second row on one directory account is refused, as
+    # an append refuses it, naming the row that holds it. Resolved once.
+    account = resolve_account(clean_email) if resolve_account is not None else None
+    holder = directory_accounts.account_holder(
+        db, Observer, session_id=review_session.id, account=account
+    )
+    if holder is not None:
+        raise ObserverOperationError(
+            "duplicate_account",
+            directory_accounts.same_account_message(clean_email, "observer", holder.email),
+        )
+
     lifecycle.invalidate_if_validated(
         db,
         review_session=review_session,
@@ -265,9 +277,7 @@ def create_observer(
         tag_1=clean_tag_1,
         cohort_rule=rule,
         # Segment 21F: the account the address resolves to, if any.
-        **directory_accounts.columns(
-            resolve_account(clean_email) if resolve_account is not None else None
-        ),
+        **directory_accounts.columns(account),
     )
     db.add(observer)
     db.flush()
@@ -373,6 +383,33 @@ def update_observer(
             f"{holder_name!r} in this session — names must match.",
         )
 
+    # 20H Item 1: an address edit onto an account another row of this
+    # roster holds is refused. Resolved once, and the answer reused for
+    # the rebind below.
+    rebind_resolve = resolve_account
+    new_address = proposed.get("email")
+    if (
+        new_address is not None
+        and resolve_account is not None
+        and directory_accounts.key(new_address) != directory_accounts.key(observer.email)  # type: ignore[arg-type]
+    ):
+        account = resolve_account(new_address) if new_address else None  # type: ignore[arg-type]
+        holder = directory_accounts.account_holder(
+            db, Observer, session_id=observer.session_id, account=account, exclude_id=observer.id
+        )
+        if holder is not None:
+            raise ObserverOperationError(
+                "duplicate_account",
+                directory_accounts.same_account_message(
+                    new_address, "observer", holder.email  # type: ignore[arg-type]
+                ),
+            )
+
+        def rebind_resolve(
+            _address: str, _account: directory_accounts.Account | None = account
+        ) -> directory_accounts.Account | None:
+            return _account
+
     changes: dict[str, list[object]] = {}
     for field, new_value in proposed.items():
         old_value = getattr(observer, field)
@@ -398,7 +435,7 @@ def update_observer(
                 observer,
                 old=changes["email"][0],  # type: ignore[arg-type]
                 new=changes["email"][1],  # type: ignore[arg-type]
-                resolve=resolve_account,
+                resolve=rebind_resolve,
             )
             if moved is not None:
                 changes["directory_object_id"] = moved

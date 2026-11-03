@@ -1089,10 +1089,10 @@ name. The duplicate-address check cannot see it, since the two
 addresses differ.
 
 **Already shipped.** Validate's `*.duplicate_account` warnings, append's
-refusal of a file row on an account already on the roster, and merge's
-refusal of one person twice (segment 19Z). The single-row forms refuse it
-from 20H Item 1 (`guide/segment_20H_walkthrough_19Z_followups.md`,
-author, 2026-11-03).
+refusal of a file row on an account already on the roster, merge's
+refusal of one person twice (segment 19Z), and the single-row forms'
+refusal of an add or address edit onto an account the roster holds (20H
+Item 1, `guide/segment_20H_walkthrough_19Z_followups.md`).
 
 **Why deferred.** Replace and append check a file's rows against each
 other only by address; the directory check runs at the save. Meanwhile Validate

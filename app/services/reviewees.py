@@ -203,6 +203,18 @@ def create_reviewee(
             f"{holder_name!r} in this session — names must match.",
         )
 
+    # 20H Item 1: a second row on one directory account is refused, as
+    # an append refuses it, naming the row that holds it. Resolved once.
+    account = resolve_account(clean_identifier) if resolve_account is not None else None
+    holder = directory_accounts.account_holder(
+        db, Reviewee, session_id=review_session.id, account=account
+    )
+    if holder is not None:
+        raise RevieweeOperationError(
+            "duplicate_account",
+            directory_accounts.same_account_message(clean_identifier, "reviewee", holder.email_or_identifier),
+        )
+
     lifecycle.invalidate_if_validated(
         db,
         review_session=review_session,
@@ -221,9 +233,7 @@ def create_reviewee(
         tag_2=clean_tag_2,
         tag_3=clean_tag_3,
         # Segment 21F: the account the address resolves to, if any.
-        **directory_accounts.columns(
-            resolve_account(clean_identifier) if resolve_account is not None else None
-        ),
+        **directory_accounts.columns(account),
     )
     db.add(reviewee)
     db.flush()
@@ -356,6 +366,33 @@ def update_reviewee(
             f"{holder_name!r} in this session — names must match.",
         )
 
+    # 20H Item 1: an address edit onto an account another row of this
+    # roster holds is refused. Resolved once, and the answer reused for
+    # the rebind below.
+    rebind_resolve = resolve_account
+    new_address = proposed.get("email_or_identifier")
+    if (
+        new_address is not None
+        and resolve_account is not None
+        and directory_accounts.key(new_address) != directory_accounts.key(reviewee.email_or_identifier)  # type: ignore[arg-type]
+    ):
+        account = resolve_account(new_address) if new_address else None  # type: ignore[arg-type]
+        holder = directory_accounts.account_holder(
+            db, Reviewee, session_id=reviewee.session_id, account=account, exclude_id=reviewee.id
+        )
+        if holder is not None:
+            raise RevieweeOperationError(
+                "duplicate_account",
+                directory_accounts.same_account_message(
+                    new_address, "reviewee", holder.email_or_identifier  # type: ignore[arg-type]
+                ),
+            )
+
+        def rebind_resolve(
+            _address: str, _account: directory_accounts.Account | None = account
+        ) -> directory_accounts.Account | None:
+            return _account
+
     changes: dict[str, list[object]] = {}
     for field, new_value in proposed.items():
         old_value = getattr(reviewee, field)
@@ -399,7 +436,7 @@ def update_reviewee(
             reviewee,
             old=changes["email_or_identifier"][0],  # type: ignore[arg-type]
             new=changes["email_or_identifier"][1],  # type: ignore[arg-type]
-            resolve=resolve_account,
+            resolve=rebind_resolve,
         )
         if moved is not None:
             changes["directory_object_id"] = moved

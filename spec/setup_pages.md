@@ -1252,6 +1252,23 @@ On a bulk action the expander shows the line and the tick beside its
 own confirmation. Reviewees' bulk Inactivate and Activate never clear
 groups and are not gated.
 
+### One account, one row
+
+On Reviewers, Reviewees and Observers, the single-row **Add** and an
+**address edit** refuse an address that resolves to a directory account
+another row of the same roster already holds, an inactive row included,
+with append's words naming that row: "'e0123456@example.edu' is the same
+directory account as the reviewer 'jane.tan@example.edu' already on the
+roster. Edit that row instead." The service resolves the address once,
+before anything is written, finds the holder
+(`directory_accounts.account_holder`) and binds with that same answer. An
+address the
+directory cannot bind (not found, ambiguous, not checked) matches no
+account and is allowed, as an upload allows it; the holder itself may
+move to its other address. Validate's `*.duplicate_account` warnings
+remain for the pairs an upload can still make: a replace, or two rows of
+one appended file (`spec/validate_page.md`).
+
 ### Bound addresses
 
 A roster row bound to a directory account (`directory_object_id`, set at

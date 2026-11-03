@@ -18,6 +18,10 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
+from typing import Any
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from cordware.graph import RESOLVED, Directory, GraphError, Outcome, look_up_all
 
@@ -280,6 +284,34 @@ def recipient(row: object) -> str:
     if getattr(row, "directory_object_id", None) and mail:
         return mail
     return getattr(row, "email", None) or getattr(row, "email_or_identifier", "")
+
+
+def account_holder(
+    db: Session, model: Any, *, session_id: int, account: Account | None, exclude_id: int | None = None
+) -> Any:
+    """The row of ``model``'s roster (`Reviewer`, `Reviewee`, `Observer`)
+    in the session already bound to ``account``, other than
+    ``exclude_id``, or ``None`` (20H Item 1). It looks nothing up: the
+    caller resolved ``account``. Inactive rows count: an inactive row
+    still holds its account."""
+    if account is None:
+        return None
+    query = select(model).where(
+        model.session_id == session_id, model.directory_object_id == account.object_id
+    )
+    if exclude_id is not None:
+        query = query.where(model.id != exclude_id)
+    return db.execute(query.order_by(model.id)).scalars().first()
+
+
+def same_account_message(address: str, label: str, holder_address: str) -> str:
+    """A single-row form's refusal of a second row on one account (20H
+    Item 1), in the words an append's refusal uses, naming the row that
+    holds it so the operator edits that row instead."""
+    return (
+        f"'{address}' is the same directory account as the {label} "
+        f"'{holder_address}' already on the roster. Edit that row instead."
+    )
 
 
 def rebind(

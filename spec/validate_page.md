@@ -277,7 +277,7 @@ the signature for the loads a single rule still owns.
 | `session.no_code` | session | error | Missing `ReviewSession.code`. |
 | `reviewers.empty` | reviewers | error | Zero reviewer rows. |
 | `reviewers.duplicate_email` | reviewers | error | Same email appears on 2+ reviewer rows. |
-| `reviewers.duplicate_account` | reviewers | warning | Two or more active rows bound to one directory account (`directory_object_id`): one person entered twice, by mail and by sign-in name, each address passing the duplicate rule. One issue per account, naming its addresses, anchored at the first row's `#reviewer-row-{id}`. Severity is warning (non-blocking): the gates and the dashboard take the lowest id. Inactive rows are not counted. |
+| `reviewers.duplicate_account` | reviewers | warning | Two or more active rows bound to one directory account (`directory_object_id`): one person entered twice, by mail and by sign-in name, each address passing the duplicate rule. One issue per account, naming its addresses, anchored at the first row's `#reviewer-row-{id}`. Severity is warning (non-blocking): the gates and the dashboard take the lowest id. Inactive rows are not counted. The single-row forms refuse a second row on a held account, and an append or a merge refuses a file row on one, so a pair arises from a replace upload, from two rows of one appended file, or from rows saved before those refusals. |
 | `reviewees.empty` | reviewees | error | Zero reviewee rows. |
 | `reviewees.duplicate_id` | reviewees | error | Same `email_or_identifier` appears on 2+ reviewee rows. |
 | `reviewees.duplicate_account` | reviewees | warning | As `reviewers.duplicate_account`, for reviewees (anchor `#reviewee-row-{id}`). |
