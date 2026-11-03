@@ -138,7 +138,7 @@ None.
 
 ### Status
 
-**Closed 2026-11-03.** As decided; `tests/browser/test_upload_banner_spacing.py` measures 8px. The look is the author's browser check.
+**Closed 2026-11-03.** As decided; `tests/browser/test_upload_banner_spacing.py` measures 8px after the recheck's form, after the upload form, and for the countdown alone. Reads: one cold read (no defect; the test covered one of the three cases, now all three). The look is the author's browser check.
 
 ### Doc impact
 
