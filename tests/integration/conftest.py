@@ -136,11 +136,26 @@ def db(engine: Engine, request: pytest.FixtureRequest) -> Iterator[Session]:
     # Segment 20F rung 3: the symmetric-review mirror is in step at every
     # commit (``_mirror_guard``). Recorded here, failed at teardown, so a
     # fault never turns into an exception inside the code under test.
+    # Only at the end of a root transaction that committed: ``after_commit``
+    # also fires when a ``begin_nested()`` inside a unit releases (the
+    # session lock takes one on Postgres), where a half-written unit is
+    # expected to be out of step.
     mirror_faults: list[str] = []
+    committed = False
 
     @event.listens_for(session, "after_commit")
-    def check_mirror(sess: Session) -> None:
-        mirror_faults.extend(mirror_problems(connection))
+    def note_commit(sess: Session) -> None:
+        nonlocal committed
+        committed = True
+
+    @event.listens_for(session, "after_transaction_end")
+    def check_mirror(sess: Session, trans) -> None:
+        nonlocal committed
+        if trans.nested or trans.parent is not None:
+            return
+        if committed:
+            mirror_faults.extend(mirror_problems(connection))
+        committed = False
 
     try:
         yield session

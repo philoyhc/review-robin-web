@@ -76,7 +76,7 @@ def test_set_unit_trims_stores_and_audits(db: Session) -> None:
     db.refresh(operator)
     assert operator.unit == "Department of Example"
     event = db.execute(
-        select(AuditEvent).where(AuditEvent.event_type == "workspace.user_unit_set")
+        select(AuditEvent).where(AuditEvent.event_type == "workspace.user_unit_set").order_by(AuditEvent.id)
     ).scalar_one()
     assert event.detail["changes"] == {"unit": [None, "Department of Example"]}
     assert event.detail["refs"] == {"target_user_id": operator.id}
@@ -92,7 +92,7 @@ def test_an_empty_value_clears_and_an_unchanged_one_is_not_audited(
     db.refresh(operator)
     assert operator.unit is None
     events = db.execute(
-        select(AuditEvent).where(AuditEvent.event_type == "workspace.user_unit_set")
+        select(AuditEvent).where(AuditEvent.event_type == "workspace.user_unit_set").order_by(AuditEvent.id)
     ).scalars().all()
     assert [e.detail["changes"]["unit"] for e in events] == [[None, "Dept"], ["Dept", None]]
 
