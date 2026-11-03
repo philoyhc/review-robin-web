@@ -254,9 +254,11 @@ to CSS classes.
 > `disabled aria-disabled="true"` and a paired confirmation checkbox
 > enables it. The checkbox is also `required` — belt-and-suspenders
 > against a JS-off submit — **wherever the gate owns its form**: e.g.
-> the `Danger Zone`'s `delete-all` and the Upload card's
-> `replace-roster` on every roster page, Session Home's
-> `delete-data` / `delete-session`.
+> the `Danger Zone`'s `delete-all`, Session Home's
+> `delete-data` / `delete-session`. **The Upload card's `replace-roster`
+> tick is not `required`**: replace, append and merge share its key, and
+> any one of the three opens Upload, so a `required` replace tick would
+> refuse an append. The route's tick check binds instead.
 >
 > **It is not `required` where the gate shares a form with
 > non-destructive submits**, and that is forced rather than an
@@ -276,11 +278,21 @@ to CSS classes.
 > per-instrument delete keys on the instrument id, and the Extract data
 > page's Data shaper keys each shape card's Delete `shape-{id}` (saved),
 > `shape-new-0` (initial blank) or `shape-new-N` (spawned in JS), per
-> `spec/extract_data.md`. That Delete is a `fetch`, not a form submit,
+> `spec/extract_data.md`. **A key may sit on more than one box**: the
+> pairing opens its button while *any* box carrying the key is ticked (the
+> Upload card's three ticks). That Delete is a `fetch`, not a form submit,
 > so its confirm has no form to be `required` in. The confirm-checkbox
 > label uses the affirmative **"Yes, delete …"** voice everywhere (full sentence in a
 > danger-zone card; compact "Yes, delete" in the expander toolbar) —
 > never a permissive "Allow delete".
+>
+> **`data-exclusive-tick="{group}"`** makes ticks mutually exclusive:
+> ticking a box unticks the others of its group within the same form, and
+> unticking leaves all unticked. It only unticks; it does not gate a button
+> (the delete-confirm pairing does, and judges every box carrying its key).
+> The Upload card's replace, append and merge ticks are one group
+> (`upload-mode`); the server refuses more than one regardless, for a page
+> without the script.
 >
 > **`.confirm-label` is `display: flex`, so the sentence must live in
 > ONE child element.** A bare text run inside a flex container becomes
@@ -730,6 +742,7 @@ lands on the numbers without bolding the whole sentence.
 | Class | Fill / text | Notes |
 |---|---|---|
 | `.pill-count`, `.pill-info` | `--status-info-bg` / `--text-body` | **One rule for both names.** The blue tint says "this is information" without implying a state. |
+| `.pill-address` (modifier) | — | With `.pill-count`: a pill that **keeps its text's case and size** (`text-transform: none`, `font-size: inherit`, no right margin), so an address reads as written. Only on a roster or account `<code>` address, via `_roster_address.html` (`spec/setup_pages.md` § *Bound addresses*). A verified account's *name* is the plain display pill, `pill pill-count`, not this. |
 | `.pill-empty`, `.pill-warning` | `--status-warning-bg` / `--status-warning-fg` | **One rule for both names.** The warning brown matches the `.card.lock` / `.card.danger-zone` framing, so chips and surfaces share one warning language. |
 | `.pill-success` | `--status-success-bg` / `--status-success-fg` | The `-fg` slot, like every other pill: a pill's label is text, and `-accent` is the marker slot. |
 | `.pill-error` | `--status-error-bg` / `--status-error-fg` | Validation-summary error counts. |

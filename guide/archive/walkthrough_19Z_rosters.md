@@ -1,6 +1,6 @@
 # Walkthrough — roster uploads: replace, append, merge (19Z, with 21F)
 
-**Written:** 2026-10-31 · **For:** the author's end-to-end check of segment 19Z (append, merge, the duplicate-account warning) on top of 21F (addresses resolved through the directory) · **Plan:** `guide/segment_19Z_roster_append.md` · **Retired 2026-11-03**, both parts ticked; 19Z's close records the result.
+**Written:** 2026-10-31 · **For:** the author's end-to-end check of segment 19Z (append, merge, the duplicate-account warning) on top of 21F (addresses resolved through the directory) · **Plan:** `guide/archive/segment_19Z_roster_append.md` · **Retired 2026-11-03**, both parts ticked; 19Z's close records the result.
 
 The basic browser check passed (author, 2026-10-31). This walks the rest in two runs:
 

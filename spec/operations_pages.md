@@ -291,7 +291,7 @@ excluded nothing is worth saying.
 
 | # | Column | Toggle? | Sort key | Content |
 |---|---|---|---|---|
-| 1 | Reviewer | — | `name` | Name + `<code>` email; name links to the per-reviewer detail page on every row (Per-row drill-in) |
+| 1 | Reviewer | — | `name` | Name + email (`<code>`, a display pill when the reviewer is bound to a directory account, `spec/setup_pages.md` § *Bound addresses*); name links to the per-reviewer detail page on every row (Per-row drill-in) |
 | 2 | Tag1 | ✓ | `tag_1` | `data-col-toggle="tag-1"` / `class="tag-col tag-col-1"`; header label via `field_label_header(session, "reviewer", "tag_1")` |
 | 3 | Tag2 | ✓ | `tag_2` | `data-col-toggle="tag-2"` / `class="tag-col tag-col-2"` |
 | 4 | Tag3 | ✓ | `tag_3` | `data-col-toggle="tag-3"` / `class="tag-col tag-col-3"` |
@@ -378,6 +378,8 @@ The reviewer name is a link to a per-**reviewer** detail page,
 exists.** The page is keyed on the reviewer because the reviewer is its
 subject: the invitation supplies one optional field, while the reviewer
 supplies the heading, the email, the breadcrumb and the row match.
+The email under the heading reads as the table's cell does, a pill when the
+reviewer is bound to a directory account; the reviewee drill-in's likewise.
 The invitation-keyed URL
 (`.../invitations/{invitation_id}/detail`) is a permanent **308** to
 the reviewer URL, so bookmarks survive.
@@ -506,7 +508,7 @@ count line ever fires.
 
 | # | Column | Toggle? | Sort key | Content |
 |---|---|---|---|---|
-| 1 | Reviewee | — | `name` | Name + `<code>` email-or-identifier; name links to per-reviewee detail page |
+| 1 | Reviewee | — | `name` | Name + email-or-identifier (`<code>`, a display pill when bound, as Invitations' Reviewer cell); name links to per-reviewee detail page |
 | 2 | Tag1 | ✓ | `tag_1` | `data-col-toggle="tag-1"` / `class="tag-col tag-col-1"`; header label via `field_label_header(session, "reviewee", "tag_1")` |
 | 3 | Tag2 | ✓ | `tag_2` | `data-col-toggle="tag-2"` / `class="tag-col tag-col-2"` |
 | 4 | Tag3 | ✓ | `tag_3` | `data-col-toggle="tag-3"` / `class="tag-col tag-col-3"` |

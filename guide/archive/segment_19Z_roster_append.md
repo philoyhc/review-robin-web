@@ -111,36 +111,17 @@ Taken 2026-10-31 at `02636177`.
 
 ## Status
 
-Open. Plan `#3433`; rung 2 `#3434` (copy `#3435`), rung 3 `#3436`, rungs 4–5 `#3437`. Rung 5 rode with rung 4 so it was not left unpushed in the container.
+**Closed 2026-11-03.** All 21 rungs shipped, in four items: append (`#3433`–`#3437`), upsert (`#3438`–`#3440`), matched addresses and verified accounts as pills, and invite from the directory (`#3455`–`#3459` and rung 21's PR). Four `diff-reviewer` reads, one per item; none found anything that deletes, cascades or writes before a refusal. What they found was fixed in the item's last PR.
 
-The one `diff-reviewer` read of `02636177..3f540f2` found nothing that deletes, cascades, or writes before a refusal. Its findings were handled in `#3437`:
-- **Diverged from Semantics: cross-roster identity.** The name check still leaves out the appended roster's own rows, as on replace. Any row whose address is already on that roster is refused as "already on the roster" whatever its name, so the only difference is which message is shown.
-- **Refusal wording.** The account refusal names the existing row's roster, not its row number: *"… is the same directory account as a reviewer already on the roster."* The spec follows the code.
-- **The deferred two-rows entry narrows less than Semantics says.** `append_conflicts` compares appended rows with existing ones, so two file rows on one account still pass, on append as on replace.
-- **An append onto an empty roster is saved as a plain upload**, as the Decision says. Only a direct POST can send one.
-- **One ask sentence** names both ticks. No card is left with the replace tick alone.
-- **Tests added:** a Relationships append that meets the group-clear ask; an append looks up only the file's addresses.
-- **Specs the build touched beyond Doc impact:** `spec/ui_elements.md`, `spec/operator_button_audit.md`, `spec/extract_data.md`. Bullets added.
+**Diverged from the plan, and why:**
+- **Cross-roster name check on append** was not added: an address already on the roster is refused whatever its name, so only the message would differ (DoD line struck).
+- **The account refusal** names the existing row's roster, not its row number ("… the same directory account as a reviewer already on the roster"); the spec follows the code.
+- **Two file rows on one account** still pass on append, as on replace: `append_conflicts` compares appended rows with existing ones only. Merge refuses them. Left in `guide/deferred_consolidated.md`, "Two rows in one roster bound to one account".
+- **Merge** checks a rename through an account match at the row's kept address; recomputes self-review; reads Status per cell (`status_given`), not per column; refuses two file rows landing on one existing row.
+- **Recorded, not changed:** two rows at one address in one roster (a merge updates the lower; Validate's `duplicate_email` flags it); a bound row matched by address keeps its binding where replace would rebind; the session-scoped directory search grants nothing the workspace one does not.
+- **Specs touched beyond the original Doc impact:** `spec/ui_elements.md`, `spec/operator_button_audit.md`, `spec/extract_data.md`, `spec/session_home.md`, `cordware/spec/identity.md`; bullets added.
 
-Upsert rungs (2026-10-31): rung 7 rode with the amendment (`#3438`), rung 8 `#3439`, rungs 9–10 `#3440`. The one `diff-reviewer` read of `a384197c..bae148ed` found nothing that deletes or cascades on a merge. Codex (`#3440`) and the read found these, all handled in `#3440`:
-- **A rename through an account match** is checked at the row's kept address, before any row is touched. The route's check covers only the file's addresses.
-- **A reviewer merge recomputes self-review**, since a binding it adds can make a pair one person.
-- **Status is per cell, not per column.** A blank Status cell keeps the stored status (`*ImportRow.status_given`). The column test alone wrote `active` over `inactive`.
-- **Two file rows landing on one existing row** (one by address, one by account) refuse the merge.
-- **The cohort rule** is compared with `same_cohort_rule`, as the row editor does. It is still logged in `observer.updated`, not in `observer.cohort_rule_assigned`.
-- Recorded, not changed:
-  - Two rows at one address in one roster: a merge updates the lower one, and Validate's `duplicate_email` already flags the pair.
-  - A bound row matched by address whose address now resolves to another account keeps its binding, where replace would rebind it.
-
-Directory item (2026-11-01): rungs 17–21 in `#3455`, `#3456`, `#3457` (with follow-up `#3458`), `#3459` and rung 21's PR. The one `diff-reviewer` read of `b8b2b69..213d71ff` found, all handled in rung 21's PR:
-- **Text that was not one address skipped the directory check** (the box became `type="text"`): `invite` now refuses `invalid_email` unless `looks_like_email`.
-- **A roster pick overwrote the other box** on an exact match: it now fills only an empty box or the picker's own last fill, so an edit row's address or a reviewee's identifier stays.
-- **The picked name could exceed the column** (`String(255)`, a Postgres error): capped.
-- **A throttled search held a worker** through `Retry-After` waits: a search is asked once.
-- Plan drift (sys-admins only, the name's source, surname, the help-contact fill) annotated; `cordware/spec/identity.md` and `spec/operator_button_audit.md` bullets widened; `_directory.py` also maps to `spec/session_home.md`.
-- Recorded, not changed: the session-scoped search grants nothing the workspace one does not (both on the caller's own token); a missing token logs a warning per search.
-
-**Walkthrough** (2026-10-31): the author's basic browser check passed; the full check is `guide/archive/walkthrough_19Z_rosters.md` (local, then the real tenant). **Done 2026-11-03**: both parts passed; Part A's findings are 20H, Part B's timing is in 20G.
+**Verified by the author** in `guide/archive/walkthrough_19Z_rosters.md` (2026-11-03): Part A locally, Part B on production against the real tenant. Its findings are segment 20H; its 1,500-row timing went to 20G. The close's `spec-writer` pass also took the 2026-11-02 findings register's D-a to D-c.
 
 ## PR ladder
 

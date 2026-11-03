@@ -1081,25 +1081,29 @@ Path B (immediate download), and the TTL. Then re-take its Blast
 radius and follow its PR ladder, scaffold first.
 
 
-#### Two rows in one roster bound to one account (21F close, 2026-10-31)
+#### Two rows in one roster bound to one account (21F close, 2026-10-31; narrowed at 19Z's close, 2026-11-03)
 
-**Ships.** An upload, or the Validate page, flags or refuses two rows
-in one roster that resolve to the same directory account: Jane listed
-once by mail and once by sign-in name. The duplicate-address check
-cannot see it, since the two addresses differ.
+**Ships.** A **replace** or **append** upload refuses two rows *in the
+file* that resolve to the same directory account: Jane listed once by mail and once by sign-in
+name. The duplicate-address check cannot see it, since the two
+addresses differ.
 
-**Why deferred.** Segment 21F's directory check runs at the save,
-after validation, so catching the pair means either resolving at
-validation or a post-save warning. Meanwhile the gates and the `/me`
-dashboard take the lowest-id row, so the person sees one row
-consistently (`guide/archive/segment_21F_directory_rosters.md` §
-Status). Open since `#3430`, unruled.
+**Already shipped.** Validate's `*.duplicate_account` warnings, append's
+refusal of a file row on an account already on the roster, and merge's
+refusal of one person twice (segment 19Z). The single-row forms refuse it
+from 20H Item 1 (`guide/segment_20H_walkthrough_19Z_followups.md`,
+author, 2026-11-03).
 
-**Lift trigger.** An operator's roster lists one person both ways, or
-an invitation sent to the second row opens the first row's surface.
+**Why deferred.** Replace and append check a file's rows against each
+other only by address; the directory check runs at the save. Meanwhile Validate
+warns, and the gates and `/me` take the lowest-id row.
 
-**Wire-up.** The author rules: refuse at upload, or a Validate soft
-warning. Either reads `directory_object_id` across one roster's rows.
+**Lift trigger.** A replace or append file lists one person both ways
+and reaches Validate.
+
+**Wire-up.** In those two paths, compare the file's resolved
+`directory_object_id`s before the save, as merge's "one person twice"
+refusal does.
 
 ### Assignment rules
 

@@ -64,33 +64,24 @@ is the author's call.
    fields back on. Planned when IT answers; see
    `guide/no_scheduling_fallback.md`.
 
-5. **19Z — Append to a roster** (not gated on Azure). The four roster
-   pages' Upload cards gain an append tick beside the replace tick
-   (mutually exclusive, neither ticked by default), so a late batch adds
-   rows without deleting assignments or responses. Append shipped
-   (`#3437`); an upsert tick and a Validate warning for two rows on one
-   directory account follow (author, 2026-10-31). A row already on the roster, or on an account already
-   there, refuses the file (author, 2026-10-31).
-   **Plan:** `guide/segment_19Z_roster_append.md`.
-
-6. **20C — Refinements** (not gated). Small follow-ups from the author's
+5. **20C — Refinements** (not gated). Small follow-ups from the author's
    browser runs, one item each. Items 1 (verified names as pills on
    the New session Owners card), 2 (checkboxes before their labels) and
    3 (verified names as the lobby's display pill) are done; the segment
    stays open for further refinements.
    **Plan:** `guide/segment_20C_refinements.md`.
 
-7. **22C — A type checker: pyright** (not gated). Pyright in basic mode
+6. **22C — A type checker: pyright** (not gated). Pyright in basic mode
    over application code, fixed cluster by cluster, then a CI gate;
    ruff's rule set widened first.
    **Plan:** `guide/segment_22C_pyright.md`.
 
-8. **20G — The import's directory check, sturdier** (not gated). Hold
+7. **20G — The import's directory check, sturdier** (not gated). Hold
    and ask to renew on a sign-in failure; normalized object ids; the
    lookup measured.
    **Plan:** `guide/segment_20G_directory_import_robustness.md`.
 
-9. **20H — Follow-ups from the 19Z walkthrough** (not gated). The
+8. **20H — Follow-ups from the 19Z walkthrough** (not gated). The
    single-row forms refuse a second row on one directory account; an
    instrument label's wrong number after an add; audit events by
    facility; Upload-card banners; the unreachable checks written down;
@@ -106,17 +97,8 @@ the PR body unless it says otherwise.
   2026-11-03)*. L1 (a 500 on a 4,300-digit value) and N1–N3 (the
   Residential preview gate tested at one route, its CSV formula guard,
   its README) are one PR each; the register is the checklist
-  (`guide/findings_2026-11-02_assessment.md`). D-a to D-c ride 19Z's
-  close; L2 and L3 were fixed by 20F.
-
-- **21F on the real tenant** *(filed 2026-10-31, at segment 21F's
-  close)*. The first Cordware deploy carrying 21F needs the author's
-  browser check of a roster given by sign-in name: the row binds at
-  upload, its account is admitted after sign-in, and the Setup page's
-  directory-check line reads right. Fake auth binds nothing, so no
-  local run covers the bound path
-  (`guide/archive/segment_21F_directory_rosters.md` § Status). Import
-  a commit at or after `#3430`, never rung 4a without rung 5.
+  (`guide/findings_2026-11-02_assessment.md`). D-a to D-c were taken by 19Z's
+  close (2026-11-03); L2 and L3 were fixed by 20F.
 
 - **Cordware host logging, events 4 and 5** *(filed 2026-10-22, at
   segment 21's close)*. v0.8 §3 "Host logging" names two events the host

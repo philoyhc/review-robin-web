@@ -267,6 +267,7 @@ service writes an `audit_events` row).
 | Delete session (`/delete`, `/bulk-delete`, `/bulk-delete-archived`) | `confirm=true`, **plus `_require_not_ready`** on `/delete` (any state but `ready`); `/bulk-delete` skips sessions that are `ready` or `archived` (it accepts `draft`, `validated` and `expired`), and `/bulk-delete-archived` deletes only archived ones | `require_session_operator` / per-id check | ✓ |
 | Close / reopen session (`/activate`, `/revert`, `/workflow/activate`) | `acknowledge_warnings=true` on `/activate` when the readiness report has warnings (`/workflow/activate` sends those to the Validate page instead); `confirm=true` on `/revert` from `ready` or `expired` | `require_session_operator` | ✓ |
 | Replace reviewers / reviewees roster | `confirm_replace` + response-loss ack | `require_session_operator` | ✓ |
+| Append to / merge with a roster (the four Upload cards; 19Z) | the `append` or `merge` tick, exclusive with `confirm_replace`; no response-loss ack (nothing is deleted); a merge that would clear group answers asks with `acknowledge_group_clear` | `require_session_operator` | ✓ |
 | Delete all reviewers / reviewees (`delete-all`) | `confirm=true` + response-loss ack | `require_session_operator` | ✓ |
 | Delete all observers (`delete-all`) | `confirm=true` only — nothing references an observer, so no response can be lost | `require_session_operator` (via `require_observers_enabled_session`) | ✓ |
 | Replace assignments (generate) | `confirm_replace` + response-loss ack | `require_session_operator` | ✓ |

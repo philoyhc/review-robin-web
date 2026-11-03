@@ -60,18 +60,18 @@ None.
 
 ## 4. Spec drift
 
-All three are 19Z's pending spec pass (`guide/segment_19Z_roster_append.md`).
+All three were taken by 19Z's close (`guide/archive/segment_19Z_roster_append.md`), 2026-11-03.
 
-- **D-a. The CSV contract says rosters never merge.**
+- ~~**D-a. The CSV contract says rosters never merge.**~~ **Done at 19Z's close.**
   `spec/csv_contracts.md` ("Wipe-and-replace, never merge"; "A roster
   import is wipe-and-replace") against `save_reviewers`, `save_reviewees`,
   `save_observers` and `save_relationships`, which take `append` and
   `merge`. `spec/setup_pages.md` names neither tick. Spec.
-- **D-b. Three routes outside the permissions matrix.** The two
+- ~~**D-b. Three routes outside the permissions matrix.**~~ **Done at 19Z's close.** The two
   directory-search GETs in `app/web/routes_operator/_directory.py` and
   the sys-admin one in `_sys_admin.py` appear in no spec, including
   `spec/permissions.md`. Their gates are right. Spec.
-- **D-c. Graph search undocumented.** `cordware/spec/identity.md`
+- ~~**D-c. Graph search undocumented.**~~ **Done at 19Z's close.** `cordware/spec/identity.md`
   documents `find_users` but not `search_users` (`cordware/graph.py`,
   `SEARCH_TOP = 10`). Spec.
 

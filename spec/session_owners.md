@@ -87,7 +87,10 @@ the page's card list; this spec owns its contents.
 - **Table**: every current owner, Email / Name / Role / Added / a
   **Remove** per row, your own included. Each Remove is its own form
   posting to `owners/{user_id}/remove` and saves at once. It is
-  `disabled` when one owner remains. Every other Remove **asks first**
+  `disabled` when one owner remains. A verified account (a non-blank
+  `users.external_principal_id`) shows its address as the roster pill and
+  its name as the plain display pill, as on the New session card (§ 1);
+  any other stays plain. Every other Remove **asks first**
   (`window.confirm` on submit; canceling posts nothing):
   - **your own row**: "Remove yourself as an owner? You will lose access
     to this session.";

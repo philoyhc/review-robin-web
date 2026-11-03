@@ -260,6 +260,18 @@ Email Address Checker; directory lookups only.
   quote doubled), `$select=id,displayName,mail,userPrincipalName` and
   `$top=5`, and returns each match as a `DirectoryUser`; an empty `mail`
   is `None`. More than one match is the caller's to judge.
+- **`search_users(prefix)`** is a picker's prefix search: one
+  `GET /v1.0/users` with `$filter=startswith(displayName,'…') or
+  startswith(surname,'…') or startswith(mail,'…') or
+  startswith(userPrincipalName,'…')` (an OData literal), the same
+  `$select`, and `$top=SEARCH_TOP` (10). It makes **one attempt**: no
+  retry and no `Retry-After` wait, since the picker asks again at the next
+  pause in typing and a wait would hold a worker. It is asked on the
+  caller's own token, so it shows what that person can already see. The
+  fake directory matches the same four fields by prefix, any case.
+  A failure is a `GraphError` as above; its `reason` is the kind, then the
+  status and Graph's `error.code` when it is a plain identifier, never
+  Graph's message. `graph.request_failed` carries it.
 - **A failure is never an empty answer.** It is a `GraphError` whose
   `kind` is `no_token`, `unauthorized` (`401`), `forbidden` (`403`),
   `throttled` (`429`), `server` (`5xx`), `network` or `bad_response` (any
@@ -288,8 +300,8 @@ Email Address Checker; directory lookups only.
   row only to a `RESOLVED` outcome (`OK`, `USE_PRIMARY`,
   `FOUND_NO_PRIMARY`).
 - **Logging.** Logger `cordware.graph`: `graph.request_failed`, a
-  warning carrying `kind` and `status` only, never the address, the
-  query or the token.
+  warning carrying `kind`, `status` and Graph's `error.code` only,
+  never the address, the query, Graph's message or the token.
 - **Renewing the token.** Easy Auth's Graph token lasts about an hour.
   `/.auth/refresh` renews it from the refresh token Easy Auth also keeps
   (the sign-in asks for `offline_access`), even after the access token has
