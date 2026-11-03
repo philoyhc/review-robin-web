@@ -426,6 +426,12 @@ to CSS classes.
 > so a page audit should expect them alongside the variants rather
 > than reading a missing accent as a defect.
 
+**On a card, banners stack under its intro**, above the controls they
+gate, in one order, and never touch their neighbors: the roster Upload
+cards' rule is `spec/setup_pages.md` "The Upload card's banners", and
+Quick Setup's card keeps the same stack above its slots. A control
+inside a banner that sits outside its form names the form with `form=`.
+
 #### 5a. Banner behaviour conventions
 
 Operator-page mutating routes (Save / Add / Delete) commonly

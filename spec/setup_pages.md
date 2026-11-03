@@ -429,8 +429,10 @@ already exists.
 
 Both confirm-gated buttons are enabled only by `base.html`'s
 confirm-pairing script, so with JS off `Delete all …` (always gated)
-and a **replace** import (gated whenever the roster has rows) are both
-unreachable. What the fallback reaches is the **empty-roster import**,
+and any upload into a roster with rows (gated on its replace, append or
+merge tick) are both unreachable, deliberately, as for every gated
+button. The routes still refuse a missing or
+doubled tick. What the fallback reaches is the **empty-roster import**,
 plus the ability to read every card the panel holds.
 
 ### The roster index
@@ -1027,14 +1029,14 @@ all; see its § *Lifecycle gate*. `spec/lifecycle.md` §5.
 Every banner an upload card shows sits in one stack, directly under the
 card's intro and above the directory-check line and the form, in one
 order: the upload problems (`partials/_upload_problems.html`), the
-directory renew (`partials/_directory_renew.html`, segment 20G), then the
+directory renew (`partials/_directory_renew.html`), then the
 group-clear ask (`data-group-clear-banner`; Reviewers, Reviewees and
 Relationships). Quick Setup's card keeps its own banners in one stack
-above its slots (`spec/quick_setup_card_spec.md`). A control inside a banner (the group
-clear's tick, a Dismiss that ends a hold) names `upload-csv-form` with
-`form=`, so it submits with the file. Nothing touches: the intro's
-`.form-help` margin leaves 12px above the first banner, and the `.banner`
-margin 16px between banners and below the last (author, 2026-11-03).
+above its slots (`spec/quick_setup_card_spec.md`). A control inside a
+banner (the group clear's tick, a Dismiss that ends a hold) names
+`upload-csv-form` with `form=`, so it submits with the file. Nothing
+touches: the intro's `.form-help` margin leaves 12px above the first
+banner, and the `.banner` margin 16px between banners and below the last.
 `tests/unit/test_upload_card_banners.py` pins the order.
 
 ### The Upload card's renew ask
