@@ -129,7 +129,8 @@ three-layer separation (mirrors CLAUDE.md "Architecture at a glance"):
    re-exporting its public surface via `__init__.py` so callers write
    the unqualified import unchanged:
    - `app/services/instruments/` — `_state.py`, `_display_fields.py`,
-     `_response_fields.py`, `_band1.py`, `_band2.py`, `_pagination.py`,
+     `_response_fields.py`, `_band1.py`, `_preview.py` (the Band 1
+     card's sample-reviewee preview), `_band2.py`, `_pagination.py`,
      `_instrument_crud.py`, `_field_presets.py`, and `_field_refs.py`
      (an instrument's sort and widths re-pointed across a copy; imported
      directly by Replicate, the clone and the settings CSV, not

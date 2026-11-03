@@ -8374,9 +8374,9 @@ def test_preview_sample_exclusion_is_not_the_desugar_stage(
     """
     import inspect
 
-    from app.services.instruments import _band1
+    from app.services.instruments import _preview
 
-    src = inspect.getsource(_band1.find_sample_in_scope_reviewee)
+    src = inspect.getsource(_preview.find_sample_in_scope_reviewee)
     assert "excludeSelfReviews=False" in src
     assert "excludeSelfReviews=True" not in src
 

@@ -143,7 +143,6 @@ from ._pagination import (
 from ._band1 import (
     Band1ParseError,
     decode_band1_state,
-    find_sample_in_scope_reviewee,
     clear_unsettled_exclude_self_reviews,
     get_exclude_self_reviews,
     parse_band1_form,
@@ -153,6 +152,7 @@ from ._band1 import (
     set_band1_assignment_rules,
     set_exclude_self_reviews,
 )
+from ._preview import find_sample_in_scope_reviewee
 
 
 __all__ = [
