@@ -82,8 +82,10 @@ ReviewerTag1               → reviewer.tag_1, no suffix (see below)
 - **Import writes `session_field_labels`** (via `field_labels`), the
   same store the per-page label editor uses — the header is a fourth
   write path, not a new store.
-- **Bare header, or an absent tag column, CLEARS that slot's label.**
-  A roster import is **wipe-and-replace** (`save_reviewers` &c.
+- **Bare header, or an absent tag column, CLEARS that slot's label**
+  on a replace (an append or a merge upserts the labels the header
+  carries and clears none, § 3.1a).
+  A roster replace is **wipe-and-replace** (`save_reviewers` &c.
   delete-and-reload the whole roster), so the uploaded file is the
   complete truth: a tag column with no suffix is the label analogue
   of a NULL tag value, and clears any existing override (resolving
@@ -354,7 +356,7 @@ case-insensitively, else a per-row error. The `*Tag1..3` columns may also carry 
 **Save:** `save_reviewers(db, *, session, user, rows, filename,
 correlation_id, field_labels_captured=None)` /
 `save_reviewees(...)` (same keyword-only shape) wipe-and-replace within the session's
-roster, then call `seed_display_fields_from_reviewees` for the
+roster (or append or merge, § 3.1a), then call `seed_display_fields_from_reviewees` for the
 Reviewees side (idempotent display-field seeding off populated
 `profile_link` / `tag_*` columns). The `field_labels_captured`
 argument reconciles the tag friendly labels from the header (§1a):
@@ -406,6 +408,87 @@ token (`cordware.graph.look_up_all`, `cordware/spec/identity.md`
   the extract's `reviewees.csv` unread. A Reviewers import mirrors into
   Reviewees in the same transaction (`spec/architecture.md`, "Symmetric
   review").
+
+### 3.1a Append and merge — the roster importers' other two modes
+
+`save_reviewers`, `save_reviewees`, `save_observers` and
+`save_relationships` take `append: bool` and `merge: bool` beside the
+default replace. At most one is true. They run the same parse, validation,
+directory check, label save and audit event; the save path is the same,
+not a second one. Where they are offered: the four roster Upload cards
+(`spec/setup_pages.md` § *The Upload card's modes*). Quick Setup and
+rehydrate always replace. An append or merge into an empty roster is a
+plain upload. Both keep the editable-state gate and
+`invalidate_if_validated` of a replace.
+
+**Neither deletes.** Existing rows, assignments and responses stay; the
+replace's cascade counts are omitted, not zeroed. The new rows have no
+assignments until the next Prepare, and the reconcile stamp's roster digest
+moves, so the Assignments page reads stale.
+
+**Append** adds the file's rows.
+
+- **A row already on the roster is refused**, naming the file row:
+  *"ReviewerEmail 'x' is already on the roster."* A match is by folded
+  address (`ReviewerEmail`, `ObserverEmail`, a reviewee's
+  `email_or_identifier`) and, on Relationships, by resolved pair. A row
+  whose address resolves to a directory account a roster row is bound to is
+  refused too: *"… is the same directory account as a reviewer already on
+  the roster."* A row the directory could not check matches no account, so
+  this check cannot catch it. The check runs again at the save, under the
+  session lock (`AppendConflict`), so a row added since is caught.
+- **All or nothing**, as replace is: any blocking issue writes nothing.
+- **Cross-roster identity** (§3.1) leaves out the roster being appended
+  to, as a replace does; any address already there is refused whatever its
+  name.
+- **The directory check looks up only the file's addresses**, and the
+  `directory_*` counts cover only them.
+- **Friendly labels** in the header are upserted; labels the file does not
+  carry are kept.
+- **Status** defaults to `active`, as on a replace.
+- Two file rows on one account still pass an append, as they pass a replace;
+  Validate's `*.duplicate_account` warning flags them
+  (`spec/validate_page.md`).
+
+**Merge** is the upsert: a file row matching a roster row updates it, any
+other row is added, and rows absent from the file are kept.
+
+- **Matching** is by folded address; on Relationships, by resolved pair. A
+  file address that resolves to a directory account bound on the roster
+  updates that bound row and **keeps its stored address**. An unresolved
+  file address, or an unbound existing row, cannot match by account, so the
+  row is added; a merge does not look up the roster's unbound rows. An
+  address change stays a single-row edit.
+- **Blank cells and absent columns keep the existing value.** Nothing is
+  cleared by a merge; a file may carry only the columns it changes. The
+  Observers `CohortRule` is a column like any other, compared with
+  `same_cohort_rule`.
+- **Status** changes only where the cell is non-blank
+  (`*ImportRow.status_given`). Deactivating a reviewer or reviewee excludes
+  their assignments, as the single-row edit does.
+- **A name change** applies if it passes the cross-roster name check, which
+  sets the updated row's own old name aside. A failure refuses the file,
+  naming the row. A rename through an account match is checked at the row's
+  kept address.
+- **Two file rows for one person** (a folded address, or one directory
+  account) or two landing on one existing row refuse the file
+  (`merge_conflicts`).
+- **A reviewer merge** recomputes self-review, since a binding it adds can
+  make a pair one person.
+- **A tag change that redraws an answered group asks first** on Reviewees
+  (and on Reviewers under symmetric review, whose merge redraws the mirrored
+  reviewees' groups): the save takes `acknowledged_loss` as §3.2 describes,
+  and `spec/setup_pages.md` § *Saves that clear group answers* shows the ask.
+- A bound row matched by address whose address now resolves to another
+  account keeps its binding; a replace would rebind it.
+
+**Audit.** Each mode's `*.imported` event keeps its envelope
+(`spec/architecture.md` § *Audit-event detail schema*): a replace counts
+`new` and `replaced`, an append `new` and `kept` with
+`context.mode = "append"`, a merge `new`, `updated` and `unchanged` with
+`context.mode = "upsert"`. Each row a merge updates also writes its own
+`*.updated` event with the `changes` envelope, so a row's history stays
+row by row. A replace carries no `mode`.
 
 ### 3.2 Relationships — `relationships.py`
 
@@ -462,8 +545,8 @@ import is an open product question, not a documented
 intent.
 
 **Save:** `save_relationships(db, *, session, user, rows, filename,
-correlation_id, field_labels_captured=None, acknowledged_loss=None)`
-wipe-and-replace, then call `seed_display_fields_from_assignments` — **named for
+correlation_id, field_labels_captured=None, acknowledged_loss=None,
+append=False, merge=False)` wipe-and-replace (or append or merge, § 3.1a), then call `seed_display_fields_from_assignments` — **named for
 assignments, but it reads `relationships.tag_N`**; the name is kept
 because renaming it buys a reader nothing and costs every caller.
 
@@ -503,7 +586,7 @@ both round-trip.
 | `Status` value | Blank/absent → `active`; `active` / `inactive` only, case-insensitively and ignoring surrounding whitespace, else per-row error. |
 | `CohortRule` shape | Non-blank cell must be valid JSON **and** pass `CohortRuleSet.model_validate` → per-row error otherwise; a typed operator (`IS` / `IS NOT` / `CONTAINS` / `DOES NOT CONTAIN`) needs a non-blank `operand_value`, since `CONTAINS ""` would match every row. Blank cell → `cohort_rule = NULL`. |
 
-**Save:** `save_observers(...)` wipe-and-replace within the session's
+**Save:** `save_observers(...)` wipe-and-replace (or append or merge, § 3.1a) within the session's
 observer roster, resolving addresses as §3.1 (*Directory resolution*). Emits `observers.imported` audit event on success.
 Bulk delete: `delete_all_observers(db, *, review_session, user,
 correlation_id)` — emits `observers.deleted_all`.
@@ -1218,11 +1301,14 @@ while creating the session.
    so they are a third reader of that one contract rather than a
    second source of truth.
 
-2. **Wipe-and-replace, never merge.** Every importer replaces
-   the section it owns within one transaction. Merge semantics
-   would require per-row diffing the operator has no way to
-   audit; replace is cleaner and matches the operator's mental
-   model ("re-upload the file = re-set the state").
+2. **Wipe-and-replace is the default; the four roster importers also
+   append and merge.** Every importer replaces the section it owns
+   within one transaction, and "re-upload the file = re-set the state"
+   stays the operator's model. Only the roster importers (Reviewers,
+   Reviewees, Relationships, Observers) offer the other two modes, each
+   an explicit operator choice (§3.1a); the Settings importer and Quick
+   Setup never merge, because a per-row diff there has nothing as
+   auditable as a roster row's `*.updated` event.
 
    **A roster replace destroys more than the roster.**
    `relationships` holds `ondelete="CASCADE"` foreign keys to both

@@ -1048,6 +1048,48 @@ card.
 - **Nothing** for an import with no counts (one that ran no check) or
   with no address to check (anonymous reviewee identifiers only).
 
+### The Upload card's modes
+
+On all four roster pages (Reviewers, Reviewees, Relationships, Observers)
+the Upload card offers three ways to apply a file to a roster that already
+has rows. With an empty roster none of the ticks shows, and an upload is
+simply the roster.
+
+> `[ ] Yes, replace the existing N reviewers …` (§ *The Upload card's replace*)
+> `[ ] Yes, append to, [ ] merge with the existing roster.`
+
+- **Replace** (`confirm_replace=true`) wipes and reloads, as below.
+- **Append** (`append=true`) adds the file's rows and leaves every existing
+  row, assignment and response alone.
+- **Merge** (`merge=true`) is the upsert: a file row matching a roster row
+  updates it, any other is added, and rows absent from the file are kept.
+  Matching, blank cells, Status and the audit are
+  `spec/csv_contracts.md` §3.1a.
+
+**The ticks are unticked by default and mutually exclusive**: all three
+share one `data-exclusive-tick="upload-mode"` group, so ticking one unticks
+the others and all may be unticked (`spec/ui_elements.md` § *Delete-confirm
+standard*). They share one delete-confirm key, so Upload stays disabled
+until one is ticked. Without a script the page cannot enforce this, so the
+server does.
+
+**What the server asks and refuses**, on a populated roster:
+
+| Posted | Answer |
+|---|---|
+| no tick | **400**, "Tick replace, append or merge just above Upload, then upload again."; the file is held |
+| more than one tick | **400**, "Tick only one of replace, append or merge, then upload again."; the file is held |
+| append, a row already on the roster, or on a directory account already bound there | **400**, the file's problems naming each row (`spec/csv_contracts.md` §3.1a); nothing written |
+| merge, two file rows for one person, or landing on one roster row | **400**, the same |
+| merge, a name that fails the cross-roster name check | **400**, naming the row |
+| merge on Reviewees (and Reviewers under symmetric review) whose tag change redraws an answered group; Relationships append or merge that does | the group-clear ask (§ *Saves that clear group answers*), the file held, the ticked mode re-ticked |
+
+An append or merge needs no response-loss acknowledgment, since neither
+deletes. Replace's label still names every loss. An ask holds the file as
+§ *The Upload card's replace* describes, and the held page re-ticks the
+mode that was posted (neither tick on the both-ticks ask). Append and merge
+share the Replace gates' editable states.
+
 ### The Upload card's replace
 
 `POST /operator/sessions/{id}/{roster}/import` replaces the whole
@@ -1113,9 +1155,8 @@ clearing group answers (§ *Saves that clear group answers*).
 **An ask holds the file.** A refusal that a tick
 answers holds the file of that submit in `held_uploads`, so the
 operator answers with the tick and Upload and chooses nothing again.
-Those refusals are the replace tick missing, the response-loss ack
-missing, and on Relationships a replace that would clear group
-answers.
+Those refusals are no mode tick, more than one, the response-loss ack
+missing, and a replace, append or merge that would clear group answers.
 
 - **The card.** It names the held file under its input ("Holding
   `roster.csv` from your last upload…"). The input stops being
@@ -1125,9 +1166,9 @@ answers.
   filename, as an untouched input posts none, so an empty file chosen
   is refused as a fresh empty upload is ("CSV has no header row")
   rather than swapped for the held one. The held bytes are parsed again as a fresh upload's would be.
-- **The replace tick.** After a group-clear or response-loss ask it
+- **The ticks.** After a group-clear or response-loss ask the posted mode
   renders ticked again, since the operator had ticked it to get there.
-  After a missing-replace ask it renders unticked.
+  After a no-tick or both-ticks ask none renders ticked.
 - **Ending the hold.** A save ends it, and so does a blocked file (the
   card's parse and validation refusals). So does the banner's Dismiss, which submits the form
   to `…/{roster}/import/dismiss`; that route deletes the hold and lands
@@ -1169,6 +1210,42 @@ nothing, such as a group that only shrank, never asks.
 On a bulk action the expander shows the line and the tick beside its
 own confirmation. Reviewees' bulk Inactivate and Activate never clear
 groups and are not gated.
+
+### Bound addresses
+
+A roster row bound to a directory account (`directory_object_id`, set at
+upload or on a single-row save, `spec/csv_contracts.md` §3.1) shows its
+address as a display pill: `<code class="pill pill-count pill-address">`
+with the title "Matched to a directory account", the address's case kept
+(`pill-address`, `spec/ui_elements.md` §9). Any other address stays plain
+`<code>`. One macro, `operator/partials/_roster_address.html`
+(`roster_address`), renders it everywhere a roster address appears: the
+three roster tables, Relationships' reviewer and reviewee cells, the
+Assignments table, the Invitations and Responses tables, and their
+per-reviewer and per-reviewee drill-ins. A new surface that shows a roster
+address takes the macro rather than a bare `<code>`.
+
+### Directory pickers on the add and edit rows
+
+On Reviewers, Reviewees and Observers the Add and Edit rows search the
+directory as the operator types, in the name box or the address box:
+`GET /operator/sessions/{id}/directory-search?q=` (`_directory.py`; the
+session's operators, on the caller's own delegated token; a local run asks
+the fake directory). Three or more characters ask; up to 10 people come
+back, and the answer says when the directory cannot be asked and why.
+
+- **A pick fills both boxes**: the address, and the name with the
+  directory's display name, which the operator may edit before saving. A
+  pick fills the other box only when it is empty or holds the picker's own
+  last fill, so an edited row's address (or a reviewee's identifier) stays.
+- **Each box offers its own value**: the name box names (address beneath),
+  the address box plain addresses (name beneath). A name two people share is
+  offered once per person as "Name <address>"; typing the name in full picks
+  no one. The name box never picks a nameless account.
+- **A typed value always works.** A Reviewees identifier that is not an
+  address is still typed freely; the save's own directory check binds the
+  row as an upload does. Relationships keeps picking from the session's
+  rosters.
 
 ### Search matching and suggestions
 
@@ -1453,7 +1530,7 @@ chip. The route answers 409 when the session is not `is_editable` and
 |---|---|---|---|
 | 0 | (select) | — | Leftmost checkbox column — per-row select + header select-all; drives the **row expander** below |
 | 1 | Name | — | `reviewer.name` |
-| 2 | Email | — | `<code>{{ reviewer.email }}</code>` |
+| 2 | Email | — | The address in `<code>`, a display pill when bound (§ *Bound addresses*) |
 | 3 | Profile | ✓ | Conditional: rendered only when at least one reviewer has `profile_link` **or** while a row is being edited (`edit_mode`). Cell renders `<a href="…" target="_blank">link</a>` for an `http(s)` value and a muted `•••` with the value as its hover for any other (`_partials/profile_value.html`); input in edit mode. `data-col-toggle="profile"` / `class="profile-col"`. Uses the display-only `("reviewer", "profile_link")` label "Profile"; it is not in `_VALID_SOURCE_FIELDS`, so a session cannot rename it. |
 | 4 | Tag1 | ✓ | `data-col-toggle="tag-1"` / `class="tag-col tag-col-1"` |
 | 5 | Tag2 | ✓ | `data-col-toggle="tag-2"` / `class="tag-col tag-col-2"` |
@@ -1523,7 +1600,7 @@ unknown key.
 |---|---|---|---|
 | 0 | (select) | — | Leftmost checkbox column — per-row select + header select-all; drives the **row expander** below |
 | 1 | Name | — | `reviewee.name` |
-| 2 | Email (`Email / Identifier` in edit mode) | — | `<code>{{ reviewee.email_or_identifier }}</code>` |
+| 2 | Email (`Email / Identifier` in edit mode) | — | The address or identifier in `<code>`, a display pill when bound (§ *Bound addresses*) |
 | 3 | Profile | ✓ | Conditional: rendered only when at least one reviewee has `profile_link` **or** while a row is being edited (`edit_mode`). Cell renders `<a href="…" target="_blank">link</a>` for an `http(s)` value and a muted `•••` with the value as its hover for any other (`_partials/profile_value.html`). `data-col-toggle="profile"` / `class="profile-col"`. Uses the display-only `("reviewee", "profile_link")` label "Profile"; it is not in `_VALID_SOURCE_FIELDS`, so a session cannot rename it. |
 | 4 | Tag1 | ✓ | `data-col-toggle="tag-1"` / `class="tag-col tag-col-1"` |
 | 5 | Tag2 | ✓ | `data-col-toggle="tag-2"` / `class="tag-col tag-col-2"` |
@@ -1571,8 +1648,8 @@ defaulting to `active` when omitted. POSTs to
 | # | Column | Toggle? | Notes |
 |---|---|---|---|
 | 0 | (select) | — | Leftmost checkbox column — per-row select + header select-all; drives the **row expander** below |
-| 1 | Reviewer | — | Resolved **name** stacked above `<code>email</code>`; sorts on name |
-| 2 | Reviewee | — | Resolved **name** stacked above `<code>email_or_identifier</code>`; sorts on name |
+| 1 | Reviewer | — | Resolved **name** stacked above the address (`<code>`, a display pill when bound, § *Bound addresses*); sorts on name |
+| 2 | Reviewee | — | Resolved **name** stacked above the address or identifier (as Reviewer); sorts on name |
 | 3 | Tag1 | ✓ | `data-col-toggle="tag-1"` / `class="tag-col tag-col-1"` |
 | 4 | Tag2 | ✓ | `data-col-toggle="tag-2"` / `class="tag-col tag-col-2"` |
 | 5 | Tag3 | ✓ | `data-col-toggle="tag-3"` / `class="tag-col tag-col-3"` |
@@ -1715,7 +1792,7 @@ refuses is a silent failure.
 |---|---|---|---|
 | 0 | (select) | — | Leftmost checkbox column — per-row select + header select-all; drives the **row expander** below |
 | 1 | Name | — | `observer.display_name`; `—` when null |
-| 2 | Email | — | `observer.email` in `<code>` |
+| 2 | Email | — | `observer.email` in `<code>`, a display pill when bound (§ *Bound addresses*) |
 | 3 | Tag | — | `observer.tag_1`; `—` when null |
 | 4 | Status | — | `observer.status` |
 | 5 | Cohort | — | Friendly summary of `observer.cohort_rule` (e.g. `Reviewer: Mentor IS THE SAME AS Observer: Email + 1 more`); `—` when no rule saved |
@@ -1899,7 +1976,9 @@ is held to the editor's shape; a bad cell is a per-row error that
 blocks the import. Emits
 `observers.imported` audit event on success.
 
-Bulk delete: `POST /operator/sessions/{id}/observers/delete-all`
+Its Upload card takes the replace, append and merge ticks of § *The
+Upload card's modes*; `append` and `merge` are read by the same import
+route. Bulk delete: `POST /operator/sessions/{id}/observers/delete-all`
 — emits `observers.deleted_all`.
 
 ## Out of scope for these pages

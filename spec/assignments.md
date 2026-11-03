@@ -807,7 +807,10 @@ The Operations-row page at
    materialised pairs, with an Included pill and, while editable, a
    row-select checkbox per row. It carries
    **no `<h2>`** — a preview-table card does not take one, and this
-   page's `<h2>` belongs to the status table above.
+   page's `<h2>` belongs to the status table above. The table's reviewer
+   and reviewee address cells show a directory-bound address as a display
+   pill and any other as plain code (`spec/setup_pages.md` § *Bound
+   addresses*).
 
    The card opens with the **two-pane toolbar**
    (`.table-card-toolbar.is-split`) the other seven table pages carry;
@@ -1338,6 +1341,11 @@ implementation note:
 - **Unpinned instruments go stale too.** A NULL `rule_set_id` is the Full
   Matrix default at the diff site, so an unpinned instrument generates
   like any other and can fall out of step like any other.
+
+- **A roster append or merge leaves every assignment in place** and reads
+  stale when a regeneration would add pairs for the new rows; it is the
+  next Prepare that gives them assignments (`spec/csv_contracts.md` §3.1a).
+  A replace is the roster change that deletes assignments.
 
 **A never-generated instrument is not stale.** A run would insert its
 whole fan-out, so treating that as staleness lights up every fresh

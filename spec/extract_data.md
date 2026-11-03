@@ -837,7 +837,9 @@ Each sub-card carries:
    `data-delete-btn="KEY"` on `Delete`, with no gate logic on
    the page. The key is unique page-wide — `shape-{id}` on a
    saved card, `shape-new-0` on the initial blank card, and
-   `shape-new-N` on a spawned one. **The tick resets**: a
+   `shape-new-N` on a spawned one. (Unique to its *button*: a key may sit on
+   several boxes, as the roster Upload card's three ticks share one, but
+   never on several buttons.) **The tick resets**: a
    change of active shape (`Edit`, `+Shape`, a `Delete` that
    moves the selection, the only-card reset) and `Cancel`
    clear every tick in the stack, which re-disables `Delete`.

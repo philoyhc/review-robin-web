@@ -49,7 +49,7 @@ columns **once**, on the row's first creation in `get_or_create_user`.
 After that the columns are authoritative: removing an email from the
 env var does **not** auto-revoke, and every later change is an
 audited in-app action on the Accounts Management page, or the sign-in
-that folds a never-used invite row into its own (the invite's flags
+that folds a never-used, unbound invite row into its own (the invite's flags
 OR'd in, audited as `workspace.user_absorbed`; `docs/security_posture.md`
 §5.5a). Super-admin is
 the exception — being config-derived, it can neither drift from the
@@ -100,7 +100,7 @@ one.
 
 | Gate | Predicate | Returns | On miss |
 |---|---|---|---|
-| `get_or_create_user` | signed in with an email claim | `User` (the row with the identity's Entra object id, the one holding the resolved email if several carry it, else the newest, moved to a changed email — audited as `workspace.user_email_changed`; a row already holding that email that was never signed in to (an invite) is absorbed, flags OR'd and memberships moved, audited as `workspace.user_absorbed`; one that was signed in to leaves both rows as they are; failing that, a case-insensitive email lookup, oldest match wins, recording the object id on a row that has none, audited as `workspace.user_principal_recorded`; else created) | **401** if the principal carries no email, or if there are no identity headers and fake auth is off |
+| `get_or_create_user` | signed in with an email claim | `User` (the row with the identity's Entra object id, the one holding the resolved email if several carry it, else the newest, moved to a changed email — audited as `workspace.user_email_changed`; a row already holding that email that was never signed in to and carries no object ID (an invite not bound in the directory) is absorbed, flags OR'd and memberships moved, audited as `workspace.user_absorbed`; one that was signed in to leaves both rows as they are; failing that, a case-insensitive email lookup, oldest match wins, recording the object id on a row that has none, audited as `workspace.user_principal_recorded`; else created) | **401** if the principal carries no email, or if there are no identity headers and fake auth is off |
 | `require_operator` | `is_operator OR is_sys_admin` | `User` | raises `OperatorAllowlistDenied` → the handler in `app/main.py` **303s to `/me?notice=organizers`** (deliberately not a 403 — the arrival is more often a misrouted legitimate user than an attacker; the "how do I get access" copy lives on `/about`) |
 | `require_sys_admin` | `is_sys_admin` | `User` | **403** `sys_admin required` |
 | `require_session_operator` | a `session_operators` row for (user, `{session_id}`) | `ReviewSession`; also stamps the session's display timezone on `request.state` | **404**, bare — for a non-member *and* for an id that does not resolve, so the two are indistinguishable and session ids cannot be enumerated. **Exception:** a **sys-admin** (hence super-admin) who is not an owner of an *existing* session gets **403** `You are not an owner of this session…`, pointing at the adopt door; an absent id still answers 404 |
@@ -138,6 +138,9 @@ Two things the table implies and the code relies on:
 | session-scoped operator routes `/operator/sessions/{session_id}/…` | `require_session_operator` | per route, directly or via the two feature-toggle wrappers. **Every** such route carries one. Checking it means following `Depends()` **transitively**: a decorator scan alone reports false positives, because several routes in `_instruments.py` are gated two levels deep through `Depends(_require_instrument_in_session)` and never name `require_session_operator` in their own signature. *A check that flags a correctly-gated route is worse than none, because the next reader believes it.* |
 | the two **relaxed** session routes: `POST …/owners/add`, `POST …/clone` | `require_sys_admin_or_session_operator` | a non-owner sys-admin may reach them; `owners/add` additionally enforces **self-only** for a non-owner in its handler (`self_only` error otherwise); `clone` makes the cloner owner of the copy and leaves the original's setup untouched, but writes `session.duplicated` on the original's audit trail naming the actor and the copy (`refs.clone_session_id`, `context.clone_code`, `context.mode`), so a non-owner sys-admin's full Duplicate, which carries the roster the original's roster page would refuse them, is on the original's own trail (read by a sys-admin, like every audit trail) |
 | lobby bulk routes (tags / archive / bulk-delete, and the Archived page's bulk-unarchive / bulk-delete-archived) | `require_operator` + per-id re-resolution | each client-supplied `session_id` is re-resolved with `sessions.get_for_user`; non-owned ids are skipped, never acted on |
+| `GET /operator/sessions/{session_id}/directory-search` | `require_session_operator` | the directory pickers on a session's roster rows (`_directory.py`) |
+| `GET /operator/directory-search` | `require_operator` (the package gate) | the help-contact boxes on New session and Session Home, where New session has no session yet (`_directory.py`) |
+| `GET /operator/sys-admin/users/directory-search` | `require_sys_admin` | the Accounts invite box's picker (`_sys_admin.py`) |
 | `/operator/sys-admin/*` (root redirect, Sessions Diagnostics, per-session Outbox + Audit log children, Accounts Management, adopt, and the per-user actions) | `require_sys_admin` | per route |
 | `GET …/export/audit_log.csv` | `require_sys_admin` | the one session-scoped export that is *not* owner-reachable: there is no operator-facing entry point to it |
 | reviewer surface, save / submit / recall / clear, post-submit summary + `summary.csv` | `require_reviewer_in_session` | per route |
@@ -192,7 +195,15 @@ status.
 | Demote | **super-admin** | `self_action`, `requires_super_admin`, `protected_super_admin`, `last_admin` (target is the only admin), `still_owner` (target has no Operator flag and owns ≥1 session — the demote would take their operator access) | `sys_admin.role_demoted` |
 | Remove from all sessions | admin | `self_action`, `protected_super_admin`, `sole_owner` (target is the only owner of some session) | `workspace.user_detached_from_all_sessions` |
 | Delete user | admin | `self_action`, `protected_super_admin`, `last_admin`, `owns_sessions`, `has_history` (target created a session or acted in the audit log; an operator's access is taken away by Revoke) | `workspace.user_removed` |
-| Invite (pre-seed a `users` row before first sign-in) | admin; **super-admin** to switch the role chip from `Invite as operator` to `Invite as sys-admin` (it posts `invite_as_sys_admin=true`), a chip the page renders only to an actor who could Promote | `invalid_email`, `duplicate` (case-insensitive), `requires_super_admin` (sys-admin chip only) | `workspace.user_invited` |
+| Invite (pre-seed a `users` row before first sign-in) | admin; **super-admin** to switch the role chip from `Invite as operator` to `Invite as sys-admin` (it posts `invite_as_sys_admin=true`), a chip the page renders only to an actor who could Promote | `invalid_email` (not one whole address), `duplicate` (case-insensitive), `requires_super_admin` (sys-admin chip only), then the directory check: `not_in_directory`, `ambiguous_in_directory`, `account_exists` (another row already holds that object ID) | `workspace.user_invited` |
+
+**An invite is checked against the directory** on the inviting admin's own
+delegated token. An address that resolves to one person creates the row
+with that person's Entra object ID in `external_principal_id` (the column
+sign-in matches first) and the directory's display name; the address is
+kept as written. With no token, a failed lookup, or on a local run, nothing
+is checked: the row is created unbound, the page says it was "not checked",
+and it binds at first sign-in. The object ID match is case-insensitive.
 
 **No-super-tier fallback.** `requires_super_admin` engages only
 once a super-admin actually exists in the effective set; with
@@ -317,7 +328,7 @@ the operation-level mappings.
 | `self_action` | **400** | `_sys_admin._handle_toggle` |
 | `requires_super_admin` on Promote / Demote | **403** | same |
 | `last_admin`, `owns_sessions`, `has_history`, `still_owner`, `sole_owner`, `protected_super_admin`, on the single-row routes | **409** | same |
-| every Invite error (`invalid_email`, `duplicate`, `requires_super_admin`) | **303** back to the page with `?invite_error=<code>`, which renders a banner | `_sys_admin.invite_user` |
+| every Invite error (`invalid_email`, `duplicate`, `requires_super_admin`, `not_in_directory`, `ambiguous_in_directory`, `account_exists`) | **303** back to the page with `?invite_error=<code>`, which renders a banner | `_sys_admin.invite_user` |
 | any other Accounts bulk refusal (§4.1) | **303** back with `?toggle_error=<code>&refused=<id>`, which renders a banner | `_sys_admin.bulk_account_action` |
 | `last_owner` on remove-owner | **409** (the card disables that Remove, so only a direct POST or a concurrent remove reaches it) | `_session_home.session_owners_remove` |
 | every other owner error on `owners/add` / `owners/{user_id}/remove` (`not_in_workspace`, `already_owner`, `not_owner`, `self_only`) | **303** back to `#owners-card` with `?owners_error=<code>` | same |
