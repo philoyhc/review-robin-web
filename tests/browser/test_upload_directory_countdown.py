@@ -95,19 +95,20 @@ def test_a_failed_lookup_stops_the_count_and_uploads(
     checks what is left within its own budget (Codex, #3555)."""
     session_id = new_session()
     roster = tmp_path / "reviewers.csv"
+    many = [f"person{i}@example.edu" for i in range(60)]
     roster.write_text(
         "ReviewerName,ReviewerEmail\n"
-        + "\n".join(f"P{i},{a}" for i, a in enumerate(ADDRESSES)) + "\n"
+        + "\n".join(f"P{i},{a}" for i, a in enumerate(many)) + "\n"
     )
-    sent: list[str] = []
+    batches: list[list[str]] = []
 
     def time_out(route) -> None:
-        key = json.loads(route.request.post_data)["keys"][0]
-        sent.append(key)
+        keys = json.loads(route.request.post_data)["keys"]
+        batches.append(keys)
         route.fulfill(
             status=200,
             content_type="application/json",
-            body=json.dumps({"outcomes": {key: {"status": "ERROR", "error_kind": "timeout"}}}),
+            body=json.dumps({"outcomes": {k: {"status": "ERROR", "error_kind": "timeout"} for k in keys}}),
         )
 
     page.route("**/directory-lookup", time_out)
@@ -116,8 +117,41 @@ def test_a_failed_lookup_stops_the_count_and_uploads(
     with page.expect_navigation():
         page.locator("#upload-csv-form .unlock-col-actions button[type=submit]:not([data-directory-recheck])").click()
     page.wait_for_load_state("load")
-    assert 1 <= len(sent) <= 4  # the first answer stops the rest
-    expect(page.locator("[data-directory-check]")).to_contain_text("matched by mail")
+    assert 1 <= len(batches) <= 2  # two in flight; the first answer stops the other four
+    expect(page.locator("[data-directory-check]")).to_contain_text("not found")
+
+
+def test_the_count_falls_by_batches_of_ten(
+    page: Page, new_session: Callable[[], str], tmp_path: Path
+) -> None:
+    """Segment 20I Item 2: 25 addresses go in three requests of 10, 10
+    and 5, at most two at once, and the count falls by each batch to zero."""
+    session_id = new_session()
+    roster = tmp_path / "reviewers.csv"
+    many = [f"batch{i}@example.edu" for i in range(25)]
+    roster.write_text(
+        "ReviewerName,ReviewerEmail\n"
+        + "\n".join(f"P{i},{a}" for i, a in enumerate(many)) + "\n"
+    )
+    batches: list[list[str]] = []
+    page.on(
+        "request",
+        lambda r: batches.append(json.loads(r.post_data)["keys"])
+        if r.url.endswith("/directory-lookup") else None,
+    )
+    page.add_init_script(_RECORD)
+    page.goto(app_url(f"/operator/sessions/{session_id}/reviewers?unlocked=1"))
+    page.locator("#upload-csv-form input[name=file]").set_input_files(str(roster))
+    with page.expect_navigation():
+        page.locator("#upload-csv-form .unlock-col-actions button[type=submit]:not([data-directory-recheck])").click()
+    page.wait_for_load_state("load")
+    assert sorted(len(b) for b in batches) == [5, 10, 10]
+    assert sorted(k for b in batches for k in b) == sorted(many)
+    seen = _seen(page)
+    assert seen[0] == 25 and seen[-1] == 0
+    assert seen == sorted(seen, reverse=True)
+    assert set(seen) <= {25, 20, 15, 10, 5, 0}  # falls by a batch, not by one
+    expect(page.locator("[data-directory-check]")).to_contain_text("25 not found")
 
 
 def test_the_recheck_counts_down_every_unmatched_address_then_rechecks(
@@ -159,3 +193,36 @@ def test_the_recheck_counts_down_every_unmatched_address_then_rechecks(
     assert seen == sorted(seen, reverse=True)
     expect(page.locator("[data-directory-check]")).to_contain_text("Recheck of the unmatched addresses")
     expect(page.locator("[data-directory-check]")).to_contain_text("4 not found, 1 ambiguous")
+
+
+def test_one_failed_key_in_a_batch_stops_the_count(
+    page: Page, new_session: Callable[[], str], tmp_path: Path
+) -> None:
+    """A batch is failed by any of its keys, not only its first: the
+    seventh key of the first batch errors, and no further batch goes."""
+    session_id = new_session()
+    roster = tmp_path / "reviewers.csv"
+    many = [f"mid{i}@example.edu" for i in range(40)]
+    roster.write_text(
+        "ReviewerName,ReviewerEmail\n"
+        + "\n".join(f"P{i},{a}" for i, a in enumerate(many)) + "\n"
+    )
+    batches: list[list[str]] = []
+
+    def answer(route) -> None:
+        keys = json.loads(route.request.post_data)["keys"]
+        batches.append(keys)
+        outcomes = {k: {"status": "NOT_FOUND", "error_kind": None} for k in keys}
+        if keys[0] == many[0]:
+            outcomes[keys[6]] = {"status": "ERROR", "error_kind": "throttled"}
+        route.fulfill(status=200, content_type="application/json", body=json.dumps({"outcomes": outcomes}))
+
+    page.route("**/directory-lookup", answer)
+    page.goto(app_url(f"/operator/sessions/{session_id}/reviewers?unlocked=1"))
+    page.locator("#upload-csv-form input[name=file]").set_input_files(str(roster))
+    with page.expect_navigation():
+        page.locator("#upload-csv-form .unlock-col-actions button[type=submit]:not([data-directory-recheck])").click()
+    page.wait_for_load_state("load")
+    # The first batch's answer stops the count: at most the other batch
+    # already in flight went too, of the four.
+    assert 1 <= len(batches) <= 2

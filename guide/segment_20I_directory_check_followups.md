@@ -69,7 +69,7 @@ The countdown of a 1,500-row upload took about 85 s on production and 18 s local
 
 ### Decision
 
-Send batches of 10 keys, four in flight, and drop the count by each batch's size. Rejected: *25 a batch*, which makes the count move in jumps of 25 on a small roster and holds a batch on its slowest key.
+Send batches of 10 keys and drop the count by each batch's size (two in flight as built; see Status). Rejected: *25 a batch*, which makes the count move in jumps of 25 on a small roster and holds a batch on its slowest key.
 
 ### PR ladder
 
@@ -83,6 +83,10 @@ Send batches of 10 keys, four in flight, and drop the count by each batch's size
 - `spec-writer` run against the doc-impact specs; flags adjudicated
 - `## Status` compacted to intended vs done; answered open questions collapsed
 - `guide/todo_master.md` 20I entry updated to drop this item; the entry itself goes only when the segment closes
+
+### Status
+
+**Closed 2026-11-03.** Intended vs done: as decided. `partials/_directory_countdown.html` sends batches of 10 (`batch`), the count falling by each batch's size; one failed key in a batch stops the count, as one failed lookup did. **Two in flight, not the decided four:** the server looks each batch up four at a time, so four batches would run sixteen directory calls at once against the Email Address Checker's four; two keeps it at eight (the item's cold read). Browser tests: 25 addresses go as 10, 10 and 5; a timing-out directory, or one failed middle key, stops within the first two batches. Reads: one cold read (the fan-out, a stale spec sentence, a test that checked only whole-batch failures; all fixed). The production timing is the author's check. `spec/setup_pages.md` "… countdown" updated in the same PR.
 
 ### Open questions
 
