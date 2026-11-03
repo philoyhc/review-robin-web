@@ -3,6 +3,7 @@
 **Consolidated architecture and functional protocol specification — v0.3**  
 **Date:** 4 November 2026  
 **Status:** Proposed consolidated baseline for review and implementation planning; **not** a claim of implemented capabilities or an authorization to modify production  
+**Parked (author, 2026-11-04):** no implementation is planned. Revisit when ApplyDesk or RA Lifecycle is further along. Rulings and review notes from that date are §13.  
 **Canonical public development repository:** `philoyhc/review-robin-web`  
 **Private import/deployment repository:** `philoyhc/cordware`  
 **Suggested repository path:** `cordware/spec/interoperability_and_orchestration.md`  
@@ -352,6 +353,83 @@ These paths in **`philoyhc/review-robin-web`** are the relevant domain specifica
 - [`applydesk/docs/applydesk_functional_spec_v0.6b_agent_handoff.md`](https://github.com/philoyhc/review-robin-web/blob/main/applydesk/docs/applydesk_functional_spec_v0.6b_agent_handoff.md) — specified ApplyDesk, **not** proof of implementation.
 
 **State as checked 3–4 November 2026:** RRW's CSV setup and response export machinery exists; the linked-handoff endpoints/status projection/response import are **proposals**. ApplyDesk is an advanced functional specification, not a completed hosted app. Before coding, re-read current `main` and reconcile any changes. Private Cordware deployment/runtime specifics remain owned by the private repo and must not be pasted into public specs.
+
+## 13. Review notes and rulings (2026-11-04)
+
+Taken against RRW `main` at `97908801`. The rulings are the author's;
+the rest is a review, and changes nothing above until the spec is
+revised.
+
+### 13.1 Rulings
+
+- **Parked.** No implementation now; revisit when ApplyDesk or RA
+  Lifecycle is further along. Either may turn out to be the first
+  consumer: RA Lifecycle → RRW peer review needs no instrument mapping
+  if it uses RRW's own templates.
+- **v1 sends rosters only.** The first handoff carries the roster files
+  (Reviewers, Reviewees, Observers, and Relationships as pair context)
+  and no `settings.csv`; instruments, fields and rules are built in RRW.
+  This defers D1's instrument mapping entirely, and §6.2's
+  "roster-only" mode becomes the v1 contract rather than a fallback.
+  Whether Relationships counts as a roster here is this review's
+  reading, to confirm at revisit.
+- **One operator in both apps (D5, in part).** Two apps interoperate
+  only for a person who is an operator in both. Someone authorized in
+  one app sees no interoperability control there, and the other app
+  refuses them (`not_authorized`); there is no cross-app delegation.
+
+### 13.2 Claims checked against RRW
+
+Confirmed: roster files are capped at 1 MiB and 5,000 rows
+(`app/services/csv_imports/_parse.py`); RRW has no Assignments importer;
+`responses.csv` is 21 columns with a field-key preamble and positional
+`instrument_{n}` names; New session commits the session before its
+staged files are checked, so a refused file leaves an empty draft, by
+design today (`spec/quick_setup_card_spec.md`, "Failure mode").
+
+### 13.3 What the spec does not yet say
+
+1. **One person, two applications.** RRW refuses a duplicate
+   `RevieweeEmail` within a file as a blocking error. The handoff must
+   send the ApplyDesk application ID as the reviewee identifier, not the
+   applicant's email. Validate then warns
+   `reviewees.unreachable_for_results` for every row, which the handoff
+   should explain or suppress.
+2. **D2 is half answered.** An instrument's `session_seq` is assigned
+   once and never renumbered, and `field_key` is unique per instrument,
+   so `session_seq` + `field_key` is a stable field key, unlike
+   `instrument_{n}`. The response and obligation identity remain open,
+   since a field's `Version` resets after a clear.
+3. **The directory check bounds a create.** A handoff create resolves
+   every roster address through Graph within RRW's 120 s budget. The
+   upload countdown's kept answers (RRW segments 20H and 20I,
+   `spec/setup_pages.md`) fit the §6.1 holding tab: count down there,
+   then create. D8 should name it.
+4. **RRW has no API surface.** There are no `/api/` routes today, so
+   §7.2's endpoints are a new layer: an error envelope, a CSRF posture
+   beyond SameSite=Lax (Origin / Fetch-Metadata), and registration with
+   RRW's URL-crawl and spec-coverage tests.
+
+### 13.4 Recommendations for the revisit
+
+1. Start with the handoff's §3 reconciliation report; build nothing for
+   a consumer that does not exist yet.
+2. Atomic create + setup has value on its own: it removes the empty
+   draft today's New session leaves. It changes an existing page, which
+   the handoff's Slice B rules out, so it needs a ruling.
+3. For D3, a signer supplied by the host: every Cordware app runs in one
+   process behind one Easy Auth, so a small Cordware helper that signs
+   and verifies digests with a key from an app setting fits §3's
+   "stateless host supplies transport helpers", with no cross-app import
+   and no server-to-server call.
+4. Keep this document in `cordware/docs/` as a proposal until D2 and D3
+   are ruled; the work then opens a segment plan whose Doc impact names
+   `cordware/spec/interoperability_and_orchestration.md`, and the spec,
+   trimmed of what §3, §6.6, §10 and the handoff repeat, lands at its
+   close.
+
+Still open from the review: D7, whether results imported into ApplyDesk
+follow a different retention policy from RRW's own.
 
 ---
 
