@@ -4,7 +4,7 @@
 the 2026-11-02 assessment) · **Theme:** the Reviewees mirror can't drift
 from the Reviewers roster unnoticed · **Related:**
 `guide/archive/segment_20B_symmetric_review.md`,
-`guide/codebase_assessment_02nov.md` §5,
+`guide/archive/codebase_assessment_02nov.md` §5,
 `guide/archive/findings_2026-11-02_assessment.md` (L2, L3),
 `spec/architecture.md` "Symmetric review"
 
@@ -15,7 +15,7 @@ Reviewers roster only because every reviewer-writing service calls
 `symmetric_review.sync_reviewees_from_reviewers` before it commits: 10
 call sites in 7 modules, by convention. Nothing fails if a new writer
 forgets, and no check notices a reviewee that has drifted from its
-reviewer (`guide/codebase_assessment_02nov.md` §5). The defect read found
+reviewer (`guide/archive/codebase_assessment_02nov.md` §5). The defect read found
 two edge cases on the same seam:
 
 - **L2.** On SQLite, a Replace can hand a removed person's reviewee row,

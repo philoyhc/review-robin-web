@@ -1,7 +1,7 @@
 # Findings — codebase assessment (2026-11-02)
 
 **Found by:** the three reads run beside
-`guide/codebase_assessment_02nov.md`: a spec-vs-code audit, a defect read
+`guide/archive/codebase_assessment_02nov.md`: a spec-vs-code audit, a defect read
 of the window's RRW changes, and a read of `residentialapps/`,
 `utilityapps/` and `cordware/` · **Read at:** `2ffb0f42` (#3521) ·
 **Open:** none. Every row was done in #3524 → #3543 by 2026-11-03, N2

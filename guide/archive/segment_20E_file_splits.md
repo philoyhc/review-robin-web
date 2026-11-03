@@ -4,14 +4,14 @@
 to log the larger follow up actions coming from the recent codebase
 assessment, including the file splits") · **Theme:** the largest
 modules cut along the seams they already have, with no behavior change ·
-**Related:** `guide/codebase_assessment_02nov.md` §9,
+**Related:** `guide/archive/codebase_assessment_02nov.md` §9,
 `guide/archive/findings_2026-11-02_assessment.md`, `spec/architecture.md`
 (the per-package module map)
 
 ## Opportunity
 
 Two files passed the triggers the 22 October watchlist set, and a third
-has a clean cut waiting (`guide/codebase_assessment_02nov.md` §9):
+has a clean cut waiting (`guide/archive/codebase_assessment_02nov.md` §9):
 
 - `app/services/csv_imports.py` is 2,258 lines, the largest file in
   `app/`, and holds four concerns: parsing, identity checks, the append

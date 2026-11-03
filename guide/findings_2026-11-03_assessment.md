@@ -39,9 +39,19 @@ None.
   its `include` goes off, and the session stays `validated`. The same pass
   runs on activated sessions (allowed by 20I's ruling), where it switches
   off included assignments mid-review. *CONFIRMED by a scratch test.*
-  Author: invalidate a validated session when a recheck binds; and rule
-  whether an activated session's recheck may move includes (skip the
-  recompute there, or refuse Reviewers and Reviewees past validated).
+  **The contract disagrees on both counts** (the spec audit):
+  `spec/lifecycle.md` §2.3 (lines 119–123) has every roster write call
+  `invalidate_if_validated`; its "Six exceptions" to `_require_editable`
+  (lines 262–301) do not include the recheck, and line 552 calls a wider
+  predicate without a stated reason a defect; `spec/assignments.md`
+  (lines 918–928) holds self-review inclusion fixed outside draft and
+  validated. Only `spec/setup_pages.md` (lines 1110–1113) states the wider
+  predicate, and `tests/integration/test_directory_recheck.py:270` pins a
+  Reviewers recheck on a `ready` session. Author: invalidate a validated
+  session when a recheck binds; and either narrow the Reviewers and
+  Reviewees recheck to `is_editable` (the UI already reaches it only on
+  Observers once activated) or state the exception in `lifecycle.md` and
+  rule whether an activated session's binding may move `include`.
 
 ## 3. Low
 
@@ -89,7 +99,64 @@ None.
 
 ## 4. Spec drift
 
-DRIFT_ROWS
+- **D1. The contract says there is no bulk re-resolve; the recheck is
+  one.** `spec/csv_contracts.md:415–416` ("there is no bulk re-resolve of
+  existing rosters") and `:412` (the line shows "the latest import's
+  counts"; it now shows the latest import or recheck,
+  `views._directory_check.last_directory_check`);
+  `spec/audience_and_identity_model.md:252–254` lists where resolution
+  runs and omits the recheck. Spec.
+- **D2. The self-review recompute triggers omit directory binding.**
+  `spec/assignments.md:546–551` lists email and reviewee edits, group
+  kind and relationship changes; classification is keyed on
+  `directory_object_id` (`app/services/assignments/_self_review.py:34–41`),
+  and both the recheck and a merge import recompute on binding. Spec,
+  unless M1 changes the code.
+- **D3. The button audit lacks the recheck and renew buttons.**
+  `spec/operator_button_audit.md` claims every operator button but has no
+  row for "Recheck N unmatched" (Reviewers, Reviewees, Observers) or the
+  renew banner's "Renew sign-in and …" and Dismiss
+  (`partials/_directory_renew.html`, on the three rosters, Quick Setup and
+  Rehydrate). Spec.
+- **D4. `?recheck_renew=1` is not in the URL-state table.**
+  `spec/settings_inventory.md` §7 (lines 425–451); set at
+  `app/web/routes_operator/_directory.py:227`, read by the three roster
+  pages. Spec.
+- **D5. `save_reviewers`' signature is stale.** `spec/csv_contracts.md:356–357`
+  omits `directory`, `append`, `merge`, `columns` and `acknowledged_loss`
+  (`app/services/csv_imports/_saving.py:64–78`). Spec.
+- **D6. The settings inventory omits the directory and mirror columns.**
+  `spec/settings_inventory.md` §5 lists no `directory_object_id`,
+  `directory_mail` or `directory_upn` (reviewers, reviewees, observers)
+  or `reviewees.mirrors_reviewer_id`, and still calls `Reviewer.email`
+  "Identity used for invitation matching"; §4 omits
+  `instruments.cached_group_pair_count` / `cached_group_pair_stamp`. Spec.
+- **D7. `views.INTRO_LAYOUT_CHOICES` is not exported.** `spec/instruments.md:912`;
+  it lives in `app/web/views/_instruments.py:66`. Code or spec, trivially.
+- **D8. The recheck's answer is loosely worded.** `spec/setup_pages.md:1112–1113`
+  says it answers "with the card again"; it 303-redirects to
+  `/{roster}?unlocked=1[&recheck_renew=1]#upload-csv`, and an archived
+  refusal is the 409 page. Spec.
+- **D9. A code comment predates 20G.** `app/web/roster_import.py:520` says
+  a check stopped on "no token, or Graph refused it" saves nothing; since
+  20G only `unauthorized` holds. Code (comment).
+- **D10. The deferred recheck entry names the button wrongly.**
+  `guide/deferred_consolidated.md:1110` says "Check unmatched addresses
+  again"; it shipped as "Recheck N unmatched". Guide.
+- **D11. Residential's spec counts three applications.**
+  `residentialapps/spec/applications.md:36, 184`: "an unset `CORDWARE_APPS`
+  mounts all three"; `cordware/main.py`'s `REGISTRY` has four (Utilities
+  last), as `cordware/spec/host.md` says. Spec.
+- **D12. Two import-boundary tables omit `utilityapps`.**
+  `cordware/spec/host.md:287–291` and `residentialapps/spec/architecture.md:44, 50`;
+  `cordware/tests/test_import_boundary.py:21–26` forbids it in every
+  direction (`utilityapps/spec/utilities.md` states its half). Spec.
+- **D13. The interoperability documents name paths that do not exist.**
+  `cordware/docs/cordware_interoperability_agent_handoff_v0.3.md:8–9` and
+  `…_consolidated_spec_v0.3.md:9` give `cordware/spec/interoperability_and_orchestration.md`
+  and `cordware/guide/interoperability_agent_handoff.md` as their homes;
+  both are parked in `cordware/docs/`. Spec: mark them as the proposed
+  homes at adoption.
 
 ## 5. Noted, not defects
 

@@ -194,7 +194,54 @@ small passes.
 
 ## 3. Functional-spec compliance
 
-SECTION3
+Every row was checked against code at `cc364ed0` by the spec-vs-code
+audit: mechanical sweeps (every `METHOD /path` in `spec/` and
+`cordware/spec/` resolves to a registered route; every backticked
+`views.*` and `module.func` name resolves; the 27 Validate rule keys and
+severities and every audit event's slots match `EVENT_SCHEMAS`), then a
+read of each area below. **Bold rows changed this window.** **Every ⚠
+drift the 2 November table named is fixed** (D-a, D-b, D-c at 19Z's
+close). The new drifts are below the table.
+
+| Area | Spec | Status |
+| --- | --- | --- |
+| Lifecycle (five states) | `spec/lifecycle.md` | ✓ shipped. ⚠ drift: the recheck writes rosters past validated without a stated exception, and does not invalidate (M1) |
+| **Assignments engine** | `spec/assignments.md` | ✓ shipped. ⚠ drift: the recheck moves self-review inclusion outside draft and validated (M1); binding is not a listed recompute trigger (D2) |
+| **Validate page** | `spec/validate_page.md` | ✓ shipped. **27 rules** (was 26): `reviewees.mirror_drift` (20F) |
+| Workflow card | `spec/workflow_card.md` | ✓ shipped. No change |
+| **Instruments** | `spec/instruments.md` | ✓ shipped. A locked card's fallback title (20H Item 2). `views.INTRO_LAYOUT_CHOICES` not exported (D7) |
+| **Setup pages** | `spec/setup_pages.md` | ✓ shipped. The banner stack, the renew ask, the directory line's reasons, the countdown, the recheck and the spacing (20G–20I) all match. ⚠ the recheck's answer is loosely worded (D8) |
+| **Quick Setup** | `spec/quick_setup_card_spec.md` | ✓ shipped. Holds on an expired token (20G) |
+| Operations pages | `spec/operations_pages.md` | ✓ shipped. No change |
+| **Sys Admin audit log** | `spec/operator_button_audit.md` | ✓ shipped. The Event type filter (20H Item 3). ⚠ the recheck and renew buttons have no rows (D3) |
+| Session owners / tags | `spec/session_owners.md`, `spec/sessions_overview.md` | ✓ shipped. No change |
+| **Participant model / identity match** | `spec/participant_model.md`, `spec/audience_and_identity_model.md` | ✓ shipped. One account, one row in the single-row forms (20H Item 1). ⚠ resolution's list omits the recheck (D1) |
+| Visibility policy | `spec/visibility_policy.md` | ✓ shipped. No change |
+| Reviewer surface | `spec/reviewer-surface.md` | ✓ shipped. No change |
+| **CSV contracts** | `spec/csv_contracts.md` | ✓ shipped. 20G's stop and reasons match. ⚠ "no bulk re-resolve" (D1); `save_reviewers`' signature (D5) |
+| Extracts | `spec/extract_data.md` | ✓ shipped. No change |
+| **Audit** | `spec/architecture.md` | ✓ shipped. **165 types** (was 161), every slot matching, `*.directory_rechecked` included |
+| **Settings inventory** | `spec/settings_inventory.md` | ✓ shipped. ⚠ the directory and mirror columns, the group-pair cache and `?recheck_renew` are missing (D4, D6) |
+| **Permissions** | `spec/permissions.md` | ✓ shipped. The three new directory POSTs sit under the session-operator row |
+| **Cordware host and identity** | `cordware/spec/host.md`, `cordware/spec/identity.md` | ✓ shipped, deployed. ⚠ the boundary table omits `utilityapps` (D12) |
+| **Symmetric review** | `spec/architecture.md`, `spec/setup_pages.md` | ✓ shipped. The mirror's repairs (20F) |
+| Email template editor | `spec/email_template_editor.md` | ✓ shipped; render only |
+| Email dispatch | `spec/email_infra_options.md` | ⛔ not sending. 14F unblocked, not started |
+| Rehydrate | `spec/rehydrate.md` | ⏸ gated off. Holds on an expired token (20G) |
+| Blob storage, operator theming | `guide/blob_storage_candidates.md`, `spec/visual_style_rrw.md` | ⏸ not built |
+| **Residential, Utilities** | `residentialapps/spec/`, `utilityapps/spec/` | Residential ⏸ screens on sample data, gated; ⚠ counts three applications (D11) and its log stamping (L5). Utilities ✓ deployed |
+| **Interoperability** | `cordware/docs/` (proposed) | ⏸ parked by the author (2026-11-04) until ApplyDesk or RA Lifecycle is further along |
+
+**Most of the drift is one cause: the recheck (20I Item 1) was specified
+in `setup_pages.md` and `architecture.md` only.** Lifecycle, assignments,
+the CSV contract, the identity model, the button audit and the settings
+inventory were not told about it (M1, D1–D4). The rest are small: a stale
+signature, missing columns, an unexported name, two package tables.
+
+**Spec corpus:** 35 files in `spec/` (unchanged), plus 2 in
+`cordware/spec/`, 4 in `residentialapps/spec/` and 2 in
+`utilityapps/spec/`, and the new `cordware/docs/` (four files, proposals
+and guidance, not contract).
 
 ## 4. Strengths
 
@@ -248,7 +295,8 @@ SECTION3
 
 ## 6. Bugs and regressions
 
-**At `cc364ed0`: one medium, six low, none high.** Each is a row of
+**At `cc364ed0`: one medium, six low, none high**, plus thirteen spec
+drifts (§3) and four noted gaps. Each is a row of
 `guide/findings_2026-11-03_assessment.md`; CONFIRMED means reproduced by a
 scratch test or request, PLAUSIBLE means traced only.
 

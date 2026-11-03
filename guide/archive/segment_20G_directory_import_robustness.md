@@ -3,7 +3,7 @@
 **Opened:** 2026-11-03, at the author's request (the larger follow-ups of
 the 2026-11-02 assessment) · **Theme:** a roster upload whose directory
 check fails says why and can try again, and matching uses its indexes ·
-**Related:** `guide/codebase_assessment_02nov.md` §5,
+**Related:** `guide/archive/codebase_assessment_02nov.md` §5,
 `guide/archive/findings_2026-11-02_assessment.md` (M1, done in #3525),
 `cordware/spec/identity.md` "Graph", `spec/csv_contracts.md` §3.1
 
@@ -11,7 +11,7 @@ check fails says why and can try again, and matching uses its indexes ·
 
 M1's fix (#3525) stopped a failed check from unbinding rows a replace
 re-adds. Three weaknesses at the same seam remain
-(`guide/codebase_assessment_02nov.md` §5):
+(`guide/archive/codebase_assessment_02nov.md` §5):
 
 - **A sign-in failure is final for that upload.** The browser renews the
   delegated Graph token on page load, once 45 minutes have passed, and
