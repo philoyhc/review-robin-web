@@ -4,10 +4,12 @@ it while the page asks (19W), and the roster import every card's Upload
 posts to (``_handle_import``, ``_save_field_labels``).
 
 Outside the routes package so ``_shared`` stays the only module slices
-share there (``CLAUDE.md``, "Architecture at a glance"); it reads the
-package's guards and templates from ``_shared``, and calls
-``_shared.directory_or_none`` through the module so a test that replaces it
-there reaches this code too.
+share there (``CLAUDE.md``, "Architecture at a glance"). The slices import
+this module, and it reads the package's guards and templates from
+``_shared``, so it imports ``_shared`` inside the two functions that use it,
+never at the top: a top-level import would be a cycle through the
+package's ``__init__``. It calls ``_shared.directory_or_none`` through the
+module, so a test that replaces it there reaches this code too.
 """
 
 from __future__ import annotations
@@ -39,13 +41,6 @@ from app.services.responses import GroupAnswersWouldClear
 from app.web import breadcrumbs, views
 from app.web.deps import request_correlation_id
 from app.web import urls
-from app.web.routes_operator import _shared
-from app.web.routes_operator._shared import (
-    _require_editable,
-    _templates,
-    acknowledged_loss,
-    roster_address,
-)
 
 @dataclass(frozen=True)
 class UploadIn:
@@ -215,6 +210,10 @@ async def _handle_import(
     editor does; its tick is ``acknowledge_group_clear``, a field of its
     own, since the card's hidden ``acknowledge_response_loss`` already
     carries ``true`` for a replace."""
+    # Imported here, not at the top: the routes package imports this
+    # module, so a top-level import of it would be a cycle (20E rung 3).
+    from app.web.routes_operator import _shared
+    from app.web.routes_operator._shared import _require_editable, _templates, acknowledged_loss, roster_address
     _require_editable(review_session)
     upload = await read_upload(
         db,

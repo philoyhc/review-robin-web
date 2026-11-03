@@ -565,9 +565,9 @@ def _require_instrument_editable(review_session: ReviewSession) -> None:
 #
 # Shared by the Reviewers / Reviewees / Relationships Setup-page
 # slices (``_setup_reviewers.py`` / ``_setup_reviewees.py`` /
-# ``_setup_relationships.py``). ``_handle_import`` backs only the
-# Reviewers + Reviewees CSV imports; ``_redirect_keeping_selection``
-# and ``_save_field_labels`` back all three.
+# ``_setup_relationships.py``). ``_redirect_keeping_selection`` backs
+# all three; the CSV import (``_handle_import``) and the tag-label save
+# (``_save_field_labels``) are ``app/web/roster_import.py`` (20E).
 # ------------------------------------------------------------------ #
 
 # Row caps for the Reviewers / Reviewees / Relationships Setup tables:

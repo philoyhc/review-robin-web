@@ -111,7 +111,13 @@ list names the five modules. Largest module 904 lines (`_parse.py`).
 it too, so it is a form helper, not upload handling. `roster_import.py`
 imports the guards and `_templates` from `_shared` and calls
 `_shared.directory_or_none` through the module, so the 12 tests that
-replace it there needed no change.
+replace it there needed no change. The item's read (rungs 1–3, cumulative since `8505fd8c`)
+found the moves faithful and one defect: `roster_import.py` imported
+`_shared` at its top, a cycle through the package's `__init__` that only
+`app.main`'s import order hid. It now imports `_shared` inside the two
+functions that use it, and `tests/unit/test_import_order.py` imports each
+split module alone in a fresh process. The read's other findings were two
+stale pointers, fixed.
 
 ## PR ladder
 

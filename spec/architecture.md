@@ -100,8 +100,11 @@ three-layer separation (mirrors CLAUDE.md "Architecture at a glance"):
    `_extract_data.py`, `_rehydrate.py`, `_workflow.py`,
    `_sys_admin.py`, …, with shared plumbing in `_shared.py`). The Setup
    cards' upload handling, the roster import every card posts to and the
-   upload holds, is `app/web/roster_import.py`, outside the package; it
-   reads the package's guards and templates from `_shared.py`.
+   upload holds, is `app/web/roster_import.py`, outside the package. The
+   slices import it, and it reads the package's guards and templates from
+   `_shared.py` inside the functions that need them, never at its top, so
+   the two never import each other at load
+   (`tests/unit/test_import_order.py`).
    Participant-facing routes live in `app/web/routes_reviewer/`
    under the `/me/` prefix (`_dashboard.py`, `_surface/`,
    `_summary.py`, `_results.py`, `_collation.py`, `_invite.py`).
