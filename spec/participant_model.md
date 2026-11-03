@@ -12,9 +12,9 @@ Each session can carry three independent rosters of people who interact with the
 
 | Roster | Table | Identity column | Setup page | Authoring service |
 |---|---|---|---|---|
-| Reviewer | `reviewers` | `email` (NOT NULL, strict email shape) | `/operator/sessions/{id}/reviewers` | `app/services/reviewers.py` + `app/services/csv_imports.py` |
-| Reviewee | `reviewees` | `email_or_identifier` (NOT NULL, email or opaque handle) | `/operator/sessions/{id}/reviewees` | `app/services/reviewees.py` + `app/services/csv_imports.py` |
-| Observer | `observers` | `email` (NOT NULL, strict email shape) | `/operator/sessions/{id}/observers` | `app/services/observers.py` + `app/services/csv_imports.py` |
+| Reviewer | `reviewers` | `email` (NOT NULL, strict email shape) | `/operator/sessions/{id}/reviewers` | `app/services/reviewers.py` + `app/services/csv_imports/` |
+| Reviewee | `reviewees` | `email_or_identifier` (NOT NULL, email or opaque handle) | `/operator/sessions/{id}/reviewees` | `app/services/reviewees.py` + `app/services/csv_imports/` |
+| Observer | `observers` | `email` (NOT NULL, strict email shape) | `/operator/sessions/{id}/observers` | `app/services/observers.py` + `app/services/csv_imports/` |
 
 Two of the three rosters are gated on per-session feature toggles (§2 below); the Reviewer roster is unconditional.
 

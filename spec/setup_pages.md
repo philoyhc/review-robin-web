@@ -1891,7 +1891,7 @@ it changes (`refs={"observer_id": id}` + `snapshot={"cohort_rule": …}`).
 
 Route: `POST /operator/sessions/{id}/observers/import`. Parsed by
 `csv_imports.parse_observer_csv` / `csv_imports.save_observers` in
-`app/services/csv_imports.py`. CSV schema: `ObserverEmail`
+`app/services/csv_imports/`. CSV schema: `ObserverEmail`
 required; `ObserverName`, `ObserverTag1`, `Status` and `CohortRule`
 optional (`spec/csv_contracts.md` §3.2b). A non-blank `CohortRule` cell
 is compact JSON validated through `CohortRuleSet`, so an imported rule

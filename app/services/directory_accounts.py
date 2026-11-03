@@ -8,7 +8,7 @@ account's object ID, mail and UPN beside the address as written; any other
 outcome stores none of them, and the row keeps matching by mail. One
 exception: on a replace, an address the directory gave no answer for (no
 token, an expired one, a failed or unfinished lookup) keeps the account
-the replaced row had (`unchecked`; `app.services.csv_imports._save`).
+the replaced row had (`unchecked`; `app.services.csv_imports._save`, in `_saving.py`).
 
 Nothing here talks to a request: the routes hand in a `Directory` (or
 ``None`` when there is none to ask, which checks nothing).

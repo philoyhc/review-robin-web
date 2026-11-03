@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Assignment, Observer, Reviewee, Reviewer
 from app.services import csv_imports
+from app.services.csv_imports import _saving as csv_imports_saving
 from app.services import session_lifecycle as lifecycle
 from app.services.instruments import ensure_default_instrument
 
@@ -116,6 +117,8 @@ def test_a_conflict_arriving_after_the_routes_check_is_refused_by_the_save(
         return [] if len(calls) == 1 else real(*args, **kwargs)
 
     monkeypatch.setattr(csv_imports, "append_conflicts", first_sees_nothing)
+    # The save calls its own module's name since the 20E split (rung 2).
+    monkeypatch.setattr(csv_imports_saving, "append_conflicts", first_sees_nothing)
     refused = _upload(client, url, FILES["reviewers"][0], append="true")
     assert len(calls) == 2
     assert refused.status_code == 400
