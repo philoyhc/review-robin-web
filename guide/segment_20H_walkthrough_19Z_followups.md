@@ -99,13 +99,15 @@ Taken 2026-11-03 at `49bb4a8c9`: the label's two forms, Python and SQL, pinned t
 **Closed 2026-11-03. Reproduced, then fixed.** The server always drew
 `Instrument_{session_seq}`; the Instruments page's script redrew a
 label-less card's title when the card locked, from
-`data-instrument-card`, the workspace-wide `id`. So a new card, unlocked
-and locked, read `Instrument_{id}` until a reload. The card now carries
+`data-instrument-card`, the workspace-wide `id`. So any label-less card
+whose `id` differs from its `session_seq`, the walkthrough's new card
+among them, read `Instrument_{id}` once locked, until a reload. The card now carries
 `data-instrument-seq` and the script reads it.
 `tests/browser/test_builder_card.py::test_a_locked_cards_fallback_title_is_its_session_number`
 failed before the fix (`Instrument_3` for the second instrument) and
 passes after. No spec change: `spec/instruments.md` already states the
-rule.
+rule. One read: no defect; no other client path draws the number, and
+cards are never built in the browser.
 
 ### Doc impact
 

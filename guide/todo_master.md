@@ -77,11 +77,10 @@ is the author's call.
    **Plan:** `guide/segment_22C_pyright.md`.
 
 7. **20H — Follow-ups from the 19Z walkthrough** (not gated). The
-   single-row forms refuse a second row on one directory account; an
-   instrument label's wrong number after an add; audit events by
-   facility; a countdown on the upload's directory check. Items 4
-   (Upload-card banners) and 5 (the unreachable checks) closed
-   2026-11-03.
+   audit events by facility; a countdown on the upload's directory
+   check. Items 1 (one account, one row in the single-row forms), 2 (an
+   instrument label's number), 4 (Upload-card banners) and 5 (the
+   unreachable checks) closed 2026-11-03.
    **Plan:** `guide/segment_20H_walkthrough_19Z_followups.md`.
 
 ### Stubs
