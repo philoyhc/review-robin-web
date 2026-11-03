@@ -11,9 +11,11 @@ work byte-identical to the pre-package shape.
 Layout:
 
 - ``_core.py`` — save / submit / recall / clear / delete-all
-  flow, validation primitives, per-row completion compute, and
-  the ``ReviewerSessionState`` rollup. Imports the group-block
+  flow, validation primitives and per-row completion compute. Imports the group-block
   symbols it depends on from ``_group_reconciliation``.
+- ``_rollups.py`` — segment 20E: the read-only tallies (the
+  per-reviewer session state, the rollup parts, the response counts).
+  Imports two private helpers from ``_core``; ``_core`` never imports it.
 - ``_group_reconciliation.py`` — Segment 13C / 18H group-scoped
   fan-out / collapse / reconcile machinery. Reads nothing from
   ``_core``; the dependency is uni-directional.
@@ -31,10 +33,7 @@ from ._core import (
     DeleteAllResult,
     MissingPosition,
     RecallResult,
-    ReviewerSessionState,
-    RollupParts,
     SaveResult,
-    SessionPill,
     SubmitResult,
     ValidationError,
     clear_all,
@@ -44,16 +43,21 @@ from ._core import (
     delete_all_for_session,
     parse_form_payload,
     recall,
+    save_draft,
+    stored_as_posted,
+    submit,
+    validate_value,
+)
+from ._rollups import (
+    ReviewerSessionState,
+    RollupParts,
+    SessionPill,
     responses_by_assignment,
     reviewer_session_state,
     rollup_parts_from_assignments,
     reviewer_session_state_per_instrument,
-    save_draft,
     session_pill_for_reviewer,
-    stored_as_posted,
     session_response_count,
-    submit,
-    validate_value,
 )
 from ._branch_rule import closed_governed_field_ids, drop_closed_branch_answers
 from ._form_keys import (
