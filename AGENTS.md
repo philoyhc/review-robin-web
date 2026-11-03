@@ -187,7 +187,7 @@ reject it.
 - **`spec/lifecycle.md`** — the five-state session machine and its transitions.
 - **`guide/todo_master.md`** — open work only: queued segments, stubs, sequencing. A segment's close deletes its entries.
 - **`guide/segment_*.md`** — current and upcoming segment plans; shipped ones in `guide/archive/`.
-- **`guide/codebase_assessment_*.md`** — latest code-vs-spec snapshot.
+- **`guide/codebase_assessment_*.md`** — latest code-vs-spec snapshot, with its `guide/findings_<date>_assessment.md` register: the checklist fixes strike off, one row per defect or drift, filed with every snapshot (standard practice).
 - **`guide/deferred_consolidated.md`** — everything scoped but not scheduled.
 - **`CONTRIBUTING.md`** — what gates a merge here (the merge policy, and why it is not branch protection).
 - **`docs/unenforced_conventions.md`** — the conventions deliberately left as guidance rather than a check, each with its reason, plus the queue of ones that could be derived now.
