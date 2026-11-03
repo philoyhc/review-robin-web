@@ -338,13 +338,13 @@
        JS / selectors. #}
     <div class="card" id="instrument-{{ instrument.id }}"
          data-instrument-card="{{ instrument.id }}"
+         data-instrument-locked="{{ 'false' if is_editing else 'true' }}"
          {# 20H Item 2 — the number the fallback title shows,
             ``Instrument_{session_seq}``, for the script that redraws
             it when the card locks. It read ``data-instrument-card``,
             the workspace-wide id, so a new card read ``Instrument_4``
             until a reload. #}
          data-instrument-seq="{{ instrument.session_seq }}"
-         data-instrument-locked="{{ 'false' if is_editing else 'true' }}"
          {% if is_editing %}data-instrument-editing="true"{% endif %}
          {# 19Q Item 6 rung 3 — keyed on ``session_seq``, the same
             number the card title shows, so the tint means something
