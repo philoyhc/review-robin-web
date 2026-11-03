@@ -4,7 +4,7 @@
 the 2026-11-02 assessment) · **Theme:** a roster upload whose directory
 check fails says why and can try again, and matching uses its indexes ·
 **Related:** `guide/codebase_assessment_02nov.md` §5,
-`guide/findings_2026-11-02_assessment.md` (M1, done in #3525),
+`guide/archive/findings_2026-11-02_assessment.md` (M1, done in #3525),
 `cordware/spec/identity.md` "Graph", `spec/csv_contracts.md` §3.1
 
 ## Opportunity

@@ -5,7 +5,7 @@ to log the larger follow up actions coming from the recent codebase
 assessment, including the file splits") · **Theme:** the largest
 modules cut along the seams they already have, with no behavior change ·
 **Related:** `guide/codebase_assessment_02nov.md` §9,
-`guide/findings_2026-11-02_assessment.md`, `spec/architecture.md`
+`guide/archive/findings_2026-11-02_assessment.md`, `spec/architecture.md`
 (the per-package module map)
 
 ## Opportunity
