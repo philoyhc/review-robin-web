@@ -21,6 +21,7 @@ from collections.abc import Iterable, Mapping
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import delete, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from cordware.graph import DirectoryUser, Outcome
@@ -85,6 +86,16 @@ def recall(
     }
 
 
+def still_to_look_up(
+    db: Session, *, user: User, session_id: int, addresses: Iterable[str | None]
+) -> list[str]:
+    """A roster's distinct lookup keys, in file order, with no fresh
+    answer kept: what an upload's countdown has left to look up."""
+    keys = list(dict.fromkeys(k for k in (directory_accounts.key(a) for a in addresses) if k))
+    kept = recall(db, user=user, session_id=session_id, keys=keys)
+    return [k for k in keys if k not in kept]
+
+
 def known_for(
     db: Session, *, user: User, session_id: int, addresses: Iterable[str | None]
 ) -> dict[str, Outcome]:
@@ -98,37 +109,46 @@ def remember(
     db: Session, *, user: User, session_id: int, outcomes: Mapping[str, Outcome]
 ) -> int:
     """Keep each answer in ``outcomes``, replacing what was kept for its
-    key; a failed lookup is not kept. Returns how many were kept."""
-    answered = {
-        k: o for k, o in outcomes.items() if o.status in directory_accounts.ANSWERED
-    }
-    if not answered:
-        return 0
-    db.execute(
-        delete(DirectoryLookup).where(
-            DirectoryLookup.operator_user_id == user.id,
-            DirectoryLookup.session_id == session_id,
-            DirectoryLookup.key.in_(list(answered)),
-        )
-    )
-    for k, o in answered.items():
+    key; a failed lookup is not kept. Returns how many were kept.
+
+    Each key is written in its own savepoint: two countdowns of one
+    operator and session (two tabs) may look the same address up at
+    once, and on Postgres both can delete before either inserts. The
+    second insert then breaks the unique key, its savepoint rolls back,
+    and the first one's answer, fetched just as freshly, stands (Codex,
+    #3554)."""
+    kept = 0
+    for k, o in outcomes.items():
+        if o.status not in directory_accounts.ANSWERED:
+            continue
         account = o.user
-        db.add(
-            DirectoryLookup(
-                operator_user_id=user.id,
-                session_id=session_id,
-                key=k,
-                status=o.status,
-                match_type=o.match_type,
-                note=o.note[:255],
-                account_id=account.id if account else None,
-                display_name=account.display_name if account else None,
-                mail=account.mail if account else None,
-                upn=account.user_principal_name if account else None,
-            )
-        )
-    db.flush()
-    return len(answered)
+        try:
+            with db.begin_nested():
+                db.execute(
+                    delete(DirectoryLookup).where(
+                        DirectoryLookup.operator_user_id == user.id,
+                        DirectoryLookup.session_id == session_id,
+                        DirectoryLookup.key == k,
+                    )
+                )
+                db.add(
+                    DirectoryLookup(
+                        operator_user_id=user.id,
+                        session_id=session_id,
+                        key=k,
+                        status=o.status,
+                        match_type=o.match_type,
+                        note=o.note[:255],
+                        account_id=account.id if account else None,
+                        display_name=account.display_name if account else None,
+                        mail=account.mail if account else None,
+                        upn=account.user_principal_name if account else None,
+                    )
+                )
+        except IntegrityError:
+            continue
+        kept += 1
+    return kept
 
 
 def sweep(db: Session) -> int:

@@ -101,11 +101,11 @@ async def roster_directory_keys(
     result = parse(upload.content)
     if result.is_blocked:
         return JSONResponse({"keys": []}, headers=_NO_STORE)
-    keys = list(dict.fromkeys(
-        k for k in (directory_accounts.key(roster_address(row)) for row in result.rows) if k
-    ))
-    kept = directory_lookups.recall(db, user=user, session_id=review_session.id, keys=keys)
-    return JSONResponse({"keys": [k for k in keys if k not in kept]}, headers=_NO_STORE)
+    keys = directory_lookups.still_to_look_up(
+        db, user=user, session_id=review_session.id,
+        addresses=[roster_address(row) for row in result.rows],
+    )
+    return JSONResponse({"keys": keys}, headers=_NO_STORE)
 
 
 @router.post("/sessions/{session_id}/directory-lookup")

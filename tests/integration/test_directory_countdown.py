@@ -196,3 +196,29 @@ def test_a_lookup_is_json_only_and_needs_the_directory(
 
     monkeypatch.setattr(_shared, "directory_for", no_token)
     assert _look_up(client, base, KEYS[:1]).json() == {"error": "no_graph"}
+
+
+def test_an_answer_another_request_just_kept_is_left_standing(
+    client: TestClient, db: Session, directory: _Counting, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Two countdowns may look one address up at once: the second insert
+    breaks the unique key, and its savepoint yields to the first answer
+    rather than failing the batch (Codex, #3554)."""
+    base, session_id = _base(client, db, "cd-race")
+    _look_up(client, base, KEYS[:1])
+    real_execute = Session.execute
+
+    def no_delete(self, statement, *args, **kwargs):
+        # The other request's insert landed after this one's delete.
+        if getattr(statement, "is_delete", False):
+            return None
+        return real_execute(self, statement, *args, **kwargs)
+
+    monkeypatch.setattr(Session, "execute", no_delete)
+    answer = _look_up(client, base, KEYS[:2])
+    monkeypatch.undo()
+    assert answer.status_code == 200
+    kept = db.execute(
+        select(DirectoryLookup.key).where(DirectoryLookup.session_id == session_id)
+    ).scalars().all()
+    assert sorted(kept) == sorted(KEYS[:2])
