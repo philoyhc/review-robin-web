@@ -45,7 +45,8 @@ PROSE_DIRS = (
 )
 # A README anywhere is prose, except in what ships to the host: the deploy
 # artefact and Cordware's import carry these folders. Their prose folders
-# (``cordware/spec/`` and ``cordware/docs/``, each app's ``docs/``, ``guide/`` and ``spec/``) stay prose.
+# (``cordware/spec/`` and ``cordware/docs/``, each app's ``docs/``, ``guide/``
+# and ``spec/``) stay prose.
 README = "README.md"
 PROSE_FILES = frozenset(app + README for app in APP_DIRS)
 SHIPPED_DIRS = ("app/", "alembic/", "cordware/", *APP_DIRS)

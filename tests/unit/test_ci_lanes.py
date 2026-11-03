@@ -55,6 +55,7 @@ def test_prose_paths(path):
         "guide/theme_preview.html",
         "cordware/main.py",
         "cordware/NOTES.md",  # Markdown, but not in a prose folder or a README
+        "cordware/docs/diagram.png",  # a prose folder, but not Markdown
         "app/README.md",  # ships with the app
         "app/web/static/guide/README.md",
         "alembic/README.md",
