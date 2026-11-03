@@ -151,6 +151,10 @@ three-layer separation (mirrors CLAUDE.md "Architecture at a glance"):
      check and the same-person checks), `_modes.py` (append and merge),
      `_saving.py` (the saves and deletes); each imports only the ones
      before it, and `__init__.py` re-exports every name.
+   - `app/services/validation/` — the Validate rules: `_inputs.py`
+     (what every rule reads), `_rosters.py`, `_assignments.py`,
+     `_instruments.py` (the rules by area) and `_registry.py`
+     (`REGISTERED_RULES`, `validate_session_setup`).
    - `app/services/rules/` — the pure rule engine (`engine.py`,
      `predicates.py`, `quotas.py`, `fields.py`).
    Other notable services: `session_lifecycle.py`, `validation.py`,

@@ -213,10 +213,16 @@ def test_every_other_caller_still_builds_its_own_report(
 # The no-duplicate guard (rung 3)
 # --------------------------------------------------------------------------- #
 
-#: The report's own module. A statement issued from here is the report
+#: The report's own package. A statement issued from here is the report
 #: loading something; a statement issued from anywhere else under
 #: `app/` is a service the report called, loading for its own purposes.
-REPORT_MODULE = "app/services/validation.py"
+REPORT_MODULE = "app/services/validation/"
+
+
+def _is_report(module: str) -> bool:
+    """Whether ``module`` is the report's own code: any module of the
+    validation package, a single file until segment 20E rung 4b."""
+    return module.startswith(REPORT_MODULE)
 
 #: The one call the exception is for. `_check_instruments_stale_generated`
 #: asks the assignments engine whether regenerating would change
@@ -311,7 +317,7 @@ def test_the_report_never_issues_one_of_its_own_queries_twice(
     own = Counter(
         key
         for key, module, _ in _capture(db, review_session)
-        if module == REPORT_MODULE
+        if _is_report(module)
     )
 
     assert own, (
@@ -365,7 +371,7 @@ def test_every_remaining_repeat_belongs_to_the_staleness_call(
         others = [
             (module, under_staleness)
             for module, under_staleness in issues_by_key[key]
-            if module != REPORT_MODULE
+            if not _is_report(module)
         ]
         assert others, f"repeat entirely inside the report: {key[0][:110]}"
         assert all(under_staleness for _, under_staleness in others), (

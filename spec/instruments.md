@@ -1880,7 +1880,7 @@ The page-wide invariants the lock model enforces:
 
 The Validate page (`spec/validate_page.md`) registers a number
 of rules against instruments. Active ones that surface here
-(see `app/services/validation.py:REGISTERED_RULES`):
+(see `app/services/validation/_registry.py:REGISTERED_RULES`):
 
 - **`instruments.no_fields`** (error) — instrument has zero
   response fields.

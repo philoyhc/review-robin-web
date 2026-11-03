@@ -4,7 +4,7 @@ The stamp decides when the cached staleness verdict may be served
 without running the rules engine, so the only failure that matters is
 **two different situations sharing a stamp**: the badge would then say
 "fresh" about generated rows that no longer match their rules, which
-``app/services/validation.py`` records this signal having once done
+``app/services/validation/_instruments.py`` records this signal having once done
 already.
 
 So the shape of this file is one case per thing the verdict is derived

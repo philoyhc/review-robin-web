@@ -10,7 +10,7 @@ verdict is derived from; a mismatch recomputes.
 **The stamp must never be the same when the answer could differ.** A
 missing input is a wrong "fresh" — and the staleness badge is the
 operator's only notice that generated rows no longer match their rules,
-a signal ``app/services/validation.py`` records having once been a
+a signal ``app/services/validation/_instruments.py`` records having once been a
 no-op that "reports a clean bill on exactly the thing it exists to
 catch". Over-covering costs a needless recompute; under-covering lies.
 Everything here errs toward the first.

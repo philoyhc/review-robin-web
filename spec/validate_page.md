@@ -12,7 +12,7 @@ button on the Workflow card then flips `validated → ready`.
 
 Cross-references:
 
-- **`app/services/validation.py`** — rule registry +
+- **`app/services/validation/`** — rule registry +
   orchestrator (`validate_session_setup`,
   `REGISTERED_RULES`).
 - **`app/schemas/validation.py`** — `ValidationIssue` +
@@ -228,7 +228,7 @@ severity chip on to see them."* with every chip off, otherwise
 ## 3. The rule registry
 
 `REGISTERED_RULES: tuple[ValidationRule, ...]` in
-`app/services/validation.py`. One entry per check, evaluated in
+`app/services/validation/_registry.py`. One entry per check, evaluated in
 declared order. Adding a rule is a single registry edit.
 
 ### 3.1 `ValidationRule` shape
@@ -473,8 +473,9 @@ natural fragment-jump handles it.
 
 ## 7. Adding a new rule
 
-1. Write a `_check_<source>_<predicate>` function in
-   `app/services/validation.py`. Signature:
+1. Write a `_check_<source>_<predicate>` function in its area's module
+   of `app/services/validation/` (`_rosters.py`, `_assignments.py` or
+   `_instruments.py`). Signature:
    `(db: Session, review_session: ReviewSession, inputs: ValidationInputs)
    -> Iterable[ValidationIssue]`.
    Yield zero or more `ValidationIssue` instances. **Read the

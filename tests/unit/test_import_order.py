@@ -23,6 +23,8 @@ FIRST_IMPORTS = [
     "app.web.roster_import",
     "app.services.csv_imports",
     "app.services.responses",
+    "app.services.instruments",
+    "app.services.validation",
 ]
 
 

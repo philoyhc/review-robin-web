@@ -18,7 +18,7 @@ The pairing matters in both directions:
   stay slow;
 - a **miss** must be provable for every input the verdict is derived
   from, because a stamp that stays equal while the answer changes is
-  the badge lying — the failure ``app/services/validation.py`` records
+  the badge lying — the failure ``app/services/validation/_instruments.py`` records
   this signal having had once already.
 """
 

@@ -199,7 +199,7 @@ reason, and it is charged on every render:
 - **Assignments** calls it directly, in every state
   (`app/web/views/_assignments.py`).
 - **Validate** reaches it through the staleness rule in
-  `app/services/validation.py`.
+  `app/services/validation/`.
 - The **shared workflow card** runs the whole validation report inline
   whenever the session is `validated` (`app/web/views/_workflow_card.py`).
   Six pages build that card — Session Home, Assignments, Validate,
@@ -621,7 +621,7 @@ Home 14.1 s → 3.7 s. Nothing else in this document comes close.
 an operator their generated rows no longer match their rules. A cache that
 wrongly says "fresh" is worse than a page that takes 20 seconds to say
 "stale", because the operator reads the silence as an answer — the same
-failure `app/services/validation.py` already records this rule having had
+failure `app/services/validation/_instruments.py` already records this rule having had
 once. So the hash has to cover every input the engine reads, and the
 safe direction on a hash miss or a hash-shape change is *recompute*.
 

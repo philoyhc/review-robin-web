@@ -124,6 +124,15 @@ stale pointers, fixed.
 `_preview_excludes_self_reviews`; `_band1.py` fell 1,395 → 1,020. One test
 that reads the function's source now reads it from `_preview`.
 
+**Rung 4b.** `validation.py` (1,506) became `app/services/validation/`:
+`_inputs.py` 180, `_rosters.py` 433, `_assignments.py` 252,
+`_instruments.py` 275 and `_registry.py` 472 (`REGISTERED_RULES`,
+`validate_session_setup`), behind a re-export wall; all 26 rules still
+register. The email template's help-contact rule sits with the session
+and roster rules. `tests/integration/test_readiness_report_cost.py`
+attributes queries to the report by package rather than by file. Rung 4
+took one read, at 4b, on the cumulative diff since `6232070a`.
+
 ## PR ladder
 
 1. **`responses/_rollups.py`.** The five tallies move; `responses/__init__.py`
@@ -145,7 +154,8 @@ that reads the function's source now reads it from `_preview`.
      source by path and slice it by text, so they move with the script
      they read.
 
-   Each takes its own read.
+   ~~Each takes its own read.~~ One read for 4a and 4b together, at 4b
+   (per item, `CLAUDE.md`).
 5. **Close.** `spec/architecture.md`'s module map, the watchlist settled
    in the next assessment.
 
