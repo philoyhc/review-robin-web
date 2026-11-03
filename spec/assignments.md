@@ -1433,7 +1433,7 @@ parameter**, not on every render.
 
 ## Validation surfaces
 
-Registered rules in `app/services/validation.py:REGISTERED_RULES`
+Registered rules in `app/services/validation/_registry.py:REGISTERED_RULES`
 that fire on this page's domain:
 
 - **`assignments.no_included_pairs`** (warning) — every row on

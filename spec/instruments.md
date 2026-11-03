@@ -1087,7 +1087,7 @@ Renders one sample reviewee inline, using the operator's
 currently-selected display fields. The sample is picked by the
 server (first surviving reviewee under current Link 1 + Link 2
 + Link 3 rules — see `find_sample_in_scope_reviewee` in
-`_band1.py`); the operator clicks **↻ Refresh sample** to pick
+`_preview.py`); the operator clicks **↻ Refresh sample** to pick
 a new one after editing the rules. In view mode the preview
 re-renders from the saved state without a refresh button.
 
@@ -1880,7 +1880,7 @@ The page-wide invariants the lock model enforces:
 
 The Validate page (`spec/validate_page.md`) registers a number
 of rules against instruments. Active ones that surface here
-(see `app/services/validation.py:REGISTERED_RULES`):
+(see `app/services/validation/_registry.py:REGISTERED_RULES`):
 
 - **`instruments.no_fields`** (error) — instrument has zero
   response fields.

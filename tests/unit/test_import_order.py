@@ -23,6 +23,12 @@ FIRST_IMPORTS = [
     "app.web.roster_import",
     "app.services.csv_imports",
     "app.services.responses",
+    "app.services.instruments",
+    "app.services.instruments._preview",
+    "app.services.validation",
+    *(f"app.services.validation.{m}" for m in ("_inputs", "_rosters", "_assignments", "_instruments", "_registry")),
+    *(f"app.services.csv_imports.{m}" for m in ("_parse", "_identity", "_modes", "_saving")),
+    "app.services.responses._rollups",
 ]
 
 
