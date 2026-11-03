@@ -85,10 +85,32 @@ is the author's call.
    ruff's rule set widened first.
    **Plan:** `guide/segment_22C_pyright.md`.
 
+8. **20E — File splits from the 2026-11-02 assessment** (not gated).
+   `csv_imports.py`, `responses/_core.py` and `_shared.py` cut along
+   their seams, no behavior change; three more at the author's word.
+   **Plan:** `guide/segment_20E_file_splits.md`.
+
+9. **20F — Symmetric review, held by more than convention** (not
+   gated). A Validate rule and a test guard for the Reviewees mirror,
+   with the register's L2 and L3.
+   **Plan:** `guide/segment_20F_symmetric_invariant.md`.
+
+10. **20G — The import's directory check, sturdier** (not gated). Hold
+    and ask to renew on a sign-in failure; normalized object ids; the
+    lookup measured.
+    **Plan:** `guide/segment_20G_directory_import_robustness.md`.
+
 ### Stubs
 
 Small items with no plan doc; each fits one PR and its reasoning fits
 the PR body unless it says otherwise.
+
+- **The 2026-11-02 findings register's small rows** *(filed
+  2026-11-03)*. L1 (a 500 on a 4,300-digit value) and N1–N3 (the
+  Residential preview gate tested at one route, its CSV formula guard,
+  its README) are one PR each; the register is the checklist
+  (`guide/findings_2026-11-02_assessment.md`). D-a to D-c ride 19Z's
+  close; L2 and L3 are 20F's.
 
 - **21F on the real tenant** *(filed 2026-10-31, at segment 21F's
   close)*. The first Cordware deploy carrying 21F needs the author's

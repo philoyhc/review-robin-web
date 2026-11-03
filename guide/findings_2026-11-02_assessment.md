@@ -53,12 +53,14 @@ None.
   `app/services/symmetric_review.py` `sync_reviewees_from_reviewers`:
   rows in memory miss `ON DELETE SET NULL`, and SQLite reuses ids.
   Postgres does not reuse ids. *Reproduced on SQLite.* Code: expire or
-  refresh the reviewee rows before building `by_link`.
+  refresh the reviewee rows before building `by_link`. Planned in 20F
+  (`guide/segment_20F_symmetric_invariant.md`).
 - **L3. A symmetric session's export, imported into a non-empty session,
   leaves the reviewees alone without a notice.**
   `app/services/zip_bundle.py:134` drops `reviewees.csv` by design, and
   the import keeps the mode off beside existing rows. *By reading.*
   Author: a notice on the import, or a line in the spec that says so.
+  Planned in 20F.
 
 ## 4. Spec drift
 
