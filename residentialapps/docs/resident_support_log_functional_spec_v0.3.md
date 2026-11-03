@@ -957,7 +957,7 @@ Support Logs should not introduce a temporary parallel staff roster merely to av
 ### Application
 
 - one responsive web application, with no separate mobile front end and no native mobile app initially;
-- every screen remains usable on a phone, and each surface is optimized for the device its workflow is used on, per `docs/cordware_mobile_to_desktop.md`:
+- every screen remains usable on a phone, and each surface is optimized for the device its workflow is used on, per `cordware/docs/cordware_mobile_to_desktop.md`:
 
 | Surface | UX class |
 |---|---|

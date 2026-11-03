@@ -113,7 +113,7 @@ The RA interface should work particularly well on a phone.
 
 Administrative, approval and dashboard views should also work efficiently on desktop screens.
 
-Per surface, following `docs/cordware_mobile_to_desktop.md` §3: applying for leave is **mobile-critical**; checking one's balance is mobile-critical; one's own leave history is responsive general-use; approver actions are **responsive general-use**; team and dashboard views and administration / roster setup are **desktop-oriented**. Every screen stays usable on a phone, and screen size never changes authorization.
+Per surface, following `cordware/docs/cordware_mobile_to_desktop.md` §3: applying for leave is **mobile-critical**; checking one's balance is mobile-critical; one's own leave history is responsive general-use; approver actions are **responsive general-use**; team and dashboard views and administration / roster setup are **desktop-oriented**. Every screen stays usable on a phone, and screen size never changes authorization.
 
 There should not be separate mobile and desktop applications. The UI follows RRW's conventions: server-rendered pages, one stylesheet in the base template, small inline scripts for progressive enhancement, and RRW's canonical button roles.
 

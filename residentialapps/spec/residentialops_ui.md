@@ -16,7 +16,7 @@ in `residentialapps/web/templates/residential/base.html`.
 
 ## 1. Devices and widths
 
-- **Device classes** follow `docs/cordware_mobile_to_desktop.md` §3:
+- **Device classes** follow `cordware/docs/cordware_mobile_to_desktop.md` §3:
   *mobile-critical*, *responsive* and *desktop-oriented*. The page map
   gives each page its class.
 - **Phone first.** A mobile-critical page is designed at 390 px, holds at
@@ -31,7 +31,7 @@ in `residentialapps/web/templates/residential/base.html`.
   wide table scrolls sideways in its box (`.table-wrap`, at least 640 px
   wide). They are not designed for one.
 - Routes and permissions are the same at every width
-  (`docs/cordware_mobile_to_desktop.md` §7.5, §9).
+  (`cordware/docs/cordware_mobile_to_desktop.md` §7.5, §9).
 
 ## 2. Chrome
 
