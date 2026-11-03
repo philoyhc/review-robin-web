@@ -87,6 +87,17 @@ Taken 2026-11-03 at `a2d95aff`.
 | Case-folded matching on object ids | 3 | `grep -rnE "func.lower\((model\.)?directory_object_id\|func.trim\(User.external_principal_id" app --include=*.py \| wc -l` |
 | Indexed columns concerned | 4 | `grep -rn "directory_object_id\|external_principal_id" app/db/models/*.py \| grep -c index=True` |
 
+## Status
+
+**2026-11-03, rung 1.** Started at the author's word ("complete the
+remaining items on the register first, then 20G"). Main before rung 1:
+`1f2dba51`, the base for the read at rung 3. `DirectoryCheck.stopped`
+carries `directory_accounts.sign_in_stop`: `no_token` when there was an
+address but no token, else the first `SIGN_IN_KINDS` kind among the
+roster's own outcomes; any other failure is not a sign-in stop. The local
+fake directory's `denied@example.edu` answers `forbidden`, so a local run
+can show the renew state.
+
 ## PR ladder
 
 1. **The check records why.** `DirectoryCheck` gains the stop kind from
