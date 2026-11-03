@@ -123,6 +123,14 @@ Taken 2026-11-03 at `a2d95aff`.
   scaffold.
 - **The budget:** keep 120 s, or lower it once the bench reports? After
   rung 5. Author.
+- **The real timing — taken** (author, 2026-11-03, 19Z walkthrough
+  B4): 1,500 addresses replaced on production in about 56 s, every
+  lookup done (23 by mail, 12 by sign-in name, 1,465 not found), about
+  37 ms a lookup. Decision 2's one real timing; well inside 120 s.
+- **A progress count?** (author, 2026-11-03) The 56 s show nothing
+  moving. Explore a countdown like the Email Address Checker's, where the
+  directory line sits ("Directory check: NN more to go"). Author, after
+  rung 5.
 
 ## Out of scope
 

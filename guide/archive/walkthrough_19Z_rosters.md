@@ -1,6 +1,6 @@
 # Walkthrough — roster uploads: replace, append, merge (19Z, with 21F)
 
-**Written:** 2026-10-31 · **For:** the author's end-to-end check of segment 19Z (append, merge, the duplicate-account warning) on top of 21F (addresses resolved through the directory) · **Plan:** `guide/segment_19Z_roster_append.md` · Retire this file once both parts are ticked; the close records the result.
+**Written:** 2026-10-31 · **For:** the author's end-to-end check of segment 19Z (append, merge, the duplicate-account warning) on top of 21F (addresses resolved through the directory) · **Plan:** `guide/segment_19Z_roster_append.md` · **Retired 2026-11-03**, both parts ticked; 19Z's close records the result.
 
 The basic browser check passed (author, 2026-10-31). This walks the rest in two runs:
 
@@ -83,6 +83,13 @@ Needs a group instrument grouped by a reviewee tag, with saved answers.
 
 ## Part B — the real tenant
 
+**Done 2026-11-03** (author, production, a build at or after `8b5de13`; its outbox predates #3513, so an invitation reads `sent`). Built from a private list run through the Email Address Checker: 73 accounts, one not found left out; five testers who sign in (the author, two staff, three students). Counts only below; the files and their key were kept outside both repositories and deleted afterwards.
+
+- **B2.** R0: 38 rows, 23 by mail / 12 by sign-in name / 3 not found / 0 ambiguous, pills on the 35 found. E0 37 (23 / 12 / 0 / 0, two identifiers not counted); O0 5; L0 70 pairs. Append +10 (10 by mail). Both append refusals held. Merge +5 to 53, 20 by mail, one row inactive; the account merge updated the sign-in-name row and kept its address; one person twice refused. Add form then Validate: one duplicate-account warning, gone on removal.
+- **B3.** All five testers reached their forms, those listed by sign-in name included; each `/me` listed only the session.
+- **B4.** The invitation to a reviewer listed by sign-in name went to their mail. 1,500 rows replaced in about 56 s, every lookup done (23 / 12 / 1,465 / 0, none not checked): about 37 ms a lookup.
+- **Differed:** none of Part B's checks. Findings: 20H (Part A's) and, for B4, a progress count on the directory check, recorded in `guide/segment_20G_directory_import_robustness.md`.
+
 **Before starting:** the Cordware deployment carries `8b5de13` or later (21F and 19Z together); you sign in as an operator with directory access (the Setup line reads counts, not "weren't checked"); and two or three colleagues, or test accounts, can sign in as participants.
 
 ### B1. Building the test set from the address list
@@ -124,23 +131,23 @@ Needs a group instrument grouped by a reviewee tag, with saved answers.
 
 Repeat A1, A3 and A4 with the B1 files. In addition:
 
-- [ ] After R0, the Setup line's counts match the checker's classification of R0 (by mail = M rows, by sign-in name = U rows, not found = N + X).
-- [ ] The pills on Reviewers count M + U; the N and X rows stay plain.
-- [ ] `R1_append_acct.csv` is refused as a directory account already on the roster.
-- [ ] `R2_merge_acct.csv` updates the P person's UPN row; it still reads the UPN.
-- [ ] Validate after adding a P person's mail by the Add form, while R0 holds their UPN: one duplicate-account warning.
+- [x] After R0, the Setup line's counts match the checker's classification of R0 (by mail = M rows, by sign-in name = U rows, not found = N + X).
+- [x] The pills on Reviewers count M + U; the N and X rows stay plain.
+- [x] `R1_append_acct.csv` is refused as a directory account already on the roster.
+- [x] `R2_merge_acct.csv` updates the P person's UPN row; it still reads the UPN.
+- [x] Validate after adding a P person's mail by the Add form, while R0 holds their UPN: one duplicate-account warning.
 
 ### B3. Signing in
 
-- [ ] A tester listed only by **sign-in name** signs in and reaches their reviewer surface (the rows' accounts admit them).
-- [ ] A tester listed by mail reaches theirs too.
-- [ ] A tester on the roster as a not-found row (made up) cannot reach anything — expected.
-- [ ] Their `/me` page lists exactly the sessions they are on.
+- [x] A tester listed only by **sign-in name** signs in and reaches their reviewer surface (the rows' accounts admit them).
+- [x] A tester listed by mail reaches theirs too.
+- [x] A tester on the roster as a not-found row (made up) cannot reach anything — expected.
+- [x] Their `/me` page lists exactly the sessions they are on.
 
 ### B4. Mail and timing
 
-- [ ] An invitation to a reviewer listed by sign-in name arrives at their mail address (the Outbox shows the directory mail, not the UPN).
-- [ ] (Optional) `R_large.csv` as a replace: note the time to the redirect and the Setup line's "not checked" count. Under about 0.25 s a lookup, 1,500 rows finish within the 120-second budget; beyond it the tail reads "not checked" and the upload still succeeds.
+- [x] An invitation to a reviewer listed by sign-in name arrives at their mail address (the Outbox shows the directory mail, not the UPN).
+- [x] (Optional) `R_large.csv` as a replace: note the time to the redirect and the Setup line's "not checked" count. Under about 0.25 s a lookup, 1,500 rows finish within the 120-second budget; beyond it the tail reads "not checked" and the upload still succeeds.
 
 ### B5. Recording
 
