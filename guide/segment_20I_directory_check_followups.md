@@ -134,7 +134,7 @@ None.
 
 ## Item 4 — Space under the Upload card's buttons
 
-**Opened and closed 2026-11-03**, from the author's browser check of Item 1: the directory line sat flush under the buttons. **Decision:** the line, or the countdown when no line shows, takes an 8px top margin under the actions row, so the gap reads as the gap between the line's paragraphs (their 6px plus the text's half-leading, which a button lacks; author: "use the gap between the two directory check paras as a gauge"). One rule in `base.html` (`#upload-csv > form + [data-directory-check]`, and the countdown). Rejected: *6px*, the paragraphs' margin, which reads tighter beside a button.
+**Opened and closed 2026-11-03**, from the author's browser check of Item 1: the directory line sat flush under the buttons. **Decision:** the line, or the countdown when no line shows, takes an 8px top margin under the actions row, so the gap reads as the gap between the line's paragraphs (their 6px plus the text's half-leading, which a button lacks; author: "use the gap between the two directory check paras as a gauge"). One rule in `base.html`, `#upload-csv > form + p.muted` (the line and the countdown are the only muted paragraphs after a form there; not by data attribute, since tests find the line by that attribute in the page's text, inline stylesheet included). Rejected: *6px*, the paragraphs' margin, which reads tighter beside a button.
 
 ### Status
 

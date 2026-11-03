@@ -4292,9 +4292,10 @@
          them as the line's paragraphs sit apart: their 6px margin plus
          the text's half-leading, which a button lacks, so 8px. The
          element before it is the upload form, or the recheck's empty
-         form when the button shows. */
-      body.ui-v2 #upload-csv > form + [data-directory-check],
-      body.ui-v2 #upload-csv > form + [data-directory-countdown] {
+         form when the button shows. Matched as the muted paragraph
+         after a form, not by its data attribute: tests find the line by
+         that attribute in the page's text, and this stylesheet is in it. */
+      body.ui-v2 #upload-csv > form + p.muted {
         margin-top: var(--space-2);
       }
       body.ui-v2 .banner.banner-info {
