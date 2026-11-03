@@ -60,3 +60,4 @@ def test_each_roster_of_one_request_reads_its_own_outcomes() -> None:
         _Refuses("unauthorized", 401), [["a@example.edu"], []]
     )
     assert first.stopped == "unauthorized" and empty.stopped is None
+

@@ -135,6 +135,20 @@ the fixture's advice, and the specs (`csv_contracts.md` §3.1,
 `setup_pages.md`, `quick_setup_card_spec.md`, `rehydrate.md`, and
 `cordware/spec/identity.md`'s "What it does not cover").
 
+**Rung 4, normalized ids.** `directory_accounts.account_of` stores the
+object id normalized, and so do the three writes of
+`users.external_principal_id`; migration `e4b2c7a91d36` normalizes stored
+values (whitespace-only to NULL; downgrade a no-op). `participants` and
+`users` compare plainly (`users.users_by_principal`).
+`tests/integration/test_directory_object_id_index.py` plans the code's own
+statements on Postgres: sign-in's and the invite's user lookup, and the
+account arm of a roster match, each served by its index. A roster match's
+mail arm (`lower(trim(email))`) has no index, unchanged. The migration
+trims what Python's `strip` does and round-trips on Postgres 16 (local).
+The rung's read found no write or read left un-normalized; it narrowed
+the index claim, the migration's trim, a blank id (now no account) and
+the claim audit's value.
+
 ## PR ladder
 
 1. **The check records why.** `DirectoryCheck` gains the stop kind from
