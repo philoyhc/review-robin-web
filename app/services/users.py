@@ -78,6 +78,13 @@ log = get_logger(__name__)
 _ASCII_WHITESPACE = " \t\n\r\f\v"
 
 
+def users_by_principal(principal_id: str | None):
+    """The users whose account is ``principal_id``: a plain equality on
+    the stored, normalized column (segment 20G), which its index
+    serves."""
+    return select(User).where(User.external_principal_id == normalize_object_id(principal_id))
+
+
 def find_signed_in_user(
     db: Session, identity: AuthenticatedUser, *, move_email: bool = True
 ) -> User | None:
@@ -141,12 +148,7 @@ def find_signed_in_user(
         # read of the P5 PR).
         rows = list(
             db.execute(
-                select(User)
-                .where(
-                    func.lower(func.trim(User.external_principal_id))
-                    == normalize_object_id(principal_id)
-                )
-                .order_by(User.id.desc())
+                users_by_principal(principal_id).order_by(User.id.desc())
             ).scalars()
         )
         for row in rows:
@@ -169,14 +171,16 @@ def find_signed_in_user(
         return None
     stored = by_email.external_principal_id
     if move_email and usable_principal and not (stored and stored.strip()):
-        by_email.external_principal_id = principal_id
+        by_email.external_principal_id = normalize_object_id(principal_id)
         # The moment an invited row is claimed by an identity, which then
         # decides it: audited, with no actor, like the email change.
         audit.write_event(
             db,
             event_type="workspace.user_principal_recorded",
             summary=f"Sign-in recorded the principal id for {by_email.email}",
-            payload=audit.changes({"external_principal_id": [stored, principal_id]}),
+            payload=audit.changes(
+                {"external_principal_id": [stored, by_email.external_principal_id]}
+            ),
             refs={"target_user_id": by_email.id},
         )
         db.commit()
@@ -1130,9 +1134,7 @@ def _invite_account(
             ),
         )
     object_id = normalize_object_id(account.object_id)
-    holder = db.execute(
-        select(User).where(func.lower(func.trim(User.external_principal_id)) == object_id)
-    ).scalars().first()
+    holder = db.execute(users_by_principal(object_id)).scalars().first()
     if holder is not None:
         raise UserOperationError(
             code="account_exists",
@@ -1212,7 +1214,7 @@ def invite(
         display_name=display_name,
         is_operator=is_operator,
         is_sys_admin=is_sys_admin,
-        external_principal_id=principal_id,
+        external_principal_id=normalize_object_id(principal_id) or None,
     )
     db.add(user)
     db.flush()

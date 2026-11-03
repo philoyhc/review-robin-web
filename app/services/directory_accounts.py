@@ -21,7 +21,7 @@ from dataclasses import dataclass
 
 from cordware.graph import RESOLVED, Directory, GraphError, Outcome, look_up_all
 
-from app.services.email_identity import looks_like_email, normalize_email
+from app.services.email_identity import looks_like_email, normalize_email, normalize_object_id
 
 #: The import's time budget, in seconds: under App Service's front-end
 #: limit, as the checker's plain post is. A lookup unfinished by then is
@@ -54,12 +54,17 @@ def key(address: str | None) -> str | None:
 
 
 def account_of(outcome: Outcome | None) -> Account | None:
-    """The account an outcome binds to: one account, or none."""
+    """The account an outcome binds to: one account, or none. Its object
+    id is stored normalized (segment 20G), so matching compares plainly;
+    an answer with no id binds nothing."""
     if outcome is None or outcome.status not in RESOLVED or outcome.user is None:
         return None
     user = outcome.user
+    object_id = normalize_object_id(user.id)
+    if not object_id:
+        return None
     return Account(
-        object_id=user.id, mail=user.mail, upn=user.user_principal_name,
+        object_id=object_id, mail=user.mail, upn=user.user_principal_name,
         name=user.display_name,
     )
 

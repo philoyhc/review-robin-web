@@ -60,7 +60,7 @@ from app.services import (
     visibility_policies,
 )
 from app.services import session_lifecycle as lifecycle
-from app.services.email_identity import normalize_email
+from app.services.email_identity import normalize_email, normalize_object_id
 
 log = get_logger(__name__)
 
@@ -186,7 +186,9 @@ def get_or_create_user(
     user = User(
         email=current_user.email.strip(),
         display_name=current_user.name,
-        external_principal_id=current_user.principal_id,
+        # Normalized, as every write of it is (segment 20G), so the
+        # lookup compares plainly and its index serves it.
+        external_principal_id=normalize_object_id(current_user.principal_id) or None,
         is_operator=is_operator,
         is_sys_admin=is_sys_admin,
     )

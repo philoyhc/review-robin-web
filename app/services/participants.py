@@ -82,7 +82,9 @@ class Viewer:
         )
         if self.principal_id is None:
             return by_mail
-        by_account = func.lower(model.directory_object_id) == self.principal_id
+        # Stored normalized (segment 20G): a plain equality the column's
+        # index can serve. The mail arm below has no index.
+        by_account = model.directory_object_id == self.principal_id
         return or_(by_account, by_mail)
 
 

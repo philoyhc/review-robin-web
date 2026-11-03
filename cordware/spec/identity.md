@@ -53,7 +53,13 @@ sign-in name, and the fake directory models exactly that collision
 (`FAKE_USERS` in `cordware/graph.py`). RRW resolves each roster address
 to an account at upload and compares the object ID with the current
 request's `principal_id`; a row with no account matches by `email`
-(`spec/audience_and_identity_model.md` "Identity match"). The fake
+(`spec/audience_and_identity_model.md` "Identity match"). RRW stores the
+object ID normalized, stripped and lower-cased
+(`email_identity.normalize_object_id`), on roster rows and on
+`users.external_principal_id` alike, and compares the request's
+`principal_id` normalized the same way, so the account match is a plain
+equality the column's index can serve (segment 20G). A `sub` fallback is
+folded the same way. The fake
 identity's `principal_id` is one shared constant and binds nothing.
 `email` falls back to `preferred_username` when no email claim is
 issued (table below), so a deployment must issue the email claim for
