@@ -688,14 +688,14 @@ can add a member to a group are:
 - a relationship created, imported, deleted, or switched active /
   inactive, since an inactive or missing relationship reads as empty
   tags;
-
-  The two relationship cases reach only an instrument whose group
-  boundary is a stored pair-context tag, saved before Link 3 offered
-  reviewee tags alone (`spec/instruments.md` Link 3); no group instrument
-  built today depends on relationships, so the Relationships page's ask
-  serves those stored instruments only.
 - Generate (and Prepare, which runs it) adding a row for a member new
   to a group.
+
+The two relationship cases reach only an instrument whose group boundary
+is a stored pair-context tag, saved before Link 3 offered reviewee tags
+alone (`spec/instruments.md` Link 3). No group instrument built today
+depends on relationships, so the Relationships page's ask serves those
+stored instruments only.
 
 A reviewee deleted, or a row Generate drops, only shrinks a group, so
 it clears nothing.
