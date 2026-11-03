@@ -1034,8 +1034,9 @@ Relationships). Quick Setup's card keeps its own banners in one stack
 above its slots (`spec/quick_setup_card_spec.md`). A control inside a
 banner (the group clear's tick, a Dismiss that ends a hold) names
 `upload-csv-form` with `form=`, so it submits with the file. Nothing
-touches: the intro's `.form-help` margin leaves 12px above the first
-banner, and the `.banner` margin 16px between banners and below the last.
+touches: 16px sits above the first banner (`#upload-csv > .form-help +
+.banner`, segment 20I Item 3), between banners and below the last.
+Quick Setup's card keeps the intro's 12px above its first banner.
 `tests/unit/test_upload_card_banners.py` pins the order.
 
 ### The Upload card's renew ask

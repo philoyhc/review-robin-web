@@ -409,8 +409,10 @@ to CSS classes.
 > - `.banner.banner-error` (`--status-error-*`) — Could-not-save /
 >   Could-not-delete inline errors.
 > Each variant sets **only** `background` and `border-color`; padding,
-> radius, border-width and margin come from the single `.banner` base,
-> and body text is the page's `--text-body`. Cancel button per the
+> radius, border-width and margin come from the single `.banner` base
+> (one exception: the roster Upload cards' first banner takes a 16px top
+> margin under the intro, `spec/setup_pages.md` "The Upload card's
+> banners"), and body text is the page's `--text-body`. Cancel button per the
 > "Banner behaviour conventions" sub-section below.
 > Inside the family sit **`.banner-headline`**, the
 > bolded first line; **`.banner-lead`**, a plain first sentence over a
