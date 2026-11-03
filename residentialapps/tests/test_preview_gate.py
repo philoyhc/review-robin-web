@@ -209,3 +209,41 @@ def test_comments_are_literal_inside_a_fence_and_only_ever_remove() -> None:
 - after@example.edu
 """
     assert web_pages.parse_preview_list(text) == frozenset({"before.comment@example.edu", "after@example.edu"})
+
+
+def _gated_routes(routes: list[object], gates: tuple[object, ...] = ()):
+    """Every route under ``routes`` with the dependencies that guard it:
+    its own dependency tree plus each enclosing include's (FastAPI nests
+    an included router behind its include context)."""
+    for route in routes:
+        context = getattr(route, "include_context", None)
+        if context is not None:
+            outer = tuple(d.dependency for d in context.dependencies or ())
+            yield from _gated_routes(context.included_router.routes, gates + outer)
+            continue
+        calls: set[object] = set(gates)
+        pending = list(getattr(route, "dependant", None).dependencies if hasattr(route, "dependant") else ())
+        while pending:
+            dependant = pending.pop()
+            calls.add(dependant.call)
+            pending.extend(dependant.dependencies)
+        yield route, calls
+
+
+#: The only routes that answer without the preview gate.
+UNGATED = {"/health"}
+
+
+@pytest.mark.parametrize("factory", [ops_app, support_app])
+def test_every_route_but_health_carries_the_gate(factory) -> None:
+    """Findings register N1: the gate was tested at ``GET /`` only, so a
+    new router that forgot ``Depends(placeholders_previewers_only)``
+    would have passed. This walks every route the application builds."""
+    routes = list(_gated_routes(factory().routes))
+    assert len(routes) > len(UNGATED)
+    missing = [
+        route.path
+        for route, calls in routes
+        if route.path not in UNGATED and web_pages.placeholders_previewers_only not in calls
+    ]
+    assert missing == []
