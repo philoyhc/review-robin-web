@@ -2,7 +2,7 @@
 
 **Opened:** 2026-11-03, at the author's request, from Part A of `guide/archive/walkthrough_19Z_rosters.md` (run locally the same day) · **Theme:** the consequential findings of that run, one item each · **Related:** `guide/segment_19Z_roster_append.md`, `guide/deferred_consolidated.md`
 
-Items close independently. Smaller fixes from the same run go to 20C. The segment closes when its five items have.
+Items close independently. Smaller fixes from the same run go to 20C. The segment closes when its six items have (Item 6 added 2026-11-03, from Part B).
 
 ## Item 1 — Refuse a second row on one directory account in the single-row forms
 
@@ -188,3 +188,48 @@ Prose: say so where each is written. Keep Upload disabled without JavaScript, as
 
 - `spec/setup_pages.md` — the Upload card needs JavaScript once the roster has rows (Item 5).
 - `spec/instruments.md` — the Relationships group-clear ask serves only stored pair-context boundaries (Item 5).
+
+## Item 6 — The roster upload counts down its directory check
+
+### Opportunity
+
+A 1,500-row replace on production took about 56 s with nothing on the page moving (walkthrough B4, 2026-11-03; author: "a count down similar to Email checker's … e.g., 'Directory check: NN more to go'"). The upload is one POST whose directory check (`directory_checks`, `app/services/csv_imports/_identity.py`) runs on the server under one 120 s budget (`directory_accounts.BUDGET`), so the page cannot know how far it has got.
+
+### Decision
+
+**Count down from the page, as the Email Address Checker does**, but keep the lookups the server's. The page sends the file's addresses in batches to a lookup endpoint, four in flight, and shows "Directory check: NN more to go" where the directory line sits (`_directory_check.html`). The server **caches each outcome it fetched**, per operator and session, for minutes; the upload then reads the cache and looks up only what is missing. Without the script, the upload works as today.
+
+Rejected: *post the page's outcomes with the file*, as the Checker does (`utilityapps/spec/email_check.md`, "From the page, counting down"). The Checker trusts them because they only describe; here an outcome binds a row to an account that sign-in then admits, so an outcome the server did not fetch must not bind. Rejected: *an estimate from the row count* (about 37 ms a lookup). Cheap, but a guess, and it says nothing when lookups slow down.
+
+### Semantics
+
+- A refused sign-in in a batch stops the countdown and takes 20G's path (hold the file, ask to renew), not a save.
+- A cached outcome older than the cache's life is looked up again; the cache never outlives the session's lock.
+- A failed batch leaves its keys uncached; the upload looks them up, as today.
+
+### Blast radius (measured)
+
+Taken 2026-11-03 at `d57044884`: the check (`app/services/csv_imports/_identity.py`, `directory_checks`), its budget (`app/services/directory_accounts.py`, `BUDGET`), the three Upload cards that include `app/web/templates/operator/partials/_directory_check.html` (`grep -rln _directory_check.html app/web/templates`: Reviewers, Reviewees, Observers); the Checker's page script to borrow from (`utilityapps/templates/email_check/preview.html`).
+
+### PR ladder
+
+After 20G rung 1, which this shares a seam with.
+1. Scaffold: the count line on the Upload card, inert. 2. The lookup endpoint and its cache, with tests. 3. The page script and the upload reading the cache; a browser test. Last build rung: cumulative read.
+
+### Definition of done
+
+- A browser test sees the count fall to zero and the upload finish without a second lookup of any cached address.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 20H.6` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `guide/todo_master.md` entries deleted; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+- The cache's life (author, at rung 1). Relationships has no directory line today, so it takes no count.
+
+### Doc impact
+
+- `spec/setup_pages.md` — the Upload card's countdown and its no-script path (Item 6).
+
