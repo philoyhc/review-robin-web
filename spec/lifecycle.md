@@ -346,7 +346,7 @@ from routes whose mutations would invalidate stored reviewer
 responses: reviewer and reviewee delete-all, assignment Generate, and
 Quick Setup's roster and settings replaces (which answer `needs_confirm`
 rather than 400). The Reviewers and Reviewees Setup-page CSV import
-(`_shared.py` `_handle_import`) applies the same gate inline and
+(`roster_import.py` `_handle_import`) applies the same gate inline and
 answers its 400 in the upload card's banner rather than an error page
 (`spec/setup_pages.md`).
 A change that clears group answers is a second gate, not this one: it

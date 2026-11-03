@@ -47,9 +47,11 @@ from app.web.routes_operator._shared import (
     _require_delete_confirm,
     _require_editable,
     _require_selected_response_loss_ack,
-    _save_field_labels,
     require_relationships_enabled_session,
     _templates,
+)
+from app.web.roster_import import (
+    _save_field_labels,
     dismiss_held_upload,
     hold_for_ask,
     read_upload,

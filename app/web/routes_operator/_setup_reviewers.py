@@ -41,8 +41,6 @@ from app.web.routes_operator._shared import (
     account_resolver,
     acknowledged_loss,
     _setup_row_window,
-    _handle_import,
-    dismiss_held_upload,
     _redirect_keeping_selection,
     _row_action_anchor,
     _require_delete_confirm,
@@ -50,8 +48,12 @@ from app.web.routes_operator._shared import (
     _require_reviewer_in_session,
     _require_selected_response_loss_ack,
     _require_response_loss_ack,
-    _save_field_labels,
     _templates,
+)
+from app.web.roster_import import (
+    _handle_import,
+    _save_field_labels,
+    dismiss_held_upload,
 )
 
 router = APIRouter()

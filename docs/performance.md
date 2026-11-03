@@ -233,7 +233,7 @@ in one page render.
 `monitoring.per_reviewer_progress` loops over every reviewer. It already
 hoists two things out of that loop — the group keys and the response rows —
 and says in its own comments why. Two lookups stayed inside, in
-`responses.reviewer_session_state` (`app/services/responses/_core.py`):
+`responses.reviewer_session_state` (`app/services/responses/_rollups.py`):
 `_reviewer_assignments` and `_instrument_fields_by_id`. At 1,000 reviewers
 that is 1,000 + 1,000 queries, on both pages, in both states.
 

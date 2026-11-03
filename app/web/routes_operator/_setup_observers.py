@@ -59,11 +59,13 @@ from app.web.routes_operator._shared import (
     _require_not_archived,
     _templates,
     directory_or_none,
+    require_observers_enabled_session,
+)
+from app.web.roster_import import (
     dismiss_held_upload,
     hold_for_ask,
     read_upload,
     release_hold,
-    require_observers_enabled_session,
 )
 
 router = APIRouter()

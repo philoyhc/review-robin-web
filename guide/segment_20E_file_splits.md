@@ -105,6 +105,20 @@ re-exported `_save` function. One test patching `append_conflicts` now
 patches `_saving` too; `tests/unit/test_email_identity_fold.py`'s gate
 list names the five modules. Largest module 904 lines (`_parse.py`).
 
+**Rung 3.** `app/web/roster_import.py` (668 lines) took `_handle_import`,
+`_save_field_labels` and the upload holds; `_shared.py` fell 1,677 → 1,050.
+`acknowledged_loss` stayed in `_shared.py`: Instruments and Quick Setup use
+it too, so it is a form helper, not upload handling. `roster_import.py`
+imports the guards and `_templates` from `_shared` and calls
+`_shared.directory_or_none` through the module, so the 12 tests that
+replace it there needed no change. The item's read (rungs 1–3, cumulative since `8505fd8c`)
+found the moves faithful and one defect: `roster_import.py` imported
+`_shared` at its top, a cycle through the package's `__init__` that only
+`app.main`'s import order hid. It now imports `_shared` inside the two
+functions that use it, and `tests/unit/test_import_order.py` imports each
+split module alone in a fresh process. The read's other findings were two
+stale pointers, fixed.
+
 ## PR ladder
 
 1. **`responses/_rollups.py`.** The five tallies move; `responses/__init__.py`

@@ -98,7 +98,13 @@ three-layer separation (mirrors CLAUDE.md "Architecture at a glance"):
    `_settings.py`, the `_setup_*` slices, `_assignments.py`,
    `_operations.py`, `_instruments*.py`, `_extracts.py`,
    `_extract_data.py`, `_rehydrate.py`, `_workflow.py`,
-   `_sys_admin.py`, …, with shared plumbing in `_shared.py`).
+   `_sys_admin.py`, …, with shared plumbing in `_shared.py`). The Setup
+   cards' upload handling, the roster import every card posts to and the
+   upload holds, is `app/web/roster_import.py`, outside the package. The
+   slices import it, and it reads the package's guards and templates from
+   `_shared.py` inside the functions that need them, never at its top, so
+   the two never import each other at load
+   (`tests/unit/test_import_order.py`).
    Participant-facing routes live in `app/web/routes_reviewer/`
    under the `/me/` prefix (`_dashboard.py`, `_surface/`,
    `_summary.py`, `_results.py`, `_collation.py`, `_invite.py`).
@@ -776,7 +782,7 @@ are in `spec/setup_pages.md`, `spec/session_home.md` and
     merge and delete-all, `session_clone`, `participant_info.set_self_fields`,
     and the Settings CSV apply (`session_config_io.apply_session_config`,
     whose reviewer self-fields and labels reach the mirror);
-  - the reviewer tag-label save, a route helper (`_shared._save_field_labels`).
+  - the reviewer tag-label save, a route helper (`roster_import._save_field_labels`).
 
   A new writer of reviewers owes the call.
 - **Audit.** A flip on Session Home (`sessions.update_session`) is a
