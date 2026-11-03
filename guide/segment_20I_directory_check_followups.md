@@ -50,14 +50,11 @@ Taken 2026-11-03 at `215106150`: the directory line's partial (`app/web/template
 
 ### Status
 
-- **Rung 1 (scaffold)**, #3557: the button left of Upload on the three rosters, counted by `views.unmatched_count`; the directory line and countdown below the form.
-- **Rung 2**: `app/services/directory_recheck.py` and `POST …/directory-recheck` (`_directory.py`), any state but archived; the button submits its own form. A found row on an account another row holds stays unbound and is counted `directory_held`. Audit `<roster>.directory_rechecked`; the line shows whichever of import and recheck ran last. Expired sign-in: nothing saved, the renew banner resubmits the recheck. Under symmetric review only Reviewers rechecks (it syncs the mirror). Reviewers and Reviewees show the card only while editable, so an activated session's recheck is reachable on Observers alone; surfacing it there is the author's call. Rung 3 joined that PR.
-- **Rung 3**, #3558: the countdown watches the recheck form too; `directory-keys` with `recheck=true` names every unmatched key, kept or not, and a `since`. The POST reads only answers fetched since then; without the script it looks every address up. A recheck with nothing unmatched writes no event.
-- **Reads**: one cold read of the item's cumulative diff (from `e554cc7e2`): it found the recheck reusing kept answers, an empty recheck hiding the line, lookups run before the archived refusal, an unguarded Observers keys call and a renew banner with no form to resubmit, plus four weak tests; all fixed in #3558.
+**Closed 2026-11-03.** Intended vs done: as decided, in #3557 (scaffold) and #3558 (the recheck and its countdown; rung 3 joined rung 2). Beyond the plan: a found row on an account another row holds stays unbound, counted `directory_held`; a recheck reads only answers its own countdown fetched (`since`), and without the script asks for every address; a recheck with nothing unmatched writes no event; a binding recomputes self-review. Reviewers and Reviewees show the card only while editable, so an activated session's recheck is reachable on Observers alone; surfacing it elsewhere is the author's call. Reads: one cold read of the cumulative diff from `e554cc7e2` (five defects and four weak tests, all fixed) and Codex (one: the self-review recompute, fixed). `spec-writer` aligned `spec/setup_pages.md` and `spec/architecture.md`.
 
 ### Open questions
 
-None; both answered at rung 1 (activated sessions may bind; the label).
+None; both answered at rung 1.
 
 ### Doc impact
 

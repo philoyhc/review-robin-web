@@ -1027,8 +1027,7 @@ all; see its § *Lifecycle gate*. `spec/lifecycle.md` §5.
 ### The Upload card's banners
 
 Every banner an upload card shows sits in one stack, directly under the
-card's intro and above the directory-check line and the form, in one
-order: the upload problems (`partials/_upload_problems.html`), the
+card's intro and above the form, in one order: the upload problems (`partials/_upload_problems.html`), the
 directory renew (`partials/_directory_renew.html`), then the
 group-clear ask (`data-group-clear-banner`; Reviewers, Reviewees and
 Relationships). Quick Setup's card keeps its own banners in one stack
@@ -1062,12 +1061,12 @@ rehydrate", Dismiss a link back to the page).
 ### The Upload card's directory-check line
 
 The Reviewers, Reviewees and Observers upload cards show one muted line
-for the latest import, from `partials/_directory_check.html`
-(`data-directory-check`), under the card's banners and above the
-form. It reads the counts the import's audit event recorded
-(`views.last_directory_check`, `spec/csv_contracts.md` §3.1), so it
-survives the redirect after the save and shows for any viewer of the
-card.
+for the latest import or recheck, whichever ran last, from
+`partials/_directory_check.html` (`data-directory-check`), below the
+card's actions row. It reads the counts that event's audit event
+recorded (`views.last_directory_check`, `spec/csv_contracts.md` §3.1;
+`spec/architecture.md` for the recheck's), so it survives the redirect
+after the save and shows for any viewer of the card.
 
 - **Checked** (the directory answered for at least one address): the
   time, then the counts matched by mail, by sign-in name, not found,
@@ -1086,14 +1085,50 @@ card.
   sign-in, the directory refusing this account, an expired sign-in, the
   directory busy, the check out of time, or the directory not answering.
   An import from before 20G recorded none, and its line names none.
+- **A recheck's line** reads "Recheck of the unmatched addresses": the
+  time, then matched by mail, by sign-in name, not found, ambiguous, on
+  an account another row already holds (when any), and not checked (when
+  any), with the cause. A recheck that checked nothing says it couldn't
+  check the addresses, and why.
 - **Nothing** for an import with no counts (one that ran no check) or
-  with no address to check (anonymous reviewee identifiers only).
+  with no address to check (anonymous reviewee identifiers only). A
+  recheck with nothing to check writes no event, so the line keeps the
+  last check that did something.
+
+#### Recheck N unmatched
+
+On the same three cards, a Secondary `.btn` "Recheck N unmatched"
+(`data-directory-recheck`) sits left of Upload in the actions row. It
+shows only while at least one active row has an address and no directory
+account (`directory_recheck.unmatched_rows`, counted by
+`views.unmatched_count`), whatever import or form added it; N is that
+count. On Reviewees under symmetric review it is hidden (the Reviewers
+recheck binds the mirror). It submits its own form
+(`directory-recheck-form`), so the chosen file and the ticks play no part.
+
+- **Route:** `POST /operator/sessions/{id}/directory-recheck`
+  (`_directory.py`, `app/services/directory_recheck.py`), allowed in any
+  state but archived, activated sessions included, and answering with the
+  card again.
+- **What it binds:** a row the directory now finds binds as an upload
+  binds it (`directory_accounts.columns`). Not found, ambiguous and not
+  checked stay unbound, and a found row whose account another row of the
+  roster holds stays unbound too, counted as held (§ *One account, one row*, applied to a recheck). A
+  recheck with nothing unmatched writes nothing. A binding can make a
+  reviewer and a reviewee one person, so a recheck that binds either
+  recomputes self-review, as an edit does (under symmetric review, the
+  mirror's sync does it).
+- **An expired sign-in** saves nothing, and the card shows the renew
+  banner's variant (`partials/_directory_renew.html`) in its stack:
+  **Renew sign-in and recheck**, which renews and submits the recheck
+  form again; Dismiss links back to the card.
 
 ### The Upload card's directory-check countdown
 
 On the same three cards, Upload counts the directory check down from the
-page (segment 20H Item 6). A muted line under the directory-check line
-(`partials/_directory_countdown.html`, `data-directory-countdown`) reads
+page (segment 20H Item 6). A muted line under the directory-check line,
+below the actions row (`partials/_directory_countdown.html`,
+`data-directory-countdown`) reads
 "Directory check: N more to go." and falls as each address comes back.
 It is hidden until the count starts.
 
@@ -1119,8 +1154,14 @@ It is hidden until the count starts.
   never held up by a directory that is not answering. The upload then
   takes its usual path: the renew banner for an expired sign-in, and a
   lookup of whatever is left, within its own budget, otherwise.
+- **The recheck** counts down the same way. `directory-keys` with
+  `recheck=true` reads no file: it answers every unmatched key of the
+  roster, kept answers or not, and a `since` time. The recheck's POST
+  reads only the answers fetched since then, so a recheck never binds
+  from an old answer.
 - **Without the script** the line never shows, and the upload checks
-  every address on the server as before.
+  every address on the server as before; a recheck then has no `since`
+  and looks every address up on the server.
 
 ### The Upload card's modes
 

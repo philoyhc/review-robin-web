@@ -1015,6 +1015,15 @@ in `counts` when the import ran a directory check, plus `directory_kept`
 when a replace kept any not-checked row on its earlier account
 (`spec/csv_contracts.md` §3.1).
 
+`reviewers.directory_rechecked` / `reviewees.directory_rechecked` /
+`observers.directory_rechecked` (the Upload card's recheck,
+`app/services/directory_recheck.py`) carry `counts` of
+`directory_by_mail`, `directory_by_upn`, `directory_not_found`,
+`directory_ambiguous`, `directory_not_checked` and `directory_held` (found
+on an account another row holds, left unbound), and
+`context.directory_unchecked` when any address went unchecked. A recheck
+with nothing unmatched writes none.
+
 **`context.mode`.** A replace carries no `mode`; an append is
 `"append"` and a merge `"upsert"` (`spec/csv_contracts.md` §3.1a;
 `EVENT_SCHEMAS` allows `context` on these events). A merge also writes
