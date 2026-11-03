@@ -63,10 +63,12 @@ from app.web.routes_operator._shared import (
     _require_response_loss_ack,
     acknowledged_loss,
     directory_or_none,
-    release_hold,
     render_session_home,
     roster_address,
     session_payload_error,
+)
+from app.web.roster_import import (
+    release_hold,
 )
 
 

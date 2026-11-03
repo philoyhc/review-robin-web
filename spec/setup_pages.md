@@ -1951,7 +1951,7 @@ Bulk delete: `POST /operator/sessions/{id}/observers/delete-all`
   — a page offering a Save the server will refuse, with no yellow card
   to explain why. Every gate on these pages reads `is_editable` for
   that reason, template and route alike (`_save_field_labels` in
-  `app/web/routes_operator/_shared.py`). What the operator meets in
+  `app/web/roster_import.py`). What the operator meets in
   every locked state:
 
   | State | `POST …/field-labels` | Card locked | Save button |

@@ -654,7 +654,7 @@ def test_the_label_editor_commits_nothing_before_a_later_slot_refuses(
     re-gating. It is one commit, so a session archived at the second
     slot's gate refuses with the first slot's label not committed."""
     from app.db.models import SessionFieldLabel
-    from app.web.routes_operator._shared import _save_field_labels
+    from app.web.roster_import import _save_field_labels
 
     user, session = _labels_session(db)
     _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "archived"), at=2)
