@@ -5,7 +5,10 @@ An address on a roster row is looked up through the host's Graph helper
 uploading operator's delegated token. A row whose address resolves to
 exactly one account (`OK`, `USE_PRIMARY`, `FOUND_NO_PRIMARY`) stores that
 account's object ID, mail and UPN beside the address as written; any other
-outcome stores none of them, and the row keeps matching by mail.
+outcome stores none of them, and the row keeps matching by mail. One
+exception: on a replace, an address the directory gave no answer for (no
+token, an expired one, a failed or unfinished lookup) keeps the account
+the replaced row had (`unchecked`; `app.services.csv_imports._save`).
 
 Nothing here talks to a request: the routes hand in a `Directory` (or
 ``None`` when there is none to ask, which checks nothing).
@@ -183,6 +186,33 @@ def counts(
         else:
             tally["directory_not_checked"] += 1
     return tally
+
+
+#: The outcomes that are the directory's answer about an address: bound,
+#: or found to be nobody or several. Anything else is *not checked*.
+ANSWERED = RESOLVED | {"NOT_FOUND", "AMBIGUOUS"}
+
+
+def unchecked(
+    outcomes: Mapping[str, Outcome], addresses: Iterable[str | None], *, checked: bool
+) -> frozenset[str]:
+    """The lookup keys among ``addresses`` the directory gave no answer
+    for: every one with ``checked`` false, else those whose outcome is
+    missing or not in `ANSWERED` (an expired token, a failed or
+    unfinished lookup). The keys `counts` tallies as *not checked*."""
+    keys = {k for k in (key(a) for a in addresses) if k is not None}
+    if not checked:
+        return frozenset(keys)
+    return frozenset(
+        k for k in keys if (o := outcomes.get(k)) is None or o.status not in ANSWERED
+    )
+
+
+def binding(row: object) -> dict[str, str | None] | None:
+    """A saved row's directory columns, or ``None`` when it is unbound."""
+    if not getattr(row, "directory_object_id", None):
+        return None
+    return {name: getattr(row, name, None) for name in UNBOUND}
 
 
 def recipient(row: object) -> str:

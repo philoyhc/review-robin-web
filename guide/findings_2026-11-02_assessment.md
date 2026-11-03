@@ -4,7 +4,7 @@
 `guide/codebase_assessment_02nov.md`: a spec-vs-code audit, a defect read
 of the window's RRW changes, and a read of `residentialapps/`,
 `utilityapps/` and `cordware/` · **Read at:** `2ffb0f42` (#3521) ·
-**Open:** 10 of 11 rows (M2 done in #3524).
+**Open:** 9 of 11 rows (M2 done in #3524, M1 in #3525).
 
 The checklist the fixes work through (author, 2026-11-02: "there should
 be a findings list that can serve as the checklist for fixes; this
@@ -26,7 +26,7 @@ None.
 
 ## 2. Medium
 
-- **M1. A Replace with an expired Graph token unbinds every row it
+- ~~**M1**~~ — **Done in #3525**: a row the directory gave no answer for keeps its earlier account unless the file binds that account elsewhere, counted as `directory_kept` (`spec/csv_contracts.md` §3.1; `tests/integration/test_directory_rosters.py`). **A Replace with an expired Graph token unbinds every row it
   re-adds.** `app/services/csv_imports.py` `_save`, with
   `cordware/graph.py` `look_up_all`. Token renewal runs on page load, so
   a Replace submitted after the token lapses resolves nothing, and every
