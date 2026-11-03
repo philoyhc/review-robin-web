@@ -131,3 +131,16 @@ None.
 
 - `spec/setup_pages.md` — "The Upload card's banners": 16 px above the first banner (Item 3).
 - `spec/ui_elements.md` — the `.banner` base's margin and its one exception (Item 3).
+
+## Item 4 — Space under the Upload card's buttons
+
+**Opened and closed 2026-11-03**, from the author's browser check of Item 1: the directory line sat flush under the buttons. **Decision:** the line, or the countdown when no line shows, takes an 8px top margin under the actions row, so the gap reads as the gap between the line's paragraphs (their 6px plus the text's half-leading, which a button lacks; author: "use the gap between the two directory check paras as a gauge"). One rule in `base.html` (`#upload-csv > form + [data-directory-check]`, and the countdown). Rejected: *6px*, the paragraphs' margin, which reads tighter beside a button.
+
+### Status
+
+**Closed 2026-11-03.** As decided; `tests/browser/test_upload_banner_spacing.py` measures 8px. The look is the author's browser check.
+
+### Doc impact
+
+- `spec/setup_pages.md` — "The Upload card's directory-check line": 8px under the buttons (Item 4).
+

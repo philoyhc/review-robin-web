@@ -1064,7 +1064,8 @@ rehydrate", Dismiss a link back to the page).
 The Reviewers, Reviewees and Observers upload cards show one muted line
 for the latest import or recheck, whichever ran last, from
 `partials/_directory_check.html` (`data-directory-check`), below the
-card's actions row. It reads the counts that event's audit event
+card's actions row, 8px under the buttons (segment 20I Item 4; the
+countdown takes the same gap when no line shows). It reads the counts that event's audit event
 recorded (`views.last_directory_check`, `spec/csv_contracts.md` §3.1;
 `spec/architecture.md` for the recheck's), so it survives the redirect
 after the save and shows for any viewer of the card.
