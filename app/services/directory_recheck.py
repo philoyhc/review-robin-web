@@ -11,7 +11,13 @@ Not found, ambiguous and not checked stay unbound. A row whose account
 another row of the roster already holds stays unbound too (20H Item 1).
 
 An expired sign-in (`directory_accounts.sign_in_stop`) saves nothing, as
-an upload's does (20G); the route asks to renew. One audit event per
+an upload's does (20G); the route asks to renew.
+
+Each roster's recheck is open while its other writes are: Reviewers and
+Reviewees while the session is editable (draft or validated; author,
+2026-11-04, findings M1), Observers until it is archived. A recheck that
+binds a row sends a validated session back to draft, as any roster write
+does (`spec/lifecycle.md` §2.3). One audit event per
 recheck, `<roster>.directory_rechecked`, whose counts the card's
 directory line shows (`app.web.views.last_directory_check`).
 """
@@ -76,15 +82,31 @@ def unmatched_addresses(db: Session, *, session_id: int, kind: str) -> list[str]
 
 
 _ARCHIVED = "Session is archived; nothing can be rechecked."
+_NOT_EDITABLE = "Session is {status}; revert to draft to recheck"
 
 
 def _refuse(review_session: ReviewSession, kind: str) -> None:
-    """Refuse an archived session, and the Reviewees recheck under
-    symmetric review (the Reviewers one binds the mirror)."""
+    """Refuse a session this roster cannot be written in (archived; for
+    Reviewers and Reviewees, anything but draft or validated), and the
+    Reviewees recheck under symmetric review (the Reviewers one binds the
+    mirror)."""
     if lifecycle.is_archived(review_session):
         raise SessionStateConflict(_ARCHIVED, code="archived")
+    if kind != "observers" and not lifecycle.is_editable(review_session):
+        raise SessionStateConflict(
+            _NOT_EDITABLE.format(status=review_session.status), code="not_editable"
+        )
     if kind == "reviewees":
         symmetric_review.refuse_reviewee_write(review_session)
+
+
+def _lock(db: Session, review_session: ReviewSession, kind: str) -> ReviewSession:
+    """Lock and re-read the session under this roster's own gate: the
+    Observers roster's ``require_not_archived``, or the setup services'
+    ``require_editable``."""
+    if kind == "observers":
+        return lifecycle.require_not_archived(db, review_session, message=_ARCHIVED)
+    return lifecycle.require_editable(db, review_session)
 
 
 def _tally(status: str | None) -> str:
@@ -128,7 +150,7 @@ def recheck(
     if stopped:
         return Recheck(counts={}, stopped=stopped)
 
-    locked = lifecycle.require_not_archived(db, review_session, message=_ARCHIVED)
+    locked = _lock(db, review_session, kind)
     _refuse(locked, kind)
     counts = dict.fromkeys(
         (
@@ -158,6 +180,16 @@ def recheck(
         db.flush()
         counts[_tally(outcome.status)] += 1
     bound = counts["directory_by_mail"] + counts["directory_by_upn"]
+    if bound:
+        # Validate reads the bound accounts (`*.duplicate_account`), and a
+        # binding can move self-review inclusion (findings M1).
+        lifecycle.invalidate_if_validated(
+            db,
+            review_session=locked,
+            user=user,
+            reason=f"{kind}_rechecked",
+            correlation_id=correlation_id,
+        )
     if kind == "reviewers" and locked.symmetric_review:
         # The mirror takes the new accounts, then recomputes self-review.
         symmetric_review.sync_reviewees_from_reviewers(db, locked)

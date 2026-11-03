@@ -267,24 +267,54 @@ def test_reviewees_and_observers_recheck_too(
     assert _event(db, session.id, "observers.directory_rechecked").detail["counts"]["directory_by_mail"] == 1
 
 
-def test_an_activated_session_may_recheck_and_an_archived_one_may_not(
+def test_reviewers_and_reviewees_recheck_only_while_editable(
     client: TestClient, db: Session, switch: _Switch
 ) -> None:
-    """Any state but archived (author, 2026-11-03: binding admits by
-    account what the address already admits)."""
+    """Reviewers and Reviewees recheck while the session is editable, as
+    their other writes do; Observers until it is archived (author,
+    2026-11-04, findings M1). A refused recheck looks nothing up."""
     session = _create_session(client, db, "recheck-states")
+    session.observers_enabled = True
+    db.commit()
     switch.current = _Failing("server")
     _upload(client, session.public_id, "reviewers", "ReviewerName,ReviewerEmail\nArun,arun.kumar@example.edu\n")
+    _upload(client, session.public_id, "reviewees", "RevieweeName,RevieweeEmail\nArun,arun.kumar@example.edu\n")
+    _upload(client, session.public_id, "observers", "ObserverName,ObserverEmail\nJane,jane.tan@example.edu\n")
     switch.current = FakeDirectory()
     row = db.get(ReviewSession, session.id)
     row.status = "ready"
     db.commit()
-    _recheck(client, session.public_id, "reviewers")
-    assert _rows(db, Reviewer, session.id)["arun.kumar@example.edu"].directory_object_id
+    _recheck(client, session.public_id, "reviewers", status=409)
+    _recheck(client, session.public_id, "reviewees", status=409)
+    assert not _rows(db, Reviewer, session.id)["arun.kumar@example.edu"].directory_object_id
+    assert not _rows(db, Reviewee, session.id)["arun.kumar@example.edu"].directory_object_id
+    _recheck(client, session.public_id, "observers")
+    assert _rows(db, Observer, session.id)["jane.tan@example.edu"].directory_object_id
     row = db.get(ReviewSession, session.id)
     row.status = "archived"
     db.commit()
-    _recheck(client, session.public_id, "reviewers", status=409)
+    _recheck(client, session.public_id, "observers", status=409)
+
+
+def test_a_recheck_that_binds_sends_a_validated_session_to_draft(
+    client: TestClient, db: Session, switch: _Switch
+) -> None:
+    """Validate reads the bound accounts, so a binding recheck
+    invalidates, as any roster write does (findings M1); one that binds
+    nothing leaves the session validated."""
+    session = _create_session(client, db, "recheck-validated")
+    switch.current = _Failing("server")
+    _upload(client, session.public_id, "reviewers", "ReviewerName,ReviewerEmail\nArun,arun.kumar@example.edu\n")
+    row = db.get(ReviewSession, session.id)
+    row.status = "validated"
+    db.commit()
+    _recheck(client, session.public_id, "reviewers")  # still down: binds nothing
+    db.expire_all()
+    assert db.get(ReviewSession, session.id).status == "validated"
+    switch.current = FakeDirectory()
+    _recheck(client, session.public_id, "reviewers")
+    db.expire_all()
+    assert db.get(ReviewSession, session.id).status == "draft"
 
 
 def test_an_unknown_roster_or_disabled_observers_is_not_found(

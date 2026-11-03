@@ -1105,27 +1105,6 @@ and reaches Validate.
 `directory_object_id`s before the save, as merge's "one person twice"
 refusal does.
 
-#### The recheck on an activated session's Reviewers and Reviewees (20I's close, 2026-11-03)
-
-**Ships.** The Upload card's "Check unmatched addresses again" (20I
-Item 1) is reachable after activation on Reviewers and Reviewees, not
-only on Observers.
-
-**Already shipped.** The recheck itself, on all three Upload cards
-(`guide/archive/segment_20I_directory_check_followups.md` Item 1). Reviewers and
-Reviewees show the Upload card only while the session is editable, so
-once it is activated the recheck is reachable on Observers alone.
-
-**Why deferred.** Where it should surface on an activated session (the
-card, the roster table's toolbar, Session Home) is the author's call,
-left open at 20I's close.
-
-**Lift trigger.** An activated session whose reviewers or reviewees
-were not found at upload, and later are.
-
-**Wire-up.** The recheck route already takes any roster; it needs only
-a control outside the Upload card.
-
 ### Assignment rules
 
 #### Include or rule out whole groups by their members' tags (author, 2026-10-18)

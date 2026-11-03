@@ -187,8 +187,9 @@ async def roster_directory_recheck(
     """The Upload card's "Recheck N unmatched" (segment 20I Item 1): the
     roster's unmatched rows looked up again, on the operator's token,
     reading what the card's countdown already fetched, and each one the
-    directory now finds bound. Any state but archived (author,
-    2026-11-03), the service deciding under the session lock. Back to
+    directory now finds bound. Reviewers and Reviewees while the session
+    is editable, Observers until it is archived (author, 2026-11-04), the
+    service deciding under the session lock. Back to
     the card, whose directory line shows the recheck's counts; an
     expired sign-in saves nothing and the card asks to renew.
 
