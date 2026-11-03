@@ -193,3 +193,13 @@ def db(engine: Engine) -> Iterator[Session]:
 # 2026-05-26 — the legacy RTD seed shim that lived here is gone.
 # Tests that need a Rating-Integer-1-5 inline default get it from
 # ``DEFAULT_RESPONSE_FIELDS[0]`` via the standard creators.
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    # Segment 20F rung 3: a test that puts a symmetric-review mirror out of
+    # step on purpose, which the commit-time guard (`tests/_mirror_guard.py`)
+    # would otherwise fail.
+    config.addinivalue_line(
+        "markers",
+        "mirror_drift_expected: the test leaves a symmetric-review mirror out of step on purpose",
+    )

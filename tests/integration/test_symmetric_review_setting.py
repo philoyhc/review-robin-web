@@ -9,6 +9,7 @@ Quick Setup slot greyed. The mirror itself is rung 3's.
 
 from __future__ import annotations
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -73,6 +74,9 @@ def test_it_turns_on_only_while_both_rosters_are_empty(client: TestClient, db: S
     assert any("symmetric_review" in str(e.detail) for e in events)
 
 
+# Its roster is built by hand, a reviewer committed before its reviewee,
+# so the commit-time mirror guard sees a mirror out of step mid-setup.
+@pytest.mark.mirror_drift_expected
 def test_off_is_always_allowed_and_clears_the_links(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, "sym-off", symmetric_review="true")
     reviewer = _add_reviewer(db, review_session)
@@ -173,3 +177,23 @@ def test_the_reviewees_tab_carries_a_corner_lock_only_under_the_mode(
         html = client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
         marked = "is-mirrored" in html and "(mirrors Reviewers, read-only)" in html
         assert marked is on, code
+
+
+def test_a_settings_csv_applied_under_the_mode_mirrors_its_reviewer_self_fields(
+    client: TestClient, db: Session
+) -> None:
+    """The Settings apply's sync (`apply_session_config`) carries the
+    file's reviewer self-fields to the mirrored reviewees. Segment 20F
+    rung 3 found nothing covering it: the commit-time mirror guard
+    compares rows, not these, and removing the call failed no test."""
+    source = _make_session(client, db, "sym-cfg-src", symmetric_review="true")
+    source.reviewer_self_fields = ["name", "email"]
+    db.commit()
+    rows = session_config_io.serialize_session_config(db, source)
+
+    target = _make_session(client, db, "sym-cfg-tgt", symmetric_review="true")
+    session_config_io.apply_session_config(db, target, rows)
+    db.commit()
+    db.refresh(target)
+    assert target.reviewer_self_fields == ["name", "email"]
+    assert target.reviewee_self_fields == ["name", "email_or_identifier"]

@@ -16,6 +16,7 @@ from app.db.models import Instrument, InstrumentViewPolicy, ReviewSession
 from app.db.session import get_db
 from app.services import visibility_policies
 from _mounted import mounted_rrw
+from _mirror_guard import mirror_problems
 from _rrw_app import rrw_app
 
 app = rrw_app()
@@ -114,7 +115,7 @@ def _seed_test_operator_allowlist(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture
-def db(engine: Engine) -> Iterator[Session]:
+def db(engine: Engine, request: pytest.FixtureRequest) -> Iterator[Session]:
     """Per-test transactional session bound to the migrated SQLite engine.
 
     Uses the canonical "savepoint per commit" recipe so service-layer
@@ -132,12 +133,28 @@ def db(engine: Engine) -> Iterator[Session]:
         if not nested.is_active:
             nested = connection.begin_nested()
 
+    # Segment 20F rung 3: the symmetric-review mirror is in step at every
+    # commit (``_mirror_guard``). Recorded here, failed at teardown, so a
+    # fault never turns into an exception inside the code under test.
+    mirror_faults: list[str] = []
+
+    @event.listens_for(session, "after_commit")
+    def check_mirror(sess: Session) -> None:
+        mirror_faults.extend(mirror_problems(connection))
+
     try:
         yield session
     finally:
         session.close()
         transaction.rollback()
         connection.close()
+    if mirror_faults and request.node.get_closest_marker("mirror_drift_expected") is None:
+        pytest.fail(
+            "a commit left a symmetric-review mirror out of step "
+            "(a writer of reviewers skipped sync_reviewees_from_reviewers):\n"
+            + "\n".join(dict.fromkeys(mirror_faults)),
+            pytrace=False,
+        )
 
 
 def _make_client(

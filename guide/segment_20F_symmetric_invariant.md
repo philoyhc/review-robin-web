@@ -90,6 +90,21 @@ Reviewers Setup, since a reviewer save re-runs the sync. One issue per
 row: a reviewer with none or several mirrors, a reviewee linked to no
 reviewer on the roster, a pair differing on a mirrored field.
 
+**Rung 3: the guard checks commits, not source.** A scan for writers of
+`Reviewer` rows found 3 of the 10 sync callers: `_save`, `roster_bulk` and
+`update_reviewer` write through generic calls and attribute sets no text
+scan sees. The guard instead runs at every commit the integration suite
+makes: the `db` fixture checks each symmetric session's mirror on the
+test's connection (`tests/_mirror_guard.py`, the same faults as the rule)
+and fails the test at teardown if one was out of step. Five tests that
+break a mirror on purpose (the rule's four, and one built by hand) are
+marked `mirror_drift_expected`. Measured by removing each sync call in turn:
+the guard catches 8 of the 10. Of the other two, `session_clone` copies
+both rosters with their links re-pointed, so the mirror is in step
+without its sync; and the Settings apply's sync mirrors reviewer
+self-fields and labels, which the guard does not compare. That call had no
+test at all, so one now covers it, and it fails without the call.
+
 ## PR ladder
 
 1. **L2.** The expire in `sync_reviewees_from_reviewers`, with the SQLite
@@ -106,7 +121,10 @@ reviewer on the roster, a pair differing on a mirrored field.
 
 - A test drifts a mirrored field directly in the database and Validate
   reports `reviewees.mirror_drift`.
-- Removing a sync call from any listed writer fails the guard test.
+- ~~Removing a sync call from any listed writer fails the guard test.~~
+  Removing any of the 10 sync calls fails a test, the guard's for 8 of them
+  (rung 3, `## Status`); `session_clone`'s mirror is in step by
+  construction.
 - The L2 reproduction passes on SQLite.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 20F` exits 0; any warning adjudicated
