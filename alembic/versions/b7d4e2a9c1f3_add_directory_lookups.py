@@ -2,7 +2,7 @@
 
 The directory answers an upload's countdown fetched, kept fifteen
 minutes so the upload reads them rather than asking Graph again
-(``guide/segment_20H_walkthrough_19Z_followups.md`` Item 6). One row per
+(``guide/archive/segment_20H_walkthrough_19Z_followups.md`` Item 6). One row per
 operator, session and lookup key; both FKs ``ON DELETE CASCADE``.
 
 A single new table: ``create_table`` / ``drop_table`` round-trip on

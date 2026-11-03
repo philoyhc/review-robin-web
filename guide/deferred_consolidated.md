@@ -1092,7 +1092,7 @@ addresses differ.
 refusal of a file row on an account already on the roster, merge's
 refusal of one person twice (segment 19Z), and the single-row forms'
 refusal of an add or address edit onto an account the roster holds (20H
-Item 1, `guide/segment_20H_walkthrough_19Z_followups.md`).
+Item 1, `guide/archive/segment_20H_walkthrough_19Z_followups.md`).
 
 **Why deferred.** Replace and append check a file's rows against each
 other only by address; the directory check runs at the save. Meanwhile Validate

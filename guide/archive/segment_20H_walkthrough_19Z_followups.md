@@ -305,27 +305,30 @@ After 20G (closed 2026-11-03), which this shares a seam with: `DirectoryCheck.st
 
 ### Status
 
-Open. Base for the cumulative read: `bb7443bf` (main before rung 1).
-- Rung 1 (scaffold): `_directory_countdown.html`, hidden, under the
-  directory line on the three Upload cards.
-- Decided at build: the page cannot read the file's addresses without
-  parsing the CSV as the server does, so a second endpoint takes the file
-  and answers its uncached keys through the roster's own parser. The
-  cache is a table, as held uploads are, since the lookups and the upload
-  may land on different instances.
-- Rung 2: `directory_lookups` (table, migration `b7d4e2a9c1f3`, service);
-  `directory-keys` and `directory-lookup` in `_directory.py`; the three
-  uploads hand the kept answers to `directory_check` as `known`.
-  `tests/integration/test_directory_countdown.py`.
-- Rung 3 (last build rung): the page script in the partial, the spec
-  (`spec/setup_pages.md`, "The Upload card's directory-check countdown")
-  and `tests/browser/test_upload_directory_countdown.py`. Codex on rung 2:
-  the keys computation moved into the service; a concurrent answer yields
-  in a savepoint.
-- Dropped at build: "the cache never outlives the session's lock". Nothing
-  clears the cache on a lock; the 15-minute life bounds it, and an answer
-  is only ever the directory's, so a stale one is at worst one the next
-  upload asks again.
+**Closed 2026-11-03.** Intended: the page counts the upload's directory
+check down, and the server keeps only what it fetched. Done as planned
+over three rungs (#3553 scaffold, #3554 endpoints and cache, #3555 page
+script); cache life 15 minutes (author).
+- Decided at build: a second endpoint, `directory-keys`, names the
+  file's uncached keys through the roster's own parser, since the page
+  cannot parse the CSV as the server does. The cache is a table
+  (`directory_lookups`, migration `b7d4e2a9c1f3`), as held uploads are,
+  since the lookups and the upload may land on different instances.
+- Dropped: "the cache never outlives the session's lock". The 15-minute
+  life is the only bound; an answer is only ever the directory's, so a
+  stale one is at worst asked again.
+- Codex: the keys computation moved into the service and a concurrent
+  answer yields in a savepoint (#3554); any failed lookup stops the count,
+  so an unanswering directory never holds it (#3555).
+- One read (cumulative from `bb7443bf`): no defect; the lookup-and-keep
+  moved into the service, the roster parsers to `_shared`, a refused
+  sign-in stops the count, and tests for the upload's freshness filter
+  and the per-operator scope. `close_check 20H.6`'s notes adjudicated:
+  `_directory`'s new routes are specced in `spec/setup_pages.md`;
+  `_quick_setup` only shares the parser map; `_rehydrate` was not touched
+  in substance.
+- Browser checks owed to the author: the line on the three cards, and a
+  deployed run against Graph.
 
 ### Doc impact
 

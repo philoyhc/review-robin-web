@@ -179,7 +179,7 @@ current.
   lookup done (23 by mail, 12 by sign-in name, 1,465 not found), about
   37 ms a lookup. Decision 2's one real timing; well inside 120 s.
 - **A progress count?** (author, 2026-11-03) Planned as 20H Item 6
-  (`guide/segment_20H_walkthrough_19Z_followups.md`), after this plan's
+  (`guide/archive/segment_20H_walkthrough_19Z_followups.md`), after this plan's
   rung 1, with which it shares a seam.
 
 ## Out of scope

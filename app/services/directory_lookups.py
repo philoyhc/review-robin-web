@@ -2,7 +2,7 @@
 
 The roster Upload card's script looks the file's addresses up in batches
 before it posts the file, so the page can count down what is left
-(``guide/segment_20H_walkthrough_19Z_followups.md`` Item 6). Each answer
+(``guide/archive/segment_20H_walkthrough_19Z_followups.md`` Item 6). Each answer
 the server fetched from Graph is kept here for :data:`CACHE_TTL`; the
 upload then reads those (`csv_imports.directory_check`'s ``known``) and
 asks Graph only for the rest.

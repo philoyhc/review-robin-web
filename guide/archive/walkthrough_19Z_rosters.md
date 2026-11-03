@@ -13,7 +13,7 @@ The basic browser check passed (author, 2026-10-31). This walks the rest in two 
 
 ## Part A — local
 
-**Done 2026-11-03** (author, local): every check passed, but for two not reachable from a browser and one ruled to change; the findings are segment 20H (`guide/segment_20H_walkthrough_19Z_followups.md`). The files used were made outside the repository.
+**Done 2026-11-03** (author, local): every check passed, but for two not reachable from a browser and one ruled to change; the findings are segment 20H (`guide/archive/segment_20H_walkthrough_19Z_followups.md`). The files used were made outside the repository.
 
 Start from a fresh session (Add new session, no files). The directory is `FakeDirectory`, so these addresses resolve as stated:
 
@@ -39,7 +39,7 @@ Start from a fresh session (Add new session, no files). The directory is `FakeDi
 - [x] Nothing ticked: Upload is disabled.
 - [x] Tick each of replace, append and merge in turn: each unticks the others, and Upload enables.
 - [x] Untick the ticked one: Upload disables again.
-- [x] Without JavaScript (DevTools, disable it): tick two, upload. The card asks "Tick only one of replace, append or merge", keeps the file, and comes back with nothing ticked. **Not reachable** (2026-11-03): Upload stays disabled without JavaScript once the roster has rows; the refusal is covered by the route tests (`guide/segment_20H_walkthrough_19Z_followups.md` Item 5).
+- [x] Without JavaScript (DevTools, disable it): tick two, upload. The card asks "Tick only one of replace, append or merge", keeps the file, and comes back with nothing ticked. **Not reachable** (2026-11-03): Upload stays disabled without JavaScript once the roster has rows; the refusal is covered by the route tests (`guide/archive/segment_20H_walkthrough_19Z_followups.md` Item 5).
 
 ### A3. Append
 
