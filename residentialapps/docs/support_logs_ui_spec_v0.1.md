@@ -8,7 +8,7 @@
 
 **Version:** 0.1, 23 October 2026 — draft for discussion
 **Scope:** the RF / RSLM surface of Support Logs, phone first, plus the safety-flag list every *safety-flag recipient* needs, frontline or not (screen 9). Master, opportunity-review, audit and administration surfaces come later.
-**Reads with:** `residentialapps/docs/resident_support_log_functional_spec_v0.3.md` (what the surface does), `docs/cordware_mobile_to_desktop.md` (UX classes), strategy v1.0 §3 (every application meets RRW's baseline).
+**Reads with:** `residentialapps/docs/resident_support_log_functional_spec_v0.3.md` (what the surface does), `cordware/docs/cordware_mobile_to_desktop.md` (UX classes), strategy v1.0 §3 (every application meets RRW's baseline).
 **Design baseline:** RRW's design system at `philoyhc/review-robin-web` `a06e7ee`: `spec/color_tokens.md`, `spec/visual_style_general.md`, `spec/ui_elements.md`, and `tools/theme_customizer.html`.
 **First mockups:** six phone screens on a private design canvas, "Support Logs RF mobile" (2026-10-23). They are a layout baseline, not yet on RRW's tokens (§8).
 
@@ -39,7 +39,7 @@
 
 Screens 7–9 are specified below but not yet mocked up.
 
-Navigation: a bottom bar with four destinations — Home, Log, Students, Follow-ups — on screens 1, 5, 6 and 7. The logging and safety screens are full-screen tasks with Close or Back instead. The bottom bar becomes a side or top bar at desktop width; routes and permissions are the same at every width (`cordware_mobile_to_desktop.md` §7.5, §9).
+Navigation: a bottom bar with four destinations — Home, Log, Students, Follow-ups — on screens 1, 5, 6 and 7. The logging and safety screens are full-screen tasks with Close or Back instead. The bottom bar becomes a side or top bar at desktop width; routes and permissions are the same at every width (`cordware/docs/cordware_mobile_to_desktop.md` §7.5, §9).
 
 ## 3. Screens
 
@@ -124,8 +124,8 @@ Navigation: a bottom bar with four destinations — Home, Log, Students, Follow-
 - **Single column** below 600 px. Choice chips wrap; tiles use `repeat(N, minmax(0, 1fr))` grids.
 - **No hover dependence**; hover tints from RRW still apply on pointer devices.
 - **Base text 16 px** (`--fs-body`), so phone browsers do not zoom into inputs on focus; zoom is never disabled.
-- **Breakpoints by content, not device** (`cordware_mobile_to_desktop.md` §7.2).
-- **Viewport testing:** every screen here is checked at a narrow and a desktop width; mobile-critical ones get a completed-workflow check at the narrow width (`cordware_mobile_to_desktop.md` §10).
+- **Breakpoints by content, not device** (`cordware/docs/cordware_mobile_to_desktop.md` §7.2).
+- **Viewport testing:** every screen here is checked at a narrow and a desktop width; mobile-critical ones get a completed-workflow check at the narrow width (`cordware/docs/cordware_mobile_to_desktop.md` §10).
 
 ## 5. Components
 

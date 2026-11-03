@@ -23,7 +23,6 @@ the archived segment plans (`guide/archive/README.md`).
 | `operations_runbook.md` | Day-to-day operation in the app: the health check, logs, the operator and admin allowlists, the data the app keeps and for how long (exports, imports, retention), and the application's own failure modes. The host's procedures, backups and diagnosis are the private deployment repository's. |
 | `known_limitations.md` | Current scope limits and deferred items, stated plainly for a pilot. |
 | `header_chrome.md` | **Functional spec, proposed 2026-11-02, not built.** One top bar across Review Robin, Residential Operations, Support Logs and ApplyDesk, after Residential's: the app icon in place of the colored square, a switcher, an account menu holding Settings, Admin, Guide, About and Sign out, the breadcrumb kept inside the header; in Review Robin nothing below the header's line changes; and the top line: the workspace's institution name (a Cordware setting), replaced by the session creator's Unit, a field on the operator that only a sys admin edits. Covers Residential, which builds to it under its own plan. Retires into `spec/` when built. |
-| `cordware_mobile_to_desktop.md` | Mobile-to-desktop UX guidance for every Cordware application: responsiveness everywhere, mobile optimization per workflow, and the three UX classes each surface is given (moved 2026-10-25 from the private deployment repository). |
 | `security_posture.md` | Authorization model (three-tier operator/admin/super-admin), permission / destructive-action audit, the identity subsystem (Easy Auth headers, `AuthenticatedUser`, `ALLOW_FAKE_AUTH`, diagnostic routes — absorbed from the retired `authentication.md`), CSRF posture (full write-up), deferred hardening. |
 | `archive/cordware_implementation_sequence.md` | **Retired 2026-10-22, at segment 21D's close — its four workstreams shipped as segments 21A–21D** (`guide/archive/segment_21_domain_retrofit.md` and its four sub-segment plans). Was the accepted (2026-10-20) split of v0.8's stages 1–2 into host skeleton, route-aware URL sweep, shared identity and prefix flip, with sizes, dependencies, the A → B ∥ C → D order and a rough PR ladder; its order is in v0.8 §5. Decision history; **do not update it**. |
 | `archive/cordware_repository_strategy_v0.7.md` | **Retired 2026-10-20 — superseded by `archive/cordware_repository_strategy_v0.8.md`.** Was the Cordware strategy v0.7 draft (2026-10-18, adopted 2026-10-19) with two addenda: requirements carried from integration spec v0.2, and three stage-1 decisions. v0.8 folds both in and replaces its standalone-compatibility requirement with the independence requirement. Kept as decision history. |
@@ -42,3 +41,7 @@ Sibling folders:
   the UI should look like).
 - **`guide/`** — forward-looking plans, todos, segment-by-segment
   workplans.
+- **`cordware/docs/`** — the Cordware platform's reference material:
+  the mobile-to-desktop UX guidance every application follows, and the
+  proposed interoperability spec and its handoff (moved there
+  2026-11-04).

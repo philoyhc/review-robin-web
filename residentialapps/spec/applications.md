@@ -57,7 +57,7 @@ role and *admin* the appointment (`residentialapps/docs/residentialapps_roles.md
 | Sys admin | `/sys-admin/` | Sys admins, for the audit log; the super-admin, for the audit log and to grant and revoke sys admin |
 
 **Residential Operations page map** (author, 2026-10-26). Each page, what
-staff and RAs do on it, and its device class (`docs/cordware_mobile_to_desktop.md` §3:
+staff and RAs do on it, and its device class (`cordware/docs/cordware_mobile_to_desktop.md` §3:
 *mobile-critical*, *responsive*, *desktop-oriented*); `—` is a page that side
 never reaches. Section numbers are the RA Leave spec's
 (`residentialapps/docs/ra_leave_management_functional_spec_v0.4.md`). RA

@@ -29,4 +29,4 @@ Residential Apps: one package, mounted under Cordware as two applications, **Res
 | `guide/fake_ids.md` | Every command the browser walkthroughs need: copy-and-paste PowerShell blocks that run Residential Apps locally as each sample viewer, the sample-viewer tables, and the browser settings |
 | `guide/todo_master.md` | Rulings, dependencies, open decisions and pending revisions |
 
-Shared UX guidance for every Cordware application is RRW's `docs/cordware_mobile_to_desktop.md`.
+Shared UX guidance for every Cordware application is `cordware/docs/cordware_mobile_to_desktop.md`.
