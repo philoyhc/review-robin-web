@@ -102,8 +102,8 @@ reviewer on the roster, a pair differing on a mirrored field.
 scan sees. The guard instead runs at every commit the integration suite
 makes: the `db` fixture checks each symmetric session's mirror on the
 test's connection (`tests/_mirror_guard.py`, the same faults as the rule)
-and fails the test at teardown if one was out of step. Five tests that
-break a mirror on purpose (the rule's four, and one built by hand) are
+and fails the test at teardown if one was out of step. Six tests that
+break a mirror on purpose (the rule's five, and one built by hand) are
 marked `mirror_drift_expected`. Measured by removing each sync call in turn:
 the guard catches 8 of the 10. Of the other two, `session_clone` copies
 both rosters with their links re-pointed, so the mirror is in step
@@ -115,8 +115,11 @@ findings are fixed: the spec's claim for the guard narrowed to row-writing
 paths through the `db` fixture, this plan's Decision, Semantics and ladder
 annotated for the guard's new form and `populate_existing`, the drift
 message naming the reviewer as Semantics says, and the anchor table's
-note. Codex on #3535 found that an unchanged reviewer save skipped the sync,
-so the rule's fix line repaired nothing; fixed there.
+note. Codex on #3535 found three gaps in the rule's fix line, all fixed there: an
+unchanged reviewer save skipped the sync; the repair it then made wrote no
+audit row (now `reviewees.mirror_repaired`, from the counts the sync
+returns); and the sync never removed a second reviewee linked to the same
+reviewer.
 
 ## PR ladder
 

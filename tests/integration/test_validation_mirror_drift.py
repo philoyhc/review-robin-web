@@ -158,6 +158,7 @@ def test_an_unchanged_save_on_a_mirror_in_step_writes_no_audit_row(
     ).first() is None
 
 
+@pytest.mark.mirror_drift_expected
 def test_a_duplicate_mirror_is_reported_and_an_unchanged_save_removes_it(
     client: TestClient, db: Session
 ) -> None:
