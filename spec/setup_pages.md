@@ -1129,7 +1129,7 @@ On the same three cards, Upload counts the directory check down from the
 page (segment 20H Item 6). A muted line under the directory-check line,
 below the actions row (`partials/_directory_countdown.html`,
 `data-directory-countdown`) reads
-"Directory check: N more to go." and falls as each address comes back.
+"Directory check: N more to go." and falls as each batch comes back.
 It is hidden until the count starts.
 
 - **Which addresses:** `POST /operator/sessions/{id}/directory-keys`
@@ -1138,9 +1138,11 @@ It is hidden until the count starts.
   and answers the lookup keys with no answer kept. A file that does not
   parse answers none, and the upload then shows the file's problems.
 - **The lookups:** `POST /operator/sessions/{id}/directory-lookup` takes
-  a JSON batch of up to 25 keys; the script sends batches of 10, four in
+  a JSON batch of up to 25 keys; the script sends batches of 10, two in
   flight, and the count falls by each batch's size (segment 20I Item 2:
-  one key a request paid a gateway round trip per address). It answers each key's
+  one key a request paid a gateway round trip per address). The server
+  looks each batch up four at a time, so at most eight directory calls
+  run at once. It answers each key's
   status and nothing about the account, and it keeps each answer the
   server fetched in `directory_lookups` for 15 minutes, per operator and
   session. With no key left to look up, the form submits at once.

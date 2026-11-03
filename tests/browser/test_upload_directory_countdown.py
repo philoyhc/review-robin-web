@@ -117,7 +117,7 @@ def test_a_failed_lookup_stops_the_count_and_uploads(
     with page.expect_navigation():
         page.locator("#upload-csv-form .unlock-col-actions button[type=submit]:not([data-directory-recheck])").click()
     page.wait_for_load_state("load")
-    assert 1 <= len(batches) <= 4  # the first answer stops the rest of the six batches
+    assert 1 <= len(batches) <= 2  # two in flight; the first answer stops the other four
     expect(page.locator("[data-directory-check]")).to_contain_text("not found")
 
 
@@ -125,7 +125,7 @@ def test_the_count_falls_by_batches_of_ten(
     page: Page, new_session: Callable[[], str], tmp_path: Path
 ) -> None:
     """Segment 20I Item 2: 25 addresses go in three requests of 10, 10
-    and 5, and the count falls by each batch to zero."""
+    and 5, at most two at once, and the count falls by each batch to zero."""
     session_id = new_session()
     roster = tmp_path / "reviewers.csv"
     many = [f"batch{i}@example.edu" for i in range(25)]
@@ -193,3 +193,36 @@ def test_the_recheck_counts_down_every_unmatched_address_then_rechecks(
     assert seen == sorted(seen, reverse=True)
     expect(page.locator("[data-directory-check]")).to_contain_text("Recheck of the unmatched addresses")
     expect(page.locator("[data-directory-check]")).to_contain_text("4 not found, 1 ambiguous")
+
+
+def test_one_failed_key_in_a_batch_stops_the_count(
+    page: Page, new_session: Callable[[], str], tmp_path: Path
+) -> None:
+    """A batch is failed by any of its keys, not only its first: the
+    seventh key of the first batch errors, and no further batch goes."""
+    session_id = new_session()
+    roster = tmp_path / "reviewers.csv"
+    many = [f"mid{i}@example.edu" for i in range(40)]
+    roster.write_text(
+        "ReviewerName,ReviewerEmail\n"
+        + "\n".join(f"P{i},{a}" for i, a in enumerate(many)) + "\n"
+    )
+    batches: list[list[str]] = []
+
+    def answer(route) -> None:
+        keys = json.loads(route.request.post_data)["keys"]
+        batches.append(keys)
+        outcomes = {k: {"status": "NOT_FOUND", "error_kind": None} for k in keys}
+        if keys[0] == many[0]:
+            outcomes[keys[6]] = {"status": "ERROR", "error_kind": "throttled"}
+        route.fulfill(status=200, content_type="application/json", body=json.dumps({"outcomes": outcomes}))
+
+    page.route("**/directory-lookup", answer)
+    page.goto(app_url(f"/operator/sessions/{session_id}/reviewers?unlocked=1"))
+    page.locator("#upload-csv-form input[name=file]").set_input_files(str(roster))
+    with page.expect_navigation():
+        page.locator("#upload-csv-form .unlock-col-actions button[type=submit]:not([data-directory-recheck])").click()
+    page.wait_for_load_state("load")
+    # The first batch's answer stops the count: at most the other batch
+    # already in flight went too, of the four.
+    assert 1 <= len(batches) <= 2

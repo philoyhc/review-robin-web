@@ -10,7 +10,7 @@
 
    On Upload the script asks `directory-keys` which of the file's
    addresses still need a lookup (parsed by the roster's own parser),
-   looks them up in batches of ten, four in flight (20I Item 2), through
+   looks them up in batches of ten, two in flight (20I Item 2), through
    `directory-lookup` (which keeps each answer the server fetched for
    fifteen minutes), and counts down. Then it submits the form as it was:
    the upload reads the kept answers and asks the directory only for the
@@ -34,9 +34,12 @@
     var roster = {{ directory_countdown_roster | tojson }};
     var keysUrl = {{ url('/operator/sessions/' ~ session.public_id ~ '/directory-keys') | tojson }};
     var lookupUrl = {{ url('/operator/sessions/' ~ session.public_id ~ '/directory-lookup') | tojson }};
-    var workers = 4;
-    // Keys a request (20I Item 2): one round trip through the gateway
-    // per ten addresses, the count falling by each batch.
+    // Batches of ten keys, two in flight (20I Item 2): one round trip
+    // through the gateway per ten addresses, the count falling by each
+    // batch. The server looks each batch up four at a time
+    // (`cordware.graph.look_up_all`), so at most eight directory calls
+    // run at once, where four in flight would make sixteen.
+    var workers = 2;
     var batch = 10;
     var counted = false;
     var counting = false;
