@@ -76,12 +76,7 @@ is the author's call.
    ruff's rule set widened first.
    **Plan:** `guide/segment_22C_pyright.md`.
 
-7. **20G — The import's directory check, sturdier** (not gated). Hold
-   and ask to renew on a sign-in failure; normalized object ids; the
-   lookup measured.
-   **Plan:** `guide/segment_20G_directory_import_robustness.md`.
-
-8. **20H — Follow-ups from the 19Z walkthrough** (not gated). The
+7. **20H — Follow-ups from the 19Z walkthrough** (not gated). The
    single-row forms refuse a second row on one directory account; an
    instrument label's wrong number after an add; audit events by
    facility; Upload-card banners; the unreachable checks written down;

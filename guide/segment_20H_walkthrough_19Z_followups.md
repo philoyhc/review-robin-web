@@ -203,7 +203,7 @@ Rejected: *post the page's outcomes with the file*, as the Checker does (`utilit
 
 ### Semantics
 
-- A refused sign-in in a batch stops the countdown and takes 20G's path (hold the file, ask to renew), not a save.
+- An expired token in a batch (Graph's `unauthorized`) stops the countdown and takes 20G's path (hold the file, ask to renew), not a save; any other failure leaves its keys uncached and saves, as 20G ruled (`guide/archive/segment_20G_directory_import_robustness.md`).
 - A cached outcome older than the cache's life is looked up again; the cache never outlives the session's lock.
 - A failed batch leaves its keys uncached; the upload looks them up, as today.
 
@@ -213,7 +213,7 @@ Taken 2026-11-03 at `d57044884`: the check (`app/services/csv_imports/_identity.
 
 ### PR ladder
 
-After 20G rung 1, which this shares a seam with.
+After 20G (closed 2026-11-03), which this shares a seam with: `DirectoryCheck.stopped` and `unchecked_reason`.
 1. Scaffold: the count line on the Upload card, inert. 2. The lookup endpoint and its cache, with tests. 3. The page script and the upload reading the cache; a browser test. Last build rung: cumulative read.
 
 ### Definition of done
