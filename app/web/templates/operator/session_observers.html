@@ -398,6 +398,9 @@
               <input type="file" id="file" name="file" accept=".csv,text/csv"
                      aria-label="CSV file"{% if not held_upload %} required{% endif %}>
               {% include "operator/partials/_held_upload.html" %}
+              {% with directory_renew_dismiss_url = observers_base_url ~ "/import/dismiss" %}
+                {% include "operator/partials/_directory_renew.html" %}
+              {% endwith %}
 
               {% if existing_count and existing_count > 0 %}
                 <fieldset class="upload-mode">
