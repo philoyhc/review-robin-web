@@ -25,6 +25,9 @@ split; wall-clock is machine-specific and only comparable within one run.
     python3 tools/bench_roster_scale.py pin-rule --session 1
     python3 tools/bench_roster_scale.py post --session 1 --path /workflow/prepare
 
+    # an import's directory check, no database (segment 20G)
+    python3 tools/bench_roster_scale.py directory --sizes 200 1000 2000
+
 Every subcommand refuses any `DATABASE_URL` that is not loopback. This tool
 writes tens of thousands of rows, drives the real Prepare and Activate
 routes, and signs in as whoever `--operator-email` names — none of which
@@ -661,6 +664,44 @@ def profile(args: argparse.Namespace) -> None:
     print("\n".join(stream.getvalue().splitlines()[4:]))
 
 
+def bench_directory(args: argparse.Namespace) -> None:
+    """Time an import's directory check (segment 20G rung 5): no database,
+    a fake directory that answers every address after ``--latency-ms``,
+    through `csv_imports.directory_check` as the upload routes call it
+    (`cordware.graph.look_up_all`, `WORKERS` at a time, under
+    `directory_accounts.BUDGET`). The default latency is the one the
+    author's 1,500-address replace on production implies: 56 s at four
+    workers is about 150 ms a lookup (``guide/segment_20G_*`` Status)."""
+    import threading
+
+    from cordware.graph import WORKERS, FakeDirectory
+    from app.services import csv_imports, directory_accounts
+
+    class _Slow(FakeDirectory):
+        def find_users(self, address: str):
+            time.sleep(args.latency_ms / 1000)
+            return []
+
+    print(
+        f"directory check · {args.latency_ms} ms a lookup · {WORKERS} workers · "
+        f"budget {directory_accounts.BUDGET:.0f} s"
+    )
+    print(f"{'addresses':>10} {'seconds':>9} {'per lookup':>11} {'unchecked':>10}")
+    for size in args.sizes:
+        addresses = [f"person{i:05d}@example.edu" for i in range(size)]
+        start = time.perf_counter()
+        check = csv_imports.directory_check(_Slow(), addresses)
+        elapsed = time.perf_counter() - start
+        print(
+            f"{size:>10} {elapsed:>9.1f} {1000 * elapsed / size:>9.1f} ms "
+            f"{len(check.unchecked):>10}"
+        )
+    # Lookups past the budget finish on their own threads; let them.
+    for thread in threading.enumerate():
+        if thread is not threading.current_thread() and thread.daemon is False:
+            thread.join(timeout=0)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = parser.add_subparsers(dest="command", required=True)
@@ -723,6 +764,15 @@ def main() -> None:
     profile_parser.add_argument("--path", default="", help='e.g. "/assignments"')
     profile_parser.add_argument("--rows", type=int, default=20)
     profile_parser.set_defaults(func=profile)
+
+    directory_parser = sub.add_parser(
+        "directory", help="time an import's directory check (no database)"
+    )
+    directory_parser.add_argument(
+        "--sizes", type=int, nargs="+", default=[200, 1000, 2000]
+    )
+    directory_parser.add_argument("--latency-ms", type=float, default=150.0)
+    directory_parser.set_defaults(func=bench_directory)
 
     args = parser.parse_args()
     args.func(args)
