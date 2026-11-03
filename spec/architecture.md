@@ -778,8 +778,11 @@ are in `spec/setup_pages.md`, `spec/session_home.md` and
   deleted), clears the answers of a group a mirrored tag change redraws
   (asking first where the caller can: `acknowledged_loss`), and then recomputes
   the self-review classification (`spec/assignments.md`). An unlinked reviewee
-  (a copy made by a clone) is adopted by address, else dropped. A no-op while
-  the mode is off. Reviewee-only state (`results_acknowledged_at`) is kept.
+  (a copy made by a clone) is adopted by address, else dropped, as is a
+  second reviewee linked to the same reviewer. It reads the reviewee rows with
+  `populate_existing`, so it sees the database's links, and returns the
+  created / updated / deleted counts (`MirrorChanges`). A no-op while the mode
+  is off. Reviewee-only state (`results_acknowledged_at`) is kept.
 - **Callers.** Every writer of reviewers, or of what the mirror copies from
   them, calls it before it commits:
   - the services `reviewers.create_reviewer` / `update_reviewer`,
@@ -792,7 +795,10 @@ are in `spec/setup_pages.md`, `spec/session_home.md` and
   A new writer of reviewers owes the call. Validate's
   `reviewees.mirror_drift` (error, `spec/validate_page.md` §3.2) reports a
   roster left out of step, so a writer that skipped the call cannot reach
-  Prepare. The integration suite also checks those faults at every commit
+  Prepare. A reviewer save that changes nothing still re-runs the sync under
+  the mode; if that changed rows it invalidates a validated session and writes
+  `reviewees.mirror_repaired` (the cascade-slot table below). The integration
+  suite also checks those faults at every commit
   made through its `db` fixture (`tests/_mirror_guard.py`). It compares the
   rows, not the mirrored self-fields and labels, so it catches a skipped call
   on any row-writing path the suite exercises.
