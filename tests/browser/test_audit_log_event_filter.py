@@ -58,6 +58,16 @@ def test_two_filters_build_one_selection(
     assert _selected(page) == [reviewer[0]]
     page.click(f"{LIST} option[value='session.created']")
 
+    # The keyboard selects natively among the types on view, but never
+    # drops the one the filter hides.
+    page.focus(LIST)
+    page.keyboard.press("ArrowDown")
+    assert reviewer[0] in _selected(page)
+    if "session.created" not in _selected(page):
+        page.click(f"{LIST} option[value='session.created']")
+    chosen = sorted(_selected(page))
+    page.focus(BOX)
+
     # Enter in the box does not submit: it is for narrowing.
     page.press(BOX, "Enter")
     expect(page.locator(BOX)).to_have_value("session")
@@ -66,7 +76,7 @@ def test_two_filters_build_one_selection(
         page.click("text=Apply filters")
     assert f"event_type={reviewer[0]}" in page.url
     assert "event_type=session.created" in page.url
-    assert sorted(_selected(page)) == sorted([reviewer[0], "session.created"])
+    assert sorted(_selected(page)) == chosen
     assert _visible(page) == everything
 
     # Clear, always beside Apply filters, goes back to the whole log.

@@ -861,7 +861,9 @@ Notes:
     event-type list as it is typed to the types beginning with the text,
     any case. A selected type the text hides stays selected and is still
     sent, so types found with one filter and then another are filtered
-    on together. The box has no `name` and sends nothing, and Enter in
+    on together. The keyboard keeps the listbox's own behavior for the
+    types on view, but a type the text hides is never dropped by it.
+    The box has no `name` and sends nothing, and Enter in
     it does nothing; the log is filtered by what the list selects.
     Without JavaScript it does nothing and the list is whole.
 - **Spacing.** `.audit-filter-form` keeps the form 16px below the

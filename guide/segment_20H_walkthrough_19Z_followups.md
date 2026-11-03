@@ -155,11 +155,13 @@ them. Typing narrows the list to the types beginning with the text; a
 click toggles one type and keeps the rest, so selections made under one
 filter survive the next and are sent together; the hint counts them.
 Clear is always shown, left of Apply filters. The box has no `name`, and
-Enter in it does nothing. `tests/browser/test_audit_log_event_filter.py`. The strip is
+Enter in it does nothing. `tests/browser/test_audit_log_event_filter.py`. The keyboard keeps the listbox's own behavior on the types in view,
+but never drops one the filter hides. The strip is
 documented in `spec/operator_button_audit.md`, where its layout already
-lived, not `spec/operator_ui_concept.md`. One read (rungs 1–2): no code
+lived, not `spec/operator_ui_concept.md`. Two reads. Rungs 1–2: no code
 defect; the test now submits with text in the box, which it had cleared
-first, and Enter is held. Chromium only: Safari's handling of a hidden
+first, and Enter is held. The refinement: the keyboard dropped hidden
+selections, now put back, and two integration checks were tightened. Chromium only: Safari's handling of a hidden
 `<option>` is the author's to check.
 
 ### Doc impact

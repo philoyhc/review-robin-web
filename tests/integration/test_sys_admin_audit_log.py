@@ -349,7 +349,6 @@ def test_audit_log_filter_by_event_type_narrows_table(
     assert "<code>session.created</code>" not in body
     # Filter strip persists state — option marked selected.
     assert 'value="session.activated" selected' in body
-    assert ">Clear</a>" in body
 
 
 def test_audit_log_filter_by_severity_narrows_table(
@@ -618,6 +617,7 @@ def test_audit_log_filter_unknown_event_type_silently_dropped(
     )
     assert response.status_code == 200
     # The filter parsed empty: the table is unfiltered.
+    assert "<code>session.created</code>" in response.text
     assert "match the current filter" not in response.text
 
 

@@ -146,6 +146,9 @@
       // - A click selects or unselects one type and leaves the others as
       //   they are, so a type found with one filter stays selected while
       //   another is found with the next.
+      // - The keyboard keeps the listbox's own behavior for the types on
+      //   view, but never drops a type the filter hides: those are
+      //   remembered and put back after each change.
       // - The hint says how many types are selected.
       (function () {
         var box = document.querySelector('[data-audit-event-filter]');
@@ -156,6 +159,13 @@
           var text = box.value.trim().toLowerCase();
           Array.prototype.forEach.call(list.options, function (option) {
             option.hidden = text !== '' && option.value.toLowerCase().indexOf(text) !== 0;
+          });
+        }
+        var hiddenChosen = {};
+        function remember() {
+          hiddenChosen = {};
+          Array.prototype.forEach.call(list.options, function (o) {
+            if (o.hidden && o.selected) { hiddenChosen[o.value] = true; }
           });
         }
         function count() {
@@ -172,8 +182,13 @@
           list.focus();
           count();
         });
-        list.addEventListener('change', count);
-        box.addEventListener('input', narrow);
+        list.addEventListener('change', function () {
+          Array.prototype.forEach.call(list.options, function (o) {
+            if (o.hidden && hiddenChosen[o.value]) { o.selected = true; }
+          });
+          count();
+        });
+        box.addEventListener('input', function () { narrow(); remember(); });
         // The box narrows the list; Enter in it would submit the form
         // and lose the narrowing, so it does nothing here.
         box.addEventListener('keydown', function (event) {
