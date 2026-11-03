@@ -375,7 +375,12 @@ token (`cordware.graph.look_up_all`, `cordware/spec/identity.md`
   address as written. Any other outcome (`NOT_FOUND`, `AMBIGUOUS`,
   `ERROR`, no delegated token, a lookup unfinished at the time budget,
   or an identifier that is not an address) stores none of them, and the
-  row matches by mail. The address column is never rewritten. Matching
+  row matches by mail. **On a replace**, an address the directory gave no
+  answer for (`ERROR`, no delegated token, a lookup unfinished at the
+  budget) keeps the account the replaced row at the same folded address
+  was bound to, unless the directory bound another of the file's rows to
+  that account. An answered `NOT_FOUND` or `AMBIGUOUS` stores none. The
+  address column is never rewritten. Matching
   is `spec/audience_and_identity_model.md` "Identity match".
 - **No token** (or fake auth off on a local run) checks nothing and the
   import proceeds.
@@ -384,11 +389,13 @@ token (`cordware.graph.look_up_all`, `cordware/spec/identity.md`
   (`USE_PRIMARY` and `FOUND_NO_PRIMARY`), `directory_not_found`,
   `directory_ambiguous`, `directory_not_checked`. Omitted when the
   caller ran no check. An unchecked address counts under
-  `directory_not_checked`.
+  `directory_not_checked`, and of those, the rows a replace left on their
+  earlier account under `directory_kept`, omitted when none were.
 - **Setup page line.** The latest import's counts show as one line under
   the import card (`spec/setup_pages.md`).
 - **Re-upload re-resolves.** A replace replaces the bindings with the
-  file's; there is no bulk re-resolve of existing rosters.
+  file's answers, keeping an earlier account only where the directory
+  gave none (above); there is no bulk re-resolve of existing rosters.
 - **Not covered.** The cross-roster identity check above stays
   address-based: it guards two names on one address, and the rows are
   not resolved until after it runs.

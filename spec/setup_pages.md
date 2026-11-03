@@ -1034,12 +1034,15 @@ card.
 
 - **Checked** (the directory answered for at least one address): the
   time, then the counts matched by mail, by sign-in name, not found,
-  ambiguous, and not checked (shown only when non-zero), then a closing
+  ambiguous, and not checked (shown only when non-zero, with how many
+  kept the account an earlier import matched when any did), then a closing
   sentence that not-found and ambiguous addresses still work by the
   address as written.
 - **Not checked** (every address unchecked): one sentence saying the
   addresses weren't checked against the directory, so rows match by the
-  address as written, and that importing again tries again. It names no
+  address as written (except those that kept the account an earlier
+  import matched, counted when any did), and that importing again tries
+  again. It names no
   cause, because no directory access and failed lookups look the same in
   the counts.
 - **Nothing** for an import with no counts (one that ran no check) or

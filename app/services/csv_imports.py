@@ -75,6 +75,11 @@ class DirectoryCheck:
 
     accounts: dict[str, directory_accounts.Account]
     counts: dict[str, int]
+    #: The lookup keys the directory gave no answer for (not checked:
+    #: no token, an expired one, a failed or unfinished lookup). A
+    #: replace keeps such a row's earlier binding rather than dropping
+    #: it (`_save`).
+    unchecked: frozenset[str] = frozenset()
 
 
 
@@ -99,6 +104,9 @@ def directory_checks(
         DirectoryCheck(
             accounts=found,
             counts=directory_accounts.counts(
+                outcomes, addresses, checked=directory is not None
+            ),
+            unchecked=directory_accounts.unchecked(
                 outcomes, addresses, checked=directory is not None
             ),
         )
@@ -1890,6 +1898,41 @@ def _save(
     existing_rows = list(
         db.execute(select(model).where(model.session_id == session.id)).scalars()
     )
+    # A replace re-adds every row, so a row whose address the directory
+    # gave no answer for (an expired token, a failed lookup) would lose
+    # the account it was bound to and stop admitting a person whose mail
+    # differs. Such a row keeps its earlier binding instead (assessment
+    # 2026-11-02, M1); an address the directory did answer for takes
+    # that answer, bound or not.
+    earlier: dict[str, dict[str, str | None]] = {}
+    if directory is not None and not keeps:
+        for held in existing_rows:
+            address = getattr(held, "email", None) or getattr(held, "email_or_identifier", None)
+            held_key = directory_accounts.key(address)
+            held_binding = directory_accounts.binding(held)
+            if held_key in directory.unchecked and held_binding is not None:
+                earlier.setdefault(held_key, held_binding)
+    # An account the directory just bound another of the file's rows to
+    # is not carried: the stale binding would put that person on two
+    # rows (cold read of M1's fix).
+    if earlier:
+        fresh = {
+            normalize_object_id(account.object_id)
+            for row in rows
+            if (account := directory.accounts.get(
+                directory_accounts.key(
+                    getattr(row, "email", None) or getattr(row, "email_or_identifier", None)
+                )
+                or ""
+            ))
+            is not None
+        }
+        earlier = {
+            k: b
+            for k, b in earlier.items()
+            if normalize_object_id(b["directory_object_id"] or "") not in fresh
+        }
+    kept_bindings = 0
     if keeps:
         replaced, kept = 0, len(existing_rows)
     else:
@@ -1919,13 +1962,17 @@ def _save(
         kwargs = to_kwargs(row, session.id)
         if directory is not None:
             # Segment 21F: the account the row's address resolved to, or
-            # none (unresolved, not checked, or not an address).
+            # none (not found, ambiguous, or not an address). An address
+            # the directory gave no answer for keeps the replaced row's
+            # account, if it had one (M1, above); else none.
             address = kwargs.get("email") or kwargs.get("email_or_identifier")
-            kwargs.update(
-                directory_accounts.columns(
-                    directory.accounts.get(directory_accounts.key(address) or "")
-                )
-            )
+            row_key = directory_accounts.key(address) or ""
+            carried = earlier.pop(row_key, None)
+            if carried is not None:
+                kwargs.update(carried)
+                kept_bindings += 1
+            else:
+                kwargs.update(directory_accounts.columns(directory.accounts.get(row_key)))
         db.add(model(**kwargs))
     db.flush()
 
@@ -1965,6 +2012,9 @@ def _save(
             # Segment 21F: what the directory check came to, over the
             # file's distinct addresses. Omitted when the caller ran none.
             **(directory.counts if directory is not None else {}),
+            # Of the not-checked rows, those that kept the account an
+            # earlier import bound them to (M1). Omitted when none did.
+            **({"directory_kept": kept_bindings} if kept_bindings else {}),
         ),
         context=(
             {

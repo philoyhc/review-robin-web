@@ -40,6 +40,9 @@ class DirectoryCheck:
     not_found: int
     ambiguous: int
     not_checked: int
+    #: Of the not-checked rows, those a replace left on the account an
+    #: earlier import bound them to (assessment 2026-11-02, M1).
+    kept: int = 0
 
     @property
     def checked(self) -> bool:
@@ -74,4 +77,5 @@ def last_directory_check(
         not_found=counts.get("directory_not_found", 0),
         ambiguous=counts.get("directory_ambiguous", 0),
         not_checked=counts.get("directory_not_checked", 0),
+        kept=counts.get("directory_kept", 0),
     )

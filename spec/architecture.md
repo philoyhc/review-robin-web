@@ -978,7 +978,8 @@ count. The slots are **not the same on every event**:
 The import events (`reviewers.` / `reviewees.` / `observers.imported`)
 also carry `directory_by_mail`, `directory_by_upn`,
 `directory_not_found`, `directory_ambiguous` and `directory_not_checked`
-in `counts` when the import ran a directory check
+in `counts` when the import ran a directory check, plus `directory_kept`
+when a replace kept any not-checked row on its earlier account
 (`spec/csv_contracts.md` §3.1).
 
 `cascaded_responses` rides the **bulk delete alone**

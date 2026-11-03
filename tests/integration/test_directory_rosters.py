@@ -294,3 +294,144 @@ def test_several_rosters_share_one_lookup_and_are_counted_apart(
     assert len(calls) == 1
     assert reviewers.counts["directory_by_upn"] == 1 and reviewers.counts["directory_not_found"] == 0
     assert reviewees.counts["directory_by_mail"] == 1 and reviewees.counts["directory_not_found"] == 1
+
+
+class _ExpiredToken(FakeDirectory):
+    """Graph refusing the operator's token, as an expired one is."""
+
+    def find_users(self, address: str):
+        from cordware.graph import GraphError
+
+        raise GraphError("unauthorized", 401)
+
+
+def _import_reviewers(client: TestClient, session, csv: bytes) -> None:
+    response = client.post(
+        f"/operator/sessions/{session.public_id}/reviewers/import",
+        files={"file": ("r.csv", csv, "text/csv")},
+        data={"confirm_replace": "true"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+
+@pytest.mark.parametrize("unanswered", ["expired", "no_token"])
+def test_a_replace_the_directory_cannot_answer_keeps_each_rows_account(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch, unanswered: str
+) -> None:
+    """Assessment 2026-11-02, M1: a replace re-adds every row, and one
+    sent with an expired token (or none) used to save every row unbound,
+    so a person given by sign-in name stopped matching. A row the
+    directory gave no answer for keeps its earlier account; the page
+    says how many did."""
+    session = _session(client, db, f"dir-keep-{unanswered}")
+    csv = b"ReviewerName,ReviewerEmail\nJane,e0123456@example.edu\nNew,new@example.edu\n"
+    monkeypatch.setattr(_shared, "directory_or_none", lambda request: FakeDirectory())
+    _import_reviewers(client, session, csv)
+    assert _bound(_row(db, Reviewer, session.id, name="Jane")) == JANE
+
+    failing = _ExpiredToken() if unanswered == "expired" else None
+    monkeypatch.setattr(_shared, "directory_or_none", lambda request: failing)
+    _import_reviewers(client, session, csv)
+    db.expire_all()
+    assert _bound(_row(db, Reviewer, session.id, name="Jane")) == JANE
+    assert _bound(_row(db, Reviewer, session.id, name="New")) == directory_accounts.UNBOUND
+    counts = db.execute(
+        select(AuditEvent)
+        .where(AuditEvent.session_id == session.id, AuditEvent.event_type == "reviewers.imported")
+        .order_by(AuditEvent.id.desc())
+    ).scalars().first().detail["counts"]
+    assert counts["directory_not_checked"] == 2 and counts["directory_kept"] == 1
+    text = client.get(f"/operator/sessions/{session.public_id}/reviewers?unlocked=1").text
+    line = text[text.index("data-directory-check") :].split("</p>")[0]
+    assert "1 that kept the account an earlier import matched" in line
+
+
+def test_a_replace_the_directory_answers_takes_the_answer(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Only an unanswered lookup keeps the old account: an address the
+    directory now reports as nobody is saved unbound (M1's boundary)."""
+    session = _session(client, db, "dir-keep-answered")
+    csv = b"ReviewerName,ReviewerEmail\nJane,e0123456@example.edu\n"
+    monkeypatch.setattr(_shared, "directory_or_none", lambda request: FakeDirectory())
+    _import_reviewers(client, session, csv)
+    monkeypatch.setattr(_shared, "directory_or_none", lambda request: FakeDirectory(users=()))
+    _import_reviewers(client, session, csv)
+    db.expire_all()
+    assert _bound(_row(db, Reviewer, session.id, name="Jane")) == directory_accounts.UNBOUND
+
+
+class _FailsFor(FakeDirectory):
+    """Graph answering for every address but one, which fails."""
+
+    def __init__(self, failing: str) -> None:
+        super().__init__()
+        self._failing = failing
+
+    def find_users(self, address: str):
+        from cordware.graph import GraphError
+
+        if address.strip().lower() == self._failing:
+            raise GraphError("server", 503)
+        return super().find_users(address)
+
+
+def test_a_reviewee_replace_keeps_an_unanswered_rows_account_too(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    session = _session(client, db, "dir-keep-reviewees")
+    url = f"/operator/sessions/{session.public_id}/reviewees/import"
+    csv = b"RevieweeName,RevieweeEmail\nJane,e0123456@example.edu\n"
+    monkeypatch.setattr(_shared, "directory_or_none", lambda request: FakeDirectory())
+    client.post(url, files={"file": ("e.csv", csv, "text/csv")}, follow_redirects=False)
+    monkeypatch.setattr(_shared, "directory_or_none", lambda request: _ExpiredToken())
+    response = client.post(
+        url, files={"file": ("e.csv", csv, "text/csv")},
+        data={"confirm_replace": "true"}, follow_redirects=False,
+    )
+    assert response.status_code == 303
+    db.expire_all()
+    assert _bound(_row(db, Reviewee, session.id, name="Jane")) == JANE
+
+
+def test_a_kept_account_the_file_binds_elsewhere_is_not_carried(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A partial answer: the old Jane-by-mail row's lookup fails while
+    Jane-by-UPN answers as Jane. Carrying the old binding would put Jane
+    on two rows, so it is dropped; the page counts what was kept."""
+    session = _session(client, db, "dir-keep-collide")
+    monkeypatch.setattr(_shared, "directory_or_none", lambda request: FakeDirectory())
+    _import_reviewers(client, session, b"ReviewerName,ReviewerEmail\nJane,jane.tan@example.edu\n")
+    assert _bound(_row(db, Reviewer, session.id, name="Jane")) == JANE
+
+    monkeypatch.setattr(
+        _shared, "directory_or_none", lambda request: _FailsFor("jane.tan@example.edu")
+    )
+    _import_reviewers(
+        client, session,
+        b"ReviewerName,ReviewerEmail\nJane,jane.tan@example.edu\nJane UPN,e0123456@example.edu\n",
+    )
+    db.expire_all()
+    assert _bound(_row(db, Reviewer, session.id, name="Jane")) == directory_accounts.UNBOUND
+    assert _bound(_row(db, Reviewer, session.id, name="Jane UPN")) == JANE
+
+
+def test_a_partly_answered_replace_keeps_the_unanswered_and_says_so(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    session = _session(client, db, "dir-keep-partial")
+    csv = b"ReviewerName,ReviewerEmail\nJane,e0123456@example.edu\nNobody,nobody@example.edu\n"
+    monkeypatch.setattr(_shared, "directory_or_none", lambda request: FakeDirectory())
+    _import_reviewers(client, session, csv)
+    monkeypatch.setattr(
+        _shared, "directory_or_none", lambda request: _FailsFor("e0123456@example.edu")
+    )
+    _import_reviewers(client, session, csv)
+    db.expire_all()
+    assert _bound(_row(db, Reviewer, session.id, name="Jane")) == JANE
+    text = client.get(f"/operator/sessions/{session.public_id}/reviewers?unlocked=1").text
+    line = " ".join(text[text.index("data-directory-check") :].split("</p>")[0].split())
+    assert "1 not found" in line
+    assert "1 not checked (1 kept the account an earlier import matched)" in line
