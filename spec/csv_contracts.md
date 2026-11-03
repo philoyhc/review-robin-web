@@ -459,8 +459,13 @@ other row is added, and rows absent from the file are kept.
   file address, or an unbound existing row, cannot match by account, so the
   row is added; a merge does not look up the roster's unbound rows. An
   address change stays a single-row edit.
-- **Blank cells and absent columns keep the existing value.** Nothing is
-  cleared by a merge; a file may carry only the columns it changes. The
+- **Blank cells and absent columns keep the existing value**, except the
+  columns every file needs, as on replace: `ReviewerName` and
+  `ReviewerEmail`, `RevieweeName` and `RevieweeEmail`, `ObserverEmail`, and
+  Relationships' two addresses. Those must be present and non-blank, so a
+  Reviewers or Reviewees merge row carries the name as well as the address.
+  Nothing else is cleared by a merge; a file may carry only those columns
+  and the ones it changes. The
   Observers `CohortRule` is a column like any other, compared with
   `same_cohort_rule`.
 - **Status** changes only where the cell is non-blank
