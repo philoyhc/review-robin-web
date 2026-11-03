@@ -301,7 +301,18 @@ After 20G (closed 2026-11-03), which this shares a seam with: `DirectoryCheck.st
 
 ### Open questions
 
-- The cache's life (author, at rung 1). Relationships has no directory line today, so it takes no count.
+- ~~The cache's life~~: 15 minutes (author, 2026-11-03). Relationships has no directory line today, so it takes no count.
+
+### Status
+
+Open. Base for the cumulative read: `bb7443bf` (main before rung 1).
+- Rung 1 (scaffold): `_directory_countdown.html`, hidden, under the
+  directory line on the three Upload cards.
+- Decided at build: the page cannot read the file's addresses without
+  parsing the CSV as the server does, so a second endpoint takes the file
+  and answers its uncached keys through the roster's own parser. The
+  cache is a table, as held uploads are, since the lookups and the upload
+  may land on different instances.
 
 ### Doc impact
 
