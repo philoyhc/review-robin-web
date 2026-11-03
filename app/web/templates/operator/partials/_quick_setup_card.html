@@ -205,6 +205,14 @@
         </div>
       </div>
     {% endif %}
+    {# A submit whose directory check stopped on the sign-in (segment 20G). #}
+    {% if quick_setup.directory_renew %}
+      {% with directory_renew = True,
+              directory_renew_form = submit_all_form_id,
+              directory_renew_dismiss_url = url("/operator/sessions/" ~ session.public_id ~ "/quick-setup/dismiss") %}
+        {% include "operator/partials/_directory_renew.html" %}
+      {% endwith %}
+    {% endif %}
     {# A symmetric bundle into a session with rows (segment 20F, L3). #}
     {% if quick_setup.kept_reviewees %}
       <div class="banner banner-info banner-scroll-target"

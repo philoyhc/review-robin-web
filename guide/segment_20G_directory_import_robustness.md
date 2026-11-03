@@ -98,6 +98,13 @@ roster's own outcomes; any other failure is not a sign-in stop. The local
 fake directory's `denied@example.edu` answers `forbidden`, so a local run
 can show the renew state.
 
+**Rung 2, the scaffold.** `operator/partials/_directory_renew.html`: a
+`banner-warning` inside the upload form on Reviewers, Reviewees and
+Observers, and above the slots on Quick Setup's card
+(`QuickSetupContext.directory_renew`), with "Nothing was saved", an inert
+*Renew sign-in and upload* (Primary) and a Dismiss that ends the hold.
+Relationships has no directory check. Nothing sets the flag yet.
+
 ## PR ladder
 
 1. **The check records why.** `DirectoryCheck` gains the stop kind from

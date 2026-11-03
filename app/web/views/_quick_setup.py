@@ -172,6 +172,11 @@ class QuickSetupContext:
     operator's and session's), so nothing was saved; the card says so
     above the slots (segment 19W)."""
 
+    directory_renew: bool = False
+    """The last submit's directory check stopped on the sign-in, so
+    nothing was saved and the files are held; the card asks to renew and
+    submit again (segment 20G, scaffold: nothing sets it yet)."""
+
     kept_reviewees: bool = False
     """The last submit's Settings file asked for symmetric review, which
     stayed off beside this session's roster rows, and it brought no

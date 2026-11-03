@@ -1,0 +1,25 @@
+{# Segment 20G rung 2 — SCAFFOLD. A roster upload whose directory check
+   stopped on the sign-in (`DirectoryCheck.stopped`: no token, or Graph
+   refused it) saves nothing, holds the file and shows this inside the
+   upload form, so the held file goes with the button's submit. The
+   button is inert until rung 3 wires it to `cordwareRenewGraph()` and a
+   resubmit. Shown while `directory_renew` is set; no route sets it yet. Dismiss
+   ends the hold, as the upload banners' Dismiss does. Outside its form
+   (Quick Setup's card), `directory_renew_form` names the form. The caller
+   passes `directory_renew_dismiss_url` app-relative or already through `url()`, which is idempotent; this applies it. #}
+{% if directory_renew %}
+  <div class="banner banner-warning banner-scroll-target" role="alert"
+       data-directory-renew>
+    <p class="banner-lead">Nothing was saved. Your sign-in to the directory had
+      expired, so this file's addresses could not be checked.</p>
+    <p>Renew the sign-in and the held file uploads again, with every
+      address checked.</p>
+    <div class="banner-actions">
+      <button type="button" class="btn" data-directory-renew-upload
+              {% if directory_renew_form %}form="{{ directory_renew_form }}" {% endif %}disabled aria-disabled="true">Renew sign-in and upload</button>
+      <button type="submit" class="btn secondary"
+              {% if directory_renew_form %}form="{{ directory_renew_form }}" {% endif %}formaction="{{ url(directory_renew_dismiss_url) }}" formnovalidate
+              data-directory-renew-dismiss>Dismiss</button>
+    </div>
+  </div>
+{% endif %}

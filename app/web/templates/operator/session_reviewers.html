@@ -375,6 +375,9 @@
             <input type="file" id="file" name="file" accept=".csv,text/csv"
                    aria-label="CSV file"{% if not held_upload %} required{% endif %}>
             {% include "operator/partials/_held_upload.html" %}
+            {% with directory_renew_dismiss_url = reviewers_base_url ~ "/import/dismiss" %}
+              {% include "operator/partials/_directory_renew.html" %}
+            {% endwith %}
 
             {# Gated on `existing_count`, not on `total_row_count`. The
                two are equal — both count the session's whole roster —
