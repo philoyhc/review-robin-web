@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Reviewee, Reviewer, ReviewSession, User
+from app.db.models import AuditEvent, Reviewee, Reviewer, ReviewSession, User
 from app.services import csv_imports
 from app.services.validation import validate_session_setup
 
@@ -112,6 +112,72 @@ def test_saving_a_reviewer_unchanged_brings_the_copy_back_into_step(
     )
     assert response.status_code in (200, 303)
     assert _drift(db, review_session) == []
+    # The repair wrote a reviewee row, so it is audited (Codex on #3535).
+    repaired = db.execute(
+        select(AuditEvent).where(
+            AuditEvent.session_id == review_session.id,
+            AuditEvent.event_type == "reviewees.mirror_repaired",
+        )
+    ).scalar_one()
+    assert repaired.detail["counts"] == {"created": 0, "updated": 1, "deleted": 0}
+    assert repaired.detail["refs"] == {"reviewer_id": ann.id}
+
+
+def _save_unchanged(client: TestClient, review_session: ReviewSession, reviewer: Reviewer):
+    return client.post(
+        f"/operator/sessions/{review_session.public_id}/reviewers/{reviewer.id}/update",
+        data={
+            "name": reviewer.name, "email": reviewer.email, "profile_link": "",
+            "tag_1": "", "tag_2": "", "tag_3": "", "status": "active",
+        },
+        follow_redirects=False,
+    )
+
+
+def test_an_unchanged_save_on_a_mirror_in_step_writes_no_audit_row(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _session(client, db, "md-noop")
+    ann = db.execute(
+        select(Reviewer).where(
+            Reviewer.session_id == review_session.id, Reviewer.email == "ann@example.edu"
+        )
+    ).scalar_one()
+    assert _save_unchanged(client, review_session, ann).status_code in (200, 303)
+    assert db.execute(
+        select(AuditEvent).where(
+            AuditEvent.session_id == review_session.id,
+            AuditEvent.event_type == "reviewees.mirror_repaired",
+        )
+    ).first() is None
+
+
+def test_a_duplicate_mirror_is_reported_and_an_unchanged_save_removes_it(
+    client: TestClient, db: Session
+) -> None:
+    """Two reviewees linked to one reviewer: the rule reports it, and the
+    sync keeps the first and drops the other (Codex on #3535: the sync
+    kept one per reviewer in a dict and never saw the second)."""
+    review_session = _session(client, db, "md-dup")
+    ann = db.execute(
+        select(Reviewer).where(
+            Reviewer.session_id == review_session.id, Reviewer.email == "ann@example.edu"
+        )
+    ).scalar_one()
+    kept = _reviewee(db, review_session, "ann@example.edu")
+    db.add(Reviewee(
+        session_id=review_session.id, name="Ann", email_or_identifier="ann2@example.edu",
+        mirrors_reviewer_id=ann.id,
+    ))
+    db.commit()
+    assert any("ann@example.edu" in m for m in _drift(db, review_session))
+    assert _save_unchanged(client, review_session, ann).status_code in (200, 303)
+    assert _drift(db, review_session) == []
+    db.expire_all()
+    left = db.execute(
+        select(Reviewee).where(Reviewee.mirrors_reviewer_id == ann.id)
+    ).scalars().all()
+    assert [r.id for r in left] == [kept.id]
 
 
 def test_nothing_is_checked_with_the_mode_off(client: TestClient, db: Session) -> None:

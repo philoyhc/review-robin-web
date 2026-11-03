@@ -994,6 +994,7 @@ count. The slots are **not the same on every event**:
 | `reviewers.imported` / `reviewees.imported` | `new`, `replaced`, `cascaded_assignments`, `cascaded_relationships` |
 | `reviewers.deleted_all` / `reviewees.deleted_all` | `deleted`, `cascaded_assignments`, `cascaded_relationships` |
 | `reviewer.bulk_deleted` / `reviewee.bulk_deleted` | `deleted`, `cascaded_assignments`, `cascaded_responses`, `cascaded_relationships` |
+| `reviewees.mirror_repaired` | `created`, `updated`, `deleted`: the reviewee rows an unchanged reviewer save brought into step under symmetric review, with `refs.reviewer_id` |
 
 The import events (`reviewers.` / `reviewees.` / `observers.imported`)
 also carry `directory_by_mail`, `directory_by_upn`,

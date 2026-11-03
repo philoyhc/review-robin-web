@@ -339,9 +339,37 @@ def update_reviewer(
         # out of step (``reviewees.mirror_drift``'s fix line; Codex on
         # #3535). A no-op with the mode off or a mirror already in step.
         if reviewer.session.symmetric_review:
-            symmetric_review.sync_reviewees_from_reviewers(
+            repaired = symmetric_review.sync_reviewees_from_reviewers(
                 db, reviewer.session, acknowledged_loss=acknowledged_loss
             )
+            if repaired:
+                # The repair writes reviewee rows, so it is audited as
+                # one: who saved, and how many rows it brought into step
+                # (Codex on #3535).
+                lifecycle.invalidate_if_validated(
+                    db,
+                    review_session=reviewer.session,
+                    user=user,
+                    reason="reviewer_updated",
+                    correlation_id=correlation_id,
+                )
+                audit.write_event(
+                    db,
+                    event_type="reviewees.mirror_repaired",
+                    summary=(
+                        f"Saving reviewer {reviewer.email} brought the "
+                        "symmetric reviewees into step"
+                    ),
+                    actor_user_id=user.id,
+                    session=reviewer.session,
+                    payload=audit.counts(
+                        created=repaired.created,
+                        updated=repaired.updated,
+                        deleted=repaired.deleted,
+                    ),
+                    refs={"reviewer_id": reviewer.id},
+                    correlation_id=correlation_id,
+                )
             db.commit()
         return {}
 

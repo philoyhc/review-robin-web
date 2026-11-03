@@ -22,6 +22,8 @@ cannot drift apart. It is a no-op while the mode is off.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -45,6 +47,18 @@ MIRRORED_FIELDS: tuple[tuple[str, str], ...] = (
 
 _TAG_SLOTS = ("tag_1", "tag_2", "tag_3")
 
+
+@dataclass(frozen=True)
+class MirrorChanges:
+    """How many reviewee rows one sync created, updated and deleted."""
+
+    created: int = 0
+    updated: int = 0
+    deleted: int = 0
+
+    def __bool__(self) -> bool:
+        return bool(self.created or self.updated or self.deleted)
+
 #: A reviewer's "what they see of their own entry" key as the reviewee's
 #: list names it (``participant_info``): only the address is spelled
 #: differently.
@@ -56,10 +70,12 @@ def sync_reviewees_from_reviewers(
     review_session: ReviewSession,
     *,
     acknowledged_loss: int | None = None,
-) -> None:
+) -> MirrorChanges:
     """Bring the Reviewees roster into step with the Reviewers roster.
 
     A no-op unless symmetric review is on. Flushes; the caller commits.
+    Returns how many reviewee rows it created, updated and deleted, so a
+    caller whose own write changed nothing can audit a repair.
 
     A mirrored tag change moves a reviewee between groups, as a reviewee
     edit would, so the reviewee-tag groups are snapshotted first and
@@ -72,7 +88,7 @@ def sync_reviewees_from_reviewers(
     address or tag can move it.
     """
     if not review_session.symmetric_review:
-        return
+        return MirrorChanges()
     from app.services import responses as responses_service
     from app.services.assignments import recompute_self_review_classification
 
@@ -104,7 +120,18 @@ def sync_reviewees_from_reviewers(
         ).scalars()
     )
     filled_before = _filled_display_slots(reviewees)
-    by_link = {r.mirrors_reviewer_id: r for r in reviewees if r.mirrors_reviewer_id is not None}
+    # The first reviewee linked to a reviewer is its mirror; any other
+    # linked to the same reviewer is a duplicate, dropped below with the
+    # orphans (Codex on #3535).
+    by_link: dict[int, Reviewee] = {}
+    duplicates: list[Reviewee] = []
+    for r in reviewees:
+        if r.mirrors_reviewer_id is None:
+            continue
+        if r.mirrors_reviewer_id in by_link:
+            duplicates.append(r)
+        else:
+            by_link[r.mirrors_reviewer_id] = r
     # An unlinked reviewee can only come from a copy made outside the
     # reconcile (a clone or a rehydrate of both rosters): adopt it for the
     # reviewer with its address, so its assignments survive, else drop it.
@@ -112,7 +139,7 @@ def sync_reviewees_from_reviewers(
     for r in reviewees:
         if r.mirrors_reviewer_id is None:
             unlinked.setdefault(email_identity.normalize_email(r.email_or_identifier), []).append(r)
-    changed = False
+    created = updated = deleted = 0
     for reviewer in reviewers:
         reviewee = by_link.pop(reviewer.id, None)
         if reviewee is None:
@@ -124,17 +151,25 @@ def sync_reviewees_from_reviewers(
         if reviewee is None:
             reviewee = Reviewee(session_id=review_session.id)
             db.add(reviewee)
-            changed = True
+            created += 1
+        row_changed = False
         if reviewee.mirrors_reviewer_id != reviewer.id:
             reviewee.mirrors_reviewer_id = reviewer.id
+            row_changed = True
         for reviewee_field, reviewer_field in MIRRORED_FIELDS:
             value = getattr(reviewer, reviewer_field)
             if getattr(reviewee, reviewee_field) != value:
                 setattr(reviewee, reviewee_field, value)
-                changed = True
-    for gone in [*by_link.values(), *(r for rows in unlinked.values() for r in rows)]:
+                row_changed = True
+        if row_changed and reviewee.id is not None:
+            updated += 1
+    for gone in [
+        *by_link.values(),
+        *duplicates,
+        *(r for rows in unlinked.values() for r in rows),
+    ]:
         db.delete(gone)
-        changed = True
+        deleted += 1
     _mirror_labels(db, review_session)
     mirrored_self_fields = (
         [_SELF_FIELD_KEY.get(key, key) for key in review_session.reviewer_self_fields]
@@ -144,8 +179,9 @@ def sync_reviewees_from_reviewers(
     if review_session.reviewee_self_fields != mirrored_self_fields:
         review_session.reviewee_self_fields = mirrored_self_fields
     db.flush()
-    if not changed:
-        return
+    result = MirrorChanges(created=created, updated=updated, deleted=deleted)
+    if not result:
+        return result
     # As a Reviewees upload does: a mirrored profile link or tag seeds
     # its reviewee display field on the session's instruments. Only for a
     # slot this change newly fills, so a name correction does not bring
@@ -169,6 +205,7 @@ def sync_reviewees_from_reviewers(
     # and so can a delete (findings B7; Codex on #3489): after the
     # mirror is flushed, never before.
     recompute_self_review_classification(db, session_id=review_session.id)
+    return result
 
 
 _DISPLAY_SLOTS = ("profile_link", "tag_1", "tag_2", "tag_3")
