@@ -76,22 +76,38 @@
           <p class="form-help">Ctrl/Cmd-click to select multiple.</p>
         </div>
         <div>
-          {# Right column: actor email, then the two date selectors
-             side by side (each half-width, read as days in the page's
-             zone), then the buttons, right-aligned. #}
-          <label for="filter-actor">Actor email</label>
-          <input type="text"
-                 id="filter-actor"
-                 name="actor"
-                 list="audit-actor-options"
-                 value="{{ filter_form.actor_email_value }}"
-                 autocomplete="off"
-                 placeholder="any actor">
-          <datalist id="audit-actor-options">
-            {% for email in filter_form.actor_options %}
-              <option value="{{ email }}"></option>
-            {% endfor %}
-          </datalist>
+          {# Right column: the event type filter and the actor email
+             side by side (each half-width; 20H Item 3, author
+             2026-11-03), then the two date selectors side by side (read
+             as days in the page's zone), then the buttons,
+             right-aligned. #}
+          <div class="audit-filter-pair">
+            <div>
+              {# 20H Item 3 — SCAFFOLD: inert, no ``name``, so nothing
+                 is sent; rung 2 wires it. #}
+              <label for="filter-event-text">Event type filter</label>
+              <input type="text"
+                     id="filter-event-text"
+                     autocomplete="off"
+                     placeholder="e.g. reviewer"
+                     data-audit-event-filter>
+            </div>
+            <div>
+              <label for="filter-actor">Actor email</label>
+              <input type="text"
+                     id="filter-actor"
+                     name="actor"
+                     list="audit-actor-options"
+                     value="{{ filter_form.actor_email_value }}"
+                     autocomplete="off"
+                     placeholder="any actor">
+              <datalist id="audit-actor-options">
+                {% for email in filter_form.actor_options %}
+                  <option value="{{ email }}"></option>
+                {% endfor %}
+              </datalist>
+            </div>
+          </div>
 
           <div class="audit-filter-dates">
             <div>

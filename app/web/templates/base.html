@@ -5267,6 +5267,13 @@
         margin-top: var(--space-3);
       }
       body.ui-v2 .audit-filter-dates > div { flex: 1; min-width: 0; }
+      /* The event type filter and the actor email, half-width each
+         (20H Item 3), as the dates below them are. */
+      body.ui-v2 .audit-filter-pair {
+        display: flex;
+        gap: var(--space-3);
+      }
+      body.ui-v2 .audit-filter-pair > div { flex: 1; min-width: 0; }
       /* Apply / Clear, right-aligned under the dates. */
       body.ui-v2 .audit-filter-actions {
         justify-content: flex-end;
