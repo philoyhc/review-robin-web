@@ -13,6 +13,8 @@ The basic browser check passed (author, 2026-10-31). This walks the rest in two 
 
 ## Part A — local
 
+**Done 2026-11-03** (author, local): every check passed, but for two not reachable from a browser and one ruled to change; the findings are segment 20H (`guide/segment_20H_walkthrough_19Z_followups.md`). The files used were made outside the repository.
+
 Start from a fresh session (Add new session, no files). The directory is `FakeDirectory`, so these addresses resolve as stated:
 
 | Address | Resolves to |
@@ -27,55 +29,55 @@ Start from a fresh session (Add new session, no files). The directory is `FakeDi
 
 ### A1. Replace, and the directory line
 
-- [ ] Upload Reviewers: Jane by mail, Arun, Lab, `office@`, `throttled@`, and two not-found rows. The Setup page's line reads 2 matched by mail (Jane, Arun), 1 by sign-in name (Lab, an account with no mail), 2 not found, 1 ambiguous, 1 not checked. Checked against `cordware/graph.py` on 2026-10-31.
-- [ ] Upload Reviewees the same way, plus an anonymous identifier (`STU-0001`). The identifier is not counted.
-- [ ] With a roster present, the card shows both lines; with an empty roster (a new session), neither.
-- [ ] Matched addresses read as pills (case kept, tooltip "Matched to a directory account"): Jane, Arun and Lab on Reviewers; not-found, ambiguous, not-checked rows and `STU-0001` stay plain. The same holds on Relationships, Assignments, Invitations, Responses and the two drill-ins.
+- [x] Upload Reviewers: Jane by mail, Arun, Lab, `office@`, `throttled@`, and two not-found rows. The Setup page's line reads 2 matched by mail (Jane, Arun), 1 by sign-in name (Lab, an account with no mail), 2 not found, 1 ambiguous, 1 not checked. Checked against `cordware/graph.py` on 2026-10-31.
+- [x] Upload Reviewees the same way, plus an anonymous identifier (`STU-0001`). The identifier is not counted.
+- [x] With a roster present, the card shows both lines; with an empty roster (a new session), neither.
+- [x] Matched addresses read as pills (case kept, tooltip "Matched to a directory account"): Jane, Arun and Lab on Reviewers; not-found, ambiguous, not-checked rows and `STU-0001` stay plain. The same holds on Relationships, Assignments, Invitations, Responses and the two drill-ins.
 
 ### A2. The ticks
 
-- [ ] Nothing ticked: Upload is disabled.
-- [ ] Tick each of replace, append and merge in turn: each unticks the others, and Upload enables.
-- [ ] Untick the ticked one: Upload disables again.
-- [ ] Without JavaScript (DevTools, disable it): tick two, upload. The card asks "Tick only one of replace, append or merge", keeps the file, and comes back with nothing ticked.
+- [x] Nothing ticked: Upload is disabled.
+- [x] Tick each of replace, append and merge in turn: each unticks the others, and Upload enables.
+- [x] Untick the ticked one: Upload disables again.
+- [x] Without JavaScript (DevTools, disable it): tick two, upload. The card asks "Tick only one of replace, append or merge", keeps the file, and comes back with nothing ticked. **Not reachable** (2026-11-03): Upload stays disabled without JavaScript once the roster has rows; the refusal is covered by the route tests (`guide/segment_20H_walkthrough_19Z_followups.md` Item 5).
 
 ### A3. Append
 
 Before this, Prepare assignments and save a response or two on the reviewer surface, so there is something an append must keep.
 
-- [ ] Append two new reviewers. They are added; every existing reviewer, assignment and response is still there; the Assignments page reads stale.
-- [ ] Append a file holding an address already on the roster, in another case (`JANE.TAN@…`). The file is refused, naming the row as already on the roster; nothing is added.
-- [ ] Append `e0123456@example.edu` while Jane is on the roster by mail. It is refused as a directory account already on the roster.
-- [ ] Append to Relationships: a new pair is added; a pair already there refuses the file.
-- [ ] The Setup page's directory line counts only the appended rows.
+- [x] Append two new reviewers. They are added; every existing reviewer, assignment and response is still there; the Assignments page reads stale.
+- [x] Append a file holding an address already on the roster, in another case (`JANE.TAN@…`). The file is refused, naming the row as already on the roster; nothing is added.
+- [x] Append `e0123456@example.edu` while Jane is on the roster by mail. It is refused as a directory account already on the roster.
+- [x] Append to Relationships: a new pair is added; a pair already there refuses the file.
+- [x] The Setup page's directory line counts only the appended rows.
 
 ### A4. Merge
 
 Use a Reviewers file with a `ReviewerTag1` column and a `Status` column.
 
-- [ ] A row already on the roster with a new tag and name: updated. The address is unchanged.
-- [ ] A row with a blank tag cell: its tag is kept.
-- [ ] A row with a blank Status cell, for someone inactive: still inactive. A row with `inactive`: now inactive.
-- [ ] A file with no Status column: nobody's status changes.
-- [ ] A new address: added. A roster row absent from the file: kept.
-- [ ] `e0123456@example.edu` named in a merge while Jane is on the roster by mail: Jane's row is updated, and still reads `jane.tan@`.
-- [ ] A merge file naming both `jane.tan@` and `e0123456@`: refused, two rows for one person.
-- [ ] Rename Jane through her UPN while she is also a reviewee named Jane: refused, names must match.
-- [ ] The sys-admin audit log shows a `reviewer.updated` per changed row, and the import counts added / updated / unchanged.
+- [x] A row already on the roster with a new tag and name: updated. The address is unchanged.
+- [x] A row with a blank tag cell: its tag is kept.
+- [x] A row with a blank Status cell, for someone inactive: still inactive. A row with `inactive`: now inactive.
+- [x] A file with no Status column: nobody's status changes.
+- [x] A new address: added. A roster row absent from the file: kept.
+- [x] `e0123456@example.edu` named in a merge while Jane is on the roster by mail: Jane's row is updated, and still reads `jane.tan@`.
+- [x] A merge file naming both `jane.tan@` and `e0123456@`: refused, two rows for one person.
+- [x] Rename Jane through her UPN while she is also a reviewee named Jane: refused, names must match.
+- [x] The sys-admin audit log shows a `reviewer.updated` per changed row, and the import counts added / updated / unchanged.
 
 ### A5. Merge that would clear group answers
 
 Needs a group instrument grouped by a reviewee tag, with saved answers.
 
-- [ ] Merge Reviewees moving one person into another answered group. The card asks with the count and a "Yes, clear them" tick in a red banner; the merge tick is still ticked; the file is held.
-- [ ] Tick "Yes, clear them" and Upload with no file chosen. The merge goes through; the joined group's answers are cleared, the left group's kept.
-- [ ] Dismiss instead: the hold ends, nothing changes.
-- [ ] The same on Relationships, with a pair-context tag.
+- [x] Merge Reviewees moving one person into another answered group. The card asks with the count and a "Yes, clear them" tick in a red banner; the merge tick is still ticked; the file is held.
+- [x] Tick "Yes, clear them" and Upload with no file chosen. The merge goes through; the joined group's answers are cleared, the left group's kept.
+- [x] Dismiss instead: the hold ends, nothing changes.
+- [x] The same on Relationships, with a pair-context tag. **Not reachable** (2026-11-03): no group instrument built today depends on relationships; covered by `tests/integration/test_relationship_group_clear_asks_first.py` (20H Item 5).
 
 ### A6. The duplicate-account warning
 
-- [ ] On Reviewers, with Jane by mail, use the single-row Add form to add `e0123456@example.edu`. It is allowed (another address). Validate shows one warning naming both addresses; Validate still passes.
-- [ ] Deactivate one of the two: the warning goes.
+- [x] On Reviewers, with Jane by mail, use the single-row Add form to add `e0123456@example.edu`. It is allowed (another address). Validate shows one warning naming both addresses; Validate still passes. To be refused instead (author, 2026-11-03; 20H Item 1).
+- [x] Deactivate one of the two: the warning goes.
 
 ---
 
