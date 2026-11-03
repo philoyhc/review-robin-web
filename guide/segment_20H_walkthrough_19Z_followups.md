@@ -92,7 +92,7 @@ Checking `reviewer.updated` events (walkthrough A4) meant scanning the session's
 
 ### Decision
 
-To be ruled at the scaffold (open question): a text search over event types, or a facility filter, the part before the dot (`reviewer`, `instrument`, `session`), that selects every type in it. Scaffold first: the control, inert, beside the existing select.
+To be ruled at the scaffold (open question): a text search over event types, or a facility filter, the part before the dot (`reviewer`, `instrument`, `session`), that selects every type in it. Scaffold first: the control, inert, beside the existing select. *Ruled (author, 2026-11-03, before the scaffold): the Actor email box halves; an **Event type** filter takes its left half and the **Actor email** filter / selector its right.*
 
 ### Blast radius (measured)
 
@@ -113,7 +113,7 @@ Taken 2026-11-03 at `49bb4a8c9`: one route (`sys_admin_session_audit_log` in `ap
 
 ### Open questions
 
-- Search box, facility filter, or both; and whether the multi-select stays (author, at rung 1).
+- ~~Search box, facility filter, or both~~: an Event type filter beside a halved Actor email box (author, 2026-11-03). Whether the multi-select stays: at the scaffold.
 
 ### Doc impact
 
@@ -150,9 +150,24 @@ Taken 2026-11-03 at `49bb4a8c9`: the group-clear banner in 4 templates (`grep -r
 
 None.
 
+### Status
+
+**Closed 2026-11-03**, done ahead of its ladder in segment 20G's work at
+the author's audit request (#3546). The audit measured every banner on
+the four roster Upload cards and Quick Setup's card in Chromium: they sat
+in three places, and the group-clear ask touched the tick fieldset (0px).
+Ruled: one stack under the card's intro, problems, renew, group clear,
+controls tied to the form with `form=`; re-measured at 12px under the
+intro and 16px between and below. The rule is in `spec/setup_pages.md`
+"The Upload card's banners" (pinned by `tests/unit/test_upload_card_banners.py`),
+and §5 points to it. One read, on #3546: a mangled class on the
+Relationships Upload row, fixed there. Owed: the author's look in a
+browser.
+
 ### Doc impact
 
 - `spec/ui_elements.md` — §5 states where a banner sits on a card and its spacing (Item 4).
+- `spec/setup_pages.md` — "The Upload card's banners", the rule itself (Item 4, in #3546).
 
 ## Item 5 — What the walkthrough could not reach
 
@@ -182,12 +197,22 @@ Prose: say so where each is written. Keep Upload disabled without JavaScript, as
 
 ### Open questions
 
-- Keep Upload disabled without JavaScript (author).
+- ~~Keep Upload disabled without JavaScript~~: kept (author, 2026-11-03).
+
+### Status
+
+**Closed 2026-11-03.** Prose only: `spec/setup_pages.md` "Reachable
+without JavaScript" says every upload into a roster with rows needs it,
+not only a replace, deliberately; `spec/assignments.md` "Group-scoped
+fan-out" says the relationship cases reach only stored pair-context
+boundaries. The walkthrough already said both (A2, A5). The second
+bullet landed in `spec/assignments.md`, where the cases are listed,
+rather than `spec/instruments.md`, which Link 3 already covers.
 
 ### Doc impact
 
 - `spec/setup_pages.md` — the Upload card needs JavaScript once the roster has rows (Item 5).
-- `spec/instruments.md` — the Relationships group-clear ask serves only stored pair-context boundaries (Item 5).
+- ~~`spec/instruments.md`~~ `spec/assignments.md` — the Relationships group-clear ask serves only stored pair-context boundaries (Item 5). <!-- cites: spec/instruments.md -->
 
 ## Item 6 — The roster upload counts down its directory check
 

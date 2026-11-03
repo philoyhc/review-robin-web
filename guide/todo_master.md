@@ -79,8 +79,9 @@ is the author's call.
 7. **20H — Follow-ups from the 19Z walkthrough** (not gated). The
    single-row forms refuse a second row on one directory account; an
    instrument label's wrong number after an add; audit events by
-   facility; Upload-card banners; the unreachable checks written down;
-   a countdown on the upload's directory check.
+   facility; a countdown on the upload's directory check. Items 4
+   (Upload-card banners) and 5 (the unreachable checks) closed
+   2026-11-03.
    **Plan:** `guide/segment_20H_walkthrough_19Z_followups.md`.
 
 ### Stubs

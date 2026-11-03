@@ -429,8 +429,10 @@ already exists.
 
 Both confirm-gated buttons are enabled only by `base.html`'s
 confirm-pairing script, so with JS off `Delete all …` (always gated)
-and a **replace** import (gated whenever the roster has rows) are both
-unreachable. What the fallback reaches is the **empty-roster import**,
+and any upload into a roster with rows (gated on its replace, append or
+merge tick) are both unreachable, deliberately, as for every gated
+button (author, 2026-11-03). The routes still refuse a missing or
+doubled tick. What the fallback reaches is the **empty-roster import**,
 plus the ability to read every card the panel holds.
 
 ### The roster index
