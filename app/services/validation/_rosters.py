@@ -432,7 +432,7 @@ def _check_reviewees_mirror_drift(
                 field=differing[0],
                 message=(
                     f"Reviewee '{mirrors[0].email_or_identifier}' differs from its "
-                    f"reviewer in {', '.join(differing)}"
+                    f"reviewer '{reviewer.email}' in {', '.join(differing)}"
                 ),
                 fix_anchor=f"#reviewer-row-{reviewer.id}",
             )

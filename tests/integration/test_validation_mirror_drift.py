@@ -4,11 +4,13 @@ kept by ``symmetric_review.sync_reviewees_from_reviewers`` on every
 reviewer write. The rule reports what a writer that skipped the sync would
 leave: a reviewer with no mirror, a reviewee mirroring no reviewer, and a
 mirrored field that differs. Each case is made here by writing the
-database directly, as such a writer would.
+database directly, as such a writer would, so each marks itself
+``mirror_drift_expected`` for the commit-time guard (``tests/_mirror_guard.py``).
 """
 
 from __future__ import annotations
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -62,15 +64,17 @@ def test_a_synced_roster_reports_nothing(client: TestClient, db: Session) -> Non
     assert _drift(db, _session(client, db, "md-clean")) == []
 
 
+@pytest.mark.mirror_drift_expected
 def test_a_mirrored_field_that_differs_is_reported(client: TestClient, db: Session) -> None:
     review_session = _session(client, db, "md-field")
     _reviewee(db, review_session, "ann@example.edu").name = "Anne"
     db.commit()
     assert _drift(db, review_session) == [
-        "Reviewee 'ann@example.edu' differs from its reviewer in name"
+        "Reviewee 'ann@example.edu' differs from its reviewer 'ann@example.edu' in name"
     ]
 
 
+@pytest.mark.mirror_drift_expected
 def test_a_reviewer_without_a_mirror_is_reported(client: TestClient, db: Session) -> None:
     review_session = _session(client, db, "md-missing")
     db.add(Reviewer(session_id=review_session.id, name="Cy", email="cy@example.edu"))
@@ -78,6 +82,7 @@ def test_a_reviewer_without_a_mirror_is_reported(client: TestClient, db: Session
     assert _drift(db, review_session) == ["Reviewer 'cy@example.edu' has no mirrored reviewee"]
 
 
+@pytest.mark.mirror_drift_expected
 def test_a_reviewee_mirroring_no_reviewer_is_reported(client: TestClient, db: Session) -> None:
     review_session = _session(client, db, "md-orphan")
     db.add(Reviewee(session_id=review_session.id, name="Di", email_or_identifier="di@example.edu"))
@@ -87,6 +92,7 @@ def test_a_reviewee_mirroring_no_reviewer_is_reported(client: TestClient, db: Se
     ]
 
 
+@pytest.mark.mirror_drift_expected
 def test_saving_a_reviewer_unchanged_brings_the_copy_back_into_step(
     client: TestClient, db: Session
 ) -> None:
@@ -152,6 +158,7 @@ def test_an_unchanged_save_on_a_mirror_in_step_writes_no_audit_row(
     ).first() is None
 
 
+@pytest.mark.mirror_drift_expected
 def test_a_duplicate_mirror_is_reported_and_an_unchanged_save_removes_it(
     client: TestClient, db: Session
 ) -> None:

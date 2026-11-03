@@ -791,7 +791,11 @@ are in `spec/setup_pages.md`, `spec/session_home.md` and
 
   A new writer of reviewers owes the call. Validate's
   `reviewees.mirror_drift` (error, `spec/validate_page.md` §3.2) reports a
-  roster left out of step, so a writer that skipped it cannot reach Prepare.
+  roster left out of step, so a writer that skipped the call cannot reach
+  Prepare. The integration suite also checks those faults at every commit
+  made through its `db` fixture (`tests/_mirror_guard.py`). It compares the
+  rows, not the mirrored self-fields and labels, so it catches a skipped call
+  on any row-writing path the suite exercises.
 - **Audit.** A flip on Session Home (`sessions.update_session`) is a
   `session.feature_toggled` event (`changes` envelope, with the other two
   toggles; `reason` slot). Quick Setup's flip ahead of a Settings file carries

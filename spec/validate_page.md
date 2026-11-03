@@ -457,7 +457,7 @@ the issue points at a specific row. Conventions:
 
 | Source | Anchor pattern | Set by check |
 |---|---|---|
-| `reviewers` (row-specific) | `#reviewer-row-{id}` | `_check_reviewers_duplicate_email`; `_check_reviewees_mirror_drift` (a reviewer's issue) |
+| `reviewers` (row-specific) | `#reviewer-row-{id}` | `_check_reviewers_duplicate_email`; also `_check_reviewees_mirror_drift`, whose issues are `source=reviewees` but anchor at the reviewer's row, where the fix is |
 | `reviewees` (row-specific) | `#reviewee-row-{id}` | `_check_reviewees_duplicate_id`; `_check_reviewees_unreachable_for_results` (the first unreachable reviewee) |
 | `observers` (row-specific) | `#observer-row-{id}` | `_check_observers_duplicate_email` |
 | any roster (row-specific) | that roster's row anchor | `_cross_roster_identity_issues`, via the three `*.cross_roster_identity` rules |

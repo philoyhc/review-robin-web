@@ -36,13 +36,16 @@ writer, rather than a restructure.**
    unlinked or linked to a missing reviewer, and any mirrored field
    (`symmetric_review.MIRRORED_FIELDS`) that differs. Validate already
    blocks Prepare on errors, so drift cannot reach a live session.
-2. **A test guard**: an integration test that walks every service
+2. ~~**A test guard**: an integration test that walks every service
    function writing `Reviewer` rows (found by a source scan for
    `Reviewer(` construction, `.delete(` on reviewers and the bulk
    updates, against an allowlist) and fails on one that does not call the
-   sync. The allowlist names each writer and why.
-3. **L2:** `sync_reviewees_from_reviewers` expires the session's reviewee
-   rows before building `by_link`, so it reads the database's links.
+   sync. The allowlist names each writer and why.~~ *At build (rung 3): a
+   commit-time check of every symmetric mirror in the integration suite,
+   since a source scan found 3 of the 10 writers (`## Status`).*
+3. **L2:** `sync_reviewees_from_reviewers` ~~expires the session's reviewee
+   rows~~ reads the reviewee rows with `populate_existing` (at build) before
+   building `by_link`, so it reads the database's links.
 4. **L3:** the setup-bundle import says, on its result page, that a
    symmetric bundle carries no reviewees and the session's are left as
    they are; `spec/csv_contracts.md` says so too.
@@ -60,8 +63,11 @@ cost. Revisit if a third drift is found.
   that reviewer, so the rule and the sync cannot disagree on a match.
 - The rule's message names the reviewer and the field; its fix line
   points at a save on Reviewers, which re-runs the sync.
-- The test guard reads source, not behavior: it fails on a new writer
-  until the writer calls the sync or joins the allowlist with a reason.
+- ~~The test guard reads source, not behavior: it fails on a new writer
+  until the writer calls the sync or joins the allowlist with a reason.~~
+  *At build: it checks behavior, at each commit the integration suite makes,
+  and a test that breaks a mirror on purpose marks itself
+  `mirror_drift_expected`.*
 
 ## Judgment calls — decided
 
@@ -90,13 +96,38 @@ Reviewers Setup, since a reviewer save re-runs the sync. One issue per
 row: a reviewer with none or several mirrors, a reviewee linked to no
 reviewer on the roster, a pair differing on a mirrored field.
 
+**Rung 3: the guard checks commits, not source.** A scan for writers of
+`Reviewer` rows found 3 of the 10 sync callers: `_save`, `roster_bulk` and
+`update_reviewer` write through generic calls and attribute sets no text
+scan sees. The guard instead runs at every commit the integration suite
+makes: the `db` fixture checks each symmetric session's mirror on the
+test's connection (`tests/_mirror_guard.py`, the same faults as the rule)
+and fails the test at teardown if one was out of step. Six tests that
+break a mirror on purpose (the rule's five, and one built by hand) are
+marked `mirror_drift_expected`. Measured by removing each sync call in turn:
+the guard catches 8 of the 10. Of the other two, `session_clone` copies
+both rosters with their links re-pointed, so the mirror is in step
+without its sync; and the Settings apply's sync mirrors reviewer
+self-fields and labels, which the guard does not compare. That call had no
+test at all, so one now covers it, and it fails without the call. The item's read
+(rungs 1–3, cumulative since `803ff768`) found no code defect. Its prose
+findings are fixed: the spec's claim for the guard narrowed to row-writing
+paths through the `db` fixture, this plan's Decision, Semantics and ladder
+annotated for the guard's new form and `populate_existing`, the drift
+message naming the reviewer as Semantics says, and the anchor table's
+note. Codex on #3535 found three gaps in the rule's fix line, all fixed there: an
+unchanged reviewer save skipped the sync; the repair it then made wrote no
+audit row (now `reviewees.mirror_repaired`, from the counts the sync
+returns); and the sync never removed a second reviewee linked to the same
+reviewer.
+
 ## PR ladder
 
-1. **L2.** The expire in `sync_reviewees_from_reviewers`, with the SQLite
+1. **L2.** The ~~expire~~ `populate_existing` read in `sync_reviewees_from_reviewers`, with the SQLite
    reproduction as its test. Must not touch Validate.
 2. **The rule.** `reviewees.mirror_drift` registered and tested (drifted
    name, missing mirror, orphan reviewee, mode off).
-3. **The guard.** The source-scan test and its allowlist. Last build rung
+3. **The guard.** ~~The source-scan test and its allowlist.~~ The commit-time mirror check. Last build rung
    for code: `diff-reviewer` on the cumulative diff since rung 1's base.
 4. **L3.** The notice on the bundle import's result and its line in
    `spec/csv_contracts.md`. Its own read (template and route).
@@ -106,7 +137,10 @@ reviewer on the roster, a pair differing on a mirrored field.
 
 - A test drifts a mirrored field directly in the database and Validate
   reports `reviewees.mirror_drift`.
-- Removing a sync call from any listed writer fails the guard test.
+- ~~Removing a sync call from any listed writer fails the guard test.~~
+  Removing any of the 10 sync calls fails a test, the guard's for 8 of them
+  (rung 3, `## Status`); `session_clone`'s mirror is in step by
+  construction.
 - The L2 reproduction passes on SQLite.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 20F` exits 0; any warning adjudicated
