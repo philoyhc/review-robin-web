@@ -1,6 +1,6 @@
 # Segment 20H — Follow-ups from the 19Z walkthrough
 
-**Opened:** 2026-11-03, at the author's request, from Part A of `guide/archive/walkthrough_19Z_rosters.md` (run locally the same day) · **Theme:** the consequential findings of that run, one item each · **Related:** `guide/segment_19Z_roster_append.md`, `guide/deferred_consolidated.md`
+**Opened:** 2026-11-03, at the author's request, from Part A of `guide/archive/walkthrough_19Z_rosters.md` (run locally the same day) · **Theme:** the consequential findings of that run, one item each · **Related:** `guide/archive/segment_19Z_roster_append.md`, `guide/deferred_consolidated.md`
 
 Items close independently. Smaller fixes from the same run go to 20C. The segment closes when its six items have (Item 6 added 2026-11-03, from Part B).
 

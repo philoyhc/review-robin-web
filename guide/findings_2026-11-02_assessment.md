@@ -60,7 +60,7 @@ None.
 
 ## 4. Spec drift
 
-All three are 19Z's pending spec pass (`guide/segment_19Z_roster_append.md`).
+All three are 19Z's pending spec pass (`guide/archive/segment_19Z_roster_append.md`).
 
 - **D-a. The CSV contract says rosters never merge.**
   `spec/csv_contracts.md` ("Wipe-and-replace, never merge"; "A roster
