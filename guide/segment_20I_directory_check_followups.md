@@ -119,6 +119,10 @@ The first banner sits 12 px under the intro (the intro's `.form-help` margin) an
 - `## Status` compacted to intended vs done; answered open questions collapsed
 - `guide/todo_master.md` 20I entry updated to drop this item; the entry itself goes only when the segment closes
 
+### Status
+
+**Closed 2026-11-03.** Intended vs done: as decided, as a top margin rather than the intro's bottom margin: `base.html` gives `.form-help + .banner` a 16px top margin, which collapses with the intro's 12px. Any page whose intro is followed by a banner takes it, not only the Upload card. `tests/browser/test_upload_banner_spacing.py` measures 16px above the first banner and below the last (it fails without the rule). `spec/setup_pages.md` "The Upload card's banners" updated.
+
 ### Open questions
 
 None.

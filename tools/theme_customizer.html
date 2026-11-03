@@ -4256,6 +4256,12 @@
         padding: var(--space-3) var(--space-4);
         margin-bottom: var(--space-4);
       }
+      /* 20I Item 3: a banner right under an intro sits as far below it
+         as the last banner sits above what follows. The two margins
+         collapse, so the gap is 16px, not the intro's 12px. */
+      body.ui-v2 .form-help + .banner {
+        margin-top: var(--space-4);
+      }
       body.ui-v2 .banner.banner-info {
         border-color: var(--status-info-border);
         background: var(--status-info-bg);
