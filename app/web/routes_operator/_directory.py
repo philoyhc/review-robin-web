@@ -16,6 +16,7 @@ again, those found bound (`directory_recheck`)."""
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.concurrency import run_in_threadpool
@@ -92,6 +93,8 @@ async def roster_directory_keys(
     if recheck == "true":
         if roster not in directory_recheck.ROSTERS:
             return _error(404, "unknown_roster")
+        if roster == "observers" and not review_session.observers_enabled:
+            return _error(404, "unknown_roster")
         directory_lookups.sweep(db)
         db.commit()
         # Every unmatched key, kept answers or not: a recheck asks for
@@ -102,7 +105,12 @@ async def roster_directory_keys(
         keys = list(dict.fromkeys(
             k for k in (directory_accounts.key(a) for a in addresses) if k is not None
         ))
-        return JSONResponse({"keys": keys}, headers=_NO_STORE)
+        # `since`: the recheck POST reads only answers fetched from now
+        # on, so a countdown stopped early leaves the rest to the server.
+        return JSONResponse(
+            {"keys": keys, "since": datetime.now(timezone.utc).isoformat()},
+            headers=_NO_STORE,
+        )
     upload = await read_upload(
         db, file=file, held_token=held_token, user=user,
         review_session=review_session, slot=roster,
@@ -171,6 +179,7 @@ async def roster_directory_lookup(
 async def roster_directory_recheck(
     request: Request,
     roster: str = Form(...),
+    since: str | None = Form(None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -181,13 +190,26 @@ async def roster_directory_recheck(
     directory now finds bound. Any state but archived (author,
     2026-11-03), the service deciding under the session lock. Back to
     the card, whose directory line shows the recheck's counts; an
-    expired sign-in saves nothing and the card asks to renew."""
+    expired sign-in saves nothing and the card asks to renew.
+
+    A recheck asks for fresh answers: it reads only those its own
+    countdown fetched (``since``, set by the page from `directory-keys`).
+    Without the script there is no ``since``, and every address is
+    looked up here."""
     if roster not in directory_recheck.ROSTERS:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     if roster == "observers" and not review_session.observers_enabled:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     addresses = directory_recheck.unmatched_addresses(
         db, session_id=review_session.id, kind=roster
+    )
+    started = _parse_since(since)
+    known = (
+        directory_lookups.known_for(
+            db, user=user, session_id=review_session.id, addresses=addresses, since=started
+        )
+        if started is not None
+        else {}
     )
     # The lookups block, and the service waits for the session lock:
     # both off the event loop.
@@ -198,9 +220,7 @@ async def roster_directory_recheck(
         user=user,
         kind=roster,
         directory=directory_or_none(request),
-        known=directory_lookups.known_for(
-            db, user=user, session_id=review_session.id, addresses=addresses
-        ),
+        known=known,
         correlation_id=request_correlation_id(),
     )
     db.commit()
@@ -210,3 +230,15 @@ async def roster_directory_recheck(
         url=f"/operator/sessions/{review_session.public_id}/{roster}?unlocked=1{renew}#upload-csv",
         status_code=status.HTTP_303_SEE_OTHER,
     )
+
+
+def _parse_since(value: str | None) -> datetime | None:
+    """The recheck countdown's start, as `directory-keys` gave it, or
+    ``None`` for none or a value that does not parse."""
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=timezone.utc)

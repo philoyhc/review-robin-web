@@ -99,7 +99,8 @@ def test_the_button_names_the_active_unmatched_rows_left_of_upload(
     assert actions < button < card.index(">Upload</button>")
     # The directory line sits below the actions, the countdown under it.
     line = card.index("data-directory-check")
-    assert card.index("</form>") < line < card.index("data-directory-countdown")
+    upload_end = card.index("</form>", card.index('id="upload-csv-form"'))
+    assert upload_end < line < card.index("data-directory-countdown")
 
 
 def test_anonymous_reviewee_identifiers_are_not_counted(
@@ -245,6 +246,7 @@ def test_an_expired_sign_in_saves_nothing_and_asks_to_renew(
     banner = page[page.index("data-directory-renew") :]
     assert "Renew sign-in and recheck" in banner
     assert 'form="directory-recheck-form"' in banner
+    assert 'id="directory-recheck-form"' in page
 
 
 def test_reviewees_and_observers_recheck_too(
@@ -347,4 +349,102 @@ def test_the_recheck_keys_are_every_unmatched_address_kept_or_not(
         data={"roster": "reviewers", "recheck": "true"},
     )
     assert response.status_code == 200
-    assert response.json() == {"keys": ["nobody@example.edu", "gone@example.edu"]}
+    assert response.json()["keys"] == ["nobody@example.edu", "gone@example.edu"]
+    assert response.json()["since"]
+
+
+def test_without_the_script_the_recheck_asks_afresh(
+    client: TestClient, db: Session, switch: _Switch, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An answer kept within the cache's life is not a recheck's: with no
+    `since` (no script) every address is looked up on the server, and
+    with one, only answers fetched since then are read."""
+    session = _create_session(client, db, "recheck-fresh")
+    _upload(client, session.public_id, "reviewers", "ReviewerName,ReviewerEmail\nNobody,nobody@example.edu\n")
+    kept = client.post(
+        f"/operator/sessions/{session.public_id}/directory-lookup",
+        json={"keys": ["nobody@example.edu"]},
+    )
+    assert kept.json()["outcomes"]["nobody@example.edu"]["status"] == "NOT_FOUND"
+
+    asked: list[str] = []
+
+    class _Found(FakeDirectory):
+        def find_users(self, address: str):
+            asked.append(address)
+            return super().find_users(address)
+
+    switch.current = _Found()
+    _recheck(client, session.public_id, "reviewers")
+    assert asked == ["nobody@example.edu"]  # asked again, not read from the kept answer
+
+    # With `since` after the kept answer, it is not read either.
+    session2 = _create_session(client, db, "recheck-fresh-2")
+    switch.current = FakeDirectory()
+    _upload(client, session2.public_id, "reviewers", "ReviewerName,ReviewerEmail\nNobody,nobody@example.edu\n")
+    client.post(f"/operator/sessions/{session2.public_id}/directory-lookup", json={"keys": ["nobody@example.edu"]})
+    since = client.post(
+        f"/operator/sessions/{session2.public_id}/directory-keys",
+        data={"roster": "reviewers", "recheck": "true"},
+    ).json()["since"]
+    asked.clear()
+    switch.current = _Found()
+    response = client.post(
+        f"/operator/sessions/{session2.public_id}/directory-recheck",
+        data={"roster": "reviewers", "since": since},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert asked == ["nobody@example.edu"]
+
+
+def test_a_recheck_with_nothing_unmatched_leaves_the_line_alone(
+    client: TestClient, db: Session, directory: FakeDirectory
+) -> None:
+    session = _create_session(client, db, "recheck-nothing")
+    _upload(client, session.public_id, "reviewers", "ReviewerName,ReviewerEmail\nJane,jane.tan@example.edu\n")
+    _recheck(client, session.public_id, "reviewers")
+    assert _event(db, session.id, "reviewers.directory_rechecked") is None
+    assert "Directory check of the last import" in _card(client, session.public_id, "reviewers")
+
+
+def test_an_import_after_a_recheck_takes_the_line_back(
+    client: TestClient, db: Session, switch: _Switch
+) -> None:
+    session = _create_session(client, db, "recheck-then-import")
+    switch.current = _Failing("server")
+    _upload(client, session.public_id, "reviewers", "ReviewerName,ReviewerEmail\nArun,arun.kumar@example.edu\n")
+    switch.current = FakeDirectory()
+    _recheck(client, session.public_id, "reviewers")
+    assert "Recheck of the unmatched addresses" in _card(client, session.public_id, "reviewers")
+    response = client.post(
+        f"/operator/sessions/{session.public_id}/reviewers/import",
+        files={"file": ("f.csv", b"ReviewerName,ReviewerEmail\nArun,arun.kumar@example.edu\n", "text/csv")},
+        data={"confirm_replace": "true"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    card = _card(client, session.public_id, "reviewers")
+    assert "Directory check of the last import" in card
+    assert "Recheck of the unmatched addresses" not in card
+
+
+def test_an_archived_session_is_refused_before_any_lookup(
+    client: TestClient, db: Session, switch: _Switch
+) -> None:
+    session = _create_session(client, db, "recheck-archived-early")
+    switch.current = _Failing("server")
+    _upload(client, session.public_id, "reviewers", "ReviewerName,ReviewerEmail\nArun,arun.kumar@example.edu\n")
+    asked: list[str] = []
+
+    class _Counting(FakeDirectory):
+        def find_users(self, address: str):
+            asked.append(address)
+            return super().find_users(address)
+
+    switch.current = _Counting()
+    row = db.get(ReviewSession, session.id)
+    row.status = "archived"
+    db.commit()
+    _recheck(client, session.public_id, "reviewers", status=409)
+    assert asked == []

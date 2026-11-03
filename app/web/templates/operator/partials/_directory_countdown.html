@@ -61,7 +61,7 @@
       }
     }
 
-    function watch(target, keysBody) {
+    function watch(target, keysBody, onKeys) {
       target.addEventListener('submit', function (event) {
         var submitter = event.submitter || null;
         // Counted already, or a submit to elsewhere (a banner's Dismiss).
@@ -76,7 +76,10 @@
             if (!response.ok) { throw new Error('keys ' + response.status); }
             return response.json();
           })
-          .then(function (answer) { count(answer.keys || []); })
+          .then(function (answer) {
+            if (onKeys) { onKeys(answer); }
+            count(answer.keys || []);
+          })
           .catch(function () { active(); });
       });
     }
@@ -97,6 +100,11 @@
         body.append('roster', roster);
         body.append('recheck', 'true');
         return body;
+      }, function (answer) {
+        // The recheck reads only what this count fetches; without
+        // `since` the server looks every address up itself.
+        var since = recheck.elements.since;
+        if (since && answer.since) { since.value = answer.since; }
       });
     }
 

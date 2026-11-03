@@ -73,16 +73,28 @@ def _rows(db: Session, *, user: User, session_id: int, keys: list[str]) -> list[
     )
 
 
+def _utc(value: datetime) -> datetime:
+    """SQLite drops tzinfo on write; a naive value is UTC."""
+    return value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
+
+
 def recall(
-    db: Session, *, user: User, session_id: int, keys: Iterable[str]
+    db: Session,
+    *,
+    user: User,
+    session_id: int,
+    keys: Iterable[str],
+    since: datetime | None = None,
 ) -> dict[str, Outcome]:
     """The fresh answers kept for ``keys``, this operator's and this
-    session's; a stale one reads as absent."""
+    session's; a stale one reads as absent. With ``since``, so does one
+    fetched before it (a recheck reads only what its own countdown
+    fetched, segment 20I Item 1)."""
     now = _now()
     return {
         row.key: _outcome(row)
         for row in _rows(db, user=user, session_id=session_id, keys=list(dict.fromkeys(keys)))
-        if _fresh(row, now)
+        if _fresh(row, now) and (since is None or _utc(row.fetched_at) >= _utc(since))
     }
 
 
@@ -97,12 +109,17 @@ def still_to_look_up(
 
 
 def known_for(
-    db: Session, *, user: User, session_id: int, addresses: Iterable[str | None]
+    db: Session,
+    *,
+    user: User,
+    session_id: int,
+    addresses: Iterable[str | None],
+    since: datetime | None = None,
 ) -> dict[str, Outcome]:
     """:func:`recall` for a roster's addresses as written: what an
     upload hands its directory check as ``known``."""
     keys = (directory_accounts.key(a) for a in addresses)
-    return recall(db, user=user, session_id=session_id, keys=[k for k in keys if k])
+    return recall(db, user=user, session_id=session_id, keys=[k for k in keys if k], since=since)
 
 
 def remember(

@@ -67,7 +67,8 @@ def test_the_recheck_button_sits_left_of_upload(kind: str) -> None:
     form = card.index('id="directory-recheck-form"')
     assert card.index("</form>") < form < card.index("_directory_check.html"), kind
     assert f'name="roster" value="{kind}"' in card[form:], kind
-    renew = card.index("{% if directory_renew_recheck %}")
+    # Only while the form it resubmits is on the page.
+    renew = card.index("{% if directory_renew_recheck and directory_unmatched %}")
     assert 'directory_renew_form = "directory-recheck-form"' in card[renew : card.index("{% endwith %}", renew)], kind
 
 

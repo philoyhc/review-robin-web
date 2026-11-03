@@ -20,14 +20,14 @@ This **reverses 20G's placement** of the line ("under the card's banners and abo
 
 - **What it checks:** every active row on that roster with an address and no `directory_object_id`, whatever import or form added it, not only the last import's.
 - **How:** the page counts it down as an upload does (20H Item 6: `directory-keys`, then `directory-lookup`), and a POST binds each row whose answer the server fetched and kept; it never binds from the page's say-so. Without the script, the POST looks the addresses up on the server, within the budget.
-- **What it changes:** a row found binds, as an upload binds it (`directory_accounts.rebind`); not found and ambiguous stay unbound; the line is replaced by this check's counts; an audit event per roster with the counts.
+- **What it changes:** a row found binds, as an upload binds it (`directory_accounts.columns`); not found and ambiguous stay unbound; the line is replaced by this check's counts; an audit event per roster with the counts.
 
 Rejected: *the button beside the line, above the form* (this plan's first draft): the line read as a header for the controls rather than their result. Rejected: *a button on the roster table's toolbar.* The table is about rows, the Upload card about the directory, and the line it answers is on the card. Rejected: *a sweep on a clock* (14E). The operator knows when the directory is back; a clock would retry blindly.
 
 ### Semantics
 
 - **Shown** when the roster has at least one active unbound row with an address, labeled with the count, "Recheck 251 unmatched" (author, 2026-11-03); absent otherwise, and the actions row is Upload alone.
-- **States:** wherever the single-row edit is allowed, since binding is what an edit's address change does; activated sessions included (author, 2026-11-03: binding admits by account what the address already admits).
+- **States:** any but archived, activated sessions included (author, 2026-11-03: binding admits by account what the address already admits), though Reviewers' and Reviewees' single-row edits stop at activation.
 - **A row that now resolves to an account another row holds** stays unbound, and the line counts it; 20H Item 1's rule, applied to a recheck.
 - **An expired sign-in** takes the renew banner (20G), as an upload does.
 
@@ -51,7 +51,9 @@ Taken 2026-11-03 at `215106150`: the directory line's partial (`app/web/template
 ### Status
 
 - **Rung 1 (scaffold)**, #3557: the button left of Upload on the three rosters, counted by `views.unmatched_count`; the directory line and countdown below the form.
-- **Rung 2**: `app/services/directory_recheck.py` and `POST …/directory-recheck` (`_directory.py`), any state but archived; the button submits its own form. A found row on an account another row holds stays unbound and is counted `directory_held`. Audit `<roster>.directory_rechecked`; the line shows whichever of import and recheck ran last. Expired sign-in: nothing saved, the renew banner resubmits the recheck. Under symmetric review only Reviewers rechecks (it syncs the mirror). Reviewers and Reviewees show the card only while editable, so an activated session's recheck is reachable on Observers alone; surfacing it there is the author's call. Next: rung 3.
+- **Rung 2**: `app/services/directory_recheck.py` and `POST …/directory-recheck` (`_directory.py`), any state but archived; the button submits its own form. A found row on an account another row holds stays unbound and is counted `directory_held`. Audit `<roster>.directory_rechecked`; the line shows whichever of import and recheck ran last. Expired sign-in: nothing saved, the renew banner resubmits the recheck. Under symmetric review only Reviewers rechecks (it syncs the mirror). Reviewers and Reviewees show the card only while editable, so an activated session's recheck is reachable on Observers alone; surfacing it there is the author's call. Rung 3 joined that PR.
+- **Rung 3**, #3558: the countdown watches the recheck form too; `directory-keys` with `recheck=true` names every unmatched key, kept or not, and a `since`. The POST reads only answers fetched since then; without the script it looks every address up. A recheck with nothing unmatched writes no event.
+- **Reads**: one cold read of the item's cumulative diff (from `e554cc7e2`): it found the recheck reusing kept answers, an empty recheck hiding the line, lookups run before the archived refusal, an unguarded Observers keys call and a renew banner with no form to resubmit, plus four weak tests; all fixed in #3558.
 
 ### Open questions
 

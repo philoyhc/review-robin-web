@@ -306,7 +306,7 @@
             {% endwith %}
             {# 20I Item 1: a recheck the sign-in stopped saved nothing; the
                banner renews and submits the recheck form again. #}
-            {% if directory_renew_recheck %}
+            {% if directory_renew_recheck and directory_unmatched %}
               {% with directory_renew = true, directory_renew_form = "directory-recheck-form",
                       directory_renew_action = "recheck",
                       directory_renew_dismiss_href = reviewees_base_url ~ "?unlocked=1#upload-csv" %}
@@ -424,6 +424,7 @@
               <form method="post" id="directory-recheck-form"
                     action="{{ url('/operator/sessions/' ~ session.public_id ~ '/directory-recheck') }}">
                 <input type="hidden" name="roster" value="reviewees">
+                <input type="hidden" name="since" value="">
               </form>
             {% endif %}
             {# Under the actions (20I Item 1, reversing 20G): what the last

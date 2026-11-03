@@ -28,6 +28,7 @@ from sqlalchemy.orm import Session
 from app.db.models import Observer, Reviewee, Reviewer, ReviewSession, User
 from app.services import audit, directory_accounts, symmetric_review
 from app.services import session_lifecycle as lifecycle
+from app.services.session_guard import SessionStateConflict
 
 #: Per roster: the model, its address attribute, and its noun.
 ROSTERS: dict[str, tuple[Any, str, str]] = {
@@ -74,6 +75,18 @@ def unmatched_addresses(db: Session, *, session_id: int, kind: str) -> list[str]
     return [getattr(row, attr) for row in unmatched_rows(db, session_id=session_id, kind=kind)]
 
 
+_ARCHIVED = "Session is archived; nothing can be rechecked."
+
+
+def _refuse(review_session: ReviewSession, kind: str) -> None:
+    """Refuse an archived session, and the Reviewees recheck under
+    symmetric review (the Reviewers one binds the mirror)."""
+    if lifecycle.is_archived(review_session):
+        raise SessionStateConflict(_ARCHIVED, code="archived")
+    if kind == "reviewees":
+        symmetric_review.refuse_reviewee_write(review_session)
+
+
 def _tally(status: str | None) -> str:
     if status == "OK":
         return "directory_by_mail"
@@ -101,18 +114,22 @@ def recheck(
     session is not held across the directory's answers; the rows are
     read again under it. Flushes and audits; the caller commits."""
     model, attr, noun = ROSTERS[kind]
+    # Refused before the lookups, so a doomed recheck does not wait out
+    # the budget; decided again under the lock below.
+    _refuse(review_session, kind)
     addresses = unmatched_addresses(db, session_id=review_session.id, kind=kind)
+    if not addresses:
+        # Nothing to check (a second tab, a stale page): no event, so the
+        # card's line still reports the last check that did something.
+        return Recheck(counts={})
     checked = directory is not None
     outcomes = directory_accounts.resolve(directory, addresses, known=known)
     stopped = directory_accounts.sign_in_stop(outcomes, addresses, checked=checked)
     if stopped:
         return Recheck(counts={}, stopped=stopped)
 
-    locked = lifecycle.require_not_archived(
-        db, review_session, message="Session is archived; nothing can be rechecked."
-    )
-    if kind == "reviewees":
-        symmetric_review.refuse_reviewee_write(locked)
+    locked = lifecycle.require_not_archived(db, review_session, message=_ARCHIVED)
+    _refuse(locked, kind)
     counts = dict.fromkeys(
         (
             "directory_by_mail",
