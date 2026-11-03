@@ -401,9 +401,10 @@ instrument uses imports as stored.
    under one budget through the operator's delegated Graph token
    (`rehydrate_session(directory=...)`). Each roster's `*.imported`
    event records its `directory_*` counts. Without this the rebuilt
-   session would match everyone by mail alone. **A sign-in stop**
-   (`None`, no delegated token, or Graph refusing it; segment 20G)
-   raises `RehydrateSignInStopped`: nothing is created, as for any
+   session would match everyone by mail alone. `None` (no delegated
+   token) checks nothing, and every row matches by mail. **An expired
+   token** (Graph's `unauthorized`; segment 20G) raises
+   `RehydrateSignInStopped`: nothing is created, as for any
    failure ([§7](#7-atomicity-and-audit)), but the page keeps the stash
    and its token and asks to renew the sign-in and rehydrate again
    (`spec/setup_pages.md` "The Upload card's renew ask").

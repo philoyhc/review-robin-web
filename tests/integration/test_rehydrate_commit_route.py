@@ -449,19 +449,23 @@ def test_a_settings_apply_failure_reaches_the_operator(
 def test_a_sign_in_stop_keeps_the_set_and_asks_to_renew(
     client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Segment 20G: with no token the rosters' directory check stops on
-    the sign-in. Nothing is created, the stash and its token stay, and
+    """Segment 20G: Graph refusing an expired token stops the rosters'
+    directory check. Nothing is created, the stash and its token stay, and
     the page asks to renew; the renew button's resubmit of the commit
     form then rehydrates."""
-    from cordware.graph import FakeDirectory
+    from cordware.graph import FakeDirectory, GraphError
 
     from app.web.routes_operator import _rehydrate
+
+    class _Expired(FakeDirectory):
+        def find_users(self, address: str):
+            raise GraphError("unauthorized", 401)
 
     rs = _seed(db)
     token = _validate_for_token(client, _file_set(db, rs))
     sessions_before = db.execute(select(ReviewSession)).scalars().all()
 
-    monkeypatch.setattr(_rehydrate, "directory_or_none", lambda request: None)
+    monkeypatch.setattr(_rehydrate, "directory_or_none", lambda request: _Expired())
     response = client.post(
         "/operator/sessions/rehydrate/commit", data={"token": token}, follow_redirects=False
     )

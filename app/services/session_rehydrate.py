@@ -463,10 +463,11 @@ class RehydrateError(Exception):
 
 
 class RehydrateSignInStopped(RehydrateError):
-    """The rosters' directory check stopped on the sign-in (segment 20G:
-    no token, or Graph refused it). Nothing is created, as for any
-    failure, but renewing the sign-in cures it, so the page keeps the
-    stashed set and asks to renew and rehydrate again."""
+    """Graph refused the rosters' directory check on an expired token
+    (segment 20G). Nothing is created, as for any failure, but renewing
+    the sign-in cures it, so the page keeps the stashed set and asks to
+    renew and rehydrate again. No token at all checks nothing and the
+    rehydrate proceeds, as an import does."""
 
 
 def _settings_rows(content: bytes) -> tuple[list[Any], list[ApplyError]]:

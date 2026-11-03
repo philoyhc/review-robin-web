@@ -19,7 +19,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 
-from cordware.graph import RESOLVED, SIGN_IN_KINDS, Directory, GraphError, Outcome, look_up_all
+from cordware.graph import RESOLVED, Directory, GraphError, Outcome, look_up_all
 
 from app.services.email_identity import looks_like_email, normalize_email
 
@@ -208,20 +208,44 @@ def unchecked(
     )
 
 
-#: Why a check stopped that renewing the sign-in can cure: Graph refused
-#: the token (`SIGN_IN_KINDS`), or there was no token to ask with.
+#: Why an address went unchecked when there was no delegated token to
+#: ask with (`unchecked_reason`); the other reasons are Graph's own
+#: failure kinds (`cordware.graph.GraphError.kind`).
 NO_TOKEN = "no_token"
+
+#: The one stop renewing the sign-in cures (segment 20G, author
+#: 2026-11-03): Graph refusing an expired token. No token at all (the
+#: token store off, or a sign-in that did not ask for Graph) and
+#: ``forbidden`` (consent or scope) are not cured by renewing, so those
+#: save as any other failure does, and the import says why.
+RENEWABLE_KIND = "unauthorized"
 
 
 def sign_in_stop(
     outcomes: Mapping[str, Outcome], addresses: Iterable[str | None], *, checked: bool
 ) -> str | None:
-    """Why the check of ``addresses`` stopped on the sign-in, or ``None``
-    (segment 20G): `NO_TOKEN` when nothing could be asked (``checked``
-    false) and there was an address to ask about; else the first
-    `SIGN_IN_KINDS` kind among their outcomes, which `look_up_all` ends
-    every lookup not yet started with. Any other failure (throttling, an
-    outage, the budget) is not a sign-in stop."""
+    """`RENEWABLE_KIND` when Graph refused the token for any of
+    ``addresses`` (an expired token: `look_up_all` ends every lookup not
+    yet started with it), else ``None`` (segment 20G). Only this stop
+    holds an upload and asks to renew."""
+    if not checked:
+        return None
+    keys = [k for k in (key(a) for a in addresses) if k is not None]
+    for k in keys:
+        outcome = outcomes.get(k)
+        if outcome is not None and outcome.error_kind == RENEWABLE_KIND:
+            return RENEWABLE_KIND
+    return None
+
+
+def unchecked_reason(
+    outcomes: Mapping[str, Outcome], addresses: Iterable[str | None], *, checked: bool
+) -> str | None:
+    """Why any of ``addresses`` went unchecked, or ``None`` when every one
+    was answered (segment 20G): `NO_TOKEN` when nothing could be asked,
+    else the first unanswered outcome's failure kind (``forbidden``,
+    ``throttled``, ``server``, ``timeout`` …), ``"timeout"`` for a lookup
+    with no outcome. The import records it, and the card's line names it."""
     keys = [k for k in (key(a) for a in addresses) if k is not None]
     if not keys:
         return None
@@ -229,8 +253,10 @@ def sign_in_stop(
         return NO_TOKEN
     for k in keys:
         outcome = outcomes.get(k)
-        if outcome is not None and outcome.error_kind in SIGN_IN_KINDS:
-            return outcome.error_kind
+        if outcome is None:
+            return "timeout"
+        if outcome.status not in ANSWERED:
+            return outcome.error_kind or "timeout"
     return None
 
 

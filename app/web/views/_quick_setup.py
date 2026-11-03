@@ -282,7 +282,9 @@ def build_quick_setup_context(
     # Segment 20G: a submit whose directory check stopped on the sign-in
     # names no slot's fault. The card shows the renew banner instead,
     # above the slots, and the submit's files are held.
-    renew = error_reason == DIRECTORY_SIGN_IN
+    # Only with files held: a per-slot route holds nothing, so there the
+    # slot's banner says it instead (`_quick_setup_error_message`).
+    renew = error_reason == DIRECTORY_SIGN_IN and bool(held)
 
     def _error_for(slot_key: str) -> str | None:
         if error_kind != slot_key or renew:
@@ -570,6 +572,9 @@ def _quick_setup_error_message(
       ``count`` saved group answers (findings S1). No tick: the card is
       locked whenever answers exist, so the sentence sends the operator
       to the Relationships page, which asks.
+    - ``DIRECTORY_SIGN_IN`` — Graph refused an expired token on a
+      route that holds nothing (segment 20G; submit-all holds and shows
+      the renew banner instead): reload the page and submit again.
     - ``"refused"`` — the Create page's code for a staged file it
       refused (findings O7): its lines are not carried, so the sentence
       sends the operator back to Quick Setup to see them.
@@ -598,6 +603,11 @@ def _quick_setup_error_message(
             "Nothing was imported. Under symmetric review the reviewees are "
             "the reviewers: upload the Reviewers roster and leave the "
             "Reviewees slot empty."
+        )
+    if reason == DIRECTORY_SIGN_IN:
+        return (
+            "Nothing was saved. Your sign-in to the directory had expired. "
+            "Reload the page, then submit again."
         )
     if reason == "refused":
         return (

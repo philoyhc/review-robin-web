@@ -1,6 +1,5 @@
-{# Segment 20G. An upload whose directory check stopped on the sign-in
-   (`DirectoryCheck.stopped`: no token, or Graph refused it) saves
-   nothing, holds its file and shows this in the card's banner stack
+{# Segment 20G. An upload whose directory check Graph refused on an
+   expired token (`DirectoryCheck.stopped`) saves nothing, holds its file and shows this in the card's banner stack
    (`spec/setup_pages.md` "The Upload card's banners"). It sits outside
    the form, so `directory_renew_form` names it, and the held file (or
    Quick Setup's held files, or rehydrate's stashed set) goes with the

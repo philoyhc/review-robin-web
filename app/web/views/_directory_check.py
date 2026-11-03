@@ -43,6 +43,10 @@ class DirectoryCheck:
     #: Of the not-checked rows, those a replace left on the account an
     #: earlier import bound them to (assessment 2026-11-02, M1).
     kept: int = 0
+    #: Why addresses went unchecked, as the import recorded it (segment
+    #: 20G), in words for the line; ``None`` for an import that recorded
+    #: none (every address answered, or one from before 20G).
+    reason: str | None = None
 
     @property
     def checked(self) -> bool:
@@ -78,4 +82,24 @@ def last_directory_check(
         ambiguous=counts.get("directory_ambiguous", 0),
         not_checked=counts.get("directory_not_checked", 0),
         kept=counts.get("directory_kept", 0),
+        reason=_reason_text(((event.detail or {}).get("context") or {}).get("directory_unchecked")),
     )
+
+
+#: The card's words for why addresses went unchecked (segment 20G), by
+#: the reason the import recorded (`directory_accounts.unchecked_reason`).
+_REASONS = {
+    "no_token": "this sign-in carries no directory access",
+    "forbidden": "the directory refused this account's access",
+    "unauthorized": "the sign-in to the directory had expired",
+    "throttled": "the directory was busy",
+    "timeout": "the check ran out of time",
+}
+
+
+def _reason_text(reason: object) -> str | None:
+    """The line's words for ``reason``; any other failure kind reads as
+    the directory not answering."""
+    if not reason:
+        return None
+    return _REASONS.get(str(reason), "the directory did not answer")

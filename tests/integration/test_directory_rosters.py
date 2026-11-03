@@ -10,6 +10,7 @@ account's mail and another's UPN.
 
 from __future__ import annotations
 
+import html
 import re
 
 import pytest
@@ -454,16 +455,15 @@ def test_a_partly_answered_replace_keeps_the_unanswered_and_says_so(
 
 
 @pytest.mark.parametrize("kind", ["reviewers", "reviewees", "observers"])
-@pytest.mark.parametrize("stop", ["expired", "no_token"])
-def test_a_sign_in_stop_saves_nothing_holds_the_file_and_asks_to_renew(
-    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch, kind: str, stop: str
+def test_an_expired_token_saves_nothing_holds_the_file_and_asks_to_renew(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch, kind: str
 ) -> None:
-    """Segment 20G: an expired token (Graph refuses it) or none at all
-    stops the check on the sign-in. The upload saves nothing, holds the
-    file and re-renders the card with the renew banner; the button's
-    resubmit with a renewed token then saves it, every address checked."""
-    session = _session(client, db, f"dir-renew-{kind}-{stop}")
-    failing = _ExpiredToken() if stop == "expired" else None
+    """Segment 20G: Graph refusing an expired token stops the check. The
+    upload saves nothing, holds the file and re-renders the card with the
+    renew banner; the button's resubmit with a renewed token then saves
+    it, every address checked."""
+    session = _session(client, db, f"dir-renew-{kind}")
+    failing = _ExpiredToken()
     module = _setup_observers if kind == "observers" else _shared
     monkeypatch.setattr(module, "directory_or_none", lambda request: failing)
     header = {
@@ -492,3 +492,42 @@ def test_a_sign_in_stop_saves_nothing_holds_the_file_and_asks_to_renew(
     assert response.status_code == 303
     db.expire_all()
     assert _bound(_row(db, model, session.id)) == JANE
+
+
+class _Forbidden(FakeDirectory):
+    """Graph refusing this account's access (consent or scope)."""
+
+    def find_users(self, address: str):
+        from cordware.graph import GraphError
+
+        raise GraphError("forbidden", 403)
+
+
+@pytest.mark.parametrize(
+    ("directory", "reason"),
+    [
+        (None, "this sign-in carries no directory access"),
+        (_Forbidden(), "the directory refused this account's access"),
+        (_Down(), "the directory did not answer"),
+        (_Down("throttled"), "the directory was busy"),
+    ],
+    ids=["no_token", "forbidden", "server", "throttled"],
+)
+def test_a_failure_renewing_cannot_cure_saves_and_the_line_says_why(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch, directory, reason: str
+) -> None:
+    """Author, 2026-11-03: only an expired token holds. No token,
+    ``forbidden``, an outage or throttling save as before, unchecked,
+    and the card's directory-check line names why."""
+    session = _session(client, db, f"dir-why-{reason[:12].replace(' ', '-')}")
+    monkeypatch.setattr(_shared, "directory_or_none", lambda request: directory)
+    response = client.post(
+        f"/operator/sessions/{session.public_id}/reviewers/import",
+        files={"file": ("r.csv", b"ReviewerName,ReviewerEmail\nJane,e0123456@example.edu\n", "text/csv")},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert _bound(_row(db, Reviewer, session.id)) == directory_accounts.UNBOUND
+    text = client.get(f"/operator/sessions/{session.public_id}/reviewers?unlocked=1").text
+    line = html.unescape(text[text.index("data-directory-check") :].split("</p>")[0])
+    assert f"because {reason}" in " ".join(line.split())
