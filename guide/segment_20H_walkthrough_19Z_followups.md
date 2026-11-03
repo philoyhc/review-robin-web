@@ -94,6 +94,19 @@ Taken 2026-11-03 at `49bb4a8c9`: the label's two forms, Python and SQL, pinned t
 
 - If it does not reproduce: close as not reproduced, with the steps tried (author).
 
+### Status
+
+**Closed 2026-11-03. Reproduced, then fixed.** The server always drew
+`Instrument_{session_seq}`; the Instruments page's script redrew a
+label-less card's title when the card locked, from
+`data-instrument-card`, the workspace-wide `id`. So a new card, unlocked
+and locked, read `Instrument_{id}` until a reload. The card now carries
+`data-instrument-seq` and the script reads it.
+`tests/browser/test_builder_card.py::test_a_locked_cards_fallback_title_is_its_session_number`
+failed before the fix (`Instrument_3` for the second instrument) and
+passes after. No spec change: `spec/instruments.md` already states the
+rule.
+
 ### Doc impact
 
 - `spec/instruments.md` — nothing expected; named in case the fix shows the label rule needs a line (Item 2). <!-- doc-impact-waived: only if the fix leaves the rule as written -->
