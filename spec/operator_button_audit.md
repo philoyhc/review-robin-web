@@ -836,7 +836,7 @@ Sys-admin-gated.
 | 277 | Filter strip (left column) | `info` / `warning` / `error` | `<label>` around a hidden `severity` checkbox | `pill tag-chip status-chip-{value}` | **Not `.btn`** — on/off chips in a status color (`spec/ui_elements.md` §9) | After `Event type \|` and a `Severity` label, on one line above the event-type list. Pale status tint when off, solid status fill when on; none on is no severity filter. Each carries `title="Show {value} events"`. |
 | 119 | Audit log card heading | Download CSV | `<a download>` | `btn secondary` | Secondary | Links (GET) to `/operator/sessions/{id}/export/audit_log.csv`; the URL forward-carries the active filter set, and `tz` when the page reads in UTC, so the CSV holds the rows on screen. |
 | 120 | Filter strip (right column) | Apply filters | `<button type="submit">` | `btn secondary` | Secondary | Right-aligned under the From / To dates in a `.btn-pair.audit-filter-actions`; **Secondary, never Primary**, so it doesn't compete with the Download CSV button up at the card heading. |
-| 121 | Filter strip (right column) | Clear | `<a>` | `btn secondary` | Secondary | Renders only when `filter_form.is_active`, before Apply filters. Resets to the canonical viewer URL, keeping only `tz=utc` when the page reads in UTC. |
+| 121 | Filter strip (right column) | Clear | `<a>` | `btn secondary` | Secondary | Always rendered, inline before Apply filters (20H Item 3). Resets to the canonical viewer URL, keeping only `tz=utc` when the page reads in UTC. |
 | 122 | Per-row detail | (expander) | `<summary>` inside `<details>` | `audit-detail summary` | Inline disclosure (custom) | Inline expander surfacing the canonical audit detail envelopes in human-readable sections + raw JSON in a nested `<details>`. Not a `.btn` but interactive — listed for completeness. |
 | 250 | Below the table | Older events → | `<a>` | `chrome-link` | **Not `.btn`** — `chrome-link` reused in page content, as #187 | Renders only when a further page of events exists; carries the cursor and the active filter set |
 
@@ -845,8 +845,12 @@ Notes:
 - **Filter strip layout:**
   - Left column: one line reading `Event type | Severity` with the
     three severity chips after it (`.audit-filter-head`, row 277), then
-    the event-type multi-select with its `Ctrl/Cmd-click to select
-    multiple` hint.
+    the event-type multi-select and its hint (`data-audit-event-hint`).
+    With JavaScript a click selects or unselects one type and leaves the
+    others as they are, and the hint reads `Click a type to select or
+    unselect it.` with the count selected; without it the list is a
+    plain multi-select and the hint reads `Ctrl/Cmd-click to select
+    multiple.`
   - Right column flows the **Event type filter** and actor email
     side-by-side (each half-width, `.audit-filter-pair`) → From / To
     date selectors side-by-side (each half-width, `.audit-filter-dates`),
@@ -854,10 +858,11 @@ Notes:
     right-aligned (`.audit-filter-actions`), the last thing in the right
     column.
   - The **Event type filter** (`data-audit-event-filter`) narrows the
-    event-type list as it is typed: types not containing the text, any
-    case, are hidden, and a selected type stays shown. It has no `name`
-    and sends nothing, and Enter in it does nothing; the log is filtered
-    by what the list selects.
+    event-type list as it is typed to the types beginning with the text,
+    any case. A selected type the text hides stays selected and is still
+    sent, so types found with one filter and then another are filtered
+    on together. The box has no `name` and sends nothing, and Enter in
+    it does nothing; the log is filtered by what the list selects.
     Without JavaScript it does nothing and the list is whole.
 - **Spacing.** `.audit-filter-form` keeps the form 16px below the
   card's description and 24px above the audit-log table; there are no

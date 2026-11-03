@@ -149,11 +149,13 @@ Taken 2026-11-03 at `49bb4a8c9`: one route (`sys_admin_session_audit_log` in `ap
 **Closed 2026-11-03.** Ruled before the scaffold: the Actor email box
 halves, an Event type filter on its left (author). Ruled at the scaffold:
 the filter narrows the Event type list, not the log, and the list stays.
-Rung 1 laid out `.audit-filter-pair`; rung 2 wired the box: types not
-containing the text are hidden, a selected type stays shown, and the box
-has no `name`, so the log is filtered by the list's selection as before.
-Enter in the box does nothing, so the narrowing is never lost to a
-submit. `tests/browser/test_audit_log_event_filter.py`. The strip is
+Rung 1 laid out `.audit-filter-pair`; rung 2 wired the box, and the
+author refined it before merge: the box finds types and the list selects
+them. Typing narrows the list to the types beginning with the text; a
+click toggles one type and keeps the rest, so selections made under one
+filter survive the next and are sent together; the hint counts them.
+Clear is always shown, left of Apply filters. The box has no `name`, and
+Enter in it does nothing. `tests/browser/test_audit_log_event_filter.py`. The strip is
 documented in `spec/operator_button_audit.md`, where its layout already
 lived, not `spec/operator_ui_concept.md`. One read (rungs 1–2): no code
 defect; the test now submits with text in the box, which it had cleared
