@@ -139,6 +139,11 @@ three-layer separation (mirrors CLAUDE.md "Architecture at a glance"):
      pure), `_branch_rule.py` (the save invariant, "a closed branch
      holds no value"), `_form_keys.py` (the review form's ordinal answer
      names and page digest).
+   - `app/services/csv_imports/` — the roster CSV imports: `_parse.py`
+     (decoding and the three parsers), `_identity.py` (the directory
+     check and the same-person checks), `_modes.py` (append and merge),
+     `_saving.py` (the saves and deletes); each imports only the ones
+     before it, and `__init__.py` re-exports every name.
    - `app/services/rules/` — the pure rule engine (`engine.py`,
      `predicates.py`, `quotas.py`, `fields.py`).
    Other notable services: `session_lifecycle.py`, `validation.py`,
@@ -986,7 +991,7 @@ when a replace kept any not-checked row on its earlier account
 
 `cascaded_responses` rides the **bulk delete alone**
 (`app/services/roster_bulk.py`) — a roster import or delete-all
-(`app/services/csv_imports.py`) does not carry it. Note the event names
+(`app/services/csv_imports/`) does not carry it. Note the event names
 differ in number as well as in suffix: the import and delete-all events
 are plural (`reviewers.`), the bulk-delete ones singular
 (`reviewer.`); `app/services/audit.py` is the list.
@@ -1116,7 +1121,7 @@ canonical "no payload" marker.
 | `observers.deleted_all` | `counts` (+ identity) |
 
 The `observer.created` and `observers.imported` events emit
-in `app/services/observers.py` and `app/services/csv_imports.py`
+in `app/services/observers.py` and `app/services/csv_imports/`
 respectively, following the same per-row / bulk-replace pattern
 as the `reviewer.*` / `reviewers.*` family.
 

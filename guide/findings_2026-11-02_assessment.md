@@ -27,7 +27,7 @@ None.
 ## 2. Medium
 
 - ~~**M1**~~ — **Done in #3525**: a row the directory gave no answer for keeps its earlier account unless the file binds that account elsewhere, counted as `directory_kept` (`spec/csv_contracts.md` §3.1; `tests/integration/test_directory_rosters.py`). **A Replace with an expired Graph token unbinds every row it
-  re-adds.** `app/services/csv_imports.py` `_save`, with
+  re-adds.** `app/services/csv_imports.py` `_save`, with <!-- path-ref-ok -->
   `cordware/graph.py` `look_up_all`. Token renewal runs on page load, so
   a Replace submitted after the token lapses resolves nothing, and every
   row is saved without its directory account. A row given by sign-in

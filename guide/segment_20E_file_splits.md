@@ -97,6 +97,14 @@ were estimates, not counts; the definition of done now reads under 1,200.
 Started at the author's word ("start 20E"); main before rung 1 was
 `8505fd8c`, the base for the read at rung 3.
 
+**Rung 2.** `csv_imports/` as planned, with two changes: `DirectoryCheck`
+and `directory_check(s)` went to `_identity.py`, not `_save`, since
+`_modes.py` needs them and imports only downward; and the save module is
+`_saving.py`, because a `_save.py` would be shadowed on the package by the
+re-exported `_save` function. One test patching `append_conflicts` now
+patches `_saving` too; `tests/unit/test_email_identity_fold.py`'s gate
+list names the five modules. Largest module 904 lines (`_parse.py`).
+
 ## PR ladder
 
 1. **`responses/_rollups.py`.** The five tallies move; `responses/__init__.py`

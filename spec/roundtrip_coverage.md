@@ -221,7 +221,7 @@ Ordered by user-visible impact:
 - Settings CSV: `app/services/session_config_io/` (`_serialize.py`,
   `_apply*.py`, `_rows.py`).
 - Roster CSVs: `app/services/extracts/{reviewers,reviewees,observers,relationships}_extract.py`,
-  `app/services/csv_imports.py`, `app/services/relationships.py`.
+  `app/services/csv_imports/`, `app/services/relationships.py`.
 - Clone: `app/services/session_clone.py`.
 - Assignments: `app/services/assignments/` (`_generate.py`,
   `_coverage.py`), `app/web/routes_operator/_assignments.py`.

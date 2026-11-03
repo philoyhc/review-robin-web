@@ -295,7 +295,12 @@ def test_no_identity_gate_folds_inline() -> None:
         "app/services/observers.py",
         "app/services/reviewees.py",
         "app/services/relationships.py",
-        "app/services/csv_imports.py",
+        # A package since 20E rung 2: every module of it.
+        "app/services/csv_imports/__init__.py",
+        "app/services/csv_imports/_parse.py",
+        "app/services/csv_imports/_identity.py",
+        "app/services/csv_imports/_modes.py",
+        "app/services/csv_imports/_saving.py",
         "app/services/rules/engine.py",
         "app/services/assignments/_self_review.py",
     ]

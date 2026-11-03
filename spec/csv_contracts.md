@@ -18,7 +18,7 @@ Cross-references:
   hold a family of related extracts), plus `zip_bundle.py` and
   `responses_import.py`, and the shared
   `__init__.py` (`stream_csv`, `filename`).
-- **`app/services/csv_imports.py`** — three roster importers
+- **`app/services/csv_imports/`** — three roster importers
   (Reviewers, Reviewees, Observers) + the shared parsing primitives.
 - **`app/services/relationships.py`** — the Relationships
   importer.
@@ -310,7 +310,7 @@ reviewer + reviewee row count, header excluded).
 
 ## 3. Importers (input contracts)
 
-### 3.1 Reviewers + Reviewees — `csv_imports.py`
+### 3.1 Reviewers + Reviewees — `csv_imports/`
 
 Two functions: `parse_reviewer_csv(content: bytes) -> ParseResult`
 and `parse_reviewee_csv(content: bytes) -> ParseResult`.
@@ -344,7 +344,7 @@ lines (`spec/quick_setup_card_spec.md`, "Result reporting").
 `ProfileLink` may be absent. An absent column is `None` for every
 row; an empty cell is `None` for that row. The legacy `PhotoLink`
 header is still accepted on import, indefinitely — `_profile_link`
-in `app/services/csv_imports.py` reads `ProfileLink` first and falls
+in `app/services/csv_imports/` reads `ProfileLink` first and falls
 back to `PhotoLink`; a non-blank `ProfileLink` wins when a file
 carries both. `Status` is
 also optional — blank/absent ⇒ `active`; `active` / `inactive` only,
@@ -478,7 +478,7 @@ persists nothing. `None`, the default, deletes without asking. The
 Relationships card and Quick Setup pass the tick's count; rehydrate
 passes none.
 
-### 3.2b Observers — `csv_imports.py`
+### 3.2b Observers — `csv_imports/`
 
 `parse_observer_csv(content: bytes) -> ParseResult`
 and `save_observers(db, *, session, user, rows, filename,
@@ -1019,7 +1019,7 @@ round-trip tests in `tests/integration/test_extracts_*.py`.
 
 ## 5. Shared parsing primitives
 
-`app/services/csv_imports.py` exposes the helpers every importer
+`app/services/csv_imports/` exposes the helpers every importer
 shares. Public surface:
 
 | Helper | Role |

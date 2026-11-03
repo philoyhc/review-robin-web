@@ -495,7 +495,7 @@ durable instrument key.
 
 **Scale.** `responses.csv` for a large session (e.g. 1,500 reviewers) far
 exceeds the roster importer's `MAX_ROWS = 5000` / `MAX_BYTES = 1 MiB`
-caps (`csv_imports.py`). The responses parser therefore **does not** reuse
+caps (`csv_imports/`). The responses parser therefore **does not** reuse
 those limits, because reusing `csv_imports`' guard rails here would
 silently truncate real data. What ships is unbounded and in memory:
 `parse_responses_csv` decodes the whole file into a list of rows, and
@@ -627,7 +627,7 @@ Stated plainly so the card copy and the PR description stay honest:
   `zip_bundle.py`).
 - Config round-trip: `app/services/session_config_io/`
   (`_serialize.py`, `_apply.py`, `_rows.py`).
-- Roster import: `app/services/csv_imports.py`,
+- Roster import: `app/services/csv_imports/`,
   `app/services/relationships.py`.
 - Create / clone / lifecycle: `app/services/sessions.py`,
   `app/services/session_clone.py`, `app/services/session_lifecycle.py`.
