@@ -50,7 +50,8 @@ Taken 2026-11-03 at `215106150`: the directory line's partial (`app/web/template
 
 ### Status
 
-- **Rung 1 (scaffold)**: the button, inert (`type="button"`, `data-directory-recheck`), left of Upload on the three rosters, counted by `views.unmatched_count`; the directory line and countdown below the form. Next: rung 2.
+- **Rung 1 (scaffold)**, #3557: the button left of Upload on the three rosters, counted by `views.unmatched_count`; the directory line and countdown below the form.
+- **Rung 2**: `app/services/directory_recheck.py` and `POST …/directory-recheck` (`_directory.py`), any state but archived; the button submits its own form. A found row on an account another row holds stays unbound and is counted `directory_held`. Audit `<roster>.directory_rechecked`; the line shows whichever of import and recheck ran last. Expired sign-in: nothing saved, the renew banner resubmits the recheck. Under symmetric review only Reviewers rechecks (it syncs the mirror). Reviewers and Reviewees show the card only while editable, so an activated session's recheck is reachable on Observers alone; surfacing it there is the author's call. Next: rung 3.
 
 ### Open questions
 

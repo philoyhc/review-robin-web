@@ -15,8 +15,8 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import AuditEvent, Observer, Reviewee, Reviewer, ReviewSession
-from app.services.email_identity import looks_like_email
+from app.db.models import AuditEvent, ReviewSession
+from app.services import directory_recheck
 
 _COUNT_KEYS = (
     "directory_by_mail",
@@ -48,23 +48,32 @@ class DirectoryCheck:
     #: 20G), in words for the line; ``None`` for an import that recorded
     #: none (every address answered, or one from before 20G).
     reason: str | None = None
+    #: The line reports the card's recheck (segment 20I Item 1), not an
+    #: import; ``held`` counts rows found on an account another row holds.
+    recheck: bool = False
+    held: int = 0
 
     @property
     def checked(self) -> bool:
         """Whether the directory answered for any address at all."""
-        return (self.by_mail + self.by_upn + self.not_found + self.ambiguous) > 0
+        return (self.by_mail + self.by_upn + self.not_found + self.ambiguous + self.held) > 0
 
 
 def last_directory_check(
     db: Session, review_session: ReviewSession, kind: str
 ) -> DirectoryCheck | None:
-    """The latest ``kind`` import's directory counts, or ``None``."""
+    """The latest ``kind`` import's or recheck's directory counts, or
+    ``None``: whichever ran last (segment 20I Item 1)."""
     event_type = _EVENT.get(kind)
     if event_type is None:
         return None
+    recheck_type = directory_recheck.EVENTS[kind]
     event = db.execute(
         select(AuditEvent)
-        .where(AuditEvent.session_id == review_session.id, AuditEvent.event_type == event_type)
+        .where(
+            AuditEvent.session_id == review_session.id,
+            AuditEvent.event_type.in_((event_type, recheck_type)),
+        )
         .order_by(AuditEvent.id.desc())
         .limit(1)
     ).scalar_one_or_none()
@@ -73,7 +82,7 @@ def last_directory_check(
         return None
     # An import with no address to check (anonymous identifiers only)
     # has nothing to report (Codex, #3429).
-    if not any(counts.get(k, 0) for k in _COUNT_KEYS):
+    if not any(counts.get(k, 0) for k in (*_COUNT_KEYS, "directory_held")):
         return None
     return DirectoryCheck(
         at=event.created_at,
@@ -84,34 +93,21 @@ def last_directory_check(
         not_checked=counts.get("directory_not_checked", 0),
         kept=counts.get("directory_kept", 0),
         reason=_reason_text(((event.detail or {}).get("context") or {}).get("directory_unchecked")),
+        recheck=event.event_type == recheck_type,
+        held=counts.get("directory_held", 0),
     )
 
 
-#: Each roster's model and its address column, for :func:`unmatched_count`.
-_ROSTERS = {
-    "reviewers": (Reviewer, Reviewer.email),
-    "reviewees": (Reviewee, Reviewee.email_or_identifier),
-    "observers": (Observer, Observer.email),
-}
-
-
 def unmatched_count(db: Session, review_session: ReviewSession, kind: str) -> int:
-    """How many of the ``kind`` roster's active rows have an address and
-    no directory account: what the Upload card's recheck button names
-    (segment 20I Item 1), whatever import or form added them. Reviewees
-    with an anonymous identifier have no address to look up."""
-    roster = _ROSTERS.get(kind)
-    if roster is None:
+    """How many rows the Upload card's recheck button names (segment 20I
+    Item 1): `directory_recheck.unmatched_rows`."""
+    if kind not in directory_recheck.ROSTERS:
         return 0
-    model, address = roster
-    addresses = db.execute(
-        select(address).where(
-            model.session_id == review_session.id,
-            model.status == "active",
-            model.directory_object_id.is_(None),
-        )
-    ).scalars()
-    return sum(1 for value in addresses if looks_like_email(value))
+    # Under symmetric review the reviewees mirror the reviewers, and a
+    # Reviewers recheck binds both; the Reviewees one is refused.
+    if kind == "reviewees" and review_session.symmetric_review:
+        return 0
+    return len(directory_recheck.unmatched_rows(db, session_id=review_session.id, kind=kind))
 
 
 #: The card's words for why addresses went unchecked (segment 20G), by

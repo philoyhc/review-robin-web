@@ -66,7 +66,7 @@ def test_the_upload_counts_down_then_reads_what_it_looked_up(
 
     page.locator("#upload-csv-form input[name=file]").set_input_files(str(roster))
     with page.expect_navigation():
-        page.locator("#upload-csv-form .unlock-col-actions button[type=submit]").click()
+        page.locator("#upload-csv-form .unlock-col-actions button[type=submit]:not([data-directory-recheck])").click()
     page.wait_for_load_state("load")
 
     assert sorted(looked_up) == sorted(ADDRESSES)  # each once, folded
@@ -80,7 +80,7 @@ def test_the_upload_counts_down_then_reads_what_it_looked_up(
     page.locator("#upload-csv-form input[name=file]").set_input_files(str(roster))
     page.locator("#upload-csv-form input[name=confirm_replace]").check()
     with page.expect_navigation():
-        page.locator("#upload-csv-form .unlock-col-actions button[type=submit]").click()
+        page.locator("#upload-csv-form .unlock-col-actions button[type=submit]:not([data-directory-recheck])").click()
     page.wait_for_load_state("load")
     assert looked_up == []
     assert _seen(page) == []
@@ -114,7 +114,7 @@ def test_a_failed_lookup_stops_the_count_and_uploads(
     page.goto(app_url(f"/operator/sessions/{session_id}/reviewers?unlocked=1"))
     page.locator("#upload-csv-form input[name=file]").set_input_files(str(roster))
     with page.expect_navigation():
-        page.locator("#upload-csv-form .unlock-col-actions button[type=submit]").click()
+        page.locator("#upload-csv-form .unlock-col-actions button[type=submit]:not([data-directory-recheck])").click()
     page.wait_for_load_state("load")
     assert 1 <= len(sent) <= 4  # the first answer stops the rest
     expect(page.locator("[data-directory-check]")).to_contain_text("matched by mail")

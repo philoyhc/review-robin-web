@@ -697,6 +697,11 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "observer.bulk_inactivated": EventSchema(_IDENTITY | {"snapshot"}),
     "observer.bulk_reactivated": EventSchema(_IDENTITY | {"snapshot"}),
     "observers.imported": EventSchema(_IDENTITY | {"counts", "context"}),
+    # Segment 20I Item 1 — the Upload card's recheck of a roster's
+    # unmatched addresses: per-row counts, and why any went unchecked.
+    "reviewers.directory_rechecked": EventSchema(_IDENTITY | {"counts", "context"}),
+    "reviewees.directory_rechecked": EventSchema(_IDENTITY | {"counts", "context"}),
+    "observers.directory_rechecked": EventSchema(_IDENTITY | {"counts", "context"}),
     "observers.deleted_all": EventSchema(_IDENTITY | {"counts"}),
     # Segment 19I Item 2 — the selection-driven delete on the four
     # roster Setup pages. Singular noun, matching the per-row

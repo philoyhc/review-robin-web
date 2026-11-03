@@ -7,21 +7,26 @@ operator's own delegated token; a local run asks the fake directory.
 Also the roster upload's countdown (segment 20H Item 6): the Upload
 card's script asks ``directory-keys`` which of the file's addresses still
 need a lookup, then sends them to ``directory-lookup`` in batches, which
-keeps each answer for the upload to read (`directory_lookups`)."""
+keeps each answer for the upload to read (`directory_lookups`).
+
+And the Upload card's "Recheck N unmatched" (segment 20I Item 1): a
+roster's saved rows with an address and no directory account looked up
+again, those found bound (`directory_recheck`)."""
 
 from __future__ import annotations
 
 import json
 
-from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
-from app.services import csv_imports, directory_accounts, directory_lookups
-from app.web.deps import get_or_create_user, require_session_operator
+from app.services import csv_imports, directory_accounts, directory_lookups, directory_recheck
+from app.web import urls
+from app.web.deps import get_or_create_user, request_correlation_id, require_session_operator
 from app.web.roster_import import read_upload
 from app.web.routes_operator._shared import (
     ROSTER_PARSERS,
@@ -142,4 +147,49 @@ async def roster_directory_lookup(
             }
         },
         headers=_NO_STORE,
+    )
+
+
+@router.post("/sessions/{session_id}/directory-recheck")
+async def roster_directory_recheck(
+    request: Request,
+    roster: str = Form(...),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """The Upload card's "Recheck N unmatched" (segment 20I Item 1): the
+    roster's unmatched rows looked up again, on the operator's token,
+    reading what the card's countdown already fetched, and each one the
+    directory now finds bound. Any state but archived (author,
+    2026-11-03), the service deciding under the session lock. Back to
+    the card, whose directory line shows the recheck's counts; an
+    expired sign-in saves nothing and the card asks to renew."""
+    if roster not in directory_recheck.ROSTERS:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    if roster == "observers" and not review_session.observers_enabled:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    addresses = directory_recheck.unmatched_addresses(
+        db, session_id=review_session.id, kind=roster
+    )
+    # The lookups block, and the service waits for the session lock:
+    # both off the event loop.
+    result = await run_in_threadpool(
+        directory_recheck.recheck,
+        db,
+        review_session=review_session,
+        user=user,
+        kind=roster,
+        directory=directory_or_none(request),
+        known=directory_lookups.known_for(
+            db, user=user, session_id=review_session.id, addresses=addresses
+        ),
+        correlation_id=request_correlation_id(),
+    )
+    db.commit()
+    renew = "&recheck_renew=1" if result.stopped else ""
+    return urls.redirect(
+        request,
+        url=f"/operator/sessions/{review_session.public_id}/{roster}?unlocked=1{renew}#upload-csv",
+        status_code=status.HTTP_303_SEE_OTHER,
     )

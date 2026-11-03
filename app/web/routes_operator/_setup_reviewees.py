@@ -334,6 +334,8 @@ def _render_reviewees_page(
             "existing_count": csv_imports.existing_reviewee_count(db, review_session.id),
             "directory_check": views.last_directory_check(db, review_session, "reviewees"),
             "directory_unmatched": views.unmatched_count(db, review_session, "reviewees"),
+            # 20I Item 1: a recheck the sign-in stopped asks to renew.
+            "directory_renew_recheck": request.query_params.get("recheck_renew") == "1",
             "assignment_count": csv_imports.existing_assignment_count(db, review_session.id),
             "upload_problems": None,
             "is_ready": is_ready,

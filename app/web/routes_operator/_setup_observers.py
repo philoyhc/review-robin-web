@@ -327,6 +327,8 @@ def _render_observers_page(
             "existing_count": existing_count,
             "directory_check": views.last_directory_check(db, review_session, "observers"),
             "directory_unmatched": views.unmatched_count(db, review_session, "observers"),
+            # 20I Item 1: a recheck the sign-in stopped asks to renew.
+            "directory_renew_recheck": request.query_params.get("recheck_renew") == "1",
             "upload_problems": views.upload_problems(
                 "observers",
                 issues,
