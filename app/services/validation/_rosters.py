@@ -375,6 +375,79 @@ def _check_observers_duplicate_account(
     return _duplicate_accounts(inputs.observers, source="observers", label="observer", address_attr="email")
 
 
+def _check_reviewees_mirror_drift(
+    db: Session,
+    review_session: ReviewSession,
+    inputs: ValidationInputs,
+) -> Iterable[ValidationIssue]:
+    """Under symmetric review, every reviewer has exactly one reviewee
+    linked to it (``mirrors_reviewer_id``), every reviewee is linked to a
+    reviewer on the roster, and each linked pair agrees on every mirrored
+    field (``symmetric_review.MIRRORED_FIELDS``, compared as the sync
+    writes them). Only a writer that skipped the sync leaves it otherwise
+    (segment 20F). Nothing to check with the mode off."""
+    if not review_session.symmetric_review:
+        return
+    from app.services.symmetric_review import MIRRORED_FIELDS
+
+    reviewers = {r.id: r for r in inputs.reviewers}
+    linked: dict[int, list[Reviewee]] = {}
+    for reviewee in inputs.reviewees:
+        if reviewee.mirrors_reviewer_id in reviewers:
+            linked.setdefault(reviewee.mirrors_reviewer_id, []).append(reviewee)
+        else:
+            yield ValidationIssue(
+                severity=Severity.error,
+                source="reviewees",
+                field="mirrors_reviewer_id",
+                message=(
+                    f"Reviewee '{reviewee.email_or_identifier}' mirrors no reviewer "
+                    "on the roster"
+                ),
+            )
+    for reviewer in inputs.reviewers:
+        mirrors = linked.get(reviewer.id, [])
+        if len(mirrors) != 1:
+            yield ValidationIssue(
+                severity=Severity.error,
+                source="reviewees",
+                field="mirrors_reviewer_id",
+                message=(
+                    f"Reviewer '{reviewer.email}' has no mirrored reviewee"
+                    if not mirrors
+                    else f"Reviewer '{reviewer.email}' is mirrored by {len(mirrors)} reviewees"
+                ),
+                fix_anchor=f"#reviewer-row-{reviewer.id}",
+            )
+            continue
+        differing = [
+            reviewee_field
+            for reviewee_field, reviewer_field in MIRRORED_FIELDS
+            if getattr(mirrors[0], reviewee_field) != getattr(reviewer, reviewer_field)
+        ]
+        if differing:
+            yield ValidationIssue(
+                severity=Severity.error,
+                source="reviewees",
+                field=differing[0],
+                message=(
+                    f"Reviewee '{mirrors[0].email_or_identifier}' differs from its "
+                    f"reviewer in {', '.join(differing)}"
+                ),
+                fix_anchor=f"#reviewer-row-{reviewer.id}",
+            )
+
+
+_MIRROR_DRIFT_WHY = (
+    "Under symmetric review the Reviewees roster is a copy of the "
+    "Reviewers roster, kept in step on every reviewer save. A reviewee "
+    "missing, extra or different from its reviewer means a change "
+    "reached the reviewers without the copy, so assignments and results "
+    "would follow the wrong roster. Saving any reviewer row on the "
+    "Reviewers page brings the copy back into step."
+)
+
+
 _DUPLICATE_ACCOUNT_WHY = (
     "A roster address is resolved through the directory at upload, and a "
     "row bound to an account admits only that account. Two rows on one "

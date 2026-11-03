@@ -60,6 +60,7 @@ _RULE_KEY_GATE: dict[str, Gate] = {
     "reviewees.empty": "setup",
     "reviewees.duplicate_id": "setup",
     "reviewees.duplicate_account": "setup",
+    "reviewees.mirror_drift": "setup",
     "reviewees.unreachable_for_results": "setup",
     "observers.duplicate_email": "setup",
     "observers.duplicate_account": "setup",

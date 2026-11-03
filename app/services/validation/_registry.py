@@ -34,6 +34,8 @@ from app.services.validation._rosters import (
     _DUPLICATE_ACCOUNT_WHY,
     _check_reviewees_unreachable_for_results,
     _check_email_template_no_help_contact,
+    _check_reviewees_mirror_drift,
+    _MIRROR_DRIFT_WHY,
 )
 from app.services.validation._assignments import (
     _check_assignments_no_included_pairs,
@@ -181,6 +183,15 @@ REGISTERED_RULES: tuple[ValidationRule, ...] = (
         fix_url=_reviewees_url,
         fix_page_label="Reviewees Setup",
         check=_check_reviewees_duplicate_account,
+    ),
+    ValidationRule(
+        key="reviewees.mirror_drift",
+        source="reviewees",
+        severity=Severity.error,
+        why=_MIRROR_DRIFT_WHY,
+        fix_url=_reviewers_url,
+        fix_page_label="Reviewers Setup",
+        check=_check_reviewees_mirror_drift,
     ),
     ValidationRule(
         key="reviewees.unreachable_for_results",

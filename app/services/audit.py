@@ -642,6 +642,9 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     ),
     "reviewers.deleted_all": EventSchema(_IDENTITY | {"counts"}),
     "reviewees.deleted_all": EventSchema(_IDENTITY | {"counts"}),
+    # Segment 20F — an unchanged reviewer save that re-ran the symmetric
+    # sync and changed reviewee rows (``reviewers.update_reviewer``).
+    "reviewees.mirror_repaired": EventSchema(_IDENTITY | {"counts", "refs"}),
     "relationships.deleted_all": EventSchema(_IDENTITY | {"counts", "context"}),
     # Segment 15F PR 1 — per-row reviewer authoring + bulk status flips.
     # ``app/services/reviewers.py`` is the sole emitter; the inline-edit
