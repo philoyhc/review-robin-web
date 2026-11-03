@@ -28,7 +28,7 @@ from dataclasses import dataclass
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, User
-from app.services import csv_imports
+from app.services import csv_imports, session_config_io
 from app.services import relationships as relationships_service
 from app.services import session_lifecycle as lifecycle
 
@@ -417,6 +417,20 @@ _SLOT_KEYS = frozenset(
     {"reviewers", "reviewees", "relationships", "observers", "settings"}
 )
 URL_REASONS = frozenset({"refused"})
+
+
+def quick_setup_kept_reviewees(
+    review_session: ReviewSession, contents: dict[str, bytes]
+) -> bool:
+    """Whether a saved submit-all shows the kept-reviewees notice: its
+    Settings file asked for symmetric review, which stayed off beside the
+    session's roster rows, and it brought no Reviewees file, so the
+    session's reviewees were left as they were (segment 20F, findings
+    register L3). Read after the submit's unit committed."""
+    if "settings" not in contents or "reviewees" in contents:
+        return False
+    asked = session_config_io.settings_symmetric_review(contents["settings"])
+    return asked is True and not review_session.symmetric_review
 
 
 def quick_setup_url_failure(

@@ -1130,18 +1130,6 @@ def _slot_response(
     )
 
 
-def _kept_reviewees(review_session: ReviewSession, contents: dict[str, bytes]) -> bool:
-    """Whether a saved submit's Settings file asked for symmetric review,
-    which stayed off beside the session's roster rows, while it brought
-    no Reviewees file: a symmetric session's setup bundle into a session
-    with rows, which leaves the reviewees as they were (segment 20F,
-    findings register L3). The operator is told so."""
-    if "settings" not in contents or "reviewees" in contents:
-        return False
-    asked = session_config_io.settings_symmetric_review(contents["settings"])
-    return asked is True and not review_session.symmetric_review
-
-
 async def _single_slot(
     kind: str,
     file: UploadFile,
@@ -1386,7 +1374,8 @@ async def quick_setup_submit_all(
             held_token=token,
             notice=(
                 "kept_reviewees"
-                if refusal is None and _kept_reviewees(review_session, contents)
+                if refusal is None
+                and views.quick_setup_kept_reviewees(review_session, contents)
                 else None
             ),
         )
