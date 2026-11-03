@@ -82,9 +82,9 @@ Inline JS mirrors the checkbox state into the form's hidden `confirm_replace` in
 - **Turned on beside empty rosters:** the same submit's Reviewers file mirrors, and its Relationships file is checked against that file's reviewers, who will be the reviewees (`relationships.parse_relationship_upload`). A symmetric setup bundle therefore re-imports in one submit.
 - **Turned off:** the same submit's Reviewees file saves.
 
-A refused unit rolls the flip back with the rest. Beside roster rows a file turning it on leaves the mode off (`spec/csv_contracts.md` §3.3).
+- **Beside roster rows, with no Reviewees file** (a symmetric session's setup bundle, which carries none): the submit saves, the mode stays off and the session's reviewees are left as they were. The success redirect carries `?quick_setup_notice=kept_reviewees`, and the card shows a `banner-info` above the slots (`data-quick-setup-kept-reviewees`): "Saved. The Settings file turns on symmetric review, but it stays off here because this session already had roster rows. The submit brought no Reviewees file, so this session's reviewees were left as they were." It scrolls into view and carries a Dismiss, as the other redirect-back banners do (`spec/ui_elements.md` §5a). Session Home reads only that code.
 
-- **Beside roster rows, with no Reviewees file** (a symmetric session's setup bundle, which carries none): the submit saves, the mode stays off and the session's reviewees are left as they were. The success redirect carries `?quick_setup_notice=kept_reviewees`, and the card shows a `banner-info` above the slots (`data-quick-setup-kept-reviewees`): "Saved. The Settings file turns on symmetric review, but it stays off here because this session already had roster rows. The submit brought no Reviewees file, so this session's reviewees were left as they were." Session Home reads only that code.
+A refused unit rolls the flip back with the rest. Beside roster rows a file turning it on leaves the mode off (`spec/csv_contracts.md` §3.3).
 
 **Empty submissions** are clean no-op redirects — submit-all without any input 303s back to Home with no slot fragment.
 

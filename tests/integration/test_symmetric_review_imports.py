@@ -390,6 +390,9 @@ def test_a_symmetric_bundle_into_a_session_with_rows_says_its_reviewees_stay(
     page = client.get(response.headers["location"].split("#")[0]).text
     assert "data-quick-setup-kept-reviewees" in page
     assert "reviewees were left as they were" in page
+    # It scrolls into view and Dismiss drops the code (spec/ui_elements.md §5a).
+    assert "banner-scroll-target" in page.split('id="quick-setup-kept-reviewees-banner"')[0][-200:]
+    assert f'href="/operator/sessions/{target.public_id}#quick-setup"' in page
 
 
 def test_a_symmetric_bundle_into_an_empty_session_says_nothing(
@@ -408,4 +411,58 @@ def test_a_symmetric_bundle_into_an_empty_session_says_nothing(
     assert response.status_code == 303, response.text
     assert "quick_setup_notice" not in response.headers["location"]
     page = client.get(f"/operator/sessions/{target.public_id}").text
+    assert "data-quick-setup-kept-reviewees" not in page
+
+
+def test_a_symmetric_bundle_with_a_reviewees_file_says_nothing(
+    client: TestClient, db: Session
+) -> None:
+    """A Reviewees file in the same submit saves, so nothing was left."""
+    source = _session(client, db, "sym-i-l3r-src")
+    user = _user(db)
+    reviewers.create_reviewer(db, review_session=source, name="Ann", email="ann@example.edu", user=user)
+    db.commit()
+    target = _session(client, db, "sym-i-l3r-target", on=False)
+    reviewers.create_reviewer(db, review_session=target, name="Kim", email="kim@example.edu", user=user)
+    db.commit()
+    files = _bundle_files(db, source)
+    files["reviewees_file"] = (
+        "e.csv", b"RevieweeName,RevieweeEmail\nLee,lee@example.edu\n", "text/csv",
+    )
+    response = client.post(
+        f"/operator/sessions/{target.public_id}/quick-setup/submit-all",
+        files=files,
+        data={"confirm_replace": "true"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    assert "quick_setup_notice" not in response.headers["location"]
+
+
+def test_a_symmetric_bundle_into_a_symmetric_session_says_nothing(
+    client: TestClient, db: Session
+) -> None:
+    """The mode is already on, so the bundle's reviewers mirror."""
+    source = _session(client, db, "sym-i-l3s-src")
+    user = _user(db)
+    reviewers.create_reviewer(db, review_session=source, name="Ann", email="ann@example.edu", user=user)
+    db.commit()
+    target = _session(client, db, "sym-i-l3s-target")
+    reviewers.create_reviewer(db, review_session=target, name="Kim", email="kim@example.edu", user=user)
+    db.commit()
+    response = client.post(
+        f"/operator/sessions/{target.public_id}/quick-setup/submit-all",
+        files=_bundle_files(db, source),
+        data={"confirm_replace": "true"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    assert "quick_setup_notice" not in response.headers["location"]
+
+
+def test_an_unknown_notice_code_shows_nothing(client: TestClient, db: Session) -> None:
+    target = _session(client, db, "sym-i-l3u", on=False)
+    page = client.get(
+        f"/operator/sessions/{target.public_id}?quick_setup_notice=anything"
+    ).text
     assert "data-quick-setup-kept-reviewees" not in page
