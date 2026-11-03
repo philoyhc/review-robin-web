@@ -26,7 +26,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Observer, Reviewee, Reviewer, ReviewSession, User
-from app.services import audit, directory_accounts, symmetric_review
+from app.services import assignments, audit, directory_accounts, symmetric_review
 from app.services import session_lifecycle as lifecycle
 from app.services.session_guard import SessionStateConflict
 
@@ -157,11 +157,16 @@ def recheck(
             setattr(row, name, value)
         db.flush()
         counts[_tally(outcome.status)] += 1
-    if kind == "reviewers":
+    bound = counts["directory_by_mail"] + counts["directory_by_upn"]
+    if kind == "reviewers" and locked.symmetric_review:
+        # The mirror takes the new accounts, then recomputes self-review.
         symmetric_review.sync_reviewees_from_reviewers(db, locked)
+    elif bound and kind in ("reviewers", "reviewees"):
+        # A bound account can make a reviewer and a reviewee one person,
+        # so an assignment between them a self-review (Codex, #3558).
+        assignments.recompute_self_review_classification(db, session_id=locked.id)
 
     reason = directory_accounts.unchecked_reason(outcomes, addresses, checked=checked)
-    bound = counts["directory_by_mail"] + counts["directory_by_upn"]
     audit.write_event(
         db,
         event_type=EVENTS[kind],

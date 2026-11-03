@@ -448,3 +448,36 @@ def test_an_archived_session_is_refused_before_any_lookup(
     db.commit()
     _recheck(client, session.public_id, "reviewers", status=409)
     assert asked == []
+
+
+def test_a_recheck_that_binds_recomputes_self_review(
+    client: TestClient, db: Session, directory: FakeDirectory
+) -> None:
+    """A reviewer at Jane's sign-in name and a reviewee at her mail are
+    two people until the recheck binds both to her account: their
+    assignment becomes a self-review (Codex, #3558)."""
+    from app.db.models import Assignment, User
+    from app.services import directory_recheck
+    from app.services.instruments import ensure_default_instrument
+
+    session = _create_session(client, db, "recheck-selfrev")
+    jane_r = Reviewer(session_id=session.id, name="Jane", email="e0123456@example.edu")
+    jane_e = Reviewee(session_id=session.id, name="Jane", email_or_identifier="jane.tan@example.edu")
+    db.add_all([jane_r, jane_e])
+    db.flush()
+    instrument = ensure_default_instrument(db, session)
+    row = Assignment(
+        session_id=session.id, reviewer_id=jane_r.id, reviewee_id=jane_e.id,
+        instrument_id=instrument.id, is_self_review=False,
+    )
+    db.add(row)
+    db.commit()
+    user = db.execute(select(User).order_by(User.id)).scalars().first()
+    directory_recheck.recheck(db, review_session=session, user=user, kind="reviewers", directory=directory)
+    db.commit()
+    db.expire_all()
+    assert db.get(Assignment, row.id).is_self_review is False  # the reviewee is still unbound
+    directory_recheck.recheck(db, review_session=session, user=user, kind="reviewees", directory=directory)
+    db.commit()
+    db.expire_all()
+    assert db.get(Assignment, row.id).is_self_review is True
