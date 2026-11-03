@@ -1095,16 +1095,19 @@ def _slot_response(
     refusal: _SlotRefusal | None,
     held: dict[str, str] | None = None,
     held_token: str | None = None,
+    notice: str | None = None,
 ) -> HTMLResponse | RedirectResponse:
-    """Back to the slot on Session Home on success; on a refusal, Session
+    """Back to the slot on Session Home on success, with ``notice`` as
+    its ``quick_setup_notice`` code when there is one; on a refusal, Session
     Home rendered again at 422 with the slot's banner and the file's own
     lines, which a URL therefore never carries (findings O7). ``held``
     names the files an ask held, by slot, under ``held_token``
     (segment 19W)."""
 
     if refusal is None:
+        query = f"?quick_setup_notice={notice}" if notice else ""
         return urls.redirect(request,
-            url=f"/operator/sessions/{review_session.public_id}#quick-setup-{kind}",
+            url=f"/operator/sessions/{review_session.public_id}{query}#quick-setup-{kind}",
             status_code=status.HTTP_303_SEE_OTHER,
         )
     return render_session_home(
@@ -1369,6 +1372,12 @@ async def quick_setup_submit_all(
             refusal=refusal,
             held=held_names,
             held_token=token,
+            notice=(
+                "kept_reviewees"
+                if refusal is None
+                and views.quick_setup_kept_reviewees(review_session, contents)
+                else None
+            ),
         )
     return urls.redirect(request,
         url=f"/operator/sessions/{review_session.public_id}",

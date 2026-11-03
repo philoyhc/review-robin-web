@@ -28,7 +28,7 @@ from dataclasses import dataclass
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, User
-from app.services import csv_imports
+from app.services import csv_imports, session_config_io
 from app.services import relationships as relationships_service
 from app.services import session_lifecycle as lifecycle
 
@@ -172,6 +172,13 @@ class QuickSetupContext:
     operator's and session's), so nothing was saved; the card says so
     above the slots (segment 19W)."""
 
+    kept_reviewees: bool = False
+    """The last submit's Settings file asked for symmetric review, which
+    stayed off beside this session's roster rows, and it brought no
+    Reviewees file (a symmetric session's setup bundle carries none):
+    the card says the reviewees were left as they were (segment 20F,
+    findings register L3)."""
+
     external_form_id: str | None = None
     """When set, slot inputs are associated with this external form
     via the HTML ``form="..."`` attribute, and the partial skips
@@ -193,6 +200,7 @@ def build_quick_setup_context(
     held: dict[str, str] | None = None,
     held_token: str | None = None,
     held_lost: bool = False,
+    kept_reviewees: bool = False,
 ) -> QuickSetupContext:
     """Build the Quick Setup card context for Session Home.
 
@@ -398,6 +406,7 @@ def build_quick_setup_context(
         # operator (author, 2026-10-19).
         confirm_replace_checked=_deletion_count > 0,
         held_lost=held_lost,
+        kept_reviewees=kept_reviewees,
     )
 
 
@@ -408,6 +417,20 @@ _SLOT_KEYS = frozenset(
     {"reviewers", "reviewees", "relationships", "observers", "settings"}
 )
 URL_REASONS = frozenset({"refused"})
+
+
+def quick_setup_kept_reviewees(
+    review_session: ReviewSession, contents: dict[str, bytes]
+) -> bool:
+    """Whether a saved submit-all shows the kept-reviewees notice: its
+    Settings file asked for symmetric review, which stayed off beside the
+    session's roster rows, and it brought no Reviewees file, so the
+    session's reviewees were left as they were (segment 20F, findings
+    register L3). Read after the submit's unit committed."""
+    if "settings" not in contents or "reviewees" in contents:
+        return False
+    asked = session_config_io.settings_symmetric_review(contents["settings"])
+    return asked is True and not review_session.symmetric_review
 
 
 def quick_setup_url_failure(

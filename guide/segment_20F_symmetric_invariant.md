@@ -121,6 +121,17 @@ audit row (now `reviewees.mirror_repaired`, from the counts the sync
 returns); and the sync never removed a second reviewee linked to the same
 reviewer.
 
+**Rung 4, L3's notice.** On a Quick Setup submit-all that saves a Settings
+file asking for symmetric review, while the mode stays off beside the
+session's roster rows and no Reviewees file came, the success redirect
+carries `?quick_setup_notice=kept_reviewees`, and the card shows a
+`banner-info` saying the reviewees were left as they were. The per-slot
+routes carry one file, so they cannot bring a bundle and do not ask. Its read
+found the condition and the copy right, and four gaps, all fixed: the banner
+lacked `banner-scroll-target` and a Dismiss (`spec/ui_elements.md` §5a), the
+URL-state table lacked the param, and three no-notice cases had no test. The
+build named two specs the plan did not, now in `## Doc impact`.
+
 ## PR ladder
 
 1. **L2.** The ~~expire~~ `populate_existing` read in `sync_reviewees_from_reviewers`, with the SQLite
@@ -163,5 +174,7 @@ reviewer.
 - `spec/validate_page.md` — the `reviewees.mirror_drift` rule (rung 2).
 - `spec/architecture.md` — "Symmetric review": the rule and the guard beside the sync (rungs 2, 3).
 - `spec/csv_contracts.md` — a symmetric bundle carries no reviewees, and the import says so (rung 4).
+- `spec/quick_setup_card_spec.md` — the kept-reviewees notice on the card (rung 4).
+- `spec/settings_inventory.md` — the `?quick_setup_notice=kept_reviewees` URL param (rung 4).
 - `guide/findings_2026-11-02_assessment.md` — L2 and L3 struck (at close).
 - `guide/todo_master.md` — delete the segment's entry at close.
