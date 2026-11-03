@@ -2,7 +2,7 @@
 
 **Opened:** 2026-11-01, at the author's request · **Theme:** small follow-ups from the author's browser runs, one item each, as 19X was · **Related:** `spec/session_owners.md`, `spec/ui_elements.md`
 
-Items close independently. **Closed 2026-11-03** (author): three items, all done; further refinements go to 20I (`guide/segment_20I_directory_check_followups.md`). The close's `spec-writer` pass confirmed `spec/session_owners.md` and `spec/ui_elements.md` against the code with no edit; `tools/close_check.py` passes for 20C.1–20C.3.
+Items close independently. **Closed 2026-11-03** (author): three items, all done; further refinements go to 20I (`guide/archive/segment_20I_directory_check_followups.md`). The close's `spec-writer` pass confirmed `spec/session_owners.md` and `spec/ui_elements.md` against the code with no edit; `tools/close_check.py` passes for 20C.1–20C.3.
 
 ## Item 1 — Verified names as pills on the New session Owners card
 

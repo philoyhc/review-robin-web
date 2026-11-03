@@ -4,6 +4,8 @@
 
 Items close independently. The segment closes when the author says no more are coming.
 
+**Closed 2026-11-03** (author: close if nothing is left). Four items, PRs #3556 → #3562. Left open: where an activated session's Reviewers and Reviewees surface the recheck, the author's call, recorded in `guide/deferred_consolidated.md`.
+
 **Ruled, not planned** (author, 2026-11-03): a not-checked count with a cause ("the directory refused this account's access", "the directory was busy") stays on the directory-check line, with no banner. The rows saved, so nothing is wrong with the upload; the cure is Item 1.
 
 ## Item 1 — Check a roster's unmatched addresses again, on demand
