@@ -40,11 +40,13 @@ PROSE_DIRS = (
     "docs/",
     "guide/",
     "cordware/spec/",
+    "cordware/docs/",
     *(app + sub for app in APP_DIRS for sub in APP_PROSE),
 )
 # A README anywhere is prose, except in what ships to the host: the deploy
 # artefact and Cordware's import carry these folders. Their prose folders
-# (``cordware/spec/``, each app's ``docs/``, ``guide/`` and ``spec/``) stay prose.
+# (``cordware/spec/`` and ``cordware/docs/``, each app's ``docs/``, ``guide/``
+# and ``spec/``) stay prose.
 README = "README.md"
 PROSE_FILES = frozenset(app + README for app in APP_DIRS)
 SHIPPED_DIRS = ("app/", "alembic/", "cordware/", *APP_DIRS)
@@ -84,7 +86,7 @@ NOT_PROSE_READERS = {
     "residentialapps/tests/test_preview_gate.py": "writes and reads a temporary preview list, not prose; the residential lane runs it",
 }
 PROSE_LITERAL = re.compile(
-    r"""["'](?:spec|docs|guide|cordware/spec|(?:"""
+    r"""["'](?:spec|docs|guide|cordware/(?:spec|docs)|(?:"""
     + "|".join(app.rstrip("/") for app in APP_DIRS)
     + r""")/(?:docs|guide|spec|README\.md))(?:/[^"'\n]*)?["']"""
     r"""|["'][A-Za-z0-9_-]+\.md["']"""

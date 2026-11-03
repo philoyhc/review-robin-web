@@ -31,6 +31,8 @@ _spec.loader.exec_module(ci_lanes)
         "utilityapps/README.md",
         "tools/README.md",
         "cordware/spec/README.md",
+        "cordware/docs/cordware_mobile_to_desktop.md",
+        "cordware/docs/README.md",
         "CLAUDE.md",
         "README.md",
     ],
@@ -53,6 +55,7 @@ def test_prose_paths(path):
         "guide/theme_preview.html",
         "cordware/main.py",
         "cordware/NOTES.md",  # Markdown, but not in a prose folder or a README
+        "cordware/docs/diagram.png",  # a prose folder, but not Markdown
         "app/README.md",  # ships with the app
         "app/web/static/guide/README.md",
         "alembic/README.md",
