@@ -87,15 +87,30 @@ def test_a_reviewee_mirroring_no_reviewer_is_reported(client: TestClient, db: Se
     ]
 
 
-def test_a_reviewer_save_brings_the_copy_back_into_step(client: TestClient, db: Session) -> None:
-    """The rule's fix line: any reviewer save re-runs the sync."""
-    from app.services import symmetric_review
-
+def test_saving_a_reviewer_unchanged_brings_the_copy_back_into_step(
+    client: TestClient, db: Session
+) -> None:
+    """The rule's fix line, through the page: saving a reviewer row with
+    nothing changed re-runs the sync (Codex on #3535: ``update_reviewer``
+    returned before the sync when nothing changed, so the advice repaired
+    nothing)."""
     review_session = _session(client, db, "md-fix")
     _reviewee(db, review_session, "ann@example.edu").name = "Anne"
     db.commit()
-    symmetric_review.sync_reviewees_from_reviewers(db, review_session)
-    db.commit()
+    ann = db.execute(
+        select(Reviewer).where(
+            Reviewer.session_id == review_session.id, Reviewer.email == "ann@example.edu"
+        )
+    ).scalar_one()
+    response = client.post(
+        f"/operator/sessions/{review_session.public_id}/reviewers/{ann.id}/update",
+        data={
+            "name": "Ann", "email": "ann@example.edu", "profile_link": "",
+            "tag_1": "", "tag_2": "", "tag_3": "", "status": "active",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code in (200, 303)
     assert _drift(db, review_session) == []
 
 

@@ -334,6 +334,15 @@ def update_reviewer(
             changes[field] = [old_value, new_value]
 
     if not changes:
+        # A save that changes nothing still re-runs the symmetric-review
+        # sync: it is how an operator repairs a mirror Validate reports as
+        # out of step (``reviewees.mirror_drift``'s fix line; Codex on
+        # #3535). A no-op with the mode off or a mirror already in step.
+        if reviewer.session.symmetric_review:
+            symmetric_review.sync_reviewees_from_reviewers(
+                db, reviewer.session, acknowledged_loss=acknowledged_loss
+            )
+            db.commit()
         return {}
 
     lifecycle.invalidate_if_validated(
