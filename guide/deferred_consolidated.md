@@ -554,7 +554,7 @@ benchmark argues for; this trigger stays only for the preview path.
 
 **Wire-up.** New module function in
 `app/services/rules/engine.py`; `find_sample_in_scope_reviewee`
-in `app/services/instruments/_band1.py` switches over (currently
+in `app/services/instruments/_preview.py` switches over (currently
 calls `engine.evaluate(...)` and takes `result.pairs[0]`).
 No schema change; no template change. Unit test covers (a) the
 fast-path return for typical rules, (b) parity with

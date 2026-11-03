@@ -1087,7 +1087,7 @@ Renders one sample reviewee inline, using the operator's
 currently-selected display fields. The sample is picked by the
 server (first surviving reviewee under current Link 1 + Link 2
 + Link 3 rules — see `find_sample_in_scope_reviewee` in
-`_band1.py`); the operator clicks **↻ Refresh sample** to pick
+`_preview.py`); the operator clicks **↻ Refresh sample** to pick
 a new one after editing the rules. In view mode the preview
 re-renders from the saved state without a refresh button.
 

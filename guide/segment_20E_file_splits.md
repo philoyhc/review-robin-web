@@ -131,7 +131,12 @@ that reads the function's source now reads it from `_preview`.
 register. The email template's help-contact rule sits with the session
 and roster rules. `tests/integration/test_readiness_report_cost.py`
 attributes queries to the report by package rather than by file. Rung 4
-took one read, at 4b, on the cumulative diff since `6232070a`.
+took one read, at 4b, on the cumulative diff since `6232070a`. It found
+both moves faithful but for one hoisted import: `find_sample_in_scope_reviewee`'s
+function-local `from pydantic import TypeAdapter` now sits at `_preview.py`'s
+top, which changes nothing. Its other findings, an orphaned comment, four
+stale pointers and an import-order test narrower than this Status said,
+were fixed.
 
 ## PR ladder
 

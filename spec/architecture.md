@@ -157,7 +157,7 @@ three-layer separation (mirrors CLAUDE.md "Architecture at a glance"):
      (`REGISTERED_RULES`, `validate_session_setup`).
    - `app/services/rules/` — the pure rule engine (`engine.py`,
      `predicates.py`, `quotas.py`, `fields.py`).
-   Other notable services: `session_lifecycle.py`, `validation.py`,
+   Other notable services: `session_lifecycle.py`,
    `visibility_policies.py`, `observers.py` / `observer_cohort.py`,
    `participant_tokens.py`, `audit.py`, the `extracts/` package, the
    `scheduled_events/` package, and `session_config_io/`.
@@ -351,7 +351,7 @@ route or helper that redirects takes `request`.
   (`app/web/return_to.py`). Pages put `here()` in it, never the
   prefixed `request.url.path`; the prefix is added when the value is
   finally emitted as a link or redirect.
-- **Services may build app-relative URL strings** (`services/validation.py`'s
+- **Services may build app-relative URL strings** (`services/validation/`'s
   `fix_url`); templates add the prefix. A service never imports
   `app.web.urls`.
 - **Absolute links** (`request.url_for("reviewer_invite", …)`, the

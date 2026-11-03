@@ -14,7 +14,6 @@ from sqlalchemy.orm import Session
 from app.db.models import Instrument, SessionRuleSet
 
 
-# UI operator label → engine predicate operator.
 from app.services.instruments._band1 import _build_rules_json
 
 
