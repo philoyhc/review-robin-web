@@ -64,14 +64,7 @@ is the author's call.
    fields back on. Planned when IT answers; see
    `guide/no_scheduling_fallback.md`.
 
-5. **20I — Directory check follow-ups and refinements** (not gated).
-   Opened 2026-11-03 from the banner and countdown checks; stays open
-   for further refinements, as 20C did. Items 1 (the recheck), 2
-   (countdown batches), 3 and 4 (spacing) are done; the segment
-   closes when the author says no more refinements are coming.
-   **Plan:** `guide/segment_20I_directory_check_followups.md`.
-
-6. **22C — A type checker: pyright** (not gated). Pyright in basic mode
+5. **22C — A type checker: pyright** (not gated). Pyright in basic mode
    over application code, fixed cluster by cluster, then a CI gate;
    ruff's rule set widened first.
    **Plan:** `guide/segment_22C_pyright.md`.
