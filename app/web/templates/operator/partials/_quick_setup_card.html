@@ -209,6 +209,7 @@
     {% if quick_setup.directory_renew %}
       {% with directory_renew = True,
               directory_renew_form = submit_all_form_id,
+              directory_renew_action = "submit",
               directory_renew_dismiss_url = url("/operator/sessions/" ~ session.public_id ~ "/quick-setup/dismiss") %}
         {% include "operator/partials/_directory_renew.html" %}
       {% endwith %}

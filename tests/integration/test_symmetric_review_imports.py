@@ -11,6 +11,8 @@ extract's reviewees.csv.
 
 from __future__ import annotations
 
+from cordware.graph import FakeDirectory
+
 import csv
 import io
 import zipfile
@@ -164,7 +166,7 @@ def test_rehydrate_rebuilds_the_reviewees_from_the_reviewers(client: TestClient,
         ]),
         "responses.csv": _csv(serialize_responses(db, review_session)),
     }
-    outcome = session_rehydrate.rehydrate_session(db, files=files, user=user)
+    outcome = session_rehydrate.rehydrate_session(db, files=files, user=user, directory=FakeDirectory())
     rehyd = outcome.session
     assert rehyd.symmetric_review is True
     assert [e.email_or_identifier for e in _reviewees(db, rehyd)] == ["ann@example.edu"]
@@ -257,7 +259,7 @@ def test_rehydrate_takes_a_symmetric_set_without_reviewees_csv(client: TestClien
     report = session_rehydrate.analyze_rehydrate_set(db, files=files, user=user)
     assert report.ok, report.errors
     assert report.preview["reviewees"] == 1
-    outcome = session_rehydrate.rehydrate_session(db, files=files, user=user)
+    outcome = session_rehydrate.rehydrate_session(db, files=files, user=user, directory=FakeDirectory())
     assert [e.email_or_identifier for e in _reviewees(db, outcome.session)] == ["ann@example.edu"]
 
 

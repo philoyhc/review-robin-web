@@ -105,6 +105,21 @@ Observers, and above the slots on Quick Setup's card
 *Renew sign-in and upload* (Primary) and a Dismiss that ends the hold.
 Relationships has no directory check. Nothing sets the flag yet.
 
+**Between rungs 2 and 3, the banner audit** (author, 2026-11-03: "make an
+audit of all the banners that appear in these upload cards"): every
+upload-card banner now stacks under the card's intro, problems, renew,
+group clear (#3546); the group-clear ask had touched the tick fieldset.
+
+**Rung 3, wired.** The roster routes, Observers, Quick Setup's submit-all
+(reason `views.DIRECTORY_SIGN_IN`, one of `_ASKS`) and rehydrate
+(`RehydrateSignInStopped`, the stash kept) refuse on a sign-in stop and
+hold; the button renews through `cordwareRenewGraph()` and submits the
+named form again, a failed renewal saying to sign out and in. M1's
+keep-the-account path is now reached by an outage or throttling only.
+The integration suite's default directory is `FakeDirectory`
+(`conftest.py`), so "no token" is something a test asks for; two tests'
+counts changed with it.
+
 ## PR ladder
 
 1. **The check records why.** `DirectoryCheck` gains the stop kind from
@@ -136,9 +151,8 @@ Relationships has no directory check. Nothing sets the flag yet.
 
 ## Open questions
 
-- **Renew automatically?** The button could renew and resubmit without
-  asking. Proposed: a button, so the operator sees why. Author, at the
-  scaffold.
+- ~~**Renew automatically?**~~ A button (author, 2026-11-03, at the
+  scaffold).
 - **The budget:** keep 120 s, or lower it once the bench reports? After
   rung 5. Author.
 - **The real timing — taken** (author, 2026-11-03, 19Z walkthrough
@@ -159,6 +173,8 @@ Relationships has no directory check. Nothing sets the flag yet.
 
 - `spec/setup_pages.md` — the Upload card's renew-and-upload state (rungs 2–3).
 - `spec/csv_contracts.md` — §3.1: a sign-in stop saves nothing and holds the file (rung 3).
+- `spec/quick_setup_card_spec.md` — the sign-in stop holds the submit and shows the renew banner (rung 3).
+- `spec/rehydrate.md` — a sign-in stop keeps the stash and asks to renew (rung 3).
 - `cordware/spec/identity.md` — object ids stored normalized; matching without case folding (rung 4).
 - `docs/performance.md` — the directory check's bench figures (rung 5).
 - `guide/todo_master.md` — delete the segment's entry at close.

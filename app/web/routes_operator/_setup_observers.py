@@ -128,6 +128,7 @@ def _render_observers_page(
     append_checked: bool = False,
     merge_checked: bool = False,
     both_ticks: bool = False,
+    directory_renew: bool = False,
     http_status: int = status.HTTP_200_OK,
 ) -> HTMLResponse:
     """Render the Observers Setup page.
@@ -339,6 +340,7 @@ def _render_observers_page(
             # Segment 19Z: the append tick, re-ticked on an ask's render.
             "append_checked": append_checked,
             "merge_checked": merge_checked,
+            "directory_renew": directory_renew,
             "is_ready": is_ready,
             # Segment 19I Item 3 — the gate on the selection surface.
             # ``is_ready`` is only ``status == "ready"``, so gating on it
@@ -963,6 +965,7 @@ async def observers_import_submit(
         missing_confirm: bool = False,
         both_ticks: bool = False,
         held_upload: dict[str, str] | None = None,
+        directory_renew: bool = False,
     ) -> HTMLResponse:
         # `panel_open=True`: this path re-renders the page in place and
         # returns 400 WITH it, so `?unlocked=1` cannot reach it. Left
@@ -994,6 +997,7 @@ async def observers_import_submit(
             ),
             append_checked=held_upload is not None and appending and not both_ticks,
             merge_checked=held_upload is not None and merging and not both_ticks,
+            directory_renew=directory_renew,
             http_status=status_code,
         )
 
@@ -1036,6 +1040,14 @@ async def observers_import_submit(
         directory_or_none(request),
         [row.email for row in result.rows],
     )
+    # Segment 20G: a check the sign-in stopped saves nothing; the file is
+    # held and the card asks to renew and upload again.
+    if directory_check.stopped:
+        return render(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            held_upload=ask(),
+            directory_renew=True,
+        )
     # Segment 19Z: an append refuses a row already on the roster, or on
     # a directory account already there; the save checks again under
     # the session lock.

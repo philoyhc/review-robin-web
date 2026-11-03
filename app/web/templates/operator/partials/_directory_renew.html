@@ -1,27 +1,68 @@
-{# Segment 20G rung 2 — SCAFFOLD. A roster upload whose directory check
-   stopped on the sign-in (`DirectoryCheck.stopped`: no token, or Graph
-   refused it) saves nothing, holds the file and shows this in the card's
-   banner stack, above the form (`spec/setup_pages.md` "The Upload card's
-   banners"). It sits outside the form, so `directory_renew_form` names it
-   and the held file goes with the buttons' submits. The renew button is
-   inert until rung 3 wires it to `cordwareRenewGraph()` and a resubmit.
-   Shown while `directory_renew` is set; no route sets it yet. Dismiss
-   ends the hold, as the upload banners' Dismiss does. The caller passes
-   `directory_renew_dismiss_url` app-relative or already through `url()`,
-   which is idempotent; this applies it. #}
+{# Segment 20G. An upload whose directory check stopped on the sign-in
+   (`DirectoryCheck.stopped`: no token, or Graph refused it) saves
+   nothing, holds its file and shows this in the card's banner stack
+   (`spec/setup_pages.md` "The Upload card's banners"). It sits outside
+   the form, so `directory_renew_form` names it, and the held file (or
+   Quick Setup's held files, or rehydrate's stashed set) goes with the
+   submit. The button renews the delegated Graph token through
+   `cordwareRenewGraph()` (base.html) and, when that answers, submits the
+   form again; a renewal that fails says so and leaves the hold alone.
+   A button rather than an automatic renew, so the operator sees why the
+   upload stopped (author, 2026-11-03).
+
+   `directory_renew_action` names what the button does again ("upload",
+   "submit", "rehydrate"). Dismiss ends the hold: a submit to
+   `directory_renew_dismiss_url`, as the upload banners' Dismiss is, or a
+   plain link to `directory_renew_dismiss_href` where there is no hold to
+   end. Both are app-relative or already through `url()`, which is
+   idempotent; this applies it. #}
 {% if directory_renew %}
+  {% set renew_action = directory_renew_action or "upload" %}
   <div class="banner banner-warning banner-scroll-target" role="alert"
        data-directory-renew>
     <p class="banner-lead">Nothing was saved. Your sign-in to the directory had
-      expired, so this file's addresses could not be checked.</p>
-    <p>Renew the sign-in and the held file uploads again, with every
-      address checked.</p>
+      expired, so the addresses could not be checked.</p>
+    <p>Renew the sign-in to {{ renew_action }} again, with every address
+      checked.</p>
+    <p class="form-help" data-directory-renew-failed hidden>The sign-in
+      could not be renewed here. Sign out and in again, then
+      {{ renew_action }} again.</p>
     <div class="banner-actions">
       <button type="button" class="btn" data-directory-renew-upload
-              {% if directory_renew_form %}form="{{ directory_renew_form }}" {% endif %}disabled aria-disabled="true">Renew sign-in and upload</button>
-      <button type="submit" class="btn secondary"
-              {% if directory_renew_form %}form="{{ directory_renew_form }}" {% endif %}formaction="{{ url(directory_renew_dismiss_url) }}" formnovalidate
-              data-directory-renew-dismiss>Dismiss</button>
+              {% if directory_renew_form %}form="{{ directory_renew_form }}"{% endif %}>Renew sign-in and {{ renew_action }}</button>
+      {% if directory_renew_dismiss_href %}
+        <a class="btn secondary" href="{{ url(directory_renew_dismiss_href) }}"
+           data-directory-renew-dismiss>Dismiss</a>
+      {% else %}
+        <button type="submit" class="btn secondary"
+                {% if directory_renew_form %}form="{{ directory_renew_form }}" {% endif %}formaction="{{ url(directory_renew_dismiss_url) }}" formnovalidate
+                data-directory-renew-dismiss>Dismiss</button>
+      {% endif %}
     </div>
   </div>
+  <script>
+    // Renew, then send the held file again (segment 20G). The form is
+    // the button's own (`form=`), so this works outside it too.
+    (function () {
+      var button = document.currentScript.previousElementSibling
+        .querySelector("[data-directory-renew-upload]");
+      var failed = document.currentScript.previousElementSibling
+        .querySelector("[data-directory-renew-failed]");
+      button.addEventListener("click", function () {
+        var form = button.form;
+        if (!form || !window.cordwareRenewGraph) return;
+        button.disabled = true;
+        button.setAttribute("aria-disabled", "true");
+        window.cordwareRenewGraph().then(function (ok) {
+          if (ok) {
+            if (form.requestSubmit) form.requestSubmit(); else form.submit();
+            return;
+          }
+          failed.hidden = false;
+          button.disabled = false;
+          button.removeAttribute("aria-disabled");
+        });
+      });
+    })();
+  </script>
 {% endif %}

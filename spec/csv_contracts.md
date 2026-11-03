@@ -375,17 +375,24 @@ token (`cordware.graph.look_up_all`, `cordware/spec/identity.md`
   `utilityapps/spec/email_check.md` "Classification") stores
   `directory_object_id`, `directory_mail` and `directory_upn` beside the
   address as written. Any other outcome (`NOT_FOUND`, `AMBIGUOUS`,
-  `ERROR`, no delegated token, a lookup unfinished at the time budget,
-  or an identifier that is not an address) stores none of them, and the
-  row matches by mail. **On a replace**, an address the directory gave no
-  answer for (`ERROR`, no delegated token, a lookup unfinished at the
-  budget) keeps the account the replaced row at the same folded address
-  was bound to, unless the directory bound another of the file's rows to
-  that account. An answered `NOT_FOUND` or `AMBIGUOUS` stores none. The
+  `ERROR`, a lookup unfinished at the time budget, or an identifier
+  that is not an address) stores none of them, and the row matches by
+  mail. **On a replace**, an address the directory gave no answer for
+  (`ERROR`, a lookup unfinished at the budget) keeps the account the
+  replaced row at the same folded address was bound to, unless the
+  directory bound another of the file's rows to that account. An answered `NOT_FOUND` or `AMBIGUOUS` stores none. The
   address column is never rewritten. Matching
   is `spec/audience_and_identity_model.md` "Identity match".
-- **No token** (or fake auth off on a local run) checks nothing and the
-  import proceeds.
+- **A sign-in stop saves nothing** (segment 20G). When the check stops
+  on the sign-in, because there is no delegated token or Graph refused it
+  (`unauthorized`, `forbidden`; `DirectoryCheck.stopped`), the import
+  writes nothing. It holds the file and asks the operator to renew the
+  sign-in and upload again (`spec/setup_pages.md` "The Upload card's
+  renew ask"). Quick Setup's submit-all holds every file of the submit
+  and asks the same way, and rehydrate keeps its stashed set and asks
+  to renew and rehydrate. Any other failure (throttling, an outage, the
+  budget) saves as above. A local run's fake directory answers every
+  lookup.
 - **Audit counts.** The `*.imported` event's `counts` gains, over the
   file's distinct addresses: `directory_by_mail`, `directory_by_upn`
   (`USE_PRIMARY` and `FOUND_NO_PRIMARY`), `directory_not_found`,

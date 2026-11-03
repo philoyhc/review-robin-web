@@ -399,10 +399,14 @@ instrument uses imports as stored.
    (`spec/csv_contracts.md` §3.1, *Directory resolution*): all three
    rosters are parsed first, then their addresses looked up in one lookup
    under one budget through the operator's delegated Graph token
-   (`rehydrate_session(directory=...)`; `None` checks nothing, and every
-   row matches by mail). Each roster's `*.imported` event records its
-   `directory_*` counts. Without this the rebuilt session would match
-   everyone by mail alone.
+   (`rehydrate_session(directory=...)`). Each roster's `*.imported`
+   event records its `directory_*` counts. Without this the rebuilt
+   session would match everyone by mail alone. **A sign-in stop**
+   (`None`, no delegated token, or Graph refusing it; segment 20G)
+   raises `RehydrateSignInStopped`: nothing is created, as for any
+   failure ([§7](#7-atomicity-and-audit)), but the page keeps the stash
+   and its token and asks to renew the sign-in and rehydrate again
+   (`spec/setup_pages.md` "The Upload card's renew ask").
 
    **The cross-roster identity check does not run here**: this step
    calls the `save_*` functions directly, while the check sits on the

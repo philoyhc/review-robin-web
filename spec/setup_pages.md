@@ -1037,6 +1037,24 @@ clear's tick, a Dismiss that ends a hold) names `upload-csv-form` with
 margin 16px between banners and below the last (author, 2026-11-03).
 `tests/unit/test_upload_card_banners.py` pins the order.
 
+### The Upload card's renew ask
+
+On Reviewers, Reviewees and Observers, an upload whose directory check
+stopped on the sign-in (`spec/csv_contracts.md` §3.1) saves nothing and
+answers 400 with the card again: the file held (segment 19W), the mode
+ticks as they were, and a `banner-warning` in the banner stack
+(`partials/_directory_renew.html`, `data-directory-renew`): "Nothing was
+saved. Your sign-in to the directory had expired, so the addresses could
+not be checked." Its **Renew sign-in and upload** (Primary) renews the
+delegated Graph token (`cordwareRenewGraph()`, `base.html`) and, when
+that answers, submits the form again with the held file. A renewal that
+fails shows a line asking to sign out and in again. **Dismiss** ends the
+hold. It is a button rather than an automatic renew, so the operator
+sees why the upload stopped (author, 2026-11-03). Quick Setup's card
+shows the same banner above its slots ("Renew sign-in and submit"), and
+the Rehydrate page shows it in its upload card ("Renew sign-in and
+rehydrate", Dismiss a link back to the page).
+
 ### The Upload card's directory-check line
 
 The Reviewers, Reviewees and Observers upload cards show one muted line

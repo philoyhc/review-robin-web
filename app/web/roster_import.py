@@ -262,6 +262,7 @@ async def _handle_import(
         both_ticks: bool = False,
         held_upload: dict[str, str] | None = None,
         group_clear: dict[str, object] | None = None,
+        directory_renew: bool = False,
     ) -> HTMLResponse:
         context: dict[str, object] = {
             # These two are the ids the page's own controls point at.
@@ -325,6 +326,9 @@ async def _handle_import(
             # (author, 2026-10-19).
             "held_upload": held_upload,
             "held_upload_lost": upload.lost,
+            # Segment 20G: the check stopped on the sign-in, so nothing
+            # was saved and the file is held; the card asks to renew.
+            "directory_renew": directory_renew,
             "confirm_replace_checked": (
                 held_upload is not None and confirm_replace == "true" and not both_ticks
             ),
@@ -506,6 +510,15 @@ async def _handle_import(
         _shared.directory_or_none(request),
         [roster_address(row) for row in result.rows],
     )
+    # Segment 20G: a check the sign-in stopped (no token, or Graph refused
+    # it) saves nothing. The file is held, and the card asks to renew the
+    # sign-in and upload again, every address checked.
+    if directory_check.stopped:
+        return render(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            held_upload=ask(),
+            directory_renew=True,
+        )
     # Segment 19Z: an append refuses a row already on the roster, or on
     # a directory account already there, as the file's problems. The
     # save checks again under the session lock.

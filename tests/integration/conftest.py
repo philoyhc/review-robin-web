@@ -322,3 +322,17 @@ def committed_client(
         yield TestClient(app)
     finally:
         app.dependency_overrides.clear()
+
+
+@pytest.fixture(autouse=True)
+def _signed_in_to_the_directory(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Segment 20G: every request reaches the directory as a signed-in
+    operator does, through `cordware.graph.FakeDirectory`. With no token
+    at all an upload's check stops on the sign-in and the file is held
+    (`DirectoryCheck.stopped`), so a test that wants that patches
+    `_shared.directory_or_none` to answer ``None``."""
+    from cordware.graph import FakeDirectory
+
+    from app.web.routes_operator import _shared
+
+    monkeypatch.setattr(_shared, "directory_for", lambda request, *a, **k: FakeDirectory())
