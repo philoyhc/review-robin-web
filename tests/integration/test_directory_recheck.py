@@ -319,3 +319,32 @@ def test_under_symmetric_review_the_reviewers_recheck_reaches_the_mirror(
     assert "data-directory-recheck" not in client.get(
         f"/operator/sessions/{session.public_id}/reviewees?unlocked=1"
     ).text
+
+
+# --- rung 3: the countdown's keys for a recheck ---
+
+
+def test_the_recheck_keys_are_every_unmatched_address_kept_or_not(
+    client: TestClient, db: Session, directory: FakeDirectory
+) -> None:
+    """A recheck asks afresh: `directory-keys` names every unmatched
+    row's key, even one whose answer the upload's countdown kept."""
+    session = _create_session(client, db, "recheck-keys")
+    _upload(
+        client,
+        session.public_id,
+        "reviewers",
+        "ReviewerName,ReviewerEmail\nJane,e0123456@example.edu\nNobody,Nobody@Example.edu\n"
+        "Gone,gone@example.edu\n",
+    )
+    lookup = client.post(
+        f"/operator/sessions/{session.public_id}/directory-lookup",
+        json={"keys": ["nobody@example.edu"]},
+    )
+    assert lookup.status_code == 200  # now kept
+    response = client.post(
+        f"/operator/sessions/{session.public_id}/directory-keys",
+        data={"roster": "reviewers", "recheck": "true"},
+    )
+    assert response.status_code == 200
+    assert response.json() == {"keys": ["nobody@example.edu", "gone@example.edu"]}

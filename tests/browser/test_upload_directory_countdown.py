@@ -118,3 +118,44 @@ def test_a_failed_lookup_stops_the_count_and_uploads(
     page.wait_for_load_state("load")
     assert 1 <= len(sent) <= 4  # the first answer stops the rest
     expect(page.locator("[data-directory-check]")).to_contain_text("matched by mail")
+
+
+def test_the_recheck_counts_down_every_unmatched_address_then_rechecks(
+    page: Page, new_session: Callable[[], str], tmp_path: Path
+) -> None:
+    """Segment 20I Item 1: "Recheck N unmatched" counts the roster's
+    unmatched addresses down as an upload does, asking for each afresh
+    though the upload's answers are still kept, then posts the recheck."""
+    session_id = new_session()
+    roster = tmp_path / "reviewers.csv"
+    roster.write_text(
+        "ReviewerName,ReviewerEmail\n"
+        + "\n".join(f"P{i},{a}" for i, a in enumerate(ADDRESSES)) + "\n"
+    )
+    page.add_init_script(_RECORD)
+    page.goto(app_url(f"/operator/sessions/{session_id}/reviewers?unlocked=1"))
+    page.locator("#upload-csv-form input[name=file]").set_input_files(str(roster))
+    with page.expect_navigation():
+        page.locator("#upload-csv-form .unlock-col-actions button[type=submit]:not([data-directory-recheck])").click()
+    page.wait_for_load_state("load")
+    _seen(page)
+
+    unmatched = [a for a in ADDRESSES if a != "e0123456@example.edu"]
+    looked_up: list[str] = []
+    page.on(
+        "request",
+        lambda r: looked_up.extend(json.loads(r.post_data)["keys"])
+        if r.url.endswith("/directory-lookup") else None,
+    )
+    button = page.locator("[data-directory-recheck]")
+    expect(button).to_have_text(f"Recheck {len(unmatched)} unmatched")
+    with page.expect_navigation():
+        button.click()
+    page.wait_for_load_state("load")
+
+    assert sorted(looked_up) == sorted(unmatched)
+    seen = _seen(page)
+    assert seen[0] == len(unmatched) and seen[-1] == 0
+    assert seen == sorted(seen, reverse=True)
+    expect(page.locator("[data-directory-check]")).to_contain_text("Recheck of the unmatched addresses")
+    expect(page.locator("[data-directory-check]")).to_contain_text("4 not found, 1 ambiguous")

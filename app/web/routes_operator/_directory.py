@@ -74,6 +74,7 @@ async def roster_directory_keys(
     roster: str = Form(...),
     file: UploadFile | None = File(None),
     held_token: str | None = Form(None),
+    recheck: str | None = Form(None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -81,11 +82,27 @@ async def roster_directory_keys(
     """The file's lookup keys not yet answered within the cache's life:
     what the countdown has left to look up. The file (or the held one)
     is parsed by its roster's own parser; a file that does not parse
-    answers no keys, and the upload then shows its problems. Saves
+    answers no keys, and the upload then shows its problems. With
+    ``recheck`` (segment 20I Item 1), every key of the roster's
+    unmatched rows instead, kept or not, and no file is read. Saves
     nothing but the sweep of stale answers."""
     parse = ROSTER_PARSERS.get(roster)
     if parse is None:
         return _error(404, "unknown_roster")
+    if recheck == "true":
+        if roster not in directory_recheck.ROSTERS:
+            return _error(404, "unknown_roster")
+        directory_lookups.sweep(db)
+        db.commit()
+        # Every unmatched key, kept answers or not: a recheck asks for
+        # a fresh answer, and the POST then reads the ones just fetched.
+        addresses = directory_recheck.unmatched_addresses(
+            db, session_id=review_session.id, kind=roster
+        )
+        keys = list(dict.fromkeys(
+            k for k in (directory_accounts.key(a) for a in addresses) if k is not None
+        ))
+        return JSONResponse({"keys": keys}, headers=_NO_STORE)
     upload = await read_upload(
         db, file=file, held_token=held_token, user=user,
         review_session=review_session, slot=roster,
