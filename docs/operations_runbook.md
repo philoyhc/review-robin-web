@@ -118,6 +118,15 @@ question), or when the operator dismisses the ask; with its
 session or its operator's `users` row; and by the sweep each new hold
 runs first.
 
+The roster Upload card's countdown keeps no file, but it keeps the
+**directory answers** it fetched, in the `directory_lookups` table, so
+the upload that follows does not ask Graph again: per operator, session
+and address, the account an address resolved to (object ID, mail,
+sign-in name, display name), or that it was not found or ambiguous.
+An answer stands for 15 minutes. Stale ones are deleted by the sweep
+each countdown runs first, and every one goes with its session or its
+operator's `users` row.
+
 ### Data retention
 
 What the application database holds and how it is removed:

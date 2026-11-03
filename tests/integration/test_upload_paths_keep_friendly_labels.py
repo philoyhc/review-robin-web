@@ -362,6 +362,10 @@ def test_a_bare_header_on_quick_setup_clears_the_override(
 #: endpoint that is in neither this map nor ``UPLOAD_PATHS`` fails the
 #: gate, which is the whole point of it.
 EXEMPT_ENDPOINTS: dict[str, str] = {
+    "app.web.routes_operator._directory.roster_directory_keys": (
+        "Parses the file only to name its addresses for the upload's "
+        "countdown (20H Item 6); saves no roster."
+    ),
     "app.web.routes_operator._setup_observers.observers_import_submit": (
         "Observers carry no friendly labels by design — "
         "`parse_observer_csv` discards the captured map and "

@@ -313,8 +313,13 @@ Open. Base for the cumulative read: `bb7443bf` (main before rung 1).
   and answers its uncached keys through the roster's own parser. The
   cache is a table, as held uploads are, since the lookups and the upload
   may land on different instances.
+- Rung 2: `directory_lookups` (table, migration `b7d4e2a9c1f3`, service);
+  `directory-keys` and `directory-lookup` in `_directory.py`; the three
+  uploads hand the kept answers to `directory_check` as `known`.
+  `tests/integration/test_directory_countdown.py`.
 
 ### Doc impact
 
 - `spec/setup_pages.md` — the Upload card's countdown and its no-script path (Item 6).
+- `docs/operations_runbook.md` — the `directory_lookups` table among what the database keeps, and for how long (Item 6).
 
