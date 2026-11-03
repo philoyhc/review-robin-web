@@ -28,7 +28,7 @@ from app.db.models import (
     ReviewSession,
     User,
 )
-from app.services import assignments, csv_imports
+from app.services import assignments, csv_imports, directory_lookups
 from app.services import field_labels as field_labels_service
 from app.services import (
     held_uploads,
@@ -505,10 +505,16 @@ async def _handle_import(
     # Segment 21F: each address resolved through the directory on the
     # operator's token, at the save and not at an ask, so a held file is
     # looked up once. Off the event loop, as the lookups block.
+    # Segment 20H Item 6: what the card's countdown already fetched is
+    # read, not asked again.
+    addresses = [roster_address(row) for row in result.rows]
     directory_check = await run_in_threadpool(
         csv_imports.directory_check,
         _shared.directory_or_none(request),
-        [roster_address(row) for row in result.rows],
+        addresses,
+        directory_lookups.known_for(
+            db, user=user, session_id=review_session.id, addresses=addresses
+        ),
     )
     # Segment 20G: a check the sign-in stopped (no token, or Graph refused
     # it) saves nothing. The file is held, and the card asks to renew the

@@ -51,21 +51,29 @@ class DirectoryCheck:
 
 
 
-def directory_check(directory: Any, addresses: list[str | None]) -> DirectoryCheck:
+def directory_check(
+    directory: Any,
+    addresses: list[str | None],
+    known: Mapping[str, Any] | None = None,
+) -> DirectoryCheck:
     """Resolve an import's addresses through ``directory`` (``None``:
-    nothing checked) for `_save` to store and count (segment 21F)."""
-    return directory_checks(directory, [addresses])[0]
+    nothing checked) for `_save` to store and count (segment 21F).
+    ``known``: answers the countdown already fetched (segment 20H Item
+    6, `directory_lookups.recall`), not asked again."""
+    return directory_checks(directory, [addresses], known=known)[0]
 
 
 def directory_checks(
-    directory: Any, rosters: list[list[str | None]]
+    directory: Any,
+    rosters: list[list[str | None]],
+    known: Mapping[str, Any] | None = None,
 ) -> list[DirectoryCheck]:
     """`directory_check` for several rosters saved by one request (Quick
     Setup, rehydrate): one lookup under one budget, so the request stays
     inside the front end's limit however many rosters it carries (Codex,
     #3430). Each roster is counted over its own addresses."""
     outcomes = directory_accounts.resolve(
-        directory, [address for addresses in rosters for address in addresses]
+        directory, [address for addresses in rosters for address in addresses], known=known
     )
     found = directory_accounts.accounts(outcomes)
     return [

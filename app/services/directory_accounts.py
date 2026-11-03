@@ -85,14 +85,22 @@ def columns(account: Account | None) -> dict[str, str | None]:
 
 
 def resolve(
-    directory: Directory | None, addresses: Iterable[str | None], *, budget: float = BUDGET
+    directory: Directory | None,
+    addresses: Iterable[str | None],
+    *,
+    budget: float = BUDGET,
+    known: Mapping[str, Outcome] | None = None,
 ) -> dict[str, Outcome]:
     """Each distinct address looked up once. With no directory, nothing
-    is checked and the answer is empty."""
+    is checked and the answer is empty. ``known`` holds answers the
+    server already fetched for some keys (an upload's countdown, segment
+    20H Item 6); those keys are not asked again."""
     if directory is None:
         return {}
-    keys = [k for k in (key(a) for a in addresses) if k is not None]
-    return look_up_all(directory, keys, budget=budget)
+    keys = list(dict.fromkeys(k for k in (key(a) for a in addresses) if k is not None))
+    kept = {k: known[k] for k in keys if known and k in known}
+    missing = [k for k in keys if k not in kept]
+    return {**kept, **(look_up_all(directory, missing, budget=budget) if missing else {})}
 
 
 def accounts(outcomes: Mapping[str, Outcome]) -> dict[str, Account]:

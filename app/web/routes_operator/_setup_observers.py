@@ -39,7 +39,7 @@ from app.web import urls
 from app.db.models import Observer, ReviewSession, User
 from app.db.session import get_db
 from app.schemas.observer_cohort_rule import VALUE_OPERATORS
-from app.services import csv_imports, participant_info
+from app.services import csv_imports, directory_lookups, participant_info
 from app.services import observers as observers_service
 from app.services import session_lifecycle as lifecycle
 from app.services.observers import ObserverOperationError
@@ -1035,10 +1035,16 @@ async def observers_import_submit(
     # existing > 0:` block it guarded went with it.
 
     # Segment 21F: each address resolved through the directory first.
+    # Segment 20H Item 6: what the card's countdown already fetched is
+    # read, not asked again.
+    addresses = [row.email for row in result.rows]
     directory_check = await run_in_threadpool(
         csv_imports.directory_check,
         directory_or_none(request),
-        [row.email for row in result.rows],
+        addresses,
+        directory_lookups.known_for(
+            db, user=user, session_id=review_session.id, addresses=addresses
+        ),
     )
     # Segment 20G: a check the sign-in stopped saves nothing; the file is
     # held and the card asks to renew and upload again.
