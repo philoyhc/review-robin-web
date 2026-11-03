@@ -294,9 +294,42 @@
               Other columns are ignored.
             </p>
 
+            {# The card's banners stack here, under its intro and above the
+               form, in one order: problems, directory renew, group clear
+               (author, 2026-11-03). A control inside one names the form with
+               `form=`. #}
             {% with upload_problems_cancel_url = reviewees_base_url ~ "?unlocked=1#upload-csv", upload_problems_dismiss_url = reviewees_base_url ~ "/import/dismiss" %}
               {% include "operator/partials/_upload_problems.html" %}
             {% endwith %}
+            {% with directory_renew_dismiss_url = reviewees_base_url ~ "/import/dismiss", directory_renew_form = "upload-csv-form" %}
+              {% include "operator/partials/_directory_renew.html" %}
+            {% endwith %}
+            {# A merge refused for clearing group answers (segment 19Z):
+               the count and the tick that answers it inside the banner,
+               as on the Relationships card. Its own field,
+               `acknowledge_group_clear`, as the hidden ack below already
+               carries `true` for a replace. The file is held. #}
+            {% if group_clear and group_clear.surface == "import" %}
+              <div class="banner banner-error" role="alert"
+                   data-group-clear-banner>
+                <p class="banner-lead">{{ group_clear.message }}</p>
+                <label class="confirm-label">
+                  <input type="checkbox" form="upload-csv-form" name="acknowledge_group_clear"
+                         value="{{ group_clear.count }}">
+                  <span>Yes, clear them</span>
+                </label>
+                <div class="banner-actions">
+                  {% if held_upload %}
+                    <button type="submit" class="btn secondary" form="upload-csv-form"
+                            formaction="{{ url(reviewees_base_url) }}/import/dismiss"
+                            formnovalidate>Dismiss</button>
+                  {% else %}
+                    <a class="btn secondary"
+                       href="{{ url(reviewees_base_url) }}?unlocked=1#upload-csv">Dismiss</a>
+                  {% endif %}
+                </div>
+              </div>
+            {% endif %}
             {% include "operator/partials/_directory_check.html" %}
 
             <form method="post" id="upload-csv-form"
@@ -305,9 +338,6 @@
               <input type="file" id="file" name="file" accept=".csv,text/csv"
                      aria-label="CSV file"{% if not held_upload %} required{% endif %}>
               {% include "operator/partials/_held_upload.html" %}
-              {% with directory_renew_dismiss_url = reviewees_base_url ~ "/import/dismiss" %}
-                {% include "operator/partials/_directory_renew.html" %}
-              {% endwith %}
 
               {% if existing_count and existing_count > 0 %}
                 <fieldset class="upload-mode">
@@ -363,33 +393,6 @@
                     <input type="hidden" id="reviewees-import-ack"
                            name="acknowledge_response_loss" value="true">
                   {% endif %}
-              {% endif %}
-
-              {# A merge refused for clearing group answers (segment 19Z):
-                 the count and the tick that answers it inside the banner,
-                 as on the Relationships card. Its own field,
-                 `acknowledge_group_clear`, as the hidden ack above already
-                 carries `true` for a replace. The file is held. #}
-              {% if group_clear and group_clear.surface == "import" %}
-                <div class="banner banner-error" role="alert"
-                     data-group-clear-banner>
-                  <p class="banner-lead">{{ group_clear.message }}</p>
-                  <label class="confirm-label">
-                    <input type="checkbox" name="acknowledge_group_clear"
-                           value="{{ group_clear.count }}">
-                    <span>Yes, clear them</span>
-                  </label>
-                  <div class="banner-actions">
-                    {% if held_upload %}
-                      <button type="submit" class="btn secondary"
-                              formaction="{{ url(reviewees_base_url) }}/import/dismiss"
-                              formnovalidate>Dismiss</button>
-                    {% else %}
-                      <a class="btn secondary"
-                         href="{{ url(reviewees_base_url) }}?unlocked=1#upload-csv">Dismiss</a>
-                    {% endif %}
-                  </div>
-                </div>
               {% endif %}
 
               <div class="unlock-col-actions">
