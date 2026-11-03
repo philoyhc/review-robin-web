@@ -265,9 +265,11 @@ chip strip, invitation acceptance and role disclosure
   name check (`spec/csv_contracts.md` §3.1) stays address-based.
 - **Two rows, one account, one roster.** The gates, the dashboard and the
   chip strip take the lowest-id row, so the choice holds across requests.
-  An append or a merge refuses a row that would add a second row on an
-  account the roster holds; a replace does not, and Validate's
-  `*.duplicate_account` warnings flag what one leaves.
+  An append or a merge refuses a file row that would add a second row on
+  an account the roster holds, and so do the single-row Add and an
+  address edit (`spec/setup_pages.md` "One account, one row"); a replace
+  does not, nor do two rows of one appended file, and Validate's
+  `*.duplicate_account` warnings flag what those leave.
 - **Mail to a bound row** goes to the directory's mail
   (`directory_accounts.recipient`), since a row given by UPN may take no
   mail.

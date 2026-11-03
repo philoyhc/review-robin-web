@@ -43,11 +43,25 @@ Taken 2026-11-03 at `49bb4a8c9`: the three create services and their update path
 
 None.
 
+### Status
+
+**Closed 2026-11-03.** `directory_accounts.account_holder` and
+`same_account_message`; each of `create_*` and `update_*` on Reviewers,
+Reviewees and Observers resolves the address once, refuses on a holder
+(code `duplicate_account`) before anything is written, and binds with
+that same answer. The routes already render the message; none changed.
+Tests: `tests/integration/test_single_row_same_account.py` (add, edit, the
+holder moving and keeping its binding, an unbound lookup, an inactive
+holder, one lookup each). One read: no correctness defect; it narrowed
+the specs (an appended file's two rows can still make a pair), added
+`spec/audience_and_identity_model.md`, and tidied the rebind's resolver.
+
 ### Doc impact
 
 - `spec/setup_pages.md` — the single-row forms refuse a second row on one directory account (Item 1).
 - `spec/validate_page.md` — the `*.duplicate_account` rules' remaining cases: rows bound by a replace, and older rows (Item 1).
 - `guide/deferred_consolidated.md` — "Two rows in one roster bound to one account": the single-row half answered; replace remains (Item 1).
+- `spec/audience_and_identity_model.md` — "Two rows, one account, one roster" names the single-row refusal (Item 1).
 
 ## Item 2 — An instrument's label shows the wrong number just after it is added
 
