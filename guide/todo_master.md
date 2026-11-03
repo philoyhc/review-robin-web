@@ -93,13 +93,6 @@ is the author's call.
 Small items with no plan doc; each fits one PR and its reasoning fits
 the PR body unless it says otherwise.
 
-- **The 2026-11-02 findings register's small rows** *(filed
-  2026-11-03)*. L1 (a 500 on a 4,300-digit value) and N1–N3 (the
-  Residential preview gate tested at one route, its CSV formula guard,
-  its README) are one PR each; the register is the checklist
-  (`guide/findings_2026-11-02_assessment.md`). D-a to D-c were taken by 19Z's
-  close (2026-11-03); L2 and L3 were fixed by 20F.
-
 - **Cordware host logging, events 4 and 5** *(filed 2026-10-22, at
   segment 21's close)*. v0.8 §3 "Host logging" names two events the host
   still does not log:

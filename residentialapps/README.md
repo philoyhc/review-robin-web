@@ -1,6 +1,6 @@
 # residentialapps/
 
-Residential Apps: one package, mounted under Cordware as two applications, **Residential Operations** at `/residentialops` and **Support Logs** at `/supportlogs` (author, 2026-10-25). Both mount and answer `/health`, and nothing else is built yet; open work, rulings and what Residential depends on are in `guide/todo_master.md`.
+Residential Apps: one package, mounted under Cordware as two applications, **Residential Operations** at `/residentialops` and **Support Logs** at `/supportlogs` (author, 2026-10-25). Both mount and answer `/health`. Behind them are placeholder screens on sample data, with no database yet: Residential Operations' landing, rosters, access and RA Leave screens and the Support Logs screens (segments 1B to 1D). Deployed, the preview gate (`web/pages.py`) lets only the accounts in its preview list and the platform super-admin open them. Open work, rulings and what Residential depends on are in `guide/todo_master.md`.
 
 | Path | Holds |
 |---|---|

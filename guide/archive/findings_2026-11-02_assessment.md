@@ -4,7 +4,8 @@
 `guide/codebase_assessment_02nov.md`: a spec-vs-code audit, a defect read
 of the window's RRW changes, and a read of `residentialapps/`,
 `utilityapps/` and `cordware/` · **Read at:** `2ffb0f42` (#3521) ·
-**Open:** 9 of 11 rows (M2 done in #3524, M1 in #3525).
+**Open:** none. Every row was done in #3524 → #3543 by 2026-11-03, N2
+struck as not reproduced; archived the same day.
 
 The checklist the fixes work through (author, 2026-11-02: "there should
 be a findings list that can serve as the checklist for fixes; this
@@ -76,15 +77,13 @@ All three were taken by 19Z's close (`guide/archive/segment_19Z_roster_append.md
 
 ## 5. Noted
 
-- **N1. Residential's preview gate is tested at one route.**
-  `residentialapps/tests/test_preview_gate.py` checks `GET /` only; a new
-  router that forgot `Depends(placeholders_previewers_only)` would pass
-  CI. A route-walking test needs the included-router walk
-  `residentialapps/tests/test_applications.py` already uses. Code.
-- **N2. Residential's CSV writer has no formula-prefix guard**
-  (`residentialapps/supportlogs/routes_records.py:45`). Harmless while
-  the data is sample-only; needed before real data. The Email Address
-  Checker's `utilityapps/email_check/csvio.py` has one. Code, with the
-  wiring.
-- **N3. `residentialapps/README.md` says "nothing else is built yet"**,
-  beside about 60 placeholder screens. Spec (docs).
+- ~~**N1**~~ — **Done in #3543**: a test walks every route both
+  applications build, through the included routers, and fails on any but
+  `/health` without the gate (`residentialapps/tests/test_preview_gate.py`).
+- ~~**N2**~~ — **Not reproduced**: `_cell` in
+  `residentialapps/supportlogs/routes_records.py` has guarded the writer
+  since 2026-10-30 (6fe14dd4), tested by
+  `test_a_cell_that_opens_like_a_formula_stays_text`. The assessment
+  read a stale line.
+- ~~**N3**~~ — **Done in #3543**: the README says what is built,
+  placeholder screens on sample data behind the preview gate.

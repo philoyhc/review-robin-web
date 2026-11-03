@@ -5,7 +5,7 @@ the 2026-11-02 assessment) · **Theme:** the Reviewees mirror can't drift
 from the Reviewers roster unnoticed · **Related:**
 `guide/archive/segment_20B_symmetric_review.md`,
 `guide/codebase_assessment_02nov.md` §5,
-`guide/findings_2026-11-02_assessment.md` (L2, L3),
+`guide/archive/findings_2026-11-02_assessment.md` (L2, L3),
 `spec/architecture.md` "Symmetric review"
 
 ## Opportunity
@@ -173,5 +173,5 @@ param, documented in `spec/settings_inventory.md`.
 - `spec/csv_contracts.md` — a symmetric bundle carries no reviewees, and the import says so (rung 4).
 - `spec/quick_setup_card_spec.md` — the kept-reviewees notice on the card (rung 4).
 - `spec/settings_inventory.md` — the `?quick_setup_notice=kept_reviewees` URL param (rung 4).
-- `guide/findings_2026-11-02_assessment.md` — L2 and L3 struck (at close).
+- `guide/archive/findings_2026-11-02_assessment.md` — L2 and L3 struck (at close).
 - `guide/todo_master.md` — delete the segment's entry at close.
