@@ -284,8 +284,17 @@ def test_reviewers_and_reviewees_recheck_only_while_editable(
     row = db.get(ReviewSession, session.id)
     row.status = "ready"
     db.commit()
+    asked: list[str] = []
+
+    class _Counting(FakeDirectory):
+        def find_users(self, address: str):
+            asked.append(address)
+            return super().find_users(address)
+
+    switch.current = _Counting()
     _recheck(client, session.public_id, "reviewers", status=409)
     _recheck(client, session.public_id, "reviewees", status=409)
+    assert asked == []  # refused before any lookup
     assert not _rows(db, Reviewer, session.id)["arun.kumar@example.edu"].directory_object_id
     assert not _rows(db, Reviewee, session.id)["arun.kumar@example.edu"].directory_object_id
     _recheck(client, session.public_id, "observers")
@@ -313,6 +322,25 @@ def test_a_recheck_that_binds_sends_a_validated_session_to_draft(
     assert db.get(ReviewSession, session.id).status == "validated"
     switch.current = FakeDirectory()
     _recheck(client, session.public_id, "reviewers")
+    db.expire_all()
+    assert db.get(ReviewSession, session.id).status == "draft"
+
+
+@pytest.mark.parametrize("roster", ["reviewees", "observers"])
+def test_every_roster_s_binding_recheck_invalidates(
+    client: TestClient, db: Session, switch: _Switch, roster: str
+) -> None:
+    session = _create_session(client, db, f"recheck-validated-{roster}")
+    session.observers_enabled = True
+    db.commit()
+    switch.current = _Failing("server")
+    header = "RevieweeName,RevieweeEmail" if roster == "reviewees" else "ObserverName,ObserverEmail"
+    _upload(client, session.public_id, roster, f"{header}\nArun,arun.kumar@example.edu\n")
+    row = db.get(ReviewSession, session.id)
+    row.status = "validated"
+    db.commit()
+    switch.current = FakeDirectory()
+    _recheck(client, session.public_id, roster)
     db.expire_all()
     assert db.get(ReviewSession, session.id).status == "draft"
 

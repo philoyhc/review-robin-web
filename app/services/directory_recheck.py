@@ -82,7 +82,7 @@ def unmatched_addresses(db: Session, *, session_id: int, kind: str) -> list[str]
 
 
 _ARCHIVED = "Session is archived; nothing can be rechecked."
-_NOT_EDITABLE = "Session is {status}; revert to draft to recheck"
+_NOT_EDITABLE = "Session is {status}; revert to draft to edit"
 
 
 def _refuse(review_session: ReviewSession, kind: str) -> None:
@@ -180,9 +180,19 @@ def recheck(
         db.flush()
         counts[_tally(outcome.status)] += 1
     bound = counts["directory_by_mail"] + counts["directory_by_upn"]
-    if bound:
-        # Validate reads the bound accounts (`*.duplicate_account`), and a
-        # binding can move self-review inclusion (findings M1).
+    mirrored = None
+    if kind == "reviewers" and locked.symmetric_review:
+        # The mirror takes the new accounts, then recomputes self-review;
+        # it also repairs a drifted mirror, binding or not.
+        mirrored = symmetric_review.sync_reviewees_from_reviewers(db, locked)
+    elif bound and kind in ("reviewers", "reviewees"):
+        # A bound account can make a reviewer and a reviewee one person,
+        # so an assignment between them a self-review (Codex, #3558).
+        assignments.recompute_self_review_classification(db, session_id=locked.id)
+    if bound or mirrored:
+        # Validate reads the bound accounts (`*.duplicate_account`) and the
+        # Reviewees roster, and a binding can move self-review inclusion
+        # (findings M1).
         lifecycle.invalidate_if_validated(
             db,
             review_session=locked,
@@ -190,13 +200,6 @@ def recheck(
             reason=f"{kind}_rechecked",
             correlation_id=correlation_id,
         )
-    if kind == "reviewers" and locked.symmetric_review:
-        # The mirror takes the new accounts, then recomputes self-review.
-        symmetric_review.sync_reviewees_from_reviewers(db, locked)
-    elif bound and kind in ("reviewers", "reviewees"):
-        # A bound account can make a reviewer and a reviewee one person,
-        # so an assignment between them a self-review (Codex, #3558).
-        assignments.recompute_self_review_classification(db, session_id=locked.id)
 
     reason = directory_accounts.unchecked_reason(outcomes, addresses, checked=checked)
     audit.write_event(
