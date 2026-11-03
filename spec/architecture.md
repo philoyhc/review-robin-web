@@ -131,7 +131,9 @@ three-layer separation (mirrors CLAUDE.md "Architecture at a glance"):
    - `app/services/assignments/` — `_shared.py`, `_coverage.py`,
      `_self_review.py`, `_generate.py`, `_reconcile_cache.py` (the
      staleness verdict's content stamp).
-   - `app/services/responses/` — `_core.py`, `_group_reconciliation.py`,
+   - `app/services/responses/` — `_core.py` (save, submit, recall,
+     clear), `_rollups.py` (the read-only tallies: per-reviewer session
+     state, rollup parts, response counts), `_group_reconciliation.py`,
      `_branching.py` (branching between response fields — conditions,
      whether a branch is open, which fields an assignment can answer;
      pure), `_branch_rule.py` (the save invariant, "a closed branch

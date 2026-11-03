@@ -89,6 +89,14 @@ Taken 2026-11-03 at `a2d95aff`.
 | Call sites of the five tallies outside `responses/` | 22 | `grep -rnE "rollup_parts_from_assignments\|responses_by_assignment\(\|reviewer_session_state_per_instrument\|session_response_count\|RollupParts" app --include=*.py \| grep -v "responses/_core.py\|responses/__init__.py" \| wc -l` |
 | `spec/architecture.md` lines naming the moved modules | 14 | `grep -n "csv_imports\|_shared.py\|responses/_core\|validation.py\|_band1" spec/architecture.md \| wc -l` |
 
+## Status
+
+**2026-11-03, rung 1.** `_rollups.py` took 433 lines and `_core.py`
+fell 1,605 → 1,194. The plan's "~380" and "under 1,000" for `_core.py`
+were estimates, not counts; the definition of done now reads under 1,200.
+Started at the author's word ("start 20E"); main before rung 1 was
+`8505fd8c`, the base for the read at rung 3.
+
 ## PR ladder
 
 1. **`responses/_rollups.py`.** The five tallies move; `responses/__init__.py`
@@ -116,8 +124,9 @@ Taken 2026-11-03 at `a2d95aff`.
 
 ## Definition of done
 
-- `app/services/csv_imports.py` and `app/services/responses/_core.py` are
-  each under 1,000 lines, and `_shared.py` under 1,200 (`wc -l`).
+- `app/services/csv_imports.py` has no module over 1,000 lines,
+  `app/services/responses/_core.py` is under 1,200 and `_shared.py` under
+  1,200 (`wc -l`).
 - The full suite passes unchanged at each rung, but for repointed patch
   targets (PR bodies list them).
 - `spec/architecture.md`'s module map names every new module.
