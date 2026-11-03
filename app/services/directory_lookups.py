@@ -2,7 +2,7 @@
 
 The roster Upload card's script looks the file's addresses up in batches
 before it posts the file, so the page can count down what is left
-(``guide/segment_20H_walkthrough_19Z_followups.md`` Item 6). Each answer
+(``guide/archive/segment_20H_walkthrough_19Z_followups.md`` Item 6). Each answer
 the server fetched from Graph is kept here for :data:`CACHE_TTL`; the
 upload then reads those (`csv_imports.directory_check`'s ``known``) and
 asks Graph only for the rest.
@@ -24,7 +24,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from cordware.graph import DirectoryUser, Outcome
+from cordware.graph import Directory, DirectoryUser, Outcome, look_up_all
 
 from app.db.models import DirectoryLookup, User
 from app.services import directory_accounts
@@ -149,6 +149,23 @@ def remember(
             continue
         kept += 1
     return kept
+
+
+def look_up_and_keep(
+    db: Session,
+    directory: Directory,
+    *,
+    user: User,
+    session_id: int,
+    keys: list[str],
+    budget: float,
+) -> dict[str, Outcome]:
+    """One countdown batch: ``keys`` looked up through ``directory`` on
+    the server, and each answer kept (:func:`remember`). Returns every
+    key's outcome, failures included, for the page to count."""
+    outcomes = look_up_all(directory, keys, budget=budget)
+    remember(db, user=user, session_id=session_id, outcomes=outcomes)
+    return outcomes
 
 
 def sweep(db: Session) -> int:

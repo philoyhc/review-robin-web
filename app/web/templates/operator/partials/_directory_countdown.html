@@ -1,9 +1,135 @@
 {# The upload's directory check, counted down from the page (segment
-   20H Item 6). Sits under the last import's directory line. Hidden until
-   the card's script starts the count: the page looks the file's
-   addresses up in batches and the line says how many are left. Without
-   the script it never shows, and the upload checks every address on the
-   server as before. Inert at the scaffold (rung 1). #}
+   20H Item 6). Sits under the last import's directory line; the card
+   passes `directory_countdown_roster` (reviewers / reviewees /
+   observers). Hidden until the script starts the count.
+
+   On Upload the script asks `directory-keys` which of the file's
+   addresses still need a lookup (parsed by the roster's own parser),
+   looks them up one per request, four in flight, through
+   `directory-lookup` (which keeps each answer the server fetched for
+   fifteen minutes), and counts down. Then it submits the form as it was:
+   the upload reads the kept answers and asks the directory only for the
+   rest. The page never sends an answer itself.
+
+   It stops early and submits at once on any failed lookup (an expired
+   sign-in: the upload then asks to renew, segment 20G), a failed
+   request, or no directory access; the upload looks up whatever is left. Without the script the
+   line never shows and the upload checks every address on the server. #}
 <p class="muted" data-directory-countdown aria-live="polite" hidden>
   Directory check: <span data-directory-countdown-left>0</span> more to go.
 </p>
+<script>
+  // The line sits above the form, so the script waits for the page.
+  document.addEventListener('DOMContentLoaded', function () {
+    var line = document.querySelector('[data-directory-countdown]');
+    var form = document.getElementById('upload-csv-form');
+    if (!line || !form || !window.fetch || !window.FormData) { return; }
+    var left = line.querySelector('[data-directory-countdown-left]');
+    var roster = {{ directory_countdown_roster | tojson }};
+    var keysUrl = {{ url('/operator/sessions/' ~ session.public_id ~ '/directory-keys') | tojson }};
+    var lookupUrl = {{ url('/operator/sessions/' ~ session.public_id ~ '/directory-lookup') | tojson }};
+    var workers = 4;
+    var counted = false;
+    var counting = false;
+
+    // A page restored from the back/forward cache keeps what the script
+    // set: put the card back as it was rendered.
+    window.addEventListener('pageshow', function (event) {
+      if (!event.persisted) { return; }
+      counted = false;
+      counting = false;
+      line.hidden = true;
+    });
+
+    function upload(submitter) {
+      counted = true;
+      if (form.requestSubmit) {
+        form.requestSubmit(submitter && submitter.form === form ? submitter : undefined);
+      } else {
+        form.submit();
+      }
+    }
+
+    form.addEventListener('submit', function (event) {
+      var submitter = event.submitter || null;
+      // Counted already, or a submit to elsewhere (a banner's Dismiss).
+      if (counted || (submitter && submitter.hasAttribute('formaction'))) { return; }
+      event.preventDefault();
+      // A second Upload while the count runs waits for the first.
+      if (counting) { return; }
+      counting = true;
+      var body = new FormData();
+      body.append('roster', roster);
+      var file = form.elements.file;
+      if (file && file.files && file.files.length) { body.append('file', file.files[0]); }
+      var held = form.elements.held_token;
+      if (held && held.value) { body.append('held_token', held.value); }
+
+      fetch(keysUrl, {method: 'POST', body: body, credentials: 'same-origin'})
+        .then(function (response) {
+          if (!response.ok) { throw new Error('keys ' + response.status); }
+          return response.json();
+        })
+        .then(function (answer) { count(answer.keys || [], submitter); })
+        .catch(function () { upload(submitter); });
+    });
+
+    function count(keys, submitter) {
+      if (!keys.length) { upload(submitter); return; }
+      var remaining = keys.length;
+      var next = 0;
+      var running = 0;
+      var done = false;
+      left.textContent = String(remaining);
+      line.hidden = false;
+
+      function end() {
+        if (done) { return; }
+        done = true;
+        upload(submitter);
+      }
+
+      function pump() {
+        if (done) { return; }
+        if (next >= keys.length && running === 0) { end(); return; }
+        while (running < workers && next < keys.length) {
+          send(keys[next]);
+          next += 1;
+        }
+      }
+
+      function send(key) {
+        running += 1;
+        fetch(lookupUrl, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+          body: JSON.stringify({keys: [key]}),
+          credentials: 'same-origin'
+        }).then(function (response) {
+          if (!response.ok) { throw new Error('lookup ' + response.status); }
+          return response.json();
+        }).then(function (answer) {
+          running -= 1;
+          if (done) { return; }
+          var outcome = (answer.outcomes || {})[key];
+          // Any failed lookup stops the count and uploads at once: a
+          // refused sign-in fails every lookup after it (expired: the
+          // upload asks to renew, segment 20G), and a directory timing out
+          // or failing would hold the count for 30 s a lookup. The upload
+          // then checks what is left within its own 120 s (Codex, #3555).
+          if (outcome && outcome.status === 'ERROR') {
+            end();
+            return;
+          }
+          remaining -= 1;
+          left.textContent = String(remaining);
+          pump();
+        }).catch(function () {
+          running -= 1;
+          end();
+        });
+      }
+      pump();
+    }
+  });
+</script>

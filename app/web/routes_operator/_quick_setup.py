@@ -60,6 +60,7 @@ from app.web.deps import (
     require_session_operator,
 )
 from app.web.routes_operator._shared import (
+    ROSTER_PARSERS,
     _require_response_loss_ack,
     acknowledged_loss,
     directory_or_none,
@@ -416,11 +417,7 @@ async def create_session(
 #: attributed in, and the order they are saved in.
 SLOT_ORDER = ("reviewers", "reviewees", "relationships", "observers", "settings")
 
-_ROSTER_PARSERS = {
-    "reviewers": csv_imports.parse_reviewer_csv,
-    "reviewees": csv_imports.parse_reviewee_csv,
-    "observers": csv_imports.parse_observer_csv,
-}
+_ROSTER_PARSERS = ROSTER_PARSERS
 
 
 @dataclass(frozen=True)

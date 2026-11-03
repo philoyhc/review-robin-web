@@ -222,3 +222,37 @@ def test_an_answer_another_request_just_kept_is_left_standing(
         select(DirectoryLookup.key).where(DirectoryLookup.session_id == session_id)
     ).scalars().all()
     assert sorted(kept) == sorted(KEYS[:2])
+
+
+def test_the_upload_asks_again_for_a_stale_answer(
+    client: TestClient, db: Session, directory: _Counting
+) -> None:
+    """The upload reads only fresh answers: one past the cache's life,
+    not yet swept, is asked again (`directory_lookups.recall`)."""
+    base, _ = _base(client, db, "cd-stale-upload")
+    _look_up(client, base, KEYS)
+    stale = datetime.now(timezone.utc) - directory_lookups.CACHE_TTL - timedelta(seconds=1)
+    for row in db.execute(select(DirectoryLookup)).scalars():
+        if row.key == KEYS[0]:
+            row.fetched_at = stale
+    db.flush()
+    directory.asked.clear()
+    client.post(f"{base}/reviewers/import", files={"file": ("r.csv", CSV, "text/csv")})
+    assert directory.asked == [KEYS[0]]
+
+
+def test_another_operator_of_the_session_reads_none_of_them(
+    client: TestClient, db: Session, make_client, bob, directory: _Counting
+) -> None:
+    """The answers are kept per operator: a co-operator's countdown and
+    upload start from nothing."""
+    from app.db.models import SessionOperator, User
+
+    base, session_id = _base(client, db, "cd-co-operator")
+    _look_up(client, base, KEYS)
+    bob_client = make_client(bob)
+    bob_client.get("/operator/")  # bob's users row
+    bob_row = db.execute(select(User).where(User.email == bob.email)).scalar_one()
+    db.add(SessionOperator(session_id=session_id, user_id=bob_row.id, role="owner"))
+    db.flush()
+    assert _keys(bob_client, base).json() == {"keys": KEYS}

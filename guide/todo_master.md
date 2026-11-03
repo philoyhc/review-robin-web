@@ -76,10 +76,6 @@ is the author's call.
    ruff's rule set widened first.
    **Plan:** `guide/segment_22C_pyright.md`.
 
-7. **20H — Follow-ups from the 19Z walkthrough** (not gated). A countdown
-   on the upload's directory check (Item 6). Items 1–5 closed 2026-11-03.
-   **Plan:** `guide/segment_20H_walkthrough_19Z_followups.md`.
-
 ### Stubs
 
 Small items with no plan doc; each fits one PR and its reasoning fits
