@@ -119,6 +119,11 @@ functions that use it, and `tests/unit/test_import_order.py` imports each
 split module alone in a fresh process. The read's other findings were two
 stale pointers, fixed.
 
+**Rung 4a.** `instruments/_preview.py` (392 lines) took
+`find_sample_in_scope_reviewee`, `_preview_group_boundary` and
+`_preview_excludes_self_reviews`; `_band1.py` fell 1,395 → 1,020. One test
+that reads the function's source now reads it from `_preview`.
+
 ## PR ladder
 
 1. **`responses/_rollups.py`.** The five tallies move; `responses/__init__.py`
@@ -160,12 +165,11 @@ stale pointers, fixed.
 
 ## Open questions
 
-- **Rung 4's three:** which, and when. Author.
-- **`base.html`'s stylesheet** (about 5,300 lines of CSS): `CLAUDE.md`
-  keeps it inline, and `tests/unit/test_contrast_audit.py` and
-  `tests/unit/test_generated_tools_are_current.py` read it from the
-  template source. Out of this segment unless the author rules the rule
-  changes.
+- ~~**Rung 4's three:** which, and when.~~ Answered 2026-11-03 (author:
+  "do band1 preview and validation splits; skip the rest"): `_band1.py`'s
+  preview and `validation.py`; `instruments_index.html`'s scripts skipped.
+- ~~**`base.html`'s stylesheet.**~~ Answered 2026-11-03: skipped with the
+  rest; `CLAUDE.md` keeps it inline.
 
 ## Out of scope
 
