@@ -568,6 +568,36 @@ number — 44% of the observers page's 106 ms — which is the same point
 from the other end. A page is fast here exactly when it is not doing
 Python work per row.
 
+## An import's directory check — measured 2026-11-03 (segment 20G)
+
+**What it costs.** A roster upload resolves each distinct address
+through the operator's Graph token before it saves, four lookups in
+flight (`cordware.graph.WORKERS`), under a 120 s budget
+(`directory_accounts.BUDGET`) on the request path. One real timing,
+the author's, on the production deployment (2026-11-03, the 19Z
+walkthrough): a 1,500-address replace took about **56 s**, every lookup
+done, about **37 ms an address** at four workers, so about 150 ms a
+lookup.
+
+**The bench** (`python3 tools/bench_roster_scale.py directory`, no
+database) runs `csv_imports.directory_check` against a fake directory
+answering after 150 ms:
+
+| Addresses | Seconds | Per address | Unchecked |
+|---:|---:|---:|---:|
+| 200 | 7.5 | 37.6 ms | 0 |
+| 1,000 | 37.6 | 37.6 ms | 0 |
+| 2,000 | 75.4 | 37.7 ms | 0 |
+
+Linear, and it matches the real timing. **The budget runs out at about
+3,200 addresses**; a roster file may hold 5,000 rows
+(`csv_imports.MAX_ROWS`), so at production's latency a full-size file
+would leave about 1,800 addresses *not checked*. They still save, by
+mail, a replace keeping their earlier accounts, and the card's line
+says how many and why (`spec/csv_contracts.md` §3.1). Raising the budget
+buys about 27 addresses a second, under App Service's front-end limit
+of about 230 s (`docs/database.md`).
+
 ## Recommendations, as shipped
 
 *R1–R3 shipped as segment 19R Items 1–3 (2026-09-21 and 2026-09-22); the

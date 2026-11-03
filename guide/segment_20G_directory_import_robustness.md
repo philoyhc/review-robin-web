@@ -149,6 +149,13 @@ The rung's read found no write or read left un-normalized; it narrowed
 the index claim, the migration's trim, a blank id (now no account) and
 the claim audit's value.
 
+**Rung 5, the bench.** `tools/bench_roster_scale.py directory` times
+`csv_imports.directory_check` at 150 ms a lookup (what the real timing
+implies at four workers): 200 → 7.5 s, 1,000 → 37.6 s, 2,000 → 75.4 s,
+linear at 37.7 ms an address, matching the author's 1,500 in 56 s. The
+120 s budget covers about 3,200 addresses, short of `MAX_ROWS` (5,000);
+`docs/performance.md` records it. The author kept the budget at 120 s.
+
 ## PR ladder
 
 1. **The check records why.** `DirectoryCheck` gains the stop kind from
@@ -182,8 +189,9 @@ the claim audit's value.
 
 - ~~**Renew automatically?**~~ A button (author, 2026-11-03, at the
   scaffold).
-- **The budget:** keep 120 s, or lower it once the bench reports? After
-  rung 5. Author.
+- ~~**The budget**~~: 120 s kept (author, 2026-11-03, after rung 5's
+  bench: about 3,200 addresses fit; the overflow saves unchecked and is
+  reported).
 - **The real timing — taken** (author, 2026-11-03, 19Z walkthrough
   B4): 1,500 addresses replaced on production in about 56 s, every
   lookup done (23 by mail, 12 by sign-in name, 1,465 not found), about
