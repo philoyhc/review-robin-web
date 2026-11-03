@@ -121,7 +121,7 @@ The first banner sits 12 px under the intro (the intro's `.form-help` margin) an
 
 ### Status
 
-**Closed 2026-11-03.** Intended vs done: as decided, as a top margin rather than the intro's bottom margin: `base.html` gives `.form-help + .banner` a 16px top margin, which collapses with the intro's 12px. Any page whose intro is followed by a banner takes it, not only the Upload card. `tests/browser/test_upload_banner_spacing.py` measures 16px above the first banner and below the last (it fails without the rule). `spec/setup_pages.md` "The Upload card's banners" updated.
+**Closed 2026-11-03.** Intended vs done: as decided, as a top margin rather than the intro's bottom margin: `base.html` gives `#upload-csv > .form-help + .banner` a 16px top margin, which collapses with the intro's 12px. Scoped to the roster Upload cards: the cold read found Quick Setup's intro followed by `hidden` slot banners, which an unscoped rule would space only when the first slot failed; Quick Setup keeps 12px. `tests/browser/test_upload_banner_spacing.py` measures 16px above the first banner and below the last (it fails without the rule). `spec/setup_pages.md` and `spec/ui_elements.md` updated by hand, a sentence each, so no `spec-writer` run. Reads: one cold read (the Quick Setup side effect, the `.banner` base sentence in `spec/ui_elements.md`; both fixed). The look, light and dark, is the author's browser check.
 
 ### Open questions
 
@@ -130,3 +130,4 @@ None.
 ### Doc impact
 
 - `spec/setup_pages.md` — "The Upload card's banners": 16 px above the first banner (Item 3).
+- `spec/ui_elements.md` — the `.banner` base's margin and its one exception (Item 3).
