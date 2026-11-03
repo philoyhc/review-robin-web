@@ -210,7 +210,7 @@ from ._quick_setup import (
 # A refused roster upload's kinds of problem, shared by Quick Setup and
 # the Setup pages' upload cards (quick_setup_update Item 3).
 from ._upload_problems import UploadProblems, problem_kinds, upload_problems
-from ._directory_check import DirectoryCheck, last_directory_check
+from ._directory_check import DirectoryCheck, last_directory_check, unmatched_count
 
 # Validate page view-shape adapter (sliced in PR 8).
 from ._validate import (
@@ -502,4 +502,5 @@ __all__ = [
     "session_status_pills",
     "DirectoryCheck",
     "last_directory_check",
+    "unmatched_count",
 ]

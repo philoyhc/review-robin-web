@@ -332,6 +332,7 @@ def _render_reviewers_page(
             ),
             "existing_count": csv_imports.existing_reviewer_count(db, review_session.id),
             "directory_check": views.last_directory_check(db, review_session, "reviewers"),
+            "directory_unmatched": views.unmatched_count(db, review_session, "reviewers"),
             "assignment_count": csv_imports.existing_assignment_count(db, review_session.id),
             "upload_problems": None,
             "is_ready": is_ready,

@@ -1,7 +1,8 @@
 """The roster upload cards' banners stack in one place (author,
 2026-11-03; `spec/setup_pages.md` "The Upload card's banners"): under
-the card's intro, above the directory-check line and the form, in the
-order problems, directory renew, group clear. A control inside one
+the card's intro, above the form, in the order problems, directory
+renew, group clear; the directory-check line and the countdown sit below
+the form's actions (segment 20I Item 1, reversing 20G). A control inside one
 names the form with `form=`, since it sits outside it."""
 
 from __future__ import annotations
@@ -42,10 +43,23 @@ def test_the_banners_stack_above_the_form_in_one_order(kind: str) -> None:
     assert all(intro < at < form for at in positions), kind
     assert positions == sorted(positions), kind
     if "_directory_check.html" in card:
-        assert max(positions) < card.index("_directory_check.html") < form
+        form_end = card.index("</form>", form)
+        line = card.index("_directory_check.html")
+        assert card.index("unlock-col-actions", form) < form_end < line, kind
         # The upload's countdown (20H Item 6) sits under the directory line.
-        countdown = card.index("_directory_countdown.html")
-        assert card.index("_directory_check.html") < countdown < form
+        assert line < card.index("_directory_countdown.html"), kind
+
+
+@pytest.mark.parametrize("kind", ["reviewers", "reviewees", "observers"])
+def test_the_recheck_button_sits_left_of_upload(kind: str) -> None:
+    """20I Item 1: first in the actions row, a plain button rather than a
+    submit, shown only while a row is unmatched."""
+    card = _upload_card(kind)
+    actions = card.index("unlock-col-actions", card.index('id="upload-csv-form"'))
+    recheck = card.index("data-directory-recheck")
+    assert actions < recheck < card.index(">Upload</button>"), kind
+    assert card.rindex("{% if directory_unmatched %}", 0, recheck) > actions, kind
+    assert '<button class="btn secondary" type="button" data-directory-recheck>' in card, kind
 
 
 @pytest.mark.parametrize("kind", ["reviewers", "reviewees", "relationships"])
