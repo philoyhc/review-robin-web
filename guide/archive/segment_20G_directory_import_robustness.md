@@ -93,7 +93,7 @@ Taken 2026-11-03 at `a2d95aff`.
 
 ## Status
 
-**Closed 2026-11-03.** PRs #3544 → {R5}, then the close; the banner
+**Closed 2026-11-03.** PRs #3544 → #3549, then the close; the banner
 audit #3546 between rungs 2 and 3. Base for the read of rungs 1–3:
 `1f2dba51`.
 
@@ -121,7 +121,7 @@ audit #3546 between rungs 2 and 3. Base for the read of rungs 1–3:
   `e4b2c7a91d36`; the user lookup and a roster match's account arm
   compare plainly, proved index-servable on Postgres. A roster match's
   mail arm has no index, unchanged.
-- **The bench** (rung 5, {R5}): 37.7 ms an address at production's
+- **The bench** (rung 5, #3549): 37.7 ms an address at production's
   latency, linear, matching the author's 1,500 in 56 s. The 120 s budget
   (kept, author) covers about 3,200 addresses; the overflow saves
   unchecked and is reported.
