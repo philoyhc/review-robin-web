@@ -400,7 +400,7 @@ they are what keeps the exclusion out of the desugar stage.
    on a Band-1 save, so a `True` can persist in the row and in
    the by-instrument extract's *Self-review excluded* cell while
    the engine still ignores it.
-3. `instruments._band1.find_sample_in_scope_reviewee` (the
+3. `instruments._preview.find_sample_in_scope_reviewee` (the
    `/preview-sample` workhorse) constructs its schema with
    `excludeSelfReviews=False`. It honors the instrument's own
    `exclude_self_reviews` flag the same way the generator does —

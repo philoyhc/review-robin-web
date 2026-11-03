@@ -91,52 +91,50 @@ Taken 2026-11-03 at `a2d95aff`.
 
 ## Status
 
-**2026-11-03, rung 1.** `_rollups.py` took 433 lines and `_core.py`
-fell 1,605 → 1,194. The plan's "~380" and "under 1,000" for `_core.py`
-were estimates, not counts; the definition of done now reads under 1,200.
-Started at the author's word ("start 20E"); main before rung 1 was
-`8505fd8c`, the base for the read at rung 3.
+**Closed 2026-11-03.** Five splits shipped in five PRs, none changing
+behavior: #3527 (rung 1), #3528 (2), #3529 (3), #3530 (4a), #3531 (4b).
+Rung 4's other two splits were skipped at the author's ruling.
 
-**Rung 2.** `csv_imports/` as planned, with two changes: `DirectoryCheck`
-and `directory_check(s)` went to `_identity.py`, not `_save`, since
-`_modes.py` needs them and imports only downward; and the save module is
-`_saving.py`, because a `_save.py` would be shadowed on the package by the
-re-exported `_save` function. One test patching `append_conflicts` now
-patches `_saving` too; `tests/unit/test_email_identity_fold.py`'s gate
-list names the five modules. Largest module 904 lines (`_parse.py`).
+| Module before | Lines | After |
+|---|---|---|
+| `responses/_core.py` | 1,605 | 1,194, plus `_rollups.py` 433 |
+| `csv_imports.py` | 2,258 | package: `_parse` 904, `_identity` 436, `_modes` 302, `_saving` 710 |
+| `routes_operator/_shared.py` | 1,677 | 1,050, plus `app/web/roster_import.py` 657 |
+| `instruments/_band1.py` | 1,395 | 1,020, plus `_preview.py` 392 |
+| `validation.py` | 1,506 | package: `_registry` 472, `_rosters` 433, `_instruments` 275, `_assignments` 252, `_inputs` 180 |
 
-**Rung 3.** `app/web/roster_import.py` (668 lines) took `_handle_import`,
-`_save_field_labels` and the upload holds; `_shared.py` fell 1,677 → 1,050.
-`acknowledged_loss` stayed in `_shared.py`: Instruments and Quick Setup use
-it too, so it is a form helper, not upload handling. `roster_import.py`
-imports the guards and `_templates` from `_shared` and calls
-`_shared.directory_or_none` through the module, so the 12 tests that
-replace it there needed no change. The item's read (rungs 1–3, cumulative since `8505fd8c`)
-found the moves faithful and one defect: `roster_import.py` imported
-`_shared` at its top, a cycle through the package's `__init__` that only
-`app.main`'s import order hid. It now imports `_shared` inside the two
-functions that use it, and `tests/unit/test_import_order.py` imports each
-split module alone in a fresh process. The read's other findings were two
-stale pointers, fixed.
+Divergences from the plan:
+- **`_core.py`'s target** was "under 1,000", an estimate; the cut left 1,194
+  and the definition of done reads under 1,200.
+- **`csv_imports/`:** `DirectoryCheck` sits in `_identity.py`, since
+  `_modes.py` needs it and imports only downward. The save module is
+  `_saving.py`, because a `_save.py` would be shadowed on the package by the
+  re-exported `_save` function.
+- **`acknowledged_loss` stayed in `_shared.py`**: Instruments and Quick
+  Setup use it, so it is a form helper, not upload handling.
+- **`roster_import.py` imports `_shared` inside the functions that use
+  it.** A top-level import was a cycle through the routes package's
+  `__init__`, hidden by `app.main`'s import order; it calls
+  `_shared.directory_or_none` through the module, so tests that replace it
+  there still reach it.
 
-**Rung 4a.** `instruments/_preview.py` (392 lines) took
-`find_sample_in_scope_reviewee`, `_preview_group_boundary` and
-`_preview_excludes_self_reviews`; `_band1.py` fell 1,395 → 1,020. One test
-that reads the function's source now reads it from `_preview`.
+Tests repointed, none weakened: one `append_conflicts` patch also targets
+`_saving`; the identity-fold gate lists the five `csv_imports` modules; a
+source-reading test reads `_preview`; the readiness-report cost guard
+matches the validation package by prefix. New:
+`tests/unit/test_import_order.py` imports every split module alone in a
+fresh process.
 
-**Rung 4b.** `validation.py` (1,506) became `app/services/validation/`:
-`_inputs.py` 180, `_rosters.py` 433, `_assignments.py` 252,
-`_instruments.py` 275 and `_registry.py` 472 (`REGISTERED_RULES`,
-`validate_session_setup`), behind a re-export wall; all 26 rules still
-register. The email template's help-contact rule sits with the session
-and roster rules. `tests/integration/test_readiness_report_cost.py`
-attributes queries to the report by package rather than by file. Rung 4
-took one read, at 4b, on the cumulative diff since `6232070a`. It found
-both moves faithful but for one hoisted import: `find_sample_in_scope_reviewee`'s
-function-local `from pydantic import TypeAdapter` now sits at `_preview.py`'s
-top, which changes nothing. Its other findings, an orphaned comment, four
-stale pointers and an import-order test narrower than this Status said,
-were fixed.
+**Reads: two `diff-reviewer` reads**, one per item (rungs 1–3 since
+`8505fd8c`; rung 4 since `6232070a`). Both compared every moved definition
+by `ast.dump`. They found one defect, the import cycle above, and one
+literal departure from "unchanged" (a function-local `TypeAdapter` import
+hoisted to `_preview.py`'s top, no behavior change). The rest were stale
+pointers and an orphaned comment, all fixed. The close's `spec-writer`
+pass found `spec/architecture.md`'s module map current and fixed one
+pointer in `spec/assignments.md`. `close_check`'s notes on five route slices touched
+outside the manifest are adjudicated: their change is the import line
+naming `roster_import`, no contract.
 
 ## PR ladder
 

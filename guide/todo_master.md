@@ -85,17 +85,13 @@ is the author's call.
    ruff's rule set widened first.
    **Plan:** `guide/segment_22C_pyright.md`.
 
-8. **20E — File splits from the 2026-11-02 assessment** (not gated).
-   `csv_imports.py`, `responses/_core.py` and `_shared.py` cut along
-   their seams, no behavior change; three more at the author's word.
-   **Plan:** `guide/segment_20E_file_splits.md`.
 
-9. **20F — Symmetric review, held by more than convention** (not
+8. **20F — Symmetric review, held by more than convention** (not
    gated). A Validate rule and a test guard for the Reviewees mirror,
    with the register's L2 and L3.
    **Plan:** `guide/segment_20F_symmetric_invariant.md`.
 
-10. **20G — The import's directory check, sturdier** (not gated). Hold
+9. **20G — The import's directory check, sturdier** (not gated). Hold
     and ask to renew on a sign-in failure; normalized object ids; the
     lookup measured.
     **Plan:** `guide/segment_20G_directory_import_robustness.md`.
