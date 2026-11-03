@@ -52,14 +52,24 @@ def test_the_banners_stack_above_the_form_in_one_order(kind: str) -> None:
 
 @pytest.mark.parametrize("kind", ["reviewers", "reviewees", "observers"])
 def test_the_recheck_button_sits_left_of_upload(kind: str) -> None:
-    """20I Item 1: first in the actions row, a plain button rather than a
-    submit, shown only while a row is unmatched."""
+    """20I Item 1: first in the actions row, shown only while a row is
+    unmatched, submitting its own form below the upload's, so the file
+    and the ticks stay out of it; and its renew banner names that form."""
     card = _upload_card(kind)
     actions = card.index("unlock-col-actions", card.index('id="upload-csv-form"'))
     recheck = card.index("data-directory-recheck")
     assert actions < recheck < card.index(">Upload</button>"), kind
     assert card.rindex("{% if directory_unmatched %}", 0, recheck) > actions, kind
-    assert '<button class="btn secondary" type="button" data-directory-recheck>' in card, kind
+    assert re.search(
+        r'<button class="btn secondary" type="submit" form="directory-recheck-form"\s+data-directory-recheck>',
+        card,
+    ), kind
+    form = card.index('id="directory-recheck-form"')
+    assert card.index("</form>") < form < card.index("_directory_check.html"), kind
+    assert f'name="roster" value="{kind}"' in card[form:], kind
+    # Only while the form it resubmits is on the page.
+    renew = card.index("{% if directory_renew_recheck and directory_unmatched %}")
+    assert 'directory_renew_form = "directory-recheck-form"' in card[renew : card.index("{% endwith %}", renew)], kind
 
 
 @pytest.mark.parametrize("kind", ["reviewers", "reviewees", "relationships"])

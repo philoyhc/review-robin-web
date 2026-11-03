@@ -333,6 +333,8 @@ def _render_reviewers_page(
             "existing_count": csv_imports.existing_reviewer_count(db, review_session.id),
             "directory_check": views.last_directory_check(db, review_session, "reviewers"),
             "directory_unmatched": views.unmatched_count(db, review_session, "reviewers"),
+            # 20I Item 1: a recheck the sign-in stopped asks to renew.
+            "directory_renew_recheck": request.query_params.get("recheck_renew") == "1",
             "assignment_count": csv_imports.existing_assignment_count(db, review_session.id),
             "upload_problems": None,
             "is_ready": is_ready,

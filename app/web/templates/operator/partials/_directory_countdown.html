@@ -4,6 +4,10 @@
    passes `directory_countdown_roster` (reviewers / reviewees /
    observers). Hidden until the script starts the count.
 
+   The card's recheck (20I Item 1) counts down the same way: its
+   `directory-keys` call names the roster's unmatched rows rather than a
+   file, and the recheck form is submitted when the count ends.
+
    On Upload the script asks `directory-keys` which of the file's
    addresses still need a lookup (parsed by the roster's own parser),
    looks them up one per request, four in flight, through
@@ -43,41 +47,69 @@
       line.hidden = true;
     });
 
-    function upload(submitter) {
+    // Two forms count down (20I Item 1): the upload, whose keys are the
+    // chosen or held file's, and the recheck, whose keys are the roster's
+    // unmatched rows. Each submits itself once counted.
+    var active = null;
+
+    function submit(target, submitter) {
       counted = true;
-      if (form.requestSubmit) {
-        form.requestSubmit(submitter && submitter.form === form ? submitter : undefined);
+      if (target.requestSubmit) {
+        target.requestSubmit(submitter && submitter.form === target ? submitter : undefined);
       } else {
-        form.submit();
+        target.submit();
       }
     }
 
-    form.addEventListener('submit', function (event) {
-      var submitter = event.submitter || null;
-      // Counted already, or a submit to elsewhere (a banner's Dismiss).
-      if (counted || (submitter && submitter.hasAttribute('formaction'))) { return; }
-      event.preventDefault();
-      // A second Upload while the count runs waits for the first.
-      if (counting) { return; }
-      counting = true;
+    function watch(target, keysBody, onKeys) {
+      target.addEventListener('submit', function (event) {
+        var submitter = event.submitter || null;
+        // Counted already, or a submit to elsewhere (a banner's Dismiss).
+        if (counted || (submitter && submitter.hasAttribute('formaction'))) { return; }
+        event.preventDefault();
+        // A second submit while the count runs waits for the first.
+        if (counting) { return; }
+        counting = true;
+        active = function () { submit(target, submitter); };
+        fetch(keysUrl, {method: 'POST', body: keysBody(), credentials: 'same-origin'})
+          .then(function (response) {
+            if (!response.ok) { throw new Error('keys ' + response.status); }
+            return response.json();
+          })
+          .then(function (answer) {
+            if (onKeys) { onKeys(answer); }
+            count(answer.keys || []);
+          })
+          .catch(function () { active(); });
+      });
+    }
+
+    watch(form, function () {
       var body = new FormData();
       body.append('roster', roster);
       var file = form.elements.file;
       if (file && file.files && file.files.length) { body.append('file', file.files[0]); }
       var held = form.elements.held_token;
       if (held && held.value) { body.append('held_token', held.value); }
-
-      fetch(keysUrl, {method: 'POST', body: body, credentials: 'same-origin'})
-        .then(function (response) {
-          if (!response.ok) { throw new Error('keys ' + response.status); }
-          return response.json();
-        })
-        .then(function (answer) { count(answer.keys || [], submitter); })
-        .catch(function () { upload(submitter); });
+      return body;
     });
+    var recheck = document.getElementById('directory-recheck-form');
+    if (recheck) {
+      watch(recheck, function () {
+        var body = new FormData();
+        body.append('roster', roster);
+        body.append('recheck', 'true');
+        return body;
+      }, function (answer) {
+        // The recheck reads only what this count fetches; without
+        // `since` the server looks every address up itself.
+        var since = recheck.elements.since;
+        if (since && answer.since) { since.value = answer.since; }
+      });
+    }
 
-    function count(keys, submitter) {
-      if (!keys.length) { upload(submitter); return; }
+    function count(keys) {
+      if (!keys.length) { active(); return; }
       var remaining = keys.length;
       var next = 0;
       var running = 0;
@@ -88,7 +120,7 @@
       function end() {
         if (done) { return; }
         done = true;
-        upload(submitter);
+        active();
       }
 
       function pump() {

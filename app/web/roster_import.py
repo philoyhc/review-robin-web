@@ -311,6 +311,7 @@ async def _handle_import(
             list_key: list_items,
             "existing_count": existing,
             "directory_check": views.last_directory_check(db, review_session, kind),
+            "directory_unmatched": views.unmatched_count(db, review_session, kind),
             "assignment_count": assignment_count,
             "upload_problems": views.upload_problems(
                 kind,

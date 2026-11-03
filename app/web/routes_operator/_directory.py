@@ -7,21 +7,27 @@ operator's own delegated token; a local run asks the fake directory.
 Also the roster upload's countdown (segment 20H Item 6): the Upload
 card's script asks ``directory-keys`` which of the file's addresses still
 need a lookup, then sends them to ``directory-lookup`` in batches, which
-keeps each answer for the upload to read (`directory_lookups`)."""
+keeps each answer for the upload to read (`directory_lookups`).
+
+And the Upload card's "Recheck N unmatched" (segment 20I Item 1): a
+roster's saved rows with an address and no directory account looked up
+again, those found bound (`directory_recheck`)."""
 
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
-from app.services import csv_imports, directory_accounts, directory_lookups
-from app.web.deps import get_or_create_user, require_session_operator
+from app.services import csv_imports, directory_accounts, directory_lookups, directory_recheck
+from app.web import urls
+from app.web.deps import get_or_create_user, request_correlation_id, require_session_operator
 from app.web.roster_import import read_upload
 from app.web.routes_operator._shared import (
     ROSTER_PARSERS,
@@ -69,6 +75,7 @@ async def roster_directory_keys(
     roster: str = Form(...),
     file: UploadFile | None = File(None),
     held_token: str | None = Form(None),
+    recheck: str | None = Form(None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -76,11 +83,34 @@ async def roster_directory_keys(
     """The file's lookup keys not yet answered within the cache's life:
     what the countdown has left to look up. The file (or the held one)
     is parsed by its roster's own parser; a file that does not parse
-    answers no keys, and the upload then shows its problems. Saves
+    answers no keys, and the upload then shows its problems. With
+    ``recheck`` (segment 20I Item 1), every key of the roster's
+    unmatched rows instead, kept or not, and no file is read. Saves
     nothing but the sweep of stale answers."""
     parse = ROSTER_PARSERS.get(roster)
     if parse is None:
         return _error(404, "unknown_roster")
+    if recheck == "true":
+        if roster not in directory_recheck.ROSTERS:
+            return _error(404, "unknown_roster")
+        if roster == "observers" and not review_session.observers_enabled:
+            return _error(404, "unknown_roster")
+        directory_lookups.sweep(db)
+        db.commit()
+        # Every unmatched key, kept answers or not: a recheck asks for
+        # a fresh answer, and the POST then reads the ones just fetched.
+        addresses = directory_recheck.unmatched_addresses(
+            db, session_id=review_session.id, kind=roster
+        )
+        keys = list(dict.fromkeys(
+            k for k in (directory_accounts.key(a) for a in addresses) if k is not None
+        ))
+        # `since`: the recheck POST reads only answers fetched from now
+        # on, so a countdown stopped early leaves the rest to the server.
+        return JSONResponse(
+            {"keys": keys, "since": datetime.now(timezone.utc).isoformat()},
+            headers=_NO_STORE,
+        )
     upload = await read_upload(
         db, file=file, held_token=held_token, user=user,
         review_session=review_session, slot=roster,
@@ -143,3 +173,72 @@ async def roster_directory_lookup(
         },
         headers=_NO_STORE,
     )
+
+
+@router.post("/sessions/{session_id}/directory-recheck")
+async def roster_directory_recheck(
+    request: Request,
+    roster: str = Form(...),
+    since: str | None = Form(None),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """The Upload card's "Recheck N unmatched" (segment 20I Item 1): the
+    roster's unmatched rows looked up again, on the operator's token,
+    reading what the card's countdown already fetched, and each one the
+    directory now finds bound. Any state but archived (author,
+    2026-11-03), the service deciding under the session lock. Back to
+    the card, whose directory line shows the recheck's counts; an
+    expired sign-in saves nothing and the card asks to renew.
+
+    A recheck asks for fresh answers: it reads only those its own
+    countdown fetched (``since``, set by the page from `directory-keys`).
+    Without the script there is no ``since``, and every address is
+    looked up here."""
+    if roster not in directory_recheck.ROSTERS:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    if roster == "observers" and not review_session.observers_enabled:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    addresses = directory_recheck.unmatched_addresses(
+        db, session_id=review_session.id, kind=roster
+    )
+    started = _parse_since(since)
+    known = (
+        directory_lookups.known_for(
+            db, user=user, session_id=review_session.id, addresses=addresses, since=started
+        )
+        if started is not None
+        else {}
+    )
+    # The lookups block, and the service waits for the session lock:
+    # both off the event loop.
+    result = await run_in_threadpool(
+        directory_recheck.recheck,
+        db,
+        review_session=review_session,
+        user=user,
+        kind=roster,
+        directory=directory_or_none(request),
+        known=known,
+        correlation_id=request_correlation_id(),
+    )
+    db.commit()
+    renew = "&recheck_renew=1" if result.stopped else ""
+    return urls.redirect(
+        request,
+        url=f"/operator/sessions/{review_session.public_id}/{roster}?unlocked=1{renew}#upload-csv",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+def _parse_since(value: str | None) -> datetime | None:
+    """The recheck countdown's start, as `directory-keys` gave it, or
+    ``None`` for none or a value that does not parse."""
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=timezone.utc)

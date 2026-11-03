@@ -8,7 +8,26 @@
    `views._directory_check._REASONS`); an import from before 20G
    recorded none, so its line names none (Codex, #3429). A replace keeps a
    not-checked row's earlier account, and says how many did (M1). #}
-{% if directory_check %}
+{% if directory_check and directory_check.recheck %}
+  {# The card's recheck (segment 20I Item 1): the rows it looked up, by
+     what each came to. A found row on an account another row holds
+     stays unbound (`held`). #}
+  <p class="muted" data-directory-check>
+    {% if directory_check.checked %}
+      Recheck of the unmatched addresses ({{ directory_check.at | format_datetime }}):
+      {{ directory_check.by_mail }} matched by mail,
+      {{ directory_check.by_upn }} by sign-in name,
+      {{ directory_check.not_found }} not found,
+      {{ directory_check.ambiguous }} ambiguous{% if directory_check.held %},
+      {{ directory_check.held }} on an account another row already holds{% endif %}{% if directory_check.not_checked %},
+      {{ directory_check.not_checked }} not checked{% endif %}.{% if directory_check.not_checked and directory_check.reason %}
+      Not checked because {{ directory_check.reason }}.{% endif %}
+    {% else %}
+      The recheck ({{ directory_check.at | format_datetime }}) couldn't check the
+      addresses{% if directory_check.reason %} because {{ directory_check.reason }}{% endif %}.
+    {% endif %}
+  </p>
+{% elif directory_check %}
   <p class="muted" data-directory-check>
     {% if directory_check.checked %}
       Directory check of the last import ({{ directory_check.at | format_datetime }}):

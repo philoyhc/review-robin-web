@@ -374,6 +374,15 @@
           {% with directory_renew_dismiss_url = reviewers_base_url ~ "/import/dismiss", directory_renew_form = "upload-csv-form" %}
             {% include "operator/partials/_directory_renew.html" %}
           {% endwith %}
+          {# 20I Item 1: a recheck the sign-in stopped saved nothing; the
+             banner renews and submits the recheck form again. #}
+          {% if directory_renew_recheck and directory_unmatched %}
+            {% with directory_renew = true, directory_renew_form = "directory-recheck-form",
+                    directory_renew_action = "recheck",
+                    directory_renew_dismiss_href = reviewers_base_url ~ "?unlocked=1#upload-csv" %}
+              {% include "operator/partials/_directory_renew.html" %}
+            {% endwith %}
+          {% endif %}
           {# 20B — under symmetric review a merge that redraws mirrored
              reviewees' answered groups asks first, as a Reviewees merge
              does: the count and its tick in the banner, the file held. #}
@@ -474,11 +483,11 @@
 
             <div class="unlock-col-actions">
               {# 20I Item 1: rechecks the saved rows with an address and no
-                 directory account, whatever added them; it ignores the file
-                 and the ticks, so it is a plain button, not a submit. Inert
-                 until the recheck is wired (rung 2). #}
+                 directory account, whatever added them. It submits its own
+                 form below the card's, so the file and the ticks stay out. #}
               {% if directory_unmatched %}
-                <button class="btn secondary" type="button" data-directory-recheck>Recheck {{ directory_unmatched }} unmatched</button>
+                <button class="btn secondary" type="submit" form="directory-recheck-form"
+                        data-directory-recheck>Recheck {{ directory_unmatched }} unmatched</button>
               {% endif %}
               {% if existing_count and existing_count > 0 %}
                 <button class="btn secondary" type="submit"
@@ -489,6 +498,13 @@
               {% endif %}
             </div>
           </form>
+          {% if directory_unmatched %}
+            <form method="post" id="directory-recheck-form"
+                  action="{{ url('/operator/sessions/' ~ session.public_id ~ '/directory-recheck') }}">
+              <input type="hidden" name="roster" value="reviewers">
+              <input type="hidden" name="since" value="">
+            </form>
+          {% endif %}
           {# Under the actions (20I Item 1, reversing 20G): what the last
              check found, then the upload's countdown. #}
           {% include "operator/partials/_directory_check.html" %}
