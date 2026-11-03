@@ -43,6 +43,9 @@ def test_the_banners_stack_above_the_form_in_one_order(kind: str) -> None:
     assert positions == sorted(positions), kind
     if "_directory_check.html" in card:
         assert max(positions) < card.index("_directory_check.html") < form
+        # The upload's countdown (20H Item 6) sits under the directory line.
+        countdown = card.index("_directory_countdown.html")
+        assert card.index("_directory_check.html") < countdown < form
 
 
 @pytest.mark.parametrize("kind", ["reviewers", "reviewees", "relationships"])

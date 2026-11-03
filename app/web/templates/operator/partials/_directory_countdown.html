@@ -1,0 +1,9 @@
+{# The upload's directory check, counted down from the page (segment
+   20H Item 6). Sits under the last import's directory line. Hidden until
+   the card's script starts the count: the page looks the file's
+   addresses up in batches and the line says how many are left. Without
+   the script it never shows, and the upload checks every address on the
+   server as before. Inert at the scaffold (rung 1). #}
+<p class="muted" data-directory-countdown aria-live="polite" hidden>
+  Directory check: <span data-directory-countdown-left>0</span> more to go.
+</p>

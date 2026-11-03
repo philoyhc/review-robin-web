@@ -531,3 +531,18 @@ def test_a_failure_renewing_cannot_cure_saves_and_the_line_says_why(
     text = client.get(f"/operator/sessions/{session.public_id}/reviewers?unlocked=1").text
     line = html.unescape(text[text.index("data-directory-check") :].split("</p>")[0])
     assert f"because {reason}" in " ".join(line.split())
+
+
+# --- 20H Item 6: the upload's countdown ---
+
+
+@pytest.mark.parametrize("roster", ["reviewers", "reviewees", "observers"])
+def test_each_upload_card_carries_the_countdown_hidden(
+    client: TestClient, db: Session, roster: str
+) -> None:
+    """The count line ships hidden: only the card's script shows it, so
+    without the script the upload is as before (20H Item 6)."""
+    session = _session(client, db, f"dir-countdown-{roster}")
+    text = client.get(f"/operator/sessions/{session.public_id}/{roster}?unlocked=1").text
+    line = text[text.index("<p class=\"muted\" data-directory-countdown") :].split("</p>")[0]
+    assert " hidden>" in line and "more to go" in line
