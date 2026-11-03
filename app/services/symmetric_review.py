@@ -89,9 +89,18 @@ def sync_reviewees_from_reviewers(
             select(Reviewer).where(Reviewer.session_id == review_session.id).order_by(Reviewer.id)
         ).scalars()
     )
+    # ``populate_existing``: read each reviewee's link from the database,
+    # not from a row already in memory. A replace deletes every reviewer,
+    # and the database's ``ON DELETE SET NULL`` clears the links without
+    # touching rows the session holds; SQLite then reuses the deleted ids,
+    # so a stale link handed a removed person's reviewee to a new reviewer
+    # (findings register L2, 2026-11-02).
     reviewees = list(
         db.execute(
-            select(Reviewee).where(Reviewee.session_id == review_session.id).order_by(Reviewee.id)
+            select(Reviewee)
+            .where(Reviewee.session_id == review_session.id)
+            .order_by(Reviewee.id)
+            .execution_options(populate_existing=True)
         ).scalars()
     )
     filled_before = _filled_display_slots(reviewees)

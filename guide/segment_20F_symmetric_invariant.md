@@ -77,6 +77,13 @@ Taken 2026-11-03 at `a2d95aff`.
 | Validate rules today | 26 | `python -c "from app.services.validation import REGISTERED_RULES as R; print(len(R))"` |
 | Symmetric-review test files | 3 | `ls tests/integration/test_symmetric_review_*.py \| wc -l` |
 
+## Status
+
+**2026-11-03, rung 1.** Started at the author's word ("start 20F"). Main
+before rung 1 was `803ff768`, the base for the read at rung 3. L2's fix is
+`populate_existing` on the sync's reviewee query rather than an expire:
+it reloads the links for exactly the rows it reads.
+
 ## PR ladder
 
 1. **L2.** The expire in `sync_reviewees_from_reviewers`, with the SQLite
@@ -103,8 +110,8 @@ Taken 2026-11-03 at `a2d95aff`.
 
 ## Open questions
 
-- **L3's form:** a notice on the import, or refuse a symmetric bundle
-  into a non-empty session? Proposed: the notice. Author.
+- ~~**L3's form.**~~ The notice (author, 2026-11-03: "L3 gets the
+  notice").
 
 ## Out of scope
 
