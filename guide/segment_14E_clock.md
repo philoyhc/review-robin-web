@@ -106,14 +106,12 @@ Taken 2026-11-02 at `fffd4c28`.
 ## Open questions
 
 - Default interval: 120 s proposed. Author.
-- Should the loop also stamp the release window's start and end in the
-  audit log? Proposed no: the window is checked on arrival. Author.
-  14C Item 2's group C report "Release window opened or ended" needs
-  that stamp to fire once; answer the two together (2026-11-04).
-- Should the clock's deadline event carry *n* of *N* submitted at the
-  moment it fires? 14C Item 2's "Deadline reached" report quotes it;
-  without it, 14G recomputes at send time, when the counts may have
-  moved. Proposed yes, if cheap. Author (2026-11-04).
+- **Answered (author, 2026-11-04):** the loop stamps the release
+  window's start and end in the audit log, one event per crossing, so
+  14C Item 2's "Release window opened or ended" report fires once.
+- **Answered (author, 2026-11-04):** the clock's deadline event carries
+  *n* of *N* submitted at the moment it fires, for 14C Item 2's
+  "Deadline reached" report.
 
 ## Out of scope
 
