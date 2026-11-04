@@ -13,7 +13,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import NamedTuple
 
-from sqlalchemy import select, update
+from sqlalchemy import Row, select, update
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -103,11 +103,18 @@ Seven slots, traced 19S Item 3: the group key needs ``id``,
     reviewer_object_id: str | None = None
 
 
+#: One ``(Assignment, Reviewer, Reviewee)`` row: a query's ``Row``, or a
+#: plain tuple (the unit tests build these).
+type _PairRow = (
+    Row[Assignment, Reviewer, Reviewee] | tuple[Assignment, Reviewer, Reviewee]
+)
+
+
 def classify_self_review(
     db: Session,
     *,
     session_id: int,
-    rows: list[tuple[Assignment, Reviewer, Reviewee]],
+    rows: Sequence[_PairRow],
 ) -> dict[int, bool]:
     """The canonical self-review classification for a set of
     ``(Assignment, Reviewer, Reviewee)`` rows on one session.
@@ -276,7 +283,7 @@ def _self_review_assignment_ids(
     db: Session,
     *,
     session_id: int,
-    rows: list[tuple[Assignment, Reviewer, Reviewee]],
+    rows: Sequence[_PairRow],
 ) -> set[int]:
     """Thin wrapper over :func:`classify_self_review` that returns
     the set of assignment ids that count as self-reviews. Kept for

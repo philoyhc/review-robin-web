@@ -26,6 +26,7 @@ from app.db.models import (
     ReviewSession,
     User,
 )
+from app.db.session import rowcount
 from app.logging_config import get_logger
 from app.services import audit, session_guard, unit_of_work
 from app.services import invitations as invitations_service
@@ -58,17 +59,17 @@ def purge_responses(
     an email-history record but unlinked from the deleted invitations.
     """
     session_id = review_session.id
-    responses = db.execute(
+    responses = rowcount(db.execute(
         delete(Response).where(
             Response.assignment_id.in_(_assignment_ids(session_id))
         )
-    ).rowcount
+    ))
     invitations_service.detach_outbox(
         db, session_id=session_id, reviewers_deleted=False
     )
-    invitations = db.execute(
+    invitations = rowcount(db.execute(
         delete(Invitation).where(Invitation.session_id == session_id)
-    ).rowcount
+    ))
     db.flush()
     audit.write_event(
         db,
@@ -112,32 +113,32 @@ def purge_rosters(
     the other rosters, and nothing references them (findings L7).
     """
     session_id = review_session.id
-    responses = db.execute(
+    responses = rowcount(db.execute(
         delete(Response).where(
             Response.assignment_id.in_(_assignment_ids(session_id))
         )
-    ).rowcount
+    ))
     invitations_service.detach_outbox(
         db, session_id=session_id, reviewers_deleted=True
     )
-    invitations = db.execute(
+    invitations = rowcount(db.execute(
         delete(Invitation).where(Invitation.session_id == session_id)
-    ).rowcount
-    assignments = db.execute(
+    ))
+    assignments = rowcount(db.execute(
         delete(Assignment).where(Assignment.session_id == session_id)
-    ).rowcount
-    relationships = db.execute(
+    ))
+    relationships = rowcount(db.execute(
         delete(Relationship).where(Relationship.session_id == session_id)
-    ).rowcount
-    reviewers = db.execute(
+    ))
+    reviewers = rowcount(db.execute(
         delete(Reviewer).where(Reviewer.session_id == session_id)
-    ).rowcount
-    reviewees = db.execute(
+    ))
+    reviewees = rowcount(db.execute(
         delete(Reviewee).where(Reviewee.session_id == session_id)
-    ).rowcount
-    observers = db.execute(
+    ))
+    observers = rowcount(db.execute(
         delete(Observer).where(Observer.session_id == session_id)
-    ).rowcount
+    ))
     db.flush()
     audit.write_event(
         db,
@@ -189,9 +190,9 @@ def purge_audit_log(
     The ``session.audit_log_purged`` event is written *after* the
     delete, so this record of the purge itself survives.
     """
-    purged = db.execute(
+    purged = rowcount(db.execute(
         delete(AuditEvent).where(AuditEvent.session_id == review_session.id)
-    ).rowcount
+    ))
     db.flush()
     audit.write_event(
         db,

@@ -13,6 +13,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from app.db.base import column_length
 from app.db.models import (
     Observer,
     Reviewee,
@@ -219,7 +220,7 @@ def _read_dict_rows(
                 ),
             )
         seen.add(column)
-    label_limit = SessionFieldLabel.__table__.columns["label"].type.length
+    label_limit = column_length(SessionFieldLabel, "label")
     for slot, label in captured.items():
         if len(label) > label_limit:
             column = field_label_csv.column_for_slot(slot)

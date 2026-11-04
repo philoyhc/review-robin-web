@@ -158,6 +158,14 @@ python3 -c "import json,collections;d=json.load(open('/tmp/pyright.json'));print
   `_BranchFieldShape`) is kept for the plain shapes (`AssignmentPair`,
   the Settings import's `_PlannedField`), and the public name is that
   protocol `|` the model. 307 → 268 errors, the 39 counted.
+- **Rung 4, cluster B:** 268 → 217 (51). Two helpers carry it:
+  `app.db.session.rowcount()` (a DML result's `CursorResult.rowcount`;
+  12 sites) and `app.db.base.column_length()` (a `String` column's
+  declared length; 3). `Select[tuple[User]]` became `Select[User]` (two
+  lock queries, about 30 errors downstream); `Model.__table__.delete()` /
+  `.update()` became `delete(cast(Table, …))`; the audit filter is
+  generic over its `Select`; `classify_self_review` takes a `Row` or a
+  tuple (`Result.tuples()` is deprecated in 2.1).
 
 ## PR ladder
 

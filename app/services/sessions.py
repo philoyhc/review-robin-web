@@ -3,8 +3,9 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping
 from datetime import UTC, datetime
+from typing import cast
 
-from sqlalchemy import delete, select
+from sqlalchemy import Table, delete, select, update
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -701,7 +702,7 @@ def set_symmetric_review_for_import(
 def clear_mirror_links(db: Session, session_id: int) -> None:
     """Turning symmetric review off leaves two ordinary rosters (20B)."""
     db.execute(
-        Reviewee.__table__.update()
+        update(cast(Table, Reviewee.__table__))
         .where(Reviewee.session_id == session_id)
         .where(Reviewee.mirrors_reviewer_id.is_not(None))
         .values(mirrors_reviewer_id=None)

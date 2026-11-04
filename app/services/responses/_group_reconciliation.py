@@ -42,6 +42,7 @@ from app.db.models import (
     Response,
     Reviewee,
 )
+from app.db.session import rowcount
 from app.schemas.responses import ResponseUpsert
 
 
@@ -420,9 +421,9 @@ def clear_changed_groups(
             raise GroupAnswersWouldClear(count)
     # Deleted by assignment, not by response id: one bound parameter per
     # row rather than one per row and field.
-    return db.execute(
+    return rowcount(db.execute(
         delete(Response).where(Response.assignment_id.in_(changed))
-    ).rowcount or 0
+    )) or 0
 
 
 def _expand_group_upserts(

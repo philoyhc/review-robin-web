@@ -47,6 +47,7 @@ from dataclasses import dataclass
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.db.base import column_length
 from app.db.models import ReviewSession, SessionFieldLabel, User
 from app.services import audit, unit_of_work
 from app.services import session_lifecycle as lifecycle
@@ -195,7 +196,7 @@ def label_length_error(label: str) -> str | None:
     """Why ``label`` cannot be stored, when it is longer than
     ``session_field_labels.label`` (findings Cc3); ``None`` otherwise.
     The CSV header path checks the same limit (``csv_imports``)."""
-    limit = SessionFieldLabel.__table__.columns["label"].type.length
+    limit = column_length(SessionFieldLabel, "label")
     normalised = (label or "").strip()
     if limit is not None and len(normalised) > limit:
         return f"A label is {len(normalised)} characters; at most {limit} fit."
