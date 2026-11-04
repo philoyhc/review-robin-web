@@ -272,6 +272,7 @@ def test_the_demo_set_builds_a_validated_session(
     assert "quick_setup_error" not in submitted.headers["location"]
 
     review_session = db.get(ReviewSession, session_id)
+    assert review_session is not None
     card = views.build_workflow_card_context(
         db, review_session, return_to="home"
     )
@@ -374,6 +375,7 @@ def test_the_demo_set_populates_the_surfaces_it_is_meant_to_show(
             Assignment.session_id == session_id
         )
     )
+    assert assignments is not None
     assert assignments > len(demo.rows["reviewers"]), assignments
 
 

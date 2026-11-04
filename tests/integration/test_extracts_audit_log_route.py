@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import csv
 import io
+from collections.abc import Callable
 from typing import cast
 
 import pytest
@@ -19,6 +20,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.auth.identity import AuthenticatedUser
 from app.config import settings
 from app.db.models import AuditEvent, ReviewSession
 
@@ -117,9 +119,9 @@ def test_audit_log_route_returns_session_events(
 
 def test_audit_log_route_rejects_non_sys_admin(
     db: Session,
-    alice: object,
-    bob: object,
-    make_client: object,
+    alice: AuthenticatedUser,
+    bob: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Bob is a plain operator (not a sys-admin) — even though he's
@@ -128,10 +130,10 @@ def test_audit_log_route_rejects_non_sys_admin(
     # Override the autouse fixture: alice still needs to create
     # the session (operator-only path), bob then hits the gate.
     monkeypatch.setattr(settings, "sys_admin_emails", [])
-    alice_client = make_client(alice)  # type: ignore[operator]
+    alice_client = make_client(alice)
     review_session = _make_session(alice_client, db, code="al-perm")
 
-    bob_client = make_client(bob)  # type: ignore[operator]
+    bob_client = make_client(bob)
     response = bob_client.get(
         f"/operator/sessions/{review_session.public_id}/export/audit_log.csv",
         follow_redirects=False,

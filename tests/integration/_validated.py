@@ -22,10 +22,12 @@ def validate_session(
     """``validate_session(review_session)`` or ``validate_session(db, id)``."""
     if isinstance(target, ReviewSession):
         db = object_session(target)
+        assert db is not None
         review_session = target
     else:
         db = target
         review_session = db.get(ReviewSession, session_id)
+        assert review_session is not None
     db.refresh(review_session)
     if not lifecycle.is_draft(review_session):
         return

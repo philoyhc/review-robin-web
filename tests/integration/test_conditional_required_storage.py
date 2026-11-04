@@ -39,6 +39,7 @@ def test_clone_copies_the_mode(client: TestClient, db: Session) -> None:
     rating.branch_mode = "require"
     db.commit()
     user = db.execute(select(User)).scalars().first()
+    assert user is not None
     clone = session_clone.clone_session(db, source=review_session, user=user, mode="all")
     db.flush()
     cloned = db.execute(

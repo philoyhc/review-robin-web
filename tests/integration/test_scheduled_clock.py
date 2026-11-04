@@ -4,6 +4,8 @@ or page view) reaches it first."""
 
 from __future__ import annotations
 
+import threading
+from collections.abc import Callable
 from contextlib import nullcontext
 from datetime import UTC, datetime, timedelta
 
@@ -21,7 +23,7 @@ from .test_scheduled_activation import _make_validated_session
 NOW = datetime.now(UTC)
 
 
-def _factory(db: Session):
+def _factory(db: Session) -> Callable[[], nullcontext[Session]]:
     """The pass opens database sessions; the test's own stands in."""
     return lambda: nullcontext(db)
 
@@ -298,7 +300,7 @@ def test_the_lifespan_starts_the_loop_and_stops_it(monkeypatch: pytest.MonkeyPat
     from app.config import settings
     from app.main import create_app
 
-    calls: list[object] = []
+    calls: list[threading.Event | None] = []
 
     def fake_pass(factory, *, now=None, stop=None):
         calls.append(stop)
@@ -330,6 +332,11 @@ def test_off_the_lifespan_starts_no_loop(monkeypatch: pytest.MonkeyPatch) -> Non
     assert calls == []
 
 
+def _no_factory() -> Session:
+    """For a stubbed pass, which opens no database session."""
+    raise AssertionError("the stubbed pass opened a session")
+
+
 def test_a_failing_pass_does_not_stop_the_loop(monkeypatch: pytest.MonkeyPatch) -> None:
     import asyncio
     import threading
@@ -345,7 +352,7 @@ def test_a_failing_pass_does_not_stop_the_loop(monkeypatch: pytest.MonkeyPatch) 
         return 0
 
     monkeypatch.setattr(_clock, "run_pass", flaky)
-    asyncio.run(_clock.run_forever(lambda: None, interval=0.01, stop=stop))
+    asyncio.run(_clock.run_forever(_no_factory, interval=0.01, stop=stop))
     assert len(calls) == 2
 
 

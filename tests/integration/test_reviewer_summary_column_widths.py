@@ -61,8 +61,9 @@ def _seed_session_with_rae_and_one_reviewee(
     db: Session,
     *,
     code: str,
-    reviewer_email: str,
+    reviewer_email: str | None,
 ) -> ReviewSession:
+    assert reviewer_email is not None
     operator_client.post(
         "/operator/sessions",
         data={"name": code.title(), "code": code},

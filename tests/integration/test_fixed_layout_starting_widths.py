@@ -81,6 +81,7 @@ def test_the_surface_starts_an_unsized_profile_column_at_its_header(
     rating = db.execute(
         select(InstrumentResponseField).where(InstrumentResponseField.field_key == "rating")
     ).scalars().first()
+    assert rating is not None
     assert f'<col style="width: {numeric_column_ch_width(rating)}ch">' in cols
 
 

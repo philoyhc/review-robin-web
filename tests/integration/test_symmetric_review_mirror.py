@@ -11,6 +11,7 @@ mirrored.
 from __future__ import annotations
 
 from datetime import UTC
+from typing import TypedDict, Unpack
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -30,7 +31,9 @@ def _session(client: TestClient, db: Session, code: str, *, on: bool = True) -> 
 
 
 def _user(db: Session) -> User:
-    return db.execute(select(User).order_by(User.id)).scalars().first()
+    user = db.execute(select(User).order_by(User.id)).scalars().first()
+    assert user is not None
+    return user
 
 
 def _assert_mirrored(db: Session, review_session: ReviewSession) -> list[Reviewee]:
@@ -50,14 +53,30 @@ def _assert_mirrored(db: Session, review_session: ReviewSession) -> list[Reviewe
     return [by_link[r.id] for r in revs]
 
 
-def _add(db: Session, review_session: ReviewSession, email: str, **kw: str) -> Reviewer:
+class _ReviewerFields(TypedDict, total=False):
+    profile_link: str
+    tag_1: str
+    tag_2: str
+    tag_3: str
+
+
+class _ImportMode(TypedDict, total=False):
+    append: bool
+    merge: bool
+
+
+def _add(
+    db: Session, review_session: ReviewSession, email: str, **kw: Unpack[_ReviewerFields]
+) -> Reviewer:
     return reviewers.create_reviewer(
         db, review_session=review_session, name=email.split("@")[0], email=email,
         user=_user(db), **kw,
     )
 
 
-def _import(db: Session, review_session: ReviewSession, body: str, **kw: bool) -> None:
+def _import(
+    db: Session, review_session: ReviewSession, body: str, **kw: Unpack[_ImportMode]
+) -> None:
     parsed = csv_imports.parse_reviewer_csv(body.encode())
     assert not parsed.issues, parsed.issues
     csv_imports.save_reviewers(
@@ -392,6 +411,7 @@ def test_a_replace_never_hands_a_removed_persons_reviewee_to_a_new_reviewer(
         select(ReviewSession).where(ReviewSession.code == "sym-l2")
     ).scalar_one()
     owner = db.execute(select(User).order_by(User.id)).scalars().first()
+    assert owner is not None
 
     def replace(body: str) -> None:
         parsed = csv_imports.parse_reviewer_csv(body.encode())

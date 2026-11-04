@@ -88,7 +88,9 @@ def _seed(
 
 
 def _operator(db: Session) -> User:
-    return db.execute(select(User)).scalars().first()
+    user = db.execute(select(User)).scalars().first()
+    assert user is not None
+    return user
 
 
 # --------------------------------------------------------------------------- #

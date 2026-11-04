@@ -514,6 +514,7 @@ def test_audit_log_csv_emits_context_slot_on_filtered_extract(
     )
     assert events, "filtered extract should emit an audit event"
     last_detail = events[-1].detail
+    assert last_detail is not None
     assert "context" in last_detail, last_detail
     assert last_detail["context"]["event_types"] == "session.activated"
     assert last_detail["context"]["severities"] == "info"
@@ -548,6 +549,7 @@ def test_audit_log_csv_no_context_on_unfiltered_extract(
         .scalars()
         .one()
     )
+    assert event.detail is not None
     assert "context" not in event.detail
 
 

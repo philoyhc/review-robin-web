@@ -557,10 +557,12 @@ def test_status_row_reports_instruments_as_configured_over_total(
     # default response fields. A bare `Instrument(...)` has none, and
     # `is_configured` would then refuse it however many Band 1 links are
     # touched — the test could never reach its all-configured case.
+    actor = db.execute(select(User)).scalars().first()
+    assert actor is not None
     second = instruments_service.create_instrument(
         db,
         review_session=review_session,
-        actor=db.execute(select(User)).scalars().first(),
+        actor=actor,
     )
     db.flush()
 

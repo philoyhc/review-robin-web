@@ -6,6 +6,7 @@ import json
 import re
 from collections.abc import Callable
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -582,7 +583,9 @@ def test_replicate_instrument_clones_content(
     source_id = source.id
     source_name = source.name
 
-    def _count(model: object, instrument_id: int) -> int:
+    def _count[M: (InstrumentResponseField, InstrumentDisplayField, _Assignment)](
+        model: type[M], instrument_id: int
+    ) -> int:
         return len(
             db.execute(
                 select(model).where(model.instrument_id == instrument_id)
@@ -2977,6 +2980,7 @@ def test_boundary_change_drops_stale_sample_member_ids(
         actor=review_session.created_by_user,
     )
     db.refresh(new_model)
+    assert new_model.band2_state is not None
     assert "sample_group_member_ids" not in new_model.band2_state
     # The rest of the Refresh state stays.
     assert new_model.band2_state["sample_reviewee_name"] == sample_name
@@ -4238,6 +4242,7 @@ def test_full_flow_r_toggle_then_bottom_save_preserves_state(
     assert band2_resp.status_code == 200
     db.expire_all()
     new_model = db.get(type(new_model), new_model.id)
+    assert new_model is not None
     rating_row = next(
         rf for rf in new_model.response_fields if rf.label == "Rating"
     )
@@ -4263,6 +4268,7 @@ def test_full_flow_r_toggle_then_bottom_save_preserves_state(
     assert save_resp.status_code in (200, 303)
     db.expire_all()
     new_model = db.get(type(new_model), new_model.id)
+    assert new_model is not None
 
     # Step 3 — Wave 3 PR iii: response-field state lives on DB rows,
     # not in band2_state JSON. The DB row's required must still be
@@ -4354,6 +4360,7 @@ def test_full_flow_add_new_response_field_persists_through_save(
     )
     db.expire_all()
     new_model = db.get(type(new_model), new_model.id)
+    assert new_model is not None
     labels = {rf.label for rf in new_model.response_fields}
     assert "Bonus" in labels, (
         "Bottom Save removed the operator-added Bonus row"
@@ -4420,6 +4427,7 @@ def test_r_toggle_persists_required_flag_via_dual_write(
 
     db.expire_all()
     new_model = db.get(type(new_model), new_model.id)
+    assert new_model is not None
     by_label = {rf.label: rf for rf in new_model.response_fields}
     # Rating.required should now be False.
     assert by_label["Rating"].required is False
@@ -5419,7 +5427,7 @@ def test_integer_field_refuses_fractional_bounds(
     field._inline_step = 0.5
     db.commit()
 
-    def _rename() -> object:
+    def _rename() -> httpx.Response:
         return client.post(url, json={"response_fields": [{
             "id": field.id, "name": "Score renamed", "data_type": "integer",
             "min": "1", "max": "5", "step": "0.5", "selected": True,
@@ -8124,6 +8132,7 @@ def test_exclude_self_reviews_does_not_yet_change_generation(
     )
     db.refresh(new_model)
     rule_set = db.get(SessionRuleSet, new_model.rule_set_id)
+    assert rule_set is not None
     assert rule_set.exclude_self_reviews is True
     schema = _session_rule_set_to_schema(rule_set)
     assert schema.options.excludeSelfReviews is False

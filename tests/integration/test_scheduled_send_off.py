@@ -70,9 +70,9 @@ def _events(db: Session, rs: ReviewSession, event_type: str) -> list[AuditEvent]
 
 def test_the_shipped_default_is_off(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("RRW_SCHEDULED_SEND", raising=False)
-    assert Settings(_env_file=None).scheduled_send is False
+    assert Settings(_env_file=None).scheduled_send is False  # pyright: ignore[reportCallIssue]  -- a pydantic-settings init option
     monkeypatch.setenv("RRW_SCHEDULED_SEND", "true")
-    assert Settings(_env_file=None).scheduled_send is True
+    assert Settings(_env_file=None).scheduled_send is True  # pyright: ignore[reportCallIssue]  -- a pydantic-settings init option
 
 
 def test_the_fields_render_disabled_with_their_line(

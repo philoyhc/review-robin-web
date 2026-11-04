@@ -276,8 +276,10 @@ def intro_columns(body: str) -> dict[str, str]:
                 if tag == "div":
                     self.depth += 1
             elif tag == "div" and dict(attrs).get("data-rs-intro-col") and len(self.cols) < 2:
-                self.current = dict(attrs)["data-rs-intro-col"]
-                self.cols[self.current] = []
+                col = dict(attrs)["data-rs-intro-col"]
+                assert col is not None
+                self.current = col
+                self.cols[col] = []
                 self.depth = 0
 
         def handle_endtag(self, tag) -> None:
@@ -1779,6 +1781,7 @@ def test_group_boundary_tag_change_keeps_the_group_it_left(
         )
     ).scalar_one()
     operator_user = db.get(User, review_session.created_by_user_id)
+    assert operator_user is not None
     # A roster edit needs an editable session (findings Bc4: the service
     # gate refuses ``ready``); Revert keeps every response.
     lifecycle.revert_session_to_draft(
@@ -1889,6 +1892,7 @@ def test_tag_change_into_answered_group_clears_it(
         )
     ).scalar_one()
     operator_user = db.get(User, review_session.created_by_user_id)
+    assert operator_user is not None
     # A roster edit needs an editable session (findings Bc4: the service
     # gate refuses ``ready``); Revert keeps every response.
     lifecycle.revert_session_to_draft(
@@ -2292,6 +2296,7 @@ def test_group_self_review_toggle_rules_out_whole_group(
         }
 
     operator_user = db.get(User, review_session.created_by_user_id)
+    assert operator_user is not None
 
     # Deactivate self-reviews: R's Team X group (R, A) is ruled out
     # wholesale; the Team Y group (C, D) — which R is not in — stays.

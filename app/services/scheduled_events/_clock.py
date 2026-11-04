@@ -25,6 +25,7 @@ import asyncio
 import logging
 import threading
 from collections.abc import Callable
+from contextlib import AbstractContextManager
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import or_, select, text
@@ -123,7 +124,7 @@ def _retried_recently(db: Session, session_id: int, *, now: datetime) -> bool:
 
 
 def run_pass(
-    session_factory: Callable[[], Session],
+    session_factory: Callable[[], AbstractContextManager[Session]],
     *,
     now: datetime | None = None,
     stop: threading.Event | None = None,
@@ -169,7 +170,7 @@ def run_pass(
 
 
 async def run_forever(
-    session_factory: Callable[[], Session],
+    session_factory: Callable[[], AbstractContextManager[Session]],
     *,
     interval: float,
     stop: threading.Event,

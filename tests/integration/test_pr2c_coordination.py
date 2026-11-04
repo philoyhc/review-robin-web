@@ -221,7 +221,9 @@ def test_cancellation_message_when_validated_with_offsets(db: Session) -> None:
     cancellation = build_manual_activate_cancellation(rs)
     assert cancellation is not None
     assert cancellation["pending_count"] == 1
-    assert "1 scheduled auto-send invitation will be cancelled" in cancellation["message"]
+    message = cancellation["message"]
+    assert isinstance(message, str)
+    assert "1 scheduled auto-send invitation will be cancelled" in message
 
 
 def test_cancellation_none_when_not_validated(db: Session) -> None:

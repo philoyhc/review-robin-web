@@ -113,10 +113,14 @@ def test_a_password_is_stored_as_typed(client: TestClient, db: Session, fernet_k
     client.get("/operator/sessions")
     user = _alice_row(db)
     _configure(db, user, plaintext_password="  spaced  ")
-    assert _secrets.decrypt_password(_alice_row(db).smtp_password_encrypted) == "  spaced  "
+    stored = _alice_row(db).smtp_password_encrypted
+    assert stored is not None
+    assert _secrets.decrypt_password(stored) == "  spaced  "
     _configure(db, user, plaintext_password="   ")
     db.expire_all()
-    assert _secrets.decrypt_password(_alice_row(db).smtp_password_encrypted) == "  spaced  "
+    kept = _alice_row(db).smtp_password_encrypted
+    assert kept is not None
+    assert _secrets.decrypt_password(kept) == "  spaced  "
 
 
 def test_the_same_password_records_no_change(client: TestClient, db: Session, fernet_key: str) -> None:

@@ -25,6 +25,7 @@ The pairing matters in both directions:
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Any
 
 import pytest
 from sqlalchemy.orm import Session
@@ -64,7 +65,7 @@ def engine_runs(monkeypatch: pytest.MonkeyPatch) -> EngineRuns:
     runs = EngineRuns()
     original = _generate._diff_one_instrument
 
-    def counting(*args: object, **kwargs: object) -> object:
+    def counting(*args: Any, **kwargs: Any) -> object:
         runs.count += 1
         return original(*args, **kwargs)
 

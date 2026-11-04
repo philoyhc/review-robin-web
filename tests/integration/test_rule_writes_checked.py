@@ -9,6 +9,7 @@ it was replaced. The writers now refuse the value instead.
 from __future__ import annotations
 
 import json
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -118,7 +119,7 @@ def _link2_form(field: str, operand: str) -> dict[str, str]:
     }
 
 
-def _stored_rules(db: Session, instrument_id: int) -> list[object] | None:
+def _stored_rules(db: Session, instrument_id: int) -> list[dict[str, Any]] | None:
     db.expire_all()
     instrument = db.get(Instrument, instrument_id)
     if instrument.rule_set_id is None:

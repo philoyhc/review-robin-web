@@ -34,10 +34,11 @@ def _make_active_session_with_one_page(
     db: Session,
     *,
     code: str,
-    reviewer_email: str,
+    reviewer_email: str | None,
 ) -> ReviewSession:
     """One reviewer, one reviewee, one instrument → one page session
     (no page break, so all instruments collapse to page 1)."""
+    assert reviewer_email is not None
     operator_client.post(
         "/operator/sessions",
         data={"name": code.title(), "code": code},

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import re
+from typing import cast
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -37,6 +38,7 @@ def test_create_gives_a_session_a_public_id(db: Session, client: TestClient) -> 
 def test_duplicate_draws_its_own_public_id(db: Session, client: TestClient) -> None:
     source = _create(db, client, "pid-src")
     user = db.execute(select(User)).scalars().first()
+    assert user is not None
 
     clone = clone_session(db, source=source, user=user, mode="config")
     db.commit()
@@ -138,7 +140,7 @@ def test_an_ill_formed_public_id_never_reaches_the_database() -> None:
     from app.services.sessions import get_by_public_id
 
     for raw in ("\x00", "abc\x00def", "ABCDEFGHJK", "k3m9-x2pq7", "a" * 17, ""):
-        assert get_by_public_id(_NoQueries(), raw) is None, raw
+        assert get_by_public_id(cast(Session, _NoQueries()), raw) is None, raw
 
 
 def test_a_nul_byte_in_a_session_url_answers_404(

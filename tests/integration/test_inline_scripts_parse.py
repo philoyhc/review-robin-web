@@ -25,13 +25,14 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
+from typing import cast
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import ReviewSession
+from app.db.models import Instrument, InstrumentResponseField, ReviewSession
 
 pytestmark = pytest.mark.skipif(
     shutil.which("node") is None, reason="node is not installed"
@@ -207,10 +208,10 @@ def test_the_previews_number_width_matches_the_surfaces() -> None:
     ).stdout
     expected = [
         numeric_column_ch_width(
-            SimpleNamespace(
+            cast(InstrumentResponseField, SimpleNamespace(
                 data_type=kind, label=label, required=required,
                 validation={"min": low, "max": high},
-            )
+            ))
         )
         for kind, low, high, label, required in _WIDTH_CASES
     ]
@@ -257,7 +258,10 @@ def test_band_2s_intro_heading_matches_the_surfaces() -> None:
     expected = []
     for label, description, position, total in _HEADING_CASES:
         heading = instrument_heading(
-            instrument=SimpleNamespace(short_label=label, description=description),
+            instrument=cast(
+                Instrument,
+                SimpleNamespace(short_label=label, description=description),
+            ),
             position=position,
             total_count=total,
         )

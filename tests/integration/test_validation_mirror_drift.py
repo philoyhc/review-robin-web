@@ -35,6 +35,7 @@ def _session(client: TestClient, db: Session, code: str, *, on: bool = True) -> 
         b"ReviewerName,ReviewerEmail\nAnn,ann@example.edu\nBob,bob@example.edu\n"
     )
     owner = db.execute(select(User).order_by(User.id)).scalars().first()
+    assert owner is not None
     csv_imports.save_reviewers(
         db, session=review_session, user=owner, rows=parsed.rows,
         filename="r.csv", correlation_id="c",

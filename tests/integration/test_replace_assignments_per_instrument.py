@@ -273,6 +273,7 @@ def test_reconcile_unchanged_run_keeps_responses(db: Session) -> None:
         .scalars()
         .first()
     )
+    assert an_assignment is not None
     resp_id = _attach_response(
         db, instrument_id=inst_a.id, assignment=an_assignment, key="unchanged"
     )
@@ -315,6 +316,7 @@ def test_reconcile_added_reviewer_inserts_pairs_and_keeps_responses(
         .scalars()
         .first()
     )
+    assert an_assignment is not None
     resp_id = _attach_response(
         db, instrument_id=inst_a.id, assignment=an_assignment, key="added"
     )

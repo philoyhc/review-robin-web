@@ -570,8 +570,8 @@ def test_a_clone_copies_each_instruments_visibility_grid(db: Session) -> None:
     source.archive_offset = "PT24H"
     db.commit()
 
-    def grids(session_id: int) -> dict[str, dict[str, tuple[str | None, str | None]]]:
-        out: dict[str, dict[str, tuple[str | None, str | None]]] = {}
+    def grids(session_id: int) -> dict[str, dict[str, tuple[str | None, ...]]]:
+        out: dict[str, dict[str, tuple[str | None, ...]]] = {}
         for instrument in db.execute(
             select(Instrument).where(Instrument.session_id == session_id)
         ).scalars():

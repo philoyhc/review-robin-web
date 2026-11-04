@@ -127,7 +127,9 @@ def _seed_assignments(db: Session, rs: ReviewSession) -> None:
 
 
 def _operator(db: Session, rs: ReviewSession) -> User:
-    return db.get(User, rs.created_by_user_id)
+    user = db.get(User, rs.created_by_user_id)
+    assert user is not None
+    return user
 
 
 def _ready_session_with_invitations(

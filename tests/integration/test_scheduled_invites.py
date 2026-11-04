@@ -144,7 +144,9 @@ def _generate_invitations(
 
 
 def _operator(db: Session, rs: ReviewSession) -> User:
-    return db.get(User, rs.created_by_user_id)
+    user = db.get(User, rs.created_by_user_id)
+    assert user is not None
+    return user
 
 
 # --------------------------------------------------------------------------- #

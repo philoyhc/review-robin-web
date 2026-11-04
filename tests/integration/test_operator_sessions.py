@@ -689,8 +689,10 @@ def test_edit_payload_rejects_a_field_update_session_does_not_write(
 ) -> None:
     session_id = _draft_with_schedule(client, db, "typo-1")
 
+    review_session = db.get(ReviewSession, session_id)
+    assert review_session is not None
     with pytest.raises(TypeError, match="nmae"):
-        sessions.edit_payload(db.get(ReviewSession, session_id), nmae="x")
+        sessions.edit_payload(review_session, nmae="x")
 
 
 def test_lobby_renders_real_session_tags(

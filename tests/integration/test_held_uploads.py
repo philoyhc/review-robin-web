@@ -116,6 +116,7 @@ def test_joining_a_hold_replaces_only_its_slot(db: Session) -> None:
         session_id=review_session.id,
         files={"reviewers": _ROSTER, "settings": _SETTINGS},
     )
+    assert token is not None
     newer = HeldFile(filename="reviewers2.csv", content=b"ReviewerName\nBo\n")
     again = held_uploads.hold(
         db,
@@ -137,6 +138,7 @@ def test_someone_elses_token_starts_a_new_hold(db: Session) -> None:
     token = held_uploads.hold(
         db, user=owner, session_id=review_session.id, files={"reviewers": _ROSTER}
     )
+    assert token is not None
     theirs = held_uploads.hold(
         db,
         user=other,
@@ -206,6 +208,7 @@ def test_an_oversized_file_still_drops_the_one_it_replaces(db: Session) -> None:
         session_id=review_session.id,
         files={"reviewers": _ROSTER, "settings": _SETTINGS},
     )
+    assert token is not None
     big = HeldFile(
         filename="big.csv", content=b"x" * (held_uploads.MAX_HELD_BYTES + 1)
     )

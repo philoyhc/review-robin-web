@@ -18,6 +18,7 @@ from app.db.models import (
     InstrumentDisplayField,
     InstrumentResponseField,
     InstrumentViewPolicy,
+    ReviewSession,
     SessionRuleSet,
     User,
 )
@@ -27,7 +28,7 @@ from app.services import instruments, sessions
 from ._full_matrix import pin_full_matrix_on_all_instruments
 
 
-def _setup(db: Session) -> tuple[Session, Instrument, User]:
+def _setup(db: Session) -> tuple[ReviewSession, Instrument, User]:
     op = User(email="op-replicate@example.edu", display_name="Op")
     db.add(op)
     db.flush()
@@ -38,6 +39,7 @@ def _setup(db: Session) -> tuple[Session, Instrument, User]:
     source = db.execute(
         select(Instrument).where(Instrument.session_id == review_session.id)
     ).scalars().first()
+    assert source is not None
     return review_session, source, op
 
 
@@ -158,8 +160,8 @@ def test_replicate_tolerates_malformed_imported_sort_and_widths(
     """Settings import stores both columns from unchecked JSON; a shape
     the writers never produce is dropped rather than failing Replicate."""
     review_session, source, op = _setup(db)
-    source.sort_display_fields = [5, {"display_field_id": [1]}, {"display_field_id": "3"}]
-    source.column_widths = [1, 2]
+    source.sort_display_fields = [5, {"display_field_id": [1]}, {"display_field_id": "3"}]  # pyright: ignore[reportAttributeAccessIssue]  -- a shape the column type rules out, as an unchecked import stores it
+    source.column_widths = [1, 2]  # pyright: ignore[reportAttributeAccessIssue]  -- a shape the column type rules out, as an unchecked import stores it
     db.commit()
 
     replica = instruments.replicate_instrument(
@@ -266,6 +268,7 @@ def test_replicate_marks_a_long_label_within_its_column(db: Session) -> None:
         db, review_session=review_session, source=source, actor=op
     )
     assert replica.short_label == "Copy of " + "x" * 24
+    assert replica.short_label is not None
     assert len(replica.short_label) == 32
 
 

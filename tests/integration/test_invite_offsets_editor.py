@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
+import httpx
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -33,7 +34,7 @@ def _create_session(
     *,
     scheduled_activate_at: str | None = None,
     invite_offsets: str | None = None,
-) -> int:
+) -> tuple[int, httpx.Response, int]:
     data: dict[str, str] = {
         "name": f"Sess {code}",
         "code": code,

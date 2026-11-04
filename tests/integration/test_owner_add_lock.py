@@ -66,6 +66,7 @@ def test_add_owner_refuses_a_target_revoked_since_it_was_loaded(
         select(ReviewSession).where(ReviewSession.code == "lock-add")
     ).scalar_one()
     actor = db.get(User, review_session.created_by_user_id)
+    assert actor is not None
     bob = _seed(db, "bob@example.edu", is_operator=True)
     _stale_revoke(db, bob)
     with pytest.raises(session_owners.OwnerOperationError) as refused:
@@ -292,14 +293,17 @@ def test_an_owner_add_holds_off_a_revoke(
 ) -> None:
     admin_id, bob_id, _ = pg_seed
     with Session(engine) as adding, Session(engine) as revoking:
-        assert session_owners.lock_owner_eligible(adding, adding.get(User, bob_id))
+        bob = adding.get(User, bob_id)
+        assert bob is not None
+        assert session_owners.lock_owner_eligible(adding, bob)
         _short_wait(revoking)
         actor = revoking.get(User, admin_id)
+        assert actor is not None
         with pytest.raises(OperationalError, match="lock timeout") as waited:
             if path == "single":
-                users_service.revoke(
-                    revoking, actor=actor, target=revoking.get(User, bob_id)
-                )
+                target = revoking.get(User, bob_id)
+                assert target is not None
+                users_service.revoke(revoking, actor=actor, target=target)
             else:
                 users_service.apply_batch(
                     revoking, actor=actor, action="revoke", user_ids=[bob_id]
@@ -318,9 +322,15 @@ def test_a_revoke_holds_off_an_owner_add(engine: Engine, pg_seed) -> None:
         revoking.execute(users_service._batch_lock("revoke", [bob_id]))
         _short_wait(adding)
         with pytest.raises(OperationalError, match="lock timeout"):
+            review_session = adding.get(ReviewSession, session_id)
+            actor = adding.get(User, admin_id)
+            target = adding.get(User, bob_id)
+            assert review_session is not None
+            assert actor is not None
+            assert target is not None
             session_owners.add_owner(
                 adding,
-                review_session=adding.get(ReviewSession, session_id),
-                actor=adding.get(User, admin_id),
-                target=adding.get(User, bob_id),
+                review_session=review_session,
+                actor=actor,
+                target=target,
             )

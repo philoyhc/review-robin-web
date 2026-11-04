@@ -13,8 +13,10 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
+from typing import cast
 
 import pytest
+from fastapi import Request
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -132,9 +134,9 @@ def test_the_pass_runs_once_per_session_per_request(
         "observe_scheduled_events",
         lambda db, session, **kwargs: seen.append(session.id),
     )
-    request = SimpleNamespace(state=SimpleNamespace(), url_for=None)
-    a = SimpleNamespace(id=1)
-    b = SimpleNamespace(id=2)
+    request = cast(Request, SimpleNamespace(state=SimpleNamespace(), url_for=None))
+    a = cast(ReviewSession, SimpleNamespace(id=1))
+    b = cast(ReviewSession, SimpleNamespace(id=2))
 
     _shared.observe_scheduled_events_on_load(request, db, [a])
     _shared.observe_scheduled_events_on_load(request, db, [a, b])

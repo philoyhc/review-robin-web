@@ -57,7 +57,9 @@ def _seed_two_display_fields(
 def _actor(db: Session):
     from app.db.models import User
 
-    return db.execute(select(User)).scalars().first()
+    actor = db.execute(select(User)).scalars().first()
+    assert actor is not None
+    return actor
 
 
 def test_set_sort_persists_canonical_shape(

@@ -11,6 +11,7 @@ blocks.
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from typing import TypedDict
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
@@ -67,7 +68,9 @@ def _count(db: Session, session: ReviewSession, event_type: str) -> int:
 
 
 def _operator(db: Session, session: ReviewSession) -> User:
-    return db.execute(select(User).order_by(User.id)).scalars().first()
+    user = db.execute(select(User).order_by(User.id)).scalars().first()
+    assert user is not None
+    return user
 
 
 def test_manual_activate_after_the_scheduled_one_refuses(
@@ -712,6 +715,7 @@ def test_a_row_edit_refuses_a_session_activated_at_the_lock(
     reviewer = db.execute(
         select(Reviewer).where(Reviewer.session_id == session.id)
     ).scalars().first()
+    assert reviewer is not None
     _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
 
     with pytest.raises(lifecycle.SessionStateConflict):
@@ -785,6 +789,13 @@ def test_a_relationship_write_refuses_a_session_activated_at_the_lock(
     ).all()
 
 
+class _Selection(TypedDict):
+    """The selection the bulk relationship writers take."""
+
+    relationship_ids: list[int]
+    correlation_id: str
+
+
 def _rung4_writes():
     from app.services import assignments
     from app.services import relationships as rel
@@ -805,7 +816,7 @@ def _rung4_writes():
         db.flush()
         return row
 
-    ids = dict(relationship_ids=[], correlation_id="t")
+    ids = _Selection(relationship_ids=[], correlation_id="t")
     return {
         "delete_all_relationships": lambda db, s, u: rel.delete_all_relationships(
             db, review_session=s, user=u, correlation_id="t"
@@ -878,6 +889,8 @@ def test_a_relationship_import_refuses_at_its_entry_gate(db: Session) -> None:
     reviewee = db.execute(
         select(Reviewee).where(Reviewee.session_id == session.id)
     ).scalars().first()
+    assert reviewer is not None
+    assert reviewee is not None
     parsed = relationships.parse_relationship_csv(
         f"ReviewerEmail,RevieweeEmail\n{reviewer.email},{reviewee.email_or_identifier}\n".encode(),
         reviewers=[reviewer],
@@ -972,6 +985,7 @@ def test_an_instrument_edit_refuses_a_session_activated_at_the_lock(
     instrument = db.execute(
         select(Instrument).where(Instrument.session_id == session.id)
     ).scalars().first()
+    assert instrument is not None
     _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
 
     with pytest.raises(lifecycle.SessionStateConflict):
@@ -1050,8 +1064,9 @@ def _rung5_writes():
     from app.services import instruments as i
     from app.services import visibility_policies as vp
 
-    def first(rows):
-        return rows[0] if rows else None
+    def first[T](rows: list[T]) -> T:
+        assert rows
+        return rows[0]
 
     def df(inst):
         return first(list(inst.display_fields))
@@ -1061,9 +1076,15 @@ def _rung5_writes():
 
     return {
         "set_band1_assignment_rules": lambda db, s, n, u: i.set_band1_assignment_rules(
-            db, instrument=n, link1_mode=None, link1_combinator=None,
-            link1_rules=[], link2_mode=None, link2_combinator=None,
-            link2_rules=[], actor=u,
+            db,
+            instrument=n,
+            link1_mode=None,  # pyright: ignore[reportArgumentType]  -- never read past the gate
+            link1_combinator=None,  # pyright: ignore[reportArgumentType]  -- never read past the gate
+            link1_rules=[],
+            link2_mode=None,  # pyright: ignore[reportArgumentType]  -- never read past the gate
+            link2_combinator=None,  # pyright: ignore[reportArgumentType]  -- never read past the gate
+            link2_rules=[],
+            actor=u,
         ),
         "set_exclude_self_reviews": lambda db, s, n, u: i.set_exclude_self_reviews(
             db, instrument=n, value=True, actor=u
@@ -1193,6 +1214,7 @@ def test_a_band2_save_is_one_commit(client, db: Session, monkeypatch) -> None:
     instrument = db.execute(
         select(Instrument).where(Instrument.session_id == session.id)
     ).scalars().first()
+    assert instrument is not None
     for field in ("tag_1", "tag_2"):
         instruments_service.add_display_field(
             db, instrument=instrument, source_type="reviewee",
@@ -1605,6 +1627,7 @@ def _invited_session(db: Session, code: str, status: str):
     reviewer = db.execute(
         select(Reviewer).where(Reviewer.session_id == session.id)
     ).scalars().first()
+    assert reviewer is not None
     invitation = Invitation(
         session_id=session.id,
         reviewer_id=reviewer.id,
@@ -1926,6 +1949,7 @@ def _instrument_missing_its_name_row(db: Session, code: str, status: str):
     instrument = db.execute(
         select(Instrument).where(Instrument.session_id == session.id)
     ).scalars().first()
+    assert instrument is not None
     from app.services import instruments as instruments_service
 
     instruments_service.ensure_locked_display_fields(db, instrument=instrument)
@@ -2024,6 +2048,7 @@ def test_rendering_the_instruments_page_writes_nothing_past_setup(
     instrument = db.execute(
         select(Instrument).where(Instrument.session_id == session.id)
     ).scalars().first()
+    assert instrument is not None
     for row in db.execute(
         select(InstrumentDisplayField).where(
             InstrumentDisplayField.instrument_id == instrument.id,

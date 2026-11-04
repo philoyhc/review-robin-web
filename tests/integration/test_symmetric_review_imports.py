@@ -43,7 +43,9 @@ def _session(client: TestClient, db: Session, code: str, *, on: bool = True) -> 
 
 
 def _user(db: Session) -> User:
-    return db.execute(select(User).order_by(User.id)).scalars().first()
+    user = db.execute(select(User).order_by(User.id)).scalars().first()
+    assert user is not None
+    return user
 
 
 def _reviewees(db: Session, review_session: ReviewSession) -> list[Reviewee]:
@@ -296,7 +298,7 @@ def test_a_turn_on_committed_after_the_route_gate_still_refuses(client: TestClie
     )
     db.commit()
     db.expire_all()
-    review_session.__dict__["symmetric_review"] = False  # the route's stale read
+    vars(review_session)["symmetric_review"] = False  # the route's stale read
     with pytest.raises(SessionStateConflict):
         reviewees_service.create_reviewee(
             db, review_session=review_session, name="X", email_or_identifier="x@example.edu", user=user

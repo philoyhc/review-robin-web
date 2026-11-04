@@ -14,7 +14,9 @@ from __future__ import annotations
 import html as html_lib
 import json
 import re
+from typing import Any
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -74,7 +76,7 @@ def _bar(body: str) -> str:
     return m.group(0)
 
 
-def _rule_attr(bar: str) -> object:
+def _rule_attr(bar: str) -> dict[str, Any]:
     m = re.search(r'data-observer-edit-cohort\s+data-rule="([^"]*)"', bar)
     assert m, "the builder pane carries no rule"
     return json.loads(html_lib.unescape(m.group(1)))
@@ -141,7 +143,7 @@ def test_a_rejected_edit_keeps_the_rule_in_the_builder(
 
 def _post(client: TestClient, url: str, cells: list[tuple[str, str, str, str]],
           *, email: str = "o@example.org", combinator: str = "AND",
-          name: str = "O") -> object:
+          name: str = "O") -> httpx.Response:
     data: dict[str, object] = {
         "email": email, "display_name": name, "tag_1": "", "status": "active",
         "cohort_combinator": combinator,

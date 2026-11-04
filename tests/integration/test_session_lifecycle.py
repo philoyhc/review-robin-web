@@ -557,7 +557,9 @@ def test_lazy_deadline_close_audit_carries_correlation_id(
 
 
 def _add_group_instrument(db: Session, session_id: int) -> Instrument:
-    add_group_instrument(db, db.get(ReviewSession, session_id))
+    review_session = db.get(ReviewSession, session_id)
+    assert review_session is not None
+    add_group_instrument(db, review_session)
     return db.execute(
         select(Instrument)
         .where(Instrument.session_id == session_id)

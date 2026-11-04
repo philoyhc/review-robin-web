@@ -8,7 +8,7 @@ import pathlib
 import re
 
 from fastapi.testclient import TestClient
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import HeldUpload, Instrument, Reviewee, Reviewer, ReviewSession
@@ -168,7 +168,7 @@ def test_a_lapsed_hold_saves_nothing_and_says_so(
     _submit(client, s, {"reviewers": ("r.csv", REVIEWERS)}, confirm_replace="true")
     asked = _submit(client, s, {"reviewers": ("r2.csv", REVIEWERS_2)})
     token = _token(asked.text)
-    db.execute(HeldUpload.__table__.delete())
+    db.execute(delete(HeldUpload).execution_options(synchronize_session=False))
     db.commit()
 
     tried = _submit(

@@ -44,8 +44,8 @@ def test_oversized_csv_logs_rejection(caplog: pytest.LogCaptureFixture) -> None:
 
     rejected = _records(caplog, "csv import rejected")
     assert len(rejected) == 1
-    assert rejected[0].reason == "too_large"
-    assert rejected[0].source == "reviewers"
+    assert rejected[0].__dict__["reason"] == "too_large"
+    assert rejected[0].__dict__["source"] == "reviewers"
 
 
 def test_non_utf8_csv_logs_rejection(caplog: pytest.LogCaptureFixture) -> None:
@@ -54,7 +54,7 @@ def test_non_utf8_csv_logs_rejection(caplog: pytest.LogCaptureFixture) -> None:
 
     rejected = _records(caplog, "csv import rejected")
     assert len(rejected) == 1
-    assert rejected[0].reason == "not_utf8"
+    assert rejected[0].__dict__["reason"] == "not_utf8"
 
 
 def test_roster_import_logs_outcome(
@@ -74,10 +74,10 @@ def test_roster_import_logs_outcome(
 
     imported = _records(caplog, "roster imported")
     assert len(imported) == 1
-    assert imported[0].session_id == review_session.id
-    assert imported[0].source == "reviewers"
-    assert imported[0].new == 1
-    assert imported[0].correlation_id == "corr-1"
+    assert imported[0].__dict__["session_id"] == review_session.id
+    assert imported[0].__dict__["source"] == "reviewers"
+    assert imported[0].__dict__["new"] == 1
+    assert imported[0].__dict__["correlation_id"] == "corr-1"
 
 
 def test_purge_responses_logs_retention_action(
@@ -92,8 +92,8 @@ def test_purge_responses_logs_retention_action(
 
     purged = _records(caplog, "session data purged")
     assert len(purged) == 1
-    assert purged[0].kind == "responses"
-    assert purged[0].session_id == review_session.id
+    assert purged[0].__dict__["kind"] == "responses"
+    assert purged[0].__dict__["session_id"] == review_session.id
 
 
 def test_permission_denial_logs_warning(
@@ -113,8 +113,8 @@ def test_permission_denial_logs_warning(
 
     denied = _records(caplog, "permission denied")
     assert len(denied) == 1
-    assert denied[0].gate == "require_operator"
-    assert denied[0].user_id == bob.id
+    assert denied[0].__dict__["gate"] == "require_operator"
+    assert denied[0].__dict__["user_id"] == bob.id
 
 
 def test_grant_denial_logs_the_user_and_the_reviewee(
@@ -162,6 +162,6 @@ def test_grant_denial_logs_the_user_and_the_reviewee(
 
     denied = _records(caplog, "permission denied")
     assert len(denied) == 1
-    assert denied[0].gate == "require_reviewee_with_current_grant"
-    assert denied[0].user_id == ree.id
-    assert denied[0].reviewee_id == reviewee.id
+    assert denied[0].__dict__["gate"] == "require_reviewee_with_current_grant"
+    assert denied[0].__dict__["user_id"] == ree.id
+    assert denied[0].__dict__["reviewee_id"] == reviewee.id

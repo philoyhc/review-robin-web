@@ -428,9 +428,11 @@ def _alice_session(
 
 
 def _instrument_for(db: Session, session: ReviewSession) -> Instrument:
-    return db.execute(
+    instrument = db.execute(
         select(Instrument).where(Instrument.session_id == session.id)
     ).scalars().first()
+    assert instrument is not None
+    return instrument
 
 
 def test_route_save_persists_three_audiences(

@@ -38,7 +38,7 @@ import re
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -352,6 +352,7 @@ def test_observer_events_do_not_report_assignments_they_never_delete(
     db.add(Observer(session_id=rs.id, email="o@example.org", display_name="O"))
     db.commit()
     user = db.get(User, rs.created_by_user_id)
+    assert user is not None
 
     parsed = csv_imports.parse_observer_csv(b"ObserverEmail\np@example.org\n")
     assert not parsed.is_blocked, parsed.issues
@@ -1042,9 +1043,9 @@ def test_a_populated_pair_of_rosters_reads_as_it_did(
     rs = _mk(client, db, "relcc-e-ok")
     _seed(db, rs.id, pairs=1)
     db.execute(
-        Relationship.__table__.delete().where(
-            Relationship.session_id == rs.id
-        )
+        delete(Relationship)
+        .where(Relationship.session_id == rs.id)
+        .execution_options(synchronize_session=False)
     )
     db.commit()
 
@@ -1143,9 +1144,9 @@ def test_an_inactive_reviewer_still_counts_as_a_reviewer(
     rs = _mk(client, db, "relcc-e-inactive")
     reviewers, _ = _seed(db, rs.id, pairs=1)
     db.execute(
-        Relationship.__table__.delete().where(
-            Relationship.session_id == rs.id
-        )
+        delete(Relationship)
+        .where(Relationship.session_id == rs.id)
+        .execution_options(synchronize_session=False)
     )
     for row in reviewers:
         row.status = "inactive"

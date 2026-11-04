@@ -50,6 +50,7 @@ def _session(
     anchor = (
         session.scheduled_activate_at if kind == "invite" else session.deadline
     )
+    assert anchor is not None
     setattr(session, f"{kind}_offsets", ["-P3D", "-P1D"])
     _record_sent(db, session, kind, anchor, "-P3D")
     db.commit()
@@ -170,6 +171,7 @@ def test_a_new_anchor_frees_the_list_and_returning_restores_its_record(
     even though it is past: it was sent there."""
     session = _session(client, db, "bc1-return", kind="invite")
     first_start = session.scheduled_activate_at
+    assert first_start is not None
     other_start = first_start + timedelta(hours=1)
     assert (
         _save(client, session, kind="invite", offsets="-P1D", anchor=other_start)
@@ -205,6 +207,7 @@ def test_a_sent_position_past_the_lists_end_takes_no_new_entry(
     """A position sent and then emptied (before this check) still never
     fires again, so an entry appended onto it is refused."""
     session = _session(client, db, "bc1-past-end", kind="invite")
+    assert session.scheduled_activate_at is not None
     _record_sent(
         db, session, "invite", session.scheduled_activate_at, "-P1D", index=1
     )
@@ -225,6 +228,7 @@ def test_the_lobby_cannot_move_end_back_onto_sent_reminders(
     there too."""
     session = _session(client, db, "bc1-lobby", kind="reminder")
     first_end = session.deadline
+    assert first_end is not None
     other_end = first_end + timedelta(hours=1)
     moved = _save(
         client, session, kind="reminder", offsets="-P1D", anchor=other_end
@@ -253,6 +257,7 @@ def test_the_lobby_names_a_moved_sent_reminder_before_its_lead_time(
     wrong (the sent-entry check runs first, as on Session Home)."""
     session = _session(client, db, "bc1-lobby-order", kind="reminder")
     first_end = session.deadline
+    assert first_end is not None
     # -P2D on an End three hours later resolves three hours out.
     other_end = first_end + timedelta(hours=3)
     moved = _save(

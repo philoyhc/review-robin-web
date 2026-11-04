@@ -260,7 +260,9 @@ def test_progress_columns_sort_by_percentage_not_raw_count() -> None:
     from app.web.routes_operator._operations import _completion_pct
 
     assert _completion_pct(0, 2) == _completion_pct(0, 8) == 0
-    assert _completion_pct(1, 2) > _completion_pct(1, 8)
+    half, eighth = _completion_pct(1, 2), _completion_pct(1, 8)
+    assert half is not None and eighth is not None
+    assert half > eighth
     assert _completion_pct(2, 2) == 100
     # Nothing to do is not "0% done".
     assert _completion_pct(0, 0) is None
