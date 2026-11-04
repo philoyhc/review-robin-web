@@ -4,7 +4,7 @@
 `guide/codebase_assessment_03nov.md`: a spec-vs-code audit, a defect read
 of the window's `app/`, `cordware/` and `alembic/` changes, and a read of
 `cordware/`, `residentialapps/` and `utilityapps/` · **Read at:**
-`cc364ed0` (#3566) · **Open:** every row below.
+`cc364ed0` (#3566) · **Open:** every row not struck.
 
 The checklist the fixes work through (standard practice since
 2026-11-02). **Nothing was edited by the reads**, and their scratch tests
@@ -25,7 +25,7 @@ None.
 
 ## 2. Medium
 
-- **M1. A directory recheck changes setup without sending a validated
+- ~~**M1**~~ — **Done in #3568** (author, 2026-11-04: Reviewers and Reviewees recheck only while editable): `directory_recheck` locks Reviewers and Reviewees under `require_editable` and Observers under `require_not_archived`, and a recheck that binds, or whose symmetric sync changes the mirror, calls `invalidate_if_validated` (`tests/integration/test_directory_recheck.py`). **A directory recheck changes setup without sending a validated
   session back to draft.** `app/services/directory_recheck.py` `recheck`
   (lines 150–185), from `app/web/routes_operator/_directory.py`. Every
   other setup write calls `lifecycle.invalidate_if_validated`; the recheck
@@ -55,7 +55,7 @@ None.
 
 ## 3. Low
 
-- **L1. A Reviewers recheck under symmetric review can 500.**
+- ~~**L1**~~ — **Not reproduced as stated** (#3568): with no `acknowledged_loss` the sync *clears* answered group responses without asking (`responses.clear_changed_groups`: "`None`, the default, deletes without asking"); it does not raise, so there is no 500. The residue, a recheck repairing a drifted mirror in a draft session that holds group answers, is the same silent clear any unasked sync makes, and M1's fix confines it to editable sessions. **A Reviewers recheck under symmetric review can 500.**
   `directory_recheck.py:178` calls `sync_reviewees_from_reviewers(db,
   locked)` with no `acknowledged_loss`, and the route does not catch
   `GroupAnswersWouldClear`; `app/web/error_handlers.py` has no handler for
@@ -133,14 +133,14 @@ None.
   `instruments.cached_group_pair_count` / `cached_group_pair_stamp`. Spec.
 - **D7. `views.INTRO_LAYOUT_CHOICES` is not exported.** `spec/instruments.md:912`;
   it lives in `app/web/views/_instruments.py:66`. Code or spec, trivially.
-- **D8. The recheck's answer is loosely worded.** `spec/setup_pages.md:1112–1113`
+- ~~**D8**~~ — **Done in #3568**: `spec/setup_pages.md` names the 409 and the redirect. **The recheck's answer is loosely worded.** `spec/setup_pages.md:1112–1113`
   says it answers "with the card again"; it 303-redirects to
   `/{roster}?unlocked=1[&recheck_renew=1]#upload-csv`, and an archived
   refusal is the 409 page. Spec.
 - **D9. A code comment predates 20G.** `app/web/roster_import.py:520` says
   a check stopped on "no token, or Graph refused it" saves nothing; since
   20G only `unauthorized` holds. Code (comment).
-- **D10. The deferred recheck entry names the button wrongly.**
+- ~~**D10**~~ — **Done in #3568**: the entry is gone, since M1's ruling settles that Reviewers and Reviewees never recheck past validated. **The deferred recheck entry names the button wrongly.**
   `guide/deferred_consolidated.md:1110` says "Check unmatched addresses
   again"; it shipped as "Recheck N unmatched". Guide.
 - **D11. Residential's spec counts three applications.**

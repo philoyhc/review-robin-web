@@ -1108,9 +1108,16 @@ recheck binds the mirror). It submits its own form
 (`directory-recheck-form`), so the chosen file and the ticks play no part.
 
 - **Route:** `POST /operator/sessions/{id}/directory-recheck`
-  (`_directory.py`, `app/services/directory_recheck.py`), allowed in any
-  state but archived, activated sessions included, and answering with the
-  card again.
+  (`_directory.py`, `app/services/directory_recheck.py`), open while the
+  roster's other writes are: Reviewers and Reviewees while the session is
+  editable (draft or validated), Observers until it is archived (author,
+  2026-11-04). A refused recheck is the 409 page and looks nothing up.
+  Otherwise it redirects to the card (`?unlocked=1#upload-csv`, with
+  `&recheck_renew=1` when an expired sign-in stopped it).
+- **Validated sessions:** a recheck that binds any row, or whose
+  symmetric sync changes the Reviewees mirror, sends a validated session
+  back to draft, as every roster write does (`spec/lifecycle.md` §2.3);
+  one that changes nothing leaves it validated.
 - **What it binds:** a row the directory now finds binds as an upload
   binds it (`directory_accounts.columns`). Not found, ambiguous and not
   checked stay unbound, and a found row whose account another row of the

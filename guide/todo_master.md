@@ -75,11 +75,9 @@ Small items with no plan doc; each fits one PR and its reasoning fits
 the PR body unless it says otherwise.
 
 - **The 2026-11-03 findings register** *(filed 2026-11-03, with
-  `guide/codebase_assessment_03nov.md`)*. One medium (M1, the recheck
-  changing setup without invalidating, and writing past validated), six
-  low, thirteen spec drifts and four noted gaps, in
-  `guide/findings_2026-11-03_assessment.md`. M1 and L1 need the author's
-  ruling first; the drifts are spec-only passes.
+  `guide/codebase_assessment_03nov.md`)*. Low defects (L2–L6), spec
+  drifts and noted gaps in `guide/findings_2026-11-03_assessment.md`;
+  M1 and L1 are settled; the drifts are spec-only passes.
 
 - **Cordware host logging, events 4 and 5** *(filed 2026-10-22, at
   segment 21's close)*. v0.8 §3 "Host logging" names two events the host
