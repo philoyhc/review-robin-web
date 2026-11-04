@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import dataclass
+from typing import Literal, overload
 
 from cordware import graph
 from cordware.graph import (  # noqa: F401  (re-exported: the checker's vocabulary)
@@ -92,6 +93,10 @@ class OutcomesRejected(ValueError):
     """Carried outcomes that don't fit the file or the shape `outcome_json` writes."""
 
 
+@overload
+def _text(value: object) -> str: ...
+@overload
+def _text(value: object, *, optional: Literal[True]) -> str | None: ...
 def _text(value: object, *, optional: bool = False) -> str | None:
     if value is None and optional:
         return None
@@ -161,7 +166,9 @@ def run(
     # addresses, numbered in the order the file first names it.
     keys_by_account: dict[str, list[str]] = {}
     for key in keys:
-        outcome = outcomes.get(key) if key is not None else None
+        if key is None:
+            continue
+        outcome = outcomes.get(key)
         if outcome is not None and outcome.status in RESOLVED and outcome.user is not None:
             seen = keys_by_account.setdefault(outcome.user.id, [])
             if key not in seen:
@@ -173,7 +180,7 @@ def run(
         )
     }
 
-    counts = dict.fromkeys(STATUSES, 0)
+    counts: dict[str, int] = dict.fromkeys(STATUSES, 0)
     cells = []
     for key in keys:
         outcome = (

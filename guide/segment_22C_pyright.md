@@ -166,6 +166,14 @@ python3 -c "import json,collections;d=json.load(open('/tmp/pyright.json'));print
   `.update()` became `delete(cast(Table, …))`; the audit filter is
   generic over its `Select`; `classify_self_review` takes a `Row` or a
   tuple (`Result.tuples()` is deprecated in 2.1).
+- **Rungs 5–6 re-cut by package, not cluster** (2026-11-04): after B,
+  clusters C and E interleave in the same files (a `None` argument beside
+  an invariant `dict`), so a cluster rung would reopen every file twice.
+  **5a** `residentialapps` + `utilityapps` (26), **5b** `app/web` (73),
+  **6** `app/services` (118), the last build rung and the read.
+- **Rung 5a:** 217 → 191. One behavior change: the leave sample's
+  `by_precinct` falls back to this week when given a start with no end,
+  where it raised `TypeError`.
 
 ## PR ladder
 

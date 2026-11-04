@@ -15,7 +15,10 @@ from utilityapps.routes_home import router as home_router
 from utilityapps.web import templates
 
 
-async def _http_error(request: Request, exc: HTTPException) -> Response:
+async def _http_error(request: Request, exc: Exception) -> Response:
+    # Starlette types every handler as taking ``Exception``; this one is
+    # registered for ``HTTPException`` alone.
+    assert isinstance(exc, HTTPException)
     # A `403` is a page, not FastAPI's JSON (spec §3: a normal 403, not an
     # invitation to ask for access); anything else keeps the default.
     if exc.status_code == 403:
