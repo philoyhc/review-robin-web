@@ -29,6 +29,7 @@ from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
+from ._lookups import detail_of
 from ._public_id import public_id
 
 
@@ -105,6 +106,7 @@ def test_full_matrix_save_persists_assignments_and_sets_mode(
     event = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "assignments.generated")
     ).scalar_one()
+    assert event.detail is not None
     assert event.detail["session_code"] == "spring-2026"
     assert event.detail["counts"]["new"] == 2
     assert event.detail["counts"]["pairs"] == 2
@@ -167,13 +169,14 @@ def test_full_matrix_fans_pairs_out_per_instrument(
         ).scalars()
     )
     assert len(events) == 2
-    total_new = sum(e.detail["counts"]["new"] for e in events)
+    total_new = sum(detail_of(e)["counts"]["new"] for e in events)
     assert total_new == 4
     for event in events:
+        assert event.detail is not None
         assert event.detail["counts"]["instruments"] == 1
         assert isinstance(event.detail["refs"]["instrument_id"], int)
     assert {
-        event.detail["refs"]["instrument_id"] for event in events
+        detail_of(event)["refs"]["instrument_id"] for event in events
     } == set(instrument_ids)
 
 
@@ -235,6 +238,7 @@ def test_re_save_with_confirm_replaces(
             .order_by(AuditEvent.id.desc())
         ).scalars()
     )
+    assert events[0].detail is not None
     assert events[0].detail["counts"]["deleted"] == 0
     assert events[0].detail["counts"]["kept"] == 1
 

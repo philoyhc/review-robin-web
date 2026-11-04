@@ -318,6 +318,7 @@ def test_create_session_with_settings_file_processes_upload(
             AuditEvent.session_id == review_session.id,
         )
     ).scalar_one()
+    assert event.detail is not None
     assert event.detail.get("counts", {}).get("instruments") == 1
 
 

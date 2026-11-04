@@ -10,6 +10,7 @@ Tan's sign-in name, `office@` is ambiguous, `nobody@` is not found.
 from __future__ import annotations
 
 import re
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -21,6 +22,7 @@ from app.web.routes_operator import _directory, _setup_observers, _shared
 from cordware.graph import FakeDirectory, GraphError
 
 from ._invitation_states import _create_session
+from ._lookups import detail_of, must_get
 
 
 class _Switch:
@@ -153,6 +155,13 @@ def _event(db: Session, session_id: int, event_type: str) -> AuditEvent | None:
     ).scalars().first()
 
 
+def _detail(db: Session, session_id: int, event_type: str) -> dict[str, Any]:
+    """The newest ``event_type`` event's detail, for an event the test expects."""
+    event = _event(db, session_id, event_type)
+    assert event is not None, event_type
+    return detail_of(event)
+
+
 def test_a_recheck_binds_the_rows_the_directory_now_finds(
     client: TestClient, db: Session, switch: _Switch
 ) -> None:
@@ -180,7 +189,7 @@ def test_a_recheck_binds_the_rows_the_directory_now_finds(
     assert rows["nobody@example.edu"].directory_object_id is None
     assert rows["lab01@example.edu"].directory_object_id is None  # inactive: not rechecked
 
-    counts = _event(db, session.id, "reviewers.directory_rechecked").detail["counts"]
+    counts = _detail(db, session.id, "reviewers.directory_rechecked")["counts"]
     assert counts == {
         "directory_by_mail": 1,
         "directory_by_upn": 1,
@@ -215,7 +224,7 @@ def test_a_row_on_an_account_another_row_holds_stays_unbound(
     rows = _rows(db, Reviewer, session.id)
     assert rows["jane.tan@example.edu"].directory_object_id
     assert rows["e0123456@example.edu"].directory_object_id is None
-    counts = _event(db, session.id, "reviewers.directory_rechecked").detail["counts"]
+    counts = _detail(db, session.id, "reviewers.directory_rechecked")["counts"]
     assert counts["directory_held"] == 1 and counts["directory_by_mail"] == 1
     card = _card(client, session.public_id, "reviewers")
     assert "1 on an account another row already holds" in card
@@ -230,6 +239,8 @@ def test_a_directory_still_down_binds_nothing_and_says_why(
     _recheck(client, session.public_id, "reviewers")
     assert _rows(db, Reviewer, session.id)["arun.kumar@example.edu"].directory_object_id is None
     event = _event(db, session.id, "reviewers.directory_rechecked")
+    assert event is not None
+    assert event.detail is not None
     assert event.detail["counts"]["directory_not_checked"] == 1
     assert event.detail["context"]["directory_unchecked"] == "server"
     card = _card(client, session.public_id, "reviewers")
@@ -268,8 +279,8 @@ def test_reviewees_and_observers_recheck_too(
     _recheck(client, session.public_id, "observers")
     assert _rows(db, Reviewee, session.id)["arun.kumar@example.edu"].directory_object_id
     assert _rows(db, Observer, session.id)["jane.tan@example.edu"].directory_object_id
-    assert _event(db, session.id, "reviewees.directory_rechecked").detail["counts"]["directory_by_mail"] == 1
-    assert _event(db, session.id, "observers.directory_rechecked").detail["counts"]["directory_by_mail"] == 1
+    assert _detail(db, session.id, "reviewees.directory_rechecked")["counts"]["directory_by_mail"] == 1
+    assert _detail(db, session.id, "observers.directory_rechecked")["counts"]["directory_by_mail"] == 1
 
 
 def test_reviewers_and_reviewees_recheck_only_while_editable(
@@ -287,6 +298,7 @@ def test_reviewers_and_reviewees_recheck_only_while_editable(
     _upload(client, session.public_id, "observers", "ObserverName,ObserverEmail\nJane,jane.tan@example.edu\n")
     switch.current = FakeDirectory()
     row = db.get(ReviewSession, session.id)
+    assert row is not None
     row.status = "ready"
     db.commit()
     asked: list[str] = []
@@ -305,6 +317,7 @@ def test_reviewers_and_reviewees_recheck_only_while_editable(
     _recheck(client, session.public_id, "observers")
     assert _rows(db, Observer, session.id)["jane.tan@example.edu"].directory_object_id
     row = db.get(ReviewSession, session.id)
+    assert row is not None
     row.status = "archived"
     db.commit()
     _recheck(client, session.public_id, "observers", status=409)
@@ -320,15 +333,16 @@ def test_a_recheck_that_binds_sends_a_validated_session_to_draft(
     switch.current = _Failing("server")
     _upload(client, session.public_id, "reviewers", "ReviewerName,ReviewerEmail\nArun,arun.kumar@example.edu\n")
     row = db.get(ReviewSession, session.id)
+    assert row is not None
     row.status = "validated"
     db.commit()
     _recheck(client, session.public_id, "reviewers")  # still down: binds nothing
     db.expire_all()
-    assert db.get(ReviewSession, session.id).status == "validated"
+    assert must_get(db, ReviewSession, session.id).status == "validated"
     switch.current = FakeDirectory()
     _recheck(client, session.public_id, "reviewers")
     db.expire_all()
-    assert db.get(ReviewSession, session.id).status == "draft"
+    assert must_get(db, ReviewSession, session.id).status == "draft"
 
 
 @pytest.mark.parametrize("roster", ["reviewees", "observers"])
@@ -342,12 +356,13 @@ def test_every_roster_s_binding_recheck_invalidates(
     header = "RevieweeName,RevieweeEmail" if roster == "reviewees" else "ObserverName,ObserverEmail"
     _upload(client, session.public_id, roster, f"{header}\nArun,arun.kumar@example.edu\n")
     row = db.get(ReviewSession, session.id)
+    assert row is not None
     row.status = "validated"
     db.commit()
     switch.current = FakeDirectory()
     _recheck(client, session.public_id, roster)
     db.expire_all()
-    assert db.get(ReviewSession, session.id).status == "draft"
+    assert must_get(db, ReviewSession, session.id).status == "draft"
 
 
 def test_an_unknown_roster_or_disabled_observers_is_not_found(
@@ -507,6 +522,7 @@ def test_an_archived_session_is_refused_before_any_lookup(
 
     switch.current = _Counting()
     row = db.get(ReviewSession, session.id)
+    assert row is not None
     row.status = "archived"
     db.commit()
     _recheck(client, session.public_id, "reviewers", status=409)
@@ -540,11 +556,11 @@ def test_a_recheck_that_binds_recomputes_self_review(
     directory_recheck.recheck(db, review_session=session, user=user, kind="reviewers", directory=directory)
     db.commit()
     db.expire_all()
-    assert db.get(Assignment, row.id).is_self_review is False  # the reviewee is still unbound
+    assert must_get(db, Assignment, row.id).is_self_review is False  # the reviewee is still unbound
     directory_recheck.recheck(db, review_session=session, user=user, kind="reviewees", directory=directory)
     db.commit()
     db.expire_all()
-    assert db.get(Assignment, row.id).is_self_review is True
+    assert must_get(db, Assignment, row.id).is_self_review is True
 
 
 def test_stop_and_save_reads_what_the_count_fetched_and_asks_nothing(
@@ -592,6 +608,8 @@ def test_stop_and_save_reads_what_the_count_fetched_and_asks_nothing(
     assert "1 not checked" in card
     assert "Not checked because the recheck was stopped." in card
     event = _event(db, session.id, "reviewers.directory_rechecked")
+    assert event is not None
+    assert event.detail is not None
     assert event.detail["context"]["directory_unchecked"] == "stopped"
 
 

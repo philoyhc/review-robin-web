@@ -327,6 +327,7 @@ def test_an_include_change_is_audited(db: Session) -> None:
         )
     ).scalars().all()
     assert len(events) == 1
+    assert events[0].detail is not None
     assert events[0].detail["counts"]["include_changed"] == 1
 
 

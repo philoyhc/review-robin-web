@@ -117,9 +117,11 @@ def test_a_require_branch_renders_its_mode_and_greys_out_r(
         ('value="require" selected', "Require the below (else, optional)"),
     ]
     r = re.search(r"<button[^>]*data-new-model-rf-required[^>]*>", _row(table, "Comments"))
+    assert r is not None
     assert 'disabled aria-disabled="true" title="Required while the condition holds"' in r.group(0)
     assert 'data-required="true"' in r.group(0)
     parent = re.search(r"<button[^>]*data-new-model-rf-required[^>]*>", _row(table, "Rating"))
+    assert parent is not None
     assert " disabled" not in parent.group(0)
 
 

@@ -27,6 +27,7 @@ from ._full_matrix import (
     pin_full_matrix_on_all_instruments,
 )
 from ._invitation_states import _create_session, _populate
+from ._lookups import must_search
 from ._public_id import public_id
 from ._validated import validate_session
 
@@ -1349,7 +1350,7 @@ def test_detail_page_shows_a_sent_link_as_it_resolves_now(
     client.post(
         f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
     )
-    current = re.search(
+    current = must_search(
         r"https?://[^\s<>\"]*/me/invite/[\w-]+", client.get(page).text
     ).group(0)
     outbox = db.execute(
@@ -1383,7 +1384,7 @@ def test_detail_page_hides_a_regenerated_link(
     base = f"/operator/sessions/{session.public_id}/invitations/{invitation.id}"
     client.post(f"{base}/send")
     sent_body = client.get(page).text
-    old_url = re.search(r"\S*/me/invite/[\w-]+", sent_body).group(0)
+    old_url = must_search(r"\S*/me/invite/[\w-]+", sent_body).group(0)
 
     client.post(f"{base}/regenerate")
     body = client.get(page).text
@@ -1920,6 +1921,7 @@ def test_invitations_filter_status_narrows_rows(
         .where(Invitation.session_id == session.id)
         .order_by(Invitation.id)
     ).scalars().first()
+    assert invitation_rae is not None
     client.post(
         f"/operator/sessions/{session.public_id}/invitations/{invitation_rae.id}/send"
     )
@@ -1981,6 +1983,7 @@ def test_regenerate_all_rotates_every_token_and_resets_status(
         .where(Invitation.session_id == session.id)
         .order_by(Invitation.id)
     ).scalars().first()
+    assert rae_invitation is not None
     client.post(
         f"/operator/sessions/{session.public_id}/invitations/{rae_invitation.id}/send"
     )

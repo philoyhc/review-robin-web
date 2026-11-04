@@ -31,6 +31,7 @@ def _one_inactive(db: Session, session_id: int) -> int:
         .where(Assignment.session_id == session_id)
         .order_by(Assignment.id)
     ).scalars().first()
+    assert row is not None
     row.include = False
     db.commit()
     return row.id

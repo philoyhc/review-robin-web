@@ -29,6 +29,7 @@ from app.db.models import (
 from app.services import csv_imports
 from app.services import session_lifecycle as lifecycle
 
+from ._lookups import must_get
 from ._quick_setup_refusal import refusal
 
 BOB = "bob@example.edu"
@@ -266,8 +267,8 @@ def test_relationships_uploaded_with_reviewers_resolve_to_the_new_rows(
     (relationship,) = db.execute(
         select(Relationship).where(Relationship.session_id == rs.id)
     ).scalars()
-    assert db.get(Reviewer, relationship.reviewer_id).email == "al@example.edu"
-    assert db.get(Reviewee, relationship.reviewee_id).name == "Cy"
+    assert must_get(db, Reviewer, relationship.reviewer_id).email == "al@example.edu"
+    assert must_get(db, Reviewee, relationship.reviewee_id).name == "Cy"
 
 
 def test_relationships_naming_a_reviewer_missing_from_the_upload_refuse(

@@ -27,6 +27,8 @@ from app.db.models import (
 from app.services import instruments as instruments_service
 from app.services.instruments import ensure_default_instrument
 
+from ._lookups import must_get
+
 _SAVED = dt.datetime(2026, 10, 17, tzinfo=dt.UTC)
 _BY_TEAM = instruments_service.encode_group_kind([("reviewee", "tag_1")])
 
@@ -110,7 +112,7 @@ def _responses(db: Session) -> int:
 
 def _group_kind(db: Session, instrument_id: int) -> str | None:
     db.expire_all()
-    return db.get(Instrument, instrument_id).group_kind
+    return must_get(db, Instrument, instrument_id).group_kind
 
 
 def test_a_merge_is_refused_with_the_count(db: Session, client: TestClient) -> None:

@@ -18,6 +18,7 @@ from app.db.models import (
 )
 from app.services import session_tags, sessions
 
+from ._lookups import must_get
 from ._public_id import public_id
 
 
@@ -325,6 +326,7 @@ def test_lobby_edit_updates_draft_session_and_tags(
     assert response.status_code == 303
     db.expire_all()
     updated = db.get(ReviewSession, session_id)
+    assert updated is not None
     assert updated.name == "New Name"
     assert updated.code == "new-1"
     assert session_tags.tags_for_sessions(db, [session_id])[session_id] == [
@@ -364,6 +366,7 @@ def test_lobby_edit_skips_name_code_when_not_editable(
     assert response.status_code == 303
     db.expire_all()
     updated = db.get(ReviewSession, session_id)
+    assert updated is not None
     assert updated.name == "Locked"
     assert updated.code == "locked-1"
     assert session_tags.tags_for_sessions(db, [session_id])[session_id] == [
@@ -459,6 +462,7 @@ def test_lobby_edit_applies_name_code_on_validated(
     assert response.status_code == 303
     db.expire_all()
     updated = db.get(ReviewSession, session_id)
+    assert updated is not None
     assert (updated.name, updated.code) == ("Renamed", "val-edit-2")
     assert updated.status == "validated"
 
@@ -478,7 +482,7 @@ def test_lobby_tags_only_save_keeps_validated(
 
     assert response.status_code == 303
     db.expire_all()
-    assert db.get(ReviewSession, session_id).status == "validated"
+    assert must_get(db, ReviewSession, session_id).status == "validated"
     assert session_tags.tags_for_sessions(db, [session_id])[session_id] == ["t1"]
 
 
@@ -493,6 +497,7 @@ def test_lobby_tags_only_save_keeps_validated_with_a_seconds_deadline(
     session_id = _validated_session(client, db, "val-secs-1")
     stored = datetime(2031, 3, 4, 23, 59, 59, tzinfo=dt.UTC)
     review_session = db.get(ReviewSession, session_id)
+    assert review_session is not None
     review_session.deadline = stored
     review_session.display_timezone = "UTC"
     db.commit()
@@ -511,7 +516,9 @@ def test_lobby_tags_only_save_keeps_validated_with_a_seconds_deadline(
     assert response.status_code == 303, response.text
     db.expire_all()
     updated = db.get(ReviewSession, session_id)
+    assert updated is not None
     assert updated.status == "validated"
+    assert updated.deadline is not None
     assert updated.deadline.replace(tzinfo=dt.UTC) == stored
 
 
@@ -526,6 +533,7 @@ def test_lobby_tags_only_save_keeps_a_deadline_in_the_repeated_dst_hour(
     session_id = _validated_session(client, db, "val-dst-1")
     stored = datetime(2026, 11, 1, 6, 30, tzinfo=dt.UTC)
     review_session = db.get(ReviewSession, session_id)
+    assert review_session is not None
     review_session.deadline = stored
     review_session.display_timezone = "America/New_York"
     db.commit()
@@ -544,7 +552,9 @@ def test_lobby_tags_only_save_keeps_a_deadline_in_the_repeated_dst_hour(
     assert response.status_code == 303, response.text
     db.expire_all()
     updated = db.get(ReviewSession, session_id)
+    assert updated is not None
     assert updated.status == "validated"
+    assert updated.deadline is not None
     assert updated.deadline.replace(tzinfo=dt.UTC) == stored
 
 
@@ -564,6 +574,7 @@ def test_lobby_edit_keeps_every_field_it_does_not_show(
     assert response.status_code == 303
     db.expire_all()
     updated = db.get(ReviewSession, session_id)
+    assert updated is not None
     assert (updated.name, updated.code) == ("Renamed", "kept-2")
     assert _naive(updated.deadline) == dt.datetime(2030, 1, 21, 9)
     assert updated.description == "Kept description"
@@ -612,7 +623,7 @@ def test_lobby_edit_refuses_a_deadline_out_of_order(
     assert response.status_code == 422
     assert message in response.text
     db.expire_all()
-    assert db.get(ReviewSession, session_id).name == "Scheduled"
+    assert must_get(db, ReviewSession, session_id).name == "Scheduled"
     assert session_tags.tags_for_sessions(db, [session_id])[session_id] == []
 
 
@@ -623,6 +634,7 @@ def test_lobby_edit_refuses_a_deadline_that_strands_a_reminder(
     would now fire in the past is refused, as on Session Home."""
     session_id = _draft_with_schedule(client, db, "remind-1")
     review_session = db.get(ReviewSession, session_id)
+    assert review_session is not None
     review_session.scheduled_activate_at = None
     review_session.responses_release_at = None
     review_session.responses_release_until = None
@@ -640,7 +652,7 @@ def test_lobby_edit_refuses_a_deadline_that_strands_a_reminder(
     assert response.status_code == 422
     assert "resolves to before now" in response.text
     db.expire_all()
-    assert db.get(ReviewSession, session_id).name == "Scheduled"
+    assert must_get(db, ReviewSession, session_id).name == "Scheduled"
     assert session_tags.tags_for_sessions(db, [session_id])[session_id] == []
 
 
@@ -651,6 +663,7 @@ def test_lobby_edit_rename_skips_the_checks_when_the_deadline_is_unchanged(
     unchecked) does not block a rename that leaves End where it is."""
     session_id = _draft_with_schedule(client, db, "aged-1")
     review_session = db.get(ReviewSession, session_id)
+    assert review_session is not None
     review_session.scheduled_activate_at = _utc(dt.datetime(2030, 1, 30, 9))
     db.commit()
 
@@ -660,7 +673,7 @@ def test_lobby_edit_rename_skips_the_checks_when_the_deadline_is_unchanged(
 
     assert response.status_code == 303
     db.expire_all()
-    assert db.get(ReviewSession, session_id).name == "Renamed"
+    assert must_get(db, ReviewSession, session_id).name == "Renamed"
 
 
 def test_lobby_edit_refuses_an_over_long_name_before_the_tags(
@@ -680,7 +693,7 @@ def test_lobby_edit_refuses_an_over_long_name_before_the_tags(
     assert response.status_code == 422
     assert "name: " in response.text
     db.expire_all()
-    assert db.get(ReviewSession, session_id).name == "Scheduled"
+    assert must_get(db, ReviewSession, session_id).name == "Scheduled"
     assert session_tags.tags_for_sessions(db, [session_id])[session_id] == []
 
 
@@ -803,7 +816,7 @@ def test_archive_selected_archives_draft_and_excludes_from_lobby(
     assert response.status_code == 303
 
     db.expire_all()
-    assert db.get(ReviewSession, session_id).status == "archived"
+    assert must_get(db, ReviewSession, session_id).status == "archived"
 
     body = client.get("/operator/sessions").text
     assert "Archive Me" not in body
@@ -835,7 +848,7 @@ def test_archive_selected_skips_activated(
     )
 
     db.expire_all()
-    assert db.get(ReviewSession, session_id).status == "ready"
+    assert must_get(db, ReviewSession, session_id).status == "ready"
 
 
 def test_archive_selected_archives_non_activated_states(
@@ -860,7 +873,7 @@ def test_archive_selected_archives_non_activated_states(
             follow_redirects=False,
         )
         db.expire_all()
-        assert db.get(ReviewSession, rs.id).status == "archived"
+        assert must_get(db, ReviewSession, rs.id).status == "archived"
 
 
 def test_lobby_filter_card_has_go_to_archive(client: TestClient) -> None:
@@ -944,7 +957,7 @@ def test_unarchive_selected_restores_session_to_draft(
 
     assert response.status_code == 303
     db.expire_all()
-    assert db.get(ReviewSession, session_id).status == "draft"
+    assert must_get(db, ReviewSession, session_id).status == "draft"
 
 
 def test_delete_archived_selected_removes_session(

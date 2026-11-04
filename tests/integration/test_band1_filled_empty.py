@@ -25,6 +25,8 @@ from app.db.models import (
 )
 from app.services.instruments import ensure_default_instrument
 
+from ._lookups import must_get
+
 
 def _session(db: Session, client: TestClient, code: str) -> tuple[ReviewSession, Instrument]:
     assert (
@@ -79,7 +81,8 @@ def _form(**link_rules: tuple[str, str, str]) -> dict[str, str]:
 def _predicates(db: Session, instrument_id: int) -> list[dict[str, object]]:
     db.expire_all()
     instrument = db.get(Instrument, instrument_id)
-    rules = db.get(SessionRuleSet, instrument.rule_set_id).rules_json
+    assert instrument is not None
+    rules = must_get(db, SessionRuleSet, instrument.rule_set_id).rules_json
     return [child["predicate"] for link in rules for child in link["rules"]]
 
 
@@ -235,7 +238,7 @@ def test_save_refuses_a_relationship_rule_the_card_no_longer_offers(
     assert any(message in error for error in card.json()["errors"]), card.json()
     assert fallback.status_code == 400
     db.expire_all()
-    assert db.get(Instrument, instrument.id).rule_set_id is None
+    assert must_get(db, Instrument, instrument.id).rule_set_id is None
 
 
 def test_a_stored_person_pair_tag_shows_as_stored_and_save_refuses_it(
@@ -251,7 +254,8 @@ def test_a_stored_person_pair_tag_shows_as_stored_and_save_refuses_it(
     )
     assert saved.status_code == 200, saved.text
     db.expire_all()
-    rule_set = db.get(SessionRuleSet, db.get(Instrument, instrument.id).rule_set_id)
+    rule_set = db.get(SessionRuleSet, must_get(db, Instrument, instrument.id).rule_set_id)
+    assert rule_set is not None
     rules = [dict(link, rules=[dict(c) for c in link["rules"]]) for link in rule_set.rules_json]
     rules[0]["rules"][0]["predicate"] = {**rules[0]["rules"][0]["predicate"], "field": "reviewer.pair_tag1"}
     rules[1]["rules"][0]["predicate"] = {**rules[1]["rules"][0]["predicate"], "field": "reviewee.pair_tag1"}
@@ -304,6 +308,7 @@ def test_group_is_refused_beside_a_link2_pair_tag_is_or_filled(
     assert fallback.status_code == 400
     db.expire_all()
     stored = db.get(Instrument, instrument.id)
+    assert stored is not None
     assert stored.rule_set_id is None
     assert stored.group_kind is None
 
@@ -326,7 +331,7 @@ def test_group_stands_beside_other_link2_pair_tags(db: Session, client: TestClie
     )
     assert saved.status_code == 200, saved.text
     db.expire_all()
-    assert db.get(Instrument, instrument.id).group_kind == "r1"
+    assert must_get(db, Instrument, instrument.id).group_kind == "r1"
 
     with_or = _with_group(
         {

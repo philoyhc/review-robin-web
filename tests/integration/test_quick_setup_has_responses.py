@@ -113,6 +113,7 @@ def _answer_every_assignment(db: Session, review_session: ReviewSession) -> None
         .filter(Instrument.session_id == review_session.id)
         .first()
     )
+    assert field is not None
     for assignment in (
         db.query(Assignment)
         .filter(Assignment.session_id == review_session.id)

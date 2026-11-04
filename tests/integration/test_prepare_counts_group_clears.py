@@ -23,6 +23,7 @@ from app.services import session_lifecycle as lifecycle
 
 from ._full_matrix import generate_via_page_button, pin_full_matrix_on_all_instruments
 from ._instrument_states import add_group_instrument
+from ._lookups import must_get
 
 
 def _session_with_two_answered_teams(
@@ -149,6 +150,7 @@ def test_a_team_that_only_loses_a_member_projects_no_clear(
     operator = make_client(alice)
     review_session, group_id = _session_with_two_answered_teams(db, operator, "clr-shrink")
     eve = db.scalar(select(Reviewee).where(Reviewee.email_or_identifier == "eve@example.edu"))
+    assert eve is not None
     eve.tag_1 = "Team D"
     db.add(
         Reviewee(
@@ -212,7 +214,8 @@ def test_a_rule_set_the_dry_run_cannot_load_fails_prepare_at_generate(
 
     operator = make_client(alice)
     review_session, group_id = _session_with_two_answered_teams(db, operator, "clr-bad-rules")
-    rule_set = db.get(SessionRuleSet, db.get(Instrument, group_id).rule_set_id)
+    rule_set = db.get(SessionRuleSet, must_get(db, Instrument, group_id).rule_set_id)
+    assert rule_set is not None
     rule_set.rules_json = [{"kind": "no-such-rule"}]
     db.commit()
 
@@ -249,7 +252,8 @@ def test_the_pages_that_read_staleness_report_a_rule_set_they_cannot_load(
     operator = make_client(alice)
     review_session, group_id = _session_with_two_answered_teams(db, operator, "e4-bad-rules")
     instrument = db.get(Instrument, group_id)
-    db.get(SessionRuleSet, instrument.rule_set_id).rules_json = [{"kind": "no-such-rule"}]
+    assert instrument is not None
+    must_get(db, SessionRuleSet, instrument.rule_set_id).rules_json = [{"kind": "no-such-rule"}]
     db.commit()
 
     page = operator.get(f"/operator/sessions/{review_session.public_id}/assignments")

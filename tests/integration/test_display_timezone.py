@@ -32,6 +32,7 @@ from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
+from ._lookups import must_get
 from ._validated import validate_session
 
 
@@ -186,6 +187,7 @@ def test_session_timezone_override_persists_and_audits(
         )
     ).scalar_one()
     # Stamped "UTC" at create (operator had no default), now New York.
+    assert event.detail is not None
     assert event.detail["changes"]["display_timezone"] == [
         "UTC",
         "America/New_York",
@@ -513,10 +515,14 @@ def test_config_save_keeps_datetimes_in_the_repeated_dst_hour(
     assert response.status_code == 303, response.text
     db.expire_all()
     updated = db.get(ReviewSession, session.id)
+    assert updated is not None
+    assert updated.deadline is not None
     assert updated.deadline.replace(tzinfo=UTC) == deadline
+    assert updated.responses_release_at is not None
     assert (
         updated.responses_release_at.replace(tzinfo=UTC) == release_at
     )
+    assert updated.responses_release_until is not None
     assert (
         updated.responses_release_until.replace(tzinfo=UTC)
         == release_until
@@ -562,7 +568,9 @@ def test_config_rename_keeps_a_schedule_that_has_aged(
     assert response.status_code == 303, response.text
     db.expire_all()
     updated = db.get(ReviewSession, session.id)
+    assert updated is not None
     assert updated.name == "Renamed"
+    assert updated.scheduled_activate_at is not None
     assert updated.scheduled_activate_at.replace(tzinfo=UTC) == start
     assert updated.invite_offsets == ["-P1D"]
     assert updated.reminder_offsets == ["-P1D"]
@@ -876,7 +884,7 @@ def test_config_zone_change_keeps_every_stored_instant(
     assert response.status_code == 303, response.text
     for field, value in stored.items():
         assert _l8_stored(db, session, field) == value, field
-    assert db.get(ReviewSession, session.id).display_timezone == "America/New_York"
+    assert must_get(db, ReviewSession, session.id).display_timezone == "America/New_York"
 
 
 def test_config_zone_change_reads_an_edited_box_in_the_new_zone(

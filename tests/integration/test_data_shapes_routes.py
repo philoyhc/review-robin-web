@@ -447,6 +447,7 @@ def test_download_emits_audit_event(
         )
     ).scalar_one()
     detail = event.detail
+    assert detail is not None
     assert detail["refs"]["shape_id"] == created["id"]
     # Fresh session, no reviewers → 0 body rows.
     assert detail["counts"]["rows"] == 0
@@ -583,6 +584,7 @@ def test_download_audit_event_carries_context_self_review_handling(
         )
     ).scalar_one()
     detail = event.detail
+    assert detail is not None
     assert detail["context"]["self_review_handling"] == "both"
 
 
@@ -805,6 +807,7 @@ def test_zip_all_bundles_every_saved_shape_file(
             AuditEvent.session_id == review_session.id,
         )
     ).scalar_one()
+    assert event.detail is not None
     assert event.detail["counts"] == {"data_shapes": 2}
 
 

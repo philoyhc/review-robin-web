@@ -25,6 +25,7 @@ from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
+from ._lookups import must_get
 
 
 def _create_session(client: TestClient, db: Session, code: str) -> ReviewSession:
@@ -40,7 +41,7 @@ def _create_session(client: TestClient, db: Session, code: str) -> ReviewSession
 
 
 def _seed_two_reviewers(client: TestClient, db: Session, session_id: int) -> None:
-    public_id = db.get(ReviewSession, session_id).public_id
+    public_id = must_get(db, ReviewSession, session_id).public_id
     client.post(
         f"/operator/sessions/{public_id}/reviewers/import",
         files={
@@ -69,7 +70,7 @@ def _seed_two_reviewers(client: TestClient, db: Session, session_id: int) -> Non
 
 def _validated(client: TestClient, db: Session, session_id: int) -> None:
     response = client.post(
-        f"/operator/sessions/{db.get(ReviewSession, session_id).public_id}/workflow/prepare",
+        f"/operator/sessions/{must_get(db, ReviewSession, session_id).public_id}/workflow/prepare",
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text

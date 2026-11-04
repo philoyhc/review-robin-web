@@ -154,6 +154,8 @@ def test_changed_value_after_submit_clears_its_stamp(db: Session) -> None:
         .where(AuditEvent.event_type == "responses.saved")
         .order_by(AuditEvent.id.desc())
     ).scalars().first()
+    assert event is not None
+    assert event.detail is not None
     assert event.detail["counts"]["submissions_cleared"] == 1
 
     _submit(db, op, reviewer, review_session, a)
@@ -176,6 +178,8 @@ def test_unchanged_value_after_submit_keeps_its_stamp(db: Session) -> None:
         .where(AuditEvent.event_type == "responses.saved")
         .order_by(AuditEvent.id.desc())
     ).scalars().first()
+    assert event is not None
+    assert event.detail is not None
     assert "submissions_cleared" not in event.detail["counts"]
 
 
@@ -217,6 +221,8 @@ def test_blocked_submit_that_changes_a_value_clears_its_stamp(
         .where(AuditEvent.event_type == "responses.saved")
         .order_by(AuditEvent.id.desc())
     ).scalars().first()
+    assert event is not None
+    assert event.detail is not None
     assert event.detail["counts"]["submissions_cleared"] == 1
 
 
@@ -275,6 +281,8 @@ def test_blanking_a_submitted_answer_unsubmits_the_rest(db: Session) -> None:
         .where(AuditEvent.event_type == "responses.saved")
         .order_by(AuditEvent.id.desc())
     ).scalars().first()
+    assert event is not None
+    assert event.detail is not None
     assert event.detail["counts"]["submissions_cleared"] == 1
 
     _submit(db, op, reviewer, review_session, a)

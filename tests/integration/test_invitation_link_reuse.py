@@ -129,5 +129,6 @@ def test_a_reminder_rebuilds_a_link_sent_under_another_prefix(
     assert result.fell_back_to_invitation is False
     assert invitation.token_hash == token_hash
     reminder = db.get(EmailOutbox, result.outbox_id)
+    assert reminder is not None
     assert _prefixed(token) in reminder.body
     assert sent_url not in reminder.body.replace(_prefixed(token), "")

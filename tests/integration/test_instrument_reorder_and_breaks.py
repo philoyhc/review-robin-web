@@ -230,6 +230,7 @@ def test_reorder_emits_audit_event(client: TestClient, db: Session) -> None:
         .order_by(AuditEvent.id.desc())
     ).scalars().first()
     assert event is not None
+    assert event.detail is not None
     assert event.detail["changes"]["instrument_order"] == [
         [a.id, b.id],
         [b.id, a.id],
@@ -355,6 +356,8 @@ def test_create_page_break_after_sets_flag_on_successor(
         .where(AuditEvent.event_type == "instrument.page_break_set")
         .order_by(AuditEvent.id.desc())
     ).scalars().first()
+    assert event is not None
+    assert event.detail is not None
     assert event.detail["refs"]["instrument_id"] == b.id
     assert event.detail["refs"]["anchor_instrument_id"] == a.id
 

@@ -26,6 +26,7 @@ from app.services import monitoring
 from app.services import responses as responses_service
 from app.services.extracts.by_instrument_extract import serialize_by_instrument
 
+from ._lookups import must_search
 from .test_monitoring_rollup_parity import (
     REVIEWEE_IMPLEMENTATIONS,
     REVIEWER_IMPLEMENTATIONS,
@@ -285,7 +286,7 @@ def test_the_surface_keeps_a_require_mode_cell_answerable(
     control = _comments_control(body)
     # Unanswered parent: enabled, not closed, not required, no hint.
     assert " disabled" not in control and "(required)" not in control
-    cell = re.search(r'<td[^>]*data-rs-governed-by="rating"[^>]*>', body).group(0)
+    cell = must_search(r'<td[^>]*data-rs-governed-by="rating"[^>]*>', body).group(0)
     assert "rs-branch-closed" not in cell and "title=" not in cell
     assert 'data-rs-required="true"' in cell
     assert re.search(r'data-rs-branch-parent="rating"[^>]*data-rs-branch-mode="require"', body)

@@ -5,8 +5,6 @@ slot's fault; the renew button's resubmit then saves them."""
 
 from __future__ import annotations
 
-import re
-
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -17,6 +15,7 @@ from app.web.routes_operator import _quick_setup
 from cordware.graph import FakeDirectory, GraphError
 
 from ._invitation_states import _create_session
+from ._lookups import must_search
 
 
 class _Expired(FakeDirectory):
@@ -43,7 +42,7 @@ def test_a_sign_in_stop_holds_the_submit_and_asks_to_renew(
     assert "data-directory-renew" in page and "Renew sign-in and submit" in page
     assert 'form="quick-setup-submit-all-form"' in page[page.index("data-directory-renew") :]
     assert "data-quick-setup-reason=\"" not in page  # no slot is at fault
-    token = re.search(r'name="held_token" value="([^"]+)"', page).group(1)
+    token = must_search(r'name="held_token" value="([^"]+)"', page).group(1)
     db.expire_all()
     assert db.execute(select(Reviewer).where(Reviewer.session_id == session.id)).first() is None
 

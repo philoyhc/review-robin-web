@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import AuditEvent, Reviewee, Reviewer, ReviewSession
 
+from ._lookups import must_get
 from ._quick_setup_refusal import refusal
 
 OBSERVERS = b"ObserverEmail,ObserverName\nola@example.edu,Ola\n"
@@ -106,6 +107,7 @@ def test_an_observers_upload_turns_observers_on(
     db.refresh(rs)
     assert rs.observers_enabled is True
     (event,) = _toggled(db, rs)
+    assert event.detail is not None
     assert event.detail["changes"] == {"observers_enabled": [False, True]}
     assert event.detail["reason"] == "quick_setup_upload"
 
@@ -166,7 +168,7 @@ def test_a_refusal_inside_the_save_leaves_the_tab_off(
 
     assert refusal(response).kind == "settings"
     db.expire_all()
-    assert db.get(ReviewSession, rs.id).observers_enabled is False
+    assert must_get(db, ReviewSession, rs.id).observers_enabled is False
     assert _toggled(db, rs) == []
 
 
@@ -242,6 +244,7 @@ def test_create_turns_relationships_on_when_the_box_is_unticked(
     ).scalar_one()
     assert rs.relationships_enabled is True
     (event,) = _toggled(db, rs)
+    assert event.detail is not None
     assert event.detail["changes"] == {"relationships_enabled": [False, True]}
 
 

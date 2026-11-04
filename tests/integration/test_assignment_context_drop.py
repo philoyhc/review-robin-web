@@ -35,6 +35,7 @@ def test_assignments_table_lacks_context_column(db: Session) -> None:
     """Schema-level: the ``context`` column is gone from the
     ``assignments`` table after PR 6b's migration runs."""
 
+    assert db.bind is not None
     columns = {col["name"] for col in inspect(db.bind).get_columns("assignments")}
     assert "context" not in columns
     # Sanity: other columns still there.

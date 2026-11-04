@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from app.db.models import AuditEvent, Instrument
 from app.services.session_config_io import Row, apply_session_config, serialize_session_config
 
+from ._lookups import detail_of
 from .test_response_field_branching_roundtrip import (
     _branched_instrument,
     _fields,
@@ -36,7 +37,7 @@ def test_the_cards_save_takes_a_mode_and_audits_it(
     db.refresh(rating)
     assert (rating.branch_op, rating.branch_mode) == ("ge", "require")
     changes = [
-        e.detail["changes"]
+        detail_of(e)["changes"]
         for e in db.execute(
             select(AuditEvent).where(AuditEvent.event_type == "instrument.field_updated")
         ).scalars()

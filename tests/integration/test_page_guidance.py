@@ -21,6 +21,8 @@ from app.db.models import Observer, ReviewSession
 from app.services.observer_cohort import observer_has_rule
 from app.web.views._guide import OPERATOR, SECTIONS
 
+from ._lookups import must_get
+
 #: Markup-only marker. The bare class name also appears ~9 times in
 #: base.html's stylesheet, so counting that counts CSS rules.
 CARD = '<details class="card page-guidance'
@@ -38,7 +40,7 @@ def _session_id(client: TestClient, db: Session) -> int:
 
 
 def _public_id(client: TestClient, db: Session) -> str:
-    return db.get(ReviewSession, _session_id(client, db)).public_id
+    return must_get(db, ReviewSession, _session_id(client, db)).public_id
 
 
 def test_the_email_template_page_carries_one_guidance_card(
@@ -91,7 +93,7 @@ def test_the_guidance_links_into_the_guide_and_returns_here(
     name a real section, and the `return_to` has to survive the
     allowlist so the operator lands back on this page."""
     session_id = _session_id(client, db)
-    public_id = db.get(ReviewSession, session_id).public_id
+    public_id = must_get(db, ReviewSession, session_id).public_id
     page = f"/operator/sessions/{public_id}/setup-invite"
 
     body = client.get(page).text
@@ -178,7 +180,7 @@ def test_every_setup_page_carries_exactly_one_guidance_card(
     page-level affordance, and two of them on one page would make
     neither the place to look."""
     session_id = _session_id(client, db)
-    public_id = db.get(ReviewSession, session_id).public_id
+    public_id = must_get(db, ReviewSession, session_id).public_id
 
     for page in SETUP_PAGES:
         body = client.get(f"/operator/sessions/{public_id}/{page}").text
@@ -194,7 +196,7 @@ def test_the_gated_setup_pages_carry_one_too(
     so they need the flag set rather than riding the loop above. Both are
     Setup pages and both take the scaffold."""
     session_id = _session_id(client, db)
-    public_id = db.get(ReviewSession, session_id).public_id
+    public_id = must_get(db, ReviewSession, session_id).public_id
 
     for page, flag in GATED_SETUP_PAGES:
         review_session = db.get(ReviewSession, session_id)
@@ -285,8 +287,9 @@ def test_every_setup_page_nests_correctly(
     of the suite passed clean.
     """
     session_id = _session_id(client, db)
-    public_id = db.get(ReviewSession, session_id).public_id
+    public_id = must_get(db, ReviewSession, session_id).public_id
     review_session = db.get(ReviewSession, session_id)
+    assert review_session is not None
     review_session.observers_enabled = True
     review_session.relationships_enabled = True
     db.flush()
@@ -315,8 +318,9 @@ def test_the_observers_guidance_leads_the_left_column(
     to act with.
     """
     session_id = _session_id(client, db)
-    public_id = db.get(ReviewSession, session_id).public_id
+    public_id = must_get(db, ReviewSession, session_id).public_id
     review_session = db.get(ReviewSession, session_id)
+    assert review_session is not None
     review_session.observers_enabled = True
     db.flush()
 
@@ -400,8 +404,9 @@ def test_no_roster_page_renders_the_column_container_beside_its_panel(
     fallback home, retired on 2026-10-11; the test below pins that.
     """
     session_id = _session_id(client, db)
-    public_id = db.get(ReviewSession, session_id).public_id
+    public_id = must_get(db, ReviewSession, session_id).public_id
     review_session = db.get(ReviewSession, session_id)
+    assert review_session is not None
     review_session.relationships_enabled = True
     db.flush()
 
@@ -432,8 +437,9 @@ def test_no_roster_page_renders_the_container_where_the_panel_cannot(
     Was `test_the_container_comes_back_as_the_labels_editors_fallback`.
     """
     session_id = _session_id(client, db)
-    public_id = db.get(ReviewSession, session_id).public_id
+    public_id = must_get(db, ReviewSession, session_id).public_id
     review_session = db.get(ReviewSession, session_id)
+    assert review_session is not None
     review_session.relationships_enabled = True
     review_session.status = "ready"
     db.flush()
@@ -468,8 +474,9 @@ def test_the_activated_lock_card_leads_the_roster_card(
     columns it sat above were the labels editor's fallback, retired
     2026-10-11."""
     session_id = _session_id(client, db)
-    public_id = db.get(ReviewSession, session_id).public_id
+    public_id = must_get(db, ReviewSession, session_id).public_id
     review_session = db.get(ReviewSession, session_id)
+    assert review_session is not None
     review_session.status = "ready"
     db.flush()
 
@@ -493,7 +500,7 @@ def test_the_assignments_page_says_where_pairs_come_from(
     rule. Inline rather than a guidance card; it is one sentence about
     the card's own table, so it sits under that card's header."""
     session_id = _session_id(client, db)
-    public_id = db.get(ReviewSession, session_id).public_id
+    public_id = must_get(db, ReviewSession, session_id).public_id
 
     body = client.get(f"/operator/sessions/{public_id}/assignments").text
     # Whitespace-normalised: the template wraps the sentence, so the
@@ -525,7 +532,7 @@ def test_the_invitations_page_says_sends_are_not_delivered(
     `guide/segment_14F_manual_email.md` is where sending lands.
     """
     session_id = _session_id(client, db)
-    public_id = db.get(ReviewSession, session_id).public_id
+    public_id = must_get(db, ReviewSession, session_id).public_id
 
     body = client.get(f"/operator/sessions/{public_id}/invitations").text
     flat = " ".join(body.split())
@@ -610,8 +617,9 @@ def test_every_setup_page_states_its_own_invisible_fact(
     consequence the page's controls do not. These are the five claims
     the bodies were written around."""
     session_id = _session_id(client, db)
-    public_id = db.get(ReviewSession, session_id).public_id
+    public_id = must_get(db, ReviewSession, session_id).public_id
     review_session = db.get(ReviewSession, session_id)
+    assert review_session is not None
     review_session.relationships_enabled = True
     review_session.observers_enabled = True
     db.flush()
@@ -631,8 +639,9 @@ def test_no_setup_page_still_carries_the_scaffold_placeholder(
     "Guidance to follow". A page that kept one would still pass every
     structural test in this file."""
     session_id = _session_id(client, db)
-    public_id = db.get(ReviewSession, session_id).public_id
+    public_id = must_get(db, ReviewSession, session_id).public_id
     review_session = db.get(ReviewSession, session_id)
+    assert review_session is not None
     review_session.relationships_enabled = True
     review_session.observers_enabled = True
     db.flush()
@@ -654,8 +663,9 @@ def test_the_five_bodies_link_into_the_guide_and_return_here(
     it: a fragment naming a real Guide section, and a `return_to` that
     survives the allowlist. All five land on `create_and_set_up`."""
     session_id = _session_id(client, db)
-    public_id = db.get(ReviewSession, session_id).public_id
+    public_id = must_get(db, ReviewSession, session_id).public_id
     review_session = db.get(ReviewSession, session_id)
+    assert review_session is not None
     review_session.relationships_enabled = True
     review_session.observers_enabled = True
     db.flush()

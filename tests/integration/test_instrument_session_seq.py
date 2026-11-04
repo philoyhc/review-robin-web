@@ -199,6 +199,7 @@ def test_the_migration_backfill_ranks_by_creation_order_per_session() -> None:
     )
     assert spec is not None
     module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
     spec.loader.exec_module(module)
     _BACKFILL = module._BACKFILL
 
@@ -528,6 +529,7 @@ def test_the_sql_label_and_the_python_label_agree(db: Session) -> None:
     named = db.execute(
         select(Instrument).where(Instrument.session_id == first.id)
     ).scalars().first()
+    assert named is not None
     named.short_label = "Peer feedback"
     db.flush()
 
@@ -598,6 +600,7 @@ def test_the_unique_migration_renumbers_duplicates_first() -> None:
     )
     assert spec is not None
     module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
     spec.loader.exec_module(module)
 
     engine = sa.create_engine("sqlite://")
