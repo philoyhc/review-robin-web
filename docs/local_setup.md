@@ -211,7 +211,7 @@ pytest tests/integration/test_X.py            # one file
 pytest tests/integration/test_X.py::test_name # one test
 pytest -k "expression"                         # match by name
 ruff check .                                   # lint
-pyright                                        # type check (application code)
+pyright                                        # type check (application code and tests)
 ```
 
 **Browser tests.** `tests/browser/` starts the app on a free port against
@@ -543,7 +543,7 @@ points inside `...\review-robin-web\.venv\Scripts`.
 ```powershell
 pytest -n auto                    # full suite
 ruff check .                      # lint
-pyright                           # type check (application code)
+pyright                           # type check (application code and tests)
 uvicorn cordware.main:app --reload  # then open http://127.0.0.1:8000/reviewrobin/health
 ```
 

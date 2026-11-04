@@ -130,6 +130,14 @@ set to the four test trees.
   pyright honours; with `enableTypeIgnoreComments` off they hide **44**
   errors (39 `reportArgumentType`). Rung 7 turns that setting off for the
   tests and fixes them, beside the two rules.
+- **Rung 6:** the gate takes the tests in. `[tool.pyright]` includes
+  `tests` and drops the `**/tests` exclude; each test tree is an
+  `executionEnvironments` root with the two rules off and `extraPaths`
+  `["."]` (`tests` adds `tools`), since a root replaces the import root.
+  The rung-1 file is deleted. `pyright`: 0 errors in 950 files, ~60 s
+  locally (application code alone: 19 s in CI). A probe confirmed the
+  relaxation stops at the test roots: an Optional member access under
+  `app/` still fails.
 
 ## PR ladder
 
@@ -172,10 +180,10 @@ set to the four test trees.
 
 ## Doc impact
 
-- `pyproject.toml` — `[tool.pyright]` takes in the test trees from `pyrightconfig.tests.json` (rung 6); the relaxations' removal (rung 7).
-- `pyrightconfig.tests.json` — the test trees' config until the gate takes them in (rung 1; deleted at rung 6).
+- `pyproject.toml` — `[tool.pyright]` takes in the test trees from the rung-1 config file, the relaxations as per-tree `executionEnvironments` (rung 6); the relaxations' removal (rung 7).
+- ~~the test trees' own config file (rung 1)~~ (retired 2026-11-04, rung 6: folded into `pyproject.toml`).
 - `README.md` — pyright's scope (rung 6).
 - `CLAUDE.md` — "Common commands" and the pre-PR gate: pyright's scope (rung 6); `AGENTS.md` copied.
 - `AGENTS.md` — the twin, copied from `CLAUDE.md` (rung 6).
-- `CONTRIBUTING.md` — the checklist's pyright scope (rung 6).
+- `CONTRIBUTING.md` — the checklist's pyright scope (rung 6). <!-- doc-impact-waived: its checklist names `pyright` without a scope, so nothing there says application code only -->
 - `guide/todo_master.md` — delete the segment's entry at close.
