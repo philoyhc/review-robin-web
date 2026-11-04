@@ -239,7 +239,9 @@ def _meta_block(
         # field's do. A field outside any branch adds no row. Under a
         # require-mode parent (19T Item 13) the condition makes the field
         # required rather than shown, and its cells are never closed.
-        parent = by_id.get(field.branch_parent_id)
+        parent = (
+            by_id.get(field.branch_parent_id) if field.branch_parent_id is not None else None
+        )
         if parent is not None:
             label = (
                 "Required when"
@@ -391,7 +393,7 @@ def _data_block(
     review_session: ReviewSession,
     instrument: Instrument,
     fields: list[InstrumentResponseField],
-    session_zone: object,
+    session_zone: str,
     *,
     include_empty_assignments: bool,
     row_filter: Callable[[Assignment], bool] | None = None,
@@ -466,7 +468,7 @@ def _data_rows(
     review_session: ReviewSession,
     instrument: Instrument,
     fields: list[InstrumentResponseField],
-    session_zone: object,
+    session_zone: str,
     *,
     include_empty_assignments: bool,
     row_filter: Callable[[Assignment], bool] | None = None,
@@ -565,7 +567,7 @@ def _assignment_row(
     responses: dict[int, Response],
     group_key: tuple[str, ...] | None,
     group_identity: dict[tuple[int, tuple[str, ...]], str],
-    session_zone: object,
+    session_zone: str,
     tokenizer: ParticipantTokenizer | None = None,
 ) -> tuple[str, ...]:
     reviewer: Reviewer = assignment.reviewer

@@ -28,7 +28,8 @@ comparison via ``Predicate.case_sensitive``.
 from __future__ import annotations
 
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
+from typing import cast
 
 from app.schemas.rules import Predicate
 from app.services.rules.fields import FIELD_MAP, get_field_values
@@ -86,9 +87,12 @@ def _not_equals(
 
 
 def _in(predicate: Predicate, *, reviewer: object, reviewee: object) -> bool:
+    # The schema holds an IN / NOT_IN operand to a list
+    # (``_validate_operand_for_operator``).
+    operand = cast(Iterable[str], predicate.operand or [])
     members = {
         _normalise(item, case_sensitive=predicate.case_sensitive)
-        for item in (predicate.operand or [])
+        for item in operand
     }
     members.discard(None)
     return any(v in members for v in _lhs(predicate, reviewer=reviewer, reviewee=reviewee))

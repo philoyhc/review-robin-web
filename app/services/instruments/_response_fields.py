@@ -398,7 +398,8 @@ def bulk_save_fields(
 
     new_display_order: list[InstrumentDisplayField] = []
     for row in display_payload:
-        field = existing_display.get(row.get("id"))
+        row_id = row.get("id")
+        field = existing_display.get(row_id) if row_id is not None else None
         if field is None:
             continue
         # ``row.get("label")`` retired in Segment 15A Slice 2.
@@ -468,7 +469,8 @@ def bulk_save_fields(
     new_response_order: list[InstrumentResponseField] = []
     response_updated: list[dict[str, Any]] = []
     for row in response_payload:
-        field = existing_response.get(row.get("id"))
+        row_id = row.get("id")
+        field = existing_response.get(row_id) if row_id is not None else None
         if field is None:
             continue
         per_row_changes: dict[str, list[Any]] = {}

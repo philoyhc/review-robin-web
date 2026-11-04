@@ -380,7 +380,6 @@ _APPLICATION_ROWS: tuple[_ApplicationRow, ...] = (
 )
 
 
-
 def _application(n: int, row: _ApplicationRow) -> Application:
     ra, leave_type, start, end, cover, cover_recorded, recorded, submitted, *remarks = row
     return Application(

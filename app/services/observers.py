@@ -383,7 +383,9 @@ def update_observer(
     # 20H Item 1: an address edit onto an account another row of this
     # roster holds is refused. Resolved once, and the answer reused for
     # the rebind below.
-    rebind_resolve = resolve_account
+    rebind_resolve: Callable[[str], directory_accounts.Account | None] | None = (
+        resolve_account
+    )
     new_address = proposed.get("email")
     if (
         new_address is not None
@@ -402,10 +404,12 @@ def update_observer(
                 ),
             )
 
-        def rebind_resolve(
+        def _resolve_held(
             _address: str, _account: directory_accounts.Account | None = account
         ) -> directory_accounts.Account | None:
             return _account
+
+        rebind_resolve = _resolve_held
 
     changes: dict[str, list[object]] = {}
     for field, new_value in proposed.items():
@@ -435,7 +439,7 @@ def update_observer(
                 resolve=rebind_resolve,
             )
             if moved is not None:
-                changes["directory_object_id"] = moved
+                changes["directory_object_id"] = [*moved]
         db.flush()
         audit.write_event(
             db,

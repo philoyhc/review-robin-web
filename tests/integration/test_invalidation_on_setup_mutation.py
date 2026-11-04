@@ -11,10 +11,12 @@ visibility-when-closed surfaces must NOT (item #16).
 from __future__ import annotations
 
 import pytest
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
     Assignment,
+    AuditEvent,
     Reviewee,
     Reviewer,
     ReviewSession,
@@ -115,6 +117,33 @@ def test_invalidate_if_validated_flips_validated_to_draft(
 
     db.refresh(review_session)
     assert review_session.status == "draft"
+
+
+def test_invalidate_if_validated_with_no_actor_records_the_flip_unattributed(
+    setup: tuple[User, ReviewSession, Reviewer, Reviewee, Assignment],
+    db: Session,
+) -> None:
+    """A service called with no actor (the page-break helpers default
+    one to ``None``) still flips a validated session, recording the
+    event with no actor, where it raised ``AttributeError`` (segment
+    22C)."""
+    _, review_session, *_ = setup
+
+    lifecycle.invalidate_if_validated(
+        db, review_session=review_session, user=None, reason="probe"
+    )
+
+    db.refresh(review_session)
+    assert review_session.status == "draft"
+    event = db.execute(
+        select(AuditEvent)
+        .where(
+            AuditEvent.session_id == review_session.id,
+            AuditEvent.event_type == "session.invalidated",
+        )
+        .order_by(AuditEvent.id.desc())
+    ).scalars().first()
+    assert event is not None and event.actor_user_id is None
 
 
 def test_invalidate_if_validated_is_noop_on_draft(

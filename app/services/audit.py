@@ -19,12 +19,12 @@ from __future__ import annotations
 
 import os
 import warnings
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
-from typing import Any
+from typing import Any, cast
 
 from pydantic import (
     BaseModel,
@@ -156,7 +156,7 @@ def write_event(
     payload: AuditPayload | None = None,
     reason: str | None = None,
     refs: dict[str, int] | None = None,
-    context: dict[str, str | int | bool] | None = None,
+    context: Mapping[str, str | int | bool] | None = None,
     detail: dict[str, Any] | None = None,
     correlation_id: str | None = None,
 ) -> AuditEvent:
@@ -188,7 +188,9 @@ def write_event(
 
     if using_canonical:
         context = _with_fired_by(event_type, context)
-        canonical_session = session if session is not _LEGACY_SENTINEL else None
+        canonical_session = (
+            cast(ReviewSession | None, session) if session is not _LEGACY_SENTINEL else None
+        )
         resolved_session_id, resolved_detail = _compose_canonical(
             session=canonical_session,
             payload=payload,
@@ -263,8 +265,8 @@ def fired_by(source: str) -> Iterator[None]:
 
 
 def _with_fired_by(
-    event_type: str, context: dict[str, str | int | bool] | None
-) -> dict[str, str | int | bool] | None:
+    event_type: str, context: Mapping[str, str | int | bool] | None
+) -> Mapping[str, str | int | bool] | None:
     source = _FIRED_BY.get()
     schema = EVENT_SCHEMAS.get(event_type)
     if source is None or schema is None or "context" not in schema.allows:
@@ -278,7 +280,7 @@ def _compose_canonical(
     payload: AuditPayload | None,
     reason: str | None,
     refs: dict[str, int] | None,
-    context: dict[str, str | int | bool] | None,
+    context: Mapping[str, str | int | bool] | None,
 ) -> tuple[int | None, dict[str, Any] | None]:
     body: dict[str, Any] = {}
     if session is not None:
@@ -376,7 +378,7 @@ class _CanonicalDetail(BaseModel):
     set_changes: _SetChangesShape | None = None
     reason: str | None = None
     refs: dict[str, int] | None = None
-    context: dict[str, str | int | bool] | None = None
+    context: Mapping[str, str | int | bool] | None = None
 
     @field_validator("refs")
     @classmethod

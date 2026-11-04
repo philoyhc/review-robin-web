@@ -13,7 +13,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy import delete, func, insert, select
 from sqlalchemy.orm import Session
@@ -321,6 +321,8 @@ def _diff_one_instrument(
         revision_seed=revision_seed,
         pair_context_lookup=pair_context_lookup,
     )
+    # The engine hands back the roster rows it was given.
+    engine_pairs = cast(list[tuple[Reviewer, Reviewee]], result.pairs)
 
     # On a group-scoped instrument, excluding self-reviews rules
     # out the whole group the reviewer is a member of — not just
@@ -366,7 +368,7 @@ def _diff_one_instrument(
                     if not is_catch_all_key(key):
                         self_review_groups.add((reviewer.id, key))
         # Keys for the pairs that actually survived.
-        for reviewer, reviewee in result.pairs:
+        for reviewer, reviewee in engine_pairs:
             pair_group_key[(reviewer.id, reviewee.id)] = _key(
                 reviewer.id, reviewee
             )
@@ -389,7 +391,7 @@ def _diff_one_instrument(
     # — the same tuple ``uq_assignment_unique`` enforces.
     new_pairs: dict[tuple[int, int], tuple[Reviewer, Reviewee, bool]] = {}
     excluded_by_rule = 0
-    for reviewer, reviewee in result.pairs:
+    for reviewer, reviewee in engine_pairs:
         if instrument.group_kind is not None:
             is_self = (
                 reviewer.id,

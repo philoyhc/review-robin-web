@@ -6,7 +6,7 @@ nothing but the rules it is given; ``_band1`` never imports it.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from pydantic import TypeAdapter
 from sqlalchemy.orm import Session
@@ -209,7 +209,8 @@ def find_sample_in_scope_reviewee(
     # ``pairs`` rather than ``result.pairs`` from here down: the
     # self-review filter below narrows it, and everything after must
     # see the narrowed set (the sample pick AND the member-id scan).
-    pairs = list(result.pairs)
+    # The engine hands back the roster rows it was given.
+    pairs = cast(list[tuple[Reviewer, Reviewee]], list(result.pairs))
 
     # The boundary fields are needed BEFORE the sample is picked now,
     # because self-review exclusion is whole-group and the group key

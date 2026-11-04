@@ -129,11 +129,10 @@ def sort_from_positions(
         else:
             position = entry.get(_SORT_POSITION)
             # ``bool`` is an ``int`` subclass; ``true`` is no position.
-            is_position = isinstance(position, int) and not isinstance(
-                position, bool
-            )
             new_id = (
-                display_ids_by_position.get(position) if is_position else None
+                display_ids_by_position.get(position)
+                if isinstance(position, int) and not isinstance(position, bool)
+                else None
             )
         # A hand-edited file can name one field twice; the operator's
         # own setter refuses that, so keep the first.

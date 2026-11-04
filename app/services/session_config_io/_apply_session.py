@@ -185,7 +185,9 @@ def _apply_session_metadata(
         if _locked_on(review_session, key, overrides[key]):
             continue
         if key == "symmetric_review" and overrides[key] is False and review_session.symmetric_review:
-            sessions.clear_mirror_links(object_session(review_session), review_session.id)
+            db = object_session(review_session)
+            assert db is not None  # the session being applied is stored
+            sessions.clear_mirror_links(db, review_session.id)
         setattr(review_session, key, overrides[key])
         written += 1
     return written

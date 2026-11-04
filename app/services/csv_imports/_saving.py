@@ -374,7 +374,8 @@ def _save(
     # An account the directory just bound another of the file's rows to
     # is not carried: the stale binding would put that person on two
     # rows (cold read of M1's fix).
-    if earlier:
+    # ``earlier`` is filled only when there is a directory.
+    if earlier and directory is not None:
         fresh = {
             normalize_object_id(account.object_id)
             for row in rows

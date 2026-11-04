@@ -54,7 +54,8 @@ The five clusters, in the order the ladder fixes them. Counts are
 approximate where a diagnostic could sit in two clusters; the command in
 `## Blast radius` re-takes them.
 
-- **A. Two Protocols declare writable attributes (39).** `GroupKeyable`
+- **A. Two Protocols declare writable attributes (39).** *(The fix below did
+  not work; what was built is in `## Status`, rung 3.)* `GroupKeyable`
   (`app/services/responses/_group_reconciliation.py`) and `BranchField`
   (`app/services/responses/_branching.py`) state their fields as plain
   attributes. A writable Protocol member is invariant, and a model's
@@ -180,6 +181,20 @@ python3 -c "import json,collections;d=json.load(open('/tmp/pyright.json'));print
   instrument with neither short label nor description showed the
   observer collation an `<h2>None</h2>`; the heading is now left out,
   with a test.
+- **Rung 6:** 108 → **0**. The rules engine's pairs are cast back to the
+  roster types at its two callers (it returns the rows it was given)
+  rather than made generic through ~20 internal signatures;
+  `write_event`'s `context` and three lookup parameters take a
+  `Mapping`. Two paths that raised now behave, each with a test: a
+  validated session flipped with no actor (the page-break helpers
+  default one to `None`) records an unattributed `session.invalidated`;
+  a quota inside a composite raises `ValueError` naming it.
+  Item 2's cumulative read (`2f9961be..HEAD`): no blocking defect; two
+  narrowings that had changed behavior were put back exactly
+  (`_digits`, the IN operand), the `BranchField` alias made lazy, and
+  `spec/assignments.md`'s composite-children line left for the close's
+  `spec-writer`. Rung 7 must run pyright with the venv's Python: without
+  it every import is missing (439 errors).
 
 ## PR ladder
 

@@ -322,7 +322,7 @@ def _full_cohort() -> tuple[tuple[str, str, str, str, str], ...]:
     so no pairing repeats across the 153 and no randomness is involved:
     the file is the same on every request.
     """
-    people = [_FULL_OPERATOR]
+    people: list[tuple[str, str]] = [_FULL_OPERATOR]
     for i in range(_FULL_GROUP_SIZE * _FULL_GROUPS - 1):
         first = _FULL_FIRST[i % len(_FULL_FIRST)]
         last = _FULL_LAST[(i // len(_FULL_FIRST) + 3 * i) % len(_FULL_LAST)]

@@ -690,8 +690,9 @@ def _sync_response_fields_to_db(
     shape_errors: list[tuple[str, str]] = []
     stored_by_id = {f.id: f for f in instrument.response_fields}
     for rf in sanitised_rfs:
+        rf_id = _band2_rf_id(rf)
         msg = _validate_response_field_shape(rf) or _integer_bounds_error(
-            db, rf, stored_by_id.get(_band2_rf_id(rf))
+            db, rf, stored_by_id.get(rf_id) if rf_id is not None else None
         )
         if msg is not None:
             shape_errors.append((rf["name"], msg))

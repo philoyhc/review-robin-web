@@ -379,7 +379,7 @@ def invalidate_if_validated(
     db: Session,
     *,
     review_session: ReviewSession,
-    user: User,
+    user: User | None,
     reason: str,
     correlation_id: str | None = None,
 ) -> None:
@@ -416,7 +416,7 @@ def _flip_to_draft(
     db: Session,
     *,
     review_session: ReviewSession,
-    user: User,
+    user: User | None,
     reason: str,
     correlation_id: str | None,
 ) -> None:
@@ -427,7 +427,9 @@ def _flip_to_draft(
         db,
         event_type="session.invalidated",
         summary=f"Session {review_session.code} invalidated ({reason})",
-        actor_user_id=user.id,
+        # A caller with no actor (a service called from a test or a
+        # script) records the flip unattributed rather than failing.
+        actor_user_id=user.id if user is not None else None,
         session=review_session,
         reason=reason,
         correlation_id=correlation_id,
@@ -1156,7 +1158,10 @@ def _end_context(review_session: ReviewSession) -> dict[str, str]:
     """The moment that ended the review, under its own name."""
     if review_session.deadline is not None:
         return {"deadline": _aware(review_session.deadline).isoformat()}
-    return {"release_at": review_end(review_session).isoformat()}
+    end = review_end(review_session)
+    # Called once the review has ended, so it has an end.
+    assert end is not None
+    return {"release_at": end.isoformat()}
 
 
 def closed_at_deadline(db: Session, review_session: ReviewSession) -> bool:

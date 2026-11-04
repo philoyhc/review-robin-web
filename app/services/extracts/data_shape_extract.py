@@ -42,6 +42,7 @@ from __future__ import annotations
 import json
 import math
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 from dataclasses import field as dc_field
 from decimal import Decimal
@@ -792,7 +793,7 @@ def _build_state_accumulators(
     *,
     axis: str,
     scope: _Scope,
-    entity_by_id: dict[int, object],
+    entity_by_id: Mapping[int, object],
     fields_per_instrument: dict[int, list[int]],
     row_key_for_entity,
     exclude_self: bool,

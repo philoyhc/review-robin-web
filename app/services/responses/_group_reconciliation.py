@@ -30,7 +30,7 @@ The core ``_core.py`` module reads from this slice
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Protocol
 
 from sqlalchemy import delete, func, select
@@ -191,7 +191,7 @@ def group_key_for_pair(
     reviewer_id: int,
     reviewee_id: int,
     boundary: list[tuple[str, str]],
-    pair_context_lookup: dict[tuple[int, int], object],
+    pair_context_lookup: Mapping[tuple[int, int], object],
 ) -> tuple[str, ...]:
     """The group key for one ``(reviewer, reviewee)`` pair under a
     decoded group-boundary spec — the tuple of boundary tag values

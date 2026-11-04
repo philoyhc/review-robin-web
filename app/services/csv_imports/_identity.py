@@ -66,7 +66,7 @@ def directory_check(
 
 def directory_checks(
     directory: Any,
-    rosters: list[list[str | None]],
+    rosters: Sequence[Sequence[str | None]],
     known: Mapping[str, Any] | None = None,
 ) -> list[DirectoryCheck]:
     """`directory_check` for several rosters saved by one request (Quick

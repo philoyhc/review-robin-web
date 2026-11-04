@@ -206,7 +206,9 @@ def _fire_reminder_entry(
         skip_reason: str | None = "not_ready"
     elif not invitations_service.has_invitations(db, locked.id):
         skip_reason = "no_invitations"
-    elif now >= _ensure_aware_utc(locked.deadline):
+    # A due reminder is counted from the deadline, so one is set; a
+    # deadline cleared since reads as outside the window.
+    elif locked.deadline is None or now >= _ensure_aware_utc(locked.deadline):
         skip_reason = "outside_response_window"
     else:
         skip_reason = None

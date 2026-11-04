@@ -201,8 +201,8 @@ def _merge_rows(
         if held is None and account is not None:
             held = by_account.get(normalize_object_id(account.object_id))
             new_name = kwargs.get(spec["name_attr"])
-            kept = getattr(held, spec["model_attr"]) if held is not None else None
             if held is not None and new_name is not None:
+                kept = getattr(held, spec["model_attr"])
                 conflict = cross_table_identity_conflict(
                     db, session_id=session.id, kind=kind, identifier=kept, name=new_name
                 )
