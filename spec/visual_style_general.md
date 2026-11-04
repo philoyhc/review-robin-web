@@ -223,7 +223,7 @@ Small inline labels for state. 2px vertical padding, 8px horizontal padding, 999
 
 - **App-specific decisions** (lifecycle states, navigation structure, domain entities, status strip composition, page header conventions). Those live in `spec/visual_style_rrw.md`.
 - **Specific copy** (button labels, error messages). Those belong in functional specs for individual pages.
-- **Responsive behavior.** Default assumption is desktop-first; mobile / narrow-viewport support is a separate spec.
+- **Responsive behavior.** Default assumption is desktop-first; which pages must also work on a phone is `spec/visual_style_rrw.md`, "Device classes".
 - **Accessibility specifics beyond color contrast.** The palette is chosen to meet WCAG AA contrast for body text, but full accessibility review (keyboard navigation, screen reader labeling, focus management) is its own work.
 - **Animation and motion.** Default is no motion beyond instant state changes.
 

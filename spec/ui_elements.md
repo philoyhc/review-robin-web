@@ -534,8 +534,8 @@ carries `border-box`, and nothing anywhere takes it away.
 A `.btn` can still overflow the one way the box model cannot reach: a
 grid item never shrinks below its longest unbreakable word, whatever
 `min-width` says. On the Workflow card's four-slot row that happens only
-below the narrowest breakpoint this sheet has, and narrow-viewport
-support is a separate spec (`visual_style_general.md`).
+below the narrowest breakpoint this sheet has, and operator pages are
+desktop-oriented (`visual_style_rrw.md`, "Device classes").
 
 | Class | Role | Notes |
 |---|---|---|
