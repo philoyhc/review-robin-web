@@ -63,7 +63,7 @@ None.
   answered group responses gives a 500, not the ask other reviewer writes
   show. *PLAUSIBLE, traced.* Code: catch it and roll back with a banner, or
   limit the recheck's sync to the directory columns. Likely lands with M1.
-- **L2. A blocked submit leaves the countdown's flag set.**
+- ~~**L2**~~ — **Done in #3570**: each form carries its own `data-directory-counted`, cleared when the browser blocks the count's submit (`tests/browser/test_upload_directory_countdown.py`, which fails without it). **A blocked submit leaves the countdown's flag set.**
   `app/web/templates/operator/partials/_directory_countdown.html`,
   `submit()`: `counted = true` precedes `requestSubmit`; if the browser's
   validation blocks the submit, every later submit on the page (both
@@ -137,7 +137,7 @@ None.
   says it answers "with the card again"; it 303-redirects to
   `/{roster}?unlocked=1[&recheck_renew=1]#upload-csv`, and an archived
   refusal is the 409 page. Spec.
-- **D9. A code comment predates 20G.** `app/web/roster_import.py:520` says
+- ~~**D9**~~ — **Done in #3570.** **A code comment predates 20G.** `app/web/roster_import.py:520` says
   a check stopped on "no token, or Graph refused it" saves nothing; since
   20G only `unauthorized` holds. Code (comment).
 - ~~**D10**~~ — **Done in #3568**: the entry is gone, since M1's ruling settles that Reviewers and Reviewees never recheck past validated. **The deferred recheck entry names the button wrongly.**

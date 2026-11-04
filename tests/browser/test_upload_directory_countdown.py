@@ -226,3 +226,45 @@ def test_one_failed_key_in_a_batch_stops_the_count(
     # The first batch's answer stops the count: at most the other batch
     # already in flight went too, of the four.
     assert 1 <= len(batches) <= 2
+
+
+def test_a_submit_the_browser_blocks_counts_again_next_time(
+    page: Page, new_session: Callable[[], str], tmp_path: Path
+) -> None:
+    """A counted form whose own validation then blocks the submit is
+    unmarked, so the next Upload counts again rather than skipping the
+    count (findings L2)."""
+    session_id = new_session()
+    roster = tmp_path / "reviewers.csv"
+    roster.write_text("ReviewerName,ReviewerEmail\nArun,arun.kumar@example.edu\n")
+    keys_asked: list[str] = []
+    page.on("request", lambda r: keys_asked.append(r.url) if r.url.endswith("/directory-keys") else None)
+    page.goto(app_url(f"/operator/sessions/{session_id}/reviewers?unlocked=1"))
+    page.locator("#upload-csv-form input[name=file]").set_input_files(str(roster))
+    # A required field that passes at the click and is emptied while the
+    # count runs, so the count's own submit is blocked.
+    page.evaluate(
+        """() => {
+          const form = document.getElementById('upload-csv-form');
+          const probe = document.createElement('input');
+          probe.name = 'probe'; probe.required = true; probe.value = 'x';
+          probe.id = 'probe';
+          form.appendChild(probe);
+          const real = window.fetch;
+          window.fetch = function (url) {
+            if (String(url).endsWith('/directory-keys') && !window.__emptied) {
+              window.__emptied = true;
+              probe.value = '';
+            }
+            return real.apply(this, arguments);
+          };
+        }"""
+    )
+    page.locator("#upload-csv-form .unlock-col-actions button[type=submit]").click()
+    page.wait_for_function("() => window.__emptied === true")
+    page.wait_for_timeout(500)
+    assert "/reviewers/import" not in page.url  # the browser blocked it
+    page.fill("#probe", "y")
+    with page.expect_navigation():
+        page.locator("#upload-csv-form .unlock-col-actions button[type=submit]").click()
+    assert len(keys_asked) == 2  # the second Upload counted again
