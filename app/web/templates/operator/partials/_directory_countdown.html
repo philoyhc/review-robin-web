@@ -19,7 +19,12 @@
    It stops early and submits at once on any failed lookup (an expired
    sign-in: the upload then asks to renew, segment 20G), a failed
    request, or no directory access; the upload looks up whatever is left. Without the script the
-   line never shows and the upload checks every address on the server. #}
+   line never shows and the upload checks every address on the server.
+
+   While the recheck counts, its button reads "Stop recheck" (author,
+   2026-11-04). Stopping sends no more batches, abandons those in flight
+   and posts nothing, so no row is bound; the card is as it was. The
+   answers already fetched are kept, but a new recheck asks afresh. #}
 <p class="muted" data-directory-countdown aria-live="polite" hidden>
   Directory check: <span data-directory-countdown-left>0</span> more to go.
 </p>
@@ -41,6 +46,13 @@
     // run at once, where four in flight would make sixteen.
     var workers = 2;
     var batch = 10;
+    // The recheck's button, relabelled while its count runs.
+    var recheckButton = document.querySelector('[data-directory-recheck]');
+    var recheckLabel = recheckButton ? recheckButton.textContent : '';
+    function labelRecheck(running) {
+      if (recheckButton) { recheckButton.textContent = running ? 'Stop recheck' : recheckLabel; }
+    }
+
     // Counted forms carry `data-directory-counted`, one per form, so a
     // count that submits one form never waves the other through.
     var counting = false;
@@ -53,13 +65,18 @@
         delete f.dataset.directoryCounted;
       });
       counting = false;
+      run = null;
       line.hidden = true;
+      labelRecheck(false);
     });
 
     // Two forms count down (20I Item 1): the upload, whose keys are the
     // chosen or held file's, and the recheck, whose keys are the roster's
     // unmatched rows. Each submits itself once counted.
     var active = null;
+    // The count in progress: its form, whether it was stopped, and the
+    // requests to abort if it is.
+    var run = null;
 
     // Submit a counted form. A submit the browser's own validation then
     // blocks fires no submit event: the form is unmarked and the count
@@ -79,10 +96,30 @@
       // The count is over either way: a navigation the operator then
       // stops must not leave the other form's button locked.
       counting = false;
+      run = null;
+      labelRecheck(false);
       if (!sent || sent.defaultPrevented) {
         delete target.dataset.directoryCounted;
         line.hidden = true;
       }
+    }
+
+    // Stop recheck: nothing more is asked, nothing is posted.
+    function stop() {
+      if (!run) { return; }
+      run.stopped = true;
+      run.controllers.forEach(function (c) { c.abort(); });
+      run = null;
+      counting = false;
+      line.hidden = true;
+      labelRecheck(false);
+    }
+
+    function signal(current) {
+      if (!window.AbortController) { return undefined; }
+      var controller = new AbortController();
+      current.controllers.push(controller);
+      return controller.signal;
     }
 
     function watch(target, keysBody, onKeys) {
@@ -94,15 +131,19 @@
         // A second submit while the count runs waits for the first.
         if (counting) { return; }
         counting = true;
-        active = function () { submit(target, submitter); };
-        fetch(keysUrl, {method: 'POST', body: keysBody(), credentials: 'same-origin'})
+        var current = run = {target: target, stopped: false, controllers: []};
+        if (target === recheck) { labelRecheck(true); }
+        active = function () { if (!current.stopped) { submit(target, submitter); } };
+        fetch(keysUrl, {method: 'POST', body: keysBody(), credentials: 'same-origin',
+                        signal: signal(current)})
           .then(function (response) {
             if (!response.ok) { throw new Error('keys ' + response.status); }
             return response.json();
           })
           .then(function (answer) {
+            if (current.stopped) { return; }
             if (onKeys) { onKeys(answer); }
-            count(answer.keys || []);
+            count(answer.keys || [], current);
           })
           .catch(function () { active(); });
       });
@@ -118,6 +159,15 @@
       return body;
     });
     var recheck = document.getElementById('directory-recheck-form');
+    // Clicking "Stop recheck" stops the count rather than submitting.
+    if (recheckButton) {
+      recheckButton.addEventListener('click', function (event) {
+        if (run && run.target === recheck) {
+          event.preventDefault();
+          stop();
+        }
+      });
+    }
     if (recheck) {
       watch(recheck, function () {
         var body = new FormData();
@@ -132,7 +182,7 @@
       });
     }
 
-    function count(keys) {
+    function count(keys, current) {
       if (!keys.length) { active(); return; }
       var remaining = keys.length;
       var next = 0;
@@ -142,13 +192,13 @@
       line.hidden = false;
 
       function end() {
-        if (done) { return; }
+        if (done || current.stopped) { return; }
         done = true;
         active();
       }
 
       function pump() {
-        if (done) { return; }
+        if (done || current.stopped) { return; }
         if (next >= keys.length && running === 0) { end(); return; }
         while (running < workers && next < keys.length) {
           send(keys.slice(next, next + batch));
@@ -162,13 +212,14 @@
           method: 'POST',
           headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
           body: JSON.stringify({keys: chunk}),
-          credentials: 'same-origin'
+          credentials: 'same-origin',
+          signal: signal(current)
         }).then(function (response) {
           if (!response.ok) { throw new Error('lookup ' + response.status); }
           return response.json();
         }).then(function (answer) {
           running -= 1;
-          if (done) { return; }
+          if (done || current.stopped) { return; }
           var outcomes = answer.outcomes || {};
           // Any failed lookup stops the count and uploads at once: a
           // refused sign-in fails every lookup after it (expired: the

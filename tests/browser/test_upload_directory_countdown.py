@@ -268,3 +268,52 @@ def test_a_submit_the_browser_blocks_counts_again_next_time(
     with page.expect_navigation():
         page.locator("#upload-csv-form .unlock-col-actions button[type=submit]").click()
     assert len(keys_asked) == 2  # the second Upload counted again
+
+
+def test_stop_recheck_stops_the_count_and_posts_nothing(
+    page: Page, new_session: Callable[[], str], tmp_path: Path
+) -> None:
+    """While the recheck counts, its button reads "Stop recheck" (author,
+    2026-11-04); clicking it sends no more batches, posts no recheck, hides
+    the count and puts the button back. A later click rechecks afresh."""
+    session_id = new_session()
+    roster = tmp_path / "reviewers.csv"
+    many = [f"stop{i}@example.edu" for i in range(25)]
+    roster.write_text(
+        "ReviewerName,ReviewerEmail\n"
+        + "\n".join(f"P{i},{a}" for i, a in enumerate(many)) + "\n"
+    )
+    page.goto(app_url(f"/operator/sessions/{session_id}/reviewers?unlocked=1"))
+    page.locator("#upload-csv-form input[name=file]").set_input_files(str(roster))
+    with page.expect_navigation():
+        page.locator("#upload-csv-form .unlock-col-actions button[type=submit]:not([data-directory-recheck])").click()
+    page.wait_for_load_state("load")
+
+    # Hold every lookup unanswered, so the count stays running.
+    held: list[object] = []
+    page.route("**/directory-lookup", lambda route: held.append(route))
+    posted: list[str] = []
+    page.on("request", lambda r: posted.append(r.url) if r.url.endswith("/directory-recheck") else None)
+
+    button = page.locator("[data-directory-recheck]")
+    expect(button).to_have_text("Recheck 25 unmatched")
+    button.click()
+    expect(button).to_have_text("Stop recheck")
+    expect(page.locator("[data-directory-countdown]")).to_be_visible()
+    page.wait_for_timeout(300)
+    assert 1 <= len(held) <= 2  # two batches in flight, no more
+
+    button.click()
+    expect(button).to_have_text("Recheck 25 unmatched")
+    expect(page.locator("[data-directory-countdown]")).to_be_hidden()
+    page.wait_for_timeout(300)
+    assert posted == []
+    assert "/directory-recheck" not in page.url
+
+    # Started again, the recheck runs to the end.
+    page.unroute("**/directory-lookup")
+    with page.expect_navigation():
+        button.click()
+    page.wait_for_load_state("load")
+    assert len(posted) == 1
+    expect(page.locator("[data-directory-check]")).to_contain_text("Recheck of the unmatched addresses")

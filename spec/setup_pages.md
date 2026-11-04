@@ -1171,6 +1171,12 @@ It is hidden until the count starts.
   roster, kept answers or not, and a `since` time. The recheck's POST
   reads only the answers fetched since then, so a recheck never binds
   from an old answer.
+- **Stop recheck:** while the recheck counts, its button reads "Stop
+  recheck" (author, 2026-11-04). Clicking it sends no more batches,
+  aborts those in flight and posts nothing: no row is bound, the line
+  hides and the button reads "Recheck N unmatched" again. The answers
+  fetched so far stay kept, but a new recheck asks for every key afresh
+  (its new `since`). Upload has no stop.
 - **Without the script** the line never shows, and the upload checks
   every address on the server as before; a recheck then has no `since`
   and looks every address up on the server.
