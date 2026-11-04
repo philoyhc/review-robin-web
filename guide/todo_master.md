@@ -78,7 +78,8 @@ gate.
    22D and 22E leave behind. No plan until something lands in it. So far:
    application code's 64 `# type: ignore` comments, which hide 66 errors
    and keep `enableTypeIgnoreComments` on
-   (`guide/archive/segment_22D_pyright_tests.md` § Status).
+   (`guide/archive/segment_22D_pyright_tests.md` § Status). What to do
+   with them is the author's call, deferred (2026-11-04).
 
 5. **22G — Diagnostics** (parked, author, 2026-11-04). Item 1: a small
    set of status reports about the session on Azure, the in-app clock's

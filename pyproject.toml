@@ -50,17 +50,125 @@ line-length = 100
 target-version = "py312"
 
 [tool.pyright]
-# Application code and its tests (segments 22C, 22D), every basic-mode
-# rule everywhere. `tests` is its own root so its helpers import as
-# top-level modules, with `tools` for the tests of the tools.
+# Strict mode (segment 22E) over application code and its tests (22C, 22D).
+# Each root below turns off only the strict rules it still fails; a package
+# joins strict mode when its list is gone, and test roots keep theirs for
+# good. `reportPrivateUsage` is off: a package's modules share `_helpers`
+# by convention (author's ruling, 2026-11-04). The first matching root wins.
 include = ["app", "cordware", "residentialapps", "utilityapps", "tests"]
 exclude = [".venv", "**/__pycache__"]
 pythonVersion = "3.12"
-typeCheckingMode = "basic"
-executionEnvironments = [
-  { root = "tests", extraPaths = [".", "tools"] },
-  { root = "." },
-]
+typeCheckingMode = "strict"
+reportPrivateUsage = "none"
+# Basic list/dict/set inference everywhere: strict inference is not a
+# diagnostic, and it applies to installed libraries too, wherever they sit
+# (Jinja's `globals` would infer strictly and 37 calls fail).
+strictListInference = false
+strictDictionaryInference = false
+strictSetInference = false
+
+[[tool.pyright.executionEnvironments]]
+root = "tests"
+extraPaths = [".", "tools"]
+reportDeprecated = "none"
+reportMissingParameterType = "none"
+reportMissingTypeArgument = "none"
+reportPossiblyUnboundVariable = "none"
+reportUnknownArgumentType = "none"
+reportUnknownLambdaType = "none"
+reportUnknownMemberType = "none"
+reportUnknownParameterType = "none"
+reportUnknownVariableType = "none"
+reportUnnecessaryComparison = "none"
+reportUnusedFunction = "none"
+reportUnusedImport = "none"
+reportUnusedVariable = "none"
+
+[[tool.pyright.executionEnvironments]]
+root = "cordware/tests"
+extraPaths = ["."]
+reportDeprecated = "none"
+reportIncompatibleMethodOverride = "none"
+reportMissingParameterType = "none"
+reportMissingTypeArgument = "none"
+reportUnknownArgumentType = "none"
+reportUnknownMemberType = "none"
+reportUnknownParameterType = "none"
+reportUnknownVariableType = "none"
+reportUnusedFunction = "none"
+
+[[tool.pyright.executionEnvironments]]
+root = "residentialapps/tests"
+extraPaths = ["."]
+reportMissingParameterType = "none"
+reportUnknownArgumentType = "none"
+reportUnknownLambdaType = "none"
+reportUnknownMemberType = "none"
+reportUnknownParameterType = "none"
+reportUnknownVariableType = "none"
+reportUnusedImport = "none"
+
+[[tool.pyright.executionEnvironments]]
+root = "utilityapps/tests"
+extraPaths = ["."]
+reportMissingParameterType = "none"
+reportMissingTypeArgument = "none"
+reportUnknownArgumentType = "none"
+reportUnknownLambdaType = "none"
+reportUnknownMemberType = "none"
+reportUnknownParameterType = "none"
+reportUnknownVariableType = "none"
+
+[[tool.pyright.executionEnvironments]]
+root = "cordware"
+extraPaths = ["."]
+reportDeprecated = "none"
+reportMissingParameterType = "none"
+reportUnknownArgumentType = "none"
+reportUnknownMemberType = "none"
+reportUnknownVariableType = "none"
+
+[[tool.pyright.executionEnvironments]]
+root = "residentialapps"
+extraPaths = ["."]
+reportMissingParameterType = "none"
+reportMissingTypeArgument = "none"
+reportUnknownArgumentType = "none"
+reportUnknownLambdaType = "none"
+reportUnknownMemberType = "none"
+reportUnknownParameterType = "none"
+reportUnknownVariableType = "none"
+
+[[tool.pyright.executionEnvironments]]
+root = "utilityapps"
+extraPaths = ["."]
+reportMissingParameterType = "none"
+reportMissingTypeArgument = "none"
+reportUnknownArgumentType = "none"
+reportUnknownLambdaType = "none"
+reportUnknownMemberType = "none"
+reportUnknownParameterType = "none"
+reportUnknownVariableType = "none"
+reportUnusedImport = "none"
+
+[[tool.pyright.executionEnvironments]]
+root = "app"
+extraPaths = ["."]
+reportDeprecated = "none"
+reportMissingParameterType = "none"
+reportMissingTypeArgument = "none"
+reportUnknownArgumentType = "none"
+reportUnknownLambdaType = "none"
+reportUnknownMemberType = "none"
+reportUnknownParameterType = "none"
+reportUnknownVariableType = "none"
+reportUnnecessaryComparison = "none"
+reportUnnecessaryIsInstance = "none"
+reportUnusedFunction = "none"
+reportUnusedImport = "none"
+
+[[tool.pyright.executionEnvironments]]
+root = "."
 
 [tool.ruff.lint]
 # Segment 22C rung 2: import order and modern syntax (2a), then bugbear
