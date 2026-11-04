@@ -47,7 +47,9 @@ def _seed_session(db: Session, *, name: str = "Spring 2026") -> ReviewSession:
 
 
 def _owner(db: Session, session: ReviewSession) -> User:
-    return db.get(User, session.created_by_user_id)
+    owner = db.get(User, session.created_by_user_id)
+    assert owner is not None
+    return owner
 
 
 def _user(db: Session, email: str, *, is_sys_admin: bool = False) -> User:

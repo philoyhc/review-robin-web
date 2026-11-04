@@ -8,12 +8,15 @@ separate caps — with one deliberate divergence the tests below pin.
 from __future__ import annotations
 
 from types import SimpleNamespace
+from typing import cast
 
+from app.db.models import ReviewSession
 from app.web.views import SESSIONS_DATALIST_CAP, sessions_filter_options
 
 
-def _s(name: str, code: str):
-    return SimpleNamespace(name=name, code=code)
+def _s(name: str, code: str) -> ReviewSession:
+    """A stand-in ``ReviewSession``: the name and code the helper reads."""
+    return cast(ReviewSession, SimpleNamespace(name=name, code=code))
 
 
 def test_tags_lead_then_names_and_codes() -> None:

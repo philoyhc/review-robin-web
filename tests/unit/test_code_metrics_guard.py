@@ -29,6 +29,7 @@ def _load():
     spec = importlib.util.spec_from_file_location(
         "code_metrics", REPO / "tools" / "code_metrics.py"
     )
+    assert spec is not None
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
     spec.loader.exec_module(module)

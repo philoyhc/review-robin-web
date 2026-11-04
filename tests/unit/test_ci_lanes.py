@@ -12,6 +12,7 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 _spec = importlib.util.spec_from_file_location("ci_lanes", REPO / "tools" / "ci_lanes.py")
+assert _spec is not None
 ci_lanes = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(ci_lanes)
 

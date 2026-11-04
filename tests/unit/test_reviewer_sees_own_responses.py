@@ -11,9 +11,11 @@ from __future__ import annotations
 
 import datetime as dt
 from types import SimpleNamespace
+from typing import cast
 
 import pytest
 
+from app.db.models import InstrumentViewPolicy, ReviewSession
 from app.services import session_lifecycle as lifecycle
 from app.services import visibility_policies
 
@@ -25,23 +27,27 @@ _PAIRS = {
 }
 
 
-def _session(status: str, *, released: bool = False) -> SimpleNamespace:
-    return SimpleNamespace(
+def _session(status: str, *, released: bool = False) -> ReviewSession:
+    """A stand-in ``ReviewSession``: its status and windows."""
+    fake = SimpleNamespace(
         status=status,
         responses_release_at=_NOW - dt.timedelta(hours=1) if released else None,
         responses_release_until=None,
         deadline=None,
     )
+    return cast(ReviewSession, fake)
 
 
-def _policy(after_release: str | None) -> SimpleNamespace:
+def _policy(after_release: str | None) -> InstrumentViewPolicy:
+    """A stand-in ``InstrumentViewPolicy``: the reviewer row's cells."""
     granularity, identification = _PAIRS[after_release]
-    return SimpleNamespace(
+    fake = SimpleNamespace(
         while_ongoing_granularity="row",
         while_ongoing_identification="identified",
         after_release_granularity=granularity,
         after_release_identification=identification,
     )
+    return cast(InstrumentViewPolicy, fake)
 
 
 @pytest.mark.parametrize(

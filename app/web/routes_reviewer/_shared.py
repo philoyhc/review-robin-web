@@ -18,7 +18,6 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db.models import (
-    Instrument,
     InstrumentDisplayField,
     Observer,
     Reviewee,
@@ -64,11 +63,10 @@ _templates.env.filters["format_datetime"] = format_datetime_filter
 _templates.env.filters["format_date"] = format_date_filter
 
 
-def validate_page_n(
-    page_n: int, pages: Sequence[Sequence[Instrument]]
-) -> int:
+def validate_page_n(page_n: int, pages: Sequence[object]) -> int:
     """Validate a 1-based reviewer-surface ``page_n`` against the
-    session's page list, raising 404 if it's out of range.
+    session's page list, raising 404 if it's out of range. Only the
+    list's length is read, so any page shape will do.
 
     Segment 18N PR 1 — single source of truth for the page-validity
     check the reviewer-surface GET, the save POST, and the operator-

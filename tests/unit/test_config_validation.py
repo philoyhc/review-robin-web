@@ -49,7 +49,7 @@ def test_deployed_env_passes_with_sys_admin_allowlist() -> None:
 def test_rrw_database_url_wins_over_database_url(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("DATABASE_URL", "sqlite:///./legacy.db")
     monkeypatch.setenv("RRW_DATABASE_URL", "sqlite:///./prefixed.db")
-    assert Settings(_env_file=None).database_url == "sqlite:///./prefixed.db"
+    assert Settings(_env_file=None).database_url == "sqlite:///./prefixed.db"  # pyright: ignore[reportCallIssue]  -- a pydantic-settings init option
 
 
 def test_database_url_is_read_when_the_prefixed_name_is_unset(
@@ -57,10 +57,10 @@ def test_database_url_is_read_when_the_prefixed_name_is_unset(
 ) -> None:
     monkeypatch.delenv("RRW_DATABASE_URL", raising=False)
     monkeypatch.setenv("DATABASE_URL", "sqlite:///./legacy.db")
-    assert Settings(_env_file=None).database_url == "sqlite:///./legacy.db"
+    assert Settings(_env_file=None).database_url == "sqlite:///./legacy.db"  # pyright: ignore[reportCallIssue]  -- a pydantic-settings init option
 
 
 def test_database_url_defaults_to_local_sqlite(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("RRW_DATABASE_URL", raising=False)
     monkeypatch.delenv("DATABASE_URL", raising=False)
-    assert Settings(_env_file=None).database_url == "sqlite:///./review_robin_web.db"
+    assert Settings(_env_file=None).database_url == "sqlite:///./review_robin_web.db"  # pyright: ignore[reportCallIssue]  -- a pydantic-settings init option

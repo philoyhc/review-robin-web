@@ -15,6 +15,8 @@ different rosters — see `test_a_tag_equal_to_a_name_adds_rows`.
 
 from __future__ import annotations
 
+from typing import TypedDict
+
 from app.db.models import Observer, Relationship, Reviewee, Reviewer
 from app.web.views import (
     filter_invitations_rows,
@@ -34,7 +36,7 @@ from app.web.views._invitations import InvitationsRow
 from app.web.views._responses import ResponsesRow
 
 
-def _reviewer(name: str, email: str, **tags: str) -> Reviewer:
+def _reviewer(name: str, email: str, **tags: str | None) -> Reviewer:
     return Reviewer(session_id=1, name=name, email=email, status="active", **tags)
 
 
@@ -281,9 +283,12 @@ def _re(pk: int, name: str, handle: str) -> Reviewee:
     )
 
 
-def _maps(
-    reviewers: list[Reviewer], reviewees: list[Reviewee]
-) -> dict[str, dict[int, object]]:
+class _Maps(TypedDict):
+    reviewer_by_id: dict[int, Reviewer]
+    reviewee_by_id: dict[int, Reviewee]
+
+
+def _maps(reviewers: list[Reviewer], reviewees: list[Reviewee]) -> _Maps:
     return {
         "reviewer_by_id": {r.id: r for r in reviewers},
         "reviewee_by_id": {r.id: r for r in reviewees},

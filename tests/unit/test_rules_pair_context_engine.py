@@ -17,6 +17,7 @@ and ``email_or_identifier`` attributes plus a ``status`` /
 from __future__ import annotations
 
 import contextlib
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 from app.schemas.rules import (
@@ -46,6 +47,17 @@ class _Reviewee:
     id: int
     email_or_identifier: str
     tag_1: str | None = None
+
+
+def _typed(pairs: Sequence[tuple[object, object]]) -> list[tuple[_Reviewer, _Reviewee]]:
+    """The engine's pairs, which are drawn from this file's own ``_Reviewer``
+    and ``_Reviewee`` stand-ins (the engine types its populations as
+    ``object``)."""
+    typed: list[tuple[_Reviewer, _Reviewee]] = []
+    for reviewer, reviewee in pairs:
+        assert isinstance(reviewer, _Reviewer) and isinstance(reviewee, _Reviewee)
+        typed.append((reviewer, reviewee))
+    return typed
 
 
 @dataclass
@@ -159,7 +171,7 @@ def test_evaluate_with_pair_context_match_rule() -> None:
         override_exclude_self_reviews=False,
         pair_context_lookup=lookup,  # type: ignore[arg-type]
     )
-    assert {(r.id, e.id) for r, e in result.pairs} == {(1, 10)}
+    assert {(r.id, e.id) for r, e in _typed(result.pairs)} == {(1, 10)}
 
 
 def test_evaluate_with_pair_context_filter_rule() -> None:
@@ -192,7 +204,7 @@ def test_evaluate_with_pair_context_filter_rule() -> None:
         override_exclude_self_reviews=False,
         pair_context_lookup=lookup,  # type: ignore[arg-type]
     )
-    pair_ids = {(r.id, e.id) for r, e in result.pairs}
+    pair_ids = {(r.id, e.id) for r, e in _typed(result.pairs)}
     assert (1, 10) not in pair_ids
     assert pair_ids == {(1, 11), (2, 10), (2, 11)}
 
@@ -253,7 +265,7 @@ def test_evaluate_inactive_row_invisible_but_pair_remains() -> None:
         override_exclude_self_reviews=False,
         pair_context_lookup=lookup,  # type: ignore[arg-type]
     )
-    assert {(r.id, e.id) for r, e in result.pairs} == {(1, 10)}
+    assert {(r.id, e.id) for r, e in _typed(result.pairs)} == {(1, 10)}
 
 
 def test_evaluate_resets_context_var_after_run() -> None:
@@ -344,4 +356,4 @@ def test_same_as_across_pair_context_and_reviewer() -> None:
         override_exclude_self_reviews=False,
         pair_context_lookup=lookup,  # type: ignore[arg-type]
     )
-    assert {(r.id, e.id) for r, e in result.pairs} == {(1, 10)}
+    assert {(r.id, e.id) for r, e in _typed(result.pairs)} == {(1, 10)}

@@ -27,7 +27,7 @@ COOKIE = "rrw-sort-rs-1-2"
 def _decode(spec: object) -> list[dict[str, object]] | None:
     return decode_cookie_sort_spec_for_reviewer_surface(
         cookies={COOKIE: quote(json.dumps(spec))},
-        session_id=1,
+        session_id="1",
         instrument_seq=2,
         display_fields=[NAME_DF, TAG_DF],
     )
@@ -36,7 +36,7 @@ def _decode(spec: object) -> list[dict[str, object]] | None:
 def test_no_cookie_is_none() -> None:
     assert (
         decode_cookie_sort_spec_for_reviewer_surface(
-            cookies={}, session_id=1, instrument_seq=2, display_fields=[NAME_DF]
+            cookies={}, session_id="1", instrument_seq=2, display_fields=[NAME_DF]
         )
         is None
     )
@@ -112,7 +112,7 @@ def test_two_fields_with_one_source_take_the_first_in_display_order() -> None:
     later = SimpleNamespace(id=5, source_type="reviewee", source_field="tag_1", order=2)
     assert decode_cookie_sort_spec_for_reviewer_surface(
         cookies={COOKIE: quote(json.dumps([{"key": TAG, "dir": "asc"}]))},
-        session_id=1,
+        session_id="1",
         instrument_seq=2,
         display_fields=[NAME_DF, later, TAG_DF],
     ) == [{"display_field_id": 12, "dir": "asc"}]

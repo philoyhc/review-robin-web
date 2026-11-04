@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import cast
+
 from sqlalchemy.orm import Session
 
 from app.db.models import Reviewee, Reviewer, ReviewSession, User
@@ -91,17 +93,20 @@ def test_registry_rules_have_non_empty_metadata() -> None:
     callable that returns a non-empty string."""
     from app.services.validation import REGISTERED_RULES
 
-    fake_session = type(
-        "_S",
-        (),
-        {
-            "id": 1,
-            "public_id": "k3m9x2pq7a",
-            "code": "x",
-            "name": "x",
-            "help_contact": None,
-        },
-    )()
+    fake_session = cast(
+        ReviewSession,
+        type(
+            "_S",
+            (),
+            {
+                "id": 1,
+                "public_id": "k3m9x2pq7a",
+                "code": "x",
+                "name": "x",
+                "help_contact": None,
+            },
+        )(),
+    )
     for rule in REGISTERED_RULES:
         assert rule.key
         assert rule.source

@@ -25,6 +25,7 @@ REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 def _load():
     path = REPO_ROOT / "tools" / "pace_audit.py"
     spec = importlib.util.spec_from_file_location("pace_audit_under_test", path)
+    assert spec is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module

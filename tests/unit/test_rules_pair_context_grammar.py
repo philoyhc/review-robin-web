@@ -112,7 +112,9 @@ def test_ruleset_serializes_pair_context_rules() -> None:
     # And re-validates cleanly through ``RuleSetSchema`` (so the
     # storage round-trip the engine relies on works).
     rehydrated = RuleSetSchema.model_validate(dumped)
-    assert rehydrated.rules[0].predicate.field == "pair_context.tag1"
+    rule = rehydrated.rules[0]
+    assert isinstance(rule, MatchRule)
+    assert rule.predicate.field == "pair_context.tag1"
 
 
 def test_field_map_has_pair_context_entries() -> None:

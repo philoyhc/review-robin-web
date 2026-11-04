@@ -21,6 +21,7 @@ REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 def _load():
     path = REPO_ROOT / "tools" / "practice_kit.py"
     spec = importlib.util.spec_from_file_location("practice_kit_under_test", path)
+    assert spec is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
