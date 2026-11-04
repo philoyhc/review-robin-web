@@ -106,7 +106,7 @@ def parse(data: bytes) -> Upload:
         raise CsvRejected("The file has a header but no rows.")
     if len(body) > MAX_ROWS:
         raise CsvRejected(f"The file has {len(body)} rows; the limit is {MAX_ROWS}.")
-    rows = []
+    rows: list[tuple[str, ...]] = []
     for number, record in enumerate(body, start=2):
         if len(record) > len(header):
             raise CsvRejected(f"Line {number} has more cells than the header.")
@@ -140,7 +140,7 @@ def result_header(header: Sequence[str]) -> tuple[str, ...]:
     """The input's header, then the result columns, each prefixed until
     it collides with no column already in the output (case-insensitive)."""
     taken = {name.strip().lower() for name in header}
-    added = []
+    added: list[str] = []
     for name in RESULT_COLUMNS:
         while name.lower() in taken:
             name = COLLISION_PREFIX + name

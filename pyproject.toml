@@ -131,18 +131,6 @@ reportUnknownParameterType = "none"
 reportUnknownVariableType = "none"
 
 [[tool.pyright.executionEnvironments]]
-root = "utilityapps"
-extraPaths = ["."]
-reportMissingParameterType = "none"
-reportMissingTypeArgument = "none"
-reportUnknownArgumentType = "none"
-reportUnknownLambdaType = "none"
-reportUnknownMemberType = "none"
-reportUnknownParameterType = "none"
-reportUnknownVariableType = "none"
-reportUnusedImport = "none"
-
-[[tool.pyright.executionEnvironments]]
 root = "app"
 extraPaths = ["."]
 reportDeprecated = "none"

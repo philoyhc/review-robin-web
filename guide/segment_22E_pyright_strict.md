@@ -86,6 +86,16 @@ Taken 2026-11-04 at `9b45a9c1`, pyright 1.1.414, `typeCheckingMode =
   parameter types; the lifespan returns `AsyncGenerator`, and the state a
   mounted lifespan yields is `Mapping[str, Any] | None`. No behavior
   change. Item base for the cumulative read: `f45dd46d`.
+- **Rung 3:** `utilityapps` strict, its table gone (49 fixed, in
+  `email_check/{check,csvio,routes}.py` and `web.py`). Carried JSON is
+  narrowed with `isinstance`, then `cast` once to `dict[object, object]`
+  / `list[object]`; the lookup's key check is a `TypeGuard`
+  (`_is_batch`); Jinja's partly untyped `Environment.globals` is reached
+  through a `Protocol`-typed helper, and `host_url`'s lambda is a
+  function. `check` re-exports `classify` as `classify as classify`;
+  the unused `Directory` re-export is gone (nothing read it). Two
+  `isinstance(…, str)` guards precede `in` tests that only a string could
+  pass. No behavior change, no ignores.
 
 ## PR ladder
 

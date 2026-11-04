@@ -11,19 +11,18 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Literal, overload
+from typing import Literal, cast, overload
 
 from cordware import graph
-from cordware.graph import (  # noqa: F401  (re-exported: the checker's vocabulary)
+from cordware.graph import (
     RESOLVED,
     SIGN_IN_KINDS,
-    Directory,
     DirectoryUser,
     Finder,
     GraphError,
     Outcome,
-    classify,
 )
+from cordware.graph import classify as classify  # re-exported: the checker's vocabulary
 from cordware.graph import error_outcome as _error
 from utilityapps.email_check import csvio
 
@@ -70,7 +69,7 @@ def look_up_all(
     return graph.look_up_all(directory, keys, budget=budget, workers=WORKERS)
 
 
-def outcome_json(outcome: Outcome) -> dict:
+def outcome_json(outcome: Outcome) -> dict[str, object]:
     """One outcome as the lookup endpoint returns it and the page carries
     it back to `/check` (segment U2)."""
     user = outcome.user
@@ -114,25 +113,32 @@ def outcomes_from_json(data: object, keys: Iterable[str]) -> dict[str, Outcome]:
         raise OutcomesRejected("the outcomes are not an object")
     allowed = set(keys)
     outcomes: dict[str, Outcome] = {}
-    for key, raw in data.items():
-        if key not in allowed:
+    for key, raw_value in cast(dict[object, object], data).items():
+        if not isinstance(key, str) or key not in allowed:
             raise OutcomesRejected("an outcome names an address the file does not have")
-        if not isinstance(raw, dict):
+        if not isinstance(raw_value, dict):
             raise OutcomesRejected("an outcome is not an object")
+        raw = cast(dict[object, object], raw_value)
         status = raw.get("status")
         match_type = raw.get("match_type")
-        if status not in STATUSES or status == "INVALID_INPUT" or match_type not in MATCH_TYPES:
+        if (
+            status not in STATUSES
+            or status == "INVALID_INPUT"
+            or not isinstance(match_type, str)
+            or match_type not in MATCH_TYPES
+        ):
             raise OutcomesRejected("an outcome has an unknown status or match type")
         user_raw = raw.get("user")
         user = None
         if user_raw is not None:
             if not isinstance(user_raw, dict):
                 raise OutcomesRejected("an outcome's account is not an object")
+            account = cast(dict[object, object], user_raw)
             user = DirectoryUser(
-                _text(user_raw.get("id")),
-                _text(user_raw.get("display_name")),
-                _text(user_raw.get("mail"), optional=True),
-                _text(user_raw.get("user_principal_name")),
+                _text(account.get("id")),
+                _text(account.get("display_name")),
+                _text(account.get("mail"), optional=True),
+                _text(account.get("user_principal_name")),
             )
         if (status in RESOLVED) != (user is not None):
             raise OutcomesRejected("an outcome's account does not fit its status")
@@ -182,7 +188,7 @@ def run(
     }
 
     counts: dict[str, int] = dict.fromkeys(STATUSES, 0)
-    cells = []
+    cells: list[list[str]] = []
     for key in keys:
         outcome = (
             outcomes[key]
