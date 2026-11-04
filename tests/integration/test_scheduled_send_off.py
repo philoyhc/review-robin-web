@@ -35,7 +35,7 @@ from .test_scheduled_invites import (
     _stub_build_url,
 )
 
-LINE = "Scheduled sending isn't available on this deployment"
+LINE = "Scheduled email is not available on this deployment."
 
 
 @pytest.fixture

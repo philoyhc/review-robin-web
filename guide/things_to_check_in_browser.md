@@ -53,9 +53,8 @@ only the audit log open**.
 window are editable only before the session opens.
 
 - [ ] **Auto-send is off.** On New session, Send invites and Send
-  reminders are greyed out with "Scheduled sending isn't available on
-  this deployment; send from Invitations when it's time"; the Guide's
-  paragraph on them says the same.
+  reminders are greyed out with "Scheduled email is not available on
+  this deployment."; the Guide's paragraph on them says the same.
 - [ ] **Set up.** Create a session; on Quick Setup upload
   `docs/sample_data/basic_cohort/mock_reviewers.csv` and
   `mock_reviewees.csv`. Run Validate and Prepare session until the
