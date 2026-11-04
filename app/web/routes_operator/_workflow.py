@@ -33,6 +33,7 @@ re-raised as a 500 (findings Bc7).
 
 from __future__ import annotations
 
+import contextlib
 import logging
 
 from fastapi import APIRouter, Depends, Form, Request
@@ -656,18 +657,16 @@ def workflow_archive(
     just-archived row in context.
     """
     correlation_id = request_correlation_id()
-    try:
+    # ``already_archived`` is the only path that raises now. Drop the
+    # user back to the lobby's archived index either way — they'll see
+    # the row there.
+    with contextlib.suppress(lifecycle.LifecycleError):
         lifecycle.archive_session(
             db,
             review_session=review_session,
             user=user,
             correlation_id=correlation_id,
         )
-    except lifecycle.LifecycleError:
-        # ``already_archived`` is the only path that raises now.
-        # Drop the user back to the lobby's archived index either
-        # way — they'll see the row there.
-        pass
     return urls.redirect(request,
         url="/operator/sessions/archived",
         status_code=status.HTTP_303_SEE_OTHER,

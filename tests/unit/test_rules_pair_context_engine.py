@@ -16,6 +16,7 @@ and ``email_or_identifier`` attributes plus a ``status`` /
 
 from __future__ import annotations
 
+import contextlib
 from dataclasses import dataclass
 
 from app.schemas.rules import (
@@ -297,15 +298,13 @@ def test_evaluate_resets_context_var_on_exception() -> None:
         def options(self):
             raise RuntimeError("boom")
 
-    try:
+    with contextlib.suppress(RuntimeError):
         engine.evaluate(
             _BoomRuleSet(),  # type: ignore[arg-type]
             reviewers=[alice],
             reviewees=[carol],
             pair_context_lookup=lookup,  # type: ignore[arg-type]
         )
-    except RuntimeError:
-        pass
 
     # ContextVar reset cleanly despite the exception.
     value = get_field_value(

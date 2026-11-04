@@ -181,9 +181,7 @@ def is_response_release_window_open(
     if now < anchor:
         return False
     close = _as_utc(review_session.responses_release_until)
-    if close is not None and now >= close:
-        return False
-    return True
+    return not (close is not None and now >= close)
 
 
 def is_editable(review_session: ReviewSession) -> bool:

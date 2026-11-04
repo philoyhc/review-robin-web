@@ -175,10 +175,10 @@ def churn(days: int, sample: int) -> None:
                 # "@@ -12,3 +12,0 @@" and the single-line form "@@ -89 +89 @@".
                 match = HUNK.match(row)
                 line_no = int(match.group(1)) if match else 0
-            elif row.startswith("-") and not row.startswith("---") and current:
-                if line_no:               # a 0 means the header did not parse
-                    deleted[current].append(line_no)
-                    line_no += 1
+            # A line_no of 0 means the header did not parse.
+            elif row.startswith("-") and not row.startswith("---") and current and line_no:
+                deleted[current].append(line_no)
+                line_no += 1
         for path, numbers in deleted.items():
             if not numbers:
                 continue

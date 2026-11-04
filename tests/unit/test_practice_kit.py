@@ -214,7 +214,7 @@ def test_theme_group_builds_a_starter_base_template(tmp_path: pathlib.Path) -> N
     assert '<body class="ui-v2 {% block body_class %}{% endblock %}">' in text
     assert 'data-theme-choice="dark"' in text
     assert 'localStorage.setItem("rrw-theme", mode)' in text
-    for path, tier, needs, _ in pk.MANIFEST:
+    for path, _tier, needs, _ in pk.MANIFEST:
         if needs == "theme":
             assert (dest / path).is_file(), path
     base.write_text("mine\n")

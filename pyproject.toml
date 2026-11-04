@@ -57,13 +57,35 @@ pythonVersion = "3.12"
 typeCheckingMode = "basic"
 
 [tool.ruff.lint]
-# Segment 22C rung 2a: import order and modern syntax on top of ruff's
-# defaults (E4, E7, E9, F). Not all of "E": E501 is 1,471 long lines with no
-# formatter to fix them.
-extend-select = ["I", "UP"]
-# StrEnum changes what str() and format() give for a member, which
-# templates and audit details render.
-ignore = ["UP042"]
+# Segment 22C rung 2: import order and modern syntax (2a), then bugbear
+# and simplify (2b), on top of ruff's defaults (E4, E7, E9, F). Not all of
+# "E": E501 is 1,471 long lines with no formatter to fix them.
+extend-select = ["I", "UP", "B", "SIM"]
+ignore = [
+    # StrEnum changes what str() and format() give for a member, which
+    # templates and audit details render.
+    "UP042",
+    # zip(strict=True) raises where a short input is silently truncated
+    # today: a behavior change at 42 call sites, not a lint fix.
+    "B905",
+    # Ternaries only where they read better; a style call, not a defect.
+    "SIM108",
+    # Its constant detection is by case, so it puts a test's expected
+    # value on the left: the yoda form it means to remove.
+    "SIM300",
+    # A word list as "a b c".split() reads better than a long literal.
+    "SIM905",
+]
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI's parameter declarations, called in defaults by design.
+extend-immutable-calls = [
+    "fastapi.Depends", "fastapi.File", "fastapi.Form", "fastapi.Path",
+    "fastapi.Query",
+    # Frozen dataclasses: one shared default instance is safe.
+    "app.services.extracts.zip_bundle.ByInstrumentOptions",
+    "app.services.extracts.zip_bundle.MetadataOptions",
+]
 
 [tool.ruff.lint.isort]
 # The repository's own alembic/ directory would otherwise make the

@@ -301,18 +301,17 @@ def update_reviewer(
     # not-identity: a dirty check — did the operator edit this field?
     # A case-only edit is a real edit, so this compares raw values
     # deliberately. The uniqueness gate below folds.
-    if "email" in proposed and proposed["email"] != reviewer.email:
-        if _email_taken(
-            db,
-            session_id=reviewer.session_id,
-            email=proposed["email"],  # type: ignore[arg-type]
-            exclude_reviewer_id=reviewer.id,
-        ):
-            raise ReviewerOperationError(
-                "duplicate_email",
-                f"Another reviewer in this session already uses "
-                f"{proposed['email']!r}.",
-            )
+    if "email" in proposed and proposed["email"] != reviewer.email and _email_taken(
+        db,
+        session_id=reviewer.session_id,
+        email=proposed["email"],  # type: ignore[arg-type]
+        exclude_reviewer_id=reviewer.id,
+    ):
+        raise ReviewerOperationError(
+            "duplicate_email",
+            f"Another reviewer in this session already uses "
+            f"{proposed['email']!r}.",
+        )
 
     # The conflict depends on the resulting (email, name) pair, so this
     # runs whether the operator edited the email, the name, or both —

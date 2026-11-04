@@ -400,9 +400,11 @@ def test_the_guard_refuses_fake_auth_outside_local(
 ) -> None:
     monkeypatch.setattr(identity_settings, "allow_fake_auth", True)
     monkeypatch.setattr(identity_settings, "app_env", "production")
-    with caplog.at_level(logging.INFO, logger="cordware"):
-        with pytest.raises(FakeAuthRefused, match="APP_ENV='production'"):
-            create_app(apps=())
+    with (
+        caplog.at_level(logging.INFO, logger="cordware"),
+        pytest.raises(FakeAuthRefused, match="APP_ENV='production'"),
+    ):
+        create_app(apps=())
     (refused,) = _events(caplog, "identity.fake_auth_refused")
     assert refused.levelno == logging.ERROR
     assert _events(caplog, "identity.fake_auth_enabled") == []
@@ -475,9 +477,8 @@ def test_the_stop_line_carries_the_missing_header_count(
     monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
     monkeypatch.setattr(identity_module, "_missing_headers", 4)
-    with caplog.at_level(logging.INFO, logger="cordware"):
-        with TestClient(create_app(apps=())):
-            pass
+    with caplog.at_level(logging.INFO, logger="cordware"), TestClient(create_app(apps=())):
+        pass
     (stopping,) = _events(caplog, "host.stopping")
     assert stopping.missing_identity_headers == 4
 

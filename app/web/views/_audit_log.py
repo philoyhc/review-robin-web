@@ -301,7 +301,7 @@ def build_audit_log_filter_form(
     from app.services.audit import EVENT_SCHEMAS
 
     event_type_options = sorted(
-        ((et, et in filters.event_types) for et in EVENT_SCHEMAS.keys()),
+        ((et, et in filters.event_types) for et in EVENT_SCHEMAS),
         key=lambda pair: pair[0],
     )
     severity_options = [

@@ -21,6 +21,7 @@ by email" form. Backed by ``app.services.users``.
 
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 from collections.abc import Callable
 from typing import Any
@@ -455,7 +456,10 @@ def sys_admin_adopt_session(
     if review_session is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     if not permissions.user_can_view_session(db, actor, review_session.id):
-        try:
+        # already_owner race / not_in_workspace (a sys-admin is on the
+        # allowlist, so the latter shouldn't fire) — fall through to the
+        # redirect either way; the goal state is "actor owns it".
+        with contextlib.suppress(session_owners.OwnerOperationError):
             session_owners.add_owner(
                 db,
                 review_session=review_session,
@@ -463,11 +467,6 @@ def sys_admin_adopt_session(
                 target=actor,
                 correlation_id=request_correlation_id(),
             )
-        except session_owners.OwnerOperationError:
-            # already_owner race / not_in_workspace (a sys-admin is on the
-            # allowlist, so the latter shouldn't fire) — fall through to the
-            # redirect either way; the goal state is "actor owns it".
-            pass
     return urls.redirect(request,
         url=f"/operator/sessions/{session_id}",
         status_code=status.HTTP_303_SEE_OTHER,

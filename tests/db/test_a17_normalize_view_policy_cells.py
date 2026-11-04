@@ -96,7 +96,7 @@ def test_illegal_cells_take_the_nearest_legal_value() -> None:
 
             # Every result is legal under the service's rule, so the
             # card's Save and a Settings re-import accept it.
-            for row_id, ((audience, _, _), (wo, ar)) in _CASES.items():
+            for (audience, _, _), (wo, ar) in _CASES.values():
                 assert _MODE[wo] in valid_modes_for_cell(audience, "while_ongoing")
                 assert _MODE[ar] in valid_modes_for_cell(audience, "after_release")
     finally:

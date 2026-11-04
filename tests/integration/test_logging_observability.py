@@ -108,9 +108,8 @@ def test_permission_denial_logs_warning(
     db.add(bob)
     db.flush()
 
-    with caplog.at_level(logging.WARNING):
-        with pytest.raises(OperatorAllowlistDenied):
-            require_operator(user=bob)
+    with caplog.at_level(logging.WARNING), pytest.raises(OperatorAllowlistDenied):
+        require_operator(user=bob)
 
     denied = _records(caplog, "permission denied")
     assert len(denied) == 1
@@ -156,11 +155,10 @@ def test_grant_denial_logs_the_user_and_the_reviewee(
     db.flush()
     assert reviewee.id != ree.id
 
-    with caplog.at_level(logging.WARNING):
-        with pytest.raises(HTTPException):
-            require_reviewee_with_current_grant(
-                reviewee_session=(reviewee, review_session), user=ree, db=db
-            )
+    with caplog.at_level(logging.WARNING), pytest.raises(HTTPException):
+        require_reviewee_with_current_grant(
+            reviewee_session=(reviewee, review_session), user=ree, db=db
+        )
 
     denied = _records(caplog, "permission denied")
     assert len(denied) == 1

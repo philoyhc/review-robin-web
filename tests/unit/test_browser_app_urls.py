@@ -177,9 +177,12 @@ def offences(source: str) -> list[str]:
     for node in ast.walk(tree):
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
             found += _call_offences(node, bound)
-        if isinstance(node, ast.Constant) and isinstance(node.value, str):
-            if _LOCATION_TO_ROOT.search(node.value):
-                found.append(f"B3 line {node.lineno}: {node.value!r}")
+        if (
+            isinstance(node, ast.Constant)
+            and isinstance(node.value, str)
+            and _LOCATION_TO_ROOT.search(node.value)
+        ):
+            found.append(f"B3 line {node.lineno}: {node.value!r}")
         if isinstance(node, ast.JoinedStr):
             # f"location.href = {x!r}", or with the quote in the literal:
             # the value sent is x.

@@ -109,7 +109,7 @@ def test_whatever_a_viewer_may_decide_opens(monkeypatch) -> None:
             for key, value in setting.items():
                 m.setitem(sample_leave.POLICY, key, value)
             if day:
-                m.setattr(sample_leave, "routes", lambda d=None, _r=sample_leave.routes: _r(day))
+                m.setattr(sample_leave, "routes", lambda d=None, _r=sample_leave.routes, _day=day: _r(_day))
             for person in people:
                 for a in [a for a, _ in sample_leave.queue(person)] + [a for a, _, _ in sample_leave.decided(person)]:
                     assert sample_leave.can_open(person, a), (setting, day, person, a.id)

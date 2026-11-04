@@ -350,18 +350,17 @@ def update_observer(
     # not-identity: a dirty check — did the operator edit this field?
     # A case-only edit is a real edit, so this compares raw values
     # deliberately. The uniqueness gate below folds.
-    if "email" in proposed and proposed["email"] != observer.email:
-        if _email_taken(
-            db,
-            session_id=observer.session_id,
-            email=proposed["email"],  # type: ignore[arg-type]
-            exclude_observer_id=observer.id,
-        ):
-            raise ObserverOperationError(
-                "duplicate_email",
-                f"Another observer in this session already uses "
-                f"{proposed['email']!r}.",
-            )
+    if "email" in proposed and proposed["email"] != observer.email and _email_taken(
+        db,
+        session_id=observer.session_id,
+        email=proposed["email"],  # type: ignore[arg-type]
+        exclude_observer_id=observer.id,
+    ):
+        raise ObserverOperationError(
+            "duplicate_email",
+            f"Another observer in this session already uses "
+            f"{proposed['email']!r}.",
+        )
 
     # Keyed on the resulting pair, so a name-only edit is caught too.
     final_email = proposed.get("email", observer.email)

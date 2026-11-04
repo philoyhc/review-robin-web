@@ -91,7 +91,7 @@ class _Policy(dict):
         return preview if preview in APPEAL_MODES else super().__getitem__(key)
 
     def get(self, key: str, default=None):
-        return self[key] if key in self else default
+        return self[key] if key in self else default  # noqa: SIM401 -- this is get(); self.get would recurse
 
 
 PREVIEW_COOKIE = "residential-sample-appeals"

@@ -489,12 +489,12 @@ def build_reviewer_summary_context(
 
         # Stable display order — same sort as the surface (by
         # reviewee name or composed group label).
-        def _row_sort_label(key: object) -> str:
+        def _row_sort_label(key: object, instrument_id: int = instrument.id) -> str:
             if isinstance(key, tuple):
                 # Group row — sort by tag values + member names.
-                identity = _identity_for_group(instrument.id, key)
+                identity = _identity_for_group(instrument_id, key)
                 return (identity.fallback_label or "").lower()
-            reviewee = reviewee_by_row.get((instrument.id, key))
+            reviewee = reviewee_by_row.get((instrument_id, key))
             return (reviewee.name if reviewee else "").lower()
 
         ordered_keys = sorted(row_order[instrument.id], key=_row_sort_label)
