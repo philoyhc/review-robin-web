@@ -19,13 +19,20 @@ repository root, venv activated, your usual `.env` (fake auth) in place,
 and no `RRW_SCHEDULED_SEND` line in it:
 
 ```powershell
-# Windows PowerShell
+# Windows PowerShell. The first line lets this window run the venv's
+# activation script; it lasts until the window closes.
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
 .\.venv\Scripts\Activate.ps1
 Remove-Item Env:RRW_SCHEDULED_SEND -ErrorAction SilentlyContinue
 $env:SCHEDULER_INTERVAL_SECONDS = "30"
 alembic upgrade head
 uvicorn cordware.main:app --reload
 ```
+
+Or with no activation at all, calling the venv's programs by path:
+`.\.venv\Scripts\alembic.exe upgrade head` then
+`.\.venv\Scripts\uvicorn.exe cordware.main:app --reload` (after the two
+`$env:` lines above).
 
 ```bash
 # macOS / Linux
