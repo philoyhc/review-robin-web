@@ -81,6 +81,36 @@ Taken 2026-11-02 at `fffd4c28`.
 | Test files naming `scheduled_activate_at` | 49 | `grep -rln scheduled_activate_at tests --include=*.py \| wc -l` |
 | Templates naming the auto-send offsets (rung 0; taken 2026-11-04 at `b2703ab9`) | 4 | `grep -rln "invite_offsets\|reminder_offsets" app/web/templates \| wc -l` |
 
+## Status
+
+Open; rungs 0–2 built (#3577, #3578, #3579). **Not closed before the
+author's test** (2026-11-04): the sequence is
+`guide/things_to_check_in_browser.md`, "14E: the clock, and auto-send off".
+
+Diverged from Semantics at build, each from a cold read or a ruling:
+
+- **`context.fired_by = "clock"`**, not `context.trigger`, which
+  `session.activated` and `session.scheduled_event_failed` already use
+  (`audit.fired_by`, a context variable; events whose schema allows
+  `context` carry it).
+- **`pg_try_advisory_xact_lock`** on RRW's own key, held by a gate
+  transaction open for the pass; each session runs in its own database
+  session.
+- **Release stamps only while `expired`**, the one state the window opens
+  in; within a day of the moment, not backfilled; checked unlocked
+  first, so a page view after the stamps takes no lock.
+- **Activation retries keep a 15-minute spacing on the clock**
+  (`RETRY_SPACING`), not one per pass: three failures in six minutes
+  would end in `failed_persistent` with nobody looking. Page views keep
+  their own pace (§8.3).
+- **With sending on, the clock holds activation for a session with
+  invite offsets**: it has no invite-URL builder until 14G, and
+  activating would clear the Start they resolve on.
+- **Shutdown waits** up to 30 s for a pass in flight, then abandons it;
+  the loop's sleep wakes on stop.
+- Two new events: `session.deadline_reached` and
+  `session.release_window_opened` / `_ended` (the author's answers).
+
 ## PR ladder
 
 0. **Auto-send off until mail can go on a clock** (added, author,
@@ -134,7 +164,7 @@ Taken 2026-11-02 at `fffd4c28`.
 
 ## Doc impact
 
-- `spec/lifecycle.md` — §8.3: the clock beside the page-view trigger, the lock, `context.trigger`; §8: auto-send disabled behind the setting (rung 0).
+- `spec/lifecycle.md` — §8.3: the clock beside the page-view trigger, the advisory lock, `context.fired_by`, the retry spacing; §8.2.3: the release moments as stamped events, only while expired; the audit table's three new events and `trigger="release"`; §8: auto-send disabled behind the setting (rung 0).
 - `spec/settings_inventory.md` — `SCHEDULER_INTERVAL_SECONDS`; `RRW_SCHEDULED_SEND` and the two auto-send fields disabled behind it (rung 0).
 - `spec/workflow_card.md` — the auto-send caption gone while the setting is off (rung 0).
 - `docs/deployment.md` — both settings in its table.

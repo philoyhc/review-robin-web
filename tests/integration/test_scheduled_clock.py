@@ -54,7 +54,10 @@ def test_the_pass_picks_only_sessions_with_a_step_due(db: Session) -> None:
     later.scheduled_activate_at = NOW + timedelta(days=1)
     past_end = _ready_past_deadline(db, "clock-past-end")
     released = _make_validated_session(db, "clock-released")
+    released.status = lifecycle.SessionStatus.expired.value
     released.responses_release_at = NOW - timedelta(minutes=1)
+    open_release = _make_validated_session(db, "clock-open-release")
+    open_release.responses_release_at = NOW - timedelta(minutes=1)
     old_release = _make_validated_session(db, "clock-old-release")
     old_release.responses_release_at = NOW - timedelta(days=3)
     archived = _make_validated_session(db, "clock-archived")
@@ -64,7 +67,7 @@ def test_the_pass_picks_only_sessions_with_a_step_due(db: Session) -> None:
 
     ids = set(_clock.due_session_ids(db, now=NOW))
     assert {due_start.id, past_end.id, released.id} <= ids
-    assert not {later.id, old_release.id, archived.id} & ids
+    assert not {later.id, old_release.id, archived.id, open_release.id} & ids
 
 
 def test_the_pass_activates_a_session_whose_start_has_passed(db: Session) -> None:
@@ -114,6 +117,7 @@ def test_a_page_view_first_records_the_deadline_without_fired_by(db: Session) ->
 
 def test_the_release_window_is_stamped_once_per_crossing(db: Session) -> None:
     rs = _make_validated_session(db, "clock-release")
+    rs.status = lifecycle.SessionStatus.expired.value
     rs.responses_release_at = NOW - timedelta(hours=2)
     rs.responses_release_until = NOW - timedelta(minutes=5)
     db.commit()
@@ -138,10 +142,78 @@ def test_the_release_window_is_stamped_once_per_crossing(db: Session) -> None:
 
 def test_a_crossing_older_than_a_day_is_not_backfilled(db: Session) -> None:
     rs = _make_validated_session(db, "clock-backfill")
+    rs.status = lifecycle.SessionStatus.expired.value
     rs.responses_release_at = NOW - timedelta(days=2)
     db.commit()
     scheduled_events.observe_scheduled_events(db, rs, now=NOW)
     assert _events(db, rs, "session.release_window_opened") == []
+
+
+def test_the_window_is_not_stamped_on_a_session_that_has_not_ended(db: Session) -> None:
+    """The window opens only on an expired session: a Release-from that
+    passes while it is still open stamps nothing, and is stamped once the
+    operator ends it."""
+    rs = _make_validated_session(db, "clock-not-ended")
+    rs.responses_release_at = NOW - timedelta(minutes=10)
+    db.commit()
+    _clock.run_pass(_factory(db), now=NOW)
+    assert _events(db, rs, "session.release_window_opened") == []
+    rs.status = lifecycle.SessionStatus.expired.value
+    db.commit()
+    _clock.run_pass(_factory(db), now=NOW)
+    assert len(_events(db, rs, "session.release_window_opened")) == 1
+
+
+def test_sending_on_the_clock_holds_activation_for_its_invites(db: Session) -> None:
+    """With sending on, the clock has no invite-URL builder, so it leaves
+    a session with invite offsets to a page view that can send them,
+    rather than activating it and clearing the Start they resolve on."""
+    rs = _make_validated_session(db, "clock-hold")
+    rs.scheduled_activate_at = NOW - timedelta(minutes=1)
+    rs.invite_offsets = ["-P1D"]
+    db.commit()
+    _clock.run_pass(_factory(db), now=NOW)
+    db.refresh(rs)
+    assert not lifecycle.is_ready(rs)
+    assert rs.scheduled_activate_at is not None
+
+
+def test_a_recent_activation_retry_waits_for_its_spacing(db: Session) -> None:
+    from app.services import audit
+
+    rs = _make_validated_session(db, "clock-retry")
+    rs.scheduled_activate_at = NOW - timedelta(minutes=1)
+    audit.write_event(
+        db,
+        event_type="session.scheduled_activation_retry",
+        summary="retry",
+        session=rs,
+        reason="boom",
+        context={"attempt": 1},
+    )
+    db.commit()
+    # The retry's row is stamped with the real time, so measure from it.
+    now = datetime.now(timezone.utc)
+    assert rs.id not in _clock.due_session_ids(db, now=now)
+    later = now + _clock.RETRY_SPACING + timedelta(minutes=1)
+    assert rs.id in _clock.due_session_ids(db, now=later)
+
+
+def test_a_pass_another_process_holds_is_skipped(db: Session) -> None:
+    """Postgres only: with the advisory lock held elsewhere, the pass
+    skips. (SQLite takes no lock.)"""
+    from sqlalchemy import text
+
+    engine = db.get_bind().engine
+    if engine.dialect.name != "postgresql":
+        pytest.skip("the advisory lock needs Postgres (the ci-postgres job)")
+    with engine.connect() as holder:
+        holder.execute(text("SELECT pg_advisory_lock(:k)"), {"k": _clock.LOCK_KEY})
+        try:
+            factory = lambda: Session(bind=engine)  # noqa: E731
+            assert _clock.run_pass(factory, now=NOW) == -1
+        finally:
+            holder.execute(text("SELECT pg_advisory_unlock(:k)"), {"k": _clock.LOCK_KEY})
 
 
 def test_one_failing_session_does_not_stop_the_pass(

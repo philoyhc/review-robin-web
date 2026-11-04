@@ -24,14 +24,15 @@ import asyncio
 import logging
 import threading
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import exists, or_, select, text
 from sqlalchemy.orm import Session
 
-from app.db.models import Instrument, ReviewSession
+from app.db.models import AuditEvent, Instrument, ReviewSession
 from app.services import audit
 from app.services import session_lifecycle as lifecycle
+from app.services.session_guard import SessionBusy
 
 from ._release import STAMP_GRACE
 
@@ -56,8 +57,11 @@ def _take_lock(db: Session) -> bool:
 def due_session_ids(db: Session, *, now: datetime) -> list[int]:
     """Sessions with a timed step due: a scheduled Start that has passed,
     an open session past its End with an instrument still accepting, or
-    a release-window moment crossed within ``STAMP_GRACE``. Archived
-    sessions are left out."""
+    a release-window moment crossed within ``STAMP_GRACE`` on an expired
+    session (the window opens on no other). Archived sessions are left
+    out. A Start whose last activation attempt failed within
+    :data:`RETRY_SPACING` waits: retries keep their spacing on the clock
+    rather than spending all three in a few passes."""
     open_instrument = exists().where(
         Instrument.session_id == ReviewSession.id,
         Instrument.accepting_responses.is_(True),
@@ -73,13 +77,41 @@ def due_session_ids(db: Session, *, now: datetime) -> list[int]:
                 (ReviewSession.status == lifecycle.SessionStatus.ready.value)
                 & (ReviewSession.deadline <= now)
                 & open_instrument,
-                ReviewSession.responses_release_at.between(since, now),
-                ReviewSession.responses_release_until.between(since, now),
+                (ReviewSession.status == lifecycle.SessionStatus.expired.value)
+                & or_(
+                    ReviewSession.responses_release_at.between(since, now),
+                    ReviewSession.responses_release_until.between(since, now),
+                ),
             )
         )
         .order_by(ReviewSession.id)
     )
-    return list(db.execute(query).scalars())
+    ids = list(db.execute(query).scalars())
+    return [i for i in ids if not _retried_recently(db, i, now=now)]
+
+
+#: The least time between two activation attempts the clock makes after
+#: a failure (segment 14E). The page-view trigger keeps its own pace.
+RETRY_SPACING = timedelta(minutes=15)
+
+
+def _retried_recently(db: Session, session_id: int, *, now: datetime) -> bool:
+    """Whether this session's last scheduled-activation retry is younger
+    than :data:`RETRY_SPACING`; true only for a session mid-retry."""
+    last = db.execute(
+        select(AuditEvent.created_at)
+        .where(
+            AuditEvent.session_id == session_id,
+            AuditEvent.event_type == "session.scheduled_activation_retry",
+        )
+        .order_by(AuditEvent.id.desc())
+        .limit(1)
+    ).scalar()
+    if last is None:
+        return False
+    if last.tzinfo is None:
+        last = last.replace(tzinfo=timezone.utc)
+    return now - last < RETRY_SPACING
 
 
 def run_pass(
@@ -118,6 +150,10 @@ def run_pass(
                         lifecycle.observe_deadline(db, review_session, now=current)
                     db.commit()
                     visited += 1
+                except SessionBusy:
+                    # Contention, not a failure: the next pass tries again.
+                    db.rollback()
+                    _log.info("scheduled clock: session %s busy; next pass", session_id)
                 except Exception:
                     db.rollback()
                     _log.exception("scheduled clock: session %s failed", session_id)
@@ -137,15 +173,16 @@ async def run_forever(
     waits too, so a start-up is not slowed. A pass that raises is logged
     and the loop goes on."""
     while not stop.is_set():
-        await asyncio.sleep(interval)
-        if stop.is_set():
+        # Waits in a worker thread on ``stop`` itself, so a shutdown wakes
+        # it at once rather than after the interval.
+        if await asyncio.to_thread(stop.wait, interval):
             break
         try:
             visited = await asyncio.to_thread(run_pass, session_factory, stop=stop)
         except Exception:
             _log.exception("scheduled clock: pass failed")
             continue
-        if visited:
+        if visited > 0:
             _log.info(
                 "scheduled clock: pass visited %s session(s)",
                 visited,

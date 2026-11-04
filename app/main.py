@@ -62,13 +62,17 @@ class _RevalidatingStaticFiles(StaticFiles):
 
 _log = logging.getLogger(__name__)
 
+#: How long shutdown waits for the clock's pass in flight (segment 14E).
+_SHUTDOWN_WAIT = 30
+
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """RRW's lifespan, entered by the Cordware host (which runs each
     mounted application's): starts the in-app clock (segment 14E) when
     `SCHEDULER_INTERVAL_SECONDS` is above 0, and stops it on shutdown,
-    letting a pass in flight finish the session in hand."""
+    waiting for a pass in flight to finish the session in hand (up to
+    `_SHUTDOWN_WAIT` seconds, then abandoning it)."""
     interval = settings.scheduler_interval_seconds
     if interval <= 0:
         yield
@@ -85,9 +89,12 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         yield
     finally:
         stop.set()
-        task.cancel()
-        with suppress(asyncio.CancelledError):
-            await task
+        try:
+            await asyncio.wait_for(task, timeout=_SHUTDOWN_WAIT)
+        except (asyncio.TimeoutError, asyncio.CancelledError):
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
         _log.info("scheduled clock stopped", extra={"event": "scheduled_clock.stopped"})
 
 

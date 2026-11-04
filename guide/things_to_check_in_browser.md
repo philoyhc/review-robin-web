@@ -41,11 +41,14 @@ setting a time and checking, **close every Review Robin tab** and wait.
   instrument and one **`session.deadline_reached`**, "Deadline reached: 1
   of N reviewers submitted", both `fired_by: clock`; the reviewer can no
   longer save.
-- [ ] **The release window is stamped.** Set Release responses from about
-  2 minutes ahead and Release responses until about 4 minutes ahead; close
-  the tabs. After both, the audit log shows one
-  `session.release_window_opened` and one `session.release_window_ended`.
-  Reload a few times: neither repeats.
+- [ ] **The release window is stamped, once the session has ended.** The
+  window opens only on an ended session. End the session from the
+  Workflow card, then set Release responses from about 2 minutes ahead
+  and Release responses until about 4 minutes ahead; close the tabs.
+  After both, the audit log shows one `session.release_window_opened`
+  and one `session.release_window_ended`. Reload a few times: neither
+  repeats. On a session still open, a passing Release from stamps
+  nothing.
 - [ ] **A page view first still works, and records it once.** Set End 2
   minutes ahead and keep Session Home open; reload it just after End:
   the instruments close at once, and the `session.deadline_reached`
