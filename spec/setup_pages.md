@@ -1089,8 +1089,9 @@ after the save and shows for any viewer of the card.
 - **A recheck's line** reads "Recheck of the unmatched addresses": the
   time, then matched by mail, by sign-in name, not found, ambiguous, on
   an account another row already holds (when any), and not checked (when
-  any), with the cause. A recheck that checked nothing says it couldn't
-  check the addresses, and why.
+  any), with the cause, which for a recheck can also be "the recheck was
+  stopped" (*Stop and save*, below). A recheck that checked nothing says
+  it couldn't check the addresses, and why.
 - **Nothing** for an import with no counts (one that ran no check) or
   with no address to check (anonymous reviewee identifiers only). A
   recheck with nothing to check writes no event, so the line keeps the
@@ -1171,6 +1172,20 @@ It is hidden until the count starts.
   roster, kept answers or not, and a `since` time. The recheck's POST
   reads only the answers fetched since then, so a recheck never binds
   from an old answer.
+- **Stop and save:** while the recheck counts, its button reads "Stop
+  and save" (author, 2026-11-04). Clicking it sends no more batches and
+  reads "Saving…" until those in flight are back, then posts the recheck
+  with `stop=true`. The server asks the directory nothing: it binds from
+  the answers the count fetched since its `since`, and counts every
+  other row not checked, "because the recheck was stopped". `stop` is
+  ignored without `since`. A lookup that fails while saving ends the
+  count as under *Stopping early*, not as a stop: an expired sign-in
+  shows the renew banner, and otherwise the server checks what is left.
+  A page restored from the back/forward cache clears `since` and `stop`. Clicked before the keys come back, there is
+  nothing to save: the count is dropped, nothing is posted, and a renew
+  banner's button that started it is usable again (the form fires
+  `directory-count-stopped`, which the banner listens for). Upload has no
+  stop.
 - **Without the script** the line never shows, and the upload checks
   every address on the server as before; a recheck then has no `since`
   and looks every address up on the server.

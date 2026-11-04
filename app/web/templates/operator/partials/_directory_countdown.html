@@ -19,7 +19,14 @@
    It stops early and submits at once on any failed lookup (an expired
    sign-in: the upload then asks to renew, segment 20G), a failed
    request, or no directory access; the upload looks up whatever is left. Without the script the
-   line never shows and the upload checks every address on the server. #}
+   line never shows and the upload checks every address on the server.
+
+   While the recheck counts, its button reads "Stop and save" (author,
+   2026-11-04). Stopping sends no more batches, waits for those in
+   flight, then posts the recheck with `stop=true`: the server binds from
+   what the count fetched, asks the directory nothing, and counts the
+   rest not checked. Stopped before the keys come back, there is nothing
+   to save, and the count is simply dropped. #}
 <p class="muted" data-directory-countdown aria-live="polite" hidden>
   Directory check: <span data-directory-countdown-left>0</span> more to go.
 </p>
@@ -41,6 +48,17 @@
     // run at once, where four in flight would make sixteen.
     var workers = 2;
     var batch = 10;
+    // The recheck's button, relabelled while its count runs.
+    var recheckButton = document.querySelector('[data-directory-recheck]');
+    var recheckLabel = recheckButton ? recheckButton.textContent : '';
+    function labelRecheck(state) {
+      if (!recheckButton) { return; }
+      recheckButton.textContent = state === 'saving' ? 'Saving…'
+        : state ? 'Stop and save' : recheckLabel;
+      if (state === 'saving') { recheckButton.setAttribute('aria-disabled', 'true'); }
+      else { recheckButton.removeAttribute('aria-disabled'); }
+    }
+
     // Counted forms carry `data-directory-counted`, one per form, so a
     // count that submits one form never waves the other through.
     var counting = false;
@@ -49,17 +67,31 @@
     // set: put the card back as it was rendered.
     window.addEventListener('pageshow', function (event) {
       if (!event.persisted) { return; }
+      // A count frozen mid-flight must not resume behind the reset.
+      cancel();
+      if (recheck) {
+        // Cleared whether or not a count was running: a recheck posted
+        // before Back left them set, and the next one must start clean.
+        if (recheck.elements.since) { recheck.elements.since.value = ''; }
+        if (recheck.elements.stop) { recheck.elements.stop.value = ''; }
+        recheck.dispatchEvent(new Event('directory-count-stopped'));
+      }
+      if (recheckButton) { recheckButton.disabled = false; }
       Array.prototype.forEach.call(document.forms, function (f) {
         delete f.dataset.directoryCounted;
       });
       counting = false;
+      run = null;
       line.hidden = true;
+      labelRecheck(false);
     });
 
     // Two forms count down (20I Item 1): the upload, whose keys are the
     // chosen or held file's, and the recheck, whose keys are the roster's
     // unmatched rows. Each submits itself once counted.
-    var active = null;
+    // The count in progress: its form, whether it was stopped, and the
+    // requests to abort if it is.
+    var run = null;
 
     // Submit a counted form. A submit the browser's own validation then
     // blocks fires no submit event: the form is unmarked and the count
@@ -79,10 +111,68 @@
       // The count is over either way: a navigation the operator then
       // stops must not leave the other form's button locked.
       counting = false;
+      run = null;
       if (!sent || sent.defaultPrevented) {
         delete target.dataset.directoryCounted;
         line.hidden = true;
+        labelRecheck(false);
+        if (target === recheck && recheck.elements.stop) { recheck.elements.stop.value = ''; }
+      } else if (target === recheck && recheckButton) {
+        // Posted: the button can't post it a second time. A navigation
+        // the operator then cancels leaves it so until a reload, the
+        // price of never posting a recheck twice.
+        labelRecheck('saving');
+        recheckButton.disabled = true;
       }
+    }
+
+    // Stop and save: no more batches; once those in flight are back, the
+    // recheck posts with `stop=true` and saves what was found.
+    function stopAndSave() {
+      if (!run || run.target !== recheck || run.saving) { return; }
+      // Before the keys come back nothing was fetched: just drop it.
+      if (!run.pump) { cancel(); return; }
+      run.saving = true;
+      if (recheck.elements.stop) { recheck.elements.stop.value = 'true'; }
+      labelRecheck('saving');
+      run.pump();
+    }
+
+    // A failed lookup while saving ends the count the ordinary way, not
+    // as a stop: the recheck then takes its usual path (the renew banner
+    // for an expired sign-in, else the server checks what is left), and
+    // its line names the real cause rather than "stopped".
+    function unsave(current) {
+      if (current.saving && recheck && recheck.elements.stop) {
+        recheck.elements.stop.value = '';
+      }
+    }
+
+    // Drop the count: nothing more is asked, nothing is posted. Requests
+    // in flight are aborted where the browser can, and ignored where not.
+    function cancel() {
+      if (!run) { return; }
+      run.stopped = true;
+      run.controllers.forEach(function (c) { c.abort(); });
+      run = null;
+      counting = false;
+      line.hidden = true;
+      labelRecheck(false);
+      if (recheck) {
+        // The next recheck asks afresh, even if its own keys call fails.
+        if (recheck.elements.since) { recheck.elements.since.value = ''; }
+        if (recheck.elements.stop) { recheck.elements.stop.value = ''; }
+        // A renew banner that started this recheck is usable again; it
+        // listens for this (`_directory_renew.html`).
+        recheck.dispatchEvent(new Event('directory-count-stopped'));
+      }
+    }
+
+    function signal(current) {
+      if (!window.AbortController) { return undefined; }
+      var controller = new AbortController();
+      current.controllers.push(controller);
+      return controller.signal;
     }
 
     function watch(target, keysBody, onKeys) {
@@ -94,17 +184,23 @@
         // A second submit while the count runs waits for the first.
         if (counting) { return; }
         counting = true;
-        active = function () { submit(target, submitter); };
-        fetch(keysUrl, {method: 'POST', body: keysBody(), credentials: 'same-origin'})
+        var current = run = {target: target, stopped: false, controllers: []};
+        if (target === recheck) { labelRecheck(true); }
+        // Each run ends through its own closure, so a stopped run's late
+        // failure can never submit the run that followed it.
+        var finish = function () { if (!current.stopped) { submit(target, submitter); } };
+        fetch(keysUrl, {method: 'POST', body: keysBody(), credentials: 'same-origin',
+                        signal: signal(current)})
           .then(function (response) {
             if (!response.ok) { throw new Error('keys ' + response.status); }
             return response.json();
           })
           .then(function (answer) {
+            if (current.stopped) { return; }
             if (onKeys) { onKeys(answer); }
-            count(answer.keys || []);
+            count(answer.keys || [], current, finish);
           })
-          .catch(function () { active(); });
+          .catch(function () { finish(); });
       });
     }
 
@@ -118,6 +214,15 @@
       return body;
     });
     var recheck = document.getElementById('directory-recheck-form');
+    // Clicking "Stop and save" stops the count rather than submitting.
+    if (recheckButton) {
+      recheckButton.addEventListener('click', function (event) {
+        if (run && run.target === recheck) {
+          event.preventDefault();
+          stopAndSave();
+        }
+      });
+    }
     if (recheck) {
       watch(recheck, function () {
         var body = new FormData();
@@ -132,24 +237,27 @@
       });
     }
 
-    function count(keys) {
-      if (!keys.length) { active(); return; }
+    function count(keys, current, finish) {
+      if (!keys.length) { finish(); return; }
       var remaining = keys.length;
       var next = 0;
       var running = 0;
       var done = false;
       left.textContent = String(remaining);
       line.hidden = false;
+      current.pump = pump;
 
       function end() {
-        if (done) { return; }
+        if (done || current.stopped) { return; }
         done = true;
-        active();
+        finish();
       }
 
       function pump() {
-        if (done) { return; }
-        if (next >= keys.length && running === 0) { end(); return; }
+        if (done || current.stopped) { return; }
+        // Saving: post once the batches in flight are back.
+        if (running === 0 && (next >= keys.length || current.saving)) { end(); return; }
+        if (current.saving) { return; }
         while (running < workers && next < keys.length) {
           send(keys.slice(next, next + batch));
           next += batch;
@@ -162,13 +270,14 @@
           method: 'POST',
           headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
           body: JSON.stringify({keys: chunk}),
-          credentials: 'same-origin'
+          credentials: 'same-origin',
+          signal: signal(current)
         }).then(function (response) {
           if (!response.ok) { throw new Error('lookup ' + response.status); }
           return response.json();
         }).then(function (answer) {
           running -= 1;
-          if (done) { return; }
+          if (done || current.stopped) { return; }
           var outcomes = answer.outcomes || {};
           // Any failed lookup stops the count and uploads at once: a
           // refused sign-in fails every lookup after it (expired: the
@@ -179,6 +288,7 @@
             return outcomes[key] && outcomes[key].status === 'ERROR';
           });
           if (failed) {
+            unsave(current);
             end();
             return;
           }
@@ -187,6 +297,7 @@
           pump();
         }).catch(function () {
           running -= 1;
+          unsave(current);
           end();
         });
       }

@@ -425,6 +425,7 @@
                     action="{{ url('/operator/sessions/' ~ session.public_id ~ '/directory-recheck') }}">
                 <input type="hidden" name="roster" value="reviewees">
                 <input type="hidden" name="since" value="">
+                <input type="hidden" name="stop" value="">
               </form>
             {% endif %}
             {# Under the actions (20I Item 1, reversing 20G): what the last

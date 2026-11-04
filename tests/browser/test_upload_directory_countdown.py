@@ -268,3 +268,95 @@ def test_a_submit_the_browser_blocks_counts_again_next_time(
     with page.expect_navigation():
         page.locator("#upload-csv-form .unlock-col-actions button[type=submit]").click()
     assert len(keys_asked) == 2  # the second Upload counted again
+
+
+def test_stop_and_save_saves_what_was_looked_up(
+    page: Page, new_session: Callable[[], str], tmp_path: Path
+) -> None:
+    """While the recheck counts, its button reads "Stop and save" (author,
+    2026-11-04). Clicking it sends no more batches, waits for those in
+    flight, then posts the recheck: what was looked up is saved, and the
+    rest are not checked, with nothing more asked of the directory."""
+    session_id = new_session()
+    roster = tmp_path / "reviewers.csv"
+    many = [f"stop{i}@example.edu" for i in range(25)]
+    roster.write_text(
+        "ReviewerName,ReviewerEmail\n"
+        + "\n".join(f"P{i},{a}" for i, a in enumerate(many)) + "\n"
+    )
+    page.goto(app_url(f"/operator/sessions/{session_id}/reviewers?unlocked=1"))
+    page.locator("#upload-csv-form input[name=file]").set_input_files(str(roster))
+    with page.expect_navigation():
+        page.locator("#upload-csv-form .unlock-col-actions button[type=submit]:not([data-directory-recheck])").click()
+    page.wait_for_load_state("load")
+
+    # Both first batches are held until after the click, so the third
+    # (five keys) is never sent.
+    held: list = []
+    page.route("**/directory-lookup", lambda route: held.append(route))
+    button = page.locator("[data-directory-recheck]")
+    expect(button).to_have_text("Recheck 25 unmatched")
+    button.click()
+    expect(button).to_have_text("Stop and save")
+    for _ in range(50):
+        if len(held) == 2:
+            break
+        page.wait_for_timeout(100)
+    assert len(held) == 2
+
+    button.click()
+    expect(button).to_have_text("Saving…")
+    page.wait_for_timeout(300)
+    assert len(held) == 2  # nothing more sent
+    with page.expect_navigation():
+        for route in held:
+            route.continue_()
+    page.wait_for_load_state("load")
+
+    line = page.locator("[data-directory-check]")
+    expect(line).to_contain_text("Recheck of the unmatched addresses")
+    expect(line).to_contain_text("20 not found")
+    expect(line).to_contain_text("5 not checked")
+    expect(line).to_contain_text("Not checked because the recheck was stopped.")
+
+
+def test_a_failed_lookup_while_saving_ends_the_ordinary_way(
+    page: Page, new_session: Callable[[], str], tmp_path: Path
+) -> None:
+    """A batch that fails while saving ends the count as any failed lookup
+    does, not as a stop: no `stop=true`, so the server checks what is left
+    and the line names no stop (findings on #3575)."""
+    session_id = new_session()
+    roster = tmp_path / "reviewers.csv"
+    many = [f"fail{i}@example.edu" for i in range(25)]
+    roster.write_text(
+        "ReviewerName,ReviewerEmail\n"
+        + "\n".join(f"P{i},{a}" for i, a in enumerate(many)) + "\n"
+    )
+    page.goto(app_url(f"/operator/sessions/{session_id}/reviewers?unlocked=1"))
+    page.locator("#upload-csv-form input[name=file]").set_input_files(str(roster))
+    with page.expect_navigation():
+        page.locator("#upload-csv-form .unlock-col-actions button[type=submit]:not([data-directory-recheck])").click()
+    page.wait_for_load_state("load")
+
+    held: list = []
+    page.route("**/directory-lookup", lambda route: held.append(route))
+    posted: list[str] = []
+    page.on("request", lambda r: posted.append(r.post_data or "") if r.url.endswith("/directory-recheck") else None)
+    button = page.locator("[data-directory-recheck]")
+    button.click()
+    for _ in range(50):
+        if len(held) == 2:
+            break
+        page.wait_for_timeout(100)
+    button.click()
+    expect(button).to_have_text("Saving…")
+    keys = json.loads(held[0].request.post_data)["keys"]
+    with page.expect_navigation():
+        held[0].fulfill(json={"outcomes": {k: {"status": "ERROR", "error_kind": "server"} for k in keys}})
+    page.wait_for_load_state("load")
+
+    assert len(posted) == 1 and "stop=true" not in posted[0]
+    line = page.locator("[data-directory-check]")
+    expect(line).to_contain_text("25 not found")
+    expect(line).not_to_contain_text("stopped")

@@ -9,6 +9,8 @@ Tan's sign-in name, `office@` is ambiguous, `nobody@` is not found.
 
 from __future__ import annotations
 
+import re
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -126,7 +128,8 @@ def test_no_button_when_every_row_is_matched(
         client, session.public_id, "observers", "ObserverName,ObserverEmail\nJane,e0123456@example.edu\n"
     )
     card = _card(client, session.public_id, "observers")
-    assert "data-directory-recheck" not in card
+    # The button, not the countdown script that names its selector.
+    assert not re.search(r"<button[^>]*data-directory-recheck", card)
     assert "data-directory-check" in card
 
 
@@ -539,3 +542,67 @@ def test_a_recheck_that_binds_recomputes_self_review(
     db.commit()
     db.expire_all()
     assert db.get(Assignment, row.id).is_self_review is True
+
+
+def test_stop_and_save_reads_what_the_count_fetched_and_asks_nothing(
+    client: TestClient, db: Session, switch: _Switch
+) -> None:
+    """Stop and save (author, 2026-11-04): with `stop=true` the recheck
+    binds from the answers its countdown fetched since `since`, asks the
+    directory nothing, and counts the rest not checked, because stopped."""
+    session = _create_session(client, db, "recheck-stop-save")
+    switch.current = _Failing("server")
+    _upload(
+        client, session.public_id, "reviewers",
+        "ReviewerName,ReviewerEmail\nJane,e0123456@example.edu\nNobody,nobody@example.edu\n",
+    )
+    switch.current = FakeDirectory()
+    since = client.post(
+        f"/operator/sessions/{session.public_id}/directory-keys",
+        data={"roster": "reviewers", "recheck": "true"},
+    ).json()["since"]
+    # The count fetched Jane's answer, then was stopped.
+    client.post(
+        f"/operator/sessions/{session.public_id}/directory-lookup",
+        json={"keys": ["e0123456@example.edu"]},
+    )
+    asked: list[str] = []
+
+    class _Watched(FakeDirectory):
+        def find_users(self, address: str):
+            asked.append(address)
+            return super().find_users(address)
+
+    switch.current = _Watched()
+    response = client.post(
+        f"/operator/sessions/{session.public_id}/directory-recheck",
+        data={"roster": "reviewers", "since": since, "stop": "true"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert asked == []
+    rows = {r.email: r for r in db.scalars(select(Reviewer).where(Reviewer.session_id == session.id))}
+    assert rows["e0123456@example.edu"].directory_object_id
+    assert rows["nobody@example.edu"].directory_object_id is None
+    card = _card(client, session.public_id, "reviewers")
+    assert "1 by sign-in name" in card
+    assert "1 not checked" in card
+    assert "Not checked because the recheck was stopped." in card
+    event = _event(db, session.id, "reviewers.directory_rechecked")
+    assert event.detail["context"]["directory_unchecked"] == "stopped"
+
+
+def test_stop_without_since_is_an_ordinary_recheck(
+    client: TestClient, db: Session, switch: _Switch
+) -> None:
+    session = _create_session(client, db, "recheck-stop-no-since")
+    switch.current = _Failing("server")
+    _upload(client, session.public_id, "reviewers", "ReviewerName,ReviewerEmail\nJane,e0123456@example.edu\n")
+    switch.current = FakeDirectory()
+    client.post(
+        f"/operator/sessions/{session.public_id}/directory-recheck",
+        data={"roster": "reviewers", "stop": "true"},
+        follow_redirects=False,
+    )
+    row = db.scalars(select(Reviewer).where(Reviewer.session_id == session.id)).one()
+    assert row.directory_object_id
