@@ -2,8 +2,8 @@
 
 **Opened:** 2026-11-04, filed at the author's request as 22C's first
 follow-up · **Theme:** the type gate covers the code that checks the
-code · **Related:** `guide/segment_22C_pyright.md` (the gate this
-extends; archived at its close), `CONTRIBUTING.md`, `tools/ci_lanes.py`
+code · **Related:** `guide/archive/segment_22C_pyright.md` (the gate this
+extends), `CONTRIBUTING.md`, `tools/ci_lanes.py`
 
 ## Opportunity
 
