@@ -47,7 +47,7 @@ def _add(page: Page, email: str) -> None:
 
 def _two_owner_session(
     page: Page, api: httpx.Client, new_session: Callable[[], str]
-) -> int:
+) -> str:
     _sign_in_colleague(api)
     session_id = new_session()
     _open_home(page, session_id)

@@ -10,6 +10,7 @@ cannot run. This drives it: `Edit` shows the observer's rule cell by cell,
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Any
 
 from playwright.sync_api import Page, expect
 
@@ -104,7 +105,7 @@ def test_add_starts_from_one_default_cell_and_the_buttons_work(
     assert cells.count() == 1
 
 
-def _stored_rule(database_url: str, email: str) -> object:
+def _stored_rule(database_url: str, email: str) -> dict[str, Any] | None:
     from sqlalchemy import create_engine, select
     from sqlalchemy.orm import Session
 
@@ -151,6 +152,7 @@ def test_save_waits_for_an_email_and_a_finished_rule(
     save.click()
     page.wait_for_load_state("load")
     rule = _stored_rule(live_server.database_url, "gate@example.org")
+    assert rule is not None
     assert rule["rules"][0]["op"] == "IS"
     assert rule["rules"][0]["operand_value"] == "Red"
 
@@ -213,7 +215,7 @@ def test_a_rule_the_dropdown_lacks_survives_a_rename(
     assert rule == stale
 
 
-def _rules(database_url: str, session_id: str) -> list[object]:
+def _rules(database_url: str, session_id: str) -> list[dict[str, Any] | None]:
     from sqlalchemy import create_engine, select
     from sqlalchemy.orm import Session
 
@@ -281,6 +283,7 @@ def test_edit_on_several_rows_saves_one_rule_to_each(
     rules = _rules(live_server.database_url, session_id)
     assert len(rules) == 2
     for rule in rules:
+        assert rule is not None
         (cell,) = rule["rules"]
         # Both operands ride along in storage (the schema's idiom); the
         # operator picks which one counts.

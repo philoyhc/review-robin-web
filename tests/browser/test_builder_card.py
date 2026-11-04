@@ -64,7 +64,12 @@ def test_ticking_delete_leaves_the_card_clean(
     add_instrument(api, session_id)
     card = open_unlocked(page, session_id)
     dialogs: list[Dialog] = []
-    page.on("dialog", lambda dialog: (dialogs.append(dialog), dialog.dismiss()))
+
+    def _record_and_dismiss(dialog: Dialog) -> None:
+        dialogs.append(dialog)
+        dialog.dismiss()
+
+    page.on("dialog", _record_and_dismiss)
 
     card.locator("input[name=confirm]").check()
     expect(save_button(card)).to_be_disabled()

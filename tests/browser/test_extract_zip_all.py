@@ -58,6 +58,7 @@ def test_zip_all_carries_each_cards_chips(
     assert query["data_shapes"] == ["0"]
 
     href = page.locator("#extract-data-zip-all").get_attribute("href")
+    assert href is not None
     # An emitted href carries the mount already: join it to the origin.
     response = api.get(api.base_url.join(href))
     assert response.status_code == 200, response.text
@@ -115,6 +116,7 @@ def test_a_partial_selection_lists_its_ids(
         ("reviewee-metadata", "reviewee_metadata.csv"),
     ):
         href = page.locator(f"#extract-data-{card}-zip").get_attribute("href")
+        assert href is not None
         assert path in href
         assert parse_qs(urlsplit(href).query)["instrument"] == [kept]
 
@@ -123,4 +125,5 @@ def test_a_partial_selection_lists_its_ids(
     query = _zip_all_query(page)
     assert not any(key.endswith(".instrument") for key in query)
     href = page.locator("#extract-data-reviewer-metadata-zip").get_attribute("href")
+    assert href is not None
     assert parse_qs(urlsplit(href).query) == {"all_instruments": ["1"]}
