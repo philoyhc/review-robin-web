@@ -146,7 +146,7 @@ python3 -c "import json,collections;d=json.load(open('/tmp/pyright.json'));print
     where a short input truncates today: a behavior change at 42 sites)
     and `SIM108` (ternaries, a style call). The rest were fixed, by
     `--fix` or by hand: `raise … from None` where a route turns a domain
-    error into a 404 or 400, and loop variables bound where a closure
+    error into a 400, and loop variables bound where a closure
     reads them.
 
 ## PR ladder
