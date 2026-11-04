@@ -15,6 +15,13 @@ STAFF = "/ra-leave/staff/"
 RACHEL = "?as=Rachel%20Yeo"
 SAM = "?as=Sam%20Lee"
 
+def _by_id(application_id: str) -> sample_leave.Application:
+    """A sample application the test names, which the sample holds."""
+    found = sample_leave.by_id(application_id)
+    assert found is not None, application_id
+    return found
+
+
 
 def client() -> TestClient:
     return TestClient(ops_app())
@@ -114,7 +121,7 @@ def test_whatever_a_viewer_may_decide_opens(monkeypatch) -> None:
                 for a in [a for a, _ in sample_leave.queue(person)] + [a for a, _, _ in sample_leave.decided(person)]:
                     assert sample_leave.can_open(person, a), (setting, day, person, a.id)
     assert c.get(STAFF + "decide/L-0103?as=Benjamin%20Chua").status_code == 404  # not a staff viewer: defaults to Daniel
-    assert sample_leave.can_open("Marcus Tan", sample_leave.by_id("L-0103"))  # standing in for Grace Ho
+    assert sample_leave.can_open("Marcus Tan", _by_id("L-0103"))  # standing in for Grace Ho
 
 
 def test_with_no_first_approval_rejections_belong_to_the_final_approver(monkeypatch) -> None:
@@ -237,7 +244,7 @@ def test_review_fixes_on_the_staff_side(monkeypatch) -> None:
     assert "Daniel Koh: RF, no decisions under the policy" in c.get(STAFF).text
     monkeypatch.setitem(sample_leave.POLICY, "first", "none")
     # Recorded as awaiting first approval, they now await final approval.
-    assert sample_leave.by_id("L-0101").stage == "Pending final approval"
+    assert _by_id("L-0101").stage == "Pending final approval"
     assert "L-0101" in [a.id for a, _ in sample_leave.queue("Rachel Yeo")]
     # The switcher lists what a staff viewer reaches, keeping `?as=`.
     # Sys admin is the account's, in the account menu (author, 2026-11-02).
@@ -372,7 +379,7 @@ def test_decide_lists_this_term_s_other_leave_only() -> None:
     term = sample_leave.TERM
     for a in sample_leave.APPLICATIONS:
         assert all(o.start <= term.end and o.end >= term.start for o in sample_leave.other_leave(a))
-    lucas = sample_leave.by_id("L-0118")
+    lucas = _by_id("L-0118")
     assert [o.id for o in sample_leave.other_leave(lucas)] == ["L-0119"]
     assert sample_leave.delegate_choices("Hui Min Goh") == []  # in no slot
 
@@ -391,7 +398,7 @@ def test_the_audit_s_appeal_screens() -> None:
     assert "Decide without the cover's confirmation" in sam  # Elise Tan has not confirmed
     assert "<dt>From entitlement</dt><dd>0 days of Personal leave</dd><dt>Extra leave</dt><dd>4 days" in sam
     assert "<dt>Blackout</dt><dd>Examinations, 15 Nov – 28 Nov: appeal only</dd>" in sam
-    refused = sample_leave.by_id("L-0120")
+    refused = _by_id("L-0120")
     assert refused.appeal and refused.stage == "Rejected"
     assert refused.days == 7 and sample_leave.timeline(refused)[-1] == (
         "11 Sep", "Rejected by Sam Lee", "The Precinct is short that week; take your five days, or apply in a quieter week.")

@@ -29,6 +29,7 @@ from alembic import command
 from alembic.config import Config
 from sqlalchemy import create_engine, inspect, text
 
+from app.db.base import column_length
 from app.db.models.instrument import Instrument
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -138,7 +139,7 @@ def test_rung_1_adds_four_nullable_cache_columns_and_drops_them_again() -> None:
             # two disagree only where there is no SQLite test session
             # to notice: production.
             assert (
-                Instrument.__table__.c.cached_reconcile_stamp.type.length
+                column_length(Instrument, "cached_reconcile_stamp")
                 == after["cached_reconcile_stamp"]["type"].length
             )
 

@@ -5,6 +5,7 @@ downstream of their configuration (author, 2026-10-28)."""
 from __future__ import annotations
 
 import re
+from datetime import date
 
 from fastapi.testclient import TestClient
 
@@ -13,6 +14,20 @@ from residentialapps.residentialops.main import create_app as ops_app
 from residentialapps.residentialops.pages import LEAVE_ADMIN_TABS
 
 ADMIN = "/ra-leave/admin/"
+
+def _by_id(application_id: str) -> sample_leave.Application:
+    """A sample application the test names, which the sample holds."""
+    found = sample_leave.by_id(application_id)
+    assert found is not None, application_id
+    return found
+
+
+def _weeks(blackout: sample_leave.Blackout) -> tuple[date, date]:
+    """A sample blackout's dates, which fall in the sample's term."""
+    found = sample_leave.week_dates(blackout)
+    assert found is not None, blackout
+    return found
+
 
 
 def client() -> TestClient:
@@ -87,7 +102,7 @@ def test_policy_blackouts_count_by_week_and_refuse_or_send_to_appeal() -> None:
     the term, so they carry across years; each either refuses leave or
     sends it to appeal."""
     page = client().get(ADMIN + "policy").text
-    dates = [sample_leave.week_dates(b) for b in sample_leave.BLACKOUTS]
+    dates = [_weeks(b) for b in sample_leave.BLACKOUTS]
     assert [(d.isoformat(), e.isoformat()) for d, e in dates] == [
         ("2026-08-03", "2026-08-15"), ("2026-11-15", "2026-11-28"), ("2027-01-11", "2027-01-16"),
     ]  # week 1's Sundays (2 Aug, 10 Jan) fall in the previous term, so are clipped
@@ -311,7 +326,7 @@ def test_approvals_choose_slot_and_unit_appointments_or_none_or_named(monkeypatc
     monkeypatch.setitem(sample_leave.POLICY, "final_names", ("Sam Lee", "Rachel Yeo"))
     assert {r.first for r in sample_leave.routes()} == {"None needed"}
     assert sample_leave.final_approvers() == ("Sam Lee", "Rachel Yeo")
-    steps = [s for _, s, _ in sample_leave.timeline(sample_leave.by_id("L-0106"))]
+    steps = [s for _, s, _ in sample_leave.timeline(_by_id("L-0106"))]
     assert not any(s.startswith("First approval") for s in steps) and "Final approval by Sam Lee" in steps
     named = client().get(ADMIN + "policy").text
     box = named.split('aria-label="Staff who may give final approval"')[1].split("</div>")[0]
@@ -319,7 +334,7 @@ def test_approvals_choose_slot_and_unit_appointments_or_none_or_named(monkeypatc
     assert "<td>Sam Lee or Rachel Yeo</td>" in client().get(ADMIN + "routing").text
     dash = client().get(ADMIN).text
     assert "No first approval, then Sam Lee or Rachel Yeo" in dash and "No first approval is needed" in dash
-    rejected = [s for _, s, _ in sample_leave.timeline(sample_leave.by_id("L-0110"))]
+    rejected = [s for _, s, _ in sample_leave.timeline(_by_id("L-0110"))]
     assert "Rejected by Sam Lee" in rejected
     assert client().get(ADMIN + "applications/L-0106").status_code == 200
     routing = client().get(ADMIN + "routing").text.split('id="delegates-h"')[1]
@@ -335,7 +350,7 @@ def test_approvals_edge_cases(monkeypatch) -> None:
     assert "then the Master or Residential Admin (Admin)" in client().get(ADMIN).text
     monkeypatch.setitem(sample_leave.POLICY, "final", "named")
     monkeypatch.setitem(sample_leave.POLICY, "final_names", ())
-    assert "Final approval by the final approver" in [s for _, s, _ in sample_leave.timeline(sample_leave.by_id("L-0106"))]
+    assert "Final approval by the final approver" in [s for _, s, _ in sample_leave.timeline(_by_id("L-0106"))]
     monkeypatch.setitem(sample_leave.POLICY, "first_types", ())
     routes = sample_leave.routes()
     assert all(r.gap and r.first == "No one" for r in routes)
@@ -392,7 +407,7 @@ def test_stage_names_and_titles_follow_the_policy(monkeypatch) -> None:
     assert card.split('aria-label="Delegate 1: acting for"')[1].split("</select>")[0].count("<option selected>Grace Ho</option>") == 1
     monkeypatch.setitem(sample_leave.POLICY, "first", "slot")
     monkeypatch.setitem(sample_leave.POLICY, "first_types", ("Master",))
-    steps = [s for _, s, _ in sample_leave.timeline(sample_leave.by_id("L-0103"))]
+    steps = [s for _, s, _ in sample_leave.timeline(_by_id("L-0103"))]
     assert "First approval by the first approver" in steps and not any("No one" in s for s in steps)
 
 
@@ -452,8 +467,8 @@ def test_leave_days_count_as_the_policy_says(monkeypatch) -> None:
     assert "<dt>Days counted</dt><dd>Every day</dd>" in client().get(ADMIN).text
     monkeypatch.setitem(sample_leave.POLICY, "day_count", "Weekdays")
     assert sample_leave.leave_days(d(2026, 11, 6), d(2026, 11, 9)) == 2
-    assert sample_leave.by_id("L-0101").days == 1  # Chloe Lim, Fri 6 to Sun 8 Nov
-    assert sample_leave.days_in_term(sample_leave.by_id("L-0101")) == 1
+    assert _by_id("L-0101").days == 1  # Chloe Lim, Fri 6 to Sun 8 Nov
+    assert sample_leave.days_in_term(_by_id("L-0101")) == 1
     weekdays = {(r["ra"], r["type"]): r for r in sample_leave.entitlement_rows()}
     assert "<dt>Days counted</dt><dd>Weekdays</dd>" in client().get(ADMIN).text
     monkeypatch.setitem(sample_leave.POLICY, "day_count", "Working days")
@@ -461,7 +476,7 @@ def test_leave_days_count_as_the_policy_says(monkeypatch) -> None:
     assert sample_leave.leave_days(d(2026, 11, 6), d(2026, 11, 9)) == 1  # less Deepavali, observed Mon
     monkeypatch.setitem(sample_leave.POLICY, "day_count", "Every day")
     every = {(r["ra"], r["type"]): r for r in sample_leave.entitlement_rows()}
-    chloe = ("Chloe Lim", sample_leave.by_id("L-0101").leave_type)
+    chloe = ("Chloe Lim", _by_id("L-0101").leave_type)
     # L-0101 charges 3 days rather than 1, so Chloe Lim's balance follows the setting.
     assert every[chloe]["available"] == weekdays[chloe]["available"] - 2
 
@@ -502,12 +517,12 @@ def test_cancelled_leave_and_decision_records(monkeypatch) -> None:
     own stage and releases its cover (spec §30); each decision shows its
     date and remarks (spec §14, §15, §19)."""
     c = client()
-    cancelled = sample_leave.by_id("L-0116")
+    cancelled = _by_id("L-0116")
     assert cancelled.stage == "Cancelled" and cancelled.cover_status == "Cancelled"
     assert '<option>Cancelled</option>' in c.get(ADMIN + "applications").text
     steps = sample_leave.timeline(cancelled)
     assert steps[-1] == ("20 Oct", "Cancelled by Rachel Yeo, Residential Admin", sample_leave.DECISIONS["L-0116"]["cancelled"][1])
-    assert sample_leave.by_id("L-0111").cover_status == "Cancelled"  # withdrawn
+    assert _by_id("L-0111").cover_status == "Cancelled"  # withdrawn
     kai = next(r for r in sample_leave.entitlement_rows() if r["ra"] == "Kai Ng" and r["type"] == "Personal leave")
     assert kai["used"] == 0  # cancelled leave is not charged
     # The final approver sees the first approver's date and remarks (§14).

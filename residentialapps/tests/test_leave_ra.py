@@ -14,6 +14,13 @@ from residentialapps.residentialops.main import create_app as ops_app
 RA = "/ra-leave/"
 PAGES = ("", "apply", "appeal", "cover", "history", "applications/L-0101")
 
+def _by_id(application_id: str) -> sample_leave.Application:
+    """A sample application the test names, which the sample holds."""
+    found = sample_leave.by_id(application_id)
+    assert found is not None, application_id
+    return found
+
+
 
 def client() -> TestClient:
     return TestClient(ops_app())
@@ -166,7 +173,7 @@ def test_an_ra_can_name_new_cover_on_an_open_application(monkeypatch) -> None:
     page = client().get(RA + "applications/L-0101").text
     assert "Change cover" in page and "Ethan Wong" in page
     assert '<option value="Ethan Wong">' not in page  # never the cover already named
-    declined = dataclasses.replace(sample_leave.by_id("L-0101"), cover_recorded="Declined")
+    declined = dataclasses.replace(_by_id("L-0101"), cover_recorded="Declined")
     monkeypatch.setattr(sample_leave, "APPLICATIONS", tuple(declined if a.id == "L-0101" else a for a in sample_leave.APPLICATIONS))
     assert "cannot cover you. Name someone else" in client().get(RA + "applications/L-0101").text
     assert "Change cover" not in client().get(RA + "applications/L-0117").text  # decided

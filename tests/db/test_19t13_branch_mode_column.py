@@ -12,6 +12,7 @@ from __future__ import annotations
 from alembic import command
 from sqlalchemy import create_engine, inspect
 
+from app.db.base import column_length
 from app.db.models import InstrumentResponseField
 
 from .test_19r2_reconcile_cache_columns import _alembic_config
@@ -48,7 +49,7 @@ def test_rung_2_adds_a_nullable_branch_mode_and_drops_it_again() -> None:
             assert column["nullable"] is True
             assert str(column["type"]) == "VARCHAR(8)"
             # The ORM agrees with the migration.
-            assert InstrumentResponseField.__table__.c.branch_mode.type.length == 8
+            assert column_length(InstrumentResponseField, "branch_mode") == 8
 
             command.downgrade(cfg, PREVIOUS)
             connection.commit()

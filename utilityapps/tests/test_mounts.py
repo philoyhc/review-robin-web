@@ -75,7 +75,7 @@ def test_log_records_are_stamped_utilities() -> None:
     _, handler = host_with(("utilities",))
     record = logging.LogRecord("utilityapps.main", logging.INFO, __file__, 1, "x", None, None)
     assert handler.filter(record)
-    assert record.application == "utilities"
+    assert record.__dict__["application"] == "utilities"
 
 
 def test_favicon_is_the_amber_wrench_and_alerts_keep_the_status_hue() -> None:

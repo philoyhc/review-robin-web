@@ -77,13 +77,13 @@ def test_json_formatter_includes_exception_text() -> None:
 def test_application_filter_stamps_by_logger_prefix(logger: str, application: str) -> None:
     record = _record(name=logger)
     assert ApplicationFilter({"app": "reviewrobin"}).filter(record)
-    assert record.application == application
+    assert record.__dict__["application"] == application
 
 
 def test_application_filter_keeps_an_explicit_stamp() -> None:
     record = _record(application="other")
     ApplicationFilter({"app": "reviewrobin"}).filter(record)
-    assert record.application == "other"
+    assert record.__dict__["application"] == "other"
 
 
 def _json_handlers() -> list[logging.Handler]:

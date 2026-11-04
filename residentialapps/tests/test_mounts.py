@@ -109,4 +109,4 @@ def test_log_records_are_stamped_with_their_application(logger: str, application
     _, handler = host_with(("residentialops", "supportlogs"))
     record = logging.LogRecord(logger, logging.INFO, __file__, 1, "x", None, None)
     assert handler.filter(record)
-    assert record.application == application
+    assert record.__dict__["application"] == application

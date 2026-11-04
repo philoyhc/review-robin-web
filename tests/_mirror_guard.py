@@ -49,7 +49,8 @@ def mirror_problems(connection: Connection) -> list[str]:
                 Reviewee.session_id == session_id
             )
         ):
-            reviewee_id, link, values = row[0], row[1], tuple(row[2:])
+            fields = tuple(row)
+            reviewee_id, link, values = fields[0], fields[1], fields[2:]
             if link not in reviewers:
                 problems.append(f"session {session_id}: reviewee {reviewee_id} mirrors no reviewer")
             else:

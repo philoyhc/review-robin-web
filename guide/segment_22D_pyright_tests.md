@@ -78,6 +78,12 @@ set to the four test trees.
   imports). With the two rules off: **1,065 errors in 163 files**
   (`tests/integration` 555, `tests/unit` 404, `tests/browser` 44, the
   rest 62).
+- **Rung 2:** the small trees clean, 1,065 → 995 (70). `cordware.graph`
+  gains `Finder` (`find_users` alone), the protocol `look_up_all` and
+  the email checker's `run` actually need: the tests' fake directories
+  never had `search_users`. Log-record extras read through
+  `record.__dict__`; pydantic-settings' `_env_file` takes a
+  `pyright: ignore` with its reason (pyright cannot see the option).
 
 ## PR ladder
 

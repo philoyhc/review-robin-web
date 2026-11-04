@@ -3,6 +3,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from typing import Any
+
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -13,7 +16,7 @@ from residentialapps.supportlogs.main import create_app as supportlogs_app
 APPS = [("residentialops", ops_app), ("supportlogs", supportlogs_app)]
 
 
-def route_names(routes: list[object]) -> list[str]:
+def route_names(routes: Sequence[Any]) -> list[str]:
     """Every route name under ``routes``. FastAPI nests an included router
     behind its include context, as RRW's crawl reads it."""
     names: list[str] = []

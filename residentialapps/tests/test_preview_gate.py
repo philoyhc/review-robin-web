@@ -5,7 +5,9 @@ else; locally they answer anyone, and health always answers."""
 
 from __future__ import annotations
 
+from collections.abc import Iterator, Sequence
 from pathlib import Path
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -31,7 +33,7 @@ Prose naming prose@example.edu is not a list item.
 
 
 @pytest.fixture
-def preview_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+def preview_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
     path = tmp_path / "residential_preview.md"
     path.write_text(LIST, encoding="utf-8")
     monkeypatch.setattr(web_pages, "PREVIEW_FILE", path)
@@ -213,7 +215,9 @@ def test_comments_are_literal_inside_a_fence_and_only_ever_remove() -> None:
     assert web_pages.parse_preview_list(text) == frozenset({"before.comment@example.edu", "after@example.edu"})
 
 
-def _gated_routes(routes: list[object], gates: tuple[object, ...] = ()):
+def _gated_routes(
+    routes: Sequence[Any], gates: tuple[object, ...] = ()
+) -> Iterator[tuple[Any, set[object]]]:
     """Every route under ``routes`` with the dependencies that guard it:
     its own dependency tree plus each enclosing include's (FastAPI nests
     an included router behind its include context)."""
