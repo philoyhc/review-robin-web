@@ -50,18 +50,15 @@ line-length = 100
 target-version = "py312"
 
 [tool.pyright]
-# Application code and its tests (segments 22C, 22D). The tests' roots
-# relax the two optional-access rules until 22D rung 7 ratchets them back
-# per directory; application code keeps every basic-mode rule.
+# Application code and its tests (segments 22C, 22D), every basic-mode
+# rule everywhere. `tests` is its own root so its helpers import as
+# top-level modules, with `tools` for the tests of the tools.
 include = ["app", "cordware", "residentialapps", "utilityapps", "tests"]
 exclude = [".venv", "**/__pycache__"]
 pythonVersion = "3.12"
 typeCheckingMode = "basic"
 executionEnvironments = [
-  { root = "tests", extraPaths = [".", "tools"], reportOptionalMemberAccess = "none", reportOptionalSubscript = "none" },
-  { root = "cordware/tests", extraPaths = ["."], reportOptionalMemberAccess = "none", reportOptionalSubscript = "none" },
-  { root = "residentialapps/tests", extraPaths = ["."], reportOptionalMemberAccess = "none", reportOptionalSubscript = "none" },
-  { root = "utilityapps/tests", extraPaths = ["."], reportOptionalMemberAccess = "none", reportOptionalSubscript = "none" },
+  { root = "tests", extraPaths = [".", "tools"] },
   { root = "." },
 ]
 

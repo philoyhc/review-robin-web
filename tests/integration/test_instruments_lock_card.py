@@ -30,6 +30,7 @@ from ._instrument_states import (
 from ._instrument_states import (
     seed_session_with_instruments as _seed,
 )
+from ._lookups import must_get
 
 
 def _page(client: TestClient, s: ReviewSession) -> str:
@@ -120,7 +121,7 @@ def test_the_offered_revert_actually_works(
     db.expire_all()
 
     assert response.status_code == 303, (state, response.text[:200])
-    assert db.get(ReviewSession, s.id).status == "draft", state
+    assert must_get(db, ReviewSession, s.id).status == "draft", state
 
 
 @pytest.mark.parametrize("state", EDITABLE)

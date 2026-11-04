@@ -48,10 +48,12 @@ from app.services import session_lifecycle as lifecycle
 from app.services import sessions as sessions_service
 
 from ._full_matrix import pin_full_matrix_on_all_instruments
+from ._lookups import detail_of
 
 # --------------------------------------------------------------------------- #
 # Fixtures                                                                    #
 # --------------------------------------------------------------------------- #
+
 
 
 def _make_validated_session(db: Session, code: str) -> ReviewSession:
@@ -147,7 +149,7 @@ def test_observer_fires_scheduled_activation_when_due(db: Session) -> None:
 
     activations = _audit_rows(db, review_session, "session.activated")
     assert len(activations) == 1
-    detail = activations[0].detail
+    detail = detail_of(activations[0])
     assert detail["context"]["trigger"] == "scheduled"
 
 
@@ -209,7 +211,7 @@ def test_observer_skips_when_session_not_validated(db: Session) -> None:
     assert review_session.scheduled_activate_at is None
     skips = _audit_rows(db, review_session, "session.scheduled_activation_skipped")
     assert len(skips) == 1
-    detail = skips[0].detail
+    detail = detail_of(skips[0])
     assert detail["reason"] == "not_validated"
     assert "scheduled_at" in detail["context"]
     assert "session.activated" not in _audit_types(db, review_session)
@@ -284,7 +286,7 @@ def test_observer_emits_retry_on_transient_failure(
     assert review_session.scheduled_activate_at is not None  # NOT cleared
     retries = _audit_rows(db, review_session, "session.scheduled_activation_retry")
     assert len(retries) == 1
-    assert retries[0].detail["context"]["attempt"] == 1
+    assert detail_of(retries[0])["context"]["attempt"] == 1
 
 
 def test_observer_fails_persistent_after_three_retries(
@@ -311,7 +313,7 @@ def test_observer_fails_persistent_after_three_retries(
     )
     assert len(retries) == 3
     assert len(failed) == 1
-    assert failed[0].detail["context"]["attempts"] == 4
+    assert detail_of(failed[0])["context"]["attempts"] == 4
     assert review_session.scheduled_activate_at is None
 
 
@@ -345,8 +347,8 @@ def test_retry_counter_scoped_to_current_scheduled_at(
     assert len(retries) == 3
     # Last retry should be attempt=1 against the new scheduled_at
     last = retries[-1]
-    assert last.detail["context"]["attempt"] == 1
-    assert second.isoformat() in last.detail["context"]["scheduled_at"]
+    assert detail_of(last)["context"]["attempt"] == 1
+    assert second.isoformat() in detail_of(last)["context"]["scheduled_at"]
 
 
 # --------------------------------------------------------------------------- #
@@ -375,7 +377,7 @@ def test_operator_activation_still_records_trigger_operator(db: Session) -> None
     assert review_session.status == lifecycle.SessionStatus.ready.value
     activations = _audit_rows(db, review_session, "session.activated")
     assert len(activations) == 1
-    assert activations[0].detail["context"]["trigger"] == "operator"
+    assert detail_of(activations[0])["context"]["trigger"] == "operator"
 
 
 def test_scheduled_activation_clears_schedule_via_activate_session(

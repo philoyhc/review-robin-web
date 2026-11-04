@@ -111,7 +111,9 @@ def test_policy_blackouts_count_by_week_and_refuse_or_send_to_appeal() -> None:
     B = sample_leave.Blackout
     assert sample_leave.week_dates(B(1, 30, 31, "Past the term", "Refused")) is None
     assert sample_leave.week_dates(B(1, 3, 2, "Backwards", "Refused")) is None
-    assert sample_leave.week_dates(B(1, 23, 24, "Last week", "Refused"))[1].isoformat() == "2027-01-10"  # a Sunday: clipped
+    last_week = sample_leave.week_dates(B(1, 23, 24, "Last week", "Refused"))
+    assert last_week is not None
+    assert last_week[1].isoformat() == "2027-01-10"  # a Sunday: clipped
     rendered = re.findall(r'<td class="nowrap subtle">([^<]*)</td>', page)
     assert rendered == ["3 Aug – 15 Aug", "15 Nov – 28 Nov", "11 Jan – 16 Jan"]
     terms = page.split('aria-label="Blackout 1: term"')[1].split("</select>")[0]

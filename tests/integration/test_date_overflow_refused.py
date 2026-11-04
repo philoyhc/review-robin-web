@@ -112,9 +112,9 @@ def test_a_far_but_safe_moment_still_saves(client: TestClient, db: Session) -> N
         client, "EDGE-OK", display_timezone="Asia/Tokyo", deadline="9998-12-31T23:59"
     )
     assert response.status_code == 303
-    assert _session(db, "EDGE-OK").deadline.replace(tzinfo=None) == datetime(
-        9998, 12, 31, 14, 59
-    )
+    deadline = _session(db, "EDGE-OK").deadline
+    assert deadline is not None
+    assert deadline.replace(tzinfo=None) == datetime(9998, 12, 31, 14, 59)
 
 
 def test_parse_refuses_within_a_day_of_the_edge() -> None:

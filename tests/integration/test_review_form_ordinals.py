@@ -24,6 +24,13 @@ _ANSWER_NAME = re.compile(r'name="response\[([0-9]+)\]\[([^\]]+)\]"')
 _DIGEST = re.compile(r'name="page_digest" value="([0-9a-f]+)"')
 
 
+def _digest(html: str) -> str:
+    """The page's ``page_digest`` hidden input, which every form carries."""
+    match = _DIGEST.search(html)
+    assert match is not None
+    return match.group(1)
+
+
 def _session_alice_reviews(
     db: Session, client: TestClient, *, code: str = "ordinals"
 ) -> ReviewSession:
@@ -110,7 +117,9 @@ def test_a_column_sort_leaves_the_ordinals_on_the_same_rows(
         found: dict[str, str] = {}
         for name in ("Carol", "Dan", "Eve"):
             row = html[html.index(f">{name}<") :]
-            found[name] = _ANSWER_NAME.search(row).group(1)
+            answer = _ANSWER_NAME.search(row)
+            assert answer is not None
+            found[name] = answer.group(1)
         order = sorted(found, key=lambda name: html.index(f">{name}<"))
         return order, found
 
@@ -145,7 +154,7 @@ def test_an_ordinal_the_page_does_not_have_is_ignored(
 ) -> None:
     session = _session_alice_reviews(db, client)
     page = client.get(f"/me/sessions/{session.public_id}/1").text
-    digest = _DIGEST.search(page).group(1)
+    digest = _digest(page)
 
     response = client.post(
         f"/me/sessions/{session.public_id}/1/save",
@@ -274,7 +283,7 @@ def test_a_group_page_posts_back_the_ordinals_it_rendered(
     rendered = {(int(n), key) for n, key in _ANSWER_NAME.findall(html)}
     assert {n for n, _key in rendered} == {1, 3}
     form = {f"response[{n}][rating]": str(n) for n, key in rendered if key == "rating"}
-    form["page_digest"] = _DIGEST.search(html).group(1)
+    form["page_digest"] = _digest(html)
 
     response = rae.post(
         f"/me/sessions/{session.public_id}/1/save", data=form, follow_redirects=False
@@ -443,7 +452,7 @@ def _rendered_form(rae, session: ReviewSession) -> dict[str, str]:
         for n, key in _ANSWER_NAME.findall(html)
         if key == "rating"
     }
-    form["page_digest"] = _DIGEST.search(html).group(1)
+    form["page_digest"] = _digest(html)
     return form
 
 
@@ -514,7 +523,7 @@ def test_a_form_from_before_a_regroup_is_refused(db: Session, make_client) -> No
         if key == "rating"
     }
     assert len(form) == 2  # one row per group
-    form["page_digest"] = _DIGEST.search(html).group(1)
+    form["page_digest"] = _digest(html)
 
     people["Ann"].tag_1 = "blue"
     db.commit()
@@ -527,7 +536,7 @@ def test_a_form_from_before_a_regroup_is_refused(db: Session, make_client) -> No
     assert [_rating(db, a) for a in rows.values()] == [None, None, None, None]
     # The page as it stands now renders a digest the stale one is not.
     fresh = rae.get(f"/me/sessions/{session.public_id}/1").text
-    assert _DIGEST.search(fresh).group(1) != form["page_digest"]
+    assert _digest(fresh) != form["page_digest"]
 
 
 def test_renaming_a_whole_group_keeps_the_digest(db: Session, make_client) -> None:
@@ -535,10 +544,10 @@ def test_renaming_a_whole_group_keeps_the_digest(db: Session, make_client) -> No
     becoming crimson for both its members leaves every answer landing
     where it did."""
     session, people, _rows, rae = _tagged_group_page(db, make_client)
-    before = _DIGEST.search(rae.get(f"/me/sessions/{session.public_id}/1").text).group(1)
+    before = _digest(rae.get(f"/me/sessions/{session.public_id}/1").text)
     people["Ann"].tag_1 = people["Bo"].tag_1 = "crimson"
     db.commit()
-    after = _DIGEST.search(rae.get(f"/me/sessions/{session.public_id}/1").text).group(1)
+    after = _digest(rae.get(f"/me/sessions/{session.public_id}/1").text)
     assert after == before
 
 
@@ -558,4 +567,4 @@ def test_a_page_with_no_group_rows_digests_as_before(
         hashlib.sha256,
     ).hexdigest()[:32]
     html = client.get(f"/me/sessions/{session.public_id}/1").text
-    assert _DIGEST.search(html).group(1) == legacy
+    assert _digest(html) == legacy

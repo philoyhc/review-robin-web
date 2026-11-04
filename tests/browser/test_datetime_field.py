@@ -208,7 +208,9 @@ def test_both_buttons_are_squares_as_tall_as_the_box(
         page.add_style_tag(content=f"html {{ font-size: {root_font}; }}")
     field = page.locator("[data-dt-field]", has=page.locator("#deadline"))
     box = page.locator("#deadline").bounding_box()
+    assert box is not None
     for which in ("[data-dt-pick]", "[data-dt-clear]"):
         button = field.locator(which).bounding_box()
+        assert button is not None, which
         assert abs(button["width"] - button["height"]) < 1, which
         assert abs(button["height"] - box["height"]) < 1, which

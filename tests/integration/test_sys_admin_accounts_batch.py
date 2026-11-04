@@ -20,7 +20,10 @@ from app.services import users as users_service
 from app.web import views
 from cordware.settings import identity_settings
 
+from ._lookups import detail_of
+
 ACCOUNTS = "/operator/sys-admin/users"
+
 
 
 @pytest.fixture
@@ -82,7 +85,7 @@ def test_revoking_two_operators_is_one_request_and_one_correlation(
     events = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "workspace.operator_revoked")
     ).scalars().all()
-    assert sorted(e.detail["refs"]["target_user_id"] for e in events) == sorted(
+    assert sorted(detail_of(e)["refs"]["target_user_id"] for e in events) == sorted(
         [bob.id, carl.id]
     )
     assert len({e.correlation_id for e in events}) == 1

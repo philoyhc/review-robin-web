@@ -212,6 +212,7 @@ def give_a_field_help_text(
                 .where(Instrument.session_id == session_pk(database_url, session_id))
                 .order_by(InstrumentResponseField.order)
             ).scalars().first()
+            assert field is not None
             field.help_text = text
             field.help_text_visible = True
             db.commit()

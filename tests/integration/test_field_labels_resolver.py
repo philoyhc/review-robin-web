@@ -365,6 +365,7 @@ def test_upsert_emits_audit_set_event(db: Session) -> None:
     )
     assert len(events) == 1
     event = events[0]
+    assert event.detail is not None
     assert event.detail["changes"] == {"label": [None, "Lab section"]}
     assert event.detail["context"] == {
         "source_type": "reviewee",
@@ -405,7 +406,9 @@ def test_upsert_audit_changes_carry_old_value_on_update(
         .all()
     )
     assert len(events) == 2
+    assert events[0].detail is not None
     assert events[0].detail["changes"] == {"label": [None, "First"]}
+    assert events[1].detail is not None
     assert events[1].detail["changes"] == {"label": ["First", "Second"]}
 
 
@@ -438,6 +441,7 @@ def test_clear_emits_audit_cleared_event(db: Session) -> None:
     )
     assert len(events) == 1
     event = events[0]
+    assert event.detail is not None
     assert event.detail["snapshot"] == {
         "source_type": "pair_context",
         "source_field": "2",

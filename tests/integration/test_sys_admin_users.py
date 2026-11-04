@@ -25,6 +25,8 @@ from app.config import settings
 from app.db.models import AuditEvent, SessionOperator, User
 from cordware.settings import identity_settings
 
+from ._lookups import detail_of
+
 
 def _bootstrap_sys_admin(
     monkeypatch: pytest.MonkeyPatch, *, email: str
@@ -115,8 +117,8 @@ def test_admit_flips_is_operator_and_emits_audit(
             AuditEvent.event_type == "workspace.operator_admitted"
         )
     ).scalar_one()
-    assert event.detail["refs"] == {"target_user_id": target.id}
-    assert event.detail["changes"] == {"is_operator": [False, True]}
+    assert detail_of(event)["refs"] == {"target_user_id": target.id}
+    assert detail_of(event)["changes"] == {"is_operator": [False, True]}
 
 
 def test_revoke_flips_is_operator_back_and_emits_audit(
@@ -140,8 +142,8 @@ def test_revoke_flips_is_operator_back_and_emits_audit(
             AuditEvent.event_type == "workspace.operator_revoked"
         )
     ).scalar_one()
-    assert event.detail["refs"] == {"target_user_id": target.id}
-    assert event.detail["changes"] == {"is_operator": [True, False]}
+    assert detail_of(event)["refs"] == {"target_user_id": target.id}
+    assert detail_of(event)["changes"] == {"is_operator": [True, False]}
 
 
 def test_revoke_refuses_when_user_still_owns_sessions(
@@ -247,8 +249,8 @@ def test_promote_with_confirm_flips_is_sys_admin_and_emits_audit(
             AuditEvent.event_type == "sys_admin.role_promoted"
         )
     ).scalar_one()
-    assert event.detail["refs"] == {"target_user_id": target.id}
-    assert event.detail["changes"] == {"is_sys_admin": [False, True]}
+    assert detail_of(event)["refs"] == {"target_user_id": target.id}
+    assert detail_of(event)["changes"] == {"is_sys_admin": [False, True]}
 
 
 def test_promote_without_confirm_still_succeeds(
@@ -302,7 +304,7 @@ def test_demote_with_confirm_flips_is_sys_admin_and_emits_audit(
             AuditEvent.event_type == "sys_admin.role_demoted"
         )
     ).scalar_one()
-    assert event.detail["refs"] == {"target_user_id": target.id}
+    assert detail_of(event)["refs"] == {"target_user_id": target.id}
 
 
 # --- Last-admin-demote guard (F7) ------------------------------------------
@@ -477,8 +479,8 @@ def test_invite_creates_user_row_and_emits_audit(
             AuditEvent.event_type == "workspace.user_invited"
         )
     ).scalar_one()
-    assert event.detail["refs"] == {"target_user_id": new_row.id}
-    assert event.detail["snapshot"]["email"] == "new@example.edu"
+    assert detail_of(event)["refs"] == {"target_user_id": new_row.id}
+    assert detail_of(event)["snapshot"]["email"] == "new@example.edu"
 
 
 def test_invite_as_sys_admin_flips_both_flags(
@@ -620,8 +622,8 @@ def test_remove_user_deletes_row_and_emits_audit(
             AuditEvent.event_type == "workspace.user_removed"
         )
     ).scalar_one()
-    assert event.detail["refs"] == {"target_user_id": target_id}
-    assert event.detail["snapshot"] == {
+    assert detail_of(event)["refs"] == {"target_user_id": target_id}
+    assert detail_of(event)["snapshot"] == {
         "email": "bob@example.edu",
         "is_operator": True,
         "is_sys_admin": False,
@@ -957,8 +959,8 @@ def test_remove_from_all_sessions_deletes_operator_rows_and_emits_audit(
         .scalars()
         .one()
     )
-    assert event.detail["counts"] == {"sessions_detached": 2}
-    assert event.detail["refs"] == {"target_user_id": target.id}
+    assert detail_of(event)["counts"] == {"sessions_detached": 2}
+    assert detail_of(event)["refs"] == {"target_user_id": target.id}
 
 
 def test_remove_from_all_sessions_refuses_when_sole_owner(

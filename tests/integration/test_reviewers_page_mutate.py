@@ -778,9 +778,11 @@ def test_add_new_carries_the_active_filter_into_add_mode(
     # An unfiltered view carries neither — `status=all` is the default
     # and an empty search is nothing, so spelling them out would be
     # noise in the URL.
-    plain = re.search(
+    add_new = re.search(
         r'<a[^>]*>\s*Add new\s*</a>', client.get(base).text
-    ).group(0)
+    )
+    assert add_new is not None
+    plain = add_new.group(0)
     assert "status=" not in plain and "q=" not in plain, plain
 
 

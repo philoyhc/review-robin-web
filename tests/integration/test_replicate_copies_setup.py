@@ -26,6 +26,7 @@ from app.schemas.sessions import SessionCreate
 from app.services import instruments, sessions
 
 from ._full_matrix import pin_full_matrix_on_all_instruments
+from ._lookups import detail_of, must_get
 
 
 def _setup(db: Session) -> tuple[ReviewSession, Instrument, User]:
@@ -60,7 +61,7 @@ def test_replicate_clones_the_rule_and_copies_the_setup(db: Session) -> None:
     source.band2_state = {"selected_display_keys": ["reviewee.name"]}
     source.starts_new_page = True
     source.accepting_responses = True
-    db.get(SessionRuleSet, source.rule_set_id).exclude_self_reviews = True
+    must_get(db, SessionRuleSet, source.rule_set_id).exclude_self_reviews = True
     db.commit()
     assert source.rule_set_id is not None
 
@@ -68,8 +69,8 @@ def test_replicate_clones_the_rule_and_copies_the_setup(db: Session) -> None:
         db, review_session=review_session, source=source, actor=op
     )
 
-    original = db.get(SessionRuleSet, source.rule_set_id)
-    clone = db.get(SessionRuleSet, replica.rule_set_id)
+    original = must_get(db, SessionRuleSet, source.rule_set_id)
+    clone = must_get(db, SessionRuleSet, replica.rule_set_id)
     assert clone.id != original.id
     assert clone.rules_json == original.rules_json
     assert clone.combinator == original.combinator
@@ -85,7 +86,7 @@ def test_replicate_clones_the_rule_and_copies_the_setup(db: Session) -> None:
             AuditEvent.event_type == "session_rule_set.created",
         )
     ).scalars().all()
-    assert [e.detail["refs"]["session_rule_set_id"] for e in created][-1] == (
+    assert [detail_of(e)["refs"]["session_rule_set_id"] for e in created][-1] == (
         replica.rule_set_id
     )
 
@@ -123,7 +124,9 @@ def test_replicate_repoints_sort_and_widths_at_its_own_fields(
     }
     # The source keeps its own ids.
     db.refresh(source)
-    assert source.sort_display_fields[0]["display_field_id"] == src_displays[0]
+    source_sort = source.sort_display_fields
+    assert source_sort is not None
+    assert source_sort[0]["display_field_id"] == src_displays[0]
 
 
 def test_editing_the_replica_band1_leaves_the_source_alone(db: Session) -> None:
@@ -133,7 +136,7 @@ def test_editing_the_replica_band1_leaves_the_source_alone(db: Session) -> None:
     replica = instruments.replicate_instrument(
         db, review_session=review_session, source=source, actor=op
     )
-    before = list(db.get(SessionRuleSet, source.rule_set_id).rules_json or [])
+    before = list(must_get(db, SessionRuleSet, source.rule_set_id).rules_json or [])
 
     instruments.set_band1_assignment_rules(
         db,
@@ -150,8 +153,8 @@ def test_editing_the_replica_band1_leaves_the_source_alone(db: Session) -> None:
     )
     db.commit()
 
-    assert db.get(SessionRuleSet, source.rule_set_id).rules_json == before
-    assert db.get(SessionRuleSet, replica.rule_set_id).rules_json != before
+    assert must_get(db, SessionRuleSet, source.rule_set_id).rules_json == before
+    assert must_get(db, SessionRuleSet, replica.rule_set_id).rules_json != before
 
 
 def test_replicate_tolerates_malformed_imported_sort_and_widths(
@@ -252,7 +255,7 @@ def test_replicate_copies_the_visibility_policies(db: Session) -> None:
         )
     ).scalars().all()
     assert sorted(
-        e.detail["refs"]["instrument_id"] for e in events
+        detail_of(e)["refs"]["instrument_id"] for e in events
     ) == [replica.id] * 3
 
 

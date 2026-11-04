@@ -23,6 +23,7 @@ from app.db.models import (
     ReviewSession,
 )
 
+from ._lookups import must_get
 from ._quick_setup_refusal import refusal
 
 
@@ -186,7 +187,7 @@ def test_import_config_short_rows_are_reported_by_row_with_other_errors(
         assert "instruments[1].name: name is required" in details
 
     db.expire_all()
-    assert db.get(ReviewSession, review_session.id).name == "Imp"
+    assert must_get(db, ReviewSession, review_session.id).name == "Imp"
 
 
 def test_a_short_row_report_takes_the_lock_off_the_event_loop(
@@ -311,11 +312,13 @@ def _session_with_a_response(client: TestClient, db: Session, code: str):
     instrument = db.execute(
         select(Instrument).where(Instrument.session_id == review_session.id)
     ).scalars().first()
+    assert instrument is not None
     field = db.execute(
         select(InstrumentResponseField).where(
             InstrumentResponseField.instrument_id == instrument.id
         )
     ).scalars().first()
+    assert field is not None
     reviewer = Reviewer(
         session_id=review_session.id, name="Ana", email="ana@example.edu"
     )

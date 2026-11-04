@@ -148,6 +148,7 @@ def test_add_display_field_appends_packed_order_and_audits(db: Session) -> None:
         )
     ).scalars().all()
     assert len(events) == 1
+    assert events[0].detail is not None
     snapshot = events[0].detail["snapshot"]
     assert snapshot["source_type"] == "reviewee"
     assert snapshot["source_field"] == "tag_1"
@@ -186,6 +187,7 @@ def test_update_display_field_records_only_changed_keys(db: Session) -> None:
         .order_by(AuditEvent.id)
     ).scalars().all()
     assert len(events) == 2
+    assert events[1].detail is not None
     assert events[1].detail["changes"] == {}
 
 
@@ -233,6 +235,7 @@ def test_delete_display_field_repacks_and_audits(db: Session) -> None:
         )
     ).scalars().all()
     assert len(events) == 1
+    assert events[0].detail is not None
     snapshot = events[0].detail["snapshot"]
     assert snapshot["source_type"] == "pair_context"
     assert snapshot["source_field"] == "2"
@@ -317,6 +320,7 @@ def test_bulk_save_fields_emits_fields_reordered_when_response_order_changes(
         .order_by(AuditEvent.id)
     ).scalars().all()
     assert len(events) == 1
+    assert events[0].detail is not None
     order_change = events[0].detail["changes"]["order"]
     assert order_change == [["rating", "comments"], ["comments", "rating"]]
 
@@ -356,6 +360,7 @@ def test_bulk_save_fields_emits_display_fields_saved_with_diff(
         .where(AuditEvent.event_type == "instrument.display_fields_saved")
     ).scalars().all()
     assert len(events) == 1
+    assert events[0].detail is not None
     set_changes = events[0].detail["set_changes"]
     assert set_changes["added"] == []
     assert set_changes["removed"] == []

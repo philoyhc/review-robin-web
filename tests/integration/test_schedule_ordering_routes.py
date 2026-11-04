@@ -372,7 +372,9 @@ def test_edit_does_not_check_a_release_window_neither_box_changed(
     assert status_code == 303, body
     db.refresh(review_session)
     assert review_session.name == "Renamed"
-    assert review_session.responses_release_until.replace(
+    release_until = review_session.responses_release_until
+    assert release_until is not None
+    assert release_until.replace(
         tzinfo=_dt.UTC
     ) == _ts(2028, 3, 1, 9)
 

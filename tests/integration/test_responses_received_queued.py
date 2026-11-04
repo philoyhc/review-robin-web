@@ -31,6 +31,7 @@ from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
+from ._lookups import detail_of
 
 
 @pytest.fixture
@@ -142,6 +143,7 @@ def test_a_submit_queues_the_confirmation(
             AuditEvent.session_id == review_session.id,
         )
     ).scalar_one()
+    assert event.detail is not None
     assert event.detail["refs"]["outbox_id"] == row.id
     rae_user = db.execute(
         select(User).where(User.email == "rae@example.edu")
@@ -167,7 +169,7 @@ def test_a_second_submit_refreshes_the_one_queued_row(
 
     assert len(_received_rows(db, review_session.id)) == 1
     contexts = [
-        e.detail["context"]["refreshed"]
+        detail_of(e)["context"]["refreshed"]
         for e in db.execute(
             select(AuditEvent)
             .where(

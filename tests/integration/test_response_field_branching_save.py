@@ -24,6 +24,7 @@ from app.db.models import (
     ReviewSession,
 )
 
+from ._lookups import detail_of
 from .test_instrument_builder_routes import _band2_rfs, _new_model_with_tags
 
 
@@ -70,6 +71,7 @@ def _add_response(db: Session, review_session, instrument, field) -> None:
     reviewee = db.execute(
         select(Reviewee).where(Reviewee.session_id == review_session.id)
     ).scalars().first()
+    assert reviewer is not None and reviewee is not None
     assignment = Assignment(
         session_id=review_session.id,
         reviewer_id=reviewer.id,
@@ -118,7 +120,7 @@ def test_a_save_creates_a_branch_by_row_key(
     events = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "instrument.field_updated")
     ).scalars().all()
-    assert {e.detail["context"]["field_key"]: e.detail["changes"] for e in events} == {
+    assert {detail_of(e)["context"]["field_key"]: detail_of(e)["changes"] for e in events} == {
         fields["Score"].field_key: {"branch_op": [None, "le"], "branch_value": [None, "2"]},
         fields["Why low"].field_key: {"branch_parent_id": [None, fields["Score"].id]},
     }
@@ -221,10 +223,11 @@ def test_deleting_the_last_governed_field_deletes_the_condition(
         .where(AuditEvent.event_type == "instrument.field_updated")
         .order_by(AuditEvent.id.desc())
     ).scalars().first()
-    assert event.detail["changes"] == {
+    assert event is not None
+    assert detail_of(event)["changes"] == {
         "branch_op": ["ge", None], "branch_value": ["4", None]
     }
-    assert event.detail["refs"]["response_field_id"] == rating.id
+    assert detail_of(event)["refs"]["response_field_id"] == rating.id
 
 
 def test_deleting_a_parent_with_its_whole_branch_in_one_save_is_bottom_up(

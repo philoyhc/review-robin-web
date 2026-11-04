@@ -88,9 +88,11 @@ def test_the_card_sits_above_upload_with_a_chip_per_populated_column(
     html = client.get(f"/operator/sessions/{rs.public_id}/reviewees?unlocked=1").text
     _, left, _ = panel_columns(html)
     assert left.index("data-reviewee-self-card") < left.index('id="upload-csv"')
-    card = re.search(
+    section = re.search(
         r"<section[^>]*data-reviewee-self-card[^>]*>.*?</section>", html, re.S
-    ).group(0)
+    )
+    assert section is not None
+    card = section.group(0)
     assert "What reviewees see of their own entry" in card
     chips = re.findall(
         r'<input type="checkbox"[^>]*value="(\w+)"([^>]*)>([^<]*)</label>', card
@@ -305,6 +307,7 @@ def test_a_save_writes_one_audit_event(client: TestClient, db: Session) -> None:
         )
     ).scalars().all()
     assert len(events) == 1
+    assert events[0].detail is not None
     assert events[0].detail["changes"]["reviewee_self_fields"] == [None, ["name"]]
 
 

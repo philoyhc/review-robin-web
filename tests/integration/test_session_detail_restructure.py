@@ -179,6 +179,7 @@ def _attach_one_response(
     assignment = db.execute(
         select(Assignment).where(Assignment.session_id == review_session.id)
     ).scalars().first()
+    assert assignment is not None
     field = InstrumentResponseField(
         instrument_id=assignment.instrument_id,
         field_key="score",
@@ -533,6 +534,7 @@ def test_delete_data_wipes_responses_and_preserves_setup(
     audit = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "responses.deleted_all")
     ).scalar_one()
+    assert audit.detail is not None
     assert audit.detail["counts"]["deleted"] == count_before
     assert audit.session_id == review_session.id
 
@@ -1012,6 +1014,7 @@ def test_revert_route_handles_validated_to_draft(
             AuditEvent.event_type == "session.invalidated"
         )
     ).scalar_one()
+    assert audit.detail is not None
     assert audit.detail["reason"] == "operator_revert"
 
 

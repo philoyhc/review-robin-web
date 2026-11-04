@@ -35,6 +35,7 @@ def answer_form(
     if not assignment_ids:
         return dict(data)
     first = db.get(Assignment, min(assignment_ids))
+    assert first is not None
     review_session = db.get(ReviewSession, first.session_id)
     assert review_session is not None
     reviewer = db.get(Reviewer, first.reviewer_id)

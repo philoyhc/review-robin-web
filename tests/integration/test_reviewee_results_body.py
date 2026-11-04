@@ -51,6 +51,17 @@ from ._past_draft_setup import past_draft_setup
 from ._validated import validate_session
 
 
+def _first_instrument(db: Session, review_session: ReviewSession) -> Instrument:
+    """The session's first instrument, which every seeded session has."""
+    instrument = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .order_by(Instrument.order, Instrument.id)
+    ).scalars().first()
+    assert instrument is not None
+    return instrument
+
+
 @pytest.fixture
 def rae() -> AuthenticatedUser:
     return AuthenticatedUser(
@@ -140,11 +151,7 @@ def _seed_submitted_responses(
     surface-rendering invariants we're checking don't depend on
     going through the form."""
     if instrument is None:
-        instrument = db.execute(
-            select(Instrument)
-            .where(Instrument.session_id == review_session.id)
-            .order_by(Instrument.order, Instrument.id)
-        ).scalars().first()
+        instrument = _first_instrument(db, review_session)
     rating = db.execute(
         select(InstrumentResponseField).where(
             InstrumentResponseField.instrument_id == instrument.id,
@@ -996,11 +1003,7 @@ def test_results_columns_mirror_reviewer_surface_widths(
     """
     operator = make_client(alice)
     review_session = _seed_and_activate(operator, db, code="vp-cols")
-    instrument = db.execute(
-        select(Instrument)
-        .where(Instrument.session_id == review_session.id)
-        .order_by(Instrument.order, Instrument.id)
-    ).scalars().first()
+    instrument = _first_instrument(db, review_session)
     rating = db.execute(
         select(InstrumentResponseField).where(
             InstrumentResponseField.instrument_id == instrument.id,
@@ -1050,11 +1053,7 @@ def test_results_columns_drop_deselected_response_fields(
     same filter the reviewer surface applies."""
     operator = make_client(alice)
     review_session = _seed_and_activate(operator, db, code="vp-cols-drop")
-    instrument = db.execute(
-        select(Instrument)
-        .where(Instrument.session_id == review_session.id)
-        .order_by(Instrument.order, Instrument.id)
-    ).scalars().first()
+    instrument = _first_instrument(db, review_session)
     # Hide the comments field so the operator's "Anonymized
     # responses" view should only show the rating column. The
     # column header literal "Comments" must not surface.
@@ -1100,11 +1099,7 @@ def test_results_columns_drop_reviewee_identity_display_fields(
     review_session = _seed_and_activate(
         operator, db, code="vp-cols-identity"
     )
-    instrument = db.execute(
-        select(Instrument)
-        .where(Instrument.session_id == review_session.id)
-        .order_by(Instrument.order, Instrument.id)
-    ).scalars().first()
+    instrument = _first_instrument(db, review_session)
     # Add a reviewee Name display field (would-be identity
     # column) + a reviewee.tag_1 column (would-be tag column).
     db.add(

@@ -26,7 +26,9 @@ def _upload(client: TestClient, data: bytes, name: str = "list.csv"):
 
 
 def _carried(text: str) -> bytes:
-    return base64.b64decode(re.search(r'name="content" value="([^"]*)"', text).group(1))
+    content = re.search(r'name="content" value="([^"]*)"', text)
+    assert content is not None
+    return base64.b64decode(content.group(1))
 
 
 def test_a_file_with_an_email_column_previews_its_counts(client: TestClient) -> None:
@@ -48,9 +50,11 @@ def test_the_counts_read_as_a_subtraction(client: TestClient) -> None:
     data = b"email\r\na@x.edu\r\nnot an address\r\nB@x.edu\r\nA@x.edu\r\nb@x.edu\r\nc@x.edu\r\n"
     text = _upload(client, data).text
     labels = ["Rows", "kept, not checked", "checked once", "Addresses to check"]
-    numbers = [
-        int(re.search(label + r"[^<]*</th><td class=\"n\"[^>]*>(\d+)<", text).group(1)) for label in labels
-    ]
+    numbers = []
+    for label in labels:
+        count = re.search(label + r"[^<]*</th><td class=\"n\"[^>]*>(\d+)<", text)
+        assert count is not None, label
+        numbers.append(int(count.group(1)))
     assert numbers == [6, 1, 2, 3]
     assert numbers[0] - numbers[1] - numbers[2] == numbers[3]
     assert [text.index(label) for label in labels] == sorted(text.index(label) for label in labels)

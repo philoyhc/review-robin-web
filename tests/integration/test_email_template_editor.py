@@ -22,6 +22,8 @@ from sqlalchemy.orm import Session
 
 from app.db.models import AuditEvent, ReviewSession
 
+from ._lookups import must_search
+
 
 def _make_session(
     client: TestClient, db: Session, *, code: str = "tpl-test"
@@ -113,6 +115,7 @@ def test_save_persists_overrides_and_audits(
     event = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "email_template.updated")
     ).scalar_one()
+    assert event.detail is not None
     assert event.detail["context"]["template"] == "invitation"
     changes = event.detail["changes"]
     assert "invitation_subject" in changes
@@ -220,6 +223,7 @@ def test_reset_removes_override_and_audits(
     event = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "email_template.reset")
     ).scalar_one()
+    assert event.detail is not None
     assert event.detail["context"]["template"] == "invitation"
     assert event.detail["context"]["field"] == "subject"
 
@@ -354,6 +358,7 @@ def test_save_responses_received_persists_overrides_and_audits(
     event = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "email_template.updated")
     ).scalar_one()
+    assert event.detail is not None
     assert event.detail["context"]["template"] == "responses_received"
     assert "responses_received_subject" in event.detail["changes"]
 
@@ -409,6 +414,7 @@ def test_save_responses_received_unchecking_persists_explicit_false(
     event = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "email_template.updated")
     ).scalar_one()
+    assert event.detail is not None
     changes = event.detail["changes"]
     assert changes["responses_received_enabled"] == [True, False]
 
@@ -543,6 +549,7 @@ def test_an_archived_sessions_templates_are_read_only(
     assert (saved.status_code, reset.status_code) == (409, 409)
     db.refresh(review_session)
     assert review_session.updated_at == before
+    assert review_session.email_template_overrides is not None
     assert review_session.email_template_overrides["reminder_subject"] == "Kept"
 
     page = client.get(f"{base}?template=reminder").text
@@ -550,7 +557,7 @@ def test_an_archived_sessions_templates_are_read_only(
     import re
 
     for name in ("subject", "body"):
-        tag = re.search(rf'<(?:input|textarea)[^>]*name="{name}"[^>]*>', page).group(0)
+        tag = must_search(rf'<(?:input|textarea)[^>]*name="{name}"[^>]*>', page).group(0)
         assert re.search(r"\bdisabled\b", tag), tag
     assert "Reset subject to default" not in page
     # Nothing to cancel either: Cancel renders disabled, not as a link

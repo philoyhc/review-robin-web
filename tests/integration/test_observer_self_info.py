@@ -22,6 +22,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Observer, ReviewSession
 
+from ._lookups import must_search
 from ._unlock_panel import panel_columns
 
 
@@ -60,7 +61,7 @@ def _div_at(html: str, marker: str) -> str:
 
 
 def _card(html: str) -> str:
-    return re.search(
+    return must_search(
         r"<section[^>]*data-observer-self-card[^>]*>.*?</section>", html, re.S
     ).group(0)
 
@@ -300,6 +301,7 @@ def test_a_save_writes_one_audit_event(client: TestClient, db: Session) -> None:
         )
     ).scalars().all()
     assert len(events) == 1
+    assert events[0].detail is not None
     assert events[0].detail["changes"]["observer_self_fields"] == [None, ["email"]]
 
 

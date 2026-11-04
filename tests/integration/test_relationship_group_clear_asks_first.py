@@ -287,7 +287,9 @@ def test_a_refusal_leaves_a_validated_session_validated(
 
     assert refused.status_code == 400
     db.expire_all()
-    assert db.get(ReviewSession, session.id).status == "validated"
+    current = db.get(ReviewSession, session.id)
+    assert current is not None
+    assert current.status == "validated"
     assert db.execute(select(func.count()).select_from(AuditEvent)).scalar_one() == events_before
 
 

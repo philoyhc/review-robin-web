@@ -393,6 +393,7 @@ def test_a_live_session_left_split_by_the_retired_close_heals(
         )
     ).scalars().all()
     assert len(healed) == 1
+    assert healed[0].detail is not None
     assert healed[0].detail["reason"] == "session_wide"
 
 

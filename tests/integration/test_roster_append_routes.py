@@ -197,7 +197,9 @@ def test_a_relationships_append_that_redraws_an_answered_group_asks_first(
     assert re.search(r'name="append" value="true"\s+checked', asked.text)
     assert 'name="confirm_replace" value="true" checked' not in asked.text
     assert _held(db) == 1
-    count = re.search(r'name="acknowledge_response_loss"\s+value="(\d+)"', asked.text).group(1)
+    acknowledge = re.search(r'name="acknowledge_response_loss"\s+value="(\d+)"', asked.text)
+    assert acknowledge is not None
+    count = acknowledge.group(1)
     assert _pairs(db, session.id) == 4
 
     answered = _upload(
@@ -236,6 +238,7 @@ def test_an_append_onto_an_empty_roster_is_just_the_roster(client: TestClient, d
     url = f"/operator/sessions/{s.public_id}/reviewers/import"
     assert _upload(client, url, FILES["reviewers"][0], append="true", confirm_replace="true").status_code == 303
     event = db.execute(select(AuditEvent).where(AuditEvent.event_type == "reviewers.imported")).scalar_one()
+    assert event.detail is not None
     assert "mode" not in (event.detail.get("context") or {})
     assert _addresses(db, "reviewers", s.id) == ["ann@example.edu"]
 
@@ -260,7 +263,9 @@ def test_the_merge_tick_shares_appends_line(client: TestClient, db: Session, kin
     assert line, "no append / merge line"
     body = line.group(1)
     assert 'name="append"' in body and "Yes, append to," in body
-    merge = re.search(r'<input[^>]*name="merge"[^>]*>', body).group(0)
+    merge_input = re.search(r'<input[^>]*name="merge"[^>]*>', body)
+    assert merge_input is not None
+    merge = merge_input.group(0)
     assert "disabled" not in merge and 'data-exclusive-tick="upload-mode"' in merge
     assert "data-delete-confirm=" in merge
     assert "merge with the existing roster." in body

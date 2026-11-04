@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Callable
+from typing import Any
 
 import httpx
 import pytest
@@ -33,8 +34,15 @@ from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
+from ._lookups import must_get, must_search
 from ._public_id import public_id
 from ._validated import validate_session
+
+
+def _band2(instrument: Instrument) -> dict[str, Any]:
+    """An instrument's ``band2_state``, which the test has written."""
+    assert instrument.band2_state is not None
+    return instrument.band2_state
 
 
 def _band2_rfs(instrument: Instrument) -> list[dict]:
@@ -137,7 +145,7 @@ def _generate_full_matrix(client: TestClient, db: Session, session_id: int) -> N
 
 def _activate(client: TestClient, db: Session, session_id: int) -> None:
     validate_session(db, session_id)
-    url_id = db.get(ReviewSession, session_id).public_id
+    url_id = must_get(db, ReviewSession, session_id).public_id
     client.get(f"/operator/sessions/{url_id}/assignments")
     client.post(
         f"/operator/sessions/{url_id}/activate",
@@ -335,6 +343,7 @@ def test_delete_field_with_responses_blocks_then_confirms(
     assignment = db.execute(
         select(Assignment).where(Assignment.session_id == review_session.id)
     ).scalars().first()
+    assert assignment is not None
     db.add(
         Response(
             assignment_id=assignment.id,
@@ -614,10 +623,10 @@ def test_replicate_instrument_clones_content(
     assert copy.description == "Peer review round 1"
     assert copy.group_kind == "r1"
     assert copy.accepting_responses is False
-    source_rule_set = db.get(Instrument, source_id).rule_set_id
+    source_rule_set = must_get(db, Instrument, source_id).rule_set_id
     assert copy.rule_set_id is not None
     assert copy.rule_set_id != source_rule_set
-    assert copy.order == db.get(Instrument, source_id).order + 1
+    assert copy.order == must_get(db, Instrument, source_id).order + 1
     assert _count(InstrumentResponseField, copy.id) == src_fields
     assert _count(InstrumentDisplayField, copy.id) == src_displays
     assert _count(_Assignment, copy.id) == 0, (
@@ -631,6 +640,7 @@ def test_replicate_instrument_clones_content(
             AuditEvent.event_type == "instrument.replicated",
         )
     ).scalar_one()
+    assert event.detail is not None
     assert event.detail["refs"]["source_instrument_id"] == source_id
     assert event.detail["refs"]["instrument_id"] == copy.id
 
@@ -1377,7 +1387,7 @@ def test_new_model_band2_state_round_trip(
     assert resp.status_code == 200
 
     db.refresh(new_model)
-    assert new_model.band2_state["selected_display_keys"] == [
+    assert _band2(new_model)["selected_display_keys"] == [
         "reviewee.name",
         "reviewee.email_or_identifier",
     ]
@@ -1871,8 +1881,8 @@ def test_new_model_band2_refresh_persists_sample_to_band2_state(
         },
     )
     db.refresh(new_model)
-    assert new_model.band2_state["sample_reviewee_name"] == "Eve"
-    assert new_model.band2_state["selected_display_keys"] == ["reviewee.name"]
+    assert _band2(new_model)["sample_reviewee_name"] == "Eve"
+    assert _band2(new_model)["selected_display_keys"] == ["reviewee.name"]
 
     # View renders the saved sample-name onto the wrapper data-attr
     # — view mode (no ?editing=) carries the saved sample so the
@@ -1944,7 +1954,7 @@ def test_new_model_band2_state_preserves_other_keys_on_partial_writes(
         },
     )
     db.refresh(new_model)
-    seeded = new_model.band2_state
+    seeded = _band2(new_model)
     assert seeded["selected_display_keys"] == ["reviewee.name"]
     # Wave 3 PR iii — response fields are DB rows; legacy JSON shape
     # rebuilt via _band2_rfs.
@@ -1959,12 +1969,12 @@ def test_new_model_band2_state_preserves_other_keys_on_partial_writes(
         json={"selected_display_keys": ["reviewee.name", "reviewee.email_or_identifier"]},
     )
     db.refresh(new_model)
-    assert new_model.band2_state["selected_display_keys"] == [
+    assert _band2(new_model)["selected_display_keys"] == [
         "reviewee.name",
         "reviewee.email_or_identifier",
     ]
     assert len(_band2_rfs(new_model)) == 1
-    assert new_model.band2_state["sample_reviewee_name"] == "Eve"
+    assert _band2(new_model)["sample_reviewee_name"] == "Eve"
 
     # RF-save write: only response_fields. selected_display_keys +
     # sample_reviewee_name must carry forward.
@@ -1996,11 +2006,11 @@ def test_new_model_band2_state_preserves_other_keys_on_partial_writes(
     )
     db.refresh(new_model)
     assert len(_band2_rfs(new_model)) == 2
-    assert new_model.band2_state["selected_display_keys"] == [
+    assert _band2(new_model)["selected_display_keys"] == [
         "reviewee.name",
         "reviewee.email_or_identifier",
     ]
-    assert new_model.band2_state["sample_reviewee_name"] == "Eve"
+    assert _band2(new_model)["sample_reviewee_name"] == "Eve"
 
     # Refresh-sample write: only sample_reviewee_name (via the
     # preview-sample route which now persists). Both other keys
@@ -2018,8 +2028,8 @@ def test_new_model_band2_state_preserves_other_keys_on_partial_writes(
         },
     )
     db.refresh(new_model)
-    assert new_model.band2_state["sample_reviewee_name"] == "Eve"
-    assert new_model.band2_state["selected_display_keys"] == [
+    assert _band2(new_model)["sample_reviewee_name"] == "Eve"
+    assert _band2(new_model)["selected_display_keys"] == [
         "reviewee.name",
         "reviewee.email_or_identifier",
     ]
@@ -2267,7 +2277,7 @@ def test_column_widths_snapshot_value_survives_html_parsing(
     values: list[str | None] = []
 
     class _Snapshot(HTMLParser):
-        def handle_starttag(self, tag, attrs):  # type: ignore[no-untyped-def]
+        def handle_starttag(self, tag, attrs):
             found = dict(attrs)
             if tag == "input" and found.get("name") == "column_widths_snapshot":
                 values.append(found.get("value"))
@@ -2360,7 +2370,7 @@ def test_new_model_response_field_width_persists_on_band2_state(
     ).text
     flat = " ".join(body.split())
     card = _card_slice(flat, new_model.id)
-    row = re.search(r'<tr data-new-model-rf-row data-row-key="rf_0".*?>', card).group(0)
+    row = must_search(r'<tr data-new-model-rf-row data-row-key="rf_0".*?>', card).group(0)
     assert 'data-width="1200"' in row
 
 
@@ -2562,8 +2572,8 @@ def test_gap_10_preview_route_returns_rule_surviving_group_member_ids(
     )
     assert resp.status_code == 200
     db.refresh(new_model)
-    sample_name = new_model.band2_state["sample_reviewee_name"]
-    member_ids = new_model.band2_state["sample_group_member_ids"]
+    sample_name = _band2(new_model)["sample_reviewee_name"]
+    member_ids = _band2(new_model)["sample_group_member_ids"]
     # Sample is one of the Team A pair (alphabetically Carol first
     # within Team A); both Team A reviewees in the ID set.
     by_name = {
@@ -2598,8 +2608,8 @@ def test_gap_10_preview_route_returns_rule_surviving_group_member_ids(
     )
     assert resp.status_code == 200
     db.refresh(new_model)
-    sample_name = new_model.band2_state["sample_reviewee_name"]
-    member_ids = new_model.band2_state["sample_group_member_ids"]
+    sample_name = _band2(new_model)["sample_reviewee_name"]
+    member_ids = _band2(new_model)["sample_group_member_ids"]
     # Sample must be Dan (Carol excluded). Member set must be {Dan}
     # — not {Carol, Dan}, which is what the pre-Gap-10 unconstrained
     # boundary partition would have returned.
@@ -2644,8 +2654,8 @@ def test_gap_10_render_filters_group_members_by_persisted_ids(
         },
     )
     db.refresh(new_model)
-    assert new_model.band2_state["sample_reviewee_name"] == "Dan"
-    assert new_model.band2_state["sample_group_member_ids"] == [
+    assert _band2(new_model)["sample_reviewee_name"] == "Dan"
+    assert _band2(new_model)["sample_group_member_ids"] == [
         by_name["Dan"]
     ]
     # Render the index page; the data-new-model-band2-sample-names
@@ -2704,7 +2714,7 @@ def test_pair_context_only_preview_honours_links_1_and_2(
     survivors = sorted(by_name[n] for n in ("Dan", "Eve", "Fay"))
     assert resp.json()["sample_group_member_ids"] == survivors
     db.refresh(new_model)
-    assert new_model.band2_state["sample_group_member_ids"] == survivors
+    assert _band2(new_model)["sample_group_member_ids"] == survivors
 
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/instruments"
@@ -2763,7 +2773,7 @@ def test_pair_context_preview_live_empty_boundary_takes_reviewer_survivors(
     )
     assert resp.json()["sample_group_member_ids"] == everyone
     db.refresh(new_model)
-    assert new_model.band2_state["sample_group_member_ids"] == everyone
+    assert _band2(new_model)["sample_group_member_ids"] == everyone
 
 
 def test_no_boundary_group_preview_honours_links_1_and_2(
@@ -2805,7 +2815,7 @@ def test_no_boundary_group_preview_honours_links_1_and_2(
     survivors = sorted(by_name[n] for n in ("Dan", "Eve", "Fay"))
     assert resp.json()["sample_group_member_ids"] == survivors
     db.refresh(new_model)
-    assert new_model.band2_state["sample_group_member_ids"] == survivors
+    assert _band2(new_model)["sample_group_member_ids"] == survivors
 
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/instruments"
@@ -2892,7 +2902,7 @@ def test_live_individual_pill_on_a_saved_group_stores_no_member_ids(
     )
     assert resp.json()["sample_group_member_ids"] == []
     db.refresh(new_model)
-    assert new_model.band2_state.get("sample_group_member_ids") is None
+    assert _band2(new_model).get("sample_group_member_ids") is None
 
 
 def test_per_reviewee_preview_stores_no_member_ids_and_renders_unfiltered(
@@ -2914,7 +2924,7 @@ def test_per_reviewee_preview_stores_no_member_ids_and_renders_unfiltered(
     )
     assert resp.json()["sample_group_member_ids"] == []
     db.refresh(new_model)
-    assert new_model.band2_state.get("sample_group_member_ids") is None
+    assert _band2(new_model).get("sample_group_member_ids") is None
 
     carol = db.execute(
         select(Reviewee)
@@ -2969,8 +2979,8 @@ def test_boundary_change_drops_stale_sample_member_ids(
         },
     )
     db.refresh(new_model)
-    assert new_model.band2_state["sample_group_member_ids"]
-    sample_name = new_model.band2_state["sample_reviewee_name"]
+    assert _band2(new_model)["sample_group_member_ids"]
+    sample_name = _band2(new_model)["sample_reviewee_name"]
 
     instruments_service.set_unit_of_review(
         db,
@@ -2983,7 +2993,7 @@ def test_boundary_change_drops_stale_sample_member_ids(
     assert new_model.band2_state is not None
     assert "sample_group_member_ids" not in new_model.band2_state
     # The rest of the Refresh state stays.
-    assert new_model.band2_state["sample_reviewee_name"] == sample_name
+    assert _band2(new_model)["sample_reviewee_name"] == sample_name
 
 
 def test_gap_10_preview_route_json_response_returns_member_ids(
@@ -3341,7 +3351,7 @@ def test_gap_10_band2_wrapper_carries_member_ids_for_js_partition(
         f"/operator/sessions/{review_session.public_id}/instruments"
     ).text
     db.refresh(new_model)
-    persisted = new_model.band2_state.get("sample_group_member_ids") or []
+    persisted = _band2(new_model).get("sample_group_member_ids") or []
     assert len(persisted) > 0
     attr = f'data-new-model-band2-sample-member-ids="{",".join(str(i) for i in persisted)}"'
     assert attr in body
@@ -4341,7 +4351,7 @@ def test_full_flow_add_new_response_field_persists_through_save(
         },
     )
     db.expire_all()
-    new_model = db.get(type(new_model), new_model.id)
+    new_model = must_get(db, type(new_model), new_model.id)
     labels = {rf.label for rf in new_model.response_fields}
     assert "Bonus" in labels
 
@@ -4648,9 +4658,11 @@ def test_wave3_prii_disabled_type_and_bounds_when_responses_present(
     reviewer = db.execute(
         select(Reviewer).where(Reviewer.session_id == review_session.id)
     ).scalars().first()
+    assert reviewer is not None
     reviewee = db.execute(
         select(Reviewee).where(Reviewee.session_id == review_session.id)
     ).scalars().first()
+    assert reviewee is not None
     assignment = Assignment(
         session_id=review_session.id,
         instrument_id=new_model.id,
@@ -4774,9 +4786,11 @@ def test_wave3_pri_cascade_blocked_delete_returns_409(
     reviewer = db.execute(
         select(Reviewer).where(Reviewer.session_id == review_session.id)
     ).scalars().first()
+    assert reviewer is not None
     reviewee = db.execute(
         select(Reviewee).where(Reviewee.session_id == review_session.id)
     ).scalars().first()
+    assert reviewee is not None
     assignment = Assignment(
         session_id=review_session.id,
         instrument_id=new_model.id,
@@ -5440,9 +5454,11 @@ def test_integer_field_refuses_fractional_bounds(
     reviewer = db.scalars(
         select(Reviewer).where(Reviewer.session_id == review_session.id)
     ).first()
+    assert reviewer is not None
     reviewee = db.scalars(
         select(Reviewee).where(Reviewee.session_id == review_session.id)
     ).first()
+    assert reviewee is not None
     assignment = Assignment(
         session_id=review_session.id,
         instrument_id=new_model.id,
@@ -5511,6 +5527,7 @@ def test_an_integer_fields_blank_step_saves_as_one(
     assert response.status_code == 200, response.text
     db.refresh(rating)
     assert rating._inline_step == 1.0
+    assert rating.validation is not None
     assert rating.validation["step"] == 1
 
     response = client.post(
@@ -5550,9 +5567,11 @@ def test_a_stored_blank_integer_step_fills_in_despite_responses(
     reviewer = db.execute(
         select(Reviewer).where(Reviewer.session_id == review_session.id)
     ).scalars().first()
+    assert reviewer is not None
     reviewee = db.execute(
         select(Reviewee).where(Reviewee.session_id == review_session.id)
     ).scalars().first()
+    assert reviewee is not None
     assignment = Assignment(
         session_id=review_session.id,
         instrument_id=new_model.id,
@@ -5589,9 +5608,11 @@ def test_a_stored_non_whole_integer_min_keeps_its_blank_step(
     reviewer = db.execute(
         select(Reviewer).where(Reviewer.session_id == review_session.id)
     ).scalars().first()
+    assert reviewer is not None
     reviewee = db.execute(
         select(Reviewee).where(Reviewee.session_id == review_session.id)
     ).scalars().first()
+    assert reviewee is not None
     assignment = Assignment(
         session_id=review_session.id,
         instrument_id=new_model.id,
@@ -5663,9 +5684,11 @@ def test_wave3_prii_shape_change_blocked_when_responses_exist(
     reviewer = db.execute(
         select(Reviewer).where(Reviewer.session_id == review_session.id)
     ).scalars().first()
+    assert reviewer is not None
     reviewee = db.execute(
         select(Reviewee).where(Reviewee.session_id == review_session.id)
     ).scalars().first()
+    assert reviewee is not None
     assignment = Assignment(
         session_id=review_session.id,
         instrument_id=new_model.id,
@@ -5741,9 +5764,11 @@ def test_wave3_prii_label_rename_allowed_when_responses_exist(
     reviewer = db.execute(
         select(Reviewer).where(Reviewer.session_id == review_session.id)
     ).scalars().first()
+    assert reviewer is not None
     reviewee = db.execute(
         select(Reviewee).where(Reviewee.session_id == review_session.id)
     ).scalars().first()
+    assert reviewee is not None
     assignment = Assignment(
         session_id=review_session.id,
         instrument_id=new_model.id,
@@ -5821,7 +5846,7 @@ def test_wave3_priii_band2_state_drops_response_fields_key(
     # JSON dict carries the other keys but NOT response_fields.
     assert new_model.band2_state is not None
     assert "response_fields" not in new_model.band2_state
-    assert new_model.band2_state["selected_display_keys"] == ["reviewee.name"]
+    assert _band2(new_model)["selected_display_keys"] == ["reviewee.name"]
     # The DB row still reflects the incoming required flag.
     db.refresh(rating)
     assert rating.required is True
@@ -7717,7 +7742,7 @@ def test_a_refused_save_persists_nothing(
     ], "the 422 came from an earlier step, not the one under test"
 
     db.expire_all()
-    assert db.get(type(new_model), new_model.id).short_label == before_label
+    assert must_get(db, type(new_model), new_model.id).short_label == before_label
     assert db.execute(
         select(InstrumentViewPolicy).where(
             InstrumentViewPolicy.instrument_id == new_model.id,
@@ -7777,7 +7802,7 @@ def test_a_refused_save_keeps_band2_pill_flips_too(
     )
 
     db.expire_all()
-    assert db.get(type(new_model), new_model.id).short_label != "Changed"
+    assert must_get(db, type(new_model), new_model.id).short_label != "Changed"
     visible_after = {
         f.id: f.visible
         for f in db.execute(
@@ -7816,8 +7841,8 @@ def test_a_refused_save_does_not_demote_a_validated_session(
     ]
 
     db.expire_all()
-    assert db.get(ReviewSession, review_session.id).status == "validated"
-    assert db.get(type(new_model), new_model.id).short_label != "Changed"
+    assert must_get(db, ReviewSession, review_session.id).status == "validated"
+    assert must_get(db, type(new_model), new_model.id).short_label != "Changed"
 
 
 def test_a_refused_no_js_save_persists_nothing(
@@ -7846,8 +7871,8 @@ def test_a_refused_no_js_save_persists_nothing(
     assert response.status_code == 422
 
     db.expire_all()
-    assert db.get(type(new_model), new_model.id).short_label == before_label
-    assert db.get(ReviewSession, review_session.id).status == "validated"
+    assert must_get(db, type(new_model), new_model.id).short_label == before_label
+    assert must_get(db, ReviewSession, review_session.id).status == "validated"
 
 
 def test_19h1_setup_pill_repaint_wiring_ships(
@@ -8021,7 +8046,7 @@ def test_exclude_self_reviews_checkbox_round_trips(
     )
     db.refresh(new_model)
     assert new_model.rule_set_id is not None
-    rule_set = db.get(SessionRuleSet, new_model.rule_set_id)
+    rule_set = must_get(db, SessionRuleSet, new_model.rule_set_id)
     assert rule_set.exclude_self_reviews is True
 
     # Unchecked: an HTML checkbox submits nothing, so the key is absent.
@@ -8051,7 +8076,7 @@ def test_exclude_self_reviews_materialises_rule_set_when_none_exists(
     )
     db.refresh(new_model)
     assert new_model.rule_set_id is not None
-    rule_set = db.get(SessionRuleSet, new_model.rule_set_id)
+    rule_set = must_get(db, SessionRuleSet, new_model.rule_set_id)
     assert rule_set.exclude_self_reviews is True
     # Empty = Full Matrix. A rule set materialized for the checkbox
     # must not smuggle in content rules.
@@ -8788,7 +8813,7 @@ def test_unset_link_clears_the_stored_flag(
         follow_redirects=False,
     )
     db.refresh(new_model)
-    rule_set = db.get(SessionRuleSet, new_model.rule_set_id)
+    rule_set = must_get(db, SessionRuleSet, new_model.rule_set_id)
     assert rule_set.exclude_self_reviews is True
 
     # Unset Link 1 while still submitting a ticked box.
@@ -8827,7 +8852,7 @@ def test_moving_individual_to_group_clears_the_flag(
         follow_redirects=False,
     )
     db.refresh(new_model)
-    rule_set = db.get(SessionRuleSet, new_model.rule_set_id)
+    rule_set = must_get(db, SessionRuleSet, new_model.rule_set_id)
     assert rule_set.exclude_self_reviews is True
     assert new_model.group_kind is None
 
@@ -8870,7 +8895,7 @@ def test_staying_in_group_mode_keeps_the_flag(
         follow_redirects=False,
     )
     db.refresh(new_model)
-    rule_set = db.get(SessionRuleSet, new_model.rule_set_id)
+    rule_set = must_get(db, SessionRuleSet, new_model.rule_set_id)
     assert rule_set.exclude_self_reviews is True
 
 
@@ -8955,7 +8980,7 @@ def test_import_cannot_leave_the_flag_set_behind_an_unset_link(
         follow_redirects=False,
     )
     db.refresh(new_model)
-    rule_set = db.get(SessionRuleSet, new_model.rule_set_id)
+    rule_set = must_get(db, SessionRuleSet, new_model.rule_set_id)
     assert rule_set.exclude_self_reviews is True
 
     # What an import can produce: flag set, Band 1 not fully set.
@@ -8989,7 +9014,7 @@ def test_import_guard_leaves_a_fully_configured_instrument_alone(
         db, review_session
     )
     db.refresh(new_model)
-    rule_set = db.get(SessionRuleSet, new_model.rule_set_id)
+    rule_set = must_get(db, SessionRuleSet, new_model.rule_set_id)
     assert cleared == 0
     assert rule_set.exclude_self_reviews is True
 
@@ -9465,7 +9490,7 @@ def test_open_card_no_longer_disables_the_action_rows(
     assert " disabled" not in tag_before(first, ">+Page break</button>")
 
     # With a break before the second card, its × stays live too.
-    second = db.get(Instrument, instrument_ids[1])
+    second = must_get(db, Instrument, instrument_ids[1])
     second.starts_new_page = True
     db.commit()
     body = client.get(url).text
@@ -9543,20 +9568,20 @@ def test_locked_display_fields_cannot_be_unselected(
     # No display pill survives in Band 2; only response pills remain.
     assert re.findall(r'data-new-model-band2-pill data-key="reviewee\.', card) == []
     rows = {
-        re.search(r'data-key="([^"]+)"', r).group(1): r
+        must_search(r'data-key="([^"]+)"', r).group(1): r
         for r in _df_rows(flat, new_model.id)
     }
     for key, slot in (("reviewee.name", "first"), ("reviewee.email_or_identifier", "second")):
         row = rows[key]
         assert 'data-locked="true"' in row, key
-        box = re.search(r'<input type="checkbox"[^>]*>', row).group(0)
+        box = must_search(r'<input type="checkbox"[^>]*>', row).group(0)
         assert " checked" in box and " disabled" in box, key
         # The chip's tooltip names the slot the server pins it to.
         assert f'title="Always shown — pinned {slot}"' in _df_chip(row), key
         assert "data-new-model-df-move" not in row, key
     tag_1 = rows["reviewee.tag_1"]
     assert "data-locked" not in tag_1
-    box = re.search(r'<input type="checkbox"[^>]*>', tag_1).group(0)
+    box = must_search(r'<input type="checkbox"[^>]*>', tag_1).group(0)
     assert " disabled" not in box
     # Grouped mode unticks and fixes a field with no group value (Email)
     # and restores Name / Email's tooltip in Individual.
@@ -9757,7 +9782,7 @@ def _df_rows(flat: str, instrument_id: int) -> list[str]:
 def _df_label(row: str) -> str:
     """A display-field row's field name: the label of its on/off chip,
     which wraps the row's hidden checkbox (ux_refinements Item 1)."""
-    return re.search(
+    return must_search(
         r'<td><label class="pill pill-count tag-chip"[^>]*><input [^>]*>([^<]+)</label></td>',
         row,
     ).group(1)
@@ -9766,7 +9791,7 @@ def _df_label(row: str) -> str:
 def _df_chip(row: str) -> str:
     """A display-field row's chip opening tag, which carries the tooltip
     (the box inside it is hidden; ux_refinements Item 1)."""
-    return re.search(r'<label class="pill pill-count tag-chip"[^>]*>', row).group(0)
+    return must_search(r'<label class="pill pill-count tag-chip"[^>]*>', row).group(0)
 
 
 def test_band3_display_field_table(
@@ -9812,7 +9837,7 @@ def test_band3_display_field_table(
 
     movable = labels[2:]
     for label, row in zip(labels, rows):
-        box = re.search(r'<input type="checkbox"[^>]*>', row).group(0)
+        box = must_search(r'<input type="checkbox"[^>]*>', row).group(0)
         assert 'onchange="newModelDfToggle(this)"' in box, label
         arrows = dict(
             re.findall(r'data-new-model-df-move="(up|down)"(.*?)>', row)
@@ -9831,7 +9856,7 @@ def test_band3_display_field_table(
     # The server-rendered tick follows each field's saved visibility.
     for label, row in zip(labels, rows):
         if label in ("Tag 1", "Tag 2"):
-            box = re.search(r'<input type="checkbox"[^>]*>', row).group(0)
+            box = must_search(r'<input type="checkbox"[^>]*>', row).group(0)
             assert " checked" in box, label
     tag_2 = db.scalars(
         select(InstrumentDisplayField).where(
@@ -9843,7 +9868,7 @@ def test_band3_display_field_table(
     db.commit()
     flat = " ".join(client.get(url).text.split())
     boxes = {
-        _df_label(r): re.search(
+        _df_label(r): must_search(
             r'<input type="checkbox"[^>]*>', r
         ).group(0)
         for r in _df_rows(flat, new_model.id)
@@ -9857,7 +9882,7 @@ def test_band3_display_field_table(
     db.commit()
     flat = " ".join(client.get(url).text.split())
     boxes = {
-        _df_label(r): re.search(
+        _df_label(r): must_search(
             r'<input type="checkbox"[^>]*>', r
         ).group(0)
         for r in _df_rows(flat, new_model.id)
@@ -9925,7 +9950,7 @@ def test_band3_display_field_table_group_off_field(
         )
         assert 'data-selectable-in-group="false"' in row
         assert "data-locked" not in row
-        return _df_chip(row) + re.search(r'<input type="checkbox"[^>]*>', row).group(0)
+        return _df_chip(row) + must_search(r'<input type="checkbox"[^>]*>', row).group(0)
 
     profile = db.scalars(
         select(InstrumentDisplayField).where(
@@ -9994,15 +10019,15 @@ def test_band3_response_fields_are_a_table(client: TestClient, db: Session) -> N
         assert row.count('<td class="col-shrink rf-slot"></td>') == 2
         assert row.count("<td") == len(order) + 2
         # 19T Item 10 — the ⑂ column holds its button.
-        fork = re.search(
+        fork = must_search(
             r'<td class="col-shrink" data-new-model-rf-fork-cell>\s*<button[^>]*>', row
         ).group(0)
         assert 'onclick="newModelRfFork(this)"' in fork
         for move in re.findall(r'<button[^>]*data-new-model-rf-move="(?:up|down)"[^>]*>', row):
             assert 'onclick="newModelRfMove(this)"' in move
     boxes = {
-        re.search(r'value="([^"]+)"', c.split("data-new-model-rf-name", 1)[1]).group(1):
-        re.search(r'<input type="checkbox" class="visually-hidden" data-new-model-rf-active[^>]*>', c).group(0)
+        must_search(r'value="([^"]+)"', c.split("data-new-model-rf-name", 1)[1]).group(1):
+        must_search(r'<input type="checkbox" class="visually-hidden" data-new-model-rf-active[^>]*>', c).group(0)
         for c in chunks
     }
     assert " checked" in boxes["Rating"] and " disabled" not in boxes["Rating"]
@@ -10010,10 +10035,10 @@ def test_band3_response_fields_are_a_table(client: TestClient, db: Session) -> N
     for box in boxes.values():
         assert 'onchange="newModelRfToggleActive(this)"' in box
     # The "+" template's row starts selected, its checkbox ticked and live.
-    tpl_box = re.search(r'<input type="checkbox" class="visually-hidden" data-new-model-rf-active[^>]*>', template).group(0)
+    tpl_box = must_search(r'<input type="checkbox" class="visually-hidden" data-new-model-rf-active[^>]*>', template).group(0)
     assert " checked" in tpl_box and " disabled" not in tpl_box
-    ups = [re.search(r'<button[^>]*data-new-model-rf-move="up"[^>]*>', c).group(0) for c in chunks]
-    downs = [re.search(r'<button[^>]*data-new-model-rf-move="down"[^>]*>', c).group(0) for c in chunks]
+    ups = [must_search(r'<button[^>]*data-new-model-rf-move="up"[^>]*>', c).group(0) for c in chunks]
+    downs = [must_search(r'<button[^>]*data-new-model-rf-move="down"[^>]*>', c).group(0) for c in chunks]
     assert [" disabled" in b for b in ups] == [True, False]
     assert [" disabled" in b for b in downs] == [False, True]
     # The pills and ✓ retired in rung 4.

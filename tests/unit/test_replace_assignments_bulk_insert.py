@@ -172,7 +172,7 @@ def test_regenerate_with_nothing_to_insert_issues_no_insert(
     statements: list[str] = []
 
     @event.listens_for(engine, "before_cursor_execute")
-    def _record(conn, cursor, statement, parameters, context, many):  # type: ignore[no-untyped-def]
+    def _record(conn, cursor, statement, parameters, context, many):
         statements.append(statement)
 
     try:
@@ -212,7 +212,7 @@ def test_the_insert_constructs_no_assignment_objects(db: Session) -> None:
     user, review_session = _seed(db)
     built: list[Assignment] = []
 
-    def _on_init(target, args, kwargs):  # type: ignore[no-untyped-def]
+    def _on_init(target, args, kwargs):
         built.append(target)
 
     event.listen(Assignment, "init", _on_init)

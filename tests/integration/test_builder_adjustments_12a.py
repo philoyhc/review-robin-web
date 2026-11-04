@@ -11,6 +11,7 @@ import re
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
+from ._lookups import must_search
 from .test_instrument_builder_routes import _card_slice, _rf_fn
 from .test_response_field_branching_builder import _page, _row, _rows_table
 from .test_reviewer_response_flow import intro_columns
@@ -54,7 +55,7 @@ def test_the_name_chip_starts_every_row_flush_left(
     table = _rows_table(card)
     for name in ("Rating", "Comments"):
         row = _row(table, name)
-        first = re.search(r"<td[^>]*>.*?</td>", row.split(">", 1)[1]).group(0)
+        first = must_search(r"<td[^>]*>.*?</td>", row.split(">", 1)[1]).group(0)
         assert first.startswith('<td class="col-shrink rf-active-cell"><label class="pill pill-count tag-chip rf-name-chip"'), name
         assert "data-new-model-rf-active" in first, name
         assert f"<span data-new-model-rf-chip-label>{name}</span>" in first, name

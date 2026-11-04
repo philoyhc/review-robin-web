@@ -288,6 +288,7 @@ def test_settings_save_timezone_persists_and_audits(
             AuditEvent.event_type == "operator.display_timezone_set"
         )
     ).scalar_one()
+    assert event.detail is not None
     assert event.detail["changes"]["display_timezone"] == [
         "UTC",
         "Asia/Singapore",

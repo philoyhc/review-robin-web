@@ -261,7 +261,9 @@ def test_a_mirrored_tag_change_asks_before_clearing_group_answers(
     refused = client.post(path, data=form, follow_redirects=False)
     assert refused.status_code == 400
     assert "Yes, clear them" in refused.text and responses() == 4
-    count = re.search(r'name="acknowledge_response_loss"\s+value="(\d+)"', refused.text).group(1)
+    acknowledge = re.search(r'name="acknowledge_response_loss"\s+value="(\d+)"', refused.text)
+    assert acknowledge is not None
+    count = acknowledge.group(1)
     accepted = client.post(path, data={**form, "acknowledge_response_loss": count}, follow_redirects=False)
     assert accepted.status_code == 303
     assert responses() == 4 - int(count)
@@ -340,6 +342,7 @@ def test_an_email_correction_keeps_an_operator_exclusion(client: TestClient, db:
     reviewers.update_reviewer(db, reviewer=reviewer, email="ann.tan@example.edu", user=_user(db))
     db.expire_all()
     row = db.get(Assignment, row.id)
+    assert row is not None
     assert (row.is_self_review, row.include) == (True, False)
 
 

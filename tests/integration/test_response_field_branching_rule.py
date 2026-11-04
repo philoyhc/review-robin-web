@@ -97,6 +97,7 @@ def test_a_parent_changed_to_close_its_branch_deletes_the_answer(
         .where(AuditEvent.event_type == "responses.saved")
         .order_by(AuditEvent.id.desc())
     ).scalars().first()
+    assert event is not None and event.detail is not None
     assert event.detail["counts"]["branch_answers_removed"] == 1
 
 
@@ -155,6 +156,7 @@ def test_a_blocked_submit_audits_the_answer_it_removed(db: Session) -> None:
         .where(AuditEvent.event_type == "responses.saved")
         .order_by(AuditEvent.id.desc())
     ).scalars().first()
+    assert event is not None and event.detail is not None
     assert event.detail["counts"]["branch_answers_removed"] == 1
     assert "submit blocked" in event.summary
 

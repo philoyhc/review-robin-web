@@ -171,6 +171,7 @@ def test_edit_clearing_emits_activation_scheduled_audit(
     assert len(audits) == 2  # one for set, one for clear
     db.refresh(db.get(ReviewSession, session_id))
     review_session = db.get(ReviewSession, session_id)
+    assert review_session is not None
     assert review_session.scheduled_activate_at is None
 
 

@@ -193,6 +193,7 @@ def _invitation_links(
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == review_session.id)
     ).scalars().first()
+    assert invitation is not None
     client.post(f"{base}/{sid}/invitations/{invitation.id}/send", follow_redirects=False)
 
     outbox = db.execute(

@@ -458,6 +458,7 @@ def test_the_panel_stands_down_in_edit_mode(
     first = db.execute(
         select(Observer).where(Observer.session_id == s.id)
     ).scalars().first()
+    assert first is not None
     for suffix in ("?add=1", f"?edit_id={first.id}"):
         markup = _markup(_page(client, s, suffix))
         assert 'id="roster-unlock-panel"' not in markup, suffix

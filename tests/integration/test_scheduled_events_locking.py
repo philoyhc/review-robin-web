@@ -252,7 +252,9 @@ def test_the_session_home_save_locks_before_its_editability_gate(
 
     assert response.status_code == 409
     db.expire_all()
-    assert db.get(ReviewSession, session.id).name != "Renamed"
+    current = db.get(ReviewSession, session.id)
+    assert current is not None
+    assert current.name != "Renamed"
 
 
 def test_the_lobby_save_locks_before_its_editability_gate(
@@ -280,7 +282,9 @@ def test_the_lobby_save_locks_before_its_editability_gate(
 
     db.expire_all()
     # Off ``is_editable`` the expander's Name is ignored.
-    assert db.get(ReviewSession, session.id).name != "Renamed"
+    current = db.get(ReviewSession, session.id)
+    assert current is not None
+    assert current.name != "Renamed"
 
 
 def test_the_settings_import_checks_under_the_lock(

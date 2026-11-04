@@ -20,6 +20,8 @@ from app.db.models import AuditEvent, ReviewSession, SessionOperator, User
 from app.services import permissions
 from app.web.deps import find_user, get_or_create_user
 
+from ._lookups import must_get
+
 
 def _sign_in(db: Session, auth: AuthenticatedUser) -> User:
     return get_or_create_user(
@@ -72,6 +74,7 @@ def test_a_changed_email_keeps_the_row_flags_and_ownership(db: Session) -> None:
 
     (event,) = _email_changes(db)
     assert event.actor_user_id is None
+    assert event.detail is not None
     assert event.detail["changes"] == {
         "email": ["pat.old@example.edu", "Pat.New@example.edu"]
     }
@@ -151,6 +154,7 @@ def test_the_principal_row_absorbs_an_invite_holding_the_new_email(
 
     (event,) = _absorptions(db)
     assert event.actor_user_id is None
+    assert event.detail is not None
     assert event.detail["changes"] == {
         "email": ["sam.old@example.edu", "Sam.New@example.edu"],
         "is_sys_admin": [False, True],
@@ -385,7 +389,7 @@ def test_a_duplicate_row_holding_the_email_wins_over_the_oldest(
     assert returned.id == current.id
     assert returned.is_operator
     db.expire_all()
-    assert db.get(User, stale.id).email == "pat.old@example.edu"
+    assert must_get(db, User, stale.id).email == "pat.old@example.edu"
     assert _email_changes(db) == []
 
 
@@ -404,6 +408,7 @@ def test_recording_a_principal_id_on_an_invite_is_audited(db: Session) -> None:
         )
     ).scalars()
     assert event.actor_user_id is None
+    assert event.detail is not None
     assert event.detail["refs"] == {"target_user_id": invited.id}
     assert event.detail["changes"] == {"external_principal_id": [None, "invitee-oid"]}
 
@@ -430,4 +435,4 @@ def test_without_a_row_holding_the_email_the_newest_duplicate_moves(
     assert returned.id == current.id
     assert returned.email == "pat.c@example.edu"
     db.expire_all()
-    assert db.get(User, stale.id).email == "pat.a@example.edu"
+    assert must_get(db, User, stale.id).email == "pat.a@example.edu"

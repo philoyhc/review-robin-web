@@ -228,7 +228,7 @@ def _gated_routes(
             yield from _gated_routes(context.included_router.routes, gates + outer)
             continue
         calls: set[object] = set(gates)
-        pending = list(getattr(route, "dependant", None).dependencies if hasattr(route, "dependant") else ())
+        pending = list(route.dependant.dependencies if hasattr(route, "dependant") else ())
         while pending:
             dependant = pending.pop()
             calls.add(dependant.call)

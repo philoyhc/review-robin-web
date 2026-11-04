@@ -134,6 +134,7 @@ def test_edit_start_change_revalidates_invite_offsets(
     assert response.status_code == 422
     # Original Start remains unchanged in the DB
     rs = db.get(ReviewSession, session_id)
+    assert rs is not None
     assert rs.invite_offsets == ["-P5D"]
 
 

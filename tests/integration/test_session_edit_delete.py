@@ -20,6 +20,7 @@ from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
+from ._lookups import detail_of
 
 
 def _make_session(
@@ -90,7 +91,7 @@ def test_session_edit_persists_and_audits_changes(
     event = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "session.updated")
     ).scalar_one()
-    changes = event.detail["changes"]
+    changes = detail_of(event)["changes"]
     assert changes["name"] == ["Spring", "Spring v2"]
     assert changes["description"] == ["old", "new description"]
     assert changes["help_contact"] == [None, "Prof X <x@example.edu>"]
@@ -198,7 +199,7 @@ def test_delete_all_reviewers_cascades_assignments(
     # fixture seeds none, and 0 is asserted rather than tolerated:
     # the field must be PRESENT on a roster that can have them,
     # which an `in`-style check would not catch if it vanished.
-    assert event.detail["counts"] == {
+    assert detail_of(event)["counts"] == {
         "deleted": 1,
         "cascaded_assignments": 1,
         "cascaded_relationships": 0,
@@ -237,7 +238,7 @@ def test_delete_all_reviewees_cascades_assignments(
     # fixture seeds none, and 0 is asserted rather than tolerated:
     # the field must be PRESENT on a roster that can have them,
     # which an `in`-style check would not catch if it vanished.
-    assert event.detail["counts"] == {
+    assert detail_of(event)["counts"] == {
         "deleted": 1,
         "cascaded_assignments": 1,
         "cascaded_relationships": 0,

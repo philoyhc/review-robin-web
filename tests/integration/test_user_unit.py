@@ -15,7 +15,10 @@ from app.db.models import AuditEvent, Reviewer, ReviewSession, User
 from app.services import users as users_service
 from cordware.settings import identity_settings
 
+from ._lookups import detail_of
+
 DEFAULT = "Example University"
+
 
 
 @pytest.fixture(autouse=True)
@@ -78,8 +81,8 @@ def test_set_unit_trims_stores_and_audits(db: Session) -> None:
     event = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "workspace.user_unit_set").order_by(AuditEvent.id)
     ).scalar_one()
-    assert event.detail["changes"] == {"unit": [None, "Department of Example"]}
-    assert event.detail["refs"] == {"target_user_id": operator.id}
+    assert detail_of(event)["changes"] == {"unit": [None, "Department of Example"]}
+    assert detail_of(event)["refs"] == {"target_user_id": operator.id}
 
 
 def test_an_empty_value_clears_and_an_unchanged_one_is_not_audited(
@@ -94,7 +97,7 @@ def test_an_empty_value_clears_and_an_unchanged_one_is_not_audited(
     events = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "workspace.user_unit_set").order_by(AuditEvent.id)
     ).scalars().all()
-    assert [e.detail["changes"]["unit"] for e in events] == [[None, "Dept"], ["Dept", None]]
+    assert [detail_of(e)["changes"]["unit"] for e in events] == [[None, "Dept"], ["Dept", None]]
 
 
 def test_set_unit_refuses_a_row_with_no_role_and_changes_nothing(db: Session) -> None:

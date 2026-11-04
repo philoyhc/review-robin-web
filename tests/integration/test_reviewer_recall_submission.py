@@ -257,6 +257,7 @@ def test_recall_post_nulls_submitted_at_and_lands_on_form(
         ).scalars()
     )
     assert len(events) == 1
+    assert events[0].detail is not None
     assert events[0].detail["counts"]["recalled"] == len(after)
 
 

@@ -246,8 +246,8 @@ def test_recompute_builds_no_assignment_entities(db: Session) -> None:
 
     loads = {"Assignment": 0, "Reviewer": 0, "Reviewee": 0}
 
-    def _counter(name: str):  # type: ignore[no-untyped-def]
-        def handler(target, context):  # type: ignore[no-untyped-def]
+    def _counter(name: str):
+        def handler(target, context):
             loads[name] += 1
 
         return handler
@@ -296,7 +296,7 @@ def test_changed_rows_go_out_as_one_statement(
     updates: list[str] = []
 
     @event.listens_for(engine, "before_cursor_execute")
-    def _record(conn, cursor, statement, parameters, context, many):  # type: ignore[no-untyped-def]
+    def _record(conn, cursor, statement, parameters, context, many):
         if "UPDATE assignments" in statement.replace("\n", " "):
             updates.append(statement)
 

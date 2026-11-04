@@ -215,7 +215,9 @@ def _post_check(client: TestClient, data: bytes, column: str = "") -> httpx.Resp
 
 
 def _download(text: str) -> tuple[str, str]:
-    href, name = re.search(r'href="data:text/csv;charset=utf-8;base64,([^"]+)" download="([^"]+)"', text).groups()
+    link = re.search(r'href="data:text/csv;charset=utf-8;base64,([^"]+)" download="([^"]+)"', text)
+    assert link is not None
+    href, name = link.groups()
     return base64.b64decode(href).decode("utf-8-sig"), name
 
 

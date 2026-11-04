@@ -125,6 +125,7 @@ def _cleared(db: Session, world: _World) -> int | None:
         .where(AuditEvent.event_type == "instrument.group_boundary_updated")
         .order_by(AuditEvent.id.desc())
     ).scalars().first()
+    assert event is not None
     return ((event.detail or {}).get("context") or {}).get("defuncted_group_responses")
 
 

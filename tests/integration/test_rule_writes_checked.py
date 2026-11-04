@@ -35,6 +35,8 @@ from app.services.session_config_io import (
     serialize_session_config,
 )
 
+from ._lookups import must_get
+
 
 def _match(field: str, operator: str, operand: str) -> dict[str, object]:
     return {
@@ -121,10 +123,10 @@ def _link2_form(field: str, operand: str) -> dict[str, str]:
 
 def _stored_rules(db: Session, instrument_id: int) -> list[dict[str, Any]] | None:
     db.expire_all()
-    instrument = db.get(Instrument, instrument_id)
+    instrument = must_get(db, Instrument, instrument_id)
     if instrument.rule_set_id is None:
         return None
-    return db.get(SessionRuleSet, instrument.rule_set_id).rules_json
+    return must_get(db, SessionRuleSet, instrument.rule_set_id).rules_json
 
 
 def test_band1_fallback_save_refuses_a_same_side_rule(db: Session, client: TestClient) -> None:
@@ -185,7 +187,7 @@ def test_band1_refusal_leaves_a_stored_rule_and_its_links_alone(
     )
     assert saved.status_code == 200, saved.text
     before_rules = _stored_rules(db, instrument.id)
-    before_links = db.get(Instrument, instrument.id).band1_touched_links
+    before_links = must_get(db, Instrument, instrument.id).band1_touched_links
 
     refused = client.post(
         f"/operator/sessions/{session.public_id}/instruments/{instrument.id}/fields/save",
@@ -195,7 +197,7 @@ def test_band1_refusal_leaves_a_stored_rule_and_its_links_alone(
 
     assert refused.status_code == 400
     assert _stored_rules(db, instrument.id) == before_rules
-    assert db.get(Instrument, instrument.id).band1_touched_links == before_links
+    assert must_get(db, Instrument, instrument.id).band1_touched_links == before_links
 
 
 # --- Settings import -------------------------------------------------------

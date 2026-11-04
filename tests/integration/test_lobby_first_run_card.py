@@ -15,6 +15,8 @@ from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession
 
+from ._lookups import must_get
+
 CARD_MARKER = 'id="lobby-first-run"'
 GUIDE_LINK = '/guide?return_to=/operator/sessions'
 
@@ -111,7 +113,7 @@ def test_archiving_every_session_brings_the_card_back(
     )
 
     db.expire_all()
-    assert db.get(ReviewSession, session_id).status == "archived"
+    assert must_get(db, ReviewSession, session_id).status == "archived"
 
     body = client.get("/operator/sessions").text
     assert CARD_MARKER in body

@@ -21,6 +21,7 @@ from app.web.views._workflow_card import (
 )
 
 from ._full_matrix import pin_full_matrix_on_all_instruments
+from ._lookups import must_get
 
 
 def _fmt_local_input(dt: datetime) -> str:
@@ -223,7 +224,7 @@ def test_edit_round_trips_invite_offsets(
     client: TestClient, db: Session
 ) -> None:
     _, _, session_id = _create_session(client, db, "edit-inv")
-    public_id = db.get(ReviewSession, session_id).public_id
+    public_id = must_get(db, ReviewSession, session_id).public_id
     start = datetime.now(UTC) + timedelta(days=30)
 
     # Set
@@ -239,6 +240,7 @@ def test_edit_round_trips_invite_offsets(
     )
     assert response.status_code == 303, response.text
     rs = db.get(ReviewSession, session_id)
+    assert rs is not None
     assert rs.invite_offsets == ["-P1D"]
 
     # Edit GET prefills the input value
@@ -266,7 +268,7 @@ def test_edit_emits_invite_schedule_updated_audit(
     client: TestClient, db: Session
 ) -> None:
     _, _, session_id = _create_session(client, db, "audit-inv")
-    public_id = db.get(ReviewSession, session_id).public_id
+    public_id = must_get(db, ReviewSession, session_id).public_id
     start = datetime.now(UTC) + timedelta(days=30)
     client.post(
         f"/operator/sessions/{public_id}/config",
@@ -535,6 +537,7 @@ def test_caption_renders_on_workflow_card_not_invitations_page(
         invite_offsets="-P1D",
     )
     rs = db.get(ReviewSession, session_id)
+    assert rs is not None
     assert rs.invite_offsets == ["-P1D"]
 
     body = client.get(

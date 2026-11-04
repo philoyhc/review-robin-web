@@ -27,6 +27,7 @@ from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
+from ._lookups import must_get
 from ._validated import validate_session
 
 
@@ -455,7 +456,7 @@ def test_archive_card_post_archives_and_redirects_to_archived_index(
     assert response.status_code == 303
     assert response.headers["location"] == "/operator/sessions/archived"
     db.expire_all()
-    assert db.get(ReviewSession, review_session.id).status == "archived"
+    assert must_get(db, ReviewSession, review_session.id).status == "archived"
 
 
 def test_extract_data_wrapup_layout_with_token_keys(

@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import AuditEvent, Instrument, ReviewSession
 
+from ._lookups import detail_of
 from ._public_id import public_id
 from .test_instrument_builder_routes import _band2_rfs, _instrument, _make_session
 
@@ -79,6 +80,7 @@ def test_changing_a_response_field_demotes_and_audits(
     assert review_session.status == "draft"
     events = _events(db, review_session.id)
     assert len(events) == before + 1
+    assert events[-1].detail is not None
     changes = events[-1].detail["set_changes"]
     assert changes["added"] == [] and changes["removed"] == []
     (updated,) = changes["updated"]
@@ -110,7 +112,7 @@ def test_removing_every_field_demotes(client: TestClient, db: Session) -> None:
 
     db.refresh(review_session)
     assert review_session.status == "draft"
-    removed = _events(db, review_session.id)[-1].detail["set_changes"]["removed"]
+    removed = detail_of(_events(db, review_session.id)[-1])["set_changes"]["removed"]
     assert sorted(r["label"] for r in removed) == ["Comments", "Rating"]
 
 
@@ -142,7 +144,7 @@ def test_reordering_demotes(client: TestClient, db: Session) -> None:
 
     db.refresh(review_session)
     assert review_session.status == "draft"
-    updated = _events(db, review_session.id)[-1].detail["set_changes"]["updated"]
+    updated = detail_of(_events(db, review_session.id)[-1])["set_changes"]["updated"]
     assert {u["field_key"] for u in updated if "order" in u["changes"]} == {
         f.field_key for f in instrument.response_fields
     }

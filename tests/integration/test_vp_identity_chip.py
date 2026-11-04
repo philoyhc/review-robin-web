@@ -44,6 +44,7 @@ def _session(client: TestClient, db: Session, code: str) -> tuple[int, int]:
     instrument = db.execute(
         select(Instrument).where(Instrument.session_id == session.id)
     ).scalars().first()
+    assert instrument is not None
     return session.id, instrument.id
 
 

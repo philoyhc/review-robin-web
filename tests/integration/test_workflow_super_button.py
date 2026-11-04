@@ -785,6 +785,7 @@ def test_workflow_close_flips_ready_to_expired_and_closes_instruments(
         ).scalars()
     )
     assert len(audit_rows) == 1
+    assert audit_rows[0].detail is not None
     assert (
         audit_rows[0].detail["counts"]["closed_instruments"]
         == len(open_instrument_ids_pre)
@@ -1084,6 +1085,7 @@ def test_a_failed_validation_creates_no_invitations(
     existing = db.execute(
         select(Reviewee).where(Reviewee.session_id == review_session.id)
     ).scalars().first()
+    assert existing is not None
     db.add(
         Reviewee(
             session_id=review_session.id,

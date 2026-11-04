@@ -24,10 +24,12 @@ from sqlalchemy.orm import Session
 from app.db.models import Reviewer, ReviewSession
 
 from ._feature_toggles import enable_observers, enable_relationships
+from ._lookups import must_search
 from ._unlock_panel import assert_lock_ends_right_column, panel_columns
 from ._unlock_panel import div_block as _div_block
 
 R_CSV = b"ReviewerName,ReviewerEmail\nR1,r1@example.com\nR2,r2@example.com\n"
+
 
 
 def _session(client: TestClient, db: Session, code: str) -> ReviewSession:
@@ -572,7 +574,7 @@ def test_the_row_expander_script_is_gated_on_selectable(client, db):
     assert 'tr.id = "reviewers-row-expander"' in html, "expander builder absent"
     assert '"session-expander session-expander-bracketed"' in html
 
-    edit_id = re.search(r'id="reviewer-row-(\d+)"', html).group(1)
+    edit_id = must_search(r'id="reviewer-row-(\d+)"', html).group(1)
     editing = client.get(
         f"/operator/sessions/{rs.public_id}/reviewers?edit_id={edit_id}"
     ).text
@@ -649,7 +651,7 @@ def test_a_server_restored_selection_renders_its_panel(client, db):
     a panel until the operator toggled something."""
     rs = _with_reviewers(client, db, "rc16")
     html = _page(client, rs)
-    row_id = re.search(r'id="reviewer-row-(\d+)"', html).group(1)
+    row_id = must_search(r'id="reviewer-row-(\d+)"', html).group(1)
     restored = client.get(
         f"/operator/sessions/{rs.public_id}/reviewers?selected={row_id}"
     ).text
@@ -1024,7 +1026,7 @@ def test_the_moved_filter_locks_while_a_row_is_being_edited(client, db):
     """
     rs = _with_reviewers(client, db, "rc31")
     listing = _page(client, rs)
-    rid = re.search(r'id="reviewer-row-(\d+)"', listing).group(1)
+    rid = must_search(r'id="reviewer-row-(\d+)"', listing).group(1)
     html = client.get(f"/operator/sessions/{rs.public_id}/reviewers?edit_id={rid}").text
     # Vacuity guard: `edit_id` typo'd is ignored silently, leaving the
     # page in its normal state — prove edit mode actually engaged.
@@ -1914,7 +1916,7 @@ def test_the_edit_row_carries_an_expander_bar_beneath_it(
     assert html.count('form="reviewer-edit-form">Save</button>') == 1, (
         "two Save buttons on one edit form"
     )
-    bar = re.search(
+    bar = must_search(
         r'<tr class="session-expander session-expander-bracketed '
         r'row-editor-bar">.*?</tr>', html, re.S,
     ).group(0)

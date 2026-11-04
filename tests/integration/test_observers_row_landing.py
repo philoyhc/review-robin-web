@@ -22,6 +22,8 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Observer, ReviewSession
 
+from ._lookups import must_search
+
 
 def _make_session(
     client: TestClient, db: Session, code: str
@@ -264,7 +266,7 @@ def test_add_carries_the_active_filter_into_add_mode(
     # An unfiltered view carries neither — `status=all` is the default
     # and an empty search is nothing, so spelling them out would be
     # noise in the URL.
-    plain = re.search(
+    plain = must_search(
         r'<a[^>]*>\s*Add new\s*</a>', client.get(base).text
     ).group(0)
     assert "status=" not in plain and "q=" not in plain, plain

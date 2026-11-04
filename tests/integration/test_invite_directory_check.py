@@ -49,6 +49,7 @@ def test_a_match_binds_the_person_and_keeps_the_address(
     # invite from the directory, rung 19).
     assert row.display_name == "Jane Tan"
     event = db.execute(select(AuditEvent).where(AuditEvent.event_type == "workspace.user_invited")).scalar_one()
+    assert event.detail is not None
     assert event.detail["snapshot"]["directory_verified"] is True
     assert event.detail["snapshot"]["display_name"] == "Jane Tan"
 
@@ -101,6 +102,7 @@ def test_the_bound_invitee_signs_in_by_either_address(
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
     _invite(client, "e0123456@example.edu")
     invited = _row(db, "e0123456@example.edu")
+    assert invited is not None
     found = find_signed_in_user(
         db, AuthenticatedUser(principal_id=JANE, email="jane.tan@example.edu", name="Jane Tan")
     )
@@ -135,6 +137,7 @@ def test_the_audit_records_the_object_id_bound(
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
     _invite(client, "jane.tan@example.edu")
     event = db.execute(select(AuditEvent).where(AuditEvent.event_type == "workspace.user_invited")).scalar_one()
+    assert event.detail is not None
     assert event.detail["snapshot"]["external_principal_id"] == JANE
 
 

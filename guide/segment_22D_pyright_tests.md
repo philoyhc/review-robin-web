@@ -138,6 +138,34 @@ set to the four test trees.
   locally (application code alone: 19 s in CI). A probe confirmed the
   relaxation stops at the test roots: an Optional member access under
   `app/` still fails.
+- **Rung 7** (base `d5f697d2`), the ratchet. With the rules on: 792
+  errors (`tests/integration` 719, `tests/unit` 34, `tests/browser` 26,
+  the apps' tests 13; `cordware/tests` and `tests/db` 0). Trees with no
+  errors share a PR rather than taking one each. A tree goes strict by
+  getting its own `executionEnvironments` root ahead of `tests` (the
+  first matching root wins).
+  - **7.1:** `tests/unit`, `tests/db`, `cordware/tests` and the apps'
+    tests strict, 47 fixed. Every error was a genuine Optional (an audit
+    event's `detail`, `db.get`, `re.search`, `spec.loader`), so each takes
+    an `assert` beside it; four comprehensions become loops with the
+    assert inside; no fixture annotation was wrong.
+  - **7.2:** `tests/browser` and `tests/integration` strict, 26 + 719
+    fixed, and the relaxation gone: `executionEnvironments` shrinks to
+    the `tests` root (import paths only) and `.`. The same patterns;
+    `tests/integration/_lookups.py` holds the asserting `must_get`,
+    `must_search` and `detail_of`, which replace 37 identical local copies
+    (`_get`, `_search`, `_detail`). 7.1 had dropped `tests` from
+    `tests/unit`'s import paths (two tests import `tests/_rrw_app.py`);
+    it ships here, since 7.1's CI had not run. Folded into #3602 when
+    GitHub left its runs queued behind two stuck `main` runs.
+  - **7.3:** the tests' 38 pre-22D `# type: ignore` comments are gone.
+    They hid 44 errors: stand-ins become `cast(Model, …)` factories,
+    `_config`'s overrides and `_join_to_bytes`'s rows take their real
+    types, an attribute set on a user goes through `monkeypatch`; six hid
+    nothing. Five deliberate wrong-typed inputs and one instance patch
+    take a `pyright: ignore` with the reason. `enableTypeIgnoreComments`
+    cannot be scoped to tests, and application code still has 66 such
+    comments, so it stays on: that is 22F's.
 
 ## PR ladder
 

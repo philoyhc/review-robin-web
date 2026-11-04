@@ -111,6 +111,7 @@ def _counts(db: Session, sid: int, event_type: str) -> dict:
             AuditEvent.event_type == event_type,
         )
     ).scalar_one()
+    assert event.detail is not None
     return event.detail["counts"]
 
 
@@ -404,9 +405,11 @@ def test_bulk_delete_omits_the_key_for_the_models_that_reach_nothing(
         db.refresh(row)
         row_id = row.id
     else:
-        row_id = db.execute(
+        existing = db.execute(
             select(Relationship).where(Relationship.session_id == rs.id)
-        ).scalars().first().id
+        ).scalars().first()
+        assert existing is not None
+        row_id = existing.id
 
     response = client.post(
         f"/operator/sessions/{rs.public_id}/{page}/bulk-delete",
@@ -488,7 +491,7 @@ def test_every_render_path_already_reaches_the_count(
         captured.append(context)
         return original(request, name, context, *args, **kwargs)
 
-    _shared._templates.TemplateResponse = _capture  # type: ignore[assignment]
+    _shared._templates.TemplateResponse = _capture  # pyright: ignore[reportAttributeAccessIssue]  -- an instance patch the finally deletes, so it cannot leak
     try:
         client.get(f"/operator/sessions/{rs.public_id}/{page}")
         response = client.post(
@@ -532,6 +535,7 @@ def test_the_audit_log_page_shows_the_new_count(
     # The page is behind `require_sys_admin`, which reads the column on
     # the user row rather than the settings list.
     signed_in = db.execute(select(User).order_by(User.id)).scalars().first()
+    assert signed_in is not None
     signed_in.is_sys_admin = True
     db.commit()
 

@@ -16,6 +16,8 @@ from app.schemas.sessions import SessionCreate
 from app.services import session_lifecycle as lifecycle
 from app.services import sessions
 
+from ._lookups import detail_of
+
 
 def _draft_session(db: Session, code: str) -> tuple[ReviewSession, User]:
     op = User(email=f"op-{code}@example.edu", display_name="Op")
@@ -95,7 +97,7 @@ def test_release_responses_now_emits_audit_event(db: Session) -> None:
             AuditEvent.session_id == review_session.id,
         )
     ).scalar_one()
-    snapshot = event.detail["snapshot"]
+    snapshot = detail_of(event)["snapshot"]
     assert snapshot["cleared_until"] is True
     # ISO-formatted UTC timestamp present.
     assert "T" in snapshot["responses_release_at"]
@@ -132,7 +134,7 @@ def test_stop_responses_release_emits_audit_event(db: Session) -> None:
             AuditEvent.session_id == review_session.id,
         )
     ).scalar_one()
-    assert "T" in event.detail["snapshot"]["responses_release_until"]
+    assert "T" in detail_of(event)["snapshot"]["responses_release_until"]
 
 
 # ── Workflow routes ──────────────────────────────────────────────────
@@ -242,4 +244,4 @@ def test_workflow_archive_route_works_from_ready_state(
             AuditEvent.session_id == review_session.id,
         )
     ).scalar_one()
-    assert event.detail["changes"]["status"] == ["ready", "archived"]
+    assert detail_of(event)["changes"]["status"] == ["ready", "archived"]

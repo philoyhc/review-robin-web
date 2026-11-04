@@ -101,6 +101,7 @@ def test_reviewer_import_writes_audit_event(client: TestClient, db: Session) -> 
     # takes the relationships with it exactly as `delete-all` does.
     # Asserted as PRESENT at 0, not merely tolerated: a reviewers import
     # CAN destroy relationships, so the key vanishing is the regression.
+    assert event.detail is not None
     assert event.detail["counts"] == {
         "new": 1,
         "replaced": 0,
@@ -195,6 +196,7 @@ def test_reviewer_import_replace_with_confirm_succeeds(
             .order_by(AuditEvent.id.desc())
         ).scalars()
     )
+    assert events[0].detail is not None
     assert events[0].detail["counts"] == {
         "new": 1,
         "replaced": 1,
@@ -457,6 +459,7 @@ def test_reviewer_replace_cascades_assignments(
             .order_by(AuditEvent.id.desc())
         ).scalars()
     )
+    assert events[0].detail is not None
     assert events[0].detail["counts"]["cascaded_assignments"] == 1
     assert events[0].detail["counts"]["replaced"] == 1
 
@@ -545,6 +548,7 @@ def test_reviewee_replace_cascades_assignments(
             .order_by(AuditEvent.id.desc())
         ).scalars()
     )
+    assert events[0].detail is not None
     assert events[0].detail["counts"]["cascaded_assignments"] == 2
 
 

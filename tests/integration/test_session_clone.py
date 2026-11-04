@@ -23,6 +23,8 @@ from app.db.models import (
 from app.schemas.sessions import SessionCreate
 from app.services import session_clone, session_tags, sessions
 
+from ._lookups import detail_of
+
 
 def _source_session(db: Session, code: str) -> tuple[ReviewSession, User]:
     """A session with the create-time seed config plus a one-pair
@@ -115,11 +117,13 @@ def test_clone_copies_data_shapes_retention_and_toggles(db: Session) -> None:
     src_inst = db.execute(
         select(Instrument).where(Instrument.session_id == source.id)
     ).scalars().first()
+    assert src_inst is not None
     src_rf = db.execute(
         select(InstrumentResponseField).where(
             InstrumentResponseField.instrument_id == src_inst.id
         )
     ).scalars().first()
+    assert src_rf is not None
     db.add(
         DataShape(
             session_id=source.id,
@@ -155,11 +159,13 @@ def test_clone_copies_data_shapes_retention_and_toggles(db: Session) -> None:
     clone_inst = db.execute(
         select(Instrument).where(Instrument.session_id == clone.id)
     ).scalars().first()
+    assert clone_inst is not None
     clone_rf = db.execute(
         select(InstrumentResponseField).where(
             InstrumentResponseField.instrument_id == clone_inst.id
         )
     ).scalars().first()
+    assert clone_rf is not None
     # Scope chips re-pointed at the clone's rows, not the source's.
     assert shape.instrument_id == clone_inst.id
     assert shape.response_field_id == clone_rf.id
@@ -238,7 +244,7 @@ def test_clone_all_copies_observers_with_their_cohort_rules(
             AuditEvent.session_id == clone.id,
         )
     ).scalar_one()
-    assert event.detail["counts"]["observers"] == 1
+    assert detail_of(event)["counts"]["observers"] == 1
 
 
 def test_clone_config_skips_roster(db: Session) -> None:
@@ -290,9 +296,9 @@ def test_clone_writes_audit_event(db: Session) -> None:
             AuditEvent.session_id == clone.id,
         )
     ).scalar_one()
-    assert event.detail["context"]["mode"] == "all"
-    assert event.detail["refs"]["source_session_id"] == source.id
-    assert event.detail["counts"]["observers"] == 0
+    assert detail_of(event)["context"]["mode"] == "all"
+    assert detail_of(event)["refs"]["source_session_id"] == source.id
+    assert detail_of(event)["counts"]["observers"] == 0
 
 
 def test_clone_writes_an_event_on_the_source(db: Session) -> None:
@@ -311,9 +317,9 @@ def test_clone_writes_an_event_on_the_source(db: Session) -> None:
     ).scalar_one()
     assert event.session_id == source.id
     assert event.actor_user_id == op.id
-    assert event.detail["session_code"] == source.code
-    assert event.detail["refs"] == {"clone_session_id": clone.id}
-    assert event.detail["context"] == {
+    assert detail_of(event)["session_code"] == source.code
+    assert detail_of(event)["refs"] == {"clone_session_id": clone.id}
+    assert detail_of(event)["context"] == {
         "mode": "config",
         "clone_code": clone.code,
     }
@@ -455,6 +461,7 @@ def test_a_clone_repoints_sort_and_widths_at_its_own_fields(
         .where(InstrumentResponseField.instrument_id == instrument.id)
         .order_by(InstrumentResponseField.order)
     ).scalars().first()
+    assert field is not None
     instrument.sort_display_fields = [
         {"display_field_id": display.id, "dir": "desc"},
         {"display_field_id": -1, "dir": "asc"},
@@ -510,6 +517,7 @@ def test_a_clone_drops_a_width_naming_another_instruments_field(
             InstrumentResponseField.instrument_id == first.id
         )
     ).scalars().first()
+    assert first_field is not None
     second = Instrument(
         session_id=source.id,
         name="Second",
@@ -637,7 +645,9 @@ def test_a_clone_leaves_the_preview_member_ids_behind(db: Session) -> None:
         select(Instrument).where(Instrument.session_id == clone.id)
     ).scalar_one()
     assert copied.band2_state == {"sample_reviewee_name": "E One"}
-    assert instrument.band2_state["sample_group_member_ids"] == [7, 8]
+    source_state = instrument.band2_state
+    assert source_state is not None
+    assert source_state["sample_group_member_ids"] == [7, 8]
 
 
 def test_clone_all_carries_each_rows_directory_account(db: Session) -> None:

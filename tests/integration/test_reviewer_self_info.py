@@ -26,6 +26,7 @@ from app.db.models import Assignment, Reviewer, ReviewSession
 from app.web import views
 
 from ._answer_form import answer_form
+from ._lookups import must_search
 from ._unlock_panel import panel_columns
 from .test_reviewer_surface_display_fields import (
     _activate,
@@ -33,6 +34,7 @@ from .test_reviewer_surface_display_fields import (
 )
 
 LINK = "https://example.edu/rae"
+
 
 
 @pytest.fixture
@@ -175,7 +177,7 @@ def test_a_failed_import_still_renders_the_card_and_readout(
     )
     assert response.status_code == 400, response.status_code
     html = response.text
-    card = re.search(
+    card = must_search(
         r"<section[^>]*data-reviewer-self-card[^>]*>.*?</section>", html, re.S
     ).group(0)
     assert re.findall(r'value="(\w+)"\s+checked', card) == [
@@ -192,7 +194,7 @@ def test_no_profile_chip_without_a_profile(
 ) -> None:
     rs = _pair(client, db, "rsi-noprof", profile="")
     html = client.get(f"/operator/sessions/{rs.public_id}/reviewers").text
-    card = re.search(
+    card = must_search(
         r"<section[^>]*data-reviewer-self-card[^>]*>.*?</section>", html, re.S
     ).group(0)
     assert not re.search(r'type="checkbox"[^>]*value="profile_link"', card)
@@ -317,7 +319,7 @@ def test_a_key_with_no_chip_survives_a_save(
     roster the card offers no chip for it, so it rides as `keep`."""
     rs = _pair(client, db, "rsi-keep", profile="")
     html = client.get(f"/operator/sessions/{rs.public_id}/reviewers").text
-    card = re.search(
+    card = must_search(
         r"<section[^>]*data-reviewer-self-card[^>]*>.*?</section>", html, re.S
     ).group(0)
     assert '<input type="hidden" name="keep" value="profile_link">' in card
@@ -356,6 +358,7 @@ def test_a_save_writes_one_audit_event(client: TestClient, db: Session) -> None:
         )
     ).scalars().all()
     assert len(events) == 1
+    assert events[0].detail is not None
     # The old value is what was stored, NULL, not the effective default.
     assert events[0].detail["changes"]["reviewer_self_fields"] == [None, ["name"]]
 
@@ -377,6 +380,7 @@ def test_saving_the_default_over_null_records_it(
             AuditEvent.event_type == "session.reviewer_self_fields_set",
         )
     ).scalar_one()
+    assert event.detail is not None
     assert event.detail["changes"]["reviewer_self_fields"] == [
         None, ["name", "email", "profile_link"],
     ]

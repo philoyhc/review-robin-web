@@ -19,6 +19,7 @@ def test_a_bound_account_is_stored_normalized() -> None:
     account = directory_accounts.account_of(
         Outcome("OK", "MAIL", user=_user(" 1A2B3C4D-AAAA-4BBB-8CCC-DDDDEEEEFFFF\t"))
     )
+    assert account is not None
     assert account.object_id == "1a2b3c4d-aaaa-4bbb-8ccc-ddddeeeeffff"
 
 

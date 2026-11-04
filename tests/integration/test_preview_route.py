@@ -181,6 +181,7 @@ def test_preview_does_not_observe_deadline_side_effect(
         )
     ).scalars().all()
     for ev in deadline_close:
+        assert ev.detail is not None
         assert ev.detail.get("reason") != "deadline"
 
 

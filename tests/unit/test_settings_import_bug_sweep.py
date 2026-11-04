@@ -152,6 +152,7 @@ def test_two_instruments_naming_one_rule_set_get_a_row_each(
     assert None not in rule_set_ids
     assert len(set(rule_set_ids)) == 2, "each instrument owns its rule set"
     first, second = (db.get(SessionRuleSet, i) for i in rule_set_ids)
+    assert first is not None and second is not None
     assert first.name == "Shared"
     assert (
         second.combinator,

@@ -522,6 +522,7 @@ def test_apply_emits_settings_imported_audit_event(db: Session) -> None:
             AuditEvent.session_id == review_session.id,
         )
     ).scalar_one()
+    assert event.detail is not None
     counts = event.detail.get("counts", {})
     assert counts.get("instruments") == 1
     assert counts.get("response_fields") == 0

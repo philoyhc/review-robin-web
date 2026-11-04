@@ -35,6 +35,8 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.db.models import AuditEvent, ReviewSession, SessionOperator, User
 
+from ._lookups import detail_of
+
 
 def _make_session(
     client: TestClient, db: Session, *, code: str
@@ -181,9 +183,9 @@ def test_add_owner_inserts_session_operator_and_emits_audit(
             AuditEvent.event_type == "session.owner_added"
         )
     ).scalar_one()
-    assert event.detail["refs"]["target_user_id"] == bob_row.id
-    assert event.detail["snapshot"]["email"] == "bob@example.edu"
-    assert event.detail["session_id"] == review_session.id
+    assert detail_of(event)["refs"]["target_user_id"] == bob_row.id
+    assert detail_of(event)["snapshot"]["email"] == "bob@example.edu"
+    assert detail_of(event)["session_id"] == review_session.id
 
 
 def test_config_owners_card_renders_add_form_when_candidates_exist(
@@ -318,7 +320,7 @@ def test_remove_owner_deletes_session_operator_and_emits_audit(
             AuditEvent.event_type == "session.owner_removed"
         )
     ).scalar_one()
-    assert event.detail["refs"]["target_user_id"] == bob_row.id
+    assert detail_of(event)["refs"]["target_user_id"] == bob_row.id
 
 
 def test_remove_last_owner_409s(
@@ -570,8 +572,8 @@ def test_non_owner_sys_admin_can_still_clone(
         )
     ).scalar_one()
     assert event.actor_user_id == bob_row.id
-    assert event.detail["refs"] == {"clone_session_id": clone_id}
-    assert event.detail["context"] == {
+    assert detail_of(event)["refs"] == {"clone_session_id": clone_id}
+    assert detail_of(event)["context"] == {
         "mode": "all",
         "clone_code": clone.code,
     }

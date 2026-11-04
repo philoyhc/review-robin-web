@@ -32,6 +32,8 @@ from app.services.session_config_io import (
 )
 from app.web.views._instruments import INTRO_LAYOUT_CHOICES, intro_layout_for
 
+from ._lookups import must_get
+
 
 def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     response = client.post(
@@ -101,6 +103,7 @@ def test_the_setter_stores_audits_and_skips_a_no_op(db: Session) -> None:
     assert instrument.intro_layout == "layout_2"
     events = _layout_events(db, instrument)
     assert len(events) == 1
+    assert events[0].detail is not None
     assert events[0].detail["changes"] == {
         "intro_layout": ["layout_1", "layout_2"]
     }
@@ -166,7 +169,7 @@ def test_both_saves_store_the_layout(
     )
     assert response.status_code in (200, 303), response.text
     db.expire_all()
-    assert db.get(Instrument, instrument.id).intro_layout == "layout_2"
+    assert must_get(db, Instrument, instrument.id).intro_layout == "layout_2"
     assert len(_layout_events(db, instrument)) == 1
 
 
@@ -186,7 +189,7 @@ def test_a_save_without_the_input_keeps_the_layout(
     )
     assert response.status_code in (200, 303), response.text
     db.expire_all()
-    assert db.get(Instrument, instrument.id).intro_layout == "layout_2"
+    assert must_get(db, Instrument, instrument.id).intro_layout == "layout_2"
 
 
 @pytest.mark.parametrize(
@@ -206,6 +209,7 @@ def test_both_saves_refuse_an_unknown_layout(
     assert response.status_code == status_code
     db.expire_all()
     stored = db.get(Instrument, instrument.id)
+    assert stored is not None
     assert stored.intro_layout == "layout_1"
     assert stored.short_label != "Changed"
 

@@ -14,6 +14,8 @@ from sqlalchemy.orm import Session
 from app.auth.identity import AuthenticatedUser
 from app.db.models import Reviewer, ReviewSession
 
+from ._lookups import must_search
+
 _TEMPLATES = Path("app/web/templates")
 _BRAND = "Review Robin Web"
 
@@ -59,7 +61,7 @@ def test_every_participant_page_title_ends_with_the_brand(template: str) -> None
     """The mismatch page had no suffix, the surface read "… — Review"
     and Sign-in details put the brand first (L2)."""
     text = (_TEMPLATES / template).read_text()
-    title = re.search(r"{% block title %}(.*?){% endblock %}", text).group(1)
+    title = must_search(r"{% block title %}(.*?){% endblock %}", text).group(1)
     assert title.endswith(f" — {_BRAND}"), title
 
 
@@ -68,7 +70,7 @@ def test_the_error_page_title_uses_the_same_brand(make_client) -> None:
     "— Review Robin Web" (L2)."""
     resp = _participant(make_client).get("/me/invite/not-a-token")
     assert resp.status_code == 404
-    title = re.search(r"<title>(.*?)</title>", resp.text).group(1)
+    title = must_search(r"<title>(.*?)</title>", resp.text).group(1)
     assert title.endswith(f" — {_BRAND}"), title
     assert "· Review Robin" not in resp.text
 

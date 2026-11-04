@@ -228,6 +228,7 @@ def _pages(
         .where(Instrument.session_id == review_session.id)
         .order_by(Instrument.order, Instrument.id)
     ).scalars().first()
+    assert instrument is not None
     for reviewee in db.execute(
         select(Reviewee).where(Reviewee.session_id == review_session.id)
     ).scalars():

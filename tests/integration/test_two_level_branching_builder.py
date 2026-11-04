@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import InstrumentResponseField
 
+from ._lookups import must_search
 from .test_instrument_builder_routes import _card_slice, _rf_fn
 from .test_response_field_branching_builder import _page, _row, _rows_table
 
@@ -118,9 +119,9 @@ def test_a_level_one_parents_fork_is_pressed_and_its_detach_off(
 ) -> None:
     _, _, card, _, _ = _chain_page(client, db, "two-level-fork")
     table = _rows_table(card)
-    fork = re.search(r"<button[^>]*data-new-model-rf-fork[^>]*>", _row(table, "Rating")).group(0)
+    fork = must_search(r"<button[^>]*data-new-model-rf-fork[^>]*>", _row(table, "Rating")).group(0)
     assert " disabled" in fork and 'title="This field has a branch"' in fork
-    join = re.search(r"<button[^>]*data-new-model-rf-join[^>]*>", _row(table, "Rating")).group(0)
+    join = must_search(r"<button[^>]*data-new-model-rf-join[^>]*>", _row(table, "Rating")).group(0)
     assert " disabled" in join and "A field with a branch can't leave its branch" in join
 
 
@@ -129,7 +130,7 @@ def test_a_governed_number_forks_one_level_down(client: TestClient, db: Session)
     why not, and an answered branch's is off like its "+"s."""
     review_session, instrument, card, _ = _page(client, db, "two-level-fork-live")
     comments = next(f for f in instrument.response_fields if f.label == "Comments")
-    fork = re.search(r"<button[^>]*data-new-model-rf-fork[^>]*>", _row(_rows_table(card), "Comments")).group(0)
+    fork = must_search(r"<button[^>]*data-new-model-rf-fork[^>]*>", _row(_rows_table(card), "Comments")).group(0)
     assert " disabled" in fork and "A String field can't have a branch" in fork
     comments._inline_data_type = "Integer"
     db.commit()
@@ -137,7 +138,7 @@ def test_a_governed_number_forks_one_level_down(client: TestClient, db: Session)
         f"/operator/sessions/{review_session.public_id}/instruments?editing={instrument.id}"
     ).text
     card = _card_slice(" ".join(body.split()), instrument.id)
-    fork = re.search(r"<button[^>]*data-new-model-rf-fork[^>]*>", _row(_rows_table(card), "Comments")).group(0)
+    fork = must_search(r"<button[^>]*data-new-model-rf-fork[^>]*>", _row(_rows_table(card), "Comments")).group(0)
     assert " disabled" not in fork
     assert 'title="Add a branch inside this branch, below this field"' in fork
     recompute = " ".join(_rf_fn(body, "newModelRfRecomputeActionStates").split())
@@ -207,7 +208,7 @@ def test_answers_lock_every_branch_above_on_the_page(client: TestClient, db: Ses
     ).text
     table = _rows_table(_card_slice(" ".join(body.split()), instrument.id))
     for cond in table.split("<tr data-new-model-rf-condition")[1:]:
-        op = re.search(r"<select data-new-model-rf-condition-op[^>]*>", cond).group(0)
+        op = must_search(r"<select data-new-model-rf-condition-op[^>]*>", cond).group(0)
         assert " disabled" in op
 
 
@@ -270,7 +271,7 @@ def test_detachs_title_counts_the_rows_own_branch(client: TestClient, db: Sessio
     so its ↳ ends Rating's branch (the Item 14 cumulative read)."""
     _, _, card, _, _ = _chain_page(client, db, "two-level-detach-title")
     comments = _row(_rows_table(card), "Comments")
-    join = re.search(r"<button[^>]*data-new-model-rf-join[^>]*>", comments).group(0)
+    join = must_search(r"<button[^>]*data-new-model-rf-join[^>]*>", comments).group(0)
     assert 'title="Detach this field and end its branch"' in join
 
 
@@ -307,7 +308,7 @@ def _with_other(
 
 
 def _nest(row: str) -> str:
-    return re.search(r"<button[^>]*data-new-model-rf-nest[^>]*>", row).group(0)
+    return must_search(r"<button[^>]*data-new-model-rf-nest[^>]*>", row).group(0)
 
 
 def test_a_level_one_row_below_a_branch_can_join_it(client: TestClient, db: Session) -> None:

@@ -11,7 +11,6 @@ account's mail and another's UPN.
 from __future__ import annotations
 
 import html
-import re
 
 import pytest
 from fastapi.testclient import TestClient
@@ -24,6 +23,7 @@ from app.web.routes_operator import _setup_observers, _shared
 from cordware.graph import FakeDirectory
 
 from ._invitation_states import _create_session
+from ._lookups import detail_of, must_search
 
 JANE_ID = "11111111-1111-4111-8111-111111111111"
 JANE = {"directory_object_id": JANE_ID, "directory_mail": "jane.tan@example.edu", "directory_upn": "e0123456@example.edu"}
@@ -85,6 +85,7 @@ def test_an_import_binds_each_resolved_address_and_counts_the_check(
     event = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "reviewers.imported")
     ).scalar_one()
+    assert event.detail is not None
     counts = event.detail["counts"]
     assert {k: v for k, v in counts.items() if k.startswith("directory_")} == {
         "directory_by_mail": 1,
@@ -118,6 +119,7 @@ def test_a_quick_setup_upload_binds_too(
     event = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "reviewers.imported")
     ).scalar_one()
+    assert event.detail is not None
     assert event.detail["counts"]["directory_by_upn"] == 1
 
 
@@ -136,6 +138,7 @@ def test_anonymous_reviewee_identifiers_are_neither_looked_up_nor_counted(
     event = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "reviewees.imported")
     ).scalar_one()
+    assert event.detail is not None
     assert event.detail["counts"]["directory_by_upn"] == 1
     assert sum(v for k, v in event.detail["counts"].items() if k.startswith("directory_")) == 1
 
@@ -353,11 +356,13 @@ def test_a_replace_the_directory_cannot_answer_keeps_each_rows_account(
     db.expire_all()
     assert _bound(_row(db, Reviewer, session.id, name="Jane")) == JANE
     assert _bound(_row(db, Reviewer, session.id, name="New")) == directory_accounts.UNBOUND
-    counts = db.execute(
+    event = db.execute(
         select(AuditEvent)
         .where(AuditEvent.session_id == session.id, AuditEvent.event_type == "reviewers.imported")
         .order_by(AuditEvent.id.desc())
-    ).scalars().first().detail["counts"]
+    ).scalars().first()
+    assert event is not None
+    counts = detail_of(event)["counts"]
     assert counts["directory_not_checked"] == 2 and counts["directory_kept"] == 1
     text = client.get(f"/operator/sessions/{session.public_id}/reviewers?unlocked=1").text
     line = text[text.index("data-directory-check") :].split("</p>")[0]
@@ -480,7 +485,7 @@ def test_an_expired_token_saves_nothing_holds_the_file_and_asks_to_renew(
     page = response.text
     assert "data-directory-renew" in page and "Nothing was saved" in page
     assert 'form="upload-csv-form"' in page[page.index("data-directory-renew") :]
-    token = re.search(r'name="held_token" value="([^"]+)"', page).group(1)
+    token = must_search(r'name="held_token" value="([^"]+)"', page).group(1)
     model = {"reviewers": Reviewer, "reviewees": Reviewee, "observers": Observer}[kind]
     db.expire_all()
     assert db.execute(select(model).where(model.session_id == session.id)).first() is None

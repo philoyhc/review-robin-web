@@ -444,7 +444,12 @@ def test_an_assignments_upload_says_what_it_does() -> None:
     page = TestClient(ops_app()).get("/rosters/assignments").text
     assert "<legend>What the upload does</legend>" in page
     radios = re.findall(r'<input type="radio"[^>]*>', page)
-    assert [re.search(r'value="([^"]*)"', r).group(1) for r in radios] == [m for m, _ in sample_data.UPLOAD_MODES]
+    values = []
+    for r in radios:
+        value = re.search(r'value="([^"]*)"', r)
+        assert value is not None
+        values.append(value.group(1))
+    assert values == [m for m, _ in sample_data.UPLOAD_MODES]
     assert all("disabled" not in r and "checked" not in r for r in radios)  # live; none chosen at first
     assert 'id="upload" class="btn btn-primary btn-unavailable" disabled aria-disabled="true" title="Choose what the upload does first"' in page
     for n, (mode, what) in enumerate(sample_data.UPLOAD_MODES, start=1):

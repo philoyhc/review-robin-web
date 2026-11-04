@@ -380,6 +380,7 @@ def test_per_instrument_toggle_emits_audit_event(
         )
     ).scalar_one()
     detail = event.detail
+    assert detail is not None
     assert detail["counts"]["flipped"] == 1
     assert detail["context"]["active"] is False
     assert detail["refs"]["instrument_id"] == instrument_id
@@ -411,4 +412,5 @@ def test_per_instrument_toggle_idempotent_when_state_unchanged(
             AuditEvent.session_id == review_session.id,
         )
     ).scalar_one()
+    assert event.detail is not None
     assert event.detail["counts"]["flipped"] == 0

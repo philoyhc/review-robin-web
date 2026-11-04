@@ -122,6 +122,7 @@ def test_feature_toggled_audit_fires_on_change(
     _submit_edit(client, review_session, relationships_enabled="true")
     events = _audit_events(db, review_session.id, "session.feature_toggled")
     assert len(events) == 1
+    assert events[0].detail is not None
     changes = events[0].detail.get("changes", {})
     assert "relationships_enabled" in changes
     assert changes["relationships_enabled"] == [False, True]
@@ -149,6 +150,7 @@ def test_feature_toggled_audit_carries_both_flag_diffs(
     )
     events = _audit_events(db, review_session.id, "session.feature_toggled")
     assert len(events) == 1
+    assert events[0].detail is not None
     changes = events[0].detail.get("changes", {})
     assert set(changes.keys()) == {
         "relationships_enabled",

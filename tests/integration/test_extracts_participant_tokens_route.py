@@ -129,6 +129,7 @@ def test_export_participant_tokens_emits_audit_event(
     )
     assert len(ext_events) == 1
     detail = ext_events[0].detail
+    assert detail is not None
     assert detail["counts"] == {"rows": 2}
 
 

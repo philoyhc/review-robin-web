@@ -133,6 +133,7 @@ def test_an_address_edit_moves_access_to_the_new_account(db: Session, as_user) -
     assert as_user("jane.tan@example.edu", JANE_OID).get(path).status_code == 404
     assert as_user("arun.kumar@example.edu", ARUN_OID).get(path).status_code == 200
     created = db.execute(select(AuditEvent).where(AuditEvent.event_type == "observer.created")).scalar_one()
+    assert created.detail is not None
     assert created.detail["snapshot"]["directory_object_id"] == JANE_OID
 
 
@@ -204,7 +205,7 @@ def test_the_chip_strip_describes_the_row_the_gate_opens(
     db.add(Observer(session_id=session.id, email="e0123456@example.edu", directory_object_id=JANE_OID))
     db.commit()
     user = User(email="jane.tan@example.edu")
-    user.signed_in_principal_id = JANE_OID  # type: ignore[attr-defined]
+    monkeypatch.setattr(user, "signed_in_principal_id", JANE_OID, raising=False)
 
     shown: list[int] = []
     real = responses_service.session_pill_for_reviewer

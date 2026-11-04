@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import csv
 import io
+from collections.abc import Iterable
 
 from sqlalchemy.orm import Session
 
@@ -143,9 +144,9 @@ def test_round_trip_through_existing_importer(db: Session) -> None:
     assert parsed[1].tag_2 == "dev"
 
 
-def _join_to_bytes(rows: object) -> bytes:
+def _join_to_bytes(rows: Iterable[tuple[str, ...]]) -> bytes:
     buf = io.StringIO()
     writer = csv.writer(buf)
-    for row in rows:  # type: ignore[union-attr]
+    for row in rows:
         writer.writerow(row)
     return buf.getvalue().encode("utf-8")

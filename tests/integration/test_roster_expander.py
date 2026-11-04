@@ -143,6 +143,7 @@ def _with_a_response(db: Session, rs: ReviewSession) -> None:
     reviewee = db.execute(
         select(Reviewee).where(Reviewee.session_id == rs.id)
     ).scalars().first()
+    assert reviewer is not None and reviewee is not None
     instrument = Instrument(session_id=rs.id, name="I", order=0)
     db.add(instrument)
     db.flush()
@@ -491,7 +492,9 @@ def test_the_bar_spans_exactly_the_row_above_it(
     cells = len(re.findall(r"<td\b", row))
 
     bar_at = html.index("row-editor-bar")
-    colspan = int(re.search(r'colspan="(\d+)"', html[bar_at:]).group(1))
+    bar_colspan = re.search(r'colspan="(\d+)"', html[bar_at:])
+    assert bar_colspan is not None
+    colspan = int(bar_colspan.group(1))
     assert colspan == cells, (colspan, cells)
 
 

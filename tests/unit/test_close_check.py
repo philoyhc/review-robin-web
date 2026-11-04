@@ -30,6 +30,7 @@ def _load():
     spec = importlib.util.spec_from_file_location("close_check_under_test", path)
     assert spec is not None
     module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
     spec.loader.exec_module(module)
     return module
 
@@ -927,5 +928,6 @@ def test_the_app_folders_are_ci_lanes_app_folders() -> None:
     spec = importlib.util.spec_from_file_location("ci_lanes_for_close_check", REPO_ROOT / "tools" / "ci_lanes.py")
     assert spec is not None
     lanes = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
     spec.loader.exec_module(lanes)
     assert {d + "/" for d in cc.APP_DIRS} == set(lanes.APP_DIRS)

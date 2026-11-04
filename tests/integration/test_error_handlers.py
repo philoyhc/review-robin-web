@@ -24,6 +24,8 @@ from app.auth.identity import AuthenticatedUser, get_current_user
 from app.db.session import get_db
 from app.services.session_guard import SessionStateConflict
 
+from ._lookups import must_search
+
 app = rrw_app()
 
 _test_router = APIRouter()
@@ -117,7 +119,7 @@ def test_the_error_card_takes_the_card_shape() -> None:
     resp = TestClient(app).get("/no/such/page")
 
     style = resp.text.split("<style>", 1)[1].split("</style>", 1)[0]
-    card = re.search(r"\.error-card\s*\{([^}]*)\}", style).group(1)
+    card = must_search(r"\.error-card\s*\{([^}]*)\}", style).group(1)
     assert re.search(r"border:\s*2px solid var\(--e-border\)", card)
     assert re.search(r"border-radius:\s*8px", card)
     padding = re.search(r"padding:\s*(\d+)px\s*;", card)

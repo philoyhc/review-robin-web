@@ -195,6 +195,7 @@ def test_commit_rebuilds_session_from_extract(
     assert r.value == "4"
     assert r.version == 1
     assert r.saved_at.replace(tzinfo=None) == dt.datetime(2026, 6, 1, 9, 0)
+    assert r.submitted_at is not None
     assert r.submitted_at.replace(tzinfo=None) == dt.datetime(2026, 6, 1, 9, 5)
 
     # The stash was consumed on a successful commit.

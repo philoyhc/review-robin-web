@@ -41,9 +41,11 @@ def _add_lookalike(db: Session, session_id: int) -> None:
     reviewee = db.execute(
         select(Reviewee).where(Reviewee.session_id == session_id)
     ).scalars().first()
+    assert reviewee is not None
     instrument = db.execute(
         select(Instrument).where(Instrument.session_id == session_id)
     ).scalars().first()
+    assert instrument is not None
     db.add(reviewer)
     db.flush()
     db.add(
@@ -191,6 +193,7 @@ def test_a_parenthesised_tag_value_is_not_treated_as_a_pick(
     reviewer = db.execute(
         select(Reviewer).where(Reviewer.session_id == s.id)
     ).scalars().first()
+    assert reviewer is not None
     reviewer.tag_3 = "Group (B)"
     db.commit()
 

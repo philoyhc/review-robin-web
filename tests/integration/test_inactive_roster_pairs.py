@@ -100,6 +100,7 @@ def test_an_inactive_side_keeps_its_pairs_excluded_and_its_responses(
     assert len(rows) == 4 and all(r.include for r in rows.values())
 
     field = db.execute(select(InstrumentResponseField)).scalars().first()
+    assert field is not None
     db.add(
         Response(
             assignment_id=rows[("Ana", "Dan")].id,
