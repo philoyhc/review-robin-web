@@ -62,6 +62,12 @@ it unnecessary, and it would put a state change on a reviewer's GET.
   for being new; it carries timed lifecycle changes only, no export or
   sync; its lock key is RRW's own. With it, a read-only status call sees
   current state without a page view.
+- **14C Item 2's report emails** (group C, 2026-11-04): the clock's audit
+  events are what those reports will read when 14G mails them, so each
+  crossing writes **one** event whichever trigger fires it first (clock
+  or page view), and a report keyed on it fires once. A persistent
+  activation failure now happens with nobody looking and no mail until
+  14G, so 14F's lobby due-action marker includes it.
 
 ## Blast radius (measured)
 
@@ -102,6 +108,12 @@ Taken 2026-11-02 at `fffd4c28`.
 - Default interval: 120 s proposed. Author.
 - Should the loop also stamp the release window's start and end in the
   audit log? Proposed no: the window is checked on arrival. Author.
+  14C Item 2's group C report "Release window opened or ended" needs
+  that stamp to fire once; answer the two together (2026-11-04).
+- Should the clock's deadline event carry *n* of *N* submitted at the
+  moment it fires? 14C Item 2's "Deadline reached" report quotes it;
+  without it, 14G recomputes at send time, when the counts may have
+  moved. Proposed yes, if cheap. Author (2026-11-04).
 
 ## Out of scope
 

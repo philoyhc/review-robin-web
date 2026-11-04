@@ -68,6 +68,9 @@ gateway's 120 s; revisit only if measured otherwise.
     batching and stamps stay RRW's. No token crosses apps.
   - Sends only on an operator's click; nothing sends on a session's
     creation.
+- **The lobby's due-action marker includes a persistent scheduled
+  activation failure** (2026-11-04): with 14E's clock it fails with
+  nobody looking, and until 14G nothing mails it.
 - **Device class** (`spec/visual_style_rrw.md`, "Device classes"): the
   operator pages this adds are desktop-oriented.
 
