@@ -78,6 +78,10 @@ no other RRW branch open, since its import and lint fixes touch most files.
    `guide/no_scheduling_fallback.md`. A shared mailbox under an app-wide
    permission is a credential every mounted app could reach: plan one
    per app, or rule a shared one accepted (`guide/interoperability.md` §2).
+   **Switching `RRW_SCHEDULED_SEND` on** (14E rung 0) would fire every
+   reminder already past due on every open session in one pass, after
+   operators may have reminded by hand: 14G marks those skipped, not
+   sent, when it turns the setting on.
 
 ### Stubs
 

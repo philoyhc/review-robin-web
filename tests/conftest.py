@@ -18,6 +18,12 @@ os.environ.setdefault("AUDIT_STRICT_MODE", "true")
 # to off so turning it on here cannot hide that.
 os.environ.setdefault("REHYDRATE_ENABLED", "true")
 
+# Auto-send ships off until mail can go on a clock (segment 14E rung 0,
+# ``app/config.py``). The suite runs with it on so the auto-send
+# machinery stays covered; ``tests/integration/test_scheduled_send_off.py``
+# turns it off and pins the shipped default.
+os.environ.setdefault("RRW_SCHEDULED_SEND", "true")
+
 # A developer's ``.env`` (the dev container writes one from
 # ``.env.example``) sets ``ALLOW_FAKE_AUTH=true``, which folds the fake
 # identity into the super-admin set (``app/auth/roles.py``) and fails the

@@ -449,11 +449,13 @@ def build_schedule_timeline(
     the full session-lifecycle visualisation.
     """
     rows: list[tuple[datetime, str]] = []
+    send = scheduled_events.scheduled_send_enabled()
     anchor = review_session.scheduled_activate_at
     if anchor is not None:
         anchor_aware = anchor if anchor.tzinfo else anchor.replace(tzinfo=timezone.utc)
         rows.append((anchor_aware, "Session activates (Start)"))
-        offsets = review_session.invite_offsets or []
+        # Auto-send off (14E rung 0): no auto-send row is shown.
+        offsets = (review_session.invite_offsets or []) if send else []
         if isinstance(offsets, list):
             for entry in offsets:
                 if not isinstance(entry, str):
@@ -474,7 +476,7 @@ def build_schedule_timeline(
             deadline if deadline.tzinfo else deadline.replace(tzinfo=timezone.utc)
         )
         rows.append((deadline_aware, "Session ends (End)"))
-        reminder_offsets = review_session.reminder_offsets or []
+        reminder_offsets = (review_session.reminder_offsets or []) if send else []
         if isinstance(reminder_offsets, list):
             for entry in reminder_offsets:
                 if not isinstance(entry, str):
@@ -569,6 +571,9 @@ def build_auto_send_invites_caption(
       created → green calm caption ("System will dispatch
       automatically; you can also Send all now").
     """
+    # Auto-send off (14E rung 0): no caption promises a send.
+    if not scheduled_events.scheduled_send_enabled():
+        return None
     offsets = review_session.invite_offsets or []
     if not isinstance(offsets, list) or not offsets:
         return None
@@ -682,6 +687,9 @@ def build_auto_send_reminders_caption(
       dispatch automatically; you can also Send reminders to
       incomplete now").
     """
+    # Auto-send off (14E rung 0): no caption promises a send.
+    if not scheduled_events.scheduled_send_enabled():
+        return None
     offsets = review_session.reminder_offsets or []
     if not isinstance(offsets, list) or not offsets:
         return None
@@ -785,6 +793,9 @@ def build_manual_activate_cancellation(
     if not lifecycle.is_validated(review_session):
         return None
     if review_session.scheduled_activate_at is None:
+        return None
+    # Auto-send off (14E rung 0): there is nothing to cancel.
+    if not scheduled_events.scheduled_send_enabled():
         return None
     offsets = review_session.invite_offsets or []
     if not isinstance(offsets, list) or not offsets:

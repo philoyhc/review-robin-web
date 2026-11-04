@@ -101,6 +101,20 @@ class Settings(BaseSettings):
     # it is this one flag.
     rehydrate_enabled: bool = False
 
+    # Segment 14E rung 0 — auto-send off until mail can go on a clock.
+    # `RRW_SCHEDULED_SEND`, default off: the two auto-send fields
+    # (`invite_offsets`, `reminder_offsets`) render disabled with their
+    # stored values kept, the page-view pass (and the clock, rung 1) fires no
+    # scheduled invite or reminder, and no page promises automatic
+    # sending. Segment 14G turns it on (`guide/no_scheduling_fallback.md`).
+    # The test suite sets it on, as for Rehydrate, so the auto-send
+    # machinery stays covered; `tests/integration/test_scheduled_send_off.py`
+    # pins the shipped default.
+    scheduled_send: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("RRW_SCHEDULED_SEND", "scheduled_send"),
+    )
+
     # When True, ``audit.write_event`` raises on a detail-shape violation;
     # when False (production default), it issues a ``warnings.warn`` and
     # writes the row anyway. Auditing is observability — dropping events because of

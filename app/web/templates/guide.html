@@ -276,8 +276,14 @@
     </figure>
     <p>
       Give the session a name and a short unique code, optionally set a
-      <strong>Start</strong>, an <strong>End</strong> and a description. To
-      send invites and reminders automatically, list one or more offsets,
+      <strong>Start</strong>, an <strong>End</strong> and a description.
+      {% if not scheduled_send %}
+      Scheduled sending isn't available on this deployment, so the
+      <strong>Send invites</strong> and <strong>Send reminders</strong> boxes
+      are greyed out: send from Invitations when it's time. Where it is
+      available, they work as follows.
+      {% endif %}
+      To send invites and reminders automatically, list one or more offsets,
       separated by commas: <strong>Send invites</strong> counts back from
       Start and <strong>Send reminders</strong> from End. Write each as a
       minus sign, <code>P</code>, then days (<code>D</code>), and after a

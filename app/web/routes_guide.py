@@ -29,6 +29,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.db.models import User
 from app.db.session import get_db
+from app.services import scheduled_events
 from app.web.deps import get_or_create_user
 from app.web import views
 from app.web.return_to import resolve_return_to
@@ -97,5 +98,7 @@ def guide(
             "visible_sections": visible_sections(db, user),
             # Participant audit M8.
             "participant_chrome": views.uses_participant_chrome(user),
+            # 14E rung 0: the offsets paragraph says auto-send is off.
+            "scheduled_send": scheduled_events.scheduled_send_enabled(),
         },
     )
