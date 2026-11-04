@@ -90,7 +90,7 @@ finding is among them.
 - `spec/rrw_functional_spec.md`: **19** (G1–G19).
 - `docs/security_posture.md`: **6** (H1, H4–H8).
 - `docs/architecture.md`: **3** (H9–H11).
-- `docs/deployment_nus.md`: **3** (H12–H14).
+- `docs/deployment_<institution>.md`: **3** (H12–H14).
 - `docs/cli_setup.md`: 1 (H15).
 - `docs/local_setup.md`: 3 (H2, H3, H19).
 - `docs/deployment_dev.md`: 2 (H20, H22).
@@ -111,7 +111,7 @@ finding is among them.
 - The Extract Setup card contract: `extract_data.md` or `session_home.md`, not both (D15).
 - `settings_inventory.md`'s precedence block becomes a pointer to `csv_contracts.md` (D26).
 - `ui_elements.md`'s "Cross-cutting rules" section (E12).
-- `deployment_nus.md` §3 becomes a pointer to `docs/nus_azure_status_v7.md` (H13).
+- `deployment_<institution>.md` §3 becomes a pointer to `docs/nus_azure_status_v7.md` (H13).
 
 ## 4. Retire
 

@@ -2350,8 +2350,8 @@ Three changes, each the smallest thing that settles its weakness.
 3. **`docs/unenforced_conventions.md` §1.6** — *vacuity is not
    coverage*.
 
-Rejected for (1): **`docs/deployment_nus.md` §10**, whose heading is
-literally "Verification checklist (on NUS, before flipping the trigger)"
+Rejected for (1): **`docs/deployment_<institution>.md` §10**, whose heading is
+literally "Verification checklist (on the institutional deployment, before flipping the trigger)"
 and which was the obvious home. The author's reason, and it is the
 better one: that runbook will be rewritten repeatedly as details are
 settled with IT, and an item parked in a section about to be rewritten is
@@ -2385,7 +2385,7 @@ judgement being asked for.
   — or when the runbook stops moving and can hold them. The file is a
   waiting room, not a second roadmap.
 - **Not a runbook.** It says what is owed *after* deploying, not how to
-  deploy, and does not compete with `docs/deployment_nus.md`.
+  deploy, and does not compete with `docs/deployment_<institution>.md`.
 
 ### Judgment calls — decided
 
@@ -2421,7 +2421,7 @@ not a plan, and is excluded from the three counts above.)*
 1. **PR 1 — all three.** They share no code and no file, but they are one
    reading of one section and splitting them would produce three PRs a
    reviewer must hold together anyway. Must not touch:
-   `docs/deployment_nus.md`, any spec, or any code.
+   `docs/deployment_<institution>.md`, any spec, or any code.
 
 ### Definition of done
 
@@ -2448,7 +2448,7 @@ not a plan, and is excluded from the three counts above.)*
 ### Open questions
 
 - **When does the checklist retire?** When its last item is done, or when
-  `docs/deployment_nus.md` stops churning and can absorb them.
+  `docs/deployment_<institution>.md` stops churning and can absorb them.
   **Decides:** the author, at the deployment. Not a blocker.
 
 ### Out of scope
@@ -2460,7 +2460,7 @@ not a plan, and is excluded from the three counts above.)*
 - **Reopening the two conceded drift classes.** They are conceded
   deliberately and in writing (`docs/unenforced_conventions.md` §1.4,
   §1.5); reopening needs new evidence, not another pass.
-- **Anything in `docs/deployment_nus.md`.** See Decision.
+- **Anything in `docs/deployment_<institution>.md`.** See Decision.
 
 ### Doc impact
 
@@ -2479,12 +2479,12 @@ not a plan, and is excluded from the three counts above.)*
 no code.**
 
 Intended one PR; shipped one PR. The ladder's "must not touch" held —
-`docs/deployment_nus.md`, the specs and `app/` are untouched.
+`docs/deployment_<institution>.md`, the specs and `app/` are untouched.
 
 **Decisions confirmed at build:**
 
 - **The runbook was the obvious home and the wrong one** (author,
-  2026-09-08). `docs/deployment_nus.md` §10 is literally the
+  2026-09-08). `docs/deployment_<institution>.md` §10 is literally the
   pre-cutover verification checklist, which is why the recommendation
   named it. The author's objection is the better argument: that file is
   about to be rewritten repeatedly as details settle with IT, and an

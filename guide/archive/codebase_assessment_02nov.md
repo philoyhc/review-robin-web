@@ -17,7 +17,7 @@ roster) is still open, at its spec pass.
   findings were closed, including the functional-spec trim three snapshots
   had proposed (#3247).
 - **Deployment out of this repository** (#3251 → #3259, #3514, #3515).
-  The NUS deployment material, `deploy_nus.yml` and the dev slot's notes
+  The institutional deployment material, `deploy_<institution>.yml` and the dev slot's notes
   moved to the private deployment repository. `docs/deployment.md` is now
   the one general picture.
 - **CI by path, and Postgres in parallel** (segments 22A and 22B, #3265 →
@@ -48,7 +48,7 @@ own documents. Window `00501f2e..2ffb0f42`: **276 merge commits, 520
 non-merge commits**, PRs #3226–#3521, 2026-10-22 → 2026-11-02, twelve
 calendar days. `main`'s first-parent line holds 298 commits: the 276
 merges, 20 squash-merged PRs (#3226 → #3229 and others early in the
-window) and two direct commits (deleting `deploy_nus.yml`, and one upload).
+window) and two direct commits (deleting `deploy_<institution>.yml`, and one upload).
 
 **This document stands alone** and archives
 `guide/archive/codebase_assessment_22oct.md` alongside it. Authority lives
@@ -482,7 +482,7 @@ Worth remembering from the window:
   The register's five rows of it (R2, C1, C2, L1, L2) are fixed, and the
   new migrations add columns only. M1 is its cousin: data *lost* when an
   outside service cannot answer, rather than data re-judged.
-- **`deploy_nus.yml` left the repository** (2026-10-24) with the move to
+- **`deploy_<institution>.yml` left the repository** (2026-10-24) with the move to
   the private deployment repository. A release can no longer be started
   from here, which is what `CONTRIBUTING.md` now says.
 
@@ -570,10 +570,10 @@ email**, now with an unblocked plan.
 - Move 1, *fix the register's medium defects, starting with O1 and R1*:
   **shipped**. O1 in #3228, R1 in #3229, the stored-data family (R2, L1,
   C1) in #3230 → #3233, the register done by #3238.
-- Move 2, *bring the deployment documents up to the host before any NUS
+- Move 2, *bring the deployment documents up to the host before any institutional
   deploy*: **shipped, differently**. Corpus H1–H21 were fixed (#3248),
   then the material left for the private repository (#3251 → #3259,
-  #3514). The first NUS deploy ran from there.
+  #3514). The first institutional deploy ran from there.
 - Move 3, *rule the functional-spec trim (corpus F11)*: **shipped**
   (#3247, 2,596 → 1,892 lines). It was in its third snapshot.
 

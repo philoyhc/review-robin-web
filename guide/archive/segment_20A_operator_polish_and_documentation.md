@@ -4,7 +4,7 @@
 Azure deployment had successfully concluded (decision 2026-09-05). The
 runbook for that deployment is kept privately with the deployment, not
 in this repository (since 2026-10-24); "concluded"
-means the NUS host is provisioned, deployed, serving, and verified,
+means the institutional host is provisioned, deployed, serving, and verified,
 with the personal Azure web app retired. Same gate, same reason as
 Segment 14B: this segment's remaining scope is *documentation of a
 real deployment*, and writing it against a host that does not yet
@@ -62,9 +62,9 @@ had already shipped under other segments; three move out; three stay.
 | 4. Sample CSV templates | **not built** — nothing downloadable, no blank-template route | **19E** |
 | 5. Sample session fixture | **not built** — no seed / demo / fixture session | **19E** |
 | 6. Operator guide | **✅ shipped**, and **relocated 2026-09-06**: was `docs/quickstart.md`, now the in-app Guide at `/guide` (Segment 19E rung 2), with the file retired to `docs/archive/quickstart.md` | currency pass stays here, against the Guide |
-| 7. Administrator guide | **partial, and host-dependent.** The material exists scattered across `docs/operations_runbook.md`, `docs/deployment_dev.md`, the NUS runbook (kept privately with the deployment), `docs/backup_restore.md`, `docs/security_posture.md`; there is no single administrator guide, and the one that matters describes the *institutional* host | **stays — the gated item** |
+| 7. Administrator guide | **partial, and host-dependent.** The material exists scattered across `docs/operations_runbook.md`, `docs/deployment_dev.md`, the institutional runbook (kept privately with the deployment), `docs/backup_restore.md`, `docs/security_posture.md`; there is no single administrator guide, and the one that matters describes the *institutional* host | **stays — the gated item** |
 | 8. Developer setup guide | **✅ shipped** as `docs/local_setup.md` (322 lines) | done |
-| 9. Troubleshooting guide | **✅ shipped for the dev slot** as `docs/troubleshooting.md`. Its failure modes are the personal-Azure ones; the institutional host will have its own (tenant, Easy Auth, NUS network policy) | institutional half stays here |
+| 9. Troubleshooting guide | **✅ shipped for the dev slot** as `docs/troubleshooting.md`. Its failure modes are the personal-Azure ones; the institutional host will have its own (tenant, Easy Auth, institutional network policy) | institutional half stays here |
 | 10. Known limitations page | **✅ shipped** as `docs/known_limitations.md` | currency pass stays here |
 | + Technical-support contact (global) | **not built.** Mechanism is an env var + footer + error-page surfaces and needs no host; only the *address* is a deploy-time decision, and an unset var renders nothing | **`guide/todo_master.md` stub** (mechanism now, value at deploy) *(was "19C Item 8", corrected 2026-09-08)* |
 
@@ -123,7 +123,7 @@ Closed 2026-11-01 in one PR. Intended versus done:
   - the runbook's allowlist rule and Accounts Management guards stated exactly;
   - the SMTP-key rotation note restored.
   
-  It also saw `docs/security_posture.md` still describing the NUS host before it served, which is post-Azure item 2's.
+  It also saw `docs/security_posture.md` still describing the institutional host before it served, which is post-Azure item 2's.
 
 ## Open questions
 
@@ -145,7 +145,7 @@ Closed 2026-11-01 in one PR. Intended versus done:
   whole point of the 2026-09-05 split: if it does not need the
   deployment, it belongs in 19E / 19C, not here. Item 4's mechanism is
   the exception, kept beside the address it serves.
-- Anything that names NUS resources: it belongs in Cordware (author,
+- Anything that names institutional resources: it belongs in Cordware (author,
   2026-11-01).
 - Re-doing the four items the audit found already shipped. A currency
   pass over the Guide / `known_limitations` is not a rewrite.

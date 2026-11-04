@@ -1,7 +1,7 @@
 # Cordware Repository and Deployment Strategy
 
 **Version:** 0.4 draft  
-**Status:** Adopted project direction following NUS IT advice on 16 October 2026.  
+**Status:** Adopted project direction following the institution's IT advice on 16 October 2026.  
 **Architecture:** Multi-repo development, Cordware integration repo, one production deployment.
 
 ---

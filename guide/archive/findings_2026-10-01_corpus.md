@@ -637,7 +637,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - ~~H13 med · `:117` · SMTP is live, so `SMTP_ENCRYPTION_KEY` is needed now.~~ Done in #2738, on a corrected premise: SMTP does not send, but the Settings page encrypts operator SMTP passwords, so the key is needed now.
   - ~~H14 low · `:50` · the artefact includes `antenv/`.~~ Done in #2738.
   - ~~H15 low · `:322` · that audit is shipped.~~ Done in #2738.
-- `deployment_nus.md`
+- `deployment_<institution>.md`
   - ~~H11 `:337`.~~ Done in #2738.
   - ~~H16 med · statuses settled by v7; consolidate.~~ Done in #2738.
   - ~~H17 med · database `rrw` vs v7's `reviewrobin`.~~ Done in #2738.
@@ -649,8 +649,8 @@ One line each: id · severity · where · finding · decides. A line with no
   - ~~H22 low · SMTP credentials are per user, encrypted in the DB.~~ Done in #2738.
 - `azure_github_setup.md`
   - ~~H23 med · `:64-73` · a DML-only role can't run migrations.~~ Done in #2738.
-  - ~~H24 med · retire or consolidate into `deployment_nus.md`.~~ Done in #2738.
-  - ~~H25, H26, H27 low · a duplicate pointer; `deploy_nus.yml`/`NUS_*`; local Docker Postgres is deferred.~~ Done in #2738.
+  - ~~H24 med · retire or consolidate into `deployment_<institution>.md`.~~ Done in #2738.
+  - ~~H25, H26, H27 low · a duplicate pointer; `deploy_<institution>.yml`/`<INSTITUTION>_*`; local Docker Postgres is deferred.~~ Done in #2738.
 - `cli_setup.md`
   - ~~H28 med · `:229,240` · Python ≥3.12.~~ Done in #2738.
   - ~~H29 low · node is needed.~~ Done in #2738.
@@ -664,7 +664,7 @@ One line each: id · severity · where · finding · decides. A line with no
 - `README.md` (docs)
   - ~~I11 med · no row for `unenforced_conventions.md`.~~ Done in #2738.
 - `known_limitations.md`
-  - ~~I3 med · `:10-23` · infra posture is silent on the provisioned NUS environment (at cutover).~~ Done in #2738.
+  - ~~I3 med · `:10-23` · infra posture is silent on the provisioned institutional environment (at cutover).~~ Done in #2738.
   - ~~I10 low · no `beforeunload` guard; no autosave.~~ Done in #2738.
 - `unenforced_conventions.md`
   - ~~I20 med · `:403-407` · "no browser in CI" is false; leans on the dev slot.~~ Done in #2738.

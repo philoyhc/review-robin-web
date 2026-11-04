@@ -5,7 +5,7 @@
 **Status:** Reviewed functional baseline. Suitable for agent planning and explicitly bounded implementation slices; unresolved policy/engineering decisions below must not be invented by an agent. Not a blanket implementation authorization.  
 **Application name:** ApplyDesk  
 **Mount:** `/applydesk/`  
-**Production URL:** `https://cordware.nus.edu.sg/applydesk/`  
+**Production URL:** `https://<institutional host>/applydesk/`  
 **Development home:** Public `philoyhc/review-robin-web` repository  
 **Production integration:** Private `philoyhc/cordware` repository, through the existing allowlisted import and release process
 
@@ -439,7 +439,7 @@ This section is an **implementation control**, not a replacement for the product
 
 1. Work only in the canonical public `philoyhc/review-robin-web` repository for application source, tests, public-safe spec and guides. Treat private `philoyhc/cordware` as a deployment/import owner; do not change production release code or infrastructure as part of an ApplyDesk feature slice without a separate approved deployment plan.
 2. At task start, inspect current `main`, root `AGENTS.md`, `constitution.md`, `rrw_sdd_in_practice.md`, `cordware/spec/host.md`, `cordware/spec/identity.md`, `utilityapps/spec/utilities.md`, and current RRW form/instrument specs and implementation. Do not treat the examples in this file as exact repository APIs. Prefer current contracts over stale examples and report discrepancies.
-3. Keep `applydesk` a standalone mount with its own DB, models, audit and authorization. `cordware` stays a stateless identity/hosting shell. Do not import RRW business modules or add a new shared user/roles table to the host. All NUS deployment configuration stays private.
+3. Keep `applydesk` a standalone mount with its own DB, models, audit and authorization. `cordware` stays a stateless identity/hosting shell. Do not import RRW business modules or add a new shared user/roles table to the host. All institutional deployment configuration stays private.
 4. For each implementation segment, write a plan identifying behavior, data ownership, migration impact, access boundaries, test/CI lanes, failure/retry behavior and manual browser acceptance. Close the segment by reconciling implemented behavior into `applydesk/spec/`; do not use this working functional draft as proof that a feature is implemented.
 5. Keep local fake identities and test fixtures synthetic. No real applicant documents, directory exports, tokens, tenant-specific secrets, or live institutional data in public tests.
 

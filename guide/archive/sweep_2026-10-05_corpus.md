@@ -85,7 +85,7 @@ is among them.
 - `docs/known_limitations.md`: 3 (H4, H5, H10).
 - `docs/architecture.md`: 1 (H6).
 - `docs/local_setup.md`: 2 (H9, H12).
-- `docs/deployment_nus.md`: 1 (H11).
+- `docs/deployment_<institution>.md`: 1 (H11).
 - `docs/cli_setup.md`: 1 (H14).
 - `rrw_sdd_in_practice.md`: **3** (I1, I6, I9).
 - `new_project_practices_setup.md`: **3** (I2–I4).

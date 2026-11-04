@@ -48,9 +48,9 @@ A few words you'll see throughout:
 
 ## 2. Before you start
 
-- RRW runs as a **hosted web app on NUS Azure** — there's nothing to install. Access it via the **web address** to the operator page (or sessions lobby) in a browser.
-- **Sign in** with your NUS MS365 account — the app uses single sign-on, so there's no separate password to create.
-- If your NUS email is **whitelisted**, you'll land on the **Sessions** list (your lobby). If it's empty, that's
+- RRW runs as a **hosted web app on institutional Azure** — there's nothing to install. Access it via the **web address** to the operator page (or sessions lobby) in a browser.
+- **Sign in** with your institutional MS365 account — the app uses single sign-on, so there's no separate password to create.
+- If your institutional email is **whitelisted**, you'll land on the **Sessions** list (your lobby). If it's empty, that's
   expected — you haven't made a session yet.
 
 > 📷 **Screenshot —** `01-sign-in.png` — *the institutional sign-in screen

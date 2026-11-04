@@ -34,11 +34,11 @@ post-Azure evidence item remains open. The available shallow history starts on
 pretending it covers the full interval.
 
 The next move should still be operational, not another feature segment, but
-deployment cannot yet be treated as a project-controlled next action. The NUS
+deployment cannot yet be treated as a project-controlled next action. The institutional
 landing zone now has the private Web App, PostgreSQL, Key Vault, telemetry,
 Easy Auth, OIDC deployment identity, public IP, DNAT, and Application Gateway
 plumbing provisioned. Two external decisions block the remaining path: Microsoft
-Support must identify runner VM capacity in Southeast Asia, and NUS must settle
+Support must identify runner VM capacity in Southeast Asia, and the institution must settle
 the production hostname. Once those clear, finish the runner, gateway, secrets,
 migrations, and deployment; then run the six post-Azure checklist items and let
 real browser, identity, latency, delivery, and restore evidence select the next
@@ -228,12 +228,12 @@ HTTP 404 demonstrates network reachability, not application health.
 The remaining uncertainty is now more precisely divided:
 
 - **Two external blockers:** repeated `SkuNotAvailable` failures prevent the
-  private self-hosted runner VM, pending Microsoft Support advice; and NUS has
+  private self-hosted runner VM, pending Microsoft Support advice; and the institution has
   not yet decided the production domain/hostname needed for DNS, TLS, gateway
   routing, and the final Easy Auth redirect URI.
 - **Project work after those blockers clear:** register and verify the private
   runner, validate its firewall path and private Key Vault access, create the
-  least-privilege database role, store production secrets, switch the NUS
+  least-privilege database role, store production secrets, switch the institutional
   deployment workflow to the runner, run migrations, and complete HTTPS gateway
   routing with App Service host-header handling and an application health probe.
 - **Evidence still owed after deployment:** real Easy Auth claims and role
@@ -272,9 +272,9 @@ observation as scheduled work.
 ### 1. Hold feature work while the two deployment blockers clear
 
 Do not substitute local product work for progress that currently depends on
-Microsoft Support and the NUS hostname decision. Keep the deployable artifact
+Microsoft Support and the institutional hostname decision. Keep the deployable artifact
 ready and avoid hard-coding a guessed public hostname or making further runner
-VM attempts until NUS receives an approved/capacity-backed SKU path.
+VM attempts until the institution receives an approved/capacity-backed SKU path.
 
 ### 2. Complete the private deployment path, then test 19T
 

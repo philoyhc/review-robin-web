@@ -185,7 +185,7 @@ register marks the six as done with this PR.
 
 ## Not here
 
-- **The NUS deployment and email.** These are external and blocked
+- **The institutional deployment and email.** These are external and blocked
   (`docs/nus_azure_status_v7.md`, Segment 14B). Nothing in this register
   shortens them.
 - **The builder-script extraction.** This waits for its trigger

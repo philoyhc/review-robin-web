@@ -111,7 +111,7 @@ For each normalized, valid, distinct input address:
 
 1. Query Graph's **user** directory for an exact `mail` match.
 2. Query for an exact `userPrincipalName` match if necessary; or combine compatible queries if the implementation confirms equivalent semantics.
-3. **Optional alias probe**, behind an explicitly enabled capability flag: attempt an exact match in `proxyAddresses` using a Graph query form demonstrated to work in the NUS tenant for the delegated token. SMTP address case and the primary/secondary distinction must be handled correctly. This is a proof-of-capability gate, **not** an assumed feature of `User.ReadBasic.All`.
+3. **Optional alias probe**, behind an explicitly enabled capability flag: attempt an exact match in `proxyAddresses` using a Graph query form demonstrated to work in the institutional tenant for the delegated token. SMTP address case and the primary/secondary distinction must be handled correctly. This is a proof-of-capability gate, **not** an assumed feature of `User.ReadBasic.All`.
 4. Deduplicate results by Entra `id` (within the tenant). Do not infer a match from display names or approximate string similarities.
 5. Return Graph's basic attributes, plus the *method by which the account was resolved*.
 
@@ -119,7 +119,7 @@ Lookups must be safely URL-encoded, properly escape OData string literals, and m
 
 ### Permission and alias caveat
 
-Microsoft Graph documents `proxyAddresses` as the Exchange-related list of associated mailbox addresses, and documents certain advanced queries on it. **It remains to be established empirically** whether the existing delegated permission permits a useful exact-alias lookup in NUS. Access to the `proxyAddresses` result property, filtering by it, and NUS directory policy should be tested separately. Do not silently fall back to broad tenant-directory download. If alias lookup needs additional permission, document the exact least-privileged option and obtain approval before enabling it.
+Microsoft Graph documents `proxyAddresses` as the Exchange-related list of associated mailbox addresses, and documents certain advanced queries on it. **It remains to be established empirically** whether the existing delegated permission permits a useful exact-alias lookup in the institutional tenant. Access to the `proxyAddresses` result property, filtering by it, and institutional directory policy should be tested separately. Do not silently fall back to broad tenant-directory download. If alias lookup needs additional permission, document the exact least-privileged option and obtain approval before enabling it.
 
 An address that belongs to a distribution list, shared mailbox, guest, external user, or other non-user object may not resolve via `/users`. The checker makes no assertion about mailbox deliverability.
 
@@ -191,14 +191,14 @@ A separate, carefully reviewed migration tool could later use the CSV to reconci
 ## 9. Hosting, authentication and deployment
 
 - **Development:** Public RRW monorepo only; **no app code changes** in the private Cordware repository.
-- **Production:** Cordware's private importer copies allowlisted runtime code from an approved RRW SHA; private Cordware owns Azure deployment and NUS-specific environment details.
+- **Production:** Cordware's private importer copies allowlisted runtime code from an approved RRW SHA; private Cordware owns Azure deployment and institution-specific environment details.
 - **Code/package proposal:** `utilityapps/` with `main.py`, `email_check/` and minimal shared UI/templates. Keep prose in `utilityapps/docs/` (excluded from production import). Do not create `tools/` as the application package.
 - **Mount:** Registry entry `utilities` at `/utilities`, landing page title **Cordware Utilities**. Health endpoint `/utilities/health` must be added to Easy Auth excluded paths and documented in the private Cordware setup; all other routes remain authenticated.
 - **Independence:** `CORDWARE_APPS=utilities` starts the utility alone with Cordware locally and in tests; it must not import `app` (Review Robin) or `residentialapps` business modules or use their database URLs.
 - **App-selection:** Add `utilities` to private `deployment/apps.toml` only when the first deployment is authorized; no assumption that it is enabled immediately.
 - **Importer:** Add the new top-level `utilityapps` path in the private allowlist, bump the rules version, and verify imports. The current allowlist fails closed for unknown top-level paths.
 - **Stack:** Existing FastAPI/Jinja, shared design tokens and navigation patterns, no frontend framework. No application database is required for v1.
-- **Local and CI:** A fake Graph client with deterministic fixtures; never use real NUS directory data in public tests or fixtures. Explicit real-tenant testing follows completion of Easy Auth.
+- **Local and CI:** A fake Graph client with deterministic fixtures; never use real institutional directory data in public tests or fixtures. Explicit real-tenant testing follows completion of Easy Auth.
 
 ## 10. Privacy, security and operational behavior
 

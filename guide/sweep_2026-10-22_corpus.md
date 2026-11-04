@@ -38,7 +38,7 @@ three items stayed carried by name:
 - `spec/architecture.md`: the `refuse_oversized_ids` dependency (F3).
 - `spec/operator_button_audit.md`: the date-time field's buttons (E1).
 - `spec/rehydrate.md`: the rule-set refusals at the settings apply (D5).
-- `docs/deployment_dev.md`, `docs/deployment_nus.md`: `CORDWARE_APPS` (H8).
+- `docs/deployment_dev.md`, `docs/deployment_<institution>.md`: `CORDWARE_APPS` (H8).
 - `rrw_sdd_in_practice.md`, `rrw_design_rationale.md`: RRW under the Cordware host (H21).
 
 ## 2. Update in place
@@ -77,11 +77,11 @@ Ids are in the register; a **bold** count includes a medium finding.
 - `docs/operations_runbook.md`, `docs/known_limitations.md`,
   `docs/database.md`, `docs/troubleshooting.md`, `docs/backup_restore.md`:
   **1** each (H1); `docs/known_limitations.md` also H3.
-- `docs/deployment_nus.md`: **4** (H1, H3, H4, H17), plus H7.
+- `docs/deployment_<institution>.md`: **4** (H1, H3, H4, H17), plus H7.
 - `docs/README.md`, `docs/architecture.md`: **1** each (H3); `docs/architecture.md` also H7.
 - `docs/cordware_stage0_baseline.md`: 1 (H5).
 - `docs/cordware_repository_strategy_v0.8.md`: **3** (H12, H13, H14).
-- `docs/cordware_nus_azure_status_2026-10-16_v8.md`: 2 (H15, H16).
+- `docs/cordware_<institution>_azure_status_2026-10-16_v8.md`: 2 (H15, H16).
 - `docs/local_setup.md`: 1 (H6).
 - `docs/security_posture.md`: 1 (H7).
 - `docs/deployment_dev.md`: 1 (H9), plus H8 above.

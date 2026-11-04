@@ -239,7 +239,7 @@ bounded plan for anything larger.
 
 ### 2. Deploy and execute the institutional evidence checklist
 
-Run the NUS deployment path with representative data. Verify real identity
+Run the institutional deployment path with representative data. Verify real identity
 headers and every role landing; the operator-to-reviewer-to-results journey;
 email decisions; browser and accessibility behavior; query/latency figures;
 logging; transfer compression; and restore. Record observed failures, not

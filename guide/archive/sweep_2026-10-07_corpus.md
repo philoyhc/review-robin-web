@@ -79,7 +79,7 @@ is among them; *code* ids are defects where the file is right.
 - `docs/known_limitations.md`: 2 (H3, H5).
 - `docs/cli_setup.md`: 1 (H4).
 - `docs/architecture.md`: 1 (H6).
-- `docs/deployment_nus.md`: 1 (H6).
+- `docs/deployment_<institution>.md`: 1 (H6).
 - `docs/database.md`: 1 (H7).
 - `docs/unenforced_conventions.md`: 1 (H7).
 - `rrw_sdd_in_practice.md`: **4** (I1–I4).

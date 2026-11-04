@@ -22,7 +22,7 @@ Since the 2026-06-03 snapshot:
 - **18Q — blob-storage prioritization** (PRs #1880 → #1883) — a decision/plan
   arc; blob storage evaluated and **deferred** (no production code).
 - **Quickstart / deployment docs + forward stubs** (PRs #1843, #1851, #1884 →
-  #1889) — quickstart guide, NUS deployment doc, a `future-randomizer` stub.
+  #1889) — quickstart guide, institutional deployment doc, a `future-randomizer` stub.
 - **18R — save/lock harmonization** (PRs #1890, #1895 → #1921, #1923) — Item 1
   instrument-card identity relabel; Item 2 consolidated `/save` persistence
   (7-PR ladder); Item 3 (open) small card tweaks.

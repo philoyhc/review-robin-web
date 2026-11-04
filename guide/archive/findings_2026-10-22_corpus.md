@@ -59,7 +59,7 @@ All ruled 2026-10-22, each as its row records.
   and `CONTRIBUTING.md`'s reason for waiting on CI (H2), whose premise —
   every push to `main` migrates Azure Postgres — is false while the slot
   is disabled. Restate as conditional, or leave until the slot resumes.
-- **H4, H5** — `docs/deployment_nus.md` §3's start command, and whether
+- **H4, H5** — `docs/deployment_<institution>.md` §3's start command, and whether
   `docs/cordware_stage0_baseline.md` stays as a dated record (retitle its
   "Command today" column) or archives.
 - **H10, H11** — dated measurements and "serves today" in
@@ -178,7 +178,7 @@ All ruled 2026-10-22, each as its row records.
 **`docs/` and root (H)**
 
 - ~~**H1**~~ — **Done in #3248**: (medium, author) — **Ruled 2026-10-22: restate as "when the slot is live".** `docs/operations_runbook.md`,
-  `docs/known_limitations.md`, `docs/deployment_nus.md` §0,
+  `docs/known_limitations.md`, `docs/deployment_<institution>.md` §0,
   `docs/database.md`, `docs/troubleshooting.md` and
   `docs/backup_restore.md` describe the dev deploy as live; it is
   disabled (`docs/deployment_dev.md` is right).
@@ -187,15 +187,15 @@ All ruled 2026-10-22, each as its row records.
   `CLAUDE.md` requires `-n auto` and `ruff`.
 - ~~**H3**~~ — **Done in #3248**: (medium, doc) — "Segment 21, on hold" is stale in
   `docs/README.md`, `docs/architecture.md`, `docs/known_limitations.md`
-  and `docs/deployment_nus.md`'s banner.
-- ~~**H4**~~ — **Done in #3248**: (medium, author) — **Ruled 2026-10-22: fix the command.** `docs/deployment_nus.md` §3 starts
+  and `docs/deployment_<institution>.md`'s banner.
+- ~~**H4**~~ — **Done in #3248**: (medium, author) — **Ruled 2026-10-22: fix the command.** `docs/deployment_<institution>.md` §3 starts
   `app.main:app`, which does not exist; it is `cordware.main:app`.
 - ~~**H5**~~ — **Done in #3248**: (low–medium, author) — **Ruled 2026-10-22: keep it as a dated record; retitle the column "at `b03fd1be`".** `docs/cordware_stage0_baseline.md`
   "Command today" and its line citations have moved (above).
 - ~~**H6**~~ — **Done in #3248**: (low, doc) — `docs/local_setup.md` §2 omits `cordware/`; §3 and
   §8 name `/docs`, now `/reviewrobin/docs`.
 - ~~**H7**~~ — **Done in #3248**: (low–medium, doc) — `docs/security_posture.md`,
-  `docs/deployment_nus.md` §4 and `docs/architecture.md` attribute the
+  `docs/deployment_<institution>.md` §4 and `docs/architecture.md` attribute the
   Easy Auth parser to `app/auth/identity.py`; it is `cordware/identity.py`.
 - ~~**H8**~~ — **Done in #3248**: (low, doc) — the deployed environment tables omit
   `CORDWARE_APPS`.
@@ -214,16 +214,16 @@ All ruled 2026-10-22, each as its row records.
   `cordware/settings.py` and `cordware/logging.py`; it says the root
   `AGENTS.md` routes work by owner, which it does not. Label the tree as
   the target, or add the routing.
-- ~~**H14**~~ — **Done in #3248**: (low, doc) — the strategy's §5: the NUS workflow also packages
+- ~~**H14**~~ — **Done in #3248**: (low, doc) — the strategy's §5: the institutional workflow also packages
   `pyproject.toml`.
-- ~~**H15**~~ — **Done in #3248**: (low–medium, doc) — `docs/cordware_nus_azure_status_2026-10-16_v8.md`
+- ~~**H15**~~ — **Done in #3248**: (low–medium, doc) — `docs/cordware_<institution>_azure_status_2026-10-16_v8.md`
   §4.3 says the landing page shows only eligible applications; it lists
   every mounted one (`cordware/web/landing.py`), as the strategy says.
 - ~~**H16**~~ — **Done in #3248**: (low, author) — **Ruled 2026-10-22: extend the banner.** the status record's banner misses §1, §18.5,
   §21 and §22 step 4 (a Cordware repo and federated credential the
   strategy dropped), and §21's "RRW Cordware retrofit: Not started"
   (Segment 21 shipped it). Extend the banner.
-- ~~**H17**~~ — **Done in #3248**: (medium, doc) — `docs/deployment_nus.md` §1, §3, §5 and §13
+- ~~**H17**~~ — **Done in #3248**: (medium, doc) — `docs/deployment_<institution>.md` §1, §3, §5 and §13
   cite headings of the v7 status record that v8 does not have; the v8
   equivalents are §8.1, §12.1, §16.1 and §18.1–18.2.
 - ~~**H18**~~ — **Done in #3248**: (low, doc) — `rrw_design_rationale.md` §7: "the only live

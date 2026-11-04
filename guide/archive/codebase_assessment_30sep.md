@@ -6,7 +6,7 @@ two queued segments, 14B and 20, both wait on the institutional Azure
 deployment, which `docs/nus_azure_status_v7.md` (2026-10-01) shows mostly
 provisioned and held on two external decisions.
 
-**Updated 2026-10-01** to reflect the NUS Azure status v7, the Codex read's
+**Updated 2026-10-01** to reflect the institutional Azure status v7, the Codex read's
 update for it, and the fix of the two doc drifts §3 found — tables, window and
 SHA re-taken together at `36e4e6a8`. Only `docs` moved; every code area is
 identical to the first writing at `df4ecae3`.
@@ -53,7 +53,7 @@ could — all three are in §2.
 each change in a browser against a local run with fake auth,
 pre-deployment with an institutional pilot pending. 161 merges in ten days is
 not a team velocity figure. **Most of this window was built while waiting on
-NUS IT**: the deployment that would put the work in front of users is not the
+the institution's IT**: the deployment that would put the work in front of users is not the
 project's to hurry, and the builder work filled the wait. Read §5 and §8 in that
 light. The question is not whether to have built it, but what to build while the
 wait lasts.
@@ -318,10 +318,10 @@ summary paragraph describes the tables below it.
   builder's script can break a sequence that only the next hand check would
   catch, and what only a deployment shows (real Easy Auth, the live app on
   Postgres, the gateway, the deployed configuration) has not been seen. That
-  waits on the NUS deployment, whose remaining path
+  waits on the institutional deployment, whose remaining path
   `docs/nus_azure_status_v7.md` holds on two external decisions: a runner VM SKU that Southeast Asia can actually allocate
   (repeated `SkuNotAvailable`, awaiting Microsoft Support) and the production
-  hostname, which NUS is deciding for a family of applications. The private Web
+  hostname, which the institution is deciding for a family of applications. The private Web
   App, PostgreSQL, Key Vault, Application Insights, Easy Auth v2 and the
   gateway's reachability to the private endpoint are in place; none of that is
   application evidence yet.
@@ -403,15 +403,15 @@ largest UI unit in the product, its interaction checked by hand in a browser
 and repeated by nothing. The one
 live thread is unchanged — **nothing sends email, and nothing has been
 deployed** — but on 2026-10-01 it is better
-described: most of the NUS foundation is provisioned, and what blocks the rest
+described: most of the institutional foundation is provisioned, and what blocks the rest
 is a regional capacity problem and a naming decision, neither of them the
 project's to make.
 
 **Recommended next moves, at most three:**
 
 1. **While the wait lasts, make what has been checked stay checked, and keep
-   the NUS path ready.** The wait is NUS IT's, and nothing here shortens it.
-   - **The NUS path.** Keep the project-side runner, gateway, secrets and
+   the institutional path ready.** The wait is the institution's IT's, and nothing here shortens it.
+   - **The institutional path.** Keep the project-side runner, gateway, secrets and
      migration work in `docs/nus_azure_status_v7.md` ready for the day its two
      blockers clear, without guessing the hostname or retrying the VM.
    - **Repeatable browser checks for the builder.** The author's local checks

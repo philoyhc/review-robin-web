@@ -128,14 +128,14 @@ Taken 2026-10-21 at `8b430421`.
 | A2 | Importers of `app.main.app` | 16: `app/web/return_to.py:65`, 13 test files, `tests/integration/_public_id.py`, `tools/bench_roster_scale.py` | `grep -rlE 'from app\.main import app\b' --include='*.py' app tests tools` |
 | A2 | `dependency_overrides` on that object | 59 lines in 12 files | `grep -rn --include='*.py' dependency_overrides tests` |
 | A2 | `resolve_return_to(` calls needing the router | 6 in 5 app files; 31 in `tests/unit/test_return_to.py` | `grep -rn 'resolve_return_to(' app tests --include='*.py'` |
-| A2 | Live `app.main:app` start lines | `README.md:115`, `CLAUDE.md:95` (+ twin), `.devcontainer/devcontainer.json:23`, `tests/browser/conftest.py:4, 96`, `docs/local_setup.md:159, 326, 507`, `docs/setup_codespaces.md:31, 54`, `docs/deployment_dev.md:38`; `docs/deployment_nus.md:109, 127` stay until stage 4 broadens the NUS artifact | `grep -rnI 'app\.main:app' . --exclude-dir=archive`, less `.claude/worktrees/` and segment 21's plans |
+| A2 | Live `app.main:app` start lines | `README.md:115`, `CLAUDE.md:95` (+ twin), `.devcontainer/devcontainer.json:23`, `tests/browser/conftest.py:4, 96`, `docs/local_setup.md:159, 326, 507`, `docs/setup_codespaces.md:31, 54`, `docs/deployment_dev.md:38`; `docs/deployment_<institution>.md:109, 127` stay until stage 4 broadens the institutional artifact | `grep -rnI 'app\.main:app' . --exclude-dir=archive`, less `.claude/worktrees/` and segment 21's plans |
 | A1 | Dev artifact paths | `app/`, `alembic/`, `alembic.ini`, `requirements.txt`, `pyproject.toml`, `antenv/`; deploys on every push to `main` | `.github/workflows/main_app-review-robin-web-dev.yml:56–62` |
 | A1 | Packaging and collection | `include = ["app*"]` (`pyproject.toml:36`); `testpaths = ["tests"]` (`:39`); ruff already covers `.` | `grep -n 'include\|testpaths' pyproject.toml` |
-| — | NUS deploy | `deploy_nus.yml` is `workflow_dispatch` only; its artifact stays as is until stage 4 (v0.8 §5) | `sed -n 1,10p .github/workflows/deploy_nus.yml` |
+| — | institutional deploy | `deploy_<institution>.yml` is `workflow_dispatch` only; its artifact stays as is until stage 4 (v0.8 §5) | `sed -n 1,10p .github/workflows/deploy_<institution>.yml` |
 | A1 | Lifespans in RRW | 0 | `grep -rnE 'lifespan\|on_event\|add_event_handler' app` |
 | A3 | Root-logger setup | `configure_logging()` (`app/logging_config.py:89–106`), first line of `create_app()` | — |
 | A3 | Logger call sites | 12 `get_logger(` lines; 15 files log at all | `grep -rn 'get_logger(' app --include='*.py'`; `-rlE 'getLogger\|get_logger\('` for 15 |
-| A1 | RRW's `/health` | `app/web/routes_health.py`, `{"status": "ok"}`; Easy Auth excludes `/health` on both slots | `docs/deployment_dev.md:247`, `docs/deployment_nus.md:159` |
+| A1 | RRW's `/health` | `app/web/routes_health.py`, `{"status": "ok"}`; Easy Auth excludes `/health` on both slots | `docs/deployment_dev.md:247`, `docs/deployment_<institution>.md:159` |
 
 ## Status
 
@@ -154,8 +154,8 @@ the lobby, `/health`, and the `host.started` line. The contract is
   separate for reviewability. The slot's start-command switch and
   `APP_ENV` moved to `docs/deployment_dev.md` "Resuming the dev slot",
   and every rung was tested on localhost.
-- **The NUS deploy must not be dispatched until stage 4.** `main` has no
-  `app.main:app` since A2, and the NUS artifact doesn't carry `cordware/`.
+- **The institutional deploy must not be dispatched until stage 4.** `main` has no
+  `app.main:app` since A2, and the institutional artifact doesn't carry `cordware/`.
   The runbook and the workflow header say so (A3).
 - **The "session-scoped fixture" became a cached builder**,
   `tests/_rrw_app.py`, because helpers and module-level mounts need the
@@ -190,7 +190,7 @@ manifest) are adjudicated: A2 only passed `routes=request.app.routes` to
 Nothing blocking; it found nine items, all fixed in A3:
 
 - the browser harness pins `CORDWARE_APPS`;
-- the NUS do-not-dispatch notes;
+- the institutional do-not-dispatch notes;
 - narrowed logging claims;
 - exact root-logger restore;
 - an import-boundary test that reads `importlib` and `__import__` and
@@ -229,7 +229,7 @@ fixes.
    `tests/integration/_public_id.py` takes the app as an argument, and
    `tools/bench_roster_scale.py` calls `create_app()` itself. It moves the
    browser harness onto
-   `cordware.main:app`, and every live start line but the NUS runbook's
+   `cordware.main:app`, and every live start line but the institutional runbook's
    (§ Blast radius). Adds
    the "importing `app.main` builds nothing" test. Must not change a
    route, a template or a URL.
@@ -251,7 +251,7 @@ fixes.
 - `pytest cordware/tests` passes with `CORDWARE_APPS` unset, empty and
   `reviewrobin`; an unknown name fails construction (A1).
 - `git grep -n 'app\.main:app' -- ':!guide/archive' ':!docs/archive'`
-  finds only segment 21's own plans, `docs/deployment_nus.md` (whose
+  finds only segment 21's own plans, `docs/deployment_<institution>.md` (whose
   command changes with stage 4's artifact), and the records § Status names
   (A2).
 - A test imports `app.main` and finds no `FastAPI` instance on it
@@ -296,8 +296,8 @@ fixes.
   (the outline). Nothing here generates or rewrites a URL.
 - **Host-logging events 2–4** (fake auth, identity problems, unhandled
   requests) and moving the super-admin warning: 21C and 21D.
-- **The NUS deploy workflow, its start command and its runbook line**
-  (`docs/deployment_nus.md:109, 127`): stage 4, together with the
+- **The institutional deploy workflow, its start command and its runbook line**
+  (`docs/deployment_<institution>.md:109, 127`): stage 4, together with the
   artifact that carries `cordware/` (v0.8 §5).
 - **Cordware settings beyond `CORDWARE_APPS`** (`APP_ENV`, fake auth,
   super-admin): 21C.
@@ -314,10 +314,10 @@ fixes.
 - `spec/settings_inventory.md` — `CORDWARE_APPS` and `LOG_LEVEL`'s owner (close).
 - `docs/cordware_repository_strategy_v0.8.md` — §8: the lifespan contract and 21A's path scope recorded as settled (close).
 - `CLAUDE.md` — the run command (A2). `AGENTS.md` twinned.
-- `docs/deployment_nus.md` — the localhost command; "do not dispatch until stage 4" (A3).
+- `docs/deployment_<institution>.md` — the localhost command; "do not dispatch until stage 4" (A3).
 - `docs/architecture.md` — the JSON logs come from the host, stamped per application (A3).
 - `docs/operations_runbook.md` — the logging pointer (A3).
-- `.github/workflows/deploy_nus.yml` — the header says not to dispatch until stage 4 (A3).
+- `.github/workflows/deploy_<institution>.yml` — the header says not to dispatch until stage 4 (A3).
 - `README.md` — the run command (A2).
 - `.env.example` — a commented `CORDWARE_APPS` line, unset meaning every registered application (A1).
 - `pyproject.toml` — package discovery and `testpaths` take in `cordware` (A1).

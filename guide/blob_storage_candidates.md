@@ -9,7 +9,7 @@
 > with Postgres `bytea`, on-the-fly streaming, or external URLs (see
 > "Current posture" below). Wiring an Azure Blob container (or
 > S3-compatible bucket) into the app is **deferred infrastructure**:
-> the NUS storage account is provisioned and unused
+> the institutional storage account is provisioned and unused
 > (recorded privately with the deployment), and what remains is a container, a
 > managed-identity role on the account, and the seam below. This doc
 > exists to

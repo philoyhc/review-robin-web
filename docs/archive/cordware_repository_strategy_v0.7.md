@@ -138,7 +138,7 @@ Residential similarly owns its business-action audit. Cordware should use ordina
 
 ### Production PostgreSQL decision: B or C
 
-The shortlist is **B or C on the existing institutional PostgreSQL server**. **C is preferred**, subject to NUS IT feasibility, cost and operational constraints.
+The shortlist is **B or C on the existing institutional PostgreSQL server**. **C is preferred**, subject to the institution's IT feasibility, cost and operational constraints.
 
 | | **B: one database, separate schemas** | **C: two databases, same server (preferred)** |
 |---|---|---|
@@ -153,7 +153,7 @@ The shortlist is **B or C on the existing institutional PostgreSQL server**. **C
 
 **Option B** requires disciplined schema qualification, search-path/grant management, migration scope and independently located Alembic version tables to protect RRW's existing objects. **Option C** is cleaner for credentials and migration isolation, but is still **one** shared server with common capacity and server-level restore; logical backups can address database-specific recovery needs under either option.
 
-**Choose C** if NUS IT can create a second database and roles on the existing server without disproportionate obstacles or material extra cost; otherwise **B** is an acceptable fallback. Do not pursue shared business tables (A) or a second PostgreSQL server (D) absent a new requirement.
+**Choose C** if the institution's IT can create a second database and roles on the existing server without disproportionate obstacles or material extra cost; otherwise **B** is an acceptable fallback. Do not pursue shared business tables (A) or a second PostgreSQL server (D) absent a new requirement.
 
 Use namespaced settings, for example `RRW_DATABASE_URL` and `RES_DATABASE_URL`. Under B these can address the same DB with distinct restricted credentials; under C they address two databases on one server. Keep RRW's existing `DATABASE_URL` working in standalone mode with documented, nonambiguous precedence.
 
@@ -196,13 +196,13 @@ The production process still shares Python dependency resolution, startup, compu
 - **Project transfer:** preserve Residential's provenance and archival planning material. Archive its original repository only after its content, workflows and migration history are verified in the canonical repo.
 - **Existing Cordware planning documents:** move/reconcile pertinent v0.4–v0.7 and integration decisions into the evolved RRW repository with source references.
 - **Optional repo rename:** postpone `review-robin-web` → `cordware` until stable operation. The existing `philoyhc/cordware` planning repo must first vacate that name. GitHub OIDC federation and other integrations may require updates.
-- **Institutional deployment:** the existing NUS Azure OIDC subject was scoped to `repo:philoyhc/review-robin-web:ref:refs/heads/main`. Keeping that name during functional integration may reduce IT changes, but verify the live configuration before cutover.
+- **Institutional deployment:** the existing institutional Azure OIDC subject was scoped to `repo:philoyhc/review-robin-web:ref:refs/heads/main`. Keeping that name during functional integration may reduce IT changes, but verify the live configuration before cutover.
 
 ## 8. Acceptance and open decisions
 
 **Architecture is accepted when:** RRW's existing folders, history, tooling and standalone behavior survive; mounted `/reviewrobin/operator/...` and `/reviewrobin/me` routes and all critical links work; Cordware is stateless and supplies trusted identity, hosting and a simple landing page; both apps independently enforce permissions, own action audits, data and migrations; Residential has its own `spec/docs/guide/tests/tools` and scoped CI; B or C is implemented safely (C preferred); and the integrated artifact is staged, tested and deployed with a documented recovery path. <!-- path-ref-ok -->
 
-**Implementation decisions still open:** exact app factory/lifespan contract; mount-aware URL approach; trusted-identity adapter; B versus C and DB-role/recovery arrangements with NUS IT; dependency locking/build artifact; CI required-check and release-gate policy; scopes for RRW's repo-wide tooling; repository privacy/rename timing.
+**Implementation decisions still open:** exact app factory/lifespan contract; mount-aware URL approach; trusted-identity adapter; B versus C and DB-role/recovery arrangements with the institution's IT; dependency locking/build artifact; CI required-check and release-gate policy; scopes for RRW's repo-wide tooling; repository privacy/rename timing.
 
 **Non-goals:** relocating all RRW source into a `reviewrobin/` directory, cross-repo source synchronization/private package composition, generic plugin discovery, Cordware user/role tables or a persistence layer, a login audit table, shared business tables, a second PostgreSQL server without new requirements, and a big-bang rewrite.
 
@@ -232,4 +232,4 @@ Three implementation decisions for stage 1 (mount RRW at `/reviewrobin`), settle
 
 1. **The mount supplies the prefix.** `host.mount("/reviewrobin", …)` strips the prefix before RRW sees a request and sets `root_path`, so route-aware URLs (`url_for`, `request.url_for`) gain `/reviewrobin` without help. The `BASE_PATH` setting and ASGI shim proposed in `guide/segment_21_domain_retrofit.md` are dropped, and that outline's rejection of a fixed mount is reversed: it rested only on the gateway's keep-or-strip behavior, which Cordware now owns. The sweep of literal root paths in templates, Python, inline scripts and cookies is still required.
 2. **RRW is constructed once, and the host owns logging.** The module-level `app = create_app()` moves out of `app/main.py` into a small entry module of its own, so importing the factory has no side effects. Standalone start commands and the docs that name them (`app.main:app` today) move to that entry module. Process-wide logging setup moves to the Cordware host, and RRW's factory stops configuring the root logger when it is mounted.
-3. **Azure sees only the assembled app; old root links are not kept.** Nothing is deployed to the NUS host until this repository runs as Cordware with RRW mounted, so its first deploy uses the Cordware entry point and RRW is never deployed there standalone. The personal dev slot switches to the Cordware entry point when stage 1 lands, as the live check of Addendum A's deep-link and hostname requirements under real Easy Auth. No redirects from old root paths (`/operator/...`, `/me`) to `/reviewrobin/...`: nothing consequential links to them.
+3. **Azure sees only the assembled app; old root links are not kept.** Nothing is deployed to the institutional host until this repository runs as Cordware with RRW mounted, so its first deploy uses the Cordware entry point and RRW is never deployed there standalone. The personal dev slot switches to the Cordware entry point when stage 1 lands, as the live check of Addendum A's deep-link and hostname requirements under real Easy Auth. No redirects from old root paths (`/operator/...`, `/me`) to `/reviewrobin/...`: nothing consequential links to them.

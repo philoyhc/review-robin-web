@@ -292,7 +292,7 @@ mechanism.
 ### 1. Make deployment verification the next active workstream
 
 Do not open another free-standing feature segment while the institutional host
-is unresolved. Complete the NUS cutover runbook, then execute the post-Azure
+is unresolved. Complete the institutional cutover runbook, then execute the post-Azure
 checklist against real infrastructure and representative data. In order:
 
 - verify identity headers, role landing, session-owner gates, and participant
