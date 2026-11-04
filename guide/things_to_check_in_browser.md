@@ -11,12 +11,42 @@ delete them once no remaining section points to them.
 **Some rows need more than a local run:** an Azure deployment (#2720,
 P5) or the Rehydrate round trip (D28).
 
-## 14E: the clock, and auto-send off (#3577, #3578 and rung 2)
+## 14E: the clock, and auto-send off (#3577, #3578, #3579)
 
-A local run. In `.env`: `SCHEDULER_INTERVAL_SECONDS=30` (a short interval
-for testing; production keeps the default 120), and `RRW_SCHEDULED_SEND`
-**unset** (off, the shipped default). Restart `uvicorn`: its log shows
-`scheduled clock started` with `interval_seconds: 30`.
+A local run, with the clock every 30 seconds (production keeps the
+default 120) and scheduled sending off (the shipped default). From the
+repository root, venv activated, your usual `.env` (fake auth) in place,
+and no `RRW_SCHEDULED_SEND` line in it:
+
+```powershell
+# Windows PowerShell. The first line lets this window run the venv's
+# activation script; it lasts until the window closes.
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
+.\.venv\Scripts\Activate.ps1
+Remove-Item Env:RRW_SCHEDULED_SEND -ErrorAction SilentlyContinue
+$env:SCHEDULER_INTERVAL_SECONDS = "30"
+alembic upgrade head
+uvicorn cordware.main:app --reload
+```
+
+Or with no activation at all, calling the venv's programs by path:
+`.\.venv\Scripts\alembic.exe upgrade head` then
+`.\.venv\Scripts\uvicorn.exe cordware.main:app --reload` (after the two
+`$env:` lines above).
+
+```bash
+# macOS / Linux
+source .venv/bin/activate
+unset RRW_SCHEDULED_SEND
+alembic upgrade head
+SCHEDULER_INTERVAL_SECONDS=30 uvicorn cordware.main:app --reload
+```
+
+The log shows `scheduled clock started` with `interval_seconds: 30`; the
+app is at `http://127.0.0.1:8000/reviewrobin/`. For the last row, stop it
+(Ctrl+C) and start it again with `30` replaced by `0`; in PowerShell,
+`$env:SCHEDULER_INTERVAL_SECONDS = "0"` then `uvicorn cordware.main:app
+--reload`.
 
 **To tell the clock from a page view:** open the session's audit log
 (`/reviewrobin/operator/sys-admin/sessions/<id>/audit-log`) and "Show
@@ -53,7 +83,7 @@ setting a time and checking, **close every Review Robin tab** and wait.
   minutes ahead and keep Session Home open; reload it just after End:
   the instruments close at once, and the `session.deadline_reached`
   event has no `fired_by`. The clock's next pass adds nothing.
-- [ ] **Off is off.** `SCHEDULER_INTERVAL_SECONDS=0`, restart: no
+- [ ] **Off is off.** Restarted with `SCHEDULER_INTERVAL_SECONDS` at `0`: no
   `scheduled clock started` in the log, and a Start that passes fires
   only when an operator page is opened, as before.
 
