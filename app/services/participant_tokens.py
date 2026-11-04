@@ -30,9 +30,11 @@ from __future__ import annotations
 
 import hashlib
 import os
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
+    from datetime import datetime
+
     from app.db.models import ReviewSession
 
 
@@ -58,7 +60,9 @@ class ParticipantTokenizer:
 
     def __init__(self, review_session: ReviewSession) -> None:
         env_salt = os.environ.get(_ENV_SALT_KEY, _DEFAULT_SALT)
-        created_at = review_session.created_at
+        # Mapped as ``datetime``, but a server default: unset until the
+        # row is flushed, so an unsaved session hashes with ``"0"``.
+        created_at = cast("datetime | None", review_session.created_at)
         created_token = (
             created_at.isoformat() if created_at is not None else "0"
         )

@@ -14,6 +14,13 @@ from app.services.session_tags import normalize_tag
 
 from ._apply_shared import _RX_SESSION_TAG, _ParsedConfig, _ParseError
 
+# What other modules import from here: the package shares its
+# underscored helpers between modules.
+__all__ = [
+    "_apply_session_tag_kv",
+    "_apply_session_tags",
+]
+
 
 def _apply_session_tag_kv(
     plan: _ParsedConfig, field_path: str, value: str

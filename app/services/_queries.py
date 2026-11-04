@@ -39,8 +39,10 @@ def session_scoped(target: Any, session_id: int) -> Select[Any]:
     on the bare ``select(...).where(Model.session_id == ...)``
     pattern.
     """
-    model = target if isinstance(target, type) else target.class_
-    return select(target).where(model.session_id == session_id)
+    # ``Any`` like ``target``: either branch is a mapped class.
+    model: Any = target if isinstance(target, type) else target.class_
+    statement: Select[Any] = select(target)
+    return statement.where(model.session_id == session_id)
 
 
 def slot_has_data(

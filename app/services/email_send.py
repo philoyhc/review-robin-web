@@ -59,8 +59,8 @@ class EmailMessage:
     to: str
     subject: str
     body: str
-    cc: list[str] = field(default_factory=list)
-    bcc: list[str] = field(default_factory=list)
+    cc: list[str] = field(default_factory=list[str])
+    bcc: list[str] = field(default_factory=list[str])
 
 
 @dataclass(frozen=True)

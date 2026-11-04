@@ -11,6 +11,18 @@ from __future__ import annotations
 import json
 from typing import NamedTuple
 
+# What other modules import from here: the package shares its
+# underscored helpers between modules.
+__all__ = [
+    "HEADER",
+    "Row",
+    "_bool",
+    "_decimal",
+    "_int",
+    "_json",
+    "_str",
+]
+
 
 class Row(NamedTuple):
     """One CSV row in the Settings export.

@@ -34,6 +34,7 @@ Audit events emitted:
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from typing import Any
 
 from sqlalchemy import select
@@ -144,7 +145,9 @@ def _validate(
     axis: str,
     instrument_id: int | None,
     response_field_id: int | None,
-    column_chip_slots: list[str],
+    # ``object``: the slots are checked to be strings below, whatever
+    # the caller declared.
+    column_chip_slots: Sequence[object],
     self_review_handling: str,
 ) -> tuple[Instrument | None, InstrumentResponseField | None]:
     """Server-side validation per the wiring decisions.

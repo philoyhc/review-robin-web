@@ -74,9 +74,9 @@ class _SettingsInfo:
 @dataclass
 class RehydrateReport:
     ok: bool = False
-    errors: list[str] = _dc_field(default_factory=list)
-    warnings: list[str] = _dc_field(default_factory=list)
-    preview: dict[str, Any] = _dc_field(default_factory=dict)
+    errors: list[str] = _dc_field(default_factory=list[str])
+    warnings: list[str] = _dc_field(default_factory=list[str])
+    preview: dict[str, Any] = _dc_field(default_factory=dict[str, Any])
 
 
 # --------------------------------------------------------------------------- #
@@ -399,7 +399,7 @@ def analyze_rehydrate_set(
         if "relationships" in resolved
         else 0
     )
-    preview = {
+    preview: dict[str, str | int] = {
         "name": derive_rehydrate_name(
             db, user=user, original_name=settings.name
         ),

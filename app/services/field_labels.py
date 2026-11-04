@@ -198,7 +198,7 @@ def label_length_error(label: str) -> str | None:
     The CSV header path checks the same limit (``csv_imports``)."""
     limit = column_length(SessionFieldLabel, "label")
     normalised = (label or "").strip()
-    if limit is not None and len(normalised) > limit:
+    if len(normalised) > limit:
         return f"A label is {len(normalised)} characters; at most {limit} fit."
     return None
 

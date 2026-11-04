@@ -18,7 +18,7 @@ was done — to that commit, and drops it if the unit rolls back.
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 
 from sqlalchemy.orm import Session
@@ -30,7 +30,7 @@ _AFTER_KEY = "unit_of_work.after_commit"
 
 
 @contextmanager
-def single_commit(db: Session) -> Iterator[None]:
+def single_commit(db: Session) -> Generator[None]:
     """While open, :func:`commit` on ``db`` flushes instead of committing."""
     previous = db.info.get(_DEFER_KEY, False)
     db.info[_DEFER_KEY] = True
@@ -41,7 +41,7 @@ def single_commit(db: Session) -> Iterator[None]:
 
 
 @contextmanager
-def atomic(db: Session) -> Iterator[None]:
+def atomic(db: Session) -> Generator[None]:
     """One all-or-nothing unit that commits on its own when outermost.
 
     :func:`single_commit` around the body, then :func:`commit` — a real

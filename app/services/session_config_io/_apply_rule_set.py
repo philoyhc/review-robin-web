@@ -6,6 +6,8 @@ export or a hand-edited one.
 """
 from __future__ import annotations
 
+from typing import cast
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -23,6 +25,13 @@ from ._apply_shared import (
     _ParseError,
     _RuleSetSpec,
 )
+
+# What other modules import from here: the package shares its
+# underscored helpers between modules.
+__all__ = [
+    "_apply_rule_set_kv",
+    "_apply_session_rule_sets",
+]
 
 
 def _apply_rule_set_kv(
@@ -56,7 +65,11 @@ def _apply_rule_set_kv(
         # refused as its Save refuses it, before the engine's own check
         # names a retired field less helpfully
         # (``guide/archive/pair_context_tags_further_clarify.md`` Item 1).
-        unoffered = unoffered_pair_rule(rules) if isinstance(rules, list) else None
+        unoffered = (
+            unoffered_pair_rule(cast("list[object]", rules))
+            if isinstance(rules, list)
+            else None
+        )
         if unoffered is not None:
             raise _ParseError(f"rules_json is not a valid rule list: {unoffered}")
         # Phase 1 holds the rules to the shape the engine reads, so a
