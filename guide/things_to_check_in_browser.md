@@ -80,13 +80,16 @@ window are editable only before the session opens.
   audit log. At *T*+13, reload: one `session.release_window_opened` and
   one `session.release_window_ended`. Reload twice more: neither repeats.
 - [ ] **Off is off, and a page view still does it.** Stop the app
-  (Ctrl+C), set the interval to `0` (`$env:SCHEDULER_INTERVAL_SECONDS =
-  "0"`, or `SCHEDULER_INTERVAL_SECONDS=0` in bash) and start it again: no
-  `scheduled clock started` in the log. Take a second session to
-  Validated with Start *T*+2 and End *T*+4, keep its Session Home open,
-  and reload it after *T*+2 and again after *T*+4: it opens, then
-  closes, and its `session.activated` and `session.deadline_reached`
-  carry no `fired_by`.
+  (Ctrl+C) and start it with the interval at `0`, keeping the lead time
+  at `0`: in PowerShell `$env:SCHEDULER_INTERVAL_SECONDS = "0"` then
+  `uvicorn cordware.main:app --reload`; in bash
+  `SCHEDULER_INTERVAL_SECONDS=0 SCHEDULED_OPERATIONAL_LEAD_HOURS=0 uvicorn
+  cordware.main:app --reload`. No `scheduled clock started` in the log.
+  Note a **new** time *T2*, take a second session to Validated with Start
+  *T2*+2 and End *T2*+4, keep its Session Home open, and reload it after
+  *T2*+2 and again after *T2*+4: it opens, then closes, and its
+  `session.activated` and `session.deadline_reached` carry no
+  `fired_by`.
 
 ## Email dates in the session's zone (#2720)
 
