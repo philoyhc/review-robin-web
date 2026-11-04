@@ -26,7 +26,8 @@ sends through `/me/sendMail` inside the request that clicked:
   writes `email.sent` / `email.send_failed`;
 - a **Send a test to me** action on the Invitations page.
 
-**While no mail goes on a clock** (`guide/no_scheduling_fallback.md`), the
+**While no mail goes on a clock** (`guide/no_scheduling_fallback.md`;
+the first two parts moved to 14E rung 0, author 2026-11-04), the
 two auto-send fields render disabled behind `RRW_SCHEDULED_SEND=off`
 (values kept, the Settings CSV round-trips), the Workflow card drops
 "System will dispatch automatically", and **due-action prompts** replace
@@ -86,9 +87,9 @@ Taken 2026-11-02 at `fffd4c28`.
 
 ## PR ladder
 
-1. **Scaffold:** the disabled auto-send fields and their line, the Workflow
-   caption, the due-action prompts as static copy, and Send a test to me
-   inert.
+1. **Scaffold:** ~~the disabled auto-send fields and their line, the
+   Workflow caption~~ (moved to 14E rung 0, author 2026-11-04), the
+   due-action prompts as static copy, and Send a test to me inert.
 2. **The transport:** a delegated Graph `EmailTransport` and the dispatch
    helper, stamping rows; Send a test to me wired.
 3. **The buttons:** Send, Send all, Remind, Remind incomplete send through
@@ -104,8 +105,6 @@ Taken 2026-11-02 at `fffd4c28`.
 - A click on Send delivers the invitation from the operator's mailbox, and
   its row reads `sent`; a refused send reads `failed` with its reason
   (a browser check on Azure, the author's).
-- With `RRW_SCHEDULED_SEND=off`, no auto-send field accepts input and no
-  page promises automatic sending.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 14F` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
@@ -128,10 +127,9 @@ Taken 2026-11-02 at `fffd4c28`.
 ## Doc impact
 
 - `spec/email_infra_options.md` — delegated Graph as the transport in use; the backend options as alternatives.
-- `spec/lifecycle.md` — §8: auto-send disabled behind the setting; the due-action prompts.
-- `spec/workflow_card.md` — the auto-send caption and the due prompts.
-- `spec/settings_inventory.md` — `RRW_SCHEDULED_SEND`.
+- `spec/lifecycle.md` — §8: the due-action prompts (auto-send disabled moved to 14E, 2026-11-04).
+- `spec/workflow_card.md` — the due prompts (the auto-send caption moved to 14E, 2026-11-04).
 - `spec/email_template_editor.md` — what Send does now; the recorded / sent / failed states named once.
 - `cordware/spec/identity.md` — "Graph": the host's send primitive beside the directory lookup.
-- `docs/deployment.md` — the setting in its table.
+- `docs/deployment.md` — the setting in its table. <!-- doc-impact-waived: RRW_SCHEDULED_SEND moved to 14E rung 0 (author, 2026-11-04); 14F adds no setting -->
 - `guide/post_azure_todo_checklist.md` — items 9 and 10 settled (at close).

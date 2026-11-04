@@ -79,9 +79,20 @@ Taken 2026-11-02 at `fffd4c28`.
 | Test files naming it | 7 | `grep -rln observe_scheduled_events tests --include=*.py \| wc -l` |
 | Files naming `observe_deadline` (app + tests) | 20 | `grep -rln observe_deadline app tests --include=*.py \| wc -l` |
 | Test files naming `scheduled_activate_at` | 49 | `grep -rln scheduled_activate_at tests --include=*.py \| wc -l` |
+| Templates naming the auto-send offsets (rung 0; taken 2026-11-04 at `b2703ab9`) | 4 | `grep -rln "invite_offsets\|reminder_offsets" app/web/templates \| wc -l` |
 
 ## PR ladder
 
+0. **Auto-send off until mail can go on a clock** (added, author,
+   2026-11-04; moved from 14F's scaffold). `RRW_SCHEDULED_SEND`, default
+   off: the two auto-send fields (`invite_offsets`, `reminder_offsets`;
+   New session and Session Home) render disabled with one line
+   ("Scheduled sending isn't available on this deployment; send from
+   Invitations when it's time"), values kept and the Settings CSV
+   round-tripping; the Workflow card drops "System will dispatch
+   automatically". Every other date field stays live: with the clock
+   they no longer mislead. 14G turns the setting on. Takes its own read
+   (a code slice outside the loop's item).
 1. **The loop, inert.** `app/services/scheduled_events/_clock.py`: one
    pass (activation, deadline close) callable directly, the lock, the
    setting (default `0` in this rung); unit and integration tests call the
@@ -97,6 +108,8 @@ Taken 2026-11-02 at `fffd4c28`.
 - A session scheduled to open at T is `ready` by T + interval with no page
   view (`tests/integration/test_scheduled_clock.py`, proposed).
 - Two processes running the pass activate a session once.
+- With `RRW_SCHEDULED_SEND=off`, no auto-send field accepts input and no
+  page promises automatic sending; the Settings CSV round-trips the values.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 14E` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
@@ -121,7 +134,8 @@ Taken 2026-11-02 at `fffd4c28`.
 
 ## Doc impact
 
-- `spec/lifecycle.md` — §8.3: the clock beside the page-view trigger, the lock, `context.trigger`.
-- `spec/settings_inventory.md` — `SCHEDULER_INTERVAL_SECONDS`.
-- `docs/deployment.md` — the setting in its table.
+- `spec/lifecycle.md` — §8.3: the clock beside the page-view trigger, the lock, `context.trigger`; §8: auto-send disabled behind the setting (rung 0).
+- `spec/settings_inventory.md` — `SCHEDULER_INTERVAL_SECONDS`; `RRW_SCHEDULED_SEND` and the two auto-send fields disabled behind it (rung 0).
+- `spec/workflow_card.md` — the auto-send caption gone while the setting is off (rung 0).
+- `docs/deployment.md` — both settings in its table.
 - `guide/post_azure_todo_checklist.md` — item 7 narrowed to mail (at close).
