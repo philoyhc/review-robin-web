@@ -44,6 +44,7 @@ def _owner(db: Session, review_session: ReviewSession) -> User:
             SessionOperator.session_id == review_session.id
         )
     ).scalars().first()
+    assert operator is not None
     user = db.get(User, operator.user_id)
     assert user is not None
     return user

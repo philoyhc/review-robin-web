@@ -9,6 +9,8 @@ file exercises the service directly.
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -16,6 +18,12 @@ from sqlalchemy.orm import Session
 from app.db.models import AuditEvent, Reviewer, ReviewSession, User
 from app.services import reviewers as reviewers_service
 from app.services.reviewers import ReviewerOperationError
+
+
+def _detail(event: AuditEvent) -> dict[str, Any]:
+    """An audit row's ``detail``, which every event under test writes."""
+    assert event.detail is not None
+    return event.detail
 
 
 def _seed(
@@ -61,11 +69,11 @@ def test_create_reviewer_inserts_row_and_emits_snapshot(db: Session) -> None:
     event = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "reviewer.created")
     ).scalar_one()
-    assert event.detail["snapshot"]["reviewer_id"] == reviewer.id
-    assert event.detail["snapshot"]["email"] == "alice@example.edu"
-    assert event.detail["snapshot"]["status"] == "active"
-    assert event.detail["snapshot"]["tag_1"] == "Mentor"
-    assert event.detail["snapshot"]["tag_2"] is None
+    assert _detail(event)["snapshot"]["reviewer_id"] == reviewer.id
+    assert _detail(event)["snapshot"]["email"] == "alice@example.edu"
+    assert _detail(event)["snapshot"]["status"] == "active"
+    assert _detail(event)["snapshot"]["tag_1"] == "Mentor"
+    assert _detail(event)["snapshot"]["tag_2"] is None
 
 
 def test_create_reviewer_strips_whitespace_and_normalises_status(
@@ -207,8 +215,8 @@ def test_update_reviewer_emits_changes_envelope_for_changed_fields_only(
         .order_by(AuditEvent.id.desc())
     ).scalars().first()
     assert event is not None
-    assert set(event.detail["changes"].keys()) == {"name", "tag_2"}
-    assert event.detail["refs"]["reviewer_id"] == reviewer.id
+    assert set(_detail(event)["changes"].keys()) == {"name", "tag_2"}
+    assert _detail(event)["refs"]["reviewer_id"] == reviewer.id
 
 
 def test_update_reviewer_no_changes_emits_nothing(db: Session) -> None:
@@ -398,7 +406,7 @@ def test_bulk_inactivate_flips_only_active_rows(db: Session) -> None:
             AuditEvent.event_type == "reviewer.bulk_inactivated"
         )
     ).scalar_one()
-    assert sorted(event.detail["snapshot"]["reviewer_ids"]) == sorted(flipped)
+    assert sorted(_detail(event)["snapshot"]["reviewer_ids"]) == sorted(flipped)
 
 
 def test_bulk_reactivate_flips_only_inactive_rows(db: Session) -> None:
@@ -422,7 +430,7 @@ def test_bulk_reactivate_flips_only_inactive_rows(db: Session) -> None:
             AuditEvent.event_type == "reviewer.bulk_reactivated"
         )
     ).scalar_one()
-    assert sorted(event.detail["snapshot"]["reviewer_ids"]) == sorted(flipped)
+    assert sorted(_detail(event)["snapshot"]["reviewer_ids"]) == sorted(flipped)
 
 
 def test_bulk_op_with_no_eligible_rows_emits_nothing(db: Session) -> None:
@@ -503,7 +511,7 @@ def test_create_reviewer_invalidates_validated_session(db: Session) -> None:
             AuditEvent.event_type == "session.invalidated"
         )
     ).scalar_one()
-    assert invalidate_event.detail["reason"] == "reviewer_created"
+    assert _detail(invalidate_event)["reason"] == "reviewer_created"
 
 
 def test_update_reviewer_invalidates_validated_session(db: Session) -> None:

@@ -10,6 +10,8 @@ synthetic Full Matrix default.
 """
 from __future__ import annotations
 
+from typing import Any
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -27,6 +29,19 @@ from app.db.models import (
 )
 from app.services import assignments
 from app.services.instruments import ensure_default_instrument
+
+
+def _get[M](db: Session, model: type[M], ident: object) -> M:
+    """``db.get`` for a row the test knows exists."""
+    row = db.get(model, ident)
+    assert row is not None
+    return row
+
+
+def _detail(event: AuditEvent) -> dict[str, Any]:
+    """An audit row's ``detail``, which every event under test writes."""
+    assert event.detail is not None
+    return event.detail
 
 
 def _seed_two_instruments(db: Session) -> tuple[
@@ -122,14 +137,14 @@ def test_one_event_per_pinned_instrument(db: Session) -> None:
     )
     assert len(events) == 2
     seen_instrument_ids = {
-        e.detail["refs"]["instrument_id"] for e in events
+        _detail(e)["refs"]["instrument_id"] for e in events
     }
     assert seen_instrument_ids == {inst_a.id, inst_b.id}
     for event in events:
-        assert event.detail["counts"]["instruments"] == 1
+        assert _detail(event)["counts"]["instruments"] == 1
         # Each event scopes its rule_set_id ref to the session-tier
         # row pinned to that instrument.
-        assert event.detail["refs"]["rule_set_id"] == rule_set.id
+        assert _detail(event)["refs"]["rule_set_id"] == rule_set.id
 
 
 def test_scoped_replace_only_touches_named_instrument(db: Session) -> None:
@@ -450,7 +465,8 @@ def test_reconcile_audit_event_carries_reconcile_counts(
         .scalars()
         .first()
     )
-    counts = event.detail["counts"]
+    assert event is not None
+    counts = _detail(event)["counts"]
     assert counts["new"] == 2
     assert counts["deleted"] == 0
     assert counts["kept"] == 4
@@ -501,7 +517,7 @@ def test_exclude_self_reviews_writes_no_row_individual(
     """With the flag set, the ``(R, R)`` pair is omitted from the fan-out
     entirely — no row at all, not a row with ``include=False``."""
     user, review_session, instrument = _seed_self_review_session(db)
-    rule_set = db.get(SessionRuleSet, instrument.rule_set_id)
+    rule_set = _get(db, SessionRuleSet, instrument.rule_set_id)
     rule_set.exclude_self_reviews = True
     db.flush()
 
@@ -562,7 +578,7 @@ def test_exclude_self_reviews_drops_the_whole_group(db: Session) -> None:
     instrument.group_kind = "r1"
     db.flush()
 
-    rule_set = db.get(SessionRuleSet, instrument.rule_set_id)
+    rule_set = _get(db, SessionRuleSet, instrument.rule_set_id)
     rule_set.exclude_self_reviews = False
     db.flush()
     assignments.replace_assignments(
@@ -596,7 +612,7 @@ def test_exclude_self_reviews_ignores_non_email_identifiers(
         )
     )
     db.flush()
-    rule_set = db.get(SessionRuleSet, instrument.rule_set_id)
+    rule_set = _get(db, SessionRuleSet, instrument.rule_set_id)
     rule_set.exclude_self_reviews = True
     db.flush()
 
@@ -610,7 +626,7 @@ def test_exclude_self_reviews_ignores_non_email_identifiers(
                 Assignment.instrument_id == instrument.id
             )
         ).scalars()
-        if db.get(Reviewee, row.reviewee_id).email_or_identifier
+        if _get(db, Reviewee, row.reviewee_id).email_or_identifier
         == "anon-001"
     ]
     assert anon_rows, "the anonymous reviewee's rows must survive"
@@ -620,7 +636,7 @@ def test_exclude_self_reviews_round_trips_both_ways(db: Session) -> None:
     """Flipping the flag on drops the row; flipping it back off
     regenerates it. The exclusion is not a one-way door."""
     user, review_session, instrument = _seed_self_review_session(db)
-    rule_set = db.get(SessionRuleSet, instrument.rule_set_id)
+    rule_set = _get(db, SessionRuleSet, instrument.rule_set_id)
 
     assignments.replace_assignments(
         db, review_session=review_session, user=user, correlation_id="c1"
@@ -659,7 +675,7 @@ def test_exclude_self_reviews_deletes_saved_responses(db: Session) -> None:
         db, instrument_id=instrument.id, assignment=self_row, key="selfrev"
     )
 
-    rule_set = db.get(SessionRuleSet, instrument.rule_set_id)
+    rule_set = _get(db, SessionRuleSet, instrument.rule_set_id)
     rule_set.exclude_self_reviews = True
     db.flush()
 
@@ -709,7 +725,7 @@ def test_exclude_self_reviews_survives_a_link_rule_hiding_the_self_pair(
     instrument.group_kind = "r1"
     db.flush()
 
-    rule_set = db.get(SessionRuleSet, instrument.rule_set_id)
+    rule_set = _get(db, SessionRuleSet, instrument.rule_set_id)
     # Link 2 keeps only tag_2 == OTHER, so Sam's own reviewee row never
     # reaches the fan-out while his group-mate Zoe does.
     rule_set.rules_json = [

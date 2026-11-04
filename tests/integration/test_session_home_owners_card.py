@@ -298,9 +298,11 @@ def test_create_ships_its_add_owner_hidden_too(
 
 
 def _remove_form(card: str, user: User) -> str:
-    return re.search(
+    form = re.search(
         rf"<form method=\"post\"[^>]*/owners/{user.id}/remove\"[^>]*>", card
-    ).group(0)
+    )
+    assert form is not None
+    return form.group(0)
 
 
 def test_the_card_has_no_lock_and_is_live(client: TestClient, db: Session) -> None:

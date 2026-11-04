@@ -104,7 +104,9 @@ def test_a_required_governed_row_renders_r_pressed(
         f"/operator/sessions/{review_session.public_id}/instruments?editing={instrument.id}"
     ).text
     governed = _row(_rows_table(_card_slice(" ".join(body.split()), instrument.id)), "Comments")
-    r = re.search(r"<button[^>]*data-new-model-rf-required[^>]*>", governed).group(0)
+    required = re.search(r"<button[^>]*data-new-model-rf-required[^>]*>", governed)
+    assert required is not None
+    r = required.group(0)
     assert 'data-required="true"' in r and 'aria-pressed="true"' in r
     assert " disabled" not in r
 

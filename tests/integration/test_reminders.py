@@ -43,7 +43,9 @@ def _create_session(client: TestClient, db: Session, code: str) -> ReviewSession
 
 
 def _populate(client: TestClient, db: Session, session_id: int, *, reviewers: list[str]) -> None:
-    pid = db.get(ReviewSession, session_id).public_id
+    review_session = db.get(ReviewSession, session_id)
+    assert review_session is not None
+    pid = review_session.public_id
     csv = b"ReviewerName,ReviewerEmail\n" + b"".join(
         f"R{i},{email}\n".encode() for i, email in enumerate(reviewers)
     )
@@ -248,6 +250,7 @@ def test_per_row_reminder_writes_a_reminders_sent_event(
 
     events = _reminders_sent_events(db, session.id)
     assert len(events) == 1
+    assert events[0].detail is not None
     assert events[0].detail["set_changes"]["updated"] == [
         {"invitation_id": invitation.id, "reviewer_id": invitation.reviewer_id}
     ]
@@ -275,6 +278,7 @@ def test_per_row_reminder_that_falls_back_counts_it(
 
     events = _reminders_sent_events(db, session.id)
     assert len(events) == 1
+    assert events[0].detail is not None
     assert events[0].detail["context"] == {"fell_back": 1}
     assert db.execute(
         select(AuditEvent).where(

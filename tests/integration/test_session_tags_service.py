@@ -53,6 +53,7 @@ def test_add_tag_persists_normalized_and_audits(db: Session) -> None:
             AuditEvent.session_id == review_session.id,
         )
     ).scalar_one()
+    assert event.detail is not None
     assert event.detail["context"]["tag"] == "pilot"
 
 
@@ -89,6 +90,7 @@ def test_remove_tag_deletes_and_audits(db: Session) -> None:
             AuditEvent.session_id == review_session.id,
         )
     ).scalar_one()
+    assert event.detail is not None
     assert event.detail["context"]["tag"] == "drop"
 
 

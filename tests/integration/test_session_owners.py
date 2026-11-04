@@ -27,6 +27,8 @@ Item 4 retired the Edit page — its own card (``#owners-card``) since
 """
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -34,6 +36,12 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db.models import AuditEvent, ReviewSession, SessionOperator, User
+
+
+def _detail(event: AuditEvent) -> dict[str, Any]:
+    """An audit row's ``detail``, which every event under test writes."""
+    assert event.detail is not None
+    return event.detail
 
 
 def _make_session(
@@ -181,9 +189,9 @@ def test_add_owner_inserts_session_operator_and_emits_audit(
             AuditEvent.event_type == "session.owner_added"
         )
     ).scalar_one()
-    assert event.detail["refs"]["target_user_id"] == bob_row.id
-    assert event.detail["snapshot"]["email"] == "bob@example.edu"
-    assert event.detail["session_id"] == review_session.id
+    assert _detail(event)["refs"]["target_user_id"] == bob_row.id
+    assert _detail(event)["snapshot"]["email"] == "bob@example.edu"
+    assert _detail(event)["session_id"] == review_session.id
 
 
 def test_config_owners_card_renders_add_form_when_candidates_exist(
@@ -318,7 +326,7 @@ def test_remove_owner_deletes_session_operator_and_emits_audit(
             AuditEvent.event_type == "session.owner_removed"
         )
     ).scalar_one()
-    assert event.detail["refs"]["target_user_id"] == bob_row.id
+    assert _detail(event)["refs"]["target_user_id"] == bob_row.id
 
 
 def test_remove_last_owner_409s(
@@ -570,8 +578,8 @@ def test_non_owner_sys_admin_can_still_clone(
         )
     ).scalar_one()
     assert event.actor_user_id == bob_row.id
-    assert event.detail["refs"] == {"clone_session_id": clone_id}
-    assert event.detail["context"] == {
+    assert _detail(event)["refs"] == {"clone_session_id": clone_id}
+    assert _detail(event)["context"] == {
         "mode": "all",
         "clone_code": clone.code,
     }

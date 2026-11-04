@@ -146,6 +146,7 @@ def test_save_emits_audit_event(db: Session) -> None:
         )
     ).scalar_one()
     detail = event.detail
+    assert detail is not None
     assert detail["counts"]["new"] == 1
     assert detail["counts"]["replaced"] == 0
     assert detail["context"]["filename"] == "rel.csv"

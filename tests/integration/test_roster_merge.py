@@ -8,6 +8,8 @@ its address.
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -23,6 +25,19 @@ from app.services import csv_imports, relationships
 from app.services.csv_imports import AppendConflict, DirectoryCheck
 
 from .test_roster_append import JANE, JANE_OID, _seeded, _session
+
+
+def _get[M](db: Session, model: type[M], ident: object) -> M:
+    """``db.get`` for a row the test knows exists."""
+    row = db.get(model, ident)
+    assert row is not None
+    return row
+
+
+def _detail(event: AuditEvent) -> dict[str, Any]:
+    """An audit row's ``detail``, which every event under test writes."""
+    assert event.detail is not None
+    return event.detail
 
 
 def _merge_reviewers(db, review_session, owner, rows, **kwargs):
@@ -62,11 +77,11 @@ def test_a_merge_updates_matched_rows_adds_the_rest_and_keeps_the_absent(db: Ses
     assert _reviewer(db, review_session.id, "cy@example.edu").name == "Cy"
 
     imported = db.execute(select(AuditEvent).where(AuditEvent.event_type == "reviewers.imported")).scalar_one()
-    assert imported.detail["counts"] == {"new": 1, "updated": 1, "unchanged": 0}
-    assert imported.detail["context"]["mode"] == "upsert"
+    assert _detail(imported)["counts"] == {"new": 1, "updated": 1, "unchanged": 0}
+    assert _detail(imported)["context"]["mode"] == "upsert"
     updated = db.execute(select(AuditEvent).where(AuditEvent.event_type == "reviewer.updated")).scalar_one()
-    assert updated.detail["changes"]["tag_1"] == ["Old", "New"]
-    assert updated.detail["refs"]["reviewer_id"] == ana.id
+    assert _detail(updated)["changes"]["tag_1"] == ["Old", "New"]
+    assert _detail(updated)["refs"]["reviewer_id"] == ana.id
 
 
 def test_status_changes_only_when_the_file_has_the_column(db: Session) -> None:
@@ -85,7 +100,7 @@ def test_an_unchanged_row_writes_no_event(db: Session) -> None:
     _merge_reviewers(db, review_session, owner, [ReviewerImportRow(name="Ana", email="ana@example.edu")])
     assert db.execute(select(AuditEvent).where(AuditEvent.event_type == "reviewer.updated")).first() is None
     imported = db.execute(select(AuditEvent).where(AuditEvent.event_type == "reviewers.imported")).scalar_one()
-    assert imported.detail["counts"] == {"new": 0, "updated": 0, "unchanged": 1}
+    assert _detail(imported)["counts"] == {"new": 0, "updated": 0, "unchanged": 1}
 
 
 def test_a_row_on_a_bound_account_updates_that_row_and_keeps_its_address(db: Session) -> None:
@@ -137,7 +152,7 @@ def test_reviewees_and_observers_merge_the_same_way(db: Session) -> None:
         rows=[ObserverImportRow(email="obs@example.edu", display_name="New")],
     )
     db.expire_all()
-    assert db.get(Reviewee, bo.id).tag_1 == "X"
+    assert _get(db, Reviewee, bo.id).tag_1 == "X"
     assert db.execute(select(Observer.display_name).where(Observer.session_id == review_session.id)).scalar_one() == "New"
 
 
@@ -228,7 +243,7 @@ def test_a_merge_that_binds_a_reviewer_recomputes_self_review(db: Session) -> No
     _merge_reviewers(db, review_session, owner,
                      [ReviewerImportRow(name="Jane", email="e0123456@example.edu")], directory=directory)
     db.expire_all()
-    assert db.get(Assignment, row.id).is_self_review is True
+    assert _get(db, Assignment, row.id).is_self_review is True
 
 
 def test_a_blank_status_cell_keeps_the_stored_status(client, db: Session) -> None:

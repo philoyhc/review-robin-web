@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -32,6 +33,19 @@ from ._full_matrix import (
 )
 from ._instrument_states import add_group_instrument
 from ._validated import validate_session
+
+
+def _detail(event: AuditEvent) -> dict[str, Any]:
+    """An audit row's ``detail``, which every event under test writes."""
+    assert event.detail is not None
+    return event.detail
+
+
+def _search(pattern: str, text: str, flags: int = 0) -> re.Match[str]:
+    """``re.search`` for a fragment the page is expected to carry."""
+    match = re.search(pattern, text, flags)
+    assert match is not None
+    return match
 
 
 def _operator_creates_session_with_pair(
@@ -1064,7 +1078,7 @@ def test_submit_with_all_required_filled_succeeds_and_writes_audit(
     audit = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "responses.submitted")
     ).scalar_one()
-    assert audit.detail["counts"]["submitted"] >= 1
+    assert _detail(audit)["counts"]["submitted"] >= 1
 
 
 def test_submit_with_missing_required_warns_without_audit(
@@ -1171,7 +1185,7 @@ def test_clear_all_with_confirm_deletes_responses(
     audit = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "responses.cleared")
     ).scalar_one()
-    assert audit.detail["counts"]["deleted"] >= 1
+    assert _detail(audit)["counts"]["deleted"] >= 1
 
 
 def test_clear_all_without_confirm_400s(
@@ -1373,7 +1387,7 @@ def test_save_drops_foreign_assignment_id_from_post(
 
     rae_client = make_client(rae)
     page = rae_client.get(f"/me/sessions/{rae_session.public_id}/1").text
-    digest = re.search(r'name="page_digest" value="([0-9a-f]+)"', page).group(1)
+    digest = _search(r'name="page_digest" value="([0-9a-f]+)"', page).group(1)
     # Rae's page has one row; ordinal 2 is past it.
     response = rae_client.post(
         f"/me/sessions/{rae_session.public_id}/1/save",
@@ -2733,7 +2747,9 @@ def test_an_excluded_group_member_keeps_the_groups_answers(
         assert _rating(by_reviewee["Carol"]) == value
         assert _rating(eve) == value
         assert _rating(by_reviewee["Dan"]) is None
-    assert db.get(Assignment, eve.id).include is False
+    eve_row = db.get(Assignment, eve.id)
+    assert eve_row is not None
+    assert eve_row.include is False
 
     # The excluded row is not the reviewer's to answer, and an
     # out-of-range value must not ride the group fan-out past
@@ -2742,7 +2758,7 @@ def test_an_excluded_group_member_keeps_the_groups_answers(
     # digest refuses, or by an ordinal past the page's rows, which is
     # ignored. Neither writes anything.
     page = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
-    digest = re.search(r'name="page_digest" value="([0-9a-f]+)"', page).group(1)
+    digest = _search(r'name="page_digest" value="([0-9a-f]+)"', page).group(1)
     past_the_page = len(
         db.execute(
             select(Assignment.id).where(Assignment.session_id == review_session.id)
@@ -2959,7 +2975,7 @@ def test_page_save_emits_audit_row_with_counts_keys(
         .where(AuditEvent.event_type == "responses.saved")
         .where(AuditEvent.session_id == review_session.id)
     ).scalar_one()
-    counts = event.detail["counts"]
+    counts = _detail(event)["counts"]
     assert counts["assignments_touched"] == 1
     assert counts["responses_saved"] == 2
     assert "saved" not in counts
@@ -3087,6 +3103,6 @@ def test_generate_clears_a_group_a_new_member_joins(
         .where(AuditEvent.correlation_id == "b13")
     ).scalars().all()
     [group_event] = [
-        e for e in event if e.detail["refs"]["instrument_id"] == group.id
+        e for e in event if _detail(e)["refs"]["instrument_id"] == group.id
     ]
-    assert group_event.detail["counts"]["group_responses_cleared"] == 1
+    assert _detail(group_event)["counts"]["group_responses_cleared"] == 1

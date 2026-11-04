@@ -249,7 +249,9 @@ def test_validate_page_renders_severity_chip_strip(
         '<span class="severity-filter-chips" role="group"'
         ' aria-labelledby="severity-filter-label">' in strip
     )
-    form_tag = re.search(r"<form[^>]*data-severity-chips[^>]*>", resp.text).group(0)
+    form_match = re.search(r"<form[^>]*data-severity-chips[^>]*>", resp.text)
+    assert form_match is not None
+    form_tag = form_match.group(0)
     assert "role=" not in form_tag and "aria-labelledby" not in form_tag
     # The default is remembered as the three keys.
     assert resp.cookies.get("rrw-validate-severity") == '"error\\054warning\\054info"'

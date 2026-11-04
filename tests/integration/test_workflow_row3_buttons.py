@@ -6,6 +6,7 @@ Archive session.
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -15,6 +16,12 @@ from app.db.models import AuditEvent, ReviewSession, User
 from app.schemas.sessions import SessionCreate
 from app.services import session_lifecycle as lifecycle
 from app.services import sessions
+
+
+def _detail(event: AuditEvent) -> dict[str, Any]:
+    """An audit row's ``detail``, which every event under test writes."""
+    assert event.detail is not None
+    return event.detail
 
 
 def _draft_session(db: Session, code: str) -> tuple[ReviewSession, User]:
@@ -95,7 +102,7 @@ def test_release_responses_now_emits_audit_event(db: Session) -> None:
             AuditEvent.session_id == review_session.id,
         )
     ).scalar_one()
-    snapshot = event.detail["snapshot"]
+    snapshot = _detail(event)["snapshot"]
     assert snapshot["cleared_until"] is True
     # ISO-formatted UTC timestamp present.
     assert "T" in snapshot["responses_release_at"]
@@ -132,7 +139,7 @@ def test_stop_responses_release_emits_audit_event(db: Session) -> None:
             AuditEvent.session_id == review_session.id,
         )
     ).scalar_one()
-    assert "T" in event.detail["snapshot"]["responses_release_until"]
+    assert "T" in _detail(event)["snapshot"]["responses_release_until"]
 
 
 # ── Workflow routes ──────────────────────────────────────────────────
@@ -242,4 +249,4 @@ def test_workflow_archive_route_works_from_ready_state(
             AuditEvent.session_id == review_session.id,
         )
     ).scalar_one()
-    assert event.detail["changes"]["status"] == ["ready", "archived"]
+    assert _detail(event)["changes"]["status"] == ["ready", "archived"]

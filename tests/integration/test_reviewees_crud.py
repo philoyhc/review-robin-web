@@ -4,6 +4,8 @@ Segment 15F PR 4. Reviewee-side mirror of ``test_reviewers_crud``.
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -11,6 +13,12 @@ from sqlalchemy.orm import Session
 from app.db.models import AuditEvent, Reviewee, ReviewSession, User
 from app.services import reviewees as reviewees_service
 from app.services.reviewees import RevieweeOperationError
+
+
+def _detail(event: AuditEvent) -> dict[str, Any]:
+    """An audit row's ``detail``, which every event under test writes."""
+    assert event.detail is not None
+    return event.detail
 
 
 def _seed(
@@ -59,9 +67,9 @@ def test_create_reviewee_inserts_row_and_emits_snapshot(
     event = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "reviewee.created")
     ).scalar_one()
-    assert event.detail["snapshot"]["reviewee_id"] == reviewee.id
-    assert event.detail["snapshot"]["email_or_identifier"] == "carol@example.edu"
-    assert event.detail["snapshot"]["profile_link"] == (
+    assert _detail(event)["snapshot"]["reviewee_id"] == reviewee.id
+    assert _detail(event)["snapshot"]["email_or_identifier"] == "carol@example.edu"
+    assert _detail(event)["snapshot"]["profile_link"] == (
         "https://example.edu/carol"
     )
 
@@ -227,7 +235,7 @@ def test_update_reviewee_emits_changes_for_changed_fields_only(
         .first()
     )
     assert event is not None
-    assert event.detail["refs"]["reviewee_id"] == reviewee.id
+    assert _detail(event)["refs"]["reviewee_id"] == reviewee.id
 
 
 def test_update_reviewee_no_changes_emits_nothing(db: Session) -> None:
@@ -352,7 +360,7 @@ def test_bulk_inactivate_flips_only_active_rows(db: Session) -> None:
             AuditEvent.event_type == "reviewee.bulk_inactivated"
         )
     ).scalar_one()
-    assert sorted(event.detail["snapshot"]["reviewee_ids"]) == sorted(flipped)
+    assert sorted(_detail(event)["snapshot"]["reviewee_ids"]) == sorted(flipped)
 
 
 def test_bulk_reactivate_flips_only_inactive_rows(db: Session) -> None:

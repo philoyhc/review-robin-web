@@ -108,9 +108,9 @@ def test_the_builders_check_agrees_with_save(client: TestClient, db: Session) ->
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/instruments?editing={instrument.id}"
     ).text
-    ops = html.unescape(
-        re.search(r"data-new-model-rf-branch-ops='([^']*)'", body).group(1)
-    )
+    match = re.search(r"data-new-model-rf-branch-ops='([^']*)'", body)
+    assert match is not None
+    ops = html.unescape(match.group(1))
     boxes = ["", " ", "2", " 2 ", "4", "-1", "1.", "x", "to", "2 to", "to 4",
              "3 to 5", "inf", "1_000"]
     cases = [

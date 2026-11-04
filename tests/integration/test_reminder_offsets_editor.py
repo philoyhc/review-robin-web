@@ -232,6 +232,7 @@ def test_edit_round_trips_reminder_offsets(
     )
     assert response.status_code == 303, response.text
     rs = db.get(ReviewSession, session_id)
+    assert rs is not None
     assert rs.reminder_offsets == ["-P1D"]
 
     # Edit GET prefills the input value
@@ -545,6 +546,7 @@ def test_caption_renders_on_workflow_card_not_invitations_page(
         reminder_offsets="-P1D",
     )
     rs = db.get(ReviewSession, session_id)
+    assert rs is not None
     assert rs.reminder_offsets == ["-P1D"]
 
     body = client.get(f"/operator/sessions/{public_id(session_id)}/invitations").text

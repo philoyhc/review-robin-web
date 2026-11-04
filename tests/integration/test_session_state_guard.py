@@ -27,6 +27,13 @@ from ._quick_setup_refusal import refusal
 from .test_scheduled_activation import _make_validated_session
 
 
+def _get[M](db: Session, model: type[M], ident: object) -> M:
+    """``db.get`` for a row the test knows exists."""
+    row = db.get(model, ident)
+    assert row is not None
+    return row
+
+
 def _lands_at_the_lock(
     monkeypatch, db: Session, statement, *, at: int = 1, commit: bool = False
 ) -> None:
@@ -452,7 +459,7 @@ def test_a_roster_import_refuses_a_session_activated_at_the_lock(
 
     assert response.status_code == 409
     assert _reviewer_emails(db, session) == before
-    assert db.get(ReviewSession, session.id).status == "ready"
+    assert _get(db, ReviewSession, session.id).status == "ready"
 
 
 _LABELLED_IMPORTS = {
@@ -614,7 +621,7 @@ def test_a_refused_import_leaves_a_validated_session_validated(
         )
 
     db.expire_all()
-    assert db.get(ReviewSession, session.id).status == "validated"
+    assert _get(db, ReviewSession, session.id).status == "validated"
     assert _count(db, session, "session.invalidated") == 0
 
 
@@ -646,7 +653,7 @@ def test_a_refused_edit_does_not_demote_a_validated_session(db: Session) -> None
     assert session.status == "draft"
     db.rollback()  # the route redirects without committing
 
-    assert db.get(ReviewSession, session.id).status == "validated"
+    assert _get(db, ReviewSession, session.id).status == "validated"
     assert _count(db, session, "session.invalidated") == 0
 
 
@@ -701,7 +708,7 @@ def test_the_validated_to_draft_flip_lands_with_the_edit(
     )
 
     assert commits == [True]
-    assert db.get(ReviewSession, session.id).status == "draft"
+    assert _get(db, ReviewSession, session.id).status == "draft"
     assert _count(db, session, "session.invalidated") == 1
 
 
@@ -724,7 +731,7 @@ def test_a_row_edit_refuses_a_session_activated_at_the_lock(
         )
 
     db.expire_all()
-    assert db.get(Reviewer, reviewer.id).name != "Renamed"
+    assert _get(db, Reviewer, reviewer.id).name != "Renamed"
 
 
 def test_observers_keep_their_own_gate(db: Session, monkeypatch) -> None:
@@ -772,6 +779,7 @@ def test_a_relationship_write_refuses_a_session_activated_at_the_lock(
     reviewee = db.execute(
         select(Reviewee).where(Reviewee.session_id == session.id)
     ).scalars().first()
+    assert reviewer is not None and reviewee is not None
     _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
 
     with pytest.raises(lifecycle.SessionStateConflict):
@@ -872,7 +880,7 @@ def test_each_rung4_write_refuses_a_session_activated_at_the_lock(
         _rung4_writes()[write](db, session, user)
 
     db.expire_all()
-    assert db.get(ReviewSession, session.id).status == "ready"
+    assert _get(db, ReviewSession, session.id).status == "ready"
 
 
 def test_a_relationship_import_refuses_at_its_entry_gate(db: Session) -> None:
@@ -919,7 +927,7 @@ def test_a_relationship_import_refuses_at_its_entry_gate(db: Session) -> None:
         )
 
     db.expire_all()
-    assert db.get(ReviewSession, session.id).status == "ready"
+    assert _get(db, ReviewSession, session.id).status == "ready"
 
 
 def test_generate_is_one_commit_from_its_gate(db: Session, monkeypatch) -> None:
@@ -997,7 +1005,7 @@ def test_an_instrument_edit_refuses_a_session_activated_at_the_lock(
         )
 
     db.expire_all()
-    assert db.get(Instrument, instrument.id).short_label != "Late"
+    assert _get(db, Instrument, instrument.id).short_label != "Late"
 
 
 def test_an_async_instrument_route_answers_409_off_the_event_loop(
@@ -1017,6 +1025,7 @@ def test_an_async_instrument_route_answers_409_off_the_event_loop(
     instrument = db.execute(
         select(Instrument).where(Instrument.session_id == session.id)
     ).scalars().first()
+    assert instrument is not None
     _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
 
     response = client.post(
@@ -1026,7 +1035,7 @@ def test_an_async_instrument_route_answers_409_off_the_event_loop(
 
     assert response.status_code == 409
     db.expire_all()
-    assert db.get(Instrument, instrument.id).short_label != "Late"
+    assert _get(db, Instrument, instrument.id).short_label != "Late"
 
 
 def test_an_identity_save_of_both_fields_is_one_commit(
@@ -1046,6 +1055,7 @@ def test_an_identity_save_of_both_fields_is_one_commit(
     instrument = db.execute(
         select(Instrument).where(Instrument.session_id == session.id)
     ).scalars().first()
+    assert instrument is not None
     _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "archived"), at=2)
     commits = _counting_commits(monkeypatch, db)
 
@@ -1057,7 +1067,7 @@ def test_an_identity_save_of_both_fields_is_one_commit(
     assert response.status_code == 409
     assert commits == []
     db.expire_all()
-    assert db.get(Instrument, instrument.id).short_label != "Late"
+    assert _get(db, Instrument, instrument.id).short_label != "Late"
 
 
 def _rung5_writes():
@@ -1192,7 +1202,7 @@ def test_each_rung5_write_refuses_a_session_activated_at_the_lock(
         _rung5_writes()[write](db, session, instrument, user)
 
     db.expire_all()
-    assert db.get(ReviewSession, session.id).status == "ready"
+    assert _get(db, ReviewSession, session.id).status == "ready"
 
 
 def test_a_band2_save_is_one_commit(client, db: Session, monkeypatch) -> None:
@@ -1269,7 +1279,7 @@ def test_update_session_refuses_a_session_activated_at_the_lock(
         )
 
     db.expire_all()
-    assert db.get(ReviewSession, session.id).name != "Renamed"
+    assert _get(db, ReviewSession, session.id).name != "Renamed"
 
 
 def test_delete_session_refuses_a_session_activated_at_the_lock(
@@ -1344,7 +1354,7 @@ def test_purge_and_archive_decides_under_the_lock(
     # The refusal rolls the transaction back, the stand-in's write with
     # it, so assert on what the purge must not have done.
     db.expire_all()
-    assert db.get(ReviewSession, session.id).status != "archived"
+    assert _get(db, ReviewSession, session.id).status != "archived"
     assert db.execute(
         select(Reviewer.id).where(Reviewer.session_id == session.id)
     ).all()
@@ -1510,7 +1520,7 @@ def test_a_session_home_config_save_is_one_commit(
     assert response.status_code == 409
     assert commits == []
     db.expire_all()
-    assert db.get(ReviewSession, session.id).name == "Config"
+    assert _get(db, ReviewSession, session.id).name == "Config"
 
 
 def test_purge_logs_only_what_the_archive_committed(

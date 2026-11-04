@@ -271,6 +271,7 @@ def test_issue_groups_carry_gate_field(db: Session) -> None:
     instrument = db.query(Instrument).filter(
         Instrument.session_id == review_session.id
     ).first()
+    assert instrument is not None
     instrument.rule_set_id = rule_set.id
     db.flush()
     db.commit()

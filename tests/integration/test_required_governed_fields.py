@@ -220,9 +220,11 @@ def _live(db: Session, operator: TestClient, code: str):
 
 
 def _comments_control(body: str) -> str:
-    return re.search(
+    control = re.search(
         r'<(?:input|textarea)[^>]*name="response\[\d+\]\[comments\]"[^>]*>', body
-    ).group(0)
+    )
+    assert control is not None
+    return control.group(0)
 
 
 def test_a_closed_required_cell_isnt_announced_as_required(

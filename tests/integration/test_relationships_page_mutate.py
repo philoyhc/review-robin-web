@@ -121,6 +121,7 @@ def test_update_repoints_reviewer_and_emits_changes(
             AuditEvent.event_type == "relationship.updated"
         )
     ).scalar_one()
+    assert event.detail is not None
     assert event.detail["refs"]["relationship_id"] == rels[0].id
 
 
@@ -520,6 +521,7 @@ def test_create_relationship_service(
             AuditEvent.event_type == "relationship.created"
         )
     ).scalar_one()
+    assert event.detail is not None
     assert event.detail["snapshot"]["reviewer_id"] == rv[0].id
 
 

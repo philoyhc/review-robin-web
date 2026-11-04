@@ -33,6 +33,12 @@ from ._full_matrix import (
 )
 
 
+def _detail(event: AuditEvent) -> dict[str, Any]:
+    """An audit row's ``detail``, which every event under test writes."""
+    assert event.detail is not None
+    return event.detail
+
+
 @pytest.fixture
 def rae() -> AuthenticatedUser:
     return AuthenticatedUser(
@@ -142,6 +148,7 @@ def test_a_submit_queues_the_confirmation(
             AuditEvent.session_id == review_session.id,
         )
     ).scalar_one()
+    assert event.detail is not None
     assert event.detail["refs"]["outbox_id"] == row.id
     rae_user = db.execute(
         select(User).where(User.email == "rae@example.edu")
@@ -167,7 +174,7 @@ def test_a_second_submit_refreshes_the_one_queued_row(
 
     assert len(_received_rows(db, review_session.id)) == 1
     contexts = [
-        e.detail["context"]["refreshed"]
+        _detail(e)["context"]["refreshed"]
         for e in db.execute(
             select(AuditEvent)
             .where(

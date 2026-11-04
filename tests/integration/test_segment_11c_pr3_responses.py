@@ -56,7 +56,9 @@ def _populate(
     reviewer_emails: list[str],
     reviewee_emails: list[str],
 ) -> None:
-    pid = db.get(ReviewSession, session_id).public_id
+    review_session = db.get(ReviewSession, session_id)
+    assert review_session is not None
+    pid = review_session.public_id
     rev_csv = b"ReviewerName,ReviewerEmail\n" + b"".join(
         f"R{i},{e}\n".encode() for i, e in enumerate(reviewer_emails)
     )

@@ -34,6 +34,7 @@ def test_archive_session_flips_draft_to_archived(db: Session) -> None:
             AuditEvent.session_id == review_session.id,
         )
     ).scalar_one()
+    assert event.detail is not None
     assert event.detail["changes"]["status"] == ["draft", "archived"]
 
 
@@ -53,6 +54,7 @@ def test_archive_session_accepts_non_draft_states(db: Session) -> None:
             AuditEvent.session_id == review_session.id,
         )
     ).scalar_one()
+    assert event.detail is not None
     assert event.detail["changes"]["status"] == ["ready", "archived"]
 
 

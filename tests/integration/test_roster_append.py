@@ -6,6 +6,8 @@ already there, refuses the whole file before anything is written.
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -33,6 +35,12 @@ from app.services.instruments import ensure_default_instrument
 
 JANE_OID = "11111111-1111-4111-8111-111111111111"
 JANE = Account(object_id=JANE_OID, mail="jane.tan@example.edu", upn="e0123456@example.edu")
+
+
+def _detail(event: AuditEvent) -> dict[str, Any]:
+    """An audit row's ``detail``, which every event under test writes."""
+    assert event.detail is not None
+    return event.detail
 
 
 def _session(db: Session, code: str) -> tuple[ReviewSession, User]:
@@ -86,8 +94,8 @@ def test_an_append_adds_the_rows_and_keeps_everything_already_there(db: Session)
     event = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "reviewers.imported")
     ).scalar_one()
-    assert event.detail["counts"] == {"new": 1, "kept": 1}
-    assert event.detail["context"] == {"filename": "late.csv", "mode": "append"}
+    assert _detail(event)["counts"] == {"new": 1, "kept": 1}
+    assert _detail(event)["context"] == {"filename": "late.csv", "mode": "append"}
 
 
 def test_a_replace_is_unchanged(db: Session) -> None:
@@ -96,8 +104,8 @@ def test_a_replace_is_unchanged(db: Session) -> None:
     assert (replaced, new) == (1, 1)
     assert _names(db, Reviewer, review_session.id) == ["Cy"]
     event = db.execute(select(AuditEvent).where(AuditEvent.event_type == "reviewers.imported")).scalar_one()
-    assert event.detail["counts"]["replaced"] == 1 and "kept" not in event.detail["counts"]
-    assert "mode" not in (event.detail.get("context") or {})
+    assert _detail(event)["counts"]["replaced"] == 1 and "kept" not in _detail(event)["counts"]
+    assert "mode" not in (_detail(event).get("context") or {})
 
 
 def test_a_row_already_on_the_roster_refuses_the_whole_append(db: Session) -> None:
@@ -196,5 +204,5 @@ def test_relationships_append_keeps_the_pairs_and_refuses_a_held_one(db: Session
     pairs = set(db.execute(select(Relationship.reviewer_id).where(Relationship.session_id == review_session.id)).scalars())
     assert pairs == {ana.id, cy.id}
     event = db.execute(select(AuditEvent).where(AuditEvent.event_type == "relationships.imported")).scalar_one()
-    assert event.detail["counts"] == {"new": 1, "kept": 1}
-    assert event.detail["context"]["mode"] == "append"
+    assert _detail(event)["counts"] == {"new": 1, "kept": 1}
+    assert _detail(event)["context"]["mode"] == "append"

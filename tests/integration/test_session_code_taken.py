@@ -14,6 +14,13 @@ from app.db.models import ReviewSession
 from app.services import session_tags
 
 
+def _get[M](db: Session, model: type[M], ident: object) -> M:
+    """``db.get`` for a row the test knows exists."""
+    row = db.get(model, ident)
+    assert row is not None
+    return row
+
+
 def _create(client: TestClient, db: Session, name: str, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
@@ -64,7 +71,7 @@ def test_session_home_save_with_a_taken_code_is_a_422_and_writes_nothing(
 
     assert response.status_code == 422, response.text
     db.expire_all()
-    other = db.get(ReviewSession, other.id)
+    other = _get(db, ReviewSession, other.id)
     assert (other.name, other.code) == ("Other", "other-code")
     assert other.display_timezone == zone_before
     assert session_tags.tags_for_sessions(db, [other.id])[other.id] == []
@@ -83,7 +90,7 @@ def test_session_home_save_keeps_its_own_code(
 
     assert response.status_code == 303, response.text
     db.expire_all()
-    assert db.get(ReviewSession, session.id).name == "Mine renamed"
+    assert _get(db, ReviewSession, session.id).name == "Mine renamed"
 
 
 def test_lobby_edit_with_a_taken_code_is_a_422_and_writes_nothing(
@@ -100,7 +107,7 @@ def test_lobby_edit_with_a_taken_code_is_a_422_and_writes_nothing(
 
     assert response.status_code == 422, response.text
     db.expire_all()
-    assert db.get(ReviewSession, other.id).code == "lobby-other"
+    assert _get(db, ReviewSession, other.id).code == "lobby-other"
     assert session_tags.tags_for_sessions(db, [other.id])[other.id] == []
 
 
@@ -117,7 +124,7 @@ def test_lobby_edit_keeps_its_own_code(client: TestClient, db: Session) -> None:
 
     assert response.status_code == 303, response.text
     db.expire_all()
-    assert db.get(ReviewSession, session.id).name == "Mine renamed"
+    assert _get(db, ReviewSession, session.id).name == "Mine renamed"
 
 
 def test_lobby_edit_when_not_editable_ignores_a_taken_code(
@@ -138,5 +145,5 @@ def test_lobby_edit_when_not_editable_ignores_a_taken_code(
 
     assert response.status_code == 303, response.text
     db.expire_all()
-    assert db.get(ReviewSession, other.id).code == "lobby-ready"
+    assert _get(db, ReviewSession, other.id).code == "lobby-ready"
     assert session_tags.tags_for_sessions(db, [other.id])[other.id] == ["pilot"]

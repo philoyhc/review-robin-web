@@ -237,9 +237,11 @@ def test_the_surface_closes_a_chain_until_its_top_opens(
         body,
     )
     for key in ("rating", "comments"):
-        control = re.search(
+        match = re.search(
             rf'<(?:input|textarea)[^>]*name="response\[\d+\]\[{key}\]"[^>]*>', body
-        ).group(0)
+        )
+        assert match is not None
+        control = match.group(0)
         assert " disabled" in control, key
     reviewer = db.execute(
         select(Reviewer).where(
@@ -253,9 +255,11 @@ def test_the_surface_closes_a_chain_until_its_top_opens(
     _answer(db, assignment, fields["rating"], "5")
     db.commit()
     body = client.get(f"/me/sessions/{review_session.public_id}").text
-    comments = re.search(
+    match = re.search(
         r'<(?:input|textarea)[^>]*name="response\[\d+\]\[comments\]"[^>]*>', body
-    ).group(0)
+    )
+    assert match is not None
+    comments = match.group(0)
     assert " disabled" in comments
 
 

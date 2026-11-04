@@ -353,6 +353,7 @@ def test_set_sort_emits_audit_on_diff(
         )
     ).scalar_one()
     detail = event.detail
+    assert detail is not None
     assert detail["refs"]["instrument_id"] == instrument.id
     assert detail["changes"] == {
         "sort_display_fields": [

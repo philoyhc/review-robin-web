@@ -430,6 +430,7 @@ def test_relationship_tags_run_on_from_the_count_after_the_divider(
     rs = _mk(client, db, "up-reltag")
     _seed(db, rs.id, "relationships", n=3)
     rel = db.query(Relationship).filter_by(session_id=rs.id).first()
+    assert rel is not None
     rel.tag_1 = "Cohort A"
     db.commit()
     card = _card(_get(client, rs, "relationships"), "relationships")
@@ -634,6 +635,7 @@ def test_the_relationships_replace_confirmation_also_arrives_open(
     _seed(db, rs.id, "relationships", n=2)
     reviewer = db.execute(select(Reviewer)).scalars().first()
     reviewee = db.execute(select(Reviewee)).scalars().first()
+    assert reviewer is not None and reviewee is not None
     csv = (
         "ReviewerEmail,RevieweeEmail\n"
         f"{reviewer.email},{reviewee.email_or_identifier}\n"

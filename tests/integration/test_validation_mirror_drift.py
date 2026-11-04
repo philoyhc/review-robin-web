@@ -126,6 +126,7 @@ def test_saving_a_reviewer_unchanged_brings_the_copy_back_into_step(
             AuditEvent.event_type == "reviewees.mirror_repaired",
         )
     ).scalar_one()
+    assert repaired.detail is not None
     assert repaired.detail["counts"] == {"created": 0, "updated": 1, "deleted": 0}
     assert repaired.detail["refs"] == {"reviewer_id": ann.id}
 

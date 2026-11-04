@@ -287,7 +287,9 @@ def test_the_offered_revert_actually_works(
     assert response.headers["location"] == (
         f"/operator/sessions/{s.public_id}/{page}"
     ), (page, state)
-    assert db.get(ReviewSession, s.id).status == "draft", (page, state)
+    current = db.get(ReviewSession, s.id)
+    assert current is not None
+    assert current.status == "draft", (page, state)
 
 
 @pytest.mark.parametrize("page", ROSTER_PAGES)
