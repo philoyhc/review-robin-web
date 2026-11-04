@@ -47,8 +47,9 @@
         .querySelector("[data-directory-renew-upload]");
       var failed = document.currentScript.previousElementSibling
         .querySelector("[data-directory-renew-failed]");
-      // A count this click started and the operator then stopped (Stop
-      // recheck) leaves the form where it was: the button works again.
+      // A count this click started and then dropped (stopped before any
+      // lookup, or a page restored from the cache) leaves the form where
+      // it was: the button works again.
       if (button.form) {
         button.form.addEventListener("directory-count-stopped", function () {
           button.disabled = false;

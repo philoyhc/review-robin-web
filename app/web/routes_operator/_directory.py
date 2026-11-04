@@ -180,6 +180,7 @@ async def roster_directory_recheck(
     request: Request,
     roster: str = Form(...),
     since: str | None = Form(None),
+    stop: str | None = Form(None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -196,7 +197,11 @@ async def roster_directory_recheck(
     A recheck asks for fresh answers: it reads only those its own
     countdown fetched (``since``, set by the page from `directory-keys`).
     Without the script there is no ``since``, and every address is
-    looked up here."""
+    looked up here.
+
+    ``stop=true`` is *Stop and save* (author, 2026-11-04): the countdown
+    was stopped, so only what it fetched is read and nothing is looked up
+    here. It needs ``since``; without one it is ignored."""
     if roster not in directory_recheck.ROSTERS:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     if roster == "observers" and not review_session.observers_enabled:
@@ -222,6 +227,7 @@ async def roster_directory_recheck(
         kind=roster,
         directory=directory_or_none(request),
         known=known,
+        stopped=stop == "true" and started is not None,
         correlation_id=request_correlation_id(),
     )
     db.commit()

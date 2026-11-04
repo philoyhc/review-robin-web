@@ -13,6 +13,11 @@ another row of the roster already holds stays unbound too (20H Item 1).
 An expired sign-in (`directory_accounts.sign_in_stop`) saves nothing, as
 an upload's does (20G); the route asks to renew.
 
+**Stop and save** (author, 2026-11-04): a recheck the operator stopped
+mid-count (``stopped``) asks the directory nothing. It binds from the
+answers its countdown already fetched and leaves every other row
+unbound, counted as not checked, for the reason `STOPPED`.
+
 Each roster's recheck is open while its other writes are: Reviewers and
 Reviewees while the session is editable (draft or validated; author,
 2026-11-04, findings M1), Observers until it is archived. A recheck that
@@ -42,6 +47,9 @@ ROSTERS: dict[str, tuple[Any, str, str]] = {
     "reviewees": (Reviewee, "email_or_identifier", "reviewee"),
     "observers": (Observer, "email", "observer"),
 }
+
+#: Why rows went unchecked when the operator stopped the recheck.
+STOPPED = "stopped"
 
 #: The audit event a recheck writes, per roster.
 EVENTS = {kind: f"{kind}.directory_rechecked" for kind in ROSTERS}
@@ -129,12 +137,14 @@ def recheck(
     kind: str,
     directory: Any,
     known: Mapping[str, Any] | None = None,
+    stopped: bool = False,
     correlation_id: str | None = None,
 ) -> Recheck:
     """Check the ``kind`` roster's unmatched rows again and bind those
     the directory now finds. Looks up before taking the lock, so the
     session is not held across the directory's answers; the rows are
-    read again under it. Flushes and audits; the caller commits."""
+    read again under it. With ``stopped``, nothing is looked up: only
+    ``known`` is read. Flushes and audits; the caller commits."""
     model, attr, noun = ROSTERS[kind]
     # Refused before the lookups, so a doomed recheck does not wait out
     # the budget; decided again under the lock below.
@@ -144,11 +154,16 @@ def recheck(
         # Nothing to check (a second tab, a stale page): no event, so the
         # card's line still reports the last check that did something.
         return Recheck(counts={})
-    checked = directory is not None
-    outcomes = directory_accounts.resolve(directory, addresses, known=known)
-    stopped = directory_accounts.sign_in_stop(outcomes, addresses, checked=checked)
     if stopped:
-        return Recheck(counts={}, stopped=stopped)
+        # The operator stopped the count: read what it fetched, ask nothing.
+        checked = True
+        outcomes = dict(known or {})
+    else:
+        checked = directory is not None
+        outcomes = directory_accounts.resolve(directory, addresses, known=known)
+    sign_in = directory_accounts.sign_in_stop(outcomes, addresses, checked=checked)
+    if sign_in:
+        return Recheck(counts={}, stopped=sign_in)
 
     locked = _lock(db, review_session, kind)
     _refuse(locked, kind)
@@ -202,6 +217,8 @@ def recheck(
         )
 
     reason = directory_accounts.unchecked_reason(outcomes, addresses, checked=checked)
+    if stopped and reason:
+        reason = STOPPED
     audit.write_event(
         db,
         event_type=EVENTS[kind],

@@ -1021,7 +1021,8 @@ when a replace kept any not-checked row on its earlier account
 `directory_by_mail`, `directory_by_upn`, `directory_not_found`,
 `directory_ambiguous`, `directory_not_checked` and `directory_held` (found
 on an account another row holds, left unbound), and
-`context.directory_unchecked` when any address went unchecked. A recheck
+`context.directory_unchecked` when any address went unchecked (`"stopped"`
+when the operator stopped it, *Stop and save*). A recheck
 with nothing unmatched writes none.
 
 **`context.mode`.** A replace carries no `mode`; an append is

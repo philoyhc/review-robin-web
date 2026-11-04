@@ -118,6 +118,7 @@ _REASONS = {
     "unauthorized": "the sign-in to the directory had expired",
     "throttled": "the directory was busy",
     "timeout": "the check ran out of time",
+    "stopped": "the recheck was stopped",
 }
 
 

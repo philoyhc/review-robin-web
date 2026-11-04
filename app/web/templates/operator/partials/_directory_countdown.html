@@ -21,10 +21,12 @@
    request, or no directory access; the upload looks up whatever is left. Without the script the
    line never shows and the upload checks every address on the server.
 
-   While the recheck counts, its button reads "Stop recheck" (author,
-   2026-11-04). Stopping sends no more batches, abandons those in flight
-   and posts nothing, so no row is bound; the card is as it was. The
-   answers already fetched are kept, but a new recheck asks afresh. #}
+   While the recheck counts, its button reads "Stop and save" (author,
+   2026-11-04). Stopping sends no more batches, waits for those in
+   flight, then posts the recheck with `stop=true`: the server binds from
+   what the count fetched, asks the directory nothing, and counts the
+   rest not checked. Stopped before the keys come back, there is nothing
+   to save, and the count is simply dropped. #}
 <p class="muted" data-directory-countdown aria-live="polite" hidden>
   Directory check: <span data-directory-countdown-left>0</span> more to go.
 </p>
@@ -49,8 +51,12 @@
     // The recheck's button, relabelled while its count runs.
     var recheckButton = document.querySelector('[data-directory-recheck]');
     var recheckLabel = recheckButton ? recheckButton.textContent : '';
-    function labelRecheck(running) {
-      if (recheckButton) { recheckButton.textContent = running ? 'Stop recheck' : recheckLabel; }
+    function labelRecheck(state) {
+      if (!recheckButton) { return; }
+      recheckButton.textContent = state === 'saving' ? 'Saving…'
+        : state ? 'Stop and save' : recheckLabel;
+      if (state === 'saving') { recheckButton.setAttribute('aria-disabled', 'true'); }
+      else { recheckButton.removeAttribute('aria-disabled'); }
     }
 
     // Counted forms carry `data-directory-counted`, one per form, so a
@@ -62,7 +68,8 @@
     window.addEventListener('pageshow', function (event) {
       if (!event.persisted) { return; }
       // A count frozen mid-flight must not resume behind the reset.
-      stop();
+      cancel();
+      if (recheckButton) { recheckButton.disabled = false; }
       Array.prototype.forEach.call(document.forms, function (f) {
         delete f.dataset.directoryCounted;
       });
@@ -98,16 +105,33 @@
       // stops must not leave the other form's button locked.
       counting = false;
       run = null;
-      labelRecheck(false);
       if (!sent || sent.defaultPrevented) {
         delete target.dataset.directoryCounted;
         line.hidden = true;
+        labelRecheck(false);
+        if (target === recheck && recheck.elements.stop) { recheck.elements.stop.value = ''; }
+      } else if (target === recheck && recheckButton) {
+        // Posted: the button can't post it a second time.
+        labelRecheck('saving');
+        recheckButton.disabled = true;
       }
     }
 
-    // Stop recheck: nothing more is asked, nothing is posted. Requests
+    // Stop and save: no more batches; once those in flight are back, the
+    // recheck posts with `stop=true` and saves what was found.
+    function stopAndSave() {
+      if (!run || run.target !== recheck || run.saving) { return; }
+      // Before the keys come back nothing was fetched: just drop it.
+      if (!run.pump) { cancel(); return; }
+      run.saving = true;
+      if (recheck.elements.stop) { recheck.elements.stop.value = 'true'; }
+      labelRecheck('saving');
+      run.pump();
+    }
+
+    // Drop the count: nothing more is asked, nothing is posted. Requests
     // in flight are aborted where the browser can, and ignored where not.
-    function stop() {
+    function cancel() {
       if (!run) { return; }
       run.stopped = true;
       run.controllers.forEach(function (c) { c.abort(); });
@@ -118,6 +142,7 @@
       if (recheck) {
         // The next recheck asks afresh, even if its own keys call fails.
         if (recheck.elements.since) { recheck.elements.since.value = ''; }
+        if (recheck.elements.stop) { recheck.elements.stop.value = ''; }
         // A renew banner that started this recheck is usable again; it
         // listens for this (`_directory_renew.html`).
         recheck.dispatchEvent(new Event('directory-count-stopped'));
@@ -170,12 +195,12 @@
       return body;
     });
     var recheck = document.getElementById('directory-recheck-form');
-    // Clicking "Stop recheck" stops the count rather than submitting.
+    // Clicking "Stop and save" stops the count rather than submitting.
     if (recheckButton) {
       recheckButton.addEventListener('click', function (event) {
         if (run && run.target === recheck) {
           event.preventDefault();
-          stop();
+          stopAndSave();
         }
       });
     }
@@ -201,6 +226,7 @@
       var done = false;
       left.textContent = String(remaining);
       line.hidden = false;
+      current.pump = pump;
 
       function end() {
         if (done || current.stopped) { return; }
@@ -210,7 +236,9 @@
 
       function pump() {
         if (done || current.stopped) { return; }
-        if (next >= keys.length && running === 0) { end(); return; }
+        // Saving: post once the batches in flight are back.
+        if (running === 0 && (next >= keys.length || current.saving)) { end(); return; }
+        if (current.saving) { return; }
         while (running < workers && next < keys.length) {
           send(keys.slice(next, next + batch));
           next += batch;
