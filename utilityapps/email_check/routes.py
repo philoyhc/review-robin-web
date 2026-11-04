@@ -88,7 +88,10 @@ async def _read(request: Request) -> _Posted | Response:
     limit = _UPLOAD_LIMIT if multipart else _CARRIED_LIMIT
     if not length.isdecimal():
         return _upload_error(request, "The upload did not say its size. Upload the file again.")
-    if int(length) > limit:
+    # Bounded before `int`: Python refuses to parse more than 4,300
+    # digits, which would be a 500 (findings L3); so long a size is over
+    # any limit anyway.
+    if len(length) > 18 or int(length) > limit:
         return _upload_error(request, f"The file is larger than {csvio.MAX_BYTES // 1024} KiB.")
     try:
         form: FormData = await request.form(max_part_size=_FORM_PART_LIMIT)
@@ -114,7 +117,8 @@ async def _read(request: Request) -> _Posted | Response:
     column = parsed.email_column
     chosen = str(form.get("column", ""))
     # `isdecimal`, not `isdigit`: "²" is a digit `int` refuses (diff-reviewer).
-    if chosen.isdecimal() and int(chosen) < len(parsed.header):
+    # Bounded before `int`, as `length` is (findings L3).
+    if chosen.isdecimal() and len(chosen) <= 6 and int(chosen) < len(parsed.header):
         column = int(chosen)
     outcomes = form.get("outcomes")
     return _Posted(
@@ -209,7 +213,7 @@ async def lookup(request: Request) -> Response:
     if request.headers.get("content-type", "").split(";")[0].strip() != "application/json":
         return _lookup_error(415, "json_required")
     length = request.headers.get("content-length", "")
-    if not length.isdecimal() or int(length) > _LOOKUP_LIMIT:
+    if not length.isdecimal() or len(length) > 18 or int(length) > _LOOKUP_LIMIT:
         return _lookup_error(413, "too_large")
     try:
         body = json.loads(await request.body())

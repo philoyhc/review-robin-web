@@ -262,7 +262,9 @@ def _identity_from_easy_auth_headers(request: Request) -> Identity | None:
                 None,
             )
 
-    if simple_name and not email:
+    # A whitespace-only name names no one, as a blank id and email do
+    # (P1, P3; findings L6). The header still counts as present.
+    if simple_name and simple_name.strip() and not email:
         if "@" in simple_name:
             email = simple_name
         else:

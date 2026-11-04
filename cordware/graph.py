@@ -106,10 +106,23 @@ class Response:
 Transport = Callable[[str, Mapping[str, str], float], Response]
 
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Refuse to follow a redirect: urllib's default handler re-sends the
+    request's headers, the bearer token included, to wherever it points.
+    Graph's ``/users`` does not redirect, so a 3xx comes back as an answer
+    (findings N2)."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: ANN001
+        return None
+
+
+_OPENER = urllib.request.build_opener(_NoRedirect)
+
+
 def urllib_transport(url: str, headers: Mapping[str, str], timeout: float) -> Response:
     request = urllib.request.Request(url, headers=dict(headers), method="GET")
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as reply:  # noqa: S310 - fixed https root
+        with _OPENER.open(request, timeout=timeout) as reply:  # noqa: S310 - fixed https root
             return Response(reply.status, dict(reply.headers), reply.read())
     except urllib.error.HTTPError as exc:
         return Response(exc.code, dict(exc.headers or {}), exc.read() or b"")

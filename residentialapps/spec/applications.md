@@ -236,6 +236,9 @@ fails to start on the missing package (`host.app_startup_failed`).
   application), or `residentialapps` outside a request. The host's filter
   keeps a stamp a record already carries (`cordware/spec/host.md`
   "Logging"), so this needs no change to the host.
+  **Until it lands**, `residentialapps.web` already logs two lines (the
+  preview list's unreadable warning and its address count,
+  `residentialapps/web/pages.py`), and the host stamps both `cordware`.
 - Neither application has a lifespan in 1A. When one does, every state key
   it yields starts `residentialops_` or `supportlogs_`, so the host's
   duplicate-key check can never trip between them (ruling 6).
