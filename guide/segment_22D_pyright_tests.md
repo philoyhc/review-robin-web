@@ -67,10 +67,23 @@ set to the four test trees.
 | By tree | `tests/integration` 1,302, `tests/unit` 453, `tests/browser` 70, `residentialapps/tests` 43, `utilityapps/tests` 29, `cordware/tests` 16, `tests/db` 2, `tests/*.py` 2 | `Counter` over the path's first two parts |
 | `reportMissingImports` | 8 | the same; likely optional browser dependencies, to check in rung 1 |
 
+## Status
+
+- **Rung 1** (2026-11-04): the test trees get their own config,
+  `pyrightconfig.tests.json`, run as `pyright -p pyrightconfig.tests.json`,
+  not a wider `include` in `pyproject.toml`. 22C's gate already runs
+  `pyright` in CI, so widening it before the fixes would turn every PR
+  red. Rung 6 folds this file into `pyproject.toml`. `extraPaths:
+  ["tools"]` resolves the tests that import from `tools/` (8 missing
+  imports). With the two rules off: **1,065 errors in 163 files**
+  (`tests/integration` 555, `tests/unit` 404, `tests/browser` 44, the
+  rest 62).
+
 ## PR ladder
 
 1. **Config.** Widen `include`; scope the two optional-access rules off
-   for the test trees; re-measure. No fixes, no gate.
+   for the test trees; re-measure. No fixes, no gate. *(Built as a
+   separate config file: `## Status`.)*
 2. **Small trees.** `cordware/tests`, `residentialapps/tests`,
    `utilityapps/tests`, `tests/db`, the root `tests/*.py`.
 3. **`tests/unit/`.**
@@ -107,7 +120,8 @@ set to the four test trees.
 
 ## Doc impact
 
-- `pyproject.toml` — `[tool.pyright]` includes the test trees; the scoped relaxations, then their removal (rungs 1, 6, 7).
+- `pyproject.toml` — `[tool.pyright]` takes in the test trees from `pyrightconfig.tests.json` (rung 6); the relaxations' removal (rung 7).
+- `pyrightconfig.tests.json` — the test trees' config until the gate takes them in (rung 1; deleted at rung 6).
 - `README.md` — pyright's scope (rung 6).
 - `CLAUDE.md` — "Common commands" and the pre-PR gate: pyright's scope (rung 6); `AGENTS.md` copied.
 - `AGENTS.md` — the twin, copied from `CLAUDE.md` (rung 6).
