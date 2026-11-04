@@ -167,7 +167,7 @@ def recheck(
 
     locked = _lock(db, review_session, kind)
     _refuse(locked, kind)
-    counts = dict.fromkeys(
+    counts: dict[str, int] = dict.fromkeys(
         (
             "directory_by_mail",
             "directory_by_upn",
@@ -182,7 +182,7 @@ def recheck(
         k = directory_accounts.key(getattr(row, attr))
         outcome = outcomes.get(k) if (checked and k is not None) else None
         account = directory_accounts.account_of(outcome)
-        if account is None:
+        if account is None or outcome is None:
             counts[_tally(outcome.status if outcome is not None else None)] += 1
             continue
         if directory_accounts.account_holder(

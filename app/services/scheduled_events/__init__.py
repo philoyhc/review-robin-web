@@ -360,7 +360,7 @@ def _run_guarded(
     *,
     trigger: str,
     correlation_id: str | None,
-    fire: Callable[[], None],
+    fire: Callable[[], object],
 ) -> bool:
     """Run one trigger so that its failure never fails the page.
     Returns whether it ran without raising.

@@ -11,7 +11,7 @@ adapter, so the rule lives in exactly one place.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
 from sqlalchemy import Row, select, update
 from sqlalchemy.orm import Session
@@ -388,7 +388,7 @@ def recompute_self_review_classification(
     flipped = [
         pair for pair in pairs if pair.is_self_review != classification[pair.id]
     ]
-    changed: list[dict[str, object]] = []
+    changed: list[dict[str, Any]] = []
     if flipped:
         # A row whose classification flips moves its ``include`` towards
         # what Generate would write (findings B7, Codex on #2765). A row
@@ -598,11 +598,12 @@ def set_instrument_self_reviews_active(
     # flips nothing, stores nothing, and must not name that session's
     # instrument here.
     instrument = db.get(Instrument, instrument_id)
-    owned = instrument is not None and instrument.session_id == review_session.id
-    if owned:
+    if instrument is not None and instrument.session_id != review_session.id:
+        instrument = None
+    if instrument is not None:
         instrument.self_reviews_active = active
     db.flush()
-    label = _instrument_label(instrument) if owned else "(unknown)"
+    label = _instrument_label(instrument) if instrument is not None else "(unknown)"
     audit.write_event(
         db,
         event_type="assignments.instrument_self_reviews_active_set",

@@ -19,11 +19,14 @@ reviewee starts unacknowledged (``spec/roundtrip_coverage.md``).
 """
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
 from sqlalchemy import inspect as sa_inspect
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm import InstanceState
 
 from app.db.models import (
     DataShape,
@@ -62,7 +65,7 @@ _NAME_MAX_LENGTH = 255
 
 def _column_values(obj: object, *, skip: set[str]) -> dict[str, Any]:
     """Every mapped column value of ``obj`` except the keys in ``skip``."""
-    mapper = sa_inspect(obj).mapper
+    mapper = cast("InstanceState[Any]", sa_inspect(obj)).mapper
     return {
         attr.key: getattr(obj, attr.key)
         for attr in mapper.column_attrs
@@ -209,7 +212,11 @@ def clone_session(
     for instrument in source.instruments:
         new_instrument = Instrument(
             session_id=clone.id,
-            rule_set_id=rule_set_map.get(instrument.rule_set_id),
+            rule_set_id=(
+                rule_set_map.get(instrument.rule_set_id)
+                if instrument.rule_set_id is not None
+                else None
+            ),
             **_column_values(
                 instrument,
                 skip=set(_SKIP_BASE)

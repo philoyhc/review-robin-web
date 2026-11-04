@@ -443,6 +443,13 @@ def _apply_one_content_rule(
     return included, dropped
 
 
+
+def _content_child(rule: Rule) -> FilterRule | MatchRule | CompositeRule:
+    """A composite's child, which is never a quota: a quota caps pairs,
+    it has no truth value to combine."""
+    if isinstance(rule, QuotaRule):
+        raise ValueError(f"quota rule {rule.id!r} cannot sit inside a composite")
+    return rule
 def _content_rule_matches(
     rule: FilterRule | MatchRule | CompositeRule,
     pair: tuple[object, object],
@@ -459,7 +466,7 @@ def _content_rule_matches(
         )
 
     # Composite: AND / OR / NOT over child rule truthiness.
-    child_results = [_content_rule_matches(child, pair) for child in rule.rules]
+    child_results = [_content_rule_matches(_content_child(child), pair) for child in rule.rules]
     if rule.op == CompositeOp.AND:
         return all(child_results)
     if rule.op == CompositeOp.OR:

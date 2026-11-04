@@ -114,13 +114,13 @@ def hide_below_hidden_parents(fields: Iterable[BranchField]) -> None:
     by_id = {field.id: field for field in field_list}
     for field in field_list:
         seen = {field.id}
-        parent = by_id.get(field.branch_parent_id)
+        parent = _parent(field, by_id)
         while parent is not None and parent.id not in seen:
             if not parent.visible:
                 field.visible = False
                 break
             seen.add(parent.id)
-            parent = by_id.get(parent.branch_parent_id)
+            parent = _parent(parent, by_id)
 
 
 # 19T Item 11, the author's ruling on pre-positioning 4.
@@ -158,6 +158,11 @@ class _BranchFieldShape(Protocol):
 BranchField = _BranchFieldShape | InstrumentResponseField
 
 
+
+def _parent(field: BranchField, by_id: Mapping[int, BranchField]) -> BranchField | None:
+    """``field``'s parent in ``by_id``, or ``None`` outside any branch."""
+    parent_id = field.branch_parent_id
+    return by_id.get(parent_id) if parent_id is not None else None
 def branch_mode(parent: BranchField | None) -> str:
     """A parent's mode, ``show`` or ``require`` (19T Item 13). Anything but
     ``require`` reads Show, so a null column and an object without one
@@ -413,7 +418,7 @@ def required_field_ids(
     for field in field_list:
         if field.id not in applicable:
             continue
-        parent = by_id.get(field.branch_parent_id)
+        parent = _parent(field, by_id)
         if parent is not None and branch_mode(parent) == BRANCH_MODE_REQUIRE:
             if field.visible and branch_is_open(
                 parent, answer_by_field_id.get(parent.id)
@@ -435,7 +440,7 @@ def may_be_required_field_ids(fields: Iterable[BranchField]) -> set[int]:
     by_id = {field.id: field for field in field_list}
     out: set[int] = set()
     for field in field_list:
-        parent = by_id.get(field.branch_parent_id)
+        parent = _parent(field, by_id)
         if parent is not None and branch_mode(parent) == BRANCH_MODE_REQUIRE:
             if field.visible:
                 out.add(field.id)

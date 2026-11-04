@@ -180,6 +180,14 @@ python3 -c "import json,collections;d=json.load(open('/tmp/pyright.json'));print
   instrument with neither short label nor description showed the
   observer collation an `<h2>None</h2>`; the heading is now left out,
   with a test.
+- **Rung 6:** 108 → **0**. The rules engine's pairs are cast back to the
+  roster types at its two callers (it returns the rows it was given)
+  rather than made generic through ~20 internal signatures;
+  `write_event`'s `context` and three lookup parameters take a
+  `Mapping`. Two paths that raised now behave, each with a test: a
+  validated session flipped with no actor (the page-break helpers
+  default one to `None`) records an unattributed `session.invalidated`;
+  a quota inside a composite raises `ValueError` naming it.
 
 ## PR ladder
 

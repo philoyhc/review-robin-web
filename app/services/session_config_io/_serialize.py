@@ -542,7 +542,9 @@ def _response_field_rows(instrument: Instrument, n: int) -> list[Row]:
         # 19T Item 10 — branching. The parent goes by ``field_key``,
         # since ids don't survive an export; the condition rides on the
         # parent as an operator token and a value.
-        parent = by_id.get(field.branch_parent_id)
+        parent = (
+            by_id.get(field.branch_parent_id) if field.branch_parent_id is not None else None
+        )
         rows.append(
             Row(
                 f"{prefix}.branch_parent",

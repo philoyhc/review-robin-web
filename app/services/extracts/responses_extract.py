@@ -191,7 +191,7 @@ def _response_row_tuple(
     instrument_label: str,
     group_key: tuple[str, ...] | None,
     group_identity: dict[tuple[int, tuple[str, ...]], str],
-    session_zone: object,
+    session_zone: str,
     is_self_review_value: bool,
 ) -> tuple[str, ...]:
     """Build the 21-column data tuple for one ``Response``.

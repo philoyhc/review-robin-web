@@ -86,9 +86,11 @@ def _not_equals(
 
 
 def _in(predicate: Predicate, *, reviewer: object, reviewee: object) -> bool:
+    # The schema holds an IN / NOT_IN operand to a list (``_validate_operand_for_operator``).
+    operand = predicate.operand if isinstance(predicate.operand, list) else []
     members = {
         _normalise(item, case_sensitive=predicate.case_sensitive)
-        for item in (predicate.operand or [])
+        for item in operand
     }
     members.discard(None)
     return any(v in members for v in _lhs(predicate, reviewer=reviewer, reviewee=reviewee))

@@ -641,7 +641,9 @@ def _mark_touched_links(
     if merged == existing:
         return
     instrument.band1_touched_links = sorted(merged)
-    object_session(instrument).flush()
+    db = object_session(instrument)
+    assert db is not None  # a stored instrument is in a session
+    db.flush()
 
 
 def _form_touched_links(form: Any, keys: tuple[str, ...]) -> set[str]:

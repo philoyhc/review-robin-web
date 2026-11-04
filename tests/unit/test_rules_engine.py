@@ -11,6 +11,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+import pytest
+
 from app.schemas.rules import (
     Combinator,
     CompositeOp,
@@ -397,6 +399,25 @@ def test_a_composite_with_no_enabled_child_reads_as_disabled() -> None:
 # ---------------------------------------------------------------------------
 # Quotas
 # ---------------------------------------------------------------------------
+
+
+def test_a_quota_inside_a_composite_is_refused_by_name() -> None:
+    """A quota has no truth value to combine, so a composite holding one
+    raises ``ValueError`` naming it (segment 22C), not an
+    ``AttributeError`` from reading its ``rules``."""
+    quota = QuotaRule(
+        id="capped",
+        scope=QuotaScope.PER_REVIEWEE,
+        max=1,
+        selection=QuotaSelection(strategy=SelectionStrategy.RANDOM, seed=1),
+    )
+    composite = CompositeRule(
+        id="mixed",
+        op=CompositeOp.AND,
+        rules=[_tag_match("a_only", "reviewer.tag1", "A"), quota],
+    )
+    with pytest.raises(ValueError, match="'capped' cannot sit inside a composite"):
+        _surviving([composite])
 
 
 def test_quota_caps_per_reviewee_at_max() -> None:

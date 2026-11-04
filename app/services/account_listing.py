@@ -280,13 +280,17 @@ def search_options(
     emails = db.execute(
         select(User.email).where(*clauses).order_by(User.email).limit(cap)
     ).scalars()
-    names = db.execute(
-        select(User.display_name)
-        .where(*clauses, User.display_name.is_not(None), User.display_name != "")
-        .distinct()
-        .order_by(User.display_name)
-        .limit(cap)
-    ).scalars()
+    names = [
+        name
+        for name in db.execute(
+            select(User.display_name)
+            .where(*clauses, User.display_name.is_not(None), User.display_name != "")
+            .distinct()
+            .order_by(User.display_name)
+            .limit(cap)
+        ).scalars()
+        if name  # the query already leaves out a blank name
+    ]
     return sorted(set(emails) | set(names), key=str.casefold)[:cap]
 
 

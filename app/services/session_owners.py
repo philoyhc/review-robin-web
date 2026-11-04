@@ -440,6 +440,8 @@ def set_owners(
     removed: list[User] = []
     for user_id in sorted(current - wanted):
         target = db.get(User, user_id)
+        if target is None:  # an owner row names a user; never missing
+            continue
         remove_owner(
             db,
             review_session=review_session,

@@ -12,7 +12,7 @@ from collections.abc import Iterable, Sequence
 # orchestrator ``_apply.py``; defined here to keep the dependency
 # graph acyclic.
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from app.services.instruments._band1 import keeps_pairs_by_pair_tag, unrepresented_rule
 from app.services.instruments._band2 import INTEGER_WHOLE_BOUNDS_MESSAGE
@@ -195,7 +195,7 @@ def _length_errors(plan: _ParsedConfig) -> list[ApplyError]:
                 )
             )
 
-    def check_spec(prefix: str, spec: object, model: type) -> None:
+    def check_spec(prefix: str, spec: Any, model: type) -> None:
         for f in _fields(spec):
             check(
                 f"{prefix}.{f.name}",
@@ -282,7 +282,7 @@ _SCHEDULE_PAIRS = (
 
 def _post_apply_value(
     plan: _ParsedConfig, review_session: ReviewSession, key: str
-) -> tuple[object, bool]:
+) -> tuple[Any, bool]:
     """``(value, supplied)``: what ``session.<key>`` holds after the
     apply, and whether it is the file's. A force-applied key takes the
     file's value whenever the file carries it; a fill-blanks key

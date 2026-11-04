@@ -381,7 +381,7 @@ def parse_relationship_upload(
     mirrored = (
         symmetric and incoming_reviewers is not None and incoming_reviewees is None
     )
-    if mirrored:
+    if mirrored and incoming_reviewers is not None:
         reviewees = [
             IncomingReviewee(id=-index, email_or_identifier=row.email)
             for index, row in enumerate(incoming_reviewers, start=1)
@@ -556,7 +556,9 @@ def save_relationships(
             )
             updated += 1
         db.flush()
-        context = {"filename": filename} if filename else {}
+        context: dict[str, str | int | bool] = (
+            {"filename": filename} if filename else {}
+        )
         if append:
             context["mode"] = "append"
         if merge:

@@ -23,6 +23,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from datetime import datetime
+from typing import cast
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -559,8 +560,8 @@ def upsert_policy(
         "after_release_identification": after_release_pair[1],
     }
     if after_release_reviewer_identity is not KEEP:
-        proposed["after_release_reviewer_identity"] = (
-            after_release_reviewer_identity  # type: ignore[assignment]
+        proposed["after_release_reviewer_identity"] = cast(
+            str | None, after_release_reviewer_identity
         )
     changes: dict[str, list[object]] = {}
     if existing is None:
