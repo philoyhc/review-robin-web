@@ -91,4 +91,11 @@ if [ -d tests/browser ] \
   echo "session-start: WARNING: no Chromium for Playwright — tests/browser/ will skip"
 fi
 
+# pyright downloads its Node build on first use; run it once here, with
+# network, so the first type check later does not (segment 22C). A failure
+# warns rather than aborts: pyright is not yet a gate.
+if ! "$VENV/bin/pyright" --version >/dev/null 2>&1; then
+  echo "session-start: WARNING: pyright --version failed — its first run will download"
+fi
+
 echo "session-start: $("$VENV/bin/python" --version), $("$VENV/bin/python" -m pytest --version 2>&1 | head -1) ready in .venv"

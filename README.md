@@ -147,6 +147,7 @@ headers instead — see [`docs/security_posture.md`](docs/security_posture.md).
 pytest                  # full suite (SQLite)
 pytest -n auto          # same, parallelised across CPU cores
 ruff check .            # lint (config in pyproject.toml)
+pyright                 # type check, application code (config in pyproject.toml)
 alembic upgrade head    # local SQLite migration
 alembic downgrade -1    # round-trip check
 ```

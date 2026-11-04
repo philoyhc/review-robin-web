@@ -101,14 +101,15 @@ approximate where a diagnostic could sit in two clusters; the command in
 
 ## Blast radius (measured)
 
-Taken 2026-11-02 at `3df7a365`, pyright 1.1.414, SQLAlchemy 2.1.5.
+Taken 2026-11-02 at `3df7a365`, pyright 1.1.414, SQLAlchemy 2.1.5; the
+first two rows re-taken at rung 1 (2026-11-04, `e9555785`).
 
 | What | Count | Command |
 |---|---|---|
-| Errors, application code | 289 in 70 files | `pyright --outputjson` with the rung 1 config, errors outside `*/tests/*` |
+| Errors, application code | 307 in 78 files (289 in 70 on 2026-11-02, before 14E) | `pyright --outputjson` with the rung 1 config |
 | Errors, the four packages with their `tests/` (the brief's scope) | 374 in 316 files | the same, without the `tests` exclude |
 | Errors, `tests/` | 1,879 in 599 files | `include = ["tests"]` |
-| By package (application code) | `app/services` 180, `app/web` 83, `residentialapps` 16, `utilityapps` 10 | `collections.Counter` over the file paths |
+| By package (application code) | `app/services` 195, `app/web` 86, `residentialapps` 16, `utilityapps` 10 (2026-11-04) | `collections.Counter` over the file paths |
 | Docs naming the lint command | 7 | `grep -rln "ruff check" --include=*.md . \| grep -v "archive\|\.venv"` (README, CLAUDE/AGENTS, CONTRIBUTING, `docs/local_setup.md`, the skill, `new_project_practices_setup.md`) |
 | `ci.yml` jobs running `ruff check .` | 2 (`test`, `residential`) | `grep -n "ruff check" .github/workflows/ci.yml` |
 | `cordware/` application files (strict, later) | 9 | `find cordware -name "*.py" -not -path "*/tests/*" \| wc -l` |
