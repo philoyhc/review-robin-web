@@ -39,6 +39,8 @@ from app.web.deps import (
 )
 from app.web.routes_operator._shared import (
     _instruments_redirect,
+    _json_dict,
+    _json_list,
     _require_instrument_editable,
     _require_instrument_in_session,
     _templates,
@@ -583,10 +585,10 @@ async def instrument_bulk_save_fields(
                 import json as _json
 
                 try:
-                    widths_payload = _json.loads(snapshot)
+                    widths_payload = _json_dict(_json.loads(snapshot))
                 except (TypeError, ValueError):
                     widths_payload = None
-                if isinstance(widths_payload, dict):
+                if widths_payload is not None:
                     instruments_service.set_column_widths(
                         db,
                         instrument=instrument,
@@ -881,10 +883,10 @@ async def instrument_consolidated_save(
                 import json as _json
 
                 try:
-                    widths_payload = _json.loads(snapshot)
+                    widths_payload = _json_dict(_json.loads(snapshot))
                 except (TypeError, ValueError):
                     widths_payload = None
-                if isinstance(widths_payload, dict):
+                if widths_payload is not None:
                     instruments_service.set_column_widths(
                         db, instrument=instrument, widths=widths_payload, actor=user
                     )
@@ -1013,10 +1015,10 @@ async def instrument_consolidated_save(
                 import json as _json
 
                 try:
-                    band2_state = _json.loads(band2_snapshot)
+                    band2_state = _json_dict(_json.loads(band2_snapshot))
                 except (TypeError, ValueError):
                     band2_state = None
-                if isinstance(band2_state, dict):
+                if band2_state is not None:
                     acknowledged_drop = bool(band2_state.get("acknowledged_drop", False))
                     try:
                         instruments_service.set_band2_state(
@@ -1072,10 +1074,10 @@ async def instrument_consolidated_save(
                 import json as _json
 
                 try:
-                    ordered_ids_raw = _json.loads(order_snapshot)
+                    ordered_ids_raw = _json_list(_json.loads(order_snapshot))
                 except (TypeError, ValueError):
                     ordered_ids_raw = None
-                if isinstance(ordered_ids_raw, list):
+                if ordered_ids_raw is not None:
                     try:
                         ordered_ids = [int(v) for v in ordered_ids_raw]
                     except (TypeError, ValueError):
@@ -1252,8 +1254,8 @@ async def instrument_display_fields_order(
     # the instrument services lock the session row (findings Bc4), and
     # a lock wait on the event loop would stall the worker.
     def _apply():
-        raw_ids = body.get("ordered_ids")
-        if not isinstance(raw_ids, list):
+        raw_ids = _json_list(body.get("ordered_ids"))
+        if raw_ids is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="display-fields/order.ordered_ids must be a list of integers",

@@ -91,7 +91,7 @@ def _completion_pct(done: int, total: int) -> int | None:
     return (done * 100) // total if total else None
 
 
-def _invitations_sort_value(row, key: str):
+def _invitations_sort_value(row: views.InvitationsRow, key: str) -> object:
     if key == "name":
         return row.reviewer.name
     if key in ("tag_1", "tag_2", "tag_3"):
@@ -113,7 +113,7 @@ def _invitations_sort_value(row, key: str):
     return None
 
 
-def _responses_sort_value(row, key: str):
+def _responses_sort_value(row: views.ResponsesRow, key: str) -> object:
     if key == "name":
         return row.reviewee.name
     if key in ("tag_1", "tag_2", "tag_3"):
@@ -127,9 +127,9 @@ def _responses_sort_value(row, key: str):
     return None
 
 
-def _page_operations_rows(
-    matching: list, *, is_filtered: bool, offset: int
-) -> tuple[list, int, views.Pager | None]:
+def _page_operations_rows[RowT](
+    matching: list[RowT], *, is_filtered: bool, offset: int
+) -> tuple[list[RowT], int, views.Pager | None]:
     """Cut the page the operator asked for out of the Invitations /
     Responses row list — Segment 19J.5 rung 3.
 
