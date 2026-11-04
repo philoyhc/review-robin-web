@@ -76,16 +76,22 @@ cutover.
 
 ---
 
-## 7. Give scheduled sends a trigger that does not wait for a page view
+## 7. Give scheduled mail a trigger that does not wait for a page view
 
-**Status:** open, **incomplete work awaiting Azure** (author's ruling,
-2026-10-01, on `guide/archive/findings_2026-10-01_corpus.md` B19).
+**Status:** open, **narrowed to mail** (2026-11-04). Segment 14E built
+the trigger: an in-app clock (`app/services/scheduled_events/_clock.py`,
+`SCHEDULER_INTERVAL_SECONDS`) runs scheduled activation, the close at the
+review's end and the release stamps with no page view
+(`spec/lifecycle.md` §8.3, `guide/archive/segment_14E_clock.md`). What is
+left is mail: scheduled invitations and reminders, off behind
+`RRW_SCHEDULED_SEND` until 14G gives the clock an invite-URL builder and
+a send path. The rest of this item is for 14G.
 
-**What is wrong.** Scheduled activation, invitations and reminders fire
-only when an operator opens a page that runs the sweep: Session Home,
+**What is wrong (before 14E).** Scheduled activation, invitations and reminders fired
+only when an operator opened a page that ran the sweep: Session Home,
 the four Operations pages and the Sessions lobby (`spec/lifecycle.md`
-§8.3, findings L4). Nothing fires while nobody has the app open, so a
-reminder scheduled for 09:00 goes out whenever an operator next looks.
+§8.3, findings L4). Nothing fired while nobody had the app open, so a
+reminder scheduled for 09:00 went out whenever an operator next looked.
 
 **Why it waits here.** The real fix is a trigger that runs on a clock,
 such as a scheduled job, a timer, or an always-on worker. Which one

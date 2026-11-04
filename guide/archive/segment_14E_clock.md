@@ -81,54 +81,48 @@ Taken 2026-11-02 at `fffd4c28`.
 | Test files naming `scheduled_activate_at` | 49 | `grep -rln scheduled_activate_at tests --include=*.py \| wc -l` |
 | Templates naming the auto-send offsets (rung 0; taken 2026-11-04 at `b2703ab9`) | 4 | `grep -rln "invite_offsets\|reminder_offsets" app/web/templates \| wc -l` |
 
-## Status
+## Status — closed 2026-11-04
 
-Open; rungs 0–2 built (#3577, #3578, #3579). **Not closed before the
-author's test** (2026-11-04): the sequence is
-`guide/things_to_check_in_browser.md`, "14E: the clock, and auto-send off".
+**Intended:** an in-app clock for scheduled activation and the deadline
+close, rungs 1–2, then a close. **Done:** that, plus rung 0 (auto-send off,
+author's ruling) and two rulings the author's browser test led to. Shipped
+in #3577 (rung 0), #3578 and #3579 (the clock), #3582 (the review's end
+closes the session), with #3576 and #3580–#3581 for the plan and the test
+sequence. The author ran the sequence (A–D) on a local run, 2026-11-04;
+it passed.
 
-Diverged from Semantics at build, each from a cold read or a ruling:
+**Diverged from Semantics:**
 
-- **`context.fired_by = "clock"`**, not `context.trigger`, which
-  `session.activated` and `session.scheduled_event_failed` already use
-  (`audit.fired_by`, a context variable; events whose schema allows
-  `context` carry it).
-- **`pg_try_advisory_xact_lock`** on RRW's own key, held by a gate
-  transaction open for the pass; each session runs in its own database
-  session.
-- **Release stamps only while `expired`**, the one state the window opens
-  in; within a day of the moment, not backfilled; checked unlocked
-  first, so a page view after the stamps takes no lock.
-- **Activation retries keep a 15-minute spacing on the clock**
-  (`RETRY_SPACING`), not one per pass: three failures in six minutes
-  would end in `failed_persistent` with nobody looking. Page views keep
-  their own pace (§8.3).
-- **With sending on, the clock holds activation for a session with
-  invite offsets**: it has no invite-URL builder until 14G, and
-  activating would clear the Start they resolve on.
-- **Shutdown waits** up to 30 s for a pass in flight, then abandons it;
-  the loop's sleep wakes on stop.
-- Two new events: `session.deadline_reached` and
-  `session.release_window_opened` / `_ended` (the author's answers).
-- **End closes the session** (author, 2026-11-04, after the first
-  test run found Release-from waiting on a manual Close): the deadline
-  close also moves `ready → expired`, writing `session.expired` with no
-  actor and `reason="deadline"`. **Visibility exists only in two
-  windows**, while ongoing (Start to End) and the release window, so
-  the `while_ongoing` window now ends at End itself
-  (`lifecycle.is_ongoing`), not when the status changes; a reviewer no
-  longer reads back their answers past End, reversing G10's "deadline or
-  not" (2026-10-01).
-- **With no End, Release from is the review's end** (author,
-  2026-11-04): `lifecycle.review_end` is End, or with no End, Release
-  from, and everything End governs follows it: the ongoing window, the
-  accept gate (`deadline_has_passed`) and the close (`observe_deadline`,
-  `session.expired` with `reason="release"`, no `deadline_reached`). No
-  age limit, as for End. **Validate's `session.end_passed`** (error)
-  stops activating a session whose end has already passed, which would
-  close at once. The scheduled pass runs reminders, the end's close, then
-  the release stamps; `scheduled_event_failed`'s `context.trigger` gains
-  `"deadline"`.
+- `context.fired_by = "clock"`, not `context.trigger` (taken by
+  `session.activated` and `scheduled_event_failed`).
+- `pg_try_advisory_xact_lock` on RRW's own key, a gate transaction per
+  pass, each session in its own database session; shutdown waits 30 s.
+- Activation retries keep a 15-minute spacing on the clock
+  (`RETRY_SPACING`); page views keep their own pace.
+- With sending on, the clock holds activation for a session with invite
+  offsets (no invite-URL builder until 14G).
+- Release stamps (`session.release_window_opened` / `_ended`, the
+  author's answer) only while `expired`, once per crossing, within a day.
+  `session.deadline_reached` carries *n* of *N* (the author's answer).
+- **The review's end closes the session** (author): End, or with no End,
+  Release from (`lifecycle.review_end`), moves `ready → expired`
+  (`session.expired`, no actor, `reason` `deadline` / `release`). The
+  `while_ongoing` window ends there too (`is_ongoing`): visibility exists
+  only while ongoing and in the release window, which reverses G10's
+  "deadline or not" (2026-10-01). Saves and Recall stop at the same end.
+  Validate's `session.end_passed` refuses a session whose end has passed
+  or comes at or before its Start; with no End, Release from must be on
+  or after Start.
+- The scheduled pass runs invites, activation, reminders, the end's
+  close, then the release stamps; operator page views run the close too.
+
+**Reads:** rung 0 one `diff-reviewer` read (5 findings, all acted on);
+rungs 1–2 one cumulative read (12 findings: release stamps on non-expired
+sessions, lost invites, a lock on every page view, retry pace, shutdown,
+two logging bugs, plan drift; all acted on) and one Codex finding (retry
+spacing hid deadlines); #3582 three reads (sessions past an older End,
+operator pages, the refused notice; a stuck no-End session, the gate;
+a Start after the end, the release reason), all acted on.
 
 ## PR ladder
 
@@ -167,7 +161,7 @@ Diverged from Semantics at build, each from a cold read or a ruling:
 
 ## Open questions
 
-- Default interval: 120 s proposed. Author.
+- **Answered:** default interval 120 s (`SCHEDULER_INTERVAL_SECONDS`).
 - **Answered (author, 2026-11-04):** the loop stamps the release
   window's start and end in the audit log, one event per crossing, so
   14C Item 2's "Release window opened or ended" report fires once.

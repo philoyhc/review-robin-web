@@ -8,7 +8,7 @@
 >   as delegated Graph on the operator's click; **Parts B and E** (idempotent
 >   retry, the Outbox surface) ride with 14F.
 > - **Part C** (queue and worker) → not needed for Send all; timed work runs
->   on `guide/segment_14E_clock.md`'s clock.
+>   on `guide/archive/segment_14E_clock.md`'s clock.
 > - **Parts D and F** (deployment sender defaults, application permission) →
 >   14G, scheduled email, if IT grants a dedicated mailbox
 >   (`guide/todo_master.md`).

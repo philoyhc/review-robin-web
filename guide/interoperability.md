@@ -44,7 +44,7 @@ only as a contract change, with its spec.**
 
 Each plan carries its line as a judgment call; this is the list.
 
-- **14E — the clock** (`guide/segment_14E_clock.md`).
+- **14E — the clock** (`guide/archive/segment_14E_clock.md`).
   - Fires only what an operator set (an activation time, a deadline);
     never acts on a session for being new, so a handoff-created draft
     stays untouched until its operator acts (spec §3 invariant 4).
