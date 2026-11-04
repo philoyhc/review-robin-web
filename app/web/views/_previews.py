@@ -91,11 +91,11 @@ class PreviewPickerContext:
     """How many distinct reviewees ``current`` is assigned to (counting
     only ``include=True`` assignments). 0 when no current."""
 
-    reviewee_peek: list[str] = field(default_factory=list)
+    reviewee_peek: list[str] = field(default_factory=list[str])
     """First ``PREVIEW_PICKER_REVIEWEE_PEEK_COUNT`` reviewee names for
     the context strip."""
 
-    reviewee_tail: list[str] = field(default_factory=list)
+    reviewee_tail: list[str] = field(default_factory=list[str])
     """Remaining reviewee names that go inside the `<details>`
     disclosure. Empty when ``reviewee_count`` is at or below the peek
     count."""

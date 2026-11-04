@@ -48,6 +48,7 @@ from app.services.instruments._display_fields import (
 from app.services.instruments._field_presets import LIST_PRESETS as _BAND3_LIST_PRESETS
 from app.web import breadcrumbs
 
+from ._json import json_list
 from ._setup import session_status_pills
 
 # Sentinel value the rule-picker `<select>` posts when the operator
@@ -597,22 +598,18 @@ def _new_model_band2_state(
         # the key is absent (legacy band2_state from before
         # Gap 10 shipped — render reflects the pre-Gap-10 view
         # until the next Refresh writes the new key).
-        persisted_member_ids = (instrument.band2_state or {}).get(
-            "sample_group_member_ids"
+        persisted_member_ids = json_list(
+            (instrument.band2_state or {}).get("sample_group_member_ids")
         )
-        if isinstance(persisted_member_ids, list) and persisted_member_ids:
+        if persisted_member_ids:
             allowed = {int(i) for i in persisted_member_ids if isinstance(i, int)}
             group_members = [r for r in group_members if r.id in allowed]
     else:
         group_members = active_reviewees
-        persisted_member_ids = (instrument.band2_state or {}).get(
-            "sample_group_member_ids"
+        persisted_member_ids = json_list(
+            (instrument.band2_state or {}).get("sample_group_member_ids")
         )
-        if (
-            instrument.group_kind is not None
-            and isinstance(persisted_member_ids, list)
-            and persisted_member_ids
-        ):
+        if instrument.group_kind is not None and persisted_member_ids:
             allowed = {int(i) for i in persisted_member_ids if isinstance(i, int)}
             group_members = [r for r in group_members if r.id in allowed]
     all_names = [r.name for r in group_members]
@@ -623,7 +620,7 @@ def _new_model_band2_state(
     # fly when the operator picks / changes a Link 3 boundary tag
     # before saving (the server-rendered ``sample_names`` above
     # reflects the SAVED group_kind, not the in-progress edit).
-    roster = [
+    roster: list[dict[str, int | str]] = [
         {
             # ``id`` is consumed by ``partitionedSampleNames`` in
             # instruments_index.html to intersect the boundary
@@ -753,7 +750,7 @@ def _new_model_band2_state(
     # ``has_responses=False``.
     rf_ids_with_id = [
         rf.get("id") for rf in response_fields
-        if isinstance(rf, dict) and isinstance(rf.get("id"), int)
+        if isinstance(rf.get("id"), int)
     ]
     response_count_by_id: dict[int, int] = {}
     if rf_ids_with_id:
@@ -767,15 +764,14 @@ def _new_model_band2_state(
         ).all()
         response_count_by_id = {fid: count for fid, count in rows}
     for rf in response_fields:
-        if isinstance(rf, dict):
-            rf_id = rf.get("id")
-            count = (
-                response_count_by_id.get(rf_id, 0)
-                if isinstance(rf_id, int)
-                else 0
-            )
-            rf["response_count"] = count
-            rf["has_responses"] = count > 0
+        rf_id = rf.get("id")
+        count = (
+            response_count_by_id.get(rf_id, 0)
+            if isinstance(rf_id, int)
+            else 0
+        )
+        rf["response_count"] = count
+        rf["has_responses"] = count > 0
     response_field_groups = _response_field_groups(response_fields)
     from app.services.responses import LIST_OP_CHOICES, NUMERIC_OP_CHOICES, RANGE_OPS
     sort_spec = list(instrument.sort_display_fields or [])
@@ -900,7 +896,9 @@ def new_model_usable_tags(
     # or "Pairwise tag" for a Link 2 relationship tag under IS / IS
     # NOT) carries the namespace hint now, so the in-option ``R-`` /
     # ``E-`` prefixes are retired.
-    namespace_specs = [
+    namespace_specs: list[
+        tuple[str, type[Reviewer] | type[Reviewee] | type[Relationship], str, bool]
+    ] = [
         ("reviewer", Reviewer, "reviewer.tag", False),
         ("reviewee", Reviewee, "reviewee.tag", False),
         ("pair_context", Relationship, "pair_context.tag", True),

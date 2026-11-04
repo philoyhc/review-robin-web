@@ -40,7 +40,9 @@ ARCHIVED_SORT_KEYS = frozenset(
 DIAGNOSTICS_SORT_KEYS = LOBBY_SORT_KEYS - {"status"}
 
 
-def session_sort_value(review_session: ReviewSession, key: str):
+def session_sort_value(
+    review_session: ReviewSession, key: str
+) -> tuple[int | str, ...] | datetime | str | int | None:
     """The value a session table sorts ``key`` by, server side."""
     # Text sorts as a header click does (author, 2026-10-15).
     if key == "name":
@@ -65,7 +67,7 @@ def session_sort_value(review_session: ReviewSession, key: str):
 _DIGIT_RUNS = re.compile(r"(\d+)")
 
 
-def text_sort_value(value: str | None) -> tuple | None:
+def text_sort_value(value: str | None) -> tuple[int | str, ...] | None:
     """A text cell's server sort key, ordered as the browser orders the
     cell on a header click (`localeCompare` with `numeric: true`, over
     the trimmed text): case aside, so "alpha" precedes "Beta", and runs

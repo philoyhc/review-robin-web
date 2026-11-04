@@ -66,7 +66,7 @@ def cohort_rule_summary(
     """
     if not rule:
         return ""
-    rules = rule.get("rules") or []
+    rules: list[dict[str, Any]] = rule.get("rules") or []
     if not rules:
         return ""
     first = rules[0]

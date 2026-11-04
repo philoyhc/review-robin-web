@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -86,6 +87,7 @@ def last_directory_check(
     # has nothing to report (Codex, #3429).
     if not any(counts.get(k, 0) for k in (*_COUNT_KEYS, "directory_held")):
         return None
+    context: dict[str, Any] = (event.detail or {}).get("context") or {}
     return DirectoryCheck(
         at=event.created_at,
         by_mail=counts.get("directory_by_mail", 0),
@@ -94,7 +96,7 @@ def last_directory_check(
         ambiguous=counts.get("directory_ambiguous", 0),
         not_checked=counts.get("directory_not_checked", 0),
         kept=counts.get("directory_kept", 0),
-        reason=_reason_text(((event.detail or {}).get("context") or {}).get("directory_unchecked")),
+        reason=_reason_text(context.get("directory_unchecked")),
         recheck=event.event_type == recheck_type,
         held=counts.get("directory_held", 0),
     )

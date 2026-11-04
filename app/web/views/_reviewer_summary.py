@@ -525,7 +525,7 @@ def build_reviewer_summary_context(
             # have rendered.
             reviewee = reviewee_by_row.get((instrument.id, key))
             assignment = representative_assignment.get((instrument.id, key))
-            display_cells = []
+            display_cells: list[SummaryDisplayCell] = []
             if assignment is not None:
                 for df in instrument_display_fields:
                     value = instruments_service.display_field_value(

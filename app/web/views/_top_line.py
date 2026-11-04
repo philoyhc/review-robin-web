@@ -29,13 +29,19 @@ from typing import Any
 from jinja2 import pass_context
 from jinja2.runtime import Context
 
-from app.db.models import ReviewSession
+from app.db.models import ReviewSession, User
 from cordware.identity import institution_name
+
+
+def _creator(review_session: ReviewSession) -> User | None:
+    """``created_by_user``, which is ``None`` on a session object not
+    yet given its creator although the mapping types it ``User``."""
+    return review_session.created_by_user
 
 
 def session_unit(review_session: ReviewSession) -> str | None:
     """The Unit a session's pages show: its creator's, or None."""
-    creator = review_session.created_by_user
+    creator = _creator(review_session)
     return creator.unit if creator is not None else None
 
 

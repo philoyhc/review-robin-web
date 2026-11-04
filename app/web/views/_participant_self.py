@@ -56,9 +56,9 @@ class SelfSpec:
     default: tuple[str, ...]
     #: The roster index names its readouts by the preview table's chip
     #: slots; the selection uses the model's column names.
-    slot_to_key: dict[str, str] = field(default_factory=dict)
+    slot_to_key: dict[str, str] = field(default_factory=dict[str, str])
     #: The fixed columns' operator-facing names; a tag's is its label.
-    fixed_labels: dict[str, str] = field(default_factory=dict)
+    fixed_labels: dict[str, str] = field(default_factory=dict[str, str])
 
 
 _TAG_SLOTS = {f"tag-{n}": f"tag_{n}" for n in (1, 2, 3)}
