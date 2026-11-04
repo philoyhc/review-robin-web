@@ -61,6 +61,8 @@
     // set: put the card back as it was rendered.
     window.addEventListener('pageshow', function (event) {
       if (!event.persisted) { return; }
+      // A count frozen mid-flight must not resume behind the reset.
+      stop();
       Array.prototype.forEach.call(document.forms, function (f) {
         delete f.dataset.directoryCounted;
       });
@@ -73,7 +75,6 @@
     // Two forms count down (20I Item 1): the upload, whose keys are the
     // chosen or held file's, and the recheck, whose keys are the roster's
     // unmatched rows. Each submits itself once counted.
-    var active = null;
     // The count in progress: its form, whether it was stopped, and the
     // requests to abort if it is.
     var run = null;
@@ -104,7 +105,8 @@
       }
     }
 
-    // Stop recheck: nothing more is asked, nothing is posted.
+    // Stop recheck: nothing more is asked, nothing is posted. Requests
+    // in flight are aborted where the browser can, and ignored where not.
     function stop() {
       if (!run) { return; }
       run.stopped = true;
@@ -113,6 +115,16 @@
       counting = false;
       line.hidden = true;
       labelRecheck(false);
+      if (recheck) {
+        // The next recheck asks afresh, even if its own keys call fails.
+        if (recheck.elements.since) { recheck.elements.since.value = ''; }
+        // A renew banner that started this recheck waits to be used again.
+        Array.prototype.forEach.call(
+          document.querySelectorAll('[data-directory-renew-upload]'),
+          function (b) {
+            if (b.form === recheck) { b.disabled = false; b.removeAttribute('aria-disabled'); }
+          });
+      }
     }
 
     function signal(current) {
@@ -133,7 +145,9 @@
         counting = true;
         var current = run = {target: target, stopped: false, controllers: []};
         if (target === recheck) { labelRecheck(true); }
-        active = function () { if (!current.stopped) { submit(target, submitter); } };
+        // Each run ends through its own closure, so a stopped run's late
+        // failure can never submit the run that followed it.
+        var finish = function () { if (!current.stopped) { submit(target, submitter); } };
         fetch(keysUrl, {method: 'POST', body: keysBody(), credentials: 'same-origin',
                         signal: signal(current)})
           .then(function (response) {
@@ -143,9 +157,9 @@
           .then(function (answer) {
             if (current.stopped) { return; }
             if (onKeys) { onKeys(answer); }
-            count(answer.keys || [], current);
+            count(answer.keys || [], current, finish);
           })
-          .catch(function () { active(); });
+          .catch(function () { finish(); });
       });
     }
 
@@ -182,8 +196,8 @@
       });
     }
 
-    function count(keys, current) {
-      if (!keys.length) { active(); return; }
+    function count(keys, current, finish) {
+      if (!keys.length) { finish(); return; }
       var remaining = keys.length;
       var next = 0;
       var running = 0;
@@ -194,7 +208,7 @@
       function end() {
         if (done || current.stopped) { return; }
         done = true;
-        active();
+        finish();
       }
 
       function pump() {
