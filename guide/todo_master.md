@@ -26,11 +26,13 @@ Two sibling registers hold the open work that is not queued here:
 
 ### After segment 21
 
-- **Segment 21D's live check** under real Easy Auth runs on the
-  institutional deployment's first release of Review Robin, not on the dev
-  slot, which stays dormant (author, 2026-10-24: one Azure host is enough;
-  its notes are archived with the deployment, 2026-11-02). The interim release of
-  2026-10-31 carries the host and Cordware Utilities only.
+- **Segment 21D's live check** under real Easy Auth, on the institutional
+  host (the dev slot stays dormant, author 2026-10-24). Review Robin's
+  first release went out on 2026-10-31, and three of the four
+  requirements are recorded passing there with the deployment: the
+  invite link on the public origin, `/.auth/*` sign-in end to end, and
+  both health probes. Not recorded: `/reviewrobin` redirecting to
+  `/reviewrobin/`. One visit settles it; then delete this entry.
 
 ### Queued segments
 
@@ -83,9 +85,9 @@ the PR body unless it says otherwise.
 
   21A deferred event 5 to 21D, whose plan never took it up
   (`guide/archive/segment_21_domain_retrofit.md` § Status).
-  `cordware/spec/host.md` "Logging" says they are not yet built. Before
-  any institutional deploy, since the logs are the host's only operational
-  record.
+  `cordware/spec/host.md` "Logging" says they are not yet built. Overdue: the
+  institutional deployment has been live since 2026-10-31, and the logs
+  are the host's only operational record.
 
 - **`regenerate_token` leaves `last_reminder_at` standing** *(filed
   2026-09-18; the author answered **yes, clear it**, placement open)*.
