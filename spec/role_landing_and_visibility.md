@@ -117,12 +117,14 @@ session is off limits to every role: no row, and every page answers 404
 |---|---|---|---|
 | `draft` | listed, "Not open yet" | no | — |
 | `validated` | listed, "Not open yet" | no | — |
-| `ready` | listed, "Open" — past the deadline "Available" if they saved an answer they may read back, else "Closed" | **yes** | opens |
-| `expired` | listed, "Available" or "Closed", as past the deadline | **yes** | **opens** |
+| `ready` | listed, "Open" — past the review's end (End, or with no End, Release from) "Available" if a role can read something now, else "Closed" | **yes** | opens |
+| `expired` | listed, "Available" or "Closed", as past the review's end | **yes** | **opens** |
 | `archived` | **absent** | — | **404** |
 
 The surface route admits `is_ready` **or `is_expired`** — a **closed**
-session's review surface still opens. Draft and validated render the
+session's review surface still opens. A reviewer past the review's end
+reads their own answers back only inside a release window that grants it,
+so that row reads "Closed" outside one (`spec/visibility_policy.md` §3). Draft and validated render the
 not-open page instead; archived is refused by the gate.
 
 **One status rule for every role** (`spec/reviewer-surface.md`
@@ -236,8 +238,8 @@ Nothing hides small cohorts, and nothing drops an observer's own rows.
 |---|---|---|---|
 | `draft` | listed, "Not open yet" | **yes** | **200** |
 | `validated` | listed, "Not open yet" | **yes** | **200** |
-| `ready` | listed, "Open" — past the deadline "Available" while an observer grant resolves, else "Closed" | yes | 200 |
-| `expired` | listed, "Available" or "Closed", as past the deadline | yes | 200 |
+| `ready` | listed, "Open" — past the review's end "Available" while an observer grant resolves, else "Closed" | yes | 200 |
+| `expired` | listed, "Available" or "Closed", as past the review's end | yes | 200 |
 | `archived` | **absent** | — | **404** |
 
 **Observers are deliberately not grant-gated**: being appointed an observer is not a disclosure *about* the observer, so the

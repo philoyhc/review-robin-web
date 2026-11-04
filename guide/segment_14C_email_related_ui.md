@@ -218,7 +218,7 @@ participant's action do not, so those wait for 14G.
   The scaffold lands after 14E (`guide/todo_master.md` order), so the
   clock exists by then: the line says *mail* on a clock waits, not the
   clock. Group C reads the clock's audit events, one per crossing
-  (`guide/segment_14E_clock.md`, judgment calls; 2026-11-04).
+  (`guide/archive/segment_14E_clock.md`, judgment calls; 2026-11-04).
 - Group A repeats what the page shows; it earns its place as a record, or
   when the operator leaves before a long send finishes.
 - The last D row reverses the fallback note's proposed "no" to due

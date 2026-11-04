@@ -98,7 +98,7 @@ defines what each window *means*, which the pairs do not restate; read
 
 | Window | What it means |
 |---|---|
-| `while_ongoing` | **`sessions.status = "ready"`** — the session is running and data is coming in. The window is the **status column**, not the deadline, and the deadline passing does not close it: a session leaves `ready` only when the operator closes it from the Workflow card, so a session past its deadline that nobody has closed is still inside this window. |
+| `while_ongoing` | **`session_lifecycle.is_ongoing`** — `sessions.status = "ready"` **and** the review's end, if any, has not passed. The end is End, or with no End, Release responses from (`review_end`). The window is Start to the end itself, checked at read time on every page: the end also closes the session (`observe_deadline`, `ready → expired`), but that runs on the clock's next pass or the next request, and visibility does not wait for it. With neither End nor Release from set the window runs until the operator closes the session from the Workflow card. |
 | `after_release` | **`sessions.status = "expired"`** AND `[sessions.responses_release_at, sessions.responses_release_until)`. The Release-responses window authored on Create New Session / Session Home's Session details card; the Release-now / Stop-release buttons write the same columns. The closed-session half of the condition is load-bearing — §3.2 carries why. |
 | `throughout` | Union of `while_ongoing` and `after_release` — viewable in either window. Not a stored value: it is both pairs set. Useful when the operator wants results visible during the review *and* after release without authoring two grants. |
 | `always` | **Reserved**, and not authorable — no pair encodes it. Viewing irrespective of window is the operator's baseline, and the operator is not a row in this table. |
@@ -149,7 +149,7 @@ other empty), which would otherwise read as "off"; and the
 **Stored rows obey it too.** Every stored row passes both writers, so
 an Instrument card's Save or a Settings re-import never meets one it
 refuses. No access check reads the reviewer's *Session ongoing* cell —
-the reviewer sees their own answers while the session is `ready`
+the reviewer sees their own answers while the session is ongoing
 regardless — but the reviewer surface's transparency table shows
 `Raw responses` there, as the editor does.
 
@@ -179,7 +179,7 @@ The `after_release` and `throughout` windows depend on `responses_release_at`. W
 
 A policy whose `after_release` pair is set while `responses_release_at` is NULL is **inert** — the resolver returns "not viewable" until the operator sets the anchor. Saving the policy without an anchor is allowed and harmless.
 
-**The session must have closed.** The two windows mean literally *as data is coming in* and *after the review has closed*, so responses are released **because the session is over**. The Workflow card gates both Release and Stop-release on `is_expired`, but the predicate must carry the lifecycle condition itself, because every path that writes the anchors without that button would otherwise open a window the UI never offers:
+**The session must have closed.** The two windows mean literally *as data is coming in* and *after the review has closed*, so responses are released **because the session is over**. Visibility exists only in these two windows: past End a reviewer no longer reads back their own answers except through a release window that grants them, and a closed session releases on the operator's Workflow card or, when Release from was set beforehand, unattended at that moment. The Workflow card gates both Release and Stop-release on `is_expired`, but the predicate must carry the lifecycle condition itself, because every path that writes the anchors without that button would otherwise open a window the UI never offers:
 
 - an anchor **backdated** on the Session details card or Quick Setup, where `parse_and_validate_responses_release_at` deliberately applies no lead-time floor, would open the window on a `draft` session; and
 - **`revert_session_to_draft`** (`expired` → `draft`) does not clear the anchor, so a session the operator had *withdrawn* would go on showing released responses to every non-operator audience — and an operator who reverts to draft believes the session is back to before activation.
@@ -228,7 +228,7 @@ instrument_view_policies
 
 ### 4.1 Default state
 
-Default on instrument create: no rows. Resolver treats a missing row as "off in both windows" — instrument is invisible to that audience. The operator opts each audience in deliberately on the instrument's visibility editor. **`peer_reviewer` while ongoing is the one cell a missing row does not turn off:** it is `raw` by rule (§2.2), so with no row the reviewer still reads back their own answers while the session is `ready` (`reviewer_sees_own_responses`), and the editor and the transparency card show Raw there (`_BAND3_VISIBILITY_DEFAULTS`, `app/web/views/_instruments.py`). **Replicate and Duplicate session are the exceptions to "no rows":** each copied instrument starts with its source's rows, written through the same `upsert_policy` writer, so each is checked against the per-cell rule and audited as in §5 (`spec/instruments.md` "Replicate semantics").
+Default on instrument create: no rows. Resolver treats a missing row as "off in both windows" — instrument is invisible to that audience. The operator opts each audience in deliberately on the instrument's visibility editor. **`peer_reviewer` while ongoing is the one cell a missing row does not turn off:** it is `raw` by rule (§2.2), so with no row the reviewer still reads back their own answers while the session is ongoing (`reviewer_sees_own_responses`), and the editor and the transparency card show Raw there (`_BAND3_VISIBILITY_DEFAULTS`, `app/web/views/_instruments.py`). **Replicate and Duplicate session are the exceptions to "no rows":** each copied instrument starts with its source's rows, written through the same `upsert_policy` writer, so each is checked against the per-cell rule and audited as in §5 (`spec/instruments.md` "Replicate semantics").
 
 ---
 

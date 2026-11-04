@@ -658,11 +658,14 @@ The reviewer write-path predicate
 `session_lifecycle.session_accepts_responses(session, instrument)`
 gates `save`/`submit`/`clear`. Saving requires all of: session is
 `ready`, the assignment's instrument has `accepting_responses=true`,
-and `now() < session.deadline`. The session deadline auto-closes the
-instrument lazily — the first reviewer or operator request that
-observes the deadline has passed sets `accepting_responses=false`,
+and the review's end has not passed (End, or with no End Release from,
+`session_lifecycle.review_end`). The end closes the instrument — the
+in-app clock or the first reviewer or operator request past it sets
+`accepting_responses=false`,
 stamps `Instrument.deadline_closed_at`, and emits a single
-`instrument.closed reason=deadline` audit event per instrument.
+`instrument.closed reason=deadline` audit event per instrument
+(`reason=release` when, with no End, Release from ended the review), and
+moves the session `ready → expired` (`spec/lifecycle.md` §4).
 
 Setup is open only while the session is **editable** — `draft` OR
 `validated` (`is_editable`). Once the session leaves that band

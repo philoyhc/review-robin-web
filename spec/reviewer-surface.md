@@ -990,11 +990,11 @@ three** of the following hold:
    session).
 2. `Instrument.accepting_responses == true` on the instruments the
    reviewer writes to. Accepting is session-wide (`spec/lifecycle.md`):
-   Activate sets it on every instrument and the deadline, Close session,
+   Activate sets it on every instrument and the review's end, Close session,
    Revert or Archive clears it on every instrument, so the gate is effectively
    one switch per session.
-3. `now() < ReviewSession.deadline` (deadline hasn't passed; null
-   deadline counts as open).
+3. The review's end hasn't passed (`session_lifecycle.review_end`: End,
+   or with no End, Release responses from; neither set counts as open).
 
 Failing any of those three, or having no included assignment, refuses
 a Save / Submit / Clear POST with **HTTP 403** (`_write_refusal`). A
@@ -1013,10 +1013,18 @@ cleared" (Clear). The first cause that applies, in this order, wins:
 
 | Cause | Opens with |
 |---|---|
-| `expired` | "This review has closed" |
+| `expired` | "This review has closed", or, when a real End closed it, the deadline sentence below |
 | `draft` or `validated` | "This review is not currently open" |
 | no included assignment | "You have nothing to review in this session right now" |
-| `ready` and past the deadline | "This review closed at its deadline, {deadline} ({zone})" |
+| `ready` and past End | "This review closed at its deadline, {deadline} ({zone})" |
+| `ready` and past the review's end with no End (Release from ended it) | "This review has closed" |
+
+The deadline sentence is named only when the session has an End and End
+closed it: while the session is still `ready` past End, or `expired` with its
+instruments closed by the end (`lifecycle.closed_at_deadline`). The operator's
+**Close session** before End, and a release that ended a review with no End,
+read "This review has closed". Recall refuses past the review's end the same
+way (403, "This review has closed, so your submission can't be recalled.").
 
 These causes win over a stale form: only a write the session would
 accept is checked against its page digest (Form HTML mechanics), and a
@@ -1051,14 +1059,15 @@ GET requests behave differently depending on which gate fails:
   rendered. A refused write on such a session renders the same page
   with its refusal card (above).
 
-- **Session `expired`** (the operator closed it). The surface
+- **Session `expired`** (the operator closed it, or the review's end
+  did). The surface
   renders as for a `ready` session whose window has closed, below:
   read-only, with no Save, Submit or Clear.
 
 - **Session `ready`, response window closed**
   (`accepting_responses=false` on every instrument, because the
-  deadline passed). The page still renders so the reviewer can read prior
-  state. The editing surface degrades to read-only:
+  review's end passed; the operator preview, which never runs the close,
+  shows this state). The editing surface degrades to read-only:
 
   - Every input renders `disabled`.
   - In both action rows: Save / Cancel / Submit hide, plus the
@@ -1073,8 +1082,9 @@ GET requests behave differently depending on which gate fails:
     instruments:
     - "Your previously saved values remain visible below in
       read-only form." (all shown)
-    - "Your previously saved values are hidden by the operator's
-      visibility setting." (all hidden)
+    - "Your previously saved values aren't shown now: they are visible
+      only while the review is open and while responses are released,
+      as the operator sets." (all hidden)
     - "Some of your previously saved values are hidden by the
       operator's visibility setting; the rest remain visible in
       read-only form." (mixed)
@@ -1088,9 +1098,10 @@ GET requests behave differently depending on which gate fails:
 
   | Session | Own saved values |
   |---|---|
-  | `ready` (incl. past the deadline) | Shown. That is the `while_ongoing` window, whose reviewer cell is Raw by rule. |
+  | `ready`, before the review's end | Shown. That is the `while_ongoing` window (`is_ongoing`), whose reviewer cell is Raw by rule. |
+  | `ready`, past the review's end (the close not yet run) | Hidden, as for `expired`: the window ends at the end itself. |
   | `expired`, release window open | Shown when the "Responses released" cell is Raw. Hidden when it is off. |
-  | `expired`, release window not open | Hidden. |
+  | `expired`, release window not open | Hidden. Visibility exists only while ongoing and in a release window, so past End a reviewer reads nothing back outside one. |
   | `archived` | Not reachable: the gate answers 404. |
   | `draft` / `validated` (after Revert) | Hidden. The surface shows the pre-open page; the summary and its CSV show nothing. |
 
@@ -1101,25 +1112,30 @@ GET requests behave differently depending on which gate fails:
   instrument: a hidden instrument is left out, and a banner says some
   or all responses are not shown; with none shown, the CSV link goes.
 
-### Lazy deadline-close
+### Close at the review's end
 
-Deadline expiration is observed lazily, not via a scheduled job.
+The review's end (End, or with no End, Release from) is observed by
+whichever trigger reaches it first: the in-app clock's pass
+(`spec/lifecycle.md` §8.3) or, as a backstop, the requests below.
 The reviewer surface GET (`/me/sessions/{id}/{page_n}`), its save,
 submit, clear and recall POSTs, and the operator Instruments page GET
 run `lifecycle.observe_deadline(...)` before reading state; the summary,
-its CSV, `/me`, results and collation do not. The first observer past
-the deadline:
+its CSV, `/me`, results and collation do not. The first trigger past
+the end:
 
 - Flips `Instrument.accepting_responses` to `false` on every
   instrument in the session.
 - Stamps `Instrument.deadline_closed_at = now()`.
 - Emits one `instrument.closed` audit event per instrument with
-  `detail.reason = "deadline"`.
+  `detail.reason = "deadline"` (`"release"` with no End).
+- Moves the session `ready → expired` (`session.expired`, no actor), also
+  when the instruments were already closed; with a real End it writes
+  `session.deadline_reached` too (`spec/lifecycle.md` §4).
 
-The lazy-close is idempotent — subsequent observers see
-`deadline_closed_at` already set and skip the side-effect.
+The close is idempotent — later triggers see the session already
+`expired` and the instruments stamped, and skip the side-effects.
 
-Before the deadline (or with none) it heals the other way on a
+Before the end (or with none) it heals the other way on a
 `ready` session: any instrument left with `accepting_responses =
 false` is reopened, its `deadline_closed_at` cleared, with one
 `instrument.opened` audit event per instrument and `detail.reason =
@@ -1372,8 +1388,8 @@ role. The first row that applies wins:
 | Pill | Style | Condition |
 |---|---|---|
 | `Not open yet` | `pill-info` | Session is `draft` or `validated`. |
-| `Open` | `pill-success` | Session is `ready` and its deadline (if set) hasn't passed. |
-| `Available` | `pill-success` | Past that (`ready` past its deadline, or `expired`), and one of the row's roles can see something now: it carries `reviewee` (present only while a reviewee grant resolves), or `observer` with an observer grant resolving now (`visibility_policies.observer_has_current_grant`, session-wide, cohort-blind), or `reviewer` with a saved answer, on a field the surface still shows, of an instrument whose `peer_reviewer` setting lets them read it back (`reviewer_sees_own_responses`). |
+| `Open` | `pill-success` | Session is `ready` and the review's end (End, or with no End, Release from) hasn't passed. |
+| `Available` | `pill-success` | Past that (`ready` past the review's end, or `expired`), and one of the row's roles can see something now: it carries `reviewee` (present only while a reviewee grant resolves), or `observer` with an observer grant resolving now (`visibility_policies.observer_has_current_grant`, session-wide, cohort-blind), or `reviewer` with a saved answer, on a field the surface still shows, of an instrument whose `peer_reviewer` setting lets them read it back (`reviewer_sees_own_responses`). |
 | `Closed` | `pill-error` | Otherwise. Red matches the past-deadline pill in the End column. |
 
 An archived session has no pill because it is not listed. The label
@@ -1446,7 +1462,7 @@ dashboard's Session column once Reviewer Status is
   section is shown), a
   "Recall my submission" control (`POST /me/sessions/{id}/recall`),
   and a secondary "Your reviews" link. Recall renders
-  only while the session is still `ready` and its deadline has not
+  only while the session is still `ready` and the review's end has not
   passed (`can_recall`): past either, the form it would land on is
   read-only and Submit is refused, so a recall would strand the
   reviewer at "Saved but not submitted". The

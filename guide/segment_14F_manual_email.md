@@ -1,6 +1,6 @@
 # Segment 14F — Email by hand, as the operator
 
-**Opened:** 2026-11-02, at the author's request · **Theme:** invitations, reminders and confirmations go out when an operator clicks, from the operator's own mailbox · **Related:** `guide/segment_14E_clock.md`, `guide/no_scheduling_fallback.md`, `guide/email_and_scheduling.md`, `guide/archive/segment_14B_email_infrastructure.md` (superseded), `spec/email_infra_options.md`
+**Opened:** 2026-11-02, at the author's request · **Theme:** invitations, reminders and confirmations go out when an operator clicks, from the operator's own mailbox · **Related:** `guide/archive/segment_14E_clock.md`, `guide/no_scheduling_fallback.md`, `guide/email_and_scheduling.md`, `guide/archive/segment_14B_email_infrastructure.md` (superseded), `spec/email_infra_options.md`
 
 ## Opportunity
 
