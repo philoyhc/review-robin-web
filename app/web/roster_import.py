@@ -517,9 +517,10 @@ async def _handle_import(
             db, user=user, session_id=review_session.id, addresses=addresses
         ),
     )
-    # Segment 20G: a check the sign-in stopped (no token, or Graph refused
-    # it) saves nothing. The file is held, and the card asks to renew the
-    # sign-in and upload again, every address checked.
+    # Segment 20G: a check an expired token stopped (Graph's
+    # ``unauthorized``) saves nothing. The file is held, and the card asks
+    # to renew the sign-in and upload again, every address checked. Any
+    # other failure, no token included, saves and the line says why.
     if directory_check.stopped:
         return render(
             status_code=status.HTTP_400_BAD_REQUEST,

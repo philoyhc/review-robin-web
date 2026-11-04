@@ -41,14 +41,17 @@
     // run at once, where four in flight would make sixteen.
     var workers = 2;
     var batch = 10;
-    var counted = false;
+    // Counted forms carry `data-directory-counted`, one per form, so a
+    // count that submits one form never waves the other through.
     var counting = false;
 
     // A page restored from the back/forward cache keeps what the script
     // set: put the card back as it was rendered.
     window.addEventListener('pageshow', function (event) {
       if (!event.persisted) { return; }
-      counted = false;
+      Array.prototype.forEach.call(document.forms, function (f) {
+        delete f.dataset.directoryCounted;
+      });
       counting = false;
       line.hidden = true;
     });
@@ -58,12 +61,25 @@
     // unmatched rows. Each submits itself once counted.
     var active = null;
 
+    // Submit a counted form. A submit the browser's own validation then
+    // blocks fires no submit event: the form is unmarked and the count
+    // unlocked, so the next try counts again (findings L2).
     function submit(target, submitter) {
-      counted = true;
+      target.dataset.directoryCounted = 'yes';
+      var sent = false;
+      function onSent() { sent = true; }
+      target.addEventListener('submit', onSent);
       if (target.requestSubmit) {
         target.requestSubmit(submitter && submitter.form === target ? submitter : undefined);
       } else {
         target.submit();
+        sent = true;
+      }
+      target.removeEventListener('submit', onSent);
+      if (!sent) {
+        delete target.dataset.directoryCounted;
+        counting = false;
+        line.hidden = true;
       }
     }
 
@@ -71,7 +87,7 @@
       target.addEventListener('submit', function (event) {
         var submitter = event.submitter || null;
         // Counted already, or a submit to elsewhere (a banner's Dismiss).
-        if (counted || (submitter && submitter.hasAttribute('formaction'))) { return; }
+        if (target.dataset.directoryCounted || (submitter && submitter.hasAttribute('formaction'))) { return; }
         event.preventDefault();
         // A second submit while the count runs waits for the first.
         if (counting) { return; }
