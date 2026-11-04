@@ -7,9 +7,11 @@ alone so that 1C items 2–5 delete it in one place
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from contextvars import ContextVar
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
+from typing import TypedDict, cast
 
 from residentialapps.residentialops import sample_data
 
@@ -83,14 +85,37 @@ COVER_POOLS = ("Any RA", "Same Precinct", "Same Wing")
 APPEALS_PREVIEW: ContextVar[str | None] = ContextVar("appeals_preview", default=None)
 
 
-class _Policy(dict):
+class Policy(TypedDict):
+    """The sample policy's settings, as `POLICY` is read."""
+
+    day_count: str
+    appeals: str
+    inviters: str
+    inviter_types: tuple[str, ...]
+    inviter_names: tuple[str, ...]
+    appeal_terms: str
+    cover_required: bool
+    cover_mode: str
+    cover_pool: str
+    first: str
+    first_types: tuple[str, ...]
+    final: str
+    final_types: tuple[str, ...]
+    final_names: tuple[str, ...]
+
+
+class _Policy(dict[str, object]):
     """The sample policy; reading `appeals` gives the previewed mode, if any."""
 
-    def __getitem__(self, key: str):
+    def __getitem__(self, key: str) -> object:
         preview = APPEALS_PREVIEW.get() if key == "appeals" else None
         return preview if preview in APPEAL_MODES else super().__getitem__(key)
 
-    def get(self, key: str, default=None):
+    def stored(self, key: str) -> object:
+        """A key's own value, never the preview."""
+        return super().__getitem__(key)
+
+    def get(self, key: str, default: object = None) -> object:
         return self[key] if key in self else default  # noqa: SIM401 -- this is get(); self.get would recurse
 
 
@@ -99,7 +124,7 @@ PREVIEW_COOKIE = "residential-sample-appeals"
 
 def policy_appeals() -> str:
     """The sample policy's own appeal mode, whatever is previewed."""
-    return dict.__getitem__(POLICY, "appeals")
+    return cast(str, _POLICY.stored("appeals"))
 
 
 def appeals_preview() -> str | None:
@@ -108,7 +133,7 @@ def appeals_preview() -> str | None:
     return mode if mode in APPEAL_MODES and mode != policy_appeals() else None
 
 
-POLICY = _Policy({
+_POLICY = _Policy({
     "day_count": "Every day",  # one of DAY_COUNTS; see leave_days()
     # Appeals beyond entitlement (author, 2026-10-28, refined 2026-10-29):
     # open to every RA, by invitation once someone the policy names agrees
@@ -133,6 +158,9 @@ POLICY = _Policy({
     "final_types": ("Admin",),
     "final_names": (),
 })
+# Read through its keys' types: `_Policy` is the runtime object, `Policy`
+# what each key holds.
+POLICY = cast(Policy, _POLICY)
 
 
 # How an application's days are counted (author, 2026-10-29): RAs work
@@ -175,7 +203,7 @@ PERIOD_LABEL = "AY2026-2027"
 APPEAL_DECIDER = "Sam Lee"  # the Master
 
 
-def _appointments(names) -> tuple[tuple[str, str], ...]:
+def _appointments(names: Iterable[str]) -> tuple[tuple[str, str], ...]:
     staff = {p.name: p for p in sample_data.STAFF}
     return sample_data.appointments(tuple(staff[n] for n in dict.fromkeys(names)))
 
@@ -452,7 +480,7 @@ def stages(open_only: bool = False) -> tuple[str, ...]:
     no first-approval stage when none is needed."""
     # Appeals off removes the route for new applications; an appeal already
     # made keeps its stage and is decided (author, 2026-10-28).
-    skip = set() if appeals_decided() else {"Appeal to the Master"}
+    skip: set[str] = set() if appeals_decided() else {"Appeal to the Master"}
     if POLICY["first"] == "none":
         skip.add("Pending first approval")
     return tuple(s for s in (OPEN_STAGES if open_only else STAGES) if s not in skip)
@@ -644,10 +672,10 @@ def days_in_term(application: Application, term: sample_data.Term = TERM) -> int
     return leave_days(first, last) if first <= last else 0
 
 
-def entitlement_anomalies() -> tuple[tuple[dict, str], ...]:
+def entitlement_anomalies() -> tuple[tuple[EntitlementRow, str], ...]:
     """Entitlement rows to look at (spec §25): over entitlement, or an adjustment
     with no reason recorded."""
-    found = []
+    found: list[tuple[EntitlementRow, str]] = []
     for r in entitlement_rows():
         if r["available"] < 0:
             found.append((r, f"Over entitlement by {-r['available']} day{'s' if r['available'] != -1 else ''}, pending included"))
@@ -675,8 +703,22 @@ def _appeal_charges() -> dict[str, int]:
     return charges
 
 
-def entitlement_rows() -> tuple[dict, ...]:
-    rows = []
+class EntitlementRow(TypedDict):
+    """An RA's entitlement for one leave type, and what is taken of it."""
+
+    ra: str
+    email: str
+    type: str
+    entitlement: int
+    adjustment: int
+    reason: str
+    used: int
+    pending: int
+    available: int
+
+
+def entitlement_rows() -> tuple[EntitlementRow, ...]:
+    rows: list[EntitlementRow] = []
     charges = _appeal_charges()
     for ra in sample_data.RAS:
         start = date.fromisoformat(ra.dates.split()[0])
@@ -785,7 +827,7 @@ def routes(day: date | None = None) -> tuple[Route, ...]:
     found: dict[str, Route] = {}
     for slot in sample_data.SLOTS:
         if slot.precinct in found:
-            found[slot.precinct] = Route(**{**found[slot.precinct].__dict__, "ras": found[slot.precinct].ras + len(slot.ras)})
+            found[slot.precinct] = replace(found[slot.precinct], ras=found[slot.precinct].ras + len(slot.ras))
             continue
         rf = next(n for n in slot.staff if staff[n].abbrev == "RF")
         rslm = next(n for n in slot.staff if staff[n].abbrev == "RSLM")
@@ -905,7 +947,7 @@ def my_applications(ra: str = VIEWER) -> tuple[Application, ...]:
     return tuple(sorted((a for a in APPLICATIONS if a.ra == ra), key=lambda a: a.submitted, reverse=True))
 
 
-def my_balances(ra: str = VIEWER) -> tuple[dict, ...]:
+def my_balances(ra: str = VIEWER) -> tuple[EntitlementRow, ...]:
     return tuple(r for r in entitlement_rows() if r["ra"] == ra)
 
 
@@ -967,7 +1009,7 @@ def staff_role(name: str) -> str:
     """A sample viewer's appointment and what the policy has them decide
     today, so the switch never claims a role the policy has taken away."""
     appointment = dict(STAFF_VIEWERS).get(name, "")
-    does = []
+    does: list[str] = []
     first = [r.precinct for r in routes() if not r.gap and name in r.first.split(" or ")]
     if first and POLICY["first"] == "slot":
         does.append("first approver for " + ", ".join(first))
@@ -997,7 +1039,7 @@ def first_decider_of(application: Application) -> str:
 def queue(viewer: str) -> tuple[tuple[Application, str], ...]:
     """What awaits the viewer's decision, oldest first (spec §16, §24), with
     the decision it needs."""
-    found = []
+    found: list[tuple[Application, str]] = []
     for a in APPLICATIONS:
         if a.stage == "Pending first approval" and viewer in routes_first(a):
             found.append((a, "First approval"))
@@ -1021,7 +1063,7 @@ def waiting_on_cover(application: Application) -> bool:
 def decided(viewer: str) -> tuple[tuple[Application, str, str], ...]:
     """The viewer's own past decisions, newest application first, as
     (application, decision, outcome)."""
-    found = []
+    found: list[tuple[Application, str, str]] = []
     for a in APPLICATIONS:
         if a.appeal:
             if viewer == APPEAL_DECIDER and decides_appeals(a.precinct) and a.stage in ("Approved", "Rejected"):
@@ -1081,7 +1123,16 @@ def other_leave(application: Application) -> tuple[Application, ...]:
     )
 
 
-def by_precinct(viewer: str, start: date | None = None, end: date | None = None) -> tuple[dict, ...]:
+class PrecinctCount(TypedDict):
+    """A Precinct's RAs, how many are away and how many applications pend."""
+
+    precinct: str
+    ras: int
+    away: int
+    pending: int
+
+
+def by_precinct(viewer: str, start: date | None = None, end: date | None = None) -> tuple[PrecinctCount, ...]:
     """Numbers away (this week, or in the period given) and pending per
     Precinct in the viewer's scope (§22)."""
     away = away_between(start, end) if start and end else away_this_week()
@@ -1127,7 +1178,7 @@ def appeal_split(application: Application) -> dict[str, int]:
 
 def blackouts_on(application: Application) -> tuple[tuple[Blackout, date, date], ...]:
     """The blackouts an application's dates touch, with their dates (§6)."""
-    found = []
+    found: list[tuple[Blackout, date, date]] = []
     for b in BLACKOUTS:
         span = week_dates(b)
         if span and span[0] <= application.end and span[1] >= application.start:
@@ -1149,7 +1200,7 @@ def approvers_for(ra: str) -> str:
 
 def term_blackouts() -> tuple[tuple[Blackout, date, date], ...]:
     """This term's blackouts not yet over, with their dates (§6)."""
-    found = []
+    found: list[tuple[Blackout, date, date]] = []
     for b in BLACKOUTS:
         span = week_dates(b, PERIOD_LABEL)
         if span and span[0] <= TERM.end and span[1] >= max(TERM.start, TODAY):
@@ -1169,7 +1220,7 @@ def coming_up(viewer: str) -> tuple[Application, ...]:
     return tuple(a for a in upcoming() if a.precinct in scope(viewer))
 
 
-def balance_of(application: Application) -> dict:
+def balance_of(application: Application) -> EntitlementRow:
     return next(r for r in entitlement_rows() if r["ra"] == application.ra and r["type"] == application.leave_type)
 
 

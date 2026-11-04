@@ -87,7 +87,8 @@ def plans(request: Request) -> Response:
     follow-ups, filtered All, Overdue or This week."""
     show = request.query_params.get("show", "all")
     show = show if show in SHOW else "all"
-    keep = {"all": None, "overdue": {"overdue"}, "week": {"overdue", "today", "week"}}[show]
+    keeps: dict[str, set[str] | None] = {"all": None, "overdue": {"overdue"}, "week": {"overdue", "today", "week"}}
+    keep = keeps[show]
     me = _me(request)
     mine = [p for p in sample.plans_of(me.name) if keep is None or sample.due(p)[0] in keep]
     return gated(request, "supportlogs/plans.html", FRONTLINE, show=show, shows=SHOW, mine=mine,

@@ -15,6 +15,7 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 from datetime import date
+from typing import TypedDict
 
 UNIT_NAME = "Example College"
 
@@ -345,7 +346,7 @@ def late_starts(term: Term) -> tuple[tuple[str, str, int], ...]:
     """The guard's warnings for a term's assignments: each assignee whose
     appointment covers only part of it, with their slot and the gap."""
     dates = {p.name: p.dates for p in (*STAFF, *RAS)}
-    found = []
+    found: list[tuple[str, str, int]] = []
     for slot in SLOTS:
         for name in (*slot.staff, *slot.ras):
             gap = gap_days(dates[name], term)
@@ -395,7 +396,17 @@ def person_id_of(email: str) -> str:
 
 PERSON_IDS = dict(_IDS)
 
-_WORKED = {
+class _Worked(TypedDict, total=False):
+    """What a worked sample person adds to the roster's fields."""
+
+    entra_display_name: str
+    entra_email: str
+    entra_upn: str
+    entra_object_id: str
+    history: tuple[tuple[str, str], ...]
+
+
+_WORKED: dict[str, _Worked] = {
     "chloe.lim@example.edu": {
         "entra_display_name": "Chloe Lim Wei Ling",
         "entra_email": "chloe.lim@u.example.edu",
