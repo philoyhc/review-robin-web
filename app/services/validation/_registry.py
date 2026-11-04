@@ -19,6 +19,7 @@ from app.services.validation._inputs import (
 from app.services.validation._rosters import (
     _check_session_no_name,
     _check_session_no_code,
+    _check_session_end_passed,
     _check_reviewers_empty,
     _check_reviewers_duplicate_email,
     _check_observers_duplicate_email,
@@ -112,6 +113,19 @@ REGISTERED_RULES: tuple[ValidationRule, ...] = (
         fix_url=_session_edit_url,
         fix_page_label="Edit session",
         check=_check_session_no_code,
+    ),
+    ValidationRule(
+        key="session.end_passed",
+        source="session",
+        severity=Severity.error,
+        why=(
+            "The review's end, End or with no End Release responses "
+            "from, closes the session (segment 14E). Already passed, it "
+            "would close the session the moment it opened."
+        ),
+        fix_url=_session_edit_url,
+        fix_page_label="Edit session",
+        check=_check_session_end_passed,
     ),
     ValidationRule(
         key="reviewers.empty",

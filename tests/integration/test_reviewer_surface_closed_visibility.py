@@ -272,7 +272,7 @@ def test_otherwise_a_closed_session_hides_them(
     body = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
     assert 'value="5"' not in body
     assert "great review" not in body
-    assert "hidden by the operator" in body
+    assert "aren&#39;t shown now" in body or "aren't shown now" in body
     assert "disabled" in body
     summary = rae_client.get(f"/me/sessions/{review_session.public_id}/summary").text
     assert "great review" not in summary

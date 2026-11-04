@@ -53,9 +53,8 @@ only the audit log open**.
 window are editable only before the session opens.
 
 - [ ] **Auto-send is off.** On New session, Send invites and Send
-  reminders are greyed out with "Scheduled sending isn't available on
-  this deployment; send from Invitations when it's time"; the Guide's
-  paragraph on them says the same.
+  reminders are greyed out with "Scheduled email is not available on
+  this deployment."; the Guide's paragraph on them says the same.
 - [ ] **Set up.** Create a session; on Quick Setup upload
   `docs/sample_data/basic_cohort/mock_reviewers.csv` and
   `mock_reviewees.csv`. Run Validate and Prepare session until the
@@ -75,10 +74,19 @@ window are editable only before the session opens.
   `instrument.closed` per instrument and one `session.deadline_reached`,
   "Deadline reached: *n* of *N* reviewers submitted", each `fired_by:
   clock`.
-- [ ] **The window waits for the session to end.** Open Session Home and
-  press **Close session** before *T*+9, then close it again, leaving the
-  audit log. At *T*+13, reload: one `session.release_window_opened` and
-  one `session.release_window_ended`. Reload twice more: neither repeats.
+- [ ] **End closes the session, and the window opens unattended.** At
+  *T*+7 the audit log also shows `session.expired`, "closed (End
+  reached)", with no actor, `reason: deadline` and `fired_by: clock`;
+  the lobby shows the session Closed. Open `/reviewrobin/me` as a
+  reviewer: the session reads Closed, and its review page says your
+  saved values aren't shown now. At *T*+13 the log shows one
+  `session.release_window_opened` and one `session.release_window_ended`,
+  with no Close session pressed. Reload twice more: neither repeats.
+- [ ] **With no End, Release from closes the session.** Take another
+  session to Validated with Start *T3*+2, **no End**, and Release from
+  *T3*+5; close the other tabs. At *T3*+6 the audit log shows
+  `session.expired`, "closed (release started)", `reason: release`, and
+  `session.release_window_opened`, both `fired_by: clock`.
 - [ ] **Off is off, and a page view still does it.** Stop the app
   (Ctrl+C) and start it with the interval at `0`, keeping the lead time
   at `0`: in PowerShell `$env:SCHEDULER_INTERVAL_SECONDS = "0"` then

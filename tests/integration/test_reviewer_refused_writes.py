@@ -156,6 +156,30 @@ def test_a_submit_after_the_operator_closed_says_so(
     assert "Line one\nLine two" in text
 
 
+def test_an_operator_close_before_end_is_not_named_as_the_deadline(
+    client: TestClient, db: Session, make_client
+) -> None:
+    """Closed by the operator before End, then End passes: the notice
+    does not blame the deadline (segment 14E)."""
+    review_session = _ready_session(client, db, code="refused-closed-then-end")
+    client.post(
+        f"/operator/sessions/{review_session.public_id}/workflow/close",
+        follow_redirects=False,
+    )
+    db.refresh(review_session)
+    review_session.deadline = datetime.now(timezone.utc) - timedelta(minutes=1)
+    db.commit()
+    aid = _assignment_of(db, review_session, "rae@example.edu").id
+    resp, text = _rae_posts(
+        make_client,
+        f"/me/sessions/{review_session.public_id}/submit?page=1",
+        answer_form(db, {f"response[{aid}][comments]": TYPED}),
+    )
+    assert resp.status_code == 403
+    assert "closed at its deadline" not in text
+    assert "This review has closed, so your answers weren't submitted." in text
+
+
 def test_a_save_on_a_session_reverted_to_draft_is_not_currently_open(
     client: TestClient, db: Session, make_client
 ) -> None:

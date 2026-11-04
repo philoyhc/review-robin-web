@@ -251,7 +251,10 @@ def _refused_write_response(
     ``page_assignment_ids`` maps the typed answers' ordinals to rows."""
     extra = {
         "write_refused": views.write_refused_notice(
-            review_session, cause, action=action
+            review_session,
+            cause,
+            action=action,
+            closed_at_deadline=lifecycle.closed_at_deadline(db, review_session),
         ),
         "unsaved_answers": views.unsaved_answers(
             db,

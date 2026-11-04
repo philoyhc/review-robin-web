@@ -30,6 +30,7 @@ def _session(status: str, *, released: bool = False) -> SimpleNamespace:
         status=status,
         responses_release_at=_NOW - dt.timedelta(hours=1) if released else None,
         responses_release_until=None,
+        deadline=None,
     )
 
 
@@ -89,3 +90,12 @@ def test_archived_is_refused_before_any_window_is_read(
     assert not visibility_policies.reviewer_sees_own_responses(
         _session("archived", released=True), _policy("raw"), now=_NOW
     )
+
+
+def test_ready_past_end_shows_nothing() -> None:
+    """Visibility exists only while ongoing (Start to End) and in the
+    release window (author, 2026-11-04, segment 14E): a session still
+    ``ready`` past End, before End has closed it, is outside both."""
+    session = _session("ready")
+    session.deadline = _NOW - dt.timedelta(minutes=1)
+    assert not visibility_policies.reviewer_sees_own_responses(session, None, now=_NOW)

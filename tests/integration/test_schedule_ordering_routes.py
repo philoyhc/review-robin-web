@@ -63,12 +63,20 @@ def test_validate_schedule_ordering_skips_pairs_with_null() -> None:
         deadline=_ts(2027, 1, 1),
         responses_release_at=_ts(2027, 1, 10),
     )
-    # End NULL: both pairs skip (each touches End).
+    # End NULL: Start-End and End-Release-from skip; with no End the
+    # release ends the review, so Release-from on or after Start passes
+    # (segment 14E) and before it is refused.
     validate_schedule_ordering(
-        scheduled_activate_at=_ts(2027, 1, 10),
+        scheduled_activate_at=_ts(2027, 1, 5),
         deadline=None,
-        responses_release_at=_ts(2027, 1, 5),
+        responses_release_at=_ts(2027, 1, 10),
     )
+    with pytest.raises(ScheduledActivateError, match="With no End"):
+        validate_schedule_ordering(
+            scheduled_activate_at=_ts(2027, 1, 10),
+            deadline=None,
+            responses_release_at=_ts(2027, 1, 5),
+        )
     # Release-from NULL: Start-End checked (in order, passes);
     # End-Release-from pair skipped.
     validate_schedule_ordering(

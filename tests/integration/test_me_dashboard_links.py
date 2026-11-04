@@ -336,12 +336,13 @@ def test_an_observer_with_a_grant_after_the_close_reads_available(
     assert CLOSED not in body
 
 
-def test_a_reviewer_past_the_deadline_with_answers_reads_available(
+def test_a_reviewer_past_the_deadline_reads_closed_even_with_answers(
     client: TestClient, db: Session
 ) -> None:
-    """Past the deadline a ``ready`` session no longer accepts, but the
-    reviewer can still read back what they saved; with nothing saved
-    there is nothing to see, so the row reads "Closed"."""
+    """Visibility exists only while ongoing and in the release window
+    (author, 2026-11-04, segment 14E): past End the reviewer cannot read
+    back what they saved, so the row reads "Closed" with answers or
+    without. Before 14E a ``ready`` session past End read "Available"."""
     review_session = _make_session(client, db, code="st-rev-past")
     review_session.status = "ready"
     review_session.deadline = datetime.now(timezone.utc) - timedelta(minutes=1)
@@ -381,7 +382,8 @@ def test_a_reviewer_past_the_deadline_with_answers_reads_available(
     )
     db.commit()
     body = client.get("/me").text
-    assert AVAILABLE in body
+    assert CLOSED in body
+    assert AVAILABLE not in body
 
 
 def test_a_reviewer_with_nothing_assigned_is_told_so(
@@ -573,16 +575,18 @@ def test_a_reviewee_with_a_grant_reads_available(
     assert AVAILABLE in client.get("/me").text
 
 
-def test_an_observer_past_the_deadline_with_a_summarized_grant_reads_available(
+def test_an_observer_past_the_deadline_reads_closed(
     client: TestClient, db: Session
 ) -> None:
-    """The while-ongoing window is the status column, not the deadline:
-    a ``ready`` session past its deadline still shows Summarized
-    collation."""
+    """The while-ongoing window ends at End (author, 2026-11-04, segment
+    14E): a ``ready`` session past End no longer shows Summarized
+    collation. Before 14E it did, until the operator closed it."""
     review_session = _observer_on(client, db, code="st-obs-past", status="ready")
     review_session.deadline = datetime.now(timezone.utc) - timedelta(minutes=1)
     _policy(db, review_session, audience="observer", while_ongoing="summarized")
-    assert AVAILABLE in client.get("/me").text
+    body = client.get("/me").text
+    assert AVAILABLE not in body
+    assert CLOSED in body
 
 
 def test_a_reviewer_reads_available_after_release_only_with_raw(

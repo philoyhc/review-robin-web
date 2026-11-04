@@ -3,8 +3,9 @@ steps are due, so they happen on time with no page view.
 
 A pass fires what an operator set, and nothing else
 (`guide/interoperability.md` §2): a scheduled activation whose Start has
-passed, the deadline close of a session past its End, and the release
-window's start and end stamps. It sends no mail: invites and reminders
+passed, the close of an open session past its end (End, or with no End,
+Release from: ``session_lifecycle.review_end``), and the release window's
+start and end stamps. It sends no mail: invites and reminders
 stay with ``RRW_SCHEDULED_SEND`` (off until 14G), and even on, the clock
 passes no invite-URL builder until 14G gives it one.
 
@@ -26,10 +27,10 @@ import threading
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import exists, or_, select, text
+from sqlalchemy import or_, select, text
 from sqlalchemy.orm import Session
 
-from app.db.models import AuditEvent, Instrument, ReviewSession
+from app.db.models import AuditEvent, ReviewSession
 from app.services import audit
 from app.services import session_lifecycle as lifecycle
 from app.services.session_guard import SessionBusy
@@ -56,7 +57,7 @@ def _take_lock(db: Session) -> bool:
 
 def due_session_ids(db: Session, *, now: datetime) -> list[int]:
     """Sessions with a timed step due: a scheduled Start that has passed,
-    an open session past its End with an instrument still accepting, or
+    an open session past its end (End, or with no End, Release from), or
     a release-window moment crossed within ``STAMP_GRACE`` on an expired
     session (the window opens on no other). Archived sessions are left
     out.
@@ -66,11 +67,6 @@ def due_session_ids(db: Session, *, now: datetime) -> list[int]:
     clock rather than spending all three in a few passes; the spacing
     holds back that Start only, never a deadline or release step due on
     the same session (Codex, #3579)."""
-    open_instrument = exists().where(
-        Instrument.session_id == ReviewSession.id,
-        Instrument.accepting_responses.is_(True),
-        Instrument.deadline_closed_at.is_(None),
-    )
     since = now - STAMP_GRACE
     live = ReviewSession.status != lifecycle.SessionStatus.archived.value
     starts = db.execute(
@@ -80,9 +76,15 @@ def due_session_ids(db: Session, *, now: datetime) -> list[int]:
         select(ReviewSession.id).where(
             live,
             or_(
+                # An open session past its end, instruments open or not:
+                # End, or with no End, Release from (`review_end`) closes
+                # it (segment 14E).
                 (ReviewSession.status == lifecycle.SessionStatus.ready.value)
-                & (ReviewSession.deadline <= now)
-                & open_instrument,
+                & or_(
+                    ReviewSession.deadline <= now,
+                    ReviewSession.deadline.is_(None)
+                    & (ReviewSession.responses_release_at <= now),
+                ),
                 (ReviewSession.status == lifecycle.SessionStatus.expired.value)
                 & or_(
                     ReviewSession.responses_release_at.between(since, now),
@@ -149,11 +151,9 @@ def run_pass(
                     review_session = db.get(ReviewSession, session_id)
                     if review_session is None:
                         continue
+                    # Activation, End's close, Release from's close and the
+                    # release stamps, as a page view runs them.
                     observe_scheduled_events(db, review_session, now=current)
-                    # The deadline close is an open session's; a session
-                    # the activation above just opened is one.
-                    if lifecycle.is_ready(review_session):
-                        lifecycle.observe_deadline(db, review_session, now=current)
                     db.commit()
                     visited += 1
                 except SessionBusy:

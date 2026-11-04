@@ -137,7 +137,7 @@ def build_observer_collation_context(
     if lifecycle.is_archived(review_session):
         return ObserverCollationContext(sections=[], cohort_empty=False)
 
-    while_ongoing_open = lifecycle.is_ready(review_session)
+    while_ongoing_open = lifecycle.is_ongoing(review_session)
     after_release_open = lifecycle.is_response_release_window_open(
         review_session
     )

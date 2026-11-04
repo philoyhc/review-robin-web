@@ -104,6 +104,36 @@ def _as_utc(value: datetime | None) -> datetime | None:
     return value
 
 
+def is_ongoing(review_session: ReviewSession, *, now: datetime | None = None) -> bool:
+    """The ``while_ongoing`` visibility window: the session is open and
+    its end (:func:`review_end`: End, or with no End, Release from), if
+    set, has not passed (author, 2026-11-04, segment 14E).
+
+    Visibility exists only in two windows, while ongoing (Start to End)
+    and the release window. End closes the session (``observe_deadline``),
+    but that runs on the clock's next pass or a reviewer's request; this
+    check makes the window end at End itself, on every page, and also for
+    a session whose End passed before End closed sessions."""
+    if not is_ready(review_session):
+        return False
+    current = now or datetime.now(timezone.utc)
+    end = review_end(review_session)
+    return end is None or current < end
+
+
+def review_end(review_session: ReviewSession) -> datetime | None:
+    """When the review ends: End, or with no End set, Release responses
+    from (author, 2026-11-04, segment 14E): a release that starts closes
+    the review. Everything End governs follows it: the ongoing window,
+    the accept gate (:func:`deadline_has_passed`) and the close
+    (:func:`observe_deadline`). ``None``: no End and no release, so the
+    review runs until the operator closes it."""
+    deadline = _as_utc(review_session.deadline)
+    if deadline is not None:
+        return deadline
+    return _as_utc(review_session.responses_release_at)
+
+
 def is_response_release_window_open(
     review_session: ReviewSession, *, now: datetime | None = None
 ) -> bool:
@@ -122,7 +152,7 @@ def is_response_release_window_open(
 
     **The session must be ``expired``** (Segment 19F PR 2a, author
     2026-09-07). The two visibility windows mean literally "as data is
-    coming in" (``while_ongoing`` = ``ready``) and "after the review has
+    coming in" (``while_ongoing``, ``ready`` and before End, :func:`is_ongoing`) and "after the review has
     closed" (``after_release`` = ``expired``); responses are released
     *because the session is over*. That was already the Workflow card's
     rule — it gates both Release and Stop-release on ``is_expired`` and
@@ -928,12 +958,14 @@ def _aware(value: datetime) -> datetime:
 def deadline_has_passed(
     review_session: ReviewSession, *, now: datetime | None = None
 ) -> bool:
-    """Whether the session's deadline is set and behind us. A null
-    deadline never passes."""
-    if review_session.deadline is None:
+    """Whether the review's end (:func:`review_end`: End, or with no End,
+    Release from) is set and behind us. With neither set it never
+    passes."""
+    end = review_end(review_session)
+    if end is None:
         return False
     current = now or datetime.now(timezone.utc)
-    return current >= _aware(review_session.deadline)
+    return current >= end
 
 
 def recall_allowed(
@@ -1092,6 +1124,60 @@ def _reopen_while_live(
     db.commit()
 
 
+def _expire_at_end(
+    db: Session,
+    review_session: ReviewSession,
+    *,
+    closed: int,
+    correlation_id: str | None,
+) -> None:
+    """End closes the session (author, 2026-11-04, segment 14E): the same
+    ``ready → expired`` as the operator's Close session, so a release
+    window set beforehand opens unattended. No actor; ``reason="deadline"``
+    for End, ``"release"`` when no End and Release from ended it. The
+    caller holds the session lock and commits."""
+    if not is_ready(review_session):
+        return
+    review_session.status = SessionStatus.expired.value
+    by_end = review_session.deadline is not None
+    audit.write_event(
+        db,
+        event_type="session.expired",
+        summary=(
+            f"Session {review_session.code} closed "
+            + ("(End reached)" if by_end else "(release started)")
+        ),
+        actor_user_id=None,
+        session=review_session,
+        payload=audit.counts(closed_instruments=closed),
+        reason="deadline" if by_end else "release",
+        context=_end_context(review_session),
+        correlation_id=correlation_id,
+    )
+
+
+def _end_context(review_session: ReviewSession) -> dict[str, str]:
+    """The moment that ended the review, under its own name."""
+    if review_session.deadline is not None:
+        return {"deadline": _aware(review_session.deadline).isoformat()}
+    return {"release_at": review_end(review_session).isoformat()}
+
+
+def closed_at_deadline(db: Session, review_session: ReviewSession) -> bool:
+    """Whether the review's end (End, or with no End, Release from) closed
+    this session's instruments (``deadline_closed_at`` set), as against the
+    operator's Close session before it, which does not stamp it. The
+    refused-write notice names the deadline only for a real End."""
+    return db.execute(
+        select(Instrument.id)
+        .where(
+            Instrument.session_id == review_session.id,
+            Instrument.deadline_closed_at.is_not(None),
+        )
+        .limit(1)
+    ).first() is not None
+
+
 def observe_deadline(
     db: Session,
     review_session: ReviewSession,
@@ -1099,11 +1185,17 @@ def observe_deadline(
     now: datetime | None = None,
     correlation_id: str | None = None,
 ) -> int:
-    """Lazy deadline-close. Idempotent.
+    """Lazy close at the review's end. Idempotent.
 
-    Closes any instruments still ``accepting_responses`` once the session
-    deadline has passed and stamps ``deadline_closed_at``. Emits one
-    ``instrument.closed reason=deadline`` audit event per transition.
+    The end is End, or with no End, Release from (:func:`review_end`;
+    segment 14E). Past it, this closes the instruments and the session
+    (``ready → expired``, :func:`_expire_at_end`), once per crossing, also
+    for a session whose instruments an earlier request already shut.
+
+    Closes any instruments still ``accepting_responses`` once the review's
+    end has passed and stamps ``deadline_closed_at``. Emits one
+    ``instrument.closed`` per transition, ``reason=deadline`` (or
+    ``release`` with no End).
     Returns the number of instruments closed by this call.
 
     ``correlation_id`` is the request-scoped UUID minted by the
@@ -1120,9 +1212,7 @@ def observe_deadline(
     the gate (see :func:`_reopen_while_live`).
     """
     current = now or datetime.now(timezone.utc)
-    if review_session.deadline is None or current < _aware(
-        review_session.deadline
-    ):
+    if not deadline_has_passed(review_session, now=current):
         _reopen_while_live(db, review_session, correlation_id=correlation_id)
         return 0
 
@@ -1139,6 +1229,17 @@ def observe_deadline(
         return list(db.execute(query).scalars())
 
     if not _open():
+        # Nothing left to close: an End that passed before End closed
+        # sessions (segment 14E), whose instruments a reviewer's request
+        # already shut. The session still closes, once.
+        if is_ready(review_session):
+            session_guard.lock_session(db, review_session)
+            if is_ready(review_session) and deadline_has_passed(
+                review_session, now=current
+            ):
+                _expire_at_end(db, review_session, closed=0, correlation_id=correlation_id)
+                db.flush()
+                db.commit()
         return 0
     # Lock and decide again before closing, so two requests tripping the
     # same deadline close each instrument (and audit it) once, and an End
@@ -1147,12 +1248,11 @@ def observe_deadline(
     # the threadpool (their gate and their error re-render), so the wait
     # for a held lock stalls only this request.
     session_guard.lock_session(db, review_session)
-    if review_session.deadline is None or current < _aware(
-        review_session.deadline
-    ):
+    if not deadline_has_passed(review_session, now=current):
         return 0
     instruments = _open(fresh=True)
     if not instruments:
+        # A racer closed them first; it also closed the session.
         return 0
 
     closed = 0
@@ -1160,18 +1260,24 @@ def observe_deadline(
     # imports this module.
     from app.services.instruments import _instrument_label
 
+    # With no End, a release ended the review: named so, as on the
+    # session's own event (segment 14E).
+    by_end = review_session.deadline is not None
     for instrument in instruments:
         instrument.accepting_responses = False
         instrument.deadline_closed_at = current
         audit.write_event(
             db,
             event_type="instrument.closed",
-            summary=f"Instrument {_instrument_label(instrument)} closed (deadline)",
+            summary=(
+                f"Instrument {_instrument_label(instrument)} closed "
+                + ("(deadline)" if by_end else "(release started)")
+            ),
             actor_user_id=None,
             session=review_session,
             refs={"instrument_id": instrument.id},
-            reason="deadline",
-            context={"deadline": review_session.deadline.isoformat()},
+            reason="deadline" if by_end else "release",
+            context=_end_context(review_session),
             correlation_id=correlation_id,
         )
         closed += 1
@@ -1182,19 +1288,24 @@ def observe_deadline(
     from app.services import monitoring
 
     progress = monitoring.summary_counts(db, review_session)
-    audit.write_event(
+    # A release that ends a review with no End is not a deadline.
+    if review_session.deadline is not None:
+        audit.write_event(
         db,
-        event_type="session.deadline_reached",
-        summary=(
-            f"Deadline reached: {progress.submitted} of "
-            f"{progress.assigned} reviewers submitted"
-        ),
-        actor_user_id=None,
-        session=review_session,
-        payload=audit.counts(submitted=progress.submitted, assigned=progress.assigned),
-        context={"deadline": review_session.deadline.isoformat()},
-        correlation_id=correlation_id,
-    )
+            event_type="session.deadline_reached",
+            summary=(
+                f"Deadline reached: {progress.submitted} of "
+                f"{progress.assigned} reviewers submitted"
+            ),
+            actor_user_id=None,
+            session=review_session,
+            payload=audit.counts(
+                submitted=progress.submitted, assigned=progress.assigned
+            ),
+            context={"deadline": review_session.deadline.isoformat()},
+            correlation_id=correlation_id,
+        )
+    _expire_at_end(db, review_session, closed=closed, correlation_id=correlation_id)
     db.flush()
     db.commit()
     return closed
