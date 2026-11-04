@@ -82,6 +82,11 @@ window are editable only before the session opens.
   saved values aren't shown now. At *T*+13 the log shows one
   `session.release_window_opened` and one `session.release_window_ended`,
   with no Close session pressed. Reload twice more: neither repeats.
+- [ ] **With no End, Release from closes the session.** Take another
+  session to Validated with Start *T3*+2, **no End**, and Release from
+  *T3*+5; close the other tabs. At *T3*+6 the audit log shows
+  `session.expired`, "closed (release started)", `reason: release`, and
+  `session.release_window_opened`, both `fired_by: clock`.
 - [ ] **Off is off, and a page view still does it.** Stop the app
   (Ctrl+C) and start it with the interval at `0`, keeping the lead time
   at `0`: in PowerShell `$env:SCHEDULER_INTERVAL_SECONDS = "0"` then

@@ -26,10 +26,10 @@ import threading
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import exists, or_, select, text
+from sqlalchemy import or_, select, text
 from sqlalchemy.orm import Session
 
-from app.db.models import AuditEvent, Instrument, ReviewSession
+from app.db.models import AuditEvent, ReviewSession
 from app.services import audit
 from app.services import session_lifecycle as lifecycle
 from app.services.session_guard import SessionBusy
@@ -66,11 +66,6 @@ def due_session_ids(db: Session, *, now: datetime) -> list[int]:
     clock rather than spending all three in a few passes; the spacing
     holds back that Start only, never a deadline or release step due on
     the same session (Codex, #3579)."""
-    open_instrument = exists().where(
-        Instrument.session_id == ReviewSession.id,
-        Instrument.accepting_responses.is_(True),
-        Instrument.deadline_closed_at.is_(None),
-    )
     since = now - STAMP_GRACE
     live = ReviewSession.status != lifecycle.SessionStatus.archived.value
     starts = db.execute(
@@ -80,9 +75,13 @@ def due_session_ids(db: Session, *, now: datetime) -> list[int]:
         select(ReviewSession.id).where(
             live,
             or_(
+                # An open session past End, instruments open or not: End
+                # closes it (segment 14E).
                 (ReviewSession.status == lifecycle.SessionStatus.ready.value)
-                & (ReviewSession.deadline <= now)
-                & open_instrument,
+                & (ReviewSession.deadline <= now),
+                (ReviewSession.status == lifecycle.SessionStatus.ready.value)
+                & ReviewSession.deadline.is_(None)
+                & ReviewSession.responses_release_at.between(since, now),
                 (ReviewSession.status == lifecycle.SessionStatus.expired.value)
                 & or_(
                     ReviewSession.responses_release_at.between(since, now),
@@ -149,11 +148,9 @@ def run_pass(
                     review_session = db.get(ReviewSession, session_id)
                     if review_session is None:
                         continue
+                    # Activation, End's close, Release from's close and the
+                    # release stamps, as a page view runs them.
                     observe_scheduled_events(db, review_session, now=current)
-                    # The deadline close is an open session's; a session
-                    # the activation above just opened is one.
-                    if lifecycle.is_ready(review_session):
-                        lifecycle.observe_deadline(db, review_session, now=current)
                     db.commit()
                     visited += 1
                 except SessionBusy:

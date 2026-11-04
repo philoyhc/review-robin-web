@@ -37,7 +37,11 @@ REFUSED_PAGE_CHANGED = "page_changed"
 
 
 def write_refused_notice(
-    review_session: ReviewSession, cause: str, *, action: str
+    review_session: ReviewSession,
+    cause: str,
+    *,
+    action: str,
+    closed_at_deadline: bool = False,
 ) -> str:
     """The sentence a refused write shows. ``action`` is ``"save"``,
     ``"submit"`` or ``"clear"``."""
@@ -55,11 +59,14 @@ def write_refused_notice(
             "This page changed after you opened it, so "
             f"{outcome}. Check the answers below and enter them again."
         )
-    # Past End the review closed at its deadline, whether the session is
-    # still open or End has closed it (segment 14E).
-    if (
-        lifecycle.is_ready(review_session) or lifecycle.is_expired(review_session)
-    ) and lifecycle.deadline_has_passed(review_session):
+    # Past End the review closed at its deadline: while the session is
+    # still open, or once End has closed it (segment 14E). An operator's
+    # Close session before End is not named as the deadline
+    # (``closed_at_deadline``, from the caller).
+    if lifecycle.deadline_has_passed(review_session) and (
+        lifecycle.is_ready(review_session)
+        or (lifecycle.is_expired(review_session) and closed_at_deadline)
+    ):
         zone = sessions_service.resolve_session_timezone(review_session)
         when = date_formatting.format_datetime(review_session.deadline, zone)
         label = date_formatting.gmt_offset_zone_label(

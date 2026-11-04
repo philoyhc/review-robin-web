@@ -361,3 +361,79 @@ def test_the_ongoing_window_ends_at_end_itself(db: Session) -> None:
     assert not lifecycle.is_ongoing(rs, now=NOW + timedelta(minutes=6))
     rs.deadline = None
     assert lifecycle.is_ongoing(rs, now=NOW + timedelta(days=30))
+
+
+def test_with_no_end_release_from_closes_the_session_and_opens_the_window(
+    db: Session,
+) -> None:
+    """With no End set, Release responses from ends the review (author,
+    2026-11-04): the session closes and the window opens in one pass."""
+    rs = _make_validated_session(db, "clock-release-close")
+    rs.status = lifecycle.SessionStatus.ready.value
+    rs.deadline = None
+    rs.responses_release_at = NOW - timedelta(minutes=1)
+    db.commit()
+    assert not lifecycle.is_ongoing(rs, now=NOW)
+
+    _clock.run_pass(_factory(db), now=NOW)
+
+    db.refresh(rs)
+    assert lifecycle.is_expired(rs)
+    expired = _events(db, rs, "session.expired")
+    assert len(expired) == 1
+    assert expired[0].detail["reason"] == "release"
+    assert expired[0].detail["context"]["fired_by"] == "clock"
+    assert len(_events(db, rs, "session.release_window_opened")) == 1
+    _clock.run_pass(_factory(db), now=NOW)
+    assert len(_events(db, rs, "session.expired")) == 1
+
+
+def test_with_an_end_release_from_does_not_close_the_session(db: Session) -> None:
+    rs = _make_validated_session(db, "clock-release-end")
+    rs.status = lifecycle.SessionStatus.ready.value
+    rs.deadline = NOW + timedelta(hours=1)
+    rs.responses_release_at = NOW - timedelta(minutes=1)
+    db.commit()
+    lifecycle.observe_release_start(db, rs, now=NOW)
+    db.refresh(rs)
+    assert lifecycle.is_ready(rs)
+
+
+def test_an_old_release_from_closes_nothing(db: Session) -> None:
+    rs = _make_validated_session(db, "clock-release-old")
+    rs.status = lifecycle.SessionStatus.ready.value
+    rs.deadline = None
+    rs.responses_release_at = NOW - timedelta(days=3)
+    db.commit()
+    assert not lifecycle.observe_release_start(db, rs, now=NOW)
+    db.refresh(rs)
+    assert lifecycle.is_ready(rs)
+
+
+def test_a_session_whose_end_passed_earlier_still_closes(db: Session) -> None:
+    """End closes the session even when its instruments were shut before
+    End closed sessions (a reviewer's request past End, before 14E)."""
+    rs = _ready_past_deadline(db, "clock-legacy-end")
+    for instrument in db.execute(
+        select(Instrument).where(Instrument.session_id == rs.id)
+    ).scalars():
+        instrument.accepting_responses = False
+        instrument.deadline_closed_at = NOW - timedelta(minutes=4)
+    db.commit()
+
+    assert rs.id in _clock.due_session_ids(db, now=NOW)
+    _clock.run_pass(_factory(db), now=NOW)
+    db.refresh(rs)
+    assert lifecycle.is_expired(rs)
+    assert len(_events(db, rs, "session.expired")) == 1
+
+
+def test_an_operator_page_view_past_end_closes_the_session(db: Session) -> None:
+    """With the clock off, the scheduled pass an operator page runs closes
+    a session past End too, not only a reviewer's request."""
+    rs = _ready_past_deadline(db, "clock-op-view")
+    scheduled_events.observe_scheduled_events(db, rs, now=NOW)
+    db.refresh(rs)
+    assert lifecycle.is_expired(rs)
+    expired = _events(db, rs, "session.expired")
+    assert len(expired) == 1 and "fired_by" not in expired[0].detail["context"]

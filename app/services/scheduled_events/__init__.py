@@ -308,6 +308,51 @@ def _observe_all(
                 db, session, now=current, correlation_id=correlation_id
             ),
         )
+    # Reminders before End's close below, so one past End is skipped as
+    # outside the response window, not as a session no longer open.
+    if send:
+        _run_guarded(
+            db,
+            session,
+            trigger="reminders",
+            correlation_id=correlation_id,
+            fire=lambda: _observe_scheduled_reminders(
+                db,
+                session,
+                now=current,
+                correlation_id=correlation_id,
+                build_invite_url=build_invite_url,
+            ),
+        )
+    # End closes the session (segment 14E): on every operator page that
+    # runs this pass, not only on reviewer requests and the clock. Only a
+    # session open and past End, so a page with nothing due queries
+    # nothing more.
+    if (
+        lifecycle.is_ready(session)
+        and session.deadline is not None
+        and current >= _ensure_aware_utc(session.deadline)
+    ):
+        _run_guarded(
+            db,
+            session,
+            trigger="deadline",
+            correlation_id=correlation_id,
+            fire=lambda: lifecycle.observe_deadline(
+                db, session, now=current, correlation_id=correlation_id
+            ),
+        )
+    # With no End, Release from closes the session (author, 2026-11-04),
+    # so the window below can open in the same pass.
+    _run_guarded(
+        db,
+        session,
+        trigger="release_close",
+        correlation_id=correlation_id,
+        fire=lambda: lifecycle.observe_release_start(
+            db, session, now=current, correlation_id=correlation_id
+        ),
+    )
     # The release window's crossings (segment 14E): stamped once, by
     # whichever trigger reaches them first.
     _run_guarded(
@@ -317,21 +362,6 @@ def _observe_all(
         correlation_id=correlation_id,
         fire=lambda: observe_release_window(
             db, session, now=current, correlation_id=correlation_id
-        ),
-    )
-    if not send:
-        return
-    _run_guarded(
-        db,
-        session,
-        trigger="reminders",
-        correlation_id=correlation_id,
-        fire=lambda: _observe_scheduled_reminders(
-            db,
-            session,
-            now=current,
-            correlation_id=correlation_id,
-            build_invite_url=build_invite_url,
         ),
     )
 

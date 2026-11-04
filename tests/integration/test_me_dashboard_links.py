@@ -584,7 +584,9 @@ def test_an_observer_past_the_deadline_reads_closed(
     review_session = _observer_on(client, db, code="st-obs-past", status="ready")
     review_session.deadline = datetime.now(timezone.utc) - timedelta(minutes=1)
     _policy(db, review_session, audience="observer", while_ongoing="summarized")
-    assert AVAILABLE not in client.get("/me").text
+    body = client.get("/me").text
+    assert AVAILABLE not in body
+    assert CLOSED in body
 
 
 def test_a_reviewer_reads_available_after_release_only_with_raw(
