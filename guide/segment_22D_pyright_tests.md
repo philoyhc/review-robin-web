@@ -138,6 +138,17 @@ set to the four test trees.
   locally (application code alone: 19 s in CI). A probe confirmed the
   relaxation stops at the test roots: an Optional member access under
   `app/` still fails.
+- **Rung 7** (base `d5f697d2`), the ratchet. With the rules on: 792
+  errors (`tests/integration` 719, `tests/unit` 34, `tests/browser` 26,
+  the apps' tests 13; `cordware/tests` and `tests/db` 0). Trees with no
+  errors share a PR rather than taking one each. A tree goes strict by
+  getting its own `executionEnvironments` root ahead of `tests` (the
+  first matching root wins).
+  - **7.1:** `tests/unit`, `tests/db`, `cordware/tests` and the apps'
+    tests strict, 47 fixed. Every error was a genuine Optional (an audit
+    event's `detail`, `db.get`, `re.search`, `spec.loader`), so each takes
+    an `assert` beside it; four comprehensions become loops with the
+    assert inside; no fixture annotation was wrong.
 
 ## PR ladder
 

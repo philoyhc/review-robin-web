@@ -82,7 +82,9 @@ def _lookup(client: TestClient, keys: object, **kwargs):
 
 
 def _download(page_text: str) -> list[dict[str, str]]:
-    encoded = re.search(r'href="data:text/csv;charset=utf-8;base64,([^"]+)"', page_text).group(1)
+    link = re.search(r'href="data:text/csv;charset=utf-8;base64,([^"]+)"', page_text)
+    assert link is not None
+    encoded = link.group(1)
     text = base64.b64decode(encoded).decode("utf-8").lstrip("﻿")
     return list(csv.DictReader(io.StringIO(text)))
 
@@ -232,7 +234,9 @@ def test_outcomes_that_do_not_fit_the_file_are_refused(client: TestClient, direc
 def test_the_preview_carries_the_keys_and_the_script(client: TestClient) -> None:
     text = client.post(PREVIEW, data=_form()).text
     assert re.search(r'id="to-check">4<', text)
-    keys = json.loads(re.search(r'<script type="application/json" id="check-keys">(.*?)</script>', text, re.S).group(1))
+    script = re.search(r'<script type="application/json" id="check-keys">(.*?)</script>', text, re.S)
+    assert script is not None
+    keys = json.loads(script.group(1))
     assert keys == _keys()
     assert '"/utilities/email-check/lookup"' in text
     assert 'name="outcomes" id="check-outcomes" disabled' in text

@@ -67,7 +67,12 @@ def test_encounters_download_by_term_or_all(client: TestClient) -> None:
     got = rows(current.text)
     assert tuple(got[0]) == sample.ENCOUNTER_COLUMNS
     assert len(got) - 1 == len(sample.encounters_by("Daniel Koh"))
-    assert {r[2] for r in got[1:]} <= {sample.student(e.student).email for e in sample.encounters_by("Daniel Koh")}
+    emails = set()
+    for e in sample.encounters_by("Daniel Koh"):
+        named = sample.student(e.student)
+        assert named is not None
+        emails.add(named.email)
+    assert {r[2] for r in got[1:]} <= emails
     assert len(rows(client.get(f"/students/records.csv?{OPEN}&term=AY2025-2026.2").text)) == 1  # the header only
     everything = client.get(f"/students/records.csv?{OPEN}&term=all")
     assert "all-terms" in everything.headers["content-disposition"] and len(rows(everything.text)) == len(got)

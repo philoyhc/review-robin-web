@@ -55,7 +55,9 @@ def _split(selector: str) -> tuple[str, str, str]:
     """``(ancestors, subject element, subject)`` of a selector."""
     parts = re.split(r"\s*[\s>+~]\s*", selector)
     subject = parts[-1]
-    return " ".join(parts[:-1]), re.match(r"[a-zA-Z]*", subject).group(0), subject
+    element = re.match(r"[a-zA-Z]*", subject)
+    assert element is not None
+    return " ".join(parts[:-1]), element.group(0), subject
 
 
 def _is_btn(selector: str) -> bool:

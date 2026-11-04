@@ -363,6 +363,7 @@ def test_one_audit_event_carries_the_three_counts(db: Session) -> None:
         if e.event_type == "reviewer.bulk_deleted"
     ]
     assert len(events) == 1, "one event per call, not one per row"
+    assert events[0].detail is not None
     assert events[0].detail["counts"] == {
         "deleted": 2,
         "cascaded_assignments": 2,

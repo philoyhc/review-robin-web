@@ -246,6 +246,7 @@ def test_set_cohort_rule_emits_audit_event(db: Session) -> None:
     seen_ids = []
     for event in events:
         detail = event.detail
+        assert detail is not None
         assert detail["snapshot"]["cohort_rule"] == payload
         assert "observer_id" in detail["refs"]
         seen_ids.append(detail["refs"]["observer_id"])
@@ -288,13 +289,13 @@ def test_set_cohort_rule_skips_observers_whose_rule_is_unchanged(
         db, review_session=session, observer_ids=[o1.id, o2.id],
         payload=rule, user=user,
     )
-    refs = [
-        e.detail["refs"]["observer_id"]
-        for e in db.execute(
-            select(AuditEvent).where(
-                AuditEvent.session_id == session.id,
-                AuditEvent.event_type == "observer.cohort_rule_assigned",
-            )
-        ).scalars()
-    ]
+    refs = []
+    for e in db.execute(
+        select(AuditEvent).where(
+            AuditEvent.session_id == session.id,
+            AuditEvent.event_type == "observer.cohort_rule_assigned",
+        )
+    ).scalars():
+        assert e.detail is not None
+        refs.append(e.detail["refs"]["observer_id"])
     assert refs == [o2.id]

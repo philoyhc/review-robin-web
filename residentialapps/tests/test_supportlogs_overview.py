@@ -72,7 +72,9 @@ def test_the_aggregate_view_names_no_student(client: TestClient) -> None:
 def test_coverage_lists_overdue_due_and_review(client: TestClient) -> None:
     cov = section(client.get("/overview/?as=Sam%20Lee").text, "cov-h")
     assert "Overdue <span class=\"count\">· 1</span>" in cov and 'href="/plans/P-01?as=Sam%20Lee">Clara Tan</a>' in cov
-    review = sample.plan("P-01").review
+    plan = sample.plan("P-01")
+    assert plan is not None
+    review = plan.review
     assert review is not None
     assert "Review " + sample.short_date(review) in cov
     aggregate = section(client.get("/overview/?as=Kenneth%20Lau").text, "cov-h")
@@ -110,7 +112,9 @@ def test_the_audit_is_senior_only_and_its_review_recorded(client: TestClient) ->
         if not event.student:  # a read of no one student: the audit itself, or a download
             assert row[3] == ""
             continue
-        assert f'<a href="/overview/students/{event.student}?as=Sam%20Lee">{sample.student(event.student).name}</a>' == row[3]
+        named = sample.student(event.student)
+        assert named is not None
+        assert f'<a href="/overview/students/{event.student}?as=Sam%20Lee">{named.name}</a>' == row[3]
     assert 'href="/overview/audit?as=Sam%20Lee"' in client.get("/overview/?as=Sam%20Lee").text
     assert "/overview/audit" not in client.get("/overview/?as=Siti%20Rahman").text
     for name in NOT_SENIOR:

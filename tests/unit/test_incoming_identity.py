@@ -297,6 +297,7 @@ def test_the_cited_upload_is_picked_by_roster_order(db: Session) -> None:
         },
     )["reviewers"][0]
 
+    assert issue.problem is not None
     assert issue.problem.endswith("in the uploaded Reviewees file")
 
 

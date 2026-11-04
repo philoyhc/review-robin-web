@@ -32,14 +32,21 @@ def rows(page: str) -> list[tuple[str, str]]:
     return [(r[0], r[1]) for r in full_rows(page)]
 
 
+def _group(pattern: str, text: str) -> str:
+    """The first group of the pattern's match, which the row always holds."""
+    found = re.search(pattern, text)
+    assert found is not None, pattern
+    return found.group(1)
+
+
 def full_rows(page: str) -> list[tuple[str, str, list[str], str, bool]]:
     """(email, state, reasons, consult, has the Consultation select) per row."""
     body = page.split("<tbody>")[1].split("</tbody>")[0]
     out = []
     for r in re.findall(r"<tr>(.*?)</tr>", body, re.S):
         tds = re.findall(r"<td>(.*?)</td>", r, re.S)
-        out.append((re.search(r'<span class="subtle">([^<]+@[^<]+)</span>', tds[0]).group(1),
-                    re.search(r'class="chip [a-z-]+">([^<]+)<', tds[1]).group(1),
+        out.append((_group(r'<span class="subtle">([^<]+@[^<]+)</span>', tds[0]),
+                    _group(r'class="chip [a-z-]+">([^<]+)<', tds[1]),
                     re.findall(r"<li>([^<]+)</li>", tds[2]), tds[3].strip(), "<select" in tds[4]))
     return out
 
