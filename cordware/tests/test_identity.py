@@ -88,6 +88,22 @@ def test_principal_name_without_at_is_treated_as_name() -> None:
     assert user.provider == "aad"
 
 
+def test_a_whitespace_only_principal_name_is_no_name() -> None:
+    """As for the id and email (P1, P3; findings L6)."""
+    request = _request(
+        {
+            "X-MS-CLIENT-PRINCIPAL-NAME": "   ",
+            "X-MS-CLIENT-PRINCIPAL-ID": "principal-123",
+            "X-MS-CLIENT-PRINCIPAL-IDP": "aad",
+        }
+    )
+
+    user = resolve_identity(request, _settings())
+
+    assert user.name is None
+    assert user.email is None
+
+
 def test_rich_client_principal_header_extracts_claims() -> None:
     rich = _encode_principal(
         {

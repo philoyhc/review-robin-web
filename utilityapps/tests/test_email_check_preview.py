@@ -121,7 +121,7 @@ def test_an_upload_without_a_length_is_refused(client: TestClient) -> None:
     assert page.status_code == 400 and "did not say its size" in page.text
 
 
-@pytest.mark.parametrize("column", ["²", "-1", " 1", "1.0"])
+@pytest.mark.parametrize("column", ["²", "-1", " 1", "1.0", "1" * 5000])
 def test_a_column_that_is_not_a_plain_index_is_ignored(client: TestClient, column: str) -> None:
     data = b"email\r\na@x.edu\r\n"
     page = client.post(URL, data={"content": base64.b64encode(data).decode(), "column": column})

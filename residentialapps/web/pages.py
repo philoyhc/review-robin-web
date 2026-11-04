@@ -42,7 +42,9 @@ def _first_address(line: str) -> str | None:
     word = match.group(1)
     if word.startswith("`"):
         word = word[1:].split("`", 1)[0]
-    word = word.strip("<>").rstrip(".,;:")
+    # Trailing punctuation first, so `<a@b.edu>.` loses the full stop and
+    # then its brackets (findings L4).
+    word = word.rstrip(".,;:").strip("<>").rstrip(".,;:")
     return word.lower() if _ADDRESS.fullmatch(word) else None
 
 

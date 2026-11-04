@@ -280,3 +280,42 @@ def test_a_search_is_asked_once_even_when_throttled() -> None:
     with pytest.raises(GraphError) as raised:
         directory(script).search_users("jan")
     assert raised.value.kind == "throttled" and len(script.calls) == 1
+
+
+def test_the_transport_does_not_follow_a_redirect_with_the_token() -> None:
+    """urllib's default handler would re-send the bearer header to wherever
+    a 3xx points; the transport refuses to follow (findings N2)."""
+    import threading
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    from cordware.graph import urllib_transport
+
+    seen: list[str | None] = []
+
+    class _Handler(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:  # noqa: N802
+            if self.path == "/start":
+                self.send_response(302)
+                self.send_header("Location", "/elsewhere")
+                self.end_headers()
+            else:
+                seen.append(self.headers.get("Authorization"))
+                self.send_response(200)
+                self.end_headers()
+
+        def log_message(self, *args: object) -> None:
+            pass
+
+    server = HTTPServer(("127.0.0.1", 0), _Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        reply = urllib_transport(
+            f"http://127.0.0.1:{server.server_port}/start",
+            {"Authorization": "Bearer secret"},
+            5.0,
+        )
+    finally:
+        server.shutdown()
+    assert reply.status == 302
+    assert seen == []  # the redirect target was never asked

@@ -70,19 +70,19 @@ None.
   forms share the flag) skips the count. The server still checks every
   address, so this costs speed only. *PLAUSIBLE, traced.* Code: one flag
   per form, reset when the submit does not navigate.
-- **L3. The Email Address Checker's preview 500s on a huge column
+- ~~**L3**~~ — **Done in PR_N**: the column index and both `Content-Length` reads are bounded before `int()` (`utilityapps/tests/test_email_check_preview.py`). **The Email Address Checker's preview 500s on a huge column
   index.** `utilityapps/email_check/routes.py:117`: `int(chosen)` on a
   `column` of more than 4,300 digits raises (Python's digit limit); the
   spec (`utilityapps/spec/email_check.md`, "Preview") says a non-index
   column is ignored. Super-admin only. Lines 85 and 197 parse
   `Content-Length` the same way. *CONFIRMED.* Code: bound the length
   before `int()`.
-- **L4. The Residential preview list drops `<address>.`**
+- ~~**L4**~~ — **Done in PR_N**: trailing punctuation goes first (`residentialapps/tests/test_preview_gate.py`). **The Residential preview list drops `<address>.`**
   `residentialapps/web/pages.py:45` `_first_address` strips angle
   brackets before trailing punctuation, so `- <jane@example.edu>.` leaves
   `jane@example.edu>` and names nobody; the spec allows both. Fails
   closed. *CONFIRMED.* Code: `rstrip(".,;:")` before `strip("<>")`.
-- **L5. Residential's web log lines are stamped `cordware`.**
+- ~~**L5**~~ — **Done in PR_N, in the spec**: `residentialapps/spec/applications.md` says the two lines are stamped `cordware` until Residential's logger lands. **Residential's web log lines are stamped `cordware`.**
   `residentialapps/web/pages.py:17` logs under `residentialapps.web`,
   which no registry prefix covers, so `ApplicationFilter` stamps its two
   lines (the preview list's unreadable warning and its count) with
@@ -91,7 +91,7 @@ None.
   will prevent, and calls not built. *CONFIRMED by trace.* Author: log
   under an application prefix now, or say in the spec that these two lines
   are stamped `cordware` until the logger lands.
-- **L6. A whitespace-only name header reads as a name.**
+- ~~**L6**~~ — **Done in PR_N** (`cordware/tests/test_identity.py`). **A whitespace-only name header reads as a name.**
   `cordware/identity.py`, the simple-header branch: a blank
   `X-MS-CLIENT-PRINCIPAL-NAME` counts as present and becomes `name="   "`,
   unlike the stripped id and email. Easy Auth never sends it. *CONFIRMED.*
@@ -169,7 +169,7 @@ None.
   **The public repository named the institution in places**, against
   `cordware/settings.py`'s note that its name lives only in the private
   deployment.
-- **N2. The Graph transport follows redirects with its bearer header.**
+- ~~**N2**~~ — **Done in PR_N**: the transport refuses redirects (`cordware/tests/test_graph.py`). **The Graph transport follows redirects with its bearer header.**
   `cordware/graph.py` `urllib_transport` uses urllib's default redirect
   handler, which re-sends `Authorization` across hosts. Graph `/users`
   does not redirect, so nothing is exposed today. Code, optional: a

@@ -183,6 +183,10 @@ def _claim(
 def _identity_from_easy_auth_headers(request: Request) -> Identity | None:
     headers = request.headers
     simple_name = headers.get("X-MS-CLIENT-PRINCIPAL-NAME")
+    # A whitespace-only name is no name, as for the id and email (P1, P3;
+    # findings L6).
+    if simple_name is not None and not simple_name.strip():
+        simple_name = None
     simple_id = headers.get("X-MS-CLIENT-PRINCIPAL-ID")
     simple_idp = headers.get("X-MS-CLIENT-PRINCIPAL-IDP")
     rich = headers.get("X-MS-CLIENT-PRINCIPAL")

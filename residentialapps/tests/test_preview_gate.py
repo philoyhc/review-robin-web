@@ -127,6 +127,8 @@ def test_comments_and_fenced_code_do_not_name_anyone() -> None:
     [
         ("- end.dot@example.edu.", "end.dot@example.edu"),
         ("- <angled@example.edu>", "angled@example.edu"),
+        ("- <closed@example.edu>.", "closed@example.edu"),
+        ("- <listed@example.edu>,", "listed@example.edu"),
         ("+ `tight@example.edu`(RF)", "tight@example.edu"),
         ("- two@at@example.edu", None),
         ("- no-domain@example", None),
