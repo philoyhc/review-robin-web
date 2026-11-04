@@ -51,6 +51,9 @@ Ruled 2026-10-25: `residentialapps/docs/residentialapps_roles.md`.
   5. **No end date** on senior identifiable grants; the audit is the control (as 4).
   6. **§17 Q11 is ruled yes**: senior staff may create a peer-view grant on a staff member's behalf, audited with both names.
 - Core admin and Support Logs authorization admin both working.
+- **The Consultation check posts** before it reads real records: its
+  sample-data GET carries students' emails in the URL
+  (`residentialapps/spec/supportlogs_ui.md`, findings N4).
 
 ## Reconcile in the first segment plan
 

@@ -4,7 +4,7 @@
 `guide/codebase_assessment_03nov.md`: a spec-vs-code audit, a defect read
 of the window's `app/`, `cordware/` and `alembic/` changes, and a read of
 `cordware/`, `residentialapps/` and `utilityapps/` · **Read at:**
-`cc364ed0` (#3566) · **Open:** every row not struck.
+`cc364ed0` (#3566) · **Open:** none. Every row was done, closed or ruled by 2026-11-04 (#3568 → #3573); archived the same day.
 
 The checklist the fixes work through (standard practice since
 2026-11-02). **Nothing was edited by the reads**, and their scratch tests
@@ -174,10 +174,10 @@ None.
   handler, which re-sends `Authorization` across hosts. Graph `/users`
   does not redirect, so nothing is exposed today. Code, optional: a
   no-redirect opener.
-- **N3. The Checker's `/check` and `/preview` take cross-site form
+- ~~**N3**~~ — **Closed, no code change** (author, 2026-11-04): the host's `SameSite=Lax` sign-in cookie is not sent on a cross-site post, so such a post arrives signed out; recorded with its one residue (a page under the institution's own domain) in `docs/security_posture.md`, "CSRF posture", and `utilityapps/spec/email_check.md`. **The Checker's `/check` and `/preview` take cross-site form
   posts.** Unlike `/lookup` (JSON only). A cross-site post can make the
   super-admin's browser run Graph lookups of chosen addresses; the result
   shows only to them, so the cost is rate usage. Unspecified. Author.
-- **N4. Support Logs' consultation check takes student emails in a GET
+- ~~**N4**~~ — **Closed as a reminder** (author, 2026-11-04): `residentialapps/spec/supportlogs_ui.md` requires the Check to post once wired, and Residential's `guide/todo_master.md` lists it before Support Logs goes live. **Support Logs' consultation check takes student emails in a GET
   query.** `/consultation/check` puts them in access logs and history.
   Sample data today; worth a POST when wired. Noted for the wiring.
