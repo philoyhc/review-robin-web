@@ -344,43 +344,52 @@ def _d(text: str) -> date:
     return date.fromisoformat(text)
 
 
-APPLICATIONS: tuple[Application, ...] = tuple(
-    Application(f"L-{n:04d}", *row)
-    for n, row in enumerate(
-        (
-            ("Chloe Lim", "Personal leave", _d("2026-11-06"), _d("2026-11-08"), "Ethan Wong", "Confirmed", "Pending first approval", _d("2026-10-27")),
-            ("Isaac Goh", "Personal leave", _d("2026-11-12"), _d("2026-11-14"), "Kai Ng", "Awaiting", "Pending first approval", _d("2026-10-26")),
-            ("Bella Koh", "Personal leave", _d("2026-10-30"), _d("2026-11-01"), "Cheng Hao Lin", "Confirmed", "Pending final approval", _d("2026-10-23")),
-            ("Leon Chia", "Personal leave", _d("2026-12-01"), _d("2026-12-05"), "Mira Sato", "Confirmed", "Pending first approval", _d("2026-10-21")),
-            # Cover not yet confirmed: the Master may decide over it, on the
-            # record (spec §7.4; audit, 2026-10-29).
-            ("Gwen Ho", "Personal leave", _d("2026-11-20"), _d("2026-11-23"), "Elise Tan", "Awaiting", "Appeal to the Master", _d("2026-10-25"),
-             "Balance exhausted; family wedding overseas."),
-            ("Maya Seah", "Personal leave", _d("2026-10-27"), _d("2026-10-29"), "Lucas Teo", "Confirmed", "Approved", _d("2026-10-12")),
-            ("Olivia Ng", "Personal leave", _d("2026-10-28"), _d("2026-10-30"), "Pranav Iyer", "Confirmed", "Approved", _d("2026-10-14")),
-            ("Pranav Iyer", "Personal leave", _d("2026-10-29"), _d("2026-10-31"), "Qi Xuan Lim", "Confirmed", "Approved", _d("2026-10-15")),
-            ("Hana Ito", "Official leave", _d("2026-11-02"), _d("2026-11-03"), "Chloe Lim", "Declined", "Pending first approval", _d("2026-10-24")),
-            ("Faris Iskandar", "Personal leave", _d("2026-10-10"), _d("2026-10-11"), "Elise Tan", "Confirmed", "Rejected", _d("2026-10-02")),
-            ("Ethan Wong", "Personal leave", _d("2026-10-17"), _d("2026-10-18"), "Hana Ito", "Confirmed", "Withdrawn", _d("2026-10-05")),
-            ("Gwen Ho", "Personal leave", _d("2026-08-17"), _d("2026-08-19"), "Elise Tan", "Confirmed", "Approved", _d("2026-08-05")),
-            ("Gwen Ho", "Personal leave", _d("2026-09-21"), _d("2026-09-22"), "Faris Iskandar", "Confirmed", "Approved", _d("2026-09-10")),
-            # Chloe Lim, the RA pages' sample viewer, is asked to cover one
-            # and has agreed to cover another.
-            ("Ethan Wong", "Personal leave", _d("2026-12-04"), _d("2026-12-06"), "Chloe Lim", "Awaiting", "Pending first approval", _d("2026-10-27")),
-            ("Hana Ito", "Personal leave", _d("2026-12-14"), _d("2026-12-15"), "Chloe Lim", "Confirmed", "Approved", _d("2026-10-20")),
-            ("Kai Ng", "Personal leave", _d("2026-11-04"), _d("2026-11-05"), "Isaac Goh", "Confirmed", "Cancelled", _d("2026-10-08")),
-            ("Chloe Lim", "Official leave", _d("2026-09-25"), _d("2026-09-25"), "Hana Ito", "Confirmed", "Approved", _d("2026-09-14"),
-             "Representing the hall at the inter-hall games."),
-            ("Lucas Teo", "Personal leave", _d("2026-09-07"), _d("2026-09-09"), "Maya Seah", "Confirmed", "Approved", _d("2026-08-28"),
-             "Balance used; grandmother's funeral abroad."),
-            # The leave that used Lucas Teo's balance before his appeal.
-            ("Lucas Teo", "Personal leave", _d("2026-08-24"), _d("2026-08-28"), "Maya Seah", "Confirmed", "Approved", _d("2026-08-17")),
-            # An appeal the Master refused (scenario I; audit, 2026-10-29).
-            ("Maya Seah", "Personal leave", _d("2026-09-21"), _d("2026-09-27"), "Lucas Teo", "Confirmed", "Rejected", _d("2026-09-08"),
-             "Seven days, two more than my five: a friend's wedding overseas."),
-        ),
-        start=101,
+#: An application's fields after its id; ``remarks`` is optional.
+_ApplicationRow = tuple[str, str, date, date, str, str, str, date, *tuple[str, ...]]
+_APPLICATION_ROWS: tuple[_ApplicationRow, ...] = (
+    ("Chloe Lim", "Personal leave", _d("2026-11-06"), _d("2026-11-08"), "Ethan Wong", "Confirmed", "Pending first approval", _d("2026-10-27")),
+    ("Isaac Goh", "Personal leave", _d("2026-11-12"), _d("2026-11-14"), "Kai Ng", "Awaiting", "Pending first approval", _d("2026-10-26")),
+    ("Bella Koh", "Personal leave", _d("2026-10-30"), _d("2026-11-01"), "Cheng Hao Lin", "Confirmed", "Pending final approval", _d("2026-10-23")),
+    ("Leon Chia", "Personal leave", _d("2026-12-01"), _d("2026-12-05"), "Mira Sato", "Confirmed", "Pending first approval", _d("2026-10-21")),
+    # Cover not yet confirmed: the Master may decide over it, on the
+    # record (spec §7.4; audit, 2026-10-29).
+    ("Gwen Ho", "Personal leave", _d("2026-11-20"), _d("2026-11-23"), "Elise Tan", "Awaiting", "Appeal to the Master", _d("2026-10-25"),
+     "Balance exhausted; family wedding overseas."),
+    ("Maya Seah", "Personal leave", _d("2026-10-27"), _d("2026-10-29"), "Lucas Teo", "Confirmed", "Approved", _d("2026-10-12")),
+    ("Olivia Ng", "Personal leave", _d("2026-10-28"), _d("2026-10-30"), "Pranav Iyer", "Confirmed", "Approved", _d("2026-10-14")),
+    ("Pranav Iyer", "Personal leave", _d("2026-10-29"), _d("2026-10-31"), "Qi Xuan Lim", "Confirmed", "Approved", _d("2026-10-15")),
+    ("Hana Ito", "Official leave", _d("2026-11-02"), _d("2026-11-03"), "Chloe Lim", "Declined", "Pending first approval", _d("2026-10-24")),
+    ("Faris Iskandar", "Personal leave", _d("2026-10-10"), _d("2026-10-11"), "Elise Tan", "Confirmed", "Rejected", _d("2026-10-02")),
+    ("Ethan Wong", "Personal leave", _d("2026-10-17"), _d("2026-10-18"), "Hana Ito", "Confirmed", "Withdrawn", _d("2026-10-05")),
+    ("Gwen Ho", "Personal leave", _d("2026-08-17"), _d("2026-08-19"), "Elise Tan", "Confirmed", "Approved", _d("2026-08-05")),
+    ("Gwen Ho", "Personal leave", _d("2026-09-21"), _d("2026-09-22"), "Faris Iskandar", "Confirmed", "Approved", _d("2026-09-10")),
+    # Chloe Lim, the RA pages' sample viewer, is asked to cover one
+    # and has agreed to cover another.
+    ("Ethan Wong", "Personal leave", _d("2026-12-04"), _d("2026-12-06"), "Chloe Lim", "Awaiting", "Pending first approval", _d("2026-10-27")),
+    ("Hana Ito", "Personal leave", _d("2026-12-14"), _d("2026-12-15"), "Chloe Lim", "Confirmed", "Approved", _d("2026-10-20")),
+    ("Kai Ng", "Personal leave", _d("2026-11-04"), _d("2026-11-05"), "Isaac Goh", "Confirmed", "Cancelled", _d("2026-10-08")),
+    ("Chloe Lim", "Official leave", _d("2026-09-25"), _d("2026-09-25"), "Hana Ito", "Confirmed", "Approved", _d("2026-09-14"),
+     "Representing the hall at the inter-hall games."),
+    ("Lucas Teo", "Personal leave", _d("2026-09-07"), _d("2026-09-09"), "Maya Seah", "Confirmed", "Approved", _d("2026-08-28"),
+     "Balance used; grandmother's funeral abroad."),
+    # The leave that used Lucas Teo's balance before his appeal.
+    ("Lucas Teo", "Personal leave", _d("2026-08-24"), _d("2026-08-28"), "Maya Seah", "Confirmed", "Approved", _d("2026-08-17")),
+    # An appeal the Master refused (scenario I; audit, 2026-10-29).
+    ("Maya Seah", "Personal leave", _d("2026-09-21"), _d("2026-09-27"), "Lucas Teo", "Confirmed", "Rejected", _d("2026-09-08"),
+     "Seven days, two more than my five: a friend's wedding overseas."),
+)
+
+
+
+def _application(n: int, row: _ApplicationRow) -> Application:
+    ra, leave_type, start, end, cover, cover_recorded, recorded, submitted, *remarks = row
+    return Application(
+        f"L-{n:04d}", ra, leave_type, start, end, cover, cover_recorded, recorded, submitted, *remarks
     )
+
+
+APPLICATIONS: tuple[Application, ...] = tuple(
+    _application(n, row) for n, row in enumerate(_APPLICATION_ROWS, start=101)
 )
 
 
@@ -725,10 +734,10 @@ class Delegate:
     def dates(self) -> str:
         if self.start is None and self.end is None:
             return "Until removed"
+        if self.start is None:
+            return f"Until {short_date(self.end)}" if self.end else "Until removed"
         if self.end is None:
             return f"From {short_date(self.start)}"
-        if self.start is None:
-            return f"Until {short_date(self.end)}"
         return f"{short_date(self.start)} – {short_date(self.end)}"
 
 
@@ -1076,7 +1085,7 @@ def other_leave(application: Application) -> tuple[Application, ...]:
 def by_precinct(viewer: str, start: date | None = None, end: date | None = None) -> tuple[dict, ...]:
     """Numbers away (this week, or in the period given) and pending per
     Precinct in the viewer's scope (§22)."""
-    away = away_between(start, end) if start else away_this_week()
+    away = away_between(start, end) if start and end else away_this_week()
     return tuple(
         {
             "precinct": p,

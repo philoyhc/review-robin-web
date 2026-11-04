@@ -346,6 +346,15 @@ def test_precinct_leave_shows_a_chosen_period() -> None:
     assert sum(counts("term").values()) == 4
     four = sample_leave.period("four")
     assert (four[1], four[2], four[3].toordinal() - four[2].toordinal()) == ("These four weeks", sample_leave.TODAY, 27)
+
+
+def test_precinct_counts_need_both_ends_of_a_period() -> None:
+    """A start with no end is no period: the counts fall back to this
+    week rather than raising (segment 22C rung 5a)."""
+    week = sample_leave.by_precinct("Sam Lee")
+    _, _, start, _ = sample_leave.period("next")
+    assert sample_leave.by_precinct("Sam Lee", start) == week
+    assert sample_leave.by_precinct("Sam Lee", start, None) == week
 def test_staff_see_only_the_emails_they_sent() -> None:
     """Spec §17.2 (author, 2026-10-29): the actor resends their own failed
     email from the application; another overseer sees no outbox there."""

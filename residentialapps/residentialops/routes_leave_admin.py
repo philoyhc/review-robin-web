@@ -4,6 +4,8 @@ downstream of its configuration (author, 2026-10-28)."""
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException
 from starlette.requests import Request
 from starlette.responses import RedirectResponse, Response
@@ -19,7 +21,7 @@ from residentialapps.web.urls import url_path
 router = APIRouter(dependencies=[Depends(placeholders_previewers_only)])
 
 
-def _page(request: Request, template: str, **context: object) -> Response:
+def _page(request: Request, template: str, **context: Any) -> Response:
     return render(
         request,
         f"residentialops/leave/admin/{template}",

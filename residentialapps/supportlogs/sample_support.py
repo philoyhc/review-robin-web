@@ -145,6 +145,13 @@ def student(sid: str | None) -> Student | None:
     return next((s for s in STUDENTS if s.id == sid), None)
 
 
+def _named(sid: str) -> Student:
+    """A student a sample record names, which the sample always holds."""
+    found = student(sid)
+    assert found is not None, f"sample record names no sample student {sid!r}"
+    return found
+
+
 @dataclass(frozen=True)
 class Encounter:
     id: str
@@ -872,7 +879,7 @@ def encounter_rows(staff: str, t: Term | None, sid: str | None = None) -> list[l
     for e in sorted(encounters_by(staff), key=lambda e: e.when):
         if (t and not t.start <= e.when.date() <= t.end) or (sid and e.student != sid):
             continue
-        s = student(e.student)
+        s = _named(e.student)
         rows.append([e.when.date().isoformat(), e.when.strftime("%H:%M"), s.email, s.name, e.duration, e.type,
                      "; ".join(e.concerns), e.follow_up, e.mode, e.note])
     return rows
@@ -887,7 +894,7 @@ def plan_rows(staff: str, t: Term | None, sid: str | None = None) -> list[list[s
     for p in sorted((p for p in PLANS if p.staff == staff), key=lambda p: p.start):
         if (t and p.start > t.end) or (sid and p.student != sid):
             continue
-        s = student(p.student)
+        s = _named(p.student)
         rows.append([s.email, s.name, "Formal assignment" if p.formal else "Follow-up", p.source, p.cadence,
                      p.start.isoformat(), p.review.isoformat() if p.review else "", p.status])
     return rows
