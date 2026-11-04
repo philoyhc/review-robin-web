@@ -30,7 +30,7 @@ import urllib.request
 from collections.abc import Callable, Iterable, Mapping
 from concurrent.futures import ThreadPoolExecutor, wait
 from dataclasses import dataclass
-from typing import Protocol
+from typing import IO, Any, Protocol, cast
 from urllib.parse import urlencode
 
 from starlette.requests import HTTPConnection
@@ -117,7 +117,15 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
     Graph's ``/users`` does not redirect, so a 3xx comes back as an answer
     (findings N2)."""
 
-    def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: ANN001
+    def redirect_request(
+        self,
+        req: urllib.request.Request,
+        fp: IO[bytes],
+        code: int,
+        msg: str,
+        headers: http.client.HTTPMessage,
+        newurl: str,
+    ) -> urllib.request.Request | None:
         return None
 
 
@@ -256,8 +264,11 @@ def _users(body: bytes) -> list[DirectoryUser]:
     try:
         values = json.loads(body)["value"]
         # Only a real empty list is "nobody there" (Codex, `#3410`).
-        if not isinstance(values, list) or not all(isinstance(v, dict) and v.get("id") for v in values):
+        if not isinstance(values, list) or not all(
+            isinstance(v, dict) and cast(dict[str, Any], v).get("id") for v in cast(list[object], values)
+        ):
             raise TypeError
+        rows = cast(list[dict[str, Any]], values)
         return [
             DirectoryUser(
                 id=str(v["id"]),
@@ -265,7 +276,7 @@ def _users(body: bytes) -> list[DirectoryUser]:
                 mail=(str(v["mail"]) if v.get("mail") else None),
                 user_principal_name=str(v.get("userPrincipalName") or ""),
             )
-            for v in values
+            for v in rows
         ]
     except (ValueError, KeyError, TypeError):
         raise _logged(GraphError("bad_response")) from None

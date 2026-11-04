@@ -16,7 +16,7 @@ import importlib
 import ipaddress
 import logging
 import re
-from collections.abc import AsyncIterator, Callable, Mapping, Sequence
+from collections.abc import AsyncGenerator, Callable, Mapping, Sequence
 from contextlib import AsyncExitStack, asynccontextmanager
 from dataclasses import dataclass, field
 from typing import Any
@@ -307,7 +307,7 @@ def create_app(
     mounted = [(registry[name], _build(name, registry[name])) for name in names]
 
     @asynccontextmanager
-    async def lifespan(_host: FastAPI) -> AsyncIterator[dict[str, Any]]:
+    async def lifespan(_host: FastAPI) -> AsyncGenerator[dict[str, Any]]:
         # Starlette runs no lifespan for a mounted application, so the
         # host enters each one in mount order and exits them in reverse.
         # State a lifespan yields is merged and yielded on, which is how
@@ -319,7 +319,9 @@ def create_app(
                 if router is None:
                     continue
                 try:
-                    yielded = await stack.enter_async_context(router.lifespan_context(sub_app))
+                    yielded: Mapping[str, Any] | None = await stack.enter_async_context(
+                        router.lifespan_context(sub_app)
+                    )
                 except Exception:
                     _log_startup_failure(name)
                     raise

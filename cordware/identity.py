@@ -29,7 +29,7 @@ import json
 import logging
 import threading
 from dataclasses import dataclass, field, replace
-from typing import Any
+from typing import Any, cast
 
 from fastapi import HTTPException, Request, status
 
@@ -156,7 +156,7 @@ def _decode_client_principal(header_value: str) -> dict[str, Any] | None:
         return None
     if not isinstance(payload, dict):
         return None
-    return payload
+    return cast(dict[str, Any], payload)
 
 
 def _claim(
@@ -171,10 +171,13 @@ def _claim(
     if not isinstance(claims, list):
         return None
     for typ in types:
-        for claim in claims:
-            if not isinstance(claim, dict) or claim.get("typ") != typ:
+        for claim in cast(list[object], claims):
+            if not isinstance(claim, dict):
                 continue
-            value = claim.get("val")
+            entry = cast(dict[str, object], claim)
+            if entry.get("typ") != typ:
+                continue
+            value = entry.get("val")
             if isinstance(value, str) and (value if blank_counts else value.strip()):
                 return value
     return None
@@ -370,11 +373,12 @@ def extract_claims(request: Request) -> list[dict[str, str]]:
     if not isinstance(raw, list):
         return []
     claims: list[dict[str, str]] = []
-    for claim in raw:
+    for claim in cast(list[object], raw):
         if not isinstance(claim, dict):
             continue
-        typ = claim.get("typ")
-        val = claim.get("val")
+        entry = cast(dict[str, object], claim)
+        typ = entry.get("typ")
+        val = entry.get("val")
         if isinstance(typ, str) and isinstance(val, str):
             claims.append({"typ": typ, "val": val})
     return claims
