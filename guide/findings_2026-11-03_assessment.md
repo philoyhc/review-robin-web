@@ -160,7 +160,7 @@ None.
 
 ## 5. Noted, not defects
 
-- ~~**N1**~~ — **Done in this PR** (author, 2026-11-04: do not name it;
+- ~~**N1**~~ — **Done in #3569** (author, 2026-11-04: do not name it;
   say "institution", "institutional" and the like). Every mention in the
   repository, archived records included, now reads "the institution",
   "institutional" or "the institution's IT"; the host's name reads
