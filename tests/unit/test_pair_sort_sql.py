@@ -19,9 +19,11 @@ right, and this one says the reason it is right has not been removed.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import cast
 
 from sqlalchemy import String, column
 from sqlalchemy.dialects import postgresql, sqlite
+from sqlalchemy.orm import Session
 
 from app.services.assignments._coverage import _code_point
 
@@ -47,6 +49,11 @@ class _FakeSession:
         return self._bind
 
 
+def _session(dialect_name: str) -> Session:
+    """A ``_FakeSession`` in the ``Session`` it stands in for."""
+    return cast(Session, _FakeSession(dialect_name))
+
+
 def _compiled(expression, dialect) -> str:
     return str(expression.compile(dialect=dialect))
 
@@ -56,14 +63,14 @@ def test_postgres_gets_an_explicit_c_collation() -> None:
     which on a locale-aware one is *not* the order this app has always
     rendered — measured, and recorded in the module the guard lives
     in."""
-    expression = _code_point(_FakeSession("postgresql"), column("name", String))
+    expression = _code_point(_session("postgresql"), column("name", String))
     assert 'COLLATE "C"' in _compiled(expression, postgresql.dialect())
 
 
 def test_sqlite_is_left_alone() -> None:
     """Its default collation is BINARY, which already is code-point
     order — and ``COLLATE "C"`` is not a collation SQLite has."""
-    expression = _code_point(_FakeSession("sqlite"), column("name", String))
+    expression = _code_point(_session("sqlite"), column("name", String))
     assert "COLLATE" not in _compiled(expression, sqlite.dialect()).upper()
 
 
@@ -71,8 +78,8 @@ def test_the_guard_is_keyed_on_the_dialect_not_the_server() -> None:
     """A server-locale check would be the obvious alternative and the
     wrong one: the same code must emit the same SQL wherever it runs,
     or the ordering becomes a property of the deployment."""
-    pg = _code_point(_FakeSession("postgresql"), column("name", String))
-    lite = _code_point(_FakeSession("sqlite"), column("name", String))
+    pg = _code_point(_session("postgresql"), column("name", String))
+    lite = _code_point(_session("sqlite"), column("name", String))
     assert _compiled(pg, postgresql.dialect()) != _compiled(
         lite, sqlite.dialect()
     )

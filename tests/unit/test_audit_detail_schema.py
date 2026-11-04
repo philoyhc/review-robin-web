@@ -342,7 +342,7 @@ def test_lenient_mode_logs_and_writes_anyway(
     matched = [
         r for r in caplog.records
         if getattr(r, "event", None) == "audit.detail_schema_violation"
-        and r.event_type == "instrument.field_added"
+        and r.__dict__["event_type"] == "instrument.field_added"
         and re.search(r"instrument\.field_added", r.getMessage())
     ]
     assert matched, (

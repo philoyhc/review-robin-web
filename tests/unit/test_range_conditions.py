@@ -12,6 +12,7 @@ import shutil
 import subprocess
 from pathlib import Path
 from types import SimpleNamespace
+from typing import cast
 
 import pytest
 
@@ -23,14 +24,20 @@ from app.services.responses import (
     condition_label,
     parse_range,
 )
+from app.services.responses._branching import BranchField
 
 SURFACE = (
     Path(__file__).resolve().parents[2] / "app/web/templates/reviewer/review_surface.html"
 )
 
 
-def _parent(op: str, value: str) -> SimpleNamespace:
-    return SimpleNamespace(label="Rating", branch_op=op, branch_value=value)
+def _parent(op: str, value: str) -> BranchField:
+    """A stand-in branch parent: the label and condition are all a
+    range reads."""
+    return cast(
+        BranchField,
+        SimpleNamespace(label="Rating", branch_op=op, branch_value=value),
+    )
 
 
 # Every token around both ends of 2 to 4, plus the ends between.

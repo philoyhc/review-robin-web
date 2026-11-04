@@ -89,6 +89,7 @@ def test_the_filter_branch_never_claims_rows_are_withheld() -> None:
     line = preview_count_line(
         shown=3, pool=3, noun="reviewers", is_filtered=True
     )
+    assert line is not None
     assert "more not shown" not in line
     assert "first" not in line
 
@@ -138,6 +139,7 @@ def test_the_withheld_count_is_drawn_from_the_matching_set() -> None:
     line = preview_count_line(
         shown=500, pool=900, noun="reviewers", is_filtered=True
     )
+    assert line is not None
     assert "400 more not shown" in line
     assert "740" not in line
 
@@ -149,6 +151,7 @@ def test_the_word_matching_is_gone() -> None:
     line = preview_count_line(
         shown=500, pool=900, noun="reviewers", is_filtered=True
     )
+    assert line is not None
     assert "matching" not in line
 
 

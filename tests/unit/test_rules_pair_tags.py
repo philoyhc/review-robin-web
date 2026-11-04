@@ -11,6 +11,7 @@ is retired.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 import pytest
@@ -32,6 +33,17 @@ class _Reviewee:
     id: int
     email_or_identifier: str
     tag_1: str | None = None
+
+
+def _typed(pairs: Sequence[tuple[object, object]]) -> list[tuple[_Reviewer, _Reviewee]]:
+    """The engine's pairs, which are drawn from this file's own ``_Reviewer``
+    and ``_Reviewee`` stand-ins (the engine types its populations as
+    ``object``)."""
+    typed: list[tuple[_Reviewer, _Reviewee]] = []
+    for reviewer, reviewee in pairs:
+        assert isinstance(reviewer, _Reviewer) and isinstance(reviewee, _Reviewee)
+        typed.append((reviewer, reviewee))
+    return typed
 
 
 @dataclass
@@ -67,7 +79,7 @@ def _pairs(field: str, operator: str, operand: object, lookup: dict) -> set[tupl
     )
     return {
         (reviewer.email.split("@")[0], reviewee.email_or_identifier.split("@")[0])
-        for reviewer, reviewee in result.pairs
+        for reviewer, reviewee in _typed(result.pairs)
     }
 
 

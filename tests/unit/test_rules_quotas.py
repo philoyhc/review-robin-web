@@ -2,6 +2,7 @@
 PR 2."""
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 from app.schemas.rules import (
@@ -21,6 +22,17 @@ class Reviewer:
 @dataclass
 class Reviewee:
     email_or_identifier: str
+
+
+def _typed(pairs: Sequence[tuple[object, object]]) -> list[tuple[Reviewer, Reviewee]]:
+    """The quota's pairs, which are drawn from this file's own ``Reviewer``
+    and ``Reviewee`` stand-ins (``apply_quota`` types its pairs as
+    ``tuple[object, object]``)."""
+    typed: list[tuple[Reviewer, Reviewee]] = []
+    for reviewer, reviewee in pairs:
+        assert isinstance(reviewer, Reviewer) and isinstance(reviewee, Reviewee)
+        typed.append((reviewer, reviewee))
+    return typed
 
 
 def _quota(
@@ -43,7 +55,9 @@ def _quota(
 
 def _build_pairs(
     *, n_reviewers: int, n_reviewees: int
-) -> list[tuple[Reviewer, Reviewee]]:
+) -> list[tuple[object, object]]:
+    """Every reviewer paired with every reviewee, typed as ``apply_quota``
+    takes them."""
     reviewers = [
         Reviewer(email=f"r{i:02d}@x.edu") for i in range(n_reviewers)
     ]
@@ -98,7 +112,7 @@ def test_random_with_different_seeds_yields_different_pairs() -> None:
             seed=seed,
         )
         survivors, _, _ = apply_quota(pairs, rule, fallback_seed=0)
-        seen.add(tuple(r.email for r, _ in survivors))
+        seen.add(tuple(r.email for r, _ in _typed(survivors)))
     assert len(seen) > 1
 
 
@@ -149,7 +163,7 @@ def test_per_reviewer_axis_groups_by_reviewer_email() -> None:
     )
     survivors, _, _ = apply_quota(pairs, rule, fallback_seed=0)
     by_reviewer: dict[str, int] = {}
-    for r, _ in survivors:
+    for r, _ in _typed(survivors):
         by_reviewer[r.email] = by_reviewer.get(r.email, 0) + 1
     assert all(count == 2 for count in by_reviewer.values())
     assert len(by_reviewer) == 2

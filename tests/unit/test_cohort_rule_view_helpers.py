@@ -9,7 +9,9 @@ builder).
 from __future__ import annotations
 
 from types import SimpleNamespace
+from typing import cast
 
+from app.db.models import Observer
 from app.web.views import cohort_rule_summary, rule_edit_state
 
 _TAG_LABELS_FULL = {
@@ -139,8 +141,12 @@ _RULE = {"combinator": "AND", "rules": [{
 }]}
 
 
-def _rows(*rules: object) -> list[SimpleNamespace]:
-    return [SimpleNamespace(id=i, cohort_rule=r) for i, r in enumerate(rules, 1)]
+def _rows(*rules: object) -> list[Observer]:
+    """Stand-in ``Observer`` rows: the id and rule the editor reads."""
+    return [
+        cast(Observer, SimpleNamespace(id=i, cohort_rule=r))
+        for i, r in enumerate(rules, 1)
+    ]
 
 
 def test_rule_edit_state_shared_rule_loads() -> None:

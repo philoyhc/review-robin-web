@@ -13,6 +13,7 @@ from datetime import UTC, datetime
 
 from app.web.routes_reviewer._surface._status import (
     PageStatus,
+    PageStatusState,
     _page_status_for_group,
     _session_status,
 )
@@ -85,7 +86,7 @@ def test_hidden_values_read_saved_rows_for_submitted() -> None:
     )
 
 
-def _pages(*states: str) -> list[PageStatus]:
+def _pages(*states: PageStatusState) -> list[PageStatus]:
     return [PageStatus(position=i, label=f"#{i}", state=s) for i, s in enumerate(states, 1)]
 
 

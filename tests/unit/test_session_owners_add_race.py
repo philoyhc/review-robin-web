@@ -42,9 +42,9 @@ def test_a_duplicate_insert_is_refused_already_owner(
     real = session_owners._is_owner
     looks: list[bool] = []
 
-    def late_is_owner(*args: object) -> bool:
+    def late_is_owner(db: Session, review_session: ReviewSession, user: User) -> bool:
         looks.append(True)
-        return False if len(looks) == 1 else real(*args)
+        return False if len(looks) == 1 else real(db, review_session, user)
 
     monkeypatch.setattr(session_owners, "_is_owner", late_is_owner)
 

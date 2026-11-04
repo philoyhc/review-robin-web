@@ -9,6 +9,7 @@ across repeated runs.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 import pytest
@@ -23,6 +24,7 @@ from app.schemas.rules import (
     QuotaRule,
     QuotaScope,
     QuotaSelection,
+    Rule,
     RuleSetOptions,
     RuleSetSchema,
     SelectionStrategy,
@@ -44,6 +46,17 @@ class Reviewee:
     tag_1: str | None = None
     tag_2: str | None = None
     tag_3: str | None = None
+
+
+def _typed(pairs: Sequence[tuple[object, object]]) -> list[tuple[Reviewer, Reviewee]]:
+    """The engine's pairs, which are drawn from this file's own ``Reviewer``
+    and ``Reviewee`` stand-ins (the engine types its populations as
+    ``object``)."""
+    typed: list[tuple[Reviewer, Reviewee]] = []
+    for reviewer, reviewee in pairs:
+        assert isinstance(reviewer, Reviewer) and isinstance(reviewee, Reviewee)
+        typed.append((reviewer, reviewee))
+    return typed
 
 
 def _build_population(
@@ -75,7 +88,7 @@ def _build_population(
 def _ruleset(
     *,
     combinator: Combinator = Combinator.ALL_OF,
-    rules: list = (),
+    rules: Sequence[Rule] = (),
     exclude_self: bool = True,
     seed: int | None = None,
 ) -> RuleSetSchema:
@@ -99,7 +112,7 @@ def test_exclude_self_reviews_drops_same_email_pairs() -> None:
         reviewers=reviewers,
         reviewees=reviewees,
     )
-    for reviewer, reviewee in result.pairs:
+    for reviewer, reviewee in _typed(result.pairs):
         assert reviewer.email != reviewee.email_or_identifier
     assert result.excluded_counts.get("self_review") == 4
 
@@ -207,7 +220,7 @@ def test_any_of_unions_per_rule_allowed_sets() -> None:
     )
     result = evaluate(rs, reviewers=reviewers, reviewees=reviewees)
     pair_keys = {
-        (r.email, e.email_or_identifier) for r, e in result.pairs
+        (r.email, e.email_or_identifier) for r, e in _typed(result.pairs)
     }
     # (a, c) intra; (a, d) same tag2; (b, d) same tag2.
     assert pair_keys == {
@@ -274,7 +287,7 @@ def test_pipeline_applies_rules_in_declaration_order() -> None:
         ],
     )
     result = evaluate(rs, reviewers=reviewers, reviewees=reviewees)
-    for r, _ in result.pairs:
+    for r, _ in _typed(result.pairs):
         assert r.tag_2 == "Member"
 
 
@@ -324,7 +337,7 @@ def test_composite_and_or_nest_correctly() -> None:
         reviewers=reviewers,
         reviewees=reviewees,
     )
-    assert {(r.email, e.email_or_identifier) for r, e in result.pairs} == {
+    assert {(r.email, e.email_or_identifier) for r, e in _typed(result.pairs)} == {
         ("a@x.edu", "c@x.edu"),
     }
 
@@ -341,13 +354,13 @@ _PAIRS_REVIEWERS = [Reviewer(email="a@x.edu", tag_1="A"), Reviewer(email="b@x.ed
 _PAIRS_REVIEWEES = [Reviewee(email_or_identifier="c@x.edu", tag_1="C")]
 
 
-def _surviving(rules: list) -> set[tuple[str, str]]:
+def _surviving(rules: list[Rule]) -> set[tuple[str, str]]:
     result = evaluate(
         _ruleset(rules=rules, exclude_self=False),
         reviewers=_PAIRS_REVIEWERS,
         reviewees=_PAIRS_REVIEWEES,
     )
-    return {(r.email, e.email_or_identifier) for r, e in result.pairs}
+    return {(r.email, e.email_or_identifier) for r, e in _typed(result.pairs)}
 
 
 def test_a_disabled_composite_child_is_not_applied() -> None:
@@ -435,7 +448,7 @@ def test_quota_caps_per_reviewee_at_max() -> None:
         reviewees=reviewees,
     )
     by_reviewee: dict[str, int] = {}
-    for _, e in result.pairs:
+    for _, e in _typed(result.pairs):
         by_reviewee[e.email_or_identifier] = (
             by_reviewee.get(e.email_or_identifier, 0) + 1
         )
@@ -480,11 +493,11 @@ def test_repeated_runs_with_same_seed_produce_identical_pairs() -> None:
         for _ in range(100)
     ]
     first = [
-        (r.email, e.email_or_identifier) for r, e in runs[0]
+        (r.email, e.email_or_identifier) for r, e in _typed(runs[0])
     ]
     for run in runs[1:]:
         assert [
-            (r.email, e.email_or_identifier) for r, e in run
+            (r.email, e.email_or_identifier) for r, e in _typed(run)
         ] == first
 
 
@@ -495,7 +508,7 @@ def test_deterministic_pair_emit_order_is_lex_email() -> None:
         reviewers=reviewers,
         reviewees=reviewees,
     )
-    keys = [(r.email, e.email_or_identifier) for r, e in result.pairs]
+    keys = [(r.email, e.email_or_identifier) for r, e in _typed(result.pairs)]
     assert keys == sorted(keys)
 
 

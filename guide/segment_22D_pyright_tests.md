@@ -84,6 +84,16 @@ set to the four test trees.
   never had `search_users`. Log-record extras read through
   `record.__dict__`; pydantic-settings' `_env_file` takes a
   `pyright: ignore` with its reason (pyright cannot see the option).
+- **Rung 3:** `tests/unit/` clean, 995 → 599 (396). Duck-typed fakes
+  (`SimpleNamespace`, `_FakeSession`) come from a factory typed as the
+  model they stand in for, by `cast`; the rule engine's `object` pairs
+  are read through an asserting `_typed` helper; an Optional lookup
+  takes an `assert` beside it; `_make_args` returns `dict[str, Any]`;
+  `_maps` a `TypedDict`. Two application annotations widen to what the
+  code reads: `sort_from_positions` / `widths_from_positions` take
+  `object` (they drop a non-list, non-dict from a hand-edited CSV) and
+  `validate_page_n` takes `Sequence[object]` (only the length). The
+  three `Settings(_env_file=None)` lines take 22D's one ignore.
 
 ## PR ladder
 

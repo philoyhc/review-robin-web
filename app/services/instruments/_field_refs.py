@@ -109,11 +109,12 @@ def sort_to_positions(
 
 
 def sort_from_positions(
-    entries: list[Any] | None, display_ids_by_position: dict[int, int]
+    entries: object, display_ids_by_position: dict[int, int]
 ) -> list[dict[str, Any]]:
     """Sort entries from the settings CSV, re-pointed at the imported
     display fields. An older bundle's id-keyed entries name the source
-    session's fields, which the import never has, so they are dropped."""
+    session's fields, which the import never has, so they are dropped;
+    so is anything a hand-edited file holds that is not a list."""
     out: list[dict[str, Any]] = []
     seen: set[int] = set()
     for entry in entries if isinstance(entries, list) else []:
@@ -167,14 +168,15 @@ def widths_to_positions(
 
 
 def widths_from_positions(
-    widths: dict[str, Any] | None,
+    widths: object,
     *,
     display_ids_by_position: dict[int, int],
     field_ids_by_position: dict[int, int],
 ) -> dict[str, Any] | None:
     """Column widths from the settings CSV, re-pointed at the imported
     fields. An older bundle's ``df_<id>`` / ``rf_<id>`` keys name the
-    source session's fields and are dropped."""
+    source session's fields and are dropped; anything a hand-edited
+    file holds that is not a dict is no widths."""
     if not isinstance(widths, dict):
         return None
     out: dict[str, Any] = {}

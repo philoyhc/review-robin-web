@@ -1760,6 +1760,7 @@ def test_an_import_waives_only_the_lead_time_floor(db: Session) -> None:
     """An exported schedule whose moments have since passed still
     imports: reminders before an End already past."""
     dst = _bare_session(db, code="l1-lead")
+    assert dst.deadline is not None
     assert dst.deadline < dt.datetime.now(dt.UTC)
     assert apply_session_config(
         db, dst, [Row("session.reminder_offsets", "-P2D, -P1D", "string")]

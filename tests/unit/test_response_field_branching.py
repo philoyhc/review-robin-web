@@ -171,10 +171,15 @@ def test_a_branch_must_directly_follow_its_parent() -> None:
 )
 def test_the_condition_reads_as_the_builder_shows_it(op, value, label) -> None:
     from types import SimpleNamespace
+    from typing import cast
 
+    from app.db.models import InstrumentResponseField
     from app.web.views import branch_condition_label
 
-    parent = SimpleNamespace(label="Colour", branch_op=op, branch_value=value)
+    parent = cast(
+        InstrumentResponseField,
+        SimpleNamespace(label="Colour", branch_op=op, branch_value=value),
+    )
     assert branch_condition_label(parent) == label
 
 

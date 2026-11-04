@@ -10,7 +10,9 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import cast
 
+from app.db.models import Reviewer, ReviewSession
 from app.services import email_templates
 
 
@@ -22,14 +24,14 @@ def _session(
     overrides: dict | None = None,
     display_timezone: str | None = None,
     creator_timezone: str | None = None,
-) -> SimpleNamespace:
+) -> ReviewSession:
     """A duck-typed stand-in for ``ReviewSession`` carrying only the
     attributes the renderer reads — including the two the session-zone
     resolver reads: the session's own zone and its creator's default."""
     creator_preferences = (
         {"display_timezone": creator_timezone} if creator_timezone else None
     )
-    return SimpleNamespace(
+    fake = SimpleNamespace(
         name=name,
         deadline=deadline,
         help_contact=help_contact,
@@ -37,10 +39,12 @@ def _session(
         display_timezone=display_timezone,
         created_by_user=SimpleNamespace(preferences=creator_preferences),
     )
+    return cast(ReviewSession, fake)
 
 
-def _reviewer(name: str = "Rae Reviewer") -> SimpleNamespace:
-    return SimpleNamespace(name=name)
+def _reviewer(name: str = "Rae Reviewer") -> Reviewer:
+    """A duck-typed stand-in for ``Reviewer``: the renderer reads its name."""
+    return cast(Reviewer, SimpleNamespace(name=name))
 
 
 # ── Default rendering (no overrides) ─────────────────────────────────────

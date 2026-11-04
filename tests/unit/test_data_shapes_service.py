@@ -7,7 +7,7 @@ will build on.
 from __future__ import annotations
 
 import json
-from typing import cast
+from typing import Any, cast
 
 import pytest
 from sqlalchemy import select
@@ -85,7 +85,7 @@ def _field(
     return field
 
 
-def _make_args(**overrides):
+def _make_args(**overrides: Any) -> dict[str, Any]:
     base = dict(
         name="My shape",
         axis="reviewer",

@@ -9,10 +9,11 @@ Per ``spec/reviewer-surface.md`` "Above the table — heading + help block".
 from __future__ import annotations
 
 from types import SimpleNamespace
+from typing import Any, cast
 
 import pytest
 
-from app.db.models import Instrument
+from app.db.models import Instrument, InstrumentResponseField
 from app.web.views import (
     InstrumentHeading,
     constraint_summary_for_field,
@@ -138,12 +139,18 @@ def test_instrument_heading_treats_blank_strings_as_unset() -> None:
 # ── placeholder_for_field ────────────────────────────────────────────────
 
 
-def _field(*, data_type: str, validation: dict | None) -> SimpleNamespace:
+def _stand_in(**attrs: Any) -> InstrumentResponseField:
+    """A duck-typed stand-in for ``InstrumentResponseField``, carrying
+    only the attributes the helper under test reads."""
+    return cast(InstrumentResponseField, SimpleNamespace(**attrs))
+
+
+def _field(*, data_type: str, validation: dict | None) -> InstrumentResponseField:
     """A duck-typed stand-in for ``InstrumentResponseField``. The real
     model derives ``data_type`` from a related RTD row, which is more
     SQLAlchemy fixture work than ``placeholder_for_field`` warrants —
     the helper only reads ``data_type`` and ``validation``."""
-    return SimpleNamespace(data_type=data_type, validation=validation)
+    return _stand_in(data_type=data_type, validation=validation)
 
 
 @pytest.mark.parametrize(
@@ -254,7 +261,7 @@ def test_integer_bounds_round_trip_the_validation_block() -> None:
 
     block = validation_block_from_inline("Integer", 0.5, 10.0, 1.0, None)
     assert block == {"min": 0.5, "max": 10, "step": 1}
-    field = SimpleNamespace(data_type="Integer", validation=block)
+    field = _stand_in(data_type="Integer", validation=block)
     assert placeholder_for_field(field) == "0.5 to 10, steps of 1"
     assert constraint_summary_for_field(field) == "0.5-10, steps of 1"
     # Whole bounds still store as ints.
@@ -270,16 +277,16 @@ def test_integer_bound_error_reads_the_bound_as_entered() -> None:
     its truncation."""
     from app.services.responses._core import validate_value
 
-    field = SimpleNamespace(
+    field = _stand_in(
         data_type="Integer", _inline_min=0.5, _inline_max=10.0, _inline_step=None
     )
     assert validate_value(field, "0") == "Must be at least 0.5."
-    whole = SimpleNamespace(
+    whole = _stand_in(
         data_type="Integer", _inline_min=1.0, _inline_max=5.0, _inline_step=1.0
     )
     assert validate_value(whole, "0") == "Must be at least 1."
     # No scientific notation, matching the constraint line.
-    tiny = SimpleNamespace(
+    tiny = _stand_in(
         data_type="Integer", _inline_min=0.00001, _inline_max=None, _inline_step=None
     )
     assert validate_value(tiny, "0") == "Must be at least 0.00001."

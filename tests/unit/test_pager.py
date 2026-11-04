@@ -48,21 +48,25 @@ def test_one_row_over_the_page_size_gets_a_pager() -> None:
 
 def test_ranges_are_inclusive_and_the_last_one_stops_at_the_total() -> None:
     pager = views.build_pager(total=556)
+    assert pager is not None
     assert _labels(pager) == ["1–200", "201–400", "401–556"]
 
 
 def test_an_exact_multiple_does_not_produce_an_empty_final_page() -> None:
     pager = views.build_pager(total=400)
+    assert pager is not None
     assert _labels(pager) == ["1–200", "201–400"]
 
 
 def test_labels_carry_thousands_separators() -> None:
     pager = views.build_pager(total=40000, offset=20000)
+    assert pager is not None
     assert "20,001–20,200" in _labels(pager)
 
 
 def test_exactly_one_range_is_current() -> None:
     pager = views.build_pager(total=556, offset=200)
+    assert pager is not None
     current = [link for link in pager.ranges if link.is_current]
     assert len(current) == 1
     assert current[0].label == "201–400"
@@ -73,6 +77,7 @@ def test_a_large_table_is_every_range_not_a_window() -> None:
     and left its reach at two pages a click; the menu holds the lot, so
     the middle of a 40,000-row table is one move away."""
     pager = views.build_pager(total=40000, offset=20000)
+    assert pager is not None
     assert len(pager.ranges) == 200
     assert pager.ranges[0].label == "1–200"
     assert pager.ranges[-1].label == "39,801–40,000"
@@ -101,6 +106,7 @@ def test_clamping_an_empty_table_is_zero_not_a_crash() -> None:
 
 def test_build_pager_clamps_rather_than_trusting_its_caller() -> None:
     pager = views.build_pager(total=556, offset=99999)
+    assert pager is not None
     assert pager.offset == 400
     current = [link for link in pager.ranges if link.is_current]
     assert current[0].label == "401–556"
@@ -114,6 +120,7 @@ def test_the_pager_carries_only_what_the_cluster_reads() -> None:
     believe there is still a window somewhere deciding what renders.
     """
     pager = views.build_pager(total=40000, offset=20000)
+    assert pager is not None
     assert {f for f in pager.__dataclass_fields__} == {
         "offset", "page_size", "total"
     }
