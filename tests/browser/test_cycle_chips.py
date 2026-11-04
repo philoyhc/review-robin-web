@@ -79,9 +79,11 @@ def test_archived_select_all_chip_stays_dark(
     engine = create_engine(live_server.database_url)
     try:
         with Session(engine) as db:
-            db.get(
+            review_session = db.get(
                 ReviewSession, session_pk(live_server.database_url, session_id)
-            ).status = "archived"
+            )
+            assert review_session is not None
+            review_session.status = "archived"
             db.commit()
     finally:
         engine.dispose()

@@ -74,6 +74,7 @@ def _seed_observers(database_url: str, session_id: str) -> None:
     try:
         with Session(engine) as db:
             review_session = db.get(ReviewSession, pk)
+            assert review_session is not None
             review_session.observers_enabled = True
             db.add(
                 Observer(

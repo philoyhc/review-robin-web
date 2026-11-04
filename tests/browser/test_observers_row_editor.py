@@ -46,7 +46,9 @@ def _seed_observer(database_url: str, session_id: str) -> int:
     engine = create_engine(database_url)
     try:
         with Session(engine) as db:
-            db.get(ReviewSession, pk).observers_enabled = True
+            review_session = db.get(ReviewSession, pk)
+            assert review_session is not None
+            review_session.observers_enabled = True
             # A populated tag, so the builder offers a field to pick.
             db.add(Reviewee(
                 session_id=pk, name="E",
@@ -182,7 +184,9 @@ def test_a_rule_the_dropdown_lacks_survives_a_rename(
     engine = create_engine(live_server.database_url)
     try:
         with Session(engine) as db:
-            db.get(Observer, observer_id).cohort_rule = stale
+            observer = db.get(Observer, observer_id)
+            assert observer is not None
+            observer.cohort_rule = stale
             db.commit()
     finally:
         engine.dispose()

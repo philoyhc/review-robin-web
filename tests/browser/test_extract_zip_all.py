@@ -99,12 +99,13 @@ def test_a_partial_selection_lists_its_ids(
         chips = page.locator(f"[data-{card}-chip^='instrument-']")
         assert chips.count() == 2
         chips.nth(0).click()
-    kept = (
+    chip = (
         page.locator("[data-by-instrument-chip^='instrument-']")
         .nth(1)
         .get_attribute("data-by-instrument-chip")
-        .removeprefix("instrument-")
     )
+    assert chip is not None
+    kept = chip.removeprefix("instrument-")
 
     query = _zip_all_query(page)
     for flag in ("by_instrument", "reviewer_metadata", "reviewee_metadata"):

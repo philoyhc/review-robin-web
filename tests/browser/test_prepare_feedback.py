@@ -46,12 +46,16 @@ def test_prepare_says_so_and_takes_one_click(
         }"""
     )
 
-    idle_height = button.bounding_box()["height"]
+    idle = button.bounding_box()
+    assert idle is not None
+    idle_height = idle["height"]
     button.click()
     # Two lines, like the idle label, so the button keeps its height.
     expect(button).to_have_text("Preparing session…", use_inner_text=True)
     assert button.evaluate("b => b.querySelectorAll('br').length") == 1
-    assert button.bounding_box()["height"] == idle_height
+    busy = button.bounding_box()
+    assert busy is not None
+    assert busy["height"] == idle_height
     expect(button).to_have_attribute("aria-busy", "true")
     # Busy is aria-busy, never disabled (base.html's busy indicator, rule 2).
     expect(button).to_be_enabled()

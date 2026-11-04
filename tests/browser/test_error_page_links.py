@@ -27,7 +27,9 @@ def test_arriving_from_an_app_page_offers_go_back_to_it(page: Page) -> None:
     page.wait_for_url(f"**{MISSING}")
     back = page.locator("[data-error-history]")
     expect(back).to_be_visible()
-    assert back.get_attribute("href").endswith("/about")
+    href = back.get_attribute("href")
+    assert href is not None
+    assert href.endswith("/about")
     with page.expect_navigation():
         back.click()
     assert page.url.endswith("/about")

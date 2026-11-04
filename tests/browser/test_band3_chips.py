@@ -68,7 +68,9 @@ def test_a_display_field_toggles_through_its_chip(
     box = _box(card, "reviewee.tag_1")
     # The box is visually hidden inside its chip: a 1px clip.
     for each in card.locator("[data-new-model-df-active]").all():
-        assert each.bounding_box()["width"] <= 1
+        bounds = each.bounding_box()
+        assert bounds is not None
+        assert bounds["width"] <= 1
 
     expect(box).to_be_checked()
     on_fill = _style(tag, "background-color")

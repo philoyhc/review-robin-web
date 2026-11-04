@@ -116,6 +116,7 @@ def _store_pair_context_config(live_server: LiveServer, session_id: str) -> None
             instrument = db.execute(
                 select(Instrument).where(Instrument.session_id == pk)
             ).scalars().first()
+            assert instrument is not None
             rule_set = SessionRuleSet(
                 session_id=pk,
                 name=f"Band1 {instrument.id}",
@@ -232,6 +233,7 @@ def _store_link2_operand(live_server: LiveServer, session_id: str) -> None:
             instrument = db.execute(
                 select(Instrument).where(Instrument.session_id == pk)
             ).scalars().first()
+            assert instrument is not None
             rule_set = SessionRuleSet(
                 session_id=pk,
                 name=f"Band1 {instrument.id}",
@@ -427,6 +429,7 @@ def _store_link2_pair_is(live_server: LiveServer, session_id: str) -> None:
             instrument = db.execute(
                 select(Instrument).where(Instrument.session_id == pk)
             ).scalars().first()
+            assert instrument is not None
             rule_set = SessionRuleSet(
                 session_id=pk,
                 name=f"Band1 {instrument.id}",
