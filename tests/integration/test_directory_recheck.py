@@ -9,6 +9,8 @@ Tan's sign-in name, `office@` is ambiguous, `nobody@` is not found.
 
 from __future__ import annotations
 
+import re
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -126,7 +128,8 @@ def test_no_button_when_every_row_is_matched(
         client, session.public_id, "observers", "ObserverName,ObserverEmail\nJane,e0123456@example.edu\n"
     )
     card = _card(client, session.public_id, "observers")
-    assert "data-directory-recheck" not in card
+    # The button, not the countdown script that names its selector.
+    assert not re.search(r"<button[^>]*data-directory-recheck", card)
     assert "data-directory-check" in card
 
 
