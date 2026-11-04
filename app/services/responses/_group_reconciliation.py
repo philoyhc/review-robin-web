@@ -45,7 +45,7 @@ from app.db.models import (
 from app.schemas.responses import ResponseUpsert
 
 
-class GroupKeyable(Protocol):
+class _GroupKeyShape(Protocol):
     """What :func:`group_keys` reads off an assignment row.
 
     Five attributes — stated as a protocol rather than as
@@ -56,12 +56,9 @@ class GroupKeyable(Protocol):
     entities. ``Assignment`` satisfies it structurally, so both
     shapes go through one function rather than a variant each.
 
-    **Documentation-grade, not enforced.** The repo runs ``ruff`` and
-    ``pytest``, no type checker, so nothing fails if a caller stops
-    satisfying this or if the function starts reading a sixth
-    attribute. The five were verified by hand against
-    :func:`_group_key_by_assignment` and :func:`group_keys` when this
-    was written; treat it as a claim to re-check, not a guarantee.
+    Checked by ``pyright`` (segment 22C). Pyright does not match a
+    protocol against SQLAlchemy's ``Mapped[...]`` attributes, so the
+    public name :data:`GroupKeyable` is this protocol *or* the model.
 
     ``reviewee`` is the one that makes this a projection and not a
     tuple of ids: the group-boundary spec names reviewee fields
@@ -83,6 +80,10 @@ class GroupKeyable(Protocol):
 
     @property
     def reviewee(self) -> Reviewee: ...
+
+
+#: An assignment row or a projection of one (:class:`_GroupKeyShape`).
+GroupKeyable = _GroupKeyShape | Assignment
 
 
 def _session_position_map(

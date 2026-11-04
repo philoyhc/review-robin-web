@@ -149,6 +149,15 @@ python3 -c "import json,collections;d=json.load(open('/tmp/pyright.json'));print
     fixed, by `--fix` or by hand: `raise … from None` where a domain
     error becomes an HTTP 400 or a CLI error, and loop variables bound
     where a closure reads them.
+- **Item 2** (rungs 3–6) is read once, cumulatively from `2f9961be`.
+- **Rung 3, cluster A:** the read-only `@property` fix does not work.
+  `GroupKeyable` already had properties, and pyright 1.1.414 still
+  rejects a model whose attributes are `Mapped[int]`: it matches a
+  protocol against the declared `Mapped[...]` type, not the descriptor's
+  `int`. Built instead: each protocol (now `_GroupKeyShape`,
+  `_BranchFieldShape`) is kept for the plain shapes (`AssignmentPair`,
+  the Settings import's `_PlannedField`), and the public name is that
+  protocol `|` the model. 307 → 268 errors, the 39 counted.
 
 ## PR ladder
 

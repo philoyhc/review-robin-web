@@ -23,6 +23,8 @@ import re
 from collections.abc import Iterable, Mapping
 from typing import Protocol
 
+from app.db.models import InstrumentResponseField
+
 # Integer / Decimal parents compare against one number.
 NUMERIC_OPS: dict[str, str] = {
     "eq": "=",
@@ -131,8 +133,12 @@ REQUIRED_GOVERNED_NEEDS_ANCHOR_MESSAGE = (
 PARENT_DATA_TYPES: frozenset[str] = frozenset({"Integer", "Decimal", "List"})
 
 
-class BranchField(Protocol):
-    """The attributes of ``InstrumentResponseField`` this module reads."""
+class _BranchFieldShape(Protocol):
+    """The attributes of ``InstrumentResponseField`` this module reads,
+    for the shapes that stand in for one (the Settings import's planned
+    fields). Pyright does not match a protocol against SQLAlchemy's
+    ``Mapped[...]`` attributes, so :data:`BranchField` names the model
+    beside it (segment 22C)."""
 
     id: int
     label: str
@@ -146,6 +152,10 @@ class BranchField(Protocol):
     _inline_list_csv: str | None
     # ``branch_mode`` (19T Item 13) is read through :func:`branch_mode`,
     # which treats an object without it as Show.
+
+
+#: A response field, or a shape that stands in for one.
+BranchField = _BranchFieldShape | InstrumentResponseField
 
 
 def branch_mode(parent: BranchField | None) -> str:
