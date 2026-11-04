@@ -3,7 +3,7 @@
 **Opened:** 2026-11-04, filed at the author's request as 22C's second
 follow-up · **Theme:** from "no wrong types" to "no unknown types" ·
 **Related:** `guide/archive/segment_22C_pyright.md` (the basic-mode gate this
-tightens), `guide/segment_22D_pyright_tests.md`
+tightens), `guide/archive/segment_22D_pyright_tests.md`
 
 ## Opportunity
 
@@ -89,7 +89,7 @@ Taken 2026-11-04 at `9b45a9c1`, pyright 1.1.414, `typeCheckingMode =
 
 ## Out of scope
 
-- Test code: `guide/segment_22D_pyright_tests.md`.
+- Test code: `guide/archive/segment_22D_pyright_tests.md`.
 
 ## Doc impact
 

@@ -70,19 +70,17 @@ gate.
    operators may have reminded by hand: 14G marks those skipped, not
    sent, when it turns the setting on.
 
-3. **22D — Pyright over test code** (not gated). The four test trees
-   join the type gate (22C), the optional-access rules relaxed for tests and
-   ratcheted back per directory. **Plan:** `guide/segment_22D_pyright_tests.md`.
+3. **22E — Pyright strict mode, package by package** (not gated).
+   **Plan:** `guide/segment_22E_pyright_strict.md`. Its place after
+   14F/14G is the author's call.
 
-4. **22E — Pyright strict mode, package by package** (not gated).
-   **Plan:** `guide/segment_22E_pyright_strict.md`. 22D and 22E are
-   independent; their order, and their place after 14F/14G, is the
-   author's call.
+4. **22F — reserved** (author, 2026-11-04) for whatever follow-up 22C,
+   22D and 22E leave behind. No plan until something lands in it. So far:
+   application code's 64 `# type: ignore` comments, which hide 66 errors
+   and keep `enableTypeIgnoreComments` on
+   (`guide/archive/segment_22D_pyright_tests.md` § Status).
 
-5. **22F — reserved** (author, 2026-11-04) for whatever follow-up 22C,
-   22D and 22E leave behind. No plan until something lands in it.
-
-6. **22G — Diagnostics** (parked, author, 2026-11-04). Item 1: a small
+5. **22G — Diagnostics** (parked, author, 2026-11-04). Item 1: a small
    set of status reports about the session on Azure, the in-app clock's
    state first; where they sit waits on how many there are.
    **Plan:** `guide/segment_22G_diagnostics.md`.

@@ -153,7 +153,7 @@ in CI (`test` and `residential` jobs): 307 errors at rung 1, 0 at
 - **The gate** (rung 7, `#3592`) needs no `venv` key in CI: setup-python
   puts its interpreter on PATH. Locally pyright must run with `.venv`
   active, or every import reads missing.
-- **Follow-ups filed** (`#3593`): `guide/segment_22D_pyright_tests.md`,
+- **Follow-ups filed** (`#3593`): `guide/archive/segment_22D_pyright_tests.md`,
   `guide/segment_22E_pyright_strict.md`.
 
 **Behavior changes, each named and tested**
@@ -223,7 +223,7 @@ back exactly. None found a defect that shipped.
 
 - ~~Rung 2's rule set~~: two steps, `I` and `UP` then `B` and `SIM`
   (author, 2026-11-04).
-- ~~Tests~~: filed as `guide/segment_22D_pyright_tests.md` (author, 2026-11-04).
+- ~~Tests~~: filed as `guide/archive/segment_22D_pyright_tests.md` (author, 2026-11-04).
 - ~~Strict mode~~: filed as `guide/segment_22E_pyright_strict.md` (author, 2026-11-04).
 
 ## Out of scope

@@ -1,0 +1,161 @@
+# Segment 22D — Pyright over test code
+
+**Opened:** 2026-11-04, filed at the author's request as 22C's first
+follow-up · **Theme:** the type gate covers the code that checks the
+code · **Related:** `guide/archive/segment_22C_pyright.md` (the gate this
+extends), `CONTRIBUTING.md`, `tools/ci_lanes.py`
+
+## Opportunity
+
+22C gates application code only (`[tool.pyright]` excludes `**/tests`).
+Test code is checked by running it, which proves the paths it runs and
+nothing about the rest: a fixture typed `Foo | None` and read as `Foo`,
+or a helper called with the wrong argument, passes until the branch that
+trips it runs. Measured over the four test trees, pyright in basic mode
+finds **1,917 errors in 262 files**. Most are the fixture shape above,
+not defects, so the gate cannot simply widen; it needs the rules relaxed
+first and ratcheted back.
+
+## Decision
+
+**Widen `include` to the test trees with the two optional-access rules
+off for tests only, fix the rest, gate it, then turn those two rules back
+on directory by directory** (`tests/unit/` first, then
+`cordware/tests`, the apps' `tests/`, `tests/db`, `tests/browser`,
+`tests/integration`).
+
+Pyright's `executionEnvironments` (or a nested config under `tests/`)
+scopes the relaxation, so application code keeps every rule it has.
+
+Rejected: *gate tests at full strength now with a baseline file.* 1,917
+entries is a second list to keep in step, and most of them are
+`reportOptional*` noise; relaxing two rules removes 844 of them by
+design rather than by list. Rejected: *leave tests out for good.* The
+other 1,073 (argument types, attribute access) include real wrong calls,
+and a test that calls a helper wrongly can pass for the wrong reason.
+
+## Semantics
+
+- **Relaxed means off, not warning.** A warning nobody reads is a
+  baseline in another form; each relaxation is listed in the config with
+  the rung that removes it.
+- **Fixtures, not asserts.** Where a fixture returns `Foo | None` but
+  always yields `Foo`, the fixture's annotation changes; a blanket
+  `assert x is not None` in every test is the wrong fix.
+- **A test helper that genuinely accepts a loose shape** (a
+  `SimpleNamespace` standing in for a model) takes a Protocol or the
+  model's type, as 22C did for `BranchField`.
+- **Test behavior never changes.** A fix that changes what a test
+  asserts is its own PR, outside this segment.
+
+## Judgment calls — decided
+
+- Directory order follows error density, smallest first, so the ratchet
+  proves itself on `tests/unit/` (453) before `tests/integration/`
+  (1,302) (2026-11-04).
+
+## Blast radius (measured)
+
+Taken 2026-11-04 at `9b45a9c1`, pyright 1.1.414, basic mode, `include`
+set to the four test trees.
+
+| What | Count | Command |
+|---|---|---|
+| Errors, test code | 1,917 in 262 files (658 analyzed) | `pyright --outputjson` with `include = ["tests", "cordware/tests", "residentialapps/tests", "utilityapps/tests"]` |
+| `reportOptionalMemberAccess` + `reportOptionalSubscript` | 533 + 311 | `collections.Counter` over `rule` |
+| `reportArgumentType` / `reportAttributeAccessIssue` | 708 / 278 | the same |
+| By tree | `tests/integration` 1,302, `tests/unit` 453, `tests/browser` 70, `residentialapps/tests` 43, `utilityapps/tests` 29, `cordware/tests` 16, `tests/db` 2, `tests/*.py` 2 | `Counter` over the path's first two parts |
+| `reportMissingImports` | 8 | the same; likely optional browser dependencies, to check in rung 1 |
+
+## Status — closed 2026-11-04
+
+**Intended:** the four test trees join the basic-mode gate with the two
+optional-access rules relaxed, then ratchet back per directory. **Done:**
+that, in #3595–#3602. `pyright` checks 950 files at 0 errors with every
+basic-mode rule on everywhere; test code went 1,917 → 0 (1,065 with the
+rules off, plus 792 with them on, plus 44 hidden by old ignores).
+
+**Diverged from the ladder:**
+
+- Rungs 1–5 checked the tests through their own config file, not a wider
+  `include`: 22C's gate already ran `pyright` in CI, so widening first
+  would have turned every PR red. Rung 6 folded it into `pyproject.toml`
+  as `executionEnvironments` roots (a root replaces the import root, so
+  each lists `.`; `tests` adds `tools`, and its helpers import as
+  top-level modules, as pytest sees them).
+- Rung 7 took three slices in one PR (#3602), not a PR per directory:
+  trees with no errors needed none, and GitHub left 7.1's CI queued
+  behind two stuck `main` runs. It also removed the tests' 38 pre-22D
+  `# type: ignore` comments, which hid 44 errors (found by the rung-5
+  read).
+
+**Decisions confirmed at build:**
+
+- Stand-ins are factories typed as the model by `cast(Model, …)`; an
+  Optional lookup takes an `assert` beside it, or `must_get` /
+  `must_search` / `detail_of` (`tests/integration/_lookups.py`) where it
+  is chained. No fixture was mistyped: every optional-access error was a
+  genuine Optional.
+- Application annotations widened only to what the code reads:
+  `cordware.graph.Finder`, `sort_from_positions` / `widths_from_positions`
+  (`object`), `validate_page_n` (`Sequence[object]`), two instrument
+  updates' `actor: User | None`, the clock's session factory.
+- `pyright: ignore[rule]  -- reason` only for pydantic-settings'
+  `_env_file`, deliberate wrong-typed inputs, and shapes a column type
+  rules out.
+- `enableTypeIgnoreComments` stays on: it cannot be scoped to tests, and
+  application code holds 64 `# type: ignore` (hiding 66 errors). 22F's.
+
+**Reads:** two `diff-reviewer` reads. Rungs 1–5 (cumulative): one
+changed test input reverted, six stale ignores dropped, the old ignores
+found. Rung 7 (cumulative from `d5f697d2`): nothing high; two Status
+wording slips, fixed here. Codex: no findings on any PR. `spec-writer`:
+not run, since `Doc impact` names no `spec/` path.
+
+## PR ladder
+
+1. **Config.** Widen `include`; scope the two optional-access rules off
+   for the test trees; re-measure. No fixes, no gate. *(Built as a
+   separate config file: `## Status`.)*
+2. **Small trees.** `cordware/tests`, `residentialapps/tests`,
+   `utilityapps/tests`, `tests/db`, the root `tests/*.py`.
+3. **`tests/unit/`.**
+4. **`tests/browser/`.**
+5. **`tests/integration/`**, split by area if it is large.
+6. **The gate.** `pyright` already runs in CI; this rung is the config
+   change that keeps tests in its scope, with the docs that say
+   "application code only" updated.
+7. **Ratchet.** The two rules back on per directory, one PR each, in the
+   Decision's order.
+8. **Close.**
+
+## Definition of done
+
+- `pyright` exits 0 with the test trees included and neither
+  optional-access rule relaxed anywhere.
+- `README.md`, `CLAUDE.md` / `AGENTS.md` and `CONTRIBUTING.md` no longer
+  say pyright checks application code only.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 22D` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `guide/todo_master.md` entries deleted; plan moved to `guide/archive/` + index row
+
+## Open questions
+
+- ~~Order against 22E~~: 22D first; the author let it run (2026-11-04).
+
+## Out of scope
+
+- Strict mode, for tests or application code: `guide/segment_22E_pyright_strict.md`.
+- Changing what any test asserts.
+
+## Doc impact
+
+- `pyproject.toml` — `[tool.pyright]` takes in the test trees from the rung-1 config file, the relaxations as per-tree `executionEnvironments` (rung 6); the relaxations' removal (rung 7).
+- ~~the test trees' own config file (rung 1)~~ (retired 2026-11-04, rung 6: folded into `pyproject.toml`).
+- `README.md` — pyright's scope (rung 6).
+- `CLAUDE.md` — "Common commands" and the pre-PR gate: pyright's scope (rung 6); `AGENTS.md` copied.
+- `AGENTS.md` — the twin, copied from `CLAUDE.md` (rung 6).
+- `CONTRIBUTING.md` — the checklist's pyright scope (rung 6). <!-- doc-impact-waived: its checklist names `pyright` without a scope, so nothing there says application code only -->
+- `guide/todo_master.md` — delete the segment's entry at close.
