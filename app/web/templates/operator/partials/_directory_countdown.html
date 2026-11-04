@@ -118,12 +118,9 @@
       if (recheck) {
         // The next recheck asks afresh, even if its own keys call fails.
         if (recheck.elements.since) { recheck.elements.since.value = ''; }
-        // A renew banner that started this recheck waits to be used again.
-        Array.prototype.forEach.call(
-          document.querySelectorAll('[data-directory-renew-upload]'),
-          function (b) {
-            if (b.form === recheck) { b.disabled = false; b.removeAttribute('aria-disabled'); }
-          });
+        // A renew banner that started this recheck is usable again; it
+        // listens for this (`_directory_renew.html`).
+        recheck.dispatchEvent(new Event('directory-count-stopped'));
       }
     }
 

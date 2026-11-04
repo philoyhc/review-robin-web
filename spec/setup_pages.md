@@ -1176,7 +1176,8 @@ It is hidden until the count starts.
   aborts those in flight (ignores them, in a browser that cannot abort)
   and posts nothing: no row is bound, the line hides and the button
   reads "Recheck N unmatched" again. A renew banner's button that
-  started the recheck is usable again. The answers fetched so far stay
+  started the recheck is usable again (the form fires
+  `directory-count-stopped`, which the banner listens for). The answers fetched so far stay
   kept, but a new recheck asks for every key afresh (its new `since`).
   Upload has no stop.
 - **Without the script** the line never shows, and the upload checks
