@@ -50,6 +50,7 @@ from typing import Callable
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.db.models import AuditEvent, ReviewSession
 from app.services import audit
 from app.services.session_guard import SessionBusy
@@ -108,6 +109,7 @@ from ._shared import (
 
 
 __all__ = [
+    "scheduled_send_enabled",
     "ScheduledActivateError",
     "fired_offset_errors",
     "fired_offsets",
@@ -241,6 +243,14 @@ def observe_scheduled_events(
         return
 
 
+def scheduled_send_enabled() -> bool:
+    """Whether scheduled invites and reminders may fire (segment 14E
+    rung 0, `RRW_SCHEDULED_SEND`). Off until mail can go on a clock
+    (14G): their fields are disabled, their stored values kept, and no
+    pass fires them. Read at call time, so a test can flip it."""
+    return settings.scheduled_send
+
+
 class _SessionBusyPass(Exception):
     """A trigger met a busy session: the pass stops, quietly."""
 
@@ -253,7 +263,10 @@ def _observe_all(
     correlation_id: str | None,
     build_invite_url: Callable[[str], str] | None,
 ) -> None:
-    invites_ok = _run_guarded(
+    # Auto-send off (14E rung 0): neither invites nor reminders fire,
+    # and activation, with no invites to wait for, runs as usual.
+    send = scheduled_send_enabled()
+    invites_ok = not send or _run_guarded(
         db,
         session,
         trigger="invites",
@@ -280,6 +293,8 @@ def _observe_all(
                 db, session, now=current, correlation_id=correlation_id
             ),
         )
+    if not send:
+        return
     _run_guarded(
         db,
         session,

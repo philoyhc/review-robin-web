@@ -325,6 +325,11 @@ def _apply_session_config_form(
     # moved sent entry is named as such rather than as one short of
     # lead time; and a sent entry kept in place, like an aged stored
     # one, skips the lead-time floor.
+    # Auto-send off (14E rung 0): the two offset fields are disabled, so
+    # the form sends neither; the stored values are kept as they are,
+    # unvalidated, since nothing fires them and the operator cannot edit
+    # them.
+    send = scheduled_events.scheduled_send_enabled()
     fired_errors = scheduled_events.fired_offset_errors(
         db,
         review_session,
@@ -332,7 +337,7 @@ def _apply_session_config_form(
         invite_offsets=scheduled_events.split_offsets(invite_offsets),
         deadline=parsed_deadline,
         reminder_offsets=scheduled_events.split_offsets(reminder_offsets),
-    )
+    ) if send else []
     if fired_errors:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -342,7 +347,7 @@ def _apply_session_config_form(
     # 18G Part 2: optional auto-send invite offsets, validated against
     # the (possibly freshly-edited) Start.
     try:
-        parsed_invite_offsets = (
+        parsed_invite_offsets = list(review_session.invite_offsets or []) if not send else (
             scheduled_events.parse_and_validate_invite_offsets(
                 invite_offsets,
                 scheduled_activate_at=parsed_scheduled_activate_at,
@@ -364,7 +369,7 @@ def _apply_session_config_form(
     # 18G Part 3: optional auto-send reminder offsets, validated
     # against the (possibly freshly-edited) deadline.
     try:
-        parsed_reminder_offsets = (
+        parsed_reminder_offsets = list(review_session.reminder_offsets or []) if not send else (
             scheduled_events.parse_and_validate_reminder_offsets(
                 reminder_offsets,
                 deadline=parsed_deadline,

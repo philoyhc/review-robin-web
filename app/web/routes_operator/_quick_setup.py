@@ -140,6 +140,12 @@ async def create_session(
             detail=str(exc),
         ) from exc
 
+    # Auto-send off (14E rung 0): the two offset fields are disabled, so
+    # nothing is posted; anything that is (a stale form) is ignored.
+    if not scheduled_events.scheduled_send_enabled():
+        invite_offsets = None
+        reminder_offsets = None
+
     # 18G Part 2: optional auto-send invite offsets. Per-entry rules
     # validate against the (possibly freshly-set) Start anchor.
     try:

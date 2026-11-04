@@ -355,7 +355,8 @@
             <input type="text" id="mock-invite-offsets" name="invite_offsets"
                    data-edit-only form="config-save-{{ session.id }}"
                    value="{{ invite_offsets_input_value }}"
-                   placeholder="e.g. -P1D, -PT2H">
+                   placeholder="e.g. -P1D, -PT2H"
+                   {% if not scheduled_send_enabled() %}disabled aria-describedby="scheduled-send-off"{% endif %}>
           </div>
           <div>
             <label for="mock-reminder-offsets">Send reminders (offset from End; optional)</label>
@@ -375,7 +376,13 @@
             <input type="text" id="mock-reminder-offsets" name="reminder_offsets"
                    data-edit-only form="config-save-{{ session.id }}"
                    value="{{ reminder_offsets_input_value }}"
-                   placeholder="e.g. -P2D, -PT4H">
+                   placeholder="e.g. -P2D, -PT4H"
+                   {% if not scheduled_send_enabled() %}disabled aria-describedby="scheduled-send-off"{% endif %}>
+            {# 14E rung 0: auto-send off until mail can go on a clock. The
+               values stay stored and shown; nothing fires them. #}
+            {% if not scheduled_send_enabled() %}
+              <p class="muted" id="scheduled-send-off" data-scheduled-send-off>Scheduled sending isn't available on this deployment; send from Invitations when it's time.</p>
+            {% endif %}
           </div>
           <div>
             <label for="mock-release-until">Release responses until (optional)</label>

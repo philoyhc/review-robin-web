@@ -31,6 +31,7 @@ from jinja2 import pass_context
 from starlette.requests import HTTPConnection
 from starlette.responses import RedirectResponse
 
+from app.services.scheduled_events import scheduled_send_enabled
 from app.web.views import top_line
 from cordware.identity import institution_name
 
@@ -138,4 +139,6 @@ def install(templates: Jinja2Templates) -> Jinja2Templates:
     templates.env.globals.update(TEMPLATE_GLOBALS)
     templates.env.globals["institution_name"] = institution_name
     templates.env.globals["top_line"] = top_line
+    # Auto-send on or off (segment 14E rung 0): the offset fields read it.
+    templates.env.globals["scheduled_send_enabled"] = scheduled_send_enabled
     return templates
