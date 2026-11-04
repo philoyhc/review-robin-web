@@ -740,12 +740,14 @@ def session_owners_add(
     # **only themselves** (the audited self-add bootstrap). Adding anyone
     # else requires being an owner first. A real session operator (owner)
     # is unaffected and may add anyone.
-    if not permissions.user_can_view_session(db, actor, review_session.id):
-        if target.id != actor.id:
-            return urls.redirect(request,
-                url=_owners_redirect_url(review_session.public_id, "self_only"),
-                status_code=status.HTTP_303_SEE_OTHER,
-            )
+    if (
+        not permissions.user_can_view_session(db, actor, review_session.id)
+        and target.id != actor.id
+    ):
+        return urls.redirect(request,
+            url=_owners_redirect_url(review_session.public_id, "self_only"),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
     try:
         session_owners.add_owner(
             db,

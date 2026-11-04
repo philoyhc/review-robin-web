@@ -86,7 +86,7 @@ _BUILT_TABLE_HOSTS = {
 _NOT_LAID_OUT_AS_A_TABLE = "shaper-preview-table"
 
 _VOID = frozenset(
-    "area base br col embed hr img input link meta param source track wbr".split()
+    ["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"]
 )
 
 

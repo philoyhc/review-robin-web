@@ -101,7 +101,7 @@ def saved_state_for_session(
         .where(AuditEvent.event_type.in_(_SAVED_STATE_EVENT_TYPES))
     ).all()
     saved: dict[int, bool] = {}
-    for event_type, detail in rows:
+    for _event_type, detail in rows:
         if not detail:
             continue
         # Canonical shape (Segment 11K PR 2): refs.instrument_id.

@@ -1721,8 +1721,8 @@ def test_results_body_team_unit_of_review_scopes_to_own_team(
             select(Reviewee).where(Reviewee.session_id == review_session.id)
         ).scalars()
     }
-    for reviewer_email, r in reviewers_by_email.items():
-        for reviewee_email, e in reviewees_by_email.items():
+    for r in reviewers_by_email.values():
+        for e in reviewees_by_email.values():
             # Same Group + Different team — and skip self-review
             # by mismatched email.
             if r.tag_3 == e.tag_3:

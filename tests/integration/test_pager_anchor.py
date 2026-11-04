@@ -182,7 +182,7 @@ def test_every_pager_route_supplies_an_anchor_that_exists() -> None:
         f"{sorted(ANCHOR_TEMPLATES)}"
     )
 
-    for anchor, template in ANCHOR_TEMPLATES.items():
+    for template in ANCHOR_TEMPLATES.values():
         markup = (templates / template).read_text(
             encoding="utf-8", errors="replace"
         )

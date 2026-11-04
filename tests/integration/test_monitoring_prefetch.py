@@ -343,9 +343,9 @@ def test_the_rollups_do_not_load_a_row_per_assignment(
         ("per_reviewer_progress", monitoring.per_reviewer_progress),
     ):
         db.expunge_all()
-        small_rows = _count_orm_rows(db, lambda: rollup(db, small))
+        small_rows = _count_orm_rows(db, lambda rollup=rollup: rollup(db, small))
         db.expunge_all()
-        large_rows = _count_orm_rows(db, lambda: rollup(db, large))
+        large_rows = _count_orm_rows(db, lambda rollup=rollup: rollup(db, large))
         # The reviewee / reviewer objects themselves still load, and
         # those grow with the roster — linearly. The assignments and
         # responses must not.

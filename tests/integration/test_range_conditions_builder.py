@@ -9,6 +9,7 @@ import json
 import re
 import shutil
 import subprocess
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -154,6 +155,6 @@ def test_no_button_on_the_page_is_inline_styled(client: TestClient, db: Session)
     ).text
     for tag in re.finditer(r"<button\b[^>]*>", body, re.S):
         assert "style=" not in tag.group(0), tag.group(0)[:120]
-    source = open("app/web/templates/operator/instruments_index.html").read()
+    source = Path("app/web/templates/operator/instruments_index.html").read_text()
     for tag in re.finditer(r"<button\b[^>]*>", source, re.S):
         assert "style=" not in tag.group(0), tag.group(0)[:120]

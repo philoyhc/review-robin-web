@@ -1508,12 +1508,11 @@ def test_purge_logs_only_what_the_archive_committed(
         raise RuntimeError("archive failed")
 
     monkeypatch.setattr(lifecycle, "archive_session", boom)
-    with caplog.at_level(logging.INFO):
-        with pytest.raises(RuntimeError):
-            session_purge.purge_and_archive(
-                db, review_session=failing, user=_operator(db, failing),
-                purge=["rosters"],
-            )
+    with caplog.at_level(logging.INFO), pytest.raises(RuntimeError):
+        session_purge.purge_and_archive(
+            db, review_session=failing, user=_operator(db, failing),
+            purge=["rosters"],
+        )
     assert "session data purged" not in caplog.text
 
     monkeypatch.setattr(lifecycle, "archive_session", real_archive)
@@ -1540,10 +1539,9 @@ def test_after_commit_runs_on_the_real_commit_and_drops_on_rollback(
         assert ran == ["outside"]
     assert ran == ["outside", "inside"]
 
-    with pytest.raises(RuntimeError):
-        with unit_of_work.atomic(db):
-            unit_of_work.after_commit(db, lambda: ran.append("rolled back"))
-            raise RuntimeError("refused")
+    with pytest.raises(RuntimeError), unit_of_work.atomic(db):
+        unit_of_work.after_commit(db, lambda: ran.append("rolled back"))
+        raise RuntimeError("refused")
     unit_of_work.commit(db)
     assert ran == ["outside", "inside"]
 
@@ -1572,9 +1570,8 @@ def test_after_commit_waits_for_the_commit_and_a_failed_commit_drops_it(
         raise RuntimeError("commit failed")
 
     monkeypatch.setattr(db, "commit", failing_commit)
-    with pytest.raises(RuntimeError):
-        with unit_of_work.atomic(db):
-            unit_of_work.after_commit(db, lambda: order.append("dropped"))
+    with pytest.raises(RuntimeError), unit_of_work.atomic(db):
+        unit_of_work.after_commit(db, lambda: order.append("dropped"))
     monkeypatch.setattr(db, "commit", spying_commit)
     unit_of_work.commit(db)
     assert order == ["commit", "callback", "commit"]

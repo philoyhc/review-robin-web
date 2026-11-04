@@ -482,10 +482,7 @@ def _slot_is_identity(axis: str, slot: str) -> bool:
     take the suffix."""
     if slot.startswith(f"{axis}:tag-"):
         return True
-    for suffix in _IDENTITY_SLOT_SUFFIXES:
-        if slot == f"{axis}:{suffix}":
-            return True
-    return False
+    return any(slot == f"{axis}:{suffix}" for suffix in _IDENTITY_SLOT_SUFFIXES)
 
 
 def _data_shape_state_suffix(state: str) -> str:

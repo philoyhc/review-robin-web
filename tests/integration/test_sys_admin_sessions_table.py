@@ -178,7 +178,7 @@ def test_the_instant_key_is_utc_and_fixed_width() -> None:
 
 
 def test_status_is_the_one_lobby_column_that_does_not_sort() -> None:
-    assert views.LOBBY_SORT_KEYS - views.DIAGNOSTICS_SORT_KEYS == {"status"}
+    assert {"status"} == views.LOBBY_SORT_KEYS - views.DIAGNOSTICS_SORT_KEYS
 
 
 def test_a_session_the_admin_owns_shows_owned_not_manage(

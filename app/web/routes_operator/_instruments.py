@@ -432,7 +432,7 @@ def instrument_edit_display_field(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Locked display fields cannot be hidden.",
-        )
+        ) from None
     return _instruments_redirect(request, review_session.public_id)
 
 
@@ -456,7 +456,7 @@ def instrument_delete_display_field(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Locked display fields cannot be deleted.",
-        )
+        ) from None
     return _instruments_redirect(request, review_session.public_id)
 
 
@@ -485,7 +485,7 @@ def instrument_move_display_field(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Locked display fields cannot be reordered.",
-        )
+        ) from None
     # Preserve editing state on the redirect so the operator stays in
     # the editable view after moving a row.
     return urls.redirect(request,
@@ -1217,7 +1217,7 @@ def instruments_delete(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
-        )
+        ) from None
     return _instruments_redirect(request,
         review_session.public_id,
         fragment=f"instrument-{landing_id}" if landing_id else None,

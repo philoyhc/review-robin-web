@@ -329,18 +329,17 @@ def update_reviewee(
     if (
         "email_or_identifier" in proposed
         and proposed["email_or_identifier"] != reviewee.email_or_identifier
+    ) and _identifier_taken(
+        db,
+        session_id=reviewee.session_id,
+        identifier=proposed["email_or_identifier"],  # type: ignore[arg-type]
+        exclude_reviewee_id=reviewee.id,
     ):
-        if _identifier_taken(
-            db,
-            session_id=reviewee.session_id,
-            identifier=proposed["email_or_identifier"],  # type: ignore[arg-type]
-            exclude_reviewee_id=reviewee.id,
-        ):
-            raise RevieweeOperationError(
-                "duplicate_identifier",
-                f"Another reviewee in this session already uses "
-                f"{proposed['email_or_identifier']!r}.",
-            )
+        raise RevieweeOperationError(
+            "duplicate_identifier",
+            f"Another reviewee in this session already uses "
+            f"{proposed['email_or_identifier']!r}.",
+        )
 
     # Keyed on the resulting pair, so a name-only edit is caught too —
     # the within-roster gate above can only see an identifier edit.

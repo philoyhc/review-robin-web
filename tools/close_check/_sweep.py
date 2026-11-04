@@ -101,7 +101,7 @@ def stale_report(since: str | None, stream) -> int:
         try:
             datetime.date.fromisoformat(since)
         except ValueError:
-            raise Unresolvable(f"--since {since!r} is not a YYYY-MM-DD date")
+            raise Unresolvable(f"--since {since!r} is not a YYYY-MM-DD date") from None
 
     today = datetime.date.today()
     rows = []

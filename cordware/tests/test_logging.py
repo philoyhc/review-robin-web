@@ -180,9 +180,8 @@ def test_a_mounted_lifespan_startup_failure_is_logged(
         "late": AppEntry(path="/late", factory=f"{__name__}:failing_lifespan_app", logger="late")
     }
     host = create_app(apps=("late",), registry=registry)
-    with pytest.raises(RuntimeError, match="lifespan startup failed"):
-        with TestClient(host):
-            pass
+    with pytest.raises(RuntimeError, match="lifespan startup failed"), TestClient(host):
+        pass
     (line,) = [e for e in _lines(captured) if e.get("event") == "host.app_startup_failed"]
     assert line["app"] == "late"
     assert "lifespan startup failed" in str(line["exc_info"])

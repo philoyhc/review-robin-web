@@ -161,9 +161,11 @@ def test_state_a_mounted_lifespan_yields_reaches_its_requests() -> None:
 
 def test_a_lifespan_state_key_clash_refuses_to_start() -> None:
     registry = {**STUBS, "clash": AppEntry(path="/c", factory=f"{__name__}:stub_clash", logger="clash")}
-    with pytest.raises(RuntimeError, match="'resource_a' from 'clash'"):
-        with TestClient(create_app(apps=("a", "clash"), registry=registry)):
-            pass
+    with (
+        pytest.raises(RuntimeError, match="'resource_a' from 'clash'"),
+        TestClient(create_app(apps=("a", "clash"), registry=registry)),
+    ):
+        pass
 
 
 def test_a_failing_factory_fails_the_host() -> None:

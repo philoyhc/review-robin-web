@@ -75,7 +75,7 @@ def test_levels_are_rows() -> None:
     """Levels are rows added with + and removed with X, after RRW's
     response-field rows; no fixed count."""
     page = TestClient(ops_app()).get("/rosters/assignments").text
-    for n, label in enumerate(sample_data.LEVEL_LABELS, start=1):
+    for n, _label in enumerate(sample_data.LEVEL_LABELS, start=1):
         assert f'aria-label="Add a level below Level {n}"' in page
         assert f'aria-label="Remove Level {n}"' in page
     assert "up to 5;" in page

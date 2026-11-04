@@ -137,9 +137,17 @@ python3 -c "import json,collections;d=json.load(open('/tmp/pyright.json'));print
     no formatter to fix them.
   - `UP042` (`StrEnum`) ignored: it changes what `str()` and `format()`
     give for a member, which templates and audit details render.
-  - 2a leaves pyright at 307 errors. 2b's preview: 663 findings, 573 of
-    them `B008` (FastAPI's `Depends` / `Form` defaults, for
-    `extend-immutable-calls`).
+  - 2a (`#3585`) leaves pyright at 307 errors. Its read: `alembic`
+    made third-party to isort, and the migration template brought up to
+    the new rules.
+  - **2b:** `B008` exempts FastAPI's parameter calls and the two frozen
+    option dataclasses in `zip_bundle.py` (`extend-immutable-calls`), so
+    663 findings fell to 93. Ignored: `B905` (`zip(strict=True)` raises
+    where a short input truncates today: a behavior change at 42 sites)
+    and `SIM108` (ternaries, a style call). The rest were fixed, by
+    `--fix` or by hand: `raise … from None` where a route turns a domain
+    error into a 404 or 400, and loop variables bound where a closure
+    reads them.
 
 ## PR ladder
 
