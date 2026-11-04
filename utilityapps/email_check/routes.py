@@ -86,11 +86,12 @@ async def _read(request: Request) -> _Posted | Response:
     length = request.headers.get("content-length", "")
     multipart = request.headers.get("content-type", "").startswith("multipart/")
     limit = _UPLOAD_LIMIT if multipart else _CARRIED_LIMIT
-    # A bounded length before `int`: Python refuses to parse more than
-    # 4,300 digits, which would be a 500 (findings L3).
-    if not length.isdecimal() or len(length) > 18:
+    if not length.isdecimal():
         return _upload_error(request, "The upload did not say its size. Upload the file again.")
-    if int(length) > limit:
+    # Bounded before `int`: Python refuses to parse more than 4,300
+    # digits, which would be a 500 (findings L3); so long a size is over
+    # any limit anyway.
+    if len(length) > 18 or int(length) > limit:
         return _upload_error(request, f"The file is larger than {csvio.MAX_BYTES // 1024} KiB.")
     try:
         form: FormData = await request.form(max_part_size=_FORM_PART_LIMIT)

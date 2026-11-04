@@ -278,6 +278,8 @@ Email Address Checker; directory lookups only.
   A failure is a `GraphError` as above; its `reason` is the kind, then the
   status and Graph's `error.code` when it is a plain identifier, never
   Graph's message. `graph.request_failed` carries it.
+- **Redirects are not followed**, so the bearer token is never re-sent to
+  another host; a `3xx` is answered as `bad_response`.
 - **A failure is never an empty answer.** It is a `GraphError` whose
   `kind` is `no_token`, `unauthorized` (`401`), `forbidden` (`403`),
   `throttled` (`429`), `server` (`5xx`), `network` or `bad_response` (any
@@ -294,7 +296,8 @@ Email Address Checker; directory lookups only.
   no retry. It is never real data.
 - **No dependency.** Requests go through the standard library;
   `GraphDirectory` takes the transport as a parameter, so the tests never
-  touch the network.
+  touch the network; one test drives the real transport against a
+  loopback server, to prove it does not follow a redirect.
 - **Looking addresses up.** `look_up_all(directory, keys, *, budget,
   workers=4)` looks each distinct key up once, `workers` at a time, within
   `budget` seconds, and `classify` turns what the directory returned into

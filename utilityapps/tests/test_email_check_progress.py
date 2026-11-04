@@ -129,6 +129,9 @@ def test_lookup_takes_json_only(client: TestClient, directory: Recording) -> Non
     assert big.status_code == 413
     bad = client.post(LOOKUP, content=b"{", headers={"content-type": "application/json"})
     assert bad.status_code == 400
+    absurd = client.build_request("POST", LOOKUP, content=b"{}", headers={"content-type": "application/json"})
+    absurd.headers["content-length"] = "9" * 5000  # too long for `int` (findings L3)
+    assert client.send(absurd).status_code == 413
     assert directory.asked == []
 
 

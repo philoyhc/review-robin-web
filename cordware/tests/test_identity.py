@@ -88,6 +88,14 @@ def test_principal_name_without_at_is_treated_as_name() -> None:
     assert user.provider == "aad"
 
 
+def test_a_whitespace_only_principal_name_alone_is_present_but_names_no_one() -> None:
+    """The header still counts as present, as the spec says; it gives an
+    identity with nothing usable, which the application refuses."""
+    user = resolve_identity(_request({"X-MS-CLIENT-PRINCIPAL-NAME": "   "}), _settings())
+
+    assert user is not None and user.name is None and user.email is None
+
+
 def test_a_whitespace_only_principal_name_is_no_name() -> None:
     """As for the id and email (P1, P3; findings L6)."""
     request = _request(

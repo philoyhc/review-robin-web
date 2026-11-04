@@ -140,3 +140,14 @@ def test_the_check_posts_the_carried_file_to_the_check(client: TestClient) -> No
 def test_the_check_is_disabled_until_a_column_is_chosen(client: TestClient) -> None:
     text = _upload(client, b"Name,Work\r\nA,a@x.edu\r\n").text
     assert re.search(r'formaction="/utilities/email-check/check" disabled>Check addresses', text)
+
+
+def test_an_upload_claiming_an_absurd_size_is_refused_as_too_large(client: TestClient) -> None:
+    """A `Content-Length` too long for `int` is over the limit, not a 500
+    (findings L3)."""
+    request = client.build_request(
+        "POST", URL, content=b"x", headers={"content-type": "multipart/form-data; boundary=b"}
+    )
+    request.headers["content-length"] = "9" * 5000
+    page = client.send(request)
+    assert page.status_code == 400 and "larger than" in page.text

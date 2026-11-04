@@ -183,10 +183,6 @@ def _claim(
 def _identity_from_easy_auth_headers(request: Request) -> Identity | None:
     headers = request.headers
     simple_name = headers.get("X-MS-CLIENT-PRINCIPAL-NAME")
-    # A whitespace-only name is no name, as for the id and email (P1, P3;
-    # findings L6).
-    if simple_name is not None and not simple_name.strip():
-        simple_name = None
     simple_id = headers.get("X-MS-CLIENT-PRINCIPAL-ID")
     simple_idp = headers.get("X-MS-CLIENT-PRINCIPAL-IDP")
     rich = headers.get("X-MS-CLIENT-PRINCIPAL")
@@ -266,7 +262,9 @@ def _identity_from_easy_auth_headers(request: Request) -> Identity | None:
                 None,
             )
 
-    if simple_name and not email:
+    # A whitespace-only name names no one, as a blank id and email do
+    # (P1, P3; findings L6). The header still counts as present.
+    if simple_name and simple_name.strip() and not email:
         if "@" in simple_name:
             email = simple_name
         else:
