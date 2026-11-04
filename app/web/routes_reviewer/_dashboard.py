@@ -14,6 +14,7 @@ Carved out of the single-file ``routes_reviewer.py`` in Segment
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import TypedDict
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
@@ -31,6 +32,13 @@ from app.web.deps import get_or_create_user
 from app.web.routes_reviewer._shared import _templates
 
 router = APIRouter(prefix="/me")
+
+
+class _RoleLink(TypedDict):
+    """One role's entry in a dashboard row's ``role_links``."""
+
+    target: str
+    enabled: bool
 
 
 def _to_utc(value: datetime) -> datetime:
@@ -152,7 +160,7 @@ def reviewer_dashboard(
         reverse=True,
     )
 
-    items = []
+    items: list[dict[str, object]] = []
     for review_session in ordered:
         roles = roles_by_session[review_session.id]
         reviewer = reviewer_by_session.get(review_session.id)
@@ -181,7 +189,7 @@ def reviewer_dashboard(
         # read-only views, so a multi-role user lands on the
         # actionable page by default. Pills give the explicit
         # escape hatch to the other surfaces.
-        role_links: dict[str, dict[str, object]] = {}
+        role_links: dict[str, _RoleLink] = {}
         if reviewer is not None:
             role_links["reviewer"] = {
                 "target": (
@@ -233,7 +241,7 @@ def reviewer_dashboard(
         for priority_role in ("reviewer", "reviewee", "observer"):
             candidate = role_links.get(priority_role)
             if candidate and candidate["enabled"]:
-                link_target = candidate["target"]  # type: ignore[assignment]
+                link_target = candidate["target"]
                 link_enabled = True
                 break
 
