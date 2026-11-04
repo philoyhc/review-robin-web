@@ -174,3 +174,78 @@ def test_the_clock_sends_nothing(db: Session) -> None:
     db.commit()
     _clock.run_pass(_factory(db), now=NOW)
     assert _events(db, rs, "session.scheduled_invites_fired") == []
+
+
+# --- rung 2: the loop, started by RRW's lifespan ---
+
+
+def test_a_set_stop_ends_the_pass_before_any_session(db: Session) -> None:
+    import threading
+
+    rs = _make_validated_session(db, "clock-stop")
+    rs.scheduled_activate_at = NOW - timedelta(minutes=1)
+    db.commit()
+    stop = threading.Event()
+    stop.set()
+    assert _clock.run_pass(_factory(db), now=NOW, stop=stop) == 0
+    db.refresh(rs)
+    assert not lifecycle.is_ready(rs)
+
+
+def test_the_lifespan_starts_the_loop_and_stops_it(monkeypatch: pytest.MonkeyPatch) -> None:
+    import time
+
+    from fastapi.testclient import TestClient
+
+    from app.config import settings
+    from app.main import create_app
+
+    calls: list[object] = []
+
+    def fake_pass(factory, *, now=None, stop=None):
+        calls.append(stop)
+        return 0
+
+    monkeypatch.setattr(settings, "scheduler_interval_seconds", 0.05)
+    monkeypatch.setattr(_clock, "run_pass", fake_pass)
+    with TestClient(create_app()):
+        deadline = time.monotonic() + 5
+        while not calls and time.monotonic() < deadline:
+            time.sleep(0.02)
+    assert calls, "the loop never ran a pass"
+    assert calls[0].is_set()  # stopped on shutdown
+
+
+def test_off_the_lifespan_starts_no_loop(monkeypatch: pytest.MonkeyPatch) -> None:
+    import time
+
+    from fastapi.testclient import TestClient
+
+    from app.config import settings
+    from app.main import create_app
+
+    calls: list[object] = []
+    monkeypatch.setattr(settings, "scheduler_interval_seconds", 0)
+    monkeypatch.setattr(_clock, "run_pass", lambda *a, **k: calls.append(1))
+    with TestClient(create_app()):
+        time.sleep(0.1)
+    assert calls == []
+
+
+def test_a_failing_pass_does_not_stop_the_loop(monkeypatch: pytest.MonkeyPatch) -> None:
+    import asyncio
+    import threading
+
+    stop = threading.Event()
+    calls: list[int] = []
+
+    def flaky(factory, *, now=None, stop=None):
+        calls.append(1)
+        if len(calls) == 1:
+            raise RuntimeError("boom")
+        stop.set()
+        return 0
+
+    monkeypatch.setattr(_clock, "run_pass", flaky)
+    asyncio.run(_clock.run_forever(lambda: None, interval=0.01, stop=stop))
+    assert len(calls) == 2

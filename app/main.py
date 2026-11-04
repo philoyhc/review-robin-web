@@ -1,4 +1,9 @@
+import asyncio
+import logging
 import pathlib
+import threading
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager, suppress
 
 from fastapi import Depends, FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -7,6 +12,8 @@ from starlette.responses import RedirectResponse, Response
 
 from app.config import settings, validate_critical_settings
 from app.db.models import User
+from app.db.session import get_sessionmaker
+from app.services.scheduled_events import _clock
 from app.web import urls
 from app.web.deps import OperatorAllowlistDenied, get_or_create_user
 from app.web.error_handlers import register_error_handlers
@@ -53,6 +60,37 @@ class _RevalidatingStaticFiles(StaticFiles):
         return response
 
 
+_log = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    """RRW's lifespan, entered by the Cordware host (which runs each
+    mounted application's): starts the in-app clock (segment 14E) when
+    `SCHEDULER_INTERVAL_SECONDS` is above 0, and stops it on shutdown,
+    letting a pass in flight finish the session in hand."""
+    interval = settings.scheduler_interval_seconds
+    if interval <= 0:
+        yield
+        return
+    stop = threading.Event()
+    task = asyncio.create_task(
+        _clock.run_forever(get_sessionmaker(), interval=interval, stop=stop)
+    )
+    _log.info(
+        "scheduled clock started",
+        extra={"event": "scheduled_clock.started", "interval_seconds": interval},
+    )
+    try:
+        yield
+    finally:
+        stop.set()
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+        _log.info("scheduled clock stopped", extra={"event": "scheduled_clock.stopped"})
+
+
 def create_app() -> FastAPI:
     # The root logger is the host's (`cordware.logging`): RRW logs under
     # its named `app.*` loggers only.
@@ -64,6 +102,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="Review Robin Web",
         dependencies=[Depends(refuse_oversized_ids)],
+        lifespan=lifespan,
     )
     # The app's first and only static mount. Everything visual has so far
     # been inline CSS in `base.html` with no image anywhere in the repo,
