@@ -5,7 +5,7 @@ RA Leave's RA layout: the slim top bar, page tabs under it, no bottom bar
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote, urlencode
@@ -30,7 +30,7 @@ def _grant_tabs(v: sample.Viewer) -> list[tuple[str, str]]:
     Students and Plans; Overview for senior staff and Other Staff view;
     Consultation check. No Safety flags tab: flags list on Home and
     Overview."""
-    tabs = []
+    tabs: list[tuple[str, str]] = []
     if sample.holds(v, sample.FRONTLINE):
         tabs += [("Log", "/log"), ("Students", "/students/"), ("Plans", "/plans/")]
     if sample.holds(v, sample.SENIOR, *sample.VIEW):
@@ -70,7 +70,7 @@ def flags_tab(v: sample.Viewer) -> str | None:
     return "/" if sample.holds(v, sample.FRONTLINE) or home_flags(v) else "/overview/"
 
 
-def tabs_for(v: sample.Viewer) -> tuple[dict[str, str], ...]:
+def tabs_for(v: sample.Viewer) -> tuple[dict[str, str | int], ...]:
     """The main area's tabs, the flags' tab carrying the count of
     unacknowledged flags (UI spec screen 9)."""
     tabs = ([("Home", "/")] if home_is_a_page(v) else []) + _grant_tabs(v)
@@ -101,7 +101,7 @@ def areas_for(v: sample.Viewer) -> tuple[dict[str, str], ...]:
     """The switcher: Support Logs for anyone with a grant beyond
     administration, Sys admin for sys admins and the super-admin."""
     q = sample.as_query(v)
-    areas = []
+    areas: list[dict[str, str]] = []
     if reaches_main(v):
         areas.append({"label": MAIN, "path": "/" + q})
     if sample.holds(v, *sample.ADMINISTRATION):
@@ -129,12 +129,16 @@ def render(
     *,
     me: sample.Viewer,
     area: str,
-    tabs: Sequence[dict[str, str]] = (),
+    tabs: Sequence[Mapping[str, str | int]] = (),
     areas: Sequence[dict[str, str]] | None = None,
     status_code: int = 200,
     **context: Any,
 ) -> Response:
     identity = current_identity(request)
+
+    def qs(**params: str) -> str:
+        return query(me, **params)
+
     return TEMPLATES.TemplateResponse(
         request,
         template,
@@ -151,7 +155,7 @@ def render(
             "initials": initials(identity.display_label) if identity else "?",
             "me": me,
             "as_query": sample.as_query(me),
-            "qs": lambda **params: query(me, **params),
+            "qs": qs,
             "sample": sample,
             # The viewer switch goes to each person's Home, which sends them
             # where they belong.

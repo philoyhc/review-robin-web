@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Iterable, Mapping
 from functools import lru_cache
 from pathlib import Path
 
@@ -151,7 +152,7 @@ def placeholders_previewers_only(request: Request) -> None:
 ACCOUNT_AREAS = frozenset({"Sys admin"})
 
 
-def split_areas(areas):
+def split_areas[A: Mapping[str, object]](areas: Iterable[A]) -> tuple[tuple[A, ...], tuple[A, ...]]:
     """The switcher's places and the account menu's entries, from one list
     of areas (`docs/header_chrome.md` §3, §4)."""
     places = tuple(a for a in areas if a["label"] not in ACCOUNT_AREAS)

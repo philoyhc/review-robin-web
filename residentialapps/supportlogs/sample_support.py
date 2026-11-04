@@ -12,8 +12,10 @@ invented and bland: nothing here may read as a real case."""
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
+from typing import TypedDict
 from urllib.parse import quote
 
 UNIT_NAME = "Example College"
@@ -274,15 +276,22 @@ def working_set(staff: str) -> list[tuple[Student, list[str], date | None]]:
     recently seen first; each with why it is theirs and when last seen."""
     ids = [p.student for p in plans_of(staff)]
     ids += [e.student for e in encounters_by(staff) if e.student not in ids]
-    found = []
+    found: list[tuple[Student, list[str], date | None]] = []
     for sid in ids:
         reasons = [f"Plan · {p.source}" if p.formal else "Following" for p in plans_of(staff, sid)]
         seen = encounters_by(staff, sid)
-        found.append((student(sid), reasons, seen[0].when.date() if seen else None))
+        found.append((_named(sid), reasons, seen[0].when.date() if seen else None))
     return found
 
 
-def recent_window(staff: str, days: int = 14) -> dict:
+class RecentWindow(TypedDict):
+    encounters: int
+    minutes: int
+    students: int
+    by_type: list[tuple[str, int]]
+
+
+def recent_window(staff: str, days: int = 14) -> RecentWindow:
     """My last 14 days (§10.1): encounters, minutes, students and a count
     by encounter type."""
     since = TODAY - timedelta(days=days - 1)
@@ -410,7 +419,7 @@ STAFF_EMAILS = {"Daniel Koh": "daniel.koh@example.edu", "Priya Raman": "priya.ra
 
 # Each plan's history (§8): how it began and what changed, so a converted
 # follow-up keeps one record rather than a disconnected duplicate.
-PLAN_HISTORY = {
+PLAN_HISTORY: dict[str, tuple[tuple[date, str], ...]] = {
     "P-01": ((date(2026, 9, 21), "Sam Lee assigned it: Counselling, weekly, with safety-plan support"),),
     "P-02": ((date(2026, 9, 28), "Daniel Koh began following up, no fixed cadence"),
              (date(2026, 10, 5), "Sam Lee converted it to a formal assignment: Dean's Office, fortnightly, review 7 Dec")),
@@ -513,10 +522,20 @@ def in_period(e: Encounter, days: int = PERIOD_DAYS, offset: int = 0) -> bool:
     return end - timedelta(days=days - 1) <= e.when.date() <= end
 
 
-def workload() -> list[dict]:
+class WorkloadRow(TypedDict):
+    staff: str
+    formal: int
+    informal: int
+    students: int
+    encounters: int
+    minutes: int
+    load: int
+
+
+def workload() -> list[WorkloadRow]:
     """Team workload (§10.2–10.3) over the last 30 days, every frontline
     colleague, heaviest load first."""
-    rows = []
+    rows: list[WorkloadRow] = []
     for staff in FRONTLINE_COLLEAGUES:
         plans = plans_of(staff)
         recent = [e for e in encounters_by(staff) if in_period(e)]
@@ -532,7 +551,15 @@ def workload() -> list[dict]:
     return sorted(rows, key=lambda r: (-r["load"], -r["encounters"], r["staff"]))
 
 
-def totals() -> dict:
+class Totals(TypedDict):
+    formal: int
+    informal: int
+    students: int
+    encounters: int
+    minutes: int
+
+
+def totals() -> Totals:
     recent = [e for e in ENCOUNTERS if in_period(e)]
     active = [p for p in PLANS if p.status == "Active"]
     return {
@@ -544,12 +571,23 @@ def totals() -> dict:
     }
 
 
-def hotspots() -> list[dict]:
+class Hotspot(TypedDict):
+    student: Student
+    contacts: int
+    before: int
+    minutes: int
+    staff: int
+    formal: bool
+    flags: int
+    rising: bool
+
+
+def hotspots() -> list[Hotspot]:
     """Students by recent support (§10.4): contacts and minutes over the last
     14 days against the 14 before, staff involved, a formal plan, active
     flags. Rising is a sharp increase on the student's own baseline, not a
     high but stable one. Never a score (§15)."""
-    rows = []
+    rows: list[Hotspot] = []
     for s in STUDENTS:
         mine = [e for e in ENCOUNTERS if e.student == s.id]
         now = [e for e in mine if in_period(e, 14)]
@@ -570,7 +608,13 @@ def hotspots() -> list[dict]:
     return sorted(rows, key=lambda r: (-r["flags"], not r["rising"], -r["contacts"], r["student"].name))
 
 
-def coverage() -> dict:
+class Coverage(TypedDict):
+    overdue: list[Plan]
+    soon: list[Plan]
+    review: list[Plan]
+
+
+def coverage() -> Coverage:
     """Coverage (§10.6): formal check-ins overdue and due soon, and
     assignments whose review is within three weeks or already past."""
     formal = [p for p in PLANS if p.formal and p.status == "Active"]
@@ -680,7 +724,8 @@ def emails_in(text: str) -> tuple[list[str], list[str]]:
     `mailto:`. An entry with no address is never quietly dropped: a check
     that cannot read an entry must not show it as No consultation indicated
     (§10.7)."""
-    emails, unread = [], []
+    emails: list[str] = []
+    unread: list[str] = []
     for entry in re.split(r"[,;\n]", text):
         entry = entry.strip()
         if not entry:
@@ -808,11 +853,18 @@ def holders(grant: str) -> list[str]:
     return [name for name, _ in STAFF_ROSTER if grant in grants_of(name)]
 
 
-def senior_reads(days: int = PERIOD_DAYS) -> list[dict]:
+class SeniorReads(TypedDict):
+    staff: str
+    reads: int
+    downloads: int
+    last: datetime | None
+
+
+def senior_reads(days: int = PERIOD_DAYS) -> list[SeniorReads]:
     """Each senior's identifiable reads in the period: counts and the
     latest, never which student (author, 2026-10-30)."""
     since = TODAY - timedelta(days=days - 1)  # as `in_period`
-    rows = []
+    rows: list[SeniorReads] = []
     for name in holders(SENIOR):
         reads = [a for a in AUDIT if a.actor == name and a.at.date() >= since and a.action in SENIOR_READS]
         rows.append({"staff": name, "reads": len(reads),
@@ -875,7 +927,7 @@ PLAN_TEMPLATE_COLUMNS = ("Student email", "Student", "Cadence", "Since")
 def encounter_rows(staff: str, t: Term | None, sid: str | None = None) -> list[list[str]]:
     """The staff member's own encounters in a term (all terms when none),
     oldest first, never a colleague's shared records or a safety flag."""
-    rows = []
+    rows: list[list[str]] = []
     for e in sorted(encounters_by(staff), key=lambda e: e.when):
         if (t and not t.start <= e.when.date() <= t.end) or (sid and e.student != sid):
             continue
@@ -890,7 +942,7 @@ def plan_rows(staff: str, t: Term | None, sid: str | None = None) -> list[list[s
     before the term's end (all terms when none). The sample's plans carry no
     closing date, so a plan closed before a term still counts in it; wired,
     a plan counts when its open span overlaps the term."""
-    rows = []
+    rows: list[list[str]] = []
     for p in sorted((p for p in PLANS if p.staff == staff), key=lambda p: p.start):
         if (t and p.start > t.end) or (sid and p.student != sid):
             continue
@@ -938,10 +990,10 @@ def term_of(d: date) -> Term | None:
 # them by staff, student and term, and deletes purged records, every action
 # audited. A download names the staff member in its own column.
 
-RECORD_KINDS = {"encounters": ("Encounters", ENCOUNTER_COLUMNS), "plans": ("Plans", PLAN_COLUMNS)}
+RECORD_KINDS: dict[str, tuple[str, tuple[str, ...]]] = {"encounters": ("Encounters", ENCOUNTER_COLUMNS), "plans": ("Plans", PLAN_COLUMNS)}
 # What a senior upload takes after its Staff column: a plan may be a formal
 # assignment (§7), and a new one is always Active, so no Status.
-STAFF_TEMPLATE_COLUMNS = {"encounters": ENCOUNTER_COLUMNS,
+STAFF_TEMPLATE_COLUMNS: dict[str, tuple[str, ...]] = {"encounters": ENCOUNTER_COLUMNS,
                           "plans": tuple(c for c in PLAN_COLUMNS if c != "Status")}
 
 
@@ -951,7 +1003,7 @@ def staff_rows(what: str, staff: str | None, t: Term | None,
     named) in a term or all terms, each row led by its staff member."""
     columns = ("Staff", *RECORD_KINDS[what][1])
     rows_of = encounter_rows if what == "encounters" else plan_rows
-    rows = []
+    rows: list[list[str]] = []
     for name in FRONTLINE_COLLEAGUES:
         if staff and name != staff:
             continue
@@ -979,6 +1031,6 @@ def staff_choices() -> list[tuple[str, str, str]]:
     return [(n, n, STAFF_EMAILS[n]) for n in FRONTLINE_COLLEAGUES]
 
 
-def student_choices(students=None) -> list[tuple[str, str, str]]:
+def student_choices(students: Iterable[Student] | None = None) -> list[tuple[str, str, str]]:
     """(id, name, email) per student, for a student filter."""
     return [(s.id, s.name, s.email) for s in (STUDENTS if students is None else students)]

@@ -7,6 +7,8 @@ item 3."""
 
 from __future__ import annotations
 
+from typing import TypedDict
+
 from fastapi import APIRouter, Depends, HTTPException
 from starlette.requests import Request
 from starlette.responses import RedirectResponse, Response
@@ -19,7 +21,13 @@ from residentialapps.web.urls import url_path
 router = APIRouter(dependencies=[Depends(placeholders_previewers_only)])
 
 
-def _context(request: Request) -> dict:
+class _Encounter(TypedDict):
+    chosen: sample.Student | None
+    duration: str | None
+    kind: str | None
+
+
+def _context(request: Request) -> _Encounter:
     """The encounter context carried from Log encounter: whichever of the
     student, duration and type were chosen, valid ones only."""
     q = request.query_params

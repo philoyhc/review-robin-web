@@ -32,7 +32,7 @@ def choices(viewer: str) -> list[dict[str, str]]:
     is_staff = any(name == viewer for name, _ in sample_leave.STAFF_VIEWERS) and bool(sample_leave.scope(viewer))
     is_sys_admin = any(name == viewer for name, *_ in sample_data.SYS_ADMINS)
     staff_query = "" if viewer == sample_leave.STAFF_VIEWERS[0][0] else f"?as={quote(viewer)}"
-    found = []
+    found: list[dict[str, str]] = []
     if is_ra:
         ra_query = "" if viewer == sample_leave.VIEWER else f"?as={quote(viewer)}"
         found.append({"label": "RA Leave", "path": "/ra-leave/" + ra_query, "what": "Your balance, apply for leave, cover asked of you"})

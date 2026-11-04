@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import csv
 import io
+from collections.abc import Callable
 
 from fastapi import APIRouter, Depends
 from starlette.requests import Request
@@ -28,11 +29,11 @@ router = APIRouter(dependencies=[Depends(placeholders_previewers_only)])
 
 UNKNOWN = "?"  # a staff name or student id that is no one's: never widened to all
 
-KINDS = {
+KINDS: dict[str, tuple[str, tuple[str, ...], Callable[[str, sample.Term | None, str | None], list[list[str]]]]] = {
     "students": ("encounters", sample.ENCOUNTER_COLUMNS, sample.encounter_rows),
     "plans": ("plans", sample.PLAN_COLUMNS, sample.plan_rows),
 }
-TEMPLATES = {"students": sample.ENCOUNTER_COLUMNS, "plans": sample.PLAN_TEMPLATE_COLUMNS}
+TEMPLATES: dict[str, tuple[str, ...]] = {"students": sample.ENCOUNTER_COLUMNS, "plans": sample.PLAN_TEMPLATE_COLUMNS}
 
 
 def _cell(value: str) -> str:

@@ -21,9 +21,11 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from pathlib import Path
+from typing import Protocol
 
 from fastapi.templating import Jinja2Templates
 from jinja2 import pass_context
+from jinja2.runtime import Context
 from starlette.requests import HTTPConnection
 
 WEB_TEMPLATES = Path(__file__).resolve().parent / "templates"
@@ -63,15 +65,25 @@ def templates(directories: Sequence[Path]) -> Jinja2Templates:
     env = Jinja2Templates(directory=[*directories, WEB_TEMPLATES])
 
     @pass_context
-    def url(context, path: str | None) -> str:
+    def url(context: Context, path: str | None) -> str:
         return url_path(context["request"], path)
 
     @pass_context
-    def is_here(context, path: str) -> bool:
+    def is_here(context: Context, path: str) -> bool:
         return app_path(context["request"]) == path
 
     def host_url(path: str) -> str:
         return path
 
-    env.env.globals.update(url=url, is_here=is_here, host_url=host_url)
+    _add_globals(env.env, url=url, is_here=is_here, host_url=host_url)
     return env
+
+
+class _HasGlobals(Protocol):
+    globals: dict[str, object]
+
+
+def _add_globals(env: _HasGlobals, **values: object) -> None:
+    """Jinja infers `Environment.globals` from a literal, partly untyped:
+    it is reached through this, typed once (as in `utilityapps/web.py`)."""
+    env.globals.update(values)

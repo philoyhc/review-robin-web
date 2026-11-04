@@ -96,6 +96,20 @@ Taken 2026-11-04 at `9b45a9c1`, pyright 1.1.414, `typeCheckingMode =
   the unused `Directory` re-export is gone (nothing read it). Two
   `isinstance(…, str)` guards precede `in` tests that only a string could
   pass. No behavior change, no ignores.
+- **Rung 4:** `residentialapps` strict, its table gone (236 fixed, 153
+  of them in the two sample modules). The samples' row dicts become
+  `TypedDict`s (entitlement rows, Precinct counts, workload, hotspots and
+  the rest), and `POLICY` is read through a `Policy` TypedDict: one `cast`
+  over the `_Policy` dict, which keeps the appeals preview and gains a
+  `stored()` read for `policy_appeals`. Untyped parameters and empty
+  lists take annotations; `split_areas` is generic over its rows; a
+  lambda becomes a named function; `Route(**__dict__)` becomes
+  `dataclasses.replace`. Jinja's `Environment.globals` goes through a
+  `Protocol`-typed helper, as in rung 3, so no ignore. `working_set` names its students through
+  `_named` (asserts the sample holds the student) rather than
+  `student()`, which every sample record already satisfies: on a broken
+  sample it now fails at the lookup instead of carrying `None` into a list
+  typed `list[Student]`.
 
 ## PR ladder
 
