@@ -205,7 +205,7 @@ def test_the_chip_strip_describes_the_row_the_gate_opens(
     db.add(Observer(session_id=session.id, email="e0123456@example.edu", directory_object_id=JANE_OID))
     db.commit()
     user = User(email="jane.tan@example.edu")
-    user.signed_in_principal_id = JANE_OID  # type: ignore[attr-defined]
+    monkeypatch.setattr(user, "signed_in_principal_id", JANE_OID, raising=False)
 
     shown: list[int] = []
     real = responses_service.session_pill_for_reviewer

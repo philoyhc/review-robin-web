@@ -8,18 +8,20 @@ sign in. Local development is exempt.
 """
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
 from app.config import ConfigurationError, Settings, validate_critical_settings
 
 
-def _settings(**overrides: object) -> Settings:
-    base: dict[str, object] = {
+def _settings(**overrides: Any) -> Settings:
+    base: dict[str, Any] = {
         "operator_emails": [],
         "sys_admin_emails": [],
     }
     base.update(overrides)
-    return Settings(**base)  # type: ignore[arg-type]
+    return Settings(**base)
 
 
 def test_local_env_skips_the_check() -> None:

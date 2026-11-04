@@ -19,12 +19,15 @@ from __future__ import annotations
 import contextlib
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import cast
 
+from app.db.models import Relationship
 from app.schemas.rules import (
     Combinator,
     FilterRule,
     MatchRule,
     Predicate,
+    Rule,
     RuleSetSchema,
 )
 from app.services.rules import engine
@@ -70,22 +73,46 @@ class _Relationship:
     status: str = "active"
 
 
-def _ruleset(*rules: object, combinator: Combinator = Combinator.ALL_OF) -> RuleSetSchema:
+def _relationship(
+    *,
+    reviewer_id: int,
+    reviewee_id: int,
+    tag_1: str | None = None,
+    tag_2: str | None = None,
+    tag_3: str | None = None,
+    status: str = "active",
+) -> Relationship:
+    """A ``_Relationship`` stand-in, typed as the model the engine's
+    lookup holds."""
+    return cast(
+        Relationship,
+        _Relationship(
+            reviewer_id=reviewer_id,
+            reviewee_id=reviewee_id,
+            tag_1=tag_1,
+            tag_2=tag_2,
+            tag_3=tag_3,
+            status=status,
+        ),
+    )
+
+
+def _ruleset(*rules: Rule, combinator: Combinator = Combinator.ALL_OF) -> RuleSetSchema:
     return RuleSetSchema(
         name="t",
         description="",
         combinator=combinator,
-        rules=list(rules),  # type: ignore[arg-type]
+        rules=list(rules),
     )
 
 
 def test_get_field_value_reads_active_relationship_tag() -> None:
     reviewer = _Reviewer(id=1, email="a@example.edu")
     reviewee = _Reviewee(id=10, email_or_identifier="b@example.edu")
-    rel = _Relationship(
+    rel = _relationship(
         reviewer_id=1, reviewee_id=10, tag_1="Mentor", status="active"
     )
-    token = set_pair_context_lookup({(1, 10): rel})  # type: ignore[arg-type]
+    token = set_pair_context_lookup({(1, 10): rel})
     try:
         value = get_field_value(
             "pair_context.tag1", reviewer=reviewer, reviewee=reviewee
@@ -101,10 +128,10 @@ def test_get_field_value_returns_none_for_inactive_relationship() -> None:
 
     reviewer = _Reviewer(id=1, email="a@example.edu")
     reviewee = _Reviewee(id=10, email_or_identifier="b@example.edu")
-    rel = _Relationship(
+    rel = _relationship(
         reviewer_id=1, reviewee_id=10, tag_1="Mentor", status="inactive"
     )
-    token = set_pair_context_lookup({(1, 10): rel})  # type: ignore[arg-type]
+    token = set_pair_context_lookup({(1, 10): rel})
     try:
         value = get_field_value(
             "pair_context.tag1", reviewer=reviewer, reviewee=reviewee
@@ -129,7 +156,7 @@ def test_get_field_value_returns_none_when_no_lookup_bound() -> None:
 def test_get_field_value_returns_none_when_pair_missing_from_lookup() -> None:
     reviewer = _Reviewer(id=1, email="a@example.edu")
     reviewee = _Reviewee(id=10, email_or_identifier="b@example.edu")
-    token = set_pair_context_lookup({})  # type: ignore[arg-type]
+    token = set_pair_context_lookup({})
     try:
         value = get_field_value(
             "pair_context.tag1", reviewer=reviewer, reviewee=reviewee
@@ -149,8 +176,8 @@ def test_evaluate_with_pair_context_match_rule() -> None:
     dan = _Reviewee(id=11, email_or_identifier="dan@example.edu")
 
     lookup = {
-        (1, 10): _Relationship(reviewer_id=1, reviewee_id=10, tag_1="Mentor"),
-        (2, 11): _Relationship(reviewer_id=2, reviewee_id=11, tag_1="COI"),
+        (1, 10): _relationship(reviewer_id=1, reviewee_id=10, tag_1="Mentor"),
+        (2, 11): _relationship(reviewer_id=2, reviewee_id=11, tag_1="COI"),
         # (1, 11) and (2, 10) have no relationship rows.
     }
 
@@ -169,7 +196,7 @@ def test_evaluate_with_pair_context_match_rule() -> None:
         reviewers=[alice, bob],
         reviewees=[carol, dan],
         override_exclude_self_reviews=False,
-        pair_context_lookup=lookup,  # type: ignore[arg-type]
+        pair_context_lookup=lookup,
     )
     assert {(r.id, e.id) for r, e in _typed(result.pairs)} == {(1, 10)}
 
@@ -184,7 +211,7 @@ def test_evaluate_with_pair_context_filter_rule() -> None:
     dan = _Reviewee(id=11, email_or_identifier="dan@example.edu")
 
     lookup = {
-        (1, 10): _Relationship(reviewer_id=1, reviewee_id=10, tag_1="COI"),
+        (1, 10): _relationship(reviewer_id=1, reviewee_id=10, tag_1="COI"),
     }
 
     rs = _ruleset(
@@ -202,7 +229,7 @@ def test_evaluate_with_pair_context_filter_rule() -> None:
         reviewers=[alice, bob],
         reviewees=[carol, dan],
         override_exclude_self_reviews=False,
-        pair_context_lookup=lookup,  # type: ignore[arg-type]
+        pair_context_lookup=lookup,
     )
     pair_ids = {(r.id, e.id) for r, e in _typed(result.pairs)}
     assert (1, 10) not in pair_ids
@@ -220,7 +247,7 @@ def test_evaluate_inactive_row_invisible_but_pair_remains() -> None:
     )
 
     lookup = {
-        (1, 10): _Relationship(
+        (1, 10): _relationship(
             reviewer_id=1, reviewee_id=10, tag_1="Mentor", status="inactive"
         ),
     }
@@ -242,7 +269,7 @@ def test_evaluate_inactive_row_invisible_but_pair_remains() -> None:
         reviewers=[alice],
         reviewees=[carol],
         override_exclude_self_reviews=False,
-        pair_context_lookup=lookup,  # type: ignore[arg-type]
+        pair_context_lookup=lookup,
     )
     assert result.pairs == []
 
@@ -263,7 +290,7 @@ def test_evaluate_inactive_row_invisible_but_pair_remains() -> None:
         reviewers=[alice],
         reviewees=[carol],
         override_exclude_self_reviews=False,
-        pair_context_lookup=lookup,  # type: ignore[arg-type]
+        pair_context_lookup=lookup,
     )
     assert {(r.id, e.id) for r, e in _typed(result.pairs)} == {(1, 10)}
 
@@ -275,7 +302,7 @@ def test_evaluate_resets_context_var_after_run() -> None:
     alice = _Reviewer(id=1, email="alice@example.edu")
     carol = _Reviewee(id=10, email_or_identifier="carol@example.edu")
     lookup = {
-        (1, 10): _Relationship(reviewer_id=1, reviewee_id=10, tag_1="Mentor"),
+        (1, 10): _relationship(reviewer_id=1, reviewee_id=10, tag_1="Mentor"),
     }
     rs = _ruleset()
     engine.evaluate(
@@ -283,7 +310,7 @@ def test_evaluate_resets_context_var_after_run() -> None:
         reviewers=[alice],
         reviewees=[carol],
         override_exclude_self_reviews=False,
-        pair_context_lookup=lookup,  # type: ignore[arg-type]
+        pair_context_lookup=lookup,
     )
     # Outside the evaluate() call, no lookup is bound.
     value = get_field_value(
@@ -299,7 +326,7 @@ def test_evaluate_resets_context_var_on_exception() -> None:
     alice = _Reviewer(id=1, email="alice@example.edu")
     carol = _Reviewee(id=10, email_or_identifier="carol@example.edu")
     lookup = {
-        (1, 10): _Relationship(reviewer_id=1, reviewee_id=10, tag_1="Mentor"),
+        (1, 10): _relationship(reviewer_id=1, reviewee_id=10, tag_1="Mentor"),
     }
 
     class _BoomRuleSet:
@@ -312,10 +339,10 @@ def test_evaluate_resets_context_var_on_exception() -> None:
 
     with contextlib.suppress(RuntimeError):
         engine.evaluate(
-            _BoomRuleSet(),  # type: ignore[arg-type]
+            _BoomRuleSet(),  # pyright: ignore[reportArgumentType]  -- a rule set that raises inside evaluate()
             reviewers=[alice],
             reviewees=[carol],
-            pair_context_lookup=lookup,  # type: ignore[arg-type]
+            pair_context_lookup=lookup,
         )
 
     # ContextVar reset cleanly despite the exception.
@@ -335,8 +362,8 @@ def test_same_as_across_pair_context_and_reviewer() -> None:
     carol = _Reviewee(id=10, email_or_identifier="carol@example.edu")
 
     lookup = {
-        (1, 10): _Relationship(reviewer_id=1, reviewee_id=10, tag_1="A"),
-        (2, 10): _Relationship(reviewer_id=2, reviewee_id=10, tag_1="B"),
+        (1, 10): _relationship(reviewer_id=1, reviewee_id=10, tag_1="A"),
+        (2, 10): _relationship(reviewer_id=2, reviewee_id=10, tag_1="B"),
     }
 
     rs = _ruleset(
@@ -354,6 +381,6 @@ def test_same_as_across_pair_context_and_reviewer() -> None:
         reviewers=[alice, bob],
         reviewees=[carol],
         override_exclude_self_reviews=False,
-        pair_context_lookup=lookup,  # type: ignore[arg-type]
+        pair_context_lookup=lookup,
     )
     assert {(r.id, e.id) for r, e in _typed(result.pairs)} == {(1, 10)}

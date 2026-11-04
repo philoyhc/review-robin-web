@@ -56,7 +56,7 @@ def test_transport_for_returns_smtp_backend() -> None:
 
 def test_transport_for_unknown_value_raises() -> None:
     bad = EmailSettings(
-        transport="rot13",  # type: ignore[arg-type]
+        transport="rot13",  # pyright: ignore[reportArgumentType]  -- an unknown transport, to prove refusal
         host="x",
         port=1,
         username="x",
@@ -70,7 +70,7 @@ def test_transport_for_unknown_value_raises() -> None:
 
 def test_smtp_backend_rejects_non_smtp_settings() -> None:
     bad = EmailSettings(
-        transport="graph",  # type: ignore[arg-type]
+        transport="graph",  # pyright: ignore[reportArgumentType]  -- a non-SMTP transport, to prove refusal
         host="x",
         port=1,
         username="x",

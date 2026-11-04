@@ -2277,7 +2277,7 @@ def test_column_widths_snapshot_value_survives_html_parsing(
     values: list[str | None] = []
 
     class _Snapshot(HTMLParser):
-        def handle_starttag(self, tag, attrs):  # type: ignore[no-untyped-def]
+        def handle_starttag(self, tag, attrs):
             found = dict(attrs)
             if tag == "input" and found.get("name") == "column_widths_snapshot":
                 values.append(found.get("value"))

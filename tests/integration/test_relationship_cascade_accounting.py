@@ -491,7 +491,7 @@ def test_every_render_path_already_reaches_the_count(
         captured.append(context)
         return original(request, name, context, *args, **kwargs)
 
-    _shared._templates.TemplateResponse = _capture  # type: ignore[assignment]
+    _shared._templates.TemplateResponse = _capture  # pyright: ignore[reportAttributeAccessIssue]  -- an instance patch the finally deletes, so it cannot leak
     try:
         client.get(f"/operator/sessions/{rs.public_id}/{page}")
         response = client.post(

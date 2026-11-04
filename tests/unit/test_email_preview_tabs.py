@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+from typing import cast
 
-from app.db.models import User
+from app.db.models import Reviewer, ReviewSession, User
 from app.web import views
 
 # --- resolve_email_preview_tab ------------------------------------------- #
@@ -121,17 +122,20 @@ def test_from_display_blank_display_name_falls_back_to_username() -> None:
 # --- build_email_preview_body -------------------------------------------- #
 
 
-def _session() -> SimpleNamespace:
-    return SimpleNamespace(
-        name="Spring Reviews",
-        deadline=None,
-        help_contact="help@example.edu",
-        email_template_overrides=None,
+def _session() -> ReviewSession:
+    return cast(
+        ReviewSession,
+        SimpleNamespace(
+            name="Spring Reviews",
+            deadline=None,
+            help_contact="help@example.edu",
+            email_template_overrides=None,
+        ),
     )
 
 
-def _reviewer() -> SimpleNamespace:
-    return SimpleNamespace(name="Alice Smith", email="alice@x.edu")
+def _reviewer() -> Reviewer:
+    return cast(Reviewer, SimpleNamespace(name="Alice Smith", email="alice@x.edu"))
 
 
 def test_invitation_render_returns_subject_and_body() -> None:
@@ -139,8 +143,8 @@ def test_invitation_render_returns_subject_and_body() -> None:
 
     body = views.build_email_preview_body(
         tab=tab,
-        review_session=_session(),  # type: ignore[arg-type]
-        reviewer=_reviewer(),  # type: ignore[arg-type]
+        review_session=_session(),
+        reviewer=_reviewer(),
         from_display="op@x.edu",
     )
 
@@ -160,8 +164,8 @@ def test_invitation_render_substitutes_invite_url_placeholder() -> None:
 
     body = views.build_email_preview_body(
         tab=tab,
-        review_session=_session(),  # type: ignore[arg-type]
-        reviewer=_reviewer(),  # type: ignore[arg-type]
+        review_session=_session(),
+        reviewer=_reviewer(),
         from_display="op@x.edu",
     )
 
@@ -174,8 +178,8 @@ def test_reminder_render_returns_subject_and_body() -> None:
 
     body = views.build_email_preview_body(
         tab=tab,
-        review_session=_session(),  # type: ignore[arg-type]
-        reviewer=_reviewer(),  # type: ignore[arg-type]
+        review_session=_session(),
+        reviewer=_reviewer(),
         from_display="op@x.edu",
     )
 
@@ -203,8 +207,8 @@ def test_unshipped_tab_returns_none_when_caller_bypasses_resolve() -> None:
 
     body = views.build_email_preview_body(
         tab=fake_tab,
-        review_session=_session(),  # type: ignore[arg-type]
-        reviewer=_reviewer(),  # type: ignore[arg-type]
+        review_session=_session(),
+        reviewer=_reviewer(),
         from_display="op@x.edu",
     )
 
@@ -216,8 +220,8 @@ def test_responses_received_render_returns_subject_and_body() -> None:
 
     body = views.build_email_preview_body(
         tab=tab,
-        review_session=_session(),  # type: ignore[arg-type]
-        reviewer=_reviewer(),  # type: ignore[arg-type]
+        review_session=_session(),
+        reviewer=_reviewer(),
         from_display="op@x.edu",
     )
 

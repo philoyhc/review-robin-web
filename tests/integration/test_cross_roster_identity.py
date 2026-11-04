@@ -180,7 +180,7 @@ def test_an_unknown_kind_is_loud() -> None:
 
     with pytest.raises(ValueError, match="unknown kind"):
         csv_imports.check_cross_table_identity(
-            None, session_id=1, rows=[], kind="relationships"  # type: ignore[arg-type]
+            None, session_id=1, rows=[], kind="relationships"  # pyright: ignore[reportArgumentType]  -- the kind guard fires before db is read
         )
 
 
@@ -195,7 +195,7 @@ def test_the_single_row_helper_is_loud_too() -> None:
 
     with pytest.raises(ValueError, match="unknown kind"):
         csv_imports.cross_table_identity_conflict(
-            None,  # type: ignore[arg-type]
+            None,  # pyright: ignore[reportArgumentType]  -- the kind guard fires before db is read
             session_id=1,
             kind="relationships",
             identifier="x@example.edu",

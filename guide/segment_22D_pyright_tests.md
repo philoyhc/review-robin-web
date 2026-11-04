@@ -158,6 +158,14 @@ set to the four test trees.
     `tests/unit`'s import paths (two tests import `tests/_rrw_app.py`);
     it ships here, since 7.1's CI had not run. Folded into #3602 when
     GitHub left its runs queued behind two stuck `main` runs.
+  - **7.3:** the tests' 38 pre-22D `# type: ignore` comments are gone.
+    They hid 44 errors: stand-ins become `cast(Model, …)` factories,
+    `_config`'s overrides and `_join_to_bytes`'s rows take their real
+    types, an attribute set on a user goes through `monkeypatch`; six hid
+    nothing. Five deliberate wrong-typed inputs and one instance patch
+    take a `pyright: ignore` with the reason. `enableTypeIgnoreComments`
+    cannot be scoped to tests, and application code still has 66 such
+    comments, so it stays on: that is 22F's.
 
 ## PR ladder
 
