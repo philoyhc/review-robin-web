@@ -79,6 +79,14 @@ gate.
    independent; their order, and their place after 14F/14G, is the
    author's call.
 
+5. **22F — reserved** (author, 2026-11-04) for whatever follow-up 22C,
+   22D and 22E leave behind. No plan until something lands in it.
+
+6. **22G — Diagnostics** (parked, author, 2026-11-04). Item 1: a small
+   set of status reports about the session on Azure, the in-app clock's
+   state first; where they sit waits on how many there are.
+   **Plan:** `guide/segment_22G_diagnostics.md`.
+
 ### Stubs
 
 Small items with no plan doc; each fits one PR and its reasoning fits
