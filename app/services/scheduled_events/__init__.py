@@ -274,19 +274,26 @@ def _observe_all(
     # Auto-send off (14E rung 0): neither invites nor reminders fire,
     # and activation, with no invites to wait for, runs as usual.
     send = scheduled_send_enabled()
-    invites_ok = not send or _run_guarded(
-        db,
-        session,
-        trigger="invites",
-        correlation_id=correlation_id,
-        fire=lambda: _observe_scheduled_invites(
+    if send and build_invite_url is None and session.invite_offsets:
+        # Sending on but no invite-URL builder (the clock's pass, until
+        # 14G gives it one): the invites cannot fire here, so activation
+        # waits for a page view that can, rather than clearing the Start
+        # their offsets resolve against.
+        invites_ok = False
+    else:
+        invites_ok = not send or _run_guarded(
             db,
             session,
-            now=current,
+            trigger="invites",
             correlation_id=correlation_id,
-            build_invite_url=build_invite_url,
-        ),
-    )
+            fire=lambda: _observe_scheduled_invites(
+                db,
+                session,
+                now=current,
+                correlation_id=correlation_id,
+                build_invite_url=build_invite_url,
+            ),
+        )
     # Activation clears ``scheduled_activate_at``, the anchor the invite
     # offsets resolve against, so activating after an invite failure
     # would leave the failed invitations with no anchor to retry from.

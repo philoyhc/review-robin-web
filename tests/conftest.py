@@ -24,6 +24,11 @@ os.environ.setdefault("REHYDRATE_ENABLED", "true")
 # turns it off and pins the shipped default.
 os.environ.setdefault("RRW_SCHEDULED_SEND", "true")
 
+# The in-app clock (segment 14E) stays off in tests: a TestClient that
+# runs RRW's lifespan must not start a loop against the test database.
+# ``tests/integration/test_scheduled_clock.py`` runs passes directly.
+os.environ.setdefault("SCHEDULER_INTERVAL_SECONDS", "0")
+
 # A developer's ``.env`` (the dev container writes one from
 # ``.env.example``) sets ``ALLOW_FAKE_AUTH=true``, which folds the fake
 # identity into the super-admin set (``app/auth/roles.py``) and fails the

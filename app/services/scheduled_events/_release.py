@@ -174,8 +174,17 @@ STAMP_GRACE = timedelta(days=1)
 
 
 def _due_release_stamps(session, now: datetime) -> list[tuple[str, str, datetime, str]]:
-    """The window's moments crossed within :data:`STAMP_GRACE` of ``now``,
-    as ``(event_type, context key, moment, word)``. No query."""
+    """The window's moments crossed within :data:`STAMP_GRACE` of ``now``
+    while the window can be open, as ``(event_type, context key, moment,
+    word)``. No query.
+
+    The window opens only on an ``expired`` session
+    (``session_lifecycle.is_response_release_window_open``), so nothing is
+    due on any other: a Release-from that passes while the session is
+    still open stamps nothing, and is stamped when the operator ends the
+    session, if within the grace."""
+    if session.status != "expired":
+        return []
     start = session.responses_release_at
     if start is None:
         return []
@@ -191,6 +200,29 @@ def _due_release_stamps(session, now: datetime) -> list[tuple[str, str, datetime
     return due
 
 
+def _unstamped(db, session, due):
+    """The due moments not yet in the audit log."""
+    from sqlalchemy import select
+
+    from app.db.models import AuditEvent
+
+    out = []
+    for event_type, key, moment, word in due:
+        iso = moment.isoformat()
+        stamped = any(
+            ((detail or {}).get("context") or {}).get(key) == iso
+            for detail in db.execute(
+                select(AuditEvent.detail).where(
+                    AuditEvent.session_id == session.id,
+                    AuditEvent.event_type == event_type,
+                )
+            ).scalars()
+        )
+        if not stamped:
+            out.append((event_type, key, iso, word))
+    return out
+
+
 def observe_release_window(
     db,
     session,
@@ -203,18 +235,19 @@ def observe_release_window(
     ``session.release_window_opened`` when ``responses_release_at`` has
     passed, a ``session.release_window_ended`` when
     ``responses_release_until`` has, each within :data:`STAMP_GRACE` of
-    ``now``. A moment already stamped is not stamped again, whichever
-    trigger (clock or page view) reaches it first; a moved moment is a
-    new crossing. Returns the number written; commits when any is.
+    ``now`` and only while the session is ``expired``, the one state in
+    which the window opens. A moment already stamped is not stamped
+    again, whichever trigger (clock or page view) reaches it first; a
+    moved moment is a new crossing. Returns the number written, and
+    commits only when it writes.
 
-    Changes nothing about what is visible: the window is still checked
-    on arrival.
+    Checks without a lock first, as the other triggers do, so a page
+    view after the stamps exist takes no lock. Changes nothing about
+    what is visible: the window is still checked on arrival.
     """
-    if not _due_release_stamps(session, now):
+    due = _due_release_stamps(session, now)
+    if not due or not _unstamped(db, session, due):
         return 0
-    from sqlalchemy import select
-
-    from app.db.models import AuditEvent
     from app.services import audit
     from app.services.session_guard import lock_session
 
@@ -222,19 +255,9 @@ def observe_release_window(
     # once stamp it once; the window is read again on the locked row.
     locked = lock_session(db, session)
     written = 0
-    for event_type, key, moment, word in _due_release_stamps(locked, now):
-        iso = moment.isoformat()
-        stamped = any(
-            ((row.detail or {}).get("context") or {}).get(key) == iso
-            for row in db.execute(
-                select(AuditEvent).where(
-                    AuditEvent.session_id == locked.id,
-                    AuditEvent.event_type == event_type,
-                )
-            ).scalars()
-        )
-        if stamped:
-            continue
+    for event_type, key, iso, word in _unstamped(
+        db, locked, _due_release_stamps(locked, now)
+    ):
         audit.write_event(
             db,
             event_type=event_type,
@@ -245,5 +268,6 @@ def observe_release_window(
             correlation_id=correlation_id,
         )
         written += 1
-    db.commit()
+    if written:
+        db.commit()
     return written

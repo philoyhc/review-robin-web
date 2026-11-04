@@ -110,6 +110,13 @@ class Settings(BaseSettings):
     # The test suite sets it on, as for Rehydrate, so the auto-send
     # machinery stays covered; `tests/integration/test_scheduled_send_off.py`
     # pins the shipped default.
+    # Segment 14E — the in-app clock's interval, in seconds: how often it
+    # runs a pass over the sessions with a timed step due (scheduled
+    # activation, the deadline close, the release window's stamps). `0`
+    # turns it off, leaving the page-view trigger alone; the test suite
+    # sets `0`. App Setting `SCHEDULER_INTERVAL_SECONDS`.
+    scheduler_interval_seconds: int = 120
+
     scheduled_send: bool = Field(
         default=False,
         validation_alias=AliasChoices("RRW_SCHEDULED_SEND", "scheduled_send"),
