@@ -128,6 +128,18 @@ Taken 2026-11-04 at `9b45a9c1`, pyright 1.1.414, `typeCheckingMode =
   `dict[str, Any] | None`. Left for 22F: `set_band2_state`'s docstring
   says `None` clears the state, but the code keeps it (no caller passes
   `None`).
+- **Rung 7:** `app/web` strict, its table gone (897 fixed, in `views`,
+  `routes_reviewer`, `routes_operator` and the top-level modules), so
+  every application package is strict and only the test roots keep
+  tables. The same patterns; `SetupWindow` and `apply_cookie_sort` are
+  generic over their rows (`_HasId`: `id: Mapped[int]`); surface rows stay
+  `dict[str, Any]` (`SurfaceRow`), since the unit tests build them loosely;
+  `views/_json.py` reads stored JSON; 16 unused re-exports leave
+  `routes_reviewer/_surface/__init__.py`. One unit test builds real
+  `InstrumentDisplayField`s instead of `SimpleNamespace`s (assertions
+  unchanged). No ignores. Left for 22F: an audit `context.scheduled_at`
+  that is truthy but not a string still raises in
+  `build_scheduled_activation_caption`, as before.
 
 ## PR ladder
 

@@ -120,21 +120,6 @@ reportUnknownParameterType = "none"
 reportUnknownVariableType = "none"
 
 [[tool.pyright.executionEnvironments]]
-root = "app/web"
-extraPaths = ["."]
-reportMissingParameterType = "none"
-reportMissingTypeArgument = "none"
-reportUnknownArgumentType = "none"
-reportUnknownLambdaType = "none"
-reportUnknownMemberType = "none"
-reportUnknownParameterType = "none"
-reportUnknownVariableType = "none"
-reportUnnecessaryComparison = "none"
-reportUnnecessaryIsInstance = "none"
-reportUnusedFunction = "none"
-reportUnusedImport = "none"
-
-[[tool.pyright.executionEnvironments]]
 root = "."
 
 [tool.ruff.lint]
