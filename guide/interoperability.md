@@ -52,7 +52,7 @@ Each plan carries its line as a judgment call; this is the list.
     app's work rides it (spec §10.1).
   - The loop and its lock key are RRW's own, so another app's clock
     cannot collide with it.
-- **22C — pyright** (`guide/segment_22C_pyright.md`).
+- **22C — pyright** (`guide/archive/segment_22C_pyright.md`, closed).
   - A package added later (ApplyDesk, a handoff module) joins the gate
     when it is created.
   - The `sqlalchemy>=2.1` floor reaches production through the next

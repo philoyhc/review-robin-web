@@ -127,80 +127,50 @@ python3 -c "import json,collections;d=json.load(open('/tmp/pyright.json'));print
 
 ## Status
 
-- **Rung 1** merged 2026-11-04 (`#3584`): config, pins, docs, the hook.
-  One read: the blast-radius rows, the hook's guard and comment, README's
-  dev-dependency note; all fixed in the PR.
-- **Rung 2 split in two** (author, 2026-11-04): **2a** `I` and `UP`
-  (mechanical, `ruff check --fix`), then **2b** `B` and `SIM`
-  (judgment). Decisions confirmed at build:
-  - `E` stays ruff's default subset (`E4`, `E7`, `E9`), through
-    `extend-select`: the whole family adds `E501`, 1,471 long lines with
-    no formatter to fix them.
-  - `UP042` (`StrEnum`) ignored: it changes what `str()` and `format()`
-    give for a member, which templates and audit details render.
-  - 2a (`#3585`) leaves pyright at 307 errors. Its read: `alembic`
-    made third-party to isort, and the migration template brought up to
-    the new rules.
-  - **2b:** `B008` exempts FastAPI's parameter calls and the two frozen
-    option dataclasses in `zip_bundle.py` (`extend-immutable-calls`), so
-    663 findings fell to 90. Ignored: `B905` (`zip(strict=True)` raises
-    where a short input truncates today: a behavior change at 42 sites),
-    `SIM108` (ternaries, a style call), and after the read `SIM300` and
-    `SIM905` (their fixes made tests read worse). The 40 left were
-    fixed, by `--fix` or by hand: `raise … from None` where a domain
-    error becomes an HTTP 400 or a CLI error, and loop variables bound
-    where a closure reads them.
-- **Item 2** (rungs 3–6) is read once, cumulatively from `2f9961be`.
-- **Rung 3, cluster A:** the read-only `@property` fix does not work.
-  `GroupKeyable` already had properties, and pyright 1.1.414 still
-  rejects a model whose attributes are `Mapped[int]`: it matches a
-  protocol against the declared `Mapped[...]` type, not the descriptor's
-  `int`. Built instead: each protocol (now `_GroupKeyShape`,
-  `_BranchFieldShape`) is kept for the plain shapes (`AssignmentPair`,
-  the Settings import's `_PlannedField`), and the public name is that
-  protocol `|` the model. 307 → 268 errors, the 39 counted.
-- **Rung 4, cluster B:** 268 → 217 (51). Two helpers carry it:
-  `app.db.session.rowcount()` (a DML result's `CursorResult.rowcount`;
-  12 sites) and `app.db.base.column_length()` (a `String` column's
-  declared length; 3). `Select[tuple[User]]` became `Select[User]` (two
-  lock queries, about 30 errors downstream); `Model.__table__.delete()` /
-  `.update()` became `delete(cast(Table, …))`; the audit filter is
-  generic over its `Select`; `classify_self_review` takes a `Row` or a
-  tuple (`Result.tuples()` is deprecated in 2.1).
-- **Rungs 5–6 re-cut by package, not cluster** (2026-11-04): after B,
-  clusters C and E interleave in the same files (a `None` argument beside
-  an invariant `dict`), so a cluster rung would reopen every file twice.
-  **5a** `residentialapps` + `utilityapps` (26), **5b** `app/web` (73),
-  **6** `app/services` (118), the last build rung and the read.
-- **Rung 5a:** 217 → 191. One behavior change: the leave sample's
-  `by_precinct` falls back to this week when given a start with no end,
-  where it raised `TypeError`.
-- **Rung 5b:** 191 → 108 (`app/web` clean; 10 more in `app/services`
-  from shared types). `ParseResult` is generic over its row type, which
-  cleared 21 errors at their source. **One bug found:** a lone
-  instrument with neither short label nor description showed the
-  observer collation an `<h2>None</h2>`; the heading is now left out,
-  with a test.
-- **Rung 6:** 108 → **0**. The rules engine's pairs are cast back to the
-  roster types at its two callers (it returns the rows it was given)
-  rather than made generic through ~20 internal signatures;
-  `write_event`'s `context` and three lookup parameters take a
-  `Mapping`. Two paths that raised now behave, each with a test: a
-  validated session flipped with no actor (the page-break helpers
-  default one to `None`) records an unattributed `session.invalidated`;
-  a quota inside a composite raises `ValueError` naming it.
-  Item 2's cumulative read (`2f9961be..HEAD`): no blocking defect; two
-  narrowings that had changed behavior were put back exactly
-  (`_digits`, the IN operand), the `BranchField` alias made lazy, and
-  `spec/assignments.md`'s composite-children line left for the close's
-  `spec-writer`. Rung 7 must run pyright with the venv's Python: without
-  it every import is missing (439 errors).
-- **Rung 7, the gate:** `run: pyright` after `Lint` in `ci.yml`'s
-  `test` and `residential` jobs (setup-python's interpreter is on PATH,
-  so imports resolve without a `venv` key); `pyright` named in the
-  pre-PR gate (`CLAUDE.md` / `AGENTS.md`), `CONTRIBUTING.md`'s checklist
-  and lane notes, the `babysit-merge` skill, `README.md` and
-  `docs/local_setup.md`.
+**Closed 2026-11-04.** Pyright 1.1.414 basic mode gates application code
+in CI (`test` and `residential` jobs): 307 errors at rung 1, 0 at
+`#3591`. Ten PRs, `#3584`–`#3593`.
+
+**What the ladder became**
+- **Rung 2 ran in two** (author): 2a `I` + `UP` (`#3585`), 2b `B` + `SIM`
+  (`#3586`). `E` stays ruff's default subset (all of it adds `E501`,
+  1,471 long lines and no formatter). Ignored, each with its reason in
+  `pyproject.toml`: `UP042`, `B905` (`zip(strict=True)` would change 42
+  sites), `SIM108`, `SIM300`, `SIM905`. `B008` exempts FastAPI's
+  parameter calls and two frozen dataclasses.
+- **Cluster A's fix did not work** (rung 3, `#3587`): pyright matches a
+  protocol against a model's declared `Mapped[int]`, not the `int` it
+  yields, so read-only properties change nothing. Built: each protocol
+  kept private for the plain stand-in shapes, the public name
+  `protocol | model`.
+- **Cluster B** (rung 4, `#3588`): `app.db.session.rowcount()` and
+  `app.db.base.column_length()` carry most of it; `Result.tuples()`
+  avoided as deprecated in 2.1.
+- **Rungs 5–6 re-cut by package, not cluster**: C and E interleave in the
+  same files. 5a `residentialapps` + `utilityapps` (`#3589`), 5b `app/web`
+  (`#3590`, where `ParseResult` became generic), 6 `app/services`
+  (`#3591`).
+- **The gate** (rung 7, `#3592`) needs no `venv` key in CI: setup-python
+  puts its interpreter on PATH. Locally pyright must run with `.venv`
+  active, or every import reads missing.
+- **Follow-ups filed** (`#3593`): `guide/segment_22D_pyright_tests.md`,
+  `guide/segment_22E_pyright_strict.md`.
+
+**Behavior changes, each named and tested**
+- The observer collation's lone unlabelled instrument showed an
+  `<h2>None</h2>`; it now has no heading (found by pyright).
+- `invalidate_if_validated` with no actor records the flip unattributed,
+  where it raised.
+- A quota inside a composite raises `ValueError` naming it, where it
+  raised `AttributeError`.
+- The leave sample's `by_precinct` with a start and no end falls back to
+  this week, where it raised `TypeError`.
+
+**Reads: four.** Rung 1 (hook guard, blast-radius rows, README), 2a
+(`alembic` isort class, migration template), 2b (counts, two more ignores),
+and Item 2's cumulative read from `2f9961be`, which found two narrowings
+that had changed behavior unnamed (`_digits`, the IN operand); both put
+back exactly. None found a defect that shipped.
 
 ## PR ladder
 
@@ -277,4 +247,5 @@ python3 -c "import json,collections;d=json.load(open('/tmp/pyright.json'));print
 - `.github/workflows/ci.yml` — the `Type check` step (rung 7).
 - `CONTRIBUTING.md` — the checklist and lane notes (rung 7).
 - `.claude/skills/babysit-merge/SKILL.md` — `pyright` in Stage 1 (rung 7).
+- `spec/assignments.md` — a quota cannot be a composite's child; the engine refuses it by name (at close).
 - `guide/todo_master.md` — delete the segment's entry at close.

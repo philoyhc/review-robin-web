@@ -239,7 +239,11 @@ The `Combinator` enum (`app/schemas/rules.py`) on a
   Band 1 never emits it.
 
 A `COMPOSITE` carries its own `op` (`CompositeOp`: `AND` / `OR` /
-`NOT`) over its children.
+`NOT`) over its children. A child is a `FILTER`, `MATCH` or
+`COMPOSITE`, never a `QUOTA`: a quota caps pairs and has no truth
+value to combine. The schema types children as `list[Rule]` and
+accepts one; the engine refuses it with `ValueError("quota rule
+'<id>' cannot sit inside a composite")`.
 
 Band 1's outer `SessionRuleSet.combinator` is always `ALL_OF` —
 Link 1's Composite ∩ Link 2's Composite. Inside each Composite,

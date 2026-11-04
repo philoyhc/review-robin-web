@@ -2,8 +2,8 @@
 
 **Opened:** 2026-11-04, filed at the author's request as 22C's second
 follow-up · **Theme:** from "no wrong types" to "no unknown types" ·
-**Related:** `guide/segment_22C_pyright.md` (the basic-mode gate this
-tightens; archived at its close), `guide/segment_22D_pyright_tests.md`
+**Related:** `guide/archive/segment_22C_pyright.md` (the basic-mode gate this
+tightens), `guide/segment_22D_pyright_tests.md`
 
 ## Opportunity
 
