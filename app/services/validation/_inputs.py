@@ -9,7 +9,7 @@ from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import ColumnElement, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -122,7 +122,7 @@ def load_validation_inputs(
     def _instrument_ids(
         field_model: type[InstrumentResponseField]
         | type[InstrumentDisplayField],
-        *extra: object,
+        *extra: ColumnElement[bool],
     ) -> frozenset[int]:
         stmt = (
             select(field_model.instrument_id)

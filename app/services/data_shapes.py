@@ -40,6 +40,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.db.base import column_length
 from app.db.models import (
     DataShape,
     Instrument,
@@ -155,7 +156,7 @@ def _validate(
     """
     if not name or not name.strip():
         raise DataShapeValidationError("Shape name is required.")
-    name_limit = DataShape.__table__.columns["name"].type.length
+    name_limit = column_length(DataShape, "name")
     if len(name) > name_limit:
         # Refused here rather than as a Postgres 500 at flush
         # (findings D11).

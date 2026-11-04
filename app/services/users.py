@@ -64,6 +64,7 @@ from app.db.models import (
     SessionOperator,
     User,
 )
+from app.db.session import rowcount
 from app.logging_config import get_logger
 from app.services import audit, directory_accounts
 from app.services.email_identity import looks_like_email, normalize_email, normalize_object_id
@@ -258,12 +259,12 @@ def _absorb(db: Session, target: User, holder: User, new_email: str) -> None:
         .where(SessionOperator.session_id.in_(shared))
         .execution_options(synchronize_session=False)
     )
-    moved = db.execute(
+    moved = rowcount(db.execute(
         update(SessionOperator)
         .where(SessionOperator.user_id == holder_id)
         .values(user_id=target.id)
         .execution_options(synchronize_session=False)
-    ).rowcount
+    ))
     # The memberships were moved in SQL; a collection loaded before
     # would make the delete cascade take them with the row.
     db.expire(holder, ["session_operators"])
@@ -981,7 +982,7 @@ def set_unit(
     return changed
 
 
-def _batch_lock(action: str, ids: list[int]) -> Select[tuple[User]]:
+def _batch_lock(action: str, ids: list[int]) -> Select[User]:
     """The selected rows, plus every sys-admin row when the action can
     lower the admin count, in id order. ``FOR NO KEY UPDATE`` except for
     Delete, which needs ``FOR UPDATE`` (see ``apply_batch``). The rows are

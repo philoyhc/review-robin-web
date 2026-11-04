@@ -137,7 +137,7 @@ def new_session_owner_candidates(db: Session, creator: User) -> list[User]:
     return [u for u in _workspace_operators(db) if u.id != creator.id]
 
 
-def _eligibility_lock(user_id: int) -> Select[tuple[User]]:
+def _eligibility_lock(user_id: int) -> Select[User]:
     return (
         select(User)
         .where(User.id == user_id)

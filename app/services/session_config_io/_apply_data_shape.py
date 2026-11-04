@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import json
+from typing import cast
 
+from sqlalchemy import Table, delete
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession
@@ -104,7 +106,7 @@ def _apply_data_shapes(
     # were wiped above are already gone; this pass clears
     # session-scope-only shapes too.
     db.execute(
-        DataShape.__table__.delete().where(
+        delete(cast(Table, DataShape.__table__)).where(
             DataShape.session_id == review_session.id
         )
     )

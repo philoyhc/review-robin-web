@@ -33,7 +33,7 @@ from pydantic import (
     ValidationError,
     field_validator,
 )
-from sqlalchemy import select
+from sqlalchemy import Select, select
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -1058,7 +1058,9 @@ class AuditFilters:
         return out
 
 
-def _apply_filters(stmt: Any, filters: AuditFilters | None, user_table: Any) -> Any:
+def _apply_filters[S: Select[*tuple[Any, ...]]](
+    stmt: S, filters: AuditFilters | None, user_table: Any
+) -> S:
     """Compose ``filters`` into ``stmt`` (a SELECT against
     ``AuditEvent`` + ``users.email`` via LEFT JOIN). Returns the
     augmented statement."""

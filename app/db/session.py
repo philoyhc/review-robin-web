@@ -1,7 +1,8 @@
 from collections.abc import Iterator
 from functools import lru_cache
+from typing import Any, cast
 
-from sqlalchemy import Engine, create_engine, event
+from sqlalchemy import CursorResult, Engine, Result, create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.config import settings
@@ -46,3 +47,10 @@ def get_db() -> Iterator[Session]:
         yield session
     finally:
         session.close()
+
+
+def rowcount(result: Result[Any]) -> int:
+    """The rows an ``UPDATE`` or ``DELETE`` matched. ``Session.execute``
+    is typed to return a bare ``Result``, but a DML statement's result
+    is a ``CursorResult``, the class that carries ``rowcount``."""
+    return cast(CursorResult[Any], result).rowcount

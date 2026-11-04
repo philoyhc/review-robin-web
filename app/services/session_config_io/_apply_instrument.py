@@ -8,9 +8,9 @@ transaction.
 from __future__ import annotations
 
 import copy
-from typing import Any
+from typing import Any, cast
 
-from sqlalchemy import select
+from sqlalchemy import Table, delete, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -380,7 +380,7 @@ def _wipe_instruments_and_dependents(
     # re-import rebuilds the whole instrument structure, so these
     # responses cannot survive it regardless — clear them explicitly.
     db.execute(
-        Response.__table__.delete().where(
+        delete(cast(Table, Response.__table__)).where(
             Response.assignment_id.in_(
                 select(Assignment.id).where(
                     Assignment.session_id == review_session.id
@@ -389,7 +389,7 @@ def _wipe_instruments_and_dependents(
         )
     )
     db.execute(
-        Assignment.__table__.delete().where(
+        delete(cast(Table, Assignment.__table__)).where(
             Assignment.session_id == review_session.id
         )
     )
