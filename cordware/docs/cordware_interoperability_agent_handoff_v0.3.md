@@ -5,8 +5,8 @@
 **Status:** Planning and reconciliation instructions; no blanket authorization to implement or deploy  
 **Parked (author, 2026-11-04):** no implementation is planned; revisit when ApplyDesk or RA Lifecycle is further along. The rulings and review notes are the main spec's §13; §9 below says what they change here.  
 **Primary specification:** `cordware_interoperability_consolidated_spec_v0.3.md`  
-**Target repository path for primary specification:** `cordware/spec/interoperability_and_orchestration.md`  
-**Recommended path for this handoff:** `cordware/guide/interoperability_agent_handoff.md`
+**Proposed home of the primary specification, at adoption:** `cordware/spec/interoperability_and_orchestration.md`  
+**Proposed home of this handoff, at adoption:** `cordware/guide/interoperability_agent_handoff.md`
 
 ## 1. Mission and definition of success
 

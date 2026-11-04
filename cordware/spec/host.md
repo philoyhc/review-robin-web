@@ -286,9 +286,10 @@ top-level packages it may not import; a second check adds one module:
 
 | Package | May not import |
 |---|---|
-| `app` | `residentialapps`; and the module `cordware.main` |
-| `residentialapps` | `app`; and the module `cordware.main` |
-| `cordware` | `app`, `residentialapps` |
+| `app` | `residentialapps`, `utilityapps`; and the module `cordware.main` |
+| `residentialapps` | `app`, `utilityapps`; and the module `cordware.main` |
+| `utilityapps` | `app`, `residentialapps`; and the module `cordware.main` |
+| `cordware` | `app`, `residentialapps`, `utilityapps` |
 
 - `cordware/tests/` is exempt: the host's tests drive real applications.
 - `app` may import `cordware` (identity, `cordware.identity`) but never

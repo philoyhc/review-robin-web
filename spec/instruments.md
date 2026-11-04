@@ -909,7 +909,7 @@ live preview of one sample row inline.
 Beside the "Preview review instrument" heading, a cycle chip
 (`spec/ui_elements.md` §9, `data-intro-layout-chip`) names the layout
 the instrument's intro takes: "Layout 1" or "Layout 2", each with a
-`title` naming its arrangement (`views.INTRO_LAYOUT_CHOICES`). A click
+`title` naming its arrangement (`views._instruments.INTRO_LAYOUT_CHOICES`). A click
 or Enter / Space advances to the next layout in `INTRO_LAYOUTS` and wraps;
 it writes the hidden `intro_layout` input on `dfsave-{id}`, sets
 `data-intro-layout` on the preview's intro so it repaints at once, and

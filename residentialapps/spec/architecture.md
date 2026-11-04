@@ -41,13 +41,13 @@ depth and including literal dynamic imports.
 
 | Package | May not import |
 |---|---|
-| `residentialapps` (all of it) | `app`; and the module `cordware.main` |
+| `residentialapps` (all of it) | `app`, `utilityapps`; and the module `cordware.main` |
 | `residentialapps.residentialops` | `residentialapps.supportlogs` |
 | `residentialapps.supportlogs` | `residentialapps.residentialops`, `residentialapps.leave`, `residentialapps.events` |
 | `residentialapps.leave` | `residentialapps.events`, either application |
 | `residentialapps.events` | `residentialapps.leave`, either application |
 | `residentialapps.core`, `residentialapps.web` | Any application or pillar |
-| `app`, `cordware` | `residentialapps` (already enforced) |
+| `app`, `cordware`, `utilityapps` | `residentialapps` (already enforced) |
 
 - `cordware.main` is forbidden for the same reason as in RRW: importing it
   builds the host. `residentialapps/tests/` is exempt from that one rule,

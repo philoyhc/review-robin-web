@@ -549,7 +549,9 @@ identifier or boundary tag edit, a reviewee added or deleted (membership
 is read off the roster), an instrument `group_kind` edit, and a
 relationship added, deleted, retagged, re-pointed or switched active /
 inactive (pair-context group keys are read off the active relationship
-rows). A row whose flag the recompute flips also moves
+rows), and a directory account bound to a reviewer or reviewee (by a
+merge import or the Upload card's recheck), since classification matches
+by `directory_object_id` where both rows have one. A row whose flag the recompute flips also moves
 its `include` towards what Generate would write: a row
 that stops being a self-review comes back on unless either side is
 inactive, and a row that becomes one is switched off when its

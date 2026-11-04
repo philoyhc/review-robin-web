@@ -6,7 +6,7 @@
 **Parked (author, 2026-11-04):** no implementation is planned. Revisit when ApplyDesk or RA Lifecycle is further along. Rulings and review notes from that date are §13.  
 **Canonical public development repository:** `philoyhc/review-robin-web`  
 **Private import/deployment repository:** `philoyhc/cordware`  
-**Suggested repository path:** `cordware/spec/interoperability_and_orchestration.md`  
+**Proposed home, at adoption (parked in `cordware/docs/` until then):** `cordware/spec/interoperability_and_orchestration.md`  
 **Companion:** `cordware_interoperability_agent_handoff_v0.3.md` (implementation brief, checks and phased plan)
 
 ## 0. Scope, authority and consolidation
