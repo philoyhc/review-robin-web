@@ -106,7 +106,8 @@ def _as_utc(value: datetime | None) -> datetime | None:
 
 def is_ongoing(review_session: ReviewSession, *, now: datetime | None = None) -> bool:
     """The ``while_ongoing`` visibility window: the session is open and
-    its End, if set, has not passed (author, 2026-11-04, segment 14E).
+    its end (:func:`review_end`: End, or with no End, Release from), if
+    set, has not passed (author, 2026-11-04, segment 14E).
 
     Visibility exists only in two windows, while ongoing (Start to End)
     and the release window. End closes the session (``observe_deadline``),
@@ -1132,8 +1133,9 @@ def _expire_at_end(
 ) -> None:
     """End closes the session (author, 2026-11-04, segment 14E): the same
     ``ready → expired`` as the operator's Close session, so a release
-    window set beforehand opens unattended. No actor, ``reason="deadline"``;
-    the caller holds the session lock and commits."""
+    window set beforehand opens unattended. No actor; ``reason="deadline"``
+    for End, ``"release"`` when no End and Release from ended it. The
+    caller holds the session lock and commits."""
     if not is_ready(review_session):
         return
     review_session.status = SessionStatus.expired.value
@@ -1162,9 +1164,10 @@ def _end_context(review_session: ReviewSession) -> dict[str, str]:
 
 
 def closed_at_deadline(db: Session, review_session: ReviewSession) -> bool:
-    """Whether End closed this session's instruments (``deadline_closed_at``
-    set), as against the operator's Close session before End, which does
-    not stamp it. The refused-write notice names the deadline only then."""
+    """Whether the review's end (End, or with no End, Release from) closed
+    this session's instruments (``deadline_closed_at`` set), as against the
+    operator's Close session before it, which does not stamp it. The
+    refused-write notice names the deadline only for a real End."""
     return db.execute(
         select(Instrument.id)
         .where(
@@ -1189,9 +1192,10 @@ def observe_deadline(
     (``ready → expired``, :func:`_expire_at_end`), once per crossing, also
     for a session whose instruments an earlier request already shut.
 
-    Closes any instruments still ``accepting_responses`` once the session
-    deadline has passed and stamps ``deadline_closed_at``. Emits one
-    ``instrument.closed reason=deadline`` audit event per transition.
+    Closes any instruments still ``accepting_responses`` once the review's
+    end has passed and stamps ``deadline_closed_at``. Emits one
+    ``instrument.closed`` per transition, ``reason=deadline`` (or
+    ``release`` with no End).
     Returns the number of instruments closed by this call.
 
     ``correlation_id`` is the request-scoped UUID minted by the
@@ -1256,17 +1260,23 @@ def observe_deadline(
     # imports this module.
     from app.services.instruments import _instrument_label
 
+    # With no End, a release ended the review: named so, as on the
+    # session's own event (segment 14E).
+    by_end = review_session.deadline is not None
     for instrument in instruments:
         instrument.accepting_responses = False
         instrument.deadline_closed_at = current
         audit.write_event(
             db,
             event_type="instrument.closed",
-            summary=f"Instrument {_instrument_label(instrument)} closed (deadline)",
+            summary=(
+                f"Instrument {_instrument_label(instrument)} closed "
+                + ("(deadline)" if by_end else "(release started)")
+            ),
             actor_user_id=None,
             session=review_session,
             refs={"instrument_id": instrument.id},
-            reason="deadline",
+            reason="deadline" if by_end else "release",
             context=_end_context(review_session),
             correlation_id=correlation_id,
         )

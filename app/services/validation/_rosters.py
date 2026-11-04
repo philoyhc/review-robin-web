@@ -72,18 +72,35 @@ def _check_session_end_passed(
 
     if review_session.status not in ("draft", "validated"):
         return
-    if not lifecycle.deadline_has_passed(review_session):
-        return
     which = "End" if review_session.deadline is not None else "Release responses from"
-    yield ValidationIssue(
-        severity=Severity.error,
-        source="session",
-        field="deadline" if review_session.deadline is not None else "responses_release_at",
-        message=(
-            f"{which} has passed: activating would close the session at "
-            f"once. Move it later, or clear it."
-        ),
-    )
+    field = "deadline" if review_session.deadline is not None else "responses_release_at"
+    if lifecycle.deadline_has_passed(review_session):
+        yield ValidationIssue(
+            severity=Severity.error,
+            source="session",
+            field=field,
+            message=(
+                f"{which} has passed: activating would close the session at "
+                f"once. Move it later, or clear it."
+            ),
+        )
+        return
+    # A scheduled Start at or after the end would open a session already
+    # over: the scheduled activation would be skipped (round-3 read).
+    end = lifecycle.review_end(review_session)
+    start = review_session.scheduled_activate_at
+    if end is not None and start is not None:
+        start = start if start.tzinfo else start.replace(tzinfo=end.tzinfo)
+        if start >= end:
+            yield ValidationIssue(
+                severity=Severity.error,
+                source="session",
+                field=field,
+                message=(
+                    f"{which} is not after Start: the session would close "
+                    f"as it opened. Move it later, or move Start earlier."
+                ),
+            )
 
 
 def _check_reviewers_empty(

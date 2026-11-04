@@ -468,3 +468,46 @@ def test_an_operator_page_view_past_end_closes_the_session(db: Session) -> None:
     assert lifecycle.is_expired(rs)
     expired = _events(db, rs, "session.expired")
     assert len(expired) == 1 and "fired_by" not in expired[0].detail["context"]
+
+
+def test_no_end_release_before_start_is_refused_at_save() -> None:
+    """With no End the release ends the review, so it cannot come before
+    Start (round-3 read, #3582)."""
+    from app.services.scheduled_events import ScheduledActivateError, validate_schedule_ordering
+
+    with pytest.raises(ScheduledActivateError):
+        validate_schedule_ordering(
+            scheduled_activate_at=NOW + timedelta(days=2),
+            deadline=None,
+            responses_release_at=NOW + timedelta(days=1),
+        )
+    validate_schedule_ordering(
+        scheduled_activate_at=NOW + timedelta(days=1),
+        deadline=None,
+        responses_release_at=NOW + timedelta(days=2),
+    )
+
+
+def test_validate_refuses_a_validated_session_whose_end_has_passed(db: Session) -> None:
+    from app.services.validation import validate_session_setup
+
+    rs = _make_validated_session(db, "clock-end-passed-v")
+    rs.deadline = NOW - timedelta(minutes=5)
+    db.commit()
+    keys = [i.message for i in validate_session_setup(db, rs)]
+    assert any("End has passed" in m for m in keys)
+
+
+def test_a_release_close_names_the_instruments_release(db: Session) -> None:
+    rs = _make_validated_session(db, "clock-release-instr")
+    rs.status = lifecycle.SessionStatus.ready.value
+    rs.deadline = None
+    rs.responses_release_at = NOW - timedelta(minutes=1)
+    for instrument in db.execute(
+        select(Instrument).where(Instrument.session_id == rs.id)
+    ).scalars():
+        instrument.accepting_responses = True
+    db.commit()
+    lifecycle.observe_deadline(db, rs, now=NOW)
+    closed = _events(db, rs, "instrument.closed")
+    assert closed and all(e.detail["reason"] == "release" for e in closed)

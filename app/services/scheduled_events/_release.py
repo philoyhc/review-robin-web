@@ -155,6 +155,20 @@ def validate_schedule_ordering(
             "reviewees can only view results after the review "
             "window closes."
         )
+    # With no End, Release from is the review's end (segment 14E,
+    # `session_lifecycle.review_end`), so it cannot come before Start: the
+    # session would be skipped at Start, its end already past.
+    if (
+        scheduled_activate_at is not None
+        and deadline is None
+        and responses_release_at is not None
+        and _ensure_aware_utc(responses_release_at)
+        < _ensure_aware_utc(scheduled_activate_at)
+    ):
+        raise ScheduledActivateError(
+            "With no End, Release responses from must be on or after "
+            "Start: the release ends the review."
+        )
     if (
         responses_release_at is not None
         and responses_release_until is not None

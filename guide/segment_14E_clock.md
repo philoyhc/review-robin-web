@@ -183,9 +183,9 @@ Diverged from Semantics at build, each from a cold read or a ruling:
 
 ## Doc impact
 
-- `spec/lifecycle.md` — §1 and §2.7: `expired` also by End (`reason="deadline"`) or, with no End, Release from (`reason="release"`), and the audit table's `session.expired` row; §8.3: the clock beside the page-view trigger, the advisory lock, `context.fired_by`, the retry spacing; §8.2.3: the release moments as stamped events, only while expired; the audit table's three new events and `trigger="release"` / `"deadline"`; §8: auto-send disabled behind the setting (rung 0).
+- `spec/lifecycle.md` — §4 and §4.1: the close, the heal and the accept gate at the review's end (End, or with no End, Release from); the `instrument.closed` row (`reason="release"`, `context.release_at`); §2's recovery path (a reverted session with a passed Release from meets `session.end_passed`); the ordering (no End: Release from on or after Start); §1 and §2.7: `expired` also by End (`reason="deadline"`) or, with no End, Release from (`reason="release"`), and the audit table's `session.expired` row; §8.3: the clock beside the page-view trigger, the advisory lock, `context.fired_by`, the retry spacing; §8.2.3: the release moments as stamped events, only while expired; the audit table's three new events and `trigger="release"` / `"deadline"`; §8: auto-send disabled behind the setting (rung 0).
 - `spec/visibility_policy.md` — the `while_ongoing` window ends at End (or, with no End, at Release from; `is_ongoing`); End closes the session.
-- `spec/reviewer-surface.md` — no read-back past End outside the release window; the closed banner's copy; the refused notice past End.
+- `spec/reviewer-surface.md` — no read-back past End outside the release window; saves and Recall stop at the review's end; the closed banner's copy; the refused notice past End.
 - `spec/role_landing_and_visibility.md` — the `/me` status past End reads Closed.
 - `spec/workflow_card.md` — `expired` reached by End or Release from, not only Close session.
 - `spec/rrw_functional_spec.md` — the Closed state's cause.
