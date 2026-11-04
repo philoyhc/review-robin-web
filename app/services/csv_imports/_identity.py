@@ -54,7 +54,7 @@ class DirectoryCheck:
 
 def directory_check(
     directory: Any,
-    addresses: list[str | None],
+    addresses: Sequence[str | None],
     known: Mapping[str, Any] | None = None,
 ) -> DirectoryCheck:
     """Resolve an import's addresses through ``directory`` (``None``:

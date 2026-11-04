@@ -23,7 +23,6 @@ from app.db.models import (
 from app.logging_config import get_logger
 from app.schemas.imports import (
     ObserverImportRow,
-    RelationshipImportRow,
     RevieweeImportRow,
     ReviewerImportRow,
 )
@@ -65,13 +64,11 @@ _ROSTER_COLUMNS: dict[str, frozenset[str]] = {
 }
 
 @dataclass
-class ParseResult:
-    rows: (
-        list[ReviewerImportRow]
-        | list[RevieweeImportRow]
-        | list[ObserverImportRow]
-        | list[RelationshipImportRow]
-    )
+class ParseResult[R]:
+    """A parsed roster or relationships file, generic over its row
+    type (``ReviewerImportRow`` and its siblings)."""
+
+    rows: list[R]
     issues: list[ValidationIssue]
     # Segment 19C Item 1 — friendly-label overrides captured from the
     # roster header's ``<Column>.<label>`` suffixes, keyed by
@@ -475,7 +472,7 @@ def _parse_email(
     return value
 
 
-def parse_reviewer_csv(content: bytes) -> ParseResult:
+def parse_reviewer_csv(content: bytes) -> ParseResult[ReviewerImportRow]:
     source = "reviewers"
     issues: list[ValidationIssue] = []
 
@@ -611,7 +608,7 @@ def parse_reviewer_csv(content: bytes) -> ParseResult:
     )
 
 
-def parse_reviewee_csv(content: bytes) -> ParseResult:
+def parse_reviewee_csv(content: bytes) -> ParseResult[RevieweeImportRow]:
     source = "reviewees"
     issues: list[ValidationIssue] = []
 
@@ -744,7 +741,7 @@ def parse_reviewee_csv(content: bytes) -> ParseResult:
     )
 
 
-def parse_observer_csv(content: bytes) -> ParseResult:
+def parse_observer_csv(content: bytes) -> ParseResult[ObserverImportRow]:
     """Parse an Observers CSV upload. Required column:
     ``ObserverEmail``. Optional columns: ``ObserverName``,
     ``ObserverTag1``, ``Status``, ``CohortRule``. Other columns are

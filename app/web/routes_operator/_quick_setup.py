@@ -579,9 +579,9 @@ def _attached(**files: UploadFile | None) -> dict[str, UploadFile]:
     an untouched file input as an empty-named part, so a blank filename
     counts as no file (the slots are skipped silently)."""
     return {
-        kind: files[kind]
+        kind: upload
         for kind in SLOT_ORDER
-        if files.get(kind) is not None and files[kind].filename
+        if (upload := files.get(kind)) is not None and upload.filename
     }
 
 

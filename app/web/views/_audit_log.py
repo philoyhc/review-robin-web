@@ -459,29 +459,29 @@ def format_audit_detail(
     sections: list[AuditDetailSection] = []
 
     payload_rendered = False
-    if isinstance(detail.get("changes"), dict):
-        sections.append(_render_changes(detail["changes"]))
+    if isinstance(changes := detail.get("changes"), dict):
+        sections.append(_render_changes(changes))
         payload_rendered = True
-    if isinstance(detail.get("snapshot"), dict):
-        sections.append(_render_kv("snapshot", "Snapshot", detail["snapshot"]))
+    if isinstance(snapshot := detail.get("snapshot"), dict):
+        sections.append(_render_kv("snapshot", "Snapshot", snapshot))
         payload_rendered = True
-    if isinstance(detail.get("counts"), dict):
-        sections.append(_render_kv("counts", "Counts", detail["counts"]))
+    if isinstance(counts := detail.get("counts"), dict):
+        sections.append(_render_kv("counts", "Counts", counts))
         payload_rendered = True
-    if isinstance(detail.get("set_changes"), dict):
-        sections.append(_render_set_changes(detail["set_changes"]))
+    if isinstance(set_changes := detail.get("set_changes"), dict):
+        sections.append(_render_set_changes(set_changes))
         payload_rendered = True
 
-    if isinstance(detail.get("reason"), str):
+    if isinstance(reason := detail.get("reason"), str):
         sections.append(
             AuditDetailSection(
-                kind="reason", label="Reason", text=detail["reason"]
+                kind="reason", label="Reason", text=reason
             )
         )
-    if isinstance(detail.get("refs"), dict):
-        sections.append(_render_kv("refs", "Refs", detail["refs"]))
-    if isinstance(detail.get("context"), dict):
-        sections.append(_render_kv("context", "Context", detail["context"]))
+    if isinstance(refs := detail.get("refs"), dict):
+        sections.append(_render_kv("refs", "Refs", refs))
+    if isinstance(context := detail.get("context"), dict):
+        sections.append(_render_kv("context", "Context", context))
 
     # Fallback: any keys the renderer didn't recognise (legacy
     # pre-11K shapes, or unrecognised additions) — render them all

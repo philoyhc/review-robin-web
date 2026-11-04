@@ -72,7 +72,7 @@ def parse_relationship_csv(
     reviewers_uploaded: bool = False,
     reviewees_uploaded: bool = False,
     reviewees_mirrored: bool = False,
-) -> ParseResult:
+) -> ParseResult[RelationshipImportRow]:
     """Parse a Relationships CSV against the session's existing rosters.
 
     Required columns: ``ReviewerEmail``, ``RevieweeEmail``.
@@ -363,7 +363,7 @@ def parse_relationship_upload(
     incoming_reviewers: Sequence[ReviewerImportRow] | None = None,
     incoming_reviewees: Sequence[RevieweeImportRow] | None = None,
     symmetric: bool = False,
-) -> ParseResult:
+) -> ParseResult[RelationshipImportRow]:
     """Check a Relationships file uploaded beside roster files, before
     any of them saves: against each uploaded roster, else the session's
     (:func:`rosters_for_relationships`).

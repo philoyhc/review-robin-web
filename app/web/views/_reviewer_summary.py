@@ -87,12 +87,16 @@ class SummaryDisplayCol:
     width_px: int | None = None
 
 
+#: A summary row's key: a reviewee id, or a group's key (its tag values).
+type _RowKey = int | tuple[str, ...]
+
+
 @dataclass(frozen=True)
 class SummaryDisplayCell:
     """One display-field value cell — mirrors the reviewer surface's
     ``row.display_cells[*]``."""
 
-    value: str
+    value: str | None  # templates print a missing value as blank
     is_profile_link: bool
 
 
@@ -344,14 +348,14 @@ def build_reviewer_summary_context(
     # (per-reviewee rows) and for the group's member-list
     # composition (group rows pull names directly from
     # ``assignments``, not via this index).
-    cells: dict[tuple[int, object, int], str] = {}
-    row_order: dict[int, list[object]] = {}
+    cells: dict[tuple[int, _RowKey, int], str] = {}
+    row_order: dict[int, list[_RowKey]] = {}
     reviewee_by_row: dict[tuple[int, int], Reviewee] = {}
-    representative_assignment: dict[tuple[int, object], Assignment] = {}
+    representative_assignment: dict[tuple[int, _RowKey], Assignment] = {}
     for response, reviewee, instrument, field in rows:
         group_key = group_key_by_assignment.get(response.assignment_id)
         if group_key is not None:
-            key: object = group_key
+            key: _RowKey = group_key
         else:
             key = reviewee.id
             reviewee_by_row[(instrument.id, reviewee.id)] = reviewee
@@ -489,7 +493,7 @@ def build_reviewer_summary_context(
 
         # Stable display order — same sort as the surface (by
         # reviewee name or composed group label).
-        def _row_sort_label(key: object, instrument_id: int = instrument.id) -> str:
+        def _row_sort_label(key: _RowKey, instrument_id: int = instrument.id) -> str:
             if isinstance(key, tuple):
                 # Group row — sort by tag values + member names.
                 identity = _identity_for_group(instrument_id, key)

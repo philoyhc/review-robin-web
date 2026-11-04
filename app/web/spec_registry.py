@@ -26,7 +26,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Iterator
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from fastapi import FastAPI
@@ -189,11 +189,10 @@ def routing_modules(app: FastAPI) -> set[str]:
             "has probably changed; fix _iter_endpoint_routes rather than "
             "the registry"
         )
-    return {
-        route.endpoint.__module__
-        for route in routes
-        if route.endpoint.__module__.startswith(FIRST_PARTY_PREFIX)
-    }
+    # The walk yields only routes with an endpoint, which ``BaseRoute``
+    # does not declare.
+    modules = (cast(Any, route).endpoint.__module__ for route in routes)
+    return {module for module in modules if module.startswith(FIRST_PARTY_PREFIX)}
 
 
 def pending_modules() -> set[str]:

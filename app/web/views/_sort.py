@@ -32,6 +32,7 @@ shape ``rows_by_instrument`` produces.
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Set as AbstractSet
 from typing import Any
 
 __all__ = [
@@ -55,7 +56,7 @@ def decode_cookie_sort_spec(
     *,
     cookies: dict[str, str],
     cookie_name: str,
-    valid_keys: set[str] | None = None,
+    valid_keys: AbstractSet[str] | None = None,
 ) -> list[tuple[str, str]]:
     """Parse a sortable-table cookie into ``[(key, dir), ...]``
     tuples in cascade order.

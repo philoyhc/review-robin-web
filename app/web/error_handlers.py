@@ -153,8 +153,11 @@ def _render_error(
 
 
 async def _http_exception_handler(
-    request: Request, exc: StarletteHTTPException
+    request: Request, exc: Exception
 ) -> Response:
+    # Registered for ``StarletteHTTPException`` alone (``register_error_handlers``);
+    # Starlette types every handler as taking ``Exception``.
+    assert isinstance(exc, StarletteHTTPException)
     if exc.status_code >= 500:
         log.error(
             "http exception",
@@ -181,17 +184,23 @@ async def _http_exception_handler(
 
 
 async def _session_state_conflict_handler(
-    request: Request, exc: SessionStateConflict
+    request: Request, exc: Exception
 ) -> Response:
     """A service's state gate refused under the session lock (findings
     Bc4): the same 409 page the routes' own gates render."""
+    # Registered for ``SessionStateConflict`` alone (``register_error_handlers``);
+    # Starlette types every handler as taking ``Exception``.
+    assert isinstance(exc, SessionStateConflict)
     return _render_error(request, status.HTTP_409_CONFLICT, str(exc))
 
 
-async def _session_busy_handler(request: Request, exc: SessionBusy) -> Response:
+async def _session_busy_handler(request: Request, exc: Exception) -> Response:
     """Another request held the session lock past its bound
     (``docs/database.md``): the 409 page, asking the operator to try
     again."""
+    # Registered for ``SessionBusy`` alone (``register_error_handlers``);
+    # Starlette types every handler as taking ``Exception``.
+    assert isinstance(exc, SessionBusy)
     log.warning(
         "session lock wait timed out",
         extra={"event": "session.lock_timeout", "path": urls.app_path(request), "method": request.method},
@@ -200,8 +209,11 @@ async def _session_busy_handler(request: Request, exc: SessionBusy) -> Response:
 
 
 async def _validation_exception_handler(
-    request: Request, exc: RequestValidationError
+    request: Request, exc: Exception
 ) -> Response:
+    # Registered for ``RequestValidationError`` alone (``register_error_handlers``);
+    # Starlette types every handler as taking ``Exception``.
+    assert isinstance(exc, RequestValidationError)
     return _render_error(request, 422)
 
 

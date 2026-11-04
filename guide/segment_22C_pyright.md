@@ -174,6 +174,12 @@ python3 -c "import json,collections;d=json.load(open('/tmp/pyright.json'));print
 - **Rung 5a:** 217 → 191. One behavior change: the leave sample's
   `by_precinct` falls back to this week when given a start with no end,
   where it raised `TypeError`.
+- **Rung 5b:** 191 → 108 (`app/web` clean; 10 more in `app/services`
+  from shared types). `ParseResult` is generic over its row type, which
+  cleared 21 errors at their source. **One bug found:** a lone
+  instrument with neither short label nor description showed the
+  observer collation an `<h2>None</h2>`; the heading is now left out,
+  with a test.
 
 ## PR ladder
 
