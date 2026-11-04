@@ -12,7 +12,8 @@ Thanks for contributing to Review Robin Web.
 
 ## Pull request checklist
 
-- [ ] Tests and lint pass locally (`pytest -n auto`, `ruff check .`).
+- [ ] Tests, lint and the type check pass locally (`pytest -n auto`,
+      `ruff check .`, `pyright` with the venv active).
 - [ ] New behavior has tests.
 - [ ] Documentation is updated if needed.
 - [ ] No unrelated refactoring is included.
@@ -51,14 +52,14 @@ outside what ships or will (`app/`, `alembic/`, `cordware/`, an app
 folder below its top), runs the `prose` job
 alone, the unit tests plus the tests that read prose, and shows `test` and
 `postgres` as skipped. One that changes only prose and `residentialapps/`
-runs the `residential` job instead (`ruff check .`, Residential's tests,
+runs the `residential` job instead (`ruff check .`, `pyright`, Residential's tests,
 `cordware/tests` and the prose lane's), with `test` and `postgres` skipped
 too: Residential has no database yet and RRW never imports it. Anything
 else, and every push to `main`, runs both in full.
 
 **Merging ahead of it is fine** for changes that cannot reach the
 database: documentation, and dev-only tooling under `tools/`. The faster
-`CI` job (`ruff check .` plus the SQLite suite, or the `residential`
+`CI` job (`ruff check .` and `pyright` plus the SQLite suite, or the `residential`
 job for a Residential-only change) still applies to anything containing
 executable code, and it takes about three minutes (2026-10-03).
 

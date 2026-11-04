@@ -87,7 +87,7 @@ pytest tests/integration/test_X.py       # one file
 pytest tests/integration/test_X.py::test_name   # one test
 pytest -k "expression"                   # match by name
 ruff check .                             # lint (configured in pyproject.toml)
-pyright                                  # type check, application code only (segment 22C; not yet a gate)
+pyright                                  # type check, application code only (venv active)
 
 alembic upgrade head                     # apply migrations to local SQLite (./review_robin_web.db)
 alembic downgrade -1                     # roll back one
@@ -201,9 +201,11 @@ reject it.
 - The author runs the app locally (`uvicorn` with fake auth, per
   `docs/local_setup.md`) and checks every change in a browser at
   `http://127.0.0.1:8000/reviewrobin/`. The agent's sandbox remains the pre-PR
-  gate for `pytest` and `ruff`.
-- The agent's session container is the pre-PR gate: `pytest -n auto`
-  and `ruff check .` must both pass there before pushing, with `node`
+  gate for `pytest`, `ruff` and `pyright`.
+- The agent's session container is the pre-PR gate: `pytest -n auto`,
+  `ruff check .` and `pyright` must all pass there before pushing (pyright
+  with `.venv` active: it resolves imports from the `python` on PATH, and
+  with no venv reports every import missing), with `node`
   present so `tests/integration/test_inline_scripts_parse.py` runs
   rather than skips — a silent tool-gated skip, so read the skip list,
   not just the exit code. The other tool-gated tests are

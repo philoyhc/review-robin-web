@@ -31,7 +31,7 @@ Before the loop, classify the PR from its diff (`git diff --name-only main...HEA
 For each PR, repeat until it passes all gates or hits a stop condition.
 
 **Stage 1 — CI and repo checks, concurrently.** Pushing starts CI (`CI` and `CI - Postgres`). While it runs, run the repo checks in the session container instead of waiting idle:
-- `pytest -n auto` and `ruff check .`, with `node` present. **Read the skip list, not just the exit code** — `tests/integration/test_inline_scripts_parse.py` skips silently without `node`. A lint-only pass is not evidence: the doc-convention tests (`test_doc_references.py`, `test_index_currency.py` and the rest) only run under `pytest`.
+- `pytest -n auto`, `ruff check .` and `pyright` (venv active), with `node` present. **Read the skip list, not just the exit code** — `tests/integration/test_inline_scripts_parse.py` skips silently without `node`. A lint-only pass is not evidence: the doc-convention tests (`test_doc_references.py`, `test_index_currency.py` and the rest) only run under `pytest`.
 - `diff-reviewer`, if this PR's class calls for it (see above). It reports; you decide. Act on findings in this PR.
 - `spec-writer`, as a verification pass, when the PR touches `spec/`, touches a path its plan's `Doc impact` names, or is the closing slice (`CLAUDE.md` "Where work runs"). Outside a close it reports divergence and does not re-align; act on its flags in this PR.
 - If the suite could not run at all, say so in the PR body and name what did run.
@@ -53,7 +53,7 @@ Batch fixes from all of these into one push where possible, then repeat Stage 1.
 - **30 minutes** still silent → a PR whose diff is **Markdown only** (every changed path ends `.md`) merges on green CI with the other gates held; say in the PR body and the hand-off report that Codex did not review the head. Anything else → STOP and ask for a ruling — prose-only as classified above still admits executable paths (`cordware/`, `.github/workflows/`, `.claude/hooks/`, `tools/`), and those do not merge unreviewed.
 - An explicit instruction from the user ("merge as soon as CI is green") skips the Codex wait for that PR; every other gate still holds.
 
-**After any fix pushed while the PR is ready:** the PR stays ready. Re-run Stage 1 on the new head (the `pytest`/`ruff` gates are owed on every push). Once CI is green again, check whether Codex has reviewed the new head; if not, post a PR comment `@codex review` to request it. Do not toggle the PR back to draft and ready again to force a review.
+**After any fix pushed while the PR is ready:** the PR stays ready. Re-run Stage 1 on the new head (the `pytest`/`ruff`/`pyright` gates are owed on every push). Once CI is green again, check whether Codex has reviewed the new head; if not, post a PR comment `@codex review` to request it. Do not toggle the PR back to draft and ready again to force a review.
 
 **Merge.** `main` has no branch protection by design — the gate is this checklist. Merge only when all hold on the head commit:
 - `CI` green.

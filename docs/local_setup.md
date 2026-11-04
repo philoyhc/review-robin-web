@@ -325,6 +325,7 @@ institutional one, since the dev slot is dormant
 | Alembic migration round-trip on SQLite | ✅ Yes |
 | Run the app + click through operator / reviewer surfaces | ✅ Yes — fake auth + forwarded port |
 | `ruff` lint | ✅ Yes |
+| `pyright` type check | ✅ Yes |
 | Postgres-dialect parity (what `ci-postgres` catches) | ⚙️ Optional — add Docker to the container, then run Postgres (below) |
 | Real Entra / Easy Auth sign-in, redirect flows, tenant allowlist | ❌ No — needs an Azure deployment |
 
