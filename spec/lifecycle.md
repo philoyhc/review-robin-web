@@ -43,7 +43,7 @@ draft                    validated                    ready           expired
 | `draft` | Draft | Setup is open; reviewer surface read-only. |
 | `validated` | Validated | Readiness check passed; setup still open but signals "ready to activate". |
 | `ready` | **Activated** | Reviewer surface accepting writes; setup locked. |
-| `expired` | Closed | Session closed by the operator's Workflow-card **Close session** button (`ready → expired`, `expire_session`). Every instrument is closed; responses (drafts + submitted) are preserved. From `expired` the operator can Revert to draft (`revert_session_to_draft`) to reopen for editing. |
+| `expired` | Closed | Session closed by the operator's Workflow-card **Close session** button (`ready → expired`, `expire_session`), or by the review's end passing: End, or with no End, Release responses from (`session_lifecycle.review_end`; `observe_deadline`, §4). Every instrument is closed; responses (drafts + submitted) are preserved. From `expired` the operator can Revert to draft (`revert_session_to_draft`) to reopen for editing. |
 | `archived` | Archived | Filed out of the active lobby; deletes no data. Written by `archive_session` / `unarchive_session`. `archive_session` accepts **any non-archived** starting state (draft / validated / ready / expired), so the Workflow card's `/workflow/archive` route can fire from any state, though the card renders its Archive button only in `expired` (`archive_visible`); the lobby's **Purge and archive** and the Extract data page's Archive card both go through `session_purge.purge_and_archive`, which skips any session failing `can_archive` (so `draft`, `validated` and `expired` archive, and `ready` does not). `archive_session` sets `accepting_responses=false` on every instrument in the same transaction, as every other exit from `ready` does, so `unarchive_session`, which restores `archived → draft`, lands with nothing accepting. |
 
 The internal enum is `SessionStatus` in
@@ -192,9 +192,12 @@ transaction. **Existing `Response` rows are preserved untouched**
 intact.
 
 Accepts both `ready` (the live mid-session pause) and `expired`
-(the recovery path after the operator closed the session with
-**Close session** and wants to reopen it for editing) as the
-starting state.
+(the recovery path after the session was closed, by **Close session**
+or by the review's end, and the operator wants to reopen it for
+editing) as the starting state. A session reverted with an End, or with
+no End a Release from, already in the past meets Validate's
+`session.end_passed` (`spec/validate_page.md`) until that date is moved
+or cleared, since activating would close it at once.
 
 Pre-conditions:
 
@@ -225,7 +228,12 @@ re-rendered in `ready`, whose form confirms.
 
 ### 2.7 `ready → expired` — `expire_session(...)`
 
-The "Close session" path. Called by `POST
+The "Close session" path. The review's end closes a session the same
+way, unattended (`observe_deadline`, §4): `ready → expired` with no
+actor, writing `session.expired` with `reason="deadline"` (End) or
+`reason="release"` (no End, Release from), not through
+`expire_session`.
+ Called by `POST
 /operator/sessions/{id}/workflow/close` — Row 2's **Close
 session** button on the Workflow card. Flips `ready → expired`
 and sets `accepting_responses=false` on every instrument in the
@@ -242,7 +250,8 @@ From `expired` the operator reopens the session for editing via
 Revert to draft (§2.5), which accepts `expired` alongside `ready`.
 
 Audit event: `session.expired` with
-`counts={"closed_instruments": N}`.
+`counts={"closed_instruments": N}`; the operator's close carries no
+`reason`.
 
 ## 3. Route-layer gates
 
@@ -445,8 +454,8 @@ open or every instrument is closed.
 
 | Column | Type | Meaning |
 |---|---|---|
-| `accepting_responses` | `Boolean` | Reviewers can save / submit. **Session-wide in practice:** set on every instrument by activate, cleared on every instrument by revert, Close session, archive and deadline-close. No operator control sets it per instrument. |
-| `deadline_closed_at` | `DateTime \| None` | Timestamp the deadline-close fired. Read only by `observe_deadline`, which skips an instrument already stamped; cleared by Activate and by a reopen while live (a `ready` session whose deadline is unset or moved into the future). No surface renders it. |
+| `accepting_responses` | `Boolean` | Reviewers can save / submit. **Session-wide in practice:** set on every instrument by activate, cleared on every instrument by revert, Close session, archive and the close at the review's end. No operator control sets it per instrument. |
+| `deadline_closed_at` | `DateTime \| None` | Timestamp the close at the review's end fired. Read by `observe_deadline`, which skips an instrument already stamped, and by `closed_at_deadline`, which tells the refused-save notice whether End closed the session; cleared by Activate and by a reopen while live (a `ready` session whose review end is unset or moved into the future). No surface renders it. |
 
 What a reviewer reads back after close is the visibility policy's call
 (`spec/reviewer-surface.md` "Lifecycle gating").
@@ -465,21 +474,37 @@ What a reviewer reads back after close is the visibility policy's call
   and the reviewer write gate (`spec/reviewer-surface.md`
   "Lifecycle gating") is session-wide with it.
 - **The heal.** `observe_deadline`, which runs on every reviewer
-  request and on the Instruments page, reopens any closed instrument
-  while the session is `ready` and before its deadline, emitting
-  `instrument.opened reason="session_wide"`; past the deadline it
-  closes them instead. Nothing in the UI reopens a single instrument,
+  request, on the Instruments page and in the scheduled pass (§8.3), reopens any closed instrument
+  while the session is `ready` and before the review's end, emitting
+  `instrument.opened reason="session_wide"`; past it, it closes them
+  instead. Nothing in the UI reopens a single instrument,
   and one left closed would make the gate refuse every write.
-- `observe_deadline(...)` — lazy deadline-close. Idempotent. Called
+- **The review's end.** `review_end(session)` is End, or with no End,
+  Release responses from; `None` when neither is set, and the review
+  then runs until the operator closes it. Everything End governs follows
+  it: the accept gate and Recall (`deadline_has_passed`), the
+  `while_ongoing` visibility window (`is_ongoing`: `ready` and before
+  the review's end) and the close below.
+- `observe_deadline(...)` — the close at the review's end. Idempotent. Called
   on the reviewer surface — its GET (`review_surface` and
   `_surface_context`; the operator preview skips it), Recall, and the write gate
-  `_write_refusal` ahead of save / submit / clear — and by
-  the operator Instruments page GET (`instruments_index`). The
+  `_write_refusal` ahead of save / submit / clear — by
+  the operator Instruments page GET (`instruments_index`) and by the
+  scheduled pass (§8.3). The
   predicate `session_accepts_responses` does not call it; it compares
-  `now()` with the deadline itself (§4.1). The first request after the deadline
-  passes sets `accepting_responses=False` + stamps
-  `deadline_closed_at` + emits one `instrument.closed
-  reason=deadline` audit event per instrument.
+  `now()` with the review's end itself (§4.1). The first trigger after the end
+  passes, whichever it is, sets `accepting_responses=False`, stamps
+  `deadline_closed_at`, emits one `instrument.closed` per instrument
+  (`reason="deadline"`, `context.deadline`; with no End,
+  `reason="release"`, `context.release_at`) and moves `ready → expired`,
+  writing `session.expired` (no actor; `reason="deadline"` or
+  `"release"`, same context, `counts.closed_instruments`). With a real
+  End it also writes `session.deadline_reached`
+  (`counts.submitted` of `counts.assigned` at that moment); a release that
+  ends the review is not a deadline and writes none. The session closes
+  also when its instruments were already shut (an earlier request
+  closed them before the session closed), once. A release window set
+  beforehand therefore opens unattended (§8.2.3).
 
 ### 4.1 The reviewer write-path predicate
 
@@ -488,7 +513,8 @@ reviewer write (save / submit / clear). Returns `True` iff:
 
 1. Session status is `ready`,
 2. `instrument.accepting_responses` is `True`,
-3. `now() < session.deadline` (or `session.deadline is None`).
+3. the review's end has not passed: `now() < review_end(session)` (or
+   `review_end` is `None`).
 
 POST routes (save / submit / clear) gate on it through
 `_write_refusal`, which also refuses a session that isn't `ready` or
@@ -504,12 +530,13 @@ upstream of this check:
   a `validated` session, the deadline, and the help contact
   (`spec/reviewer-surface.md` "Pre-open page"). An `archived` session
   never reaches the route: the gate answers 404.
-- If the session is `ready` but the predicate returns `False`
-  (the deadline passed),
-  the existing surface template renders read-only with the "no
-  longer accepting responses" banner; the saved values render below,
-  since a `ready` session is in the reviewer's `while_ongoing` window
-  (`spec/reviewer-surface.md` "Lifecycle gating").
+- If the review's end has passed, `observe_deadline` has already
+  moved the session to `expired` (this request runs it first), and the
+  surface renders read-only with the closed banner; the saved values
+  render only inside a release window the policy grants
+  (`spec/reviewer-surface.md` "Lifecycle gating"), since the
+  `while_ongoing` window ends at the review's end (`is_ongoing`), also
+  before the close has run.
 
 See `spec/reviewer-surface.md` §"Lifecycle gating" for the full
 GET-side rendering rules.
@@ -708,7 +735,9 @@ The events the lifecycle transitions and the scheduled triggers write.
 | `session.invalidated` | `invalidate_if_validated` (the automatic flip; lands in the caller's commit) and `invalidate_session` (the Revert; commits itself) | `reason=<string>` naming the caller: the mutation for `invalidate_if_validated` (e.g. `reviewer_created`, `assignments_generated`), `operator_revert` from `/revert`. A failed Activate writes none: the session stays `validated` |
 | `session.activated` | `activate_session` | `counts={"warnings": N, "info": N, "instruments": N}` + `context={"prev_status": "validated", "override_warnings": bool, "trigger": "operator" \| "scheduled"}` |
 | `session.reverted_to_draft` | `revert_session_to_draft` | `counts={"closed_instruments": N, "responses_at_revert": N}` |
-| `session.expired` | `expire_session` (Workflow-card **Close session**) | `counts={"closed_instruments": N}` |
+| `session.expired` | `expire_session` (Workflow-card **Close session**); `observe_deadline` at the review's end | `counts={"closed_instruments": N}`. The end's close has no actor and adds `reason="deadline"` (End) or `"release"` (no End, Release from) + `context={"deadline": …}` / `{"release_at": …}` |
+| `session.deadline_reached` | `observe_deadline`, only for a real End | `counts={"submitted": N, "assigned": N}` + `context={"deadline": …}` |
+| `session.release_window_opened` / `session.release_window_ended` | `observe_release_window` (§8.2.3) | `context={"release_at": …}` / `{"release_until": …}` |
 | `session.archived` | `archive_session` | `changes={"status": [<from_status>, "archived"]}` |
 | `session.unarchived` | `unarchive_session` | `changes={"status": ["archived", "draft"]}` |
 | `session.responses_released` | `release_responses_now` (Workflow-card **Release responses**) | `snapshot={"responses_release_at": …, "cleared_until": bool}` |
@@ -721,9 +750,14 @@ The events the lifecycle transitions and the scheduled triggers write.
 | `session.scheduled_activation_retry` / `session.scheduled_activation_failed_persistent` | the scheduled activation trigger on a transition error (§8.3) | `reason=<error text>` + `context={"scheduled_at": …, "attempt" \| "attempts": N}` |
 | `session.scheduled_invites_fired` / `session.scheduled_reminders_fired` | the invite / reminder triggers, once per offset fired | `counts={"sent": N}` + `context={"anchor_at", "offset_index", "offset", "scheduled_at", "actual_fired_at"}` |
 | `session.scheduled_invites_skipped` / `session.scheduled_reminders_skipped` | the invite / reminder triggers, once per offset skipped (§8.2.3) | `reason=<skip code>` + `context={"anchor_at", "offset_index", "offset", "scheduled_at"}` |
-| `session.scheduled_event_failed` | `observe_scheduled_events` when a trigger raises (§8.3) | `reason=<error text>` + `context={"trigger": …}` |
+| `session.scheduled_event_failed` | `observe_scheduled_events` when a trigger raises (§8.3) | `reason=<error text>` + `context={"trigger": "invites" \| "activation" \| "reminders" \| "deadline" \| "release"}` |
 | `instrument.opened` | `observe_deadline`'s heal (§4) | `refs={"instrument_id": id}` + `reason="session_wide"`. Older rows, from the retired per-instrument Open, carry no reason. |
-| `instrument.closed` | `observe_deadline` | `refs={"instrument_id": id}` + `reason="deadline"` + `context={"deadline": "..."}`. Past rows may carry `reason="manual"` from the retired per-instrument close. |
+| `instrument.closed` | `observe_deadline` | `refs={"instrument_id": id}` + `reason="deadline"` + `context={"deadline": "..."}`; with no End, `reason="release"` + `context={"release_at": "..."}`. Past rows may carry `reason="manual"` from the retired per-instrument close. |
+
+An event written inside the clock's pass (§8.3) also carries
+`context.fired_by="clock"` where its schema allows `context`; one written
+on a page view carries none. Each crossing writes one event whichever
+trigger reaches it first.
 
 See `spec/architecture.md` "Audit-event detail schema" for the
 canonical envelope contract these events follow.
@@ -761,8 +795,9 @@ canonical envelope contract these events follow.
 
 The operator-facing automation surface for time-based lifecycle
 events. The activation, invite and reminder triggers are live
-(`app/services/scheduled_events/`), and the release-window anchors
-are consumed by the participant surfaces rather than by a trigger;
+(`app/services/scheduled_events/`); the end's close and the release
+window's stamps run beside them, and the window itself is read by the
+participant surfaces;
 auto-archive and auto-delete-after-archive are columns with no
 consumer at all (`guide/deferred_consolidated.md`). This section
 documents the persistent model + the cross-cutting rules **all**
@@ -799,15 +834,33 @@ in-memory archive timestamp) also serve as anchors for offsets:
 
 | Offset | Column | Anchor | Shape | Default | Consumer |
 |---|---|---|---|---|---|
-| Auto-send invites | `invite_offsets` | `scheduled_activate_at` | JSON list of ISO 8601 durations, e.g. `["-P1D", "-PT2H"]` | empty (no auto-send) | live (`app/services/scheduled_events/_invites.py`) |
-| Auto-send reminders | `reminder_offsets` | `deadline` | JSON list of ISO 8601 durations, e.g. `["-P2D", "-PT4H"]` | empty (no auto-send) | live (`app/services/scheduled_events/_reminders.py`) |
+| Auto-send invites | `invite_offsets` | `scheduled_activate_at` | JSON list of ISO 8601 durations, e.g. `["-P1D", "-PT2H"]` | empty (no auto-send) | live behind `RRW_SCHEDULED_SEND` (`app/services/scheduled_events/_invites.py`) |
+| Auto-send reminders | `reminder_offsets` | `deadline` | JSON list of ISO 8601 durations, e.g. `["-P2D", "-PT4H"]` | empty (no auto-send) | live behind `RRW_SCHEDULED_SEND` (`app/services/scheduled_events/_reminders.py`) |
 | Auto-archive | `archive_offset` | `deadline` | single ISO 8601 duration, e.g. `"P30D"` | intended **`P30D`** once auto-archive is wired (gives the operator time to download data post-deadline before the session leaves the active lobby); the column has no default today, so it stays NULL unless a Settings CSV import sets it | deferred — column only (`guide/deferred_consolidated.md`) |
 | Release-until | `responses_release_until` — an absolute datetime, not an offset | n/a — column carries the absolute close time | DateTime(tz) | unset | Live. The form input is a date-time field (`spec/ui_elements.md` §8); the save-time validator enforces ordering (must close after `responses_release_at`) + a 365-day magnitude check. The Workflow card's **Stop releasing** button writes the same column (`= now()`). The reviewee and observer surfaces consume it inside their per-instrument window gates; there is no route-level gate on it. |
 | Auto-delete after archive | `retention_overrides.delete_after_archive` (JSON key inside `retention_overrides`) | archive timestamp | single ISO 8601 duration | unset (use deployment env-var default) | deferred — column only (`guide/deferred_consolidated.md`) |
 
-The "End" anchor (`deadline`) is also the anchor for the lazy
-deadline observer (§4 — per-instrument auto-close); that's the
-one scheduled lifecycle effect already live.
+**Auto-send is off by default.** `RRW_SCHEDULED_SEND` (`scheduled_send`
+in `app/config.py`, default off; read through
+`scheduled_events.scheduled_send_enabled`) stays off until mail can go on
+the clock. While it is off:
+
+- the two offset fields render disabled on New session and Session Home
+  with "Scheduled email is not available on this deployment."; stored
+  values are kept and shown without a send time, a Session Home save keeps
+  them unvalidated, and a create stores none;
+- the scheduled pass fires no invite or reminder, and activation, with no
+  invites to wait for, runs as usual;
+- the Workflow card's auto-send captions, the schedule timeline's
+  auto-send rows and the manual-activate confirm that warns of cancelling
+  scheduled sends are not shown, and the Guide says so;
+- the lobby's End edit skips the stored-reminder checks (§8.2.7's
+  ordering still applies);
+- the Settings CSV still exports both columns' values.
+
+The "End" anchor (`deadline`) is also the anchor for the close at the
+review's end (§4), which is live, and with no End the review's end is
+Release-from (`session_lifecycle.review_end`).
 
 ### 8.2 Cross-cutting rules
 
@@ -874,15 +927,25 @@ Release-from and Release-until are not fired events. The release
 window is evaluated at read time by
 `session_lifecycle.is_response_release_window_open` and is open only
 on an `expired` session, so there is no fire-time guard and no skip
-reason. Auto-archive and auto-delete-after-archive have no trigger at
+reason. Each moment is also **stamped** as an audit event for reports to
+read: `observe_release_window` writes `session.release_window_opened`
+when `responses_release_at` has passed and
+`session.release_window_ended` when `responses_release_until` has, once
+per crossing (a moved moment is a new crossing), whichever trigger reaches
+it first. It stamps only while the session is `expired`, and only a
+moment within `STAMP_GRACE` (one day) of now: an older crossing is not
+backfilled. It checks without a lock first, so a page view after the
+stamps exist takes none, and stamps under the session lock. It changes
+nothing about what is visible. Auto-archive and auto-delete-after-archive have no trigger at
 all (§8, above), so neither has a guard or a skip event either. The
 `not_draft` and `not_archived` codes exist only as the manual Validate
 and Unarchive transitions' refusals.
 
-The "End" anchor (`deadline`) is the trivial case: it's
-conditional on activation (`status == "ready"`) because there's
-nothing to close in a draft session — the lazy deadline observer
-(§4) already short-circuits when the session isn't `ready`.
+The review's end (End, or with no End, Release-from) is the trivial
+case: it's conditional on activation (`status == "ready"`) because
+there's nothing to close in a draft session — the close (§4) only runs
+on a `ready` session. Validate's `session.end_passed` refuses to
+activate a session whose end has already passed (`spec/validate_page.md`).
 
 **Why this shape.** The operator's planning window is wide
 ("when I create the session, I know it should activate Monday
@@ -940,8 +1003,9 @@ Edit / Create routes:
 > `scheduled_activate_at  ≤  deadline  ≤  responses_release_at  <  responses_release_until`
 
 Each pair is checked only when both members are non-NULL;
-NULL slots impose no constraint. The Start ↔ End and End ↔
-Release-from pairs are enforced by
+NULL slots impose no constraint, with one exception: with no End,
+Release-from is the review's end, so it must be on or after Start. The
+Start ↔ End, End ↔ Release-from and no-End Start ↔ Release-from pairs are enforced by
 `scheduled_events.validate_schedule_ordering`, called after
 the per-field parsers succeed; the Release-from ↔ Release-
 until pair (strict-greater-than, plus the 365-day magnitude
@@ -954,6 +1018,7 @@ translate to HTTP 422 with the per-pair error message:
 |---|---|
 | End < Start | `End must be on or after Start.` |
 | Release-from < End | `Release responses from must be on or after End — reviewees can only view results after the review window closes.` |
+| No End, Release-from < Start | `With no End, Release responses from must be on or after Start: the release ends the review.` |
 | Release-until ≤ Release-from | `Release responses until must be after Release responses from.` |
 | Release-until > Release-from + 365d | `Release responses until must be within 365 days of Release responses from.` |
 
@@ -968,7 +1033,7 @@ releasing a year after Release and then a Revert, can store a window
 past the cap (findings L1).
 
 The **Settings CSV import** enforces the chain too, in its parse phase, so a violating file is refused
-whole and nothing is applied. It checks the three pairs through
+whole and nothing is applied. It checks the pairs through
 `validate_schedule_ordering` (which takes `responses_release_until`
 for this caller, since the import has no per-field parser), on the
 values the session would hold after the apply — End is a fallback
@@ -995,18 +1060,44 @@ the page entirely.
 
 ### 8.3 Implementation notes
 
-- **Trigger mechanism — lazy observer.**
-  Scheduled-event triggers extend the lazy deadline-observer
-  pattern (§4) rather than running a separate background worker:
-  each operator GET to a session-related page runs the per-anchor
+- **Trigger mechanism — two triggers, one pass.** The scheduled steps
+  run in one order, `scheduled_events.observe_scheduled_events`:
+  invites (only with `RRW_SCHEDULED_SEND` on), then activation, then
+  reminders (same condition), then the close at the review's end
+  (`observe_deadline`, for a `ready` session past `review_end`), then the
+  release-window stamps (§8.2.3). Two triggers run that pass: the
+  page view below and the **clock** (next bullet). Either may reach a
+  step first; the per-session lock makes it happen once.
+- **The clock.** `app/services/scheduled_events/_clock.py`, started by
+  RRW's lifespan (`app/main.py`) when `SCHEDULER_INTERVAL_SECONDS`
+  (default `120`; `0` turns it off, as the test suite does) is above `0`.
+  Each pass takes a Postgres transaction-level advisory lock on RRW's own
+  key (`LOCK_KEY`; SQLite takes none) and skips if another process holds
+  it, so one process runs it. It visits only sessions with a step due
+  (`due_session_ids`): a Start that has passed, a `ready` session past its
+  review end, an `expired` one with a release moment within `STAMP_GRACE`;
+  never an `archived` session. Each session runs in its own database
+  session under the per-session lock, so one session's failure or
+  contention never stops the pass. Events it writes carry
+  `context.fired_by="clock"` (`audit.fired_by`; not `context.trigger`,
+  which names which trigger raised in `session.activated` and
+  `session.scheduled_event_failed`). It sends no mail: with sending on and
+  no invite-URL builder (it has none) the clock holds activation for a
+  session with invite offsets, since activating would clear the Start the
+  offsets resolve against. Shutdown waits up to 30 s for a pass in flight,
+  then abandons it. The page-view trigger stays as a backstop, so a
+  deployment with the clock off behaves as before.
+- **Trigger mechanism — page view.**
+  Each operator GET to a session-related page runs the per-anchor
   sweep for that session, fires anything past its scheduled time, and
   short-circuits on no-op. The pages are Session Home, the four
   Operations pages of §5 (Validate, Assignments, Invitations,
   Responses) and the Sessions lobby, which runs it for each session
   its table lists that can still fire (every one the operator owns
   that is neither `expired` nor `archived`: an expired session has
-  nothing left to fire, and its past entries would cost a lock on
-  every load). All go
+  nothing left for the lobby to fire, and its past entries would cost a
+  lock on every load; its release stamps wait for the clock or its own
+  pages). All go
   through `observe_scheduled_events_on_load`
   (`app/web/routes_operator/_shared.py`), which runs
   `scheduled_events.observe_scheduled_events` once per session per
@@ -1017,7 +1108,9 @@ the page entirely.
   operator GET ≥ scheduled time" — which is fine for events
   with reasonable lead time, but constrains *how close to the
   fire moment* the operator can schedule (the lead-time floors
-  are in `spec/settings_inventory.md` §2).
+  are in `spec/settings_inventory.md` §2). With the clock on, Start and
+  the review's end fire within one interval of their time with no page
+  view.
 - **Past-time editor rule.** The values that fire — Start and
   each invite and reminder offset — are **rejected** on **save**
   when their resolved fire time is closer than the operational
@@ -1106,8 +1199,11 @@ the page entirely.
   The trigger counts `scheduled_X_retry` events for the current
   scheduled-fire moment from the audit log; **after 3 failed
   retries** it emits `session.scheduled_X_failed_persistent`,
-  clears the schedule, and stops. Retries are paced by operator
-  visits — no time-based throttle for MVP. **Only activation
+  clears the schedule, and stops. Page-view retries are paced by operator
+  visits, with no throttle. On the clock a retry waits `RETRY_SPACING`
+  (15 minutes) after the last one, so the three do not spend themselves
+  in a few passes with nobody looking; the spacing holds back a Start
+  only, never a close or stamp due on the same session. **Only activation
   implements this.** For invites and reminders the retry and
   terminal state are work in progress awaiting Azure
   (`guide/post_azure_todo_checklist.md` item 7). Until then

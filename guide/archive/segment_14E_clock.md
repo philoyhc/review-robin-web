@@ -187,4 +187,9 @@ a Start after the end, the release reason), all acted on.
 - `spec/settings_inventory.md` — `SCHEDULER_INTERVAL_SECONDS`; `RRW_SCHEDULED_SEND` and the two auto-send fields disabled behind it (rung 0).
 - `spec/workflow_card.md` — the auto-send caption gone while the setting is off (rung 0).
 - `docs/deployment.md` — both settings in its table.
+- `spec/session_home.md` — the `expired` row; the disabled offset boxes (added at close, spec-writer's report).
+- `spec/sessions_overview.md` — the lobby End edit skips reminder checks while scheduled email is off (added at close).
+- `spec/README.md` — the `lifecycle.md` row (added at close).
+- `spec/architecture.md` — the accept rule and the close at the review's end (added at close).
+- `spec/email_infra_options.md` — the plan's archived path (added at close).
 - `guide/post_azure_todo_checklist.md` — item 7 narrowed to mail (at close).

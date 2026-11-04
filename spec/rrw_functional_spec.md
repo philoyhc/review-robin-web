@@ -398,7 +398,7 @@ list of display fields, and per-audience **visibility policies**
 rule produces, the cached eligible-pair count, the per-instrument
 fan-out copies for group-scoped instruments, and the
 accepting-responses flag, which the session's lifecycle sets on
-every instrument at once (Activate opens; the deadline, Close session,
+every instrument at once (Activate opens; the review's end, Close session,
 Revert or Archive closes).
 
 A session may have any number of instruments (no cap). Each
@@ -634,7 +634,7 @@ time (nothing is copied onto assignments).
   stripped), **Summarized** (per-data-type aggregate stats, no
   individual rows).
 - **Window** (2): **session ongoing** — while the session is
-  Activated (`ready`), whether or not its deadline has passed — and
+  Activated (`ready`) and the review's end has not passed — and
   **responses released** — while it is Closed (`expired`) and inside
   the operator's Release-responses window. A grant carries one mode
   per window; a grant with a mode in both is visible in either.
@@ -689,7 +689,7 @@ treats the session in lobby and extract surfaces.
 | `draft` | Draft | Setup is open. Operator may edit any aspect. Reviewer surface is read-only (pre-open). |
 | `validated` | Validated | Setup has been validated and passed all blocking checks. Setup is still open. Any setup change the readiness check reads auto-invalidates back to `draft`. |
 | `ready` | Activated | Reviewer surface is open and accepting responses. Setup is locked. Operator may revert to `draft`. |
-| `expired` | Closed | The operator closed the session with the Workflow-card **Close session** button. Every instrument is closed; all responses (drafts + submitted) are preserved. Operator can Revert to draft to reopen for editing. |
+| `expired` | Closed | The operator closed the session with the Workflow-card **Close session** button, or the review's end did: its End or, with no End, its Release-responses-from time. Every instrument is closed; all responses (drafts + submitted) are preserved. Operator can Revert to draft to reopen for editing. |
 | `archived` | Archived | Session is filed out of the active lobby; no data deleted unless the operator chose to purge on the way in. The service accepts **any non-archived** state; which state each control offers it from is in §6.1. Unarchive returns it to `draft`. |
 
 ### 6.1 Transitions
@@ -697,7 +697,7 @@ treats the session in lobby and extract surfaces.
 Prepare session moves `draft → validated` on a clean validation, and
 any setup change the readiness check reads flips the session back to
 `draft`. Activate moves `validated → ready`, by the operator or on
-schedule; Close session moves `ready → expired`; Revert to draft
+schedule; Close session, or the review's end passing, moves `ready → expired`; Revert to draft
 returns `ready` or `expired` to `draft` with responses kept. The
 Workflow card offers **Archive session** only in `expired`, while the
 lobby's **Purge and archive** and the Extract data page's **Archive
@@ -723,12 +723,15 @@ and Assignments, Invitations and Responses rely on the Workflow card.
 `spec/lifecycle.md` §3 and §5 own the gates and the lock-card pattern;
 `spec/session_home.md` owns the Session details card's own gate.
 
-### 6.3 Lazy deadline closure
+### 6.3 Closure at the review's end
 
-Once the deadline passes, the first request that observes it closes
-every instrument and writes one `instrument.closed` event per
-instrument. `spec/lifecycle.md` §4 owns the lazy close, and
-`spec/reviewer-surface.md` "Lazy deadline-close" what the reviewer sees
+The review ends at its End or, with no End, at its Release-responses-from
+time. Timed steps (opening at Start, closing at the end, stamping the
+release window) happen on time with no one looking, from a clock inside the
+application; a request that arrives first does the same work, once. At the
+end, every instrument closes (one `instrument.closed` event each) and the
+session closes (`expired`). `spec/lifecycle.md` §4 owns the lazy close, and
+`spec/reviewer-surface.md` "Close at the review's end" what the reviewer sees
 after it.
 
 ---
@@ -883,10 +886,13 @@ Every scheduled anchor obeys a save-time ordering chain
 (Start ≤ deadline ≤ Release-from < Release-until), which the
 Settings CSV import enforces too, and an
 unset-anchor rule (an offset whose anchor is unset never fires).
-Triggers fire via the
-lazy-observer pattern (on the next operator GET past the
-scheduled time), not a background worker. The Session details
-config card shows each offset's resolved fire moment inline.
+Timed steps fire from a clock inside the application, with no page view
+needed; the same work also runs on the next operator or reviewer request
+past the scheduled time, and a step reached by both happens once. Scheduled
+sending of invitations and reminders is switched off per deployment until
+mail can go on a clock: the offset fields are then disabled, stored values
+are kept, and nothing fires. When on, the Session details config card shows
+each offset's resolved fire moment inline.
 
 ### 8.4 Email-template fields
 
@@ -1266,11 +1272,11 @@ and the help contact, each when it applies, and a return link to the
 dashboard. No review form renders. An `archived` session answers a
 bare 404 to every participant.
 
-If the session is `ready` but past its deadline, or `expired`, the
+If the session is `expired`, or `ready` but past the review's end, the
 reviewer's **review surface still loads** but renders read-only:
 inputs disabled, Save / Submit / Clear hidden, previously-saved
 responses visible as each instrument's visibility policy allows:
-always while the session is ready, and after close only through a
+always while the review is ongoing, and after its end only through a
 Raw "Responses released" grant inside the release window
 (`spec/reviewer-surface.md` "Lifecycle gating").
 
@@ -1438,7 +1444,8 @@ table and its retry rules.
 
 ### 11.4 Scheduling — auto-send
 
-The operator sets **invite offsets** anchored on the
+Where the deployment has scheduled sending switched on (it is off until
+mail can go on a clock, §8.3), the operator sets **invite offsets** anchored on the
 scheduled-activation moment and **reminder offsets** anchored on the
 deadline. Each offset fires one auto-send pass over the eligible
 reviewers, a reminder falling back to a fresh invitation where the
@@ -1714,7 +1721,8 @@ deletion and operator-triggered purge.
 
 ### 16.1 Close session
 
-From `ready`, the Workflow card's **Close session** moves the session
+From `ready`, the Workflow card's **Close session** (or the review's end
+passing, §6.3) moves the session
 to `expired` (Closed): every instrument closes, every response is kept,
 and Revert to draft reopens it. `spec/lifecycle.md` §2.7 owns it.
 

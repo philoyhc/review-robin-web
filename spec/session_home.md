@@ -17,7 +17,7 @@ transitions.
 | `draft` | Draft | live |
 | `validated` | Validated | live |
 | `ready` | **Activated** | live |
-| `expired` | Closed | live (Workflow-card "Close session": `ready → expired`) |
+| `expired` | Closed | live (Workflow-card "Close session", or the review's end, End or with no End Release from: `ready → expired`, `spec/lifecycle.md` §4) |
 | `archived` | Archived | live (Workflow "Archive" / lobby "Purge and archive"; reversible via unarchive → draft) |
 
 The enum/display divergence on `ready` → "Activated" exists because
@@ -369,7 +369,11 @@ plain `<label>` above its value:
   the **Send invites** (offset from Start) and **Send reminders**
   (offset from End) offset lists. In display mode each offset
   shows as a pill next to its **resolved send datetime**
-  (`views.build_offset_display_rows`). Resolved fire-moments read
+  (`views.build_offset_display_rows`). **With scheduled email off**
+  (`RRW_SCHEDULED_SEND`, the default; `spec/settings_inventory.md`) the
+  two offset boxes render disabled under the line "Scheduled email is
+  not available on this deployment.", the pills show without a send
+  time, and a Save keeps the stored offsets as they are, unchecked. Resolved fire-moments read
   inline beside their offset; there is no separate
   Schedule-timeline card. Each box is seeded with its stored value in
   the session's zone. **A timezone change keeps the stored instants**

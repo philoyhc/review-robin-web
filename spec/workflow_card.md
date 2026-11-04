@@ -137,8 +137,8 @@ returns:
   click would cancel pending auto-sends, built by
   `build_manual_activate_cancellation`. Shape:
   `{"pending_count": int, "message": str}`. `None` unless the
-  session is `validated`, `scheduled_activate_at` is set and
-  `invite_offsets` is non-empty. The modal lives on the button
+  session is `validated`, `scheduled_activate_at` is set,
+  `invite_offsets` is non-empty and `RRW_SCHEDULED_SEND` is on. The modal lives on the button
   itself, not the right column — see §"Manual-activate cancellation modal".
 - `next_action_return_to` — the `return_to` slug, passed
   through.
@@ -221,7 +221,7 @@ missed).
 | **7** | `is_ready`, no Invitation rows yet | "Session is open for responses, but no invitations exist — nobody has been told they can start. Only **Prepare session** creates them and an open session cannot run it: **Revert to draft** first, which stops responses, then fix the roster, Prepare, and activate again." |
 | **8** | `is_ready`, invites generated, none sent | "Session is open. Send the prepared invitations so reviewers know they can start." |
 | **9** | `is_ready`, invites sent | "Session is open. Send reminders if reviewers fall behind." |
-| **10** | `is_expired` (post-Close-session) | "Session is closed. No further responses are being accepted. Revert to draft to reopen for editing — responses are preserved." |
+| **10** | `is_expired` (post-Close-session, or closed by the review's end) | "Session is closed. No further responses are being accepted. Revert to draft to reopen for editing — responses are preserved." |
 
 **The `W` overlay** — `is_validated` + `can_activate` +
 `needs_acknowledge`, on top of whichever of States 4 / 5 / 6 the invitation
@@ -332,8 +332,9 @@ never co-render: Send invites disappears once they're sent;
 Release responses
 and Stop releasing share a slot, flipping on
 `is_response_release_window_open`, and both stay hidden until
-the session has **closed (expired)** — the operator only takes
-the manual release shortcut post-deadline.
+the session has **closed (expired)**, by the Close session button or
+by the review's end — the operator only takes the manual release shortcut
+once the session is closed.
 
 ### Per-state visible-button table
 
@@ -710,7 +711,11 @@ sub-module (`app/web/routes_operator/_workflow.py`):
   (`accepting_responses = False`); each instrument's visibility
   policy then governs whether reviewers can still see what they
   submitted (`spec/reviewer-surface.md` "Lifecycle gating"). Emits
-  `session.expired`.
+  `session.expired`. The button is not the only way to `expired`: the
+  review's end (End, or with no End, Release responses from) closes a
+  `ready` session unattended (`observe_deadline`; `spec/lifecycle.md` §4),
+  with the same effect, so a session can arrive in State 10 with no
+  click, and its release window can open without one.
 - **Release responses** posts to
   `/operator/sessions/{id}/workflow/release-responses` via
   `next-action-release-responses-form`. Live in State 10 only,
@@ -821,6 +826,14 @@ border — the icon tone carries the urgency cue:
 Lines render in this top-to-bottom order: failure first (most
 urgent), then scheduled-activation, then auto-send invites, then
 auto-send reminders.
+
+**With `RRW_SCHEDULED_SEND` off** (the default; `spec/lifecycle.md` §8.1),
+`build_auto_send_invites_caption` and `build_auto_send_reminders_caption`
+return `None` whatever the offsets hold, so no line promises an automatic
+send and the "System will dispatch automatically" rows below do not render;
+the schedule timeline lists no auto-send row, and
+`build_manual_activate_cancellation` returns `None`. The scheduled-activation
+signal is unaffected.
 
 #### Workflow-failure signal
 
@@ -940,7 +953,8 @@ right-column signal. The `manual_activate_cancellation` context
 key is populated when a manual Activate click would cancel
 pending auto-sends — i.e. when the session is `validated`,
 `scheduled_activate_at` is set (the builder does not test that it
-is in the future) **and** `invite_offsets` has at least one entry.
+is in the future) **and** `invite_offsets` has at least one entry **and** scheduled
+send is on (`RRW_SCHEDULED_SEND`; off, there is nothing to cancel).
 Payload: `pending_count`, the length of the whole `invite_offsets`
 list rather than the future-only subset, and `message`, which the
 Activate form carries as `data-manual-activate-confirm` ("N

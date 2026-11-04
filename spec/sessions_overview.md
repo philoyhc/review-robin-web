@@ -298,7 +298,9 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
   (`scheduled_events.validate_deadline_change`) is the three Session
   Home runs on End: ordering against the stored Start and Release-from,
   the reminders already sent on the new End (`spec/lifecycle.md`
-  §8.2.6), and each stored reminder offset re-resolved on the new End. An unchanged
+  §8.2.6), and each stored reminder offset re-resolved on the new End;
+  with scheduled email off (`RRW_SCHEDULED_SEND`) the two reminder checks
+  are skipped, as the offsets fire nothing. An unchanged
   deadline skips it, and a deadline box whose text is still the stored
   deadline as the box renders it, in the session zone (`T` or a space
   between date and time alike), counts as
