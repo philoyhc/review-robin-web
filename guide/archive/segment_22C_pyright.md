@@ -154,7 +154,7 @@ in CI (`test` and `residential` jobs): 307 errors at rung 1, 0 at
   puts its interpreter on PATH. Locally pyright must run with `.venv`
   active, or every import reads missing.
 - **Follow-ups filed** (`#3593`): `guide/archive/segment_22D_pyright_tests.md`,
-  `guide/segment_22E_pyright_strict.md`.
+  `guide/archive/segment_22E_pyright_strict.md`.
 
 **Behavior changes, each named and tested**
 - The observer collation's lone unlabelled instrument showed an
@@ -224,7 +224,7 @@ back exactly. None found a defect that shipped.
 - ~~Rung 2's rule set~~: two steps, `I` and `UP` then `B` and `SIM`
   (author, 2026-11-04).
 - ~~Tests~~: filed as `guide/archive/segment_22D_pyright_tests.md` (author, 2026-11-04).
-- ~~Strict mode~~: filed as `guide/segment_22E_pyright_strict.md` (author, 2026-11-04).
+- ~~Strict mode~~: filed as `guide/archive/segment_22E_pyright_strict.md` (author, 2026-11-04).
 
 ## Out of scope
 
