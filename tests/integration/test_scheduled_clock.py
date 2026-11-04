@@ -8,7 +8,6 @@ import threading
 from collections.abc import Callable
 from contextlib import nullcontext
 from datetime import UTC, datetime, timedelta
-from typing import Any
 
 import pytest
 from sqlalchemy import select
@@ -19,15 +18,11 @@ from app.services import scheduled_events
 from app.services import session_lifecycle as lifecycle
 from app.services.scheduled_events import _clock
 
+from ._lookups import detail_of
 from .test_scheduled_activation import _make_validated_session
 
 NOW = datetime.now(UTC)
 
-
-def _detail(event: AuditEvent) -> dict[str, Any]:
-    """An audit row's ``detail``, which every event under test writes."""
-    assert event.detail is not None
-    return event.detail
 
 
 def _factory(db: Session) -> Callable[[], nullcontext[Session]]:
@@ -89,8 +84,8 @@ def test_the_pass_activates_a_session_whose_start_has_passed(db: Session) -> Non
     db.refresh(rs)
     assert lifecycle.is_ready(rs)
     activated = _events(db, rs, "session.activated")
-    assert _detail(activated[-1])["context"]["fired_by"] == "clock"
-    assert _detail(activated[-1])["context"]["trigger"] == "scheduled"
+    assert detail_of(activated[-1])["context"]["fired_by"] == "clock"
+    assert detail_of(activated[-1])["context"]["trigger"] == "scheduled"
 
 
 def test_the_deadline_closes_once_with_the_counts_at_that_moment(db: Session) -> None:
@@ -106,16 +101,16 @@ def test_the_deadline_closes_once_with_the_counts_at_that_moment(db: Session) ->
     assert open_left == []
     reached = _events(db, rs, "session.deadline_reached")
     assert len(reached) == 1
-    assert _detail(reached[0])["context"]["fired_by"] == "clock"
-    assert set(_detail(reached[0])["counts"]) == {"submitted", "assigned"}
+    assert detail_of(reached[0])["context"]["fired_by"] == "clock"
+    assert set(detail_of(reached[0])["counts"]) == {"submitted", "assigned"}
     # End closes the session (author, 2026-11-04): ready → expired, no actor.
     db.refresh(rs)
     assert lifecycle.is_expired(rs)
     expired = _events(db, rs, "session.expired")
     assert len(expired) == 1
     assert expired[0].actor_user_id is None
-    assert _detail(expired[0])["reason"] == "deadline"
-    assert _detail(expired[0])["context"]["fired_by"] == "clock"
+    assert detail_of(expired[0])["reason"] == "deadline"
+    assert detail_of(expired[0])["context"]["fired_by"] == "clock"
 
     # A later page view, and a second pass, record nothing more.
     lifecycle.observe_deadline(db, rs, now=NOW)
@@ -129,7 +124,7 @@ def test_a_page_view_first_records_the_deadline_without_fired_by(db: Session) ->
     _clock.run_pass(_factory(db), now=NOW)
     reached = _events(db, rs, "session.deadline_reached")
     assert len(reached) == 1
-    assert "fired_by" not in _detail(reached[0])["context"]
+    assert "fired_by" not in detail_of(reached[0])["context"]
 
 
 def test_the_release_window_is_stamped_once_per_crossing(db: Session) -> None:
@@ -147,10 +142,10 @@ def test_the_release_window_is_stamped_once_per_crossing(db: Session) -> None:
     assert len(opened) == 1 and len(ended) == 1
     release_at = rs.responses_release_at
     assert release_at is not None
-    assert _detail(opened[0])["context"]["release_at"] == release_at.replace(
+    assert detail_of(opened[0])["context"]["release_at"] == release_at.replace(
         tzinfo=release_at.tzinfo or UTC
     ).isoformat()
-    assert _detail(ended[0])["context"]["fired_by"] == "clock"
+    assert detail_of(ended[0])["context"]["fired_by"] == "clock"
 
     # A moved end is a new crossing.
     rs.responses_release_until = NOW - timedelta(minutes=1)
@@ -400,9 +395,9 @@ def test_with_no_end_release_from_closes_the_session_and_opens_the_window(
     assert lifecycle.is_expired(rs)
     expired = _events(db, rs, "session.expired")
     assert len(expired) == 1
-    assert _detail(expired[0])["reason"] == "release"
-    assert _detail(expired[0])["context"]["fired_by"] == "clock"
-    assert "release_at" in _detail(expired[0])["context"]
+    assert detail_of(expired[0])["reason"] == "release"
+    assert detail_of(expired[0])["context"]["fired_by"] == "clock"
+    assert "release_at" in detail_of(expired[0])["context"]
     assert _events(db, rs, "session.deadline_reached") == []
     assert len(_events(db, rs, "session.release_window_opened")) == 1
     _clock.run_pass(_factory(db), now=NOW)
@@ -485,7 +480,7 @@ def test_an_operator_page_view_past_end_closes_the_session(db: Session) -> None:
     db.refresh(rs)
     assert lifecycle.is_expired(rs)
     expired = _events(db, rs, "session.expired")
-    assert len(expired) == 1 and "fired_by" not in _detail(expired[0])["context"]
+    assert len(expired) == 1 and "fired_by" not in detail_of(expired[0])["context"]
 
 
 def test_no_end_release_before_start_is_refused_at_save() -> None:
@@ -528,4 +523,4 @@ def test_a_release_close_names_the_instruments_release(db: Session) -> None:
     db.commit()
     lifecycle.observe_deadline(db, rs, now=NOW)
     closed = _events(db, rs, "instrument.closed")
-    assert closed and all(_detail(e)["reason"] == "release" for e in closed)
+    assert closed and all(detail_of(e)["reason"] == "release" for e in closed)

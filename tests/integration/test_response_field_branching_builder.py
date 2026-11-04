@@ -14,19 +14,13 @@ import re
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
+from ._lookups import must_search
 from .test_instrument_builder_routes import (
     _band2_rfs,
     _card_slice,
     _new_model_with_tags,
     _rf_fn,
 )
-
-
-def _search(pattern: str, text: str, flags: int = 0) -> re.Match[str]:
-    """``re.search`` for a fragment the page is expected to carry."""
-    match = re.search(pattern, text, flags)
-    assert match is not None
-    return match
 
 
 def _page(client: TestClient, db: Session, code: str, *, branched: bool = True):
@@ -105,16 +99,16 @@ def test_rows_align_from_the_name_onward(client: TestClient, db: Session) -> Non
 def test_fork_shows_its_three_states(client: TestClient, db: Session) -> None:
     _, _, card, _ = _page(client, db, "br-builder-fork")
     parent = _row(_rows_table(card), "Rating")
-    fork = _search(r"<button[^>]*data-new-model-rf-fork[^>]*>", parent).group(0)
+    fork = must_search(r"<button[^>]*data-new-model-rf-fork[^>]*>", parent).group(0)
     # Selected, and off, on a parent with a branch.
     assert 'class="btn rf-glyph"' in fork and 'aria-pressed="true"' in fork
     assert 'title="This field has a branch"' in fork and " disabled" in fork
     _, _, card, _ = _page(client, db, "br-builder-fork-none", branched=False)
     table = _rows_table(card)
-    rating = _search(
+    rating = must_search(
         r"<button[^>]*data-new-model-rf-fork[^>]*>", _row(table, "Rating")
     ).group(0)
-    comments = _search(
+    comments = must_search(
         r"<button[^>]*data-new-model-rf-fork[^>]*>", _row(table, "Comments")
     ).group(0)
     # Outline, and live, where a branch can be added; off on a String field.
@@ -159,13 +153,13 @@ def test_branch_controls_are_wired(client: TestClient, db: Session) -> None:
     # No control is disabled, the mode select included (19T Item 13).
     assert " disabled" not in condition
     governed = _row(table, "Comments")
-    r = _search(r"<button[^>]*data-new-model-rf-required[^>]*>", governed).group(0)
+    r = must_search(r"<button[^>]*data-new-model-rf-required[^>]*>", governed).group(0)
     assert " disabled" not in r and "can't be required" not in r
     assert 'onclick="newModelRfRequiredChanged(this)"' in r
-    x = _search(r"<button[^>]*data-new-model-rf-delete[^>]*>", _row(table, "Rating"))
+    x = must_search(r"<button[^>]*data-new-model-rf-delete[^>]*>", _row(table, "Rating"))
     assert " disabled" in x.group(0) and 'title="Delete its branch first"' in x.group(0)
     # The operators by parent type, for a new condition row's select.
-    ops = _search(r"data-new-model-rf-branch-ops='([^']*)'", table).group(1)
+    ops = must_search(r"data-new-model-rf-branch-ops='([^']*)'", table).group(1)
     assert json.loads(ops.replace("&#34;", '"')) == {
         "numeric": [
             ["eq", "is equal to", "="], ["ne", "is not equal to", "≠"],
@@ -296,7 +290,7 @@ def test_join_and_detach_show_their_states(client: TestClient, db: Session) -> N
     # The first row, and a parent, can't join.
     assert parent_join and " disabled" in parent_join.group(0)
     for marker in ("data-new-model-rf-add", "data-new-model-rf-fork", "data-new-model-rf-join"):
-        button = _search(rf"<button[^>]*{marker}[^>]*>", _row(table, "Rating")).group(0)
+        button = must_search(rf"<button[^>]*{marker}[^>]*>", _row(table, "Rating")).group(0)
         assert "rf-glyph" in button, marker
     assert (
         "body.ui-v2 table.rf-table .btn.rf-glyph, body.ui-v2 table.rf-table td.col-shrink > .btn "

@@ -149,6 +149,15 @@ set to the four test trees.
     event's `detail`, `db.get`, `re.search`, `spec.loader`), so each takes
     an `assert` beside it; four comprehensions become loops with the
     assert inside; no fixture annotation was wrong.
+  - **7.2:** `tests/browser` and `tests/integration` strict, 26 + 719
+    fixed, and the relaxation gone: `executionEnvironments` shrinks to
+    the `tests` root (import paths only) and `.`. The same patterns;
+    `tests/integration/_lookups.py` holds the asserting `must_get`,
+    `must_search` and `detail_of`, which replace 37 identical local copies
+    (`_get`, `_search`, `_detail`). 7.1 had dropped `tests` from
+    `tests/unit`'s import paths (two tests import `tests/_rrw_app.py`);
+    it ships here, since 7.1's CI had not run. Folded into #3602 when
+    GitHub left its runs queued behind two stuck `main` runs.
 
 ## PR ladder
 

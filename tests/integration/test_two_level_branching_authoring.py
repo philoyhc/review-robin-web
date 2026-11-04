@@ -8,8 +8,6 @@ and Rating ≥ 4 governs Comments."""
 
 from __future__ import annotations
 
-from typing import Any
-
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -18,17 +16,13 @@ from app.db.models import AuditEvent, Instrument, InstrumentResponseField
 from app.services import instruments as instruments_service
 from app.services.session_config_io import Row, apply_session_config, serialize_session_config
 
+from ._lookups import detail_of
 from .test_instrument_builder_routes import _band2_rfs, _new_model_with_tags
 from .test_response_field_branching_roundtrip import _fields, _session
 from .test_response_field_branching_save import _add_response, _rfs, _save
 
 DEEP = "A branch inside a branch can't have a branch of its own."
 
-
-def _detail(event: AuditEvent) -> dict[str, Any]:
-    """An audit row's ``detail``, which every event under test writes."""
-    assert event.detail is not None
-    return event.detail
 
 
 def _chain_payload(instrument: Instrument, **changes: dict) -> list[dict]:
@@ -73,7 +67,7 @@ def test_the_cards_save_stores_and_audits_a_chain(client: TestClient, db: Sessio
     audited = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "instrument.field_updated")
     ).scalars().all()
-    changed = {_detail(e)["context"]["field_key"] for e in audited if "branch_parent_id" in (_detail(e).get("changes") or {})}
+    changed = {detail_of(e)["context"]["field_key"] for e in audited if "branch_parent_id" in (detail_of(e).get("changes") or {})}
     assert {rating.field_key, comments.field_key} <= changed
 
 

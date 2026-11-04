@@ -14,8 +14,6 @@ to verify. See `tests/integration/conftest.py`, "Real-commit harness".
 
 from __future__ import annotations
 
-from typing import Any
-
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.engine import Engine
@@ -23,20 +21,8 @@ from sqlalchemy.orm import Session
 
 from app.db.models import AuditEvent, ReviewSession
 
+from ._lookups import detail_of, must_get
 from ._public_id import public_id
-
-
-def _get[M](db: Session, model: type[M], ident: object) -> M:
-    """``db.get`` for a row the test knows exists."""
-    row = db.get(model, ident)
-    assert row is not None
-    return row
-
-
-def _detail(event: AuditEvent) -> dict[str, Any]:
-    """An audit row's ``detail``, which every event under test writes."""
-    assert event.detail is not None
-    return event.detail
 
 
 def _session_id(client: TestClient, engine: Engine, code: str) -> int:
@@ -109,7 +95,7 @@ def test_a_failed_prepare_persists_its_audit_event(
         "`audit.write_event` flushes and the failure path returns without "
         "committing"
     )
-    assert _detail(failed[0])["context"]["step"] == "validate"
+    assert detail_of(failed[0])["context"]["step"] == "validate"
 
 
 def test_a_prepare_failing_at_generate_keeps_its_started_event(
@@ -166,12 +152,12 @@ def test_a_prepare_failing_unexpectedly_records_its_failure(
     assert _events(committed_engine, session_id, "session.workflow_run_started")
     failed = _events(committed_engine, session_id, "session.workflow_run_failed")
     assert len(failed) == 1
-    assert _detail(failed[0])["context"]["step"] == "generate"
-    assert _detail(failed[0])["context"]["error_message"] == (
+    assert detail_of(failed[0])["context"]["step"] == "generate"
+    assert detail_of(failed[0])["context"]["error_message"] == (
         "Unexpected error (IntegrityError)."
     )
     with Session(bind=committed_engine) as verify:
-        assert _get(verify, ReviewSession, session_id).status == "draft"
+        assert must_get(verify, ReviewSession, session_id).status == "draft"
 
 
 def test_activate_commits_its_started_event_before_the_warnings_detour(
@@ -186,7 +172,7 @@ def test_activate_commits_its_started_event_before_the_warnings_detour(
 
     session_id = _session_id(committed_client, committed_engine, "act-detour")
     with Session(bind=committed_engine) as setup:
-        _get(setup, ReviewSession, session_id).status = "validated"
+        must_get(setup, ReviewSession, session_id).status = "validated"
         setup.commit()
 
     monkeypatch.setattr(workflow.validation, "validate_session_setup", lambda *_: [])
@@ -210,10 +196,10 @@ def test_activate_commits_its_started_event_before_the_warnings_detour(
 
     started = _events(committed_engine, session_id, "session.workflow_run_started")
     assert len(started) == 1
-    assert _detail(started[0])["context"]["button"] == "activate_session"
+    assert detail_of(started[0])["context"]["button"] == "activate_session"
     assert not _events(committed_engine, session_id, "session.workflow_run_failed")
     with Session(bind=committed_engine) as verify:
-        assert _get(verify, ReviewSession, session_id).status == "validated"
+        assert must_get(verify, ReviewSession, session_id).status == "validated"
 
 
 def test_an_unexpected_failure_after_a_flush_lands_only_its_failure_row(
@@ -246,6 +232,6 @@ def test_an_unexpected_failure_after_a_flush_lands_only_its_failure_row(
 
     failed = _events(committed_engine, session_id, "session.workflow_run_failed")
     assert len(failed) == 1
-    assert _detail(failed[0])["context"]["step"] == "validate"
+    assert detail_of(failed[0])["context"]["step"] == "validate"
     with Session(bind=committed_engine) as verify:
-        assert _get(verify, ReviewSession, session_id).name == "Fail-Flush"
+        assert must_get(verify, ReviewSession, session_id).name == "Fail-Flush"

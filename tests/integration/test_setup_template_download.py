@@ -39,17 +39,13 @@ from app.services.setup_templates import (
 from app.web import views
 from cordware.settings import IdentitySettings
 
+from ._lookups import must_get
+
 app = rrw_app()
 
 DOWNLOAD_URL = "/templates/starter.zip"
 DEMO_URL = "/templates/demo.zip"
 
-
-def _get[M](db: Session, model: type[M], ident: object) -> M:
-    """``db.get`` for a row the test knows exists."""
-    row = db.get(model, ident)
-    assert row is not None
-    return row
 
 
 def _files(set_key: str = "starter") -> dict[str, bytes]:
@@ -256,7 +252,7 @@ def test_the_demo_set_builds_a_validated_session(
             ReviewSession.code == "demo-round-trip"
         )
     ).scalar_one()
-    public_id = _get(db, ReviewSession, session_id).public_id
+    public_id = must_get(db, ReviewSession, session_id).public_id
 
     submitted = client.post(
         f"/operator/sessions/{public_id}/quick-setup/submit-all",
@@ -321,7 +317,7 @@ def test_the_demo_set_builds_a_validated_session(
     assert prepared.status_code == 303
 
     db.expire_all()
-    assert _get(db, ReviewSession, session_id).status == "validated"
+    assert must_get(db, ReviewSession, session_id).status == "validated"
 
 
 def test_the_demo_set_populates_the_surfaces_it_is_meant_to_show(
@@ -340,7 +336,7 @@ def test_the_demo_set_populates_the_surfaces_it_is_meant_to_show(
     session_id = db.execute(
         select(ReviewSession.id).where(ReviewSession.code == "demo-populated")
     ).scalar_one()
-    public_id = _get(db, ReviewSession, session_id).public_id
+    public_id = must_get(db, ReviewSession, session_id).public_id
     client.post(
         f"/operator/sessions/{public_id}/quick-setup/submit-all",
         files={

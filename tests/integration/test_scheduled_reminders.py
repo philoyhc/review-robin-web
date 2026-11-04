@@ -7,7 +7,6 @@ Mirrors the structure of ``test_scheduled_invites.py``.
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -37,16 +36,12 @@ from app.services import (
 )
 
 from ._full_matrix import pin_full_matrix_on_all_instruments
+from ._lookups import detail_of
 
 # --------------------------------------------------------------------------- #
 # Fixtures                                                                    #
 # --------------------------------------------------------------------------- #
 
-
-def _detail(event: AuditEvent) -> dict[str, Any]:
-    """An audit row's ``detail``, which every event under test writes."""
-    assert event.detail is not None
-    return event.detail
 
 
 def _stub_build_url(token: str) -> str:
@@ -244,8 +239,8 @@ def test_skip_when_not_ready(db: Session) -> None:
     )
     skipped = _audit_rows(db, rs, "session.scheduled_reminders_skipped")
     assert len(skipped) == 1
-    assert _detail(skipped[0])["reason"] == "not_ready"
-    assert _detail(skipped[0])["context"]["offset_index"] == 0
+    assert detail_of(skipped[0])["reason"] == "not_ready"
+    assert detail_of(skipped[0])["context"]["offset_index"] == 0
 
     # Second pass: dedup holds.
     scheduled_events.observe_scheduled_events(
@@ -268,7 +263,7 @@ def test_skip_when_no_invitations(db: Session) -> None:
     )
     skipped = _audit_rows(db, rs, "session.scheduled_reminders_skipped")
     assert len(skipped) == 1
-    assert _detail(skipped[0])["reason"] == "no_invitations"
+    assert detail_of(skipped[0])["reason"] == "no_invitations"
 
 
 def test_skip_when_past_deadline(db: Session) -> None:
@@ -286,7 +281,7 @@ def test_skip_when_past_deadline(db: Session) -> None:
     )
     skipped = _audit_rows(db, rs, "session.scheduled_reminders_skipped")
     assert len(skipped) == 1
-    assert _detail(skipped[0])["reason"] == "outside_response_window"
+    assert detail_of(skipped[0])["reason"] == "outside_response_window"
 
 
 # --------------------------------------------------------------------------- #
@@ -310,11 +305,11 @@ def test_fires_to_incomplete_reviewers_at_due_time(db: Session) -> None:
 
     fired = _audit_rows(db, rs, "session.scheduled_reminders_fired")
     assert len(fired) == 1
-    assert _detail(fired[0])["counts"]["sent"] == 3
-    assert _detail(fired[0])["context"]["offset_index"] == 0
-    assert "actual_fired_at" in _detail(fired[0])["context"]
-    assert "scheduled_at" in _detail(fired[0])["context"]
-    assert "anchor_at" in _detail(fired[0])["context"]
+    assert detail_of(fired[0])["counts"]["sent"] == 3
+    assert detail_of(fired[0])["context"]["offset_index"] == 0
+    assert "actual_fired_at" in detail_of(fired[0])["context"]
+    assert "scheduled_at" in detail_of(fired[0])["context"]
+    assert "anchor_at" in detail_of(fired[0])["context"]
 
     # All three reviewers got an outbox row stamped with the
     # per-reviewer correlation_id.
@@ -387,7 +382,7 @@ def test_per_reviewer_dedup_via_correlation_id(db: Session) -> None:
     fired = _audit_rows(db, rs, "session.scheduled_reminders_fired")
     assert len(fired) == 1
     # Only one new reminder dispatched (the other reviewer was deduped).
-    assert _detail(fired[0])["counts"]["sent"] == 1
+    assert detail_of(fired[0])["counts"]["sent"] == 1
 
 
 def test_multi_entry_fires_in_chronological_order(db: Session) -> None:
@@ -415,13 +410,13 @@ def test_multi_entry_fires_in_chronological_order(db: Session) -> None:
 
     fired = _audit_rows(db, rs, "session.scheduled_reminders_fired")
     assert len(fired) == 2
-    first_scheduled = _detail(fired[0])["context"]["scheduled_at"]
-    second_scheduled = _detail(fired[1])["context"]["scheduled_at"]
+    first_scheduled = detail_of(fired[0])["context"]["scheduled_at"]
+    second_scheduled = detail_of(fired[1])["context"]["scheduled_at"]
     assert first_scheduled < second_scheduled
     # Both offsets dispatch to the (single) incomplete reviewer; the
     # dedup key differs by offset_index so each fire dispatches anew.
-    assert _detail(fired[0])["counts"]["sent"] == 1
-    assert _detail(fired[1])["counts"]["sent"] == 1
+    assert detail_of(fired[0])["counts"]["sent"] == 1
+    assert detail_of(fired[1])["counts"]["sent"] == 1
     # Outbox rows exist under both correlation_ids.
     reviewer = db.execute(
         select(Reviewer).where(Reviewer.session_id == rs.id)
@@ -472,8 +467,8 @@ def test_reschedule_resets_per_entry_dedup(db: Session) -> None:
     fired = _audit_rows(db, rs, "session.scheduled_reminders_fired")
     assert len(fired) == 2
     assert (
-        _detail(fired[0])["context"]["anchor_at"]
-        != _detail(fired[1])["context"]["anchor_at"]
+        detail_of(fired[0])["context"]["anchor_at"]
+        != detail_of(fired[1])["context"]["anchor_at"]
     )
 
 
@@ -492,7 +487,7 @@ def test_unparseable_offset_skipped_silently(db: Session) -> None:
     )
     fired = _audit_rows(db, rs, "session.scheduled_reminders_fired")
     assert len(fired) == 1
-    assert _detail(fired[0])["context"]["offset"] == "-PT8H"
+    assert detail_of(fired[0])["context"]["offset"] == "-PT8H"
 
 
 def test_partial_failure_does_not_requeue_sent_reminders(

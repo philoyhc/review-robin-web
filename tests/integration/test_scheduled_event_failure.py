@@ -8,8 +8,6 @@ back, logged, recorded once as ``session.scheduled_event_failed``.
 """
 from __future__ import annotations
 
-from typing import Any
-
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -18,11 +16,7 @@ from sqlalchemy.orm import Session
 from app.db.models import AuditEvent, ReviewSession
 from app.services import scheduled_events
 
-
-def _detail(event: AuditEvent) -> dict[str, Any]:
-    """An audit row's ``detail``, which every event under test writes."""
-    assert event.detail is not None
-    return event.detail
+from ._lookups import detail_of
 
 
 def _make_session(client: TestClient, db: Session, code: str) -> ReviewSession:
@@ -78,8 +72,8 @@ def test_session_home_renders_when_a_trigger_raises(
     assert response.status_code == 200
     rows = _failed_rows(db, review_session)
     assert len(rows) == 1
-    assert _detail(rows[0])["context"] == {"trigger": "invites"}
-    assert "render failed" in _detail(rows[0])["reason"]
+    assert detail_of(rows[0])["context"] == {"trigger": "invites"}
+    assert "render failed" in detail_of(rows[0])["reason"]
 
 
 def test_later_triggers_still_run_after_one_raises(
@@ -117,7 +111,7 @@ def test_a_repeated_failure_is_recorded_once(
 
     rows = _failed_rows(db, review_session)
     assert len(rows) == 1
-    assert _detail(rows[0])["context"] == {"trigger": "reminders"}
+    assert detail_of(rows[0])["context"] == {"trigger": "reminders"}
 
 
 def test_a_changed_failure_is_recorded_again(
@@ -133,7 +127,7 @@ def test_a_changed_failure_is_recorded_again(
     )
     scheduled_events.observe_scheduled_events(db, review_session)
 
-    reasons = [_detail(row)["reason"] for row in _failed_rows(db, review_session)]
+    reasons = [detail_of(row)["reason"] for row in _failed_rows(db, review_session)]
     assert len(reasons) == 2
     assert "first" in reasons[0] and "second" in reasons[1]
 
@@ -152,7 +146,7 @@ def test_two_failing_triggers_each_record_once(
     for _ in range(3):
         assert client.get(f"/operator/sessions/{review_session.public_id}").status_code == 200
 
-    triggers = [_detail(row)["context"]["trigger"] for row in _failed_rows(db, review_session)]
+    triggers = [detail_of(row)["context"]["trigger"] for row in _failed_rows(db, review_session)]
     assert sorted(triggers) == ["invites", "reminders"]
 
 

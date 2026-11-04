@@ -8,7 +8,6 @@ one directly: Rating (Integer) is the parent, with the condition
 from __future__ import annotations
 
 import json
-from typing import Any
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -25,13 +24,8 @@ from app.db.models import (
     ReviewSession,
 )
 
+from ._lookups import detail_of
 from .test_instrument_builder_routes import _band2_rfs, _new_model_with_tags
-
-
-def _detail(event: AuditEvent) -> dict[str, Any]:
-    """An audit row's ``detail``, which every event under test writes."""
-    assert event.detail is not None
-    return event.detail
 
 
 def _branched(
@@ -126,7 +120,7 @@ def test_a_save_creates_a_branch_by_row_key(
     events = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "instrument.field_updated")
     ).scalars().all()
-    assert {_detail(e)["context"]["field_key"]: _detail(e)["changes"] for e in events} == {
+    assert {detail_of(e)["context"]["field_key"]: detail_of(e)["changes"] for e in events} == {
         fields["Score"].field_key: {"branch_op": [None, "le"], "branch_value": [None, "2"]},
         fields["Why low"].field_key: {"branch_parent_id": [None, fields["Score"].id]},
     }
@@ -230,10 +224,10 @@ def test_deleting_the_last_governed_field_deletes_the_condition(
         .order_by(AuditEvent.id.desc())
     ).scalars().first()
     assert event is not None
-    assert _detail(event)["changes"] == {
+    assert detail_of(event)["changes"] == {
         "branch_op": ["ge", None], "branch_value": ["4", None]
     }
-    assert _detail(event)["refs"]["response_field_id"] == rating.id
+    assert detail_of(event)["refs"]["response_field_id"] == rating.id
 
 
 def test_deleting_a_parent_with_its_whole_branch_in_one_save_is_bottom_up(

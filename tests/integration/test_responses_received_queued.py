@@ -31,12 +31,7 @@ from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
-
-
-def _detail(event: AuditEvent) -> dict[str, Any]:
-    """An audit row's ``detail``, which every event under test writes."""
-    assert event.detail is not None
-    return event.detail
+from ._lookups import detail_of
 
 
 @pytest.fixture
@@ -174,7 +169,7 @@ def test_a_second_submit_refreshes_the_one_queued_row(
 
     assert len(_received_rows(db, review_session.id)) == 1
     contexts = [
-        _detail(e)["context"]["refreshed"]
+        detail_of(e)["context"]["refreshed"]
         for e in db.execute(
             select(AuditEvent)
             .where(

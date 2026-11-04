@@ -23,13 +23,7 @@ from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
-
-
-def _get[M](db: Session, model: type[M], ident: object) -> M:
-    """``db.get`` for a row the test knows exists."""
-    row = db.get(model, ident)
-    assert row is not None
-    return row
+from ._lookups import must_get
 
 
 def _count(db: Session, model, session_id: int) -> int:
@@ -93,7 +87,7 @@ def test_purge_audit_log_and_archive(
     assert response.status_code == 303
 
     db.expire_all()
-    assert _get(db, ReviewSession, review_session.id).status == "archived"
+    assert must_get(db, ReviewSession, review_session.id).status == "archived"
     events = db.execute(
         select(AuditEvent.event_type).where(
             AuditEvent.session_id == review_session.id
@@ -120,7 +114,7 @@ def test_purge_rosters_and_archive(
     assert response.status_code == 303
 
     db.expire_all()
-    assert _get(db, ReviewSession, review_session.id).status == "archived"
+    assert must_get(db, ReviewSession, review_session.id).status == "archived"
     assert _count(db, Reviewer, review_session.id) == 0
     assert _count(db, Reviewee, review_session.id) == 0
     assert _count(db, Assignment, review_session.id) == 0
@@ -188,7 +182,7 @@ def test_purge_responses_and_archive(
     assert response.status_code == 303
 
     db.expire_all()
-    assert _get(db, ReviewSession, review_session.id).status == "archived"
+    assert must_get(db, ReviewSession, review_session.id).status == "archived"
     assert _count(db, Invitation, review_session.id) == 0
     assert _count(db, Assignment, review_session.id) >= 1
     assert _count(db, Reviewer, review_session.id) == 1

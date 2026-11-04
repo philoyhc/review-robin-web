@@ -6,7 +6,6 @@ closure so the dispatch path runs without a live FastAPI Request.
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -37,16 +36,12 @@ from app.services import (
 )
 
 from ._full_matrix import pin_full_matrix_on_all_instruments
+from ._lookups import detail_of
 
 # --------------------------------------------------------------------------- #
 # Fixtures                                                                    #
 # --------------------------------------------------------------------------- #
 
-
-def _detail(event: AuditEvent) -> dict[str, Any]:
-    """An audit row's ``detail``, which every event under test writes."""
-    assert event.detail is not None
-    return event.detail
 
 
 def _stub_build_url(token: str) -> str:
@@ -234,8 +229,8 @@ def test_skip_when_not_prepared(db: Session) -> None:
     )
     skipped = _audit_rows(db, rs, "session.scheduled_invites_skipped")
     assert len(skipped) == 1
-    assert _detail(skipped[0])["reason"] == "not_prepared"
-    assert _detail(skipped[0])["context"]["offset_index"] == 0
+    assert detail_of(skipped[0])["reason"] == "not_prepared"
+    assert detail_of(skipped[0])["context"]["offset_index"] == 0
 
     # Second observer pass should not re-emit (dedup keyed on entry).
     scheduled_events.observe_scheduled_events(
@@ -260,8 +255,8 @@ def test_skip_when_invitations_not_created(db: Session) -> None:
     )
     skipped = _audit_rows(db, rs, "session.scheduled_invites_skipped")
     assert len(skipped) == 1
-    assert _detail(skipped[0])["reason"] == "invitations_not_created"
-    assert _detail(skipped[0])["context"]["offset_index"] == 0
+    assert detail_of(skipped[0])["reason"] == "invitations_not_created"
+    assert detail_of(skipped[0])["context"]["offset_index"] == 0
 
     # Second observer pass should not re-emit (dedup keyed on entry).
     scheduled_events.observe_scheduled_events(
@@ -300,10 +295,10 @@ def test_fires_pending_invitations_at_due_time(db: Session) -> None:
 
     fired = _audit_rows(db, rs, "session.scheduled_invites_fired")
     assert len(fired) == 1
-    assert _detail(fired[0])["counts"]["sent"] == 3
-    assert _detail(fired[0])["context"]["offset_index"] == 0
-    assert "actual_fired_at" in _detail(fired[0])["context"]
-    assert "scheduled_at" in _detail(fired[0])["context"]
+    assert detail_of(fired[0])["counts"]["sent"] == 3
+    assert detail_of(fired[0])["context"]["offset_index"] == 0
+    assert "actual_fired_at" in detail_of(fired[0])["context"]
+    assert "scheduled_at" in detail_of(fired[0])["context"]
 
     # Every invitation should now be sent
     pending = db.execute(
@@ -318,7 +313,7 @@ def test_fires_pending_invitations_at_due_time(db: Session) -> None:
     invite_sents = _audit_rows(db, rs, "invitation.sent")
     assert len(invite_sents) == 3
     for row in invite_sents:
-        assert _detail(row)["context"]["trigger"] == "scheduled"
+        assert detail_of(row)["context"]["trigger"] == "scheduled"
 
 
 def test_idempotent_on_repeated_observer_calls(db: Session) -> None:
@@ -371,13 +366,13 @@ def test_multi_entry_fires_in_chronological_order(db: Session) -> None:
     fired = _audit_rows(db, rs, "session.scheduled_invites_fired")
     assert len(fired) == 2
     # Earlier fire moment → smaller audit id (it was emitted first)
-    first_scheduled = _detail(fired[0])["context"]["scheduled_at"]
-    second_scheduled = _detail(fired[1])["context"]["scheduled_at"]
+    first_scheduled = detail_of(fired[0])["context"]["scheduled_at"]
+    second_scheduled = detail_of(fired[1])["context"]["scheduled_at"]
     assert first_scheduled < second_scheduled
     # The second fire dispatches zero invitations — the first already
     # marked them all sent.
-    assert _detail(fired[0])["counts"]["sent"] == 1
-    assert _detail(fired[1])["counts"]["sent"] == 0
+    assert detail_of(fired[0])["counts"]["sent"] == 1
+    assert detail_of(fired[1])["counts"]["sent"] == 0
 
 
 def test_reschedule_resets_per_entry_dedup(db: Session) -> None:
@@ -424,8 +419,8 @@ def test_reschedule_resets_per_entry_dedup(db: Session) -> None:
     assert len(fired) == 2  # entry fires again against the new anchor
     # The second fire's anchor_at differs from the first
     assert (
-        _detail(fired[0])["context"]["anchor_at"]
-        != _detail(fired[1])["context"]["anchor_at"]
+        detail_of(fired[0])["context"]["anchor_at"]
+        != detail_of(fired[1])["context"]["anchor_at"]
     )
 
 
@@ -452,7 +447,7 @@ def test_unparseable_offset_skipped_silently(db: Session) -> None:
     # for catching these, not the runtime trigger).
     fired = _audit_rows(db, rs, "session.scheduled_invites_fired")
     assert len(fired) == 1
-    assert _detail(fired[0])["context"]["offset"] == "-P2D"
+    assert detail_of(fired[0])["context"]["offset"] == "-P2D"
 
 
 # --------------------------------------------------------------------------- #
@@ -504,7 +499,7 @@ def test_scheduled_fire_skips_a_reviewer_who_is_no_longer_eligible(
 
     fired = _audit_rows(db, rs, "session.scheduled_invites_fired")
     assert len(fired) == 1
-    assert _detail(fired[0])["counts"]["sent"] == 2, (
+    assert detail_of(fired[0])["counts"]["sent"] == 2, (
         "the count must report what was actually sent, not what was "
         "pending — an audit row saying 3 here would be a false record"
     )

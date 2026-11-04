@@ -50,21 +50,15 @@ line-length = 100
 target-version = "py312"
 
 [tool.pyright]
-# Application code and its tests (segments 22C, 22D). A test tree is its
-# own root (import root `.`, plus `tools` for `tests`). The roots still
-# relaxing the two optional-access rules are ratcheted back per directory
-# at 22D rung 7; a root listed first wins.
+# Application code and its tests (segments 22C, 22D), every basic-mode
+# rule everywhere. `tests` is its own root so its helpers import as
+# top-level modules, with `tools` for the tests of the tools.
 include = ["app", "cordware", "residentialapps", "utilityapps", "tests"]
 exclude = [".venv", "**/__pycache__"]
 pythonVersion = "3.12"
 typeCheckingMode = "basic"
 executionEnvironments = [
-  { root = "tests/unit", extraPaths = [".", "tools"] },
-  { root = "tests/db", extraPaths = ["."] },
-  { root = "tests", extraPaths = [".", "tools"], reportOptionalMemberAccess = "none", reportOptionalSubscript = "none" },
-  { root = "cordware/tests", extraPaths = ["."] },
-  { root = "residentialapps/tests", extraPaths = ["."] },
-  { root = "utilityapps/tests", extraPaths = ["."] },
+  { root = "tests", extraPaths = [".", "tools"] },
   { root = "." },
 ]
 

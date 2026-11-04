@@ -7,7 +7,6 @@ the state after the batch.
 
 from __future__ import annotations
 
-from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
@@ -21,13 +20,10 @@ from app.services import users as users_service
 from app.web import views
 from cordware.settings import identity_settings
 
+from ._lookups import detail_of
+
 ACCOUNTS = "/operator/sys-admin/users"
 
-
-def _detail(event: AuditEvent) -> dict[str, Any]:
-    """An audit row's ``detail``, which every event under test writes."""
-    assert event.detail is not None
-    return event.detail
 
 
 @pytest.fixture
@@ -89,7 +85,7 @@ def test_revoking_two_operators_is_one_request_and_one_correlation(
     events = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "workspace.operator_revoked")
     ).scalars().all()
-    assert sorted(_detail(e)["refs"]["target_user_id"] for e in events) == sorted(
+    assert sorted(detail_of(e)["refs"]["target_user_id"] for e in events) == sorted(
         [bob.id, carl.id]
     )
     assert len({e.correlation_id for e in events}) == 1

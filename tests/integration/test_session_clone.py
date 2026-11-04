@@ -3,7 +3,6 @@ route — Segment 18A Part 1 session cloning."""
 from __future__ import annotations
 
 import datetime as dt
-from typing import Any
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -24,11 +23,7 @@ from app.db.models import (
 from app.schemas.sessions import SessionCreate
 from app.services import session_clone, session_tags, sessions
 
-
-def _detail(event: AuditEvent) -> dict[str, Any]:
-    """An audit row's ``detail``, which every event under test writes."""
-    assert event.detail is not None
-    return event.detail
+from ._lookups import detail_of
 
 
 def _source_session(db: Session, code: str) -> tuple[ReviewSession, User]:
@@ -249,7 +244,7 @@ def test_clone_all_copies_observers_with_their_cohort_rules(
             AuditEvent.session_id == clone.id,
         )
     ).scalar_one()
-    assert _detail(event)["counts"]["observers"] == 1
+    assert detail_of(event)["counts"]["observers"] == 1
 
 
 def test_clone_config_skips_roster(db: Session) -> None:
@@ -301,9 +296,9 @@ def test_clone_writes_audit_event(db: Session) -> None:
             AuditEvent.session_id == clone.id,
         )
     ).scalar_one()
-    assert _detail(event)["context"]["mode"] == "all"
-    assert _detail(event)["refs"]["source_session_id"] == source.id
-    assert _detail(event)["counts"]["observers"] == 0
+    assert detail_of(event)["context"]["mode"] == "all"
+    assert detail_of(event)["refs"]["source_session_id"] == source.id
+    assert detail_of(event)["counts"]["observers"] == 0
 
 
 def test_clone_writes_an_event_on_the_source(db: Session) -> None:
@@ -322,9 +317,9 @@ def test_clone_writes_an_event_on_the_source(db: Session) -> None:
     ).scalar_one()
     assert event.session_id == source.id
     assert event.actor_user_id == op.id
-    assert _detail(event)["session_code"] == source.code
-    assert _detail(event)["refs"] == {"clone_session_id": clone.id}
-    assert _detail(event)["context"] == {
+    assert detail_of(event)["session_code"] == source.code
+    assert detail_of(event)["refs"] == {"clone_session_id": clone.id}
+    assert detail_of(event)["context"] == {
         "mode": "config",
         "clone_code": clone.code,
     }
