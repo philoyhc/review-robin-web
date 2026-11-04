@@ -120,15 +120,6 @@ reportUnknownParameterType = "none"
 reportUnknownVariableType = "none"
 
 [[tool.pyright.executionEnvironments]]
-root = "cordware"
-extraPaths = ["."]
-reportDeprecated = "none"
-reportMissingParameterType = "none"
-reportUnknownArgumentType = "none"
-reportUnknownMemberType = "none"
-reportUnknownVariableType = "none"
-
-[[tool.pyright.executionEnvironments]]
 root = "residentialapps"
 extraPaths = ["."]
 reportMissingParameterType = "none"

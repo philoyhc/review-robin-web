@@ -79,6 +79,13 @@ Taken 2026-11-04 at `9b45a9c1`, pyright 1.1.414, `typeCheckingMode =
   roots keep their tables for good (the open question below). With the rule off and strict
   inference: `app` 1,531, `residentialapps` 236, `utilityapps` 49,
   `cordware` 30 (the blast radius's 2,137 counted the 437 private uses).
+- **Rung 2:** `cordware` strict, its table gone (30 fixed). JSON read
+  from Graph and the client principal is narrowed with `isinstance` and
+  then `cast` once to `dict[str, Any]` / `list[object]`, so the reads
+  that follow are typed; `_NoRedirect.redirect_request` takes typeshed's
+  parameter types; the lifespan returns `AsyncGenerator`, and the state a
+  mounted lifespan yields is `Mapping[str, Any] | None`. No behavior
+  change. Item base for the cumulative read: `f45dd46d`.
 
 ## PR ladder
 
