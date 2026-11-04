@@ -93,6 +93,11 @@ approximate where a diagnostic could sit in two clusters; the command in
 - One `diff-reviewer` read for the fix rungs together, as one item
   (`CLAUDE.md` "Where work runs"), not one per rung as the brief had it;
   the ruff rung takes its own (2026-11-02).
+- **Interoperability, pre-positioned** (`guide/interoperability.md` §2,
+  2026-11-04): a package added later (ApplyDesk, a handoff module) joins
+  the gate when it is created; and the `sqlalchemy>=2.1` floor reaches
+  production through the next Cordware import of `requirements.txt`, so
+  that import's PR says so.
 
 ## Blast radius (measured)
 

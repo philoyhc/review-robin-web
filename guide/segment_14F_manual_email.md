@@ -59,6 +59,17 @@ gateway's 120 s; revisit only if measured otherwise.
 
 - Sends run in the request, not in the background (2026-11-02).
 - The auto-send fields are disabled, not removed (2026-11-02).
+- **Interoperability, pre-positioned** (`guide/interoperability.md` §2,
+  2026-11-04):
+  - **Recorded, sent, failed** are named in one spec section, so a later
+    status projection counts *invited* without guessing.
+  - **The Graph send primitive goes in the host**, `cordware/graph.py`
+    beside the directory lookup, for other apps to reuse; the outbox,
+    batching and stamps stay RRW's. No token crosses apps.
+  - Sends only on an operator's click; nothing sends on a session's
+    creation.
+- **Device class** (`spec/visual_style_rrw.md`, "Device classes"): the
+  operator pages this adds are desktop-oriented.
 
 ## Blast radius (measured)
 
@@ -117,6 +128,7 @@ Taken 2026-11-02 at `fffd4c28`.
 - `spec/lifecycle.md` — §8: auto-send disabled behind the setting; the due-action prompts.
 - `spec/workflow_card.md` — the auto-send caption and the due prompts.
 - `spec/settings_inventory.md` — `RRW_SCHEDULED_SEND`.
-- `spec/email_template_editor.md` — what Send does now.
+- `spec/email_template_editor.md` — what Send does now; the recorded / sent / failed states named once.
+- `cordware/spec/identity.md` — "Graph": the host's send primitive beside the directory lookup.
 - `docs/deployment.md` — the setting in its table.
 - `guide/post_azure_todo_checklist.md` — items 9 and 10 settled (at close).

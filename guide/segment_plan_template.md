@@ -25,7 +25,12 @@ report, a spec gap. One or two paragraphs. Not a feature description. -->
 ## Decision
 
 <!-- The converged design. Then the alternative that was rejected, and why.
-A decision without a named alternative is a description. -->
+A decision without a named alternative is a description.
+
+A new page: its device class only if it departs from spec/visual_style_rrw.md
+"Device classes" (operator desktop-oriented, /me responsive where feasible).
+Touching a CSV contract, an identifier or a cross-app seam: check
+guide/interoperability.md first. -->
 
 ## Semantics
 

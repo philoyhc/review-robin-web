@@ -117,6 +117,20 @@ All grids collapse to a single column at narrow viewports (≤800px). On collaps
 
 The implication: when designing a page, **think about mobile order first**, then arrange the desktop grid so the DOM order matches. Don't reach for `order:` CSS to fix mobile after the fact.
 
+### Device classes
+
+Cordware's mobile-to-desktop guidance (`cordware/docs/cordware_mobile_to_desktop.md`)
+gives each surface one of three classes. Review Robin's (author, 2026-11-04):
+
+- **Operator pages are desktop-oriented.** They are built for a notebook
+  or desktop, and must still render safely on a phone: nothing clipped,
+  every action reachable, wide tables scrolling rather than breaking.
+- **Participant pages (`/me/…`) are responsive general-use where
+  feasible**, usable on a phone as on a desktop; a page that cannot be
+  (a wide instrument grid, say) is desktop-oriented, and its plan says so.
+
+A plan states a page's class only when it departs from these.
+
 ### Card-kind taxonomy
 
 A page is composed of cards drawn from a small named vocabulary. The kind sets the card's role and (for the warning kinds) its visual treatment.

@@ -75,7 +75,9 @@ no other RRW branch open, since its import and lint fixes touch most files.
    operator, else a dedicated mailbox). Sends due invitations, reminders
    and confirmations from 14E's clock, and switches 14F's auto-send
    fields back on. Planned when IT answers; see
-   `guide/no_scheduling_fallback.md`.
+   `guide/no_scheduling_fallback.md`. A shared mailbox under an app-wide
+   permission is a credential every mounted app could reach: plan one
+   per app, or rule a shared one accepted (`guide/interoperability.md` §2).
 
 ### Stubs
 

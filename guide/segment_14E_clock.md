@@ -57,6 +57,11 @@ it unnecessary, and it would put a state change on a reviewer's GET.
 - In RRW, not the host: the passes are RRW's services, and the host only
   runs lifespans (2026-11-02).
 - No new table or queue: the anchors are already columns (2026-11-02).
+- **Interoperability, pre-positioned** (`guide/interoperability.md` §2,
+  2026-11-04): the loop fires only what an operator set, never a session
+  for being new; it carries timed lifecycle changes only, no export or
+  sync; its lock key is RRW's own. With it, a read-only status call sees
+  current state without a page view.
 
 ## Blast radius (measured)
 
