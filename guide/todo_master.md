@@ -43,16 +43,22 @@ host is provisioned and serving Review Robin since 2026-10-31; whether
 the deployment has *concluded* (verified, the personal web app retired)
 is the author's call.
 
-1. **14C — Email-related UI** (not gated). The operator-facing email
-   controls. Item 1 (the SMTP cards retired) is done; Item 2 adds a
-   half-width Email settings card of toggles (scaffold first, wired as
-   14F's send path reads them).
-   **Plan:** `guide/segment_14C_email_related_ui.md`.
+**Order (author, 2026-11-04): 14E, then 22C, then 14F with 14C Item 2.**
+14E is small and fixes timed actions now; 22C's codebase-wide lint and
+type fixes land before 14F opens `invitations.py` and `_operations.py`,
+so 14F's send path is checked as it is written. If email is needed for a
+pilot first, 22C and 14F swap: nothing depends on 22C. 22C runs best with
+no other RRW branch open, since its import and lint fixes touch most files.
 
-2. **14E — A clock for timed actions (no mail)** (not gated). An in-app
+1. **14E — A clock for timed actions (no mail)** (not gated). An in-app
    loop fires scheduled activation and the deadline close on time, with
    no page view and nothing from IT.
    **Plan:** `guide/segment_14E_clock.md`.
+
+2. **22C — A type checker: pyright** (not gated). Pyright in basic mode
+   over application code, fixed cluster by cluster, then a CI gate;
+   ruff's rule set widened first. Re-measure the error counts in rung 1.
+   **Plan:** `guide/segment_22C_pyright.md`.
 
 3. **14F — Email by hand, as the operator** (not gated: the tenant
    already grants delegated `Mail.Send`). Sends on the operator's click
@@ -60,16 +66,16 @@ is the author's call.
    due-action prompts while no mail goes on a clock.
    **Plan:** `guide/segment_14F_manual_email.md`.
 
+   **With it, 14C Item 2 — Email-related UI** (Item 1, the SMTP cards
+   retired, is done): a half-width Email settings card of toggles,
+   scaffolded beside 14F's scaffold and wired as 14F's send path reads
+   them. **Plan:** `guide/segment_14C_email_related_ui.md`.
+
 4. **14G — Scheduled email** (gated on IT: offline sending as the
    operator, else a dedicated mailbox). Sends due invitations, reminders
    and confirmations from 14E's clock, and switches 14F's auto-send
    fields back on. Planned when IT answers; see
    `guide/no_scheduling_fallback.md`.
-
-5. **22C — A type checker: pyright** (not gated). Pyright in basic mode
-   over application code, fixed cluster by cluster, then a CI gate;
-   ruff's rule set widened first.
-   **Plan:** `guide/segment_22C_pyright.md`.
 
 ### Stubs
 
