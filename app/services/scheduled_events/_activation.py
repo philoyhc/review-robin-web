@@ -15,7 +15,22 @@ from app.db.models import AuditEvent, ReviewSession
 from app.services import audit, date_formatting, validation
 from app.services import session_lifecycle as lifecycle
 
-from ._shared import ScheduledActivateError, _ensure_aware_utc, lock_session
+from ._shared import (
+    ScheduledActivateError,
+    _ensure_aware_utc,
+    _json_object,
+    lock_session,
+)
+
+# The helpers the package root imports from here.
+__all__ = [
+    "_ACTIVATION_MAX_RETRIES",
+    "_count_recent_retries",
+    "_emit_activation_retry_or_failed",
+    "_emit_activation_skipped",
+    "_observe_scheduled_activation",
+    "parse_and_validate_scheduled_activate_at",
+]
 
 _ACTIVATION_MAX_RETRIES = 3
 
@@ -241,11 +256,11 @@ def _count_recent_retries(
     ).scalars()
     count = 0
     for row in rows:
-        detail = row.detail or {}
-        if not isinstance(detail, dict):
+        detail = _json_object(row.detail or {})
+        if detail is None:
             continue
-        context = detail.get("context") or {}
-        if isinstance(context, dict) and context.get("scheduled_at") == scheduled_at_iso:
+        context = _json_object(detail.get("context") or {})
+        if context is not None and context.get("scheduled_at") == scheduled_at_iso:
             count += 1
     return count
 

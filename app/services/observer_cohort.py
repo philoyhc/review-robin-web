@@ -125,7 +125,7 @@ def observer_has_rule(observer: Observer) -> bool:
     (sections render with zero counts)."""
     if not observer.cohort_rule:
         return False
-    rules = observer.cohort_rule.get("rules") or []
+    rules: object = observer.cohort_rule.get("rules") or []
     return bool(rules)
 
 
@@ -214,7 +214,7 @@ def assignment_matches_cohort(
     """
     if not rule_set:
         return False
-    rules = rule_set.get("rules") or []
+    rules: list[dict[str, Any]] = rule_set.get("rules") or []
     if not rules:
         return False
     combinator = str(rule_set.get("combinator", "AND")).upper()

@@ -10,6 +10,9 @@ import os
 from app.db.models import Reviewee, Reviewer
 from app.services.roster_status import is_active
 
+# The helpers the sibling submodules import from here.
+__all__ = ["_is_active", "_is_test_env"]
+
 
 def _is_test_env() -> bool:
     """Match :func:`app.services.audit._is_test_env` for the self-

@@ -13,7 +13,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from app.db.base import column_length
+from app.db.base import Base, column_length
 from app.db.models import (
     Observer,
     Reviewee,
@@ -74,7 +74,9 @@ class ParseResult[R]:
     # roster header's ``<Column>.<label>`` suffixes, keyed by
     # ``(source_type, source_field)``. Empty for a header with no
     # suffixes; the save step reconciles (upsert present, clear absent).
-    field_labels: dict[tuple[str, str], str] = field(default_factory=dict)
+    field_labels: dict[tuple[str, str], str] = field(
+        default_factory=dict[tuple[str, str], str]
+    )
     # Segment 19Z: the header's canonical columns, so a merge can tell an
     # absent Status column (keep each row's status) from one the parser
     # defaulted to ``active``.
@@ -275,7 +277,7 @@ def _missing_columns_issues(
 
 def cell_length_issues(
     row: object,
-    model: type,
+    model: type[Base],
     headers: dict[str, str],
     *,
     source: str,
@@ -311,7 +313,7 @@ def cell_length_issues(
 
 
 def over_long_field_message(
-    model: type, values: dict[str, object], labels: dict[str, str]
+    model: type[Base], values: dict[str, object], labels: dict[str, str]
 ) -> str | None:
     """The first value longer than its ``model`` column, as an
     operator-facing sentence, or ``None``.

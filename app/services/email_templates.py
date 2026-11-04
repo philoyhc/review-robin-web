@@ -309,7 +309,7 @@ def render_responses_received(
     lines and the help-contact fallback follow ``_body``."""
     submitted_at = _latest_submitted_at(review_session, reviewer)
     merge: dict[str, str] = {
-        "reviewer_name": (reviewer.name if reviewer is not None else ""),
+        "reviewer_name": reviewer.name,
         "session_name": review_session.name,
         "deadline": _format_deadline(review_session),
         "help_contact": _help_contact(review_session),

@@ -110,6 +110,24 @@ Taken 2026-11-04 at `9b45a9c1`, pyright 1.1.414, `typeCheckingMode =
   `student()`, which every sample record already satisfies: on a broken
   sample it now fails at the lookup instead of carrying `None` into a list
   typed `list[Student]`.
+- **Rungs 5–6** in one PR: everything in `app` outside `app/web` joins
+  strict (`app/db`, `app/schemas`, `app/main.py`, all of `app/services`;
+  633 fixed), so the `app` table becomes `app/web`'s, and `app/web` now
+  passes `reportDeprecated` too (897 left there). Patterns as before:
+  JSON narrowed then cast once (`_json_dict` / `_json_list` /
+  `_json_object` helpers), `TypedDict`s and annotated literals, typed
+  `default_factory`, `Generator` for context managers, generic roster
+  helpers. **A package-private helper imported by a sibling module goes
+  in that module's `__all__`** (pyright counts it as used); this follows
+  the private-name ruling, and nothing star-imports. Two
+  `pyright: ignore[reportUnusedFunction]` keep the monitoring rollup's
+  parity oracles, which only a test calls. Checks removed only where
+  unreachable (a pydantic-validated operand, a required argument, a
+  non-null column, JSON object keys); `reorder_instruments` keeps its
+  list check, its parameter now `Sequence`. `User.preferences` is
+  `dict[str, Any] | None`. Left for 22F: `set_band2_state`'s docstring
+  says `None` clears the state, but the code keeps it (no caller passes
+  `None`).
 
 ## PR ladder
 

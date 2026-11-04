@@ -12,7 +12,7 @@ from collections.abc import Iterable, Sequence
 # orchestrator ``_apply.py``; defined here to keep the dependency
 # graph acyclic.
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from app.services.instruments._band1 import keeps_pairs_by_pair_tag, unrepresented_rule
 from app.services.instruments._band2 import INTEGER_WHOLE_BOUNDS_MESSAGE
@@ -44,7 +44,22 @@ from ._apply_shared import (
 from ._rows import Row
 
 if TYPE_CHECKING:
+    from datetime import datetime
+
+    from app.db.base import Base
     from app.db.models import ReviewSession
+
+# What other modules import from here: the package shares its
+# underscored helpers between modules.
+__all__ = [
+    "ApplyError",
+    "_parse_rows",
+    "session_fallback_length_errors",
+    "session_fired_offset_errors",
+    "session_offset_errors",
+    "session_schedule_order_errors",
+    "split_rows",
+]
 
 # 19T Item 10 — the type a response field without a data_type imports as.
 _DEFAULT_DATA_TYPE = _inline_kwargs_from_default_spec(DEFAULT_RESPONSE_FIELDS[0])[
@@ -157,7 +172,7 @@ def _parse_rows(rows: list[Row]) -> tuple[_ParsedConfig, list[ApplyError]]:
     return plan, errors
 
 
-def _column_length(model: type, name: str) -> int | None:
+def _column_length(model: type[Base], name: str) -> int | None:
     """The declared length of ``model``'s ``name`` column, or ``None``
     when there is no such column or it has no cap (``Text``)."""
     column = model.__table__.columns.get(name)
@@ -314,9 +329,11 @@ def session_schedule_order_errors(
         validate_schedule_ordering,
     )
 
-    anchors = dict.fromkeys(key for pair in _SCHEDULE_PAIRS for key in pair)
+    anchors: dict[str, datetime | None] = dict.fromkeys(
+        key for pair in _SCHEDULE_PAIRS for key in pair
+    )
     supplied: set[str] = set()
-    effective: dict[str, object] = {}
+    effective: dict[str, datetime | None] = {}
     for key in anchors:
         effective[key], from_file = _post_apply_value(plan, review_session, key)
         if from_file:
@@ -405,7 +422,8 @@ def session_fired_offset_errors(
     from app.services.session_guard import lock_session
 
     db = object_session(review_session)
-    if db is None or review_session.id is None:
+    # Mapped as ``int``, but unset until the session row is flushed.
+    if db is None or cast("int | None", review_session.id) is None:
         return []
     # Under the session lock before reading the stored values the check
     # compares against (findings Bc3).

@@ -279,7 +279,7 @@ def reconcile_stamp(
     is in the stamp so that a future caller passing ``True`` cannot
     read a verdict computed for ``None``.
     """
-    payload = {
+    payload: dict[str, object] = {
         "instrument": {
             "rule_set_id": instrument.rule_set_id,
             "group_kind": instrument.group_kind,

@@ -18,6 +18,13 @@ from ._apply_shared import (
     _ParseError,
 )
 
+# What other modules import from here: the package shares its
+# underscored helpers between modules.
+__all__ = [
+    "_apply_data_shape_kv",
+    "_apply_data_shapes",
+]
+
 
 def _apply_data_shape_kv(
     plan: _ParsedConfig,
@@ -62,7 +69,7 @@ def _apply_data_shape_kv(
                 f"data_shapes[{idx}].column_chip_slots must be a "
                 f"JSON list, got {type(slots).__name__}"
             )
-        spec.column_chip_slots = [str(s) for s in slots]
+        spec.column_chip_slots = [str(s) for s in cast("list[object]", slots)]
     elif key == "self_review_handling":
         spec.self_review_handling = value or "include_self"
     elif key == "include_empty_rows":

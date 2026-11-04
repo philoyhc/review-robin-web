@@ -24,9 +24,9 @@ from app.db.models import (
 from app.logging_config import get_logger
 from app.schemas.validation import Severity, ValidationIssue
 from app.services import audit, session_guard, unit_of_work
-from app.services.session_guard import (  # noqa: F401 — re-exported
-    LifecycleError,
-    SessionStateConflict,
+from app.services.session_guard import LifecycleError
+from app.services.session_guard import (
+    SessionStateConflict as SessionStateConflict,  # re-exported
 )
 
 log = get_logger(__name__)
@@ -292,9 +292,9 @@ def require_accepting_responses(
 class ReadinessReport:
     """Activation gate input split by severity."""
 
-    errors: list[ValidationIssue] = field(default_factory=list)
-    warnings: list[ValidationIssue] = field(default_factory=list)
-    info: list[ValidationIssue] = field(default_factory=list)
+    errors: list[ValidationIssue] = field(default_factory=list[ValidationIssue])
+    warnings: list[ValidationIssue] = field(default_factory=list[ValidationIssue])
+    info: list[ValidationIssue] = field(default_factory=list[ValidationIssue])
 
     @property
     def can_activate(self) -> bool:

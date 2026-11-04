@@ -8,6 +8,7 @@ Section ordering is pinned by ``serialize_session_config``'s docstring.
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -15,6 +16,7 @@ from sqlalchemy.orm import Session
 from app.db.models import (
     DataShape,
     Instrument,
+    InstrumentDisplayField,
     InstrumentResponseField,
     ReviewSession,
     SessionRuleSet,
@@ -459,7 +461,9 @@ def _instrument_rows(
     return rows
 
 
-def _field_positions(fields) -> dict[int, int]:
+def _field_positions(
+    fields: Iterable[InstrumentDisplayField | InstrumentResponseField],
+) -> dict[int, int]:
     """Field id → its 1-based position in the CSV's field rows, in the
     ``(order, id)`` order ``_display_field_rows`` and
     ``_response_field_rows`` write them."""
@@ -810,7 +814,7 @@ def _data_shape_rows(
             )
         )
         try:
-            slots_list = json.loads(shape.column_chip_slots)
+            slots_list: object = json.loads(shape.column_chip_slots)
         except (json.JSONDecodeError, TypeError):
             slots_list = []
         rows.append(

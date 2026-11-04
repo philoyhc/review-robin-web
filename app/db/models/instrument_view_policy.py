@@ -34,7 +34,7 @@ _CELL_MODES: dict[str, tuple[tuple[str | None, ...], tuple[str | None, ...]]] = 
 
 
 def _window_sql(window: str, modes: tuple[str | None, ...]) -> str:
-    terms = []
+    terms: list[str] = []
     for mode in modes:
         pair = _MODE_PAIRS[mode]
         if pair is None:

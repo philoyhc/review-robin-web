@@ -242,7 +242,7 @@ def _absorb(db: Session, target: User, holder: User, new_email: str) -> None:
     the two role flags, move the session memberships (a session both
     are on keeps ``target``'s), delete ``holder`` and give ``target``
     its email. One ``workspace.user_absorbed`` event names both ids."""
-    old = {
+    old: dict[str, str | bool] = {
         "email": target.email,
         "is_operator": target.is_operator,
         "is_sys_admin": target.is_sys_admin,
@@ -274,7 +274,7 @@ def _absorb(db: Session, target: User, holder: User, new_email: str) -> None:
     # unique, so the row holding it goes first.
     db.flush()
     target.email = new_email
-    new = {
+    new: dict[str, str | bool] = {
         "email": new_email,
         "is_operator": target.is_operator,
         "is_sys_admin": target.is_sys_admin,
@@ -778,7 +778,7 @@ def _guard_deletable(db: Session, target: User) -> None:
 def _write_remove(
     db: Session, actor: User, target: User, correlation_id: str | None
 ) -> None:
-    snapshot = {
+    snapshot: dict[str, str | bool] = {
         "email": target.email,
         "is_operator": target.is_operator,
         "is_sys_admin": target.is_sys_admin,

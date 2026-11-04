@@ -151,4 +151,4 @@ class CohortRuleSet(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     combinator: CohortCombinator = CohortCombinator.AND
-    rules: list[CohortRule] = Field(default_factory=list)
+    rules: list[CohortRule] = Field(default_factory=list[CohortRule])

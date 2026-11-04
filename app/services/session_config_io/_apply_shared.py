@@ -22,6 +22,40 @@ from app.services.instruments import (
     encode_group_kind,
 )
 
+# What other modules import from here: the package shares its
+# underscored helpers between modules.
+__all__ = [
+    "_DataShapeSpec",
+    "_DisplayFieldSpec",
+    "_InstrumentSpec",
+    "_ParseError",
+    "_ParsedConfig",
+    "_RX_DATA_SHAPE",
+    "_RX_EMAIL",
+    "_RX_INSTRUMENT",
+    "_RX_INSTRUMENT_DF",
+    "_RX_INSTRUMENT_RF",
+    "_RX_INSTRUMENT_VP",
+    "_RX_RULE_SET",
+    "_RX_SESSION_TAG",
+    "_ResponseFieldSpec",
+    "_RuleSetSpec",
+    "_VALID_COMBINATORS",
+    "_VALID_DATA_TYPES",
+    "_VALID_DF_SOURCE_TYPES",
+    "_VALID_VP_AUDIENCES",
+    "_VALID_VP_GRANULARITY",
+    "_VALID_VP_IDENTIFICATION",
+    "_ViewPolicySpec",
+    "_parse_bool",
+    "_parse_datetime",
+    "_parse_decimal",
+    "_parse_group_kind",
+    "_parse_int",
+    "_parse_intro_layout",
+    "_parse_json",
+]
+
 
 class _ParseError(Exception):
     """Raised by row routers / cell parsers when a row is malformed."""
@@ -106,12 +140,18 @@ class _InstrumentSpec:
     # Segment 18P PR D2 — the Band 1 "set"-pill state, dropped by the
     # pre-D2 settings CSV.
     band1_touched_links: list[str] | None = None
-    display_fields: dict[int, _DisplayFieldSpec] = _dataclass_field(default_factory=dict)
-    response_fields: dict[int, _ResponseFieldSpec] = _dataclass_field(default_factory=dict)
+    display_fields: dict[int, _DisplayFieldSpec] = _dataclass_field(
+        default_factory=dict[int, _DisplayFieldSpec]
+    )
+    response_fields: dict[int, _ResponseFieldSpec] = _dataclass_field(
+        default_factory=dict[int, _ResponseFieldSpec]
+    )
     # Segment 18P PR A2 — the Band 3 visibility grid, keyed by
     # audience. Pre-A2 the round-trip dropped every view policy, so a
     # ported / rehydrated session reverted to default visibility.
-    view_policies: dict[str, _ViewPolicySpec] = _dataclass_field(default_factory=dict)
+    view_policies: dict[str, _ViewPolicySpec] = _dataclass_field(
+        default_factory=dict[str, _ViewPolicySpec]
+    )
 
 
 @dataclass
@@ -121,7 +161,7 @@ class _RuleSetSpec:
     combinator: str | None = None
     exclude_self_reviews: bool = False
     seed: int | None = None
-    rules_json: list[Any] = _dataclass_field(default_factory=list)
+    rules_json: list[Any] = _dataclass_field(default_factory=list[Any])
 
 
 @dataclass
@@ -140,7 +180,7 @@ class _DataShapeSpec:
     # unscoped, reference).
     instrument_number: int | None = None
     response_field_key: str | None = None
-    column_chip_slots: list[str] = _dataclass_field(default_factory=list)
+    column_chip_slots: list[str] = _dataclass_field(default_factory=list[str])
     # PR B of the Self-review handling chip slice. Default to
     # ``include_self`` so a pre-PR-B Settings CSV (which doesn't
     # carry the row) imports cleanly with today's behaviour.
@@ -153,14 +193,20 @@ class _DataShapeSpec:
 
 @dataclass
 class _ParsedConfig:
-    session_overrides: dict[str, Any] = _dataclass_field(default_factory=dict)
-    email_overrides: dict[str, Any] = _dataclass_field(default_factory=dict)
-    instruments: dict[int, _InstrumentSpec] = _dataclass_field(default_factory=dict)
-    session_rule_sets: dict[int, _RuleSetSpec] = _dataclass_field(default_factory=dict)
-    data_shapes: dict[int, _DataShapeSpec] = _dataclass_field(default_factory=dict)
+    session_overrides: dict[str, Any] = _dataclass_field(default_factory=dict[str, Any])
+    email_overrides: dict[str, Any] = _dataclass_field(default_factory=dict[str, Any])
+    instruments: dict[int, _InstrumentSpec] = _dataclass_field(
+        default_factory=dict[int, _InstrumentSpec]
+    )
+    session_rule_sets: dict[int, _RuleSetSpec] = _dataclass_field(
+        default_factory=dict[int, _RuleSetSpec]
+    )
+    data_shapes: dict[int, _DataShapeSpec] = _dataclass_field(
+        default_factory=dict[int, _DataShapeSpec]
+    )
     # Segment 18P PR D2 — session tags (the `session_tags[i].tag`
     # rows), collected as an ordered list of tag strings.
-    session_tags: list[str] = _dataclass_field(default_factory=list)
+    session_tags: list[str] = _dataclass_field(default_factory=list[str])
 
 
 _VALID_DATA_TYPES = {

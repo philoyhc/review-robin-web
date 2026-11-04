@@ -49,7 +49,7 @@ from app.db.models import Instrument, SessionRuleSet, User
 from app.schemas.rules import rules_payload_error
 from app.services import audit
 from app.services import session_lifecycle as lifecycle
-from app.services.instruments._state import _instrument_label
+from app.services.instruments._state import _instrument_label, _json_dict, _json_list
 
 # UI operator label → engine predicate operator.
 _UI_TO_ENGINE_OP: dict[str, str] = {
@@ -255,7 +255,7 @@ def _shown_composites(
     with its enabled children. A disabled rule is not shown, as the
     engine does not apply it (findings E1, 2026-10-22); a Link whose
     rules are all disabled reads as All, as the engine skips it."""
-    shown = []
+    shown: list[tuple[str, dict[str, Any], list[dict[str, Any]]]] = []
     for entry in rules_json:
         if entry.get("kind") != "COMPOSITE":
             continue
@@ -701,15 +701,16 @@ def _link_predicates(rules_json: list[Any], link_id: str) -> list[dict[str, Any]
     the shape the card stores, so an imported cell can reach the
     engine's own check (``rules_payload_error``) and be named there."""
     predicates: list[dict[str, Any]] = []
-    for entry in rules_json:
-        if not isinstance(entry, dict):
+    for raw_entry in rules_json:
+        entry = _json_dict(raw_entry)
+        if entry is None:
             continue
         if entry.get("id") != link_id or entry.get("kind") != "COMPOSITE":
             continue
-        children = entry.get("rules")
-        for child in children if isinstance(children, list) else []:
-            predicate = child.get("predicate") if isinstance(child, dict) else None
-            if isinstance(predicate, dict):
+        for raw_child in _json_list(entry.get("rules")) or []:
+            child = _json_dict(raw_child)
+            predicate = _json_dict(child.get("predicate")) if child is not None else None
+            if predicate is not None:
                 predicates.append(predicate)
     return predicates
 
@@ -811,7 +812,7 @@ def unrepresented_rule(rules_json: list[Any]) -> str | None:
                 )
             if not _flag(child, "enabled", True):
                 return f"{link} holds a disabled rule ({child_id!r}); the card has no disabled rule."
-            predicate = child.get("predicate") or {}
+            predicate: dict[str, Any] = child.get("predicate") or {}
             operator = predicate.get("operator")
             offered = _CARD_LINK_OPS[rule_id]
             if operator not in offered:
@@ -845,7 +846,7 @@ def keeps_pairs_by_pair_tag(rules_json: list[dict[str, Any]]) -> bool:
         if not _flag(entry, "enabled", True):
             continue
         for child in entry.get("rules", []):
-            predicate = child.get("predicate") or {}
+            predicate: dict[str, Any] = child.get("predicate") or {}
             if (
                 _flag(child, "enabled", True)
                 and predicate.get("operator") in _PAIR_KEEPING_OPS

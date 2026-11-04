@@ -22,6 +22,18 @@ from app.services.validation._inputs import (
     ValidationInputs,
 )
 
+# What the package's other modules import from this one; the leading
+# underscore marks a name private to the package, not to the module.
+__all__ = [
+    "_active_assignment_presence",
+    "_active_reviewers",
+    "_check_assignments_instrument_empty",
+    "_check_assignments_no_included_pairs",
+    "_check_assignments_reviewer_missing",
+    "_check_assignments_reviewer_missing_for_instrument",
+    "_included_instrument_ids",
+]
+
 
 def _check_assignments_no_included_pairs(
     db: Session,

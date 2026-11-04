@@ -22,7 +22,9 @@ cannot drift apart. It is a no-op while the mode is off.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
+from typing import cast
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -161,7 +163,9 @@ def sync_reviewees_from_reviewers(
             if getattr(reviewee, reviewee_field) != value:
                 setattr(reviewee, reviewee_field, value)
                 row_changed = True
-        if row_changed and reviewee.id is not None:
+        # Mapped as ``int``, but unset on a row created above and not yet
+        # flushed: that one counts as created, not updated.
+        if row_changed and cast("int | None", reviewee.id) is not None:
             updated += 1
     for gone in [
         *by_link.values(),
@@ -211,7 +215,7 @@ def sync_reviewees_from_reviewers(
 _DISPLAY_SLOTS = ("profile_link", "tag_1", "tag_2", "tag_3")
 
 
-def _filled_display_slots(reviewees) -> set[str]:
+def _filled_display_slots(reviewees: Iterable[Reviewee]) -> set[str]:
     """The reviewee display-field slots any of these rows fills."""
     reviewees = list(reviewees)
     return {

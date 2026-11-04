@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import os
 import warnings
-from collections.abc import Iterator, Mapping
+from collections.abc import Generator, Mapping
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, field
@@ -93,9 +93,9 @@ class CountsPayload(AuditPayload):
 class SetChangesPayload(AuditPayload):
     """`{"set_changes": {"added": [...], "removed": [...], "updated": [...]}}`."""
 
-    added: list[dict[str, Any]] = field(default_factory=list)
-    removed: list[dict[str, Any]] = field(default_factory=list)
-    updated: list[dict[str, Any]] = field(default_factory=list)
+    added: list[dict[str, Any]] = field(default_factory=list[dict[str, Any]])
+    removed: list[dict[str, Any]] = field(default_factory=list[dict[str, Any]])
+    updated: list[dict[str, Any]] = field(default_factory=list[dict[str, Any]])
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -249,7 +249,7 @@ _FIRED_BY: ContextVar[str | None] = ContextVar("audit_fired_by", default=None)
 
 
 @contextmanager
-def fired_by(source: str) -> Iterator[None]:
+def fired_by(source: str) -> Generator[None]:
     """Mark every event written inside the block as fired by
     ``source``: each one whose schema allows ``context`` carries
     ``context.fired_by``. The clock's pass runs inside

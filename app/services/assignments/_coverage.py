@@ -10,6 +10,8 @@ from __future__ import annotations
 from typing import Any
 
 from sqlalchemy import (
+    ColumnElement,
+    Select,
     String,
     case,
     cast,
@@ -23,7 +25,7 @@ from sqlalchemy import (
 from sqlalchemy import (
     false as sa_false,
 )
-from sqlalchemy.orm import Session, aliased, joinedload
+from sqlalchemy.orm import QueryableAttribute, Session, aliased, joinedload
 
 from app.db.models import (
     Assignment,
@@ -128,7 +130,9 @@ def list_reviewees(db: Session, session_id: int) -> list[Reviewee]:
     )
 
 
-def _tag_matches(term: str, *columns):
+def _tag_matches(
+    term: str, *columns: QueryableAttribute[str | None]
+) -> list[ColumnElement[bool]]:
     """Whole-value tag predicates for ``term`` (Segment 19I Item 7).
 
     The tag half of Item 1's per-column rule, expressed in SQL:
@@ -163,7 +167,7 @@ def _tag_matches(term: str, *columns):
     return [func.lower(func.trim(column)) == folded for column in columns]
 
 
-def _apply_status(stmt, status: str):
+def _apply_status(stmt: Select[Any], status: str) -> Select[Any]:
     """Filter a pairs query by `Assignment.include` (Segment 19I Item
     9).
 
@@ -186,12 +190,12 @@ def _apply_status(stmt, status: str):
 
 
 def _apply_pair_search(
-    stmt,
+    stmt: Select[Any],
     search: str,
     search_by: str = "all",
     picked_reviewer_handle: str | None = None,
     picked_reviewee_handle: str | None = None,
-):
+) -> Select[Any]:
     """Add the reviewer / reviewee free-text filter to a pairs query.
 
     Name and handle match by **case-insensitive substring** (Segment
@@ -221,7 +225,7 @@ def _apply_pair_search(
     # separates `ana@example.edu` from `ana2@example.edu`, which a
     # name substring cannot.
     if picked_reviewer_handle or picked_reviewee_handle:
-        sides = []
+        sides: list[tuple[str, ColumnElement[bool]]] = []
         if picked_reviewer_handle:
             sides.append(
                 (
@@ -301,7 +305,9 @@ def _apply_pair_search(
 # --------------------------------------------------------------------- #
 
 
-def _code_point(db: Session, expression):
+def _code_point(
+    db: Session, expression: ColumnElement[str]
+) -> ColumnElement[str]:
     """Order ``expression`` by code point on either dialect.
 
     SQLite's default collation is BINARY, which already is code-point
@@ -313,7 +319,7 @@ def _code_point(db: Session, expression):
     return expression
 
 
-def _instrument_label_sql(instrument):
+def _instrument_label_sql(instrument: type[Instrument]) -> ColumnElement[str]:
     """The SQL form of ``instruments._instrument_label``: the trimmed
     ``short_label`` when it holds anything, else
     ``Instrument_{session_seq}``.
@@ -336,7 +342,9 @@ def _instrument_label_sql(instrument):
     )
 
 
-def _pair_sort_order(db: Session, stmt, sort: list[tuple[str, str]] | None):
+def _pair_sort_order(
+    db: Session, stmt: Select[Any], sort: list[tuple[str, str]] | None
+) -> tuple[Select[Any], list[ColumnElement[Any]]]:
     """Translate a cookie sort spec into ``ORDER BY``, joining only what
     the active keys need — an unsorted page must stay the single-table
     query it was.
@@ -345,7 +353,7 @@ def _pair_sort_order(db: Session, stmt, sort: list[tuple[str, str]] | None):
     route validates them against ``_ASSIGNMENT_SORT_KEYS`` first, and a
     cookie is operator-editable.
     """
-    order: list = []
+    order: list[ColumnElement[Any]] = []
     if not sort:
         return stmt, order
 

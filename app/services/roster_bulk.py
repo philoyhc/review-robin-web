@@ -16,10 +16,11 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import InstrumentedAttribute, Session
 
 from app.db.models import (
     Assignment,
+    Observer,
     Relationship,
     Response,
     Reviewee,
@@ -77,11 +78,24 @@ def clear_redrawn_groups(
     return {"defuncted_group_responses": defuncted} if defuncted else None
 
 
-def bulk_set_status(
+def _rows_in_session[M: (Reviewer, Reviewee, Observer, Relationship)](
+    db: Session, *, model: type[M], session_id: int, ids: list[int]
+) -> list[M]:
+    """The ``model`` rows in ``ids`` that belong to ``session_id``, by id."""
+    return list(
+        db.execute(
+            select(model)
+            .where(model.session_id == session_id, model.id.in_(ids))
+            .order_by(model.id)
+        ).scalars()
+    )
+
+
+def bulk_set_status[M: (Reviewer, Reviewee, Observer, Relationship)](
     db: Session,
     *,
     review_session: ReviewSession,
-    model: type,
+    model: type[M],
     ids: list[int],
     target_status: str,
     normalise_status: Callable[[str], str],
@@ -105,12 +119,8 @@ def bulk_set_status(
     if not ids:
         return []
 
-    candidates = list(
-        db.execute(
-            select(model)
-            .where(model.session_id == review_session.id, model.id.in_(ids))
-            .order_by(model.id)
-        ).scalars()
+    candidates = _rows_in_session(
+        db, model=model, session_id=review_session.id, ids=ids
     )
     missing = set(ids) - {row.id for row in candidates}
     if missing:
@@ -190,7 +200,7 @@ def bulk_set_status(
 # (findings B34). That loss is not a cascade: the route asks for it
 # through ``acknowledged_loss`` instead (warnings_updates.md Item 1,
 # which reversed the 2026-10-03 ruling that it asks nothing).
-_ASSIGNMENT_FK = {
+_ASSIGNMENT_FK: dict[type, InstrumentedAttribute[int]] = {
     Reviewer: Assignment.reviewer_id,
     Reviewee: Assignment.reviewee_id,
 }
@@ -199,7 +209,7 @@ _ASSIGNMENT_FK = {
 #: ``Observer`` is absent because nothing references it, and
 #: ``Relationship`` because a relationship delete reaches no other
 #: relationship — both count 0 and their events keep their old payload.
-_RELATIONSHIP_FK = {
+_RELATIONSHIP_FK: dict[type, InstrumentedAttribute[int]] = {
     Reviewer: Relationship.reviewer_id,
     Reviewee: Relationship.reviewee_id,
 }
@@ -260,8 +270,10 @@ def _reviewer_relationships_per_row(db: Session, *, session_id: int) -> dict[int
     ).all()
     counts: dict[int, int] = {}
     for _id, reviewer_id, mirrored_reviewer_id in rows:
-        for row_id in {reviewer_id, mirrored_reviewer_id} - {None}:
-            counts[int(row_id)] = counts.get(int(row_id), 0) + 1
+        ends: set[int | None] = {reviewer_id, mirrored_reviewer_id}
+        for row_id in ends:
+            if row_id is not None:
+                counts[row_id] = counts.get(row_id, 0) + 1
     return counts
 
 
@@ -341,11 +353,11 @@ def cascade_counts(
     return len(assignment_ids), int(responses)
 
 
-def bulk_delete(
+def bulk_delete[M: (Reviewer, Reviewee, Observer, Relationship)](
     db: Session,
     *,
     review_session: ReviewSession,
-    model: type,
+    model: type[M],
     ids: list[int],
     error_cls: type[Exception],
     event_type: str,
@@ -375,12 +387,8 @@ def bulk_delete(
     if not ids:
         return 0, 0, 0
 
-    rows = list(
-        db.execute(
-            select(model)
-            .where(model.session_id == review_session.id, model.id.in_(ids))
-            .order_by(model.id)
-        ).scalars()
+    rows = _rows_in_session(
+        db, model=model, session_id=review_session.id, ids=ids
     )
     missing = set(ids) - {row.id for row in rows}
     if missing:

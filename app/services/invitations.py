@@ -754,10 +754,7 @@ def url_matches_current_token(url: str, invitation: Invitation) -> bool:
     regenerate rotates ``token_hash`` without sending, so the last
     outbox body can carry a token that no longer resolves."""
     raw = url.rsplit("/", 1)[-1]
-    return (
-        invitation.token_hash is not None
-        and hash_token(raw) == invitation.token_hash
-    )
+    return hash_token(raw) == invitation.token_hash
 
 
 def most_recent_invitation_status(

@@ -14,6 +14,13 @@ from ._apply_shared import (
     _ParseError,
 )
 
+# What other modules import from here: the package shares its
+# underscored helpers between modules.
+__all__ = [
+    "_apply_email_kv",
+    "_apply_email_overrides",
+]
+
 
 def _apply_email_kv(
     plan: _ParsedConfig, field_path: str, value: str, data_type: str

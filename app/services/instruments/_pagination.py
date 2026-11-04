@@ -25,6 +25,8 @@ dependency is one-way.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -50,7 +52,7 @@ def reorder_instruments(
     db: Session,
     *,
     review_session: ReviewSession,
-    items: list[int | None],
+    items: Sequence[int | None],
     actor: User | None = None,
 ) -> None:
     """Apply a reorder of a session's instruments + page breaks.

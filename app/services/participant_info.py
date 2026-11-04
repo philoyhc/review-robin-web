@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
+from typing import cast
 
 from sqlalchemy.orm import Session
 
@@ -100,16 +101,19 @@ class SelfFieldsError(ValueError):
     """A selection named a key outside its participant's field keys."""
 
 
-def normalize_self_fields(participant: str, keys: Iterable[str]) -> list[str]:
+def normalize_self_fields(participant: str, keys: Iterable[object]) -> list[str]:
     """The selection in roster order, each key once.
 
     Raises ``SelfFieldsError`` on an unknown key rather than dropping it,
     so a typo in a hand-edited Settings CSV is reported, not swallowed.
     """
     spec = _PARTICIPANTS[participant]
-    items = list(keys)
-    if not all(isinstance(key, str) for key in items):
-        raise SelfFieldsError(f"{participant} field keys must be strings")
+    # ``object``: the keys can come from a hand-edited CSV or stored JSON.
+    items: list[str] = []
+    for key in keys:
+        if not isinstance(key, str):
+            raise SelfFieldsError(f"{participant} field keys must be strings")
+        items.append(key)
     chosen = {key.strip() for key in items if key.strip()}
     unknown = sorted(chosen - set(spec.keys))
     if unknown:
@@ -118,6 +122,11 @@ def normalize_self_fields(participant: str, keys: Iterable[str]) -> list[str]:
             f"some of {', '.join(spec.keys)}"
         )
     return [key for key in spec.keys if key in chosen]
+
+
+def _stored_list(stored: object) -> list[object] | None:
+    """A stored selection (JSON) as a list, or ``None`` when it is not one."""
+    return cast("list[object]", stored) if isinstance(stored, list) else None
 
 
 def effective_self_fields(
@@ -130,8 +139,8 @@ def effective_self_fields(
     participant's page.
     """
     spec = _PARTICIPANTS[participant]
-    stored = getattr(review_session, spec.column)
-    if not isinstance(stored, list):
+    stored = _stored_list(getattr(review_session, spec.column))
+    if stored is None:
         return spec.default
     try:
         return tuple(normalize_self_fields(participant, stored))
@@ -159,14 +168,15 @@ def set_self_fields(
     spec = _PARTICIPANTS[participant]
     spec.require(db, review_session)
     new = normalize_self_fields(participant, keys)
-    stored = getattr(review_session, spec.column)
+    stored: object = getattr(review_session, spec.column)
     # Compared with what is stored, not the effective selection, so a
     # save over a hand-edited bad value repairs it rather than no-op.
     if stored == new:
         return
     # The audit records what was stored (``None`` while unset), not the
     # effective default, so a first save reads as NULL → list.
-    old = list(stored) if isinstance(stored, list) else stored
+    listed = _stored_list(stored)
+    old = list(listed) if listed is not None else stored
     setattr(review_session, spec.column, new)
     db.flush()
     audit.write_event(

@@ -24,6 +24,7 @@ from __future__ import annotations
 from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import cast
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -135,7 +136,8 @@ def _validate(
     from app.services import session_guard
 
     db = object_session(review_session)
-    if db is not None and review_session.id is not None:
+    # Mapped as ``int``, but unset until the session row is flushed.
+    if db is not None and cast("int | None", review_session.id) is not None:
         session_guard.lock_session(db, review_session)
     plan, errors = _parse_rows(rows)
     errors += session_fallback_length_errors(plan, review_session)
@@ -314,4 +316,5 @@ def _apply_plan(
 # Re-exports for the package ``__init__`` and the unit tests that
 # reach for ``_ParseError`` / ``_parse_group_kind`` via the legacy
 # ``_apply`` module path.
-from ._apply_shared import _parse_group_kind, _ParseError  # noqa: E402, F401
+from ._apply_shared import _parse_group_kind as _parse_group_kind  # noqa: E402
+from ._apply_shared import _ParseError as _ParseError  # noqa: E402

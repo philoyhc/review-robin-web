@@ -23,8 +23,18 @@ from ._shared import (
     _OFFSET_MAX_MAGNITUDE,
     ScheduledActivateError,
     _ensure_aware_utc,
+    _json_list,
     lock_session,
 )
+
+# The helpers the package root imports from here.
+__all__ = [
+    "_consumed_invite_offset_indices",
+    "_dispatch_pending_invitations",
+    "_observe_scheduled_invites",
+    "_resolve_invite_fires",
+    "parse_and_validate_invite_offsets",
+]
 
 
 def _resolve_invite_fires(
@@ -38,8 +48,8 @@ def _resolve_invite_fires(
     tuples, preserving the original list order. The caller filters
     by ``fire_at <= now`` to find due entries.
     """
-    offsets = session.invite_offsets or []
-    if not isinstance(offsets, list):
+    offsets = _json_list(session.invite_offsets or [])
+    if offsets is None:
         return []
     anchor = session.scheduled_activate_at
     fires: list[tuple[int, str, datetime | None]] = []
@@ -196,7 +206,7 @@ def _fire_invite_entry(
     session could otherwise fire invites from ``draft`` even though
     manual Send would refuse (the operator route
     ``_require_validated_or_ready`` gates the same way)."""
-    context = {
+    context: dict[str, str | int] = {
         "anchor_at": anchor_iso,
         "offset_index": offset_index,
         "offset": offset_str,

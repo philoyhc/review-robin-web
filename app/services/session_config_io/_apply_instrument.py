@@ -77,6 +77,14 @@ from ._apply_shared import (
     _ViewPolicySpec,
 )
 
+# What other modules import from here: the package shares its
+# underscored helpers between modules.
+__all__ = [
+    "_apply_instrument_kv",
+    "_apply_instruments",
+    "_wipe_instruments_and_dependents",
+]
+
 
 def _apply_instrument_kv(
     plan: _ParsedConfig, field_path: str, value: str, data_type: str
@@ -298,7 +306,9 @@ def _apply_instrument_kv(
         # stored made the page answer 500 (findings S2, 2026-10-16).
         if not isinstance(state, dict):
             raise _ParseError("band2_state must be a JSON object")
-        instrument.band2_state = portable_band2_state(state or None)
+        instrument.band2_state = portable_band2_state(
+            cast("dict[str, Any]", state) or None
+        )
     elif attr == "band1_touched_links":
         # Segment 18P PR D2 — the Band 1 "set"-pill link list.
         instrument.band1_touched_links = (

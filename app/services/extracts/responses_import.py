@@ -122,7 +122,9 @@ class DroppedResponseRow:
 @dataclass
 class ResponseLoadResult:
     responses: int = 0
-    dropped: list[DroppedResponseRow] = _dc_field(default_factory=list)
+    dropped: list[DroppedResponseRow] = _dc_field(
+        default_factory=list[DroppedResponseRow]
+    )
 
     @property
     def dropped_count(self) -> int:

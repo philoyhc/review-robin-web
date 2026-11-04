@@ -2,7 +2,7 @@ import asyncio
 import logging
 import pathlib
 import threading
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager, suppress
 
 from fastapi import Depends, FastAPI
@@ -67,7 +67,7 @@ _SHUTDOWN_WAIT = 30
 
 
 @asynccontextmanager
-async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
     """RRW's lifespan, entered by the Cordware host (which runs each
     mounted application's): starts the in-app clock (segment 14E) when
     `SCHEDULER_INTERVAL_SECONDS` is above 0, and stops it on shutdown,

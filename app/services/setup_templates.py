@@ -327,7 +327,7 @@ def _full_cohort() -> tuple[tuple[str, str, str, str, str], ...]:
         first = _FULL_FIRST[i % len(_FULL_FIRST)]
         last = _FULL_LAST[(i // len(_FULL_FIRST) + 3 * i) % len(_FULL_LAST)]
         people.append((f"{first} {last}", _email(f"{first} {last}")))
-    cohort = []
+    cohort: list[tuple[str, str, str, str, str]] = []
     for index, (name, email) in enumerate(people):
         group = index // _FULL_GROUP_SIZE + 1
         position = index % _FULL_GROUP_SIZE

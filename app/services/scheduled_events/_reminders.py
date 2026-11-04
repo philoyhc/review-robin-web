@@ -24,8 +24,18 @@ from ._shared import (
     _OFFSET_MAX_MAGNITUDE,
     ScheduledActivateError,
     _ensure_aware_utc,
+    _json_list,
     lock_session,
 )
+
+# The helpers the package root imports from here.
+__all__ = [
+    "_consumed_reminder_offset_indices",
+    "_dispatch_scheduled_reminders",
+    "_observe_scheduled_reminders",
+    "_resolve_reminder_fires",
+    "parse_and_validate_reminder_offsets",
+]
 
 
 def _resolve_reminder_fires(
@@ -39,8 +49,8 @@ def _resolve_reminder_fires(
     order; ``fire_at`` is ``None`` when the anchor is unset or the
     entry is unparseable.
     """
-    offsets = session.reminder_offsets or []
-    if not isinstance(offsets, list):
+    offsets = _json_list(session.reminder_offsets or [])
+    if offsets is None:
         return []
     anchor = session.deadline
     fires: list[tuple[int, str, datetime | None]] = []
@@ -196,7 +206,7 @@ def _fire_reminder_entry(
 ) -> None:
     """Skip or send one due entry and record it, without committing:
     the caller commits the entry as one transaction."""
-    context = {
+    context: dict[str, str | int] = {
         "anchor_at": anchor_iso,
         "offset_index": offset_index,
         "offset": offset_str,

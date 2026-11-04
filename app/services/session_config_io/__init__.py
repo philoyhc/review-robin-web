@@ -52,9 +52,11 @@ from app.services.session_config_io._apply_parse import ApplyError, split_rows
 
 # ``_ParseError`` / ``_parse_group_kind`` are re-exported for the
 # unit test that exercises the group-kind cell parser directly.
-from app.services.session_config_io._apply_shared import (  # noqa: F401
-    _parse_group_kind,
-    _ParseError,
+from app.services.session_config_io._apply_shared import (
+    _parse_group_kind as _parse_group_kind,
+)
+from app.services.session_config_io._apply_shared import (
+    _ParseError as _ParseError,
 )
 from app.services.session_config_io._rows import HEADER, Row
 from app.services.session_config_io._serialize import serialize_session_config

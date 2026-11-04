@@ -48,6 +48,8 @@ from app.services.instruments._instrument_crud import (
 )
 from app.services.instruments._state import (
     _instrument_label,
+    _json_dict,
+    _json_list,
     _response_count_for_field,
 )
 from app.services.text import parse_id
@@ -122,7 +124,7 @@ def set_band2_state(
     db: Session,
     *,
     instrument: Instrument,
-    state: dict[str, Any],
+    state: dict[str, Any] | None,
     actor: User,
     acknowledged_drop: bool = False,
 ) -> Instrument:
@@ -166,12 +168,9 @@ def set_band2_state(
     # nuking the operator's ``response_fields`` or
     # ``sample_reviewee_name``, and lets ↻ Refresh send only
     # ``sample_reviewee_name`` without nuking the pill / RF state.
-    selected_keys_in_payload = (
-        isinstance(state, dict) and "selected_display_keys" in state
-    )
-    if selected_keys_in_payload:
-        raw_keys = state.get("selected_display_keys")
-        if isinstance(raw_keys, list):
+    if isinstance(state, dict) and "selected_display_keys" in state:
+        raw_keys = _json_list(state.get("selected_display_keys"))
+        if raw_keys is not None:
             sanitised_keys: list[str] = []
             for raw in raw_keys:
                 k = str(raw).strip()
@@ -186,14 +185,12 @@ def set_band2_state(
             _sync_display_field_visibility(
                 db,
                 instrument=instrument,
-                selected_keys=set(sanitised_keys)
-                if isinstance(raw_keys, list)
-                else None,
+                selected_keys=set(sanitised_keys),
                 actor=actor,
             )
     else:
-        existing_keys = existing.get("selected_display_keys")
-        if isinstance(existing_keys, list) and existing_keys:
+        existing_keys = _json_list(existing.get("selected_display_keys"))
+        if existing_keys:
             sanitised["selected_display_keys"] = list(existing_keys)
     # Wave 3 PR iii — sanitised response_fields is no longer
     # persisted into band2_state JSON. It still gets built as a
@@ -205,11 +202,12 @@ def set_band2_state(
     rf_widths_by_id: dict[int, int] = {}
     rf_widths_by_name: dict[str, int] = {}
     if isinstance(state, dict) and "response_fields" in state:
-        raw_rfs = state.get("response_fields")
-        if isinstance(raw_rfs, list):
+        raw_rfs = _json_list(state.get("response_fields"))
+        if raw_rfs is not None:
             incoming_rfs = []
-            for raw in raw_rfs:
-                if not isinstance(raw, dict):
+            for raw_rf in raw_rfs:
+                raw = _json_dict(raw_rf)
+                if raw is None:
                     continue
                 name = str(raw.get("name") or "").strip()[:255]
                 if not name:
@@ -268,8 +266,8 @@ def set_band2_state(
     # boundary switched off — render falls back to unconstrained
     # partition). Missing preserves existing.
     if isinstance(state, dict) and "sample_group_member_ids" in state:
-        raw_ids = state.get("sample_group_member_ids")
-        if isinstance(raw_ids, list):
+        raw_ids = _json_list(state.get("sample_group_member_ids"))
+        if raw_ids is not None:
             cleaned_ids: list[int] = []
             for raw in raw_ids:
                 try:
@@ -281,8 +279,8 @@ def set_band2_state(
             if cleaned_ids:
                 sanitised["sample_group_member_ids"] = cleaned_ids
     else:
-        existing_ids = existing.get("sample_group_member_ids")
-        if isinstance(existing_ids, list) and existing_ids:
+        existing_ids = _json_list(existing.get("sample_group_member_ids"))
+        if existing_ids:
             sanitised["sample_group_member_ids"] = list(existing_ids)
     # Wave 3 PR iii — DB rows are now authoritative for response
     # fields; JSON ``response_fields`` retired. The dual-write helper
@@ -444,7 +442,7 @@ def _record_response_field_changes(
     kept = before.keys() & after.keys()
     old_rank, new_rank = _ranks(before, kept), _ranks(after, kept)
     branch_changed = False
-    updated = []
+    updated: list[dict[str, Any]] = []
     for i in sorted(kept):
         changes = {}
         for attr in _RESPONSE_FIELD_ATTRS:
@@ -1105,7 +1103,7 @@ def _apply_branch_rules(
     for field in kept:
         old = old_branch.get(field.id, (None, None, None, None))
         new = tuple(getattr(field, attr) for attr in _BRANCH_ATTRS)
-        changes = {
+        changes: dict[str, list[Any]] = {
             attr: [before, after]
             for attr, before, after in zip(_BRANCH_ATTRS, old, new)
             if before != after

@@ -539,7 +539,7 @@ def delete_session(
     so the deletion itself stays in the global audit log.
     """
     lifecycle.require_not_ready(db, review_session)
-    captured = {
+    captured: dict[str, int | str] = {
         "id": review_session.id,
         "code": review_session.code,
         "name": review_session.name,

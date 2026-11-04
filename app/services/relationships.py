@@ -794,14 +794,14 @@ def _normalised_rel_tag(value: str | None) -> str | None:
     return stripped or None
 
 
-def _require_session_member(
+def _require_session_member[M: (Reviewer, Reviewee)](
     db: Session,
     *,
     session_id: int,
-    model: type,
+    model: type[M],
     member_id: int,
     label: str,
-) -> object:
+) -> M:
     obj = db.execute(
         select(model).where(
             model.id == member_id, model.session_id == session_id

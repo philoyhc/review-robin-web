@@ -7,6 +7,8 @@ apply phase.
 """
 from __future__ import annotations
 
+from typing import cast
+
 from sqlalchemy.orm import object_session
 
 from app.db.models import ReviewSession
@@ -24,6 +26,14 @@ from ._apply_shared import (
     _ParsedConfig,
     _ParseError,
 )
+
+# What other modules import from here: the package shares its
+# underscored helpers between modules.
+__all__ = [
+    "SESSION_FALLBACK_KEYS",
+    "_apply_session_kv",
+    "_apply_session_metadata",
+]
 
 #: The Settings CSV's own-entry selections (participant info Items 1, 4
 #: and 5): the `session.*` key, and the participant it normalizes against.
@@ -109,15 +119,14 @@ def _apply_session_kv(
             plan.session_overrides[key] = None
             return
         parsed = _parse_json(value, default=None)
-        if not isinstance(parsed, list) or not all(
-            isinstance(item, str) for item in parsed
-        ):
+        keys = cast("list[object]", parsed) if isinstance(parsed, list) else None
+        if keys is None or not all(isinstance(item, str) for item in keys):
             raise _ParseError(
                 f"expected a JSON list of field keys, got {value!r}"
             )
         try:
             plan.session_overrides[key] = normalize_self_fields(
-                _SELF_FIELDS_KEYS[key], parsed
+                _SELF_FIELDS_KEYS[key], keys
             )
         except SelfFieldsError as exc:
             raise _ParseError(str(exc)) from exc

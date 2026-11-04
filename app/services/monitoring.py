@@ -422,7 +422,7 @@ def per_reviewer_progress(
     return out
 
 
-def _per_reviewer_progress_python(
+def _per_reviewer_progress_python(  # pyright: ignore[reportUnusedFunction]  -- parity oracle, run by tests only
     db: Session, review_session: ReviewSession
 ) -> list[ReviewerProgress]:
     """The pre-rewrite implementation, kept as the parity oracle.
@@ -817,7 +817,7 @@ def _python_routed_coverage(
     return out
 
 
-def _per_reviewee_coverage_python(
+def _per_reviewee_coverage_python(  # pyright: ignore[reportUnusedFunction]  -- parity oracle, run by tests only
     db: Session, review_session: ReviewSession
 ) -> list[RevieweeCoverage]:
     """The pre-rewrite implementation, kept as the parity oracle.
