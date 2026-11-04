@@ -253,11 +253,8 @@ python3 -c "import json,collections;d=json.load(open('/tmp/pyright.json'));print
 
 - ~~Rung 2's rule set~~: two steps, `I` and `UP` then `B` and `SIM`
   (author, 2026-11-04).
-- **Tests:** gate them later with the two optional-access rules relaxed
-  and ratcheted back per directory (`tests/unit/` first), or leave test
-  code to running it? Its own plan; author.
-- **Strict mode** after the gate, per package (`strict = ["cordware"]`
-  first, then `app/services`, then `app/web`)? Its own plan; author.
+- ~~Tests~~: filed as `guide/segment_22D_pyright_tests.md` (author, 2026-11-04).
+- ~~Strict mode~~: filed as `guide/segment_22E_pyright_strict.md` (author, 2026-11-04).
 
 ## Out of scope
 

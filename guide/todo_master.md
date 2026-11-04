@@ -78,6 +78,15 @@ no other RRW branch open, since its import and lint fixes touch most files.
    operators may have reminded by hand: 14G marks those skipped, not
    sent, when it turns the setting on.
 
+4. **22D — Pyright over test code** (not gated). The four test trees
+   join 22C's gate, the optional-access rules relaxed for tests and
+   ratcheted back per directory. **Plan:** `guide/segment_22D_pyright_tests.md`.
+
+5. **22E — Pyright strict mode, package by package** (not gated).
+   **Plan:** `guide/segment_22E_pyright_strict.md`. 22D and 22E are
+   independent; their order, and their place after 14F/14G, is the
+   author's call.
+
 ### Stubs
 
 Small items with no plan doc; each fits one PR and its reasoning fits
