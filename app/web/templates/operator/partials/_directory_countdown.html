@@ -69,6 +69,13 @@
       if (!event.persisted) { return; }
       // A count frozen mid-flight must not resume behind the reset.
       cancel();
+      if (recheck) {
+        // Cleared whether or not a count was running: a recheck posted
+        // before Back left them set, and the next one must start clean.
+        if (recheck.elements.since) { recheck.elements.since.value = ''; }
+        if (recheck.elements.stop) { recheck.elements.stop.value = ''; }
+        recheck.dispatchEvent(new Event('directory-count-stopped'));
+      }
       if (recheckButton) { recheckButton.disabled = false; }
       Array.prototype.forEach.call(document.forms, function (f) {
         delete f.dataset.directoryCounted;
@@ -111,7 +118,9 @@
         labelRecheck(false);
         if (target === recheck && recheck.elements.stop) { recheck.elements.stop.value = ''; }
       } else if (target === recheck && recheckButton) {
-        // Posted: the button can't post it a second time.
+        // Posted: the button can't post it a second time. A navigation
+        // the operator then cancels leaves it so until a reload, the
+        // price of never posting a recheck twice.
         labelRecheck('saving');
         recheckButton.disabled = true;
       }
@@ -127,6 +136,16 @@
       if (recheck.elements.stop) { recheck.elements.stop.value = 'true'; }
       labelRecheck('saving');
       run.pump();
+    }
+
+    // A failed lookup while saving ends the count the ordinary way, not
+    // as a stop: the recheck then takes its usual path (the renew banner
+    // for an expired sign-in, else the server checks what is left), and
+    // its line names the real cause rather than "stopped".
+    function unsave(current) {
+      if (current.saving && recheck && recheck.elements.stop) {
+        recheck.elements.stop.value = '';
+      }
     }
 
     // Drop the count: nothing more is asked, nothing is posted. Requests
@@ -269,6 +288,7 @@
             return outcomes[key] && outcomes[key].status === 'ERROR';
           });
           if (failed) {
+            unsave(current);
             end();
             return;
           }
@@ -277,6 +297,7 @@
           pump();
         }).catch(function () {
           running -= 1;
+          unsave(current);
           end();
         });
       }

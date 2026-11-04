@@ -588,6 +588,8 @@ def test_stop_and_save_reads_what_the_count_fetched_and_asks_nothing(
     assert "1 by sign-in name" in card
     assert "1 not checked" in card
     assert "Not checked because the recheck was stopped." in card
+    event = _event(db, session.id, "reviewers.directory_rechecked")
+    assert event.detail["context"]["directory_unchecked"] == "stopped"
 
 
 def test_stop_without_since_is_an_ordinary_recheck(

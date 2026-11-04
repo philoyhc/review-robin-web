@@ -1178,7 +1178,10 @@ It is hidden until the count starts.
   with `stop=true`. The server asks the directory nothing: it binds from
   the answers the count fetched since its `since`, and counts every
   other row not checked, "because the recheck was stopped". `stop` is
-  ignored without `since`. Clicked before the keys come back, there is
+  ignored without `since`. A lookup that fails while saving ends the
+  count as under *Stopping early*, not as a stop: an expired sign-in
+  shows the renew banner, and otherwise the server checks what is left.
+  A page restored from the back/forward cache clears `since` and `stop`. Clicked before the keys come back, there is
   nothing to save: the count is dropped, nothing is posted, and a renew
   banner's button that started it is usable again (the form fires
   `directory-count-stopped`, which the banner listens for). Upload has no
