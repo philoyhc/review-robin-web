@@ -185,7 +185,7 @@ stricter until ruled on.
   retired; the old register's "Done in #2738" overstates. Inbound
   references to repoint first: `docs/README.md:27-29`,
   `docs/architecture.md:83,128,135`, `docs/cli_setup.md:3,648`,
-  `docs/deployment_nus.md:16-17`, `spec/rehydrate.md:185`,
+  `docs/deployment_<institution>.md:16-17`, `spec/rehydrate.md:185`,
   `guide/segment_20_operator_polish_and_documentation.md:53`,
   `guide/todo_master.md:2070`. `guide/post_azure_todo_checklist.md:101`
   still queues the question. Retire, or record "kept as the estimate
@@ -194,7 +194,7 @@ stricter until ruled on.
   sweep's row is the first since #2718).
 - ~~**I7, H23**~~ — **Ruled 2026-10-03: update the documents. Done in #2796.** `known_limitations.md` does not say scheduled sends fire
   only on a Session Home visit (old B19); the backup, runbook and
-  troubleshooting docs have no NUS coverage until cutover.
+  troubleshooting docs have no institutional coverage until cutover.
 
 ## 3. Findings by file
 
@@ -419,10 +419,10 @@ and not exposed".
 
 **H — deployment and operations docs**
 
-- H-retire (above), and ~~H14~~ low-med: `deployment_nus.md:15-19` and `docs/README.md:28` still present the superseded runbooks as live.
+- H-retire (above), and ~~H14~~ low-med: `deployment_<institution>.md:15-19` and `docs/README.md:28` still present the superseded runbooks as live.
 - `security_posture.md`:
   - ~~H1~~ med doc · :222: no `activate_confirm`; Activate takes `acknowledge_warnings`, Revert `confirm`.
-  - ~~H4~~ med doc · :441-447: scope the deferred-hardening table to the dev slot; NUS has private endpoints and App Insights.
+  - ~~H4~~ med doc · :441-447: scope the deferred-hardening table to the dev slot; the institution has private endpoints and App Insights.
   - ~~H5~~ low-med doc/author · :185-210: the §5.6 audit omits `/about`, `/guide` and `/templates/*.zip`.
   - ~~H6~~ low · :177-180: state the not-identity marker rule, not a tally of 14.
   - ~~H7~~ low · :11: seven gates under "three layers".
@@ -431,10 +431,10 @@ and not exposed".
   - ~~H9~~ med-low doc · :105-107: the app logs JSON to stdout; nothing streams to Azure Monitor yet.
   - ~~H10~~ author: the storage account's purpose.
   - ~~H11~~ low doc · :92-94: `audit_events` rows are deleted on session delete and purge.
-- `deployment_nus.md`:
-  - ~~H12~~ med-low doc · :87-90, 180-196, 273-283: the whole `deploy_nus.yml` moves in-VNet per v7.
+- `deployment_<institution>.md`:
+  - ~~H12~~ med-low doc · :87-90, 180-196, 273-283: the whole `deploy_<institution>.yml` moves in-VNet per v7.
   - ~~H13~~ low-med consolidate · :116-134: reduce §3 to a pointer to v7.
-- `cli_setup.md`: ~~H15~~ low-med doc: reframe around `deployment_nus.md`, `NUS_*` secrets and no NPRD names. (#2796 repointed its companion line and closing pointer when its parent retired; the body's "Phase N" references to the retired runbook remain.)
+- `cli_setup.md`: ~~H15~~ low-med doc: reframe around `deployment_<institution>.md`, `<INSTITUTION>_*` secrets and no NPRD names. (#2796 repointed its companion line and closing pointer when its parent retired; the body's "Phase N" references to the retired runbook remain.)
 - `azure_github_setup.md` / `azure_provision.md`: ~~H16~~ author (two contradictory banners), ~~H17~~ and ~~H18~~ moot once retired.
 - `local_setup.md`: ~~H2~~ low-med (drop the ~35s figure), ~~H3~~ low (`node` in the tool tables), ~~H19~~ low (without fake auth every route 401s).
 - `deployment_dev.md`: ~~H20~~ low (repoint the env-var rules to `lifecycle.md` §2), ~~H22~~ low (no Oryx build).

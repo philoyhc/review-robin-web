@@ -89,7 +89,7 @@ the PR body unless it says otherwise.
   21A deferred event 5 to 21D, whose plan never took it up
   (`guide/archive/segment_21_domain_retrofit.md` § Status).
   `cordware/spec/host.md` "Logging" says they are not yet built. Before
-  any NUS deploy, since the logs are the host's only operational
+  any institutional deploy, since the logs are the host's only operational
   record.
 
 - **`regenerate_token` leaves `last_reminder_at` standing** *(filed

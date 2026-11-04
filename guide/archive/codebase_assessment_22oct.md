@@ -334,9 +334,9 @@ list (corpus F11).
     unbuilt (corpus H12);
   - section pointers into a superseded status record (corpus H17).
 
-  `.github/workflows/deploy_nus.yml` does not yet ship `cordware/` (stage
+  `.github/workflows/deploy_<institution>.yml` does not yet ship `cordware/` (stage
   4). Nothing is deployed, so nothing is broken yet, but these are the
-  documents a first NUS deploy will be run from.
+  documents a first institutional deploy will be run from.
 - **Nothing sends email, and nothing is deployed.** Unchanged; the dev
   slot is now dormant, with a resume checklist in `docs/deployment_dev.md`.
   14B and 20 wait on the institutional deployment, and Cordware stage 3 is
@@ -446,8 +446,8 @@ nothing is deployed**.
    one comparison taught to read what older code stored, and doing them
    at once makes that a habit rather than five patches. Rule R4, S1 and
    C1 first; they are the author's calls.
-2. **Bring the deployment documents up to the host before any NUS deploy**
-   (corpus H1–H9 and H12–H17, with `deploy_nus.yml` shipping `cordware/`). The next
+2. **Bring the deployment documents up to the host before any institutional deploy**
+   (corpus H1–H9 and H12–H17, with `deploy_<institution>.yml` shipping `cordware/`). The next
    deploy will be run from these pages, and a wrong start command fails
    on day one.
 3. **Rule the functional-spec trim (corpus F11) and let the spec-update

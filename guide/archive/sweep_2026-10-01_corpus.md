@@ -84,7 +84,7 @@ finding is among them.
 - `docs/local_setup.md`: 1 (H7).
 - `docs/security_posture.md`: 3 (H8–H10), plus G21.
 - `docs/deployment_dev.md`: **6** (H7, H11–H15).
-- `docs/deployment_nus.md`: **5** (H11, H16–H19).
+- `docs/deployment_<institution>.md`: **5** (H11, H16–H19).
 - `docs/cli_setup.md`: 4 (H27–H30).
 - `docs/backup_restore.md`: 2 (H31, H32).
 - `docs/operations_runbook.md`: 1 (H13).
@@ -100,14 +100,14 @@ finding is among them.
 
 ## 3. Consolidate
 
-- `docs/deployment_nus.md` and `docs/nus_azure_status_v7.md`: v7 is the status and `deployment_nus.md` the runbook. Move the settled open items out of the runbook (H16).
+- `docs/deployment_<institution>.md` and `docs/nus_azure_status_v7.md`: v7 is the status and `deployment_<institution>.md` the runbook. Move the settled open items out of the runbook (H16).
 - `rrw_functional_spec.md` §13.2 should point at `validate_page.md` for the readiness rules (G12).
 - `operator_ui_concept.md`'s Validate page section should point at `validate_page.md` (E23).
 
 ## 4. Retire
 
-- `docs/azure_provision.md`, overtaken by the NUS environment (H21).
-- `docs/azure_github_setup.md` (H24), into `deployment_nus.md`.
+- `docs/azure_provision.md`, overtaken by the institutional environment (H21).
+- `docs/azure_github_setup.md` (H24), into `deployment_<institution>.md`.
 - `azure_ask.md`, answered differently (I12). It is already queued in `guide/post_azure_todo_checklist.md`.
 - Sections:
   - `email_infra_options.md` "Doc impact" (F24).
@@ -165,7 +165,7 @@ merges a week does more to specs than any close catches. The worst drift is
 where 19T rebuilt a surface in place (sorting, reviewer surface,
 instruments). The next worst is in documents whose subject moved without
 a plan naming them: the deployment docs, which have been untouched since the
-NUS environment was provisioned, and `docs/status.md`'s Capabilities
+institutional environment was provisioned, and `docs/status.md`'s Capabilities
 section. **Three specs say email identity is casefolded, but the code uses
 `.lower()` deliberately**, and two separate reads found it. The most consequential findings are rulings,
 not spec edits (register §1). Several look like code defects that reach

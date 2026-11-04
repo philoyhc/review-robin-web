@@ -322,7 +322,7 @@ not happen.
   measuring the cost over the institutional network. Planned, not soon.
 - **Nothing sends email, and nothing is deployed.** Unchanged. 14B and 20
   still wait on the institutional deployment. A shared-host direction under
-  `cordware.nus.edu.sg` was proposed in the window and outlined as
+  `<institutional host>` was proposed in the window and outlined as
   Segment 21; the author has put it on hold as speculative, so it is neither
   a dependency nor a plan here.
 

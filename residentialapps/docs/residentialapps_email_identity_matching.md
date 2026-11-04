@@ -100,7 +100,7 @@ According to Cordware's 29 October Azure progress report:
 - Easy Auth's token store and configured login scopes are in place.
 - The user-assigned managed identity and federated identity credential for Easy Auth are created and assigned.
 - **Final Web App-side managed-identity/FIC assertion wiring and live token acquisition/refresh and Graph-call testing remain to be completed.** Do not describe Graph lookups as already production-validated. *Superseded 31 October 2026 (update below): the wiring is done, and lookups are production-validated for staff and students; token refresh is not yet exercised.*
-- A separate NUS firewall issue remains for GitHub Actions artifact/blob egress; it is not an email-alias identity rule.
+- A separate institutional firewall issue remains for GitHub Actions artifact/blob egress; it is not an email-alias identity rule.
 
 **Update, 30 October 2026** (Cordware's private records (`docs/cordware_azure_progress_runner_2026-10-29.md` §2 and `guide/temp_todo.md`, in `philoyhc/cordware`)). The fourth bullet above is now partly out of date:
 

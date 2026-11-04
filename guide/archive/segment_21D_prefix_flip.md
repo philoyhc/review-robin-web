@@ -201,7 +201,7 @@ forwarding and host header, at stage 4.
    - Host tests move to the mount. The browser harness moves to the
      mount through `app_url`, covering raw contexts and `window.location`
      too, with the guard test and every browser test passing.
-   - `docs/deployment_nus.md` retires its "no code change" line.
+   - `docs/deployment_<institution>.md` retires its "no code change" line.
    - Docs that name the local URL say `/reviewrobin/`.
    - The `.env.example` and start commands are unchanged.
 4. **D3, the behavior requirements pinned.**
@@ -258,7 +258,7 @@ forwarding and host header, at stage 4.
 
 - **The dev slot's live check** under real Easy Auth: when it resumes
   (`docs/deployment_dev.md` "Resuming the dev slot").
-- **The NUS gateway's path forwarding and host header:** stage 4.
+- **The institutional gateway's path forwarding and host header:** stage 4.
 - **Repointing RRW's 77 identity importers:** the re-export stays (21C).
 - **Residential Apps:** stage 3, after this closes.
 
@@ -275,6 +275,6 @@ forwarding and host header, at stage 4.
 - `README.md` — the local URL (D2).
 - `.env.example` — an empty `CORDWARE_APPS` serves the landing page and `/health` (D3).
 - `CLAUDE.md` — the local URL the author checks at (D2). `AGENTS.md` twinned.
-- `docs/deployment_nus.md` — the "no code change" line retired; its start command moves with stage 4's artifact (D2; carried from the outline).
+- `docs/deployment_<institution>.md` — the "no code change" line retired; its start command moves with stage 4's artifact (D2; carried from the outline).
 - `docs/cordware_implementation_sequence.md` — retired to `docs/archive/` at the close; the sub-segment plans carry its ladder (carried from the outline). <!-- cites: docs/cordware_implementation_sequence.md -->
 - `cordware/spec/host.md` — the landing page and the one-application redirect, `AppEntry.title`, RRW at `/reviewrobin` (close); checked by hand.

@@ -1,11 +1,11 @@
 # Cordware Repository and Deployment Strategy
 
-> **Retired 2026-10-24.** The Cordware strategy and the NUS deployment material are now maintained privately with the deployment, not in this repository. Kept as public decision history of the host this repository carries; `cordware/spec/host.md` and `cordware/spec/identity.md` cite its §3. Not implementation instructions.
+> **Retired 2026-10-24.** The Cordware strategy and the institutional deployment material are now maintained privately with the deployment, not in this repository. Kept as public decision history of the host this repository carries; `cordware/spec/host.md` and `cordware/spec/identity.md` cite its §3. Not implementation instructions.
 
 **Version:** 0.8, 20 October 2026; stages 1 and 2 resequenced the same day (§5); fake auth, the platform super-admin and host logging settled 21 October (§3); `APP_ENV`, the fake-auth guard and local testing switches settled the same day (§3); URL emission settled the same day (§3, §8); the prefix flip, the public host for absolute links and the one-application landing page settled 22 October (§1, §8)  
 **Status:** The adopted strategy (author, 2026-10-19). The direction is decided; smaller details may still shift, and each shift is recorded here. This is not authorization for any single production change.  
 **Source of truth:** this file, in `philoyhc/review-robin-web`. The `philoyhc/cordware` planning repo stands down later and is not updated.  
-**Deployment:** One integrated application on one Azure App Service, at `https://cordware.nus.edu.sg`.
+**Deployment:** One integrated application on one Azure App Service, at `https://<institutional host>`.
 
 > **Decision:** Evolve RRW's existing repository **in place** into an asymmetric monorepo. RRW keeps its root-level source and development folders. A deliberately small, stateless `cordware/` host package supplies trusted Entra identity and mounts each application under its own path. Residential Apps follows later in a self-contained `residentialapps/` area. The sequence is **build the host with RRW still at `/` and sweep RRW's links → extract shared identity, then move RRW to `/reviewrobin` → establish Residential Apps → integrate and deploy**, and both RRW stages land before Residential Apps arrives.
 
@@ -132,7 +132,7 @@ Cordware owns `/` (the landing page) and `/health`. Easy Auth's `/.auth/*` paths
 
 ### Construction, lifecycle and logging
 
-- **Each application is constructed once.** Importing an application's factory has no side effects. RRW's module-level `app = create_app()` in `app/main.py` is removed, and every start command (local, dev slot, NUS) becomes the one Cordware entry point.
+- **Each application is constructed once.** Importing an application's factory has no side effects. RRW's module-level `app = create_app()` in `app/main.py` is removed, and every start command (local, dev slot, the institution) becomes the one Cordware entry point.
 - **The host owns process-wide setup.** Root-logger configuration moves to Cordware. An application's factory stops configuring the root logger and logs under its own named logger, with the application recorded in each record.
 - **Lifespans are explicit.** A mounted application's lifespan does not run under the parent automatically. Startup work therefore happens in the application's factory, or Cordware's own lifespan runs each mounted application's lifespan explicitly.
 - **A critical application failure fails startup.** If a mounted application's startup validation fails, the process fails, unless a deliberately engineered degraded mode is approved later.
@@ -169,7 +169,7 @@ RRW's tested Easy Auth parsing moves into `cordware/identity.py` once the host e
 
 **`APP_ENV` is a platform setting** (author, 2026-10-21). Cordware reads it and exposes it as a host-level value; applications consult that value rather than reading the setting themselves. It keeps its name and its default, `local`. Today RRW reads it in two places, both asking only whether it is `local`: its fail-fast startup check (`validate_critical_settings`, which refuses to start when no one could sign in) and the empty-super-admin startup warning, which moves to Cordware (host logging, event 1).
 
-**Cordware enforces the fake-auth guard.** It refuses to start when `ALLOW_FAKE_AUTH` is on and `APP_ENV` is anything other than `local`. At decision time nothing enforced this: fake auth was gated only by `ALLOW_FAKE_AUTH`, and "never enable it when deployed" was a documented rule. The host now refuses at startup (`cordware/main.py`; §8, segment 21C). Every deployed environment, the personal dev slot included, therefore sets `APP_ENV` to a non-`local` value (NUS uses `production`).
+**Cordware enforces the fake-auth guard.** It refuses to start when `ALLOW_FAKE_AUTH` is on and `APP_ENV` is anything other than `local`. At decision time nothing enforced this: fake auth was gated only by `ALLOW_FAKE_AUTH`, and "never enable it when deployed" was a documented rule. The host now refuses at startup (`cordware/main.py`; §8, segment 21C). Every deployed environment, the personal dev slot included, therefore sets `APP_ENV` to a non-`local` value (institutional uses `production`).
 
 **Local testing switches keep their names, defaults and behavior.** Every environment switch RRW reads today stays settable in the repository-root `.env` or per run (`$env:NAME=…` in PowerShell, `export NAME=…` in a POSIX shell), with the shell value overriding `.env`, and a restart picking up a change. One `.env` is read by Cordware and every mounted application. Ownership splits as follows:
 
@@ -206,7 +206,7 @@ Residential owns its business-action audit in the same way. Cordware uses ordina
 
 ### Production PostgreSQL: B or C
 
-The shortlist is **B or C on the existing institutional PostgreSQL server. C is preferred**, subject to NUS IT feasibility, cost and operational constraints.
+The shortlist is **B or C on the existing institutional PostgreSQL server. C is preferred**, subject to the institution's IT feasibility, cost and operational constraints.
 
 | | **B: one database, separate schemas** | **C: two databases, same server (preferred)** |
 |---|---|---|
@@ -221,7 +221,7 @@ The shortlist is **B or C on the existing institutional PostgreSQL server. C is 
 
 **B** needs disciplined schema qualification, search-path and grant management, migration scope, and separately located Alembic version tables to protect RRW's existing objects. **C** is cleaner for credentials and migration isolation, but it is still **one** server, with shared capacity and server-level restore. Logical backups can cover database-specific recovery under either option.
 
-**Choose C** if NUS IT can create a second database and roles on the existing server without disproportionate obstacles or material extra cost; otherwise **B** is an acceptable fallback. Shared business tables (A) and a second PostgreSQL server (D) are not pursued without a new requirement.
+**Choose C** if the institution's IT can create a second database and roles on the existing server without disproportionate obstacles or material extra cost; otherwise **B** is an acceptable fallback. Shared business tables (A) and a second PostgreSQL server (D) are not pursued without a new requirement.
 
 Settings are namespaced: `RRW_DATABASE_URL` and `RES_DATABASE_URL`. Under B they can address the same database with distinct restricted credentials; under C, two databases on one server. RRW's existing `DATABASE_URL` keeps working, with a documented, unambiguous precedence between the two names.
 
@@ -229,7 +229,7 @@ Settings are namespaced: `RRW_DATABASE_URL` and `RES_DATABASE_URL`. Under B they
 
 ## 5. Implementation pathway and stage gates
 
-Make small, reviewable changes. **Nothing is deployed to the NUS host until this repository runs as Cordware with RRW mounted at `/reviewrobin`**, so RRW is never deployed there on its own and the first NUS deploy uses the Cordware entry point.
+Make small, reviewable changes. **Nothing is deployed to the institutional host until this repository runs as Cordware with RRW mounted at `/reviewrobin`**, so RRW is never deployed there on its own and the first institutional deploy uses the Cordware entry point.
 
 | Stage | Work | Gate before the next stage |
 |---|---|---|
@@ -239,7 +239,7 @@ Make small, reviewable changes. **Nothing is deployed to the NUS host until this
 | **3. Establish Residential** | Import its skeleton, architectural decisions, specs, plans, tests, tools, agent guidance and Alembic; re-namespace `app`; consume Cordware identity; mount at `/residentialapps`. Settle B or C **before production database setup**, not necessarily before the code import. | Cordware + Residential runs without RRW; both applications coexist |
 | **4. Integrated release** | Resolve the one dependency environment; package the applications and assets; run each mounted application's migrations with its own database and credentials; verify in staging, then a controlled production cutover. | One validated build and release, with documented rollback and recovery |
 
-The NUS deploy workflow currently packages `app/`, `alembic/`, `alembic.ini`, requirements, `pyproject.toml` and `antenv/`. Broaden the artifact only when the integrated application is ready. The **deployment workflow** runs each mounted application's migrations; Cordware does not become a migration service. Prefer backward-compatible migrations: reverting code does not reverse a database change.
+The institutional deploy workflow currently packages `app/`, `alembic/`, `alembic.ini`, requirements, `pyproject.toml` and `antenv/`. Broaden the artifact only when the integrated application is ready. The **deployment workflow** runs each mounted application's migrations; Cordware does not become a migration service. Prefer backward-compatible migrations: reverting code does not reverse a database change.
 
 ## 6. Scoped CI and shared-runtime risks
 
@@ -264,7 +264,7 @@ The production process still shares Python dependency resolution, startup, compu
 - **Residential's transfer:** keep Residential's provenance and archived planning material. Archive its original repository only after its content, workflows and migration history are verified here.
 - **Cordware planning documents:** v0.4–v0.7, the planning notes and integration spec v0.2 are in `docs/archive/` as decision history. The `philoyhc/cordware` copies are not maintained.
 - **Optional rename:** postpone `review-robin-web` → `cordware` until operation is stable. The `philoyhc/cordware` planning repo must first give up that name, and GitHub OIDC federation and other integrations may need updating.
-- **Institutional deployment:** the NUS Azure OIDC subject is scoped to `repo:philoyhc/review-robin-web:ref:refs/heads/main`. Keeping the repository name through functional integration may reduce IT changes; verify the live configuration before cutover.
+- **Institutional deployment:** the institutional Azure OIDC subject is scoped to `repo:philoyhc/review-robin-web:ref:refs/heads/main`. Keeping the repository name through functional integration may reduce IT changes; verify the live configuration before cutover.
 
 ## 8. Acceptance, open decisions and non-goals
 
@@ -279,7 +279,7 @@ The production process still shares Python dependency resolution, startup, compu
 - B or C is implemented safely (C preferred);
 - the integrated artifact is staged, tested and deployed, with a documented recovery path.
 
-**Implementation decisions still open:** the `DATABASE_URL` / `RRW_DATABASE_URL` precedence; confirming that the Web App's diagnostic settings route App Service console logs to the Log Analytics workspace; confirming that the personal dev slot sets `APP_ENV` to a non-`local` value before the guard lands; B versus C, and the database-role and recovery arrangements with NUS IT; dependency locking and the build artifact; CI required-check and release-gate policy; repository privacy and rename timing.
+**Implementation decisions still open:** the `DATABASE_URL` / `RRW_DATABASE_URL` precedence; confirming that the Web App's diagnostic settings route App Service console logs to the Log Analytics workspace; confirming that the personal dev slot sets `APP_ENV` to a non-`local` value before the guard lands; B versus C, and the database-role and recovery arrangements with the institution's IT; dependency locking and the build artifact; CI required-check and release-gate policy; repository privacy and rename timing.
 
 **Settled in stage 1 (segment 21A, 2026-10-21):**
 
@@ -318,7 +318,7 @@ All earlier versions, `cordware_repo_planning.md` and integration spec v0.2 are 
 
 - **Standalone compatibility replaced by independence (§3).** v0.7 required RRW to "work both standalone locally and mounted". v0.8 requires that Cordware plus any single application runs, with the mounted set named by `CORDWARE_APPS` and Cordware runnable alone. Packages stay shared. There is no supported standalone RRW runtime, so RRW keeps no second identity parser.
 - **v0.7 Addendum A folded into §3** as "Behavior under the mount": deep links, auth-free probes, mounted request handling, no backend-host leak.
-- **v0.7 Addendum B folded into §3 and §5:** the mount replaces the `BASE_PATH` shim; each application is constructed once, with host-owned logging and the module-level app removed; NUS sees only the assembled application; the dev slot switches to the Cordware entry point; old root links are not kept.
+- **v0.7 Addendum B folded into §3 and §5:** the mount replaces the `BASE_PATH` shim; each application is constructed once, with host-owned logging and the module-level app removed; institutional sees only the assembled application; the dev slot switches to the Cordware entry point; old root links are not kept.
 - **Gateway path forwarding stated (§3):** the mount needs Application Gateway to forward the public path unchanged; v0.7 had called keep-or-strip irrelevant.
 - **The v8 status report marked superseded in part:** its source-control and deployment model (independent repos synced into `philoyhc/cordware`) conflicts with this strategy, and the report now says so.
 - **Stages 1 and 2 resequenced (§5, same day):** v0.8 first put the whole mount, sweep included, in stage 1 and identity after it. Stage 1 is now the host skeleton (RRW still at `/`) and the URL sweep, both behavior-neutral. Stage 2 is shared identity, which may run alongside the sweep, then the prefix flip, which is the only step that changes URLs and comes last. The behavior requirements apply from the flip; the dev slot changes its start command in stage 1 and its served path in stage 2.

@@ -535,7 +535,7 @@ The following are out of scope for the Segment 14A in-app
 hardening ladder — they need the Azure portal or a later segment.
 Tracked in `guide/deferred_consolidated.md`. The infrastructure rows
 describe the dormant dev slot, whose notes are archived with the
-deployment. The NUS
+deployment. The institutional
 environment already has private endpoints for the Web App and Key Vault,
 a privately provisioned Postgres (no public access), VNet integration,
 an in-VNet runner, an Application Insights resource, and its database

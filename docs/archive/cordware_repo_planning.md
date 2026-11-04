@@ -2,7 +2,7 @@
 
 **Status:** Working notes, nothing decided  
 **Date:** 17 October 2026  
-**Inputs:** `cordware_repository_strategy_v0.4.md`, `cordware_rrw_integration_spec_v0.2.md`, `cordware_nus_azure_status_2026-10-16_v8.md`, and the `review-robin-web` (RRW) codebase as of `main` on this date.
+**Inputs:** `cordware_repository_strategy_v0.4.md`, `cordware_rrw_integration_spec_v0.2.md`, `cordware_<institution>_azure_status_2026-10-16_v8.md`, and the `review-robin-web` (RRW) codebase as of `main` on this date.
 
 The strategy doc sketches a repo shape (`app/core/`, `app/reviewrobin/`, `module-manifest.yml`, …). This document lists the open questions that have to be answered before that shape can be settled. For each issue it gives the facts, the options, and a provisional leaning where there is one. A leaning is a suggestion, not a decision.
 
@@ -166,17 +166,17 @@ Facts about `nuscr-res-apps` (Residential Apps, RA) are **unknown**: that repo h
 
 **Facts.** RRW has two deploy workflows:
 - `main_app-review-robin-web-dev.yml`: deploys to `app-review-robin-web-dev` on push to `main`.
-- `deploy_nus.yml`: manual, deploys to the NUS Web App via `vars.NUS_WEBAPP_NAME`. The NUS OIDC subject is `repo:philoyhc/review-robin-web:ref:refs/heads/main`.
+- `deploy_<institution>.yml`: manual, deploys to the institutional Web App via `vars.INSTITUTION_WEBAPP_NAME`. The institutional OIDC subject is `repo:philoyhc/review-robin-web:ref:refs/heads/main`.
 
 **Issues.**
 - **The dev slot.** It is the author's only deployed RRW today. Does it stay standalone at root? Strategy §10 says the module repos should stay deployable on their own, which argues for keeping it. Keeping it means RRW supports both root mode and prefix mode indefinitely, and Segment 21's design (`BASE_PATH` empty = byte-identical) already supports that.
-- **`deploy_nus.yml`** should be retired, or reduced to a dead stub, once Cordware deploys. Until then, two repos can deploy to the same Web App. The OIDC subject swap (v8 §15.1) cuts RRW off automatically.
+- **`deploy_<institution>.yml`** should be retired, or reduced to a dead stub, once Cordware deploys. Until then, two repos can deploy to the same Web App. The OIDC subject swap (v8 §15.1) cuts RRW off automatically.
 - **A Cordware non-production target.** Is there anywhere to deploy the assembled app before production? Could the RRW dev slot host a Cordware build, or is a separate target needed?
 
 **Decisions needed:**
 1. Keep the RRW dev slot standalone?
 2. Is there a Cordware staging target, and which one?
-3. When should `deploy_nus.yml` be retired?
+3. When should `deploy_<institution>.yml` be retired?
 
 ---
 

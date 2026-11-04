@@ -45,7 +45,7 @@ commit**, `guide/sweep_2026-10-05_corpus.md`, with its register
 checking each change in a browser against a local run with fake auth,
 pre-deployment with an institutional pilot pending. 124 merges in five days
 were almost all corrections, retirements and documentation, not features,
-built while the deployment waits on NUS IT.
+built while the deployment waits on the institution's IT.
 
 ---
 
@@ -280,7 +280,7 @@ the window's own behavior changes left behind. The functional spec carries
   says.
 - **Prepare is still about 13 seconds**, now with a "Preparing…" label
   rather than none (#2715). The feedback gap closed; the time did not.
-- **Nothing sends email, and nothing is deployed.** Unchanged. The NUS
+- **Nothing sends email, and nothing is deployed.** Unchanged. The institutional
   status names the same two external blockers as on 1 October: a runner VM
   SKU awaiting Microsoft Support and the production hostname.
 
@@ -379,8 +379,8 @@ nothing is deployed**, held by the same two external decisions as on
    maintenance, not correctness.
 
 **Settling the 30 September proposals.** Move 1, *make what has been checked
-stay checked, and keep the NUS path ready*: **browser tests shipped**
-(#2706 → #2711, 45 tests in CI); the NUS path is ready on the project side
+stay checked, and keep the institutional path ready*: **browser tests shipped**
+(#2706 → #2711, 45 tests in CI); the institutional path is ready on the project side
 and still blocked outside it. Move 2, *freeze instrument scope*: **held**. No
 rules-language feature landed, and the window removed a per-instrument
 control rather than adding one. Move 3, *make the next builder change pay

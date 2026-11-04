@@ -5,7 +5,7 @@
 deployed, serving, verified — and that nothing in the repository will
 otherwise remind anyone about.
 
-**Why this file rather than the NUS deployment runbook.** That runbook, kept
+**Why this file rather than the institutional deployment runbook.** That runbook, kept
 privately with the deployment since 2026-10-24, is
 the migration procedure and will be rewritten repeatedly as details are
 settled with IT; an item parked in a section that is about to be
@@ -89,7 +89,7 @@ reminder scheduled for 09:00 goes out whenever an operator next looks.
 
 **Why it waits here.** The real fix is a trigger that runs on a clock,
 such as a scheduled job, a timer, or an always-on worker. Which one
-depends on what the NUS App Service plan and network allow
+depends on what the institutional App Service plan and network allow
 (recorded privately with the deployment). The page-view trigger now covers the
 Operations pages and the lobby (findings L4), which narrows the gap but
 does not close it.
@@ -187,7 +187,7 @@ and makes the stub Option B: an application permission on a shared
 mailbox (`/users/{mailbox}/sendMail`). The stub sends nothing, so no
 behavior depends on either.
 
-**Why it waits here.** Which permission is possible is the NUS tenant's
+**Why it waits here.** Which permission is possible is the institutional tenant's
 answer, not the repository's (`spec/email_infra_options.md`, Option B).
 **The tenant's answer so far (read 2026-11-01):** the app registration
 holds delegated `Mail.Send` and `User.ReadBasic.All` with tenant-wide

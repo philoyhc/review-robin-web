@@ -57,7 +57,7 @@ since.
 | Web session container | `.claude/hooks/session-start.sh` builds `.venv/` (3.12+), `pip install -e .[dev]` | the hook; no server started |
 | Browser tests | `python -m uvicorn app.main:app` on a free port, fresh SQLite, fake auth | `tests/browser/conftest.py:96` |
 | Dev slot | `gunicorn -w 2 -k uvicorn.workers.UvicornWorker app.main:app`, an Azure setting | `docs/deployment_dev.md:38` |
-| NUS slot | the same `gunicorn` line, still to be set | `docs/deployment_nus.md:127` |
+| institutional slot | the same `gunicorn` line, still to be set | `docs/deployment_<institution>.md:127` |
 
 Settings are read by `app/config.py` (`env_file=".env"`, shell overrides
 it). Its 20 fields (`python -c "from app.config import Settings; print(len(Settings.model_fields))"`) are listed in `docs/deployment_dev.md` "Environment
@@ -70,7 +70,7 @@ variables".
 | `ci.yml` | push and PR to `main` | active | every PR |
 | `ci-postgres.yml` | push and PR to `main` | active | every PR |
 | `main_app-review-robin-web-dev.yml` | push to `main`, `workflow_dispatch` | **`disabled_manually`** | 2026-06-03, `8b3d5c33`, success |
-| `deploy_nus.yml` | `workflow_dispatch` only | active | never run |
+| `deploy_<institution>.yml` | `workflow_dispatch` only | active | never run |
 
 Command: `gh api repos/philoyhc/review-robin-web/actions/workflows`, and
 `…/workflows/<file>/runs?per_page=3` for the last run.
@@ -79,7 +79,7 @@ Command: `gh api repos/philoyhc/review-robin-web/actions/workflows`, and
   `app/`, `alembic/`, `alembic.ini`, `requirements.txt`, `pyproject.toml`
   and `antenv/` (`:56–62`). It then runs `alembic upgrade head` against
   the dev Postgres and deploys with OIDC to `app-review-robin-web-dev`.
-  The NUS workflow packages the same paths (`deploy_nus.yml:55–61`).
+  The institutional workflow packages the same paths (`deploy_<institution>.yml:55–61`).
 - **The dev slot is not redeployed on merge.** Its workflow has been
   disabled since its last run on 2026-06-03. The slot is still serving
   that build or a later manual deploy; this session cannot tell which.

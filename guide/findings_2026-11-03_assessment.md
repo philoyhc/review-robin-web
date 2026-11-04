@@ -160,16 +160,15 @@ None.
 
 ## 5. Noted, not defects
 
-- **N1. The public repository names the institution in places.**
-  `residentialapps/docs/residentialapps_email_identity_matching.md:98–105`
-  (a firewall issue by institution, the private repository's paths, the
-  deployment's managed-identity state) and
-  `utilityapps/docs/email_address_checker_functional_spec_v0.1.md:114,
-  122, 194, 201` ("NUS tenant", "NUS directory"). Other files name it too
-  (`rrw_design_rationale.md`, parts of `guide/`, `applydesk/docs/`), so it
-  may be accepted; it conflicts with `cordware/settings.py`'s note that the
-  institution's name lives only in the private deployment. Author: rule
-  whether naming the institution is acceptable, and if not, which files.
+- ~~**N1**~~ — **Done in this PR** (author, 2026-11-04: do not name it;
+  say "institution", "institutional" and the like). Every mention in the
+  repository, archived records included, now reads "the institution",
+  "institutional" or "the institution's IT"; the host's name reads
+  `<institutional host>`, and retired file and variable names carry
+  `<institution>` in its place. Git history keeps the old text.
+  **The public repository named the institution in places**, against
+  `cordware/settings.py`'s note that its name lives only in the private
+  deployment.
 - **N2. The Graph transport follows redirects with its bearer header.**
   `cordware/graph.py` `urllib_transport` uses urllib's default redirect
   handler, which re-sends `Authorization` across hosts. Graph `/users`

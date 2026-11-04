@@ -2,7 +2,7 @@
 
 **Version:** 0.2 draft  
 **Purpose:** Define the required behavior for integrating Review Robin Web (RRW) into the adopted Cordware single-App-Service architecture.  
-**Public host:** `https://cordware.nus.edu.sg`  
+**Public host:** `https://<institutional host>`  
 **RRW path:** `/reviewrobin`  
 **Status:** Implementation specification for the RRW project.
 
@@ -17,13 +17,13 @@ Instead, RRW will be integrated as a distinct module inside one Cordware web app
 The public structure is:
 
 ```text
-https://cordware.nus.edu.sg/
+https://<institutional host>/
     -> Cordware landing
 
-https://cordware.nus.edu.sg/reviewrobin
+https://<institutional host>/reviewrobin
     -> RRW module
 
-https://cordware.nus.edu.sg/residentialapps
+https://<institutional host>/residentialapps
     -> Residential Apps module
 ```
 
@@ -37,7 +37,7 @@ Authentication and authorization are separate.
 
 ### Authentication
 
-Cordware has one NUS Entra / Easy Auth boundary.
+Cordware has one institutional Entra / Easy Auth boundary.
 
 Cordware core is responsible for exposing a trustworthy authenticated-user identity to RRW.
 
@@ -55,7 +55,7 @@ A user authenticated to Cordware is **not** automatically authorized for RRW.
 
 A user navigating directly to:
 
-`https://cordware.nus.edu.sg/reviewrobin`
+`https://<institutional host>/reviewrobin`
 
 must be able to authenticate and continue directly into RRW.
 
@@ -65,7 +65,7 @@ If authentication is required, it occurs at the shared Cordware Easy Auth bounda
 
 Deep links such as:
 
-`https://cordware.nus.edu.sg/reviewrobin/sessions/123`
+`https://<institutional host>/reviewrobin/sessions/123`
 
 must survive authentication and return to the requested RRW location.
 

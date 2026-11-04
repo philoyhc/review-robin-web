@@ -46,13 +46,13 @@ reference-repointing appendix follow.
 | `local_setup.md` | Update + consolidate w/ `codespace_setup.md` | 2 / 3 |
 | `codespace_setup.md` | Current (consolidation candidate) | 3 |
 | `deployment_dev.md` | Update (dead link) | 2 |
-| `deployment_nus.md` | Current | — |
+| `deployment_<institution>.md` | Current | — |
 | `operations_runbook.md` | Update | 2 |
 | `troubleshooting.md` | Current | — |
 | `backup_restore.md` | Update | 2 |
 | `known_limitations.md` | Update | 2 |
 | `azure_provision.md` | Current | — |
-| `azure_github_setup.md` | Consolidate / reconcile w/ `deployment_nus.md` | 3 |
+| `azure_github_setup.md` | Consolidate / reconcile w/ `deployment_<institution>.md` | 3 |
 | `cli_setup.md` | Current (absorbs `cli_setup_notes.md`) | 3 |
 | `cli_setup_notes.md` | Retire (fold into `cli_setup.md`) | 3 / 4 |
 
@@ -171,8 +171,8 @@ Factual drift; each file stays in `docs/`.
 - **L34–36** "Revoking operator/sys-admin access is a manual database
   `UPDATE` until Segment 16A PR 6 ships." Same as above — in-app
   revoke/demote shipped in 18S. Remove or reword.
-- Speculative watch: a `deploy_nus.yml` + `docs/deployment_nus.md` now
-  exist (NUS migration underway), so the "single environment" framing
+- Speculative watch: a `deploy_<institution>.yml` + `docs/deployment_<institution>.md` now
+  exist (institutional migration underway), so the "single environment" framing
   may need revisiting — but the dev slot is still the live target, so
   not yet wrong.
 
@@ -286,19 +286,19 @@ fake auth, Postgres-parity). `codespace_setup.md` is **current**;
 `local_setup.md` so they stop drifting apart. Merging is cleaner given
 the shared surface.
 
-### `azure_github_setup.md` ↔ `deployment_nus.md` — reconcile contradictory topologies
+### `azure_github_setup.md` ↔ `deployment_<institution>.md` — reconcile contradictory topologies
 
 `azure_github_setup.md` (self-labelled **"v0.1 draft"**) describes a
 **two-environment PRD + NPRD** topology (Functions, App Configuration,
 Communication Services) that **contradicts** the authoritative
 single-pilot plan: `azure_provision.md:8–19` ("single sandboxed pilot —
-**not** a PRD/NPRD split") and `deployment_nus.md` (a single PRD
+**not** a PRD/NPRD split") and `deployment_<institution>.md` (a single PRD
 environment). The deploy-identity design also diverges — Phase 4
 hardcodes GitHub environments `production`/`staging`, while
-`deployment_nus.md:205–210` designs a single generic `environment:<name>`
-NUS credential. A reader following both runbooks gets conflicting OIDC
+`deployment_<institution>.md:205–210` designs a single generic `environment:<name>`
+institutional credential. A reader following both runbooks gets conflicting OIDC
 setups. This is forward-looking greenfield planning; either **reconcile
-/ merge into `deployment_nus.md`**, or **move it to `guide/`** as a
+/ merge into `deployment_<institution>.md`**, or **move it to `guide/`** as a
 scale-up target so it stops reading as the current plan. `cli_setup.md`
 is coupled to it (shared `production`/`staging` + `psql-nrrw-nprd`
 naming) — its references should travel with whatever we decide.
@@ -350,9 +350,9 @@ naming) — its references should travel with whatever we decide.
 
 `architecture.md` (infra topology, internally consistent; one forward
 note: it calls the storage account "no blob dependency" while
-`deployment_nus.md` calls the same account the "18Q blob store" — true
+`deployment_<institution>.md` calls the same account the "18Q blob store" — true
 today since 18Q is deferred, will diverge when 18Q lands),
-`deployment_nus.md` (matches `.github/workflows/deploy_nus.yml` exactly;
+`deployment_<institution>.md` (matches `.github/workflows/deploy_<institution>.yml` exactly;
 status "plan" by design), `azure_provision.md` (SKUs consistent; code
 path `assignments/_generate.py` correct), `cli_setup.md` (current once it
 absorbs `cli_setup_notes.md`), `codespace_setup.md` (clean; consolidation

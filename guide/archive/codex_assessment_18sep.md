@@ -252,7 +252,7 @@ Route genuine defects directly; park preferences until pilot evidence exists.
 
 ### 2. Make institutional deployment the active workstream
 
-Execute the NUS runbook and post-Azure checklist against representative data.
+Execute the institutional runbook and post-Azure checklist against representative data.
 The minimum evidence is real identity headers and role landing; owner and
 participant gates; the end-to-end operator/reviewer/result journey; browser
 behavior for the new expanders and sorting; backup/restore; logs; transfer size;

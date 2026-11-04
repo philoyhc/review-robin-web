@@ -35,13 +35,13 @@ deployment, not a local run.
   (`app/services/users.py`). So an address change keeps the row. Fake
   auth never records one, which is why a local run can't show it.
 - **Where.** The institutional deployment,
-  `https://cordware.nus.edu.sg/reviewrobin/`, live since 2026-10-31.
+  `https://<institutional host>/reviewrobin/`, live since 2026-10-31.
   The dev slot is dormant.
 - **What they need.**
-  - Rows 1 and 2: NUS IT changing the primary email of a test account
+  - Rows 1 and 2: the institution's IT changing the primary email of a test account
     in the tenant. Ask first, then work in this order: sign in, have IT
     change the email, send row 2's invite, sign in again.
-  - Row 3: a second NUS account that has never signed in to Review
+  - Row 3: a second institutional account that has never signed in to Review
     Robin.
 - **Where to look.** The event names below are in the sys-admin audit
   log.

@@ -4,7 +4,7 @@
 > three items shipped. This file is the design-decision + PR-ladder record;
 > the shipped behaviour lives in the specs / docs cited under "Doc impact"
 > below (`spec/audience_and_identity_model.md` §4, `docs/security_posture.md`,
-> `docs/deployment_dev.md` / `docs/deployment_nus.md` §7) and in
+> `docs/deployment_dev.md` / `docs/deployment_<institution>.md` §7) and in
 > `docs/status.md`. The "Future items" security-refinement holding list was
 > empty at close — further in-app security/authz work opens a fresh segment.
 
@@ -157,7 +157,7 @@ config-derived; `is_operator` / `is_sys_admin` columns already exist).
 - A super-admin email always resolves to a full-rights admin on sign-in (per
   the chosen self-heal rule).
 - `spec/audience_and_identity_model.md` §4 rewritten to the three-tier model;
-  `docs/deployment_dev.md` + `docs/deployment_nus.md` §7 document
+  `docs/deployment_dev.md` + `docs/deployment_<institution>.md` §7 document
   `SUPER_ADMIN_EMAILS`; `docs/security_posture.md` records the hierarchy.
 - Unit tests cover the management matrix, the protection guards, and the
   self-heal; full suite + `ruff` green.
@@ -284,7 +284,7 @@ land before the UI that surfaces them):
      three-tier model (tiers, nesting, the management matrix, the
      config-anchored super tier).
    - Document `SUPER_ADMIN_EMAILS` in `docs/deployment_dev.md` +
-     `docs/deployment_nus.md` §7 (incl. §7.1: the seeded admin can be made a
+     `docs/deployment_<institution>.md` §7 (incl. §7.1: the seeded admin can be made a
      protected super-admin); record the hierarchy + protected-super-admin
      guarantee in `docs/security_posture.md`; note the ship in `docs/status.md`.
    - Document the `fake_auth_super_admin` sandbox toggle in
@@ -469,7 +469,7 @@ a fresh segment rather than reopening this one.
 
 - `spec/audience_and_identity_model.md` §4 — rewrite to the three-tier role
   model (Item 1).
-- `docs/deployment_dev.md` / `docs/deployment_nus.md` §7 — document
+- `docs/deployment_dev.md` / `docs/deployment_<institution>.md` §7 — document
   `SUPER_ADMIN_EMAILS` (and §7.1: the seeded admin can be made a protected
   super-admin).
 - `docs/security_posture.md` — record the role hierarchy + the
