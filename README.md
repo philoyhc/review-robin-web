@@ -158,7 +158,7 @@ workers stay isolated. The SQLite CI job runs `pytest -n auto`.
 
 `pyright` is a dev dependency pinned exactly (`pyright==1.1.414`), and
 it checks application code and the four test trees (segments 22C,
-22D; the tests relax two optional-access rules, `pyproject.toml`); CI's `test`
+22D), every basic-mode rule on everywhere; CI's `test`
 and `residential` jobs run it after lint. Run it with the venv active: it resolves imports from the
 `python` on PATH. The SQLAlchemy floor is `>=2.1` because pyright's
 reading of `Select` and `Result` differs between 2.0 and 2.1.
