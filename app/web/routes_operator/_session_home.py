@@ -92,6 +92,8 @@ def new_session_form(
             # timeline starts empty. The template renders the block
             # only when at least one row is present.
             "schedule_timeline_rows": [],
+            # 14E rung 0: the auto-send offset fields, on or off.
+            "scheduled_send": scheduled_events.scheduled_send_enabled(),
             # 19S Item 9 Part A — the Owners card's Add-owner picker. The
             # creator is the first owner, so the list is everyone else.
             "new_session_owner_candidates": (

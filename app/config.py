@@ -104,7 +104,7 @@ class Settings(BaseSettings):
     # Segment 14E rung 0 — auto-send off until mail can go on a clock.
     # `RRW_SCHEDULED_SEND`, default off: the two auto-send fields
     # (`invite_offsets`, `reminder_offsets`) render disabled with their
-    # stored values kept, the page-view and clock passes fire no
+    # stored values kept, the page-view pass (and the clock, rung 1) fires no
     # scheduled invite or reminder, and no page promises automatic
     # sending. Segment 14G turns it on (`guide/no_scheduling_fallback.md`).
     # The test suite sets it on, as for Rehydrate, so the auto-send

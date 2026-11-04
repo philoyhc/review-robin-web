@@ -107,16 +107,16 @@
               <label for="invite_offsets">Send invites (offset from Start; optional)</label>
               <input type="text" id="invite_offsets" name="invite_offsets"
                      placeholder="e.g. -P1D, -PT2H"
-                     {% if not scheduled_send_enabled() %}disabled aria-describedby="scheduled-send-off"{% endif %}>
+                     {% if not scheduled_send %}disabled aria-describedby="scheduled-send-off"{% endif %}>
             </div>
 
             <div>
               <label for="reminder_offsets">Send reminders (offset from End; optional)</label>
               <input type="text" id="reminder_offsets" name="reminder_offsets"
                      placeholder="e.g. -P2D, -PT4H"
-                     {% if not scheduled_send_enabled() %}disabled aria-describedby="scheduled-send-off"{% endif %}>
+                     {% if not scheduled_send %}disabled aria-describedby="scheduled-send-off"{% endif %}>
               {# 14E rung 0: auto-send off until mail can go on a clock. #}
-              {% if not scheduled_send_enabled() %}
+              {% if not scheduled_send %}
                 <p class="muted" id="scheduled-send-off" data-scheduled-send-off>Scheduled sending isn't available on this deployment; send from Invitations when it's time.</p>
               {% endif %}
             </div>

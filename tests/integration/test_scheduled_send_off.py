@@ -93,6 +93,35 @@ def test_the_fields_render_disabled_with_their_line(
     assert 'value="-P1D"' in home  # the stored value is still shown
 
 
+def test_session_home_shows_offsets_without_a_send_time(
+    client: TestClient, db: Session, send_off: None
+) -> None:
+    rs = _client_session(client, db, "off-display")
+    rs.scheduled_activate_at = datetime.now(timezone.utc) + timedelta(days=5)
+    rs.invite_offsets = ["-P1D"]
+    db.commit()
+    home = client.get(f"/operator/sessions/{rs.public_id}").text
+    assert 'class="config-value config-value-resolved"' not in home
+
+
+def test_the_guide_says_auto_send_is_off(
+    client: TestClient, send_off: None
+) -> None:
+    assert LINE in client.get("/guide").text
+
+
+def test_an_end_change_from_the_lobby_ignores_stored_reminders(
+    db: Session, send_off: None
+) -> None:
+    rs = _seed_session_with_reviewers(db, "off-lobby-end")
+    # A stored reminder the new End would put inside the lead time.
+    rs.reminder_offsets = ["-PT2H"]
+    db.commit()
+    scheduled_events.validate_deadline_change(
+        db, rs, deadline=datetime.now(timezone.utc) + timedelta(minutes=90)
+    )
+
+
 def test_on_the_fields_are_live(client: TestClient, db: Session) -> None:
     page = client.get("/operator/sessions/new").text
     assert LINE not in page

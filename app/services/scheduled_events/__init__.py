@@ -109,7 +109,6 @@ from ._shared import (
 
 
 __all__ = [
-    "scheduled_send_enabled",
     "ScheduledActivateError",
     "fired_offset_errors",
     "fired_offsets",
@@ -123,6 +122,7 @@ __all__ = [
     "parse_and_validate_scheduled_activate_at",
     "parse_iso_duration",
     "resolve_offset",
+    "scheduled_send_enabled",
     "split_offsets",
     "validate_deadline_change",
     "validate_schedule_ordering",
@@ -165,6 +165,11 @@ def validate_deadline_change(
         deadline=deadline,
         responses_release_at=review_session.responses_release_at,
     )
+    # Auto-send off (14E rung 0): the reminder offsets are disabled and
+    # fire nothing, so an End change does not check them, as Session
+    # Home's save does not.
+    if not scheduled_send_enabled():
+        return
     # An End moved back to a value whose reminders were sent meets that
     # value's record (findings Bc1); checked first, so a moved sent entry
     # is named as such rather than as one short of lead time.

@@ -1011,14 +1011,19 @@ def render_session_home(
                 review_session.reminder_offsets or []
             ),
             # 18R Item 4 — display mode shows each offset + its resolved
-            # send datetime (invites off Start, reminders off End).
+            # send datetime (invites off Start, reminders off End). With
+            # auto-send off (14E rung 0) the offsets show without a send
+            # time, since nothing will send then.
+            "scheduled_send": scheduled_events.scheduled_send_enabled(),
             "invite_offset_rows": views.build_offset_display_rows(
-                review_session.scheduled_activate_at,
+                review_session.scheduled_activate_at
+                if scheduled_events.scheduled_send_enabled() else None,
                 review_session.invite_offsets,
                 session_tz,
             ),
             "reminder_offset_rows": views.build_offset_display_rows(
-                review_session.deadline,
+                review_session.deadline
+                if scheduled_events.scheduled_send_enabled() else None,
                 review_session.reminder_offsets,
                 session_tz,
             ),
