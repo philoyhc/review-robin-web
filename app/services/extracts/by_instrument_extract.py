@@ -50,9 +50,8 @@ from app.db.models import (
 from app.services import field_labels
 from app.services import responses as responses_service
 from app.services.date_formatting import iso_in_zone
-from app.services.instruments import decode_band1_state, decode_group_kind
+from app.services.instruments import _instrument_label, decode_band1_state, decode_group_kind
 from app.services.instruments._instrument_crud import GROUP_KIND_SENTINEL
-from app.services.instruments import _instrument_label
 from app.services.participant_tokens import ParticipantTokenizer
 from app.services.sessions import resolve_session_timezone
 

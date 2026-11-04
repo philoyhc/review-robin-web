@@ -21,26 +21,27 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
-
 from app.db.models import (
     Reviewee,
     Reviewer,
     ReviewSession,
     User,
 )
-from app.services import assignments, csv_imports, directory_lookups
-from app.services import field_labels as field_labels_service
 from app.services import (
+    assignments,
+    csv_imports,
+    directory_lookups,
     held_uploads,
     roster_bulk,
+    unit_of_work,
 )
+from app.services import field_labels as field_labels_service
 from app.services import session_lifecycle as lifecycle
 from app.services import symmetric_review as symmetric_review_service
-from app.services import unit_of_work
 from app.services.responses import GroupAnswersWouldClear
-from app.web import breadcrumbs, views
+from app.web import breadcrumbs, urls, views
 from app.web.deps import request_correlation_id
-from app.web import urls
+
 
 @dataclass(frozen=True)
 class UploadIn:
@@ -213,7 +214,12 @@ async def _handle_import(
     # Imported here, not at the top: the routes package imports this
     # module, so a top-level import of it would be a cycle (20E rung 3).
     from app.web.routes_operator import _shared
-    from app.web.routes_operator._shared import _require_editable, _templates, acknowledged_loss, roster_address
+    from app.web.routes_operator._shared import (
+        _require_editable,
+        _templates,
+        acknowledged_loss,
+        roster_address,
+    )
     _require_editable(review_session)
     upload = await read_upload(
         db,

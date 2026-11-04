@@ -22,15 +22,13 @@ Audit events registered in ``EVENT_SCHEMAS``:
 from __future__ import annotations
 
 from collections.abc import Callable
-
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Reviewee, ReviewSession, User
-from app.services import audit, csv_imports
-from app.services import directory_accounts, symmetric_review
+from app.services import audit, csv_imports, directory_accounts, symmetric_review
 from app.services import session_lifecycle as lifecycle
 from app.services.email_identity import looks_like_email, normalize_email
 from app.services.roster_bulk import bulk_delete, bulk_set_status
@@ -553,7 +551,7 @@ def acknowledge_results(
     acknowledged, stays acknowledged)."""
     if reviewee.results_acknowledged_at is not None:
         return False
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     reviewee.results_acknowledged_at = now
     db.flush()
     audit.write_event(

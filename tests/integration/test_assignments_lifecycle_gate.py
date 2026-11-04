@@ -38,6 +38,8 @@ from ._assignment_states import (
     ALL_STATES,
     EDITABLE,
     LOCKED,
+)
+from ._assignment_states import (
     seed_session_with_assignment as _seed,
 )
 

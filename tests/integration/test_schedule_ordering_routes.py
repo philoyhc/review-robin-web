@@ -22,8 +22,10 @@ the load-bearing safety net, which is what these tests pin.
 
 from __future__ import annotations
 
-import pytest
+# ── Helper-direct unit ─────────────────────────────────────────────────
+import datetime as _dt
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -35,14 +37,8 @@ from app.services.scheduled_events import (
 )
 
 
-# ── Helper-direct unit ─────────────────────────────────────────────────
-
-import datetime as _dt
-from datetime import timezone
-
-
 def _ts(year: int, month: int, day: int, hour: int = 0) -> _dt.datetime:
-    return _dt.datetime(year, month, day, hour, tzinfo=timezone.utc)
+    return _dt.datetime(year, month, day, hour, tzinfo=_dt.UTC)
 
 
 def test_validate_schedule_ordering_accepts_chain_in_order() -> None:
@@ -377,7 +373,7 @@ def test_edit_does_not_check_a_release_window_neither_box_changed(
     db.refresh(review_session)
     assert review_session.name == "Renamed"
     assert review_session.responses_release_until.replace(
-        tzinfo=timezone.utc
+        tzinfo=_dt.UTC
     ) == _ts(2028, 3, 1, 9)
 
     status_code, body = _save(responses_release_until=_ts(2028, 3, 2, 9))

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from urllib.parse import quote
 
 import pytest
@@ -88,7 +88,7 @@ def test_the_sort_cookie_orders_the_first_render(
     # Statuses and ages differ, so a Status sort would visibly reorder:
     # newest first is Gamma, Alpha, Beta; by status it would be Beta
     # (archived), Gamma (draft), Alpha (ready).
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     _session(db, "Beta", "zz-beta", ann, status="archived", created_at=now - timedelta(days=3))
     _session(db, "Alpha", "zz-alpha", ann, status="ready", created_at=now - timedelta(days=2))
     _session(db, "Gamma", "zz-gamma", ann, status="draft", created_at=now - timedelta(days=1))
@@ -130,8 +130,8 @@ def test_created_deadline_and_timezone_sort_by_the_routes_values(
     _session(db, "Open", "zz-open", ann)
     _session(
         db, "Due", "zz-due", ann,
-        created_at=datetime(2026, 10, 1, 9, 30, 15, 250000, tzinfo=timezone.utc),
-        deadline=datetime(2026, 11, 1, 12, 0, tzinfo=timezone.utc),
+        created_at=datetime(2026, 10, 1, 9, 30, 15, 250000, tzinfo=UTC),
+        deadline=datetime(2026, 11, 1, 12, 0, tzinfo=UTC),
         display_timezone="Asia/Singapore",
     )
     db.commit()

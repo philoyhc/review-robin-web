@@ -7,8 +7,8 @@ records why."""
 
 from __future__ import annotations
 
-from cordware.graph import FakeDirectory, GraphError
 from app.services import csv_imports, directory_accounts
+from cordware.graph import FakeDirectory, GraphError
 
 
 class _Refuses(FakeDirectory):

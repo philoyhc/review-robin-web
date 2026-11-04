@@ -6,7 +6,7 @@ rehydrate Validate and Commit requests.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -26,7 +26,7 @@ def _age(db: Session, token: str, *, hours: float) -> None:
     row = db.execute(
         select(RehydrateStash).where(RehydrateStash.token == token)
     ).scalar_one()
-    row.created_at = datetime.now(timezone.utc) - timedelta(hours=hours)
+    row.created_at = datetime.now(UTC) - timedelta(hours=hours)
     db.flush()
 
 

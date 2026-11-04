@@ -34,16 +34,17 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, Sequence, Union
+from collections.abc import Sequence
+from typing import Any
 
 import sqlalchemy as sa
+
 from alembic import op
 
-
 revision: str = "c3a7e9d8b154"
-down_revision: Union[str, Sequence[str], None] = "b2f6c4a8e1d3"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = "b2f6c4a8e1d3"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 _COLUMN_WIDTH_MIN_PX = 40

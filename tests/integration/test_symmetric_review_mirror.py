@@ -10,6 +10,8 @@ mirrored.
 
 from __future__ import annotations
 
+from datetime import UTC
+
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -226,7 +228,7 @@ def test_a_mirrored_tag_change_asks_before_clearing_group_answers(
     db.flush()
     db.add_all(
         Response(assignment_id=row.id, response_field_id=field.id, value="3",
-                 saved_at=dt.datetime(2026, 11, 1, tzinfo=dt.timezone.utc), version=1)
+                 saved_at=dt.datetime(2026, 11, 1, tzinfo=dt.UTC), version=1)
         for row in rows
     )
     db.commit()
@@ -264,7 +266,7 @@ def _answered(db: Session, review_session: ReviewSession, reviewer: Reviewer, re
     db.add(row)
     db.flush()
     db.add(Response(assignment_id=row.id, response_field_id=field.id, value="3",
-                    saved_at=dt.datetime(2026, 11, 1, tzinfo=dt.timezone.utc), version=1))
+                    saved_at=dt.datetime(2026, 11, 1, tzinfo=dt.UTC), version=1))
     db.commit()
     return instrument, row
 
@@ -378,7 +380,7 @@ def test_a_replace_never_hands_a_removed_persons_reviewee_to_a_new_reviewer(
     reuses the deleted ids, so a new reviewer took over a removed person's
     reviewee row, their results acknowledgement included. The sync reads
     the links from the database now."""
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     response = client.post(
         "/operator/sessions",
@@ -404,7 +406,7 @@ def test_a_replace_never_hands_a_removed_persons_reviewee_to_a_new_reviewer(
     ann = db.execute(
         select(Reviewee).where(Reviewee.email_or_identifier == "ann@example.edu")
     ).scalar_one()
-    ann.results_acknowledged_at = datetime.now(timezone.utc)
+    ann.results_acknowledged_at = datetime.now(UTC)
     db.commit()
 
     replace("ReviewerName,ReviewerEmail\nCarl,carl@example.edu\nDan,dan@example.edu\n")

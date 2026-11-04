@@ -10,7 +10,7 @@ blocks.
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
@@ -22,8 +22,8 @@ from app.services import session_guard
 from app.services import session_lifecycle as lifecycle
 from app.web.routes_operator._shared import _lifecycle_error_response
 
-from .test_scheduled_activation import _make_validated_session
 from ._quick_setup_refusal import refusal
+from .test_scheduled_activation import _make_validated_session
 
 
 def _lands_at_the_lock(
@@ -152,7 +152,7 @@ def test_the_deadline_close_rereads_under_the_lock(
     close is not written, or audited, twice."""
     session = _make_validated_session(db, "guard-deadline")
     session.status = "ready"
-    session.deadline = datetime.now(timezone.utc) - timedelta(hours=1)
+    session.deadline = datetime.now(UTC) - timedelta(hours=1)
     db.commit()
     _open_instruments(db, session)
     _lands_at_the_lock(
@@ -162,7 +162,7 @@ def test_the_deadline_close_rereads_under_the_lock(
         .where(Instrument.session_id == session.id)
         .values(
             accepting_responses=False,
-            deadline_closed_at=datetime.now(timezone.utc),
+            deadline_closed_at=datetime.now(UTC),
         ),
     )
 
@@ -177,7 +177,7 @@ def test_the_live_reopen_rereads_the_status(
     instrument: the heal re-reads ``expired`` and leaves it closed."""
     session = _make_validated_session(db, "guard-reopen")
     session.status = "ready"
-    session.deadline = datetime.now(timezone.utc) + timedelta(days=1)
+    session.deadline = datetime.now(UTC) + timedelta(days=1)
     db.commit()
     db.execute(
         update(Instrument)
@@ -206,7 +206,7 @@ def test_the_deadline_close_rereads_the_end_under_the_lock(
     closed, and the re-read row (no deadline) is not dereferenced."""
     session = _make_validated_session(db, "guard-end-cleared")
     session.status = "ready"
-    session.deadline = datetime.now(timezone.utc) - timedelta(hours=1)
+    session.deadline = datetime.now(UTC) - timedelta(hours=1)
     db.commit()
     _open_instruments(db, session)
     _lands_at_the_lock(
@@ -786,7 +786,8 @@ def test_a_relationship_write_refuses_a_session_activated_at_the_lock(
 
 
 def _rung4_writes():
-    from app.services import assignments, relationships as rel
+    from app.services import assignments
+    from app.services import relationships as rel
 
     def _rel(db, session):
         from app.db.models import Relationship, Reviewee, Reviewer
@@ -912,9 +913,9 @@ def test_generate_is_one_commit_from_its_gate(db: Session, monkeypatch) -> None:
     """Generate's display-field seed (and its drift correction) committed
     on their own after the main commit, once the gate's lock was gone. The
     seed is forced to write here; the whole Generate is still one commit."""
+    import app.services.instruments as instruments_pkg
     from app.db.models import Assignment
     from app.services import assignments
-    import app.services.instruments as instruments_pkg
 
     session = _make_validated_session(db, "guard-generate-once")
     monkeypatch.setattr(

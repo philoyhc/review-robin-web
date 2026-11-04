@@ -23,22 +23,21 @@ from app.db.models import (
     ReviewSession,
     User,
 )
-from app.services import date_formatting
+from app.services import date_formatting, visibility_policies
 from app.services import instruments as instruments_service
 from app.services import relationships as relationships_service
 from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
 from app.services import sessions as sessions_service
-from app.services import visibility_policies
 from app.web import views
+from app.web.deps import request_correlation_id
+from app.web.routes_reviewer._shared import (
+    _NOT_REVIEWEE_IDENTITY_DISPLAY_FIELD,
+)
 from app.web.views import (
     REFUSED_CLOSED,
     REFUSED_NO_ASSIGNMENTS,
     REFUSED_NOT_OPEN,
-)
-from app.web.deps import request_correlation_id
-from app.web.routes_reviewer._shared import (
-    _NOT_REVIEWEE_IDENTITY_DISPLAY_FIELD,
 )
 
 from ._group_collapse import _collapse_group_rows

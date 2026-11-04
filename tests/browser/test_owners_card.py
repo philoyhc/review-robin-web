@@ -17,8 +17,8 @@ from ._builder import activate, seed_rosters, sign_in
 from .conftest import (
     COLLEAGUE_EMAIL,
     FAKE_OPERATOR_EMAIL,
-    LiveServer,
     SECOND_COLLEAGUE_EMAIL,
+    LiveServer,
     app_url,
 )
 

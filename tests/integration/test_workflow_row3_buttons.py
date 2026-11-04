@@ -5,7 +5,7 @@ Archive session.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -71,7 +71,7 @@ def test_release_responses_now_is_inert_on_an_unclosed_session(
 def test_release_responses_now_clears_prior_until(db: Session) -> None:
     review_session, op = _draft_session(db, "rel-clear")
     review_session.responses_release_until = datetime.now(
-        timezone.utc
+        UTC
     ) - timedelta(hours=1)
     db.commit()
     lifecycle.release_responses_now(
@@ -83,7 +83,7 @@ def test_release_responses_now_clears_prior_until(db: Session) -> None:
 def test_release_responses_now_emits_audit_event(db: Session) -> None:
     review_session, op = _draft_session(db, "rel-audit")
     review_session.responses_release_until = datetime.now(
-        timezone.utc
+        UTC
     ) - timedelta(hours=1)
     db.commit()
     lifecycle.release_responses_now(
@@ -110,7 +110,7 @@ def test_stop_responses_release_stamps_until(db: Session) -> None:
     # anchor, since 19F PR 2a.
     review_session.status = "expired"
     review_session.responses_release_at = datetime.now(
-        timezone.utc
+        UTC
     ) - timedelta(hours=1)
     db.commit()
     assert lifecycle.is_response_release_window_open(review_session)

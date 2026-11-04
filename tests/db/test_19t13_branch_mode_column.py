@@ -9,9 +9,9 @@ SQLite engine; Postgres sees the column through ``ci-postgres``'s own
 
 from __future__ import annotations
 
-from alembic import command
 from sqlalchemy import create_engine, inspect
 
+from alembic import command
 from app.db.models import InstrumentResponseField
 
 from .test_19r2_reconcile_cache_columns import _alembic_config

@@ -35,16 +35,16 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import Request, APIRouter, Depends, Form
+from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from starlette import status
 
-from app.web import urls
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
 from app.services import assignments, audit, invitations, validation
 from app.services import session_lifecycle as lifecycle
+from app.web import urls
 from app.web.deps import (
     get_or_create_user,
     request_correlation_id,

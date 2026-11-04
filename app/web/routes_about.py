@@ -10,10 +10,9 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.db.models import User
 from app.db.session import get_db
+from app.web import urls, views
 from app.web.deps import get_or_create_user
-from app.web import views
 from app.web.return_to import resolve_return_to
-from app.web import urls
 
 router = APIRouter()
 

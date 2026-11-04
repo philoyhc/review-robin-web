@@ -6,25 +6,25 @@ Source ranges in pre-refactor ``routes_operator.py``: 64-123.
 
 from __future__ import annotations
 
-
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
-from app.web import urls
 from app.config import settings
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
-from app.services import scheduled_events
-from app.services import session_clone
-from app.services import session_purge
-from app.services import sessions
-from app.services import session_guard
+from app.services import (
+    scheduled_events,
+    session_clone,
+    session_guard,
+    session_owners,
+    session_purge,
+    session_tags,
+    sessions,
+)
 from app.services import session_lifecycle as lifecycle
-from app.services import session_owners
-from app.services import session_tags
-from app.web import breadcrumbs, views
+from app.web import breadcrumbs, urls, views
 from app.web.deps import (
     OperatorAllowlistDenied,
     get_or_create_user,
@@ -38,7 +38,6 @@ from app.web.routes_operator._shared import (
     parse_session_deadline,
     session_payload_error,
 )
-
 
 router = APIRouter()
 

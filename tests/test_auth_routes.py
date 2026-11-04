@@ -3,12 +3,12 @@ from __future__ import annotations
 import base64
 import json
 
+from _rrw_app import rrw_app
 from fastapi import Request
 from fastapi.testclient import TestClient
 
 from app.auth.identity import AuthenticatedUser, get_current_user, resolve_current_user
 from cordware.settings import IdentitySettings
-from _rrw_app import rrw_app
 
 app = rrw_app()
 

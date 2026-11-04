@@ -15,7 +15,6 @@ import pathlib
 
 import pytest
 from fastapi.testclient import TestClient
-
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 

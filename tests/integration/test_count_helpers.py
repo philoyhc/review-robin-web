@@ -29,7 +29,8 @@ from app.db.models import (
     ReviewSession,
     User,
 )
-from app.services import csv_imports, relationships as relationships_service
+from app.services import csv_imports
+from app.services import relationships as relationships_service
 from app.services.assignments import _coverage
 
 

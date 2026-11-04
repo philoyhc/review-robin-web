@@ -21,7 +21,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import inspect as sa_inspect, select
+from sqlalchemy import inspect as sa_inspect
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -41,9 +42,9 @@ from app.db.models import (
     User,
 )
 from app.services import audit, symmetric_review
-from app.services.instruments._field_refs import repoint_sort, repoint_widths
 from app.services.instruments import copy_view_policies
 from app.services.instruments._band2 import portable_band2_state
+from app.services.instruments._field_refs import repoint_sort, repoint_widths
 
 CLONE_MODES: tuple[str, ...] = ("all", "config")
 

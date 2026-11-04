@@ -15,10 +15,9 @@ from app.config import settings
 from app.db.models import User
 from app.db.session import get_db
 from app.logging_config import get_logger
+from app.web import urls, views
 from app.web.deps import find_user, stamp_principal
-from app.web import views
 from app.web.return_to import resolve_return_to
-from app.web import urls
 
 log = get_logger(__name__)
 

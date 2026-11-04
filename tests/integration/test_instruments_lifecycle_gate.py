@@ -28,6 +28,8 @@ from ._instrument_states import (
     ALL_STATES,
     EDITABLE,
     LOCKED,
+)
+from ._instrument_states import (
     seed_session_with_instruments as _seed,
 )
 

@@ -47,10 +47,8 @@ from app.db.models import (
     ReviewSession,
 )
 from app.services.validation import validate_session_setup
+
 from ._validation_scenarios import SCENARIOS
-
-
-
 
 # --------------------------------------------------------------------------- #
 # Normalization

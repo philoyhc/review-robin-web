@@ -40,8 +40,8 @@ from app.db.models import (
     User,
 )
 from app.db.session import get_db
-from app.services import session_lifecycle as lifecycle
 from app.services import extracts, visibility_policies
+from app.services import session_lifecycle as lifecycle
 from app.services.extracts.by_instrument_extract import (
     by_instrument_filename_slug,
     serialize_by_instrument,
@@ -51,11 +51,11 @@ from app.services.observer_cohort import (
 )
 from app.web import views
 from app.web.deps import get_or_create_user, require_observer_in_session
+from app.web.downloads import content_disposition
 from app.web.routes_reviewer._shared import (
     _templates,
     build_role_chips,
 )
-from app.web.downloads import content_disposition
 
 router = APIRouter(prefix="/me")
 

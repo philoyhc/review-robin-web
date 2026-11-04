@@ -30,8 +30,8 @@ from app.db.models import (
     User,
 )
 from app.schemas.assignments import AssignmentMode
-from app.services import audit, session_lifecycle as lifecycle
-from app.services import unit_of_work
+from app.services import audit, unit_of_work
+from app.services import session_lifecycle as lifecycle
 from app.services.instruments import _instrument_label
 
 from . import _reconcile_cache
@@ -46,7 +46,6 @@ from ._self_review import (
     verify_self_review_classification,
 )
 from ._shared import _is_active, _is_test_env
-
 
 _logger = logging.getLogger(__name__)
 

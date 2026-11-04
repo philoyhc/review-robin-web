@@ -10,16 +10,18 @@ from __future__ import annotations
 from typing import Any
 
 from sqlalchemy import (
-    case,
-    collate,
     String,
+    case,
     cast,
-    false as sa_false,
+    collate,
     func,
     literal,
     nullslast,
     or_,
     select,
+)
+from sqlalchemy import (
+    false as sa_false,
 )
 from sqlalchemy.orm import Session, aliased, joinedload
 
@@ -33,7 +35,6 @@ from app.db.models import (
 )
 from app.services._queries import session_scoped
 from app.services.email_identity import normalize_email
-
 
 PAIR_PREVIEW_LIMIT = 200
 

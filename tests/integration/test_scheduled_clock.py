@@ -5,7 +5,7 @@ or page view) reaches it first."""
 from __future__ import annotations
 
 from contextlib import nullcontext
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy import select
@@ -18,7 +18,7 @@ from app.services.scheduled_events import _clock
 
 from .test_scheduled_activation import _make_validated_session
 
-NOW = datetime.now(timezone.utc)
+NOW = datetime.now(UTC)
 
 
 def _factory(db: Session):
@@ -137,7 +137,7 @@ def test_the_release_window_is_stamped_once_per_crossing(db: Session) -> None:
     ended = _events(db, rs, "session.release_window_ended")
     assert len(opened) == 1 and len(ended) == 1
     assert opened[0].detail["context"]["release_at"] == rs.responses_release_at.replace(
-        tzinfo=rs.responses_release_at.tzinfo or timezone.utc
+        tzinfo=rs.responses_release_at.tzinfo or UTC
     ).isoformat()
     assert ended[0].detail["context"]["fired_by"] == "clock"
 
@@ -201,7 +201,7 @@ def test_a_recent_activation_retry_waits_for_its_spacing(db: Session) -> None:
     )
     db.commit()
     # The retry's row is stamped with the real time, so measure from it.
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     assert rs.id not in _clock.due_session_ids(db, now=now)
     later = now + _clock.RETRY_SPACING + timedelta(minutes=1)
     assert rs.id in _clock.due_session_ids(db, now=later)
@@ -222,7 +222,7 @@ def test_the_retry_spacing_holds_back_only_the_start(db: Session) -> None:
         context={"attempt": 1},
     )
     db.commit()
-    assert rs.id in _clock.due_session_ids(db, now=datetime.now(timezone.utc))
+    assert rs.id in _clock.due_session_ids(db, now=datetime.now(UTC))
 
 
 def test_a_pass_another_process_holds_is_skipped(db: Session) -> None:

@@ -7,18 +7,20 @@ caption, and the Schedule timeline preview block. Mirrors the Part 2
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import AuditEvent, ReviewSession
-from app.services import scheduled_events, session_lifecycle as lifecycle
+from app.services import scheduled_events
+from app.services import session_lifecycle as lifecycle
 from app.web.views._workflow_card import (
     build_auto_send_reminders_caption,
     build_schedule_timeline,
 )
+
 from ._full_matrix import pin_full_matrix_on_all_instruments
 from ._public_id import public_id
 
@@ -89,7 +91,7 @@ def test_parser_returns_none_for_empty(db: Session) -> None:
 
 
 def test_parser_splits_comma_separated_entries(db: Session) -> None:
-    deadline = datetime.now(timezone.utc) + timedelta(days=30)
+    deadline = datetime.now(UTC) + timedelta(days=30)
     result = scheduled_events.parse_and_validate_reminder_offsets(
         "-P1D , -PT4H", deadline=deadline
     )
@@ -97,7 +99,7 @@ def test_parser_splits_comma_separated_entries(db: Session) -> None:
 
 
 def test_parser_rejects_invalid_iso_entry(db: Session) -> None:
-    deadline = datetime.now(timezone.utc) + timedelta(days=30)
+    deadline = datetime.now(UTC) + timedelta(days=30)
     try:
         scheduled_events.parse_and_validate_reminder_offsets(
             "NOT-AN-ISO", deadline=deadline
@@ -110,7 +112,7 @@ def test_parser_rejects_invalid_iso_entry(db: Session) -> None:
 
 def test_parser_rejects_positive_offset(db: Session) -> None:
     """Positive offsets fire at or after End — flag at save."""
-    deadline = datetime.now(timezone.utc) + timedelta(days=30)
+    deadline = datetime.now(UTC) + timedelta(days=30)
     try:
         scheduled_events.parse_and_validate_reminder_offsets(
             "P1D", deadline=deadline
@@ -122,7 +124,7 @@ def test_parser_rejects_positive_offset(db: Session) -> None:
 
 
 def test_parser_rejects_too_small_notice_gap(db: Session) -> None:
-    deadline = datetime.now(timezone.utc) + timedelta(days=30)
+    deadline = datetime.now(UTC) + timedelta(days=30)
     try:
         scheduled_events.parse_and_validate_reminder_offsets(
             "-PT30M", deadline=deadline
@@ -136,7 +138,7 @@ def test_parser_rejects_too_small_notice_gap(db: Session) -> None:
 def test_parser_rejects_offset_exceeding_10_day_cap(db: Session) -> None:
     """|offset| > 10 days is rejected per the Part 0b spec
     "Maximum offset" rule."""
-    deadline = datetime.now(timezone.utc) + timedelta(days=30)
+    deadline = datetime.now(UTC) + timedelta(days=30)
     try:
         scheduled_events.parse_and_validate_reminder_offsets(
             "-P11D", deadline=deadline
@@ -154,7 +156,7 @@ def test_parser_rejects_offset_exceeding_10_day_cap(db: Session) -> None:
 
 def test_parser_rejects_too_close_to_now(db: Session) -> None:
     """deadline + offset before now + SCHEDULED_OPERATIONAL_LEAD_HOURS rejected."""
-    deadline = datetime.now(timezone.utc) + timedelta(minutes=30)
+    deadline = datetime.now(UTC) + timedelta(minutes=30)
     try:
         scheduled_events.parse_and_validate_reminder_offsets(
             "-PT1H", deadline=deadline
@@ -181,7 +183,7 @@ def test_parser_accepts_when_deadline_unset(db: Session) -> None:
 def test_create_accepts_reminder_offsets_with_valid_deadline(
     client: TestClient, db: Session
 ) -> None:
-    deadline = datetime.now(timezone.utc) + timedelta(days=30)
+    deadline = datetime.now(UTC) + timedelta(days=30)
     status_code, _, session_id = _create_session(
         client,
         db,
@@ -196,7 +198,7 @@ def test_create_accepts_reminder_offsets_with_valid_deadline(
 
 
 def test_create_rejects_invalid_reminder_offset(client: TestClient) -> None:
-    deadline = datetime.now(timezone.utc) + timedelta(days=30)
+    deadline = datetime.now(UTC) + timedelta(days=30)
     response = client.post(
         "/operator/sessions",
         data={
@@ -215,7 +217,7 @@ def test_edit_round_trips_reminder_offsets(
     client: TestClient, db: Session
 ) -> None:
     _, _, session_id = _create_session(client, db, "edit-rem")
-    deadline = datetime.now(timezone.utc) + timedelta(days=30)
+    deadline = datetime.now(UTC) + timedelta(days=30)
 
     # Set
     response = client.post(
@@ -259,7 +261,7 @@ def test_edit_emits_reminder_schedule_updated_audit(
     client: TestClient, db: Session
 ) -> None:
     _, _, session_id = _create_session(client, db, "audit-rem")
-    deadline = datetime.now(timezone.utc) + timedelta(days=30)
+    deadline = datetime.now(UTC) + timedelta(days=30)
     client.post(
         f"/operator/sessions/{public_id(session_id)}/config",
         data={
@@ -296,7 +298,7 @@ def test_timeline_includes_end_and_reminder_offsets(db: Session) -> None:
         user=op,
         payload=SessionCreate(name="t", code="tl-rem", description="d"),
     )
-    rs.deadline = datetime(2099, 6, 5, 17, 0, tzinfo=timezone.utc)
+    rs.deadline = datetime(2099, 6, 5, 17, 0, tzinfo=UTC)
     rs.reminder_offsets = ["-PT4H", "-P1D"]
     db.flush()
     db.commit()
@@ -328,10 +330,10 @@ def test_timeline_combines_start_invites_reminders_end(db: Session) -> None:
         payload=SessionCreate(name="t", code="tl-all", description="d"),
     )
     rs.scheduled_activate_at = datetime(
-        2099, 6, 1, 9, 0, tzinfo=timezone.utc
+        2099, 6, 1, 9, 0, tzinfo=UTC
     )
     rs.invite_offsets = ["-P1D"]
-    rs.deadline = datetime(2099, 6, 5, 17, 0, tzinfo=timezone.utc)
+    rs.deadline = datetime(2099, 6, 5, 17, 0, tzinfo=UTC)
     rs.reminder_offsets = ["-P1D"]
     db.flush()
     db.commit()
@@ -403,7 +405,7 @@ def test_caption_amber_warning_when_not_ready(db: Session) -> None:
         user=op,
         payload=SessionCreate(name="t", code="rcap-amber", description="d"),
     )
-    rs.deadline = datetime(2099, 6, 5, 17, 0, tzinfo=timezone.utc)
+    rs.deadline = datetime(2099, 6, 5, 17, 0, tzinfo=UTC)
     rs.reminder_offsets = ["-P1D"]
     db.flush()
     db.commit()
@@ -432,7 +434,7 @@ def test_caption_amber_warning_when_ready_but_no_invitations(
         user=op,
         payload=SessionCreate(name="t", code="rcap-amber-ni", description="d"),
     )
-    rs.deadline = datetime(2099, 6, 5, 17, 0, tzinfo=timezone.utc)
+    rs.deadline = datetime(2099, 6, 5, 17, 0, tzinfo=UTC)
     rs.reminder_offsets = ["-P1D"]
     rs.status = lifecycle.SessionStatus.ready.value
     db.flush()
@@ -468,6 +470,8 @@ def test_caption_green_when_ready_and_invitations_exist(
     from app.schemas.sessions import SessionCreate
     from app.services import (
         invitations as invitations_service,
+    )
+    from app.services import (
         sessions as sessions_service,
     )
 
@@ -509,7 +513,7 @@ def test_caption_green_when_ready_and_invitations_exist(
         db, review_session=rs, user=op
     )
 
-    rs.deadline = datetime(2099, 6, 5, 17, 0, tzinfo=timezone.utc)
+    rs.deadline = datetime(2099, 6, 5, 17, 0, tzinfo=UTC)
     rs.reminder_offsets = ["-P1D"]
     rs.status = lifecycle.SessionStatus.ready.value
     db.flush()
@@ -532,7 +536,7 @@ def test_caption_renders_on_workflow_card_not_invitations_page(
     """The auto-send reminders caption is now part of the Workflow
     card's right-column aside (consolidated 2026-05-21); the
     Invitations page no longer renders it as a standalone banner."""
-    deadline = datetime.now(timezone.utc) + timedelta(days=30)
+    deadline = datetime.now(UTC) + timedelta(days=30)
     _, _, session_id = _create_session(
         client,
         db,

@@ -21,19 +21,16 @@ from app.db.models import (
     SessionTag,
 )
 from app.services.date_formatting import iso_in_zone
-from app.services.instruments._band2 import portable_band2_state
-from app.services.instruments._instrument_crud import effective_intro_layout
-from app.services.instruments._field_refs import (
-    sort_to_positions,
-    widths_to_positions,
-)
 from app.services.email_templates import (
     OVERRIDE_KEYS,
     RESPONSES_RECEIVED_ENABLED_KEY,
 )
-from app.services.sessions import resolve_session_timezone
-from app.services.visibility_policies import REVIEWER_IDENTITY_AUDIENCES
-
+from app.services.instruments._band2 import portable_band2_state
+from app.services.instruments._field_refs import (
+    sort_to_positions,
+    widths_to_positions,
+)
+from app.services.instruments._instrument_crud import effective_intro_layout
 from app.services.session_config_io._rows import (
     Row,
     _bool,
@@ -42,7 +39,8 @@ from app.services.session_config_io._rows import (
     _json,
     _str,
 )
-
+from app.services.sessions import resolve_session_timezone
+from app.services.visibility_policies import REVIEWER_IDENTITY_AUDIENCES
 
 # --------------------------------------------------------------------------- #
 # Public entry point

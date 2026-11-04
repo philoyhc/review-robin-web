@@ -78,11 +78,11 @@ def parse_field(dotted: str) -> tuple[str, str]:
 # threading the lookup through every operator), and resets cleanly
 # when ``evaluate()`` exits even if it raises.
 _pair_context_lookup: ContextVar[
-    dict[tuple[int, int], "Relationship"] | None
+    dict[tuple[int, int], Relationship] | None
 ] = ContextVar("pair_context_lookup", default=None)
 
 def set_pair_context_lookup(
-    lookup: dict[tuple[int, int], "Relationship"] | None,
+    lookup: dict[tuple[int, int], Relationship] | None,
 ) -> object:
     """Bind a pair-context lookup for the calling task. Returns a
     token the caller passes to ``reset_pair_context_lookup`` when

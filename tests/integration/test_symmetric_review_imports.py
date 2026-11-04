@@ -11,8 +11,6 @@ extract's reviewees.csv.
 
 from __future__ import annotations
 
-from cordware.graph import FakeDirectory
-
 import csv
 import io
 import zipfile
@@ -29,6 +27,7 @@ from app.services.extracts.reviewees_extract import serialize_reviewees
 from app.services.extracts.reviewers_extract import serialize_reviewers
 from app.services.session_config_io import serialize_session_config
 from app.web import views
+from cordware.graph import FakeDirectory
 
 REVIEWERS_CSV = b"ReviewerName,ReviewerEmail\nAnn,ann@example.edu\nBob,bob@example.edu\n"
 REVIEWEES_CSV = b"RevieweeName,RevieweeEmail\nAnn,ann@example.edu\n"

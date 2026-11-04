@@ -16,11 +16,11 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 import pytest
+from _mounted import MOUNT, leaks
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from _mounted import MOUNT, leaks
 from app.auth.identity import AuthenticatedUser
 from app.config import settings
 from app.db.models import (
@@ -83,7 +83,10 @@ def _activated_session(client: TestClient, db: Session) -> str:
 
 def _draft_session(client: TestClient, db: Session) -> str:
     """The same session in draft: rosters in, ready to activate."""
-    from ._full_matrix import mark_band1_touched_on_all_instruments, pin_full_matrix_on_all_instruments
+    from ._full_matrix import (
+        mark_band1_touched_on_all_instruments,
+        pin_full_matrix_on_all_instruments,
+    )
 
     base = f"{MOUNT}/operator/sessions"
     client.post(base, data={"name": "Live", "code": "live"}, follow_redirects=False)

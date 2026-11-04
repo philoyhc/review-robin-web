@@ -13,6 +13,7 @@ Always exits 0 — it reports a baseline, it does not gate.
 
 from __future__ import annotations
 
+from . import _shared
 from ._manifest import (
     _section,
     find_manifests,
@@ -21,7 +22,6 @@ from ._manifest import (
     plan_dirs,
     window,
 )
-from . import _shared
 
 
 def manifest_levels(found: dict) -> list[tuple[int, int, int | None]]:

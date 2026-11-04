@@ -46,10 +46,10 @@ def _seed_roster(client: TestClient, review_session: ReviewSession) -> None:
             "file": (
                 "r.csv",
                 (
-                    "ReviewerName,ReviewerEmail,ReviewerTag1\n"
-                    "Alex,alex@example.edu,cohort-a\n"
-                    "Bob,bob@example.edu,\n"
-                ).encode("utf-8"),
+                    b"ReviewerName,ReviewerEmail,ReviewerTag1\n"
+                    b"Alex,alex@example.edu,cohort-a\n"
+                    b"Bob,bob@example.edu,\n"
+                ),
                 "text/csv",
             )
         },
@@ -61,10 +61,10 @@ def _seed_roster(client: TestClient, review_session: ReviewSession) -> None:
             "file": (
                 "e.csv",
                 (
-                    "RevieweeName,RevieweeEmail,RevieweeTag1,ProfileLink\n"
-                    "Carol,carol@example.edu,design,https://example.edu/c.jpg\n"
-                    "Dan,dan@example.edu,,\n"
-                ).encode("utf-8"),
+                    b"RevieweeName,RevieweeEmail,RevieweeTag1,ProfileLink\n"
+                    b"Carol,carol@example.edu,design,https://example.edu/c.jpg\n"
+                    b"Dan,dan@example.edu,,\n"
+                ),
                 "text/csv",
             )
         },
@@ -214,10 +214,10 @@ def _seed_relationships(
             "file": (
                 "p.csv",
                 (
-                    "ReviewerEmail,RevieweeEmail,PairContextTag1\n"
-                    "alex@example.edu,carol@example.edu,advisor\n"
-                    "bob@example.edu,dan@example.edu,\n"
-                ).encode("utf-8"),
+                    b"ReviewerEmail,RevieweeEmail,PairContextTag1\n"
+                    b"alex@example.edu,carol@example.edu,advisor\n"
+                    b"bob@example.edu,dan@example.edu,\n"
+                ),
                 "text/csv",
             )
         },

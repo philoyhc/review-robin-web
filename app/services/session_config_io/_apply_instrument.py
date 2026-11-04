@@ -23,6 +23,7 @@ from app.db.models import (
     ReviewSession,
     SessionRuleSet,
 )
+from app.services.instruments._band1 import _band1_rule_set_name, shown_links
 from app.services.instruments._band2 import (
     _BAND2_DATA_TYPE_TO_INLINE,
     portable_band2_state,
@@ -32,7 +33,6 @@ from app.services.instruments._field_refs import (
     sort_from_positions,
     widths_from_positions,
 )
-from app.services.instruments._band1 import _band1_rule_set_name, shown_links
 from app.services.instruments._response_fields import (
     DEFAULT_RESPONSE_FIELDS,
     FieldKeyError,
@@ -41,17 +41,17 @@ from app.services.instruments._response_fields import (
     _validation_block_from_default_spec,
     validation_block_from_inline,
 )
-from app.services.visibility_policies import (
-    VisibilityPolicyError,
-    validate_reviewer_identity,
-)
 from app.services.responses import (
     BRANCH_MODE_REQUIRE,
     BRANCH_MODES,
     BRANCH_OPS,
     branch_structure_errors,
-    hide_below_hidden_parents,
     canonical_condition_value,
+    hide_below_hidden_parents,
+)
+from app.services.visibility_policies import (
+    VisibilityPolicyError,
+    validate_reviewer_identity,
 )
 
 from ._apply_shared import (
@@ -65,16 +65,16 @@ from ._apply_shared import (
     _VALID_VP_IDENTIFICATION,
     _DisplayFieldSpec,
     _InstrumentSpec,
-    _ParsedConfig,
-    _ParseError,
-    _ResponseFieldSpec,
-    _ViewPolicySpec,
     _parse_bool,
     _parse_decimal,
     _parse_group_kind,
     _parse_int,
     _parse_intro_layout,
     _parse_json,
+    _ParsedConfig,
+    _ParseError,
+    _ResponseFieldSpec,
+    _ViewPolicySpec,
 )
 
 

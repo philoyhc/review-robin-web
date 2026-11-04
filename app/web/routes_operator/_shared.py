@@ -26,8 +26,6 @@ from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from cordware.graph import Directory, GraphError, directory_for
-
 from app.config import settings
 from app.db.models import (
     Instrument,
@@ -36,28 +34,30 @@ from app.db.models import (
     User,
 )
 from app.db.session import get_db
-from app.services import csv_imports, date_formatting, directory_accounts
-from app.services import field_labels as field_labels_service
-from app.services.users import is_verified as users_service_is_verified
-from app.services import instruments as instruments_service
 from app.services import (
+    csv_imports,
+    date_formatting,
+    directory_accounts,
     lifecycle_display,
     operator_settings,
     roster_bulk,
     scheduled_events,
+    session_owners,
+    session_tags,
 )
+from app.services import field_labels as field_labels_service
+from app.services import instruments as instruments_service
 from app.services import session_lifecycle as lifecycle
-from app.services import session_owners, session_tags
 from app.services import sessions as sessions_service
-from app.web import breadcrumbs, views
+from app.services.users import is_verified as users_service_is_verified
+from app.web import breadcrumbs, urls, views
 from app.web.date_filters import (
     display_timezone_context_processor,
     format_date_filter,
     format_datetime_filter,
 )
 from app.web.deps import request_correlation_id, require_session_operator
-from app.web import urls
-
+from cordware.graph import Directory, GraphError, directory_for
 
 # ------------------------------------------------------------------ #
 # Template factory + Jinja globals — single source of truth.

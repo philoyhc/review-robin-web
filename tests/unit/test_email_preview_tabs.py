@@ -7,7 +7,6 @@ from types import SimpleNamespace
 from app.db.models import User
 from app.web import views
 
-
 # --- resolve_email_preview_tab ------------------------------------------- #
 
 

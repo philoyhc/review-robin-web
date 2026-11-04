@@ -26,12 +26,13 @@ from app.db.models import (
     InstrumentDisplayField,
     ReviewSession,
 )
+
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
-from ._validated import validate_session
 from ._public_id import public_id
+from ._validated import validate_session
 
 
 def _make_session(

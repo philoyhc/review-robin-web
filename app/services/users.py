@@ -47,14 +47,12 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable
-from dataclasses import dataclass, replace as dataclass_replace
+from dataclasses import dataclass
+from dataclasses import replace as dataclass_replace
 from datetime import datetime
 
 from sqlalchemy import Select, delete, func, or_, select, update
 from sqlalchemy.orm import Session
-
-from cordware.graph import Outcome
-from cordware.settings import identity_settings
 
 from app.auth.identity import AuthenticatedUser
 from app.auth.roles import is_super_admin, super_admin_configured
@@ -69,6 +67,8 @@ from app.db.models import (
 from app.logging_config import get_logger
 from app.services import audit, directory_accounts
 from app.services.email_identity import looks_like_email, normalize_email, normalize_object_id
+from cordware.graph import Outcome
+from cordware.settings import identity_settings
 
 log = get_logger(__name__)
 

@@ -22,8 +22,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from cordware.settings import identity_settings
 from app.db.models import AuditEvent, SessionOperator, User
+from cordware.settings import identity_settings
 
 
 def _bootstrap_sys_admin(

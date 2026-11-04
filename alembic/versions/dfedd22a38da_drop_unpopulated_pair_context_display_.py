@@ -19,16 +19,16 @@ Create Date: 2026-05-01 00:00:00.000000
 
 """
 import json
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op
 
 revision: str = "dfedd22a38da"
-down_revision: Union[str, Sequence[str], None] = "c2143bd329c7"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = "c2143bd329c7"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def _populated_slots_by_session(bind) -> dict[int, set[str]]:

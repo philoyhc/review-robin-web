@@ -39,9 +39,6 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Resp
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from cordware.identity import is_local
-
-from app.web import urls
 from app.auth.roles import super_admin_configured
 from app.db.models import User
 from app.db.session import get_db
@@ -54,13 +51,15 @@ from app.services import (
     permissions,
     session_owners,
     sessions,
+)
+from app.services import (
     users as users_service,
 )
-from app.web import views
+from app.web import urls, views
 from app.web.deps import request_correlation_id, require_sys_admin
 from app.web.return_to import ReturnTarget, resolve_return_to
 from app.web.routes_operator._shared import _templates, directory_or_none, directory_search_response
-
+from cordware.identity import is_local
 
 router = APIRouter()
 

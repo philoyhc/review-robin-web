@@ -18,9 +18,10 @@ Pins that the summary HTML and the CSV honour ``visible``:
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
+from _rrw_app import rrw_app
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -33,7 +34,6 @@ from app.db.models import (
     Response,
     ReviewSession,
 )
-from _rrw_app import rrw_app
 from app.web.deps import get_current_user
 
 from ._answer_form import answer_form
@@ -361,7 +361,7 @@ def _seed_response_for_assignment(
         assignment_id=assignment.id,
         response_field_id=field.id,
         value=value,
-        submitted_at=datetime.now(timezone.utc) if submitted else None,
+        submitted_at=datetime.now(UTC) if submitted else None,
     )
     db.add(row)
     db.commit()

@@ -7,23 +7,20 @@ Source range in pre-refactor ``routes_operator.py``: 126-238.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
-from app.web import urls
 from app.db.models import User
 from app.db.session import get_db
-from app.services import date_formatting
-from app.services import operator_settings
-from app.web import breadcrumbs
+from app.services import date_formatting, operator_settings
+from app.web import breadcrumbs, urls
 from app.web.deps import get_or_create_user, request_correlation_id
 from app.web.return_to import resolve_return_to
 from app.web.routes_operator._shared import _templates
-
 
 router = APIRouter()
 
@@ -67,7 +64,7 @@ def operator_settings_form(
             "user": user,
             "current_timezone": current_timezone,
             "timezone_sample": date_formatting.format_datetime(
-                datetime.now(timezone.utc), current_timezone
+                datetime.now(UTC), current_timezone
             ),
             "timezone_options": operator_settings.timezone_options(),
             "return_to_raw": return_to,

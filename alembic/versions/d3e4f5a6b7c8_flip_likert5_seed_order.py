@@ -21,15 +21,16 @@ Revises: e1c8f4d57a92
 Create Date: 2026-05-05 00:00:00.000000
 
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision: str = "d3e4f5a6b7c8"
-down_revision: Union[str, Sequence[str], None] = "e1c8f4d57a92"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = "e1c8f4d57a92"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 _OLD_CSV = "Strongly Disagree, Disagree, Neutral, Agree, Strongly Agree"

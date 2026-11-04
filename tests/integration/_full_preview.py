@@ -19,6 +19,7 @@ from __future__ import annotations
 from urllib.parse import quote
 
 from fastapi.testclient import TestClient
+
 from ._public_id import public_id
 
 

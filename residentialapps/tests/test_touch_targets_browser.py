@@ -11,7 +11,10 @@ from __future__ import annotations
 import pytest
 from playwright.sync_api import Page
 
-from residentialapps.tests.test_sort_persistence_browser import ORIGIN, page  # noqa: F401  (the fixture)
+from residentialapps.tests.test_sort_persistence_browser import (  # noqa: F401  (the fixture)
+    ORIGIN,
+    page,
+)
 
 # Easy Auth's headers for a signed-in viewer: the account menu needs one.
 SIGNED_IN = {"X-MS-CLIENT-PRINCIPAL-NAME": "chloe.lim@example.edu", "X-MS-CLIENT-PRINCIPAL-ID": "chloe-oid"}

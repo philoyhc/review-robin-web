@@ -13,7 +13,7 @@ import re
 import secrets
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import select, update
 from sqlalchemy.exc import SQLAlchemyError
@@ -24,13 +24,12 @@ from app.db.models import (
     EmailOutbox,
     Invitation,
     Response,
-    ReviewSession,
     Reviewer,
+    ReviewSession,
     User,
 )
 from app.logging_config import get_logger
-from app.services import audit, email_templates
-from app.services import directory_accounts
+from app.services import audit, directory_accounts, email_templates
 from app.services import session_lifecycle as lifecycle
 
 log = get_logger(__name__)
@@ -400,7 +399,7 @@ def send_invitation(
     # ``sent`` or ``failed`` (`guide/email_and_scheduling.md`,
     # recommendation 1, settled 2026-11-02). The invitation records that the operator sent
     # it: ``sent`` here means the send was recorded, not delivered.
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     invitation.status = "sent"
     invitation.sent_at = now
     invitation.opened_at = None
@@ -532,7 +531,7 @@ def record_open(
     """
     if invitation.opened_at is not None:
         return False
-    invitation.opened_at = datetime.now(timezone.utc)
+    invitation.opened_at = datetime.now(UTC)
     invitation.status = "opened"
     db.flush()
     audit.write_event(
@@ -841,7 +840,7 @@ def send_reminder(
             outbox_correlation_id=outbox_correlation_id,
             commit=commit,
         )
-        invitation.last_reminder_at = datetime.now(timezone.utc)
+        invitation.last_reminder_at = datetime.now(UTC)
         db.flush()
         if commit:
             db.commit()
@@ -872,7 +871,7 @@ def send_reminder(
     db.flush()
 
     # ``queued`` until a transport sends it, as for invitations.
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     invitation.last_reminder_at = now
     db.flush()
     if commit:

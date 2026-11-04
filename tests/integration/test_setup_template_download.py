@@ -10,6 +10,7 @@ from __future__ import annotations
 import io
 import zipfile
 
+from _rrw_app import rrw_app
 from fastapi import Request
 from fastapi.testclient import TestClient
 from sqlalchemy import func, select
@@ -20,7 +21,6 @@ from app.auth.identity import (
     get_current_user,
     resolve_current_user,
 )
-from cordware.settings import IdentitySettings
 from app.db.models import (
     Assignment,
     Instrument,
@@ -30,7 +30,6 @@ from app.db.models import (
     ReviewSession,
     User,
 )
-from _rrw_app import rrw_app
 from app.services import csv_imports, relationships
 from app.services.setup_templates import (
     build_zip,
@@ -38,6 +37,7 @@ from app.services.setup_templates import (
     templates_in,
 )
 from app.web import views
+from cordware.settings import IdentitySettings
 
 app = rrw_app()
 

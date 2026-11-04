@@ -31,13 +31,12 @@ from app.db.models import (
     User,
 )
 from app.services.session_config_io import (
-    ApplyError,
     HEADER,
+    ApplyError,
     Row,
     apply_session_config,
     serialize_session_config,
 )
-
 
 # --------------------------------------------------------------------------- #
 # Fixtures
@@ -73,7 +72,7 @@ def _bare_session(db: Session, *, code: str = "rt") -> ReviewSession:
         db,
         code=code,
         description="Two-line description.",
-        deadline=dt.datetime(2026, 5, 15, 17, 0, tzinfo=dt.timezone.utc),
+        deadline=dt.datetime(2026, 5, 15, 17, 0, tzinfo=dt.UTC),
         help_contact="help@example.edu",
     )
 
@@ -605,7 +604,7 @@ def _populated_round_trip_session(
         db,
         code=code,
         description="Round-trip target",
-        deadline=dt.datetime(2026, 6, 15, 17, 0, tzinfo=dt.timezone.utc),
+        deadline=dt.datetime(2026, 6, 15, 17, 0, tzinfo=dt.UTC),
         help_contact="help@example.edu",
     )
     # ``_session`` doesn't thread every column through to the model
@@ -626,16 +625,16 @@ def _populated_round_trip_session(
     # as this session's own, so the import's ordering check (G22)
     # passes on either.
     review_session.scheduled_activate_at = dt.datetime(
-        2026, 5, 1, 9, 0, tzinfo=dt.timezone.utc
+        2026, 5, 1, 9, 0, tzinfo=dt.UTC
     )
     review_session.responses_release_at = dt.datetime(
-        2026, 6, 30, 23, 59, tzinfo=dt.timezone.utc
+        2026, 6, 30, 23, 59, tzinfo=dt.UTC
     )
     review_session.invite_offsets = ["-P7D", "-P1D"]
     review_session.reminder_offsets = ["-P3D", "-P1D", "-PT12H"]
     review_session.archive_offset = "+30d"
     review_session.responses_release_until = dt.datetime(
-        2026, 7, 14, 23, 59, tzinfo=dt.timezone.utc
+        2026, 7, 14, 23, 59, tzinfo=dt.UTC
     )
     review_session.retention_exception = True
     review_session.retention_overrides = {"audit_log_days": 365}
@@ -1465,7 +1464,7 @@ def test_round_trip_preserves_group_scoped_instrument(db: Session) -> None:
 
 
 def _iso(month: int, day: int) -> str:
-    return dt.datetime(2026, month, day, 12, 0, tzinfo=dt.timezone.utc).isoformat()
+    return dt.datetime(2026, month, day, 12, 0, tzinfo=dt.UTC).isoformat()
 
 
 @pytest.mark.parametrize(
@@ -1547,7 +1546,7 @@ def test_the_chain_reads_the_destinations_own_end_over_the_files(
     dst = _session(
         db,
         code="chain-own-end",
-        deadline=dt.datetime(2026, 5, 15, 12, 0, tzinfo=dt.timezone.utc),
+        deadline=dt.datetime(2026, 5, 15, 12, 0, tzinfo=dt.UTC),
     )
     result = apply_session_config(
         db,
@@ -1570,10 +1569,10 @@ def test_an_early_closed_then_released_sessions_export_is_refused(
     src = _session(
         db,
         code="chain-early-src",
-        deadline=dt.datetime(2026, 6, 15, 12, 0, tzinfo=dt.timezone.utc),
+        deadline=dt.datetime(2026, 6, 15, 12, 0, tzinfo=dt.UTC),
     )
     src.display_timezone = "UTC"
-    src.responses_release_at = dt.datetime(2026, 6, 10, 12, 0, tzinfo=dt.timezone.utc)
+    src.responses_release_at = dt.datetime(2026, 6, 10, 12, 0, tzinfo=dt.UTC)
     db.flush()
     rows = serialize_session_config(db, src)
 
@@ -1586,7 +1585,7 @@ def test_a_pair_the_import_does_not_touch_is_not_checked(db: Session) -> None:
     """An import is never refused over a schedule it does not change:
     the destination's own out-of-order Release-from stays its business."""
     dst = _bare_session(db, code="chain-untouched")
-    dst.responses_release_at = dt.datetime(2026, 5, 1, tzinfo=dt.timezone.utc)
+    dst.responses_release_at = dt.datetime(2026, 5, 1, tzinfo=dt.UTC)
     db.flush()
     result = apply_session_config(
         db, dst, [Row("session.help_contact", "x@example.edu", "string")]
@@ -1604,10 +1603,10 @@ def _fired_invite_session(db: Session, code: str) -> ReviewSession:
     the first recorded as fired on that Start."""
     review_session = _bare_session(db, code=code)
     review_session.scheduled_activate_at = dt.datetime(
-        2026, 6, 1, 12, 0, tzinfo=dt.timezone.utc
+        2026, 6, 1, 12, 0, tzinfo=dt.UTC
     )
     review_session.deadline = dt.datetime(
-        2026, 6, 15, 12, 0, tzinfo=dt.timezone.utc
+        2026, 6, 15, 12, 0, tzinfo=dt.UTC
     )
     review_session.invite_offsets = ["-P3D", "-P1D"]
     db.add(
@@ -1748,7 +1747,7 @@ def test_an_import_refuses_an_offset_the_details_card_refuses(
     made Session Home answer 500 on every load. The card's rules run in
     phase 1; nothing is applied."""
     dst = _bare_session(db, code="l1-offsets")
-    dst.scheduled_activate_at = dt.datetime(2026, 5, 1, 9, 0, tzinfo=dt.timezone.utc)
+    dst.scheduled_activate_at = dt.datetime(2026, 5, 1, 9, 0, tzinfo=dt.UTC)
     db.flush()
     result = apply_session_config(db, dst, [Row(f"session.{column}", value, "string")])
     assert [e.field for e in result.errors] == [f"session.{column}"]
@@ -1761,7 +1760,7 @@ def test_an_import_waives_only_the_lead_time_floor(db: Session) -> None:
     """An exported schedule whose moments have since passed still
     imports: reminders before an End already past."""
     dst = _bare_session(db, code="l1-lead")
-    assert dst.deadline < dt.datetime.now(dt.timezone.utc)
+    assert dst.deadline < dt.datetime.now(dt.UTC)
     assert apply_session_config(
         db, dst, [Row("session.reminder_offsets", "-P2D, -P1D", "string")]
     ).errors == []

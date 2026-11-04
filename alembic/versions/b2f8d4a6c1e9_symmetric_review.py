@@ -16,16 +16,16 @@ Create Date: 2026-11-01
 """
 from __future__ import annotations
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
-
 revision: str = "b2f8d4a6c1e9"
-down_revision: Union[str, Sequence[str], None] = "a7d3e9f1c2b5"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = "a7d3e9f1c2b5"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 _FK = "fk_reviewees_mirrors_reviewer_id_reviewers"
 _IX = "ix_reviewees_mirrors_reviewer_id"

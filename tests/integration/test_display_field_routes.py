@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -11,6 +10,7 @@ from app.db.models import (
     AuditEvent,
     InstrumentDisplayField,
 )
+
 from ._display_field_helpers import (
     _activate,
     _generate_full_matrix,
@@ -20,8 +20,6 @@ from ._display_field_helpers import (
     _seed_pair_context_display_fields,
     _validate,
 )
-
-
 
 
 def test_add_display_field_appends_row_and_invalidates_validated(

@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
-
 import json
 import re
+from collections.abc import Callable
 
 import pytest
 from fastapi.testclient import TestClient
@@ -28,6 +27,7 @@ from app.db.models import (
 )
 from app.services.instruments._instrument_crud import GROUP_KIND_SENTINEL
 from app.web.views._instruments import _REVIEWER_VP_MODE_LABELS
+
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
@@ -565,12 +565,12 @@ def test_replicate_instrument_clones_content(
     The duplicate starts empty and gets its pairs from the next
     Generate, like any other instrument: rows are only ever written by
     the rule engine."""
+    from app.db.models import Assignment as _Assignment
     from app.db.models import (
         AuditEvent,
         InstrumentDisplayField,
         InstrumentResponseField,
     )
-    from app.db.models import Assignment as _Assignment
 
     review_session = _make_session(client, db, code="replicate-1")
     _populate_rosters(client, review_session.id)
@@ -2252,8 +2252,8 @@ def test_column_widths_snapshot_value_survives_html_parsing(
     """The hidden snapshot carries the stored widths as JSON a browser
     reads back whole. Inside a double-quoted attribute ``tojson``'s
     ``"`` ended the value at ``{`` (findings O9)."""
-    from html.parser import HTMLParser
     import json
+    from html.parser import HTMLParser
 
     review_session = _make_session(client, db, code="nm-widths-attr")
     _seed_tag_data(db, review_session.id)
@@ -3604,8 +3604,8 @@ def test_gap_3_band2_state_carries_sort_spec(
     fields = _df_by_key(db, new_model.id)
     tag1_id = fields["reviewee.tag_1"].id
     tag2_id = fields["reviewee.tag_2"].id
-    from app.services import instruments as instruments_service
     from app.db.models import User
+    from app.services import instruments as instruments_service
 
     actor = db.execute(select(User).limit(1)).scalar_one()
     instruments_service.set_sort_display_fields(

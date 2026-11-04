@@ -20,16 +20,16 @@ Revision ID: 683e99cca6b7
 Revises: e5c1a3b9d472
 Create Date: 2026-05-30
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
-
 revision: str = "683e99cca6b7"
-down_revision: Union[str, Sequence[str], None] = "e5c1a3b9d472"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = "e5c1a3b9d472"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

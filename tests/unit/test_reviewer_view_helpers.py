@@ -8,9 +8,9 @@ Per ``spec/reviewer-surface.md`` "Above the table — heading + help block".
 
 from __future__ import annotations
 
-import pytest
-
 from types import SimpleNamespace
+
+import pytest
 
 from app.db.models import Instrument
 from app.web.views import (

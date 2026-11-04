@@ -4,7 +4,7 @@ sessions being off limits to participants (M4, author's rulings of
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from fastapi.testclient import TestClient
@@ -66,7 +66,7 @@ def test_a_prepared_session_shows_when_it_is_scheduled_to_open(
 ) -> None:
     review_session = _session(client, db, code="no-sched", status="validated")
     review_session.scheduled_activate_at = datetime(
-        2031, 3, 4, 9, 30, tzinfo=timezone.utc
+        2031, 3, 4, 9, 30, tzinfo=UTC
     )
     db.commit()
     body = client.get(f"/me/sessions/{review_session.public_id}/1").text
@@ -78,7 +78,7 @@ def test_a_draft_shows_no_schedule(client: TestClient, db: Session) -> None:
     """A draft can't open on its schedule until it is prepared again."""
     review_session = _session(client, db, code="no-sched-draft", status="draft")
     review_session.scheduled_activate_at = datetime(
-        2031, 3, 4, 9, 30, tzinfo=timezone.utc
+        2031, 3, 4, 9, 30, tzinfo=UTC
     )
     db.commit()
     body = client.get(f"/me/sessions/{review_session.public_id}/1").text

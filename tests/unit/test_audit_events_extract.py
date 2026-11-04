@@ -89,7 +89,7 @@ def test_per_row_shape_includes_all_columns(db: Session) -> None:
         correlation_id="req-abc",
         detail={"counts": {"rows": 3}},
         created_at=dt.datetime(
-            2026, 5, 10, 12, 0, 0, tzinfo=dt.timezone.utc
+            2026, 5, 10, 12, 0, 0, tzinfo=dt.UTC
         ),
     )
     rows = list(serialize_audit_events(db, review_session))
@@ -144,7 +144,7 @@ def test_ordering_is_created_at_then_id(db: Session) -> None:
     test sets created_at explicitly."""
 
     review_session = _session(db, code="ae-order")
-    base = dt.datetime(2026, 5, 10, 12, 0, 0, tzinfo=dt.timezone.utc)
+    base = dt.datetime(2026, 5, 10, 12, 0, 0, tzinfo=dt.UTC)
     _event(
         db,
         review_session,

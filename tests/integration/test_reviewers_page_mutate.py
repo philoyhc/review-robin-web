@@ -11,7 +11,6 @@ from __future__ import annotations
 import re
 
 import pytest
-
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session

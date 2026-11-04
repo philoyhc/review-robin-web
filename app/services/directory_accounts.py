@@ -23,9 +23,8 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from cordware.graph import RESOLVED, Directory, GraphError, Outcome, look_up_all
-
 from app.services.email_identity import looks_like_email, normalize_email, normalize_object_id
+from cordware.graph import RESOLVED, Directory, GraphError, Outcome, look_up_all
 
 #: The import's time budget, in seconds: under App Service's front-end
 #: limit, as the checker's plain post is. A lookup unfinished by then is

@@ -6,7 +6,7 @@ Mirrors the structure of ``test_scheduled_invites.py``.
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -22,14 +22,20 @@ from app.db.models import (
     User,
 )
 from app.schemas.sessions import SessionCreate
-from ._full_matrix import pin_full_matrix_on_all_instruments
 from app.services import (
     invitations as invitations_service,
+)
+from app.services import (
     scheduled_events,
+)
+from app.services import (
     session_lifecycle as lifecycle,
+)
+from app.services import (
     sessions as sessions_service,
 )
 
+from ._full_matrix import pin_full_matrix_on_all_instruments
 
 # --------------------------------------------------------------------------- #
 # Fixtures                                                                    #
@@ -159,7 +165,7 @@ def _ready_session_with_invitations(
 
 def test_no_op_when_reminder_offsets_unset(db: Session) -> None:
     rs = _ready_session_with_invitations(db, "noop-empty-rem")
-    rs.deadline = datetime.now(timezone.utc) + timedelta(days=1)
+    rs.deadline = datetime.now(UTC) + timedelta(days=1)
     db.flush()
     db.commit()
 
@@ -187,7 +193,7 @@ def test_no_op_when_deadline_unset(db: Session) -> None:
 def test_no_op_when_build_invite_url_missing(db: Session) -> None:
     """Without a URL builder the fallback path can't dispatch → no-op."""
     rs = _ready_session_with_invitations(db, "noop-no-url-rem")
-    rs.deadline = datetime.now(timezone.utc) + timedelta(days=1)
+    rs.deadline = datetime.now(UTC) + timedelta(days=1)
     rs.reminder_offsets = ["-P30D"]
     db.flush()
     db.commit()
@@ -199,7 +205,7 @@ def test_no_op_when_build_invite_url_missing(db: Session) -> None:
 def test_no_op_when_offset_in_future(db: Session) -> None:
     """Resolved fire moment hasn't arrived yet → no-op for that entry."""
     rs = _ready_session_with_invitations(db, "future-offset-rem")
-    rs.deadline = datetime.now(timezone.utc) + timedelta(days=10)
+    rs.deadline = datetime.now(UTC) + timedelta(days=10)
     rs.reminder_offsets = ["-P1D"]
     db.flush()
     db.commit()
@@ -219,7 +225,7 @@ def test_skip_when_not_ready(db: Session) -> None:
     """reminder_offsets due but session is draft (not yet activated) →
     skip with reason=not_ready, one-shot consume."""
     rs = _seed_session_with_reviewers(db, "skip-draft")
-    rs.deadline = datetime.now(timezone.utc) + timedelta(hours=2)
+    rs.deadline = datetime.now(UTC) + timedelta(hours=2)
     rs.reminder_offsets = ["-P1D"]  # resolves to ~22h ago — due
     db.flush()
     db.commit()
@@ -243,7 +249,7 @@ def test_skip_when_no_invitations(db: Session) -> None:
     """Session ready but no Invitation rows → skip with reason=no_invitations."""
     rs = _seed_session_with_reviewers(db, "skip-no-inv-rem")
     rs.status = lifecycle.SessionStatus.ready.value
-    rs.deadline = datetime.now(timezone.utc) + timedelta(hours=2)
+    rs.deadline = datetime.now(UTC) + timedelta(hours=2)
     rs.reminder_offsets = ["-P1D"]
     db.flush()
     db.commit()
@@ -261,7 +267,7 @@ def test_skip_when_past_deadline(db: Session) -> None:
     skip with reason=outside_response_window."""
     rs = _ready_session_with_invitations(db, "skip-past-dl")
     # deadline two hours in the past
-    rs.deadline = datetime.now(timezone.utc) - timedelta(hours=2)
+    rs.deadline = datetime.now(UTC) - timedelta(hours=2)
     rs.reminder_offsets = ["-PT4H"]  # resolves to 6h ago — due
     db.flush()
     db.commit()
@@ -283,7 +289,7 @@ def test_fires_to_incomplete_reviewers_at_due_time(db: Session) -> None:
     """Past-due offset + ready session + invitations exist + incomplete
     reviewers → reminders dispatched, audit emitted with counts.sent."""
     rs = _ready_session_with_invitations(db, "fire-happy-rem", reviewer_count=3)
-    rs.deadline = datetime.now(timezone.utc) + timedelta(hours=4)
+    rs.deadline = datetime.now(UTC) + timedelta(hours=4)
     # -PT8H resolves to 4h ago → due. Offset is anchored on deadline.
     rs.reminder_offsets = ["-PT8H"]
     db.flush()
@@ -318,7 +324,7 @@ def test_idempotent_on_repeated_observer_calls(db: Session) -> None:
     """A second observer pass after a successful fire does not re-fire
     the same entry (dedup via audit log)."""
     rs = _ready_session_with_invitations(db, "idempotent-rem")
-    rs.deadline = datetime.now(timezone.utc) + timedelta(hours=4)
+    rs.deadline = datetime.now(UTC) + timedelta(hours=4)
     rs.reminder_offsets = ["-PT8H"]
     db.flush()
     db.commit()
@@ -360,7 +366,7 @@ def test_per_reviewer_dedup_via_correlation_id(db: Session) -> None:
             correlation_id=pre_cid,
         )
     )
-    rs.deadline = datetime.now(timezone.utc) + timedelta(hours=4)
+    rs.deadline = datetime.now(UTC) + timedelta(hours=4)
     rs.reminder_offsets = ["-PT8H"]
     db.flush()
     db.commit()
@@ -388,7 +394,7 @@ def test_multi_entry_fires_in_chronological_order(db: Session) -> None:
     rs = _ready_session_with_invitations(
         db, "multi-entry-rem", reviewer_count=1
     )
-    rs.deadline = datetime.now(timezone.utc) + timedelta(hours=4)
+    rs.deadline = datetime.now(UTC) + timedelta(hours=4)
     # Both resolve to the past; list order is out of chronological order.
     rs.reminder_offsets = ["-PT8H", "-P2D"]
     db.flush()
@@ -433,7 +439,7 @@ def test_reschedule_resets_per_entry_dedup(db: Session) -> None:
     rs = _ready_session_with_invitations(
         db, "reanchor-rem", reviewer_count=1
     )
-    first_deadline = datetime.now(timezone.utc) + timedelta(hours=4)
+    first_deadline = datetime.now(UTC) + timedelta(hours=4)
     rs.deadline = first_deadline
     rs.reminder_offsets = ["-PT8H"]
     db.flush()
@@ -446,7 +452,7 @@ def test_reschedule_resets_per_entry_dedup(db: Session) -> None:
 
     # Operator reschedules deadline; the same offset entry should
     # re-evaluate against the new anchor.
-    new_deadline = datetime.now(timezone.utc) + timedelta(hours=2)
+    new_deadline = datetime.now(UTC) + timedelta(hours=2)
     rs.deadline = new_deadline
     db.flush()
     db.commit()
@@ -467,7 +473,7 @@ def test_unparseable_offset_skipped_silently(db: Session) -> None:
     silently skipped — no audit event, observer continues with valid
     entries."""
     rs = _ready_session_with_invitations(db, "bad-offset-rem")
-    rs.deadline = datetime.now(timezone.utc) + timedelta(hours=4)
+    rs.deadline = datetime.now(UTC) + timedelta(hours=4)
     rs.reminder_offsets = ["NOT-AN-ISO-DURATION", "-PT8H"]
     db.flush()
     db.commit()
@@ -493,7 +499,7 @@ def test_partial_failure_does_not_requeue_sent_reminders(
     back every row the pass queued, and the next pass sends each
     reviewer one reminder."""
     rs = _ready_session_with_invitations(db, "partial-rem", reviewer_count=2)
-    rs.deadline = datetime.now(timezone.utc) + timedelta(hours=4)
+    rs.deadline = datetime.now(UTC) + timedelta(hours=4)
     rs.reminder_offsets = ["-PT8H"]
     db.flush()
     db.commit()

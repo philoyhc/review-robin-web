@@ -6,7 +6,7 @@ right-column caption.
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -16,6 +16,7 @@ from app.db.models import AuditEvent, ReviewSession
 from app.services import scheduled_events
 from app.services import session_lifecycle as lifecycle
 from app.web.views._workflow_card import build_scheduled_activation_caption
+
 from ._public_id import public_id
 
 
@@ -61,7 +62,7 @@ def test_create_accepts_valid_scheduled_activate_at(
     client: TestClient, db: Session
 ) -> None:
     """A Start at least the configured lead time in the future saves."""
-    future = datetime.now(timezone.utc) + timedelta(hours=24)
+    future = datetime.now(UTC) + timedelta(hours=24)
     session_id = _create_session(
         client,
         db,
@@ -85,7 +86,7 @@ def test_create_rejects_past_scheduled_activate_at(
     client: TestClient,
 ) -> None:
     """A Start in the past — or closer than the operational lead — is rejected at save."""
-    too_soon = datetime.now(timezone.utc) + timedelta(minutes=15)
+    too_soon = datetime.now(UTC) + timedelta(minutes=15)
     response = client.post(
         "/operator/sessions",
         data={
@@ -119,7 +120,7 @@ def test_edit_accepts_setting_scheduled_activate_at(
 ) -> None:
     """Operator sets Start on an existing draft session via the Edit form."""
     session_id = _create_session(client, db, "edit-set")
-    future = datetime.now(timezone.utc) + timedelta(hours=24)
+    future = datetime.now(UTC) + timedelta(hours=24)
 
     response = client.post(
         f"/operator/sessions/{public_id(session_id)}/config",
@@ -141,7 +142,7 @@ def test_edit_clearing_emits_activation_scheduled_audit(
 ) -> None:
     """Setting then clearing Start emits session.activation_scheduled twice."""
     session_id = _create_session(client, db, "edit-clear")
-    future = datetime.now(timezone.utc) + timedelta(hours=24)
+    future = datetime.now(UTC) + timedelta(hours=24)
     # Set
     client.post(
         f"/operator/sessions/{public_id(session_id)}/config",
@@ -176,7 +177,7 @@ def test_edit_clearing_emits_activation_scheduled_audit(
 def test_edit_rejects_too_soon(client: TestClient, db: Session) -> None:
     """Edit save rejects a Start that would violate the lead-time floor."""
     session_id = _create_session(client, db, "edit-too-soon")
-    too_soon = datetime.now(timezone.utc) + timedelta(minutes=10)
+    too_soon = datetime.now(UTC) + timedelta(minutes=10)
     response = client.post(
         f"/operator/sessions/{public_id(session_id)}/config",
         data={
@@ -194,7 +195,7 @@ def test_edit_get_prefills_scheduled_activate_at_input_value(
 ) -> None:
     """The Edit page GET renders the persisted Start in the input."""
     session_id = _create_session(client, db, "edit-prefill")
-    future = datetime.now(timezone.utc) + timedelta(hours=24)
+    future = datetime.now(UTC) + timedelta(hours=24)
     client.post(
         f"/operator/sessions/{public_id(session_id)}/config",
         data={
@@ -259,7 +260,7 @@ def test_caption_amber_warning_when_draft_with_future_schedule(
     rs = _make_session_in_status(
         db, "cap-draft-future", lifecycle.SessionStatus.draft.value
     )
-    rs.scheduled_activate_at = datetime.now(timezone.utc) + timedelta(days=1)
+    rs.scheduled_activate_at = datetime.now(UTC) + timedelta(days=1)
     db.flush()
     db.commit()
     cap = build_scheduled_activation_caption(db, rs)
@@ -274,7 +275,7 @@ def test_caption_green_when_validated_with_future_schedule(
     rs = _make_session_in_status(
         db, "cap-validated-future", lifecycle.SessionStatus.validated.value
     )
-    rs.scheduled_activate_at = datetime.now(timezone.utc) + timedelta(days=1)
+    rs.scheduled_activate_at = datetime.now(UTC) + timedelta(days=1)
     db.flush()
     db.commit()
     cap = build_scheduled_activation_caption(db, rs)

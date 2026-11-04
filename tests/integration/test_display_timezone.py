@@ -16,7 +16,7 @@ dependencies stamp ``request.state.display_timezone``; the
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -27,6 +27,7 @@ from sqlalchemy.orm import Session
 from app.auth.identity import AuthenticatedUser
 from app.db.models import AuditEvent, ReviewSession
 from app.services.date_formatting import format_datetime
+
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
@@ -486,15 +487,14 @@ def test_config_save_keeps_datetimes_in_the_repeated_dst_hour(
     York. A Save that re-submits the seeded boxes in an unchanged zone
     keeps each stored instant; re-parsing the text would land on the
     first 01:30 (05:30 UTC) and move it an hour early."""
-    from datetime import timezone
 
     session = _create_session(client, db, code="tz-dst-keep")
-    deadline = datetime(2026, 11, 1, 6, 30, tzinfo=timezone.utc)
-    release_at = datetime(2026, 11, 1, 6, 45, tzinfo=timezone.utc)
+    deadline = datetime(2026, 11, 1, 6, 30, tzinfo=UTC)
+    release_at = datetime(2026, 11, 1, 6, 45, tzinfo=UTC)
     # Five minutes after Release-from, in the same repeated hour: Until
     # is checked against the instant that is kept, not a re-parse of it
     # an hour early (the cold read of #2835).
-    release_until = datetime(2026, 11, 1, 6, 50, tzinfo=timezone.utc)
+    release_until = datetime(2026, 11, 1, 6, 50, tzinfo=UTC)
     session.display_timezone = "America/New_York"
     session.deadline = deadline
     session.responses_release_at = release_at
@@ -513,12 +513,12 @@ def test_config_save_keeps_datetimes_in_the_repeated_dst_hour(
     assert response.status_code == 303, response.text
     db.expire_all()
     updated = db.get(ReviewSession, session.id)
-    assert updated.deadline.replace(tzinfo=timezone.utc) == deadline
+    assert updated.deadline.replace(tzinfo=UTC) == deadline
     assert (
-        updated.responses_release_at.replace(tzinfo=timezone.utc) == release_at
+        updated.responses_release_at.replace(tzinfo=UTC) == release_at
     )
     assert (
-        updated.responses_release_until.replace(tzinfo=timezone.utc)
+        updated.responses_release_until.replace(tzinfo=UTC)
         == release_until
     )
 
@@ -530,12 +530,12 @@ def test_config_rename_keeps_a_schedule_that_has_aged(
     reminder offsets that now resolve into the past, still takes a
     rename. The unedited boxes are kept as stored rather than re-checked
     against the save-time floor; an aged value "stays put"."""
-    from datetime import timedelta, timezone
+    from datetime import timedelta
 
     from app.services.date_formatting import format_datetime_local
 
     session = _create_session(client, db, code="tz-aged")
-    now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    now = datetime.now(UTC).replace(second=0, microsecond=0)
     start = now - timedelta(days=1)
     deadline = now + timedelta(hours=2)
     session.display_timezone = "UTC"
@@ -563,7 +563,7 @@ def test_config_rename_keeps_a_schedule_that_has_aged(
     db.expire_all()
     updated = db.get(ReviewSession, session.id)
     assert updated.name == "Renamed"
-    assert updated.scheduled_activate_at.replace(tzinfo=timezone.utc) == start
+    assert updated.scheduled_activate_at.replace(tzinfo=UTC) == start
     assert updated.invite_offsets == ["-P1D"]
     assert updated.reminder_offsets == ["-P1D"]
 
@@ -573,14 +573,14 @@ def test_config_still_refuses_an_edited_start_in_the_past(
 ) -> None:
     """The B4 exemption covers only a box left as stored: typing a new
     Start in the past is still refused by the lead-time floor."""
-    from datetime import timedelta, timezone
+    from datetime import timedelta
 
     from app.services.date_formatting import format_datetime_local
 
     session = _create_session(client, db, code="tz-aged-edit")
     session.display_timezone = "UTC"
     db.commit()
-    past = datetime.now(timezone.utc) - timedelta(days=1)
+    past = datetime.now(UTC) - timedelta(days=1)
 
     response = client.post(
         f"/operator/sessions/{session.public_id}/config",
@@ -600,12 +600,12 @@ def _post_aged_schedule(
 ):
     """A draft whose Start passed a day ago, invite offsets ``stored``,
     re-saved with the Start box untouched and ``submitted`` offsets."""
-    from datetime import timedelta, timezone
+    from datetime import timedelta
 
     from app.services.date_formatting import format_datetime_local
 
     session = _create_session(client, db, code=code)
-    now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    now = datetime.now(UTC).replace(second=0, microsecond=0)
     start = now - timedelta(days=1)
     session.display_timezone = "UTC"
     session.scheduled_activate_at = start
@@ -654,12 +654,12 @@ def test_config_rechecks_stored_offsets_when_start_moves(
 ) -> None:
     """The exemption holds only while the anchor is unedited: moving
     Start re-checks every stored invite offset against the floor."""
-    from datetime import timedelta, timezone
+    from datetime import timedelta
 
     from app.services.date_formatting import format_datetime_local
 
     session = _create_session(client, db, code="tz-aged-moved")
-    now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    now = datetime.now(UTC).replace(second=0, microsecond=0)
     session.display_timezone = "UTC"
     session.scheduled_activate_at = now - timedelta(days=1)
     session.invite_offsets = ["-P1D"]
@@ -702,12 +702,12 @@ def test_config_refuses_a_duplicate_of_an_aged_reminder_offset(
     """The reminder parser matches by position too: with End unedited,
     a second copy of a stored reminder offset that now resolves into
     the past meets the floor."""
-    from datetime import timedelta, timezone
+    from datetime import timedelta
 
     from app.services.date_formatting import format_datetime_local
 
     session = _create_session(client, db, code="tz-aged-dup-rem")
-    now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    now = datetime.now(UTC).replace(second=0, microsecond=0)
     deadline = now + timedelta(hours=2)
     session.display_timezone = "UTC"
     session.deadline = deadline
@@ -739,12 +739,12 @@ def test_config_refuses_reordered_aged_offsets(
     """Exemption is by position: the observer tracks fired offsets by
     index, so a stored entry moved to another position is new there and
     meets the floor (Codex on #2870)."""
-    from datetime import timedelta, timezone
+    from datetime import timedelta
 
     from app.services.date_formatting import format_datetime_local
 
     session = _create_session(client, db, code="tz-aged-reorder")
-    now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    now = datetime.now(UTC).replace(second=0, microsecond=0)
     start = now - timedelta(days=1)
     session.display_timezone = "UTC"
     session.scheduled_activate_at = start
@@ -776,12 +776,12 @@ def test_config_refuses_reordered_aged_reminder_offsets(
     """The reminder parser's positional match: with End unedited,
     swapping two stored reminder offsets that now resolve into the past
     is refused."""
-    from datetime import timedelta, timezone
+    from datetime import timedelta
 
     from app.services.date_formatting import format_datetime_local
 
     session = _create_session(client, db, code="tz-aged-reorder-rem")
-    now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    now = datetime.now(UTC).replace(second=0, microsecond=0)
     deadline = now + timedelta(hours=2)
     session.display_timezone = "UTC"
     session.deadline = deadline
@@ -821,7 +821,7 @@ def _l8_session(
     into the past, Release-from before End (Close early, then Release,
     stamps that), and seconds on End, which no box can carry."""
     session = _create_session(client, db, code=code)
-    now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    now = datetime.now(UTC).replace(second=0, microsecond=0)
     stored = {
         "scheduled_activate_at": now - timedelta(days=1),
         "deadline": now + timedelta(days=9, seconds=45),
@@ -851,7 +851,7 @@ def _l8_save(client: TestClient, session: ReviewSession, boxes: dict[str, str]):
 def _l8_stored(db: Session, session: ReviewSession, field: str) -> datetime:
     db.expire_all()
     value = getattr(db.get(ReviewSession, session.id), field)
-    return value.replace(tzinfo=timezone.utc)
+    return value.replace(tzinfo=UTC)
 
 
 @pytest.mark.parametrize(
@@ -927,7 +927,7 @@ def test_config_zone_change_reads_old_text_typed_back_as_an_edit(
     expected = (
         datetime.strptime(old_text, "%Y-%m-%dT%H:%M")
         .replace(tzinfo=ZoneInfo("America/New_York"))
-        .astimezone(timezone.utc)
+        .astimezone(UTC)
     )
     assert _l8_stored(db, session, "responses_release_until") == expected
     for field in ("scheduled_activate_at", "deadline", "responses_release_at"):

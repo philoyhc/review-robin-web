@@ -11,7 +11,6 @@ from sqlalchemy.orm import object_session
 
 from app.db.models import ReviewSession
 from app.services import sessions
-
 from app.services.participant_info import (
     SelfFieldsError,
     normalize_self_fields,
@@ -19,11 +18,11 @@ from app.services.participant_info import (
 )
 
 from ._apply_shared import (
-    _ParseError,
-    _ParsedConfig,
     _parse_bool,
     _parse_datetime,
     _parse_json,
+    _ParsedConfig,
+    _ParseError,
 )
 
 #: The Settings CSV's own-entry selections (participant info Items 1, 4

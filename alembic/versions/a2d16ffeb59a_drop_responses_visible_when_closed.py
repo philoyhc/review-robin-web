@@ -15,16 +15,16 @@ Revises: e2a7c4f9b130
 Create Date: 2026-10-03
 
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
-
 revision: str = "a2d16ffeb59a"
-down_revision: Union[str, Sequence[str], None] = "e2a7c4f9b130"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = "e2a7c4f9b130"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

@@ -10,14 +10,14 @@ rows, through the relationship the resolver walks.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
 from app.db.models import Reviewer, ReviewSession, User
 from app.services import email_templates
 
-_NINE_UTC = datetime(2026, 6, 30, 9, 0, tzinfo=timezone.utc)
+_NINE_UTC = datetime(2026, 6, 30, 9, 0, tzinfo=UTC)
 
 
 def _session(db: Session, *, code: str, own_zone: str | None) -> ReviewSession:

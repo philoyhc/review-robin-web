@@ -15,6 +15,7 @@ from app.db.models import (
     ReviewSession,
     User,
 )
+from app.schemas.validation import Severity
 from app.services.instruments import (
     FieldKeyError,
     ResponsesPresentError,
@@ -27,7 +28,6 @@ from app.services.instruments import (
     update_response_field,
 )
 from app.services.validation import validate_session_setup
-from app.schemas.validation import Severity
 
 
 def _user(db: Session) -> User:

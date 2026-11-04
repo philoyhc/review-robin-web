@@ -12,9 +12,8 @@ See ``guide/segment_19B_consistency.md`` (S5).
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session

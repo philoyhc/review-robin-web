@@ -21,6 +21,7 @@ from app.db.models.email_outbox import EMAIL_OUTBOX_STATUSES
 from app.services import email_send
 from app.services import invitations as inv_service
 from app.web import views
+
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
@@ -28,7 +29,6 @@ from ._full_matrix import (
 from ._invitation_states import _create_session, _populate
 from ._public_id import public_id
 from ._validated import validate_session
-
 
 # --------------------------------------------------------------------------- #
 # Fixture helpers

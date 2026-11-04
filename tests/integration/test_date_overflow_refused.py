@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import csv
 import io
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from fastapi.testclient import TestClient
@@ -162,7 +162,7 @@ def test_a_stored_edge_instant_renders(
 
 
 def test_display_helpers_leave_an_edge_instant_unconverted() -> None:
-    edge = datetime.max.replace(tzinfo=timezone.utc)
+    edge = datetime.max.replace(tzinfo=UTC)
     assert date_formatting.format_datetime(edge, "Asia/Tokyo") == "9999-12-31 23:59"
     assert date_formatting.format_date(edge, "Asia/Tokyo") == "9999-12-31"
     assert date_formatting.format_datetime_local(edge, "Asia/Tokyo") == "9999-12-31T23:59"
@@ -170,7 +170,7 @@ def test_display_helpers_leave_an_edge_instant_unconverted() -> None:
     # Shown in UTC, so labelled UTC rather than with the session's zone.
     assert date_formatting.gmt_offset_label("Asia/Tokyo", edge) == "UTC"
     assert date_formatting.gmt_offset_zone_label("Asia/Tokyo", edge) == "UTC"
-    safe = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    safe = datetime(2026, 1, 1, tzinfo=UTC)
     assert date_formatting.gmt_offset_zone_label("Asia/Tokyo", safe) == "GMT+9 Asia/Tokyo"
 
 
@@ -221,7 +221,7 @@ def test_settings_import_refuses_an_edge_datetime(value: str) -> None:
 # ── O3: the audit log's date filter ──────────────────────────────────
 
 
-_EVENT_AT = datetime(2026, 3, 1, 20, 30, tzinfo=timezone.utc)
+_EVENT_AT = datetime(2026, 3, 1, 20, 30, tzinfo=UTC)
 
 
 @pytest.mark.parametrize(

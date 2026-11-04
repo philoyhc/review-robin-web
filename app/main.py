@@ -19,12 +19,12 @@ from app.web.deps import OperatorAllowlistDenied, get_or_create_user
 from app.web.error_handlers import register_error_handlers
 from app.web.oversized_ids import refuse_oversized_ids
 from app.web.routes_about import router as about_router
-from app.web.routes_guide import router as guide_router
-from app.web.routes_templates import router as templates_router
 from app.web.routes_auth import router as auth_router
+from app.web.routes_guide import router as guide_router
 from app.web.routes_health import router as health_router
 from app.web.routes_operator import router as operator_router
 from app.web.routes_reviewer import router as reviewer_router
+from app.web.routes_templates import router as templates_router
 
 
 class _RevalidatingStaticFiles(StaticFiles):
@@ -91,7 +91,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         stop.set()
         try:
             await asyncio.wait_for(task, timeout=_SHUTDOWN_WAIT)
-        except (asyncio.TimeoutError, asyncio.CancelledError):
+        except (TimeoutError, asyncio.CancelledError):
             task.cancel()
             with suppress(asyncio.CancelledError):
                 await task

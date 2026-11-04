@@ -66,12 +66,11 @@ from app.db.models import (
     ReviewSession,
 )
 from app.services import instruments as instruments_service
-from app.services import participant_tokens
-from app.web.views._instruments import instrument_heading, numeric_column_ch_width
+from app.services import participant_tokens, visibility_policies
 from app.services import relationships as relationships_service
 from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
-from app.services import visibility_policies
+from app.web.views._instruments import instrument_heading, numeric_column_ch_width
 from app.web.views._reviewer_summary import (
     GROUP_MEMBER_NAME_LIMIT,
     SummaryDisplayCell,

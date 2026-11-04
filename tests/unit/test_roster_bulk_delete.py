@@ -122,7 +122,7 @@ def _assignment_with_responses(
                 assignment_id=assignment.id,
                 response_field_id=field.id,
                 value=str(i),
-                saved_at=_dt.datetime(2026, 9, 9, tzinfo=_dt.timezone.utc),
+                saved_at=_dt.datetime(2026, 9, 9, tzinfo=_dt.UTC),
                 version=1,
             )
         )

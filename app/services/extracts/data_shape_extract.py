@@ -42,7 +42,8 @@ from __future__ import annotations
 import json
 import math
 import re
-from dataclasses import dataclass, field as dc_field
+from dataclasses import dataclass
+from dataclasses import field as dc_field
 from decimal import Decimal
 from statistics import mean, median
 
@@ -793,7 +794,7 @@ def _build_state_accumulators(
     review_session: ReviewSession,
     *,
     axis: str,
-    scope: "_Scope",
+    scope: _Scope,
     entity_by_id: dict[int, object],
     fields_per_instrument: dict[int, list[int]],
     row_key_for_entity,

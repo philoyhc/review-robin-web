@@ -238,11 +238,11 @@ EVERY_SLOT: dict[str, dict[str, tuple[str, ...]]] = {
 }
 
 
-def every_slot(term: "Term") -> dict[str, tuple[str, ...]]:
+def every_slot(term: Term) -> dict[str, tuple[str, ...]]:
     return EVERY_SLOT.get(term.key, {"appointments": (), "names": ()})
 
 
-def every_slot_people(term: "Term") -> tuple[str, ...]:
+def every_slot_people(term: Term) -> tuple[str, ...]:
     """Those in every slot for a term: holders of the ticked appointments,
     then anyone named, in Staff-roster order."""
     chosen = every_slot(term)
@@ -270,7 +270,7 @@ def coverage(neighborhoods: set[str]) -> tuple[str, ...]:
     return tuple(names)
 
 
-def oversight(name: str, term: "Term") -> tuple[str, ...]:
+def oversight(name: str, term: Term) -> tuple[str, ...]:
     """What a rostered staff member oversees for a term, as the Staff roster
     shows it: the Unit for those in every slot, else their slots named by
     the levels they make up; empty for none (author, 2026-10-29)."""
@@ -281,7 +281,7 @@ def oversight(name: str, term: "Term") -> tuple[str, ...]:
     return coverage({s.neighborhood for s in SLOTS if name in s.staff})
 
 
-def assignment(name: str, term: "Term") -> tuple[str, ...]:
+def assignment(name: str, term: Term) -> tuple[str, ...]:
     """The slots an RA's cell names for a term, as the RA roster shows
     them; empty for none (author, 2026-10-29). An RA's charge is a slot, so
     its name stands rather than the levels it makes up."""

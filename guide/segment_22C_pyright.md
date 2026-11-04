@@ -123,6 +123,23 @@ pyright --outputjson > /tmp/pyright.json
 python3 -c "import json,collections;d=json.load(open('/tmp/pyright.json'));print(d['summary']);print(collections.Counter(x.get('rule') for x in d['generalDiagnostics'] if x['severity']=='error').most_common())"
 ```
 
+## Status
+
+- **Rung 1** merged 2026-11-04 (`#3584`): config, pins, docs, the hook.
+  One read: the blast-radius rows, the hook's guard and comment, README's
+  dev-dependency note; all fixed in the PR.
+- **Rung 2 split in two** (author, 2026-11-04): **2a** `I` and `UP`
+  (mechanical, `ruff check --fix`), then **2b** `B` and `SIM`
+  (judgment). Decisions confirmed at build:
+  - `E` stays ruff's default subset (`E4`, `E7`, `E9`), through
+    `extend-select`: the whole family adds `E501`, 1,471 long lines with
+    no formatter to fix them.
+  - `UP042` (`StrEnum`) ignored: it changes what `str()` and `format()`
+    give for a member, which templates and audit details render.
+  - 2a leaves pyright at 307 errors. 2b's preview: 663 findings, 573 of
+    them `B008` (FastAPI's `Depends` / `Form` defaults, for
+    `extend-immutable-calls`).
+
 ## PR ladder
 
 1. **Config and pins.** `[tool.pyright]` in `pyproject.toml`
@@ -172,8 +189,8 @@ python3 -c "import json,collections;d=json.load(open('/tmp/pyright.json'));print
 
 ## Open questions
 
-- **Rung 2's rule set:** all six families at once, or `I` and `UP` first
-  (mechanical) and `B` and `SIM` after (judgment)? Author, at rung 2.
+- ~~Rung 2's rule set~~: two steps, `I` and `UP` then `B` and `SIM`
+  (author, 2026-11-04).
 - **Tests:** gate them later with the two optional-access rules relaxed
   and ratcheted back per directory (`tests/unit/` first), or leave test
   code to running it? Its own plan; author.

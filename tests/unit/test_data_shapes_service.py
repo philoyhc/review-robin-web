@@ -23,7 +23,6 @@ from app.db.models import (
 )
 from app.services import data_shapes
 
-
 _INLINE_NUMERIC = {
     "_inline_data_type": "Integer",
     "_inline_response_type": "100int",

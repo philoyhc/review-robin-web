@@ -24,7 +24,6 @@ import sys
 from . import _shared
 from ._shared import Unresolvable, _git
 
-
 # A committed path: backticked, ending .md, under spec/ or docs/. The
 # trailing [^`]* absorbs a section reference written inside the ticks
 # (`docs/setup.md §4c`, `spec/x.md#anchor`). Matched anywhere in the

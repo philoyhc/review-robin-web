@@ -35,15 +35,13 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.web import urls
 from app.db.models import Reviewer, ReviewSession, User
 from app.db.session import get_db
-from app.web import breadcrumbs, views
+from app.web import breadcrumbs, urls, views
 from app.web.deps import get_or_create_user, require_session_operator
 from app.web.routes_operator._shared import _templates
 from app.web.routes_reviewer._shared import validate_page_n
 from app.web.routes_reviewer._surface import _pages_for_session, _surface_context
-
 
 router = APIRouter()
 

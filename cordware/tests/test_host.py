@@ -13,7 +13,14 @@ import pytest
 from fastapi import FastAPI, Request, Response
 from fastapi.testclient import TestClient
 
-from cordware.main import REGISTRY, AppEntry, PublicOrigin, create_app, parse_apps, parse_public_origin
+from cordware.main import (
+    REGISTRY,
+    AppEntry,
+    PublicOrigin,
+    create_app,
+    parse_apps,
+    parse_public_origin,
+)
 
 # Lifespan calls recorded by the stub applications below.
 EVENTS: list[str] = []

@@ -20,7 +20,6 @@ from __future__ import annotations
 
 from typing import Final
 
-
 # (key, label, comma-joined list_options). ``key`` is the value the
 # template's <select> emits; the JS in instruments_index.html
 # catches the ``preset:`` prefix, sets ``data_type=list``, and

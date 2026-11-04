@@ -17,7 +17,6 @@ import pathlib
 import re
 
 import pytest
-
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -657,7 +656,7 @@ def test_a_server_restored_selection_renders_its_panel(client, db):
     # Vacuity guard: prove the server actually restored the tick, or the
     # assertion below would pass against an unselected page.
     assert re.search(
-        r'value="%s"[^>]*checked' % row_id, restored
+        rf'value="{row_id}"[^>]*checked', restored
     ), "server did not restore the selection"
     # The script seeds tick order from the restored boxes and renders once.
     assert 'if (box && box.checked) tickOrder.push(row.id);' in restored

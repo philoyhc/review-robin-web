@@ -13,15 +13,16 @@ Create Date: 2026-10-18
 
 """
 import secrets
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision: str = "a9d4f2c7e1b8"
-down_revision: Union[str, Sequence[str], None] = "f3a7c1e9d5b2"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = "f3a7c1e9d5b2"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 # Frozen copy of the model's alphabet and length: a migration must not
 # import app code that may change after it.

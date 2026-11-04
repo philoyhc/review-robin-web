@@ -56,7 +56,7 @@ class ParticipantTokenizer:
 
     __slots__ = ("_salt_prefix",)
 
-    def __init__(self, review_session: "ReviewSession") -> None:
+    def __init__(self, review_session: ReviewSession) -> None:
         env_salt = os.environ.get(_ENV_SALT_KEY, _DEFAULT_SALT)
         created_at = review_session.created_at
         created_token = (
@@ -75,7 +75,7 @@ class ParticipantTokenizer:
 
 
 def participant_token(
-    review_session: "ReviewSession",
+    review_session: ReviewSession,
     role: str,
     individual_id: int,
 ) -> str:

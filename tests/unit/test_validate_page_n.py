@@ -20,7 +20,6 @@ from fastapi import HTTPException
 
 from app.web.routes_reviewer._shared import validate_page_n
 
-
 # Pages payloads are sequences of sequences of Instrument; for the
 # helper's perspective only the length matters. Use plain lists of
 # sentinel objects so the unit test stays decoupled from the ORM.

@@ -30,10 +30,10 @@ from app.db.models import (
 from app.services.session_config_io import (
     HEADER,
     Row,
+    _parse_group_kind,
+    _ParseError,
     serialize_session_config,
 )
-from app.services.session_config_io import _ParseError, _parse_group_kind
-
 
 # Segment 18J Wave 2 PR iii-b4 — the FK from
 # ``instrument_response_fields`` to ``response_type_definitions``
@@ -68,7 +68,7 @@ def _bare_session(db: Session, *, code: str = "spring") -> ReviewSession:
         name=code.title(),
         code=code,
         description="Two-line description.",
-        deadline=dt.datetime(2026, 5, 15, 17, 0, tzinfo=dt.timezone.utc),
+        deadline=dt.datetime(2026, 5, 15, 17, 0, tzinfo=dt.UTC),
         help_contact="help@example.edu",
         created_by_user_id=user.id,
     )

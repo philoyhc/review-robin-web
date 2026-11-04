@@ -37,17 +37,18 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import datetime, timezone
-from typing import Any, Sequence, Union
+from collections.abc import Sequence
+from datetime import UTC, datetime
+from typing import Any
 
 import sqlalchemy as sa
+
 from alembic import op
 
-
 revision: str = "e43454fceb1c"
-down_revision: Union[str, Sequence[str], None] = "e3ba5737e841"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = "e3ba5737e841"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -115,7 +116,7 @@ def upgrade() -> None:
     # Group migrated rows by session for the per-session audit emit.
     by_session: dict[int, dict[str, int]] = {}
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     for (session_id, reviewer_id, reviewee_id), tags in pair_tags.items():
         counts = by_session.setdefault(
             session_id, {"scanned": 0, "migrated": 0, "skipped": 0}

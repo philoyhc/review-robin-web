@@ -39,8 +39,8 @@ from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
-from app.services import audit, operator_settings, sessions, responses as responses_service
-from app.web import views as audit_views
+from app.services import audit, operator_settings, sessions
+from app.services import responses as responses_service
 from app.services.extracts import filename, stream_csv
 from app.services.extracts.audit_events_extract import serialize_audit_events
 from app.services.extracts.entity_metadata_extract import (
@@ -71,6 +71,7 @@ from app.services.session_config_io import (
     HEADER,
     serialize_session_config,
 )
+from app.web import views as audit_views
 from app.web.deps import (
     get_or_create_user,
     require_session_operator,

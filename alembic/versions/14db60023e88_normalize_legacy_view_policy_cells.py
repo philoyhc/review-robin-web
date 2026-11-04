@@ -32,16 +32,16 @@ Revises: a2d16ffeb59a
 Create Date: 2026-10-05
 
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
-
 revision: str = "14db60023e88"
-down_revision: Union[str, Sequence[str], None] = "a2d16ffeb59a"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = "a2d16ffeb59a"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 # Frozen here rather than imported: a migration must keep meaning what it

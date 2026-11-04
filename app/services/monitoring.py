@@ -34,7 +34,6 @@ from app.db.models import (
 )
 from app.services import responses as responses_service
 
-
 # At-risk classification thresholds for the Responses page. A reviewee
 # whose complete-assignment fraction is at least ``adequate_fraction``
 # (but not 100%) renders as "adequate"; below that (and > 0) is
@@ -542,7 +541,7 @@ def _assignment_complete(
     db: Session,
     assignment: Assignment,
     fields: list[InstrumentResponseField],
-    responses_by_assignment: dict[int, list["Response"]] | None = None,
+    responses_by_assignment: dict[int, list[Response]] | None = None,
 ) -> tuple[bool, datetime | None]:
     """Returns ``(is_complete, latest_submitted_at)`` for one assignment.
 

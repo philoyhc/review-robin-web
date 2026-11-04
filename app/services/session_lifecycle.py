@@ -7,7 +7,7 @@ constraint); all five are written (``spec/lifecycle.md``).
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 
 from sqlalchemy import func, select
@@ -23,9 +23,7 @@ from app.db.models import (
 )
 from app.logging_config import get_logger
 from app.schemas.validation import Severity, ValidationIssue
-from app.services import audit
-from app.services import unit_of_work
-from app.services import session_guard
+from app.services import audit, session_guard, unit_of_work
 from app.services.session_guard import (  # noqa: F401 — re-exported
     LifecycleError,
     SessionStateConflict,
@@ -100,7 +98,7 @@ def _as_utc(value: datetime | None) -> datetime | None:
     if value is None:
         return None
     if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
+        return value.replace(tzinfo=UTC)
     return value
 
 
@@ -116,7 +114,7 @@ def is_ongoing(review_session: ReviewSession, *, now: datetime | None = None) ->
     a session whose End passed before End closed sessions."""
     if not is_ready(review_session):
         return False
-    current = now or datetime.now(timezone.utc)
+    current = now or datetime.now(UTC)
     end = review_end(review_session)
     return end is None or current < end
 
@@ -179,7 +177,7 @@ def is_response_release_window_open(
     if anchor is None:
         return False
     if now is None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
     if now < anchor:
         return False
     close = _as_utc(review_session.responses_release_until)
@@ -528,7 +526,7 @@ def activate_session(
     # *first* time this session went live; later revert + re-
     # activate cycles don't overwrite it.
     if review_session.activated_at is None:
-        review_session.activated_at = datetime.now(timezone.utc)
+        review_session.activated_at = datetime.now(UTC)
     # Consume the scheduled-activation column (Segment 18G Part 1).
     # Whether activation fired via the scheduled trigger or via a
     # manual click during the window, the schedule has done its job.
@@ -774,7 +772,7 @@ def release_responses_now(
         code="archived",
         message="Archived sessions can't have responses released.",
     )
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     cleared_until = review_session.responses_release_until is not None
     review_session.responses_release_at = now
     review_session.responses_release_until = None
@@ -828,7 +826,7 @@ def stop_responses_release(
         code="archived",
         message="Archived sessions can't have releases stopped.",
     )
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     review_session.responses_release_until = now
     db.flush()
     audit.write_event(
@@ -951,7 +949,7 @@ def unarchive_session(
 def _aware(value: datetime) -> datetime:
     """Treat naive datetimes as UTC for comparison (SQLite-stored timestamps)."""
     if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
+        return value.replace(tzinfo=UTC)
     return value
 
 
@@ -964,7 +962,7 @@ def deadline_has_passed(
     end = review_end(review_session)
     if end is None:
         return False
-    current = now or datetime.now(timezone.utc)
+    current = now or datetime.now(UTC)
     return current >= end
 
 
@@ -1211,7 +1209,7 @@ def observe_deadline(
     it, so it is reopened here, on the same requests that would have hit
     the gate (see :func:`_reopen_while_live`).
     """
-    current = now or datetime.now(timezone.utc)
+    current = now or datetime.now(UTC)
     if not deadline_has_passed(review_session, now=current):
         _reopen_while_live(db, review_session, correlation_id=correlation_id)
         return 0

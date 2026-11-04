@@ -13,7 +13,15 @@ from starlette.requests import Request
 from starlette.responses import RedirectResponse, Response
 
 from residentialapps.supportlogs import sample_support as sample
-from residentialapps.supportlogs.pages import MAIN, destinations, forbidden, home_flags, home_is_a_page, render, tabs_for
+from residentialapps.supportlogs.pages import (
+    MAIN,
+    destinations,
+    forbidden,
+    home_flags,
+    home_is_a_page,
+    render,
+    tabs_for,
+)
 from residentialapps.web.pages import placeholders_previewers_only
 from residentialapps.web.urls import url_path
 

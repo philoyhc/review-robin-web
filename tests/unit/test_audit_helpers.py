@@ -18,7 +18,7 @@ covers the helpers themselves in isolation.
 from __future__ import annotations
 
 import warnings
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 import pytest
 from sqlalchemy.orm import Session
@@ -46,7 +46,7 @@ def _make_user_and_session(db: Session, code: str) -> tuple[User, ReviewSession]
 
 
 def test_changes_serialises_datetimes_and_passes_scalars_through() -> None:
-    when = datetime(2026, 5, 7, 12, 0, tzinfo=timezone.utc)
+    when = datetime(2026, 5, 7, 12, 0, tzinfo=UTC)
     payload = audit.changes(
         {
             "name": ["Spring", "Spring v2"],

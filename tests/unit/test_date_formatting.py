@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta, timezone
 
 import pytest
 
@@ -20,7 +20,7 @@ def test_format_datetime_none_is_empty_string() -> None:
 
 
 def test_format_datetime_aware_utc() -> None:
-    value = datetime(2026, 5, 15, 17, 0, tzinfo=timezone.utc)
+    value = datetime(2026, 5, 15, 17, 0, tzinfo=UTC)
     assert format_datetime(value) == "2026-05-15 17:00"
 
 
@@ -47,7 +47,7 @@ def test_format_date_from_date() -> None:
 
 
 def test_format_date_from_datetime_drops_time() -> None:
-    value = datetime(2026, 5, 15, 17, 0, tzinfo=timezone.utc)
+    value = datetime(2026, 5, 15, 17, 0, tzinfo=UTC)
     assert format_date(value) == "2026-05-15"
 
 
@@ -65,17 +65,17 @@ def test_format_date_from_datetime_uses_utc_date() -> None:
 def test_format_datetime_in_named_zone() -> None:
     # 09:00 UTC is 17:00 in Singapore — the value is converted, but
     # no zone token is appended.
-    value = datetime(2026, 5, 15, 9, 0, tzinfo=timezone.utc)
+    value = datetime(2026, 5, 15, 9, 0, tzinfo=UTC)
     assert format_datetime(value, "Asia/Singapore") == "2026-05-15 17:00"
 
 
 def test_format_datetime_utc_zone() -> None:
-    value = datetime(2026, 5, 15, 17, 0, tzinfo=timezone.utc)
+    value = datetime(2026, 5, 15, 17, 0, tzinfo=UTC)
     assert format_datetime(value, "UTC") == "2026-05-15 17:00"
 
 
 def test_format_datetime_unknown_zone_falls_back_to_utc() -> None:
-    value = datetime(2026, 5, 15, 17, 0, tzinfo=timezone.utc)
+    value = datetime(2026, 5, 15, 17, 0, tzinfo=UTC)
     assert format_datetime(value, "Bogus/Zone") == "2026-05-15 17:00"
 
 
@@ -85,7 +85,7 @@ def test_format_datetime_none_with_zone_is_empty_string() -> None:
 
 def test_format_date_in_named_zone_rolls_to_next_day() -> None:
     # 23:00 UTC on the 15th is 07:00 on the 16th in Singapore.
-    value = datetime(2026, 5, 15, 23, 0, tzinfo=timezone.utc)
+    value = datetime(2026, 5, 15, 23, 0, tzinfo=UTC)
     assert format_date(value, "Asia/Singapore") == "2026-05-16"
 
 
@@ -104,7 +104,7 @@ def test_zone_token_off_by_default() -> None:
 
 def test_format_datetime_appends_token_when_switch_on(monkeypatch) -> None:
     monkeypatch.setattr(date_formatting, "SHOW_ZONE_TOKEN", True)
-    value = datetime(2026, 5, 15, 9, 0, tzinfo=timezone.utc)
+    value = datetime(2026, 5, 15, 9, 0, tzinfo=UTC)
     assert format_datetime(value, "UTC") == "2026-05-15 09:00 UTC"
     assert format_datetime(value, "Asia/Singapore") == "2026-05-15 17:00 +08"
 
@@ -112,7 +112,7 @@ def test_format_datetime_appends_token_when_switch_on(monkeypatch) -> None:
 def test_format_date_ignores_zone_token_switch(monkeypatch) -> None:
     # The token only ever rode the date-time render, never date-only.
     monkeypatch.setattr(date_formatting, "SHOW_ZONE_TOKEN", True)
-    value = datetime(2026, 5, 15, 9, 0, tzinfo=timezone.utc)
+    value = datetime(2026, 5, 15, 9, 0, tzinfo=UTC)
     assert format_date(value, "Asia/Singapore") == "2026-05-15"
 
 
@@ -129,7 +129,7 @@ def test_gmt_offset_label_half_hour() -> None:
 
 def test_gmt_offset_label_negative() -> None:
     # New York is GMT-5 in January (standard time).
-    winter = datetime(2026, 1, 2, 12, 0, tzinfo=timezone.utc)
+    winter = datetime(2026, 1, 2, 12, 0, tzinfo=UTC)
     assert date_formatting.gmt_offset_label("America/New_York", at=winter) == "GMT-5"
 
 

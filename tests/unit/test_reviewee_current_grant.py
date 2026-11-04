@@ -12,7 +12,7 @@ would only reach indirectly.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.orm import Session
 
@@ -69,7 +69,7 @@ def _open_release_window(review_session: ReviewSession) -> None:
     :func:`_session` defaults to that state."""
     review_session.status = "expired"
     review_session.responses_release_at = datetime.now(
-        timezone.utc
+        UTC
     ) - timedelta(hours=1)
     review_session.responses_release_until = None
 
@@ -153,7 +153,7 @@ def test_a_closed_release_window_retires_the_grant(db: Session) -> None:
     """An operator who stops the release takes the row back with it."""
     review_session = _session(db, code="cg-closed")
     _reviewee_policy(db, _instrument(db, review_session))
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     review_session.responses_release_at = now - timedelta(days=2)
     review_session.responses_release_until = now - timedelta(days=1)
     assert not visibility_policies.reviewee_has_current_grant(
@@ -207,7 +207,7 @@ def test_an_unclosed_session_is_not_a_grant(db: Session) -> None:
     review_session = _session(db, code="cg-running", status="ready")
     _reviewee_policy(db, _instrument(db, review_session))
     review_session.responses_release_at = datetime.now(
-        timezone.utc
+        UTC
     ) - timedelta(hours=1)
     review_session.responses_release_until = None
     assert not visibility_policies.reviewee_has_current_grant(

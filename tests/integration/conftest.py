@@ -1,23 +1,23 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterator
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
+from _mirror_guard import mirror_problems
+from _mounted import mounted_rrw
+from _rrw_app import rrw_app
+from _sqlite_schema import build_sqlite_schema
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine, create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 
-from _sqlite_schema import build_sqlite_schema
 from app.auth.identity import AuthenticatedUser, get_current_user
 from app.config import settings
 from app.db.models import Instrument, InstrumentViewPolicy, ReviewSession
 from app.db.session import get_db
 from app.services import visibility_policies
-from _mounted import mounted_rrw
-from _mirror_guard import mirror_problems
-from _rrw_app import rrw_app
 
 app = rrw_app()
 
@@ -102,7 +102,7 @@ def _grant_reviewee_visibility(
     )
     review_session.status = "expired"
     review_session.responses_release_at = datetime.now(
-        timezone.utc
+        UTC
     ) - timedelta(hours=1)
     review_session.responses_release_until = None
     db.commit()
@@ -333,8 +333,7 @@ def _signed_in_to_the_directory(monkeypatch: pytest.MonkeyPatch) -> None:
     routes import the name: `_shared`, `_quick_setup`,
     `_setup_observers`, `_rehydrate`), or makes `_shared.directory_for`
     raise `GraphError("no_token")` to reach every caller at once."""
-    from cordware.graph import FakeDirectory
-
     from app.web.routes_operator import _shared
+    from cordware.graph import FakeDirectory
 
     monkeypatch.setattr(_shared, "directory_for", lambda request, *a, **k: FakeDirectory())

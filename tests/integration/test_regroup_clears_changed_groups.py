@@ -30,7 +30,7 @@ from app.db.models import (
 )
 from app.services import instruments as instruments_service
 
-_SAVED = dt.datetime(2026, 10, 17, tzinfo=dt.timezone.utc)
+_SAVED = dt.datetime(2026, 10, 17, tzinfo=dt.UTC)
 _TEAM = ("reviewee", "tag_1")
 _SITE = ("reviewee", "tag_2")
 

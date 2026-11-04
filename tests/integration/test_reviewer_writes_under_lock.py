@@ -43,7 +43,7 @@ def _action(name: str, assignment_id: int):
     return responses_service.recall
 
 
-_PAST = dt.datetime(2026, 1, 1, tzinfo=dt.timezone.utc)
+_PAST = dt.datetime(2026, 1, 1, tzinfo=dt.UTC)
 
 
 @pytest.mark.parametrize(
@@ -54,7 +54,7 @@ def test_a_close_committed_before_the_lock_refuses_the_write(
     db: Session, monkeypatch: pytest.MonkeyPatch, name: str, racer: dict
 ) -> None:
     op, reviewer, review_session, assignment = _seed(db)
-    stamped = dt.datetime(2026, 5, 9, tzinfo=dt.timezone.utc)
+    stamped = dt.datetime(2026, 5, 9, tzinfo=dt.UTC)
     db.add(
         Response(
             assignment_id=assignment.id,

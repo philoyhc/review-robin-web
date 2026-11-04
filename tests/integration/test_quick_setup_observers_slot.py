@@ -21,8 +21,8 @@ from sqlalchemy.orm import Session
 from app.auth.identity import AuthenticatedUser
 from app.db.models import Observer, ReviewSession
 from app.web import views
-from ._quick_setup_refusal import refusal
 
+from ._quick_setup_refusal import refusal
 
 OBSERVER_CSV = (
     b"ObserverName,ObserverEmail,ObserverTag1\n"

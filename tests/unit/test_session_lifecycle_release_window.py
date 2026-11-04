@@ -17,7 +17,7 @@ visibility windows mean literally "as data is coming in"
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from app.db.models import ReviewSession
 from app.services.session_lifecycle import (
@@ -26,7 +26,7 @@ from app.services.session_lifecycle import (
 
 
 def _at(year: int, month: int, day: int) -> datetime:
-    return datetime(year, month, day, tzinfo=timezone.utc)
+    return datetime(year, month, day, tzinfo=UTC)
 
 
 def _session(
@@ -117,11 +117,11 @@ def test_default_now_defers_to_current_time() -> None:
     ``datetime.now(timezone.utc)`` — exercise the live-time path
     by setting an anchor far enough in the past that the call
     can't race with any plausible test machine clock."""
-    session = _session(release_at=datetime(2000, 1, 1, tzinfo=timezone.utc))
+    session = _session(release_at=datetime(2000, 1, 1, tzinfo=UTC))
     assert is_response_release_window_open(session)
 
     future_session = _session(
-        release_at=datetime.now(timezone.utc) + timedelta(days=365)
+        release_at=datetime.now(UTC) + timedelta(days=365)
     )
     assert not is_response_release_window_open(future_session)
 

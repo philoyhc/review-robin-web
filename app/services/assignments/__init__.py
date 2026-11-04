@@ -41,6 +41,7 @@ from ._coverage import (
     list_reviewers,
 )
 from ._generate import (
+    InstrumentReconcileState,
     ReconcileImpact,
     _diff_one_instrument,  # noqa: F401
     _full_matrix_schema,  # noqa: F401
@@ -52,15 +53,14 @@ from ._generate import (
     _session_rule_set_to_schema,  # noqa: F401
     bulk_set_assignment_include,
     generate_full_matrix,
-    reconcile_impact,
-    InstrumentReconcileState,
     persist_reconcile_warm,
-    staleness_by_instrument,
+    reconcile_impact,
     replace_assignments,
+    staleness_by_instrument,
 )
 from ._self_review import (
-    _self_review_assignment_ids,  # noqa: F401
     AssignmentPair,
+    _self_review_assignment_ids,  # noqa: F401
     classify_self_review,
     classify_self_review_pairs,
     is_self_review,
@@ -70,7 +70,6 @@ from ._self_review import (
     verify_self_review_classification,
 )
 from ._shared import _is_active, _is_test_env  # noqa: F401
-
 
 __all__ = [
     "PAIR_PREVIEW_LIMIT",

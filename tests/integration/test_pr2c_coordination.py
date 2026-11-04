@@ -17,7 +17,7 @@ The five behaviours land together with PR 2C:
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -35,14 +35,21 @@ from app.db.models import (
 from app.schemas.sessions import SessionCreate
 from app.services import (
     invitations as invitations_service,
+)
+from app.services import (
     scheduled_events,
+)
+from app.services import (
     session_lifecycle as lifecycle,
+)
+from app.services import (
     sessions as sessions_service,
 )
 from app.web.views._workflow_card import (
     build_auto_send_invites_caption,
     build_manual_activate_cancellation,
 )
+
 from ._full_matrix import pin_full_matrix_on_all_instruments
 from ._public_id import public_id
 
@@ -102,7 +109,7 @@ def test_edit_start_change_revalidates_invite_offsets(
 ) -> None:
     """Operator moves Start closer to now; previously-valid
     invite_offsets now violates the operational-lead rule → 422."""
-    far_start = datetime.now(timezone.utc) + timedelta(days=10)
+    far_start = datetime.now(UTC) + timedelta(days=10)
     session_id = _create_session(
         client,
         db,
@@ -113,7 +120,7 @@ def test_edit_start_change_revalidates_invite_offsets(
 
     # Move Start to 1 day from now; the same -P5D offset would resolve
     # to 4 days ago — well before now + 1hr operational lead.
-    near_start = datetime.now(timezone.utc) + timedelta(days=1)
+    near_start = datetime.now(UTC) + timedelta(days=1)
     response = client.post(
         f"/operator/sessions/{public_id(session_id)}/config",
         data={
@@ -135,7 +142,7 @@ def test_edit_start_change_within_rules_succeeds(
 ) -> None:
     """Counterpart to the above — moving Start while keeping the
     rules satisfied saves cleanly."""
-    far_start = datetime.now(timezone.utc) + timedelta(days=10)
+    far_start = datetime.now(UTC) + timedelta(days=10)
     session_id = _create_session(
         client,
         db,
@@ -144,7 +151,7 @@ def test_edit_start_change_within_rules_succeeds(
         invite_offsets="-P2D",
     )
 
-    further_start = datetime.now(timezone.utc) + timedelta(days=20)
+    further_start = datetime.now(UTC) + timedelta(days=20)
     response = client.post(
         f"/operator/sessions/{public_id(session_id)}/config",
         data={
@@ -206,7 +213,7 @@ def test_cancellation_message_when_validated_with_offsets(db: Session) -> None:
         payload=SessionCreate(name="t", code="cancel-msg", description="d"),
     )
     rs.status = lifecycle.SessionStatus.validated.value
-    rs.scheduled_activate_at = datetime.now(timezone.utc) + timedelta(days=10)
+    rs.scheduled_activate_at = datetime.now(UTC) + timedelta(days=10)
     rs.invite_offsets = ["-P2D"]
     db.flush()
     db.commit()
@@ -227,7 +234,7 @@ def test_cancellation_none_when_not_validated(db: Session) -> None:
         user=op,
         payload=SessionCreate(name="t", code="cancel-draft", description="d"),
     )
-    rs.scheduled_activate_at = datetime.now(timezone.utc) + timedelta(days=10)
+    rs.scheduled_activate_at = datetime.now(UTC) + timedelta(days=10)
     rs.invite_offsets = ["-P2D"]
     db.flush()
     db.commit()
@@ -246,7 +253,7 @@ def test_cancellation_none_without_offsets(db: Session) -> None:
         payload=SessionCreate(name="t", code="cancel-no-off", description="d"),
     )
     rs.status = lifecycle.SessionStatus.validated.value
-    rs.scheduled_activate_at = datetime.now(timezone.utc) + timedelta(days=10)
+    rs.scheduled_activate_at = datetime.now(UTC) + timedelta(days=10)
     db.flush()
     db.commit()
 
@@ -311,7 +318,7 @@ def test_observer_fires_invites_before_activation_on_catch_up(
     one pass. Audit ordering: scheduled_invites_fired before
     session.activated."""
     rs = _seed_full_session(db, "catchup")
-    rs.scheduled_activate_at = datetime.now(timezone.utc) - timedelta(
+    rs.scheduled_activate_at = datetime.now(UTC) - timedelta(
         seconds=30
     )  # already past
     rs.invite_offsets = ["-P1D"]  # also past
@@ -344,7 +351,7 @@ def test_manual_activate_clears_start_invite_offsets_inert(
     scheduled_activate_at as a side effect. invite_offsets persists
     in the column but is now inert via anchor-null."""
     rs = _seed_full_session(db, "manual-cancel")
-    rs.scheduled_activate_at = datetime.now(timezone.utc) + timedelta(days=5)
+    rs.scheduled_activate_at = datetime.now(UTC) + timedelta(days=5)
     rs.invite_offsets = ["-P2D"]
     db.flush()
     db.commit()

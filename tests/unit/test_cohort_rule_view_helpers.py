@@ -12,7 +12,6 @@ from types import SimpleNamespace
 
 from app.web.views import cohort_rule_summary, rule_edit_state
 
-
 _TAG_LABELS_FULL = {
     "reviewer": [
         ("reviewer.tag1", "Mentor"),

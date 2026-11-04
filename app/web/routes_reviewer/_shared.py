@@ -8,9 +8,8 @@ from this file but ``_shared`` imports nothing from the package.
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from collections.abc import Sequence
+from pathlib import Path
 
 from fastapi import HTTPException, status
 from fastapi.templating import Jinja2Templates
@@ -27,12 +26,10 @@ from app.db.models import (
     ReviewSession,
     User,
 )
-from app.services import participants
+from app.services import participants, visibility_policies
 from app.services import responses as responses_service
-from app.services import visibility_policies
 from app.services import session_lifecycle as lifecycle
-from app.web import views
-from app.web import urls
+from app.web import urls, views
 from app.web.date_filters import (
     display_timezone_context_processor,
     format_date_filter,

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -224,7 +224,7 @@ def test_can_create_a_response_for_an_assignment_field(db: Session) -> None:
         assignment_id=assignment.id,
         response_field_id=response_field.id,
         value="4",
-        submitted_at=datetime(2026, 5, 1, tzinfo=timezone.utc),
+        submitted_at=datetime(2026, 5, 1, tzinfo=UTC),
     )
     db.add(response)
     db.flush()

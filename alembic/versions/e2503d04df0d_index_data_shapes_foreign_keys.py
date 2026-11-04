@@ -13,15 +13,14 @@ Revises: 14db60023e88
 Create Date: 2026-10-05
 
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 from alembic import op
 
-
 revision: str = "e2503d04df0d"
-down_revision: Union[str, Sequence[str], None] = "14db60023e88"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = "14db60023e88"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 _COLUMNS = ("instrument_id", "response_field_id", "created_by_user_id")

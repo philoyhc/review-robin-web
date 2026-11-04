@@ -51,7 +51,6 @@ from app.db.models import ReviewSession, SessionFieldLabel, User
 from app.services import audit, unit_of_work
 from app.services import session_lifecycle as lifecycle
 
-
 # The canonical display label for every slot the app names. This is
 # the *display* set, wider than the renameable set below.
 # Source-field values

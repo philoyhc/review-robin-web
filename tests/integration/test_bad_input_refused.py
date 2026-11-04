@@ -3,7 +3,6 @@ R3, R4, R8, O4, O6, P4; ``guide/findings_2026-10-16_bugs.md``)."""
 
 from __future__ import annotations
 
-
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select

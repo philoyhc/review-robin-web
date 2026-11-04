@@ -17,6 +17,7 @@ from app.db.models import (
     User,
 )
 from app.services import session_tags, sessions
+
 from ._public_id import public_id
 
 
@@ -377,7 +378,7 @@ _RELEASE_UNTIL = dt.datetime(2030, 2, 25, 9)
 
 
 def _utc(value: dt.datetime) -> dt.datetime:
-    return value.replace(tzinfo=dt.timezone.utc)
+    return value.replace(tzinfo=dt.UTC)
 
 
 def _naive(value: dt.datetime | None) -> dt.datetime | None:
@@ -487,10 +488,10 @@ def test_lobby_tags_only_save_keeps_validated_with_a_seconds_deadline(
     """The expander seeds Deadline at minute precision, so a stored
     deadline with seconds comes back truncated. That re-submission is
     not an edit: the session stays `validated` and keeps its deadline."""
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     session_id = _validated_session(client, db, "val-secs-1")
-    stored = datetime(2031, 3, 4, 23, 59, 59, tzinfo=timezone.utc)
+    stored = datetime(2031, 3, 4, 23, 59, 59, tzinfo=dt.UTC)
     review_session = db.get(ReviewSession, session_id)
     review_session.deadline = stored
     review_session.display_timezone = "UTC"
@@ -511,7 +512,7 @@ def test_lobby_tags_only_save_keeps_validated_with_a_seconds_deadline(
     db.expire_all()
     updated = db.get(ReviewSession, session_id)
     assert updated.status == "validated"
-    assert updated.deadline.replace(tzinfo=timezone.utc) == stored
+    assert updated.deadline.replace(tzinfo=dt.UTC) == stored
 
 
 def test_lobby_tags_only_save_keeps_a_deadline_in_the_repeated_dst_hour(
@@ -520,10 +521,10 @@ def test_lobby_tags_only_save_keeps_a_deadline_in_the_repeated_dst_hour(
     """06:30 UTC on 2026-11-01 renders as 01:30 in New York, the second
     01:30 that morning; parsing that text back lands on the first (05:30
     UTC). The seeded box re-submitted is still not an edit (Codex, #2832)."""
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     session_id = _validated_session(client, db, "val-dst-1")
-    stored = datetime(2026, 11, 1, 6, 30, tzinfo=timezone.utc)
+    stored = datetime(2026, 11, 1, 6, 30, tzinfo=dt.UTC)
     review_session = db.get(ReviewSession, session_id)
     review_session.deadline = stored
     review_session.display_timezone = "America/New_York"
@@ -544,7 +545,7 @@ def test_lobby_tags_only_save_keeps_a_deadline_in_the_repeated_dst_hour(
     db.expire_all()
     updated = db.get(ReviewSession, session_id)
     assert updated.status == "validated"
-    assert updated.deadline.replace(tzinfo=timezone.utc) == stored
+    assert updated.deadline.replace(tzinfo=dt.UTC) == stored
 
 
 def test_lobby_edit_keeps_every_field_it_does_not_show(
@@ -626,7 +627,7 @@ def test_lobby_edit_refuses_a_deadline_that_strands_a_reminder(
     review_session.responses_release_at = None
     review_session.responses_release_until = None
     db.commit()
-    soon = dt.datetime.now(dt.timezone.utc) + dt.timedelta(days=1)
+    soon = dt.datetime.now(dt.UTC) + dt.timedelta(days=1)
 
     response = _lobby_save(
         client,

@@ -133,15 +133,15 @@ import sys
 
 from ._archive import archived_report, manifest_levels
 from ._manifest import (
+    _COMMIT_CACHE,
+    _ITEM_START_CACHE,
+    _PRIOR_PATHS_CACHE,
     APP_DIRS,
     FAIL,
     NOTED,
     PASS,
     WARN,
-    _COMMIT_CACHE,
-    _PRIOR_PATHS_CACHE,
     _first_commit_matching,
-    _ITEM_START_CACHE,
     _section,
     bullet_window_start,
     check_manifest,

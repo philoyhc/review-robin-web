@@ -13,7 +13,7 @@ from __future__ import annotations
 import csv
 import io
 from collections.abc import Callable
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -197,7 +197,7 @@ def _download(
     policy.after_release_identification = identification
     policy.after_release_reviewer_identity = level
     review_session.status = "expired"
-    review_session.responses_release_at = datetime.now(timezone.utc) - timedelta(
+    review_session.responses_release_at = datetime.now(UTC) - timedelta(
         hours=1
     )
     db.commit()
@@ -249,7 +249,7 @@ def _a_namesake(db: Session, seeded: dict) -> None:
             assignment_id=assignment.id,
             response_field_id=seeded["field"].id,
             value="9",
-            submitted_at=datetime.now(timezone.utc),
+            submitted_at=datetime.now(UTC),
         )
     )
 
@@ -297,7 +297,7 @@ def _a_self_review(db: Session, seeded: dict) -> None:
             assignment_id=assignment.id,
             response_field_id=seeded["field"].id,
             value="7",
-            submitted_at=datetime.now(timezone.utc),
+            submitted_at=datetime.now(UTC),
         )
     )
 

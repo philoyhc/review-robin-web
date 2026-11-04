@@ -28,8 +28,10 @@ import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
 from close_check import *  # noqa: F401,F403  — re-export for by-path loaders
-from close_check import _shared  # noqa: F401  — the single REPO patch point
-from close_check import main
+from close_check import (
+    _shared,  # noqa: F401  — the single REPO patch point
+    main,
+)
 
 if __name__ == "__main__":
     sys.exit(main())

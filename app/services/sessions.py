@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
@@ -23,10 +23,11 @@ from app.services import (
     audit,
     date_formatting,
     operator_settings,
+    unit_of_work,
 )
 from app.services import session_lifecycle as lifecycle
-from app.services import unit_of_work
 from app.services.instruments import ensure_default_instrument
+
 # Wave 5 PR 5.2 — RuleSet seeding retired; ``app.services.rules.seeds``
 # module deleted entirely. New sessions land with no rows in
 # ``session_rule_sets``. Band 1's inline editor lazily materialises
@@ -240,7 +241,7 @@ def edit_payload(review_session: ReviewSession, **changes: object) -> SessionCre
 
 
 def _as_utc(value: datetime) -> datetime:
-    return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value
+    return value.replace(tzinfo=UTC) if value.tzinfo is None else value
 
 
 def datetime_box_unedited(

@@ -24,9 +24,8 @@ Saves emit ``instrument.created`` / ``.deleted`` /
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import copy as _copy
+from typing import TYPE_CHECKING
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -41,10 +40,8 @@ from app.db.models import (
     User,
 )
 from app.db.models.instrument import INTRO_LAYOUT_DEFAULT, INTRO_LAYOUTS
-from app.services import session_guard
+from app.services import audit, session_guard, unit_of_work
 from app.services import session_lifecycle as lifecycle
-from app.services import audit
-from app.services import unit_of_work
 from app.services.instruments._band1 import _band1_rule_set_name
 from app.services.instruments._field_refs import repoint_sort, repoint_widths
 from app.services.instruments._response_fields import DEFAULT_RESPONSE_FIELDS

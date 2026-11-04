@@ -22,38 +22,36 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
-from app.web import urls
 from app.db.models import Reviewer, ReviewSession, User
 from app.db.session import get_db
-from app.services import assignments, csv_imports, participant_info
+from app.services import assignments, csv_imports, participant_info, roster_bulk
 from app.services import reviewers as reviewers_service
-from app.services import roster_bulk
 from app.services import session_lifecycle as lifecycle
 from app.services.responses import GroupAnswersWouldClear
 from app.services.reviewers import ReviewerOperationError
-from app.web import breadcrumbs, views
+from app.web import breadcrumbs, urls, views
 from app.web.deps import (
     get_or_create_user,
     request_correlation_id,
     require_session_operator,
 )
-from app.web.routes_operator._shared import (
-    account_resolver,
-    acknowledged_loss,
-    _setup_row_window,
-    _redirect_keeping_selection,
-    _row_action_anchor,
-    _require_delete_confirm,
-    _require_editable,
-    _require_reviewer_in_session,
-    _require_selected_response_loss_ack,
-    _require_response_loss_ack,
-    _templates,
-)
 from app.web.roster_import import (
     _handle_import,
     _save_field_labels,
     dismiss_held_upload,
+)
+from app.web.routes_operator._shared import (
+    _redirect_keeping_selection,
+    _require_delete_confirm,
+    _require_editable,
+    _require_response_loss_ack,
+    _require_reviewer_in_session,
+    _require_selected_response_loss_ack,
+    _row_action_anchor,
+    _setup_row_window,
+    _templates,
+    account_resolver,
+    acknowledged_loss,
 )
 
 router = APIRouter()

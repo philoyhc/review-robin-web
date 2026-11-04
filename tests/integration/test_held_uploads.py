@@ -7,7 +7,7 @@ token, expiring an hour after it was held.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -39,7 +39,7 @@ def _age(db: Session, token: str, *, hours: float) -> None:
     for row in db.execute(
         select(HeldUpload).where(HeldUpload.token == token)
     ).scalars():
-        row.created_at = datetime.now(timezone.utc) - timedelta(hours=hours)
+        row.created_at = datetime.now(UTC) - timedelta(hours=hours)
     db.flush()
 
 

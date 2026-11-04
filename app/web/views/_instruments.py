@@ -20,8 +20,8 @@ Source range in pre-PR-6 ``_legacy.py``: lines 38-335.
 from __future__ import annotations
 
 import re
-from decimal import Decimal
 from dataclasses import dataclass
+from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import func, select
@@ -38,19 +38,17 @@ from app.db.models import (
     ReviewSession,
     User,
 )
-from app.services import field_labels
+from app.services import field_labels, visibility_policies
 from app.services import instruments as instruments_service
 from app.services import session_lifecycle as lifecycle
-from app.services import visibility_policies
 from app.services._queries import slot_has_data
-from app.services.instruments._field_presets import LIST_PRESETS as _BAND3_LIST_PRESETS
 from app.services.instruments._display_fields import (
     _MAX_SORT_KEYS as _SORT_KEYS_MAX,
 )
+from app.services.instruments._field_presets import LIST_PRESETS as _BAND3_LIST_PRESETS
 from app.web import breadcrumbs
 
 from ._setup import session_status_pills
-
 
 # Sentinel value the rule-picker `<select>` posts when the operator
 # chose the "— No rule —" option. Anything else is an int that

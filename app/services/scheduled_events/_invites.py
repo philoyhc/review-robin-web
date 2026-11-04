@@ -6,10 +6,8 @@ the invitation-dispatch wrapper + the editor-side parser
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
-
-from collections.abc import Sequence
-from typing import Callable
+from collections.abc import Callable, Sequence
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.orm import Session
 
@@ -22,8 +20,8 @@ from app.services import session_lifecycle as lifecycle
 from ._duration import parse_iso_duration
 from ._fired import fired_offsets
 from ._shared import (
-    ScheduledActivateError,
     _OFFSET_MAX_MAGNITUDE,
+    ScheduledActivateError,
     _ensure_aware_utc,
     lock_session,
 )
@@ -350,7 +348,7 @@ def parse_and_validate_invite_offsets(
         if notice_min_hours is not None
         else settings.reviewer_notice_min_hours
     )
-    current = now or datetime.now(timezone.utc)
+    current = now or datetime.now(UTC)
 
     cleaned: list[str] = []
     for index, entry in enumerate(entries):

@@ -16,19 +16,19 @@ from app.db.models import (
 )
 from app.schemas.imports import (
     ObserverImportRow,
-    ReviewerImportRow,
     RevieweeImportRow,
+    ReviewerImportRow,
 )
 from app.schemas.validation import Severity, ValidationIssue
-from app.services import audit
-from app.services import directory_accounts
-from app.services.email_identity import normalize_email, normalize_object_id
+from app.services import audit, directory_accounts
 from app.services.csv_imports._identity import (
-    DirectoryCheck,
-    _IDENTITY_ROSTERS,
     _IDENTITY_MODELS,
+    _IDENTITY_ROSTERS,
+    DirectoryCheck,
     cross_table_identity_conflict,
 )
+from app.services.email_identity import normalize_email, normalize_object_id
+
 
 class AppendConflict(Exception):
     """An append refused at its save, under the session lock (segment

@@ -19,26 +19,33 @@ from app.db.models import (
 )
 from app.schemas.imports import (
     ObserverImportRow,
-    ReviewerImportRow,
     RevieweeImportRow,
+    ReviewerImportRow,
 )
-from app.services import audit, field_labels, symmetric_review
-from app.services import directory_accounts, roster_bulk, unit_of_work
+from app.services import (
+    audit,
+    directory_accounts,
+    field_labels,
+    roster_bulk,
+    symmetric_review,
+    unit_of_work,
+)
 from app.services import invitations as invitations_service
 from app.services import session_lifecycle as lifecycle
-from app.services.email_identity import normalize_object_id
-from app.services.csv_imports._parse import (
-    log,
-)
 from app.services.csv_imports._identity import (
     DirectoryCheck,
 )
 from app.services.csv_imports._modes import (
     AppendConflict,
+    _merge_rows,
     append_conflicts,
     merge_conflicts,
-    _merge_rows,
 )
+from app.services.csv_imports._parse import (
+    log,
+)
+from app.services.email_identity import normalize_object_id
+
 
 def existing_reviewer_count(db: Session, session_id: int) -> int:
     return _count(db, Reviewer, session_id)

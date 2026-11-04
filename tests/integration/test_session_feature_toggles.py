@@ -15,7 +15,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import AuditEvent, Observer, Relationship, ReviewSession, Reviewer, Reviewee
+from app.db.models import AuditEvent, Observer, Relationship, Reviewee, Reviewer, ReviewSession
 
 
 def _make_session(

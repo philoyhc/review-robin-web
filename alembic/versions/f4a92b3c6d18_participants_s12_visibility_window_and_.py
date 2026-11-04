@@ -53,18 +53,18 @@ Create Date: 2026-06-01
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 from datetime import timedelta
-from typing import Sequence, Union
 
 import sqlalchemy as sa
-from alembic import op
 
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "f4a92b3c6d18"
-down_revision: Union[str, Sequence[str], None] = "c8d4e9f1a2b3"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = "c8d4e9f1a2b3"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 # Subset of the ISO 8601 duration grammar shared with

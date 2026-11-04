@@ -22,12 +22,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession
+
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
 from ._validated import validate_session
-
 
 # --------------------------------------------------------------------------- #
 # Setup helpers

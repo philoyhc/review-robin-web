@@ -19,13 +19,13 @@ from app.db.models import (
     Reviewer,
     SessionFieldLabel,
 )
+from app.logging_config import get_logger
 from app.schemas.imports import (
     ObserverImportRow,
     RelationshipImportRow,
-    ReviewerImportRow,
     RevieweeImportRow,
+    ReviewerImportRow,
 )
-from app.logging_config import get_logger
 from app.schemas.observer_cohort_rule import CohortRuleSet
 from app.schemas.validation import Severity, ValidationIssue
 from app.services import field_label_csv

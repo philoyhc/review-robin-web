@@ -11,17 +11,17 @@ from __future__ import annotations
 
 import logging
 import re
-from pathlib import Path
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
+from _rrw_app import rrw_app
 from fastapi import APIRouter, HTTPException, status
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser, get_current_user
 from app.db.session import get_db
-from _rrw_app import rrw_app
 from app.services.session_guard import SessionStateConflict
 
 app = rrw_app()

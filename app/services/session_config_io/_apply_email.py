@@ -9,9 +9,9 @@ from app.services.email_templates import (
 
 from ._apply_shared import (
     _RX_EMAIL,
+    _parse_bool,
     _ParsedConfig,
     _ParseError,
-    _parse_bool,
 )
 
 

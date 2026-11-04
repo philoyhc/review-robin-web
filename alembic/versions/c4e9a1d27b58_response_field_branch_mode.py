@@ -16,16 +16,16 @@ Revises: 63b1bb107eb0
 Create Date: 2026-09-28
 
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
-
 revision: str = "c4e9a1d27b58"
-down_revision: Union[str, Sequence[str], None] = "63b1bb107eb0"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = "63b1bb107eb0"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

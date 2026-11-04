@@ -19,8 +19,9 @@ next one pass for the wrong reason.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
 
 import pytest
 from sqlalchemy.orm import Session

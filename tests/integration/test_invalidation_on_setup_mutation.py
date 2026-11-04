@@ -26,21 +26,29 @@ from app.schemas.imports import ReviewerImportRow
 from app.schemas.sessions import SessionCreate
 from app.services import (
     assignments as assignments_service,
+)
+from app.services import (
     csv_imports,
+)
+from app.services import (
     instruments as instruments_service,
+)
+from app.services import (
     session_lifecycle as lifecycle,
+)
+from app.services import (
     sessions as sessions_service,
 )
 
 
-def _seed_validated() -> "tuple[User, Reviewer, Reviewee, ReviewSession]":
+def _seed_validated() -> tuple[User, Reviewer, Reviewee, ReviewSession]:
     raise NotImplementedError("see ``_setup`` fixture below")
 
 
 @pytest.fixture
 def setup(
     db: Session,
-) -> "tuple[User, ReviewSession, Reviewer, Reviewee, Assignment]":
+) -> tuple[User, ReviewSession, Reviewer, Reviewee, Assignment]:
     op = User(email="op@example.edu", display_name="Op")
     db.add(op)
     db.flush()
@@ -96,7 +104,7 @@ def setup(
 
 
 def test_invalidate_if_validated_flips_validated_to_draft(
-    setup: "tuple[User, ReviewSession, Reviewer, Reviewee, Assignment]",
+    setup: tuple[User, ReviewSession, Reviewer, Reviewee, Assignment],
     db: Session,
 ) -> None:
     op, review_session, *_ = setup
@@ -110,7 +118,7 @@ def test_invalidate_if_validated_flips_validated_to_draft(
 
 
 def test_invalidate_if_validated_is_noop_on_draft(
-    setup: "tuple[User, ReviewSession, Reviewer, Reviewee, Assignment]",
+    setup: tuple[User, ReviewSession, Reviewer, Reviewee, Assignment],
     db: Session,
 ) -> None:
     """Idempotency: a second call (or a service that calls multiple
@@ -131,7 +139,7 @@ def test_invalidate_if_validated_is_noop_on_draft(
 
 
 def test_session_update_does_not_invalidate(
-    setup: "tuple[User, ReviewSession, Reviewer, Reviewee, Assignment]",
+    setup: tuple[User, ReviewSession, Reviewer, Reviewee, Assignment],
     db: Session,
 ) -> None:
     """The one setup service that does not: no field ``update_session``
@@ -158,7 +166,7 @@ def test_session_update_does_not_invalidate(
 
 
 def test_csv_save_reviewers_invalidates(
-    setup: "tuple[User, ReviewSession, Reviewer, Reviewee, Assignment]",
+    setup: tuple[User, ReviewSession, Reviewer, Reviewee, Assignment],
     db: Session,
 ) -> None:
     op, review_session, *_ = setup
@@ -177,7 +185,7 @@ def test_csv_save_reviewers_invalidates(
 
 
 def test_csv_delete_all_reviewees_invalidates(
-    setup: "tuple[User, ReviewSession, Reviewer, Reviewee, Assignment]",
+    setup: tuple[User, ReviewSession, Reviewer, Reviewee, Assignment],
     db: Session,
 ) -> None:
     op, review_session, *_ = setup
@@ -194,7 +202,7 @@ def test_csv_delete_all_reviewees_invalidates(
 
 
 def test_assignments_replace_invalidates(
-    setup: "tuple[User, ReviewSession, Reviewer, Reviewee, Assignment]",
+    setup: tuple[User, ReviewSession, Reviewer, Reviewee, Assignment],
     db: Session,
 ) -> None:
     op, review_session, reviewer, reviewee, _ = setup
@@ -211,7 +219,7 @@ def test_assignments_replace_invalidates(
 
 
 def test_instrument_create_invalidates(
-    setup: "tuple[User, ReviewSession, Reviewer, Reviewee, Assignment]",
+    setup: tuple[User, ReviewSession, Reviewer, Reviewee, Assignment],
     db: Session,
 ) -> None:
     op, review_session, *_ = setup
@@ -225,7 +233,7 @@ def test_instrument_create_invalidates(
 
 
 def test_instrument_update_description_invalidates(
-    setup: "tuple[User, ReviewSession, Reviewer, Reviewee, Assignment]",
+    setup: tuple[User, ReviewSession, Reviewer, Reviewee, Assignment],
     db: Session,
 ) -> None:
     op, review_session, _, _, assignment = setup
@@ -240,7 +248,7 @@ def test_instrument_update_description_invalidates(
 
 
 def test_response_field_add_invalidates(
-    setup: "tuple[User, ReviewSession, Reviewer, Reviewee, Assignment]",
+    setup: tuple[User, ReviewSession, Reviewer, Reviewee, Assignment],
     db: Session,
 ) -> None:
     op, review_session, _, _, assignment = setup

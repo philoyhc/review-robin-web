@@ -26,7 +26,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import ReviewSession, Reviewer
+from app.db.models import Reviewer, ReviewSession
 from app.services import assignments as assignments_service
 from app.web.views import apply_cookie_sort
 
@@ -34,7 +34,6 @@ from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
-
 
 # Deliberately adversarial: mixed case, a leading underscore, and a
 # pair differing only in case — the set that separates code-point

@@ -13,16 +13,16 @@ Revises: 4e8a2b9c3d11
 Create Date: 2026-04-30 12:00:00.000000
 
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op
 
 revision: str = "c2143bd329c7"
-down_revision: Union[str, Sequence[str], None] = "4e8a2b9c3d11"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = "4e8a2b9c3d11"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 _PAIR_CONTEXT_SLOTS = (("1", 0), ("2", 1), ("3", 2))

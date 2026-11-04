@@ -23,7 +23,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
 from pydantic import (
@@ -1081,7 +1081,9 @@ def _apply_filters(stmt: Any, filters: AuditFilters | None, user_table: Any) -> 
             _func.lower(user_table.email) == filters.actor_email.lower()
         )
     if filters.created_from or filters.created_to:
-        from datetime import datetime as _dt, time as _time, timedelta as _td, timezone as _tz
+        from datetime import datetime as _dt
+        from datetime import time as _time
+        from datetime import timedelta as _td
 
         from app.services.date_formatting import resolve_zone
 
@@ -1093,7 +1095,7 @@ def _apply_filters(stmt: Any, filters: AuditFilters | None, user_table: Any) -> 
             # only a day at the calendar's edge does, and then the bound
             # excludes nothing (findings O3).
             try:
-                return _dt.combine(day, _time.min, tzinfo=zone).astimezone(_tz.utc)
+                return _dt.combine(day, _time.min, tzinfo=zone).astimezone(UTC)
             except OverflowError:
                 return None
 

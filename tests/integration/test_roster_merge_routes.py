@@ -56,8 +56,8 @@ def test_more_than_one_tick_asks_and_holds(client: TestClient, db: Session, tick
 def test_two_file_rows_on_one_account_refuse_the_merge(
     client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from cordware.graph import FakeDirectory
     from app.web.routes_operator import _shared
+    from cordware.graph import FakeDirectory
 
     monkeypatch.setattr(_shared, "directory_or_none", lambda request: FakeDirectory())
     s = _session(client, db, code="mrr-acct")

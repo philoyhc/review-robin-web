@@ -9,7 +9,7 @@ CSV show them — and leave the detail snapshots, which keep it.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -58,12 +58,12 @@ def test_deadline_close_and_live_reopen_summaries_name_the_label(
 ) -> None:
     session, instrument = _labelled_session(db, "name-int-deadline")
     session.status = "ready"
-    session.deadline = datetime.now(timezone.utc) + timedelta(days=1)
+    session.deadline = datetime.now(UTC) + timedelta(days=1)
     instrument.accepting_responses = False
     db.commit()
 
     lifecycle.observe_deadline(db, session)  # live: reopens
-    session.deadline = datetime.now(timezone.utc) - timedelta(hours=1)
+    session.deadline = datetime.now(UTC) - timedelta(hours=1)
     db.commit()
     lifecycle.observe_deadline(db, session)  # past: closes
 

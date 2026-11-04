@@ -34,7 +34,7 @@ from app.db.models import (
 from app.schemas.imports import RelationshipImportRow
 from app.services import relationships as relationships_service
 
-_SAVED = dt.datetime(2026, 10, 3, tzinfo=dt.timezone.utc)
+_SAVED = dt.datetime(2026, 10, 3, tzinfo=dt.UTC)
 
 
 class _World:

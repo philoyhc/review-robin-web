@@ -8,7 +8,7 @@ See ``guide/archive/participant_model_upgrade.md`` rows S7, S8, S9, S11.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
@@ -79,7 +79,7 @@ def test_reviewee_results_acknowledged_at_optional(db: Session) -> None:
     db.commit()
     assert reviewee.results_acknowledged_at is None
 
-    stamp = datetime(2026, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
+    stamp = datetime(2026, 6, 1, 12, 0, 0, tzinfo=UTC)
     reviewee.results_acknowledged_at = stamp
     db.commit()
     refetched = db.get(Reviewee, reviewee.id)

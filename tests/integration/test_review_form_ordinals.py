@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import re
+from datetime import UTC
 from urllib.parse import quote
 
 from fastapi.testclient import TestClient
@@ -201,13 +202,13 @@ def test_a_refused_stale_form_lists_its_answers_bare(
     """Past the deadline a Save is refused (403) and its typed answers come
     back to copy. A form whose page changed since it rendered lists them
     bare, not under the rows its ordinals name now."""
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
 
     session = _session_alice_reviews(db, client)
     first, second, _third = _assignments(db, session)
     stale = answer_form(db, {f"response[{second.id}][rating]": "4"})
     first.include = False
-    session.deadline = datetime.now(timezone.utc) - timedelta(minutes=1)
+    session.deadline = datetime.now(UTC) - timedelta(minutes=1)
     db.commit()
 
     response = client.post(

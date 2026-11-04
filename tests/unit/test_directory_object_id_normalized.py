@@ -4,8 +4,8 @@ no id binds nothing."""
 
 from __future__ import annotations
 
-from cordware.graph import DirectoryUser, Outcome
 from app.services import directory_accounts
+from cordware.graph import DirectoryUser, Outcome
 
 
 def _user(object_id: str) -> DirectoryUser:

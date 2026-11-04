@@ -32,11 +32,10 @@ from app.db.models import (
     ReviewSession,
 )
 from app.services import instruments as instruments_service
-from app.web.views._instruments import instrument_heading, numeric_column_ch_width
 from app.services import relationships as relationships_service
 from app.services import responses as responses_service
 from app.services import visibility_policies
-
+from app.web.views._instruments import instrument_heading, numeric_column_ch_width
 
 # Cap on the member-name list rendered in a group-scoped row's
 # identity cell — mirrors ``routes_reviewer/_surface.GROUP_MEMBER_NAME_LIMIT``.

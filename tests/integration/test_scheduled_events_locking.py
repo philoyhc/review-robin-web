@@ -10,7 +10,7 @@ observer's would."""
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
@@ -21,12 +21,12 @@ from app.services import scheduled_events
 from app.services import session_lifecycle as lifecycle
 from app.services.scheduled_events import lock_session
 
+from ._quick_setup_refusal import refusal
 from .test_scheduled_activation import _make_validated_session
 from .test_scheduled_reminders import (
     _ready_session_with_invitations,
     _stub_build_url,
 )
-from ._quick_setup_refusal import refusal
 
 
 def _saved_behind_the_orm(
@@ -82,7 +82,7 @@ def test_the_observer_fires_from_the_lists_saved_after_it_loaded(
     (three hours out). The pass decides under the lock, on the saved
     list, and sends nothing."""
     session = _ready_session_with_invitations(db, "lock-saved-first")
-    session.deadline = datetime.now(timezone.utc) + timedelta(hours=4)
+    session.deadline = datetime.now(UTC) + timedelta(hours=4)
     session.reminder_offsets = ["-PT8H"]
     db.commit()
     _saved_behind_the_orm(db, session, "reminder_offsets", ["-PT1H"])
@@ -99,12 +99,12 @@ def test_activation_rereads_its_anchor(db: Session) -> None:
     """A Start cleared by a save after the page loaded does not fire:
     the idempotency check reads the row under the lock."""
     session = _make_validated_session(db, "lock-activation")
-    session.scheduled_activate_at = datetime(2099, 1, 1, 9, 0, tzinfo=timezone.utc)
+    session.scheduled_activate_at = datetime(2099, 1, 1, 9, 0, tzinfo=UTC)
     db.commit()
     _saved_behind_the_orm(db, session, "scheduled_activate_at", None)
 
     scheduled_events.observe_scheduled_events(
-        db, session, now=datetime(2099, 1, 1, 10, 0, tzinfo=timezone.utc)
+        db, session, now=datetime(2099, 1, 1, 10, 0, tzinfo=UTC)
     )
 
     db.refresh(session)
@@ -121,7 +121,7 @@ def test_an_entry_is_sent_and_recorded_in_one_transaction(
     session = _ready_session_with_invitations(
         db, "lock-atomic", reviewer_count=2
     )
-    session.deadline = datetime.now(timezone.utc) + timedelta(hours=4)
+    session.deadline = datetime.now(UTC) + timedelta(hours=4)
     session.reminder_offsets = ["-PT8H"]
     db.commit()
 
@@ -176,14 +176,14 @@ def test_activation_rechecks_that_it_is_due_under_the_lock(db: Session) -> None:
     """A Start moved later by a save after the page loaded does not
     fire early: due-ness is decided on the row under the lock."""
     session = _make_validated_session(db, "lock-activation-later")
-    session.scheduled_activate_at = datetime(2099, 1, 1, 9, 0, tzinfo=timezone.utc)
+    session.scheduled_activate_at = datetime(2099, 1, 1, 9, 0, tzinfo=UTC)
     db.commit()
     _saved_behind_the_orm(
         db, session, "scheduled_activate_at", "2099-01-05 09:00:00.000000"
     )
 
     scheduled_events.observe_scheduled_events(
-        db, session, now=datetime(2099, 1, 1, 10, 0, tzinfo=timezone.utc)
+        db, session, now=datetime(2099, 1, 1, 10, 0, tzinfo=UTC)
     )
 
     db.refresh(session)
@@ -291,7 +291,7 @@ def test_the_settings_import_checks_under_the_lock(
     from app.services.session_config_io import Row, apply_session_config
 
     session = _make_validated_session(db, "lock-import")
-    session.deadline = datetime(2026, 5, 15, 12, 0, tzinfo=timezone.utc)
+    session.deadline = datetime(2026, 5, 15, 12, 0, tzinfo=UTC)
     db.commit()
     _commit_lands_at_the_lock(
         monkeypatch,
@@ -307,7 +307,7 @@ def test_the_settings_import_checks_under_the_lock(
         [
             Row(
                 "session.scheduled_activate_at",
-                datetime(2026, 5, 10, 12, 0, tzinfo=timezone.utc).isoformat(),
+                datetime(2026, 5, 10, 12, 0, tzinfo=UTC).isoformat(),
                 "datetime",
             )
         ],

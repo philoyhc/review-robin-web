@@ -19,15 +19,16 @@ Revises: 4efcf31d61d2
 Create Date: 2026-05-09
 
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision: str = "38b72f14662c"
-down_revision: Union[str, Sequence[str], None] = "4efcf31d61d2"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = "4efcf31d61d2"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

@@ -23,16 +23,17 @@ Revises: 8d57b772ffc4
 Create Date: 2026-05-07 12:30:00.000000
 
 """
-from datetime import datetime, timezone
-from typing import Sequence, Union
+from collections.abc import Sequence
+from datetime import UTC, datetime
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision: str = "9a7c2e1b4f60"
-down_revision: Union[str, Sequence[str], None] = "8d57b772ffc4"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = "8d57b772ffc4"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -46,7 +47,7 @@ def upgrade() -> None:
     from app.services.rules.seeds import SEEDS  # noqa: F401  (unreachable)
 
     bind = op.get_bind()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # Lightweight column-typed table descriptors so SQLAlchemy's bind
     # processors handle Boolean / JSON correctly across SQLite and

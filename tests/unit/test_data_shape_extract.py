@@ -28,7 +28,6 @@ from app.services.extracts.data_shape_extract import (
     compose_shape_preview_headers,
 )
 
-
 _INLINE_NUMERIC = {
     "_inline_data_type": "Integer",
     "_inline_response_type": "100int",

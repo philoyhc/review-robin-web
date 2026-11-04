@@ -20,7 +20,7 @@ short-circuit is deleted: it simulates exactly that relaxation.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy.orm import Session
@@ -47,7 +47,7 @@ def _seeded(db: Session, *, status: str) -> tuple[Observer, ReviewSession]:
     review_session = ReviewSession(
         name="S", code=f"obs-arch-{status}", status=status,
         created_by_user_id=creator.id,
-        responses_release_at=datetime.now(timezone.utc) - timedelta(hours=1),
+        responses_release_at=datetime.now(UTC) - timedelta(hours=1),
     )
     db.add(review_session)
     db.flush()

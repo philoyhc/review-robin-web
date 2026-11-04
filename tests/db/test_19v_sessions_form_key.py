@@ -9,8 +9,9 @@ Built on its own in-memory SQLite engine, like
 
 from __future__ import annotations
 
-from alembic import command
 from sqlalchemy import create_engine, inspect, text
+
+from alembic import command
 
 from .test_19r2_reconcile_cache_columns import _alembic_config
 

@@ -21,6 +21,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 
 import pytest
+from _rrw_app import rrw_app
 from fastapi import APIRouter, Depends, Request
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -28,15 +29,14 @@ from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser, get_current_user
 from app.config import settings
-from cordware.settings import identity_settings
 from app.db.models import User
 from app.db.session import get_db
-from _rrw_app import rrw_app
 from app.web.deps import (
     OperatorAllowlistDenied,
     get_or_create_user,
     require_operator,
 )
+from cordware.settings import identity_settings
 
 app = rrw_app()
 

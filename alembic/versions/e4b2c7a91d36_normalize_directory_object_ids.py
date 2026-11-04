@@ -17,16 +17,16 @@ Create Date: 2026-11-03
 """
 from __future__ import annotations
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
-
 revision: str = "e4b2c7a91d36"
-down_revision: Union[str, Sequence[str], None] = "c3e9a1f7d2b4"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = "c3e9a1f7d2b4"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 #: What Python's ``str.strip()`` removes from these ASCII values, as
 #: ``users._by_email`` trims: SQL's one-argument ``trim`` strips spaces

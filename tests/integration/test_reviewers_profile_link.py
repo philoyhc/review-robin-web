@@ -20,7 +20,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Reviewer, ReviewSession, User
-from app.services import field_labels, reviewers as reviewers_service
+from app.services import field_labels
+from app.services import reviewers as reviewers_service
 
 
 def _make_session(

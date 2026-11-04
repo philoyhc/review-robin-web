@@ -24,8 +24,9 @@ Adding a routing module? Add it here too, or the coverage test fails.
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Iterator
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterable, Iterator
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from fastapi import FastAPI

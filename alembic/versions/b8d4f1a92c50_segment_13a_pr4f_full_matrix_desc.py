@@ -14,15 +14,16 @@ Revises: 9a7c2e1b4f60
 Create Date: 2026-05-07 13:00:00.000000
 
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision: str = "b8d4f1a92c50"
-down_revision: Union[str, Sequence[str], None] = "9a7c2e1b4f60"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = "9a7c2e1b4f60"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 _NEW_DESCRIPTION = "Pair every reviewer with every reviewee."

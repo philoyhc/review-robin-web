@@ -32,7 +32,7 @@ def _load():
 
 pa = _load()
 
-T0 = dt.datetime(2026, 9, 20, 10, 0, tzinfo=dt.timezone.utc)
+T0 = dt.datetime(2026, 9, 20, 10, 0, tzinfo=dt.UTC)
 
 
 def _at(minutes: int) -> str:

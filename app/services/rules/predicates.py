@@ -28,7 +28,7 @@ comparison via ``Predicate.case_sensitive``.
 from __future__ import annotations
 
 import re
-from typing import Callable
+from collections.abc import Callable
 
 from app.schemas.rules import Predicate
 from app.services.rules.fields import FIELD_MAP, get_field_values

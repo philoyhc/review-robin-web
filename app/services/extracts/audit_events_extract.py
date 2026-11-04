@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterable
+from datetime import UTC
 from typing import TYPE_CHECKING
 
 from sqlalchemy import select
@@ -52,7 +53,7 @@ def serialize_audit_events(
     db: Session,
     review_session: ReviewSession,
     *,
-    filters: "AuditFilters | None" = None,
+    filters: AuditFilters | None = None,
 ) -> Iterable[tuple[str, ...]]:
     """Yield CSV rows for ``review_session``'s audit events.
 
@@ -110,10 +111,10 @@ def _isoformat_utc(value: object) -> str:
 
     if value is None:
         return ""
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     if isinstance(value, datetime) and value.tzinfo is None:
-        value = value.replace(tzinfo=timezone.utc)
+        value = value.replace(tzinfo=UTC)
     return value.isoformat()  # type: ignore[union-attr]
 
 

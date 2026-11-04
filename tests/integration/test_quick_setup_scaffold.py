@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 from app.auth.identity import AuthenticatedUser
 from app.db.models import ReviewSession
 from app.web import views
+
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
@@ -274,7 +275,7 @@ def test_quick_setup_unavailable_when_responses_exist_even_on_draft(
             assignment_id=assignment.id,
             response_field_id=field.id,
             value="4",
-            saved_at=dt.datetime(2026, 9, 21, tzinfo=dt.timezone.utc),
+            saved_at=dt.datetime(2026, 9, 21, tzinfo=dt.UTC),
             version=1,
         )
     )

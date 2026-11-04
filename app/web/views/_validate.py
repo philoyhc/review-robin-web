@@ -24,7 +24,6 @@ from sqlalchemy.orm import Session
 from app.db.models import Instrument, ReviewSession
 from app.services import assignments, csv_imports
 
-
 # --------------------------------------------------------------------------- #
 # Setup gate vs. Operations gate (Segment 15E PR 2)
 # --------------------------------------------------------------------------- #

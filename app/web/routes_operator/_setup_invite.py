@@ -13,19 +13,17 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
-from app.web import urls
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
 from app.services import email_templates
 from app.services import session_lifecycle as lifecycle
-from app.web import breadcrumbs, views
+from app.web import breadcrumbs, urls, views
 from app.web.deps import (
     get_or_create_user,
     request_correlation_id,
     require_session_operator,
 )
 from app.web.routes_operator._shared import _templates
-
 
 router = APIRouter()
 

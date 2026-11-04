@@ -8,7 +8,6 @@ from app.db.models import ReviewSession
 
 from ._shared import _ensure_aware_utc
 
-
 _ISO_DURATION_RE = re.compile(
     r"^(?P<sign>-)?P"
     r"(?:(?P<years>\d+)Y)?"

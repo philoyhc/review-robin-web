@@ -21,8 +21,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Instrument, SessionRuleSet
-from ._public_id import public_id
 
+from ._public_id import public_id
 
 _BAND1_LINKS_ALL = ["link1", "link2", "link3"]
 

@@ -15,9 +15,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Reviewee, ReviewSession, Reviewer
+from app.db.models import Reviewee, Reviewer, ReviewSession
 from app.web import views
-
 
 REVIEWER_CSV = b"ReviewerName,ReviewerEmail\nAlice,alice@example.edu\n"
 REVIEWEE_CSV = b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\n"
@@ -249,6 +248,7 @@ def test_session_home_quick_setup_keeps_default_title(
     assert response.status_code == 303
 
     from sqlalchemy import select
+
     from app.db.models import ReviewSession
 
     review_session = db.execute(

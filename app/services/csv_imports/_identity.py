@@ -5,8 +5,8 @@ identity checks. Segment 20E rung 2, moved unchanged.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from typing import Any
 
 from sqlalchemy import select
@@ -20,12 +20,13 @@ from app.db.models import (
 )
 from app.schemas.imports import (
     ObserverImportRow,
-    ReviewerImportRow,
     RevieweeImportRow,
+    ReviewerImportRow,
 )
 from app.schemas.validation import Severity, ValidationIssue
 from app.services import directory_accounts
 from app.services.email_identity import normalize_email
+
 
 @dataclass(frozen=True)
 class DirectoryCheck:

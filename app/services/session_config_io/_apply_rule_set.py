@@ -16,11 +16,11 @@ from app.services.instruments._band1 import unoffered_pair_rule
 from ._apply_shared import (
     _RX_RULE_SET,
     _VALID_COMBINATORS,
-    _ParsedConfig,
-    _ParseError,
     _parse_bool,
     _parse_int,
     _parse_json,
+    _ParsedConfig,
+    _ParseError,
     _RuleSetSpec,
 )
 

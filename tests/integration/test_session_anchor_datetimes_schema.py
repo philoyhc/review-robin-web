@@ -8,7 +8,7 @@ columns are inert today — no service module reads or writes them.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -39,7 +39,7 @@ def test_anchor_datetimes_default_to_null(db: Session) -> None:
 
 
 def test_scheduled_activate_at_round_trips(db: Session) -> None:
-    when = datetime(2026, 6, 1, 9, 0, tzinfo=timezone.utc)
+    when = datetime(2026, 6, 1, 9, 0, tzinfo=UTC)
     review_session = _make_session(
         db, "scheduled-activate", scheduled_activate_at=when
     )
@@ -48,11 +48,11 @@ def test_scheduled_activate_at_round_trips(db: Session) -> None:
         select(ReviewSession).where(ReviewSession.id == review_session.id)
     ).scalar_one()
     assert reread.scheduled_activate_at is not None
-    assert reread.scheduled_activate_at.replace(tzinfo=timezone.utc) == when
+    assert reread.scheduled_activate_at.replace(tzinfo=UTC) == when
 
 
 def test_responses_release_at_round_trips(db: Session) -> None:
-    when = datetime(2026, 7, 15, 12, 0, tzinfo=timezone.utc)
+    when = datetime(2026, 7, 15, 12, 0, tzinfo=UTC)
     review_session = _make_session(
         db, "responses-release", responses_release_at=when
     )
@@ -61,7 +61,7 @@ def test_responses_release_at_round_trips(db: Session) -> None:
         select(ReviewSession).where(ReviewSession.id == review_session.id)
     ).scalar_one()
     assert reread.responses_release_at is not None
-    assert reread.responses_release_at.replace(tzinfo=timezone.utc) == when
+    assert reread.responses_release_at.replace(tzinfo=UTC) == when
 
 
 def test_anchor_datetimes_flip_persists(db: Session) -> None:
@@ -69,10 +69,10 @@ def test_anchor_datetimes_flip_persists(db: Session) -> None:
     assert review_session.scheduled_activate_at is None
 
     review_session.scheduled_activate_at = datetime(
-        2026, 8, 1, 10, 0, tzinfo=timezone.utc
+        2026, 8, 1, 10, 0, tzinfo=UTC
     )
     review_session.responses_release_at = datetime(
-        2026, 8, 31, 10, 0, tzinfo=timezone.utc
+        2026, 8, 31, 10, 0, tzinfo=UTC
     )
     db.flush()
     db.expire(review_session)

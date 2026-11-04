@@ -32,7 +32,6 @@ from app.web.views._validate import (
     gate_for_rule_key,
 )
 
-
 # --------------------------------------------------------------------------- #
 # gate_for_rule_key
 # --------------------------------------------------------------------------- #
@@ -228,9 +227,9 @@ def test_validate_page_gate_heading_classes(
 def test_issue_groups_carry_gate_field(db: Session) -> None:
     """View-shape contract: ``IssueSourceGroup.gate`` matches the
     rule's gate, and groups are sorted setup-gate-first."""
+    from app.services.instruments import ensure_default_instrument
     from app.services.validation import validate_session_setup
     from app.web.views._validate import build_validate_context
-    from app.services.instruments import ensure_default_instrument
 
     user = User(email="op-igc@example.edu")
     db.add(user)

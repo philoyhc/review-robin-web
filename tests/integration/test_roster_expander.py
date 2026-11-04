@@ -37,6 +37,7 @@ failed on every hand-written literal.
 
 from __future__ import annotations
 
+import datetime as _dt
 import pathlib
 import re
 
@@ -44,8 +45,6 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-
-import datetime as _dt
 
 from app.db.models import (
     Assignment,
@@ -171,7 +170,7 @@ def _with_a_response(db: Session, rs: ReviewSession) -> None:
             assignment_id=assignment.id,
             response_field_id=field.id,
             value="1",
-            saved_at=_dt.datetime(2026, 9, 9, tzinfo=_dt.timezone.utc),
+            saved_at=_dt.datetime(2026, 9, 9, tzinfo=_dt.UTC),
             version=1,
         )
     )

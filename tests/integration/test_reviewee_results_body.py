@@ -21,12 +21,12 @@ See ``spec/visibility_policy.md`` + the W16 slice plan.
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-import pytest
 
 from app.auth.identity import AuthenticatedUser
 from app.db.models import (
@@ -41,13 +41,14 @@ from app.db.models import (
     User,
 )
 from app.services import visibility_policies
-from ._instrument_states import add_group_instrument
+
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
-from ._validated import validate_session
+from ._instrument_states import add_group_instrument
 from ._past_draft_setup import past_draft_setup
+from ._validated import validate_session
 
 
 @pytest.fixture
@@ -156,7 +157,7 @@ def _seed_submitted_responses(
             InstrumentResponseField.field_key == "comments",
         )
     ).scalar_one()
-    submitted_at = datetime.now(timezone.utc) if submitted else None
+    submitted_at = datetime.now(UTC) if submitted else None
     assignments = db.execute(
         select(Assignment).where(
             Assignment.session_id == review_session.id,
@@ -212,7 +213,7 @@ def _enable_reviewee_after_release_raw(
         # session closed: released *because the session is over*.
         review_session.status = "expired"
         review_session.responses_release_at = datetime.now(
-            timezone.utc
+            UTC
         ) - timedelta(hours=1)
     db.commit()
 
@@ -524,7 +525,7 @@ def test_results_body_omits_instrument_with_policy_off(
     # session closed: released *because the session is over*.
     review_session.status = "expired"
     review_session.responses_release_at = datetime.now(
-        timezone.utc
+        UTC
     ) - timedelta(hours=1)
     db.commit()
 
@@ -559,7 +560,7 @@ def test_results_404_when_release_window_explicitly_closed(
         db, review_session, operator=_operator_user(db), open_window=True
     )
     review_session.responses_release_until = datetime.now(
-        timezone.utc
+        UTC
     ) - timedelta(minutes=30)
     db.commit()
 
@@ -596,7 +597,7 @@ def _enable_reviewee_after_release_anonymized(
         # session closed: released *because the session is over*.
         review_session.status = "expired"
         review_session.responses_release_at = datetime.now(
-            timezone.utc
+            UTC
         ) - timedelta(hours=1)
     db.commit()
 
@@ -633,7 +634,7 @@ def _enable_reviewee_after_release_summarized(
         # session closed: released *because the session is over*.
         review_session.status = "expired"
         review_session.responses_release_at = datetime.now(
-            timezone.utc
+            UTC
         ) - timedelta(hours=1)
     db.commit()
 
@@ -741,7 +742,7 @@ def test_results_row_order_does_not_follow_reviewer_names_when_anonymized(
     )
     db.refresh(review_session)
     # Pin the token salt's session half so the permutation is fixed.
-    review_session.created_at = datetime(2026, 10, 5, 9, 0, tzinfo=timezone.utc)
+    review_session.created_at = datetime(2026, 10, 5, 9, 0, tzinfo=UTC)
     db.commit()
     _seed_submitted_responses(db, review_session)
     if mode == "anonymized":
@@ -804,7 +805,7 @@ def test_results_404_when_anonymized_window_closed_explicitly(
         db, review_session, operator=_operator_user(db), open_window=True
     )
     review_session.responses_release_until = datetime.now(
-        timezone.utc
+        UTC
     ) - timedelta(minutes=30)
     db.commit()
 
@@ -907,7 +908,7 @@ def test_results_body_summarized_aggregates_list_choice_frequencies(
             assignment_id=assignment.id,
             response_field_id=list_field.id,
             value="B",
-            submitted_at=datetime.now(timezone.utc),
+            submitted_at=datetime.now(UTC),
         )
     )
     db.commit()
@@ -1285,7 +1286,7 @@ def test_results_body_group_scoped_drops_display_field_columns(
     # session closed: released *because the session is over*.
     review_session.status = "expired"
     review_session.responses_release_at = datetime.now(
-        timezone.utc
+        UTC
     ) - timedelta(hours=1)
     db.commit()
 
@@ -1401,7 +1402,7 @@ def test_results_body_excludes_responses_about_other_reviewees(
             Assignment.include.is_(True),
         )
     ).scalars().all()
-    submitted_at = datetime.now(timezone.utc)
+    submitted_at = datetime.now(UTC)
     for assignment in assignments:
         reviewee_row = assignment.reviewee
         if reviewee_row.email_or_identifier == "carol@example.edu":
@@ -1440,7 +1441,7 @@ def test_results_body_excludes_responses_about_other_reviewees(
     # session closed: released *because the session is over*.
     review_session.status = "expired"
     review_session.responses_release_at = datetime.now(
-        timezone.utc
+        UTC
     ) - timedelta(hours=1)
     db.commit()
 
@@ -1552,7 +1553,7 @@ def test_results_body_excludes_responses_about_other_groups(
             Assignment.include.is_(True),
         )
     ).scalars().all()
-    submitted_at = datetime.now(timezone.utc)
+    submitted_at = datetime.now(UTC)
     for assignment in assignments:
         reviewee_row = assignment.reviewee
         if reviewee_row.tag_1 == "Squad-A":
@@ -1591,7 +1592,7 @@ def test_results_body_excludes_responses_about_other_groups(
     # session closed: released *because the session is over*.
     review_session.status = "expired"
     review_session.responses_release_at = datetime.now(
-        timezone.utc
+        UTC
     ) - timedelta(hours=1)
     db.commit()
 
@@ -1628,7 +1629,7 @@ def test_results_body_team_unit_of_review_scopes_to_own_team(
     only R21's response about TEAM 1 — never R21's responses
     about Teams 3 or 4.
     """
-    from app.db.models import Reviewer, Reviewee
+    from app.db.models import Reviewee, Reviewer
 
     operator = make_client(alice)
     operator.post(
@@ -1759,7 +1760,7 @@ def test_results_body_team_unit_of_review_scopes_to_own_team(
             InstrumentResponseField.field_key == "comments",
         )
     ).scalar_one()
-    submitted_at = datetime.now(timezone.utc)
+    submitted_at = datetime.now(UTC)
     assignments = db.execute(
         select(Assignment).where(
             Assignment.session_id == review_session.id,
@@ -1802,7 +1803,7 @@ def test_results_body_team_unit_of_review_scopes_to_own_team(
     # session closed: released *because the session is over*.
     review_session.status = "expired"
     review_session.responses_release_at = datetime.now(
-        timezone.utc
+        UTC
     ) - timedelta(hours=1)
     db.commit()
 

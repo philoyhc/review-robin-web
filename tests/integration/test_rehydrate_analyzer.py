@@ -7,8 +7,6 @@ clean case and the common failure modes.
 
 from __future__ import annotations
 
-from cordware.graph import FakeDirectory
-
 import csv
 import datetime as dt
 import io
@@ -26,15 +24,16 @@ from app.db.models import (
     SessionOperator,
     User,
 )
-from app.services.session_config_io import serialize_session_config
+from app.services.extracts.responses_extract import serialize_responses
 from app.services.extracts.reviewees_extract import serialize_reviewees
 from app.services.extracts.reviewers_extract import serialize_reviewers
-from app.services.extracts.responses_extract import serialize_responses
+from app.services.session_config_io import serialize_session_config
 from app.services.session_rehydrate import (
     _resolve_files,
     analyze_rehydrate_set,
     derive_rehydrate_name,
 )
+from cordware.graph import FakeDirectory
 
 _INLINE = dict(
     _inline_data_type="Integer",
@@ -95,8 +94,8 @@ def _seed(db: Session) -> tuple[User, ReviewSession]:
             assignment_id=a.id,
             response_field_id=field.id,
             value="4",
-            saved_at=dt.datetime(2026, 6, 1, 9, 0, tzinfo=dt.timezone.utc),
-            submitted_at=dt.datetime(2026, 6, 1, 10, 0, tzinfo=dt.timezone.utc),
+            saved_at=dt.datetime(2026, 6, 1, 9, 0, tzinfo=dt.UTC),
+            submitted_at=dt.datetime(2026, 6, 1, 10, 0, tzinfo=dt.UTC),
             version=1,
         )
     )

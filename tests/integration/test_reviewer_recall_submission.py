@@ -14,9 +14,10 @@ the deadline the form is read-only).
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
+from _rrw_app import rrw_app
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -28,7 +29,6 @@ from app.db.models import (
     Response,
     ReviewSession,
 )
-from _rrw_app import rrw_app
 from app.services import session_lifecycle as lifecycle
 from app.web.deps import get_current_user
 
@@ -329,7 +329,7 @@ def test_recall_then_resubmit_round_trips_the_submitted_at_stamp(
 
 
 def _past_deadline(db: Session, review_session: ReviewSession) -> None:
-    review_session.deadline = datetime.now(timezone.utc) - timedelta(minutes=1)
+    review_session.deadline = datetime.now(UTC) - timedelta(minutes=1)
     db.commit()
 
 

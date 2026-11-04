@@ -18,7 +18,7 @@ per §4.1), 2182-2294, 2447-2510.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -26,7 +26,6 @@ from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.web import urls
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
 from app.schemas.sessions import SessionCreate
@@ -44,7 +43,7 @@ from app.services import (
 )
 from app.services import session_lifecycle as lifecycle
 from app.services.email_identity import normalize_email
-from app.web import breadcrumbs, views
+from app.web import breadcrumbs, urls, views
 from app.web.deps import (
     get_or_create_user,
     request_correlation_id,
@@ -62,7 +61,6 @@ from app.web.routes_operator._shared import (
     render_session_home,
     session_payload_error,
 )
-
 
 router = APIRouter()
 
@@ -86,7 +84,7 @@ def new_session_form(
             "current_timezone": current_timezone,
             "timezone_options": operator_settings.timezone_options(),
             "timezone_sample": date_formatting.format_datetime(
-                datetime.now(timezone.utc), current_timezone
+                datetime.now(UTC), current_timezone
             ),
             # 18G PR 2B: the Create form has no existing session, so the
             # timeline starts empty. The template renders the block

@@ -29,8 +29,8 @@ from app.db.models import (
     ReviewSession,
 )
 from app.web import views
-from ._quick_setup_refusal import refusal
 
+from ._quick_setup_refusal import refusal
 
 REVIEWER_CSV = b"ReviewerName,ReviewerEmail\nAlice,alice@example.edu\n"
 REVIEWEE_CSV = b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\n"

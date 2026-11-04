@@ -34,7 +34,6 @@ Audit events registered in ``EVENT_SCHEMAS``:
 from __future__ import annotations
 
 from collections.abc import Callable
-
 from typing import Any
 
 from pydantic import ValidationError
@@ -43,8 +42,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Observer, ReviewSession, User
 from app.schemas.observer_cohort_rule import CohortRuleSet
-from app.services import audit, csv_imports
-from app.services import directory_accounts
+from app.services import audit, csv_imports, directory_accounts
 from app.services import session_lifecycle as lifecycle
 from app.services.email_identity import looks_like_email, normalize_email
 from app.services.roster_bulk import bulk_delete, bulk_set_status

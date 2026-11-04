@@ -9,13 +9,13 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass, field as _dataclass_field
+from dataclasses import dataclass
+from dataclasses import field as _dataclass_field
 from datetime import datetime
 from typing import Any
 
 from app.db.models.instrument import INTRO_LAYOUTS
 from app.services import date_formatting
-
 from app.services.instruments import (
     GROUP_KIND_SENTINEL,
     decode_group_kind,

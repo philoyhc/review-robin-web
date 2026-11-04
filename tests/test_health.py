@@ -1,6 +1,5 @@
-from fastapi.testclient import TestClient
-
 from _rrw_app import rrw_app
+from fastapi.testclient import TestClient
 
 app = rrw_app()
 

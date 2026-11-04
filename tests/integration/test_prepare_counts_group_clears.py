@@ -63,7 +63,7 @@ def _session_with_two_answered_teams(
                 assignment_id=row.id,
                 response_field_id=rating.id,
                 value="4",
-                saved_at=dt.datetime.now(dt.timezone.utc),
+                saved_at=dt.datetime.now(dt.UTC),
             )
         )
     # Eve joins the answered Team A; Team C is untouched.
@@ -176,7 +176,7 @@ def test_a_team_that_only_loses_a_member_projects_no_clear(
                     assignment_id=row.id,
                     response_field_id=field_id,
                     value="3",
-                    saved_at=dt.datetime.now(dt.timezone.utc),
+                    saved_at=dt.datetime.now(dt.UTC),
                 )
             )
     db.add(

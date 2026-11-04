@@ -31,7 +31,6 @@ from app.services.extracts.responses_extract import (
     serialize_reviewer_session_summary,
 )
 
-
 # --------------------------------------------------------------------------- #
 # Fixtures
 # --------------------------------------------------------------------------- #
@@ -207,7 +206,7 @@ def _add_response(
         assignment_id=assignment.id,
         response_field_id=field.id,
         value=value,
-        saved_at=saved_at or dt.datetime(2026, 5, 9, tzinfo=dt.timezone.utc),
+        saved_at=saved_at or dt.datetime(2026, 5, 9, tzinfo=dt.UTC),
         submitted_at=submitted_at,
         version=version,
     )
@@ -366,8 +365,8 @@ def test_per_row_shape_denormalises_all_join_keys(db: Session) -> None:
         reviewee=reviewee,
         instrument=instr,
     )
-    saved_at = dt.datetime(2026, 5, 1, 12, 0, tzinfo=dt.timezone.utc)
-    submitted_at = dt.datetime(2026, 5, 2, 9, 30, tzinfo=dt.timezone.utc)
+    saved_at = dt.datetime(2026, 5, 1, 12, 0, tzinfo=dt.UTC)
+    submitted_at = dt.datetime(2026, 5, 2, 9, 30, tzinfo=dt.UTC)
     _add_response(
         db,
         assignment=assignment,
