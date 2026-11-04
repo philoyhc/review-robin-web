@@ -15,6 +15,7 @@ import json
 import logging
 from dataclasses import dataclass
 from datetime import date
+from typing import TypeGuard, cast
 
 from fastapi import APIRouter, Depends, HTTPException
 from starlette.concurrency import run_in_threadpool
@@ -55,7 +56,7 @@ def require_super_admin(request: Request) -> None:
 router = APIRouter(prefix="/email-check", dependencies=[Depends(require_super_admin)])
 
 
-def _page(request: Request, name: str, context: dict | None = None, status: int = 200) -> Response:
+def _page(request: Request, name: str, context: dict[str, object] | None = None, status: int = 200) -> Response:
     return templates.TemplateResponse(request, name, context or {}, status_code=status, headers=_NO_STORE)
 
 
@@ -205,6 +206,17 @@ def _lookup_error(status: int, error: str) -> JSONResponse:
     return JSONResponse({"error": error}, status_code=status, headers=_NO_STORE)
 
 
+def _is_batch(keys: object) -> TypeGuard[list[str]]:
+    """A batch of lookup keys: a list of 1 to `check.BATCH_MAX` keys, each
+    already folded."""
+    if not isinstance(keys, list):
+        return False
+    items = cast(list[object], keys)
+    return 1 <= len(items) <= check.BATCH_MAX and all(
+        isinstance(k, str) and csvio.lookup_key(k) == k for k in items
+    )
+
+
 @router.post("/lookup", name="utilities_email_check_lookup")
 async def lookup(request: Request) -> Response:
     """One batch of the page's check (segment U2): ``{"keys": [...]}`` in,
@@ -219,12 +231,8 @@ async def lookup(request: Request) -> Response:
         body = json.loads(await request.body())
     except (ValueError, RecursionError):
         return _lookup_error(400, "bad_json")
-    keys = body.get("keys") if isinstance(body, dict) else None
-    if (
-        not isinstance(keys, list)
-        or not 1 <= len(keys) <= check.BATCH_MAX
-        or not all(isinstance(k, str) and csvio.lookup_key(k) == k for k in keys)
-    ):
+    keys = cast(dict[object, object], body).get("keys") if isinstance(body, dict) else None
+    if not _is_batch(keys):
         return _lookup_error(400, "bad_keys")
     try:
         directory = directory_for(request)
