@@ -267,7 +267,7 @@ def _reviewer_relationships_per_row(db: Session, *, session_id: int) -> dict[int
         .select_from(Relationship)
         .join(Reviewee, Reviewee.id == Relationship.reviewee_id)
         .where(Relationship.session_id == session_id)
-    ).tuples().all()
+    ).all()
     counts: dict[int, int] = {}
     for _id, reviewer_id, mirrored_reviewer_id in rows:
         ends: set[int | None] = {reviewer_id, mirrored_reviewer_id}

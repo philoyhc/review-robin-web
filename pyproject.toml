@@ -120,9 +120,8 @@ reportUnknownParameterType = "none"
 reportUnknownVariableType = "none"
 
 [[tool.pyright.executionEnvironments]]
-root = "app"
+root = "app/web"
 extraPaths = ["."]
-reportDeprecated = "none"
 reportMissingParameterType = "none"
 reportMissingTypeArgument = "none"
 reportUnknownArgumentType = "none"
