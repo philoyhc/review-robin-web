@@ -50,11 +50,20 @@ line-length = 100
 target-version = "py312"
 
 [tool.pyright]
-# Application code only; test code is checked by running it (segment 22C).
-include = ["app", "cordware", "residentialapps", "utilityapps"]
-exclude = [".venv", "**/__pycache__", "**/tests"]
+# Application code and its tests (segments 22C, 22D). The tests' roots
+# relax the two optional-access rules until 22D rung 7 ratchets them back
+# per directory; application code keeps every basic-mode rule.
+include = ["app", "cordware", "residentialapps", "utilityapps", "tests"]
+exclude = [".venv", "**/__pycache__"]
 pythonVersion = "3.12"
 typeCheckingMode = "basic"
+executionEnvironments = [
+  { root = "tests", extraPaths = [".", "tools"], reportOptionalMemberAccess = "none", reportOptionalSubscript = "none" },
+  { root = "cordware/tests", extraPaths = ["."], reportOptionalMemberAccess = "none", reportOptionalSubscript = "none" },
+  { root = "residentialapps/tests", extraPaths = ["."], reportOptionalMemberAccess = "none", reportOptionalSubscript = "none" },
+  { root = "utilityapps/tests", extraPaths = ["."], reportOptionalMemberAccess = "none", reportOptionalSubscript = "none" },
+  { root = "." },
+]
 
 [tool.ruff.lint]
 # Segment 22C rung 2: import order and modern syntax (2a), then bugbear

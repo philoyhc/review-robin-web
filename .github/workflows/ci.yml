@@ -63,7 +63,7 @@ jobs:
       - name: Lint
         run: ruff check .
 
-      # Application code only (`[tool.pyright]`, segment 22C); setup-python's
+      # Application code and tests (`[tool.pyright]`, segments 22C, 22D); setup-python's
       # interpreter is on PATH, so pyright resolves the installed packages.
       - name: Type check
         run: pyright
@@ -130,7 +130,7 @@ jobs:
       - name: Lint
         run: ruff check .
 
-      # Application code only (`[tool.pyright]`, segment 22C); setup-python's
+      # Application code and tests (`[tool.pyright]`, segments 22C, 22D); setup-python's
       # interpreter is on PATH, so pyright resolves the installed packages.
       - name: Type check
         run: pyright
