@@ -21,9 +21,10 @@ from __future__ import annotations
 import math
 import re
 from collections.abc import Iterable, Mapping
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
-from app.db.models import InstrumentResponseField
+if TYPE_CHECKING:
+    from app.db.models import InstrumentResponseField
 
 # Integer / Decimal parents compare against one number.
 NUMERIC_OPS: dict[str, str] = {
@@ -155,14 +156,15 @@ class _BranchFieldShape(Protocol):
 
 
 #: A response field, or a shape that stands in for one.
-BranchField = _BranchFieldShape | InstrumentResponseField
-
+type BranchField = _BranchFieldShape | InstrumentResponseField
 
 
 def _parent(field: BranchField, by_id: Mapping[int, BranchField]) -> BranchField | None:
     """``field``'s parent in ``by_id``, or ``None`` outside any branch."""
     parent_id = field.branch_parent_id
     return by_id.get(parent_id) if parent_id is not None else None
+
+
 def branch_mode(parent: BranchField | None) -> str:
     """A parent's mode, ``show`` or ``require`` (19T Item 13). Anything but
     ``require`` reads Show, so a null column and an object without one

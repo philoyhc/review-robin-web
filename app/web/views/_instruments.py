@@ -274,9 +274,8 @@ def numeric_column_ch_width(
         return None
     validation = field.validation or {}
 
-    def _digits(value: object) -> int:
-        # A bound is a JSON number; anything else (``None``) has no width.
-        if not isinstance(value, (int, float, str)):
+    def _digits(value: Any) -> int:  # a stored bound: a JSON number or None
+        if value is None:
             return 0
         if field.data_type == "Integer":
             return len(str(int(value)))
