@@ -23,14 +23,13 @@ Layout:
 """
 from __future__ import annotations
 
-# Public + private re-exports. The F401 noqa markers on the
-# private (single-underscore) names acknowledge that these
+# Public + private re-exports. The redundant ``as`` aliases on the
+# private (single-underscore) names mark that these
 # imports are deliberate re-exports rather than dead code; a
 # handful of tests reach in via ``assignments._<name>`` and the
 # byte-stable surface keeps those working unchanged.
 from ._coverage import (
     PAIR_PREVIEW_LIMIT,
-    _apply_pair_search,  # noqa: F401
     count_pairs,
     existing_count,
     existing_count_per_instrument,
@@ -40,17 +39,10 @@ from ._coverage import (
     list_reviewees,
     list_reviewers,
 )
+from ._coverage import _apply_pair_search as _apply_pair_search
 from ._generate import (
     InstrumentReconcileState,
     ReconcileImpact,
-    _diff_one_instrument,  # noqa: F401
-    _full_matrix_schema,  # noqa: F401
-    _InstrumentDiff,  # noqa: F401
-    _load_reconcile_inputs,  # noqa: F401
-    _logger,  # noqa: F401
-    _materialise_one_instrument,  # noqa: F401
-    _ReconcileInputs,  # noqa: F401
-    _session_rule_set_to_schema,  # noqa: F401
     bulk_set_assignment_include,
     generate_full_matrix,
     persist_reconcile_warm,
@@ -58,9 +50,16 @@ from ._generate import (
     replace_assignments,
     staleness_by_instrument,
 )
+from ._generate import _diff_one_instrument as _diff_one_instrument
+from ._generate import _full_matrix_schema as _full_matrix_schema
+from ._generate import _InstrumentDiff as _InstrumentDiff
+from ._generate import _load_reconcile_inputs as _load_reconcile_inputs
+from ._generate import _logger as _logger
+from ._generate import _materialise_one_instrument as _materialise_one_instrument
+from ._generate import _ReconcileInputs as _ReconcileInputs
+from ._generate import _session_rule_set_to_schema as _session_rule_set_to_schema
 from ._self_review import (
     AssignmentPair,
-    _self_review_assignment_ids,  # noqa: F401
     classify_self_review,
     classify_self_review_pairs,
     is_self_review,
@@ -69,7 +68,9 @@ from ._self_review import (
     set_instrument_self_reviews_active,
     verify_self_review_classification,
 )
-from ._shared import _is_active, _is_test_env  # noqa: F401
+from ._self_review import _self_review_assignment_ids as _self_review_assignment_ids
+from ._shared import _is_active as _is_active
+from ._shared import _is_test_env as _is_test_env
 
 __all__ = [
     "PAIR_PREVIEW_LIMIT",

@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import AuditEvent, ReviewSession
 
-from ._shared import _ensure_aware_utc, lock_session
+from ._shared import _ensure_aware_utc, _flushed_id, _json_object, lock_session
 
 _EVENT_TYPES = {
     "invite": (
@@ -64,7 +64,7 @@ def fired_offsets(
     entries already sent or skipped on ``anchor``. Anchors compare as
     instants, so the record is found whatever offset the stored value
     was rendered with."""
-    if anchor is None or review_session.id is None:
+    if anchor is None or _flushed_id(review_session) is None:
         return {}
     rows = db.execute(
         select(AuditEvent).where(
@@ -74,8 +74,9 @@ def fired_offsets(
     ).scalars()
     fired: dict[int, str] = {}
     for row in rows:
-        ctx = row.detail.get("context") if isinstance(row.detail, dict) else None
-        if not isinstance(ctx, dict):
+        detail = _json_object(row.detail)
+        ctx = _json_object(detail.get("context")) if detail is not None else None
+        if ctx is None:
             continue
         try:
             recorded = datetime.fromisoformat(str(ctx.get("anchor_at")))
@@ -106,7 +107,9 @@ def offsets_lead_exempt(
     stored list that predates the sent-entry check keeps saving as it
     stands, and restoring the sent entry is allowed too."""
     column = "invite_offsets" if kind == "invite" else "reminder_offsets"
-    stored = (getattr(review_session, column) or []) if anchor_unedited else []
+    stored: list[str] = (
+        (getattr(review_session, column) or []) if anchor_unedited else []
+    )
     fired = fired_offsets(db, review_session, kind, anchor)
     size = max([len(stored), *(index + 1 for index in fired)])
     return [
@@ -142,7 +145,7 @@ def fired_offset_errors(
     being recorded is committed before this reads the record, and an
     observer arriving after waits for the save to commit, then re-reads
     the lists it saved."""
-    if review_session.id is not None:
+    if _flushed_id(review_session) is not None:
         lock_session(db, review_session)
     proposed = {
         "invite_offsets": (list(invite_offsets), scheduled_activate_at),

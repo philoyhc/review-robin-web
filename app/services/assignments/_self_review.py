@@ -30,6 +30,19 @@ from app.services.email_identity import normalize_email, normalize_object_id, sa
 from app.services.instruments import _instrument_label
 from app.services.roster_status import is_active, status_is_active
 
+# The names the package root imports from here.
+__all__ = [
+    "AssignmentPair",
+    "_self_review_assignment_ids",
+    "classify_self_review",
+    "classify_self_review_pairs",
+    "is_self_review",
+    "recompute_self_review_classification",
+    "self_review_breakdown_per_instrument",
+    "set_instrument_self_reviews_active",
+    "verify_self_review_classification",
+]
+
 
 def is_self_review(reviewer: Reviewer, reviewee: Reviewee) -> bool:
     return _is_self_review_pair(

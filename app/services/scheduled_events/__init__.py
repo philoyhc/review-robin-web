@@ -59,19 +59,21 @@ from app.services.session_guard import SessionBusy
 
 # Private names (single underscore) are part of the byte-stable
 # re-export wall: a handful of tests and one Alembic migration reach
-# in via ``scheduled_events._<name>``. The F401 noqa markers
-# acknowledge that these imports are deliberate re-exports rather
-# than dead code; the public names below carry ``__all__`` instead.
+# in via ``scheduled_events._<name>``. The redundant ``as`` aliases
+# mark these imports as deliberate re-exports rather than dead code;
+# the public names below carry ``__all__`` instead.
+from ._activation import _ACTIVATION_MAX_RETRIES as _ACTIVATION_MAX_RETRIES
+from ._activation import _count_recent_retries as _count_recent_retries
 from ._activation import (
-    _ACTIVATION_MAX_RETRIES,  # noqa: F401
-    _count_recent_retries,  # noqa: F401
-    _emit_activation_retry_or_failed,  # noqa: F401
-    _emit_activation_skipped,  # noqa: F401
+    _emit_activation_retry_or_failed as _emit_activation_retry_or_failed,
+)
+from ._activation import _emit_activation_skipped as _emit_activation_skipped
+from ._activation import (
     _observe_scheduled_activation,
     parse_and_validate_scheduled_activate_at,
 )
+from ._duration import _ISO_DURATION_RE as _ISO_DURATION_RE
 from ._duration import (
-    _ISO_DURATION_RE,  # noqa: F401
     parse_iso_duration,
     resolve_offset,
 )
@@ -81,32 +83,35 @@ from ._fired import (
     offsets_lead_exempt,
     split_offsets,
 )
+from ._invites import _consumed_invite_offset_indices as _consumed_invite_offset_indices
+from ._invites import _dispatch_pending_invitations as _dispatch_pending_invitations
 from ._invites import (
-    _consumed_invite_offset_indices,  # noqa: F401
-    _dispatch_pending_invitations,  # noqa: F401
     _observe_scheduled_invites,
-    _resolve_invite_fires,  # noqa: F401
     parse_and_validate_invite_offsets,
 )
+from ._invites import _resolve_invite_fires as _resolve_invite_fires
+from ._release import _RELEASE_WINDOW_MAX as _RELEASE_WINDOW_MAX
+from ._release import STAMP_GRACE as STAMP_GRACE
 from ._release import (
-    _RELEASE_WINDOW_MAX,  # noqa: F401
-    STAMP_GRACE,  # noqa: F401
     observe_release_window,
     parse_and_validate_responses_release_at,
     parse_and_validate_responses_release_until,
     validate_schedule_ordering,
 )
 from ._reminders import (
-    _consumed_reminder_offset_indices,  # noqa: F401
-    _dispatch_scheduled_reminders,  # noqa: F401
+    _consumed_reminder_offset_indices as _consumed_reminder_offset_indices,
+)
+from ._reminders import _dispatch_scheduled_reminders as _dispatch_scheduled_reminders
+from ._reminders import (
     _observe_scheduled_reminders,
-    _resolve_reminder_fires,  # noqa: F401
     parse_and_validate_reminder_offsets,
 )
+from ._reminders import _resolve_reminder_fires as _resolve_reminder_fires
+from ._shared import _OFFSET_MAX_MAGNITUDE as _OFFSET_MAX_MAGNITUDE
 from ._shared import (
-    _OFFSET_MAX_MAGNITUDE,  # noqa: F401
     ScheduledActivateError,
-    _ensure_aware_utc,  # noqa: F401
+    _ensure_aware_utc,
+    _json_object,
     lock_session,
 )
 
@@ -440,9 +445,9 @@ def _record_failure(
             .order_by(AuditEvent.id.desc())
         ).scalars()
         for row in rows:
-            detail = row.detail if isinstance(row.detail, dict) else {}
-            context = detail.get("context") or {}
-            if isinstance(context, dict) and context.get("trigger") == trigger:
+            detail = _json_object(row.detail) or {}
+            context = _json_object(detail.get("context") or {})
+            if context is not None and context.get("trigger") == trigger:
                 if detail.get("reason") == error_text:
                     db.rollback()  # release the row lock
                     return

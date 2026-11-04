@@ -18,10 +18,21 @@ individual parse has succeeded.
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+from typing import TYPE_CHECKING, Any
 
 from app.services import date_formatting
 
 from ._shared import ScheduledActivateError, _ensure_aware_utc
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Session
+
+    from app.db.models import ReviewSession
+
+#: A due release-window crossing: ``(event_type, context key, moment, word)``.
+_DueStamp = tuple[str, str, datetime, str]
+#: One not yet stamped, its moment rendered: ``(event_type, key, iso, word)``.
+_UnstampedStamp = tuple[str, str, str, str]
 
 
 def parse_and_validate_responses_release_at(
@@ -187,7 +198,7 @@ def validate_schedule_ordering(
 STAMP_GRACE = timedelta(days=1)
 
 
-def _due_release_stamps(session, now: datetime) -> list[tuple[str, str, datetime, str]]:
+def _due_release_stamps(session: ReviewSession, now: datetime) -> list[_DueStamp]:
     """The window's moments crossed within :data:`STAMP_GRACE` of ``now``
     while the window can be open, as ``(event_type, context key, moment,
     word)``. No query.
@@ -203,7 +214,7 @@ def _due_release_stamps(session, now: datetime) -> list[tuple[str, str, datetime
     if start is None:
         return []
     start = _ensure_aware_utc(start)
-    due = []
+    due: list[_DueStamp] = []
     if now - STAMP_GRACE < start <= now:
         due.append(("session.release_window_opened", "release_at", start, "opened"))
     until = session.responses_release_until
@@ -214,17 +225,25 @@ def _due_release_stamps(session, now: datetime) -> list[tuple[str, str, datetime
     return due
 
 
-def _unstamped(db, session, due):
+def _context_value(detail: dict[str, Any] | None, key: str) -> object:
+    """``detail["context"][key]`` of an audit row, or ``None``."""
+    context: dict[str, Any] = (detail or {}).get("context") or {}
+    return context.get(key)
+
+
+def _unstamped(
+    db: Session, session: ReviewSession, due: list[_DueStamp]
+) -> list[_UnstampedStamp]:
     """The due moments not yet in the audit log."""
     from sqlalchemy import select
 
     from app.db.models import AuditEvent
 
-    out = []
+    out: list[_UnstampedStamp] = []
     for event_type, key, moment, word in due:
         iso = moment.isoformat()
         stamped = any(
-            ((detail or {}).get("context") or {}).get(key) == iso
+            _context_value(detail, key) == iso
             for detail in db.execute(
                 select(AuditEvent.detail).where(
                     AuditEvent.session_id == session.id,
@@ -238,8 +257,8 @@ def _unstamped(db, session, due):
 
 
 def observe_release_window(
-    db,
-    session,
+    db: Session,
+    session: ReviewSession,
     *,
     now: datetime,
     correlation_id: str | None = None,
