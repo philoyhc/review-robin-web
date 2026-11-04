@@ -25,7 +25,7 @@ router = APIRouter()
 
 _templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 urls.install(_templates)
-_templates.env.globals["app_version"] = settings.app_version
+urls.add_globals(_templates, app_version=settings.app_version)
 
 
 @router.get("/auth/me")

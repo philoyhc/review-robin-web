@@ -24,7 +24,7 @@ that emits one under the mount.
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, Protocol
 
 from fastapi.templating import Jinja2Templates
 from jinja2 import pass_context
@@ -119,7 +119,7 @@ def _host_url(path: str) -> str:
     return path
 
 
-TEMPLATE_GLOBALS = {
+TEMPLATE_GLOBALS: dict[str, object] = {
     "url": _url,
     "here": _here,
     "is_here": _is_here,
@@ -135,7 +135,21 @@ def install(templates: Jinja2Templates) -> Jinja2Templates:
     institution name and the page's resolved top line (segment 20D,
     `docs/header_chrome.md` §6). This is the one hook every RRW
     environment passes through, so the bar cannot miss them."""
-    templates.env.globals.update(TEMPLATE_GLOBALS)
-    templates.env.globals["institution_name"] = institution_name
-    templates.env.globals["top_line"] = top_line
+    add_globals(templates, **TEMPLATE_GLOBALS)
+    add_globals(templates, institution_name=institution_name, top_line=top_line)
     return templates
+
+
+class _HasGlobals(Protocol):
+    globals: dict[str, object]
+
+
+def _globals_of(env: _HasGlobals) -> dict[str, object]:
+    return env.globals
+
+
+def add_globals(templates: Jinja2Templates, **values: object) -> None:
+    """Set globals on a ``Jinja2Templates`` environment. Jinja infers
+    `Environment.globals` from a literal, partly untyped: it is reached
+    through this, typed once (after `utilityapps/web.py`)."""
+    _globals_of(templates.env).update(values)

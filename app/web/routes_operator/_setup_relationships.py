@@ -9,6 +9,7 @@ import is relationship-specific and stays here.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 from fastapi import (
@@ -27,8 +28,9 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Relationship, ReviewSession, User
+from app.db.models import Relationship, Reviewee, Reviewer, ReviewSession, User
 from app.db.session import get_db
+from app.schemas.validation import ValidationIssue
 from app.services import assignments
 from app.services import relationships as relationships_service
 from app.services import responses as responses_service
@@ -202,7 +204,7 @@ async def relationships_import_submit(
             status_code=status.HTTP_400_BAD_REQUEST,
         )
 
-    def refuse(issues: list) -> HTMLResponse:
+    def refuse(issues: list[ValidationIssue]) -> HTMLResponse:
         release_hold(
             db, token=upload.token, user=user, review_session=review_session
         )
@@ -677,7 +679,7 @@ def _picker_label(member: object, handle_attr: str) -> str:
 
 
 def _relationship_picker_options(
-    members: list, *, handle_attr: str
+    members: Sequence[Reviewer] | Sequence[Reviewee], *, handle_attr: str
 ) -> list[tuple[int, str]]:
     """``(id, label)`` tuples for a reviewer / reviewee picker,
     sorted by name (Segment 15F PR 5). The label feeds a
@@ -742,7 +744,7 @@ def _render_relationships_page(
     review_session: ReviewSession,
     user: User,
     db: Session,
-    issues: list,
+    issues: list[ValidationIssue],
     filename: str | None,
     missing_confirm: bool = False,
     status: str = "all",
@@ -807,7 +809,7 @@ def _render_relationships_page(
     # ``reviewer`` / ``reviewee`` resolve via the lookup maps; the
     # sort keys on the rendered name (Segment 15F PR 5 stage 2 —
     # name is now the prominent identity text).
-    def _relationship_sort_value(row, key: str):
+    def _relationship_sort_value(row: Relationship, key: str) -> object:
         if key == "reviewer":
             reviewer = reviewer_by_id.get(row.reviewer_id)
             return reviewer.name if reviewer else None
@@ -821,7 +823,7 @@ def _render_relationships_page(
         cookie_name=f"rrw-sort-relationships-{review_session.public_id}",
         valid_keys=_RELATIONSHIP_SORT_KEYS,
     )
-    all_rows = views.apply_cookie_sort(
+    all_rows: list[Relationship] = views.apply_cookie_sort(
         rows,
         sort_spec,
         value_resolver=_relationship_sort_value,
@@ -854,7 +856,7 @@ def _render_relationships_page(
         edit_id=edit_id,
         locate_id=focus_id,
     )
-    relationships = window.rows
+    relationships: list[Relationship] = window.rows
     offset = window.offset
     edit_id = window.edit_id
     displayed_row_count = len(relationships)

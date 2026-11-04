@@ -62,7 +62,7 @@ _REVIEWER_SORT_KEYS = {
 }
 
 
-def _reviewer_sort_value(reviewer, key: str):
+def _reviewer_sort_value(reviewer: Reviewer, key: str) -> object:
     """Sort-key resolver for the Reviewers Setup table (Segment 13B
     Part 2 PR 6)."""
     return getattr(reviewer, key, None)
@@ -165,7 +165,7 @@ def _render_reviewers_page(
         edit_id = None
         add_mode = False
 
-    all_reviewers = assignments.list_reviewers(db, review_session.id)
+    all_reviewers: list[Reviewer] = assignments.list_reviewers(db, review_session.id)
     # Segment 13B Part 2 PR 6 — cookie-backed personal sort.
     sort_spec = views.decode_cookie_sort_spec(
         cookies=dict(request.cookies),
@@ -199,7 +199,7 @@ def _render_reviewers_page(
         edit_id=edit_id,
         locate_id=focus_id,
     )
-    reviewers = window.rows
+    reviewers: list[Reviewer] = window.rows
     offset = window.offset
     edit_id = window.edit_id
     displayed_row_count = len(reviewers)
