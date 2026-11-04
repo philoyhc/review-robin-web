@@ -374,6 +374,7 @@ def test_with_no_end_release_from_closes_the_session_and_opens_the_window(
     rs.responses_release_at = NOW - timedelta(minutes=1)
     db.commit()
     assert not lifecycle.is_ongoing(rs, now=NOW)
+    assert lifecycle.review_end(rs) is not None
 
     _clock.run_pass(_factory(db), now=NOW)
 
@@ -383,6 +384,8 @@ def test_with_no_end_release_from_closes_the_session_and_opens_the_window(
     assert len(expired) == 1
     assert expired[0].detail["reason"] == "release"
     assert expired[0].detail["context"]["fired_by"] == "clock"
+    assert "release_at" in expired[0].detail["context"]
+    assert _events(db, rs, "session.deadline_reached") == []
     assert len(_events(db, rs, "session.release_window_opened")) == 1
     _clock.run_pass(_factory(db), now=NOW)
     assert len(_events(db, rs, "session.expired")) == 1
@@ -394,22 +397,50 @@ def test_with_an_end_release_from_does_not_close_the_session(db: Session) -> Non
     rs.deadline = NOW + timedelta(hours=1)
     rs.responses_release_at = NOW - timedelta(minutes=1)
     db.commit()
-    lifecycle.observe_release_start(db, rs, now=NOW)
+    assert lifecycle.observe_deadline(db, rs, now=NOW) == 0
     db.refresh(rs)
     assert lifecycle.is_ready(rs)
 
 
-def test_an_old_release_from_closes_nothing(db: Session) -> None:
+def test_an_old_release_from_with_no_end_closes_too(db: Session) -> None:
+    """No age limit, as for End: a session whose Release from passed long
+    ago, with no End, closes rather than staying open with its visibility
+    shut (round-2 cold read, #3582)."""
     rs = _make_validated_session(db, "clock-release-old")
     rs.status = lifecycle.SessionStatus.ready.value
     rs.deadline = None
     rs.responses_release_at = NOW - timedelta(days=3)
     db.commit()
-    assert not lifecycle.observe_release_start(db, rs, now=NOW)
+    assert rs.id in _clock.due_session_ids(db, now=NOW)
+    _clock.run_pass(_factory(db), now=NOW)
     db.refresh(rs)
-    assert lifecycle.is_ready(rs)
+    assert lifecycle.is_expired(rs)
 
 
+def test_with_no_end_release_from_stops_saves_at_once(db: Session) -> None:
+    """The accept gate follows the review's end: past Release from, with
+    no End, nothing is accepted even before any close has run."""
+    rs = _make_validated_session(db, "clock-release-gate")
+    rs.status = lifecycle.SessionStatus.ready.value
+    rs.deadline = None
+    rs.responses_release_at = NOW - timedelta(minutes=1)
+    db.commit()
+    assert lifecycle.deadline_has_passed(rs, now=NOW)
+    assert not lifecycle.recall_allowed(rs, now=NOW)
+
+
+def test_validate_refuses_a_session_whose_end_has_passed(db: Session) -> None:
+    """Activating would close it at once, so Validate stops it (an End,
+    or with no End a Release from, already passed)."""
+    from app.services.validation import validate_session_setup
+
+    rs = _make_validated_session(db, "clock-end-passed")
+    rs.status = "draft"
+    rs.deadline = None
+    rs.responses_release_at = NOW - timedelta(hours=2)
+    db.commit()
+    issues = validate_session_setup(db, rs)
+    assert any("Release responses from has passed" in i.message for i in issues)
 def test_a_session_whose_end_passed_earlier_still_closes(db: Session) -> None:
     """End closes the session even when its instruments were shut before
     End closed sessions (a reviewer's request past End, before 14E)."""

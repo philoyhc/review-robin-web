@@ -54,6 +54,7 @@ Gate = Literal["setup", "operations"]
 _RULE_KEY_GATE: dict[str, Gate] = {
     "session.no_name": "setup",
     "session.no_code": "setup",
+    "session.end_passed": "setup",
     "reviewers.empty": "setup",
     "reviewers.duplicate_email": "setup",
     "reviewers.duplicate_account": "setup",

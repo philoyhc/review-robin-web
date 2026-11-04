@@ -3,8 +3,9 @@ steps are due, so they happen on time with no page view.
 
 A pass fires what an operator set, and nothing else
 (`guide/interoperability.md` §2): a scheduled activation whose Start has
-passed, the deadline close of a session past its End, and the release
-window's start and end stamps. It sends no mail: invites and reminders
+passed, the close of an open session past its end (End, or with no End,
+Release from: ``session_lifecycle.review_end``), and the release window's
+start and end stamps. It sends no mail: invites and reminders
 stay with ``RRW_SCHEDULED_SEND`` (off until 14G), and even on, the clock
 passes no invite-URL builder until 14G gives it one.
 
@@ -56,7 +57,7 @@ def _take_lock(db: Session) -> bool:
 
 def due_session_ids(db: Session, *, now: datetime) -> list[int]:
     """Sessions with a timed step due: a scheduled Start that has passed,
-    an open session past its End with an instrument still accepting, or
+    an open session past its end (End, or with no End, Release from), or
     a release-window moment crossed within ``STAMP_GRACE`` on an expired
     session (the window opens on no other). Archived sessions are left
     out.
@@ -75,13 +76,15 @@ def due_session_ids(db: Session, *, now: datetime) -> list[int]:
         select(ReviewSession.id).where(
             live,
             or_(
-                # An open session past End, instruments open or not: End
-                # closes it (segment 14E).
+                # An open session past its end, instruments open or not:
+                # End, or with no End, Release from (`review_end`) closes
+                # it (segment 14E).
                 (ReviewSession.status == lifecycle.SessionStatus.ready.value)
-                & (ReviewSession.deadline <= now),
-                (ReviewSession.status == lifecycle.SessionStatus.ready.value)
-                & ReviewSession.deadline.is_(None)
-                & ReviewSession.responses_release_at.between(since, now),
+                & or_(
+                    ReviewSession.deadline <= now,
+                    ReviewSession.deadline.is_(None)
+                    & (ReviewSession.responses_release_at <= now),
+                ),
                 (ReviewSession.status == lifecycle.SessionStatus.expired.value)
                 & or_(
                     ReviewSession.responses_release_at.between(since, now),

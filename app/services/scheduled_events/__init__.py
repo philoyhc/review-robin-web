@@ -324,14 +324,13 @@ def _observe_all(
                 build_invite_url=build_invite_url,
             ),
         )
-    # End closes the session (segment 14E): on every operator page that
-    # runs this pass, not only on reviewer requests and the clock. Only a
-    # session open and past End, so a page with nothing due queries
-    # nothing more.
-    if (
-        lifecycle.is_ready(session)
-        and session.deadline is not None
-        and current >= _ensure_aware_utc(session.deadline)
+    # The review's end closes the session (segment 14E): End, or with no
+    # End, Release from (`lifecycle.review_end`). On every operator page
+    # that runs this pass, not only on reviewer requests and the clock.
+    # Only a session open and past its end, so a page with nothing due
+    # queries nothing more.
+    if lifecycle.is_ready(session) and lifecycle.deadline_has_passed(
+        session, now=current
     ):
         _run_guarded(
             db,
@@ -342,17 +341,6 @@ def _observe_all(
                 db, session, now=current, correlation_id=correlation_id
             ),
         )
-    # With no End, Release from closes the session (author, 2026-11-04),
-    # so the window below can open in the same pass.
-    _run_guarded(
-        db,
-        session,
-        trigger="release_close",
-        correlation_id=correlation_id,
-        fire=lambda: lifecycle.observe_release_start(
-            db, session, now=current, correlation_id=correlation_id
-        ),
-    )
     # The release window's crossings (segment 14E): stamped once, by
     # whichever trigger reaches them first.
     _run_guarded(

@@ -275,6 +275,7 @@ the signature for the loads a single rule still owns.
 |---|---|---|---|
 | `session.no_name` | session | error | Missing `ReviewSession.name`. |
 | `session.no_code` | session | error | Missing `ReviewSession.code`. |
+| `session.end_passed` | session | error | The review's end has passed before the session opens: End, or with no End, Release responses from (`session_lifecycle.review_end`). The end closes the session (segment 14E), so activating would close it at once. Draft and validated sessions only. |
 | `reviewers.empty` | reviewers | error | Zero reviewer rows. |
 | `reviewers.duplicate_email` | reviewers | error | Same email appears on 2+ reviewer rows. |
 | `reviewers.duplicate_account` | reviewers | warning | Two or more active rows bound to one directory account (`directory_object_id`): one person entered twice, by mail and by sign-in name, each address passing the duplicate rule. One issue per account, naming its addresses, anchored at the first row's `#reviewer-row-{id}`. Severity is warning (non-blocking): the gates and the dashboard take the lowest id. Inactive rows are not counted. The single-row forms refuse a second row on a held account, and an append or a merge refuses a file row on one, so a pair arises from a replace upload, from two rows of one appended file, or from rows saved before those refusals. |

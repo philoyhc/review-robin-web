@@ -63,7 +63,11 @@ def write_refused_notice(
     # still open, or once End has closed it (segment 14E). An operator's
     # Close session before End is not named as the deadline
     # (``closed_at_deadline``, from the caller).
-    if lifecycle.deadline_has_passed(review_session) and (
+    # Named only for a real End: a review that a release ended (no End)
+    # reads as closed.
+    if review_session.deadline is not None and lifecycle.deadline_has_passed(
+        review_session
+    ) and (
         lifecycle.is_ready(review_session)
         or (lifecycle.is_expired(review_session) and closed_at_deadline)
     ):

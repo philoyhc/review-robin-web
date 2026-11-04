@@ -37,6 +37,7 @@ from app.services.validation._inputs import (
 from app.services.validation._rosters import (
     _check_session_no_name,
     _check_session_no_code,
+    _check_session_end_passed,
     _check_reviewers_empty,
     _check_reviewers_duplicate_email,
     _check_observers_duplicate_email,
@@ -97,6 +98,7 @@ __all__ = [
     "load_validation_inputs",
     "_check_session_no_name",
     "_check_session_no_code",
+    "_check_session_end_passed",
     "_check_reviewers_empty",
     "_check_reviewers_duplicate_email",
     "_check_observers_duplicate_email",

@@ -60,6 +60,32 @@ def _check_session_no_code(
         )
 
 
+def _check_session_end_passed(
+    db: Session,
+    review_session: ReviewSession,
+    inputs: ValidationInputs,
+) -> Iterable[ValidationIssue]:
+    """The review's end has passed before it opens (segment 14E): End, or
+    with no End, Release from (``session_lifecycle.review_end``). The
+    end closes the session, so activating would close it at once."""
+    from app.services import session_lifecycle as lifecycle
+
+    if review_session.status not in ("draft", "validated"):
+        return
+    if not lifecycle.deadline_has_passed(review_session):
+        return
+    which = "End" if review_session.deadline is not None else "Release responses from"
+    yield ValidationIssue(
+        severity=Severity.error,
+        source="session",
+        field="deadline" if review_session.deadline is not None else "responses_release_at",
+        message=(
+            f"{which} has passed: activating would close the session at "
+            f"once. Move it later, or clear it."
+        ),
+    )
+
+
 def _check_reviewers_empty(
     db: Session,
     review_session: ReviewSession,

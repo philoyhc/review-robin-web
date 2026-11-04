@@ -119,10 +119,16 @@ Diverged from Semantics at build, each from a cold read or a ruling:
   (`lifecycle.is_ongoing`), not when the status changes; a reviewer no
   longer reads back their answers past End, reversing G10's "deadline or
   not" (2026-10-01).
-- **With no End, Release from closes the session** (author, 2026-11-04):
-  `observe_release_start` moves `ready → expired` at Release from
-  (`session.expired`, `reason="release"`), within a day of it, so the
-  window opens unattended; the ongoing window ends there too.
+- **With no End, Release from is the review's end** (author,
+  2026-11-04): `lifecycle.review_end` is End, or with no End, Release
+  from, and everything End governs follows it: the ongoing window, the
+  accept gate (`deadline_has_passed`) and the close (`observe_deadline`,
+  `session.expired` with `reason="release"`, no `deadline_reached`). No
+  age limit, as for End. **Validate's `session.end_passed`** (error)
+  stops activating a session whose end has already passed, which would
+  close at once. The scheduled pass runs reminders, the end's close, then
+  the release stamps; `scheduled_event_failed`'s `context.trigger` gains
+  `"deadline"`.
 
 ## PR ladder
 
@@ -177,12 +183,13 @@ Diverged from Semantics at build, each from a cold read or a ruling:
 
 ## Doc impact
 
-- `spec/lifecycle.md` — §1 and §2.7: `expired` also by End (`reason="deadline"`) or, with no End, Release from (`reason="release"`), and the audit table's `session.expired` row; §8.3: the clock beside the page-view trigger, the advisory lock, `context.fired_by`, the retry spacing; §8.2.3: the release moments as stamped events, only while expired; the audit table's three new events and `trigger="release"`; §8: auto-send disabled behind the setting (rung 0).
+- `spec/lifecycle.md` — §1 and §2.7: `expired` also by End (`reason="deadline"`) or, with no End, Release from (`reason="release"`), and the audit table's `session.expired` row; §8.3: the clock beside the page-view trigger, the advisory lock, `context.fired_by`, the retry spacing; §8.2.3: the release moments as stamped events, only while expired; the audit table's three new events and `trigger="release"` / `"deadline"`; §8: auto-send disabled behind the setting (rung 0).
 - `spec/visibility_policy.md` — the `while_ongoing` window ends at End (or, with no End, at Release from; `is_ongoing`); End closes the session.
 - `spec/reviewer-surface.md` — no read-back past End outside the release window; the closed banner's copy; the refused notice past End.
 - `spec/role_landing_and_visibility.md` — the `/me` status past End reads Closed.
 - `spec/workflow_card.md` — `expired` reached by End or Release from, not only Close session.
 - `spec/rrw_functional_spec.md` — the Closed state's cause.
+- `spec/validate_page.md` — the `session.end_passed` rule (edited with the rule, 2026-11-04).
 - `spec/settings_inventory.md` — `SCHEDULER_INTERVAL_SECONDS`; `RRW_SCHEDULED_SEND` and the two auto-send fields disabled behind it (rung 0).
 - `spec/workflow_card.md` — the auto-send caption gone while the setting is off (rung 0).
 - `docs/deployment.md` — both settings in its table.

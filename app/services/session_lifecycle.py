@@ -7,7 +7,7 @@ constraint); all five are written (``spec/lifecycle.md``).
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from enum import Enum
 
 from sqlalchemy import func, select
@@ -116,78 +116,21 @@ def is_ongoing(review_session: ReviewSession, *, now: datetime | None = None) ->
     if not is_ready(review_session):
         return False
     current = now or datetime.now(timezone.utc)
-    end = _ongoing_end(review_session)
+    end = review_end(review_session)
     return end is None or current < end
 
 
-def _ongoing_end(review_session: ReviewSession) -> datetime | None:
-    """Where the ongoing window ends: End, or with no End set, Release
-    responses from (author, 2026-11-04): a release that starts closes the
-    review."""
+def review_end(review_session: ReviewSession) -> datetime | None:
+    """When the review ends: End, or with no End set, Release responses
+    from (author, 2026-11-04, segment 14E): a release that starts closes
+    the review. Everything End governs follows it: the ongoing window,
+    the accept gate (:func:`deadline_has_passed`) and the close
+    (:func:`observe_deadline`). ``None``: no End and no release, so the
+    review runs until the operator closes it."""
     deadline = _as_utc(review_session.deadline)
     if deadline is not None:
         return deadline
     return _as_utc(review_session.responses_release_at)
-
-
-#: How far back a Release-from with no End still closes the session
-#: (segment 14E). An older one, from before the clock ran, closes nothing.
-RELEASE_CLOSE_GRACE = timedelta(days=1)
-
-
-def observe_release_start(
-    db: Session,
-    review_session: ReviewSession,
-    *,
-    now: datetime | None = None,
-    correlation_id: str | None = None,
-) -> bool:
-    """With no End set, Release responses from closes the session (author,
-    2026-11-04, segment 14E): the review is over when its results are
-    released, and the window opens only on a closed session. The same
-    ``ready → expired`` as Close session, every instrument closed, one
-    ``session.expired`` with no actor and ``reason="release"``. Once per
-    crossing, within :data:`RELEASE_CLOSE_GRACE`. With End set, End
-    closes the session (:func:`observe_deadline`), and Release from is
-    on or after it."""
-    current = now or datetime.now(timezone.utc)
-
-    def due(row: ReviewSession) -> bool:
-        start = _as_utc(row.responses_release_at)
-        return (
-            is_ready(row)
-            and row.deadline is None
-            and start is not None
-            and current - RELEASE_CLOSE_GRACE < start <= current
-        )
-
-    if not due(review_session):
-        return False
-    session_guard.lock_session(db, review_session)
-    if not due(review_session):
-        return False
-    closed = 0
-    for instrument in db.execute(
-        select(Instrument).where(Instrument.session_id == review_session.id)
-    ).scalars():
-        if instrument.accepting_responses:
-            closed += 1
-        instrument.accepting_responses = False
-    review_session.status = SessionStatus.expired.value
-    audit.write_event(
-        db,
-        event_type="session.expired",
-        summary=f"Session {review_session.code} closed (release started)",
-        actor_user_id=None,
-        session=review_session,
-        payload=audit.counts(closed_instruments=closed),
-        reason="release",
-        context={"release_at": _as_utc(review_session.responses_release_at).isoformat()},
-        correlation_id=correlation_id,
-    )
-    db.flush()
-    db.commit()
-    return True
 
 
 def is_response_release_window_open(
@@ -1014,12 +957,14 @@ def _aware(value: datetime) -> datetime:
 def deadline_has_passed(
     review_session: ReviewSession, *, now: datetime | None = None
 ) -> bool:
-    """Whether the session's deadline is set and behind us. A null
-    deadline never passes."""
-    if review_session.deadline is None:
+    """Whether the review's end (:func:`review_end`: End, or with no End,
+    Release from) is set and behind us. With neither set it never
+    passes."""
+    end = review_end(review_session)
+    if end is None:
         return False
     current = now or datetime.now(timezone.utc)
-    return current >= _aware(review_session.deadline)
+    return current >= end
 
 
 def recall_allowed(
@@ -1192,17 +1137,28 @@ def _expire_at_end(
     if not is_ready(review_session):
         return
     review_session.status = SessionStatus.expired.value
+    by_end = review_session.deadline is not None
     audit.write_event(
         db,
         event_type="session.expired",
-        summary=f"Session {review_session.code} closed (End reached)",
+        summary=(
+            f"Session {review_session.code} closed "
+            + ("(End reached)" if by_end else "(release started)")
+        ),
         actor_user_id=None,
         session=review_session,
         payload=audit.counts(closed_instruments=closed),
-        reason="deadline",
-        context={"deadline": review_session.deadline.isoformat()},
+        reason="deadline" if by_end else "release",
+        context=_end_context(review_session),
         correlation_id=correlation_id,
     )
+
+
+def _end_context(review_session: ReviewSession) -> dict[str, str]:
+    """The moment that ended the review, under its own name."""
+    if review_session.deadline is not None:
+        return {"deadline": _aware(review_session.deadline).isoformat()}
+    return {"release_at": review_end(review_session).isoformat()}
 
 
 def closed_at_deadline(db: Session, review_session: ReviewSession) -> bool:
@@ -1226,7 +1182,12 @@ def observe_deadline(
     now: datetime | None = None,
     correlation_id: str | None = None,
 ) -> int:
-    """Lazy deadline-close. Idempotent.
+    """Lazy close at the review's end. Idempotent.
+
+    The end is End, or with no End, Release from (:func:`review_end`;
+    segment 14E). Past it, this closes the instruments and the session
+    (``ready → expired``, :func:`_expire_at_end`), once per crossing, also
+    for a session whose instruments an earlier request already shut.
 
     Closes any instruments still ``accepting_responses`` once the session
     deadline has passed and stamps ``deadline_closed_at``. Emits one
@@ -1247,9 +1208,7 @@ def observe_deadline(
     the gate (see :func:`_reopen_while_live`).
     """
     current = now or datetime.now(timezone.utc)
-    if review_session.deadline is None or current < _aware(
-        review_session.deadline
-    ):
+    if not deadline_has_passed(review_session, now=current):
         _reopen_while_live(db, review_session, correlation_id=correlation_id)
         return 0
 
@@ -1271,10 +1230,8 @@ def observe_deadline(
         # already shut. The session still closes, once.
         if is_ready(review_session):
             session_guard.lock_session(db, review_session)
-            if (
-                is_ready(review_session)
-                and review_session.deadline is not None
-                and current >= _aware(review_session.deadline)
+            if is_ready(review_session) and deadline_has_passed(
+                review_session, now=current
             ):
                 _expire_at_end(db, review_session, closed=0, correlation_id=correlation_id)
                 db.flush()
@@ -1287,9 +1244,7 @@ def observe_deadline(
     # the threadpool (their gate and their error re-render), so the wait
     # for a held lock stalls only this request.
     session_guard.lock_session(db, review_session)
-    if review_session.deadline is None or current < _aware(
-        review_session.deadline
-    ):
+    if not deadline_has_passed(review_session, now=current):
         return 0
     instruments = _open(fresh=True)
     if not instruments:
@@ -1312,7 +1267,7 @@ def observe_deadline(
             session=review_session,
             refs={"instrument_id": instrument.id},
             reason="deadline",
-            context={"deadline": review_session.deadline.isoformat()},
+            context=_end_context(review_session),
             correlation_id=correlation_id,
         )
         closed += 1
@@ -1323,19 +1278,23 @@ def observe_deadline(
     from app.services import monitoring
 
     progress = monitoring.summary_counts(db, review_session)
-    audit.write_event(
+    # A release that ends a review with no End is not a deadline.
+    if review_session.deadline is not None:
+        audit.write_event(
         db,
-        event_type="session.deadline_reached",
-        summary=(
-            f"Deadline reached: {progress.submitted} of "
-            f"{progress.assigned} reviewers submitted"
-        ),
-        actor_user_id=None,
-        session=review_session,
-        payload=audit.counts(submitted=progress.submitted, assigned=progress.assigned),
-        context={"deadline": review_session.deadline.isoformat()},
-        correlation_id=correlation_id,
-    )
+            event_type="session.deadline_reached",
+            summary=(
+                f"Deadline reached: {progress.submitted} of "
+                f"{progress.assigned} reviewers submitted"
+            ),
+            actor_user_id=None,
+            session=review_session,
+            payload=audit.counts(
+                submitted=progress.submitted, assigned=progress.assigned
+            ),
+            context={"deadline": review_session.deadline.isoformat()},
+            correlation_id=correlation_id,
+        )
     _expire_at_end(db, review_session, closed=closed, correlation_id=correlation_id)
     db.flush()
     db.commit()
