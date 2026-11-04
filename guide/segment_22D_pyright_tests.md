@@ -93,7 +93,7 @@ set to the four test trees.
   code reads: `sort_from_positions` / `widths_from_positions` take
   `object` (they drop a non-list, non-dict from a hand-edited CSV) and
   `validate_page_n` takes `Sequence[object]` (only the length). The
-  three `Settings(_env_file=None)` lines take 22D's one ignore.
+  three `Settings(_env_file=None)` lines take 22D's one kind of ignore, as rung 2's did.
 - **Rung 4:** `tests/browser/` clean, 599 → 555 (44). The server
   fixture's `Popen` extras are a `TypedDict` (20 of the 44); two
   helpers typed `int` return the session's `str` id; a stored
@@ -120,6 +120,16 @@ set to the four test trees.
   only enter it). Ignores: the two `Settings(_env_file=None)` lines, and
   three assignments of a shape the column type rules out
   (`sort_display_fields`, `column_widths`, `reviewer_self_fields`).
+- **Item read** (rung 5, `diff-reviewer` over `b0179c12..` — rung 1 was
+  prose, so nothing before it is lost): nothing high. Acted on: a gate
+  test's `link*_mode` / `link*_combinator` stay `None` (each with a
+  `pyright: ignore` and its reason) rather than turning into real
+  values, and three files that typed `make_client` as `object` take the
+  factory type, dropping six `# type: ignore[operator]`. **Found:** the
+  test trees still hold 38 pre-22D `# type: ignore` comments, which
+  pyright honours; with `enableTypeIgnoreComments` off they hide **44**
+  errors (39 `reportArgumentType`). Rung 7 turns that setting off for the
+  tests and fixes them, beside the two rules.
 
 ## PR ladder
 

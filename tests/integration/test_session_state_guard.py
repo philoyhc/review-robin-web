@@ -1076,9 +1076,15 @@ def _rung5_writes():
 
     return {
         "set_band1_assignment_rules": lambda db, s, n, u: i.set_band1_assignment_rules(
-            db, instrument=n, link1_mode="all", link1_combinator="AND",
-            link1_rules=[], link2_mode="all", link2_combinator="AND",
-            link2_rules=[], actor=u,
+            db,
+            instrument=n,
+            link1_mode=None,  # pyright: ignore[reportArgumentType]  -- never read past the gate
+            link1_combinator=None,  # pyright: ignore[reportArgumentType]  -- never read past the gate
+            link1_rules=[],
+            link2_mode=None,  # pyright: ignore[reportArgumentType]  -- never read past the gate
+            link2_combinator=None,  # pyright: ignore[reportArgumentType]  -- never read past the gate
+            link2_rules=[],
+            actor=u,
         ),
         "set_exclude_self_reviews": lambda db, s, n, u: i.set_exclude_self_reviews(
             db, instrument=n, value=True, actor=u
