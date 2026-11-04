@@ -42,7 +42,7 @@ from __future__ import annotations
 import json
 import math
 import re
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from dataclasses import field as dc_field
 from decimal import Decimal
@@ -50,6 +50,7 @@ from statistics import mean, median
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from sqlalchemy.sql.elements import ColumnElement
 
 from app.db.models import (
     Assignment,
@@ -79,6 +80,13 @@ __all__ = [
 
 
 _NUMERIC = ("Integer", "Decimal")
+
+# A roster row: the axis decides which (``Reviewer`` for the
+# reviewer axis, ``Reviewee`` for the reviewee axis).
+_Entity = Reviewer | Reviewee
+# A row's accumulator key: ``("ind", id)``, ``("tag", *combo)`` or
+# ``("sum",)``.
+_RowKey = tuple[str | int, ...]
 _TAG_SLOTS = ("tag-1", "tag-2", "tag-3")
 
 # A numeric response field with a finite, small number of valid
@@ -97,14 +105,14 @@ class _Acc:
     """One row's running aggregate state."""
 
     assigned: int = 0
-    numeric_values: list[float] = dc_field(default_factory=list)
+    numeric_values: list[float] = dc_field(default_factory=list[float])
     string_chars: int = 0
     string_count: int = 0
     other_count: int = 0
     # ``data-shape-field-list-options`` / ``...-discrete-steps``
     # fan-out: count of non-empty responses matching each
     # discrete value. Keyed by the value's string form.
-    fanout_counts: dict[str, int] = dc_field(default_factory=dict)
+    fanout_counts: dict[str, int] = dc_field(default_factory=dict[str, int])
 
     @property
     def count(self) -> int:
@@ -284,7 +292,7 @@ def _list_option_values(
 
 
 def _entity_tuple_individual(
-    axis: str, entity, slots: list[str]
+    axis: str, entity: _Entity, slots: list[str]
 ) -> tuple[str, ...]:
     """Identification cells for a per-individual row."""
     cells: list[str] = []
@@ -292,9 +300,11 @@ def _entity_tuple_individual(
         if slot == f"{axis}:name":
             cells.append(entity.name)
         elif slot == f"{axis}:email":
+            # The axis picked the entity class (``build_shape_rows``),
+            # so the class answers the axis question.
             cells.append(
                 entity.email
-                if axis == "reviewer"
+                if isinstance(entity, Reviewer)
                 else entity.email_or_identifier
             )
         elif slot.startswith(f"{axis}:tag-"):
@@ -623,7 +633,9 @@ def _compose_header(
 # --------------------------------------------------------------------------- #
 
 
-def _entity_tag_combo(axis: str, entity, selected_tag_slots: list[str]) -> tuple[str, ...]:
+def _entity_tag_combo(
+    axis: str, entity: _Entity, selected_tag_slots: list[str]
+) -> tuple[str, ...]:
     parts: list[str] = []
     for slot in selected_tag_slots:
         n = slot.rsplit("-", 1)[-1]
@@ -678,7 +690,7 @@ def build_shape_rows(
     for fid, fobj in scope.field_by_id.items():
         fields_per_instrument.setdefault(fobj.instrument_id, []).append(fid)
 
-    def _row_key_for_entity(entity) -> tuple:
+    def _row_key_for_entity(entity: _Entity) -> _RowKey:
         if per_individual:
             return ("ind", entity.id)
         if per_tag_combo:
@@ -700,7 +712,7 @@ def build_shape_rows(
         else (state,)
     )
 
-    per_state_accs: dict[str, dict[tuple, _Acc]] = {}
+    per_state_accs: dict[str, dict[_RowKey, _Acc]] = {}
     for run_state in states_to_run:
         per_state_accs[run_state] = _build_state_accumulators(
             db,
@@ -723,7 +735,7 @@ def build_shape_rows(
         )
     ]
 
-    def _aggregate_block(row_key: tuple, fallback: _Acc | None = None) -> tuple[str, ...]:
+    def _aggregate_block(row_key: _RowKey, fallback: _Acc | None = None) -> tuple[str, ...]:
         """Per-row aggregate cells across every state in
         ``states_to_run`` — single block for one-state shapes,
         two blocks (``_self`` then ``_noself`` columns) for
@@ -750,7 +762,7 @@ def build_shape_rows(
     # an empty CSV would be confusing surface.
     drop_empty = not shape.include_empty_rows
 
-    def _row_is_empty(row_key: tuple) -> bool:
+    def _row_is_empty(row_key: _RowKey) -> bool:
         for run_state in states_to_run:
             acc = per_state_accs[run_state].get(row_key)
             if acc is not None and not acc.is_empty():
@@ -771,12 +783,16 @@ def build_shape_rows(
     elif per_tag_combo:
         # One row per distinct tag-combo, sorted by the combo's
         # values in chip order (a blank tag sorts first). The
-        # identification cells are the combo itself, so any member
-        # of it supplies them.
-        for key in sorted({_row_key_for_entity(e) for e in entities}):
+        # identification cells are the combo itself (the key less
+        # its ``"tag"`` head), so any member of it supplies them.
+        combo_by_key = {
+            _row_key_for_entity(e): _entity_tag_combo(axis, e, selected_tag_slots)
+            for e in entities
+        }
+        for key in sorted(combo_by_key):
             if drop_empty and _row_is_empty(key):
                 continue
-            rows.append(key[1:] + _aggregate_block(key))
+            rows.append(combo_by_key[key] + _aggregate_block(key))
     else:
         # Single summary row aggregating across the whole
         # roster. The ``(sum,)`` key is shared across all
@@ -793,17 +809,17 @@ def _build_state_accumulators(
     *,
     axis: str,
     scope: _Scope,
-    entity_by_id: Mapping[int, object],
+    entity_by_id: Mapping[int, _Entity],
     fields_per_instrument: dict[int, list[int]],
-    row_key_for_entity,
+    row_key_for_entity: Callable[[_Entity], _RowKey],
     exclude_self: bool,
-) -> dict[tuple, _Acc]:
+) -> dict[_RowKey, _Acc]:
     """One Self-review handling state's accumulators for the Data
     shape pipeline. ``exclude_self=True`` adds
     ``Assignment.is_self_review.is_(False)`` to both the
     assignment-pool and response queries; the rest of the dedupe
     + ingest machinery matches the pre-PR-B single-state flow."""
-    assignment_filter = [
+    assignment_filter: list[ColumnElement[bool]] = [
         Assignment.session_id == review_session.id,
         Assignment.include.is_(True),
         Assignment.instrument_id.in_(scope.instrument_ids)
@@ -825,7 +841,7 @@ def _build_state_accumulators(
         else {}
     )
 
-    accs: dict[tuple, _Acc] = {}
+    accs: dict[_RowKey, _Acc] = {}
     # Pre-seed every row-key the entity universe could compose,
     # so per-individual rows still ship with zero aggregates
     # when nothing accrues to them.
@@ -856,7 +872,7 @@ def _build_state_accumulators(
     # Response rollup.
     seen_reviewer_response: set[tuple[int, tuple[str, ...], int]] = set()
     if scope.instrument_ids:
-        response_filter = [
+        response_filter: list[ColumnElement[bool]] = [
             Assignment.session_id == review_session.id,
             Assignment.include.is_(True),
             Assignment.instrument_id.in_(scope.instrument_ids),

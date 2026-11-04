@@ -38,8 +38,6 @@ def _preview_group_boundary(
         return decode_group_kind(instrument.group_kind)
     boundary: list[tuple[str, str]] = []
     for raw in link3_boundary:
-        if not isinstance(raw, str):
-            continue
         source, _, slot = raw.strip().partition(".")
         if not slot.startswith("tag"):
             continue
@@ -219,10 +217,8 @@ def find_sample_in_scope_reviewee(
     from app.services.instruments._instrument_crud import decode_group_kind
 
     if link3_boundary is not None:
-        reviewee_boundary_fields = []
+        reviewee_boundary_fields: list[str] = []
         for raw in link3_boundary:
-            if not isinstance(raw, str):
-                continue
             v = raw.strip()
             if not v.startswith("reviewee.tag"):
                 continue

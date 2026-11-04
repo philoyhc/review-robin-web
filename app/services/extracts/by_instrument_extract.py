@@ -299,7 +299,7 @@ def _render_pool(link_state: dict[str, Any], session: ReviewSession) -> str:
     mode = link_state.get("mode") or "all"
     if mode == "all":
         return "ALL OF"
-    rules = link_state.get("rules") or []
+    rules: list[dict[str, str]] = link_state.get("rules") or []
     if not rules:
         return "ALL OF"
     combinator = link_state.get("combinator") or "AND"

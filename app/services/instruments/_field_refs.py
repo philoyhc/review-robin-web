@@ -24,9 +24,10 @@ names no field of the source is dropped.
 from __future__ import annotations
 
 import re
-from typing import Any
+from typing import Any, cast
 
 from app.services.instruments._display_fields import GROUP_IDENTITY_SORT_KEY
+from app.services.instruments._state import _json_dict, _json_list
 
 __all__ = [
     "repoint_sort",
@@ -43,14 +44,19 @@ _SORT_POSITION = "display_field"
 
 
 def repoint_sort(
-    entries: list[dict[str, Any]] | None, display_ids: dict[int, int]
+    entries: object, display_ids: dict[int, int]
 ) -> list[dict[str, Any]] | None:
-    """Sort entries re-pointed at the copy's display fields."""
-    if not isinstance(entries, list) or not entries:
-        return entries if isinstance(entries, list) else None
-    out = []
-    for entry in entries:
-        if not isinstance(entry, dict):
+    """Sort entries re-pointed at the copy's display fields. ``entries``
+    is the stored JSON, which an older row may hold in another shape:
+    anything but a list is no sort, and an item that is not a dict is
+    dropped."""
+    items = _json_list(entries)
+    if not items:
+        return items
+    out: list[dict[str, Any]] = []
+    for item in items:
+        entry = _json_dict(item)
+        if entry is None:
             continue
         old_id = entry.get("display_field_id")
         if old_id == GROUP_IDENTITY_SORT_KEY:
@@ -74,7 +80,7 @@ def repoint_widths(
         return widths if isinstance(widths, dict) else None
     out: dict[str, Any] = {}
     for key, value in widths.items():
-        match = _WIDTH_KEY.match(key) if isinstance(key, str) else None
+        match = _WIDTH_KEY.match(key)
         if match is None:
             out[key] = value
             continue
@@ -86,13 +92,15 @@ def repoint_widths(
 
 
 def sort_to_positions(
-    entries: list[dict[str, Any]] | None, display_positions: dict[int, int]
+    entries: object, display_positions: dict[int, int]
 ) -> list[dict[str, Any]]:
     """Sort entries for the settings CSV: ``display_field_id`` becomes
-    ``display_field``, the field's 1-based position."""
+    ``display_field``, the field's 1-based position. ``entries`` is the
+    stored JSON, read as ``repoint_sort`` reads it."""
     out: list[dict[str, Any]] = []
-    for entry in entries if isinstance(entries, list) else []:
-        if not isinstance(entry, dict):
+    for item in _json_list(entries) or []:
+        entry = _json_dict(item)
+        if entry is None:
             continue
         field_id = entry.get("display_field_id")
         if field_id == GROUP_IDENTITY_SORT_KEY:
@@ -117,8 +125,9 @@ def sort_from_positions(
     so is anything a hand-edited file holds that is not a list."""
     out: list[dict[str, Any]] = []
     seen: set[int] = set()
-    for entry in entries if isinstance(entries, list) else []:
-        if not isinstance(entry, dict):
+    for item in _json_list(entries) or []:
+        entry = _json_dict(item)
+        if entry is None:
             continue
         rest = {
             k: v
@@ -154,7 +163,7 @@ def widths_to_positions(
     become ``df@<position>`` / ``rf@<position>``."""
     out: dict[str, Any] = {}
     for key, value in (widths if isinstance(widths, dict) else {}).items():
-        match = _WIDTH_KEY.match(key) if isinstance(key, str) else None
+        match = _WIDTH_KEY.match(key)
         if match is None:
             out[key] = value
             continue
@@ -179,8 +188,10 @@ def widths_from_positions(
     file holds that is not a dict is no widths."""
     if not isinstance(widths, dict):
         return None
+    # Whatever the import handed over; each key is checked below.
+    stored = cast(dict[object, Any], widths)
     out: dict[str, Any] = {}
-    for key, value in widths.items():
+    for key, value in stored.items():
         if not isinstance(key, str) or _WIDTH_KEY.match(key):
             continue
         match = _WIDTH_POSITION_KEY.match(key)

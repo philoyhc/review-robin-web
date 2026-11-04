@@ -926,7 +926,7 @@ def delete_response_field(
         reason="instrument_field_deleted",
     )
 
-    captured = {
+    captured: dict[str, Any] = {
         "id": field.id,
         "field_key": field.field_key,
         "label": field.label,

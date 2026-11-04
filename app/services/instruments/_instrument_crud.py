@@ -174,7 +174,7 @@ def is_untouched_default(instrument: Instrument) -> bool:
     if len(fields) != len(DEFAULT_RESPONSE_FIELDS):
         return False
     for field, spec in zip(fields, DEFAULT_RESPONSE_FIELDS):
-        expected = {
+        expected: dict[str, object] = {
             "field_key": spec["field_key"],
             "label": spec["label"],
             "required": spec["required"],

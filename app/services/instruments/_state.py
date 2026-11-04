@@ -14,10 +14,22 @@ other way round — same import-graph invariant the
 
 from __future__ import annotations
 
+from typing import Any, cast
+
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import AuditEvent, Instrument, Response
+
+# The private helpers are read by the sibling slices (and
+# ``_instrument_label`` beyond the package, through ``__init__``).
+__all__ = [
+    "_instrument_label",
+    "_json_dict",
+    "_json_list",
+    "_response_count_for_field",
+    "saved_state_for_session",
+]
 
 # Audit-event types that signal "this instrument's field tables were
 # saved by the operator" — used by ``saved_state_for_session`` to
@@ -34,6 +46,19 @@ _SAVED_STATE_EVENT_TYPES: frozenset[str] = frozenset({
     "instrument.fields_reordered",
     "instrument.response_fields_saved",
 })
+
+
+def _json_dict(value: object) -> dict[str, Any] | None:
+    """``value`` when it is a dict, as stored JSON holds one (an object,
+    so its keys are strings), else ``None``. The typed boundary for
+    JSON read back from a column or a request body."""
+    return cast(dict[str, Any], value) if isinstance(value, dict) else None
+
+
+def _json_list(value: object) -> list[Any] | None:
+    """``value`` when it is a list (a JSON array, whose items are any
+    JSON value), else ``None``."""
+    return cast(list[Any], value) if isinstance(value, list) else None
 
 
 def _instrument_label(instrument: Instrument) -> str:
@@ -106,7 +131,7 @@ def saved_state_for_session(
             continue
         # Canonical shape (Segment 11K PR 2): refs.instrument_id.
         # Pre-migration rows kept the id at the top level.
-        refs = detail.get("refs") or {}
+        refs: dict[str, Any] = detail.get("refs") or {}
         instrument_id = refs.get("instrument_id")
         if instrument_id is None:
             instrument_id = detail.get("instrument_id")

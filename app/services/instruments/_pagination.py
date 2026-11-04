@@ -91,8 +91,6 @@ def reorder_instruments(
     emit — mirrors ``reorder_display_fields``.
     """
     lifecycle.require_editable(db, review_session)
-    if not isinstance(items, list):
-        raise ValueError("items must be a list")
     if not items or items[0] is None:
         raise ValueError("page break is not allowed before the first instrument")
     if items[-1] is None:

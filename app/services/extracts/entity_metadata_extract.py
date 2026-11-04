@@ -57,6 +57,7 @@ from statistics import mean, median
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from sqlalchemy.sql.elements import ColumnElement
 
 from app.db.models import (
     Assignment,
@@ -284,7 +285,7 @@ def _resolve_scope(
 class _FieldAcc:
     """One field's accumulator for a single entity."""
 
-    numeric_values: list[float] = dc_field(default_factory=list)
+    numeric_values: list[float] = dc_field(default_factory=list[float])
     string_chars: int = 0
     string_count: int = 0
     other_count: int = 0
@@ -403,7 +404,7 @@ def _reviewer_state_block(
     total_count: dict[int, int] = {r.id: 0 for r in reviewers}
 
     if scope_ids:
-        assignment_filter = [
+        assignment_filter: list[ColumnElement[bool]] = [
             Assignment.session_id == review_session.id,
             Assignment.include.is_(True),
             Assignment.instrument_id.in_(scope_ids),
@@ -444,7 +445,7 @@ def _reviewer_state_block(
         seen_reviewer_group_response: set[
             tuple[int, tuple[str, ...], int]
         ] = set()
-        response_filter = [
+        response_filter: list[ColumnElement[bool]] = [
             Assignment.session_id == review_session.id,
             Assignment.include.is_(True),
             Assignment.instrument_id.in_(scope_ids),
@@ -624,7 +625,7 @@ def _reviewee_state_block(
     total_count: dict[int, int] = {e.id: 0 for e in reviewees}
 
     if scope_ids:
-        assignment_filter = [
+        assignment_filter: list[ColumnElement[bool]] = [
             Assignment.session_id == review_session.id,
             Assignment.include.is_(True),
             Assignment.instrument_id.in_(scope_ids),
@@ -644,7 +645,7 @@ def _reviewee_state_block(
                 if f.id in selected_field_ids:
                     per_field[f.id] += 1
 
-        response_filter = [
+        response_filter: list[ColumnElement[bool]] = [
             Assignment.session_id == review_session.id,
             Assignment.include.is_(True),
             Assignment.instrument_id.in_(scope_ids),
