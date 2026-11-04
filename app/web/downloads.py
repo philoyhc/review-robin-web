@@ -15,7 +15,7 @@ from urllib.parse import quote
 
 
 def _ascii_fallback(filename: str) -> str:
-    out = []
+    out: list[str] = []
     for ch in unicodedata.normalize("NFKD", filename):
         if unicodedata.combining(ch):
             continue

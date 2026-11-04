@@ -153,7 +153,7 @@ def session_extract_data(
     # ``compose_shape_preview_headers``'s docstring so the
     # preview reads as "what's chosen" rather than "what
     # the file will look like".
-    saved_shape_rows = [
+    saved_shape_rows: list[dict[str, object]] = [
         {
             "id": shape.id,
             "name": shape.name,

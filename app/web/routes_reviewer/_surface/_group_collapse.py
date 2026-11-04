@@ -10,16 +10,20 @@ returns a fresh list. No DB reads.
 """
 from __future__ import annotations
 
+from typing import Any
+
+from ._status import SurfaceRow
+
 # A group row's identity cell lists at most this many member names
 # before collapsing the rest to a "+N more" suffix (Segment 13C).
 GROUP_MEMBER_NAME_LIMIT = 10
 
 
 def _collapse_group_rows(
-    per_assignment_rows: list[dict],
+    per_assignment_rows: list[SurfaceRow],
     *,
     group_key_by_assignment: dict[int, tuple[str, ...]],
-) -> list[dict]:
+) -> list[SurfaceRow]:
     """Collapse a group-scoped instrument's per-assignment rows into
     one row per boundary-defined group (Segment 13C reviewer surface).
 
@@ -32,11 +36,11 @@ def _collapse_group_rows(
     findings G1) and a ``group_label`` for aria text; its per-reviewee
     ``display_cells`` / ``sort_values`` are cleared.
     """
-    partitions: dict[tuple[str, ...], list[dict]] = {}
+    partitions: dict[tuple[str, ...], list[SurfaceRow]] = {}
     for row in per_assignment_rows:
         group_key = group_key_by_assignment.get(row["assignment"].id, ())
         partitions.setdefault(group_key, []).append(row)
-    collapsed: list[dict] = []
+    collapsed: list[SurfaceRow] = []
     for group_key in sorted(partitions):
         members = sorted(
             partitions[group_key], key=lambda r: r["assignment"].id
@@ -54,7 +58,10 @@ def _collapse_group_rows(
         # visible reviewee.tag_* display fields, so the line is
         # never blank when a boundary tag value exists.
         tag_values: list[str] = []
-        for cell in members[0].get("display_cells", []) or []:
+        display_cells: list[dict[str, Any]] = (
+            members[0].get("display_cells", []) or []
+        )
+        for cell in display_cells:
             field = cell.get("field")
             if field is None:
                 continue
@@ -81,3 +88,6 @@ def _collapse_group_rows(
         )
         collapsed.append(representative)
     return collapsed
+
+
+__all__ = ["GROUP_MEMBER_NAME_LIMIT", "_collapse_group_rows"]

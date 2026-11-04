@@ -13,10 +13,13 @@ refused file never reaches.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 
+from app.schemas.validation import ValidationIssue
 
-def problem_kinds(issues: list) -> list[str]:
+
+def problem_kinds(issues: Sequence[ValidationIssue]) -> list[str]:
     """One line per kind of problem, with how many rows have it
     ("ReviewerEmail is blank (2 rows)"), in the order each kind first
     appears.
@@ -93,7 +96,7 @@ NEEDS_RESPONSE_ACK_SENTENCE = (
 
 def upload_problems(
     noun: str,
-    issues: list | None,
+    issues: Sequence[ValidationIssue] | None,
     *,
     missing_confirm: bool = False,
     missing_response_ack: bool = False,

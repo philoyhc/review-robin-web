@@ -71,7 +71,7 @@ _REVIEWEE_SORT_KEYS = {
 }
 
 
-def _reviewee_sort_value(reviewee, key: str):
+def _reviewee_sort_value(reviewee: Reviewee, key: str) -> object:
     """Sort-key resolver for the Reviewees Setup table (Segment 13B
     Part 2 PR 6)."""
     return getattr(reviewee, key, None)
@@ -177,7 +177,7 @@ def _render_reviewees_page(
         edit_id = None
         add_mode = False
 
-    all_reviewees = assignments.list_reviewees(db, review_session.id)
+    all_reviewees: list[Reviewee] = assignments.list_reviewees(db, review_session.id)
     sort_spec = views.decode_cookie_sort_spec(
         cookies=dict(request.cookies),
         cookie_name=f"rrw-sort-reviewees-{review_session.public_id}",
@@ -206,7 +206,7 @@ def _render_reviewees_page(
         locate_id=focus_id,
         edit_id=edit_id,
     )
-    reviewees = window.rows
+    reviewees: list[Reviewee] = window.rows
     offset = window.offset
     edit_id = window.edit_id
     displayed_row_count = len(reviewees)

@@ -34,7 +34,7 @@ Workflow card's Prepare is how a session is validated.
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -54,6 +54,8 @@ from app.services import session_lifecycle as lifecycle
 from app.services import (
     sessions as sessions_service,
 )
+
+from ._json import json_list, json_object
 
 
 def build_workflow_card_context(
@@ -116,7 +118,7 @@ def build_workflow_card_context(
     is_expired = lifecycle.is_expired(review_session)
 
     validation_summary: dict[str, object] | None = None
-    validation_issues_by_severity: dict[str, list] = {
+    validation_issues_by_severity: dict[str, list[ValidationIssue]] = {
         "errors": [],
         "warnings": [],
         "info": [],
@@ -336,24 +338,22 @@ def build_scheduled_activation_caption(
     }
     if latest.event_type not in skip_types:
         return None
-    detail = latest.detail or {}
-    context = detail.get("context", {}) if isinstance(detail, dict) else {}
-    scheduled_at_iso = (
-        context.get("scheduled_at") if isinstance(context, dict) else None
-    )
+    detail = json_object(latest.detail or {})
+    context = json_object(detail.get("context", {})) if detail is not None else None
+    scheduled_at_iso = context.get("scheduled_at") if context is not None else None
     when_text = "unknown"
     if scheduled_at_iso:
         try:
-            parsed = datetime.fromisoformat(scheduled_at_iso)
+            # The emitter writes an ISO string; any other shape raises
+            # TypeError here, as it did before the value was typed.
+            parsed = datetime.fromisoformat(cast("str", scheduled_at_iso))
         except ValueError:
             parsed = None
         if parsed is not None:
             if parsed.tzinfo is None:
                 parsed = parsed.replace(tzinfo=UTC)
             when_text = date_formatting.format_datetime(parsed, session_tz)
-    reason = (
-        detail.get("reason", "unknown") if isinstance(detail, dict) else "unknown"
-    )
+    reason = detail.get("reason", "unknown") if detail is not None else "unknown"
     headline = (
         "Scheduled activation"
         if latest.event_type.endswith("skipped")
@@ -458,8 +458,8 @@ def build_schedule_timeline(
         anchor_aware = anchor if anchor.tzinfo else anchor.replace(tzinfo=UTC)
         rows.append((anchor_aware, "Session activates (Start)"))
         # Auto-send off (14E rung 0): no auto-send row is shown.
-        offsets = (review_session.invite_offsets or []) if send else []
-        if isinstance(offsets, list):
+        offsets = json_list((review_session.invite_offsets or []) if send else [])
+        if offsets is not None:
             for entry in offsets:
                 if not isinstance(entry, str):
                     continue
@@ -479,8 +479,10 @@ def build_schedule_timeline(
             deadline if deadline.tzinfo else deadline.replace(tzinfo=UTC)
         )
         rows.append((deadline_aware, "Session ends (End)"))
-        reminder_offsets = (review_session.reminder_offsets or []) if send else []
-        if isinstance(reminder_offsets, list):
+        reminder_offsets = json_list(
+            (review_session.reminder_offsets or []) if send else []
+        )
+        if reminder_offsets is not None:
             for entry in reminder_offsets:
                 if not isinstance(entry, str):
                     continue
@@ -518,14 +520,15 @@ def build_offset_display_rows(
     ``build_schedule_timeline`` does for the same list columns.
     """
     rows: list[dict[str, str]] = []
-    if not isinstance(offsets, list):
+    entries = json_list(offsets)
+    if entries is None:
         return rows
     anchor_aware = None
     if anchor is not None:
         anchor_aware = (
             anchor if anchor.tzinfo else anchor.replace(tzinfo=UTC)
         )
-    for entry in offsets:
+    for entry in entries:
         if not isinstance(entry, str) or not entry:
             continue
         at = ""
@@ -577,8 +580,8 @@ def build_auto_send_invites_caption(
     # Auto-send off (14E rung 0): no caption promises a send.
     if not scheduled_events.scheduled_send_enabled():
         return None
-    offsets = review_session.invite_offsets or []
-    if not isinstance(offsets, list) or not offsets:
+    offsets = json_list(review_session.invite_offsets or [])
+    if not offsets:
         return None
 
     if review_session.scheduled_activate_at is None:
@@ -693,8 +696,8 @@ def build_auto_send_reminders_caption(
     # Auto-send off (14E rung 0): no caption promises a send.
     if not scheduled_events.scheduled_send_enabled():
         return None
-    offsets = review_session.reminder_offsets or []
-    if not isinstance(offsets, list) or not offsets:
+    offsets = json_list(review_session.reminder_offsets or [])
+    if not offsets:
         return None
 
     if review_session.deadline is None:
@@ -800,8 +803,8 @@ def build_manual_activate_cancellation(
     # Auto-send off (14E rung 0): there is nothing to cancel.
     if not scheduled_events.scheduled_send_enabled():
         return None
-    offsets = review_session.invite_offsets or []
-    if not isinstance(offsets, list) or not offsets:
+    offsets = json_list(review_session.invite_offsets or [])
+    if not offsets:
         return None
     count = len(offsets)
     plural = "" if count == 1 else "s"

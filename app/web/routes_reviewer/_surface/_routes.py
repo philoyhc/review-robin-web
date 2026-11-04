@@ -165,7 +165,7 @@ def _pre_open_response(
     reviewer: Reviewer,
     review_session: ReviewSession,
     *,
-    extra: dict | None = None,
+    extra: dict[str, object] | None = None,
     status_code: int = status.HTTP_200_OK,
 ) -> HTMLResponse:
     """The pre-open page, for a ``draft`` or ``validated`` session (an
@@ -247,7 +247,7 @@ def _refused_write_response(
     changed under the post (19V Item 2), whose answers are listed bare
     because their ordinals no longer name the rows they were typed into.
     ``page_assignment_ids`` maps the typed answers' ordinals to rows."""
-    extra = {
+    extra: dict[str, object] = {
         "write_refused": views.write_refused_notice(
             review_session,
             cause,

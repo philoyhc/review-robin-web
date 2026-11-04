@@ -9,6 +9,7 @@ renders against identical plumbing without mutating session state.
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
@@ -43,6 +44,7 @@ from app.web.views import (
 from ._group_collapse import _collapse_group_rows
 from ._status import (
     PageStatus,
+    SurfaceRow,
     _group_completion,
     _page_status_for_group,
     _session_status,
@@ -100,7 +102,7 @@ def _pages_for_session(db: Session, session_id: int) -> list[list[Instrument]]:
     return pages
 
 
-def _reviewer_row_sort_key(row: dict, display_field_id: int) -> object | None:
+def _reviewer_row_sort_key(row: SurfaceRow, display_field_id: int) -> object | None:
     """Resolve one reviewer-surface row's value for a given
     ``display_field_id`` so ``views.order_rows_by_sort_spec``
     (Segment 13B PR 1) can sort.
@@ -200,7 +202,7 @@ def _surface_context(
     cookies: dict[str, str] | None = None,
     preview_mode: bool = False,
     page_url_builder: Callable[[int], str] | None = None,
-) -> dict:
+) -> dict[str, Any]:
     # ``preview_mode`` (operator-side full preview, Segment 18Q):
     # render the reviewer surface against the same plumbing the
     # reviewer hits, but bypass the deadline-observer (which
@@ -312,7 +314,7 @@ def _surface_context(
     peer_policies = visibility_policies.peer_reviewer_policies(
         db, instrument_ids
     )
-    rows_by_instrument: dict[int, list[dict]] = {}
+    rows_by_instrument: dict[int, list[SurfaceRow]] = {}
     any_accepting = False
     any_closed_with_hidden_values = False
     any_closed_with_shown_values = False
@@ -377,7 +379,7 @@ def _surface_context(
         # parent may be required whatever its own ``required``.
         may_be_required_ids = responses_service.may_be_required_field_ids(fields)
         field_by_id = {f.id: f for f in fields}
-        cells = []
+        cells: list[dict[str, object]] = []
         for field in fields:
             parent = (
                 field_by_id.get(field.branch_parent_id)
@@ -410,7 +412,7 @@ def _surface_context(
         is_complete = completion.is_complete
         missing_count = completion.missing_count
         latest_submitted = completion.latest_submitted_at
-        display_cells = []
+        display_cells: list[dict[str, object]] = []
         for display_field in display_fields_by_instrument.get(
             assignment.instrument_id, []
         ):
@@ -480,8 +482,8 @@ def _surface_context(
             group_key_by_assignment=group_keys,
         )
 
-    instrument_groups = []
-    flat_rows = []
+    instrument_groups: list[dict[str, Any]] = []
+    flat_rows: list[SurfaceRow] = []
     position_by_id = {
         inst.id: idx
         for idx, inst in enumerate(
@@ -573,7 +575,7 @@ def _surface_context(
         # identity column; ``"df_<id>"`` for each display field.
         widths_by_col_key: dict[str, int] = dict(instrument.column_widths or {})
         identity_width_px = widths_by_col_key.get("identity")
-        display_field_headers = (
+        display_field_headers: list[dict[str, object]] = (
             []
             if is_group
             else [
@@ -599,7 +601,7 @@ def _surface_context(
             for f in fields
             if f"rf_{f.id}" in widths_by_col_key
         }
-        constraints = []
+        constraints: list[dict[str, str]] = []
         for f in fields:
             summary = views.constraint_summary_for_field(f)
             if summary:
@@ -662,7 +664,7 @@ def _surface_context(
     pages = _pages_for_session(db, review_session.id)
     page_count = len(pages) or 1
     safe_page_n = page_n if 1 <= page_n <= page_count else 1
-    current_page_instrument_ids = {
+    current_page_instrument_ids: set[int] = {
         inst.id for inst in pages[safe_page_n - 1]
     } if pages else set()
     instrument_groups = [
@@ -756,3 +758,12 @@ def _surface_context(
             review_session, reviewer
         ),
     }
+
+
+__all__ = [
+    "_pages_for_session",
+    "_race_refusal",
+    "_surface_context",
+    "_write_refusal",
+    "page_assignments_for",
+]

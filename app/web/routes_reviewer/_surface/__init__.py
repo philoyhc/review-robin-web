@@ -41,39 +41,12 @@ longer possible after a session-wide POST.
 """
 from __future__ import annotations
 
-# The F401 noqa markers on the private (single-underscore) names
-# acknowledge that these imports are deliberate re-exports rather
-# than dead code; the operator-side preview surface +
-# ``tests/unit/test_reviewer_surface_group_collapse.py`` reach in
-# via ``_surface._<name>`` and the byte-stable surface keeps those
-# working unchanged.
-from ._context import (
-    _instruments_for_session,  # noqa: F401
-    _load_assignments_with_relations,  # noqa: F401
-    _pages_for_session,
-    _reviewer_row_sort_key,  # noqa: F401
-    _surface_context,
-)
+# Only the names the docstring lists are re-exported; the sub-modules
+# are imported directly for anything else.
+from ._context import _pages_for_session, _surface_context
 from ._group_collapse import GROUP_MEMBER_NAME_LIMIT, _collapse_group_rows
-from ._routes import (
-    review_surface,  # noqa: F401
-    review_surface_default_position,  # noqa: F401
-    reviewer_clear,  # noqa: F401
-    reviewer_recall,  # noqa: F401
-    reviewer_save,  # noqa: F401
-    reviewer_submit,  # noqa: F401
-    router,
-    submit_redirect_url,  # noqa: F401
-)
-from ._status import (
-    GroupCompletion,  # noqa: F401
-    PageStatus,
-    PageStatusState,  # noqa: F401
-    SessionStatusState,  # noqa: F401
-    _group_completion,  # noqa: F401
-    _page_status_for_group,  # noqa: F401
-    _session_status,  # noqa: F401
-)
+from ._routes import router
+from ._status import PageStatus
 
 __all__ = [
     "GROUP_MEMBER_NAME_LIMIT",

@@ -6,8 +6,17 @@ when assembling the template context.
 """
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any, Literal
+
+from app.db.models import InstrumentResponseField
+
+# One built reviewer-surface row (``_context._surface_context``): a
+# template-context dict whose keys the row builder, the group collapse
+# and these rollups share. Its values are read by the template and by
+# duck-typed test fixtures, so it stays a plain string-keyed dict.
+type SurfaceRow = dict[str, Any]
 
 PageStatusState = Literal["not_started", "in_progress", "complete", "submitted"]
 
@@ -53,7 +62,7 @@ class _SavedState:
         return self.answered and self.required_met and not self.unsubmitted
 
 
-def _saved_state(rows: list[dict]) -> _SavedState:
+def _saved_state(rows: Sequence[SurfaceRow]) -> _SavedState:
     return _SavedState(
         answered=any(r.get("answer_count", 0) for r in rows),
         required_met=all(r.get("is_complete") for r in rows),
@@ -61,7 +70,7 @@ def _saved_state(rows: list[dict]) -> _SavedState:
     )
 
 
-def _page_status_for_group(group_rows: list[dict]) -> PageStatusState:
+def _page_status_for_group(group_rows: Sequence[SurfaceRow]) -> PageStatusState:
     """Roll up per-row completion data into a single page state.
 
     Order of evaluation matches the spec table in
@@ -103,7 +112,7 @@ SessionStatusState = Literal["draft", "saved", "submitted"]
 
 
 def _session_status(
-    page_statuses: list[PageStatus], rows: list[dict]
+    page_statuses: list[PageStatus], rows: Sequence[SurfaceRow]
 ) -> SessionStatusState | None:
     """Roll the per-page states into one session-wide status.
 
@@ -137,7 +146,9 @@ class GroupCompletion:
     all_total: int
 
 
-def _group_completion(group_rows: list[dict], fields: list) -> GroupCompletion:
+def _group_completion(
+    group_rows: Sequence[SurfaceRow], fields: Sequence[InstrumentResponseField]
+) -> GroupCompletion:
     """Tally completed vs total response cells for one instrument.
 
     ``required_done`` is derived from each row's ``missing_count``
@@ -174,3 +185,15 @@ def _group_completion(group_rows: list[dict], fields: list) -> GroupCompletion:
         all_done=all_done,
         all_total=all_total,
     )
+
+
+__all__ = [
+    "GroupCompletion",
+    "PageStatus",
+    "PageStatusState",
+    "SessionStatusState",
+    "SurfaceRow",
+    "_group_completion",
+    "_page_status_for_group",
+    "_session_status",
+]

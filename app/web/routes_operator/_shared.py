@@ -13,10 +13,11 @@ evolves.
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+from typing import Any, Protocol, cast
 from urllib.parse import urlencode
 
 from fastapi import Depends, HTTPException, Request, status
@@ -24,7 +25,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Mapped, Session
 
 from app.config import settings
 from app.db.models import (
@@ -34,6 +35,11 @@ from app.db.models import (
     User,
 )
 from app.db.session import get_db
+from app.schemas.imports import (
+    ObserverImportRow,
+    RevieweeImportRow,
+    ReviewerImportRow,
+)
 from app.services import (
     csv_imports,
     date_formatting,
@@ -59,6 +65,28 @@ from app.web.date_filters import (
 from app.web.deps import request_correlation_id, require_session_operator
 from cordware.graph import Directory, GraphError, directory_for
 
+# The package-private helpers the slices import (the private-name
+# ruling, segment 22E); listing them here is what marks them used.
+__all__ = [
+    "_instruments_redirect",
+    "_json_dict",
+    "_json_list",
+    "_lifecycle_error_response",
+    "_redirect_keeping_selection",
+    "_redirect_url",
+    "_require_delete_confirm",
+    "_require_editable",
+    "_require_instrument_editable",
+    "_require_instrument_in_session",
+    "_require_not_archived",
+    "_require_not_ready",
+    "_require_response_loss_ack",
+    "_require_reviewer_in_session",
+    "_require_selected_response_loss_ack",
+    "_row_action_anchor",
+    "_setup_row_window",
+]
+
 # ------------------------------------------------------------------ #
 # Template factory + Jinja globals — single source of truth.
 #
@@ -74,19 +102,33 @@ _templates = Jinja2Templates(
     context_processors=[display_timezone_context_processor],
 )
 urls.install(_templates)
-_templates.env.globals["app_version"] = settings.app_version
+
+
+class _JinjaNamespaces(Protocol):
+    globals: dict[str, object]
+    filters: dict[str, object]
+
+
+def _jinja_namespaces(env: _JinjaNamespaces) -> _JinjaNamespaces:
+    """Jinja infers `Environment.globals` / `.filters` from literals,
+    partly untyped: they are reached through this, typed once."""
+    return env
+
+
+_jinja = _jinja_namespaces(_templates.env)
+_jinja.globals["app_version"] = settings.app_version
 # 19Z, accounts item: a ``users`` row bound to its person in the directory.
-_templates.env.globals["account_verified"] = users_service_is_verified
-_templates.env.globals["display_field_label"] = (
+_jinja.globals["account_verified"] = users_service_is_verified
+_jinja.globals["display_field_label"] = (
     instruments_service.display_field_label
 )
-_templates.env.globals["is_locked_display_source"] = (
+_jinja.globals["is_locked_display_source"] = (
     instruments_service.is_locked_display_source
 )
 # Segment 13C — the set of (source_type, source_field) tag pairs a
 # group-scoped instrument groups by; drives the group Display
 # Fields table's Group-by / Include columns.
-_templates.env.globals["group_boundary_pairs"] = (
+_jinja.globals["group_boundary_pairs"] = (
     instruments_service.group_boundary_pairs
 )
 # Friendly-label resolver globals — Segment 15A Slice 2.
@@ -94,46 +136,46 @@ _templates.env.globals["group_boundary_pairs"] = (
 # canonical default → fallback). ``field_label_pair`` returns the
 # ``LabelPair(friendly, canonical, has_override)`` used by the
 # two-line operator-surface header render.
-_templates.env.globals["field_label"] = field_labels_service.resolve
-_templates.env.globals["field_label_pair"] = field_labels_service.resolve_pair
-_templates.env.filters["lifecycle_label"] = (
+_jinja.globals["field_label"] = field_labels_service.resolve
+_jinja.globals["field_label_pair"] = field_labels_service.resolve_pair
+_jinja.filters["lifecycle_label"] = (
     lifecycle_display.lifecycle_display_label
 )
 # Canonical date / time display formatting — Segment 18B PR 1 / PR 2.
 # Context-aware: the filters resolve their display zone from the
 # ``display_timezone`` context key the processor above injects.
-_templates.env.filters["format_datetime"] = format_datetime_filter
-_templates.env.filters["format_date"] = format_date_filter
+_jinja.filters["format_datetime"] = format_datetime_filter
+_jinja.filters["format_date"] = format_date_filter
 # A stored instant as the session tables' client sort key, so a header
 # click orders Deadline / Created / Archived as a reload does.
-_templates.env.filters["sort_instant"] = views.instant_sort_value
+_jinja.filters["sort_instant"] = views.instant_sort_value
 # A status's lifecycle position, the session tables' Status sort key.
-_templates.env.filters["sort_status"] = views.status_sort_cell
+_jinja.filters["sort_status"] = views.status_sort_cell
 # Mirrors the date_formatting.SHOW_ZONE_TOKEN switch into templates
 # so the two timezone-card live previews match the server render.
-_templates.env.globals["show_zone_token"] = date_formatting.SHOW_ZONE_TOKEN
+_jinja.globals["show_zone_token"] = date_formatting.SHOW_ZONE_TOKEN
 # Resolves a session's effective display zone (the raw IANA id) —
 # used by the sessions-lobby Timezone column, where the table lists
 # many sessions and so can't pick one zone for its timestamp cells.
-_templates.env.globals["session_timezone"] = (
+_jinja.globals["session_timezone"] = (
     sessions_service.resolve_session_timezone
 )
 # Compact GMT-offset label for the sessions-lobby Timezone column —
 # narrower than the raw IANA id (e.g. ``GMT+8`` for ``Asia/Singapore``).
-_templates.env.globals["gmt_offset_label"] = date_formatting.gmt_offset_label
+_jinja.globals["gmt_offset_label"] = date_formatting.gmt_offset_label
 # Combined form for the timezone picker datalist + initial value:
 # ``"GMT+8 Asia/Singapore"`` (or ``"UTC"`` for the zero-offset case).
-_templates.env.globals["gmt_offset_zone_label"] = (
+_jinja.globals["gmt_offset_zone_label"] = (
     date_formatting.gmt_offset_zone_label
 )
 # ``YYYY-MM-DDTHH:MM`` wall-clock in a session's zone — Session Home's
 # ``data-tz-utc`` seeds, which the zone-conversion script reads.
-_templates.env.globals["format_datetime_local"] = (
+_jinja.globals["format_datetime_local"] = (
     date_formatting.format_datetime_local
 )
 # A date-time field's 24-hour text (19X Item 6) — the sessions-lobby
 # inline expander's Deadline box seeds from it.
-_templates.env.globals["format_datetime_box"] = date_formatting.format_datetime_box
+_jinja.globals["format_datetime_box"] = date_formatting.format_datetime_box
 # Per-numeric-column ``ch`` width for the fixed-layout group-scoped
 # instrument table (Segment 13C). Registered on the reviewer
 # ``_templates`` as well; the operator preview route
@@ -142,21 +184,21 @@ _templates.env.globals["format_datetime_box"] = date_formatting.format_datetime_
 # helper inside the group-scoped branch — so without this global,
 # previewing a session whose page-2+ holds a group-scoped instrument
 # 500s on render.
-_templates.env.globals["numeric_column_ch_width"] = (
+_jinja.globals["numeric_column_ch_width"] = (
     views.numeric_column_ch_width
 )
-_templates.env.globals["profile_column_ch_width"] = (
+_jinja.globals["profile_column_ch_width"] = (
     views.profile_column_ch_width
 )
-_templates.env.globals["is_web_link"] = views.is_web_link
+_jinja.globals["is_web_link"] = views.is_web_link
 # Reviewer-progress pill: one state → (css, label) mapping (audit V2).
-_templates.env.globals["progress_pill"] = views.progress_pill
+_jinja.globals["progress_pill"] = views.progress_pill
 # Operator-facing instrument label resolver
 # (``short_label > Instrument_{session_seq}`` per the 2026-05-28 operator-
 # identifier policy in ``spec/instruments.md``). Registered as a
 # Jinja global so operator templates can call ``instrument_label(...)``
 # inline without the view shape having to pre-compute every cell.
-_templates.env.globals["instrument_label"] = (
+_jinja.globals["instrument_label"] = (
     instruments_service._instrument_label
 )
 
@@ -513,7 +555,20 @@ def _redirect_url(
     return f"{base}?{urlencode(params)}"
 
 
-async def require_json_object(request: Request, *, label: str) -> dict:
+def _json_dict(value: object) -> dict[str, Any] | None:
+    """``value`` when it is a JSON object (its keys are strings), else
+    ``None``: the typed boundary for JSON from a request body or form
+    snapshot."""
+    return cast("dict[str, Any]", value) if isinstance(value, dict) else None
+
+
+def _json_list(value: object) -> list[Any] | None:
+    """``value`` when it is a JSON array (its items any JSON value), else
+    ``None``."""
+    return cast("list[Any]", value) if isinstance(value, list) else None
+
+
+async def require_json_object(request: Request, *, label: str) -> dict[str, Any]:
     """Parse an AJAX request body as a JSON object, else raise
     ``HTTPException(400)`` with a ``"{label} body must be …"`` message.
 
@@ -531,12 +586,13 @@ async def require_json_object(request: Request, *, label: str) -> dict:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"{label} body must be JSON",
         ) from exc
-    if not isinstance(body, dict):
+    obj = _json_dict(body)
+    if obj is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"{label} body must be a JSON object",
         )
-    return body
+    return obj
 
 
 def _can_edit_instrument(review_session: ReviewSession) -> bool:
@@ -591,8 +647,14 @@ _SETUP_DEFAULT_CAP: int = 200
 _SETUP_FILTERED_CAP: int = 500
 
 
+class _HasId(Protocol):
+    """A roster row: an ORM model with an integer primary key."""
+
+    id: Mapped[int]
+
+
 @dataclass(frozen=True)
-class SetupWindow:
+class SetupWindow[RowT: _HasId]:
     """The slice of a roster one Setup page renders, plus what the
     page needs to say about it (Segment 19J.5 rung 2).
 
@@ -601,21 +663,21 @@ class SetupWindow:
     rendering an editor over nothing.
     """
 
-    rows: list
+    rows: list[RowT]
     offset: int
     pager: views.Pager | None
     edit_id: int | None
 
 
-def _setup_row_window(
+def _setup_row_window[RowT: _HasId](
     *,
-    filtered: list,
-    all_rows: list,
+    filtered: list[RowT],
+    all_rows: list[RowT],
     is_filtered: bool,
     offset: int = 0,
     edit_id: int | None = None,
     locate_id: int | None = None,
-) -> SetupWindow:
+) -> SetupWindow[RowT]:
     """Cut the page the operator asked for out of a sorted, filtered
     roster — shared by the four Setup roster slices.
 
@@ -907,7 +969,9 @@ def directory_search_response(directory: Directory | None, q: str) -> JSONRespon
     return JSONResponse(answer, headers={"Cache-Control": "no-store"})
 
 
-def account_resolver(request: Request):
+def account_resolver(
+    request: Request,
+) -> Callable[[str], directory_accounts.Account | None]:
     """The single-row add and edit's lookup (segment 21F): one address
     resolved on demand, through the operator's directory if there is one."""
     return directory_accounts.resolver(directory_or_none(request))
@@ -915,7 +979,13 @@ def account_resolver(request: Request):
 
 #: The roster upload parsers by slot: Quick Setup dispatches through it,
 #: and the upload countdown's keys (20H Item 6) parse with the same one.
-ROSTER_PARSERS = {
+RosterParser = (
+    Callable[[bytes], csv_imports.ParseResult[ReviewerImportRow]]
+    | Callable[[bytes], csv_imports.ParseResult[RevieweeImportRow]]
+    | Callable[[bytes], csv_imports.ParseResult[ObserverImportRow]]
+)
+
+ROSTER_PARSERS: dict[str, RosterParser] = {
     "reviewers": csv_imports.parse_reviewer_csv,
     "reviewees": csv_imports.parse_reviewee_csv,
     "observers": csv_imports.parse_observer_csv,

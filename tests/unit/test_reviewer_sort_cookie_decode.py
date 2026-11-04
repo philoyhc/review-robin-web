@@ -11,15 +11,15 @@ sort finds.
 from __future__ import annotations
 
 import json
-from types import SimpleNamespace
 from urllib.parse import quote
 
 import pytest
 
+from app.db.models import InstrumentDisplayField
 from app.web.views import decode_cookie_sort_spec_for_reviewer_surface
 
-NAME_DF = SimpleNamespace(id=11, source_type="reviewee", source_field="name", order=0)
-TAG_DF = SimpleNamespace(id=12, source_type="reviewee", source_field="tag_1", order=1)
+NAME_DF = InstrumentDisplayField(id=11, source_type="reviewee", source_field="name", order=0)
+TAG_DF = InstrumentDisplayField(id=12, source_type="reviewee", source_field="tag_1", order=1)
 TAG = "display:reviewee.tag_1"
 COOKIE = "rrw-sort-rs-1-2"
 
@@ -109,7 +109,7 @@ def test_a_display_key_names_its_source_not_its_id() -> None:
 def test_two_fields_with_one_source_take_the_first_in_display_order() -> None:
     """The Settings import can give two display fields one source. They
     show the same values, so the key goes to the first in display order."""
-    later = SimpleNamespace(id=5, source_type="reviewee", source_field="tag_1", order=2)
+    later = InstrumentDisplayField(id=5, source_type="reviewee", source_field="tag_1", order=2)
     assert decode_cookie_sort_spec_for_reviewer_surface(
         cookies={COOKIE: quote(json.dumps([{"key": TAG, "dir": "asc"}]))},
         session_id="1",

@@ -23,12 +23,14 @@ Source range in pre-PR-7 ``_legacy.py``: lines 398-863.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import TypedDict
 
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, User
+from app.schemas.validation import ValidationIssue
 from app.services import csv_imports, session_config_io
 from app.services import relationships as relationships_service
 from app.services import session_lifecycle as lifecycle
@@ -257,9 +259,9 @@ def build_quick_setup_context(
     relationship_count = relationships_service.existing_count(db, sid)
     observer_count = csv_imports.existing_observer_count(db, sid)
 
-    cancel_url_for = lambda key: (  # noqa: E731
-        f"/operator/sessions/{review_session.public_id}#quick-setup-{key}"
-    )
+    def cancel_url_for(key: str) -> str:
+        return f"/operator/sessions/{review_session.public_id}#quick-setup-{key}"
+
     # The re-offered tick renders only for the refusal that asks for it,
     # and only with a count to carry.
     _deletion_count = (
@@ -493,14 +495,16 @@ def _clip(line: str) -> str:
     return line
 
 
-def settings_error_details(errors: list) -> list[str]:
+def settings_error_details(
+    errors: Sequence[session_config_io.ApplyError],
+) -> list[str]:
     """Format ``apply_session_config``'s ``ApplyResult.errors`` as the
     lines the Settings slot's banner lists (findings D31): the row
     and field when the error has them, then the message."""
 
-    lines = []
+    lines: list[str] = []
     for error in errors:
-        where = []
+        where: list[str] = []
         if error.row_number:
             where.append(f"Row {error.row_number}")
         if error.field:
@@ -511,7 +515,7 @@ def settings_error_details(errors: list) -> list[str]:
     return _capped(lines)
 
 
-def roster_problem_details(issues: list) -> list[str]:
+def roster_problem_details(issues: Sequence[ValidationIssue]) -> list[str]:
     """The kinds of problem that refused a roster file in Quick Setup,
     one line each with how many rows have it ("ReviewerEmail is blank
     (2 rows)"), capped for the banner. The lines are the Setup pages'

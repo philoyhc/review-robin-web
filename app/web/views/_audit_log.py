@@ -41,6 +41,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime
+from typing import cast
 from urllib.parse import urlencode
 
 from app.services.audit import AuditFilters, AuditLogRow
@@ -50,6 +51,8 @@ from app.services.date_formatting import (
     gmt_offset_label,
     gmt_offset_zone_label,
 )
+
+from ._json import json_object
 
 __all__ = [
     "AuditDetailChangeRow",
@@ -459,16 +462,16 @@ def format_audit_detail(
     sections: list[AuditDetailSection] = []
 
     payload_rendered = False
-    if isinstance(changes := detail.get("changes"), dict):
+    if (changes := json_object(detail.get("changes"))) is not None:
         sections.append(_render_changes(changes))
         payload_rendered = True
-    if isinstance(snapshot := detail.get("snapshot"), dict):
+    if (snapshot := json_object(detail.get("snapshot"))) is not None:
         sections.append(_render_kv("snapshot", "Snapshot", snapshot))
         payload_rendered = True
-    if isinstance(counts := detail.get("counts"), dict):
+    if (counts := json_object(detail.get("counts"))) is not None:
         sections.append(_render_kv("counts", "Counts", counts))
         payload_rendered = True
-    if isinstance(set_changes := detail.get("set_changes"), dict):
+    if (set_changes := json_object(detail.get("set_changes"))) is not None:
         sections.append(_render_set_changes(set_changes))
         payload_rendered = True
 
@@ -478,9 +481,9 @@ def format_audit_detail(
                 kind="reason", label="Reason", text=reason
             )
         )
-    if isinstance(refs := detail.get("refs"), dict):
+    if (refs := json_object(detail.get("refs"))) is not None:
         sections.append(_render_kv("refs", "Refs", refs))
-    if isinstance(context := detail.get("context"), dict):
+    if (context := json_object(detail.get("context"))) is not None:
         sections.append(_render_kv("context", "Context", context))
 
     # Fallback: any keys the renderer didn't recognise (legacy
@@ -504,13 +507,9 @@ def format_audit_detail(
     )
 
 
-def _render_changes(changes: dict) -> AuditDetailSection:
+def _render_changes(changes: dict[str, object]) -> AuditDetailSection:
     rows = tuple(
-        AuditDetailChangeRow(
-            label=field,
-            before=_format_scalar(pair[0] if len(pair) > 0 else None),
-            after=_format_scalar(pair[1] if len(pair) > 1 else None),
-        )
+        _change_row(field, cast("list[object]", pair))
         for field, pair in sorted(changes.items())
         if isinstance(pair, list)
     )
@@ -521,7 +520,17 @@ def _render_changes(changes: dict) -> AuditDetailSection:
     )
 
 
-def _render_kv(kind: str, label: str, data: dict) -> AuditDetailSection:
+def _change_row(field: str, pair: list[object]) -> AuditDetailChangeRow:
+    return AuditDetailChangeRow(
+        label=field,
+        before=_format_scalar(pair[0] if len(pair) > 0 else None),
+        after=_format_scalar(pair[1] if len(pair) > 1 else None),
+    )
+
+
+def _render_kv(
+    kind: str, label: str, data: dict[str, object]
+) -> AuditDetailSection:
     rows = tuple(
         AuditDetailKVRow(label=k, value=_format_scalar(v))
         for k, v in sorted(data.items(), key=lambda kv: str(kv[0]))
@@ -529,7 +538,7 @@ def _render_kv(kind: str, label: str, data: dict) -> AuditDetailSection:
     return AuditDetailSection(kind=kind, label=label, kv_rows=rows)
 
 
-def _render_set_changes(data: dict) -> AuditDetailSection:
+def _render_set_changes(data: dict[str, object]) -> AuditDetailSection:
     import json
 
     def _fmt_items(items: object) -> list[str]:
@@ -539,7 +548,7 @@ def _render_set_changes(data: dict) -> AuditDetailSection:
             json.dumps(item, separators=(",", ":"), sort_keys=True)
             if not isinstance(item, str)
             else item
-            for item in items
+            for item in cast("list[object]", items)
         ]
 
     return AuditDetailSection(

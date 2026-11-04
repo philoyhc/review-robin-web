@@ -41,7 +41,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.roles import super_admin_configured
-from app.db.models import User
+from app.db.models import ReviewSession, User
 from app.db.session import get_db
 from app.services import (
     account_listing,
@@ -130,7 +130,7 @@ def sys_admin_sessions(
         cookie_name=_DIAGNOSTICS_SORT_COOKIE,
         valid_keys=views.DIAGNOSTICS_SORT_KEYS,
     )
-    rows = views.apply_cookie_sort(
+    rows: list[ReviewSession] = views.apply_cookie_sort(
         sessions.list_all(db), sort_spec, value_resolver=views.session_sort_value
     )
     owners = session_owners.owners_by_session(db, [s.id for s in rows])

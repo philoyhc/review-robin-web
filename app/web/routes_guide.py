@@ -41,7 +41,7 @@ _templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 urls.install(_templates)
 # The chrome's "(version …)" reads it; every other environment that
 # renders base.html sets it too (participant audit M8).
-_templates.env.globals["app_version"] = settings.app_version
+urls.add_globals(_templates, app_version=settings.app_version)
 
 
 @router.get("/guide", response_class=HTMLResponse)

@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
+from typing import cast
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.concurrency import run_in_threadpool
@@ -44,6 +45,22 @@ router = APIRouter()
 LOOKUP_BATCH_MAX = 25
 LOOKUP_BODY_MAX = 64 * 1024
 LOOKUP_BUDGET = 30.0
+
+
+def _lookup_keys(body: object) -> list[str] | None:
+    """A lookup body's ``keys``: 1 to ``LOOKUP_BATCH_MAX`` strings, each
+    already a canonical key, else ``None``."""
+    if not isinstance(body, dict):
+        return None
+    keys = cast("dict[object, object]", body).get("keys")
+    if not isinstance(keys, list):
+        return None
+    items = cast("list[object]", keys)
+    if not 1 <= len(items) <= LOOKUP_BATCH_MAX:
+        return None
+    valid = [k for k in items if isinstance(k, str) and directory_accounts.key(k) == k]
+    return valid if len(valid) == len(items) else None
+
 
 _NO_STORE = {"Cache-Control": "no-store"}
 
@@ -150,12 +167,8 @@ async def roster_directory_lookup(
         body = json.loads(await request.body())
     except (ValueError, RecursionError):
         return _error(400, "bad_json")
-    keys = body.get("keys") if isinstance(body, dict) else None
-    if (
-        not isinstance(keys, list)
-        or not 1 <= len(keys) <= LOOKUP_BATCH_MAX
-        or not all(isinstance(k, str) and directory_accounts.key(k) == k for k in keys)
-    ):
+    keys = _lookup_keys(body)
+    if keys is None:
         return _error(400, "bad_keys")
     directory = directory_or_none(request)
     if directory is None:

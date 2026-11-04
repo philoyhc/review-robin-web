@@ -37,6 +37,7 @@ from sqlalchemy.orm import Session
 from app.db.models import Observer, ReviewSession, User
 from app.db.session import get_db
 from app.schemas.observer_cohort_rule import VALUE_OPERATORS
+from app.schemas.validation import ValidationIssue
 from app.services import csv_imports, directory_lookups, participant_info
 from app.services import observers as observers_service
 from app.services import session_lifecycle as lifecycle
@@ -117,7 +118,7 @@ def _render_observers_page(
     rule_edit_ids: list[int] | None = None,
     selected_ids: set[int] | None = None,
     focus_id: int | None = None,
-    issues: list | None = None,
+    issues: list[ValidationIssue] | None = None,
     missing_confirm: bool = False,
     filename: str | None = None,
     held_upload: dict[str, str] | None = None,
@@ -183,7 +184,7 @@ def _render_observers_page(
             rule_edit_ids[0] if rule_edit_ids else None
         ),
     )
-    observers = window.rows
+    observers: list[Observer] = window.rows
     offset = window.offset
     edit_id = window.edit_id
     displayed_row_count = len(observers)
@@ -683,7 +684,10 @@ def _row_editor_rule(
     the page disables Save on one, and this refuses it too.
     """
     n = len(ops)
-    pad = lambda xs: list(xs) + [""] * (n - len(xs))  # noqa: E731
+
+    def pad(xs: list[str]) -> list[str]:
+        return list(xs) + [""] * (n - len(xs))
+
     fields, operand_tags, operand_values = (
         pad(fields), pad(operand_tags), pad(operand_values)
     )
@@ -700,7 +704,10 @@ def _row_editor_rule(
         cells.append(
             {"field": field, "op": op, "operand_tag": tag, "operand_value": value}
         )
-    shown = {"combinator": (combinator or "AND").strip().upper(), "rules": cells}
+    shown: dict[str, Any] = {
+        "combinator": (combinator or "AND").strip().upper(),
+        "rules": cells,
+    }
     return _RowEditorRule(
         payload=shown if cells else None,
         shown=shown,

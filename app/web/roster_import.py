@@ -14,6 +14,7 @@ module, so a test that replaces it there reaches this code too.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import cast
 
@@ -28,6 +29,7 @@ from app.db.models import (
     ReviewSession,
     User,
 )
+from app.schemas.imports import RevieweeImportRow, ReviewerImportRow
 from app.services import (
     assignments,
     csv_imports,
@@ -42,6 +44,16 @@ from app.services import symmetric_review as symmetric_review_service
 from app.services.responses import GroupAnswersWouldClear
 from app.web import breadcrumbs, urls, views
 from app.web.deps import request_correlation_id
+
+__all__ = [
+    "UploadIn",
+    "read_upload",
+    "hold_for_ask",
+    "release_hold",
+    "dismiss_held_upload",
+    "_handle_import",
+    "_save_field_labels",
+]
 
 
 @dataclass(frozen=True)
@@ -182,9 +194,15 @@ async def _handle_import(
     user: User,
     db: Session,
     kind: str,
-    existing_count_fn,
-    parse_fn,
-    save_fn,
+    existing_count_fn: Callable[[Session, int], int],
+    parse_fn: Callable[
+        [bytes],
+        csv_imports.ParseResult[ReviewerImportRow]
+        | csv_imports.ParseResult[RevieweeImportRow],
+    ],
+    # Called with the import's keywords plus a merge's ``**extra``, so
+    # its parameters are not spelled here.
+    save_fn: Callable[..., tuple[int, int]],
     append: str | None = None,
     merge: str | None = None,
     acknowledge_group_clear: str | None = None,
@@ -462,7 +480,7 @@ async def _handle_import(
                     "add_mode": False,
                     "edit_values": None,
                     "edit_error": None,
-                    "selected_ids": set(),
+                    "selected_ids": set[int](),
                 }
             )
         return _templates.TemplateResponse(

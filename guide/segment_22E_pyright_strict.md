@@ -95,7 +95,11 @@ Taken 2026-11-04 at `9b45a9c1`, pyright 1.1.414, `typeCheckingMode =
   function. `check` re-exports `classify` as `classify as classify`;
   the unused `Directory` re-export is gone (nothing read it). Two
   `isinstance(…, str)` guards precede `in` tests that only a string could
-  pass. No behavior change, no ignores.
+  pass. **One named fix** (found by the item read): a carried outcome whose
+  `match_type` is unhashable (`[]`, `{}`) used to raise `TypeError` out of
+  the set test, a 500; it is now refused like any other bad outcome
+  (`test_carried_outcomes_with_a_non_string_match_type_are_refused`). No
+  ignores.
 - **Rung 4:** `residentialapps` strict, its table gone (236 fixed, 153
   of them in the two sample modules). The samples' row dicts become
   `TypedDict`s (entitlement rows, Precinct counts, workload, hotspots and
@@ -123,11 +127,32 @@ Taken 2026-11-04 at `9b45a9c1`, pyright 1.1.414, `typeCheckingMode =
   `pyright: ignore[reportUnusedFunction]` keep the monitoring rollup's
   parity oracles, which only a test calls. Checks removed only where
   unreachable (a pydantic-validated operand, a required argument, a
-  non-null column, JSON object keys); `reorder_instruments` keeps its
-  list check, its parameter now `Sequence`. `User.preferences` is
+  non-null column, JSON object keys, `column_length`'s `int`, two string
+  checks on a list the only caller builds from `str()`);
+  `reorder_instruments` keeps its list check, so its `Sequence` parameter
+  admits a tuple the check still refuses, as before. `User.preferences` is
   `dict[str, Any] | None`. Left for 22F: `set_band2_state`'s docstring
   says `None` clears the state, but the code keeps it (no caller passes
   `None`).
+- **Rung 7:** `app/web` strict, its table gone (897 fixed, in `views`,
+  `routes_reviewer`, `routes_operator` and the top-level modules), so
+  every application package is strict and only the test roots keep
+  tables. The same patterns; `SetupWindow` and `apply_cookie_sort` are
+  generic over their rows (`_HasId`: `id: Mapped[int]`); surface rows stay
+  `dict[str, Any]` (`SurfaceRow`), since the unit tests build them loosely;
+  `views/_json.py` reads stored JSON; two `isinstance(rf, dict)` checks on
+  a list built from dicts a few lines up go; 16 unused re-exports leave
+  `routes_reviewer/_surface/__init__.py`. One unit test builds real
+  `InstrumentDisplayField`s instead of `SimpleNamespace`s (assertions
+  unchanged). No ignores. Left for 22F: an audit `context.scheduled_at`
+  that is truthy but not a string still raises in
+  `build_scheduled_activation_caption`, as before; five JSON-narrowing
+  helpers (`_json_dict` / `_json_object` / `json_object`, value `Any` or
+  `object`) and three Jinja-namespace wrappers could each be one.
+- **Item read** (rung 7, cumulative from `f45dd46d`): one medium, the
+  unnamed email-check fix above, now named and tested; the rest low
+  (Status gaps, fixed here; the duplicated helpers, for 22F; the plan's
+  prose still describing a `strict` list, for the close).
 
 ## PR ladder
 

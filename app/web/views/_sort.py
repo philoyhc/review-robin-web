@@ -33,7 +33,10 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Sequence
 from collections.abc import Set as AbstractSet
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
+
+if TYPE_CHECKING:
+    from app.db.models import InstrumentDisplayField
 
 __all__ = [
     "apply_cookie_sort",
@@ -85,9 +88,10 @@ def decode_cookie_sort_spec(
     if not isinstance(decoded, list):
         return []
     out: list[tuple[str, str]] = []
-    for entry in decoded[:3]:
-        if not isinstance(entry, dict):
+    for item in cast("list[object]", decoded)[:3]:
+        if not isinstance(item, dict):
             continue
+        entry = cast("dict[str, object]", item)
         key = entry.get("key")
         direction = entry.get("dir")
         if not isinstance(key, str) or direction not in ("asc", "desc"):
@@ -98,12 +102,12 @@ def decode_cookie_sort_spec(
     return out
 
 
-def apply_cookie_sort(
-    rows,
+def apply_cookie_sort[Row](
+    rows: Iterable[Row],
     spec: list[tuple[str, str]],
     *,
-    value_resolver,
-):
+    value_resolver: Callable[[Row, str], Any],
+) -> list[Row]:
     """Sort ``rows`` per the cascade-ordered ``(key, dir)`` spec.
 
     ``value_resolver(row, key) -> Any | None`` extracts the
@@ -131,13 +135,13 @@ def apply_cookie_sort(
 
     from functools import cmp_to_key
 
-    def _resolve(row) -> list:
+    def _resolve(row: Row) -> list[Any]:
         values = [value_resolver(row, key) for key, _ in spec]
         return [None if value == "" else value for value in values]
 
     decorated = [(_resolve(row), row) for row in materialised]
 
-    def _compare(a, b) -> int:
+    def _compare(a: tuple[list[Any], Row], b: tuple[list[Any], Row]) -> int:
         for (_, direction), av, bv in zip(spec, a[0], b[0]):
             if av is None and bv is None:
                 continue
@@ -177,7 +181,7 @@ def decode_cookie_sort_spec_for_reviewer_surface(
     cookies: dict[str, str],
     session_id: str,
     instrument_seq: int,
-    display_fields,
+    display_fields: Sequence[InstrumentDisplayField],
 ) -> list[dict[str, object]] | None:
     """Translate the reviewer-surface cookie into a
     ``sort_display_fields``-shaped spec the
@@ -246,14 +250,13 @@ def decode_cookie_sort_spec_for_reviewer_surface(
     # uses, so the server and the browser keep the same entries.
     entries = [
         entry
-        for entry in decoded
-        if isinstance(entry, dict)
-        and isinstance(entry.get("key"), str)
+        for entry in _object_entries(cast("list[object]", decoded))
+        if isinstance(entry.get("key"), str)
         and entry.get("dir") in ("asc", "desc")
     ][:3]
     out: list[dict[str, object]] = []
     for entry in entries:
-        key = entry["key"]
+        key = cast("str", entry["key"])
         direction = entry["dir"]
         if key.startswith("response:"):
             # The on-load script owns this spec; see the docstring.
@@ -270,6 +273,15 @@ def decode_cookie_sort_spec_for_reviewer_surface(
             continue
         out.append({"display_field_id": df_id, "dir": direction})
     return out
+
+
+def _object_entries(items: list[object]) -> list[dict[str, object]]:
+    """The JSON objects in a decoded cookie list, in order."""
+    return [
+        cast("dict[str, object]", item)
+        for item in items
+        if isinstance(item, dict)
+    ]
 
 
 def order_rows_by_sort_spec[Row](
@@ -331,7 +343,7 @@ def order_rows_by_sort_spec[Row](
     if not effective_spec:
         return materialised
 
-    def _row_key(row: Row) -> tuple:
+    def _row_key(row: Row) -> tuple[tuple[int, Any], ...]:
         keys: list[tuple[int, Any]] = []
         for entry in effective_spec:
             field_id = entry["display_field_id"]

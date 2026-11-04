@@ -152,6 +152,13 @@ def _render_error(
     )
 
 
+def _str_or_none(value: object) -> str | None:
+    """Starlette types ``HTTPException.detail`` as ``str``, but FastAPI's
+    subclass takes any value (a dict, a list), so it is checked as what
+    it may be."""
+    return value if isinstance(value, str) else None
+
+
 async def _http_exception_handler(
     request: Request, exc: Exception
 ) -> Response:
@@ -167,7 +174,7 @@ async def _http_exception_handler(
                 "method": request.method,
             },
         )
-    detail = exc.detail if isinstance(exc.detail, str) else None
+    detail = _str_or_none(exc.detail)
     if exc.status_code in _COPY_ONLY:
         # The page hides the detail, so keep it here: it is the only
         # record of *why* a sign-in was refused.

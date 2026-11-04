@@ -39,6 +39,8 @@ from app.services import instruments as instruments_service
 from app.services import unit_of_work
 from app.web.deps import get_or_create_user
 from app.web.routes_operator._shared import (
+    _json_dict,
+    _json_list,
     _require_instrument_editable,
     _require_instrument_in_session,
     require_json_object,
@@ -70,8 +72,8 @@ async def instrument_column_widths(
     # the instrument services lock the session row (findings Bc4), and
     # a lock wait on the event loop would stall the worker.
     def _apply():
-        widths = body.get("widths") or {}
-        if not isinstance(widths, dict):
+        widths = _json_dict(body.get("widths") or {})
+        if widths is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="column-widths.widths must be an object",
@@ -218,13 +220,16 @@ async def instrument_preview_sample(
     # a lock wait on the event loop would stall the worker.
     def _apply():
         def _str_list(v: Any) -> list[str]:
-            return [str(x) for x in v] if isinstance(v, list) else []
+            items = _json_list(v)
+            return [str(x) for x in items] if items is not None else []
         def _rule_list(v: Any) -> list[dict[str, str]]:
             out: list[dict[str, str]] = []
-            if not isinstance(v, list):
+            items = _json_list(v)
+            if items is None:
                 return out
-            for entry in v:
-                if not isinstance(entry, dict):
+            for item in items:
+                entry = _json_dict(item)
+                if entry is None:
                     continue
                 out.append(
                     {

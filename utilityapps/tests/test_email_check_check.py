@@ -281,3 +281,12 @@ def test_the_log_carries_counts_never_the_file(client: TestClient, caplog: pytes
 def test_a_step_reached_by_address_starts_again(client: TestClient, path: str) -> None:
     page = client.get(path, follow_redirects=False)
     assert page.status_code == 303 and page.headers["location"] == "/utilities/email-check/"
+
+
+@pytest.mark.parametrize("match_type", [[], {}, 1])
+def test_carried_outcomes_with_a_non_string_match_type_are_refused(match_type: object) -> None:
+    """Segment 22E rung 3: an unhashable match type once raised `TypeError`
+    out of the set test (a 500); it is refused like any other bad outcome."""
+    carried = {"a@x.edu": {"status": "OK", "match_type": match_type, "user": None}}
+    with pytest.raises(check.OutcomesRejected):
+        check.outcomes_from_json(carried, ["a@x.edu"])

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
 from datetime import datetime
+from typing import TypedDict, cast
 from urllib.parse import urlencode
 
 from fastapi import (
@@ -34,6 +35,11 @@ from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
+from app.schemas.imports import (
+    ObserverImportRow,
+    RevieweeImportRow,
+    ReviewerImportRow,
+)
 from app.schemas.sessions import SessionCreate
 from app.services import (
     csv_imports,
@@ -441,7 +447,7 @@ class _SlotFailure:
     Relationships file would clear (findings S1)."""
 
     reason: str
-    details: list[str] = field(default_factory=list)
+    details: list[str] = field(default_factory=list[str])
     count: int = 0
 
 
@@ -457,6 +463,16 @@ class _SlotRefusal:
 _ROSTER_KINDS = ("reviewers", "reviewees", "observers")
 
 
+#: A staged slot's parsed rows, by ``kind``: a roster's import rows, or
+#: a Settings file's rows (Relationships stages its bytes instead).
+type _StagedRows = (
+    list[ReviewerImportRow]
+    | list[RevieweeImportRow]
+    | list[ObserverImportRow]
+    | list[session_config_io.Row]
+)
+
+
 @dataclass(frozen=True)
 class _StagedSlot:
     """A file that passed every check, held until the save. A roster
@@ -466,8 +482,8 @@ class _StagedSlot:
 
     kind: str
     filename: str
-    rows: list = field(default_factory=list)
-    field_labels: dict | None = None
+    rows: _StagedRows = field(default_factory=list[session_config_io.Row])
+    field_labels: dict[tuple[str, str], str] | None = None
     content: bytes = b""
     #: A roster's directory check (segment 21F), run before the save unit.
     directory: csv_imports.DirectoryCheck | None = None
@@ -829,8 +845,15 @@ def _check_uploads(
                 ),
             )
         elif kind == "relationships":
-            reviewers = parsed.get("reviewers")
-            reviewees = parsed.get("reviewees")
+            # Each parser's result, by the slot it was parsed for.
+            reviewers = cast(
+                "csv_imports.ParseResult[ReviewerImportRow] | None",
+                parsed.get("reviewers"),
+            )
+            reviewees = cast(
+                "csv_imports.ParseResult[RevieweeImportRow] | None",
+                parsed.get("reviewees"),
+            )
             result = relationships_service.parse_relationship_upload(
                 db,
                 review_session.id,
@@ -973,6 +996,15 @@ def _save_uploads(
         raise _UnitRefused(_SlotRefusal(current, _SlotFailure(reason))) from exc
 
 
+class _SaveCommon(TypedDict):
+    """The keyword arguments every slot's saver takes."""
+
+    session: ReviewSession
+    user: User
+    filename: str
+    correlation_id: str
+
+
 def _save_slot(
     db: Session,
     item: _StagedSlot,
@@ -992,16 +1024,17 @@ def _save_slot(
     ``acknowledged_group_loss`` is that count. The card is locked
     whenever answers exist, so only a stale tab or a direct POST meets
     the refusal, and only a direct POST can carry the count."""
-    common = {
+    common: _SaveCommon = {
         "session": review_session,
         "user": user,
         "filename": item.filename,
         "correlation_id": correlation_id,
     }
+    # ``item.rows`` holds the rows its ``kind`` was parsed into.
     if item.kind == "reviewers":
         csv_imports.save_reviewers(
             db,
-            rows=item.rows,
+            rows=cast("list[ReviewerImportRow]", item.rows),
             field_labels_captured=item.field_labels,
             directory=item.directory,
             **common,
@@ -1010,14 +1043,19 @@ def _save_slot(
     elif item.kind == "reviewees":
         csv_imports.save_reviewees(
             db,
-            rows=item.rows,
+            rows=cast("list[RevieweeImportRow]", item.rows),
             field_labels_captured=item.field_labels,
             directory=item.directory,
             **common,
         )
         return len(item.rows)
     elif item.kind == "observers":
-        csv_imports.save_observers(db, rows=item.rows, directory=item.directory, **common)
+        csv_imports.save_observers(
+            db,
+            rows=cast("list[ObserverImportRow]", item.rows),
+            directory=item.directory,
+            **common,
+        )
         return len(item.rows)
     elif item.kind == "relationships":
         # Parsed again against the rosters as they now stand inside the
@@ -1066,7 +1104,7 @@ def _save_slot(
             result = session_config_io.apply_session_config(
                 db,
                 review_session,
-                item.rows,
+                cast("list[session_config_io.Row]", item.rows),
                 user=user,
                 correlation_id=correlation_id,
                 acknowledged_deletions=acknowledged_deletions,
