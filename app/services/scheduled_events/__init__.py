@@ -89,6 +89,8 @@ from ._fired import (
 )
 from ._release import (
     _RELEASE_WINDOW_MAX,  # noqa: F401
+    STAMP_GRACE,  # noqa: F401
+    observe_release_window,
     parse_and_validate_responses_release_at,
     parse_and_validate_responses_release_until,
     validate_schedule_ordering,
@@ -113,6 +115,7 @@ __all__ = [
     "fired_offset_errors",
     "fired_offsets",
     "lock_session",
+    "observe_release_window",
     "observe_scheduled_events",
     "offsets_lead_exempt",
     "parse_and_validate_invite_offsets",
@@ -298,6 +301,17 @@ def _observe_all(
                 db, session, now=current, correlation_id=correlation_id
             ),
         )
+    # The release window's crossings (segment 14E): stamped once, by
+    # whichever trigger reaches them first.
+    _run_guarded(
+        db,
+        session,
+        trigger="release",
+        correlation_id=correlation_id,
+        fire=lambda: observe_release_window(
+            db, session, now=current, correlation_id=correlation_id
+        ),
+    )
     if not send:
         return
     _run_guarded(

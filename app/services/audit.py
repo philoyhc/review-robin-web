@@ -19,6 +19,9 @@ from __future__ import annotations
 
 import os
 import warnings
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from typing import Any
@@ -184,6 +187,7 @@ def write_event(
         )
 
     if using_canonical:
+        context = _with_fired_by(event_type, context)
         canonical_session = session if session is not _LEGACY_SENTINEL else None
         resolved_session_id, resolved_detail = _compose_canonical(
             session=canonical_session,
@@ -235,6 +239,37 @@ def write_event(
 # --------------------------------------------------------------------------- #
 # Internals
 # --------------------------------------------------------------------------- #
+
+
+#: Who fired a scheduled event (segment 14E): ``"clock"`` inside the
+#: in-app clock's pass, unset on a page view or an operator's action.
+_FIRED_BY: ContextVar[str | None] = ContextVar("audit_fired_by", default=None)
+
+
+@contextmanager
+def fired_by(source: str) -> Iterator[None]:
+    """Mark every event written inside the block as fired by
+    ``source``: each one whose schema allows ``context`` carries
+    ``context.fired_by``. The clock's pass runs inside
+    ``fired_by("clock")``; an event written on a page view carries none.
+    Not ``context.trigger``, which ``session.activated`` and
+    ``session.scheduled_event_failed`` already use for which trigger
+    ran."""
+    token = _FIRED_BY.set(source)
+    try:
+        yield
+    finally:
+        _FIRED_BY.reset(token)
+
+
+def _with_fired_by(
+    event_type: str, context: dict[str, str | int | bool] | None
+) -> dict[str, str | int | bool] | None:
+    source = _FIRED_BY.get()
+    schema = EVENT_SCHEMAS.get(event_type)
+    if source is None or schema is None or "context" not in schema.allows:
+        return context
+    return {**(context or {}), "fired_by": source}
 
 
 def _compose_canonical(
@@ -730,6 +765,14 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # without a separate diff. Buttons + emitters land with the
     # Operations-row release controls (W14 follow-on).
     "session.responses_released": EventSchema(_IDENTITY | {"snapshot"}),
+    # Segment 14E — the release window's start and end, stamped once per
+    # crossing (``context.release_at`` / ``context.release_until`` names
+    # the moment), and the deadline reached, once per crossing, with
+    # ``counts.submitted`` of ``counts.assigned`` reviewers at that moment.
+    # Each carries ``context.fired_by`` when the clock wrote it.
+    "session.release_window_opened": EventSchema(_IDENTITY | {"context"}),
+    "session.release_window_ended": EventSchema(_IDENTITY | {"context"}),
+    "session.deadline_reached": EventSchema(_IDENTITY | {"counts", "context"}),
     "session.responses_release_stopped": EventSchema(
         _IDENTITY | {"snapshot"}
     ),

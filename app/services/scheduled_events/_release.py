@@ -164,3 +164,86 @@ def validate_schedule_ordering(
         raise ScheduledActivateError(
             "Release responses until must be after Release responses from."
         )
+
+
+
+#: How far back a release-window crossing is still stamped (segment 14E).
+#: A crossing older than this, from before the clock ran or while the app
+#: was down, is not backfilled.
+STAMP_GRACE = timedelta(days=1)
+
+
+def _due_release_stamps(session, now: datetime) -> list[tuple[str, str, datetime, str]]:
+    """The window's moments crossed within :data:`STAMP_GRACE` of ``now``,
+    as ``(event_type, context key, moment, word)``. No query."""
+    start = session.responses_release_at
+    if start is None:
+        return []
+    start = _ensure_aware_utc(start)
+    due = []
+    if now - STAMP_GRACE < start <= now:
+        due.append(("session.release_window_opened", "release_at", start, "opened"))
+    until = session.responses_release_until
+    if until is not None:
+        until = _ensure_aware_utc(until)
+        if start < until and now - STAMP_GRACE < until <= now:
+            due.append(("session.release_window_ended", "release_until", until, "ended"))
+    return due
+
+
+def observe_release_window(
+    db,
+    session,
+    *,
+    now: datetime,
+    correlation_id: str | None = None,
+) -> int:
+    """Stamp the release window's start and end in the audit log, once
+    per crossing (segment 14E; author, 2026-11-04): a
+    ``session.release_window_opened`` when ``responses_release_at`` has
+    passed, a ``session.release_window_ended`` when
+    ``responses_release_until`` has, each within :data:`STAMP_GRACE` of
+    ``now``. A moment already stamped is not stamped again, whichever
+    trigger (clock or page view) reaches it first; a moved moment is a
+    new crossing. Returns the number written; commits when any is.
+
+    Changes nothing about what is visible: the window is still checked
+    on arrival.
+    """
+    if not _due_release_stamps(session, now):
+        return 0
+    from sqlalchemy import select
+
+    from app.db.models import AuditEvent
+    from app.services import audit
+    from app.services.session_guard import lock_session
+
+    # Under the session lock, so two triggers reaching one crossing at
+    # once stamp it once; the window is read again on the locked row.
+    locked = lock_session(db, session)
+    written = 0
+    for event_type, key, moment, word in _due_release_stamps(locked, now):
+        iso = moment.isoformat()
+        stamped = any(
+            ((row.detail or {}).get("context") or {}).get(key) == iso
+            for row in db.execute(
+                select(AuditEvent).where(
+                    AuditEvent.session_id == locked.id,
+                    AuditEvent.event_type == event_type,
+                )
+            ).scalars()
+        )
+        if stamped:
+            continue
+        audit.write_event(
+            db,
+            event_type=event_type,
+            summary=f"Release window {word}",
+            actor_user_id=None,
+            session=locked,
+            context={key: iso},
+            correlation_id=correlation_id,
+        )
+        written += 1
+    db.commit()
+    return written

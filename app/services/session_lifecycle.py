@@ -1175,6 +1175,26 @@ def observe_deadline(
             correlation_id=correlation_id,
         )
         closed += 1
+    # One event per crossing (segment 14E): written by the close that
+    # shut the session's instruments, whichever trigger ran it, with the
+    # submitted count as it stands at the deadline, which a later report
+    # quotes (14C Item 2's "Deadline reached").
+    from app.services import monitoring
+
+    progress = monitoring.summary_counts(db, review_session)
+    audit.write_event(
+        db,
+        event_type="session.deadline_reached",
+        summary=(
+            f"Deadline reached: {progress.submitted} of "
+            f"{progress.assigned} reviewers submitted"
+        ),
+        actor_user_id=None,
+        session=review_session,
+        payload=audit.counts(submitted=progress.submitted, assigned=progress.assigned),
+        context={"deadline": review_session.deadline.isoformat()},
+        correlation_id=correlation_id,
+    )
     db.flush()
     db.commit()
     return closed
