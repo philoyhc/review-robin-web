@@ -44,7 +44,7 @@ def _branched_session(
     *,
     required: bool = False,
     opens_at: str = "4",
-) -> int:
+) -> str:
     session_id = new_session()
     seed_rosters(api, session_id)
     card = branch_rating(page, session_id, value=opens_at)

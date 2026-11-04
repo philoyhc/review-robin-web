@@ -10,7 +10,7 @@ import json
 from collections.abc import Callable
 from pathlib import Path
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page, Request, expect
 
 from .conftest import app_url
 
@@ -41,6 +41,13 @@ document.addEventListener('DOMContentLoaded', function () {
 """
 
 
+def _lookup_keys(request: Request) -> list[str]:
+    """The keys a ``/directory-lookup`` request posted."""
+    body = request.post_data
+    assert body is not None
+    return json.loads(body)["keys"]
+
+
 def _seen(page: Page) -> list[int]:
     value = page.evaluate("() => sessionStorage.getItem('countdown')")
     page.evaluate("() => sessionStorage.removeItem('countdown')")
@@ -57,7 +64,7 @@ def test_the_upload_counts_down_then_reads_what_it_looked_up(
     looked_up: list[str] = []
     page.on(
         "request",
-        lambda r: looked_up.extend(json.loads(r.post_data)["keys"])
+        lambda r: looked_up.extend(_lookup_keys(r))
         if r.url.endswith("/directory-lookup") else None,
     )
     page.add_init_script(_RECORD)
@@ -136,7 +143,7 @@ def test_the_count_falls_by_batches_of_ten(
     batches: list[list[str]] = []
     page.on(
         "request",
-        lambda r: batches.append(json.loads(r.post_data)["keys"])
+        lambda r: batches.append(_lookup_keys(r))
         if r.url.endswith("/directory-lookup") else None,
     )
     page.add_init_script(_RECORD)
@@ -178,7 +185,7 @@ def test_the_recheck_counts_down_every_unmatched_address_then_rechecks(
     looked_up: list[str] = []
     page.on(
         "request",
-        lambda r: looked_up.extend(json.loads(r.post_data)["keys"])
+        lambda r: looked_up.extend(_lookup_keys(r))
         if r.url.endswith("/directory-lookup") else None,
     )
     button = page.locator("[data-directory-recheck]")

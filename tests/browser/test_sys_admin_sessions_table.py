@@ -8,11 +8,18 @@ import uuid
 from collections.abc import Callable
 
 import httpx
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Cookie, Page, expect
 
 from .conftest import app_url
 
 PAGE = "/operator/sys-admin/sessions"
+
+
+def _path(cookie: Cookie) -> str:
+    """A cookie's path; Playwright always reports one."""
+    path = cookie.get("path")
+    assert path is not None
+    return path
 
 
 def _invite(page: Page, email: str) -> None:
@@ -102,8 +109,8 @@ def test_a_sort_survives_a_reload(page: Page, new_session: Callable[[], str]) ->
     page.click(button)
     page.click(button)
     descending = codes.all_inner_texts()
-    [cookie] = [c for c in page.context.cookies() if c["name"] == "rrw-sort-sys-admin-sessions"]
-    assert cookie["path"] == app_url("/")
+    [cookie] = [c for c in page.context.cookies() if c.get("name") == "rrw-sort-sys-admin-sessions"]
+    assert _path(cookie) == app_url("/")
     page.reload()
     assert codes.all_inner_texts() == descending
 
@@ -139,7 +146,7 @@ def test_a_sort_cookie_left_at_the_root_path_is_expired(page: Page) -> None:
         ]
     )
     page.reload()
-    paths = sorted(c["path"] for c in page.context.cookies() if c["name"] == name)
+    paths = sorted(_path(c) for c in page.context.cookies() if c.get("name") == name)
     assert paths == [app_url("/")]
 
 
@@ -169,7 +176,7 @@ def test_the_load_that_expires_a_root_copy_sorts_by_the_mount_copy(
     rows = page.locator("#diagnostics-sessions tbody tr td:nth-child(2) code")
     page.reload()
     first_load = rows.all_inner_texts()
-    assert [c["path"] for c in page.context.cookies() if c["name"] == name] == [app_url("/")]
+    assert [_path(c) for c in page.context.cookies() if c.get("name") == name] == [app_url("/")]
     # The next load sends only the mount copy, so the server sorts by it.
     page.reload()
     assert first_load == rows.all_inner_texts()
@@ -211,4 +218,4 @@ def test_a_root_copy_with_no_mount_copy_loads_the_default_order(
     )
     page.reload()
     expect(rows).to_have_text(default)
-    assert not [c for c in page.context.cookies() if c["name"] == name]
+    assert not [c for c in page.context.cookies() if c.get("name") == name]

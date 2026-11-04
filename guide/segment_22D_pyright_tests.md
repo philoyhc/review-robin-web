@@ -94,6 +94,14 @@ set to the four test trees.
   `object` (they drop a non-list, non-dict from a hand-edited CSV) and
   `validate_page_n` takes `Sequence[object]` (only the length). The
   three `Settings(_env_file=None)` lines take 22D's one ignore.
+- **Rung 4:** `tests/browser/` clean, 599 → 555 (44). The server
+  fixture's `Popen` extras are a `TypedDict` (20 of the 44); two
+  helpers typed `int` return the session's `str` id; a stored
+  `cohort_rule` is `dict[str, Any] | None` with an `assert` beside its
+  reads, as is each `get_attribute("href")`; a request body and a
+  cookie's path go through asserting helpers (`_lookup_keys`, `_path`)
+  and a cookie's name through `.get`; a tuple-returning dialog lambda
+  becomes a named handler. No application change, no ignore.
 
 ## PR ladder
 

@@ -30,6 +30,7 @@ import uuid
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TypedDict
 
 import httpx
 import pytest
@@ -97,7 +98,13 @@ class LiveServer:
     database_url: str
 
 
-def _server_command(sock: socket.socket) -> tuple[list[str], dict[str, object]]:
+class _PopenExtras(TypedDict, total=False):
+    """The ``subprocess.Popen`` keywords ``_server_command`` may add."""
+
+    pass_fds: tuple[int, ...]
+
+
+def _server_command(sock: socket.socket) -> tuple[list[str], _PopenExtras]:
     """How to start uvicorn on ``sock``'s port, and the Popen extras it needs.
 
     On POSIX the server inherits the listening socket itself (``--fd``), so
