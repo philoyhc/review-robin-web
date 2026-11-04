@@ -9,6 +9,8 @@ import is relationship-specific and stays here.
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import (
     APIRouter,
     Depends,
@@ -710,7 +712,7 @@ def _refuse_group_clear(
     exc: responses_service.GroupAnswersWouldClear,
     *,
     surface: str,
-    **render: object,
+    **render: Any,
 ) -> HTMLResponse:
     """Refuse, then re-offer (author's ruling 2026-10-17): roll back the
     flushed change and re-render the page with the count and a

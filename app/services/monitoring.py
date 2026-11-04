@@ -67,7 +67,7 @@ class ReviewerProgress:
     missing_required_count: int
     required_total: int
     pill_state: str  # "not started" | "in progress" | "submitted"
-    last_reminder_at: object | None  # datetime|None — keep generic for templates
+    last_reminder_at: datetime | None
 
     @property
     def is_incomplete(self) -> bool:

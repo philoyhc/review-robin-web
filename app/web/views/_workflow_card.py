@@ -40,6 +40,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import AuditEvent, ReviewSession
+from app.schemas.validation import ValidationIssue
 from app.services import (
     assignments,
     csv_imports,
@@ -60,7 +61,7 @@ def build_workflow_card_context(
     review_session: ReviewSession,
     *,
     return_to: str,
-    issues: list[validation.ValidationIssue] | None = None,
+    issues: list[ValidationIssue] | None = None,
     super_failure: dict[str, str] | None = None,
     prepare_confirm: str | None = None,
 ) -> dict[str, Any]:

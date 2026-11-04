@@ -52,7 +52,7 @@
   {% else %}
     {% for section in collation.sections %}
       <div class="card">
-        <h2 style="margin-top: 0;">{{ section.title }}</h2>
+        {% if section.title %}<h2 style="margin-top: 0;">{{ section.title }}</h2>{% endif %}
         {% if section.description %}
           <p class="muted">{{ section.description }}</p>
         {% endif %}

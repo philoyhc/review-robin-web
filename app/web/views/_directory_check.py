@@ -77,7 +77,9 @@ def last_directory_check(
         .order_by(AuditEvent.id.desc())
         .limit(1)
     ).scalar_one_or_none()
-    counts = (event.detail or {}).get("counts", {}) if event is not None else {}
+    if event is None:
+        return None
+    counts = (event.detail or {}).get("counts", {})
     if "directory_not_checked" not in counts:
         return None
     # An import with no address to check (anonymous identifiers only)

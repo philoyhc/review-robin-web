@@ -582,7 +582,7 @@ def _relationship_person(
     dimension: str,
     reviewer_by_id: dict[int, Reviewer],
     reviewee_by_id: dict[int, Reviewee],
-) -> tuple[object | None, str | None]:
+) -> tuple[Reviewer | Reviewee | None, str | None]:
     """Resolve the (person, handle) for one side of a relationship
     row. ``handle`` is the email (reviewer) or email_or_identifier
     (reviewee). Either may be ``None`` when the FK is dangling."""

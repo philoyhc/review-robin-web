@@ -60,7 +60,9 @@ class InstrumentCollationSection:
     """One per visible instrument on the observer surface."""
 
     instrument_id: int
-    title: str
+    # ``None`` for a lone instrument with neither short label nor
+    # description (``instrument_heading``): the card has no heading.
+    title: str | None
     description: str | None
     fields: list[InstrumentResponseField]
     mode: str

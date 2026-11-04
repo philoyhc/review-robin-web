@@ -1373,3 +1373,41 @@ def test_collation_csv_marks_an_unsubmitted_answer(
         response.value = blank
         db.commit()
         assert table()["Submitted"] == ""
+
+
+def test_a_lone_instrument_with_no_label_has_no_heading(
+    client: TestClient, db: Session
+) -> None:
+    """One instrument with neither short label nor description has no
+    title (``instrument_heading``), so its card shows no heading rather
+    than the word ``None`` (found by pyright, segment 22C)."""
+    review_session = _make_session(client, db, code="col-body-no-title")
+    for default in db.execute(
+        select(Instrument).where(Instrument.session_id == review_session.id)
+    ).scalars():
+        db.delete(default)
+    db.commit()
+    seeded = _seed_one_instrument(db, review_session)
+    assert seeded["instrument"].short_label is None
+    assert seeded["instrument"].description is None
+    _add_observer(
+        db,
+        review_session,
+        email="alice@example.edu",
+        cohort_rule={
+            "combinator": "AND",
+            "rules": [
+                {
+                    "field": "reviewer.tag1",
+                    "op": "IS",
+                    "operand_tag": "",
+                    "operand_value": "mathcohort",
+                }
+            ],
+        },
+    )
+
+    body = client.get(f"/me/sessions/{review_session.public_id}/collation").text
+
+    assert "Rating" in body  # the instrument's card rendered
+    assert ">None<" not in body

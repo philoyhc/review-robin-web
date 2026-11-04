@@ -15,6 +15,7 @@ module, so a test that replaces it there reaches this code too.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import cast
 
 from fastapi import HTTPException, Request, UploadFile, status
 from fastapi.concurrency import run_in_threadpool
@@ -359,7 +360,9 @@ async def _handle_import(
             # never an edit state.
             if kind == "reviewers":
                 status_options = views.REVIEWERS_STATUS_OPTIONS
-                search_options = views.reviewers_search_options(list_items)
+                search_options = views.reviewers_search_options(
+                    cast(list[Reviewer], list_items)  # loaded for this kind above
+                )
                 # 19I Item 12 rung 2 — this path re-renders the same
                 # template, so it owes it the same chip flags. Missing
                 # them here would render every chip as "no data" on a
@@ -383,7 +386,9 @@ async def _handle_import(
                 )
             else:
                 status_options = views.REVIEWEES_STATUS_OPTIONS
-                search_options = views.reviewees_search_options(list_items)
+                search_options = views.reviewees_search_options(
+                    cast(list[Reviewee], list_items)  # loaded for this kind above
+                )
                 # 19P.3 rung 4 — same as the branch above, and for the
                 # same reason. This once set ``col_readouts = []`` with
                 # a note that Reviewees had no index row yet; once it

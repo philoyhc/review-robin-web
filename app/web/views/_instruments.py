@@ -275,7 +275,8 @@ def numeric_column_ch_width(
     validation = field.validation or {}
 
     def _digits(value: object) -> int:
-        if value is None:
+        # A bound is a JSON number; anything else (``None``) has no width.
+        if not isinstance(value, (int, float, str)):
             return 0
         if field.data_type == "Integer":
             return len(str(int(value)))
@@ -1136,7 +1137,7 @@ def build_instruments_context(
 # - reviewee + observer: both windows default off; the operator
 #   opts in deliberately.
 
-_BAND3_VISIBILITY_DEFAULTS: dict[str, dict[str, object]] = {
+_BAND3_VISIBILITY_DEFAULTS: dict[str, dict[str, str | None]] = {
     "peer_reviewer": {
         "while_ongoing_mode": "raw",
         "after_release_mode": None,

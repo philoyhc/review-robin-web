@@ -24,6 +24,7 @@ Source range in pre-PR-7 ``_legacy.py``: lines 398-863.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TypedDict
 
 from sqlalchemy.orm import Session
 
@@ -452,9 +453,16 @@ def quick_setup_kept_reviewees(
     return asked is True and not review_session.symmetric_review
 
 
+class QuickSetupUrlFailure(TypedDict, total=False):
+    """The keywords :func:`quick_setup_url_failure` passes on."""
+
+    error_kind: str
+    error_reason: str
+
+
 def quick_setup_url_failure(
     kind: str | None, reason: str | None
-) -> dict[str, str]:
+) -> QuickSetupUrlFailure:
     """The ``error_kind`` / ``error_reason`` keywords for
     :func:`build_quick_setup_context` from Session Home's
     ``?quick_setup_error=…&quick_setup_reason=…`` codes, or none for a
@@ -462,8 +470,8 @@ def quick_setup_url_failure(
     as ``super_error`` does (findings O7)."""
 
     if kind in _SLOT_KEYS and reason in URL_REASONS:
-        return {"error_kind": kind, "error_reason": reason}
-    return {}
+        return QuickSetupUrlFailure(error_kind=kind, error_reason=reason)
+    return QuickSetupUrlFailure()
 
 
 #: How many error lines a refused slot's banner lists (a Settings CSV's
