@@ -310,7 +310,7 @@ def test_edit_does_not_check_a_pair_neither_box_changed(
     db.commit()
     zone = sessions.resolve_session_timezone(review_session)
 
-    def _box(value: _dt.datetime) -> str:
+    def _box(value: _dt.datetime | None) -> str:
         return date_formatting.format_datetime_local(value, zone)
 
     status_code, body = _submit_edit(
@@ -351,7 +351,7 @@ def test_edit_does_not_check_a_release_window_neither_box_changed(
     db.commit()
     zone = sessions.resolve_session_timezone(review_session)
 
-    def _box(value: _dt.datetime) -> str:
+    def _box(value: _dt.datetime | None) -> str:
         return date_formatting.format_datetime_local(value, zone)
 
     def _save(**boxes: _dt.datetime) -> tuple[int, str]:
@@ -398,7 +398,7 @@ def test_edit_does_not_check_an_inverted_release_window_neither_box_changed(
     db.commit()
     zone = sessions.resolve_session_timezone(review_session)
 
-    def _box(value: _dt.datetime) -> str:
+    def _box(value: _dt.datetime | None) -> str:
         return date_formatting.format_datetime_local(value, zone)
 
     status_code, body = _submit_edit(

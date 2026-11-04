@@ -15,6 +15,8 @@ implementation rather than a restatement of the same SQL.
 """
 from __future__ import annotations
 
+from typing import TypedDict
+
 import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -32,6 +34,14 @@ from app.db.models import (
 from app.services import csv_imports
 from app.services import relationships as relationships_service
 from app.services.assignments import _coverage
+
+
+class _PairFilters(TypedDict, total=False):
+    """The filters ``count_pairs`` and ``list_pairs`` share."""
+
+    search: str
+    search_by: str
+    status: str
 
 
 def _old_count(db: Session, model, session_id: int) -> int:
@@ -238,7 +248,7 @@ def test_existing_count_still_scopes_to_one_instrument(
     ],
 )
 def test_count_pairs_agrees_with_the_rows_it_counts(
-    db: Session, seeded: ReviewSession, filters: dict[str, str]
+    db: Session, seeded: ReviewSession, filters: _PairFilters
 ) -> None:
     """``count_pairs`` against ``list_pairs`` — the same filters, an
     independent implementation, and the join-carrying conversion."""

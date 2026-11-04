@@ -110,6 +110,7 @@ def test_a_reminder_rebuilds_a_link_sent_under_another_prefix(
     sent_url = invitations.most_recent_invitation_url(
         db, invitation_id=invitation.id
     )
+    assert sent_url is not None
     token = sent_url.rsplit("/", 1)[-1]
 
     def _prefixed(raw: str) -> str:

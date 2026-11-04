@@ -136,14 +136,16 @@ def test_no_button_when_every_row_is_matched(
 # --- rung 2: the recheck binds what the directory now finds ---
 
 
-def _rows(db: Session, model, session_id: int) -> dict[str, object]:
+def _rows[M: (Reviewer, Reviewee, Observer)](
+    db: Session, model: type[M], session_id: int
+) -> dict[str, M]:
     db.expire_all()
     address = "email_or_identifier" if model is Reviewee else "email"
     rows = db.execute(select(model).where(model.session_id == session_id)).scalars()
     return {getattr(row, address): row for row in rows}
 
 
-def _event(db: Session, session_id: int, event_type: str) -> AuditEvent:
+def _event(db: Session, session_id: int, event_type: str) -> AuditEvent | None:
     return db.execute(
         select(AuditEvent)
         .where(AuditEvent.session_id == session_id, AuditEvent.event_type == event_type)
@@ -534,6 +536,7 @@ def test_a_recheck_that_binds_recomputes_self_review(
     db.add(row)
     db.commit()
     user = db.execute(select(User).order_by(User.id)).scalars().first()
+    assert user is not None
     directory_recheck.recheck(db, review_session=session, user=user, kind="reviewers", directory=directory)
     db.commit()
     db.expire_all()

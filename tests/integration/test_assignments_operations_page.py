@@ -211,9 +211,11 @@ def test_operations_page_does_not_render_generate_card(
 
 def _self_review_instrument_id(db: Session, session_id: int) -> int:
     from app.db.models import Instrument
-    return db.execute(
+    value = db.execute(
         select(Instrument.id).where(Instrument.session_id == session_id)
     ).scalars().first()
+    assert value is not None
+    return value
 
 
 def test_operations_page_renders_self_reviews_toggle_section(

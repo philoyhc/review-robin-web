@@ -378,6 +378,7 @@ def _session_with_policy(
     instrument = db.execute(
         select(Instrument).where(Instrument.session_id == review_session.id)
     ).scalars().first()
+    assert instrument is not None
     client.post(
         f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}/fields/save",
         data={"reviewee_after_release_mode": "raw"},

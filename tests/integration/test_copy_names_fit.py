@@ -44,6 +44,7 @@ def test_replicate_of_a_255_char_instrument_name_fits(db: Session) -> None:
     source = db.execute(
         select(Instrument).where(Instrument.session_id == review_session.id)
     ).scalars().first()
+    assert source is not None
     source.name = LONG_NAME
     db.commit()
 

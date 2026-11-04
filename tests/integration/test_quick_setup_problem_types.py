@@ -11,6 +11,8 @@ roster parsers raise carries a row-free ``problem``
 
 from __future__ import annotations
 
+from typing import cast
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -292,8 +294,10 @@ def test_every_row_issue_a_roster_parser_raises_has_a_problem(
 def test_every_relationship_row_issue_has_a_problem() -> None:
     from types import SimpleNamespace
 
-    reviewers = [SimpleNamespace(id=1, email="a@example.org")]
-    reviewees = [SimpleNamespace(id=2, email_or_identifier="b@example.org")]
+    reviewers = [cast(Reviewer, SimpleNamespace(id=1, email="a@example.org"))]
+    reviewees = [
+        cast(Reviewee, SimpleNamespace(id=2, email_or_identifier="b@example.org"))
+    ]
     content = (
         b"ReviewerEmail,RevieweeEmail,Status\n"
         b",b@example.org,\n"

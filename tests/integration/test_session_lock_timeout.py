@@ -45,6 +45,12 @@ def committed_session(engine: Engine) -> Iterator[int]:
         cleanup.commit()
 
 
+def _session(db: Session, session_id: int) -> ReviewSession:
+    review_session = db.get(ReviewSession, session_id)
+    assert review_session is not None
+    return review_session
+
+
 def _lock_timeout(db: Session) -> str:
     return db.execute(text("SHOW lock_timeout")).scalar_one()
 
@@ -54,11 +60,11 @@ def test_a_held_lock_turns_a_waiter_away_within_the_bound(
 ) -> None:
     monkeypatch.setattr(session_guard, "LOCK_TIMEOUT_MS", 300)
     with Session(engine) as holder, Session(engine) as waiter:
-        lock_session(holder, holder.get(ReviewSession, committed_session))
+        lock_session(holder, _session(holder, committed_session))
         before = _lock_timeout(waiter)
         started = time.monotonic()
         with pytest.raises(SessionBusy) as raised:
-            lock_session(waiter, waiter.get(ReviewSession, committed_session))
+            lock_session(waiter, _session(waiter, committed_session))
         waited = time.monotonic() - started
         assert 0.25 <= waited < 3.0
         assert str(raised.value) == BUSY_MESSAGE
@@ -67,7 +73,7 @@ def test_a_held_lock_turns_a_waiter_away_within_the_bound(
         assert waiter.execute(text("SELECT 1")).scalar_one() == 1
         holder.rollback()
         # Released, the same waiter takes the lock.
-        assert lock_session(waiter, waiter.get(ReviewSession, committed_session)).id == committed_session
+        assert lock_session(waiter, _session(waiter, committed_session)).id == committed_session
         assert _lock_timeout(waiter) == before
         waiter.rollback()
 
@@ -75,7 +81,7 @@ def test_a_held_lock_turns_a_waiter_away_within_the_bound(
 def test_an_uncontended_lock_leaves_the_timeout_as_it_was(engine: Engine, committed_session: int) -> None:
     with Session(engine) as db:
         before = _lock_timeout(db)
-        lock_session(db, db.get(ReviewSession, committed_session))
+        lock_session(db, _session(db, committed_session))
         assert _lock_timeout(db) == before
         db.rollback()
 
@@ -84,7 +90,7 @@ def test_a_timeout_the_transaction_set_itself_is_put_back(engine: Engine, commit
     """Not merely back to the server's default: whatever applied before."""
     with Session(engine) as db:
         db.execute(text("SET LOCAL lock_timeout = '2s'"))
-        lock_session(db, db.get(ReviewSession, committed_session))
+        lock_session(db, _session(db, committed_session))
         assert _lock_timeout(db) == "2s"
         db.rollback()
 

@@ -11,7 +11,9 @@ from __future__ import annotations
 
 import re
 from types import SimpleNamespace
+from typing import cast
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -159,7 +161,7 @@ def test_a_reviewer_who_is_also_a_reviewee_sees_only_the_active_pages_line(
 # ── Storing the selection (rung 3) ───────────────────────────────────
 
 
-def _save(client: TestClient, rs: ReviewSession, **form) -> object:
+def _save(client: TestClient, rs: ReviewSession, **form) -> httpx.Response:
     return client.post(
         f"/operator/sessions/{rs.public_id}/reviewees/self-fields",
         data=form,
@@ -329,7 +331,7 @@ def test_the_settings_csv_round_trips_the_selection(
     assert row[1] == cell
     plan = _ParsedConfig()
     _apply_session_kv(plan, "session.reviewee_self_fields", row[1])
-    target = SimpleNamespace(reviewee_self_fields=["name"])
+    target = cast(ReviewSession, SimpleNamespace(reviewee_self_fields=["name"]))
     _apply_session_metadata(target, plan)
     assert target.reviewee_self_fields == stored
 

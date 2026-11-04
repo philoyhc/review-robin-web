@@ -469,6 +469,7 @@ def test_results_body_omits_instrument_with_policy_off(
         .where(Instrument.session_id == review_session.id)
         .order_by(Instrument.order, Instrument.id)
     ).scalars().first()
+    assert first_instrument is not None
     first_instrument.short_label = "First Form"
     db.commit()
     operator.post(

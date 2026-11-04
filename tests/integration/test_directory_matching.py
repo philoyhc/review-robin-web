@@ -118,6 +118,7 @@ def test_an_address_edit_moves_access_to_the_new_account(db: Session, as_user) -
     in, and the audit's changes say which account the row now admits."""
     session = _open_session(db, "match-edit")
     operator = db.get(User, session.created_by_user_id)
+    assert operator is not None
     resolve = directory_accounts.resolver(FakeDirectory())
     row = observers.create_observer(
         db, review_session=session, email="e0123456@example.edu", user=operator, resolve_account=resolve

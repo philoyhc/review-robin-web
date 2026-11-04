@@ -36,7 +36,9 @@ def answer_form(
         return dict(data)
     first = db.get(Assignment, min(assignment_ids))
     review_session = db.get(ReviewSession, first.session_id)
+    assert review_session is not None
     reviewer = db.get(Reviewer, first.reviewer_id)
+    assert reviewer is not None
     page_rows = page_assignments_for(db, review_session, reviewer, page_n)
     ordinals = responses_service.answer_ordinals([a.id for a in page_rows])
     missing = assignment_ids - set(ordinals)

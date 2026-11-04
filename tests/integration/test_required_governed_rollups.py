@@ -148,6 +148,7 @@ def test_the_python_halves_read_only_their_own_work(db: Session) -> None:
 
     db.expunge_all()
     review_session = db.get(ReviewSession, review_session.id)
+    assert review_session is not None
     event.listen(db, "loaded_as_persistent", on_load)
     try:
         monitoring.per_reviewer_progress(db, review_session)

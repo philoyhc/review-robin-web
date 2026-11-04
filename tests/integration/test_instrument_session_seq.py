@@ -17,6 +17,7 @@ import pytest
 import sqlalchemy as sa
 from fastapi.testclient import TestClient
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.models import Instrument, ReviewSession, User
@@ -196,6 +197,7 @@ def test_the_migration_backfill_ranks_by_creation_order_per_session() -> None:
         pathlib.Path(__file__).resolve().parents[2]
         / "alembic/versions/b7d4f2a9c153_instruments_session_seq.py",
     )
+    assert spec is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     _BACKFILL = module._BACKFILL
@@ -283,6 +285,7 @@ def test_the_card_title_and_the_delete_confirm_show_the_same_handle(
     """
     review_session = _client_session(client, db, "lbl-render")
     op = db.execute(select(User)).scalars().first()
+    assert op is not None
     crud.ensure_default_instrument(db, review_session)
     crud.create_instrument(db, review_session=review_session, actor=op)
     db.commit()
@@ -382,6 +385,7 @@ def test_the_tint_follows_the_number_on_the_card(
     review_session = _client_session(client, db, "tint-a")
     other = _client_session(client, db, "tint-b")
     op = db.execute(select(User)).scalars().first()
+    assert op is not None
     crud.ensure_default_instrument(db, review_session)
     crud.ensure_default_instrument(db, other)
     # Interleaved, so the first session's ids are not contiguous.
@@ -416,6 +420,7 @@ def test_the_tint_does_not_move_when_the_operator_reorders(
 
     review_session = _client_session(client, db, "tint-reorder")
     op = db.execute(select(User)).scalars().first()
+    assert op is not None
     crud.ensure_default_instrument(db, review_session)
     crud.create_instrument(db, review_session=review_session, actor=op)
     db.commit()
@@ -449,6 +454,7 @@ def test_the_palette_wraps_past_six(client: TestClient, db: Session) -> None:
     rather than a key."""
     review_session = _client_session(client, db, "tint-wrap")
     op = db.execute(select(User)).scalars().first()
+    assert op is not None
     crud.ensure_default_instrument(db, review_session)
     for _ in range(6):
         crud.create_instrument(db, review_session=review_session, actor=op)
@@ -549,7 +555,7 @@ def test_two_instruments_cannot_share_a_number(db: Session) -> None:
     review_session, _ = _session(db, "seq-unique")
     taken = _seqs(db, review_session.id)[0]
     db.add(Instrument(session_id=review_session.id, name="Dup", session_seq=taken))
-    with pytest.raises(sa.exc.IntegrityError):
+    with pytest.raises(IntegrityError):
         db.flush()
     db.rollback()
 
@@ -590,6 +596,7 @@ def test_the_unique_migration_renumbers_duplicates_first() -> None:
         pathlib.Path(__file__).resolve().parents[2]
         / "alembic/versions/d2f7a3c9b5e4_instruments_session_seq_unique.py",
     )
+    assert spec is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
 

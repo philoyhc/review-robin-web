@@ -336,6 +336,8 @@ def test_deleting_a_reviewee_keeps_the_group_it_leaves(db: Session) -> None:
         .where(AuditEvent.event_type == "reviewee.bulk_deleted")
         .order_by(AuditEvent.id.desc())
     ).scalars().first()
+    assert event is not None
+    assert event.detail is not None
     assert "context" not in event.detail
 
 

@@ -18,7 +18,7 @@ import datetime as dt
 import re
 
 from fastapi.testclient import TestClient
-from sqlalchemy import Engine, event, func, select
+from sqlalchemy import Engine, delete, event, func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -446,7 +446,7 @@ def test_delete_all_with_nothing_to_clear_names_only_the_relationships(
     db: Session, client: TestClient
 ) -> None:
     session = _seed(db, client, "rgc-delete-all-bare")
-    db.execute(Response.__table__.delete())
+    db.execute(delete(Response).execution_options(synchronize_session=False))
     db.commit()
     form = _delete_all_form(client.get(f"{_base(session)}?unlocked=1").text)
     label = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", form))

@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import re
 from datetime import UTC
+from typing import cast
 from urllib.parse import quote
 
 from fastapi.testclient import TestClient
@@ -300,8 +301,8 @@ def test_the_digest_is_keyed_by_a_secret_the_page_never_shows(
 
     assert len(session.form_key) == 64
     assert session.form_key not in html
-    rows = [SimpleNamespace(id=7), SimpleNamespace(id=9)]
-    other_key = SimpleNamespace(form_key="0" * 64)
+    rows = [cast(Assignment, SimpleNamespace(id=7)), cast(Assignment, SimpleNamespace(id=9))]
+    other_key = cast(ReviewSession, SimpleNamespace(form_key="0" * 64))
     assert page_digest(session, rows, group_keys={}) != page_digest(
         other_key, rows, group_keys={}
     )

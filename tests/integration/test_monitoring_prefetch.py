@@ -245,6 +245,7 @@ def test_an_assignment_with_no_responses_reads_the_same_either_way(
     assignment = db.execute(
         select(Assignment).where(Assignment.session_id == session.id)
     ).scalars().first()
+    assert assignment is not None
     assert assignment.id not in prefetched, "fixture has responses; test is void"
     assert _assignment_complete(db, assignment, []) == _assignment_complete(
         db, assignment, [], prefetched

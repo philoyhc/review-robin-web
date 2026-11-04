@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import json
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
 import pytest
@@ -20,6 +20,7 @@ from _mounted import MOUNT, leaks
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from starlette.routing import Route
 
 from app.auth.identity import AuthenticatedUser
 from app.config import settings
@@ -326,7 +327,7 @@ ROUTES: dict[str, tuple[Visit, ...]] = {
 }
 
 
-def _get_paths(routes: list[object], prefix: str = "") -> set[str]:
+def _get_paths(routes: Sequence[object], prefix: str = "") -> set[str]:
     """Every GET path registered under ``routes``, schema or not. FastAPI
     nests an included router behind its include context, prefix and all."""
     found: set[str] = set()
@@ -335,6 +336,7 @@ def _get_paths(routes: list[object], prefix: str = "") -> set[str]:
         if context is not None:
             found |= _get_paths(context.included_router.routes, prefix + context.prefix)
         elif "GET" in (getattr(route, "methods", None) or ()):
+            assert isinstance(route, Route), route
             found.add(prefix + route.path)
     return found
 
@@ -383,8 +385,12 @@ def _seed_draft(client: TestClient, db: Session) -> tuple[ReviewSession, dict[st
     }
 
 
-def _first(db: Session, model: type, review_session: ReviewSession) -> object:
-    return db.execute(select(model).where(model.session_id == review_session.id)).scalars().first()
+def _first[M: (Instrument, Reviewer, Reviewee, DataShape, Invitation)](
+    db: Session, model: type[M], review_session: ReviewSession
+) -> M:
+    row = db.execute(select(model).where(model.session_id == review_session.id)).scalars().first()
+    assert row is not None
+    return row
 
 
 def _go_live(client: TestClient, db: Session, review_session: ReviewSession, params: dict[str, str]) -> None:

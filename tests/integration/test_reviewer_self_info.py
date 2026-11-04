@@ -13,7 +13,9 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 from types import SimpleNamespace
+from typing import cast
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -82,15 +84,15 @@ def _div_at(html: str, marker: str) -> str:
 # ── The view helpers ─────────────────────────────────────────────────
 
 
-def _session_stub() -> SimpleNamespace:
-    return SimpleNamespace(id=1, field_labels=[])
+def _session_stub() -> ReviewSession:
+    return cast(ReviewSession, SimpleNamespace(id=1, field_labels=[]))
 
 
 def test_the_line_keeps_roster_order_and_skips_empty_fields() -> None:
-    reviewer = SimpleNamespace(
+    reviewer = cast(Reviewer, SimpleNamespace(
         name="Rae", email="rae@example.edu", profile_link="",
         tag_1="Blue", tag_2=None, tag_3="  ",
-    )
+    ))
     line = views.reviewer_self_line(
         _session_stub(), reviewer,
         ["tag_3", "tag_1", "profile_link", "email", "name", "tag_2"],
@@ -259,7 +261,7 @@ def test_the_preview_shows_a_static_reviewer_pill_and_the_line(
 # ── Storing the selection ────────────────────────────────────────────
 
 
-def _save(client: TestClient, rs: ReviewSession, **form) -> object:
+def _save(client: TestClient, rs: ReviewSession, **form) -> httpx.Response:
     return client.post(
         f"/operator/sessions/{rs.public_id}/reviewers/self-fields",
         data=form,
@@ -398,7 +400,7 @@ def test_a_hand_edited_stored_value_falls_back_to_the_default(
 
     rs = _pair(client, db, "rsi-bad")
     for bad in ([1], {"a": 1}, ["status"], "name"):
-        rs.reviewer_self_fields = bad
+        rs.reviewer_self_fields = bad  # pyright: ignore[reportAttributeAccessIssue]  -- a hand-edited stored value the column type rules out
         assert effective_reviewer_self_fields(rs) == (
             "name", "email", "profile_link",
         ), bad
@@ -444,7 +446,7 @@ def test_the_settings_csv_round_trips_the_selection(
     assert row[1] == cell
     plan = _ParsedConfig()
     _apply_session_kv(plan, "session.reviewer_self_fields", row[1])
-    target = SimpleNamespace(reviewer_self_fields=["name"])
+    target = cast(ReviewSession, SimpleNamespace(reviewer_self_fields=["name"]))
     for key in ("name", "code", "description", "deadline", "help_contact"):
         setattr(target, key, "x")
     _apply_session_metadata(target, plan)

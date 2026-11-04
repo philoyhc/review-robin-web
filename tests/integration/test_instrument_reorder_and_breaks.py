@@ -73,7 +73,9 @@ def _ordered(db: Session, session_id: int) -> list[Instrument]:
 
 
 def _actor(db: Session) -> User:
-    return db.execute(select(User)).scalars().first()
+    user = db.execute(select(User)).scalars().first()
+    assert user is not None
+    return user
 
 
 # --------------------------------------------------------------------------- #

@@ -26,7 +26,7 @@ proving the oracle first.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -78,6 +78,31 @@ T0 = datetime(2026, 9, 1, 12, 0, tzinfo=UTC)
 
 class Fixture:
     """The session every case below reads, and the names to address it by."""
+
+    session: ReviewSession
+    alice: Reviewer
+    bob: Reviewer
+    zoe: Reviewer
+    carol: Reviewee
+    dan: Reviewee
+    erin: Reviewee
+    solo: Instrument
+    grouped: Instrument
+    grouped2: Instrument
+    q1: InstrumentResponseField
+    q2: InstrumentResponseField
+    g1: InstrumentResponseField
+    g2: InstrumentResponseField
+    a1: Assignment
+    a2: Assignment
+    a3: Assignment
+    a4: Assignment
+    a5: Assignment
+    a6: Assignment
+    a7: Assignment
+    a8: Assignment
+    a9: Assignment
+    a10: Assignment
 
     def __init__(self, **kw: object) -> None:
         self.__dict__.update(kw)
@@ -316,11 +341,15 @@ def _utc_naive(value: datetime | None) -> datetime | None:
     return value.astimezone(UTC).replace(tzinfo=None)
 
 
-def _by_email(rows) -> dict[str, object]:
+def _by_email(
+    rows: Iterable[monitoring.ReviewerProgress],
+) -> dict[str, monitoring.ReviewerProgress]:
     return {row.reviewer.email: row for row in rows}
 
 
-def _by_identifier(rows) -> dict[str, object]:
+def _by_identifier(
+    rows: Iterable[monitoring.RevieweeCoverage],
+) -> dict[str, monitoring.RevieweeCoverage]:
     return {row.reviewee.email_or_identifier: row for row in rows}
 
 

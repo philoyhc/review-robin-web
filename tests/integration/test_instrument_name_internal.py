@@ -50,7 +50,9 @@ def _labelled_session(db: Session, code: str) -> tuple[ReviewSession, Instrument
 
 
 def _operator(db: Session, session: ReviewSession) -> User:
-    return db.get(User, session.created_by_user_id)
+    user = db.get(User, session.created_by_user_id)
+    assert user is not None
+    return user
 
 
 def test_deadline_close_and_live_reopen_summaries_name_the_label(

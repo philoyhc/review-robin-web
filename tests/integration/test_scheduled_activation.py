@@ -165,11 +165,9 @@ def test_observer_no_op_when_schedule_in_future(db: Session) -> None:
 
     assert review_session.status == lifecycle.SessionStatus.validated.value
     # SQLite drops tzinfo on round-trip; compare via _ensure_aware_utc
-    assert review_session.scheduled_activate_at is not None
-    assert (
-        scheduled_events._ensure_aware_utc(review_session.scheduled_activate_at)
-        == future
-    )
+    stored = review_session.scheduled_activate_at
+    assert stored is not None
+    assert scheduled_events._ensure_aware_utc(stored) == future
     assert "session.activated" not in _audit_types(db, review_session)
 
 

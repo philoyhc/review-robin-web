@@ -794,7 +794,7 @@ def update_instrument_description(
     *,
     instrument: Instrument,
     description: str | None,
-    actor: User,
+    actor: User | None,
 ) -> Instrument:
     lifecycle.require_editable(db, instrument.session)
     lifecycle.invalidate_if_validated(
@@ -827,7 +827,7 @@ def update_short_label(
     *,
     instrument: Instrument,
     short_label: str | None,
-    actor: User,
+    actor: User | None,
 ) -> Instrument:
     """Update an instrument's reviewer-facing short label (Segment 11L).
 

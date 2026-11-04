@@ -244,4 +244,5 @@ def test_a_picked_name_is_kept_to_the_column_s_length(
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
     _invite(client, "N" * 300 + " <long@example.edu>")
     row = _row(db, "long@example.edu")
-    assert row is not None and len(row.display_name) == 255
+    assert row is not None and row.display_name is not None
+    assert len(row.display_name) == 255

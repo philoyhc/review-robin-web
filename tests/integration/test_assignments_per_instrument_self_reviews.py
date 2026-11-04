@@ -444,6 +444,7 @@ def test_self_review_chip_tracks_the_include_state(
 
     # A second, included self-review row makes the instrument mixed.
     instrument = db.get(Instrument, instrument_id)
+    assert instrument is not None
     bob_r = Reviewer(session_id=review_session.id, name="Bob", email="bob@example.edu")
     bob_e = Reviewee(
         session_id=review_session.id, name="Bob", email_or_identifier="bob@example.edu"

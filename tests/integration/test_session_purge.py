@@ -191,6 +191,7 @@ def _sent_invitation(db: Session, review_session: ReviewSession) -> Reviewer:
     reviewer = db.execute(
         select(Reviewer).where(Reviewer.session_id == review_session.id)
     ).scalars().first()
+    assert reviewer is not None
     invitation = Invitation(
         session_id=review_session.id,
         reviewer_id=reviewer.id,

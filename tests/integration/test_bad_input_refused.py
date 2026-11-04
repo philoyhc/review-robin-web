@@ -87,13 +87,14 @@ def test_a_stepped_integer_refuses_a_number_past_a_float(db: Session) -> None:
 
 def test_the_extracts_skip_a_stored_non_finite_value() -> None:
     field = InstrumentResponseField(_inline_data_type="Decimal")
-    for acc, ingest in (
-        (data_shape_extract._Acc(), data_shape_extract._ingest),
-        (entity_metadata_extract._FieldAcc(), entity_metadata_extract._ingest_value),
-    ):
-        ingest(acc, field, "nan")
-        assert acc.numeric_values == []
-        assert acc.other_count == 1
+    acc = data_shape_extract._Acc()
+    data_shape_extract._ingest(acc, field, "nan")
+    assert acc.numeric_values == []
+    assert acc.other_count == 1
+    field_acc = entity_metadata_extract._FieldAcc()
+    entity_metadata_extract._ingest_value(field_acc, field, "nan")
+    assert field_acc.numeric_values == []
+    assert field_acc.other_count == 1
 
 
 # --- R4: non-canonical numbers ---------------------------------------------

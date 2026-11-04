@@ -56,6 +56,7 @@ def _create(client: TestClient, db: Session, code: str) -> ReviewSession:
 
 def _tag(db: Session, review_session: ReviewSession, tags: list[str]) -> None:
     user = db.execute(select(User)).scalars().first()
+    assert user is not None
     session_tags.set_tags(db, review_session=review_session, user=user, tags=tags)
 
 

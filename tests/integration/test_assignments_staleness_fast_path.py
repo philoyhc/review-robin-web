@@ -26,7 +26,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.db.models import Reviewee, Reviewer, ReviewSession, User
+from app.db.models import Instrument, Reviewee, Reviewer, ReviewSession, User
 from app.services import assignments
 from app.services.assignments import _generate
 from app.services.instruments import ensure_default_instrument
@@ -34,7 +34,7 @@ from app.services.instruments import ensure_default_instrument
 
 def _seed(
     db: Session, code: str, group_kind: str | None = None
-) -> tuple[ReviewSession, object]:
+) -> tuple[ReviewSession, Instrument]:
     user = User(email=f"op-{code}@example.edu")
     db.add(user)
     db.flush()

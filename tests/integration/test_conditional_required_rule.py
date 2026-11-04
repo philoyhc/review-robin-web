@@ -13,13 +13,14 @@ import io
 import re
 from collections.abc import Callable
 from types import SimpleNamespace
+from typing import cast
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
-from app.db.models import Assignment, Response, Reviewer
+from app.db.models import Assignment, InstrumentResponseField, Response, Reviewer
 from app.schemas.responses import ResponseUpsert
 from app.services import monitoring
 from app.services import responses as responses_service
@@ -44,12 +45,15 @@ from .test_required_governed_rollups import _mixed_session
 # The pure rule.
 
 
-def _f(id_, *, required=False, parent=None, op=None, value=None, mode=None, visible=True):
-    return SimpleNamespace(
+def _f(
+    id_, *, required=False, parent=None, op=None, value=None, mode=None, visible=True
+) -> InstrumentResponseField:
+    """A stand-in for a response field, carrying what the rule reads."""
+    return cast(InstrumentResponseField, SimpleNamespace(
         id=id_, label=f"F{id_}", order=id_, required=required, visible=visible,
         branch_parent_id=parent, branch_op=op, branch_value=value, branch_mode=mode,
         _inline_data_type="Integer", _inline_list_csv=None,
-    )
+    ))
 
 
 def _pair(mode, *, governed_required=False):

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from types import SimpleNamespace
+from typing import cast
 
 import pytest
 from fastapi.testclient import TestClient
@@ -23,6 +24,7 @@ from app.auth.identity import AuthenticatedUser
 from app.db.models import (
     Assignment,
     AuditEvent,
+    InstrumentResponseField,
     Response,
     Reviewee,
     Reviewer,
@@ -409,7 +411,8 @@ def test_group_copies_stored_in_different_forms_keep_their_stamps(
     ],
 )
 def test_stored_as_posted(data_type: str, stored: str | None, posted: str) -> None:
-    field = SimpleNamespace(data_type=data_type)  # all the helper reads
+    # All the helper reads.
+    field = cast(InstrumentResponseField, SimpleNamespace(data_type=data_type))
     assert responses_service.stored_as_posted(stored, field) == posted
 
 

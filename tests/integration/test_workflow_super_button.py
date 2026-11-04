@@ -189,6 +189,7 @@ def _seed_reverted_session_with_response(
         .scalars()
         .first()
     )
+    assert assignment is not None
     _attach_response(db, assignment=assignment, key="prepbtn")
 
     client.post(
@@ -458,6 +459,7 @@ def test_activate_with_errors_at_revalidation_stays_validated(
     assert "super_status=failed" in response.headers["location"]
     db.expire_all()
     review_session = db.get(ReviewSession, review_session.id)
+    assert review_session is not None
     assert lifecycle.is_validated(review_session)
     assert not db.execute(
         select(AuditEvent).where(

@@ -48,6 +48,7 @@ def test_the_lobby_dates_and_timezone_carry_the_routes_values(
     # The viewer reads dates in Tokyo, so the cell shows 21:00; the sort
     # key stays the UTC instant.
     viewer = db.execute(select(User)).scalars().first()
+    assert viewer is not None
     operator_settings.set_display_timezone(db, user=viewer, timezone_name="Asia/Tokyo")
     db.commit()
     body = client.get("/operator/sessions").text
@@ -151,7 +152,16 @@ def test_the_text_keys_fold_case_trim_and_read_numbers() -> None:
     # Leading digits keep text at the even places, so keys always
     # compare like with like; digits come before letters, as in the
     # browser.
-    assert views.text_sort_value("2nd") == ("0", 2, "nd") < views.text_sort_value("abc")
+    abc = views.text_sort_value("abc")
+    assert abc is not None
+    assert views.text_sort_value("2nd") == ("0", 2, "nd") < abc
+
+
+def _text_key(value: str) -> tuple:
+    """``text_sort_value`` for a non-blank cell, which always has a key."""
+    key = views.text_sort_value(value)
+    assert key is not None
+    return key
 
 
 def test_text_keys_order_as_the_browser_does() -> None:
@@ -164,7 +174,7 @@ def test_text_keys_order_as_the_browser_does() -> None:
     ]
     # Reversed first: `sorted` is stable, so in-order input would let a
     # key that ties two of these pass.
-    assert sorted(reversed(browser_order), key=views.text_sort_value) == browser_order
+    assert sorted(reversed(browser_order), key=_text_key) == browser_order
     assert views.text_sort_value("") is None
     assert views.text_sort_value("   ") is None
 

@@ -15,13 +15,15 @@ from contextlib import contextmanager
 
 from sqlalchemy.orm import Session
 
-from app.db.models import ReviewSession
+from app.db.models import Instrument, ReviewSession
 from app.services import session_lifecycle as lifecycle
 
 
 @contextmanager
-def past_draft_setup(db: Session, owner: object) -> Iterator[None]:
-    """``owner`` is the session, or a row with a ``session`` attribute."""
+def past_draft_setup(
+    db: Session, owner: ReviewSession | Instrument
+) -> Iterator[None]:
+    """``owner`` is the session, or an instrument (its ``session``)."""
     session = owner if isinstance(owner, ReviewSession) else owner.session
     if lifecycle.is_editable(session):
         yield

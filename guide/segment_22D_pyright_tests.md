@@ -102,6 +102,24 @@ set to the four test trees.
   cookie's path go through asserting helpers (`_lookup_keys`, `_path`)
   and a cookie's name through `.get`; a tuple-returning dialog lambda
   becomes a named handler. No application change, no ignore.
+- **Rung 5:** `tests/integration/` clean, 555 → 0: the test config exits 0. Shared causes
+  first: `make_client` yields a typed factory, the `_save` / `_post`
+  helpers return `httpx.Response`, the rollup oracle's `Fixture` declares
+  its attributes and `_by_email` / `_by_identifier` their row types, and
+  the seed helpers take `reviewer_email: str | None` with an assert (an
+  identity's email is Optional). Then the rung-3 patterns: an `assert`
+  beside each Optional lookup or helper return; stand-ins by
+  `cast(<Model>, SimpleNamespace(…))`; log extras through `__dict__`;
+  `TypedDict`s for `**` filters; constrained type parameters for the
+  `_rows` / `_first` / `_count` model helpers; Core deletes as
+  `delete(Model)` with `synchronize_session=False`. Two application
+  annotations widen to what the code reads: `update_short_label` /
+  `update_instrument_description` take `actor: User | None` (both write
+  `actor.id if actor else None`), and the clock's `run_pass` /
+  `run_forever` take a factory of `AbstractContextManager[Session]` (they
+  only enter it). Ignores: the two `Settings(_env_file=None)` lines, and
+  three assignments of a shape the column type rules out
+  (`sort_display_fields`, `column_widths`, `reviewer_self_fields`).
 
 ## PR ladder
 

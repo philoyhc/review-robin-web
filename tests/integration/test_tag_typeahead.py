@@ -44,7 +44,9 @@ def _owner(db: Session, review_session: ReviewSession) -> User:
             SessionOperator.session_id == review_session.id
         )
     ).scalars().first()
-    return db.get(User, operator.user_id)
+    user = db.get(User, operator.user_id)
+    assert user is not None
+    return user
 
 
 def _tag(db: Session, review_session: ReviewSession, tags: list[str]) -> None:

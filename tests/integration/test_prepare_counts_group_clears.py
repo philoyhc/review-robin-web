@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
 from app.db.models import Assignment, Response, Reviewee, ReviewSession
+from app.schemas.validation import ValidationIssue
 from app.services import assignments as assignments_service
 from app.services import session_lifecycle as lifecycle
 
@@ -228,6 +229,11 @@ def test_a_rule_set_the_dry_run_cannot_load_fails_prepare_at_generate(
     assert _answers(db, group_id) == {"Carol": "4", "Fay": "4"}
 
 
+def _anchor(issue: ValidationIssue) -> str:
+    assert issue.fix_anchor is not None
+    return issue.fix_anchor
+
+
 def test_the_pages_that_read_staleness_report_a_rule_set_they_cannot_load(
     db: Session,
     alice: AuthenticatedUser,
@@ -266,7 +272,7 @@ def test_the_pages_that_read_staleness_report_a_rule_set_they_cannot_load(
     pinned = db.scalars(
         select(Instrument.id).where(Instrument.rule_set_id == instrument.rule_set_id)
     ).all()
-    assert sorted(issue.fix_anchor for issue in issues) == sorted(f"#instrument-{i}" for i in pinned)
+    assert sorted(_anchor(issue) for issue in issues) == sorted(f"#instrument-{i}" for i in pinned)
     assert {issue.severity.value for issue in issues} == {"error"}
     # The label is not quoted: a quoted one read 'Instrument_1''s (round 3).
     assert all("''s" not in issue.message for issue in issues)

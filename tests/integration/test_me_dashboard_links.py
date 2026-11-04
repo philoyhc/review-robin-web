@@ -22,7 +22,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -302,9 +302,9 @@ def test_one_status_rule_reads_the_lifecycle(
         body = client.get("/me").text
         assert pill in body, status
         db.execute(
-            Observer.__table__.delete().where(
-                Observer.email == "alice@example.edu"
-            )
+            delete(Observer)
+            .where(Observer.email == "alice@example.edu")
+            .execution_options(synchronize_session=False)
         )
         db.commit()
 

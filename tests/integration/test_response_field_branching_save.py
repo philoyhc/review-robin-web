@@ -51,8 +51,9 @@ def _save(client: TestClient, review_session, instrument, rfs: list[dict]):
     )
 
 
-def _rfs(instrument: Instrument, **changes: dict) -> list[dict]:
-    """The card's payload for ``instrument``, with per-label changes."""
+def _rfs(instrument: Instrument, **changes: dict | None) -> list[dict]:
+    """The card's payload for ``instrument``, with per-label changes;
+    ``None`` drops the row."""
     out = []
     for rf in _band2_rfs(instrument):
         change = changes.get(rf["name"], {})
@@ -405,6 +406,7 @@ def test_a_session_clone_points_the_branch_at_the_cloned_parent(
         client, db, "19t10-clone"
     )
     user = db.execute(select(User)).scalars().first()
+    assert user is not None
     clone = session_clone.clone_session(
         db, source=review_session, user=user, mode="all"
     )

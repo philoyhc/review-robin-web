@@ -168,6 +168,7 @@ def test_a_reviewee_merge_that_redraws_an_answered_group_asks_first(db: Session,
 
     session, _ = _seed(db, client, "mrg-groups")
     owner = db.execute(select(User)).scalars().first()
+    assert owner is not None
     row = [RevieweeImportRow(name="Ann", email_or_identifier="ann@example.edu", tag_1="blue")]
 
     def merge(**kwargs):

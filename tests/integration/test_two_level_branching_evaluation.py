@@ -14,6 +14,7 @@ import io
 import re
 from collections.abc import Callable
 from types import SimpleNamespace
+from typing import cast
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -43,12 +44,15 @@ from .test_required_governed_rollups import T0, _mixed_session
 # The pure rule.
 
 
-def _f(id_, *, required=False, parent=None, op=None, value=None, mode=None):
-    return SimpleNamespace(
+def _f(
+    id_, *, required=False, parent=None, op=None, value=None, mode=None
+) -> InstrumentResponseField:
+    """A stand-in for a response field, carrying what the rule reads."""
+    return cast(InstrumentResponseField, SimpleNamespace(
         id=id_, label=f"F{id_}", order=id_, required=required, visible=True,
         branch_parent_id=parent, branch_op=op, branch_value=value, branch_mode=mode,
         _inline_data_type="Integer", _inline_list_csv=None,
-    )
+    ))
 
 
 def _chain(*, level1_mode=None, level0_mode=None):
@@ -106,7 +110,7 @@ def _chain_seed(db: Session):
     return op, reviewer, review_session, assignments, familiarity, rating, comments
 
 
-def _values(db: Session, assignment: Assignment) -> dict[int, str]:
+def _values(db: Session, assignment: Assignment) -> dict[int, str | None]:
     return dict(
         db.execute(
             select(Response.response_field_id, Response.value).where(

@@ -174,6 +174,7 @@ def test_the_self_review_column_ignores_a_row_excluded_by_status(
     db.commit()
     _prepare(db, user, review_session)
     instrument_id = db.execute(select(Assignment.instrument_id)).scalars().first()
+    assert instrument_id is not None
     assert assignments.self_review_breakdown_per_instrument(
         db, review_session.id
     ) == {instrument_id: (1, 0)}

@@ -6,6 +6,8 @@ toggle is on, a reviewer's successful submit writes a
 Azure: the row stays ``queued`` because no transport exists yet."""
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -260,7 +262,7 @@ def test_a_failure_after_the_write_leaves_no_row(
 
     real_write_event = audit.write_event
 
-    def _boom_on_queue(*args: object, **kwargs: object) -> object:
+    def _boom_on_queue(*args: Any, **kwargs: Any) -> object:
         if kwargs.get("event_type") == "responses_received.queued":
             raise OperationalError("audit", {}, Exception("db down"))
         return real_write_event(*args, **kwargs)

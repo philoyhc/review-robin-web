@@ -423,6 +423,8 @@ def test_the_settings_slot_commits_its_own_work(
         return real_commit(self, *args, **kwargs)
 
     monkeypatch.setattr(SASession, "commit", _spy)
+    owner = db.get(User, review_session.created_by_user_id)
+    assert owner is not None
     failure = asyncio.run(
         _quick_setup._run_quick_setup(
             uploads={
@@ -441,7 +443,7 @@ def test_the_settings_slot_commits_its_own_work(
                 )
             },
             review_session=review_session,
-            user=db.get(User, review_session.created_by_user_id),
+            user=owner,
             db=db,
             replacing=True,
             confirm_replace="true",

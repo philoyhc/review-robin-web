@@ -220,7 +220,7 @@ def test_unhandled_exception_renders_friendly_500(
 
     logged = [r for r in caplog.records if r.getMessage() == "unhandled exception"]
     assert len(logged) == 1
-    assert logged[0].path == "/__test/err/boom"
+    assert logged[0].__dict__["path"] == "/__test/err/boom"
     assert "ValueError: kaboom" in caplog.text  # but it IS logged
 
 
