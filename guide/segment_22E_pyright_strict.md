@@ -69,13 +69,14 @@ Taken 2026-11-04 at `9b45a9c1`, pyright 1.1.414, `typeCheckingMode =
   (pyright's `getStrictModeNotOverriddenRules` exempts one rule, not
   this one). So `typeCheckingMode` is `strict` at the top with the rule
   off, and each root in `executionEnvironments` (TOML tables) turns off
-  only the strict rules it still fails, with basic list/dict/set
-  inference; a package joins strict mode when its table is just its
-  import path. A strict rule a package already passes is enforced from
-  this rung (an unneeded `cast` now fails under `app/`). The `.` root
-  keeps basic inference for installed libraries, or Jinja's `globals`
-  infers strictly and 37 calls fail. Test roots keep their tables for
-  good (the open question below). With the rule off and strict
+  only the strict rules it still fails; a package joins strict mode when
+  its table is just its import path. A strict rule a package already
+  passes is enforced from this rung (an unneeded `cast` now fails under
+  `app/`). List/dict/set inference stays basic everywhere: it is not a
+  diagnostic, and installed libraries take it too, wherever they sit;
+  strict, Jinja's `globals` fails 37 calls (CI caught it: its libraries
+  sit outside the repository, so a per-root setting missed them). Test
+  roots keep their tables for good (the open question below). With the rule off and strict
   inference: `app` 1,531, `residentialapps` 236, `utilityapps` 49,
   `cordware` 30 (the blast radius's 2,137 counted the 437 private uses).
 

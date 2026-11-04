@@ -52,23 +52,24 @@ target-version = "py312"
 [tool.pyright]
 # Strict mode (segment 22E) over application code and its tests (22C, 22D).
 # Each root below turns off only the strict rules it still fails; a package
-# joins strict mode when its list and its basic inference are gone. Test
-# roots keep both for good. `reportPrivateUsage` is off: a package's
-# modules share `_helpers` by convention (author's ruling, 2026-11-04).
-# The first matching root wins; `.` also covers installed libraries, which
-# keep basic inference so their types read as they did under basic mode.
+# joins strict mode when its list is gone, and test roots keep theirs for
+# good. `reportPrivateUsage` is off: a package's modules share `_helpers`
+# by convention (author's ruling, 2026-11-04). The first matching root wins.
 include = ["app", "cordware", "residentialapps", "utilityapps", "tests"]
 exclude = [".venv", "**/__pycache__"]
 pythonVersion = "3.12"
 typeCheckingMode = "strict"
 reportPrivateUsage = "none"
+# Basic list/dict/set inference everywhere: strict inference is not a
+# diagnostic, and it applies to installed libraries too, wherever they sit
+# (Jinja's `globals` would infer strictly and 37 calls fail).
+strictListInference = false
+strictDictionaryInference = false
+strictSetInference = false
 
 [[tool.pyright.executionEnvironments]]
 root = "tests"
 extraPaths = [".", "tools"]
-strictListInference = false
-strictDictionaryInference = false
-strictSetInference = false
 reportDeprecated = "none"
 reportMissingParameterType = "none"
 reportMissingTypeArgument = "none"
@@ -86,9 +87,6 @@ reportUnusedVariable = "none"
 [[tool.pyright.executionEnvironments]]
 root = "cordware/tests"
 extraPaths = ["."]
-strictListInference = false
-strictDictionaryInference = false
-strictSetInference = false
 reportDeprecated = "none"
 reportIncompatibleMethodOverride = "none"
 reportMissingParameterType = "none"
@@ -102,9 +100,6 @@ reportUnusedFunction = "none"
 [[tool.pyright.executionEnvironments]]
 root = "residentialapps/tests"
 extraPaths = ["."]
-strictListInference = false
-strictDictionaryInference = false
-strictSetInference = false
 reportMissingParameterType = "none"
 reportUnknownArgumentType = "none"
 reportUnknownLambdaType = "none"
@@ -116,9 +111,6 @@ reportUnusedImport = "none"
 [[tool.pyright.executionEnvironments]]
 root = "utilityapps/tests"
 extraPaths = ["."]
-strictListInference = false
-strictDictionaryInference = false
-strictSetInference = false
 reportMissingParameterType = "none"
 reportMissingTypeArgument = "none"
 reportUnknownArgumentType = "none"
@@ -130,9 +122,6 @@ reportUnknownVariableType = "none"
 [[tool.pyright.executionEnvironments]]
 root = "cordware"
 extraPaths = ["."]
-strictListInference = false
-strictDictionaryInference = false
-strictSetInference = false
 reportDeprecated = "none"
 reportMissingParameterType = "none"
 reportUnknownArgumentType = "none"
@@ -142,9 +131,6 @@ reportUnknownVariableType = "none"
 [[tool.pyright.executionEnvironments]]
 root = "residentialapps"
 extraPaths = ["."]
-strictListInference = false
-strictDictionaryInference = false
-strictSetInference = false
 reportMissingParameterType = "none"
 reportMissingTypeArgument = "none"
 reportUnknownArgumentType = "none"
@@ -156,9 +142,6 @@ reportUnknownVariableType = "none"
 [[tool.pyright.executionEnvironments]]
 root = "utilityapps"
 extraPaths = ["."]
-strictListInference = false
-strictDictionaryInference = false
-strictSetInference = false
 reportMissingParameterType = "none"
 reportMissingTypeArgument = "none"
 reportUnknownArgumentType = "none"
@@ -171,9 +154,6 @@ reportUnusedImport = "none"
 [[tool.pyright.executionEnvironments]]
 root = "app"
 extraPaths = ["."]
-strictListInference = false
-strictDictionaryInference = false
-strictSetInference = false
 reportDeprecated = "none"
 reportMissingParameterType = "none"
 reportMissingTypeArgument = "none"
@@ -189,9 +169,6 @@ reportUnusedImport = "none"
 
 [[tool.pyright.executionEnvironments]]
 root = "."
-strictListInference = false
-strictDictionaryInference = false
-strictSetInference = false
 
 [tool.ruff.lint]
 # Segment 22C rung 2: import order and modern syntax (2a), then bugbear
