@@ -91,10 +91,12 @@ if [ -d tests/browser ] \
   echo "session-start: WARNING: no Chromium for Playwright — tests/browser/ will skip"
 fi
 
-# pyright downloads its Node build on first use; run it once here, with
-# network, so the first type check later does not (segment 22C). A failure
-# warns rather than aborts: pyright is not yet a gate.
-if ! "$VENV/bin/pyright" --version >/dev/null 2>&1; then
+# Where no `node` is on PATH, pyright downloads one on first use; run it once
+# here, with network, so the first type check later does not (segment 22C).
+# Only where pyproject.toml configures pyright (a repository built from
+# tools/practice_kit.py may not). A failure warns rather than aborts.
+if grep -q '^\[tool\.pyright\]' pyproject.toml 2>/dev/null \
+  && ! "$VENV/bin/pyright" --version >/dev/null 2>&1; then
   echo "session-start: WARNING: pyright --version failed — its first run will download"
 fi
 

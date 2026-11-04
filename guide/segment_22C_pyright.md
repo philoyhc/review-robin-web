@@ -86,7 +86,7 @@ approximate where a diagnostic could sit in two clusters; the command in
 
 ## Judgment calls — decided
 
-- Basic mode, not strict, for the first gate: strict on 289 files of
+- Basic mode, not strict, for the first gate: strict on 289 errors' worth of
   existing code is a rewrite (2026-11-02).
 - Test code excluded from the first gate; it is checked by running it
   until its own plan (2026-11-02).
@@ -102,12 +102,14 @@ approximate where a diagnostic could sit in two clusters; the command in
 ## Blast radius (measured)
 
 Taken 2026-11-02 at `3df7a365`, pyright 1.1.414, SQLAlchemy 2.1.5; the
-first two rows re-taken at rung 1 (2026-11-04, `e9555785`).
+first two rows and the by-package row re-taken at rung 1 (2026-11-04,
+`e9555785`). Under an activated `.venv`: without one, pyright reads
+whatever `python` is on PATH and reports the missing imports too (622).
 
 | What | Count | Command |
 |---|---|---|
 | Errors, application code | 307 in 78 files (289 in 70 on 2026-11-02, before 14E) | `pyright --outputjson` with the rung 1 config |
-| Errors, the four packages with their `tests/` (the brief's scope) | 374 in 316 files | the same, without the `tests` exclude |
+| Errors, the four packages with their `tests/` (the brief's scope) | 395 in 97 files (374 on 2026-11-02) | the same, without the `tests` exclude |
 | Errors, `tests/` | 1,879 in 599 files | `include = ["tests"]` |
 | By package (application code) | `app/services` 195, `app/web` 86, `residentialapps` 16, `utilityapps` 10 (2026-11-04) | `collections.Counter` over the file paths |
 | Docs naming the lint command | 7 | `grep -rln "ruff check" --include=*.md . \| grep -v "archive\|\.venv"` (README, CLAUDE/AGENTS, CONTRIBUTING, `docs/local_setup.md`, the skill, `new_project_practices_setup.md`) |
@@ -131,7 +133,8 @@ python3 -c "import json,collections;d=json.load(open('/tmp/pyright.json'));print
    and `AGENTS.md` ("Common commands") and `docs/local_setup.md` gain
    `pyright` beside `ruff check .`. The session-start hook runs
    `pyright --version` once, so the Node download it does on first use
-   happens at session start, not mid-gate. Not in CI yet. Code: its own
+   (only where no `node` is on PATH) happens at session start, not
+   mid-gate. Not in CI yet. Code: its own
    read (it touches `.claude/hooks/`).
 2. **Ruff rules widened.** `[tool.ruff.lint] select = ["E", "F", "I",
    "B", "UP", "SIM"]` and `ruff check --fix`, then the findings `--fix`
