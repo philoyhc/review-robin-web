@@ -29,7 +29,6 @@ import logging
 from collections.abc import Sequence
 
 import sqlalchemy as sa
-
 from alembic import op
 
 revision: str = "e5c1a9d3b7f2"

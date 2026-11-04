@@ -11,9 +11,8 @@ observer's summary. Built on its own in-memory SQLite engine, like
 
 from __future__ import annotations
 
-from sqlalchemy import create_engine, text
-
 from alembic import command
+from sqlalchemy import create_engine, text
 
 from .test_19r2_reconcile_cache_columns import _alembic_config
 

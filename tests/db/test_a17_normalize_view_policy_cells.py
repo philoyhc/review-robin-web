@@ -10,9 +10,9 @@ migration through ``ci-postgres``'s ``upgrade head``.
 
 from __future__ import annotations
 
+from alembic import command
 from sqlalchemy import create_engine, text
 
-from alembic import command
 from app.services.visibility_policies import valid_modes_for_cell
 
 from .test_19r2_reconcile_cache_columns import _alembic_config

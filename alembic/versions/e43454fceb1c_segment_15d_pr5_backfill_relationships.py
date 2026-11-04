@@ -42,7 +42,6 @@ from datetime import UTC, datetime
 from typing import Any
 
 import sqlalchemy as sa
-
 from alembic import op
 
 revision: str = "e43454fceb1c"

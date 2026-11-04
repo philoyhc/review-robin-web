@@ -42,12 +42,11 @@ from pathlib import Path  # noqa: E402
 
 import pytest  # noqa: E402
 from _sqlite_schema import build_sqlite_schema  # noqa: E402
+from alembic import command  # noqa: E402
 from alembic.config import Config  # noqa: E402
 from sqlalchemy import Engine, create_engine, make_url, text  # noqa: E402
 from sqlalchemy.exc import ProgrammingError  # noqa: E402
 from sqlalchemy.orm import Session  # noqa: E402
-
-from alembic import command  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 

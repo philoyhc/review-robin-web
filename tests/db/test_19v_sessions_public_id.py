@@ -9,9 +9,9 @@ migration through ``ci-postgres``'s ``upgrade head`` and round-trip.
 
 from __future__ import annotations
 
+from alembic import command
 from sqlalchemy import create_engine, inspect, text
 
-from alembic import command
 from app.db.models.review_session import PUBLIC_ID_ALPHABET, PUBLIC_ID_LENGTH
 
 from .test_19r2_reconcile_cache_columns import _alembic_config

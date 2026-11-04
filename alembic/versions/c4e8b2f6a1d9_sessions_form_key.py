@@ -17,7 +17,6 @@ import secrets
 from collections.abc import Sequence
 
 import sqlalchemy as sa
-
 from alembic import op
 
 revision: str = "c4e8b2f6a1d9"

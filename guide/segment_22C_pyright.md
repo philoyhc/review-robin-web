@@ -38,7 +38,8 @@ there. Test code and strict mode come later, each in its own plan.
   `requirements.txt`. Error counts move with both: 2.1 types `Select`
   and `Result` differently from 2.0, and a gate has to give the same
   answer on every machine.
-- **Lint rules widened first:** `ruff`'s `select` grows to
+- **Lint rules widened first** (split into 2a and 2b, and `E` kept to
+  ruff's default subset: `## Status`): `ruff`'s `select` grows to
   `E, F, I, B, UP, SIM` in its own rung, before the type fixes, so their
   diffs are not mixed with reformatting.
 
@@ -153,7 +154,7 @@ python3 -c "import json,collections;d=json.load(open('/tmp/pyright.json'));print
    (only where no `node` is on PATH) happens at session start, not
    mid-gate. Not in CI yet. Code: its own
    read (it touches `.claude/hooks/`).
-2. **Ruff rules widened.** `[tool.ruff.lint] select = ["E", "F", "I",
+2. **Ruff rules widened** (built as 2a and 2b, `## Status`). `[tool.ruff.lint] select = ["E", "F", "I",
    "B", "UP", "SIM"]` and `ruff check --fix`, then the findings `--fix`
    leaves, by hand. Nothing else in the PR. Its own read, of the config
    and the hand fixes; the mechanical diff is summarized per rule in the

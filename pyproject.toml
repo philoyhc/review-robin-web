@@ -64,3 +64,8 @@ extend-select = ["I", "UP"]
 # StrEnum changes what str() and format() give for a member, which
 # templates and audit details render.
 ignore = ["UP042"]
+
+[tool.ruff.lint.isort]
+# The repository's own alembic/ directory would otherwise make the
+# installed package first-party.
+known-third-party = ["alembic"]

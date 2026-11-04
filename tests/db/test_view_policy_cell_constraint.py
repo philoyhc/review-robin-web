@@ -16,10 +16,10 @@ import logging
 import logging.config
 
 import pytest
+from alembic import command
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import IntegrityError
 
-from alembic import command
 from app.db.base import Base
 from app.services.visibility_policies import (
     VisibilityPolicyError,

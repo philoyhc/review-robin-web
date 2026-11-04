@@ -38,7 +38,6 @@ from collections.abc import Sequence
 from typing import Any
 
 import sqlalchemy as sa
-
 from alembic import op
 
 revision: str = "c3a7e9d8b154"
