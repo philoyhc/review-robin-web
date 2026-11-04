@@ -32,9 +32,10 @@ states only what Residential adds.
 - Each factory is a zero-argument callable returning a new `FastAPI`
   application, as the registry requires. It reads no setting and opens no
   database in 1A.
-- The registry lists them after `reviewrobin`, in the order above, so an
-  unset `CORDWARE_APPS` mounts all three in that order and the landing
-  page lists them so.
+- The registry lists them after `reviewrobin`, in the order above, with
+  Cordware Utilities last, so an unset `CORDWARE_APPS` mounts all four
+  in that order and the landing page lists them so
+  (`cordware/spec/host.md`).
 
 ## Pages
 
@@ -181,7 +182,7 @@ Every combination starts and answers both health paths it mounts (ruling 5):
 | `residentialops` | Residential Operations alone; `/` lists it |
 | `supportlogs` | Support Logs alone; `/` lists it |
 | `residentialops,supportlogs` | Both; `/` lists both |
-| unset | RRW and both; `/` lists all three |
+| unset | RRW, both and Cordware Utilities; `/` lists all four |
 
 A bare mount path answered `404` in 1A. Residential Operations' landing
 (`/residentialops/`) now answers as its placeholders do, behind the

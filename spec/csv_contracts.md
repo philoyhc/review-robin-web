@@ -354,7 +354,8 @@ case-insensitively, else a per-row error. The `*Tag1..3` columns may also carry 
 `.<label>` friendly-label suffix (§1a).
 
 **Save:** `save_reviewers(db, *, session, user, rows, filename,
-correlation_id, field_labels_captured=None)` /
+correlation_id, field_labels_captured=None, directory=None,
+append=False, merge=False, columns=frozenset(), acknowledged_loss=None)` /
 `save_reviewees(...)` (same keyword-only shape) wipe-and-replace within the session's
 roster (or append or merge, § 3.1a), then call `seed_display_fields_from_reviewees` for the
 Reviewees side (idempotent display-field seeding off populated
@@ -409,11 +410,14 @@ token (`cordware.graph.look_up_all`, `cordware/spec/identity.md`
   caller ran no check. An unchecked address counts under
   `directory_not_checked`, and of those, the rows a replace left on their
   earlier account under `directory_kept`, omitted when none were.
-- **Setup page line.** The latest import's counts show as one line under
-  the import card (`spec/setup_pages.md`).
+- **Setup page line.** The latest import's or recheck's counts show as
+  one line under the import card (`spec/setup_pages.md`).
 - **Re-upload re-resolves.** A replace replaces the bindings with the
   file's answers, keeping an earlier account only where the directory
-  gave none (above); there is no bulk re-resolve of existing rosters.
+  gave none (above). The bulk re-resolve of existing rows is the Upload
+  card's recheck (`spec/setup_pages.md`, "Recheck"): it binds the
+  roster's unmatched rows the directory now finds, and touches no row
+  already bound.
 - **Not covered.** The cross-roster identity check above stays
   address-based: it guards two names on one address, and the rows are
   not resolved until after it runs.

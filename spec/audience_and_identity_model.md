@@ -251,7 +251,7 @@ chip strip, invitation acceptance and role disclosure
 - **How a row becomes bound** is the upload's resolution
   (`spec/csv_contracts.md` §3.1, *Directory resolution*). Resolution
   runs at every roster write: Setup import, single add and edit, Quick
-  Setup and rehydrate. An address edit keeps the binding when the folded
+  Setup, rehydrate, and the Upload card's recheck of unmatched rows. An address edit keeps the binding when the folded
   address is unchanged; otherwise it re-resolves, and without a lookup
   or a unique account clears the binding, never keeps it. A replace
   import is not an address edit: a row at the same folded address whose
