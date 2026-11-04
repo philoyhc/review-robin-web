@@ -66,19 +66,21 @@
     // unlocked, so the next try counts again (findings L2).
     function submit(target, submitter) {
       target.dataset.directoryCounted = 'yes';
-      var sent = false;
-      function onSent() { sent = true; }
+      var sent = null;
+      function onSent(event) { sent = event; }
       target.addEventListener('submit', onSent);
       if (target.requestSubmit) {
         target.requestSubmit(submitter && submitter.form === target ? submitter : undefined);
       } else {
         target.submit();
-        sent = true;
+        sent = {defaultPrevented: false};
       }
       target.removeEventListener('submit', onSent);
-      if (!sent) {
+      // The count is over either way: a navigation the operator then
+      // stops must not leave the other form's button locked.
+      counting = false;
+      if (!sent || sent.defaultPrevented) {
         delete target.dataset.directoryCounted;
-        counting = false;
         line.hidden = true;
       }
     }
