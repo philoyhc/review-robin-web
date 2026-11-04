@@ -147,6 +147,7 @@ headers instead — see [`docs/security_posture.md`](docs/security_posture.md).
 pytest                  # full suite (SQLite)
 pytest -n auto          # same, parallelised across CPU cores
 ruff check .            # lint (config in pyproject.toml)
+pyright                 # type check, application code (config in pyproject.toml)
 alembic upgrade head    # local SQLite migration
 alembic downgrade -1    # round-trip check
 ```
@@ -154,6 +155,12 @@ alembic downgrade -1    # round-trip check
 `pytest-xdist` provides `-n auto`; the SQLite `:memory:`
 engine is per-process and tests roll back per-test, so the
 workers stay isolated. The SQLite CI job runs `pytest -n auto`.
+
+`pyright` is a dev dependency pinned exactly (`pyright==1.1.414`), and
+it checks application code only, not tests (segment 22C; not yet a CI
+gate). Run it with the venv active: it resolves imports from the
+`python` on PATH. The SQLAlchemy floor is `>=2.1` because pyright's
+reading of `Select` and `Result` differs between 2.0 and 2.1.
 
 The SQLite test path builds its schema directly from the ORM
 metadata (`Base.metadata.create_all`) rather than replaying the
