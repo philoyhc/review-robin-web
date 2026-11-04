@@ -92,7 +92,9 @@ class ValidationInputs:
     #: Loads filled on first use and shared for the run, for checks that
     #: need a heavier read only some runs reach: ``staleness``, the
     #: engine's per-instrument verdicts (findings E4's cold read).
-    _memo: dict[str, Any] = field(default_factory=dict, compare=False, repr=False)
+    _memo: dict[str, Any] = field(
+        default_factory=dict[str, Any], compare=False, repr=False
+    )
 
     @property
     def active_reviewees(self) -> tuple[Reviewee, ...]:

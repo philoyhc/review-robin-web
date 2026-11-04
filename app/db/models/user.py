@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import JSON, Boolean, Integer, LargeBinary, String, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -75,7 +75,7 @@ class User(Base, TimestampMixin):
     # in-code default (``UTC`` for the timezone key). Schema
     # pre-positioned in 13F PR 7; lands inert — no service module
     # reads or writes the column until 18B PR 2 lights it up.
-    preferences: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    preferences: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
 
     # Segment 20D: the operator's Unit, the top line of the bar on the
     # sessions they create (docs/header_chrome.md §6). Set only by a

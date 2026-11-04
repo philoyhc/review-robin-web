@@ -19,6 +19,19 @@ from app.services.validation._inputs import (
     ValidationInputs,
 )
 
+# What the package's other modules import from this one; the leading
+# underscore marks a name private to the package, not to the module.
+__all__ = [
+    "_check_instruments_no_display_fields",
+    "_check_instruments_no_fields",
+    "_check_instruments_no_rule_pinned",
+    "_check_instruments_rule_set_unloadable",
+    "_check_instruments_stale_generated",
+    "_check_instruments_zero_included",
+    "_check_new_model_no_visible_response_fields",
+    "_staleness",
+]
+
 
 def _check_instruments_no_fields(
     db: Session,

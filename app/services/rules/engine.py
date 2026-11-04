@@ -64,13 +64,13 @@ class EvaluationResult:
     """Surviving assignments in deterministic
     ``(reviewer.email, reviewee.email_or_identifier)`` order."""
 
-    excluded_counts: dict[str, int] = field(default_factory=dict)
+    excluded_counts: dict[str, int] = field(default_factory=dict[str, int])
     """Exclusion reasons, flatten-keyed for the
     ``assignments.generated.context.excluded_*`` audit shape per
     Segment 11K. Keys: ``self_review``, ``predicate.<rule_id>``,
     ``quota.per_reviewer``, ``quota.per_reviewee``."""
 
-    warnings: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list[str])
     """Non-fatal observations — zero-assignment outcomes,
     quota under-min satisfaction, etc."""
 

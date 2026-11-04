@@ -29,6 +29,16 @@ from app.services.csv_imports._identity import (
 )
 from app.services.email_identity import normalize_email, normalize_object_id
 
+# What the package's other modules import from this one; the leading
+# underscore marks a name private to the package, not to the module.
+__all__ = [
+    "AppendConflict",
+    "_MERGE_KEEPS",
+    "_merge_rows",
+    "append_conflicts",
+    "merge_conflicts",
+]
+
 
 class AppendConflict(Exception):
     """An append refused at its save, under the session lock (segment

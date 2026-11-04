@@ -155,7 +155,7 @@ _IDENTITY_ROSTERS: dict[str, dict[str, str]] = {
     },
 }
 
-_IDENTITY_MODELS = {
+_IDENTITY_MODELS: dict[str, type[Reviewer] | type[Reviewee] | type[Observer]] = {
     "reviewers": Reviewer,
     "reviewees": Reviewee,
     "observers": Observer,

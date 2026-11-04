@@ -192,10 +192,6 @@ class Predicate(BaseModel):
                     f"operator {op!r} requires a non-empty list of "
                     "literals as operand"
                 )
-            if not all(isinstance(item, str) for item in operand):
-                raise ValueError(
-                    f"operator {op!r} operand list must contain strings"
-                )
             return self
 
         if op in _REGEX_OPERATORS:
@@ -344,7 +340,7 @@ class RuleSetSchema(BaseModel):
     description: str = ""
     scope: RuleSetScope = RuleSetScope.personal
     combinator: Combinator
-    rules: list[Rule] = Field(default_factory=list)
+    rules: list[Rule] = Field(default_factory=list[Rule])
     options: RuleSetOptions = Field(default_factory=RuleSetOptions)
     metadata: RuleSetMetadata = Field(default_factory=RuleSetMetadata)
 
@@ -377,7 +373,9 @@ def rules_payload_error(payload: Any) -> str | None:
     if not isinstance(payload, list):
         return "rules must be a list"
     try:
-        RuleSetSchema(name="check", combinator=Combinator.ALL_OF, rules=payload)
+        RuleSetSchema.model_validate(
+            {"name": "check", "combinator": Combinator.ALL_OF, "rules": payload}
+        )
     except ValidationError as exc:
         message = str(exc.errors()[0]["msg"])
         return message.removeprefix("Value error, ")

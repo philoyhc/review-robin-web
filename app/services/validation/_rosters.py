@@ -27,6 +27,38 @@ from app.services.validation._inputs import (
     ValidationInputs,
 )
 
+# What the package's other modules import from this one; the leading
+# underscore marks a name private to the package, not to the module.
+__all__ = [
+    "_CROSS_ROSTER_WHY",
+    "_DUPLICATE_ACCOUNT_WHY",
+    "_IdentityHolder",
+    "_MIRROR_DRIFT_WHY",
+    "_ROSTER_IDENTITY_FIELDS",
+    "_ROSTER_SINGULAR",
+    "_check_email_template_no_help_contact",
+    "_check_observers_cross_roster_identity",
+    "_check_observers_duplicate_account",
+    "_check_observers_duplicate_email",
+    "_check_reviewees_cross_roster_identity",
+    "_check_reviewees_duplicate_account",
+    "_check_reviewees_duplicate_id",
+    "_check_reviewees_empty",
+    "_check_reviewees_mirror_drift",
+    "_check_reviewees_unreachable_for_results",
+    "_check_reviewers_cross_roster_identity",
+    "_check_reviewers_duplicate_account",
+    "_check_reviewers_duplicate_email",
+    "_check_reviewers_empty",
+    "_check_session_end_passed",
+    "_check_session_no_code",
+    "_check_session_no_name",
+    "_cross_roster_identity_issues",
+    "_duplicate_accounts",
+    "_identity_holders_by_email",
+]
+
+
 # --------------------------------------------------------------------------- #
 # Individual rule check functions
 # --------------------------------------------------------------------------- #

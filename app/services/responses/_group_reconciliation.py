@@ -45,6 +45,16 @@ from app.db.models import (
 from app.db.session import rowcount
 from app.schemas.responses import ResponseUpsert
 
+# What the package's other modules import from this one; the leading
+# underscore marks a name private to the package, not to the module.
+__all__ = [
+    "_expand_group_upserts",
+    "_group_instrument_ids",
+    "_group_key_by_assignment",
+    "_session_position_map",
+    "group_keys",
+]
+
 
 class _GroupKeyShape(Protocol):
     """What :func:`group_keys` reads off an assignment row.

@@ -3,7 +3,9 @@ from functools import lru_cache
 from typing import Any, cast
 
 from sqlalchemy import CursorResult, Engine, Result, create_engine, event
+from sqlalchemy.engine.interfaces import DBAPIConnection
 from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import ConnectionPoolEntry
 
 from app.config import settings
 
@@ -15,7 +17,9 @@ def _enable_sqlite_fk_enforcement(engine: Engine) -> None:
     for SQLite so dev + test environments behave the same way."""
 
     @event.listens_for(engine, "connect")
-    def _set_pragma(dbapi_connection, _connection_record):  # type: ignore[no-untyped-def]
+    def _set_pragma(
+        dbapi_connection: DBAPIConnection, _connection_record: ConnectionPoolEntry
+    ) -> None:
         cursor = dbapi_connection.cursor()
         try:
             cursor.execute("PRAGMA foreign_keys = ON")

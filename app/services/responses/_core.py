@@ -702,7 +702,11 @@ def _hold_answers_behind_refused_parents(
         return valid, []
     field_by_id = {field.id: field for field in field_index.values()}
     kept: list[ResponseUpsert] = []
-    held = []
+    held: list[
+        tuple[
+            ResponseUpsert, Assignment, InstrumentResponseField, InstrumentResponseField
+        ]
+    ] = []
     for u in valid:
         assignment = assignment_index.get(u.assignment_id)
         field = (
@@ -728,7 +732,13 @@ def _hold_answers_behind_refused_parents(
                 if ancestor.branch_parent_id is not None
                 else None
             )
-        if refused_ancestor is not None:
+        # A refused ancestor is found only through ``field``, which is
+        # found only through ``assignment``: all three are set together.
+        if (
+            refused_ancestor is not None
+            and assignment is not None
+            and field is not None
+        ):
             held.append((u, assignment, field, refused_ancestor))
         else:
             kept.append(u)
