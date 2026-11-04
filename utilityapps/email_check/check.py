@@ -19,6 +19,7 @@ from cordware.graph import (  # noqa: F401  (re-exported: the checker's vocabula
     SIGN_IN_KINDS,
     Directory,
     DirectoryUser,
+    Finder,
     GraphError,
     Outcome,
     classify,
@@ -63,7 +64,7 @@ class Result:
 
 
 def look_up_all(
-    directory: Directory, keys: Iterable[str], *, budget: float = BUDGET
+    directory: Finder, keys: Iterable[str], *, budget: float = BUDGET
 ) -> dict[str, Outcome]:
     """`cordware.graph.look_up_all` at the checker's own pace (`WORKERS`)."""
     return graph.look_up_all(directory, keys, budget=budget, workers=WORKERS)
@@ -145,7 +146,7 @@ def outcomes_from_json(data: object, keys: Iterable[str]) -> dict[str, Outcome]:
 def run(
     upload: csvio.Upload,
     column: int,
-    directory: Directory | None,
+    directory: Finder | None,
     *,
     carried: dict[str, Outcome] | None = None,
     stopped: str = "",

@@ -480,7 +480,7 @@ def test_the_stop_line_carries_the_missing_header_count(
     with caplog.at_level(logging.INFO, logger="cordware"), TestClient(create_app(apps=())):
         pass
     (stopping,) = _events(caplog, "host.stopping")
-    assert stopping.missing_identity_headers == 4
+    assert stopping.__dict__["missing_identity_headers"] == 4
 
 
 @pytest.mark.parametrize("fake", [False, True], ids=["fake-off", "fake-on"])
@@ -691,9 +691,9 @@ def test_the_institution_name_reads_cordwares_own_variable(monkeypatch) -> None:
     """`CORDWARE_INSTITUTION_NAME`, trimmed; unset is empty, meaning no top
     line (`docs/header_chrome.md` §6)."""
     monkeypatch.delenv("CORDWARE_INSTITUTION_NAME", raising=False)
-    assert identity_module.institution_name(IdentitySettings(_env_file=None)) == ""
+    assert identity_module.institution_name(IdentitySettings(_env_file=None)) == ""  # pyright: ignore[reportCallIssue]  -- a pydantic-settings init option
     monkeypatch.setenv("CORDWARE_INSTITUTION_NAME", "  Example University ")
     assert (
-        identity_module.institution_name(IdentitySettings(_env_file=None))
+        identity_module.institution_name(IdentitySettings(_env_file=None))  # pyright: ignore[reportCallIssue]  -- a pydantic-settings init option
         == "Example University"
     )

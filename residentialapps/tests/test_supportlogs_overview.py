@@ -72,7 +72,9 @@ def test_the_aggregate_view_names_no_student(client: TestClient) -> None:
 def test_coverage_lists_overdue_due_and_review(client: TestClient) -> None:
     cov = section(client.get("/overview/?as=Sam%20Lee").text, "cov-h")
     assert "Overdue <span class=\"count\">· 1</span>" in cov and 'href="/plans/P-01?as=Sam%20Lee">Clara Tan</a>' in cov
-    assert "Review " + sample.short_date(sample.plan("P-01").review) in cov
+    review = sample.plan("P-01").review
+    assert review is not None
+    assert "Review " + sample.short_date(review) in cov
     aggregate = section(client.get("/overview/?as=Kenneth%20Lau").text, "cov-h")
     assert "Overdue <span class=\"count\">· 1</span>" in aggregate and "<a " not in aggregate
 

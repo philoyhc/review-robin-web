@@ -8,6 +8,7 @@ from __future__ import annotations
 import csv
 from collections import Counter
 from pathlib import Path
+from typing import Any
 
 DATA = Path(__file__).resolve().parents[1] / "docs" / "sample_data"
 
@@ -236,7 +237,7 @@ def test_quick_setup_holds_every_other_file() -> None:
         by_email = {p["Email"]: p for p in rows(file)}
         assert people == by_email, file  # the same people; the file's order is its own
     slots_of_file = slots()
-    held: dict[str, dict[str, str]] = {}
+    held: dict[str, dict[str, Any]] = {}
     for r in quick:
         if r["Level3.Neighborhood"]:
             slot = held.setdefault(r["Level3.Neighborhood"], {k: r[k] for k in UNITS} | {"Staff": [], "RA": []})

@@ -82,11 +82,16 @@ class GraphError(Exception):
         return f"{self}{f' {self.code}' if self.code else ''}"
 
 
-class Directory(Protocol):
+class Finder(Protocol):
+    """The part of a `Directory` that `look_up_all` needs."""
+
     def find_users(self, address: str) -> list[DirectoryUser]:
         """Every user whose `mail` or `userPrincipalName` is ``address``
         (exactly, as Graph compares), up to a small page."""
         ...
+
+
+class Directory(Finder, Protocol):
 
     def search_users(self, prefix: str) -> list[DirectoryUser]:
         """Up to `SEARCH_TOP` users whose display name, surname, `mail`
@@ -388,7 +393,7 @@ def error_outcome(kind: str) -> Outcome:
 
 
 def look_up_all(
-    directory: Directory, keys: Iterable[str], *, budget: float, workers: int = WORKERS
+    directory: Finder, keys: Iterable[str], *, budget: float, workers: int = WORKERS
 ) -> dict[str, Outcome]:
     """Each distinct key looked up once, ``workers`` at a time, within
     ``budget`` seconds. A lookup not finished by then is `ERROR`

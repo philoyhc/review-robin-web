@@ -7,8 +7,10 @@ from __future__ import annotations
 import re
 import shutil
 import subprocess
+from collections.abc import Sequence
 from dataclasses import replace
 from pathlib import Path
+from typing import Any
 
 import pytest
 from fastapi.routing import APIRoute
@@ -33,13 +35,13 @@ LINK = re.compile(r'\b(?:href|action|formaction|src)\s*=\s*"([^"]*)"')
 def page_routes() -> list[str]:
     """Every GET page of the application: its routes, less health, with no
     path parameters (the screens' detail pages arrive with their data)."""
-    routes = [r for r in flatten(ops_app().routes) if isinstance(r, APIRoute) and "GET" in r.methods]
+    routes = [r for r in flatten(ops_app().routes) if isinstance(r, APIRoute) and "GET" in (r.methods or ())]
     return sorted(r.path for r in routes if r.name != "residentialops_health" and "{" not in r.path)
 
 
-def flatten(routes: list[object]) -> list[object]:
+def flatten(routes: Sequence[Any]) -> list[Any]:
     """FastAPI nests an included router behind its include context."""
-    found: list[object] = []
+    found: list[Any] = []
     for route in routes:
         context = getattr(route, "include_context", None)
         found += flatten(context.included_router.routes) if context is not None else [route]
@@ -630,7 +632,7 @@ def test_a_filled_one_person_box_keeps_its_label_target() -> None:
     """Once a one-person box holds someone, the typeahead goes; its id passes
     to the remove button, so `<label for>` still names a control, and the
     description moves with the group."""
-    box = pages.TEMPLATES.env.get_template("residential/_people.html").module.person_tokens
+    box = pages.TEMPLATES.env.get_template("residential/_people.html").module.__dict__["person_tokens"]
     html = str(box("Covering RA", ("Chloe Lim",), "ra-names", "cover", single=True, describedby="cover-what"))
     assert "token-input" not in html
     assert 'id="cover" class="token-x"' in html

@@ -133,7 +133,7 @@ def test_a_failure_logs_its_kind_never_the_address_or_token(caplog: pytest.LogCa
     with pytest.raises(GraphError):
         directory(Script(Response(403, {}, b""))).find_users("secret.person@example.edu")
     (record,) = caplog.records
-    assert record.event == "graph.request_failed" and record.kind == "forbidden" and record.status == 403
+    assert record.__dict__["event"] == "graph.request_failed" and record.__dict__["kind"] == "forbidden" and record.__dict__["status"] == 403
     text = record.getMessage() + repr(record.__dict__)
     assert "secret.person" not in text and "tok" not in text.replace("token", "")
 
@@ -167,12 +167,12 @@ def _request(headers: dict[str, str] | None = None) -> Request:
 
 
 def test_fake_auth_on_a_local_run_gets_the_fake_directory() -> None:
-    settings = IdentitySettings(app_env="local", allow_fake_auth=True, _env_file=None)
+    settings = IdentitySettings(app_env="local", allow_fake_auth=True, _env_file=None)  # pyright: ignore[reportCallIssue]  -- a pydantic-settings init option
     assert isinstance(graph.directory_for(_request(), settings), FakeDirectory)
 
 
 def test_otherwise_the_request_token_is_used() -> None:
-    settings = IdentitySettings(app_env="production", allow_fake_auth=False, _env_file=None)
+    settings = IdentitySettings(app_env="production", allow_fake_auth=False, _env_file=None)  # pyright: ignore[reportCallIssue]  -- a pydantic-settings init option
     found = graph.directory_for(_request({graph.TOKEN_HEADER: "abc"}), settings)
     assert isinstance(found, GraphDirectory)
     assert found._headers["Authorization"] == "Bearer abc"
@@ -180,7 +180,7 @@ def test_otherwise_the_request_token_is_used() -> None:
 
 @pytest.mark.parametrize("token", [None, "", "   "])
 def test_no_token_is_an_error_not_an_empty_directory(token: str | None) -> None:
-    settings = IdentitySettings(app_env="local", allow_fake_auth=False, _env_file=None)
+    settings = IdentitySettings(app_env="local", allow_fake_auth=False, _env_file=None)  # pyright: ignore[reportCallIssue]  -- a pydantic-settings init option
     headers = {} if token is None else {graph.TOKEN_HEADER: token}
     with pytest.raises(GraphError, match="no_token"):
         graph.directory_for(_request(headers), settings)
@@ -198,6 +198,7 @@ def test_look_up_all_classifies_each_distinct_key_once() -> None:
             return super().find_users(address)
 
     jane = next(u for u in graph.FAKE_USERS if u.mail and u.mail.startswith("jane"))
+    assert jane.mail is not None
     outcomes = graph.look_up_all(
         Recording(),
         [jane.mail, jane.user_principal_name, jane.mail, "office@example.edu", "nobody@example.edu"],

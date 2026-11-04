@@ -142,7 +142,9 @@ def engine() -> Iterator[Engine]:
         admin = create_engine(named, isolation_level="AUTOCOMMIT", future=True)
         try:
             with admin.connect() as connection:
-                _ensure_database(connection, make_url(url).database)
+                database = make_url(url).database
+                assert database is not None  # a worker URL names its database
+                _ensure_database(connection, database)
         finally:
             admin.dispose()
 

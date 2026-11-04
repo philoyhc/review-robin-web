@@ -10,6 +10,7 @@ import io
 import logging
 import re
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
@@ -206,7 +207,7 @@ def client() -> TestClient:
     return TestClient(host_with(("utilities",))[0])
 
 
-def _post_check(client: TestClient, data: bytes, column: str = "") -> object:
+def _post_check(client: TestClient, data: bytes, column: str = "") -> httpx.Response:
     fields = {"content": base64.b64encode(data).decode(), "filename": "list.csv"}
     if column:
         fields["column"] = column
@@ -267,8 +268,8 @@ def test_the_log_carries_counts_never_the_file(client: TestClient, caplog: pytes
     caplog.set_level(logging.INFO, logger="utilityapps")
     _post_check(client, b"email,name\r\njane.tan@example.edu,Jane Tan\r\noutage@example.edu,X\r\n")
     (record,) = [r for r in caplog.records if getattr(r, "event", "") == "email_check.completed"]
-    assert record.rows == 2 and record.lookups == 2 and record.error_kinds == ["server"]
-    assert record.counts["OK"] == 1 and record.counts["ERROR"] == 1
+    assert record.__dict__["rows"] == 2 and record.__dict__["lookups"] == 2 and record.__dict__["error_kinds"] == ["server"]
+    assert record.__dict__["counts"]["OK"] == 1 and record.__dict__["counts"]["ERROR"] == 1
     everything = " ".join(r.getMessage() + repr(r.__dict__) for r in caplog.records)
     for secret in ("jane.tan", "Jane Tan", "outage@", "11111111-1111"):
         assert secret not in everything
