@@ -199,6 +199,24 @@ def test_a_recent_activation_retry_waits_for_its_spacing(db: Session) -> None:
     assert rs.id in _clock.due_session_ids(db, now=later)
 
 
+def test_the_retry_spacing_holds_back_only_the_start(db: Session) -> None:
+    """A recent activation retry never hides a deadline due on the same
+    session (Codex, #3579)."""
+    from app.services import audit
+
+    rs = _ready_past_deadline(db, "clock-retry-deadline")
+    audit.write_event(
+        db,
+        event_type="session.scheduled_activation_retry",
+        summary="retry",
+        session=rs,
+        reason="boom",
+        context={"attempt": 1},
+    )
+    db.commit()
+    assert rs.id in _clock.due_session_ids(db, now=datetime.now(timezone.utc))
+
+
 def test_a_pass_another_process_holds_is_skipped(db: Session) -> None:
     """Postgres only: with the advisory lock held elsewhere, the pass
     skips. (SQLite takes no lock.)"""

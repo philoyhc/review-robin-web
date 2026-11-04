@@ -59,21 +59,27 @@ def due_session_ids(db: Session, *, now: datetime) -> list[int]:
     an open session past its End with an instrument still accepting, or
     a release-window moment crossed within ``STAMP_GRACE`` on an expired
     session (the window opens on no other). Archived sessions are left
-    out. A Start whose last activation attempt failed within
-    :data:`RETRY_SPACING` waits: retries keep their spacing on the clock
-    rather than spending all three in a few passes."""
+    out.
+
+    A Start whose last activation attempt failed within
+    :data:`RETRY_SPACING` waits, so retries keep their spacing on the
+    clock rather than spending all three in a few passes; the spacing
+    holds back that Start only, never a deadline or release step due on
+    the same session (Codex, #3579)."""
     open_instrument = exists().where(
         Instrument.session_id == ReviewSession.id,
         Instrument.accepting_responses.is_(True),
         Instrument.deadline_closed_at.is_(None),
     )
     since = now - STAMP_GRACE
-    query = (
-        select(ReviewSession.id)
-        .where(ReviewSession.status != lifecycle.SessionStatus.archived.value)
-        .where(
+    live = ReviewSession.status != lifecycle.SessionStatus.archived.value
+    starts = db.execute(
+        select(ReviewSession.id).where(live, ReviewSession.scheduled_activate_at <= now)
+    ).scalars()
+    others = db.execute(
+        select(ReviewSession.id).where(
+            live,
             or_(
-                ReviewSession.scheduled_activate_at <= now,
                 (ReviewSession.status == lifecycle.SessionStatus.ready.value)
                 & (ReviewSession.deadline <= now)
                 & open_instrument,
@@ -82,12 +88,12 @@ def due_session_ids(db: Session, *, now: datetime) -> list[int]:
                     ReviewSession.responses_release_at.between(since, now),
                     ReviewSession.responses_release_until.between(since, now),
                 ),
-            )
+            ),
         )
-        .order_by(ReviewSession.id)
-    )
-    ids = list(db.execute(query).scalars())
-    return [i for i in ids if not _retried_recently(db, i, now=now)]
+    ).scalars()
+    due = set(others)
+    due.update(i for i in starts if i not in due and not _retried_recently(db, i, now=now))
+    return sorted(due)
 
 
 #: The least time between two activation attempts the clock makes after
