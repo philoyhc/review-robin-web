@@ -134,7 +134,7 @@ def test_allowed_predicate_fields_match_spec_vocabulary() -> None:
     } | {
         f"pair_context.tag{n}" for n in (1, 2, 3)
     }
-    assert expected == ALLOWED_PREDICATE_FIELDS
+    assert ALLOWED_PREDICATE_FIELDS == expected
 
 
 # ---------------------------------------------------------------------------

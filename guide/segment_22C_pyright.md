@@ -142,12 +142,13 @@ python3 -c "import json,collections;d=json.load(open('/tmp/pyright.json'));print
     the new rules.
   - **2b:** `B008` exempts FastAPI's parameter calls and the two frozen
     option dataclasses in `zip_bundle.py` (`extend-immutable-calls`), so
-    663 findings fell to 93. Ignored: `B905` (`zip(strict=True)` raises
-    where a short input truncates today: a behavior change at 42 sites)
-    and `SIM108` (ternaries, a style call). The rest were fixed, by
-    `--fix` or by hand: `raise … from None` where a route turns a domain
-    error into a 400, and loop variables bound where a closure
-    reads them.
+    663 findings fell to 90. Ignored: `B905` (`zip(strict=True)` raises
+    where a short input truncates today: a behavior change at 42 sites),
+    `SIM108` (ternaries, a style call), and after the read `SIM300` and
+    `SIM905` (their fixes made tests read worse). The 40 left were
+    fixed, by `--fix` or by hand: `raise … from None` where a domain
+    error becomes an HTTP 400 or a CLI error, and loop variables bound
+    where a closure reads them.
 
 ## PR ladder
 

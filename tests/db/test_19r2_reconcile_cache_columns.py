@@ -122,7 +122,7 @@ def test_rung_1_adds_four_nullable_cache_columns_and_drops_them_again() -> None:
             command.upgrade(cfg, REVISION)
             connection.commit()
             after = _instrument_columns(connection)
-            assert set(after) >= CACHE_COLUMNS
+            assert CACHE_COLUMNS <= set(after)
             for name in CACHE_COLUMNS:
                 assert after[name]["nullable"] is True, name
 

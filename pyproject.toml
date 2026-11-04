@@ -70,13 +70,18 @@ ignore = [
     "B905",
     # Ternaries only where they read better; a style call, not a defect.
     "SIM108",
+    # Its constant detection is by case, so it puts a test's expected
+    # value on the left: the yoda form it means to remove.
+    "SIM300",
+    # A word list as "a b c".split() reads better than a long literal.
+    "SIM905",
 ]
 
 [tool.ruff.lint.flake8-bugbear]
 # FastAPI's parameter declarations, called in defaults by design.
 extend-immutable-calls = [
     "fastapi.Depends", "fastapi.File", "fastapi.Form", "fastapi.Path",
-    "fastapi.Query", "fastapi.params.Depends",
+    "fastapi.Query",
     # Frozen dataclasses: one shared default instance is safe.
     "app.services.extracts.zip_bundle.ByInstrumentOptions",
     "app.services.extracts.zip_bundle.MetadataOptions",

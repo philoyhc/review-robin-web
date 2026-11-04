@@ -244,7 +244,7 @@ def test_the_instruments_bulk_toggles_moved_into_the_deadline_card(
 # --------------------------------------------------------------------------- #
 
 _VOID_ELEMENTS = frozenset(
-    ["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"]
+    "area base br col embed hr img input link meta param source track wbr".split()
 )
 
 
