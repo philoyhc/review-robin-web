@@ -39,8 +39,8 @@ from app.schemas.imports import (
     ReviewerImportRow,
 )
 from app.schemas.validation import Severity, ValidationIssue
-from app.services import audit, field_labels, session_lifecycle as lifecycle
-from app.services import unit_of_work
+from app.services import audit, field_labels, unit_of_work
+from app.services import session_lifecycle as lifecycle
 from app.services.csv_imports import (
     AppendConflict,
     ParseResult,

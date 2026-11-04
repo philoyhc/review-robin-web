@@ -5,15 +5,15 @@ segment 1B item 1, and the URL rules every page keeps
 from __future__ import annotations
 
 import re
-from dataclasses import replace
 import shutil
 import subprocess
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
-from markupsafe import escape
 from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
+from markupsafe import escape
 from starlette.requests import Request
 
 from residentialapps.residentialops import pages, sample_data

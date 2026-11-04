@@ -18,7 +18,7 @@ from __future__ import annotations
 import re
 from datetime import datetime
 from enum import Enum
-from typing import Annotated, Any, Literal, Union
+from typing import Annotated, Any, Literal
 
 from pydantic import (
     BaseModel,
@@ -283,7 +283,7 @@ class CompositeRule(_RuleBase):
 
 
 Rule = Annotated[
-    Union[FilterRule, MatchRule, QuotaRule, CompositeRule],
+    FilterRule | MatchRule | QuotaRule | CompositeRule,
     Field(discriminator="kind"),
 ]
 """Discriminated union over the four rule kinds. The ``kind`` literal

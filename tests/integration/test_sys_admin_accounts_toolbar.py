@@ -8,7 +8,6 @@ the URL.
 from __future__ import annotations
 
 import re
-
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
@@ -16,7 +15,6 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from cordware.settings import identity_settings
 from app.db.models import (
     AuditEvent,
     Observer,
@@ -28,6 +26,7 @@ from app.db.models import (
 )
 from app.services import account_listing
 from app.web import views
+from cordware.settings import identity_settings
 
 ACCOUNTS = "/operator/sys-admin/users"
 

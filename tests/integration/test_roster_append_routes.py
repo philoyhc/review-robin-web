@@ -14,8 +14,8 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Assignment, Observer, Reviewee, Reviewer
 from app.services import csv_imports
-from app.services.csv_imports import _saving as csv_imports_saving
 from app.services import session_lifecycle as lifecycle
+from app.services.csv_imports import _saving as csv_imports_saving
 from app.services.instruments import ensure_default_instrument
 
 from .test_held_upload_setup_cards import _held, _session, _token, _upload
@@ -211,8 +211,8 @@ def test_a_relationships_append_that_redraws_an_answered_group_asks_first(
 def test_an_append_looks_up_only_the_files_addresses(
     client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from cordware.graph import FakeDirectory
     from app.web.routes_operator import _shared
+    from cordware.graph import FakeDirectory
 
     asked: list[str] = []
 

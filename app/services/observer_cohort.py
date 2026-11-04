@@ -52,7 +52,6 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.db.models import Assignment, Observer, Reviewee, Reviewer
 
-
 _REVIEWER_TAG_ATTRS: dict[str, str] = {
     "tag1": "tag_1",
     "tag2": "tag_2",

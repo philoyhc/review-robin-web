@@ -44,7 +44,7 @@ import statistics
 import sys
 import time
 from collections.abc import Iterator
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -281,7 +281,7 @@ def seed(args: argparse.Namespace) -> None:
             .order_by(Assignment.id)
         ).all()
         cutoff = int(len(answered) * args.answered)
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         rows = [
             {
                 "assignment_id": assignment_id,
@@ -674,8 +674,8 @@ def bench_directory(args: argparse.Namespace) -> None:
     workers is about 150 ms a lookup (``guide/segment_20G_*`` Status)."""
     import threading
 
-    from cordware.graph import WORKERS, FakeDirectory
     from app.services import csv_imports, directory_accounts
+    from cordware.graph import WORKERS, FakeDirectory
 
     class _Slow(FakeDirectory):
         def find_users(self, address: str):

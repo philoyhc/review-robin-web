@@ -26,7 +26,6 @@ from app.db.models import (
 )
 from app.services import session_config_io
 
-
 _INLINE_NUMERIC = {
     "_inline_data_type": "Integer",
     "_inline_response_type": "100int",
@@ -243,8 +242,8 @@ def test_the_instrument_row_parses_blank_or_a_number() -> None:
         _apply_data_shape_kv,
     )
     from app.services.session_config_io._apply_shared import (
-        _ParseError,
         _ParsedConfig,
+        _ParseError,
     )
 
     plan = _ParsedConfig()

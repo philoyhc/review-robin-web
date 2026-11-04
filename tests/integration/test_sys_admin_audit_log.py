@@ -488,8 +488,9 @@ def test_audit_log_csv_emits_context_slot_on_filtered_extract(
     """``session.audit_log_extracted`` carries the filter set
     in its ``context`` slot when filters are active. Unfiltered
     extracts emit no ``context``."""
-    from app.db.models import AuditEvent
     from sqlalchemy import select
+
+    from app.db.models import AuditEvent
 
     monkeypatch.setattr(settings, "sys_admin_emails", ["bob@example.edu"])
     review_session = _make_session(client, db, code="filter-csv-audit")
@@ -527,8 +528,9 @@ def test_audit_log_csv_no_context_on_unfiltered_extract(
 ) -> None:
     """Unfiltered CSV extract emits the canonical audit event
     without a ``context`` slot."""
-    from app.db.models import AuditEvent
     from sqlalchemy import select
+
+    from app.db.models import AuditEvent
 
     monkeypatch.setattr(settings, "sys_admin_emails", ["bob@example.edu"])
     review_session = _make_session(client, db, code="filter-csv-noctx")

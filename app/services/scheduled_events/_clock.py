@@ -25,7 +25,7 @@ import asyncio
 import logging
 import threading
 from collections.abc import Callable
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import or_, select, text
 from sqlalchemy.orm import Session
@@ -118,7 +118,7 @@ def _retried_recently(db: Session, session_id: int, *, now: datetime) -> bool:
     if last is None:
         return False
     if last.tzinfo is None:
-        last = last.replace(tzinfo=timezone.utc)
+        last = last.replace(tzinfo=UTC)
     return now - last < RETRY_SPACING
 
 
@@ -135,7 +135,7 @@ def run_pass(
     # Imported here: the package's ``__init__`` imports this module.
     from app.services.scheduled_events import observe_scheduled_events
 
-    current = now or datetime.now(timezone.utc)
+    current = now or datetime.now(UTC)
     with session_factory() as gate:
         if not _take_lock(gate):
             return -1

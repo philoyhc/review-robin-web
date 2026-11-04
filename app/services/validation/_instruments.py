@@ -19,6 +19,7 @@ from app.services.validation._inputs import (
     ValidationInputs,
 )
 
+
 def _check_instruments_no_fields(
     db: Session,
     review_session: ReviewSession,

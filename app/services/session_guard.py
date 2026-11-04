@@ -12,7 +12,7 @@ lives here so ``session_lifecycle`` can re-export it without a cycle.
 """
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 from sqlalchemy import select, text
 from sqlalchemy.exc import OperationalError

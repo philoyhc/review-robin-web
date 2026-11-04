@@ -29,55 +29,6 @@ from this package; templates do not.
 
 from __future__ import annotations
 
-# A refused reviewer write's notice and typed answers (participant
-# audit P3).
-from ._refused_write import (
-    REFUSED_CLOSED,
-    REFUSED_NO_ASSIGNMENTS,
-    REFUSED_NOT_OPEN,
-    REFUSED_PAGE_CHANGED,
-    unsaved_answers,
-    write_refused_notice,
-)
-
-# Participant chrome, masked invite address and /me notices (M8, M9,
-# M11).
-from ._top_line import top_line
-from ._participant_chrome import (
-    masked_email,
-    me_notice,
-    uses_participant_chrome,
-)
-
-# The /me row's status pill (participant audit M6).
-from ._participant_status import (
-    ParticipantStatus,
-    participant_session_status,
-    participant_start_at,
-)
-
-# Responses page rows (sliced in PR 1).
-from ._progress import ProgressPill, progress_pill
-from ._responses import ResponsesRow, build_responses_rows
-
-# Extract Data card on Session Home (sliced in PR 2).
-from ._extract_data import (
-    ExtractDataContext,
-    ExtractDataRow,
-    build_extract_data_context,
-)
-
-# Assignments page status blocks + Generate context (Segment 15B
-# Slice 3a).
-from ._assignments import (
-    AssignmentsPageContext,
-    InstrumentStatusBlock,
-    build_assignments_page_context,
-)
-
-# Manage Invitations page rows (sliced in PR 3).
-from ._invitations import InvitationsRow, build_invitations_rows
-
 # Sys Admin → Accounts toolbar (guide/admin_pages_refine.md Item 1).
 from ._accounts import (
     ACCOUNT_CATEGORIES,
@@ -96,22 +47,52 @@ from ._accounts import (
     remembered_account_chips,
 )
 
-# Filter / search helpers shared by Invitations + Responses
-# (sliced in PR 4).
-from ._pager import PAGE_SIZE, Pager, PagerLink, build_pager, clamp_offset
-from ._preview_counts import preview_count_line
+# Assignments page status blocks + Generate context (Segment 15B
+# Slice 3a).
+from ._assignments import (
+    AssignmentsPageContext,
+    InstrumentStatusBlock,
+    build_assignments_page_context,
+)
+
+# Audit log viewer (Segment 16C PR 1 + PR 2 + PR 3).
+from ._audit_log import (
+    AuditDetailChangeRow,
+    AuditDetailKVRow,
+    AuditDetailRender,
+    AuditDetailSection,
+    AuditDetailSetChanges,
+    AuditLogFilterFormContext,
+    AuditLogRowsContext,
+    AuditLogTableRow,
+    AuditLogZone,
+    build_audit_log_filter_form,
+    build_audit_log_rows,
+    filters_querystring,
+    format_audit_detail,
+    parse_audit_log_filters,
+    resolve_audit_log_zone,
+)
+from ._directory_check import DirectoryCheck, last_directory_check, unmatched_count
+
+# Extract Data card on Session Home (sliced in PR 2).
+from ._extract_data import (
+    ExtractDataContext,
+    ExtractDataRow,
+    build_extract_data_context,
+)
 from ._filters import (
+    ASSIGNMENTS_STATUS_OPTIONS,
     INVITATIONS_STATUS_OPTIONS,
     OBSERVERS_STATUS_OPTIONS,
     RELATIONSHIPS_STATUS_OPTIONS,
     RESPONSES_STATUS_OPTIONS,
     REVIEWEES_STATUS_OPTIONS,
     REVIEWERS_DATALIST_CAP,
+    REVIEWERS_STATUS_OPTIONS,
     SESSIONS_DATALIST_CAP,
-    ASSIGNMENTS_STATUS_OPTIONS,
     assignments_picked_handles,
     assignments_search_options,
-    REVIEWERS_STATUS_OPTIONS,
     filter_invitations_rows,
     filter_observers_rows,
     filter_relationships_rows,
@@ -126,6 +107,27 @@ from ._filters import (
     reviewers_search_options,
     sessions_filter_options,
 )
+
+# Instruments page context + reviewer-surface heading helpers
+# (sliced in PR 6).
+from ._instruments import (
+    InstrumentHeading,
+    branch_condition_label,
+    build_instruments_context,
+    build_reviewer_visibility_rows,
+    constraint_summary_for_field,
+    instrument_delete_landing_id,
+    instrument_heading,
+    intro_layout_for,
+    is_web_link,
+    new_model_usable_tags,
+    numeric_column_ch_width,
+    placeholder_for_field,
+    profile_column_ch_width,
+)
+
+# Manage Invitations page rows (sliced in PR 3).
+from ._invitations import InvitationsRow, build_invitations_rows
 from ._observer_collation import (
     InstrumentCollationSection,
     ObserverCollationContext,
@@ -137,22 +139,74 @@ from ._observers import (
     rule_edit_state,
 )
 
-# Setup overview rows + standardized status-pills row (sliced in
-# PR 5).
-from ._setup import (
-    MissingRoster,
-    RelationshipPrerequisites,
-    SessionStatusPills,
-    SetupRow,
-    build_setup_rows,
-    chip_slots,
-    observer_column_state,
-    relationship_column_state,
-    relationship_prerequisites,
-    reviewee_column_state,
-    reviewer_column_state,
-    session_status_pills,
+# Filter / search helpers shared by Invitations + Responses
+# (sliced in PR 4).
+from ._pager import PAGE_SIZE, Pager, PagerLink, build_pager, clamp_offset
+from ._participant_chrome import (
+    masked_email,
+    me_notice,
+    uses_participant_chrome,
 )
+
+# The /me row's status pill (participant audit M6).
+from ._participant_status import (
+    ParticipantStatus,
+    participant_session_status,
+    participant_start_at,
+)
+from ._preview_counts import preview_count_line
+
+# Previews page view-shapes (sliced in PR 9): reviewer picker,
+# three-tab email previews, merge-tag editor strip. The iframe-
+# embedded reviewer-surface preview card was retired in the Segment
+# 18Q follow-on alongside its ``SurfacePreviewContext`` /
+# ``SurfacePreviewMissing`` / ``build_surface_preview_context``
+# adapters.
+from ._previews import (
+    EMAIL_PREVIEW_TABS,
+    PREVIEW_INVITE_URL_PLACEHOLDER,
+    PREVIEW_PICKER_REVIEWEE_PEEK_COUNT,
+    EmailBody,
+    EmailPreviewTab,
+    PreviewPickerContext,
+    PreviewPickerOption,
+    build_email_preview_body,
+    build_preview_picker_context,
+    email_preview_from_display,
+    extract_email_from_picker_value,
+    merge_tags_for_template,
+    resolve_email_preview_tab,
+)
+
+# Responses page rows (sliced in PR 1).
+from ._progress import ProgressPill, progress_pill
+
+# Quick Setup card on Session Home + new-session preview variant
+# (sliced in PR 7).
+from ._quick_setup import (
+    DIRECTORY_SIGN_IN,
+    QuickSetupContext,
+    QuickSetupSlot,
+    build_new_session_quick_setup_context,
+    build_quick_setup_context,
+    deleted_instrument_details,
+    quick_setup_kept_reviewees,
+    quick_setup_url_failure,
+    roster_problem_details,
+    settings_error_details,
+)
+
+# A refused reviewer write's notice and typed answers (participant
+# audit P3).
+from ._refused_write import (
+    REFUSED_CLOSED,
+    REFUSED_NO_ASSIGNMENTS,
+    REFUSED_NOT_OPEN,
+    REFUSED_PAGE_CHANGED,
+    unsaved_answers,
+    write_refused_notice,
+)
+from ._responses import ResponsesRow, build_responses_rows
 
 # What a reviewer is shown of their own roster entry (participant info
 # Item 1).
@@ -174,43 +228,57 @@ from ._reviewer_self import (
     reviewer_self_readout,
 )
 
-# Instruments page context + reviewer-surface heading helpers
-# (sliced in PR 6).
-from ._instruments import (
-    InstrumentHeading,
-    build_instruments_context,
-    instrument_delete_landing_id,
-    branch_condition_label,
-    build_reviewer_visibility_rows,
-    constraint_summary_for_field,
-    instrument_heading,
-    intro_layout_for,
-    new_model_usable_tags,
-    numeric_column_ch_width,
-    profile_column_ch_width,
-    is_web_link,
-    placeholder_for_field,
+# Wave 5 PR 5.1 — ``_rule_builder`` view module retired alongside
+# the Rule Builder page itself. No replacement; Band 1's inline
+# editor is the canonical authoring surface for new-model rules.
+# The session tables' shared sort columns and the Diagnostics filter.
+from ._sessions_table import (
+    ARCHIVED_SORT_KEYS,
+    DIAGNOSTICS_SORT_KEYS,
+    LOBBY_SORT_KEYS,
+    diagnostics_filter_options,
+    diagnostics_filter_text,
+    instant_sort_value,
+    owned_session_ids,
+    session_sort_value,
+    session_status_counts,
+    status_sort_cell,
+    status_sort_value,
+    text_sort_value,
 )
 
-# Quick Setup card on Session Home + new-session preview variant
-# (sliced in PR 7).
-from ._quick_setup import (
-    DIRECTORY_SIGN_IN,
-    QuickSetupContext,
-    QuickSetupSlot,
-    build_new_session_quick_setup_context,
-    build_quick_setup_context,
-    deleted_instrument_details,
-    quick_setup_kept_reviewees,
-    quick_setup_url_failure,
-    roster_problem_details,
-    settings_error_details,
+# Setup overview rows + standardized status-pills row (sliced in
+# PR 5).
+from ._setup import (
+    MissingRoster,
+    RelationshipPrerequisites,
+    SessionStatusPills,
+    SetupRow,
+    build_setup_rows,
+    chip_slots,
+    observer_column_state,
+    relationship_column_state,
+    relationship_prerequisites,
+    reviewee_column_state,
+    reviewer_column_state,
+    session_status_pills,
 )
+
+# Sort helpers (Segment 13B PR 1 + Part 2 PR 5 + PR 6).
+from ._sort import (
+    apply_cookie_sort,
+    decode_cookie_sort_spec,
+    decode_cookie_sort_spec_for_reviewer_surface,
+    order_rows_by_sort_spec,
+)
+
+# Participant chrome, masked invite address and /me notices (M8, M9,
+# M11).
+from ._top_line import top_line
 
 # A refused roster upload's kinds of problem, shared by Quick Setup and
 # the Setup pages' upload cards (quick_setup_update Item 3).
 from ._upload_problems import UploadProblems, problem_kinds, upload_problems
-from ._directory_check import DirectoryCheck, last_directory_check, unmatched_count
 
 # Validate page view-shape adapter (sliced in PR 8).
 from ._validate import (
@@ -237,75 +305,6 @@ from ._workflow_card import (
     build_scheduled_activation_caption,
     build_workflow_card_context,
     parse_super_failure,
-)
-
-# Previews page view-shapes (sliced in PR 9): reviewer picker,
-# three-tab email previews, merge-tag editor strip. The iframe-
-# embedded reviewer-surface preview card was retired in the Segment
-# 18Q follow-on alongside its ``SurfacePreviewContext`` /
-# ``SurfacePreviewMissing`` / ``build_surface_preview_context``
-# adapters.
-from ._previews import (
-    EMAIL_PREVIEW_TABS,
-    PREVIEW_INVITE_URL_PLACEHOLDER,
-    PREVIEW_PICKER_REVIEWEE_PEEK_COUNT,
-    EmailBody,
-    EmailPreviewTab,
-    PreviewPickerContext,
-    PreviewPickerOption,
-    build_email_preview_body,
-    build_preview_picker_context,
-    extract_email_from_picker_value,
-    email_preview_from_display,
-    merge_tags_for_template,
-    resolve_email_preview_tab,
-)
-
-# Wave 5 PR 5.1 — ``_rule_builder`` view module retired alongside
-# the Rule Builder page itself. No replacement; Band 1's inline
-# editor is the canonical authoring surface for new-model rules.
-
-# The session tables' shared sort columns and the Diagnostics filter.
-from ._sessions_table import (
-    ARCHIVED_SORT_KEYS,
-    DIAGNOSTICS_SORT_KEYS,
-    LOBBY_SORT_KEYS,
-    diagnostics_filter_options,
-    diagnostics_filter_text,
-    instant_sort_value,
-    owned_session_ids,
-    session_sort_value,
-    session_status_counts,
-    status_sort_cell,
-    status_sort_value,
-    text_sort_value,
-)
-
-# Sort helpers (Segment 13B PR 1 + Part 2 PR 5 + PR 6).
-from ._sort import (
-    apply_cookie_sort,
-    decode_cookie_sort_spec,
-    decode_cookie_sort_spec_for_reviewer_surface,
-    order_rows_by_sort_spec,
-)
-
-# Audit log viewer (Segment 16C PR 1 + PR 2 + PR 3).
-from ._audit_log import (
-    AuditDetailChangeRow,
-    AuditDetailKVRow,
-    AuditDetailRender,
-    AuditDetailSection,
-    AuditDetailSetChanges,
-    AuditLogFilterFormContext,
-    AuditLogRowsContext,
-    AuditLogTableRow,
-    AuditLogZone,
-    build_audit_log_filter_form,
-    build_audit_log_rows,
-    filters_querystring,
-    format_audit_detail,
-    parse_audit_log_filters,
-    resolve_audit_log_zone,
 )
 
 __all__ = [

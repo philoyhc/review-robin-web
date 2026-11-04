@@ -17,6 +17,7 @@ surface still ships the write-path chrome.
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import UTC
 
 import pytest
 from fastapi.testclient import TestClient
@@ -25,11 +26,11 @@ from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
 from app.db.models import AuditEvent, ReviewSession
+
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
-
 from ._full_preview import get_full_preview_html
 from ._public_id import public_id
 from ._validated import validate_session
@@ -155,7 +156,7 @@ def test_preview_does_not_observe_deadline_side_effect(
     contract carries through the operator-side full preview route:
     rendering it after deadline must not emit a ``deadline``-reason
     ``instrument.closed`` audit event."""
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
 
     review_session = _make_session(client, db, code="prev-deadline")
     _populate_rosters(client, review_session.id)
@@ -164,7 +165,7 @@ def test_preview_does_not_observe_deadline_side_effect(
     db.refresh(review_session)
 
     # Set a deadline in the past after activation.
-    review_session.deadline = datetime.now(timezone.utc) - timedelta(hours=1)
+    review_session.deadline = datetime.now(UTC) - timedelta(hours=1)
     db.flush()
 
     body = get_full_preview_html(

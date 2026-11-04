@@ -25,6 +25,7 @@ from app.db.models import (
     ReviewSession,
 )
 from app.services import session_lifecycle as lifecycle
+
 from ._full_matrix import pin_full_matrix_on_all_instruments
 from ._public_id import public_id
 

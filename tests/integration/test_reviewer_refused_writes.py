@@ -11,7 +11,7 @@ the cause, and the typed answers listed as text to copy."""
 from __future__ import annotations
 
 import html
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -110,7 +110,7 @@ def test_a_save_past_the_deadline_shows_the_surface_and_what_was_typed(
     client: TestClient, db: Session, make_client
 ) -> None:
     review_session = _ready_session(client, db, code="refused-deadline")
-    review_session.deadline = datetime.now(timezone.utc) - timedelta(minutes=1)
+    review_session.deadline = datetime.now(UTC) - timedelta(minutes=1)
     db.commit()
     aid = _assignment_of(db, review_session, "rae@example.edu").id
 
@@ -167,7 +167,7 @@ def test_an_operator_close_before_end_is_not_named_as_the_deadline(
         follow_redirects=False,
     )
     db.refresh(review_session)
-    review_session.deadline = datetime.now(timezone.utc) - timedelta(minutes=1)
+    review_session.deadline = datetime.now(UTC) - timedelta(minutes=1)
     db.commit()
     aid = _assignment_of(db, review_session, "rae@example.edu").id
     resp, text = _rae_posts(
@@ -262,7 +262,7 @@ def test_a_row_no_get_would_show_is_listed_without_labels(
     assignment: a field the row doesn't have, and an ordinal past the
     page's rows, echo the value bare, naming nobody."""
     review_session = _ready_session(client, db, code="refused-own")
-    review_session.deadline = datetime.now(timezone.utc) - timedelta(minutes=1)
+    review_session.deadline = datetime.now(UTC) - timedelta(minutes=1)
     db.commit()
     raes = _assignment_of(db, review_session, "rae@example.edu").id
 
@@ -400,7 +400,7 @@ def test_a_value_matching_the_stored_answer_is_still_listed(
         follow_redirects=False,
     )
     assert saved.status_code == 303
-    review_session.deadline = datetime.now(timezone.utc) - timedelta(minutes=1)
+    review_session.deadline = datetime.now(UTC) - timedelta(minutes=1)
     db.commit()
 
     resp = rae_client.post(
@@ -418,7 +418,7 @@ def test_a_hidden_field_comes_back_without_labels(
     """A field the operator un-pinned has no column on the page, so a
     value posted against it names neither the field nor the row."""
     review_session = _ready_session(client, db, code="refused-hidden")
-    review_session.deadline = datetime.now(timezone.utc) - timedelta(minutes=1)
+    review_session.deadline = datetime.now(UTC) - timedelta(minutes=1)
     assignment = _assignment_of(db, review_session, "rae@example.edu")
     field = db.execute(
         select(InstrumentResponseField).where(
@@ -447,7 +447,7 @@ def test_typed_text_comes_back_as_typed(
     """Read from the raw form, not the stripped upserts: indentation
     survives, and a blank value is not listed."""
     review_session = _ready_session(client, db, code="refused-raw")
-    review_session.deadline = datetime.now(timezone.utc) - timedelta(minutes=1)
+    review_session.deadline = datetime.now(UTC) - timedelta(minutes=1)
     db.commit()
     aid = _assignment_of(db, review_session, "rae@example.edu").id
 
@@ -473,7 +473,7 @@ def test_a_refused_post_to_an_out_of_range_page_still_renders(
 ) -> None:
     """Not a 404 or a 500: the refusal renders page 1."""
     review_session = _ready_session(client, db, code="refused-page")
-    review_session.deadline = datetime.now(timezone.utc) - timedelta(minutes=1)
+    review_session.deadline = datetime.now(UTC) - timedelta(minutes=1)
     db.commit()
 
     resp, _ = _rae_posts(
@@ -517,7 +517,7 @@ def test_a_save_the_deadline_overtakes_mid_request_keeps_what_was_typed(
         db_.execute(
             update(ReviewSession)
             .where(ReviewSession.id == session.id)
-            .values(deadline=datetime.now(timezone.utc) - timedelta(minutes=1))
+            .values(deadline=datetime.now(UTC) - timedelta(minutes=1))
         )
         db_.commit()
         return real_gate(db_, session)

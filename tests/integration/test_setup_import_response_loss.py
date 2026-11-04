@@ -13,9 +13,8 @@ supposed to take.
 """
 from __future__ import annotations
 
-import re
-
 import datetime as _dt
+import re
 
 import pytest
 from fastapi.testclient import TestClient
@@ -98,7 +97,7 @@ def _roster_with_responses(db: Session, s: ReviewSession, *, n: int) -> None:
                 assignment_id=a.id,
                 response_field_id=f.id,
                 value=str(i),
-                saved_at=_dt.datetime(2026, 9, 9, tzinfo=_dt.timezone.utc),
+                saved_at=_dt.datetime(2026, 9, 9, tzinfo=_dt.UTC),
                 version=1,
             )
         )

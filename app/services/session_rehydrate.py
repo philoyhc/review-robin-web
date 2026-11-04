@@ -18,7 +18,8 @@ import datetime as _dt
 import io
 import re
 import zipfile
-from dataclasses import dataclass, field as _dc_field
+from dataclasses import dataclass
+from dataclasses import field as _dc_field
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import select

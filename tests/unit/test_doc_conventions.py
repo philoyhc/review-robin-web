@@ -16,8 +16,8 @@ from pathlib import Path
 
 from app.services.lifecycle_display import DISPLAY_LABELS
 from app.services.visibility_policies import (
-    MODE_LABELS,
     _PER_CELL_VALID_MODES,
+    MODE_LABELS,
 )
 
 REPO = Path(__file__).resolve().parents[2]

@@ -9,8 +9,12 @@ from starlette.requests import Request
 from starlette.responses import RedirectResponse, Response
 
 from residentialapps.residentialops import sample_data, sample_leave
+from residentialapps.residentialops.pages import (
+    LEAVE_ADMIN_TABS,
+    placeholders_previewers_only,
+    render,
+)
 from residentialapps.web.urls import url_path
-from residentialapps.residentialops.pages import LEAVE_ADMIN_TABS, placeholders_previewers_only, render
 
 router = APIRouter(dependencies=[Depends(placeholders_previewers_only)])
 

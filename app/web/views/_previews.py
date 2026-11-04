@@ -42,7 +42,6 @@ from app.db.models import (
 )
 from app.services import email_templates
 
-
 # How many reviewee names the picker context strip shows before
 # collapsing the rest into the `<details>` disclosure tail.
 PREVIEW_PICKER_REVIEWEE_PEEK_COUNT = 3

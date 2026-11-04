@@ -5,19 +5,17 @@ retry counter + the editor-side parser (``parse_and_validate_scheduled_activate_
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db.models import AuditEvent, ReviewSession
-from app.services import audit, date_formatting
+from app.services import audit, date_formatting, validation
 from app.services import session_lifecycle as lifecycle
-from app.services import validation
 
 from ._shared import ScheduledActivateError, _ensure_aware_utc, lock_session
-
 
 _ACTIVATION_MAX_RETRIES = 3
 
@@ -296,7 +294,7 @@ def parse_and_validate_scheduled_activate_at(
         if min_lead_hours is not None
         else settings.scheduled_operational_lead_hours
     )
-    current = now or datetime.now(timezone.utc)
+    current = now or datetime.now(UTC)
     if not aged_exempt and parsed_aware - current < timedelta(hours=hours):
         raise ScheduledActivateError(
             f"Scheduled activation must be at least {hours} hour(s) "

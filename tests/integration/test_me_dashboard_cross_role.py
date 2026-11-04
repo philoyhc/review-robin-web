@@ -9,7 +9,7 @@ surface on ``/me`` because the route queried reviewers only.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -253,7 +253,7 @@ def test_a_grant_that_exists_but_has_not_opened_does_not_count(
     db.commit()
     grant_reviewee_visibility(review_session)
     review_session.responses_release_at = datetime.now(
-        timezone.utc
+        UTC
     ) + timedelta(days=7)
     db.commit()
 

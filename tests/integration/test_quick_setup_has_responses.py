@@ -36,7 +36,7 @@ from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
 from app.web.views import build_quick_setup_context
 
-NOW = dt.datetime(2026, 9, 21, tzinfo=dt.timezone.utc)
+NOW = dt.datetime(2026, 9, 21, tzinfo=dt.UTC)
 
 
 def _session(db: Session, code: str, *, group: bool) -> ReviewSession:

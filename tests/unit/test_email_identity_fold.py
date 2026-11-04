@@ -25,7 +25,6 @@ import pytest
 
 from app.services.email_identity import looks_like_email, normalize_email
 
-
 # --------------------------------------------------------------------- #
 # Reading a source file as code, not as prose
 # --------------------------------------------------------------------- #

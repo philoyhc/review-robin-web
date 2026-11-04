@@ -31,7 +31,6 @@ from app.services import session_lifecycle as lifecycle
 
 from ._quick_setup_refusal import refusal
 
-
 BOB = "bob@example.edu"
 
 

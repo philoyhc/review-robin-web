@@ -11,7 +11,7 @@ as a revert to draft keeps it.)"""
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -38,7 +38,7 @@ def _session(
     session = db.execute(
         select(ReviewSession).where(ReviewSession.code == code)
     ).scalar_one()
-    now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    now = datetime.now(UTC).replace(second=0, microsecond=0)
     session.display_timezone = "UTC"
     two_days = now + timedelta(days=2)
     session.scheduled_activate_at = (

@@ -23,9 +23,9 @@ from sqlalchemy.orm import Session
 
 from app.db.models import (
     Relationship,
-    ReviewSession,
     Reviewee,
     Reviewer,
+    ReviewSession,
     User,
 )
 

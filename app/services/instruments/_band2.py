@@ -52,7 +52,6 @@ from app.services.instruments._state import (
 )
 from app.services.text import parse_id
 
-
 _BAND2_ALLOWED_DISPLAY_KEYS: frozenset[str] = frozenset(
     {
         "reviewee.name",

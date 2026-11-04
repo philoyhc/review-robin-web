@@ -10,12 +10,11 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
-from app.web import urls
 from app.db.models import User
 from app.db.session import get_db
 from app.services import invitations as invitations_service
 from app.services import participants
-from app.web import views
+from app.web import urls, views
 from app.web.deps import get_or_create_user, request_correlation_id
 from app.web.routes_reviewer._shared import (
     _templates,

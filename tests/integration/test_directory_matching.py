@@ -17,18 +17,17 @@ from collections.abc import Iterator
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
-from sqlalchemy import select
-
-from cordware.graph import FakeDirectory
 from app.db.models import Assignment, AuditEvent, Observer, Reviewee, Reviewer, ReviewSession, User
 from app.services import assignments, directory_accounts, observers
 from app.services.assignments._self_review import is_self_review
 from app.services.instruments import ensure_default_instrument
 from app.services.participants import Viewer, disclosable_roles, same_person
 from app.services.rules.engine import _is_self_review
+from cordware.graph import FakeDirectory
 
 from .conftest import _make_client
 

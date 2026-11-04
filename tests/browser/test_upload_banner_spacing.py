@@ -8,7 +8,6 @@ from __future__ import annotations
 from collections.abc import Callable
 
 import pytest
-
 from playwright.sync_api import Page, expect
 
 from .conftest import app_url

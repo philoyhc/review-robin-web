@@ -64,11 +64,11 @@ def _setup_session_with_three_reviewees(
             "file": (
                 "e.csv",
                 (
-                    "RevieweeName,RevieweeEmail\n"
-                    "Bravo,bravo@example.edu\n"
-                    "Alpha,alpha@example.edu\n"
-                    "Charlie,charlie@example.edu\n"
-                ).encode(),
+                    b"RevieweeName,RevieweeEmail\n"
+                    b"Bravo,bravo@example.edu\n"
+                    b"Alpha,alpha@example.edu\n"
+                    b"Charlie,charlie@example.edu\n"
+                ),
                 "text/csv",
             )
         },

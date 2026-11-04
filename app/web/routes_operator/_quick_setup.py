@@ -32,32 +32,38 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
-from cordware.graph import Directory
-
-from app.web import urls
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
 from app.schemas.sessions import SessionCreate
 from app.services import (
     csv_imports,
     date_formatting,
+    held_uploads,
     operator_settings,
-    relationships as relationships_service,
-    responses as responses_service,
     scheduled_events,
     session_config_io,
+    session_guard,
     session_owners,
     session_tags,
     sessions,
+    unit_of_work,
 )
-from app.services import held_uploads, session_guard, unit_of_work
+from app.services import (
+    relationships as relationships_service,
+)
+from app.services import (
+    responses as responses_service,
+)
 from app.services import session_lifecycle as lifecycle
-from app.web import views
+from app.web import urls, views
 from app.web.deps import (
     OperatorAllowlistDenied,
     get_or_create_user,
     request_correlation_id,
     require_session_operator,
+)
+from app.web.roster_import import (
+    release_hold,
 )
 from app.web.routes_operator._shared import (
     ROSTER_PARSERS,
@@ -68,10 +74,7 @@ from app.web.routes_operator._shared import (
     roster_address,
     session_payload_error,
 )
-from app.web.roster_import import (
-    release_hold,
-)
-
+from cordware.graph import Directory
 
 router = APIRouter()
 

@@ -28,11 +28,12 @@ from app.db.models import (
     Instrument,
     ReviewSession,
 )
-from ._instrument_states import add_group_instrument
+
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
+from ._instrument_states import add_group_instrument
 from ._public_id import public_id
 
 

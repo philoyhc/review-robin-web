@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from urllib.parse import quote
 
 from fastapi.testclient import TestClient
@@ -41,8 +41,8 @@ def test_the_lobby_dates_and_timezone_carry_the_routes_values(
     no_zone = _session(client, db, "zz-open", display_timezone=None)
     _session(
         client, db, "zz-due",
-        created_at=datetime(2026, 10, 1, 9, 30, 15, 250000, tzinfo=timezone.utc),
-        deadline=datetime(2026, 11, 1, 12, 0, tzinfo=timezone.utc),
+        created_at=datetime(2026, 10, 1, 9, 30, 15, 250000, tzinfo=UTC),
+        deadline=datetime(2026, 11, 1, 12, 0, tzinfo=UTC),
         display_timezone="Asia/Singapore",
     )
     # The viewer reads dates in Tokyo, so the cell shows 21:00; the sort
@@ -69,8 +69,8 @@ def test_the_archive_dates_and_timezone_carry_the_routes_values(
 ) -> None:
     _session(
         client, db, "zz-gone", status="archived", display_timezone="Europe/Paris",
-        created_at=datetime(2026, 9, 1, 8, 0, 0, 1, tzinfo=timezone.utc),
-        updated_at=datetime(2026, 10, 2, 17, 45, 0, 999999, tzinfo=timezone.utc),
+        created_at=datetime(2026, 9, 1, 8, 0, 0, 1, tzinfo=UTC),
+        updated_at=datetime(2026, 10, 2, 17, 45, 0, 999999, tzinfo=UTC),
     )
     body = client.get("/operator/sessions/archived").text
     assert _sort_values(body, "zz-gone") == [
@@ -95,7 +95,7 @@ def test_status_sorts_in_lifecycle_order_on_a_reload_and_a_click(
     ):
         _session(
             client, db, code, status=status,
-            created_at=datetime(2026, 10, day, tzinfo=timezone.utc),
+            created_at=datetime(2026, 10, day, tzinfo=UTC),
         )
     lifecycle = ["zz-draft", "zz-valid", "zz-active", "zz-closed"]
 

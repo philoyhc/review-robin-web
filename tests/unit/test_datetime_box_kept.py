@@ -3,7 +3,7 @@ at their stored instant (findings L8, author's ruling)."""
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.services.date_formatting import format_datetime_local
 from app.services.sessions import (
@@ -12,7 +12,7 @@ from app.services.sessions import (
     datetime_box_unedited,
 )
 
-_STORED = datetime(2027, 3, 1, 2, 0, 45, tzinfo=timezone.utc)
+_STORED = datetime(2027, 3, 1, 2, 0, 45, tzinfo=UTC)
 _SGT = format_datetime_local(_STORED, "Asia/Singapore")
 _NY = format_datetime_local(_STORED, "America/New_York")
 

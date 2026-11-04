@@ -14,7 +14,6 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
-from app.web import urls
 from app.db.models import Assignment, Reviewer, ReviewSession, User
 from app.db.session import get_db
 from app.services import date_formatting
@@ -23,7 +22,7 @@ from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
 from app.services import sessions as sessions_service
 from app.services.session_guard import SessionStateConflict
-from app.web import views
+from app.web import urls, views
 from app.web.deps import (
     get_or_create_user,
     request_correlation_id,
@@ -42,7 +41,6 @@ from ._context import (
     _write_refusal,
     page_assignments_for,
 )
-
 
 router = APIRouter(prefix="/me")
 

@@ -14,15 +14,15 @@ Revises: c4e8b2f6a1d9
 Create Date: 2026-10-18
 
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
 
 revision: str = "d2f7a3c9b5e4"
-down_revision: Union[str, Sequence[str], None] = "c4e8b2f6a1d9"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = "c4e8b2f6a1d9"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 _CONSTRAINT = "uq_instruments_session_seq"
 

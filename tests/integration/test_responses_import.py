@@ -111,14 +111,14 @@ def _assignment(db, rs, reviewer, reviewee, instrument):
 
 
 def _response(db, assignment, field, value, *, submitted=True, version=1):
-    saved = dt.datetime(2026, 6, 1, 9, 0, tzinfo=dt.timezone.utc)
+    saved = dt.datetime(2026, 6, 1, 9, 0, tzinfo=dt.UTC)
     r = Response(
         assignment_id=assignment.id,
         response_field_id=field.id,
         value=value,
         saved_at=saved,
         submitted_at=(
-            dt.datetime(2026, 6, 1, 10, 0, tzinfo=dt.timezone.utc)
+            dt.datetime(2026, 6, 1, 10, 0, tzinfo=dt.UTC)
             if submitted
             else None
         ),

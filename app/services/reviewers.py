@@ -31,8 +31,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Reviewer, ReviewSession, User
-from app.services import audit, csv_imports
-from app.services import directory_accounts, symmetric_review
+from app.services import audit, csv_imports, directory_accounts, symmetric_review
 from app.services import session_lifecycle as lifecycle
 from app.services.email_identity import looks_like_email, normalize_email
 from app.services.roster_bulk import bulk_delete, bulk_set_status

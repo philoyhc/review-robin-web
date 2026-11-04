@@ -14,10 +14,10 @@ to verify. See `tests/integration/conftest.py`, "Real-commit harness".
 
 from __future__ import annotations
 
+from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
-from fastapi.testclient import TestClient
 
 from app.db.models import AuditEvent, ReviewSession
 

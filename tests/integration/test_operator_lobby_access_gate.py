@@ -25,6 +25,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 
 import pytest
+from _rrw_app import rrw_app
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -40,7 +41,6 @@ from app.db.models import (
     User,
 )
 from app.db.session import get_db
-from _rrw_app import rrw_app
 
 app = rrw_app()
 

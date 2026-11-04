@@ -46,8 +46,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Iterable, Mapping, Sequence
+from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -56,9 +57,9 @@ from app.db.models import (
     Assignment,
     Instrument,
     Relationship,
-    ReviewSession,
     Reviewee,
     Reviewer,
+    ReviewSession,
     SessionRuleSet,
 )
 from app.services.rules.fields import FIELD_MAP

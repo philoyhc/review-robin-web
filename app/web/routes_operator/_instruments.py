@@ -19,7 +19,6 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.web import urls
 from app.db.models import (
     Instrument,
     ReviewSession,
@@ -32,7 +31,7 @@ from app.services import (
 from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
 from app.services import unit_of_work, visibility_policies
-from app.web import views
+from app.web import urls, views
 from app.web.deps import (
     get_or_create_user,
     request_correlation_id,
@@ -40,10 +39,10 @@ from app.web.deps import (
 )
 from app.web.routes_operator._shared import (
     _instruments_redirect,
-    acknowledged_loss,
     _require_instrument_editable,
     _require_instrument_in_session,
     _templates,
+    acknowledged_loss,
     require_json_object,
 )
 

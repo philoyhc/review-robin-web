@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
+from _rrw_app import rrw_app
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -24,7 +25,6 @@ from app.web.return_to import (
     Viewer,
 )
 from app.web.return_to import resolve_return_to as _resolve_return_to
-from _rrw_app import rrw_app
 
 
 def resolve_return_to(raw: str | None, db: Session, *, viewer: Viewer) -> ReturnTarget:
@@ -309,7 +309,7 @@ def _grant_reviewees(db: Session, session: ReviewSession) -> None:
         )
     )
     session.status = "expired"
-    session.responses_release_at = datetime.now(timezone.utc) - timedelta(hours=1)
+    session.responses_release_at = datetime.now(UTC) - timedelta(hours=1)
     db.flush()
 
 

@@ -22,8 +22,8 @@ from ._builder import session_pk, sign_in
 from .conftest import (
     COLLEAGUE_EMAIL,
     FAKE_OPERATOR_EMAIL,
-    LiveServer,
     SECOND_COLLEAGUE_EMAIL,
+    LiveServer,
     app_url,
 )
 

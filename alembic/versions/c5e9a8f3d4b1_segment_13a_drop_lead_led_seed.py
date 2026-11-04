@@ -19,15 +19,16 @@ Revises: b8d4f1a92c50
 Create Date: 2026-05-07 13:15:00.000000
 
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
+from datetime import UTC
 
 import sqlalchemy as sa
 from alembic import op
 
 revision: str = "c5e9a8f3d4b1"
-down_revision: Union[str, Sequence[str], None] = "b8d4f1a92c50"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = "b8d4f1a92c50"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 _SEED_NAME = "Lead-led review"
@@ -87,7 +88,7 @@ def downgrade() -> None:
     # find. The literal is inlined here (not imported from seeds.py)
     # because seeds.py no longer carries it; capturing the JSON shape
     # in the migration keeps the downgrade self-contained.
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     rule_sets = sa.table(
         "rule_sets",
@@ -116,7 +117,7 @@ def downgrade() -> None:
     )
 
     bind = op.get_bind()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     rules_payload = [
         {

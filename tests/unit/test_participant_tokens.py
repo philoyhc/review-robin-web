@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -74,12 +74,12 @@ def test_token_differs_across_sessions(db) -> None:
     s1 = _session(
         db,
         code="tok-s1",
-        created_at=datetime(2026, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
+        created_at=datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC),
     )
     s2 = _session(
         db,
         code="tok-s2",
-        created_at=datetime(2026, 1, 2, 0, 0, 0, tzinfo=timezone.utc),
+        created_at=datetime(2026, 1, 2, 0, 0, 0, tzinfo=UTC),
     )
     a = participant_token(s1, "reviewer", 1)
     b = participant_token(s2, "reviewer", 1)

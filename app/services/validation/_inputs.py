@@ -52,7 +52,7 @@ class ValidationRule:
     fix_url: Callable[[ReviewSession], str]
     fix_page_label: str
     check: Callable[
-        [Session, ReviewSession, "ValidationInputs"],
+        [Session, ReviewSession, ValidationInputs],
         Iterable[ValidationIssue],
     ]
 

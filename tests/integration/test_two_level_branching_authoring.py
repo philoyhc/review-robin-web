@@ -8,10 +8,9 @@ and Rating ≥ 4 governs Comments."""
 
 from __future__ import annotations
 
+from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-
-from fastapi.testclient import TestClient
 
 from app.db.models import AuditEvent, Instrument, InstrumentResponseField
 from app.services import instruments as instruments_service

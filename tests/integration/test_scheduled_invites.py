@@ -5,7 +5,7 @@ closure so the dispatch path runs without a live FastAPI Request.
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -24,12 +24,18 @@ from app.db.models import (
 from app.schemas.sessions import SessionCreate
 from app.services import (
     invitations as invitations_service,
+)
+from app.services import (
     scheduled_events,
+)
+from app.services import (
     session_lifecycle as lifecycle,
+)
+from app.services import (
     sessions as sessions_service,
 )
-from ._full_matrix import pin_full_matrix_on_all_instruments
 
+from ._full_matrix import pin_full_matrix_on_all_instruments
 
 # --------------------------------------------------------------------------- #
 # Fixtures                                                                    #
@@ -148,7 +154,7 @@ def _operator(db: Session, rs: ReviewSession) -> User:
 
 def test_no_op_when_invite_offsets_unset(db: Session) -> None:
     rs = _seed_session_with_reviewers(db, "noop-empty")
-    rs.scheduled_activate_at = datetime.now(timezone.utc) + timedelta(days=1)
+    rs.scheduled_activate_at = datetime.now(UTC) + timedelta(days=1)
     db.flush()
     db.commit()
 
@@ -175,7 +181,7 @@ def test_no_op_when_anchor_unset(db: Session) -> None:
 def test_no_op_when_build_invite_url_missing(db: Session) -> None:
     """Without a URL builder we can't dispatch → silent no-op."""
     rs = _seed_session_with_reviewers(db, "noop-no-url")
-    rs.scheduled_activate_at = datetime.now(timezone.utc) + timedelta(days=1)
+    rs.scheduled_activate_at = datetime.now(UTC) + timedelta(days=1)
     rs.invite_offsets = ["-P30D"]
     db.flush()
     db.commit()
@@ -187,7 +193,7 @@ def test_no_op_when_build_invite_url_missing(db: Session) -> None:
 def test_no_op_when_offset_in_future(db: Session) -> None:
     """Resolved fire moment hasn't arrived yet → no-op for that entry."""
     rs = _seed_session_with_reviewers(db, "future-offset")
-    rs.scheduled_activate_at = datetime.now(timezone.utc) + timedelta(days=10)
+    rs.scheduled_activate_at = datetime.now(UTC) + timedelta(days=10)
     rs.invite_offsets = ["-P1D"]
     db.flush()
     db.commit()
@@ -208,7 +214,7 @@ def test_skip_when_not_prepared(db: Session) -> None:
     reason=not_prepared (the trigger gates on validated/ready to
     match the operator route's `_require_validated_or_ready`)."""
     rs = _seed_session_with_reviewers(db, "skip-not-prep")
-    start = datetime.now(timezone.utc) - timedelta(hours=1)
+    start = datetime.now(UTC) - timedelta(hours=1)
     rs.scheduled_activate_at = start  # past → entry resolves to past
     rs.invite_offsets = ["-PT2H"]
     db.flush()
@@ -234,7 +240,7 @@ def test_skip_when_invitations_not_created(db: Session) -> None:
     Invitation rows → skip + dedup entry."""
     rs = _seed_session_with_reviewers(db, "skip-no-inv")
     rs.status = lifecycle.SessionStatus.validated.value
-    start = datetime.now(timezone.utc) - timedelta(hours=1)
+    start = datetime.now(UTC) - timedelta(hours=1)
     rs.scheduled_activate_at = start  # in the past — entry resolves to past
     rs.invite_offsets = ["-PT2H"]  # 2h before start → now - 3h, due
     db.flush()
@@ -274,7 +280,7 @@ def test_fires_pending_invitations_at_due_time(db: Session) -> None:
 
     # Schedule for 1 day in the future, with an entry 2 days before
     # Start (resolves to 1 day in the past → due).
-    rs.scheduled_activate_at = datetime.now(timezone.utc) + timedelta(days=1)
+    rs.scheduled_activate_at = datetime.now(UTC) + timedelta(days=1)
     rs.invite_offsets = ["-P2D"]
     db.flush()
     db.commit()
@@ -316,7 +322,7 @@ def test_idempotent_on_repeated_observer_calls(db: Session) -> None:
     db.commit()
     _generate_invitations(db, rs, op)
 
-    rs.scheduled_activate_at = datetime.now(timezone.utc) + timedelta(days=1)
+    rs.scheduled_activate_at = datetime.now(UTC) + timedelta(days=1)
     rs.invite_offsets = ["-P2D"]
     db.flush()
     db.commit()
@@ -341,7 +347,7 @@ def test_multi_entry_fires_in_chronological_order(db: Session) -> None:
     db.commit()
     _generate_invitations(db, rs, op)
 
-    rs.scheduled_activate_at = datetime.now(timezone.utc) + timedelta(days=1)
+    rs.scheduled_activate_at = datetime.now(UTC) + timedelta(days=1)
     # Both offsets resolve to the past so both are due in one pass.
     # Order in the list is out of chronological order — observer fires
     # earliest-resolved (most negative offset) first.
@@ -375,7 +381,7 @@ def test_reschedule_resets_per_entry_dedup(db: Session) -> None:
     db.commit()
     _generate_invitations(db, rs, op)
 
-    first_anchor = datetime.now(timezone.utc) + timedelta(days=1)
+    first_anchor = datetime.now(UTC) + timedelta(days=1)
     rs.scheduled_activate_at = first_anchor
     rs.invite_offsets = ["-P2D"]
     db.flush()
@@ -397,7 +403,7 @@ def test_reschedule_resets_per_entry_dedup(db: Session) -> None:
         db, review_session=rs, user=op, correlation_id=None
     )
 
-    new_anchor = datetime.now(timezone.utc) + timedelta(days=2)
+    new_anchor = datetime.now(UTC) + timedelta(days=2)
     rs.scheduled_activate_at = new_anchor
     db.flush()
     db.commit()
@@ -424,7 +430,7 @@ def test_unparseable_offset_skipped_silently(db: Session) -> None:
     db.commit()
     _generate_invitations(db, rs, op)
 
-    rs.scheduled_activate_at = datetime.now(timezone.utc) + timedelta(days=1)
+    rs.scheduled_activate_at = datetime.now(UTC) + timedelta(days=1)
     rs.invite_offsets = ["NOT-AN-ISO-DURATION", "-P2D"]
     db.flush()
     db.commit()
@@ -477,7 +483,7 @@ def test_scheduled_fire_skips_a_reviewer_who_is_no_longer_eligible(
     db.flush()
     db.commit()
 
-    rs.scheduled_activate_at = datetime.now(timezone.utc) + timedelta(days=1)
+    rs.scheduled_activate_at = datetime.now(UTC) + timedelta(days=1)
     rs.invite_offsets = ["-P2D"]
     db.flush()
     db.commit()

@@ -23,10 +23,9 @@ one level over).
 
 from __future__ import annotations
 
-import re
-
 import csv
 import io
+import re
 
 import pytest
 from fastapi.testclient import TestClient
@@ -35,7 +34,6 @@ from sqlalchemy.orm import Session
 
 from app.db.models import AuditEvent, ReviewSession, User
 from app.services import session_owners
-
 
 #: The signed-in operator the integration client authenticates as
 #: (``tests/integration/conftest.py``) — the session's creator.

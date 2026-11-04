@@ -24,9 +24,6 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable
 
-from ._invitations import InvitationsRow
-from ._responses import ResponsesRow
-
 from app.db.models import (
     Observer,
     Relationship,
@@ -34,6 +31,9 @@ from app.db.models import (
     Reviewer,
     ReviewSession,
 )
+
+from ._invitations import InvitationsRow
+from ._responses import ResponsesRow
 
 # Cap for the per-page `<datalist>` autocomplete options. Decision 14
 # in ``guide/segment_15F_enhanced_setup_pages.md`` — the

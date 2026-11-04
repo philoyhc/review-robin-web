@@ -34,7 +34,6 @@ from app.services import session_lifecycle as lifecycle
 
 from ._upload_problems import problem_kinds, problems_sentence
 
-
 #: The refusal reason a submit whose directory check stopped on the
 #: sign-in carries (segment 20G): it holds the files and asks to renew.
 DIRECTORY_SIGN_IN = "directory_sign_in"

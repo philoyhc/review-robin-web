@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -15,16 +15,16 @@ from app.db.models import (
     Response,
     ReviewSession,
 )
+from app.services import session_lifecycle as lifecycle
+
 from ._answer_form import answer_form
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
-from app.services import session_lifecycle as lifecycle
 from ._instrument_states import add_group_instrument
 from ._public_id import public_id
 from ._validated import validate_session
-
 
 # --------------------------------------------------------------------------- #
 # Helpers
@@ -190,7 +190,7 @@ def test_revert_requires_confirm_and_preserves_responses(
             .response_fields[0]
             .id,
             value="3",
-            submitted_at=datetime.now(timezone.utc),
+            submitted_at=datetime.now(UTC),
         )
     )
     db.commit()
@@ -367,7 +367,7 @@ def test_a_live_session_left_split_by_the_retired_close_heals(
     it on the reviewer's next request and records why."""
     operator = make_client(alice)
     session = _build_ready_session(operator, db, code="split-heal")
-    session.deadline = datetime.now(timezone.utc) + timedelta(days=1)
+    session.deadline = datetime.now(UTC) + timedelta(days=1)
     instrument = db.execute(
         select(Instrument).where(Instrument.session_id == session.id)
     ).scalar_one()
@@ -403,7 +403,7 @@ def test_the_heal_leaves_a_session_past_its_deadline_closed(
 ) -> None:
     operator = make_client(alice)
     session = _build_ready_session(operator, db, code="split-past")
-    session.deadline = datetime.now(timezone.utc) - timedelta(minutes=1)
+    session.deadline = datetime.now(UTC) - timedelta(minutes=1)
     db.commit()
     lifecycle.observe_deadline(db, session)
     lifecycle.observe_deadline(db, session)  # a second pass reopens nothing
@@ -420,7 +420,7 @@ def test_reviewer_save_403_when_deadline_passed(
 ) -> None:
     operator = make_client(alice)
     session = _build_ready_session(operator, db, code="deadline-1")
-    session.deadline = datetime.now(timezone.utc) - timedelta(minutes=1)
+    session.deadline = datetime.now(UTC) - timedelta(minutes=1)
     db.commit()
 
     rae = AuthenticatedUser(
@@ -469,7 +469,7 @@ def test_past_the_deadline_the_reviewer_no_longer_sees_their_values(
 
     # Pass the deadline: the reviewer's next GET runs the deadline
     # observer, which closes every instrument.
-    session.deadline = datetime.now(timezone.utc) - timedelta(minutes=1)
+    session.deadline = datetime.now(UTC) - timedelta(minutes=1)
     db.commit()
 
     page = rae_client.get(f"/me/sessions/{session.public_id}")
@@ -486,7 +486,7 @@ def test_lazy_deadline_close_fires_once(
 ) -> None:
     operator = make_client(alice)
     session = _build_ready_session(operator, db, code="lazy-close")
-    session.deadline = datetime.now(timezone.utc) - timedelta(seconds=1)
+    session.deadline = datetime.now(UTC) - timedelta(seconds=1)
     db.commit()
 
     rae = AuthenticatedUser(
@@ -528,7 +528,7 @@ def test_lazy_deadline_close_audit_carries_correlation_id(
     """
     operator = make_client(alice)
     session = _build_ready_session(operator, db, code="lazy-close-cid")
-    session.deadline = datetime.now(timezone.utc) - timedelta(seconds=1)
+    session.deadline = datetime.now(UTC) - timedelta(seconds=1)
     db.commit()
 
     rae = AuthenticatedUser(

@@ -32,7 +32,7 @@ shape ``rows_by_instrument`` produces.
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Sequence
-from typing import Any, TypeVar
+from typing import Any
 
 __all__ = [
     "apply_cookie_sort",
@@ -271,10 +271,7 @@ def decode_cookie_sort_spec_for_reviewer_surface(
     return out
 
 
-Row = TypeVar("Row")
-
-
-def order_rows_by_sort_spec(
+def order_rows_by_sort_spec[Row](
     rows: Iterable[Row],
     sort_spec: Sequence[dict[str, Any]] | None,
     *,
@@ -381,7 +378,7 @@ class _DescendingKey:
     def __init__(self, value: Any) -> None:
         self.value = value
 
-    def __lt__(self, other: "_DescendingKey") -> bool:
+    def __lt__(self, other: _DescendingKey) -> bool:
         try:
             return self.value > other.value
         except TypeError:

@@ -8,10 +8,11 @@ having to import siblings.
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
-from app.services.session_guard import lock_session  # noqa: F401 — re-exported; moved for findings Bc4
-
+from app.services.session_guard import (
+    lock_session,  # noqa: F401 — re-exported; moved for findings Bc4
+)
 
 # Per spec/guide/segment_18G_scheduled_events.md Part 0b, the offset
 # String(16) column is sized for a 10-day cap on any single offset.
@@ -34,5 +35,5 @@ def _ensure_aware_utc(value: datetime) -> datetime:
     """SQLite stores naive timestamps even with ``DateTime(timezone=True)``;
     treat them as UTC for comparison purposes."""
     if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
+        return value.replace(tzinfo=UTC)
     return value

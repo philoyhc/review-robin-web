@@ -16,14 +16,12 @@ different rosters — see `test_a_tag_equal_to_a_name_adds_rows`.
 from __future__ import annotations
 
 from app.db.models import Observer, Relationship, Reviewee, Reviewer
-from app.web.views._invitations import InvitationsRow
-from app.web.views._responses import ResponsesRow
 from app.web.views import (
     filter_invitations_rows,
     filter_observers_rows,
-    filter_reviewees_rows,
     filter_relationships_rows,
     filter_responses_rows,
+    filter_reviewees_rows,
     filter_reviewers_rows,
     invitations_search_options,
     observers_search_options,
@@ -32,6 +30,8 @@ from app.web.views import (
     reviewees_search_options,
     reviewers_search_options,
 )
+from app.web.views._invitations import InvitationsRow
+from app.web.views._responses import ResponsesRow
 
 
 def _reviewer(name: str, email: str, **tags: str) -> Reviewer:

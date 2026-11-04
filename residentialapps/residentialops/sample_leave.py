@@ -253,7 +253,7 @@ def final_label(full: bool = False) -> str:
     return " or ".join(f"{titles[t]} ({t})" if full and titles.get(t, t) != t else t for t in POLICY["final_types"])
 
 
-def final_decider(application: "Application") -> str:
+def final_decider(application: Application) -> str:
     """The sample's final approver on a decided application: the first who
     may give it for its Precinct."""
     return next(iter(final_for(application.precinct)), "the final approver")
@@ -416,19 +416,19 @@ DECISIONS: dict[str, dict[str, tuple[date, str]]] = {
 CANCELLED_BY = "Rachel Yeo"  # the sample's Leave admin
 
 
-def decision(application: "Application", step: str) -> tuple[str, str]:
+def decision(application: Application, step: str) -> tuple[str, str]:
     """A recorded step's date, as shown, and remarks; blank when the sample
     keeps no record of it."""
     when, remarks = DECISIONS.get(application.id, {}).get(step, (None, ""))
     return (short_date(when) if when else "", remarks)
 
 
-def _step(application: "Application", step: str, what: str) -> tuple[str, str, str]:
+def _step(application: Application, step: str, what: str) -> tuple[str, str, str]:
     when, remarks = decision(application, step)
     return (when, what, remarks)
 
 
-def history_steps(application: "Application") -> tuple[tuple[str, str, str], ...]:
+def history_steps(application: Application) -> tuple[tuple[str, str, str], ...]:
     """The decisions and closing actions on an application, as its timeline
     shows them under today's policy, for a history item (spec §19): each
     with its date and remarks."""
@@ -1149,7 +1149,7 @@ def term_blackouts() -> tuple[tuple[Blackout, date, date], ...]:
     return tuple(found)
 
 
-def draft_short(draft: "Draft") -> int:
+def draft_short(draft: Draft) -> int:
     """How many days a draft asks beyond what the RA has of its type; 0 when
     it fits (§10, scenario G)."""
     available = next(r["available"] for r in entitlement_rows() if r["ra"] == draft.ra and r["type"] == draft.leave_type)

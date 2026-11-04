@@ -18,7 +18,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-
 from fastapi import (
     APIRouter,
     Depends,
@@ -35,7 +34,6 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.web import urls
 from app.db.models import Observer, ReviewSession, User
 from app.db.session import get_db
 from app.schemas.observer_cohort_rule import VALUE_OPERATORS
@@ -44,28 +42,28 @@ from app.services import observers as observers_service
 from app.services import session_lifecycle as lifecycle
 from app.services.observers import ObserverOperationError
 from app.services.text import parse_id
-from app.web import breadcrumbs, views
+from app.web import breadcrumbs, urls, views
 from app.web.deps import (
     get_or_create_user,
     request_correlation_id,
-)
-from app.web.routes_operator._shared import (
-    account_resolver,
-    _setup_row_window,
-    _redirect_keeping_selection,
-    _row_action_anchor,
-    _require_delete_confirm,
-    _require_selected_response_loss_ack,
-    _require_not_archived,
-    _templates,
-    directory_or_none,
-    require_observers_enabled_session,
 )
 from app.web.roster_import import (
     dismiss_held_upload,
     hold_for_ask,
     read_upload,
     release_hold,
+)
+from app.web.routes_operator._shared import (
+    _redirect_keeping_selection,
+    _require_delete_confirm,
+    _require_not_archived,
+    _require_selected_response_loss_ack,
+    _row_action_anchor,
+    _setup_row_window,
+    _templates,
+    account_resolver,
+    directory_or_none,
+    require_observers_enabled_session,
 )
 
 router = APIRouter()

@@ -34,6 +34,8 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+)
+from sqlalchemy import (
     true as sa_true,
 )
 from sqlalchemy.orm import Mapped, mapped_column

@@ -34,16 +34,15 @@ Revises: b7d4f2a9c153
 Create Date: 2026-09-21
 
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
 
-
 revision: str = "d8c31f7a6b40"
-down_revision: Union[str, Sequence[str], None] = "b7d4f2a9c153"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = "b7d4f2a9c153"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

@@ -8,7 +8,7 @@ doesn't 500 the send path.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from types import SimpleNamespace
 
 from app.services import email_templates
@@ -114,7 +114,7 @@ def test_reminder_override_body_keeps_default_subject() -> None:
 
 def test_all_five_merge_fields_substitute() -> None:
     session = _session(
-        deadline=datetime(2026, 6, 30, 17, 0, tzinfo=timezone.utc),
+        deadline=datetime(2026, 6, 30, 17, 0, tzinfo=UTC),
         help_contact="Prof X <x@example.edu>",
         overrides={
             "invitation_body": (
@@ -140,7 +140,7 @@ def test_all_five_merge_fields_substitute() -> None:
 # They rendered in UTC until 2026-10-01, so a 17:00 Singapore deadline
 # was mailed as 09:00 (guide/archive/findings_2026-10-01_corpus.md C18 = D25).
 
-_NINE_UTC = datetime(2026, 6, 30, 9, 0, tzinfo=timezone.utc)
+_NINE_UTC = datetime(2026, 6, 30, 9, 0, tzinfo=UTC)
 
 
 def test_deadline_renders_in_the_sessions_own_zone() -> None:

@@ -7,14 +7,13 @@ lands with each consumer PR (1B activation, 2A invites, …).
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, User
 from app.services import scheduled_events
-
 
 # --------------------------------------------------------------------------- #
 # parse_iso_duration                                                          #
@@ -96,7 +95,7 @@ def test_resolve_offset_anchor_null_returns_none(db: Session) -> None:
 
 
 def test_resolve_offset_offset_null_returns_none(db: Session) -> None:
-    when = datetime(2026, 6, 1, 9, 0, tzinfo=timezone.utc)
+    when = datetime(2026, 6, 1, 9, 0, tzinfo=UTC)
     review_session = _make_session(
         db, "offset-null", scheduled_activate_at=when
     )
@@ -121,7 +120,7 @@ def test_resolve_offset_both_null_returns_none(db: Session) -> None:
 
 def test_resolve_offset_valid_anchor_string_offset(db: Session) -> None:
     """Singleton offset string (archive_offset) anchored on deadline."""
-    deadline = datetime(2026, 6, 1, 17, 0, tzinfo=timezone.utc)
+    deadline = datetime(2026, 6, 1, 17, 0, tzinfo=UTC)
     review_session = _make_session(
         db, "valid-archive", deadline=deadline, archive_offset="P30D"
     )
@@ -134,7 +133,7 @@ def test_resolve_offset_valid_anchor_string_offset(db: Session) -> None:
 
 def test_resolve_offset_negative_duration_subtracts(db: Session) -> None:
     """A negative ISO 8601 duration moves the fire moment *before* the anchor."""
-    start = datetime(2026, 6, 1, 9, 0, tzinfo=timezone.utc)
+    start = datetime(2026, 6, 1, 9, 0, tzinfo=UTC)
     review_session = _make_session(
         db, "valid-negative", scheduled_activate_at=start, archive_offset="-P1D"
     )
@@ -150,7 +149,7 @@ def test_resolve_offset_negative_duration_subtracts(db: Session) -> None:
 
 def test_resolve_offset_invalid_duration_returns_none(db: Session) -> None:
     """Malformed offset short-circuits to None — caller doesn't need a try/except."""
-    deadline = datetime(2026, 6, 1, 17, 0, tzinfo=timezone.utc)
+    deadline = datetime(2026, 6, 1, 17, 0, tzinfo=UTC)
     review_session = _make_session(
         db, "invalid-offset", deadline=deadline, archive_offset="not-a-duration"
     )
@@ -177,7 +176,7 @@ def test_resolve_offset_naive_anchor_treated_as_utc(db: Session) -> None:
     )
     assert resolved is not None
     assert resolved.tzinfo is not None
-    assert resolved == datetime(2026, 6, 2, 17, 0, tzinfo=timezone.utc)
+    assert resolved == datetime(2026, 6, 2, 17, 0, tzinfo=UTC)
 
 
 # --------------------------------------------------------------------------- #
@@ -205,8 +204,9 @@ def test_lock_session_returns_refreshed_row(db: Session) -> None:
 def test_observe_scheduled_events_is_no_op_in_pr_1a(db: Session) -> None:
     """PR 1A ships the scaffolding without any wired triggers; calling
     the observer on any session is a no-op and writes no audit events."""
-    from app.db.models import AuditEvent
     from sqlalchemy import func, select
+
+    from app.db.models import AuditEvent
 
     review_session = _make_session(db, "no-op")
 
@@ -232,7 +232,7 @@ def test_observe_scheduled_events_accepts_explicit_now(db: Session) -> None:
     """The ``now`` kwarg lets callers (and tests) pin the clock — used
     by per-trigger tests once triggers are wired."""
     review_session = _make_session(db, "explicit-now")
-    pinned = datetime(2099, 1, 1, tzinfo=timezone.utc)
+    pinned = datetime(2099, 1, 1, tzinfo=UTC)
 
     # No-op, but should accept the kwarg without raising.
     scheduled_events.observe_scheduled_events(db, review_session, now=pinned)

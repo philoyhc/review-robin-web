@@ -17,9 +17,9 @@ import ipaddress
 import logging
 import re
 from collections.abc import AsyncIterator, Callable, Mapping, Sequence
-from typing import Any
 from contextlib import AsyncExitStack, asynccontextmanager
 from dataclasses import dataclass, field
+from typing import Any
 from urllib.parse import urlsplit
 
 from fastapi import FastAPI

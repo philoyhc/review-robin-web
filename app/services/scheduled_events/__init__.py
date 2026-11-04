@@ -43,9 +43,8 @@ avoids a circular import.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
-
-from typing import Callable
+from collections.abc import Callable
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -53,8 +52,10 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.db.models import AuditEvent, ReviewSession
 from app.services import audit
+from app.services import (
+    session_lifecycle as lifecycle,  # noqa: F401 — re-export for legacy ``monkeypatch.setattr("app.services.scheduled_events.lifecycle.activate_session", …)`` paths
+)
 from app.services.session_guard import SessionBusy
-from app.services import session_lifecycle as lifecycle  # noqa: F401 — re-export for legacy ``monkeypatch.setattr("app.services.scheduled_events.lifecycle.activate_session", …)`` paths
 
 # Private names (single underscore) are part of the byte-stable
 # re-export wall: a handful of tests and one Alembic migration reach
@@ -64,8 +65,8 @@ from app.services import session_lifecycle as lifecycle  # noqa: F401 — re-exp
 from ._activation import (
     _ACTIVATION_MAX_RETRIES,  # noqa: F401
     _count_recent_retries,  # noqa: F401
-    _emit_activation_skipped,  # noqa: F401
     _emit_activation_retry_or_failed,  # noqa: F401
+    _emit_activation_skipped,  # noqa: F401
     _observe_scheduled_activation,
     parse_and_validate_scheduled_activate_at,
 )
@@ -74,18 +75,18 @@ from ._duration import (
     parse_iso_duration,
     resolve_offset,
 )
+from ._fired import (
+    fired_offset_errors,
+    fired_offsets,
+    offsets_lead_exempt,
+    split_offsets,
+)
 from ._invites import (
     _consumed_invite_offset_indices,  # noqa: F401
     _dispatch_pending_invitations,  # noqa: F401
     _observe_scheduled_invites,
     _resolve_invite_fires,  # noqa: F401
     parse_and_validate_invite_offsets,
-)
-from ._fired import (
-    fired_offset_errors,
-    fired_offsets,
-    offsets_lead_exempt,
-    split_offsets,
 )
 from ._release import (
     _RELEASE_WINDOW_MAX,  # noqa: F401
@@ -108,7 +109,6 @@ from ._shared import (
     _ensure_aware_utc,  # noqa: F401
     lock_session,
 )
-
 
 __all__ = [
     "ScheduledActivateError",
@@ -234,7 +234,7 @@ def observe_scheduled_events(
     ordering (past-due invites fire before activation in the same
     pass) is the natural order below.
     """
-    current = now or datetime.now(timezone.utc)
+    current = now or datetime.now(UTC)
     try:
         _observe_all(
             db,

@@ -166,7 +166,7 @@ def test_reviewee_missing_name_column_blocks() -> None:
 
 
 def test_reviewer_csv_with_utf8_bom_parses() -> None:
-    csv_bytes = "﻿".encode("utf-8") + _b(
+    csv_bytes = "﻿".encode() + _b(
         "ReviewerName,ReviewerEmail\nAlice,alice@example.edu\n"
     )
     result = parse_reviewer_csv(csv_bytes)

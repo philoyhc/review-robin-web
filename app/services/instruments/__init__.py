@@ -39,13 +39,22 @@ Final layout (post-2026-05-09 §12.A split + 2026-05-28 Segment
 
 from __future__ import annotations
 
-# Cross-slice state. ``_SAVED_STATE_EVENT_TYPES`` stays private to
-# ``_state.py`` — only ``saved_state_for_session`` is part of the
-# public surface (called from ``views.py``). ``_instrument_label``
-# is private but imported from this package by services, views and
-# ``tests/integration/test_instrument_session_seq.py`` — preserve it
-# in the re-export wall.
-from ._state import _instrument_label, saved_state_for_session
+from ._band1 import (
+    Band1ParseError,
+    clear_unsettled_exclude_self_reviews,
+    decode_band1_state,
+    get_exclude_self_reviews,
+    parse_band1_form,
+    parse_exclude_self_reviews_form,
+    parse_link3_form,
+    resolve_exclude_self_reviews,
+    set_band1_assignment_rules,
+    set_exclude_self_reviews,
+)
+
+# Band 2 state + the Band 3 dual-write — carved into
+# ``_band2.py`` in Segment 18N PR 2.
+from ._band2 import set_band2_state
 
 # Response Type Definitions slice retired 2026-05-26 — the per-
 # session ``response_type_definitions`` table dropped alongside the
@@ -54,11 +63,10 @@ from ._state import _instrument_label, saved_state_for_session
 # Band 3's "Type" picker drives ``data_type`` + ``list_options``
 # directly, with quick-fill presets defined in
 # ``app/services/instruments/_field_presets.py``.
-
 # Display fields (sliced in PR 2).
 from ._display_fields import (
-    DisplaySourceError,
     GROUP_IDENTITY_SORT_KEY,
+    DisplaySourceError,
     LockedDisplayFieldError,
     SortSpecError,
     add_display_field,
@@ -75,6 +83,47 @@ from ._display_fields import (
     set_sort_display_fields,
     update_display_field,
 )
+
+# Instrument CRUD — the core lifecycle, default-instrument
+# seeding, Band 1 group / unit-of-review helpers, and the
+# per-instrument column-widths writer. (Session-level bulk toggles
+# retired in 18R Item 3.)
+from ._instrument_crud import (
+    DEFAULT_INSTRUMENT_NAME,
+    GROUP_KIND_SENTINEL,
+    IntroLayoutError,
+    LastInstrumentError,
+    configured_counts,
+    copy_view_policies,
+    create_instrument,
+    decode_group_kind,
+    delete_instrument,
+    effective_intro_layout,
+    encode_group_kind,
+    ensure_default_instrument,
+    ensure_locked_display_fields,
+    group_boundary_pairs,
+    has_unconfigured,
+    is_configured,
+    is_untouched_default,
+    repair_display_fields,
+    replicate_instrument,
+    set_column_widths,
+    set_group_boundary,
+    set_intro_layout,
+    set_unit_of_review,
+    update_instrument_description,
+    update_short_label,
+)
+
+# Segment 18M instrument ordering + per-instrument page-break
+# helpers — carved into ``_pagination.py`` in Segment 18N PR 2.
+from ._pagination import (
+    clear_page_break,
+    create_page_break_after,
+    reorder_instruments,
+)
+from ._preview import find_sample_in_scope_reviewee
 
 # Response fields (sliced in PR 3). ``InstrumentResponseField`` is
 # the model class — re-exported through the response-fields slice
@@ -99,61 +148,13 @@ from ._response_fields import (
     update_response_field,
 )
 
-# Instrument CRUD — the core lifecycle, default-instrument
-# seeding, Band 1 group / unit-of-review helpers, and the
-# per-instrument column-widths writer. (Session-level bulk toggles
-# retired in 18R Item 3.)
-from ._instrument_crud import (
-    DEFAULT_INSTRUMENT_NAME,
-    GROUP_KIND_SENTINEL,
-    LastInstrumentError,
-    copy_view_policies,
-    create_instrument,
-    decode_group_kind,
-    delete_instrument,
-    encode_group_kind,
-    ensure_default_instrument,
-    ensure_locked_display_fields,
-    group_boundary_pairs,
-    is_untouched_default,
-    repair_display_fields,
-    replicate_instrument,
-    configured_counts,
-    has_unconfigured,
-    is_configured,
-    IntroLayoutError,
-    effective_intro_layout,
-    set_column_widths,
-    set_group_boundary,
-    set_intro_layout,
-    set_unit_of_review,
-    update_instrument_description,
-    update_short_label,
-)
-# Band 2 state + the Band 3 dual-write — carved into
-# ``_band2.py`` in Segment 18N PR 2.
-from ._band2 import set_band2_state
-# Segment 18M instrument ordering + per-instrument page-break
-# helpers — carved into ``_pagination.py`` in Segment 18N PR 2.
-from ._pagination import (
-    clear_page_break,
-    create_page_break_after,
-    reorder_instruments,
-)
-from ._band1 import (
-    Band1ParseError,
-    decode_band1_state,
-    clear_unsettled_exclude_self_reviews,
-    get_exclude_self_reviews,
-    parse_band1_form,
-    parse_exclude_self_reviews_form,
-    parse_link3_form,
-    resolve_exclude_self_reviews,
-    set_band1_assignment_rules,
-    set_exclude_self_reviews,
-)
-from ._preview import find_sample_in_scope_reviewee
-
+# Cross-slice state. ``_SAVED_STATE_EVENT_TYPES`` stays private to
+# ``_state.py`` — only ``saved_state_for_session`` is part of the
+# public surface (called from ``views.py``). ``_instrument_label``
+# is private but imported from this package by services, views and
+# ``tests/integration/test_instrument_session_seq.py`` — preserve it
+# in the re-export wall.
+from ._state import _instrument_label, saved_state_for_session
 
 __all__ = [
     # Cross-slice (lives in _state.py).

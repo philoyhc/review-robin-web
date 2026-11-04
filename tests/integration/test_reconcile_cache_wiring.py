@@ -24,7 +24,7 @@ The pairing matters in both directions:
 
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 import pytest
 from sqlalchemy.orm import Session

@@ -25,8 +25,9 @@ seeding rule.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Iterable
+from typing import TYPE_CHECKING
 
 from app.schemas.rules import (
     Combinator,
@@ -98,7 +99,7 @@ def evaluate(
     reviewees: Iterable[object],
     override_exclude_self_reviews: bool | None = None,
     revision_seed: int = 0,
-    pair_context_lookup: dict[tuple[int, int], "Relationship"] | None = None,
+    pair_context_lookup: dict[tuple[int, int], Relationship] | None = None,
 ) -> EvaluationResult:
     """Run ``rule_set`` against the populations and return the result.
 

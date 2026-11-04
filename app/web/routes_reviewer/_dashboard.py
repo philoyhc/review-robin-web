@@ -13,7 +13,7 @@ Carved out of the single-file ``routes_reviewer.py`` in Segment
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
@@ -22,12 +22,10 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Observer, Reviewee, Reviewer, ReviewSession, User
 from app.db.session import get_db
-from app.services import date_formatting
-from app.services import participants
+from app.services import date_formatting, participants, visibility_policies
 from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
 from app.services import sessions as sessions_service
-from app.services import visibility_policies
 from app.web import views
 from app.web.deps import get_or_create_user
 from app.web.routes_reviewer._shared import _templates
@@ -44,7 +42,7 @@ def _to_utc(value: datetime) -> datetime:
     raises ``TypeError`` on SQLite.
     """
     if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
+        return value.replace(tzinfo=UTC)
     return value
 
 
@@ -271,7 +269,7 @@ def reviewer_dashboard(
                 "deadline_is_past": (
                     review_session.deadline is not None
                     and _to_utc(review_session.deadline)
-                    <= datetime.now(timezone.utc)
+                    <= datetime.now(UTC)
                 ),
                 "timezone_gmt_offset": date_formatting.gmt_offset_label(
                     session_zone, at=review_session.deadline

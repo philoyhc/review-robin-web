@@ -566,7 +566,7 @@ def test_the_gate_recognises_every_shape_an_upload_parameter_takes() -> None:
         list[_UploadFile],
         _UploadFile | None,
         list[_UploadFile] | None,
-        _typing.Optional[list[_UploadFile]],
+        _typing.Optional[list[_UploadFile]],  # noqa: UP045 -- the old spelling is the case under test
         dict[str, list[_UploadFile]],
     ):
         assert check(annotation), f"{annotation!r} is an upload and was missed"

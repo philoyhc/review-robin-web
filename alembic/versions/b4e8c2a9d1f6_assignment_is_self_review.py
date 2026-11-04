@@ -30,15 +30,15 @@ Revises: 683e99cca6b7
 Create Date: 2026-05-30
 
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
 
 revision: str = "b4e8c2a9d1f6"
-down_revision: Union[str, Sequence[str], None] = "683e99cca6b7"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = "683e99cca6b7"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 # Group-kind encoding mirrors

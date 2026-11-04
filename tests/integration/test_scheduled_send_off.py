@@ -10,7 +10,7 @@ automatic send. The Settings CSV still carries the stored values."""
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -97,7 +97,7 @@ def test_session_home_shows_offsets_without_a_send_time(
     client: TestClient, db: Session, send_off: None
 ) -> None:
     rs = _client_session(client, db, "off-display")
-    rs.scheduled_activate_at = datetime.now(timezone.utc) + timedelta(days=5)
+    rs.scheduled_activate_at = datetime.now(UTC) + timedelta(days=5)
     rs.invite_offsets = ["-P1D"]
     db.commit()
     home = client.get(f"/operator/sessions/{rs.public_id}").text
@@ -118,7 +118,7 @@ def test_an_end_change_from_the_lobby_ignores_stored_reminders(
     rs.reminder_offsets = ["-PT2H"]
     db.commit()
     scheduled_events.validate_deadline_change(
-        db, rs, deadline=datetime.now(timezone.utc) + timedelta(minutes=90)
+        db, rs, deadline=datetime.now(UTC) + timedelta(minutes=90)
     )
 
 
@@ -131,7 +131,7 @@ def test_on_the_fields_are_live(client: TestClient, db: Session) -> None:
 def test_a_save_keeps_the_stored_offsets_and_ignores_posted_ones(
     client: TestClient, db: Session, send_off: None
 ) -> None:
-    start = datetime.now(timezone.utc) + timedelta(days=30)
+    start = datetime.now(UTC) + timedelta(days=30)
     rs = _client_session(client, db, "off-save")
     rs.scheduled_activate_at = start
     # An entry that would now fail the lead-time rule: kept, not checked.
@@ -158,7 +158,7 @@ def test_a_save_keeps_the_stored_offsets_and_ignores_posted_ones(
 def test_a_create_stores_no_offsets(
     client: TestClient, db: Session, send_off: None
 ) -> None:
-    start = datetime.now(timezone.utc) + timedelta(days=30)
+    start = datetime.now(UTC) + timedelta(days=30)
     response = client.post(
         "/operator/sessions",
         data={
@@ -187,7 +187,7 @@ def test_no_pass_fires_invites_or_reminders_but_activation_runs(
     db.commit()
     _generate_invitations(db, rs, op)
     # Start just passed, with an invite entry due before it.
-    rs.scheduled_activate_at = datetime.now(timezone.utc) - timedelta(minutes=1)
+    rs.scheduled_activate_at = datetime.now(UTC) - timedelta(minutes=1)
     rs.invite_offsets = ["-P2D"]
     db.commit()
 
@@ -206,7 +206,7 @@ def test_no_reminder_fires(db: Session, send_off: None) -> None:
     db.commit()
     _generate_invitations(db, rs, op)
     rs.status = lifecycle.SessionStatus.ready.value
-    rs.deadline = datetime.now(timezone.utc) + timedelta(hours=1)
+    rs.deadline = datetime.now(UTC) + timedelta(hours=1)
     rs.reminder_offsets = ["-P1D"]
     db.commit()
 
@@ -218,8 +218,8 @@ def test_no_reminder_fires(db: Session, send_off: None) -> None:
 def test_nothing_promises_an_automatic_send(db: Session, send_off: None) -> None:
     rs = _seed_session_with_reviewers(db, "off-captions")
     rs.status = lifecycle.SessionStatus.validated.value
-    rs.scheduled_activate_at = datetime.now(timezone.utc) + timedelta(days=5)
-    rs.deadline = datetime.now(timezone.utc) + timedelta(days=10)
+    rs.scheduled_activate_at = datetime.now(UTC) + timedelta(days=5)
+    rs.deadline = datetime.now(UTC) + timedelta(days=10)
     rs.invite_offsets = ["-P1D"]
     rs.reminder_offsets = ["-P1D"]
     db.commit()

@@ -22,15 +22,15 @@ Revises: c5d3f1a2b9e7
 Create Date: 2026-05-30
 
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
 
 revision: str = "d8e4c3a1b5f6"
-down_revision: Union[str, Sequence[str], None] = "c5d3f1a2b9e7"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = "c5d3f1a2b9e7"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

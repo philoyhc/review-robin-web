@@ -11,7 +11,7 @@ cleared (``session.scheduled_activation_skipped``, §8.2.3).
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
 import pytest
@@ -38,7 +38,7 @@ def _make_session(client: TestClient, db: Session, code: str) -> ReviewSession:
 
 def _past_due_start(db: Session, review_session: ReviewSession) -> None:
     # Stored directly: the save-time lead-time floor refuses a past Start.
-    review_session.scheduled_activate_at = datetime.now(timezone.utc) - timedelta(
+    review_session.scheduled_activate_at = datetime.now(UTC) - timedelta(
         hours=1
     )
     db.commit()

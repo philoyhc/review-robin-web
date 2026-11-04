@@ -55,3 +55,17 @@ include = ["app", "cordware", "residentialapps", "utilityapps"]
 exclude = [".venv", "**/__pycache__", "**/tests"]
 pythonVersion = "3.12"
 typeCheckingMode = "basic"
+
+[tool.ruff.lint]
+# Segment 22C rung 2a: import order and modern syntax on top of ruff's
+# defaults (E4, E7, E9, F). Not all of "E": E501 is 1,471 long lines with no
+# formatter to fix them.
+extend-select = ["I", "UP"]
+# StrEnum changes what str() and format() give for a member, which
+# templates and audit details render.
+ignore = ["UP042"]
+
+[tool.ruff.lint.isort]
+# The repository's own alembic/ directory would otherwise make the
+# installed package first-party.
+known-third-party = ["alembic"]

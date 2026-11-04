@@ -11,7 +11,7 @@ template doesn't need a special case.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
@@ -127,7 +127,7 @@ def _submit_response(
             response_field_id=field.id,
             value=value,
             submitted_at=(
-                datetime.now(timezone.utc) if submitted else None
+                datetime.now(UTC) if submitted else None
             ),
         )
     )

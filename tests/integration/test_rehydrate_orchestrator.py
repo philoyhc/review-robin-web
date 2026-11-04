@@ -15,8 +15,6 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from cordware.graph import FakeDirectory
-
 from app.db.models import (
     Assignment,
     Instrument,
@@ -31,10 +29,11 @@ from app.db.models import (
 )
 from app.services import session_rehydrate
 from app.services.extracts import responses_import
-from app.services.session_config_io import serialize_session_config
+from app.services.extracts.responses_extract import serialize_responses
 from app.services.extracts.reviewees_extract import serialize_reviewees
 from app.services.extracts.reviewers_extract import serialize_reviewers
-from app.services.extracts.responses_extract import serialize_responses
+from app.services.session_config_io import serialize_session_config
+from cordware.graph import FakeDirectory
 
 _INLINE = dict(
     _inline_data_type="Integer",
@@ -93,7 +92,7 @@ def _seed(db: Session) -> tuple[ReviewSession, User]:
             assignment_id=a.id,
             response_field_id=field.id,
             value="4",
-            saved_at=dt.datetime(2026, 6, 1, 9, 0, tzinfo=dt.timezone.utc),
+            saved_at=dt.datetime(2026, 6, 1, 9, 0, tzinfo=dt.UTC),
             version=1,
         )
     )

@@ -8,18 +8,12 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
 
-from ._apply_data_shape import _apply_data_shape_kv
-from ._apply_email import _apply_email_kv
-from ._apply_instrument import _apply_instrument_kv
-from ._apply_rule_set import _apply_rule_set_kv
-from ._apply_session import SESSION_FALLBACK_KEYS, _apply_session_kv
-from ._apply_session_tag import _apply_session_tag_kv
-from ._apply_shared import (
-    _VALID_DATA_TYPES,
-    _ParsedConfig,
-    _ParseError,
-)
-from ._rows import Row
+# ApplyError is used by both this module (cross-row errors) and the
+# orchestrator ``_apply.py``; defined here to keep the dependency
+# graph acyclic.
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
 from app.services.instruments._band1 import keeps_pairs_by_pair_tag, unrepresented_rule
 from app.services.instruments._band2 import INTEGER_WHOLE_BOUNDS_MESSAGE
 from app.services.instruments._response_fields import (
@@ -36,12 +30,18 @@ from app.services.visibility_policies import (
     valid_modes_for_cell,
 )
 
-
-# ApplyError is used by both this module (cross-row errors) and the
-# orchestrator ``_apply.py``; defined here to keep the dependency
-# graph acyclic.
-from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from ._apply_data_shape import _apply_data_shape_kv
+from ._apply_email import _apply_email_kv
+from ._apply_instrument import _apply_instrument_kv
+from ._apply_rule_set import _apply_rule_set_kv
+from ._apply_session import SESSION_FALLBACK_KEYS, _apply_session_kv
+from ._apply_session_tag import _apply_session_tag_kv
+from ._apply_shared import (
+    _VALID_DATA_TYPES,
+    _ParsedConfig,
+    _ParseError,
+)
+from ._rows import Row
 
 if TYPE_CHECKING:
     from app.db.models import ReviewSession

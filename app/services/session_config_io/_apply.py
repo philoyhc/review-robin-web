@@ -314,4 +314,4 @@ def _apply_plan(
 # Re-exports for the package ``__init__`` and the unit tests that
 # reach for ``_ParseError`` / ``_parse_group_kind`` via the legacy
 # ``_apply`` module path.
-from ._apply_shared import _ParseError, _parse_group_kind  # noqa: E402, F401
+from ._apply_shared import _parse_group_kind, _ParseError  # noqa: E402, F401

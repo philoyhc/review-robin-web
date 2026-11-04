@@ -33,7 +33,7 @@ Workflow card's Prepare is how a session is validated.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import select
@@ -45,12 +45,14 @@ from app.services import (
     csv_imports,
     date_formatting,
     invitations,
-    sessions as sessions_service,
+    scheduled_events,
     validation,
 )
 from app.services import instruments as instruments_service
-from app.services import scheduled_events
 from app.services import session_lifecycle as lifecycle
+from app.services import (
+    sessions as sessions_service,
+)
 
 
 def build_workflow_card_context(
@@ -346,7 +348,7 @@ def build_scheduled_activation_caption(
             parsed = None
         if parsed is not None:
             if parsed.tzinfo is None:
-                parsed = parsed.replace(tzinfo=timezone.utc)
+                parsed = parsed.replace(tzinfo=UTC)
             when_text = date_formatting.format_datetime(parsed, session_tz)
     reason = (
         detail.get("reason", "unknown") if isinstance(detail, dict) else "unknown"
@@ -452,7 +454,7 @@ def build_schedule_timeline(
     send = scheduled_events.scheduled_send_enabled()
     anchor = review_session.scheduled_activate_at
     if anchor is not None:
-        anchor_aware = anchor if anchor.tzinfo else anchor.replace(tzinfo=timezone.utc)
+        anchor_aware = anchor if anchor.tzinfo else anchor.replace(tzinfo=UTC)
         rows.append((anchor_aware, "Session activates (Start)"))
         # Auto-send off (14E rung 0): no auto-send row is shown.
         offsets = (review_session.invite_offsets or []) if send else []
@@ -473,7 +475,7 @@ def build_schedule_timeline(
     deadline = review_session.deadline
     if deadline is not None:
         deadline_aware = (
-            deadline if deadline.tzinfo else deadline.replace(tzinfo=timezone.utc)
+            deadline if deadline.tzinfo else deadline.replace(tzinfo=UTC)
         )
         rows.append((deadline_aware, "Session ends (End)"))
         reminder_offsets = (review_session.reminder_offsets or []) if send else []
@@ -520,7 +522,7 @@ def build_offset_display_rows(
     anchor_aware = None
     if anchor is not None:
         anchor_aware = (
-            anchor if anchor.tzinfo else anchor.replace(tzinfo=timezone.utc)
+            anchor if anchor.tzinfo else anchor.replace(tzinfo=UTC)
         )
     for entry in offsets:
         if not isinstance(entry, str) or not entry:
@@ -592,7 +594,7 @@ def build_auto_send_invites_caption(
 
     # Resolve the earliest fire moment for display
     anchor = review_session.scheduled_activate_at
-    anchor_aware = anchor if anchor.tzinfo else anchor.replace(tzinfo=timezone.utc)
+    anchor_aware = anchor if anchor.tzinfo else anchor.replace(tzinfo=UTC)
     fire_moments: list[datetime] = []
     for entry in offsets:
         if not isinstance(entry, str):
@@ -706,7 +708,7 @@ def build_auto_send_reminders_caption(
         }
 
     anchor = review_session.deadline
-    anchor_aware = anchor if anchor.tzinfo else anchor.replace(tzinfo=timezone.utc)
+    anchor_aware = anchor if anchor.tzinfo else anchor.replace(tzinfo=UTC)
     fire_moments: list[datetime] = []
     for entry in offsets:
         if not isinstance(entry, str):

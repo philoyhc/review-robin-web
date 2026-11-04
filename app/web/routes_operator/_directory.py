@@ -16,7 +16,7 @@ again, those found bound (`directory_recheck`)."""
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.concurrency import run_in_threadpool
@@ -108,7 +108,7 @@ async def roster_directory_keys(
         # `since`: the recheck POST reads only answers fetched from now
         # on, so a countdown stopped early leaves the rest to the server.
         return JSONResponse(
-            {"keys": keys, "since": datetime.now(timezone.utc).isoformat()},
+            {"keys": keys, "since": datetime.now(UTC).isoformat()},
             headers=_NO_STORE,
         )
     upload = await read_upload(
@@ -248,4 +248,4 @@ def _parse_since(value: str | None) -> datetime | None:
         parsed = datetime.fromisoformat(value)
     except ValueError:
         return None
-    return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=timezone.utc)
+    return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=UTC)

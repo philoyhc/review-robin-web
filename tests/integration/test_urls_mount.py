@@ -9,6 +9,7 @@ input at `/` and adds the prefix under the mount.
 from __future__ import annotations
 
 import pytest
+from _mounted import MOUNT, host_with, leaks
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -16,7 +17,6 @@ from fastapi.testclient import TestClient
 from jinja2 import DictLoader, Environment
 from starlette.responses import Response
 
-from _mounted import MOUNT, host_with, leaks
 from app.web import urls
 
 _PAGE = """\

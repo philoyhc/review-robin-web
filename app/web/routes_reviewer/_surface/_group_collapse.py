@@ -10,7 +10,6 @@ returns a fresh list. No DB reads.
 """
 from __future__ import annotations
 
-
 # A group row's identity cell lists at most this many member names
 # before collapsing the rest to a "+N more" suffix (Segment 13C).
 GROUP_MEMBER_NAME_LIMIT = 10

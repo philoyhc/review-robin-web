@@ -28,8 +28,8 @@ Per the Part 1 plan section in
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Iterator
+from collections.abc import Iterator
+from datetime import UTC, datetime
 
 import pytest
 from sqlalchemy import select
@@ -46,8 +46,8 @@ from app.schemas.sessions import SessionCreate
 from app.services import scheduled_events
 from app.services import session_lifecycle as lifecycle
 from app.services import sessions as sessions_service
-from ._full_matrix import pin_full_matrix_on_all_instruments
 
+from ._full_matrix import pin_full_matrix_on_all_instruments
 
 # --------------------------------------------------------------------------- #
 # Fixtures                                                                    #
@@ -132,13 +132,13 @@ def test_observer_fires_scheduled_activation_when_due(db: Session) -> None:
     carries context.trigger=scheduled."""
     review_session = _make_validated_session(db, "fire-happy")
     review_session.scheduled_activate_at = datetime(
-        2099, 1, 1, 9, 0, tzinfo=timezone.utc
+        2099, 1, 1, 9, 0, tzinfo=UTC
     )
     db.flush()
     db.commit()
 
     # Fire with now-past-the-schedule
-    later = datetime(2099, 1, 1, 10, 0, tzinfo=timezone.utc)
+    later = datetime(2099, 1, 1, 10, 0, tzinfo=UTC)
     scheduled_events.observe_scheduled_events(db, review_session, now=later)
     db.refresh(review_session)
 
@@ -154,12 +154,12 @@ def test_observer_fires_scheduled_activation_when_due(db: Session) -> None:
 def test_observer_no_op_when_schedule_in_future(db: Session) -> None:
     """Scheduled time hasn't arrived yet → trigger does nothing."""
     review_session = _make_validated_session(db, "future")
-    future = datetime(2099, 12, 31, 9, 0, tzinfo=timezone.utc)
+    future = datetime(2099, 12, 31, 9, 0, tzinfo=UTC)
     review_session.scheduled_activate_at = future
     db.flush()
     db.commit()
 
-    earlier = datetime(2099, 1, 1, tzinfo=timezone.utc)
+    earlier = datetime(2099, 1, 1, tzinfo=UTC)
     scheduled_events.observe_scheduled_events(db, review_session, now=earlier)
     db.refresh(review_session)
 
@@ -178,7 +178,7 @@ def test_observer_no_op_when_schedule_unset(db: Session) -> None:
     review_session = _make_validated_session(db, "unset")
     assert review_session.scheduled_activate_at is None
 
-    later = datetime(2099, 1, 1, tzinfo=timezone.utc)
+    later = datetime(2099, 1, 1, tzinfo=UTC)
     scheduled_events.observe_scheduled_events(db, review_session, now=later)
     db.refresh(review_session)
 
@@ -198,12 +198,12 @@ def test_observer_skips_when_session_not_validated(db: Session) -> None:
     # Revert to draft to simulate "operator edited setup after scheduling"
     review_session.status = lifecycle.SessionStatus.draft.value
     review_session.scheduled_activate_at = datetime(
-        2099, 1, 1, 9, 0, tzinfo=timezone.utc
+        2099, 1, 1, 9, 0, tzinfo=UTC
     )
     db.flush()
     db.commit()
 
-    later = datetime(2099, 1, 1, 10, 0, tzinfo=timezone.utc)
+    later = datetime(2099, 1, 1, 10, 0, tzinfo=UTC)
     scheduled_events.observe_scheduled_events(db, review_session, now=later)
     db.refresh(review_session)
 
@@ -228,12 +228,12 @@ def test_observer_idempotent_on_already_cleared_schedule(db: Session) -> None:
     scheduled_activate_at is already None)."""
     review_session = _make_validated_session(db, "idempotent")
     review_session.scheduled_activate_at = datetime(
-        2099, 1, 1, 9, 0, tzinfo=timezone.utc
+        2099, 1, 1, 9, 0, tzinfo=UTC
     )
     db.flush()
     db.commit()
 
-    later = datetime(2099, 1, 1, 10, 0, tzinfo=timezone.utc)
+    later = datetime(2099, 1, 1, 10, 0, tzinfo=UTC)
     scheduled_events.observe_scheduled_events(db, review_session, now=later)
     db.refresh(review_session)
     assert review_session.status == lifecycle.SessionStatus.ready.value
@@ -273,12 +273,12 @@ def test_observer_emits_retry_on_transient_failure(
     trigger writes a retry audit and *keeps* the schedule set."""
     review_session = _make_validated_session(db, "retry-first")
     review_session.scheduled_activate_at = datetime(
-        2099, 1, 1, 9, 0, tzinfo=timezone.utc
+        2099, 1, 1, 9, 0, tzinfo=UTC
     )
     db.flush()
     db.commit()
 
-    later = datetime(2099, 1, 1, 10, 0, tzinfo=timezone.utc)
+    later = datetime(2099, 1, 1, 10, 0, tzinfo=UTC)
     scheduled_events.observe_scheduled_events(db, review_session, now=later)
     db.refresh(review_session)
 
@@ -296,12 +296,12 @@ def test_observer_fails_persistent_after_three_retries(
     and clears the schedule."""
     review_session = _make_validated_session(db, "retry-exhaust")
     review_session.scheduled_activate_at = datetime(
-        2099, 1, 1, 9, 0, tzinfo=timezone.utc
+        2099, 1, 1, 9, 0, tzinfo=UTC
     )
     db.flush()
     db.commit()
 
-    later = datetime(2099, 1, 1, 10, 0, tzinfo=timezone.utc)
+    later = datetime(2099, 1, 1, 10, 0, tzinfo=UTC)
     # 4 invocations → 3 retries + 1 failed_persistent
     for _ in range(4):
         scheduled_events.observe_scheduled_events(db, review_session, now=later)
@@ -323,25 +323,25 @@ def test_retry_counter_scoped_to_current_scheduled_at(
     """If the operator changes scheduled_activate_at after a failure,
     the retry counter resets — the new schedule starts fresh."""
     review_session = _make_validated_session(db, "retry-reschedule")
-    first = datetime(2099, 1, 1, 9, 0, tzinfo=timezone.utc)
+    first = datetime(2099, 1, 1, 9, 0, tzinfo=UTC)
     review_session.scheduled_activate_at = first
     db.flush()
     db.commit()
 
-    later = datetime(2099, 1, 1, 10, 0, tzinfo=timezone.utc)
+    later = datetime(2099, 1, 1, 10, 0, tzinfo=UTC)
     # Emit two retries against the first schedule
     scheduled_events.observe_scheduled_events(db, review_session, now=later)
     scheduled_events.observe_scheduled_events(db, review_session, now=later)
     assert len(_audit_rows(db, review_session, "session.scheduled_activation_retry")) == 2
 
     # Operator reschedules
-    second = datetime(2099, 2, 1, 9, 0, tzinfo=timezone.utc)
+    second = datetime(2099, 2, 1, 9, 0, tzinfo=UTC)
     review_session.scheduled_activate_at = second
     db.flush()
     db.commit()
 
     # Fire against the new schedule — should be attempt=1, not attempt=3
-    later2 = datetime(2099, 2, 1, 10, 0, tzinfo=timezone.utc)
+    later2 = datetime(2099, 2, 1, 10, 0, tzinfo=UTC)
     scheduled_events.observe_scheduled_events(db, review_session, now=later2)
     retries = _audit_rows(db, review_session, "session.scheduled_activation_retry")
     assert len(retries) == 3
@@ -388,7 +388,7 @@ def test_scheduled_activation_clears_schedule_via_activate_session(
     the side effect is on the service, not the trigger wrapper."""
     review_session = _make_validated_session(db, "manual-clear")
     review_session.scheduled_activate_at = datetime(
-        2099, 1, 1, 9, 0, tzinfo=timezone.utc
+        2099, 1, 1, 9, 0, tzinfo=UTC
     )
     db.flush()
     db.commit()
@@ -420,7 +420,7 @@ def test_manual_activate_clears_pending_scheduled_activate_at(
     The 9:00 trigger then sees status=ready and no schedule → no-op."""
     review_session = _make_validated_session(db, "manual-pre-empt")
     review_session.scheduled_activate_at = datetime(
-        2099, 1, 1, 9, 0, tzinfo=timezone.utc
+        2099, 1, 1, 9, 0, tzinfo=UTC
     )
     db.flush()
     db.commit()
@@ -443,7 +443,7 @@ def test_manual_activate_clears_pending_scheduled_activate_at(
     assert review_session.scheduled_activate_at is None
 
     # Now the would-be-scheduled fire time arrives — observer should no-op
-    later = datetime(2099, 1, 1, 10, 0, tzinfo=timezone.utc)
+    later = datetime(2099, 1, 1, 10, 0, tzinfo=UTC)
     activations_before = len(_audit_rows(db, review_session, "session.activated"))
     scheduled_events.observe_scheduled_events(db, review_session, now=later)
     activations_after = len(_audit_rows(db, review_session, "session.activated"))

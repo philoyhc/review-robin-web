@@ -6,24 +6,24 @@ server fetched are kept; the page posts none."""
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from cordware.graph import FakeDirectory, GraphError
 from app.db.models import DirectoryLookup, Reviewer
 from app.services import directory_lookups
 from app.web.routes_operator import _shared
+from cordware.graph import FakeDirectory, GraphError
 
 from ._invitation_states import _create_session
 
 CSV = (
-    "ReviewerName,ReviewerEmail\n"
-    "Jane,E0123456@example.edu\nOffice,office@example.edu\nNobody,nobody@example.edu\n"
-).encode()
+    b"ReviewerName,ReviewerEmail\n"
+    b"Jane,E0123456@example.edu\nOffice,office@example.edu\nNobody,nobody@example.edu\n"
+)
 KEYS = ["e0123456@example.edu", "office@example.edu", "nobody@example.edu"]
 
 
@@ -147,7 +147,7 @@ def test_a_stale_answer_is_asked_again_and_swept(
 ) -> None:
     base, session_id = _base(client, db, "cd-stale")
     _look_up(client, base, KEYS)
-    stale = datetime.now(timezone.utc) - directory_lookups.CACHE_TTL - timedelta(seconds=1)
+    stale = datetime.now(UTC) - directory_lookups.CACHE_TTL - timedelta(seconds=1)
     for row in db.execute(select(DirectoryLookup)).scalars():
         row.fetched_at = stale
     db.flush()
@@ -231,7 +231,7 @@ def test_the_upload_asks_again_for_a_stale_answer(
     not yet swept, is asked again (`directory_lookups.recall`)."""
     base, _ = _base(client, db, "cd-stale-upload")
     _look_up(client, base, KEYS)
-    stale = datetime.now(timezone.utc) - directory_lookups.CACHE_TTL - timedelta(seconds=1)
+    stale = datetime.now(UTC) - directory_lookups.CACHE_TTL - timedelta(seconds=1)
     for row in db.execute(select(DirectoryLookup)).scalars():
         if row.key == KEYS[0]:
             row.fetched_at = stale

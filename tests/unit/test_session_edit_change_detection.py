@@ -12,12 +12,12 @@ DST fall-back, whose wall-clock text parses to the hour's first instant.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.db.models import ReviewSession
 from app.services import sessions
 
-AWARE = datetime(2031, 3, 4, 23, 59, 59, tzinfo=timezone.utc)
+AWARE = datetime(2031, 3, 4, 23, 59, 59, tzinfo=UTC)
 NAIVE_SAME = datetime(2031, 3, 4, 23, 59, 59)
 
 
@@ -59,7 +59,7 @@ def test_clearing_or_setting_a_deadline_is_an_edit() -> None:
 def test_the_second_pass_of_a_repeated_dst_hour_is_unedited() -> None:
     # 06:30 UTC on 2026-11-01 is 01:30 EST, the second 01:30 in New York;
     # parsing "01:30" back would land on 05:30 UTC, the first (Codex, #2832).
-    stored = datetime(2026, 11, 1, 6, 30, tzinfo=timezone.utc)
+    stored = datetime(2026, 11, 1, 6, 30, tzinfo=UTC)
     assert sessions.datetime_box_unedited(
         stored, "2026-11-01T01:30", "America/New_York"
     )

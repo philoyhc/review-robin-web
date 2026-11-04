@@ -19,7 +19,7 @@ Contract:
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -327,7 +327,7 @@ def test_an_observer_with_a_grant_after_the_close_reads_available(
             after_release_identification=identification,
         )
     )
-    review_session.responses_release_at = datetime.now(timezone.utc) - timedelta(
+    review_session.responses_release_at = datetime.now(UTC) - timedelta(
         hours=1
     )
     db.commit()
@@ -345,7 +345,7 @@ def test_a_reviewer_past_the_deadline_reads_closed_even_with_answers(
     without. Before 14E a ``ready`` session past End read "Available"."""
     review_session = _make_session(client, db, code="st-rev-past")
     review_session.status = "ready"
-    review_session.deadline = datetime.now(timezone.utc) - timedelta(minutes=1)
+    review_session.deadline = datetime.now(UTC) - timedelta(minutes=1)
     reviewer = Reviewer(
         session_id=review_session.id, name="Alice", email="alice@example.edu"
     )
@@ -417,7 +417,7 @@ def test_a_draft_does_not_show_a_start_from_before_its_revert(
     client: TestClient, db: Session
 ) -> None:
     review_session = _observer_on(client, db, code="st-start", status="expired")
-    review_session.activated_at = datetime(2026, 1, 2, 9, 0, tzinfo=timezone.utc)
+    review_session.activated_at = datetime(2026, 1, 2, 9, 0, tzinfo=UTC)
     db.commit()
     assert "2026-01-02 09:00" in client.get("/me").text
     review_session.status = "draft"
@@ -582,7 +582,7 @@ def test_an_observer_past_the_deadline_reads_closed(
     14E): a ``ready`` session past End no longer shows Summarized
     collation. Before 14E it did, until the operator closed it."""
     review_session = _observer_on(client, db, code="st-obs-past", status="ready")
-    review_session.deadline = datetime.now(timezone.utc) - timedelta(minutes=1)
+    review_session.deadline = datetime.now(UTC) - timedelta(minutes=1)
     _policy(db, review_session, audience="observer", while_ongoing="summarized")
     body = client.get("/me").text
     assert AVAILABLE not in body
@@ -594,7 +594,7 @@ def test_a_reviewer_reads_available_after_release_only_with_raw(
 ) -> None:
     review_session = _make_session(client, db, code="st-rev-exp")
     review_session.status = "expired"
-    review_session.responses_release_at = datetime.now(timezone.utc) - timedelta(
+    review_session.responses_release_at = datetime.now(UTC) - timedelta(
         hours=1
     )
     instrument = _policy(
@@ -633,7 +633,7 @@ def test_an_answer_on_a_hidden_field_does_not_make_it_available(
     """The surface doesn't show it, so there is nothing to read back."""
     review_session = _make_session(client, db, code="st-rev-hidden")
     review_session.status = "ready"
-    review_session.deadline = datetime.now(timezone.utc) - timedelta(minutes=1)
+    review_session.deadline = datetime.now(UTC) - timedelta(minutes=1)
     instrument = Instrument(session_id=review_session.id, name="F", order=1)
     db.add(instrument)
     db.flush()
@@ -646,7 +646,7 @@ def test_a_prepared_session_shows_its_scheduled_start(
 ) -> None:
     review_session = _observer_on(client, db, code="st-sched", status="validated")
     review_session.scheduled_activate_at = datetime(
-        2031, 3, 4, 9, 30, tzinfo=timezone.utc
+        2031, 3, 4, 9, 30, tzinfo=UTC
     )
     db.commit()
     assert "2031-03-04 09:30" in client.get("/me").text
@@ -709,10 +709,10 @@ def test_rows_keep_their_order_when_a_session_is_edited(
     newer = _observer_on(client, db, code="ord-newer", status="ready")
     older = _observer_on(client, db, code="ord-older", status="ready")
     assert newer.id < older.id
-    older.created_at = datetime(2026, 1, 1, tzinfo=timezone.utc)
-    newer.created_at = datetime(2026, 2, 1, tzinfo=timezone.utc)
-    newer.updated_at = datetime(2026, 2, 1, tzinfo=timezone.utc)
-    older.updated_at = datetime(2026, 3, 1, tzinfo=timezone.utc)
+    older.created_at = datetime(2026, 1, 1, tzinfo=UTC)
+    newer.created_at = datetime(2026, 2, 1, tzinfo=UTC)
+    newer.updated_at = datetime(2026, 2, 1, tzinfo=UTC)
+    older.updated_at = datetime(2026, 3, 1, tzinfo=UTC)
     db.commit()
     assert older.updated_at > newer.updated_at
 

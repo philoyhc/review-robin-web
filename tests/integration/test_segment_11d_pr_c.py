@@ -11,11 +11,11 @@ from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
 from app.db.models import Assignment, Reviewer, ReviewSession
+
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
-
 from ._full_preview import get_full_preview_html
 
 

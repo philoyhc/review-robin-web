@@ -36,7 +36,7 @@ from app.services import relationships as relationships_service
 
 from ._feature_toggles import enable_relationships
 
-_SAVED = dt.datetime(2026, 10, 17, tzinfo=dt.timezone.utc)
+_SAVED = dt.datetime(2026, 10, 17, tzinfo=dt.UTC)
 _TICK = 'name="acknowledge_response_loss"'
 
 

@@ -18,7 +18,7 @@ def build_sqlite_schema(eng: Engine) -> None:
     ``Base.metadata``; ``create_all`` then builds the schema in one pass,
     skipping the migration replay.
     """
-    from app.db.base import Base
     import app.db.models  # noqa: F401  -- registers all tables on Base.metadata
+    from app.db.base import Base
 
     Base.metadata.create_all(eng)

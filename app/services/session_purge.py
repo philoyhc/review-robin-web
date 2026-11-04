@@ -27,11 +27,9 @@ from app.db.models import (
     User,
 )
 from app.logging_config import get_logger
-from app.services import audit
+from app.services import audit, session_guard, unit_of_work
 from app.services import invitations as invitations_service
-from app.services import session_guard
 from app.services import session_lifecycle as lifecycle
-from app.services import unit_of_work
 
 log = get_logger(__name__)
 
@@ -224,7 +222,7 @@ def purge_and_archive(
     *,
     review_session: ReviewSession,
     user: User,
-    purge: "list[str] | set[str]",
+    purge: list[str] | set[str],
     correlation_id: str | None = None,
 ) -> bool:
     """Optionally purge the ticked data categories, then archive.

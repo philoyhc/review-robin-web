@@ -333,8 +333,8 @@ def test_the_settings_csv_round_trips_the_selection(
 def test_the_settings_csv_refuses_a_bad_selection(cell: str) -> None:
     from app.services.session_config_io._apply_session import _apply_session_kv
     from app.services.session_config_io._apply_shared import (
-        _ParseError,
         _ParsedConfig,
+        _ParseError,
     )
 
     with pytest.raises(_ParseError):

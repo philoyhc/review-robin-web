@@ -9,10 +9,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
-from app.services import monitoring as monitoring_service
-from app.services import responses as responses_service
-from app.services import session_lifecycle as lifecycle
-from app.services import visibility_policies
 from app.db.models import (
     Assignment,
     AuditEvent,
@@ -24,12 +20,17 @@ from app.db.models import (
     ReviewSession,
     User,
 )
+from app.services import monitoring as monitoring_service
+from app.services import responses as responses_service
+from app.services import session_lifecycle as lifecycle
+from app.services import visibility_policies
+
 from ._answer_form import answer_form
-from ._instrument_states import add_group_instrument
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
+from ._instrument_states import add_group_instrument
 from ._validated import validate_session
 
 
@@ -2033,7 +2034,7 @@ def test_relationship_pair_context_tag_change_defuncts_pair_responses(
                 assignment_id=rows[name].id,
                 response_field_id=field.id,
                 value="4",
-                saved_at=_dt.datetime(2026, 5, 9, tzinfo=_dt.timezone.utc),
+                saved_at=_dt.datetime(2026, 5, 9, tzinfo=_dt.UTC),
                 version=1,
             )
         )
@@ -2177,7 +2178,7 @@ def test_relationship_repoint_clears_the_group_it_joins(
                 response_field_id=field.id,
                 value="4",
                 saved_at=_dt.datetime(
-                    2026, 5, 9, tzinfo=_dt.timezone.utc
+                    2026, 5, 9, tzinfo=_dt.UTC
                 ),
                 version=1,
             )
@@ -3023,7 +3024,7 @@ def test_generate_clears_a_group_a_new_member_joins(
             assignment_id=carol_row.id,
             response_field_id=rating.id,
             value="4",
-            submitted_at=dt.datetime.now(dt.timezone.utc),
+            submitted_at=dt.datetime.now(dt.UTC),
         )
     )
     db.add_all(

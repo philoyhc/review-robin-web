@@ -33,8 +33,8 @@ from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
-from ._validated import validate_session
 from ._public_id import public_id
+from ._validated import validate_session
 
 # Emails are deliberately in the **reverse** of name order.
 #

@@ -12,9 +12,9 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from cordware.graph import FakeDirectory, GraphError
 from app.db.models import Observer, Reviewer
 from app.web.routes_operator import _quick_setup
+from cordware.graph import FakeDirectory, GraphError
 
 from ._invitation_states import _create_session
 

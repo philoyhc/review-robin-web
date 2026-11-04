@@ -29,16 +29,16 @@ from app.db.models import (
     Observer,
     Relationship,
     Response,
-    ReviewSession,
     Reviewee,
     Reviewer,
+    ReviewSession,
 )
 from app.services import assignments, csv_imports
 from app.services import field_labels as field_labels_service
-from app.services._queries import slot_row_count, tag_slot_counts
 from app.services import instruments as instruments_service
-from app.services.text import pluralize
 from app.services import relationships as relationships_service
+from app.services._queries import slot_row_count, tag_slot_counts
+from app.services.text import pluralize
 
 
 @dataclass

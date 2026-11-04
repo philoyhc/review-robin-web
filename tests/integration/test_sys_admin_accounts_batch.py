@@ -15,10 +15,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from cordware.settings import identity_settings
 from app.db.models import AuditEvent, ReviewSession, SessionOperator, User
 from app.services import users as users_service
 from app.web import views
+from cordware.settings import identity_settings
 
 ACCOUNTS = "/operator/sys-admin/users"
 

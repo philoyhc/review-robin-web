@@ -32,10 +32,10 @@ from app.db.models import (
     SessionOperator,
     User,
 )
-from app.services.session_config_io import serialize_session_config
+from app.services.extracts.responses_extract import serialize_responses
 from app.services.extracts.reviewees_extract import serialize_reviewees
 from app.services.extracts.reviewers_extract import serialize_reviewers
-from app.services.extracts.responses_extract import serialize_responses
+from app.services.session_config_io import serialize_session_config
 
 _INLINE = dict(
     _inline_data_type="Integer",
@@ -98,8 +98,8 @@ def _seed(db: Session) -> ReviewSession:
             assignment_id=a.id,
             response_field_id=field.id,
             value="4",
-            saved_at=dt.datetime(2026, 6, 1, 9, 0, tzinfo=dt.timezone.utc),
-            submitted_at=dt.datetime(2026, 6, 1, 9, 5, tzinfo=dt.timezone.utc),
+            saved_at=dt.datetime(2026, 6, 1, 9, 0, tzinfo=dt.UTC),
+            submitted_at=dt.datetime(2026, 6, 1, 9, 5, tzinfo=dt.UTC),
             version=1,
         )
     )
@@ -453,9 +453,8 @@ def test_a_sign_in_stop_keeps_the_set_and_asks_to_renew(
     directory check. Nothing is created, the stash and its token stay, and
     the page asks to renew; the renew button's resubmit of the commit
     form then rehydrates."""
-    from cordware.graph import FakeDirectory, GraphError
-
     from app.web.routes_operator import _rehydrate
+    from cordware.graph import FakeDirectory, GraphError
 
     class _Expired(FakeDirectory):
         def find_users(self, address: str):

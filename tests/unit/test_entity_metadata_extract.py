@@ -41,7 +41,6 @@ from app.services.extracts.entity_metadata_extract import (
     self_review_handling_filename_suffix,
 )
 
-
 # --------------------------------------------------------------------------- #
 # Fixtures.
 # --------------------------------------------------------------------------- #

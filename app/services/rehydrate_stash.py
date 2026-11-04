@@ -12,7 +12,7 @@ resolved files); this module just stores / fetches / expires it.
 from __future__ import annotations
 
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -27,14 +27,14 @@ _TOKEN_BYTES = 32
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _as_aware_utc(value: datetime) -> datetime:
     """SQLite drops tzinfo on write, so a fetched ``created_at`` can be
     naive. Treat naive values as UTC for age comparison."""
     if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
+        return value.replace(tzinfo=UTC)
     return value
 
 

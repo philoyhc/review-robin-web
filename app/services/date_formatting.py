@@ -32,10 +32,8 @@ these helpers only take the resolved zone name.
 from __future__ import annotations
 
 import re
-
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
-
 
 _DATETIME_FORMAT = "%Y-%m-%d %H:%M"
 _DATE_FORMAT = "%Y-%m-%d"
@@ -82,8 +80,8 @@ def _as_utc(value: datetime) -> datetime:
     is UTC, and SQLite returns them naive.
     """
     if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
-    return value.astimezone(timezone.utc)
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
 
 
 def _converts(value: datetime, tz_name: str | None) -> bool:
@@ -227,7 +225,7 @@ def parse_local_datetime(value: str, tz_name: str | None) -> datetime:
     local = naive.replace(tzinfo=resolve_zone(tz_name))
     if not in_entry_range(local):
         raise ValueError(f"datetime out of range: {value!r}")
-    return local.astimezone(timezone.utc).replace(tzinfo=None)
+    return local.astimezone(UTC).replace(tzinfo=None)
 
 
 def iso_in_zone(

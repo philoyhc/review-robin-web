@@ -146,7 +146,8 @@ def test_one_assignee_starts_partway_into_the_term() -> None:
 def test_the_guard_covers_qualifies_and_refuses() -> None:
     """Ruling point 6: whole cover qualifies (0), part cover warns with the
     days missed at either end, and none at all is refused (None)."""
-    from residentialapps.residentialops.sample_data import CURRENT_TERM as term, gap_days
+    from residentialapps.residentialops.sample_data import CURRENT_TERM as term
+    from residentialapps.residentialops.sample_data import gap_days
 
     assert gap_days("2026-08-01 –", term) == 0
     assert gap_days("2026-08-17 –", term) == 14

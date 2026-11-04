@@ -8,6 +8,8 @@ keeps the per-page wiring drop-in for PRs 6+.
 
 from __future__ import annotations
 
+from datetime import UTC
+
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -403,10 +405,10 @@ def test_release_and_stop_visible_gate_on_expired_only(
     the session is over") and keeps the ≤4-visible-button budget
     safe across the draft / validated / ready states regardless
     of any backdated ``responses_release_at``."""
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
 
     sess = _seed_pair_plus_pinned(client, db, code="release-stop-pre-expired")
-    sess.responses_release_at = datetime.now(timezone.utc) - timedelta(
+    sess.responses_release_at = datetime.now(UTC) - timedelta(
         hours=1
     )
 

@@ -32,9 +32,8 @@ import re
 from collections import Counter
 from pathlib import Path
 
-from starlette.routing import Mount
-
 from _rrw_app import rrw_app
+from starlette.routing import Mount
 
 REPO = Path(__file__).resolve().parents[2]
 APP = REPO / "app"

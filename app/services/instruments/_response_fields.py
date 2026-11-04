@@ -49,7 +49,6 @@ from app.services.instruments._state import (
     _response_count_for_field,
 )
 
-
 # Segment 18J Wave 2 PR iii-b2 — default response fields now carry
 # inline bound info directly. Pre-iii-b2 they pointed at the seeded
 # ``1-to-5int`` + ``Long_text`` RTDs; all seeded RTDs retire in

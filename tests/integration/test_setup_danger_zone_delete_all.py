@@ -104,7 +104,7 @@ def _responses(
                 assignment_id=a.id,
                 response_field_id=f.id,
                 value=str(i),
-                saved_at=_dt.datetime(2026, 9, 9, tzinfo=_dt.timezone.utc),
+                saved_at=_dt.datetime(2026, 9, 9, tzinfo=_dt.UTC),
                 version=1,
             )
         )

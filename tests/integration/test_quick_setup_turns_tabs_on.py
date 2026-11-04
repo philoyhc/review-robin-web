@@ -17,6 +17,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import AuditEvent, Reviewee, Reviewer, ReviewSession
+
 from ._quick_setup_refusal import refusal
 
 OBSERVERS = b"ObserverEmail,ObserverName\nola@example.edu,Ola\n"

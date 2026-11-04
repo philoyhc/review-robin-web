@@ -17,7 +17,6 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.web import urls
 from app.db.models import (
     Invitation,
     Reviewee,
@@ -27,10 +26,10 @@ from app.db.models import (
 )
 from app.db.session import get_db
 from app.services import assignments, invitations, monitoring, validation
-from app.services.email_identity import normalize_email
-from app.services._queries import tag_slot_presence
 from app.services import session_lifecycle as lifecycle
-from app.web import breadcrumbs, views
+from app.services._queries import tag_slot_presence
+from app.services.email_identity import normalize_email
+from app.web import breadcrumbs, urls, views
 from app.web.deps import (
     get_or_create_user,
     request_correlation_id,
@@ -42,7 +41,6 @@ from app.web.routes_operator._shared import (
     _templates,
     observe_scheduled_events_on_load,
 )
-
 
 # --------------------------------------------------------------------------- #
 # Column sort — Segment 19I Item 11 rung 2.

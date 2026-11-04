@@ -48,8 +48,8 @@ from __future__ import annotations
 # via ``_surface._<name>`` and the byte-stable surface keeps those
 # working unchanged.
 from ._context import (
-    _load_assignments_with_relations,  # noqa: F401
     _instruments_for_session,  # noqa: F401
+    _load_assignments_with_relations,  # noqa: F401
     _pages_for_session,
     _reviewer_row_sort_key,  # noqa: F401
     _surface_context,
@@ -74,7 +74,6 @@ from ._status import (
     _page_status_for_group,  # noqa: F401
     _session_status,  # noqa: F401
 )
-
 
 __all__ = [
     "GROUP_MEMBER_NAME_LIMIT",

@@ -38,7 +38,8 @@ there. Test code and strict mode come later, each in its own plan.
   `requirements.txt`. Error counts move with both: 2.1 types `Select`
   and `Result` differently from 2.0, and a gate has to give the same
   answer on every machine.
-- **Lint rules widened first:** `ruff`'s `select` grows to
+- **Lint rules widened first** (split into 2a and 2b, and `E` kept to
+  ruff's default subset: `## Status`): `ruff`'s `select` grows to
   `E, F, I, B, UP, SIM` in its own rung, before the type fixes, so their
   diffs are not mixed with reformatting.
 
@@ -123,6 +124,23 @@ pyright --outputjson > /tmp/pyright.json
 python3 -c "import json,collections;d=json.load(open('/tmp/pyright.json'));print(d['summary']);print(collections.Counter(x.get('rule') for x in d['generalDiagnostics'] if x['severity']=='error').most_common())"
 ```
 
+## Status
+
+- **Rung 1** merged 2026-11-04 (`#3584`): config, pins, docs, the hook.
+  One read: the blast-radius rows, the hook's guard and comment, README's
+  dev-dependency note; all fixed in the PR.
+- **Rung 2 split in two** (author, 2026-11-04): **2a** `I` and `UP`
+  (mechanical, `ruff check --fix`), then **2b** `B` and `SIM`
+  (judgment). Decisions confirmed at build:
+  - `E` stays ruff's default subset (`E4`, `E7`, `E9`), through
+    `extend-select`: the whole family adds `E501`, 1,471 long lines with
+    no formatter to fix them.
+  - `UP042` (`StrEnum`) ignored: it changes what `str()` and `format()`
+    give for a member, which templates and audit details render.
+  - 2a leaves pyright at 307 errors. 2b's preview: 663 findings, 573 of
+    them `B008` (FastAPI's `Depends` / `Form` defaults, for
+    `extend-immutable-calls`).
+
 ## PR ladder
 
 1. **Config and pins.** `[tool.pyright]` in `pyproject.toml`
@@ -136,7 +154,7 @@ python3 -c "import json,collections;d=json.load(open('/tmp/pyright.json'));print
    (only where no `node` is on PATH) happens at session start, not
    mid-gate. Not in CI yet. Code: its own
    read (it touches `.claude/hooks/`).
-2. **Ruff rules widened.** `[tool.ruff.lint] select = ["E", "F", "I",
+2. **Ruff rules widened** (built as 2a and 2b, `## Status`). `[tool.ruff.lint] select = ["E", "F", "I",
    "B", "UP", "SIM"]` and `ruff check --fix`, then the findings `--fix`
    leaves, by hand. Nothing else in the PR. Its own read, of the config
    and the hand fixes; the mechanical diff is summarized per rule in the
@@ -172,8 +190,8 @@ python3 -c "import json,collections;d=json.load(open('/tmp/pyright.json'));print
 
 ## Open questions
 
-- **Rung 2's rule set:** all six families at once, or `I` and `UP` first
-  (mechanical) and `B` and `SIM` after (judgment)? Author, at rung 2.
+- ~~Rung 2's rule set~~: two steps, `I` and `UP` then `B` and `SIM`
+  (author, 2026-11-04).
 - **Tests:** gate them later with the two optional-access rules relaxed
   and ratcheted back per directory (`tests/unit/` first), or leave test
   code to running it? Its own plan; author.

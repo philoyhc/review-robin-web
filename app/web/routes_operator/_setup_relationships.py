@@ -25,7 +25,6 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.web import urls
 from app.db.models import Relationship, ReviewSession, User
 from app.db.session import get_db
 from app.services import assignments
@@ -34,21 +33,10 @@ from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
 from app.services.csv_imports import AppendConflict
 from app.services.relationships import RelationshipOperationError
-from app.web import breadcrumbs, views
+from app.web import breadcrumbs, urls, views
 from app.web.deps import (
     get_or_create_user,
     request_correlation_id,
-)
-from app.web.routes_operator._shared import (
-    _setup_row_window,
-    _redirect_keeping_selection,
-    acknowledged_loss,
-    _row_action_anchor,
-    _require_delete_confirm,
-    _require_editable,
-    _require_selected_response_loss_ack,
-    require_relationships_enabled_session,
-    _templates,
 )
 from app.web.roster_import import (
     _save_field_labels,
@@ -56,6 +44,17 @@ from app.web.roster_import import (
     hold_for_ask,
     read_upload,
     release_hold,
+)
+from app.web.routes_operator._shared import (
+    _redirect_keeping_selection,
+    _require_delete_confirm,
+    _require_editable,
+    _require_selected_response_loss_ack,
+    _row_action_anchor,
+    _setup_row_window,
+    _templates,
+    acknowledged_loss,
+    require_relationships_enabled_session,
 )
 
 router = APIRouter()

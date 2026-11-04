@@ -77,10 +77,10 @@ class RollupParts:
     all_required_and_submitted: bool
 
     @staticmethod
-    def empty() -> "RollupParts":
+    def empty() -> RollupParts:
         return RollupParts(0, 0, 0, 0, False, True)
 
-    def __add__(self, other: "RollupParts") -> "RollupParts":
+    def __add__(self, other: RollupParts) -> RollupParts:
         return RollupParts(
             total_assignments=self.total_assignments + other.total_assignments,
             completed_count=self.completed_count + other.completed_count,

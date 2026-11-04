@@ -11,7 +11,7 @@ governed fields on both halves together."""
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -43,7 +43,7 @@ from .test_monitoring_rollup_parity import (
 )
 from .test_reminders import _ready_session
 
-T0 = datetime(2026, 9, 1, 12, 0, tzinfo=timezone.utc)
+T0 = datetime(2026, 9, 1, 12, 0, tzinfo=UTC)
 
 
 def _mixed_session(db: Session):

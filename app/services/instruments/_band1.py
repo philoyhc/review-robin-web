@@ -51,7 +51,6 @@ from app.services import audit
 from app.services import session_lifecycle as lifecycle
 from app.services.instruments._state import _instrument_label
 
-
 # UI operator label → engine predicate operator.
 _UI_TO_ENGINE_OP: dict[str, str] = {
     "IS": "equals",

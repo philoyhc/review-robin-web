@@ -15,8 +15,8 @@ from __future__ import annotations
 
 import pytest
 import sqlalchemy as sa
-from sqlalchemy import select
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Instrument, ReviewSession, User

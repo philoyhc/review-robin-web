@@ -12,8 +12,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from .test_instrument_builder_routes import _card_slice, _rf_fn
-from .test_reviewer_response_flow import intro_columns
 from .test_response_field_branching_builder import _page, _row, _rows_table
+from .test_reviewer_response_flow import intro_columns
 
 
 def test_join_reads_the_up_arrow_and_detach_the_down_arrow(

@@ -9,7 +9,12 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from residentialapps.residentialops import sample_data
-from residentialapps.residentialops.pages import areas_for, choices, placeholders_previewers_only, render
+from residentialapps.residentialops.pages import (
+    areas_for,
+    choices,
+    placeholders_previewers_only,
+    render,
+)
 
 router = APIRouter(dependencies=[Depends(placeholders_previewers_only)])
 

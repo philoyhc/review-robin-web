@@ -6,7 +6,7 @@ caption, and the Schedule timeline preview block.
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -18,6 +18,7 @@ from app.web.views._workflow_card import (
     build_auto_send_invites_caption,
     build_schedule_timeline,
 )
+
 from ._full_matrix import pin_full_matrix_on_all_instruments
 
 
@@ -92,7 +93,7 @@ def test_parser_returns_none_for_empty(db: Session) -> None:
 
 def test_parser_splits_comma_separated_entries(db: Session) -> None:
     """Multi-entry strings parse to a clean list with stripped whitespace."""
-    start = datetime.now(timezone.utc) + timedelta(days=30)
+    start = datetime.now(UTC) + timedelta(days=30)
     result = scheduled_events.parse_and_validate_invite_offsets(
         "-P1D , -PT4H", scheduled_activate_at=start
     )
@@ -100,7 +101,7 @@ def test_parser_splits_comma_separated_entries(db: Session) -> None:
 
 
 def test_parser_rejects_invalid_iso_entry(db: Session) -> None:
-    start = datetime.now(timezone.utc) + timedelta(days=30)
+    start = datetime.now(UTC) + timedelta(days=30)
     try:
         scheduled_events.parse_and_validate_invite_offsets(
             "NOT-AN-ISO", scheduled_activate_at=start
@@ -113,7 +114,7 @@ def test_parser_rejects_invalid_iso_entry(db: Session) -> None:
 
 def test_parser_rejects_positive_offset(db: Session) -> None:
     """Positive offsets fire at or after Start — flag at save."""
-    start = datetime.now(timezone.utc) + timedelta(days=30)
+    start = datetime.now(UTC) + timedelta(days=30)
     try:
         scheduled_events.parse_and_validate_invite_offsets(
             "P1D", scheduled_activate_at=start
@@ -126,7 +127,7 @@ def test_parser_rejects_positive_offset(db: Session) -> None:
 
 def test_parser_rejects_too_small_notice_gap(db: Session) -> None:
     """|offset| less than REVIEWER_NOTICE_MIN_HOURS is rejected."""
-    start = datetime.now(timezone.utc) + timedelta(days=30)
+    start = datetime.now(UTC) + timedelta(days=30)
     try:
         scheduled_events.parse_and_validate_invite_offsets(
             "-PT30M", scheduled_activate_at=start
@@ -141,7 +142,7 @@ def test_parser_rejects_offset_exceeding_10_day_cap(db: Session) -> None:
     """|offset| > 10 days is rejected per the Part 0b spec
     "Maximum offset" rule. Applies whether or not the anchor is
     set (the cap is shape-only)."""
-    start = datetime.now(timezone.utc) + timedelta(days=30)
+    start = datetime.now(UTC) + timedelta(days=30)
     try:
         scheduled_events.parse_and_validate_invite_offsets(
             "-P11D", scheduled_activate_at=start
@@ -160,7 +161,7 @@ def test_parser_rejects_offset_exceeding_10_day_cap(db: Session) -> None:
 def test_parser_rejects_too_close_to_now(db: Session) -> None:
     """Resolved fire moment before now + SCHEDULED_OPERATIONAL_LEAD_HOURS rejected."""
     # Start in 30 minutes; offset of -PT1H resolves to 30 minutes ago.
-    start = datetime.now(timezone.utc) + timedelta(minutes=30)
+    start = datetime.now(UTC) + timedelta(minutes=30)
     try:
         scheduled_events.parse_and_validate_invite_offsets(
             "-PT1H", scheduled_activate_at=start
@@ -187,7 +188,7 @@ def test_parser_accepts_when_start_unset(db: Session) -> None:
 def test_create_accepts_invite_offsets_with_valid_start(
     client: TestClient, db: Session
 ) -> None:
-    start = datetime.now(timezone.utc) + timedelta(days=30)
+    start = datetime.now(UTC) + timedelta(days=30)
     status_code, _, session_id = _create_session(
         client,
         db,
@@ -202,7 +203,7 @@ def test_create_accepts_invite_offsets_with_valid_start(
 
 
 def test_create_rejects_invalid_invite_offset(client: TestClient) -> None:
-    start = datetime.now(timezone.utc) + timedelta(days=30)
+    start = datetime.now(UTC) + timedelta(days=30)
     response = client.post(
         "/operator/sessions",
         data={
@@ -222,7 +223,7 @@ def test_edit_round_trips_invite_offsets(
 ) -> None:
     _, _, session_id = _create_session(client, db, "edit-inv")
     public_id = db.get(ReviewSession, session_id).public_id
-    start = datetime.now(timezone.utc) + timedelta(days=30)
+    start = datetime.now(UTC) + timedelta(days=30)
 
     # Set
     response = client.post(
@@ -265,7 +266,7 @@ def test_edit_emits_invite_schedule_updated_audit(
 ) -> None:
     _, _, session_id = _create_session(client, db, "audit-inv")
     public_id = db.get(ReviewSession, session_id).public_id
-    start = datetime.now(timezone.utc) + timedelta(days=30)
+    start = datetime.now(UTC) + timedelta(days=30)
     client.post(
         f"/operator/sessions/{public_id}/config",
         data={
@@ -323,7 +324,7 @@ def test_timeline_renders_start_and_invite_offsets_chronologically(
         payload=SessionCreate(name="t", code="tl-rows", description="d"),
     )
     rs.scheduled_activate_at = datetime(
-        2099, 6, 1, 9, 0, tzinfo=timezone.utc
+        2099, 6, 1, 9, 0, tzinfo=UTC
     )
     rs.invite_offsets = ["-PT2H", "-P1D"]
     db.flush()
@@ -377,7 +378,7 @@ def test_caption_amber_warning_when_draft_not_prepared(db: Session) -> None:
         payload=SessionCreate(name="t", code="cap-not-prep", description="d"),
     )
     rs.scheduled_activate_at = datetime(
-        2099, 6, 1, 9, 0, tzinfo=timezone.utc
+        2099, 6, 1, 9, 0, tzinfo=UTC
     )
     rs.invite_offsets = ["-P1D"]
     db.flush()
@@ -404,7 +405,8 @@ def test_caption_amber_when_validated_but_no_invitations(
     """
     from app.db.models import User
     from app.schemas.sessions import SessionCreate
-    from app.services import sessions as sessions_service, session_lifecycle as lifecycle
+    from app.services import session_lifecycle as lifecycle
+    from app.services import sessions as sessions_service
 
     op = User(email="op-cap-amber@example.edu", display_name="Op")
     db.add(op)
@@ -415,7 +417,7 @@ def test_caption_amber_when_validated_but_no_invitations(
         payload=SessionCreate(name="t", code="cap-amber", description="d"),
     )
     rs.scheduled_activate_at = datetime(
-        2099, 6, 1, 9, 0, tzinfo=timezone.utc
+        2099, 6, 1, 9, 0, tzinfo=UTC
     )
     rs.invite_offsets = ["-P1D"]
     rs.status = lifecycle.SessionStatus.validated.value
@@ -450,7 +452,11 @@ def test_caption_green_when_invitations_exist(db: Session) -> None:
     from app.schemas.sessions import SessionCreate
     from app.services import (
         invitations as invitations_service,
+    )
+    from app.services import (
         session_lifecycle as lifecycle,
+    )
+    from app.services import (
         sessions as sessions_service,
     )
 
@@ -493,7 +499,7 @@ def test_caption_green_when_invitations_exist(db: Session) -> None:
     )
 
     rs.scheduled_activate_at = datetime(
-        2099, 6, 1, 9, 0, tzinfo=timezone.utc
+        2099, 6, 1, 9, 0, tzinfo=UTC
     )
     rs.invite_offsets = ["-P1D"]
     rs.status = lifecycle.SessionStatus.validated.value
@@ -519,7 +525,7 @@ def test_caption_renders_on_workflow_card_not_invitations_page(
     Invitations page no longer renders it as a standalone banner."""
     from app.db.models import ReviewSession
 
-    start = datetime.now(timezone.utc) + timedelta(days=30)
+    start = datetime.now(UTC) + timedelta(days=30)
     _, _, session_id = _create_session(
         client,
         db,

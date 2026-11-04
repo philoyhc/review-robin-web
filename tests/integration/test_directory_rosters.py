@@ -18,10 +18,10 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from cordware.graph import FakeDirectory
 from app.db.models import AuditEvent, Observer, Reviewee, Reviewer
 from app.services import directory_accounts
 from app.web.routes_operator import _setup_observers, _shared
+from cordware.graph import FakeDirectory
 
 from ._invitation_states import _create_session
 
@@ -61,12 +61,12 @@ def test_an_import_binds_each_resolved_address_and_counts_the_check(
 ) -> None:
     session = _session(client, db, "dir-import")
     csv = (
-        "ReviewerName,ReviewerEmail\n"
-        "Jane by mail,Jane.Tan@example.edu\n"
-        "Jane by UPN,e0123456@example.edu\n"
-        "Office,office@example.edu\n"
-        "Nobody,nobody@example.edu\n"
-    ).encode()
+        b"ReviewerName,ReviewerEmail\n"
+        b"Jane by mail,Jane.Tan@example.edu\n"
+        b"Jane by UPN,e0123456@example.edu\n"
+        b"Office,office@example.edu\n"
+        b"Nobody,nobody@example.edu\n"
+    )
     response = client.post(
         f"/operator/sessions/{session.public_id}/reviewers/import",
         files={"file": ("r.csv", csv, "text/csv")},
@@ -125,7 +125,7 @@ def test_anonymous_reviewee_identifiers_are_neither_looked_up_nor_counted(
     client: TestClient, db: Session, directory: FakeDirectory
 ) -> None:
     session = _session(client, db, "dir-anon")
-    csv = "RevieweeName,RevieweeEmail\nAnon,STU-0001\nJane,e0123456@example.edu\n".encode()
+    csv = b"RevieweeName,RevieweeEmail\nAnon,STU-0001\nJane,e0123456@example.edu\n"
     client.post(
         f"/operator/sessions/{session.public_id}/reviewees/import",
         files={"file": ("e.csv", csv, "text/csv")},
@@ -144,7 +144,7 @@ def test_an_observer_import_binds_too(
     client: TestClient, db: Session, directory: FakeDirectory
 ) -> None:
     session = _session(client, db, "dir-obs")
-    csv = "ObserverName,ObserverEmail\nJane,e0123456@example.edu\n".encode()
+    csv = b"ObserverName,ObserverEmail\nJane,e0123456@example.edu\n"
     response = client.post(
         f"/operator/sessions/{session.public_id}/observers/import",
         files={"file": ("o.csv", csv, "text/csv")},
@@ -235,9 +235,9 @@ def test_the_setup_page_shows_the_last_imports_directory_check(
     page = client.get(f"/operator/sessions/{session.public_id}/reviewers?unlocked=1")
     assert "data-directory-check" not in page.text  # no import yet
     csv = (
-        "ReviewerName,ReviewerEmail\n"
-        "Jane,e0123456@example.edu\nOffice,office@example.edu\nNobody,nobody@example.edu\n"
-    ).encode()
+        b"ReviewerName,ReviewerEmail\n"
+        b"Jane,e0123456@example.edu\nOffice,office@example.edu\nNobody,nobody@example.edu\n"
+    )
     client.post(
         f"/operator/sessions/{session.public_id}/reviewers/import",
         files={"file": ("r.csv", csv, "text/csv")},

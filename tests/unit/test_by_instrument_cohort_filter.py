@@ -17,7 +17,7 @@ suite — this file pins only the observer additions.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
@@ -34,7 +34,6 @@ from app.db.models import (
 from app.services.extracts.by_instrument_extract import (
     serialize_by_instrument,
 )
-
 
 # ── Fixtures ─────────────────────────────────────────────────────────
 
@@ -125,7 +124,7 @@ def _seed_two_pairs(db: Session) -> dict:
     db.add_all([a1, a2])
     db.flush()
 
-    submitted = datetime.now(timezone.utc)
+    submitted = datetime.now(UTC)
     db.add_all(
         [
             Response(

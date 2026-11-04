@@ -12,6 +12,7 @@ from app.db.models.observer import Observer
 from app.db.models.rehydrate_stash import RehydrateStash
 from app.db.models.relationship import Relationship
 from app.db.models.response import Response
+
 # Per-session ``response_type_definitions`` table retired 2026-05-26.
 # Bounds + data_type live inline on ``instrument_response_fields``;
 # the per-instrument RTD card on the Instruments page retired in the
@@ -19,6 +20,7 @@ from app.db.models.response import Response
 from app.db.models.review_session import ReviewSession
 from app.db.models.reviewee import Reviewee
 from app.db.models.reviewer import Reviewer
+
 # Wave 5 PR 5.2 — ``RuleSet`` + ``RuleSetRevision`` (operator-library
 # tier) retired. ``app.db.models.rule_set`` module deleted; the
 # ``operator_rule_sets`` + ``rule_set_revisions`` tables drop in

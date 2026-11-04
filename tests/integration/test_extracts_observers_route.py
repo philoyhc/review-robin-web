@@ -21,7 +21,6 @@ from sqlalchemy.orm import Session
 from app.db.models import AuditEvent, ReviewSession
 from app.web import views
 
-
 OBSERVER_CSV = (
     b"ObserverName,ObserverEmail,ObserverTag1\n"
     b"Oren,oren@example.edu,Mentor\n"

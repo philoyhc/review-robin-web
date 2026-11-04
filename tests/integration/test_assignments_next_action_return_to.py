@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession
 from app.services import session_lifecycle as lifecycle
+
 from ._full_matrix import pin_full_matrix_on_all_instruments
 from ._validated import validate_session
 

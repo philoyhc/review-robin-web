@@ -27,14 +27,14 @@ from app.db.models import (
     Instrument,
     ReviewSession,
 )
+from app.services import instruments as instruments_service
+
 from ._answer_form import answer_form
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
-from app.services import instruments as instruments_service
 from ._validated import validate_session
-
 
 
 def _setup_two_instrument_session(

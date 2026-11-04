@@ -4,7 +4,7 @@ import math
 import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -14,27 +14,27 @@ from app.db.models import (
     Assignment,
     InstrumentResponseField,
     Response,
-    ReviewSession,
     Reviewer,
+    ReviewSession,
     User,
 )
 from app.schemas.responses import ResponseUpsert
 from app.services import audit
 from app.services import session_lifecycle as lifecycle
-from app.services.text import decimal_text, pluralize
 from app.services.responses._branch_rule import drop_closed_branch_answers
-from app.services.responses._form_keys import ANSWER_KEY_PATTERN
 from app.services.responses._branching import (
     DECIMAL_PATTERN,
     may_be_required_field_ids,
     required_field_ids,
 )
+from app.services.responses._form_keys import ANSWER_KEY_PATTERN
 from app.services.responses._group_reconciliation import (
     _expand_group_upserts,
     _group_instrument_ids,
     _group_key_by_assignment,
     _session_position_map,
 )
+from app.services.text import decimal_text, pluralize
 
 _DECIMAL = re.compile(DECIMAL_PATTERN)
 _INTEGER = re.compile(r"[+-]?[0-9]+")
@@ -414,7 +414,7 @@ def _apply_upserts(
             # counts the changes (findings R6): a changed save moves both,
             # an unchanged one touches neither.
             existing.value = u.value
-            existing.saved_at = datetime.now(timezone.utc)
+            existing.saved_at = datetime.now(UTC)
             # In SQL, so two concurrent saves (reviewer saves share the
             # session lock) both count.
             existing.version = Response.version + 1
@@ -1004,7 +1004,7 @@ def submit(
             submitted=False, missing=missing, errors=[], submitted_count=0
         )
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     submitted_count = 0
     for assignment in assignments + excluded:
         rows = list(

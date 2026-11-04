@@ -29,11 +29,10 @@ from fastapi import APIRouter, Depends, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
-from app.web import urls
 from app.db.models import Reviewee, ReviewSession, User
 from app.db.session import get_db
 from app.services import reviewees as reviewees_service
-from app.web import views
+from app.web import urls, views
 from app.web.deps import (
     get_or_create_user,
     require_reviewee_with_current_grant,

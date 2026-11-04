@@ -16,8 +16,8 @@ from playwright.sync_api import Locator, Page, expect
 
 from ._builder import (
     REVIEWER_EMAIL,
-    give_a_field_help_text,
     activate,
+    give_a_field_help_text,
     open_card,
     open_unlocked,
     rows,

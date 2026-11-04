@@ -27,8 +27,8 @@ from __future__ import annotations
 
 import re
 import traceback
-from collections.abc import Callable
 from collections import Counter
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -41,10 +41,10 @@ from app.db.models import ReviewSession
 from app.schemas.validation import Severity, ValidationIssue
 from app.services import validation
 from app.web import views
-from ._full_matrix import pin_full_matrix_on_all_instruments
-from ._validation_scenarios import SCENARIOS
-from ._validated import validate_session
 
+from ._full_matrix import pin_full_matrix_on_all_instruments
+from ._validated import validate_session
+from ._validation_scenarios import SCENARIOS
 
 # Every page that renders `operator/partials/next_action_card.html`,
 # as a URL suffix on `/operator/sessions/{id}`. Session Home is the

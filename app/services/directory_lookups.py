@@ -18,16 +18,15 @@ saves nothing until an import does, which audits as before.
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from cordware.graph import Directory, DirectoryUser, Outcome, look_up_all
-
 from app.db.models import DirectoryLookup, User
 from app.services import directory_accounts
+from cordware.graph import Directory, DirectoryUser, Outcome, look_up_all
 
 #: How long a fetched answer stands in for a lookup (author, 2026-11-03):
 #: long enough to look a large file up and upload it, short enough that
@@ -36,14 +35,14 @@ CACHE_TTL = timedelta(minutes=15)
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _fresh(row: DirectoryLookup, now: datetime) -> bool:
     """SQLite drops tzinfo on write; a naive value is UTC."""
     fetched = row.fetched_at
     if fetched.tzinfo is None:
-        fetched = fetched.replace(tzinfo=timezone.utc)
+        fetched = fetched.replace(tzinfo=UTC)
     return now - fetched <= CACHE_TTL
 
 
@@ -75,7 +74,7 @@ def _rows(db: Session, *, user: User, session_id: int, keys: list[str]) -> list[
 
 def _utc(value: datetime) -> datetime:
     """SQLite drops tzinfo on write; a naive value is UTC."""
-    return value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
+    return value if value.tzinfo is not None else value.replace(tzinfo=UTC)
 
 
 def recall(
@@ -196,7 +195,7 @@ def sweep(db: Session) -> int:
         for row_id, fetched_at in db.execute(
             select(DirectoryLookup.id, DirectoryLookup.fetched_at)
         )
-        if now - (fetched_at if fetched_at.tzinfo else fetched_at.replace(tzinfo=timezone.utc))
+        if now - (fetched_at if fetched_at.tzinfo else fetched_at.replace(tzinfo=UTC))
         > CACHE_TTL
     ]
     if stale:

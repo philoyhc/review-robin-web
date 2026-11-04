@@ -142,11 +142,10 @@ def test_the_object_id_is_matched_in_any_case(db: Session, monkeypatch: pytest.M
     """21F's rule: an Entra GUID may arrive in either case. An invite binds
     it folded; an account already holding it in another case is the same
     person; sign-in finds the row whichever case the header carries."""
-    from cordware.graph import DirectoryUser, FakeDirectory
-
     from app.auth.identity import AuthenticatedUser
     from app.services import users
     from app.services.directory_accounts import look_up_one
+    from cordware.graph import DirectoryUser, FakeDirectory
 
     upper = JANE.upper()
     shouting = FakeDirectory((DirectoryUser(upper, "Jane Tan", "jane.tan@example.edu", "e0123456@example.edu"),))
@@ -181,9 +180,8 @@ def test_the_cheap_refusals_come_before_the_lookup(
 
 
 def test_the_fake_sign_in_s_id_is_no_one_s(db: Session) -> None:
-    from cordware.settings import identity_settings
-
     from app.services.users import is_verified
+    from cordware.settings import identity_settings
 
     assert not is_verified(User(email="dev@example.edu", external_principal_id=identity_settings.fake_auth_principal_id))
     assert not is_verified(User(email="dev@example.edu", external_principal_id="  "))

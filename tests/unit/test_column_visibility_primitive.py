@@ -13,7 +13,6 @@ nothing else in the suite would notice.
 from __future__ import annotations
 
 import re
-
 from pathlib import Path
 
 import pytest

@@ -20,7 +20,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
-
 from app.db.models import (
     Assignment,
     AuditEvent,
@@ -32,9 +31,9 @@ from app.db.models import (
     User,
 )
 from app.schemas.responses import ResponseUpsert
+from app.services import instruments as instruments_service
 from app.services import monitoring
 from app.services import responses as responses_service
-from app.services import instruments as instruments_service
 from app.services.instruments import ensure_default_instrument
 
 

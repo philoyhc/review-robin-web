@@ -13,6 +13,7 @@ Covers:
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import UTC
 
 import pytest
 from fastapi.testclient import TestClient
@@ -23,17 +24,18 @@ from app.auth.identity import AuthenticatedUser
 from app.db.models import (
     Assignment,
     AuditEvent,
+    Response,
     Reviewee,
     Reviewer,
-    Response,
     ReviewSession,
 )
+from app.web import views
+
 from ._answer_form import answer_form
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
-from app.web import views
 from ._validated import validate_session
 
 
@@ -170,7 +172,7 @@ def _attach_one_response(
     """Attach one ``Response`` to one of the session's assignments so the
     chrome Responses pill counts it. ``submitted`` stamps ``submitted_at``
     (a submitted review) vs. leaving it null (an in-progress draft)."""
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     from app.db.models import InstrumentResponseField
 
@@ -191,7 +193,7 @@ def _attach_one_response(
             assignment_id=assignment.id,
             response_field_id=field.id,
             value="4",
-            submitted_at=datetime.now(timezone.utc) if submitted else None,
+            submitted_at=datetime.now(UTC) if submitted else None,
         )
     )
     db.commit()
@@ -428,9 +430,10 @@ def _seed_responses(client: TestClient, db: Session) -> tuple[ReviewSession, int
         provider="aad",
     )
 
+    from _rrw_app import rrw_app
+
     from app.auth.identity import get_current_user
     from app.db.session import get_db
-    from _rrw_app import rrw_app
 
     app = rrw_app()
 
@@ -1228,14 +1231,14 @@ def test_config_card_invite_offset_shows_offset_plus_resolved_datetime(
 ) -> None:
     """18R Item 4 — in display mode the Send-invites offset renders as two
     pills: the ISO offset, then its resolved send datetime (Start + offset)."""
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     review_session = _make_session(client, db, code="cfg-offset")
     # Far-future Start so the resolved send datetime stays ahead of "now"
     # (a past Start flips the config card's display and drops the resolved
     # pill — the assertion below). Matches the 2099 dates used elsewhere here.
     review_session.scheduled_activate_at = datetime(
-        2099, 8, 30, 0, 0, tzinfo=timezone.utc
+        2099, 8, 30, 0, 0, tzinfo=UTC
     )
     review_session.invite_offsets = ["-P1D"]
     db.commit()

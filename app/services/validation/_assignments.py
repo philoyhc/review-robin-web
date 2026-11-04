@@ -22,6 +22,7 @@ from app.services.validation._inputs import (
     ValidationInputs,
 )
 
+
 def _check_assignments_no_included_pairs(
     db: Session,
     review_session: ReviewSession,

@@ -27,7 +27,7 @@ from app.db.models import (
 from app.services import instruments as instruments_service
 from app.services.instruments import ensure_default_instrument
 
-_SAVED = dt.datetime(2026, 10, 17, tzinfo=dt.timezone.utc)
+_SAVED = dt.datetime(2026, 10, 17, tzinfo=dt.UTC)
 _BY_TEAM = instruments_service.encode_group_kind([("reviewee", "tag_1")])
 
 

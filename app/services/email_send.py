@@ -39,7 +39,6 @@ from typing import Protocol
 
 from app.services.operator_settings import EmailSettings
 
-
 # How long an aborted SMTP response truncates to before we stash it
 # on the outbox row. Real-world SMTP error strings can be long; a
 # fixed cap keeps the audit row size predictable.

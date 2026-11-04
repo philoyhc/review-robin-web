@@ -52,9 +52,9 @@ from app.db.models import (
     Instrument,
     InstrumentResponseField,
     Response,
-    ReviewSession,
     Reviewee,
     Reviewer,
+    ReviewSession,
     User,
 )
 from app.services import monitoring

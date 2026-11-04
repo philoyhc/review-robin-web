@@ -6,22 +6,22 @@ line of count pills and nothing else, Operators · Admins · super-admins
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from cordware.settings import identity_settings
 from app.db.models import AuditEvent, User
 from app.services import account_listing
+from cordware.settings import identity_settings
 
 ACCOUNTS = "/operator/sys-admin/users"
 
 
 def _user(db: Session, email: str, **flags: bool) -> User:
-    user = User(email=email, created_at=datetime.now(timezone.utc), **flags)
+    user = User(email=email, created_at=datetime.now(UTC), **flags)
     db.add(user)
     db.flush()
     return user

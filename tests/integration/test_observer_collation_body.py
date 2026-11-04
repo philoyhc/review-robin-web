@@ -9,7 +9,7 @@ the Anonymized → tokens behaviour on the CSV.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -58,7 +58,7 @@ def _open_release_window(db: Session, review_session: ReviewSession) -> None:
     Responses released cell — the one a per-row mode may sit on — is
     the one the readers consult."""
     review_session.status = "expired"
-    review_session.responses_release_at = datetime.now(timezone.utc) - timedelta(
+    review_session.responses_release_at = datetime.now(UTC) - timedelta(
         hours=1
     )
     db.commit()
@@ -137,7 +137,7 @@ def _seed_one_instrument(
             assignment_id=a.id,
             response_field_id=field.id,
             value="4",
-            submitted_at=datetime.now(timezone.utc),
+            submitted_at=datetime.now(UTC),
         )
     )
     db.commit()
@@ -535,7 +535,7 @@ def _add_hidden_and_empty_fields(db: Session, seeded: dict) -> None:
             assignment_id=seeded["assignment"].id,
             response_field_id=hidden.id,
             value="HIDDEN-ANSWER",
-            submitted_at=datetime.now(timezone.utc),
+            submitted_at=datetime.now(UTC),
         )
     )
     db.commit()
@@ -766,7 +766,7 @@ def test_collation_csv_or_rule_per_row_either_side(
     )
     db.add_all([r_math, r_bio, e_junior, e_senior])
     db.flush()
-    submitted = datetime.now(timezone.utc)
+    submitted = datetime.now(UTC)
     # Pair 1: math + senior — matches reviewer-side rule only.
     a1 = Assignment(
         session_id=review_session.id,
@@ -905,7 +905,7 @@ def test_collation_csv_excludes_rows_outside_cohort_rule(
     )
     db.add_all([a_in, a_out])
     db.flush()
-    submitted = datetime.now(timezone.utc)
+    submitted = datetime.now(UTC)
     db.add_all(
         [
             Response(
@@ -1001,7 +1001,7 @@ def test_collation_csv_anonymized_excludes_rows_outside_cohort_rule(
     )
     db.add_all([in_cohort, out_cohort, reviewee])
     db.flush()
-    submitted = datetime.now(timezone.utc)
+    submitted = datetime.now(UTC)
     a_in = Assignment(
         session_id=review_session.id,
         instrument_id=inst.id,
@@ -1215,7 +1215,7 @@ def test_collation_renders_after_release_section_when_window_open(
             assignment_id=a.id,
             response_field_id=field.id,
             value="4",
-            submitted_at=datetime.now(timezone.utc),
+            submitted_at=datetime.now(UTC),
         )
     )
     # Critical bit: open the release window. Since 19F PR 2a that
@@ -1223,7 +1223,7 @@ def test_collation_renders_after_release_section_when_window_open(
     # responses are released because the session is over.
     review_session.status = "expired"
     review_session.responses_release_at = datetime.now(
-        timezone.utc
+        UTC
     ) - timedelta(hours=1)
     db.commit()
     _add_observer(

@@ -42,7 +42,6 @@ from app.db.models import User
 from app.services import _secrets, audit
 from app.services.date_formatting import DEFAULT_TIMEZONE
 
-
 # Today the only legal transport is SMTP. The ``Literal`` widens to
 # include ``"graph"`` once Segment 11E PR 5's typed Graph stub gets a
 # real implementation.

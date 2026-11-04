@@ -26,8 +26,8 @@ proving the oracle first.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
-from typing import Callable
+from collections.abc import Callable
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy.orm import Session
@@ -73,7 +73,7 @@ reviewee_impl = pytest.mark.parametrize(
     ids=[name for name, _ in REVIEWEE_IMPLEMENTATIONS],
 )
 
-T0 = datetime(2026, 9, 1, 12, 0, tzinfo=timezone.utc)
+T0 = datetime(2026, 9, 1, 12, 0, tzinfo=UTC)
 
 
 class Fixture:
@@ -313,7 +313,7 @@ def _utc_naive(value: datetime | None) -> datetime | None:
     """
     if value is None or value.tzinfo is None:
         return value
-    return value.astimezone(timezone.utc).replace(tzinfo=None)
+    return value.astimezone(UTC).replace(tzinfo=None)
 
 
 def _by_email(rows) -> dict[str, object]:

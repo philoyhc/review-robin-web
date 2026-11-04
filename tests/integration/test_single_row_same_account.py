@@ -126,9 +126,8 @@ def test_an_add_and_an_edit_look_the_address_up_once(
     client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The refusal's lookup is the binding's: one directory call each."""
-    from cordware.graph import FakeDirectory
-
     from app.web.routes_operator import _shared
+    from cordware.graph import FakeDirectory
 
     calls: list[str] = []
 

@@ -9,7 +9,7 @@ after Submit holds it off, and a blank all-optional row does not.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.web.routes_reviewer._surface._status import (
     PageStatus,
@@ -17,7 +17,7 @@ from app.web.routes_reviewer._surface._status import (
     _session_status,
 )
 
-_AT = datetime(2026, 10, 17, tzinfo=timezone.utc)
+_AT = datetime(2026, 10, 17, tzinfo=UTC)
 
 
 def _row(

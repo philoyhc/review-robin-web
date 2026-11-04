@@ -10,10 +10,10 @@ from app.db.models import ReviewSession
 from ._apply_shared import (
     _RX_DATA_SHAPE,
     _DataShapeSpec,
-    _ParsedConfig,
-    _ParseError,
     _parse_bool,
     _parse_json,
+    _ParsedConfig,
+    _ParseError,
 )
 
 

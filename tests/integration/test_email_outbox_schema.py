@@ -11,7 +11,7 @@ land without any further Alembic churn.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -34,7 +34,7 @@ def _make_session(db: Session, code: str) -> ReviewSession:
 
 def test_audit_log_columns_round_trip(db: Session) -> None:
     review_session = _make_session(db, "outbox-rt")
-    delivered = datetime(2026, 5, 7, 12, 30, tzinfo=timezone.utc)
+    delivered = datetime(2026, 5, 7, 12, 30, tzinfo=UTC)
 
     row = EmailOutbox(
         session_id=review_session.id,
@@ -64,7 +64,7 @@ def test_audit_log_columns_round_trip(db: Session) -> None:
     assert fetched.backend_message_id == "<abc.123@mail.example.edu>"
     # SQLite drops tzinfo on read; compare instants rather than tz state.
     assert fetched.delivered_at is not None
-    assert fetched.delivered_at.replace(tzinfo=timezone.utc) == delivered
+    assert fetched.delivered_at.replace(tzinfo=UTC) == delivered
     assert fetched.payload_hash == "a" * 64
     assert fetched.correlation_id == "invitation:1:42"
 

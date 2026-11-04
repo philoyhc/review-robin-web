@@ -19,6 +19,7 @@ from __future__ import annotations
 import datetime as dt
 
 import pytest
+from _rrw_app import rrw_app
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -30,7 +31,6 @@ from app.db.models import (
     ReviewSession,
     User,
 )
-from _rrw_app import rrw_app
 from app.services import session_lifecycle as lifecycle
 from app.services import visibility_policies
 from app.web.deps import get_current_user
@@ -217,7 +217,7 @@ def _close_after_rae_submits(
     assert lifecycle.is_expired(review_session)
     if open_release:
         review_session.responses_release_at = dt.datetime.now(
-            dt.timezone.utc
+            dt.UTC
         ) - dt.timedelta(hours=1)
         db.commit()
     app.dependency_overrides[get_current_user] = lambda: rae

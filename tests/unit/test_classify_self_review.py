@@ -28,8 +28,8 @@ from app.db.models import (
 )
 from app.services import assignments
 from app.services.instruments import (
-    ensure_default_instrument,
     encode_group_kind,
+    ensure_default_instrument,
 )
 
 

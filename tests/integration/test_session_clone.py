@@ -15,9 +15,9 @@ from app.db.models import (
     InstrumentResponseField,
     Observer,
     Relationship,
-    ReviewSession,
     Reviewee,
     Reviewer,
+    ReviewSession,
     User,
 )
 from app.schemas.sessions import SessionCreate
@@ -108,7 +108,7 @@ def test_clone_copies_data_shapes_retention_and_toggles(db: Session) -> None:
     source.retention_overrides = {"audit_log_days": 365}
     # A scheduling anchor that must NOT survive the clone.
     source.scheduled_activate_at = dt.datetime(
-        2026, 6, 1, 9, 0, tzinfo=dt.timezone.utc
+        2026, 6, 1, 9, 0, tzinfo=dt.UTC
     )
     db.flush()
 
@@ -176,7 +176,7 @@ def test_clone_all_does_not_copy_results_acknowledgement(
         select(Reviewee).where(Reviewee.session_id == source.id)
     ).scalar_one()
     source_reviewee.results_acknowledged_at = dt.datetime(
-        2026, 9, 1, 9, 0, tzinfo=dt.timezone.utc
+        2026, 9, 1, 9, 0, tzinfo=dt.UTC
     )
     db.commit()
 
@@ -561,7 +561,7 @@ def test_a_clone_copies_each_instruments_visibility_grid(db: Session) -> None:
                 after_release_mode=after,
                 user=op,
             )
-    now = dt.datetime(2026, 10, 6, 9, 0, tzinfo=dt.timezone.utc)
+    now = dt.datetime(2026, 10, 6, 9, 0, tzinfo=dt.UTC)
     source.deadline = now + dt.timedelta(days=7)
     source.responses_release_at = now + dt.timedelta(days=8)
     source.responses_release_until = now + dt.timedelta(days=20)

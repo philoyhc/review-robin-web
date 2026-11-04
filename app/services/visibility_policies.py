@@ -21,8 +21,8 @@ envelope. No-op writes (no change) emit nothing.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from datetime import datetime
-from typing import Iterable
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -33,11 +33,9 @@ from app.db.models import (
     ReviewSession,
     User,
 )
-from app.services import audit
-from app.services import unit_of_work
+from app.services import audit, unit_of_work
 from app.services import session_lifecycle as lifecycle
 from app.services.instruments import _instrument_label
-
 
 #: ``upsert_policy``'s default for a column the caller doesn't set.
 KEEP = object()

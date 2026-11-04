@@ -29,7 +29,6 @@ from fastapi import (
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
-from app.web import urls
 from app.db.models import (
     Instrument,
     Relationship,
@@ -42,11 +41,15 @@ from app.db.session import get_db
 from app.services import (
     assignments,
     csv_imports,
+)
+from app.services import (
     relationships as relationships_service,
+)
+from app.services import (
     session_lifecycle as lifecycle,
 )
 from app.services._queries import tag_slot_presence
-from app.web import breadcrumbs, views
+from app.web import breadcrumbs, urls, views
 from app.web.deps import (
     get_or_create_user,
     request_correlation_id,
@@ -59,7 +62,6 @@ from app.web.routes_operator._shared import (
     _templates,
     observe_scheduled_events_on_load,
 )
-
 
 router = APIRouter()
 

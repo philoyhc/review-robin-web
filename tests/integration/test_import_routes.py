@@ -9,12 +9,11 @@ from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
 from app.db.models import AuditEvent, Reviewer, ReviewSession
+
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
-
-
 
 #: One address the suite's directory (`cordware.graph.FakeDirectory`,
 #: segment 20G's default in `conftest.py`) does not know.
@@ -343,10 +342,10 @@ def test_reviewee_import_persists_with_profilelink(
     review_session = _make_session(client, db)
 
     csv_body = (
-        "RevieweeName,RevieweeEmail,ProfileLink,RevieweeTag1\n"
-        "Carol,carol@example.edu,https://example.edu/c.jpg,cohort-A\n"
-        "Dan,dan-2026,,\n"
-    ).encode("utf-8")
+        b"RevieweeName,RevieweeEmail,ProfileLink,RevieweeTag1\n"
+        b"Carol,carol@example.edu,https://example.edu/c.jpg,cohort-A\n"
+        b"Dan,dan-2026,,\n"
+    )
 
     response = client.post(
         f"/operator/sessions/{review_session.public_id}/reviewees/import",

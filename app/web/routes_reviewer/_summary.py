@@ -18,7 +18,6 @@ from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from sqlalchemy.orm import Session
 from starlette import status
 
-from app.web import urls
 from app.db.models import Reviewer, ReviewSession, User
 from app.db.session import get_db
 from app.services import responses as responses_service
@@ -29,14 +28,14 @@ from app.services.extracts import filename, stream_csv
 from app.services.extracts.responses_extract import (
     serialize_reviewer_session_summary,
 )
-from app.web import views
+from app.web import urls, views
 from app.web.deps import get_or_create_user, require_reviewer_in_session
+from app.web.downloads import content_disposition
 from app.web.routes_reviewer._shared import (
     _templates,
     build_role_chips,
 )
 from app.web.views._reviewer_summary import build_reviewer_summary_context
-from app.web.downloads import content_disposition
 
 router = APIRouter(prefix="/me")
 

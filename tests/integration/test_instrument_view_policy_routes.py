@@ -45,7 +45,6 @@ from app.db.models import (
 )
 from app.services import visibility_policies
 
-
 # ── Service-level: encode / decode + validation ──────────────────────
 
 

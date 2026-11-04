@@ -32,7 +32,6 @@ from app.db.models import (
 )
 
 
-
 def _owner(db: Session, code: str) -> User:
     """One operator row per scenario — `sessions.created_by_user_id` is
     NOT NULL, and nothing under test reads the user. The email carries

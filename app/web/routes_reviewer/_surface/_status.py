@@ -9,7 +9,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-
 PageStatusState = Literal["not_started", "in_progress", "complete", "submitted"]
 
 
@@ -104,7 +103,7 @@ SessionStatusState = Literal["draft", "saved", "submitted"]
 
 
 def _session_status(
-    page_statuses: list["PageStatus"], rows: list[dict]
+    page_statuses: list[PageStatus], rows: list[dict]
 ) -> SessionStatusState | None:
     """Roll the per-page states into one session-wide status.
 

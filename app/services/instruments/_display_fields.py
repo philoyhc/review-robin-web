@@ -34,12 +34,10 @@ from app.db.models import (
     ReviewSession,
     User,
 )
-from app.services import audit
-from app.services import unit_of_work
+from app.services import audit, unit_of_work
 from app.services import session_lifecycle as lifecycle
 
 from ._state import _instrument_label
-
 
 _DEFAULT_DISPLAY_LABELS: dict[tuple[str, str], str] = {
     ("reviewee", "name"): "Name",

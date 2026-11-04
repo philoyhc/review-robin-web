@@ -26,8 +26,8 @@ from sqlalchemy.orm import Session
 
 from app.db.models import AuditEvent, Instrument, ReviewSession, User
 from app.services import instruments as instruments_service
-from ._public_id import public_id
 
+from ._public_id import public_id
 
 # --------------------------------------------------------------------------- #
 # Helpers

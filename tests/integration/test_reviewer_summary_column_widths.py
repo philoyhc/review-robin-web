@@ -23,6 +23,7 @@ Pins the post-fix contract:
 from __future__ import annotations
 
 import pytest
+from _rrw_app import rrw_app
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -34,7 +35,6 @@ from app.db.models import (
     InstrumentResponseField,
     ReviewSession,
 )
-from _rrw_app import rrw_app
 from app.web.deps import get_current_user
 
 from ._answer_form import answer_form

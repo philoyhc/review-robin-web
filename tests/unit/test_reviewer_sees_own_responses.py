@@ -17,7 +17,7 @@ import pytest
 from app.services import session_lifecycle as lifecycle
 from app.services import visibility_policies
 
-_NOW = dt.datetime(2026, 10, 1, 12, tzinfo=dt.timezone.utc)
+_NOW = dt.datetime(2026, 10, 1, 12, tzinfo=dt.UTC)
 _PAIRS = {
     "raw": ("row", "identified"),
     "summarized": ("aggregated", "deidentified"),

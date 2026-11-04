@@ -40,7 +40,7 @@ stay UTC.
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from urllib.parse import urlencode
 
 from app.services.audit import AuditFilters, AuditLogRow
@@ -138,9 +138,9 @@ def _year_offsets(tz_name: str) -> set[str]:
     this year: one label for a fixed-offset zone, more for one whose
     offset moves (daylight saving in either hemisphere, or a mid-year
     shift such as Casablanca's in Ramadan)."""
-    year = datetime.now(timezone.utc).year
+    year = datetime.now(UTC).year
     return {
-        gmt_offset_label(tz_name, datetime(year, month, day, tzinfo=timezone.utc))
+        gmt_offset_label(tz_name, datetime(year, month, day, tzinfo=UTC))
         for month in range(1, 13)
         for day in (1, 15)
     }

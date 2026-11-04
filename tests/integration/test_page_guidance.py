@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import pathlib
 import re
-
 from html.parser import HTMLParser
 
 from fastapi.testclient import TestClient
@@ -21,7 +20,6 @@ from sqlalchemy.orm import Session
 from app.db.models import Observer, ReviewSession
 from app.services.observer_cohort import observer_has_rule
 from app.web.views._guide import OPERATOR, SECTIONS
-
 
 #: Markup-only marker. The bare class name also appears ~9 times in
 #: base.html's stylesheet, so counting that counts CSS rules.

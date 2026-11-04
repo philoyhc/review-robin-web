@@ -99,7 +99,7 @@ def seed_session_with_instruments(
             assignment_id=assignment.id,
             response_field_id=field.id,
             value="3",
-            saved_at=_dt.datetime(2026, 9, 9, tzinfo=_dt.timezone.utc),
+            saved_at=_dt.datetime(2026, 9, 9, tzinfo=_dt.UTC),
             version=1,
         )
     )

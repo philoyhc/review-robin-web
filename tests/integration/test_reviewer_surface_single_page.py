@@ -33,8 +33,8 @@ from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
-from ._validated import validate_session
 from ._past_draft_setup import past_draft_setup
+from ._validated import validate_session
 
 
 def _operator_creates_session_with_pair(
@@ -401,7 +401,7 @@ def test_a_closed_multi_page_surface_keeps_prev_and_next(
 
     with past_draft_setup(db, first):
         instruments_service.create_page_break_after(db, instrument=first)
-    review_session.deadline = dt.datetime.now(dt.timezone.utc) - dt.timedelta(
+    review_session.deadline = dt.datetime.now(dt.UTC) - dt.timedelta(
         minutes=1
     )
     db.commit()

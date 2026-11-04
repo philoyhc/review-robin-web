@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import csv
 import io
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from fastapi.testclient import TestClient
@@ -20,7 +20,7 @@ from app.services import audit
 from app.services.audit import AuditFilters
 
 # 20:30 UTC on 1 March is 04:30 on 2 March in Singapore (GMT+8).
-_EVENT_AT = datetime(2026, 3, 1, 20, 30, tzinfo=timezone.utc)
+_EVENT_AT = datetime(2026, 3, 1, 20, 30, tzinfo=UTC)
 
 
 def _setup(

@@ -33,7 +33,6 @@ from pathlib import Path
 
 import httpx
 import pytest
-
 from _mounted import MOUNT
 from playwright.sync_api import Browser, Error, Page, sync_playwright
 

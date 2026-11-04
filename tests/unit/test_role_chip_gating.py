@@ -16,7 +16,7 @@ there, author's ruling 2026-10-16.)
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.orm import Session
 
@@ -72,7 +72,7 @@ def _grant_reviewee_view(db: Session, review_session: ReviewSession) -> None:
     )
     review_session.status = "expired"
     review_session.responses_release_at = datetime.now(
-        timezone.utc
+        UTC
     ) - timedelta(hours=1)
     review_session.responses_release_until = None
     db.flush()

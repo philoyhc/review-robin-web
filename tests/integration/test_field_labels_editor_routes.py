@@ -19,7 +19,6 @@ covers only the route + template wiring.
 from __future__ import annotations
 
 import pytest
-
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session

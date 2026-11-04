@@ -21,7 +21,6 @@ import pytest
 
 from app.web.views import preview_count_line
 
-
 # --------------------------------------------------------------------------- #
 # Unfiltered — the pager's territory.
 # --------------------------------------------------------------------------- #

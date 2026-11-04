@@ -25,16 +25,15 @@ Revises: 779b90e4b397
 Create Date: 2026-05-11
 
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
 
-
 revision: str = "8003c2be99d8"
-down_revision: Union[str, Sequence[str], None] = "779b90e4b397"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = "779b90e4b397"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
