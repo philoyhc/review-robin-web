@@ -195,6 +195,12 @@ python3 -c "import json,collections;d=json.load(open('/tmp/pyright.json'));print
   `spec/assignments.md`'s composite-children line left for the close's
   `spec-writer`. Rung 7 must run pyright with the venv's Python: without
   it every import is missing (439 errors).
+- **Rung 7, the gate:** `run: pyright` after `Lint` in `ci.yml`'s
+  `test` and `residential` jobs (setup-python's interpreter is on PATH,
+  so imports resolve without a `venv` key); `pyright` named in the
+  pre-PR gate (`CLAUDE.md` / `AGENTS.md`), `CONTRIBUTING.md`'s checklist
+  and lane notes, the `babysit-merge` skill, `README.md` and
+  `docs/local_setup.md`.
 
 ## PR ladder
 
