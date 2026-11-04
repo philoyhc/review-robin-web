@@ -70,18 +70,20 @@ gate.
    operators may have reminded by hand: 14G marks those skipped, not
    sent, when it turns the setting on.
 
-3. **22E — Pyright strict mode, package by package** (not gated).
-   **Plan:** `guide/segment_22E_pyright_strict.md`. Its place after
-   14F/14G is the author's call.
-
-4. **22F — reserved** (author, 2026-11-04) for whatever follow-up 22C,
+3. **22F — reserved** (author, 2026-11-04) for whatever follow-up 22C,
    22D and 22E leave behind. No plan until something lands in it. So far:
-   application code's 64 `# type: ignore` comments, which hide 66 errors
+   application code's 62 `# type: ignore` comments (64 before 22E)
    and keep `enableTypeIgnoreComments` on
    (`guide/archive/segment_22D_pyright_tests.md` § Status). What to do
    with them is the author's call, deferred (2026-11-04).
+   From 22E (`guide/archive/segment_22E_pyright_strict.md` § Status):
+   strict mode for the test trees (the author's call); five JSON-narrowing
+   helpers and three Jinja-namespace wrappers to merge;
+   `set_band2_state`'s docstring against its `None` behavior; a non-string
+   audit `scheduled_at` that raises on the workflow card;
+   `relationships.py`'s deprecated `Result.tuples()`.
 
-5. **22G — Diagnostics** (parked, author, 2026-11-04). Item 1: a small
+4. **22G — Diagnostics** (parked, author, 2026-11-04). Item 1: a small
    set of status reports about the session on Azure, the in-app clock's
    state first; where they sit waits on how many there are.
    **Plan:** `guide/segment_22G_diagnostics.md`.

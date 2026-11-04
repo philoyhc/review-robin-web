@@ -87,7 +87,7 @@ pytest tests/integration/test_X.py       # one file
 pytest tests/integration/test_X.py::test_name   # one test
 pytest -k "expression"                   # match by name
 ruff check .                             # lint (configured in pyproject.toml)
-pyright                                  # type check, application code and tests (venv active)
+pyright                                  # type check: strict on app code, tests relaxed (venv active)
 
 alembic upgrade head                     # apply migrations to local SQLite (./review_robin_web.db)
 alembic downgrade -1                     # roll back one

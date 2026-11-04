@@ -147,7 +147,7 @@ not run, since `Doc impact` names no `spec/` path.
 
 ## Out of scope
 
-- Strict mode, for tests or application code: `guide/segment_22E_pyright_strict.md`.
+- Strict mode, for tests or application code: `guide/archive/segment_22E_pyright_strict.md`.
 - Changing what any test asserts.
 
 ## Doc impact
