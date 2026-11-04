@@ -46,6 +46,8 @@ old files, which would never tighten.
 
 - `cordware` first: 30 errors in 3 files, and it is the host every app
   depends on (2026-11-04).
+- **Private names:** the convention stands; `reportPrivateUsage` is off
+  everywhere (author, 2026-11-04).
 
 ## Blast radius (measured)
 
@@ -58,6 +60,24 @@ Taken 2026-11-04 at `9b45a9c1`, pyright 1.1.414, `typeCheckingMode =
 | By package | `app/web` 955 (55 files), `app/services` 877 (75), `residentialapps` 216 (10), `utilityapps` 46 (4), `cordware` 30 (3), `app/db` 8, `app/schemas` 4, `app/main.py` 1 | `Counter` over the path |
 | By rule | `reportUnknownVariableType` 443, `reportPrivateUsage` 437, `reportUnknownMemberType` 401, `reportUnknownArgumentType` 341, `reportArgumentType` 101, `reportUnknownParameterType` 99, `reportUnusedFunction` 91, `reportMissingTypeArgument` 59 | `Counter` over `rule` |
 | Python files per package | `app` 245, `cordware` 9, `residentialapps` 29, `utilityapps` 9 | `find <pkg> -name "*.py" -not -path "*/tests/*" \| wc -l` |
+
+## Status
+
+- **Rung 1** (2026-11-04): the ruling, and the mechanism changes. A
+  `strict` list cannot carry it: strict mode only raises a rule's level,
+  so `reportPrivateUsage = "none"` is overridden in every strict file
+  (pyright's `getStrictModeNotOverriddenRules` exempts one rule, not
+  this one). So `typeCheckingMode` is `strict` at the top with the rule
+  off, and each root in `executionEnvironments` (TOML tables) turns off
+  only the strict rules it still fails, with basic list/dict/set
+  inference; a package joins strict mode when its table is just its
+  import path. A strict rule a package already passes is enforced from
+  this rung (an unneeded `cast` now fails under `app/`). The `.` root
+  keeps basic inference for installed libraries, or Jinja's `globals`
+  infers strictly and 37 calls fail. Test roots keep their tables for
+  good (the open question below). With the rule off and strict
+  inference: `app` 1,531, `residentialapps` 236, `utilityapps` 49,
+  `cordware` 30 (the blast radius's 2,137 counted the 437 private uses).
 
 ## PR ladder
 
@@ -82,8 +102,7 @@ Taken 2026-11-04 at `9b45a9c1`, pyright 1.1.414, `typeCheckingMode =
 
 ## Open questions
 
-- **The private-name convention** (Semantics): keep it and turn the rule
-  off, or rename across packages? Author, at rung 1.
+- ~~The private-name convention~~: kept, the rule off (author, 2026-11-04).
 - **Strict for tests** once 22D gates them? Probably never: tests lean on
   loose fixtures by design. Author, at this plan's close.
 
@@ -93,7 +112,7 @@ Taken 2026-11-04 at `9b45a9c1`, pyright 1.1.414, `typeCheckingMode =
 
 ## Doc impact
 
-- `pyproject.toml` — `[tool.pyright]` `strict` list grows per rung (rungs 1–7).
+- `pyproject.toml` — `[tool.pyright]` strict at the top, `reportPrivateUsage` off, a per-root table of the strict rules each root still fails, shrinking per rung (rungs 1–7).
 - `CLAUDE.md` — "Common commands": pyright runs strict on the listed packages (at close); `AGENTS.md` copied.
 - `AGENTS.md` — the twin, copied from `CLAUDE.md` (at close).
 - `guide/todo_master.md` — delete the segment's entry at close.
