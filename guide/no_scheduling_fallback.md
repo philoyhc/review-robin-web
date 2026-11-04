@@ -29,13 +29,15 @@ ships, or when 14F has absorbed it.
 
 ## What changes while mail is manual (14F)
 
-1. **The two auto-send fields render disabled** behind
+1. **The two auto-send fields render disabled** (built by 14E, not 14F:
+   author, 2026-11-04) behind
    `RRW_SCHEDULED_SEND=off`, with one line: "Scheduled sending isn't
    available on this deployment; send from Invitations when it's time".
    Their values are kept and the Settings CSV round-trips, so switching
    the setting on with 14G restores them. Every other date field stays
    live: none of them misleads once 14E ships.
-2. **The Workflow card drops "System will dispatch automatically"**, which
+2. **The Workflow card drops "System will dispatch automatically"** (14E
+   too), which
    is also wrong today (checklist item 7).
 3. **Due-action prompts replace the promise.** Session Home says what is
    due ("Reminders due: 12 reviewers have not submitted, 2 days before

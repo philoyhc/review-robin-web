@@ -140,7 +140,7 @@ Items (Graph `sendMail`'s `saveToSentItems`). Others will follow.
 - First toggle: **Keep a copy in my Sent Items** (default on, as Graph's
   is). It applies only to mail sent as the operator; the card says so
   when the deployment sends from a dedicated mailbox.
-- Each toggle is stored when the send path that reads it exists (14B),
+- Each toggle is stored when the send path that reads it exists (14F),
   as a per-operator preference beside `display_timezone`, so no column
   is added before it has a reader.
 
@@ -157,7 +157,7 @@ operator's own mailbox, not a session.
 
 1. **Scaffold:** the card, its copy, the inert toggle(s). Must not touch
    a route or service.
-2. **Wire** each toggle when 14B's send path reads it, one rung per
+2. **Wire** each toggle when 14F's send path reads it, one rung per
    toggle or a few together.
 
 ### Definition of done
@@ -175,7 +175,7 @@ operator's own mailbox, not a session.
 1. **Which other toggles?** Candidates to put to the author: send a copy
    to myself (Bcc); use the session's Help contact as the Reply-to;
    send invitations from me or from the dedicated mailbox when both
-   exist. Each needs its send-side behavior settled in 14B first.
+   exist. Each needs its send-side behavior settled in 14F first.
 2. **Where does a deployment-wide sender setting live** (the dedicated
    mailbox's address), if it is not an App Setting? Not on this card,
    which is per operator.
@@ -215,6 +215,10 @@ participant's action do not, so those wait for 14G.
   into a daily digest.
 - **Until 14G ships**, groups C and D render disabled with the
   deployment line the auto-send fields use (`guide/no_scheduling_fallback.md`).
+  The scaffold lands after 14E (`guide/todo_master.md` order), so the
+  clock exists by then: the line says *mail* on a clock waits, not the
+  clock. Group C reads the clock's audit events, one per crossing
+  (`guide/segment_14E_clock.md`, judgment calls; 2026-11-04).
 - Group A repeats what the page shows; it earns its place as a record, or
   when the operator leaves before a long send finishes.
 - The last D row reverses the fallback note's proposed "no" to due
@@ -222,7 +226,7 @@ participant's action do not, so those wait for 14G.
 
 ### Out of scope
 
-- The send path itself (14B) and the outbox page (14B Part E).
+- The send path itself (14F; 14B, archived, before it) and the outbox page.
 - Building the reports: A and B ride 14F's transport, C and D 14G's.
   This item lists and, later, stores the choices.
 
