@@ -74,10 +74,14 @@ window are editable only before the session opens.
   `instrument.closed` per instrument and one `session.deadline_reached`,
   "Deadline reached: *n* of *N* reviewers submitted", each `fired_by:
   clock`.
-- [ ] **The window waits for the session to end.** Open Session Home and
-  press **Close session** before *T*+9, then close it again, leaving the
-  audit log. At *T*+13, reload: one `session.release_window_opened` and
-  one `session.release_window_ended`. Reload twice more: neither repeats.
+- [ ] **End closes the session, and the window opens unattended.** At
+  *T*+7 the audit log also shows `session.expired`, "closed (End
+  reached)", with no actor, `reason: deadline` and `fired_by: clock`;
+  the lobby shows the session Closed. Open `/reviewrobin/me` as a
+  reviewer: the session reads Closed, and its review page says your
+  saved values aren't shown now. At *T*+13 the log shows one
+  `session.release_window_opened` and one `session.release_window_ended`,
+  with no Close session pressed. Reload twice more: neither repeats.
 - [ ] **Off is off, and a page view still does it.** Stop the app
   (Ctrl+C) and start it with the interval at `0`, keeping the lead time
   at `0`: in PowerShell `$env:SCHEDULER_INTERVAL_SECONDS = "0"` then

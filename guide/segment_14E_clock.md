@@ -110,6 +110,15 @@ Diverged from Semantics at build, each from a cold read or a ruling:
   the loop's sleep wakes on stop.
 - Two new events: `session.deadline_reached` and
   `session.release_window_opened` / `_ended` (the author's answers).
+- **End closes the session** (author, 2026-11-04, after the first
+  test run found Release-from waiting on a manual Close): the deadline
+  close also moves `ready → expired`, writing `session.expired` with no
+  actor and `reason="deadline"`. **Visibility exists only in two
+  windows**, while ongoing (Start to End) and the release window, so
+  the `while_ongoing` window now ends at End itself
+  (`lifecycle.is_ongoing`), not when the status changes; a reviewer no
+  longer reads back their answers past End, reversing G10's "deadline or
+  not" (2026-10-01).
 
 ## PR ladder
 
@@ -165,6 +174,9 @@ Diverged from Semantics at build, each from a cold read or a ruling:
 ## Doc impact
 
 - `spec/lifecycle.md` — §8.3: the clock beside the page-view trigger, the advisory lock, `context.fired_by`, the retry spacing; §8.2.3: the release moments as stamped events, only while expired; the audit table's three new events and `trigger="release"`; §8: auto-send disabled behind the setting (rung 0).
+- `spec/visibility_policy.md` — the `while_ongoing` window ends at End (`is_ongoing`); End closes the session.
+- `spec/reviewer-surface.md` — no read-back past End outside the release window; the closed banner's copy.
+- `spec/participant_model.md` — the `/me` status past End reads Closed.
 - `spec/settings_inventory.md` — `SCHEDULER_INTERVAL_SECONDS`; `RRW_SCHEDULED_SEND` and the two auto-send fields disabled behind it (rung 0).
 - `spec/workflow_card.md` — the auto-send caption gone while the setting is off (rung 0).
 - `docs/deployment.md` — both settings in its table.

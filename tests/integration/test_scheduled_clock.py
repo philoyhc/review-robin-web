@@ -99,6 +99,14 @@ def test_the_deadline_closes_once_with_the_counts_at_that_moment(db: Session) ->
     assert len(reached) == 1
     assert reached[0].detail["context"]["fired_by"] == "clock"
     assert set(reached[0].detail["counts"]) == {"submitted", "assigned"}
+    # End closes the session (author, 2026-11-04): ready → expired, no actor.
+    db.refresh(rs)
+    assert lifecycle.is_expired(rs)
+    expired = _events(db, rs, "session.expired")
+    assert len(expired) == 1
+    assert expired[0].actor_user_id is None
+    assert expired[0].detail["reason"] == "deadline"
+    assert expired[0].detail["context"]["fired_by"] == "clock"
 
     # A later page view, and a second pass, record nothing more.
     lifecycle.observe_deadline(db, rs, now=NOW)
@@ -339,3 +347,17 @@ def test_a_failing_pass_does_not_stop_the_loop(monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setattr(_clock, "run_pass", flaky)
     asyncio.run(_clock.run_forever(lambda: None, interval=0.01, stop=stop))
     assert len(calls) == 2
+
+
+def test_the_ongoing_window_ends_at_end_itself(db: Session) -> None:
+    """Visibility exists only while ongoing and in the release window: a
+    session still ``ready`` past End (the clock has not run yet, or End
+    passed before End closed sessions) is not ongoing."""
+    rs = _make_validated_session(db, "clock-ongoing")
+    rs.status = lifecycle.SessionStatus.ready.value
+    rs.deadline = NOW + timedelta(minutes=5)
+    db.commit()
+    assert lifecycle.is_ongoing(rs, now=NOW)
+    assert not lifecycle.is_ongoing(rs, now=NOW + timedelta(minutes=6))
+    rs.deadline = None
+    assert lifecycle.is_ongoing(rs, now=NOW + timedelta(days=30))

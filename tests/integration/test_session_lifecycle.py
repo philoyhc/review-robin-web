@@ -435,16 +435,16 @@ def test_reviewer_save_403_when_deadline_passed(
     assert response.status_code == 403
 
 
-def test_past_the_deadline_a_ready_session_still_shows_the_reviewer_their_values(
+def test_past_the_deadline_the_reviewer_no_longer_sees_their_values(
     db: Session,
     alice: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """While the session is ``ready`` the reviewer is inside the
-    ``while_ongoing`` window, whose ``peer_reviewer`` cell is Raw by
-    rule, so once the deadline closes the instruments their own saved
-    values stay readable (read-only). The visibility policy decides
-    (G10, 2026-10-01)."""
+    """Visibility exists only while ongoing (Start to End) and in the
+    release window (author, 2026-11-04, segment 14E): past End the
+    session closes, and with no release window open the reviewer's own
+    saved values are no longer shown. Before 14E a ``ready`` session
+    past End kept them readable (G10, 2026-10-01)."""
     operator = make_client(alice)
     session = _build_ready_session(operator, db, code="visibility")
     assignment = db.execute(
@@ -475,8 +475,8 @@ def test_past_the_deadline_a_ready_session_still_shows_the_reviewer_their_values
     page = rae_client.get(f"/me/sessions/{session.public_id}")
     assert page.status_code == 200
     assert "no longer accepting responses" in page.text.lower()
-    assert "secret-comment" in page.text
-    assert "remain visible below" in page.text
+    assert "secret-comment" not in page.text
+    assert "aren&#39;t shown now" in page.text or "aren't shown now" in page.text
 
 
 def test_lazy_deadline_close_fires_once(

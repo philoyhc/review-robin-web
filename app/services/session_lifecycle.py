@@ -104,6 +104,22 @@ def _as_utc(value: datetime | None) -> datetime | None:
     return value
 
 
+def is_ongoing(review_session: ReviewSession, *, now: datetime | None = None) -> bool:
+    """The ``while_ongoing`` visibility window: the session is open and
+    its End, if set, has not passed (author, 2026-11-04, segment 14E).
+
+    Visibility exists only in two windows, while ongoing (Start to End)
+    and the release window. End closes the session (``observe_deadline``),
+    but that runs on the clock's next pass or a reviewer's request; this
+    check makes the window end at End itself, on every page, and also for
+    a session whose End passed before End closed sessions."""
+    if not is_ready(review_session):
+        return False
+    deadline = _as_utc(review_session.deadline)
+    current = now or datetime.now(timezone.utc)
+    return deadline is None or current < deadline
+
+
 def is_response_release_window_open(
     review_session: ReviewSession, *, now: datetime | None = None
 ) -> bool:
@@ -1195,6 +1211,23 @@ def observe_deadline(
         context={"deadline": review_session.deadline.isoformat()},
         correlation_id=correlation_id,
     )
+    # End closes the session (author, 2026-11-04, segment 14E): the same
+    # `ready → expired` as the operator's Close session, so a release
+    # window set beforehand opens unattended. Once per crossing, with the
+    # close above; no actor, `reason="deadline"`.
+    if is_ready(review_session):
+        review_session.status = SessionStatus.expired.value
+        audit.write_event(
+            db,
+            event_type="session.expired",
+            summary=f"Session {review_session.code} closed (End reached)",
+            actor_user_id=None,
+            session=review_session,
+            payload=audit.counts(closed_instruments=closed),
+            reason="deadline",
+            context={"deadline": review_session.deadline.isoformat()},
+            correlation_id=correlation_id,
+        )
     db.flush()
     db.commit()
     return closed

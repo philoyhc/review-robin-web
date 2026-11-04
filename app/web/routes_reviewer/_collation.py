@@ -140,7 +140,7 @@ def observer_collation_instrument_csv(
     policy = policies.get("observer")
     mode = visibility_policies.resolve_mode(
         policy,
-        while_ongoing_open=lifecycle.is_ready(review_session),
+        while_ongoing_open=lifecycle.is_ongoing(review_session),
         after_release_open=(
             lifecycle.is_response_release_window_open(review_session)
         ),

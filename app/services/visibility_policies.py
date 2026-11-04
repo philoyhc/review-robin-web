@@ -370,7 +370,7 @@ def observer_has_current_grant(
     given observer's cohort holds. False once archived."""
     if lifecycle.is_archived(review_session):
         return False
-    while_ongoing_open = lifecycle.is_ready(review_session)
+    while_ongoing_open = lifecycle.is_ongoing(review_session)
     after_release_open = lifecycle.is_response_release_window_open(
         review_session
     )
@@ -429,9 +429,12 @@ def reviewer_sees_own_responses(
     (``spec/visibility_policy.md`` §2.2):
 
     - **Archived** — never; archiving ends all visibility.
-    - **``ready``** (the ``while_ongoing`` window, deadline or not) —
-      always. That cell is ``raw`` by rule, the baseline self-view, so
-      a missing row reads the same.
+    - **The ``while_ongoing`` window** (``ready`` and before End,
+      ``lifecycle.is_ongoing``) — always. That cell is ``raw`` by rule,
+      the baseline self-view, so a missing row reads the same. Past End
+      the window is shut: visibility exists only while ongoing and in
+      the release window (author, 2026-11-04, segment 14E; before, a
+      ``ready`` session showed it past End too).
     - **``expired`` inside the release window** — when the
       ``after_release`` mode is ``raw`` (the cell is ``raw`` or ``None``
       since ``summarized`` was retired, findings A18).
@@ -440,7 +443,7 @@ def reviewer_sees_own_responses(
     """
     if lifecycle.is_archived(review_session):
         return False
-    if lifecycle.is_ready(review_session):
+    if lifecycle.is_ongoing(review_session, now=now):
         return True
     if not (
         lifecycle.is_expired(review_session)
