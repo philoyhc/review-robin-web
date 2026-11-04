@@ -13,10 +13,10 @@ P5) or the Rehydrate round trip (D28).
 
 ## 14E: the clock, and auto-send off (#3577, #3578, #3579)
 
-A local run, with the clock every 30 seconds (production keeps the
-default 120) and scheduled sending off (the shipped default). From the
-repository root, venv activated, your usual `.env` (fake auth) in place,
-and no `RRW_SCHEDULED_SEND` line in it:
+A local run, with the clock every 30 seconds (production keeps 120),
+scheduled sending off (the shipped default), and Start's one-hour lead
+time lifted so a Start a few minutes ahead saves. From the repository
+root, your usual `.env` (fake auth as `operator@example.edu`) in place:
 
 ```powershell
 # Windows PowerShell. The first line lets this window run the venv's
@@ -25,67 +25,68 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
 .\.venv\Scripts\Activate.ps1
 Remove-Item Env:RRW_SCHEDULED_SEND -ErrorAction SilentlyContinue
 $env:SCHEDULER_INTERVAL_SECONDS = "30"
+$env:SCHEDULED_OPERATIONAL_LEAD_HOURS = "0"
 alembic upgrade head
 uvicorn cordware.main:app --reload
 ```
-
-Or with no activation at all, calling the venv's programs by path:
-`.\.venv\Scripts\alembic.exe upgrade head` then
-`.\.venv\Scripts\uvicorn.exe cordware.main:app --reload` (after the two
-`$env:` lines above).
 
 ```bash
 # macOS / Linux
 source .venv/bin/activate
 unset RRW_SCHEDULED_SEND
 alembic upgrade head
-SCHEDULER_INTERVAL_SECONDS=30 uvicorn cordware.main:app --reload
+SCHEDULER_INTERVAL_SECONDS=30 SCHEDULED_OPERATIONAL_LEAD_HOURS=0 uvicorn cordware.main:app --reload
 ```
 
 The log shows `scheduled clock started` with `interval_seconds: 30`; the
-app is at `http://127.0.0.1:8000/reviewrobin/`. For the last row, stop it
-(Ctrl+C) and start it again with `30` replaced by `0`; in PowerShell,
-`$env:SCHEDULER_INTERVAL_SECONDS = "0"` then `uvicorn cordware.main:app
---reload`.
+app is at `http://127.0.0.1:8000/reviewrobin/`.
 
-**To tell the clock from a page view:** open the session's audit log
-(`/reviewrobin/operator/sys-admin/sessions/<id>/audit-log`) and "Show
-detail" on the event: one the clock wrote carries `fired_by: clock`. Any
-operator page you open runs the page-view trigger too, so between
-setting a time and checking, **close every Review Robin tab** and wait.
+**Reading the audit log.** A session's log is
+`/reviewrobin/operator/sys-admin/sessions/<id>/audit-log`, `<id>` being
+the code after `/sessions/` in Session Home's address; "Show detail"
+opens an event. One the clock wrote carries `fired_by: clock`. The log
+page does not run the scheduled steps, but Session Home, the Operations
+pages and the lobby do, so **between setting a time and checking, keep
+only the audit log open**.
 
-- [ ] **Auto-send is off.** On New session and in Session Home's edit
-  mode, Send invites and Send reminders are greyed out with "Scheduled
-  sending isn't available on this deployment; send from Invitations when
-  it's time." Session Home's display shows any stored offsets without a
-  send time; the Workflow card never says "System will dispatch
-  automatically"; the Guide's paragraph on the offsets says scheduled
-  sending is off.
-- [ ] **Activation on time, with no page view.** Take a session to
-  Validated, set Start about 2 minutes ahead, save, close the tabs. Two
-  minutes past Start, open the lobby: the session is open, and its
-  `session.activated` event carries `fired_by: clock`.
-- [ ] **The deadline closes on time.** On that open session, submit one
-  reviewer's responses, then set End about 2 minutes ahead and close the
-  tabs. After End, the audit log shows `instrument.closed` for each
-  instrument and one **`session.deadline_reached`**, "Deadline reached: 1
-  of N reviewers submitted", both `fired_by: clock`; the reviewer can no
-  longer save.
-- [ ] **The release window is stamped, once the session has ended.** The
-  window opens only on an ended session. End the session from the
-  Workflow card, then set Release responses from about 2 minutes ahead
-  and Release responses until about 4 minutes ahead; close the tabs.
-  After both, the audit log shows one `session.release_window_opened`
-  and one `session.release_window_ended`. Reload a few times: neither
-  repeats. On a session still open, a passing Release from stamps
-  nothing.
-- [ ] **A page view first still works, and records it once.** Set End 2
-  minutes ahead and keep Session Home open; reload it just after End:
-  the instruments close at once, and the `session.deadline_reached`
-  event has no `fired_by`. The clock's next pass adds nothing.
-- [ ] **Off is off.** Restarted with `SCHEDULER_INTERVAL_SECONDS` at `0`: no
-  `scheduled clock started` in the log, and a Start that passes fires
-  only when an operator page is opened, as before.
+**Times are set together, beforehand:** Start, End and the release
+window are editable only before the session opens.
+
+- [ ] **Auto-send is off.** On New session, Send invites and Send
+  reminders are greyed out with "Scheduled sending isn't available on
+  this deployment; send from Invitations when it's time"; the Guide's
+  paragraph on them says the same.
+- [ ] **Set up.** Create a session; on Quick Setup upload
+  `docs/sample_data/basic_cohort/mock_reviewers.csv` and
+  `mock_reviewees.csv`. Run Validate and Prepare session until the
+  Workflow card offers Activate (Validated). In Session Home's edit mode
+  the two offset fields are greyed out with the same line, and the
+  Workflow card never says "System will dispatch automatically".
+- [ ] **Schedule.** Note the time *T*. In Session Home's edit mode set
+  Start *T*+3 min, End *T*+6 min, Release responses from *T*+9 min and
+  Release responses until *T*+12 min; save. Copy the session's code
+  from the address, open its audit log, and close every other Review
+  Robin tab.
+- [ ] **Activation on time.** At *T*+4, reload the audit log:
+  `session.activated`, detail `fired_by: clock`.
+- [ ] **The deadline closes on time.** (Optional, before *T*+6: open
+  `/reviewrobin/me` and submit your own reviews, as
+  `operator@example.edu` is a reviewer.) At *T*+7, reload: one
+  `instrument.closed` per instrument and one `session.deadline_reached`,
+  "Deadline reached: *n* of *N* reviewers submitted", each `fired_by:
+  clock`.
+- [ ] **The window waits for the session to end.** Open Session Home and
+  press **Close session** before *T*+9, then close it again, leaving the
+  audit log. At *T*+13, reload: one `session.release_window_opened` and
+  one `session.release_window_ended`. Reload twice more: neither repeats.
+- [ ] **Off is off, and a page view still does it.** Stop the app
+  (Ctrl+C), set the interval to `0` (`$env:SCHEDULER_INTERVAL_SECONDS =
+  "0"`, or `SCHEDULER_INTERVAL_SECONDS=0` in bash) and start it again: no
+  `scheduled clock started` in the log. Take a second session to
+  Validated with Start *T*+2 and End *T*+4, keep its Session Home open,
+  and reload it after *T*+2 and again after *T*+4: it opens, then
+  closes, and its `session.activated` and `session.deadline_reached`
+  carry no `fired_by`.
 
 ## Email dates in the session's zone (#2720)
 
