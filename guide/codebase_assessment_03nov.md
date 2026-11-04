@@ -60,7 +60,7 @@ the contract is `spec/` (indexed by `spec/README.md`) plus
   (§3, §6).
 
 Nothing was edited by them. Every defect, drift and gap they reported is a
-row of `guide/findings_2026-11-03_assessment.md`, the checklist the fixes
+row of `guide/archive/findings_2026-11-03_assessment.md`, the checklist the fixes
 strike off.
 
 **Development context:** a single author, with AI agents building. The
@@ -300,7 +300,7 @@ and guidance, not contract).
 
 **At `cc364ed0`: one medium, six low, none high**, plus thirteen spec
 drifts (§3) and four noted gaps. Each is a row of
-`guide/findings_2026-11-03_assessment.md`; CONFIRMED means reproduced by a
+`guide/archive/findings_2026-11-03_assessment.md`; CONFIRMED means reproduced by a
 scratch test or request, PLAUSIBLE means traced only.
 
 - **M1 (medium, CONFIRMED).** `directory_recheck.recheck` binds rows,

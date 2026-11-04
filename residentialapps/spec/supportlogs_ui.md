@@ -109,7 +109,15 @@ form's end, and the main action is a full-width Primary on the page
 - **The forms that show their confirmation are live on sample data**:
   Log encounter's Save, Safety concern's Save and raise, Share, Flag for
   formal assignment and the Consultation check's Check. Each submits to its
-  confirmation page and stores nothing. Your records' Unlock and Download
+  confirmation page and stores nothing.
+- **When the Consultation check is wired to real records, its Check posts**
+  (findings N4, 2026-11-03). On sample data it is a GET, so the purpose
+  and the students' emails ride the URL (`/consultation/check?…&emails=`)
+  into browser history, the host's access logs and any copied link, and
+  that a staff member checked a student is itself sensitive. Wired, the
+  emails travel in a POST body and the result renders from that request;
+  a redirect after it may carry only a short-lived server-side token,
+  never the emails. Your records' Unlock and Download
   CSV, and its template link, are live too, as are Records across staff's
   Unlock, Download CSV, template links and purge filter: the downloads
   are the sample's own records.

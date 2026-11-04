@@ -128,6 +128,10 @@ preview page carries the distinct keys as JSON (`#check-keys`), and
 request, four in flight. After each answer, *Addresses to check* drops
 by one.
 
+- **Cross-site posts.** `/preview` and `/check` take ordinary form posts
+  and rely on the host's `SameSite=Lax` sign-in cookie, as every
+  Cordware form does (`docs/security_posture.md`, "CSRF posture");
+  `/lookup` is JSON only besides.
 - **`POST /email-check/lookup`**: super-admin only. The body is JSON
   `{"keys": [...]}`, `Content-Type: application/json` and at most 16 KiB.
   It takes 1–25 keys (`check.BATCH_MAX`), each already a lookup key.

@@ -493,6 +493,19 @@ default, this section is the canonical place to revisit the decision.
 - *Custom request headers (`X-Requested-With`)* — useful for AJAX
   endpoints; the app's POSTs are all `<form>`-based, so no benefit.
 
+**The posture covers every application the host mounts**, not RRW
+alone: Residential's forms, and the Email Address Checker's `/check` and
+`/preview`, which take ordinary form posts (its `/lookup` takes JSON
+only, beside the cookie). A cross-site post to any of them arrives
+signed out and Easy Auth refuses it (findings N3, 2026-11-03, ruled
+closed by the author on 2026-11-04). The one residue is a page on
+another host under the institution's own registrable domain, which a
+browser counts as the same *site* and so sends a `Lax` cookie to: such
+a page could make a signed-in super-admin's browser run the Checker's
+lookups of addresses it chose, whose results it cannot read. The cost is
+directory calls, not data; an Origin check on those two routes would
+close it if a co-hosted institutional site ever became a concern.
+
 If the deployment model ever shifts (multi-tenant, embedded iframe from
 a foreign origin), revisit this and likely add CSRF tokens.
 
