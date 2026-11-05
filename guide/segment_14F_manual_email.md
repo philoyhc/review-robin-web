@@ -152,6 +152,15 @@ Taken 2026-11-02 at `fffd4c28`; re-taken 2026-11-05 at `095336bf`
 - 2026-11-05: the ladder is re-cut by the Decision's amendment (no bulk
   email; share the link). The original rungs 3 and 4 are struck below,
   and 3a–3d added.
+- 2026-11-05, rung 3a, Codex on #3651: a Regenerate fails the
+  invitation's still-queued rows, so a per-row send queued before it
+  never goes out with the dead link (`email=superseded`).
+- 2026-11-05, rung 3b: the **Share the session link** card sits on
+  Invitations between the counters and the table, with the link, the
+  invitation and reminder messages and five inert Copy buttons. The
+  Workflow card's bulk-off line links to `#share-session-link`. Two
+  lines that 3a made stale also changed: the composer's "sending is not
+  switched on yet" and the Email settings card's.
 - 2026-11-05, rung 3a:
   - **Per-row sends.** Send and Send reminder dispatch the row they queue
     through `graph.mailer_for`, with `send_options_for`, and redirect to
