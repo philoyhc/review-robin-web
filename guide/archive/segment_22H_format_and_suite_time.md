@@ -182,6 +182,42 @@ plus the named hand edits.
 
 ## Item 2 — Suite time
 
+### Status (closed 2026-11-05)
+
+**Intended vs done.** The three rungs ran as planned: #3627 (the
+outlier test), #3628 (the targeted loop) and #3629 (the CI split), then
+this close. One cumulative `diff-reviewer` read ran at rung 3, from
+`d72367f0`. It found that the shard check caught a file in all three
+shards but not one in any two, and that the check missed `*_test.py`
+files and could not see other flags (both fixed in #3629). It also
+found that the loop paragraph overstated where the template checks
+live (fixed in #3628). It found the outlier fix and the matrix syntax
+sound.
+
+**Decisions confirmed at build:**
+- `test_no_url_leaks` slices only the two calls it reports and caches
+  the router's segments: 7.6 s to 0.8 s of scanning, with the finding
+  set identical against three planted leaks. `test_import_order` is
+  left as it was (the plan's out): under xdist its subprocesses
+  already spread, and one combined test would lose the per-module ids.
+- The CI split has **three shards, not two**. Timed on 4 cores, the
+  plan's split left integration and browser together at 2 m 54 s
+  against unit's 36 s. By folder, the shards are unit with lint about
+  1.5 min, integration about 1.7 min, and browser about 1.2 min.
+  On #3629's own CI, install included, they took 2 m 28 s, 2 m 04 s and
+  2 m 32 s, against the old job's 6 m 42 s. `ci-postgres` (6 m 00 s) is
+  now the PR's long pole; it was left whole by the plan's measure, and
+  splitting it is the next lever if the wait matters.
+- The unit shard runs `tests/` less the two big folders, because the
+  plan's path list missed `tests/test_auth_routes.py` and
+  `tests/test_health.py`. `tests/unit/test_ci_shards.py` keeps every
+  `testpaths` file in exactly one shard.
+- No live prose named the `test` job, so the job's new names needed no
+  edit; `CLAUDE.md` gained the loop paragraph alone.
+- Timing turned up one intermittent failure in the r–z integration
+  files plus `tests/browser`. Three reruns passed and the test was not
+  named, so it is not filed; whoever next sees it red should name it.
+
 ### PR ladder
 
 1. **The two outlier tests (one PR, code).**
