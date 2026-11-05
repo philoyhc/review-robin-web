@@ -125,6 +125,18 @@ Taken 2026-11-05 at `a321b04b`, except where a row says otherwise.
 
 ## Item 1 — `CI - Postgres` in two shards
 
+### Status
+
+- 2026-11-05, #3634: `postgres (unit)` 1 m 25 s with the migrations,
+  `postgres (integration)` 3 m 44 s; wall 3 m 44 s against 3 m 51 s to
+  6 m 00 s. The shards differ by more than 2×, but `tests/db` was already
+  in `unit`, so nothing moved: the imbalance is `tests/integration` itself.
+- It is still the longest check, by 1 m 0 s over `test (browser)`
+  (2 m 12 s), so the Out of scope condition for a further split is met
+  at its edge; left for the author.
+- One `diff-reviewer` read: no defects; it found `CONTRIBUTING.md` still
+  describing one job, so that file joined the PR and the Doc impact.
+
 ### PR ladder
 
 1. **The split (one PR: CI and one test).**
@@ -162,6 +174,7 @@ Taken 2026-11-05 at `a321b04b`, except where a row says otherwise.
 - `CLAUDE.md` — "Database": the `ci-postgres` check runs as two shards.
 - `AGENTS.md` — the twin, copied from `CLAUDE.md`.
 - `docs/database.md` — the CI lines name the shards.
+- `CONTRIBUTING.md` — "When to wait for CI": the job is two shards, with their times.
 - `guide/todo_master.md` — the segment's entry, edited at each item's close.
 
 ## Item 2 — the stale figure
@@ -280,8 +293,7 @@ Taken 2026-11-05 at `a321b04b`, except where a row says otherwise.
 
 - ~~Does anything in `tools/` read `ci-postgres.yml` by job name?~~ No.
   `tools/practice_kit.py` names the file only (re-checked 2026-11-05).
-- **Where `tests/db` goes:** the unit or the integration shard. It is
-  decided on the measured split at Item 1, not in advance.
+- ~~Where `tests/db` goes?~~ It stays in `unit`; the split is uneven without it (Item 1 Status).
 
 ## Out of scope
 
