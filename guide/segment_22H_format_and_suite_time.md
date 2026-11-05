@@ -104,6 +104,32 @@ Taken 2026-11-05 at `dd8af8ff`, except where a row says `38a0506`.
 
 ## Item 1 — `ruff format`
 
+### Status (closed 2026-11-05)
+
+**Intended vs done.** The format run went in as #3623. A follow-up PR,
+#3624, which the ladder did not have, turned `E501` on after it (the
+ruling below). The gate went in as #3625, and this close as the PR after it. Item 1 took one read: a cold
+scope read of #3623, which confirmed the diff was `ruff format` output
+plus the named hand edits.
+
+**Decisions confirmed at build:**
+- The run left 222 lines over 100, not about 50. The author ruled to
+  exempt `tools/theme_customizer.gen.py` (92 of them, the generated
+  page's markup) and fix the rest in their own PR.
+- The 130 others: 85 strings split by implicit concatenation, 4
+  comments rewrapped, 20 docstring lines rewrapped (whitespace only),
+  and 23 lines inside 11 multi-line strings (mock CSV, JS and HTML)
+  marked `# noqa: E501`, because they cannot split without changing
+  their value. Every edited file's AST matched its parent once docstring
+  whitespace was normalized.
+- The run needed three kinds of hand edit, as Semantics predicted: a
+  moved `noqa`, a `pyright` ignore split onto two lines, and two
+  `# not-identity:` markers. Two joined lines had tripped
+  `test_identity_columns_are_compared_through_the_fold`, which reads
+  layout. The formatter also normalized four docstrings' whitespace.
+- `ruff` is pinned exactly (`0.15.22`), which the ladder did not say.
+  A version range would let CI format differently from the tree.
+
 ### PR ladder
 
 1. **Config and the big diff (one PR, nothing else in it).**
@@ -226,9 +252,9 @@ Taken 2026-11-05 at `dd8af8ff`, except where a row says `38a0506`.
 
 ## Open questions
 
-- **The `E501` residue after formatting.** It is unknown until the run.
-  If it is over about 50, the author rules: fix it, or leave the rule off.
-  Decided at Item 1 rung 1.
+- ~~The `E501` residue after formatting~~: 222 lines. The author ruled
+  to exempt `tools/theme_customizer.gen.py` and fix the rest (Item 1
+  Status).
 
 ## Out of scope
 
