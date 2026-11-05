@@ -86,6 +86,9 @@ class MetadataOptions:
     instrument_ids: set[int] | None = None
     all_rows: bool = True
     self_review_handling: str = SELF_REVIEW_HANDLING_DEFAULT
+    timestamps: bool = False
+    """The Reviewer card's Timestamps chip (14F rung 3d); the Reviewee
+    card has none, so it stays off there."""
 
 
 def build_setup_bundle(db: Session, review_session: ReviewSession) -> tuple[bytes, dict[str, int]]:
@@ -208,6 +211,7 @@ def build_responses_bundle(
             instrument_ids=options.instrument_ids,
             self_review_handling=options.self_review_handling,
             **{all_kwarg: options.all_rows},
+            **({"timestamps": True} if options.timestamps else {}),
         )
         members.append(
             (

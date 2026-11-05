@@ -372,6 +372,7 @@ def export_responses_bundle_zip(
         default=SELF_REVIEW_HANDLING_DEFAULT,
         alias="reviewer_metadata.self_review_handling",
     ),
+    rvr_timestamps: int = Query(default=0, alias="reviewer_metadata.timestamps"),
     reviewee_metadata: int = Query(default=1),
     rve_instrument: list[int] | None = Query(default=None, alias="reviewee_metadata.instrument"),
     rve_all: int = Query(default=1, alias="reviewee_metadata.all"),
@@ -397,8 +398,8 @@ def export_responses_bundle_zip(
     card's route reads it: ``?by_instrument.instrument=42`` (and
     ``.meta`` / ``.all_rows``) as on ``by_instrument_bundle.zip``;
     ``?reviewer_metadata.instrument=42`` (and ``.all_instruments`` /
-    ``.all`` / ``.self_review_handling``) as on
-    ``reviewer_metadata.csv``, and
+    ``.all`` / ``.self_review_handling``, and ``.timestamps`` on the
+    reviewer card) as on ``reviewer_metadata.csv``, and
     likewise for reviewees. Saved shapes carry their own chips, so
     ``data_shapes`` has no options. The page composes the URL from
     the cards' chips; an omitted option takes the card route's own
@@ -415,6 +416,7 @@ def export_responses_bundle_zip(
             ),
             all_rows=rvr_all != 0,
             self_review_handling=_normalise_self_review_handling(rvr_self_review_handling),
+            timestamps=rvr_timestamps != 0,
         )
         if reviewer_metadata != 0
         else None
@@ -589,6 +591,7 @@ def export_reviewer_metadata_csv(
     all: int = Query(default=1),
     all_instruments: int = Query(default=0),
     self_review_handling: str = Query(default=SELF_REVIEW_HANDLING_DEFAULT),
+    timestamps: int = Query(default=0),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -607,6 +610,9 @@ def export_reviewer_metadata_csv(
     ``guide/archive/extract_data.md`` § *Self-review handling*). Unknown
     values fall through to ``include_self`` so today's chip-less
     links keep working unchanged.
+
+    ``?timestamps=1`` (the Timestamps chip, 14F rung 3d) adds
+    ``LastOpened`` / ``LastSaved`` / ``LastSubmitted``.
     """
     state = _normalise_self_review_handling(self_review_handling)
     instrument_ids = metadata_instrument_scope(
@@ -621,6 +627,7 @@ def export_reviewer_metadata_csv(
         instrument_ids=instrument_ids,
         all_reviewers=all != 0,
         self_review_handling=state,
+        timestamps=timestamps != 0,
     )
     body_count = len(rows) - 1  # subtract header
 
@@ -637,7 +644,7 @@ def export_reviewer_metadata_csv(
             rows=body_count,
             instruments=len(instrument_ids) if instrument_ids else 0,
         ),
-        context={"self_review_handling": state},
+        context={"self_review_handling": state, "timestamps": timestamps != 0},
     )
     db.commit()
 

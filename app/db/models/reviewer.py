@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -30,6 +31,11 @@ class Reviewer(Base, TimestampMixin):
     directory_object_id: Mapped[str | None] = mapped_column(String(64), index=True)
     directory_mail: Mapped[str | None] = mapped_column(String(320))
     directory_upn: Mapped[str | None] = mapped_column(String(320))
+    # 14F rung 3d: when the reviewer last opened their review, through
+    # the session link or a personal one; stamped on every surface GET
+    # (``reviewers.mark_opened``). ``Invitation.opened_at`` is the first
+    # follow of one invitation's link only.
+    last_opened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     session: Mapped[ReviewSession] = relationship(back_populates="reviewers")
     assignments: Mapped[list[Assignment]] = relationship(

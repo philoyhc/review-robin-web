@@ -26,11 +26,13 @@ Audit events registered in ``EVENT_SCHEMAS``:
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Final, TypedDict
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.attributes import set_committed_value
 
 from app.db.models import Reviewer, ReviewSession, User
 from app.services import audit, csv_imports, directory_accounts, symmetric_review
@@ -75,6 +77,24 @@ _FIELD_LABELS = {
     "tag_2": "Tag 2",
     "tag_3": "Tag 3",
 }
+
+
+def mark_opened(db: Session, reviewer: Reviewer, *, now: datetime | None = None) -> None:
+    """Stamp ``reviewer.last_opened_at`` (14F rung 3d): every arrival on
+    the review surface or the summary, whichever link brought them.
+
+    A Core ``UPDATE`` that sets ``updated_at`` to itself, so a visit does
+    not read as a roster edit on Setup's Reviewers table. No audit event:
+    the stamp is a reading, not a change anyone made."""
+    stamp = now or datetime.now(UTC)
+    db.execute(
+        update(Reviewer)
+        .where(Reviewer.id == reviewer.id)
+        .values(last_opened_at=stamp, updated_at=Reviewer.updated_at)
+        .execution_options(synchronize_session=False)
+    )
+    db.commit()
+    set_committed_value(reviewer, "last_opened_at", stamp)
 
 
 def _refuse_over_long(values: Mapping[str, object]) -> None:

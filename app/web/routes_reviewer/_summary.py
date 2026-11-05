@@ -21,6 +21,7 @@ from starlette import status
 from app.db.models import Reviewer, ReviewSession, User
 from app.db.session import get_db
 from app.services import responses as responses_service
+from app.services import reviewers as reviewers_service
 from app.services import session_lifecycle as lifecycle
 from app.services import sessions as sessions_service
 from app.services.date_formatting import format_datetime, gmt_offset_zone_label
@@ -62,6 +63,7 @@ def reviewer_session_summary(
     # An archived session never reaches here: the gate answers 404
     # (``deps._participant_session_or_404``).
     reviewer, review_session = reviewer_session
+    reviewers_service.mark_opened(db, reviewer)
     if not _is_session_fully_submitted(db, reviewer=reviewer, session_id=review_session.id):
         # Not all rows submitted — redirect to the dashboard.
         # With a one-line notice saying why (participant audit M11).

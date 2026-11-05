@@ -169,6 +169,15 @@ Taken 2026-11-02 at `fffd4c28`; re-taken 2026-11-05 at `095336bf`
   link and Copy link** (2026-11-05): the invitation and reminder boxes
   the Decision named, rendered for everyone, are dropped, and the help
   text is the author's.
+- 2026-11-05, rung 3d: `reviewers.last_opened_at` (migration
+  `a3d7f1c9e2b4`) is stamped by `reviewers.mark_opened` on every GET of
+  the review surface page and the summary. It is a Core `UPDATE` that
+  keeps `updated_at`, so a visit is not a roster edit on Setup, and it
+  writes no audit event. The **Timestamps** chip (off by default) adds
+  `LastOpened`, `LastSaved` and `LastSubmitted` after name and email:
+  saved and submitted are the session-wide maxima, whatever the
+  instrument chips, in ISO 8601 in the session zone. Zip all carries it
+  as `reviewer_metadata.timestamps`; the Reviewee card has no such chip.
 - 2026-11-05, rung 3a:
   - **Per-row sends.** Send and Send reminder dispatch the row they queue
     through `graph.mailer_for`, with `send_options_for`, and redirect to
@@ -273,4 +282,5 @@ Taken 2026-11-02 at `fffd4c28`; re-taken 2026-11-05 at `095336bf`
 - `docs/deployment.md` — `RRW_BULK_SEND` in the settings table, default off (2026-11-05; was waived when `RRW_SCHEDULED_SEND` moved to 14E).
 - `spec/operations_pages.md` — the Share the session link card on Invitations; the bulk buttons disabled behind `RRW_BULK_SEND`.
 - `spec/extract_data.md` — the participation report's columns (first opened, last saved, last submitted, eligible instruments).
+- `spec/settings_inventory.md` — `reviewers.last_opened_at` in the Reviewers table, "Not settings: a reading" (rung 3d).
 - `guide/post_azure_todo_checklist.md` — items 9 and 10 settled (at close).
