@@ -2918,9 +2918,10 @@
          ``.tag-chip.is-disabled`` no longer appears on any chip row:
          19I Item 12 rung 3 retired the struck-through "no data in
          this column" state, because a slot with no data now renders
-         neither chip nor column. The rule stays because
-         ``instruments_index.html`` renders the same class for its
-         Band 1 link chips, which are a different mechanism. */
+         neither chip nor column. The Band 1 link chips stopped
+         rendering it too (2026-11-05: an untagged roster's chip stays
+         live); the rule is kept, unused, for a chip that is shown
+         but cannot act. */
       body.ui-v2 .col-chip-row {
         display: flex;
         flex-wrap: wrap;

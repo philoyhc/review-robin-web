@@ -137,3 +137,37 @@ def test_a_locked_cards_unset_link_chip_stays_amber(
     assert _fill(chip) == _amber(card)
     assert _style(chip, "cursor") == "default"
     assert _style(chip, "boxShadow") == "none"
+
+
+UNTAGGED_REVIEWERS_CSV = b"ReviewerName,ReviewerEmail\nRana,rana@example.edu\n"
+UNTAGGED_REVIEWEES_CSV = b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\n"
+
+
+def test_with_no_tags_a_link_chip_cycles_past_its_tag_state(
+    page: Page, api: httpx.Client, new_session: Callable[[], str]
+) -> None:
+    """An untagged roster: each chip cycles Not set → All (Individual on
+    Link 3) → Not set, skipping the state that needs a tag."""
+    session_id = new_session()
+    for kind, body in (
+        ("reviewers", UNTAGGED_REVIEWERS_CSV),
+        ("reviewees", UNTAGGED_REVIEWEES_CSV),
+    ):
+        response = api.post(
+            f"/operator/sessions/{session_id}/{kind}/import",
+            files={"file": (f"{kind}.csv", body, "text/csv")},
+            follow_redirects=False,
+        )
+        assert response.status_code in (200, 303), response.text
+    card = open_unlocked(page, session_id)
+    chips = card.locator(LINK_CHIPS)
+    assert chips.count() == 3
+    for i, set_label in enumerate(("All", "All", "Individual")):
+        chip = chips.nth(i)
+        expect(chip).to_have_text("Not set")
+        chip.click()
+        expect(chip).to_have_text(set_label)
+        expect(chip).to_have_attribute("aria-pressed", "false")
+        chip.click()
+        expect(chip).to_have_text("Not set")
+        expect(chip).to_have_attribute("aria-pressed", "mixed")

@@ -447,15 +447,23 @@ def test_a_stored_operand_from_an_emptied_slot_survives_with_no_reviewer_tags(
     ]
 
 
+def _no_tag_pills(page: str) -> list[str]:
+    """The Band 1 pills marked as having no tag to filter or group by."""
+    pills = re.findall(r"<span[^>]*data-new-model-(?:rule|unit)-mode[^>]*>", page)
+    return [pill for pill in pills if "data-new-model-no-tags" in pill]
+
+
 def test_link3_pill_follows_a_stored_boundary_with_only_pair_tags(
     db: Session, client: TestClient
 ) -> None:
     """Relationship tags make Link 2 usable; Link 1 (roster tags only)
-    stays disabled, and Link 3, which groups by reviewee tags only, stays
-    disabled unless a boundary is stored."""
+    has nothing to filter by, and Link 3, which groups by reviewee tags
+    only, nothing to group by unless a boundary is stored. Those two
+    pills skip their tag-based state (`data-new-model-no-tags`) but stay
+    live, so All and Individual can still be set."""
     session, instrument = _pair_tags_only(db, client, "b1-pair-only")
     page = _page(client, session.public_id, instrument.id)
-    assert page.count('title="No usable tags for this link"') == 2
+    assert len(_no_tag_pills(page)) == 2
 
     saved = client.post(
         f"/operator/sessions/{session.public_id}/instruments/{instrument.id}/fields/save",
@@ -470,8 +478,10 @@ def test_link3_pill_follows_a_stored_boundary_with_only_pair_tags(
     assert saved.status_code == 303, saved.text
 
     page = _page(client, session.public_id, instrument.id)
-    assert page.count('title="No usable tags for this link"') == 1
-    assert 'onclick="newModelToggleUnitMode(this)"' in page
+    assert len(_no_tag_pills(page)) == 1
+    unit_pill = re.search(r"<span[^>]*data-new-model-unit-mode[^>]*>", page)
+    assert unit_pill is not None
+    assert "data-new-model-no-tags" not in unit_pill.group(0)
 
 
 def test_a_default_link2_cell_on_a_pair_tag_shows_the_value_box(
@@ -509,3 +519,42 @@ def test_an_is_value_reading_like_a_field_is_free_text(db: Session, client: Test
     )
 
     assert saved.status_code == 200, saved.text
+
+
+def _untagged(db: Session, client: TestClient, code: str) -> tuple[ReviewSession, Instrument]:
+    """No tag on either roster and no relationships: nothing to filter
+    or group by."""
+    session, instrument = _pair_tags_only(db, client, code)
+    for relationship in db.execute(
+        select(Relationship).where(Relationship.session_id == session.id)
+    ).scalars():
+        db.delete(relationship)
+    db.commit()
+    return session, instrument
+
+
+def test_an_untagged_roster_still_offers_all_and_individual(
+    db: Session, client: TestClient
+) -> None:
+    """With no tag anywhere, all three pills stay live (a button, not
+    `aria-disabled`) and are marked to skip their tag-based state, so
+    All / All / Individual can be set. The render is what guards the
+    fix (each pill was stuck on "Not set" before); the save shows the
+    three Links then read as touched, which the safety gate needs."""
+    session, instrument = _untagged(db, client, "b1-untagged")
+    page = _page(client, session.public_id, instrument.id)
+    pills = re.findall(r"<span[^>]*data-new-model-(?:rule|unit)-mode[^>]*>", page)
+    assert len(pills) == 3
+    for pill in pills:
+        assert 'role="button"' in pill and "aria-disabled" not in pill, pill
+    assert len(_no_tag_pills(page)) == 3
+
+    saved = client.post(
+        f"/operator/sessions/{session.public_id}/instruments/{instrument.id}/save", data=_form()
+    )
+    assert saved.status_code == 200, saved.text
+    db.refresh(instrument)
+    assert set(instrument.band1_touched_links or []) == {"link1", "link2", "link3"}
+    page = _page(client, session.public_id, instrument.id)
+    assert re.search(r'data-new-model-rule-mode="all"', page)
+    assert re.search(r'data-new-model-unit-mode="individual"', page)
