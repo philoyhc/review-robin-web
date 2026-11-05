@@ -111,6 +111,14 @@ Taken 2026-11-02 at `fffd4c28`; re-taken 2026-11-05 at `095336bf`
   - **No retry on a `5xx` or a network failure**, since Graph may have
     accepted the message; a `429` waits once. The outbox row reads
     `failed` and a person decides.
+- 2026-11-05, rung 2b: **Send a test to me** submits the composer form
+  to `/setup-invite/send-test` (`app/services/email_test_send.py`). It
+  renders the template as edited, unsaved, overlaying the saved overrides
+  with `set_committed_value` so nothing is marked dirty. Merge tags come
+  from the roster's first reviewer, else a "Sample Reviewer" stand-in,
+  and the link is a placeholder. It goes to the operator only, subject
+  marked `[Test]`, with no Cc, Bcc or outbox row, and `email.test_sent`
+  records it. A failure comes back as a line naming why.
 
 ## PR ladder
 

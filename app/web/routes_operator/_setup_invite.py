@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
-from app.services import email_templates
+from app.services import email_send, email_templates, email_test_send
 from app.services import session_lifecycle as lifecycle
 from app.web import breadcrumbs, urls, views
 from app.web.deps import (
@@ -24,6 +24,7 @@ from app.web.deps import (
     require_session_operator,
 )
 from app.web.routes_operator._shared import _templates
+from cordware import graph
 
 router = APIRouter()
 
@@ -62,10 +63,24 @@ def _build_field_rows(review_session: ReviewSession, template: str) -> list[dict
     return rows
 
 
+def _send_test_notice(test: str | None, kind: str | None, user: User) -> dict[str, str] | None:
+    """The line under the composer's buttons after Send a test to me."""
+    if test == "sent":
+        return {"tone": "success", "text": f"Test sent to {user.email}. Check your inbox."}
+    if test == "failed":
+        return {
+            "tone": "error",
+            "text": f"The test was not sent. {email_send.failure_copy(kind or '')}",
+        }
+    return None
+
+
 @router.get("/sessions/{session_id}/setup-invite", response_class=HTMLResponse)
 def setupinvite_form(
     request: Request,
     template: str = Query(default="invitation"),
+    test: str | None = Query(default=None),
+    kind: str | None = Query(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -90,6 +105,7 @@ def setupinvite_form(
                 email_templates.responses_received_enabled(review_session)
             ),
             "locked": lifecycle.is_archived(review_session),
+            "send_test_notice": _send_test_notice(test, kind, user),
             "breadcrumbs": breadcrumbs.operator_session_child(review_session, "Email Template"),
         },
     )
@@ -145,6 +161,51 @@ async def setupinvite_save(
     return urls.redirect(
         request,
         url=f"/operator/sessions/{review_session.public_id}/setup-invite?template={template}",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/sessions/{session_id}/setup-invite/send-test")
+async def setupinvite_send_test(
+    request: Request,
+    template: str = Form(default="invitation"),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Send a test to me (14F rung 2b): the composer's form, as edited and
+    unsaved, rendered and sent to the operator. Saves nothing."""
+    if template not in _VALID_TEMPLATES:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Unknown template",
+        )
+    form = await request.form()
+    edited: dict[str, str | None] = {}
+    for spec in email_templates.TEMPLATE_FIELDS[template]:
+        raw = form.get(spec["field"])
+        if isinstance(raw, str):
+            edited[spec["key"]] = raw
+    transport = email_send.graph_transport_for(lambda: graph.mailer_for(request))
+    # The Graph call waits off the event loop.
+    result = await run_in_threadpool(
+        lambda: email_test_send.send_test(
+            db,
+            review_session=review_session,
+            user=user,
+            template=template,
+            edited=edited,
+            transport=transport,
+            correlation_id=request_correlation_id(),
+        )
+    )
+    outcome = "test=sent" if result.ok else f"test=failed&kind={result.failure_kind or ''}"
+    return urls.redirect(
+        request,
+        url=(
+            f"/operator/sessions/{review_session.public_id}/setup-invite"
+            f"?template={template}&{outcome}"
+        ),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 

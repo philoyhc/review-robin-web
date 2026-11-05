@@ -563,6 +563,8 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # failed to send (``app/services/email_dispatch.py``).
     "email.sent": EventSchema(_IDENTITY | {"refs", "context"}),
     "email.send_failed": EventSchema(_IDENTITY | {"reason", "refs", "context"}),
+    # 14F rung 2b — Send a test to me, from the email composer.
+    "email.test_sent": EventSchema(_IDENTITY | {"reason", "context"}),
     # G4 (2026-10-02) — the responses-received confirmation queued on a
     # reviewer's successful submit; stays ``queued`` until a transport
     # exists (work in progress awaiting Azure).
