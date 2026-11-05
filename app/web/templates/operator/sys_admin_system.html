@@ -65,7 +65,7 @@
       <h2>Sending</h2>
       <dl class="status-list">
         <dt>Scheduled send</dt>
-        <dd data-sending-scheduled>{% if scheduled_send %}On: scheduled invites and reminders fire on time{% else %}Off (RRW_SCHEDULED_SEND): scheduled invites and reminders do not fire{% endif %}</dd>
+        <dd data-sending-scheduled>{{ instance.scheduled_send_label }}</dd>
       </dl>
     </div>
 
@@ -77,15 +77,7 @@
         <dt>Uptime</dt><dd data-instance-uptime>{{ clock.uptime_label }}</dd>
         <dt>Database</dt><dd data-instance-dialect>{{ instance.dialect }}</dd>
         <dt>Schema</dt>
-        <dd data-instance-schema data-schema-current="{{ 'yes' if instance.schema_current else 'no' }}">
-          {%- if instance.schema_current -%}
-            Current ({{ instance.schema_head }})
-          {%- elif instance.schema_revision -%}
-            At {{ instance.schema_revision }}; this code expects {{ instance.schema_head }}
-          {%- else -%}
-            No revision recorded; this code expects {{ instance.schema_head }}
-          {%- endif -%}
-        </dd>
+        <dd data-instance-schema data-schema-state="{{ instance.schema_state }}">{{ instance.schema_label }}</dd>
       </dl>
     </div>
   </div>

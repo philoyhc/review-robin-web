@@ -478,11 +478,11 @@ def test_system_status_sending_and_instance_cards(
     assert f"data-instance-dialect>{dialect}<" in response.text
     if dialect == "sqlite":
         # The SQLite schema is built without Alembic: no revision recorded.
-        assert 'data-schema-current="no"' in response.text
+        assert 'data-schema-state="unrecorded"' in response.text
         assert f"No revision recorded; this code expects {SCHEMA_HEAD}" in response.text
     else:
         # The Postgres job migrates to head.
-        assert 'data-schema-current="yes"' in response.text
+        assert 'data-schema-state="current"' in response.text
         assert f"Current ({SCHEMA_HEAD})" in response.text
 
     monkeypatch.setattr(settings, "scheduled_send", True)

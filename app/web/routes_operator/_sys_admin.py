@@ -188,8 +188,10 @@ def sys_admin_system(
             "user": user,
             "clock": clock,
             "due": system_status.due_next(db),
-            "scheduled_send": scheduled_events.scheduled_send_enabled(),
-            "instance": system_status.instance(db),
+            "instance": views.instance_card(
+                system_status.instance(db),
+                scheduled_send=scheduled_events.scheduled_send_enabled(),
+            ),
             "return_to_url": target.url,
             "return_to_label": target.label,
         },

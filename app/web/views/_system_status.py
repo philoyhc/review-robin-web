@@ -9,6 +9,7 @@ import dataclasses
 from datetime import UTC, datetime, timedelta
 
 from app.services.scheduled_events import ClockStatus
+from app.services.system_status import Instance
 
 
 @dataclasses.dataclass(frozen=True)
@@ -88,4 +89,38 @@ def clock_card(
             f"{_plural(status.busy_sessions, 'session')} busy, "
             f"{_plural(status.held_elsewhere, 'pass')} held by another process"
         ),
+    )
+
+
+@dataclasses.dataclass(frozen=True)
+class InstanceCard:
+    """The Sending and This instance cards. ``schema_state`` is
+    ``current`` / ``behind`` / ``unrecorded``."""
+
+    scheduled_send_label: str
+    version: str
+    dialect: str
+    schema_state: str
+    schema_label: str
+
+
+def instance_card(instance: Instance, *, scheduled_send: bool) -> InstanceCard:
+    if instance.schema_current:
+        state, label = "current", f"Current ({instance.schema_head})"
+    elif instance.schema_revision:
+        state = "behind"
+        label = f"At {instance.schema_revision}; this code expects {instance.schema_head}"
+    else:
+        state = "unrecorded"
+        label = f"No revision recorded; this code expects {instance.schema_head}"
+    return InstanceCard(
+        scheduled_send_label=(
+            "On: scheduled invites and reminders fire on time"
+            if scheduled_send
+            else "Off (RRW_SCHEDULED_SEND): scheduled invites and reminders do not fire"
+        ),
+        version=instance.version,
+        dialect=instance.dialect,
+        schema_state=state,
+        schema_label=label,
     )

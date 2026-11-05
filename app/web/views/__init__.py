@@ -273,7 +273,13 @@ from ._sort import (
 )
 
 # Sys Admin → System Status (segment 22G Item 1).
-from ._system_status import ClockCard, clock_card, duration_label
+from ._system_status import (
+    ClockCard,
+    InstanceCard,
+    clock_card,
+    duration_label,
+    instance_card,
+)
 
 # Participant chrome, masked invite address and /me notices (M8, M9,
 # M11).
@@ -312,8 +318,10 @@ from ._workflow_card import (
 
 __all__ = [
     "ClockCard",
+    "InstanceCard",
     "clock_card",
     "duration_label",
+    "instance_card",
     "top_line",
     "REFUSED_CLOSED",
     "REFUSED_NO_ASSIGNMENTS",
