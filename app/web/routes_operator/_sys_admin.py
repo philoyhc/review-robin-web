@@ -58,6 +58,7 @@ from app.services import (
     scheduled_events,
     session_owners,
     sessions,
+    system_status,
 )
 from app.services import (
     users as users_service,
@@ -185,6 +186,7 @@ def sys_admin_system(
                 scheduled_events.clock_status(),
                 interval_setting=settings.scheduler_interval_seconds,
             ),
+            "due": system_status.due_next(db),
             "return_to_url": target.url,
             "return_to_label": target.label,
         },

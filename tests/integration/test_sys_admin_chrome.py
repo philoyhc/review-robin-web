@@ -427,3 +427,16 @@ def test_system_status_clock_card_reads_the_clock(
     assert 'data-clock-state="on"' in response.text
     assert "Every 2 min" in response.text
     assert "None yet" in response.text
+
+
+def test_system_status_due_card_renders_its_rows(
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
+    response = client.get("/operator/sys-admin/system")
+    assert response.status_code == 200
+    for row in ("data-due-start", "data-due-close", "data-due-release", "data-due-now", "data-due-failed"):
+        assert row in response.text
+    assert "Nothing scheduled" in response.text

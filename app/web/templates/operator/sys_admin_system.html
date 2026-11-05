@@ -12,8 +12,9 @@
     {% include "operator/partials/sys_admin_top_nav.html" %}
   {% endwith %}
 
-  {# Segment 22G Item 1. Four read-only cards; Due next, Sending and
-     This instance are placeholders until rungs 3-4 wire them. The
+  {# Segment 22G Item 1. Four read-only cards; Sending and This
+     instance are placeholders until rung 4 wires them. Each session
+     named links to its audit log, where its scheduled steps are. The
      clock's figures are this process's, since it started. #}
   <div class="page-grid">
     <div class="card" data-system-clock data-clock-state="{{ clock.state }}">
@@ -33,12 +34,29 @@
 
     <div class="card" data-system-due>
       <h2>Due next</h2>
+      {% macro session_ref(item) -%}
+        <a href="{{ url('/operator/sys-admin/sessions/' ~ item.session_id ~ '/audit-log') }}">{{ item.name }}</a> <span class="muted">({{ item.code }})</span>
+      {%- endmacro %}
+      {% macro next_row(item) -%}
+        {% if item %}{{ item.at | format_datetime }}, {{ session_ref(item) }}{% else %}Nothing scheduled{% endif %}
+      {%- endmacro %}
       <dl class="status-list">
-        <dt>Next Start</dt><dd>—</dd>
-        <dt>Next End close</dt><dd>—</dd>
-        <dt>Next release stamp</dt><dd>—</dd>
-        <dt>Due now</dt><dd>—</dd>
-        <dt>Failed activations, 7 days</dt><dd>—</dd>
+        <dt>Next Start</dt><dd data-due-start>{{ next_row(due.next_start) }}</dd>
+        <dt>Next End close</dt><dd data-due-close>{{ next_row(due.next_close) }}</dd>
+        <dt>Next release stamp</dt><dd data-due-release>{{ next_row(due.next_release_stamp) }}</dd>
+        <dt>Due now</dt>
+        <dd data-due-now>
+          {%- if due.due_now -%}
+            {% for item in due.due_now %}{{ session_ref(item) }}{% if not loop.last %}, {% endif %}{% endfor %}
+            <br><span class="muted">The clock's next pass takes these; one still listed after it is not being moved.</span>
+          {%- else -%}None{%- endif -%}
+        </dd>
+        <dt>Failed activations, 7 days</dt>
+        <dd data-due-failed>
+          {%- if due.failed_activations -%}
+            {% for item in due.failed_activations %}{{ item.at | format_datetime }}, {{ session_ref(item) }}{% if not loop.last %}<br>{% endif %}{% endfor %}
+          {%- else -%}None{%- endif -%}
+        </dd>
       </dl>
     </div>
   </div>
