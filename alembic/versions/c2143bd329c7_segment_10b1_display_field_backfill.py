@@ -46,7 +46,8 @@ def upgrade() -> None:
                 sa.text(
                     "INSERT INTO instrument_display_fields "
                     '(instrument_id, source_type, source_field, label, "order", visible) '
-                    "VALUES (:instrument_id, 'pair_context', :source_field, '', :order_index, :visible)"
+                    "VALUES (:instrument_id, 'pair_context', :source_field, '', :order_index, "
+                    ":visible)"
                 ),
                 {
                     "instrument_id": instrument_id,

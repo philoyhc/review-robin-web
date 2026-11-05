@@ -256,8 +256,8 @@ def test_the_row_script_reads_a_rows_own_parent_and_condition(
     assert "? rfRowCondition(row) : null;" in stager
     hint = " ".join(_rf_fn(body, "newModelRfBranchHint").split())
     assert (
-        "var parent = window.newModelRfParentOf(row); var cond = window.newModelRfConditionOf(parent);"
-        in hint
+        "var parent = window.newModelRfParentOf(row); var cond = "
+        "window.newModelRfConditionOf(parent);" in hint
     )
     sync = " ".join(_rf_fn(body, "newModelRfSyncConditionOps").split())
     assert "var parent = parentRow || group.querySelector('[data-new-model-rf-parent]');" in sync
@@ -421,8 +421,14 @@ def test_a_branch_inside_a_branch_is_ruled_above_and_below(client: TestClient, d
     assert 'class="rf-inner-end"' in _row(_rows_table(card), "Comments")
     flat = " ".join(body.split())
     for rule in (
-        "body.ui-v2 table.rf-table > tbody > tr.rf-inner-top > td:nth-child(n+3) { border-top: 1px solid var(--border-default); }",
-        "body.ui-v2 table.rf-table > tbody > tr.rf-inner-end > td:nth-child(n+3) { border-bottom: 1px solid var(--border-default); }",
+        (
+            "body.ui-v2 table.rf-table > tbody > tr.rf-inner-top > td:nth-child(n+3) { "
+            "border-top: 1px solid var(--border-default); }"
+        ),
+        (
+            "body.ui-v2 table.rf-table > tbody > tr.rf-inner-end > td:nth-child(n+3) { "
+            "border-bottom: 1px solid var(--border-default); }"
+        ),
     ):
         assert rule in flat, rule
     sync = " ".join(_rf_fn(body, "newModelRfSyncInnerBorders").split())

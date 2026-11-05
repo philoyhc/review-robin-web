@@ -11,7 +11,8 @@ Two routes:
 - ``GET .../collation/instruments/{instrument_seq}.csv`` —
   streams the per-instrument CSV scoped to the observer's
   cohort. The instrument is named by its per-session
-  ``session_seq``, not its workspace-wide ID (19V Item 3). Identification mode (Raw / Anonymized) follows
+  ``session_seq``, not its workspace-wide ID (19V Item 3). Identification mode (Raw / Anonymized)
+  follows
   Band 3; ``Summarized`` returns 404 because no per-row
   download is offered.
 

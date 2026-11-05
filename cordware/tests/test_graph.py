@@ -282,7 +282,10 @@ def test_a_search_s_failures_raise_as_a_lookup_s_do() -> None:
     ("body", "reason"),
     [
         (
-            b'{"error": {"code": "Request_UnsupportedQuery", "message": "startswith(\'jan\') ..."}}',
+            (
+                b'{"error": {"code": "Request_UnsupportedQuery", "message": '
+                b"\"startswith('jan') ...\"}}"
+            ),
             "bad_response (400) Request_UnsupportedQuery",
         ),
         (b"not json", "bad_response (400)"),

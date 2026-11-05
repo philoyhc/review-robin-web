@@ -135,7 +135,8 @@ def set_band2_state(
       (``"reviewee.name"`` etc.) the operator has ticked into the
       preview row. Unknown keys are dropped silently.
     - ``response_fields``: ordered list of dicts, one per named
-      response-field row on Band 3's table, in row order. Each dict carries ``name`` (str, required, ≤255
+      response-field row on Band 3's table, in row order. Each dict carries ``name`` (str, required,
+      ≤255
       chars), ``data_type`` (one of ``string`` / ``integer`` /
       ``decimal`` / ``list``), ``min`` / ``max`` / ``step`` /
       ``list_options`` (str, optional), and ``selected`` (bool).
@@ -982,7 +983,8 @@ def _apply_branch_rules(
     Then the saved state is checked whole (``branch_structure_errors``):
     a required governed field with no active required field outside any
     branch (19T Item 11), a parent turned String, a condition that doesn't
-    fit, or a field inside a branch it isn't part of are refused. Raises :class:`InvalidResponseFieldShapeError`; the caller's
+    fit, or a field inside a branch it isn't part of are refused. Raises
+    :class:`InvalidResponseFieldShapeError`; the caller's
     transaction is not committed. Each field whose branch changed is
     audited as its ``instrument.field_updated`` (Codex on #2639)."""
     from app.services.instruments._response_fields import (

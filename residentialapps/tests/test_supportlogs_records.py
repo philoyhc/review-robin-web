@@ -461,8 +461,8 @@ def test_purge_is_outline_red(client: TestClient) -> None:
     """Purge all takes the Destructive role, outline red (author, 2026-10-30)."""
     page = client.get(f"/students/?{OPEN}").text
     assert (
-        '<button type="button" class="btn btn-danger" disabled aria-label="Purge all your encounters">Purge all</button>'
-        in page
+        '<button type="button" class="btn btn-danger" disabled aria-label="Purge all your '
+        'encounters">Purge all</button>' in page
     )
 
 
@@ -508,8 +508,8 @@ def test_filters_take_a_name_or_email_as_a_pill(client: TestClient) -> None:
     )
     assert 'aria-label="Remove Farid Osman from Purged records: Student"' in chosen
     assert (
-        '<button type="button" id="p-staff" class="token-x" aria-label="Remove Grace Ho from Purged records: Staff">'
-        in chosen
+        '<button type="button" id="p-staff" class="token-x" aria-label="Remove Grace Ho from '
+        'Purged records: Staff">' in chosen
     )
     assert re.search(
         r'<input class="token-input" type="text" list="p-staff-list"[^>]* hidden>', chosen

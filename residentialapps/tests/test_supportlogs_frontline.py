@@ -71,8 +71,8 @@ def test_the_dashboard_follows_recent_and_the_last_14_days(client: TestClient) -
     ]
     days = section(page, "mine-h")
     assert (
-        "<dt>Encounters</dt><dd>6</dd><dt>Support time</dt><dd>105 min</dd><dt>Students</dt><dd>6</dd>"
-        in days
+        "<dt>Encounters</dt><dd>6</dd><dt>Support time</dt><dd>105 min</dd>"
+        "<dt>Students</dt><dd>6</dd>" in days
     )
     assert "<dt>Check-in</dt><dd>2</dd>" in days
     assert "The flags you raised" in page  # rung 3 fills the flags

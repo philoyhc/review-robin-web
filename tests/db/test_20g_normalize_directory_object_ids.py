@@ -68,7 +68,8 @@ def test_stored_ids_are_normalized_and_the_downgrade_keeps_them() -> None:
             )
             connection.execute(
                 text(
-                    "INSERT INTO observers (session_id, email, display_name, status, directory_object_id) "
+                    "INSERT INTO observers "
+                    "(session_id, email, display_name, status, directory_object_id) "
                     "VALUES (:sid, 'o@example.edu', 'O', 'active', :mixed)"
                 ),
                 {"sid": sid, "mixed": MIXED},

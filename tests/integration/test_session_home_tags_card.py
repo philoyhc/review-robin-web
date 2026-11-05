@@ -2,7 +2,8 @@
 
 Since 19U Item 2 it is a field of the card itself, not a sub-card: under
 Description in the left column, above the optional-tab toggles; the
-Save / Cancel / Lock cluster sits at the foot of the right column. Locked it shows the session's tags as the lobby's pills
+Save / Cancel / Lock cluster sits at the foot of the right column. Locked it shows the session's
+tags as the lobby's pills
 (an em dash ``.config-value`` when there are none, like the card's other
 empty fields); unlocked it shows a text input prefilled with the tags
 comma-joined.

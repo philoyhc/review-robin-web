@@ -37,7 +37,10 @@ MANIFEST: tuple[tuple[str, str, str, str], ...] = (
         "CLAUDE.md",
         "adapt",
         "",
-        "rewrite Project conventions + Architecture + Where to look; keep Where work runs; cp to AGENTS.md",
+        (
+            "rewrite Project conventions + Architecture + Where to look; keep Where work runs; "
+            "cp to AGENTS.md"
+        ),
     ),
     (
         "constitution.md",
@@ -55,7 +58,10 @@ MANIFEST: tuple[tuple[str, str, str, str], ...] = (
         ".gitignore",
         "skeleton",
         "",
-        "the harness lines only — .claude/* negations plus the hook's build products; appended if absent",
+        (
+            "the harness lines only — .claude/* negations plus the hook's build products; "
+            "appended if absent"
+        ),
     ),
     (
         ".claude/agents/diff-reviewer.md",
@@ -67,14 +73,20 @@ MANIFEST: tuple[tuple[str, str, str, str], ...] = (
         ".claude/agents/spec-writer.md",
         "adapt",
         "",
-        "cites this project's specs and close procedure; re-point once your spec/ has a second file",
+        (
+            "cites this project's specs and close procedure; "
+            "re-point once your spec/ has a second file"
+        ),
     ),
     (".claude/skills/segment-plan/SKILL.md", "verbatim", "", "the plan / item / close procedure"),
     (
         ".claude/hooks/session-start.sh",
         "adapt",
         "",
-        "builds the 3.12 venv the pre-PR gate needs; retarget the node-warning comment at your own JS-parsing test",
+        (
+            "builds the 3.12 venv the pre-PR gate needs; "
+            "retarget the node-warning comment at your own JS-parsing test"
+        ),
     ),
     (
         ".claude/settings.json",
@@ -122,7 +134,11 @@ MANIFEST: tuple[tuple[str, str, str, str], ...] = (
         "tests/unit/test_doc_references.py",
         "verbatim",
         "",
-        "the twins, path-reference, section-reference and node-id gates; read only the tree. The node-id floor and archive check skip on a fresh export — both need a corpus a new repo has not got",
+        (
+            "the twins, path-reference, section-reference and node-id gates; read only the tree. "
+            "The node-id floor and archive check skip on a fresh export — both need a corpus a new "
+            "repo has not got"
+        ),
     ),
     (
         "tests/unit/test_guide_indexes.py",
@@ -140,7 +156,10 @@ MANIFEST: tuple[tuple[str, str, str, str], ...] = (
         "app/web/spec_registry.py",
         "deferred",
         "app",
-        "imports the app; export with --include-deferred once app/main.py exists, then empty the table and lower _MINIMUM_ROUTES",
+        (
+            "imports the app; export with --include-deferred once app/main.py exists, "
+            "then empty the table and lower _MINIMUM_ROUTES"
+        ),
     ),
     (
         "tests/unit/test_spec_coverage.py",
@@ -152,13 +171,20 @@ MANIFEST: tuple[tuple[str, str, str, str], ...] = (
         "app/web/templates/base.html",
         "deferred",
         "theme",
-        "BUILT, not copied: the source's head through </style> (no-flash theme script, both :root blocks, every component class), a body.ui-v2 with the theme toggle and its script, a content block; rename the title, favicon and storage key",
+        (
+            "BUILT, not copied: the source's head through </style> (no-flash theme script, "
+            "both :root blocks, every component class), a body.ui-v2 with the theme toggle and its "
+            "script, a content block; rename the title, favicon and storage key"
+        ),
     ),
     (
         "tools/_harness_common.py",
         "deferred",
         "theme",
-        "the stylesheet lift, token parse and contrast pairs; ACCEPTED_BELOW_AA is the inherited palette's list",
+        (
+            "the stylesheet lift, token parse and contrast pairs; "
+            "ACCEPTED_BELOW_AA is the inherited palette's list"
+        ),
     ),
     (
         "tools/theme_customizer.gen.py",
@@ -177,13 +203,19 @@ MANIFEST: tuple[tuple[str, str, str, str], ...] = (
         "tests/unit/test_contrast_audit.py",
         "deferred",
         "theme",
-        "13 of its 14 pass on the inherited stylesheet; test_the_muted_token_absorbed_the_retired_one asserts this project's template counts",
+        (
+            "13 of its 14 pass on the inherited stylesheet; "
+            "test_the_muted_token_absorbed_the_retired_one asserts this project's template counts"
+        ),
     ),
     (
         "spec/color_tokens.md",
         "deferred",
         "theme",
-        "the inherited palette's catalogue; it cites specs, an archived plan and a test that stay in the source, so the path gate goes red again on export",
+        (
+            "the inherited palette's catalogue; it cites specs, an archived plan and a test that "
+            "stay in the source, so the path gate goes red again on export"
+        ),
     ),
     ("tools/close_check.py", "verbatim", "", "close check entry point"),
     ("tools/close_check/__init__.py", "verbatim", "", "close check package"),

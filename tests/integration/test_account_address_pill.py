@@ -19,7 +19,8 @@ from .test_session_home_owners_card import CREATOR, _add_bob, _create, _home
 from .test_sys_admin_users import _bootstrap_sys_admin
 
 PILL = re.compile(
-    r'<code class="pill pill-count pill-address" title="Matched to a directory account" data-directory-matched>([^<]+)</code>'
+    r'<code class="pill pill-count pill-address" title="Matched to a directory account" '
+    r"data-directory-matched>([^<]+)</code>"
 )
 OBJECT_ID = "99999999-9999-4999-8999-999999999999"
 
@@ -55,8 +56,8 @@ def test_the_accounts_table_pills_a_verified_account(
     assert "<code>plain@example.edu</code>" in page
     # The name too (author, 2026-10-31): the pill for a verified account.
     assert (
-        '<span class="pill pill-count" title="Matched to a directory account" data-directory-matched>Bea Bound</span>'
-        in page
+        '<span class="pill pill-count" title="Matched to a directory account" '
+        "data-directory-matched>Bea Bound</span>" in page
     )
     assert "<td>Pat Plain</td>" in page
     nameless = page[page.index("nameless@example.edu</code>") :]
@@ -79,8 +80,8 @@ def test_the_owners_card_pills_a_verified_owner(client: TestClient, db: Session)
     db.commit()
     page = _home(client, review_session)
     assert (
-        '<span class="pill pill-count" title="Matched to a directory account" data-directory-matched>Bob Bound</span>'
-        in page
+        '<span class="pill pill-count" title="Matched to a directory account" '
+        "data-directory-matched>Bob Bound</span>" in page
     )
 
 

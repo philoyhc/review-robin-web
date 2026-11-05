@@ -79,7 +79,8 @@ def _latest_invitation_outbox_by_reviewer(db: Session, session_id: int) -> dict[
     """One latest ``kind="invitation"`` outbox row per reviewer.
 
     Used by ``build_invitations_rows`` to populate the Email Status
-    column (the Sent column reads ``Invitation.sent_at``). Sorted descending by created_at then id, then
+    column (the Sent column reads ``Invitation.sent_at``). Sorted descending by created_at then id,
+    then
     the first row per reviewer wins.
     """
     rows = list(

@@ -167,7 +167,10 @@ def test_decide_shows_the_applicant_s_other_leave_and_precinct_numbers() -> None
     appeal = c.get(STAFF + "decide/L-0105" + SAM).text.split('id="own-h"')[1].split("</section>")[0]
     assert appeal.count("<li>") == 2 and "17 Aug – 19 Aug" in appeal
     rows = re.findall(
-        r'<td class="strong nowrap">([^<]*)</td><td class="num">(\d+)</td><td class="num">(\d+)</td><td class="num">(\d+)</td>',
+        (
+            r'<td class="strong nowrap">([^<]*)</td><td class="num">(\d+)</td>'
+            r'<td class="num">(\d+)</td><td class="num">(\d+)</td>'
+        ),
         c.get(STAFF + "precinct" + SAM).text,
     )
     assert ("Willow A 13-25", "4", "2", "0") in rows and len(rows) == 9

@@ -118,7 +118,8 @@ def _session_status(
 
     ``submitted`` — the dashboard's rule over ``rows``, every row on
     every page (``_SavedState.submitted``), so a page left blank with
-    nothing on it required doesn't hold it off (findings R7). ``draft`` — nothing started on any page; ``saved``
+    nothing on it required doesn't hold it off (findings R7). ``draft`` — nothing started on any
+    page; ``saved``
     — anything in between. ``None`` when the reviewer has no pages, so
     the template renders no session pill.
     """

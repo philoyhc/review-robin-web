@@ -541,7 +541,8 @@ def rehydrate_session(
     observers / relationships → regenerate assignments → load responses
     (Part F). The session lands in **draft** — never auto-activated.
     Returns the session *and* the dropped rows: a response the regenerated
-    rules cannot place is reported, never given a fabricated home. On any failure the partially-built
+    rules cannot place is reported, never given a fabricated home. On any failure the
+    partially-built
     session is hard-deleted so no half-rehydrated session survives.
 
     Assumes the caller has already run :func:`analyze_rehydrate_set` on the

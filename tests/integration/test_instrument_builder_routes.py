@@ -981,12 +981,13 @@ def test_new_model_band2_renders_selectable_pills_with_data_attrs(
     # Group-selectability is encoded for the JS unit-mode flip:
     # name + tag_1 selectable in Group; email_or_identifier not.
     assert (
-        'data-key="reviewee.name" data-label="Name" data-source-type="reviewee" data-source-field="name" data-value="E1" data-selectable-in-group="true"'
-        in flat
+        'data-key="reviewee.name" data-label="Name" data-source-type="reviewee" '
+        'data-source-field="name" data-value="E1" data-selectable-in-group="true"' in flat
     )
     assert (
-        'data-key="reviewee.email_or_identifier" data-label="Email" data-source-type="reviewee" data-source-field="email_or_identifier" data-value="e1@example.edu" data-selectable-in-group="false"'
-        in flat
+        'data-key="reviewee.email_or_identifier" data-label="Email" data-source-type="reviewee" '
+        'data-source-field="email_or_identifier" data-value="e1@example.edu" '
+        'data-selectable-in-group="false"' in flat
     )
     # The sample-names list rides on the Band 2 wrapper for the
     # Group-mode preview's member-name line. With one reviewee, the
@@ -1350,8 +1351,8 @@ def test_new_model_band2_state_round_trip(client: TestClient, db: Session) -> No
     flat = " ".join(body.split())
     # Display fields render as Band 3's table rows (19T Item 8).
     assert (
-        'data-key="reviewee.name" data-label="Name" data-source-type="reviewee" data-source-field="name"'
-        in flat
+        'data-key="reviewee.name" data-label="Name" data-source-type="reviewee" '
+        'data-source-field="name"' in flat
     )
     # The `||` divider retired with the display pills.
     assert "data-new-model-band2-pills-divider" not in flat
@@ -8502,7 +8503,8 @@ def test_row_marker_follows_validity(client: TestClient, db: Session) -> None:
     """19T Item 9 — the amber marker shows while a row's live name or
     shape is invalid (the preview keeps its last valid shape), with the
     reason as the row's tooltip; an empty name counts until the box
-    loses focus and gets its default label back. The marker's CSS sits on the row's cells, since a <tbody>
+    loses focus and gets its default label back. The marker's CSS sits on the row's cells, since a
+    <tbody>
     draws no box-shadow."""
     review_session, new_model = _new_model_with_tags(client, db, code="19t-marker")
     body = client.get(
@@ -9165,7 +9167,10 @@ def test_band3_response_fields_are_a_table(client: TestClient, db: Session) -> N
     assert '<div class="table-scroll"> <table class="rf-table" data-new-model-rf-rows' in card
     for rule in (
         "body.ui-v2 table.rf-table > tbody { border-bottom: 1px solid var(--border-default); }",
-        "body.ui-v2 table.rf-table > tbody > tr > td { padding: var(--space-1); border-bottom: 0; }",
+        (
+            "body.ui-v2 table.rf-table > tbody > tr > td { "
+            "padding: var(--space-1); border-bottom: 0; }"
+        ),
     ):
         assert rule in flat, rule
     chunks = rows.split("<tr data-new-model-rf-row")[1:]

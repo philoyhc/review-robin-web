@@ -59,7 +59,8 @@ class AppEntry:
 
 # RRW mounts at `/reviewrobin` (segment 21D; v0.8 §3), the two Residential
 # applications at `/residentialops` and `/supportlogs` (Residential segment
-# 1A), Utilities at `/utilities` (Utilities segment U1). Constants, not settings, so no configuration can move one by accident.
+# 1A), Utilities at `/utilities` (Utilities segment U1). Constants, not
+# settings, so no configuration can move one by accident.
 REGISTRY: Mapping[str, AppEntry] = {
     "reviewrobin": AppEntry(
         path="/reviewrobin",

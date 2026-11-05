@@ -304,7 +304,7 @@ HARNESS_CSS = """
     .danger-banner { background: var(--status-error-bg); color: var(--status-error-fg); border-color: var(--status-error-border); }
     .ph-tint { border: 1px solid var(--border-subtle); border-radius: 8px;
       padding: 14px; font-size: 0.85rem; }
-"""
+"""  # noqa: E501
 
 
 # The text / links sample markup, for the gallery's "Text & links" section.
@@ -312,7 +312,7 @@ TEXT_LINKS_SAMPLE = """      <h1>Heading 1</h1>
       <p class="page-subtitle">A page subtitle in secondary text.</p>
       <p>Body copy with an <a href="#">inline link</a> and some <strong>strong</strong> emphasis.</p>
       <p class="muted">Muted helper text (.muted).</p>
-      <nav class="breadcrumb"><a href="#">Sessions</a> <span class="breadcrumb-sep">/</span> <a href="#">Session</a> <span class="breadcrumb-sep">/</span> <span aria-current="page">Instruments</span></nav>"""
+      <nav class="breadcrumb"><a href="#">Sessions</a> <span class="breadcrumb-sep">/</span> <a href="#">Session</a> <span class="breadcrumb-sep">/</span> <span aria-current="page">Instruments</span></nav>"""  # noqa: E501
 
 
 def component_sections():
@@ -325,7 +325,8 @@ def component_sections():
     customizer's picker can skip them: they label the demo, they aren't app
     screen elements to identify a token for."""
     tints = "\n".join(
-        f'        <div class="ph-tint" style="background: var(--surface-tint-{i});">Instrument card tint {i}</div>'
+        f'        <div class="ph-tint" style="background: var(--surface-tint-{i});">Instrument '
+        f"card tint {i}</div>"
         for i in range(1, 7)
     )
     return [
@@ -346,7 +347,7 @@ def component_sections():
           <a class="signout" href="#">Sign out</a>
         </div>
       </div>
-    </section>""",
+    </section>""",  # noqa: E501
         ),
         (
             "nav",
@@ -378,7 +379,7 @@ def component_sections():
         <span class="pill pill-count tag-chip is-selected">Mentor</span>
         <span class="pill pill-count tag-chip">External</span>
       </div>
-    </section>""",
+    </section>""",  # noqa: E501
         ),
         (
             "text",
@@ -448,7 +449,7 @@ def component_sections():
         <input type="text" id="ph-dis" value="frozen value" disabled>
         <p class="muted ph-anno" style="margin-top: 10px;">Click a field to see the focus ring (accent-blue border + halo).</p>
       </div>
-    </section>""",
+    </section>""",  # noqa: E501
         ),
         (
             "buttons",
@@ -468,7 +469,7 @@ def component_sections():
         <button class="btn destructive" disabled>Destructive</button>
         <button class="btn alert" disabled>Outline-amber</button>
       </div>
-    </section>""",
+    </section>""",  # noqa: E501
         ),
         (
             "pills",
@@ -490,7 +491,7 @@ def component_sections():
       <div class="warning-banner">Warning banner — an amber advisory.</div>
       <div class="danger-banner">Danger banner — a hard red alert.</div>
       <p class="ph-save-error"><strong>Couldn't save.</strong> Soft inline-error treatment (the <code>--red-warm-*</code> tokens).</p>
-    </section>""",
+    </section>""",  # noqa: E501
         ),
         (
             "table",
@@ -504,7 +505,7 @@ def component_sections():
           <tr><td>App password</td><td><span class="muted">not set</span></td><td><span class="pill pill-warning">pending</span></td></tr>
         </tbody>
       </table>
-    </section>""",
+    </section>""",  # noqa: E501
         ),
     ]
 

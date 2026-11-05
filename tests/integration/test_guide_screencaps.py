@@ -1,7 +1,8 @@
 """The Guide's screencaps — the app's first static assets.
 
 Every image is referenced by an app-relative `/static/guide/...` path,
-through `url()` (segment 21B), in `guide.html` and served by the single `StaticFiles` mount in `app.main`.
+through `url()` (segment 21B), in `guide.html` and served by the single `StaticFiles` mount in
+`app.main`.
 Two ways this breaks silently, both covered here: a `<img>` whose file
 was never committed (a 404 the page renders as a broken icon), and a
 committed file no template points at (dead weight in the deploy

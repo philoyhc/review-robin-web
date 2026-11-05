@@ -264,7 +264,10 @@ def test_a_locked_instrument_cards_chips_read_as_display_pills(
     keyed on the card's lock attribute."""
     review_session = _make_session(client, db, code="ux1-locked-card")
     css = client.get(f"/operator/sessions/{review_session.public_id}").text
-    locked = 'body.ui-v2 [data-instrument-card][data-instrument-locked="true"] [data-lock-region] label.tag-chip'
+    locked = (
+        'body.ui-v2 [data-instrument-card][data-instrument-locked="true"] [data-lock-region] '
+        "label.tag-chip"
+    )
     block = _rule(css, locked)
     assert block is not None
     for decl in (

@@ -35,8 +35,8 @@ def test_each_viewer_sees_only_what_they_reach() -> None:
     assert apps("?as=Nobody") == apps()  # an unknown viewer: the default
     page = TestClient(ops_app()).get("/").text
     assert (
-        '<span class="app app-off"><span class="app-name">RA Events</span><span class="app-what">Coming later'
-        in page
+        '<span class="app app-off"><span class="app-name">RA Events</span>'
+        '<span class="app-what">Coming later' in page
     )
     assert "Sample data" in page and "Viewing as Chloe Lim" in page
 

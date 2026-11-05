@@ -61,7 +61,10 @@ def test_the_recheck_button_sits_left_of_upload(kind: str) -> None:
     assert actions < recheck < card.index(">Upload</button>"), kind
     assert card.rindex("{% if directory_unmatched %}", 0, recheck) > actions, kind
     assert re.search(
-        r'<button class="btn secondary" type="submit" form="directory-recheck-form"\s+data-directory-recheck>',
+        (
+            r'<button class="btn secondary" type="submit" '
+            r'form="directory-recheck-form"\s+data-directory-recheck>'
+        ),
         card,
     ), kind
     form = card.index('id="directory-recheck-form"')

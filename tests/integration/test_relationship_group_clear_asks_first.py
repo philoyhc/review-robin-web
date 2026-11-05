@@ -426,8 +426,8 @@ def test_delete_all_names_the_answers_it_clears_on_its_tick(
     assert len(set(re.findall(r'id="relationship-row-(\d+)"', page))) == 4
     label = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", form))
     assert (
-        "Yes, delete the existing 4 relationships and the 4 reviewer responses on the groups they form."
-        in label
+        "Yes, delete the existing 4 relationships and the 4 reviewer responses "
+        "on the groups they form." in label
     )
     assert re.findall(r'name="acknowledge_response_loss"[^>]*value="(\d+)"', form) == ["4"]
     # Counting deleted nothing.

@@ -448,7 +448,8 @@ def sessions_delete_selected(
     ones are deleted from the archived page's own route. The lobby's
     row expander surfaces a "Yes, delete" checkbox and the Delete
     button — without ``confirm=true`` the request is rejected with
-    ``400``, as the single-session route does. Each deletion goes through ``sessions.delete_session``
+    ``400``, as the single-session route does. Each deletion goes through
+    ``sessions.delete_session``
     which already cascades reviewers / reviewees / instruments /
     assignments / invitations / email_outbox rows + writes the
     ``session.deleted`` audit row."""
