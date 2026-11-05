@@ -30,14 +30,22 @@ def _shard_args(workflow: str) -> list[list[str]]:
 def _test_files(args: list[str]) -> set[Path]:
     """The test files ``pytest <args>`` would collect, from paths and
     ``--ignore=`` alone, matching pytest's default ``python_files``
-    (``test_*.py`` and ``*_test.py``). Any other flag is refused: this
-    model could not see what it drops."""
+    (``test_*.py`` and ``*_test.py``). A path holding a glob is expanded
+    as the run step's unquoted ``$PYTEST_ARGS`` expands it. Any other flag
+    is refused: this model could not see what it drops."""
     for arg in args:
         assert not arg.startswith("-") or arg.startswith("--ignore="), (
             f"a shard passes {arg!r}, which this check cannot model"
         )
     ignored = [ROOT / a.split("=", 1)[1] for a in args if a.startswith("--ignore=")]
-    roots = [ROOT / a for a in args if not a.startswith("-")]
+    roots: list[Path] = []
+    for arg in (a for a in args if not a.startswith("-")):
+        if any(c in arg for c in "*?["):
+            matched = sorted(ROOT.glob(arg))
+            assert matched, f"a shard's glob {arg!r} matches nothing"
+            roots.extend(matched)
+        else:
+            roots.append(ROOT / arg)
     files: set[Path] = set()
     for root in roots:
         if root.is_file():

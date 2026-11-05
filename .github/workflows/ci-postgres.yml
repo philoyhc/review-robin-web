@@ -54,8 +54,12 @@ jobs:
         shard:
           - name: unit
             pytest_args: "tests cordware/tests residentialapps/tests utilityapps/tests --ignore=tests/integration --ignore=tests/browser"
-          - name: integration
-            pytest_args: "tests/integration"
+          # tests/integration cut on first letter by measured time (22I
+          # Item 1 rung 2); the unquoted $PYTEST_ARGS expands the globs.
+          - name: integration-a
+            pytest_args: "tests/integration/test_[a-q]*.py"
+          - name: integration-b
+            pytest_args: "tests/integration/test_[r-z]*.py"
     name: postgres (${{ matrix.shard.name }})
 
     services:

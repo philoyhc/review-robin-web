@@ -172,7 +172,7 @@ reject it.
 ### Database
 
 - One `database_url` in `app/config.py` (Pydantic settings). Production reads Azure Postgres via `psycopg[binary]`; local dev uses SQLite. The same `alembic env.py` works for both.
-- CI runs migrations *and* the pytest suite, less `tests/browser/`, against a real `postgres:16` service container (`.github/workflows/ci-postgres.yml`, two parallel shards, `postgres (unit)` with the migrations and `postgres (integration)`, segment 22I) on every PR that changes more than prose (`tools/ci_lanes.py`) and every push to `main`, so dialect-only failures show up in CI alongside the SQLite pytest job.
+- CI runs migrations *and* the pytest suite, less `tests/browser/`, against a real `postgres:16` service container (`.github/workflows/ci-postgres.yml`, three parallel shards, `postgres (unit)` with the migrations and `tests/integration` cut in two, `postgres (integration-a)` and `postgres (integration-b)`, segment 22I) on every PR that changes more than prose (`tools/ci_lanes.py`) and every push to `main`, so dialect-only failures show up in CI alongside the SQLite pytest job.
 
 ## Where to look
 

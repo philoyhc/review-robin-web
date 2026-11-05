@@ -32,9 +32,10 @@ more permissive of the two in several ways that have bitten this project
 see the migration-portability notes in `AGENTS.md`). That job is the only
 check covering the gap: it round-trips the whole Alembic chain in both
 directions and runs the suite, less `tests/browser/`, against a real
-`postgres:16`, in two parallel shards with xdist workers and a database
-each. `postgres (unit)` carries the migrations and took 1 m 25 s on
-#3634; `postgres (integration)` took 3 m 44 s (segment 22I). It
+`postgres:16`, in three parallel shards with xdist workers and a database
+each: `postgres (unit)`, which carries the migrations, and
+`tests/integration` cut in two, `postgres (integration-a)` and
+`postgres (integration-b)` (segment 22I). It
 matters because a deployment migrates Postgres from a `main` commit:
 the dev slot's workflow did so on every push without depending on
 either CI workflow, and the institutional release migrates whichever
