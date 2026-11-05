@@ -547,11 +547,9 @@
           {% endif %}
         {% endfor %}
         {% set _has_operand_select = operand_tag_options is not none and (operand_tag_options | length > 0 or _stored_operands.keys | length > 0) %}
-        {# Active with usable tags, or with stored rules to show and
-           edit (a stored tag the card no longer offers keeps its
-           option below). #}
         {# Whether the Link can filter: usable tags, or a stored rule to
-           edit. Without either the pill stays live but skips "Filter
+           show and edit (a stored tag the card no longer offers keeps
+           its option below). Without either the pill stays live but skips "Filter
            using …" (`data-new-model-no-tags`), so an untagged roster
            can still be set to All and the instrument prepared. #}
         {% set _is_active = tag_options | length > 0 or _stored_rules | length > 0 %}

@@ -538,9 +538,9 @@ def test_an_untagged_roster_still_offers_all_and_individual(
 ) -> None:
     """With no tag anywhere, all three pills stay live (a button, not
     `aria-disabled`) and are marked to skip their tag-based state, so
-    All / All / Individual can be set and the instrument reads as set up.
-    Before, each was stuck on "Not set" and the session could not be
-    prepared."""
+    All / All / Individual can be set. The render is what guards the
+    fix (each pill was stuck on "Not set" before); the save shows the
+    three Links then read as touched, which the safety gate needs."""
     session, instrument = _untagged(db, client, "b1-untagged")
     page = _page(client, session.public_id, instrument.id)
     pills = re.findall(r"<span[^>]*data-new-model-(?:rule|unit)-mode[^>]*>", page)

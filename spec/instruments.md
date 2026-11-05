@@ -690,11 +690,10 @@ Link's namespace and the Link has no stored rule (for Link 3, no
 stored boundary), the pill stays live but carries
 `data-new-model-no-tags`, and its cycle skips the state that needs a
 tag: `Not set → All → Not set` for Links 1 and 2, `Not set → Individual
-→ Not set` for Link 3. Its title says so ("… (no tags on this roster to
-filter by)"). All and Individual need no tag, so an untagged roster can
-still pass the safety gate below and be prepared; before 2026-11-05 the
-pill was stuck on `Not set` with `aria-disabled`, and such a session
-could not be prepared at all. A Link with stored rules keeps the full
+→ Not set` for Link 3. Its title says so: "… (no tags on this roster to
+filter by)" for Links 1 and 2, "… (no reviewee tags to group by)" for
+Link 3. All and Individual need no tag, so an untagged roster can still
+pass the safety gate below and be prepared. A Link with stored rules keeps the full
 cycle, so they can still be edited. Relationship tags count as usable
 for Link 2 only. Saving with a Link in `Not set` is still fine — the
 service treats an empty filter as "no constraint on this Link" — and
