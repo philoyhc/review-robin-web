@@ -7,7 +7,8 @@ the mail an operator schedules goes out at its time with nobody signed in ·
 `guide/no_scheduling_fallback.md`, `guide/email_and_scheduling.md`,
 `guide/post_azure_todo_checklist.md` items 7 and 9
 
-Four items, each closing on its own. **Item 1 can be built now.** Items 2–4
+Five items, each closing on its own (Item 5, bulk sending, added
+2026-11-05 when 14F handed it over). **Item 1 can be built now.** Items 2–4
 wait on two things outside this plan: 14F's delegated Graph send (author,
 2026-11-05: 14F and 14C are built first), and IT's answer on offline
 sending (two requests kept privately with the deployment: offline sending
@@ -212,7 +213,64 @@ are in; the ladder below is the shape.
 - `spec/email_template_editor.md` — the confirmation sent on submit.
 - `guide/post_azure_todo_checklist.md` — item 9 settled for clock-sent rows.
 
+## Item 5 — bulk sending, paced (from 14F, 2026-11-05)
+
+### Opportunity
+
+14F builds Send all, Remind incomplete, Send queued confirmations and the
+Workflow card's Send invites, but leaves them disabled behind
+`RRW_BULK_SEND`. 1,500 reviewers is 1,500 messages, one per personal link.
+In one request that runs far past the gateway's 120 s, and it meets the
+sending mailbox's own limits (Exchange Online documents a per-minute
+message rate and a daily recipient cap; to be measured on the tenant).
+Until this item ships, operators share 14F's session link instead.
+
+### Decision (draft)
+
+- **Paced and resumable.** The dispatcher already claims each row once
+  and stamps it, so a bulk send is a loop over queued rows that can stop
+  and resume without sending anything twice. It paces under the measured
+  mailbox rate and backs off on a `429`.
+- **Two ways to drive it:**
+  - **(a) page-driven batches:** the browser posts the queue in chunks
+    with a progress line. This needs no IT, but the tab must stay open.
+  - **(b) the clock drains the queue** with Item 2's offline send path,
+    with nobody's tab open. This needs Item 2.
+
+  The draft favors (b) once Item 2 lands, and (a) only if bulk is wanted
+  sooner.
+- **Send queued confirmations** sends under 14F's backlog rule (author,
+  2026-11-05): confirmations queued before go-live are not resent, nor
+  any for a recalled or deleted submission.
+
+### PR ladder
+
+1. **Measure:** per-send time and the mailbox rate on Azure, through the
+   per-row Send.
+2. **The paced loop** behind `RRW_BULK_SEND`, by (a) or (b).
+3. **Switch on:** the four buttons live; `docs/deployment.md` says when.
+4. **Close.**
+
+### Definition of done
+
+- A Send all of 1,500 test rows completes, paced, with every row
+  stamped `sent` or `failed` and none sent twice (a test, plus a check
+  on Azure, the author's).
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 14G.5` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `guide/todo_master.md` entries deleted; plan moved to `guide/archive/` + index row
+
+### Doc impact
+
+- `spec/operations_pages.md` — the bulk buttons live, with their progress line.
+- `docs/deployment.md` — `RRW_BULK_SEND`: when to turn it on.
+
 ## Open questions
+
+- **Item 5's driver:** (a) page-driven batches, or (b) the clock.
+  Author, once Item 2's path is known.
 
 - **Path (a) or (b).** IT, then the author.
 - **Which operator's token sends under (a)** when several own a session:
@@ -228,4 +286,5 @@ are in; the ladder below is the shape.
 - The Email settings card itself: 14C Item 2.
 - Reviewee and observer notifications and magic links (W20 / W21,
   `guide/magic_links.md`).
-- A background send queue for volume (14B Part C), unless measured.
+- A separate background worker or queue service: Item 5 paces sending
+  inside the app.

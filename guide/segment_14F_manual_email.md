@@ -41,6 +41,33 @@ basic SMTP AUTH under MFA, and 14C retired the SMTP cards. Rejected: *a
 background queue for Send all* (14B Part C): a few hundred sends fit the
 gateway's 120 s; revisit only if measured otherwise.
 
+**Amended 2026-11-05 (author): no bulk email in 14F; share the link.**
+A session of 1,500 reviewers is 1,500 messages, one per personal link. In
+one request that runs far past the gateway's 120 s, and it meets the
+mailbox's own sending limits (to be measured on Azure). So:
+
+- **Bulk sending is built but off.** Send all, Remind incomplete, Send
+  queued confirmations and the Workflow card's Send invites render
+  disabled behind `RRW_BULK_SEND` (default off), with one line pointing
+  to the session link. Turning it on, with paced, batched sending, is
+  14G's. **Per-row Send and Remind stay live**: one message, one request.
+- **The session link is the fallback.** Every session already has one
+  stable link for every reviewer, `/me/sessions/{public_id}`
+  (`spec/rrw_functional_spec.md` §7.2), gated at arrival by sign-in and
+  the roster. A **Share the session link** card shows it with Copy, and
+  the Invitation and Reminder templates rendered for everyone, with
+  `$invite_url` as the link and `$reviewer_name` blank, in an editable,
+  unsaved box with Copy message and Copy subject. The operator pastes
+  them into their own channel, such as an LMS.
+- **A stranger's arrival stays a bare 404** (author, 2026-11-05).
+- **A participation report** replaces per-reviewer tracking by email:
+  one CSV row per reviewer (name, email), with their eligible
+  instruments, when first opened, when last saved, and when last
+  submitted. Extract data's Reviewer response metadata is the first
+  candidate. Its documented columns (`spec/extract_data.md`) carry
+  counts but no times, so the build checks the code and adds the three
+  times there, or builds the report beside it.
+
 ## Semantics
 
 - **No token** (fake auth, or an expired one the page renewal missed): the
@@ -122,6 +149,9 @@ Taken 2026-11-02 at `fffd4c28`; re-taken 2026-11-05 at `095336bf`
   the draft still in its fields and Save live, so a test never loses
   unsaved edits (Codex on #3648). The result line is
   `views.send_test_notice`.
+- 2026-11-05: the ladder is re-cut by the Decision's amendment (no bulk
+  email; share the link). The original rungs 3 and 4 are struck below,
+  and 3a–3d added.
 
 ## PR ladder
 
@@ -130,11 +160,30 @@ Taken 2026-11-02 at `fffd4c28`; re-taken 2026-11-05 at `095336bf`
    due-action prompts as static copy, and Send a test to me inert.
 2. **The transport:** a delegated Graph `EmailTransport` and the dispatch
    helper, stamping rows; Send a test to me wired.
-3. **The buttons:** Send, Send all, Remind, Remind incomplete send through
-   it.
-4. **Confirmations:** Send queued confirmations, with the backlog rule.
-5. **The prompts, wired**, from the offsets the operator set. Last build
-   rung: the cumulative read.
+3. ~~**The buttons:** Send, Send all, Remind, Remind incomplete send through
+   it.~~ Re-cut as 3a (author, 2026-11-05).
+4. ~~**Confirmations:** Send queued confirmations, with the backlog rule.~~
+   A bulk send: moved to 14G with the backlog rule (2026-11-05).
+
+3a. **The per-row buttons, and bulk off.** Per-row Send and Remind send
+    through the dispatcher with `send_options_for`. A missing token
+    refuses with "reload the page", and a rotated link is never sent.
+    Send all, Remind incomplete, Send queued confirmations and the
+    Workflow card's Send invites render disabled behind `RRW_BULK_SEND`,
+    with their line.
+3b. **Share the session link, scaffold:** the card on the Invitations
+    page (a link to it from the Workflow card) with copy and layout
+    only, and its Copy buttons inert.
+3c. **Share the session link, wired:** the absolute link (from
+    `CORDWARE_PUBLIC_ORIGIN`), the templates rendered for everyone, and
+    copy to the clipboard.
+3d. **The participation report:** first opened, last saved and last
+    submitted per reviewer, with eligible instruments. A first visit
+    through the shared link stamps *opened* too, which today only a
+    personal invitation link does.
+5. **The prompts, wired**, from the offsets the operator set; a due
+   reminder points to the card's Reminder message. Last build rung: the
+   cumulative read.
 6. **Close.** Specs; checklist items 9 and 10 settled; the Guide's
    "Running a session by hand".
 
@@ -158,11 +207,23 @@ Taken 2026-11-02 at `fffd4c28`; re-taken 2026-11-05 at `095336bf`
 - ~~Which of 14C Item 2's toggles the send path reads.~~ All three on
   the card: Sent Items, a copy to myself (Bcc) and Reply-to the Help
   contact, **each off by default** (author, 2026-11-05).
+- ~~A stranger at the session link: a bare 404, or a friendlier page?~~
+  The 404 stays (author, 2026-11-05).
+- **Where the Share the session link card lives:** the Invitations page,
+  with a link from the Workflow card (recommended), or Session Home.
+  Author, at 3b.
+- **The participation report:** Reviewer response metadata extended, or
+  a report of its own. Decided at 3d, on reading the export's code.
+  "Last opened" needs a new stamp; `Invitation.opened_at` records the
+  first open only.
 
 ## Out of scope
 
 - Mail on a clock: 14G, if IT grants a way.
-- A background send queue (14B Part C), unless measured.
+- **Bulk sending** (Send all, Remind incomplete, Send queued
+  confirmations, Workflow Send invites) and the backlog rule's sends:
+  14G, which turns `RRW_BULK_SEND` on with paced, batched sending
+  (2026-11-05).
 - Reviewee and observer notifications and magic links (14B's appendix,
   W20 / W21).
 
@@ -173,5 +234,7 @@ Taken 2026-11-02 at `fffd4c28`; re-taken 2026-11-05 at `095336bf`
 - `spec/workflow_card.md` — the due prompts (the auto-send caption moved to 14E, 2026-11-04).
 - `spec/email_template_editor.md` — what Send does now; the recorded / sent / failed states named once.
 - `cordware/spec/identity.md` — "Graph": the host's send primitive beside the directory lookup.
-- `docs/deployment.md` — the setting in its table. <!-- doc-impact-waived: RRW_SCHEDULED_SEND moved to 14E rung 0 (author, 2026-11-04); 14F adds no setting -->
+- `docs/deployment.md` — `RRW_BULK_SEND` in the settings table, default off (2026-11-05; was waived when `RRW_SCHEDULED_SEND` moved to 14E).
+- `spec/operations_pages.md` — the Share the session link card on Invitations; the bulk buttons disabled behind `RRW_BULK_SEND`.
+- `spec/extract_data.md` — the participation report's columns (first opened, last saved, last submitted, eligible instruments).
 - `guide/post_azure_todo_checklist.md` — items 9 and 10 settled (at close).
