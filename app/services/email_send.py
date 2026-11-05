@@ -3,15 +3,14 @@
 This module is the "transport-agnostic send abstraction" the
 segment plan calls for. It defines the ``EmailTransport`` Protocol,
 ships a concrete ``SmtpEmailTransport`` over ``smtplib``, and
-leaves a typed-stub ``GraphEmailTransport`` placeholder for the
-future Microsoft Graph swap. The factory ``transport_for(settings)``
-dispatches on ``settings.transport``; today only ``"smtp"`` is
-reachable.
+ships ``GraphEmailTransport`` over the host's mailer (segment 14F:
+delegated Graph as the operator, the send path in use). The factory
+``transport_for(settings)`` dispatches the per-operator SMTP settings
+on ``settings.transport``, kept for a deployment outside Microsoft 365
+(``spec/settings_inventory.md``).
 
-**Nothing in the app calls this yet.** Segment 11C PR F's send
-dispatch on the rebuilt Manage Invitations page is the first
-caller; until then, outbox rows continue to write
-``status="queued"`` as today.
+``app.services.email_dispatch`` is the caller: it claims an outbox
+row, sends it through a transport, and stamps the outcome.
 
 Design notes:
 
@@ -38,6 +37,7 @@ from email.utils import formataddr
 from typing import Protocol
 
 from app.services.operator_settings import EmailSettings
+from cordware import graph
 
 # How long an aborted SMTP response truncates to before we stash it
 # on the outbox row. Real-world SMTP error strings can be long; a
@@ -61,6 +61,10 @@ class EmailMessage:
     body: str
     cc: list[str] = field(default_factory=list[str])
     bcc: list[str] = field(default_factory=list[str])
+    reply_to: str | None = None
+    #: Graph's ``saveToSentItems`` (14C Item 2's toggle, off by default).
+    #: The SMTP transport ignores it: SMTP has no Sent Items.
+    save_to_sent_items: bool = False
 
 
 @dataclass(frozen=True)
@@ -215,30 +219,54 @@ def _failure(error_message: str, raw: str | None) -> SendResult:
     )
 
 
-# ── Graph backend (typed stub) ───────────────────────────────────────────
+# ── Graph backend (segment 14F) ──────────────────────────────────────────
+
+#: Operator-facing copy for each way a Graph send can fail. The kind
+#: (with its status and Graph's code) goes on the outbox row as the
+#: transport response; this sentence is what the page shows.
+_GRAPH_FAILURE_COPY: dict[str, str] = {
+    "no_token": "You are not signed in to Microsoft for sending. Reload the page and try again.",
+    "unauthorized": "Your Microsoft sign-in has expired. Reload the page and try again.",
+    "forbidden": "Microsoft refused to send this from your mailbox.",
+    "throttled": "Microsoft is limiting how fast mail can be sent. Try again in a minute.",
+    "server": (
+        "Microsoft could not take the message. It may or may not have gone; "
+        "check before sending again."
+    ),
+    "network": (
+        "The connection to Microsoft failed. It may or may not have gone; "
+        "check before sending again."
+    ),
+    "bad_response": "Microsoft did not accept the message.",
+}
 
 
 class GraphEmailTransport:
-    """Microsoft Graph backend — typed stub, not yet implemented.
+    """Sends through the host's ``Mailer`` (``cordware.graph.mailer_for``):
+    delegated ``/me/sendMail`` as the signed-in operator, or the fake
+    mailer under fake auth. The sender is the operator's own mailbox,
+    so ``from_addr`` and ``from_display_name`` are not sent: Graph sets
+    the From itself (author, 2026-11-02)."""
 
-    The expected swap is roughly: ``httpx.post`` against
-    ``https://graph.microsoft.com/v1.0/me/sendMail`` with the
-    operator's delegated OAuth2 token (Entra ``Mail.Send`` scope),
-    token cache fetched per-operator from a yet-to-exist
-    ``OperatorOAuthToken`` table. Lands as its own future segment;
-    today this class exists only so ``transport_for`` can dispatch
-    on ``settings.transport == "graph"`` once that work begins.
-    """
+    backend = "graph"
 
-    def __init__(self, settings: EmailSettings) -> None:
-        self._settings = settings
+    def __init__(self, mailer: graph.Mailer) -> None:
+        self._mailer = mailer
 
-    def send(self, msg: EmailMessage) -> SendResult:  # pragma: no cover
-        raise NotImplementedError(
-            "GraphEmailTransport is a typed stub; the implementation "
-            "ships in a future segment alongside an Entra Mail.Send "
-            "scope grant + per-operator token cache."
+    def send(self, msg: EmailMessage) -> SendResult:
+        message = graph.MailMessage(
+            to=msg.to,
+            subject=msg.subject,
+            body=msg.body,
+            bcc=tuple(msg.bcc),
+            reply_to=msg.reply_to,
+            save_to_sent_items=msg.save_to_sent_items,
         )
+        try:
+            self._mailer.send_mail(message)
+        except graph.GraphError as exc:
+            return _failure(_GRAPH_FAILURE_COPY.get(exc.kind, "The send failed."), exc.reason)
+        return SendResult(ok=True)
 
 
 # ── Factory ──────────────────────────────────────────────────────────────
@@ -255,5 +283,5 @@ def transport_for(settings: EmailSettings) -> EmailTransport:
         return SmtpEmailTransport(settings)
     raise ValueError(
         f"transport_for: unknown transport {settings.transport!r}; "
-        f"expected 'smtp' (Graph backend ships in a future segment)."
+        f"expected 'smtp' (Graph is GraphEmailTransport over the request's mailer)."
     )

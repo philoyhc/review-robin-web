@@ -103,6 +103,14 @@ Taken 2026-11-02 at `fffd4c28`; re-taken 2026-11-05 at `095336bf`
   - **The lobby's Due pill** has its slot in the status cell, fed by
     `views.lobby_due_session_ids`, which marks none until rung 5.
   - **Send a test to me** sits inert in the composer's Save row.
+- 2026-11-05, rung 2 split in three: **2a** the host's send primitive
+  (`cordware.graph.mailer_for`, `FakeMailer` under fake auth), the Graph
+  transport and the dispatcher (`app/services/email_dispatch.py`), no UI;
+  **2b** Send a test to me wired; **2c** 14C Item 2's toggles stored and
+  read. 2a sends nothing on its own: no route calls it yet.
+  - **No retry on a `5xx` or a network failure**, since Graph may have
+    accepted the message; a `429` waits once. The outbox row reads
+    `failed` and a person decides.
 
 ## PR ladder
 

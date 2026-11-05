@@ -7,10 +7,12 @@ the user's delegated Graph token in `X-MS-TOKEN-AAD-ACCESS-TOKEN`; with
 fake auth on there is no token, and `directory_for` answers from a fixed
 fake directory of invented accounts instead.
 
-Only directory lookups are built: the Email Address Checker's, shared
-from segment 21F with RRW's roster upload as `look_up_all` and
-`classify` below. A failure is a `GraphError` with a `kind`, never an
-empty answer: a caller must not read "could not ask" as "nobody there".
+Two things are built: directory lookups (the Email Address Checker's,
+shared from segment 21F with RRW's roster upload as `look_up_all` and
+`classify` below), and sending mail as the signed-in user (`mailer_for`,
+RRW segment 14F), with `FakeMailer` sending nothing under fake auth.
+A failure is a `GraphError` with a `kind`, never an empty answer: a
+caller must not read "could not ask" as "nobody there".
 
 The standard library makes the requests: nothing here needs a dependency
 the applications do not already have. `GraphDirectory` takes the
@@ -482,3 +484,144 @@ def look_up_all(
         else error_outcome("timeout")
         for key, future in futures.items()
     }
+
+
+# --- Sending mail as the signed-in user (RRW segment 14F) ---
+#
+# The host's send primitive, beside the directory lookup and for the same
+# reason: the host owns the token. An application builds the message,
+# keeps its own outbox and stamps, and hands the host a flat `MailMessage`.
+# No token crosses applications (`cordware/spec/identity.md`, "Graph").
+
+
+@dataclass(frozen=True)
+class MailMessage:
+    """One plain-text message, sent from the signed-in user's mailbox."""
+
+    to: str
+    subject: str
+    body: str
+    bcc: tuple[str, ...] = ()
+    reply_to: str | None = None
+    #: Graph's ``saveToSentItems``, which Graph itself defaults to true.
+    save_to_sent_items: bool = False
+
+
+class Mailer(Protocol):
+    def send_mail(self, message: MailMessage) -> None:
+        """Send ``message``, or raise a `GraphError`. Returning is
+        Graph's `202 Accepted`: queued for delivery, not delivered."""
+        ...
+
+
+PostTransport = Callable[[str, Mapping[str, str], bytes, float], Response]
+
+
+def urllib_post(url: str, headers: Mapping[str, str], body: bytes, timeout: float) -> Response:
+    request = urllib.request.Request(url, data=body, headers=dict(headers), method="POST")
+    try:
+        with _OPENER.open(request, timeout=timeout) as reply:  # noqa: S310 - fixed https root
+            return Response(reply.status, dict(reply.headers), reply.read())
+    except urllib.error.HTTPError as exc:
+        return Response(exc.code, dict(exc.headers or {}), exc.read() or b"")
+
+
+def _recipient(address: str) -> dict[str, dict[str, str]]:
+    return {"emailAddress": {"address": address}}
+
+
+def send_mail_payload(message: MailMessage) -> dict[str, Any]:
+    """The `POST /me/sendMail` body for ``message``."""
+    mail: dict[str, Any] = {
+        "subject": message.subject,
+        "body": {"contentType": "Text", "content": message.body},
+        "toRecipients": [_recipient(message.to)],
+    }
+    if message.bcc:
+        mail["bccRecipients"] = [_recipient(address) for address in message.bcc]
+    if message.reply_to:
+        mail["replyTo"] = [_recipient(message.reply_to)]
+    return {"message": mail, "saveToSentItems": message.save_to_sent_items}
+
+
+class GraphMailer:
+    """`POST /me/sendMail` with one user's delegated token.
+
+    **Never retried here.** A `5xx` or a network failure may come after
+    Graph accepted the message, so a retry could send it twice; the
+    caller's outbox records the failure and a person decides. A `429`
+    is the exception: Graph refused before accepting anything, so it
+    waits its `Retry-After` (up to `_MAX_WAIT`) once and tries again.
+    """
+
+    def __init__(
+        self,
+        token: str,
+        *,
+        transport: PostTransport = urllib_post,
+        sleep: Callable[[float], None] = time.sleep,
+        timeout: float = 20.0,
+    ) -> None:
+        self._headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+        self._transport = transport
+        self._sleep = sleep
+        self._timeout = timeout
+
+    def send_mail(self, message: MailMessage) -> None:
+        body = json.dumps(send_mail_payload(message)).encode()
+        for attempt in range(2):
+            try:
+                reply = self._transport(
+                    f"{GRAPH_ROOT}/me/sendMail", self._headers, body, self._timeout
+                )
+            except (OSError, http.client.HTTPException):
+                raise _logged(GraphError("network")) from None
+            if 200 <= reply.status < 300:
+                return
+            if reply.status == 401:
+                raise _logged(GraphError("unauthorized", 401, _error_code(reply.body)))
+            if reply.status == 403:
+                raise _logged(GraphError("forbidden", 403, _error_code(reply.body)))
+            if reply.status == 429:
+                wait = _retry_after(reply.headers)
+                if attempt == 0 and wait <= _MAX_WAIT:
+                    self._sleep(wait)
+                    continue
+                raise _logged(GraphError("throttled", 429))
+            if reply.status >= 500:
+                raise _logged(GraphError("server", reply.status))
+            raise _logged(GraphError("bad_response", reply.status, _error_code(reply.body)))
+        raise AssertionError("unreachable")
+
+
+class FakeMailer:
+    """Fake auth's mailer (a local run only): nothing leaves the machine.
+    Each message is kept on `sent` and logged by recipient and subject."""
+
+    def __init__(self) -> None:
+        self.sent: list[MailMessage] = []
+
+    def send_mail(self, message: MailMessage) -> None:
+        self.sent.append(message)
+        log.info(
+            "fake send (nothing sent): to %s, subject %r",
+            message.to,
+            message.subject,
+            extra={"event": "graph.fake_send"},
+        )
+
+
+def mailer_for(request: HTTPConnection, settings: IdentitySettings | None = None) -> Mailer:
+    """The mailer for the request's signed-in user, as `directory_for`
+    resolves the directory: `FakeMailer` under fake auth, else Graph with
+    the user's delegated token, and with none `GraphError("no_token")`."""
+    if is_local(settings) and fake_auth(settings).enabled:
+        return FakeMailer()
+    token = request.headers.get(TOKEN_HEADER, "").strip()
+    if not token:
+        raise _logged(GraphError("no_token"))
+    return GraphMailer(token)

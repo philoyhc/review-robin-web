@@ -559,6 +559,10 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "invitation.regenerated": EventSchema(_IDENTITY | {"refs"}),
     "invitations.regenerated": EventSchema(_IDENTITY | {"set_changes"}),
     "invitation.sent": EventSchema(_IDENTITY | {"refs", "context"}),
+    # 14F rung 2 — the dispatcher's stamps on an outbox row it sent or
+    # failed to send (``app/services/email_dispatch.py``).
+    "email.sent": EventSchema(_IDENTITY | {"refs", "context"}),
+    "email.send_failed": EventSchema(_IDENTITY | {"reason", "refs", "context"}),
     # G4 (2026-10-02) — the responses-received confirmation queued on a
     # reviewer's successful submit; stays ``queued`` until a transport
     # exists (work in progress awaiting Azure).
