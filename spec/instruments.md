@@ -685,18 +685,21 @@ card a set pill reads as the plain display pill, with no edge or
 pointer, and `Not set` stays amber. The pill is a
 `role="button"` span, so Enter and Space advance it as a click does.
 
-**Disabled state.** When the session has no usable tags for a
+**No usable tags.** When the session has no usable tags for a
 Link's namespace and the Link has no stored rule (for Link 3, no
-stored boundary), the pill is permanently stuck on `Not set`
-with `aria-disabled="true"` and the title "No usable tags for
-this link". A Link with stored rules keeps a live pill, so they can
-still be edited. Relationship tags count as usable for Link 2 only.
-Saving the instrument in that state is fine — the
-service treats an empty filter as "no constraint on this Link"
-and the workflow card still surfaces it as unconfigured until
-the operator clicks the pill (which on a disabled pill is a
-no-op, so these sessions need at least one tag column on the
-relevant roster before Band 1 can be touched).
+stored boundary), the pill stays live but carries
+`data-new-model-no-tags`, and its cycle skips the state that needs a
+tag: `Not set → All → Not set` for Links 1 and 2, `Not set → Individual
+→ Not set` for Link 3. Its title says so ("… (no tags on this roster to
+filter by)"). All and Individual need no tag, so an untagged roster can
+still pass the safety gate below and be prepared; before 2026-11-05 the
+pill was stuck on `Not set` with `aria-disabled`, and such a session
+could not be prepared at all. A Link with stored rules keeps the full
+cycle, so they can still be edited. Relationship tags count as usable
+for Link 2 only. Saving with a Link in `Not set` is still fine — the
+service treats an empty filter as "no constraint on this Link" — and
+the workflow card still surfaces the instrument as unconfigured until
+each pill is set.
 
 #### "Not set" pill safety gate
 

@@ -550,6 +550,10 @@
         {# Active with usable tags, or with stored rules to show and
            edit (a stored tag the card no longer offers keeps its
            option below). #}
+        {# Whether the Link can filter: usable tags, or a stored rule to
+           edit. Without either the pill stays live but skips "Filter
+           using …" (`data-new-model-no-tags`), so an untagged roster
+           can still be set to All and the instrument prepared. #}
         {% set _is_active = tag_options | length > 0 or _stored_rules | length > 0 %}
         {# Trim IS THE SAME AS / IS DIFFERENT FROM from the cycle
            when there are no operand-side tags to compare against,
@@ -579,13 +583,15 @@
                pill the link is sticky-touched; the workflow card
                only considers the instrument configured when all
                three Band 1 link pills are out of "Not set".
-               Disabled (and stuck on "Not set") when no usable
-               tags exist for this link and it has no stored rules. #}
-            <span class="pill {% if _is_active %}{% if _pill_state == 'not_set' %}pill-empty tag-chip is-unset{% else %}pill-count tag-chip is-selected{% endif %}{% else %}pill-empty tag-chip is-disabled{% endif %}"
+               With no usable tags and no stored rules the cycle
+               is "Not set" → "All" → "Not set": nothing to filter
+               by, but the link can still be set. #}
+            <span class="pill {% if _pill_state == 'not_set' %}pill-empty tag-chip is-unset{% else %}pill-count tag-chip is-selected{% endif %}"
                   data-new-model-rule-mode="{{ _pill_state }}"
                   data-new-model-mode-on-label="{{ on_label }}"
-                  {% if _is_active %}role="button" tabindex="0" aria-pressed="{{ 'mixed' if _pill_state == 'not_set' else ('true' if _filter_on else 'false') }}" onclick="newModelToggleRuleMode(this)" onkeydown="newModelChipKey(this, event)"{% else %}aria-disabled="true"{% endif %}
-                  title="{{ 'Click to cycle: Not set → All → ' ~ on_label ~ ' → Not set' if _is_active else 'No usable tags for this link' }}">{{ _pill_label }}</span>
+                  {% if not _is_active %}data-new-model-no-tags{% endif %}
+                  role="button" tabindex="0" aria-pressed="{{ 'mixed' if _pill_state == 'not_set' else ('true' if _filter_on else 'false') }}" onclick="newModelToggleRuleMode(this)" onkeydown="newModelChipKey(this, event)"
+                  title="{{ 'Click to cycle: Not set → All → ' ~ on_label ~ ' → Not set' if _is_active else 'Click to cycle: Not set → All → Not set (no tags on this roster to filter by)' }}">{{ _pill_label }}</span>
           </h3>
           {# Hidden inputs that carry mode + combinator state
              alongside the per-rule arrays. newModelToggleRuleMode
@@ -855,14 +861,15 @@
                  state for an untouched link (Wave 5 "Not set"
                  safety gate); the workflow card only considers
                  the instrument configured when all three Band 1
-                 pills are out of "Not set". Disabled (and stuck
-                 on "Not set") when no usable reviewee tags exist
-                 for the session and no boundary is stored. #}
-              <span class="pill {% if _link3_active %}{% if _link3_pill_state == 'not_set' %}pill-empty tag-chip is-unset{% else %}pill-count tag-chip is-selected{% endif %}{% else %}pill-empty tag-chip is-disabled{% endif %}"
+                 pills are out of "Not set". With no usable
+                 reviewee tags and no stored boundary the cycle is
+                 "Not set" → "Individual" → "Not set". #}
+              <span class="pill {% if _link3_pill_state == 'not_set' %}pill-empty tag-chip is-unset{% else %}pill-count tag-chip is-selected{% endif %}"
                     data-new-model-unit-mode="{{ _link3_pill_state }}"
                     data-new-model-mode-on-label="Group using tags"
-                    {% if _link3_active %}role="button" tabindex="0" aria-pressed="{{ 'mixed' if _link3_pill_state == 'not_set' else ('true' if _link3_pill_state == 'group' else 'false') }}" onclick="newModelToggleUnitMode(this)" onkeydown="newModelChipKey(this, event)"{% else %}aria-disabled="true"{% endif %}
-                    title="{{ 'Click to cycle: Not set → Individual → Group using tags → Not set' if _link3_active else 'No usable tags for this link' }}">{{ _link3_pill_label }}</span>
+                    {% if not _link3_active %}data-new-model-no-tags{% endif %}
+                    role="button" tabindex="0" aria-pressed="{{ 'mixed' if _link3_pill_state == 'not_set' else ('true' if _link3_pill_state == 'group' else 'false') }}" onclick="newModelToggleUnitMode(this)" onkeydown="newModelChipKey(this, event)"
+                    title="{{ 'Click to cycle: Not set → Individual → Group using tags → Not set' if _link3_active else 'Click to cycle: Not set → Individual → Not set (no reviewee tags to group by)' }}">{{ _link3_pill_label }}</span>
             </h3>
             {# Segment 18R Item 2 PR 1 — always rendered so a
                client-unlocked card's Link 3 state rides the dfsave
@@ -1295,6 +1302,11 @@
           } else {
             next = 'not_set';
           }
+          // No usable tags and no stored rule: nothing to filter by, so
+          // the cycle is Not set → All → Not set.
+          if (next === 'filter' && btn.hasAttribute('data-new-model-no-tags')) {
+            next = 'not_set';
+          }
           btn.setAttribute('data-new-model-rule-mode', next);
           if (next === 'filter') {
             btn.setAttribute('aria-pressed', 'true');
@@ -1377,6 +1389,11 @@
           // Group is skipped while one is set (author, 2026-10-17; IS
           // FILLED 2026-10-18); Save refuses the pair if already grouped.
           if (next === 'group' && newModelKeepsPairsByPairTag(btn)) {
+            next = 'not_set';
+          }
+          // No usable reviewee tags and no stored boundary: nothing to
+          // group by, so the cycle is Not set → Individual → Not set.
+          if (next === 'group' && btn.hasAttribute('data-new-model-no-tags')) {
             next = 'not_set';
           }
           btn.setAttribute('data-new-model-unit-mode', next);
