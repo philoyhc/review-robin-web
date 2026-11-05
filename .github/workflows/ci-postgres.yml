@@ -42,7 +42,7 @@ jobs:
     # (Residential has no database yet); a failed classifier still runs it.
     if: ${{ !cancelled() && needs.changes.outputs.lane != 'prose' && needs.changes.outputs.lane != 'residential' }}
     runs-on: ubuntu-latest
-    # Two shards in parallel (segment 22I Item 1), each against its own
+    # Three shards in parallel (segment 22I Item 1), each against its own
     # postgres:16. Together they run every testpaths root but tests/browser
     # exactly once, which tests/unit/test_ci_shards.py checks. The alembic
     # steps check the migration chain and run in the unit shard only; they

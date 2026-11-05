@@ -149,9 +149,9 @@ teardown, so tests do not pollute each other.
   round-trips migrations *and* runs the pytest suite, less
   `tests/browser/`, against a `postgres:16` service container, in three
   shards (`postgres (unit)`, which also runs the migrations, and
-  `tests/integration` cut in two by first letter, `postgres
-  (integration-a)` and `postgres (integration-b)`; segment 22I) on every PR that changes more than
-  prose (`tools/ci_lanes.py`). The `engine` fixture
+  `tests/integration` cut in two by first letter,
+  `postgres (integration-a)` and `postgres (integration-b)`; segment
+  22I) on every PR that changes more than prose (`tools/ci_lanes.py`). The `engine` fixture
   in `tests/conftest.py` honours `TEST_DATABASE_URL` (the job sets it
   from its `DATABASE_URL`) so the same test bodies cover both dialects.
 
