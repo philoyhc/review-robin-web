@@ -94,6 +94,16 @@ Taken 2026-11-02 at `fffd4c28`; re-taken 2026-11-05 at `095336bf`
 | Operator send/remind routes in `_operations.py` | 4 | `grep -n "def invitations_send\|def invitations_remind" app/web/routes_operator/_operations.py \| wc -l` |
 | Templates naming the auto-send offsets | 4 | `grep -rln "invite_offsets\|reminder_offsets" app/web/templates \| wc -l` |
 
+## Status
+
+- 2026-11-05, rung 1 (scaffold). Main before rung 1: `79f86ee8`, the
+  base of the item's cumulative read at rung 5.
+  - **The due prompt** is a placeholder signal line in the Workflow
+    card's aside, shown once a session has invite or reminder offsets.
+  - **The lobby's Due pill** has its slot in the status cell, fed by
+    `views.lobby_due_session_ids`, which marks none until rung 5.
+  - **Send a test to me** sits inert in the composer's Save row.
+
 ## PR ladder
 
 1. **Scaffold:** ~~the disabled auto-send fields and their line, the
