@@ -133,7 +133,7 @@ Taken 2026-11-05 at `a321b04b`, except where a row says otherwise.
   in `unit`, so nothing moved: the imbalance is `tests/integration` itself.
 - It is still the longest check, by 1 m 0 s over `test (browser)`
   (2 m 12 s), so the Out of scope condition for a further split is met
-  at its edge; left for the author.
+  at its edge. The author added rung 2 for it (2026-11-05).
 - One `diff-reviewer` read: no defects; it found `CONTRIBUTING.md` still
   describing one job, so that file joined the PR and the Doc impact.
 
@@ -156,11 +156,24 @@ Taken 2026-11-05 at `a321b04b`, except where a row says otherwise.
    - **Timings:** measure the PR's own run and put both shards' times in
      the PR body against the three figures above. If the shards differ by
      more than 2×, move `tests/db` to the shorter one and say so.
-2. **Close.**
+2. **`tests/integration` in two (author, 2026-11-05; one PR: CI and
+   one test).** `postgres (integration)` becomes `integration-a`,
+   `tests/integration/test_[a-q]*.py`, and `integration-b`,
+   `tests/integration/test_[r-z]*.py`. The run step's unquoted
+   `$PYTEST_ARGS` already expands globs. `test_ci_shards.py`'s model
+   expands a glob argument the same way, so the coverage and overlap
+   checks still bite, and a new file outside both ranges fails them.
+   - **The cut, measured** on SQLite at `dcb121f9` with `--junitxml`:
+     `tests/integration` sums 375 s; `a`–`q` 166 s, `r`–`z` 209 s, the
+     closest split on a first letter (`a`–`r` is 273 s against 102 s).
+   - **Prose:** the same three files say three shards.
+   - **Timings** in the PR body against rung 1's.
+   - It reopens `tests/`, so it takes its own `diff-reviewer` read.
+3. **Close.**
 
 ### Definition of done
 
-- Both shards are green on the PR, and their times are in the PR body.
+- All shards are green on the PR, and their times are in the PR body.
 - `tests/unit/test_ci_shards.py` passes on both workflows, and fails on
   the planted omission.
 - `## Doc impact` section present and current
@@ -171,7 +184,7 @@ Taken 2026-11-05 at `a321b04b`, except where a row says otherwise.
 
 ### Doc impact
 
-- `CLAUDE.md` — "Database": the `ci-postgres` check runs as two shards.
+- `CLAUDE.md` — "Database": the `ci-postgres` check runs as shards (two at rung 1, three at rung 2).
 - `AGENTS.md` — the twin, copied from `CLAUDE.md`.
 - `docs/database.md` — the CI lines name the shards.
 - `CONTRIBUTING.md` — "When to wait for CI": the job is two shards, with their times.
@@ -299,5 +312,5 @@ Taken 2026-11-05 at `a321b04b`, except where a row says otherwise.
 
 - Re-taking §6.4's cadence figures (`tools/pace_audit.py`): the next
   practice audit.
-- Splitting `ci-postgres` further, or caching its install: only if
+- ~~Splitting `ci-postgres` further~~ (Item 1 rung 2), or caching its install: only if
   Item 1's split leaves it the longest check by more than a minute.
