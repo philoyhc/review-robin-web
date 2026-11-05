@@ -35,8 +35,9 @@
           <h2 style="margin-top: 0;">Reviewer response metadata</h2>
           <p class="form-help" style="margin-bottom: 0;">
             Per-reviewer metadata about the responses each reviewer
-            produced — how many, when saved / submitted, against which
-            instruments. Optimised for reviewer audit and coaching.
+            produced — how many, against which instruments, and with
+            <strong>Timestamps</strong> on, when each last opened, saved
+            and submitted. Optimised for reviewer audit and coaching.
           </p>
         </div>
         <p class="col-chip-row" style="margin: 0;">
@@ -77,6 +78,15 @@
                 aria-pressed="true"
                 title="Self-review handling: click to cycle through Include self / Exclude self / Both."
                 >Self-review: Include</span>
+          {# 14F rung 3d — the participation report: a toggle chip, off
+             by default, adding LastOpened / LastSaved / LastSubmitted
+             per reviewer (``?timestamps=1``). #}
+          <span class="pill pill-count tag-chip"
+                data-reviewer-metadata-chip="timestamps"
+                role="button"
+                tabindex="0"
+                aria-pressed="false"
+                title="Add when each reviewer last opened, last saved and last submitted.">Timestamps</span>
         </p>
         <div class="extract-data-card-actions">
           <a class="btn secondary"
@@ -923,6 +933,8 @@
      * ``all-reviewers`` / ``all-reviewees`` add ``?all=0`` when
        off (filter body rows to entities with at least one
        response in scope).
+     * ``timestamps`` (Reviewer card only) adds ``?timestamps=1``
+       when on.
      * Unlike the By-instrument card, zero-instrument selection
        is **valid** here — the export still ships, carrying just
        the cross-instrument totals.
@@ -1090,6 +1102,7 @@
         var instrumentIds = [];
         var instrumentChips = 0;
         var allOn = true;
+        var timestampsOn = false;
         document
           .querySelectorAll("[" + chipAttr + "]")
           .forEach(function (chip) {
@@ -1102,6 +1115,8 @@
               }
             } else if (slot === allSlot) {
               allOn = on;
+            } else if (slot === "timestamps") {
+              timestampsOn = on;
             }
           });
         var params = new URLSearchParams();
@@ -1116,6 +1131,8 @@
           });
         }
         if (!allOn) params.set("all", "0");
+        // The Reviewer card's Timestamps chip (14F rung 3d).
+        if (timestampsOn) params.set("timestamps", "1");
         // Self-review handling chip — three-state cycle drives
         // ``?self_review_handling=`` per ``guide/archive/extract_data.md``
         // § *Self-review handling*.

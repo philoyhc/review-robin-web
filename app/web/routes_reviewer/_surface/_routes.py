@@ -20,6 +20,7 @@ from app.db.session import get_db
 from app.services import date_formatting
 from app.services import invitations as invitations_service
 from app.services import responses as responses_service
+from app.services import reviewers as reviewers_service
 from app.services import session_lifecycle as lifecycle
 from app.services import sessions as sessions_service
 from app.services.session_guard import SessionStateConflict
@@ -317,6 +318,7 @@ def review_surface(
     via the Prev / Next links in the page-nav row.
     """
     reviewer, review_session = reviewer_session
+    reviewers_service.mark_opened(db, reviewer, user=user)
     lifecycle.observe_deadline(db, review_session, correlation_id=request_correlation_id())
     db.refresh(review_session)
     if not (lifecycle.is_ready(review_session) or lifecycle.is_expired(review_session)):

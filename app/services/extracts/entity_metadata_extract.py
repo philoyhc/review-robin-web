@@ -55,7 +55,7 @@ from dataclasses import dataclass
 from dataclasses import field as dc_field
 from statistics import mean, median
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.elements import ColumnElement
 
@@ -69,8 +69,10 @@ from app.db.models import (
     ReviewSession,
 )
 from app.services import responses as responses_service
+from app.services.date_formatting import iso_in_zone
 from app.services.extracts import filename
 from app.services.instruments import _instrument_label
+from app.services.sessions import resolve_session_timezone
 
 __all__ = [
     "build_reviewer_metadata",
@@ -489,9 +491,17 @@ def build_reviewer_metadata(
     instrument_ids: set[int] | None,
     all_reviewers: bool,
     self_review_handling: str = SELF_REVIEW_HANDLING_DEFAULT,
+    timestamps: bool = False,
 ) -> list[tuple[str, ...]]:
     """Return the rows (header + body) for the Reviewer response
     metadata CSV.
+
+    ``timestamps`` (the card's Timestamps chip, 14F rung 3d) adds
+    ``LastOpened``, ``LastSaved`` and ``LastSubmitted`` after the name
+    and email: the reviewer's ``last_opened_at``, and the latest
+    ``saved_at`` / ``submitted_at`` across every response they made in
+    the session, whatever the instrument chips. ISO 8601 in the
+    session's zone, empty when never.
 
     ``instrument_ids`` of ``None`` ships only the two
     cross-instrument totals (scanning every session instrument).
@@ -550,8 +560,11 @@ def build_reviewer_metadata(
             )
         )
 
-    header: tuple[str, ...] = _REVIEWER_BASE_HEADER + tuple(
-        col for header_cols, _, _ in state_blocks for col in header_cols
+    stamps = _reviewer_timestamps(db, review_session, reviewers) if timestamps else None
+    header: tuple[str, ...] = (
+        _REVIEWER_BASE_HEADER
+        + (_REVIEWER_TIMESTAMP_HEADER if stamps is not None else ())
+        + tuple(col for header_cols, _, _ in state_blocks for col in header_cols)
     )
     rows: list[tuple[str, ...]] = [header]
     for r in reviewers:
@@ -560,10 +573,46 @@ def build_reviewer_metadata(
         ):
             continue
         body: list[str] = [r.name, r.email]
+        if stamps is not None:
+            body.extend(stamps[r.id])
         for _, body_by_reviewer, _ in state_blocks:
             body.extend(body_by_reviewer[r.id])
         rows.append(tuple(body))
     return rows
+
+
+_REVIEWER_TIMESTAMP_HEADER: tuple[str, ...] = ("LastOpened", "LastSaved", "LastSubmitted")
+
+
+def _reviewer_timestamps(
+    db: Session, review_session: ReviewSession, reviewers: list[Reviewer]
+) -> dict[int, tuple[str, str, str]]:
+    """Per reviewer, ``(LastOpened, LastSaved, LastSubmitted)`` as ISO
+    8601 in the session's zone; one grouped query for the two response
+    maxima."""
+    zone = resolve_session_timezone(review_session)
+    latest = {
+        reviewer_id: (saved, submitted)
+        for reviewer_id, saved, submitted in db.execute(
+            select(
+                Assignment.reviewer_id,
+                func.max(Response.saved_at),
+                func.max(Response.submitted_at),
+            )
+            .join(Response, Response.assignment_id == Assignment.id)
+            .where(Assignment.session_id == review_session.id)
+            .group_by(Assignment.reviewer_id)
+        ).all()
+    }
+    out: dict[int, tuple[str, str, str]] = {}
+    for r in reviewers:
+        saved, submitted = latest.get(r.id, (None, None))
+        out[r.id] = (
+            iso_in_zone(r.last_opened_at, zone),
+            iso_in_zone(saved, zone),
+            iso_in_zone(submitted, zone),
+        )
+    return out
 
 
 # --------------------------------------------------------------------------- #
