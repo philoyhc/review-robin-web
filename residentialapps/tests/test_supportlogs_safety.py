@@ -37,7 +37,10 @@ def flags(html: str) -> list[tuple[str, str]]:
 def badge(page: str) -> list[tuple[str, str]]:
     nav = page.split('<nav class="tabs"')[1].split("</nav>")[0]
     return re.findall(
-        r'>([^<>]+) <span class="tab-badge">(\d+)<span class="visually-hidden"> unacknowledged safety flags?</span>',
+        (
+            r'>([^<>]+) <span class="tab-badge">(\d+)'
+            r'<span class="visually-hidden"> unacknowledged safety flags?</span>'
+        ),
         nav,
     )
 

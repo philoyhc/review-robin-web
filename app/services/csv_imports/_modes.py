@@ -222,7 +222,9 @@ def _merge_rows(
                                 f"{holder_label} '{holder_name}' in this session; "
                                 "names must match."
                             ),
-                            problem=f"{spec['field']} is used under a different name in another roster",
+                            problem=(
+                                f"{spec['field']} is used under a different name in another roster"
+                            ),
                         )
                     )
         if held is not None:

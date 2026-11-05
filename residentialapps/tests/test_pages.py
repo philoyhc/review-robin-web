@@ -108,8 +108,8 @@ def test_a_roster_row_carries_its_appointment_and_abbreviation() -> None:
         assert headers[headers.index("Appointment") + 1] == "Abbrev"
         for person in people:
             assert (
-                f'<td data-col="appointment">{person.appointment}</td>\n              <td data-col="abbrev">{person.abbrev}</td>'
-                in roster
+                f'<td data-col="appointment">{person.appointment}</td>\n              '
+                f'<td data-col="abbrev">{person.abbrev}</td>' in roster
             )
         options = roster.split('id="appointment"')[1].split("</select>")[0]
         assert re.findall(r"<option>([^<]*)", options) == ["All", *(a for a, _ in appointments)]
@@ -286,8 +286,8 @@ def test_the_ra_roster_shows_each_ras_neighborhood(monkeypatch: pytest.MonkeyPat
     page = TestClient(ops_app()).get("/rosters/ras").text
     row = page.split('aria-label="Select Chloe Lim"')[1].split("</tr>")[0]
     assert (
-        '<td data-col="neighborhood" data-sort-value="Cypress A 04-05-06"><span class="pills"><span class="pill-derived">Cypress A 04-05-06</span></span></td>'
-        in row
+        '<td data-col="neighborhood" data-sort-value="Cypress A 04-05-06"><span class="pills">'
+        '<span class="pill-derived">Cypress A 04-05-06</span></span></td>' in row
     )
     shown = re.findall(r'data-col="neighborhood" data-sort-value="([^"]*)"', page)
     assert len(shown) == len(sample_data.RAS) and all(shown)  # every sample RA holds a slot
@@ -298,8 +298,8 @@ def test_the_ra_roster_shows_each_ras_neighborhood(monkeypatch: pytest.MonkeyPat
     page = TestClient(ops_app()).get("/rosters/ras").text
     row = page.split(f'aria-label="Select {first.ras[0]}"')[1].split("</tr>")[0]
     assert (
-        '<td data-col="neighborhood" data-sort-value=""><span class="chip chip-mute">None</span></td>'
-        in row
+        '<td data-col="neighborhood" data-sort-value="">'
+        '<span class="chip chip-mute">None</span></td>' in row
     )
     assert page.count('<span class="chip chip-mute">None</span>') == 1
 
@@ -503,8 +503,8 @@ def test_assignments_show_one_term_at_a_time() -> None:
     client = TestClient(ops_app())
     page = client.get("/rosters/assignments").text
     assert (
-        '<option value="AY2026-2027.1" selected>AY2026-2027, Term 1 · Sem 1 + Winter break (Current)</option>'
-        in page
+        '<option value="AY2026-2027.1" selected>AY2026-2027, Term 1 · Sem 1 + Winter break '
+        "(Current)</option>" in page
     )
     assert page.split('id="term"')[1].split("</select>")[0].count("<option value=") == len(
         sample_data.TERMS
@@ -561,8 +561,8 @@ def test_an_assignments_upload_says_what_it_does() -> None:
         "disabled" not in r and "checked" not in r for r in radios
     )  # live; none chosen at first
     assert (
-        'id="upload" class="btn btn-primary btn-unavailable" disabled aria-disabled="true" title="Choose what the upload does first"'
-        in page
+        'id="upload" class="btn btn-primary btn-unavailable" disabled aria-disabled="true" '
+        'title="Choose what the upload does first"' in page
     )
     for n, (mode, what) in enumerate(sample_data.UPLOAD_MODES, start=1):
         assert (
@@ -597,12 +597,12 @@ def test_home_names_the_current_term() -> None:
     assert "<dt>Years</dt><dd>AY2025-2026, AY2026-2027</dd>" in home
     start = TestClient(ops_app()).get("/rosters/?stage=start").text
     assert (
-        'href="/rosters/assignments/terms?return_to=/rosters/&amp;stage=start" aria-label="Go to step 1, Setup"'
-        in start
+        'href="/rosters/assignments/terms?return_to=/rosters/&amp;stage=start" '
+        'aria-label="Go to step 1, Setup"' in start
     )
     assert (
-        "Name the levels and list the area slots; set out each year&#39;s terms. Assignments are made for a term."
-        in start
+        "Name the levels and list the area slots; set out each year&#39;s terms. "
+        "Assignments are made for a term." in start
     )
     assert (
         'href="/rosters/assignments" aria-label="Go to step 1, Setup"' in home
@@ -882,13 +882,19 @@ def test_the_sample_viewer_card_comes_last_and_the_chip_jumps_to_it(
     page = both.get(f"/{app}{path}").text
     main = page[page.index('<main class="page">') : page.index("</main>")]
     card = re.search(
-        r'<nav id="sample-viewer" class="card card-pad muted viewer-end" aria-label="Sample viewer">.*?</nav>',
+        (
+            r'<nav id="sample-viewer" class="card card-pad muted viewer-end" '
+            r'aria-label="Sample viewer">.*?</nav>'
+        ),
         main,
         re.S,
     )
     assert card is not None and main[card.end() :].strip() == ""  # nothing after it in <main>
     chip = re.search(
-        r'<a class="chip chip-info chip-viewing" href="#sample-viewer">Viewing as ([^<]+)<span aria-hidden="true" class="caret"> ▾</span></a>',
+        (
+            r'<a class="chip chip-info chip-viewing" href="#sample-viewer">Viewing as ([^<]+)'
+            r'<span aria-hidden="true" class="caret"> ▾</span></a>'
+        ),
         main,
     )
     assert chip is not None and main.index(chip.group(0)) < card.start()

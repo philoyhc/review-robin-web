@@ -1,7 +1,8 @@
 """19T Item 10 rung 3 — the save rule: a closed branch holds no value.
 
 Every writer of ``Response`` rows ends in it: save and submit, and the
-responses import (the group re-fan, which also did, retired 2026-10-17). Each test gives an instrument a branch
+responses import (the group re-fan, which also did, retired 2026-10-17). Each test gives an
+instrument a branch
 directly (no page authors one yet): an Integer parent with the condition
 ``ge 4``, governing a String field."""
 

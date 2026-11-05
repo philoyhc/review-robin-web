@@ -384,8 +384,8 @@ def test_the_ra_sees_an_appeal_s_split_and_a_refused_appeal() -> None:
     maya = c.get("/ra-leave/history?as=Maya%20Seah").text
     assert "Rejected by Sam Lee" in maya
     assert (
-        "For example, 4 days of Personal leave asked with 2 available: 2 from your entitlement, 2 extra"
-        in c.get("/ra-leave/appeal").text
+        "For example, 4 days of Personal leave asked with 2 available: 2 from your entitlement, "
+        "2 extra" in c.get("/ra-leave/appeal").text
     )
 
 
@@ -402,8 +402,8 @@ def test_apply_names_approvers_and_blackouts_and_warns_on_a_draft_over_balance()
     draft = sample_leave.my_drafts()[0]
     assert sample_leave.draft_short(draft) == 2  # 3 days of Official leave, 1 available
     assert (
-        "It asks 2 days more Official leave than you have: submitting it offers Request extra leave instead."
-        in c.get(f"/ra-leave/apply?draft={draft.id}").text
+        "It asks 2 days more Official leave than you have: submitting it offers Request extra "
+        "leave instead." in c.get(f"/ra-leave/apply?draft={draft.id}").text
     )
     assert (
         '<span class="chip chip-warn">2 days over your Official leave</span>'

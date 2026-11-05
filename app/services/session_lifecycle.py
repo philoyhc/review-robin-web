@@ -151,7 +151,8 @@ def is_response_release_window_open(
 
     **The session must be ``expired``** (Segment 19F PR 2a, author
     2026-09-07). The two visibility windows mean literally "as data is
-    coming in" (``while_ongoing``, ``ready`` and before End, :func:`is_ongoing`) and "after the review has
+    coming in" (``while_ongoing``, ``ready`` and before End, :func:`is_ongoing`) and "after the
+    review has
     closed" (``after_release`` = ``expired``); responses are released
     *because the session is over*. That was already the Workflow card's
     rule — it gates both Release and Stop-release on ``is_expired`` and
@@ -915,8 +916,9 @@ def unarchive_session(
 # --------------------------------------------------------------------------- #
 # Accepting is session-wide, so there is no per-instrument open or close:
 # ``activate_session`` opens every instrument, and ``observe_deadline``,
-# Close session (``expire_session``), Revert and Archive close them all. ``open_instrument`` / ``close_instrument``
-# were removed with their routes on 2026-10-01.
+# Close session (``expire_session``), Revert and Archive close them all.
+# ``open_instrument`` / ``close_instrument`` were removed with their routes
+# on 2026-10-01.
 
 
 # --------------------------------------------------------------------------- #

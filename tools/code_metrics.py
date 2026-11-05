@@ -120,7 +120,8 @@ def duplication(root: pathlib.Path) -> None:
                 seen[f].update(range(i, i + size))
         dup = sum(len(v) for v in seen.values())
         print(
-            f"      blocks >= {size:>2} lines: {dup:>6,} lines duplicated  ({dup / total * 100:4.1f}%)"
+            f"      blocks >= {size:>2} lines: {dup:>6,} lines duplicated  "
+            f"({dup / total * 100:4.1f}%)"
         )
         if size == 10:
             worst_at_10 = sorted(seen.items(), key=lambda kv: -len(kv[1]))[:5]
@@ -130,7 +131,8 @@ def duplication(root: pathlib.Path) -> None:
         for f, lines in worst_at_10:
             own = len(per_file[f])
             print(
-                f"        {str(f.relative_to(REPO)):<52} {len(lines):>5}/{own:<5} ({len(lines) / own * 100:3.0f}%)"
+                f"        {str(f.relative_to(REPO)):<52} {len(lines):>5}/{own:<5} "
+                f"({len(lines) / own * 100:3.0f}%)"
             )
 
 

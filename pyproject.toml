@@ -131,9 +131,9 @@ root = "."
 
 [tool.ruff.lint]
 # Segment 22C rung 2: import order and modern syntax (2a), then bugbear
-# and simplify (2b), on top of ruff's defaults (E4, E7, E9, F). Not all of
-# "E": E501 is 1,471 long lines with no formatter to fix them.
-extend-select = ["I", "UP", "B", "SIM"]
+# and simplify (2b), on top of ruff's defaults (E4, E7, E9, F). E501 from
+# segment 22H, once ruff format had wrapped what it could.
+extend-select = ["I", "UP", "B", "SIM", "E501"]
 ignore = [
     # StrEnum changes what str() and format() give for a member, which
     # templates and audit details render.
@@ -149,6 +149,11 @@ ignore = [
     # A word list as "a b c".split() reads better than a long literal.
     "SIM905",
 ]
+
+[tool.ruff.lint.per-file-ignores]
+# The generator holds the theme customizer page's markup as long literals
+# (author's ruling, segment 22H).
+"tools/theme_customizer.gen.py" = ["E501"]
 
 [tool.ruff.lint.flake8-bugbear]
 # FastAPI's parameter declarations, called in defaults by design.

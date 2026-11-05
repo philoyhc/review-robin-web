@@ -128,8 +128,8 @@ def test_the_preview_mirrors_it(client: TestClient, db: Session) -> None:
     ).text
     flat = " ".join(body.split())
     assert (
-        "function profileColumnCh(label) { return Math.max(String(label || '').length + 4, 'View'.length + 3); }"
-        in flat
+        "function profileColumnCh(label) { return Math.max(String(label || '').length + 4, "
+        "'View'.length + 3); }" in flat
     )
     assert "? 'width: ' + profileColumnCh(o.label) + 'ch;' : colStyle(o.width);" in flat
     # An unsized number column starts at the surface's width, in both the
@@ -146,7 +146,10 @@ def test_the_preview_mirrors_it(client: TestClient, db: Session) -> None:
         "return sized ? ' style=\"' + style + '\"' : ' data-start-style=\"' + style + '\"';",
         "c.setAttribute('style', c.getAttribute('data-start-style'));",
         "if (shape.dataType === 'integer' || shape.dataType === 'decimal') { return 'rs-narrow'; }",
-        'return \'<span class="rrw-sort-btn" aria-hidden="true"><span class="rrw-sort-badge">↕</span></span>\';',
+        (
+            'return \'<span class="rrw-sort-btn" aria-hidden="true">'
+            '<span class="rrw-sort-badge">↕</span></span>\';'
+        ),
         "+ (sortBadgeHtml(card, o.displayFieldId) || surfaceSortStub())",
         # Any width counts, a hidden column's too, as has_custom_widths does.
         "var sized = identityW > 0 || dfRows(card).some(hasWidth) || rfRows(card).some(hasWidth);",

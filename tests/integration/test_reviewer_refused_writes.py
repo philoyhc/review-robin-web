@@ -484,7 +484,8 @@ def test_a_save_the_deadline_overtakes_mid_request_keeps_what_was_typed(
     client: TestClient, db: Session, make_client, monkeypatch
 ) -> None:
     """The route's check lets the Save through, then the deadline passes
-    before the service's locked re-check (findings L3): the page re-renders with the typed answers, as a refusal at
+    before the service's locked re-check (findings L3): the page re-renders with the typed answers,
+    as a refusal at
     the route does, not the standalone error page."""
     from sqlalchemy import update
 

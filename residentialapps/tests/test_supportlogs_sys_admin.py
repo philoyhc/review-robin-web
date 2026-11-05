@@ -48,7 +48,10 @@ def test_each_row_shows_the_grants_held(client: TestClient) -> None:
             if col == "Other Staff view":
                 continue
             box = re.search(
-                rf'<input type="checkbox" aria-label="{re.escape(col)} for {name}"( checked)? disabled>',
+                (
+                    rf'<input type="checkbox" aria-label="{re.escape(col)} for {name}"( checked)? '
+                    r"disabled>"
+                ),
                 table,
             )
             assert box and bool(box.group(1)) == (col in sample.grants_of(name)), (name, col)

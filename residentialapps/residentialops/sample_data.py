@@ -89,11 +89,17 @@ ASSIGNED_TERMS = (CURRENT_TERM,)
 UPLOAD_MODES = (
     (
         "New slots",
-        "The file defines the slots from its first term on, earlier terms keeping theirs. That term and every later one are wiped, after a warning naming them.",
+        (
+            "The file defines the slots from its first term on, earlier terms keeping theirs. "
+            "That term and every later one are wiped, after a warning naming them."
+        ),
     ),
     (
         "Refresh a term",
-        "The slots must match those on file exactly. The current term's assignments, or a future term's that already has some, are replaced, after a warning.",
+        (
+            "The slots must match those on file exactly. The current term's assignments, "
+            "or a future term's that already has some, are replaced, after a warning."
+        ),
     ),
     ("Add a term", "The slots must match those on file exactly. The term has no assignments yet."),
 )
@@ -559,7 +565,7 @@ Chloe Lim,chloe.lim@example.edu,Residential Assistant,RA,2026-08-01,,LIM CHLOE,A
 
 ASSIGNMENTS_CSV = """\
 Term,Level1.Wing,Level2.Precinct,Level3.Neighborhood,Notes,Staff,RA
-AY2026-2027 Term 1,Cypress,Cypress A 04-12,Cypress A 04-05-06,"RC1A L4: 101, 102-105; Else: 101, 102",daniel.koh@example.edu; priya.raman@example.edu,chloe.lim@example.edu"""
+AY2026-2027 Term 1,Cypress,Cypress A 04-12,Cypress A 04-05-06,"RC1A L4: 101, 102-105; Else: 101, 102",daniel.koh@example.edu; priya.raman@example.edu,chloe.lim@example.edu"""  # noqa: E501
 
 
 def linked_count(people: tuple[StaffMember, ...] | tuple[RosterRA, ...]) -> tuple[int, int]:

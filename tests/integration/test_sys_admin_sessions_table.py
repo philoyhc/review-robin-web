@@ -76,7 +76,10 @@ def test_a_row_carries_its_name_code_and_owners_for_the_filter(
         assert f'<option value="{value}">' in options
     # Clear empties the filter, as the lobby's does; a button, not a submit.
     assert re.search(
-        r'<button type="button" class="btn secondary"\s+data-diagnostics-filter-clear>Clear</button>',
+        (
+            r'<button type="button" class="btn secondary"\s+'
+            r"data-diagnostics-filter-clear>Clear</button>"
+        ),
         body,
     )
 

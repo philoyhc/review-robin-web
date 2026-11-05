@@ -975,7 +975,8 @@ CONSULTATION_REASONS = (
     ("Several staff recently involved", SUGGESTED),
 )
 NONE_MEANS = (
-    "No consultation indicated means only that nothing recorded in Support Logs prompted a second look. "
+    "No consultation indicated means only that nothing recorded in Support Logs "
+    "prompted a second look. "
     "It never means a student is well or suitable."
 )
 SAMPLE_EMAILS = (

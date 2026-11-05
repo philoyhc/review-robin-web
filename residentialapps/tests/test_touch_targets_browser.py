@@ -41,7 +41,7 @@ SMALL = """() => [...document.querySelectorAll('a[href], button, input, select, 
   .map(e => [e.matches('.token-input') ? e.closest('.tokens')
              : e.matches('[type=checkbox], [type=radio]') && e.closest('label') ? e.closest('label') : e, e])
   .map(([box, e]) => [e.outerHTML.slice(0, 80), Math.round(box.getBoundingClientRect().height)])
-  .filter(([, h]) => h < 44)"""
+  .filter(([, h]) => h < 44)"""  # noqa: E501
 
 
 @pytest.mark.parametrize("path", PHONE_PAGES)
@@ -58,7 +58,10 @@ def test_a_token_s_remove_button_is_a_thumb_s_width(page: Page) -> None:  # noqa
     page.goto(ORIGIN + "/rosters/assignments")
     sizes = page.eval_on_selector_all(
         ".token-x",
-        "xs => xs.map(x => [Math.round(x.getBoundingClientRect().height), Math.round(x.getBoundingClientRect().width)])",
+        (
+            "xs => xs.map(x => [Math.round(x.getBoundingClientRect().height), "
+            "Math.round(x.getBoundingClientRect().width)])"
+        ),
     )
     assert sizes and all(h >= 44 and w >= 44 for h, w in sizes)
 

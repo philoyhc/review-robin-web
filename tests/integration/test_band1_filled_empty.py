@@ -294,11 +294,17 @@ def test_a_stored_person_pair_tag_shows_as_stored_and_save_refuses_it(
     page = _page(client, session.public_id, instrument.id)
 
     assert re.search(
-        r'<option value="reviewer\.pair_tag1" selected data-new-model-stored-only>Reviewer&#39;s pair tag: ',
+        (
+            r'<option value="reviewer\.pair_tag1" selected '
+            r"data-new-model-stored-only>Reviewer&#39;s pair tag: "
+        ),
         page,
     )
     assert re.search(
-        r'<option value="reviewee\.pair_tag1" selected data-new-model-stored-only>Reviewee&#39;s pair tag: ',
+        (
+            r'<option value="reviewee\.pair_tag1" selected '
+            r"data-new-model-stored-only>Reviewee&#39;s pair tag: "
+        ),
         page,
     )
     refused = client.post(

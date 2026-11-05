@@ -930,7 +930,9 @@ def delete_response_field(
     audit.write_event(
         db,
         event_type="instrument.field_deleted",
-        summary=f"Deleted field '{label_for_summary}' from instrument {_instrument_label(instrument)}",
+        summary=(
+            f"Deleted field '{label_for_summary}' from instrument {_instrument_label(instrument)}"
+        ),
         actor_user_id=actor.id if actor else None,
         session=instrument.session,
         payload=audit.snapshot(captured),

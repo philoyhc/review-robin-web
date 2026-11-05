@@ -4,7 +4,8 @@ its fields.
 The copy gets its own clone of the source's pinned rule set and copies
 its Band 1 touched links, Band 2 state, the visible-when-closed flag
 and (2026-10-03) its visibility policies; its short label comes across
-marked ``Copy of …``. It does not take the page-break flag. Sort entries and column widths name fields by id, so they are
+marked ``Copy of …``. It does not take the page-break flag. Sort entries and column widths name
+fields by id, so they are
 re-pointed at the copy's own fields (``spec/instruments.md``
 "Replicate semantics")."""
 

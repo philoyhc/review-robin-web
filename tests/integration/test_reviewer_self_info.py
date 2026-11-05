@@ -220,7 +220,10 @@ def test_locked_the_readout_stays_and_the_card_goes(client: TestClient, db: Sess
 
 def _info(html: str) -> str:
     m = re.search(
-        r'<span class="rs-self-info" data-reviewer-self-info>(.*?)</span>\s*<(?:span|a) class="pill',
+        (
+            r'<span class="rs-self-info" data-reviewer-self-info>(.*?)</span>\s*'
+            r'<(?:span|a) class="pill'
+        ),
         html,
         re.S,
     )

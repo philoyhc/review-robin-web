@@ -145,7 +145,10 @@ def test_policy_blackouts_count_by_week_and_refuse_or_send_to_appeal() -> None:
     terms = page.split('aria-label="Blackout 1: term"')[1].split("</select>")[0]
     assert re.findall(r"<option[^>]*>([^<]*)", terms) == ["Term 1", "Term 2", "Term 3"]
     effects = re.findall(
-        r'aria-label="Blackout \d: leave is" disabled><option( selected)?>Refused</option><option( selected)?>Appeal only',
+        (
+            r'aria-label="Blackout \d: leave is" disabled><option( selected)?>Refused</option>'
+            r"<option( selected)?>Appeal only"
+        ),
         page,
     )
     assert [("Refused" if r else "Appeal only") for r, _ in effects] == [
@@ -824,8 +827,8 @@ def test_roles_outside_the_slots_show_as_gaps(monkeypatch) -> None:
     )
     assert "9 Precincts whose appeals the Master cannot decide" in c.get(ADMIN).text
     assert (
-        'those in every slot on <a href="/rosters/assignments">Assignments</a> (Rachel Yeo) hold one in each'
-        in c.get(ADMIN + "routing").text
+        'those in every slot on <a href="/rosters/assignments">Assignments</a> '
+        "(Rachel Yeo) hold one in each" in c.get(ADMIN + "routing").text
     )
     D = sample_leave.Delegate
     monkeypatch.setattr(

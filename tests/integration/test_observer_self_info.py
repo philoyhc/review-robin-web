@@ -142,7 +142,10 @@ def test_a_failed_import_still_renders_the_card_and_readout(
 
 def _info(html: str) -> str:
     m = re.search(
-        r'<span class="rs-self-info" data-observer-self-info>(.*?)</span>\s*<(?:span|a) class="pill',
+        (
+            r'<span class="rs-self-info" data-observer-self-info>(.*?)</span>\s*'
+            r'<(?:span|a) class="pill'
+        ),
         html,
         re.S,
     )

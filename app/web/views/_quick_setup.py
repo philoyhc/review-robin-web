@@ -88,7 +88,8 @@ class QuickSetupSlot:
     """Populated when the operator's last submit for this slot was
     rejected (parse / validation failure, or a lifecycle rejection
     on ``ready``). Rendered as a full-width ``banner-error`` above
-    the slots, tied to this slot by id. The cancel link in the banner returns the operator to the slot
+    the slots, tied to this slot by id. The cancel link in the banner returns the operator to the
+    slot
     fragment with a clean URL."""
 
     cancel_url: str | None = None
@@ -651,7 +652,8 @@ def build_new_session_quick_setup_context(
     shape — every slot ``is_wired=False`` — for callers that want
     the eventual visual without hooking up the back end.
 
-    The card is always live (``is_locked=False``). The card-level replace-confirmation checkbox is also suppressed
+    The card is always live (``is_locked=False``). The card-level replace-confirmation checkbox is
+    also suppressed
     (``show_confirm_replace=False``) — there's nothing to replace
     on a freshly-created session.
     """

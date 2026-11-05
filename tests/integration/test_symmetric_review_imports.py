@@ -385,7 +385,10 @@ def test_a_relationships_upload_is_checked_against_the_mirroring_reviewers(
 
     review_session = _session(client, db, "sym-i-rel-svc", on=False)
     incoming = parse_reviewer_csv(REVIEWERS_CSV).rows
-    content = b"ReviewerEmail,RevieweeEmail\nann@example.edu,bob@example.edu\nann@example.edu,zed@example.edu\n"
+    content = (
+        b"ReviewerEmail,RevieweeEmail\nann@example.edu,bob@example.edu\n"
+        b"ann@example.edu,zed@example.edu\n"
+    )
     result = relationships_service.parse_relationship_upload(
         db, review_session.id, content, incoming_reviewers=incoming, symmetric=True
     )

@@ -144,7 +144,10 @@ def test_a_column_that_is_not_a_plain_index_is_ignored(client: TestClient, colum
 def test_the_check_posts_the_carried_file_to_the_check(client: TestClient) -> None:
     text = _upload(client, b"email\r\na@x.edu\r\n").text
     assert re.search(
-        r'<button class="btn primary" type="submit" id="check-button" formaction="/utilities/email-check/check">Check addresses',
+        (
+            r'<button class="btn primary" type="submit" id="check-button" '
+            r'formaction="/utilities/email-check/check">Check addresses'
+        ),
         text,
     )
     assert "no-store" in _upload(client, b"email\r\na@x.edu\r\n").headers["cache-control"]

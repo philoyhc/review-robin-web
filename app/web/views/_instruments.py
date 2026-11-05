@@ -365,7 +365,8 @@ def _response_field_groups(
     level-1 field's ↰ does with the previous field in its branch:
     ``"join"`` its branch (rung 5), ``"start"`` one on a plain number or
     List field (ux_refinements Item 5), or None, off; ``nest_first``
-    marks the branch's first field, which has none above. A level-1 parent is ``inner_top`` and its branch's
+    marks the branch's first field, which has none above. A level-1 parent is ``inner_top`` and its
+    branch's
     last field ``inner_end``: the rules around a branch inside a branch.
     """
     from app.services.responses import (

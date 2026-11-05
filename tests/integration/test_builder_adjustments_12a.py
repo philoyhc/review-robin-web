@@ -53,7 +53,8 @@ def test_the_name_chip_starts_every_row_flush_left(client: TestClient, db: Sessi
         row = _row(table, name)
         first = must_search(r"<td[^>]*>.*?</td>", row.split(">", 1)[1]).group(0)
         assert first.startswith(
-            '<td class="col-shrink rf-active-cell"><label class="pill pill-count tag-chip rf-name-chip"'
+            '<td class="col-shrink rf-active-cell">'
+            '<label class="pill pill-count tag-chip rf-name-chip"'
         ), name
         assert "data-new-model-rf-active" in first, name
         assert f"<span data-new-model-rf-chip-label>{name}</span>" in first, name

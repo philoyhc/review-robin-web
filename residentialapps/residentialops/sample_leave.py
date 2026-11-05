@@ -146,7 +146,9 @@ _POLICY = _Policy(
         "inviters": "unit",  # "slot", "unit" or "named"
         "inviter_types": ("Master", "Admin"),
         "inviter_names": (),
-        "appeal_terms": "Granted on the understanding that you take on extra duties, as agreed with your RF.",
+        "appeal_terms": (
+            "Granted on the understanding that you take on extra duties, as agreed with your RF."
+        ),
         "cover_required": True,
         "cover_mode": "Named and confirmed",
         "cover_pool": "Same Precinct",
@@ -196,7 +198,10 @@ def zero_day_rule() -> str:
     (author, 2026-10-29)."""
     return {
         "Weekdays": "Dates falling only on a weekend count no days, and cannot be submitted.",
-        "Working days": "Dates falling only on weekends or public holidays count no days, and cannot be submitted.",
+        "Working days": (
+            "Dates falling only on weekends or public holidays count no days, "
+            "and cannot be submitted."
+        ),
     }.get(POLICY["day_count"], "")
 
 
@@ -985,7 +990,10 @@ def entitlement_anomalies() -> tuple[tuple[EntitlementRow, str], ...]:
             found.append(
                 (
                     r,
-                    f"Over entitlement by {-r['available']} day{'s' if r['available'] != -1 else ''}, pending included",
+                    (
+                        f"Over entitlement by {-r['available']} "
+                        f"day{'s' if r['available'] != -1 else ''}, pending included"
+                    ),
                 )
             )
         elif r["adjustment"] and not r["reason"]:

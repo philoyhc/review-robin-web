@@ -719,8 +719,8 @@ def test_observers_page_marks_observers_nav_tab_active(client: TestClient, db: S
     body = client.get(f"/operator/sessions/{review_session.public_id}/observers").text
     assert 'class="nav-tab active"' in body
     assert (
-        f'class="nav-tab active"\n       href="/operator/sessions/{review_session.public_id}/observers"'
-        in body
+        'class="nav-tab active"\n       '
+        f'href="/operator/sessions/{review_session.public_id}/observers"' in body
     )
 
 

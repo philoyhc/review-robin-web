@@ -25,7 +25,8 @@ from .test_held_upload_setup_cards import _session
 
 JANE = "11111111-1111-4111-8111-111111111111"
 PILL = re.compile(
-    r'<code class="pill pill-count pill-address" title="Matched to a directory account"[^>]*data-directory-matched[^>]*>([^<]+)</code>'
+    r'<code class="pill pill-count pill-address" title="Matched to a directory '
+    r'account"[^>]*data-directory-matched[^>]*>([^<]+)</code>'
 )
 
 

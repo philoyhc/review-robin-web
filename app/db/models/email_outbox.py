@@ -30,7 +30,8 @@ class EmailOutbox(Base):
 
     Pre-Segment-14B the row is a dev-mode preview surface: there is no
     real transport, so every row stays ``queued`` (nothing has sent
-    it), and the operator views the rendered body here. Segment 14B Part A lights up the actual send paths against
+    it), and the operator views the rendered body here. Segment 14B Part A lights up the actual send
+    paths against
     the audit-log columns added by Segment 11C PR F (``error_message``,
     ``from_address``, ``backend``, ``backend_message_id``,
     ``delivered_at``, ``payload_hash``, ``correlation_id``); the value

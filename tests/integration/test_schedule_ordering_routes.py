@@ -268,8 +268,8 @@ def test_new_session_form_includes_live_update_script(client: TestClient, db: Se
     # The shared partial's distinctive IDS array is the cheapest
     # marker that the script is on the page.
     assert (
-        'IDS = [\n      "scheduled_activate_at",\n      "deadline",\n      "responses_release_at",\n      "responses_release_until",\n    ]'
-        in body
+        'IDS = [\n      "scheduled_activate_at",\n      "deadline",\n'
+        '      "responses_release_at",\n      "responses_release_until",\n    ]' in body
     )
 
 

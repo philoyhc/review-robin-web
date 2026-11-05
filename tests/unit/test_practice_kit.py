@@ -119,11 +119,13 @@ def test_the_setup_document_table_matches_the_manifest() -> None:
     rows = _document_rows()
     expected = {p: (tier, needs) for p, tier, needs, _ in pk.MANIFEST}
     assert rows == expected, (
-        "new_project_practices_setup.md's kit table has drifted from tools/practice_kit.py MANIFEST; "
+        "new_project_practices_setup.md's kit table has drifted from "
+        "tools/practice_kit.py MANIFEST; "
         "regenerate it with `python3 tools/practice_kit.py --list`.\n"
         f"only in document: {sorted(set(rows) - set(expected))}\n"
         f"only in manifest: {sorted(set(expected) - set(rows))}\n"
-        f"tier or needs mismatch: {sorted(p for p in rows if p in expected and rows[p] != expected[p])}"
+        "tier or needs mismatch: "
+        f"{sorted(p for p in rows if p in expected and rows[p] != expected[p])}"
     )
 
 

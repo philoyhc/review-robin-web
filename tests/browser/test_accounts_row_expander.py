@@ -161,7 +161,8 @@ def test_a_narrow_row_wraps_between_groups_not_inside_one(page: Page, api: httpx
     expect(groups).to_have_count(4)
     for group in groups.all():
         tops = group.evaluate(
-            "g => Array.from(g.children).map(c => Math.round(c.getBoundingClientRect().top + c.getBoundingClientRect().height / 2))"
+            "g => Array.from(g.children).map(c => Math.round(c.getBoundingClientRect().top + "
+            "c.getBoundingClientRect().height / 2))"
         )
         assert max(tops) - min(tops) <= 2, tops
 
@@ -180,7 +181,7 @@ def test_a_wrapping_confirm_keeps_its_tick_by_the_first_line(page: Page) -> None
           const box = label.querySelector("input").getBoundingClientRect();
           const whole = label.getBoundingClientRect();
           return [box.top - whole.top, whole.height];
-        }"""
+        }"""  # noqa: E501
     )
     offset, height = top
     assert height > 40, height  # it wrapped
