@@ -10,9 +10,13 @@ work of engaging reviewers and tracking reviewee coverage:
   visible.
 
 Both render the same overall chrome shape: the **Workflow card** at
-the top (per `spec/workflow_card.md`), then a full-width info card
-with inline counters, then a table whose card opens with a two-pane
-toolbar carrying the filter. Bulk-actions
+the top (per `spec/workflow_card.md`), then an info card with inline
+counters under a heading (*Reviewers and invitations*, *Reviewees and
+responses*), then a table whose card opens with a two-pane toolbar
+carrying the filter. On Responses the info card is full width; on
+Invitations it takes the left half of a `.bottom-grid` row, beside the
+**Share the session link** card (the session's stable link and Copy
+link; segment 14F). Bulk-actions
 (Send invites · Send reminders) live on the
 Workflow card's button row — neither page body carries its own bulk
 action bar. Creating invites has no button of its own: Prepare creates
