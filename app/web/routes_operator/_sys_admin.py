@@ -175,18 +175,23 @@ def sys_admin_system(
     db: Session = Depends(get_db),
 ) -> Response:
     """System Status (segment 22G Item 1): what the host is doing in the
-    background, read-only. The cards not yet wired show placeholders."""
+    background, read-only."""
     target = _admin_return_target(request, return_to, db, user)
+    clock = views.clock_card(
+        scheduled_events.clock_status(),
+        interval_setting=settings.scheduler_interval_seconds,
+    )
     response = _templates.TemplateResponse(
         request,
         "operator/sys_admin_system.html",
         {
             "user": user,
-            "clock": views.clock_card(
-                scheduled_events.clock_status(),
-                interval_setting=settings.scheduler_interval_seconds,
-            ),
+            "clock": clock,
             "due": system_status.due_next(db),
+            "instance": views.instance_card(
+                system_status.instance(db),
+                scheduled_send=scheduled_events.scheduled_send_enabled(),
+            ),
             "return_to_url": target.url,
             "return_to_label": target.label,
         },

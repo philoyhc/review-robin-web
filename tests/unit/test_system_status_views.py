@@ -50,7 +50,8 @@ def test_a_pass_and_a_failure() -> None:
         last_failure_at=started,
         last_failure_type="RuntimeError",
     )
-    card = clock_card(status, interval_setting=120)
+    card = clock_card(status, interval_setting=120, now=SINCE + timedelta(hours=3))
+    assert card.uptime_label == "3 h"
     assert card.last_pass_at == started
     assert card.last_pass_label == "Took 0.4 s, visited 1 session"
     assert card.last_failure_label == "RuntimeError"
@@ -65,3 +66,22 @@ def test_duration_label() -> None:
     assert duration_label(timedelta(hours=2, minutes=5)) == "2 h 5 min"
     assert duration_label(timedelta(days=4, hours=3)) == "4 d 3 h"
     assert duration_label(timedelta(seconds=-1)) == "0.0 s"
+
+
+def test_instance_card_schema_states_and_sending() -> None:
+    from app.services.system_status import Instance
+    from app.web.views import instance_card
+
+    def card(revision: str | None, *, send: bool = False):
+        return instance_card(
+            Instance(version="a5aa328", dialect="postgresql", schema_revision=revision, schema_head="h1"),
+            scheduled_send=send,
+        )
+
+    assert (card("h1").schema_state, card("h1").schema_label) == ("current", "Current (h1)")
+    assert card("h0").schema_state == "behind"
+    assert card("h0").schema_label == "At h0; this code expects h1"
+    assert card(None).schema_state == "unrecorded"
+    assert card(None).scheduled_send_label.startswith("Off (RRW_SCHEDULED_SEND)")
+    assert card(None, send=True).scheduled_send_label.startswith("On:")
+    assert (card(None).version, card(None).dialect) == ("a5aa328", "postgresql")

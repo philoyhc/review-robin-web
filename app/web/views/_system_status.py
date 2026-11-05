@@ -6,9 +6,10 @@ in the viewer's zone."""
 from __future__ import annotations
 
 import dataclasses
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from app.services.scheduled_events import ClockStatus
+from app.services.system_status import Instance
 
 
 @dataclasses.dataclass(frozen=True)
@@ -21,6 +22,7 @@ class ClockCard:
     state_label: str
     interval_label: str
     since: datetime
+    uptime_label: str
     last_pass_at: datetime | None
     last_pass_label: str
     last_failure_at: datetime | None
@@ -51,7 +53,11 @@ def duration_label(span: timedelta) -> str:
     return f"{days} d {hours} h" if hours else f"{days} d"
 
 
-def clock_card(status: ClockStatus, *, interval_setting: float) -> ClockCard:
+def clock_card(
+    status: ClockStatus, *, interval_setting: float, now: datetime | None = None
+) -> ClockCard:
+    """``now`` dates the uptime: the time since ``status.since``, when
+    this process loaded the clock, which is this instance's start."""
     if interval_setting <= 0:
         state, state_label = "off", "Off (SCHEDULER_INTERVAL_SECONDS is 0)"
     elif status.running:
@@ -73,6 +79,7 @@ def clock_card(status: ClockStatus, *, interval_setting: float) -> ClockCard:
         state_label=state_label,
         interval_label=interval_label,
         since=status.since,
+        uptime_label=duration_label((now or datetime.now(UTC)) - status.since),
         last_pass_at=status.last_pass_started,
         last_pass_label=last_pass_label,
         last_failure_at=status.last_failure_at,
@@ -82,4 +89,38 @@ def clock_card(status: ClockStatus, *, interval_setting: float) -> ClockCard:
             f"{_plural(status.busy_sessions, 'session')} busy, "
             f"{_plural(status.held_elsewhere, 'pass')} held by another process"
         ),
+    )
+
+
+@dataclasses.dataclass(frozen=True)
+class InstanceCard:
+    """The Sending and This instance cards. ``schema_state`` is
+    ``current`` / ``behind`` / ``unrecorded``."""
+
+    scheduled_send_label: str
+    version: str
+    dialect: str
+    schema_state: str
+    schema_label: str
+
+
+def instance_card(instance: Instance, *, scheduled_send: bool) -> InstanceCard:
+    if instance.schema_current:
+        state, label = "current", f"Current ({instance.schema_head})"
+    elif instance.schema_revision:
+        state = "behind"
+        label = f"At {instance.schema_revision}; this code expects {instance.schema_head}"
+    else:
+        state = "unrecorded"
+        label = f"No revision recorded; this code expects {instance.schema_head}"
+    return InstanceCard(
+        scheduled_send_label=(
+            "On: scheduled invites and reminders fire on time"
+            if scheduled_send
+            else "Off (RRW_SCHEDULED_SEND): scheduled invites and reminders do not fire"
+        ),
+        version=instance.version,
+        dialect=instance.dialect,
+        schema_state=state,
+        schema_label=label,
     )
