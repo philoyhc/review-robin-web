@@ -41,7 +41,10 @@ jobs:
     # Runs unless the change is prose or Residential only; a failed
     # classifier still runs it.
     if: ${{ !cancelled() && needs.changes.outputs.lane != 'prose' && needs.changes.outputs.lane != 'residential' }}
-    runs-on: ubuntu-latest
+    # Pinned, not ubuntu-latest: that moved to 26.04 on 2026-11-05 and the
+    # pinned Playwright (1.56) installs no Chromium there. Unpin with a
+    # Playwright that supports it.
+    runs-on: ubuntu-24.04
     # Three shards in parallel, by folder (segment 22H Item 2), sized on
     # 4 cores: unit with lint, format and type check about 1.5 min,
     # integration about 1.7 min, browser about 1.2 min. Together they run
@@ -137,7 +140,8 @@ jobs:
     # rather than skip without one here, as RRW's do in the full lane.
     needs: changes
     if: ${{ needs.changes.outputs.lane == 'residential' }}
-    runs-on: ubuntu-latest
+    # Pinned for Chromium, as the test job is.
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Check out repository
