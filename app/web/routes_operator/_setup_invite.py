@@ -43,14 +43,25 @@ def _require_editable_templates(review_session: ReviewSession) -> None:
         )
 
 
-def _build_field_rows(review_session: ReviewSession, template: str) -> list[dict[str, Any]]:
+def _build_field_rows(
+    review_session: ReviewSession,
+    template: str,
+    edited: dict[str, str] | None = None,
+) -> list[dict[str, Any]]:
     """For each (field, key, default) tuple on the active template,
     return the dict the editor template iterates over to render
     each editable field plus its per-field "Reset to default" link.
+
+    ``shown`` is what the field's box holds: the saved override (blank
+    for the default), or, after Send a test to me, what the operator had
+    typed (``edited``), so a test never discards an unsaved draft.
+    ``unsaved`` marks a box that differs from what is saved.
     """
     rows: list[dict[str, Any]] = []
     for spec in email_templates.TEMPLATE_FIELDS[template]:
         override = email_templates.get_override(review_session, spec["key"])
+        saved_shown = override if override is not None else ""
+        shown = edited[spec["key"]] if edited is not None and spec["key"] in edited else saved_shown
         rows.append(
             {
                 "field": spec["field"],
@@ -58,38 +69,24 @@ def _build_field_rows(review_session: ReviewSession, template: str) -> list[dict
                 "value": override if override is not None else spec["default"],
                 "default": spec["default"],
                 "has_override": override is not None,
+                "shown": shown,
+                "unsaved": shown != saved_shown,
             }
         )
     return rows
 
 
-def _send_test_notice(test: str | None, kind: str | None, user: User) -> dict[str, str] | None:
-    """The line under the composer's buttons after Send a test to me."""
-    if test == "sent":
-        return {"tone": "success", "text": f"Test sent to {user.email}. Check your inbox."}
-    if test == "failed":
-        return {
-            "tone": "error",
-            "text": f"The test was not sent. {email_send.failure_copy(kind or '')}",
-        }
-    return None
-
-
-@router.get("/sessions/{session_id}/setup-invite", response_class=HTMLResponse)
-def setupinvite_form(
+def _composer_page(
     request: Request,
-    template: str = Query(default="invitation"),
-    test: str | None = Query(default=None),
-    kind: str | None = Query(default=None),
-    review_session: ReviewSession = Depends(require_session_operator),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
+    db: Session,
+    review_session: ReviewSession,
+    user: User,
+    template: str,
+    *,
+    edited: dict[str, str] | None = None,
+    send_test_notice: dict[str, str] | None = None,
 ) -> HTMLResponse:
-    if template not in _VALID_TEMPLATES:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Unknown template",
-        )
+    rows = _build_field_rows(review_session, template, edited)
     return _templates.TemplateResponse(
         request,
         "operator/session_setupinvite.html",
@@ -99,16 +96,33 @@ def setupinvite_form(
             "status_pills": views.session_status_pills(db, review_session),
             "active_template": template,
             "valid_templates": _VALID_TEMPLATES,
-            "rows": _build_field_rows(review_session, template),
+            "rows": rows,
+            "unsaved_edits": any(row["unsaved"] for row in rows),
             "merge_tags": views.merge_tags_for_template(template),
             "responses_received_enabled": (
                 email_templates.responses_received_enabled(review_session)
             ),
             "locked": lifecycle.is_archived(review_session),
-            "send_test_notice": _send_test_notice(test, kind, user),
+            "send_test_notice": send_test_notice,
             "breadcrumbs": breadcrumbs.operator_session_child(review_session, "Email Template"),
         },
     )
+
+
+@router.get("/sessions/{session_id}/setup-invite", response_class=HTMLResponse)
+def setupinvite_form(
+    request: Request,
+    template: str = Query(default="invitation"),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    if template not in _VALID_TEMPLATES:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Unknown template",
+        )
+    return _composer_page(request, db, review_session, user, template)
 
 
 @router.post("/sessions/{session_id}/setup-invite")
@@ -172,16 +186,18 @@ async def setupinvite_send_test(
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
-) -> RedirectResponse:
+) -> HTMLResponse:
     """Send a test to me (14F rung 2b): the composer's form, as edited and
-    unsaved, rendered and sent to the operator. Saves nothing."""
+    unsaved, rendered and sent to the operator. Saves nothing, and answers
+    with the composer itself, the edits still in it (not a redirect, which
+    would reload the saved template and lose the draft)."""
     if template not in _VALID_TEMPLATES:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Unknown template",
         )
     form = await request.form()
-    edited: dict[str, str | None] = {}
+    edited: dict[str, str] = {}
     for spec in email_templates.TEMPLATE_FIELDS[template]:
         raw = form.get(spec["field"])
         if isinstance(raw, str):
@@ -199,14 +215,14 @@ async def setupinvite_send_test(
             correlation_id=request_correlation_id(),
         )
     )
-    outcome = "test=sent" if result.ok else f"test=failed&kind={result.failure_kind or ''}"
-    return urls.redirect(
+    return _composer_page(
         request,
-        url=(
-            f"/operator/sessions/{review_session.public_id}/setup-invite"
-            f"?template={template}&{outcome}"
-        ),
-        status_code=status.HTTP_303_SEE_OTHER,
+        db,
+        review_session,
+        user,
+        template,
+        edited=edited,
+        send_test_notice=views.send_test_notice(result, user.email),
     )
 
 

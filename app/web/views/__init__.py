@@ -176,6 +176,7 @@ from ._previews import (
     extract_email_from_picker_value,
     merge_tags_for_template,
     resolve_email_preview_tab,
+    send_test_notice,
 )
 
 # Responses page rows (sliced in PR 1).
@@ -471,6 +472,7 @@ __all__ = [
     "invitations_search_options",
     "observers_search_options",
     "merge_tags_for_template",
+    "send_test_notice",
     "AuditDetailChangeRow",
     "AuditDetailKVRow",
     "AuditDetailRender",

@@ -41,6 +41,7 @@ from app.db.models import (
     User,
 )
 from app.services import email_templates
+from app.services.email_send import SendResult
 
 # How many reviewee names the picker context strip shows before
 # collapsing the rest into the `<details>` disclosure tail.
@@ -463,3 +464,14 @@ def merge_tags_for_template(template: str) -> list[dict[str, str]]:
         {"tag": tag, "description": _MERGE_TAG_DESCRIPTIONS[tag]}
         for tag in _MERGE_TAGS_BY_TEMPLATE[template]
     ]
+
+
+def send_test_notice(result: SendResult, to: str) -> dict[str, str]:
+    """The line under the email composer's buttons after Send a test to
+    me (14F rung 2b): its tone and its sentence."""
+    if result.ok:
+        return {"tone": "success", "text": f"Test sent to {to}. Check your inbox."}
+    return {
+        "tone": "error",
+        "text": f"The test was not sent. {result.error_message or 'The send failed.'}",
+    }

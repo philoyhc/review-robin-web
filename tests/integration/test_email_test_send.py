@@ -5,6 +5,8 @@
   (a stand-in while the roster is empty) and a placeholder link.
 - Nothing is saved, no outbox row is written, and `email.test_sent`
   records the outcome.
+- The answer is the composer itself, with the draft still in its fields
+  and Save live, so a test (sent or not) never loses unsaved edits.
 - A refused send, or no Microsoft token, comes back as a failure line
   naming why.
 """
@@ -49,7 +51,6 @@ def _send(client: TestClient, rs: ReviewSession, **fields: str):
     return client.post(
         f"/operator/sessions/{rs.public_id}/setup-invite/send-test",
         data={"template": "invitation", **fields},
-        follow_redirects=False,
     )
 
 
@@ -70,8 +71,7 @@ def test_the_edited_unsaved_template_goes_to_the_operator(
     response = _send(
         client, rs, subject="Hi $reviewer_name", body="Open $invite_url, $reviewer_name"
     )
-    assert response.status_code == 303
-    assert response.headers["location"].endswith("template=invitation&test=sent")
+    assert response.status_code == 200
 
     [sent] = mailer.sent
     db.refresh(rs)
@@ -87,8 +87,16 @@ def test_the_edited_unsaved_template_goes_to_the_operator(
     [event] = _events(db, rs)
     assert event.detail is not None and event.detail["context"]["outcome"] == "sent"
 
-    page = client.get(response.headers["location"]).text
+    page = response.text
     assert f"Test sent to {operator_email}." in page
+    # The draft survives the test: the fields still hold it, Save is live.
+    assert 'value="Hi $reviewer_name"' in page
+    assert ">Open $invite_url, $reviewer_name</textarea>" in page
+    save = page.split('id="setupinvite-save-button"', 1)[1].split(">", 1)[0]
+    assert "disabled" not in save
+    # A plain reload shows the saved template again.
+    reloaded = client.get(f"/operator/sessions/{rs.public_id}/setup-invite").text
+    assert 'value="Hi $reviewer_name"' not in reloaded
 
 
 def test_an_empty_roster_fills_tags_from_a_stand_in(
@@ -117,9 +125,9 @@ def test_the_other_templates_send_too(
     response = client.post(
         f"/operator/sessions/{rs.public_id}/setup-invite/send-test",
         data={"template": template, "subject": "S $session_name", "body": "B"},
-        follow_redirects=False,
     )
-    assert response.headers["location"].endswith(f"template={template}&test=sent")
+    assert response.status_code == 200
+    assert "Test sent to" in response.text
     assert mailer.sent[0].subject == f"[Test] S {rs.name}"
 
 
@@ -134,10 +142,10 @@ def test_a_failed_test_says_why(
 
     monkeypatch.setattr(_setup_invite.graph, "mailer_for", build)
     rs = _session(client, db, f"TF-{kind[:4]}")
-    response = _send(client, rs, subject="s", body="b")
-    assert response.headers["location"].endswith(f"test=failed&kind={kind}")
-    page = client.get(response.headers["location"]).text
+    response = _send(client, rs, subject="draft subject", body="b")
+    page = response.text
     assert "The test was not sent." in page
+    assert 'value="draft subject"' in page  # kept for a retry
     [event] = _events(db, rs)
     assert event.detail is not None and event.detail["context"]["outcome"] == "failed"
 
@@ -149,7 +157,6 @@ def test_an_unknown_template_is_refused(
     response = client.post(
         f"/operator/sessions/{rs.public_id}/setup-invite/send-test",
         data={"template": "nope"},
-        follow_redirects=False,
     )
     assert response.status_code == 404
     assert mailer.sent == []

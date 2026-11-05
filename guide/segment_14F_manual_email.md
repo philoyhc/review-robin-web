@@ -118,7 +118,10 @@ Taken 2026-11-02 at `fffd4c28`; re-taken 2026-11-05 at `095336bf`
   from the roster's first reviewer, else a "Sample Reviewer" stand-in,
   and the link is a placeholder. It goes to the operator only, subject
   marked `[Test]`, with no Cc, Bcc or outbox row, and `email.test_sent`
-  records it. A failure comes back as a line naming why.
+  records it. It answers with the composer itself, not a redirect, with
+  the draft still in its fields and Save live, so a test never loses
+  unsaved edits (Codex on #3648). The result line is
+  `views.send_test_notice`.
 
 ## PR ladder
 
