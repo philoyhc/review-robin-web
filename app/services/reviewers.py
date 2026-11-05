@@ -26,7 +26,7 @@ Audit events registered in ``EVENT_SCHEMAS``:
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from typing import Final, TypedDict
 
@@ -79,22 +79,47 @@ _FIELD_LABELS = {
 }
 
 
-def mark_opened(db: Session, reviewer: Reviewer, *, now: datetime | None = None) -> None:
-    """Stamp ``reviewer.last_opened_at`` (14F rung 3d): every arrival on
-    the review surface or the summary, whichever link brought them.
+ARRIVAL_GAP = timedelta(minutes=30)
+"""How long without a visit before the next one counts as a new arrival
+(``mark_opened``): page turns within a visit neither restamp nor audit."""
 
-    A Core ``UPDATE`` that sets ``updated_at`` to itself, so a visit does
-    not read as a roster edit on Setup's Reviewers table. No audit event:
-    the stamp is a reading, not a change anyone made."""
+
+def mark_opened(
+    db: Session, reviewer: Reviewer, *, user: User, now: datetime | None = None
+) -> bool:
+    """Stamp ``reviewer.last_opened_at`` on an arrival on the review
+    surface or the summary, whichever link brought them (14F rung 3d), and
+    write ``reviewer.opened``. Whether this call stamped.
+
+    An arrival is a visit after ``ARRIVAL_GAP`` without one, so the stamp
+    reads as when the latest visit began and the audit log gets one row a
+    visit, not one a page (Codex on #3654). A Core ``UPDATE`` that sets
+    ``updated_at`` to itself, so a visit does not read as a roster edit on
+    Setup's Reviewers table."""
     stamp = now or datetime.now(UTC)
+    last = reviewer.last_opened_at
+    if last is not None:
+        if last.tzinfo is None:
+            last = last.replace(tzinfo=UTC)
+        if stamp - last < ARRIVAL_GAP:
+            return False
     db.execute(
         update(Reviewer)
         .where(Reviewer.id == reviewer.id)
         .values(last_opened_at=stamp, updated_at=Reviewer.updated_at)
         .execution_options(synchronize_session=False)
     )
+    audit.write_event(
+        db,
+        event_type="reviewer.opened",
+        summary=f"Reviewer #{reviewer.id} opened their review",
+        actor_user_id=user.id,
+        session=reviewer.session,
+        refs={"reviewer_id": reviewer.id},
+    )
     db.commit()
     set_committed_value(reviewer, "last_opened_at", stamp)
+    return True
 
 
 def _refuse_over_long(values: Mapping[str, object]) -> None:

@@ -318,7 +318,7 @@ def review_surface(
     via the Prev / Next links in the page-nav row.
     """
     reviewer, review_session = reviewer_session
-    reviewers_service.mark_opened(db, reviewer)
+    reviewers_service.mark_opened(db, reviewer, user=user)
     lifecycle.observe_deadline(db, review_session, correlation_id=request_correlation_id())
     db.refresh(review_session)
     if not (lifecycle.is_ready(review_session) or lifecycle.is_expired(review_session)):

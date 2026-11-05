@@ -63,7 +63,7 @@ def reviewer_session_summary(
     # An archived session never reaches here: the gate answers 404
     # (``deps._participant_session_or_404``).
     reviewer, review_session = reviewer_session
-    reviewers_service.mark_opened(db, reviewer)
+    reviewers_service.mark_opened(db, reviewer, user=user)
     if not _is_session_fully_submitted(db, reviewer=reviewer, session_id=review_session.id):
         # Not all rows submitted — redirect to the dashboard.
         # With a one-line notice saying why (participant audit M11).
