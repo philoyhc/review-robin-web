@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterable
-from datetime import UTC
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import select
@@ -101,7 +101,7 @@ def serialize_audit_events(
         )
 
 
-def _isoformat_utc(value: object) -> str:
+def _isoformat_utc(value: datetime | None) -> str:
     """ISO 8601 representation of a datetime, normalised
     to UTC when tzinfo is missing on readback.
 
@@ -111,11 +111,9 @@ def _isoformat_utc(value: object) -> str:
 
     if value is None:
         return ""
-    from datetime import datetime
-
-    if isinstance(value, datetime) and value.tzinfo is None:
+    if value.tzinfo is None:
         value = value.replace(tzinfo=UTC)
-    return value.isoformat()  # type: ignore[union-attr]
+    return value.isoformat()
 
 
 def _json_or_empty(value: object) -> str:

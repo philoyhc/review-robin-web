@@ -20,6 +20,7 @@ import logging
 import sys
 from collections.abc import Mapping
 from datetime import UTC, datetime
+from typing import TextIO
 
 HOST = "cordware"
 
@@ -98,6 +99,13 @@ class ApplicationFilter(logging.Filter):
         return True
 
 
+class _JsonStreamHandler(logging.StreamHandler[TextIO]):
+    """The handler ``configure_logging`` installs, marked so a second
+    call finds and replaces it."""
+
+    _cordware_json = True
+
+
 def configure_logging(level: str, loggers: Mapping[str, str]) -> None:
     """Install the JSON handler on the root logger.
 
@@ -109,8 +117,7 @@ def configure_logging(level: str, loggers: Mapping[str, str]) -> None:
     for handler in list(root.handlers):
         if getattr(handler, "_cordware_json", False):
             root.removeHandler(handler)
-    handler = logging.StreamHandler(sys.stdout)
+    handler = _JsonStreamHandler(sys.stdout)
     handler.setFormatter(JsonFormatter())
     handler.addFilter(ApplicationFilter(loggers))
-    handler._cordware_json = True  # type: ignore[attr-defined]
     root.addHandler(handler)

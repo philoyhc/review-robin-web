@@ -94,6 +94,16 @@ class User(Base, TimestampMixin):
         deliberately."""
         return self.display_name or self.email
 
+    # This request's Entra object id, stamped by
+    # ``app.web.deps.stamp_principal`` for the roster matchers (segment
+    # 21F). A plain attribute, not a column: it is never written, and an
+    # unstamped row reads ``None``. Declared outside ``Mapped[]`` so the
+    # declarative mapper leaves it alone.
+    if TYPE_CHECKING:
+        signed_in_principal_id: str | None
+    else:
+        signed_in_principal_id = None
+
     @property
     def is_super_admin(self) -> bool:
         """Segment 18S Item 1 — the protected top tier. Cordware's

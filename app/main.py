@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 import pathlib
 import threading
 from collections.abc import AsyncGenerator
@@ -9,6 +10,7 @@ from fastapi import Depends, FastAPI
 from fastapi.staticfiles import StaticFiles
 from starlette.requests import Request
 from starlette.responses import RedirectResponse, Response
+from starlette.types import Scope
 
 from app.config import settings, validate_critical_settings
 from app.db.models import User
@@ -54,8 +56,16 @@ class _RevalidatingStaticFiles(StaticFiles):
     through.
     """
 
-    def file_response(self, *args: object, **kwargs: object) -> Response:
-        response = super().file_response(*args, **kwargs)  # type: ignore[arg-type]
+    def file_response(
+        self,
+        full_path: str | os.PathLike[str],
+        stat_result: os.stat_result,
+        scope: Scope,
+        status_code: int = 200,
+    ) -> Response:
+        response = super().file_response(
+            full_path, stat_result, scope, status_code
+        )
         response.headers["cache-control"] = "no-cache"
         return response
 

@@ -342,7 +342,7 @@ def instrument_move_field(
 
     try:
         instruments_service.move_response_field(
-            db, field=field, direction=direction, actor=user  # type: ignore[arg-type]
+            db, field=field, direction=direction, actor=user
         )
     except instruments_service.BranchedInstrumentError as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, detail=str(exc)) from exc

@@ -20,8 +20,10 @@ land. Audit event ``relationships.imported`` (registered in
 
 from __future__ import annotations
 
+import enum
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import Final
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -767,7 +769,15 @@ class RelationshipOperationError(ValueError):
         self.message = message
 
 
-_UNSET: object = object()
+class _Unset(enum.Enum):
+    """The type of :data:`_UNSET`: a one-member enum, so an
+    ``update_relationship`` argument typed ``int | _Unset`` narrows to
+    ``int`` once ``is not _UNSET`` has been checked."""
+
+    UNSET = enum.auto()
+
+
+_UNSET: Final = _Unset.UNSET
 
 # Each column's name in a ``too_long`` or ``comma_in_tag`` message. A
 # tag is named by its slot, not by the session's friendly label for it.
@@ -943,12 +953,12 @@ def update_relationship(
     db: Session,
     *,
     relationship: Relationship,
-    reviewer_id: int | object = _UNSET,
-    reviewee_id: int | object = _UNSET,
-    tag_1: str | None | object = _UNSET,
-    tag_2: str | None | object = _UNSET,
-    tag_3: str | None | object = _UNSET,
-    status: str | object = _UNSET,
+    reviewer_id: int | _Unset = _UNSET,
+    reviewee_id: int | _Unset = _UNSET,
+    tag_1: str | None | _Unset = _UNSET,
+    tag_2: str | None | _Unset = _UNSET,
+    tag_3: str | None | _Unset = _UNSET,
+    status: str | _Unset = _UNSET,
     user: User,
     correlation_id: str | None = None,
     acknowledged_loss: int | None = None,
@@ -961,44 +971,44 @@ def update_relationship(
     lifecycle.require_editable(db, relationship.session)
     session_id = relationship.session_id
     proposed: dict[str, object] = {}
+    final_reviewer = relationship.reviewer_id
+    final_reviewee = relationship.reviewee_id
     if reviewer_id is not _UNSET:
         _require_session_member(
             db,
             session_id=session_id,
             model=Reviewer,
-            member_id=reviewer_id,  # type: ignore[arg-type]
+            member_id=reviewer_id,
             label="Reviewer",
         )
-        proposed["reviewer_id"] = reviewer_id
+        proposed["reviewer_id"] = final_reviewer = reviewer_id
     if reviewee_id is not _UNSET:
         _require_session_member(
             db,
             session_id=session_id,
             model=Reviewee,
-            member_id=reviewee_id,  # type: ignore[arg-type]
+            member_id=reviewee_id,
             label="Reviewee",
         )
-        proposed["reviewee_id"] = reviewee_id
+        proposed["reviewee_id"] = final_reviewee = reviewee_id
     if status is not _UNSET:
-        proposed["status"] = _normalised_rel_status(status)  # type: ignore[arg-type]
+        proposed["status"] = _normalised_rel_status(status)
     if tag_1 is not _UNSET:
-        proposed["tag_1"] = _normalised_rel_tag(tag_1)  # type: ignore[arg-type]
+        proposed["tag_1"] = _normalised_rel_tag(tag_1)
     if tag_2 is not _UNSET:
-        proposed["tag_2"] = _normalised_rel_tag(tag_2)  # type: ignore[arg-type]
+        proposed["tag_2"] = _normalised_rel_tag(tag_2)
     if tag_3 is not _UNSET:
-        proposed["tag_3"] = _normalised_rel_tag(tag_3)  # type: ignore[arg-type]
+        proposed["tag_3"] = _normalised_rel_tag(tag_3)
     _refuse_over_long(proposed)
 
-    final_reviewer = proposed.get("reviewer_id", relationship.reviewer_id)
-    final_reviewee = proposed.get("reviewee_id", relationship.reviewee_id)
     if (
         final_reviewer != relationship.reviewer_id
         or final_reviewee != relationship.reviewee_id
     ) and _pair_taken(
         db,
         session_id=session_id,
-        reviewer_id=final_reviewer,  # type: ignore[arg-type]
-        reviewee_id=final_reviewee,  # type: ignore[arg-type]
+        reviewer_id=final_reviewer,
+        reviewee_id=final_reviewee,
         exclude_id=relationship.id,
     ):
         raise RelationshipOperationError(

@@ -104,9 +104,14 @@ def get_email_settings(user: User) -> EmailSettings | None:
     if not _is_complete(user):
         return None
     assert user.smtp_password_encrypted is not None  # _is_complete check
+    # Every write stores ``"smtp"``, the only legal transport today; a
+    # row holding anything else is not a usable credential set.
+    transport = user.smtp_transport
+    if transport != "smtp":
+        return None
     plaintext = _secrets.decrypt_password(user.smtp_password_encrypted)
     return EmailSettings(
-        transport=user.smtp_transport or "smtp",  # type: ignore[arg-type]
+        transport=transport,
         host=user.smtp_host or "",
         port=user.smtp_port or 0,
         username=user.smtp_username or "",

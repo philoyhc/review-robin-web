@@ -935,7 +935,9 @@ def _normalise_sort_spec(
             field_id_raw = entry.get("display_field_id")
             dir_raw = entry.get("dir")
         try:
-            field_id = int(field_id_raw)  # type: ignore[arg-type]
+            if field_id_raw is None:
+                raise TypeError("display_field_id is missing")
+            field_id = int(field_id_raw)
         except (TypeError, ValueError) as exc:
             raise SortSpecError(
                 code="bad_id",

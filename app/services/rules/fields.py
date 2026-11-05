@@ -35,7 +35,7 @@ person held across their pairs) retired with
 
 from __future__ import annotations
 
-from contextvars import ContextVar
+from contextvars import ContextVar, Token
 from typing import TYPE_CHECKING, Final
 
 if TYPE_CHECKING:
@@ -83,7 +83,7 @@ _pair_context_lookup: ContextVar[
 
 def set_pair_context_lookup(
     lookup: dict[tuple[int, int], Relationship] | None,
-) -> object:
+) -> Token[dict[tuple[int, int], Relationship] | None]:
     """Bind a pair-context lookup for the calling task. Returns a
     token the caller passes to ``reset_pair_context_lookup`` when
     done. Engine call sites use this in a try/finally pair around
@@ -92,8 +92,10 @@ def set_pair_context_lookup(
     return _pair_context_lookup.set(lookup)
 
 
-def reset_pair_context_lookup(token: object) -> None:
-    _pair_context_lookup.reset(token)  # type: ignore[arg-type]
+def reset_pair_context_lookup(
+    token: Token[dict[tuple[int, int], Relationship] | None],
+) -> None:
+    _pair_context_lookup.reset(token)
 
 
 def get_field_value(
