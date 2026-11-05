@@ -33,8 +33,9 @@ Audit events registered in ``EVENT_SCHEMAS``:
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from typing import Any
+from collections.abc import Callable, Mapping
+from enum import Enum
+from typing import Any, Final, TypedDict
 
 from pydantic import ValidationError
 from sqlalchemy import select
@@ -81,7 +82,7 @@ class ObserverOperationError(ValueError):
 _FIELD_LABELS = {"email": "Email", "display_name": "Name", "tag_1": "Tag 1"}
 
 
-def _refuse_over_long(values: dict[str, object]) -> None:
+def _refuse_over_long(values: Mapping[str, object]) -> None:
     message = csv_imports.over_long_field_message(Observer, values, _FIELD_LABELS)
     if message is not None:
         raise ObserverOperationError("too_long", message)
@@ -133,7 +134,24 @@ def _email_taken(
     )
 
 
-_UNSET: object = object()
+class _Unset(Enum):
+    """``update_*``'s "argument not passed" default: an enum member, so
+    ``value is not _UNSET`` narrows it out of the parameter's type."""
+
+    UNSET = "UNSET"
+
+
+_UNSET: Final = _Unset.UNSET
+
+
+class _ProposedObserver(TypedDict, total=False):
+    """``update_observer``'s edited fields, normalised, before the dirty
+    check: each key is an ``Observer`` column of the same type."""
+
+    email: str
+    status: str
+    display_name: str | None
+    tag_1: str | None
 
 
 def _validated_cohort_rule(payload: dict[str, Any] | None) -> dict[str, Any] | None:
@@ -311,11 +329,11 @@ def update_observer(
     db: Session,
     *,
     observer: Observer,
-    email: str | object = _UNSET,
-    display_name: str | None | object = _UNSET,
-    tag_1: str | None | object = _UNSET,
-    status: str | object = _UNSET,
-    cohort_rule: dict[str, Any] | None | object = _UNSET,
+    email: str | _Unset = _UNSET,
+    display_name: str | None | _Unset = _UNSET,
+    tag_1: str | None | _Unset = _UNSET,
+    status: str | _Unset = _UNSET,
+    cohort_rule: dict[str, Any] | None | _Unset = _UNSET,
     user: User,
     correlation_id: str | None = None,
     resolve_account: Callable[[str], directory_accounts.Account | None] | None = None,
@@ -334,17 +352,17 @@ def update_observer(
     rule_changed = False
     rule: dict[str, Any] | None = None
     if cohort_rule is not _UNSET:
-        rule = _validated_cohort_rule(cohort_rule)  # type: ignore[arg-type]
+        rule = _validated_cohort_rule(cohort_rule)
         rule_changed = not same_cohort_rule(rule, observer.cohort_rule)
-    proposed: dict[str, object] = {}
+    proposed: _ProposedObserver = {}
     if email is not _UNSET:
-        proposed["email"] = _normalised_email(email)  # type: ignore[arg-type]
+        proposed["email"] = _normalised_email(email)
     if status is not _UNSET:
-        proposed["status"] = _normalised_status(status)  # type: ignore[arg-type]
+        proposed["status"] = _normalised_status(status)
     if display_name is not _UNSET:
-        proposed["display_name"] = _normalised_optional(display_name)  # type: ignore[arg-type]
+        proposed["display_name"] = _normalised_optional(display_name)
     if tag_1 is not _UNSET:
-        proposed["tag_1"] = _normalised_optional(tag_1)  # type: ignore[arg-type]
+        proposed["tag_1"] = _normalised_optional(tag_1)
     _refuse_over_long(proposed)
 
     # not-identity: a dirty check — did the operator edit this field?
@@ -353,7 +371,7 @@ def update_observer(
     if "email" in proposed and proposed["email"] != observer.email and _email_taken(
         db,
         session_id=observer.session_id,
-        email=proposed["email"],  # type: ignore[arg-type]
+        email=proposed["email"],
         exclude_observer_id=observer.id,
     ):
         raise ObserverOperationError(
@@ -369,8 +387,8 @@ def update_observer(
         db,
         session_id=observer.session_id,
         kind="observers",
-        identifier=final_email,  # type: ignore[arg-type]
-        name=final_name or "",  # type: ignore[arg-type]
+        identifier=final_email,
+        name=final_name or "",
     )
     if conflict is not None:
         holder_label, holder_name = conflict
@@ -390,9 +408,9 @@ def update_observer(
     if (
         new_address is not None
         and resolve_account is not None
-        and directory_accounts.key(new_address) != directory_accounts.key(observer.email)  # type: ignore[arg-type]
+        and directory_accounts.key(new_address) != directory_accounts.key(observer.email)
     ):
-        account = resolve_account(new_address) if new_address else None  # type: ignore[arg-type]
+        account = resolve_account(new_address) if new_address else None
         holder = directory_accounts.account_holder(
             db, Observer, session_id=observer.session_id, account=account, exclude_id=observer.id
         )
@@ -400,7 +418,7 @@ def update_observer(
             raise ObserverOperationError(
                 "duplicate_account",
                 directory_accounts.same_account_message(
-                    new_address, "observer", holder.email  # type: ignore[arg-type]
+                    new_address, "observer", holder.email
                 ),
             )
 
@@ -428,14 +446,15 @@ def update_observer(
             reason="observer_updated",
             correlation_id=correlation_id,
         )
+        old_email = observer.email
         for field, (_, new_value) in changes.items():
             setattr(observer, field, new_value)
         # Segment 21F: a changed address rebinds, or loses its binding.
         if "email" in changes:
             moved = directory_accounts.rebind(
                 observer,
-                old=changes["email"][0],  # type: ignore[arg-type]
-                new=changes["email"][1],  # type: ignore[arg-type]
+                old=old_email,
+                new=observer.email,
                 resolve=rebind_resolve,
             )
             if moved is not None:

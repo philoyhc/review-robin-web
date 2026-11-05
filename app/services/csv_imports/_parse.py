@@ -8,6 +8,7 @@ from __future__ import annotations
 import csv
 import io
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -313,7 +314,7 @@ def cell_length_issues(
 
 
 def over_long_field_message(
-    model: type[Base], values: dict[str, object], labels: dict[str, str]
+    model: type[Base], values: Mapping[str, object], labels: dict[str, str]
 ) -> str | None:
     """The first value longer than its ``model`` column, as an
     operator-facing sentence, or ``None``.
@@ -361,7 +362,7 @@ def tag_comma_issues(
 
 
 def comma_tag_message(
-    values: dict[str, object], labels: dict[str, str]
+    values: Mapping[str, object], labels: dict[str, str]
 ) -> str | None:
     """The first tag value holding a comma, as an operator-facing
     sentence, or ``None``: the single-row editors' counterpart of
