@@ -118,6 +118,39 @@
       input.addEventListener("change", update);
     })();
   </script>
+
+  {# 14C Item 2 rung 1 — the Email settings card, a scaffold: copy and
+     layout only, every toggle inert (disabled, nothing stored, no
+     route). Each toggle is a Toggle (spec/ui_elements.md §6) showing
+     its proposed default, and is stored and wired when 14F's send path
+     reads it. It stacks under Date & time because Unit (20D) took the
+     slot beside it. #}
+  <div class="card" id="email-settings">
+    <h2>Email settings</h2>
+    <p class="muted">
+      Mail you send from Review Robin goes from your own mailbox. Sending
+      isn't switched on yet; these choices take effect when it is.
+    </p>
+    {% set email_toggles = [
+      ("sent-items", "Keep a copy in my Sent Items", true,
+       "Each invitation and reminder you send is also saved in your mailbox's Sent Items."),
+      ("bcc-self", "Send a copy to myself", false,
+       "Each message you send is also blind-copied to you."),
+      ("reply-to-help", "Replies go to the session's Help contact", false,
+       "Replies to your invitations and reminders go to the Help contact set on the session, not to you."),
+    ] %}
+    {% for key, label, on, hint in email_toggles %}
+      <div class="email-setting-row" data-email-setting="{{ key }}">
+        <div>
+          <div>{{ label }}</div>
+          <p class="muted email-setting-hint">{{ hint }}</p>
+        </div>
+        <button type="button" class="btn{% if not on %} secondary{% endif %}"
+                aria-pressed="{{ 'true' if on else 'false' }}" disabled
+                title="Not available until sending is switched on">{{ 'On' if on else 'Off' }}</button>
+      </div>
+    {% endfor %}
+  </div>
   </div>
   {# Segment 20D: the operator's Unit, read-only here; only a system
      admin sets it, on Accounts Management (`docs/header_chrome.md` §6).

@@ -840,6 +840,14 @@
          normal weight/size. On New session the checkbox comes first, as
          every checkbox does (20C Item 2); Session Home's toggles are chips. */
       .ui-settings-row { display: flex; gap: var(--space-4); flex-wrap: wrap; align-items: center; }
+      /* Settings' Email settings card (14C Item 2): one row per choice,
+         its label and hint on the left, its Toggle on the right. */
+      .email-setting-row {
+        display: flex; justify-content: space-between; align-items: center;
+        gap: var(--space-4); padding: var(--space-2) 0;
+        border-top: 1px solid var(--border-subtle);
+      }
+      .email-setting-hint { margin: 2px 0 0; font-size: var(--fs-small); }
       /* body.ui-v2 selector so it beats ``body.ui-v2 label`` (which sets a
          smaller --fs-small size + 500 weight) — the toggle text should read
          as normal card body text. */

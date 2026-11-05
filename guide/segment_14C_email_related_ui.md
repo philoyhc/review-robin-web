@@ -153,6 +153,16 @@ operator's own mailbox, not a session.
   under a dedicated mailbox) is shown disabled with its reason, not
   hidden, so the card's shape does not change between deployments.
 
+### Status
+
+- 2026-11-05, rung 1 (scaffold): the card stacks **under** Date & time,
+  not beside it, because Unit (20D) took that slot after this plan was
+  written. It shows three inert Toggles at their proposed defaults:
+  Keep a copy in my Sent Items (on), Send a copy to myself (off), and
+  Replies go to the session's Help contact (off). The last two are
+  Open question 1's recommendation, put up for the author to judge on
+  the page. Main-base SHA before this item's rung 1: `908959ba`.
+
 ### PR ladder
 
 1. **Scaffold:** the card, its copy, the inert toggle(s). Must not touch
