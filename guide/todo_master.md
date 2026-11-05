@@ -71,8 +71,8 @@ gate.
    sent, when it turns the setting on.
 
 3. **22I — Postgres shards, a stale figure, and the practice record**
-   (planned, 2026-11-05). Item 1 closed (three Postgres shards). Item 2:
-   `CLAUDE.md`'s suite time re-taken. Item 3: `rrw_sdd_in_practice.md`
+   (planned, 2026-11-05). Items 1 and 2 closed (three Postgres shards; the
+   suite time re-taken). Item 3: `rrw_sdd_in_practice.md`
    records the language-level gates and the CI split. In that order.
    **Plan:** `guide/segment_22I_postgres_shards_and_practice_record.md`.
 
