@@ -55,6 +55,13 @@ gateway's 120 s; revisit only if measured otherwise.
   submission. Author.
 - **From:** the operator's own address, as Graph sends it; nothing in the
   app sets it.
+- **One send per row** (`guide/post_azure_todo_checklist.md`, added
+  2026-11-05): the sender claims a row by flipping it `queued` →
+  `sending` in a conditional update, and sends only a row it claimed. A
+  resubmit rewrites a row still `queued`, and two clicks of Send all can
+  overlap, so an unclaimed send could go twice. `sending` is already in
+  `EMAIL_OUTBOX_STATUSES`; a row left `sending` by a request that died
+  reads as such on the outbox, and is retried only by hand.
 
 ## Judgment calls — decided
 
@@ -77,11 +84,12 @@ gateway's 120 s; revisit only if measured otherwise.
 
 ## Blast radius (measured)
 
-Taken 2026-11-02 at `fffd4c28`.
+Taken 2026-11-02 at `fffd4c28`; re-taken 2026-11-05 at `095336bf`
+(after 22H's reformat), where only the first row moved.
 
 | What | Count | Command |
 |---|---|---|
-| Send/remind services in `invitations.py` | 5 | `grep -n "^def send_\|^def queue_responses_received" app/services/invitations.py \| wc -l` |
+| Send/remind services in `invitations.py` | 5, now 7 | `grep -n "^def send_\|^def queue_responses_received" app/services/invitations.py \| wc -l` |
 | Operator send/remind routes in `_operations.py` | 4 | `grep -n "def invitations_send\|def invitations_remind" app/web/routes_operator/_operations.py \| wc -l` |
 | Templates naming the auto-send offsets | 4 | `grep -rln "invite_offsets\|reminder_offsets" app/web/templates \| wc -l` |
 
@@ -113,9 +121,24 @@ Taken 2026-11-02 at `fffd4c28`.
 
 ## Open questions
 
-- The backlog rule above. Author.
-- Whether Send a test to me shows on the Invitations page or in the
-  composer. Author, at the scaffold.
+- **The backlog rule above.** Author, by rung 4. *Recommended
+  (2026-11-05): adopt it as written* — invitations and reminders queued
+  before go-live are never resent (some carry a rotated, dead link, and
+  a later send may already supersede them); confirmations queued after
+  the go-live date are sent, and none for a recalled or deleted
+  submission. Rows written before 2026-11-02 already read `sent` and are
+  left alone.
+- **Where Send a test to me sits.** Author, at the scaffold.
+  *Recommended (2026-11-05): in the email composer* (the Email Template
+  page), beside the template it tests, sending that template as edited,
+  with the session's merge tags filled from a sample row. The Invitations
+  page keeps its real sends only.
+- **Which of 14C Item 2's toggles 14F's send path reads**
+  (`guide/segment_14C_email_related_ui.md`, Item 2, Open questions 1).
+  Author, at the scaffold. *Recommended (2026-11-05): two, read by rung
+  2's transport* — a copy to myself (Bcc to the operator) and Reply-to as
+  the session's Help contact. Report emails and a deployment-wide sender
+  wait for 14G.
 
 ## Out of scope
 
