@@ -1354,6 +1354,17 @@ wait for 14G. Magic-link landings for them (W21) are in
 `guide/magic_links.md`. **Lift trigger:** 14F shipped and an operator
 asking to notify reviewees.
 
+### More System Status reports (22G Item 1's later candidates)
+
+*Filed 2026-11-05, at 22G Item 1's close* (`guide/archive/segment_22G_diagnostics.md`).
+Admin → System Status reports the clock, what is due next, scheduled
+send and this instance. Candidates collected but not built: the outbox
+across sessions (queued and failed sends), configuration sanity (the
+settings that must agree, checked in one place), identity and Graph
+reachability, data counts, and audit-schema drift (`EVENT_SCHEMAS`
+mismatches logged in production mode). **Lift trigger:** a deployed
+problem that one of these would have shown without the logs.
+
 ## Part C — Future possibilities (off-roadmap)
 
 Aspirational directions deliberately *not* on the roadmap. Each entry states the idea, why it is off the roadmap, what is being done instead, and what evidence would move it back on.

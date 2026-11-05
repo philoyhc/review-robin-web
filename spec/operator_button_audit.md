@@ -763,9 +763,10 @@ takes the next free number.
 | 197 | Sessions table, per row (Actions) | Outbox | `<a>` | `btn secondary` | Secondary | Child page, read-only for a non-owner sys-admin. |
 | 198 | Sessions table, per row (Actions) | Audit log | `<a>` | `btn secondary` | Secondary | Child page (Section 20). The three sit on one line in a `.btn-pair.is-one-line`, however narrow the cell. |
 | 275 | Filter card | Clear | `<button type="button">` | `btn secondary` | Secondary | Empties the Filter box (session name, code or owner, with a typeahead of every name, code and owner label) and shows every row again. `Clear`, as on the lobby's filter (#194a). The filter hides rendered rows live and never queries. In an empty workspace the card stays and Clear is inert, a `<span class="btn secondary disabled">` as on #194a. |
-| 247 | Page top | ← Back to {{ return_to_label }} | `<a>` | `back-link` | Return-to (`.back-link`) | Returns to wherever the chrome's Admin link (#225) was followed from. `/operator/sys-admin` remembers that origin for the browser session, until a later Admin link replaces it (cookie `rrw-admin-return-to`), so this tab and Accounts (#111) keep it across the tab strip and every action's redirect |
-| 248 | Sys Admin tab strip | Sessions Diagnostics | `<a>` | `nav-tab` (`.active` on this page and its Outbox and Audit log children) | Nav (page-internal) | `app/web/templates/operator/partials/sys_admin_top_nav.html`, in a `tab-strip tab-strip-page sys-admin-nav` wrapper, on all four Sys Admin pages (§§19–22). The active tab stays an `<a>`, not the `<span aria-current>` convention 4 describes |
+| 247 | Page top | ← Back to {{ return_to_label }} | `<a>` | `back-link` | Return-to (`.back-link`) | Returns to wherever the chrome's Admin link (#225) was followed from. `/operator/sys-admin` remembers that origin for the browser session, until a later Admin link replaces it (cookie `rrw-admin-return-to`), so this tab, Accounts (#111) and System Status (#283) keep it across the tab strip and every action's redirect |
+| 248 | Sys Admin tab strip | Sessions Diagnostics | `<a>` | `nav-tab` (`.active` on this page and its Outbox and Audit log children) | Nav (page-internal) | `app/web/templates/operator/partials/sys_admin_top_nav.html`, in a `tab-strip tab-strip-page sys-admin-nav` wrapper, on all five Sys Admin pages (§§19–22, 24). The active tab stays an `<a>`, not the `<span aria-current>` convention 4 describes |
 | 249 | Sys Admin tab strip | Accounts Management | `<a>` | `nav-tab` (`.active` on §19's page) | Nav (page-internal) | As #248 |
+| 282 | Sys Admin tab strip | System Status | `<a>` | `nav-tab` (`.active` on §24's page) | Nav (page-internal) | As #248 |
 
 Notes:
 
@@ -891,6 +892,18 @@ Sys-admin-gated and read-only; reached from §21's per-row Outbox (#197).
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
 | 251 | Page top | ← Back to Sessions Diagnostics | `<a>` | `back-link` | Return-to (`.back-link`) | |
+
+---
+
+## Section 24 — System Status (`/operator/sys-admin/system`)
+
+Source: `app/web/templates/operator/sys_admin_system.html`. Sys-admin-gated
+and read-only: no button. The Due next card's session
+names are plain links to each session's audit log (§20), not buttons.
+
+| # | Card | Label | Element | CSS class | Canonical | Notes |
+|---|---|---|---|---|---|---|
+| 283 | Page top | ← Back to {{ return_to_label }} | `<a>` | `back-link` | Return-to (`.back-link`) | As #247 |
 
 ---
 

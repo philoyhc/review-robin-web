@@ -1,6 +1,6 @@
 # Segment 22G — Diagnostics
 
-**Opened:** 2026-11-04, parked; Item 1 planned 2026-11-05 · **Theme:** a
+**Opened:** 2026-11-04, parked; Item 1 planned and closed 2026-11-05 · **Theme:** a
 small set of status reports that say whether the deployed host is doing
 what it should, without reading logs · **Related:**
 `guide/archive/segment_14E_clock.md` (the clock Item 1 reports on)
@@ -92,6 +92,39 @@ Taken 2026-11-05 at `a5aa3284`.
   #248–249 (`grep -rln "Sessions Diagnostics" spec/`).
 - Migrations: 102 files in `alembic/versions/`.
 
+### Status (closed 2026-11-05)
+
+**Intended vs done.** The ladder ran as planned: plan #3616, scaffold
+#3617, Clock #3618, Due next #3619, Sending and This instance #3620, this
+close. Cordware #178 sets `APP_VERSION` on deploy (the open question).
+
+**Reads.** One cumulative `diff-reviewer` read at rung 4
+(`f4053add..`), seven findings: Due next's session links 404'd (integer
+id, not `public_id`) and its release stamp did not follow the clock's
+rule (both also Codex's, fixed on rung 3 with tests); archived sessions'
+failures were listed (fixed, rung 3); the uptime was computed in the
+route and a comment sat under the wrong heading (fixed, rung 4); and two
+divergences from the plan, kept below. Codex added one on rung 4: the
+schema and sending labels were chosen in the template, so
+`views.instance_card` now builds them. The close's `spec-writer` pass
+dropped segment provenance from two specs and flagged the return-to
+cookie's wording (fixed) and a Cordware fact in
+`spec/settings_inventory.md` (kept: it is what sets `APP_VERSION`).
+
+**Decisions confirmed at build:**
+- Due next links each session to its audit log, not its Sessions
+  Diagnostics row: the log is where its scheduled steps are recorded,
+  and the row has no anchor to land on.
+- Due next has no view adapter: the service's `DueNext` is already the
+  card's shape, and the template only formats instants and empty rows.
+- The process start is the clock record's `since` (when the process
+  loaded the clock), so This instance and the Clock card share one
+  "since".
+- `scheduled_events.due_session_ids` is exported, so the service reads
+  the clock's own pick rather than a copy of its query.
+- A migration now updates `app/db/schema_head.py` with it;
+  `tests/unit/test_schema_head.py` says so when one does not.
+
 ### PR ladder
 
 1. **Scaffold.** The tab, the route, the template with the four cards as
@@ -123,21 +156,25 @@ Taken 2026-11-05 at `a5aa3284`.
 
 ### Open questions
 
-- **`APP_VERSION` on Azure.** RRW shows `dev` unless the host sets it;
-  whether Cordware's release should set it to the imported commit is a
-  Cordware change. Author, at rung 4.
+- ~~`APP_VERSION` on Azure~~: set by Cordware's release deploy to the
+  imported commit, one version for every application (author,
+  2026-11-05; Cordware #178).
 
 ### Out of scope
 
 - Host request logging: the Cordware stub in `guide/todo_master.md`
   ("Cordware host logging, events 4 and 5").
 - CPU, memory, requests and logs: Azure's own pages.
-- Later candidates, for a later item if wanted: the outbox across
-  sessions, configuration sanity, identity and Graph reachability, data
-  counts, audit-schema drift.
+- Later candidates: the outbox across sessions, configuration sanity,
+  identity and Graph reachability, data counts, audit-schema drift.
+  Filed in `guide/deferred_consolidated.md` ("More System Status
+  reports").
 
 ### Doc impact
 
 - `spec/operator_ui_concept.md` — §6 gains the System Status tab and its four cards.
 - `spec/operator_button_audit.md` — the tab-strip row for System Status beside #248–249, and the page's own section.
+- `spec/permissions.md` — the `/operator/sys-admin/*` gate row names System Status (added at close).
+- `spec/settings_inventory.md` — `APP_VERSION` shows on System Status and is set by the release deploy; the return-to cookie is read by every tab (added at close).
+- `guide/deferred_consolidated.md` — file the later candidates (added at close).
 - `guide/todo_master.md` — delete the segment's entry at the item's close.

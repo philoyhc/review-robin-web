@@ -141,7 +141,7 @@ Two things the table implies and the code relies on:
 | `GET /operator/sessions/{session_id}/directory-search` | `require_session_operator` | the directory pickers on a session's roster rows (`_directory.py`) |
 | `GET /operator/directory-search` | `require_operator` (the package gate) | the help-contact boxes on New session and Session Home, where New session has no session yet (`_directory.py`) |
 | `GET /operator/sys-admin/users/directory-search` | `require_sys_admin` | the Accounts invite box's picker (`_sys_admin.py`) |
-| `/operator/sys-admin/*` (root redirect, Sessions Diagnostics, per-session Outbox + Audit log children, Accounts Management, adopt, and the per-user actions) | `require_sys_admin` | per route |
+| `/operator/sys-admin/*` (root redirect, Sessions Diagnostics, per-session Outbox + Audit log children, Accounts Management, System Status, adopt, and the per-user actions) | `require_sys_admin` | per route |
 | `GET …/export/audit_log.csv` | `require_sys_admin` | the one session-scoped export that is *not* owner-reachable: there is no operator-facing entry point to it |
 | reviewer surface, save / submit / recall / clear, post-submit summary + `summary.csv` | `require_reviewer_in_session` | per route |
 | `/me/sessions/{id}/results` (+ acknowledge) | `require_reviewee_with_current_grant` | per route — composes the roster gate with `visibility_policies.reviewee_has_current_grant`; both the GET and the acknowledge POST share it |
