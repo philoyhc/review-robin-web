@@ -28,6 +28,7 @@ source itself (whitespace collapsed).
 from __future__ import annotations
 
 import ast
+import functools
 import re
 from collections import Counter
 from pathlib import Path
@@ -56,6 +57,7 @@ _REBINDS = re.compile(
 )
 
 
+@functools.cache
 def _segments() -> list[str]:
     app = rrw_app()
     paths = list(app.openapi()["paths"]) + [r.path for r in app.routes if isinstance(r, Mount)]
@@ -139,6 +141,10 @@ def python_leaks() -> Counter[Leak]:
         for node in ast.walk(ast.parse(source)):
             if isinstance(node, ast.Call):
                 func = getattr(node.func, "id", None) or getattr(node.func, "attr", None)
+                if func not in ("RedirectResponse", "set_cookie"):
+                    # Only the two calls below are reported, and slicing the
+                    # source re-splits the whole file each time (22H Item 2).
+                    continue
                 call = _norm(ast.get_source_segment(source, node) or "")
                 if func == "RedirectResponse":
                     found["P1", name, call] += 1
