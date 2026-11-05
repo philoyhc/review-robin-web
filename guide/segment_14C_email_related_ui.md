@@ -137,8 +137,8 @@ Items (Graph `sendMail`'s `saveToSentItems`). Others will follow.
   `spec/ui_elements.md` §6.
 - **Scaffold first** (`CLAUDE.md`, consequential UI): the card with its
   copy and layout and every toggle inert, before any is stored.
-- First toggle: **Keep a copy in my Sent Items** (default on, as Graph's
-  is). It applies only to mail sent as the operator; the card says so
+- First toggle: **Keep a copy in my Sent Items** (default off, author
+  2026-11-05, though Graph's own default is on). It applies only to mail sent as the operator; the card says so
   when the deployment sends from a dedicated mailbox.
 - Each toggle is stored when the send path that reads it exists (14F),
   as a per-operator preference beside `display_timezone`, so no column
@@ -158,10 +158,9 @@ operator's own mailbox, not a session.
 - 2026-11-05, rung 1 (scaffold): the card stacks **under** Date & time,
   not beside it, because Unit (20D) took that slot after this plan was
   written. It shows three inert Toggles at their proposed defaults:
-  Keep a copy in my Sent Items (on), Send a copy to myself (off), and
-  Replies go to the session's Help contact (off). The last two are
-  Open question 1's recommendation, put up for the author to judge on
-  the page. Main-base SHA before this item's rung 1: `908959ba`.
+  Keep a copy in my Sent Items, Send a copy to myself, and Replies go
+  to the session's Help contact. The author kept all three and ruled
+  each off by default (2026-11-05). Main-base SHA before this item's rung 1: `908959ba`.
 
 ### PR ladder
 
@@ -182,7 +181,9 @@ operator's own mailbox, not a session.
 
 ### Open questions
 
-1. **Which other toggles?** Candidates to put to the author: send a copy
+1. ~~**Which other toggles?**~~ Bcc to myself and Reply-to the Help
+   contact, beside Sent Items; all three off by default (author,
+   2026-11-05). Was: candidates to put to the author: send a copy
    to myself (Bcc); use the session's Help contact as the Reply-to;
    send invitations from me or from the dedicated mailbox when both
    exist. Each needs its send-side behavior settled in 14F first. *Recommended

@@ -121,8 +121,8 @@
 
   {# 14C Item 2 rung 1 — the Email settings card, a scaffold: copy and
      layout only, every toggle inert (disabled, nothing stored, no
-     route). Each toggle is a Toggle (spec/ui_elements.md §6) showing
-     its proposed default, and is stored and wired when 14F's send path
+     route). Each toggle is a Toggle (spec/ui_elements.md §6),
+     off by default (author, 2026-11-05), stored and wired when 14F's send path
      reads it. It stacks under Date & time because Unit (20D) took the
      slot beside it. #}
   <div class="card" id="email-settings">
@@ -132,7 +132,7 @@
       isn't switched on yet; these choices take effect when it is.
     </p>
     {% set email_toggles = [
-      ("sent-items", "Keep a copy in my Sent Items", true,
+      ("sent-items", "Keep a copy in my Sent Items", false,
        "Each invitation and reminder you send is also saved in your mailbox's Sent Items."),
       ("bcc-self", "Send a copy to myself", false,
        "Each message you send is also blind-copied to you."),
