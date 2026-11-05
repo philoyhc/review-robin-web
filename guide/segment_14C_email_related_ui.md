@@ -160,7 +160,25 @@ operator's own mailbox, not a session.
   written. It shows three inert Toggles at their proposed defaults:
   Keep a copy in my Sent Items, Send a copy to myself, and Replies go
   to the session's Help contact. The author kept all three and ruled
-  each off by default (2026-11-05). Main-base SHA before this item's rung 1: `908959ba`.
+  each off by default (2026-11-05).
+- 2026-11-05, rung 2 (the last build rung). The three choices are boolean
+  keys in `users.preferences` (`email_save_to_sent_items`,
+  `email_bcc_self`, `email_reply_to_help`), so there is no migration, as
+  with `display_timezone`. Each Toggle is a one-button form posting its
+  next state to `/operator/settings/email-preference`, with no script,
+  and `operator.email_preference_set` records it.
+  `email_dispatch.send_options_for` turns the choices into a send's
+  options. **Reply-to applies only when the Help contact is an email
+  address**, since that field is free text. 14F's test send applies Sent
+  Items and Reply-to, but not Bcc.
+- Read once, at rung 2. The read found the Reply-to check let
+  "address or call …" through, since `parseaddr` squeezes spaces out; it
+  now uses `email_identity.looks_like_email`. It also found the card's
+  copy claimed every send: no participant send exists until 14F rung 3a,
+  so the copy says what applies now, and `dispatch` takes `options`
+  without a default. **The Definition of done's "changes what the send
+  path does" is met for Bcc only when 14F rung 3a lands**, so this item
+  closes with 14F rung 3a, not before. Main-base SHA before this item's rung 1: `908959ba`.
 
 ### PR ladder
 
@@ -251,3 +269,4 @@ participant's action do not, so those wait for 14G.
 - `spec/settings_inventory.md` — each stored toggle, its default and where it is kept (Item 2).
 - `spec/operator_ui_concept.md` — the Email settings card on the Settings page (Item 2).
 - `spec/operator_button_audit.md` — the card's toggles (Item 2).
+- `spec/ui_elements.md` — §6 Toggle: used on the Email settings card too (Item 2).

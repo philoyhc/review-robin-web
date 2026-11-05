@@ -18,22 +18,24 @@ module claims it, sends it and stamps the outcome:
 A request that dies between 1 and 3 leaves the row ``sending``; the
 outbox shows it so, and only a person retries it.
 
-Per-operator options (14C Item 2's toggles) come in as ``SendOptions``;
-the dispatcher does not read settings itself.
+Per-operator options (14C Item 2's toggles) come in as ``SendOptions``,
+which ``send_options_for`` builds from the operator's stored choices.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from email.utils import parseaddr
 from typing import Literal
 
 from sqlalchemy import update
 from sqlalchemy.orm import Session
 
-from app.db.models import EmailOutbox
+from app.db.models import EmailOutbox, ReviewSession, User
 from app.db.session import rowcount
-from app.services import audit
+from app.services import audit, operator_settings
+from app.services.email_identity import looks_like_email
 from app.services.email_send import EmailMessage, EmailTransport
 
 Outcome = Literal["sent", "failed", "not_claimed"]
@@ -46,6 +48,33 @@ class SendOptions:
     save_to_sent_items: bool = False
     bcc_self: str | None = None
     reply_to: str | None = None
+
+
+def _address(text: str | None) -> str | None:
+    """``text`` as one email address, or ``None``: a help contact is free
+    text ("Dr Tan, room 3"), and only an address can be a Reply-to."""
+    raw = (text or "").strip()
+    _name, address = parseaddr(raw)
+    # ``parseaddr`` squeezes out spaces outside angle brackets, so
+    # "tan@x.edu or call 6516" comes back as one run of text: accept it
+    # only when the text is the address alone or ``Name <address>``.
+    if not looks_like_email(address):
+        return None
+    if raw != address and not raw.endswith(f"<{address}>"):
+        return None
+    return address
+
+
+def send_options_for(user: User, review_session: ReviewSession) -> SendOptions:
+    """What ``user``'s Email settings choices mean for a send in
+    ``review_session`` (14C Item 2). The Reply-to choice applies only
+    when the session's Help contact is an email address."""
+    preferences = operator_settings.get_email_preferences(user)
+    return SendOptions(
+        save_to_sent_items=preferences.save_to_sent_items,
+        bcc_self=user.email if preferences.bcc_self else None,
+        reply_to=_address(review_session.help_contact) if preferences.reply_to_help else None,
+    )
 
 
 @dataclass(frozen=True)
@@ -104,14 +133,16 @@ def dispatch(
     *,
     backend: str,
     actor_user_id: int | None,
+    options: SendOptions,
     from_address: str | None = None,
-    options: SendOptions | None = None,
     now: datetime | None = None,
 ) -> DispatchResult:
-    """Claim ``row``, send it, stamp it. See the module docstring."""
+    """Claim ``row``, send it, stamp it. See the module docstring.
+    ``options`` is required, so a caller cannot drop the operator's
+    Email settings by omission: pass ``send_options_for(user, session)``."""
     if not claim(db, row):
         return DispatchResult("not_claimed")
-    result = transport.send(message_for(row, options or SendOptions()))
+    result = transport.send(message_for(row, options))
     row.backend = backend
     row.from_address = from_address
     refs = {"outbox_id": row.id}

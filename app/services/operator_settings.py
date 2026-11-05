@@ -323,6 +323,68 @@ def set_display_timezone(
     db.commit()
 
 
+# ── Email preferences (14C Item 2; author's ruling 2026-11-05) ─────────
+#
+# Three per-operator choices about mail Review Robin sends as them, each
+# a boolean key in the ``users.preferences`` container, all off by
+# default. Read by ``email_dispatch.send_options_for``.
+
+EMAIL_PREFERENCE_KEYS: tuple[str, ...] = (
+    "email_save_to_sent_items",
+    "email_bcc_self",
+    "email_reply_to_help",
+)
+
+
+@dataclass(frozen=True)
+class EmailPreferences:
+    save_to_sent_items: bool = False
+    bcc_self: bool = False
+    reply_to_help: bool = False
+
+
+def get_email_preferences(user: User) -> EmailPreferences:
+    """The operator's three email choices; anything but a stored ``True``
+    reads as off."""
+    preferences = user.preferences or {}
+    return EmailPreferences(
+        save_to_sent_items=preferences.get("email_save_to_sent_items") is True,
+        bcc_self=preferences.get("email_bcc_self") is True,
+        reply_to_help=preferences.get("email_reply_to_help") is True,
+    )
+
+
+def set_email_preference(
+    db: Session,
+    *,
+    user: User,
+    key: str,
+    on: bool,
+    correlation_id: str | None = None,
+) -> None:
+    """Turn one email choice on or off; a no-op when unchanged. Raises
+    ``ValueError`` for a key outside ``EMAIL_PREFERENCE_KEYS``."""
+    if key not in EMAIL_PREFERENCE_KEYS:
+        raise ValueError(f"unknown email preference {key!r}")
+    old = (user.preferences or {}).get(key) is True
+    if old == on:
+        return
+    preferences = dict(user.preferences or {})
+    preferences[key] = on
+    user.preferences = preferences
+    audit.write_event(
+        db,
+        event_type="operator.email_preference_set",
+        summary=f"Operator {user.email} turned {key} {'on' if on else 'off'}",
+        actor_user_id=user.id,
+        session=None,
+        payload=audit.changes({key: [old, on]}),
+        correlation_id=correlation_id,
+    )
+    db.flush()
+    db.commit()
+
+
 def _normalise(value: str | None) -> str | None:
     if value is None:
         return None

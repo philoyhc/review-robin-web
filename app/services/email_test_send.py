@@ -9,7 +9,8 @@
   a stand-in named "Sample Reviewer" while the roster is empty. The
   invite link is a placeholder; a test never mints a token.
 - **To** the signed-in operator only. The template's Cc and Bcc are not
-  copied, and no outbox row is written: a test is not a send to a
+  copied (nor the operator's own Bcc choice); their Sent Items and
+  Reply-to choices apply. No outbox row is written: a test is not a send to a
   participant. ``email.test_sent`` records it, either way.
 """
 
@@ -22,7 +23,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import set_committed_value
 
 from app.db.models import Reviewer, ReviewSession, User
-from app.services import audit, email_templates
+from app.services import audit, email_dispatch, email_templates
 from app.services.email_send import EmailMessage, EmailTransport, SendResult
 
 SUBJECT_PREFIX = "[Test] "
@@ -84,6 +85,9 @@ def send_test(
 ) -> SendResult:
     """Render ``template`` as edited and send it to ``user``; audit it."""
     subject, body = render_as_edited(db, review_session, template, edited)
+    # The operator's Sent Items and Reply-to choices apply, so the test
+    # shows them; Bcc to themselves would only send it twice.
+    options = email_dispatch.send_options_for(user, review_session)
     result = transport.send(
         EmailMessage(
             from_addr="",
@@ -91,6 +95,8 @@ def send_test(
             to=user.email,
             subject=SUBJECT_PREFIX + subject,
             body=body,
+            reply_to=options.reply_to,
+            save_to_sent_items=options.save_to_sent_items,
         )
     )
     audit.write_event(

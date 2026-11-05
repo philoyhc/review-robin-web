@@ -177,10 +177,10 @@ Taken 2026-11-02 at `fffd4c28`; re-taken 2026-11-05 at `095336bf`
 3c. **Share the session link, wired:** the absolute link (from
     `CORDWARE_PUBLIC_ORIGIN`), the templates rendered for everyone, and
     copy to the clipboard.
-3d. **The participation report:** first opened, last saved and last
-    submitted per reviewer, with eligible instruments. A first visit
-    through the shared link stamps *opened* too, which today only a
-    personal invitation link does.
+3d. **The participation report:** a **Timestamps** chip on Extract data's
+    Reviewer response metadata adds LastOpened, LastSaved and
+    LastSubmitted per reviewer (author, 2026-11-05). A last-opened stamp
+    is set on every arrival, through the shared link or a personal one.
 5. **The prompts, wired**, from the offsets the operator set; a due
    reminder points to the card's Reminder message. Last build rung: the
    cumulative read.
@@ -209,13 +209,15 @@ Taken 2026-11-02 at `fffd4c28`; re-taken 2026-11-05 at `095336bf`
   contact, **each off by default** (author, 2026-11-05).
 - ~~A stranger at the session link: a bare 404, or a friendlier page?~~
   The 404 stays (author, 2026-11-05).
-- **Where the Share the session link card lives:** the Invitations page,
-  with a link from the Workflow card (recommended), or Session Home.
-  Author, at 3b.
-- **The participation report:** Reviewer response metadata extended, or
-  a report of its own. Decided at 3d, on reading the export's code.
-  "Last opened" needs a new stamp; `Invitation.opened_at` records the
-  first open only.
+- ~~Where the Share the session link card lives.~~ The Invitations page,
+  with a link from the Workflow card (author, 2026-11-05).
+- ~~The participation report's form.~~ Reviewer response metadata gains
+  one more toggle chip, **Timestamps**, adding when last opened, last
+  saved and last submitted per reviewer (author, 2026-11-05). Its
+  columns carry counts but no times today
+  (`app/services/extracts/entity_metadata_extract.py`). "Last opened"
+  needs a new stamp, since `Invitation.opened_at` records the first
+  open only.
 
 ## Out of scope
 

@@ -60,19 +60,104 @@ def test_settings_page_has_no_smtp_cards_and_date_time_stands_alone(
     assert body.index('class="bottom-grid"') < body.index('id="timezone-settings"')
 
 
-def test_email_settings_card_is_an_inert_scaffold(client: TestClient) -> None:
-    """14C Item 2 rung 1: the card renders under Date & time with its
-    three toggles, each a disabled Toggle, all off (author, 2026-11-05);
-    nothing posts, since no toggle is stored until 14F reads it."""
+def _email_row(body: str, key: str) -> str:
+    """One Email settings row, up to the end of its toggle's form."""
+    return body.split(f'data-email-setting="{key}"', 1)[1].split("</form>", 1)[0]
+
+
+def test_email_settings_card_starts_all_off(client: TestClient) -> None:
+    """14C Item 2: the card sits under Date & time, its three toggles
+    live and off by default (author, 2026-11-05), each a form posting
+    its next state."""
     body = client.get("/operator/settings").text
-    card = body.split('id="email-settings"', 1)[1].split("</div>\n  </div>", 1)[0]
     assert body.index('id="timezone-settings"') < body.index('id="email-settings"')
-    assert "<form" not in card
-    expected = {"sent-items": "false", "bcc-self": "false", "reply-to-help": "false"}
-    for key, pressed in expected.items():
-        row = card.split(f'data-email-setting="{key}"', 1)[1].split("</button>", 1)[0]
-        assert f'aria-pressed="{pressed}"' in row, key
-        assert " disabled" in row, key
+    for key in ("sent-items", "bcc-self", "reply-to-help"):
+        row = _email_row(body, key)
+        assert 'aria-pressed="false"' in row, key
+        assert 'name="on" value="true"' in row, key
+        assert " disabled" not in row, key
+
+
+@pytest.mark.parametrize(
+    ("pref_key", "row_key", "field"),
+    [
+        ("email_save_to_sent_items", "sent-items", "save_to_sent_items"),
+        ("email_bcc_self", "bcc-self", "bcc_self"),
+        ("email_reply_to_help", "reply-to-help", "reply_to_help"),
+    ],
+)
+def test_an_email_toggle_turns_on_and_off_and_is_audited(
+    client: TestClient, db: Session, pref_key: str, row_key: str, field: str
+) -> None:
+    response = client.post(
+        "/operator/settings/email-preference",
+        data={"key": pref_key, "on": "true"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"].endswith("/operator/settings#email-settings")
+    user = _alice_row(db)
+    db.refresh(user)
+    assert getattr(operator_settings.get_email_preferences(user), field) is True
+    assert 'aria-pressed="true"' in _email_row(client.get("/operator/settings").text, row_key)
+
+    off = client.post(
+        "/operator/settings/email-preference",
+        data={"key": pref_key, "on": "false"},
+        follow_redirects=False,
+    )
+    assert off.status_code == 303
+    db.refresh(user)
+    assert getattr(operator_settings.get_email_preferences(user), field) is False
+    events = (
+        db.execute(
+            select(AuditEvent).where(AuditEvent.event_type == "operator.email_preference_set")
+        )
+        .scalars()
+        .all()
+    )
+    assert all(e.detail is not None for e in events)
+    assert [e.detail["changes"][pref_key] for e in events if e.detail is not None] == [
+        [False, True],
+        [True, False],
+    ]
+
+
+def test_an_email_toggle_keeps_the_return_to(client: TestClient) -> None:
+    response = client.post(
+        "/operator/settings/email-preference",
+        data={"key": "email_bcc_self", "on": "true", "return_to": "/operator/sessions"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"].endswith(
+        "/operator/settings?return_to=/operator/sessions#email-settings"
+    )
+
+
+def test_each_email_toggle_is_named_by_its_row(client: TestClient) -> None:
+    body = client.get("/operator/settings").text
+    for key in ("sent-items", "bcc-self", "reply-to-help"):
+        assert f'id="email-setting-{key}-label"' in body
+        assert f'aria-labelledby="email-setting-{key}-label email-setting-{key}-toggle"' in body
+
+
+def test_an_email_toggle_keeps_the_other_preferences(client: TestClient, db: Session) -> None:
+    client.get("/operator/settings")  # the first request creates the user row
+    user = _alice_row(db)
+    user.preferences = {"display_timezone": "Asia/Singapore"}
+    db.commit()
+    client.post("/operator/settings/email-preference", data={"key": "email_bcc_self", "on": "true"})
+    db.refresh(user)
+    assert user.preferences == {"display_timezone": "Asia/Singapore", "email_bcc_self": True}
+
+
+@pytest.mark.parametrize(
+    "data", [{"key": "email_nope", "on": "true"}, {"key": "email_bcc_self", "on": "yes"}]
+)
+def test_an_unknown_email_setting_is_refused(client: TestClient, data: dict[str, str]) -> None:
+    response = client.post("/operator/settings/email-preference", data=data)
+    assert response.status_code == 422
 
 
 def test_settings_display_mode_card_retired_toggle_in_chrome(

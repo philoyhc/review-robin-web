@@ -74,7 +74,12 @@ def test_a_queued_row_is_sent_once_and_stamped(db: Session) -> None:
     rs, row = _queued_row(db, "disp-ok")
     mailer = FakeMailer()
     result = email_dispatch.dispatch(
-        db, row, GraphEmailTransport(mailer), backend="graph", actor_user_id=rs.created_by_user_id
+        db,
+        row,
+        GraphEmailTransport(mailer),
+        backend="graph",
+        actor_user_id=rs.created_by_user_id,
+        options=SendOptions(),
     )
     assert result.outcome == "sent"
     db.refresh(row)
@@ -87,7 +92,12 @@ def test_a_queued_row_is_sent_once_and_stamped(db: Session) -> None:
     assert event.detail["refs"]["outbox_id"] == row.id
 
     again = email_dispatch.dispatch(
-        db, row, GraphEmailTransport(mailer), backend="graph", actor_user_id=None
+        db,
+        row,
+        GraphEmailTransport(mailer),
+        backend="graph",
+        actor_user_id=None,
+        options=SendOptions(),
     )
     assert again.outcome == "not_claimed"
     assert len(mailer.sent) == 1
@@ -97,7 +107,12 @@ def test_a_refused_send_is_stamped_failed_with_its_reason(db: Session) -> None:
     rs, row = _queued_row(db, "disp-fail")
     mailer = RefusingMailer("forbidden")
     result = email_dispatch.dispatch(
-        db, row, GraphEmailTransport(mailer), backend="graph", actor_user_id=None
+        db,
+        row,
+        GraphEmailTransport(mailer),
+        backend="graph",
+        actor_user_id=None,
+        options=SendOptions(),
     )
     assert result.outcome == "failed"
     db.refresh(row)
@@ -116,7 +131,12 @@ def test_a_row_not_queued_is_not_claimed(db: Session, status: str) -> None:
     db.commit()
     mailer = FakeMailer()
     result = email_dispatch.dispatch(
-        db, row, GraphEmailTransport(mailer), backend="graph", actor_user_id=None
+        db,
+        row,
+        GraphEmailTransport(mailer),
+        backend="graph",
+        actor_user_id=None,
+        options=SendOptions(),
     )
     assert result.outcome == "not_claimed"
     assert mailer.sent == []
@@ -147,7 +167,52 @@ def test_options_default_to_off(db: Session) -> None:
     _rs, row = _queued_row(db, "disp-defaults")
     mailer = FakeMailer()
     email_dispatch.dispatch(
-        db, row, GraphEmailTransport(mailer), backend="graph", actor_user_id=None
+        db,
+        row,
+        GraphEmailTransport(mailer),
+        backend="graph",
+        actor_user_id=None,
+        options=SendOptions(),
     )
     [sent] = mailer.sent
     assert (sent.reply_to, sent.save_to_sent_items) == (None, False)
+
+
+def test_send_options_follow_the_operators_choices() -> None:
+    from app.db.models import User
+
+    operator = User(email="op@example.edu", display_name="Op")
+    review_session = ReviewSession(name="S", code="X", help_contact="help@example.edu")
+    assert email_dispatch.send_options_for(operator, review_session) == SendOptions()
+    operator.preferences = {
+        "email_save_to_sent_items": True,
+        "email_bcc_self": True,
+        "email_reply_to_help": True,
+    }
+    assert email_dispatch.send_options_for(operator, review_session) == SendOptions(
+        save_to_sent_items=True, bcc_self="op@example.edu", reply_to="help@example.edu"
+    )
+
+
+@pytest.mark.parametrize(
+    ("help_contact", "reply_to"),
+    [
+        ("Dr Tan <tan@example.edu>", "tan@example.edu"),
+        ("tan@example.edu", "tan@example.edu"),
+        ("Dr Tan, room 3", None),
+        (None, None),
+        ("a@b@c", None),
+        ("tan@example.edu or call 6516", None),
+        ("tan@example.edu x1234", None),
+        ("tan@example", None),
+        ("@example.edu", None),
+    ],
+)
+def test_reply_to_applies_only_to_an_address(
+    help_contact: str | None, reply_to: str | None
+) -> None:
+    from app.db.models import User
+
+    operator = User(email="op@example.edu", preferences={"email_reply_to_help": True})
+    review_session = ReviewSession(name="S", code="X", help_contact=help_contact)
+    assert email_dispatch.send_options_for(operator, review_session).reply_to == reply_to

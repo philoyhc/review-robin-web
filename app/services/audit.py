@@ -709,6 +709,8 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # Segment 18B PR 2 — per-operator default display timezone.
     # ``app/services/operator_settings.py`` emits.
     "operator.display_timezone_set": EventSchema(frozenset({"changes"})),
+    # 14C Item 2 — the Email settings card's three toggles.
+    "operator.email_preference_set": EventSchema(frozenset({"changes"})),
     # Segment 18B PR 3 — per-session display-timezone override.
     # ``app/services/sessions.py`` emits.
     "session.display_timezone_set": EventSchema(_IDENTITY | {"changes"}),
