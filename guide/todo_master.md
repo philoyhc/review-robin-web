@@ -70,11 +70,6 @@ gate.
    operators may have reminded by hand: 14G marks those skipped, not
    sent, when it turns the setting on.
 
-3. **22H — Formatter and suite time** (Item 1 closed 2026-11-05). Item 2:
-   the outlier tests, the targeted loop, the CI split. Next: Item 2
-   rung 1.
-   **Plan:** `guide/segment_22H_format_and_suite_time.md`.
-
 ### Stubs
 
 Small items with no plan doc; each fits one PR and its reasoning fits
