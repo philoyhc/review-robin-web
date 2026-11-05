@@ -61,7 +61,9 @@ gate.
 2. **14G — Scheduled email** (gated on IT: offline sending as the
    operator, else a dedicated mailbox). Sends due invitations, reminders
    and confirmations from 14E's clock, and switches 14F's auto-send
-   fields back on. Planned when IT answers; see
+   fields back on. **Plan (draft, 2026-11-05):**
+   `guide/segment_14G_scheduled_email.md`; Item 1 can be built now,
+   Items 2–4 wait on 14F and IT. See also
    `guide/no_scheduling_fallback.md`. A shared mailbox under an app-wide
    permission is a credential every mounted app could reach: plan one
    per app, or rule a shared one accepted (`guide/interoperability.md` §2).
