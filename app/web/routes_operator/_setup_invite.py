@@ -6,8 +6,6 @@ Source range in pre-refactor ``routes_operator.py``: 2576-2725.
 
 from __future__ import annotations
 
-from typing import Any
-
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, status
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -43,39 +41,6 @@ def _require_editable_templates(review_session: ReviewSession) -> None:
         )
 
 
-def _build_field_rows(
-    review_session: ReviewSession,
-    template: str,
-    edited: dict[str, str] | None = None,
-) -> list[dict[str, Any]]:
-    """For each (field, key, default) tuple on the active template,
-    return the dict the editor template iterates over to render
-    each editable field plus its per-field "Reset to default" link.
-
-    ``shown`` is what the field's box holds: the saved override (blank
-    for the default), or, after Send a test to me, what the operator had
-    typed (``edited``), so a test never discards an unsaved draft.
-    ``unsaved`` marks a box that differs from what is saved.
-    """
-    rows: list[dict[str, Any]] = []
-    for spec in email_templates.TEMPLATE_FIELDS[template]:
-        override = email_templates.get_override(review_session, spec["key"])
-        saved_shown = override if override is not None else ""
-        shown = edited[spec["key"]] if edited is not None and spec["key"] in edited else saved_shown
-        rows.append(
-            {
-                "field": spec["field"],
-                "key": spec["key"],
-                "value": override if override is not None else spec["default"],
-                "default": spec["default"],
-                "has_override": override is not None,
-                "shown": shown,
-                "unsaved": shown != saved_shown,
-            }
-        )
-    return rows
-
-
 def _composer_page(
     request: Request,
     db: Session,
@@ -89,9 +54,9 @@ def _composer_page(
 ) -> HTMLResponse:
     """The composer page. ``edited`` / ``edited_enabled`` carry what the
     operator had on the form (after Send a test to me), unsaved."""
-    rows = _build_field_rows(review_session, template, edited)
-    saved_enabled = email_templates.responses_received_enabled(review_session)
-    shown_enabled = saved_enabled if edited_enabled is None else edited_enabled
+    fields = views.build_composer_fields(
+        review_session, template, edited=edited, edited_enabled=edited_enabled
+    )
     return _templates.TemplateResponse(
         request,
         "operator/session_setupinvite.html",
@@ -101,12 +66,10 @@ def _composer_page(
             "status_pills": views.session_status_pills(db, review_session),
             "active_template": template,
             "valid_templates": _VALID_TEMPLATES,
-            "rows": rows,
-            "unsaved_edits": (
-                any(row["unsaved"] for row in rows) or shown_enabled != saved_enabled
-            ),
+            "rows": fields.rows,
+            "unsaved_edits": fields.unsaved_edits,
             "merge_tags": views.merge_tags_for_template(template),
-            "responses_received_enabled": shown_enabled,
+            "responses_received_enabled": fields.responses_received_enabled,
             "locked": lifecycle.is_archived(review_session),
             "send_test_notice": send_test_notice,
             "breadcrumbs": breadcrumbs.operator_session_child(review_session, "Email Template"),

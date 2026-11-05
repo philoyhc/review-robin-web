@@ -74,6 +74,7 @@ from ._audit_log import (
     resolve_audit_log_zone,
 )
 from ._directory_check import DirectoryCheck, last_directory_check, unmatched_count
+from ._email_composer import ComposerFields, build_composer_fields
 
 # Extract Data card on Session Home (sliced in PR 2).
 from ._extract_data import (
@@ -473,6 +474,8 @@ __all__ = [
     "observers_search_options",
     "merge_tags_for_template",
     "send_test_notice",
+    "ComposerFields",
+    "build_composer_fields",
     "AuditDetailChangeRow",
     "AuditDetailKVRow",
     "AuditDetailRender",
