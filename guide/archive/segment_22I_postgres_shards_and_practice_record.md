@@ -205,8 +205,10 @@ Closed 2026-11-05, as planned, in #3638. The figure is 287 s for 8,381
 tests (8,369 passed, 12 skipped). It is pytest's own wall time from the
 full pre-push run for #3636, on the tree that is now `main`, not a
 separate `time` run. `grep -n "172 s" CLAUDE.md AGENTS.md` finds nothing.
-No read was taken, the rung being prose only. `spec-writer` was not run:
-the Doc impact names no spec, and the `grep` above is the whole check.
+No read was taken, the rung being prose only. `spec-writer` ran at the
+segment close, over `CLAUDE.md` and `AGENTS.md`, and found no divergence.
+That pass had first been skipped as needless; the skill makes it
+unconditional, as Codex noted on #3641.
 
 ### PR ladder
 
@@ -254,9 +256,12 @@ the Doc impact names no spec, and the `grep` above is the whole check.
     check now covers every file.
   - **Spelling:** "unlabeled", US.
   - **Sources:** each figure is cited beside its PR or command.
-- **Close:** `close_check 22I.3` passes. `spec-writer` was not run: the
-  Doc impact names no spec, and the overclaim read checked every figure
-  in the prose against its source.
+- **Close:** `close_check 22I.3` passes. `spec-writer` ran over
+  `rrw_sdd_in_practice.md` §6.3, §6.4, §7, §9 and the Appendix. It found
+  no divergence, honored bullets (a)–(d), and found no older figure in
+  the document contradicting the new ones. At first the pass was skipped
+  on a reading that a file outside `spec/` needs none; Codex flagged it
+  on #3641, and the skill makes the pass unconditional.
 - **The ignore split** this plan gives in Blast radius and bullet (a),
   "7 in application code, 19 in tests", is stale. At `0ff3a3c4` it is 2
   and 24 of 26 (`git grep -c "pyright: ignore" -- '*.py'`), and the
