@@ -127,19 +127,22 @@ Taken 2026-11-05 at `a321b04b`, except where a row says otherwise.
 
 ### Status
 
-- 2026-11-05, #3634: `postgres (unit)` 1 m 25 s with the migrations,
-  `postgres (integration)` 3 m 44 s; wall 3 m 44 s against 3 m 51 s to
-  6 m 00 s. The shards differ by more than 2×, but `tests/db` was already
-  in `unit`, so nothing moved: the imbalance is `tests/integration` itself.
-- It is still the longest check, by 1 m 0 s over `test (browser)`
-  (2 m 12 s), so the Out of scope condition for a further split is met
-  at its edge. The author added rung 2 for it (2026-11-05).
-- Rung 2, #3636: `unit` 1 m 34 s, `integration-a` 2 m 16 s,
-  `integration-b` 2 m 45 s; wall 2 m 45 s, within a minute of
-  `test (integration)` (2 m 54 s on the same push). One read, on the
-  rung: no defects; a stale workflow comment, fixed.
-- One `diff-reviewer` read: no defects; it found `CONTRIBUTING.md` still
-  describing one job, so that file joined the PR and the Doc impact.
+Closed 2026-11-05. **Intended:** two shards, one PR. **Done:** three shards,
+two PRs.
+- **Rung 1, #3634:** `unit` 1 m 25 s and `integration` 3 m 44 s, against
+  3 m 51 s to 6 m 00 s for the single job. `tests/db` was already in `unit`,
+  so the 2× rule moved nothing; the time was `tests/integration` itself.
+- **Rung 2, #3636, added by the author:** `integration` still led the
+  next check by 1 m 0 s, which met the Out of scope condition, so it was
+  cut on first letter by measured SQLite time (`a`–`q` 166 s, `r`–`z`
+  209 s). On #3636 the shards took 1 m 34 s, 2 m 16 s and 2 m 45 s, so
+  the wall is 2 m 45 s, under `test (integration)` at 2 m 54 s.
+  `test_ci_shards.py` expands glob arguments the way bash does.
+- **Reads:** two, one per code rung, and neither found a defect. They
+  caught stale prose: rung 1's, a `CONTRIBUTING.md` that still described
+  one job, which put that file in Doc impact; rung 2's, a workflow comment.
+- **Close:** `close_check 22I.1` passes. `spec-writer` checked the four
+  Doc impact files and found no divergence.
 
 ### PR ladder
 
