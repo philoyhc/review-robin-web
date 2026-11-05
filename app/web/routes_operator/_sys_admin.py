@@ -45,6 +45,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.roles import super_admin_configured
+from app.config import settings
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
 from app.services import (
@@ -54,6 +55,7 @@ from app.services import (
     invitations,
     operator_settings,
     permissions,
+    scheduled_events,
     session_owners,
     sessions,
 )
@@ -172,14 +174,17 @@ def sys_admin_system(
     db: Session = Depends(get_db),
 ) -> Response:
     """System Status (segment 22G Item 1): what the host is doing in the
-    background, read-only. Rung 1 is the scaffold; every value is a
-    placeholder until its card is wired."""
+    background, read-only. The cards not yet wired show placeholders."""
     target = _admin_return_target(request, return_to, db, user)
     response = _templates.TemplateResponse(
         request,
         "operator/sys_admin_system.html",
         {
             "user": user,
+            "clock": views.clock_card(
+                scheduled_events.clock_status(),
+                interval_setting=settings.scheduler_interval_seconds,
+            ),
             "return_to_url": target.url,
             "return_to_label": target.label,
         },

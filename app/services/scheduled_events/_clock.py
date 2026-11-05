@@ -17,11 +17,18 @@ step reached by both happens once; an event the clock writes carries
 **One pass at a time.** On Postgres the pass takes a transaction-level
 advisory lock on :data:`LOCK_KEY` and skips when another process holds
 it. SQLite (local, tests) takes no lock: one process.
+
+**What the clock last did** (segment 22G Item 1): :func:`clock_status`
+returns a snapshot of this process's record, kept in memory and so reset
+by a restart: whether the loop runs, the last pass, the last failure and
+the counts since the process started. The Admin page's System Status tab
+reads it.
 """
 
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import logging
 import threading
 from collections.abc import Callable
@@ -44,6 +51,49 @@ _log = logging.getLogger(__name__)
 #: application's clock never contends with it (segment 14E;
 #: `guide/interoperability.md` §2). The bytes of "RRWclock".
 LOCK_KEY = 0x5252_5763_6C6F_636B
+
+
+@dataclasses.dataclass
+class ClockStatus:
+    """What this process's clock has done since ``since``, the moment
+    the process loaded it. ``running`` and ``interval_seconds`` are the
+    loop's; every other field is the passes', whoever ran them.
+
+    ``passes`` counts passes this process ran; ``held_elsewhere`` those
+    skipped because another process held the lock (they leave
+    ``last_pass_*`` as it was). ``busy_sessions`` counts sessions a pass
+    left for the next one because a request held them; ``failures``
+    counts sessions that raised, and passes that raised outright."""
+
+    since: datetime
+    running: bool = False
+    interval_seconds: float | None = None
+    passes: int = 0
+    last_pass_started: datetime | None = None
+    last_pass_finished: datetime | None = None
+    last_pass_visited: int | None = None
+    held_elsewhere: int = 0
+    busy_sessions: int = 0
+    failures: int = 0
+    last_failure_at: datetime | None = None
+    last_failure_type: str | None = None
+
+    def record_failure(self, exc: BaseException) -> None:
+        self.failures += 1
+        self.last_failure_at = datetime.now(UTC)
+        self.last_failure_type = type(exc).__name__
+
+
+# The live record, written by the pass's worker thread and the loop and
+# read by a request's, so every access holds the lock.
+_status_lock = threading.Lock()
+_status = ClockStatus(since=datetime.now(UTC))
+
+
+def clock_status() -> ClockStatus:
+    """A copy of this process's clock record, safe to read at leisure."""
+    with _status_lock:
+        return dataclasses.replace(_status)
 
 
 def _take_lock(db: Session) -> bool:
@@ -137,8 +187,11 @@ def run_pass(
     from app.services.scheduled_events import observe_scheduled_events
 
     current = now or datetime.now(UTC)
+    started = datetime.now(UTC)
     with session_factory() as gate:
         if not _take_lock(gate):
+            with _status_lock:
+                _status.held_elsewhere += 1
             return -1
         ids = due_session_ids(gate, now=current)
         visited = 0
@@ -160,12 +213,21 @@ def run_pass(
                 except SessionBusy:
                     # Contention, not a failure: the next pass tries again.
                     db.rollback()
+                    with _status_lock:
+                        _status.busy_sessions += 1
                     _log.info("scheduled clock: session %s busy; next pass", session_id)
-                except Exception:
+                except Exception as exc:
                     db.rollback()
+                    with _status_lock:
+                        _status.record_failure(exc)
                     _log.exception("scheduled clock: session %s failed", session_id)
         # Ends the transaction, releasing the advisory lock.
         gate.commit()
+    with _status_lock:
+        _status.passes += 1
+        _status.last_pass_started = started
+        _status.last_pass_finished = datetime.now(UTC)
+        _status.last_pass_visited = visited
     return visited
 
 
@@ -179,6 +241,22 @@ async def run_forever(
     pass in a worker thread, repeat until ``stop`` is set. The first pass
     waits too, so a start-up is not slowed. A pass that raises is logged
     and the loop goes on."""
+    with _status_lock:
+        _status.running = True
+        _status.interval_seconds = interval
+    try:
+        await _loop(session_factory, interval=interval, stop=stop)
+    finally:
+        with _status_lock:
+            _status.running = False
+
+
+async def _loop(
+    session_factory: Callable[[], AbstractContextManager[Session]],
+    *,
+    interval: float,
+    stop: threading.Event,
+) -> None:
     while not stop.is_set():
         # Waits in a worker thread on ``stop`` itself, so a shutdown wakes
         # it at once rather than after the interval.
@@ -186,7 +264,9 @@ async def run_forever(
             break
         try:
             visited = await asyncio.to_thread(run_pass, session_factory, stop=stop)
-        except Exception:
+        except Exception as exc:
+            with _status_lock:
+                _status.record_failure(exc)
             _log.exception("scheduled clock: pass failed")
             continue
         if visited > 0:

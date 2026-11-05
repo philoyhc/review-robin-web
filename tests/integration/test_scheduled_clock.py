@@ -243,7 +243,12 @@ def test_a_pass_another_process_holds_is_skipped(db: Session) -> None:
         holder.execute(text("SELECT pg_advisory_lock(:k)"), {"k": _clock.LOCK_KEY})
         try:
             factory = lambda: Session(bind=engine)  # noqa: E731
+            before = _clock.clock_status()
             assert _clock.run_pass(factory, now=NOW) == -1
+            after = _clock.clock_status()
+            # Counted as held elsewhere, and not as a pass (22G Item 1).
+            assert after.held_elsewhere == before.held_elsewhere + 1
+            assert after.passes == before.passes
         finally:
             holder.execute(text("SELECT pg_advisory_unlock(:k)"), {"k": _clock.LOCK_KEY})
 
@@ -524,3 +529,94 @@ def test_a_release_close_names_the_instruments_release(db: Session) -> None:
     lifecycle.observe_deadline(db, rs, now=NOW)
     closed = _events(db, rs, "instrument.closed")
     assert closed and all(detail_of(e)["reason"] == "release" for e in closed)
+
+
+# --- segment 22G Item 1: what the clock last did ---
+
+
+def test_a_pass_records_itself_in_the_clock_status(db: Session) -> None:
+    rs = _make_validated_session(db, "clock-status-pass")
+    rs.scheduled_activate_at = NOW - timedelta(minutes=1)
+    db.commit()
+    before = _clock.clock_status()
+    visited = _clock.run_pass(_factory(db), now=NOW)
+    after = _clock.clock_status()
+    assert after.passes == before.passes + 1
+    assert after.last_pass_visited == visited >= 1
+    assert after.last_pass_started is not None and after.last_pass_finished is not None
+    assert after.last_pass_started <= after.last_pass_finished
+
+
+def test_a_failing_session_and_a_busy_one_are_counted(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.services.session_guard import SessionBusy
+
+    bad = _make_validated_session(db, "clock-status-bad")
+    bad.scheduled_activate_at = NOW - timedelta(minutes=1)
+    busy = _make_validated_session(db, "clock-status-busy")
+    busy.scheduled_activate_at = NOW - timedelta(minutes=1)
+    db.commit()
+
+    def refuse(db_, session, **kwargs):
+        if session.id == bad.id:
+            raise RuntimeError("boom")
+        if session.id == busy.id:
+            raise SessionBusy()
+        return None
+
+    monkeypatch.setattr(scheduled_events, "observe_scheduled_events", refuse)
+    before = _clock.clock_status()
+    _clock.run_pass(_factory(db), now=NOW)
+    after = _clock.clock_status()
+    assert after.failures == before.failures + 1
+    assert after.last_failure_type == "RuntimeError"
+    assert after.last_failure_at is not None
+    assert after.busy_sessions == before.busy_sessions + 1
+
+
+def test_the_status_is_a_copy(db: Session) -> None:
+    snapshot = _clock.clock_status()
+    snapshot.passes += 100
+    assert _clock.clock_status().passes != snapshot.passes
+
+
+def test_the_loop_marks_itself_running_while_it_runs(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import asyncio
+
+    seen: list[bool] = []
+
+    def fake_pass(factory, *, now=None, stop=None):
+        seen.append(_clock.clock_status().running)
+        assert stop is not None
+        stop.set()
+        return 0
+
+    monkeypatch.setattr(_clock, "run_pass", fake_pass)
+    stop = threading.Event()
+    asyncio.run(_clock.run_forever(_factory(db), interval=0.01, stop=stop))
+    assert seen == [True]
+    after = _clock.clock_status()
+    assert after.running is False
+    assert after.interval_seconds == 0.01
+
+
+def test_a_pass_that_raises_outright_is_a_failure(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import asyncio
+
+    stop = threading.Event()
+
+    def broken_pass(factory, *, now=None, stop=stop):
+        stop.set()
+        raise LookupError("no database")
+
+    monkeypatch.setattr(_clock, "run_pass", broken_pass)
+    before = _clock.clock_status()
+    asyncio.run(_clock.run_forever(_factory(db), interval=0.01, stop=stop))
+    after = _clock.clock_status()
+    assert after.failures == before.failures + 1
+    assert after.last_failure_type == "LookupError"
