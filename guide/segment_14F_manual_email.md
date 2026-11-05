@@ -184,6 +184,10 @@ Taken 2026-11-02 at `fffd4c28`; re-taken 2026-11-05 at `095336bf`
   saved and submitted are the session-wide maxima, whatever the
   instrument chips, in ISO 8601 in the session zone. Zip all carries it
   as `reviewer_metadata.timestamps`; the Reviewee card has no such chip.
+- 2026-11-05, after 3d (author): Invitations' info card and Share the
+  session link sit side by side, each half width; both Operations info
+  cards gain a heading (*Reviewers and invitations*, *Reviewees and
+  responses*), and the link card's help text is the author's revision.
 - 2026-11-05, rung 3a:
   - **Per-row sends.** Send and Send reminder dispatch the row they queue
     through `graph.mailer_for`, with `send_options_for`, and redirect to

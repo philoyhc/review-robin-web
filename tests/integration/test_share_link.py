@@ -43,8 +43,8 @@ def test_the_card_is_the_link_alone(client: TestClient, db: Session) -> None:
     link (2026-11-05): no message boxes."""
     session = _ready_session(client, db, code="share-alone")
     card = _card(_page(client, session))
-    assert "Only eligible participants will be able to reach the session" in card
-    assert "Sign-in is required to validate access." in card
+    assert "Only eligible signed in participants will be able to reach the" in card
+    assert "only when the session is open to" in card
     assert "<textarea" not in card
     assert "data-share-message" not in card
     tag = card.split('id="share-session-link-copy"', 1)[1].split(">", 1)[0]

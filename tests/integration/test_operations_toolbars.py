@@ -136,28 +136,53 @@ def test_the_filter_survives_a_search_that_matches_nothing(
     assert f"No {noun} match the current filter." in body
 
 
-@pytest.mark.parametrize("page", PAGES)
-def test_the_info_card_is_no_longer_half_a_grid(client: TestClient, db: Session, page: str) -> None:
-    """One move, two visible effects. The info card and the filter card
-    were the two children of one `bottom-grid`, so taking the filter
-    out would strand the info card at half width in the LEFT column —
-    a card that reads as having failed to fill the row.
+def test_responses_info_card_is_not_half_a_grid(client: TestClient, db: Session) -> None:
+    """The info card and the filter card were the two children of one
+    `bottom-grid`, so taking the filter out would strand the info card
+    at half width in the LEFT column — a card that reads as having
+    failed to fill the row. The wrapper went rather than the card
+    gaining a width class: a `1fr 1fr` grid with one child is not a
+    grid. Measured in Chromium at 1280px — info card 1200px, the same
+    as the table card.
 
-    The wrapper goes rather than the card gaining a width class: a
-    `1fr 1fr` grid with one child is not a grid. Measured in Chromium
-    at 1280px — info card 1200px, the same as the table card.
+    Invitations no longer holds to this: its info card shares a row
+    with Share the session link (author, 2026-11-05), the test below.
     """
     # Class attributes, not the raw text: the template's comment names
     # the grid to record where it went, and `base.html` carries the
     # class in its inline CSS.
-    src = _markup((OPERATOR / f"session_{page}.html").read_text())
-    assert not [c for c in re.findall(r'class="([^"]*)"', src) if "bottom-grid" in c], page
-    assert f'id="{page}-info-card"' in src
+    src = _markup((OPERATOR / "session_responses.html").read_text())
+    assert not [c for c in re.findall(r'class="([^"]*)"', src) if "bottom-grid" in c]
+    assert 'id="responses-info-card"' in src
 
-    rs = _ready_session(client, db, code=f"ops-ic-{page[:3]}")
-    body = _markup(_page(client, rs, page))
-    assert f'id="{page}-info-card"' in body, "the page did not render"
-    assert not [c for c in re.findall(r'class="([^"]*)"', body) if "bottom-grid" in c], page
+    rs = _ready_session(client, db, code="ops-ic-res")
+    body = _markup(_page(client, rs, "responses"))
+    assert 'id="responses-info-card"' in body, "the page did not render"
+    assert not [c for c in re.findall(r'class="([^"]*)"', body) if "bottom-grid" in c]
+
+
+def test_invitations_info_card_pairs_with_the_session_link(client: TestClient, db: Session) -> None:
+    """A two-child grid: the info card left, Share the session link
+    right, each its own `.bottom-left` stack (author, 2026-11-05)."""
+    rs = _ready_session(client, db, code="ops-ic-inv")
+    body = _markup(_page(client, rs, "invitations"))
+    row = body.split('id="invitations-top-row"', 1)[1].split('id="invitations-table"', 1)[0]
+    left, right = row.split('<div class="bottom-left">')[1:3]
+    assert 'id="invitations-info-card"' in left
+    assert 'id="share-session-link"' in right
+    assert 'id="share-session-link"' not in left
+
+
+@pytest.mark.parametrize(
+    ("page", "heading"),
+    [("invitations", "Reviewers and invitations"), ("responses", "Reviewees and responses")],
+)
+def test_the_info_cards_are_headed(
+    client: TestClient, db: Session, page: str, heading: str
+) -> None:
+    rs = _ready_session(client, db, code=f"ops-ih-{page[:3]}")
+    card = _page(client, rs, page).split(f'id="{page}-info-card"', 1)[1]
+    assert card.lstrip(">").lstrip().startswith(f"<h2>{heading}</h2>")
 
 
 # The "all seven carry the modifier" claim is owned by
