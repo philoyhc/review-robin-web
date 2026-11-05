@@ -70,9 +70,9 @@ gate.
    operators may have reminded by hand: 14G marks those skipped, not
    sent, when it turns the setting on.
 
-3. **22G — Diagnostics** (parked, author, 2026-11-04). Item 1: a small
-   set of status reports about the session on Azure, the in-app clock's
-   state first; where they sit waits on how many there are.
+3. **22G — Diagnostics** (planned, 2026-11-05). Item 1: System Status,
+   a third Admin tab: the clock, what is due next and stuck, scheduled
+   send, and this instance. Next: rung 1, the scaffold.
    **Plan:** `guide/segment_22G_diagnostics.md`.
 
 ### Stubs
