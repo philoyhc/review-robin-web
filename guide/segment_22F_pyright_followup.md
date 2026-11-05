@@ -82,6 +82,18 @@ Taken 2026-11-04 at `2ed1de42`.
   client JSON it already re-parsed. `urls.add_globals` / `add_filters`
   replace the two private Jinja wrappers; the registered names, values
   and order are identical (dumped before and after).
+- **Rungs 4–5** in one PR: the 62 ignores go, and
+  `enableTypeIgnoreComments = false` with none left (pyright 0). Most
+  shared one cause: an `object()` "unset" sentinel that `is not` cannot
+  narrow, now a one-member enum (`reviewers`, `reviewees`, `observers`,
+  `relationships`, `visibility_policies`), with `TypedDict` `proposed`
+  dicts; the rest take honest types (`contextvars.Token`, Starlette's
+  `file_response` signature, `Reviewer | Reviewee`, a typed
+  `_JsonStreamHandler`, `User.signed_in_principal_id` declared as a
+  non-column `str | None`). **One named fix:** `get_email_settings` reads
+  a stored transport other than `"smtp"` as unconfigured instead of
+  failing later at send time; no write stores one
+  (`test_get_email_settings_returns_none_for_an_unknown_transport`).
 
 ## PR ladder
 

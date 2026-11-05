@@ -351,3 +351,17 @@ def test_settings_save_timezone_preserves_other_preference_keys(
         "other_key": "keep-me",
         "display_timezone": "Europe/London",
     }
+
+
+def test_get_email_settings_returns_none_for_an_unknown_transport(
+    client: TestClient, db: Session, fernet_key: str
+) -> None:
+    """Segment 22F: every write stores ``"smtp"``; a row holding any other
+    transport is not a usable credential set, so it reads as unconfigured
+    rather than failing later at send time."""
+    client.get("/operator/sessions")
+    user = _alice_row(db)
+    _configure(db, user)
+    user.smtp_transport = "rot13"
+    db.flush()
+    assert operator_settings.get_email_settings(user) is None
