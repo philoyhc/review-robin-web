@@ -60,6 +60,21 @@ def test_settings_page_has_no_smtp_cards_and_date_time_stands_alone(
     assert body.index('class="bottom-grid"') < body.index('id="timezone-settings"')
 
 
+def test_email_settings_card_is_an_inert_scaffold(client: TestClient) -> None:
+    """14C Item 2 rung 1: the card renders under Date & time with its
+    three toggles, each a disabled Toggle showing its proposed default;
+    nothing posts, since no toggle is stored until 14F reads it."""
+    body = client.get("/operator/settings").text
+    card = body.split('id="email-settings"', 1)[1].split("</div>\n  </div>", 1)[0]
+    assert body.index('id="timezone-settings"') < body.index('id="email-settings"')
+    assert "<form" not in card
+    expected = {"sent-items": "true", "bcc-self": "false", "reply-to-help": "false"}
+    for key, pressed in expected.items():
+        row = card.split(f'data-email-setting="{key}"', 1)[1].split("</button>", 1)[0]
+        assert f'aria-pressed="{pressed}"' in row, key
+        assert " disabled" in row, key
+
+
 def test_settings_display_mode_card_retired_toggle_in_chrome(
     client: TestClient,
 ) -> None:
