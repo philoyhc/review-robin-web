@@ -381,11 +381,12 @@ def _send_queued_row(
         from_address=user.email,
         options=email_dispatch.send_options_for(user, review_session),
     )
-    query = (
-        "email=sent"
-        if result.outcome == "sent"
-        else f"email=failed&kind={result.failure_kind or ''}"
-    )
+    if result.outcome == "sent":
+        query = "email=sent"
+    elif result.outcome == "not_claimed":
+        query = "email=superseded"
+    else:
+        query = f"email=failed&kind={result.failure_kind or ''}"
     return urls.redirect(
         request,
         url=f"/operator/sessions/{review_session.public_id}/invitations?{query}",

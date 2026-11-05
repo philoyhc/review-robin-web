@@ -204,6 +204,23 @@ def generate_invitations(
 # --------------------------------------------------------------------------- #
 
 
+SUPERSEDED_MESSAGE = "Not sent: the invitation's link was regenerated first."
+
+
+def _supersede_queued(db: Session, invitation_ids: list[int]) -> None:
+    """Fail the still-queued rows carrying these invitations' old links,
+    so a send already queued cannot go out with a dead link: its claim
+    finds nothing to claim (14F rung 3a, Codex)."""
+    if not invitation_ids:
+        return
+    db.execute(
+        update(EmailOutbox)
+        .where(EmailOutbox.invitation_id.in_(invitation_ids), EmailOutbox.status == "queued")
+        .values(status="failed", error_message=SUPERSEDED_MESSAGE)
+        .execution_options(synchronize_session=False)
+    )
+
+
 @dataclass
 class RegenerateResult:
     raw_token: str
@@ -226,6 +243,7 @@ def regenerate_token(
     invitation.status = "pending"
     invitation.sent_at = None
     invitation.opened_at = None
+    _supersede_queued(db, [invitation.id])
     db.flush()
     audit.write_event(
         db,
@@ -280,6 +298,7 @@ def regenerate_all_tokens(
         rotated_ids.append(invitation.id)
         rotated_reviewer_ids.append(invitation.reviewer_id)
     if rotated_ids:
+        _supersede_queued(db, rotated_ids)
         db.flush()
         audit.write_event(
             db,

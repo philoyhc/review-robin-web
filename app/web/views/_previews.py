@@ -487,4 +487,9 @@ def row_send_notice(outcome: str | None, kind: str | None) -> dict[str, str] | N
             "tone": "error",
             "text": f"The email was not sent. {failure_copy(kind or '')}",
         }
+    if outcome == "superseded":
+        return {
+            "tone": "error",
+            "text": "The email was not sent: its link was regenerated first. Send it again.",
+        }
     return None

@@ -151,3 +151,35 @@ def test_the_operators_email_settings_reach_a_per_row_send(
     [message] = fake_mailer.sent
     assert operator.email in message.bcc
     assert message.save_to_sent_items is True
+
+
+def test_a_regenerate_between_queue_and_send_stops_the_dead_link(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch, fake_mailer: FakeMailer
+) -> None:
+    """Codex on #3651: another operator's Regenerate, committed after the
+    row was queued and before it was claimed, fails the row, so the old
+    link never goes out."""
+    from app.services import invitations as invitations_service
+    from app.web.routes_operator import _operations
+
+    session = _ready_session(client, db, code="row-superseded")
+    invitation = _invitation(db, session.id)
+    operator = db.get(User, session.created_by_user_id)
+    assert operator is not None
+    real_send_queued = _operations._send_queued_row  # pyright: ignore[reportPrivateUsage]  -- the seam under test
+
+    def regenerate_first(*args: object, **kwargs: object) -> object:
+        invitations_service.regenerate_token(db, invitation=invitation, user=operator)
+        return real_send_queued(*args, **kwargs)  # pyright: ignore[reportArgumentType]  -- passed through
+
+    monkeypatch.setattr(_operations, "_send_queued_row", regenerate_first)
+    response = client.post(
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send",
+        follow_redirects=False,
+    )
+    assert response.headers["location"].endswith("/invitations?email=superseded")
+    assert fake_mailer.sent == []
+    [row] = db.execute(select(EmailOutbox)).scalars().all()
+    assert row.status == "failed"
+    assert row.error_message == invitations_service.SUPERSEDED_MESSAGE
+    assert "regenerated first" in client.get(response.headers["location"]).text
