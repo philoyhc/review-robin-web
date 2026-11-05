@@ -256,19 +256,28 @@ def test_smtp_oserror_during_connect_returns_failed_send_result() -> None:
     assert "SMTP send failed" in (result.error_message or "")
 
 
-# ── Graph stub ───────────────────────────────────────────────────────────
+# ── Graph transport (14F rung 2) ─────────────────────────────────────────
 
 
-def test_graph_transport_send_raises_not_implemented() -> None:
-    settings = EmailSettings(
-        transport="smtp",  # the stub doesn't enforce; the factory does
-        host="x",
-        port=1,
-        username="x",
-        password="x",
-        from_display_name=None,
-        encryption="starttls",
-    )
-    transport = GraphEmailTransport(settings)
-    with pytest.raises(NotImplementedError, match="future segment"):
-        transport.send(_msg())
+def test_graph_transport_sends_through_the_mailer() -> None:
+    from cordware.graph import FakeMailer
+
+    mailer = FakeMailer()
+    result = GraphEmailTransport(mailer).send(_msg())
+    assert result.ok
+    [sent] = mailer.sent
+    assert (sent.to, sent.save_to_sent_items) == (_msg().to, False)
+
+
+@pytest.mark.parametrize("kind", ["no_token", "unauthorized", "forbidden", "network"])
+def test_graph_transport_turns_a_graph_error_into_a_failed_result(kind: str) -> None:
+    from cordware.graph import GraphError, MailMessage
+
+    class Refusing:
+        def send_mail(self, message: MailMessage) -> None:
+            raise GraphError(kind)
+
+    result = GraphEmailTransport(Refusing()).send(_msg())
+    assert not result.ok
+    assert result.error_message
+    assert result.transport_response == kind
