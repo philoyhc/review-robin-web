@@ -175,14 +175,19 @@ operator's own mailbox, not a session.
 1. **Which other toggles?** Candidates to put to the author: send a copy
    to myself (Bcc); use the session's Help contact as the Reply-to;
    send invitations from me or from the dedicated mailbox when both
-   exist. Each needs its send-side behavior settled in 14F first.
+   exist. Each needs its send-side behavior settled in 14F first. *Recommended
+   (2026-11-05, with 14F's plan): the first two*, Bcc to myself and
+   Reply-to the Help contact, read by 14F's transport; "from me or the
+   dedicated mailbox" waits for a dedicated mailbox (14G).
 2. **Where does a deployment-wide sender setting live** (the dedicated
    mailbox's address), if it is not an App Setting? Not on this card,
-   which is per operator.
+   which is per operator. *Recommended: an App Setting, decided in
+   14G*, since only a dedicated mailbox needs it.
 
 3. **Report emails** (filed 2026-11-02, author: "file the list in 14C for
    the settings ui for now"): which of the candidates below the card
-   offers, and when. Author.
+   offers, and when. Author. *Recommended: none in 14F*; they are
+   sends on a clock or on another person's action, so they follow 14G.
 
 ### Candidate toggles: report emails, operator to operator
 
