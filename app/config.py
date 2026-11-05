@@ -122,6 +122,17 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("RRW_SCHEDULED_SEND", "scheduled_send"),
     )
 
+    # Segment 14F rung 3a — bulk email off until 14G paces it.
+    # `RRW_BULK_SEND`, default off: the Workflow card's Send invites and
+    # Send reminders render disabled with a line pointing to the session
+    # link, and their routes refuse. Per-row Send and Remind stay live.
+    # The test suite sets it on, as for `RRW_SCHEDULED_SEND`;
+    # `tests/integration/test_bulk_send_off.py` pins the shipped default.
+    bulk_send: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("RRW_BULK_SEND", "bulk_send"),
+    )
+
     # When True, ``audit.write_event`` raises on a detail-shape violation;
     # when False (production default), it issues a ``warnings.warn`` and
     # writes the row anyway. Auditing is observability — dropping events because of

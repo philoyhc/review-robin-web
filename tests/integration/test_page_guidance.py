@@ -472,28 +472,19 @@ def test_the_assignments_page_says_where_pairs_come_from(client: TestClient, db:
     assert body.count(CARD) == 0  # not a guidance card
 
 
-def test_the_invitations_page_says_sends_are_not_delivered(client: TestClient, db: Session) -> None:
-    """Send records an invitation or reminder today, and its counters
-    move, but no email is delivered until Segment 14F ships (findings
-    F12; 14F replaced 14B). Without the note the page claims a send nobody
-    received.
-
-    **This assertion is expected to fail when 14F lands** — that is the
-    point. The note becomes false the moment sending is switched on, and
-    a red test is a better reminder than a comment nobody greps for.
-    `guide/segment_14F_manual_email.md` is where sending lands.
-    """
+def test_the_invitations_page_says_what_send_does(client: TestClient, db: Session) -> None:
+    """14F rung 3a: per-row Send and Send reminder email one reviewer, and
+    bulk sending waits for 14G. Replaces findings F12's note that no email
+    was delivered, which this test was written to catch going stale."""
     session_id = _session_id(client, db)
     public_id = must_get(db, ReviewSession, session_id).public_id
 
     body = client.get(f"/operator/sessions/{public_id}/invitations").text
     flat = " ".join(body.split())
 
-    assert (
-        "Note: Send records an invitation or reminder here, but no email "
-        "is delivered until email sending is switched on." in flat
-    )
-    assert flat.index("no email is delivered") < flat.index("Eligible reviewers")
+    assert "Send and Send reminder email one reviewer from your own mailbox." in flat
+    assert "no email is delivered" not in flat
+    assert flat.index("Send and Send reminder") < flat.index("Eligible reviewers")
     assert body.count(CARD) == 0  # not a guidance card
 
 

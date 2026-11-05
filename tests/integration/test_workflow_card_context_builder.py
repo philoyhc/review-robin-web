@@ -65,6 +65,8 @@ def _seed_pair_plus_pinned(client: TestClient, db: Session, *, code: str) -> Rev
 
 
 _EXPECTED_KEYS = {
+    "bulk_send_enabled",
+    "bulk_off_line",
     "is_draft",
     "is_validated",
     "is_ready",
