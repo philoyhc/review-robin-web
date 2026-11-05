@@ -82,7 +82,7 @@ section rather than reproducing it.
 Run all of these from the repository root with the project virtualenv activated (`pip install -e .[dev]` once).
 
 ```bash
-pytest                                   # full suite (SQLite; 172 s with -n auto on 4 cores, 2026-10-02)
+pytest                                   # full suite (SQLite; 287 s with -n auto on 4 cores, 8,381 tests, 2026-11-05)
 pytest tests/integration/test_X.py       # one file
 pytest tests/integration/test_X.py::test_name   # one test
 pytest -k "expression"                   # match by name
