@@ -210,7 +210,11 @@ reject it.
   service or view module you changed (`pytest
   tests/integration/test_<area>.py tests/unit/test_<area>.py`), plus
   `pytest tests/unit` when prose or a template changed: the doc-convention
-  and template tests live there. Then run the full `pytest -n auto` once
+  tests and most template checks live there. A few template-wide checks
+  live in `tests/integration/`, such as
+  `tests/integration/test_inline_scripts_parse.py` and
+  `tests/integration/test_url_crawl.py`; add them for a template change,
+  or leave them to the full run. Then run the full `pytest -n auto` once
   before pushing. A full run after every edit is 4–5 minutes of waiting
   that finds nothing a targeted run would not; the run before the push
   finds the rest (segment 22H).
