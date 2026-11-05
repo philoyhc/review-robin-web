@@ -427,3 +427,35 @@ def test_system_status_clock_card_reads_the_clock(
     assert 'data-clock-state="on"' in response.text
     assert "Every 2 min" in response.text
     assert "None yet" in response.text
+
+
+def test_system_status_due_card_renders_its_rows(
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
+    response = client.get("/operator/sys-admin/system")
+    assert response.status_code == 200
+    for row in ("data-due-start", "data-due-close", "data-due-release", "data-due-now", "data-due-failed"):
+        assert row in response.text
+    assert "Nothing scheduled" in response.text
+
+
+def test_system_status_links_a_session_by_its_public_id(
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Codex, #3619: the audit-log route takes the public id, not the
+    integer one, so a link built from ``id`` would 404."""
+    from datetime import UTC, datetime, timedelta
+
+    monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
+    review_session = _make_session(client, db, code="due-link")
+    review_session.scheduled_activate_at = datetime.now(UTC) + timedelta(days=1)
+    db.commit()
+    response = client.get("/operator/sys-admin/system")
+    link = f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log"
+    assert f'href="{link}"' in response.text
+    assert client.get(link).status_code == 200
