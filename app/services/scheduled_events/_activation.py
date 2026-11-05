@@ -12,13 +12,13 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db.models import AuditEvent, ReviewSession
+from app.json_shapes import json_object
 from app.services import audit, date_formatting, validation
 from app.services import session_lifecycle as lifecycle
 
 from ._shared import (
     ScheduledActivateError,
     _ensure_aware_utc,
-    _json_object,
     lock_session,
 )
 
@@ -256,10 +256,10 @@ def _count_recent_retries(
     ).scalars()
     count = 0
     for row in rows:
-        detail = _json_object(row.detail or {})
+        detail = json_object(row.detail or {})
         if detail is None:
             continue
-        context = _json_object(detail.get("context") or {})
+        context = json_object(detail.get("context") or {})
         if context is not None and context.get("scheduled_at") == scheduled_at_iso:
             count += 1
     return count

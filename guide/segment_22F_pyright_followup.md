@@ -74,6 +74,14 @@ Taken 2026-11-04 at `2ed1de42`.
   three ways on the old code); ruling 4, `set_band2_state`'s docstring
   says `None` keeps the stored state; `relationships.py` reads rows
   without `Result.tuples()`.
+- **Rung 3:** `app/json_shapes.py` (`json_object` / `json_list`,
+  values `object`) replaces the five copies and eleven inline casts;
+  callers that relied on `Any` values narrow at the use
+  (`isinstance(x, str | int | float)` before `int(x)`, the same path for
+  JSON input). `set_column_widths` takes `Mapping[str, object]`, the raw
+  client JSON it already re-parsed. `urls.add_globals` / `add_filters`
+  replace the two private Jinja wrappers; the registered names, values
+  and order are identical (dumped before and after).
 
 ## PR ladder
 

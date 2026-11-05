@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db.models import ReviewSession
+from app.json_shapes import json_list
 from app.services import audit
 from app.services import invitations as invitations_service
 from app.services import session_lifecycle as lifecycle
@@ -23,7 +24,6 @@ from ._shared import (
     _OFFSET_MAX_MAGNITUDE,
     ScheduledActivateError,
     _ensure_aware_utc,
-    _json_list,
     lock_session,
 )
 
@@ -48,7 +48,7 @@ def _resolve_invite_fires(
     tuples, preserving the original list order. The caller filters
     by ``fire_at <= now`` to find due entries.
     """
-    offsets = _json_list(session.invite_offsets or [])
+    offsets = json_list(session.invite_offsets or [])
     if offsets is None:
         return []
     anchor = session.scheduled_activate_at

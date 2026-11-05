@@ -23,6 +23,7 @@ from app.db.models import (
     ReviewSession,
     SessionRuleSet,
 )
+from app.json_shapes import json_object
 from app.services.instruments._band1 import _band1_rule_set_name, shown_links
 from app.services.instruments._band2 import (
     _BAND2_DATA_TYPE_TO_INLINE,
@@ -301,14 +302,12 @@ def _apply_instrument_kv(
     elif attr == "intro_layout":
         instrument.intro_layout = _parse_intro_layout(value)
     elif attr == "band2_state":
-        state = _parse_json(value, default={})
+        state = json_object(_parse_json(value, default={}))
         # The Instruments page reads this as an object; anything else
         # stored made the page answer 500 (findings S2, 2026-10-16).
-        if not isinstance(state, dict):
+        if state is None:
             raise _ParseError("band2_state must be a JSON object")
-        instrument.band2_state = portable_band2_state(
-            cast("dict[str, Any]", state) or None
-        )
+        instrument.band2_state = portable_band2_state(state or None)
     elif attr == "band1_touched_links":
         # Segment 18P PR D2 — the Band 1 "set"-pill link list.
         instrument.band1_touched_links = (

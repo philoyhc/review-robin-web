@@ -38,6 +38,7 @@ from app.db.models import (
     ReviewSession,
     User,
 )
+from app.json_shapes import json_list
 from app.services import field_labels, visibility_policies
 from app.services import instruments as instruments_service
 from app.services import session_lifecycle as lifecycle
@@ -48,7 +49,6 @@ from app.services.instruments._display_fields import (
 from app.services.instruments._field_presets import LIST_PRESETS as _BAND3_LIST_PRESETS
 from app.web import breadcrumbs
 
-from ._json import json_list
 from ._setup import session_status_pills
 
 # Sentinel value the rule-picker `<select>` posts when the operator

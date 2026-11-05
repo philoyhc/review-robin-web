@@ -17,7 +17,7 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Protocol, cast
+from typing import Any, Protocol
 from urllib.parse import urlencode
 
 from fastapi import Depends, HTTPException, Request, status
@@ -35,6 +35,7 @@ from app.db.models import (
     User,
 )
 from app.db.session import get_db
+from app.json_shapes import json_object
 from app.schemas.imports import (
     ObserverImportRow,
     RevieweeImportRow,
@@ -69,8 +70,6 @@ from cordware.graph import Directory, GraphError, directory_for
 # ruling, segment 22E); listing them here is what marks them used.
 __all__ = [
     "_instruments_redirect",
-    "_json_dict",
-    "_json_list",
     "_lifecycle_error_response",
     "_redirect_keeping_selection",
     "_redirect_url",
@@ -104,102 +103,78 @@ _templates = Jinja2Templates(
 urls.install(_templates)
 
 
-class _JinjaNamespaces(Protocol):
-    globals: dict[str, object]
-    filters: dict[str, object]
-
-
-def _jinja_namespaces(env: _JinjaNamespaces) -> _JinjaNamespaces:
-    """Jinja infers `Environment.globals` / `.filters` from literals,
-    partly untyped: they are reached through this, typed once."""
-    return env
-
-
-_jinja = _jinja_namespaces(_templates.env)
-_jinja.globals["app_version"] = settings.app_version
-# 19Z, accounts item: a ``users`` row bound to its person in the directory.
-_jinja.globals["account_verified"] = users_service_is_verified
-_jinja.globals["display_field_label"] = (
-    instruments_service.display_field_label
+urls.add_globals(
+    _templates,
+    app_version=settings.app_version,
+    # 19Z, accounts item: a ``users`` row bound to its person in the
+    # directory.
+    account_verified=users_service_is_verified,
+    display_field_label=instruments_service.display_field_label,
+    is_locked_display_source=instruments_service.is_locked_display_source,
+    # Segment 13C — the set of (source_type, source_field) tag pairs a
+    # group-scoped instrument groups by; drives the group Display
+    # Fields table's Group-by / Include columns.
+    group_boundary_pairs=instruments_service.group_boundary_pairs,
+    # Friendly-label resolver globals — Segment 15A Slice 2.
+    # ``field_label`` returns just the resolved string (friendly →
+    # canonical default → fallback). ``field_label_pair`` returns the
+    # ``LabelPair(friendly, canonical, has_override)`` used by the
+    # two-line operator-surface header render.
+    field_label=field_labels_service.resolve,
+    field_label_pair=field_labels_service.resolve_pair,
+    # Mirrors the date_formatting.SHOW_ZONE_TOKEN switch into templates
+    # so the two timezone-card live previews match the server render.
+    show_zone_token=date_formatting.SHOW_ZONE_TOKEN,
+    # Resolves a session's effective display zone (the raw IANA id) —
+    # used by the sessions-lobby Timezone column, where the table lists
+    # many sessions and so can't pick one zone for its timestamp cells.
+    session_timezone=sessions_service.resolve_session_timezone,
+    # Compact GMT-offset label for the sessions-lobby Timezone column —
+    # narrower than the raw IANA id (e.g. ``GMT+8`` for ``Asia/Singapore``).
+    gmt_offset_label=date_formatting.gmt_offset_label,
+    # Combined form for the timezone picker datalist + initial value:
+    # ``"GMT+8 Asia/Singapore"`` (or ``"UTC"`` for the zero-offset case).
+    gmt_offset_zone_label=date_formatting.gmt_offset_zone_label,
+    # ``YYYY-MM-DDTHH:MM`` wall-clock in a session's zone — Session Home's
+    # ``data-tz-utc`` seeds, which the zone-conversion script reads.
+    format_datetime_local=date_formatting.format_datetime_local,
+    # A date-time field's 24-hour text (19X Item 6) — the sessions-lobby
+    # inline expander's Deadline box seeds from it.
+    format_datetime_box=date_formatting.format_datetime_box,
+    # Per-numeric-column ``ch`` width for the fixed-layout group-scoped
+    # instrument table (Segment 13C). Registered on the reviewer
+    # ``_templates`` as well; the operator preview route
+    # (``_preview_surface.py``) renders ``reviewer/review_surface.html``
+    # through this operator instance, and the template references this
+    # helper inside the group-scoped branch — so without this global,
+    # previewing a session whose page-2+ holds a group-scoped instrument
+    # 500s on render.
+    numeric_column_ch_width=views.numeric_column_ch_width,
+    profile_column_ch_width=views.profile_column_ch_width,
+    is_web_link=views.is_web_link,
+    # Reviewer-progress pill: one state → (css, label) mapping (audit V2).
+    progress_pill=views.progress_pill,
+    # Operator-facing instrument label resolver
+    # (``short_label > Instrument_{session_seq}`` per the 2026-05-28
+    # operator-identifier policy in ``spec/instruments.md``). Registered
+    # as a Jinja global so operator templates can call
+    # ``instrument_label(...)`` inline without the view shape having to
+    # pre-compute every cell.
+    instrument_label=instruments_service._instrument_label,
 )
-_jinja.globals["is_locked_display_source"] = (
-    instruments_service.is_locked_display_source
-)
-# Segment 13C — the set of (source_type, source_field) tag pairs a
-# group-scoped instrument groups by; drives the group Display
-# Fields table's Group-by / Include columns.
-_jinja.globals["group_boundary_pairs"] = (
-    instruments_service.group_boundary_pairs
-)
-# Friendly-label resolver globals — Segment 15A Slice 2.
-# ``field_label`` returns just the resolved string (friendly →
-# canonical default → fallback). ``field_label_pair`` returns the
-# ``LabelPair(friendly, canonical, has_override)`` used by the
-# two-line operator-surface header render.
-_jinja.globals["field_label"] = field_labels_service.resolve
-_jinja.globals["field_label_pair"] = field_labels_service.resolve_pair
-_jinja.filters["lifecycle_label"] = (
-    lifecycle_display.lifecycle_display_label
-)
-# Canonical date / time display formatting — Segment 18B PR 1 / PR 2.
-# Context-aware: the filters resolve their display zone from the
-# ``display_timezone`` context key the processor above injects.
-_jinja.filters["format_datetime"] = format_datetime_filter
-_jinja.filters["format_date"] = format_date_filter
-# A stored instant as the session tables' client sort key, so a header
-# click orders Deadline / Created / Archived as a reload does.
-_jinja.filters["sort_instant"] = views.instant_sort_value
-# A status's lifecycle position, the session tables' Status sort key.
-_jinja.filters["sort_status"] = views.status_sort_cell
-# Mirrors the date_formatting.SHOW_ZONE_TOKEN switch into templates
-# so the two timezone-card live previews match the server render.
-_jinja.globals["show_zone_token"] = date_formatting.SHOW_ZONE_TOKEN
-# Resolves a session's effective display zone (the raw IANA id) —
-# used by the sessions-lobby Timezone column, where the table lists
-# many sessions and so can't pick one zone for its timestamp cells.
-_jinja.globals["session_timezone"] = (
-    sessions_service.resolve_session_timezone
-)
-# Compact GMT-offset label for the sessions-lobby Timezone column —
-# narrower than the raw IANA id (e.g. ``GMT+8`` for ``Asia/Singapore``).
-_jinja.globals["gmt_offset_label"] = date_formatting.gmt_offset_label
-# Combined form for the timezone picker datalist + initial value:
-# ``"GMT+8 Asia/Singapore"`` (or ``"UTC"`` for the zero-offset case).
-_jinja.globals["gmt_offset_zone_label"] = (
-    date_formatting.gmt_offset_zone_label
-)
-# ``YYYY-MM-DDTHH:MM`` wall-clock in a session's zone — Session Home's
-# ``data-tz-utc`` seeds, which the zone-conversion script reads.
-_jinja.globals["format_datetime_local"] = (
-    date_formatting.format_datetime_local
-)
-# A date-time field's 24-hour text (19X Item 6) — the sessions-lobby
-# inline expander's Deadline box seeds from it.
-_jinja.globals["format_datetime_box"] = date_formatting.format_datetime_box
-# Per-numeric-column ``ch`` width for the fixed-layout group-scoped
-# instrument table (Segment 13C). Registered on the reviewer
-# ``_templates`` as well; the operator preview route
-# (``_preview_surface.py``) renders ``reviewer/review_surface.html``
-# through this operator instance, and the template references this
-# helper inside the group-scoped branch — so without this global,
-# previewing a session whose page-2+ holds a group-scoped instrument
-# 500s on render.
-_jinja.globals["numeric_column_ch_width"] = (
-    views.numeric_column_ch_width
-)
-_jinja.globals["profile_column_ch_width"] = (
-    views.profile_column_ch_width
-)
-_jinja.globals["is_web_link"] = views.is_web_link
-# Reviewer-progress pill: one state → (css, label) mapping (audit V2).
-_jinja.globals["progress_pill"] = views.progress_pill
-# Operator-facing instrument label resolver
-# (``short_label > Instrument_{session_seq}`` per the 2026-05-28 operator-
-# identifier policy in ``spec/instruments.md``). Registered as a
-# Jinja global so operator templates can call ``instrument_label(...)``
-# inline without the view shape having to pre-compute every cell.
-_jinja.globals["instrument_label"] = (
-    instruments_service._instrument_label
+urls.add_filters(
+    _templates,
+    lifecycle_label=lifecycle_display.lifecycle_display_label,
+    # Canonical date / time display formatting — Segment 18B PR 1 / PR 2.
+    # Context-aware: the filters resolve their display zone from the
+    # ``display_timezone`` context key the processor above injects.
+    format_datetime=format_datetime_filter,
+    format_date=format_date_filter,
+    # A stored instant as the session tables' client sort key, so a
+    # header click orders Deadline / Created / Archived as a reload does.
+    sort_instant=views.instant_sort_value,
+    # A status's lifecycle position, the session tables' Status sort key.
+    sort_status=views.status_sort_cell,
 )
 
 
@@ -555,19 +530,6 @@ def _redirect_url(
     return f"{base}?{urlencode(params)}"
 
 
-def _json_dict(value: object) -> dict[str, Any] | None:
-    """``value`` when it is a JSON object (its keys are strings), else
-    ``None``: the typed boundary for JSON from a request body or form
-    snapshot."""
-    return cast("dict[str, Any]", value) if isinstance(value, dict) else None
-
-
-def _json_list(value: object) -> list[Any] | None:
-    """``value`` when it is a JSON array (its items any JSON value), else
-    ``None``."""
-    return cast("list[Any]", value) if isinstance(value, list) else None
-
-
 async def require_json_object(request: Request, *, label: str) -> dict[str, Any]:
     """Parse an AJAX request body as a JSON object, else raise
     ``HTTPException(400)`` with a ``"{label} body must be …"`` message.
@@ -586,7 +548,7 @@ async def require_json_object(request: Request, *, label: str) -> dict[str, Any]
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"{label} body must be JSON",
         ) from exc
-    obj = _json_dict(body)
+    obj = json_object(body)
     if obj is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

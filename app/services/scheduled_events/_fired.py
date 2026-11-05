@@ -19,8 +19,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import AuditEvent, ReviewSession
+from app.json_shapes import json_object
 
-from ._shared import _ensure_aware_utc, _flushed_id, _json_object, lock_session
+from ._shared import _ensure_aware_utc, _flushed_id, lock_session
 
 _EVENT_TYPES = {
     "invite": (
@@ -74,8 +75,8 @@ def fired_offsets(
     ).scalars()
     fired: dict[int, str] = {}
     for row in rows:
-        detail = _json_object(row.detail)
-        ctx = _json_object(detail.get("context")) if detail is not None else None
+        detail = json_object(row.detail)
+        ctx = json_object(detail.get("context")) if detail is not None else None
         if ctx is None:
             continue
         try:

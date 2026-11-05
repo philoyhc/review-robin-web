@@ -25,6 +25,7 @@ Saves emit ``instrument.created`` / ``.deleted`` /
 from __future__ import annotations
 
 import copy as _copy
+from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 from sqlalchemy import func, select
@@ -1234,7 +1235,7 @@ def set_column_widths(
     db: Session,
     *,
     instrument: Instrument,
-    widths: dict[str, int],
+    widths: Mapping[str, object],
     actor: User,
 ) -> Instrument:
     """Persist the per-column pixel widths the operator set by
@@ -1242,7 +1243,8 @@ def set_column_widths(
 
     ``widths`` is a dict keyed by ``"identity"`` and
     ``"df_<display_field_id>"`` strings, valued by positive integer
-    pixels. Unknown keys are dropped; values are clamped to
+    pixels: JSON from the client, so a key or a value ``int`` refuses
+    is dropped. Unknown keys are dropped; values are clamped to
     ``[_COLUMN_WIDTH_MIN_PX, _COLUMN_WIDTH_MAX_PX]``. Passing an
     empty dict clears all custom widths back to NULL — the
     reviewer surface falls back to its default auto-sized layout.
@@ -1281,6 +1283,8 @@ def set_column_widths(
                 continue
             if field_id not in valid_response_field_ids:
                 continue
+        if not isinstance(raw_value, str | int | float):
+            continue  # what ``int`` refuses with a TypeError
         try:
             value = int(raw_value)
         except (TypeError, ValueError):

@@ -14,7 +14,7 @@ other way round — same import-graph invariant the
 
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -25,8 +25,6 @@ from app.db.models import AuditEvent, Instrument, Response
 # ``_instrument_label`` beyond the package, through ``__init__``).
 __all__ = [
     "_instrument_label",
-    "_json_dict",
-    "_json_list",
     "_response_count_for_field",
     "saved_state_for_session",
 ]
@@ -46,19 +44,6 @@ _SAVED_STATE_EVENT_TYPES: frozenset[str] = frozenset({
     "instrument.fields_reordered",
     "instrument.response_fields_saved",
 })
-
-
-def _json_dict(value: object) -> dict[str, Any] | None:
-    """``value`` when it is a dict, as stored JSON holds one (an object,
-    so its keys are strings), else ``None``. The typed boundary for
-    JSON read back from a column or a request body."""
-    return cast(dict[str, Any], value) if isinstance(value, dict) else None
-
-
-def _json_list(value: object) -> list[Any] | None:
-    """``value`` when it is a list (a JSON array, whose items are any
-    JSON value), else ``None``."""
-    return cast(list[Any], value) if isinstance(value, list) else None
 
 
 def _instrument_label(instrument: Instrument) -> str:

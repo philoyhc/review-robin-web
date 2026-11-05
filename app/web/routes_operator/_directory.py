@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
-from typing import cast
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.concurrency import run_in_threadpool
@@ -26,6 +25,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
+from app.json_shapes import json_list, json_object
 from app.services import csv_imports, directory_accounts, directory_lookups, directory_recheck
 from app.web import urls
 from app.web.deps import get_or_create_user, request_correlation_id, require_session_operator
@@ -50,12 +50,12 @@ LOOKUP_BUDGET = 30.0
 def _lookup_keys(body: object) -> list[str] | None:
     """A lookup body's ``keys``: 1 to ``LOOKUP_BATCH_MAX`` strings, each
     already a canonical key, else ``None``."""
-    if not isinstance(body, dict):
+    obj = json_object(body)
+    if obj is None:
         return None
-    keys = cast("dict[object, object]", body).get("keys")
-    if not isinstance(keys, list):
+    items = json_list(obj.get("keys"))
+    if items is None:
         return None
-    items = cast("list[object]", keys)
     if not 1 <= len(items) <= LOOKUP_BATCH_MAX:
         return None
     valid = [k for k in items if isinstance(k, str) and directory_accounts.key(k) == k]

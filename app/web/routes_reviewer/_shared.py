@@ -10,7 +10,6 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Protocol
 
 from fastapi import HTTPException, status
 from fastapi.templating import Jinja2Templates
@@ -47,31 +46,25 @@ _templates = Jinja2Templates(
 urls.install(_templates)
 
 
-class _TemplateEnv(Protocol):
-    globals: dict[str, object]
-    filters: dict[str, object]
-
-
-def _configure_env(env: _TemplateEnv) -> None:
-    """Jinja infers `Environment.globals` / `.filters` from literals,
-    partly untyped: they are reached through this, typed once (as in
-    `utilityapps/web.py`)."""
-    env.globals["app_version"] = settings.app_version
+urls.add_globals(
+    _templates,
+    app_version=settings.app_version,
     # Segment 13C — per-numeric-column ``ch`` width for the
     # fixed-layout group-scoped instrument table.
-    env.globals["numeric_column_ch_width"] = views.numeric_column_ch_width
-    env.globals["profile_column_ch_width"] = views.profile_column_ch_width
-    env.globals["is_web_link"] = views.is_web_link
+    numeric_column_ch_width=views.numeric_column_ch_width,
+    profile_column_ch_width=views.profile_column_ch_width,
+    is_web_link=views.is_web_link,
     # Reviewer-progress pill: one state → (css, label) mapping (audit V2).
-    env.globals["progress_pill"] = views.progress_pill
-    # Canonical date / time display formatting — Segment 18B PR 1 / PR 2.
-    # Context-aware: the filters resolve their display zone from the
-    # ``display_timezone`` context key the processor above injects.
-    env.filters["format_datetime"] = format_datetime_filter
-    env.filters["format_date"] = format_date_filter
-
-
-_configure_env(_templates.env)
+    progress_pill=views.progress_pill,
+)
+# Canonical date / time display formatting — Segment 18B PR 1 / PR 2.
+# Context-aware: the filters resolve their display zone from the
+# ``display_timezone`` context key the processor above injects.
+urls.add_filters(
+    _templates,
+    format_datetime=format_datetime_filter,
+    format_date=format_date_filter,
+)
 
 
 def validate_page_n(page_n: int, pages: Sequence[object]) -> int:
