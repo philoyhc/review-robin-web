@@ -62,13 +62,13 @@ def test_settings_page_has_no_smtp_cards_and_date_time_stands_alone(
 
 def test_email_settings_card_is_an_inert_scaffold(client: TestClient) -> None:
     """14C Item 2 rung 1: the card renders under Date & time with its
-    three toggles, each a disabled Toggle showing its proposed default;
+    three toggles, each a disabled Toggle, all off (author, 2026-11-05);
     nothing posts, since no toggle is stored until 14F reads it."""
     body = client.get("/operator/settings").text
     card = body.split('id="email-settings"', 1)[1].split("</div>\n  </div>", 1)[0]
     assert body.index('id="timezone-settings"') < body.index('id="email-settings"')
     assert "<form" not in card
-    expected = {"sent-items": "true", "bcc-self": "false", "reply-to-help": "false"}
+    expected = {"sent-items": "false", "bcc-self": "false", "reply-to-help": "false"}
     for key, pressed in expected.items():
         row = card.split(f'data-email-setting="{key}"', 1)[1].split("</button>", 1)[0]
         assert f'aria-pressed="{pressed}"' in row, key

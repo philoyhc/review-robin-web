@@ -24,7 +24,8 @@ sends through `/me/sendMail` inside the request that clicked:
   that reviewers' submits queue;
 - each send stamps its outbox row `sent` or `failed` with the reason, and
   writes `email.sent` / `email.send_failed`;
-- a **Send a test to me** action on the Invitations page.
+- a **Send a test to me** action in the email composer, sending the
+  template as edited (author, 2026-11-05; was the Invitations page).
 
 **While no mail goes on a clock** (`guide/no_scheduling_fallback.md`;
 the first two parts moved to 14E rung 0, author 2026-11-04), the
@@ -50,9 +51,9 @@ gateway's 120 s; revisit only if measured otherwise.
 - **A rotated token:** a queued row whose link a regenerate has rotated is
   never sent; Send sends the invitation's current link.
 - **The backlog** of rows queued before this ships (checklist item 9):
-  proposed, invitations and reminders not resent; confirmations sent only
-  if queued after the go-live date, and not for a recalled or deleted
-  submission. Author.
+  invitations and reminders not resent; confirmations sent only if
+  queued after the go-live date, and not for a recalled or deleted
+  submission (author, 2026-11-05).
 - **From:** the operator's own address, as Graph sends it; nothing in the
   app sets it.
 - **One send per row** (`guide/post_azure_todo_checklist.md`, added
@@ -121,24 +122,13 @@ Taken 2026-11-02 at `fffd4c28`; re-taken 2026-11-05 at `095336bf`
 
 ## Open questions
 
-- **The backlog rule above.** Author, by rung 4. *Recommended
-  (2026-11-05): adopt it as written* — invitations and reminders queued
-  before go-live are never resent (some carry a rotated, dead link, and
-  a later send may already supersede them); confirmations queued after
-  the go-live date are sent, and none for a recalled or deleted
-  submission. Rows written before 2026-11-02 already read `sent` and are
-  left alone.
-- **Where Send a test to me sits.** Author, at the scaffold.
-  *Recommended (2026-11-05): in the email composer* (the Email Template
-  page), beside the template it tests, sending that template as edited,
-  with the session's merge tags filled from a sample row. The Invitations
-  page keeps its real sends only.
-- **Which of 14C Item 2's toggles 14F's send path reads**
-  (`guide/segment_14C_email_related_ui.md`, Item 2, Open questions 1).
-  Author, at the scaffold. *Recommended (2026-11-05): two, read by rung
-  2's transport* — a copy to myself (Bcc to the operator) and Reply-to as
-  the session's Help contact. Report emails and a deployment-wide sender
-  wait for 14G.
+- ~~The backlog rule above.~~ Adopted as written (author, 2026-11-05).
+- ~~Where Send a test to me sits.~~ In the email composer, sending the
+  template as edited with merge tags from a sample row (author,
+  2026-11-05).
+- ~~Which of 14C Item 2's toggles the send path reads.~~ All three on
+  the card: Sent Items, a copy to myself (Bcc) and Reply-to the Help
+  contact, **each off by default** (author, 2026-11-05).
 
 ## Out of scope
 
