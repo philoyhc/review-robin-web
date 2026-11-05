@@ -42,6 +42,22 @@ jobs:
     # classifier still runs it.
     if: ${{ !cancelled() && needs.changes.outputs.lane != 'prose' && needs.changes.outputs.lane != 'residential' }}
     runs-on: ubuntu-latest
+    # Three shards in parallel, by folder (segment 22H Item 2), sized on
+    # 4 cores: unit with lint, format and type check about 1.5 min,
+    # integration about 1.7 min, browser about 1.2 min. Together they run
+    # every testpaths root in pyproject.toml exactly once, which
+    # tests/unit/test_ci_shards.py checks.
+    strategy:
+      fail-fast: false
+      matrix:
+        shard:
+          - name: unit
+            pytest_args: "tests cordware/tests residentialapps/tests utilityapps/tests --ignore=tests/integration --ignore=tests/browser"
+          - name: integration
+            pytest_args: "tests/integration"
+          - name: browser
+            pytest_args: "tests/browser"
+    name: test (${{ matrix.shard.name }})
 
     steps:
       - name: Check out repository
@@ -57,26 +73,36 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .[dev]
 
+      # The unit shard needs it too: three of residentialapps/tests'
+      # files drive a browser.
       - name: Install Chromium for the browser tests
+        if: matrix.shard.name != 'integration'
         run: python -m playwright install --with-deps chromium
 
       - name: Lint
+        if: matrix.shard.name == 'unit'
         run: ruff check .
 
       - name: Format check
+        if: matrix.shard.name == 'unit'
         run: ruff format --check .
 
       # Application code and tests (`[tool.pyright]`, segments 22C, 22D); setup-python's
       # interpreter is on PATH, so pyright resolves the installed packages.
       - name: Type check
+        if: matrix.shard.name == 'unit'
         run: pyright
 
       - name: Run tests
-        # tests/browser/ fails rather than skips without a browser here
+        # A browser test fails rather than skips without a browser here
         # (guide/archive/browser_test.md).
         env:
           RRW_REQUIRE_BROWSER: "1"
-        run: pytest -n auto
+          PYTEST_ARGS: ${{ matrix.shard.pytest_args }}
+        run: |
+          # Word-split on purpose: PYTEST_ARGS is a list of paths and flags.
+          # shellcheck disable=SC2086
+          pytest -n auto $PYTEST_ARGS
 
   prose:
     # A prose-only pull request: the unit tests (the doc gates live there)
