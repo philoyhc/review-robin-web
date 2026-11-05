@@ -75,6 +75,12 @@ gate.
    send, and this instance. Next: rung 1, the scaffold.
    **Plan:** `guide/segment_22G_diagnostics.md`.
 
+4. **22H — Formatter and suite time** (planned, 2026-11-05). Item 1:
+   `ruff format` in one PR with nothing else in it, landed while no code
+   PR is open, then the CI gate. Item 2: the outlier tests, the targeted
+   loop, the CI split. Next: Item 1 rung 1.
+   **Plan:** `guide/segment_22H_format_and_suite_time.md`.
+
 ### Stubs
 
 Small items with no plan doc; each fits one PR and its reasoning fits
