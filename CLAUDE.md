@@ -96,6 +96,8 @@ alembic revision --autogenerate -m "..." # after editing models — ALWAYS hand-
 uvicorn cordware.main:app --reload       # local dev server; RRW at http://127.0.0.1:8000/reviewrobin/
 ```
 
+Pyright honours no `# type: ignore` (`enableTypeIgnoreComments = false`, segment 22F): to silence a rule on one line, write `# pyright: ignore[<rule>]  -- <reason>`, and prefer fixing the type.
+
 `pytest` collection imports `app/`, so `PYTHONPATH=.` is sometimes needed when invoking from outside the venv (e.g. `PYTHONPATH=. pytest`). Tests use an in-memory SQLite whose schema is built directly from the ORM metadata (`Base.metadata.create_all`) per `tests/conftest.py` — the Alembic migration chain is still round-tripped on every PR that changes more than prose (`tools/ci_lanes.py`) by the `ci-postgres` job. `pytest-xdist` runs the suite in parallel (`pytest -n auto`).
 
 **Migration portability matters.** Alembic migrations run against both SQLite (default; tests) and Postgres 16 (production + the `ci-postgres` job). SQLite is more permissive than Postgres in several places that have bitten us — `BOOLEAN DEFAULT 1` (use `sa.true()` / `sa.false()`), `WHERE bool_col = 1` (use `IS TRUE`), FK constraints not enforced at `DROP TABLE` time (drop FKs explicitly first, or recreate them on downgrade), and index / FK name mismatches between upgrade and downgrade (use the *original* names so downgrades further back in the chain can drop them). The `ci-postgres` job runs `alembic upgrade head` *and* the full `downgrade base + upgrade head` round-trip, so every migration must survive both directions on Postgres.

@@ -872,7 +872,7 @@ anchor):
 | --- | --- | --- |
 | any but `ready` | unset, no skip / failure event (below) | (none) |
 | `draft`, `expired` or `archived` | set | ⚠ "Scheduled activation at «X» — currently inactive: Prepare session before then or the schedule will skip." |
-| any but `ready` | unset, and the session's newest audit event is `session.scheduled_activation_skipped` / `session.scheduled_activation_failed_persistent` | ⓘ "Scheduled activation at «X» — reason: «reason»." (the failed event reads "Scheduled activation gave up at «X» — …"), «X» and «reason» from that event. One-shot: any newer audit event for the session clears it. |
+| any but `ready` | unset, and the session's newest audit event is `session.scheduled_activation_skipped` / `session.scheduled_activation_failed_persistent` | ⓘ "Scheduled activation at «X» — reason: «reason»." (the failed event reads "Scheduled activation gave up at «X» — …"), «X» and «reason» from that event; «X» is the event's `context.scheduled_at`, and reads "unknown" when that is missing, not a string or not a parseable ISO datetime. One-shot: any newer audit event for the session clears it. |
 | `validated` | set | ✓ "System will auto-activate at «X». You can also click Activate now." |
 | `ready` | (any — moot post-activation) | (none — the existing "Activated at «X»" treatment covers it) |
 

@@ -70,13 +70,7 @@ gate.
    operators may have reminded by hand: 14G marks those skipped, not
    sent, when it turns the setting on.
 
-3. **22F — Pyright follow-up** (not gated). The leftovers of 22C–22E,
-   on the author's rulings of 2026-11-04: fix the 62 `# type: ignore`
-   comments and stop pyright honouring them; the test trees stay relaxed;
-   two small defects; merged helpers. **Plan:**
-   `guide/segment_22F_pyright_followup.md`.
-
-4. **22G — Diagnostics** (parked, author, 2026-11-04). Item 1: a small
+3. **22G — Diagnostics** (parked, author, 2026-11-04). Item 1: a small
    set of status reports about the session on Azure, the in-app clock's
    state first; where they sit waits on how many there are.
    **Plan:** `guide/segment_22G_diagnostics.md`.
