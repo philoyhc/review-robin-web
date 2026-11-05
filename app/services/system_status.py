@@ -1,9 +1,9 @@
 """What the clock will do next, across the workspace (segment 22G Item 1):
 the System Status tab's Due next card.
 
-It reads the columns the clock's own pick reads
-(``scheduled_events.due_session_ids``), so the card and the clock
-cannot disagree about what is due; archived sessions are left out, as
+Due now is the clock's own pick (``scheduled_events.due_session_ids``),
+and the next moments follow the rules that pick applies, so the card and
+the clock agree about what is due; archived sessions are left out, as
 there. Read-only: nothing here fires a step.
 """
 
@@ -30,6 +30,7 @@ class SessionAt:
     """A session and the moment that concerns it."""
 
     session_id: int
+    public_id: str
     name: str
     code: str
     at: datetime | None = None
@@ -51,7 +52,7 @@ def _utc(value: datetime | None) -> datetime | None:
 
 
 def _at(rs: ReviewSession, at: datetime | None) -> SessionAt:
-    return SessionAt(session_id=rs.id, name=rs.name, code=rs.code, at=at)
+    return SessionAt(session_id=rs.id, public_id=rs.public_id, name=rs.name, code=rs.code, at=at)
 
 
 def _earliest(candidates: list[SessionAt]) -> SessionAt | None:
@@ -79,10 +80,16 @@ def due_next(db: Session, *, now: datetime | None = None) -> DueNext:
     closes = [_at(rs, lifecycle.review_end(rs)) for rs in open_sessions]
     next_close = _earliest([c for c in closes if c.at is not None and c.at > current])
 
-    # The release window's opening or closing stamp.
+    # The release window's opening or closing stamp, by the clock's rule
+    # (``_release._due_release_stamps``): a window stamps only from its
+    # Release from, and closes only after it opens; a session stamps only
+    # once ended, so a draft one, not yet run, is left out.
     windows = db.execute(
         select(ReviewSession).where(
-            live,
+            ReviewSession.status.in_(
+                [lifecycle.SessionStatus.ready.value, lifecycle.SessionStatus.expired.value]
+            ),
+            ReviewSession.responses_release_at.is_not(None),
             or_(
                 ReviewSession.responses_release_at > current,
                 ReviewSession.responses_release_until > current,
@@ -91,9 +98,14 @@ def due_next(db: Session, *, now: datetime | None = None) -> DueNext:
     ).scalars()
     stamps: list[SessionAt] = []
     for rs in windows:
-        for moment in (_utc(rs.responses_release_at), _utc(rs.responses_release_until)):
-            if moment is not None and moment > current:
-                stamps.append(_at(rs, moment))
+        start = _utc(rs.responses_release_at)
+        until = _utc(rs.responses_release_until)
+        if start is None:
+            continue
+        if start > current:
+            stamps.append(_at(rs, start))
+        if until is not None and start < until and until > current:
+            stamps.append(_at(rs, until))
     next_release_stamp = _earliest(stamps)
 
     # What the clock's next pass would pick: a session listed pass after
@@ -110,6 +122,7 @@ def due_next(db: Session, *, now: datetime | None = None) -> DueNext:
         select(AuditEvent, ReviewSession)
         .join(ReviewSession, AuditEvent.session_id == ReviewSession.id)
         .where(
+            live,
             AuditEvent.event_type == ACTIVATION_FAILED_PERSISTENT,
             AuditEvent.created_at >= current - FAILED_ACTIVATION_WINDOW,
         )

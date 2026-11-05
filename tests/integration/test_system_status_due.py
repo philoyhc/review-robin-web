@@ -103,3 +103,41 @@ def test_failed_activations_within_seven_days_newest_first(db: Session) -> None:
         NOW - timedelta(days=3),
     ]
     assert all(s.session_id == rs.id for s in due.failed_activations)
+
+
+def test_a_window_the_clock_would_not_stamp_is_left_out(db: Session) -> None:
+    """Codex, #3619: no Release from, a draft session, or an end before
+    the start stamps nothing (``_release._due_release_stamps``)."""
+    expired = lifecycle.SessionStatus.expired.value
+    _session(db, "due-anchorless", status=expired, responses_release_until=NOW + timedelta(hours=1))
+    _session(db, "due-draft-window", responses_release_at=NOW + timedelta(hours=2))
+    _session(
+        db,
+        "due-backwards",
+        status=expired,
+        responses_release_at=NOW - timedelta(hours=1),
+        responses_release_until=NOW - timedelta(hours=2),
+    )
+    real = _session(
+        db,
+        "due-real-window",
+        status=lifecycle.SessionStatus.ready.value,
+        responses_release_at=NOW + timedelta(hours=9),
+    )
+    due = system_status.due_next(db, now=NOW)
+    assert due.next_release_stamp is not None
+    assert due.next_release_stamp.session_id == real.id
+
+
+def test_an_archived_sessions_failure_is_left_out(db: Session) -> None:
+    rs = _session(db, "due-failed-archived", status=lifecycle.SessionStatus.archived.value)
+    db.add(
+        AuditEvent(
+            session_id=rs.id,
+            event_type=system_status.ACTIVATION_FAILED_PERSISTENT,
+            summary="Scheduled activation failed",
+            created_at=NOW - timedelta(hours=1),
+        )
+    )
+    db.commit()
+    assert system_status.due_next(db, now=NOW).failed_activations == []

@@ -35,7 +35,7 @@
     <div class="card" data-system-due>
       <h2>Due next</h2>
       {% macro session_ref(item) -%}
-        <a href="{{ url('/operator/sys-admin/sessions/' ~ item.session_id ~ '/audit-log') }}">{{ item.name }}</a> <span class="muted">({{ item.code }})</span>
+        <a href="{{ url('/operator/sys-admin/sessions/' ~ item.public_id ~ '/audit-log') }}">{{ item.name }}</a> <span class="muted">({{ item.code }})</span>
       {%- endmacro %}
       {% macro next_row(item) -%}
         {% if item %}{{ item.at | format_datetime }}, {{ session_ref(item) }}{% else %}Nothing scheduled{% endif %}
