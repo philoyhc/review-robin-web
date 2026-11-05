@@ -1,6 +1,6 @@
 # Segment 22I — Postgres shards, a stale figure, and the practice record
 
-**Opened:** 2026-11-05 · **Theme:** finish the CI wait 22H moved, and let
+**Opened and closed:** 2026-11-05 (#3633–#3640 and the close) · **Theme:** finish the CI wait 22H moved, and let
 `rrw_sdd_in_practice.md` record what 22C–22H did to the practice ·
 **Related:** `guide/archive/segment_22H_format_and_suite_time.md`,
 `guide/archive/segment_22C_pyright.md`,
@@ -254,6 +254,9 @@ the Doc impact names no spec, and the `grep` above is the whole check.
     check now covers every file.
   - **Spelling:** "unlabeled", US.
   - **Sources:** each figure is cited beside its PR or command.
+- **Close:** `close_check 22I.3` passes. `spec-writer` was not run: the
+  Doc impact names no spec, and the overclaim read checked every figure
+  in the prose against its source.
 - **The ignore split** this plan gives in Blast radius and bullet (a),
   "7 in application code, 19 in tests", is stale. At `0ff3a3c4` it is 2
   and 24 of 26 (`git grep -c "pyright: ignore" -- '*.py'`), and the
