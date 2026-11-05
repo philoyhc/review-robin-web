@@ -104,11 +104,12 @@ def get_email_settings(user: User) -> EmailSettings | None:
     if not _is_complete(user):
         return None
     assert user.smtp_password_encrypted is not None  # _is_complete check
-    # Every write stores ``"smtp"``, the only legal transport today; a
-    # row holding anything else is not a usable credential set.
+    # Every write stores ``"smtp"``, the only legal transport today. Any
+    # other value is a code bug, refused loudly as ``transport_for`` would
+    # refuse it at send time, never read as "not configured" (22F).
     transport = user.smtp_transport
     if transport != "smtp":
-        return None
+        raise ValueError(f"get_email_settings: unknown transport {transport!r}")
     plaintext = _secrets.decrypt_password(user.smtp_password_encrypted)
     return EmailSettings(
         transport=transport,
