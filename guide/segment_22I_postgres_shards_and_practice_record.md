@@ -199,6 +199,15 @@ two PRs.
 
 ## Item 2 — the stale figure
 
+### Status
+
+Closed 2026-11-05, as planned, in #3638. The figure is 287 s for 8,381
+tests (8,369 passed, 12 skipped). It is pytest's own wall time from the
+full pre-push run for #3636, on the tree that is now `main`, not a
+separate `time` run. `grep -n "172 s" CLAUDE.md AGENTS.md` finds nothing.
+No read was taken, the rung being prose only. `spec-writer` was not run:
+the Doc impact names no spec, and the `grep` above is the whole check.
+
 ### PR ladder
 
 1. **The figure (prose only, no read).** Re-take it in the container with
