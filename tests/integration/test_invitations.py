@@ -238,10 +238,11 @@ def test_send_records_the_invitation_and_queues_its_outbox_row(
         select(EmailOutbox).where(EmailOutbox.invitation_id == invitation.id)
     ).scalar_one()
     assert outbox.kind == "invitation"
-    # Queued until a transport sends it: the row never claims a delivery
-    # that did not happen (post-Azure checklist item 8, settled 2026-11-02).
-    assert outbox.status == "queued"
-    assert outbox.sent_at is None
+    # Sent through the operator's mailbox at once (14F rung 3a; the
+    # suite's mailer is a FakeMailer).
+    assert outbox.status == "sent"
+    assert outbox.sent_at is not None
+    assert outbox.backend == "graph"
     assert outbox.to_email == "rae@example.edu"
     assert "/me/invite/" in outbox.body  # raw token URL embedded
 
@@ -643,9 +644,8 @@ def test_invitations_page_email_status_reflects_outbox_row(client: TestClient, d
     ).scalar_one()
     client.post(f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send")
     body = client.get(f"/operator/sessions/{session.public_id}/invitations").text
-    # After send: the outbox row exists, queued until a transport sends
-    # it (checklist item 8).
-    assert _DELIVERY("queued") in body
+    # After send: sent through the operator's mailbox (14F rung 3a).
+    assert '<span class="pill pill-count">sent</span>' in body
 
 
 def test_invitations_page_reviewer_name_links_to_drill_in(client: TestClient, db: Session) -> None:
@@ -1460,7 +1460,7 @@ def test_per_row_remind_redirects_to_invitations_page(client: TestClient, db: Se
     )
     assert response.status_code == 303
     assert response.headers["location"].endswith(
-        f"/operator/sessions/{session.public_id}/invitations"
+        f"/operator/sessions/{session.public_id}/invitations?email=sent"
     )
 
 
@@ -2415,7 +2415,9 @@ def test_regenerate_all_resets_the_table_and_the_sent_counter(
     ).scalar_one()
     client.post(f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send")
     sent = client.get(f"/operator/sessions/{session.public_id}/invitations").text
-    assert _DELIVERY("queued") in sent, "premise: the send shows in the table"
+    assert '<span class="pill pill-count">sent</span>' in sent, (
+        "premise: the send shows in the table"
+    )
 
     response = client.post(
         f"/operator/sessions/{session.public_id}/invitations/regenerate-all",

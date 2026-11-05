@@ -41,7 +41,7 @@ from app.db.models import (
     User,
 )
 from app.services import email_templates
-from app.services.email_send import SendResult
+from app.services.email_send import SendResult, failure_copy
 
 # How many reviewee names the picker context strip shows before
 # collapsing the rest into the `<details>` disclosure tail.
@@ -475,3 +475,16 @@ def send_test_notice(result: SendResult, to: str) -> dict[str, str]:
         "tone": "error",
         "text": f"The test was not sent. {result.error_message or 'The send failed.'}",
     }
+
+
+def row_send_notice(outcome: str | None, kind: str | None) -> dict[str, str] | None:
+    """The line atop Invitations after a per-row Send or Remind (14F rung
+    3a), from the redirect's ``email`` / ``kind``; ``None`` otherwise."""
+    if outcome == "sent":
+        return {"tone": "success", "text": "Sent from your mailbox."}
+    if outcome == "failed":
+        return {
+            "tone": "error",
+            "text": f"The email was not sent. {failure_copy(kind or '')}",
+        }
+    return None

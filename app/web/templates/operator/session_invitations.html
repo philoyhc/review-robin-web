@@ -38,6 +38,13 @@
 
      The route re-checks `no_match` against the roster before this
      renders, so the sentence below is a fact rather than an echo. #}
+  {# 14F rung 3a: how a per-row Send or Remind went. #}
+  {% if email_notice %}
+    <div class="card banner-scroll-target" role="status"
+         id="invitations-email-notice" data-email-notice>
+      <p class="send-test-notice--{{ email_notice.tone }}">{{ email_notice.text }}</p>
+    </div>
+  {% endif %}
   {% if no_match %}
     <div class="card banner-scroll-target" role="alert"
          id="invitations-no-match">
@@ -58,15 +65,13 @@
        Workflow card's Send invites / Send reminders super-buttons
        carry those affordances now; creating them is Prepare's third
        step since 19Q Item 2 rung 2. #}
-    {# 19E, reworded by findings F12 (2026-10-06) — Send works today: it
-       records the invitation or reminder and the counters move, but no
-       email leaves until delivery (Segment 14B, still in planning) is
-       switched on. Without this the page claims a send nobody received.
-       REMOVE WITH 14B — `guide/segment_14B_email_infrastructure.md`
-       carries the reciprocal note. #}
-    <p class="muted" style="margin-top: 0;">
-      Note: Send records an invitation or reminder here, but no email is
-      delivered until email sending is switched on.
+    {# 14F rung 3a: per-row Send and Send reminder email one reviewer
+       from the operator's mailbox; the bulk sends wait for 14G. Replaces
+       the findings F12 note that no email was delivered. #}
+    <p class="muted" style="margin-top: 0;" data-send-note>
+      Send and Send reminder email one reviewer from your own mailbox.
+      Sending to everyone at once isn't available yet: share the session
+      link instead.
     </p>
     <p>
       Eligible reviewers

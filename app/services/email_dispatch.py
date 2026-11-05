@@ -32,6 +32,7 @@ from typing import Literal
 from sqlalchemy import update
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.db.models import EmailOutbox, ReviewSession, User
 from app.db.session import rowcount
 from app.services import audit, operator_settings
@@ -48,6 +49,15 @@ class SendOptions:
     save_to_sent_items: bool = False
     bcc_self: str | None = None
     reply_to: str | None = None
+
+
+BULK_OFF_LINE = "Bulk email isn't available yet: share the session link from Invitations instead."
+
+
+def bulk_send_enabled() -> bool:
+    """Whether bulk sends (Send all, Remind incomplete) may run:
+    ``RRW_BULK_SEND``, off until 14G paces them (14F rung 3a)."""
+    return settings.bulk_send
 
 
 def _address(text: str | None) -> str | None:
@@ -81,6 +91,8 @@ def send_options_for(user: User, review_session: ReviewSession) -> SendOptions:
 class DispatchResult:
     outcome: Outcome
     error_message: str | None = None
+    #: The transport's failure kind (a ``GraphError`` kind), when failed.
+    failure_kind: str | None = None
 
 
 def _addresses(raw: str | None) -> list[str]:
@@ -178,4 +190,6 @@ def dispatch(
             context={"kind": row.kind, "backend": backend},
         )
     db.commit()
-    return DispatchResult("sent" if result.ok else "failed", result.error_message)
+    return DispatchResult(
+        "sent" if result.ok else "failed", result.error_message, result.failure_kind
+    )

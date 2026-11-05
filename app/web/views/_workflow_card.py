@@ -46,6 +46,7 @@ from app.services import (
     assignments,
     csv_imports,
     date_formatting,
+    email_dispatch,
     invitations,
     scheduled_events,
     validation,
@@ -199,6 +200,10 @@ def build_workflow_card_context(
         "revert_visible": revert_visible,
         "prepare_visible": prepare_visible,
         "send_invites_visible": send_invites_visible,
+        # 14F rung 3a: with bulk email off the two bulk buttons render
+        # disabled, and the card says why.
+        "bulk_send_enabled": email_dispatch.bulk_send_enabled(),
+        "bulk_off_line": email_dispatch.BULK_OFF_LINE,
         "activate_visible": activate_visible,
         "send_reminders_visible": send_reminders_visible,
         "close_visible": close_visible,

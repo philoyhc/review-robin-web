@@ -18,6 +18,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
+    EmailOutbox,
     Invitation,
     Reviewee,
     Reviewer,
@@ -25,10 +26,11 @@ from app.db.models import (
     User,
 )
 from app.db.session import get_db
-from app.services import assignments, invitations, monitoring, validation
+from app.services import assignments, email_dispatch, invitations, monitoring, validation
 from app.services import session_lifecycle as lifecycle
 from app.services._queries import tag_slot_presence
 from app.services.email_identity import normalize_email
+from app.services.email_send import GraphEmailTransport
 from app.web import breadcrumbs, urls, views
 from app.web.deps import (
     get_or_create_user,
@@ -41,6 +43,7 @@ from app.web.routes_operator._shared import (
     _templates,
     observe_scheduled_events_on_load,
 )
+from cordware import graph
 
 # --------------------------------------------------------------------------- #
 # Column sort — Segment 19I Item 11 rung 2.
@@ -333,6 +336,63 @@ def _require_validated_or_ready(review_session: ReviewSession) -> None:
         )
 
 
+def _require_bulk_send() -> None:
+    """Refuse a bulk send while ``RRW_BULK_SEND`` is off (14F rung 3a);
+    the buttons render disabled, so only a direct POST reaches this."""
+    if not email_dispatch.bulk_send_enabled():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=email_dispatch.BULK_OFF_LINE,
+        )
+
+
+def _mailer_or_refusal(request: Request, session_id: str) -> graph.Mailer | RedirectResponse:
+    """The signed-in operator's mailer, or a redirect saying to reload when
+    there is no Microsoft token, so nothing is queued or rotated."""
+    try:
+        return graph.mailer_for(request)
+    except graph.GraphError as exc:
+        return urls.redirect(
+            request,
+            url=f"/operator/sessions/{session_id}/invitations?email=failed&kind={exc.kind}",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
+
+def _send_queued_row(
+    request: Request,
+    db: Session,
+    *,
+    mailer: graph.Mailer,
+    outbox_id: int,
+    user: User,
+    review_session: ReviewSession,
+) -> RedirectResponse:
+    """Send the row a per-row Send or Remind just queued, as the operator
+    (14F rung 3a), and redirect to Invitations saying how it went."""
+    row = db.get(EmailOutbox, outbox_id)
+    assert row is not None
+    result = email_dispatch.dispatch(
+        db,
+        row,
+        GraphEmailTransport(mailer),
+        backend="graph",
+        actor_user_id=user.id,
+        from_address=user.email,
+        options=email_dispatch.send_options_for(user, review_session),
+    )
+    query = (
+        "email=sent"
+        if result.outcome == "sent"
+        else f"email=failed&kind={result.failure_kind or ''}"
+    )
+    return urls.redirect(
+        request,
+        url=f"/operator/sessions/{review_session.public_id}/invitations?{query}",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
 def _require_ready(review_session: ReviewSession) -> None:
     """Reject per-row invitation actions and reminders outside ``ready``.
 
@@ -412,6 +472,8 @@ def invitations_index(
     super_error: str | None = None,
     prepare_confirm: str | None = None,
     no_match: str = "",
+    email: str | None = None,
+    kind: str | None = None,
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -552,6 +614,7 @@ def invitations_index(
             "pending_reminders_count": pending_reminders_count,
             "completed_count": completed_count,
             "breadcrumbs": breadcrumbs.operator_session_child(review_session, "Invitations"),
+            "email_notice": views.row_send_notice(email, kind),
             **workflow_ctx,
         },
     )
@@ -725,6 +788,7 @@ def invitations_send_all(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
+    _require_bulk_send()
     _require_validated_or_ready(review_session)
     # `list_sendable_invitations`, not `list_invitations_for_session`
     # (19Q Item 2 rung 1). The listing is every row, which is what the
@@ -837,7 +901,10 @@ def invitations_send_one(
                 "active with at least one included assignment."
             ),
         )
-    invitations.send_one_invitation(
+    mailer = _mailer_or_refusal(request, review_session.public_id)
+    if isinstance(mailer, RedirectResponse):
+        return mailer
+    sent = invitations.send_one_invitation(
         db,
         invitation=invitation,
         review_session=review_session,
@@ -846,10 +913,13 @@ def invitations_send_one(
         build_invite_url=lambda token: str(request.url_for("reviewer_invite", token=token)),
         correlation_id=request_correlation_id(),
     )
-    return urls.redirect(
+    return _send_queued_row(
         request,
-        url=f"/operator/sessions/{review_session.public_id}/invitations",
-        status_code=status.HTTP_303_SEE_OTHER,
+        db,
+        mailer=mailer,
+        outbox_id=sent.outbox_id,
+        user=user,
+        review_session=review_session,
     )
 
 
@@ -1084,7 +1154,10 @@ def invitations_remind_one(
                 "active with at least one included assignment."
             ),
         )
-    invitations.send_one_reminder(
+    mailer = _mailer_or_refusal(request, review_session.public_id)
+    if isinstance(mailer, RedirectResponse):
+        return mailer
+    reminded = invitations.send_one_reminder(
         db,
         invitation=invitation,
         review_session=review_session,
@@ -1093,10 +1166,13 @@ def invitations_remind_one(
         build_invite_url=lambda token: str(request.url_for("reviewer_invite", token=token)),
         correlation_id=request_correlation_id(),
     )
-    return urls.redirect(
+    return _send_queued_row(
         request,
-        url=f"/operator/sessions/{review_session.public_id}/invitations",
-        status_code=status.HTTP_303_SEE_OTHER,
+        db,
+        mailer=mailer,
+        outbox_id=reminded.outbox_id,
+        user=user,
+        review_session=review_session,
     )
 
 
@@ -1113,6 +1189,7 @@ def invitations_remind_incomplete(
     ``invitations.send_reminders_to_incomplete`` helper the (still-
     existing) Monitoring page uses; PR 3 retires the Monitoring
     counterpart endpoint."""
+    _require_bulk_send()
     _require_ready(review_session)
     invitations.send_reminders_to_incomplete(
         db,

@@ -152,6 +152,23 @@ Taken 2026-11-02 at `fffd4c28`; re-taken 2026-11-05 at `095336bf`
 - 2026-11-05: the ladder is re-cut by the Decision's amendment (no bulk
   email; share the link). The original rungs 3 and 4 are struck below,
   and 3a–3d added.
+- 2026-11-05, rung 3a:
+  - **Per-row sends.** Send and Send reminder dispatch the row they queue
+    through `graph.mailer_for`, with `send_options_for`, and redirect to
+    Invitations with `?email=sent|failed&kind=…`
+    (`views.row_send_notice`). The mailer is built first, so with no
+    token nothing is queued or rotated.
+  - **Bulk off.** `RRW_BULK_SEND` (default off) disables the card's two
+    bulk buttons, with a signal line, and the routes answer 409. The
+    disabled buttons stay visible, departing from the card's
+    hide-inactive rule, because the author asked for them inactive, not
+    hidden.
+  - **No send-queued-confirmations button exists yet**; 14G builds it.
+  - **Copy.** The three places saying no email is delivered now say
+    what Send does: the Invitations note, the status row's hover title
+    (retired) and the Guide.
+  - **Tests.** The suite's mailer is a `FakeMailer` (an autouse fixture
+    in `tests/conftest.py`), since the suite runs without fake auth.
 
 ## PR ladder
 

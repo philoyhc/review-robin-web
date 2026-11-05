@@ -23,6 +23,9 @@ os.environ.setdefault("REHYDRATE_ENABLED", "true")
 # machinery stays covered; ``tests/integration/test_scheduled_send_off.py``
 # turns it off and pins the shipped default.
 os.environ.setdefault("RRW_SCHEDULED_SEND", "true")
+# Bulk email (14F rung 3a) is off by default; the suite turns it on so
+# Send all and Remind incomplete stay covered.
+os.environ.setdefault("RRW_BULK_SEND", "true")
 
 # The in-app clock (segment 14E) stays off in tests: a TestClient that
 # runs RRW's lifespan must not start a loop against the test database.
@@ -215,3 +218,17 @@ def pytest_configure(config: pytest.Config) -> None:
         "markers",
         "mirror_drift_expected: the test leaves a symmetric-review mirror out of step on purpose",
     )
+
+
+@pytest.fixture(autouse=True)
+def fake_mailer(monkeypatch: pytest.MonkeyPatch):
+    """Every test's Graph mailer is a `FakeMailer` (14F rung 3a): the suite
+    runs without fake auth and so without a Microsoft token, and per-row
+    Send and Remind now send through the host's mailer. A test that wants
+    the no-token path, or a refusal, patches `cordware.graph.mailer_for`
+    itself. `cordware/tests` tests `mailer_for` and is outside this tree."""
+    from cordware import graph
+
+    mailer = graph.FakeMailer()
+    monkeypatch.setattr(graph, "mailer_for", lambda request, settings=None: mailer)
+    return mailer

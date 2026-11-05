@@ -317,8 +317,11 @@
     {% endif %}
 
     {% if send_invites_visible %}
+      {# 14F rung 3a: a bulk send, off behind RRW_BULK_SEND until 14G
+         paces it; disabled, with the reason in the signal column. #}
       <button class="btn" type="submit"
-              form="next-action-send-invites-form">Send<br>invites</button>
+              form="next-action-send-invites-form"
+              {% if not bulk_send_enabled %}disabled title="{{ bulk_off_line }}"{% endif %}>Send<br>invites</button>
     {% endif %}
 
     {% if activate_visible %}
@@ -332,7 +335,8 @@
 
     {% if send_reminders_visible %}
       <button class="btn" type="submit"
-              form="next-action-send-reminders-form">Send<br>reminders</button>
+              form="next-action-send-reminders-form"
+              {% if not bulk_send_enabled %}disabled title="{{ bulk_off_line }}"{% endif %}>Send<br>reminders</button>
     {% endif %}
 
     {% if close_visible %}
@@ -421,7 +425,8 @@
          on a session whose operator set invite or reminder offsets.
          Rung 5 replaces the example with what is due. #}
       {% set _due_actions_placeholder = session.invite_offsets or session.reminder_offsets %}
-      {% set _has_signals = scheduled_activation_caption or auto_send_invites_caption or auto_send_reminders_caption or super_failure or _due_actions_placeholder %}
+      {% set _bulk_off_shown = not bulk_send_enabled and (send_invites_visible or send_reminders_visible) %}
+      {% set _has_signals = scheduled_activation_caption or auto_send_invites_caption or auto_send_reminders_caption or super_failure or _due_actions_placeholder or _bulk_off_shown %}
       {% if _has_signals %}
         <div class="next-action-signals">
           {% if super_failure %}
@@ -491,6 +496,15 @@
                id="next-action-auto-send-reminders-caption">
               <span class="next-action-signal-icon" aria-hidden="true">{{ _icon }}</span>
               <span>{{ auto_send_reminders_caption.text }}</span>
+            </p>
+          {% endif %}
+          {% if _bulk_off_shown %}
+            <p class="next-action-signal next-action-signal--amber-grey"
+               id="next-action-bulk-off" data-bulk-off>
+              <span class="next-action-signal-icon" aria-hidden="true">ⓘ</span>
+              <span>Bulk email isn't available yet: share the session link from
+                <a href="{{ url('/operator/sessions/' ~ session.public_id ~ '/invitations') }}">Invitations</a>
+                instead.</span>
             </p>
           {% endif %}
           {% if _due_actions_placeholder %}

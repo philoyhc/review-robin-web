@@ -177,6 +177,7 @@ from ._previews import (
     extract_email_from_picker_value,
     merge_tags_for_template,
     resolve_email_preview_tab,
+    row_send_notice,
     send_test_notice,
 )
 
@@ -473,6 +474,7 @@ __all__ = [
     "invitations_search_options",
     "observers_search_options",
     "merge_tags_for_template",
+    "row_send_notice",
     "send_test_notice",
     "ComposerFields",
     "build_composer_fields",
