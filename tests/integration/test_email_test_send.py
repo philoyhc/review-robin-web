@@ -160,3 +160,22 @@ def test_an_unknown_template_is_refused(
     )
     assert response.status_code == 404
     assert mailer.sent == []
+
+
+def test_the_confirmation_toggle_survives_a_test_send(
+    client: TestClient, db: Session, mailer: FakeMailer
+) -> None:
+    """The Responses received tab's send-on-submit box (default on), turned
+    off and unsaved, stays off after a test, with Save live."""
+    rs = _session(client, db, "TEST11")
+    response = client.post(
+        f"/operator/sessions/{rs.public_id}/setup-invite/send-test",
+        data={"template": "responses_received", "subject": "", "body": ""},
+    )
+    page = response.text
+    box = page.split('name="enabled"', 1)[1].split(">", 1)[0]
+    assert "checked" not in box
+    save = page.split('id="setupinvite-save-button"', 1)[1].split(">", 1)[0]
+    assert "disabled" not in save
+    db.refresh(rs)
+    assert email_test_send.email_templates.responses_received_enabled(rs) is True  # unsaved

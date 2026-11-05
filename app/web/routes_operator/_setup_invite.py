@@ -84,9 +84,14 @@ def _composer_page(
     template: str,
     *,
     edited: dict[str, str] | None = None,
+    edited_enabled: bool | None = None,
     send_test_notice: dict[str, str] | None = None,
 ) -> HTMLResponse:
+    """The composer page. ``edited`` / ``edited_enabled`` carry what the
+    operator had on the form (after Send a test to me), unsaved."""
     rows = _build_field_rows(review_session, template, edited)
+    saved_enabled = email_templates.responses_received_enabled(review_session)
+    shown_enabled = saved_enabled if edited_enabled is None else edited_enabled
     return _templates.TemplateResponse(
         request,
         "operator/session_setupinvite.html",
@@ -97,11 +102,11 @@ def _composer_page(
             "active_template": template,
             "valid_templates": _VALID_TEMPLATES,
             "rows": rows,
-            "unsaved_edits": any(row["unsaved"] for row in rows),
-            "merge_tags": views.merge_tags_for_template(template),
-            "responses_received_enabled": (
-                email_templates.responses_received_enabled(review_session)
+            "unsaved_edits": (
+                any(row["unsaved"] for row in rows) or shown_enabled != saved_enabled
             ),
+            "merge_tags": views.merge_tags_for_template(template),
+            "responses_received_enabled": shown_enabled,
             "locked": lifecycle.is_archived(review_session),
             "send_test_notice": send_test_notice,
             "breadcrumbs": breadcrumbs.operator_session_child(review_session, "Email Template"),
@@ -222,6 +227,8 @@ async def setupinvite_send_test(
         user,
         template,
         edited=edited,
+        # The confirmation tab's send-on-submit box, as the form had it.
+        edited_enabled=("enabled" in form) if template == "responses_received" else None,
         send_test_notice=views.send_test_notice(result, user.email),
     )
 
