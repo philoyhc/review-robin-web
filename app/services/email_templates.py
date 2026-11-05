@@ -209,7 +209,7 @@ def _merge_context(
 
 def render_invitation(
     review_session: ReviewSession,
-    reviewer: Reviewer,
+    reviewer: Reviewer | None,
     invite_url: str,
 ) -> tuple[str, str]:
     """Returns ``(subject, body)`` for the invitation email."""
@@ -232,7 +232,7 @@ def render_invitation(
 
 def render_reminder(
     review_session: ReviewSession,
-    reviewer: Reviewer,
+    reviewer: Reviewer | None,
     invite_url: str,
 ) -> tuple[str, str]:
     """Returns ``(subject, body)`` for the reminder email."""
@@ -243,6 +243,17 @@ def render_reminder(
     )
     body = _body(review_session, "reminder_body", DEFAULT_REMINDER_BODY, merge)
     return subject, body
+
+
+def render_for_everyone(
+    review_session: ReviewSession, kind: str, session_link: str
+) -> tuple[str, str]:
+    """``(subject, body)`` of the invitation or reminder (``kind``) written
+    for everyone: the session's stable link as ``$invite_url`` and no
+    reviewer, so a default body drops its greeting line (14F rung 3c, the
+    Share the session link card)."""
+    render = render_invitation if kind == "invitation" else render_reminder
+    return render(review_session, None, session_link)
 
 
 def _latest_submitted_at(review_session: ReviewSession, reviewer: Reviewer) -> datetime | None:

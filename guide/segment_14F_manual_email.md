@@ -161,6 +161,14 @@ Taken 2026-11-02 at `fffd4c28`; re-taken 2026-11-05 at `095336bf`
   Workflow card's bulk-off line links to `#share-session-link`. Two
   lines that 3a made stale also changed: the composer's "sending is not
   switched on yet" and the Email settings card's.
+- 2026-11-05, rung 3c: the card's link is
+  `request.url_for("review_surface_default_position")`, absolute through
+  the host's public origin as invitation links are.
+  `email_templates.render_for_everyone` renders each template with that
+  link as `$invite_url` and no reviewer, so a default body drops its
+  greeting line; an override renders as written, and the operator edits
+  a stray `$reviewer_name` in the box. Copy uses the Clipboard API, else
+  `execCommand`, and a status line says which happened.
 - 2026-11-05, rung 3a:
   - **Per-row sends.** Send and Send reminder dispatch the row they queue
     through `graph.mailer_for`, with `send_options_for`, and redirect to
