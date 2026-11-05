@@ -40,6 +40,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import AuditEvent, ReviewSession
+from app.json_shapes import json_list, json_object
 from app.schemas.validation import ValidationIssue
 from app.services import (
     assignments,
@@ -54,8 +55,6 @@ from app.services import session_lifecycle as lifecycle
 from app.services import (
     sessions as sessions_service,
 )
-
-from ._json import json_list, json_object
 
 
 def build_workflow_card_context(

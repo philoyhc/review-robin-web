@@ -140,16 +140,24 @@ def install(templates: Jinja2Templates) -> Jinja2Templates:
     return templates
 
 
-class _HasGlobals(Protocol):
+class _JinjaNamespaces(Protocol):
     globals: dict[str, object]
+    filters: dict[str, object]
 
 
-def _globals_of(env: _HasGlobals) -> dict[str, object]:
-    return env.globals
+def _namespaces_of(env: _JinjaNamespaces) -> _JinjaNamespaces:
+    return env
 
 
 def add_globals(templates: Jinja2Templates, **values: object) -> None:
     """Set globals on a ``Jinja2Templates`` environment. Jinja infers
-    `Environment.globals` from a literal, partly untyped: it is reached
-    through this, typed once (after `utilityapps/web.py`)."""
-    _globals_of(templates.env).update(values)
+    `Environment.globals` / `.filters` from literals, partly untyped:
+    they are reached through this and `add_filters`, typed once (after
+    `utilityapps/web.py`)."""
+    _namespaces_of(templates.env).globals.update(values)
+
+
+def add_filters(templates: Jinja2Templates, **values: object) -> None:
+    """Set filters on a ``Jinja2Templates`` environment, as
+    `add_globals` sets globals."""
+    _namespaces_of(templates.env).filters.update(values)

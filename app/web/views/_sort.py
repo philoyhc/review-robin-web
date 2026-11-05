@@ -35,6 +35,8 @@ from collections.abc import Callable, Iterable, Sequence
 from collections.abc import Set as AbstractSet
 from typing import TYPE_CHECKING, Any, cast
 
+from app.json_shapes import json_list, json_object
+
 if TYPE_CHECKING:
     from app.db.models import InstrumentDisplayField
 
@@ -85,13 +87,14 @@ def decode_cookie_sort_spec(
         decoded = json.loads(unquote(raw))
     except (TypeError, ValueError):
         return []
-    if not isinstance(decoded, list):
+    items = json_list(decoded)
+    if items is None:
         return []
     out: list[tuple[str, str]] = []
-    for item in cast("list[object]", decoded)[:3]:
-        if not isinstance(item, dict):
+    for item in items[:3]:
+        entry = json_object(item)
+        if entry is None:
             continue
-        entry = cast("dict[str, object]", item)
         key = entry.get("key")
         direction = entry.get("dir")
         if not isinstance(key, str) or direction not in ("asc", "desc"):
@@ -232,7 +235,8 @@ def decode_cookie_sort_spec_for_reviewer_surface(
         decoded = json.loads(unquote(raw))
     except (TypeError, ValueError):
         return None
-    if not isinstance(decoded, list):
+    items = json_list(decoded)
+    if items is None:
         return None
     name_id_by_source = {
         df.source_field: df.id
@@ -250,7 +254,7 @@ def decode_cookie_sort_spec_for_reviewer_surface(
     # uses, so the server and the browser keep the same entries.
     entries = [
         entry
-        for entry in _object_entries(cast("list[object]", decoded))
+        for entry in _object_entries(items)
         if isinstance(entry.get("key"), str)
         and entry.get("dir") in ("asc", "desc")
     ][:3]
@@ -278,9 +282,7 @@ def decode_cookie_sort_spec_for_reviewer_surface(
 def _object_entries(items: list[object]) -> list[dict[str, object]]:
     """The JSON objects in a decoded cookie list, in order."""
     return [
-        cast("dict[str, object]", item)
-        for item in items
-        if isinstance(item, dict)
+        entry for item in items if (entry := json_object(item)) is not None
     ]
 
 

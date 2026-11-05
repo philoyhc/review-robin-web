@@ -46,10 +46,11 @@ from pydantic import TypeAdapter, ValidationError
 from sqlalchemy.orm import Session, object_session
 
 from app.db.models import Instrument, SessionRuleSet, User
+from app.json_shapes import json_list, json_object
 from app.schemas.rules import rules_payload_error
 from app.services import audit
 from app.services import session_lifecycle as lifecycle
-from app.services.instruments._state import _instrument_label, _json_dict, _json_list
+from app.services.instruments._state import _instrument_label
 
 # UI operator label → engine predicate operator.
 _UI_TO_ENGINE_OP: dict[str, str] = {
@@ -702,14 +703,14 @@ def _link_predicates(rules_json: list[Any], link_id: str) -> list[dict[str, Any]
     engine's own check (``rules_payload_error``) and be named there."""
     predicates: list[dict[str, Any]] = []
     for raw_entry in rules_json:
-        entry = _json_dict(raw_entry)
+        entry = json_object(raw_entry)
         if entry is None:
             continue
         if entry.get("id") != link_id or entry.get("kind") != "COMPOSITE":
             continue
-        for raw_child in _json_list(entry.get("rules")) or []:
-            child = _json_dict(raw_child)
-            predicate = _json_dict(child.get("predicate")) if child is not None else None
+        for raw_child in json_list(entry.get("rules")) or []:
+            child = json_object(raw_child)
+            predicate = json_object(child.get("predicate")) if child is not None else None
             if predicate is not None:
                 predicates.append(predicate)
     return predicates

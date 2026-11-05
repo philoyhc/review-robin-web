@@ -8,6 +8,7 @@ from sqlalchemy import Table, delete
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession
+from app.json_shapes import json_list
 
 from ._apply_shared import (
     _RX_DATA_SHAPE,
@@ -64,12 +65,13 @@ def _apply_data_shape_kv(
         spec.response_field_key = value or None
     elif key == "column_chip_slots":
         slots = _parse_json(value, default=[])
-        if not isinstance(slots, list):
+        slot_list = json_list(slots)
+        if slot_list is None:
             raise _ParseError(
                 f"data_shapes[{idx}].column_chip_slots must be a "
                 f"JSON list, got {type(slots).__name__}"
             )
-        spec.column_chip_slots = [str(s) for s in cast("list[object]", slots)]
+        spec.column_chip_slots = [str(s) for s in slot_list]
     elif key == "self_review_handling":
         spec.self_review_handling = value or "include_self"
     elif key == "include_empty_rows":

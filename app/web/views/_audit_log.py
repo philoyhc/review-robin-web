@@ -41,9 +41,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime
-from typing import cast
 from urllib.parse import urlencode
 
+from app.json_shapes import json_list, json_object
 from app.services.audit import AuditFilters, AuditLogRow
 from app.services.date_formatting import (
     DEFAULT_TIMEZONE,
@@ -51,8 +51,6 @@ from app.services.date_formatting import (
     gmt_offset_label,
     gmt_offset_zone_label,
 )
-
-from ._json import json_object
 
 __all__ = [
     "AuditDetailChangeRow",
@@ -509,9 +507,9 @@ def format_audit_detail(
 
 def _render_changes(changes: dict[str, object]) -> AuditDetailSection:
     rows = tuple(
-        _change_row(field, cast("list[object]", pair))
+        _change_row(field, pair_list)
         for field, pair in sorted(changes.items())
-        if isinstance(pair, list)
+        if (pair_list := json_list(pair)) is not None
     )
     return AuditDetailSection(
         kind="changes",
@@ -542,13 +540,14 @@ def _render_set_changes(data: dict[str, object]) -> AuditDetailSection:
     import json
 
     def _fmt_items(items: object) -> list[str]:
-        if not isinstance(items, list):
+        listed = json_list(items)
+        if listed is None:
             return []
         return [
             json.dumps(item, separators=(",", ":"), sort_keys=True)
             if not isinstance(item, str)
             else item
-            for item in cast("list[object]", items)
+            for item in listed
         ]
 
     return AuditDetailSection(

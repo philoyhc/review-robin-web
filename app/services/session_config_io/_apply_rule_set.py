@@ -6,12 +6,11 @@ export or a hand-edited one.
 """
 from __future__ import annotations
 
-from typing import cast
-
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, SessionRuleSet
+from app.json_shapes import json_list
 from app.schemas.rules import rules_payload_error
 from app.services.instruments._band1 import unoffered_pair_rule
 
@@ -65,10 +64,9 @@ def _apply_rule_set_kv(
         # refused as its Save refuses it, before the engine's own check
         # names a retired field less helpfully
         # (``guide/archive/pair_context_tags_further_clarify.md`` Item 1).
+        rule_list = json_list(rules)
         unoffered = (
-            unoffered_pair_rule(cast("list[object]", rules))
-            if isinstance(rules, list)
-            else None
+            unoffered_pair_rule(rule_list) if rule_list is not None else None
         )
         if unoffered is not None:
             raise _ParseError(f"rules_json is not a valid rule list: {unoffered}")

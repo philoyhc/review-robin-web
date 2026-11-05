@@ -26,8 +26,8 @@ from __future__ import annotations
 import re
 from typing import Any, cast
 
+from app.json_shapes import json_list, json_object
 from app.services.instruments._display_fields import GROUP_IDENTITY_SORT_KEY
-from app.services.instruments._state import _json_dict, _json_list
 
 __all__ = [
     "repoint_sort",
@@ -50,12 +50,12 @@ def repoint_sort(
     is the stored JSON, which an older row may hold in another shape:
     anything but a list is no sort, and an item that is not a dict is
     dropped."""
-    items = _json_list(entries)
-    if not items:
-        return items
+    items = json_list(entries)
+    if items is None:
+        return None
     out: list[dict[str, Any]] = []
     for item in items:
-        entry = _json_dict(item)
+        entry = json_object(item)
         if entry is None:
             continue
         old_id = entry.get("display_field_id")
@@ -98,8 +98,8 @@ def sort_to_positions(
     ``display_field``, the field's 1-based position. ``entries`` is the
     stored JSON, read as ``repoint_sort`` reads it."""
     out: list[dict[str, Any]] = []
-    for item in _json_list(entries) or []:
-        entry = _json_dict(item)
+    for item in json_list(entries) or []:
+        entry = json_object(item)
         if entry is None:
             continue
         field_id = entry.get("display_field_id")
@@ -125,8 +125,8 @@ def sort_from_positions(
     so is anything a hand-edited file holds that is not a list."""
     out: list[dict[str, Any]] = []
     seen: set[int] = set()
-    for item in _json_list(entries) or []:
-        entry = _json_dict(item)
+    for item in json_list(entries) or []:
+        entry = json_object(item)
         if entry is None:
             continue
         rest = {

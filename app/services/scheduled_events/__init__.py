@@ -51,6 +51,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db.models import AuditEvent, ReviewSession
+from app.json_shapes import json_object
 from app.services import audit
 from app.services import (
     session_lifecycle as lifecycle,  # noqa: F401 — re-export for legacy ``monkeypatch.setattr("app.services.scheduled_events.lifecycle.activate_session", …)`` paths
@@ -111,7 +112,6 @@ from ._shared import _OFFSET_MAX_MAGNITUDE as _OFFSET_MAX_MAGNITUDE
 from ._shared import (
     ScheduledActivateError,
     _ensure_aware_utc,
-    _json_object,
     lock_session,
 )
 
@@ -445,8 +445,8 @@ def _record_failure(
             .order_by(AuditEvent.id.desc())
         ).scalars()
         for row in rows:
-            detail = _json_object(row.detail) or {}
-            context = _json_object(detail.get("context") or {})
+            detail = json_object(row.detail) or {}
+            context = json_object(detail.get("context") or {})
             if context is not None and context.get("trigger") == trigger:
                 if detail.get("reason") == error_text:
                     db.rollback()  # release the row lock

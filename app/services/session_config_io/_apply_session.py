@@ -7,11 +7,10 @@ apply phase.
 """
 from __future__ import annotations
 
-from typing import cast
-
 from sqlalchemy.orm import object_session
 
 from app.db.models import ReviewSession
+from app.json_shapes import json_list
 from app.services import sessions
 from app.services.participant_info import (
     SelfFieldsError,
@@ -119,7 +118,7 @@ def _apply_session_kv(
             plan.session_overrides[key] = None
             return
         parsed = _parse_json(value, default=None)
-        keys = cast("list[object]", parsed) if isinstance(parsed, list) else None
+        keys = json_list(parsed)
         if keys is None or not all(isinstance(item, str) for item in keys):
             raise _ParseError(
                 f"expected a JSON list of field keys, got {value!r}"

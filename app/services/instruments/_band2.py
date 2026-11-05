@@ -39,6 +39,7 @@ from app.db.models import (
     InstrumentResponseField,
     User,
 )
+from app.json_shapes import json_list, json_object
 from app.services import audit
 from app.services import session_lifecycle as lifecycle
 from app.services.instruments._instrument_crud import (
@@ -48,8 +49,6 @@ from app.services.instruments._instrument_crud import (
 )
 from app.services.instruments._state import (
     _instrument_label,
-    _json_dict,
-    _json_list,
     _response_count_for_field,
 )
 from app.services.text import parse_id
@@ -171,7 +170,7 @@ def set_band2_state(
     # ``sample_reviewee_name``, and lets ↻ Refresh send only
     # ``sample_reviewee_name`` without nuking the pill / RF state.
     if isinstance(state, dict) and "selected_display_keys" in state:
-        raw_keys = _json_list(state.get("selected_display_keys"))
+        raw_keys = json_list(state.get("selected_display_keys"))
         if raw_keys is not None:
             sanitised_keys: list[str] = []
             for raw in raw_keys:
@@ -191,7 +190,7 @@ def set_band2_state(
                 actor=actor,
             )
     else:
-        existing_keys = _json_list(existing.get("selected_display_keys"))
+        existing_keys = json_list(existing.get("selected_display_keys"))
         if existing_keys:
             sanitised["selected_display_keys"] = list(existing_keys)
     # Wave 3 PR iii — sanitised response_fields is no longer
@@ -204,11 +203,11 @@ def set_band2_state(
     rf_widths_by_id: dict[int, int] = {}
     rf_widths_by_name: dict[str, int] = {}
     if isinstance(state, dict) and "response_fields" in state:
-        raw_rfs = _json_list(state.get("response_fields"))
+        raw_rfs = json_list(state.get("response_fields"))
         if raw_rfs is not None:
             incoming_rfs = []
             for raw_rf in raw_rfs:
-                raw = _json_dict(raw_rf)
+                raw = json_object(raw_rf)
                 if raw is None:
                     continue
                 name = str(raw.get("name") or "").strip()[:255]
@@ -242,8 +241,14 @@ def set_band2_state(
                 # back-fills the id and we re-key by id afterwards.
                 raw_width = raw.get("width_px")
                 if raw_width not in (None, ""):
+                    # JSON's other shapes (null, array, object) are what
+                    # ``int`` refuses with a TypeError.
                     try:
-                        width_int = int(raw_width)
+                        width_int = (
+                            int(raw_width)
+                            if isinstance(raw_width, str | int | float)
+                            else 0
+                        )
                     except (TypeError, ValueError):
                         width_int = 0
                     if width_int >= _COLUMN_WIDTH_MIN_PX:
@@ -268,10 +273,12 @@ def set_band2_state(
     # boundary switched off — render falls back to unconstrained
     # partition). Missing preserves existing.
     if isinstance(state, dict) and "sample_group_member_ids" in state:
-        raw_ids = _json_list(state.get("sample_group_member_ids"))
+        raw_ids = json_list(state.get("sample_group_member_ids"))
         if raw_ids is not None:
             cleaned_ids: list[int] = []
             for raw in raw_ids:
+                if not isinstance(raw, str | int | float):
+                    continue  # what ``int`` refuses with a TypeError
                 try:
                     rid = int(raw)
                 except (TypeError, ValueError):
@@ -281,7 +288,7 @@ def set_band2_state(
             if cleaned_ids:
                 sanitised["sample_group_member_ids"] = cleaned_ids
     else:
-        existing_ids = _json_list(existing.get("sample_group_member_ids"))
+        existing_ids = json_list(existing.get("sample_group_member_ids"))
         if existing_ids:
             sanitised["sample_group_member_ids"] = list(existing_ids)
     # Wave 3 PR iii — DB rows are now authoritative for response

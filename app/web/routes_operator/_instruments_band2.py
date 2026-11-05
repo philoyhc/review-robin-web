@@ -35,12 +35,11 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Instrument, ReviewSession, User
 from app.db.session import get_db
+from app.json_shapes import json_list, json_object
 from app.services import instruments as instruments_service
 from app.services import unit_of_work
 from app.web.deps import get_or_create_user
 from app.web.routes_operator._shared import (
-    _json_dict,
-    _json_list,
     _require_instrument_editable,
     _require_instrument_in_session,
     require_json_object,
@@ -72,7 +71,7 @@ async def instrument_column_widths(
     # the instrument services lock the session row (findings Bc4), and
     # a lock wait on the event loop would stall the worker.
     def _apply():
-        widths = _json_dict(body.get("widths") or {})
+        widths = json_object(body.get("widths") or {})
         if widths is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -220,15 +219,15 @@ async def instrument_preview_sample(
     # a lock wait on the event loop would stall the worker.
     def _apply():
         def _str_list(v: Any) -> list[str]:
-            items = _json_list(v)
+            items = json_list(v)
             return [str(x) for x in items] if items is not None else []
         def _rule_list(v: Any) -> list[dict[str, str]]:
             out: list[dict[str, str]] = []
-            items = _json_list(v)
+            items = json_list(v)
             if items is None:
                 return out
             for item in items:
-                entry = _json_dict(item)
+                entry = json_object(item)
                 if entry is None:
                     continue
                 out.append(

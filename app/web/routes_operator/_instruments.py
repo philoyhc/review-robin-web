@@ -25,6 +25,7 @@ from app.db.models import (
     User,
 )
 from app.db.session import get_db
+from app.json_shapes import json_list, json_object
 from app.services import (
     instruments as instruments_service,
 )
@@ -39,8 +40,6 @@ from app.web.deps import (
 )
 from app.web.routes_operator._shared import (
     _instruments_redirect,
-    _json_dict,
-    _json_list,
     _require_instrument_editable,
     _require_instrument_in_session,
     _templates,
@@ -585,7 +584,7 @@ async def instrument_bulk_save_fields(
                 import json as _json
 
                 try:
-                    widths_payload = _json_dict(_json.loads(snapshot))
+                    widths_payload = json_object(_json.loads(snapshot))
                 except (TypeError, ValueError):
                     widths_payload = None
                 if widths_payload is not None:
@@ -883,7 +882,7 @@ async def instrument_consolidated_save(
                 import json as _json
 
                 try:
-                    widths_payload = _json_dict(_json.loads(snapshot))
+                    widths_payload = json_object(_json.loads(snapshot))
                 except (TypeError, ValueError):
                     widths_payload = None
                 if widths_payload is not None:
@@ -1015,7 +1014,7 @@ async def instrument_consolidated_save(
                 import json as _json
 
                 try:
-                    band2_state = _json_dict(_json.loads(band2_snapshot))
+                    band2_state = json_object(_json.loads(band2_snapshot))
                 except (TypeError, ValueError):
                     band2_state = None
                 if band2_state is not None:
@@ -1074,12 +1073,19 @@ async def instrument_consolidated_save(
                 import json as _json
 
                 try:
-                    ordered_ids_raw = _json_list(_json.loads(order_snapshot))
+                    ordered_ids_raw = json_list(_json.loads(order_snapshot))
                 except (TypeError, ValueError):
                     ordered_ids_raw = None
                 if ordered_ids_raw is not None:
+                    # JSON's other shapes are what ``int`` refuses with
+                    # a TypeError.
+                    convertible = [
+                        v for v in ordered_ids_raw if isinstance(v, str | int | float)
+                    ]
                     try:
-                        ordered_ids = [int(v) for v in ordered_ids_raw]
+                        if len(convertible) != len(ordered_ids_raw):
+                            raise TypeError
+                        ordered_ids = [int(v) for v in convertible]
                     except (TypeError, ValueError):
                         return _fail("Display-field order must be a list of integers.")
                     try:
@@ -1254,14 +1260,18 @@ async def instrument_display_fields_order(
     # the instrument services lock the session row (findings Bc4), and
     # a lock wait on the event loop would stall the worker.
     def _apply():
-        raw_ids = _json_list(body.get("ordered_ids"))
+        raw_ids = json_list(body.get("ordered_ids"))
         if raw_ids is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="display-fields/order.ordered_ids must be a list of integers",
             )
+        # JSON's other shapes are what ``int`` refuses with a TypeError.
+        convertible = [v for v in raw_ids if isinstance(v, str | int | float)]
         try:
-            ordered_ids = [int(v) for v in raw_ids]
+            if len(convertible) != len(raw_ids):
+                raise TypeError
+            ordered_ids = [int(v) for v in convertible]
         except (TypeError, ValueError) as exc:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

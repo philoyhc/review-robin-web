@@ -11,11 +11,11 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
-from typing import cast
 
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, User
+from app.json_shapes import json_list
 from app.services import audit, symmetric_review, unit_of_work
 from app.services import session_lifecycle as lifecycle
 
@@ -124,11 +124,6 @@ def normalize_self_fields(participant: str, keys: Iterable[object]) -> list[str]
     return [key for key in spec.keys if key in chosen]
 
 
-def _stored_list(stored: object) -> list[object] | None:
-    """A stored selection (JSON) as a list, or ``None`` when it is not one."""
-    return cast("list[object]", stored) if isinstance(stored, list) else None
-
-
 def effective_self_fields(
     review_session: ReviewSession, participant: str
 ) -> tuple[str, ...]:
@@ -139,7 +134,7 @@ def effective_self_fields(
     participant's page.
     """
     spec = _PARTICIPANTS[participant]
-    stored = _stored_list(getattr(review_session, spec.column))
+    stored = json_list(getattr(review_session, spec.column))
     if stored is None:
         return spec.default
     try:
@@ -175,7 +170,7 @@ def set_self_fields(
         return
     # The audit records what was stored (``None`` while unset), not the
     # effective default, so a first save reads as NULL → list.
-    listed = _stored_list(stored)
+    listed = json_list(stored)
     old = list(listed) if listed is not None else stored
     setattr(review_session, spec.column, new)
     db.flush()

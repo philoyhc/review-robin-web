@@ -29,11 +29,11 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Instrument, ReviewSession, User
 from app.db.session import get_db
+from app.json_shapes import json_list
 from app.services import instruments as instruments_service
 from app.web.deps import get_or_create_user, require_session_operator
 from app.web.routes_operator._shared import (
     _instruments_redirect,
-    _json_list,
     _require_instrument_editable,
     _require_instrument_in_session,
     require_json_object,
@@ -129,7 +129,7 @@ async def instruments_order(
     # the instrument services lock the session row (findings Bc4), and
     # a lock wait on the event loop would stall the worker.
     def _apply():
-        raw_items = _json_list(body.get("items"))
+        raw_items = json_list(body.get("items"))
         if raw_items is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
