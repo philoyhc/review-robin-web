@@ -18,22 +18,23 @@ module claims it, sends it and stamps the outcome:
 A request that dies between 1 and 3 leaves the row ``sending``; the
 outbox shows it so, and only a person retries it.
 
-Per-operator options (14C Item 2's toggles) come in as ``SendOptions``;
-the dispatcher does not read settings itself.
+Per-operator options (14C Item 2's toggles) come in as ``SendOptions``,
+which ``send_options_for`` builds from the operator's stored choices.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from email.utils import parseaddr
 from typing import Literal
 
 from sqlalchemy import update
 from sqlalchemy.orm import Session
 
-from app.db.models import EmailOutbox
+from app.db.models import EmailOutbox, ReviewSession, User
 from app.db.session import rowcount
-from app.services import audit
+from app.services import audit, operator_settings
 from app.services.email_send import EmailMessage, EmailTransport
 
 Outcome = Literal["sent", "failed", "not_claimed"]
@@ -46,6 +47,28 @@ class SendOptions:
     save_to_sent_items: bool = False
     bcc_self: str | None = None
     reply_to: str | None = None
+
+
+def _address(text: str | None) -> str | None:
+    """``text`` as one email address, or ``None``: a help contact is free
+    text ("Dr Tan, room 3"), and only an address can be a Reply-to."""
+    name, address = parseaddr((text or "").strip())
+    del name
+    if "@" not in address or " " in address or address.count("@") != 1:
+        return None
+    return address
+
+
+def send_options_for(user: User, review_session: ReviewSession) -> SendOptions:
+    """What ``user``'s Email settings choices mean for a send in
+    ``review_session`` (14C Item 2). The Reply-to choice applies only
+    when the session's Help contact is an email address."""
+    preferences = operator_settings.get_email_preferences(user)
+    return SendOptions(
+        save_to_sent_items=preferences.save_to_sent_items,
+        bcc_self=user.email if preferences.bcc_self else None,
+        reply_to=_address(review_session.help_contact) if preferences.reply_to_help else None,
+    )
 
 
 @dataclass(frozen=True)

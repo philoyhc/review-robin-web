@@ -179,3 +179,22 @@ def test_the_confirmation_toggle_survives_a_test_send(
     assert "disabled" not in save
     db.refresh(rs)
     assert email_test_send.email_templates.responses_received_enabled(rs) is True  # unsaved
+
+
+def test_the_operators_sent_items_and_reply_to_choices_apply(
+    client: TestClient, db: Session, mailer: FakeMailer
+) -> None:
+    rs = _session(client, db, "TEST10")
+    rs.help_contact = "help@example.edu"
+    operator = rs.created_by_user
+    operator.preferences = {
+        "email_save_to_sent_items": True,
+        "email_bcc_self": True,
+        "email_reply_to_help": True,
+    }
+    db.commit()
+    _send(client, rs, subject="s", body="b")
+    [sent] = mailer.sent
+    assert sent.save_to_sent_items is True
+    assert sent.reply_to == "help@example.edu"
+    assert sent.bcc == ()  # a test already goes to the operator

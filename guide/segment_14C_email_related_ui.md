@@ -160,7 +160,17 @@ operator's own mailbox, not a session.
   written. It shows three inert Toggles at their proposed defaults:
   Keep a copy in my Sent Items, Send a copy to myself, and Replies go
   to the session's Help contact. The author kept all three and ruled
-  each off by default (2026-11-05). Main-base SHA before this item's rung 1: `908959ba`.
+  each off by default (2026-11-05).
+- 2026-11-05, rung 2 (the last build rung). The three choices are boolean
+  keys in `users.preferences` (`email_save_to_sent_items`,
+  `email_bcc_self`, `email_reply_to_help`), so there is no migration, as
+  with `display_timezone`. Each Toggle is a one-button form posting its
+  next state to `/operator/settings/email-preference`, with no script,
+  and `operator.email_preference_set` records it.
+  `email_dispatch.send_options_for` turns the choices into a send's
+  options. **Reply-to applies only when the Help contact is an email
+  address**, since that field is free text. 14F's test send applies Sent
+  Items and Reply-to, but not Bcc. Main-base SHA before this item's rung 1: `908959ba`.
 
 ### PR ladder
 

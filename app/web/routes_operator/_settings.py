@@ -1,6 +1,7 @@
-"""Operator-level Settings page: the default display timezone.
-Slice 2 of the major refactor. The per-operator SMTP cards and their two
-routes retired in 14C Item 1 (2026-11-01); their storage and service stay.
+"""Operator-level Settings page: the default display timezone and the
+Email settings card (14C Item 2). Slice 2 of the major refactor. The
+per-operator SMTP cards and their two routes retired in 14C Item 1
+(2026-11-01); their storage and service stay.
 
 Source range in pre-refactor ``routes_operator.py``: 126-238.
 """
@@ -65,6 +66,7 @@ def operator_settings_form(
             "current_timezone": current_timezone,
             "timezone_sample": date_formatting.format_datetime(datetime.now(UTC), current_timezone),
             "timezone_options": operator_settings.timezone_options(),
+            "email_preferences": operator_settings.get_email_preferences(user),
             "return_to_raw": return_to,
             "return_to_url": target.url,
             "return_to_label": target.label,
@@ -99,6 +101,36 @@ def operator_settings_save_timezone(
     return urls.redirect(
         request,
         url=_settings_redirect_url(return_to),
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/settings/email-preference")
+def operator_settings_save_email_preference(
+    request: Request,
+    key: str = Form(...),
+    on: str = Form(...),
+    return_to: str | None = Form(default=None),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Turn one of the Email settings card's three choices on or off
+    (14C Item 2 rung 2)."""
+    if key not in operator_settings.EMAIL_PREFERENCE_KEYS or on not in ("true", "false"):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="unknown email setting",
+        )
+    operator_settings.set_email_preference(
+        db,
+        user=user,
+        key=key,
+        on=on == "true",
+        correlation_id=request_correlation_id(),
+    )
+    return urls.redirect(
+        request,
+        url=_settings_redirect_url(return_to) + "#email-settings",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 

@@ -151,3 +151,38 @@ def test_options_default_to_off(db: Session) -> None:
     )
     [sent] = mailer.sent
     assert (sent.reply_to, sent.save_to_sent_items) == (None, False)
+
+
+def test_send_options_follow_the_operators_choices() -> None:
+    from app.db.models import User
+
+    operator = User(email="op@example.edu", display_name="Op")
+    review_session = ReviewSession(name="S", code="X", help_contact="help@example.edu")
+    assert email_dispatch.send_options_for(operator, review_session) == SendOptions()
+    operator.preferences = {
+        "email_save_to_sent_items": True,
+        "email_bcc_self": True,
+        "email_reply_to_help": True,
+    }
+    assert email_dispatch.send_options_for(operator, review_session) == SendOptions(
+        save_to_sent_items=True, bcc_self="op@example.edu", reply_to="help@example.edu"
+    )
+
+
+@pytest.mark.parametrize(
+    ("help_contact", "reply_to"),
+    [
+        ("Dr Tan <tan@example.edu>", "tan@example.edu"),
+        ("Dr Tan, room 3", None),
+        (None, None),
+        ("a@b@c", None),
+    ],
+)
+def test_reply_to_applies_only_to_an_address(
+    help_contact: str | None, reply_to: str | None
+) -> None:
+    from app.db.models import User
+
+    operator = User(email="op@example.edu", preferences={"email_reply_to_help": True})
+    review_session = ReviewSession(name="S", code="X", help_contact=help_contact)
+    assert email_dispatch.send_options_for(operator, review_session).reply_to == reply_to

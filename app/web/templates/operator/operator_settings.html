@@ -119,35 +119,44 @@
     })();
   </script>
 
-  {# 14C Item 2 rung 1 — the Email settings card, a scaffold: copy and
-     layout only, every toggle inert (disabled, nothing stored, no
-     route). Each toggle is a Toggle (spec/ui_elements.md §6),
-     off by default (author, 2026-11-05), stored and wired when 14F's send path
-     reads it. It stacks under Date & time because Unit (20D) took the
-     slot beside it. #}
+  {# 14C Item 2 — the Email settings card. Each choice is a Toggle
+     (spec/ui_elements.md §6) in a one-button form posting its next
+     state, so it needs no script; off by default (author, 2026-11-05),
+     stored in ``users.preferences`` and read by
+     ``email_dispatch.send_options_for``. It stacks under Date & time
+     because Unit (20D) took the slot beside it. #}
   <div class="card" id="email-settings">
     <h2>Email settings</h2>
     <p class="muted">
-      Mail you send from Review Robin goes from your own mailbox. Sending
-      isn't switched on yet; these choices take effect when it is.
+      Mail you send from Review Robin goes from your own mailbox. These
+      choices apply to every message it sends as you.
     </p>
     {% set email_toggles = [
-      ("sent-items", "Keep a copy in my Sent Items", false,
+      ("sent-items", "email_save_to_sent_items", "Keep a copy in my Sent Items",
+       email_preferences.save_to_sent_items,
        "Each invitation and reminder you send is also saved in your mailbox's Sent Items."),
-      ("bcc-self", "Send a copy to myself", false,
+      ("bcc-self", "email_bcc_self", "Send a copy to myself", email_preferences.bcc_self,
        "Each message you send is also blind-copied to you."),
-      ("reply-to-help", "Replies go to the session's Help contact", false,
-       "Replies to your invitations and reminders go to the Help contact set on the session, not to you."),
+      ("reply-to-help", "email_reply_to_help", "Replies go to the session's Help contact",
+       email_preferences.reply_to_help,
+       "Replies to your invitations and reminders go to the session's Help contact, not to you, when it is an email address."),
     ] %}
-    {% for key, label, on, hint in email_toggles %}
+    {% for key, pref_key, label, on, hint in email_toggles %}
       <div class="email-setting-row" data-email-setting="{{ key }}">
         <div>
           <div>{{ label }}</div>
           <p class="muted email-setting-hint">{{ hint }}</p>
         </div>
-        <button type="button" class="btn{% if not on %} secondary{% endif %}"
-                aria-pressed="{{ 'true' if on else 'false' }}" disabled
-                title="Not available until sending is switched on">{{ 'On' if on else 'Off' }}</button>
+        <form method="post" action="{{ url('/operator/settings/email-preference') }}">
+          <input type="hidden" name="key" value="{{ pref_key }}">
+          <input type="hidden" name="on" value="{{ 'false' if on else 'true' }}">
+          {% if return_to_raw %}
+            <input type="hidden" name="return_to" value="{{ return_to_raw }}">
+          {% endif %}
+          <button type="submit" class="btn{% if not on %} secondary{% endif %}"
+                  aria-pressed="{{ 'true' if on else 'false' }}"
+                  title="Click to turn {{ 'off' if on else 'on' }}">{{ 'On' if on else 'Off' }}</button>
+        </form>
       </div>
     {% endfor %}
   </div>
