@@ -149,10 +149,12 @@ def set_band2_state(
       ``branch_mode`` (``show`` / ``require``). An entry that omits a
       branch key keeps what is stored.
 
-    Passing ``None`` (or a payload that reduces to empty
-    selections + zero response_fields) clears ``band2_state``
-    back to NULL — the new-model card falls back to its default
-    "nothing selected, no response fields" shape.
+    Passing ``None`` changes nothing: every key counts as absent, so
+    the stored selections, sample and response fields carry forward
+    (segment 22F, ruling 4). A payload that reduces to empty
+    selections + zero response_fields clears ``band2_state`` back to
+    NULL — the new-model card falls back to its default "nothing
+    selected, no response fields" shape.
 
     No-op saves (the merged payload matches what's already
     persisted) skip the audit + lifecycle side effects.
