@@ -147,10 +147,17 @@ headers instead — see [`docs/security_posture.md`](docs/security_posture.md).
 pytest                  # full suite (SQLite)
 pytest -n auto          # same, parallelised across CPU cores
 ruff check .            # lint (config in pyproject.toml)
+ruff format --check .   # formatting; `ruff format .` fixes it
 pyright                 # type check, application code and tests (config in pyproject.toml)
 alembic upgrade head    # local SQLite migration
 alembic downgrade -1    # round-trip check
 ```
+
+`ruff` is pinned exactly, like `pyright`, so the format check gives the
+same answer everywhere. The format-only commit is listed in
+`.git-blame-ignore-revs`; run
+`git config blame.ignoreRevsFile .git-blame-ignore-revs` once so
+`git blame` skips it.
 
 `pytest-xdist` provides `-n auto`; the SQLite `:memory:`
 engine is per-process and tests roll back per-test, so the

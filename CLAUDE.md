@@ -87,6 +87,7 @@ pytest tests/integration/test_X.py       # one file
 pytest tests/integration/test_X.py::test_name   # one test
 pytest -k "expression"                   # match by name
 ruff check .                             # lint (configured in pyproject.toml)
+ruff format --check .                    # formatting (ruff format . fixes it)
 pyright                                  # type check: strict on app code, tests relaxed (venv active)
 
 alembic upgrade head                     # apply migrations to local SQLite (./review_robin_web.db)
@@ -205,7 +206,8 @@ reject it.
   `http://127.0.0.1:8000/reviewrobin/`. The agent's sandbox remains the pre-PR
   gate for `pytest`, `ruff` and `pyright`.
 - The agent's session container is the pre-PR gate: `pytest -n auto`,
-  `ruff check .` and `pyright` must all pass there before pushing (pyright
+  `ruff check .`, `ruff format --check .` and `pyright` must all pass
+  there before pushing (pyright
   with `.venv` active: it resolves imports from the `python` on PATH, and
   with no venv reports every import missing), with `node`
   present so `tests/integration/test_inline_scripts_parse.py` runs
