@@ -351,3 +351,18 @@ def test_settings_save_timezone_preserves_other_preference_keys(
         "other_key": "keep-me",
         "display_timezone": "Europe/London",
     }
+
+
+def test_get_email_settings_refuses_an_unknown_transport(
+    client: TestClient, db: Session, fernet_key: str
+) -> None:
+    """Segment 22F: every write stores ``"smtp"``; any other stored transport
+    is a code bug and is refused loudly, as ``transport_for`` refuses it at
+    send time, never read as "not configured"."""
+    client.get("/operator/sessions")
+    user = _alice_row(db)
+    _configure(db, user)
+    user.smtp_transport = "rot13"
+    db.flush()
+    with pytest.raises(ValueError, match="unknown transport 'rot13'"):
+        operator_settings.get_email_settings(user)

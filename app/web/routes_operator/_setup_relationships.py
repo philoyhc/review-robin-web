@@ -667,13 +667,13 @@ def relationships_bulk_reactivate(
     )
 
 
-def _picker_label(member: object, handle_attr: str) -> str:
+def _picker_label(member: Reviewer | Reviewee, handle_attr: str) -> str:
     """Canonical relationship-picker label — ``"Name (handle)"`` with
     a ``— inactive`` suffix on non-active members. Carries both the
     name and the handle so a `<datalist>` autocomplete matches a
     substring of either (Segment 15F)."""
-    label = f"{member.name} ({getattr(member, handle_attr)})"  # type: ignore[attr-defined]
-    if member.status != "active":  # type: ignore[attr-defined]
+    label = f"{member.name} ({getattr(member, handle_attr)})"
+    if member.status != "active":
         label += " — inactive"
     return label
 

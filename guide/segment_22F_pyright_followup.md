@@ -75,13 +75,33 @@ Taken 2026-11-04 at `2ed1de42`.
   says `None` keeps the stored state; `relationships.py` reads rows
   without `Result.tuples()`.
 - **Rung 3:** `app/json_shapes.py` (`json_object` / `json_list`,
-  values `object`) replaces the five copies and eleven inline casts;
+  values `object`) replaces the five copies and twelve inline casts;
   callers that relied on `Any` values narrow at the use
   (`isinstance(x, str | int | float)` before `int(x)`, the same path for
   JSON input). `set_column_widths` takes `Mapping[str, object]`, the raw
   client JSON it already re-parsed. `urls.add_globals` / `add_filters`
   replace the two private Jinja wrappers; the registered names, values
   and order are identical (dumped before and after).
+- **Rungs 4–5** in one PR: the 62 ignores go, and
+  `enableTypeIgnoreComments = false` with none left (pyright 0). Most
+  shared one cause: an `object()` "unset" sentinel that `is not` cannot
+  narrow, now a one-member enum (`reviewers`, `reviewees`, `observers`,
+  `relationships`, `visibility_policies`), with `TypedDict` `proposed`
+  dicts; the rest take honest types (`contextvars.Token`, Starlette's
+  `file_response` signature, `Reviewer | Reviewee`, a typed
+  `_JsonStreamHandler`, `User.signed_in_principal_id` declared as a
+  non-column `str | None`). `get_email_settings` refuses a stored
+  transport other than `"smtp"` with `ValueError`, as `transport_for`
+  refused it at send time, only earlier; no write stores one
+  (`test_get_email_settings_refuses_an_unknown_transport`). The rung 5
+  build had read it as "not configured", a behavior change no ruling
+  covers; the item read caught it.
+- **Item read** (cumulative from `095844ef`): no defects; one medium
+  (the email-settings change above, reverted to a loud refusal), three
+  low (a miscount, fixed; `spec/workflow_card.md` not yet saying a
+  non-string time reads as unknown, added to `Doc impact`; five
+  near-identical one-member sentinel enums, left as they are, since each
+  is private to its module).
 
 ## PR ladder
 
@@ -120,4 +140,5 @@ None.
 - `pyproject.toml` — `[tool.pyright]` `enableTypeIgnoreComments = false` (rung 5).
 - `CLAUDE.md` — "Common commands": a `# type: ignore` hides nothing (at close); `AGENTS.md` copied.
 - `AGENTS.md` — the twin, copied from `CLAUDE.md` (at close).
+- `spec/workflow_card.md` — the skipped / gave-up caption's «X» reads "unknown" when the event's time is missing or not a parseable string (ruling 3; at close).
 - `guide/todo_master.md` — the 22F entry points at this plan (rung 1); deleted at close.

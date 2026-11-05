@@ -132,7 +132,7 @@ def stamp_principal(user: User, current_user: AuthenticatedUser) -> None:
     holder's (Codex, #3424). Not for the fake user, whose ID is one
     shared constant. A plain attribute, not a column: it lives for this
     request's ``User`` instance and is never written."""
-    user.signed_in_principal_id = None if current_user.is_fake else current_user.principal_id  # type: ignore[attr-defined]
+    user.signed_in_principal_id = None if current_user.is_fake else current_user.principal_id
 
 
 def get_or_create_user(

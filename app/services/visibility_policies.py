@@ -21,9 +21,10 @@ envelope. No-op writes (no change) emit nothing.
 
 from __future__ import annotations
 
+import enum
 from collections.abc import Iterable
 from datetime import datetime
-from typing import cast
+from typing import Final
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -38,8 +39,17 @@ from app.services import audit, unit_of_work
 from app.services import session_lifecycle as lifecycle
 from app.services.instruments import _instrument_label
 
+
+class _Keep(enum.Enum):
+    """The type of :data:`KEEP`: a one-member enum, so a parameter
+    typed ``str | None | _Keep`` narrows to ``str | None`` once
+    ``is not KEEP`` has been checked."""
+
+    KEEP = enum.auto()
+
+
 #: ``upsert_policy``'s default for a column the caller doesn't set.
-KEEP = object()
+KEEP: Final = _Keep.KEEP
 
 
 # Three audiences are operator-configurable; the operator audience
@@ -494,7 +504,7 @@ def upsert_policy(
     after_release_mode: str | None,
     user: User,
     correlation_id: str | None = None,
-    after_release_reviewer_identity: str | None | object = KEEP,
+    after_release_reviewer_identity: str | None | _Keep = KEEP,
 ) -> tuple[InstrumentViewPolicy, dict[str, list[object]]]:
     """Insert or update the ``(instrument, audience)`` row.
 
@@ -535,9 +545,7 @@ def upsert_policy(
         after_release_mode=after_release_mode,
     )
     if after_release_reviewer_identity is not KEEP:
-        validate_reviewer_identity(
-            audience, after_release_reviewer_identity  # type: ignore[arg-type]
-        )
+        validate_reviewer_identity(audience, after_release_reviewer_identity)
 
     while_ongoing_pair: tuple[str | None, str | None] = (None, None)
     after_release_pair: tuple[str | None, str | None] = (None, None)
@@ -560,8 +568,8 @@ def upsert_policy(
         "after_release_identification": after_release_pair[1],
     }
     if after_release_reviewer_identity is not KEEP:
-        proposed["after_release_reviewer_identity"] = cast(
-            str | None, after_release_reviewer_identity
+        proposed["after_release_reviewer_identity"] = (
+            after_release_reviewer_identity
         )
     changes: dict[str, list[object]] = {}
     if existing is None:

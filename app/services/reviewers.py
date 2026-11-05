@@ -25,7 +25,9 @@ Audit events registered in ``EVENT_SCHEMAS``:
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
+from enum import Enum
+from typing import Final, TypedDict
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -75,7 +77,7 @@ _FIELD_LABELS = {
 }
 
 
-def _refuse_over_long(values: dict[str, object]) -> None:
+def _refuse_over_long(values: Mapping[str, object]) -> None:
     message = csv_imports.over_long_field_message(Reviewer, values, _FIELD_LABELS)
     if message is not None:
         raise ReviewerOperationError("too_long", message)
@@ -255,20 +257,40 @@ def create_reviewer(
     return reviewer
 
 
-_UNSET: object = object()
+class _Unset(Enum):
+    """``update_*``'s "argument not passed" default: an enum member, so
+    ``value is not _UNSET`` narrows it out of the parameter's type."""
+
+    UNSET = "UNSET"
+
+
+_UNSET: Final = _Unset.UNSET
+
+
+class _ProposedReviewer(TypedDict, total=False):
+    """``update_reviewer``'s edited fields, normalised, before the dirty
+    check: each key is a ``Reviewer`` column of the same type."""
+
+    name: str
+    email: str
+    status: str
+    profile_link: str | None
+    tag_1: str | None
+    tag_2: str | None
+    tag_3: str | None
 
 
 def update_reviewer(
     db: Session,
     *,
     reviewer: Reviewer,
-    name: str | object = _UNSET,
-    email: str | object = _UNSET,
-    profile_link: str | None | object = _UNSET,
-    tag_1: str | None | object = _UNSET,
-    tag_2: str | None | object = _UNSET,
-    tag_3: str | None | object = _UNSET,
-    status: str | object = _UNSET,
+    name: str | _Unset = _UNSET,
+    email: str | _Unset = _UNSET,
+    profile_link: str | None | _Unset = _UNSET,
+    tag_1: str | None | _Unset = _UNSET,
+    tag_2: str | None | _Unset = _UNSET,
+    tag_3: str | None | _Unset = _UNSET,
+    status: str | _Unset = _UNSET,
     user: User,
     correlation_id: str | None = None,
     resolve_account: Callable[[str], directory_accounts.Account | None] | None = None,
@@ -279,23 +301,21 @@ def update_reviewer(
     ``{field: [old, new]}`` for each changed field only. Returns the
     changes dict (empty if nothing changed)."""
     lifecycle.require_editable(db, reviewer.session)
-    proposed: dict[str, object] = {}
+    proposed: _ProposedReviewer = {}
     if name is not _UNSET:
-        proposed["name"] = _normalised_name(name)  # type: ignore[arg-type]
+        proposed["name"] = _normalised_name(name)
     if email is not _UNSET:
-        proposed["email"] = _normalised_email(email)  # type: ignore[arg-type]
+        proposed["email"] = _normalised_email(email)
     if status is not _UNSET:
-        proposed["status"] = _normalised_status(status)  # type: ignore[arg-type]
+        proposed["status"] = _normalised_status(status)
     if profile_link is not _UNSET:
-        proposed["profile_link"] = _normalised_tag(
-            profile_link  # type: ignore[arg-type]
-        )
+        proposed["profile_link"] = _normalised_tag(profile_link)
     if tag_1 is not _UNSET:
-        proposed["tag_1"] = _normalised_tag(tag_1)  # type: ignore[arg-type]
+        proposed["tag_1"] = _normalised_tag(tag_1)
     if tag_2 is not _UNSET:
-        proposed["tag_2"] = _normalised_tag(tag_2)  # type: ignore[arg-type]
+        proposed["tag_2"] = _normalised_tag(tag_2)
     if tag_3 is not _UNSET:
-        proposed["tag_3"] = _normalised_tag(tag_3)  # type: ignore[arg-type]
+        proposed["tag_3"] = _normalised_tag(tag_3)
     _refuse_over_long(proposed)
 
     # not-identity: a dirty check — did the operator edit this field?
@@ -304,7 +324,7 @@ def update_reviewer(
     if "email" in proposed and proposed["email"] != reviewer.email and _email_taken(
         db,
         session_id=reviewer.session_id,
-        email=proposed["email"],  # type: ignore[arg-type]
+        email=proposed["email"],
         exclude_reviewer_id=reviewer.id,
     ):
         raise ReviewerOperationError(
@@ -324,8 +344,8 @@ def update_reviewer(
         db,
         session_id=reviewer.session_id,
         kind="reviewers",
-        identifier=final_email,  # type: ignore[arg-type]
-        name=final_name,  # type: ignore[arg-type]
+        identifier=final_email,
+        name=final_name,
     )
     if conflict is not None:
         holder_label, holder_name = conflict
@@ -345,9 +365,9 @@ def update_reviewer(
     if (
         new_address is not None
         and resolve_account is not None
-        and directory_accounts.key(new_address) != directory_accounts.key(reviewer.email)  # type: ignore[arg-type]
+        and directory_accounts.key(new_address) != directory_accounts.key(reviewer.email)
     ):
-        account = resolve_account(new_address) if new_address else None  # type: ignore[arg-type]
+        account = resolve_account(new_address) if new_address else None
         holder = directory_accounts.account_holder(
             db, Reviewer, session_id=reviewer.session_id, account=account, exclude_id=reviewer.id
         )
@@ -355,7 +375,7 @@ def update_reviewer(
             raise ReviewerOperationError(
                 "duplicate_account",
                 directory_accounts.same_account_message(
-                    new_address, "reviewer", holder.email  # type: ignore[arg-type]
+                    new_address, "reviewer", holder.email
                 ),
             )
 
@@ -420,14 +440,15 @@ def update_reviewer(
         correlation_id=correlation_id,
     )
 
+    old_email = reviewer.email
     for field, (_, new_value) in changes.items():
         setattr(reviewer, field, new_value)
     # Segment 21F: a changed address rebinds, or loses its binding.
     if "email" in changes:
         moved = directory_accounts.rebind(
             reviewer,
-            old=changes["email"][0],  # type: ignore[arg-type]
-            new=changes["email"][1],  # type: ignore[arg-type]
+            old=old_email,
+            new=reviewer.email,
             resolve=rebind_resolve,
         )
         if moved is not None:
