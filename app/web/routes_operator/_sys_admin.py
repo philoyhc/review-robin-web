@@ -17,6 +17,10 @@ workspace sessions table.
 Management — at ``GET /operator/sys-admin/users`` with per-row
 Admit / Revoke / Promote / Demote toggles and a sibling "Invite
 by email" form. Backed by ``app.services.users``.
+
+**Segment 22G Item 1.** The third tab, System Status, at
+``GET /operator/sys-admin/system``: the clock, what is due next,
+scheduled send and this instance.
 """
 
 from __future__ import annotations
@@ -151,6 +155,31 @@ def sys_admin_sessions(
             "filter_options": views.diagnostics_filter_options(rows, owners),
             "owned_session_ids": views.owned_session_ids(owners, user),
             "return_to_raw": return_to,
+            "return_to_url": target.url,
+            "return_to_label": target.label,
+        },
+    )
+    if return_to:
+        _remember_return_to(request, response, target)
+    return response
+
+
+@router.get("/sys-admin/system", response_class=HTMLResponse)
+def sys_admin_system(
+    request: Request,
+    return_to: str | None = Query(default=None),
+    user: User = Depends(require_sys_admin),
+    db: Session = Depends(get_db),
+) -> Response:
+    """System Status (segment 22G Item 1): what the host is doing in the
+    background, read-only. Rung 1 is the scaffold; every value is a
+    placeholder until its card is wired."""
+    target = _admin_return_target(request, return_to, db, user)
+    response = _templates.TemplateResponse(
+        request,
+        "operator/sys_admin_system.html",
+        {
+            "user": user,
             "return_to_url": target.url,
             "return_to_label": target.label,
         },

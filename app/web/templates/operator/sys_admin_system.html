@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}System Status — Admin{% endblock %}
+{% block body_class %}ui-v2{% endblock %}
+
+{% block content %}
+  <a class="back-link" href="{{ url(return_to_url) }}">&larr; Back to {{ return_to_label }}</a>
+
+  <h1>Admin</h1>
+
+  {% with current_admin_page = "System" %}
+    {% include "operator/partials/sys_admin_top_nav.html" %}
+  {% endwith %}
+
+  {# Segment 22G Item 1, rung 1: the scaffold. Four read-only cards with
+     their real headings and labels; every value is a placeholder until
+     its card is wired (rungs 2-4). The clock's figures are this
+     process's, since it started. #}
+  <div class="page-grid">
+    <div class="card" data-system-clock>
+      <h2>Clock</h2>
+      <p class="muted">Counts since this process started.</p>
+      <dl class="status-list">
+        <dt>Running</dt><dd>—</dd>
+        <dt>Interval</dt><dd>—</dd>
+        <dt>Last pass</dt><dd>—</dd>
+        <dt>Sessions visited</dt><dd>—</dd>
+        <dt>Last failure</dt><dd>—</dd>
+        <dt>Failures</dt><dd>—</dd>
+        <dt>Busy skips</dt><dd>—</dd>
+      </dl>
+    </div>
+
+    <div class="card" data-system-due>
+      <h2>Due next</h2>
+      <dl class="status-list">
+        <dt>Next Start</dt><dd>—</dd>
+        <dt>Next End close</dt><dd>—</dd>
+        <dt>Next release stamp</dt><dd>—</dd>
+        <dt>Due now</dt><dd>—</dd>
+        <dt>Failed activations, 7 days</dt><dd>—</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="page-grid">
+    <div class="card" data-system-sending>
+      <h2>Sending</h2>
+      <dl class="status-list">
+        <dt>Scheduled send</dt><dd>—</dd>
+      </dl>
+    </div>
+
+    <div class="card" data-system-instance>
+      <h2>This instance</h2>
+      <dl class="status-list">
+        <dt>Version</dt><dd>—</dd>
+        <dt>Started</dt><dd>—</dd>
+        <dt>Uptime</dt><dd>—</dd>
+        <dt>Database</dt><dd>—</dd>
+        <dt>Schema</dt><dd>—</dd>
+      </dl>
+    </div>
+  </div>
+{% endblock %}

@@ -2,19 +2,23 @@
 
    One-row tab strip across the workspace Admin surfaces.
    Modelled on (but lighter than) the per-session
-   ``session_top_nav.html``. Two tabs:
+   ``session_top_nav.html``. Three tabs:
 
    - Sessions Diagnostics — workspace sessions table with
      per-row Outbox + Audit log affordances (PRs 3 + 4).
    - Accounts Management — workspace user list with Admit /
      Revoke / Promote / Demote toggles + Invite by email (PR 6).
+   - System Status — the host's background work: the clock, what
+     is due next, scheduled send, this instance (segment 22G).
 
    Required context:
-     - current_admin_page: one of "Sessions" / "Accounts".
+     - current_admin_page: one of "Sessions" / "Accounts" / "System".
 #}
 <div class="tab-strip tab-strip-page sys-admin-nav">
   <a class="nav-tab{% if current_admin_page == 'Sessions' %} active{% endif %}"
      href="{{ url('/operator/sys-admin/sessions') }}">Sessions Diagnostics</a>
   <a class="nav-tab{% if current_admin_page == 'Accounts' %} active{% endif %}"
      href="{{ url('/operator/sys-admin/users') }}">Accounts Management</a>
+  <a class="nav-tab{% if current_admin_page == 'System' %} active{% endif %}"
+     href="{{ url('/operator/sys-admin/system') }}">System Status</a>
 </div>

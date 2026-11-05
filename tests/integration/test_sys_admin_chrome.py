@@ -363,3 +363,44 @@ def test_require_sys_admin_raises_on_miss(db: Session) -> None:
         require_sys_admin(user=user)
     assert excinfo.value.status_code == 403
     assert excinfo.value.detail == "sys_admin required"
+
+
+# --- /sys-admin/system (System Status tab, segment 22G Item 1) ------------
+
+
+def test_system_status_renders_for_sys_admin(
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
+    response = client.get("/operator/sys-admin/system")
+    assert response.status_code == 200
+    for card in ("data-system-clock", "data-system-due", "data-system-sending", "data-system-instance"):
+        assert card in response.text
+    # The tab is active here, and the other two link away.
+    assert re.search(
+        r'class="nav-tab active"\s+href="/operator/sys-admin/system">System Status', response.text
+    )
+    assert 'href="/operator/sys-admin/sessions"' in response.text
+    assert 'href="/operator/sys-admin/users"' in response.text
+
+
+def test_system_status_403s_for_plain_operator(
+    db: Session,
+    client: TestClient,
+) -> None:
+    response = client.get("/operator/sys-admin/system")
+    assert response.status_code == 403
+
+
+def test_every_admin_tab_links_to_system_status(
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
+    for path in ("/operator/sys-admin/sessions", "/operator/sys-admin/users"):
+        response = client.get(path)
+        assert response.status_code == 200
+        assert 'href="/operator/sys-admin/system"' in response.text
