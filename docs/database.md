@@ -16,7 +16,7 @@ sufficient for unit tests and local development.
 is enforced by the CI workflow at `.github/workflows/ci-postgres.yml` (every
 PR that changes more than prose, and every push to `main` — runs the Alembic
 round-trip *and* the pytest suite, less `tests/browser/`, against Postgres,
-in two parallel shards)
+in three parallel shards)
 and by the release's migrate-before-deploy step (`docs/deployment.md`).
 
 If you do need a local Postgres for a Postgres-only investigation, install
@@ -147,10 +147,11 @@ teardown, so tests do not pollute each other.
   are recorded with the deployment.
 - **Postgres-against-Docker CI** — `ci-postgres.yml` applies and
   round-trips migrations *and* runs the pytest suite, less
-  `tests/browser/`, against a `postgres:16` service container, in two
+  `tests/browser/`, against a `postgres:16` service container, in three
   shards (`postgres (unit)`, which also runs the migrations, and
-  `postgres (integration)`; segment 22I) on every PR that changes more than
-  prose (`tools/ci_lanes.py`). The `engine` fixture
+  `tests/integration` cut in two by first letter,
+  `postgres (integration-a)` and `postgres (integration-b)`; segment
+  22I) on every PR that changes more than prose (`tools/ci_lanes.py`). The `engine` fixture
   in `tests/conftest.py` honours `TEST_DATABASE_URL` (the job sets it
   from its `DATABASE_URL`) so the same test bodies cover both dialects.
 

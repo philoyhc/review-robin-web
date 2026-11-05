@@ -134,6 +134,10 @@ Taken 2026-11-05 at `a321b04b`, except where a row says otherwise.
 - It is still the longest check, by 1 m 0 s over `test (browser)`
   (2 m 12 s), so the Out of scope condition for a further split is met
   at its edge. The author added rung 2 for it (2026-11-05).
+- Rung 2, #3636: `unit` 1 m 34 s, `integration-a` 2 m 16 s,
+  `integration-b` 2 m 45 s; wall 2 m 45 s, within a minute of
+  `test (integration)` (2 m 54 s on the same push). One read, on the
+  rung: no defects; a stale workflow comment, fixed.
 - One `diff-reviewer` read: no defects; it found `CONTRIBUTING.md` still
   describing one job, so that file joined the PR and the Doc impact.
 
