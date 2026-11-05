@@ -141,3 +141,27 @@ def test_an_archived_sessions_failure_is_left_out(db: Session) -> None:
     )
     db.commit()
     assert system_status.due_next(db, now=NOW).failed_activations == []
+
+
+def test_the_instance_reads_the_recorded_revision(db: Session) -> None:
+    from sqlalchemy import text
+
+    from app.db.schema_head import SCHEMA_HEAD
+
+    if db.get_bind().dialect.name != "sqlite":
+        # The Postgres job migrates its database to head: current.
+        current = system_status.instance(db)
+        assert current.schema_revision == SCHEMA_HEAD
+        assert current.schema_current
+        return
+    # The SQLite schema is built without Alembic: none recorded.
+    assert system_status.instance(db).schema_revision is None
+    db.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL)"))
+    db.execute(text("INSERT INTO alembic_version VALUES (:v)"), {"v": SCHEMA_HEAD})
+    current = system_status.instance(db)
+    assert current.schema_revision == SCHEMA_HEAD
+    assert current.schema_current
+    db.execute(text("UPDATE alembic_version SET version_num = 'older'"))
+    behind = system_status.instance(db)
+    assert behind.schema_revision == "older"
+    assert not behind.schema_current

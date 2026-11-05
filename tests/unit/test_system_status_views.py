@@ -50,7 +50,8 @@ def test_a_pass_and_a_failure() -> None:
         last_failure_at=started,
         last_failure_type="RuntimeError",
     )
-    card = clock_card(status, interval_setting=120)
+    card = clock_card(status, interval_setting=120, now=SINCE + timedelta(hours=3))
+    assert card.uptime_label == "3 h"
     assert card.last_pass_at == started
     assert card.last_pass_label == "Took 0.4 s, visited 1 session"
     assert card.last_failure_label == "RuntimeError"

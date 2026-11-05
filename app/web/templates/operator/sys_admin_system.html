@@ -12,10 +12,9 @@
     {% include "operator/partials/sys_admin_top_nav.html" %}
   {% endwith %}
 
-  {# Segment 22G Item 1. Four read-only cards; Sending and This
-     instance are placeholders until rung 4 wires them. Each session
-     named links to its audit log, where its scheduled steps are. The
-     clock's figures are this process's, since it started. #}
+  {# Segment 22G Item 1. Four read-only cards. Each session named links
+     to its audit log, where its scheduled steps are. The clock's
+     figures, and this instance's start, are this process's. #}
   <div class="page-grid">
     <div class="card" data-system-clock data-clock-state="{{ clock.state }}">
       <h2>Clock</h2>
@@ -65,18 +64,28 @@
     <div class="card" data-system-sending>
       <h2>Sending</h2>
       <dl class="status-list">
-        <dt>Scheduled send</dt><dd>—</dd>
+        <dt>Scheduled send</dt>
+        <dd data-sending-scheduled>{% if scheduled_send %}On: scheduled invites and reminders fire on time{% else %}Off (RRW_SCHEDULED_SEND): scheduled invites and reminders do not fire{% endif %}</dd>
       </dl>
     </div>
 
     <div class="card" data-system-instance>
       <h2>This instance</h2>
       <dl class="status-list">
-        <dt>Version</dt><dd>—</dd>
-        <dt>Started</dt><dd>—</dd>
-        <dt>Uptime</dt><dd>—</dd>
-        <dt>Database</dt><dd>—</dd>
-        <dt>Schema</dt><dd>—</dd>
+        <dt>Version</dt><dd data-instance-version>{{ instance.version }}</dd>
+        <dt>Started</dt><dd>{{ clock.since | format_datetime }}</dd>
+        <dt>Uptime</dt><dd data-instance-uptime>{{ clock.uptime_label }}</dd>
+        <dt>Database</dt><dd data-instance-dialect>{{ instance.dialect }}</dd>
+        <dt>Schema</dt>
+        <dd data-instance-schema data-schema-current="{{ 'yes' if instance.schema_current else 'no' }}">
+          {%- if instance.schema_current -%}
+            Current ({{ instance.schema_head }})
+          {%- elif instance.schema_revision -%}
+            At {{ instance.schema_revision }}; this code expects {{ instance.schema_head }}
+          {%- else -%}
+            No revision recorded; this code expects {{ instance.schema_head }}
+          {%- endif -%}
+        </dd>
       </dl>
     </div>
   </div>

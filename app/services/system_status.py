@@ -1,5 +1,6 @@
-"""What the clock will do next, across the workspace (segment 22G Item 1):
-the System Status tab's Due next card.
+"""What the System Status tab reports beyond the clock's own record
+(segment 22G Item 1): what the clock will do next across the workspace
+(the Due next card), and this instance (version, start, database).
 
 Due now is the clock's own pick (``scheduled_events.due_session_ids``),
 and the next moments follow the rules that pick applies, so the card and
@@ -12,10 +13,13 @@ from __future__ import annotations
 import dataclasses
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import or_, select
+from sqlalchemy import or_, select, text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.db.models import AuditEvent, ReviewSession
+from app.db.schema_head import SCHEMA_HEAD
 from app.services import session_lifecycle as lifecycle
 from app.services.scheduled_events import due_session_ids
 
@@ -136,4 +140,39 @@ def due_next(db: Session, *, now: datetime | None = None) -> DueNext:
         next_release_stamp=next_release_stamp,
         due_now=due_now,
         failed_activations=failed_activations,
+    )
+
+
+@dataclasses.dataclass(frozen=True)
+class Instance:
+    """This instance. ``schema_revision`` is ``None`` when the database
+    records none (a schema built without Alembic, as the tests build
+    it, or a read that failed)."""
+
+    version: str
+    dialect: str
+    schema_revision: str | None
+    schema_head: str
+
+    @property
+    def schema_current(self) -> bool:
+        return self.schema_revision == self.schema_head
+
+
+def _schema_revision(db: Session) -> str | None:
+    try:
+        # A nested transaction, so a missing table rolls back only this.
+        with db.begin_nested():
+            rows = db.execute(text("SELECT version_num FROM alembic_version")).scalars().all()
+    except SQLAlchemyError:
+        return None
+    return ", ".join(sorted(rows)) or None
+
+
+def instance(db: Session) -> Instance:
+    return Instance(
+        version=settings.app_version,
+        dialect=db.get_bind().dialect.name,
+        schema_revision=_schema_revision(db),
+        schema_head=SCHEMA_HEAD,
     )

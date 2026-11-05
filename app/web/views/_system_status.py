@@ -6,7 +6,7 @@ in the viewer's zone."""
 from __future__ import annotations
 
 import dataclasses
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from app.services.scheduled_events import ClockStatus
 
@@ -21,6 +21,7 @@ class ClockCard:
     state_label: str
     interval_label: str
     since: datetime
+    uptime_label: str
     last_pass_at: datetime | None
     last_pass_label: str
     last_failure_at: datetime | None
@@ -51,7 +52,11 @@ def duration_label(span: timedelta) -> str:
     return f"{days} d {hours} h" if hours else f"{days} d"
 
 
-def clock_card(status: ClockStatus, *, interval_setting: float) -> ClockCard:
+def clock_card(
+    status: ClockStatus, *, interval_setting: float, now: datetime | None = None
+) -> ClockCard:
+    """``now`` dates the uptime: the time since ``status.since``, when
+    this process loaded the clock, which is this instance's start."""
     if interval_setting <= 0:
         state, state_label = "off", "Off (SCHEDULER_INTERVAL_SECONDS is 0)"
     elif status.running:
@@ -73,6 +78,7 @@ def clock_card(status: ClockStatus, *, interval_setting: float) -> ClockCard:
         state_label=state_label,
         interval_label=interval_label,
         since=status.since,
+        uptime_label=duration_label((now or datetime.now(UTC)) - status.since),
         last_pass_at=status.last_pass_started,
         last_pass_label=last_pass_label,
         last_failure_at=status.last_failure_at,

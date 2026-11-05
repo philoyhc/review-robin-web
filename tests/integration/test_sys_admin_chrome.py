@@ -459,3 +459,32 @@ def test_system_status_links_a_session_by_its_public_id(
     link = f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log"
     assert f'href="{link}"' in response.text
     assert client.get(link).status_code == 200
+
+
+def test_system_status_sending_and_instance_cards(
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.db.schema_head import SCHEMA_HEAD
+
+    monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
+    monkeypatch.setattr(settings, "app_version", "a5aa328")
+    monkeypatch.setattr(settings, "scheduled_send", False)
+    response = client.get("/operator/sys-admin/system")
+    assert "Off (RRW_SCHEDULED_SEND)" in response.text
+    assert re.search(r"data-instance-version>a5aa328<", response.text)
+    dialect = db.get_bind().dialect.name
+    assert f"data-instance-dialect>{dialect}<" in response.text
+    if dialect == "sqlite":
+        # The SQLite schema is built without Alembic: no revision recorded.
+        assert 'data-schema-current="no"' in response.text
+        assert f"No revision recorded; this code expects {SCHEMA_HEAD}" in response.text
+    else:
+        # The Postgres job migrates to head.
+        assert 'data-schema-current="yes"' in response.text
+        assert f"Current ({SCHEMA_HEAD})" in response.text
+
+    monkeypatch.setattr(settings, "scheduled_send", True)
+    response = client.get("/operator/sys-admin/system")
+    assert "On: scheduled invites and reminders fire on time" in response.text
