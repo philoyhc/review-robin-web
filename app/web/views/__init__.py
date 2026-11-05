@@ -74,6 +74,7 @@ from ._audit_log import (
     resolve_audit_log_zone,
 )
 from ._directory_check import DirectoryCheck, last_directory_check, unmatched_count
+from ._email_composer import ComposerFields, build_composer_fields
 
 # Extract Data card on Session Home (sliced in PR 2).
 from ._extract_data import (
@@ -176,6 +177,7 @@ from ._previews import (
     extract_email_from_picker_value,
     merge_tags_for_template,
     resolve_email_preview_tab,
+    send_test_notice,
 )
 
 # Responses page rows (sliced in PR 1).
@@ -471,6 +473,9 @@ __all__ = [
     "invitations_search_options",
     "observers_search_options",
     "merge_tags_for_template",
+    "send_test_notice",
+    "ComposerFields",
+    "build_composer_fields",
     "AuditDetailChangeRow",
     "AuditDetailKVRow",
     "AuditDetailRender",

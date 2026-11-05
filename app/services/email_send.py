@@ -31,6 +31,7 @@ Design notes:
 from __future__ import annotations
 
 import smtplib
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from email.message import EmailMessage as _StdEmailMessage
 from email.utils import formataddr
@@ -79,6 +80,9 @@ class SendResult:
     ok: bool
     error_message: str | None = None
     transport_response: str | None = None
+    #: The Graph transport's ``GraphError.kind`` on a failure, so a page
+    #: can name it without parsing ``transport_response``.
+    failure_kind: str | None = None
 
 
 class EmailTransport(Protocol):
@@ -266,8 +270,40 @@ class GraphEmailTransport:
         try:
             self._mailer.send_mail(message)
         except graph.GraphError as exc:
-            return _failure(_GRAPH_FAILURE_COPY.get(exc.kind, "The send failed."), exc.reason)
+            return SendResult(
+                ok=False,
+                error_message=failure_copy(exc.kind),
+                transport_response=exc.reason[:_RESPONSE_TRUNCATE_AT],
+                failure_kind=exc.kind,
+            )
         return SendResult(ok=True)
+
+
+def failure_copy(kind: str) -> str:
+    """The operator-facing sentence for a Graph failure ``kind``."""
+    return _GRAPH_FAILURE_COPY.get(kind, "The send failed.")
+
+
+class UnavailableMailer:
+    """A mailer that could not be built for the request (no token): every
+    send fails with the error that stopped it, so a caller handles it as
+    any other failed send."""
+
+    def __init__(self, error: graph.GraphError) -> None:
+        self._error = error
+
+    def send_mail(self, message: graph.MailMessage) -> None:
+        raise self._error
+
+
+def graph_transport_for(build: Callable[[], graph.Mailer]) -> GraphEmailTransport:
+    """``GraphEmailTransport`` over ``build()``, or over an
+    ``UnavailableMailer`` when ``build`` raises a ``GraphError``."""
+    try:
+        mailer = build()
+    except graph.GraphError as exc:
+        return GraphEmailTransport(UnavailableMailer(exc))
+    return GraphEmailTransport(mailer)
 
 
 # ── Factory ──────────────────────────────────────────────────────────────

@@ -1,0 +1,181 @@
+"""Send a test to me (segment 14F rung 2b, `app/services/email_test_send.py`).
+
+- The template as edited, saved or not, goes to the signed-in operator
+  only, marked "[Test]", with merge tags from the roster's first reviewer
+  (a stand-in while the roster is empty) and a placeholder link.
+- Nothing is saved, no outbox row is written, and `email.test_sent`
+  records the outcome.
+- The answer is the composer itself, with the draft still in its fields
+  and Save live, so a test (sent or not) never loses unsaved edits.
+- A refused send, or no Microsoft token, comes back as a failure line
+  naming why.
+"""
+
+from __future__ import annotations
+
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
+
+from app.db.models import AuditEvent, EmailOutbox, Reviewer, ReviewSession
+from app.services import email_test_send
+from app.web.routes_operator import _setup_invite
+from cordware.graph import FakeMailer, GraphError, MailMessage
+
+
+class Refusing:
+    def __init__(self, kind: str) -> None:
+        self.kind = kind
+
+    def send_mail(self, message: MailMessage) -> None:
+        raise GraphError(self.kind)
+
+
+def _session(client: TestClient, db: Session, code: str) -> ReviewSession:
+    response = client.post(
+        "/operator/sessions", data={"name": f"Sess {code}", "code": code}, follow_redirects=False
+    )
+    assert response.status_code == 303, response.text
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
+
+
+@pytest.fixture
+def mailer(monkeypatch: pytest.MonkeyPatch) -> FakeMailer:
+    fake = FakeMailer()
+    monkeypatch.setattr(_setup_invite.graph, "mailer_for", lambda _request: fake)
+    return fake
+
+
+def _send(client: TestClient, rs: ReviewSession, **fields: str):
+    return client.post(
+        f"/operator/sessions/{rs.public_id}/setup-invite/send-test",
+        data={"template": "invitation", **fields},
+    )
+
+
+def _events(db: Session, rs: ReviewSession) -> list[AuditEvent]:
+    stmt = select(AuditEvent).where(
+        AuditEvent.session_id == rs.id, AuditEvent.event_type == "email.test_sent"
+    )
+    return list(db.execute(stmt).scalars())
+
+
+def test_the_edited_unsaved_template_goes_to_the_operator(
+    client: TestClient, db: Session, mailer: FakeMailer
+) -> None:
+    rs = _session(client, db, "TEST1")
+    db.add(Reviewer(session_id=rs.id, name="Ada First", email="ada@example.edu"))
+    db.commit()
+
+    response = _send(
+        client, rs, subject="Hi $reviewer_name", body="Open $invite_url, $reviewer_name"
+    )
+    assert response.status_code == 200
+
+    [sent] = mailer.sent
+    db.refresh(rs)
+    operator_email = rs.created_by_user.email
+    assert sent.to == operator_email
+    assert sent.subject == "[Test] Hi Ada First"
+    assert sent.body.startswith(f"Open {email_test_send.SAMPLE_INVITE_URL}, Ada First")
+    assert (sent.cc, sent.bcc) == ((), ())
+
+    db.refresh(rs)
+    assert not (rs.email_template_overrides or {}).get("invitation_subject")  # nothing saved
+    assert db.execute(select(func.count()).select_from(EmailOutbox)).scalar() == 0
+    [event] = _events(db, rs)
+    assert event.detail is not None and event.detail["context"]["outcome"] == "sent"
+
+    page = response.text
+    assert f"Test sent to {operator_email}." in page
+    # The draft survives the test: the fields still hold it, Save is live.
+    assert 'value="Hi $reviewer_name"' in page
+    assert ">Open $invite_url, $reviewer_name</textarea>" in page
+    save = page.split('id="setupinvite-save-button"', 1)[1].split(">", 1)[0]
+    assert "disabled" not in save
+    # A plain reload shows the saved template again.
+    reloaded = client.get(f"/operator/sessions/{rs.public_id}/setup-invite").text
+    assert 'value="Hi $reviewer_name"' not in reloaded
+
+
+def test_an_empty_roster_fills_tags_from_a_stand_in(
+    client: TestClient, db: Session, mailer: FakeMailer
+) -> None:
+    rs = _session(client, db, "TEST2")
+    _send(client, rs, subject="For $reviewer_name", body="b")
+    assert mailer.sent[0].subject == f"[Test] For {email_test_send.SAMPLE_REVIEWER_NAME}"
+
+
+def test_a_blank_field_tests_the_default(
+    client: TestClient, db: Session, mailer: FakeMailer
+) -> None:
+    rs = _session(client, db, "TEST3")
+    _send(client, rs, subject="", body="")
+    [sent] = mailer.sent
+    assert sent.subject.startswith("[Test] ") and len(sent.subject) > len("[Test] ")
+    assert email_test_send.SAMPLE_INVITE_URL in sent.body
+
+
+@pytest.mark.parametrize("template", ["reminder", "responses_received"])
+def test_the_other_templates_send_too(
+    client: TestClient, db: Session, mailer: FakeMailer, template: str
+) -> None:
+    rs = _session(client, db, f"T-{template[:4]}")
+    response = client.post(
+        f"/operator/sessions/{rs.public_id}/setup-invite/send-test",
+        data={"template": template, "subject": "S $session_name", "body": "B"},
+    )
+    assert response.status_code == 200
+    assert "Test sent to" in response.text
+    assert mailer.sent[0].subject == f"[Test] S {rs.name}"
+
+
+@pytest.mark.parametrize("kind", ["forbidden", "no_token"])
+def test_a_failed_test_says_why(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch, kind: str
+) -> None:
+    def build(_request: object) -> Refusing:
+        if kind == "no_token":
+            raise GraphError("no_token")
+        return Refusing(kind)
+
+    monkeypatch.setattr(_setup_invite.graph, "mailer_for", build)
+    rs = _session(client, db, f"TF-{kind[:4]}")
+    response = _send(client, rs, subject="draft subject", body="b")
+    page = response.text
+    assert "The test was not sent." in page
+    assert 'value="draft subject"' in page  # kept for a retry
+    [event] = _events(db, rs)
+    assert event.detail is not None and event.detail["context"]["outcome"] == "failed"
+
+
+def test_an_unknown_template_is_refused(
+    client: TestClient, db: Session, mailer: FakeMailer
+) -> None:
+    rs = _session(client, db, "TEST9")
+    response = client.post(
+        f"/operator/sessions/{rs.public_id}/setup-invite/send-test",
+        data={"template": "nope"},
+    )
+    assert response.status_code == 404
+    assert mailer.sent == []
+
+
+def test_the_confirmation_toggle_survives_a_test_send(
+    client: TestClient, db: Session, mailer: FakeMailer
+) -> None:
+    """The Responses received tab's send-on-submit box (default on), turned
+    off and unsaved, stays off after a test, with Save live."""
+    rs = _session(client, db, "TEST11")
+    response = client.post(
+        f"/operator/sessions/{rs.public_id}/setup-invite/send-test",
+        data={"template": "responses_received", "subject": "", "body": ""},
+    )
+    page = response.text
+    box = page.split('name="enabled"', 1)[1].split(">", 1)[0]
+    assert "checked" not in box
+    save = page.split('id="setupinvite-save-button"', 1)[1].split(">", 1)[0]
+    assert "disabled" not in save
+    db.refresh(rs)
+    assert email_test_send.email_templates.responses_received_enabled(rs) is True  # unsaved

@@ -106,10 +106,10 @@
               <textarea id="field-{{ row.field }}" name="{{ row.field }}"
                         rows="8"
                         placeholder="{{ row.default }}"
-                        {% if locked %}disabled{% endif %}>{{ row.value if row.has_override else '' }}</textarea>
+                        {% if locked %}disabled{% endif %}>{{ row.shown }}</textarea>
             {% else %}
               <input type="text" id="field-{{ row.field }}" name="{{ row.field }}"
-                     value="{{ row.value if row.has_override else '' }}"
+                     value="{{ row.shown }}"
                      placeholder="{{ row.default }}"
                      {% if row.field == "subject" %}maxlength="255"{% endif %}
                      {% if locked %}disabled{% endif %}>
@@ -158,13 +158,20 @@
              href="{{ url('/operator/sessions/' ~ session.public_id) }}">Cancel</a>
         {% endif %}
         <button class="btn secondary" type="submit" form="setupinvite-form"
-                id="setupinvite-save-button" disabled>Save</button>
-        {# 14F rung 1 scaffold: inert. Rung 2 sends this template, as
-           edited, to the signed-in operator, merge tags filled from a
-           sample row (author, 2026-11-05). #}
-        <button class="btn secondary" type="button" id="setupinvite-send-test"
-                disabled title="Available when sending is switched on">Send a test to me</button>
+                id="setupinvite-save-button"{% if not unsaved_edits %} disabled{% endif %}>Save</button>
+        {# 14F rung 2b: sends this template, as edited and unsaved, to
+           the signed-in operator, merge tags filled from a sample row
+           (author, 2026-11-05). It submits the composer form to its own
+           action, so it needs no unsaved-changes step. #}
+        <button class="btn secondary" type="submit" form="setupinvite-form"
+                id="setupinvite-send-test"
+                formaction="{{ url('/operator/sessions/' ~ session.public_id ~ '/setup-invite/send-test') }}"
+                title="Send this email, as edited, to {{ user.email }}">Send a test to me</button>
       </div>
+      {% if send_test_notice %}
+        <p class="form-help send-test-notice send-test-notice--{{ send_test_notice.tone }}"
+           role="status" data-send-test-notice>{{ send_test_notice.text }}</p>
+      {% endif %}
     </div>
     </div>
 

@@ -4,10 +4,12 @@
   the operator has set invite or reminder offsets, and none before.
 - The lobby has a Due pill slot that marks no session yet, and renders
   the pill for any session the view names.
-- The email composer carries an inert "Send a test to me" button.
+- The email composer carries a "Send a test to me" button (wired in rung 2b).
 """
 
 from __future__ import annotations
+
+import re
 
 import pytest
 from fastapi.testclient import TestClient
@@ -61,9 +63,16 @@ def test_the_lobby_renders_a_due_pill_for_a_named_session(
     assert ">Due</span>" in row
 
 
-def test_the_composer_has_an_inert_send_a_test_button(client: TestClient, db: Session) -> None:
+def test_the_composer_send_a_test_button_posts_the_form_to_its_own_action(
+    client: TestClient, db: Session
+) -> None:
+    """Rung 1 placed it inert; rung 2b wired it (`test_email_test_send.py`)."""
     rs = _client_session(client, db, "DUE4")
     body = client.get(f"/operator/sessions/{rs.public_id}/setup-invite").text
-    button = body.split('id="setupinvite-send-test"', 1)[1].split("</button>", 1)[0]
-    assert " disabled" in button
+    match = re.search(r'<button[^>]*id="setupinvite-send-test"[^>]*>[^<]*</button>', body)
+    assert match is not None
+    button = match.group(0)
+    assert " disabled" not in button
+    assert 'form="setupinvite-form"' in button
+    assert "/setup-invite/send-test" in button
     assert "Send a test to me" in button

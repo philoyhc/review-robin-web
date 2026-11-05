@@ -6,8 +6,6 @@ Source range in pre-refactor ``routes_operator.py``: 2576-2725.
 
 from __future__ import annotations
 
-from typing import Any
-
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, status
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -15,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
-from app.services import email_templates
+from app.services import email_send, email_templates, email_test_send
 from app.services import session_lifecycle as lifecycle
 from app.web import breadcrumbs, urls, views
 from app.web.deps import (
@@ -24,6 +22,7 @@ from app.web.deps import (
     require_session_operator,
 )
 from app.web.routes_operator._shared import _templates
+from cordware import graph
 
 router = APIRouter()
 
@@ -42,24 +41,40 @@ def _require_editable_templates(review_session: ReviewSession) -> None:
         )
 
 
-def _build_field_rows(review_session: ReviewSession, template: str) -> list[dict[str, Any]]:
-    """For each (field, key, default) tuple on the active template,
-    return the dict the editor template iterates over to render
-    each editable field plus its per-field "Reset to default" link.
-    """
-    rows: list[dict[str, Any]] = []
-    for spec in email_templates.TEMPLATE_FIELDS[template]:
-        override = email_templates.get_override(review_session, spec["key"])
-        rows.append(
-            {
-                "field": spec["field"],
-                "key": spec["key"],
-                "value": override if override is not None else spec["default"],
-                "default": spec["default"],
-                "has_override": override is not None,
-            }
-        )
-    return rows
+def _composer_page(
+    request: Request,
+    db: Session,
+    review_session: ReviewSession,
+    user: User,
+    template: str,
+    *,
+    edited: dict[str, str] | None = None,
+    edited_enabled: bool | None = None,
+    send_test_notice: dict[str, str] | None = None,
+) -> HTMLResponse:
+    """The composer page. ``edited`` / ``edited_enabled`` carry what the
+    operator had on the form (after Send a test to me), unsaved."""
+    fields = views.build_composer_fields(
+        review_session, template, edited=edited, edited_enabled=edited_enabled
+    )
+    return _templates.TemplateResponse(
+        request,
+        "operator/session_setupinvite.html",
+        {
+            "user": user,
+            "session": review_session,
+            "status_pills": views.session_status_pills(db, review_session),
+            "active_template": template,
+            "valid_templates": _VALID_TEMPLATES,
+            "rows": fields.rows,
+            "unsaved_edits": fields.unsaved_edits,
+            "merge_tags": views.merge_tags_for_template(template),
+            "responses_received_enabled": fields.responses_received_enabled,
+            "locked": lifecycle.is_archived(review_session),
+            "send_test_notice": send_test_notice,
+            "breadcrumbs": breadcrumbs.operator_session_child(review_session, "Email Template"),
+        },
+    )
 
 
 @router.get("/sessions/{session_id}/setup-invite", response_class=HTMLResponse)
@@ -75,24 +90,7 @@ def setupinvite_form(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Unknown template",
         )
-    return _templates.TemplateResponse(
-        request,
-        "operator/session_setupinvite.html",
-        {
-            "user": user,
-            "session": review_session,
-            "status_pills": views.session_status_pills(db, review_session),
-            "active_template": template,
-            "valid_templates": _VALID_TEMPLATES,
-            "rows": _build_field_rows(review_session, template),
-            "merge_tags": views.merge_tags_for_template(template),
-            "responses_received_enabled": (
-                email_templates.responses_received_enabled(review_session)
-            ),
-            "locked": lifecycle.is_archived(review_session),
-            "breadcrumbs": breadcrumbs.operator_session_child(review_session, "Email Template"),
-        },
-    )
+    return _composer_page(request, db, review_session, user, template)
 
 
 @router.post("/sessions/{session_id}/setup-invite")
@@ -146,6 +144,55 @@ async def setupinvite_save(
         request,
         url=f"/operator/sessions/{review_session.public_id}/setup-invite?template={template}",
         status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/sessions/{session_id}/setup-invite/send-test")
+async def setupinvite_send_test(
+    request: Request,
+    template: str = Form(default="invitation"),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    """Send a test to me (14F rung 2b): the composer's form, as edited and
+    unsaved, rendered and sent to the operator. Saves nothing, and answers
+    with the composer itself, the edits still in it (not a redirect, which
+    would reload the saved template and lose the draft)."""
+    if template not in _VALID_TEMPLATES:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Unknown template",
+        )
+    form = await request.form()
+    edited: dict[str, str] = {}
+    for spec in email_templates.TEMPLATE_FIELDS[template]:
+        raw = form.get(spec["field"])
+        if isinstance(raw, str):
+            edited[spec["key"]] = raw
+    transport = email_send.graph_transport_for(lambda: graph.mailer_for(request))
+    # The Graph call waits off the event loop.
+    result = await run_in_threadpool(
+        lambda: email_test_send.send_test(
+            db,
+            review_session=review_session,
+            user=user,
+            template=template,
+            edited=edited,
+            transport=transport,
+            correlation_id=request_correlation_id(),
+        )
+    )
+    return _composer_page(
+        request,
+        db,
+        review_session,
+        user,
+        template,
+        edited=edited,
+        # The confirmation tab's send-on-submit box, as the form had it.
+        edited_enabled=("enabled" in form) if template == "responses_received" else None,
+        send_test_notice=views.send_test_notice(result, user.email),
     )
 
 
