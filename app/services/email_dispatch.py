@@ -35,6 +35,7 @@ from sqlalchemy.orm import Session
 from app.db.models import EmailOutbox, ReviewSession, User
 from app.db.session import rowcount
 from app.services import audit, operator_settings
+from app.services.email_identity import looks_like_email
 from app.services.email_send import EmailMessage, EmailTransport
 
 Outcome = Literal["sent", "failed", "not_claimed"]
@@ -52,9 +53,14 @@ class SendOptions:
 def _address(text: str | None) -> str | None:
     """``text`` as one email address, or ``None``: a help contact is free
     text ("Dr Tan, room 3"), and only an address can be a Reply-to."""
-    name, address = parseaddr((text or "").strip())
-    del name
-    if "@" not in address or " " in address or address.count("@") != 1:
+    raw = (text or "").strip()
+    _name, address = parseaddr(raw)
+    # ``parseaddr`` squeezes out spaces outside angle brackets, so
+    # "tan@x.edu or call 6516" comes back as one run of text: accept it
+    # only when the text is the address alone or ``Name <address>``.
+    if not looks_like_email(address):
+        return None
+    if raw != address and not raw.endswith(f"<{address}>"):
         return None
     return address
 
@@ -127,14 +133,16 @@ def dispatch(
     *,
     backend: str,
     actor_user_id: int | None,
+    options: SendOptions,
     from_address: str | None = None,
-    options: SendOptions | None = None,
     now: datetime | None = None,
 ) -> DispatchResult:
-    """Claim ``row``, send it, stamp it. See the module docstring."""
+    """Claim ``row``, send it, stamp it. See the module docstring.
+    ``options`` is required, so a caller cannot drop the operator's
+    Email settings by omission: pass ``send_options_for(user, session)``."""
     if not claim(db, row):
         return DispatchResult("not_claimed")
-    result = transport.send(message_for(row, options or SendOptions()))
+    result = transport.send(message_for(row, options))
     row.backend = backend
     row.from_address = from_address
     refs = {"outbox_id": row.id}

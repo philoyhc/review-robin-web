@@ -101,7 +101,12 @@ def test_an_email_toggle_turns_on_and_off_and_is_audited(
     assert getattr(operator_settings.get_email_preferences(user), field) is True
     assert 'aria-pressed="true"' in _email_row(client.get("/operator/settings").text, row_key)
 
-    client.post("/operator/settings/email-preference", data={"key": pref_key, "on": "false"})
+    off = client.post(
+        "/operator/settings/email-preference",
+        data={"key": pref_key, "on": "false"},
+        follow_redirects=False,
+    )
+    assert off.status_code == 303
     db.refresh(user)
     assert getattr(operator_settings.get_email_preferences(user), field) is False
     events = (
@@ -111,10 +116,30 @@ def test_an_email_toggle_turns_on_and_off_and_is_audited(
         .scalars()
         .all()
     )
-    assert [e.detail["changes"][pref_key] for e in events if e.detail] == [
+    assert all(e.detail is not None for e in events)
+    assert [e.detail["changes"][pref_key] for e in events if e.detail is not None] == [
         [False, True],
         [True, False],
     ]
+
+
+def test_an_email_toggle_keeps_the_return_to(client: TestClient) -> None:
+    response = client.post(
+        "/operator/settings/email-preference",
+        data={"key": "email_bcc_self", "on": "true", "return_to": "/operator/sessions"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"].endswith(
+        "/operator/settings?return_to=/operator/sessions#email-settings"
+    )
+
+
+def test_each_email_toggle_is_named_by_its_row(client: TestClient) -> None:
+    body = client.get("/operator/settings").text
+    for key in ("sent-items", "bcc-self", "reply-to-help"):
+        assert f'id="email-setting-{key}-label"' in body
+        assert f'aria-labelledby="email-setting-{key}-label email-setting-{key}-toggle"' in body
 
 
 def test_an_email_toggle_keeps_the_other_preferences(client: TestClient, db: Session) -> None:

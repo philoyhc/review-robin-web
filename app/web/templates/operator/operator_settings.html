@@ -128,8 +128,10 @@
   <div class="card" id="email-settings">
     <h2>Email settings</h2>
     <p class="muted">
-      Mail you send from Review Robin goes from your own mailbox. These
-      choices apply to every message it sends as you.
+      Mail you send from Review Robin goes from your own mailbox. Sending
+      invitations and reminders isn't switched on yet: until it is, these
+      choices apply to <strong>Send a test to me</strong> (Sent Items and
+      Reply-to), and to every message once it is.
     </p>
     {% set email_toggles = [
       ("sent-items", "email_save_to_sent_items", "Keep a copy in my Sent Items",
@@ -144,7 +146,7 @@
     {% for key, pref_key, label, on, hint in email_toggles %}
       <div class="email-setting-row" data-email-setting="{{ key }}">
         <div>
-          <div>{{ label }}</div>
+          <div id="email-setting-{{ key }}-label">{{ label }}</div>
           <p class="muted email-setting-hint">{{ hint }}</p>
         </div>
         <form method="post" action="{{ url('/operator/settings/email-preference') }}">
@@ -154,6 +156,8 @@
             <input type="hidden" name="return_to" value="{{ return_to_raw }}">
           {% endif %}
           <button type="submit" class="btn{% if not on %} secondary{% endif %}"
+                  id="email-setting-{{ key }}-toggle"
+                  aria-labelledby="email-setting-{{ key }}-label email-setting-{{ key }}-toggle"
                   aria-pressed="{{ 'true' if on else 'false' }}"
                   title="Click to turn {{ 'off' if on else 'on' }}">{{ 'On' if on else 'Off' }}</button>
         </form>

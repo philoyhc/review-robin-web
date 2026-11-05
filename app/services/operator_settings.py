@@ -347,8 +347,11 @@ def get_email_preferences(user: User) -> EmailPreferences:
     """The operator's three email choices; anything but a stored ``True``
     reads as off."""
     preferences = user.preferences or {}
-    on = [preferences.get(key) is True for key in EMAIL_PREFERENCE_KEYS]
-    return EmailPreferences(*on)
+    return EmailPreferences(
+        save_to_sent_items=preferences.get("email_save_to_sent_items") is True,
+        bcc_self=preferences.get("email_bcc_self") is True,
+        reply_to_help=preferences.get("email_reply_to_help") is True,
+    )
 
 
 def set_email_preference(
