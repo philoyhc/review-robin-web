@@ -206,7 +206,14 @@ def run_pass(
                         continue
                     # Activation, End's close, Release from's close and the
                     # release stamps, as a page view runs them.
-                    observe_scheduled_events(db, review_session, now=current)
+                    if not observe_scheduled_events(db, review_session, now=current):
+                        # A trigger met the session busy; the observer
+                        # has rolled back and ends the pass for it.
+                        db.rollback()
+                        with _status_lock:
+                            _status.busy_sessions += 1
+                        _log.info("scheduled clock: session %s busy; next pass", session_id)
+                        continue
                     db.commit()
                     visited += 1
                 except SessionBusy:

@@ -569,7 +569,7 @@ def test_a_failing_session_and_a_busy_one_are_counted(
             raise RuntimeError("boom")
         if session.id == busy.id:
             raise SessionBusy()
-        return None
+        return True
 
     monkeypatch.setattr(scheduled_events, "observe_scheduled_events", refuse)
     before = _clock.clock_status()
@@ -579,6 +579,37 @@ def test_a_failing_session_and_a_busy_one_are_counted(
     assert after.last_failure_type == "RuntimeError"
     assert after.last_failure_at is not None
     assert after.busy_sessions == before.busy_sessions + 1
+
+
+def test_a_trigger_meeting_a_busy_session_counts_as_busy_not_visited(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The real path (Codex, cordware #180): a trigger's ``SessionBusy``
+    is caught inside the observer, which reports the pass cut short, so
+    the clock counts the session busy rather than visited."""
+    from app.services.session_guard import SessionBusy
+
+    rs = _make_validated_session(db, "clock-status-busy-trigger")
+    rs.scheduled_activate_at = NOW - timedelta(minutes=1)
+    db.commit()
+
+    def busy(*args, **kwargs):
+        raise SessionBusy()
+
+    monkeypatch.setattr(scheduled_events, "_observe_scheduled_activation", busy)
+    before = _clock.clock_status()
+    visited = _clock.run_pass(_factory(db), now=NOW)
+    after = _clock.clock_status()
+    assert visited == 0
+    assert after.busy_sessions == before.busy_sessions + 1
+    assert after.last_pass_visited == 0
+    db.refresh(rs)
+    assert not lifecycle.is_ready(rs)
+
+
+def test_the_observer_reports_a_full_pass(db: Session) -> None:
+    rs = _make_validated_session(db, "clock-observer-true")
+    assert scheduled_events.observe_scheduled_events(db, rs, now=NOW) is True
 
 
 def test_the_status_is_a_copy(db: Session) -> None:

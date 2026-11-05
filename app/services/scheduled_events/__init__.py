@@ -212,7 +212,7 @@ def observe_scheduled_events(
     now: datetime | None = None,
     correlation_id: str | None = None,
     build_invite_url: Callable[[str], str] | None = None,
-) -> None:
+) -> bool:
     """Lazy observer entry point — called, through the route layer's
     ``observe_scheduled_events_on_load``, from the GETs of Session
     Home, the four Operations pages (Validate, Assignments,
@@ -243,6 +243,10 @@ def observe_scheduled_events(
     triggers in this pass see the same clock — and the catch-up
     ordering (past-due invites fire before activation in the same
     pass) is the natural order below.
+
+    Returns ``False`` when a busy session cut the pass short (another
+    request held its lock), ``True`` otherwise; the clock counts the
+    first as a busy skip, a page view ignores it.
     """
     current = now or datetime.now(UTC)
     try:
@@ -258,7 +262,8 @@ def observe_scheduled_events(
         # (``docs/database.md``): it may be doing this very work. Skip the
         # rest of the pass rather than wait again for each trigger; the
         # next page load tries again.
-        return
+        return False
+    return True
 
 
 def scheduled_send_enabled() -> bool:
