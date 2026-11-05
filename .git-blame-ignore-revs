@@ -1,0 +1,4 @@
+# Commits that only reformat; `git blame` skips them once configured:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+# Segment 22H Item 1: ruff format across the repository (#3623).
+9f45f59b9c557b2036f88020d522416babadb013
