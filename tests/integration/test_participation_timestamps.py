@@ -1,7 +1,7 @@
 """14F rung 3d: the participation report.
 
-- An arrival on the review surface or the summary (a visit after
-  ``ARRIVAL_GAP`` without one) stamps ``Reviewer.last_opened_at``,
+- Opening the review surface or the summary stamps
+  ``Reviewer.last_opened_at`` at most once per ``ARRIVAL_GAP``,
   whichever link brought the reviewer, writes ``reviewer.opened``, and
   leaves ``updated_at`` alone (it reads as a roster edit on Setup).
 - Reviewer response metadata's **Timestamps** chip, off by default, adds
@@ -83,9 +83,9 @@ def _opened_events(db: Session, reviewer: Reviewer) -> list[AuditEvent]:
     ]
 
 
-def test_page_turns_within_a_visit_are_one_arrival(client: TestClient, db: Session) -> None:
-    """Codex on #3654: each arrival is audited, but a visit's page turns
-    neither restamp nor write another row."""
+def test_requests_within_the_gap_of_a_stamp_write_nothing(client: TestClient, db: Session) -> None:
+    """Codex on #3654: each stamp is audited; requests within
+    ``ARRIVAL_GAP`` of the last stamp neither restamp nor write a row."""
     session = _ready_session(client, db, code="ts-arrival")
     reviewer = _rae(db, session)
     operator = db.execute(select(User).where(User.id == session.created_by_user_id)).scalar_one()

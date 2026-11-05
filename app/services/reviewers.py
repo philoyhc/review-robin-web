@@ -80,22 +80,24 @@ _FIELD_LABELS = {
 
 
 ARRIVAL_GAP = timedelta(minutes=30)
-"""How long without a visit before the next one counts as a new arrival
-(``mark_opened``): page turns within a visit neither restamp nor audit."""
+"""The least time between two stamps (``mark_opened``): requests within it
+of the last stamp neither restamp nor audit."""
 
 
 def mark_opened(
     db: Session, reviewer: Reviewer, *, user: User, now: datetime | None = None
 ) -> bool:
-    """Stamp ``reviewer.last_opened_at`` on an arrival on the review
-    surface or the summary, whichever link brought them (14F rung 3d), and
-    write ``reviewer.opened``. Whether this call stamped.
+    """Stamp ``reviewer.last_opened_at`` when the reviewer opens the
+    review surface or the summary, whichever link brought them (14F rung
+    3d), and write ``reviewer.opened``. Whether this call stamped.
 
-    An arrival is a visit after ``ARRIVAL_GAP`` without one, so the stamp
-    reads as when the latest visit began and the audit log gets one row a
-    visit, not one a page (Codex on #3654). A Core ``UPDATE`` that sets
-    ``updated_at`` to itself, so a visit does not read as a roster edit on
-    Setup's Reviewers table."""
+    At most once per ``ARRIVAL_GAP``, measured from the last stamp, not
+    from the last request (Codex on #3654): the audit log gets a row per
+    half hour of use rather than one per page, and ``LastOpened`` is at
+    most that much older than the reviewer's latest request. Measuring
+    inactivity would mean writing on every page again. A Core ``UPDATE``
+    that sets ``updated_at`` to itself, so a visit does not read as a
+    roster edit on Setup's Reviewers table."""
     stamp = now or datetime.now(UTC)
     last = reviewer.last_opened_at
     if last is not None:

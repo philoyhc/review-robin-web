@@ -171,10 +171,13 @@ Taken 2026-11-02 at `fffd4c28`; re-taken 2026-11-05 at `095336bf`
   text is the author's.
 - 2026-11-05, rung 3d: `reviewers.last_opened_at` (migration
   `a3d7f1c9e2b4`) is stamped by `reviewers.mark_opened` on an arrival on
-  the review surface page or the summary: a visit after `ARRIVAL_GAP`
-  (30 minutes) without one, so it reads as when the latest visit began.
-  Each arrival writes `reviewer.opened` (Codex on #3654: every mutating
-  service audits), and page turns within a visit write nothing. It is a
+  the review surface page or the summary, at most once per
+  `ARRIVAL_GAP` (30 minutes) measured from the last stamp, so it is at
+  most that much older than the latest request. Each stamp writes
+  `reviewer.opened` (Codex on #3654: every mutating service audits);
+  requests between stamps write nothing. Codex's next round wanted the
+  gap measured from the last request: that would mean writing on every
+  page again, so the wording was fixed instead. It is a
   Core `UPDATE` that keeps `updated_at`, so a visit is not a roster edit
   on Setup. The **Timestamps** chip (off by default) adds
   `LastOpened`, `LastSaved` and `LastSubmitted` after name and email:
