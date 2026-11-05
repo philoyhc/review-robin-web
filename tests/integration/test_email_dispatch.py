@@ -126,6 +126,7 @@ def test_a_row_not_queued_is_not_claimed(db: Session, status: str) -> None:
 
 def test_the_operators_options_reach_the_message(db: Session) -> None:
     _rs, row = _queued_row(db, "disp-opts")
+    row.cc_emails = "dean@example.edu"
     row.bcc_emails = "Op@Example.edu, other@example.edu"
     db.commit()
     mailer = FakeMailer()
@@ -136,6 +137,7 @@ def test_the_operators_options_reach_the_message(db: Session) -> None:
         db, row, GraphEmailTransport(mailer), backend="graph", actor_user_id=None, options=options
     )
     [sent] = mailer.sent
+    assert sent.cc == ("dean@example.edu",)
     assert sent.bcc == ("Op@Example.edu", "other@example.edu")  # the operator once
     assert sent.reply_to == "help@example.edu"
     assert sent.save_to_sent_items is True

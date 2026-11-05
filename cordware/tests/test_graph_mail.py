@@ -61,11 +61,13 @@ def test_bcc_reply_to_and_sent_items_reach_the_payload() -> None:
             to="rev@example.edu",
             subject="s",
             body="b",
+            cc=("dean@example.edu",),
             bcc=("me@example.edu",),
             reply_to="help@example.edu",
             save_to_sent_items=True,
         )
     )
+    assert payload["message"]["ccRecipients"] == [{"emailAddress": {"address": "dean@example.edu"}}]
     assert payload["message"]["bccRecipients"] == [{"emailAddress": {"address": "me@example.edu"}}]
     assert payload["message"]["replyTo"] == [{"emailAddress": {"address": "help@example.edu"}}]
     assert payload["saveToSentItems"] is True

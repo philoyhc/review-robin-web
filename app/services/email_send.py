@@ -258,6 +258,7 @@ class GraphEmailTransport:
             to=msg.to,
             subject=msg.subject,
             body=msg.body,
+            cc=tuple(msg.cc),
             bcc=tuple(msg.bcc),
             reply_to=msg.reply_to,
             save_to_sent_items=msg.save_to_sent_items,

@@ -501,6 +501,7 @@ class MailMessage:
     to: str
     subject: str
     body: str
+    cc: tuple[str, ...] = ()
     bcc: tuple[str, ...] = ()
     reply_to: str | None = None
     #: Graph's ``saveToSentItems``, which Graph itself defaults to true.
@@ -537,6 +538,8 @@ def send_mail_payload(message: MailMessage) -> dict[str, Any]:
         "body": {"contentType": "Text", "content": message.body},
         "toRecipients": [_recipient(message.to)],
     }
+    if message.cc:
+        mail["ccRecipients"] = [_recipient(address) for address in message.cc]
     if message.bcc:
         mail["bccRecipients"] = [_recipient(address) for address in message.bcc]
     if message.reply_to:
