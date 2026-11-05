@@ -35,7 +35,8 @@ directions and runs the suite, less `tests/browser/`, against a real
 `postgres:16`, in three parallel shards with xdist workers and a database
 each: `postgres (unit)`, which carries the migrations, and
 `tests/integration` cut in two, `postgres (integration-a)` and
-`postgres (integration-b)` (segment 22I). It
+`postgres (integration-b)` (segment 22I). On #3636 they took 1 m 34 s,
+2 m 16 s and 2 m 45 s. It
 matters because a deployment migrates Postgres from a `main` commit:
 the dev slot's workflow did so on every push without depending on
 either CI workflow, and the institutional release migrates whichever
