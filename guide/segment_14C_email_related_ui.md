@@ -174,11 +174,11 @@ operator's own mailbox, not a session.
 - Read once, at rung 2. The read found the Reply-to check let
   "address or call …" through, since `parseaddr` squeezes spaces out; it
   now uses `email_identity.looks_like_email`. It also found the card's
-  copy claimed every send: no participant send exists until 14F rung 3,
+  copy claimed every send: no participant send exists until 14F rung 3a,
   so the copy says what applies now, and `dispatch` takes `options`
   without a default. **The Definition of done's "changes what the send
-  path does" is met for Bcc only when 14F rung 3 lands**, so this item
-  closes with 14F rung 3, not before. Main-base SHA before this item's rung 1: `908959ba`.
+  path does" is met for Bcc only when 14F rung 3a lands**, so this item
+  closes with 14F rung 3a, not before. Main-base SHA before this item's rung 1: `908959ba`.
 
 ### PR ladder
 
