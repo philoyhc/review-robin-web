@@ -55,9 +55,7 @@ def test_the_cookie_round_trips_every_chip_off() -> None:
     assert views.remembered_account_chips("") is None
 
 
-def test_a_chip_selected_turns_on_is_remembered(
-    client: TestClient, admin: None
-) -> None:
+def test_a_chip_selected_turns_on_is_remembered(client: TestClient, admin: None) -> None:
     """``?selected=`` turns the row's chip on as if clicked, and a click
     is remembered, so leaving and coming back keeps the row in view."""
     client.post(f"{ACCOUNTS}/invite", data={"email": "newbie@example.edu"})
@@ -69,9 +67,7 @@ def test_a_chip_selected_turns_on_is_remembered(
     assert _on(client.get(ACCOUNTS).text) == ["operators", "unused"]
 
 
-def test_invite_lands_on_the_table_as_the_admin_left_it(
-    client: TestClient, admin: None
-) -> None:
+def test_invite_lands_on_the_table_as_the_admin_left_it(client: TestClient, admin: None) -> None:
     """Invite selects no row (19X Item 14, author), so the remembered chips
     stand even when they hide the new operator."""
     client.get(f"{ACCOUNTS}?show=unused")

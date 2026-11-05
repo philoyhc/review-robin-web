@@ -25,9 +25,7 @@ from app.db.models import Observer, ReviewSession
 from ._lookups import must_search
 
 
-def _make_session(
-    client: TestClient, db: Session, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "Obs", "code": code, "description": ""},
@@ -65,20 +63,30 @@ def _seed(db: Session, session_id: int, names: list[str]) -> list[Observer]:
 # `cohort-rule` is on this list and is not on the Reviewers one —
 # it is the row action this page has and that one does not.
 _ROW_ACTIONS = [
-    ("update", "{base}/{rid}/update", {
-        "display_name": "Alice", "email": "alice@example.org",
-        "tag_1": "", "status": "active",
-    }),
+    (
+        "update",
+        "{base}/{rid}/update",
+        {
+            "display_name": "Alice",
+            "email": "alice@example.org",
+            "tag_1": "",
+            "status": "active",
+        },
+    ),
     ("bulk-inactivate", "{base}/bulk-inactivate", {"observer_ids": ["{rid}"]}),
     ("bulk-reactivate", "{base}/bulk-reactivate", {"observer_ids": ["{rid}"]}),
-    ("cohort-rule", "{base}/cohort-rule", {
-        "observer_ids": ["{rid}"],
-        "cohort_combinator": "AND",
-        "cohort_rule_field": "reviewer.tag1",
-        "cohort_rule_op": "IS",
-        "cohort_rule_operand_tag": "observer.tag1",
-        "cohort_rule_operand_value": "blue",
-    }),
+    (
+        "cohort-rule",
+        "{base}/cohort-rule",
+        {
+            "observer_ids": ["{rid}"],
+            "cohort_combinator": "AND",
+            "cohort_rule_field": "reviewer.tag1",
+            "cohort_rule_op": "IS",
+            "cohort_rule_operand_tag": "observer.tag1",
+            "cohort_rule_operand_value": "blue",
+        },
+    ),
 ]
 
 
@@ -86,7 +94,8 @@ def _post_row_action(client, base, rid, template, data, **extra):
     payload = {k: ([rid] if v == ["{rid}"] else v) for k, v in data.items()}
     payload.update(extra)
     return client.post(
-        template.format(base=base, rid=rid), data=payload,
+        template.format(base=base, rid=rid),
+        data=payload,
         follow_redirects=False,
     )
 
@@ -101,9 +110,9 @@ def test_every_row_action_lands_on_the_row_it_acted_on(
 
     response = _post_row_action(client, base, rows[0].id, template, data)
     assert response.status_code == 303, f"{name}: {response.text[:400]}"
-    assert response.headers["location"].endswith(
-        f"#observer-row-{rows[0].id}"
-    ), f"{name}: {response.headers['location']}"
+    assert response.headers["location"].endswith(f"#observer-row-{rows[0].id}"), (
+        f"{name}: {response.headers['location']}"
+    )
 
 
 @pytest.mark.parametrize("name,template,data", _ROW_ACTIONS)
@@ -117,14 +126,12 @@ def test_every_row_action_carries_the_pager_offset(
     rows = _seed(db, review_session.id, ["Alice"])
     base = f"/operator/sessions/{review_session.public_id}/observers"
 
-    loc = _post_row_action(
-        client, base, rows[0].id, template, data, filter_offset=200
-    ).headers["location"]
+    loc = _post_row_action(client, base, rows[0].id, template, data, filter_offset=200).headers[
+        "location"
+    ]
     assert "offset=200" in loc, f"{name}: {loc}"
 
-    plain = _post_row_action(
-        client, base, rows[0].id, template, data
-    ).headers["location"]
+    plain = _post_row_action(client, base, rows[0].id, template, data).headers["location"]
     assert "offset=" not in plain, f"{name}: {plain}"
 
 
@@ -145,7 +152,8 @@ def test_the_page_actually_sends_the_offset_it_asks_the_route_to_read(
 
     bulk = re.search(
         r'<form[^>]*id="observers-bulk-form".*?</form>',
-        client.get(f"{base}?offset=200").text, re.S,
+        client.get(f"{base}?offset=200").text,
+        re.S,
     )
     assert bulk, "bulk form not rendered on page 2"
     assert 'name="filter_offset" value="200"' in bulk.group(0), (
@@ -157,14 +165,19 @@ def test_the_page_actually_sends_the_offset_it_asks_the_route_to_read(
     # along with the defect (19O Item 6). An unordered `SELECT` has no
     # guaranteed row order, so `[210]` was luck; SQLite returns
     # insertion order for this shape and Postgres need not.
-    rid = db.execute(
-        select(Observer.id)
-        .where(Observer.session_id == review_session.id)
-        .order_by(Observer.id)
-    ).scalars().all()[210]
+    rid = (
+        db.execute(
+            select(Observer.id)
+            .where(Observer.session_id == review_session.id)
+            .order_by(Observer.id)
+        )
+        .scalars()
+        .all()[210]
+    )
     edit = re.search(
         r'<form[^>]*id="observer-edit-form".*?</form>',
-        client.get(f"{base}?edit_id={rid}").text, re.S,
+        client.get(f"{base}?edit_id={rid}").text,
+        re.S,
     )
     assert edit, "edit form not rendered"
     assert 'name="filter_offset" value="200"' in edit.group(0), (
@@ -190,9 +203,7 @@ def test_delete_lands_on_the_table_card_because_its_rows_are_gone(
     assert response.status_code == 303, response.text[:400]
     loc = response.headers["location"]
     assert loc.endswith("#observers-table-card"), loc
-    assert "#observer-row-" not in loc, (
-        "delete anchored a row it had just removed"
-    )
+    assert "#observer-row-" not in loc, "delete anchored a row it had just removed"
     # A delete has no row to name, but it still has a page to come back
     # to: without the offset an operator deleting from page 6 of a long
     # roster was answered with page 1. The parametrized offset test
@@ -214,17 +225,11 @@ def test_rows_and_the_fallback_are_both_present_for_the_landing(
     """
     review_session = _make_session(client, db, code="obs-landing")
     rows = _seed(db, review_session.id, ["Alice"])
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/observers"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/observers").text
 
-    row = re.search(
-        rf'<tr\b[^>]*id="observer-row-{rows[0].id}"[^>]*>', body, re.S
-    )
+    row = re.search(rf'<tr\b[^>]*id="observer-row-{rows[0].id}"[^>]*>', body, re.S)
     assert row, "the row the redirect names is not rendered"
-    assert "row-action-target" in row.group(0), (
-        "the row carries no landing margin"
-    )
+    assert "row-action-target" in row.group(0), "the row carries no landing margin"
     # Page-wide by nature: the rule lives in `base.html`'s inline
     # `<style>`, which every page carries. So this guards that the base
     # rule still exists, not anything Observers-specific — the scoped
@@ -235,17 +240,13 @@ def test_rows_and_the_fallback_are_both_present_for_the_landing(
     # is satisfied by the table card's `id=` attribute, which renders
     # regardless — so deleting the operative lines of the script would
     # leave that assertion green.
-    script = re.search(
-        r"<script>(?:(?!</script>).)*?#observer-row-.*?</script>", body, re.S
-    )
+    script = re.search(r"<script>(?:(?!</script>).)*?#observer-row-.*?</script>", body, re.S)
     assert script, "the fallback script is gone"
     for needle in ("getElementById", "observers-table-card", "scrollIntoView"):
         assert needle in script.group(0), f"the fallback lost {needle}"
 
 
-def test_add_carries_the_active_filter_into_add_mode(
-    db: Session, client: TestClient
-) -> None:
+def test_add_carries_the_active_filter_into_add_mode(db: Session, client: TestClient) -> None:
     """The filter is lost at the NAVIGATION, not at the POST.
 
     `Add` linked to a bare `?add=1`, so the add page rendered
@@ -258,7 +259,7 @@ def test_add_carries_the_active_filter_into_add_mode(
     base = f"/operator/sessions/{review_session.public_id}/observers"
 
     body = client.get(f"{base}?status=inactive&q=ali").text
-    link = re.search(r'<a[^>]*>\s*Add new\s*</a>', body)
+    link = re.search(r"<a[^>]*>\s*Add new\s*</a>", body)
     assert link, "no Add new link"
     assert "status=inactive" in link.group(0), link.group(0)
     assert "q=ali" in link.group(0), link.group(0)
@@ -266,9 +267,7 @@ def test_add_carries_the_active_filter_into_add_mode(
     # An unfiltered view carries neither — `status=all` is the default
     # and an empty search is nothing, so spelling them out would be
     # noise in the URL.
-    plain = must_search(
-        r'<a[^>]*>\s*Add new\s*</a>', client.get(base).text
-    ).group(0)
+    plain = must_search(r"<a[^>]*>\s*Add new\s*</a>", client.get(base).text).group(0)
     assert "status=" not in plain and "q=" not in plain, plain
 
 
@@ -289,16 +288,17 @@ def test_creating_a_row_pages_to_where_the_new_row_actually_is(
     response = client.post(
         f"{base}/create",
         data={
-            "display_name": "Zed", "email": "zed@example.org",
-            "tag_1": "", "status": "active", "filter_offset": 0,
+            "display_name": "Zed",
+            "email": "zed@example.org",
+            "tag_1": "",
+            "status": "active",
+            "filter_offset": 0,
         },
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text[:400]
     loc = response.headers["location"]
-    created = db.execute(
-        select(Observer).where(Observer.email == "zed@example.org")
-    ).scalar_one()
+    created = db.execute(select(Observer).where(Observer.email == "zed@example.org")).scalar_one()
     assert f"focus={created.id}" in loc, loc
     assert loc.endswith(f"#observer-row-{created.id}"), loc
 
@@ -310,9 +310,7 @@ def test_creating_a_row_pages_to_where_the_new_row_actually_is(
     assert ">Zed<" in landed
 
 
-def test_a_create_carries_the_pager_offset_too(
-    db: Session, client: TestClient
-) -> None:
+def test_a_create_carries_the_pager_offset_too(db: Session, client: TestClient) -> None:
     """`_ROW_ACTIONS` structurally cannot cover a create — there is no
     row id to act on until the POST returns — so the offset half is
     asserted here.
@@ -329,17 +327,18 @@ def test_a_create_carries_the_pager_offset_too(
     loc = client.post(
         f"{base}/create",
         data={
-            "display_name": "Ada", "email": "ada@example.org",
-            "tag_1": "", "status": "active", "filter_offset": 200,
+            "display_name": "Ada",
+            "email": "ada@example.org",
+            "tag_1": "",
+            "status": "active",
+            "filter_offset": 200,
         },
         follow_redirects=False,
     ).headers["location"]
     assert "offset=200" in loc, loc
 
 
-def test_entering_edit_mode_lands_on_the_row_being_edited(
-    db: Session, client: TestClient
-) -> None:
+def test_entering_edit_mode_lands_on_the_row_being_edited(db: Session, client: TestClient) -> None:
     """Entering edit mode is a navigation like any other.
 
     The `Edit` button is client-side — it builds a URL from the checked
@@ -349,13 +348,12 @@ def test_entering_edit_mode_lands_on_the_row_being_edited(
     `row-action-target` on the edit row had nothing navigating to it.
     """
     review_session = _make_session(client, db, code="obs-editnav")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/observers"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/observers").text
 
     script = re.search(
         r'<script>(?:(?!</script>).)*?"\?edit_id="(?:(?!</script>).)*?</script>',
-        body, re.S,
+        body,
+        re.S,
     )
     assert script, "the Edit navigation script is gone"
     assert '"#observer-row-"' in script.group(0), (
@@ -370,19 +368,13 @@ def test_entering_edit_mode_lands_on_the_row_being_edited(
     edit_page = client.get(
         f"/operator/sessions/{review_session.public_id}/observers?edit_id={row.id}"
     ).text
-    edit_row = re.search(
-        rf'<tr\b[^>]*id="observer-row-{row.id}"[^>]*>', edit_page, re.S
-    )
+    edit_row = re.search(rf'<tr\b[^>]*id="observer-row-{row.id}"[^>]*>', edit_page, re.S)
     assert edit_row, "the edit row is not rendered with the id Edit names"
     assert "observer-edit-row" in edit_row.group(0), edit_row.group(0)
-    assert "row-action-target" in edit_row.group(0), (
-        "the edit row carries no landing margin"
-    )
+    assert "row-action-target" in edit_row.group(0), "the edit row carries no landing margin"
 
 
-def test_add_lands_on_the_row_it_opens(
-    db: Session, client: TestClient
-) -> None:
+def test_add_lands_on_the_row_it_opens(db: Session, client: TestClient) -> None:
     """The other half of the `Add` fix.
 
     Carrying the filter stopped the add page rendering unfiltered; it
@@ -394,7 +386,7 @@ def test_add_lands_on_the_row_it_opens(
     _seed(db, review_session.id, ["Alice", "Bob"])
     base = f"/operator/sessions/{review_session.public_id}/observers"
 
-    link = re.search(r'<a[^>]*>\s*Add new\s*</a>', client.get(base).text)
+    link = re.search(r"<a[^>]*>\s*Add new\s*</a>", client.get(base).text)
     assert link, "no Add new link"
     assert "#observers-row-editor" in link.group(0), link.group(0)
 
@@ -402,6 +394,4 @@ def test_add_lands_on_the_row_it_opens(
     add_page = client.get(f"{base}?add=1").text
     row = re.search(r'<tr\b[^>]*id="observers-row-editor"[^>]*>', add_page)
     assert row, "the add row does not carry the id the link names"
-    assert "row-action-target" in row.group(0), (
-        "the add row carries no landing margin"
-    )
+    assert "row-action-target" in row.group(0), "the add row carries no landing margin"

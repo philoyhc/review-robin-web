@@ -30,13 +30,9 @@ from sqlalchemy.orm import Session
 from app.db.models import ReviewSession
 from app.services import field_labels
 
-REVIEWER_CSV = (
-    b"ReviewerName,ReviewerEmail,ReviewerTag1.Tutor\n"
-    b"Alice,alice@example.edu,senior\n"
-)
+REVIEWER_CSV = b"ReviewerName,ReviewerEmail,ReviewerTag1.Tutor\nAlice,alice@example.edu,senior\n"
 REVIEWEE_CSV = (
-    b"RevieweeName,RevieweeEmail,RevieweeTag1.House\n"
-    b"Carol,carol@example.edu,Gryffindor\n"
+    b"RevieweeName,RevieweeEmail,RevieweeTag1.House\nCarol,carol@example.edu,Gryffindor\n"
 )
 RELATIONSHIP_CSV = (
     b"ReviewerEmail,RevieweeEmail,PairContextTag1.Mentor\n"
@@ -45,10 +41,7 @@ RELATIONSHIP_CSV = (
 #: The same three files with bare tag headers — no ``.Label`` suffix.
 #: `spec/csv_contracts.md`'s "upsert present, clear absent" rule makes
 #: these *clear* an existing override rather than leave it alone.
-BARE_REVIEWER_CSV = (
-    b"ReviewerName,ReviewerEmail,ReviewerTag1\n"
-    b"Alice,alice@example.edu,senior\n"
-)
+BARE_REVIEWER_CSV = b"ReviewerName,ReviewerEmail,ReviewerTag1\nAlice,alice@example.edu,senior\n"
 
 
 def _assert_upload_succeeded(response) -> None:
@@ -60,14 +53,10 @@ def _assert_upload_succeeded(response) -> None:
     """
     assert response.status_code in (200, 303), response.text
     location = response.headers.get("location", "")
-    assert "quick_setup_error" not in location, (
-        f"the upload was rejected, not applied: {location}"
-    )
+    assert "quick_setup_error" not in location, f"the upload was rejected, not applied: {location}"
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "FL", "code": code, "description": "d"},
@@ -269,18 +258,13 @@ def test_the_upload_keeps_the_headers_friendly_label(
     ).scalar_one()
 
     for source_type, field_key, label in expected:
-        assert (
-            field_labels.resolve(review_session, source_type, field_key)
-            == label
-        ), (
+        assert field_labels.resolve(review_session, source_type, field_key) == label, (
             f"{source_type}.{field_key} lost its header label: the upload "
             "saved without reconciling field_labels_captured"
         )
 
 
-def test_the_create_session_form_keeps_the_label(
-    client: TestClient, db: Session
-) -> None:
+def test_the_create_session_form_keeps_the_label(client: TestClient, db: Session) -> None:
     """The eighth entry point, which the matrix above cannot reach: the
     labels ride in on the POST that *creates* the session, so there is
     no session to hand a `post` callable."""
@@ -310,9 +294,7 @@ def test_the_create_session_form_keeps_the_label(
     assert field_labels.resolve(review_session, "pair_context", "1") == "Mentor"
 
 
-def test_a_bare_header_on_quick_setup_clears_the_override(
-    client: TestClient, db: Session
-) -> None:
+def test_a_bare_header_on_quick_setup_clears_the_override(client: TestClient, db: Session) -> None:
     """The half of this item worth review.
 
     `spec/csv_contracts.md` reconciles a header's labels "upsert
@@ -346,9 +328,7 @@ def test_a_bare_header_on_quick_setup_clears_the_override(
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.id == review_session.id)
     ).scalar_one()
-    assert (
-        field_labels.resolve(review_session, "reviewer", "tag_1") != "Tutor"
-    ), (
+    assert field_labels.resolve(review_session, "reviewer", "tag_1") != "Tutor", (
         "a bare tag header left the override standing; Quick Setup is "
         "supposed to reconcile on the same terms as the card"
     )
@@ -406,10 +386,7 @@ def _upload_annotation_predicate():
     def check(annotation: object) -> bool:
         if isinstance(annotation, type) and issubclass(annotation, UploadFile):
             return True
-        return any(
-            arg is not None and check(arg)
-            for arg in typing.get_args(annotation)
-        )
+        return any(arg is not None and check(arg) for arg in typing.get_args(annotation))
 
     return check
 

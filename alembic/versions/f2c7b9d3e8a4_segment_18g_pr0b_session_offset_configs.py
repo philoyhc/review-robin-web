@@ -32,6 +32,7 @@ Revises: e6d4a1c8b3f5
 Create Date: 2026-05-20
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -47,12 +48,8 @@ def upgrade() -> None:
     with op.batch_alter_table("sessions", schema=None) as batch_op:
         batch_op.add_column(sa.Column("invite_offsets", sa.JSON(), nullable=True))
         batch_op.add_column(sa.Column("reminder_offsets", sa.JSON(), nullable=True))
-        batch_op.add_column(
-            sa.Column("archive_offset", sa.String(length=16), nullable=True)
-        )
-        batch_op.add_column(
-            sa.Column("release_until_offset", sa.String(length=16), nullable=True)
-        )
+        batch_op.add_column(sa.Column("archive_offset", sa.String(length=16), nullable=True))
+        batch_op.add_column(sa.Column("release_until_offset", sa.String(length=16), nullable=True))
 
 
 def downgrade() -> None:

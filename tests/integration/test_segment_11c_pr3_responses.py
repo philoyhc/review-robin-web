@@ -4,6 +4,7 @@ Covers the new Responses page (`/sessions/{id}/responses`), its
 reviewee-detail drill-in, and the chrome / nav changes that
 accompany the Monitoring retirement.
 """
+
 from __future__ import annotations
 
 import re
@@ -43,9 +44,7 @@ def _create_session(client: TestClient, db: Session, code: str) -> ReviewSession
         follow_redirects=False,
     )
     assert response.status_code == 303
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _populate(
@@ -131,9 +130,7 @@ def _ready_session(
 # --------------------------------------------------------------------------- #
 
 
-def test_responses_page_renders_workflow_card(
-    client: TestClient, db: Session
-) -> None:
+def test_responses_page_renders_workflow_card(client: TestClient, db: Session) -> None:
     """Per spec/workflow_card.md — the Responses page hosts
     the Workflow card with ``next_action_return_to=responses``."""
     session = _ready_session(
@@ -190,9 +187,7 @@ def test_responses_page_renders_table_for_assigned_reviewees(
     assert '<span class="pill pill-empty">—</span>' in body
 
 
-def test_responses_tab_shows_in_top_nav_and_active_on_page(
-    client: TestClient, db: Session
-) -> None:
+def test_responses_tab_shows_in_top_nav_and_active_on_page(client: TestClient, db: Session) -> None:
     session = _ready_session(
         client,
         db,
@@ -200,22 +195,15 @@ def test_responses_tab_shows_in_top_nav_and_active_on_page(
         reviewer_emails=["rae@example.edu"],
         reviewee_emails=["carol@example.edu"],
     )
-    body = client.get(
-        f"/operator/sessions/{session.public_id}/responses"
-    ).text
+    body = client.get(f"/operator/sessions/{session.public_id}/responses").text
     # Tab renders pointing at /responses, and is active.
-    assert (
-        f'href="/operator/sessions/{session.public_id}/responses">Responses</a>'
-        in body
-    )
+    assert f'href="/operator/sessions/{session.public_id}/responses">Responses</a>' in body
     assert "nav-tab active" in body
     # Monitoring tab is gone.
     assert ">Monitoring</a>" not in body
 
 
-def test_responses_page_reviewee_name_links_to_drill_in(
-    client: TestClient, db: Session
-) -> None:
+def test_responses_page_reviewee_name_links_to_drill_in(client: TestClient, db: Session) -> None:
     session = _ready_session(
         client,
         db,
@@ -230,15 +218,10 @@ def test_responses_page_reviewee_name_links_to_drill_in(
         )
     ).scalar_one()
     body = client.get(f"/operator/sessions/{session.public_id}/responses").text
-    assert (
-        f'href="/operator/sessions/{session.public_id}/responses/'
-        f'{reviewee.id}/detail"' in body
-    )
+    assert f'href="/operator/sessions/{session.public_id}/responses/{reviewee.id}/detail"' in body
 
 
-def test_responses_reviewee_detail_renders(
-    client: TestClient, db: Session
-) -> None:
+def test_responses_reviewee_detail_renders(client: TestClient, db: Session) -> None:
     session = _ready_session(
         client,
         db,
@@ -252,9 +235,7 @@ def test_responses_reviewee_detail_renders(
             Reviewee.email_or_identifier == "carol@example.edu",
         )
     ).scalar_one()
-    response = client.get(
-        f"/operator/sessions/{session.public_id}/responses/{reviewee.id}/detail"
-    )
+    response = client.get(f"/operator/sessions/{session.public_id}/responses/{reviewee.id}/detail")
     assert response.status_code == 200
     body = response.text
     assert "carol@example.edu" in body
@@ -263,9 +244,7 @@ def test_responses_reviewee_detail_renders(
     assert "Reviewers responded:" in body
 
 
-def test_responses_reviewee_detail_404_for_other_session(
-    client: TestClient, db: Session
-) -> None:
+def test_responses_reviewee_detail_404_for_other_session(client: TestClient, db: Session) -> None:
     session = _ready_session(
         client,
         db,
@@ -287,8 +266,7 @@ def test_responses_reviewee_detail_404_for_other_session(
         )
     ).scalar_one()
     response = client.get(
-        f"/operator/sessions/{session.public_id}/responses/"
-        f"{other_reviewee.id}/detail"
+        f"/operator/sessions/{session.public_id}/responses/{other_reviewee.id}/detail"
     )
     assert response.status_code == 404
 
@@ -318,10 +296,7 @@ def test_responses_page_bulk_remind_form_targets_invitations_endpoint(
         follow_redirects=False,
     )
     body = client.get(f"/operator/sessions/{session.public_id}/responses").text
-    assert (
-        f'action="/operator/sessions/{session.public_id}/invitations/remind-incomplete"'
-        in body
-    )
+    assert f'action="/operator/sessions/{session.public_id}/invitations/remind-incomplete"' in body
 
 
 # --------------------------------------------------------------------------- #
@@ -355,9 +330,7 @@ def test_per_reviewee_coverage_no_responses_with_assignments(
 # --------------------------------------------------------------------------- #
 
 
-def test_responses_filter_strip_renders(
-    client: TestClient, db: Session
-) -> None:
+def test_responses_filter_strip_renders(client: TestClient, db: Session) -> None:
     session = _ready_session(
         client,
         db,
@@ -377,9 +350,7 @@ def test_responses_filter_strip_renders(
     assert ">Clear</a>" not in body
 
 
-def test_responses_filter_status_narrows_rows(
-    client: TestClient, db: Session
-) -> None:
+def test_responses_filter_status_narrows_rows(client: TestClient, db: Session) -> None:
     """Two reviewees, one each in different states:
     - Carol has one assigned reviewer → "no responses".
     - Bob has no assignments at all → not included in the per-reviewee
@@ -393,17 +364,13 @@ def test_responses_filter_status_narrows_rows(
         reviewer_emails=["rae@example.edu"],
         reviewee_emails=["carol@example.edu", "dave@example.edu"],
     )
-    body = client.get(
-        f"/operator/sessions/{session.public_id}/responses?status=no_responses"
-    ).text
+    body = client.get(f"/operator/sessions/{session.public_id}/responses?status=no_responses").text
     # Both reviewees match "no responses" today (no submissions yet).
     assert "carol@example.edu" in body
     assert "dave@example.edu" in body
     # Filtering on "complete" with zero matching reviewees shows the
     # filter-empty message, not the "no reviewees assigned yet" copy.
-    body = client.get(
-        f"/operator/sessions/{session.public_id}/responses?status=complete"
-    ).text
+    body = client.get(f"/operator/sessions/{session.public_id}/responses?status=complete").text
     assert "No reviewees match the current filter." in body
     assert ">Clear</a>" in body
 
@@ -430,9 +397,7 @@ def test_the_count_line_sits_with_the_table_not_the_filter_row(
         reviewee_emails=["carol@example.edu", "dave@example.edu"],
     )
 
-    body = client.get(
-        f"/operator/sessions/{session.public_id}/responses?q=carol"
-    ).text
+    body = client.get(f"/operator/sessions/{session.public_id}/responses?q=carol").text
 
     # Left pane: what the table is showing.
     left = body[body.index('<div class="toolbar-pane toolbar-left">') :]
@@ -448,9 +413,7 @@ def test_the_count_line_sits_with_the_table_not_the_filter_row(
     assert ">Search</button>" in actions
 
 
-def test_the_count_line_is_absent_when_no_filter_narrows(
-    client: TestClient, db: Session
-) -> None:
+def test_the_count_line_is_absent_when_no_filter_narrows(client: TestClient, db: Session) -> None:
     """Uncapped page: absent, or the plain filter count. Never the
     `first N of M … more not shown` branch (19I Item 10)."""
     session = _ready_session(
@@ -467,9 +430,7 @@ def test_the_count_line_is_absent_when_no_filter_narrows(
     assert "more not shown" not in body
 
 
-def test_responses_filter_search_narrows_rows(
-    client: TestClient, db: Session
-) -> None:
+def test_responses_filter_search_narrows_rows(client: TestClient, db: Session) -> None:
     session = _ready_session(
         client,
         db,
@@ -477,9 +438,9 @@ def test_responses_filter_search_narrows_rows(
         reviewer_emails=["rae@example.edu"],
         reviewee_emails=["carol@example.edu", "dave@example.edu"],
     )
-    body = _strip_datalist(client.get(
-        f"/operator/sessions/{session.public_id}/responses?q=carol"
-    ).text)
+    body = _strip_datalist(
+        client.get(f"/operator/sessions/{session.public_id}/responses?q=carol").text
+    )
     assert "carol@example.edu" in body
     assert "dave@example.edu" not in body
     # One row per *reviewee* on this page, so that is the noun

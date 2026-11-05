@@ -56,10 +56,26 @@ _NOT_APP_PATHS = ("#", "?", "mailto:", "tel:", "javascript:", "data:", "http:", 
 def _is_url_attr(name: str) -> bool:
     """``href`` and its kin, and a ``data-*`` attribute named for one
     (``data-zip-href``), which a script follows."""
-    return name in _URL_ATTRS or (name.startswith("data-") and name.endswith(("href", "url", "action", "src")))
+    return name in _URL_ATTRS or (
+        name.startswith("data-") and name.endswith(("href", "url", "action", "src"))
+    )
 
 
-_VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
+_VOID = {
+    "area",
+    "base",
+    "br",
+    "col",
+    "embed",
+    "hr",
+    "img",
+    "input",
+    "link",
+    "meta",
+    "source",
+    "track",
+    "wbr",
+}
 
 
 _SCRIPT_COMMENTS = re.compile(r"/\*.*?\*/|^[ \t]*//[^\n]*", re.DOTALL | re.MULTILINE)

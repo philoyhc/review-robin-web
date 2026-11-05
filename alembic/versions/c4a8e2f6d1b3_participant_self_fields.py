@@ -12,6 +12,7 @@ Revises: b7e3d91a4c62
 Create Date: 2026-10-12
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa

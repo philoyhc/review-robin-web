@@ -36,15 +36,15 @@ from app.services import session_lifecycle as lifecycle
 from app.services.instruments._state import _instrument_label
 
 
-def _ordered_instruments(
-    db: Session, review_session: ReviewSession
-) -> list[Instrument]:
+def _ordered_instruments(db: Session, review_session: ReviewSession) -> list[Instrument]:
     return list(
         db.execute(
             select(Instrument)
             .where(Instrument.session_id == review_session.id)
             .order_by(Instrument.order, Instrument.id)
-        ).scalars().all()
+        )
+        .scalars()
+        .all()
     )
 
 
@@ -115,17 +115,12 @@ def reorder_instruments(
     instruments = _ordered_instruments(db, review_session)
     by_id: dict[int, Instrument] = {inst.id: inst for inst in instruments}
     if set(new_order_ids) != set(by_id):
-        raise ValueError(
-            "items must enumerate every instrument on the session exactly once"
-        )
+        raise ValueError("items must enumerate every instrument on the session exactly once")
 
     current_order_ids = [inst.id for inst in instruments]
     current_breaks_at = {inst.id for inst in instruments if inst.starts_new_page}
 
-    if (
-        current_order_ids == new_order_ids
-        and current_breaks_at == new_breaks_at
-    ):
+    if current_order_ids == new_order_ids and current_breaks_at == new_breaks_at:
         return
 
     lifecycle.invalidate_if_validated(
@@ -196,8 +191,7 @@ def create_page_break_after(
         ) from exc
     if idx == len(siblings) - 1:
         raise ValueError(
-            "cannot add a page break after the last instrument "
-            "(trailing breaks are not allowed)"
+            "cannot add a page break after the last instrument (trailing breaks are not allowed)"
         )
     successor = siblings[idx + 1]
     if successor.starts_new_page:
@@ -218,10 +212,7 @@ def create_page_break_after(
     audit.write_event(
         db,
         event_type="instrument.page_break_set",
-        summary=(
-            f"Added page break before instrument "
-            f"{_instrument_label(successor)}"
-        ),
+        summary=(f"Added page break before instrument {_instrument_label(successor)}"),
         actor_user_id=actor.id if actor else None,
         session=review_session,
         payload=audit.changes({"starts_new_page": [False, True]}),
@@ -248,9 +239,7 @@ def clear_page_break(
     """
     lifecycle.require_editable(db, instrument.session)
     if not instrument.starts_new_page:
-        raise ValueError(
-            f"instrument {instrument.id} does not carry a page break"
-        )
+        raise ValueError(f"instrument {instrument.id} does not carry a page break")
 
     review_session = instrument.session
     lifecycle.invalidate_if_validated(
@@ -265,10 +254,7 @@ def clear_page_break(
     audit.write_event(
         db,
         event_type="instrument.page_break_cleared",
-        summary=(
-            f"Removed page break before instrument "
-            f"{_instrument_label(instrument)}"
-        ),
+        summary=(f"Removed page break before instrument {_instrument_label(instrument)}"),
         actor_user_id=actor.id if actor else None,
         session=review_session,
         payload=audit.changes({"starts_new_page": [True, False]}),

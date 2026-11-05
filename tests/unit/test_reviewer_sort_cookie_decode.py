@@ -47,9 +47,7 @@ def test_explicitly_empty_cookie_is_an_empty_override() -> None:
 
 
 def test_display_only_cookie_decodes() -> None:
-    assert _decode(
-        [{"key": "reviewee.name", "dir": "desc"}, {"key": TAG, "dir": "asc"}]
-    ) == [
+    assert _decode([{"key": "reviewee.name", "dir": "desc"}, {"key": TAG, "dir": "asc"}]) == [
         {"display_field_id": 11, "dir": "desc"},
         {"display_field_id": 12, "dir": "asc"},
     ]
@@ -74,9 +72,9 @@ def test_malformed_entries_drop_before_the_cap() -> None:
     counts."""
     bad = {"key": "reviewee.name", "dir": "sideways"}
     assert _decode(["x", {"dir": "asc"}, bad, {"key": "response:rating", "dir": "asc"}]) is None
-    assert _decode(
-        [bad, bad, bad, {"key": "reviewee.name", "dir": "asc"}]
-    ) == [{"display_field_id": 11, "dir": "asc"}]
+    assert _decode([bad, bad, bad, {"key": "reviewee.name", "dir": "asc"}]) == [
+        {"display_field_id": 11, "dir": "asc"}
+    ]
 
 
 def test_unknown_keys_count_toward_the_cap() -> None:

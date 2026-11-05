@@ -61,7 +61,13 @@ def shallow_and_full(tmp_path: pathlib.Path) -> tuple[pathlib.Path, pathlib.Path
 
     shallow = tmp_path / "shallow"
     _run(
-        "git", "clone", "-q", "--depth", "1", f"file://{full}", str(shallow),
+        "git",
+        "clone",
+        "-q",
+        "--depth",
+        "1",
+        f"file://{full}",
+        str(shallow),
         cwd=tmp_path,
     )
     return shallow, full

@@ -125,9 +125,7 @@ def _search_filter(search: str) -> ColumnElement[bool]:
     needle = search.lower()
     return or_(
         func.lower(User.email).contains(needle, autoescape=True),
-        func.lower(func.coalesce(User.display_name, "")).contains(
-            needle, autoescape=True
-        ),
+        func.lower(func.coalesce(User.display_name, "")).contains(needle, autoescape=True),
     )
 
 
@@ -144,9 +142,7 @@ def _filters(
 
 def category_of(db: Session, user_id: int) -> str | None:
     """The chip one account sits under, or ``None`` if it doesn't exist."""
-    return db.execute(
-        select(_category()).where(User.id == user_id)
-    ).scalar_one_or_none()
+    return db.execute(select(_category()).where(User.id == user_id)).scalar_one_or_none()
 
 
 def _offset_of(
@@ -154,13 +150,9 @@ def _offset_of(
 ) -> int | None:
     """The page start that holds ``user_id`` under these filters, or
     ``None`` when the filters hide it. Rows run newest first."""
-    if db.execute(
-        select(User.id).where(User.id == user_id, *clauses)
-    ).first() is None:
+    if db.execute(select(User.id).where(User.id == user_id, *clauses)).first() is None:
         return None
-    ahead = db.execute(
-        select(func.count(User.id)).where(User.id > user_id, *clauses)
-    ).scalar_one()
+    ahead = db.execute(select(func.count(User.id)).where(User.id > user_id, *clauses)).scalar_one()
     return (ahead // page_size) * page_size
 
 
@@ -182,9 +174,7 @@ def list_accounts_page(
     holding that row, so an action's redirect lands where the row is.
     """
     clauses = _filters(categories, role, search)
-    total = db.execute(
-        select(func.count(User.id)).where(*clauses)
-    ).scalar_one()
+    total = db.execute(select(func.count(User.id)).where(*clauses)).scalar_one()
 
     if selected_user_id is not None:
         found = _offset_of(db, selected_user_id, clauses, page_size)
@@ -206,9 +196,7 @@ def list_accounts_page(
 
     category = _category().label("category")
     counts = {key: 0 for key in CATEGORIES}
-    for key, count in db.execute(
-        select(category, func.count(User.id)).group_by(category)
-    ):
+    for key, count in db.execute(select(category, func.count(User.id)).group_by(category)):
         counts[key] = count
 
     session_total, user_sole = _session_counts(db, [user.id for user, _, _ in page])
@@ -233,9 +221,7 @@ def list_accounts_page(
     return AccountsPage(rows=rows, total=total, counts=counts, offset=offset)
 
 
-def _session_counts(
-    db: Session, user_ids: list[int]
-) -> tuple[dict[int, int], dict[int, int]]:
+def _session_counts(db: Session, user_ids: list[int]) -> tuple[dict[int, int], dict[int, int]]:
     """Per user on the page: sessions they own, and how many of those
     they own alone."""
     if not user_ids:
@@ -248,13 +234,17 @@ def _session_counts(
         )
     )
     session_ids = {session_id for session_id, _ in memberships}
-    owners_per_session = dict(
-        db.execute(
-            select(SessionOperator.session_id, func.count(SessionOperator.id))
-            .where(SessionOperator.session_id.in_(session_ids))
-            .group_by(SessionOperator.session_id)
-        ).all()
-    ) if session_ids else {}
+    owners_per_session = (
+        dict(
+            db.execute(
+                select(SessionOperator.session_id, func.count(SessionOperator.id))
+                .where(SessionOperator.session_id.in_(session_ids))
+                .group_by(SessionOperator.session_id)
+            ).all()
+        )
+        if session_ids
+        else {}
+    )
     total: dict[int, int] = defaultdict(int)
     sole: dict[int, int] = defaultdict(int)
     for session_id, user_id in memberships:

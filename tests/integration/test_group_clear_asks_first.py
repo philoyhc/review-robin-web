@@ -147,9 +147,7 @@ def test_an_acknowledged_merge_clears(db: Session, client: TestClient) -> None:
     assert _group_kind(db, instrument.id) == instruments_service.encode_group_kind([])
 
 
-def test_a_tick_for_another_count_is_refused_again(
-    db: Session, client: TestClient
-) -> None:
+def test_a_tick_for_another_count_is_refused_again(db: Session, client: TestClient) -> None:
     """A tick left on after further edits carries the count it was shown,
     so it cannot approve a clear of a different size."""
     session, instrument = _seed(db, client, "gc-stale")
@@ -164,9 +162,7 @@ def test_a_tick_for_another_count_is_refused_again(
     assert _responses(db) == 4
 
 
-def test_the_no_js_fallback_refuses_then_goes_through(
-    db: Session, client: TestClient
-) -> None:
+def test_the_no_js_fallback_refuses_then_goes_through(db: Session, client: TestClient) -> None:
     session, instrument = _seed(db, client, "gc-fallback")
     url = f"/operator/sessions/{session.public_id}/instruments/{instrument.id}/fields/save"
 
@@ -196,9 +192,7 @@ def test_a_save_that_clears_nothing_never_asks(db: Session, client: TestClient) 
     assert _group_kind(db, instrument.id) is None
 
 
-def test_the_card_renders_the_tick_on_its_dfsave_form(
-    db: Session, client: TestClient
-) -> None:
+def test_the_card_renders_the_tick_on_its_dfsave_form(db: Session, client: TestClient) -> None:
     session, instrument = _seed(db, client, "gc-tick")
 
     page = client.get(
@@ -242,8 +236,7 @@ def test_a_reviewee_tag_edit_into_an_answered_group_is_refused(
 
     assert refused.status_code == 400
     assert (
-        "This change clears 3 saved responses on groups whose members it changes."
-        in refused.text
+        "This change clears 3 saved responses on groups whose members it changes." in refused.text
     )
     assert 'name="acknowledge_response_loss"' in refused.text
     assert 'value="3"' in refused.text
@@ -302,9 +295,7 @@ def test_an_acknowledged_reviewee_tag_edit_clears_the_group_joined(
     assert _responses(db) == 1
 
 
-def test_a_reviewee_edit_that_clears_nothing_never_asks(
-    db: Session, client: TestClient
-) -> None:
+def test_a_reviewee_edit_that_clears_nothing_never_asks(db: Session, client: TestClient) -> None:
     session, _ = _seed(db, client, "gc-reviewee-noop")
     ann = _reviewee(db, session.id, "Ann")
     url = f"/operator/sessions/{session.public_id}/reviewees/{ann.id}/update"

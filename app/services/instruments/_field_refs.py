@@ -43,9 +43,7 @@ _WIDTH_POSITION_KEY = re.compile(r"^(df|rf)@(\d+)$")
 _SORT_POSITION = "display_field"
 
 
-def repoint_sort(
-    entries: object, display_ids: dict[int, int]
-) -> list[dict[str, Any]] | None:
+def repoint_sort(entries: object, display_ids: dict[int, int]) -> list[dict[str, Any]] | None:
     """Sort entries re-pointed at the copy's display fields. ``entries``
     is the stored JSON, which an older row may hold in another shape:
     anything but a list is no sort, and an item that is not a dict is
@@ -91,9 +89,7 @@ def repoint_widths(
     return out
 
 
-def sort_to_positions(
-    entries: object, display_positions: dict[int, int]
-) -> list[dict[str, Any]]:
+def sort_to_positions(entries: object, display_positions: dict[int, int]) -> list[dict[str, Any]]:
     """Sort entries for the settings CSV: ``display_field_id`` becomes
     ``display_field``, the field's 1-based position. ``entries`` is the
     stored JSON, read as ``repoint_sort`` reads it."""
@@ -106,9 +102,7 @@ def sort_to_positions(
         if field_id == GROUP_IDENTITY_SORT_KEY:
             out.append(dict(entry))
             continue
-        position = (
-            display_positions.get(field_id) if isinstance(field_id, int) else None
-        )
+        position = display_positions.get(field_id) if isinstance(field_id, int) else None
         if position is None:
             continue
         rest = {k: v for k, v in entry.items() if k != "display_field_id"}
@@ -129,11 +123,7 @@ def sort_from_positions(
         entry = json_object(item)
         if entry is None:
             continue
-        rest = {
-            k: v
-            for k, v in entry.items()
-            if k not in (_SORT_POSITION, "display_field_id")
-        }
+        rest = {k: v for k, v in entry.items() if k not in (_SORT_POSITION, "display_field_id")}
         if entry.get("display_field_id") == GROUP_IDENTITY_SORT_KEY:
             new_id = GROUP_IDENTITY_SORT_KEY
         else:
@@ -167,9 +157,7 @@ def widths_to_positions(
         if match is None:
             out[key] = value
             continue
-        positions = (
-            display_positions if match.group(1) == "df" else field_positions
-        )
+        positions = display_positions if match.group(1) == "df" else field_positions
         position = positions.get(int(match.group(2)))
         if position is not None:
             out[f"{match.group(1)}@{position}"] = value
@@ -198,11 +186,7 @@ def widths_from_positions(
         if match is None:
             out[key] = value
             continue
-        ids = (
-            display_ids_by_position
-            if match.group(1) == "df"
-            else field_ids_by_position
-        )
+        ids = display_ids_by_position if match.group(1) == "df" else field_ids_by_position
         new_id = ids.get(int(match.group(2)))
         if new_id is not None:
             out[f"{match.group(1)}_{new_id}"] = value

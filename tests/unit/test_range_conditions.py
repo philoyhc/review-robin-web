@@ -26,9 +26,7 @@ from app.services.responses import (
 )
 from app.services.responses._branching import BranchField
 
-SURFACE = (
-    Path(__file__).resolve().parents[2] / "app/web/templates/reviewer/review_surface.html"
-)
+SURFACE = Path(__file__).resolve().parents[2] / "app/web/templates/reviewer/review_surface.html"
 
 
 def _parent(op: str, value: str) -> BranchField:
@@ -151,8 +149,20 @@ def _is_open_source() -> str:
 def test_the_reviewer_script_agrees_with_the_service() -> None:
     """``isOpen`` run in node against ``branch_is_open`` on every range token,
     at and around both ends, over good and bad values and answers."""
-    values = ["2 to 4", "-5 to -1", "1.5 to 3", " 2 to 4 ", "4 to 2", "2 to 2",
-              "2to4", "2 to 4 to 6", "a to 4", "1_000 to 2000", "4", ""]
+    values = [
+        "2 to 4",
+        "-5 to -1",
+        "1.5 to 3",
+        " 2 to 4 ",
+        "4 to 2",
+        "2 to 2",
+        "2to4",
+        "2 to 4 to 6",
+        "a to 4",
+        "1_000 to 2000",
+        "4",
+        "",
+    ]
     answers = ANSWERS + ["-5", "-3", "-1", "0", "1.5", "", " 3 ", "1_000", "x", "1e0"]
     cases = [
         [op, value, answer]
@@ -167,7 +177,9 @@ def test_the_reviewer_script_agrees_with_the_service() -> None:
     )
     out = subprocess.run(
         ["node", "-e", script, json.dumps(cases)],
-        capture_output=True, text=True, check=True,
+        capture_output=True,
+        text=True,
+        check=True,
     ).stdout
     js = json.loads(out)
     py = [branch_is_open(_parent(op, value), answer) for op, value, answer in cases]

@@ -80,9 +80,7 @@ def guide(
     # additionally stops rendering the link for such a viewer, so the
     # bounce is the safety net rather than the normal path.
     if not visible_audiences(db, user):
-        return urls.redirect(request,
-            url="/about", status_code=status.HTTP_303_SEE_OTHER
-        )
+        return urls.redirect(request, url="/about", status_code=status.HTTP_303_SEE_OTHER)
     return_to = resolve_return_to(
         request.query_params.get("return_to"), db, viewer=user, routes=request.app.routes
     )

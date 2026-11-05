@@ -22,20 +22,24 @@ from .test_response_field_branching_builder import _page, _rows_table
 from .test_response_field_branching_save import _branched, _rfs, _save
 
 
-def test_the_card_saves_a_range_and_refuses_a_bad_one(
-    client: TestClient, db: Session
-) -> None:
+def test_the_card_saves_a_range_and_refuses_a_bad_one(client: TestClient, db: Session) -> None:
     review_session, instrument, rating, _ = _branched(client, db, "range-save")
-    response = _save(client, review_session, instrument, _rfs(
-        instrument, Rating={"branch_op": "out_exc", "branch_value": "2 to 4"}
-    ))
+    response = _save(
+        client,
+        review_session,
+        instrument,
+        _rfs(instrument, Rating={"branch_op": "out_exc", "branch_value": "2 to 4"}),
+    )
     assert response.status_code == 200, response.text
     db.expire_all()
     assert (rating.branch_op, rating.branch_value) == ("out_exc", "2 to 4")
 
-    response = _save(client, review_session, instrument, _rfs(
-        instrument, Rating={"branch_op": "in_inc", "branch_value": "2 to "}
-    ))
+    response = _save(
+        client,
+        review_session,
+        instrument,
+        _rfs(instrument, Rating={"branch_op": "in_inc", "branch_value": "2 to "}),
+    )
     assert response.status_code == 422
     assert response.json()["errors"] == ["Rating: The range's high end needs a number."]
 
@@ -48,9 +52,7 @@ def _condition(client: TestClient, review_session, instrument) -> str:
     return table.split("<tr data-new-model-rf-condition>")[1].split("</tr>")[0]
 
 
-def test_a_range_renders_two_boxes_and_a_single_value_one(
-    client: TestClient, db: Session
-) -> None:
+def test_a_range_renders_two_boxes_and_a_single_value_one(client: TestClient, db: Session) -> None:
     review_session, instrument, _, flat = _page(client, db, "range-render")
     condition = flat.split("<tr data-new-model-rf-condition>")[1].split("</tr>")[0]
     # "ge 4": the second box is hidden and empty.
@@ -70,9 +72,7 @@ def test_a_range_renders_two_boxes_and_a_single_value_one(
     )
 
 
-def test_the_row_script_joins_checks_and_titles_a_range(
-    client: TestClient, db: Session
-) -> None:
+def test_the_row_script_joins_checks_and_titles_a_range(client: TestClient, db: Session) -> None:
     review_session, instrument, _, _ = _page(client, db, "range-js")
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/instruments?editing={instrument.id}"
@@ -111,8 +111,22 @@ def test_the_builders_check_agrees_with_save(client: TestClient, db: Session) ->
     match = re.search(r"data-new-model-rf-branch-ops='([^']*)'", body)
     assert match is not None
     ops = html.unescape(match.group(1))
-    boxes = ["", " ", "2", " 2 ", "4", "-1", "1.", "x", "to", "2 to", "to 4",
-             "3 to 5", "inf", "1_000"]
+    boxes = [
+        "",
+        " ",
+        "2",
+        " 2 ",
+        "4",
+        "-1",
+        "1.",
+        "x",
+        "to",
+        "2 to",
+        "to 4",
+        "3 to 5",
+        "inf",
+        "1_000",
+    ]
     cases = [
         [op, low, high]
         for op in sorted(RANGE_OPS) + ["ge", "eq"]
@@ -121,9 +135,12 @@ def test_the_builders_check_agrees_with_save(client: TestClient, db: Session) ->
     ]
     script = (
         "var window = {newModelRfBranchOps: function () { return "
-        + ops + "; }};\n"
-        + _rf_fn(body, "newModelRfIsRangeOp") + "\n        };\n"
-        + _rf_fn(body, "newModelRfConditionError") + "\n        };\n"
+        + ops
+        + "; }};\n"
+        + _rf_fn(body, "newModelRfIsRangeOp")
+        + "\n        };\n"
+        + _rf_fn(body, "newModelRfConditionError")
+        + "\n        };\n"
         + "const cases = JSON.parse(process.argv[1]);\n"
         + "console.log(JSON.stringify(cases.map(function (c) {\n"
         + "  var value = window.newModelRfIsRangeOp(c[0])\n"
@@ -133,7 +150,9 @@ def test_the_builders_check_agrees_with_save(client: TestClient, db: Session) ->
     )
     out = subprocess.run(
         ["node", "-e", script, json.dumps(cases)],
-        capture_output=True, text=True, check=True,
+        capture_output=True,
+        text=True,
+        check=True,
     ).stdout
     results = json.loads(out)
     mismatches = [

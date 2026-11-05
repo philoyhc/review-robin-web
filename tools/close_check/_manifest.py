@@ -214,7 +214,9 @@ def plan_dirs() -> list[pathlib.Path]:
     """Where plans live: RRW's `guide/`, then each app's, each live dir
     then its archive."""
     roots = [_shared.REPO, *(_shared.REPO / app for app in APP_DIRS)]
-    return [directory for root in roots for directory in (root / "guide", root / "guide" / "archive")]
+    return [
+        directory for root in roots for directory in (root / "guide", root / "guide" / "archive")
+    ]
 
 
 def resolve_plan(segment: str) -> pathlib.Path:
@@ -228,14 +230,15 @@ def resolve_plan(segment: str) -> pathlib.Path:
         path
         for directory in plan_dirs()
         for path in sorted(directory.glob(f"segment_{segment}*.md"))
-        if path.stem == f"segment_{segment}"
-        or path.stem.startswith(f"segment_{segment}_")
+        if path.stem == f"segment_{segment}" or path.stem.startswith(f"segment_{segment}_")
     ]
     if not candidates:
         raise Unresolvable(f"no plan file for segment {segment!r} in any guide/")
     # A plan and its archived copy are one plan; the same name in RRW's
     # guide and an app's is two, and ambiguous.
-    trees = {(p.parent.parent if p.parent.name == "archive" else p.parent, p.name) for p in candidates}
+    trees = {
+        (p.parent.parent if p.parent.name == "archive" else p.parent, p.name) for p in candidates
+    }
     if len(trees) > 1:
         names = ", ".join(sorted(p.name for p in candidates))
         raise Unresolvable(f"segment {segment!r} is ambiguous: {names}")
@@ -245,9 +248,7 @@ def resolve_plan(segment: str) -> pathlib.Path:
 def parse_id(raw: str) -> tuple[str, int | None]:
     match = SEGMENT_ID.match(raw)
     if not match:
-        raise Unresolvable(
-            f"{raw!r} is not a segment id — expected e.g. 18R or 19A.3"
-        )
+        raise Unresolvable(f"{raw!r} is not a segment id — expected e.g. 18R or 19A.3")
     segment, item = match.groups()
     return segment, int(item) if item else None
 
@@ -346,9 +347,11 @@ def parse_bullets(lines: list[str], start: int, end: int) -> list[dict]:
         bullet["cites"] = cited
         seen: list[str] = []
         head = BULLET_HEAD.split(bullet["text"], maxsplit=1)[0]
-        for raw in (COMMITTED_PATH.findall(bullet["text"])
-                    + COMMITTED_BARE.findall(head)
-                    + COMMITTED_ROOT.findall(head)):
+        for raw in (
+            COMMITTED_PATH.findall(bullet["text"])
+            + COMMITTED_BARE.findall(head)
+            + COMMITTED_ROOT.findall(head)
+        ):
             path = resolve_committed(raw)
             if path not in seen and path not in cited:
                 seen.append(path)
@@ -361,11 +364,13 @@ def parse_bullets(lines: list[str], start: int, end: int) -> list[dict]:
         bullet["cited_absent"] = [
             name for name in cited if name not in seen and name not in _all_paths(bullet)
         ]
-        bullet["items"] = sorted({
-            int(number)
-            for tag in ITEM_TAG.findall(bullet["text"])
-            for number in ITEM_TAG_NUMBER.findall(tag)
-        })
+        bullet["items"] = sorted(
+            {
+                int(number)
+                for tag in ITEM_TAG.findall(bullet["text"])
+                for number in ITEM_TAG_NUMBER.findall(tag)
+            }
+        )
     return bullets
 
 
@@ -453,14 +458,16 @@ def _prior_paths(plan: pathlib.Path) -> list[str]:
     if key in _PRIOR_PATHS_CACHE:
         return _PRIOR_PATHS_CACHE[key]
     listed = _git(
-        "log", "--follow", "--name-only", "--format=",
-        "--", plan.relative_to(_shared.REPO).as_posix(),
+        "log",
+        "--follow",
+        "--name-only",
+        "--format=",
+        "--",
+        plan.relative_to(_shared.REPO).as_posix(),
     )
     _PRIOR_PATHS_CACHE[key] = [
         name
-        for name in dict.fromkeys(
-            row.strip() for row in listed.split("\n") if row.strip()
-        )
+        for name in dict.fromkeys(row.strip() for row in listed.split("\n") if row.strip())
         if pathlib.PurePosixPath(name).name.startswith("segment_")
     ]
     return _PRIOR_PATHS_CACHE[key]
@@ -469,17 +476,23 @@ def _prior_paths(plan: pathlib.Path) -> list[str]:
 def _pickaxe(candidate: str, pattern: str) -> list[str] | None:
     """[sha, date] of the first commit adding ``pattern`` at ``candidate``."""
     found = [
-        row for row in _git(
-            "log", "--reverse", "--format=%H %ad", "--date=short",
-            "-G", pattern, "--", candidate,
-        ).split("\n") if row.strip()
+        row
+        for row in _git(
+            "log",
+            "--reverse",
+            "--format=%H %ad",
+            "--date=short",
+            "-G",
+            pattern,
+            "--",
+            candidate,
+        ).split("\n")
+        if row.strip()
     ]
     return found[0].split(" ", 1) if found else None
 
 
-def _uncached_first_commit_matching(
-    plan: pathlib.Path, pattern: str
-) -> list[str] | None:
+def _uncached_first_commit_matching(plan: pathlib.Path, pattern: str) -> list[str] | None:
     """The earliest commit adding ``pattern`` under any name the plan had.
 
     **Unrenamed — the overwhelming majority — costs what it always did.**
@@ -526,9 +539,12 @@ def _later_commit(a: list[str] | None, b: list[str] | None) -> list[str] | None:
     if a[0] == b[0]:
         return a
     # Ancestry is the honest ordering; dates can tie or run backwards.
-    if subprocess.run(
-        ["git", "-C", str(_shared.REPO), "merge-base", "--is-ancestor", a[0], b[0]]
-    ).returncode == 0:
+    if (
+        subprocess.run(
+            ["git", "-C", str(_shared.REPO), "merge-base", "--is-ancestor", a[0], b[0]]
+        ).returncode
+        == 0
+    ):
         return b
     return a
 
@@ -540,9 +556,7 @@ def item_heading_start(plan: pathlib.Path, number: int) -> list[str] | None:
     """[sha, date] of the commit that added ``## Item <n>`` to this plan."""
     key = (plan.as_posix(), number)
     if key not in _ITEM_START_CACHE:
-        _ITEM_START_CACHE[key] = _first_commit_matching(
-            plan, f"^## Item {number} "
-        )
+        _ITEM_START_CACHE[key] = _first_commit_matching(plan, f"^## Item {number} ")
     return _ITEM_START_CACHE[key]
 
 
@@ -578,9 +592,7 @@ def window(
     relative = plan.relative_to(_shared.REPO).as_posix()
     archived = "guide/archive/" in relative
 
-    start = _first_commit_matching(
-        plan, "^" + ("###" if depth == 3 else "##") + " Doc impact$"
-    )
+    start = _first_commit_matching(plan, "^" + ("###" if depth == 3 else "##") + " Doc impact$")
     provisional = False
     if item is not None:
         heading = _first_commit_matching(plan, f"^## Item {item} ")
@@ -602,9 +614,9 @@ def window(
         key = (plan.as_posix(), "A:" + relative)
         if key not in _COMMIT_CACHE:
             _COMMIT_CACHE[key] = [
-                row for row in _git(
-                    "log", "--diff-filter=A", "--format=%H", "--", relative
-                ).split("\n") if row.strip()
+                row
+                for row in _git("log", "--diff-filter=A", "--format=%H", "--", relative).split("\n")
+                if row.strip()
             ]
         adds = _COMMIT_CACHE[key]
         end = adds[0] if adds else "HEAD"
@@ -625,8 +637,13 @@ def honoured(path: str, start: str, end: str) -> str | None:
     edit fell, and a boundary edit is the same evidence as any other.
     """
     out = _git(
-        "log", "--no-merges", "--format=%ad", "--date=short",
-        f"{start}..{end}", "--", path,
+        "log",
+        "--no-merges",
+        "--format=%ad",
+        "--date=short",
+        f"{start}..{end}",
+        "--",
+        path,
     ).split("\n")
     dates = [row for row in out if row.strip()]
     if dates:
@@ -635,10 +652,18 @@ def honoured(path: str, start: str, end: str) -> str | None:
     # commit, whether or not it has a parent. `--no-merges` keeps a merge
     # start (which the `-G` pickaxe cannot return anyway) reading as it
     # did before.
-    return _git(
-        "log", "--no-merges", "--format=%ad", "--date=short",
-        f"{start}^!", "--", path,
-    ).strip() or None
+    return (
+        _git(
+            "log",
+            "--no-merges",
+            "--format=%ad",
+            "--date=short",
+            f"{start}^!",
+            "--",
+            path,
+        ).strip()
+        or None
+    )
 
 
 def last_touched_ever(path: str) -> str | None:
@@ -672,19 +697,16 @@ def coverage_note(start: str | None, end: str, committed: set[str]) -> list[str]
         return []
 
     changed = [
-        row for row in _git(
-            "diff", "--name-only", f"{start}..{end}"
-        ).split("\n") if row.strip().startswith("app/web/routes") and row.endswith(".py")
+        row
+        for row in _git("diff", "--name-only", f"{start}..{end}").split("\n")
+        if row.strip().startswith("app/web/routes") and row.endswith(".py")
     ]
     notes = []
     for path in sorted(set(changed)):
         module = path[: -len(".py")].replace("/", ".")
         unnamed = [s for s in SPEC_COVERAGE.get(module, ()) if s not in committed]
         if unnamed:
-            notes.append(
-                f"{module.split('.')[-1]} touched; not in manifest: "
-                + ", ".join(unnamed)
-            )
+            notes.append(f"{module.split('.')[-1]} touched; not in manifest: " + ", ".join(unnamed))
     if len(notes) > NOTE_CAP:
         extra = len(notes) - NOTE_CAP
         notes = notes[:NOTE_CAP] + [f"... and {extra} more touched module(s)"]
@@ -696,8 +718,13 @@ def coverage_note(start: str | None, end: str, committed: set[str]) -> list[str]
 
 
 def check_manifest(
-    plan: pathlib.Path, found: dict, depth: int, body: tuple[int, int], label: str,
-    status_present: bool, item: int | None = None,
+    plan: pathlib.Path,
+    found: dict,
+    depth: int,
+    body: tuple[int, int],
+    label: str,
+    status_present: bool,
+    item: int | None = None,
 ) -> dict:
     lines = found["lines"]
     bullets = parse_bullets(lines, *body)
@@ -736,19 +763,26 @@ def check_manifest(
         # until 19K.5 made such paths commitments in the first place.
         elif not (_shared.REPO / entry["path"]).exists():
             c2.append(f"{entry['path']} does not exist (line {entry['line']})")
-    checks.append({
-        "id": "C2", "what": "committed paths exist and are live",
-        "status": FAIL if c2 else PASS, "detail": c2,
-    })
+    checks.append(
+        {
+            "id": "C2",
+            "what": "committed paths exist and are live",
+            "status": FAIL if c2 else PASS,
+            "detail": c2,
+        }
+    )
 
     # C3 — every un-waived path modified in the window.
     c3, c3_warn, honoured_count, checked = [], [], 0, 0
     if start is None:
-        checks.append({
-            "id": "C3", "what": "paths modified in window",
-            "status": WARN,
-            "detail": [f"no window: '{label}' heading never appears in the plan's history"],
-        })
+        checks.append(
+            {
+                "id": "C3",
+                "what": "paths modified in window",
+                "status": WARN,
+                "detail": [f"no window: '{label}' heading never appears in the plan's history"],
+            }
+        )
     else:
         for entry in committed:
             if entry["waived"] or not (_shared.REPO / entry["path"]).exists():
@@ -782,11 +816,14 @@ def check_manifest(
                 "read clean on a sibling's edits — provisional until the "
                 "heading lands"
             )
-        checks.append({
-            "id": "C3", "what": "paths modified in window",
-            "status": FAIL if c3 else (WARN if c3_warn else PASS),
-            "detail": c3 + c3_warn,
-        })
+        checks.append(
+            {
+                "id": "C3",
+                "what": "paths modified in window",
+                "status": FAIL if c3 else (WARN if c3_warn else PASS),
+                "detail": c3 + c3_warn,
+            }
+        )
 
     # C4 — every waiver reasoned.
     # Bullets, not paths: a waiver is per-bullet, and a bullet whose only
@@ -794,14 +831,16 @@ def check_manifest(
     c4 = [
         f"line {bullet['line']}: waiver has no reason"
         for bullet in bullets
-        if bullet["waived"]
-        and not bullet["reason"]
-        and (bullet["paths"] or bullet["guide_paths"])
+        if bullet["waived"] and not bullet["reason"] and (bullet["paths"] or bullet["guide_paths"])
     ]
-    checks.append({
-        "id": "C4", "what": "waivers carry a reason",
-        "status": FAIL if c4 else PASS, "detail": c4,
-    })
+    checks.append(
+        {
+            "id": "C4",
+            "what": "waivers carry a reason",
+            "status": FAIL if c4 else PASS,
+            "detail": c4,
+        }
+    )
 
     # C5 — guide/ commitments, counted and named, not verified.
     noted = [
@@ -814,24 +853,29 @@ def check_manifest(
         for path in bullet["guide_paths"]
     ]
     if noted:
-        checks.append({
-            "id": "C5",
-            "what": "guide/ commitments (counted, not verified)",
-            "status": NOTED,
-            "detail": [
-                f"{entry['path']}"
-                + (" (waived)" if entry["waived"] else "")
-                + f" (line {entry['line']})"
-                for entry in noted
-            ],
-        })
+        checks.append(
+            {
+                "id": "C5",
+                "what": "guide/ commitments (counted, not verified)",
+                "status": NOTED,
+                "detail": [
+                    f"{entry['path']}"
+                    + (" (waived)" if entry["waived"] else "")
+                    + f" (line {entry['line']})"
+                    for entry in noted
+                ],
+            }
+        )
 
     # C6 — Status block at the closing level. Warn only in v1.
-    checks.append({
-        "id": "C6", "what": "Status block present",
-        "status": PASS if status_present else WARN,
-        "detail": [] if status_present else [f"no Status block at {label} level"],
-    })
+    checks.append(
+        {
+            "id": "C6",
+            "what": "Status block present",
+            "status": PASS if status_present else WARN,
+            "detail": [] if status_present else [f"no Status block at {label} level"],
+        }
+    )
 
     # C7 — every `cites:` names a path its bullet actually contains.
     # Both directions, like the doc-conventions markers: an escape that
@@ -843,10 +887,14 @@ def check_manifest(
         for bullet in bullets
         for name in bullet["cited_absent"]
     ]
-    checks.append({
-        "id": "C7", "what": "every cites: names a path in its bullet",
-        "status": FAIL if c7 else PASS, "detail": c7,
-    })
+    checks.append(
+        {
+            "id": "C7",
+            "what": "every cites: names a path in its bullet",
+            "status": FAIL if c7 else PASS,
+            "detail": c7,
+        }
+    )
 
     return {
         "level": label,
@@ -861,9 +909,7 @@ def check_manifest(
         "honoured": honoured_count,
         "checked": checked,
         "checks": checks,
-        "coverage_note": coverage_note(
-            start, end, {entry["path"] for entry in committed}
-        ),
+        "coverage_note": coverage_note(start, end, {entry["path"] for entry in committed}),
     }
 
 
@@ -893,26 +939,36 @@ def run(segment: str, item: int | None) -> dict:
         elif item_docs.get(item) is None:
             c1.append(f"Item {item} has no '### Doc impact' heading")
         else:
-            targets.append({
-                "depth": 3,
-                "line": item_docs[item],
-                "label": f"Item {item}",
-                "status": found["items"][item]["status"] is not None,
-                "item": item,
-            })
+            targets.append(
+                {
+                    "depth": 3,
+                    "line": item_docs[item],
+                    "label": f"Item {item}",
+                    "status": found["items"][item]["status"] is not None,
+                    "item": item,
+                }
+            )
     elif has_segment:
-        targets.append({
-            "depth": 2, "line": found["segment"], "label": "segment",
-            "status": found["segment_status"],
-        })
+        targets.append(
+            {
+                "depth": 2,
+                "line": found["segment"],
+                "label": "segment",
+                "status": found["segment_status"],
+            }
+        )
     elif has_items:
         # A segment whose items close independently: every item must pass.
         for number in sorted(item_docs):
-            targets.append({
-                "depth": 3, "line": item_docs[number], "label": f"Item {number}",
-                "status": found["items"][number]["status"] is not None,
-                "item": number,
-            })
+            targets.append(
+                {
+                    "depth": 3,
+                    "line": item_docs[number],
+                    "label": f"Item {number}",
+                    "status": found["items"][number]["status"] is not None,
+                    "item": number,
+                }
+            )
     elif found["stray"]:
         c1.append(
             f"{relative} has a '### Doc impact' that is not inside a "
@@ -926,8 +982,10 @@ def run(segment: str, item: int | None) -> dict:
         "id": f"{segment}.{item}" if item is not None else segment,
         "plan": relative,
         "c1": {
-            "id": "C1", "what": "Doc impact present at level, one shape",
-            "status": FAIL if c1 else PASS, "detail": c1,
+            "id": "C1",
+            "what": "Doc impact present at level, one shape",
+            "status": FAIL if c1 else PASS,
+            "detail": c1,
         },
         "levels": [],
     }
@@ -935,8 +993,13 @@ def run(segment: str, item: int | None) -> dict:
         body = _section(lines, target["line"], target["depth"])
         result["levels"].append(
             check_manifest(
-                plan, found, target["depth"], body, target["label"],
-                target["status"], target.get("item"),
+                plan,
+                found,
+                target["depth"],
+                body,
+                target["label"],
+                target["status"],
+                target.get("item"),
             )
         )
     return result
@@ -961,7 +1024,8 @@ def report(result: dict, stream) -> bool:
         win = level["window"]
         span = (
             f"{win['start_date']} .. {win['end'][:9] if win['end'] != 'HEAD' else 'HEAD'}"
-            if win["start"] else "no window"
+            if win["start"]
+            else "no window"
         )
         # The total counts `guide/` paths; the parenthetical says how
         # many of them the tool is not verifying. Counted and verified
@@ -989,5 +1053,3 @@ def report(result: dict, stream) -> bool:
 
     print(f"  => {'PASS' if ok else 'FAIL'}", file=stream)
     return ok
-
-

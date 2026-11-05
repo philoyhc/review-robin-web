@@ -49,35 +49,25 @@ def _session(
 def test_anchor_null_reads_as_closed_regardless_of_until() -> None:
     """``responses_release_at`` NULL is the inert / anchor-null
     rule — the window is closed until the operator sets it."""
-    session = _session(
-        release_at=None, release_until=_at(2030, 1, 1)
-    )
-    assert not is_response_release_window_open(
-        session, now=_at(2026, 1, 1)
-    )
+    session = _session(release_at=None, release_until=_at(2030, 1, 1))
+    assert not is_response_release_window_open(session, now=_at(2026, 1, 1))
 
 
 def test_before_anchor_reads_as_closed() -> None:
     session = _session(release_at=_at(2026, 6, 15))
-    assert not is_response_release_window_open(
-        session, now=_at(2026, 6, 14)
-    )
+    assert not is_response_release_window_open(session, now=_at(2026, 6, 14))
 
 
 def test_at_anchor_reads_as_open() -> None:
     session = _session(release_at=_at(2026, 6, 15))
-    assert is_response_release_window_open(
-        session, now=_at(2026, 6, 15)
-    )
+    assert is_response_release_window_open(session, now=_at(2026, 6, 15))
 
 
 def test_after_anchor_with_no_until_reads_as_open() -> None:
     """Open-ended (``responses_release_until`` NULL) — the
     window stays open indefinitely once the anchor passes."""
     session = _session(release_at=_at(2026, 6, 15))
-    assert is_response_release_window_open(
-        session, now=_at(2030, 1, 1)
-    )
+    assert is_response_release_window_open(session, now=_at(2030, 1, 1))
 
 
 def test_after_anchor_before_until_reads_as_open() -> None:
@@ -85,9 +75,7 @@ def test_after_anchor_before_until_reads_as_open() -> None:
         release_at=_at(2026, 6, 15),
         release_until=_at(2026, 7, 15),
     )
-    assert is_response_release_window_open(
-        session, now=_at(2026, 7, 1)
-    )
+    assert is_response_release_window_open(session, now=_at(2026, 7, 1))
 
 
 def test_at_until_reads_as_closed() -> None:
@@ -97,9 +85,7 @@ def test_at_until_reads_as_closed() -> None:
         release_at=_at(2026, 6, 15),
         release_until=_at(2026, 7, 15),
     )
-    assert not is_response_release_window_open(
-        session, now=_at(2026, 7, 15)
-    )
+    assert not is_response_release_window_open(session, now=_at(2026, 7, 15))
 
 
 def test_after_until_reads_as_closed() -> None:
@@ -107,9 +93,7 @@ def test_after_until_reads_as_closed() -> None:
         release_at=_at(2026, 6, 15),
         release_until=_at(2026, 7, 15),
     )
-    assert not is_response_release_window_open(
-        session, now=_at(2026, 7, 16)
-    )
+    assert not is_response_release_window_open(session, now=_at(2026, 7, 16))
 
 
 def test_default_now_defers_to_current_time() -> None:
@@ -120,9 +104,7 @@ def test_default_now_defers_to_current_time() -> None:
     session = _session(release_at=datetime(2000, 1, 1, tzinfo=UTC))
     assert is_response_release_window_open(session)
 
-    future_session = _session(
-        release_at=datetime.now(UTC) + timedelta(days=365)
-    )
+    future_session = _session(release_at=datetime.now(UTC) + timedelta(days=365))
     assert not is_response_release_window_open(future_session)
 
 
@@ -134,9 +116,7 @@ def test_an_unclosed_session_reads_as_closed_whatever_the_anchors() -> None:
     can no longer open a window the UI would never offer.
     """
     for status in ("draft", "validated", "ready", "archived"):
-        session = _session(
-            release_at=_at(2020, 1, 1), release_until=None, status=status
-        )
+        session = _session(release_at=_at(2020, 1, 1), release_until=None, status=status)
         assert not is_response_release_window_open(session), status
 
 

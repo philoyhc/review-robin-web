@@ -41,6 +41,7 @@ from app.web.routes_operator._shared import (
 
 router = APIRouter()
 
+
 @router.get("/sessions", response_class=HTMLResponse)
 def list_sessions(
     request: Request,
@@ -86,9 +87,7 @@ def list_sessions(
             # Wider than ``lobby_tags``, which feeds the filter strip and
             # so stays scoped to the rows shown.
             "tag_vocabulary": session_tags.vocabulary_for_user(db, user),
-            "filter_options": views.sessions_filter_options(
-                review_sessions, lobby_tags
-            ),
+            "filter_options": views.sessions_filter_options(review_sessions, lobby_tags),
             "breadcrumbs": breadcrumbs.operator_root(),
             "rehydrate_enabled": settings.rehydrate_enabled,
         },
@@ -109,19 +108,13 @@ def archived_sessions(
     edited as late as 19O Item 7 entry 15, which changed `Search` to
     `Filter` in it and left the promise standing.
     """
-    archived = [
-        s
-        for s in sessions.list_for_user(db, user)
-        if s.status == "archived"
-    ]
+    archived = [s for s in sessions.list_for_user(db, user) if s.status == "archived"]
     sort_spec = views.decode_cookie_sort_spec(
         cookies=dict(request.cookies),
         cookie_name="rrw-sort-archived",
         valid_keys=views.ARCHIVED_SORT_KEYS,
     )
-    archived = views.apply_cookie_sort(
-        archived, sort_spec, value_resolver=views.session_sort_value
-    )
+    archived = views.apply_cookie_sort(archived, sort_spec, value_resolver=views.session_sort_value)
     session_ids = [s.id for s in archived]
     archived_tags = session_tags.vocabulary(db, session_ids)
     return _templates.TemplateResponse(
@@ -132,9 +125,7 @@ def archived_sessions(
             "sessions": archived,
             "tags_by_session": session_tags.tags_for_sessions(db, session_ids),
             "archived_tags": archived_tags,
-            "filter_options": views.sessions_filter_options(
-                archived, archived_tags
-            ),
+            "filter_options": views.sessions_filter_options(archived, archived_tags),
             "breadcrumbs": breadcrumbs.operator_sessions_child("Archived"),
         },
     )
@@ -142,7 +133,8 @@ def archived_sessions(
 
 @router.post("/sessions/bulk-tags")
 def sessions_bulk_tags(
-    request: Request, session_ids: list[int] = Form(default=[]),
+    request: Request,
+    session_ids: list[int] = Form(default=[]),
     tags: str = Form(default=""),
     op: str = Form(...),
     user: User = Depends(get_or_create_user),
@@ -187,7 +179,8 @@ def sessions_bulk_tags(
             except ValueError:
                 # Blank / over-long tag from the split — skip it.
                 continue
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url="/operator/sessions",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -195,7 +188,8 @@ def sessions_bulk_tags(
 
 @router.post("/sessions/bulk-unarchive")
 def sessions_unarchive_selected(
-    request: Request, session_ids: list[int] = Form(default=[]),
+    request: Request,
+    session_ids: list[int] = Form(default=[]),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -218,7 +212,8 @@ def sessions_unarchive_selected(
             # Unarchived by another request since this one read it (a
             # double submit): skipped, as the filter above skips it.
             db.rollback()
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url="/operator/sessions/archived",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -226,7 +221,8 @@ def sessions_unarchive_selected(
 
 @router.post("/sessions/bulk-delete-archived")
 def sessions_delete_archived_selected(
-    request: Request, session_ids: list[int] = Form(default=[]),
+    request: Request,
+    session_ids: list[int] = Form(default=[]),
     confirm: str | None = Form(default=None),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -250,7 +246,8 @@ def sessions_delete_archived_selected(
             user=user,
             correlation_id=correlation_id,
         )
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url="/operator/sessions/archived",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -258,7 +255,8 @@ def sessions_delete_archived_selected(
 
 @router.post("/sessions/{session_id}/lobby-edit")
 def lobby_edit_submit(
-    request: Request, name: str = Form(...),
+    request: Request,
+    name: str = Form(...),
     code: str = Form(...),
     deadline: str | None = Form(default=None),
     tags: str = Form(default=""),
@@ -289,25 +287,19 @@ def lobby_edit_submit(
     payload = None
     if lifecycle.is_editable(review_session):
         try:
-            sessions.ensure_code_available(
-                db, code, exclude_session_id=review_session.id
-            )
+            sessions.ensure_code_available(db, code, exclude_session_id=review_session.id)
         except sessions.SessionCodeTakenError as exc:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=str(exc),
             ) from exc
         timezone_name = sessions.resolve_session_timezone(review_session)
-        if sessions.datetime_box_unedited(
-            review_session.deadline, deadline, timezone_name
-        ):
+        if sessions.datetime_box_unedited(review_session.deadline, deadline, timezone_name):
             parsed_deadline = review_session.deadline
         else:
             parsed_deadline = parse_session_deadline(deadline, timezone_name)
         try:
-            scheduled_events.validate_deadline_change(
-                db, review_session, parsed_deadline
-            )
+            scheduled_events.validate_deadline_change(db, review_session, parsed_deadline)
         except scheduled_events.ScheduledActivateError as exc:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -322,9 +314,7 @@ def lobby_edit_submit(
         except ValidationError as exc:
             raise session_payload_error(exc) from exc
 
-    if payload is not None and sessions.payload_changes_session(
-        review_session, payload
-    ):
+    if payload is not None and sessions.payload_changes_session(review_session, payload):
         sessions.update_session(
             db,
             review_session=review_session,
@@ -344,7 +334,8 @@ def lobby_edit_submit(
         correlation_id=correlation_id,
     )
 
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url="/operator/sessions",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -352,10 +343,9 @@ def lobby_edit_submit(
 
 @router.post("/sessions/{session_id}/clone")
 def clone_session_submit(
-    request: Request, mode: str = Form(...),
-    review_session: ReviewSession = Depends(
-        require_sys_admin_or_session_operator
-    ),
+    request: Request,
+    mode: str = Form(...),
+    review_session: ReviewSession = Depends(require_sys_admin_or_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -385,7 +375,8 @@ def clone_session_submit(
     # card open in edit mode (the Edit page is retired). The operator's
     # first task on a clone is to rename it, then review the cloned setup
     # on the same page. No fragment (19X Item 7).
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url=f"/operator/sessions/{clone.public_id}?editing=1",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -393,7 +384,8 @@ def clone_session_submit(
 
 @router.post("/sessions/bulk-archive")
 def sessions_archive_selected(
-    request: Request, session_ids: list[int] = Form(default=[]),
+    request: Request,
+    session_ids: list[int] = Form(default=[]),
     purge: list[str] = Form(default=[]),
     return_to: str = Form(default=""),
     user: User = Depends(get_or_create_user),
@@ -431,12 +423,9 @@ def sessions_archive_selected(
             # this — purge_and_archive decides ``can_archive`` under the
             # lock before any purge and returns False.
             db.rollback()
-    target = (
-        "/operator/sessions/archived"
-        if return_to == "archived"
-        else "/operator/sessions"
-    )
-    return urls.redirect(request,
+    target = "/operator/sessions/archived" if return_to == "archived" else "/operator/sessions"
+    return urls.redirect(
+        request,
         url=target,
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -444,7 +433,8 @@ def sessions_archive_selected(
 
 @router.post("/sessions/bulk-delete")
 def sessions_delete_selected(
-    request: Request, session_ids: list[int] = Form(default=[]),
+    request: Request,
+    session_ids: list[int] = Form(default=[]),
     confirm: str | None = Form(default=None),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -473,10 +463,7 @@ def sessions_delete_selected(
         review_session = sessions.get_for_user(db, user, session_id)
         if review_session is None:
             continue
-        if not (
-            lifecycle.is_editable(review_session)
-            or lifecycle.is_expired(review_session)
-        ):
+        if not (lifecycle.is_editable(review_session) or lifecycle.is_expired(review_session)):
             continue
         try:
             sessions.delete_session(
@@ -489,7 +476,8 @@ def sessions_delete_selected(
             # Activated since this request read it (findings Bc4): skipped,
             # as the filter above skips a ``ready`` row.
             db.rollback()
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url="/operator/sessions",
         status_code=status.HTTP_303_SEE_OTHER,
     )

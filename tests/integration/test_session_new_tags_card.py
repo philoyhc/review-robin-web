@@ -111,35 +111,25 @@ def _create(
     if tags is not None:
         data["tags"] = tags
     files = (
-        {"settings_file": ("settings.csv", settings, "text/csv")}
-        if settings is not None
-        else None
+        {"settings_file": ("settings.csv", settings, "text/csv")} if settings is not None else None
     )
     # The status assertion below is a **diagnostic, not a guard**:
     # removing it fails nothing, because a non-303 create leaves no
     # session and every caller's tag assertion fails anyway. It is kept
     # so that failure reads as "the create was rejected" rather than as
     # "the tags are empty", which is the wrong thing to go looking at.
-    response = client.post(
-        "/operator/sessions", data=data, files=files, follow_redirects=False
-    )
+    response = client.post("/operator/sessions", data=data, files=files, follow_redirects=False)
     assert response.status_code == 303, response.text
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     """A committed session to run the settings helper against."""
     _create(client, code=code)
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _tags_of(db: Session, code: str) -> list[str]:
-    row = db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    row = db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
     return session_tags.tags_for_sessions(db, [row.id])[row.id]
 
 
@@ -196,10 +186,8 @@ def test_the_card_helper_is_bounded(client: TestClient) -> None:
     )
     assert card.count('<div class="card"') == 1, "exactly one card"
     # Something rendered after the card, proving the slice really stops.
-    tail = body[body.index(card) + len(card):]
-    assert "getElementById" in tail, (
-        "the page's inline scripts follow the card and are not in it"
-    )
+    tail = body[body.index(card) + len(card) :]
+    assert "getElementById" in tail, "the page's inline scripts follow the card and are not in it"
     assert "getElementById" not in card
 
 
@@ -224,9 +212,9 @@ def test_both_columns_use_the_documented_column_primitive(
     # Right column: Tags, then Owners.
     right = body.rfind('<div class="bottom-left">', grid, body.find('id="session-tags"'))
     assert right != -1, "the cell holding Tags is a .bottom-left flex column"
-    assert body.rfind(
-        '<div class="bottom-left">', grid, body.find('id="session-owners"')
-    ) == right, "the column wraps both cards, not just Tags"
+    assert (
+        body.rfind('<div class="bottom-left">', grid, body.find('id="session-owners"')) == right
+    ), "the column wraps both cards, not just Tags"
     # Left column: User interface settings, then Quick Setup.
     ui_pos = body.find('id="user-interface-settings"')
     left = body.rfind('<div class="bottom-left">', grid, ui_pos)
@@ -252,9 +240,7 @@ def test_the_tags_input_is_wired_to_the_create_form(
     )
 
 
-def test_a_typed_tag_is_written_on_create(
-    client: TestClient, db: Session
-) -> None:
+def test_a_typed_tag_is_written_on_create(client: TestClient, db: Session) -> None:
     """The round trip, asserted through the route rather than the
     service, per the plan's Definition of done."""
     _create(client, code="tags-basic", tags="pilot, 2026")
@@ -275,8 +261,7 @@ def test_a_typed_tag_beats_a_settings_csv_carrying_other_tags(
     )
     _create(client, code="tags-vs-csv", tags="typed", settings=csv_bytes)
     assert _tags_of(db, "tags-vs-csv") == ["typed"], (
-        "the CSV's tags are replaced wholesale, not merged with the "
-        "typed one"
+        "the CSV's tags are replaced wholesale, not merged with the typed one"
     )
 
 
@@ -297,9 +282,7 @@ def test_a_typed_tag_survives_a_settings_csv_with_no_tag_rows(
     assert _tags_of(db, "tags-vs-empty") == ["typed"]
 
 
-def test_an_empty_box_leaves_a_settings_csv_s_tags_alone(
-    client: TestClient, db: Session
-) -> None:
+def test_an_empty_box_leaves_a_settings_csv_s_tags_alone(client: TestClient, db: Session) -> None:
     """The other half of the rule. An empty box must write *nothing*,
     not an empty tag set: ``set_tags`` is a replace, so calling it
     unconditionally would drop what the CSV had just applied."""
@@ -313,33 +296,28 @@ def test_an_empty_box_leaves_a_settings_csv_s_tags_alone(
     assert _tags_of(db, "tags-absent") == ["from-csv"]
 
 
-def test_an_empty_box_emits_no_tag_added_event(
-    client: TestClient, db: Session
-) -> None:
+def test_an_empty_box_emits_no_tag_added_event(client: TestClient, db: Session) -> None:
     """A create with no typed tag is silent in the audit log, which is
     the observable difference between *writing nothing* and *writing an
     empty set*."""
     _create(client, code="tags-silent", tags="   ")
-    row = db.execute(
-        select(ReviewSession).where(ReviewSession.code == "tags-silent")
-    ).scalar_one()
-    events = db.execute(
-        select(AuditEvent.event_type).where(
-            AuditEvent.session_id == row.id,
-            AuditEvent.event_type.in_(
-                ("session.tag_added", "session.tag_removed")
-            ),
+    row = db.execute(select(ReviewSession).where(ReviewSession.code == "tags-silent")).scalar_one()
+    events = (
+        db.execute(
+            select(AuditEvent.event_type).where(
+                AuditEvent.session_id == row.id,
+                AuditEvent.event_type.in_(("session.tag_added", "session.tag_removed")),
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert events == [], (
-        "a blank box wrote nothing, so there is no tag event — a "
-        "whitespace-only value is blank too"
+        "a blank box wrote nothing, so there is no tag event — a whitespace-only value is blank too"
     )
 
 
-def test_a_typed_tag_survives_a_failed_quick_setup_upload(
-    client: TestClient, db: Session
-) -> None:
+def test_a_typed_tag_survives_a_failed_quick_setup_upload(client: TestClient, db: Session) -> None:
     """Not in the plan, and decided while building: the write also runs
     on the Quick-Setup error path.
 

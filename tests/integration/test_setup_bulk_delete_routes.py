@@ -9,6 +9,7 @@ The **client** gate (a selection enables the checkbox, the checkbox
 enables the button) is a convenience. Every assertion here posts
 directly, because the server check is the one that counts.
 """
+
 from __future__ import annotations
 
 import datetime as _dt
@@ -39,9 +40,7 @@ ID_FIELD = {
 }
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "Spring", "code": code},
@@ -61,8 +60,7 @@ def _rows(db: Session, s: ReviewSession, page: str, n: int) -> list:
     """`n` rows of the page's own entity, plus whatever they need."""
     if page == "reviewers":
         rows = [
-            Reviewer(session_id=s.id, name=f"R{i}", email=f"r{i}@example.edu")
-            for i in range(n)
+            Reviewer(session_id=s.id, name=f"R{i}", email=f"r{i}@example.edu") for i in range(n)
         ]
     elif page == "reviewees":
         rows = [
@@ -80,18 +78,13 @@ def _rows(db: Session, s: ReviewSession, page: str, n: int) -> list:
         ]
     else:
         reviewers = [
-            Reviewer(session_id=s.id, name=f"R{i}", email=f"pr{i}@example.edu")
-            for i in range(n)
+            Reviewer(session_id=s.id, name=f"R{i}", email=f"pr{i}@example.edu") for i in range(n)
         ]
-        reviewee = Reviewee(
-            session_id=s.id, name="Solo", email_or_identifier="solo@example.edu"
-        )
+        reviewee = Reviewee(session_id=s.id, name="Solo", email_or_identifier="solo@example.edu")
         db.add_all([*reviewers, reviewee])
         db.flush()
         rows = [
-            Relationship(
-                session_id=s.id, reviewer_id=r.id, reviewee_id=reviewee.id
-            )
+            Relationship(session_id=s.id, reviewer_id=r.id, reviewee_id=reviewee.id)
             for r in reviewers
         ]
     db.add_all(rows)
@@ -161,14 +154,10 @@ def test_a_confirmed_post_deletes_only_the_selected_rows(
     survivor = rows[1].id
     model = type(rows[0])
 
-    response = _post(
-        client, s, page, **{ID_FIELD[page]: doomed}, confirm="true"
-    )
+    response = _post(client, s, page, **{ID_FIELD[page]: doomed}, confirm="true")
 
     assert response.status_code == 303, response.text
-    left = db.execute(
-        select(model.id).where(model.session_id == s.id)
-    ).scalars().all()
+    left = db.execute(select(model.id).where(model.session_id == s.id)).scalars().all()
     assert left == [survivor]
 
 
@@ -211,30 +200,18 @@ def test_an_unconfirmed_post_is_refused_and_deletes_nothing(
     response = _post(client, s, page, **{ID_FIELD[page]: [rows[0].id]})
 
     assert response.status_code == 400
-    assert (
-        len(
-            db.execute(select(model).where(model.session_id == s.id))
-            .scalars()
-            .all()
-        )
-        == 2
-    ), "a refused post must not have deleted anything"
+    assert len(db.execute(select(model).where(model.session_id == s.id)).scalars().all()) == 2, (
+        "a refused post must not have deleted anything"
+    )
 
 
 @pytest.mark.parametrize("page", PAGES)
-def test_confirm_must_be_exactly_true(
-    db: Session, client: TestClient, page: str
-) -> None:
+def test_confirm_must_be_exactly_true(db: Session, client: TestClient, page: str) -> None:
     """A checkbox posts `value="true"`; anything else is not a tick."""
     s = _make_session(client, db, code=f"bdr-conf-{page}")
     rows = _rows(db, s, page, 1)
 
-    assert (
-        _post(
-            client, s, page, **{ID_FIELD[page]: [rows[0].id]}, confirm="on"
-        ).status_code
-        == 400
-    )
+    assert _post(client, s, page, **{ID_FIELD[page]: [rows[0].id]}, confirm="on").status_code == 400
 
 
 def test_responses_on_the_selected_rows_need_acknowledgement(
@@ -242,16 +219,12 @@ def test_responses_on_the_selected_rows_need_acknowledgement(
 ) -> None:
     s = _make_session(client, db, code="bdr-ack")
     reviewer = Reviewer(session_id=s.id, name="R", email="r@example.edu")
-    reviewee = Reviewee(
-        session_id=s.id, name="E", email_or_identifier="e@example.edu"
-    )
+    reviewee = Reviewee(session_id=s.id, name="E", email_or_identifier="e@example.edu")
     db.add_all([reviewer, reviewee])
     db.flush()
     _with_responses(db, s, reviewer=reviewer, reviewee=reviewee, n=3)
 
-    refused = _post(
-        client, s, "reviewers", reviewer_ids=[reviewer.id], confirm="true"
-    )
+    refused = _post(client, s, "reviewers", reviewer_ids=[reviewer.id], confirm="true")
     assert refused.status_code == 400
     assert "3 saved responses" in refused.text, refused.text
     assert db.get(Reviewer, reviewer.id) is not None
@@ -269,25 +242,19 @@ def test_responses_on_the_selected_rows_need_acknowledgement(
     assert db.execute(select(Response)).scalars().all() == []
 
 
-def test_the_gate_counts_the_selection_not_the_session(
-    db: Session, client: TestClient
-) -> None:
+def test_the_gate_counts_the_selection_not_the_session(db: Session, client: TestClient) -> None:
     """The session has responses; the *selected* reviewer has none, so
     the delete goes through unacknowledged. A session-wide check —
     which is all `delete-all` can do — would refuse this."""
     s = _make_session(client, db, code="bdr-scope")
     answered = Reviewer(session_id=s.id, name="A", email="a@example.edu")
     clean = Reviewer(session_id=s.id, name="C", email="c@example.edu")
-    reviewee = Reviewee(
-        session_id=s.id, name="E", email_or_identifier="e@example.edu"
-    )
+    reviewee = Reviewee(session_id=s.id, name="E", email_or_identifier="e@example.edu")
     db.add_all([answered, clean, reviewee])
     db.flush()
     _with_responses(db, s, reviewer=answered, reviewee=reviewee, n=2)
 
-    response = _post(
-        client, s, "reviewers", reviewer_ids=[clean.id], confirm="true"
-    )
+    response = _post(client, s, "reviewers", reviewer_ids=[clean.id], confirm="true")
 
     assert response.status_code == 303, response.text
     assert db.get(Reviewer, clean.id) is None
@@ -304,18 +271,14 @@ def test_observers_and_relationships_never_need_the_acknowledgement(
     cascade count is zero."""
     s = _make_session(client, db, code=f"bdr-noack-{page}")
     reviewer = Reviewer(session_id=s.id, name="R", email="r@example.edu")
-    reviewee = Reviewee(
-        session_id=s.id, name="E", email_or_identifier="e@example.edu"
-    )
+    reviewee = Reviewee(session_id=s.id, name="E", email_or_identifier="e@example.edu")
     db.add_all([reviewer, reviewee])
     db.flush()
     _with_responses(db, s, reviewer=reviewer, reviewee=reviewee, n=4)
     row = (
         Observer(session_id=s.id, email="o@example.edu", display_name="O")
         if page == "observers"
-        else Relationship(
-            session_id=s.id, reviewer_id=reviewer.id, reviewee_id=reviewee.id
-        )
+        else Relationship(session_id=s.id, reviewer_id=reviewer.id, reviewee_id=reviewee.id)
     )
     db.add(row)
     db.commit()
@@ -327,9 +290,7 @@ def test_observers_and_relationships_never_need_the_acknowledgement(
 
 
 @pytest.mark.parametrize("page", PAGES)
-def test_an_id_from_another_session_is_refused(
-    db: Session, client: TestClient, page: str
-) -> None:
+def test_an_id_from_another_session_is_refused(db: Session, client: TestClient, page: str) -> None:
     s = _make_session(client, db, code=f"bdr-cross-{page}")
     other = _make_session(client, db, code=f"bdr-other-{page}")
     mine = _rows(db, s, page, 1)[0]
@@ -362,25 +323,19 @@ REFUSES_AT = {
 
 
 @pytest.mark.parametrize("page", PAGES)
-def test_a_non_editable_session_refuses(
-    db: Session, client: TestClient, page: str
-) -> None:
+def test_a_non_editable_session_refuses(db: Session, client: TestClient, page: str) -> None:
     s = _make_session(client, db, code=f"bdr-locked-{page}")
     rows = _rows(db, s, page, 1)
     s.status = REFUSES_AT[page]
     db.commit()
 
-    response = _post(
-        client, s, page, **{ID_FIELD[page]: [rows[0].id]}, confirm="true"
-    )
+    response = _post(client, s, page, **{ID_FIELD[page]: [rows[0].id]}, confirm="true")
 
     assert response.status_code in (400, 409), response.status_code
     assert db.get(type(rows[0]), rows[0].id) is not None
 
 
-def test_observers_bulk_delete_accepts_on_ready(
-    db: Session, client: TestClient
-) -> None:
+def test_observers_bulk_delete_accepts_on_ready(db: Session, client: TestClient) -> None:
     """The other side of `REFUSES_AT`, stated rather than implied.
 
     Without this, narrowing the observers gate back to
@@ -393,8 +348,7 @@ def test_observers_bulk_delete_accepts_on_ready(
     db.commit()
 
     response = _post(
-        client, s, "observers",
-        **{ID_FIELD["observers"]: [rows[0].id]}, confirm="true"
+        client, s, "observers", **{ID_FIELD["observers"]: [rows[0].id]}, confirm="true"
     )
 
     assert response.status_code == 303, response.status_code
@@ -425,19 +379,16 @@ def test_the_gate_names_the_response_loss_when_there_is_any(
     assert needle(page) not in without
 
     reviewer = Reviewer(session_id=s.id, name="Z", email="z@example.edu")
-    reviewee = Reviewee(
-        session_id=s.id, name="Y", email_or_identifier="y@example.edu"
-    )
+    reviewee = Reviewee(session_id=s.id, name="Y", email_or_identifier="y@example.edu")
     db.add_all([reviewer, reviewee])
     db.flush()
     _with_responses(db, s, reviewer=reviewer, reviewee=reviewee, n=1)
 
     with_loss = client.get(f"/operator/sessions/{s.public_id}/{page}").text
     assert needle(page) in with_loss
-    assert (
-        "delete these and their associated assignments and reviewer responses"
-        in with_loss
-    ), "one gate, and its label says what the tick agrees to (19I.3 copy)"
+    assert "delete these and their associated assignments and reviewer responses" in with_loss, (
+        "one gate, and its label says what the tick agrees to (19I.3 copy)"
+    )
 
 
 @pytest.mark.parametrize("page", ["observers", "relationships"])
@@ -451,9 +402,7 @@ def test_the_gate_never_names_response_loss_where_there_is_none(
     s = _make_session(client, db, code=f"bdr-noackbox-{page}")
     _rows(db, s, page, 1)
     reviewer = Reviewer(session_id=s.id, name="Z", email="z@example.edu")
-    reviewee = Reviewee(
-        session_id=s.id, name="Y", email_or_identifier="y@example.edu"
-    )
+    reviewee = Reviewee(session_id=s.id, name="Y", email_or_identifier="y@example.edu")
     db.add_all([reviewer, reviewee])
     db.flush()
     _with_responses(db, s, reviewer=reviewer, reviewee=reviewee, n=2)

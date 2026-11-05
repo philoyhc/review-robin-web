@@ -33,18 +33,18 @@ def _session(client: TestClient, db: Session, code: str) -> ReviewSession:
         follow_redirects=False,
     )
     assert response.status_code == 303
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _alice(db: Session, rs: ReviewSession, *, profile: str | None = LINK) -> None:
     """`client` signs in as alice@example.edu (tests/conftest.py)."""
     db.add(
         Reviewee(
-            session_id=rs.id, name="Alice Reviewee",
+            session_id=rs.id,
+            name="Alice Reviewee",
             email_or_identifier="alice@example.edu",
-            profile_link=profile, tag_1="Blue",
+            profile_link=profile,
+            tag_1="Blue",
         )
     )
     db.commit()
@@ -56,14 +56,15 @@ def _div_at(html: str, marker: str) -> str:
     for m in re.finditer(r"<(/?)div\b", html[start:]):
         depth += -1 if m.group(1) else 1
         if depth == 0:
-            return html[start:start + m.end() + 1]
+            return html[start : start + m.end() + 1]
     raise AssertionError(f"{marker} never closes")
 
 
 def _info(html: str) -> str:
     m = re.search(
         r'<span class="rs-self-info" data-reviewee-self-info>(.*?)</span>\s*<(?:span|a) class="pill',
-        html, re.S,
+        html,
+        re.S,
     )
     assert m, "no reviewee info on the role row"
     return m.group(1)
@@ -76,7 +77,9 @@ def test_the_readout_reports_the_default(client: TestClient, db: Session) -> Non
     shown = _div_at(html, "data-reviewee-self-readout")
     assert "Reviewees see:" in shown
     assert re.findall(r'<span class="pill pill-count">([^<]*)</span>', shown) == [
-        "Name", "Email", "Profile",
+        "Name",
+        "Email",
+        "Profile",
     ]
 
 
@@ -88,15 +91,11 @@ def test_the_card_sits_above_upload_with_a_chip_per_populated_column(
     html = client.get(f"/operator/sessions/{rs.public_id}/reviewees?unlocked=1").text
     _, left, _ = panel_columns(html)
     assert left.index("data-reviewee-self-card") < left.index('id="upload-csv"')
-    section = re.search(
-        r"<section[^>]*data-reviewee-self-card[^>]*>.*?</section>", html, re.S
-    )
+    section = re.search(r"<section[^>]*data-reviewee-self-card[^>]*>.*?</section>", html, re.S)
     assert section is not None
     card = section.group(0)
     assert "What reviewees see of their own entry" in card
-    chips = re.findall(
-        r'<input type="checkbox"[^>]*value="(\w+)"([^>]*)>([^<]*)</label>', card
-    )
+    chips = re.findall(r'<input type="checkbox"[^>]*value="(\w+)"([^>]*)>([^<]*)</label>', card)
     assert [(k, "checked" in rest, label.strip()) for k, rest, label in chips] == [
         ("name", True, "Name"),
         ("email_or_identifier", True, "Email"),
@@ -124,7 +123,9 @@ def test_a_failed_import_still_renders_the_card_and_readout(
     assert "data-reviewee-self-card" in html
     shown = _div_at(html, "data-reviewee-self-readout")
     assert re.findall(r'<span class="pill pill-count">([^<]*)</span>', shown) == [
-        "Name", "Email", "Profile",
+        "Name",
+        "Email",
+        "Profile",
     ]
 
 
@@ -189,7 +190,8 @@ def test_a_save_stores_the_selection_and_results_follow(
         "data-reviewee-self-readout",
     )
     assert re.findall(r'<span class="pill pill-count">([^<]*)</span>', shown) == [
-        "Email", "Tag 1",
+        "Email",
+        "Tag 1",
     ]
     grant_reviewee_visibility(rs)
     info = _info(client.get(f"/me/sessions/{rs.public_id}/results").text)
@@ -206,9 +208,7 @@ def test_an_empty_save_shows_nothing_after_the_pill(
     db.refresh(rs)
     assert rs.reviewee_self_fields == []
     grant_reviewee_visibility(rs)
-    assert "data-reviewee-self-info" not in client.get(
-        f"/me/sessions/{rs.public_id}/results"
-    ).text
+    assert "data-reviewee-self-info" not in client.get(f"/me/sessions/{rs.public_id}/results").text
 
 
 def test_a_key_with_no_chip_survives_a_save(client: TestClient, db: Session) -> None:
@@ -240,9 +240,7 @@ def test_a_locked_session_refuses_the_save(client: TestClient, db: Session) -> N
     assert rs.reviewee_self_fields is None
 
 
-def test_locked_the_readout_stays_and_the_card_goes(
-    client: TestClient, db: Session
-) -> None:
+def test_locked_the_readout_stays_and_the_card_goes(client: TestClient, db: Session) -> None:
     rs = _session(client, db, "rei-locked-page")
     _alice(db, rs)
     rs.status = "ready"
@@ -252,9 +250,7 @@ def test_locked_the_readout_stays_and_the_card_goes(
     assert "data-reviewee-self-card" not in html
 
 
-def test_a_save_leaves_a_validated_session_validated(
-    client: TestClient, db: Session
-) -> None:
+def test_a_save_leaves_a_validated_session_validated(client: TestClient, db: Session) -> None:
     rs = _session(client, db, "rei-valid")
     rs.status = "validated"
     db.commit()
@@ -272,13 +268,15 @@ def test_a_tag_reads_under_the_reviewee_label(
 
     rs = _session(client, db, "rei-label")
     _alice(db, rs)
-    actor = db.execute(
-        select(User).where(User.email == "alice@example.edu")
-    ).scalar_one()
+    actor = db.execute(select(User).where(User.email == "alice@example.edu")).scalar_one()
     for source_type, label in (("reviewee", "Cohort"), ("reviewer", "Wrong")):
         field_labels.upsert(
-            db, rs, source_type=source_type, source_field="tag_1",
-            label=label, user=actor,
+            db,
+            rs,
+            source_type=source_type,
+            source_field="tag_1",
+            label=label,
+            user=actor,
         )
     db.commit()
     assert _save(client, rs, fields=["name", "tag_1"]).status_code == 303
@@ -287,7 +285,8 @@ def test_a_tag_reads_under_the_reviewee_label(
         "data-reviewee-self-readout",
     )
     assert re.findall(r'<span class="pill pill-count">([^<]*)</span>', shown) == [
-        "Name", "Cohort",
+        "Name",
+        "Cohort",
     ]
     grant_reviewee_visibility(rs)
     info = _info(client.get(f"/me/sessions/{rs.public_id}/results").text)
@@ -300,12 +299,16 @@ def test_a_save_writes_one_audit_event(client: TestClient, db: Session) -> None:
     rs = _session(client, db, "rei-audit")
     _save(client, rs, fields=["name"])
     _save(client, rs, fields=["name"])  # a no-op: nothing changed
-    events = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.session_id == rs.id,
-            AuditEvent.event_type == "session.reviewee_self_fields_set",
+    events = (
+        db.execute(
+            select(AuditEvent).where(
+                AuditEvent.session_id == rs.id,
+                AuditEvent.event_type == "session.reviewee_self_fields_set",
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(events) == 1
     assert events[0].detail is not None
     assert events[0].detail["changes"]["reviewee_self_fields"] == [None, ["name"]]
@@ -328,9 +331,7 @@ def test_the_settings_csv_round_trips_the_selection(
     source = _session(client, db, f"rei-csv-{len(cell)}")
     source.reviewee_self_fields = stored
     db.commit()
-    row = next(
-        r for r in _session_rows(source) if r[0] == "session.reviewee_self_fields"
-    )
+    row = next(r for r in _session_rows(source) if r[0] == "session.reviewee_self_fields")
     assert row[1] == cell
     plan = _ParsedConfig()
     _apply_session_kv(plan, "session.reviewee_self_fields", row[1])

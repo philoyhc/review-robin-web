@@ -51,9 +51,7 @@ def _create(client: TestClient, code: str, **extra: str):
 
 
 def _session(db: Session, code: str) -> ReviewSession:
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 # ── L2: entry refuses ────────────────────────────────────────────────
@@ -67,9 +65,12 @@ def test_create_refuses_an_edge_moment(
     response = _create(client, "EDGE-NEW", display_timezone=zone, **{box: value})
     assert response.status_code == 422
     assert message in response.text
-    assert db.execute(
-        select(ReviewSession).where(ReviewSession.code == "EDGE-NEW")
-    ).scalar_one_or_none() is None
+    assert (
+        db.execute(
+            select(ReviewSession).where(ReviewSession.code == "EDGE-NEW")
+        ).scalar_one_or_none()
+        is None
+    )
 
 
 @pytest.mark.parametrize(("value", "zone"), _EDGE_MOMENTS)
@@ -121,9 +122,7 @@ def test_parse_refuses_within_a_day_of_the_edge() -> None:
     for value, zone in _EDGE_MOMENTS:
         with pytest.raises(ValueError):
             date_formatting.parse_local_datetime(value, zone)
-    assert date_formatting.parse_local_datetime(
-        "9999-12-30T00:00", "UTC"
-    ) == datetime(9999, 12, 30)
+    assert date_formatting.parse_local_datetime("9999-12-30T00:00", "UTC") == datetime(9999, 12, 30)
 
 
 # ── L2: display tolerates ────────────────────────────────────────────
@@ -261,16 +260,12 @@ def test_audit_log_dates_at_the_calendar_edges(
         session=review_session,
         payload=audit.counts(n=1),
     )
-    event = db.execute(
-        select(AuditEvent).where(AuditEvent.summary == "the dated one")
-    ).scalar_one()
+    event = db.execute(select(AuditEvent).where(AuditEvent.summary == "the dated one")).scalar_one()
     event.created_at = _EVENT_AT
     db.commit()
     bob_client = make_client(bob)
     bob_client.get("/operator/sys-admin/sessions")  # creates Bob's row
-    user = db.execute(
-        select(User).where(func.lower(User.email) == "bob@example.edu")
-    ).scalar_one()
+    user = db.execute(select(User).where(func.lower(User.email) == "bob@example.edu")).scalar_one()
     user.preferences = {"display_timezone": zone}
     db.commit()
 

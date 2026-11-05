@@ -26,7 +26,15 @@ from cordware.graph import classify as classify  # re-exported: the checker's vo
 from cordware.graph import error_outcome as _error
 from utilityapps.email_check import csvio
 
-STATUSES = ("OK", "USE_PRIMARY", "FOUND_NO_PRIMARY", "NOT_FOUND", "AMBIGUOUS", "INVALID_INPUT", "ERROR")
+STATUSES = (
+    "OK",
+    "USE_PRIMARY",
+    "FOUND_NO_PRIMARY",
+    "NOT_FOUND",
+    "AMBIGUOUS",
+    "INVALID_INPUT",
+    "ERROR",
+)
 # `RESOLVED` (a row naming one account, so it can join a duplicate group),
 # `SIGN_IN_KINDS`, `Outcome` and `classify` are `cordware.graph`'s, shared
 # with RRW's roster upload from segment 21F.
@@ -197,7 +205,9 @@ def run(
         )
         counts[outcome.status] += 1
         user = outcome.user
-        recommended = user.mail if user is not None and outcome.status in {"OK", "USE_PRIMARY"} else None
+        recommended = (
+            user.mail if user is not None and outcome.status in {"OK", "USE_PRIMARY"} else None
+        )
         cells.append(
             [
                 outcome.status,

@@ -112,9 +112,7 @@ def _file_set(db: Session, rs: ReviewSession) -> dict[str, bytes]:
     }
 
 
-def test_rollback_leaves_no_partial_session(
-    db: Session, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_rollback_leaves_no_partial_session(db: Session, monkeypatch: pytest.MonkeyPatch) -> None:
     rs, user = _seed(db)
     files = _file_set(db, rs)
 
@@ -131,9 +129,7 @@ def test_rollback_leaves_no_partial_session(
     # The partially-built session was hard-deleted — zero rows survive.
     assert (
         db.execute(
-            select(ReviewSession).where(
-                ReviewSession.name == "Spring_REHYD"
-            )
+            select(ReviewSession).where(ReviewSession.name == "Spring_REHYD")
         ).scalar_one_or_none()
         is None
     )
@@ -144,9 +140,7 @@ def test_rollback_leaves_no_partial_session(
         is None
     )
     # No orphaned rosters from the deleted session (only the source's).
-    reviewer_sessions = set(
-        db.execute(select(Reviewer.session_id)).scalars()
-    )
+    reviewer_sessions = set(db.execute(select(Reviewer.session_id)).scalars())
     assert reviewer_sessions == {rs.id}
 
 
@@ -161,14 +155,9 @@ def test_short_settings_rows_are_named_with_the_other_settings_errors(
     key = f"{rs.code}_settings.csv"
     # Numbered as ApplyError numbers them: non-blank rows below the
     # header, read as CSV so a quoted multi-line cell counts once.
-    data_rows = sum(
-        1 for row in csv.reader(io.StringIO(files[key].decode("utf-8")))
-        if row
-    ) - 1
+    data_rows = sum(1 for row in csv.reader(io.StringIO(files[key].decode("utf-8"))) if row) - 1
     files[key] += (
-        b"session.description\n"
-        b"instruments[9].short_label,X,string\n"
-        b"session.timezone,UTC\n"
+        b"session.description\ninstruments[9].short_label,X,string\nsession.timezone,UTC\n"
     )
 
     with pytest.raises(session_rehydrate.RehydrateError) as exc_info:
@@ -192,7 +181,10 @@ def test_orchestrator_lands_draft_with_note(db: Session) -> None:
     files = _file_set(db, rs)
 
     outcome = session_rehydrate.rehydrate_session(
-        db, files=files, user=user, today=dt.date(2026, 8, 15),
+        db,
+        files=files,
+        user=user,
+        today=dt.date(2026, 8, 15),
         directory=FakeDirectory(),
     )
     rehyd = outcome.session
@@ -240,7 +232,9 @@ def test_rehydrate_keeps_a_rule_set_no_instrument_uses(db: Session) -> None:
     rs, user = _seed(db)
     _legacy_rule_set(db, rs)
 
-    outcome = session_rehydrate.rehydrate_session(db, files=_file_set(db, rs), user=user, directory=FakeDirectory())
+    outcome = session_rehydrate.rehydrate_session(
+        db, files=_file_set(db, rs), user=user, directory=FakeDirectory()
+    )
 
     copied = db.execute(
         select(SessionRuleSet).where(SessionRuleSet.session_id == outcome.session.id)
@@ -250,14 +244,14 @@ def test_rehydrate_keeps_a_rule_set_no_instrument_uses(db: Session) -> None:
 
 def test_rehydrate_refuses_a_used_rule_set_the_card_cant_show(db: Session) -> None:
     rs, user = _seed(db)
-    instrument = db.execute(
-        select(Instrument).where(Instrument.session_id == rs.id)
-    ).scalar_one()
+    instrument = db.execute(select(Instrument).where(Instrument.session_id == rs.id)).scalar_one()
     instrument.rule_set_id = _legacy_rule_set(db, rs).id
     db.flush()
 
     with pytest.raises(session_rehydrate.RehydrateError) as exc_info:
-        session_rehydrate.rehydrate_session(db, files=_file_set(db, rs), user=user, directory=FakeDirectory())
+        session_rehydrate.rehydrate_session(
+            db, files=_file_set(db, rs), user=user, directory=FakeDirectory()
+        )
 
     assert "rule the card can't show" in str(exc_info.value)
 
@@ -269,11 +263,15 @@ def test_rehydrate_resolves_roster_addresses_through_the_directory(db: Session) 
     from cordware.graph import FakeDirectory
 
     rs, user = _seed(db)
-    db.execute(select(Reviewer).where(Reviewer.session_id == rs.id)).scalar_one().email = "e0123456@example.edu"
+    db.execute(
+        select(Reviewer).where(Reviewer.session_id == rs.id)
+    ).scalar_one().email = "e0123456@example.edu"
     db.flush()
     files = _file_set(db, rs)
 
-    outcome = session_rehydrate.rehydrate_session(db, files=files, user=user, directory=FakeDirectory())
+    outcome = session_rehydrate.rehydrate_session(
+        db, files=files, user=user, directory=FakeDirectory()
+    )
     reviewer = db.execute(
         select(Reviewer).where(Reviewer.session_id == outcome.session.id)
     ).scalar_one()

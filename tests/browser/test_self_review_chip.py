@@ -79,12 +79,9 @@ def test_switching_link_3_to_group_turns_the_chip_back_to_include(
 
     link3 = card.locator("[data-new-model-unit-mode][role=button]")
     link3.click()
-    expect(link3).to_have_attribute(
-        "data-new-model-unit-mode", "group"
-    )
+    expect(link3).to_have_attribute("data-new-model-unit-mode", "group")
     expect(chip).to_have_text("Include self reviews")
     expect(chip.locator("input")).not_to_be_checked()
     expect(card.locator("[data-new-model-self-review-copy]")).to_have_text(
         "A self review is where the reviewer is in the group being reviewed"
     )
-

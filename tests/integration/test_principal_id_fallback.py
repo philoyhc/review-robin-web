@@ -24,23 +24,17 @@ from ._lookups import must_get
 
 
 def _sign_in(db: Session, auth: AuthenticatedUser) -> User:
-    return get_or_create_user(
-        request=Request({"type": "http"}), current_user=auth, db=db
-    )
+    return get_or_create_user(request=Request({"type": "http"}), current_user=auth, db=db)
 
 
 def _identity(email: str, principal_id: str | None) -> AuthenticatedUser:
-    return AuthenticatedUser(
-        principal_id=principal_id, email=email, name="Pat", provider="aad"
-    )
+    return AuthenticatedUser(principal_id=principal_id, email=email, name="Pat", provider="aad")
 
 
 def _email_changes(db: Session) -> list[AuditEvent]:
     return list(
         db.execute(
-            select(AuditEvent).where(
-                AuditEvent.event_type == "workspace.user_email_changed"
-            )
+            select(AuditEvent).where(AuditEvent.event_type == "workspace.user_email_changed")
         ).scalars()
     )
 
@@ -75,9 +69,7 @@ def test_a_changed_email_keeps_the_row_flags_and_ownership(db: Session) -> None:
     (event,) = _email_changes(db)
     assert event.actor_user_id is None
     assert event.detail is not None
-    assert event.detail["changes"] == {
-        "email": ["pat.old@example.edu", "Pat.New@example.edu"]
-    }
+    assert event.detail["changes"] == {"email": ["pat.old@example.edu", "Pat.New@example.edu"]}
     assert event.detail["refs"] == {"target_user_id": pat.id}
 
     # The same email again, cased differently: no second rename.
@@ -112,9 +104,7 @@ def test_the_principal_row_absorbs_an_invite_holding_the_new_email(
     It has never been signed in to, so it folds in: flags OR'd,
     memberships moved (a shared session keeps one), row gone, email
     taken."""
-    original = User(
-        email="sam.old@example.edu", external_principal_id="sam-oid", is_operator=True
-    )
+    original = User(email="sam.old@example.edu", external_principal_id="sam-oid", is_operator=True)
     creator = User(email="creator@example.edu")
     db.add_all([original, creator])
     db.flush()
@@ -142,15 +132,16 @@ def test_the_principal_row_absorbs_an_invite_holding_the_new_email(
     assert db.get(User, invite_id) is None
     for rs in (mine, theirs, shared):
         assert permissions.user_can_view_session(db, returned, rs.id)
-    memberships = db.execute(
-        select(SessionOperator.session_id).where(
-            SessionOperator.user_id == original.id
-        )
-    ).scalars().all()
+    memberships = (
+        db.execute(select(SessionOperator.session_id).where(SessionOperator.user_id == original.id))
+        .scalars()
+        .all()
+    )
     assert sorted(memberships) == sorted([mine.id, theirs.id, shared.id])
-    assert db.execute(
-        select(SessionOperator.id).where(SessionOperator.user_id == invite_id)
-    ).first() is None
+    assert (
+        db.execute(select(SessionOperator.id).where(SessionOperator.user_id == invite_id)).first()
+        is None
+    )
 
     (event,) = _absorptions(db)
     assert event.actor_user_id is None
@@ -168,15 +159,11 @@ def test_the_principal_row_absorbs_an_invite_holding_the_new_email(
 
 
 @pytest.mark.parametrize("history", ["own_principal", "acted", "created_session"])
-def test_a_holder_that_was_signed_in_to_is_not_absorbed(
-    db: Session, history: str
-) -> None:
+def test_a_holder_that_was_signed_in_to_is_not_absorbed(db: Session, history: str) -> None:
     """A row with its own principal id, or anything a sign-in leaves
     behind, is someone's account: the principal-id row stays put and
     keeps its email, and nothing is merged."""
-    original = User(
-        email="lee.old@example.edu", external_principal_id="lee-oid", is_operator=True
-    )
+    original = User(email="lee.old@example.edu", external_principal_id="lee-oid", is_operator=True)
     holder = User(
         email="lee.new@example.edu",
         external_principal_id="other-oid" if history == "own_principal" else None,
@@ -207,9 +194,7 @@ def test_the_debug_lookup_absorbs_nothing(db: Session) -> None:
     db.add_all([original, invite])
     db.commit()
 
-    found = find_user(
-        db, _identity("max.new@example.edu", "max-oid"), move_email=False
-    )
+    found = find_user(db, _identity("max.new@example.edu", "max-oid"), move_email=False)
 
     assert found is not None and found.id == original.id
     db.refresh(invite)
@@ -226,9 +211,7 @@ def test_the_debug_lookup_finds_the_row_without_moving_its_email(
     db.add(row)
     db.commit()
 
-    found = find_user(
-        db, _identity("dee.new@example.edu", "dee-oid"), move_email=False
-    )
+    found = find_user(db, _identity("dee.new@example.edu", "dee-oid"), move_email=False)
 
     assert found is not None and found.id == row.id
     assert found.email == "dee.old@example.edu"
@@ -239,9 +222,7 @@ def test_the_debug_lookup_finds_the_row_without_moving_its_email(
 
 
 @pytest.mark.parametrize("principal_id", [None, "", "   "])
-def test_no_principal_id_matches_by_email_as_before(
-    db: Session, principal_id: str | None
-) -> None:
+def test_no_principal_id_matches_by_email_as_before(db: Session, principal_id: str | None) -> None:
     """A missing or blank principal id never matches a row — not even
     one stored blank too — and records nothing on the email match."""
     blank = User(email="blank.old@example.edu", external_principal_id=principal_id)
@@ -296,9 +277,7 @@ def test_an_invited_row_records_its_principal_id_on_first_sign_in(
 
 
 @pytest.mark.parametrize("stored", ["", "  "])
-def test_a_blank_stored_principal_id_is_recorded_over(
-    db: Session, stored: str
-) -> None:
+def test_a_blank_stored_principal_id_is_recorded_over(db: Session, stored: str) -> None:
     row = User(email="bea@example.edu", external_principal_id=stored)
     db.add(row)
     db.commit()
@@ -403,9 +382,7 @@ def test_recording_a_principal_id_on_an_invite_is_audited(db: Session) -> None:
     assert returned.id == invited.id
     assert returned.external_principal_id == "invitee-oid"
     (event,) = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "workspace.user_principal_recorded"
-        )
+        select(AuditEvent).where(AuditEvent.event_type == "workspace.user_principal_recorded")
     ).scalars()
     assert event.actor_user_id is None
     assert event.detail is not None

@@ -130,7 +130,8 @@ def stale_report(since: str | None, stream) -> int:
     days = (today - datetime.date.fromisoformat(since)).days
     main_ref = next(
         (
-            ref for ref in ("origin/main", "main")
+            ref
+            for ref in ("origin/main", "main")
             if _git("rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}").strip()
         ),
         None,
@@ -141,11 +142,13 @@ def stale_report(since: str | None, stream) -> int:
             "read 0 and the trigger would say 'not due' for the wrong reason — "
             "fetch first"
         )
-    merges = len([
-        row for row in _git(
-            "rev-list", "--merges", f"--since={since}", main_ref
-        ).split("\n") if row.strip()
-    ])
+    merges = len(
+        [
+            row
+            for row in _git("rev-list", "--merges", f"--since={since}", main_ref).split("\n")
+            if row.strip()
+        ]
+    )
     due_weeks = days >= SWEEP_INTERVAL_WEEKS * 7
     due_merges = merges >= SWEEP_INTERVAL_MERGES
     print(
@@ -160,13 +163,8 @@ def stale_report(since: str | None, stream) -> int:
         file=stream,
     )
     print(
-        f"  merges   {merges:4d}   of {SWEEP_INTERVAL_MERGES}"
-        f"{'  <- due' if due_merges else ''}",
+        f"  merges   {merges:4d}   of {SWEEP_INTERVAL_MERGES}{'  <- due' if due_merges else ''}",
         file=stream,
     )
-    print(
-        f"  => {'DUE' if due_weeks or due_merges else 'not due'}", file=stream
-    )
+    print(f"  => {'DUE' if due_weeks or due_merges else 'not due'}", file=stream)
     return 0
-
-

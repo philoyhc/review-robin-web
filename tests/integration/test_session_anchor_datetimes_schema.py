@@ -6,6 +6,7 @@ Round-trips the two new ``DateTime(timezone=True)`` columns on
 ``responses_release_at`` (Participants-platform inert). Both
 columns are inert today — no service module reads or writes them.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -20,9 +21,7 @@ def _make_session(db: Session, code: str, **kwargs: object) -> ReviewSession:
     op = User(email=f"op-{code}@example.edu", display_name="Op")
     db.add(op)
     db.flush()
-    review_session = ReviewSession(
-        name=code.title(), code=code, created_by_user_id=op.id, **kwargs
-    )
+    review_session = ReviewSession(name=code.title(), code=code, created_by_user_id=op.id, **kwargs)
     db.add(review_session)
     db.flush()
     return review_session
@@ -40,9 +39,7 @@ def test_anchor_datetimes_default_to_null(db: Session) -> None:
 
 def test_scheduled_activate_at_round_trips(db: Session) -> None:
     when = datetime(2026, 6, 1, 9, 0, tzinfo=UTC)
-    review_session = _make_session(
-        db, "scheduled-activate", scheduled_activate_at=when
-    )
+    review_session = _make_session(db, "scheduled-activate", scheduled_activate_at=when)
 
     reread = db.execute(
         select(ReviewSession).where(ReviewSession.id == review_session.id)
@@ -53,9 +50,7 @@ def test_scheduled_activate_at_round_trips(db: Session) -> None:
 
 def test_responses_release_at_round_trips(db: Session) -> None:
     when = datetime(2026, 7, 15, 12, 0, tzinfo=UTC)
-    review_session = _make_session(
-        db, "responses-release", responses_release_at=when
-    )
+    review_session = _make_session(db, "responses-release", responses_release_at=when)
 
     reread = db.execute(
         select(ReviewSession).where(ReviewSession.id == review_session.id)
@@ -68,12 +63,8 @@ def test_anchor_datetimes_flip_persists(db: Session) -> None:
     review_session = _make_session(db, "anchors-flip")
     assert review_session.scheduled_activate_at is None
 
-    review_session.scheduled_activate_at = datetime(
-        2026, 8, 1, 10, 0, tzinfo=UTC
-    )
-    review_session.responses_release_at = datetime(
-        2026, 8, 31, 10, 0, tzinfo=UTC
-    )
+    review_session.scheduled_activate_at = datetime(2026, 8, 1, 10, 0, tzinfo=UTC)
+    review_session.responses_release_at = datetime(2026, 8, 31, 10, 0, tzinfo=UTC)
     db.flush()
     db.expire(review_session)
     assert review_session.scheduled_activate_at is not None

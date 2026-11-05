@@ -20,9 +20,7 @@ from app.services.reviewers import ReviewerOperationError
 from ._lookups import detail_of
 
 
-def _seed(
-    db: Session, *, status: str = "draft"
-) -> tuple[User, ReviewSession]:
+def _seed(db: Session, *, status: str = "draft") -> tuple[User, ReviewSession]:
     user = User(email="op@example.edu", display_name="Op")
     db.add(user)
     db.flush()
@@ -203,11 +201,15 @@ def test_update_reviewer_emits_changes_envelope_for_changed_fields_only(
     assert changes["name"] == ["Alice", "Alice 2"]
     assert changes["tag_2"] == [None, "Cohort A"]
 
-    event = db.execute(
-        select(AuditEvent)
-        .where(AuditEvent.event_type == "reviewer.updated")
-        .order_by(AuditEvent.id.desc())
-    ).scalars().first()
+    event = (
+        db.execute(
+            select(AuditEvent)
+            .where(AuditEvent.event_type == "reviewer.updated")
+            .order_by(AuditEvent.id.desc())
+        )
+        .scalars()
+        .first()
+    )
     assert event is not None
     assert set(detail_of(event)["changes"].keys()) == {"name", "tag_2"}
     assert detail_of(event)["refs"]["reviewer_id"] == reviewer.id
@@ -222,9 +224,7 @@ def test_update_reviewer_no_changes_emits_nothing(db: Session) -> None:
         email="alice@example.edu",
         user=user,
     )
-    before = db.execute(
-        select(AuditEvent).where(AuditEvent.event_type == "reviewer.updated")
-    ).all()
+    before = db.execute(select(AuditEvent).where(AuditEvent.event_type == "reviewer.updated")).all()
 
     changes = reviewers_service.update_reviewer(
         db,
@@ -235,9 +235,7 @@ def test_update_reviewer_no_changes_emits_nothing(db: Session) -> None:
     )
     assert changes == {}
 
-    after = db.execute(
-        select(AuditEvent).where(AuditEvent.event_type == "reviewer.updated")
-    ).all()
+    after = db.execute(select(AuditEvent).where(AuditEvent.event_type == "reviewer.updated")).all()
     assert len(after) == len(before)
 
 
@@ -346,9 +344,7 @@ def test_update_reviewer_status_only_change_emits_reviewer_updated(
     assert changes == {"status": ["active", "inactive"]}
 
     bulk_event = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "reviewer.bulk_inactivated"
-        )
+        select(AuditEvent).where(AuditEvent.event_type == "reviewer.bulk_inactivated")
     ).first()
     assert bulk_event is None  # the bulk path did not fire
 
@@ -396,9 +392,7 @@ def test_bulk_inactivate_flips_only_active_rows(db: Session) -> None:
     assert all(r.status == "inactive" for r in rows)
 
     event = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "reviewer.bulk_inactivated"
-        )
+        select(AuditEvent).where(AuditEvent.event_type == "reviewer.bulk_inactivated")
     ).scalar_one()
     assert sorted(detail_of(event)["snapshot"]["reviewer_ids"]) == sorted(flipped)
 
@@ -420,9 +414,7 @@ def test_bulk_reactivate_flips_only_inactive_rows(db: Session) -> None:
     assert all(r.status == "active" for r in rows)
 
     event = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "reviewer.bulk_reactivated"
-        )
+        select(AuditEvent).where(AuditEvent.event_type == "reviewer.bulk_reactivated")
     ).scalar_one()
     assert sorted(detail_of(event)["snapshot"]["reviewer_ids"]) == sorted(flipped)
 
@@ -439,9 +431,7 @@ def test_bulk_op_with_no_eligible_rows_emits_nothing(db: Session) -> None:
     assert flipped == []
 
     events = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "reviewer.bulk_reactivated"
-        )
+        select(AuditEvent).where(AuditEvent.event_type == "reviewer.bulk_reactivated")
     ).all()
     assert events == []
 
@@ -456,9 +446,7 @@ def test_bulk_op_rejects_ids_outside_session(db: Session) -> None:
     )
     db.add(session_b)
     db.flush()
-    other = Reviewer(
-        session_id=session_b.id, name="X", email="x@example.edu"
-    )
+    other = Reviewer(session_id=session_b.id, name="X", email="x@example.edu")
     db.add(other)
     db.flush()
 
@@ -501,9 +489,7 @@ def test_create_reviewer_invalidates_validated_session(db: Session) -> None:
     assert review_session.status == "draft"
 
     invalidate_event = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "session.invalidated"
-        )
+        select(AuditEvent).where(AuditEvent.event_type == "session.invalidated")
     ).scalar_one()
     assert detail_of(invalidate_event)["reason"] == "reviewer_created"
 
@@ -520,9 +506,7 @@ def test_update_reviewer_invalidates_validated_session(db: Session) -> None:
     review_session.status = "validated"
     db.flush()
 
-    reviewers_service.update_reviewer(
-        db, reviewer=reviewer, name="Alice 2", user=user
-    )
+    reviewers_service.update_reviewer(db, reviewer=reviewer, name="Alice 2", user=user)
     assert review_session.status == "draft"
 
 
@@ -538,9 +522,7 @@ def test_no_op_update_does_not_invalidate(db: Session) -> None:
     review_session.status = "validated"
     db.flush()
 
-    reviewers_service.update_reviewer(
-        db, reviewer=reviewer, name="Alice", user=user
-    )
+    reviewers_service.update_reviewer(db, reviewer=reviewer, name="Alice", user=user)
     # Nothing changed → no invalidation.
     assert review_session.status == "validated"
 

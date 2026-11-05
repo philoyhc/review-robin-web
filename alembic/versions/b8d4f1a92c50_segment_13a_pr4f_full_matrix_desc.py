@@ -14,6 +14,7 @@ Revises: 9a7c2e1b4f60
 Create Date: 2026-05-07 13:00:00.000000
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -26,10 +27,7 @@ depends_on: str | Sequence[str] | None = None
 
 
 _NEW_DESCRIPTION = "Pair every reviewer with every reviewee."
-_OLD_DESCRIPTION = (
-    "Pair every reviewer with every reviewee. Equivalent to "
-    "Simple mode's default."
-)
+_OLD_DESCRIPTION = "Pair every reviewer with every reviewee. Equivalent to Simple mode's default."
 
 
 def upgrade() -> None:

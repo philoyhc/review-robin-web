@@ -18,7 +18,7 @@ from ._base_css import css, rules
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
 from _harness_common import collect_contrast_pairs  # noqa: E402
 
-SELECTOR = "[data-new-model-rf-row][data-row-pending=\"true\"] > td"
+SELECTOR = '[data-new-model-rf-row][data-row-pending="true"] > td'
 
 
 def test_the_pending_fill_is_a_token_not_a_literal() -> None:

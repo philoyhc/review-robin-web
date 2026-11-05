@@ -75,9 +75,7 @@ class InvitationsRow:
         return "not_started"
 
 
-def _latest_invitation_outbox_by_reviewer(
-    db: Session, session_id: int
-) -> dict[int, EmailOutbox]:
+def _latest_invitation_outbox_by_reviewer(db: Session, session_id: int) -> dict[int, EmailOutbox]:
     """One latest ``kind="invitation"`` outbox row per reviewer.
 
     Used by ``build_invitations_rows`` to populate the Email Status
@@ -92,9 +90,7 @@ def _latest_invitation_outbox_by_reviewer(
                 EmailOutbox.kind == invitations_service.INVITATION_KIND,
                 EmailOutbox.reviewer_id.is_not(None),
             )
-            .order_by(
-                EmailOutbox.created_at.desc(), EmailOutbox.id.desc()
-            )
+            .order_by(EmailOutbox.created_at.desc(), EmailOutbox.id.desc())
         ).scalars()
     )
     out: dict[int, EmailOutbox] = {}
@@ -105,9 +101,7 @@ def _latest_invitation_outbox_by_reviewer(
     return out
 
 
-def build_invitations_rows(
-    db: Session, review_session: ReviewSession
-) -> list[InvitationsRow]:
+def build_invitations_rows(db: Session, review_session: ReviewSession) -> list[InvitationsRow]:
     progress_rows = monitoring.per_reviewer_progress(db, review_session)
     latest_outbox = _latest_invitation_outbox_by_reviewer(db, review_session.id)
     out: list[InvitationsRow] = []
@@ -120,14 +114,8 @@ def build_invitations_rows(
         # the date from ``Invitation.sent_at``, the state only once the
         # invitation is past ``pending``.
         invitation = p.invitation
-        email_sent_at: datetime | None = (
-            invitation.sent_at if invitation is not None else None
-        )
-        if (
-            outbox_row is None
-            or invitation is None
-            or invitation.status == "pending"
-        ):
+        email_sent_at: datetime | None = invitation.sent_at if invitation is not None else None
+        if outbox_row is None or invitation is None or invitation.status == "pending":
             email_status = "not sent"
         else:
             email_status = outbox_row.status

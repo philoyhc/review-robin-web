@@ -42,9 +42,13 @@ def test_clone_copies_the_mode(client: TestClient, db: Session) -> None:
     assert user is not None
     clone = session_clone.clone_session(db, source=review_session, user=user, mode="all")
     db.flush()
-    cloned = db.execute(
-        select(InstrumentResponseField)
-        .join(Instrument)
-        .where(Instrument.session_id == clone.id, InstrumentResponseField.label == "Rating")
-    ).scalars().all()
+    cloned = (
+        db.execute(
+            select(InstrumentResponseField)
+            .join(Instrument)
+            .where(Instrument.session_id == clone.id, InstrumentResponseField.label == "Rating")
+        )
+        .scalars()
+        .all()
+    )
     assert [f.branch_mode for f in cloned if f.branch_op] == ["require"]

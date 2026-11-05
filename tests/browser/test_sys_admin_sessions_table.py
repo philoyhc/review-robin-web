@@ -86,7 +86,9 @@ def test_a_header_sorts_and_the_actions_stay_on_one_line(
     page.click('#diagnostics-sessions th[data-sort-key="code"] .rrw-sort-btn')
     assert codes.all_inner_texts() == list(reversed(ascending))
     # Status has no sort button.
-    expect(page.locator("#diagnostics-sessions thead th", has_text="Status").locator(".rrw-sort-btn")).to_have_count(0)
+    expect(
+        page.locator("#diagnostics-sessions thead th", has_text="Status").locator(".rrw-sort-btn")
+    ).to_have_count(0)
 
     actions = page.locator("#diagnostics-sessions tbody tr").first.locator(".btn-pair .btn")
     expect(actions).to_have_count(3)
@@ -138,7 +140,7 @@ def test_a_sort_cookie_left_at_the_root_path_is_expired(page: Page) -> None:
     page.goto(app_url(PAGE))
     host = page.evaluate("location.hostname")
     page.context.clear_cookies(name=name)
-    stale = '%5B%7B%22key%22%3A%22code%22%2C%22dir%22%3A%22asc%22%7D%5D'
+    stale = "%5B%7B%22key%22%3A%22code%22%2C%22dir%22%3A%22asc%22%7D%5D"
     page.context.add_cookies(
         [
             {"name": name, "value": stale, "domain": host, "path": "/"},

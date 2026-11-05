@@ -29,11 +29,17 @@ router = APIRouter(dependencies=[Depends(placeholders_previewers_only)])
 
 UNKNOWN = "?"  # a staff name or student id that is no one's: never widened to all
 
-KINDS: dict[str, tuple[str, tuple[str, ...], Callable[[str, sample.Term | None, str | None], list[list[str]]]]] = {
+KINDS: dict[
+    str,
+    tuple[str, tuple[str, ...], Callable[[str, sample.Term | None, str | None], list[list[str]]]],
+] = {
     "students": ("encounters", sample.ENCOUNTER_COLUMNS, sample.encounter_rows),
     "plans": ("plans", sample.PLAN_COLUMNS, sample.plan_rows),
 }
-TEMPLATES: dict[str, tuple[str, ...]] = {"students": sample.ENCOUNTER_COLUMNS, "plans": sample.PLAN_TEMPLATE_COLUMNS}
+TEMPLATES: dict[str, tuple[str, ...]] = {
+    "students": sample.ENCOUNTER_COLUMNS,
+    "plans": sample.PLAN_TEMPLATE_COLUMNS,
+}
 
 
 def _cell(value: str) -> str:
@@ -48,8 +54,11 @@ def _csv(name: str, columns: tuple[str, ...], rows: list[list[str]]) -> Response
     writer = csv.writer(out, lineterminator="\r\n")
     writer.writerow(columns)
     writer.writerows([_cell(v) for v in row] for row in rows)
-    return Response(out.getvalue(), media_type="text/csv; charset=utf-8",
-                    headers={"Content-Disposition": f'attachment; filename="{name}"'})
+    return Response(
+        out.getvalue(),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{name}"'},
+    )
 
 
 def _student(request: Request) -> str | None:
@@ -102,6 +111,7 @@ def plans_template(request: Request) -> Response:
 # --- Records across staff (rung 8; author, 2026-10-30): senior
 # identifiable access only, behind the same lock.
 
+
 def _staff(request: Request) -> str | None:
     """The chosen staff member; None for all staff, chosen as an empty
     value; UNKNOWN for a name that is not a staff member's."""
@@ -130,10 +140,22 @@ def staff_records(request: Request) -> Response:
     student, only that student's records go. Each action is a support-activity event
     (§11.3)."""
     staff, student = _staff(request), _student(request)
-    purged = [] if UNKNOWN in (staff, student) else sample.purges(staff, student)  # unknown matches no one
-    return gated(request, "supportlogs/overview_records.html", sample.SENIOR, current_tab="/overview/",
-                 unlocked=records_unlocked(request), staff=staff, student=student, purged=purged,
-                 purged_records=sum(p.about(None if student in (None, UNKNOWN) else student) for p in purged))
+    purged = (
+        [] if UNKNOWN in (staff, student) else sample.purges(staff, student)
+    )  # unknown matches no one
+    return gated(
+        request,
+        "supportlogs/overview_records.html",
+        sample.SENIOR,
+        current_tab="/overview/",
+        unlocked=records_unlocked(request),
+        staff=staff,
+        student=student,
+        purged=purged,
+        purged_records=sum(
+            p.about(None if student in (None, UNKNOWN) else student) for p in purged
+        ),
+    )
 
 
 def _senior_download(request: Request, template: bool) -> Response:
@@ -144,11 +166,17 @@ def _senior_download(request: Request, template: bool) -> Response:
         return RedirectResponse(url_path(request, "/overview/records") + query(me), status_code=303)
     what = _what(request)
     if template:
-        return _csv(f"support-logs-{what}-staff-template.csv", ("Staff", *sample.STAFF_TEMPLATE_COLUMNS[what]), [])
+        return _csv(
+            f"support-logs-{what}-staff-template.csv",
+            ("Staff", *sample.STAFF_TEMPLATE_COLUMNS[what]),
+            [],
+        )
     staff, chosen, sid = _staff(request), _term(request, sample.CURRENT_TERM.key), _student(request)
     if UNKNOWN in (staff, sid):  # a name or id that is no one's downloads nothing
-        return RedirectResponse(url_path(request, "/overview/records") + query(me, records="open", understood="yes"),
-                                status_code=303)
+        return RedirectResponse(
+            url_path(request, "/overview/records") + query(me, records="open", understood="yes"),
+            status_code=303,
+        )
     columns, rows = sample.staff_rows(what, staff, chosen, sid)
     who = "all-staff" if staff is None else staff.lower().replace(" ", "-")
     scope = ("all-terms" if chosen is None else chosen.key) + (f"-{sid}" if sid else "")

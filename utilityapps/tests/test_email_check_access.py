@@ -52,13 +52,17 @@ def test_nobody_signed_in_gets_a_401(
     assert _call(client, method, path).status_code == 401
 
 
-def test_a_listed_super_admin_is_let_in(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_listed_super_admin_is_let_in(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setattr(identity_settings, "fake_auth_super_admin", False)
     monkeypatch.setattr(identity_settings, "super_admin_emails", ["admin@example.edu"])
     assert client.get("/utilities/email-check/").status_code == 200
 
 
-def test_the_index_and_the_probe_are_not_gated(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_the_index_and_the_probe_are_not_gated(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setattr(identity_settings, "fake_auth_super_admin", False)
     assert client.get("/utilities/").status_code == 200
     assert client.get("/utilities/health").status_code == 200
@@ -71,7 +75,10 @@ def test_the_upload_page_states_the_limits_and_the_caveats(client: TestClient) -
     assert "up to 500 rows and 1 MiB" in text
     assert "Nothing you upload is kept" in text
     assert "is not proof that it" in text
-    assert 'method="post" action="/utilities/email-check/preview" enctype="multipart/form-data"' in text
+    assert (
+        'method="post" action="/utilities/email-check/preview" enctype="multipart/form-data"'
+        in text
+    )
     assert "Placeholder" not in text
 
 

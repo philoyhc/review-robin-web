@@ -33,9 +33,7 @@ def test_it_names_exactly_the_empty_rosters(
     has_reviewers: bool, has_reviewees: bool, labels: list[str]
 ) -> None:
     """Including the order, which is the nav's and the CSV's."""
-    prereqs = relationship_prerequisites(
-        has_reviewers=has_reviewers, has_reviewees=has_reviewees
-    )
+    prereqs = relationship_prerequisites(has_reviewers=has_reviewers, has_reviewees=has_reviewees)
     assert [roster.label for roster in prereqs.missing] == labels
     assert prereqs.satisfied is (not labels)
 
@@ -43,9 +41,7 @@ def test_it_names_exactly_the_empty_rosters(
 def test_the_slug_is_the_setup_page_it_links_to() -> None:
     """The template builds `/operator/sessions/<id>/<slug>` from it, so
     a typo here is a 404 on the one link the operator is told to use."""
-    prereqs = relationship_prerequisites(
-        has_reviewers=False, has_reviewees=False
-    )
+    prereqs = relationship_prerequisites(has_reviewers=False, has_reviewees=False)
     assert [roster.slug for roster in prereqs.missing] == [
         "reviewers",
         "reviewees",
@@ -66,9 +62,7 @@ def test_both_surfaces_agree_about_number(
     noun: str,
     clause: str,
 ) -> None:
-    prereqs = relationship_prerequisites(
-        has_reviewers=has_reviewers, has_reviewees=has_reviewees
-    )
+    prereqs = relationship_prerequisites(has_reviewers=has_reviewers, has_reviewees=has_reviewees)
     assert prereqs.roster_noun == noun
     assert prereqs.empty_state_clause == clause
 
@@ -85,20 +79,16 @@ def test_both_surfaces_agree_about_number(
         (
             True,
             False,
-            "Add rows to the Reviewees roster first — "
-            "a relationship needs one of each.",
+            "Add rows to the Reviewees roster first — a relationship needs one of each.",
         ),
         (
             False,
             True,
-            "Add rows to the Reviewers roster first — "
-            "a relationship needs one of each.",
+            "Add rows to the Reviewers roster first — a relationship needs one of each.",
         ),
     ],
 )
-def test_the_tooltip_in_full(
-    has_reviewers: bool, has_reviewees: bool, expected: str
-) -> None:
+def test_the_tooltip_in_full(has_reviewers: bool, has_reviewees: bool, expected: str) -> None:
     """It read *"Add a reviewer and a reviewee first"* in all three
     cases, so an operator with a full Reviewers roster was told to add a
     reviewer. Asserted whole rather than by substring: the defect it
@@ -115,8 +105,6 @@ def test_nothing_missing_has_nothing_to_say() -> None:
     """The template renders the live button in this state, so the
     tooltip is never read — empty rather than a sentence that would be
     false if it ever were."""
-    prereqs = relationship_prerequisites(
-        has_reviewers=True, has_reviewees=True
-    )
+    prereqs = relationship_prerequisites(has_reviewers=True, has_reviewees=True)
     assert prereqs.satisfied
     assert prereqs.add_disabled_title == ""

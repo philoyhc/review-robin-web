@@ -20,6 +20,7 @@ Revision ID: a3f7e2d1c9b5
 Revises: e1a7b3c9d2f8
 Create Date: 2026-05-26
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -35,9 +36,7 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     with op.batch_alter_table("instruments", schema=None) as batch_op:
-        batch_op.add_column(
-            sa.Column("band1_touched_links", sa.JSON(), nullable=True)
-        )
+        batch_op.add_column(sa.Column("band1_touched_links", sa.JSON(), nullable=True))
 
 
 def downgrade() -> None:

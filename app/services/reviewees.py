@@ -95,15 +95,11 @@ def _normalised_name(name: str) -> str:
 def _normalised_identifier(identifier: str) -> str:
     value = (identifier or "").strip()
     if not value:
-        raise RevieweeOperationError(
-            "empty_identifier", "Email / identifier must not be empty."
-        )
+        raise RevieweeOperationError("empty_identifier", "Email / identifier must not be empty.")
     # Non-strict: a handle without ``@`` is fine; anything with an
     # ``@`` must be a well-formed email.
     if "@" in value and not looks_like_email(value):
-        raise RevieweeOperationError(
-            "invalid_email", f"{value!r} is not a valid email address."
-        )
+        raise RevieweeOperationError("invalid_email", f"{value!r} is not a valid email address.")
     return value
 
 
@@ -130,9 +126,7 @@ def _identifier_taken(
     # that admits the same identifier (audit S2).
     key = normalize_email(identifier)
     rows = db.execute(
-        select(Reviewee.id, Reviewee.email_or_identifier).where(
-            Reviewee.session_id == session_id
-        )
+        select(Reviewee.id, Reviewee.email_or_identifier).where(Reviewee.session_id == session_id)
     ).all()
     return any(
         normalize_email(existing) == key
@@ -179,13 +173,10 @@ def create_reviewee(
         }
     )
 
-    if _identifier_taken(
-        db, session_id=review_session.id, identifier=clean_identifier
-    ):
+    if _identifier_taken(db, session_id=review_session.id, identifier=clean_identifier):
         raise RevieweeOperationError(
             "duplicate_identifier",
-            f"Another reviewee in this session already uses "
-            f"{clean_identifier!r}.",
+            f"Another reviewee in this session already uses {clean_identifier!r}.",
         )
 
     conflict = csv_imports.cross_table_identity_conflict(
@@ -212,7 +203,9 @@ def create_reviewee(
     if holder is not None:
         raise RevieweeOperationError(
             "duplicate_account",
-            directory_accounts.same_account_message(clean_identifier, "reviewee", holder.email_or_identifier),
+            directory_accounts.same_account_message(
+                clean_identifier, "reviewee", holder.email_or_identifier
+            ),
         )
 
     lifecycle.invalidate_if_validated(
@@ -246,9 +239,7 @@ def create_reviewee(
             recompute_self_review_classification,
         )
 
-        recompute_self_review_classification(
-            db, session_id=review_session.id
-        )
+        recompute_self_review_classification(db, session_id=review_session.id)
 
     audit.write_event(
         db,
@@ -355,15 +346,12 @@ def update_reviewee(
     ):
         raise RevieweeOperationError(
             "duplicate_identifier",
-            f"Another reviewee in this session already uses "
-            f"{proposed['email_or_identifier']!r}.",
+            f"Another reviewee in this session already uses {proposed['email_or_identifier']!r}.",
         )
 
     # Keyed on the resulting pair, so a name-only edit is caught too —
     # the within-roster gate above can only see an identifier edit.
-    final_identifier = proposed.get(
-        "email_or_identifier", reviewee.email_or_identifier
-    )
+    final_identifier = proposed.get("email_or_identifier", reviewee.email_or_identifier)
     final_name = proposed.get("name", reviewee.name)
 
     conflict = csv_imports.cross_table_identity_conflict(
@@ -384,14 +372,13 @@ def update_reviewee(
     # 20H Item 1: an address edit onto an account another row of this
     # roster holds is refused. Resolved once, and the answer reused for
     # the rebind below.
-    rebind_resolve: Callable[[str], directory_accounts.Account | None] | None = (
-        resolve_account
-    )
+    rebind_resolve: Callable[[str], directory_accounts.Account | None] | None = resolve_account
     new_address = proposed.get("email_or_identifier")
     if (
         new_address is not None
         and resolve_account is not None
-        and directory_accounts.key(new_address) != directory_accounts.key(reviewee.email_or_identifier)
+        and directory_accounts.key(new_address)
+        != directory_accounts.key(reviewee.email_or_identifier)
     ):
         account = resolve_account(new_address) if new_address else None
         holder = directory_accounts.account_holder(
@@ -475,17 +462,12 @@ def update_reviewee(
     # rule). Either kind of change can shift the classification —
     # recompute against the whole session if any of those fields
     # moved.
-    if any(
-        f in changes
-        for f in ("email_or_identifier", "tag_1", "tag_2", "tag_3")
-    ):
+    if any(f in changes for f in ("email_or_identifier", "tag_1", "tag_2", "tag_3")):
         from app.services.assignments import (
             recompute_self_review_classification,
         )
 
-        recompute_self_review_classification(
-            db, session_id=reviewee.session_id
-        )
+        recompute_self_review_classification(db, session_id=reviewee.session_id)
 
     audit.write_event(
         db,
@@ -495,9 +477,7 @@ def update_reviewee(
         session=reviewee.session,
         payload=audit.changes(changes),
         refs={"reviewee_id": reviewee.id},
-        context=(
-            {"defuncted_group_responses": defuncted} if defuncted else None
-        ),
+        context=({"defuncted_group_responses": defuncted} if defuncted else None),
         correlation_id=correlation_id,
     )
     db.commit()

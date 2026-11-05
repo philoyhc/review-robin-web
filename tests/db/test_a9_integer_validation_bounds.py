@@ -24,9 +24,18 @@ PREVIOUS = "e2503d04df0d"
 # id: (data_type, min, max, step, stored block) -> expected block
 _CASES = {
     1: (("Integer", 0.5, 10.0, None, {"min": 0, "max": 10}), {"min": 0.5, "max": 10}),
-    2: (("Integer", 0.0, 10.0, 1.0, {"min": 0, "max": 10, "step": 1}), {"min": 0, "max": 10, "step": 1}),
-    3: (("Integer", 1.0, 7.5, 2.5, {"min": 1, "max": 7, "step": 2}), {"min": 1, "max": 7.5, "step": 2.5}),
-    4: (("Decimal", 0.5, 1.5, 0.25, {"min": 0.5, "max": 1.5, "step": 0.25}), {"min": 0.5, "max": 1.5, "step": 0.25}),
+    2: (
+        ("Integer", 0.0, 10.0, 1.0, {"min": 0, "max": 10, "step": 1}),
+        {"min": 0, "max": 10, "step": 1},
+    ),
+    3: (
+        ("Integer", 1.0, 7.5, 2.5, {"min": 1, "max": 7, "step": 2}),
+        {"min": 1, "max": 7.5, "step": 2.5},
+    ),
+    4: (
+        ("Decimal", 0.5, 1.5, 0.25, {"min": 0.5, "max": 1.5, "step": 0.25}),
+        {"min": 0.5, "max": 1.5, "step": 0.25},
+    ),
     5: (("Integer", 0.5, None, None, None), {"min": 0.5}),
 }
 

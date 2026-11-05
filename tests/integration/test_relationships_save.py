@@ -38,12 +38,8 @@ def _seed(
     )
     db.add(review_session)
     db.flush()
-    alice = Reviewer(
-        session_id=review_session.id, name="Alice", email="alice@example.edu"
-    )
-    bob = Reviewer(
-        session_id=review_session.id, name="Bob", email="bob@example.edu"
-    )
+    alice = Reviewer(session_id=review_session.id, name="Alice", email="alice@example.edu")
+    bob = Reviewer(session_id=review_session.id, name="Bob", email="bob@example.edu")
     carol = Reviewee(
         session_id=review_session.id,
         name="Carol",
@@ -217,9 +213,7 @@ def test_pair_context_lookup_returns_keyed_dict(db: Session) -> None:
         correlation_id="corr-lookup",
     )
 
-    lookup = relationships_service.pair_context_lookup(
-        db, review_session.id
-    )
+    lookup = relationships_service.pair_context_lookup(db, review_session.id)
     assert set(lookup.keys()) == {(alice.id, carol.id), (bob.id, dan.id)}
     assert lookup[(alice.id, carol.id)].tag_1 == "Mentor"
     assert lookup[(bob.id, dan.id)].tag_2 == "COI"
@@ -246,9 +240,7 @@ def test_save_isolates_per_session(db: Session) -> None:
     )
     db.add(sess_b)
     db.flush()
-    alice_b = Reviewer(
-        session_id=sess_b.id, name="Alice", email="alice@example.edu"
-    )
+    alice_b = Reviewer(session_id=sess_b.id, name="Alice", email="alice@example.edu")
     carol_b = Reviewee(
         session_id=sess_b.id,
         name="Carol",
@@ -265,8 +257,8 @@ def test_save_isolates_per_session(db: Session) -> None:
         correlation_id="corr-b",
     )
 
-    rows_b = db.execute(
-        select(Relationship).where(Relationship.session_id == sess_b.id)
-    ).scalars().all()
+    rows_b = (
+        db.execute(select(Relationship).where(Relationship.session_id == sess_b.id)).scalars().all()
+    )
     assert {r.tag_1 for r in rows_b} == {"Other-session tag"}
     assert relationships_service.existing_count(db, sess_a.id) == 1

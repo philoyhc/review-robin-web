@@ -55,10 +55,7 @@ def rows(card: Locator) -> Locator:
 
 
 def names(card: Locator) -> list[str]:
-    return [
-        field.input_value()
-        for field in rows(card).locator("[data-new-model-rf-name]").all()
-    ]
+    return [field.input_value() for field in rows(card).locator("[data-new-model-rf-name]").all()]
 
 
 def preview_headers(card: Locator) -> list[str]:
@@ -71,9 +68,13 @@ def preview_headers(card: Locator) -> list[str]:
 
 def preview_input(card: Locator, column: int) -> Locator:
     """The sample row's control under a response-field column."""
-    return card.locator("th[scope=col]:not(.rs-reviewee)").nth(column).locator(
-        "xpath=ancestor::table[1]"
-    ).locator("tbody td :is(input, select, textarea)").nth(column)
+    return (
+        card.locator("th[scope=col]:not(.rs-reviewee)")
+        .nth(column)
+        .locator("xpath=ancestor::table[1]")
+        .locator("tbody td :is(input, select, textarea)")
+        .nth(column)
+    )
 
 
 def save_button(card: Locator) -> Locator:
@@ -193,9 +194,7 @@ def branch_rating(page: Page, session_id: str, *, op: str = "ge", value: str = "
     return card
 
 
-def give_a_field_help_text(
-    database_url: str, session_id: str, text: str = "Score 1 to 5."
-) -> None:
+def give_a_field_help_text(database_url: str, session_id: str, text: str = "Score 1 to 5.") -> None:
     """The first response field's help text, shown, written directly:
     the preview and the reviewer surface build their help rows from it."""
     from sqlalchemy import create_engine, select
@@ -206,12 +205,16 @@ def give_a_field_help_text(
     engine = create_engine(database_url)
     try:
         with Session(engine) as db:
-            field = db.execute(
-                select(InstrumentResponseField)
-                .join(Instrument, Instrument.id == InstrumentResponseField.instrument_id)
-                .where(Instrument.session_id == session_pk(database_url, session_id))
-                .order_by(InstrumentResponseField.order)
-            ).scalars().first()
+            field = (
+                db.execute(
+                    select(InstrumentResponseField)
+                    .join(Instrument, Instrument.id == InstrumentResponseField.instrument_id)
+                    .where(Instrument.session_id == session_pk(database_url, session_id))
+                    .order_by(InstrumentResponseField.order)
+                )
+                .scalars()
+                .first()
+            )
             assert field is not None
             field.help_text = text
             field.help_text_visible = True

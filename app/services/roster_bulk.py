@@ -36,10 +36,7 @@ if TYPE_CHECKING:
     from app.services.responses import GroupPartitions
 
 
-
-def pair_context_groups_before(
-    db: Session, *, session_id: int
-) -> GroupPartitions:
+def pair_context_groups_before(db: Session, *, session_id: int) -> GroupPartitions:
     """The groups of every pair-context group instrument a relationship
     change could redraw, snapshotted before it (findings B34). Empty
     when none of them has an answer yet."""
@@ -119,9 +116,7 @@ def bulk_set_status[M: (Reviewer, Reviewee, Observer, Relationship)](
     if not ids:
         return []
 
-    candidates = _rows_in_session(
-        db, model=model, session_id=review_session.id, ids=ids
-    )
+    candidates = _rows_in_session(db, model=model, session_id=review_session.id, ids=ids)
     missing = set(ids) - {row.id for row in candidates}
     if missing:
         raise error_cls(
@@ -167,9 +162,7 @@ def bulk_set_status[M: (Reviewer, Reviewee, Observer, Relationship)](
             recompute_self_review_classification,
         )
 
-        recompute_self_review_classification(
-            db, session_id=review_session.id
-        )
+        recompute_self_review_classification(db, session_id=review_session.id)
 
     audit.write_event(
         db,
@@ -226,9 +219,7 @@ def reaches_relationships(model: type) -> bool:
     return model in _RELATIONSHIP_FK
 
 
-def relationships_per_row(
-    db: Session, *, model: type, session_id: int
-) -> dict[int, int]:
+def relationships_per_row(db: Session, *, model: type, session_id: int) -> dict[int, int]:
     """``{row_id: relationships}`` for one roster, whole session.
 
     The row-expander confirmation names the loss for **the selection**,
@@ -277,9 +268,7 @@ def _reviewer_relationships_per_row(db: Session, *, session_id: int) -> dict[int
     return counts
 
 
-def relationship_cascade_count(
-    db: Session, *, model: type, ids: list[int]
-) -> int:
+def relationship_cascade_count(db: Session, *, model: type, ids: list[int]) -> int:
     """How many relationships deleting ``ids`` would take with them.
 
     **The cascade is the database's, not the ORM's.**
@@ -301,11 +290,7 @@ def relationship_cascade_count(
     if mirrors:
         condition = condition | Relationship.reviewee_id.in_(mirrors)
     return int(
-        db.execute(
-            select(func.count())
-            .select_from(Relationship)
-            .where(condition)
-        ).scalar_one()
+        db.execute(select(func.count()).select_from(Relationship).where(condition)).scalar_one()
     )
 
 
@@ -316,15 +301,11 @@ def _mirrored_reviewee_ids(db: Session, *, model: type, ids: list[int]) -> list[
     if model is not Reviewer or not ids:
         return []
     return list(
-        db.execute(
-            select(Reviewee.id).where(Reviewee.mirrors_reviewer_id.in_(ids))
-        ).scalars()
+        db.execute(select(Reviewee.id).where(Reviewee.mirrors_reviewer_id.in_(ids))).scalars()
     )
 
 
-def cascade_counts(
-    db: Session, *, model: type, ids: list[int]
-) -> tuple[int, int]:
+def cascade_counts(db: Session, *, model: type, ids: list[int]) -> tuple[int, int]:
     """``(assignments, responses)`` that deleting ``ids`` would take
     with them, for *these* rows rather than the whole session.
 
@@ -340,15 +321,11 @@ def cascade_counts(
     mirrors = _mirrored_reviewee_ids(db, model=model, ids=ids)
     if mirrors:
         condition = condition | Assignment.reviewee_id.in_(mirrors)
-    assignment_ids = list(
-        db.execute(select(Assignment.id).where(condition)).scalars()
-    )
+    assignment_ids = list(db.execute(select(Assignment.id).where(condition)).scalars())
     if not assignment_ids:
         return 0, 0
     responses = db.execute(
-        select(func.count())
-        .select_from(Response)
-        .where(Response.assignment_id.in_(assignment_ids))
+        select(func.count()).select_from(Response).where(Response.assignment_id.in_(assignment_ids))
     ).scalar_one()
     return len(assignment_ids), int(responses)
 
@@ -387,9 +364,7 @@ def bulk_delete[M: (Reviewer, Reviewee, Observer, Relationship)](
     if not ids:
         return 0, 0, 0
 
-    rows = _rows_in_session(
-        db, model=model, session_id=review_session.id, ids=ids
-    )
+    rows = _rows_in_session(db, model=model, session_id=review_session.id, ids=ids)
     missing = set(ids) - {row.id for row in rows}
     if missing:
         raise error_cls(
@@ -452,17 +427,12 @@ def bulk_delete[M: (Reviewer, Reviewee, Observer, Relationship)](
             recompute_self_review_classification,
         )
 
-        recompute_self_review_classification(
-            db, session_id=review_session.id
-        )
+        recompute_self_review_classification(db, session_id=review_session.id)
 
     audit.write_event(
         db,
         event_type=event_type,
-        summary=(
-            f"Deleted {deleted} selected {entity_noun}"
-            f"{'' if deleted == 1 else 's'}"
-        ),
+        summary=(f"Deleted {deleted} selected {entity_noun}{'' if deleted == 1 else 's'}"),
         actor_user_id=user.id,
         session=review_session,
         payload=audit.counts(
@@ -471,11 +441,7 @@ def bulk_delete[M: (Reviewer, Reviewee, Observer, Relationship)](
             cascaded_responses=responses,
             # 19O.5 — omitted, not zero, for the models that reach no
             # relationship, so their events keep the payload they had.
-            **(
-                {"cascaded_relationships": relationships}
-                if reaches_relationships(model)
-                else {}
-            ),
+            **({"cascaded_relationships": relationships} if reaches_relationships(model) else {}),
         ),
         context=context,
         correlation_id=correlation_id,

@@ -40,6 +40,7 @@ The :func:`observe_scheduled_events` orchestrator lives here in
 without depending on any of them; keeping it at the package root
 avoids a circular import.
 """
+
 from __future__ import annotations
 
 import logging
@@ -338,9 +339,7 @@ def _observe_all(
     # that runs this pass, not only on reviewer requests and the clock.
     # Only a session open and past its end, so a page with nothing due
     # queries nothing more.
-    if lifecycle.is_ready(session) and lifecycle.deadline_has_passed(
-        session, now=current
-    ):
+    if lifecycle.is_ready(session) and lifecycle.deadline_has_passed(session, now=current):
         _run_guarded(
             db,
             session,
@@ -405,9 +404,7 @@ def _run_guarded(
         raise _SessionBusyPass() from None
     except Exception as exc:  # noqa: BLE001 — observer must keep page rendering
         db.rollback()
-        log.exception(
-            "Scheduled %s trigger failed for session %s", trigger, session_id
-        )
+        log.exception("Scheduled %s trigger failed for session %s", trigger, session_id)
         _record_failure(
             db,
             session_id=session_id,

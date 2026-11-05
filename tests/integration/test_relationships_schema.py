@@ -14,6 +14,7 @@ The table sits inert until 15D PR 1 introduces the per-entity
 importer + serializer; this file is the schema gate that lets
 that work land without further Alembic churn.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -39,17 +40,13 @@ def _make_user(db: Session, email: str) -> User:
 
 def _make_session(db: Session, code: str) -> ReviewSession:
     owner = _make_user(db, f"op-{code}@example.edu")
-    review_session = ReviewSession(
-        name=code.title(), code=code, created_by_user_id=owner.id
-    )
+    review_session = ReviewSession(name=code.title(), code=code, created_by_user_id=owner.id)
     db.add(review_session)
     db.flush()
     return review_session
 
 
-def _make_reviewer(
-    db: Session, session: ReviewSession, email: str
-) -> Reviewer:
+def _make_reviewer(db: Session, session: ReviewSession, email: str) -> Reviewer:
     reviewer = Reviewer(
         session_id=session.id,
         name=email.split("@", 1)[0],
@@ -60,9 +57,7 @@ def _make_reviewer(
     return reviewer
 
 
-def _make_reviewee(
-    db: Session, session: ReviewSession, identifier: str
-) -> Reviewee:
+def _make_reviewee(db: Session, session: ReviewSession, identifier: str) -> Reviewee:
     reviewee = Reviewee(
         session_id=session.id,
         name=identifier.split("@", 1)[0],
@@ -99,9 +94,7 @@ def test_round_trip(db: Session) -> None:
     db.flush()
     db.refresh(row)
 
-    fetched = db.execute(
-        select(Relationship).where(Relationship.id == row.id)
-    ).scalar_one()
+    fetched = db.execute(select(Relationship).where(Relationship.id == row.id)).scalar_one()
     assert fetched.session_id == review_session.id
     assert fetched.reviewer_id == reviewer.id
     assert fetched.reviewee_id == reviewee.id
@@ -157,9 +150,11 @@ def test_cascade_on_session_delete(db: Session) -> None:
     db.delete(review_session)
     db.flush()
 
-    remaining = db.execute(
-        select(Relationship).where(Relationship.session_id == session_id)
-    ).scalars().all()
+    remaining = (
+        db.execute(select(Relationship).where(Relationship.session_id == session_id))
+        .scalars()
+        .all()
+    )
     assert remaining == []
 
 
@@ -182,9 +177,11 @@ def test_cascade_on_reviewer_delete(db: Session) -> None:
     db.delete(reviewer)
     db.flush()
 
-    remaining = db.execute(
-        select(Relationship).where(Relationship.reviewer_id == reviewer_id)
-    ).scalars().all()
+    remaining = (
+        db.execute(select(Relationship).where(Relationship.reviewer_id == reviewer_id))
+        .scalars()
+        .all()
+    )
     assert remaining == []
 
 
@@ -207,7 +204,9 @@ def test_cascade_on_reviewee_delete(db: Session) -> None:
     db.delete(reviewee)
     db.flush()
 
-    remaining = db.execute(
-        select(Relationship).where(Relationship.reviewee_id == reviewee_id)
-    ).scalars().all()
+    remaining = (
+        db.execute(select(Relationship).where(Relationship.reviewee_id == reviewee_id))
+        .scalars()
+        .all()
+    )
     assert remaining == []

@@ -19,6 +19,7 @@ Revises: b3d5e7f9a1c4
 Create Date: 2026-05-07 00:00:00.000000
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -33,22 +34,12 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     with op.batch_alter_table("email_outbox", schema=None) as batch_op:
         batch_op.add_column(sa.Column("error_message", sa.Text(), nullable=True))
-        batch_op.add_column(
-            sa.Column("from_address", sa.String(length=320), nullable=True)
-        )
+        batch_op.add_column(sa.Column("from_address", sa.String(length=320), nullable=True))
         batch_op.add_column(sa.Column("backend", sa.String(length=32), nullable=True))
-        batch_op.add_column(
-            sa.Column("backend_message_id", sa.String(length=255), nullable=True)
-        )
-        batch_op.add_column(
-            sa.Column("delivered_at", sa.DateTime(timezone=True), nullable=True)
-        )
-        batch_op.add_column(
-            sa.Column("payload_hash", sa.String(length=64), nullable=True)
-        )
-        batch_op.add_column(
-            sa.Column("correlation_id", sa.String(length=128), nullable=True)
-        )
+        batch_op.add_column(sa.Column("backend_message_id", sa.String(length=255), nullable=True))
+        batch_op.add_column(sa.Column("delivered_at", sa.DateTime(timezone=True), nullable=True))
+        batch_op.add_column(sa.Column("payload_hash", sa.String(length=64), nullable=True))
+        batch_op.add_column(sa.Column("correlation_id", sa.String(length=128), nullable=True))
         batch_op.create_index(
             batch_op.f("ix_email_outbox_correlation_id"),
             ["correlation_id"],

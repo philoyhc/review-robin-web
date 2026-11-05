@@ -18,6 +18,7 @@ Each test seeds a small population, applies the trigger, and
 asserts ``Assignment.is_self_review`` reflects the canonical
 classification — same rule the migration backfilled in PR 1.
 """
+
 from __future__ import annotations
 
 from sqlalchemy.orm import Session
@@ -78,12 +79,8 @@ def test_regenerate_populates_is_self_review_on_fresh_rows(
     db: Session,
 ) -> None:
     user, review_session = _seed(db, code="regen")
-    alice_r = Reviewer(
-        session_id=review_session.id, name="Alice", email="alice@example.edu"
-    )
-    bob_r = Reviewer(
-        session_id=review_session.id, name="Bob", email="bob@example.edu"
-    )
+    alice_r = Reviewer(session_id=review_session.id, name="Alice", email="alice@example.edu")
+    bob_r = Reviewer(session_id=review_session.id, name="Bob", email="bob@example.edu")
     alice_e = Reviewee(
         session_id=review_session.id,
         name="Alice",
@@ -179,9 +176,7 @@ def test_create_instrument_writes_no_assignment_rows(
     inconsistent, which the staleness signal now reports instead.
     """
     user, review_session = _seed(db, code="create-noclone")
-    alice_r = Reviewer(
-        session_id=review_session.id, name="Alice", email="alice@example.edu"
-    )
+    alice_r = Reviewer(session_id=review_session.id, name="Alice", email="alice@example.edu")
     alice_e = Reviewee(
         session_id=review_session.id,
         name="Alice",
@@ -209,19 +204,13 @@ def test_create_instrument_writes_no_assignment_rows(
     )
     db.flush()
 
-    rows = (
-        db.query(Assignment)
-        .filter_by(instrument_id=new_instrument.id)
-        .count()
-    )
+    rows = db.query(Assignment).filter_by(instrument_id=new_instrument.id).count()
     assert rows == 0, (
         "adding an instrument must not write assignment rows — the "
         "engine is the only writer (Segment 19N)"
     )
     # The source is untouched.
-    assert (
-        db.query(Assignment).filter_by(instrument_id=source.id).count() == 1
-    )
+    assert db.query(Assignment).filter_by(instrument_id=source.id).count() == 1
 
 
 def test_replicate_instrument_writes_no_assignment_rows(
@@ -234,9 +223,7 @@ def test_replicate_instrument_writes_no_assignment_rows(
     come from the next Generate.
     """
     user, review_session = _seed(db, code="replicate-noclone")
-    alice_r = Reviewer(
-        session_id=review_session.id, name="Alice", email="alice@example.edu"
-    )
+    alice_r = Reviewer(session_id=review_session.id, name="Alice", email="alice@example.edu")
     alice_e = Reviewee(
         session_id=review_session.id,
         name="Alice",
@@ -256,17 +243,14 @@ def test_replicate_instrument_writes_no_assignment_rows(
     )
     db.flush()
 
-    copy = replicate_instrument(
-        db, review_session=review_session, source=source, actor=user
-    )
+    copy = replicate_instrument(db, review_session=review_session, source=source, actor=user)
     db.flush()
 
-    assert (
-        db.query(Assignment).filter_by(instrument_id=copy.id).count() == 0
-    ), (
-        "duplicating an instrument must not write assignment rows "
-        "(Segment 19N)"
+    assert db.query(Assignment).filter_by(instrument_id=copy.id).count() == 0, (
+        "duplicating an instrument must not write assignment rows (Segment 19N)"
     )
+
+
 def test_reviewer_email_change_recomputes_is_self_review(
     db: Session,
 ) -> None:
@@ -294,14 +278,10 @@ def test_reviewer_email_change_recomputes_is_self_review(
     )
     db.add(assignment)
     db.flush()
-    assignments.recompute_self_review_classification(
-        db, session_id=review_session.id
-    )
+    assignments.recompute_self_review_classification(db, session_id=review_session.id)
     assert assignment.is_self_review is False
 
-    reviewers.update_reviewer(
-        db, reviewer=alice_r, email="alice@example.edu", user=user
-    )
+    reviewers.update_reviewer(db, reviewer=alice_r, email="alice@example.edu", user=user)
     db.refresh(assignment)
     assert assignment.is_self_review is True
 
@@ -315,9 +295,7 @@ def test_reviewee_identifier_change_recomputes_is_self_review(
     db: Session,
 ) -> None:
     user, review_session = _seed(db, code="ree-id")
-    alice_r = Reviewer(
-        session_id=review_session.id, name="Alice", email="alice@example.edu"
-    )
+    alice_r = Reviewer(session_id=review_session.id, name="Alice", email="alice@example.edu")
     alice_e = Reviewee(
         session_id=review_session.id,
         name="Alice",
@@ -335,9 +313,7 @@ def test_reviewee_identifier_change_recomputes_is_self_review(
     )
     db.add(assignment)
     db.flush()
-    assignments.recompute_self_review_classification(
-        db, session_id=review_session.id
-    )
+    assignments.recompute_self_review_classification(db, session_id=review_session.id)
     assert assignment.is_self_review is False
 
     reviewees.update_reviewee(
@@ -363,9 +339,7 @@ def test_reviewee_tag_change_recomputes_is_self_review(
     Bob into group X (where Alice lives) — Alice's reviews of both
     Alice and Bob flip to self-review (whole-group rule)."""
     user, review_session = _seed(db, code="ree-tag")
-    alice_r = Reviewer(
-        session_id=review_session.id, name="Alice", email="alice@example.edu"
-    )
+    alice_r = Reviewer(session_id=review_session.id, name="Alice", email="alice@example.edu")
     alice_e = Reviewee(
         session_id=review_session.id,
         name="Alice",
@@ -398,9 +372,7 @@ def test_reviewee_tag_change_recomputes_is_self_review(
     )
     db.add_all([a_alice, a_bob])
     db.flush()
-    assignments.recompute_self_review_classification(
-        db, session_id=review_session.id
-    )
+    assignments.recompute_self_review_classification(db, session_id=review_session.id)
     # Alice's group "X" is currently {Alice} → self-review row only
     # for the Alice-on-Alice cell. Bob is in group "Y" → not in
     # Alice's group; Alice's row about Bob isn't self-review.
@@ -408,9 +380,7 @@ def test_reviewee_tag_change_recomputes_is_self_review(
     assert a_bob.is_self_review is False
 
     # Move Bob into Alice's group.
-    reviewees.update_reviewee(
-        db, reviewee=bob_e, tag_1="X", user=user
-    )
+    reviewees.update_reviewee(db, reviewee=bob_e, tag_1="X", user=user)
     db.refresh(a_alice)
     db.refresh(a_bob)
     # Whole-group rule: Alice's group X now {Alice, Bob}, and Alice
@@ -433,9 +403,7 @@ def test_set_group_boundary_recomputes_is_self_review(
     ``tag_1`` — Bob's row about Carol (different ``tag_1``) drops out
     of Alice's group entirely, so its self-review flag flips off."""
     user, review_session = _seed(db, code="set-boundary")
-    alice_r = Reviewer(
-        session_id=review_session.id, name="Alice", email="alice@example.edu"
-    )
+    alice_r = Reviewer(session_id=review_session.id, name="Alice", email="alice@example.edu")
     alice_e = Reviewee(
         session_id=review_session.id,
         name="Alice",
@@ -470,9 +438,7 @@ def test_set_group_boundary_recomputes_is_self_review(
     )
     db.add_all([a_alice, a_carol])
     db.flush()
-    assignments.recompute_self_review_classification(
-        db, session_id=review_session.id
-    )
+    assignments.recompute_self_review_classification(db, session_id=review_session.id)
     assert a_alice.is_self_review is True
     assert a_carol.is_self_review is True
 
@@ -498,9 +464,7 @@ def test_set_unit_of_review_recomputes_is_self_review(
     extends self-review status from the (Alice, Alice) pair to
     every assignment in Alice's group."""
     user, review_session = _seed(db, code="set-unit")
-    alice_r = Reviewer(
-        session_id=review_session.id, name="Alice", email="alice@example.edu"
-    )
+    alice_r = Reviewer(session_id=review_session.id, name="Alice", email="alice@example.edu")
     alice_e = Reviewee(
         session_id=review_session.id,
         name="Alice",
@@ -531,9 +495,7 @@ def test_set_unit_of_review_recomputes_is_self_review(
     )
     db.add_all([a_alice, a_bob])
     db.flush()
-    assignments.recompute_self_review_classification(
-        db, session_id=review_session.id
-    )
+    assignments.recompute_self_review_classification(db, session_id=review_session.id)
     assert a_alice.is_self_review is True
     assert a_bob.is_self_review is False
 
@@ -565,9 +527,7 @@ def test_recompute_returns_zero_when_nothing_changed(
     ``classify_self_review`` returns, the helper writes nothing and
     returns 0. Defensively useful so callers can flush precisely."""
     user, review_session = _seed(db, code="noop")
-    alice_r = Reviewer(
-        session_id=review_session.id, name="Alice", email="alice@example.edu"
-    )
+    alice_r = Reviewer(session_id=review_session.id, name="Alice", email="alice@example.edu")
     alice_e = Reviewee(
         session_id=review_session.id,
         name="Alice",
@@ -586,7 +546,5 @@ def test_recompute_returns_zero_when_nothing_changed(
         )
     )
     db.flush()
-    changed = assignments.recompute_self_review_classification(
-        db, session_id=review_session.id
-    )
+    changed = assignments.recompute_self_review_classification(db, session_id=review_session.id)
     assert changed == 0

@@ -16,9 +16,7 @@ if TYPE_CHECKING:
 class Response(Base):
     __tablename__ = "responses"
     __table_args__ = (
-        UniqueConstraint(
-            "assignment_id", "response_field_id", name="uq_response_assignment_field"
-        ),
+        UniqueConstraint("assignment_id", "response_field_id", name="uq_response_assignment_field"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)

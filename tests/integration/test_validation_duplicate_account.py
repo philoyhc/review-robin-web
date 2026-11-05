@@ -33,22 +33,46 @@ def test_two_rows_on_one_account_warn_on_each_roster(db: Session) -> None:
     s = _session(db)
     db.add_all(
         [
-            Reviewer(session_id=s.id, name="Jane", email="jane.tan@example.edu", directory_object_id=JANE),
-            Reviewer(session_id=s.id, name="Jane", email="e0123456@example.edu", directory_object_id=JANE.upper()),
+            Reviewer(
+                session_id=s.id, name="Jane", email="jane.tan@example.edu", directory_object_id=JANE
+            ),
+            Reviewer(
+                session_id=s.id,
+                name="Jane",
+                email="e0123456@example.edu",
+                directory_object_id=JANE.upper(),
+            ),
             Reviewer(session_id=s.id, name="Lee", email="lee@example.edu"),
-            Reviewee(session_id=s.id, name="Jane", email_or_identifier="jane.tan@example.edu", directory_object_id=JANE),
-            Reviewee(session_id=s.id, name="Jane", email_or_identifier="e0123456@example.edu", directory_object_id=JANE),
+            Reviewee(
+                session_id=s.id,
+                name="Jane",
+                email_or_identifier="jane.tan@example.edu",
+                directory_object_id=JANE,
+            ),
+            Reviewee(
+                session_id=s.id,
+                name="Jane",
+                email_or_identifier="e0123456@example.edu",
+                directory_object_id=JANE,
+            ),
             Observer(session_id=s.id, email="jane.tan@example.edu", directory_object_id=JANE),
             Observer(session_id=s.id, email="e0123456@example.edu", directory_object_id=JANE),
         ]
     )
     db.flush()
 
-    for key in ("reviewers.duplicate_account", "reviewees.duplicate_account", "observers.duplicate_account"):
+    for key in (
+        "reviewers.duplicate_account",
+        "reviewees.duplicate_account",
+        "observers.duplicate_account",
+    ):
         issues = _issues(db, s, key)
         assert len(issues) == 1, key
         assert issues[0].severity is Severity.warning
-        assert "'jane.tan@example.edu'" in issues[0].message and "'e0123456@example.edu'" in issues[0].message
+        assert (
+            "'jane.tan@example.edu'" in issues[0].message
+            and "'e0123456@example.edu'" in issues[0].message
+        )
     # The duplicate-address rules see two different addresses.
     assert _issues(db, s, "reviewers.duplicate_email") == []
 
@@ -57,8 +81,16 @@ def test_an_inactive_or_unbound_row_is_not_counted(db: Session) -> None:
     s = _session(db)
     db.add_all(
         [
-            Reviewer(session_id=s.id, name="Jane", email="jane.tan@example.edu", directory_object_id=JANE),
-            Reviewer(session_id=s.id, name="Jane", email="e0123456@example.edu", directory_object_id=JANE, status="inactive"),
+            Reviewer(
+                session_id=s.id, name="Jane", email="jane.tan@example.edu", directory_object_id=JANE
+            ),
+            Reviewer(
+                session_id=s.id,
+                name="Jane",
+                email="e0123456@example.edu",
+                directory_object_id=JANE,
+                status="inactive",
+            ),
             Reviewer(session_id=s.id, name="Pat", email="pat@example.edu"),
             Reviewer(session_id=s.id, name="Pat", email="pat.lim@example.edu"),
         ]

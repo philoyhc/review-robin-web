@@ -3,6 +3,7 @@
 Includes the observer-side trigger + its audit-emit helpers + the
 retry counter + the editor-side parser (``parse_and_validate_scheduled_activate_at``).
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -85,9 +86,7 @@ def _observe_scheduled_activation(
         db.commit()
         return
 
-    scheduled_at_iso = _ensure_aware_utc(
-        locked.scheduled_activate_at
-    ).isoformat()
+    scheduled_at_iso = _ensure_aware_utc(locked.scheduled_activate_at).isoformat()
 
     if not lifecycle.is_validated(locked):
         _emit_activation_skipped(
@@ -159,10 +158,7 @@ def _emit_activation_skipped(
     audit.write_event(
         db,
         event_type="session.scheduled_activation_skipped",
-        summary=(
-            f"Scheduled activation for {session.code} skipped "
-            f"({reason})"
-        ),
+        summary=(f"Scheduled activation for {session.code} skipped ({reason})"),
         actor_user_id=None,
         session=session,
         reason=reason,
@@ -220,10 +216,7 @@ def _emit_activation_retry_or_failed(
     audit.write_event(
         db,
         event_type="session.scheduled_activation_retry",
-        summary=(
-            f"Scheduled activation for {session.code} will retry "
-            f"(attempt {retry_count + 1})"
-        ),
+        summary=(f"Scheduled activation for {session.code} will retry (attempt {retry_count + 1})"),
         actor_user_id=None,
         session=session,
         reason=error_text,
@@ -297,22 +290,17 @@ def parse_and_validate_scheduled_activate_at(
     try:
         parsed = date_formatting.parse_local_datetime(raw, timezone_name)
     except ValueError as exc:
-        raise ScheduledActivateError(
-            "Start must be a valid datetime"
-        ) from exc
+        raise ScheduledActivateError("Start must be a valid datetime") from exc
     # date_formatting.parse_local_datetime returns naive-UTC; re-attach
     # the tzinfo for arithmetic against ``now`` (which is aware).
     parsed_aware = _ensure_aware_utc(parsed)
 
     hours = (
-        min_lead_hours
-        if min_lead_hours is not None
-        else settings.scheduled_operational_lead_hours
+        min_lead_hours if min_lead_hours is not None else settings.scheduled_operational_lead_hours
     )
     current = now or datetime.now(UTC)
     if not aged_exempt and parsed_aware - current < timedelta(hours=hours):
         raise ScheduledActivateError(
-            f"Scheduled activation must be at least {hours} hour(s) "
-            f"in the future"
+            f"Scheduled activation must be at least {hours} hour(s) in the future"
         )
     return parsed_aware

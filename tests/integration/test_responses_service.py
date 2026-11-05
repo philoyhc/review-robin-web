@@ -28,16 +28,16 @@ def _seed(db: Session) -> tuple[User, Reviewer, ReviewSession, Assignment]:
     # ``ready``: the reviewer write services re-check it under the
     # session lock (findings L3).
     review_session = ReviewSession(
-        name="Spring", code="spring-2026", created_by_user_id=op.id,
+        name="Spring",
+        code="spring-2026",
+        created_by_user_id=op.id,
         status="ready",
     )
     db.add(review_session)
     db.flush()
     db.add(SessionOperator(session_id=review_session.id, user_id=op.id, role="owner"))
     instrument = ensure_default_instrument(db, review_session)
-    reviewer = Reviewer(
-        session_id=review_session.id, name="Rae", email="rae@example.edu"
-    )
+    reviewer = Reviewer(session_id=review_session.id, name="Rae", email="rae@example.edu")
     reviewee = Reviewee(
         session_id=review_session.id,
         name="Carol",
@@ -176,15 +176,11 @@ def test_compute_row_completion_marks_required_only(db: Session) -> None:
         reviewer=reviewer,
         user=op,
         upserts=[
-            ResponseUpsert(
-                assignment_id=assignment.id, field_key="comments", value="hi"
-            ),
+            ResponseUpsert(assignment_id=assignment.id, field_key="comments", value="hi"),
         ],
         correlation_id="c1",
     )
-    is_complete, missing, submitted = responses_service.compute_row_completion(
-        db, assignment
-    )
+    is_complete, missing, submitted = responses_service.compute_row_completion(db, assignment)
     assert is_complete is False
     assert missing == 1
     assert submitted is None
@@ -312,9 +308,7 @@ def test_reviewer_session_state_no_required_field_draft_is_in_progress(
         reviewer=reviewer,
         user=op,
         upserts=[
-            ResponseUpsert(
-                assignment_id=assignment.id, field_key="comments", value="hi"
-            ),
+            ResponseUpsert(assignment_id=assignment.id, field_key="comments", value="hi"),
         ],
         correlation_id="c1",
     )
@@ -372,9 +366,7 @@ def test_compute_row_completion_excludes_hidden_required_field(
     op, reviewer, review_session, assignment = _seed(db)
     _hide_field(db, assignment.instrument_id, "rating")
 
-    is_complete, missing, _ = responses_service.compute_row_completion(
-        db, assignment
-    )
+    is_complete, missing, _ = responses_service.compute_row_completion(db, assignment)
     assert is_complete is True
     assert missing == 0
 
@@ -412,9 +404,7 @@ def test_save_draft_drops_upsert_to_hidden_field(db: Session) -> None:
         reviewer=reviewer,
         user=op,
         upserts=[
-            ResponseUpsert(
-                assignment_id=assignment.id, field_key="comments", value="hi"
-            ),
+            ResponseUpsert(assignment_id=assignment.id, field_key="comments", value="hi"),
         ],
         correlation_id="c1",
     )
@@ -460,9 +450,7 @@ def test_validate_value_string_max_length(db: Session) -> None:
     db.flush()
 
     assert responses_service.validate_value(field, "okay") is None
-    assert "at most 5" in (
-        responses_service.validate_value(field, "too long") or ""
-    )
+    assert "at most 5" in (responses_service.validate_value(field, "too long") or "")
 
 
 def test_validate_value_list_option_membership(db: Session) -> None:
@@ -482,9 +470,7 @@ def test_validate_value_list_option_membership(db: Session) -> None:
 
     assert responses_service.validate_value(field, "Yes") is None
     assert responses_service.validate_value(field, "Maybe") is None
-    assert "one of the listed" in (
-        responses_service.validate_value(field, "Sometimes") or ""
-    )
+    assert "one of the listed" in (responses_service.validate_value(field, "Sometimes") or "")
 
 
 def test_saved_at_and_version_move_on_a_changed_save_only(
@@ -503,9 +489,7 @@ def test_saved_at_and_version_move_on_a_changed_save_only(
             reviewer=reviewer,
             user=op,
             upserts=[
-                ResponseUpsert(
-                    assignment_id=assignment.id, field_key="rating", value=value
-                ),
+                ResponseUpsert(assignment_id=assignment.id, field_key="rating", value=value),
             ],
             correlation_id=corr,
         )

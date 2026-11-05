@@ -21,6 +21,7 @@ Revises: e2503d04df0d
 Create Date: 2026-10-06
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -64,11 +65,7 @@ def upgrade() -> None:
                 block[key] = float(value)
                 changed = True
         if changed:
-            bind.execute(
-                _fields.update()
-                .where(_fields.c.id == row.id)
-                .values(validation=block)
-            )
+            bind.execute(_fields.update().where(_fields.c.id == row.id).values(validation=block))
 
 
 def downgrade() -> None:

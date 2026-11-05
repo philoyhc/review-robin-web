@@ -45,7 +45,7 @@ def _seed_minimal_session(connection, *, code: str) -> tuple[int, int]:
     connection.execute(
         text(
             "INSERT INTO instruments "
-            "(session_id, name, \"order\", accepting_responses, "
+            '(session_id, name, "order", accepting_responses, '
             "responses_visible_when_closed) "
             "VALUES (:sid, 'Default', 0, 0, 0)"
         ),
@@ -60,7 +60,7 @@ def _seed_minimal_session(connection, *, code: str) -> tuple[int, int]:
         connection.execute(
             text(
                 "INSERT INTO instrument_display_fields "
-                "(instrument_id, source_type, source_field, label, \"order\", visible) "
+                '(instrument_id, source_type, source_field, label, "order", visible) '
                 "VALUES (:iid, 'pair_context', :sf, '', :ord, 1)"
             ),
             {"iid": instrument_id, "sf": slot, "ord": order},
@@ -77,9 +77,7 @@ def _seed_reviewer_and_reviewee(connection, *, session_id: int) -> tuple[int, in
         {"sid": session_id, "email": f"r-{session_id}@example.edu"},
     )
     reviewer_id = connection.execute(
-        text(
-            "SELECT id FROM reviewers WHERE session_id = :sid"
-        ),
+        text("SELECT id FROM reviewers WHERE session_id = :sid"),
         {"sid": session_id},
     ).scalar_one()
     connection.execute(
@@ -91,9 +89,7 @@ def _seed_reviewer_and_reviewee(connection, *, session_id: int) -> tuple[int, in
         {"sid": session_id, "ident": f"e-{session_id}@example.edu"},
     )
     reviewee_id = connection.execute(
-        text(
-            "SELECT id FROM reviewees WHERE session_id = :sid"
-        ),
+        text("SELECT id FROM reviewees WHERE session_id = :sid"),
         {"sid": session_id},
     ).scalar_one()
     return reviewer_id, reviewee_id
@@ -114,9 +110,7 @@ def test_drop_unpopulated_pair_context_keeps_populated_slots() -> None:
             command.upgrade(cfg, "c2143bd329c7")
             connection.commit()
 
-            session_id, instrument_id = _seed_minimal_session(
-                connection, code="keep-populated"
-            )
+            session_id, instrument_id = _seed_minimal_session(connection, code="keep-populated")
             reviewer_id, reviewee_id = _seed_reviewer_and_reviewee(
                 connection, session_id=session_id
             )
@@ -125,7 +119,7 @@ def test_drop_unpopulated_pair_context_keeps_populated_slots() -> None:
                 text(
                     "INSERT INTO assignments "
                     "(session_id, reviewer_id, reviewee_id, instrument_id, "
-                    'include, context, created_by_mode) '
+                    "include, context, created_by_mode) "
                     "VALUES (:sid, :rev, :rev2, :inst, 1, :ctx, 'manual')"
                 ),
                 {
@@ -133,9 +127,7 @@ def test_drop_unpopulated_pair_context_keeps_populated_slots() -> None:
                     "rev": reviewer_id,
                     "rev2": reviewee_id,
                     "inst": instrument_id,
-                    "ctx": json.dumps(
-                        {"pair_context_1": "morning", "pair_context_3": "cohortA"}
-                    ),
+                    "ctx": json.dumps({"pair_context_1": "morning", "pair_context_3": "cohortA"}),
                 },
             )
             connection.execute(
@@ -152,10 +144,10 @@ def test_drop_unpopulated_pair_context_keeps_populated_slots() -> None:
 
             rows = connection.execute(
                 text(
-                    "SELECT source_type, source_field, label, \"order\" "
+                    'SELECT source_type, source_field, label, "order" '
                     "FROM instrument_display_fields "
                     "WHERE instrument_id = :iid "
-                    "ORDER BY \"order\""
+                    'ORDER BY "order"'
                 ),
                 {"iid": instrument_id},
             ).fetchall()
@@ -184,9 +176,7 @@ def test_drop_unpopulated_pair_context_drops_all_when_no_assignments() -> None:
             command.upgrade(cfg, "c2143bd329c7")
             connection.commit()
 
-            session_id, instrument_id = _seed_minimal_session(
-                connection, code="no-asgn"
-            )
+            session_id, instrument_id = _seed_minimal_session(connection, code="no-asgn")
             connection.commit()
 
             command.upgrade(cfg, "head")
@@ -197,7 +187,7 @@ def test_drop_unpopulated_pair_context_drops_all_when_no_assignments() -> None:
                     "SELECT source_type, source_field "
                     "FROM instrument_display_fields "
                     "WHERE instrument_id = :iid "
-                    "ORDER BY \"order\""
+                    'ORDER BY "order"'
                 ),
                 {"iid": instrument_id},
             ).fetchall()
@@ -225,9 +215,7 @@ def test_drop_unpopulated_pair_context_preserves_reviewee_rows() -> None:
             command.upgrade(cfg, "c2143bd329c7")
             connection.commit()
 
-            session_id, instrument_id = _seed_minimal_session(
-                connection, code="keep-rev"
-            )
+            session_id, instrument_id = _seed_minimal_session(connection, code="keep-rev")
             connection.execute(
                 text(
                     "INSERT INTO instrument_display_fields "
@@ -246,7 +234,7 @@ def test_drop_unpopulated_pair_context_preserves_reviewee_rows() -> None:
                     "SELECT source_type, source_field, label "
                     "FROM instrument_display_fields "
                     "WHERE instrument_id = :iid "
-                    "ORDER BY \"order\""
+                    'ORDER BY "order"'
                 ),
                 {"iid": instrument_id},
             ).fetchall()

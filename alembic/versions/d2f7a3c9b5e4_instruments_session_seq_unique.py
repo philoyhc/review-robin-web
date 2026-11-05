@@ -14,6 +14,7 @@ Revises: c4e8b2f6a1d9
 Create Date: 2026-10-18
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -37,9 +38,9 @@ def renumber_duplicates(conn: sa.engine.Connection) -> None:
         sa.column("session_seq", sa.Integer),
     )
     rows = conn.execute(
-        sa.select(
-            instruments.c.id, instruments.c.session_id, instruments.c.session_seq
-        ).order_by(instruments.c.session_id, instruments.c.id)
+        sa.select(instruments.c.id, instruments.c.session_id, instruments.c.session_seq).order_by(
+            instruments.c.session_id, instruments.c.id
+        )
     ).all()
     highest: dict[int, int] = {}
     for _, session_id, seq in rows:

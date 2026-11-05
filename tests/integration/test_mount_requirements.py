@@ -190,9 +190,11 @@ def _invitation_links(
     mark_band1_touched_on_all_instruments(db, review_session.id)
     for step in ("prepare", "activate"):
         client.post(f"{base}/{sid}/workflow/{step}", follow_redirects=False)
-    invitation = db.execute(
-        select(Invitation).where(Invitation.session_id == review_session.id)
-    ).scalars().first()
+    invitation = (
+        db.execute(select(Invitation).where(Invitation.session_id == review_session.id))
+        .scalars()
+        .first()
+    )
     assert invitation is not None
     client.post(f"{base}/{sid}/invitations/{invitation.id}/send", follow_redirects=False)
 

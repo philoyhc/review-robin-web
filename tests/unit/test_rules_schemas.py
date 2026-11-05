@@ -39,9 +39,7 @@ from app.schemas.rules import (
 
 
 def test_predicate_equals_with_literal_validates() -> None:
-    pred = Predicate(
-        field="reviewer.tag1", operator="equals", operand="Group01"
-    )
+    pred = Predicate(field="reviewer.tag1", operator="equals", operand="Group01")
     assert pred.field == "reviewer.tag1"
     assert pred.operator == "equals"
     assert pred.operand == "Group01"
@@ -84,15 +82,11 @@ def test_predicate_in_requires_non_empty_string_list() -> None:
 
 
 def test_predicate_matches_requires_compilable_regex() -> None:
-    pred = Predicate(
-        field="reviewer.tag1", operator="matches", operand=r"Group\d+"
-    )
+    pred = Predicate(field="reviewer.tag1", operator="matches", operand=r"Group\d+")
     assert pred.operand == r"Group\d+"
 
     with pytest.raises(ValidationError) as exc:
-        Predicate(
-            field="reviewer.tag1", operator="matches", operand="["
-        )
+        Predicate(field="reviewer.tag1", operator="matches", operand="[")
     assert "does not" in str(exc.value).lower()
 
 
@@ -101,9 +95,7 @@ def test_predicate_is_empty_takes_no_operand() -> None:
     assert pred.operand is None
 
     with pytest.raises(ValidationError) as exc:
-        Predicate(
-            field="reviewee.tag3", operator="is_empty", operand="x"
-        )
+        Predicate(field="reviewee.tag3", operator="is_empty", operand="x")
     assert "takes no operand" in str(exc.value)
 
 
@@ -131,9 +123,7 @@ def test_allowed_predicate_fields_match_spec_vocabulary() -> None:
         f"{side}.{name}"
         for side in ("reviewer", "reviewee")
         for name in ("email", "tag1", "tag2", "tag3")
-    } | {
-        f"pair_context.tag{n}" for n in (1, 2, 3)
-    }
+    } | {f"pair_context.tag{n}" for n in (1, 2, 3)}
     assert ALLOWED_PREDICATE_FIELDS == expected
 
 
@@ -182,9 +172,7 @@ def test_quota_rule_min_must_not_exceed_max() -> None:
             scope=QuotaScope.PER_REVIEWEE,
             min=5,
             max=3,
-            selection=QuotaSelection(
-                strategy=SelectionStrategy.ROUND_ROBIN
-            ),
+            selection=QuotaSelection(strategy=SelectionStrategy.ROUND_ROBIN),
         )
     assert "exceeds max" in str(exc.value)
 

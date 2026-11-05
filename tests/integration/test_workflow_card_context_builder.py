@@ -18,23 +18,17 @@ from app.db.models import ReviewSession
 from app.web import views
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": f"WCB-{code}", "code": code, "description": "d"},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
-def _seed_pair_plus_pinned(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _seed_pair_plus_pinned(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     review_session = _make_session(client, db, code=code)
     client.post(
         f"/operator/sessions/{review_session.public_id}/reviewers/import",
@@ -64,6 +58,7 @@ def _seed_pair_plus_pinned(
     # so the Wave 5 "Not set" pill safety gate sees the bypass
     # as fully configured.
     from ._full_matrix import pin_full_matrix_on_all_instruments
+
     pin_full_matrix_on_all_instruments(db, review_session.id)
     db.refresh(review_session)
     return review_session
@@ -100,13 +95,9 @@ _EXPECTED_KEYS = {
 }
 
 
-def test_builder_returns_expected_key_set(
-    client: TestClient, db: Session
-) -> None:
+def test_builder_returns_expected_key_set(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="builder-keys")
-    ctx = views.build_workflow_card_context(
-        db, review_session, return_to="assignments"
-    )
+    ctx = views.build_workflow_card_context(db, review_session, return_to="assignments")
     assert set(ctx.keys()) == _EXPECTED_KEYS
 
 
@@ -114,9 +105,7 @@ def test_builder_state_1_setup_empty_carries_checklist_falses(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="builder-state1")
-    ctx = views.build_workflow_card_context(
-        db, review_session, return_to="assignments"
-    )
+    ctx = views.build_workflow_card_context(db, review_session, return_to="assignments")
     assert ctx["is_draft"] is True
     assert ctx["is_setup_empty"] is True
     # Wave 5 follow-up — the "Not set" pill safety gate forces
@@ -138,12 +127,8 @@ def test_builder_state_1_setup_empty_carries_checklist_falses(
 def test_builder_state_1a_flips_when_rosters_and_rule_pinned(
     client: TestClient, db: Session
 ) -> None:
-    review_session = _seed_pair_plus_pinned(
-        client, db, code="builder-state1a"
-    )
-    ctx = views.build_workflow_card_context(
-        db, review_session, return_to="assignments"
-    )
+    review_session = _seed_pair_plus_pinned(client, db, code="builder-state1a")
+    ctx = views.build_workflow_card_context(db, review_session, return_to="assignments")
     assert ctx["is_setup_empty"] is False
     assert ctx["setup_checklist"] == {
         "reviewers_ok": True,
@@ -152,17 +137,13 @@ def test_builder_state_1a_flips_when_rosters_and_rule_pinned(
     }
 
 
-def test_builder_never_promotes_a_draft(
-    client: TestClient, db: Session
-) -> None:
+def test_builder_never_promotes_a_draft(client: TestClient, db: Session) -> None:
     """The builder is read-only. It once flipped a clean draft to
     ``validated`` for the retired ``?validated=1`` entry path (findings
     B15); a clean draft now stays a draft, with no validation summary."""
     from app.services import session_lifecycle as lifecycle
 
-    review_session = _seed_pair_plus_pinned(
-        client, db, code="builder-promote"
-    )
+    review_session = _seed_pair_plus_pinned(client, db, code="builder-promote")
     client.post(
         f"/operator/sessions/{review_session.public_id}/assignments/generate",
         follow_redirects=False,
@@ -170,9 +151,7 @@ def test_builder_never_promotes_a_draft(
     db.refresh(review_session)
     assert lifecycle.is_draft(review_session)
 
-    ctx = views.build_workflow_card_context(
-        db, review_session, return_to="assignments"
-    )
+    ctx = views.build_workflow_card_context(db, review_session, return_to="assignments")
 
     db.refresh(review_session)
     assert lifecycle.is_draft(review_session)
@@ -186,12 +165,7 @@ def test_parse_super_failure_decodes_query_params() -> None:
     → prepare; activate → activate); precondition falls back to
     prepare."""
     assert views.parse_super_failure(None, None, None) is None
-    assert (
-        views.parse_super_failure(
-            "anything-else", "step", "err", "prepare"
-        )
-        is None
-    )
+    assert views.parse_super_failure("anything-else", "step", "err", "prepare") is None
     # No button param + unknown step → prepare fallback.
     assert views.parse_super_failure("failed", None, None) == {
         "button": "prepare",
@@ -200,18 +174,14 @@ def test_parse_super_failure_decodes_query_params() -> None:
     }
     # Step name implies the button when ``super_button`` is absent
     # (legacy URL).
-    assert views.parse_super_failure(
-        "failed", "validate", "has_errors"
-    ) == {
+    assert views.parse_super_failure("failed", "validate", "has_errors") == {
         "button": "prepare",
         "step": "validate",
         "error": "Validation reported errors. The Validate page lists them.",
     }
     # ``super_error`` is a code: a sentence in the URL is an unlisted
     # code and shows nothing (findings O7).
-    assert views.parse_super_failure(
-        "failed", "activate", "Activate raised."
-    ) == {
+    assert views.parse_super_failure("failed", "activate", "Activate raised.") == {
         "button": "activate",
         "step": "activate",
         "error": "",
@@ -229,9 +199,7 @@ def test_parse_super_failure_decodes_query_params() -> None:
     }
 
 
-def test_archive_visible_gates_on_expired_only(
-    client: TestClient, db: Session
-) -> None:
+def test_archive_visible_gates_on_expired_only(client: TestClient, db: Session) -> None:
     """Archive button surfaces only when the session is
     ``expired`` — i.e. the operator has run Close session. The
     underlying ``lifecycle.archive_session`` service stays
@@ -240,34 +208,24 @@ def test_archive_visible_gates_on_expired_only(
     pre-close states + matches the close-then-file-away
     sequence)."""
     sess = _make_session(client, db, code="archive-gate")
-    ctx = views.build_workflow_card_context(
-        db, sess, return_to="home"
-    )
+    ctx = views.build_workflow_card_context(db, sess, return_to="home")
     # draft: archive button hidden.
     assert ctx["archive_visible"] is False
 
     for state in ("validated", "ready"):
         sess.status = state
         db.commit()
-        ctx = views.build_workflow_card_context(
-            db, sess, return_to="home"
-        )
-        assert ctx["archive_visible"] is False, (
-            f"archive button should not surface in {state!r}"
-        )
+        ctx = views.build_workflow_card_context(db, sess, return_to="home")
+        assert ctx["archive_visible"] is False, f"archive button should not surface in {state!r}"
 
     sess.status = "expired"
     db.commit()
-    ctx = views.build_workflow_card_context(
-        db, sess, return_to="home"
-    )
+    ctx = views.build_workflow_card_context(db, sess, return_to="home")
     assert ctx["archive_visible"] is True
 
     sess.status = "archived"
     db.commit()
-    ctx = views.build_workflow_card_context(
-        db, sess, return_to="home"
-    )
+    ctx = views.build_workflow_card_context(db, sess, return_to="home")
     assert ctx["archive_visible"] is False
 
 
@@ -291,13 +249,9 @@ def _visible_set(ctx: dict) -> set[str]:
     return {key for key in _VISIBLE_KEYS if ctx.get(key)}
 
 
-def test_draft_empty_state_surfaces_nothing(
-    client: TestClient, db: Session
-) -> None:
+def test_draft_empty_state_surfaces_nothing(client: TestClient, db: Session) -> None:
     sess = _make_session(client, db, code="vis-state-1")
-    ctx = views.build_workflow_card_context(
-        db, sess, return_to="home"
-    )
+    ctx = views.build_workflow_card_context(db, sess, return_to="home")
     assert _visible_set(ctx) == set()
 
 
@@ -307,9 +261,7 @@ def test_validated_no_invites_surfaces_revert_prepare_activate(
     sess = _seed_pair_plus_pinned(client, db, code="vis-state-4")
     sess.status = "validated"
     db.commit()
-    ctx = views.build_workflow_card_context(
-        db, sess, return_to="home"
-    )
+    ctx = views.build_workflow_card_context(db, sess, return_to="home")
     visible = _visible_set(ctx)
     # `create_invites_visible` retired at 19Q.2 rung 3 — Prepare creates
     # the invitations, so this state surfaces three buttons, not four.
@@ -321,9 +273,7 @@ def test_validated_no_invites_surfaces_revert_prepare_activate(
     assert len(visible) <= 4
 
 
-def test_ready_no_invites_surfaces_revert_close(
-    client: TestClient, db: Session
-) -> None:
+def test_ready_no_invites_surfaces_revert_close(client: TestClient, db: Session) -> None:
     """Ready state surfaces ≤ 3 buttons: revert + close, plus
     send-invites or send-reminders once invitations exist. **Release responses + Stop releasing
     stay hidden until the session has closed/expired** — the
@@ -331,9 +281,7 @@ def test_ready_no_invites_surfaces_revert_close(
     sess = _seed_pair_plus_pinned(client, db, code="vis-state-7")
     sess.status = "ready"
     db.commit()
-    ctx = views.build_workflow_card_context(
-        db, sess, return_to="home"
-    )
+    ctx = views.build_workflow_card_context(db, sess, return_to="home")
     visible = _visible_set(ctx)
     # Two buttons since 19Q.2 rung 3. A `ready` session with no
     # invitations means nobody was eligible when Prepare last ran, and
@@ -348,15 +296,11 @@ def test_ready_no_invites_surfaces_revert_close(
     assert len(visible) <= 4
 
 
-def test_expired_surfaces_revert_release_archive(
-    client: TestClient, db: Session
-) -> None:
+def test_expired_surfaces_revert_release_archive(client: TestClient, db: Session) -> None:
     sess = _seed_pair_plus_pinned(client, db, code="vis-state-10")
     sess.status = "expired"
     db.commit()
-    ctx = views.build_workflow_card_context(
-        db, sess, return_to="home"
-    )
+    ctx = views.build_workflow_card_context(db, sess, return_to="home")
     visible = _visible_set(ctx)
     assert visible == {
         "revert_visible",
@@ -365,39 +309,27 @@ def test_expired_surfaces_revert_release_archive(
     }
 
 
-def test_archived_surfaces_nothing(
-    client: TestClient, db: Session
-) -> None:
+def test_archived_surfaces_nothing(client: TestClient, db: Session) -> None:
     sess = _seed_pair_plus_pinned(client, db, code="vis-state-archived")
     sess.status = "archived"
     db.commit()
-    ctx = views.build_workflow_card_context(
-        db, sess, return_to="home"
-    )
+    ctx = views.build_workflow_card_context(db, sess, return_to="home")
     assert _visible_set(ctx) == set()
 
 
-def test_every_state_keeps_visible_count_within_four(
-    client: TestClient, db: Session
-) -> None:
+def test_every_state_keeps_visible_count_within_four(client: TestClient, db: Session) -> None:
     """Sanity check for the 25%-per-button single-row layout — every
     lifecycle state caps the visible-button count at 4."""
     sess = _seed_pair_plus_pinned(client, db, code="vis-cap")
     for state in ("draft", "validated", "ready", "expired", "archived"):
         sess.status = state
         db.commit()
-        ctx = views.build_workflow_card_context(
-            db, sess, return_to="home"
-        )
+        ctx = views.build_workflow_card_context(db, sess, return_to="home")
         visible = _visible_set(ctx)
-        assert len(visible) <= 4, (
-            f"state {state!r} surfaces {len(visible)} buttons: {visible}"
-        )
+        assert len(visible) <= 4, f"state {state!r} surfaces {len(visible)} buttons: {visible}"
 
 
-def test_release_and_stop_visible_gate_on_expired_only(
-    client: TestClient, db: Session
-) -> None:
+def test_release_and_stop_visible_gate_on_expired_only(client: TestClient, db: Session) -> None:
     """Release responses + Stop releasing stay hidden in every
     pre-expired state. The operator only takes the manual
     release shortcut after a session has closed (``expired``) —
@@ -408,30 +340,21 @@ def test_release_and_stop_visible_gate_on_expired_only(
     from datetime import datetime, timedelta
 
     sess = _seed_pair_plus_pinned(client, db, code="release-stop-pre-expired")
-    sess.responses_release_at = datetime.now(UTC) - timedelta(
-        hours=1
-    )
+    sess.responses_release_at = datetime.now(UTC) - timedelta(hours=1)
 
     for state in ("draft", "validated", "ready"):
         sess.status = state
         db.commit()
-        ctx = views.build_workflow_card_context(
-            db, sess, return_to="home"
-        )
-        assert ctx["release_responses_visible"] is False, (
-            f"Release should stay hidden in {state!r}"
-        )
+        ctx = views.build_workflow_card_context(db, sess, return_to="home")
+        assert ctx["release_responses_visible"] is False, f"Release should stay hidden in {state!r}"
         assert ctx["stop_release_visible"] is False, (
-            f"Stop should stay hidden in {state!r} even with a "
-            f"backdated release_at"
+            f"Stop should stay hidden in {state!r} even with a backdated release_at"
         )
         assert len(_visible_set(ctx)) <= 4
 
     # Once closed/expired, Stop surfaces because the window is open.
     sess.status = "expired"
     db.commit()
-    ctx = views.build_workflow_card_context(
-        db, sess, return_to="home"
-    )
+    ctx = views.build_workflow_card_context(db, sess, return_to="home")
     assert ctx["stop_release_visible"] is True
     assert ctx["release_responses_visible"] is False

@@ -7,6 +7,7 @@ no overrides came back with one, and Validate's "custom email
 overrides" line reported it. ``set_responses_received_enabled`` keeps
 the key only for an explicit opt-out; the import now does the same.
 """
+
 from __future__ import annotations
 
 from sqlalchemy.orm import Session
@@ -24,9 +25,7 @@ def _session(db: Session, code: str) -> ReviewSession:
     op = User(email=f"op-{code}@example.edu", display_name="Op")
     db.add(op)
     db.flush()
-    review_session = ReviewSession(
-        name=code.title(), code=code, created_by_user_id=op.id
-    )
+    review_session = ReviewSession(name=code.title(), code=code, created_by_user_id=op.id)
     db.add(review_session)
     db.flush()
     return review_session
@@ -35,10 +34,7 @@ def _session(db: Session, code: str) -> ReviewSession:
 def _with_enabled(rows: list[Row], value: str) -> list[Row]:
     key = "email_overrides.responses_received.enabled"
     assert any(r.field == key for r in rows), "the export no longer writes it"
-    return [
-        Row(r.field, value, r.data_type) if r.field == key else r
-        for r in rows
-    ]
+    return [Row(r.field, value, r.data_type) if r.field == key else r for r in rows]
 
 
 def test_a_session_with_no_overrides_imports_with_none(db: Session) -> None:

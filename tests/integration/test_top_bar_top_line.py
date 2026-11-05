@@ -30,13 +30,10 @@ def test_every_page_shows_the_name_when_set(
     assert '<span class="tb-top">Example University</span>' in body
 
 
-def test_the_name_is_escaped(
-    client: TestClient, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_the_name_is_escaped(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(identity_settings, "institution_name", "A & <B>")
     body = client.get("/operator/sessions").text
     assert '<span class="tb-top">A &amp; &lt;B&gt;</span>' in body
-
 
 
 def test_accounts_management_shows_the_default_unit_as_a_pill(

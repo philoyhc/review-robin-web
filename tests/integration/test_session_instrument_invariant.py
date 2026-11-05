@@ -19,9 +19,7 @@ def _make_session(client: TestClient, db: Session, code: str) -> ReviewSession:
         follow_redirects=False,
     )
     assert response.status_code == 303
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def test_session_creation_yields_default_instrument_with_seed_fields(
@@ -30,9 +28,7 @@ def test_session_creation_yields_default_instrument_with_seed_fields(
     review_session = _make_session(client, db, code="invariant-test")
 
     instruments = list(
-        db.execute(
-            select(Instrument).where(Instrument.session_id == review_session.id)
-        ).scalars()
+        db.execute(select(Instrument).where(Instrument.session_id == review_session.id)).scalars()
     )
     assert len(instruments) == 1
     instrument = instruments[0]
@@ -98,9 +94,7 @@ def test_assignment_generation_reuses_existing_default_instrument(
     generate_via_page_button(client, review_session.id)
 
     instruments = list(
-        db.execute(
-            select(Instrument).where(Instrument.session_id == review_session.id)
-        ).scalars()
+        db.execute(select(Instrument).where(Instrument.session_id == review_session.id)).scalars()
     )
     assert len(instruments) == 1
     assert instruments[0].id == initial_instrument_id

@@ -24,7 +24,7 @@ def div_block(html: str, marker: str) -> str:
     for tag in re.finditer(r"<div\b|</div>", html[i:]):
         depth += 1 if tag.group(0) != "</div>" else -1
         if depth == 0:
-            return html[start:i + tag.end()]
+            return html[start : i + tag.end()]
     raise AssertionError(f"{marker} never closes")
 
 
@@ -44,16 +44,14 @@ def assert_lock_ends_right_column(html: str) -> None:
     after the columns (that left a gap under a shorter right column)."""
     panel, left, right = panel_columns(html)
     assert html.count('id="roster-unlock-btn"') == 1, "two Lock controls"
-    assert 'class="roster-card-actions"' not in left, (
-        "Lock sits in the left column"
-    )
+    assert 'class="roster-card-actions"' not in left, "Lock sits in the left column"
     marker = '<div class="roster-card-actions">'
     assert marker in right, "Lock is not in the right column"
-    tail = right[right.index(marker):]
+    tail = right[right.index(marker) :]
     actions = div_block(tail, marker)
-    rest = re.sub(r"<!--.*?-->", "", tail[len(actions):], flags=re.S)
+    rest = re.sub(r"<!--.*?-->", "", tail[len(actions) :], flags=re.S)
     assert rest.strip() == "</div>", "Lock is not the right column's last child"
-    after = panel[panel.index(right) + len(right):]
+    after = panel[panel.index(right) + len(right) :]
     assert re.sub(r"<!--.*?-->", "", after, flags=re.S).strip() == "</div>", (
         "something follows the right column inside the panel"
     )

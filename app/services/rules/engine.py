@@ -158,9 +158,7 @@ def _evaluate_inner(
         survivors: list[tuple[object, object]] = []
         for pair in candidates:
             if _is_self_review(*pair):
-                excluded_counts["self_review"] = (
-                    excluded_counts.get("self_review", 0) + 1
-                )
+                excluded_counts["self_review"] = excluded_counts.get("self_review", 0) + 1
             else:
                 survivors.append(pair)
         candidates = survivors
@@ -187,11 +185,7 @@ def _evaluate_inner(
         excluded_counts[key] = excluded_counts.get(key, 0) + count
 
     # Step 5 — apply quota rules in declaration order.
-    fallback_seed = (
-        rule_set.options.seed
-        if rule_set.options.seed is not None
-        else revision_seed
-    )
+    fallback_seed = rule_set.options.seed if rule_set.options.seed is not None else revision_seed
     for quota in quota_rules:
         survivors, quota_excluded, quota_warnings = apply_quota(
             survivors, quota, fallback_seed=fallback_seed
@@ -202,9 +196,7 @@ def _evaluate_inner(
                 if quota.scope.value == "PER_REVIEWER"
                 else "quota.per_reviewee"
             )
-            excluded_counts[key] = (
-                excluded_counts.get(key, 0) + quota_excluded
-            )
+            excluded_counts[key] = excluded_counts.get(key, 0) + quota_excluded
         warnings.extend(quota_warnings)
 
     # Step 6 — emit pairs in deterministic order. (``apply_quota``
@@ -256,17 +248,9 @@ def validate_rule_set(
         reviewers_list = list(reviewers)
         reviewees_list = list(reviewees)
         if not reviewers_list:
-            issues.append(
-                ValidationIssue(
-                    rule_id=None, message="reviewer population is empty"
-                )
-            )
+            issues.append(ValidationIssue(rule_id=None, message="reviewer population is empty"))
         if not reviewees_list:
-            issues.append(
-                ValidationIssue(
-                    rule_id=None, message="reviewee population is empty"
-                )
-            )
+            issues.append(ValidationIssue(rule_id=None, message="reviewee population is empty"))
         for rule in rule_set.rules:
             if isinstance(rule, QuotaRule):
                 axis_size = (
@@ -344,9 +328,7 @@ def _enabled_rule(rule: Rule) -> Rule | None:
     if not isinstance(rule, CompositeRule):
         return rule
     children = [
-        child
-        for child in (_enabled_rule(stored) for stored in rule.rules)
-        if child is not None
+        child for child in (_enabled_rule(stored) for stored in rule.rules) if child is not None
     ]
     if not children:
         return None
@@ -462,9 +444,7 @@ def _content_rule_matches(
 
     reviewer, reviewee = pair
     if isinstance(rule, (FilterRule, MatchRule)):
-        return evaluate_predicate(
-            rule.predicate, reviewer=reviewer, reviewee=reviewee
-        )
+        return evaluate_predicate(rule.predicate, reviewer=reviewer, reviewee=reviewee)
 
     # Composite: AND / OR / NOT over child rule truthiness.
     child_results = [_content_rule_matches(_content_child(child), pair) for child in rule.rules]

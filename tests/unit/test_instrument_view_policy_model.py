@@ -35,9 +35,7 @@ def _instrument(db: Session, *, code: str = "ivp") -> Instrument:
     )
     db.add(review_session)
     db.flush()
-    instrument = Instrument(
-        session_id=review_session.id, name="Form", short_label="F"
-    )
+    instrument = Instrument(session_id=review_session.id, name="Form", short_label="F")
     db.add(instrument)
     db.flush()
     return instrument

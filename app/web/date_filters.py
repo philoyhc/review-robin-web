@@ -27,11 +27,7 @@ DEFAULT_TIMEZONE = date_formatting.DEFAULT_TIMEZONE
 
 def display_timezone_context_processor(request: Request) -> dict[str, str]:
     """Inject ``display_timezone`` into every template render."""
-    return {
-        "display_timezone": getattr(
-            request.state, "display_timezone", DEFAULT_TIMEZONE
-        )
-    }
+    return {"display_timezone": getattr(request.state, "display_timezone", DEFAULT_TIMEZONE)}
 
 
 def _context_zone(context: jinja2.runtime.Context) -> str:
@@ -39,14 +35,10 @@ def _context_zone(context: jinja2.runtime.Context) -> str:
 
 
 @jinja2.pass_context
-def format_datetime_filter(
-    context: jinja2.runtime.Context, value: datetime | None
-) -> str:
+def format_datetime_filter(context: jinja2.runtime.Context, value: datetime | None) -> str:
     return date_formatting.format_datetime(value, _context_zone(context))
 
 
 @jinja2.pass_context
-def format_date_filter(
-    context: jinja2.runtime.Context, value: date | datetime | None
-) -> str:
+def format_date_filter(context: jinja2.runtime.Context, value: date | datetime | None) -> str:
     return date_formatting.format_date(value, _context_zone(context))

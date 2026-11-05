@@ -25,14 +25,11 @@ from ._quick_setup_refusal import refusal
 REVIEWER_CSV = b"ReviewerName,ReviewerEmail\nAlice,alice@example.edu\n"
 REVIEWEE_CSV = b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\n"
 RELATIONSHIP_CSV = (
-    b"ReviewerEmail,RevieweeEmail,PairContextTag1\n"
-    b"alice@example.edu,carol@example.edu,Mentor\n"
+    b"ReviewerEmail,RevieweeEmail,PairContextTag1\nalice@example.edu,carol@example.edu,Mentor\n"
 )
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "QSRel", "code": code, "description": "d"},
@@ -65,9 +62,7 @@ def _seed_rosters(client: TestClient, session_id: str) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_quick_setup_relationships_slot_is_wired_live(
-    client: TestClient, db: Session
-) -> None:
+def test_quick_setup_relationships_slot_is_wired_live(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="qsrel-live")
     context = views.build_quick_setup_context(db, review_session)
     by_key = {slot.key: slot for slot in context.slots}
@@ -104,9 +99,7 @@ def test_quick_setup_relationships_slot_count_reflects_population(
 # ---------------------------------------------------------------------------
 
 
-def test_quick_setup_relationships_route_imports_rows(
-    client: TestClient, db: Session
-) -> None:
+def test_quick_setup_relationships_route_imports_rows(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="qsrel-route")
     _seed_rosters(client, review_session.public_id)
 
@@ -118,11 +111,11 @@ def test_quick_setup_relationships_route_imports_rows(
     assert response.status_code == 303
     assert response.headers["location"].endswith("#quick-setup-relationships")
 
-    rows = db.execute(
-        select(Relationship).where(
-            Relationship.session_id == review_session.id
-        )
-    ).scalars().all()
+    rows = (
+        db.execute(select(Relationship).where(Relationship.session_id == review_session.id))
+        .scalars()
+        .all()
+    )
     assert len(rows) == 1
     assert rows[0].tag_1 == "Mentor"
 
@@ -155,10 +148,7 @@ def test_quick_setup_relationships_route_unknown_email_is_parse_error(
     review_session = _make_session(client, db, code="qsrel-parse")
     _seed_rosters(client, review_session.public_id)
 
-    bad_csv = (
-        b"ReviewerEmail,RevieweeEmail\n"
-        b"ghost@example.edu,carol@example.edu\n"
-    )
+    bad_csv = b"ReviewerEmail,RevieweeEmail\nghost@example.edu,carol@example.edu\n"
     response = client.post(
         f"/operator/sessions/{review_session.public_id}/quick-setup/relationships",
         files={"file": ("rel.csv", bad_csv, "text/csv")},
@@ -185,9 +175,7 @@ def test_quick_setup_relationships_lifecycle_gate_on_ready(
         data={"name": "Locked", "code": "qsrel-lifecycle"},
         follow_redirects=False,
     )
-    review_session = db.execute(
-        select(RS).where(RS.code == "qsrel-lifecycle")
-    ).scalar_one()
+    review_session = db.execute(select(RS).where(RS.code == "qsrel-lifecycle")).scalar_one()
     review_session.status = lifecycle.SessionStatus.ready.value
     db.commit()
 
@@ -204,9 +192,7 @@ def test_quick_setup_relationships_lifecycle_gate_on_ready(
 # ---------------------------------------------------------------------------
 
 
-def test_submit_all_runs_relationships_after_rosters(
-    client: TestClient, db: Session
-) -> None:
+def test_submit_all_runs_relationships_after_rosters(client: TestClient, db: Session) -> None:
     """Chain order: reviewers → reviewees → relationships. A
     submit-all POST with all three files runs them in sequence."""
 
@@ -228,15 +214,13 @@ def test_submit_all_runs_relationships_after_rosters(
     assert response.status_code == 303
     # Last fragment is the relationships slot since it's the final
     # step in the chain.
-    assert response.headers["location"].endswith(
-        "#quick-setup-relationships"
-    )
+    assert response.headers["location"].endswith("#quick-setup-relationships")
 
-    rows = db.execute(
-        select(Relationship).where(
-            Relationship.session_id == review_session.id
-        )
-    ).scalars().all()
+    rows = (
+        db.execute(select(Relationship).where(Relationship.session_id == review_session.id))
+        .scalars()
+        .all()
+    )
     assert len(rows) == 1
 
 
@@ -270,11 +254,11 @@ def test_create_session_with_relationships_file_processes_upload(
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.code == "qsrel-newsess")
     ).scalar_one()
-    rows = db.execute(
-        select(Relationship).where(
-            Relationship.session_id == review_session.id
-        )
-    ).scalars().all()
+    rows = (
+        db.execute(select(Relationship).where(Relationship.session_id == review_session.id))
+        .scalars()
+        .all()
+    )
     assert len(rows) == 1
 
 

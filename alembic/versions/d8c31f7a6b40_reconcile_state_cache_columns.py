@@ -34,6 +34,7 @@ Revises: b7d4f2a9c153
 Create Date: 2026-09-21
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa

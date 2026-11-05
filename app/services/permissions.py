@@ -15,9 +15,7 @@ def user_can_view_session(db: Session, user: User, session_id: int) -> bool:
     return db.execute(stmt).first() is not None
 
 
-def may_name_session(
-    db: Session, user: User | None, review_session: ReviewSession
-) -> bool:
+def may_name_session(db: Session, user: User | None, review_session: ReviewSession) -> bool:
     """Whether ``user`` may be told this session's name: a sys-admin
     (Sessions Diagnostics lists every session by name), one of its
     operators, or a participant whose role on it may be disclosed to

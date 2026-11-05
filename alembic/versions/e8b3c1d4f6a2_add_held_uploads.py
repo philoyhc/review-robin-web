@@ -15,6 +15,7 @@ Revision ID: e8b3c1d4f6a2
 Revises: d2f7a3c9b5e4
 Create Date: 2026-10-19
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -39,19 +40,13 @@ def upgrade() -> None:
         sa.Column("filename", sa.String(length=255), nullable=False),
         sa.Column("content", sa.LargeBinary(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["operator_user_id"], ["users.id"], ondelete="CASCADE"
-        ),
-        sa.ForeignKeyConstraint(
-            ["session_id"], ["sessions.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["operator_user_id"], ["users.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["session_id"], ["sessions.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("token", "slot", name="uq_held_uploads_token_slot"),
     )
     op.create_index("ix_held_uploads_token", "held_uploads", ["token"])
-    op.create_index(
-        "ix_held_uploads_operator_user_id", "held_uploads", ["operator_user_id"]
-    )
+    op.create_index("ix_held_uploads_operator_user_id", "held_uploads", ["operator_user_id"])
     op.create_index("ix_held_uploads_session_id", "held_uploads", ["session_id"])
 
 

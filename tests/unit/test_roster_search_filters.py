@@ -129,9 +129,7 @@ def test_an_offered_label_still_exact_matches_its_handle() -> None:
         _reviewer("Ana Lim", "ana2@example.edu"),
     ]
 
-    picked = filter_reviewers_rows(
-        rows, status="all", search="Ana Lim (ana@example.edu)"
-    )
+    picked = filter_reviewers_rows(rows, status="all", search="Ana Lim (ana@example.edu)")
 
     assert [r.email for r in picked] == ["ana@example.edu"]
 
@@ -145,9 +143,7 @@ def test_a_tag_ending_in_parentheses_matches_its_tag() -> None:
         _reviewer("B", "b@example.edu"),
     ]
 
-    assert _names(
-        filter_reviewers_rows(rows, status="all", search="Group (B)")
-    ) == {"A"}
+    assert _names(filter_reviewers_rows(rows, status="all", search="Group (B)")) == {"A"}
 
 
 def test_a_reviewee_tag_in_parentheses_matches_its_tag() -> None:
@@ -179,10 +175,20 @@ def test_a_reviewee_tag_in_parentheses_matches_its_tag() -> None:
 
 def test_observers_search_their_single_tag_slot() -> None:
     rows = [
-        Observer(session_id=1, email="o1@example.edu", display_name="Obs One",
-                 status="active", tag_1="Panel A"),
-        Observer(session_id=1, email="o2@example.edu", display_name="Obs Two",
-                 status="active", tag_1="Panel B"),
+        Observer(
+            session_id=1,
+            email="o1@example.edu",
+            display_name="Obs One",
+            status="active",
+            tag_1="Panel A",
+        ),
+        Observer(
+            session_id=1,
+            email="o2@example.edu",
+            display_name="Obs Two",
+            status="active",
+            tag_1="Panel B",
+        ),
     ]
 
     kept = filter_observers_rows(rows, status="all", search="Panel A")
@@ -231,12 +237,18 @@ def test_a_tag_whose_rows_fall_past_the_display_cap_is_still_offered() -> None:
 
 def test_every_page_offers_its_tags_ahead_of_its_people() -> None:
     reviewees = [
-        Reviewee(session_id=1, name="Carol", email_or_identifier="c@example.edu",
-                 status="active", tag_2="Alpha")
+        Reviewee(
+            session_id=1,
+            name="Carol",
+            email_or_identifier="c@example.edu",
+            status="active",
+            tag_2="Alpha",
+        )
     ]
     observers = [
-        Observer(session_id=1, email="o@example.edu", display_name="Obs",
-                 status="active", tag_1="Panel")
+        Observer(
+            session_id=1, email="o@example.edu", display_name="Obs", status="active", tag_1="Panel"
+        )
     ]
 
     assert reviewees_search_options(reviewees)[0] == "Alpha"
@@ -325,12 +337,12 @@ def test_a_pair_context_tag_matches_by_whole_value() -> None:
     ]
     maps = _maps([ali], [carol])
 
-    assert [r.id for r in filter_relationships_rows(
-        rows, status="all", search="TW01", **maps
-    )] == [1], "whole value, so TW010 is not a hit"
-    assert filter_relationships_rows(
-        rows, status="all", search="TW0", **maps
-    ) == [], "a prefix matches no tag"
+    assert [r.id for r in filter_relationships_rows(rows, status="all", search="TW01", **maps)] == [
+        1
+    ], "whole value, so TW010 is not a hit"
+    assert filter_relationships_rows(rows, status="all", search="TW0", **maps) == [], (
+        "a prefix matches no tag"
+    )
 
 
 def test_a_pair_context_tag_equal_to_a_name_adds_rows() -> None:
@@ -360,9 +372,7 @@ def test_status_narrows_before_the_search_runs() -> None:
         _pair(2, reviewer=ali, reviewee=carol, tag_1="TW01", status="inactive"),
     ]
 
-    kept = filter_relationships_rows(
-        rows, status="active", search="TW01", **_maps([ali], [carol])
-    )
+    kept = filter_relationships_rows(rows, status="active", search="TW01", **_maps([ali], [carol]))
 
     assert [r.id for r in kept] == [1]
 
@@ -377,9 +387,9 @@ def test_a_dangling_side_does_not_crash_or_match() -> None:
     maps = {"reviewer_by_id": {}, "reviewee_by_id": {carol.id: carol}}
 
     assert filter_relationships_rows(rows, status="all", search="Ali", **maps) == []
-    assert [r.id for r in filter_relationships_rows(
-        rows, status="all", search="Carol", **maps
-    )] == [1]
+    assert [
+        r.id for r in filter_relationships_rows(rows, status="all", search="Carol", **maps)
+    ] == [1]
 
 
 def test_a_reviewer_and_reviewee_sharing_a_primary_key_both_appear() -> None:
@@ -511,16 +521,13 @@ def test_invitations_name_and_email_still_match_by_substring() -> None:
     ]
 
     assert {
-        r.reviewer.name
-        for r in filter_invitations_rows(rows, status="all", search="na L")
+        r.reviewer.name for r in filter_invitations_rows(rows, status="all", search="na L")
     } == {"Ana Lim"}
 
 
 def test_invitations_search_reads_all_three_tag_slots() -> None:
     rows = [
-        _invitation_row(
-            _reviewer("Ana", "ana@example.edu", tag_1="T1", tag_2="T2", tag_3="T3")
-        ),
+        _invitation_row(_reviewer("Ana", "ana@example.edu", tag_1="T1", tag_2="T2", tag_3="T3")),
         _invitation_row(_reviewer("Ben", "ben@example.edu", tag_1="Other")),
     ]
     for term in ("T1", "T2", "T3"):
@@ -557,12 +564,8 @@ def test_neither_datalist_offers_tag_values() -> None:
     Assignments page. Matching a tag and suggesting one are different
     questions.
     """
-    inv = [
-        _invitation_row(_reviewer("Ana", "ana@example.edu", tag_1="Team A"))
-    ]
-    resp = [
-        _response_row(_reviewee_with_tags("Carol", "carol@example.edu", tag_1="Group A"))
-    ]
+    inv = [_invitation_row(_reviewer("Ana", "ana@example.edu", tag_1="Team A"))]
+    resp = [_response_row(_reviewee_with_tags("Carol", "carol@example.edu", tag_1="Group A"))]
 
     assert invitations_search_options(inv) == ["Ana (ana@example.edu)"]
     assert responses_search_options(resp) == ["Carol (carol@example.edu)"]

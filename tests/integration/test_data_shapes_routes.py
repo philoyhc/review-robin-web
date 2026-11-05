@@ -27,18 +27,14 @@ from sqlalchemy.orm import Session
 from app.db.models import DataShape, ReviewSession
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "DS", "code": code, "description": ""},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _payload(
@@ -54,8 +50,7 @@ def _payload(
         "axis": axis,
         "instrument_id": instrument_id,
         "response_field_id": response_field_id,
-        "column_chip_slots": column_chip_slots
-        or ["reviewer:name", "reviewer:email"],
+        "column_chip_slots": column_chip_slots or ["reviewer:name", "reviewer:email"],
     }
 
 
@@ -64,9 +59,7 @@ def _payload(
 # --------------------------------------------------------------------------- #
 
 
-def test_post_creates_shape_and_returns_201(
-    client: TestClient, db: Session
-) -> None:
+def test_post_creates_shape_and_returns_201(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="post-ok")
     response = client.post(
         f"/operator/sessions/{review_session.public_id}/extract-data/shapes",
@@ -82,18 +75,16 @@ def test_post_creates_shape_and_returns_201(
     ]
     # Row persisted.
     db.expire_all()
-    rows = db.execute(
-        select(DataShape).where(
-            DataShape.session_id == review_session.id
-        )
-    ).scalars().all()
+    rows = (
+        db.execute(select(DataShape).where(DataShape.session_id == review_session.id))
+        .scalars()
+        .all()
+    )
     assert len(rows) == 1
     assert rows[0].name == "Created"
 
 
-def test_post_invalid_axis_returns_422(
-    client: TestClient, db: Session
-) -> None:
+def test_post_invalid_axis_returns_422(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="post-axis")
     response = client.post(
         f"/operator/sessions/{review_session.public_id}/extract-data/shapes",
@@ -134,8 +125,7 @@ def test_patch_updates_shape(client: TestClient, db: Session) -> None:
         json=_payload(name="initial"),
     ).json()
     response = client.patch(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/extract-data/shapes/{created['id']}",
+        f"/operator/sessions/{review_session.public_id}/extract-data/shapes/{created['id']}",
         json=_payload(
             name="renamed",
             axis="reviewee",
@@ -147,16 +137,12 @@ def test_patch_updates_shape(client: TestClient, db: Session) -> None:
     assert body["name"] == "renamed"
     assert body["axis"] == "reviewee"
     db.expire_all()
-    row = db.execute(
-        select(DataShape).where(DataShape.id == created["id"])
-    ).scalar_one()
+    row = db.execute(select(DataShape).where(DataShape.id == created["id"])).scalar_one()
     assert row.name == "renamed"
     assert row.axis == "reviewee"
 
 
-def test_patch_cross_session_shape_returns_404(
-    client: TestClient, db: Session
-) -> None:
+def test_patch_cross_session_shape_returns_404(client: TestClient, db: Session) -> None:
     """A shape_id from a different session must not be
     PATCHable from the current session."""
     session_a = _make_session(client, db, code="patch-a")
@@ -166,8 +152,7 @@ def test_patch_cross_session_shape_returns_404(
         json=_payload(),
     ).json()
     response = client.patch(
-        f"/operator/sessions/{session_b.public_id}"
-        f"/extract-data/shapes/{created['id']}",
+        f"/operator/sessions/{session_b.public_id}/extract-data/shapes/{created['id']}",
         json=_payload(name="hijack"),
     )
     assert response.status_code == 404
@@ -185,15 +170,12 @@ def test_delete_removes_shape(client: TestClient, db: Session) -> None:
         json=_payload(),
     ).json()
     response = client.delete(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/extract-data/shapes/{created['id']}"
+        f"/operator/sessions/{review_session.public_id}/extract-data/shapes/{created['id']}"
     )
     assert response.status_code == 204
     db.expire_all()
     assert (
-        db.execute(
-            select(DataShape).where(DataShape.id == created["id"])
-        ).scalar_one_or_none()
+        db.execute(select(DataShape).where(DataShape.id == created["id"])).scalar_one_or_none()
         is None
     )
 
@@ -205,12 +187,10 @@ def test_delete_is_idempotent(client: TestClient, db: Session) -> None:
         json=_payload(),
     ).json()
     first = client.delete(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/extract-data/shapes/{created['id']}"
+        f"/operator/sessions/{review_session.public_id}/extract-data/shapes/{created['id']}"
     )
     second = client.delete(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/extract-data/shapes/{created['id']}"
+        f"/operator/sessions/{review_session.public_id}/extract-data/shapes/{created['id']}"
     )
     assert first.status_code == 204
     assert second.status_code == 204
@@ -221,9 +201,7 @@ def test_delete_is_idempotent(client: TestClient, db: Session) -> None:
 # --------------------------------------------------------------------------- #
 
 
-def test_page_renders_saved_shapes_with_persistence_attrs(
-    client: TestClient, db: Session
-) -> None:
+def test_page_renders_saved_shapes_with_persistence_attrs(client: TestClient, db: Session) -> None:
     """Saved shapes render as ``data-shape-mode="saved"``
     sub-cards before the (no-longer-present-when-shapes-
     exist) initial blank. Each carries the persistence
@@ -241,9 +219,7 @@ def test_page_renders_saved_shapes_with_persistence_attrs(
             ],
         ),
     ).json()
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/extract-data"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
 
     # Each saved shape's sub-card carries its id + axis +
     # column-slots JSON on a ``data-shape-mode="saved"`` div.
@@ -257,8 +233,7 @@ def test_page_renders_saved_shapes_with_persistence_attrs(
     # subsequent ``| e`` no-ops on, so the previous
     # double-quoted form collapsed to an empty attribute.
     expected_slots_attr = (
-        'data-shape-column-slots=\'["reviewer:name", '
-        '"reviewer:email", "reviewer:assigned"]\''
+        'data-shape-column-slots=\'["reviewer:name", "reviewer:email", "reviewer:assigned"]\''
     )
     assert expected_slots_attr in body
     # Preview row pre-populated with the **preview-table
@@ -276,32 +251,21 @@ def test_page_renders_saved_shapes_with_persistence_attrs(
     # ``data-shape-column-headers`` carries the JSON-encoded
     # preview-label list — used by the post-Cancel /
     # close-other-editing ``renderSavedPreviewRow`` path.
-    assert (
-        "data-shape-column-headers='[\"Reviewer Name\", "
-        "\"Reviewer Email\", \"Assigned\"]'"
-    ) in body
+    assert ('data-shape-column-headers=\'["Reviewer Name", "Reviewer Email", "Assigned"]\'') in body
     # The always-present blank initial card does NOT render
     # when shapes exist — operator uses ``+Shape`` to spawn
     # a new editable card if they want one.
-    stack_block = body.split("data-shaper-stack")[1].split(
-        'id="extract-data-shaper-zip"'
-    )[0]
+    stack_block = body.split("data-shaper-stack")[1].split('id="extract-data-shaper-zip"')[0]
     assert stack_block.count('data-shape-mode="edit"') == 0
 
 
-def test_page_renders_initial_blank_when_no_shapes_exist(
-    client: TestClient, db: Session
-) -> None:
+def test_page_renders_initial_blank_when_no_shapes_exist(client: TestClient, db: Session) -> None:
     """No saved shapes → always-present blank edit-mode
     sub-card renders so the operator has an immediate edit
     target (band-3 builder pattern)."""
     review_session = _make_session(client, db, code="no-shapes")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/extract-data"
-    ).text
-    stack_block = body.split("data-shaper-stack")[1].split(
-        'id="extract-data-shaper-zip"'
-    )[0]
+    body = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
+    stack_block = body.split("data-shaper-stack")[1].split('id="extract-data-shaper-zip"')[0]
     assert 'data-shape-mode="edit"' in stack_block
 
 
@@ -317,12 +281,8 @@ def _ships_disabled(tag: str) -> bool:
 
 def _delete_pair(markup: str, key: str) -> tuple[str, str]:
     """The Delete button and confirm checkbox paired on ``key``."""
-    button = re.search(
-        rf'<button[^>]*data-delete-btn="{re.escape(key)}"[^>]*>', markup
-    )
-    checkbox = re.search(
-        rf'<input[^>]*data-delete-confirm="{re.escape(key)}"[^>]*>', markup
-    )
+    button = re.search(rf'<button[^>]*data-delete-btn="{re.escape(key)}"[^>]*>', markup)
+    checkbox = re.search(rf'<input[^>]*data-delete-confirm="{re.escape(key)}"[^>]*>', markup)
     assert button and checkbox, f"no Delete pair keyed {key!r}"
     return button.group(0), checkbox.group(0)
 
@@ -344,12 +304,8 @@ def test_saved_shape_delete_ships_disabled_behind_a_confirm_tick(
         f"/operator/sessions/{review_session.public_id}/extract-data/shapes",
         json=_payload(name="Second"),
     ).json()
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/extract-data"
-    ).text
-    stack_block = body.split("<div data-shaper-stack>")[1].split(
-        'id="extract-data-shaper-zip"'
-    )[0]
+    body = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
+    stack_block = body.split("<div data-shaper-stack>")[1].split('id="extract-data-shaper-zip"')[0]
 
     for shape in (first, second):
         button, checkbox = _delete_pair(stack_block, f"shape-{shape['id']}")
@@ -369,20 +325,16 @@ def test_saved_shape_delete_ships_disabled_behind_a_confirm_tick(
     assert "Yes, delete this shape. There is no undo." in after
 
 
-def test_unsaved_shape_cards_ship_delete_disabled_too(
-    client: TestClient, db: Session
-) -> None:
+def test_unsaved_shape_cards_ship_delete_disabled_too(client: TestClient, db: Session) -> None:
     """The unsaved cards: the initial blank card keys its pair
     ``shape-new-0``, and the spawn template carries the same gated
     markup. The template's placeholder key is re-keyed by the page
     script on every clone, so spawned cards never collide."""
     review_session = _make_session(client, db, code="del-confirm-blank")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/extract-data"
-    ).text
-    template, stack_block = body.split(
-        "<template data-shaper-shape-card-template>"
-    )[1].split("</template>", 1)
+    body = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
+    template, stack_block = body.split("<template data-shaper-shape-card-template>")[1].split(
+        "</template>", 1
+    )
     stack_block = stack_block.split('id="extract-data-shaper-zip"')[0]
 
     for markup, key in ((stack_block, "shape-new-0"), (template, "shape-new")):
@@ -397,9 +349,7 @@ def test_unsaved_shape_cards_ship_delete_disabled_too(
 # --------------------------------------------------------------------------- #
 
 
-def test_download_streams_csv_with_canonical_filename(
-    client: TestClient, db: Session
-) -> None:
+def test_download_streams_csv_with_canonical_filename(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="dl-name")
     created = client.post(
         f"/operator/sessions/{review_session.public_id}/extract-data/shapes",
@@ -424,9 +374,7 @@ def test_download_streams_csv_with_canonical_filename(
     )
 
 
-def test_download_emits_audit_event(
-    client: TestClient, db: Session
-) -> None:
+def test_download_emits_audit_event(client: TestClient, db: Session) -> None:
     from app.db.models import AuditEvent
 
     review_session = _make_session(client, db, code="dl-aud")
@@ -453,9 +401,7 @@ def test_download_emits_audit_event(
     assert detail["counts"]["rows"] == 0
 
 
-def test_download_cross_session_shape_returns_404(
-    client: TestClient, db: Session
-) -> None:
+def test_download_cross_session_shape_returns_404(client: TestClient, db: Session) -> None:
     session_a = _make_session(client, db, code="dl-a")
     session_b = _make_session(client, db, code="dl-b")
     created = client.post(
@@ -463,8 +409,7 @@ def test_download_cross_session_shape_returns_404(
         json=_payload(),
     ).json()
     response = client.get(
-        f"/operator/sessions/{session_b.public_id}"
-        f"/extract-data/shapes/{created['id']}/download.csv"
+        f"/operator/sessions/{session_b.public_id}/extract-data/shapes/{created['id']}/download.csv"
     )
     assert response.status_code == 404
 
@@ -474,9 +419,7 @@ def test_download_cross_session_shape_returns_404(
 # --------------------------------------------------------------------------- #
 
 
-def test_post_round_trips_self_review_handling_state(
-    client: TestClient, db: Session
-) -> None:
+def test_post_round_trips_self_review_handling_state(client: TestClient, db: Session) -> None:
     """Posting a payload with ``self_review_handling=exclude_self``
     persists the value on the row + echoes it back on the
     response."""
@@ -489,15 +432,11 @@ def test_post_round_trips_self_review_handling_state(
     body = response.json()
     assert body["self_review_handling"] == "exclude_self"
     db.expire_all()
-    row = db.execute(
-        select(DataShape).where(DataShape.id == body["id"])
-    ).scalar_one()
+    row = db.execute(select(DataShape).where(DataShape.id == body["id"])).scalar_one()
     assert row.self_review_handling == "exclude_self"
 
 
-def test_patch_can_flip_self_review_handling(
-    client: TestClient, db: Session
-) -> None:
+def test_patch_can_flip_self_review_handling(client: TestClient, db: Session) -> None:
     """PATCH updates the persisted state."""
     review_session = _make_session(client, db, code="srh-patch")
     created = client.post(
@@ -506,17 +445,14 @@ def test_patch_can_flip_self_review_handling(
     ).json()
     assert created["self_review_handling"] == "include_self"
     response = client.patch(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/extract-data/shapes/{created['id']}",
+        f"/operator/sessions/{review_session.public_id}/extract-data/shapes/{created['id']}",
         json={**_payload(name="To flip"), "self_review_handling": "both"},
     )
     assert response.status_code == 200
     assert response.json()["self_review_handling"] == "both"
 
 
-def test_post_rejects_unknown_self_review_handling(
-    client: TestClient, db: Session
-) -> None:
+def test_post_rejects_unknown_self_review_handling(client: TestClient, db: Session) -> None:
     """A bogus state string returns 422 from the service-layer
     validator."""
     review_session = _make_session(client, db, code="srh-bogus")
@@ -527,9 +463,7 @@ def test_post_rejects_unknown_self_review_handling(
     assert response.status_code == 422
 
 
-def test_download_filename_carries_state_suffix(
-    client: TestClient, db: Session
-) -> None:
+def test_download_filename_carries_state_suffix(client: TestClient, db: Session) -> None:
     """The Self-review handling chip's filename suffix
     (``_self`` / ``_noself`` / ``_both``) lands between the
     shape's name-slug and the ``.csv`` extension."""
@@ -551,11 +485,8 @@ def test_download_filename_carries_state_suffix(
             f"/extract-data/shapes/{created['id']}/download.csv"
         )
         assert response.status_code == 200
-        assert (
-            response.headers["content-disposition"]
-            == (
-                f'attachment; filename="dl-srh_Shape-{state}{expected_suffix}.csv"'
-            )
+        assert response.headers["content-disposition"] == (
+            f'attachment; filename="dl-srh_Shape-{state}{expected_suffix}.csv"'
         )
 
 
@@ -600,9 +531,7 @@ def test_saved_shape_renders_self_review_handling_attr_on_card(
         f"/operator/sessions/{review_session.public_id}/extract-data/shapes",
         json={**_payload(name="Excludey"), "self_review_handling": "exclude_self"},
     ).json()
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/extract-data"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
     assert f'data-shape-id="{created["id"]}"' in body
     assert 'data-shape-self-review-handling="exclude_self"' in body
 
@@ -612,9 +541,7 @@ def test_saved_shape_renders_self_review_handling_attr_on_card(
 # --------------------------------------------------------------------------- #
 
 
-def test_post_round_trips_include_empty_rows_false(
-    client: TestClient, db: Session
-) -> None:
+def test_post_round_trips_include_empty_rows_false(client: TestClient, db: Session) -> None:
     """POST with ``include_empty_rows=false`` persists +
     echoes the value."""
     review_session = _make_session(client, db, code="ier-post")
@@ -626,15 +553,11 @@ def test_post_round_trips_include_empty_rows_false(
     body = response.json()
     assert body["include_empty_rows"] is False
     db.expire_all()
-    row = db.execute(
-        select(DataShape).where(DataShape.id == body["id"])
-    ).scalar_one()
+    row = db.execute(select(DataShape).where(DataShape.id == body["id"])).scalar_one()
     assert row.include_empty_rows is False
 
 
-def test_post_defaults_include_empty_rows_to_true(
-    client: TestClient, db: Session
-) -> None:
+def test_post_defaults_include_empty_rows_to_true(client: TestClient, db: Session) -> None:
     """A payload that omits the field defaults to ``True`` ⇒
     today's behaviour preserved for chip-less clients."""
     review_session = _make_session(client, db, code="ier-default")
@@ -646,9 +569,7 @@ def test_post_defaults_include_empty_rows_to_true(
     assert response.json()["include_empty_rows"] is True
 
 
-def test_patch_can_flip_include_empty_rows(
-    client: TestClient, db: Session
-) -> None:
+def test_patch_can_flip_include_empty_rows(client: TestClient, db: Session) -> None:
     """PATCH updates the persisted state."""
     review_session = _make_session(client, db, code="ier-patch")
     created = client.post(
@@ -675,9 +596,7 @@ def test_saved_shape_renders_include_empty_rows_attr_on_card(
         f"/operator/sessions/{review_session.public_id}/extract-data/shapes",
         json={**_payload(name="Dropper"), "include_empty_rows": False},
     ).json()
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/extract-data"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
     assert f'data-shape-id="{created["id"]}"' in body
     assert 'data-shape-include-empty-rows="false"' in body
 
@@ -707,14 +626,10 @@ def test_preview_th_marks_aggregate_columns_with_data_aggregate(
             ],
         ),
     )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/extract-data"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
     # Scope the search to the saved sub-card's preview row to
     # avoid matching chip-pool entries or anything else.
-    preview_block = body.split('data-shape-id="')[1].split(
-        "data-shape-actions"
-    )[0]
+    preview_block = body.split('data-shape-id="')[1].split("data-shape-actions")[0]
     # Identity ths have no aggregate marker; aggregate ths do.
     import re
 
@@ -747,16 +662,9 @@ def test_saved_card_ships_column_aggregates_attr_parallel_to_headers(
             ],
         ),
     )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/extract-data"
-    ).text
-    assert (
-        "data-shape-column-headers='[\"Reviewer Name\", "
-        "\"Reviewer Email\", \"Assigned\"]'"
-    ) in body
-    assert (
-        "data-shape-column-aggregates='[false, false, true]'"
-    ) in body
+    body = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
+    assert ('data-shape-column-headers=\'["Reviewer Name", "Reviewer Email", "Assigned"]\'') in body
+    assert ("data-shape-column-aggregates='[false, false, true]'") in body
 
 
 # --------------------------------------------------------------------------- #
@@ -769,9 +677,7 @@ def _shaper_zip_tag(body: str) -> str:
     return body[body.rindex("<a", 0, start) : body.index(">", start) + 1]
 
 
-def test_zip_all_bundles_every_saved_shape_file(
-    client: TestClient, db: Session
-) -> None:
+def test_zip_all_bundles_every_saved_shape_file(client: TestClient, db: Session) -> None:
     """Each member is named as that shape's own Download names it,
     and nothing else ships."""
     import io
@@ -781,14 +687,16 @@ def test_zip_all_bundles_every_saved_shape_file(
 
     review_session = _make_session(client, db, code="zip-shapes")
     for name in ("First", "Second"):
-        assert client.post(
-            f"/operator/sessions/{review_session.public_id}/extract-data/shapes",
-            json=_payload(name=name),
-        ).status_code == 201
+        assert (
+            client.post(
+                f"/operator/sessions/{review_session.public_id}/extract-data/shapes",
+                json=_payload(name=name),
+            ).status_code
+            == 201
+        )
 
     response = client.get(
-        f"/operator/sessions/{review_session.public_id}"
-        "/export/data_shapes_bundle.zip"
+        f"/operator/sessions/{review_session.public_id}/export/data_shapes_bundle.zip"
     )
     assert response.status_code == 200
     assert response.headers["content-disposition"] == (
@@ -811,9 +719,7 @@ def test_zip_all_bundles_every_saved_shape_file(
     assert event.detail["counts"] == {"data_shapes": 2}
 
 
-def test_zip_all_is_greyed_until_a_shape_is_saved(
-    client: TestClient, db: Session
-) -> None:
+def test_zip_all_is_greyed_until_a_shape_is_saved(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="zip-greyed")
     page = f"/operator/sessions/{review_session.public_id}/extract-data"
     url = f"/operator/sessions/{review_session.public_id}/export/data_shapes_bundle.zip"

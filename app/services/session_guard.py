@@ -10,6 +10,7 @@ Nothing here imports another service: ``session_lifecycle`` and
 ``scheduled_events`` both build on this module, and ``LifecycleError``
 lives here so ``session_lifecycle`` can re-export it without a cycle.
 """
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -45,10 +46,7 @@ LOCK_TIMEOUT_MS = 5000
 #: Postgres's SQLSTATE for ``lock_timeout`` expiring (``lock_not_available``).
 _LOCK_NOT_AVAILABLE = "55P03"
 
-BUSY_MESSAGE = (
-    "Someone else is changing this session right now. "
-    "Try again in a moment."
-)
+BUSY_MESSAGE = "Someone else is changing this session right now. Try again in a moment."
 
 
 class SessionBusy(Exception):
@@ -62,9 +60,7 @@ class SessionBusy(Exception):
         super().__init__(BUSY_MESSAGE)
 
 
-def lock_session(
-    db: Session, session: ReviewSession, *, shared: bool = False
-) -> ReviewSession:
+def lock_session(db: Session, session: ReviewSession, *, shared: bool = False) -> ReviewSession:
     """``SELECT … FOR NO KEY UPDATE`` the session row + return it,
     refreshed from the database.
 
@@ -144,13 +140,7 @@ def require_state(
     is :func:`lock_session`'s."""
     # The two-argument call for the default lock, which every other
     # caller and its test spies use.
-    locked = (
-        lock_session(db, session, shared=True)
-        if shared
-        else lock_session(db, session)
-    )
+    locked = lock_session(db, session, shared=True) if shared else lock_session(db, session)
     if not allowed(locked):
-        raise SessionStateConflict(
-            message.format(status=locked.status), code=code
-        )
+        raise SessionStateConflict(message.format(status=locked.status), code=code)
     return locked

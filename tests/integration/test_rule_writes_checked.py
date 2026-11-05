@@ -6,6 +6,7 @@ card offered and stored a rule the engine rejects. In each case the stored
 value made the Instruments, Assignments or Validate page answer 500 until
 it was replaced. The writers now refuse the value instead.
 """
+
 from __future__ import annotations
 
 import json
@@ -75,7 +76,9 @@ def test_rules_payload_error_passes_what_the_reader_loads() -> None:
 # --- Band 1 card -----------------------------------------------------------
 
 
-def _session_with_tags(db: Session, client: TestClient, code: str) -> tuple[ReviewSession, Instrument]:
+def _session_with_tags(
+    db: Session, client: TestClient, code: str
+) -> tuple[ReviewSession, Instrument]:
     assert (
         client.post(
             "/operator/sessions", data={"name": "S", "code": code}, follow_redirects=False
@@ -233,8 +236,7 @@ def _seed_for_import(db: Session, code: str) -> tuple[User, ReviewSession]:
 def _with_cell(rows: list[Row], suffix: str, value: str) -> list[Row]:
     assert any(row.field.endswith(suffix) for row in rows), suffix
     return [
-        Row(row.field, value, row.data_type) if row.field.endswith(suffix) else row
-        for row in rows
+        Row(row.field, value, row.data_type) if row.field.endswith(suffix) else row for row in rows
     ]
 
 
@@ -324,11 +326,15 @@ def _one_rule(link: str, predicate: str) -> str:
     ("value", "message"),
     [
         (
-            _one_rule("link1", '{"field": "pair_context.tag1", "operator": "equals", "operand": "F"}'),
+            _one_rule(
+                "link1", '{"field": "pair_context.tag1", "operator": "equals", "operand": "F"}'
+            ),
             "Who does the review no longer filters",
         ),
         (
-            _one_rule("link1", '{"field": "reviewer.pair_tag1", "operator": "equals", "operand": "F"}'),
+            _one_rule(
+                "link1", '{"field": "reviewer.pair_tag1", "operator": "equals", "operand": "F"}'
+            ),
             "a person's relationship tag",
         ),
         (
@@ -356,8 +362,7 @@ def test_settings_import_refuses_a_relationship_rule_the_card_no_longer_offers(
     result = apply_session_config(db, session, rows, user=operator)
 
     assert any(
-        error.field.endswith(".rules_json") and message in error.message
-        for error in result.errors
+        error.field.endswith(".rules_json") and message in error.message for error in result.errors
     ), result.errors
 
 
@@ -383,7 +388,14 @@ def test_settings_import_refuses_group_beside_a_link2_pair_tag_filled(db: Sessio
 
 
 def _composite(link: str, children: list[dict[str, object]], **extra: object) -> dict[str, object]:
-    return {"id": link, "enabled": True, "kind": "COMPOSITE", "op": "AND", "rules": children, **extra}
+    return {
+        "id": link,
+        "enabled": True,
+        "kind": "COMPOSITE",
+        "op": "AND",
+        "rules": children,
+        **extra,
+    }
 
 
 def _child(predicate: dict[str, object], **extra: object) -> dict[str, object]:
@@ -397,7 +409,10 @@ _IS_A = {"field": "reviewee.tag1", "operator": "equals", "operand": "A", "case_s
     ("rules", "message"),
     [
         ([{**_child(_IS_A), "id": "extra"}], "not one of the card's Links"),
-        ([{**_child(_IS_A), "id": "link1"}], "is a MATCH rule; the card reads a Link only as a COMPOSITE"),
+        (
+            [{**_child(_IS_A), "id": "link1"}],
+            "is a MATCH rule; the card reads a Link only as a COMPOSITE",
+        ),
         ([_composite("link3", [_child(_IS_A)])], "not one of the card's Links"),
         ([_composite("link2", [_child(_IS_A)], enabled=False)], "is disabled"),
         ([_composite("link2", [_child(_IS_A)], op="NOT")], "'NOT'"),
@@ -472,14 +487,22 @@ def test_settings_import_keeps_both_card_links(db: Session) -> None:
     rules = [
         _composite(
             "link1",
-            [_child({"field": "reviewer.tag1", "operator": "is_not_empty", "operand": None}, id="c2")],
+            [
+                _child(
+                    {"field": "reviewer.tag1", "operator": "is_not_empty", "operand": None}, id="c2"
+                )
+            ],
         ),
         _composite(
             "link2",
             [
                 _child(_IS_A),
                 _child(
-                    {"field": "reviewee.tag2", "operator": "different_from", "operand": "reviewer.tag2"},
+                    {
+                        "field": "reviewee.tag2",
+                        "operator": "different_from",
+                        "operand": "reviewer.tag2",
+                    },
                     id="c1",
                 ),
             ],
@@ -584,9 +607,7 @@ def test_the_card_does_not_show_a_disabled_rule_the_engine_skips(
     assert [rule["operand_value"] for rule in state["link2"]["rules"]] == ["A"]
 
 
-def test_the_card_reads_a_string_false_as_the_engine_does(
-    db: Session, client: TestClient
-) -> None:
+def test_the_card_reads_a_string_false_as_the_engine_does(db: Session, client: TestClient) -> None:
     """The engine reads ``"false"`` as False (Pydantic's lax bool), so
     the card hides that Link, and a ``case_sensitive: "false"`` rule
     imports (Codex on #3237)."""
@@ -601,9 +622,7 @@ def test_the_card_reads_a_string_false_as_the_engine_does(
     assert not apply_session_config(db, session, rows, user=operator).errors
 
 
-def test_a_link_whose_rules_are_all_disabled_reads_as_all(
-    db: Session, client: TestClient
-) -> None:
+def test_a_link_whose_rules_are_all_disabled_reads_as_all(db: Session, client: TestClient) -> None:
     """The engine skips a Composite with no enabled child, so the card
     shows that Link as All, not as Filter with no rules."""
     _session, instrument = _session_with_tags(db, client, "e1-all-off")

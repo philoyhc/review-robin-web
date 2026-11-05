@@ -24,6 +24,7 @@ Revises: 2fec0f646bd2
 Create Date: 2026-05-15
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -37,9 +38,7 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     with op.batch_alter_table("users", schema=None) as batch_op:
-        batch_op.add_column(
-            sa.Column("preferences", sa.JSON(), nullable=True)
-        )
+        batch_op.add_column(sa.Column("preferences", sa.JSON(), nullable=True))
 
 
 def downgrade() -> None:

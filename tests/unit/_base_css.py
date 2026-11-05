@@ -92,9 +92,7 @@ def token_maps(css: str) -> dict[str, dict[str, str]]:
 
     return {
         theme: {
-            token: resolved
-            for token in source
-            if (resolved := resolve(token, source)) is not None
+            token: resolved for token in source if (resolved := resolve(token, source)) is not None
         }
         for theme, source in raw.items()
     }

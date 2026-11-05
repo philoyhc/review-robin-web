@@ -79,9 +79,7 @@ def test_archived_select_all_chip_stays_dark(
     engine = create_engine(live_server.database_url)
     try:
         with Session(engine) as db:
-            review_session = db.get(
-                ReviewSession, session_pk(live_server.database_url, session_id)
-            )
+            review_session = db.get(ReviewSession, session_pk(live_server.database_url, session_id))
             assert review_session is not None
             review_session.status = "archived"
             db.commit()
@@ -104,9 +102,7 @@ EXTRACT_CYCLE_CHIPS = (
 )
 
 
-def test_extract_empty_row_chips_stay_dark(
-    page: Page, new_session: Callable[[], str]
-) -> None:
+def test_extract_empty_row_chips_stay_dark(page: Page, new_session: Callable[[], str]) -> None:
     session_id = new_session()
     page.goto(app_url(f"/operator/sessions/{session_id}/extract-data"))
     # An on/off chip on the same page gives the two fills.

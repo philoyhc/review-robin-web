@@ -88,6 +88,7 @@ def settings_symmetric_review(content: bytes) -> bool | None:
     return None
     return False
 
+
 __all__ = [
     "ApplyError",
     "ApplyResult",

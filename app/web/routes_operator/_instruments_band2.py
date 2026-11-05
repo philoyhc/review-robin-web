@@ -48,9 +48,7 @@ from app.web.routes_operator._shared import (
 router = APIRouter()
 
 
-@router.post(
-    "/sessions/{session_id}/instruments/{instrument_id}/column-widths"
-)
+@router.post("/sessions/{session_id}/instruments/{instrument_id}/column-widths")
 async def instrument_column_widths(
     request: Request,
     bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
@@ -67,6 +65,7 @@ async def instrument_column_widths(
     instrument, _ = bundle
     _require_instrument_editable(instrument.session)
     body = await require_json_object(request, label="column-widths")
+
     # Everything after the request body is read runs in the threadpool:
     # the instrument services lock the session row (findings Bc4), and
     # a lock wait on the event loop would stall the worker.
@@ -77,18 +76,14 @@ async def instrument_column_widths(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="column-widths.widths must be an object",
             )
-        instruments_service.set_column_widths(
-            db, instrument=instrument, widths=widths, actor=user
-        )
+        instruments_service.set_column_widths(db, instrument=instrument, widths=widths, actor=user)
         db.commit()
         return JSONResponse({"ok": True}, status_code=status.HTTP_200_OK)
 
     return await run_in_threadpool(_apply)
 
 
-@router.post(
-    "/sessions/{session_id}/instruments/{instrument_id}/band2-state"
-)
+@router.post("/sessions/{session_id}/instruments/{instrument_id}/band2-state")
 async def instrument_band2_state(
     request: Request,
     bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
@@ -105,6 +100,7 @@ async def instrument_band2_state(
     instrument, _ = bundle
     _require_instrument_editable(instrument.session)
     body = await require_json_object(request, label="band2-state")
+
     # Segment 18K PR 4 — Band 2 chip un-pin confirm guard. The
     # operator-side JS shows a ``confirm()`` naming the field +
     # response count before flipping a chip whose backing row has
@@ -183,10 +179,7 @@ async def instrument_band2_state(
             return JSONResponse(
                 {
                     "error": "invalid_field_shape",
-                    "errors": [
-                        {"field_label": label, "message": msg}
-                        for label, msg in exc.errors
-                    ],
+                    "errors": [{"field_label": label, "message": msg} for label, msg in exc.errors],
                 },
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             )
@@ -195,9 +188,7 @@ async def instrument_band2_state(
     return await run_in_threadpool(_apply)
 
 
-@router.post(
-    "/sessions/{session_id}/instruments/{instrument_id}/preview-sample"
-)
+@router.post("/sessions/{session_id}/instruments/{instrument_id}/preview-sample")
 async def instrument_preview_sample(
     request: Request,
     bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
@@ -214,6 +205,7 @@ async def instrument_preview_sample(
     instrument, _ = bundle
     _require_instrument_editable(instrument.session)
     body = await require_json_object(request, label="preview-sample")
+
     # Everything after the request body is read runs in the threadpool:
     # the instrument services lock the session row (findings Bc4), and
     # a lock wait on the event loop would stall the worker.
@@ -221,6 +213,7 @@ async def instrument_preview_sample(
         def _str_list(v: Any) -> list[str]:
             items = json_list(v)
             return [str(x) for x in items] if items is not None else []
+
         def _rule_list(v: Any) -> list[dict[str, str]]:
             out: list[dict[str, str]] = []
             items = json_list(v)
@@ -239,6 +232,7 @@ async def instrument_preview_sample(
                     }
                 )
             return out
+
         # Live Link 3 boundary list (canonical keys like
         # ``"reviewee.tag3"``) — the operator's in-progress boundary
         # selection. Pre-Gap-10 the route silently used the persisted
@@ -246,15 +240,9 @@ async def instrument_preview_sample(
         # boundary computed against the OLD boundary. ``None`` (key
         # absent) preserves that fallback for older callers.
         raw_boundary = body.get("link3_boundary")
-        link3_boundary = (
-            _str_list(raw_boundary) if raw_boundary is not None else None
-        )
+        link3_boundary = _str_list(raw_boundary) if raw_boundary is not None else None
         raw_link3_mode = body.get("link3_mode")
-        link3_mode = (
-            raw_link3_mode
-            if raw_link3_mode in ("individual", "grouped")
-            else None
-        )
+        link3_mode = raw_link3_mode if raw_link3_mode in ("individual", "grouped") else None
         sample_pick = instruments_service.find_sample_in_scope_reviewee(
             db,
             instrument=instrument,
@@ -268,9 +256,7 @@ async def instrument_preview_sample(
             link3_mode=link3_mode,
         )
         if sample_pick is None:
-            return JSONResponse(
-                {"sample_reviewee": None}, status_code=status.HTTP_200_OK
-            )
+            return JSONResponse({"sample_reviewee": None}, status_code=status.HTTP_200_OK)
         reviewee, sample_group_member_ids = sample_pick
         # Persist the picked sample on band2_state so the choice
         # survives across page reloads (especially the transition from
@@ -310,9 +296,7 @@ async def instrument_preview_sample(
                 # survivors. Empty list for a per-reviewee instrument;
                 # render falls back to the unconstrained list there.
                 "sample_group_member_ids": (
-                    sample_group_member_ids
-                    if sample_group_member_ids is not None
-                    else []
+                    sample_group_member_ids if sample_group_member_ids is not None else []
                 ),
             },
             status_code=status.HTTP_200_OK,

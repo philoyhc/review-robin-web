@@ -1,5 +1,6 @@
 """Coverage for the Segment 18A Part 3 archiving transitions —
 ``session_lifecycle.archive_session`` / ``unarchive_session``."""
+
 from __future__ import annotations
 
 import pytest
@@ -71,11 +72,7 @@ def test_archive_from_ready_closes_every_instrument(db: Session) -> None:
     )
     db.flush()
     instruments = list(
-        db.execute(
-            select(Instrument).where(
-                Instrument.session_id == review_session.id
-            )
-        ).scalars()
+        db.execute(select(Instrument).where(Instrument.session_id == review_session.id)).scalars()
     )
     assert len(instruments) >= 2
     for instrument in instruments:
@@ -100,9 +97,7 @@ def test_archive_session_rejects_already_archived(db: Session) -> None:
     lifecycle.archive_session(db, review_session=review_session, user=op)
 
     with pytest.raises(lifecycle.LifecycleError):
-        lifecycle.archive_session(
-            db, review_session=review_session, user=op
-        )
+        lifecycle.archive_session(db, review_session=review_session, user=op)
 
 
 def test_unarchive_session_flips_archived_to_draft(db: Session) -> None:
@@ -112,18 +107,19 @@ def test_unarchive_session_flips_archived_to_draft(db: Session) -> None:
     lifecycle.unarchive_session(db, review_session=review_session, user=op)
 
     assert review_session.status == "draft"
-    assert db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "session.unarchived",
-            AuditEvent.session_id == review_session.id,
-        )
-    ).scalar_one() is not None
+    assert (
+        db.execute(
+            select(AuditEvent).where(
+                AuditEvent.event_type == "session.unarchived",
+                AuditEvent.session_id == review_session.id,
+            )
+        ).scalar_one()
+        is not None
+    )
 
 
 def test_unarchive_session_rejects_non_archived(db: Session) -> None:
     review_session, op = _draft_session(db, "unarch-draft")
 
     with pytest.raises(lifecycle.LifecycleError):
-        lifecycle.unarchive_session(
-            db, review_session=review_session, user=op
-        )
+        lifecycle.unarchive_session(db, review_session=review_session, user=op)

@@ -12,6 +12,7 @@ from the *list* on the author's measurement that a tag identifies too
 many rows to partition by here — tag *matching* (Item 7) is
 untouched.
 """
+
 from __future__ import annotations
 
 import re
@@ -35,16 +36,14 @@ def _add_lookalike(db: Session, session_id: int) -> None:
     `Ana` is a substring of both — so this row is what separates an
     exact handle match from a name match.
     """
-    reviewer = Reviewer(
-        session_id=session_id, name="Ana Lim", email="ana2@example.edu"
+    reviewer = Reviewer(session_id=session_id, name="Ana Lim", email="ana2@example.edu")
+    reviewee = (
+        db.execute(select(Reviewee).where(Reviewee.session_id == session_id)).scalars().first()
     )
-    reviewee = db.execute(
-        select(Reviewee).where(Reviewee.session_id == session_id)
-    ).scalars().first()
     assert reviewee is not None
-    instrument = db.execute(
-        select(Instrument).where(Instrument.session_id == session_id)
-    ).scalars().first()
+    instrument = (
+        db.execute(select(Instrument).where(Instrument.session_id == session_id)).scalars().first()
+    )
     assert instrument is not None
     db.add(reviewer)
     db.flush()
@@ -62,9 +61,7 @@ def _add_lookalike(db: Session, session_id: int) -> None:
 
 
 def _datalist_options(body: str) -> list[str]:
-    m = re.search(
-        r'<datalist id="assignments-search-options">(.*?)</datalist>', body, re.S
-    )
+    m = re.search(r'<datalist id="assignments-search-options">(.*?)</datalist>', body, re.S)
     if not m:
         return []
     return re.findall(r'<option value="([^"]*)"', m.group(1))
@@ -109,17 +106,11 @@ def test_a_picked_label_returns_that_person_and_not_the_lookalike(
     # now — the filter ran and excluded nothing — which makes this
     # assertion stronger: the two searches are told apart by their
     # counts rather than by presence versus absence.
-    assert (
-        _showing(by_name) == "Showing 3 assignments."
-    ), "both Anas — all three pairs"
-    assert (
-        _showing(by_pick) == "Showing 2 assignments."
-    ), "only the picked handle's pairs"
+    assert _showing(by_name) == "Showing 3 assignments.", "both Anas — all three pairs"
+    assert _showing(by_pick) == "Showing 2 assignments.", "only the picked handle's pairs"
 
 
-def test_the_service_matches_a_resolved_handle_by_equality(
-    db: Session, client: TestClient
-) -> None:
+def test_the_service_matches_a_resolved_handle_by_equality(db: Session, client: TestClient) -> None:
     """The predicate itself, given the handle the route resolves."""
     s = _seed(client, db, code="ta-svc")
     _add_lookalike(db, s.id)
@@ -147,9 +138,7 @@ def test_the_service_matches_a_resolved_handle_by_equality(
     )
 
 
-def test_a_picked_label_scopes_to_the_side(
-    db: Session, client: TestClient
-) -> None:
+def test_a_picked_label_scopes_to_the_side(db: Session, client: TestClient) -> None:
     """Ana is reviewer on both pairs and reviewee on the self-review
     row, so the scope separates 'reviews she writes' from 'reviews
     about her' — the reason the `Search by:` select stays."""
@@ -163,17 +152,11 @@ def test_a_picked_label_scopes_to_the_side(
         f"/operator/sessions/{s.public_id}/assignments?{picked}&search_by=reviewee"
     ).text
 
-    assert (
-        _showing(reviewer) == "Showing 2 assignments."
-    ), "both pairs — she reviews on each"
-    assert (
-        _showing(reviewee) == "Showing 1 assignment."
-    ), "only the self-review row"
+    assert _showing(reviewer) == "Showing 2 assignments.", "both pairs — she reviews on each"
+    assert _showing(reviewee) == "Showing 1 assignment.", "only the self-review row"
 
 
-def test_an_unpicked_term_still_matches_as_item_7_left_it(
-    db: Session, client: TestClient
-) -> None:
+def test_an_unpicked_term_still_matches_as_item_7_left_it(db: Session, client: TestClient) -> None:
     """The pick path must not swallow ordinary matching."""
     s = _seed(client, db, code="ta-plain")
 
@@ -190,27 +173,20 @@ def test_a_parenthesised_tag_value_is_not_treated_as_a_pick(
     rather than inferring from punctuation, and the tail must contain
     an `@`. A tag like `Group (B)` is neither."""
     s = _seed(client, db, code="ta-tagparen")
-    reviewer = db.execute(
-        select(Reviewer).where(Reviewer.session_id == s.id)
-    ).scalars().first()
+    reviewer = db.execute(select(Reviewer).where(Reviewer.session_id == s.id)).scalars().first()
     assert reviewer is not None
     reviewer.tag_3 = "Group (B)"
     db.commit()
 
-    assert (
-        assignments.count_pairs(db, s.id, search="Group (B)", search_by="reviewer")
-        == 2
-    ), "matched as a whole-value tag, not mistaken for a picked label"
+    assert assignments.count_pairs(db, s.id, search="Group (B)", search_by="reviewer") == 2, (
+        "matched as a whole-value tag, not mistaken for a picked label"
+    )
 
 
-def test_the_datalist_offers_both_sides_and_no_tags(
-    db: Session, client: TestClient
-) -> None:
+def test_the_datalist_offers_both_sides_and_no_tags(db: Session, client: TestClient) -> None:
     s = _seed(client, db, code="ta-list")
 
-    options = _datalist_options(client.get(
-        f"/operator/sessions/{s.public_id}/assignments"
-    ).text)
+    options = _datalist_options(client.get(f"/operator/sessions/{s.public_id}/assignments").text)
 
     assert PICKED in options, "the reviewer's label"
     assert "Ben Ord (ben@example.edu)" in options, "the reviewee's label"
@@ -220,9 +196,7 @@ def test_the_datalist_offers_both_sides_and_no_tags(
     assert "Team B" not in options
 
 
-def test_the_search_input_is_wired_to_the_datalist(
-    db: Session, client: TestClient
-) -> None:
+def test_the_search_input_is_wired_to_the_datalist(db: Session, client: TestClient) -> None:
     s = _seed(client, db, code="ta-wire")
 
     body = client.get(f"/operator/sessions/{s.public_id}/assignments").text
@@ -231,9 +205,7 @@ def test_the_search_input_is_wired_to_the_datalist(
     assert '<datalist id="assignments-search-options">' in body
 
 
-def test_the_page_renders_the_pick(
-    db: Session, client: TestClient
-) -> None:
+def test_the_page_renders_the_pick(db: Session, client: TestClient) -> None:
     """End to end, where the operator meets it."""
     s = _seed(client, db, code="ta-page")
     _add_lookalike(db, s.id)

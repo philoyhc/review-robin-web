@@ -12,6 +12,7 @@ Revises: f3a7c1e9d5b2
 Create Date: 2026-10-18
 
 """
+
 import secrets
 from collections.abc import Sequence
 
@@ -41,9 +42,7 @@ def upgrade() -> None:
         while value in used:
             value = "".join(secrets.choice(_ALPHABET) for _ in range(_LENGTH))
         used.add(value)
-        conn.execute(
-            sessions.update().where(sessions.c.id == session_id).values(public_id=value)
-        )
+        conn.execute(sessions.update().where(sessions.c.id == session_id).values(public_id=value))
 
     with op.batch_alter_table("sessions") as batch:
         batch.alter_column("public_id", existing_type=sa.String(length=16), nullable=False)

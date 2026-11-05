@@ -59,12 +59,16 @@ def _show_one_empty_help_text(database_url: str, session_id: str) -> None:
     engine = create_engine(database_url)
     try:
         with Session(engine) as db:
-            fields = db.execute(
-                select(InstrumentResponseField)
-                .join(Instrument, Instrument.id == InstrumentResponseField.instrument_id)
-                .where(Instrument.session_id == session_pk(database_url, session_id))
-                .order_by(InstrumentResponseField.order)
-            ).scalars().all()
+            fields = (
+                db.execute(
+                    select(InstrumentResponseField)
+                    .join(Instrument, Instrument.id == InstrumentResponseField.instrument_id)
+                    .where(Instrument.session_id == session_pk(database_url, session_id))
+                    .order_by(InstrumentResponseField.order)
+                )
+                .scalars()
+                .all()
+            )
             for field in fields:
                 field.help_text_visible = False
             fields[0].help_text = ""
@@ -146,9 +150,7 @@ def test_the_chip_moves_the_help_rows_and_saves(
     card = open_unlocked(page, session_id)
     chip = card.locator("[data-intro-layout-chip]")
     expect(chip).to_have_text("Layout 1")
-    first_help = card.locator(
-        "[data-new-model-band2-intro-card] [data-help-card-textarea]"
-    ).first
+    first_help = card.locator("[data-new-model-band2-intro-card] [data-help-card-textarea]").first
     expect(first_help).to_be_visible()
 
     boxes = _boxes(card)
@@ -274,9 +276,7 @@ def test_a_locked_untitled_preview_draws_the_heading_card_for_its_rows(
     page.set_viewport_size({"width": 1400, "height": 1000})
     card = open_card(page, session_id)
     expect(card).to_have_attribute("data-instrument-locked", "true")
-    expect(
-        card.locator("[data-new-model-band2-intro-card] .rs-help-row").first
-    ).to_be_visible()
+    expect(card.locator("[data-new-model-band2-intro-card] .rs-help-row").first).to_be_visible()
     boxes = _boxes(card)
     assert boxes["rowHome"] == "heading", boxes
     assert boxes["heading"]["y"] == boxes["visibility"]["y"], boxes
@@ -402,9 +402,7 @@ def test_a_row_with_no_help_text_shows_only_while_unlocked(
 
     card.locator("[data-instrument-unlock-toggle]:visible").first.click()
     expect(card).to_have_attribute("data-instrument-locked", "false")
-    textarea = card.locator(
-        "[data-new-model-band2-intro-card] [data-help-card-textarea]"
-    )
+    textarea = card.locator("[data-new-model-band2-intro-card] [data-help-card-textarea]")
     expect(textarea).to_have_count(1)
     expect(textarea).to_have_attribute("aria-label", re.compile(r"^Help text for \S"))
 

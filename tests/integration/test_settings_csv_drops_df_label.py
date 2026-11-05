@@ -13,6 +13,7 @@ Pins:
 Sibling to ``tests/integration/test_field_labels_resolver.py``
 which covers the resolver chain itself.
 """
+
 from __future__ import annotations
 
 from sqlalchemy import select
@@ -35,9 +36,7 @@ def _make_session(db: Session, code: str) -> tuple[ReviewSession, User]:
     op = User(email=f"op-{code}@example.edu", display_name="Op")
     db.add(op)
     db.flush()
-    review_session = ReviewSession(
-        name=code.title(), code=code, created_by_user_id=op.id
-    )
+    review_session = ReviewSession(name=code.title(), code=code, created_by_user_id=op.id)
     db.add(review_session)
     db.flush()
     return review_session, op
@@ -47,9 +46,7 @@ def _make_session_with_df(
     db: Session, code: str, *, df_label: str = ""
 ) -> tuple[ReviewSession, User, Instrument, InstrumentDisplayField]:
     review_session, op = _make_session(db, code)
-    instrument = Instrument(
-        session_id=review_session.id, name="Survey", order=0
-    )
+    instrument = Instrument(session_id=review_session.id, name="Survey", order=0)
     db.add(instrument)
     db.flush()
     df = InstrumentDisplayField(
@@ -69,9 +66,7 @@ def test_serialize_does_not_emit_display_field_label(db: Session) -> None:
     """A display field with a per-instrument label round-trips
     *without* the ``.label`` row. Source / visible rows continue
     to round-trip as before."""
-    review_session, _, _, _ = _make_session_with_df(
-        db, "csv-df-noemit", df_label="legacy override"
-    )
+    review_session, _, _, _ = _make_session_with_df(db, "csv-df-noemit", df_label="legacy override")
     rows = serialize_session_config(db, review_session)
     keys = {row.field for row in rows}
     assert "instruments[1].display_fields[1].source_type" in keys
@@ -87,9 +82,7 @@ def test_apply_tolerates_legacy_display_field_label_row(
     imports cleanly — no parse error, no apply error. The value
     is silently dropped: the DB column stays at its current
     value (here, the empty seed)."""
-    review_session, _, instrument, df = _make_session_with_df(
-        db, "csv-df-legacy", df_label=""
-    )
+    review_session, _, instrument, df = _make_session_with_df(db, "csv-df-legacy", df_label="")
     # Build a minimal Settings CSV containing only the rows
     # apply_session_config needs to recognise the display field
     # plus a legacy .label row.
@@ -159,9 +152,7 @@ def test_apply_silently_ignores_field_labels_rows(
     result = apply_session_config(db, review_session, rows)
     assert result.errors == []
     stored = (
-        db.query(SessionFieldLabel)
-        .filter(SessionFieldLabel.session_id == review_session.id)
-        .all()
+        db.query(SessionFieldLabel).filter(SessionFieldLabel.session_id == review_session.id).all()
     )
     assert stored == []
 

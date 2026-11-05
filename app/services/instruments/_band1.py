@@ -162,9 +162,7 @@ def set_band1_assignment_rules(
     if rule_set is None:
         if not rules_json:
             return instrument
-        rule_set = _create_band1_rule_set(
-            db, instrument=instrument, rules_json=rules_json
-        )
+        rule_set = _create_band1_rule_set(db, instrument=instrument, rules_json=rules_json)
         instrument.rule_set_id = rule_set.id
         db.flush()
         lifecycle.invalidate_if_validated(
@@ -229,10 +227,7 @@ def set_band1_assignment_rules(
     audit.write_event(
         db,
         event_type="session_rule_set.updated",
-        summary=(
-            f"Updated Band 1 rules on new-model instrument "
-            f"{_instrument_label(instrument)}"
-        ),
+        summary=(f"Updated Band 1 rules on new-model instrument {_instrument_label(instrument)}"),
         actor_user_id=actor.id,
         session=instrument.session,
         payload=audit.changes(
@@ -263,9 +258,7 @@ def _shown_composites(
         link_id = entry.get("id")
         if link_id not in ("link1", "link2"):
             continue
-        enabled = [
-            child for child in entry.get("rules", []) if _flag(child, "enabled", True)
-        ]
+        enabled = [child for child in entry.get("rules", []) if _flag(child, "enabled", True)]
         if _flag(entry, "enabled", True) and enabled:
             shown.append((link_id, entry, enabled))
     return shown
@@ -306,9 +299,7 @@ def decode_band1_state(instrument: Instrument, db: Session) -> dict[str, Any]:
         op = entry.get("op", "AND")
         target["combinator"] = "OR" if op == "OR" else "AND"
         target["rules"] = [
-            _decode_match_rule(child)
-            for child in enabled
-            if child.get("kind") == "MATCH"
+            _decode_match_rule(child) for child in enabled if child.get("kind") == "MATCH"
         ]
     return state
 
@@ -342,9 +333,7 @@ def parse_exclude_self_reviews_form(form: Any) -> bool:
     return str(form.get("exclude_self_reviews") or "").strip() == "true"
 
 
-def clear_unsettled_exclude_self_reviews(
-    db: Session, review_session: Any
-) -> int:
+def clear_unsettled_exclude_self_reviews(db: Session, review_session: Any) -> int:
     """Clear ``exclude_self_reviews`` on every instrument in the
     session whose Band 1 has an unset Link. Returns the count cleared.
 
@@ -370,9 +359,7 @@ def clear_unsettled_exclude_self_reviews(
 
     cleared = 0
     rows = db.execute(
-        sa_select(_Instrument).where(
-            _Instrument.session_id == review_session.id
-        )
+        sa_select(_Instrument).where(_Instrument.session_id == review_session.id)
     ).scalars()
     for instrument in rows:
         if instrument.rule_set_id is None:
@@ -434,9 +421,7 @@ def resolve_exclude_self_reviews(
     touched = set(instrument.band1_touched_links or [])
     if not {"link1", "link2", "link3"} <= touched:
         return False
-    moved_to_group = (
-        previous_group_kind is None and instrument.group_kind is not None
-    )
+    moved_to_group = previous_group_kind is None and instrument.group_kind is not None
     if moved_to_group:
         return False
     return form_value
@@ -495,9 +480,7 @@ def set_exclude_self_reviews(
     if instrument.rule_set_id is None:
         if not value:
             return instrument
-        rule_set = _create_band1_rule_set(
-            db, instrument=instrument, rules_json=[]
-        )
+        rule_set = _create_band1_rule_set(db, instrument=instrument, rules_json=[])
         instrument.rule_set_id = rule_set.id
         db.flush()
         # ``_create_band1_rule_set`` writes no audit event of its own —
@@ -587,7 +570,7 @@ def parse_link3_form(
             continue
         if not slot.startswith("tag"):
             continue
-        tag_num = slot[len("tag"):]
+        tag_num = slot[len("tag") :]
         if tag_num not in ("1", "2", "3"):
             continue
         # Stored as ``encode_group_kind`` keys them: a reviewee slot is
@@ -731,9 +714,7 @@ def unoffered_pair_rule(rules_json: list[Any]) -> str | None:
             operand = predicate.get("operand")
             if predicate.get("operator") not in _TAG_OPERAND_OPS or not isinstance(operand, str):
                 operand = ""
-            if field.startswith(_PERSON_PAIR_PREFIXES) or operand.startswith(
-                _PERSON_PAIR_PREFIXES
-            ):
+            if field.startswith(_PERSON_PAIR_PREFIXES) or operand.startswith(_PERSON_PAIR_PREFIXES):
                 return (
                     "A rule reads a person's relationship tag, which the "
                     "card no longer offers. Remove that rule; a relationship "
@@ -745,9 +726,8 @@ def unoffered_pair_rule(rules_json: list[Any]) -> str | None:
                     "tag. Remove that rule; a relationship tag filters pairs "
                     "in Who is being reviewed."
                 )
-            if (
-                predicate.get("operator") in _TAG_OPERAND_OPS
-                and (field.startswith(_PAIR_PREFIX) or operand.startswith(_PAIR_PREFIX))
+            if predicate.get("operator") in _TAG_OPERAND_OPS and (
+                field.startswith(_PAIR_PREFIX) or operand.startswith(_PAIR_PREFIX)
             ):
                 return (
                     "A relationship tag can't be compared with IS THE SAME AS "
@@ -812,7 +792,9 @@ def unrepresented_rule(rules_json: list[Any]) -> str | None:
                     "the card shows only MATCH rules, and its next Save drops it."
                 )
             if not _flag(child, "enabled", True):
-                return f"{link} holds a disabled rule ({child_id!r}); the card has no disabled rule."
+                return (
+                    f"{link} holds a disabled rule ({child_id!r}); the card has no disabled rule."
+                )
             predicate: dict[str, Any] = child.get("predicate") or {}
             operator = predicate.get("operator")
             offered = _CARD_LINK_OPS[rule_id]
@@ -857,9 +839,7 @@ def keeps_pairs_by_pair_tag(rules_json: list[dict[str, Any]]) -> bool:
     return False
 
 
-def _build_match_rule(
-    rule_dict: dict[str, str], link_id: str, idx: int
-) -> dict[str, Any] | None:
+def _build_match_rule(rule_dict: dict[str, str], link_id: str, idx: int) -> dict[str, Any] | None:
     ui_op = rule_dict.get("op", "").strip()
     engine_op = _UI_TO_ENGINE_OP.get(ui_op)
     if engine_op is None:
@@ -927,10 +907,7 @@ def _create_band1_rule_set(
     rule_set = SessionRuleSet(
         session_id=instrument.session_id,
         name=name,
-        description=(
-            f"Auto-managed by Band 1 of new-model instrument "
-            f"#{instrument.id}."
-        ),
+        description=(f"Auto-managed by Band 1 of new-model instrument #{instrument.id}."),
         combinator="ALL_OF",
         # Default off, explicitly: a new instrument generates
         # self-review pairs, and the per-instrument "Self review"
@@ -959,9 +936,7 @@ def _band1_rule_set_name(db: Session, instrument: Instrument) -> str:
     base = f"New-model instrument #{instrument.id} Band 1"
     candidate = base
     suffix = 2
-    while _name_exists_in_session(
-        db, session_id=instrument.session_id, name=candidate
-    ):
+    while _name_exists_in_session(db, session_id=instrument.session_id, name=candidate):
         candidate = f"{base} ({suffix})"
         suffix += 1
     return candidate
@@ -991,9 +966,7 @@ def _form_combinator(form: Any, key: str) -> str:
 def _form_rules(form: Any, link_prefix: str) -> list[dict[str, str]]:
     fields = [str(v) for v in form.getlist(f"{link_prefix}_field")]
     ops = [str(v) for v in form.getlist(f"{link_prefix}_op")]
-    operand_values = [
-        str(v) for v in form.getlist(f"{link_prefix}_operand_value")
-    ]
+    operand_values = [str(v) for v in form.getlist(f"{link_prefix}_operand_value")]
     operand_tags = [str(v) for v in form.getlist(f"{link_prefix}_operand_tag")]
     # When a link's tag_options is empty (no tags configured for that
     # side), the ``<select name="{link}_field">`` renders with zero

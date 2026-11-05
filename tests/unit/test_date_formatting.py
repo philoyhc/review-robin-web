@@ -32,9 +32,7 @@ def test_format_datetime_naive_assumed_utc() -> None:
 
 def test_format_datetime_aware_non_utc_converted() -> None:
     # +08:00 17:00 is 09:00 UTC — the helper normalises before format.
-    value = datetime(
-        2026, 5, 15, 17, 0, tzinfo=timezone(timedelta(hours=8))
-    )
+    value = datetime(2026, 5, 15, 17, 0, tzinfo=timezone(timedelta(hours=8)))
     assert format_datetime(value) == "2026-05-15 09:00"
 
 
@@ -53,9 +51,7 @@ def test_format_date_from_datetime_drops_time() -> None:
 
 def test_format_date_from_datetime_uses_utc_date() -> None:
     # 01:00 at +08:00 is the previous day in UTC.
-    value = datetime(
-        2026, 5, 15, 1, 0, tzinfo=timezone(timedelta(hours=8))
-    )
+    value = datetime(2026, 5, 15, 1, 0, tzinfo=timezone(timedelta(hours=8)))
     assert format_date(value) == "2026-05-14"
 
 
@@ -142,14 +138,8 @@ def test_gmt_offset_label_utc_and_none() -> None:
 
 
 def test_gmt_offset_zone_label_offset_plus_iana() -> None:
-    assert (
-        date_formatting.gmt_offset_zone_label("Asia/Singapore")
-        == "GMT+8 Asia/Singapore"
-    )
-    assert (
-        date_formatting.gmt_offset_zone_label("Asia/Kolkata")
-        == "GMT+5:30 Asia/Kolkata"
-    )
+    assert date_formatting.gmt_offset_zone_label("Asia/Singapore") == "GMT+8 Asia/Singapore"
+    assert date_formatting.gmt_offset_zone_label("Asia/Kolkata") == "GMT+5:30 Asia/Kolkata"
 
 
 def test_gmt_offset_zone_label_dedupes_bare_utc() -> None:
@@ -168,9 +158,7 @@ def test_parse_local_datetime_converts_zone_wall_clock_to_utc() -> None:
 
 
 def test_parse_local_datetime_utc_is_identity() -> None:
-    assert parse_local_datetime("2026-06-02T17:00", "UTC") == datetime(
-        2026, 6, 2, 17, 0
-    )
+    assert parse_local_datetime("2026-06-02T17:00", "UTC") == datetime(2026, 6, 2, 17, 0)
 
 
 def test_parse_local_datetime_rejects_unparseable_string() -> None:
@@ -215,8 +203,15 @@ def test_box_text_reads_either_separator_alike(submitted, expected) -> None:
 
 @pytest.mark.parametrize(
     "text",
-    ["2027-04-02", "2027-04-02 11:15:30", "2027-04-02 11", "2027-04-02T11:15+09:00",
-     "2027-04-02T11:15:00.5", "tomorrow", ""],
+    [
+        "2027-04-02",
+        "2027-04-02 11:15:30",
+        "2027-04-02 11",
+        "2027-04-02T11:15+09:00",
+        "2027-04-02T11:15:00.5",
+        "tomorrow",
+        "",
+    ],
 )
 def test_parse_local_datetime_refuses_any_other_shape(text) -> None:
     """The box is free text (19X Item 6): only `YYYY-MM-DD HH:MM`, with a

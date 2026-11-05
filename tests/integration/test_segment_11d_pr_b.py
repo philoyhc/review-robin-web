@@ -9,25 +9,19 @@ from sqlalchemy.orm import Session
 from app.db.models import ReviewSession
 
 
-def _create_session(
-    client: TestClient, db: Session, *, code: str = "rrw-pr-b"
-) -> ReviewSession:
+def _create_session(client: TestClient, db: Session, *, code: str = "rrw-pr-b") -> ReviewSession:
     client.post(
         "/operator/sessions",
         data={"name": code.title(), "code": code},
         follow_redirects=False,
     )
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 # ── Sessions list lobby (D4) ────────────────────────────────────────────
 
 
-def test_sessions_list_renders_v2_table_inside_a_card(
-    client: TestClient, db: Session
-) -> None:
+def test_sessions_list_renders_v2_table_inside_a_card(client: TestClient, db: Session) -> None:
     session = _create_session(client, db)
     body = client.get("/operator/sessions").text
     # Body class flips onto v2.
@@ -35,26 +29,27 @@ def test_sessions_list_renders_v2_table_inside_a_card(
     # Lobby is a v2 <table> inside a single .card wrapper (revisits the
     # original D4 cards-vs-table decision).
     assert "<table>" in body
-    assert "class=\"card session-card\"" not in body
+    assert 'class="card session-card"' not in body
     # The session name is the row's primary anchor into Session Home —
     # there's no separate Access button.
-    assert (
-        f'<a href="/operator/sessions/{session.public_id}">{session.name}</a>'
-    ) in body
+    assert (f'<a href="/operator/sessions/{session.public_id}">{session.name}</a>') in body
     assert ">Access</a>" not in body
 
 
-def test_sessions_list_columns_match_spec(
-    client: TestClient, db: Session
-) -> None:
+def test_sessions_list_columns_match_spec(client: TestClient, db: Session) -> None:
     """Sortable columns — Session Name / Session Code / Created by /
     Created / Deadline / Timezone / Status — plus the Tags column and
     the trailing select column. The Last Modified column is dropped."""
     _create_session(client, db, code="rrw-cols")
     body = client.get("/operator/sessions").text
     for sort_key in (
-        "name", "code", "created_by", "created", "deadline",
-        "timezone", "status",
+        "name",
+        "code",
+        "created_by",
+        "created",
+        "deadline",
+        "timezone",
+        "status",
     ):
         assert f'data-sort-key="{sort_key}"' in body
     assert "<th>Tags</th>" in body
@@ -64,9 +59,7 @@ def test_sessions_list_columns_match_spec(
     assert 'class="sessions-list-select-all"' in body
 
 
-def test_sessions_list_deadline_renders_as_pill_when_set(
-    client: TestClient, db: Session
-) -> None:
+def test_sessions_list_deadline_renders_as_pill_when_set(client: TestClient, db: Session) -> None:
     """Deadline values render as `.pill.pill-info` (a salient stand-out
     cell, vs the plain "No deadline" text used when unset)."""
     # Create with no deadline first — assert the empty-state copy.
@@ -171,9 +164,7 @@ def test_session_edit_renders_status_row_with_lifecycle_pill(
     assert f'class="pill pill-lifecycle-{session.status}"' in body
 
 
-def test_session_edit_form_lives_inside_a_card(
-    client: TestClient, db: Session
-) -> None:
+def test_session_edit_form_lives_inside_a_card(client: TestClient, db: Session) -> None:
     session = _create_session(client, db, code="rrw-edit3")
     body = client.get(f"/operator/sessions/{session.public_id}?editing=1").text
     # The config card carries the `session-config` id and its own form
@@ -189,21 +180,15 @@ def test_session_edit_form_lives_inside_a_card(
     assert f'form="config-save-{session.id}"' in body
 
 
-def test_session_edit_has_back_link_to_session_home(
-    client: TestClient, db: Session
-) -> None:
+def test_session_edit_has_back_link_to_session_home(client: TestClient, db: Session) -> None:
     """The config card lives on Session Home; its Cancel / Lock controls
     return to Home display mode (dropping the ?editing param)."""
     session = _create_session(client, db, code="rrw-edit-back")
     body = client.get(f"/operator/sessions/{session.public_id}?editing=1").text
-    assert (
-        f'href="/operator/sessions/{session.public_id}#session-config"' in body
-    )
+    assert f'href="/operator/sessions/{session.public_id}#session-config"' in body
 
 
-def test_session_edit_save_redirects_back_to_edit(
-    client: TestClient, db: Session
-) -> None:
+def test_session_edit_save_redirects_back_to_edit(client: TestClient, db: Session) -> None:
     """Save on the config card redirects back to Session Home with the
     card still unlocked; Lock, not Save, locks it (19U Item 4)."""
     session = _create_session(client, db, code="rrw-edit-stay")
@@ -217,9 +202,7 @@ def test_session_edit_save_redirects_back_to_edit(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    assert response.headers["location"] == (
-        f"/operator/sessions/{session.public_id}?editing=1"
-    )
+    assert response.headers["location"] == (f"/operator/sessions/{session.public_id}?editing=1")
 
 
 def test_session_owners_card_is_half_width_above_the_danger_zone(

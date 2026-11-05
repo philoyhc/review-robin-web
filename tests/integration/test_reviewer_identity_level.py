@@ -138,9 +138,7 @@ def test_the_raw_identity_cell_follows_the_level(
     email: bool,
     link: bool,
 ) -> None:
-    body = _results(
-        db, alice, carol, make_client, code=f"rid-{level or 'unset'}", level=level
-    )
+    body = _results(db, alice, carol, make_client, code=f"rid-{level or 'unset'}", level=level)
     assert "<strong>Rae</strong>" in body
     assert ("rae@example.edu" in body) is email
     assert (f'href="{LINK}"' in body) is link
@@ -197,9 +195,7 @@ def _download(
     policy.after_release_identification = identification
     policy.after_release_reviewer_identity = level
     review_session.status = "expired"
-    review_session.responses_release_at = datetime.now(UTC) - timedelta(
-        hours=1
-    )
+    review_session.responses_release_at = datetime.now(UTC) - timedelta(hours=1)
     db.commit()
     _add_observer(db, review_session, email="alice@example.edu", cohort_rule=_MATH_RULE)
     response = client.get(
@@ -212,9 +208,7 @@ def _download(
     return rows[start:]
 
 
-def test_name_only_blanks_the_email_and_the_reviewer_tags(
-    client: TestClient, db: Session
-) -> None:
+def test_name_only_blanks_the_email_and_the_reviewer_tags(client: TestClient, db: Session) -> None:
     header, row = _download(client, db, code="rid-csv-name", level="name")
     assert header[:2] == ["ReviewerName", "ReviewerEmail"]
     assert "ReviewerProfileLink" not in header
@@ -264,9 +258,7 @@ def test_name_only_does_not_sort_namesakes_by_their_hidden_emails(
         client, db, code="rid-csv-twin-shown", level="name_email", extra=_a_namesake
     )
     assert [row[1] for row in shown] == ["aaa@x", "rev@x"]
-    _, *hidden = _download(
-        client, db, code="rid-csv-twin-hidden", level="name", extra=_a_namesake
-    )
+    _, *hidden = _download(client, db, code="rid-csv-twin-hidden", level="name", extra=_a_namesake)
     rating = shown[0].index("9")
     assert [row[rating] for row in hidden] == ["4", "9"]
 
@@ -308,16 +300,17 @@ def test_name_only_blanks_a_self_reviews_reviewee_identity_too(
     """Findings R8: on a self-review row the reviewee is the reviewer, so
     at the `name` level its email and tags would name the reviewer the
     level hides. They are blanked there; another row's reviewee stays."""
-    header, *rows = _download(
-        client, db, code="rid-csv-self", level="name", extra=_a_self_review
-    )
+    header, *rows = _download(client, db, code="rid-csv-self", level="name", extra=_a_self_review)
     flag = header.index("SelfReview")
     self_row = next(row for row in rows if row[flag] == "TRUE")
     assert self_row[:10] == ["Rev", "", "", "", "", "Rev", "", "", "", ""]
     other = next(row for row in rows if row[flag] == "FALSE")
     assert other[5:8] == ["Ree", "ree@x", "mathcohort"]
     _, *shown = _download(
-        client, db, code="rid-csv-self-shown", level="name_email",
+        client,
+        db,
+        code="rid-csv-self-shown",
+        level="name_email",
         extra=_a_self_review,
     )
     assert ["Rev", "rev@x", "mathcohort"] in [row[5:8] for row in shown]
@@ -327,27 +320,19 @@ def test_name_only_blanks_a_self_reviews_reviewee_identity_too(
 def test_name_and_email_is_raw_as_it_was(
     client: TestClient, db: Session, level: str | None
 ) -> None:
-    header, row = _download(
-        client, db, code=f"rid-csv-{level or 'unset'}", level=level
-    )
+    header, row = _download(client, db, code=f"rid-csv-{level or 'unset'}", level=level)
     assert "ReviewerProfileLink" not in header
     assert row[:3] == ["Rev", "rev@x", "mathcohort"]
 
 
-def test_the_profile_level_adds_a_column_after_the_email(
-    client: TestClient, db: Session
-) -> None:
-    header, row = _download(
-        client, db, code="rid-csv-profile", level="name_email_profile"
-    )
+def test_the_profile_level_adds_a_column_after_the_email(client: TestClient, db: Session) -> None:
+    header, row = _download(client, db, code="rid-csv-profile", level="name_email_profile")
     assert header[:3] == ["ReviewerName", "ReviewerEmail", "ReviewerProfileLink"]
     assert row[:4] == ["Rev", "rev@x", LINK, "mathcohort"]
     assert len(row) == len(header)
 
 
-def test_an_anonymized_download_ignores_the_level(
-    client: TestClient, db: Session
-) -> None:
+def test_an_anonymized_download_ignores_the_level(client: TestClient, db: Session) -> None:
     header, row = _download(
         client,
         db,
@@ -375,9 +360,11 @@ def _session_with_policy(
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.code == code)
     ).scalar_one()
-    instrument = db.execute(
-        select(Instrument).where(Instrument.session_id == review_session.id)
-    ).scalars().first()
+    instrument = (
+        db.execute(select(Instrument).where(Instrument.session_id == review_session.id))
+        .scalars()
+        .first()
+    )
     assert instrument is not None
     client.post(
         f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}/fields/save",
@@ -390,9 +377,7 @@ def _session_with_policy(
     return review_session, instrument, policy
 
 
-def test_the_cards_save_keeps_a_stored_level(
-    client: TestClient, db: Session
-) -> None:
+def test_the_cards_save_keeps_a_stored_level(client: TestClient, db: Session) -> None:
     review_session, instrument, policy = _session_with_policy(client, db, "rid-keep")
     client.post(
         f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}/fields/save",
@@ -426,13 +411,11 @@ def test_duplicate_carries_the_level(client: TestClient, db: Session) -> None:
     from app.services import session_clone
 
     review_session, _, _ = _session_with_policy(client, db, "rid-dup")
-    clone = session_clone.clone_session(
-        db, source=review_session, user=_actor(db), mode="all"
-    )
+    clone = session_clone.clone_session(db, source=review_session, user=_actor(db), mode="all")
     db.commit()
-    [copied_instrument] = db.execute(
-        select(Instrument).where(Instrument.session_id == clone.id)
-    ).scalars().all()
+    [copied_instrument] = (
+        db.execute(select(Instrument).where(Instrument.session_id == clone.id)).scalars().all()
+    )
     copied = vp.list_for_instrument(db, copied_instrument.id)["reviewee"]
     assert copied.after_release_reviewer_identity == "name"
 

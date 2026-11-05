@@ -33,6 +33,7 @@ Revises: f6183d235e59
 Create Date: 2026-05-09
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -50,9 +51,7 @@ def upgrade() -> None:
     # a second batch — same shape as 8b3c1d4e5f7a (10D Slice 4a) and
     # f6183d235e59 (13D PR 3).
     with op.batch_alter_table("instruments") as batch:
-        batch.add_column(
-            sa.Column("rule_set_id", sa.Integer(), nullable=True)
-        )
+        batch.add_column(sa.Column("rule_set_id", sa.Integer(), nullable=True))
     with op.batch_alter_table("instruments") as batch:
         batch.create_foreign_key(
             "fk_instruments_rule_set_id",

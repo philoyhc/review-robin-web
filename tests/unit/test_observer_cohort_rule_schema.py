@@ -45,9 +45,7 @@ def test_ruleset_round_trip() -> None:
 
 
 def test_or_combinator_validates() -> None:
-    rs = CohortRuleSet.model_validate(
-        {"combinator": "OR", "rules": []}
-    )
+    rs = CohortRuleSet.model_validate({"combinator": "OR", "rules": []})
     assert rs.combinator == CohortCombinator.OR
 
 
@@ -76,9 +74,7 @@ def test_unknown_operator_rejected() -> None:
 
 
 def test_field_operator_requires_operand_tag() -> None:
-    with pytest.raises(
-        ValidationError, match="requires operand_tag"
-    ):
+    with pytest.raises(ValidationError, match="requires operand_tag"):
         CohortRule.model_validate(
             {
                 "field": "reviewer.tag1",

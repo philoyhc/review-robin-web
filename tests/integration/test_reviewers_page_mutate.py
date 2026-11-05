@@ -6,6 +6,7 @@ the create / update / bulk POST routes, validation-error
 re-rendering, and the defensive ``invitations_send_one`` status
 guard folded in from PR 6.
 """
+
 from __future__ import annotations
 
 import re
@@ -61,7 +62,8 @@ def _landing_script(body: str) -> str:
     m = re.search(
         r"<script>(?:(?!</script>).)*?"
         r'querySelector\(".reviewer-edit-row"\).*?</script>',
-        body, re.S,
+        body,
+        re.S,
     )
     assert m, "the edit-row landing script is not served"
     return m.group(0)
@@ -78,9 +80,7 @@ def test_plain_render_has_checkbox_column_and_action_buttons(
     review_session = _make_session(client, db, code="rev-m-plain")
     _seed(db, review_session.id, ["Alice", "Bob"])
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
     # Per-row select checkboxes + select-all.
     assert 'class="reviewer-select"' in body
     assert 'id="reviewers-select-all"' in body
@@ -93,7 +93,7 @@ def test_plain_render_has_checkbox_column_and_action_buttons(
     # shell's own `action`, so asserting it against the whole response
     # passes with the expander's status-action loop deleted outright.
     start = body.index('tr.id = "reviewers-row-expander"')
-    build = body[start:body.index("td.innerHTML = html;", start)]
+    build = body[start : body.index("td.innerHTML = html;", start)]
     for route in ("/bulk-inactivate", "/bulk-reactivate", "/bulk-delete"):
         assert route in build, f"the expander cannot reach {route}"
     assert "?add=1" in body  # Add new row link
@@ -106,24 +106,19 @@ def test_plain_render_has_checkbox_column_and_action_buttons(
 # --------------------------------------------------------------------------- #
 
 
-def test_edit_id_renders_target_row_as_inputs(
-    db: Session, client: TestClient
-) -> None:
+def test_edit_id_renders_target_row_as_inputs(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rev-m-editget")
     rows = _seed(db, review_session.id, ["Alice", "Bob"])
 
     body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-        f"?edit_id={rows[0].id}"
+        f"/operator/sessions/{review_session.public_id}/reviewers?edit_id={rows[0].id}"
     ).text
     assert "reviewer-edit-row" in body
     assert 'id="reviewer-edit-form"' in body
     # Focused Edit card with Save + Cancel.
     # No editor card: the row is the editor, and its controls hang in
     # the bar directly beneath it.
-    assert 'class="card row-editor-anchored"' not in body, (
-        "the editor card is back"
-    )
+    assert 'class="card row-editor-anchored"' not in body, "the editor card is back"
     assert "row-editor-bar" in body
     assert ">Save</button>" in body
     assert ">Cancel</a>" in body
@@ -164,9 +159,7 @@ def test_edit_id_renders_target_row_as_inputs(
     )
 
 
-def test_edit_post_updates_row_and_redirects(
-    db: Session, client: TestClient
-) -> None:
+def test_edit_post_updates_row_and_redirects(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rev-m-editpost")
     rows = _seed(db, review_session.id, ["Alice"])
 
@@ -184,17 +177,13 @@ def test_edit_post_updates_row_and_redirects(
     )
     assert response.status_code == 303
     db.expire_all()
-    reviewer = db.execute(
-        select(Reviewer).where(Reviewer.id == rows[0].id)
-    ).scalar_one()
+    reviewer = db.execute(select(Reviewer).where(Reviewer.id == rows[0].id)).scalar_one()
     assert reviewer.name == "Alice Renamed"
     assert reviewer.tag_1 == "Mentor"
     assert reviewer.status == "inactive"
 
 
-def test_edit_post_validation_error_rerenders_with_values(
-    db: Session, client: TestClient
-) -> None:
+def test_edit_post_validation_error_rerenders_with_values(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rev-m-editerr")
     rows = _seed(db, review_session.id, ["Alice", "Bob"])
 
@@ -220,39 +209,28 @@ def test_edit_post_validation_error_rerenders_with_values(
     # and `row-editor-error` acquired its own rule in that same
     # stylesheet the moment the message was styled, which would have
     # reproduced the vacuity exactly. Same trap `_markup()` exists for.
-    assert '<span class="row-editor-error">' in response.text, (
-        "no save error rendered"
-    )
+    assert '<span class="row-editor-error">' in response.text, "no save error rendered"
     assert 'value="alice@example.edu"' in response.text
     # The DB row is untouched.
     db.expire_all()
-    bob = db.execute(
-        select(Reviewer).where(Reviewer.id == rows[1].id)
-    ).scalar_one()
+    bob = db.execute(select(Reviewer).where(Reviewer.id == rows[1].id)).scalar_one()
     assert bob.email == "bob@example.edu"
 
 
-def test_edit_id_outside_cap_is_force_included(
-    db: Session, client: TestClient
-) -> None:
+def test_edit_id_outside_cap_is_force_included(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rev-m-editcap")
-    rows = _seed(
-        db, review_session.id, [f"R{i:04d}" for i in range(250)]
-    )
+    rows = _seed(db, review_session.id, [f"R{i:04d}" for i in range(250)])
     # The 250th row is past the 200 unfiltered cap.
     target = rows[240]
 
     body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-        f"?edit_id={target.id}"
+        f"/operator/sessions/{review_session.public_id}/reviewers?edit_id={target.id}"
     ).text
     assert "reviewer-edit-row" in body
     assert f'value="{target.name}"' in body
 
 
-def test_edit_unknown_reviewer_id_falls_back_to_plain_list(
-    db: Session, client: TestClient
-) -> None:
+def test_edit_unknown_reviewer_id_falls_back_to_plain_list(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rev-m-editstale")
     _seed(db, review_session.id, ["Alice"])
 
@@ -269,15 +247,11 @@ def test_edit_unknown_reviewer_id_falls_back_to_plain_list(
 # --------------------------------------------------------------------------- #
 
 
-def test_add_renders_blank_edit_row(
-    db: Session, client: TestClient
-) -> None:
+def test_add_renders_blank_edit_row(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rev-m-addget")
     _seed(db, review_session.id, ["Alice"])
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers?add=1"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers?add=1").text
     assert "reviewer-edit-row" in body
     # The blank row IS the editor: its heading card went when Save and
     # Cancel moved into the row's own bar, so what marks add mode is
@@ -286,20 +260,14 @@ def test_add_renders_blank_edit_row(
     assert ">Save</button>" in body
 
 
-def test_add_works_on_empty_roster(
-    db: Session, client: TestClient
-) -> None:
+def test_add_works_on_empty_roster(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rev-m-addempty")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers?add=1"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers?add=1").text
     # The blank edit row renders even with zero existing reviewers.
     assert "reviewer-edit-row" in body
 
 
-def test_add_post_creates_row_and_redirects(
-    db: Session, client: TestClient
-) -> None:
+def test_add_post_creates_row_and_redirects(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rev-m-addpost")
 
     response = client.post(
@@ -316,17 +284,13 @@ def test_add_post_creates_row_and_redirects(
     )
     assert response.status_code == 303
     reviewer = db.execute(
-        select(Reviewer).where(
-            Reviewer.session_id == review_session.id
-        )
+        select(Reviewer).where(Reviewer.session_id == review_session.id)
     ).scalar_one()
     assert reviewer.name == "Newbie"
     assert reviewer.email == "newbie@example.edu"
 
 
-def test_add_post_validation_error_rerenders_in_add_mode(
-    db: Session, client: TestClient
-) -> None:
+def test_add_post_validation_error_rerenders_in_add_mode(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rev-m-adderr")
 
     response = client.post(
@@ -349,19 +313,12 @@ def test_add_post_validation_error_rerenders_in_add_mode(
     # and `row-editor-error` acquired its own rule in that same
     # stylesheet the moment the message was styled, which would have
     # reproduced the vacuity exactly. Same trap `_markup()` exists for.
-    assert '<span class="row-editor-error">' in response.text, (
-        "no save error rendered"
-    )
+    assert '<span class="row-editor-error">' in response.text, "no save error rendered"
     # The bad value is preserved for correction.
     assert 'value="not-an-email"' in response.text
     # Nothing was persisted.
     assert (
-        db.execute(
-            select(Reviewer).where(
-                Reviewer.session_id == review_session.id
-            )
-        ).first()
-        is None
+        db.execute(select(Reviewer).where(Reviewer.session_id == review_session.id)).first() is None
     )
 
 
@@ -370,9 +327,7 @@ def test_add_post_validation_error_rerenders_in_add_mode(
 # --------------------------------------------------------------------------- #
 
 
-def test_bulk_inactivate_flips_selected_rows(
-    db: Session, client: TestClient
-) -> None:
+def test_bulk_inactivate_flips_selected_rows(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rev-m-bulkinact")
     rows = _seed(db, review_session.id, ["Alice", "Bob", "Carol"])
 
@@ -386,9 +341,7 @@ def test_bulk_inactivate_flips_selected_rows(
     statuses = {
         r.name: r.status
         for r in db.execute(
-            select(Reviewer).where(
-                Reviewer.session_id == review_session.id
-            )
+            select(Reviewer).where(Reviewer.session_id == review_session.id)
         ).scalars()
     }
     assert statuses == {
@@ -398,9 +351,7 @@ def test_bulk_inactivate_flips_selected_rows(
     }
 
 
-def test_bulk_action_keeps_selection(
-    db: Session, client: TestClient
-) -> None:
+def test_bulk_action_keeps_selection(db: Session, client: TestClient) -> None:
     """After a bulk action the redirect carries the acted-on ids
     so the operator clears the selection themselves."""
     review_session = _make_session(client, db, code="rev-m-keepsel")
@@ -424,15 +375,11 @@ def test_bulk_action_keeps_selection(
         assert "checked" in cell
     # The untouched row is not pre-checked.
     bob_marker = f'value="{rows[1].id}"'
-    bob_cell = table[
-        table.find(bob_marker) - 160 : table.find(bob_marker) + 160
-    ]
+    bob_cell = table[table.find(bob_marker) - 160 : table.find(bob_marker) + 160]
     assert "checked" not in bob_cell
 
 
-def test_bulk_action_keeps_filter(
-    db: Session, client: TestClient
-) -> None:
+def test_bulk_action_keeps_filter(db: Session, client: TestClient) -> None:
     """The active search / status filter rides through a bulk
     action so the operator lands back on the same filtered view."""
     review_session = _make_session(client, db, code="rev-m-keepfilter")
@@ -452,9 +399,7 @@ def test_bulk_action_keeps_filter(
     assert "q=Ali" in loc
 
 
-def test_bulk_reactivate_flips_selected_rows(
-    db: Session, client: TestClient
-) -> None:
+def test_bulk_reactivate_flips_selected_rows(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rev-m-bulkreact")
     rows = _seed(db, review_session.id, ["Alice", "Bob"])
     for r in rows:
@@ -471,17 +416,13 @@ def test_bulk_reactivate_flips_selected_rows(
     statuses = {
         r.name: r.status
         for r in db.execute(
-            select(Reviewer).where(
-                Reviewer.session_id == review_session.id
-            )
+            select(Reviewer).where(Reviewer.session_id == review_session.id)
         ).scalars()
     }
     assert statuses == {"Alice": "active", "Bob": "inactive"}
 
 
-def test_bulk_with_id_outside_session_is_rejected(
-    db: Session, client: TestClient
-) -> None:
+def test_bulk_with_id_outside_session_is_rejected(db: Session, client: TestClient) -> None:
     session_a = _make_session(client, db, code="rev-m-bulk-a")
     rows_a = _seed(db, session_a.id, ["Alice"])
     session_b = _make_session(client, db, code="rev-m-bulk-b")
@@ -500,29 +441,20 @@ def test_bulk_with_id_outside_session_is_rejected(
 # --------------------------------------------------------------------------- #
 
 
-def test_edit_mode_suppressed_on_ready_session(
-    db: Session, client: TestClient
-) -> None:
-    review_session = _make_session(
-        client, db, code="rev-m-ready", status="ready"
-    )
+def test_edit_mode_suppressed_on_ready_session(db: Session, client: TestClient) -> None:
+    review_session = _make_session(client, db, code="rev-m-ready", status="ready")
     rows = _seed(db, review_session.id, ["Alice"])
 
     body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-        f"?edit_id={rows[0].id}"
+        f"/operator/sessions/{review_session.public_id}/reviewers?edit_id={rows[0].id}"
     ).text
     # Ready session → edit mode suppressed, lock card shown instead.
     assert "reviewer-edit-row" not in body
     assert "card lock" in body
 
 
-def test_create_on_ready_session_is_409(
-    db: Session, client: TestClient
-) -> None:
-    review_session = _make_session(
-        client, db, code="rev-m-ready-create", status="ready"
-    )
+def test_create_on_ready_session_is_409(db: Session, client: TestClient) -> None:
+    review_session = _make_session(client, db, code="rev-m-ready-create", status="ready")
     response = client.post(
         f"/operator/sessions/{review_session.public_id}/reviewers/create",
         data={
@@ -540,12 +472,8 @@ def test_create_on_ready_session_is_409(
 # --------------------------------------------------------------------------- #
 
 
-def test_send_invitation_to_inactive_reviewer_is_409(
-    db: Session, client: TestClient
-) -> None:
-    review_session = _make_session(
-        client, db, code="rev-m-send-inactive", status="ready"
-    )
+def test_send_invitation_to_inactive_reviewer_is_409(db: Session, client: TestClient) -> None:
+    review_session = _make_session(client, db, code="rev-m-send-inactive", status="ready")
     reviewer = Reviewer(
         session_id=review_session.id,
         name="Inactive",
@@ -564,8 +492,7 @@ def test_send_invitation_to_inactive_reviewer_is_409(
     db.commit()
 
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/invitations/{invitation.id}/send",
+        f"/operator/sessions/{review_session.public_id}/invitations/{invitation.id}/send",
         follow_redirects=False,
     )
     assert response.status_code == 409
@@ -583,10 +510,18 @@ def test_send_invitation_to_inactive_reviewer_is_409(
 # alone — the commonest action on the page — and the whole suite stayed
 # green, because all three redirect tests exercised the bulk routes.
 _ROW_ACTIONS = [
-    ("update", "{base}/{rid}/update", {
-        "name": "Alice", "email": "alice@example.edu",
-        "tag_1": "", "tag_2": "", "tag_3": "", "status": "active",
-    }),
+    (
+        "update",
+        "{base}/{rid}/update",
+        {
+            "name": "Alice",
+            "email": "alice@example.edu",
+            "tag_1": "",
+            "tag_2": "",
+            "tag_3": "",
+            "status": "active",
+        },
+    ),
     ("bulk-inactivate", "{base}/bulk-inactivate", {"reviewer_ids": ["{rid}"]}),
     ("bulk-reactivate", "{base}/bulk-reactivate", {"reviewer_ids": ["{rid}"]}),
 ]
@@ -596,7 +531,8 @@ def _post_row_action(client, base, rid, template, data, **extra):
     payload = {k: ([rid] if v == ["{rid}"] else v) for k, v in data.items()}
     payload.update(extra)
     return client.post(
-        template.format(base=base, rid=rid), data=payload,
+        template.format(base=base, rid=rid),
+        data=payload,
         follow_redirects=False,
     )
 
@@ -611,9 +547,9 @@ def test_every_row_action_lands_on_the_row_it_acted_on(
 
     response = _post_row_action(client, base, rows[0].id, template, data)
     assert response.status_code == 303, name
-    assert response.headers["location"].endswith(
-        f"#reviewer-row-{rows[0].id}"
-    ), f"{name}: {response.headers['location']}"
+    assert response.headers["location"].endswith(f"#reviewer-row-{rows[0].id}"), (
+        f"{name}: {response.headers['location']}"
+    )
 
 
 @pytest.mark.parametrize("name,template,data", _ROW_ACTIONS)
@@ -627,14 +563,12 @@ def test_every_row_action_carries_the_pager_offset(
     rows = _seed(db, review_session.id, ["Alice"])
     base = f"/operator/sessions/{review_session.public_id}/reviewers"
 
-    loc = _post_row_action(
-        client, base, rows[0].id, template, data, filter_offset=200
-    ).headers["location"]
+    loc = _post_row_action(client, base, rows[0].id, template, data, filter_offset=200).headers[
+        "location"
+    ]
     assert "offset=200" in loc, f"{name}: {loc}"
 
-    plain = _post_row_action(
-        client, base, rows[0].id, template, data
-    ).headers["location"]
+    plain = _post_row_action(client, base, rows[0].id, template, data).headers["location"]
     assert "offset=" not in plain, f"{name}: {plain}"
 
 
@@ -658,7 +592,8 @@ def test_the_page_actually_sends_the_offset_it_asks_the_route_to_read(
 
     bulk = re.search(
         r'<form[^>]*id="reviewers-bulk-form".*?</form>',
-        client.get(f"{base}?offset=200").text, re.S,
+        client.get(f"{base}?offset=200").text,
+        re.S,
     )
     assert bulk, "bulk form not rendered on page 2"
     assert 'name="filter_offset" value="200"' in bulk.group(0), (
@@ -671,14 +606,19 @@ def test_the_page_actually_sends_the_offset_it_asks_the_route_to_read(
     # luck. SQLite happens to return insertion order for this shape
     # and Postgres need not, which makes it a `ci-postgres`-only flake
     # — the worst kind, because the suite is green where it is written.
-    rid = db.execute(
-        select(Reviewer.id)
-        .where(Reviewer.session_id == review_session.id)
-        .order_by(Reviewer.id)
-    ).scalars().all()[210]
+    rid = (
+        db.execute(
+            select(Reviewer.id)
+            .where(Reviewer.session_id == review_session.id)
+            .order_by(Reviewer.id)
+        )
+        .scalars()
+        .all()[210]
+    )
     edit = re.search(
         r'<form[^>]*id="reviewer-edit-form".*?</form>',
-        client.get(f"{base}?edit_id={rid}").text, re.S,
+        client.get(f"{base}?edit_id={rid}").text,
+        re.S,
     )
     assert edit, "edit form not rendered"
     assert 'name="filter_offset" value="200"' in edit.group(0), (
@@ -705,9 +645,7 @@ def test_delete_lands_on_the_table_card_because_its_rows_are_gone(
     assert response.status_code == 303
     loc = response.headers["location"]
     assert loc.endswith("#reviewers-table-card"), loc
-    assert "#reviewer-row-" not in loc, (
-        "delete anchored a row it had just removed"
-    )
+    assert "#reviewer-row-" not in loc, "delete anchored a row it had just removed"
     # A delete has no row to name, but it still has a page to come back
     # to. `_ROW_ACTIONS` cannot cover this one — deleting the row it
     # acts on leaves nothing for the anchor assertion to name — so the
@@ -730,34 +668,24 @@ def test_rows_and_the_fallback_are_both_present_for_the_landing(
     """
     review_session = _make_session(client, db, code="rev-landing")
     rows = _seed(db, review_session.id, ["Alice"])
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
 
-    row = re.search(
-        rf'<tr\b[^>]*id="reviewer-row-{rows[0].id}"[^>]*>', body
-    )
+    row = re.search(rf'<tr\b[^>]*id="reviewer-row-{rows[0].id}"[^>]*>', body)
     assert row, "the row the redirect names is not rendered"
-    assert "row-action-target" in row.group(0), (
-        "the row carries no landing margin"
-    )
+    assert "row-action-target" in row.group(0), "the row carries no landing margin"
     assert "tr.row-action-target" in body, "no rule gives it that margin"
 
     # Read the fallback's OWN text. `'"reviewers-table-card"' in body`
     # was satisfied by the table card's `id=` attribute, which renders
     # regardless — so deleting the two operative lines of the script
     # left that assertion green.
-    script = re.search(
-        r"<script>(?:(?!</script>).)*?#reviewer-row-.*?</script>", body, re.S
-    )
+    script = re.search(r"<script>(?:(?!</script>).)*?#reviewer-row-.*?</script>", body, re.S)
     assert script, "the fallback script is gone"
     for needle in ("getElementById", "reviewers-table-card", "scrollIntoView"):
         assert needle in script.group(0), f"the fallback lost {needle}"
 
 
-def test_add_new_carries_the_active_filter_into_add_mode(
-    db: Session, client: TestClient
-) -> None:
+def test_add_new_carries_the_active_filter_into_add_mode(db: Session, client: TestClient) -> None:
     """The filter was lost at the NAVIGATION, not at the POST.
 
     `Add new` linked to a bare `?add=1`, so the add page rendered
@@ -770,7 +698,7 @@ def test_add_new_carries_the_active_filter_into_add_mode(
     base = f"/operator/sessions/{review_session.public_id}/reviewers"
 
     body = client.get(f"{base}?status=inactive&q=ali").text
-    link = re.search(r'<a[^>]*>\s*Add new\s*</a>', body)
+    link = re.search(r"<a[^>]*>\s*Add new\s*</a>", body)
     assert link, "no Add new link"
     assert "status=inactive" in link.group(0), link.group(0)
     assert "q=ali" in link.group(0), link.group(0)
@@ -778,9 +706,7 @@ def test_add_new_carries_the_active_filter_into_add_mode(
     # An unfiltered view carries neither — `status=all` is the default
     # and an empty search is nothing, so spelling them out would be
     # noise in the URL.
-    add_new = re.search(
-        r'<a[^>]*>\s*Add new\s*</a>', client.get(base).text
-    )
+    add_new = re.search(r"<a[^>]*>\s*Add new\s*</a>", client.get(base).text)
     assert add_new is not None
     plain = add_new.group(0)
     assert "status=" not in plain and "q=" not in plain, plain
@@ -803,17 +729,19 @@ def test_creating_a_row_pages_to_where_the_new_row_actually_is(
     response = client.post(
         f"{base}/create",
         data={
-            "name": "Zed", "email": "zed@example.edu",
-            "tag_1": "", "tag_2": "", "tag_3": "", "status": "active",
+            "name": "Zed",
+            "email": "zed@example.edu",
+            "tag_1": "",
+            "tag_2": "",
+            "tag_3": "",
+            "status": "active",
             "filter_offset": 0,
         },
         follow_redirects=False,
     )
     assert response.status_code == 303
     loc = response.headers["location"]
-    created = db.execute(
-        select(Reviewer).where(Reviewer.email == "zed@example.edu")
-    ).scalar_one()
+    created = db.execute(select(Reviewer).where(Reviewer.email == "zed@example.edu")).scalar_one()
     assert f"focus={created.id}" in loc, loc
     assert loc.endswith(f"#reviewer-row-{created.id}"), loc
 
@@ -849,8 +777,12 @@ def test_a_save_error_renders_in_the_row_bar_and_is_reachable(
     response = client.post(
         f"{base}/create",
         data={
-            "name": "Dup", "email": "alice@example.edu",
-            "tag_1": "", "tag_2": "", "tag_3": "", "status": "active",
+            "name": "Dup",
+            "email": "alice@example.edu",
+            "tag_1": "",
+            "tag_2": "",
+            "tag_3": "",
+            "status": "active",
         },
         follow_redirects=False,
     )
@@ -858,7 +790,9 @@ def test_a_save_error_renders_in_the_row_bar_and_is_reachable(
     body = response.text
 
     bar = re.search(
-        r'<tr class="[^"]*\brow-editor-bar\b[^"]*">.*?</tr>', body, re.S,
+        r'<tr class="[^"]*\brow-editor-bar\b[^"]*">.*?</tr>',
+        body,
+        re.S,
     )
     assert bar, "no editor bar on the error render"
     assert '<span class="row-editor-error">' in bar.group(0), (
@@ -874,22 +808,22 @@ def test_a_save_error_renders_in_the_row_bar_and_is_reachable(
     # by mutation, which is how the first version of this test was found
     # to be testing the wrong half.
     _seed(db, review_session.id, ["Bob"])
-    bob = db.execute(
-        select(Reviewer).where(Reviewer.email == "bob@example.edu")
-    ).scalar_one()
+    bob = db.execute(select(Reviewer).where(Reviewer.email == "bob@example.edu")).scalar_one()
     edit_err = client.post(
         f"{base}/{bob.id}/update",
         data={
-            "name": "Bob", "email": "alice@example.edu",
-            "tag_1": "", "tag_2": "", "tag_3": "", "status": "active",
+            "name": "Bob",
+            "email": "alice@example.edu",
+            "tag_1": "",
+            "tag_2": "",
+            "tag_3": "",
+            "status": "active",
         },
         follow_redirects=False,
     )
     assert edit_err.status_code == 400
     edit_body = edit_err.text
-    assert '<span class="row-editor-error">' in edit_body, (
-        "no error on a failed edit"
-    )
+    assert '<span class="row-editor-error">' in edit_body, "no error on a failed edit"
 
     # Scoped to the landing script itself. `"scrollIntoView" in body`
     # is satisfied by `base.html`'s banner-scroll script, which ships on
@@ -899,22 +833,19 @@ def test_a_save_error_renders_in_the_row_bar_and_is_reachable(
     # fallback-script assertion 140 lines up in this file.
     script = _landing_script(edit_body)
     assert "scrollIntoView" in script, (
-        "nothing brings the row on screen on an edit error, which "
-        "re-renders with no fragment"
+        "nothing brings the row on screen on an edit error, which re-renders with no fragment"
     )
     # ...and it only scrolls when no fragment decided the position.
     assert "window.location.hash" in script, (
         "the script scrolls unconditionally, fighting the landing anchor"
     )
-    assert "block: \"center\"" in script, (
+    assert 'block: "center"' in script, (
         "the row is brought on screen without being centred, so a long "
         "row can still land with its bar below the fold"
     )
 
 
-def test_delete_all_comes_back_with_the_panel_open(
-    db: Session, client: TestClient
-) -> None:
+def test_delete_all_comes_back_with_the_panel_open(db: Session, client: TestClient) -> None:
     """The control lives inside the Unlock panel now, so a bare redirect
     closes the panel the operator was working in.
 
@@ -935,8 +866,7 @@ def test_delete_all_comes_back_with_the_panel_open(
     )
     assert response.status_code == 303
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-        "?unlocked=1#roster-card"
+        f"/operator/sessions/{review_session.public_id}/reviewers?unlocked=1#roster-card"
     ), response.headers["location"]
 
 

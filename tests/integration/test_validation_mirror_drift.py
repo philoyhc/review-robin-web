@@ -37,8 +37,12 @@ def _session(client: TestClient, db: Session, code: str, *, on: bool = True) -> 
     owner = db.execute(select(User).order_by(User.id)).scalars().first()
     assert owner is not None
     csv_imports.save_reviewers(
-        db, session=review_session, user=owner, rows=parsed.rows,
-        filename="r.csv", correlation_id="c",
+        db,
+        session=review_session,
+        user=owner,
+        rows=parsed.rows,
+        filename="r.csv",
+        correlation_id="c",
     )
     db.commit()
     return review_session
@@ -112,8 +116,13 @@ def test_saving_a_reviewer_unchanged_brings_the_copy_back_into_step(
     response = client.post(
         f"/operator/sessions/{review_session.public_id}/reviewers/{ann.id}/update",
         data={
-            "name": "Ann", "email": "ann@example.edu", "profile_link": "",
-            "tag_1": "", "tag_2": "", "tag_3": "", "status": "active",
+            "name": "Ann",
+            "email": "ann@example.edu",
+            "profile_link": "",
+            "tag_1": "",
+            "tag_2": "",
+            "tag_3": "",
+            "status": "active",
         },
         follow_redirects=False,
     )
@@ -135,8 +144,13 @@ def _save_unchanged(client: TestClient, review_session: ReviewSession, reviewer:
     return client.post(
         f"/operator/sessions/{review_session.public_id}/reviewers/{reviewer.id}/update",
         data={
-            "name": reviewer.name, "email": reviewer.email, "profile_link": "",
-            "tag_1": "", "tag_2": "", "tag_3": "", "status": "active",
+            "name": reviewer.name,
+            "email": reviewer.email,
+            "profile_link": "",
+            "tag_1": "",
+            "tag_2": "",
+            "tag_3": "",
+            "status": "active",
         },
         follow_redirects=False,
     )
@@ -152,12 +166,15 @@ def test_an_unchanged_save_on_a_mirror_in_step_writes_no_audit_row(
         )
     ).scalar_one()
     assert _save_unchanged(client, review_session, ann).status_code in (200, 303)
-    assert db.execute(
-        select(AuditEvent).where(
-            AuditEvent.session_id == review_session.id,
-            AuditEvent.event_type == "reviewees.mirror_repaired",
-        )
-    ).first() is None
+    assert (
+        db.execute(
+            select(AuditEvent).where(
+                AuditEvent.session_id == review_session.id,
+                AuditEvent.event_type == "reviewees.mirror_repaired",
+            )
+        ).first()
+        is None
+    )
 
 
 @pytest.mark.mirror_drift_expected
@@ -174,18 +191,22 @@ def test_a_duplicate_mirror_is_reported_and_an_unchanged_save_removes_it(
         )
     ).scalar_one()
     kept = _reviewee(db, review_session, "ann@example.edu")
-    db.add(Reviewee(
-        session_id=review_session.id, name="Ann", email_or_identifier="ann2@example.edu",
-        mirrors_reviewer_id=ann.id,
-    ))
+    db.add(
+        Reviewee(
+            session_id=review_session.id,
+            name="Ann",
+            email_or_identifier="ann2@example.edu",
+            mirrors_reviewer_id=ann.id,
+        )
+    )
     db.commit()
     assert any("ann@example.edu" in m for m in _drift(db, review_session))
     assert _save_unchanged(client, review_session, ann).status_code in (200, 303)
     assert _drift(db, review_session) == []
     db.expire_all()
-    left = db.execute(
-        select(Reviewee).where(Reviewee.mirrors_reviewer_id == ann.id)
-    ).scalars().all()
+    left = (
+        db.execute(select(Reviewee).where(Reviewee.mirrors_reviewer_id == ann.id)).scalars().all()
+    )
     assert [r.id for r in left] == [kept.id]
 
 

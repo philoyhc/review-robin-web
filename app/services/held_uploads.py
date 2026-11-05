@@ -15,6 +15,7 @@ A hold is a convenience, never a trust boundary: the caller parses the
 held bytes again on every submit, exactly as it would a fresh upload.
 Nothing here writes an audit event; a hold saves nothing.
 """
+
 from __future__ import annotations
 
 import secrets
@@ -60,9 +61,7 @@ def _expired(row: HeldUpload) -> bool:
     return _now() - _as_aware_utc(row.created_at) > HOLD_TTL
 
 
-def _rows(
-    db: Session, *, token: str, user: User, session_id: int
-) -> list[HeldUpload]:
+def _rows(db: Session, *, token: str, user: User, session_id: int) -> list[HeldUpload]:
     return list(
         db.execute(
             select(HeldUpload).where(
@@ -92,29 +91,23 @@ def hold(
     expired holds first. :func:`take` says what the hold now holds.
     """
     sweep(db)
-    keep = {
-        slot: held
-        for slot, held in files.items()
-        if 0 < len(held.content) <= MAX_HELD_BYTES
-    }
-    if token is not None and not _rows(
-        db, token=token, user=user, session_id=session_id
-    ):
+    keep = {slot: held for slot, held in files.items() if 0 < len(held.content) <= MAX_HELD_BYTES}
+    if token is not None and not _rows(db, token=token, user=user, session_id=session_id):
         token = None
     if token is not None:
         # Every slot this call brings drops what the hold had for it,
         # kept or not: a file too large to hold must not leave the one it
         # replaced to be sent again in its place.
         db.execute(
-            delete(HeldUpload).where(
-                HeldUpload.token == token, HeldUpload.slot.in_(list(files))
-            )
+            delete(HeldUpload).where(HeldUpload.token == token, HeldUpload.slot.in_(list(files)))
         )
         db.flush()
     if not keep:
-        return token if token is not None and _rows(
-            db, token=token, user=user, session_id=session_id
-        ) else None
+        return (
+            token
+            if token is not None and _rows(db, token=token, user=user, session_id=session_id)
+            else None
+        )
     if token is None:
         token = secrets.token_urlsafe(_TOKEN_BYTES)
     for slot, held in keep.items():
@@ -132,9 +125,7 @@ def hold(
     return token
 
 
-def take(
-    db: Session, *, token: str, user: User, session_id: int
-) -> dict[str, HeldFile]:
+def take(db: Session, *, token: str, user: User, session_id: int) -> dict[str, HeldFile]:
     """The files held under ``token`` for this operator and session, by
     slot. Another operator's or another session's token, an unknown one
     and an expired hold all read as empty; expired rows are deleted on
@@ -171,9 +162,7 @@ def sweep(db: Session) -> int:
     cutoff = _now() - HOLD_TTL
     stale = [
         row_id
-        for row_id, created_at in db.execute(
-            select(HeldUpload.id, HeldUpload.created_at)
-        )
+        for row_id, created_at in db.execute(select(HeldUpload.id, HeldUpload.created_at))
         if _as_aware_utc(created_at) < cutoff
     ]
     if stale:

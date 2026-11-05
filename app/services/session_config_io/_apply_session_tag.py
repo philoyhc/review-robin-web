@@ -4,6 +4,7 @@ Session tags round-trip through the settings CSV (they already
 round-tripped through ``session_clone``). Wipe-and-replace on apply,
 mirroring the other list sections.
 """
+
 from __future__ import annotations
 
 from sqlalchemy import select
@@ -22,9 +23,7 @@ __all__ = [
 ]
 
 
-def _apply_session_tag_kv(
-    plan: _ParsedConfig, field_path: str, value: str
-) -> None:
+def _apply_session_tag_kv(plan: _ParsedConfig, field_path: str, value: str) -> None:
     match = _RX_SESSION_TAG.match(field_path)
     if match is None:
         raise _ParseError(f"unrecognised session_tags[] key {field_path!r}")
@@ -47,9 +46,7 @@ def _apply_session_tag_kv(
         plan.session_tags.append(tag)
 
 
-def _apply_session_tags(
-    db: Session, review_session: ReviewSession, plan: _ParsedConfig
-) -> int:
+def _apply_session_tags(db: Session, review_session: ReviewSession, plan: _ParsedConfig) -> int:
     """Wipe-and-replace the session's tags from the parsed set.
 
     ``(session_id, tag)`` is unique, so the parse phase already
@@ -59,9 +56,7 @@ def _apply_session_tags(
     existing = {
         tag.tag: tag
         for tag in db.execute(
-            select(SessionTag).where(
-                SessionTag.session_id == review_session.id
-            )
+            select(SessionTag).where(SessionTag.session_id == review_session.id)
         ).scalars()
     }
 

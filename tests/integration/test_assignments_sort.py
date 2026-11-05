@@ -4,6 +4,7 @@ Segment 13B Part 2 PR 8.
 Pins the table marker + per-row scaffolding + cookie-driven SSR
 order on ``/operator/sessions/{id}/assignments``.
 """
+
 from __future__ import annotations
 
 import json
@@ -21,23 +22,17 @@ from ._full_matrix import (
 from ._public_id import public_id
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "Spring", "code": code},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
-def _populate_full_matrix(
-    client: TestClient, db: Session, session_id: int
-) -> None:
+def _populate_full_matrix(client: TestClient, db: Session, session_id: int) -> None:
     """Three reviewers × three reviewees → 9 (or 6 with self-review
     excluded) assignments. Names are deliberately non-alphabetical
     so a sort actually reshuffles."""
@@ -78,21 +73,14 @@ def _populate_full_matrix(
     generate_via_page_button(client, session_id)
 
 
-def test_assignments_table_renders_sort_scaffolding(
-    db: Session, client: TestClient
-) -> None:
+def test_assignments_table_renders_sort_scaffolding(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="asn-scaff")
     _populate_full_matrix(client, db, review_session.id)
-    response = client.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    )
+    response = client.get(f"/operator/sessions/{review_session.public_id}/assignments")
     assert response.status_code == 200
     body = response.text
     # Table marker + tbody wrapper.
-    assert (
-        f'data-rrw-sortable="rrw-sort-assignments-{review_session.public_id}"'
-        in body
-    )
+    assert f'data-rrw-sortable="rrw-sort-assignments-{review_session.public_id}"' in body
     assert '<tbody class="rrw-rows">' in body
     # Every sortable header carries its data-sort-key. The tag
     # columns are conditional since 19I Item 12 rung 3 — a slot with
@@ -108,9 +96,7 @@ def test_assignments_table_renders_sort_scaffolding(
     assert 'data-sort-value="Charlie R"' in body
 
 
-def test_a_populated_tag_column_carries_its_sort_key(
-    db: Session, client: TestClient
-) -> None:
+def test_a_populated_tag_column_carries_its_sort_key(db: Session, client: TestClient) -> None:
     """The other side of the conditional above: give a tag slot data
     and its column, header and sort key all come back. Without this
     the test above would pass just as well if tag columns had been
@@ -136,10 +122,7 @@ def test_a_populated_tag_column_carries_its_sort_key(
         files={
             "file": (
                 "e.csv",
-                (
-                    b"RevieweeName,RevieweeEmail\n"
-                    b"Alpha E,alphae@example.edu\n"
-                ),
+                (b"RevieweeName,RevieweeEmail\nAlpha E,alphae@example.edu\n"),
                 "text/csv",
             )
         },
@@ -148,9 +131,7 @@ def test_a_populated_tag_column_carries_its_sort_key(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(client, review_session.id)
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/assignments").text
     assert 'data-sort-key="reviewer_tag_1"' in body
     assert 'data-col-toggle="rt1"' in body
     # The reviewee and pair-context slots are still empty.
@@ -158,9 +139,7 @@ def test_a_populated_tag_column_carries_its_sort_key(
     assert 'data-sort-key="pair_tag_1"' not in body
 
 
-def test_assignments_cookie_sort_by_reviewer_asc(
-    db: Session, client: TestClient
-) -> None:
+def test_assignments_cookie_sort_by_reviewer_asc(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="asn-asc")
     _populate_full_matrix(client, db, review_session.id)
     cookie_name = f"rrw-sort-assignments-{review_session.public_id}"
@@ -169,16 +148,10 @@ def test_assignments_cookie_sort_by_reviewer_asc(
         json.dumps([{"key": "reviewer", "dir": "asc"}]),
         path=f"/operator/sessions/{review_session.public_id}",
     )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/assignments").text
     # Reviewer column sorts on name — Alpha R, Bravo R, Charlie R
     # in row order.
-    assert (
-        _rows(body).find("Alpha R")
-        < _rows(body).find("Bravo R")
-        < _rows(body).find("Charlie R")
-    )
+    assert _rows(body).find("Alpha R") < _rows(body).find("Bravo R") < _rows(body).find("Charlie R")
 
 
 def _rows(body: str) -> str:
@@ -192,12 +165,10 @@ def _rows(body: str) -> str:
     ascending ones would have passed whatever order the table was in.
     Scoping to the table restores exactly what they were checking.
     """
-    return body[body.index('<table id="assignments-table"'):]
+    return body[body.index('<table id="assignments-table"') :]
 
 
-def test_assignments_cookie_sort_by_reviewer_desc(
-    db: Session, client: TestClient
-) -> None:
+def test_assignments_cookie_sort_by_reviewer_desc(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="asn-desc")
     _populate_full_matrix(client, db, review_session.id)
     cookie_name = f"rrw-sort-assignments-{review_session.public_id}"
@@ -206,19 +177,11 @@ def test_assignments_cookie_sort_by_reviewer_desc(
         json.dumps([{"key": "reviewer", "dir": "desc"}]),
         path=f"/operator/sessions/{review_session.public_id}",
     )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    ).text
-    assert (
-        _rows(body).find("Charlie R")
-        < _rows(body).find("Bravo R")
-        < _rows(body).find("Alpha R")
-    )
+    body = client.get(f"/operator/sessions/{review_session.public_id}/assignments").text
+    assert _rows(body).find("Charlie R") < _rows(body).find("Bravo R") < _rows(body).find("Alpha R")
 
 
-def test_assignments_cookie_sort_by_reviewee(
-    db: Session, client: TestClient
-) -> None:
+def test_assignments_cookie_sort_by_reviewee(db: Session, client: TestClient) -> None:
     """Cascade: reviewer asc primary, reviewee desc secondary —
     tie on reviewer falls through to reviewee desc."""
     review_session = _make_session(client, db, code="asn-cascade")
@@ -226,15 +189,15 @@ def test_assignments_cookie_sort_by_reviewee(
     cookie_name = f"rrw-sort-assignments-{review_session.public_id}"
     client.cookies.set(
         cookie_name,
-        json.dumps([
-            {"key": "reviewer", "dir": "asc"},
-            {"key": "reviewee", "dir": "desc"},
-        ]),
+        json.dumps(
+            [
+                {"key": "reviewer", "dir": "asc"},
+                {"key": "reviewee", "dir": "desc"},
+            ]
+        ),
         path=f"/operator/sessions/{review_session.public_id}",
     )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/assignments").text
     # Within Alpha R's rows (the first reviewer alphabetically),
     # reviewees sort desc: Charlie E before Alpha E.
     # (Self-review for Alpha R/Alpha E is excluded by the
@@ -247,9 +210,7 @@ def test_assignments_cookie_sort_by_reviewee(
     assert alpha_segment.find("Charlie E") < alpha_segment.find("Bravo E")
 
 
-def test_assignments_malformed_cookie_falls_back(
-    db: Session, client: TestClient
-) -> None:
+def test_assignments_malformed_cookie_falls_back(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="asn-bad")
     _populate_full_matrix(client, db, review_session.id)
     cookie_name = f"rrw-sort-assignments-{review_session.public_id}"
@@ -258,9 +219,7 @@ def test_assignments_malformed_cookie_falls_back(
         "not-json{",
         path=f"/operator/sessions/{review_session.public_id}",
     )
-    response = client.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    )
+    response = client.get(f"/operator/sessions/{review_session.public_id}/assignments")
     assert response.status_code == 200
     # Page renders; assertion that no sort badges appear is too
     # brittle (the JS hydration runs in browser but not in this

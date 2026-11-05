@@ -81,9 +81,7 @@ BRANCH_MODES: frozenset[str] = frozenset({BRANCH_MODE_SHOW, BRANCH_MODE_REQUIRE}
 # 19T Item 14 — how many branches a field may sit in, and the refusals
 # past it: a branch inside a branch can't have one of its own.
 MAX_BRANCH_DEPTH = 2
-BRANCH_TOO_DEEP_MESSAGE = (
-    "A branch inside a branch can't have a branch of its own."
-)
+BRANCH_TOO_DEEP_MESSAGE = "A branch inside a branch can't have a branch of its own."
 BRANCH_LOOP_MESSAGE = "Its branch leads back to itself."
 
 
@@ -235,7 +233,7 @@ def condition_error(
         return "A String field can't have a branch."
     if data_type == "List":
         if op not in LIST_OPS:
-            return "A List field's branch condition must be \"is\" or \"is not\"."
+            return 'A List field\'s branch condition must be "is" or "is not".'
         chosen = _list_items(value)
         if not chosen:
             return "Choose at least one option for the branch condition."
@@ -243,8 +241,7 @@ def condition_error(
         missing = [item for item in chosen if item not in options]
         if missing:
             return (
-                "The branch condition names an option the list doesn't "
-                f"have: {', '.join(missing)}."
+                f"The branch condition names an option the list doesn't have: {', '.join(missing)}."
             )
         return None
     if op in RANGE_OPS:
@@ -299,9 +296,7 @@ def condition_label(parent: BranchField) -> str:
     if op in LIST_OPS:
         options = _list_items(value)
         joined = (
-            ", ".join(options[:-1]) + " or " + options[-1]
-            if len(options) > 1
-            else "".join(options)
+            ", ".join(options[:-1]) + " or " + options[-1] if len(options) > 1 else "".join(options)
         )
         return f"{parent.label} {LIST_OPS[op]} {joined}"
     return f"{parent.label} {NUMERIC_OPS.get(op, op)} {value}"
@@ -422,9 +417,7 @@ def required_field_ids(
             continue
         parent = _parent(field, by_id)
         if parent is not None and branch_mode(parent) == BRANCH_MODE_REQUIRE:
-            if field.visible and branch_is_open(
-                parent, answer_by_field_id.get(parent.id)
-            ):
+            if field.visible and branch_is_open(parent, answer_by_field_id.get(parent.id)):
                 required.add(field.id)
         elif field.required:
             required.add(field.id)
@@ -495,17 +488,13 @@ def branch_structure_errors(
         elif depth > MAX_BRANCH_DEPTH:
             errors.append((field.label, BRANCH_TOO_DEEP_MESSAGE))
         governed_by_parent.setdefault(parent_id, []).append(field)
-    has_anchor = any(
-        f.required and f.visible and f.branch_parent_id is None for f in field_list
-    )
+    has_anchor = any(f.required and f.visible and f.branch_parent_id is None for f in field_list)
     if not has_anchor:
         may_be_required = may_be_required_field_ids(field_list)
         errors.extend(
             (field.label, REQUIRED_GOVERNED_NEEDS_ANCHOR_MESSAGE)
             for field in field_list
-            if field.branch_parent_id is not None
-            and field.id in may_be_required
-            and field.visible
+            if field.branch_parent_id is not None and field.id in may_be_required and field.visible
         )
     for field in field_list:
         # A mode (19T Item 13) belongs to a condition, so a lone one is an
@@ -523,9 +512,8 @@ def branch_structure_errors(
             if msg is not None:
                 errors.append((field.label, msg))
         elif has_condition:
-            errors.append(
-                (field.label, "Its branch condition governs no field.")
-            )
+            errors.append((field.label, "Its branch condition governs no field."))
+
     def descendants(parent_id: int) -> set[int]:
         # Iterative, so a hand-made chain of any length (a settings CSV
         # has no field cap) is refused by name, not by RecursionError
@@ -547,7 +535,5 @@ def branch_structure_errors(
         below = descendants(field.id)
         following = ordered[index + 1 : index + 1 + len(below)]
         if {f.id for f in following} != below:
-            errors.append(
-                (field.label, "A branch's fields must directly follow their parent.")
-            )
+            errors.append((field.label, "A branch's fields must directly follow their parent."))
     return errors

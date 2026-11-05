@@ -55,7 +55,7 @@ def _leaves_comment_open(text: str) -> bool:
         end = text.find(_CLOSE, start + len(_OPEN))
         if end < 0:
             return True
-        text = text[end + len(_CLOSE):]
+        text = text[end + len(_CLOSE) :]
     return False
 
 
@@ -91,7 +91,7 @@ def parse_preview_list(text: str) -> frozenset[str]:
         if in_comment:
             end = line.find(_CLOSE)
             if end >= 0:
-                in_comment = _leaves_comment_open(line[end + len(_CLOSE):])
+                in_comment = _leaves_comment_open(line[end + len(_CLOSE) :])
             continue
         if match and not (match.group(2)[0] == "`" and "`" in match.group(3)):
             fence = (match.group(2), len(match.group(1)))

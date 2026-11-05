@@ -119,9 +119,11 @@ async def roster_directory_keys(
         addresses = directory_recheck.unmatched_addresses(
             db, session_id=review_session.id, kind=roster
         )
-        keys = list(dict.fromkeys(
-            k for k in (directory_accounts.key(a) for a in addresses) if k is not None
-        ))
+        keys = list(
+            dict.fromkeys(
+                k for k in (directory_accounts.key(a) for a in addresses) if k is not None
+            )
+        )
         # `since`: the recheck POST reads only answers fetched from now
         # on, so a countdown stopped early leaves the rest to the server.
         return JSONResponse(
@@ -129,8 +131,12 @@ async def roster_directory_keys(
             headers=_NO_STORE,
         )
     upload = await read_upload(
-        db, file=file, held_token=held_token, user=user,
-        review_session=review_session, slot=roster,
+        db,
+        file=file,
+        held_token=held_token,
+        user=user,
+        review_session=review_session,
+        slot=roster,
     )
     directory_lookups.sweep(db)
     db.commit()
@@ -140,7 +146,9 @@ async def roster_directory_keys(
     if result.is_blocked:
         return JSONResponse({"keys": []}, headers=_NO_STORE)
     keys = directory_lookups.still_to_look_up(
-        db, user=user, session_id=review_session.id,
+        db,
+        user=user,
+        session_id=review_session.id,
         addresses=[roster_address(row) for row in result.rows],
     )
     return JSONResponse({"keys": keys}, headers=_NO_STORE)
@@ -175,7 +183,12 @@ async def roster_directory_lookup(
         return _error(503, "no_graph")
     outcomes = await run_in_threadpool(
         directory_lookups.look_up_and_keep,
-        db, directory, user=user, session_id=review_session.id, keys=keys, budget=LOOKUP_BUDGET,
+        db,
+        directory,
+        user=user,
+        session_id=review_session.id,
+        keys=keys,
+        budget=LOOKUP_BUDGET,
     )
     db.commit()
     return JSONResponse(
@@ -219,9 +232,7 @@ async def roster_directory_recheck(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     if roster == "observers" and not review_session.observers_enabled:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-    addresses = directory_recheck.unmatched_addresses(
-        db, session_id=review_session.id, kind=roster
-    )
+    addresses = directory_recheck.unmatched_addresses(db, session_id=review_session.id, kind=roster)
     started = _parse_since(since)
     known = (
         directory_lookups.known_for(

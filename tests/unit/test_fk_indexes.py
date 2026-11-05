@@ -26,6 +26,5 @@ def test_every_foreign_key_column_is_indexed() -> None:
         )
     )
     assert unindexed == [], (
-        "ForeignKey columns without index=True (docs/database.md "
-        f"'Indexes'): {unindexed}"
+        f"ForeignKey columns without index=True (docs/database.md 'Indexes'): {unindexed}"
     )

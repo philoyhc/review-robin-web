@@ -33,6 +33,7 @@ writes tens of thousands of rows, drives the real Prepare and Activate
 routes, and signs in as whoever `--operator-email` names — none of which
 may ever meet a deployed database.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -141,11 +142,7 @@ def seed(args: argparse.Namespace) -> None:
         )
         db.add(review_session)
         db.flush()
-        db.add(
-            SessionOperator(
-                session_id=review_session.id, user_id=user.id, role="owner"
-            )
-        )
+        db.add(SessionOperator(session_id=review_session.id, user_id=user.id, role="owner"))
 
         instruments = [
             Instrument(
@@ -204,16 +201,12 @@ def seed(args: argparse.Namespace) -> None:
 
         reviewer_ids = list(
             db.execute(
-                select(Reviewer.id)
-                .where(Reviewer.session_id == session_id)
-                .order_by(Reviewer.id)
+                select(Reviewer.id).where(Reviewer.session_id == session_id).order_by(Reviewer.id)
             ).scalars()
         )
         reviewee_ids = list(
             db.execute(
-                select(Reviewee.id)
-                .where(Reviewee.session_id == session_id)
-                .order_by(Reviewee.id)
+                select(Reviewee.id).where(Reviewee.session_id == session_id).order_by(Reviewee.id)
             ).scalars()
         )
 
@@ -238,9 +231,7 @@ def seed(args: argparse.Namespace) -> None:
                 {
                     "session_id": session_id,
                     "reviewer_id": reviewer_id,
-                    "reviewee_id": reviewee_ids[
-                        (index + offset + 1) % len(reviewee_ids)
-                    ],
+                    "reviewee_id": reviewee_ids[(index + offset + 1) % len(reviewee_ids)],
                     "tag_1": f"Team {index % 10}",
                     "status": "active",
                 }
@@ -329,9 +320,7 @@ def seed_lobby(args: argparse.Namespace) -> None:
     engine = create_engine(url, future=True)
     started = time.perf_counter()
     with Session(engine) as db:
-        user = db.execute(
-            select(User).where(User.email == args.operator_email)
-        ).scalar_one()
+        user = db.execute(select(User).where(User.email == args.operator_email)).scalar_one()
         existing = db.execute(
             select(SessionOperator.id).where(SessionOperator.user_id == user.id)
         ).all()
@@ -346,11 +335,7 @@ def seed_lobby(args: argparse.Namespace) -> None:
             )
             db.add(review_session)
             db.flush()
-            db.add(
-                SessionOperator(
-                    session_id=review_session.id, user_id=user.id, role="owner"
-                )
-            )
+            db.add(SessionOperator(session_id=review_session.id, user_id=user.id, role="owner"))
             for tag in (f"Term {n % 6}", f"Faculty {n % 4}"):
                 db.add(SessionTag(session_id=review_session.id, tag=tag))
         db.commit()
@@ -380,20 +365,22 @@ def seed_accounts(args: argparse.Namespace) -> None:
     engine = create_engine(url, future=True)
     started = time.perf_counter()
     with Session(engine) as db:
-        emails = list(
-            db.execute(
-                select(Reviewer.email).where(Reviewer.session_id == args.session)
-            ).scalars()
-        ) + list(
-            db.execute(
-                select(Reviewee.email_or_identifier).where(
-                    Reviewee.session_id == args.session
-                )
-            ).scalars()
-        ) + list(
-            db.execute(
-                select(Observer.email).where(Observer.session_id == args.session)
-            ).scalars()
+        emails = (
+            list(
+                db.execute(
+                    select(Reviewer.email).where(Reviewer.session_id == args.session)
+                ).scalars()
+            )
+            + list(
+                db.execute(
+                    select(Reviewee.email_or_identifier).where(Reviewee.session_id == args.session)
+                ).scalars()
+            )
+            + list(
+                db.execute(
+                    select(Observer.email).where(Observer.session_id == args.session)
+                ).scalars()
+            )
         )
         known = set(db.execute(select(User.email)).scalars())
         fresh = sorted(set(emails) - known)
@@ -408,9 +395,7 @@ def seed_accounts(args: argparse.Namespace) -> None:
         ]
         if rows:
             db.execute(insert(User), rows)
-        ids = list(
-            db.execute(select(User.id).where(User.email.in_(fresh))).scalars()
-        )
+        ids = list(db.execute(select(User.id).where(User.email.in_(fresh))).scalars())
         actors = ids[: int(len(ids) * args.history_share)]
         events = [
             {
@@ -449,11 +434,23 @@ ACCOUNTS_PAGES = (
     ("Accounts: all chips", "?show=operators&show=admins&show=no_role&show=unused"),
     ("Accounts: last page", "?show=operators&show=admins&show=no_role&show=unused&offset=99999"),
     ("Accounts: ?q=", "?show=operators&show=admins&show=no_role&show=unused&q=00500"),
-    ("Accounts: role=reviewer", "?show=operators&show=admins&show=no_role&show=unused&role=reviewer"),
-    ("Accounts: role=reviewee", "?show=operators&show=admins&show=no_role&show=unused&role=reviewee"),
-    ("Accounts: role=observer", "?show=operators&show=admins&show=no_role&show=unused&role=observer"),
+    (
+        "Accounts: role=reviewer",
+        "?show=operators&show=admins&show=no_role&show=unused&role=reviewer",
+    ),
+    (
+        "Accounts: role=reviewee",
+        "?show=operators&show=admins&show=no_role&show=unused&role=reviewee",
+    ),
+    (
+        "Accounts: role=observer",
+        "?show=operators&show=admins&show=no_role&show=unused&role=observer",
+    ),
     ("Accounts: role=owner", "?show=operators&show=admins&show=no_role&show=unused&role=owner"),
-    ("Accounts: typeahead", "/search-options?show=operators&show=admins&show=no_role&show=unused&q=par"),
+    (
+        "Accounts: typeahead",
+        "/search-options?show=operators&show=admins&show=no_role&show=unused&q=par",
+    ),
 )
 
 
@@ -465,9 +462,7 @@ def bench_accounts(args: argparse.Namespace) -> None:
     # The admin flag is stamped when a ``users`` row is first created, and
     # ``seed`` has usually created the bench operator's already, so set it.
     with Session(engine) as db:
-        user = db.execute(
-            select(User).where(User.email == args.operator_email)
-        ).scalar_one()
+        user = db.execute(select(User).where(User.email == args.operator_email)).scalar_one()
         user.is_sys_admin = True
         db.commit()
         # An action's redirect: the oldest account, so the lookup of its
@@ -618,9 +613,7 @@ def pin_rule(args: argparse.Namespace) -> None:
         db.add(rule_set)
         db.flush()
         instruments = list(
-            db.execute(
-                select(Instrument).where(Instrument.session_id == args.session)
-            ).scalars()
+            db.execute(select(Instrument).where(Instrument.session_id == args.session)).scalars()
         )
         for instrument in instruments:
             instrument.rule_set_id = rule_set.id
@@ -720,9 +713,7 @@ def main() -> None:
     seed_parser.add_argument("--code", default="BENCH1")
     seed_parser.set_defaults(func=seed)
 
-    lobby_parser = sub.add_parser(
-        "seed-lobby", parents=[common], help="add N near-empty sessions"
-    )
+    lobby_parser = sub.add_parser("seed-lobby", parents=[common], help="add N near-empty sessions")
     lobby_parser.add_argument("--sessions", type=int, default=50)
     lobby_parser.add_argument("--prefix", default="LOB")
     lobby_parser.set_defaults(func=seed_lobby)
@@ -730,13 +721,12 @@ def main() -> None:
     bench_parser = sub.add_parser("bench", parents=[common], help="time every page")
     bench_parser.add_argument("--session", type=int, required=True)
     bench_parser.add_argument("--runs", type=int, default=3)
-    bench_parser.add_argument(
-        "--only", default="", help="substring filter over the page labels"
-    )
+    bench_parser.add_argument("--only", default="", help="substring filter over the page labels")
     bench_parser.set_defaults(func=bench)
 
     accounts_parser = sub.add_parser(
-        "seed-accounts", parents=[common],
+        "seed-accounts",
+        parents=[common],
         help="a users row per roster email of a seeded session",
     )
     accounts_parser.add_argument("--session", type=int, required=True)
@@ -768,9 +758,7 @@ def main() -> None:
     directory_parser = sub.add_parser(
         "directory", help="time an import's directory check (no database)"
     )
-    directory_parser.add_argument(
-        "--sizes", type=int, nargs="+", default=[200, 1000, 2000]
-    )
+    directory_parser.add_argument("--sizes", type=int, nargs="+", default=[200, 1000, 2000])
     directory_parser.add_argument("--latency-ms", type=float, default=150.0)
     directory_parser.set_defaults(func=bench_directory)
 

@@ -12,6 +12,7 @@ The table sits inert until 15A Slice 1 introduces the resolver;
 this file is the schema gate that lets that work land without any
 further Alembic churn.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -26,9 +27,7 @@ def _make_session(db: Session, code: str) -> ReviewSession:
     op = User(email=f"op-{code}@example.edu", display_name="Op")
     db.add(op)
     db.flush()
-    review_session = ReviewSession(
-        name=code.title(), code=code, created_by_user_id=op.id
-    )
+    review_session = ReviewSession(name=code.title(), code=code, created_by_user_id=op.id)
     db.add(review_session)
     db.flush()
     return review_session
@@ -110,11 +109,15 @@ def test_same_field_different_sessions_ok(db: Session) -> None:
     )
     db.flush()
 
-    rows = db.execute(
-        select(SessionFieldLabel)
-        .where(SessionFieldLabel.source_field == "1")
-        .order_by(SessionFieldLabel.session_id)
-    ).scalars().all()
+    rows = (
+        db.execute(
+            select(SessionFieldLabel)
+            .where(SessionFieldLabel.source_field == "1")
+            .order_by(SessionFieldLabel.session_id)
+        )
+        .scalars()
+        .all()
+    )
     assert len(rows) == 2
     assert {r.label for r in rows} == {"Course", "Project"}
 
@@ -138,9 +141,9 @@ def test_cascade_on_session_delete(db: Session) -> None:
     db.delete(review_session)
     db.flush()
 
-    remaining = db.execute(
-        select(SessionFieldLabel).where(
-            SessionFieldLabel.session_id == session_id
-        )
-    ).scalars().all()
+    remaining = (
+        db.execute(select(SessionFieldLabel).where(SessionFieldLabel.session_id == session_id))
+        .scalars()
+        .all()
+    )
     assert remaining == []

@@ -38,9 +38,7 @@ def _window_sql(window: str, modes: tuple[str | None, ...]) -> str:
     for mode in modes:
         pair = _MODE_PAIRS[mode]
         if pair is None:
-            terms.append(
-                f"({window}_granularity IS NULL AND {window}_identification IS NULL)"
-            )
+            terms.append(f"({window}_granularity IS NULL AND {window}_identification IS NULL)")
         else:
             # COALESCE, so a NULL column compares false rather than
             # NULL: a CHECK passes on NULL, and an `=` against NULL
@@ -108,8 +106,6 @@ class InstrumentViewPolicy(Base, TimestampMixin):
     # ``name_email_profile``; ``NULL`` reads as ``name_email``, which
     # is what Raw showed before the level existed. Only Raw reads it.
     # ``guide/profilelink_updates.md`` Item 2.
-    after_release_reviewer_identity: Mapped[str | None] = mapped_column(
-        String(24)
-    )
+    after_release_reviewer_identity: Mapped[str | None] = mapped_column(String(24))
 
     instrument: Mapped[Instrument] = relationship(back_populates="view_policies")

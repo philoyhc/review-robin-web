@@ -73,9 +73,7 @@ def cohort_rule_summary(
     field = _cohort_field_friendly(str(first.get("field", "")), tag_labels)
     op = str(first.get("op", ""))
     if op in ("IS THE SAME AS", "IS DIFFERENT FROM"):
-        operand = _cohort_field_friendly(
-            str(first.get("operand_tag", "")), tag_labels
-        )
+        operand = _cohort_field_friendly(str(first.get("operand_tag", "")), tag_labels)
     else:
         operand_value = str(first.get("operand_value", ""))
         # ASCII straight quotes so the summary string survives
@@ -106,9 +104,7 @@ class RuleEditState:
     last_id: int | None
 
 
-def rule_edit_state(
-    shown: Sequence[Observer], requested_ids: Iterable[int]
-) -> RuleEditState:
+def rule_edit_state(shown: Sequence[Observer], requested_ids: Iterable[int]) -> RuleEditState:
     """Which selected rows the several-row editor edits, and what it
     loads (operator pages Item 4).
 
@@ -127,5 +123,8 @@ def rule_edit_state(
     chosen = set(ids)
     last_id = next((o.id for o in reversed(shown) if o.id in chosen), None)
     return RuleEditState(
-        ids=ids, rule=None if mixed else first, mixed=mixed, last_id=last_id,
+        ids=ids,
+        rule=None if mixed else first,
+        mixed=mixed,
+        last_id=last_id,
     )

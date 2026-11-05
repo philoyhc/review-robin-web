@@ -64,18 +64,14 @@ ANCHOR_TEMPLATES = {
 }
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "Spring", "code": code},
         follow_redirects=False,
     )
     assert response.status_code == 303
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _import_reviewers(
@@ -89,9 +85,7 @@ def _import_reviewers(
         header += b",ReviewerTag1"
     rows = b"".join(
         (
-            f"Reviewer {i:04d},r{i:04d}@example.edu"
-            + (f",Tutor {i % 4}" if tagged else "")
-            + "\n"
+            f"Reviewer {i:04d},r{i:04d}@example.edu" + (f",Tutor {i % 4}" if tagged else "") + "\n"
         ).encode()
         for i in range(count)
     )
@@ -117,14 +111,10 @@ def _ranges(body: str) -> list[str]:
     )
 
 
-def test_every_range_link_lands_on_the_table(
-    client: TestClient, db: Session
-) -> None:
+def test_every_range_link_lands_on_the_table(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="anchor-1")
     _import_reviewers(client, review_session.id, 556)
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
 
     hrefs = _ranges(body)
     # Three pages of 556, rendered above and below the table.
@@ -136,9 +126,7 @@ def test_every_range_link_lands_on_the_table(
         assert re.search(r"offset=\d+#reviewers-table-card$", href), href
 
 
-def test_the_anchor_names_an_id_the_page_actually_has(
-    client: TestClient, db: Session
-) -> None:
+def test_the_anchor_names_an_id_the_page_actually_has(client: TestClient, db: Session) -> None:
     """The half that catches a renamed table.
 
     A fragment pointing at nothing leaves the browser at the top of the
@@ -147,9 +135,7 @@ def test_the_anchor_names_an_id_the_page_actually_has(
     """
     review_session = _make_session(client, db, code="anchor-2")
     _import_reviewers(client, review_session.id, 556)
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
 
     anchors = {href.split("#", 1)[1] for href in _ranges(body)}
     assert anchors, "no range links rendered"
@@ -178,14 +164,11 @@ def test_every_pager_route_supplies_an_anchor_that_exists() -> None:
         declared += re.findall(r'"pager_anchor": "([^"]+)"', source)
 
     assert sorted(declared) == sorted(ANCHOR_TEMPLATES), (
-        f"routes declare {sorted(declared)}; expected "
-        f"{sorted(ANCHOR_TEMPLATES)}"
+        f"routes declare {sorted(declared)}; expected {sorted(ANCHOR_TEMPLATES)}"
     )
 
     for template in ANCHOR_TEMPLATES.values():
-        markup = (templates / template).read_text(
-            encoding="utf-8", errors="replace"
-        )
+        markup = (templates / template).read_text(encoding="utf-8", errors="replace")
         # The template writes the id through the context variable, so
         # the source carries the binding rather than the literal. What
         # matters is that it is on a card, and that the card is the one
@@ -193,14 +176,10 @@ def test_every_pager_route_supplies_an_anchor_that_exists() -> None:
         assert 'class="card table-pager-anchored" id="{{ pager_anchor }}"' in markup, (
             f"{template} does not anchor its table card"
         )
-        assert "_pager_cluster.html" in markup, (
-            f"{template} does not render the pager partial"
-        )
+        assert "_pager_cluster.html" in markup, f"{template} does not render the pager partial"
 
 
-def test_the_anchored_card_keeps_a_landing_margin(
-    client: TestClient, db: Session
-) -> None:
+def test_the_anchored_card_keeps_a_landing_margin(client: TestClient, db: Session) -> None:
     """Without it the card's top border sits flush against the
     viewport's edge, which reads as a crop rather than a boundary."""
     review_session = _make_session(client, db, code="anchor-margin")
@@ -208,9 +187,7 @@ def test_the_anchored_card_keeps_a_landing_margin(
     # card has to hold all three, and an untagged roster would leave
     # the ordering assertion below with only two things to order.
     _import_reviewers(client, review_session.id, 556, tagged=True)
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
 
     # Matched within a selector list rather than as the whole selector.
     # The margin was shared with `.row-editor-anchored` until that class
@@ -219,25 +196,20 @@ def test_the_anchored_card_keeps_a_landing_margin(
     # still carries the rule, not that it is alone on the line; a
     # whole-selector match would break again the next time something
     # joins it.
-    rule = re.search(
-        r"\.table-pager-anchored[^{}]*\{([^}]*)\}", body
-    )
+    rule = re.search(r"\.table-pager-anchored[^{}]*\{([^}]*)\}", body)
     assert rule is not None, "the landing-margin rule is gone"
     assert "scroll-margin-top" in rule.group(1)
 
     # And it is on the element the fragment points at, not merely
     # declared somewhere in the sheet.
-    assert (
-        '<div class="card table-pager-anchored" id="reviewers-table-card">'
-        in body
-    )
+    assert '<div class="card table-pager-anchored" id="reviewers-table-card">' in body
     # Exactly one element carries the id — a duplicate would make the
     # fragment ambiguous and leave the landing point to the browser.
     assert body.count('id="reviewers-table-card"') == 1
 
     # And the card really encloses all three things the operator needs
     # to see, in this order down the screen: chips, page links, rows.
-    card = body[body.index('id="reviewers-table-card"'):]
+    card = body[body.index('id="reviewers-table-card"') :]
     assert (
         card.index("col-chip-row")
         < card.index('<div class="table-pager-cluster')

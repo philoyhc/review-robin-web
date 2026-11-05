@@ -33,9 +33,7 @@ def _create_session(client: TestClient, db: Session, code: str) -> ReviewSession
         follow_redirects=False,
     )
     assert response.status_code == 303
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _populate(client: TestClient, db: Session, session_id: int, *, reviewer_email: str) -> None:

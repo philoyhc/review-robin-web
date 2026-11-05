@@ -22,18 +22,14 @@ from sqlalchemy.orm import Session
 from app.db.models import Observer, Reviewee, Reviewer, ReviewSession
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "Cohort A", "code": code, "description": ""},
         follow_redirects=False,
     )
     assert response.status_code == 303
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 # ── Results surface ───────────────────────────────────────────────────
@@ -53,24 +49,13 @@ def test_results_chip_renders_reviewee_active_no_anchor(
     db.commit()
     # 19F PR 4 — /results opens only while a grant resolves.
     grant_reviewee_visibility(review_session)
-    body = client.get(
-        f"/me/sessions/{review_session.public_id}/results"
-    ).text
+    body = client.get(f"/me/sessions/{review_session.public_id}/results").text
     # Reviewee chip is the active one — no anchor, span with the
     # ``rs-role-nav-active`` marker class.
-    assert (
-        '<span class="pill pill-role-reviewee rs-role-nav-active">Reviewee</span>'
-        in body
-    )
+    assert '<span class="pill pill-role-reviewee rs-role-nav-active">Reviewee</span>' in body
     # Only one chip — no anchors to the other surfaces.
-    assert (
-        f'href="/me/sessions/{review_session.public_id}/1"'
-        not in body
-    )
-    assert (
-        f'href="/me/sessions/{review_session.public_id}/collation"'
-        not in body
-    )
+    assert f'href="/me/sessions/{review_session.public_id}/1"' not in body
+    assert f'href="/me/sessions/{review_session.public_id}/collation"' not in body
 
 
 def test_results_chips_show_other_roles_as_muted_anchors(
@@ -97,13 +82,8 @@ def test_results_chips_show_other_roles_as_muted_anchors(
     db.commit()
     # 19F PR 4 — /results opens only while a grant resolves.
     grant_reviewee_visibility(review_session)
-    body = client.get(
-        f"/me/sessions/{review_session.public_id}/results"
-    ).text
-    assert (
-        '<span class="pill pill-role-reviewee rs-role-nav-active">Reviewee</span>'
-        in body
-    )
+    body = client.get(f"/me/sessions/{review_session.public_id}/results").text
+    assert '<span class="pill pill-role-reviewee rs-role-nav-active">Reviewee</span>' in body
     expected_observer = (
         f'<a class="pill pill-role-observer rs-role-nav-muted" '
         f'href="/me/sessions/{review_session.public_id}/collation">Observer</a>'
@@ -141,9 +121,7 @@ def test_results_chips_render_in_priority_order(
     db.commit()
     # 19F PR 4 — /results opens only while a grant resolves.
     grant_reviewee_visibility(review_session)
-    body = client.get(
-        f"/me/sessions/{review_session.public_id}/results"
-    ).text
+    body = client.get(f"/me/sessions/{review_session.public_id}/results").text
     reviewer_pos = body.find("pill-role-reviewer rs-role-nav-muted")
     reviewee_pos = body.find("pill-role-reviewee rs-role-nav-active")
     observer_pos = body.find("pill-role-observer rs-role-nav-muted")
@@ -185,13 +163,8 @@ def test_results_reviewer_chip_is_always_live_now(
     )
     db.commit()
     grant_reviewee_visibility(review_session)
-    body = client.get(
-        f"/me/sessions/{review_session.public_id}/results"
-    ).text
-    assert (
-        '<span class="pill pill-role-reviewer rs-role-nav-muted">Reviewer</span>'
-        not in body
-    )
+    body = client.get(f"/me/sessions/{review_session.public_id}/results").text
+    assert '<span class="pill pill-role-reviewer rs-role-nav-muted">Reviewer</span>' not in body
     assert (
         f'<a class="pill pill-role-reviewer rs-role-nav-muted" '
         f'href="/me/sessions/{review_session.public_id}'
@@ -225,18 +198,11 @@ def test_collation_reviewer_chip_disabled_when_session_not_opened(
         ]
     )
     db.commit()
-    body = client.get(
-        f"/me/sessions/{review_session.public_id}/collation"
-    ).text
-    assert (
-        '<span class="pill pill-role-reviewer rs-role-nav-muted">Reviewer</span>'
-        in body
-    )
+    body = client.get(f"/me/sessions/{review_session.public_id}/collation").text
+    assert '<span class="pill pill-role-reviewer rs-role-nav-muted">Reviewer</span>' in body
 
 
-def test_collation_chip_renders_observer_active(
-    client: TestClient, db: Session
-) -> None:
+def test_collation_chip_renders_observer_active(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="chip-ob-only")
     db.add(
         Observer(
@@ -246,13 +212,8 @@ def test_collation_chip_renders_observer_active(
         )
     )
     db.commit()
-    body = client.get(
-        f"/me/sessions/{review_session.public_id}/collation"
-    ).text
-    assert (
-        '<span class="pill pill-role-observer rs-role-nav-active">Observer</span>'
-        in body
-    )
+    body = client.get(f"/me/sessions/{review_session.public_id}/collation").text
+    assert '<span class="pill pill-role-observer rs-role-nav-active">Observer</span>' in body
 
 
 def test_collation_omits_reviewee_chip_without_a_current_grant(
@@ -284,18 +245,13 @@ def test_collation_omits_reviewee_chip_without_a_current_grant(
         ]
     )
     db.commit()
-    body = client.get(
-        f"/me/sessions/{review_session.public_id}/collation"
-    ).text
+    body = client.get(f"/me/sessions/{review_session.public_id}/collation").text
     # Scoped to the chip markup: a bare ``pill-role-reviewee`` also
     # matches the CSS rule in ``base.html``'s inlined stylesheet, which
     # is present on every page and would pass this test forever.
     assert 'class="pill pill-role-reviewee' not in body
     assert f"/me/sessions/{review_session.public_id}/results" not in body
-    assert (
-        '<span class="pill pill-role-observer rs-role-nav-active">Observer</span>'
-        in body
-    )
+    assert '<span class="pill pill-role-observer rs-role-nav-active">Observer</span>' in body
 
 
 def test_collation_shows_reviewee_chip_once_a_grant_resolves(
@@ -321,15 +277,10 @@ def test_collation_shows_reviewee_chip_once_a_grant_resolves(
     )
     db.commit()
     grant_reviewee_visibility(review_session)
-    body = client.get(
-        f"/me/sessions/{review_session.public_id}/collation"
-    ).text
+    body = client.get(f"/me/sessions/{review_session.public_id}/collation").text
     expected_reviewee = (
         f'<a class="pill pill-role-reviewee rs-role-nav-muted" '
         f'href="/me/sessions/{review_session.public_id}/results">Reviewee</a>'
     )
     assert expected_reviewee in body
-    assert (
-        '<span class="pill pill-role-observer rs-role-nav-active">Observer</span>'
-        in body
-    )
+    assert '<span class="pill pill-role-observer rs-role-nav-active">Observer</span>' in body

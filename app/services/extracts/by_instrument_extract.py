@@ -76,9 +76,7 @@ def fallback_instrument_label(instrument: Instrument, position: int) -> str:
     return _instrument_label(instrument)
 
 
-def by_instrument_filename_slug(
-    instrument: Instrument, position: int, *, used: set[str]
-) -> str:
+def by_instrument_filename_slug(instrument: Instrument, position: int, *, used: set[str]) -> str:
     """A filesystem-safe slug for the per-instrument CSV name.
 
     Built from the short label (or the ``Instrument_{session_seq}``
@@ -174,25 +172,15 @@ def serialize_by_instrument(
 
     session_zone = resolve_session_timezone(review_session)
     fields = sorted(
-        (
-            f
-            for f in instrument.response_fields
-            if f.visible or not visible_only
-        ),
+        (f for f in instrument.response_fields if f.visible or not visible_only),
         key=lambda f: (f.order, f.id),
     )
 
-    tokenizer = (
-        ParticipantTokenizer(review_session)
-        if identification == "anonymized"
-        else None
-    )
+    tokenizer = ParticipantTokenizer(review_session) if identification == "anonymized" else None
     level = reviewer_identity if identification == "raw" else "name_email"
 
     if include_metadata:
-        yield from _meta_block(
-            db, review_session, instrument, fields, position
-        )
+        yield from _meta_block(db, review_session, instrument, fields, position)
         yield ()
     yield from _data_block(
         db,
@@ -239,14 +227,11 @@ def _meta_block(
         # field's do. A field outside any branch adds no row. Under a
         # require-mode parent (19T Item 13) the condition makes the field
         # required rather than shown, and its cells are never closed.
-        parent = (
-            by_id.get(field.branch_parent_id) if field.branch_parent_id is not None else None
-        )
+        parent = by_id.get(field.branch_parent_id) if field.branch_parent_id is not None else None
         if parent is not None:
             label = (
                 "Required when"
-                if responses_service.branch_mode(parent)
-                == responses_service.BRANCH_MODE_REQUIRE
+                if responses_service.branch_mode(parent) == responses_service.BRANCH_MODE_REQUIRE
                 else "Shown when"
             )
             yield (label, responses_service.condition_label(parent))
@@ -345,11 +330,7 @@ def _field_friendly_label(field_path: str, session: ReviewSession) -> str:
         return field_path
     source_type, _, source_field = field_path.partition(".")
     lookup_field = source_field
-    if (
-        len(lookup_field) == 4
-        and lookup_field.startswith("tag")
-        and lookup_field[3].isdigit()
-    ):
+    if len(lookup_field) == 4 and lookup_field.startswith("tag") and lookup_field[3].isdigit():
         lookup_field = f"tag_{lookup_field[3]}"
     try:
         return field_labels.resolve(session, source_type, lookup_field)
@@ -357,18 +338,13 @@ def _field_friendly_label(field_path: str, session: ReviewSession) -> str:
         return source_field
 
 
-def _unit_of_review_label(
-    instrument: Instrument, session: ReviewSession
-) -> str:
+def _unit_of_review_label(instrument: Instrument, session: ReviewSession) -> str:
     if instrument.group_kind is None:
         return "Individual"
     pairs = decode_group_kind(instrument.group_kind)
     if not pairs or instrument.group_kind == GROUP_KIND_SENTINEL:
         return "Group"
-    labels = [
-        _field_friendly_label(f"{source}.{slot}", session)
-        for source, slot in pairs
-    ]
+    labels = [_field_friendly_label(f"{source}.{slot}", session) for source, slot in pairs]
     if len(labels) == 1:
         return f"Group by {labels[0]}"
     return f"Group by AND({', '.join(labels)})"
@@ -428,15 +404,11 @@ def _data_block(
                 # email and tags would name them there (findings R8).
                 row = (*row[:6], "", "", "", "", *row[10:])
         elif with_link:
-            row = _with_profile_column(
-                row, assignment.reviewer.profile_link or ""
-            )
+            row = _with_profile_column(row, assignment.reviewer.profile_link or "")
         yield row
 
 
-def _with_profile_column(
-    row: tuple[str, ...], value: str
-) -> tuple[str, ...]:
+def _with_profile_column(row: tuple[str, ...], value: str) -> tuple[str, ...]:
     """``row`` with ``value`` after ``ReviewerEmail`` (index 1)."""
     return (*row[:2], value, *row[2:])
 
@@ -509,19 +481,13 @@ def _data_rows(
         db, review_session, instrument, assignments
     )
 
-    responses_by_assignment = _responses_by_assignment(
-        db, instrument, [a.id for a in assignments]
-    )
+    responses_by_assignment = _responses_by_assignment(db, instrument, [a.id for a in assignments])
 
     field_ids = [f.id for f in fields]
-    rows: list[
-        tuple[tuple[str, str, str, str, int], Assignment, tuple[str, ...]]
-    ] = []
+    rows: list[tuple[tuple[str, str, str, str, int], Assignment, tuple[str, ...]]] = []
     seen_group_rows: set[tuple[int, tuple[str, ...]]] = set()
     for assignment in assignments:
-        assignment_responses = responses_by_assignment.get(
-            assignment.id, {}
-        )
+        assignment_responses = responses_by_assignment.get(assignment.id, {})
         if not include_empty_assignments and not assignment_responses:
             continue
         group_key = group_key_by_assignment.get(assignment.id)
@@ -546,9 +512,7 @@ def _data_rows(
         sort_key = (
             row[5],
             row[0],
-            row[6]
-            if sort_by_reviewer_email or not assignment.is_self_review
-            else "",
+            row[6] if sort_by_reviewer_email or not assignment.is_self_review else "",
             row[1] if sort_by_reviewer_email else "",
             assignment.id,
         )
@@ -598,9 +562,7 @@ def _assignment_row(
         reviewee_name = (
             ""
             if tokenizer is not None
-            else group_identity.get(
-                (instrument.id, group_key), "(group)"
-            )
+            else group_identity.get((instrument.id, group_key), "(group)")
         )
         reviewee_email = ""
         reviewee_tags = ("", "", "")
@@ -630,9 +592,7 @@ def _assignment_row(
     # A row the import stored with no value, or only whitespace, is not
     # an answer here either, as the collation statistics count it.
     answered = [
-        responses[f]
-        for f in field_ids
-        if f in responses and (responses[f].value or "").strip()
+        responses[f] for f in field_ids if f in responses and (responses[f].value or "").strip()
     ]
     submitted_state = (
         ""
@@ -726,9 +686,7 @@ def _group_index(
         group_key = key_by_assignment.get(assignment.id)
         if group_key is None:
             continue
-        members.setdefault(
-            (instrument.id, group_key), set()
-        ).add(assignment.reviewee.name)
+        members.setdefault((instrument.id, group_key), set()).add(assignment.reviewee.name)
     identity = {
         (instr_id, group_key): _compose_group_identity(group_key, names)
         for (instr_id, group_key), names in members.items()
@@ -736,9 +694,7 @@ def _group_index(
     return key_by_assignment, identity
 
 
-def _compose_group_identity(
-    group_key: tuple[str, ...], member_names: set[str]
-) -> str:
+def _compose_group_identity(group_key: tuple[str, ...], member_names: set[str]) -> str:
     """Single-cell group identity for the wide row: the boundary tag
     values alone. Unlike the unified Responses CSV, which appends the
     member names, this lens lists no members."""

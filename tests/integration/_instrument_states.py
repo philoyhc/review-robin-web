@@ -7,6 +7,7 @@ package, and nothing puts the repo root on ``sys.path``).
 
 Segment 19I Item 6.
 """
+
 from __future__ import annotations
 
 import datetime as _dt
@@ -62,14 +63,10 @@ def seed_session_with_instruments(
         follow_redirects=False,
     )
     assert r.status_code == 303, r.text
-    s = db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    s = db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
     reviewer = Reviewer(session_id=s.id, name="R", email="r@example.edu")
-    reviewee = Reviewee(
-        session_id=s.id, name="E", email_or_identifier="e@example.edu"
-    )
+    reviewee = Reviewee(session_id=s.id, name="E", email_or_identifier="e@example.edu")
     first = Instrument(session_id=s.id, name="I1", order=0)
     second = Instrument(session_id=s.id, name="I2", order=1)
     db.add_all([reviewer, reviewee, first, second])

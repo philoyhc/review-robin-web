@@ -48,15 +48,9 @@ def test_blank_all_optional_rows_are_not_started() -> None:
 
 def test_complete_needs_an_answer_and_every_required_field() -> None:
     assert _page_status_for_group([_row(answers=1, unsubmitted=1)]) == "complete"
-    assert (
-        _page_status_for_group([_row(answers=1, unsubmitted=1, complete=False)])
-        == "in_progress"
-    )
+    assert _page_status_for_group([_row(answers=1, unsubmitted=1, complete=False)]) == "in_progress"
     # One answered row and one blank all-optional row is complete.
-    assert (
-        _page_status_for_group([_row(answers=1, unsubmitted=1), _row()])
-        == "complete"
-    )
+    assert _page_status_for_group([_row(answers=1, unsubmitted=1), _row()]) == "complete"
 
 
 def test_submitted_ignores_a_blank_all_optional_row() -> None:
@@ -67,10 +61,7 @@ def test_unsubmitted_answer_after_submit_is_not_submitted() -> None:
     # A new or changed answer (findings R1) beside stamped ones: complete
     # while every required field is filled, in progress once one isn't.
     assert _page_status_for_group([_row(answers=2, unsubmitted=1)]) == "complete"
-    assert (
-        _page_status_for_group([_row(answers=2, unsubmitted=1, complete=False)])
-        == "in_progress"
-    )
+    assert _page_status_for_group([_row(answers=2, unsubmitted=1, complete=False)]) == "in_progress"
 
 
 def test_hidden_values_read_saved_rows_for_submitted() -> None:
@@ -78,12 +69,7 @@ def test_hidden_values_read_saved_rows_for_submitted() -> None:
     # submitted page still reads submitted; one short of it reads as not
     # started, as the spec has it.
     assert _page_status_for_group([_row(answers=1, shown=False)]) == "submitted"
-    assert (
-        _page_status_for_group(
-            [_row(answers=1, complete=False, shown=False)]
-        )
-        == "not_started"
-    )
+    assert _page_status_for_group([_row(answers=1, complete=False, shown=False)]) == "not_started"
 
 
 def _pages(*states: PageStatusState) -> list[PageStatus]:

@@ -14,6 +14,7 @@ on a clean verdict). **PR H (this file)** wires the **Rehydrate** commit:
 :func:`session_rehydrate.rehydrate_session` and redirects to the new draft's
 Session Home.
 """
+
 from __future__ import annotations
 
 import io
@@ -158,9 +159,7 @@ def rehydrate_validate(
     if report.ok:
         # Only a clean set is worth stashing — the Rehydrate button gates
         # on the same verdict, so a failed run has nothing to commit.
-        token = rehydrate_stash.put(
-            db, payload=pack_file_set(collected), user=user
-        )
+        token = rehydrate_stash.put(db, payload=pack_file_set(collected), user=user)
     return _render(request, user, report=report, token=token)
 
 
@@ -252,7 +251,8 @@ def rehydrate_commit(
 
     if not result.dropped:
         db.commit()
-        return urls.redirect(request,
+        return urls.redirect(
+            request,
             url=f"/operator/sessions/{result.session.public_id}?rehydrated=1",
             status_code=status.HTTP_303_SEE_OTHER,
         )
@@ -296,7 +296,5 @@ def rehydrate_dropped_csv(
     return Response(
         content=payload,
         media_type="text/csv",
-        headers={
-            "Content-Disposition": content_disposition("rehydrate_dropped_responses.csv")
-        },
+        headers={"Content-Disposition": content_disposition("rehydrate_dropped_responses.csv")},
     )

@@ -33,13 +33,22 @@ class Field:
 
 
 def _parent(**kw) -> Field:
-    return Field(**{"id": 1, "label": "Rating", "order": 0,
-                    "branch_op": "ge", "branch_value": "4", **kw})
+    return Field(
+        **{"id": 1, "label": "Rating", "order": 0, "branch_op": "ge", "branch_value": "4", **kw}
+    )
 
 
 def _governed(**kw) -> Field:
-    return Field(**{"id": 2, "label": "Why", "order": 1,
-                    "branch_parent_id": 1, "_inline_data_type": "String", **kw})
+    return Field(
+        **{
+            "id": 2,
+            "label": "Why",
+            "order": 1,
+            "branch_parent_id": 1,
+            "_inline_data_type": "String",
+            **kw,
+        }
+    )
 
 
 @pytest.mark.parametrize(
@@ -53,13 +62,28 @@ def _governed(**kw) -> Field:
         ("Integer", None, "eq", "inf", "The branch condition needs a number."),
         ("List", "Red,Green,Blue", "is", "Red, Blue", None),
         ("List", "Red,Green,Blue", "is_not", "Red, Blue", None),
-        ("List", "Red,Green", "eq", "Red",
-         "A List field's branch condition must be \"is\" or \"is not\"."),
-        ("List", "Red,Green", "is_not", "Pink",
-         "The branch condition names an option the list doesn't have: Pink."),
+        (
+            "List",
+            "Red,Green",
+            "eq",
+            "Red",
+            'A List field\'s branch condition must be "is" or "is not".',
+        ),
+        (
+            "List",
+            "Red,Green",
+            "is_not",
+            "Pink",
+            "The branch condition names an option the list doesn't have: Pink.",
+        ),
         ("List", "Red,Green", "is", " , ", "Choose at least one option for the branch condition."),
-        ("List", "Red,Green", "is", "Red, Pink",
-         "The branch condition names an option the list doesn't have: Pink."),
+        (
+            "List",
+            "Red,Green",
+            "is",
+            "Red, Pink",
+            "The branch condition names an option the list doesn't have: Pink.",
+        ),
     ],
 )
 def test_condition_error(data_type, list_csv, op, value, expected) -> None:
@@ -107,9 +131,10 @@ def test_applicable_fields_follow_the_parent_answer() -> None:
 
 
 def test_a_valid_branch_has_no_structure_errors() -> None:
-    assert branch_structure_errors(
-        [_parent(), _governed(), _governed(id=3, label="How", order=2)]
-    ) == []
+    assert (
+        branch_structure_errors([_parent(), _governed(), _governed(id=3, label="How", order=2)])
+        == []
+    )
 
 
 def test_structure_errors_name_each_broken_rule() -> None:
@@ -118,8 +143,15 @@ def test_structure_errors_name_each_broken_rule() -> None:
     nested = [
         _parent(),
         _governed(_inline_data_type="Integer", branch_op="eq", branch_value="1"),
-        _governed(id=3, label="Deep", order=2, branch_parent_id=2,
-                  _inline_data_type="Integer", branch_op="eq", branch_value="1"),
+        _governed(
+            id=3,
+            label="Deep",
+            order=2,
+            branch_parent_id=2,
+            _inline_data_type="Integer",
+            branch_op="eq",
+            branch_value="1",
+        ),
         _governed(id=4, label="Deeper", order=3, branch_parent_id=3),
     ]
     two_levels = [*nested[:2], _governed(id=3, label="Deep", order=2, branch_parent_id=2)]
@@ -129,10 +161,24 @@ def test_structure_errors_name_each_broken_rule() -> None:
     ]
     # A loop is refused, not followed.
     loop = [
-        Field(id=1, label="A", order=0, branch_parent_id=2, _inline_data_type="Integer",
-              branch_op="ge", branch_value="1"),
-        Field(id=2, label="B", order=1, branch_parent_id=1, _inline_data_type="Integer",
-              branch_op="ge", branch_value="1"),
+        Field(
+            id=1,
+            label="A",
+            order=0,
+            branch_parent_id=2,
+            _inline_data_type="Integer",
+            branch_op="ge",
+            branch_value="1",
+        ),
+        Field(
+            id=2,
+            label="B",
+            order=1,
+            branch_parent_id=1,
+            _inline_data_type="Integer",
+            branch_op="ge",
+            branch_value="1",
+        ),
     ]
     assert ("A", "Its branch leads back to itself.") in branch_structure_errors(loop)
     # A required governed field needs an active required field outside
@@ -141,9 +187,9 @@ def test_structure_errors_name_each_broken_rule() -> None:
         ("Why", REQUIRED_GOVERNED_NEEDS_ANCHOR_MESSAGE)
     ]
     # A String parent.
-    assert branch_structure_errors(
-        [_parent(_inline_data_type="String"), _governed()]
-    ) == [("Rating", "A String field can't have a branch.")]
+    assert branch_structure_errors([_parent(_inline_data_type="String"), _governed()]) == [
+        ("Rating", "A String field can't have a branch.")
+    ]
     # A branch is one unit: a condition always governs a field.
     assert branch_structure_errors([_parent()]) == [
         ("Rating", "Its branch condition governs no field.")
@@ -156,9 +202,9 @@ def test_structure_errors_name_each_broken_rule() -> None:
 
 def test_a_branch_must_directly_follow_its_parent() -> None:
     notes = Field(id=3, label="Notes", order=1)
-    assert branch_structure_errors(
-        [_parent(), notes, _governed(order=2)]
-    ) == [("Rating", "A branch's fields must directly follow their parent.")]
+    assert branch_structure_errors([_parent(), notes, _governed(order=2)]) == [
+        ("Rating", "A branch's fields must directly follow their parent.")
+    ]
 
 
 @pytest.mark.parametrize(
@@ -185,9 +231,20 @@ def test_the_condition_reads_as_the_builder_shows_it(op, value, label) -> None:
 
 @pytest.mark.parametrize(
     ("value", "is_number"),
-    [("4", True), ("-2.5", True), (".5", True), ("1e3", True), (" 7 ", True),
-     ("1_000", False), ("0x10", False), ("inf", False), ("nan", False),
-     ("", False), ("4.", True), ("١", False)],
+    [
+        ("4", True),
+        ("-2.5", True),
+        (".5", True),
+        ("1e3", True),
+        (" 7 ", True),
+        ("1_000", False),
+        ("0x10", False),
+        ("inf", False),
+        ("nan", False),
+        ("", False),
+        ("4.", True),
+        ("١", False),
+    ],
 )
 def test_a_number_is_a_plain_decimal(value, is_number) -> None:
     """The cumulative read's finding 2: ``float()`` takes "1_000" and "nan"
@@ -228,8 +285,7 @@ def test_applicability_walks_the_whole_chain() -> None:
     14 lets the structure rules accept the chain."""
     grandparent = _parent()
     parent = _governed(branch_op="ge", branch_value="4", _inline_data_type="Integer")
-    child = Field(id=3, label="Why", order=2, branch_parent_id=2,
-                  _inline_data_type="String")
+    child = Field(id=3, label="Why", order=2, branch_parent_id=2, _inline_data_type="String")
     fields = [grandparent, parent, child]
     assert applicable_field_ids(fields, {1: "5", 2: "5"}) == {1, 2, 3}
     assert applicable_field_ids(fields, {1: "2", 2: "5"}) == {1}
@@ -240,11 +296,13 @@ def test_applicability_walks_the_whole_chain() -> None:
 def test_a_branch_inside_a_branch_must_directly_follow_too() -> None:
     """The level-0 branch's fields include the branch inside it, so a
     plain field wedged between Level1 and its own branch breaks both."""
+
     def chain(*extra: Field) -> list[Field]:
         return [
             _parent(),
-            _governed(label="Level1", branch_op="ge", branch_value="4",
-                      _inline_data_type="Integer"),
+            _governed(
+                label="Level1", branch_op="ge", branch_value="4", _inline_data_type="Integer"
+            ),
             *extra,
         ]
 
@@ -262,21 +320,37 @@ def test_a_branch_inside_a_branch_must_directly_follow_too() -> None:
 def test_a_very_long_chain_is_refused_by_name_not_by_recursion() -> None:
     """Codex on #2681: a settings CSV has no field cap, so a hand-made
     chain thousands long must come back as named errors."""
-    fields = [Field(id=0, label="F0", order=0, required=True,
-                    _inline_data_type="Integer", branch_op="ge", branch_value="1")]
+    fields = [
+        Field(
+            id=0,
+            label="F0",
+            order=0,
+            required=True,
+            _inline_data_type="Integer",
+            branch_op="ge",
+            branch_value="1",
+        )
+    ]
     for n in range(1, 3000):
-        fields.append(Field(id=n, label=f"F{n}", order=n, branch_parent_id=n - 1,
-                            _inline_data_type="Integer", branch_op="ge", branch_value="1"))
+        fields.append(
+            Field(
+                id=n,
+                label=f"F{n}",
+                order=n,
+                branch_parent_id=n - 1,
+                _inline_data_type="Integer",
+                branch_op="ge",
+                branch_value="1",
+            )
+        )
     errors = branch_structure_errors(fields)
     assert ("F3", "A branch inside a branch can't have a branch of its own.") in errors
     assert ("F1", "A branch inside a branch can't have a branch of its own.") not in errors
 
 
 def test_a_cycle_closes_rather_than_recursing() -> None:
-    first = Field(id=1, label="A", order=0, branch_parent_id=2,
-                  branch_op="ge", branch_value="1")
-    second = Field(id=2, label="B", order=1, branch_parent_id=1,
-                   branch_op="ge", branch_value="1")
+    first = Field(id=1, label="A", order=0, branch_parent_id=2, branch_op="ge", branch_value="1")
+    second = Field(id=2, label="B", order=1, branch_parent_id=1, branch_op="ge", branch_value="1")
     assert applicable_field_ids([first, second], {1: "5", 2: "5"}) == set()
 
 
@@ -287,19 +361,24 @@ def test_a_required_governed_field_needs_an_active_required_anchor() -> None:
     # The parent itself.
     assert branch_structure_errors([_parent(required=True), _governed(required=True)]) == []
     # Another field, with the parent optional.
-    assert branch_structure_errors(
-        [_parent(), _governed(required=True), Field(**{**notes.__dict__, "required": True})]
-    ) == []
+    assert (
+        branch_structure_errors(
+            [_parent(), _governed(required=True), Field(**{**notes.__dict__, "required": True})]
+        )
+        == []
+    )
     # A hidden anchor guarantees nothing: the submit gate skips it.
     assert branch_structure_errors(
         [_parent(required=True, visible=False), _governed(required=True)]
     ) == [("Why", REQUIRED_GOVERNED_NEEDS_ANCHOR_MESSAGE)]
     # A hidden required governed field counts nowhere, so it needs none.
-    assert branch_structure_errors(
-        [_parent(), _governed(required=True, visible=False), notes]
-    ) == []
+    assert (
+        branch_structure_errors([_parent(), _governed(required=True, visible=False), notes]) == []
+    )
     # Every required governed field without an anchor is named.
     assert branch_structure_errors(
         [_parent(), _governed(required=True), _governed(id=3, label="How", order=2, required=True)]
-    ) == [("Why", REQUIRED_GOVERNED_NEEDS_ANCHOR_MESSAGE),
-          ("How", REQUIRED_GOVERNED_NEEDS_ANCHOR_MESSAGE)]
+    ) == [
+        ("Why", REQUIRED_GOVERNED_NEEDS_ANCHOR_MESSAGE),
+        ("How", REQUIRED_GOVERNED_NEEDS_ANCHOR_MESSAGE),
+    ]

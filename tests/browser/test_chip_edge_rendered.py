@@ -21,10 +21,7 @@ from .conftest import app_url
 
 def _edge(chip: Locator) -> tuple[str, str]:
     return tuple(
-        chip.evaluate(
-            "el => [getComputedStyle(el).borderTopColor,"
-            " getComputedStyle(el).boxShadow]"
-        )
+        chip.evaluate("el => [getComputedStyle(el).borderTopColor, getComputedStyle(el).boxShadow]")
     )
 
 

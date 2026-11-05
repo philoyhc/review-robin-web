@@ -157,9 +157,7 @@ def session_status_counts(
     }
 
 
-def owned_session_ids(
-    owners_by_session: Mapping[int, list[User]], user: User
-) -> set[int]:
+def owned_session_ids(owners_by_session: Mapping[int, list[User]], user: User) -> set[int]:
     """The sessions ``user`` already owns, whose Diagnostics row shows a
     grayed-out **Owned** in place of Manage (author, 2026-10-15)."""
     return {

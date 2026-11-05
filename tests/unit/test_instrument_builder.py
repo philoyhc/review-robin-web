@@ -83,11 +83,15 @@ def test_add_response_field_rejects_invalid_key(db: Session) -> None:
             actor=user,
         )
 
-    fields = db.execute(
-        select(InstrumentResponseField).where(
-            InstrumentResponseField.instrument_id == instrument.id
+    fields = (
+        db.execute(
+            select(InstrumentResponseField).where(
+                InstrumentResponseField.instrument_id == instrument.id
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert fields == []
 
 
@@ -121,11 +125,15 @@ def test_add_response_field_rejects_duplicate_key(db: Session) -> None:
             actor=user,
         )
 
-    fields = db.execute(
-        select(InstrumentResponseField).where(
-            InstrumentResponseField.instrument_id == instrument.id
+    fields = (
+        db.execute(
+            select(InstrumentResponseField).where(
+                InstrumentResponseField.instrument_id == instrument.id
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(fields) == 1
 
 
@@ -146,11 +154,15 @@ def test_add_response_field_appends_with_packed_order_and_audits(db: Session) ->
         actor=user,
     )
 
-    fields = db.execute(
-        select(InstrumentResponseField)
-        .where(InstrumentResponseField.instrument_id == instrument.id)
-        .order_by(InstrumentResponseField.order)
-    ).scalars().all()
+    fields = (
+        db.execute(
+            select(InstrumentResponseField)
+            .where(InstrumentResponseField.instrument_id == instrument.id)
+            .order_by(InstrumentResponseField.order)
+        )
+        .scalars()
+        .all()
+    )
     assert [f.order for f in fields] == list(range(len(fields)))
     assert fields[-1].field_key == new.field_key
 
@@ -200,9 +212,7 @@ def test_update_response_field_required_warning_counts_missing_rows(
     rating = next(f for f in instrument.response_fields if f.field_key == "rating")
 
     reviewer = Reviewer(session_id=session.id, name="R", email="r@example.edu")
-    reviewee = Reviewee(
-        session_id=session.id, name="E", email_or_identifier="e@example.edu"
-    )
+    reviewee = Reviewee(session_id=session.id, name="E", email_or_identifier="e@example.edu")
     db.add_all([reviewer, reviewee])
     db.flush()
 
@@ -259,9 +269,7 @@ def test_delete_response_field_with_responses_blocks_without_confirm(
     rating = next(f for f in instrument.response_fields if f.field_key == "rating")
 
     reviewer = Reviewer(session_id=session.id, name="R", email="r@example.edu")
-    reviewee = Reviewee(
-        session_id=session.id, name="E", email_or_identifier="e@example.edu"
-    )
+    reviewee = Reviewee(session_id=session.id, name="E", email_or_identifier="e@example.edu")
     db.add_all([reviewer, reviewee])
     db.flush()
     assignment = Assignment(
@@ -302,18 +310,20 @@ def test_move_response_field_swaps_and_audits_full_order(db: Session) -> None:
 
     move_response_field(db, field=rating, direction="down", actor=user)
 
-    fields = db.execute(
-        select(InstrumentResponseField)
-        .where(InstrumentResponseField.instrument_id == instrument.id)
-        .order_by(InstrumentResponseField.order)
-    ).scalars().all()
+    fields = (
+        db.execute(
+            select(InstrumentResponseField)
+            .where(InstrumentResponseField.instrument_id == instrument.id)
+            .order_by(InstrumentResponseField.order)
+        )
+        .scalars()
+        .all()
+    )
     assert [f.field_key for f in fields] == ["comments", "rating"]
     assert [f.order for f in fields] == [0, 1]
 
     audit = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "instrument.fields_reordered"
-        )
+        select(AuditEvent).where(AuditEvent.event_type == "instrument.fields_reordered")
     ).scalar_one()
     assert audit.detail is not None
     assert audit.detail["changes"]["order"] == [
@@ -329,9 +339,7 @@ def test_update_instrument_description_normalises_blank_to_none(db: Session) -> 
     instrument.description = "Old"
     db.flush()
 
-    update_instrument_description(
-        db, instrument=instrument, description="   ", actor=user
-    )
+    update_instrument_description(db, instrument=instrument, description="   ", actor=user)
     db.refresh(instrument)
     assert instrument.description is None
 
@@ -346,18 +354,12 @@ def test_validate_setup_blocks_when_instrument_has_no_fields(db: Session) -> Non
     user = _user(db)
     session = _session(db, user, code="empty-instr")
     db.add(Reviewer(session_id=session.id, name="R", email="r@example.edu"))
-    db.add(
-        Reviewee(
-            session_id=session.id, name="E", email_or_identifier="e@example.edu"
-        )
-    )
+    db.add(Reviewee(session_id=session.id, name="E", email_or_identifier="e@example.edu"))
     _bare_instrument(db, session)
     db.flush()
 
     issues = validate_session_setup(db, session)
-    blocking = [
-        i for i in issues if i.severity is Severity.error and i.source == "instruments"
-    ]
+    blocking = [i for i in issues if i.severity is Severity.error and i.source == "instruments"]
     assert len(blocking) == 1
     assert "no response fields" in blocking[0].message
 
@@ -379,8 +381,7 @@ def test_validate_setup_blocks_when_instrument_has_no_fields(db: Session) -> Non
         # Decimal — preserves float cast.
         ("Decimal", 0.5, 9.5, 0.25, None, {"min": 0.5, "max": 9.5, "step": 0.25}),
         # List — CSV → choices array (whitespace trimmed, empties dropped).
-        ("List", None, None, None, "Yes,No, Maybe ,",
-         {"choices": ["Yes", "No", "Maybe"]}),
+        ("List", None, None, None, "Yes,No, Maybe ,", {"choices": ["Yes", "No", "Maybe"]}),
         # List — empty CSV → None (no choices to render).
         ("List", None, None, None, "", None),
         ("List", None, None, None, None, None),
@@ -389,9 +390,7 @@ def test_validate_setup_blocks_when_instrument_has_no_fields(db: Session) -> Non
         ("", 0.0, 100.0, None, None, None),
     ],
 )
-def test_validation_block_from_inline_shapes(
-    data_type, min_, max_, step, list_csv, expected
-):
+def test_validation_block_from_inline_shapes(data_type, min_, max_, step, list_csv, expected):
     """The reviewer surface reads ``cell.field.validation`` for
     ``max_length`` / numeric bounds / List ``choices``; the inline
     columns the operator authors via Band 3 must serialise into
@@ -402,7 +401,4 @@ def test_validation_block_from_inline_shapes(
         validation_block_from_inline,
     )
 
-    assert (
-        validation_block_from_inline(data_type, min_, max_, step, list_csv)
-        == expected
-    )
+    assert validation_block_from_inline(data_type, min_, max_, step, list_csv) == expected

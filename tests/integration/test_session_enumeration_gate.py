@@ -37,9 +37,7 @@ def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSessio
         follow_redirects=False,
     )
     assert response.status_code == 303
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 @pytest.mark.parametrize(
@@ -71,12 +69,8 @@ def test_a_session_you_hold_no_role_on_is_indistinguishable_from_no_session(
     review_session = _make_session(db=db, client=client, code=f"enum-{gate[8:14]}")
     bob_client = make_client(bob)
 
-    existing = bob_client.get(
-        path.format(id=review_session.public_id), follow_redirects=False
-    )
-    missing = bob_client.get(
-        path.format(id=MISSING_SESSION_ID), follow_redirects=False
-    )
+    existing = bob_client.get(path.format(id=review_session.public_id), follow_redirects=False)
+    missing = bob_client.get(path.format(id=MISSING_SESSION_ID), follow_redirects=False)
 
     assert existing.status_code == 404, gate
     assert existing.status_code == missing.status_code, gate
@@ -122,9 +116,7 @@ def test_the_only_403s_left_are_the_two_that_are_meant_to_be() -> None:
 
     ``require_operator`` keeps its 303 and appears in neither count.
     """
-    source = (
-        __import__("pathlib").Path("app/web/deps.py").read_text()
-    )
+    source = __import__("pathlib").Path("app/web/deps.py").read_text()
     assert source.count("status.HTTP_403_FORBIDDEN") == 2
     # And they are in the two functions named above — not, say, both in
     # a participant gate.
@@ -137,7 +129,10 @@ def test_the_only_403s_left_are_the_two_that_are_meant_to_be() -> None:
 
 
 def test_the_sys_admin_exemption_does_not_invent_sessions(
-    db: Session, client: TestClient, make_client, bob,
+    db: Session,
+    client: TestClient,
+    make_client,
+    bob,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """The exemption is gated on the session actually existing.
@@ -157,7 +152,5 @@ def test_the_sys_admin_exemption_does_not_invent_sessions(
     )
     assert existing.status_code == 403
 
-    missing = bob_client.get(
-        f"/operator/sessions/{MISSING_SESSION_ID}", follow_redirects=False
-    )
+    missing = bob_client.get(f"/operator/sessions/{MISSING_SESSION_ID}", follow_redirects=False)
     assert missing.status_code == 404

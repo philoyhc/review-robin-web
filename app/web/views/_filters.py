@@ -86,9 +86,7 @@ def _distinct_tag_options(
     return sorted(seen, key=str.casefold)[:cap]
 
 
-def _matches_row(
-    needle: str, *, text: tuple[str, ...], tags: tuple[str | None, ...]
-) -> bool:
+def _matches_row(needle: str, *, text: tuple[str, ...], tags: tuple[str | None, ...]) -> bool:
     """Per-column search matching, unioned (Segment 19I Item 1).
 
     ``text`` (name, email / identifier) matches by **substring**;
@@ -109,11 +107,7 @@ def _matches_row(
     if any(_matches_search(value, needle) for value in text):
         return True
     folded = needle.strip().casefold()
-    return any(
-        (tag or "").strip().casefold() == folded
-        for tag in tags
-        if (tag or "").strip()
-    )
+    return any((tag or "").strip().casefold() == folded for tag in tags if (tag or "").strip())
 
 
 def _picked_label_handle(needle: str, offered: Iterable[str]) -> str | None:
@@ -237,11 +231,7 @@ def filter_responses_rows(
             # already authorized to see. Folding here changes what is
             # displayed, not who may see it, so the display fold stays.
             picked = tail.casefold()
-            out = [
-                r
-                for r in out
-                if r.reviewee.email_or_identifier.casefold() == picked
-            ]
+            out = [r for r in out if r.reviewee.email_or_identifier.casefold() == picked]
         else:
             out = [
                 r
@@ -266,9 +256,7 @@ def invitations_search_options(rows: list[InvitationsRow]) -> list[str]:
     consistently regardless of the row order the page renders in. One
     entry per row; deduplication isn't needed because invitations rows
     are already one-per-reviewer."""
-    labels = [
-        f"{r.reviewer.name} ({r.reviewer.email})" for r in rows
-    ]
+    labels = [f"{r.reviewer.name} ({r.reviewer.email})" for r in rows]
     return sorted(labels, key=str.casefold)
 
 
@@ -278,10 +266,7 @@ def responses_search_options(rows: list[ResponsesRow]) -> list[str]:
     Same shape as ``invitations_search_options`` but keyed on the
     reviewee's ``email_or_identifier`` (which is the operator-visible
     handle for a reviewee even when there's no email on file)."""
-    labels = [
-        f"{r.reviewee.name} ({r.reviewee.email_or_identifier})"
-        for r in rows
-    ]
+    labels = [f"{r.reviewee.name} ({r.reviewee.email_or_identifier})" for r in rows]
     return sorted(labels, key=str.casefold)
 
 
@@ -294,9 +279,7 @@ REVIEWERS_STATUS_OPTIONS: tuple[tuple[str, str], ...] = (
 )
 
 
-def filter_reviewers_rows(
-    rows: list[Reviewer], *, status: str, search: str
-) -> list[Reviewer]:
+def filter_reviewers_rows(rows: list[Reviewer], *, status: str, search: str) -> list[Reviewer]:
     """Apply status + search filters to a Reviewer list.
 
     ``status`` is one of ``REVIEWERS_STATUS_OPTIONS`` keys
@@ -354,17 +337,12 @@ def reviewers_search_options(rows: list[Reviewer]) -> list[str]:
     suggestions are a convenience, the server-side filter handles
     anything the operator types beyond the first N matches. Tags
     carry their own cap."""
-    tags = _distinct_tag_options(
-        value for r in rows for value in (r.tag_1, r.tag_2, r.tag_3)
-    )
+    tags = _distinct_tag_options(value for r in rows for value in (r.tag_1, r.tag_2, r.tag_3))
     labels = sorted(_reviewer_labels(rows), key=str.casefold)
     return tags + labels[:REVIEWERS_DATALIST_CAP]
 
 
-
-def assignments_search_options(
-    reviewers: list[Reviewer], reviewees: list[Reviewee]
-) -> list[str]:
+def assignments_search_options(reviewers: list[Reviewer], reviewees: list[Reviewee]) -> list[str]:
     """Typeahead options for the Assignments page: both sides'
     ``"Name (handle)"`` labels, one list (Segment 19I Item 9).
 
@@ -429,9 +407,7 @@ REVIEWEES_STATUS_OPTIONS: tuple[tuple[str, str], ...] = (
 )
 
 
-def filter_reviewees_rows(
-    rows: list[Reviewee], *, status: str, search: str
-) -> list[Reviewee]:
+def filter_reviewees_rows(rows: list[Reviewee], *, status: str, search: str) -> list[Reviewee]:
     """Apply status + search filters to a Reviewee list.
 
     ``status`` is one of ``REVIEWEES_STATUS_OPTIONS`` keys
@@ -458,11 +434,7 @@ def filter_reviewees_rows(
             # already authorized to see. Folding here changes what is
             # displayed, not who may see it, so the display fold stays.
             picked = tail.casefold()
-            out = [
-                r
-                for r in out
-                if r.email_or_identifier.casefold() == picked
-            ]
+            out = [r for r in out if r.email_or_identifier.casefold() == picked]
         else:
             out = [
                 r
@@ -486,9 +458,7 @@ def reviewees_search_options(rows: list[Reviewee]) -> list[str]:
     the Reviewees page typeahead. Tags lead and carry their own cap;
     people labels are sorted alphabetically and capped at
     ``REVIEWERS_DATALIST_CAP`` per decision 14. Segment 19I Item 1."""
-    tags = _distinct_tag_options(
-        value for r in rows for value in (r.tag_1, r.tag_2, r.tag_3)
-    )
+    tags = _distinct_tag_options(value for r in rows for value in (r.tag_1, r.tag_2, r.tag_3))
     labels = sorted(_reviewee_labels(rows), key=str.casefold)
     return tags + labels[:REVIEWERS_DATALIST_CAP]
 
@@ -502,9 +472,7 @@ OBSERVERS_STATUS_OPTIONS: tuple[tuple[str, str], ...] = (
 )
 
 
-def filter_observers_rows(
-    rows: list[Observer], *, status: str, search: str
-) -> list[Observer]:
+def filter_observers_rows(rows: list[Observer], *, status: str, search: str) -> list[Observer]:
     """Apply status + search filters to an Observer list.
 
     ``status`` is one of ``OBSERVERS_STATUS_OPTIONS`` keys
@@ -546,10 +514,7 @@ def _observer_labels(rows: list[Observer]) -> list[str]:
     """Every observer label, uncapped. Falls back to the bare email
     when no display name is set — that label carries no parenthesised
     tail, so a pick on it resolves by the email itself."""
-    return [
-        f"{o.display_name} ({o.email})" if o.display_name else o.email
-        for o in rows
-    ]
+    return [f"{o.display_name} ({o.email})" if o.display_name else o.email for o in rows]
 
 
 def observers_search_options(rows: list[Observer]) -> list[str]:
@@ -653,13 +618,9 @@ def filter_relationships_rows(
                 kept.append(row)
             continue
         text: tuple[str, ...] = tuple(
-            value
-            for person, handle in present
-            for value in (person.name, handle)
+            value for person, handle in present for value in (person.name, handle)
         )
-        if _matches_row(
-            needle, text=text, tags=(row.tag_1, row.tag_2, row.tag_3)
-        ):
+        if _matches_row(needle, text=text, tags=(row.tag_1, row.tag_2, row.tag_3)):
             kept.append(row)
     return kept
 
@@ -732,9 +693,7 @@ def relationships_search_options(
 SESSIONS_DATALIST_CAP: int = 200
 
 
-def sessions_filter_options(
-    rows: list[ReviewSession], tags: Iterable[str]
-) -> list[str]:
+def sessions_filter_options(rows: list[ReviewSession], tags: Iterable[str]) -> list[str]:
     """Typeahead options for the Lobby and Archive filter boxes: the
     distinct tag values, then the session names and codes.
 

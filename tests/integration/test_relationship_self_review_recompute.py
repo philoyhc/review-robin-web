@@ -48,22 +48,16 @@ class _World:
         self.zoe_row = zoe_row
 
 
-def _seed(
-    db: Session, *, own_tag: str | None, zoe_tag: str | None
-) -> _World:
+def _seed(db: Session, *, own_tag: str | None, zoe_tag: str | None) -> _World:
     """Sam reviews his own row and Zoe's on a ``p1`` group instrument.
     A ``None`` tag means no relationship row for that pair."""
     user = User(email="op-b33@example.edu")
     db.add(user)
     db.flush()
-    review_session = ReviewSession(
-        name="B33", code="b33", created_by_user_id=user.id
-    )
+    review_session = ReviewSession(name="B33", code="b33", created_by_user_id=user.id)
     db.add(review_session)
     db.flush()
-    reviewer = Reviewer(
-        session_id=review_session.id, name="Sam", email="sam@example.edu"
-    )
+    reviewer = Reviewer(session_id=review_session.id, name="Sam", email="sam@example.edu")
     own = Reviewee(
         session_id=review_session.id,
         name="Sam",
@@ -99,9 +93,7 @@ def _seed(
     ]
     db.add_all(rows)
     db.flush()
-    assignments.recompute_self_review_classification(
-        db, session_id=review_session.id
-    )
+    assignments.recompute_self_review_classification(db, session_id=review_session.id)
     db.commit()
     return _World(user, review_session, reviewer, own, zoe, rows[1])
 

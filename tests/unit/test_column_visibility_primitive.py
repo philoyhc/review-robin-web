@@ -10,6 +10,7 @@ These are structural assertions over the template sources. They exist
 because the failure mode is silent: a sixth copy would work fine, and
 nothing else in the suite would notice.
 """
+
 from __future__ import annotations
 
 import re
@@ -54,9 +55,7 @@ def test_base_html_carries_the_only_implementation() -> None:
     assert BASE.read_text().count(TOGGLE) == 1
 
 
-@pytest.mark.parametrize(
-    "name", sorted(p.name for p in OPERATOR.glob("*.html"))
-)
+@pytest.mark.parametrize("name", sorted(p.name for p in OPERATOR.glob("*.html")))
 def test_no_operator_template_reimplements_the_toggle(name: str) -> None:
     """The assertion that would fail on a fifth copy."""
     assert TOGGLE not in (OPERATOR / name).read_text()
@@ -120,9 +119,7 @@ def test_chips_sit_above_the_count_line_and_the_table(name: str) -> None:
     chips = src.index(CHIP_ROW)
     count = src.index(COUNT_LINE)
     table = src.index('<table id="')
-    assert chips < count < table, (
-        f"{name}: chips@{chips} count@{count} table@{table}"
-    )
+    assert chips < count < table, f"{name}: chips@{chips} count@{count} table@{table}"
 
 
 @pytest.mark.parametrize("name", CHIP_PAGES)
@@ -302,9 +299,7 @@ def test_only_chip_rows_built_from_groups_are_marked_grouped() -> None:
     """The modifier and the markup it describes cannot drift apart:
     every row carrying `.chip-group` children takes `is-grouped`, and
     no row without them does."""
-    for path in sorted(OPERATOR.glob("*.html")) + sorted(
-        (OPERATOR / "partials").glob("*.html")
-    ):
+    for path in sorted(OPERATOR.glob("*.html")) + sorted((OPERATOR / "partials").glob("*.html")):
         text = path.read_text()
         for row in re.findall(r'<p class="col-chip-row[^"]*"[^>]*>', text):
             after = text[text.index(row) + len(row) :]

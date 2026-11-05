@@ -68,7 +68,9 @@ REVIEWER_SPEC = SelfSpec(
     keys=REVIEWER_SELF_FIELD_KEYS,
     default=REVIEWER_SELF_DEFAULT,
     slot_to_key={
-        "name": "name", "email": "email", "profile": "profile_link",
+        "name": "name",
+        "email": "email",
+        "profile": "profile_link",
         **_TAG_SLOTS,
     },
     fixed_labels={"name": "Name", "email": "Email", "profile_link": "Profile"},
@@ -79,11 +81,14 @@ REVIEWEE_SPEC = SelfSpec(
     keys=REVIEWEE_SELF_FIELD_KEYS,
     default=REVIEWEE_SELF_DEFAULT,
     slot_to_key={
-        "name": "name", "email": "email_or_identifier",
-        "profile": "profile_link", **_TAG_SLOTS,
+        "name": "name",
+        "email": "email_or_identifier",
+        "profile": "profile_link",
+        **_TAG_SLOTS,
     },
     fixed_labels={
-        "name": "Name", "email_or_identifier": "Email",
+        "name": "Name",
+        "email_or_identifier": "Email",
         "profile_link": "Profile",
     },
 )
@@ -123,9 +128,7 @@ def self_label(spec: SelfSpec, review_session: ReviewSession, key: str) -> str:
     the friendly label for a tag, as the roster index reads."""
     if key in spec.fixed_labels:
         return spec.fixed_labels[key]
-    return field_labels_service.resolve_pair(
-        review_session, spec.source_type, key
-    ).friendly
+    return field_labels_service.resolve_pair(review_session, spec.source_type, key).friendly
 
 
 def self_chips(
@@ -145,9 +148,7 @@ def self_chips(
     ]
 
 
-def self_kept(
-    spec: SelfSpec, chips: Iterable[SelfFieldChip], selected: Iterable[str]
-) -> list[str]:
+def self_kept(spec: SelfSpec, chips: Iterable[SelfFieldChip], selected: Iterable[str]) -> list[str]:
     """Selected keys the card offers no chip for (no data in that
     column), in roster order: the card posts them back as hidden
     ``keep`` inputs so a save does not drop them."""
@@ -161,9 +162,7 @@ def self_readout(
 ) -> list[str]:
     """The roster card's `… see:` pills, in roster order."""
     chosen = set(selected)
-    return [
-        self_label(spec, review_session, k) for k in spec.keys if k in chosen
-    ]
+    return [self_label(spec, review_session, k) for k in spec.keys if k in chosen]
 
 
 def self_line(
@@ -183,8 +182,6 @@ def self_line(
         if not value.strip():
             continue
         line.append(
-            SelfFieldValue(
-                key=key, label=self_label(spec, review_session, key), value=value
-            )
+            SelfFieldValue(key=key, label=self_label(spec, review_session, key), value=value)
         )
     return line

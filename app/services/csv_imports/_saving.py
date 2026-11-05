@@ -342,9 +342,7 @@ def _save(
     # An append deletes nothing, so it cascades nothing: the counts are
     # omitted, not zeroed.
     cascaded_assignment_count = (
-        _count_assignments(db, session.id)
-        if _reaches_assignments(model) and not keeps
-        else None
+        _count_assignments(db, session.id) if _reaches_assignments(model) and not keeps else None
     )
     # Before the delete below: the FK cascade is the database's, so
     # counting afterwards reads 0. Same mechanism as `_delete_all`.
@@ -354,9 +352,7 @@ def _save(
         else None
     )
 
-    existing_rows = list(
-        db.execute(select(model).where(model.session_id == session.id)).scalars()
-    )
+    existing_rows = list(db.execute(select(model).where(model.session_id == session.id)).scalars())
     # A replace re-adds every row, so a row whose address the directory
     # gave no answer for (an expired token, a failed lookup) would lose
     # the account it was bound to and stop admitting a person whose mail
@@ -379,12 +375,14 @@ def _save(
         fresh = {
             normalize_object_id(account.object_id)
             for row in rows
-            if (account := directory.accounts.get(
-                directory_accounts.key(
-                    getattr(row, "email", None) or getattr(row, "email_or_identifier", None)
+            if (
+                account := directory.accounts.get(
+                    directory_accounts.key(
+                        getattr(row, "email", None) or getattr(row, "email_or_identifier", None)
+                    )
+                    or ""
                 )
-                or ""
-            ))
+            )
             is not None
         }
         earlier = {
@@ -554,9 +552,7 @@ def _reaches_assignments(model: type) -> bool:
 def _count_assignments(db: Session, session_id: int) -> int:
     from app.db.models import Assignment
 
-    stmt = select(func.count(Assignment.id)).where(
-        Assignment.session_id == session_id
-    )
+    stmt = select(func.count(Assignment.id)).where(Assignment.session_id == session_id)
     return int(db.execute(stmt).scalar_one())
 
 
@@ -650,9 +646,7 @@ def _delete_all(
     )
     # Omitted for observers, as in `_save` (findings S10).
     cascaded_assignments = (
-        _count_assignments(db, review_session.id)
-        if _reaches_assignments(model)
-        else None
+        _count_assignments(db, review_session.id) if _reaches_assignments(model) else None
     )
     # 19O.5 — the whole session's relationships, because emptying either
     # roster empties them all. Taken before the delete: the cascade is
@@ -663,15 +657,9 @@ def _delete_all(
         if roster_bulk.reaches_relationships(model)
         else None
     )
-    rows = list(
-        db.execute(
-            select(model).where(model.session_id == review_session.id)
-        ).scalars()
-    )
+    rows = list(db.execute(select(model).where(model.session_id == review_session.id)).scalars())
     deleted = len(rows)
-    _detach_outbox_if_reviewers(
-        db, model=model, session_id=review_session.id, rows=rows
-    )
+    _detach_outbox_if_reviewers(db, model=model, session_id=review_session.id, rows=rows)
     for row in rows:
         db.delete(row)
     db.flush()

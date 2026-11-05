@@ -113,20 +113,14 @@ def self_review_handling_filename_suffix(state: str) -> str:
     return _SUFFIX_BY_STATE.get(state, "_self")
 
 
-def metadata_filename(
-    review_session: ReviewSession, kind: str, state: str
-) -> str:
+def metadata_filename(review_session: ReviewSession, kind: str, state: str) -> str:
     """The Reviewer / Reviewee response metadata card's download
     name: ``{code}_{kind}{suffix}.csv``, the Self-review handling
     chip's suffix (``_self`` / ``_noself`` / ``_both``) before the
     extension. Shared by the card's route and the Zip-all bundle
     so a file reads the same whichever button produced it."""
     base = filename(review_session, kind)
-    return (
-        base[: -len(".csv")]
-        + self_review_handling_filename_suffix(state)
-        + ".csv"
-    )
+    return base[: -len(".csv")] + self_review_handling_filename_suffix(state) + ".csv"
 
 
 def metadata_instrument_scope(
@@ -143,13 +137,14 @@ def metadata_instrument_scope(
     has (an explicit id per chip, three cards over, could pass a
     gateway's URL limit)."""
     if all_instruments:
-        return set(
-            db.execute(
-                select(Instrument.id).where(
-                    Instrument.session_id == review_session.id
-                )
-            ).scalars()
-        ) or None
+        return (
+            set(
+                db.execute(
+                    select(Instrument.id).where(Instrument.session_id == review_session.id)
+                ).scalars()
+            )
+            or None
+        )
     return set(instrument) if instrument else None
 
 
@@ -201,9 +196,7 @@ class _FieldSpec:
         return cols
 
 
-def _instrument_short_or_fallback(
-    instrument: Instrument, position: int
-) -> str:
+def _instrument_short_or_fallback(instrument: Instrument, position: int) -> str:
     return _instrument_label(instrument)
 
 
@@ -241,9 +234,7 @@ def _resolve_scope(
     )
 
     scope_ids: set[int] = (
-        set(instrument_ids)
-        if instrument_ids is not None
-        else {i.id for i in instruments}
+        set(instrument_ids) if instrument_ids is not None else {i.id for i in instruments}
     )
 
     fields_by_instrument: dict[int, list[InstrumentResponseField]] = {}
@@ -251,9 +242,7 @@ def _resolve_scope(
     for instrument in instruments:
         if instrument.id not in scope_ids:
             continue
-        ordered_fields = sorted(
-            instrument.response_fields, key=lambda f: (f.order, f.id)
-        )
+        ordered_fields = sorted(instrument.response_fields, key=lambda f: (f.order, f.id))
         fields_by_instrument[instrument.id] = ordered_fields
         for f in ordered_fields:
             field_by_id[f.id] = f
@@ -398,8 +387,7 @@ def _reviewer_state_block(
     }
     total_assigned: dict[int, int] = {r.id: 0 for r in reviewers}
     response_acc: dict[int, dict[int, _FieldAcc]] = {
-        r.id: {spec.field_id: _FieldAcc() for spec in field_specs}
-        for r in reviewers
+        r.id: {spec.field_id: _FieldAcc() for spec in field_specs} for r in reviewers
     }
     total_count: dict[int, int] = {r.id: 0 for r in reviewers}
 
@@ -411,9 +399,7 @@ def _reviewer_state_block(
         ]
         if exclude_self:
             assignment_filter.append(Assignment.is_self_review.is_(False))
-        assignments = list(
-            db.execute(select(Assignment).where(*assignment_filter)).scalars()
-        )
+        assignments = list(db.execute(select(Assignment).where(*assignment_filter)).scalars())
         group_key_by_assignment = responses_service.group_keys(
             db, assignments=assignments, session_id=review_session.id
         )
@@ -421,9 +407,7 @@ def _reviewer_state_block(
         # Reviewer-side Assigned dedupes group fan-out: a reviewer
         # fills one form per group, not one per member, so each
         # ``(reviewer, instrument, group_key)`` triple counts once.
-        seen_reviewer_group_assigned: set[
-            tuple[int, int, tuple[str, ...]]
-        ] = set()
+        seen_reviewer_group_assigned: set[tuple[int, int, tuple[str, ...]]] = set()
         for a in assignments:
             if a.reviewer_id not in total_assigned:
                 continue
@@ -442,9 +426,7 @@ def _reviewer_state_block(
         # Reviewer-side Count + per-field rollup dedupe the same
         # way: each group answer counts once per (reviewer,
         # group_key, field_id).
-        seen_reviewer_group_response: set[
-            tuple[int, tuple[str, ...], int]
-        ] = set()
+        seen_reviewer_group_response: set[tuple[int, tuple[str, ...], int]] = set()
         response_filter: list[ColumnElement[bool]] = [
             Assignment.session_id == review_session.id,
             Assignment.include.is_(True),
@@ -553,9 +535,7 @@ def build_reviewer_metadata(
         ).scalars()
     )
 
-    state_blocks: list[
-        tuple[tuple[str, ...], dict[int, list[str]], dict[int, int]]
-    ] = []
+    state_blocks: list[tuple[tuple[str, ...], dict[int, list[str]], dict[int, int]]] = []
     for state in states_to_run:
         state_blocks.append(
             _reviewer_state_block(
@@ -619,8 +599,7 @@ def _reviewee_state_block(
     }
     total_assigned: dict[int, int] = {e.id: 0 for e in reviewees}
     response_acc: dict[int, dict[int, _FieldAcc]] = {
-        e.id: {spec.field_id: _FieldAcc() for spec in field_specs}
-        for e in reviewees
+        e.id: {spec.field_id: _FieldAcc() for spec in field_specs} for e in reviewees
     }
     total_count: dict[int, int] = {e.id: 0 for e in reviewees}
 
@@ -633,9 +612,7 @@ def _reviewee_state_block(
         if exclude_self:
             assignment_filter.append(Assignment.is_self_review.is_(False))
         for reviewee_id, instrument_id in db.execute(
-            select(
-                Assignment.reviewee_id, Assignment.instrument_id
-            ).where(*assignment_filter)
+            select(Assignment.reviewee_id, Assignment.instrument_id).where(*assignment_filter)
         ):
             if reviewee_id not in total_assigned:
                 continue
@@ -732,9 +709,7 @@ def build_reviewee_metadata(
         ).scalars()
     )
 
-    state_blocks: list[
-        tuple[tuple[str, ...], dict[int, list[str]], dict[int, int]]
-    ] = []
+    state_blocks: list[tuple[tuple[str, ...], dict[int, list[str]], dict[int, int]]] = []
     for state in states_to_run:
         state_blocks.append(
             _reviewee_state_block(

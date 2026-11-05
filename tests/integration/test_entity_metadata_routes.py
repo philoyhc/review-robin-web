@@ -18,24 +18,18 @@ from sqlalchemy.orm import Session
 from app.db.models import AuditEvent, Instrument, ReviewSession
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "Meta", "code": code, "description": ""},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _default_instrument(db: Session, session_id: int) -> Instrument:
-    return db.execute(
-        select(Instrument).where(Instrument.session_id == session_id)
-    ).scalar_one()
+    return db.execute(select(Instrument).where(Instrument.session_id == session_id)).scalar_one()
 
 
 def test_reviewer_metadata_route_streams_csv_with_canonical_filename(
@@ -43,8 +37,7 @@ def test_reviewer_metadata_route_streams_csv_with_canonical_filename(
 ) -> None:
     review_session = _make_session(client, db, code="rmd-name")
     response = client.get(
-        f"/operator/sessions/{review_session.public_id}"
-        "/export/reviewer_metadata.csv"
+        f"/operator/sessions/{review_session.public_id}/export/reviewer_metadata.csv"
     )
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/csv")
@@ -57,9 +50,7 @@ def test_reviewer_metadata_route_streams_csv_with_canonical_filename(
     # suffix (always-emit-suffix rule per
     # ``guide/extract_data.md`` § *Self-review handling*).
     first_line = response.text.split("\r\n", 1)[0]
-    assert first_line == (
-        "ReviewerName,ReviewerEmail,Assigned_self,Count_self"
-    )
+    assert first_line == ("ReviewerName,ReviewerEmail,Assigned_self,Count_self")
 
 
 def test_reviewer_metadata_instrument_param_adds_per_field_block(
@@ -79,9 +70,7 @@ def test_reviewer_metadata_instrument_param_adds_per_field_block(
     # seeded instrument carries one Long_text field labelled
     # "Strengths" so the .Length column appears (String data
     # type, not numeric).
-    assert first_line.startswith(
-        "ReviewerName,ReviewerEmail,Assigned_self,Count_self,"
-    )
+    assert first_line.startswith("ReviewerName,ReviewerEmail,Assigned_self,Count_self,")
     assert "#1: Peer." in first_line
     assert ".Length_self" in first_line
 
@@ -116,8 +105,7 @@ def test_reviewee_metadata_route_streams_csv_with_canonical_filename(
 ) -> None:
     review_session = _make_session(client, db, code="emd-name")
     response = client.get(
-        f"/operator/sessions/{review_session.public_id}"
-        "/export/reviewee_metadata.csv"
+        f"/operator/sessions/{review_session.public_id}/export/reviewee_metadata.csv"
     )
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/csv")
@@ -126,18 +114,12 @@ def test_reviewee_metadata_route_streams_csv_with_canonical_filename(
         == 'attachment; filename="emd-name_reviewee_metadata_self.csv"'
     )
     first_line = response.text.split("\r\n", 1)[0]
-    assert first_line == (
-        "RevieweeName,RevieweeEmail,Assigned_self,Count_self"
-    )
+    assert first_line == ("RevieweeName,RevieweeEmail,Assigned_self,Count_self")
 
 
-def test_extract_data_page_links_both_metadata_buttons(
-    client: TestClient, db: Session
-) -> None:
+def test_extract_data_page_links_both_metadata_buttons(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="md-links")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/extract-data"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
 
     assert 'id="extract-data-reviewer-metadata-zip"' in body
     assert (
@@ -172,14 +154,10 @@ def test_reviewer_metadata_route_honours_exclude_self_query_param(
         == 'attachment; filename="srh-route-excl_reviewer_metadata_noself.csv"'
     )
     first_line = response.text.split("\r\n", 1)[0]
-    assert first_line == (
-        "ReviewerName,ReviewerEmail,Assigned_noself,Count_noself"
-    )
+    assert first_line == ("ReviewerName,ReviewerEmail,Assigned_noself,Count_noself")
 
 
-def test_reviewer_metadata_route_honours_both_query_param(
-    client: TestClient, db: Session
-) -> None:
+def test_reviewer_metadata_route_honours_both_query_param(client: TestClient, db: Session) -> None:
     """``?self_review_handling=both`` emits two side-by-side column
     blocks and renames the file to ``_both.csv``."""
     review_session = _make_session(client, db, code="srh-route-both")
@@ -194,9 +172,7 @@ def test_reviewer_metadata_route_honours_both_query_param(
     )
     first_line = response.text.split("\r\n", 1)[0]
     assert first_line == (
-        "ReviewerName,ReviewerEmail,"
-        "Assigned_self,Count_self,"
-        "Assigned_noself,Count_noself"
+        "ReviewerName,ReviewerEmail,Assigned_self,Count_self,Assigned_noself,Count_noself"
     )
 
 
@@ -257,6 +233,4 @@ def test_reviewee_metadata_route_honours_self_review_handling_param(
         == 'attachment; filename="srh-route-ree_reviewee_metadata_noself.csv"'
     )
     first_line = response.text.split("\r\n", 1)[0]
-    assert first_line == (
-        "RevieweeName,RevieweeEmail,Assigned_noself,Count_noself"
-    )
+    assert first_line == ("RevieweeName,RevieweeEmail,Assigned_noself,Count_noself")

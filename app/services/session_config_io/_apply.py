@@ -19,6 +19,7 @@ stays here; private re-exports the unit tests reach for
 (``_ParseError`` / ``_parse_group_kind``) live in
 ``_apply_shared`` + the package ``__init__``.
 """
+
 from __future__ import annotations
 
 from collections import Counter
@@ -107,9 +108,7 @@ def instruments_deleted_by(
     (``is_untouched_default``; the author, 2026-10-19)."""
     from app.services.instruments import _instrument_label, is_untouched_default
 
-    unclaimed = Counter(
-        spec.name for spec in plan.instruments.values() if spec.name
-    )
+    unclaimed = Counter(spec.name for spec in plan.instruments.values() if spec.name)
     deleted: list[str] = []
     existing = db.execute(
         select(Instrument)
@@ -256,9 +255,7 @@ def _apply_plan(
     # same instrument wipe; we hoist it inline here.
     _wipe_instruments_and_dependents(db, review_session)
     db.flush()
-    counts["session_rule_sets"] = _apply_session_rule_sets(
-        db, review_session, plan
-    )
+    counts["session_rule_sets"] = _apply_session_rule_sets(db, review_session, plan)
     db.flush()
     inst_counts = _apply_instruments(db, review_session, plan)
     counts.update(inst_counts)
@@ -301,9 +298,7 @@ def _apply_plan(
     audit.write_event(
         db,
         event_type="session.settings_imported",
-        summary=(
-            f"Imported Settings CSV for session {review_session.code}"
-        ),
+        summary=(f"Imported Settings CSV for session {review_session.code}"),
         actor_user_id=user.id if user is not None else None,
         session=review_session,
         payload=audit.counts(**counts),

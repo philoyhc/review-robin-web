@@ -73,7 +73,7 @@ def test_the_card_helper_is_bounded(client: TestClient) -> None:
 
     assert card.startswith('<div class="card" id="session-owners"')
     assert card.count("<div") == card.count("</div>")
-    tail = body[body.index(card) + len(card):]
+    tail = body[body.index(card) + len(card) :]
     assert "getElementById" in tail, "the page's scripts follow the card"
     assert "getElementById" not in card
 
@@ -115,9 +115,7 @@ def test_the_card_mirrors_session_home(client: TestClient, db: Session) -> None:
     assert ">Add owner</button>" in card
 
 
-def test_the_copy_says_create_session_saves_the_owners(
-    client: TestClient, db: Session
-) -> None:
+def test_the_copy_says_create_session_saves_the_owners(client: TestClient, db: Session) -> None:
     """Unlike Session Home, where Add owner writes at once, nothing here
     persists until Create session — so the card says so, and Add owner is
     an outline button rather than a second Primary beside Create session
@@ -134,7 +132,9 @@ def test_the_creator_is_the_first_owner_and_cannot_be_removed(
 ) -> None:
     body = client.get("/operator/sessions/new").text
     card = _card(body)
-    assert re.search(rf"<code(?: [^>]*)?>{re.escape(CREATOR)}</code>", card)  # plain or the pill (19Z)
+    assert re.search(
+        rf"<code(?: [^>]*)?>{re.escape(CREATOR)}</code>", card
+    )  # plain or the pill (19Z)
     assert "<td>owner</td>" in card
     assert "Remove" not in card, "a session always keeps one owner"
 
@@ -149,20 +149,20 @@ def test_the_creators_verified_name_is_the_pill(client: TestClient, db: Session)
     user.display_name = "Alice Tan"
     db.commit()
     card = _card(client.get("/operator/sessions/new").text)
-    assert re.search(r'<span class="pill pill-count"[^>]*data-directory-matched>Alice Tan</span>', card)
+    assert re.search(
+        r'<span class="pill pill-count"[^>]*data-directory-matched>Alice Tan</span>', card
+    )
     assert "<td>Alice Tan</td>" not in card
 
 
-def test_the_picker_suggests_other_workspace_operators(
-    client: TestClient, db: Session
-) -> None:
+def test_the_picker_suggests_other_workspace_operators(client: TestClient, db: Session) -> None:
     """Everyone ``add_owner`` would accept, minus the creator — who owns
     the session the moment it exists. A non-operator is never offered."""
     _operator(db, "colleague@example.edu")
     _operator(db, "outsider@example.edu", is_operator=False)
     card = _card(client.get("/operator/sessions/new").text)
 
-    datalist = card[card.index("<datalist"):card.index("</datalist>")]
+    datalist = card[card.index("<datalist") : card.index("</datalist>")]
     assert 'value="colleague@example.edu"' in datalist
     assert "outsider@example.edu" not in datalist
     assert f'value="{CREATOR}"' not in datalist
@@ -176,9 +176,7 @@ def test_with_no_one_to_add_the_picker_says_so(client: TestClient) -> None:
     assert "<datalist" not in card
 
 
-def test_the_picker_is_wired_to_the_create_form(
-    client: TestClient, db: Session
-) -> None:
+def test_the_picker_is_wired_to_the_create_form(client: TestClient, db: Session) -> None:
     """Rung 3's inertness assertion, inverted: the box has a ``name`` and
     a ``form=``, the card declares the stager's wiring, and the creator's
     row carries its hidden ``owners`` input like every staged row will."""
@@ -189,8 +187,8 @@ def test_the_picker_is_wired_to_the_create_form(
     # The email box itself, not the creator row's hidden input, which
     # carries the same name — asserting ``name="owners"`` anywhere in the
     # card passed with the box's name removed.
-    box = card[card.index('id="session-owners-email"'):]
-    box = box[:box.index(">")]
+    box = card[card.index('id="session-owners-email"') :]
+    box = box[: box.index(">")]
     assert 'name="owners"' in box
     assert 'form="create-session-form"' in box
     assert "data-owners-stager" in card
@@ -199,7 +197,7 @@ def test_the_picker_is_wired_to_the_create_form(
     assert 'type="button"' in card and 'type="submit"' not in card, (
         "Add owner stages; only Create session submits"
     )
-    assert "data-owners-stager" in body[body.index(card) + len(card):], (
+    assert "data-owners-stager" in body[body.index(card) + len(card) :], (
         "the stager script ships with the page"
     )
 
@@ -207,9 +205,7 @@ def test_the_picker_is_wired_to_the_create_form(
 def _create(client: TestClient, code: str, **extra):
     data = {"name": "Owned", "code": code, "description": "", **extra}
     files = data.pop("files", None)
-    return client.post(
-        "/operator/sessions", data=data, files=files, follow_redirects=False
-    )
+    return client.post("/operator/sessions", data=data, files=files, follow_redirects=False)
 
 
 def _owners_of(db: Session, code: str) -> list[str]:
@@ -219,15 +215,11 @@ def _owners_of(db: Session, code: str) -> list[str]:
     return sorted(row.email for row in session_owners.list_owners(db, review_session))
 
 
-def test_a_staged_co_owner_owns_the_created_session(
-    client: TestClient, db: Session
-) -> None:
+def test_a_staged_co_owner_owns_the_created_session(client: TestClient, db: Session) -> None:
     _operator(db, "colleague@example.edu")
     response = _create(client, "OWNERS-ADD", owners=["", "colleague@example.edu"])
     assert response.status_code == 303, response.text
-    assert _owners_of(db, "OWNERS-ADD") == sorted(
-        [CREATOR, "colleague@example.edu"]
-    )
+    assert _owners_of(db, "OWNERS-ADD") == sorted([CREATOR, "colleague@example.edu"])
 
 
 def test_duplicates_and_the_creator_collapse(client: TestClient, db: Session) -> None:
@@ -241,14 +233,10 @@ def test_duplicates_and_the_creator_collapse(client: TestClient, db: Session) ->
         owners=[creator, "Colleague@Example.edu", "colleague@example.edu"],
     )
     assert response.status_code == 303, response.text
-    assert _owners_of(db, "OWNERS-DEDUPE") == sorted(
-        [creator, "colleague@example.edu"]
-    )
+    assert _owners_of(db, "OWNERS-DEDUPE") == sorted([creator, "colleague@example.edu"])
 
 
-def test_no_staged_owner_leaves_the_creator_alone(
-    client: TestClient, db: Session
-) -> None:
+def test_no_staged_owner_leaves_the_creator_alone(client: TestClient, db: Session) -> None:
     creator = CREATOR
     response = _create(client, "OWNERS-NONE", owners=[creator, ""])
     assert response.status_code == 303, response.text
@@ -256,12 +244,16 @@ def test_no_staged_owner_leaves_the_creator_alone(
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.code == "OWNERS-NONE")
     ).scalar_one()
-    added = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.session_id == review_session.id,
-            AuditEvent.event_type == "session.owner_added",
+    added = (
+        db.execute(
+            select(AuditEvent).where(
+                AuditEvent.session_id == review_session.id,
+                AuditEvent.event_type == "session.owner_added",
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert added == []
 
 
@@ -281,14 +273,15 @@ def test_an_address_add_owner_would_refuse_refuses_the_create(
     )
     assert response.status_code == 422, response.text
     assert "outsider@example.edu" in response.text
-    assert db.execute(
-        select(ReviewSession).where(ReviewSession.code == "OWNERS-REFUSED")
-    ).scalar_one_or_none() is None
+    assert (
+        db.execute(
+            select(ReviewSession).where(ReviewSession.code == "OWNERS-REFUSED")
+        ).scalar_one_or_none()
+        is None
+    )
 
 
-def test_a_failed_upload_keeps_the_staged_owners(
-    client: TestClient, db: Session
-) -> None:
+def test_a_failed_upload_keeps_the_staged_owners(client: TestClient, db: Session) -> None:
     """As the Tags box keeps what was typed: the operator sent back to fix
     a CSV does not also lose who they staged."""
     _operator(db, "colleague@example.edu")
@@ -299,9 +292,7 @@ def test_a_failed_upload_keeps_the_staged_owners(
         files={"reviewers_file": ("r.csv", b"NotAHeader\ngarbage\n", "text/csv")},
     )
     assert response.status_code == 303, response.text
-    assert "quick_setup_error=reviewers" in response.headers["location"], (
-        "the upload really failed"
-    )
+    assert "quick_setup_error=reviewers" in response.headers["location"], "the upload really failed"
     assert "colleague@example.edu" in _owners_of(db, "OWNERS-UPLOAD-FAIL")
 
 
@@ -324,10 +315,14 @@ def test_one_create_is_one_correlation_id(client: TestClient, db: Session) -> No
         observers_enabled="true",
         files={
             "reviewers_file": (
-                "r.csv", b"ReviewerName,ReviewerEmail\nAl,al@example.edu\n", "text/csv"
+                "r.csv",
+                b"ReviewerName,ReviewerEmail\nAl,al@example.edu\n",
+                "text/csv",
             ),
             "reviewees_file": (
-                "e.csv", b"RevieweeName,RevieweeEmail\nCy,cy@example.edu\n", "text/csv"
+                "e.csv",
+                b"RevieweeName,RevieweeEmail\nCy,cy@example.edu\n",
+                "text/csv",
             ),
             "relationships_file": (
                 "rel.csv",
@@ -335,7 +330,9 @@ def test_one_create_is_one_correlation_id(client: TestClient, db: Session) -> No
                 "text/csv",
             ),
             "observers_file": (
-                "obs.csv", b"ObserverName,ObserverEmail\nOz,oz@example.edu\n", "text/csv"
+                "obs.csv",
+                b"ObserverName,ObserverEmail\nOz,oz@example.edu\n",
+                "text/csv",
             ),
             "settings_file": ("s.csv", buf.getvalue().encode(), "text/csv"),
         },
@@ -345,9 +342,11 @@ def test_one_create_is_one_correlation_id(client: TestClient, db: Session) -> No
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.code == "OWNERS-CORR")
     ).scalar_one()
-    events = db.execute(
-        select(AuditEvent).where(AuditEvent.session_id == review_session.id)
-    ).scalars().all()
+    events = (
+        db.execute(select(AuditEvent).where(AuditEvent.session_id == review_session.id))
+        .scalars()
+        .all()
+    )
     kinds = {e.event_type for e in events}
     for kind in ("session.created", "session.tag_added", "session.owner_added"):
         assert kind in kinds, (kind, sorted(kinds))

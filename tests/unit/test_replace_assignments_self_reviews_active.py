@@ -14,6 +14,7 @@ authoring deleted in 15D PR 7a); the per-pair operator override
 now lives on the ``relationships`` row via the engine's
 ``pair_context`` predicate path.
 """
+
 from __future__ import annotations
 
 from sqlalchemy.orm import Session
@@ -30,9 +31,9 @@ from app.services import assignments
 from app.services.instruments import ensure_default_instrument
 
 
-def _seed(db: Session, *, self_reviews_active: bool) -> tuple[
-    User, ReviewSession, Reviewer, Reviewer, Reviewee, Reviewee
-]:
+def _seed(
+    db: Session, *, self_reviews_active: bool
+) -> tuple[User, ReviewSession, Reviewer, Reviewer, Reviewee, Reviewee]:
     user = User(email="op@example.edu")
     db.add(user)
     db.flush()
@@ -44,12 +45,8 @@ def _seed(db: Session, *, self_reviews_active: bool) -> tuple[
     )
     db.add(review_session)
     db.flush()
-    alice_r = Reviewer(
-        session_id=review_session.id, name="Alice", email="alice@example.edu"
-    )
-    bob_r = Reviewer(
-        session_id=review_session.id, name="Bob", email="bob@example.edu"
-    )
+    alice_r = Reviewer(session_id=review_session.id, name="Alice", email="alice@example.edu")
+    bob_r = Reviewer(session_id=review_session.id, name="Bob", email="bob@example.edu")
     alice_e = Reviewee(
         session_id=review_session.id,
         name="Alice",
@@ -85,9 +82,7 @@ def _seed(db: Session, *, self_reviews_active: bool) -> tuple[
     return user, review_session, alice_r, bob_r, alice_e, carol_e
 
 
-def _self_review_assignments(
-    db: Session, session_id: int
-) -> list[Assignment]:
+def _self_review_assignments(db: Session, session_id: int) -> list[Assignment]:
     rows = (
         db.query(Assignment, Reviewer, Reviewee)
         .join(Reviewer, Assignment.reviewer_id == Reviewer.id)
@@ -115,14 +110,8 @@ def test_self_review_row_inactive_when_session_flag_off(db: Session) -> None:
     assert len(self_reviews) == 1
     assert self_reviews[0].include is False
 
-    rows = (
-        db.query(Assignment)
-        .filter(Assignment.session_id == review_session.id)
-        .all()
-    )
-    non_self_includes = {
-        a.include for a in rows if a not in self_reviews
-    }
+    rows = db.query(Assignment).filter(Assignment.session_id == review_session.id).all()
+    non_self_includes = {a.include for a in rows if a not in self_reviews}
     assert non_self_includes == {True}
 
 
@@ -139,9 +128,5 @@ def test_self_review_row_active_when_session_flag_on(db: Session) -> None:
         correlation_id="corr-on",
     )
 
-    rows = (
-        db.query(Assignment)
-        .filter(Assignment.session_id == review_session.id)
-        .all()
-    )
+    rows = db.query(Assignment).filter(Assignment.session_id == review_session.id).all()
     assert {a.include for a in rows} == {True}

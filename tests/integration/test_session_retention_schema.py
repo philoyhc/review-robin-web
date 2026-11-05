@@ -15,6 +15,7 @@ Round-trips the two new columns on ``sessions``:
 Both columns are inert today — no service module reads or writes
 them. JSON shape validation lands with 18G Part 4.
 """
+
 from __future__ import annotations
 
 from sqlalchemy import select
@@ -27,9 +28,7 @@ def _make_session(db: Session, code: str, **kwargs: object) -> ReviewSession:
     op = User(email=f"op-{code}@example.edu", display_name="Op")
     db.add(op)
     db.flush()
-    review_session = ReviewSession(
-        name=code.title(), code=code, created_by_user_id=op.id, **kwargs
-    )
+    review_session = ReviewSession(name=code.title(), code=code, created_by_user_id=op.id, **kwargs)
     db.add(review_session)
     db.flush()
     return review_session
@@ -46,9 +45,7 @@ def test_retention_columns_default_to_null(db: Session) -> None:
 
 
 def test_retention_exception_round_trips_bool(db: Session) -> None:
-    review_session = _make_session(
-        db, "retention-exception", retention_exception=True
-    )
+    review_session = _make_session(db, "retention-exception", retention_exception=True)
 
     reread = db.execute(
         select(ReviewSession).where(ReviewSession.id == review_session.id)
@@ -66,9 +63,7 @@ def test_retention_overrides_round_trips_json(db: Session) -> None:
         "archived_days": 90,
         "delete_after_archive": "P30D",
     }
-    review_session = _make_session(
-        db, "retention-overrides", retention_overrides=overrides
-    )
+    review_session = _make_session(db, "retention-overrides", retention_overrides=overrides)
 
     reread = db.execute(
         select(ReviewSession).where(ReviewSession.id == review_session.id)

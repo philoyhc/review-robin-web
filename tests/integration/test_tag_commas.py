@@ -26,15 +26,11 @@ def _issue_fields(result) -> set[str]:
 
 
 def test_the_roster_imports_refuse_a_comma_in_a_tag() -> None:
-    reviewer = parse_reviewer_csv(
-        b'ReviewerName,ReviewerEmail,ReviewerTag2\nAl,a@x.edu,"A, B"\n'
-    )
+    reviewer = parse_reviewer_csv(b'ReviewerName,ReviewerEmail,ReviewerTag2\nAl,a@x.edu,"A, B"\n')
     assert reviewer.is_blocked and reviewer.rows == []
     assert _issue_fields(reviewer) == {"ReviewerTag2"}
 
-    reviewee = parse_reviewee_csv(
-        b'RevieweeName,RevieweeEmail,RevieweeTag1\nBo,b@x.edu,"A,B"\n'
-    )
+    reviewee = parse_reviewee_csv(b'RevieweeName,RevieweeEmail,RevieweeTag1\nBo,b@x.edu,"A,B"\n')
     assert reviewee.is_blocked
     assert _issue_fields(reviewee) == {"RevieweeTag1"}
 
@@ -44,9 +40,7 @@ def test_the_roster_imports_refuse_a_comma_in_a_tag() -> None:
 
 
 def test_a_tag_without_a_comma_still_imports() -> None:
-    result = parse_reviewee_csv(
-        b"RevieweeName,RevieweeEmail,RevieweeTag1\nBo,b@x.edu,Team A; B\n"
-    )
+    result = parse_reviewee_csv(b"RevieweeName,RevieweeEmail,RevieweeTag1\nBo,b@x.edu,Team A; B\n")
     assert result.issues == []
     assert result.rows[0].tag_1 == "Team A; B"
 
@@ -81,7 +75,11 @@ def test_the_single_row_editors_refuse_a_comma_in_a_tag(db: Session) -> None:
 
     with pytest.raises(reviewers.ReviewerOperationError) as exc:
         reviewers.create_reviewer(
-            db, review_session=rs, name="Al", email="a@x.edu", tag_1="A,B",
+            db,
+            review_session=rs,
+            name="Al",
+            email="a@x.edu",
+            tag_1="A,B",
             user=user,
         )
     assert exc.value.code == "comma_in_tag"
@@ -92,8 +90,12 @@ def test_the_single_row_editors_refuse_a_comma_in_a_tag(db: Session) -> None:
 
     with pytest.raises(reviewees.RevieweeOperationError) as exc:
         reviewees.create_reviewee(
-            db, review_session=rs, name="Bo", email_or_identifier="b@x.edu",
-            tag_2="A,B", user=user,
+            db,
+            review_session=rs,
+            name="Bo",
+            email_or_identifier="b@x.edu",
+            tag_2="A,B",
+            user=user,
         )
     assert exc.value.code == "comma_in_tag"
     with pytest.raises(reviewees.RevieweeOperationError) as exc:
@@ -101,29 +103,30 @@ def test_the_single_row_editors_refuse_a_comma_in_a_tag(db: Session) -> None:
     assert exc.value.code == "comma_in_tag"
 
     with pytest.raises(observers.ObserverOperationError) as exc:
-        observers.create_observer(
-            db, review_session=rs, email="o@x.edu", tag_1="A,B", user=user
-        )
+        observers.create_observer(db, review_session=rs, email="o@x.edu", tag_1="A,B", user=user)
     assert exc.value.code == "comma_in_tag"
-    observer = observers.create_observer(
-        db, review_session=rs, email="o@x.edu", user=user
-    )
+    observer = observers.create_observer(db, review_session=rs, email="o@x.edu", user=user)
     with pytest.raises(observers.ObserverOperationError) as exc:
         observers.update_observer(db, observer=observer, tag_1="A,B", user=user)
     assert exc.value.code == "comma_in_tag"
 
     with pytest.raises(relationships.RelationshipOperationError) as exc:
         relationships.create_relationship(
-            db, review_session=rs, reviewer_id=rvr.id, reviewee_id=rve.id,
-            tag_2="A,B", user=user,
+            db,
+            review_session=rs,
+            reviewer_id=rvr.id,
+            reviewee_id=rve.id,
+            tag_2="A,B",
+            user=user,
         )
     assert exc.value.code == "comma_in_tag"
     rel = relationships.create_relationship(
-        db, review_session=rs, reviewer_id=rvr.id, reviewee_id=rve.id,
+        db,
+        review_session=rs,
+        reviewer_id=rvr.id,
+        reviewee_id=rve.id,
         user=user,
     )
     with pytest.raises(relationships.RelationshipOperationError) as exc:
-        relationships.update_relationship(
-            db, relationship=rel, tag_1="A,B", user=user
-        )
+        relationships.update_relationship(db, relationship=rel, tag_1="A,B", user=user)
     assert exc.value.code == "comma_in_tag"

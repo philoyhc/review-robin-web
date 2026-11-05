@@ -11,6 +11,7 @@ located by the `list=` that binds it to the page's suggestion
 datalist. A bare `"tag" in body` would pass on the tag-column chips,
 the tag headers and the friendly-label editor, none of which are this.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -27,26 +28,20 @@ from app.db.models import (
 )
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "Spring", "code": code},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _seed(db: Session, review_session: ReviewSession) -> None:
     review_session.relationships_enabled = True
     review_session.observers_enabled = True
-    reviewer = Reviewer(
-        session_id=review_session.id, name="Ali", email="ali@example.edu"
-    )
+    reviewer = Reviewer(session_id=review_session.id, name="Ali", email="ali@example.edu")
     reviewee = Reviewee(
         session_id=review_session.id,
         name="Carol",
@@ -96,9 +91,7 @@ def test_search_placeholder_names_the_tag_columns(
     review_session = _make_session(client, db, code=f"ph-{route}")
     _seed(db, review_session)
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/{route}"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/{route}").text
     element = _search_input(body, page=page)
 
     assert "placeholder=" in element, element
@@ -120,8 +113,6 @@ def test_the_relationships_edit_pickers_keep_their_own_help_text(
     review_session = _make_session(client, db, code="ph-pickers")
     _seed(db, review_session)
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/relationships?add=1"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/relationships?add=1").text
 
     assert 'placeholder="Search name or email"' in body

@@ -22,6 +22,7 @@ Revision ID: c5e2d7a3f81b
 Revises: b1e8f3c47d92
 Create Date: 2026-05-24
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -52,11 +53,7 @@ def upgrade() -> None:
             """
         )
     )
-    bind.execute(
-        sa.text(
-            "DELETE FROM response_type_definitions WHERE is_seeded IS TRUE"
-        )
-    )
+    bind.execute(sa.text("DELETE FROM response_type_definitions WHERE is_seeded IS TRUE"))
 
 
 def downgrade() -> None:
@@ -64,27 +61,29 @@ def downgrade() -> None:
     refs that were NULL'd are NOT restored — the migration can't
     tell which seeded RTD each field originally pointed at."""
     bind = op.get_bind()
-    sessions = bind.execute(
-        sa.text("SELECT id FROM sessions")
-    ).fetchall()
+    sessions = bind.execute(sa.text("SELECT id FROM sessions")).fetchall()
     rows = [
-        ("Long_text",  "String",  0,    2000, None, None,    0),
-        ("Short_text", "String",  0,    100,  None, None,    1),
-        ("Yes_no",     "List",    None, None, None,
-         "Yes, No",                                          2),
-        ("Grade",      "List",    None, None, None,
-         "A+, A, A-, B+, B, B-, C+, C, D+, D, F",            3),
-        ("Likert5",    "List",    None, None, None,
-         "Strongly Agree, Agree, Neutral, Disagree, Strongly Disagree",
-                                                             4),
-        ("100int",     "Integer", 0,    100,  1,    None,    5),
-        ("0-to-2int",  "Integer", 0,    2,    1,    None,    6),
-        ("1-to-5int",  "Integer", 1,    5,    1,    None,    7),
-        ("1-to-5half", "Decimal", 1.0,  5.0,  0.5,  None,    8),
-        ("1-to-5dec",  "Decimal", 1.0,  5.0,  0.1,  None,    9),
+        ("Long_text", "String", 0, 2000, None, None, 0),
+        ("Short_text", "String", 0, 100, None, None, 1),
+        ("Yes_no", "List", None, None, None, "Yes, No", 2),
+        ("Grade", "List", None, None, None, "A+, A, A-, B+, B, B-, C+, C, D+, D, F", 3),
+        (
+            "Likert5",
+            "List",
+            None,
+            None,
+            None,
+            "Strongly Agree, Agree, Neutral, Disagree, Strongly Disagree",
+            4,
+        ),
+        ("100int", "Integer", 0, 100, 1, None, 5),
+        ("0-to-2int", "Integer", 0, 2, 1, None, 6),
+        ("1-to-5int", "Integer", 1, 5, 1, None, 7),
+        ("1-to-5half", "Decimal", 1.0, 5.0, 0.5, None, 8),
+        ("1-to-5dec", "Decimal", 1.0, 5.0, 0.1, None, 9),
     ]
     for (session_id,) in sessions:
-        for (rt, dt, min_, max_, step, lc, seed_order) in rows:
+        for rt, dt, min_, max_, step, lc, seed_order in rows:
             bind.execute(
                 sa.text(
                     """

@@ -74,7 +74,9 @@ def test_instance_card_schema_states_and_sending() -> None:
 
     def card(revision: str | None, *, send: bool = False):
         return instance_card(
-            Instance(version="a5aa328", dialect="postgresql", schema_revision=revision, schema_head="h1"),
+            Instance(
+                version="a5aa328", dialect="postgresql", schema_revision=revision, schema_head="h1"
+            ),
             scheduled_send=send,
         )
 

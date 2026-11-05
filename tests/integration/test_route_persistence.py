@@ -51,13 +51,10 @@ def _bootstrap(
 def test_add_display_field_route_persists(
     committed_client: TestClient, committed_engine: Engine
 ) -> None:
-    session_id, instrument_id = _bootstrap(
-        committed_client, committed_engine, code="add-disp"
-    )
+    session_id, instrument_id = _bootstrap(committed_client, committed_engine, code="add-disp")
 
     response = committed_client.post(
-        f"/operator/sessions/{public_id(session_id)}/instruments/{instrument_id}"
-        "/display-fields",
+        f"/operator/sessions/{public_id(session_id)}/instruments/{instrument_id}/display-fields",
         data={
             "source_pair": "reviewee:tag_1",
             "label": "Cohort",
@@ -68,11 +65,15 @@ def test_add_display_field_route_persists(
     assert response.status_code == 303, response.text
 
     with Session(committed_engine) as s:
-        rows = s.execute(
-            select(InstrumentDisplayField)
-            .where(InstrumentDisplayField.instrument_id == instrument_id)
-            .order_by(InstrumentDisplayField.order)
-        ).scalars().all()
+        rows = (
+            s.execute(
+                select(InstrumentDisplayField)
+                .where(InstrumentDisplayField.instrument_id == instrument_id)
+                .order_by(InstrumentDisplayField.order)
+            )
+            .scalars()
+            .all()
+        )
     # Locked Name + Email rows are seeded on session creation; the
     # newly-added tag_1 row appends at order 2.
     assert [(r.source_type, r.source_field, r.label) for r in rows] == [
@@ -91,12 +92,9 @@ def test_update_display_field_label_no_longer_persists(
     accepts the ``label`` form parameter. Any stray ``label`` in
     the payload is silently ignored — the column stays at its
     existing (empty) value in the schema."""
-    session_id, instrument_id = _bootstrap(
-        committed_client, committed_engine, code="edit-disp"
-    )
+    session_id, instrument_id = _bootstrap(committed_client, committed_engine, code="edit-disp")
     committed_client.post(
-        f"/operator/sessions/{public_id(session_id)}/instruments/{instrument_id}"
-        "/display-fields",
+        f"/operator/sessions/{public_id(session_id)}/instruments/{instrument_id}/display-fields",
         data={"source_pair": "reviewee:tag_1", "label": "", "visible": "true"},
         follow_redirects=False,
     )
@@ -128,12 +126,9 @@ def test_update_display_field_label_no_longer_persists(
 def test_delete_display_field_persists(
     committed_client: TestClient, committed_engine: Engine
 ) -> None:
-    session_id, instrument_id = _bootstrap(
-        committed_client, committed_engine, code="del-disp"
-    )
+    session_id, instrument_id = _bootstrap(committed_client, committed_engine, code="del-disp")
     committed_client.post(
-        f"/operator/sessions/{public_id(session_id)}/instruments/{instrument_id}"
-        "/display-fields",
+        f"/operator/sessions/{public_id(session_id)}/instruments/{instrument_id}/display-fields",
         data={"source_pair": "reviewee:tag_1", "label": "", "visible": "true"},
         follow_redirects=False,
     )
@@ -174,9 +169,7 @@ def test_delete_response_field_persists(
 ) -> None:
     """The other headline regression: clicking the ✗ on a Response Field
     actually deletes the row in the database."""
-    session_id, instrument_id = _bootstrap(
-        committed_client, committed_engine, code="del-rf"
-    )
+    session_id, instrument_id = _bootstrap(committed_client, committed_engine, code="del-rf")
     with Session(committed_engine) as s:
         comments = s.execute(
             select(InstrumentResponseField).where(
@@ -195,9 +188,7 @@ def test_delete_response_field_persists(
 
     with Session(committed_engine) as s:
         gone = s.execute(
-            select(InstrumentResponseField).where(
-                InstrumentResponseField.id == comments_id
-            )
+            select(InstrumentResponseField).where(InstrumentResponseField.id == comments_id)
         ).scalar_one_or_none()
     assert gone is None
 
@@ -205,9 +196,7 @@ def test_delete_response_field_persists(
 def test_update_response_field_label_persists(
     committed_client: TestClient, committed_engine: Engine
 ) -> None:
-    session_id, instrument_id = _bootstrap(
-        committed_client, committed_engine, code="edit-rf"
-    )
+    session_id, instrument_id = _bootstrap(committed_client, committed_engine, code="edit-rf")
     with Session(committed_engine) as s:
         rating = s.execute(
             select(InstrumentResponseField).where(
@@ -241,9 +230,7 @@ def test_update_response_field_label_persists(
 def test_move_response_field_persists(
     committed_client: TestClient, committed_engine: Engine
 ) -> None:
-    session_id, instrument_id = _bootstrap(
-        committed_client, committed_engine, code="move-rf"
-    )
+    session_id, instrument_id = _bootstrap(committed_client, committed_engine, code="move-rf")
     with Session(committed_engine) as s:
         rating = s.execute(
             select(InstrumentResponseField).where(
@@ -276,13 +263,10 @@ def test_move_response_field_persists(
 def test_add_default_response_field_persists(
     committed_client: TestClient, committed_engine: Engine
 ) -> None:
-    session_id, instrument_id = _bootstrap(
-        committed_client, committed_engine, code="add-rf"
-    )
+    session_id, instrument_id = _bootstrap(committed_client, committed_engine, code="add-rf")
 
     response = committed_client.post(
-        f"/operator/sessions/{public_id(session_id)}/instruments/{instrument_id}"
-        "/fields/add-row",
+        f"/operator/sessions/{public_id(session_id)}/instruments/{instrument_id}/fields/add-row",
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -306,31 +290,35 @@ def test_data_shapes_zip_all_audit_row_persists(
     ``write_event`` alone only flushes."""
     from app.db.models import AuditEvent
 
-    session_id, _ = _bootstrap(
-        committed_client, committed_engine, code="zip-shapes-commit"
+    session_id, _ = _bootstrap(committed_client, committed_engine, code="zip-shapes-commit")
+    assert (
+        committed_client.post(
+            f"/operator/sessions/{public_id(session_id)}/extract-data/shapes",
+            json={
+                "name": "One",
+                "axis": "reviewer",
+                "instrument_id": None,
+                "response_field_id": None,
+                "column_chip_slots": ["reviewer:name"],
+            },
+        ).status_code
+        == 201
     )
-    assert committed_client.post(
-        f"/operator/sessions/{public_id(session_id)}/extract-data/shapes",
-        json={
-            "name": "One",
-            "axis": "reviewer",
-            "instrument_id": None,
-            "response_field_id": None,
-            "column_chip_slots": ["reviewer:name"],
-        },
-    ).status_code == 201
     response = committed_client.get(
         f"/operator/sessions/{public_id(session_id)}/export/data_shapes_bundle.zip"
     )
     assert response.status_code == 200
 
     with Session(committed_engine) as s:
-        assert s.execute(
-            select(AuditEvent).where(
-                AuditEvent.session_id == session_id,
-                AuditEvent.event_type == "session.data_shapes_bundle_extracted",
-            )
-        ).scalar_one() is not None
+        assert (
+            s.execute(
+                select(AuditEvent).where(
+                    AuditEvent.session_id == session_id,
+                    AuditEvent.event_type == "session.data_shapes_bundle_extracted",
+                )
+            ).scalar_one()
+            is not None
+        )
 
 
 @pytest.mark.parametrize(
@@ -368,15 +356,16 @@ def test_extract_audit_rows_persist(
         committed_engine,
         code=f"x-{path.replace('.', '-').replace('_', '-')}",
     )
-    response = committed_client.get(
-        f"/operator/sessions/{public_id(session_id)}/export/{path}"
-    )
+    response = committed_client.get(f"/operator/sessions/{public_id(session_id)}/export/{path}")
     assert response.status_code == 200, response.text
 
     with Session(committed_engine) as s:
-        assert s.execute(
-            select(AuditEvent).where(
-                AuditEvent.session_id == session_id,
-                AuditEvent.event_type == event_type,
-            )
-        ).scalar_one() is not None
+        assert (
+            s.execute(
+                select(AuditEvent).where(
+                    AuditEvent.session_id == session_id,
+                    AuditEvent.event_type == event_type,
+                )
+            ).scalar_one()
+            is not None
+        )

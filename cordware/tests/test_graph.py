@@ -17,7 +17,12 @@ from cordware import graph
 from cordware.graph import DirectoryUser, FakeDirectory, GraphDirectory, GraphError, Response
 from cordware.settings import IdentitySettings
 
-JANE = {"id": "u1", "displayName": "Jane Tan", "mail": "jane.tan@example.edu", "userPrincipalName": "e0123456@example.edu"}
+JANE = {
+    "id": "u1",
+    "displayName": "Jane Tan",
+    "mail": "jane.tan@example.edu",
+    "userPrincipalName": "e0123456@example.edu",
+}
 
 
 class Script:
@@ -40,18 +45,26 @@ def ok(*users: dict) -> Response:
 
 
 def directory(script: Script, sleeps: list[float] | None = None) -> GraphDirectory:
-    return GraphDirectory("tok", transport=script, sleep=(sleeps if sleeps is not None else []).append)
+    return GraphDirectory(
+        "tok", transport=script, sleep=(sleeps if sleeps is not None else []).append
+    )
 
 
 def test_one_query_matches_mail_or_upn_with_the_token() -> None:
     script = Script(ok(JANE))
     users = directory(script).find_users("o'brien@example.edu")
-    assert users == [DirectoryUser("u1", "Jane Tan", "jane.tan@example.edu", "e0123456@example.edu")]
+    assert users == [
+        DirectoryUser("u1", "Jane Tan", "jane.tan@example.edu", "e0123456@example.edu")
+    ]
     url, headers, timeout = script.calls[0]
     parts = urlsplit(url)
-    assert f"{parts.scheme}://{parts.netloc}{parts.path}" == "https://graph.microsoft.com/v1.0/users"
+    assert (
+        f"{parts.scheme}://{parts.netloc}{parts.path}" == "https://graph.microsoft.com/v1.0/users"
+    )
     query = parse_qs(parts.query)
-    assert query["$filter"] == ["mail eq 'o''brien@example.edu' or userPrincipalName eq 'o''brien@example.edu'"]
+    assert query["$filter"] == [
+        "mail eq 'o''brien@example.edu' or userPrincipalName eq 'o''brien@example.edu'"
+    ]
     assert query["$select"] == ["id,displayName,mail,userPrincipalName"]
     assert query["$top"] == ["5"]
     assert headers["Authorization"] == "Bearer tok"
@@ -64,7 +77,9 @@ def test_no_match_is_an_empty_list_and_a_null_mail_is_none() -> None:
     assert directory(Script(ok(lab))).find_users("lab01@example.edu")[0].mail is None
 
 
-@pytest.mark.parametrize(("status", "kind"), [(401, "unauthorized"), (403, "forbidden"), (400, "bad_response")])
+@pytest.mark.parametrize(
+    ("status", "kind"), [(401, "unauthorized"), (403, "forbidden"), (400, "bad_response")]
+)
 def test_a_refusal_is_raised_at_once(status: int, kind: str) -> None:
     script = Script(Response(status, {}, b"{}"))
     with pytest.raises(GraphError) as caught:
@@ -128,12 +143,18 @@ def test_an_unreadable_answer_is_bad_response(body: bytes) -> None:
         directory(Script(Response(200, {}, body))).find_users("a@example.edu")
 
 
-def test_a_failure_logs_its_kind_never_the_address_or_token(caplog: pytest.LogCaptureFixture) -> None:
+def test_a_failure_logs_its_kind_never_the_address_or_token(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     caplog.set_level(logging.WARNING, logger="cordware.graph")
     with pytest.raises(GraphError):
         directory(Script(Response(403, {}, b""))).find_users("secret.person@example.edu")
     (record,) = caplog.records
-    assert record.__dict__["event"] == "graph.request_failed" and record.__dict__["kind"] == "forbidden" and record.__dict__["status"] == 403
+    assert (
+        record.__dict__["event"] == "graph.request_failed"
+        and record.__dict__["kind"] == "forbidden"
+        and record.__dict__["status"] == 403
+    )
     text = record.getMessage() + repr(record.__dict__)
     assert "secret.person" not in text and "tok" not in text.replace("token", "")
 
@@ -144,7 +165,10 @@ def test_the_fake_directory_matches_mail_or_upn_in_any_case() -> None:
     assert [u.display_name for u in fake.find_users("e0123456@example.edu")] == ["Jane Tan"]
     assert fake.find_users("lab01@example.edu")[0].mail is None
     # One address that is one user's mail and another's UPN: two users.
-    assert {u.display_name for u in fake.find_users("office@example.edu")} == {"Wei Ling Lim", "Office Desk"}
+    assert {u.display_name for u in fake.find_users("office@example.edu")} == {
+        "Wei Ling Lim",
+        "Office Desk",
+    }
     assert fake.find_users("nobody@example.edu") == []
 
 
@@ -201,10 +225,18 @@ def test_look_up_all_classifies_each_distinct_key_once() -> None:
     assert jane.mail is not None
     outcomes = graph.look_up_all(
         Recording(),
-        [jane.mail, jane.user_principal_name, jane.mail, "office@example.edu", "nobody@example.edu"],
+        [
+            jane.mail,
+            jane.user_principal_name,
+            jane.mail,
+            "office@example.edu",
+            "nobody@example.edu",
+        ],
         budget=10,
     )
-    assert sorted(asked) == sorted({jane.mail, jane.user_principal_name, "office@example.edu", "nobody@example.edu"})
+    assert sorted(asked) == sorted(
+        {jane.mail, jane.user_principal_name, "office@example.edu", "nobody@example.edu"}
+    )
     assert outcomes[jane.mail].status == "OK" and outcomes[jane.mail].user == jane
     assert outcomes[jane.user_principal_name].status == "USE_PRIMARY"
     # One account's mail is another's UPN: the directory sees both, so no winner.
@@ -227,7 +259,9 @@ def test_a_search_asks_startswith_on_name_surname_mail_and_upn() -> None:
     """RRW segment 19Z, invite from the directory: a picker's search."""
     script = Script(ok(JANE))
     users = directory(script).search_users("o'b")
-    assert users == [DirectoryUser("u1", "Jane Tan", "jane.tan@example.edu", "e0123456@example.edu")]
+    assert users == [
+        DirectoryUser("u1", "Jane Tan", "jane.tan@example.edu", "e0123456@example.edu")
+    ]
     url, headers, _ = script.calls[0]
     query = parse_qs(urlsplit(url).query)
     assert query["$filter"] == [
@@ -247,13 +281,17 @@ def test_a_search_s_failures_raise_as_a_lookup_s_do() -> None:
 @pytest.mark.parametrize(
     ("body", "reason"),
     [
-        (b'{"error": {"code": "Request_UnsupportedQuery", "message": "startswith(\'jan\') ..."}}',
-         "bad_response (400) Request_UnsupportedQuery"),
+        (
+            b'{"error": {"code": "Request_UnsupportedQuery", "message": "startswith(\'jan\') ..."}}',
+            "bad_response (400) Request_UnsupportedQuery",
+        ),
         (b"not json", "bad_response (400)"),
         (b'{"error": {"code": "has spaces <b>"}}', "bad_response (400)"),
     ],
 )
-def test_a_failure_carries_graph_s_error_code_and_never_its_message(body: bytes, reason: str) -> None:
+def test_a_failure_carries_graph_s_error_code_and_never_its_message(
+    body: bytes, reason: str
+) -> None:
     with pytest.raises(GraphError) as raised:
         directory(Script(Response(400, {}, body))).search_users("jan")
     assert raised.value.reason == reason

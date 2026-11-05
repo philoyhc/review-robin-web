@@ -13,6 +13,7 @@ Pins:
 - Stale keys (column the operator doesn't recognise anymore)
   are silently dropped.
 """
+
 from __future__ import annotations
 
 import json
@@ -27,9 +28,7 @@ from app.db.models import ReviewSession
 from ._public_id import public_id
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "Spring", "code": code},
@@ -87,20 +86,13 @@ def _populate_reviewees(client: TestClient, session_id: int) -> None:
 # --- Reviewers --------------------------------------------------------------
 
 
-def test_reviewers_table_renders_sort_scaffolding(
-    db: Session, client: TestClient
-) -> None:
+def test_reviewers_table_renders_sort_scaffolding(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rev-scaff")
     _populate_reviewers(client, review_session.id)
-    response = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-    )
+    response = client.get(f"/operator/sessions/{review_session.public_id}/reviewers")
     assert response.status_code == 200
     body = response.text
-    assert (
-        f'data-rrw-sortable="rrw-sort-reviewers-{review_session.public_id}"'
-        in body
-    )
+    assert f'data-rrw-sortable="rrw-sort-reviewers-{review_session.public_id}"' in body
     assert '<tbody class="rrw-rows">' in body
     assert 'class="rrw-sortable" data-sort-key="name"' in body
     assert 'class="rrw-sortable" data-sort-key="email"' in body
@@ -123,9 +115,7 @@ def test_reviewers_table_renders_sort_scaffolding(
     assert 'data-sort-value="Alpha"' in body
 
 
-def test_reviewers_updated_at_sort_surfaces_recent_row(
-    db: Session, client: TestClient
-) -> None:
+def test_reviewers_updated_at_sort_surfaces_recent_row(db: Session, client: TestClient) -> None:
     """The right-end ``updated_at`` column is sortable — a more
     recently touched row floats to the top under a desc sort. This
     is the column's reason for existing: surface the most recently
@@ -142,15 +132,11 @@ def test_reviewers_updated_at_sort_surfaces_recent_row(
     # value by offsetting an existing row's ``updated_at`` so it
     # keeps the dialect's tz-awareness — Postgres returns
     # tz-aware datetimes, SQLite naive ones.
-    rows = db.execute(
-        select(Reviewer).where(
-            Reviewer.session_id == review_session.id
-        )
-    ).scalars().all()
-    by_name = {r.name: r for r in rows}
-    by_name["Charlie"].updated_at = (
-        by_name["Alpha"].updated_at + timedelta(days=365)
+    rows = (
+        db.execute(select(Reviewer).where(Reviewer.session_id == review_session.id)).scalars().all()
     )
+    by_name = {r.name: r for r in rows}
+    by_name["Charlie"].updated_at = by_name["Alpha"].updated_at + timedelta(days=365)
     db.commit()
 
     cookie_name = f"rrw-sort-reviewers-{review_session.public_id}"
@@ -159,17 +145,13 @@ def test_reviewers_updated_at_sort_surfaces_recent_row(
         json.dumps([{"key": "updated_at", "dir": "desc"}]),
         path=f"/operator/sessions/{review_session.public_id}",
     )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
     body = body[body.find('id="reviewers-table"') :]
     assert body.find("Charlie") < body.find("Bravo")
     assert body.find("Charlie") < body.find("Alpha")
 
 
-def test_reviewers_cookie_drives_ssr_initial_order(
-    db: Session, client: TestClient
-) -> None:
+def test_reviewers_cookie_drives_ssr_initial_order(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rev-cookie-asc")
     _populate_reviewers(client, review_session.id)
 
@@ -179,9 +161,7 @@ def test_reviewers_cookie_drives_ssr_initial_order(
         json.dumps([{"key": "name", "dir": "asc"}]),
         path=f"/operator/sessions/{review_session.public_id}",
     )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
     # Slice from the table marker so the Segment 15F search-autocomplete
     # `<datalist>` options above the table don't interfere.
     body = body[body.find('id="reviewers-table"') :]
@@ -189,9 +169,7 @@ def test_reviewers_cookie_drives_ssr_initial_order(
     assert body.find("Alpha") < body.find("Bravo") < body.find("Charlie")
 
 
-def test_reviewers_cookie_desc_order(
-    db: Session, client: TestClient
-) -> None:
+def test_reviewers_cookie_desc_order(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rev-cookie-desc")
     _populate_reviewers(client, review_session.id)
 
@@ -201,16 +179,12 @@ def test_reviewers_cookie_desc_order(
         json.dumps([{"key": "name", "dir": "desc"}]),
         path=f"/operator/sessions/{review_session.public_id}",
     )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
     body = body[body.find('id="reviewers-table"') :]
     assert body.find("Charlie") < body.find("Bravo") < body.find("Alpha")
 
 
-def test_reviewers_percent_encoded_cookie_drives_ssr_order(
-    db: Session, client: TestClient
-) -> None:
+def test_reviewers_percent_encoded_cookie_drives_ssr_order(db: Session, client: TestClient) -> None:
     """The browser primitive writes the sort cookie percent-encoded
     (``encodeURIComponent``); Starlette doesn't percent-decode
     cookie values, so the SSR decoder must ``unquote`` before
@@ -225,9 +199,7 @@ def test_reviewers_percent_encoded_cookie_drives_ssr_order(
         quote(json.dumps([{"key": "name", "dir": "asc"}])),
         path=f"/operator/sessions/{review_session.public_id}",
     )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
     body = body[body.find('id="reviewers-table"') :]
     assert body.find("Alpha") < body.find("Bravo") < body.find("Charlie")
 
@@ -244,17 +216,13 @@ def test_reviewers_malformed_cookie_falls_back_to_insertion_order(
         "not-json{",
         path=f"/operator/sessions/{review_session.public_id}",
     )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
     body = body[body.find('id="reviewers-table"') :]
     # Insertion order: Bravo, Alpha, Charlie.
     assert body.find("Bravo") < body.find("Alpha") < body.find("Charlie")
 
 
-def test_reviewers_stale_cookie_key_dropped(
-    db: Session, client: TestClient
-) -> None:
+def test_reviewers_stale_cookie_key_dropped(db: Session, client: TestClient) -> None:
     """A cookie referencing a column the route doesn't recognise
     (e.g. an old ``tag_5``) is silently dropped — the rest of the
     spec still applies."""
@@ -264,15 +232,15 @@ def test_reviewers_stale_cookie_key_dropped(
     cookie_name = f"rrw-sort-reviewers-{review_session.public_id}"
     client.cookies.set(
         cookie_name,
-        json.dumps([
-            {"key": "tag_5", "dir": "asc"},
-            {"key": "name", "dir": "asc"},
-        ]),
+        json.dumps(
+            [
+                {"key": "tag_5", "dir": "asc"},
+                {"key": "name", "dir": "asc"},
+            ]
+        ),
         path=f"/operator/sessions/{review_session.public_id}",
     )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
     body = body[body.find('id="reviewers-table"') :]
     # tag_5 drops; name asc still applies.
     assert body.find("Alpha") < body.find("Bravo") < body.find("Charlie")
@@ -281,29 +249,20 @@ def test_reviewers_stale_cookie_key_dropped(
 # --- Reviewees --------------------------------------------------------------
 
 
-def test_reviewees_table_renders_sort_scaffolding(
-    db: Session, client: TestClient
-) -> None:
+def test_reviewees_table_renders_sort_scaffolding(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="ree-scaff")
     _populate_reviewees(client, review_session.id)
-    response = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewees"
-    )
+    response = client.get(f"/operator/sessions/{review_session.public_id}/reviewees")
     assert response.status_code == 200
     body = response.text
-    assert (
-        f'data-rrw-sortable="rrw-sort-reviewees-{review_session.public_id}"'
-        in body
-    )
+    assert f'data-rrw-sortable="rrw-sort-reviewees-{review_session.public_id}"' in body
     assert '<tbody class="rrw-rows">' in body
     assert 'class="rrw-sortable" data-sort-key="name"' in body
     assert 'class="rrw-sortable" data-sort-key="email_or_identifier"' in body
     assert 'data-sort-value="Alpha"' in body
 
 
-def test_reviewees_cookie_drives_ssr_initial_order(
-    db: Session, client: TestClient
-) -> None:
+def test_reviewees_cookie_drives_ssr_initial_order(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="ree-cookie-asc")
     _populate_reviewees(client, review_session.id)
 
@@ -313,18 +272,14 @@ def test_reviewees_cookie_drives_ssr_initial_order(
         json.dumps([{"key": "name", "dir": "asc"}]),
         path=f"/operator/sessions/{review_session.public_id}",
     )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewees"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewees").text
     assert body.find("Alpha") < body.find("Bravo") < body.find("Charlie")
 
 
 # --- Relationships ---------------------------------------------------------
 
 
-def _populate_relationships(
-    client: TestClient, session_id: int
-) -> None:
+def _populate_relationships(client: TestClient, session_id: int) -> None:
     """Three reviewers paired with one reviewee via the
     Relationships CSV. Insertion order is Bravo / Alpha / Charlie
     so a name sort actually reshuffles."""
@@ -373,18 +328,11 @@ def _populate_relationships(
     )
 
 
-def test_relationships_table_renders_sort_scaffolding(
-    db: Session, client: TestClient
-) -> None:
+def test_relationships_table_renders_sort_scaffolding(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rel-scaff")
     _populate_relationships(client, review_session.id)
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/relationships"
-    ).text
-    assert (
-        f'data-rrw-sortable="rrw-sort-relationships-{review_session.public_id}"'
-        in body
-    )
+    body = client.get(f"/operator/sessions/{review_session.public_id}/relationships").text
+    assert f'data-rrw-sortable="rrw-sort-relationships-{review_session.public_id}"' in body
     assert '<tbody class="rrw-rows">' in body
     assert 'class="rrw-sortable" data-sort-key="reviewer"' in body
     assert 'class="rrw-sortable" data-sort-key="reviewee"' in body
@@ -393,9 +341,7 @@ def test_relationships_table_renders_sort_scaffolding(
     assert 'data-sort-value="A Rev"' in body
 
 
-def test_relationships_cookie_sort_by_reviewer_asc(
-    db: Session, client: TestClient
-) -> None:
+def test_relationships_cookie_sort_by_reviewer_asc(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rel-by-rev")
     _populate_relationships(client, review_session.id)
 
@@ -405,9 +351,7 @@ def test_relationships_cookie_sort_by_reviewer_asc(
         json.dumps([{"key": "reviewer", "dir": "asc"}]),
         path=f"/operator/sessions/{review_session.public_id}",
     )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/relationships"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/relationships").text
     body = body[body.find('id="relationships-table"') :]
     # Reviewer column sorts on email — alphabetical: alpha,
     # bravo, charlie.
@@ -418,9 +362,7 @@ def test_relationships_cookie_sort_by_reviewer_asc(
     )
 
 
-def test_relationships_cookie_sort_desc(
-    db: Session, client: TestClient
-) -> None:
+def test_relationships_cookie_sort_desc(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rel-desc")
     _populate_relationships(client, review_session.id)
 
@@ -430,9 +372,7 @@ def test_relationships_cookie_sort_desc(
         json.dumps([{"key": "reviewer", "dir": "desc"}]),
         path=f"/operator/sessions/{review_session.public_id}",
     )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/relationships"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/relationships").text
     body = body[body.find('id="relationships-table"') :]
     assert (
         body.find("charlie@example.edu")
@@ -441,24 +381,22 @@ def test_relationships_cookie_sort_desc(
     )
 
 
-def test_relationships_stale_cookie_key_dropped(
-    db: Session, client: TestClient
-) -> None:
+def test_relationships_stale_cookie_key_dropped(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rel-stale")
     _populate_relationships(client, review_session.id)
 
     cookie_name = f"rrw-sort-relationships-{review_session.public_id}"
     client.cookies.set(
         cookie_name,
-        json.dumps([
-            {"key": "not_a_column", "dir": "asc"},
-            {"key": "reviewer", "dir": "asc"},
-        ]),
+        json.dumps(
+            [
+                {"key": "not_a_column", "dir": "asc"},
+                {"key": "reviewer", "dir": "asc"},
+            ]
+        ),
         path=f"/operator/sessions/{review_session.public_id}",
     )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/relationships"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/relationships").text
     body = body[body.find('id="relationships-table"') :]
     assert (
         body.find("alpha@example.edu")

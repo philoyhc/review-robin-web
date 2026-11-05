@@ -35,9 +35,7 @@ def _session(db: Session, user: User, *, code: str) -> ReviewSession:
     return s
 
 
-def _make_field(
-    *, source_type: str, source_field: str, label: str = ""
-) -> InstrumentDisplayField:
+def _make_field(*, source_type: str, source_field: str, label: str = "") -> InstrumentDisplayField:
     return InstrumentDisplayField(
         instrument_id=0,
         label=label,
@@ -53,9 +51,7 @@ def test_display_field_label_ignores_per_instrument_override() -> None:
     ``InstrumentDisplayField.label`` is no longer in the resolver
     chain, even when non-empty. The session-less call returns the
     built-in default for the slot."""
-    field = _make_field(
-        source_type="reviewee", source_field="tag_1", label="  Cohort  "
-    )
+    field = _make_field(source_type="reviewee", source_field="tag_1", label="  Cohort  ")
     assert display_field_label(field) == "Tag 1"
 
 
@@ -108,8 +104,7 @@ def test_display_field_value_pair_context_reads_relationship(slot: str) -> None:
     lookup = {(1, 10): relationship}
     field = _make_field(source_type="pair_context", source_field=slot)
     assert (
-        display_field_value(field, assignment, pair_context_lookup=lookup)
-        == f"slot-{slot}-value"
+        display_field_value(field, assignment, pair_context_lookup=lookup) == f"slot-{slot}-value"
     )
 
 
@@ -162,10 +157,7 @@ def test_display_field_value_pair_context_skips_inactive_relationship() -> None:
     )
     lookup = {(1, 10): relationship}
     field = _make_field(source_type="pair_context", source_field="1")
-    assert (
-        display_field_value(field, assignment, pair_context_lookup=lookup)
-        is None
-    )
+    assert display_field_value(field, assignment, pair_context_lookup=lookup) is None
 
 
 def test_display_field_value_pair_context_returns_none_when_empty_string() -> None:
@@ -187,10 +179,7 @@ def test_display_field_value_pair_context_returns_none_when_empty_string() -> No
     )
     lookup = {(1, 10): relationship}
     field = _make_field(source_type="pair_context", source_field="1")
-    assert (
-        display_field_value(field, assignment, pair_context_lookup=lookup)
-        is None
-    )
+    assert display_field_value(field, assignment, pair_context_lookup=lookup) is None
 
 
 @pytest.mark.parametrize(
@@ -223,7 +212,6 @@ def test_display_field_value_reviewee_reads_via_getattr(
         reviewee_id=reviewee.id,
         instrument_id=instrument.id,
         include=True,
-
     )
     db.add(assignment)
     db.flush()
@@ -237,9 +225,7 @@ def test_display_field_value_reviewee_returns_none_when_column_unset(
 ) -> None:
     user = _user(db)
     session = _session(db, user, code="rv-none")
-    reviewee = Reviewee(
-        session_id=session.id, name="E", email_or_identifier="e@example.edu"
-    )
+    reviewee = Reviewee(session_id=session.id, name="E", email_or_identifier="e@example.edu")
     reviewer = Reviewer(session_id=session.id, name="R", email="r@example.edu")
     db.add_all([reviewer, reviewee])
     db.flush()
@@ -250,7 +236,6 @@ def test_display_field_value_reviewee_returns_none_when_column_unset(
         reviewee_id=reviewee.id,
         instrument_id=instrument.id,
         include=True,
-
     )
     db.add(assignment)
     db.flush()
@@ -271,11 +256,15 @@ def test_ensure_default_instrument_seeds_locked_name_and_email_only(
 
     instrument = ensure_default_instrument(db, session)
 
-    rows = db.execute(
-        select(InstrumentDisplayField)
-        .where(InstrumentDisplayField.instrument_id == instrument.id)
-        .order_by(InstrumentDisplayField.order)
-    ).scalars().all()
+    rows = (
+        db.execute(
+            select(InstrumentDisplayField)
+            .where(InstrumentDisplayField.instrument_id == instrument.id)
+            .order_by(InstrumentDisplayField.order)
+        )
+        .scalars()
+        .all()
+    )
     assert [(r.source_type, r.source_field, r.order, r.visible) for r in rows] == [
         ("reviewee", "name", 0, True),
         ("reviewee", "email_or_identifier", 1, True),
@@ -327,11 +316,15 @@ def test_seed_display_fields_from_reviewees_creates_rows_for_populated_slots(
     created = seed_display_fields_from_reviewees(db, session)
     assert created == 3
 
-    rows = db.execute(
-        select(InstrumentDisplayField)
-        .where(InstrumentDisplayField.instrument_id == instrument.id)
-        .order_by(InstrumentDisplayField.order)
-    ).scalars().all()
+    rows = (
+        db.execute(
+            select(InstrumentDisplayField)
+            .where(InstrumentDisplayField.instrument_id == instrument.id)
+            .order_by(InstrumentDisplayField.order)
+        )
+        .scalars()
+        .all()
+    )
     # The two locked rows (Name + Email) sit at the top from
     # ensure_default_instrument; the lazy-seeded rows append after.
     pairs = [(r.source_type, r.source_field) for r in rows]
@@ -362,11 +355,15 @@ def test_seed_display_fields_from_reviewees_is_idempotent(db: Session) -> None:
     second_call_created = seed_display_fields_from_reviewees(db, session)
     assert second_call_created == 0
 
-    rows = db.execute(
-        select(InstrumentDisplayField).where(
-            InstrumentDisplayField.instrument_id == instrument.id
+    rows = (
+        db.execute(
+            select(InstrumentDisplayField).where(
+                InstrumentDisplayField.instrument_id == instrument.id
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     # 2 locked rows + 1 tag_1 lazy seed = 3.
     assert len(rows) == 3
 
@@ -401,11 +398,15 @@ def test_seed_display_fields_from_reviewees_preserves_operator_label(
 
     seed_display_fields_from_reviewees(db, session)
 
-    rows = db.execute(
-        select(InstrumentDisplayField)
-        .where(InstrumentDisplayField.instrument_id == instrument.id)
-        .order_by(InstrumentDisplayField.order)
-    ).scalars().all()
+    rows = (
+        db.execute(
+            select(InstrumentDisplayField)
+            .where(InstrumentDisplayField.instrument_id == instrument.id)
+            .order_by(InstrumentDisplayField.order)
+        )
+        .scalars()
+        .all()
+    )
     by_source = {r.source_field: (r.label, r.visible) for r in rows}
     assert by_source["tag_1"] == ("Cohort", False)
     assert by_source["tag_2"] == ("", True)
@@ -427,9 +428,7 @@ def test_seed_display_fields_from_assignments_creates_pair_context_rows(
     session = _session(db, user, code="seed-asgn")
     instrument = ensure_default_instrument(db, session)
     reviewer = Reviewer(session_id=session.id, name="R", email="r@example.edu")
-    reviewee = Reviewee(
-        session_id=session.id, name="E", email_or_identifier="e@example.edu"
-    )
+    reviewee = Reviewee(session_id=session.id, name="E", email_or_identifier="e@example.edu")
     db.add_all([reviewer, reviewee])
     db.flush()
     db.add(
@@ -456,11 +455,15 @@ def test_seed_display_fields_from_assignments_creates_pair_context_rows(
     created = seed_display_fields_from_assignments(db, session)
     assert created == 2
 
-    rows = db.execute(
-        select(InstrumentDisplayField)
-        .where(InstrumentDisplayField.instrument_id == instrument.id)
-        .order_by(InstrumentDisplayField.order)
-    ).scalars().all()
+    rows = (
+        db.execute(
+            select(InstrumentDisplayField)
+            .where(InstrumentDisplayField.instrument_id == instrument.id)
+            .order_by(InstrumentDisplayField.order)
+        )
+        .scalars()
+        .all()
+    )
     pairs = [(r.source_type, r.source_field) for r in rows]
     # Locked rows seed first, pair_context rows appended.
     assert pairs == [
@@ -484,9 +487,7 @@ def test_seed_display_fields_from_assignments_no_op_for_no_relationships(
     session = _session(db, user, code="seed-asgn-fm")
     instrument = ensure_default_instrument(db, session)
     reviewer = Reviewer(session_id=session.id, name="R", email="r@example.edu")
-    reviewee = Reviewee(
-        session_id=session.id, name="E", email_or_identifier="e@example.edu"
-    )
+    reviewee = Reviewee(session_id=session.id, name="E", email_or_identifier="e@example.edu")
     db.add_all([reviewer, reviewee])
     db.flush()
     db.add(
@@ -503,11 +504,15 @@ def test_seed_display_fields_from_assignments_no_op_for_no_relationships(
     created = seed_display_fields_from_assignments(db, session)
     assert created == 0
 
-    rows = db.execute(
-        select(InstrumentDisplayField).where(
-            InstrumentDisplayField.instrument_id == instrument.id
+    rows = (
+        db.execute(
+            select(InstrumentDisplayField).where(
+                InstrumentDisplayField.instrument_id == instrument.id
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     # Locked Name + Email rows are still seeded, but no pair_context rows
     # are added when ``context`` is None.
     pairs = sorted((r.source_type, r.source_field) for r in rows)

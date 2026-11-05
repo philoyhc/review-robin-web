@@ -49,6 +49,10 @@ testpaths = ["tests", "cordware/tests", "residentialapps/tests", "utilityapps/te
 line-length = 100
 target-version = "py312"
 
+[tool.ruff.format]
+# Segment 22H Item 1: ruff's defaults (double quotes, magic trailing
+# commas respected, the line length above).
+
 [tool.pyright]
 # Strict mode (segment 22E) over application code and its tests (22C, 22D).
 # Each root below turns off only the strict rules it still fails; a package

@@ -6,6 +6,7 @@ instrument IDs), the no-op short-circuit, the lifecycle-
 invalidation hook, and the canonical audit envelope on
 ``instrument.sort_fields_updated``.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -62,9 +63,7 @@ def _actor(db: Session):
     return actor
 
 
-def test_set_sort_persists_canonical_shape(
-    db: Session, client: TestClient
-) -> None:
+def test_set_sort_persists_canonical_shape(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="ssdf-canon")
     _populate_rosters(client, review_session.id)
     instrument = _instrument(db, review_session.id)
@@ -82,15 +81,11 @@ def test_set_sort_persists_canonical_shape(
         {"display_field_id": f2.id, "dir": "desc"},
     ]
     db.expire_all()
-    refreshed = db.execute(
-        select(Instrument).where(Instrument.id == instrument.id)
-    ).scalar_one()
+    refreshed = db.execute(select(Instrument).where(Instrument.id == instrument.id)).scalar_one()
     assert refreshed.sort_display_fields == new_value
 
 
-def test_set_sort_accepts_canonical_dict_input(
-    db: Session, client: TestClient
-) -> None:
+def test_set_sort_accepts_canonical_dict_input(db: Session, client: TestClient) -> None:
     """The route layer may hand in the canonical dict shape
     directly (e.g. when re-saving a value pulled from the DB)."""
     review_session = _make_session(client, db, code="ssdf-dict-in")
@@ -107,9 +102,7 @@ def test_set_sort_accepts_canonical_dict_input(
     assert new_value == [{"display_field_id": f1.id, "dir": "asc"}]
 
 
-def test_set_sort_clear_back_to_empty(
-    db: Session, client: TestClient
-) -> None:
+def test_set_sort_clear_back_to_empty(db: Session, client: TestClient) -> None:
     """Passing an empty list clears the sort back to the default
     'no operator sort' state."""
     review_session = _make_session(client, db, code="ssdf-clear")
@@ -130,9 +123,7 @@ def test_set_sort_clear_back_to_empty(
     assert new_value == []
 
 
-def test_set_sort_rejects_too_many_keys(
-    db: Session, client: TestClient
-) -> None:
+def test_set_sort_rejects_too_many_keys(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="ssdf-too-many")
     _populate_rosters(client, review_session.id)
     instrument = _instrument(db, review_session.id)
@@ -164,9 +155,7 @@ def test_set_sort_rejects_too_many_keys(
     assert excinfo.value.code == "too_many"
 
 
-def test_set_sort_rejects_unknown_dir(
-    db: Session, client: TestClient
-) -> None:
+def test_set_sort_rejects_unknown_dir(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="ssdf-bad-dir")
     _populate_rosters(client, review_session.id)
     instrument = _instrument(db, review_session.id)
@@ -182,9 +171,7 @@ def test_set_sort_rejects_unknown_dir(
     assert excinfo.value.code == "unknown_dir"
 
 
-def test_set_sort_rejects_duplicate_id(
-    db: Session, client: TestClient
-) -> None:
+def test_set_sort_rejects_duplicate_id(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="ssdf-dup")
     _populate_rosters(client, review_session.id)
     instrument = _instrument(db, review_session.id)
@@ -200,9 +187,7 @@ def test_set_sort_rejects_duplicate_id(
     assert excinfo.value.code == "duplicate_id"
 
 
-def test_set_sort_drops_a_foreign_id(
-    db: Session, client: TestClient
-) -> None:
+def test_set_sort_drops_a_foreign_id(db: Session, client: TestClient) -> None:
     """A display_field_id that belongs to a different instrument is
     dropped, not refused (findings A24): the spec keeps only this
     instrument's keys."""
@@ -212,9 +197,7 @@ def test_set_sort_drops_a_foreign_id(
     f1, _ = _seed_two_display_fields(db, instrument)
 
     # Seed a second instrument with its own display field.
-    other = Instrument(
-        session_id=review_session.id, name="Other", order=99
-    )
+    other = Instrument(session_id=review_session.id, name="Other", order=99)
     db.add(other)
     db.flush()
     foreign = InstrumentDisplayField(
@@ -237,9 +220,7 @@ def test_set_sort_drops_a_foreign_id(
     assert new_value == [{"display_field_id": f1.id, "dir": "desc"}]
 
 
-def test_set_sort_drops_the_reviewee_email(
-    db: Session, client: TestClient
-) -> None:
+def test_set_sort_drops_the_reviewee_email(db: Session, client: TestClient) -> None:
     """The email shares the identity column with the name, whose badge
     sorts by name; no operator control sets an email key, so a save
     drops one (findings A29)."""
@@ -300,18 +281,20 @@ def test_a_save_compacts_a_sort_key_whose_field_was_deleted(
     ]
     db.refresh(instrument)
     assert instrument.sort_display_fields == new_value
-    events = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "instrument.sort_fields_updated",
-            AuditEvent.session_id == review_session.id,
+    events = (
+        db.execute(
+            select(AuditEvent).where(
+                AuditEvent.event_type == "instrument.sort_fields_updated",
+                AuditEvent.session_id == review_session.id,
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(events) == 2
 
 
-def test_set_sort_accepts_group_identity_sentinel(
-    db: Session, client: TestClient
-) -> None:
+def test_set_sort_accepts_group_identity_sentinel(db: Session, client: TestClient) -> None:
     """The ``GROUP_IDENTITY_SORT_KEY`` (-1) sentinel for the
     composed Group cell sort on a new-model group-scoped
     instrument's preview is kept, not dropped as a stale id — it
@@ -332,9 +315,7 @@ def test_set_sort_accepts_group_identity_sentinel(
     ]
 
 
-def test_set_sort_emits_audit_on_diff(
-    db: Session, client: TestClient
-) -> None:
+def test_set_sort_emits_audit_on_diff(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="ssdf-audit")
     _populate_rosters(client, review_session.id)
     instrument = _instrument(db, review_session.id)
@@ -363,9 +344,7 @@ def test_set_sort_emits_audit_on_diff(
     }
 
 
-def test_set_sort_no_emit_on_noop_save(
-    db: Session, client: TestClient
-) -> None:
+def test_set_sort_no_emit_on_noop_save(db: Session, client: TestClient) -> None:
     """Idempotent: a second call with the same value emits no
     audit event."""
     review_session = _make_session(client, db, code="ssdf-noop")
@@ -398,9 +377,7 @@ def test_set_sort_no_emit_on_noop_save(
     assert len(events) == 1
 
 
-def test_empty_sort_on_a_never_sorted_instrument_is_a_noop(
-    db: Session, client: TestClient
-) -> None:
+def test_empty_sort_on_a_never_sorted_instrument_is_a_noop(db: Session, client: TestClient) -> None:
     """Findings A2 (2026-10-07): NULL and ``[]`` both mean "no sort",
     so the card's first Save, which always sends an empty spec for an
     unsorted instrument, emits nothing and leaves a validated session
@@ -413,24 +390,24 @@ def test_empty_sort_on_a_never_sorted_instrument_is_a_noop(
     review_session.status = "validated"
     db.flush()
 
-    instruments.set_sort_display_fields(
-        db, instrument=instrument, fields=[], actor=_actor(db)
-    )
+    instruments.set_sort_display_fields(db, instrument=instrument, fields=[], actor=_actor(db))
     db.expire_all()
     assert review_session.status == "validated"
     assert instrument.sort_display_fields is None
-    events = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "instrument.sort_fields_updated",
-            AuditEvent.session_id == review_session.id,
+    events = (
+        db.execute(
+            select(AuditEvent).where(
+                AuditEvent.event_type == "instrument.sort_fields_updated",
+                AuditEvent.session_id == review_session.id,
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert events == []
 
 
-def test_set_sort_invalidates_validated_session(
-    db: Session, client: TestClient
-) -> None:
+def test_set_sort_invalidates_validated_session(db: Session, client: TestClient) -> None:
     """Sort spec is a setup-shape change — saving it on a
     previously-validated session bumps it back to draft."""
     review_session = _make_session(client, db, code="ssdf-invalidate")

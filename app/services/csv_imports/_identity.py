@@ -51,7 +51,6 @@ class DirectoryCheck:
     unchecked_reason: str | None = None
 
 
-
 def directory_check(
     directory: Any,
     addresses: Sequence[str | None],
@@ -80,9 +79,7 @@ def directory_checks(
     return [
         DirectoryCheck(
             accounts=found,
-            counts=directory_accounts.counts(
-                outcomes, addresses, checked=directory is not None
-            ),
+            counts=directory_accounts.counts(outcomes, addresses, checked=directory is not None),
             unchecked=directory_accounts.unchecked(
                 outcomes, addresses, checked=directory is not None
             ),
@@ -197,33 +194,22 @@ def _identity_holders(
         if roster in exclude:
             continue
         model = _IDENTITY_MODELS[roster]
-        for row in (
-            db.execute(select(model).where(model.session_id == session_id))
-            .scalars()
-            .all()
-        ):
+        for row in db.execute(select(model).where(model.session_id == session_id)).scalars().all():
             identifier = getattr(row, spec["model_attr"]) or ""
             name = getattr(row, spec["name_attr"])
             if not is_comparable_identity(identifier, name):
                 continue
-            holders.setdefault(normalize_email(identifier), []).append(
-                (spec["label"], name)
-            )
+            holders.setdefault(normalize_email(identifier), []).append((spec["label"], name))
     return holders
 
 
 #: Roster label -> its position in ``_IDENTITY_ROSTERS``, so a message
 #: naming one of several disagreeing holders names the same one every
 #: time, on every dialect.
-_ROSTER_ORDER = {
-    spec["label"]: index
-    for index, spec in enumerate(_IDENTITY_ROSTERS.values())
-}
+_ROSTER_ORDER = {spec["label"]: index for index, spec in enumerate(_IDENTITY_ROSTERS.values())}
 
 
-def _first_disagreeing_holder(
-    holders: list[tuple[str, str]], name: str
-) -> tuple[str, str] | None:
+def _first_disagreeing_holder(holders: list[tuple[str, str]], name: str) -> tuple[str, str] | None:
     """The holder to cite when one or more disagree with ``name``.
 
     **Any** disagreement is a conflict — the caller must not be able to
@@ -237,9 +223,7 @@ def _first_disagreeing_holder(
     disagreeing = [held for held in holders if held[1] != name]
     if not disagreeing:
         return None
-    return min(
-        disagreeing, key=lambda held: (_ROSTER_ORDER[held[0]], held[1])
-    )
+    return min(disagreeing, key=lambda held: (_ROSTER_ORDER[held[0]], held[1]))
 
 
 def cross_table_identity_conflict(
@@ -276,9 +260,12 @@ def _with_mirrors(db: Session, session_id: int, kinds: set[str] | frozenset[str]
     checked under symmetric review (segment 20B): every reviewee there
     mirrors a reviewer, so a reviewer's own mirror never conflicts with
     a correction of their name, and the reconcile carries it over."""
-    if "reviewers" in kinds and db.execute(
-        select(ReviewSession.symmetric_review).where(ReviewSession.id == session_id)
-    ).scalar_one_or_none():
+    if (
+        "reviewers" in kinds
+        and db.execute(
+            select(ReviewSession.symmetric_review).where(ReviewSession.id == session_id)
+        ).scalar_one_or_none()
+    ):
         return frozenset(kinds) | {"reviewees"}
     return frozenset(kinds)
 
@@ -287,9 +274,7 @@ def check_cross_table_identity(
     db: Session,
     *,
     session_id: int,
-    rows: list[ReviewerImportRow]
-    | list[RevieweeImportRow]
-    | list[ObserverImportRow],
+    rows: list[ReviewerImportRow] | list[RevieweeImportRow] | list[ObserverImportRow],
     kind: str,
 ) -> list[ValidationIssue]:
     """Block CSV uploads where a row's email is already present in
@@ -324,9 +309,7 @@ def check_cross_table_identity(
             f"check_cross_table_identity: unknown kind {kind!r}; "
             f"expected one of {sorted(_IDENTITY_ROSTERS)}"
         )
-    return check_incoming_identity(
-        db, session_id=session_id, incoming={kind: rows}
-    )[kind]
+    return check_incoming_identity(db, session_id=session_id, incoming={kind: rows})[kind]
 
 
 def check_incoming_identity(
@@ -364,9 +347,7 @@ def check_incoming_identity(
     existing = _identity_holders(
         db, session_id=session_id, exclude=_with_mirrors(db, session_id, set(incoming))
     )
-    uploaded = {
-        kind: _incoming_holders(kind, rows) for kind, rows in incoming.items()
-    }
+    uploaded = {kind: _incoming_holders(kind, rows) for kind, rows in incoming.items()}
 
     issues_by_kind: dict[str, list[ValidationIssue]] = {}
     for kind, rows in incoming.items():
@@ -435,14 +416,10 @@ def check_incoming_identity(
 
 
 #: Roster label -> how a message names that roster's uploaded file.
-_FILE_BY_LABEL = {
-    spec["label"]: spec["file"] for spec in _IDENTITY_ROSTERS.values()
-}
+_FILE_BY_LABEL = {spec["label"]: spec["file"] for spec in _IDENTITY_ROSTERS.values()}
 
 
-def _incoming_holders(
-    kind: str, rows: Sequence[Any]
-) -> dict[str, list[tuple[str, str]]]:
+def _incoming_holders(kind: str, rows: Sequence[Any]) -> dict[str, list[tuple[str, str]]]:
     """:func:`_identity_holders` for an uploaded file's parsed rows:
     ``{normalized email: [(roster label, name), ...]}``, skipping what
     :func:`is_comparable_identity` skips."""
@@ -453,7 +430,5 @@ def _incoming_holders(
         name = getattr(row, spec["row_name_attr"])
         if not is_comparable_identity(identifier, name):
             continue
-        holders.setdefault(normalize_email(identifier), []).append(
-            (spec["label"], name)
-        )
+        holders.setdefault(normalize_email(identifier), []).append((spec["label"], name))
     return holders

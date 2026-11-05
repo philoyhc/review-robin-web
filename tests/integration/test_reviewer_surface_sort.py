@@ -12,6 +12,7 @@ writer's validator + audit + lifecycle behaviour lives in
 is the smallest possible "end-to-end through the reviewer
 surface" pin.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -80,13 +81,9 @@ def _setup_session_with_three_reviewees(
     return review_session
 
 
-def _activate(
-    operator_client: TestClient, db: Session, review_session: ReviewSession
-) -> None:
+def _activate(operator_client: TestClient, db: Session, review_session: ReviewSession) -> None:
     validate_session(review_session)
-    operator_client.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    )
+    operator_client.get(f"/operator/sessions/{review_session.public_id}/assignments")
     response = operator_client.post(
         f"/operator/sessions/{review_session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
@@ -138,9 +135,7 @@ def test_no_sort_spec_renders_three_rows(
     )
     _activate(client, db, review_session)
     rae_client = make_client(rae)
-    response = rae_client.get(
-        f"/me/sessions/{review_session.public_id}"
-    )
+    response = rae_client.get(f"/me/sessions/{review_session.public_id}")
     assert response.status_code == 200
     body = response.text
     assert all(name in body for name in ("Alpha", "Bravo", "Charlie"))
@@ -157,16 +152,12 @@ def test_sort_spec_orders_rows_ascending_by_name(
     )
     name_field = _reviewee_name_display_field(db, review_session)
     instrument = name_field.instrument
-    instrument.sort_display_fields = [
-        {"display_field_id": name_field.id, "dir": "asc"}
-    ]
+    instrument.sort_display_fields = [{"display_field_id": name_field.id, "dir": "asc"}]
     db.commit()
 
     _activate(client, db, review_session)
     rae_client = make_client(rae)
-    response = rae_client.get(
-        f"/me/sessions/{review_session.public_id}"
-    )
+    response = rae_client.get(f"/me/sessions/{review_session.public_id}")
     body = response.text
     # Alphabetical: Alpha, Bravo, Charlie.
     assert body.find("Alpha") < body.find("Bravo") < body.find("Charlie")
@@ -183,16 +174,12 @@ def test_sort_spec_orders_rows_descending_by_name(
     )
     name_field = _reviewee_name_display_field(db, review_session)
     instrument = name_field.instrument
-    instrument.sort_display_fields = [
-        {"display_field_id": name_field.id, "dir": "desc"}
-    ]
+    instrument.sort_display_fields = [{"display_field_id": name_field.id, "dir": "desc"}]
     db.commit()
 
     _activate(client, db, review_session)
     rae_client = make_client(rae)
-    response = rae_client.get(
-        f"/me/sessions/{review_session.public_id}"
-    )
+    response = rae_client.get(f"/me/sessions/{review_session.public_id}")
     body = response.text
     # Reverse-alphabetical: Charlie, Bravo, Alpha.
     assert body.find("Charlie") < body.find("Bravo") < body.find("Alpha")
@@ -216,9 +203,7 @@ def test_empty_sort_spec_renders_insertion_order(
     db.commit()
     _activate(client, db, review_session)
     rae_client = make_client(rae)
-    response = rae_client.get(
-        f"/me/sessions/{review_session.public_id}"
-    )
+    response = rae_client.get(f"/me/sessions/{review_session.public_id}")
     assert response.status_code == 200
     body = response.text
     # Empty list is a no-op — all three names render with no
@@ -241,13 +226,11 @@ def test_reviewer_surface_renders_sortable_header_scaffolding(
     )
     _activate(client, db, review_session)
     rae_client = make_client(rae)
-    response = rae_client.get(
-        f"/me/sessions/{review_session.public_id}"
-    )
+    response = rae_client.get(f"/me/sessions/{review_session.public_id}")
     assert response.status_code == 200
     body = response.text
     # Table element carries the per-instrument sortable marker.
-    assert 'data-rrw-sortable=' in body
+    assert "data-rrw-sortable=" in body
     # The Reviewee identity header is clickable.
     assert 'class="rs-reviewee rrw-sortable"' in body
     assert 'data-sort-key="reviewee.name"' in body
@@ -258,7 +241,7 @@ def test_reviewer_surface_renders_sortable_header_scaffolding(
     # Each <td> carries a data-sort-value mirroring the row's
     # persisted display value (the JS reads this rather than
     # peeking into editable inputs).
-    assert 'data-sort-value=' in body
+    assert "data-sort-value=" in body
     # tbody.rrw-rows wraps the data rows.
     assert '<tbody class="rrw-rows">' in body
 
@@ -276,9 +259,7 @@ def test_reviewer_surface_response_field_headers_carry_sort_type(
     )
     _activate(client, db, review_session)
     rae_client = make_client(rae)
-    response = rae_client.get(
-        f"/me/sessions/{review_session.public_id}"
-    )
+    response = rae_client.get(f"/me/sessions/{review_session.public_id}")
     assert response.status_code == 200
     body = response.text
     # The default instrument has a String response field; the
@@ -302,15 +283,11 @@ def test_reviewer_surface_no_override_preserves_operator_sort(
     )
     name_field = _reviewee_name_display_field(db, review_session)
     instrument = name_field.instrument
-    instrument.sort_display_fields = [
-        {"display_field_id": name_field.id, "dir": "desc"}
-    ]
+    instrument.sort_display_fields = [{"display_field_id": name_field.id, "dir": "desc"}]
     db.commit()
     _activate(client, db, review_session)
     rae_client = make_client(rae)
-    response = rae_client.get(
-        f"/me/sessions/{review_session.public_id}"
-    )
+    response = rae_client.get(f"/me/sessions/{review_session.public_id}")
     assert response.status_code == 200
     body = response.text
     # Operator-desc order: Charlie, Bravo, Alpha. (Reviewee
@@ -334,15 +311,11 @@ def test_stale_display_field_id_skipped_silently(
     instrument = db.execute(
         select(Instrument).where(Instrument.session_id == review_session.id)
     ).scalar_one()
-    instrument.sort_display_fields = [
-        {"display_field_id": 99999, "dir": "asc"}
-    ]
+    instrument.sort_display_fields = [{"display_field_id": 99999, "dir": "asc"}]
     db.commit()
     _activate(client, db, review_session)
     rae_client = make_client(rae)
-    response = rae_client.get(
-        f"/me/sessions/{review_session.public_id}"
-    )
+    response = rae_client.get(f"/me/sessions/{review_session.public_id}")
     assert response.status_code == 200
     body = response.text
     assert all(name in body for name in ("Alpha", "Bravo", "Charlie"))

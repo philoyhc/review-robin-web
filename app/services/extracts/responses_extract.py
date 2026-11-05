@@ -166,9 +166,7 @@ def _group_export_index(
             continue
         if reviewer_id is not None and assignment.reviewer_id != reviewer_id:
             continue
-        names = members.setdefault(
-            (assignment.instrument_id, group_key), set()
-        )
+        names = members.setdefault((assignment.instrument_id, group_key), set())
         if reviewer_id is None or assignment.include:
             names.add(assignment.reviewee.name)
     identity = {
@@ -207,9 +205,7 @@ def _response_row_tuple(
     in favour of the column-read.
     """
     if group_key is not None:
-        reviewee_name = group_identity.get(
-            (instrument.id, group_key), "(group)"
-        )
+        reviewee_name = group_identity.get((instrument.id, group_key), "(group)")
         reviewee_email = ""
         reviewee_tags = ("", "", "")
         flavour = "group-scoped"
@@ -248,9 +244,7 @@ def _response_row_tuple(
     )
 
 
-def serialize_responses(
-    db: Session, review_session: ReviewSession
-) -> Iterable[tuple[str, ...]]:
+def serialize_responses(db: Session, review_session: ReviewSession) -> Iterable[tuple[str, ...]]:
     """Yield CSV rows for ``review_session``'s responses.
 
     Yields, in order: the per-instrument preamble blocks (an
@@ -296,9 +290,7 @@ def serialize_responses(
         label = f"instrument_{n}"
         instrument_label[instrument.id] = label
         yield (label,)
-        fields = sorted(
-            instrument.response_fields, key=lambda f: (f.order, f.id)
-        )
+        fields = sorted(instrument.response_fields, key=lambda f: (f.order, f.id))
         for field in fields:
             yield (field.field_key, field.help_text or "")
     if instruments:
@@ -311,9 +303,7 @@ def serialize_responses(
     # duplicate Response rows to one row per group; the index work
     # is skipped entirely when the session has none.
     if any(i.group_kind is not None for i in instruments):
-        group_key_by_assignment, group_identity = _group_export_index(
-            db, review_session
-        )
+        group_key_by_assignment, group_identity = _group_export_index(db, review_session)
     else:
         group_key_by_assignment, group_identity = {}, {}
     seen_group_cells: set[tuple[int, int, tuple[str, ...], int]] = set()
@@ -429,9 +419,7 @@ def serialize_reviewer_session_summary(
     # G10: the reviewer's own record carries only the instruments their
     # peer_reviewer visibility policy lets them read now, and none once
     # the session is archived — the same rule as the review surface.
-    peer_policies = visibility_policies.peer_reviewer_policies(
-        db, answered_instrument_ids
-    )
+    peer_policies = visibility_policies.peer_reviewer_policies(db, answered_instrument_ids)
     readable_instrument_ids = {
         instrument_id
         for instrument_id in answered_instrument_ids

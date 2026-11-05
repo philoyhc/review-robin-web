@@ -29,6 +29,7 @@ The ``OperatorAllowlistDenied`` handler stays in ``app/main.py``:
 that is a deliberate 303 redirect to ``/me`` (18R Item 6), not an
 error page.
 """
+
 from __future__ import annotations
 
 import http
@@ -53,8 +54,7 @@ urls.install(_templates)
 _ERROR_COPY: dict[int, tuple[str, str]] = {
     status.HTTP_400_BAD_REQUEST: (
         "Bad request",
-        "The request couldn't be processed. Please check the link or "
-        "form and try again.",
+        "The request couldn't be processed. Please check the link or form and try again.",
     ),
     # 422 — request-validation failures. Integer literal rather than
     # ``status.HTTP_422_*`` because the constant's name churned across
@@ -62,8 +62,7 @@ _ERROR_COPY: dict[int, tuple[str, str]] = {
     # warning.
     422: (
         "Bad request",
-        "The request couldn't be processed. Please check the link or "
-        "form and try again.",
+        "The request couldn't be processed. Please check the link or form and try again.",
     ),
     # 401 — no usable identity. Always this copy: the raised details
     # ("Not authenticated", "Authenticated identity has no email claim")
@@ -80,13 +79,11 @@ _ERROR_COPY: dict[int, tuple[str, str]] = {
     ),
     status.HTTP_404_NOT_FOUND: (
         "Page not found",
-        "The page you're looking for doesn't exist, or may have been "
-        "removed.",
+        "The page you're looking for doesn't exist, or may have been removed.",
     ),
     status.HTTP_500_INTERNAL_SERVER_ERROR: (
         "Something went wrong",
-        "An unexpected error occurred. The problem has been logged — "
-        "please try again in a moment.",
+        "An unexpected error occurred. The problem has been logged — please try again in a moment.",
     ),
 }
 
@@ -126,16 +123,10 @@ def _home_link(request: Request, status_code: int) -> tuple[str, str]:
     return "/me", "Go to your reviews"
 
 
-def _render_error(
-    request: Request, status_code: int, detail: str | None = None
-) -> Response:
+def _render_error(request: Request, status_code: int, detail: str | None = None) -> Response:
     headline, body = _ERROR_COPY.get(status_code, _GENERIC)
     message = body
-    if (
-        detail
-        and detail != _standard_phrase(status_code)
-        and status_code not in _COPY_ONLY
-    ):
+    if detail and detail != _standard_phrase(status_code) and status_code not in _COPY_ONLY:
         message = detail
     home_url, home_label = _home_link(request, status_code)
     return _templates.TemplateResponse(
@@ -159,9 +150,7 @@ def _str_or_none(value: object) -> str | None:
     return value if isinstance(value, str) else None
 
 
-async def _http_exception_handler(
-    request: Request, exc: Exception
-) -> Response:
+async def _http_exception_handler(request: Request, exc: Exception) -> Response:
     # Registered for ``StarletteHTTPException`` alone (``register_error_handlers``);
     # Starlette types every handler as taking ``Exception``.
     assert isinstance(exc, StarletteHTTPException)
@@ -190,9 +179,7 @@ async def _http_exception_handler(
     return _render_error(request, exc.status_code, detail)
 
 
-async def _session_state_conflict_handler(
-    request: Request, exc: Exception
-) -> Response:
+async def _session_state_conflict_handler(request: Request, exc: Exception) -> Response:
     """A service's state gate refused under the session lock (findings
     Bc4): the same 409 page the routes' own gates render."""
     # Registered for ``SessionStateConflict`` alone (``register_error_handlers``);
@@ -210,23 +197,23 @@ async def _session_busy_handler(request: Request, exc: Exception) -> Response:
     assert isinstance(exc, SessionBusy)
     log.warning(
         "session lock wait timed out",
-        extra={"event": "session.lock_timeout", "path": urls.app_path(request), "method": request.method},
+        extra={
+            "event": "session.lock_timeout",
+            "path": urls.app_path(request),
+            "method": request.method,
+        },
     )
     return _render_error(request, status.HTTP_409_CONFLICT, str(exc))
 
 
-async def _validation_exception_handler(
-    request: Request, exc: Exception
-) -> Response:
+async def _validation_exception_handler(request: Request, exc: Exception) -> Response:
     # Registered for ``RequestValidationError`` alone (``register_error_handlers``);
     # Starlette types every handler as taking ``Exception``.
     assert isinstance(exc, RequestValidationError)
     return _render_error(request, 422)
 
 
-async def _unhandled_exception_handler(
-    request: Request, exc: Exception
-) -> Response:
+async def _unhandled_exception_handler(request: Request, exc: Exception) -> Response:
     log.error(
         "unhandled exception",
         extra={"path": urls.app_path(request), "method": request.method},
@@ -238,11 +225,7 @@ async def _unhandled_exception_handler(
 def register_error_handlers(app: FastAPI) -> None:
     """Wire the five handlers onto ``app``."""
     app.add_exception_handler(StarletteHTTPException, _http_exception_handler)
-    app.add_exception_handler(
-        SessionStateConflict, _session_state_conflict_handler
-    )
+    app.add_exception_handler(SessionStateConflict, _session_state_conflict_handler)
     app.add_exception_handler(SessionBusy, _session_busy_handler)
-    app.add_exception_handler(
-        RequestValidationError, _validation_exception_handler
-    )
+    app.add_exception_handler(RequestValidationError, _validation_exception_handler)
     app.add_exception_handler(Exception, _unhandled_exception_handler)

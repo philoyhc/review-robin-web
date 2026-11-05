@@ -29,20 +29,42 @@ def choices(viewer: str) -> list[dict[str, str]]:
     Sys admin for sys admins only (the landing's cards)."""
     is_ra = any(ra.name == viewer for ra in sample_data.RAS)
     # Staff see RA Leave only while they oversee some RA (author, 2026-10-29).
-    is_staff = any(name == viewer for name, _ in sample_leave.STAFF_VIEWERS) and bool(sample_leave.scope(viewer))
+    is_staff = any(name == viewer for name, _ in sample_leave.STAFF_VIEWERS) and bool(
+        sample_leave.scope(viewer)
+    )
     is_sys_admin = any(name == viewer for name, *_ in sample_data.SYS_ADMINS)
     staff_query = "" if viewer == sample_leave.STAFF_VIEWERS[0][0] else f"?as={quote(viewer)}"
     found: list[dict[str, str]] = []
     if is_ra:
         ra_query = "" if viewer == sample_leave.VIEWER else f"?as={quote(viewer)}"
-        found.append({"label": "RA Leave", "path": "/ra-leave/" + ra_query, "what": "Your balance, apply for leave, cover asked of you"})
+        found.append(
+            {
+                "label": "RA Leave",
+                "path": "/ra-leave/" + ra_query,
+                "what": "Your balance, apply for leave, cover asked of you",
+            }
+        )
     elif is_staff:
-        found.append({"label": "RA Leave", "path": "/ra-leave/staff/" + staff_query, "what": "Decisions awaiting you and your Precinct's leave"})
+        found.append(
+            {
+                "label": "RA Leave",
+                "path": "/ra-leave/staff/" + staff_query,
+                "what": "Decisions awaiting you and your Precinct's leave",
+            }
+        )
     found.append({"label": "RA Events", "path": "", "what": "Coming later"})
     if is_sys_admin:
         found += [
-            {"label": "RA Leave admin", "path": "/ra-leave/admin/", "what": "Policy, entitlements, approval chain, applications, appeals"},
-            {"label": "Rosters and setup", "path": "/rosters/", "what": "Setup, rosters and assignments"},
+            {
+                "label": "RA Leave admin",
+                "path": "/ra-leave/admin/",
+                "what": "Policy, entitlements, approval chain, applications, appeals",
+            },
+            {
+                "label": "Rosters and setup",
+                "path": "/rosters/",
+                "what": "Setup, rosters and assignments",
+            },
             {"label": "Sys admin", "path": "/sys-admin/", "what": "Audit log and sys admin grants"},
         ]
     return found
@@ -52,7 +74,9 @@ def areas_for(viewer: str) -> tuple[dict[str, str | None], ...]:
     """The switcher for a sample viewer (§2): the landing, then what they
     reach, carrying a staff viewer's `?as=`."""
     # The landing knows its own viewers; anyone else goes to its default.
-    known = viewer in dict(sample_data.LANDING_VIEWERS) and viewer != sample_data.LANDING_VIEWERS[0][0]
+    known = (
+        viewer in dict(sample_data.LANDING_VIEWERS) and viewer != sample_data.LANDING_VIEWERS[0][0]
+    )
     landing = f"/?as={quote(viewer)}" if known else "/"
     return (
         {"label": "Home", "path": landing},
@@ -68,6 +92,7 @@ LEAVE_ADMIN_TABS: tuple[dict[str, str | None], ...] = (
     {"label": "Applications", "path": "/ra-leave/admin/applications"},
     {"label": "Appeals", "path": "/ra-leave/admin/appeals"},
 )
+
 
 def leave_ra_tabs(appeals: bool, query: str = "") -> tuple[dict[str, str | None], ...]:
     """An RA's tabs, carrying the sample viewer (`?as=`); Extra leave only
@@ -140,7 +165,12 @@ def render(
             # (§2), as RA Leave admin's do; a path of None is an area not
             # built yet.
             # Sys admin is the account's, in its menu, not a place (§4).
-            **dict(zip(("areas", "account_links"), split_areas(areas_for(sample_leave.CANCELLED_BY) if areas is None else areas))),
+            **dict(
+                zip(
+                    ("areas", "account_links"),
+                    split_areas(areas_for(sample_leave.CANCELLED_BY) if areas is None else areas),
+                )
+            ),
             "tabs": tabs,
             "viewer": viewer,
             "initials": initials(viewer.display_label) if viewer else "?",

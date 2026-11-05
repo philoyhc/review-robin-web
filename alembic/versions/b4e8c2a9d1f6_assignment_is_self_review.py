@@ -30,6 +30,7 @@ Revises: 683e99cca6b7
 Create Date: 2026-05-30
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -72,9 +73,7 @@ def _decode_group_kind(group_kind: str | None) -> list[tuple[str, str]]:
     return pairs
 
 
-def _is_pair_self_review(
-    reviewer_email: str, reviewee_identifier: str
-) -> bool:
+def _is_pair_self_review(reviewer_email: str, reviewee_identifier: str) -> bool:
     if "@" not in reviewee_identifier:
         return False
     return reviewer_email.casefold() == reviewee_identifier.casefold()
@@ -83,9 +82,10 @@ def _is_pair_self_review(
 def _classify_session(bind, session_id: int) -> set[int]:
     """Return the set of ``assignment.id`` rows in this session that
     are self-reviews per the canonical rule."""
-    rows = bind.execute(
-        sa.text(
-            """
+    rows = (
+        bind.execute(
+            sa.text(
+                """
             SELECT
                 a.id            AS assignment_id,
                 a.reviewer_id   AS reviewer_id,
@@ -103,9 +103,12 @@ def _classify_session(bind, session_id: int) -> set[int]:
             JOIN instruments i   ON i.id   = a.instrument_id
             WHERE a.session_id = :sid
             """
-        ),
-        {"sid": session_id},
-    ).mappings().all()
+            ),
+            {"sid": session_id},
+        )
+        .mappings()
+        .all()
+    )
 
     if not rows:
         return set()
@@ -120,16 +123,20 @@ def _classify_session(bind, session_id: int) -> set[int]:
     )
     relationship_tags: dict[tuple[int, int], tuple[str | None, str | None, str | None]] = {}
     if needs_relationships:
-        rel_rows = bind.execute(
-            sa.text(
-                """
+        rel_rows = (
+            bind.execute(
+                sa.text(
+                    """
                 SELECT reviewer_id, reviewee_id, tag_1, tag_2, tag_3
                 FROM relationships
                 WHERE session_id = :sid AND status = 'active'
                 """
-            ),
-            {"sid": session_id},
-        ).mappings().all()
+                ),
+                {"sid": session_id},
+            )
+            .mappings()
+            .all()
+        )
         for r in rel_rows:
             relationship_tags[(r["reviewer_id"], r["reviewee_id"])] = (
                 r["tag_1"],
@@ -150,9 +157,7 @@ def _classify_session(bind, session_id: int) -> set[int]:
                 raw = row[f"reviewee_{source_field}"]
             else:  # pair_context
                 idx = int(source_field) - 1  # "1"|"2"|"3" → 0|1|2
-                rel = relationship_tags.get(
-                    (row["reviewer_id"], row["reviewee_id"])
-                )
+                rel = relationship_tags.get((row["reviewer_id"], row["reviewee_id"]))
                 raw = rel[idx] if rel is not None else None
             key.append((raw or "").strip())
         group_key_by_assignment[row["assignment_id"]] = tuple(key)
@@ -165,9 +170,9 @@ def _classify_session(bind, session_id: int) -> set[int]:
         if aid in group_key_by_assignment and _is_pair_self_review(
             row["reviewer_email"], row["reviewee_identifier"]
         ):
-            self_group_key[(row["instrument_id"], row["reviewer_id"])] = (
-                group_key_by_assignment[aid]
-            )
+            self_group_key[(row["instrument_id"], row["reviewer_id"])] = group_key_by_assignment[
+                aid
+            ]
 
     # Second pass: flag self-review rows per the rule.
     flagged: set[int] = set()
@@ -176,18 +181,11 @@ def _classify_session(bind, session_id: int) -> set[int]:
         group_key = group_key_by_assignment.get(aid)
         if group_key is None:
             # Individual instrument: per-row pair test.
-            if _is_pair_self_review(
-                row["reviewer_email"], row["reviewee_identifier"]
-            ):
+            if _is_pair_self_review(row["reviewer_email"], row["reviewee_identifier"]):
                 flagged.add(aid)
         else:
             # Group instrument: whole-group rule.
-            if (
-                self_group_key.get(
-                    (row["instrument_id"], row["reviewer_id"])
-                )
-                == group_key
-            ):
+            if self_group_key.get((row["instrument_id"], row["reviewer_id"])) == group_key:
                 flagged.add(aid)
     return flagged
 
@@ -209,9 +207,7 @@ def upgrade() -> None:
     bind = op.get_bind()
     session_ids = [
         row[0]
-        for row in bind.execute(
-            sa.text("SELECT DISTINCT session_id FROM assignments")
-        ).fetchall()
+        for row in bind.execute(sa.text("SELECT DISTINCT session_id FROM assignments")).fetchall()
     ]
     for session_id in session_ids:
         flagged = _classify_session(bind, session_id)
@@ -223,10 +219,9 @@ def upgrade() -> None:
         for i in range(0, len(ids), batch_size):
             chunk = ids[i : i + batch_size]
             bind.execute(
-                sa.text(
-                    "UPDATE assignments SET is_self_review = :v "
-                    "WHERE id IN :ids"
-                ).bindparams(sa.bindparam("ids", expanding=True)),
+                sa.text("UPDATE assignments SET is_self_review = :v WHERE id IN :ids").bindparams(
+                    sa.bindparam("ids", expanding=True)
+                ),
                 {"v": True, "ids": chunk},
             )
 

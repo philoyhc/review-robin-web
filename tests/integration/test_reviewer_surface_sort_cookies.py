@@ -15,6 +15,7 @@ Pins:
 - The shared ``base.html`` script ships the cookie I/O helpers
   + the ``DOMContentLoaded`` hydration pass.
 """
+
 from __future__ import annotations
 
 import json
@@ -89,13 +90,9 @@ def _setup_session_with_three_reviewees(
     return review_session
 
 
-def _activate(
-    operator_client: TestClient, db: Session, review_session: ReviewSession
-) -> None:
+def _activate(operator_client: TestClient, db: Session, review_session: ReviewSession) -> None:
     validate_session(review_session)
-    operator_client.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    )
+    operator_client.get(f"/operator/sessions/{review_session.public_id}/assignments")
     response = operator_client.post(
         f"/operator/sessions/{review_session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
@@ -138,14 +135,11 @@ def test_table_marker_uses_cookie_name_shape(
     instrument = _instrument(db, review_session)
     _activate(client, db, review_session)
     rae_client = make_client(rae)
-    response = rae_client.get(
-        f"/me/sessions/{review_session.public_id}"
-    )
+    response = rae_client.get(f"/me/sessions/{review_session.public_id}")
     assert response.status_code == 200
     body = response.text
     expected = (
-        f'data-rrw-sortable="rrw-sort-rs-{review_session.public_id}'
-        f'-{instrument.session_seq}"'
+        f'data-rrw-sortable="rrw-sort-rs-{review_session.public_id}-{instrument.session_seq}"'
     )
     assert expected in body
 
@@ -174,9 +168,7 @@ def test_cookie_drives_ssr_initial_row_order(
         json.dumps([{"key": "reviewee.name", "dir": "desc"}]),
         path=f"/me/sessions/{review_session.public_id}",
     )
-    response = rae_client.get(
-        f"/me/sessions/{review_session.public_id}"
-    )
+    response = rae_client.get(f"/me/sessions/{review_session.public_id}")
     body = response.text
     # Reverse-alphabetical: Charlie, Bravo, Alpha.
     assert body.find("Charlie") < body.find("Bravo") < body.find("Alpha")
@@ -204,9 +196,7 @@ def test_percent_encoded_cookie_drives_ssr_row_order(
         quote(json.dumps([{"key": "reviewee.name", "dir": "desc"}])),
         path=f"/me/sessions/{review_session.public_id}",
     )
-    body = rae_client.get(
-        f"/me/sessions/{review_session.public_id}"
-    ).text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}").text
     assert body.find("Charlie") < body.find("Bravo") < body.find("Alpha")
 
 
@@ -227,9 +217,7 @@ def test_cookie_overrides_operator_default(
         .where(InstrumentDisplayField.instrument_id == instrument.id)
         .where(InstrumentDisplayField.source_field == "name")
     ).scalar_one()
-    instrument.sort_display_fields = [
-        {"display_field_id": name_field.id, "dir": "desc"}
-    ]
+    instrument.sort_display_fields = [{"display_field_id": name_field.id, "dir": "desc"}]
     db.commit()
     _activate(client, db, review_session)
 
@@ -240,9 +228,7 @@ def test_cookie_overrides_operator_default(
         json.dumps([{"key": "reviewee.name", "dir": "asc"}]),
         path=f"/me/sessions/{review_session.public_id}",
     )
-    response = rae_client.get(
-        f"/me/sessions/{review_session.public_id}"
-    )
+    response = rae_client.get(f"/me/sessions/{review_session.public_id}")
     body = response.text
     # Cookie's asc wins over operator's desc.
     assert body.find("Alpha") < body.find("Bravo") < body.find("Charlie")
@@ -266,9 +252,7 @@ def test_malformed_cookie_falls_back_to_operator_default(
         .where(InstrumentDisplayField.instrument_id == instrument.id)
         .where(InstrumentDisplayField.source_field == "name")
     ).scalar_one()
-    instrument.sort_display_fields = [
-        {"display_field_id": name_field.id, "dir": "asc"}
-    ]
+    instrument.sort_display_fields = [{"display_field_id": name_field.id, "dir": "asc"}]
     db.commit()
     _activate(client, db, review_session)
 
@@ -279,9 +263,7 @@ def test_malformed_cookie_falls_back_to_operator_default(
         "not-json{",
         path=f"/me/sessions/{review_session.public_id}",
     )
-    response = rae_client.get(
-        f"/me/sessions/{review_session.public_id}"
-    )
+    response = rae_client.get(f"/me/sessions/{review_session.public_id}")
     assert response.status_code == 200
     body = response.text
     # Operator default (asc) wins because the malformed cookie
@@ -309,9 +291,7 @@ def _render_with_cookie(
         .where(InstrumentDisplayField.instrument_id == instrument.id)
         .where(InstrumentDisplayField.source_field == "name")
     ).scalar_one()
-    instrument.sort_display_fields = [
-        {"display_field_id": name_field.id, "dir": "desc"}
-    ]
+    instrument.sort_display_fields = [{"display_field_id": name_field.id, "dir": "desc"}]
     db.commit()
     _activate(client, db, review_session)
     rae_client = make_client(rae)
@@ -336,7 +316,10 @@ def test_response_only_cookie_renders_operator_default(
     stored sort stamps, so rows tied on the response (unanswered ones included)
     land the same after a reload as after a click."""
     body = _render_with_cookie(
-        client, db, rae, make_client,
+        client,
+        db,
+        rae,
+        make_client,
         code="ck-rkey-only",
         cookie=[{"key": "response:score", "dir": "asc"}],
     )
@@ -355,7 +338,10 @@ def test_mixed_cookie_with_response_key_renders_operator_default(
     renders the operator default so the script's tie-break matches a
     click's."""
     body = _render_with_cookie(
-        client, db, rae, make_client,
+        client,
+        db,
+        rae,
+        make_client,
         code="ck-rkey-mixed",
         cookie=[
             {"key": "response:score", "dir": "asc"},
@@ -375,7 +361,10 @@ def test_display_only_cookie_still_applies_server_side(
     the operator default, as before, and the on-load script does not
     re-sort."""
     body = _render_with_cookie(
-        client, db, rae, make_client,
+        client,
+        db,
+        rae,
+        make_client,
         code="ck-dkey-only",
         cookie=[{"key": "reviewee.name", "dir": "asc"}],
     )
@@ -395,9 +384,7 @@ def test_sort_keys_carry_no_instrument_or_field_id(
     display header its source and a response header its ``field_key``.
     A session made first pads the workspace, so every ID differs from
     what replaces it."""
-    _setup_session_with_three_reviewees(
-        client, db, code="ck-pad", reviewer_email=rae.email
-    )
+    _setup_session_with_three_reviewees(client, db, code="ck-pad", reviewer_email=rae.email)
     review_session = _setup_session_with_three_reviewees(
         client, db, code="ck-no-ids", reviewer_email=rae.email
     )
@@ -471,9 +458,7 @@ def test_a_cookie_keyed_by_display_source_applies_server_side(
         .where(InstrumentDisplayField.instrument_id == instrument.id)
         .where(InstrumentDisplayField.source_field == "name")
     ).scalar_one()
-    instrument.sort_display_fields = [
-        {"display_field_id": name_field.id, "dir": "desc"}
-    ]
+    instrument.sort_display_fields = [{"display_field_id": name_field.id, "dir": "desc"}]
     db.commit()
     _activate(client, db, review_session)
     rae_client = make_client(rae)

@@ -6,6 +6,7 @@ Pure (no-DB) coverage for the header grammar: the ``split_header`` /
 export round-trip, bare-header-clears, and the export header live in
 ``tests/integration/test_field_label_roster_roundtrip.py``.
 """
+
 from __future__ import annotations
 
 from app.services import field_label_csv
@@ -67,9 +68,7 @@ def test_normalize_strips_suffix_and_captures() -> None:
 
 
 def test_normalize_empty_suffix_captures_nothing() -> None:
-    canonical, captured = field_label_csv.normalize_headers(
-        ["RevieweeTag1.", "RevieweeTag2.  "]
-    )
+    canonical, captured = field_label_csv.normalize_headers(["RevieweeTag1.", "RevieweeTag2.  "])
     assert canonical == ["RevieweeTag1", "RevieweeTag2"]
     assert captured == {}
 
@@ -89,10 +88,7 @@ def test_normalize_pair_context_columns() -> None:
 
 def test_reviewer_parse_captures_label_and_still_reads_value() -> None:
     result = parse_reviewer_csv(
-        _b(
-            "ReviewerName,ReviewerEmail,ReviewerTag1.Tutor\n"
-            "Alice,alice@example.edu,senior\n"
-        )
+        _b("ReviewerName,ReviewerEmail,ReviewerTag1.Tutor\nAlice,alice@example.edu,senior\n")
     )
     assert result.issues == []
     assert result.field_labels == {("reviewer", "tag_1"): "Tutor"}

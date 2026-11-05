@@ -58,9 +58,7 @@ def _seed(db: Session) -> ReviewSession:
     db.add(rs)
     db.flush()
     db.add(SessionOperator(session_id=rs.id, user_id=user.id, role="owner"))
-    inst = Instrument(
-        session_id=rs.id, name="Inst", short_label="INST", order=1
-    )
+    inst = Instrument(session_id=rs.id, name="Inst", short_label="INST", order=1)
     db.add(inst)
     db.flush()
     field = InstrumentResponseField(
@@ -102,8 +100,7 @@ def _seed(db: Session) -> ReviewSession:
 
 def _file_set(db: Session, rs: ReviewSession) -> dict[str, bytes]:
     settings_rows = [("field", "value", "data_type")] + [
-        (r.field, r.value, r.data_type)
-        for r in serialize_session_config(db, rs)
+        (r.field, r.value, r.data_type) for r in serialize_session_config(db, rs)
     ]
     return {
         f"{rs.code}_settings.csv": _to_csv(settings_rows),
@@ -117,9 +114,7 @@ def _multipart(files: dict[str, bytes]) -> list:
     return [("files", (name, content, "text/csv")) for name, content in files.items()]
 
 
-def test_validate_clean_set_enables_rehydrate(
-    client: TestClient, db: Session
-) -> None:
+def test_validate_clean_set_enables_rehydrate(client: TestClient, db: Session) -> None:
     rs = _seed(db)
     response = client.post(
         "/operator/sessions/rehydrate/validate",
@@ -145,9 +140,7 @@ def test_validate_clean_set_enables_rehydrate(
     )
 
 
-def test_validate_incomplete_set_disables_rehydrate(
-    client: TestClient, db: Session
-) -> None:
+def test_validate_incomplete_set_disables_rehydrate(client: TestClient, db: Session) -> None:
     rs = _seed(db)
     files = _file_set(db, rs)
     del files[f"{rs.code}_responses.csv"]

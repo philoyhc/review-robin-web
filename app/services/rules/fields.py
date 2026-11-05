@@ -58,6 +58,7 @@ FIELD_MAP: Final[dict[str, tuple[str, str]]] = {
     "pair_context.tag3": ("pair_context", "tag_3"),
 }
 
+
 def parse_field(dotted: str) -> tuple[str, str]:
     """Resolve a dotted field name to ``(side, orm_attribute)``.
 
@@ -77,9 +78,10 @@ def parse_field(dotted: str) -> tuple[str, str]:
 # A ``ContextVar`` keeps the predicate-eval API ergonomic (no
 # threading the lookup through every operator), and resets cleanly
 # when ``evaluate()`` exits even if it raises.
-_pair_context_lookup: ContextVar[
-    dict[tuple[int, int], Relationship] | None
-] = ContextVar("pair_context_lookup", default=None)
+_pair_context_lookup: ContextVar[dict[tuple[int, int], Relationship] | None] = ContextVar(
+    "pair_context_lookup", default=None
+)
+
 
 def set_pair_context_lookup(
     lookup: dict[tuple[int, int], Relationship] | None,
@@ -98,9 +100,7 @@ def reset_pair_context_lookup(
     _pair_context_lookup.reset(token)
 
 
-def get_field_value(
-    dotted: str, *, reviewer: object, reviewee: object
-) -> str | None:
+def get_field_value(dotted: str, *, reviewer: object, reviewee: object) -> str | None:
     """Return the value of ``dotted`` for the given pair.
 
     Empty strings normalise to ``None`` per spec §9 (empty tag values
@@ -128,9 +128,7 @@ def get_field_value(
     return raw
 
 
-def _resolve_pair_context(
-    reviewer: object, reviewee: object, attribute: str
-) -> str | None:
+def _resolve_pair_context(reviewer: object, reviewee: object, attribute: str) -> str | None:
     lookup = _pair_context_lookup.get()
     if lookup is None:
         return None
@@ -154,9 +152,7 @@ def _resolve_pair_context(
     return raw
 
 
-def get_field_values(
-    dotted: str, *, reviewer: object, reviewee: object
-) -> tuple[str, ...]:
+def get_field_values(dotted: str, *, reviewer: object, reviewee: object) -> tuple[str, ...]:
     """Every value of ``dotted`` for the pair, empty when it has none:
     at most one, the raw column value. Unlike :func:`get_field_value` it
     leaves a blank string for the caller's normalisation to drop.

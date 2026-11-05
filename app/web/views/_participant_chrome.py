@@ -22,9 +22,7 @@ def uses_participant_chrome(user: Any) -> bool:
     system admins. ``user`` may be ``None`` (no row could be found)."""
     if user is None:
         return True
-    return not (
-        getattr(user, "is_operator", False) or getattr(user, "is_sys_admin", False)
-    )
+    return not (getattr(user, "is_operator", False) or getattr(user, "is_sys_admin", False))
 
 
 def masked_email(address: str | None) -> str:

@@ -20,7 +20,6 @@ from ._lookups import detail_of
 DEFAULT = "Example University"
 
 
-
 @pytest.fixture(autouse=True)
 def _default(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(identity_settings, "institution_name", DEFAULT)
@@ -43,9 +42,7 @@ def _session(client: TestClient, db: Session, code: str) -> ReviewSession:
         data={"name": f"Unit {code}", "code": code},
         follow_redirects=False,
     )
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _set_unit(db: Session, email: str, unit: str | None) -> None:
@@ -79,7 +76,9 @@ def test_set_unit_trims_stores_and_audits(db: Session) -> None:
     db.refresh(operator)
     assert operator.unit == "Department of Example"
     event = db.execute(
-        select(AuditEvent).where(AuditEvent.event_type == "workspace.user_unit_set").order_by(AuditEvent.id)
+        select(AuditEvent)
+        .where(AuditEvent.event_type == "workspace.user_unit_set")
+        .order_by(AuditEvent.id)
     ).scalar_one()
     assert detail_of(event)["changes"] == {"unit": [None, "Department of Example"]}
     assert detail_of(event)["refs"] == {"target_user_id": operator.id}
@@ -94,9 +93,15 @@ def test_an_empty_value_clears_and_an_unchanged_one_is_not_audited(
     users_service.set_unit(db, actor=admin, user_ids=[operator.id], unit="   ")
     db.refresh(operator)
     assert operator.unit is None
-    events = db.execute(
-        select(AuditEvent).where(AuditEvent.event_type == "workspace.user_unit_set").order_by(AuditEvent.id)
-    ).scalars().all()
+    events = (
+        db.execute(
+            select(AuditEvent)
+            .where(AuditEvent.event_type == "workspace.user_unit_set")
+            .order_by(AuditEvent.id)
+        )
+        .scalars()
+        .all()
+    )
     assert [detail_of(e)["changes"]["unit"] for e in events] == [[None, "Dept"], ["Dept", None]]
 
 
@@ -106,9 +111,7 @@ def test_set_unit_refuses_a_row_with_no_role_and_changes_nothing(db: Session) ->
     db.add(stranger)
     db.commit()
     with pytest.raises(users_service.UserOperationError) as exc:
-        users_service.set_unit(
-            db, actor=admin, user_ids=[operator.id, stranger.id], unit="Dept"
-        )
+        users_service.set_unit(db, actor=admin, user_ids=[operator.id, stranger.id], unit="Dept")
     assert exc.value.code == "unit_not_operator"
     assert exc.value.user_id == stranger.id
     db.rollback()
@@ -145,9 +148,7 @@ def test_a_sys_admin_sets_a_unit_from_accounts_management(
     assert "<td data-unit-cell>Department of Example</td>" in body
 
 
-def test_an_operator_cannot_set_a_unit(
-    client: TestClient, db: Session
-) -> None:
+def test_an_operator_cannot_set_a_unit(client: TestClient, db: Session) -> None:
     client.get("/operator/sessions")
     me = _user(db, "alice@example.edu")
     response = client.post(
@@ -160,9 +161,7 @@ def test_an_operator_cannot_set_a_unit(
     assert me.unit is None
 
 
-def test_a_refusal_comes_back_naming_the_row(
-    client: TestClient, db: Session, monkeypatch
-) -> None:
+def test_a_refusal_comes_back_naming_the_row(client: TestClient, db: Session, monkeypatch) -> None:
     monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
     client.get("/operator/sessions")
     stranger = User(email="nobody@example.edu")
@@ -185,13 +184,14 @@ def test_settings_shows_the_operators_own_unit(client: TestClient, db: Session) 
 # -- which name a page shows ------------------------------------------
 
 
-def test_an_operators_other_pages_show_their_own_unit(
-    client: TestClient, db: Session
-) -> None:
+def test_an_operators_other_pages_show_their_own_unit(client: TestClient, db: Session) -> None:
     assert _top(client.get("/operator/sessions").text) == DEFAULT
     _set_unit(db, "alice@example.edu", "Department of Example")
     for path in (
-        "/operator/sessions", "/operator/settings", "/about", "/guide",
+        "/operator/sessions",
+        "/operator/settings",
+        "/about",
+        "/guide",
         "/auth/me/debug",
     ):
         assert _top(client.get(path).text) == "Department of Example", path
@@ -230,8 +230,10 @@ def test_participants_see_the_creators_unit_and_the_default_elsewhere(
     _set_unit(db, "alice@example.edu", "Creator Dept")
     pat = make_client(
         AuthenticatedUser(
-            principal_id="pat-oid", email="pat@example.edu",
-            name="Pat", provider="aad",
+            principal_id="pat-oid",
+            email="pat@example.edu",
+            name="Pat",
+            provider="aad",
         )
     )
     page = pat.get(f"/me/sessions/{review_session.public_id}").text
@@ -248,16 +250,16 @@ def test_your_reviews_shows_the_default_when_sessions_differ(
     first = _session(client, db, "unit-a")
     second = _session(make_client(bob), db, "unit-b")
     for review_session in (first, second):
-        db.add(
-            Reviewer(session_id=review_session.id, name="Pat", email="pat@example.edu")
-        )
+        db.add(Reviewer(session_id=review_session.id, name="Pat", email="pat@example.edu"))
     db.commit()
     _set_unit(db, "alice@example.edu", "Dept A")
     _set_unit(db, "bob@example.edu", "Dept B")
     pat = make_client(
         AuthenticatedUser(
-            principal_id="pat-oid", email="pat@example.edu",
-            name="Pat", provider="aad",
+            principal_id="pat-oid",
+            email="pat@example.edu",
+            name="Pat",
+            provider="aad",
         )
     )
     assert _top(pat.get("/me").text) == DEFAULT
@@ -282,9 +284,7 @@ def test_an_account_with_no_role_has_a_blank_unit_cell(
     former = User(email="former@example.edu", unit="Old Dept")
     db.add(former)
     db.commit()
-    body = client.get(
-        "/operator/sys-admin/users?show=no_role&show=unused&q=former"
-    ).text
+    body = client.get("/operator/sys-admin/users?show=no_role&show=unused&q=former").text
     assert "former@example.edu" in body
     assert "<td data-unit-cell></td>" in body
     assert "Old Dept" not in body
@@ -304,7 +304,5 @@ def test_sys_admin_session_diagnostics_show_the_creators_unit(
     other.unit = "Creator Dept"
     db.commit()
     assert creator.unit == "Admin Dept"
-    body = client.get(
-        f"/operator/sys-admin/sessions/{review_session.public_id}/{child}"
-    ).text
+    body = client.get(f"/operator/sys-admin/sessions/{review_session.public_id}/{child}").text
     assert _top(body) == "Creator Dept"

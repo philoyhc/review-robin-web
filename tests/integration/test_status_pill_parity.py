@@ -70,8 +70,7 @@ def _all_optional_session(
         files={
             "file": (
                 "e.csv",
-                b"RevieweeName,RevieweeEmail\n"
-                b"Carol,carol@example.edu\nDan,dan@example.edu\n",
+                b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\nDan,dan@example.edu\n",
                 "text/csv",
             )
         },
@@ -121,9 +120,7 @@ def test_blank_all_optional_rows_read_not_started_on_both(
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    review_session, reviewer, _ = _all_optional_session(
-        make_client(alice), db, code="r7-blank"
-    )
+    review_session, reviewer, _ = _all_optional_session(make_client(alice), db, code="r7-blank")
     body = make_client(rae).get(f"/me/sessions/{review_session.public_id}/1").text
 
     # Every row is "complete" by its required fields, since none are;
@@ -177,9 +174,7 @@ def test_new_answer_after_submit_is_unsubmitted_on_both(
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    review_session, reviewer, by_name = _all_optional_session(
-        make_client(alice), db, code="r7-new"
-    )
+    review_session, reviewer, by_name = _all_optional_session(make_client(alice), db, code="r7-new")
     rae_client = make_client(rae)
     rae_client.post(
         f"/me/sessions/{review_session.public_id}/submit",

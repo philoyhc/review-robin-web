@@ -38,20 +38,14 @@ def _user(db: Session) -> User:
 
 def _session(db: Session, *, code: str = "rel") -> ReviewSession:
     user = _user(db)
-    review_session = ReviewSession(
-        name="Relationships", code=code, created_by_user_id=user.id
-    )
+    review_session = ReviewSession(name="Relationships", code=code, created_by_user_id=user.id)
     db.add(review_session)
     db.flush()
     return review_session
 
 
-def _reviewer(
-    db: Session, review_session: ReviewSession, *, name: str, email: str
-) -> Reviewer:
-    reviewer = Reviewer(
-        session_id=review_session.id, name=name, email=email
-    )
+def _reviewer(db: Session, review_session: ReviewSession, *, name: str, email: str) -> Reviewer:
+    reviewer = Reviewer(session_id=review_session.id, name=name, email=email)
     db.add(reviewer)
     db.flush()
     return reviewer
@@ -103,12 +97,8 @@ def test_empty_session_emits_header_only(db: Session) -> None:
 
 def test_per_row_shape_includes_pair_context_tags(db: Session) -> None:
     review_session = _session(db, code="shape")
-    reviewer = _reviewer(
-        db, review_session, name="Alex", email="alex@example.edu"
-    )
-    reviewee = _reviewee(
-        db, review_session, name="Carol", identifier="carol@example.edu"
-    )
+    reviewer = _reviewer(db, review_session, name="Alex", email="alex@example.edu")
+    reviewee = _reviewee(db, review_session, name="Carol", identifier="carol@example.edu")
     _add(
         db,
         review_session,
@@ -131,16 +121,10 @@ def test_per_row_shape_includes_pair_context_tags(db: Session) -> None:
 
 def test_active_rows_lead_then_alphabetical(db: Session) -> None:
     review_session = _session(db, code="order")
-    alex = _reviewer(
-        db, review_session, name="Alex", email="alex@example.edu"
-    )
+    alex = _reviewer(db, review_session, name="Alex", email="alex@example.edu")
     bob = _reviewer(db, review_session, name="Bob", email="bob@example.edu")
-    carol = _reviewee(
-        db, review_session, name="Carol", identifier="carol@example.edu"
-    )
-    dan = _reviewee(
-        db, review_session, name="Dan", identifier="dan@example.edu"
-    )
+    carol = _reviewee(db, review_session, name="Carol", identifier="carol@example.edu")
+    dan = _reviewee(db, review_session, name="Dan", identifier="dan@example.edu")
 
     _add(db, review_session, reviewer=bob, reviewee=carol)
     _add(
@@ -168,16 +152,10 @@ def test_round_trip_through_existing_importer(db: Session) -> None:
     export CSV feeds the upload flow without conversion."""
 
     review_session = _session(db, code="rt")
-    alex = _reviewer(
-        db, review_session, name="Alex", email="alex@example.edu"
-    )
+    alex = _reviewer(db, review_session, name="Alex", email="alex@example.edu")
     bob = _reviewer(db, review_session, name="Bob", email="bob@example.edu")
-    carol = _reviewee(
-        db, review_session, name="Carol", identifier="carol@example.edu"
-    )
-    dan = _reviewee(
-        db, review_session, name="Dan", identifier="dan@example.edu"
-    )
+    carol = _reviewee(db, review_session, name="Carol", identifier="carol@example.edu")
+    dan = _reviewee(db, review_session, name="Dan", identifier="dan@example.edu")
     _add(
         db,
         review_session,
@@ -201,9 +179,7 @@ def test_round_trip_through_existing_importer(db: Session) -> None:
         reviewees=[carol, dan],
     )
     assert parse_result.issues == []
-    parsed = sorted(
-        parse_result.rows, key=lambda r: (r.reviewer_id, r.reviewee_id)
-    )
+    parsed = sorted(parse_result.rows, key=lambda r: (r.reviewer_id, r.reviewee_id))
     assert [(r.reviewer_id, r.reviewee_id, r.status) for r in parsed] == [
         (alex.id, carol.id, "active"),
         (bob.id, dan.id, "inactive"),

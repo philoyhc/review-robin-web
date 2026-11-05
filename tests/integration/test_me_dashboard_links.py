@@ -39,18 +39,14 @@ from app.db.models import (
 from app.services import visibility_policies
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "S", "code": code, "description": ""},
         follow_redirects=False,
     )
     assert response.status_code == 303
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 # ── Per-pill link rendering ──────────────────────────────────────────
@@ -78,9 +74,7 @@ def test_reviewee_pill_renders_as_anchor_to_results(
     assert expected in body
 
 
-def test_observer_pill_renders_as_anchor_to_collation(
-    client: TestClient, db: Session
-) -> None:
+def test_observer_pill_renders_as_anchor_to_collation(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="link-ob")
     db.add(
         Observer(
@@ -236,9 +230,7 @@ def test_session_name_falls_through_to_observer_when_only_observer_reachable(
     assert f'href="/me/sessions/{review_session.public_id}/collation"' in body
 
 
-def test_session_name_is_plain_text_when_no_role_reachable(
-    client: TestClient, db: Session
-) -> None:
+def test_session_name_is_plain_text_when_no_role_reachable(client: TestClient, db: Session) -> None:
     """Reviewer-only row on a draft session: the reviewer
     surface is not opened, and the user holds no other role —
     the session-name renders without a link."""
@@ -270,9 +262,7 @@ AVAILABLE = _pill("pill-success", "Available")
 CLOSED = _pill("pill-error", "Closed")
 
 
-def _observer_on(
-    client: TestClient, db: Session, *, code: str, status: str
-) -> ReviewSession:
+def _observer_on(client: TestClient, db: Session, *, code: str, status: str) -> ReviewSession:
     review_session = _make_session(client, db, code=code)
     review_session.status = status
     db.add(
@@ -286,9 +276,7 @@ def _observer_on(
     return review_session
 
 
-def test_one_status_rule_reads_the_lifecycle(
-    client: TestClient, db: Session
-) -> None:
+def test_one_status_rule_reads_the_lifecycle(client: TestClient, db: Session) -> None:
     """Not open yet / Open / Closed from the lifecycle, one
     rule for every role (author's ruling 2026-10-15). Observer-only rows,
     with no observer grant, so "Closed" is not lifted to "Available"."""
@@ -327,9 +315,7 @@ def test_an_observer_with_a_grant_after_the_close_reads_available(
             after_release_identification=identification,
         )
     )
-    review_session.responses_release_at = datetime.now(UTC) - timedelta(
-        hours=1
-    )
+    review_session.responses_release_at = datetime.now(UTC) - timedelta(hours=1)
     db.commit()
     body = client.get("/me").text
     assert AVAILABLE in body
@@ -346,9 +332,7 @@ def test_a_reviewer_past_the_deadline_reads_closed_even_with_answers(
     review_session = _make_session(client, db, code="st-rev-past")
     review_session.status = "ready"
     review_session.deadline = datetime.now(UTC) - timedelta(minutes=1)
-    reviewer = Reviewer(
-        session_id=review_session.id, name="Alice", email="alice@example.edu"
-    )
+    reviewer = Reviewer(session_id=review_session.id, name="Alice", email="alice@example.edu")
     reviewee = Reviewee(
         session_id=review_session.id,
         name="Bob",
@@ -386,26 +370,18 @@ def test_a_reviewer_past_the_deadline_reads_closed_even_with_answers(
     assert AVAILABLE not in body
 
 
-def test_a_reviewer_with_nothing_assigned_is_told_so(
-    client: TestClient, db: Session
-) -> None:
+def test_a_reviewer_with_nothing_assigned_is_told_so(client: TestClient, db: Session) -> None:
     """Not a "0/0" progress pill."""
     review_session = _make_session(client, db, code="st-rev-none")
     review_session.status = "ready"
-    db.add(
-        Reviewer(
-            session_id=review_session.id, name="Alice", email="alice@example.edu"
-        )
-    )
+    db.add(Reviewer(session_id=review_session.id, name="Alice", email="alice@example.edu"))
     db.commit()
     body = client.get("/me").text
     assert "Nothing assigned to you" in body
     assert ">0/0<" not in body
 
 
-def test_no_view_responses_or_until_columns(
-    client: TestClient, db: Session
-) -> None:
+def test_no_view_responses_or_until_columns(client: TestClient, db: Session) -> None:
     """Both were always "—" (participant audit M7)."""
     _observer_on(client, db, code="st-cols", status="ready")
     body = client.get("/me").text
@@ -450,14 +426,10 @@ def test_observer_row_is_linked_in_every_state_but_archived(
         )
         db.commit()
         body = client.get("/me").text
-        assert (
-            f'href="/me/sessions/{review_session.public_id}/collation"' in body
-        ), state
+        assert f'href="/me/sessions/{review_session.public_id}/collation"' in body, state
 
 
-def test_an_archived_session_leaves_me_for_every_role(
-    client: TestClient, db: Session
-) -> None:
+def test_an_archived_session_leaves_me_for_every_role(client: TestClient, db: Session) -> None:
     """Once archived a session is off limits to participants (author's
     ruling 2026-10-16): no row for any role, not a "Finished" one."""
     review_session = _make_session(client, db, code="arch-gone")
@@ -524,9 +496,7 @@ def _reviewer_answer(
     *,
     visible: bool = True,
 ) -> None:
-    reviewer = Reviewer(
-        session_id=review_session.id, name="Alice", email="alice@example.edu"
-    )
+    reviewer = Reviewer(session_id=review_session.id, name="Alice", email="alice@example.edu")
     reviewee = Reviewee(
         session_id=review_session.id,
         name="Bob",
@@ -575,9 +545,7 @@ def test_a_reviewee_with_a_grant_reads_available(
     assert AVAILABLE in client.get("/me").text
 
 
-def test_an_observer_past_the_deadline_reads_closed(
-    client: TestClient, db: Session
-) -> None:
+def test_an_observer_past_the_deadline_reads_closed(client: TestClient, db: Session) -> None:
     """The while-ongoing window ends at End (author, 2026-11-04, segment
     14E): a ``ready`` session past End no longer shows Summarized
     collation. Before 14E it did, until the operator closed it."""
@@ -594,9 +562,7 @@ def test_a_reviewer_reads_available_after_release_only_with_raw(
 ) -> None:
     review_session = _make_session(client, db, code="st-rev-exp")
     review_session.status = "expired"
-    review_session.responses_release_at = datetime.now(UTC) - timedelta(
-        hours=1
-    )
+    review_session.responses_release_at = datetime.now(UTC) - timedelta(hours=1)
     instrument = _policy(
         db,
         review_session,
@@ -609,9 +575,7 @@ def test_a_reviewer_reads_available_after_release_only_with_raw(
 
     # Window still open, but the after-release cell off: nothing to read.
     policy = db.execute(
-        select(InstrumentViewPolicy).where(
-            InstrumentViewPolicy.instrument_id == instrument.id
-        )
+        select(InstrumentViewPolicy).where(InstrumentViewPolicy.instrument_id == instrument.id)
     ).scalar_one()
     policy.after_release_granularity = None
     policy.after_release_identification = None
@@ -641,13 +605,9 @@ def test_an_answer_on_a_hidden_field_does_not_make_it_available(
     assert CLOSED in client.get("/me").text
 
 
-def test_a_prepared_session_shows_its_scheduled_start(
-    client: TestClient, db: Session
-) -> None:
+def test_a_prepared_session_shows_its_scheduled_start(client: TestClient, db: Session) -> None:
     review_session = _observer_on(client, db, code="st-sched", status="validated")
-    review_session.scheduled_activate_at = datetime(
-        2031, 3, 4, 9, 30, tzinfo=UTC
-    )
+    review_session.scheduled_activate_at = datetime(2031, 3, 4, 9, 30, tzinfo=UTC)
     db.commit()
     assert "2031-03-04 09:30" in client.get("/me").text
 
@@ -697,9 +657,7 @@ def test_a_participant_sent_from_an_operator_page_is_told_why(make_client) -> No
 # ── Participant audit L6 ─────────────────────────────────────────────
 
 
-def test_rows_keep_their_order_when_a_session_is_edited(
-    client: TestClient, db: Session
-) -> None:
+def test_rows_keep_their_order_when_a_session_is_edited(client: TestClient, db: Session) -> None:
     """Rows sorted by ``updated_at``, so editing a session moved it to
     the top. They now sort newest-created first. The timestamps are set
     by hand (``func.now()`` ties within a second on SQLite and within a

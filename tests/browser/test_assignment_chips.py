@@ -49,9 +49,7 @@ def _exclude_one_self_review(database_url: str, session_id: str) -> None:
     try:
         with Session(engine) as db:
             rana = db.execute(
-                select(Reviewer).where(
-                    Reviewer.session_id == pk, Reviewer.name == "Rana"
-                )
+                select(Reviewer).where(Reviewer.session_id == pk, Reviewer.name == "Rana")
             ).scalar_one()
             row = db.execute(
                 select(Assignment).where(

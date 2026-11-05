@@ -79,7 +79,9 @@ def parse(data: bytes) -> Upload:
     try:
         text = data.decode("utf-8-sig")
     except UnicodeDecodeError:
-        raise CsvRejected("The file is not UTF-8 text. Save it as CSV UTF-8 and try again.") from None
+        raise CsvRejected(
+            "The file is not UTF-8 text. Save it as CSV UTF-8 and try again."
+        ) from None
     if "\x00" in text:
         raise CsvRejected("The file contains a NUL character, so it is not a CSV.")
     try:
@@ -133,7 +135,9 @@ def preview(upload: Upload, column: int) -> Preview:
         if key in seen:
             repeated += 1
         seen[key] = None
-    return Preview(rows=len(upload.rows), valid=valid, invalid=invalid, repeated=repeated, keys=tuple(seen))
+    return Preview(
+        rows=len(upload.rows), valid=valid, invalid=invalid, repeated=repeated, keys=tuple(seen)
+    )
 
 
 def result_header(header: Sequence[str]) -> tuple[str, ...]:

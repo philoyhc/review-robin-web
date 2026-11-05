@@ -80,9 +80,7 @@ def _equals(predicate: Predicate, *, reviewer: object, reviewee: object) -> bool
     return rhs in _lhs(predicate, reviewer=reviewer, reviewee=reviewee)
 
 
-def _not_equals(
-    predicate: Predicate, *, reviewer: object, reviewee: object
-) -> bool:
+def _not_equals(predicate: Predicate, *, reviewer: object, reviewee: object) -> bool:
     return not _equals(predicate, reviewer=reviewer, reviewee=reviewee)
 
 
@@ -90,10 +88,7 @@ def _in(predicate: Predicate, *, reviewer: object, reviewee: object) -> bool:
     # The schema holds an IN / NOT_IN operand to a list
     # (``_validate_operand_for_operator``).
     operand = cast(Iterable[str], predicate.operand or [])
-    members = {
-        _normalise(item, case_sensitive=predicate.case_sensitive)
-        for item in operand
-    }
+    members = {_normalise(item, case_sensitive=predicate.case_sensitive) for item in operand}
     members.discard(None)
     return any(v in members for v in _lhs(predicate, reviewer=reviewer, reviewee=reviewee))
 
@@ -102,9 +97,7 @@ def _not_in(predicate: Predicate, *, reviewer: object, reviewee: object) -> bool
     return not _in(predicate, reviewer=reviewer, reviewee=reviewee)
 
 
-def _matches(
-    predicate: Predicate, *, reviewer: object, reviewee: object
-) -> bool:
+def _matches(predicate: Predicate, *, reviewer: object, reviewee: object) -> bool:
     flags = 0 if predicate.case_sensitive else re.IGNORECASE
     return any(
         re.search(str(predicate.operand), value, flags=flags) is not None
@@ -112,34 +105,23 @@ def _matches(
     )
 
 
-def _not_matches(
-    predicate: Predicate, *, reviewer: object, reviewee: object
-) -> bool:
+def _not_matches(predicate: Predicate, *, reviewer: object, reviewee: object) -> bool:
     values = _lhs(predicate, reviewer=reviewer, reviewee=reviewee)
     if not values:
         return False
     flags = 0 if predicate.case_sensitive else re.IGNORECASE
-    return all(
-        re.search(str(predicate.operand), value, flags=flags) is None
-        for value in values
-    )
+    return all(re.search(str(predicate.operand), value, flags=flags) is None for value in values)
 
 
-def _is_empty(
-    predicate: Predicate, *, reviewer: object, reviewee: object
-) -> bool:
+def _is_empty(predicate: Predicate, *, reviewer: object, reviewee: object) -> bool:
     return not _lhs(predicate, reviewer=reviewer, reviewee=reviewee)
 
 
-def _is_not_empty(
-    predicate: Predicate, *, reviewer: object, reviewee: object
-) -> bool:
+def _is_not_empty(predicate: Predicate, *, reviewer: object, reviewee: object) -> bool:
     return bool(_lhs(predicate, reviewer=reviewer, reviewee=reviewee))
 
 
-def _same_as(
-    predicate: Predicate, *, reviewer: object, reviewee: object
-) -> bool:
+def _same_as(predicate: Predicate, *, reviewer: object, reviewee: object) -> bool:
     operand = str(predicate.operand)
     if operand not in FIELD_MAP:
         # The schema admits only field operands here; defensive only.
@@ -153,15 +135,11 @@ def _same_as(
     return any(v in rhs for v in lhs)
 
 
-def _different_from(
-    predicate: Predicate, *, reviewer: object, reviewee: object
-) -> bool:
+def _different_from(predicate: Predicate, *, reviewer: object, reviewee: object) -> bool:
     return not _same_as(predicate, reviewer=reviewer, reviewee=reviewee)
 
 
-_DISPATCH: dict[
-    str, Callable[..., bool]
-] = {
+_DISPATCH: dict[str, Callable[..., bool]] = {
     "equals": _equals,
     "not_equals": _not_equals,
     "in": _in,

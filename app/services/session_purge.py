@@ -9,6 +9,7 @@ Every purge is a hard-delete with no undo. The delete order in
 each function is foreign-key-safe (children before parents) so it
 holds on the FK-enforcing Postgres CI database, not just SQLite.
 """
+
 from __future__ import annotations
 
 from sqlalchemy import delete, select
@@ -59,17 +60,13 @@ def purge_responses(
     an email-history record but unlinked from the deleted invitations.
     """
     session_id = review_session.id
-    responses = rowcount(db.execute(
-        delete(Response).where(
-            Response.assignment_id.in_(_assignment_ids(session_id))
-        )
-    ))
-    invitations_service.detach_outbox(
-        db, session_id=session_id, reviewers_deleted=False
+    responses = rowcount(
+        db.execute(delete(Response).where(Response.assignment_id.in_(_assignment_ids(session_id))))
     )
-    invitations = rowcount(db.execute(
-        delete(Invitation).where(Invitation.session_id == session_id)
-    ))
+    invitations_service.detach_outbox(db, session_id=session_id, reviewers_deleted=False)
+    invitations = rowcount(
+        db.execute(delete(Invitation).where(Invitation.session_id == session_id))
+    )
     db.flush()
     audit.write_event(
         db,
@@ -113,32 +110,22 @@ def purge_rosters(
     the other rosters, and nothing references them (findings L7).
     """
     session_id = review_session.id
-    responses = rowcount(db.execute(
-        delete(Response).where(
-            Response.assignment_id.in_(_assignment_ids(session_id))
-        )
-    ))
-    invitations_service.detach_outbox(
-        db, session_id=session_id, reviewers_deleted=True
+    responses = rowcount(
+        db.execute(delete(Response).where(Response.assignment_id.in_(_assignment_ids(session_id))))
     )
-    invitations = rowcount(db.execute(
-        delete(Invitation).where(Invitation.session_id == session_id)
-    ))
-    assignments = rowcount(db.execute(
-        delete(Assignment).where(Assignment.session_id == session_id)
-    ))
-    relationships = rowcount(db.execute(
-        delete(Relationship).where(Relationship.session_id == session_id)
-    ))
-    reviewers = rowcount(db.execute(
-        delete(Reviewer).where(Reviewer.session_id == session_id)
-    ))
-    reviewees = rowcount(db.execute(
-        delete(Reviewee).where(Reviewee.session_id == session_id)
-    ))
-    observers = rowcount(db.execute(
-        delete(Observer).where(Observer.session_id == session_id)
-    ))
+    invitations_service.detach_outbox(db, session_id=session_id, reviewers_deleted=True)
+    invitations = rowcount(
+        db.execute(delete(Invitation).where(Invitation.session_id == session_id))
+    )
+    assignments = rowcount(
+        db.execute(delete(Assignment).where(Assignment.session_id == session_id))
+    )
+    relationships = rowcount(
+        db.execute(delete(Relationship).where(Relationship.session_id == session_id))
+    )
+    reviewers = rowcount(db.execute(delete(Reviewer).where(Reviewer.session_id == session_id)))
+    reviewees = rowcount(db.execute(delete(Reviewee).where(Reviewee.session_id == session_id)))
+    observers = rowcount(db.execute(delete(Observer).where(Observer.session_id == session_id)))
     db.flush()
     audit.write_event(
         db,
@@ -190,9 +177,9 @@ def purge_audit_log(
     The ``session.audit_log_purged`` event is written *after* the
     delete, so this record of the purge itself survives.
     """
-    purged = rowcount(db.execute(
-        delete(AuditEvent).where(AuditEvent.session_id == review_session.id)
-    ))
+    purged = rowcount(
+        db.execute(delete(AuditEvent).where(AuditEvent.session_id == review_session.id))
+    )
     db.flush()
     audit.write_event(
         db,
@@ -254,21 +241,29 @@ def purge_and_archive(
     with unit_of_work.atomic(db):
         if "audit_log" in purge:
             purge_audit_log(
-                db, review_session=review_session, user=user,
+                db,
+                review_session=review_session,
+                user=user,
                 correlation_id=correlation_id,
             )
         if "responses" in purge:
             purge_responses(
-                db, review_session=review_session, user=user,
+                db,
+                review_session=review_session,
+                user=user,
                 correlation_id=correlation_id,
             )
         if "rosters" in purge:
             purge_rosters(
-                db, review_session=review_session, user=user,
+                db,
+                review_session=review_session,
+                user=user,
                 correlation_id=correlation_id,
             )
         lifecycle.archive_session(
-            db, review_session=review_session, user=user,
+            db,
+            review_session=review_session,
+            user=user,
             correlation_id=correlation_id,
         )
     return True

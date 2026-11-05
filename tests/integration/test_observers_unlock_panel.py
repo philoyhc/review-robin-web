@@ -48,24 +48,24 @@ def _session(
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    s = db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    s = db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
     s.observers_enabled = True
     # `named` / `tagged` default to "every row" / "none", which is the
     # shape most of this file wants; the index test overrides them so
     # the three column counts differ from each other.
     named = rows if named is None else named
-    db.add_all([
-        Observer(
-            session_id=s.id,
-            email=f"o{n}@example.org",
-            display_name=f"O{n}" if n < named else None,
-            tag_1=f"t{n}" if n < tagged else None,
-            status="active",
-        )
-        for n in range(rows)
-    ])
+    db.add_all(
+        [
+            Observer(
+                session_id=s.id,
+                email=f"o{n}@example.org",
+                display_name=f"O{n}" if n < named else None,
+                tag_1=f"t{n}" if n < tagged else None,
+                status="active",
+            )
+            for n in range(rows)
+        ]
+    )
     db.commit()
     db.refresh(s)
     return s
@@ -113,7 +113,8 @@ def _roster_count(card: str) -> str:
     m = re.search(
         r'roster-readout-label">Roster:</span>\s*'
         r'<span class="pill pill-count">(.*?)</span>',
-        card, re.S,
+        card,
+        re.S,
     )
     assert m, "no roster readout in the card"
     return " ".join(m.group(1).split())
@@ -130,7 +131,8 @@ def _control_label(card: str) -> str:
     """
     m = re.search(
         r'<button[^>]*id="roster-unlock-btn"[^>]*>(.*?)</button>',
-        card, re.S,
+        card,
+        re.S,
     )
     assert m, "no toggle button in the card"
     return m.group(1).strip()
@@ -140,7 +142,8 @@ def _toggle(body: str) -> str:
     """The card's own toggle script, for the claims that ARE about it."""
     m = re.search(
         r"<script>(?:(?!</script>).)*?roster-unlock-panel.*?</script>",
-        body, re.S,
+        body,
+        re.S,
     )
     assert m, "the Unlock toggle is not in the response"
     return m.group(0)
@@ -187,14 +190,12 @@ def test_both_cards_move_into_the_panel_and_nothing_stays_below(
     # And nothing mutating is left after the table. Read by position,
     # because "not in the panel" and "not on the page" are different
     # claims and only the second one is the rung.
-    after = markup[markup.index('id="observers-table-card"'):]
+    after = markup[markup.index('id="observers-table-card"') :]
     assert 'id="upload-csv"' not in after
     assert "danger-zone" not in after
 
 
-def test_upload_goes_left_and_the_danger_zone_right(
-    client: TestClient, db: Session
-) -> None:
+def test_upload_goes_left_and_the_danger_zone_right(client: TestClient, db: Session) -> None:
     """Author's ruling: `Upload Observers` left, `Danger Zone` right —
     the order they already had in the grid, so the operator's muscle
     memory for this page survives the move.
@@ -213,26 +214,22 @@ def test_upload_goes_left_and_the_danger_zone_right(
     assert right < danger, "the Danger Zone is not in the right stack"
 
 
-def test_the_lock_control_ships_as_the_cards_last_child(
-    client: TestClient, db: Session
-) -> None:
+def test_the_lock_control_ships_as_the_cards_last_child(client: TestClient, db: Session) -> None:
     """Collapsed, the control is the card's last child; open, it is the
     end of the panel's right column (participant info Item 2). One element, two homes — the
     toggle MOVES it, so where it *starts* decides whether the first
     click moves it out of a place it was never in.
     """
     card = _card(_page(client, _session(client, db, "unl-3")))
-    assert card.index('id="roster-unlock-panel"') < card.index(
-        'class="roster-card-actions"'
-    ), "the collapsed control is not after the panel"
+    assert card.index('id="roster-unlock-panel"') < card.index('class="roster-card-actions"'), (
+        "the collapsed control is not after the panel"
+    )
     # The label names the state the control moves TO, not "Done": the
     # panel is a lock state, not a form being finished.
     assert _control_label(card) == "Unlock", _control_label(card)
 
     # Open, it ends the right column, under the Danger Zone.
-    open_card = _card(
-        _page(client, _session(client, db, "unl-3b"), "?unlocked=1")
-    )
+    open_card = _card(_page(client, _session(client, db, "unl-3b"), "?unlocked=1"))
     assert_lock_ends_right_column(open_card)
     assert _control_label(open_card) == "Lock", _control_label(open_card)
 
@@ -254,12 +251,8 @@ def test_the_lock_control_follows_the_own_entry_card_on_an_empty_roster(
     The empty case is not an edge: it is first use, and the state
     `delete-all` redirects into (`?unlocked=1`).
     """
-    full = _card(
-        _page(client, _session(client, db, "unl-20", rows=2), "?unlocked=1")
-    )
-    empty = _card(
-        _page(client, _session(client, db, "unl-21", rows=0), "?unlocked=1")
-    )
+    full = _card(_page(client, _session(client, db, "unl-20", rows=2), "?unlocked=1"))
+    empty = _card(_page(client, _session(client, db, "unl-21", rows=0), "?unlocked=1"))
     assert "danger-zone" in full and "danger-zone" not in empty
     for card in (full, empty):
         assert_lock_ends_right_column(card)
@@ -269,15 +262,12 @@ def test_the_lock_control_follows_the_own_entry_card_on_an_empty_roster(
     # pushes `Lock` to the foot only when nothing precedes it; here the
     # card does, on the empty roster as on a full one.
     _, _, right = panel_columns(empty)
-    inner = right[right.index(">") + 1:]
+    inner = right[right.index(">") + 1 :]
     inner = re.sub(r"\{#.*?#\}|<!--.*?-->", "", inner, flags=re.S).strip()
-    assert inner.startswith('<section class="card" id="observer-self-fields"'), (
-        inner[:200])
+    assert inner.startswith('<section class="card" id="observer-self-fields"'), inner[:200]
 
 
-def test_the_panel_ships_hidden_and_unlocked_opens_it(
-    client: TestClient, db: Session
-) -> None:
+def test_the_panel_ships_hidden_and_unlocked_opens_it(client: TestClient, db: Session) -> None:
     """`?unlocked=1` is the whole server side of the panel's open state.
 
     The `hidden` attribute is the only thing distinguishing these two
@@ -302,9 +292,7 @@ def test_the_panel_ships_hidden_and_unlocked_opens_it(
 # ── The redirects the plan called out ─────────────────────────────────
 
 
-def test_delete_all_returns_with_the_panel_still_open(
-    client: TestClient, db: Session
-) -> None:
+def test_delete_all_returns_with_the_panel_still_open(client: TestClient, db: Session) -> None:
     """A control inside the panel must not close the panel it was used
     from.
 
@@ -321,9 +309,9 @@ def test_delete_all_returns_with_the_panel_still_open(
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    assert response.headers["location"].endswith(
-        "/observers?unlocked=1#roster-card"
-    ), response.headers["location"]
+    assert response.headers["location"].endswith("/observers?unlocked=1#roster-card"), (
+        response.headers["location"]
+    )
 
 
 def test_a_successful_import_returns_with_the_panel_still_open(
@@ -338,14 +326,12 @@ def test_a_successful_import_returns_with_the_panel_still_open(
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    assert response.headers["location"].endswith(
-        "/observers?unlocked=1#roster-card"
-    ), response.headers["location"]
+    assert response.headers["location"].endswith("/observers?unlocked=1#roster-card"), (
+        response.headers["location"]
+    )
 
 
-def test_a_failed_import_arrives_with_the_panel_open(
-    client: TestClient, db: Session
-) -> None:
+def test_a_failed_import_arrives_with_the_panel_open(client: TestClient, db: Session) -> None:
     """The one path `?unlocked=1` cannot reach: a parse failure
     re-renders the page in place and returns 400 WITH it.
 
@@ -362,9 +348,9 @@ def test_a_failed_import_arrives_with_the_panel_open(
         follow_redirects=False,
     )
     assert response.status_code == 400, response.status_code
-    assert not re.search(
-        r'id="roster-unlock-panel"\s+hidden', response.text
-    ), "a failed import answers with the errors hidden"
+    assert not re.search(r'id="roster-unlock-panel"\s+hidden', response.text), (
+        "a failed import answers with the errors hidden"
+    )
 
 
 # ── Gating ────────────────────────────────────────────────────────────
@@ -414,9 +400,7 @@ def test_the_panel_is_suppressed_on_archived_but_the_index_stays(
     assert "danger-zone" not in markup
 
 
-def test_an_archived_roster_keeps_its_read_only_toolbar(
-    client: TestClient, db: Session
-) -> None:
+def test_an_archived_roster_keeps_its_read_only_toolbar(client: TestClient, db: Session) -> None:
     """`archived` suppresses the mutating surface, not the page.
 
     The table card still renders while there are rows, and `Search` and
@@ -435,9 +419,7 @@ def test_an_archived_roster_keeps_its_read_only_toolbar(
     db.flush()
 
     markup = _markup(_page(client, s))
-    assert 'id="observers-table-card"' in markup, (
-        "an archived roster with rows lost its table"
-    )
+    assert 'id="observers-table-card"' in markup, "an archived roster with rows lost its table"
     assert ">Search</button>" in markup, "Search does not render on archived"
     # ...while the mutating surface is gone, which is the actual rule.
     assert 'id="roster-unlock-panel"' not in markup
@@ -448,16 +430,12 @@ def test_an_archived_roster_keeps_its_read_only_toolbar(
     assert ">Clear</a>" in filtered, "Clear does not render on archived"
 
 
-def test_the_panel_stands_down_in_edit_mode(
-    client: TestClient, db: Session
-) -> None:
+def test_the_panel_stands_down_in_edit_mode(client: TestClient, db: Session) -> None:
     """Unlock and row-editing are mutually exclusive — the Unlock
     affordance stands down while a row is being typed into. The index
     stays, for the same reason it survives `archived`."""
     s = _session(client, db, "unl-10")
-    first = db.execute(
-        select(Observer).where(Observer.session_id == s.id)
-    ).scalars().first()
+    first = db.execute(select(Observer).where(Observer.session_id == s.id)).scalars().first()
     assert first is not None
     for suffix in ("?add=1", f"?edit_id={first.id}"):
         markup = _markup(_page(client, s, suffix))
@@ -466,9 +444,7 @@ def test_the_panel_stands_down_in_edit_mode(
         assert 'class="roster-readouts"' in markup, suffix
 
 
-def test_the_index_lists_every_column_the_table_renders(
-    client: TestClient, db: Session
-) -> None:
+def test_the_index_lists_every_column_the_table_renders(client: TestClient, db: Session) -> None:
     """The rule `reviewer_column_state` was written waiting for a second
     caller to settle: **the index mirrors the columns the preview table
     renders**, so the two cannot disagree.
@@ -527,9 +503,7 @@ def test_the_index_counts_the_whole_roster_not_the_filtered_window(
     filtered = _card(_page(client, s, "?q=o0%40example.org"))
 
     assert _roster_count(unfiltered) == "Observers (3)"
-    assert _roster_count(filtered) == "Observers (3)", (
-        "a search shrank the roster index"
-    )
+    assert _roster_count(filtered) == "Observers (3)", "a search shrank the roster index"
     # ...and the filter really did bite, or the assertion above is
     # about nothing.
     body = _page(client, s, "?q=o0%40example.org")
@@ -537,9 +511,7 @@ def test_the_index_counts_the_whole_roster_not_the_filtered_window(
     assert rows == 1, f"the filter matched {rows} rows, not 1"
 
 
-def test_the_tag_column_reads_tag_not_tag1(
-    client: TestClient, db: Session
-) -> None:
+def test_the_tag_column_reads_tag_not_tag1(client: TestClient, db: Session) -> None:
     """Author's call, 19P.2 rung 6: this page has exactly one tag slot,
     so the digit numbered a series of one.
 
@@ -554,9 +526,7 @@ def test_the_tag_column_reads_tag_not_tag1(
     assert "<th>Tag1</th>" not in markup
     assert "Tag1 (" not in markup, "the index still reads Tag1"
     # ...and the contract the operator uploads against is untouched.
-    assert "ObserverTag1" in markup, (
-        "the CSV column name was renamed with the display label"
-    )
+    assert "ObserverTag1" in markup, "the CSV column name was renamed with the display label"
 
     # Every DISPLAY site moves together, or one row reads `Tag` in its
     # column header and `Observer: Tag 1` in its Cohort cell. The cold
@@ -569,6 +539,7 @@ def test_the_tag_column_reads_tag_not_tag1(
     )
     assert ">Observer: Tag</option>" in builder
     from app.web.views._observers import _COHORT_OBSERVER_FRIENDLY
+
     assert _COHORT_OBSERVER_FRIENDLY["observer.tag1"] == "Observer: Tag"
     # The stored KEY is not a display label and must not move — a saved
     # `cohort_rule` holds it.
@@ -594,9 +565,7 @@ def test_the_danger_zone_is_gated_on_rows_and_upload_is_not(
 # ── The things a move quietly breaks ──────────────────────────────────
 
 
-def test_each_confirm_key_still_appears_exactly_once(
-    client: TestClient, db: Session
-) -> None:
+def test_each_confirm_key_still_appears_exactly_once(client: TestClient, db: Session) -> None:
     """`base.html` pairs a confirm to its button with a first-match
     `querySelector`, so a duplicated key gates the WRONG button.
 
@@ -612,9 +581,7 @@ def test_each_confirm_key_still_appears_exactly_once(
         assert body.count(f'data-delete-btn="{key}"') == 1, key
 
 
-def test_each_confirm_sentence_is_one_flex_item(
-    client: TestClient, db: Session
-) -> None:
+def test_each_confirm_sentence_is_one_flex_item(client: TestClient, db: Session) -> None:
     """`.confirm-label` is `display: flex`, so the sentence must live in
     ONE child element.
 
@@ -638,7 +605,7 @@ def test_each_confirm_sentence_is_one_flex_item(
     for key in ("replace-observers", "delete-all"):
         label = re.search(
             r'<label class="confirm-label">(.*?)</label>',
-            panel[panel.index(f'data-delete-confirm="{key}"') - 400:],
+            panel[panel.index(f'data-delete-confirm="{key}"') - 400 :],
             re.S,
         )
         assert label, key
@@ -646,7 +613,7 @@ def test_each_confirm_sentence_is_one_flex_item(
         # Everything after the checkbox must be inside one element: no
         # bare text between the `<input>` and the wrapper, and none
         # after the wrapper closes.
-        after_input = body[body.index(">", body.index("<input")) + 1:]
+        after_input = body[body.index(">", body.index("<input")) + 1 :]
         after_input = re.sub(r"\{#.*?#\}", "", after_input, flags=re.S)
         assert after_input.strip().startswith("<span>"), (
             f"{key}: the sentence does not start in a wrapper"
@@ -657,9 +624,7 @@ def test_each_confirm_sentence_is_one_flex_item(
         )
 
 
-def test_the_danger_zone_can_carry_its_own_accessible_name(
-    client: TestClient, db: Session
-) -> None:
+def test_the_danger_zone_can_carry_its_own_accessible_name(client: TestClient, db: Session) -> None:
     """`aria-labelledby` on a role-less `<div>` is dead markup: a
     `<div>` is `generic` and a generic element takes no accessible name.
 
@@ -675,9 +640,7 @@ def test_the_danger_zone_can_carry_its_own_accessible_name(
     assert 'id="observers-danger-h"' in panel, "nothing to point at"
 
 
-def test_the_panel_is_reachable_without_javascript(
-    client: TestClient, db: Session
-) -> None:
+def test_the_panel_is_reachable_without_javascript(client: TestClient, db: Session) -> None:
     """This rung moves both mutating cards behind a button, so with JS
     off the page would lose the import and the delete-all outright.
 
@@ -687,13 +650,9 @@ def test_the_panel_is_reachable_without_javascript(
     """
     card = _card(_page(client, _session(client, db, "unl-13")))
     assert "<noscript>" in card
-    assert "?unlocked=1#roster-card" in card, (
-        "no no-JS route into the panel"
-    )
+    assert "?unlocked=1#roster-card" in card, "no no-JS route into the panel"
     # And back out again, from the open page.
-    open_card = _card(
-        _page(client, _session(client, db, "unl-14"), "?unlocked=1")
-    )
+    open_card = _card(_page(client, _session(client, db, "unl-14"), "?unlocked=1"))
     assert "<noscript>" in open_card
     assert re.search(
         r'<noscript>\s*<a class="btn secondary"\s*\n?\s*href="[^"]*/observers#roster-card"',
@@ -711,9 +670,6 @@ def test_the_toggle_moves_one_control_rather_than_rendering_two(
     is a second copy appearing in one of them.
     """
     for suffix in ("", "?unlocked=1"):
-        card = _card(
-            _page(client, _session(client, db, f"unl-15{len(suffix)}"),
-                  suffix)
-        )
+        card = _card(_page(client, _session(client, db, f"unl-15{len(suffix)}"), suffix))
         assert card.count('id="roster-unlock-btn"') == 1, suffix
         assert card.count('class="roster-card-actions"') == 1, suffix

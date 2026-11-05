@@ -6,6 +6,7 @@ the card stops offering pair-context tags while their meaning is
 reworked. A rule already stored with one keeps its option, so a Save
 does not silently drop it.
 """
+
 from __future__ import annotations
 
 import re
@@ -116,7 +117,15 @@ def test_filled_and_empty_store_with_no_operand(db: Session, client: TestClient)
     assert ">IS EMPTY</button>" in page
     # Each rule's value box renders inactive.
     assert len(re.findall(r'name="link[12]_operand_value"', page)) == 2
-    assert len(re.findall(r'readonly aria-disabled="true"\s+form="dfsave-\d+" name="link[12]_operand_value"', page)) == 2
+    assert (
+        len(
+            re.findall(
+                r'readonly aria-disabled="true"\s+form="dfsave-\d+" name="link[12]_operand_value"',
+                page,
+            )
+        )
+        == 2
+    )
 
 
 def test_link1_cycle_offers_filled_and_empty(db: Session, client: TestClient) -> None:
@@ -181,7 +190,9 @@ def test_every_link2_pair_tag_operator_stores_the_pair(db: Session, client: Test
     )
 
     assert saved.status_code == 200, saved.text
-    assert [(p["field"], p["operator"], p.get("operand")) for p in _predicates(db, instrument.id)] == [
+    assert [
+        (p["field"], p["operator"], p.get("operand")) for p in _predicates(db, instrument.id)
+    ] == [
         ("pair_context.tag1", "equals", "P"),
         ("pair_context.tag1", "not_equals", "C"),
         ("pair_context.tag1", "is_not_empty", None),
@@ -197,7 +208,10 @@ def test_every_link2_pair_tag_operator_stores_the_pair(db: Session, client: Test
         r'data-new-model-operator-cycle="([^"]*)"\s+data-new-model-operator-cycle-pair=', page
     )
     assert link2_cycles == ["IS|IS NOT|IS FILLED|IS EMPTY"] * 4
-    assert len(re.findall(r'data-new-model-field-helper-pair="Pairwise tag"[^>]*>Pairwise tag<', page)) == 4
+    assert (
+        len(re.findall(r'data-new-model-field-helper-pair="Pairwise tag"[^>]*>Pairwise tag<', page))
+        == 4
+    )
     before = _predicates(db, instrument.id)
     again = client.post(
         f"/operator/sessions/{session.public_id}/instruments/{instrument.id}/save", data=form
@@ -212,9 +226,18 @@ def test_every_link2_pair_tag_operator_stores_the_pair(db: Session, client: Test
         (_form(link1=("pair_context.tag1", "IS", "P")), "Who does the review no longer filters"),
         (_form(link1=("reviewer.pair_tag1", "IS", "P")), "a person's relationship tag"),
         (_form(link2=("reviewee.pair_tag1", "IS FILLED", "")), "a person's relationship tag"),
-        (_form(link2=("reviewee.tag1", "IS THE SAME AS", "pair_context.tag1")), "can't be compared"),
-        (_form(link2=("pair_context.tag1", "IS DIFFERENT FROM", "reviewer.tag1")), "can't be compared"),
-        (_form(link2=("reviewee.tag1", "IS THE SAME AS", "reviewer.pair_tag1")), "a person's relationship tag"),
+        (
+            _form(link2=("reviewee.tag1", "IS THE SAME AS", "pair_context.tag1")),
+            "can't be compared",
+        ),
+        (
+            _form(link2=("pair_context.tag1", "IS DIFFERENT FROM", "reviewer.tag1")),
+            "can't be compared",
+        ),
+        (
+            _form(link2=("reviewee.tag1", "IS THE SAME AS", "reviewer.pair_tag1")),
+            "a person's relationship tag",
+        ),
     ],
 )
 def test_save_refuses_a_relationship_rule_the_card_no_longer_offers(
@@ -257,8 +280,14 @@ def test_a_stored_person_pair_tag_shows_as_stored_and_save_refuses_it(
     rule_set = db.get(SessionRuleSet, must_get(db, Instrument, instrument.id).rule_set_id)
     assert rule_set is not None
     rules = [dict(link, rules=[dict(c) for c in link["rules"]]) for link in rule_set.rules_json]
-    rules[0]["rules"][0]["predicate"] = {**rules[0]["rules"][0]["predicate"], "field": "reviewer.pair_tag1"}
-    rules[1]["rules"][0]["predicate"] = {**rules[1]["rules"][0]["predicate"], "field": "reviewee.pair_tag1"}
+    rules[0]["rules"][0]["predicate"] = {
+        **rules[0]["rules"][0]["predicate"],
+        "field": "reviewer.pair_tag1",
+    }
+    rules[1]["rules"][0]["predicate"] = {
+        **rules[1]["rules"][0]["predicate"],
+        "field": "reviewee.pair_tag1",
+    }
     rule_set.rules_json = rules
     db.commit()
 
@@ -290,9 +319,7 @@ def test_group_is_refused_beside_a_link2_pair_tag_is_or_filled(
     db: Session, client: TestClient, op: str, value: str
 ) -> None:
     session, instrument = _session(db, client, "b1-pc-group")
-    form = _with_group(
-        {**_form(), **_link2_rules(("pair_context.tag1", op, value, ""))}
-    )
+    form = _with_group({**_form(), **_link2_rules(("pair_context.tag1", op, value, ""))})
 
     card = client.post(
         f"/operator/sessions/{session.public_id}/instruments/{instrument.id}/save", data=form
@@ -455,11 +482,14 @@ def test_a_default_link2_cell_on_a_pair_tag_shows_the_value_box(
 
     page = _page(client, session.public_id, instrument.id)
 
-    assert re.findall(r'name="link2_op"\s+data-new-model-op-input\s+value="([^"]*)"', page) == ["IS"]
+    assert re.findall(r'name="link2_op"\s+data-new-model-op-input\s+value="([^"]*)"', page) == [
+        "IS"
+    ]
     operand_tag = re.search(r'<select data-new-model-operand-tag\s+style="([^"]*)"', page)
     assert operand_tag and "display: none" in operand_tag.group(1)
     value_boxes = re.findall(
-        r'<input data-new-model-operand-value type="text" placeholder="value"\s+style="([^"]*)"', page
+        r'<input data-new-model-operand-value type="text" placeholder="value"\s+style="([^"]*)"',
+        page,
     )
     assert len(value_boxes) == 2 and "display: none" not in value_boxes[1]
 

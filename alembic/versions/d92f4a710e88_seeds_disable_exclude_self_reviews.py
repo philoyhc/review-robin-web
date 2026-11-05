@@ -16,6 +16,7 @@ Revises: 324a449e7856
 Create Date: 2026-05-10 12:00:00.000000
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -39,9 +40,7 @@ def upgrade() -> None:
         sa.column("rule_set_id", sa.Integer),
         sa.column("exclude_self_reviews", sa.Boolean),
     )
-    seed_ids = sa.select(operator_rule_sets.c.id).where(
-        operator_rule_sets.c.is_seed.is_(True)
-    )
+    seed_ids = sa.select(operator_rule_sets.c.id).where(operator_rule_sets.c.is_seed.is_(True))
     bind.execute(
         sa.update(revisions)
         .where(revisions.c.rule_set_id.in_(seed_ids))
@@ -61,9 +60,7 @@ def downgrade() -> None:
         sa.column("rule_set_id", sa.Integer),
         sa.column("exclude_self_reviews", sa.Boolean),
     )
-    seed_ids = sa.select(operator_rule_sets.c.id).where(
-        operator_rule_sets.c.is_seed.is_(True)
-    )
+    seed_ids = sa.select(operator_rule_sets.c.id).where(operator_rule_sets.c.is_seed.is_(True))
     bind.execute(
         sa.update(revisions)
         .where(revisions.c.rule_set_id.in_(seed_ids))

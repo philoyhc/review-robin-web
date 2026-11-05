@@ -66,9 +66,7 @@ def test_reviewer_status_round_trips(db: Session) -> None:
         ]
     )
     db.flush()
-    result = parse_reviewer_csv(
-        _csv_bytes(list(serialize_reviewers(db, review_session)))
-    )
+    result = parse_reviewer_csv(_csv_bytes(list(serialize_reviewers(db, review_session))))
     assert result.issues == []
     by_email = {r.email: r.status for r in result.rows}
     assert by_email["ana@e.edu"] == "active"
@@ -94,9 +92,7 @@ def test_reviewee_status_round_trips(db: Session) -> None:
         ]
     )
     db.flush()
-    result = parse_reviewee_csv(
-        _csv_bytes(list(serialize_reviewees(db, review_session)))
-    )
+    result = parse_reviewee_csv(_csv_bytes(list(serialize_reviewees(db, review_session))))
     assert result.issues == []
     by_id = {r.email_or_identifier: r.status for r in result.rows}
     assert by_id["cy@e.edu"] == "active"
@@ -120,9 +116,7 @@ def test_observer_status_round_trips(db: Session) -> None:
         ]
     )
     db.flush()
-    result = parse_observer_csv(
-        _csv_bytes(list(serialize_observers(db, review_session)))
-    )
+    result = parse_observer_csv(_csv_bytes(list(serialize_observers(db, review_session))))
     assert result.issues == []
     by_email = {r.email: r.status for r in result.rows}
     assert by_email["ea@e.edu"] == "active"

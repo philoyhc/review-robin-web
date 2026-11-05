@@ -70,7 +70,12 @@ def directory(monkeypatch: pytest.MonkeyPatch) -> Recording:
 
 
 def _form(**extra: str) -> dict[str, str]:
-    return {"content": base64.b64encode(DATA).decode(), "filename": "list.csv", "column": "1", **extra}
+    return {
+        "content": base64.b64encode(DATA).decode(),
+        "filename": "list.csv",
+        "column": "1",
+        **extra,
+    }
 
 
 def _keys() -> list[str]:
@@ -78,7 +83,12 @@ def _keys() -> list[str]:
 
 
 def _lookup(client: TestClient, keys: object, **kwargs):
-    return client.post(LOOKUP, content=json.dumps({"keys": keys}), headers={"content-type": "application/json"}, **kwargs)
+    return client.post(
+        LOOKUP,
+        content=json.dumps({"keys": keys}),
+        headers={"content-type": "application/json"},
+        **kwargs,
+    )
 
 
 def _download(page_text: str) -> list[dict[str, str]]:
@@ -110,16 +120,29 @@ def test_lookup_answers_each_key_once(client: TestClient, directory: Recording) 
     assert outcomes["jane.tan@example.edu"]["status"] == "OK"
     assert outcomes["jane.tan@example.edu"]["user"]["id"] == "id-jane"
     assert outcomes["nobody@example.edu"] == {
-        "status": "NOT_FOUND", "match_type": "NONE", "note": "No user-directory match", "error_kind": "", "user": None,
+        "status": "NOT_FOUND",
+        "match_type": "NONE",
+        "note": "No user-directory match",
+        "error_kind": "",
+        "user": None,
     }
     assert sorted(directory.asked) == ["jane.tan@example.edu", "nobody@example.edu"]
 
 
 @pytest.mark.parametrize(
     "keys",
-    [[], ["a@x.edu"] * (check.BATCH_MAX + 1), ["Jane.Tan@example.edu"], ["not an address"], [3], "a@x.edu"],
+    [
+        [],
+        ["a@x.edu"] * (check.BATCH_MAX + 1),
+        ["Jane.Tan@example.edu"],
+        ["not an address"],
+        [3],
+        "a@x.edu",
+    ],
 )
-def test_lookup_refuses_a_batch_that_is_not_lookup_keys(client: TestClient, directory: Recording, keys: object) -> None:
+def test_lookup_refuses_a_batch_that_is_not_lookup_keys(
+    client: TestClient, directory: Recording, keys: object
+) -> None:
     assert _lookup(client, keys).status_code == 400
     assert directory.asked == []
 
@@ -127,17 +150,25 @@ def test_lookup_refuses_a_batch_that_is_not_lookup_keys(client: TestClient, dire
 def test_lookup_takes_json_only(client: TestClient, directory: Recording) -> None:
     form = client.post(LOOKUP, data={"keys": "a@x.edu"})
     assert form.status_code == 415
-    big = client.post(LOOKUP, content=b"{" + b" " * (20 * 1024) + b"}", headers={"content-type": "application/json"})
+    big = client.post(
+        LOOKUP,
+        content=b"{" + b" " * (20 * 1024) + b"}",
+        headers={"content-type": "application/json"},
+    )
     assert big.status_code == 413
     bad = client.post(LOOKUP, content=b"{", headers={"content-type": "application/json"})
     assert bad.status_code == 400
-    absurd = client.build_request("POST", LOOKUP, content=b"{}", headers={"content-type": "application/json"})
+    absurd = client.build_request(
+        "POST", LOOKUP, content=b"{}", headers={"content-type": "application/json"}
+    )
     absurd.headers["content-length"] = "9" * 5000  # too long for `int` (findings L3)
     assert client.send(absurd).status_code == 413
     assert directory.asked == []
 
 
-def test_lookup_is_the_super_admins_alone(client: TestClient, monkeypatch: pytest.MonkeyPatch, directory: Recording) -> None:
+def test_lookup_is_the_super_admins_alone(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, directory: Recording
+) -> None:
     monkeypatch.setattr(identity_settings, "fake_auth_super_admin", False)
     assert _lookup(client, ["a@x.edu"]).status_code == 403
     monkeypatch.setattr(identity_settings, "allow_fake_auth", False)
@@ -145,7 +176,9 @@ def test_lookup_is_the_super_admins_alone(client: TestClient, monkeypatch: pytes
     assert directory.asked == []
 
 
-def test_lookup_without_a_token_is_a_503(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_lookup_without_a_token_is_a_503(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     def no_token(request):
         raise GraphError("no_token")
 
@@ -157,7 +190,9 @@ def test_lookup_without_a_token_is_a_503(client: TestClient, monkeypatch: pytest
 # --- /check with the page's outcomes ---
 
 
-def test_the_page_path_gives_the_same_download_as_the_plain_post(client: TestClient, directory: Recording) -> None:
+def test_the_page_path_gives_the_same_download_as_the_plain_post(
+    client: TestClient, directory: Recording
+) -> None:
     plain = client.post(CHECK, data=_form())
     asked_by_plain = len(directory.asked)
     collected = _collect(client)
@@ -169,19 +204,28 @@ def test_the_page_path_gives_the_same_download_as_the_plain_post(client: TestCli
     assert asked_by_plain == len(_keys())
 
 
-def test_keys_the_page_did_not_send_are_error_incomplete(client: TestClient, directory: Recording) -> None:
+def test_keys_the_page_did_not_send_are_error_incomplete(
+    client: TestClient, directory: Recording
+) -> None:
     collected = _collect(client)
     del collected["nobody@example.edu"]
     rows = _download(client.post(CHECK, data=_form(outcomes=json.dumps(collected))).text)
     nobody = next(r for r in rows if r["Name"] == "Nobody")
-    assert nobody["status"] == "ERROR" and nobody["notes"].startswith("Not looked up: the check stopped first")
+    assert nobody["status"] == "ERROR" and nobody["notes"].startswith(
+        "Not looked up: the check stopped first"
+    )
 
 
-def test_a_carried_error_with_a_known_kind_is_kept(client: TestClient, directory: Recording) -> None:
+def test_a_carried_error_with_a_known_kind_is_kept(
+    client: TestClient, directory: Recording
+) -> None:
     collected = _collect(client)
     collected["nobody@example.edu"] = {
-        "status": "ERROR", "match_type": "NONE", "note": "Lookup incomplete (throttled); try again later",
-        "error_kind": "throttled", "user": None,
+        "status": "ERROR",
+        "match_type": "NONE",
+        "note": "Lookup incomplete (throttled); try again later",
+        "error_kind": "throttled",
+        "user": None,
     }
     rows = _download(client.post(CHECK, data=_form(outcomes=json.dumps(collected))).text)
     assert next(r for r in rows if r["Name"] == "Nobody")["status"] == "ERROR"
@@ -198,12 +242,18 @@ def test_the_script_holds_back_for_an_unpreviewed_column(client: TestClient) -> 
     assert text.count("column.disabled = false; column.value = previewed;") == 3
 
 
-def test_a_refused_sign_in_marks_the_rest_with_its_kind(client: TestClient, directory: Recording) -> None:
+def test_a_refused_sign_in_marks_the_rest_with_its_kind(
+    client: TestClient, directory: Recording
+) -> None:
     collected = {k: v for k, v in _collect(client).items() if k == "jane.tan@example.edu"}
-    rows = _download(client.post(CHECK, data=_form(outcomes=json.dumps(collected), stopped="unauthorized")).text)
+    rows = _download(
+        client.post(CHECK, data=_form(outcomes=json.dumps(collected), stopped="unauthorized")).text
+    )
     assert rows[0]["status"] == "OK"
     lab = next(r for r in rows if r["Name"] == "Lab")
-    assert lab["status"] == "ERROR" and "unauthorized" in lab["notes"] and "sign out" in lab["notes"]
+    assert (
+        lab["status"] == "ERROR" and "unauthorized" in lab["notes"] and "sign out" in lab["notes"]
+    )
 
 
 @pytest.mark.parametrize(
@@ -214,14 +264,36 @@ def test_a_refused_sign_in_marks_the_rest_with_its_kind(client: TestClient, dire
         json.dumps({"stranger@example.edu": {"status": "NOT_FOUND", "match_type": "NONE"}}),
         json.dumps({"nobody@example.edu": {"status": "INVALID_INPUT", "match_type": "NONE"}}),
         json.dumps({"nobody@example.edu": {"status": "MADE_UP", "match_type": "NONE"}}),
-        json.dumps({"nobody@example.edu": {"status": "OK", "match_type": "PRIMARY_MAIL", "user": None}}),
-        json.dumps({"nobody@example.edu": {"status": "NOT_FOUND", "match_type": "NONE", "note": "x" * 600}}),
-        json.dumps({"nobody@example.edu": {"status": "ERROR", "match_type": "NONE", "error_kind": "someone@x.edu"}}),
+        json.dumps(
+            {"nobody@example.edu": {"status": "OK", "match_type": "PRIMARY_MAIL", "user": None}}
+        ),
+        json.dumps(
+            {"nobody@example.edu": {"status": "NOT_FOUND", "match_type": "NONE", "note": "x" * 600}}
+        ),
+        json.dumps(
+            {
+                "nobody@example.edu": {
+                    "status": "ERROR",
+                    "match_type": "NONE",
+                    "error_kind": "someone@x.edu",
+                }
+            }
+        ),
         json.dumps({"nobody@example.edu": {"status": "ERROR", "match_type": "NONE"}}),
-        json.dumps({"nobody@example.edu": {"status": "NOT_FOUND", "match_type": "NONE", "error_kind": "timeout"}}),
+        json.dumps(
+            {
+                "nobody@example.edu": {
+                    "status": "NOT_FOUND",
+                    "match_type": "NONE",
+                    "error_kind": "timeout",
+                }
+            }
+        ),
     ],
 )
-def test_outcomes_that_do_not_fit_the_file_are_refused(client: TestClient, directory: Recording, outcomes: str) -> None:
+def test_outcomes_that_do_not_fit_the_file_are_refused(
+    client: TestClient, directory: Recording, outcomes: str
+) -> None:
     page = client.post(CHECK, data=_form(outcomes=outcomes))
     assert page.status_code == 400
     assert "could not be read" in page.text
@@ -234,7 +306,9 @@ def test_outcomes_that_do_not_fit_the_file_are_refused(client: TestClient, direc
 def test_the_preview_carries_the_keys_and_the_script(client: TestClient) -> None:
     text = client.post(PREVIEW, data=_form()).text
     assert re.search(r'id="to-check">4<', text)
-    script = re.search(r'<script type="application/json" id="check-keys">(.*?)</script>', text, re.S)
+    script = re.search(
+        r'<script type="application/json" id="check-keys">(.*?)</script>', text, re.S
+    )
     assert script is not None
     keys = json.loads(script.group(1))
     assert keys == _keys()

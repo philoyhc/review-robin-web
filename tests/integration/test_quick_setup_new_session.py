@@ -78,7 +78,7 @@ def test_new_session_ui_toggles_put_the_checkbox_first(client: TestClient) -> No
     """20C Item 2: each toggle's checkbox precedes its text, as every
     other checkbox in the app does (`spec/ui_elements.md`)."""
     body = client.get("/operator/sessions/new").text
-    card = body[body.find('id="user-interface-settings"'):]
+    card = body[body.find('id="user-interface-settings"') :]
     for name, text in (
         ("relationships_enabled", "Relationships page"),
         ("observers_enabled", "Observers page"),
@@ -196,12 +196,12 @@ def test_create_session_with_quick_setup_files_processes_uploads(
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.code == "qs-newsess-roster")
     ).scalar_one()
-    reviewers = db.execute(
-        select(Reviewer).where(Reviewer.session_id == review_session.id)
-    ).scalars().all()
-    reviewees = db.execute(
-        select(Reviewee).where(Reviewee.session_id == review_session.id)
-    ).scalars().all()
+    reviewers = (
+        db.execute(select(Reviewer).where(Reviewer.session_id == review_session.id)).scalars().all()
+    )
+    reviewees = (
+        db.execute(select(Reviewee).where(Reviewee.session_id == review_session.id)).scalars().all()
+    )
     assert len(reviewers) == 1
     assert len(reviewees) == 1
     # Lands at the top of Session Home, not at the last slot that ran
@@ -228,8 +228,7 @@ def test_create_session_with_no_quick_setup_files_still_works(
     # Home with the Session details card open in edit mode (the Edit page
     # is retired) so the operator continues filling in session details.
     assert (
-        response.headers["location"]
-        == f"/operator/sessions/{review_session.public_id}?editing=1"
+        response.headers["location"] == f"/operator/sessions/{review_session.public_id}?editing=1"
     )
 
 

@@ -94,9 +94,7 @@ def _refuse_over_long(values: Mapping[str, object]) -> None:
 def _normalised_email(email: str) -> str:
     value = (email or "").strip()
     if not looks_like_email(value):
-        raise ObserverOperationError(
-            "invalid_email", f"{value!r} is not a valid email address."
-        )
+        raise ObserverOperationError("invalid_email", f"{value!r} is not a valid email address.")
     return value
 
 
@@ -123,9 +121,7 @@ def _email_taken(
     # that admits the same address (audit S2).
     key = normalize_email(email)
     rows = db.execute(
-        select(Observer.id, Observer.email).where(
-            Observer.session_id == session_id
-        )
+        select(Observer.id, Observer.email).where(Observer.session_id == session_id)
     ).all()
     return any(
         normalize_email(existing) == key
@@ -179,8 +175,10 @@ def same_cohort_rule(a: dict[str, Any] | None, b: dict[str, Any] | None) -> bool
     same "no rule": an imported observer can hold the explicit empty set,
     and an untouched editor posts ``None`` — saving its name must not
     rewrite one as the other with an event."""
+
     def norm(rule: dict[str, Any] | None) -> dict[str, Any] | None:
         return rule if rule and rule.get("rules") else None
+
     return norm(a) == norm(b)
 
 
@@ -318,8 +316,12 @@ def create_observer(
     )
     if rule is not None:
         _write_cohort_rule_event(
-            db, review_session=review_session, observer=observer,
-            rule=rule, user=user, correlation_id=correlation_id,
+            db,
+            review_session=review_session,
+            observer=observer,
+            rule=rule,
+            user=user,
+            correlation_id=correlation_id,
         )
     db.commit()
     return observer
@@ -368,16 +370,19 @@ def update_observer(
     # not-identity: a dirty check — did the operator edit this field?
     # A case-only edit is a real edit, so this compares raw values
     # deliberately. The uniqueness gate below folds.
-    if "email" in proposed and proposed["email"] != observer.email and _email_taken(
-        db,
-        session_id=observer.session_id,
-        email=proposed["email"],
-        exclude_observer_id=observer.id,
+    if (
+        "email" in proposed
+        and proposed["email"] != observer.email
+        and _email_taken(
+            db,
+            session_id=observer.session_id,
+            email=proposed["email"],
+            exclude_observer_id=observer.id,
+        )
     ):
         raise ObserverOperationError(
             "duplicate_email",
-            f"Another observer in this session already uses "
-            f"{proposed['email']!r}.",
+            f"Another observer in this session already uses {proposed['email']!r}.",
         )
 
     # Keyed on the resulting pair, so a name-only edit is caught too.
@@ -401,9 +406,7 @@ def update_observer(
     # 20H Item 1: an address edit onto an account another row of this
     # roster holds is refused. Resolved once, and the answer reused for
     # the rebind below.
-    rebind_resolve: Callable[[str], directory_accounts.Account | None] | None = (
-        resolve_account
-    )
+    rebind_resolve: Callable[[str], directory_accounts.Account | None] | None = resolve_account
     new_address = proposed.get("email")
     if (
         new_address is not None
@@ -417,9 +420,7 @@ def update_observer(
         if holder is not None:
             raise ObserverOperationError(
                 "duplicate_account",
-                directory_accounts.same_account_message(
-                    new_address, "observer", holder.email
-                ),
+                directory_accounts.same_account_message(new_address, "observer", holder.email),
             )
 
         def _resolve_held(
@@ -474,8 +475,12 @@ def update_observer(
         observer.cohort_rule = rule
         db.flush()
         _write_cohort_rule_event(
-            db, review_session=observer.session, observer=observer,
-            rule=rule, user=user, correlation_id=correlation_id,
+            db,
+            review_session=observer.session,
+            observer=observer,
+            rule=rule,
+            user=user,
+            correlation_id=correlation_id,
         )
     db.commit()
     return changes
@@ -572,10 +577,7 @@ def set_cohort_rule(
     # Only the observers whose rule changes are written and audited: an
     # untouched Save over a shared rule is not N events (operator pages
     # Item 4, as `update_observer`).
-    changed = [
-        o for o in candidates
-        if not same_cohort_rule(validated_dump, o.cohort_rule)
-    ]
+    changed = [o for o in candidates if not same_cohort_rule(validated_dump, o.cohort_rule)]
     for observer in changed:
         observer.cohort_rule = validated_dump
     db.flush()
@@ -587,8 +589,12 @@ def set_cohort_rule(
     # PKs, snapshot carries full-state row capture).
     for observer in changed:
         _write_cohort_rule_event(
-            db, review_session=review_session, observer=observer,
-            rule=validated_dump, user=user, correlation_id=correlation_id,
+            db,
+            review_session=review_session,
+            observer=observer,
+            rule=validated_dump,
+            user=user,
+            correlation_id=correlation_id,
         )
     db.commit()
     return validated_dump

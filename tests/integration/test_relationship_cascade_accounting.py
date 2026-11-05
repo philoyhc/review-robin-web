@@ -62,9 +62,7 @@ def _mk(client: TestClient, db: Session, code: str) -> ReviewSession:
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    rs = db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    rs = db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
     rs.relationships_enabled = True
     rs.observers_enabled = True
     db.commit()
@@ -75,8 +73,7 @@ def _mk(client: TestClient, db: Session, code: str) -> ReviewSession:
 def _seed(db: Session, sid: int, *, pairs: int = 3):
     """`pairs` reviewers, `pairs` reviewees, and one relationship each."""
     reviewers = [
-        Reviewer(session_id=sid, name=f"R{i}", email=f"r{i}@example.org")
-        for i in range(pairs)
+        Reviewer(session_id=sid, name=f"R{i}", email=f"r{i}@example.org") for i in range(pairs)
     ]
     reviewees = [
         Reviewee(
@@ -117,18 +114,14 @@ def _counts(db: Session, sid: int, event_type: str) -> dict:
 
 def _relationships(db: Session, sid: int) -> int:
     return len(
-        db.execute(
-            select(Relationship).where(Relationship.session_id == sid)
-        ).scalars().all()
+        db.execute(select(Relationship).where(Relationship.session_id == sid)).scalars().all()
     )
 
 
 # ── The counter itself ─────────────────────────────────────────────────
 
 
-def test_the_counter_answers_per_model_and_per_row(
-    client: TestClient, db: Session
-) -> None:
+def test_the_counter_answers_per_model_and_per_row(client: TestClient, db: Session) -> None:
     """Three models, three answers, and only two of them are non-zero.
 
     `Observer` and `Relationship` are absent from the FK map — nothing
@@ -138,50 +131,37 @@ def test_the_counter_answers_per_model_and_per_row(
     rs = _mk(client, db, "relcc-1")
     reviewers, reviewees = _seed(db, rs.id)
 
-    assert roster_bulk.relationship_cascade_count(
-        db, model=Reviewer, ids=[reviewers[0].id]
-    ) == 1
-    assert roster_bulk.relationship_cascade_count(
-        db, model=Reviewer, ids=[r.id for r in reviewers]
-    ) == 3
-    assert roster_bulk.relationship_cascade_count(
-        db, model=Reviewee, ids=[reviewees[0].id]
-    ) == 1
+    assert roster_bulk.relationship_cascade_count(db, model=Reviewer, ids=[reviewers[0].id]) == 1
+    assert (
+        roster_bulk.relationship_cascade_count(db, model=Reviewer, ids=[r.id for r in reviewers])
+        == 3
+    )
+    assert roster_bulk.relationship_cascade_count(db, model=Reviewee, ids=[reviewees[0].id]) == 1
     # Real ids for both, so a mutation adding either model to the map
     # would be caught. Ids that match no row would make this pass by
     # accident rather than by rule.
-    observer = Observer(
-        session_id=rs.id, email="o@example.org", display_name="O"
-    )
+    observer = Observer(session_id=rs.id, email="o@example.org", display_name="O")
     db.add(observer)
     db.commit()
     db.refresh(observer)
     every_relationship = [
         r.id
-        for r in db.execute(
-            select(Relationship).where(Relationship.session_id == rs.id)
-        ).scalars()
+        for r in db.execute(select(Relationship).where(Relationship.session_id == rs.id)).scalars()
     ]
-    assert roster_bulk.relationship_cascade_count(
-        db, model=Observer, ids=[observer.id]
-    ) == 0
-    assert roster_bulk.relationship_cascade_count(
-        db, model=Relationship, ids=every_relationship
-    ) == 0, "a relationship delete reaches no other relationship"
+    assert roster_bulk.relationship_cascade_count(db, model=Observer, ids=[observer.id]) == 0
+    assert (
+        roster_bulk.relationship_cascade_count(db, model=Relationship, ids=every_relationship) == 0
+    ), "a relationship delete reaches no other relationship"
     # An empty selection. **This one is behaviour-preserving**: the
     # `not ids` short-circuit mirrors `cascade_counts`' and saves a
     # query, but `column.in_([])` already answers 0, so removing the
     # guard passes this assertion. Mutation-checked and recorded rather
     # than dressed up as a behavioural claim — the reason to keep the
     # line is symmetry with its sibling, which is a source fact.
-    assert roster_bulk.relationship_cascade_count(
-        db, model=Reviewer, ids=[]
-    ) == 0
+    assert roster_bulk.relationship_cascade_count(db, model=Reviewer, ids=[]) == 0
 
 
-def test_the_count_must_be_taken_before_the_delete(
-    client: TestClient, db: Session
-) -> None:
+def test_the_count_must_be_taken_before_the_delete(client: TestClient, db: Session) -> None:
     """The reason the counter is a separate call rather than something
     the delete reports: afterwards there is nothing left to count.
 
@@ -193,9 +173,7 @@ def test_the_count_must_be_taken_before_the_delete(
     reviewers, _ = _seed(db, rs.id)
     ids = [r.id for r in reviewers]
 
-    before = roster_bulk.relationship_cascade_count(
-        db, model=Reviewer, ids=ids
-    )
+    before = roster_bulk.relationship_cascade_count(db, model=Reviewer, ids=ids)
     client.post(
         f"/operator/sessions/{rs.public_id}/reviewers/delete-all",
         data={"confirm": "true"},
@@ -287,8 +265,7 @@ def test_a_csv_replace_logs_the_relationships_it_destroyed(
 
     response = client.post(
         f"/operator/sessions/{rs.public_id}/{page}/import",
-        files={"file": ("r.csv", header + b"\nNew,new@example.org\n",
-                        "text/csv")},
+        files={"file": ("r.csv", header + b"\nNew,new@example.org\n", "text/csv")},
         data={"confirm_replace": "true"},
         follow_redirects=False,
     )
@@ -299,18 +276,14 @@ def test_a_csv_replace_logs_the_relationships_it_destroyed(
     assert _counts(db, rs.id, event_type)["cascaded_relationships"] == 3
 
 
-def test_observers_events_keep_the_payload_they_had(
-    client: TestClient, db: Session
-) -> None:
+def test_observers_events_keep_the_payload_they_had(client: TestClient, db: Session) -> None:
     """Omitted, not zero. Nothing references `observers`, so a key
     reading 0 would describe a cascade that cannot exist — the same
     reason their delete confirmation never mentions assignments.
     """
     rs = _mk(client, db, "relcc-obs")
     _seed(db, rs.id)
-    db.add(
-        Observer(session_id=rs.id, email="o@example.org", display_name="O")
-    )
+    db.add(Observer(session_id=rs.id, email="o@example.org", display_name="O"))
     db.commit()
 
     client.post(
@@ -374,9 +347,9 @@ def test_observer_events_do_not_report_assignments_they_never_delete(
 
     assert _counts(db, rs.id, "observers.imported") == {"new": 1, "replaced": 1}
     assert _counts(db, rs.id, "observers.deleted_all") == {"deleted": 1}
-    assert db.execute(
-        select(Assignment.id).where(Assignment.session_id == rs.id)
-    ).all(), "the assignment the old count reported is still there"
+    assert db.execute(select(Assignment.id).where(Assignment.session_id == rs.id)).all(), (
+        "the assignment the old count reported is still there"
+    )
 
 
 @pytest.mark.parametrize(
@@ -397,17 +370,17 @@ def test_bulk_delete_omits_the_key_for_the_models_that_reach_nothing(
     rs = _mk(client, db, f"relcc-om-{page[:4]}")
     _seed(db, rs.id)
     if page == "observers":
-        row = Observer(
-            session_id=rs.id, email="o@example.org", display_name="O"
-        )
+        row = Observer(session_id=rs.id, email="o@example.org", display_name="O")
         db.add(row)
         db.commit()
         db.refresh(row)
         row_id = row.id
     else:
-        existing = db.execute(
-            select(Relationship).where(Relationship.session_id == rs.id)
-        ).scalars().first()
+        existing = (
+            db.execute(select(Relationship).where(Relationship.session_id == rs.id))
+            .scalars()
+            .first()
+        )
         assert existing is not None
         row_id = existing.id
 
@@ -480,9 +453,10 @@ def test_every_render_path_already_reaches_the_count(
     # would wrap the same object twice and restore it to a wrapper.
     from app.web.routes_operator import _shared
 
-    assert _shared._templates is __import__(
-        "app.web.routes_operator._setup_" + page, fromlist=["_templates"]
-    )._templates, "the page module no longer shares _shared's templates"
+    assert (
+        _shared._templates
+        is __import__("app.web.routes_operator._setup_" + page, fromlist=["_templates"])._templates
+    ), "the page module no longer shares _shared's templates"
 
     captured: list[dict] = []
     original = _shared._templates.TemplateResponse
@@ -513,9 +487,7 @@ def test_every_render_path_already_reaches_the_count(
         assert context["status_pills"].relationship_count == 3, sorted(context)
 
 
-def test_the_audit_log_page_shows_the_new_count(
-    client: TestClient, db: Session
-) -> None:
+def test_the_audit_log_page_shows_the_new_count(client: TestClient, db: Session) -> None:
     """The one surface this rung DOES change for a reader.
 
     `format_audit_detail` renders a `counts` envelope by iterating every
@@ -588,13 +560,11 @@ def test_every_confirmation_names_the_relationship_loss(
     # The first version of this test asserted a count of the shared
     # phrase and passed on the defective sentence.
     noun = page[:-1]
+    assert f"delete the existing 3 {noun}s and the 3 relationships involving them." in flat, flat[
+        :400
+    ]
     assert (
-        f"delete the existing 3 {noun}s and the 3 relationships "
-        "involving them." in flat
-    ), flat[:400]
-    assert (
-        f"replace the existing 3 {noun}s and delete the 3 "
-        "relationships involving them." in flat
+        f"replace the existing 3 {noun}s and delete the 3 relationships involving them." in flat
     ), flat[:400]
 
     # The expander's clause is numberless and selection-summed.
@@ -616,9 +586,10 @@ def test_a_roster_with_no_relationships_reads_exactly_as_before(
     rs = _mk(client, db, f"relcc-zero-{page[:4]}")
     # Rosters, but no relationships between them.
     db.add_all(
-        [Reviewer(session_id=rs.id, name="R", email="r@example.org"),
-         Reviewee(session_id=rs.id, name="E",
-                  email_or_identifier="e@example.org")]
+        [
+            Reviewer(session_id=rs.id, name="R", email="r@example.org"),
+            Reviewee(session_id=rs.id, name="E", email_or_identifier="e@example.org"),
+        ]
     )
     db.commit()
 
@@ -644,8 +615,7 @@ def test_a_roster_with_no_relationships_reads_exactly_as_before(
     assert 'data-relationships="0"' in flat
 
 
-@pytest.mark.parametrize("page,noun", [("reviewers", "reviewer"),
-                                       ("reviewees", "reviewee")])
+@pytest.mark.parametrize("page,noun", [("reviewers", "reviewer"), ("reviewees", "reviewee")])
 def test_each_row_carries_the_relationships_it_would_take(
     client: TestClient, db: Session, page: str, noun: str
 ) -> None:
@@ -669,12 +639,13 @@ def test_each_row_carries_the_relationships_it_would_take(
     db.commit()
 
     body = client.get(f"/operator/sessions/{rs.public_id}/{page}").text
-    rows = (reviewers if page == "reviewers" else reviewees)
+    rows = reviewers if page == "reviewers" else reviewees
     found = {}
     for row in rows:
         m = re.search(
             rf'id="{noun}-row-{row.id}".*?data-relationships="(\d+)"',
-            body, re.S,
+            body,
+            re.S,
         )
         assert m, f"row {row.id} carries no count"
         found[row.id] = int(m.group(1))
@@ -710,12 +681,9 @@ def test_the_expander_clause_is_gated_on_the_selection_not_the_roster(
     _seed(db, rs.id)
     body = client.get(f"/operator/sessions/{rs.public_id}/{page}").text
 
-    assert "relationshipsIn(sel) > 0" in body, (
-        "the clause no longer reads the selection"
-    )
+    assert "relationshipsIn(sel) > 0" in body, "the clause no longer reads the selection"
     assert "parseInt(row.dataset.relationships, 10) || 0" in body, (
-        "the summing helper is gone or no longer defaults a missing "
-        "attribute to 0"
+        "the summing helper is gone or no longer defaults a missing attribute to 0"
     )
 
 
@@ -750,22 +718,16 @@ def test_the_replace_verb_is_not_repeated_when_assignments_exist(
     body = client.get(f"/operator/sessions/{rs.public_id}/{page}?unlocked=1").text
     flat = " ".join(re.sub(r"<[^>]+>", " ", body).split())
 
-    assert (
-        "and delete the 1 assignment and the 3 relationships involving "
-        "them." in flat
-    ), flat[:500]
+    assert "and delete the 1 assignment and the 3 relationships involving them." in flat, flat[:500]
     assert "and delete the 3 relationships" not in flat, (
-        "the verb is repeated where the assignment clause already "
-        "introduced it"
+        "the verb is repeated where the assignment clause already introduced it"
     )
 
 
 # ── Rung 3: the prose that explains the cost before it is incurred ────
 
 
-def test_the_guide_tells_operators_what_order_to_work_in(
-    client: TestClient, db: Session
-) -> None:
+def test_the_guide_tells_operators_what_order_to_work_in(client: TestClient, db: Session) -> None:
     """The confirmations name the cost at the moment it is about to be
     paid; the Guide is where an operator learns to avoid paying it.
 
@@ -775,10 +737,8 @@ def test_the_guide_tells_operators_what_order_to_work_in(
     empties this one was to do it.
     """
     rs = _mk(client, db, "relcc-guide")
-    body = client.get(
-        f"/guide?return_to=/operator/sessions/{rs.public_id}/relationships"
-    ).text
-    section = body[body.index("Optional: relationships and observers"):]
+    body = client.get(f"/guide?return_to=/operator/sessions/{rs.public_id}/relationships").text
+    section = body[body.index("Optional: relationships and observers") :]
     section = " ".join(re.sub(r"<[^>]+>", " ", section[:2000]).split())
 
     assert "after the reviewer and reviewee rosters" in section, section[:400]
@@ -803,9 +763,7 @@ def test_the_guide_tells_operators_what_order_to_work_in(
     )
 
 
-def test_the_three_cards_agree_about_what_an_upload_costs(
-    client: TestClient, db: Session
-) -> None:
+def test_the_three_cards_agree_about_what_an_upload_costs(client: TestClient, db: Session) -> None:
     """One fact, three pages, and each states the half it owns.
 
     Reviewers and Reviewees say what an upload *there* destroys;
@@ -821,8 +779,7 @@ def test_the_three_cards_agree_about_what_an_upload_costs(
         body = client.get(f"/operator/sessions/{rs.public_id}/{page}").text
         start = body.index('<details class="card page-guidance')
         bodies[page] = " ".join(
-            re.sub(r"<[^>]+>", " ", body[start : body.index("</details>", start)])
-            .split()
+            re.sub(r"<[^>]+>", " ", body[start : body.index("</details>", start)]).split()
         )
 
     for page in ("reviewers", "reviewees"):
@@ -873,10 +830,7 @@ def test_a_session_without_relationships_is_not_told_their_cost(
 
     body = client.get(f"/operator/sessions/{rs.public_id}/{page}").text
     start = body.index('<details class="card page-guidance')
-    prose = " ".join(
-        re.sub(r"<[^>]+>", " ", body[start : body.index("</details>", start)])
-        .split()
-    )
+    prose = " ".join(re.sub(r"<[^>]+>", " ", body[start : body.index("</details>", start)]).split())
 
     assert "relationship" not in prose.lower(), prose
     # The rest of the card is untouched — this is a suppressed clause,
@@ -896,10 +850,7 @@ def test_relationships_guidance_does_not_claim_an_upload_clears_assignments(
 
     body = client.get(f"/operator/sessions/{rs.public_id}/relationships").text
     start = body.index('<details class="card page-guidance')
-    prose = " ".join(
-        re.sub(r"<[^>]+>", " ", body[start : body.index("</details>", start)])
-        .split()
-    )
+    prose = " ".join(re.sub(r"<[^>]+>", " ", body[start : body.index("</details>", start)]).split())
 
     assert "clears any assignments" not in prose
     assert "Assignments already generated are not cleared" in prose
@@ -928,18 +879,14 @@ def _add_new_title(client: TestClient, sid: str) -> str | None:
     passed on a button that had vanished.
     """
     body = client.get(f"/operator/sessions/{sid}/relationships").text
-    match = re.search(
-        r'aria-disabled="true"\s+title="([^"]*)">Add new', body
-    )
+    match = re.search(r'aria-disabled="true"\s+title="([^"]*)">Add new', body)
     return match.group(1) if match else None
 
 
 def _add_new_is_live(client: TestClient, sid: str) -> bool:
     """An `Add new` that is present, enabled and links somewhere."""
     body = client.get(f"/operator/sessions/{sid}/relationships").text
-    return bool(
-        re.search(r'<a class="btn secondary"\s+[^>]*href="[^"]+">Add new', body)
-    )
+    return bool(re.search(r'<a class="btn secondary"\s+[^>]*href="[^"]+">Add new', body))
 
 
 @pytest.mark.parametrize(
@@ -991,15 +938,11 @@ def test_the_empty_state_names_the_roster_that_is_missing(
 
     prose = _empty_state(client, rs.public_id)
     assert "none can be added" in prose, prose
-    assert "Upload a CSV" not in prose, (
-        "an upload here fails every row; do not invite one"
-    )
+    assert "Upload a CSV" not in prose, "an upload here fails every row; do not invite one"
     for name in names:
         assert f"{name}" in prose, (name, prose)
     for name in not_named:
-        assert name not in prose, (
-            f"{name} has rows; naming it sends the operator to the wrong page"
-        )
+        assert name not in prose, f"{name} has rows; naming it sends the operator to the wrong page"
     # Plural agreement, which a substring assertion on the roster names
     # would not catch: "rosters both have" vs "roster has".
     expected = "rosters both have rows" if len(names) > 1 else "roster has rows"
@@ -1011,9 +954,7 @@ def test_the_empty_state_names_the_roster_that_is_missing(
         assert prose.index("Reviewers") < prose.index("Reviewees"), prose
 
 
-def test_the_empty_state_links_to_the_roster_it_names(
-    client: TestClient, db: Session
-) -> None:
+def test_the_empty_state_links_to_the_roster_it_names(client: TestClient, db: Session) -> None:
     """Naming the page is half of it; the operator has to get there.
 
     The link is what makes this better than the tooltip it replaces —
@@ -1030,9 +971,7 @@ def test_the_empty_state_links_to_the_roster_it_names(
     assert hrefs == [f"/operator/sessions/{rs.public_id}/reviewees"], hrefs
 
 
-def test_a_populated_pair_of_rosters_reads_as_it_did(
-    client: TestClient, db: Session
-) -> None:
+def test_a_populated_pair_of_rosters_reads_as_it_did(client: TestClient, db: Session) -> None:
     """The fourth state, reading as it did before this rung.
 
     Same rule the rung-2 labels follow: a sentence describing a
@@ -1131,14 +1070,11 @@ def test_a_roster_delete_is_what_puts_the_page_in_that_state(
     assert "none can be added" in prose, prose
     assert "Reviewers" in prose, prose
     assert _add_new_title(client, rs.public_id) == (
-        "Add rows to the Reviewers roster first — "
-        "a relationship needs one of each."
+        "Add rows to the Reviewers roster first — a relationship needs one of each."
     )
 
 
-def test_an_inactive_reviewer_still_counts_as_a_reviewer(
-    client: TestClient, db: Session
-) -> None:
+def test_an_inactive_reviewer_still_counts_as_a_reviewer(client: TestClient, db: Session) -> None:
     """`list_reviewers` is status-blind and so is the gate that reads it.
 
     A relationship can name an inactive reviewer — `create_relationship`

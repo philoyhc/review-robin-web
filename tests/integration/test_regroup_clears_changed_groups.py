@@ -112,19 +112,25 @@ def _answers(db: Session, world: _World) -> dict[str, str | None]:
     db.expire_all()
     out: dict[str, str | None] = {}
     for name, row in world.rows.items():
-        values = db.execute(
-            select(Response.value).where(Response.assignment_id == row.id)
-        ).scalars().all()
+        values = (
+            db.execute(select(Response.value).where(Response.assignment_id == row.id))
+            .scalars()
+            .all()
+        )
         out[name] = values[0] if values else None
     return out
 
 
 def _cleared(db: Session, world: _World) -> int | None:
-    event = db.execute(
-        select(AuditEvent)
-        .where(AuditEvent.event_type == "instrument.group_boundary_updated")
-        .order_by(AuditEvent.id.desc())
-    ).scalars().first()
+    event = (
+        db.execute(
+            select(AuditEvent)
+            .where(AuditEvent.event_type == "instrument.group_boundary_updated")
+            .order_by(AuditEvent.id.desc())
+        )
+        .scalars()
+        .first()
+    )
     assert event is not None
     return ((event.detail or {}).get("context") or {}).get("defuncted_group_responses")
 
@@ -196,9 +202,7 @@ def test_a_finer_boundary_keeps_every_part(db: Session) -> None:
 
 def test_individual_to_grouped_keeps_only_a_one_member_group(db: Session) -> None:
     tags = {"Ann": ("red", "x"), "Bo": ("red", "x"), "Cy": ("blue", "x")}
-    world = _seed(
-        db, group_kind=None, tags=tags, answers={"Ann": "1", "Bo": "3", "Cy": "5"}
-    )
+    world = _seed(db, group_kind=None, tags=tags, answers={"Ann": "1", "Bo": "3", "Cy": "5"})
     _unit(db, world, "grouped", [_TEAM])
     assert _answers(db, world) == {"Ann": None, "Bo": None, "Cy": "5"}
     assert _cleared(db, world) == 2
@@ -305,9 +309,7 @@ def test_a_member_removed_keeps_the_group_it_leaves(db: Session) -> None:
     db.delete(bo)
     db.flush()
 
-    cleared = responses_service.clear_changed_groups(
-        db, session_id=session_id, before=before
-    )
+    cleared = responses_service.clear_changed_groups(db, session_id=session_id, before=before)
 
     assert cleared == 0
     assert _answers(db, world) == {"Ann": "2", "Cy": "5", "Di": "5"}
@@ -332,11 +334,15 @@ def test_deleting_a_reviewee_keeps_the_group_it_leaves(db: Session) -> None:
     )
 
     assert _answers(db, world) == {"Ann": "2", "Cy": "5", "Di": "5"}
-    event = db.execute(
-        select(AuditEvent)
-        .where(AuditEvent.event_type == "reviewee.bulk_deleted")
-        .order_by(AuditEvent.id.desc())
-    ).scalars().first()
+    event = (
+        db.execute(
+            select(AuditEvent)
+            .where(AuditEvent.event_type == "reviewee.bulk_deleted")
+            .order_by(AuditEvent.id.desc())
+        )
+        .scalars()
+        .first()
+    )
     assert event is not None
     assert event.detail is not None
     assert "context" not in event.detail
@@ -382,9 +388,7 @@ def test_a_reused_assignment_id_still_reads_as_a_new_member(db: Session) -> None
     db.add(world.rows["Eve"])
     db.flush()
 
-    cleared = responses_service.clear_changed_groups(
-        db, session_id=session_id, before=before
-    )
+    cleared = responses_service.clear_changed_groups(db, session_id=session_id, before=before)
 
     assert cleared == 1
     assert _answers(db, world) == {"Ann": "2", "Bo": "2", "Cy": None, "Eve": None}

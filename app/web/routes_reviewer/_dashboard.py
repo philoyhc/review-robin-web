@@ -263,21 +263,16 @@ def reviewer_dashboard(
                 "link_enabled": link_enabled,
                 "link_target": link_target,
                 "start_text": (
-                    date_formatting.format_datetime(start_at, session_zone)
-                    if start_at
-                    else None
+                    date_formatting.format_datetime(start_at, session_zone) if start_at else None
                 ),
                 "deadline_text": (
-                    date_formatting.format_datetime(
-                        review_session.deadline, session_zone
-                    )
+                    date_formatting.format_datetime(review_session.deadline, session_zone)
                     if review_session.deadline
                     else None
                 ),
                 "deadline_is_past": (
                     review_session.deadline is not None
-                    and _to_utc(review_session.deadline)
-                    <= datetime.now(UTC)
+                    and _to_utc(review_session.deadline) <= datetime.now(UTC)
                 ),
                 "timezone_gmt_offset": date_formatting.gmt_offset_label(
                     session_zone, at=review_session.deadline

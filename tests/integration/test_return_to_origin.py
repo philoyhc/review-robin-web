@@ -18,9 +18,7 @@ def _create_session(client: TestClient, db: Session, *, code: str = "rrw-rt") ->
         data={"name": code.title(), "code": code},
         follow_redirects=False,
     )
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def test_about_renders_default_back_link_without_return_to(
@@ -36,9 +34,7 @@ def test_about_renders_session_label_when_return_to_is_session_path(
     client: TestClient, db: Session
 ) -> None:
     session = _create_session(client, db)
-    body = client.get(
-        f"/about?return_to=/operator/sessions/{session.public_id}"
-    ).text
+    body = client.get(f"/about?return_to=/operator/sessions/{session.public_id}").text
     assert f'href="/operator/sessions/{session.public_id}"' in body
     assert f"Back to {session.name}" in body
 
@@ -54,9 +50,7 @@ def test_about_falls_back_to_default_for_disallowed_return_to(
 
 def test_me_debug_renders_back_link(client: TestClient, db: Session) -> None:
     session = _create_session(client, db, code="rrw-md")
-    body = client.get(
-        f"/auth/me/debug?return_to=/operator/sessions/{session.public_id}"
-    ).text
+    body = client.get(f"/auth/me/debug?return_to=/operator/sessions/{session.public_id}").text
     assert 'class="back-link"' in body
     assert f"Back to {session.name}" in body
 
@@ -72,8 +66,10 @@ def test_a_stranger_is_not_told_a_session_name_by_the_back_link(
     session = _create_session(client, db, code="rrw-secret")
     stranger = make_client(
         AuthenticatedUser(
-            principal_id="eve-oid", email="eve@example.edu",
-            name="Eve", provider="aad",
+            principal_id="eve-oid",
+            email="eve@example.edu",
+            name="Eve",
+            provider="aad",
         )
     )
     body = stranger.get(f"{page}?return_to={shape.format(id=session.public_id)}").text
@@ -84,29 +80,25 @@ def test_a_stranger_is_not_told_a_session_name_by_the_back_link(
     assert 'href="/me">&larr; Back to your reviews' in body
 
 
-def test_me_debug_creates_no_user_row(
-    client: TestClient, db: Session, make_client
-) -> None:
+def test_me_debug_creates_no_user_row(client: TestClient, db: Session, make_client) -> None:
     """The debug page looks the viewer up to decide a label; it never
     signs them in as a side effect. A real session makes the lookup
     decide a name as well as the fallback."""
     session = _create_session(client, db, code="rrw-norow")
     eve = make_client(
         AuthenticatedUser(
-            principal_id="eve-oid", email="eve@example.edu",
-            name="Eve", provider="aad",
+            principal_id="eve-oid",
+            email="eve@example.edu",
+            name="Eve",
+            provider="aad",
         )
     )
     body = eve.get(f"/auth/me/debug?return_to=/me/sessions/{session.public_id}").text
     assert "Back to your reviews" in body
-    assert db.execute(
-        select(User).where(User.email == "eve@example.edu")
-    ).first() is None
+    assert db.execute(select(User).where(User.email == "eve@example.edu")).first() is None
 
 
-def test_me_debug_renders_when_the_user_lookup_fails(
-    make_client, monkeypatch
-) -> None:
+def test_me_debug_renders_when_the_user_lookup_fails(make_client, monkeypatch) -> None:
     """Sign-in details is where a broken sign-in is diagnosed, so a
     failed lookup reads as no row instead of a 500."""
     from sqlalchemy.exc import OperationalError
@@ -119,8 +111,10 @@ def test_me_debug_renders_when_the_user_lookup_fails(
     monkeypatch.setattr(routes_auth, "find_user", broken)
     eve = make_client(
         AuthenticatedUser(
-            principal_id="eve-oid", email="eve@example.edu",
-            name="Eve", provider="aad",
+            principal_id="eve-oid",
+            email="eve@example.edu",
+            name="Eve",
+            provider="aad",
         )
     )
     resp = eve.get("/auth/me/debug")
@@ -134,9 +128,11 @@ def test_settings_does_not_name_another_operators_session(
     """A workspace operator reaches Settings, but a session they do not
     own stays unnamed in its back link."""
     session = _create_session(client, db, code="rrw-alices")
-    body = make_client(bob).get(
-        f"/operator/settings?return_to=/operator/sessions/{session.public_id}"
-    ).text
+    body = (
+        make_client(bob)
+        .get(f"/operator/settings?return_to=/operator/sessions/{session.public_id}")
+        .text
+    )
     assert session.name not in body
     assert "Back to Sessions" in body
 

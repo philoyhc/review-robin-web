@@ -50,9 +50,7 @@ def _build(db: Session, code: str, *, group: bool = False) -> tuple:
     user = User(email=f"op-{code}@e.edu", display_name="Op")
     db.add(user)
     db.flush()
-    review_session = ReviewSession(
-        name=code, code=code, created_by_user_id=user.id
-    )
+    review_session = ReviewSession(name=code, code=code, created_by_user_id=user.id)
     db.add(review_session)
     db.flush()
     instrument = Instrument(
@@ -86,9 +84,7 @@ def _reviewer(db, rs, email, name="R"):
 
 
 def _reviewee(db, rs, ident, name, tag_1=None):
-    e = Reviewee(
-        session_id=rs.id, name=name, email_or_identifier=ident, tag_1=tag_1
-    )
+    e = Reviewee(session_id=rs.id, name=name, email_or_identifier=ident, tag_1=tag_1)
     db.add(e)
     db.flush()
     return e
@@ -101,9 +97,7 @@ def _assignment(db, rs, reviewer, reviewee, instrument):
         reviewee_id=reviewee.id,
         instrument_id=instrument.id,
         include=True,
-        is_self_review=(
-            reviewer.email.lower() == reviewee.email_or_identifier.lower()
-        ),
+        is_self_review=(reviewer.email.lower() == reviewee.email_or_identifier.lower()),
     )
     db.add(a)
     db.flush()
@@ -117,11 +111,7 @@ def _response(db, assignment, field, value, *, submitted=True, version=1):
         response_field_id=field.id,
         value=value,
         saved_at=saved,
-        submitted_at=(
-            dt.datetime(2026, 6, 1, 10, 0, tzinfo=dt.UTC)
-            if submitted
-            else None
-        ),
+        submitted_at=(dt.datetime(2026, 6, 1, 10, 0, tzinfo=dt.UTC) if submitted else None),
         version=version,
     )
     db.add(r)
@@ -271,16 +261,17 @@ def test_a_pair_the_rules_did_not_generate_is_dropped_not_backfilled(
 
     # No assignment was fabricated: the target still carries the one it
     # was given.
-    assert db.execute(
-        select(func.count()).select_from(Assignment).where(
-            Assignment.session_id == dst.id
-        )
-    ).scalar_one() == 1
-    dst_responses = db.execute(
-        select(Response)
-        .join(Assignment)
-        .where(Assignment.session_id == dst.id)
-    ).scalars().all()
+    assert (
+        db.execute(
+            select(func.count()).select_from(Assignment).where(Assignment.session_id == dst.id)
+        ).scalar_one()
+        == 1
+    )
+    dst_responses = (
+        db.execute(select(Response).join(Assignment).where(Assignment.session_id == dst.id))
+        .scalars()
+        .all()
+    )
     assert len(dst_responses) == 1
 
 
@@ -401,10 +392,7 @@ def test_group_row_named_by_its_tags_alone_still_matches(db: Session) -> None:
         a = _assignment(db, src, rvr, _reviewee(db, src, ident, name, tag), s_inst)
         _response(db, a, s_field, value_by_team[tag])
     old_names = {"Team A (Carol, Eve)": "Team A", "Team B (Dan)": "Team B"}
-    rows = [
-        [old_names.get(cell, cell) for cell in row]
-        for row in serialize_responses(db, src)
-    ]
+    rows = [[old_names.get(cell, cell) for cell in row] for row in serialize_responses(db, src)]
 
     dst, d_inst, _ = _build(db, "grp-old-dst", group=True)
     d_rvr = _reviewer(db, dst, "r@e.edu")
@@ -415,9 +403,7 @@ def test_group_row_named_by_its_tags_alone_still_matches(db: Session) -> None:
     ):
         _assignment(db, dst, d_rvr, _reviewee(db, dst, ident, name, tag), d_inst)
 
-    result = load_responses(
-        db, review_session=dst, rows=parse_responses_csv(_csv_bytes(rows))
-    )
+    result = load_responses(db, review_session=dst, rows=parse_responses_csv(_csv_bytes(rows)))
     assert result.dropped == []
     assert result.responses == 3
     stored = dict(
@@ -441,8 +427,13 @@ def test_a_shared_short_label_falls_back_to_the_position(db: Session) -> None:
         db.add(inst)
         db.flush()
         f = InstrumentResponseField(
-            instrument_id=inst.id, field_key="q1", label="Q1", order=1,
-            help_text="Help", visible=True, **_INLINE,
+            instrument_id=inst.id,
+            field_key="q1",
+            label="Q1",
+            order=1,
+            help_text="Help",
+            visible=True,
+            **_INLINE,
         )
         db.add(f)
         db.flush()

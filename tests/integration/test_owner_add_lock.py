@@ -52,9 +52,7 @@ def _stale_revoke(db: Session, user: User) -> None:
 
 def test_the_lock_is_for_share_and_rereads_the_row() -> None:
     statement = session_owners._eligibility_lock(1)
-    assert str(statement.compile(dialect=postgresql.dialect())).rstrip().endswith(
-        "FOR SHARE"
-    )
+    assert str(statement.compile(dialect=postgresql.dialect())).rstrip().endswith("FOR SHARE")
     assert statement.get_execution_options()["populate_existing"] is True
 
 
@@ -70,13 +68,11 @@ def test_add_owner_refuses_a_target_revoked_since_it_was_loaded(
     bob = _seed(db, "bob@example.edu", is_operator=True)
     _stale_revoke(db, bob)
     with pytest.raises(session_owners.OwnerOperationError) as refused:
-        session_owners.add_owner(
-            db, review_session=review_session, actor=actor, target=bob
-        )
+        session_owners.add_owner(db, review_session=review_session, actor=actor, target=bob)
     assert refused.value.code == "not_in_workspace"
-    assert db.execute(
-        select(SessionOperator).where(SessionOperator.user_id == bob.id)
-    ).first() is None
+    assert (
+        db.execute(select(SessionOperator).where(SessionOperator.user_id == bob.id)).first() is None
+    )
 
 
 def test_single_row_revoke_takes_the_batch_lock_before_counting(
@@ -142,9 +138,9 @@ def test_create_bounces_a_creator_revoked_since_the_gate(
     )
     assert response.status_code == 303
     assert response.headers["location"].endswith("/me?notice=organizers")
-    assert db.execute(
-        select(ReviewSession).where(ReviewSession.code == "lock-create")
-    ).first() is None
+    assert (
+        db.execute(select(ReviewSession).where(ReviewSession.code == "lock-create")).first() is None
+    )
 
 
 def test_duplicate_bounces_a_creator_revoked_since_the_gate(
@@ -192,11 +188,13 @@ def test_create_skips_a_staged_owner_revoked_since_the_check(
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.code == "lock-staged")
     ).scalar_one()
-    owners = db.execute(
-        select(SessionOperator.user_id).where(
-            SessionOperator.session_id == review_session.id
+    owners = (
+        db.execute(
+            select(SessionOperator.user_id).where(SessionOperator.session_id == review_session.id)
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert sorted(owners) == sorted([review_session.created_by_user_id, carl.id])
 
 
@@ -247,9 +245,7 @@ def pg_seed(engine: Engine):
         pytest.skip("row locks need Postgres (the ci-postgres job)")
     token = uuid.uuid4().hex[:8]
     with Session(engine) as setup:
-        admin = User(
-            email=f"lock-{token}-admin@example.edu", is_operator=True, is_sys_admin=True
-        )
+        admin = User(email=f"lock-{token}-admin@example.edu", is_operator=True, is_sys_admin=True)
         bob = User(email=f"lock-{token}-bob@example.edu", is_operator=True)
         setup.add_all([admin, bob])
         setup.flush()
@@ -258,11 +254,7 @@ def pg_seed(engine: Engine):
         )
         setup.add(review_session)
         setup.flush()
-        setup.add(
-            SessionOperator(
-                session_id=review_session.id, user_id=admin.id, role="owner"
-            )
-        )
+        setup.add(SessionOperator(session_id=review_session.id, user_id=admin.id, role="owner"))
         setup.commit()
         ids = (admin.id, bob.id, review_session.id)
     yield ids
@@ -277,9 +269,7 @@ def pg_seed(engine: Engine):
             {"sid": ids[2]},
         )
         cleanup.execute(text("DELETE FROM sessions WHERE id = :sid"), {"sid": ids[2]})
-        cleanup.execute(
-            text("DELETE FROM users WHERE id = ANY(:ids)"), {"ids": user_ids}
-        )
+        cleanup.execute(text("DELETE FROM users WHERE id = ANY(:ids)"), {"ids": user_ids})
         cleanup.commit()
 
 
@@ -288,9 +278,7 @@ def _short_wait(session: Session) -> None:
 
 
 @pytest.mark.parametrize("path", ["single", "bulk"])
-def test_an_owner_add_holds_off_a_revoke(
-    engine: Engine, pg_seed, path: str
-) -> None:
+def test_an_owner_add_holds_off_a_revoke(engine: Engine, pg_seed, path: str) -> None:
     admin_id, bob_id, _ = pg_seed
     with Session(engine) as adding, Session(engine) as revoking:
         bob = adding.get(User, bob_id)
@@ -305,9 +293,7 @@ def test_an_owner_add_holds_off_a_revoke(
                 assert target is not None
                 users_service.revoke(revoking, actor=actor, target=target)
             else:
-                users_service.apply_batch(
-                    revoking, actor=actor, action="revoke", user_ids=[bob_id]
-                )
+                users_service.apply_batch(revoking, actor=actor, action="revoke", user_ids=[bob_id])
         # The revoke's own row lock is what waited, not its later UPDATE,
         # so the revoke takes one. That it comes before the owner count is
         # pinned for the single-row path by

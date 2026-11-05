@@ -69,9 +69,7 @@ def test_each_session_numbers_from_one(db: Session) -> None:
     # column that had simply copied a contiguous id run.
     ids = list(
         db.execute(
-            select(Instrument.id)
-            .where(Instrument.session_id == first.id)
-            .order_by(Instrument.id)
+            select(Instrument.id).where(Instrument.session_id == first.id).order_by(Instrument.id)
         ).scalars()
     )
     assert ids != [1, 2, 3], "ids happened to be contiguous — test is vacuous"
@@ -139,9 +137,7 @@ def test_replicate_takes_a_fresh_number(db: Session) -> None:
         select(Instrument).where(Instrument.session_id == review_session.id)
     ).scalar_one()
 
-    crud.replicate_instrument(
-        db, review_session=review_session, source=source, actor=op
-    )
+    crud.replicate_instrument(db, review_session=review_session, source=source, actor=op)
     db.flush()
     assert _seqs(db, review_session.id) == [1, 2]
 
@@ -224,9 +220,7 @@ def test_the_migration_backfill_ranks_by_creation_order_per_session() -> None:
         )
         conn.execute(_BACKFILL)
         rows = conn.execute(
-            sa.text(
-                "SELECT id, session_id, session_seq FROM instruments ORDER BY id"
-            )
+            sa.text("SELECT id, session_id, session_seq FROM instruments ORDER BY id")
         ).all()
 
     assert rows == [(3, 1, 1), (7, 1, 2), (8, 2, 1), (12, 1, 3), (40, 2, 2)]
@@ -251,9 +245,7 @@ def test_the_fallback_label_is_per_session(db: Session) -> None:
     labels = [
         _instrument_label(inst)
         for inst in db.execute(
-            select(Instrument)
-            .where(Instrument.session_id == first.id)
-            .order_by(Instrument.id)
+            select(Instrument).where(Instrument.session_id == first.id).order_by(Instrument.id)
         ).scalars()
     ]
     assert labels == ["Instrument_1", "Instrument_2"]
@@ -305,9 +297,7 @@ def test_the_card_title_and_the_delete_confirm_show_the_same_handle(
     assert "Instrument #" not in body, "the reserved # prefix is back"
 
 
-def test_the_delete_confirm_names_a_renamed_instrument(
-    client: TestClient, db: Session
-) -> None:
+def test_the_delete_confirm_names_a_renamed_instrument(client: TestClient, db: Session) -> None:
     """The third defect in that one string: it ignored ``short_label``,
     so an operator who named the instrument was asked to confirm
     deleting a name nobody chose."""
@@ -320,9 +310,7 @@ def test_the_delete_confirm_names_a_renamed_instrument(
     instrument.short_label = "Peer feedback"
     db.commit()
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     confirm_start = body.index("Yes, delete <strong>")
     confirm = body[confirm_start : confirm_start + 200]
     assert "Peer feedback" in confirm
@@ -349,8 +337,8 @@ def test_no_template_spells_the_fallback_itself() -> None:
         # Both quote styles — Jinja takes either, and this template
         # uses single quotes elsewhere (`:422`) — plus the ``%`` form.
         if re.search(
-            r'''["']Instrument_["']\s*~|["']Instrument_%s["']|'''
-            r'''Instrument_\{\{|Instrument #\{\{''',
+            r"""["']Instrument_["']\s*~|["']Instrument_%s["']|"""
+            r"""Instrument_\{\{|Instrument #\{\{""",
             line,
         )
     ]
@@ -374,9 +362,7 @@ def _rendered_tints(body: str) -> list[int]:
     return [int(n) for n in re.findall(r"var\(--surface-tint-(\d)\)", body)]
 
 
-def test_the_tint_follows_the_number_on_the_card(
-    client: TestClient, db: Session
-) -> None:
+def test_the_tint_follows_the_number_on_the_card(client: TestClient, db: Session) -> None:
     """Keyed on ``session_seq``, so the tint runs 1, 2, 3 down the page
     whatever the ids are — and means the number the title shows.
 
@@ -412,9 +398,7 @@ def test_the_tint_follows_the_number_on_the_card(
     assert _rendered_tints(response.text) == [1, 2, 3]
 
 
-def test_the_tint_does_not_move_when_the_operator_reorders(
-    client: TestClient, db: Session
-) -> None:
+def test_the_tint_does_not_move_when_the_operator_reorders(client: TestClient, db: Session) -> None:
     """The property the display-position alternative could not give:
     dragging a card changes where it sits, not what colour it is."""
     from app.services import instruments as instruments_service
@@ -441,9 +425,7 @@ def test_the_tint_does_not_move_when_the_operator_reorders(
     )
     db.commit()
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     # Render order is display order, so the tints arrive reversed —
     # each card kept its own colour rather than inheriting the slot's.
     assert _rendered_tints(body) == [2, 1]
@@ -461,9 +443,7 @@ def test_the_palette_wraps_past_six(client: TestClient, db: Session) -> None:
         crud.create_instrument(db, review_session=review_session, actor=op)
     db.commit()
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     assert _rendered_tints(body) == [1, 2, 3, 4, 5, 6, 1]
 
 
@@ -526,9 +506,9 @@ def test_the_sql_label_and_the_python_label_agree(db: Session) -> None:
     crud.create_instrument(db, review_session=second, actor=op)
     crud.create_instrument(db, review_session=first, actor=op)
     db.flush()
-    named = db.execute(
-        select(Instrument).where(Instrument.session_id == first.id)
-    ).scalars().first()
+    named = (
+        db.execute(select(Instrument).where(Instrument.session_id == first.id)).scalars().first()
+    )
     assert named is not None
     named.short_label = "Peer feedback"
     db.flush()

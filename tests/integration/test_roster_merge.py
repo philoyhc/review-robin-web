@@ -28,8 +28,14 @@ from .test_roster_append import JANE, JANE_OID, _seeded, _session
 
 def _merge_reviewers(db, review_session, owner, rows, **kwargs):
     return csv_imports.save_reviewers(
-        db, session=review_session, user=owner, rows=rows, filename="m.csv",
-        correlation_id="c", merge=True, **kwargs,
+        db,
+        session=review_session,
+        user=owner,
+        rows=rows,
+        filename="m.csv",
+        correlation_id="c",
+        merge=True,
+        **kwargs,
     )
 
 
@@ -48,7 +54,9 @@ def test_a_merge_updates_matched_rows_adds_the_rest_and_keeps_the_absent(db: Ses
     db.commit()
 
     replaced, new = _merge_reviewers(
-        db, review_session, owner,
+        db,
+        review_session,
+        owner,
         [
             ReviewerImportRow(name="Ana Lee", email="ANA@example.edu", tag_1="New"),
             ReviewerImportRow(name="Cy", email="cy@example.edu"),
@@ -62,42 +70,79 @@ def test_a_merge_updates_matched_rows_adds_the_rest_and_keeps_the_absent(db: Ses
     assert _reviewer(db, review_session.id, "kim@example.edu").tag_1 == "A"
     assert _reviewer(db, review_session.id, "cy@example.edu").name == "Cy"
 
-    imported = db.execute(select(AuditEvent).where(AuditEvent.event_type == "reviewers.imported")).scalar_one()
+    imported = db.execute(
+        select(AuditEvent).where(AuditEvent.event_type == "reviewers.imported")
+    ).scalar_one()
     assert detail_of(imported)["counts"] == {"new": 1, "updated": 1, "unchanged": 0}
     assert detail_of(imported)["context"]["mode"] == "upsert"
-    updated = db.execute(select(AuditEvent).where(AuditEvent.event_type == "reviewer.updated")).scalar_one()
+    updated = db.execute(
+        select(AuditEvent).where(AuditEvent.event_type == "reviewer.updated")
+    ).scalar_one()
     assert detail_of(updated)["changes"]["tag_1"] == ["Old", "New"]
     assert detail_of(updated)["refs"]["reviewer_id"] == ana.id
 
 
 def test_status_changes_only_when_the_file_has_the_column(db: Session) -> None:
     review_session, owner, ana, _ = _seeded(db, "mrg-status")
-    row = ReviewerImportRow(name="Ana", email="ana@example.edu", status="inactive", status_given=True)
-    _merge_reviewers(db, review_session, owner, [ReviewerImportRow(name="Ana", email="ana@example.edu")],
-                     columns=frozenset({"ReviewerName", "ReviewerEmail"}))
+    row = ReviewerImportRow(
+        name="Ana", email="ana@example.edu", status="inactive", status_given=True
+    )
+    _merge_reviewers(
+        db,
+        review_session,
+        owner,
+        [ReviewerImportRow(name="Ana", email="ana@example.edu")],
+        columns=frozenset({"ReviewerName", "ReviewerEmail"}),
+    )
     assert _reviewer(db, review_session.id, "ana@example.edu").status == "active"
-    _merge_reviewers(db, review_session, owner, [row],
-                     columns=frozenset({"ReviewerName", "ReviewerEmail", "Status"}))
+    _merge_reviewers(
+        db,
+        review_session,
+        owner,
+        [row],
+        columns=frozenset({"ReviewerName", "ReviewerEmail", "Status"}),
+    )
     assert _reviewer(db, review_session.id, "ana@example.edu").status == "inactive"
 
 
 def test_an_unchanged_row_writes_no_event(db: Session) -> None:
     review_session, owner, _, _ = _seeded(db, "mrg-same")
-    _merge_reviewers(db, review_session, owner, [ReviewerImportRow(name="Ana", email="ana@example.edu")])
-    assert db.execute(select(AuditEvent).where(AuditEvent.event_type == "reviewer.updated")).first() is None
-    imported = db.execute(select(AuditEvent).where(AuditEvent.event_type == "reviewers.imported")).scalar_one()
+    _merge_reviewers(
+        db, review_session, owner, [ReviewerImportRow(name="Ana", email="ana@example.edu")]
+    )
+    assert (
+        db.execute(select(AuditEvent).where(AuditEvent.event_type == "reviewer.updated")).first()
+        is None
+    )
+    imported = db.execute(
+        select(AuditEvent).where(AuditEvent.event_type == "reviewers.imported")
+    ).scalar_one()
     assert detail_of(imported)["counts"] == {"new": 0, "updated": 0, "unchanged": 1}
 
 
 def test_a_row_on_a_bound_account_updates_that_row_and_keeps_its_address(db: Session) -> None:
     review_session, owner = _session(db, "mrg-acct")
-    db.add(Reviewer(session_id=review_session.id, name="Jane", email="jane.tan@example.edu", directory_object_id=JANE_OID))
+    db.add(
+        Reviewer(
+            session_id=review_session.id,
+            name="Jane",
+            email="jane.tan@example.edu",
+            directory_object_id=JANE_OID,
+        )
+    )
     db.commit()
     directory = DirectoryCheck(accounts={"e0123456@example.edu": JANE}, counts={})
-    _merge_reviewers(db, review_session, owner,
-                     [ReviewerImportRow(name="Jane", email="e0123456@example.edu", tag_1="T")], directory=directory)
+    _merge_reviewers(
+        db,
+        review_session,
+        owner,
+        [ReviewerImportRow(name="Jane", email="e0123456@example.edu", tag_1="T")],
+        directory=directory,
+    )
     db.expire_all()
-    rows = db.execute(select(Reviewer).where(Reviewer.session_id == review_session.id)).scalars().all()
+    rows = (
+        db.execute(select(Reviewer).where(Reviewer.session_id == review_session.id)).scalars().all()
+    )
     assert [(r.email, r.tag_1) for r in rows] == [("jane.tan@example.edu", "T")]
 
 
@@ -106,8 +151,13 @@ def test_a_matched_unbound_row_is_bound_when_its_address_resolves(db: Session) -
     db.add(Reviewer(session_id=review_session.id, name="Jane", email="e0123456@example.edu"))
     db.commit()
     directory = DirectoryCheck(accounts={"e0123456@example.edu": JANE}, counts={})
-    _merge_reviewers(db, review_session, owner,
-                     [ReviewerImportRow(name="Jane", email="e0123456@example.edu")], directory=directory)
+    _merge_reviewers(
+        db,
+        review_session,
+        owner,
+        [ReviewerImportRow(name="Jane", email="e0123456@example.edu")],
+        directory=directory,
+    )
     assert _reviewer(db, review_session.id, "e0123456@example.edu").directory_object_id == JANE_OID
 
 
@@ -118,10 +168,16 @@ def test_two_file_rows_on_one_account_refuse_the_merge(db: Session) -> None:
         accounts={"e0123456@example.edu": JANE, "jane.tan@example.edu": JANE}, counts={}
     )
     with pytest.raises(AppendConflict) as refused:
-        _merge_reviewers(db, review_session, owner, [
-            ReviewerImportRow(name="Jane", email="jane.tan@example.edu"),
-            ReviewerImportRow(name="Jane", email="e0123456@example.edu"),
-        ], directory=directory)
+        _merge_reviewers(
+            db,
+            review_session,
+            owner,
+            [
+                ReviewerImportRow(name="Jane", email="jane.tan@example.edu"),
+                ReviewerImportRow(name="Jane", email="e0123456@example.edu"),
+            ],
+            directory=directory,
+        )
     assert [i.row_number for i in refused.value.issues] == [2]
 
 
@@ -130,16 +186,31 @@ def test_reviewees_and_observers_merge_the_same_way(db: Session) -> None:
     db.add(Observer(session_id=review_session.id, email="obs@example.edu", display_name="Old"))
     db.commit()
     csv_imports.save_reviewees(
-        db, session=review_session, user=owner, filename="", correlation_id="c", merge=True,
+        db,
+        session=review_session,
+        user=owner,
+        filename="",
+        correlation_id="c",
+        merge=True,
         rows=[RevieweeImportRow(name="Bo", email_or_identifier="bo@example.edu", tag_1="X")],
     )
     csv_imports.save_observers(
-        db, session=review_session, user=owner, filename="", correlation_id="c", merge=True,
+        db,
+        session=review_session,
+        user=owner,
+        filename="",
+        correlation_id="c",
+        merge=True,
         rows=[ObserverImportRow(email="obs@example.edu", display_name="New")],
     )
     db.expire_all()
     assert must_get(db, Reviewee, bo.id).tag_1 == "X"
-    assert db.execute(select(Observer.display_name).where(Observer.session_id == review_session.id)).scalar_one() == "New"
+    assert (
+        db.execute(
+            select(Observer.display_name).where(Observer.session_id == review_session.id)
+        ).scalar_one()
+        == "New"
+    )
 
 
 def test_relationships_merge_updates_a_held_pairs_tags(db: Session) -> None:
@@ -148,14 +219,28 @@ def test_relationships_merge_updates_a_held_pairs_tags(db: Session) -> None:
     db.add(cy)
     db.commit()
     assert relationships.save_relationships(
-        db, session=review_session, user=owner, filename="", correlation_id="c", merge=True,
-        rows=[RelationshipImportRow(reviewer_id=ana.id, reviewee_id=bo.id, tag_1="G"),
-              RelationshipImportRow(reviewer_id=cy.id, reviewee_id=bo.id)],
+        db,
+        session=review_session,
+        user=owner,
+        filename="",
+        correlation_id="c",
+        merge=True,
+        rows=[
+            RelationshipImportRow(reviewer_id=ana.id, reviewee_id=bo.id, tag_1="G"),
+            RelationshipImportRow(reviewer_id=cy.id, reviewee_id=bo.id),
+        ],
     ) == (0, 1)
     db.expire_all()
-    pairs = {r.reviewer_id: r.tag_1 for r in db.execute(select(Relationship).where(Relationship.session_id == review_session.id)).scalars()}
+    pairs = {
+        r.reviewer_id: r.tag_1
+        for r in db.execute(
+            select(Relationship).where(Relationship.session_id == review_session.id)
+        ).scalars()
+    }
     assert pairs == {ana.id: "G", cy.id: None}
-    assert db.execute(select(AuditEvent).where(AuditEvent.event_type == "relationship.updated")).scalar_one()
+    assert db.execute(
+        select(AuditEvent).where(AuditEvent.event_type == "relationship.updated")
+    ).scalar_one()
 
 
 def test_a_reviewee_merge_that_redraws_an_answered_group_asks_first(db: Session, client) -> None:
@@ -174,7 +259,14 @@ def test_a_reviewee_merge_that_redraws_an_answered_group_asks_first(db: Session,
 
     def merge(**kwargs):
         return csv_imports.save_reviewees(
-            db, session=session, user=owner, filename="", correlation_id="c", merge=True, rows=row, **kwargs
+            db,
+            session=session,
+            user=owner,
+            filename="",
+            correlation_id="c",
+            merge=True,
+            rows=row,
+            **kwargs,
         )
 
     # A route passes 0 for an unticked "Yes, clear them" (``None``, the
@@ -197,13 +289,29 @@ def test_a_rename_through_an_account_match_is_checked_at_the_kept_address(db: Se
     and keeps `jane.tan@`, so the name is checked there and the reviewee's
     disagrees (Codex, #3440)."""
     review_session, owner = _session(db, "mrg-rename")
-    db.add(Reviewer(session_id=review_session.id, name="Jane", email="jane.tan@example.edu", directory_object_id=JANE_OID))
-    db.add(Reviewee(session_id=review_session.id, name="Jane", email_or_identifier="jane.tan@example.edu"))
+    db.add(
+        Reviewer(
+            session_id=review_session.id,
+            name="Jane",
+            email="jane.tan@example.edu",
+            directory_object_id=JANE_OID,
+        )
+    )
+    db.add(
+        Reviewee(
+            session_id=review_session.id, name="Jane", email_or_identifier="jane.tan@example.edu"
+        )
+    )
     db.commit()
     directory = DirectoryCheck(accounts={"e0123456@example.edu": JANE}, counts={})
     with pytest.raises(AppendConflict) as refused:
-        _merge_reviewers(db, review_session, owner,
-                         [ReviewerImportRow(name="Different", email="e0123456@example.edu")], directory=directory)
+        _merge_reviewers(
+            db,
+            review_session,
+            owner,
+            [ReviewerImportRow(name="Different", email="e0123456@example.edu")],
+            directory=directory,
+        )
     assert refused.value.issues[0].row_number == 1
     db.rollback()
     assert _reviewer(db, review_session.id, "jane.tan@example.edu").name == "Jane"
@@ -218,16 +326,32 @@ def test_a_merge_that_binds_a_reviewer_recomputes_self_review(db: Session) -> No
 
     review_session, owner = _session(db, "mrg-selfrev")
     jane_r = Reviewer(session_id=review_session.id, name="Jane", email="e0123456@example.edu")
-    jane_e = Reviewee(session_id=review_session.id, name="Jane", email_or_identifier="jane.tan@example.edu", directory_object_id=JANE_OID)
+    jane_e = Reviewee(
+        session_id=review_session.id,
+        name="Jane",
+        email_or_identifier="jane.tan@example.edu",
+        directory_object_id=JANE_OID,
+    )
     db.add_all([jane_r, jane_e])
     db.flush()
     instrument = ensure_default_instrument(db, review_session)
-    row = Assignment(session_id=review_session.id, reviewer_id=jane_r.id, reviewee_id=jane_e.id, instrument_id=instrument.id, is_self_review=False)
+    row = Assignment(
+        session_id=review_session.id,
+        reviewer_id=jane_r.id,
+        reviewee_id=jane_e.id,
+        instrument_id=instrument.id,
+        is_self_review=False,
+    )
     db.add(row)
     db.commit()
     directory = DirectoryCheck(accounts={"e0123456@example.edu": JANE}, counts={})
-    _merge_reviewers(db, review_session, owner,
-                     [ReviewerImportRow(name="Jane", email="e0123456@example.edu")], directory=directory)
+    _merge_reviewers(
+        db,
+        review_session,
+        owner,
+        [ReviewerImportRow(name="Jane", email="e0123456@example.edu")],
+        directory=directory,
+    )
     db.expire_all()
     assert must_get(db, Assignment, row.id).is_self_review is True
 
@@ -252,14 +376,27 @@ def test_two_file_rows_landing_on_one_row_refuse_the_merge(db: Session) -> None:
     (its own lookup failed), another her UPN (resolved): both would update
     her row, so the merge is refused."""
     review_session, owner = _session(db, "mrg-claimed")
-    db.add(Reviewer(session_id=review_session.id, name="Jane", email="jane.tan@example.edu", directory_object_id=JANE_OID))
+    db.add(
+        Reviewer(
+            session_id=review_session.id,
+            name="Jane",
+            email="jane.tan@example.edu",
+            directory_object_id=JANE_OID,
+        )
+    )
     db.commit()
     directory = DirectoryCheck(accounts={"e0123456@example.edu": JANE}, counts={})
     with pytest.raises(AppendConflict) as refused:
-        _merge_reviewers(db, review_session, owner, [
-            ReviewerImportRow(name="Jane", email="jane.tan@example.edu", tag_1="A"),
-            ReviewerImportRow(name="Jane", email="e0123456@example.edu", tag_1="B"),
-        ], directory=directory)
+        _merge_reviewers(
+            db,
+            review_session,
+            owner,
+            [
+                ReviewerImportRow(name="Jane", email="jane.tan@example.edu", tag_1="A"),
+                ReviewerImportRow(name="Jane", email="e0123456@example.edu", tag_1="B"),
+            ],
+            directory=directory,
+        )
     assert [i.row_number for i in refused.value.issues] == [2]
 
 
@@ -271,19 +408,27 @@ def test_a_merge_that_would_bind_a_row_to_an_account_another_row_holds_is_refuse
     would put one person on the roster twice. Append refuses that;
     merge now does too, before anything is written."""
     review_session, owner = _session(db, "mrg-held-account")
-    db.add_all([
-        Reviewer(session_id=review_session.id, name="Jane", email="jane.tan@example.edu"),
-        Reviewer(
-            session_id=review_session.id, name="Jane", email="e0123456@example.edu",
-            directory_object_id=JANE_OID,
-        ),
-    ])
+    db.add_all(
+        [
+            Reviewer(session_id=review_session.id, name="Jane", email="jane.tan@example.edu"),
+            Reviewer(
+                session_id=review_session.id,
+                name="Jane",
+                email="e0123456@example.edu",
+                directory_object_id=JANE_OID,
+            ),
+        ]
+    )
     db.commit()
     directory = DirectoryCheck(accounts={"jane.tan@example.edu": JANE}, counts={})
     with pytest.raises(AppendConflict) as refused:
-        _merge_reviewers(db, review_session, owner,
-                         [ReviewerImportRow(name="Jane", email="jane.tan@example.edu", tag_1="X")],
-                         directory=directory)
+        _merge_reviewers(
+            db,
+            review_session,
+            owner,
+            [ReviewerImportRow(name="Jane", email="jane.tan@example.edu", tag_1="X")],
+            directory=directory,
+        )
     issue = refused.value.issues[0]
     assert issue.row_number == 1
     assert issue.problem == "ReviewerEmail is a directory account already on the roster"

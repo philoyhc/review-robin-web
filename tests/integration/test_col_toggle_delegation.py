@@ -129,8 +129,7 @@ def test_the_rendered_markup_still_carries_what_the_block_reads(
     ).scalar_one()
 
     rows = b"".join(
-        f"Reviewer {i:03d},r{i:03d}@example.edu,Tutor {i % 3}\n".encode()
-        for i in range(5)
+        f"Reviewer {i:03d},r{i:03d}@example.edu,Tutor {i % 3}\n".encode() for i in range(5)
     )
     client.post(
         f"/operator/sessions/{review_session.public_id}/reviewers/import",
@@ -143,9 +142,7 @@ def test_the_rendered_markup_still_carries_what_the_block_reads(
         },
         follow_redirects=False,
     )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
 
     # The chip row, the pairing attribute, and the key on the table.
     assert '<p class="col-chip-row" data-col-toggles-for="reviewers-table"' in body

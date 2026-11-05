@@ -65,9 +65,7 @@ def _agree(count: int, noun: str) -> str:
     return noun
 
 
-def preview_count_line(
-    *, shown: int, pool: int, noun: str, is_filtered: bool
-) -> str | None:
+def preview_count_line(*, shown: int, pool: int, noun: str, is_filtered: bool) -> str | None:
     """Compose the count line for a preview table, or ``None``.
 
     ``shown`` is how many rows the table holds and ``pool`` how many
@@ -99,7 +97,4 @@ def preview_count_line(
     withheld = max(pool - shown, 0)
     if withheld == 0:
         return f"Showing {shown:,} {_agree(shown, noun)}."
-    return (
-        f"Showing {shown:,} of {pool:,} {noun}, "
-        f"{withheld:,} more not shown."
-    )
+    return f"Showing {shown:,} of {pool:,} {noun}, {withheld:,} more not shown."

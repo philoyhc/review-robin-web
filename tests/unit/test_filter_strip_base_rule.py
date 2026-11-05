@@ -16,6 +16,7 @@ scope that re-declares a base property is how the trap comes back, and
 these tests fail on that rather than on the symptom two dev-slot cycles
 later.
 """
+
 from __future__ import annotations
 
 import re
@@ -28,8 +29,12 @@ BASE = Path(__file__).resolve().parents[2] / "app/web/templates/base.html"
 #: The declarations the base owns. A scope re-stating one of these is
 #: either redundant or an undocumented divergence; both are the bug.
 BASE_OWNED = (
-    "align-items", "justify-content", "flex-wrap", "margin-top",
-    "width", "box-sizing",
+    "align-items",
+    "justify-content",
+    "flex-wrap",
+    "margin-top",
+    "width",
+    "box-sizing",
 )
 
 #: Every scope allowed to carry a `.filter-row` / `.filter-actions`
@@ -68,8 +73,7 @@ def css() -> str:
     brace. That produced a false positive on the first run of this
     file, which is a decent argument for the stripping.
     """
-    return re.sub(r"/\*.*?\*/", "", BASE.read_text(encoding="utf-8"),
-                  flags=re.S)
+    return re.sub(r"/\*.*?\*/", "", BASE.read_text(encoding="utf-8"), flags=re.S)
 
 
 def _rule(css: str, selector: str) -> str:
@@ -107,31 +111,33 @@ def _rules(css: str) -> list[tuple[str, str]]:
         if ch == "{":
             selector = css[start:i].strip()
             if selector.startswith("@"):
-                start = i + 1          # descend into the at-rule body
+                start = i + 1  # descend into the at-rule body
                 i += 1
                 continue
             close = css.find("}", i)
             if close < 0:
                 break
-            out.append((selector, css[i + 1:close]))
+            out.append((selector, css[i + 1 : close]))
             i = start = close + 1
             continue
         if ch == "}":
-            start = i + 1              # leaving an at-rule body
+            start = i + 1  # leaving an at-rule body
         i += 1
     return out
 
 
 def _shape_rules(css: str) -> list[tuple[str, str]]:
     """Rules whose selector list mentions the shape."""
-    return [(sel, body) for sel, body in _rules(css)
-            if re.search(r"\.filter-(?:row|actions)\b", sel)]
+    return [
+        (sel, body) for sel, body in _rules(css) if re.search(r"\.filter-(?:row|actions)\b", sel)
+    ]
 
 
 def _scope_blocks(css: str, scope: str) -> list[str]:
     """Declaration blocks in which `scope` narrows the shape."""
-    return [body for sel, body in _shape_rules(css)
-            if any(scope in part for part in sel.split(","))]
+    return [
+        body for sel, body in _shape_rules(css) if any(scope in part for part in sel.split(","))
+    ]
 
 
 def _filter_rows(markup: str) -> list[str]:
@@ -144,10 +150,10 @@ def _filter_rows(markup: str) -> list[str]:
     rows: list[str] = []
     for m in re.finditer(r'<div class="filter-row">', markup):
         start, depth = m.end(), 1
-        for tag in re.finditer(r"<div\b|</div>", markup[m.end():]):
+        for tag in re.finditer(r"<div\b|</div>", markup[m.end() :]):
             depth += 1 if tag.group(0) != "</div>" else -1
             if depth == 0:
-                rows.append(markup[start:m.end() + tag.start()])
+                rows.append(markup[start : m.end() + tag.start()])
                 break
     return rows
 
@@ -155,20 +161,20 @@ def _filter_rows(markup: str) -> list[str]:
 def test_the_base_rule_is_unscoped(css: str) -> None:
     """Unscoped is the whole mechanism: a scoped base is just a fourth
     copy, and a move out of that scope loses it again."""
-    assert re.search(r"\n\s*\.filter-row \{", css), (
-        "no unscoped `.filter-row` base rule"
-    )
-    assert re.search(r"\n\s*\.filter-actions \{", css), (
-        "no unscoped `.filter-actions` base rule"
-    )
+    assert re.search(r"\n\s*\.filter-row \{", css), "no unscoped `.filter-row` base rule"
+    assert re.search(r"\n\s*\.filter-actions \{", css), "no unscoped `.filter-actions` base rule"
 
 
 def test_the_base_carries_the_declarations_two_bugs_rediscovered(
     css: str,
 ) -> None:
     actions = _rule(css, "\n      .filter-actions")
-    for decl in ("align-items: center", "justify-content: flex-end",
-                 "margin-top: var(--space-3)", "flex-wrap: wrap"):
+    for decl in (
+        "align-items: center",
+        "justify-content: flex-end",
+        "margin-top: var(--space-3)",
+        "flex-wrap: wrap",
+    ):
         assert decl in actions, f"the base lost `{decl}`"
 
     row = _rule(css, "\n      .filter-row")
@@ -193,9 +199,7 @@ def test_the_generic_label_rule_outranks_the_global_label_rule(
     # `.operator-actions-card .filter-row > label.filter-search` (0,3,1)
     # and silently undoes that scope's only narrowing.
     for cls in ("filter-status", "filter-search"):
-        assert not re.search(
-            rf"body\.ui-v2 \.filter-row > label\.{cls} \{{", css
-        ), (
+        assert not re.search(rf"body\.ui-v2 \.filter-row > label\.{cls} \{{", css), (
             f"`.{cls}` base rule gained a `body.ui-v2` prefix; it now "
             "outranks the per-scope narrowings"
         )
@@ -232,9 +236,7 @@ def test_no_scope_redeclares_what_the_base_owns(css: str, scope: str) -> None:
             # `(?<![-a-z])`, not `\b`: a word boundary sits between `-`
             # and `w`, so `\bwidth` also matches `max-width` and
             # `min-width` and would report them as re-declaring `width`.
-            assert not re.search(
-                rf"(?<![-a-z]){re.escape(prop)}\s*:", block
-            ), (
+            assert not re.search(rf"(?<![-a-z]){re.escape(prop)}\s*:", block), (
                 f"{scope} re-declares `{prop}`, which the base owns. "
                 f"Either it is redundant, or it is an undocumented "
                 f"divergence. Block: {block!r}"
@@ -264,9 +266,7 @@ def test_every_scope_narrowing_is_one_the_list_accounts_for(
                 f"{len(blocks)} rule(s) under it select the shape"
             )
         for block in blocks:
-            props = {
-                p.strip() for p in re.findall(r"([a-z-]+)\s*:", block)
-            }
+            props = {p.strip() for p in re.findall(r"([a-z-]+)\s*:", block)}
             unexpected = props - allowed
             assert not unexpected, (
                 f"{scope} narrows {sorted(unexpected)}, which "
@@ -336,9 +336,7 @@ def test_every_filter_row_label_is_classed() -> None:
             for label in re.finditer(r"<label\b([^>]*)>", row):
                 attrs = label.group(1)
                 checked += 1
-                assert re.search(
-                    r'class="[^"]*\bfilter-(?:status|search)\b', attrs
-                ), (
+                assert re.search(r'class="[^"]*\bfilter-(?:status|search)\b', attrs), (
                     f"{path.name}: a `.filter-row` label carries neither "
                     f"`.filter-status` nor `.filter-search`, so it falls "
                     f"back to `flex: 0 1 auto`: <label{attrs}>"

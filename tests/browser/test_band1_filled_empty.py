@@ -94,8 +94,10 @@ def test_link2_filled_shows_the_inactive_value_box(
     card.locator("[data-new-model-rule-builder]").nth(1).locator(
         "[data-new-model-rule-add]"
     ).click()
-    added = card.locator('select[name="link2_field"]').nth(1).locator(
-        "xpath=ancestor::*[@data-new-model-rule-cell]"
+    added = (
+        card.locator('select[name="link2_field"]')
+        .nth(1)
+        .locator("xpath=ancestor::*[@data-new-model-rule-cell]")
     )
     expect(added.locator("[data-new-model-operator-cycle]")).to_have_text("IS THE SAME AS")
     assert added.locator("[data-new-model-operand-value]").evaluate("i => i.readOnly") is False
@@ -113,9 +115,9 @@ def _store_pair_context_config(live_server: LiveServer, session_id: str) -> None
     engine = create_engine(live_server.database_url)
     try:
         with Session(engine) as db:
-            instrument = db.execute(
-                select(Instrument).where(Instrument.session_id == pk)
-            ).scalars().first()
+            instrument = (
+                db.execute(select(Instrument).where(Instrument.session_id == pk)).scalars().first()
+            )
             assert instrument is not None
             rule_set = SessionRuleSet(
                 session_id=pk,
@@ -170,9 +172,7 @@ def test_a_new_cell_does_not_offer_a_stored_only_tag(
 
     link1 = card.locator('select[name="link1_field"]')
     assert _offered(link1.first) == ["reviewer.tag1", "pair_context.tag1"]
-    card.locator("[data-new-model-rule-builder]").first.locator(
-        "[data-new-model-rule-add]"
-    ).click()
+    card.locator("[data-new-model-rule-builder]").first.locator("[data-new-model-rule-add]").click()
     expect(link1).to_have_count(2)
     assert _offered(link1.nth(1)) == ["reviewer.tag1"]
     assert link1.first.input_value() == "pair_context.tag1"
@@ -203,9 +203,11 @@ def test_a_new_cell_beside_a_stored_operand_opens_on_is_with_no_reviewer_tags(
         assert response.status_code in (200, 303), response.text
     _store_link2_operand(live_server, session_id)
     card = open_unlocked(page, session_id)
-    operators = card.locator('select[name="link2_field"]').locator(
-        "xpath=ancestor::*[@data-new-model-rule-cell]"
-    ).locator("[data-new-model-operator-cycle]")
+    operators = (
+        card.locator('select[name="link2_field"]')
+        .locator("xpath=ancestor::*[@data-new-model-rule-cell]")
+        .locator("[data-new-model-operator-cycle]")
+    )
     expect(operators.first).to_have_text("IS THE SAME AS")
 
     card.locator("[data-new-model-rule-builder]").nth(1).locator(
@@ -230,9 +232,9 @@ def _store_link2_operand(live_server: LiveServer, session_id: str) -> None:
     engine = create_engine(live_server.database_url)
     try:
         with Session(engine) as db:
-            instrument = db.execute(
-                select(Instrument).where(Instrument.session_id == pk)
-            ).scalars().first()
+            instrument = (
+                db.execute(select(Instrument).where(Instrument.session_id == pk)).scalars().first()
+            )
             assert instrument is not None
             rule_set = SessionRuleSet(
                 session_id=pk,
@@ -390,13 +392,18 @@ def test_a_link2_pair_tag_cell_has_its_own_cycle_and_caption(
     card.locator("[data-new-model-rule-builder]").nth(1).locator(
         "[data-new-model-rule-add]"
     ).click()
-    added = card.locator('select[name="link2_field"]').nth(1).locator(
-        "xpath=ancestor::*[@data-new-model-rule-cell]"
+    added = (
+        card.locator('select[name="link2_field"]')
+        .nth(1)
+        .locator("xpath=ancestor::*[@data-new-model-rule-cell]")
     )
     expect(added.locator("[data-new-model-operator-cycle]")).to_have_text("IS THE SAME AS")
-    assert added.locator("[data-new-model-operator-cycle]").get_attribute(
-        "data-new-model-operator-cycle"
-    ) == "IS THE SAME AS|IS DIFFERENT FROM|IS|IS NOT|IS FILLED|IS EMPTY"
+    assert (
+        added.locator("[data-new-model-operator-cycle]").get_attribute(
+            "data-new-model-operator-cycle"
+        )
+        == "IS THE SAME AS|IS DIFFERENT FROM|IS|IS NOT|IS FILLED|IS EMPTY"
+    )
     expect(added.locator("[data-new-model-rule-field-helper]")).to_have_text("Reviewee's tag")
 
 
@@ -426,9 +433,9 @@ def _store_link2_pair_is(live_server: LiveServer, session_id: str) -> None:
     engine = create_engine(live_server.database_url)
     try:
         with Session(engine) as db:
-            instrument = db.execute(
-                select(Instrument).where(Instrument.session_id == pk)
-            ).scalars().first()
+            instrument = (
+                db.execute(select(Instrument).where(Instrument.session_id == pk)).scalars().first()
+            )
             assert instrument is not None
             rule_set = SessionRuleSet(
                 session_id=pk,

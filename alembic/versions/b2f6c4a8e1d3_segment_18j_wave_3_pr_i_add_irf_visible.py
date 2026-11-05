@@ -27,6 +27,7 @@ Revision ID: b2f6c4a8e1d3
 Revises: e5a3b1f8d2c4
 Create Date: 2026-05-24
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -49,9 +50,7 @@ def upgrade() -> None:
     # SQLite tolerates ``1`` for booleans but Postgres rejects
     # ``DEFAULT 1`` / ``= 1`` with ``DatatypeMismatch`` /
     # ``operator does not exist: boolean = integer``.
-    with op.batch_alter_table(
-        "instrument_response_fields", schema=None
-    ) as batch_op:
+    with op.batch_alter_table("instrument_response_fields", schema=None) as batch_op:
         batch_op.add_column(
             sa.Column(
                 "visible",
@@ -63,15 +62,10 @@ def upgrade() -> None:
 
     bind = op.get_bind()
     bind.execute(
-        sa.text(
-            "UPDATE instrument_response_fields SET visible = true "
-            "WHERE visible IS NULL"
-        )
+        sa.text("UPDATE instrument_response_fields SET visible = true WHERE visible IS NULL")
     )
 
-    with op.batch_alter_table(
-        "instrument_response_fields", schema=None
-    ) as batch_op:
+    with op.batch_alter_table("instrument_response_fields", schema=None) as batch_op:
         batch_op.alter_column(
             "visible",
             existing_type=sa.Boolean(),
@@ -81,7 +75,5 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    with op.batch_alter_table(
-        "instrument_response_fields", schema=None
-    ) as batch_op:
+    with op.batch_alter_table("instrument_response_fields", schema=None) as batch_op:
         batch_op.drop_column("visible")

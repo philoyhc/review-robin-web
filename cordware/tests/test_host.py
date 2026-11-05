@@ -160,7 +160,10 @@ def test_state_a_mounted_lifespan_yields_reaches_its_requests() -> None:
 
 
 def test_a_lifespan_state_key_clash_refuses_to_start() -> None:
-    registry = {**STUBS, "clash": AppEntry(path="/c", factory=f"{__name__}:stub_clash", logger="clash")}
+    registry = {
+        **STUBS,
+        "clash": AppEntry(path="/c", factory=f"{__name__}:stub_clash", logger="clash"),
+    }
     with (
         pytest.raises(RuntimeError, match="'resource_a' from 'clash'"),
         TestClient(create_app(apps=("a", "clash"), registry=registry)),
@@ -215,7 +218,9 @@ def _origin_host(monkeypatch: pytest.MonkeyPatch, origin: str | None) -> TestCli
         monkeypatch.delenv("CORDWARE_PUBLIC_ORIGIN", raising=False)
     else:
         monkeypatch.setenv("CORDWARE_PUBLIC_ORIGIN", origin)
-    return TestClient(create_app(apps=("u",), registry=URL_STUB), base_url="http://backend.internal")
+    return TestClient(
+        create_app(apps=("u",), registry=URL_STUB), base_url="http://backend.internal"
+    )
 
 
 def test_unset_urls_follow_the_request(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -265,13 +270,22 @@ def test_a_utilities_slash_redirect_names_the_origin(monkeypatch: pytest.MonkeyP
         (None, None),
         ("", None),
         ("  ", None),
-        ("https://Apps.Example.edu", PublicOrigin("https", "apps.example.edu", 443, "apps.example.edu")),
-        ("https://apps.example.edu/", PublicOrigin("https", "apps.example.edu", 443, "apps.example.edu")),
+        (
+            "https://Apps.Example.edu",
+            PublicOrigin("https", "apps.example.edu", 443, "apps.example.edu"),
+        ),
+        (
+            "https://apps.example.edu/",
+            PublicOrigin("https", "apps.example.edu", 443, "apps.example.edu"),
+        ),
         (
             "https://apps.example.edu:8443",
             PublicOrigin("https", "apps.example.edu", 8443, "apps.example.edu:8443"),
         ),
-        ("https://apps.example.edu:443", PublicOrigin("https", "apps.example.edu", 443, "apps.example.edu")),
+        (
+            "https://apps.example.edu:443",
+            PublicOrigin("https", "apps.example.edu", 443, "apps.example.edu"),
+        ),
         ("https://[::1]:8443", PublicOrigin("https", "::1", 8443, "[::1]:8443")),
     ],
 )

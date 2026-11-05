@@ -40,9 +40,18 @@ def plain(cell: str) -> str:
 def test_workload_weighs_formal_assignments_by_cadence(client: TestClient) -> None:
     rows = cells(section(client.get("/overview/?as=Sam%20Lee").text, "load-h"))
     assert [plain(r[0]) for r in rows] == [r["staff"] for r in sample.workload()]
-    assert rows[0][1:] == ["2", "2", "6", "8", "145", "6"]  # Daniel Koh: assigned, following, students, encounters, minutes, load
+    assert rows[0][1:] == [
+        "2",
+        "2",
+        "6",
+        "8",
+        "145",
+        "6",
+    ]  # Daniel Koh: assigned, following, students, encounters, minutes, load
     daniel = next(r for r in sample.workload() if r["staff"] == "Daniel Koh")
-    assert daniel["load"] == sum(sample.WEIGHTS[p.cadence] for p in sample.plans_of("Daniel Koh") if p.formal)
+    assert daniel["load"] == sum(
+        sample.WEIGHTS[p.cadence] for p in sample.plans_of("Daniel Koh") if p.formal
+    )
 
 
 def test_hotspots_name_students_for_identifiable_views_only(client: TestClient) -> None:
@@ -50,9 +59,14 @@ def test_hotspots_name_students_for_identifiable_views_only(client: TestClient) 
     assert 'href="/overview/students/S-07?as=Sam%20Lee">Gwyneth Low</a>' in sam
     rows = cells(sam)
     assert [plain(r[0]) for r in rows] == [r["student"].name for r in sample.hotspots()]
-    assert [r[1:5] for r in rows] == [[str(r[k]) for k in ("contacts", "before", "minutes", "staff")] for r in sample.hotspots()]
+    assert [r[1:5] for r in rows] == [
+        [str(r[k]) for k in ("contacts", "before", "minutes", "staff")] for r in sample.hotspots()
+    ]
     hana = next(r for r in sample.hotspots() if r["student"].id == "S-08")
-    assert (hana["contacts"], hana["staff"]) == (1, 1)  # staff counted over the same 14 days as contacts
+    assert (hana["contacts"], hana["staff"]) == (
+        1,
+        1,
+    )  # staff counted over the same 14 days as contacts
     assert [plain(r[0]) for r in rows if "Rising" in r[5]] == ["Gwyneth Low"]
     siti = section(client.get("/overview/?as=Siti%20Rahman").text, "hot-h")
     assert "Gwyneth Low" in siti and "/overview/students/" not in siti  # named, but no history
@@ -71,21 +85,28 @@ def test_the_aggregate_view_names_no_student(client: TestClient) -> None:
 
 def test_coverage_lists_overdue_due_and_review(client: TestClient) -> None:
     cov = section(client.get("/overview/?as=Sam%20Lee").text, "cov-h")
-    assert "Overdue <span class=\"count\">· 1</span>" in cov and 'href="/plans/P-01?as=Sam%20Lee">Clara Tan</a>' in cov
+    assert (
+        'Overdue <span class="count">· 1</span>' in cov
+        and 'href="/plans/P-01?as=Sam%20Lee">Clara Tan</a>' in cov
+    )
     plan = sample.plan("P-01")
     assert plan is not None
     review = plan.review
     assert review is not None
     assert "Review " + sample.short_date(review) in cov
     aggregate = section(client.get("/overview/?as=Kenneth%20Lau").text, "cov-h")
-    assert "Overdue <span class=\"count\">· 1</span>" in aggregate and "<a " not in aggregate
+    assert 'Overdue <span class="count">· 1</span>' in aggregate and "<a " not in aggregate
 
 
 def test_no_cluster_view_until_students_have_a_location(client: TestClient) -> None:
     """Nothing ties a student to a housing location, so §10.5's cluster
     view is deferred (author, 2026-10-30): no card, and no student's
     cluster on their history."""
-    for path in ("/overview/?as=Sam%20Lee", "/overview/?as=Kenneth%20Lau", "/overview/students/S-08?as=Sam%20Lee"):
+    for path in (
+        "/overview/?as=Sam%20Lee",
+        "/overview/?as=Kenneth%20Lau",
+        "/overview/students/S-08?as=Sam%20Lee",
+    ):
         page = client.get(path)
         assert page.status_code == 200 and "cluster" not in page.text.lower(), path
 
@@ -94,12 +115,18 @@ def test_history_is_senior_only_and_spans_every_staff_member(client: TestClient)
     page = client.get("/overview/students/S-08?as=Sam%20Lee").text
     assert "<h1>Hana Rahim" in page and "Opening this history is recorded" in page
     staff = section(page, "staff-h")
-    assert re.findall(r"<li>([^<]+)</li>", staff) == ["Arjun Nair", "Priya Raman"]  # not Daniel: shared with, never seen her
+    assert re.findall(r"<li>([^<]+)</li>", staff) == [
+        "Arjun Nair",
+        "Priya Raman",
+    ]  # not Daniel: shared with, never seen her
     encounters = section(page, "enc-h")
     assert encounters.count("<li>") == sum(1 for e in sample.ENCOUNTERS if e.student == "S-08")
     for name in NOT_SENIOR:
         for sid in ("S-08", "S-99"):  # an unknown id is 403 too: no probing
-            assert client.get(f"/overview/students/{sid}?as={name.replace(' ', '%20')}").status_code == 403, (name, sid)
+            assert (
+                client.get(f"/overview/students/{sid}?as={name.replace(' ', '%20')}").status_code
+                == 403
+            ), (name, sid)
     assert client.get("/overview/students/S-99?as=Sam%20Lee").status_code == 404
 
 
@@ -114,7 +141,9 @@ def test_the_audit_is_senior_only_and_its_review_recorded(client: TestClient) ->
             continue
         named = sample.student(event.student)
         assert named is not None
-        assert f'<a href="/overview/students/{event.student}?as=Sam%20Lee">{named.name}</a>' == row[3]
+        assert (
+            f'<a href="/overview/students/{event.student}?as=Sam%20Lee">{named.name}</a>' == row[3]
+        )
     assert 'href="/overview/audit?as=Sam%20Lee"' in client.get("/overview/?as=Sam%20Lee").text
     assert "/overview/audit" not in client.get("/overview/?as=Siti%20Rahman").text
     for name in NOT_SENIOR:
@@ -133,9 +162,19 @@ def test_the_overview_pages_answer_only_on_a_local_run(monkeypatch: pytest.Monke
 def test_mounted_overview_pages_stay_under_the_mount() -> None:
     host, _ = host_with(("supportlogs",))
     mounted = TestClient(host)
-    for path in ("/overview/?as=Sam%20Lee", "/overview/?as=Kenneth%20Lau", "/overview/students/S-08?as=Sam%20Lee",
-                 "/overview/audit?as=Sam%20Lee"):
+    for path in (
+        "/overview/?as=Sam%20Lee",
+        "/overview/?as=Kenneth%20Lau",
+        "/overview/students/S-08?as=Sam%20Lee",
+        "/overview/audit?as=Sam%20Lee",
+    ):
         page = mounted.get("/supportlogs" + path)
         assert page.status_code == 200, path
-        for link in re.findall(r'\b(?:href|action|formaction|src)="([^"]*)"', re.sub(r'<link rel="icon"[^>]*>', "", page.text)):
-            assert link in ("/", "/.auth/logout") or link.startswith(("/supportlogs/", "#")), (path, link)
+        for link in re.findall(
+            r'\b(?:href|action|formaction|src)="([^"]*)"',
+            re.sub(r'<link rel="icon"[^>]*>', "", page.text),
+        ):
+            assert link in ("/", "/.auth/logout") or link.startswith(("/supportlogs/", "#")), (
+                path,
+                link,
+            )

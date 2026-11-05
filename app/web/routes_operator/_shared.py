@@ -277,9 +277,7 @@ def _require_editable(review_session: ReviewSession) -> None:
     if not lifecycle.is_editable(review_session):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=(
-                f"Session is {review_session.status}; revert to draft to edit"
-            ),
+            detail=(f"Session is {review_session.status}; revert to draft to edit"),
         )
 
 
@@ -359,9 +357,7 @@ def require_observers_enabled_session(
     return review_session
 
 
-def _require_response_loss_ack(
-    db: Session, review_session: ReviewSession, ack: str | None
-) -> None:
+def _require_response_loss_ack(db: Session, review_session: ReviewSession, ack: str | None) -> None:
     """When responses exist, require explicit acknowledge_response_loss=true."""
     if not lifecycle.session_has_responses(db, review_session):
         return
@@ -403,9 +399,7 @@ def _require_selected_response_loss_ack(
     zero (and the gate a no-op) for Observers and Relationships, since
     nothing references them.
     """
-    _assignments, responses = roster_bulk.cascade_counts(
-        db, model=model, ids=ids
-    )
+    _assignments, responses = roster_bulk.cascade_counts(db, model=model, ids=ids)
     if responses and ack != "true":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -422,9 +416,7 @@ def _lifecycle_error_response(exc: lifecycle.LifecycleError) -> HTTPException:
     if isinstance(exc, lifecycle.SessionStateConflict):
         # A state gate re-read under the lock (findings Bc4) — the 409
         # every route-level gate answers with, whatever its code.
-        return HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
-        )
+        return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
     code_to_status = {
         "not_draft": status.HTTP_409_CONFLICT,
         "not_ready": status.HTTP_409_CONFLICT,
@@ -455,9 +447,7 @@ def session_payload_error(exc: ValidationError) -> HTTPException:
     )
 
 
-def parse_session_deadline(
-    deadline: str | None, timezone_name: str
-) -> datetime | None:
+def parse_session_deadline(deadline: str | None, timezone_name: str) -> datetime | None:
     """Parse an operator-entered wall-clock deadline in the session's
     display timezone, or ``None`` when blank. Raises
     ``HTTPException(422)`` on a malformed value.
@@ -584,10 +574,7 @@ def _require_instrument_editable(review_session: ReviewSession) -> None:
     if not _can_edit_instrument(review_session):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=(
-                "Instrument structure is locked while the session is "
-                f"{review_session.status}"
-            ),
+            detail=(f"Instrument structure is locked while the session is {review_session.status}"),
         )
 
 
@@ -665,13 +652,9 @@ def _setup_row_window[RowT: _HasId](
         offset = 0
         pager = None
     else:
-        offset = views.clamp_offset(
-            offset, total=len(filtered), page_size=_SETUP_DEFAULT_CAP
-        )
+        offset = views.clamp_offset(offset, total=len(filtered), page_size=_SETUP_DEFAULT_CAP)
         rows = filtered[offset : offset + _SETUP_DEFAULT_CAP]
-        pager = views.build_pager(
-            total=len(filtered), offset=offset, page_size=_SETUP_DEFAULT_CAP
-        )
+        pager = views.build_pager(total=len(filtered), offset=offset, page_size=_SETUP_DEFAULT_CAP)
 
     # A row to land on that is not being edited: a create appends past
     # the end of an unfiltered roster, so on anything over one page the
@@ -686,9 +669,7 @@ def _setup_row_window[RowT: _HasId](
         and not is_filtered
         and locate_id not in {r.id for r in rows}
     ):
-        index = next(
-            (i for i, r in enumerate(filtered) if r.id == locate_id), None
-        )
+        index = next((i for i, r in enumerate(filtered) if r.id == locate_id), None)
         if index is not None:
             offset = (index // _SETUP_DEFAULT_CAP) * _SETUP_DEFAULT_CAP
             rows = filtered[offset : offset + _SETUP_DEFAULT_CAP]
@@ -709,9 +690,7 @@ def _setup_row_window[RowT: _HasId](
         return SetupWindow(rows=rows, offset=offset, pager=pager, edit_id=None)
 
     if not is_filtered:
-        index = next(
-            (i for i, r in enumerate(filtered) if r.id == edit_id), None
-        )
+        index = next((i for i, r in enumerate(filtered) if r.id == edit_id), None)
         if index is not None:
             offset = (index // _SETUP_DEFAULT_CAP) * _SETUP_DEFAULT_CAP
             rows = filtered[offset : offset + _SETUP_DEFAULT_CAP]
@@ -720,17 +699,14 @@ def _setup_row_window[RowT: _HasId](
                 offset=offset,
                 page_size=_SETUP_DEFAULT_CAP,
             )
-            return SetupWindow(
-                rows=rows, offset=offset, pager=pager, edit_id=edit_id
-            )
+            return SetupWindow(rows=rows, offset=offset, pager=pager, edit_id=edit_id)
 
-    return SetupWindow(
-        rows=[edited, *rows], offset=offset, pager=pager, edit_id=edit_id
-    )
+    return SetupWindow(rows=[edited, *rows], offset=offset, pager=pager, edit_id=edit_id)
 
 
 def _redirect_keeping_selection(
-    request: Request, base_url: str,
+    request: Request,
+    base_url: str,
     selected_ids: list[int],
     *,
     filter_params: list[tuple[str, str]] | None = None,
@@ -995,9 +971,7 @@ def render_session_home(
         prepare_confirm=prepare_confirm,
     )
     if quick_setup is None:
-        quick_setup = views.build_quick_setup_context(
-            db, review_session, user=user
-        )
+        quick_setup = views.build_quick_setup_context(db, review_session, user=user)
     # 18R Item 4 Slice 2 (mock-up) — the same schedule input-value
     # prefills the Edit route builds, so the inert Session config card
     # can render filled edit boxes. Reused verbatim; the edit-mode
@@ -1013,9 +987,7 @@ def render_session_home(
             "status_pills": views.session_status_pills(db, review_session),
             "has_responses": lifecycle.session_has_responses(db, review_session),
             "quick_setup": quick_setup,
-            "session_timezone_label": date_formatting.gmt_offset_zone_label(
-                session_tz
-            ),
+            "session_timezone_label": date_formatting.gmt_offset_zone_label(session_tz),
             # Schedule input-value prefills for the Session config card
             # mock-up (18R Item 4 Slice 2) — mirror the Edit route.
             "scheduled_activate_at_input_value": (
@@ -1027,21 +999,15 @@ def render_session_home(
                 review_session.deadline, session_tz
             ),
             "responses_release_at_input_value": (
-                date_formatting.format_datetime_box(
-                    review_session.responses_release_at, session_tz
-                )
+                date_formatting.format_datetime_box(review_session.responses_release_at, session_tz)
             ),
             "responses_release_until_input_value": (
                 date_formatting.format_datetime_box(
                     review_session.responses_release_until, session_tz
                 )
             ),
-            "invite_offsets_input_value": ", ".join(
-                review_session.invite_offsets or []
-            ),
-            "reminder_offsets_input_value": ", ".join(
-                review_session.reminder_offsets or []
-            ),
+            "invite_offsets_input_value": ", ".join(review_session.invite_offsets or []),
+            "reminder_offsets_input_value": ", ".join(review_session.reminder_offsets or []),
             # 18R Item 4 — display mode shows each offset + its resolved
             # send datetime (invites off Start, reminders off End). With
             # auto-send off (14E rung 0) the offsets show without a send
@@ -1049,13 +1015,13 @@ def render_session_home(
             "scheduled_send": scheduled_events.scheduled_send_enabled(),
             "invite_offset_rows": views.build_offset_display_rows(
                 review_session.scheduled_activate_at
-                if scheduled_events.scheduled_send_enabled() else None,
+                if scheduled_events.scheduled_send_enabled()
+                else None,
                 review_session.invite_offsets,
                 session_tz,
             ),
             "reminder_offset_rows": views.build_offset_display_rows(
-                review_session.deadline
-                if scheduled_events.scheduled_send_enabled() else None,
+                review_session.deadline if scheduled_events.scheduled_send_enabled() else None,
                 review_session.reminder_offsets,
                 session_tz,
             ),
@@ -1067,9 +1033,9 @@ def render_session_home(
             ),
             # 19S Item 9 Part B — the details card's Tags field, shown as a
             # ``.config-value`` when locked and prefilled when editing.
-            "session_tag_list": session_tags.tags_for_sessions(
-                db, [review_session.id]
-            )[review_session.id],
+            "session_tag_list": session_tags.tags_for_sessions(db, [review_session.id])[
+                review_session.id
+            ],
             # 19S Item 7 — the Tags field's typeahead.
             "tag_vocabulary": session_tags.vocabulary_for_user(db, user),
             # Owner add/remove errors, the Owners card's banner
@@ -1084,24 +1050,15 @@ def render_session_home(
             # roster has rows (mirrors the Edit page + service-layer guard).
             "config_editing": (
                 editing
-                and (
-                    lifecycle.is_draft(review_session)
-                    or lifecycle.is_validated(review_session)
-                )
+                and (lifecycle.is_draft(review_session) or lifecycle.is_validated(review_session))
             ),
             "timezone_options": operator_settings.timezone_options(),
             "current_session_timezone": session_tz,
-            "has_relationships": sessions_service._has_relationships(
-                db, review_session.id
-            ),
-            "has_observers": sessions_service._has_observers(
-                db, review_session.id
-            ),
+            "has_relationships": sessions_service._has_relationships(db, review_session.id),
+            "has_observers": sessions_service._has_observers(db, review_session.id),
             # 20B — symmetric review turns on only while both rosters
             # are empty, so the box is disabled once either has a row.
-            "has_roster_rows": sessions_service.has_roster_rows(
-                db, review_session.id
-            ),
+            "has_roster_rows": sessions_service.has_roster_rows(db, review_session.id),
             "breadcrumbs": breadcrumbs.operator_session(review_session),
             **workflow_ctx,
         },

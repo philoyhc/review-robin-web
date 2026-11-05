@@ -137,9 +137,7 @@ def rollups(db: Session) -> Fixture:
     user = User(email="op-r2parity@example.edu")
     db.add(user)
     db.flush()
-    review_session = ReviewSession(
-        name="Spring", code="r2-parity", created_by_user_id=user.id
-    )
+    review_session = ReviewSession(name="Spring", code="r2-parity", created_by_user_id=user.id)
     db.add(review_session)
     db.flush()
     sid = review_session.id
@@ -173,12 +171,8 @@ def rollups(db: Session) -> Fixture:
     db.add_all([alice, bob, zoe, carol, dan, erin])
     db.flush()
 
-    solo = Instrument(
-        session_id=sid, name="Solo", order=0, session_seq=1, group_kind=None
-    )
-    grouped = Instrument(
-        session_id=sid, name="Grouped", order=1, session_seq=2, group_kind="r1"
-    )
+    solo = Instrument(session_id=sid, name="Solo", order=0, session_seq=1, group_kind=None)
+    grouped = Instrument(session_id=sid, name="Grouped", order=1, session_seq=2, group_kind="r1")
     # A **second** group-scoped instrument on the same boundary tag, so
     # "Team A on `grouped`" and "Team A on `grouped2`" are distinct
     # units. A dedupe keyed on the group alone collapses them into one.
@@ -189,17 +183,29 @@ def rollups(db: Session) -> Fixture:
     db.flush()
 
     q1 = InstrumentResponseField(
-        instrument_id=solo.id, field_key="q1", label="Q1", required=True, order=0,
-        _inline_data_type="List", _inline_list_csv="yes,no",
-        branch_op="is", branch_value="yes",
+        instrument_id=solo.id,
+        field_key="q1",
+        label="Q1",
+        required=True,
+        order=0,
+        _inline_data_type="List",
+        _inline_list_csv="yes,no",
+        branch_op="is",
+        branch_value="yes",
     )
     q2 = InstrumentResponseField(
         instrument_id=solo.id, field_key="q2", label="Q2", required=False, order=1
     )
     g1 = InstrumentResponseField(
-        instrument_id=grouped.id, field_key="g1", label="G1", required=True, order=0,
-        _inline_data_type="List", _inline_list_csv="ok,not ok",
-        branch_op="is", branch_value="ok",
+        instrument_id=grouped.id,
+        field_key="g1",
+        label="G1",
+        required=True,
+        order=0,
+        _inline_data_type="List",
+        _inline_list_csv="ok,not ok",
+        branch_op="is",
+        branch_value="ok",
     )
     g2 = InstrumentResponseField(
         instrument_id=grouped.id, field_key="g2", label="G2", required=False, order=1
@@ -443,9 +449,7 @@ def test_the_invitation_and_its_reminder_ride_on_the_row(
     alice = rows["alice@example.edu"]
     assert alice.invitation is not None
     assert alice.invitation.status == "opened"
-    assert _utc_naive(alice.last_reminder_at) == _utc_naive(
-        T0 + timedelta(hours=4)
-    )
+    assert _utc_naive(alice.last_reminder_at) == _utc_naive(T0 + timedelta(hours=4))
 
     bob = rows["bob@example.edu"]
     assert bob.invitation is not None
@@ -458,9 +462,7 @@ def test_the_invitation_and_its_reminder_ride_on_the_row(
 
 
 @reviewer_impl
-def test_an_excluded_row_is_not_work(
-    db: Session, rollups: Fixture, rollup: Callable
-) -> None:
+def test_an_excluded_row_is_not_work(db: Session, rollups: Fixture, rollup: Callable) -> None:
     """Bob has two assignments; a6 is `include=False`, so he carries one
     unit, unanswered — `not started`, with its one required field
     counted as missing."""
@@ -490,9 +492,7 @@ def test_reviewee_rows_are_in_identifier_order(
 
 
 @reviewee_impl
-def test_carol_is_adequately_covered(
-    db: Session, rollups: Fixture, rollup: Callable
-) -> None:
+def test_carol_is_adequately_covered(db: Session, rollups: Fixture, rollup: Callable) -> None:
     """a1, a3 and a9 — three assignments, two of them answered with the
     required field satisfied and submitted. a9 is the draft, which this
     rollup does **not** count. Two of three is at or above the adequate
@@ -512,9 +512,7 @@ def test_carol_is_adequately_covered(
     assert carol.pill_state == "adequate"
     # +6h: a3's later row. Not +0h (a1, her first assignment with a
     # stamp) and not +2h (a3's other row).
-    assert _utc_naive(carol.last_response_at) == _utc_naive(
-        T0 + timedelta(hours=6)
-    )
+    assert _utc_naive(carol.last_response_at) == _utc_naive(T0 + timedelta(hours=6))
 
 
 @reviewee_impl
@@ -534,9 +532,7 @@ def test_a_response_that_completes_nothing_still_reads_as_no_responses(
     assert dan.completed_count == 0
     assert dan.pill_state == "no responses"
     # ...and the timestamp still comes from that row.
-    assert _utc_naive(dan.last_response_at) == _utc_naive(
-        T0 + timedelta(hours=1)
-    )
+    assert _utc_naive(dan.last_response_at) == _utc_naive(T0 + timedelta(hours=1))
 
 
 @reviewee_impl
@@ -559,9 +555,7 @@ def test_erin_is_at_risk_below_the_adequate_fraction(
 # --- where the two sides disagree, on purpose ------------------------
 
 
-def test_an_inactive_reviewer_is_excluded_one_side_only(
-    db: Session, rollups: Fixture
-) -> None:
+def test_an_inactive_reviewer_is_excluded_one_side_only(db: Session, rollups: Fixture) -> None:
     """`zoe` is inactive. The reviewer rollup drops her; the reviewee
     rollup still counts her assignment against erin — a8 is one of the
     three in `test_erin_is_at_risk_below_the_adequate_fraction`, and its
@@ -574,16 +568,12 @@ def test_an_inactive_reviewer_is_excluded_one_side_only(
     reviewers = _by_email(monitoring.per_reviewer_progress(db, rollups.session))
     assert "zoe@example.edu" not in reviewers
 
-    erin = _by_identifier(
-        monitoring.per_reviewee_coverage(db, rollups.session)
-    )["erin@example.edu"]
+    erin = _by_identifier(monitoring.per_reviewee_coverage(db, rollups.session))["erin@example.edu"]
     assert erin.reviewer_count == 3
     assert erin.completed_count == 1
 
 
-def test_a_draft_is_complete_to_one_rollup_and_not_the_other(
-    db: Session, rollups: Fixture
-) -> None:
+def test_a_draft_is_complete_to_one_rollup_and_not_the_other(db: Session, rollups: Fixture) -> None:
     """a9 carries `h1 = "wip"` with no `submitted_at`.
 
     The reviewer rollup counts it **complete**: it asks only whether
@@ -598,12 +588,10 @@ def test_a_draft_is_complete_to_one_rollup_and_not_the_other(
     difference a rewrite would iron out by accident while both sides
     kept passing their own tests.
     """
-    alice = _by_email(monitoring.per_reviewer_progress(db, rollups.session))[
-        "alice@example.edu"
+    alice = _by_email(monitoring.per_reviewer_progress(db, rollups.session))["alice@example.edu"]
+    carol = _by_identifier(monitoring.per_reviewee_coverage(db, rollups.session))[
+        "carol@example.edu"
     ]
-    carol = _by_identifier(
-        monitoring.per_reviewee_coverage(db, rollups.session)
-    )["carol@example.edu"]
 
     # Alice's three completions include a9; drop it and she has two.
     assert alice.completed_count == 3
@@ -637,17 +625,13 @@ def test_an_invisible_required_field_is_the_reviewers_third_asymmetry(
     user = User(email="op-visible@example.edu")
     db.add(user)
     db.flush()
-    review_session = ReviewSession(
-        name="Spring", code="r2-visible", created_by_user_id=user.id
-    )
+    review_session = ReviewSession(name="Spring", code="r2-visible", created_by_user_id=user.id)
     db.add(review_session)
     db.flush()
     sid = review_session.id
 
     reviewer = Reviewer(session_id=sid, name="Ann", email="ann@example.edu")
-    reviewee = Reviewee(
-        session_id=sid, name="Ben", email_or_identifier="ben@example.edu"
-    )
+    reviewee = Reviewee(session_id=sid, name="Ben", email_or_identifier="ben@example.edu")
     db.add_all([reviewer, reviewee])
     db.flush()
     # **On both instrument kinds**, because the reviewer rollup has two
@@ -655,9 +639,7 @@ def test_an_invisible_required_field_is_the_reviewers_third_asymmetry(
     # path for group-scoped ones — and each reaches its fields by its
     # own query.
     instruments = [
-        Instrument(
-            session_id=sid, name="Solo", order=0, session_seq=1, group_kind=None
-        ),
+        Instrument(session_id=sid, name="Solo", order=0, session_seq=1, group_kind=None),
         Instrument(
             session_id=sid,
             name="Grouped",
@@ -760,27 +742,19 @@ def test_the_edges_the_shared_fixture_does_not_reach(
     user = User(email="op-edges@example.edu")
     db.add(user)
     db.flush()
-    review_session = ReviewSession(
-        name="Spring", code="r2-edges", created_by_user_id=user.id
-    )
+    review_session = ReviewSession(name="Spring", code="r2-edges", created_by_user_id=user.id)
     db.add(review_session)
     db.flush()
     sid = review_session.id
 
     plain_only = Reviewer(session_id=sid, name="Pat", email="pat@example.edu")
-    grouped_only = Reviewer(
-        session_id=sid, name="Quinn", email="quinn@example.edu"
-    )
-    subject = Reviewee(
-        session_id=sid, name="Sam", email_or_identifier="sam@example.edu"
-    )
+    grouped_only = Reviewer(session_id=sid, name="Quinn", email="quinn@example.edu")
+    subject = Reviewee(session_id=sid, name="Sam", email_or_identifier="sam@example.edu")
     db.add_all([plain_only, grouped_only, subject])
     db.flush()
 
     # No required fields on either instrument.
-    optional_solo = Instrument(
-        session_id=sid, name="Solo", order=0, session_seq=1, group_kind=None
-    )
+    optional_solo = Instrument(session_id=sid, name="Solo", order=0, session_seq=1, group_kind=None)
     optional_group = Instrument(
         session_id=sid, name="Grouped", order=1, session_seq=2, group_kind="r1"
     )
@@ -857,9 +831,7 @@ def test_the_edges_the_shared_fixture_does_not_reach(
         assert row.pill_state == "complete", name
 
 
-def test_summary_counts_ride_on_the_reviewer_rollup(
-    db: Session, rollups: Fixture
-) -> None:
+def test_summary_counts_ride_on_the_reviewer_rollup(db: Session, rollups: Fixture) -> None:
     """`summary_counts` derives entirely from `per_reviewer_progress`, so
     a change to that rollup moves these too — including the invitation
     half, which is why the fixture seeds two.
@@ -887,14 +859,10 @@ def test_the_fixture_is_branched_and_holds_to_the_rules(rollups: Fixture) -> Non
         assert branch_structure_errors(fields) == []
     # a3's governed answer sits in an open branch ("ok"), so the fixture
     # obeys "a closed branch holds no value".
-    assert rollups.g2.id in applicable_field_ids(
-        [rollups.g1, rollups.g2], {rollups.g1.id: "ok"}
-    )
+    assert rollups.g2.id in applicable_field_ids([rollups.g1, rollups.g2], {rollups.g1.id: "ok"})
 
 
-def test_the_fixture_reaches_both_sql_aggregates(
-    db: Session, rollups: Fixture
-) -> None:
+def test_the_fixture_reaches_both_sql_aggregates(db: Session, rollups: Fixture) -> None:
     """The "sql" cases above only compare against the oracle if this
     fixture's per-reviewee work actually reaches the aggregates. A
     required governed field on `solo` would route it to Python and make

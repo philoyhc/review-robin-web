@@ -33,7 +33,15 @@ def log(request: Request) -> Response:
     chosen = sample.student(q.get("student"))
     duration = q.get("duration") if q.get("duration") in sample.DURATIONS else None
     kind = q.get("type") if q.get("type") in sample.ENCOUNTER_TYPES else None
-    return gated(request, "supportlogs/log.html", FRONTLINE, chosen=chosen, duration=duration, kind=kind, current_tab="/log")
+    return gated(
+        request,
+        "supportlogs/log.html",
+        FRONTLINE,
+        chosen=chosen,
+        duration=duration,
+        kind=kind,
+        current_tab="/log",
+    )
 
 
 @router.get("/log/saved", name="supportlogs_log_saved")
@@ -52,15 +60,24 @@ def log_saved(request: Request) -> Response:
     # a sample stores nothing, so the view is offered only if already so.
     in_set = any(s.id == chosen.id for s, _, _ in sample.working_set(me.name))
     return gated(
-        request, "supportlogs/log_saved.html", FRONTLINE,
-        chosen=chosen, duration=duration, kind=kind, following=following, in_set=in_set,
-        added=q.get("follow") == "yes" and not following, current_tab="/log",
+        request,
+        "supportlogs/log_saved.html",
+        FRONTLINE,
+        chosen=chosen,
+        duration=duration,
+        kind=kind,
+        following=following,
+        in_set=in_set,
+        added=q.get("follow") == "yes" and not following,
+        current_tab="/log",
     )
 
 
 @router.get("/students/", name="supportlogs_students")
 def students(request: Request) -> Response:
-    return gated(request, "supportlogs/students.html", FRONTLINE, unlocked=records_unlocked(request))
+    return gated(
+        request, "supportlogs/students.html", FRONTLINE, unlocked=records_unlocked(request)
+    )
 
 
 @router.get("/students/{sid}", name="supportlogs_student")
@@ -71,11 +88,15 @@ def student_view(request: Request, sid: str) -> Response:
     only what the viewer's records and grants cover (§11.1)."""
     me = _me(request)
     if not sample.holds(me, FRONTLINE):
-        return gated(request, "supportlogs/student.html", FRONTLINE)  # the 403 page, whatever the id
+        return gated(
+            request, "supportlogs/student.html", FRONTLINE
+        )  # the 403 page, whatever the id
     found = sample.student(sid)
     if found is None or not reaches_student(me, sid):
         raise HTTPException(status_code=404)
-    return gated(request, "supportlogs/student.html", FRONTLINE, chosen=found, current_tab="/students/")
+    return gated(
+        request, "supportlogs/student.html", FRONTLINE, chosen=found, current_tab="/students/"
+    )
 
 
 SHOW = {"all": "All", "overdue": "Overdue", "week": "This week"}
@@ -87,9 +108,20 @@ def plans(request: Request) -> Response:
     follow-ups, filtered All, Overdue or This week."""
     show = request.query_params.get("show", "all")
     show = show if show in SHOW else "all"
-    keeps: dict[str, set[str] | None] = {"all": None, "overdue": {"overdue"}, "week": {"overdue", "today", "week"}}
+    keeps: dict[str, set[str] | None] = {
+        "all": None,
+        "overdue": {"overdue"},
+        "week": {"overdue", "today", "week"},
+    }
     keep = keeps[show]
     me = _me(request)
     mine = [p for p in sample.plans_of(me.name) if keep is None or sample.due(p)[0] in keep]
-    return gated(request, "supportlogs/plans.html", FRONTLINE, show=show, shows=SHOW, mine=mine,
-                 unlocked=records_unlocked(request))
+    return gated(
+        request,
+        "supportlogs/plans.html",
+        FRONTLINE,
+        show=show,
+        shows=SHOW,
+        mine=mine,
+        unlocked=records_unlocked(request),
+    )

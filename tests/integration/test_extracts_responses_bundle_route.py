@@ -31,9 +31,7 @@ from app.db.models import (
 )
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "RespBundle", "code": code, "description": ""},
@@ -46,9 +44,7 @@ def _make_session(
     # A roster and an assignment on each instrument with no responses,
     # so ``all=0`` / ``all_rows=0`` have rows to drop and the
     # pass-through is observable.
-    reviewer = Reviewer(
-        session_id=review_session.id, name="Ann", email="ann@example.edu"
-    )
+    reviewer = Reviewer(session_id=review_session.id, name="Ann", email="ann@example.edu")
     reviewee = Reviewee(
         session_id=review_session.id,
         name="Bo",
@@ -90,26 +86,19 @@ def _instrument_ids(db: Session, review_session: ReviewSession) -> list[int]:
     )
 
 
-def _bundle(
-    client: TestClient, review_session: ReviewSession, query: str = ""
-) -> zipfile.ZipFile:
+def _bundle(client: TestClient, review_session: ReviewSession, query: str = "") -> zipfile.ZipFile:
     response = client.get(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/export/responses_bundle.zip{query}"
+        f"/operator/sessions/{review_session.public_id}/export/responses_bundle.zip{query}"
     )
     assert response.status_code == 200, response.text
     return zipfile.ZipFile(io.BytesIO(response.content))
 
 
-def _download(
-    client: TestClient, path: str
-) -> tuple[str, bytes]:
+def _download(client: TestClient, path: str) -> tuple[str, bytes]:
     """``(filename, body)`` of a card's own download."""
     response = client.get(path)
     assert response.status_code == 200, response.text
-    match = re.search(
-        r'filename="([^"]+)"', response.headers["content-disposition"]
-    )
+    match = re.search(r'filename="([^"]+)"', response.headers["content-disposition"])
     assert match
     return match.group(1), response.content
 
@@ -126,8 +115,7 @@ def test_responses_bundle_route_streams_zip_with_canonical_filename(
 ) -> None:
     review_session = _make_session(client, db, code="rb-fname")
     response = client.get(
-        f"/operator/sessions/{review_session.public_id}"
-        "/export/responses_bundle.zip"
+        f"/operator/sessions/{review_session.public_id}/export/responses_bundle.zip"
     )
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/zip"
@@ -136,9 +124,7 @@ def test_responses_bundle_route_streams_zip_with_canonical_filename(
     )
 
 
-def test_every_card_passes_through_as_configured(
-    client: TestClient, db: Session
-) -> None:
+def test_every_card_passes_through_as_configured(client: TestClient, db: Session) -> None:
     """Each card's non-default chip state reaches the bundle, and the
     member equals that card's own download with the same query."""
     review_session = _make_session(client, db, code="rb-pass")
@@ -147,18 +133,15 @@ def test_every_card_passes_through_as_configured(
 
     by_instrument = _card_zip(
         client,
-        f"{base}/by_instrument_bundle.zip?instrument={second}&meta=0"
-        "&all_rows=0",
+        f"{base}/by_instrument_bundle.zip?instrument={second}&meta=0&all_rows=0",
     )
     reviewer_name, reviewer_body = _download(
         client,
-        f"{base}/reviewer_metadata.csv?instrument={first}&all=0"
-        "&self_review_handling=both",
+        f"{base}/reviewer_metadata.csv?instrument={first}&all=0&self_review_handling=both",
     )
     reviewee_name, reviewee_body = _download(
         client,
-        f"{base}/reviewee_metadata.csv?instrument={first}&all=0"
-        "&self_review_handling=exclude_self",
+        f"{base}/reviewee_metadata.csv?instrument={first}&all=0&self_review_handling=exclude_self",
     )
     archive = _bundle(
         client,
@@ -204,8 +187,7 @@ def test_every_card_passes_through_as_configured(
     assert reviewee_name == "rb-pass_reviewee_metadata_noself.csv"
     assert len(by_instrument) == 1
     assert sorted(archive.namelist()) == sorted(
-        ["rb-pass_responses.csv", reviewer_name, reviewee_name]
-        + list(by_instrument)
+        ["rb-pass_responses.csv", reviewer_name, reviewee_name] + list(by_instrument)
     )
     for name, body in by_instrument.items():
         assert archive.read(name) == body
@@ -213,26 +195,19 @@ def test_every_card_passes_through_as_configured(
     assert archive.read(reviewee_name) == reviewee_body
 
 
-def test_omitted_options_take_each_card_routes_defaults(
-    client: TestClient, db: Session
-) -> None:
+def test_omitted_options_take_each_card_routes_defaults(client: TestClient, db: Session) -> None:
     """No query at all: every card rides with its own route's
     defaults, and the stats and per-instrument long files that used
     to ride along are gone."""
     review_session = _make_session(client, db, code="rb-def")
     base = f"/operator/sessions/{review_session.public_id}/export"
     by_instrument = _card_zip(client, f"{base}/by_instrument_bundle.zip")
-    reviewer_name, reviewer_body = _download(
-        client, f"{base}/reviewer_metadata.csv"
-    )
-    reviewee_name, reviewee_body = _download(
-        client, f"{base}/reviewee_metadata.csv"
-    )
+    reviewer_name, reviewer_body = _download(client, f"{base}/reviewer_metadata.csv")
+    reviewee_name, reviewee_body = _download(client, f"{base}/reviewee_metadata.csv")
 
     archive = _bundle(client, review_session)
     assert sorted(archive.namelist()) == sorted(
-        ["rb-def_responses.csv", reviewer_name, reviewee_name]
-        + list(by_instrument)
+        ["rb-def_responses.csv", reviewer_name, reviewee_name] + list(by_instrument)
     )
     assert len(by_instrument) == 2
     for name, body in by_instrument.items():
@@ -244,17 +219,14 @@ def test_omitted_options_take_each_card_routes_defaults(
         assert not re.search(r"_instrument_\d+\.csv$", name)
 
 
-def test_chips_off_leave_only_responses(
-    client: TestClient, db: Session
-) -> None:
+def test_chips_off_leave_only_responses(client: TestClient, db: Session) -> None:
     """``responses.csv`` is not behind a chip: with every card off it
     is the whole bundle."""
     review_session = _make_session(client, db, code="rb-off")
     archive = _bundle(
         client,
         review_session,
-        "?by_instrument=0&reviewer_metadata=0&reviewee_metadata=0"
-        "&data_shapes=0&tokens=0",
+        "?by_instrument=0&reviewer_metadata=0&reviewee_metadata=0&data_shapes=0&tokens=0",
     )
     assert archive.namelist() == ["rb-off_responses.csv"]
 
@@ -294,9 +266,7 @@ def test_saved_shapes_ride_as_their_download_buttons_name_them(
 
     archive = _bundle(client, review_session)
     assert archive.read(name) == body
-    assert name not in _bundle(
-        client, review_session, "?data_shapes=0"
-    ).namelist()
+    assert name not in _bundle(client, review_session, "?data_shapes=0").namelist()
 
 
 def test_a_shape_named_like_another_member_does_not_replace_it(
@@ -325,9 +295,7 @@ def test_a_shape_named_like_another_member_does_not_replace_it(
     assert archive.read("rb-dup_reviewer_metadata_self_2.csv") != reviewer_body
 
 
-def test_responses_bundle_route_emits_audit_event(
-    client: TestClient, db: Session
-) -> None:
+def test_responses_bundle_route_emits_audit_event(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="rb-aud")
     _bundle(
         client,
@@ -351,53 +319,36 @@ def test_responses_bundle_route_emits_audit_event(
         "data_shapes": 0,
         "participant_tokens": 0,
     }
-    assert detail["context"] == {
-        "reviewer_metadata_self_review_handling": "both"
-    }
+    assert detail["context"] == {"reviewer_metadata_self_review_handling": "both"}
 
 
-def test_extract_data_page_surfaces_zip_all_button(
-    client: TestClient, db: Session
-) -> None:
+def test_extract_data_page_surfaces_zip_all_button(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="rb-page")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/extract-data"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
 
     assert 'id="extract-data-zip-all"' in body
     assert (
-        f'href="/operator/sessions/{review_session.public_id}'
-        f'/export/responses_bundle.zip"' in body
+        f'href="/operator/sessions/{review_session.public_id}/export/responses_bundle.zip"' in body
     )
     assert "a complete set" in body
     assert "of response data, plus whichever files are selected" in body
 
 
-def test_half_width_cards_follow_the_authors_order(
-    client: TestClient, db: Session
-) -> None:
+def test_half_width_cards_follow_the_authors_order(client: TestClient, db: Session) -> None:
     """Left column: Reviewer then Reviewee response metadata; right
     column: By instrument then Extract all data (D28)."""
     review_session = _make_session(client, db, code="rb-order")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/extract-data"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
     grid = body[: body.index('id="extract-data-shaper"')]
     columns = grid.split('<div class="extract-data-column">')[1:]
     assert len(columns) == 2
     left, right = columns
-    assert left.index('id="extract-data-by-reviewer"') < left.index(
-        'id="extract-data-by-reviewee"'
-    )
+    assert left.index('id="extract-data-by-reviewer"') < left.index('id="extract-data-by-reviewee"')
     assert 'id="extract-data-intro"' not in left
-    assert right.index('id="extract-data-by-instrument"') < right.index(
-        'id="extract-data-intro"'
-    )
+    assert right.index('id="extract-data-by-instrument"') < right.index('id="extract-data-intro"')
 
 
-def test_all_instruments_stands_for_every_instrument_chip(
-    client: TestClient, db: Session
-) -> None:
+def test_all_instruments_stands_for_every_instrument_chip(client: TestClient, db: Session) -> None:
     """Codex on #2769: the page sends ``all_instruments=1`` rather than
     one id per chip when every chip is on, so the Zip-all link stays
     under a gateway's URL limit. It means exactly the full list, on the
@@ -408,23 +359,17 @@ def test_all_instruments_stands_for_every_instrument_chip(
     listed = "&".join(f"instrument={i}" for i in ids)
     for kind in ("reviewer_metadata", "reviewee_metadata"):
         name, body = _download(client, f"{base}/{kind}.csv?{listed}")
-        assert _download(
-            client, f"{base}/{kind}.csv?all_instruments=1"
-        ) == (name, body)
+        assert _download(client, f"{base}/{kind}.csv?all_instruments=1") == (name, body)
         assert _download(client, f"{base}/{kind}.csv")[1] != body
-        archive = _bundle(
-            client, review_session, f"?{kind}.all_instruments=1"
-        )
+        archive = _bundle(client, review_session, f"?{kind}.all_instruments=1")
         assert archive.read(name) == body
         # It wins over an explicit list, on the card and in the bundle.
         # Naming only the field-less second instrument would change the
         # file, so a list that won would fail here.
-        assert _download(client, f"{base}/{kind}.csv?instrument={ids[1]}")[
-            1
-        ] != body
-        assert _download(
-            client, f"{base}/{kind}.csv?all_instruments=1&instrument={ids[1]}"
-        )[1] == body
+        assert _download(client, f"{base}/{kind}.csv?instrument={ids[1]}")[1] != body
+        assert (
+            _download(client, f"{base}/{kind}.csv?all_instruments=1&instrument={ids[1]}")[1] == body
+        )
         archive = _bundle(
             client,
             review_session,

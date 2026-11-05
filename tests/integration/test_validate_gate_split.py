@@ -11,6 +11,7 @@ Two test families:
   rendered Validate page contains the expected ``Setup gate`` /
   ``Operations gate`` headings under realistic session states.
 """
+
 from __future__ import annotations
 
 import re
@@ -64,9 +65,7 @@ def test_setup_gate_rules() -> None:
         "email_template.no_help_contact",
     }
     for key in setup_keys:
-        assert gate_for_rule_key(key) == "setup", (
-            f"{key!r} should be in the Setup gate"
-        )
+        assert gate_for_rule_key(key) == "setup", f"{key!r} should be in the Setup gate"
 
 
 def test_operations_gate_rules() -> None:
@@ -81,9 +80,7 @@ def test_operations_gate_rules() -> None:
         "assignments.instrument_empty",
     }
     for key in operations_keys:
-        assert gate_for_rule_key(key) == "operations", (
-            f"{key!r} should be in the Operations gate"
-        )
+        assert gate_for_rule_key(key) == "operations", f"{key!r} should be in the Operations gate"
 
 
 def test_gate_heuristic_falls_back_for_unmapped_keys() -> None:
@@ -100,9 +97,7 @@ def test_gate_heuristic_falls_back_for_unmapped_keys() -> None:
 # --------------------------------------------------------------------------- #
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     """Create a session via the HTTP route so the test client's
     authenticated user becomes its operator."""
     from sqlalchemy import select as _select
@@ -113,14 +108,10 @@ def _make_session(
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        _select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(_select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
-def test_validate_page_renders_both_gate_headings(
-    client: TestClient, db: Session
-) -> None:
+def test_validate_page_renders_both_gate_headings(client: TestClient, db: Session) -> None:
     """A bare-bones session has setup-gate errors (reviewers.empty,
     reviewees.empty, etc.) and an operations-gate warning
     (assignments.no_included_pairs). Both gate headings render.
@@ -129,9 +120,7 @@ def test_validate_page_renders_both_gate_headings(
     ``text-transform: capitalize`` does the visual casing.
     """
     review_session = _make_session(client, db, code="gate-both")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/validate"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/validate").text
     assert 'id="gate-setup"' in body
     assert "setup gate" in body
     assert 'id="gate-operations"' in body
@@ -147,9 +136,7 @@ def test_validate_page_skips_operations_gate_when_no_operations_issues(
     setup-gate (reviewers/reviewees/etc.). The Operations gate
     heading should not render."""
     review_session = _make_session(client, db, code="gate-setup-only")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/validate?severity=error"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/validate?severity=error").text
     assert "setup gate" in body
     assert "operations gate" not in body
 
@@ -186,9 +173,7 @@ def test_validate_page_per_source_anchor_uses_first_gate_only(
     for field in list(instrument.response_fields):
         db.delete(field)
     db.commit()
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/validate"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/validate").text
     # The instruments source heads a group in both gates...
     assert 'id="gate-setup"' in body
     assert 'id="gate-operations"' in body
@@ -204,23 +189,17 @@ def test_validate_page_setup_coverage_deep_link_still_works(
     ``#issue-source-{source}``. Confirm the anchor target exists on
     the issue list for setup-gate sources after the split."""
     review_session = _make_session(client, db, code="gate-deeplink")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/validate"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/validate").text
     assert 'href="#issue-source-reviewers"' in body
     assert 'id="issue-source-reviewers"' in body
 
 
-def test_validate_page_gate_heading_classes(
-    client: TestClient, db: Session
-) -> None:
+def test_validate_page_gate_heading_classes(client: TestClient, db: Session) -> None:
     """Gate headings carry a stable CSS hook ``issue-gate-heading``
     so a later visual-polish PR can style them without re-finding
     the markup."""
     review_session = _make_session(client, db, code="gate-classes")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/validate"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/validate").text
     assert 'class="issue-gate-heading"' in body
 
 
@@ -234,9 +213,7 @@ def test_issue_groups_carry_gate_field(db: Session) -> None:
     user = User(email="op-igc@example.edu")
     db.add(user)
     db.flush()
-    review_session = ReviewSession(
-        name="V15E-igc", code="gate-igc", created_by_user_id=user.id
-    )
+    review_session = ReviewSession(name="V15E-igc", code="gate-igc", created_by_user_id=user.id)
     db.add(review_session)
     db.flush()
     # Reviewers + reviewees imported, default instrument unpinned →
@@ -268,9 +245,7 @@ def test_issue_groups_carry_gate_field(db: Session) -> None:
     )
     db.add(rule_set)
     db.flush()
-    instrument = db.query(Instrument).filter(
-        Instrument.session_id == review_session.id
-    ).first()
+    instrument = db.query(Instrument).filter(Instrument.session_id == review_session.id).first()
     assert instrument is not None
     instrument.rule_set_id = rule_set.id
     db.flush()

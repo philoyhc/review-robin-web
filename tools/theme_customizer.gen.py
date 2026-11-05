@@ -20,6 +20,7 @@ the same shape (portability goal, decision #6).
 Regenerate after any base.html change:  python3 tools/theme_customizer.gen.py
 Not production code; not wired into the app.
 """
+
 import colorsys
 import json
 import pathlib
@@ -31,7 +32,7 @@ BASE = ROOT / "app/web/templates/base.html"
 OUT = ROOT / "tools/theme_customizer.html"
 
 base_css = hc.lift_base_style(BASE.read_text(encoding="utf-8"))
-prims = hc.parse_primitives(base_css)              # [(name, hex)] ordered
+prims = hc.parse_primitives(base_css)  # [(name, hex)] ordered
 prim_val = dict(prims)
 sem = hc.parse_semantic(base_css)
 sem_light, sem_dark = dict(sem["light"]), dict(sem["dark"])
@@ -42,7 +43,7 @@ clusters = [(n, t) for n, t in hc.parse_clusters(base_css) if t]
 # "neutral" family. sky folds into blue and danger into red (the primitives are
 # named --blue-cyan-* / --red-warm-*, so they group under blue / red).
 NEUTRAL_PREFIXES = {"white", "paper", "gray", "slate", "ink"}
-NON_SEED = NEUTRAL_PREFIXES | {"tint"}                 # families with no seed control
+NON_SEED = NEUTRAL_PREFIXES | {"tint"}  # families with no seed control
 SEED_PREFIX_ORDER = ["blue", "green", "amber", "red", "violet"]
 DISPLAY_ORDER = ["neutral", "blue", "green", "amber", "red", "violet", "tint"]
 
@@ -56,8 +57,8 @@ def display_group(name):
     return "neutral" if p in NEUTRAL_PREFIXES else p
 
 
-groups = {}      # by prefix — chromatic seed families
-dgroups = {}     # by display group — the primitive grid (neutrals merged into one)
+groups = {}  # by prefix — chromatic seed families
+dgroups = {}  # by display group — the primitive grid (neutrals merged into one)
 for name, val in prims:
     groups.setdefault(prefix(name), []).append((name, val))
     dgroups.setdefault(display_group(name), []).append((name, val))
@@ -66,7 +67,7 @@ prim_groups = [(g, dgroups[g]) for g in DISPLAY_ORDER if g in dgroups]
 
 def saturation(hexv):
     h = hexv.lstrip("#")
-    r, g, b = (int(h[i:i + 2], 16) / 255 for i in (0, 2, 4))
+    r, g, b = (int(h[i : i + 2], 16) / 255 for i in (0, 2, 4))
     return colorsys.rgb_to_hsv(r, g, b)[1]
 
 
@@ -87,6 +88,7 @@ SEED_ORDER = [p for p in SEED_PREFIX_ORDER if p in seed_families]
 # for every pair it returns. Grouping and ordering are below, after `pretty`.
 CX_PAIRS = hc.collect_contrast_pairs(base_css)
 
+
 # --- pick targets: preview element -> the semantic token each colour facet
 # paints from. `sel` is scoped inside Part A; `facets` are (label, prop, token)
 # where prop is bg / fg / border. This is the authority for Part C's readout
@@ -98,14 +100,23 @@ def _btn(mod, label, key):
     # exclude in-card button instances (e.g. the danger-zone button) — they just
     # follow their canonical role, so only the Buttons-section samples are picked.
     sel += ":not(.danger-zone *)"
-    return (sel, label, [("infill", "bg", f"--btn-{key}-bg"),
-                         ("text", "fg", f"--btn-{key}-fg"),
-                         ("border", "border", f"--btn-{key}-border")])
+    return (
+        sel,
+        label,
+        [
+            ("infill", "bg", f"--btn-{key}-bg"),
+            ("text", "fg", f"--btn-{key}-fg"),
+            ("border", "border", f"--btn-{key}-border"),
+        ],
+    )
 
 
 def _pill(name, label):
-    return (f".pill-{name}", label, [("infill", "bg", f"--status-{name}-bg"),
-                                     ("text", "fg", f"--status-{name}-fg")])
+    return (
+        f".pill-{name}",
+        label,
+        [("infill", "bg", f"--status-{name}-bg"), ("text", "fg", f"--status-{name}-fg")],
+    )
 
 
 TARGETS = [
@@ -118,16 +129,44 @@ TARGETS = [
     (".chrome-app-identity", "App identity", [("text", "fg", "--text-subtle")]),
     (".chrome-user > div", "Signed-in text", [("text", "fg", "--text-subtle")]),
     (".chrome-link", "Chrome link", [("text", "fg", "--text-link")]),
-    (".signout", "Sign out button", [("text", "fg", "--text-body"), ("border", "border", "--border-default")]),
+    (
+        ".signout",
+        "Sign out button",
+        [("text", "fg", "--text-body"), ("border", "border", "--border-default")],
+    ),
     (".breadcrumb a", "Breadcrumb link", [("text", "fg", "--text-link")]),
     ('.breadcrumb [aria-current="page"]', "Breadcrumb (current)", [("text", "fg", "--text-body")]),
     (".breadcrumb-sep", "Breadcrumb separator", [("text", "fg", "--text-subtle")]),
     # Session navigation
-    (".session-home-anchor:not(.active)", "Session Home anchor", [("background", "bg", "--nav-home-bg"), ("text", "fg", "--text-subtle")]),
-    (".session-home-anchor.active", "Session Home anchor (selected)", [("background", "bg", "--surface-page"), ("text", "fg", "--text-body")]),
-    (".row-label.active-group", "Nav row label (active)", [("background", "bg", "--surface-page"), ("text", "fg", "--text-body")]),
-    (".row-label:not(.active-group)", "Nav row label", [("background", "bg", "--surface-page"), ("text", "fg", "--text-subtle")]),
-    (".tag-chip:not(.is-selected)", "Tag chip", [("infill", "bg", "--status-info-bg"), ("text", "fg", "--text-body"), ("border", "border", "--selected-bg")]),
+    (
+        ".session-home-anchor:not(.active)",
+        "Session Home anchor",
+        [("background", "bg", "--nav-home-bg"), ("text", "fg", "--text-subtle")],
+    ),
+    (
+        ".session-home-anchor.active",
+        "Session Home anchor (selected)",
+        [("background", "bg", "--surface-page"), ("text", "fg", "--text-body")],
+    ),
+    (
+        ".row-label.active-group",
+        "Nav row label (active)",
+        [("background", "bg", "--surface-page"), ("text", "fg", "--text-body")],
+    ),
+    (
+        ".row-label:not(.active-group)",
+        "Nav row label",
+        [("background", "bg", "--surface-page"), ("text", "fg", "--text-subtle")],
+    ),
+    (
+        ".tag-chip:not(.is-selected)",
+        "Tag chip",
+        [
+            ("infill", "bg", "--status-info-bg"),
+            ("text", "fg", "--text-body"),
+            ("border", "border", "--selected-bg"),
+        ],
+    ),
     # Text
     ("h1", "Heading", [("text", "fg", "--text-body")]),
     (".card:not(.danger-zone) h2", "Card heading", [("text", "fg", "--text-body")]),
@@ -141,12 +180,24 @@ TARGETS = [
     (".muted:not(.ph-anno)", "Muted text", [("text", "fg", "--text-subtle")]),
     # Cards, in the gallery's own order: plain, danger zone, help, help+edit.
     # a plain .card fills with --surface-page (raised via its border), not --surface-card
-    (".card:not(.rs-help-card):not(.danger-zone):not(.ph-help-edit)", "Plain card",
-     [("background", "bg", "--surface-page"), ("text", "fg", "--text-body"),
-      ("border", "border", "--border-default")]),
-    (".danger-zone", "Danger zone card",
-     [("background", "bg", "--card-warning-bg"), ("text", "fg", "--text-body"),
-      ("border", "border", "--card-warning-border")]),
+    (
+        ".card:not(.rs-help-card):not(.danger-zone):not(.ph-help-edit)",
+        "Plain card",
+        [
+            ("background", "bg", "--surface-page"),
+            ("text", "fg", "--text-body"),
+            ("border", "border", "--border-default"),
+        ],
+    ),
+    (
+        ".danger-zone",
+        "Danger zone card",
+        [
+            ("background", "bg", "--card-warning-bg"),
+            ("text", "fg", "--text-body"),
+            ("border", "border", "--card-warning-border"),
+        ],
+    ),
     # Border facet included: the help card's edge is its own token, two palette
     # steps off the fill, and Part C is how you find out *which* token paints
     # an edge.
@@ -154,64 +205,163 @@ TARGETS = [
     # --card-help-* tokens also paint the page-guidance disclosure on every
     # Setup page, so a facet named after one caller would misdescribe what
     # editing it changes.
-    (".rs-help-card", "Help card",
-     [("background", "bg", "--card-help-bg"), ("text", "fg", "--card-help-fg"),
-      ("border", "border", "--card-help-border")]),
+    (
+        ".rs-help-card",
+        "Help card",
+        [
+            ("background", "bg", "--card-help-bg"),
+            ("text", "fg", "--card-help-fg"),
+            ("border", "border", "--card-help-border"),
+        ],
+    ),
     # An instrument's help texts are rows in a normal card (19Y Item 2), so
     # the card takes the plain card's tokens, not --card-help-*.
-    (".rs-intro-help.ph-help-edit", "Instrument help texts with edit box",
-     [("background", "bg", "--surface-page"), ("text", "fg", "--text-body"),
-      ("border", "border", "--border-default")]),
+    (
+        ".rs-intro-help.ph-help-edit",
+        "Instrument help texts with edit box",
+        [
+            ("background", "bg", "--surface-page"),
+            ("text", "fg", "--text-body"),
+            ("border", "border", "--border-default"),
+        ],
+    ),
     # The edit box itself: on the operator Instruments page the only thing
     # separating it from the card is its own border, so it is pickable in place
     # rather than only via the Forms section's standalone textarea.
-    (".rs-intro-help.ph-help-edit textarea", "Help-text edit box",
-     [("background", "bg", "--surface-page"), ("text", "fg", "--text-body"),
-      ("border", "border", "--border-default")]),
+    (
+        ".rs-intro-help.ph-help-edit textarea",
+        "Help-text edit box",
+        [
+            ("background", "bg", "--surface-page"),
+            ("text", "fg", "--text-body"),
+            ("border", "border", "--border-default"),
+        ],
+    ),
     _pill("error", "Error pill"),
     _pill("warning", "Warning pill"),
     # info text is remapped under body.ui-v2 (not the -fg token); success
     # uses its -fg token, as the ui-v2 rule does (findings E7)
-    (".pill-info", "Info pill", [("infill", "bg", "--status-info-bg"), ("text", "fg", "--text-body")]),
+    (
+        ".pill-info",
+        "Info pill",
+        [("infill", "bg", "--status-info-bg"), ("text", "fg", "--text-body")],
+    ),
     _pill("success", "Success pill"),
     _pill("super", "Super pill"),
-    (".warning-banner", "Warning banner",
-     [("background", "bg", "--status-warning-bg"), ("text", "fg", "--status-warning-fg"),
-      ("border", "border", "--status-warning-border")]),
-    (".danger-banner", "Danger banner",
-     [("background", "bg", "--status-error-bg"), ("text", "fg", "--status-error-fg"),
-      ("border", "border", "--status-error-border")]),
-    (".ph-save-error", "Inline save error",
-     [("background", "bg", "--status-error-soft-bg"), ("text", "fg", "--status-error-soft-fg"),
-      ("border", "border", "--status-error-soft-border")]),
+    (
+        ".warning-banner",
+        "Warning banner",
+        [
+            ("background", "bg", "--status-warning-bg"),
+            ("text", "fg", "--status-warning-fg"),
+            ("border", "border", "--status-warning-border"),
+        ],
+    ),
+    (
+        ".danger-banner",
+        "Danger banner",
+        [
+            ("background", "bg", "--status-error-bg"),
+            ("text", "fg", "--status-error-fg"),
+            ("border", "border", "--status-error-border"),
+        ],
+    ),
+    (
+        ".ph-save-error",
+        "Inline save error",
+        [
+            ("background", "bg", "--status-error-soft-bg"),
+            ("text", "fg", "--status-error-soft-fg"),
+            ("border", "border", "--status-error-soft-border"),
+        ],
+    ),
     ("label", "Field label", [("text", "fg", "--text-body")]),
-    ("input[type=text]", "Text input",
-     [("background", "bg", "--surface-page"), ("text", "fg", "--text-body"), ("border", "border", "--border-default")]),
-    ("textarea", "Textarea",
-     [("background", "bg", "--surface-page"), ("text", "fg", "--text-body"), ("border", "border", "--border-default")]),
-    ("select", "Select",
-     [("background", "bg", "--surface-page"), ("text", "fg", "--text-body"), ("border", "border", "--border-default")]),
+    (
+        "input[type=text]",
+        "Text input",
+        [
+            ("background", "bg", "--surface-page"),
+            ("text", "fg", "--text-body"),
+            ("border", "border", "--border-default"),
+        ],
+    ),
+    (
+        "textarea",
+        "Textarea",
+        [
+            ("background", "bg", "--surface-page"),
+            ("text", "fg", "--text-body"),
+            ("border", "border", "--border-default"),
+        ],
+    ),
+    (
+        "select",
+        "Select",
+        [
+            ("background", "bg", "--surface-page"),
+            ("text", "fg", "--text-body"),
+            ("border", "border", "--border-default"),
+        ],
+    ),
     # table cell borders collapse against neighbours (per-side ambiguous), so
     # only the fills / text are reflected here.
-    ("th", "Table header", [("background", "bg", "--surface-muted"), ("text", "fg", "--text-subtle")]),
+    (
+        "th",
+        "Table header",
+        [("background", "bg", "--surface-muted"), ("text", "fg", "--text-subtle")],
+    ),
     ("td", "Table cell", [("text", "fg", "--text-body")]),
-    (".config-value", "Config value", [("infill", "bg", "--config-value-bg"), ("text", "fg", "--config-value-fg")]),
-    (".config-value-resolved", "Resolved config value", [("infill", "bg", "--config-value-resolved-bg")]),
-    (".nav-tab.active", "Active nav tab", [("infill", "bg", "--nav-tab-active-bg"), ("text", "fg", "--text-body")]),
+    (
+        ".config-value",
+        "Config value",
+        [("infill", "bg", "--config-value-bg"), ("text", "fg", "--config-value-fg")],
+    ),
+    (
+        ".config-value-resolved",
+        "Resolved config value",
+        [("infill", "bg", "--config-value-resolved-bg")],
+    ),
+    (
+        ".nav-tab.active",
+        "Active nav tab",
+        [("infill", "bg", "--nav-tab-active-bg"), ("text", "fg", "--text-body")],
+    ),
     # inactive tabs are transparent, so their visible fill is the strip behind
     # them — and the Setup / Operations strips are independent tokens.
-    (".tab-strip-setup .nav-tab:not(.active)", "Nav tab · Setup",
-     [("text", "fg", "--text-subtle"), ("strip", "bg", "--nav-strip-setup-bg")]),
-    (".tab-strip-ops .nav-tab:not(.active)", "Nav tab · Operations",
-     [("text", "fg", "--text-subtle"), ("strip", "bg", "--nav-strip-ops-bg")]),
-    (".tag-chip.is-selected", "Selected tag chip", [("infill", "bg", "--selected-bg"), ("text", "fg", "--selected-fg"), ("border", "border", "--selected-bg")]),
+    (
+        ".tab-strip-setup .nav-tab:not(.active)",
+        "Nav tab · Setup",
+        [("text", "fg", "--text-subtle"), ("strip", "bg", "--nav-strip-setup-bg")],
+    ),
+    (
+        ".tab-strip-ops .nav-tab:not(.active)",
+        "Nav tab · Operations",
+        [("text", "fg", "--text-subtle"), ("strip", "bg", "--nav-strip-ops-bg")],
+    ),
+    (
+        ".tag-chip.is-selected",
+        "Selected tag chip",
+        [
+            ("infill", "bg", "--selected-bg"),
+            ("text", "fg", "--selected-fg"),
+            ("border", "border", "--selected-bg"),
+        ],
+    ),
     (".back-link", "Back link", [("text", "fg", "--text-link")]),
 ]
-TARGETS += [(f".ph-tint:nth-child({i})", f"Instrument tint {i}", [("background", "bg", f"--surface-tint-{i}")])
-            for i in range(1, 7)]
+TARGETS += [
+    (
+        f".ph-tint:nth-child({i})",
+        f"Instrument tint {i}",
+        [("background", "bg", f"--surface-tint-{i}")],
+    )
+    for i in range(1, 7)
+]
 
-targets_data = [{"sel": s, "el": el, "facets": [{"f": f, "prop": p, "token": t} for f, p, t in fac]}
-                for s, el, fac in TARGETS]
+targets_data = [
+    {"sel": s, "el": el, "facets": [{"f": f, "prop": p, "token": t} for f, p, t in fac]}
+    for s, el, fac in TARGETS
+]
 
 DATA = {
     "prims": prim_val,
@@ -229,11 +379,7 @@ def pretty(token):
     return token.lstrip("-").replace("-", " ")
 
 
-_CX_CLUSTER = {
-    token: label
-    for label, tokens in hc.parse_clusters(base_css)
-    for token in tokens
-}
+_CX_CLUSTER = {token: label for label, tokens in hc.parse_clusters(base_css) for token in tokens}
 
 
 def _srgb(channel):
@@ -243,10 +389,12 @@ def _srgb(channel):
 
 def contrast_ratio(a, b):
     """WCAG 2.1 contrast ratio between two `#rrggbb` strings."""
+
     def lum(v):
         h = v.lstrip("#")
-        r, g, bl = (int(h[i:i + 2], 16) for i in (0, 2, 4))
+        r, g, bl = (int(h[i : i + 2], 16) for i in (0, 2, 4))
         return 0.2126 * _srgb(r) + 0.7152 * _srgb(g) + 0.0722 * _srgb(bl)
+
     la, lb = lum(a), lum(b)
     return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
 
@@ -276,7 +424,6 @@ def cx_groups():
         (cluster, [(r[1], r[2], r[3], r[4], r[5]) for r in sorted(rows)])
         for cluster, rows in sorted(groups.items(), key=lambda kv: min(r[0] for r in kv[1]))
     ]
-
 
 
 # ---------- markup ----------
@@ -340,21 +487,26 @@ for cname, toks in clusters:
     sem_blocks.append(
         f'      <details class="tc-cluster"><summary>{cname} · {len(toks)}</summary>\n'
         f'      <div class="tc-remap-head"><span>role</span><span></span><span>light → primitive</span><span>dark → primitive</span></div>\n'
-        f'{rows}\n      </details>'
+        f"{rows}\n      </details>"
     )
 sem_section = f"""    <section class="tc-sec">
       <h2 class="tc-h">Semantic remaps — repoint a role, per theme. Target a <strong>primitive</strong> (the independent default) or another <strong>semantic token</strong> — a deliberate coupling (<code>--x: var(--y)</code>, marked ⛓; export it as <code>@coupled</code>). Edit the ACTIVE theme's column; both are saved + exported.</h2>
 {chr(10).join(sem_blocks)}
     </section>"""
 
+
 def _cx_row(label, fg, bg, provenance, ratio):
     shipped = "—" if ratio is None else f"{ratio:.2f}"
     source = provenance.split(":", 1)
-    hint = "a rule sets both halves — " + source[1] if len(source) == 2 else {
-        "name": "--x-fg paired with --x-bg by name",
-        "surface": "text token against every surface",
-        "fill": "foreground for a named fill (hand-kept, see ON_FILL)",
-    }[provenance]
+    hint = (
+        "a rule sets both halves — " + source[1]
+        if len(source) == 2
+        else {
+            "name": "--x-fg paired with --x-bg by name",
+            "surface": "text token against every surface",
+            "fill": "foreground for a named fill (hand-kept, see ON_FILL)",
+        }[provenance]
+    )
     # The cell ellipsises a long pair, so the tooltip carries the whole
     # thing — token names, not the prettified label, since the tokens are
     # what you would grep for. Without this the panel shows a red 3.32 and
@@ -369,9 +521,7 @@ def _cx_row(label, fg, bg, provenance, ratio):
     }
     for th, reason in accepted.items():
         title += f" \u00b7 accepted in {th}: {reason}"
-    acc_attr = "".join(
-        f' data-accepted-{th}="{reason}"' for th, reason in accepted.items()
-    )
+    acc_attr = "".join(f' data-accepted-{th}="{reason}"' for th, reason in accepted.items())
     return (
         f'        <div class="tc-cx" data-fg="{fg}" data-bg="{bg}"{acc_attr} title="{title}">'
         f'<span class="tc-cx-sample" style="background: var({bg}); color: var({fg})">Aa — {label}</span>'
@@ -1128,9 +1278,12 @@ part_a = (
 part_b = (
     '  <div class="tc-part tc-part-b">\n'
     '    <h2 class="tc-part-h">Part B — Tokens</h2>\n'
-    + seeds_section + "\n"
-    + prim_section + "\n"
-    + contrast_section + "\n"
+    + seeds_section
+    + "\n"
+    + prim_section
+    + "\n"
+    + contrast_section
+    + "\n"
     + sem_section
     + "\n  </div>"
 )
@@ -1151,13 +1304,17 @@ body = (
     toolbar
     + '\n\n  <div class="tc-cols">\n'
     + '  <div class="tc-left">\n'
-    + part_a + "\n"
-    + part_b + "\n"
+    + part_a
+    + "\n"
+    + part_b
+    + "\n"
     + "  </div>\n"
     + part_c
     + "\n  </div>\n\n"
-    + data_script + "\n"
-    + editor_js + "\n"
+    + data_script
+    + "\n"
+    + editor_js
+    + "\n"
 )
 
 html = hc.page(
@@ -1168,5 +1325,7 @@ html = hc.page(
     body,
 )
 OUT.write_text(html, encoding="utf-8")
-print(f"Wrote {OUT.relative_to(ROOT)} ({len(html)} bytes, {len(prims)} primitives, "
-      f"{len(SEED_ORDER)} seeds, {sum(len(t) for _, t in clusters)} semantic remaps)")
+print(
+    f"Wrote {OUT.relative_to(ROOT)} ({len(html)} bytes, {len(prims)} primitives, "
+    f"{len(SEED_ORDER)} seeds, {sum(len(t) for _, t in clusters)} semantic remaps)"
+)

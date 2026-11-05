@@ -21,6 +21,7 @@ Revises: 8b3c1d4e5f7a
 Create Date: 2026-05-02 00:00:00.000000
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -34,8 +35,8 @@ depends_on: str | Sequence[str] | None = None
 
 _BUMPS: list[dict] = [
     # name,        old_max, new_max
-    {"name": "Long_text",  "old_max": 200, "new_max": 2000},
-    {"name": "Short_text", "old_max": 50,  "new_max": 100},
+    {"name": "Long_text", "old_max": 200, "new_max": 2000},
+    {"name": "Short_text", "old_max": 50, "new_max": 100},
 ]
 
 
@@ -63,11 +64,15 @@ def _retarget(
     # row of this name. (RF.validation is derived from the RTD —
     # operators don't edit it directly — so a blanket update is
     # safe.)
-    rtd_ids = bind.execute(
-        sa.select(rtd_table.c.id)
-        .where(rtd_table.c.response_type == name)
-        .where(rtd_table.c.is_seeded.is_(True))
-    ).scalars().all()
+    rtd_ids = (
+        bind.execute(
+            sa.select(rtd_table.c.id)
+            .where(rtd_table.c.response_type == name)
+            .where(rtd_table.c.is_seeded.is_(True))
+        )
+        .scalars()
+        .all()
+    )
     if rtd_ids:
         bind.execute(
             rf_table.update()
@@ -79,12 +84,8 @@ def _retarget(
 def upgrade() -> None:
     bind = op.get_bind()
     metadata = sa.MetaData()
-    rtd_table = sa.Table(
-        "response_type_definitions", metadata, autoload_with=bind
-    )
-    rf_table = sa.Table(
-        "instrument_response_fields", metadata, autoload_with=bind
-    )
+    rtd_table = sa.Table("response_type_definitions", metadata, autoload_with=bind)
+    rf_table = sa.Table("instrument_response_fields", metadata, autoload_with=bind)
     for bump in _BUMPS:
         _retarget(
             rtd_table,
@@ -99,12 +100,8 @@ def upgrade() -> None:
 def downgrade() -> None:
     bind = op.get_bind()
     metadata = sa.MetaData()
-    rtd_table = sa.Table(
-        "response_type_definitions", metadata, autoload_with=bind
-    )
-    rf_table = sa.Table(
-        "instrument_response_fields", metadata, autoload_with=bind
-    )
+    rtd_table = sa.Table("response_type_definitions", metadata, autoload_with=bind)
+    rf_table = sa.Table("instrument_response_fields", metadata, autoload_with=bind)
     for bump in _BUMPS:
         _retarget(
             rtd_table,

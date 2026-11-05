@@ -4,6 +4,7 @@
 ``_apply_*_kv`` routers via :func:`_route_row`, then runs
 ``_cross_row_errors`` to surface uniqueness / required-field issues.
 """
+
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
@@ -204,9 +205,7 @@ def _length_errors(plan: _ParsedConfig) -> list[ApplyError]:
                 ApplyError(
                     row_number=0,
                     field=field,
-                    message=(
-                        f"{len(value)} characters; at most {limit} fit"
-                    ),
+                    message=(f"{len(value)} characters; at most {limit} fit"),
                 )
             )
 
@@ -361,9 +360,7 @@ def session_schedule_order_errors(
     return errors
 
 
-def session_offset_errors(
-    plan: _ParsedConfig, review_session: ReviewSession
-) -> list[ApplyError]:
+def session_offset_errors(plan: _ParsedConfig, review_session: ReviewSession) -> list[ApplyError]:
     """Refuse auto-send invite and reminder offsets the details card
     would refuse (findings L1, 2026-10-16): each entry a valid ISO 8601
     duration within the 10-day cap, and, while its anchor is set, at
@@ -401,9 +398,7 @@ def session_offset_errors(
                 aged_exempt=[frozenset({entry}) for entry in entries],
             )
         except ScheduledActivateError as exc:
-            errors.append(
-                ApplyError(row_number=0, field=f"session.{column}", message=str(exc))
-            )
+            errors.append(ApplyError(row_number=0, field=f"session.{column}", message=str(exc)))
     return errors
 
 
@@ -483,8 +478,7 @@ def _branch_errors(plan: _ParsedConfig) -> list[ApplyError]:
         # Item 13, ``branch_mode``) is an orphaned condition refused here,
         # not stored (Codex on #2642).
         if not any(
-            rf.branch_parent or rf.branch_op or rf.branch_value or rf.branch_mode
-            for _, rf in specs
+            rf.branch_parent or rf.branch_op or rf.branch_value or rf.branch_mode for _, rf in specs
         ):
             continue
         position_by_key = {rf.field_key: m for m, rf in specs if rf.field_key}
@@ -497,14 +491,8 @@ def _branch_errors(plan: _ParsedConfig) -> list[ApplyError]:
                     errors.append(
                         ApplyError(
                             row_number=0,
-                            field=(
-                                f"instruments[{n}].response_fields[{m}]"
-                                ".branch_parent"
-                            ),
-                            message=(
-                                f"no response field {rf.branch_parent!r} on "
-                                "this instrument"
-                            ),
+                            field=(f"instruments[{n}].response_fields[{m}].branch_parent"),
+                            message=(f"no response field {rf.branch_parent!r} on this instrument"),
                         )
                     )
                     continue
@@ -540,6 +528,7 @@ def _branch_errors(plan: _ParsedConfig) -> list[ApplyError]:
             for label, msg in branch_structure_errors(planned)
         )
     return errors
+
 
 _VP_WINDOWS: tuple[str, ...] = ("while_ongoing", "after_release")
 
@@ -605,10 +594,7 @@ def _view_policy_cell_errors(plan: _ParsedConfig) -> list[ApplyError]:
             for window in _VP_WINDOWS:
                 granularity = getattr(vp, f"{window}_granularity")
                 identification = getattr(vp, f"{window}_identification")
-                field = (
-                    f"instruments[{n}].view_policies[{audience}]"
-                    f".{window}_granularity"
-                )
+                field = f"instruments[{n}].view_policies[{audience}].{window}_granularity"
                 if (granularity is None) != (identification is None):
                     errors.append(
                         ApplyError(
@@ -634,10 +620,7 @@ def _view_policy_cell_errors(plan: _ParsedConfig) -> list[ApplyError]:
                             ApplyError(
                                 row_number=0,
                                 field=field,
-                                message=(
-                                    f"view-policy cell {audience!r} "
-                                    f"{window}: {exc.message}"
-                                ),
+                                message=(f"view-policy cell {audience!r} {window}: {exc.message}"),
                             )
                         )
                         continue
@@ -656,7 +639,6 @@ def _view_policy_cell_errors(plan: _ParsedConfig) -> list[ApplyError]:
                         )
                     )
     return errors
-
 
 
 def _route_row(
@@ -731,18 +713,12 @@ def _cross_row_errors(plan: _ParsedConfig) -> list[ApplyError]:
     # appear as a session_rule_sets[N] block in the CSV.
     valid_rule_set_names = set(seen_names)
     for n, instrument in sorted(plan.instruments.items()):
-        if (
-            instrument.rule_set_name
-            and instrument.rule_set_name not in valid_rule_set_names
-        ):
+        if instrument.rule_set_name and instrument.rule_set_name not in valid_rule_set_names:
             errors.append(
                 ApplyError(
                     row_number=0,
                     field=f"instruments[{n}].rule_set_name",
-                    message=(
-                        f"no such RuleSet on this session: "
-                        f"{instrument.rule_set_name!r}"
-                    ),
+                    message=(f"no such RuleSet on this session: {instrument.rule_set_name!r}"),
                 )
             )
     # A Link 2 pair-tag IS or IS FILLED keeps pairs one by one, so a
@@ -751,9 +727,7 @@ def _cross_row_errors(plan: _ParsedConfig) -> list[ApplyError]:
     # ``guide/archive/pair_context_tags_further_clarify.md`` Item 1), so an
     # import cannot store the combination either.
     rules_by_name = {
-        spec.name: spec.rules_json or []
-        for spec in plan.session_rule_sets.values()
-        if spec.name
+        spec.name: spec.rules_json or [] for spec in plan.session_rule_sets.values() if spec.name
     }
     # A rule set an instrument uses holds only what Band 1's card shows:
     # a rule it can't show would be hidden there and dropped or
@@ -831,10 +805,7 @@ def _cross_row_errors(plan: _ParsedConfig) -> list[ApplyError]:
                 errors.append(
                     ApplyError(
                         row_number=0,
-                        field=(
-                            f"instruments[{n}].display_fields[{m}]"
-                            ".source_type"
-                        ),
+                        field=(f"instruments[{n}].display_fields[{m}].source_type"),
                         message="source_type is required",
                     )
                 )
@@ -847,9 +818,7 @@ def _cross_row_errors(plan: _ParsedConfig) -> list[ApplyError]:
                 errors.append(
                     ApplyError(
                         row_number=0,
-                        field=(
-                            f"instruments[{n}].response_fields[{m}].field_key"
-                        ),
+                        field=(f"instruments[{n}].response_fields[{m}].field_key"),
                         message="field_key is required",
                     )
                 )
@@ -857,9 +826,7 @@ def _cross_row_errors(plan: _ParsedConfig) -> list[ApplyError]:
                 errors.append(
                     ApplyError(
                         row_number=0,
-                        field=(
-                            f"instruments[{n}].response_fields[{m}].field_key"
-                        ),
+                        field=(f"instruments[{n}].response_fields[{m}].field_key"),
                         message=(
                             f"duplicate field_key {rf.field_key!r} "
                             f"(also at instruments[{n}].response_fields"
@@ -880,10 +847,7 @@ def _cross_row_errors(plan: _ParsedConfig) -> list[ApplyError]:
                         errors.append(
                             ApplyError(
                                 row_number=0,
-                                field=(
-                                    f"instruments[{n}].response_fields"
-                                    f"[{m}].{key}"
-                                ),
+                                field=(f"instruments[{n}].response_fields[{m}].{key}"),
                                 message=INTEGER_WHOLE_BOUNDS_MESSAGE,
                             )
                         )
@@ -891,9 +855,7 @@ def _cross_row_errors(plan: _ParsedConfig) -> list[ApplyError]:
                 errors.append(
                     ApplyError(
                         row_number=0,
-                        field=(
-                            f"instruments[{n}].response_fields[{m}].label"
-                        ),
+                        field=(f"instruments[{n}].response_fields[{m}].label"),
                         message="label is required",
                     )
                 )
@@ -901,10 +863,7 @@ def _cross_row_errors(plan: _ParsedConfig) -> list[ApplyError]:
                 errors.append(
                     ApplyError(
                         row_number=0,
-                        field=(
-                            f"instruments[{n}].response_fields[{m}]"
-                            ".response_type"
-                        ),
+                        field=(f"instruments[{n}].response_fields[{m}].response_type"),
                         message="response_type is required",
                     )
                 )

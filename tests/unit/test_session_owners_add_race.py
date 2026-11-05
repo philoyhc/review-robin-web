@@ -25,9 +25,7 @@ def test_a_duplicate_insert_is_refused_already_owner(
     bob = User(email="bob@example.edu", is_operator=True)
     db.add_all([alice, bob])
     db.flush()
-    review_session = ReviewSession(
-        name="Race", code="RACE-1", created_by_user_id=alice.id
-    )
+    review_session = ReviewSession(name="Race", code="RACE-1", created_by_user_id=alice.id)
     db.add(review_session)
     db.flush()
     db.add_all(
@@ -49,9 +47,7 @@ def test_a_duplicate_insert_is_refused_already_owner(
     monkeypatch.setattr(session_owners, "_is_owner", late_is_owner)
 
     with pytest.raises(session_owners.OwnerOperationError) as exc:
-        session_owners.add_owner(
-            db, review_session=review_session, actor=alice, target=bob
-        )
+        session_owners.add_owner(db, review_session=review_session, actor=alice, target=bob)
 
     assert exc.value.code == "already_owner"
     assert len(looks) == 2
@@ -69,9 +65,7 @@ def test_an_integrity_error_that_is_not_the_duplicate_still_raises(
     bob = User(email="bob@example.edu", is_operator=True)
     db.add_all([alice, bob])
     db.flush()
-    review_session = ReviewSession(
-        name="Race", code="RACE-2", created_by_user_id=alice.id
-    )
+    review_session = ReviewSession(name="Race", code="RACE-2", created_by_user_id=alice.id)
     db.add(review_session)
     db.flush()
 
@@ -81,6 +75,4 @@ def test_an_integrity_error_that_is_not_the_duplicate_still_raises(
     monkeypatch.setattr(session_owners, "_insert_owner", failing_insert)
 
     with pytest.raises(IntegrityError):
-        session_owners.add_owner(
-            db, review_session=review_session, actor=alice, target=bob
-        )
+        session_owners.add_owner(db, review_session=review_session, actor=alice, target=bob)

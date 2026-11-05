@@ -133,9 +133,7 @@ def test_the_chips_pager_and_count_line_are_in_the_left_pane(
     # sentence falls on.
 
 
-def test_the_search_lands_on_the_table_card(
-    client: TestClient, db: Session
-) -> None:
+def test_the_search_lands_on_the_table_card(client: TestClient, db: Session) -> None:
     """A `GET` submission replaces the query and leaves the action's
     fragment alone, so a search arrives at the card's top edge exactly
     as a page turn does (19J.8). From its old home in the card the form
@@ -158,9 +156,7 @@ def test_the_search_lands_on_the_table_card(
     assert f'href="{anchored}"' in cleared
 
 
-def test_the_no_match_state_closes_every_div_it_opens(
-    client: TestClient, db: Session
-) -> None:
+def test_the_no_match_state_closes_every_div_it_opens(client: TestClient, db: Session) -> None:
     """A real defect this rung inherited, not a hypothetical.
 
     `<div class="table-card-toolbar">` opened above the
@@ -205,9 +201,7 @@ def test_no_split_toolbar_chip_row_carries_an_inline_margin() -> None:
     which needs a filter or 200+ rows.
     """
     offenders = {}
-    for path in sorted(
-        pathlib.Path("app/web/templates/operator").glob("session_*.html")
-    ):
+    for path in sorted(pathlib.Path("app/web/templates/operator").glob("session_*.html")):
         text = path.read_text()
         if "table-card-toolbar is-split" not in text:
             continue
@@ -237,9 +231,7 @@ def _builder(body: str) -> str:
     return body[start : body.index("function render()", start)]
 
 
-def test_the_operator_actions_card_is_gone_from_the_page(
-    client: TestClient, db: Session
-) -> None:
+def test_the_operator_actions_card_is_gone_from_the_page(client: TestClient, db: Session) -> None:
     """Rung 1 emptied it of the filter; rung 2 empties it entirely.
 
     The card was the last `.operator-actions-card` in the app — the
@@ -265,9 +257,7 @@ def test_the_operator_actions_card_is_gone_from_the_page(
     assert '<form id="assignments-bulk-form"' in body
 
 
-def test_every_row_carries_the_status_the_panel_reads(
-    client: TestClient, db: Session
-) -> None:
+def test_every_row_carries_the_status_the_panel_reads(client: TestClient, db: Session) -> None:
     """`data-status` is `Assignment.include`, in the vocabulary
     `spec/assignments.md` § *The status filter* already uses for
     `?status=` (`active` = `include IS true`).
@@ -278,9 +268,7 @@ def test_every_row_carries_the_status_the_panel_reads(
     against the database, because the cell is what the operator reads.
     """
     rs = _seeded(client, db, "asn-exp-status")
-    rows = db.execute(
-        select(Assignment).where(Assignment.session_id == rs.id)
-    ).scalars().all()
+    rows = db.execute(select(Assignment).where(Assignment.session_id == rs.id)).scalars().all()
     assert rows, "fixture generated no assignments"
     # Flip one so the page is not uniform — a page where every row is
     # `active` cannot tell a correct mapping from a hardcoded one.
@@ -317,9 +305,7 @@ def test_the_panel_offers_only_the_action_the_selection_admits(
     rs = _seeded(client, db, "asn-exp-actions")
     body = _page(client, rs)
     rule = body[
-        body.index("function statusActions(sel)") : body.index(
-            "function visibleColumnCount"
-        )
+        body.index("function statusActions(sel)") : body.index("function visibleColumnCount")
     ]
 
     assert 'if (hasActive) out.push("Inactivate");' in rule
@@ -339,9 +325,7 @@ def test_the_panel_offers_only_the_action_the_selection_admits(
     )
 
 
-def test_the_panel_is_removed_before_it_is_rebuilt(
-    client: TestClient, db: Session
-) -> None:
+def test_the_panel_is_removed_before_it_is_rebuilt(client: TestClient, db: Session) -> None:
     """`render()` runs on every tick, so without the remove the page
     accumulates one panel per change instead of moving one.
 
@@ -382,18 +366,12 @@ def test_the_panel_spans_the_columns_that_are_actually_shown(
     body = _page(client, rs)
 
     assert "td.colSpan = visibleColumnCount();" in _builder(body)
-    counter = body[
-        body.index("function visibleColumnCount()") : body.index(
-            "function build(sel)"
-        )
-    ]
+    counter = body[body.index("function visibleColumnCount()") : body.index("function build(sel)")]
     assert "th.offsetParent !== null" in counter
     assert 'table.querySelectorAll("thead th")' in counter
 
 
-def test_the_panel_survives_a_sort(
-    client: TestClient, db: Session
-) -> None:
+def test_the_panel_survives_a_sort(client: TestClient, db: Session) -> None:
     """The table declares `data-rrw-sortable`, and `_rrwApplySort`
     slices `tbody.children` — the injected panel among them. It reads
     `a.children[col]`, gets `undefined` for a row whose only cell is
@@ -426,9 +404,7 @@ def test_the_panel_survives_a_sort(
     )
 
 
-def test_a_partial_selection_reads_as_a_dash(
-    client: TestClient, db: Session
-) -> None:
+def test_a_partial_selection_reads_as_a_dash(client: TestClient, db: Session) -> None:
     """`selectAll.indeterminate`, which the card script this replaced
     never set and this file's first draft inherited the omission of.
 
@@ -469,20 +445,14 @@ def test_the_selection_surface_only_reaches_rows_you_can_see(
     # The filter announces, because it runs in its own IIFE outside
     # `can_edit` and holds no reference to the expander.
     assert 'new CustomEvent("rrw:assignment-rows-filtered")' in body
-    assert (
-        'document.addEventListener("rrw:assignment-rows-filtered"' in body
-    )
-    handler = body[
-        body.index('document.addEventListener("rrw:assignment-rows-filtered"') :
-    ][:600]
+    assert 'document.addEventListener("rrw:assignment-rows-filtered"' in body
+    handler = body[body.index('document.addEventListener("rrw:assignment-rows-filtered"') :][:600]
     assert "box.checked = false" in handler, "a hidden row stays selected"
     assert "tickOrder = tickOrder.filter" in handler, "stale anchor survives"
     assert "render();" in handler
 
 
-def test_a_column_toggle_keeps_the_panel_the_table_s_width(
-    client: TestClient, db: Session
-) -> None:
+def test_a_column_toggle_keeps_the_panel_the_table_s_width(client: TestClient, db: Session) -> None:
     """`colSpan` is counted when the panel is built, and the shared
     chip primitive only flips `col-hidden-*` classes on the table — so
     nothing in the expander would hear a toggle and the panel would

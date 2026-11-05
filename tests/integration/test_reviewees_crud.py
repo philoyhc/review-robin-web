@@ -15,9 +15,7 @@ from app.services.reviewees import RevieweeOperationError
 from ._lookups import detail_of
 
 
-def _seed(
-    db: Session, *, status: str = "draft"
-) -> tuple[User, ReviewSession]:
+def _seed(db: Session, *, status: str = "draft") -> tuple[User, ReviewSession]:
     user = User(email="op@example.edu", display_name="Op")
     db.add(user)
     db.flush()
@@ -63,9 +61,7 @@ def test_create_reviewee_inserts_row_and_emits_snapshot(
     ).scalar_one()
     assert detail_of(event)["snapshot"]["reviewee_id"] == reviewee.id
     assert detail_of(event)["snapshot"]["email_or_identifier"] == "carol@example.edu"
-    assert detail_of(event)["snapshot"]["profile_link"] == (
-        "https://example.edu/carol"
-    )
+    assert detail_of(event)["snapshot"]["profile_link"] == ("https://example.edu/carol")
 
 
 def test_create_reviewee_accepts_non_email_identifier(
@@ -250,11 +246,7 @@ def test_update_reviewee_no_changes_emits_nothing(db: Session) -> None:
     )
     assert changes == {}
     assert (
-        db.execute(
-            select(AuditEvent).where(
-                AuditEvent.event_type == "reviewee.updated"
-            )
-        ).first()
+        db.execute(select(AuditEvent).where(AuditEvent.event_type == "reviewee.updated")).first()
         is None
     )
 
@@ -350,9 +342,7 @@ def test_bulk_inactivate_flips_only_active_rows(db: Session) -> None:
     assert all(r.status == "inactive" for r in rows)
 
     event = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "reviewee.bulk_inactivated"
-        )
+        select(AuditEvent).where(AuditEvent.event_type == "reviewee.bulk_inactivated")
     ).scalar_one()
     assert sorted(detail_of(event)["snapshot"]["reviewee_ids"]) == sorted(flipped)
 
@@ -383,9 +373,7 @@ def test_bulk_op_rejects_ids_outside_session(db: Session) -> None:
     )
     db.add(session_b)
     db.flush()
-    other = Reviewee(
-        session_id=session_b.id, name="X", email_or_identifier="x@example.edu"
-    )
+    other = Reviewee(session_id=session_b.id, name="X", email_or_identifier="x@example.edu")
     db.add(other)
     db.flush()
 
@@ -427,7 +415,5 @@ def test_no_op_update_does_not_invalidate(db: Session) -> None:
     )
     review_session.status = "validated"
     db.flush()
-    reviewees_service.update_reviewee(
-        db, reviewee=reviewee, name="Carol", user=user
-    )
+    reviewees_service.update_reviewee(db, reviewee=reviewee, name="Carol", user=user)
     assert review_session.status == "validated"

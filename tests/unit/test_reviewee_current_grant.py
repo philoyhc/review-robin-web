@@ -38,9 +38,7 @@ def _session(db: Session, *, code: str, status: str = "expired") -> ReviewSessio
 
 
 def _instrument(db: Session, review_session: ReviewSession, *, order: int = 1) -> Instrument:
-    instrument = Instrument(
-        session_id=review_session.id, name=f"I{order}", order=order
-    )
+    instrument = Instrument(session_id=review_session.id, name=f"I{order}", order=order)
     db.add(instrument)
     db.flush()
     return instrument
@@ -68,18 +66,14 @@ def _open_release_window(review_session: ReviewSession) -> None:
     session ``expired`` as well as the anchor reached — which is why
     :func:`_session` defaults to that state."""
     review_session.status = "expired"
-    review_session.responses_release_at = datetime.now(
-        UTC
-    ) - timedelta(hours=1)
+    review_session.responses_release_at = datetime.now(UTC) - timedelta(hours=1)
     review_session.responses_release_until = None
 
 
 def test_no_instruments_means_no_grant(db: Session) -> None:
     review_session = _session(db, code="cg-empty")
     _open_release_window(review_session)
-    assert not visibility_policies.reviewee_has_current_grant(
-        db, review_session
-    )
+    assert not visibility_policies.reviewee_has_current_grant(db, review_session)
 
 
 def test_an_open_window_without_a_policy_row_is_not_a_grant(
@@ -90,9 +84,7 @@ def test_an_open_window_without_a_policy_row_is_not_a_grant(
     review_session = _session(db, code="cg-norow")
     _instrument(db, review_session)
     _open_release_window(review_session)
-    assert not visibility_policies.reviewee_has_current_grant(
-        db, review_session
-    )
+    assert not visibility_policies.reviewee_has_current_grant(db, review_session)
 
 
 def test_a_policy_row_without_an_open_window_is_not_a_grant(
@@ -103,9 +95,7 @@ def test_a_policy_row_without_an_open_window_is_not_a_grant(
     reviewees will see, and has not yet let them see it."""
     review_session = _session(db, code="cg-nowindow")
     _reviewee_policy(db, _instrument(db, review_session))
-    assert not visibility_policies.reviewee_has_current_grant(
-        db, review_session
-    )
+    assert not visibility_policies.reviewee_has_current_grant(db, review_session)
 
 
 def test_one_open_instrument_out_of_several_is_enough(db: Session) -> None:
@@ -123,13 +113,9 @@ def test_one_open_instrument_out_of_several_is_enough(db: Session) -> None:
 def test_every_instrument_off_is_not_a_grant(db: Session) -> None:
     review_session = _session(db, code="cg-alloff")
     for order in (1, 2):
-        _reviewee_policy(
-            db, _instrument(db, review_session, order=order), mode=None
-        )
+        _reviewee_policy(db, _instrument(db, review_session, order=order), mode=None)
     _open_release_window(review_session)
-    assert not visibility_policies.reviewee_has_current_grant(
-        db, review_session
-    )
+    assert not visibility_policies.reviewee_has_current_grant(db, review_session)
 
 
 def test_archive_closes_the_grant(db: Session) -> None:
@@ -144,9 +130,7 @@ def test_archive_closes_the_grant(db: Session) -> None:
     assert visibility_policies.reviewee_has_current_grant(db, review_session)
 
     review_session.status = "archived"
-    assert not visibility_policies.reviewee_has_current_grant(
-        db, review_session
-    )
+    assert not visibility_policies.reviewee_has_current_grant(db, review_session)
 
 
 def test_a_closed_release_window_retires_the_grant(db: Session) -> None:
@@ -156,9 +140,7 @@ def test_a_closed_release_window_retires_the_grant(db: Session) -> None:
     now = datetime.now(UTC)
     review_session.responses_release_at = now - timedelta(days=2)
     review_session.responses_release_until = now - timedelta(days=1)
-    assert not visibility_policies.reviewee_has_current_grant(
-        db, review_session
-    )
+    assert not visibility_policies.reviewee_has_current_grant(db, review_session)
 
 
 def test_another_audiences_grant_does_not_count(db: Session) -> None:
@@ -178,9 +160,7 @@ def test_another_audiences_grant_does_not_count(db: Session) -> None:
     )
     db.flush()
     _open_release_window(review_session)
-    assert not visibility_policies.reviewee_has_current_grant(
-        db, review_session
-    )
+    assert not visibility_policies.reviewee_has_current_grant(db, review_session)
 
 
 def test_another_sessions_grant_does_not_count(db: Session) -> None:
@@ -206,13 +186,9 @@ def test_an_unclosed_session_is_not_a_grant(db: Session) -> None:
     anchors are set."""
     review_session = _session(db, code="cg-running", status="ready")
     _reviewee_policy(db, _instrument(db, review_session))
-    review_session.responses_release_at = datetime.now(
-        UTC
-    ) - timedelta(hours=1)
+    review_session.responses_release_at = datetime.now(UTC) - timedelta(hours=1)
     review_session.responses_release_until = None
-    assert not visibility_policies.reviewee_has_current_grant(
-        db, review_session
-    )
+    assert not visibility_policies.reviewee_has_current_grant(db, review_session)
 
 
 def test_reverting_a_released_session_to_draft_closes_the_grant(
@@ -232,8 +208,6 @@ def test_reverting_a_released_session_to_draft_closes_the_grant(
     assert visibility_policies.reviewee_has_current_grant(db, review_session)
 
     review_session.status = "draft"
-    assert not visibility_policies.reviewee_has_current_grant(
-        db, review_session
-    )
+    assert not visibility_policies.reviewee_has_current_grant(db, review_session)
     # The anchor survives the revert — inert, not erased.
     assert review_session.responses_release_at is not None

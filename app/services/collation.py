@@ -111,9 +111,7 @@ def build_cohort_stats_for_instrument(
     aggregates.
     """
     fields = observer_response_fields(instrument)
-    empty_cells = [
-        SummarizedFieldCell(data_type=f.data_type) for f in fields
-    ]
+    empty_cells = [SummarizedFieldCell(data_type=f.data_type) for f in fields]
 
     if not fields or not cohort.assignment_ids:
         return (

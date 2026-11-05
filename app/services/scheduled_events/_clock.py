@@ -133,8 +133,7 @@ def due_session_ids(db: Session, *, now: datetime) -> list[int]:
                 (ReviewSession.status == lifecycle.SessionStatus.ready.value)
                 & or_(
                     ReviewSession.deadline <= now,
-                    ReviewSession.deadline.is_(None)
-                    & (ReviewSession.responses_release_at <= now),
+                    ReviewSession.deadline.is_(None) & (ReviewSession.responses_release_at <= now),
                 ),
                 (ReviewSession.status == lifecycle.SessionStatus.expired.value)
                 & or_(

@@ -45,9 +45,7 @@ def _suggestions(page: Page) -> list[str]:
     )
 
 
-@pytest.mark.parametrize(
-    "where", ["create", "session_home"], ids=["Create", "Session Home"]
-)
+@pytest.mark.parametrize("where", ["create", "session_home"], ids=["Create", "Session Home"])
 def test_tag_suggestions_complete_only_the_last_tag(
     page: Page, api: httpx.Client, where: str
 ) -> None:
@@ -94,9 +92,7 @@ def test_enter_in_a_lobby_tag_box_never_submits(
     expect(page.locator(f"input.sessions-list-select-row[value='{session_id}']")).to_have_count(1)
 
 
-def test_create_stages_owners_and_saves_what_remains(
-    page: Page, api: httpx.Client
-) -> None:
+def test_create_stages_owners_and_saves_what_remains(page: Page, api: httpx.Client) -> None:
     """Item 5, 'Create is unchanged' (JavaScript on)."""
     sign_in(api, COLLEAGUE_EMAIL)
     sign_in(api, SECOND_COLLEAGUE_EMAIL)
@@ -152,9 +148,7 @@ def test_create_without_javascript_saves_the_typed_owner(
 
     expect(page).to_have_url(re.compile(r"/operator/sessions/[2-9a-z]{10}\b"))
     owners = page.locator("#owners-card code")
-    expect(owners).to_have_text(
-        [FAKE_OPERATOR_EMAIL, COLLEAGUE_EMAIL], use_inner_text=True
-    )
+    expect(owners).to_have_text([FAKE_OPERATOR_EMAIL, COLLEAGUE_EMAIL], use_inner_text=True)
 
 
 def test_a_staged_verified_owner_reads_as_the_pill(page: Page, api: httpx.Client) -> None:

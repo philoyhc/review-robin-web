@@ -148,9 +148,7 @@ def test_by_instrument_rows_break_name_ties_on_email(db: Session) -> None:
     db.refresh(instrument)
 
     rows = list(
-        serialize_by_instrument(
-            db, review_session, instrument, position=1, include_metadata=False
-        )
+        serialize_by_instrument(db, review_session, instrument, position=1, include_metadata=False)
     )
 
     assert [(row[6], row[1]) for row in rows[1:]] == [

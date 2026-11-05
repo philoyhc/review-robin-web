@@ -14,6 +14,7 @@ that its own state actually has:
   no control, rather than growing a second unarchive affordance on a
   Setup page.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -85,9 +86,7 @@ def test_revertable_states_carry_the_inline_revert_form(
     assert 'data-delete-btn="revert"' in page, state
 
 
-def test_archived_names_unarchive_instead_of_revert(
-    db: Session, client: TestClient
-) -> None:
+def test_archived_names_unarchive_instead_of_revert(db: Session, client: TestClient) -> None:
     """The whole point of the archived branch: `revert` 409s from
     `archived`, so a revert form here would be a dead control — the
     shape Item 3 removed from the roster pages."""
@@ -104,9 +103,7 @@ def test_archived_names_unarchive_instead_of_revert(
 
 
 @pytest.mark.parametrize("state", ("ready", "expired"))
-def test_the_offered_revert_actually_works(
-    db: Session, client: TestClient, state: str
-) -> None:
+def test_the_offered_revert_actually_works(db: Session, client: TestClient, state: str) -> None:
     """A control the card offers has to do something. `revert` accepts
     `ready` and `expired`; this posts what the form carries."""
     s, _ = _seed(client, db, code=f"lc-works-{state}")
@@ -125,9 +122,7 @@ def test_the_offered_revert_actually_works(
 
 
 @pytest.mark.parametrize("state", EDITABLE)
-def test_no_lock_copy_while_editable(
-    db: Session, client: TestClient, state: str
-) -> None:
+def test_no_lock_copy_while_editable(db: Session, client: TestClient, state: str) -> None:
     s, _ = _seed(client, db, code=f"lc-none-{state}")
     s.status = state
     db.commit()

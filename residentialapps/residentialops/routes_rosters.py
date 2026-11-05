@@ -83,14 +83,20 @@ def terms(request: Request) -> Response:
     if back not in RETURN_TO:
         back = "/rosters/assignments"
     return render(
-        request, "residentialops/rosters/terms.html", back_path=back, back_label=RETURN_TO[back], **_context(request)
+        request,
+        "residentialops/rosters/terms.html",
+        back_path=back,
+        back_label=RETURN_TO[back],
+        **_context(request),
     )
 
 
 @router.get("/rosters/staff", name="residentialops_rosters_staff")
 def staff(request: Request) -> Response:
     context = _context(request)
-    return render(request, "residentialops/rosters/staff.html", count=context["staff_count"], **context)
+    return render(
+        request, "residentialops/rosters/staff.html", count=context["staff_count"], **context
+    )
 
 
 @router.get("/rosters/ras", name="residentialops_rosters_ras")

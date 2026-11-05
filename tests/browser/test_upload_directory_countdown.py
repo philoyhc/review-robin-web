@@ -64,8 +64,9 @@ def test_the_upload_counts_down_then_reads_what_it_looked_up(
     looked_up: list[str] = []
     page.on(
         "request",
-        lambda r: looked_up.extend(_lookup_keys(r))
-        if r.url.endswith("/directory-lookup") else None,
+        lambda r: (
+            looked_up.extend(_lookup_keys(r)) if r.url.endswith("/directory-lookup") else None
+        ),
     )
     page.add_init_script(_RECORD)
     page.goto(app_url(f"/operator/sessions/{session_id}/reviewers?unlocked=1"))
@@ -73,7 +74,9 @@ def test_the_upload_counts_down_then_reads_what_it_looked_up(
 
     page.locator("#upload-csv-form input[name=file]").set_input_files(str(roster))
     with page.expect_navigation():
-        page.locator("#upload-csv-form .unlock-col-actions button[type=submit]:not([data-directory-recheck])").click()
+        page.locator(
+            "#upload-csv-form .unlock-col-actions button[type=submit]:not([data-directory-recheck])"
+        ).click()
     page.wait_for_load_state("load")
 
     assert sorted(looked_up) == sorted(ADDRESSES)  # each once, folded
@@ -87,7 +90,9 @@ def test_the_upload_counts_down_then_reads_what_it_looked_up(
     page.locator("#upload-csv-form input[name=file]").set_input_files(str(roster))
     page.locator("#upload-csv-form input[name=confirm_replace]").check()
     with page.expect_navigation():
-        page.locator("#upload-csv-form .unlock-col-actions button[type=submit]:not([data-directory-recheck])").click()
+        page.locator(
+            "#upload-csv-form .unlock-col-actions button[type=submit]:not([data-directory-recheck])"
+        ).click()
     page.wait_for_load_state("load")
     assert looked_up == []
     assert _seen(page) == []
@@ -104,8 +109,7 @@ def test_a_failed_lookup_stops_the_count_and_uploads(
     roster = tmp_path / "reviewers.csv"
     many = [f"person{i}@example.edu" for i in range(60)]
     roster.write_text(
-        "ReviewerName,ReviewerEmail\n"
-        + "\n".join(f"P{i},{a}" for i, a in enumerate(many)) + "\n"
+        "ReviewerName,ReviewerEmail\n" + "\n".join(f"P{i},{a}" for i, a in enumerate(many)) + "\n"
     )
     batches: list[list[str]] = []
 
@@ -115,14 +119,18 @@ def test_a_failed_lookup_stops_the_count_and_uploads(
         route.fulfill(
             status=200,
             content_type="application/json",
-            body=json.dumps({"outcomes": {k: {"status": "ERROR", "error_kind": "timeout"} for k in keys}}),
+            body=json.dumps(
+                {"outcomes": {k: {"status": "ERROR", "error_kind": "timeout"} for k in keys}}
+            ),
         )
 
     page.route("**/directory-lookup", time_out)
     page.goto(app_url(f"/operator/sessions/{session_id}/reviewers?unlocked=1"))
     page.locator("#upload-csv-form input[name=file]").set_input_files(str(roster))
     with page.expect_navigation():
-        page.locator("#upload-csv-form .unlock-col-actions button[type=submit]:not([data-directory-recheck])").click()
+        page.locator(
+            "#upload-csv-form .unlock-col-actions button[type=submit]:not([data-directory-recheck])"
+        ).click()
     page.wait_for_load_state("load")
     assert 1 <= len(batches) <= 2  # two in flight; the first answer stops the other four
     expect(page.locator("[data-directory-check]")).to_contain_text("not found")
@@ -137,20 +145,20 @@ def test_the_count_falls_by_batches_of_ten(
     roster = tmp_path / "reviewers.csv"
     many = [f"batch{i}@example.edu" for i in range(25)]
     roster.write_text(
-        "ReviewerName,ReviewerEmail\n"
-        + "\n".join(f"P{i},{a}" for i, a in enumerate(many)) + "\n"
+        "ReviewerName,ReviewerEmail\n" + "\n".join(f"P{i},{a}" for i, a in enumerate(many)) + "\n"
     )
     batches: list[list[str]] = []
     page.on(
         "request",
-        lambda r: batches.append(_lookup_keys(r))
-        if r.url.endswith("/directory-lookup") else None,
+        lambda r: batches.append(_lookup_keys(r)) if r.url.endswith("/directory-lookup") else None,
     )
     page.add_init_script(_RECORD)
     page.goto(app_url(f"/operator/sessions/{session_id}/reviewers?unlocked=1"))
     page.locator("#upload-csv-form input[name=file]").set_input_files(str(roster))
     with page.expect_navigation():
-        page.locator("#upload-csv-form .unlock-col-actions button[type=submit]:not([data-directory-recheck])").click()
+        page.locator(
+            "#upload-csv-form .unlock-col-actions button[type=submit]:not([data-directory-recheck])"
+        ).click()
     page.wait_for_load_state("load")
     assert sorted(len(b) for b in batches) == [5, 10, 10]
     assert sorted(k for b in batches for k in b) == sorted(many)
@@ -171,13 +179,16 @@ def test_the_recheck_counts_down_every_unmatched_address_then_rechecks(
     roster = tmp_path / "reviewers.csv"
     roster.write_text(
         "ReviewerName,ReviewerEmail\n"
-        + "\n".join(f"P{i},{a}" for i, a in enumerate(ADDRESSES)) + "\n"
+        + "\n".join(f"P{i},{a}" for i, a in enumerate(ADDRESSES))
+        + "\n"
     )
     page.add_init_script(_RECORD)
     page.goto(app_url(f"/operator/sessions/{session_id}/reviewers?unlocked=1"))
     page.locator("#upload-csv-form input[name=file]").set_input_files(str(roster))
     with page.expect_navigation():
-        page.locator("#upload-csv-form .unlock-col-actions button[type=submit]:not([data-directory-recheck])").click()
+        page.locator(
+            "#upload-csv-form .unlock-col-actions button[type=submit]:not([data-directory-recheck])"
+        ).click()
     page.wait_for_load_state("load")
     _seen(page)
 
@@ -185,8 +196,9 @@ def test_the_recheck_counts_down_every_unmatched_address_then_rechecks(
     looked_up: list[str] = []
     page.on(
         "request",
-        lambda r: looked_up.extend(_lookup_keys(r))
-        if r.url.endswith("/directory-lookup") else None,
+        lambda r: (
+            looked_up.extend(_lookup_keys(r)) if r.url.endswith("/directory-lookup") else None
+        ),
     )
     button = page.locator("[data-directory-recheck]")
     expect(button).to_have_text(f"Recheck {len(unmatched)} unmatched")
@@ -198,7 +210,9 @@ def test_the_recheck_counts_down_every_unmatched_address_then_rechecks(
     seen = _seen(page)
     assert seen[0] == len(unmatched) and seen[-1] == 0
     assert seen == sorted(seen, reverse=True)
-    expect(page.locator("[data-directory-check]")).to_contain_text("Recheck of the unmatched addresses")
+    expect(page.locator("[data-directory-check]")).to_contain_text(
+        "Recheck of the unmatched addresses"
+    )
     expect(page.locator("[data-directory-check]")).to_contain_text("4 not found, 1 ambiguous")
 
 
@@ -211,8 +225,7 @@ def test_one_failed_key_in_a_batch_stops_the_count(
     roster = tmp_path / "reviewers.csv"
     many = [f"mid{i}@example.edu" for i in range(40)]
     roster.write_text(
-        "ReviewerName,ReviewerEmail\n"
-        + "\n".join(f"P{i},{a}" for i, a in enumerate(many)) + "\n"
+        "ReviewerName,ReviewerEmail\n" + "\n".join(f"P{i},{a}" for i, a in enumerate(many)) + "\n"
     )
     batches: list[list[str]] = []
 
@@ -222,13 +235,17 @@ def test_one_failed_key_in_a_batch_stops_the_count(
         outcomes = {k: {"status": "NOT_FOUND", "error_kind": None} for k in keys}
         if keys[0] == many[0]:
             outcomes[keys[6]] = {"status": "ERROR", "error_kind": "throttled"}
-        route.fulfill(status=200, content_type="application/json", body=json.dumps({"outcomes": outcomes}))
+        route.fulfill(
+            status=200, content_type="application/json", body=json.dumps({"outcomes": outcomes})
+        )
 
     page.route("**/directory-lookup", answer)
     page.goto(app_url(f"/operator/sessions/{session_id}/reviewers?unlocked=1"))
     page.locator("#upload-csv-form input[name=file]").set_input_files(str(roster))
     with page.expect_navigation():
-        page.locator("#upload-csv-form .unlock-col-actions button[type=submit]:not([data-directory-recheck])").click()
+        page.locator(
+            "#upload-csv-form .unlock-col-actions button[type=submit]:not([data-directory-recheck])"
+        ).click()
     page.wait_for_load_state("load")
     # The first batch's answer stops the count: at most the other batch
     # already in flight went too, of the four.
@@ -245,7 +262,9 @@ def test_a_submit_the_browser_blocks_counts_again_next_time(
     roster = tmp_path / "reviewers.csv"
     roster.write_text("ReviewerName,ReviewerEmail\nArun,arun.kumar@example.edu\n")
     keys_asked: list[str] = []
-    page.on("request", lambda r: keys_asked.append(r.url) if r.url.endswith("/directory-keys") else None)
+    page.on(
+        "request", lambda r: keys_asked.append(r.url) if r.url.endswith("/directory-keys") else None
+    )
     page.goto(app_url(f"/operator/sessions/{session_id}/reviewers?unlocked=1"))
     page.locator("#upload-csv-form input[name=file]").set_input_files(str(roster))
     # A required field that passes at the click and is emptied while the
@@ -288,13 +307,14 @@ def test_stop_and_save_saves_what_was_looked_up(
     roster = tmp_path / "reviewers.csv"
     many = [f"stop{i}@example.edu" for i in range(25)]
     roster.write_text(
-        "ReviewerName,ReviewerEmail\n"
-        + "\n".join(f"P{i},{a}" for i, a in enumerate(many)) + "\n"
+        "ReviewerName,ReviewerEmail\n" + "\n".join(f"P{i},{a}" for i, a in enumerate(many)) + "\n"
     )
     page.goto(app_url(f"/operator/sessions/{session_id}/reviewers?unlocked=1"))
     page.locator("#upload-csv-form input[name=file]").set_input_files(str(roster))
     with page.expect_navigation():
-        page.locator("#upload-csv-form .unlock-col-actions button[type=submit]:not([data-directory-recheck])").click()
+        page.locator(
+            "#upload-csv-form .unlock-col-actions button[type=submit]:not([data-directory-recheck])"
+        ).click()
     page.wait_for_load_state("load")
 
     # Both first batches are held until after the click, so the third
@@ -337,19 +357,25 @@ def test_a_failed_lookup_while_saving_ends_the_ordinary_way(
     roster = tmp_path / "reviewers.csv"
     many = [f"fail{i}@example.edu" for i in range(25)]
     roster.write_text(
-        "ReviewerName,ReviewerEmail\n"
-        + "\n".join(f"P{i},{a}" for i, a in enumerate(many)) + "\n"
+        "ReviewerName,ReviewerEmail\n" + "\n".join(f"P{i},{a}" for i, a in enumerate(many)) + "\n"
     )
     page.goto(app_url(f"/operator/sessions/{session_id}/reviewers?unlocked=1"))
     page.locator("#upload-csv-form input[name=file]").set_input_files(str(roster))
     with page.expect_navigation():
-        page.locator("#upload-csv-form .unlock-col-actions button[type=submit]:not([data-directory-recheck])").click()
+        page.locator(
+            "#upload-csv-form .unlock-col-actions button[type=submit]:not([data-directory-recheck])"
+        ).click()
     page.wait_for_load_state("load")
 
     held: list = []
     page.route("**/directory-lookup", lambda route: held.append(route))
     posted: list[str] = []
-    page.on("request", lambda r: posted.append(r.post_data or "") if r.url.endswith("/directory-recheck") else None)
+    page.on(
+        "request",
+        lambda r: (
+            posted.append(r.post_data or "") if r.url.endswith("/directory-recheck") else None
+        ),
+    )
     button = page.locator("[data-directory-recheck]")
     button.click()
     for _ in range(50):
@@ -360,7 +386,9 @@ def test_a_failed_lookup_while_saving_ends_the_ordinary_way(
     expect(button).to_have_text("Saving…")
     keys = json.loads(held[0].request.post_data)["keys"]
     with page.expect_navigation():
-        held[0].fulfill(json={"outcomes": {k: {"status": "ERROR", "error_kind": "server"} for k in keys}})
+        held[0].fulfill(
+            json={"outcomes": {k: {"status": "ERROR", "error_kind": "server"} for k in keys}}
+        )
     page.wait_for_load_state("load")
 
     assert len(posted) == 1 and "stop=true" not in posted[0]

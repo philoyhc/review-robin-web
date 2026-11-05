@@ -45,14 +45,18 @@ def test_senior_staff_see_who_holds_access(client: TestClient) -> None:
 def test_who_holds_access_is_senior_only(client: TestClient) -> None:
     assert 'id="who-h"' not in client.get("/overview/?as=Siti%20Rahman").text
     for name in ("Siti Rahman", "Kenneth Lau", "Daniel Koh", "Rachel Yeo"):
-        assert client.get(f"/overview/access?as={name.replace(' ', '%20')}").status_code == 403, name
+        assert client.get(f"/overview/access?as={name.replace(' ', '%20')}").status_code == 403, (
+            name
+        )
 
 
 def test_administrators_see_counts_of_senior_reads_never_whom(client: TestClient) -> None:
     page = client.get("/sys-admin/audit" + RACHEL).text
     table = section(page, "reads-h")
     rows = re.findall(r"<tr><td[^>]*>([^<]+)</td><td[^>]*>(\d+)</td><td[^>]*>(\d+)</td>", table)
-    assert rows == [("Sam Lee", "3", "1")]  # a history, the audit and a download; not the flag he read as recipient
+    assert rows == [
+        ("Sam Lee", "3", "1")
+    ]  # a history, the audit and a download; not the flag he read as recipient
     assert [r["staff"] for r in sample.senior_reads()] == sample.holders(sample.SENIOR)
     for s in sample.STUDENTS:
         assert s.name not in page and s.id not in page, s.name
@@ -70,14 +74,22 @@ def test_the_self_grant_is_a_setting_off_by_default(client: TestClient, monkeypa
     assert '<input type="checkbox" disabled>' in config
     assert "except a sys admin" not in client.get("/sys-admin/" + RACHEL).text
     monkeypatch.setattr(sample, "SELF_GRANT_SENIOR", True)
-    assert '<input type="checkbox" checked disabled>' in section(client.get("/sys-admin/configuration" + RACHEL).text, "self-h")
-    assert "except a sys admin granting itself Senior identifiable" in client.get("/sys-admin/" + RACHEL).text
+    assert '<input type="checkbox" checked disabled>' in section(
+        client.get("/sys-admin/configuration" + RACHEL).text, "self-h"
+    )
+    assert (
+        "except a sys admin granting itself Senior identifiable"
+        in client.get("/sys-admin/" + RACHEL).text
+    )
 
 
 def test_senior_staff_share_on_a_staff_member_s_behalf(client: TestClient, monkeypatch) -> None:
     card = section(client.get("/overview/students/S-08" + SAM).text, "peer-h")
     assert "Priya Raman → Daniel Koh" in card and "Share on their behalf" in card
-    assert '<label for="peer-from">Whose records</label>' in card and '<label for="peer-to">With</label>' in card
+    assert (
+        '<label for="peer-from">Whose records</label>' in card
+        and '<label for="peer-to">With</label>' in card
+    )
     on_behalf = sample.PeerGrant("S-08", "Priya Raman", "Mei Ling Tan", sample.TODAY, by="Sam Lee")
     monkeypatch.setattr(sample, "PEER_GRANTS", (*sample.PEER_GRANTS, on_behalf))
     card = section(client.get("/overview/students/S-08" + SAM).text, "peer-h")

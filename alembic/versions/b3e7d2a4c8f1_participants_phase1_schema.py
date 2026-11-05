@@ -49,6 +49,7 @@ Revises: d8e4c3a1b5f6
 Create Date: 2026-05-31
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -84,17 +85,11 @@ def upgrade() -> None:
         ),
         sa.ForeignKeyConstraint(["session_id"], ["sessions.id"]),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint(
-            "session_id", "email", name="uq_observer_session_email"
-        ),
+        sa.UniqueConstraint("session_id", "email", name="uq_observer_session_email"),
     )
     with op.batch_alter_table("observers", schema=None) as batch_op:
-        batch_op.create_index(
-            batch_op.f("ix_observers_email"), ["email"], unique=False
-        )
-        batch_op.create_index(
-            batch_op.f("ix_observers_session_id"), ["session_id"], unique=False
-        )
+        batch_op.create_index(batch_op.f("ix_observers_email"), ["email"], unique=False)
+        batch_op.create_index(batch_op.f("ix_observers_session_id"), ["session_id"], unique=False)
 
     # New table — instrument_view_policies.
     op.create_table(
@@ -131,9 +126,7 @@ def upgrade() -> None:
             name="uq_view_policy_instrument_audience",
         ),
     )
-    with op.batch_alter_table(
-        "instrument_view_policies", schema=None
-    ) as batch_op:
+    with op.batch_alter_table("instrument_view_policies", schema=None) as batch_op:
         batch_op.create_index(
             batch_op.f("ix_instrument_view_policies_instrument_id"),
             ["instrument_id"],
@@ -172,9 +165,7 @@ def upgrade() -> None:
 
     # New column — reviewers.profile_link.
     with op.batch_alter_table("reviewers", schema=None) as batch_op:
-        batch_op.add_column(
-            sa.Column("profile_link", sa.String(length=2000), nullable=True)
-        )
+        batch_op.add_column(sa.Column("profile_link", sa.String(length=2000), nullable=True))
 
 
 def downgrade() -> None:
@@ -188,12 +179,8 @@ def downgrade() -> None:
         batch_op.drop_column("observers_enabled")
         batch_op.drop_column("relationships_enabled")
 
-    with op.batch_alter_table(
-        "instrument_view_policies", schema=None
-    ) as batch_op:
-        batch_op.drop_index(
-            batch_op.f("ix_instrument_view_policies_instrument_id")
-        )
+    with op.batch_alter_table("instrument_view_policies", schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f("ix_instrument_view_policies_instrument_id"))
     op.drop_table("instrument_view_policies")
 
     with op.batch_alter_table("observers", schema=None) as batch_op:

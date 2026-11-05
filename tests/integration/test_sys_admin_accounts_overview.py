@@ -59,7 +59,11 @@ def test_the_card_is_one_line_of_pills(
         _user(db, f"op{n}@example.edu", is_operator=True)
     for n in range(2):
         acted = _user(db, f"acted{n}@example.edu")
-        db.add(AuditEvent(event_type="response.submitted", summary="x", actor_user_id=acted.id, detail={}))
+        db.add(
+            AuditEvent(
+                event_type="response.submitted", summary="x", actor_user_id=acted.id, detail={}
+            )
+        )
     for n in range(4):
         _user(db, f"unused{n}@example.edu")
     db.commit()
@@ -68,13 +72,15 @@ def test_the_card_is_one_line_of_pills(
     lines = card.split('<p class="overview-pills">')[1:]
     assert len(lines) == 1
     # The signed-in sys-admin is the one Admin; no super-admin configured.
-    assert lines[0].split("</p>", 1)[0] == " · ".join([
-        _pill("operators", "3 Operators"),
-        _pill("admins", "1 Admin"),
-        _pill("super_admins", "0 super-admins"),
-        _pill("no_role", "2 No role"),
-        _pill("unused", "4 Unused"),
-    ])
+    assert lines[0].split("</p>", 1)[0] == " · ".join(
+        [
+            _pill("operators", "3 Operators"),
+            _pill("admins", "1 Admin"),
+            _pill("super_admins", "0 super-admins"),
+            _pill("no_role", "2 No role"),
+            _pill("unused", "4 Unused"),
+        ]
+    )
     # Nothing else on the card: no links, no other lines.
     assert "<a " not in card
     assert "<dl" not in card
@@ -82,12 +88,17 @@ def test_the_card_is_one_line_of_pills(
 
 @pytest.mark.parametrize(
     "supers, text",
-    [(["alice@example.edu"], "1 super-admin"),
-     (["alice@example.edu", "boss@example.edu"], "2 super-admins")],
+    [
+        (["alice@example.edu"], "1 super-admin"),
+        (["alice@example.edu", "boss@example.edu"], "2 super-admins"),
+    ],
 )
 def test_the_super_admin_pill_counts_them(
-    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch,
-    supers: list[str], text: str,
+    client: TestClient,
+    db: Session,
+    monkeypatch: pytest.MonkeyPatch,
+    supers: list[str],
+    text: str,
 ) -> None:
     monkeypatch.setattr(identity_settings, "super_admin_emails", supers)
     _user(db, "boss@example.edu", is_operator=True, is_sys_admin=True)

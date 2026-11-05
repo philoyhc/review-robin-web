@@ -8,6 +8,7 @@ houses the per-session bulk include toggle
 (``bulk_set_assignment_include``) since it shares the audit / commit
 shape with the rest of this slice.
 """
+
 from __future__ import annotations
 
 import logging
@@ -88,9 +89,7 @@ def bulk_set_assignment_include(
     flipped = 0
     skipped_inactive = 0
     for assignment in rows:
-        if include and not (
-            _is_active(assignment.reviewer) and _is_active(assignment.reviewee)
-        ):
+        if include and not (_is_active(assignment.reviewer) and _is_active(assignment.reviewee)):
             if not assignment.include:
                 skipped_inactive += 1
             continue
@@ -133,12 +132,8 @@ def generate_full_matrix(
     inactive_reviewers = sum(1 for r in reviewers_list if not _is_active(r))
     inactive_reviewees = sum(1 for r in reviewees_list if not _is_active(r))
 
-    active_reviewers = sorted(
-        (r for r in reviewers_list if _is_active(r)), key=lambda r: r.id
-    )
-    active_reviewees = sorted(
-        (r for r in reviewees_list if _is_active(r)), key=lambda r: r.id
-    )
+    active_reviewers = sorted((r for r in reviewers_list if _is_active(r)), key=lambda r: r.id)
+    active_reviewees = sorted((r for r in reviewees_list if _is_active(r)), key=lambda r: r.id)
     pairs: list[tuple[Reviewer, Reviewee]] = []
     excluded_self = 0
     for reviewer in active_reviewers:
@@ -346,9 +341,7 @@ def _diff_one_instrument(
         from app.services import instruments as instruments_service
         from app.services.responses import group_key_for_pair, is_catch_all_key
 
-        boundary = instruments_service.decode_group_kind(
-            instrument.group_kind
-        )
+        boundary = instruments_service.decode_group_kind(instrument.group_kind)
 
         def _key(reviewer_id: int, reviewee: Any) -> tuple[str, ...]:
             return group_key_for_pair(
@@ -369,9 +362,7 @@ def _diff_one_instrument(
                         self_review_groups.add((reviewer.id, key))
         # Keys for the pairs that actually survived.
         for reviewer, reviewee in engine_pairs:
-            pair_group_key[(reviewer.id, reviewee.id)] = _key(
-                reviewer.id, reviewee
-            )
+            pair_group_key[(reviewer.id, reviewee.id)] = _key(reviewer.id, reviewee)
 
     # Per-instrument self-review exclusion (19O Item 1 rung 3). Honored
     # HERE, after the engine's fan-out, and deliberately not at the
@@ -382,10 +373,7 @@ def _diff_one_instrument(
     # composition, which is the recorded reason
     # ``RuleSetOptions.excludeSelfReviews`` stays pinned ``False``
     # (``spec/assignments.md`` "Self-review policy").
-    exclude_self = bool(
-        session_rule_set is not None
-        and session_rule_set.exclude_self_reviews
-    )
+    exclude_self = bool(session_rule_set is not None and session_rule_set.exclude_self_reviews)
 
     # The engine's pair fan-out, keyed by ``(reviewer_id, reviewee_id)``
     # — the same tuple ``uq_assignment_unique`` enforces.
@@ -453,9 +441,7 @@ def _diff_one_instrument(
         delete_ids = [existing_rows[key].id for key in to_delete]
         responses_deleted = int(
             db.execute(
-                select(func.count(Response.id)).where(
-                    Response.assignment_id.in_(delete_ids)
-                )
+                select(func.count(Response.id)).where(Response.assignment_id.in_(delete_ids))
             ).scalar_one()
         )
 
@@ -467,9 +453,7 @@ def _diff_one_instrument(
         to_keep=to_keep,
         responses_deleted=responses_deleted,
         pairs_count=len(new_pairs),
-        excluded_counts=_with_self_review_exclusions(
-            result.excluded_counts, excluded_by_rule
-        ),
+        excluded_counts=_with_self_review_exclusions(result.excluded_counts, excluded_by_rule),
     )
 
 
@@ -535,9 +519,7 @@ def _materialise_one_instrument(
     # ORM ``delete-orphan`` cascade — see PR #1065).
     if diff.to_delete:
         delete_ids = [diff.existing_rows[key].id for key in diff.to_delete]
-        db.execute(
-            delete(Response).where(Response.assignment_id.in_(delete_ids))
-        )
+        db.execute(delete(Response).where(Response.assignment_id.in_(delete_ids)))
         db.execute(delete(Assignment).where(Assignment.id.in_(delete_ids)))
 
     # Insert newly eligible pairs. Bulk Core, matching the delete
@@ -600,9 +582,7 @@ def _materialise_one_instrument(
     # — recompute against the post-diff population so newly inserted
     # rows pick up the correct flag and kept rows reflect any
     # composition shift that happened mid-session.
-    recompute_self_review_classification(
-        db, session_id=review_session.id
-    )
+    recompute_self_review_classification(db, session_id=review_session.id)
 
     group_responses_cleared = responses_service.clear_changed_groups(
         db, session_id=review_session.id, before=groups_before
@@ -653,9 +633,7 @@ def _materialise_one_instrument(
             # makes "would find nothing" a fact rather than a hope.
             stale=False,
             eligible=diff.pairs_count,
-            self_reviews_excluded=diff.excluded_counts.get(
-                "self_review", 0
-            ),
+            self_reviews_excluded=diff.excluded_counts.get("self_review", 0),
         ),
     )
 
@@ -708,21 +686,15 @@ def _load_reconcile_inputs(
     """
     from app.services._queries import session_scoped
 
-    instruments_query = (
-        session_scoped(Instrument, review_session.id)
-        .order_by(Instrument.order, Instrument.id)
+    instruments_query = session_scoped(Instrument, review_session.id).order_by(
+        Instrument.order, Instrument.id
     )
     if instrument_id is not None:
-        instruments_query = instruments_query.where(
-            Instrument.id == instrument_id
-        )
+        instruments_query = instruments_query.where(Instrument.id == instrument_id)
     all_instruments = list(db.execute(instruments_query).scalars())
 
     if instrument_id is not None and not all_instruments:
-        raise ValueError(
-            f"instrument {instrument_id} not found in session "
-            f"{review_session.id}"
-        )
+        raise ValueError(f"instrument {instrument_id} not found in session {review_session.id}")
     # Wave 5 PR 5.3 — every instrument now flows through the same
     # path: NULL ``rule_set_id`` is interpreted as Full Matrix at
     # the diff site via the synthetic empty-rules schema. No more
@@ -733,9 +705,7 @@ def _load_reconcile_inputs(
     reviewees = list_reviewees(db, review_session.id)
     from app.services import relationships as relationships_service
 
-    pair_context_lookup = relationships_service.pair_context_lookup(
-        db, review_session.id
-    )
+    pair_context_lookup = relationships_service.pair_context_lookup(db, review_session.id)
 
     rule_set_ids = {i.rule_set_id for i in targets if i.rule_set_id is not None}
     rule_set_rows = {
@@ -802,9 +772,7 @@ def _rule_set_load_error(row: SessionRuleSet, exc: ValueError) -> str:
     return rules_payload_error(row.rules_json) or str(exc).splitlines()[0]
 
 
-def _cached_state(
-    instrument: Instrument, stamp: str
-) -> InstrumentReconcileState | None:
+def _cached_state(instrument: Instrument, stamp: str) -> InstrumentReconcileState | None:
     """The instrument's cached verdict if it was computed against
     ``stamp``, else ``None`` — a miss, which the caller answers by
     running the engine.
@@ -826,15 +794,11 @@ def _cached_state(
     return InstrumentReconcileState(
         stale=bool(instrument.cached_reconcile_stale),
         eligible=int(instrument.cached_reconcile_eligible),
-        self_reviews_excluded=int(
-            instrument.cached_reconcile_self_reviews_excluded
-        ),
+        self_reviews_excluded=int(instrument.cached_reconcile_self_reviews_excluded),
     )
 
 
-def _store_state(
-    instrument: Instrument, stamp: str, state: InstrumentReconcileState
-) -> None:
+def _store_state(instrument: Instrument, stamp: str, state: InstrumentReconcileState) -> None:
     """Write the verdict and the stamp it was computed against.
 
     All four together, so the read above never sees a stamp that
@@ -843,9 +807,7 @@ def _store_state(
     instrument.cached_reconcile_stamp = stamp
     instrument.cached_reconcile_stale = state.stale
     instrument.cached_reconcile_eligible = state.eligible
-    instrument.cached_reconcile_self_reviews_excluded = (
-        state.self_reviews_excluded
-    )
+    instrument.cached_reconcile_self_reviews_excluded = state.self_reviews_excluded
 
 
 def _stamp_for(
@@ -867,9 +829,7 @@ def _stamp_for(
         reviewers=inputs.reviewers,
         reviewees=inputs.reviewees,
         pair_context_lookup=inputs.pair_context_lookup,
-        materialized=_reconcile_cache.rows_for(
-            rows_by_instrument, instrument.id
-        ),
+        materialized=_reconcile_cache.rows_for(rows_by_instrument, instrument.id),
         override_exclude_self_reviews=override_exclude_self_reviews,
     )
 
@@ -911,14 +871,10 @@ def _full_matrix_never_generated_state(
         # unbound reviewer, with every reviewee at its address.
         by_address = Counter(normalize_email(e.email_or_identifier) for e in reviewees)
         unbound_by_address = Counter(
-            normalize_email(e.email_or_identifier)
-            for e in reviewees
-            if not e.directory_object_id
+            normalize_email(e.email_or_identifier) for e in reviewees if not e.directory_object_id
         )
         by_account = Counter(
-            normalize_object_id(e.directory_object_id)
-            for e in reviewees
-            if e.directory_object_id
+            normalize_object_id(e.directory_object_id) for e in reviewees if e.directory_object_id
         )
         for r in reviewers:
             address = normalize_email(r.email)
@@ -980,9 +936,7 @@ def staleness_by_instrument(
     Item 2 for what the stamp covers.
     """
     inputs = _load_reconcile_inputs(db, review_session, None)
-    rows_by_instrument = _reconcile_cache.materialized_rows_by_instrument(
-        db, review_session.id
-    )
+    rows_by_instrument = _reconcile_cache.materialized_rows_by_instrument(db, review_session.id)
 
     state: dict[int, InstrumentReconcileState] = {}
     warmed = False
@@ -1001,9 +955,7 @@ def staleness_by_instrument(
         session_rule_set = inputs.rule_set_for(instrument)
         if (
             session_rule_set is None
-            and not _reconcile_cache.rows_for(
-                rows_by_instrument, instrument.id
-            ).count
+            and not _reconcile_cache.rows_for(rows_by_instrument, instrument.id).count
         ):
             # Never generated, on the Full Matrix default: the verdict
             # is not stale by the rule below, and the fan-out is every
@@ -1060,12 +1012,9 @@ def staleness_by_instrument(
         # alternative — treating "no rows" as stale — is the false
         # positive above.
         computed = InstrumentReconcileState(
-            stale=bool(diff.existing_rows)
-            and bool(diff.to_insert or diff.to_delete),
+            stale=bool(diff.existing_rows) and bool(diff.to_insert or diff.to_delete),
             eligible=diff.pairs_count,
-            self_reviews_excluded=diff.excluded_counts.get(
-                "self_review", 0
-            ),
+            self_reviews_excluded=diff.excluded_counts.get("self_review", 0),
         )
         state[instrument.id] = computed
         _store_state(instrument, stamp, computed)
@@ -1207,9 +1156,9 @@ def _projected_group_clears(
     }
     if not changed:
         return 0
-    return db.scalar(
-        select(func.count(Response.id)).where(Response.assignment_id.in_(changed))
-    ) or 0
+    return (
+        db.scalar(select(func.count(Response.id)).where(Response.assignment_id.in_(changed))) or 0
+    )
 
 
 def replace_assignments(
@@ -1301,9 +1250,7 @@ def replace_assignments(
         # **After the flush**, because the stamp carries the row summary
         # and the rows were just rewritten — a stamp taken before the
         # flush would describe the row set this run replaced.
-        rows_by_instrument = _reconcile_cache.materialized_rows_by_instrument(
-            db, review_session.id
-        )
+        rows_by_instrument = _reconcile_cache.materialized_rows_by_instrument(db, review_session.id)
         for instrument in inputs.targets:
             _store_state(
                 instrument,
@@ -1326,9 +1273,7 @@ def replace_assignments(
         # the canonical rule on every row. Drift means a non-regenerate
         # write path is missing a recompute hook, or there's a non-
         # determinism bug in :func:`classify_self_review`.
-        drift = verify_self_review_classification(
-            db, session_id=review_session.id
-        )
+        drift = verify_self_review_classification(db, session_id=review_session.id)
         if drift:
             if _is_test_env():
                 raise AssertionError(
@@ -1350,9 +1295,7 @@ def replace_assignments(
                     "first_few": drift[:5],
                 },
             )
-            recompute_self_review_classification(
-                db, session_id=review_session.id
-            )
+            recompute_self_review_classification(db, session_id=review_session.id)
             db.flush()
 
         # Lazy-seed pair_context display fields for any populated slots

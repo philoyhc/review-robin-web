@@ -38,12 +38,10 @@ def _session(client: TestClient, db: Session, code: str) -> tuple[int, int]:
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    session = db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
-    instrument = db.execute(
-        select(Instrument).where(Instrument.session_id == session.id)
-    ).scalars().first()
+    session = db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
+    instrument = (
+        db.execute(select(Instrument).where(Instrument.session_id == session.id)).scalars().first()
+    )
     assert instrument is not None
     return session.id, instrument.id
 
@@ -67,9 +65,7 @@ def _page(client: TestClient, session_id: int) -> str:
     return client.get(f"/operator/sessions/{public_id(session_id)}/instruments").text
 
 
-def test_the_chip_hides_unless_the_released_cell_is_raw(
-    client: TestClient, db: Session
-) -> None:
+def test_the_chip_hides_unless_the_released_cell_is_raw(client: TestClient, db: Session) -> None:
     session_id, _ = _session(client, db, "vp-ident-off")
     body = _page(client, session_id)
     for attr in (
@@ -85,9 +81,7 @@ def test_the_chip_hides_unless_the_released_cell_is_raw(
     assert 'name="peer_reviewer_after_release_reviewer_identity"' not in body
 
 
-def test_the_chip_is_a_cycle_control_beside_a_raw_cell(
-    client: TestClient, db: Session
-) -> None:
+def test_the_chip_is_a_cycle_control_beside_a_raw_cell(client: TestClient, db: Session) -> None:
     session_id, instrument_id = _session(client, db, "vp-ident-raw")
     _save(
         client,
@@ -133,15 +127,10 @@ def test_the_profile_level_is_offered_once_a_reviewer_has_a_link(
     )
     db.commit()
     chip = _span(_page(client, session_id), 'data-new-model-vp-identity="reviewee"')
-    assert (
-        'data-new-model-vp-identity-slugs="name|name_email|name_email_profile"'
-        in chip
-    )
+    assert 'data-new-model-vp-identity-slugs="name|name_email|name_email_profile"' in chip
 
 
-def test_save_stores_the_level_and_the_pills_show_it(
-    client: TestClient, db: Session
-) -> None:
+def test_save_stores_the_level_and_the_pills_show_it(client: TestClient, db: Session) -> None:
     session_id, instrument_id = _session(client, db, "vp-ident-save")
     _save(
         client,
@@ -157,7 +146,8 @@ def test_save_stores_the_level_and_the_pills_show_it(
     assert policies["observer"].after_release_reviewer_identity == "name_email_profile"
     body = _page(client, session_id)
     assert _span(body, 'data-new-model-vp-identity="reviewee"').endswith(
-        ">Reviewer name only</span>")
+        ">Reviewer name only</span>"
+    )
     assert _span(body, 'data-new-model-vp-identity-preview="reviewee"').endswith(
         ">Reviewer name only</span>"
     )
@@ -199,9 +189,7 @@ def test_an_empty_input_clears_the_level_and_a_missing_one_keeps_it(
     assert policy.after_release_reviewer_identity is None
 
 
-def test_a_corrupt_stored_level_does_not_block_save(
-    client: TestClient, db: Session
-) -> None:
+def test_a_corrupt_stored_level_does_not_block_save(client: TestClient, db: Session) -> None:
     """A stored value that isn't a level (only a direct database edit
     can write one) renders as the default and goes out empty, so the
     card's ordinary Save still works (Codex on #2966)."""
@@ -212,7 +200,8 @@ def test_a_corrupt_stored_level_does_not_block_save(
     db.commit()
     body = _page(client, session_id)
     assert _span(body, 'data-new-model-vp-identity="reviewee"').endswith(
-        ">Reviewer name, email</span>")
+        ">Reviewer name, email</span>"
+    )
     match = re.search(
         r'name="reviewee_after_release_reviewer_identity"\s*'
         r'data-new-model-vp-identity-input="reviewee"\s*value="([^"]*)"',
@@ -231,9 +220,7 @@ def test_a_corrupt_stored_level_does_not_block_save(
     assert policy.after_release_reviewer_identity is None
 
 
-def test_save_refuses_a_level_that_is_not_one(
-    client: TestClient, db: Session
-) -> None:
+def test_save_refuses_a_level_that_is_not_one(client: TestClient, db: Session) -> None:
     session_id, instrument_id = _session(client, db, "vp-ident-bad")
     response = client.post(
         f"/operator/sessions/{public_id(session_id)}/instruments/{instrument_id}/fields/save",
@@ -272,9 +259,9 @@ def test_the_reviewer_sees_the_level_after_a_raw_reviewees_cell(
     instrument = db.execute(
         select(Instrument).where(Instrument.session_id == review_session.id)
     ).scalar_one()
-    vp.list_for_instrument(db, instrument.id)["reviewee"].after_release_reviewer_identity = (
-        "name_email_profile"
-    )
+    vp.list_for_instrument(db, instrument.id)[
+        "reviewee"
+    ].after_release_reviewer_identity = "name_email_profile"
     db.commit()
     body = make_client(rae).get(f"/me/sessions/{review_session.public_id}").text
     assert _span(body, "data-rs-reviewer-identity").endswith(

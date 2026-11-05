@@ -15,6 +15,7 @@ have an end without a start.
 across the four operator-set schedule datetimes once every
 individual parse has succeeded.
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta
@@ -53,9 +54,7 @@ def parse_and_validate_responses_release_at(
     try:
         parsed = date_formatting.parse_local_datetime(raw, timezone_name)
     except ValueError as exc:
-        raise ScheduledActivateError(
-            "Release responses from must be a valid datetime"
-        ) from exc
+        raise ScheduledActivateError("Release responses from must be a valid datetime") from exc
     return _ensure_aware_utc(parsed)
 
 
@@ -91,16 +90,13 @@ def parse_and_validate_responses_release_until(
     try:
         parsed = date_formatting.parse_local_datetime(raw, timezone_name)
     except ValueError as exc:
-        raise ScheduledActivateError(
-            "Release responses until must be a valid datetime"
-        ) from exc
+        raise ScheduledActivateError("Release responses until must be a valid datetime") from exc
     parsed_aware = _ensure_aware_utc(parsed)
     if responses_release_at is not None:
         anchor_aware = _ensure_aware_utc(responses_release_at)
         if parsed_aware <= anchor_aware:
             raise ScheduledActivateError(
-                "Release responses until must be after Release "
-                "responses from."
+                "Release responses until must be after Release responses from."
             )
         if parsed_aware - anchor_aware > _RELEASE_WINDOW_MAX:
             raise ScheduledActivateError(
@@ -147,19 +143,13 @@ def validate_schedule_ordering(
     if (
         scheduled_activate_at is not None
         and deadline is not None
-        and _ensure_aware_utc(deadline) < _ensure_aware_utc(
-            scheduled_activate_at
-        )
+        and _ensure_aware_utc(deadline) < _ensure_aware_utc(scheduled_activate_at)
     ):
-        raise ScheduledActivateError(
-            "End must be on or after Start."
-        )
+        raise ScheduledActivateError("End must be on or after Start.")
     if (
         deadline is not None
         and responses_release_at is not None
-        and _ensure_aware_utc(responses_release_at) < _ensure_aware_utc(
-            deadline
-        )
+        and _ensure_aware_utc(responses_release_at) < _ensure_aware_utc(deadline)
     ):
         raise ScheduledActivateError(
             "Release responses from must be on or after End — "
@@ -173,8 +163,7 @@ def validate_schedule_ordering(
         scheduled_activate_at is not None
         and deadline is None
         and responses_release_at is not None
-        and _ensure_aware_utc(responses_release_at)
-        < _ensure_aware_utc(scheduled_activate_at)
+        and _ensure_aware_utc(responses_release_at) < _ensure_aware_utc(scheduled_activate_at)
     ):
         raise ScheduledActivateError(
             "With no End, Release responses from must be on or after "
@@ -183,13 +172,11 @@ def validate_schedule_ordering(
     if (
         responses_release_at is not None
         and responses_release_until is not None
-        and _ensure_aware_utc(responses_release_until)
-        <= _ensure_aware_utc(responses_release_at)
+        and _ensure_aware_utc(responses_release_until) <= _ensure_aware_utc(responses_release_at)
     ):
         raise ScheduledActivateError(
             "Release responses until must be after Release responses from."
         )
-
 
 
 #: How far back a release-window crossing is still stamped (segment 14E).
@@ -231,9 +218,7 @@ def _context_value(detail: dict[str, Any] | None, key: str) -> object:
     return context.get(key)
 
 
-def _unstamped(
-    db: Session, session: ReviewSession, due: list[_DueStamp]
-) -> list[_UnstampedStamp]:
+def _unstamped(db: Session, session: ReviewSession, due: list[_DueStamp]) -> list[_UnstampedStamp]:
     """The due moments not yet in the audit log."""
     from sqlalchemy import select
 
@@ -288,9 +273,7 @@ def observe_release_window(
     # once stamp it once; the window is read again on the locked row.
     locked = lock_session(db, session)
     written = 0
-    for event_type, key, iso, word in _unstamped(
-        db, locked, _due_release_stamps(locked, now)
-    ):
+    for event_type, key, iso, word in _unstamped(db, locked, _due_release_stamps(locked, now)):
         audit.write_event(
             db,
             event_type=event_type,

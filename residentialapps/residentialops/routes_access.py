@@ -51,4 +51,9 @@ def not_registered(request: Request) -> Response:
     # The preview of what a signed-in person Residential cannot link sees at
     # any path (`residentialapps/docs/residentialapps_identity.md` §6, step 4):
     # no switcher, no tabs, nothing about anyone else.
-    return render(request, "residentialops/access/not_registered.html", area="Residential Operations", areas=())
+    return render(
+        request,
+        "residentialops/access/not_registered.html",
+        area="Residential Operations",
+        areas=(),
+    )

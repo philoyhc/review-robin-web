@@ -31,9 +31,7 @@ MATCHING_TERM = {"invitations": "rae", "responses": "carol"}
 
 
 def _page(client: TestClient, session, page: str, query: str = "") -> str:
-    return client.get(
-        f"/operator/sessions/{session.public_id}/{page}{query}"
-    ).text
+    return client.get(f"/operator/sessions/{session.public_id}/{page}{query}").text
 
 
 def _markup(html: str) -> str:
@@ -77,9 +75,7 @@ def test_the_filter_is_in_the_toolbar_and_the_submit_says_search(
 
 
 @pytest.mark.parametrize("page", PAGES)
-def test_the_search_lands_on_the_table_card(
-    client: TestClient, db: Session, page: str
-) -> None:
+def test_the_search_lands_on_the_table_card(client: TestClient, db: Session, page: str) -> None:
     """A `GET` submission replaces the query and leaves the action's
     fragment alone, so a search scrolls to the table card exactly as a
     page turn does (19J.8) rather than landing at the document top.
@@ -141,9 +137,7 @@ def test_the_filter_survives_a_search_that_matches_nothing(
 
 
 @pytest.mark.parametrize("page", PAGES)
-def test_the_info_card_is_no_longer_half_a_grid(
-    client: TestClient, db: Session, page: str
-) -> None:
+def test_the_info_card_is_no_longer_half_a_grid(client: TestClient, db: Session, page: str) -> None:
     """One move, two visible effects. The info card and the filter card
     were the two children of one `bottom-grid`, so taking the filter
     out would strand the info card at half width in the LEFT column —
@@ -157,17 +151,13 @@ def test_the_info_card_is_no_longer_half_a_grid(
     # the grid to record where it went, and `base.html` carries the
     # class in its inline CSS.
     src = _markup((OPERATOR / f"session_{page}.html").read_text())
-    assert not [
-        c for c in re.findall(r'class="([^"]*)"', src) if "bottom-grid" in c
-    ], page
+    assert not [c for c in re.findall(r'class="([^"]*)"', src) if "bottom-grid" in c], page
     assert f'id="{page}-info-card"' in src
 
     rs = _ready_session(client, db, code=f"ops-ic-{page[:3]}")
     body = _markup(_page(client, rs, page))
     assert f'id="{page}-info-card"' in body, "the page did not render"
-    assert not [
-        c for c in re.findall(r'class="([^"]*)"', body) if "bottom-grid" in c
-    ], page
+    assert not [c for c in re.findall(r'class="([^"]*)"', body) if "bottom-grid" in c], page
 
 
 # The "all seven carry the modifier" claim is owned by

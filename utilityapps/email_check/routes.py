@@ -56,8 +56,12 @@ def require_super_admin(request: Request) -> None:
 router = APIRouter(prefix="/email-check", dependencies=[Depends(require_super_admin)])
 
 
-def _page(request: Request, name: str, context: dict[str, object] | None = None, status: int = 200) -> Response:
-    return templates.TemplateResponse(request, name, context or {}, status_code=status, headers=_NO_STORE)
+def _page(
+    request: Request, name: str, context: dict[str, object] | None = None, status: int = 200
+) -> Response:
+    return templates.TemplateResponse(
+        request, name, context or {}, status_code=status, headers=_NO_STORE
+    )
 
 
 @router.get("/", name="utilities_email_check")
@@ -169,8 +173,12 @@ async def run_check(request: Request) -> Response:
         try:
             carried = check.outcomes_from_json(json.loads(posted.outcomes), keys)
         except (ValueError, RecursionError):
-            return _upload_error(request, "The check's results could not be read. Upload the file again.")
-        result = check.run(posted.upload, posted.column, None, carried=carried, stopped=posted.stopped)
+            return _upload_error(
+                request, "The check's results could not be read. Upload the file again."
+            )
+        result = check.run(
+            posted.upload, posted.column, None, carried=carried, stopped=posted.stopped
+        )
     else:
         try:
             directory = directory_for(request)

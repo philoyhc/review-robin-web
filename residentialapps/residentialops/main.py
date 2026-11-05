@@ -19,7 +19,10 @@ def create_app() -> FastAPI:
     # No schema pages: neither application is an API, and they would list
     # its routes to anyone signed out.
     app = FastAPI(
-        title="Residential Operations", docs_url=None, redoc_url=None, openapi_url=None,
+        title="Residential Operations",
+        docs_url=None,
+        redoc_url=None,
+        openapi_url=None,
         dependencies=[Depends(sample_preview)],  # sample-only: goes with sample_leave
     )
     app.include_router(health_router)

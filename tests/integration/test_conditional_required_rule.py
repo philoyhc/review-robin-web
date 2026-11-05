@@ -50,11 +50,22 @@ def _f(
     id_, *, required=False, parent=None, op=None, value=None, mode=None, visible=True
 ) -> InstrumentResponseField:
     """A stand-in for a response field, carrying what the rule reads."""
-    return cast(InstrumentResponseField, SimpleNamespace(
-        id=id_, label=f"F{id_}", order=id_, required=required, visible=visible,
-        branch_parent_id=parent, branch_op=op, branch_value=value, branch_mode=mode,
-        _inline_data_type="Integer", _inline_list_csv=None,
-    ))
+    return cast(
+        InstrumentResponseField,
+        SimpleNamespace(
+            id=id_,
+            label=f"F{id_}",
+            order=id_,
+            required=required,
+            visible=visible,
+            branch_parent_id=parent,
+            branch_op=op,
+            branch_value=value,
+            branch_mode=mode,
+            _inline_data_type="Integer",
+            _inline_list_csv=None,
+        ),
+    )
 
 
 def _pair(mode, *, governed_required=False):
@@ -115,12 +126,12 @@ def test_a_require_mode_branch_needs_the_anchor() -> None:
     ]
     assert ("F2", message) in responses_service.branch_structure_errors(unanchored)
     assert not [
-        e for e in responses_service.branch_structure_errors(_pair("require"))
-        if e[1] == message
+        e for e in responses_service.branch_structure_errors(_pair("require")) if e[1] == message
     ]
     # A show-mode optional governed field needs no anchor, as before.
     assert not [
-        e for e in responses_service.branch_structure_errors(
+        e
+        for e in responses_service.branch_structure_errors(
             [_f(1, op="ge", value="4"), _f(2, parent=1)]
         )
         if e[1] == message
@@ -145,10 +156,16 @@ def _require_seed(db: Session):
 
 def test_a_closed_condition_keeps_a_require_mode_answer(db: Session) -> None:
     op, reviewer, review_session, (a1, _), _, comments = _require_seed(db)
-    _submit(db, op, reviewer, review_session, [
-        ResponseUpsert(assignment_id=a1.id, field_key="rating", value="2"),
-        ResponseUpsert(assignment_id=a1.id, field_key="comments", value="still here"),
-    ])
+    _submit(
+        db,
+        op,
+        reviewer,
+        review_session,
+        [
+            ResponseUpsert(assignment_id=a1.id, field_key="rating", value="2"),
+            ResponseUpsert(assignment_id=a1.id, field_key="comments", value="still here"),
+        ],
+    )
     kept = db.execute(
         select(Response.value).where(
             Response.assignment_id == a1.id, Response.response_field_id == comments.id
@@ -159,17 +176,27 @@ def test_a_closed_condition_keeps_a_require_mode_answer(db: Session) -> None:
 
 def test_the_submit_gate_follows_the_condition(db: Session) -> None:
     op, reviewer, review_session, (a1, a2), _, _ = _require_seed(db)
-    result = _submit(db, op, reviewer, review_session, [
-        ResponseUpsert(assignment_id=a1.id, field_key="rating", value="5"),
-        ResponseUpsert(assignment_id=a2.id, field_key="rating", value="2"),
-    ])
+    result = _submit(
+        db,
+        op,
+        reviewer,
+        review_session,
+        [
+            ResponseUpsert(assignment_id=a1.id, field_key="rating", value="5"),
+            ResponseUpsert(assignment_id=a2.id, field_key="rating", value="2"),
+        ],
+    )
     assert result.submitted is False
-    assert [(m.reviewee_name, m.field_key) for m in result.missing] == [
-        ("Carol", "comments")
-    ]
-    result = _submit(db, op, reviewer, review_session, [
-        ResponseUpsert(assignment_id=a1.id, field_key="comments", value="why"),
-    ])
+    assert [(m.reviewee_name, m.field_key) for m in result.missing] == [("Carol", "comments")]
+    result = _submit(
+        db,
+        op,
+        reviewer,
+        review_session,
+        [
+            ResponseUpsert(assignment_id=a1.id, field_key="comments", value="why"),
+        ],
+    )
     assert result.missing == [] and result.submitted is True
 
 
@@ -181,12 +208,16 @@ def test_the_gate_asks_a_require_mode_instrument_even_with_no_required_flag(
     op, reviewer, review_session, (a1, a2), rating, _ = _require_seed(db)
     rating.required = False
     db.flush()
-    result = _submit(db, op, reviewer, review_session, [
-        ResponseUpsert(assignment_id=a1.id, field_key="rating", value="4"),
-    ])
-    assert [(m.reviewee_name, m.field_key) for m in result.missing] == [
-        ("Carol", "comments")
-    ]
+    result = _submit(
+        db,
+        op,
+        reviewer,
+        review_session,
+        [
+            ResponseUpsert(assignment_id=a1.id, field_key="rating", value="4"),
+        ],
+    )
+    assert [(m.reviewee_name, m.field_key) for m in result.missing] == [("Carol", "comments")]
 
 
 def test_a_rows_counts_follow_the_condition(db: Session) -> None:
@@ -233,9 +264,9 @@ def test_the_rollups_count_a_require_mode_field_while_its_condition_holds(
     review_session, _ = _require_mixed(db)
     for name, rollup in REVIEWER_IMPLEMENTATIONS:
         rae = _by_email(rollup(db, review_session))["rae@example.edu"]
-        assert (rae.required_total, rae.missing_required_count, rae.completed_count) == (
-            4, 1, 2
-        ), name
+        assert (rae.required_total, rae.missing_required_count, rae.completed_count) == (4, 1, 2), (
+            name
+        )
         assert rae.pill_state == "in progress", name
     for name, rollup in REVIEWEE_IMPLEMENTATIONS:
         rows = _by_identifier(rollup(db, review_session))
@@ -255,9 +286,9 @@ def test_the_rollups_never_owe_a_hidden_require_mode_field(db: Session) -> None:
     db.flush()
     for name, rollup in REVIEWER_IMPLEMENTATIONS:
         rae = _by_email(rollup(db, review_session))["rae@example.edu"]
-        assert (rae.required_total, rae.missing_required_count, rae.completed_count) == (
-            3, 0, 3
-        ), name
+        assert (rae.required_total, rae.missing_required_count, rae.completed_count) == (3, 0, 3), (
+            name
+        )
     for name, rollup in REVIEWEE_IMPLEMENTATIONS:
         by_id = _by_identifier(rollup(db, review_session))
         assert by_id["dan@example.edu"].completed_count == 1, name
@@ -320,12 +351,11 @@ def test_the_surface_script_keeps_a_require_mode_cell_enabled(
     start = body.index("function isOpen(op, value, raw)")
     script = body[start : body.index("})();", start)]
     assert 'var requireMode = parentCell.dataset.rsBranchMode === "require";' in script
-    assert 'var applies = parentApplies && (open || requireMode);' in script
+    assert "var applies = parentApplies && (open || requireMode);" in script
     assert 'cell.classList.toggle("rs-branch-closed", !applies);' in script
     assert "c.disabled = !applies;" in script
     assert (
-        'var requiredNow = parentApplies && open && cell.dataset.rsRequired === "true";'
-        in script
+        'var requiredNow = parentApplies && open && cell.dataset.rsRequired === "true";' in script
     )
 
 

@@ -25,7 +25,9 @@ OVERVIEW = (sample.SENIOR, *sample.VIEW)
 def overview(request: Request) -> Response:
     me = sample.viewer(request.query_params.get("as"))
     return gated(
-        request, "supportlogs/overview.html", *OVERVIEW,
+        request,
+        "supportlogs/overview.html",
+        *OVERVIEW,
         named=sample.holds(me, sample.SENIOR, sample.VIEW_IDENTIFIABLE),
         senior=sample.holds(me, sample.SENIOR),
     )
@@ -41,7 +43,9 @@ def history(request: Request, sid: str) -> Response:
     found = sample.student(sid)
     if found is None:
         raise HTTPException(status_code=404)
-    return gated(request, "supportlogs/history.html", sample.SENIOR, chosen=found, current_tab="/overview/")
+    return gated(
+        request, "supportlogs/history.html", sample.SENIOR, chosen=found, current_tab="/overview/"
+    )
 
 
 @router.get("/overview/audit", name="supportlogs_overview_audit")
@@ -56,4 +60,6 @@ def access(request: Request) -> Response:
     """Who holds each Support Logs grant and the access changes, read-only,
     for senior identifiable access (author, 2026-10-30): administration
     decides who sees content, and senior staff see what it decided."""
-    return gated(request, "supportlogs/overview_access.html", sample.SENIOR, current_tab="/overview/")
+    return gated(
+        request, "supportlogs/overview_access.html", sample.SENIOR, current_tab="/overview/"
+    )

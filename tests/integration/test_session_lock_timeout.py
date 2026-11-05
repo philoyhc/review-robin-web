@@ -78,7 +78,9 @@ def test_a_held_lock_turns_a_waiter_away_within_the_bound(
         waiter.rollback()
 
 
-def test_an_uncontended_lock_leaves_the_timeout_as_it_was(engine: Engine, committed_session: int) -> None:
+def test_an_uncontended_lock_leaves_the_timeout_as_it_was(
+    engine: Engine, committed_session: int
+) -> None:
     with Session(engine) as db:
         before = _lock_timeout(db)
         lock_session(db, _session(db, committed_session))
@@ -86,7 +88,9 @@ def test_an_uncontended_lock_leaves_the_timeout_as_it_was(engine: Engine, commit
         db.rollback()
 
 
-def test_a_timeout_the_transaction_set_itself_is_put_back(engine: Engine, committed_session: int) -> None:
+def test_a_timeout_the_transaction_set_itself_is_put_back(
+    engine: Engine, committed_session: int
+) -> None:
     """Not merely back to the server's default: whatever applied before."""
     with Session(engine) as db:
         db.execute(text("SET LOCAL lock_timeout = '2s'"))

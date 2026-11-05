@@ -24,7 +24,6 @@ from .test_scheduled_activation import _make_validated_session
 NOW = datetime.now(UTC)
 
 
-
 def _factory(db: Session) -> Callable[[], nullcontext[Session]]:
     """The pass opens database sessions; the test's own stands in."""
     return lambda: nullcontext(db)
@@ -33,9 +32,9 @@ def _factory(db: Session) -> Callable[[], nullcontext[Session]]:
 def _events(db: Session, rs: ReviewSession, event_type: str) -> list[AuditEvent]:
     return list(
         db.execute(
-            select(AuditEvent).where(
-                AuditEvent.session_id == rs.id, AuditEvent.event_type == event_type
-            ).order_by(AuditEvent.id)
+            select(AuditEvent)
+            .where(AuditEvent.session_id == rs.id, AuditEvent.event_type == event_type)
+            .order_by(AuditEvent.id)
         ).scalars()
     )
 
@@ -93,11 +92,15 @@ def test_the_deadline_closes_once_with_the_counts_at_that_moment(db: Session) ->
 
     _clock.run_pass(_factory(db), now=NOW)
 
-    open_left = db.execute(
-        select(Instrument).where(
-            Instrument.session_id == rs.id, Instrument.accepting_responses.is_(True)
+    open_left = (
+        db.execute(
+            select(Instrument).where(
+                Instrument.session_id == rs.id, Instrument.accepting_responses.is_(True)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert open_left == []
     reached = _events(db, rs, "session.deadline_reached")
     assert len(reached) == 1
@@ -142,9 +145,10 @@ def test_the_release_window_is_stamped_once_per_crossing(db: Session) -> None:
     assert len(opened) == 1 and len(ended) == 1
     release_at = rs.responses_release_at
     assert release_at is not None
-    assert detail_of(opened[0])["context"]["release_at"] == release_at.replace(
-        tzinfo=release_at.tzinfo or UTC
-    ).isoformat()
+    assert (
+        detail_of(opened[0])["context"]["release_at"]
+        == release_at.replace(tzinfo=release_at.tzinfo or UTC).isoformat()
+    )
     assert detail_of(ended[0])["context"]["fired_by"] == "clock"
 
     # A moved end is a new crossing.
@@ -459,6 +463,8 @@ def test_validate_refuses_a_session_whose_end_has_passed(db: Session) -> None:
     db.commit()
     issues = validate_session_setup(db, rs)
     assert any("Release responses from has passed" in i.message for i in issues)
+
+
 def test_a_session_whose_end_passed_earlier_still_closes(db: Session) -> None:
     """End closes the session even when its instruments were shut before
     End closed sessions (a reviewer's request past End, before 14E)."""

@@ -63,9 +63,7 @@ def operator_settings_form(
         {
             "user": user,
             "current_timezone": current_timezone,
-            "timezone_sample": date_formatting.format_datetime(
-                datetime.now(UTC), current_timezone
-            ),
+            "timezone_sample": date_formatting.format_datetime(datetime.now(UTC), current_timezone),
             "timezone_options": operator_settings.timezone_options(),
             "return_to_raw": return_to,
             "return_to_url": target.url,
@@ -77,7 +75,8 @@ def operator_settings_form(
 
 @router.post("/settings/timezone")
 def operator_settings_save_timezone(
-    request: Request, display_timezone: str = Form(...),
+    request: Request,
+    display_timezone: str = Form(...),
     return_to: str | None = Form(default=None),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -85,9 +84,7 @@ def operator_settings_save_timezone(
     """Persist the operator's default display timezone (Segment 18B
     PR 2). New sessions this operator creates inherit it; existing
     sessions keep their own per-session setting."""
-    timezone_name = operator_settings.parse_display_timezone_input(
-        display_timezone
-    )
+    timezone_name = operator_settings.parse_display_timezone_input(display_timezone)
     if not operator_settings.is_valid_timezone(timezone_name):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -99,7 +96,8 @@ def operator_settings_save_timezone(
         timezone_name=timezone_name,
         correlation_id=request_correlation_id(),
     )
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url=_settings_redirect_url(return_to),
         status_code=status.HTTP_303_SEE_OTHER,
     )

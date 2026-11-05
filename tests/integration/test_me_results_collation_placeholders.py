@@ -33,30 +33,22 @@ def _make_session(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 # ── /results ──────────────────────────────────────────────────────────
 
 
-def test_results_404_when_user_is_not_a_reviewee(
-    client: TestClient, db: Session
-) -> None:
+def test_results_404_when_user_is_not_a_reviewee(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="res-deny")
-    response = client.get(
-        f"/me/sessions/{review_session.public_id}/results"
-    )
+    response = client.get(f"/me/sessions/{review_session.public_id}/results")
     assert response.status_code == 404
 
 
 def test_results_renders_for_email_identified_reviewee(
     client: TestClient, db: Session, grant_reviewee_visibility
 ) -> None:
-    review_session = _make_session(
-        client, db, code="res-ok", description="Mid-term peer review."
-    )
+    review_session = _make_session(client, db, code="res-ok", description="Mid-term peer review.")
     db.add(
         Reviewee(
             session_id=review_session.id,
@@ -67,9 +59,7 @@ def test_results_renders_for_email_identified_reviewee(
     db.commit()
     # 19F PR 4 — /results opens only while a grant resolves.
     grant_reviewee_visibility(review_session)
-    response = client.get(
-        f"/me/sessions/{review_session.public_id}/results"
-    )
+    response = client.get(f"/me/sessions/{review_session.public_id}/results")
     assert response.status_code == 200
     body = response.text
     # Session name as the page header.
@@ -102,9 +92,7 @@ def test_results_renders_without_description_card_when_none(
     db.commit()
     # 19F PR 4 — /results opens only while a grant resolves.
     grant_reviewee_visibility(review_session)
-    body = client.get(
-        f"/me/sessions/{review_session.public_id}/results"
-    ).text
+    body = client.get(f"/me/sessions/{review_session.public_id}/results").text
     assert "<h1>Cohort A</h1>" in body
     assert "Results of the review" in body
     # The class name appears in the inline ``<style>`` block in
@@ -112,9 +100,7 @@ def test_results_renders_without_description_card_when_none(
     assert '<p class="rs-session-description">' not in body
 
 
-def test_results_404_for_inactive_reviewee(
-    client: TestClient, db: Session
-) -> None:
+def test_results_404_for_inactive_reviewee(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="res-inact")
     db.add(
         Reviewee(
@@ -125,28 +111,20 @@ def test_results_404_for_inactive_reviewee(
         )
     )
     db.commit()
-    response = client.get(
-        f"/me/sessions/{review_session.public_id}/results"
-    )
+    response = client.get(f"/me/sessions/{review_session.public_id}/results")
     assert response.status_code == 404
 
 
 # ── /collation ────────────────────────────────────────────────────────
 
 
-def test_collation_404_when_user_is_not_an_observer(
-    client: TestClient, db: Session
-) -> None:
+def test_collation_404_when_user_is_not_an_observer(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="col-deny")
-    response = client.get(
-        f"/me/sessions/{review_session.public_id}/collation"
-    )
+    response = client.get(f"/me/sessions/{review_session.public_id}/collation")
     assert response.status_code == 404
 
 
-def test_collation_renders_for_observer(
-    client: TestClient, db: Session
-) -> None:
+def test_collation_renders_for_observer(client: TestClient, db: Session) -> None:
     review_session = _make_session(
         client,
         db,
@@ -161,9 +139,7 @@ def test_collation_renders_for_observer(
         )
     )
     db.commit()
-    response = client.get(
-        f"/me/sessions/{review_session.public_id}/collation"
-    )
+    response = client.get(f"/me/sessions/{review_session.public_id}/collation")
     assert response.status_code == 200
     body = response.text
     assert "<h1>Cohort A</h1>" in body
@@ -192,17 +168,13 @@ def test_collation_renders_without_description_card_when_none(
         )
     )
     db.commit()
-    body = client.get(
-        f"/me/sessions/{review_session.public_id}/collation"
-    ).text
+    body = client.get(f"/me/sessions/{review_session.public_id}/collation").text
     assert "<h1>Cohort A</h1>" in body
     assert "Observer view of the session" in body
     assert '<p class="rs-session-description">' not in body
 
 
-def test_collation_404_for_inactive_observer(
-    client: TestClient, db: Session
-) -> None:
+def test_collation_404_for_inactive_observer(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="col-inact")
     db.add(
         Observer(
@@ -213,18 +185,14 @@ def test_collation_404_for_inactive_observer(
         )
     )
     db.commit()
-    response = client.get(
-        f"/me/sessions/{review_session.public_id}/collation"
-    )
+    response = client.get(f"/me/sessions/{review_session.public_id}/collation")
     assert response.status_code == 404
 
 
 # ── 19F PR 4 — /results is gated on a currently-resolving grant ───────
 
 
-def test_results_404_for_an_active_reviewee_with_no_grant(
-    client: TestClient, db: Session
-) -> None:
+def test_results_404_for_an_active_reviewee_with_no_grant(client: TestClient, db: Session) -> None:
     """The disclosure this rung closes.
 
     Before PR 4 this returned **200** and rendered the session name, its
@@ -233,9 +201,7 @@ def test_results_404_for_an_active_reviewee_with_no_grant(
     before anyone had granted them anything. Now it is the same bare 404
     a stranger gets.
     """
-    review_session = _make_session(
-        client, db, code="res-nogrant", description="Confidential round"
-    )
+    review_session = _make_session(client, db, code="res-nogrant", description="Confidential round")
     db.add(
         Reviewee(
             session_id=review_session.id,
@@ -306,4 +272,3 @@ def test_an_ungranted_reviewee_is_byte_identical_to_a_stranger(
     stranger = make_client(bob).get(url)
     assert ungranted_reviewee.status_code == stranger.status_code == 404
     assert ungranted_reviewee.text == stranger.text
-

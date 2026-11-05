@@ -136,7 +136,10 @@ def test_a_non_super_admin_sees_the_rows_but_no_claims(monkeypatch: pytest.Monke
     monkeypatch.setattr(identity_settings, "super_admin_emails", ["boss@example.edu"])
     claims = [
         {"typ": "preferred_username", "val": "e0123456@example.edu"},
-        {"typ": "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress", "val": "jane.tan@example.edu"},
+        {
+            "typ": "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress",
+            "val": "jane.tan@example.edu",
+        },
         {"typ": "sid", "val": "session-internal"},
     ]
     response = _two_apps().get("/", headers={"X-MS-CLIENT-PRINCIPAL": _principal(claims)})
@@ -152,7 +155,10 @@ def test_the_upn_and_mail_rows_render_beside_the_matched_address(
     monkeypatch.setattr(identity_settings, "allow_fake_auth", False)
     claims = [
         {"typ": "preferred_username", "val": "e0123456@example.edu"},
-        {"typ": "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress", "val": "jane.tan@example.edu"},
+        {
+            "typ": "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress",
+            "val": "jane.tan@example.edu",
+        },
     ]
     page = _two_apps().get("/", headers={"X-MS-CLIENT-PRINCIPAL": _principal(claims)}).text
     assert "<dt>Matched as</dt><dd>jane.tan@example.edu</dd>" in page
@@ -166,7 +172,10 @@ def test_absent_upn_and_mail_read_as_a_dash(monkeypatch: pytest.MonkeyPatch) -> 
     monkeypatch.setattr(identity_settings, "allow_fake_auth", False)
     response = _two_apps().get(
         "/",
-        headers={"X-MS-CLIENT-PRINCIPAL-NAME": "someone@example.edu", "X-MS-CLIENT-PRINCIPAL-ID": "oid-2"},
+        headers={
+            "X-MS-CLIENT-PRINCIPAL-NAME": "someone@example.edu",
+            "X-MS-CLIENT-PRINCIPAL-ID": "oid-2",
+        },
     )
     assert response.status_code == 200
     page = response.text
@@ -240,11 +249,15 @@ def test_an_application_s_icon_is_drawn_before_its_title() -> None:
     """Author, 2026-10-31: each application's own favicon, decorative."""
     icon = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'/>"
     registry = {
-        "one": AppEntry(path="/one", factory=f"{__name__}:stub_factory", logger="stub", title="First", icon=icon),
+        "one": AppEntry(
+            path="/one", factory=f"{__name__}:stub_factory", logger="stub", title="First", icon=icon
+        ),
         "two": _entry("/two", "Second"),
     }
     page = TestClient(create_app(apps=("one", "two"), registry=registry)).get("/").text
-    drawn = re.search(r'<a href="/one/"><img src="([^"]*)" alt="" width="24" height="24">First</a>', page)
+    drawn = re.search(
+        r'<a href="/one/"><img src="([^"]*)" alt="" width="24" height="24">First</a>', page
+    )
     assert drawn is not None
     assert drawn.group(1).replace("&lt;", "<").replace("&#39;", "'").replace("&gt;", ">") == icon
     assert '<a href="/two/">Second</a>' in page  # no icon, no image
@@ -262,12 +275,16 @@ def _own_favicon(name: str) -> str:
         (icon,) = ICON.findall((REPO / "app/web/templates/base.html").read_text(encoding="utf-8"))
         return icon
     if name == "utilities":
-        (icon,) = ICON.findall((REPO / "utilityapps/templates/utilities/base.html").read_text(encoding="utf-8"))
+        (icon,) = ICON.findall(
+            (REPO / "utilityapps/templates/utilities/base.html").read_text(encoding="utf-8")
+        )
         return icon
     # Residential sets each application's icon once, for the tab and the
     # bar alike (RRW segment 20D).
-    text = (REPO / "residentialapps/web/templates/residential/base.html").read_text(encoding="utf-8")
-    return RESIDENTIAL_ICON.findall(text[text.index(f'app_key == "{name}"'):])[0]
+    text = (REPO / "residentialapps/web/templates/residential/base.html").read_text(
+        encoding="utf-8"
+    )
+    return RESIDENTIAL_ICON.findall(text[text.index(f'app_key == "{name}"') :])[0]
 
 
 @pytest.mark.parametrize("name", list(REGISTRY))

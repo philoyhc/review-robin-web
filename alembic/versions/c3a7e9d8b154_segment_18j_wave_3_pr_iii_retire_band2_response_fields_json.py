@@ -30,6 +30,7 @@ Revision ID: c3a7e9d8b154
 Revises: b2f6c4a8e1d3
 Create Date: 2026-05-25
 """
+
 from __future__ import annotations
 
 import json
@@ -121,9 +122,7 @@ def upgrade() -> None:
     # Walk every instrument that still has ``band2_state.response_fields``.
     rows = bind.execute(
         sa.text(
-            "SELECT id, band2_state, column_widths "
-            "FROM instruments "
-            "WHERE band2_state IS NOT NULL"
+            "SELECT id, band2_state, column_widths FROM instruments WHERE band2_state IS NOT NULL"
         )
     ).fetchall()
 
@@ -140,10 +139,7 @@ def upgrade() -> None:
                 band2_state.pop("response_fields", None)
                 new_state = band2_state or None
                 bind.execute(
-                    sa.text(
-                        "UPDATE instruments SET band2_state = :s "
-                        "WHERE id = :i"
-                    ),
+                    sa.text("UPDATE instruments SET band2_state = :s WHERE id = :i"),
                     {
                         "s": _encode_band2_state(new_state, dialect_name),
                         "i": instrument_id,
@@ -154,7 +150,7 @@ def upgrade() -> None:
         # Existing DB rows for this instrument, keyed by id + field_key.
         existing_rows = bind.execute(
             sa.text(
-                "SELECT id, field_key, label, \"order\" "
+                'SELECT id, field_key, label, "order" '
                 "FROM instrument_response_fields "
                 "WHERE instrument_id = :i"
             ),
@@ -188,12 +184,8 @@ def upgrade() -> None:
             else:
                 # Create a new row. Slugify the label, dedupe.
                 field_key = _unique_field_key(name, used_field_keys)
-                data_type_lower = (
-                    str(rf.get("data_type") or "string").strip().lower()
-                )
-                inline_data_type = _BAND2_DATA_TYPE_TO_INLINE.get(
-                    data_type_lower, "String"
-                )
+                data_type_lower = str(rf.get("data_type") or "string").strip().lower()
+                inline_data_type = _BAND2_DATA_TYPE_TO_INLINE.get(data_type_lower, "String")
                 inline_min = _parse_float(rf.get("min"))
                 inline_max = _parse_float(rf.get("max"))
                 inline_step = _parse_float(rf.get("step"))
@@ -204,7 +196,7 @@ def upgrade() -> None:
                     sa.text(
                         "INSERT INTO instrument_response_fields "
                         "(instrument_id, field_key, label, "
-                        " required, \"order\", visible, "
+                        ' required, "order", visible, '
                         " help_text, help_text_visible, "
                         " data_type, response_type, "
                         " min, max, step, list_csv) "
@@ -215,10 +207,9 @@ def upgrade() -> None:
                         " :min, :max, :step, :list_csv) "
                         "RETURNING id"
                         if dialect_name == "postgresql"
-                        else
-                        "INSERT INTO instrument_response_fields "
+                        else "INSERT INTO instrument_response_fields "
                         "(instrument_id, field_key, label, "
-                        " required, \"order\", visible, "
+                        ' required, "order", visible, '
                         " help_text, help_text_visible, "
                         " data_type, response_type, "
                         " min, max, step, list_csv) "
@@ -235,12 +226,8 @@ def upgrade() -> None:
                         "required": bool(rf.get("required")),
                         "order": order_idx,
                         "visible": bool(rf.get("selected", True)),
-                        "help_text": (
-                            str(rf.get("help_text") or "")[:1000] or None
-                        ),
-                        "help_text_visible": bool(
-                            rf.get("help_text_visible", True)
-                        ),
+                        "help_text": (str(rf.get("help_text") or "")[:1000] or None),
+                        "help_text_visible": bool(rf.get("help_text_visible", True)),
                         "data_type": inline_data_type,
                         "response_type": inline_data_type,
                         "min": inline_min,
@@ -252,9 +239,7 @@ def upgrade() -> None:
                 if dialect_name == "postgresql":
                     field_id = inserted.scalar()
                 else:
-                    field_id = bind.execute(
-                        sa.text("SELECT last_insert_rowid()")
-                    ).scalar()
+                    field_id = bind.execute(sa.text("SELECT last_insert_rowid()")).scalar()
                 existing_by_id[field_id] = {
                     "id": field_id,
                     "field_key": field_key,
@@ -279,10 +264,7 @@ def upgrade() -> None:
         band2_state.pop("response_fields", None)
         new_state = band2_state or None
         bind.execute(
-            sa.text(
-                "UPDATE instruments SET band2_state = :s "
-                "WHERE id = :i"
-            ),
+            sa.text("UPDATE instruments SET band2_state = :s WHERE id = :i"),
             {
                 "s": _encode_band2_state(new_state, dialect_name),
                 "i": instrument_id,
@@ -290,10 +272,7 @@ def upgrade() -> None:
         )
         if widths_dirty:
             bind.execute(
-                sa.text(
-                    "UPDATE instruments SET column_widths = :w "
-                    "WHERE id = :i"
-                ),
+                sa.text("UPDATE instruments SET column_widths = :w WHERE id = :i"),
                 {
                     "w": _encode_band2_state(column_widths, dialect_name),
                     "i": instrument_id,

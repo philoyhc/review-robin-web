@@ -60,15 +60,12 @@ def test_every_mapped_spec_path_is_a_live_file() -> None:
                 continue
             if "archive/" in path:
                 problems.append(
-                    f"{module} -> {path}: archived docs are history, "
-                    "not a governing contract"
+                    f"{module} -> {path}: archived docs are history, not a governing contract"
                 )
                 continue
             if not (REPO_ROOT / path).is_file():
                 problems.append(f"{module} -> {path}: file does not exist")
-    assert not problems, "spec_registry.py maps to unusable paths:\n  " + "\n  ".join(
-        problems
-    )
+    assert not problems, "spec_registry.py maps to unusable paths:\n  " + "\n  ".join(problems)
 
 
 def test_pending_modules_match_the_expected_baseline() -> None:

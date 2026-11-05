@@ -103,8 +103,7 @@ def _require_known_source(source_type: str, source_field: str) -> None:
     allowed = _VALID_SOURCE_FIELDS.get(source_type)
     if allowed is None:
         raise FieldLabelSourceError(
-            f"unknown source_type {source_type!r}; expected one of "
-            f"{sorted(_VALID_SOURCE_FIELDS)}"
+            f"unknown source_type {source_type!r}; expected one of {sorted(_VALID_SOURCE_FIELDS)}"
         )
     if source_field not in allowed:
         raise FieldLabelSourceError(
@@ -121,9 +120,7 @@ def _builtin_default(source_type: str, source_field: str) -> str:
     return f"{source_type}:{source_field}"
 
 
-def resolve(
-    session: ReviewSession, source_type: str, source_field: str
-) -> str:
+def resolve(session: ReviewSession, source_type: str, source_field: str) -> str:
     """Return the friendly label for a slot under ``session``.
 
     Three-step chain: session override → built-in default →
@@ -148,10 +145,7 @@ def all_labels(session: ReviewSession) -> dict[tuple[str, str], str]:
     slots in one request reuse the dict instead of triggering a
     query per slot.
     """
-    return {
-        (row.source_type, row.source_field): row.label
-        for row in session.field_labels
-    }
+    return {(row.source_type, row.source_field): row.label for row in session.field_labels}
 
 
 @dataclass(frozen=True)
@@ -169,9 +163,7 @@ class LabelPair:
     has_override: bool
 
 
-def resolve_pair(
-    session: ReviewSession, source_type: str, source_field: str
-) -> LabelPair:
+def resolve_pair(session: ReviewSession, source_type: str, source_field: str) -> LabelPair:
     """Resolve ``friendly`` + ``canonical`` + ``has_override`` for a slot.
 
     Single point for operator-facing surfaces that want to show
@@ -187,9 +179,7 @@ def resolve_pair(
             canonical=canonical,
             has_override=True,
         )
-    return LabelPair(
-        friendly=canonical, canonical=canonical, has_override=False
-    )
+    return LabelPair(friendly=canonical, canonical=canonical, has_override=False)
 
 
 def label_length_error(label: str) -> str | None:
@@ -231,8 +221,7 @@ def upsert(
     normalised = (label or "").strip()
     if not normalised:
         raise ValueError(
-            "label cannot be empty or whitespace — call "
-            "field_labels.clear() to remove an override"
+            "label cannot be empty or whitespace — call field_labels.clear() to remove an override"
         )
     too_long = label_length_error(normalised)
     if too_long is not None:
@@ -276,10 +265,7 @@ def upsert(
     audit.write_event(
         db,
         event_type="session_field_label.set",
-        summary=(
-            f"Set friendly label for {source_type}.{source_field} "
-            f"to {normalised!r}"
-        ),
+        summary=(f"Set friendly label for {source_type}.{source_field} to {normalised!r}"),
         actor_user_id=user.id if user else None,
         session=session,
         payload=audit.changes({"label": [old_value, normalised]}),
@@ -397,8 +383,7 @@ def clear(
         db,
         event_type="session_field_label.cleared",
         summary=(
-            f"Cleared friendly label for {source_type}.{source_field} "
-            f"(was {cleared_label!r})"
+            f"Cleared friendly label for {source_type}.{source_field} (was {cleared_label!r})"
         ),
         actor_user_id=user.id if user else None,
         session=session,

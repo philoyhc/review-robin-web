@@ -29,9 +29,7 @@ def _pad_workspace(client: TestClient, db: Session) -> ReviewSession:
     fifth is observed just as the session under test's is, so only the
     route's session scope keeps it out of that session's reach."""
     other = _make_session(client, db, code="col-addr-padding")
-    db.add_all(
-        [Instrument(session_id=other.id, name=f"Pad {n}", order=n + 1) for n in range(3)]
-    )
+    db.add_all([Instrument(session_id=other.id, name=f"Pad {n}", order=n + 1) for n in range(3)])
     db.flush()
     observed = _seed_one_instrument(db, other)["instrument"]
     assert observed.session_seq == 5
@@ -39,7 +37,9 @@ def _pad_workspace(client: TestClient, db: Session) -> ReviewSession:
     return other
 
 
-def _observed_instrument(client: TestClient, db: Session, code: str) -> tuple[ReviewSession, Instrument]:
+def _observed_instrument(
+    client: TestClient, db: Session, code: str
+) -> tuple[ReviewSession, Instrument]:
     _pad_workspace(client, db)
     review_session = _make_session(client, db, code=code)
     instrument = _seed_one_instrument(db, review_session)["instrument"]
@@ -53,9 +53,7 @@ def _csv(review_session: ReviewSession, handle: object) -> str:
     return f"/me/sessions/{review_session.public_id}/collation/instruments/{handle}.csv"
 
 
-def test_the_download_link_names_the_per_session_number(
-    client: TestClient, db: Session
-) -> None:
+def test_the_download_link_names_the_per_session_number(client: TestClient, db: Session) -> None:
     review_session, instrument = _observed_instrument(client, db, "col-addr-link")
 
     body = client.get(f"/me/sessions/{review_session.public_id}/collation").text
@@ -64,9 +62,7 @@ def test_the_download_link_names_the_per_session_number(
     assert f"instruments/{instrument.id}.csv" not in body
 
 
-def test_the_number_reaches_the_csv_and_the_id_does_not(
-    client: TestClient, db: Session
-) -> None:
+def test_the_number_reaches_the_csv_and_the_id_does_not(client: TestClient, db: Session) -> None:
     review_session, instrument = _observed_instrument(client, db, "col-addr-reach")
 
     assert client.get(_csv(review_session, instrument.session_seq)).status_code == 200
@@ -85,9 +81,7 @@ def test_an_unknown_or_malformed_number_answers_404(
     assert client.get(_csv(review_session, handle)).status_code == 404
 
 
-def test_another_sessions_number_reaches_nothing_here(
-    client: TestClient, db: Session
-) -> None:
+def test_another_sessions_number_reaches_nothing_here(client: TestClient, db: Session) -> None:
     """The padding session's instruments run to number 5, the fifth
     observed by the same address; this session's run to 2. Number 5 is
     the other session's instrument, and out of reach here.

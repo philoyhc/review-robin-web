@@ -58,9 +58,7 @@ def _open_release_window(db: Session, review_session: ReviewSession) -> None:
     Responses released cell — the one a per-row mode may sit on — is
     the one the readers consult."""
     review_session.status = "expired"
-    review_session.responses_release_at = datetime.now(UTC) - timedelta(
-        hours=1
-    )
+    review_session.responses_release_at = datetime.now(UTC) - timedelta(hours=1)
     db.commit()
 
 
@@ -86,9 +84,7 @@ def _seed_one_instrument(
     released = pair != ("aggregated", "deidentified")
     if released:
         _open_release_window(db, review_session)
-    inst = Instrument(
-        session_id=review_session.id, name="Instrument 1", order=0
-    )
+    inst = Instrument(session_id=review_session.id, name="Instrument 1", order=0)
     db.add(inst)
     db.flush()
     field = InstrumentResponseField(
@@ -174,16 +170,12 @@ def _add_observer(
 # ── Page body ─────────────────────────────────────────────────────────
 
 
-def test_collation_shows_empty_cohort_message_when_no_rule(
-    client: TestClient, db: Session
-) -> None:
+def test_collation_shows_empty_cohort_message_when_no_rule(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="col-body-empty")
     _seed_one_instrument(db, review_session)
     _add_observer(db, review_session, email="alice@example.edu")
 
-    body = client.get(
-        f"/me/sessions/{review_session.public_id}/collation"
-    ).text
+    body = client.get(f"/me/sessions/{review_session.public_id}/collation").text
     assert "haven't been given anyone to observe" in body
     # Participant audit P4: an observer has a way back to /me.
     assert 'href="/me" data-your-reviews>Your reviews</a>' in body
@@ -245,9 +237,7 @@ def test_collation_renders_per_instrument_table_with_two_stats_rows(
         },
     )
 
-    body = client.get(
-        f"/me/sessions/{review_session.public_id}/collation"
-    ).text
+    body = client.get(f"/me/sessions/{review_session.public_id}/collation").text
     assert "Reviewers in cohort" in body
     assert "Reviewees in cohort" in body
     # Field column header from the instrument.
@@ -258,9 +248,7 @@ def test_collation_renders_per_instrument_table_with_two_stats_rows(
     assert "Download CSV" in body
 
 
-def test_an_empty_cohort_gets_no_download_link(
-    client: TestClient, db: Session
-) -> None:
+def test_an_empty_cohort_gets_no_download_link(client: TestClient, db: Session) -> None:
     """Participant audit M13: the CSV route answers 404 when the cohort
     takes in no assignment, so the page must not offer the link. The
     rule here matches nothing the seeded roster carries."""
@@ -327,9 +315,7 @@ def test_an_empty_cohort_on_a_summarized_instrument_shows_only_the_line(
     assert 'class="rs-reviewee">Cohort' not in body
 
 
-def test_collation_numbers_instruments_from_one(
-    client: TestClient, db: Session
-) -> None:
+def test_collation_numbers_instruments_from_one(client: TestClient, db: Session) -> None:
     """With two instruments the headings read ``#1`` and ``#2``, as on
     every other reader surface, not ``#0`` and ``#1`` (findings
     2026-10-03 A1)."""
@@ -384,12 +370,8 @@ def test_collation_numbers_instruments_from_one(
     assert "#0:" not in body
 
 
-def test_collation_summarized_mode_omits_download_button(
-    client: TestClient, db: Session
-) -> None:
-    review_session = _make_session(
-        client, db, code="col-body-summarized"
-    )
+def test_collation_summarized_mode_omits_download_button(client: TestClient, db: Session) -> None:
+    review_session = _make_session(client, db, code="col-body-summarized")
     _seed_one_instrument(
         db,
         review_session,
@@ -413,17 +395,13 @@ def test_collation_summarized_mode_omits_download_button(
         },
     )
 
-    body = client.get(
-        f"/me/sessions/{review_session.public_id}/collation"
-    ).text
+    body = client.get(f"/me/sessions/{review_session.public_id}/collation").text
     assert "Reviewers in cohort" in body
     assert "Download CSV" not in body
     assert "Only the summary above is shown" in body
 
 
-def test_collation_anonymized_mode_marks_download_label(
-    client: TestClient, db: Session
-) -> None:
+def test_collation_anonymized_mode_marks_download_label(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="col-body-anon")
     _seed_one_instrument(
         db,
@@ -448,9 +426,7 @@ def test_collation_anonymized_mode_marks_download_label(
         },
     )
 
-    body = client.get(
-        f"/me/sessions/{review_session.public_id}/collation"
-    ).text
+    body = client.get(f"/me/sessions/{review_session.public_id}/collation").text
     assert "Download CSV" in body
     assert "(Anonymized)" in body
 
@@ -458,9 +434,7 @@ def test_collation_anonymized_mode_marks_download_label(
 # ── CSV download ──────────────────────────────────────────────────────
 
 
-def test_collation_csv_serves_raw_rows_for_cohort(
-    client: TestClient, db: Session
-) -> None:
+def test_collation_csv_serves_raw_rows_for_cohort(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="col-csv-raw")
     seeded = _seed_one_instrument(db, review_session)
     _add_observer(
@@ -542,9 +516,7 @@ def _add_hidden_and_empty_fields(db: Session, seeded: dict) -> None:
     db.refresh(inst)
 
 
-def test_collation_leaves_out_fields_marked_not_visible(
-    client: TestClient, db: Session
-) -> None:
+def test_collation_leaves_out_fields_marked_not_visible(client: TestClient, db: Session) -> None:
     """Findings A3 (2026-10-03): the observer page and its CSV drop a
     response field the operator marked not visible, as every other
     participant surface does. The operator's extract keeps it."""
@@ -555,9 +527,7 @@ def test_collation_leaves_out_fields_marked_not_visible(
     review_session = _make_session(client, db, code="col-hidden")
     seeded = _seed_one_instrument(db, review_session)
     _add_hidden_and_empty_fields(db, seeded)
-    _add_observer(
-        db, review_session, email="alice@example.edu", cohort_rule=_MATH_RULE
-    )
+    _add_observer(db, review_session, email="alice@example.edu", cohort_rule=_MATH_RULE)
 
     body = client.get(f"/me/sessions/{review_session.public_id}/collation").text
     assert "Rating" in body
@@ -576,9 +546,7 @@ def test_collation_leaves_out_fields_marked_not_visible(
     from app.services.collation import build_cohort_stats_for_instrument
     from app.services.observer_cohort import materialize_cohort_assignments
 
-    observer = db.scalars(
-        select(Observer).where(Observer.session_id == review_session.id)
-    ).one()
+    observer = db.scalars(select(Observer).where(Observer.session_id == review_session.id)).one()
     cohort = materialize_cohort_assignments(
         db, observer=observer, instrument_id=seeded["instrument"].id
     )
@@ -591,9 +559,7 @@ def test_collation_leaves_out_fields_marked_not_visible(
 
     operator_rows = "\n".join(
         ",".join(row)
-        for row in serialize_by_instrument(
-            db, review_session, seeded["instrument"], position=0
-        )
+        for row in serialize_by_instrument(db, review_session, seeded["instrument"], position=0)
     )
     assert "HIDDEN-ANSWER" in operator_rows
 
@@ -606,18 +572,14 @@ def test_collation_string_cell_at_zero_responses_shows_a_dash(
     review_session = _make_session(client, db, code="col-zero-string")
     seeded = _seed_one_instrument(db, review_session)
     _add_hidden_and_empty_fields(db, seeded)
-    _add_observer(
-        db, review_session, email="alice@example.edu", cohort_rule=_MATH_RULE
-    )
+    _add_observer(db, review_session, email="alice@example.edu", cohort_rule=_MATH_RULE)
 
     body = client.get(f"/me/sessions/{review_session.public_id}/collation").text
     assert "Total length:" in body
     assert "Total length: 0 characters" not in body
 
 
-def test_collation_csv_anonymized_swaps_names_for_tokens(
-    client: TestClient, db: Session
-) -> None:
+def test_collation_csv_anonymized_swaps_names_for_tokens(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="col-csv-anon")
     seeded = _seed_one_instrument(
         db,
@@ -655,12 +617,8 @@ def test_collation_csv_anonymized_swaps_names_for_tokens(
     assert "E-" in body
 
 
-def test_collation_csv_summarized_returns_404(
-    client: TestClient, db: Session
-) -> None:
-    review_session = _make_session(
-        client, db, code="col-csv-summarized"
-    )
+def test_collation_csv_summarized_returns_404(client: TestClient, db: Session) -> None:
+    review_session = _make_session(client, db, code="col-csv-summarized")
     seeded = _seed_one_instrument(
         db,
         review_session,
@@ -691,14 +649,10 @@ def test_collation_csv_summarized_returns_404(
     assert response.status_code == 404
 
 
-def test_collation_csv_cohort_empty_returns_404(
-    client: TestClient, db: Session
-) -> None:
+def test_collation_csv_cohort_empty_returns_404(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="col-csv-no-cohort")
     seeded = _seed_one_instrument(db, review_session)
-    _add_observer(
-        db, review_session, email="alice@example.edu", cohort_rule=None
-    )
+    _add_observer(db, review_session, email="alice@example.edu", cohort_rule=None)
 
     response = client.get(
         f"/me/sessions/{review_session.public_id}/collation/instruments/"
@@ -707,9 +661,7 @@ def test_collation_csv_cohort_empty_returns_404(
     assert response.status_code == 404
 
 
-def test_collation_csv_or_rule_per_row_either_side(
-    client: TestClient, db: Session
-) -> None:
+def test_collation_csv_or_rule_per_row_either_side(client: TestClient, db: Session) -> None:
     """A cross-side OR rule (``reviewer.tag1 = math`` OR
     ``reviewee.tag1 = junior``) must include rows where EITHER
     side matches, and only those. The set-based filter would
@@ -718,9 +670,7 @@ def test_collation_csv_or_rule_per_row_either_side(
     intersect)."""
     review_session = _make_session(client, db, code="col-csv-or")
     _open_release_window(db, review_session)
-    inst = Instrument(
-        session_id=review_session.id, name="Instrument 1", order=0
-    )
+    inst = Instrument(session_id=review_session.id, name="Instrument 1", order=0)
     db.add(inst)
     db.flush()
     field = InstrumentResponseField(
@@ -823,8 +773,7 @@ def test_collation_csv_or_rule_per_row_either_side(
     )
 
     response = client.get(
-        f"/me/sessions/{review_session.public_id}/collation/instruments/"
-        f"{inst.session_seq}.csv"
+        f"/me/sessions/{review_session.public_id}/collation/instruments/{inst.session_seq}.csv"
     )
     assert response.status_code == 200
     body = response.text
@@ -839,9 +788,7 @@ def test_collation_csv_or_rule_per_row_either_side(
     assert body.count("Senior Ree") == 1
 
 
-def test_collation_csv_excludes_rows_outside_cohort_rule(
-    client: TestClient, db: Session
-) -> None:
+def test_collation_csv_excludes_rows_outside_cohort_rule(client: TestClient, db: Session) -> None:
     """A single-side cohort rule (e.g. ``reviewer.tag1 IS
     mathcohort``) must drop assignments whose reviewer doesn't
     match — even though the materialiser's
@@ -849,9 +796,7 @@ def test_collation_csv_excludes_rows_outside_cohort_rule(
     reviewee. Regression test for the OR → AND filter swap."""
     review_session = _make_session(client, db, code="col-csv-scope")
     _open_release_window(db, review_session)
-    inst = Instrument(
-        session_id=review_session.id, name="Instrument 1", order=0
-    )
+    inst = Instrument(session_id=review_session.id, name="Instrument 1", order=0)
     db.add(inst)
     db.flush()
     field = InstrumentResponseField(
@@ -940,8 +885,7 @@ def test_collation_csv_excludes_rows_outside_cohort_rule(
     )
 
     response = client.get(
-        f"/me/sessions/{review_session.public_id}/collation/instruments/"
-        f"{inst.session_seq}.csv"
+        f"/me/sessions/{review_session.public_id}/collation/instruments/{inst.session_seq}.csv"
     )
     assert response.status_code == 200
     body = response.text
@@ -960,9 +904,7 @@ def test_collation_csv_anonymized_excludes_rows_outside_cohort_rule(
     token never appears in the CSV."""
     review_session = _make_session(client, db, code="col-csv-anon-scope")
     _open_release_window(db, review_session)
-    inst = Instrument(
-        session_id=review_session.id, name="Instrument 1", order=0
-    )
+    inst = Instrument(session_id=review_session.id, name="Instrument 1", order=0)
     db.add(inst)
     db.flush()
     field = InstrumentResponseField(
@@ -1050,8 +992,7 @@ def test_collation_csv_anonymized_excludes_rows_outside_cohort_rule(
     )
 
     response = client.get(
-        f"/me/sessions/{review_session.public_id}/collation/instruments/"
-        f"{inst.session_seq}.csv"
+        f"/me/sessions/{review_session.public_id}/collation/instruments/{inst.session_seq}.csv"
     )
     assert response.status_code == 200
     body = response.text
@@ -1083,9 +1024,7 @@ def test_collation_csv_raw_filename_prefixes_the_session_code(
     Raw, the operator extracts' shape; no ``_anon`` suffix. It started
     with the observer's address and named no session (participant
     audit L6)."""
-    review_session = _make_session(
-        client, db, code="col-csv-name-raw"
-    )
+    review_session = _make_session(client, db, code="col-csv-name-raw")
     seeded = _seed_one_instrument(db, review_session)
     _add_observer(
         db,
@@ -1118,9 +1057,7 @@ def test_collation_csv_raw_filename_prefixes_the_session_code(
 def test_collation_csv_anonymized_filename_carries_anon_suffix(
     client: TestClient, db: Session
 ) -> None:
-    review_session = _make_session(
-        client, db, code="col-csv-name-anon"
-    )
+    review_session = _make_session(client, db, code="col-csv-name-anon")
     seeded = _seed_one_instrument(
         db,
         review_session,
@@ -1162,12 +1099,8 @@ def test_collation_renders_after_release_section_when_window_open(
     and the policy carries an ``after_release`` mode."""
     from datetime import timedelta
 
-    review_session = _make_session(
-        client, db, code="col-body-after-release"
-    )
-    inst = Instrument(
-        session_id=review_session.id, name="Instrument 1", order=0
-    )
+    review_session = _make_session(client, db, code="col-body-after-release")
+    inst = Instrument(session_id=review_session.id, name="Instrument 1", order=0)
     db.add(inst)
     db.flush()
     field = InstrumentResponseField(
@@ -1222,9 +1155,7 @@ def test_collation_renders_after_release_section_when_window_open(
     # means closing the session *and* backdating the anchor —
     # responses are released because the session is over.
     review_session.status = "expired"
-    review_session.responses_release_at = datetime.now(
-        UTC
-    ) - timedelta(hours=1)
+    review_session.responses_release_at = datetime.now(UTC) - timedelta(hours=1)
     db.commit()
     _add_observer(
         db,
@@ -1243,9 +1174,7 @@ def test_collation_renders_after_release_section_when_window_open(
         },
     )
 
-    body = client.get(
-        f"/me/sessions/{review_session.public_id}/collation"
-    ).text
+    body = client.get(f"/me/sessions/{review_session.public_id}/collation").text
     # The instrument section renders + Anonymized download
     # button appears.
     assert "Reviewers in cohort" in body
@@ -1253,9 +1182,7 @@ def test_collation_renders_after_release_section_when_window_open(
     assert "(Anonymized)" in body
 
 
-def test_collation_csv_404_when_user_is_not_an_observer(
-    client: TestClient, db: Session
-) -> None:
+def test_collation_csv_404_when_user_is_not_an_observer(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="col-csv-nope")
     seeded = _seed_one_instrument(db, review_session)
     # Authenticated user isn't on the observer roster.
@@ -1303,9 +1230,7 @@ def _archived_csv_url(client: TestClient, db: Session, *, code: str) -> str:
     return url
 
 
-def test_collation_csv_404_once_the_session_is_archived(
-    client: TestClient, db: Session
-) -> None:
+def test_collation_csv_404_once_the_session_is_archived(client: TestClient, db: Session) -> None:
     """The contract, whichever mechanism enforces it: the same 404 the
     route gives an instrument the observer cannot see."""
     url = _archived_csv_url(client, db, code="col-csv-archived")
@@ -1320,15 +1245,11 @@ def test_collation_csv_archive_guard_holds_if_a_window_predicate_relaxes(
     gate refuses the archived session before the route runs, so the CSV
     still 404s."""
     url = _archived_csv_url(client, db, code="col-csv-archived-relaxed")
-    monkeypatch.setattr(
-        _collation.lifecycle, "is_response_release_window_open", lambda s: True
-    )
+    monkeypatch.setattr(_collation.lifecycle, "is_response_release_window_open", lambda s: True)
     assert client.get(url).status_code == 404
 
 
-def test_collation_csv_marks_an_unsubmitted_answer(
-    client: TestClient, db: Session
-) -> None:
+def test_collation_csv_marks_an_unsubmitted_answer(client: TestClient, db: Session) -> None:
     """Findings R4 (author's ruling 2026-10-22): the observer download
     carries drafts, which the page's statistics leave out, so each row
     says whether its answers are submitted: ``Submitted`` TRUE when all
@@ -1375,9 +1296,7 @@ def test_collation_csv_marks_an_unsubmitted_answer(
         assert table()["Submitted"] == ""
 
 
-def test_a_lone_instrument_with_no_label_has_no_heading(
-    client: TestClient, db: Session
-) -> None:
+def test_a_lone_instrument_with_no_label_has_no_heading(client: TestClient, db: Session) -> None:
     """One instrument with neither short label nor description has no
     title (``instrument_heading``), so its card shows no heading rather
     than the word ``None`` (found by pyright, segment 22C)."""

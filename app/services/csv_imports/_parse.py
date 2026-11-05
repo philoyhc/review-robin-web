@@ -48,21 +48,44 @@ NUL_MESSAGE = "File contains a NUL character, which cannot be stored"
 #: included, is ignored, so two of it lose nothing.
 _ROSTER_COLUMNS: dict[str, frozenset[str]] = {
     "reviewers": frozenset(
-        {"ReviewerName", "ReviewerEmail", "ReviewerTag1", "ReviewerTag2",
-         "ReviewerTag3", "ProfileLink", "PhotoLink", "Status"}
+        {
+            "ReviewerName",
+            "ReviewerEmail",
+            "ReviewerTag1",
+            "ReviewerTag2",
+            "ReviewerTag3",
+            "ProfileLink",
+            "PhotoLink",
+            "Status",
+        }
     ),
     "reviewees": frozenset(
-        {"RevieweeName", "RevieweeEmail", "RevieweeTag1", "RevieweeTag2",
-         "RevieweeTag3", "ProfileLink", "PhotoLink", "Status"}
+        {
+            "RevieweeName",
+            "RevieweeEmail",
+            "RevieweeTag1",
+            "RevieweeTag2",
+            "RevieweeTag3",
+            "ProfileLink",
+            "PhotoLink",
+            "Status",
+        }
     ),
     "observers": frozenset(
         {"ObserverName", "ObserverEmail", "ObserverTag1", "Status", "CohortRule"}
     ),
     "relationships": frozenset(
-        {"ReviewerEmail", "RevieweeEmail", "PairContextTag1", "PairContextTag2",
-         "PairContextTag3", "Status"}
+        {
+            "ReviewerEmail",
+            "RevieweeEmail",
+            "PairContextTag1",
+            "PairContextTag2",
+            "PairContextTag3",
+            "Status",
+        }
     ),
 }
+
 
 @dataclass
 class ParseResult[R]:
@@ -75,9 +98,7 @@ class ParseResult[R]:
     # roster header's ``<Column>.<label>`` suffixes, keyed by
     # ``(source_type, source_field)``. Empty for a header with no
     # suffixes; the save step reconciles (upsert present, clear absent).
-    field_labels: dict[tuple[str, str], str] = field(
-        default_factory=dict[tuple[str, str], str]
-    )
+    field_labels: dict[tuple[str, str], str] = field(default_factory=dict[tuple[str, str], str])
     # Segment 19Z: the header's canonical columns, so a merge can tell an
     # absent Status column (keep each row's status) from one the parser
     # defaulted to ``active``.
@@ -303,10 +324,7 @@ def cell_length_issues(
                     source=source,
                     row_number=row_number,
                     field=header,
-                    message=(
-                        f"{header} is {len(value)} characters; "
-                        f"at most {limit} fit"
-                    ),
+                    message=(f"{header} is {len(value)} characters; at most {limit} fit"),
                     problem=f"{header} is longer than {limit} characters",
                 )
             )
@@ -328,10 +346,7 @@ def over_long_field_message(
         column = model.__table__.columns.get(attr)
         limit = getattr(column.type, "length", None) if column is not None else None
         if isinstance(value, str) and limit is not None and len(value) > limit:
-            return (
-                f"{labels.get(attr, attr)} is {len(value)} characters; "
-                f"at most {limit} fit."
-            )
+            return f"{labels.get(attr, attr)} is {len(value)} characters; at most {limit} fit."
     return None
 
 
@@ -361,9 +376,7 @@ def tag_comma_issues(
     ]
 
 
-def comma_tag_message(
-    values: Mapping[str, object], labels: dict[str, str]
-) -> str | None:
+def comma_tag_message(values: Mapping[str, object], labels: dict[str, str]) -> str | None:
     """The first tag value holding a comma, as an operator-facing
     sentence, or ``None``: the single-row editors' counterpart of
     :func:`tag_comma_issues`. Only ``tag_*`` attributes are checked."""
@@ -387,8 +400,10 @@ def _profile_link_header(row: dict[str, str]) -> str:
     """The column ``_profile_link`` read: ``ProfileLink``, or the legacy
     ``PhotoLink`` a file without one still carries, so an issue names a
     column the operator's file has."""
-    return "ProfileLink" if _none_if_blank(row, "ProfileLink") else (
-        "PhotoLink" if _none_if_blank(row, "PhotoLink") else "ProfileLink"
+    return (
+        "ProfileLink"
+        if _none_if_blank(row, "ProfileLink")
+        else ("PhotoLink" if _none_if_blank(row, "PhotoLink") else "ProfileLink")
     )
 
 
@@ -406,9 +421,7 @@ def _profile_link(row: dict[str, str]) -> str | None:
 _VALID_ROSTER_STATUSES: frozenset[str] = frozenset({"active", "inactive"})
 
 
-def _parse_status(
-    row: dict[str, str], *, source: str, row_number: int
-) -> str | ValidationIssue:
+def _parse_status(row: dict[str, str], *, source: str, row_number: int) -> str | ValidationIssue:
     """Parse an optional ``Status`` cell → ``active`` / ``inactive``.
 
     Blank or absent → ``"active"`` (back-compat: a pre-18P-C roster
@@ -426,10 +439,7 @@ def _parse_status(
             source=source,
             row_number=row_number,
             field="Status",
-            message=(
-                f"Status must be one of {sorted(_VALID_ROSTER_STATUSES)}; "
-                f"got {value!r}"
-            ),
+            message=(f"Status must be one of {sorted(_VALID_ROSTER_STATUSES)}; got {value!r}"),
             problem="Status is not active or inactive",
         )
     return value
@@ -484,16 +494,12 @@ def parse_reviewer_csv(content: bytes) -> ParseResult[ReviewerImportRow]:
         return ParseResult(rows=[], issues=[decode_issue])
     assert text is not None
 
-    raw_rows, fieldnames, captured_labels, count_issue = _read_dict_rows(
-        text, source
-    )
+    raw_rows, fieldnames, captured_labels, count_issue = _read_dict_rows(text, source)
     if count_issue is not None:
         return ParseResult(rows=[], issues=[count_issue])
     assert raw_rows is not None
 
-    issues.extend(
-        _missing_columns_issues(fieldnames, ["ReviewerName", "ReviewerEmail"], source)
-    )
+    issues.extend(_missing_columns_issues(fieldnames, ["ReviewerName", "ReviewerEmail"], source))
     if issues:
         return ParseResult(rows=[], issues=issues)
 
@@ -541,10 +547,7 @@ def parse_reviewer_csv(content: bytes) -> ParseResult[ReviewerImportRow]:
         if prior is not None:
             prior_index, prior_name = prior
             if prior_name == name:
-                message = (
-                    f"Duplicate ReviewerEmail '{email}' "
-                    f"(also on row {prior_index})"
-                )
+                message = f"Duplicate ReviewerEmail '{email}' (also on row {prior_index})"
                 problem = "ReviewerEmail appears on more than one row"
             else:
                 problem = "ReviewerEmail is used with different names"
@@ -620,16 +623,12 @@ def parse_reviewee_csv(content: bytes) -> ParseResult[RevieweeImportRow]:
         return ParseResult(rows=[], issues=[decode_issue])
     assert text is not None
 
-    raw_rows, fieldnames, captured_labels, count_issue = _read_dict_rows(
-        text, source
-    )
+    raw_rows, fieldnames, captured_labels, count_issue = _read_dict_rows(text, source)
     if count_issue is not None:
         return ParseResult(rows=[], issues=[count_issue])
     assert raw_rows is not None
 
-    issues.extend(
-        _missing_columns_issues(fieldnames, ["RevieweeName", "RevieweeEmail"], source)
-    )
+    issues.extend(_missing_columns_issues(fieldnames, ["RevieweeName", "RevieweeEmail"], source))
     if issues:
         return ParseResult(rows=[], issues=issues)
 
@@ -677,10 +676,7 @@ def parse_reviewee_csv(content: bytes) -> ParseResult[RevieweeImportRow]:
         if prior is not None:
             prior_index, prior_name = prior
             if prior_name == name:
-                message = (
-                    f"Duplicate RevieweeEmail '{identifier}' "
-                    f"(also on row {prior_index})"
-                )
+                message = f"Duplicate RevieweeEmail '{identifier}' (also on row {prior_index})"
                 problem = "RevieweeEmail appears on more than one row"
             else:
                 problem = "RevieweeEmail is used with different names"
@@ -773,16 +769,12 @@ def parse_observer_csv(content: bytes) -> ParseResult[ObserverImportRow]:
 
     # Observers carry no renamable friendly-label slots, so the
     # captured-label map is always empty here (Segment 19C Item 1).
-    raw_rows, fieldnames, _captured_labels, count_issue = _read_dict_rows(
-        text, source
-    )
+    raw_rows, fieldnames, _captured_labels, count_issue = _read_dict_rows(text, source)
     if count_issue is not None:
         return ParseResult(rows=[], issues=[count_issue])
     assert raw_rows is not None
 
-    issues.extend(
-        _missing_columns_issues(fieldnames, ["ObserverEmail"], source)
-    )
+    issues.extend(_missing_columns_issues(fieldnames, ["ObserverEmail"], source))
     if issues:
         return ParseResult(rows=[], issues=issues)
 
@@ -821,10 +813,7 @@ def parse_observer_csv(content: bytes) -> ParseResult[ObserverImportRow]:
                     source=source,
                     row_number=index,
                     field="ObserverEmail",
-                    message=(
-                        f"Duplicate ObserverEmail '{email}' "
-                        f"(also on row {prior})"
-                    ),
+                    message=(f"Duplicate ObserverEmail '{email}' (also on row {prior})"),
                     problem="ObserverEmail appears on more than one row",
                 )
             )
@@ -861,10 +850,7 @@ def parse_observer_csv(content: bytes) -> ParseResult[ObserverImportRow]:
                         source=source,
                         row_number=index,
                         field="CohortRule",
-                        message=(
-                            "CohortRule failed cohort-rule schema "
-                            "validation"
-                        ),
+                        message=("CohortRule failed cohort-rule schema validation"),
                         problem="CohortRule is not a valid cohort rule",
                     )
                 )

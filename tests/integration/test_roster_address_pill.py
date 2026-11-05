@@ -24,30 +24,63 @@ from app.services.instruments import ensure_default_instrument
 from .test_held_upload_setup_cards import _session
 
 JANE = "11111111-1111-4111-8111-111111111111"
-PILL = re.compile(r'<code class="pill pill-count pill-address" title="Matched to a directory account"[^>]*data-directory-matched[^>]*>([^<]+)</code>')
+PILL = re.compile(
+    r'<code class="pill pill-count pill-address" title="Matched to a directory account"[^>]*data-directory-matched[^>]*>([^<]+)</code>'
+)
 
 
-def _seed(
-    client: TestClient, db: Session, code: str
-) -> tuple[ReviewSession, dict[str, int]]:
+def _seed(client: TestClient, db: Session, code: str) -> tuple[ReviewSession, dict[str, int]]:
     """The session, and its four rows' ids by name."""
     s = _session(client, db, code=code)
-    bound_r = Reviewer(session_id=s.id, name="Jane", email="e0123456@example.edu", directory_object_id=JANE)
+    bound_r = Reviewer(
+        session_id=s.id, name="Jane", email="e0123456@example.edu", directory_object_id=JANE
+    )
     plain_r = Reviewer(session_id=s.id, name="Pat", email="pat@example.edu")
-    bound_e = Reviewee(session_id=s.id, name="Jane", email_or_identifier="Jane.Tan@example.edu", directory_object_id=JANE)
+    bound_e = Reviewee(
+        session_id=s.id,
+        name="Jane",
+        email_or_identifier="Jane.Tan@example.edu",
+        directory_object_id=JANE,
+    )
     plain_e = Reviewee(session_id=s.id, name="Anon", email_or_identifier="STU-0001")
-    db.add_all([bound_r, plain_r, bound_e, plain_e,
-                Observer(session_id=s.id, email="e0123456@example.edu", directory_object_id=JANE),
-                Observer(session_id=s.id, email="obs@example.edu")])
+    db.add_all(
+        [
+            bound_r,
+            plain_r,
+            bound_e,
+            plain_e,
+            Observer(session_id=s.id, email="e0123456@example.edu", directory_object_id=JANE),
+            Observer(session_id=s.id, email="obs@example.edu"),
+        ]
+    )
     db.flush()
     instrument = ensure_default_instrument(db, s)
-    db.add(Assignment(session_id=s.id, reviewer_id=bound_r.id, reviewee_id=plain_e.id, instrument_id=instrument.id))
-    db.add(Assignment(session_id=s.id, reviewer_id=plain_r.id, reviewee_id=bound_e.id, instrument_id=instrument.id))
+    db.add(
+        Assignment(
+            session_id=s.id,
+            reviewer_id=bound_r.id,
+            reviewee_id=plain_e.id,
+            instrument_id=instrument.id,
+        )
+    )
+    db.add(
+        Assignment(
+            session_id=s.id,
+            reviewer_id=plain_r.id,
+            reviewee_id=bound_e.id,
+            instrument_id=instrument.id,
+        )
+    )
     s.relationships_enabled = True
     db.add(Relationship(session_id=s.id, reviewer_id=bound_r.id, reviewee_id=plain_e.id))
     db.add(Relationship(session_id=s.id, reviewer_id=plain_r.id, reviewee_id=bound_e.id))
     db.commit()
-    ids = {"bound_r": bound_r.id, "plain_r": plain_r.id, "bound_e": bound_e.id, "plain_e": plain_e.id}
+    ids = {
+        "bound_r": bound_r.id,
+        "plain_r": plain_r.id,
+        "bound_e": bound_e.id,
+        "plain_e": plain_e.id,
+    }
     return s, ids
 
 
@@ -68,7 +101,9 @@ def test_a_bound_roster_address_is_a_pill_and_an_unbound_one_plain(
     assert f"<code>{plain}</code>" in html
 
 
-def test_the_assignments_table_pills_bound_addresses_on_both_sides(client: TestClient, db: Session) -> None:
+def test_the_assignments_table_pills_bound_addresses_on_both_sides(
+    client: TestClient, db: Session
+) -> None:
     s, _ = _seed(client, db, "pill-assign")
     html = client.get(f"/operator/sessions/{s.public_id}/assignments").text
     assert sorted(PILL.findall(html)) == ["Jane.Tan@example.edu", "e0123456@example.edu"]
@@ -89,7 +124,11 @@ def test_the_relationships_invitations_and_responses_tables_pill_bound_addresses
         "responses": ["Jane.Tan@example.edu"],
     }[page]
     assert sorted(PILL.findall(html)) == expected
-    plain = {"relationships": "pat@example.edu", "invitations": "pat@example.edu", "responses": "STU-0001"}[page]
+    plain = {
+        "relationships": "pat@example.edu",
+        "invitations": "pat@example.edu",
+        "responses": "STU-0001",
+    }[page]
     assert f"<code>{plain}</code>" in html
 
 

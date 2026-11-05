@@ -78,9 +78,7 @@ def _setup_two_instrument_session(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(operator_client, review_session.id)
     [first] = list(
-        db.execute(
-            select(Instrument).where(Instrument.session_id == review_session.id)
-        ).scalars()
+        db.execute(select(Instrument).where(Instrument.session_id == review_session.id)).scalars()
     )
     operator_client.post(
         f"/operator/sessions/{review_session.public_id}/instruments/add-new-model",
@@ -98,9 +96,7 @@ def _setup_two_instrument_session(
     # exist, so the route requires ``confirm_replace``; without it the
     # POST is a no-op redirect and the second instrument stays empty.
     pin_full_matrix_on_all_instruments(db, review_session.id)
-    generate_via_page_button(
-        operator_client, review_session.id, confirm_replace=True
-    )
+    generate_via_page_button(operator_client, review_session.id, confirm_replace=True)
     instruments_service.update_short_label(
         db, instrument=first, short_label="Self-eval", actor=None
     )
@@ -255,9 +251,7 @@ def test_missing_required_renders_in_full_width_card(
     because the list can be long enough that cramming it into the
     card produced a tall, narrow scroll."""
     operator = make_client(alice)
-    review_session, first, _ = _setup_two_instrument_session(
-        operator, db, code="rae-e-card"
-    )
+    review_session, first, _ = _setup_two_instrument_session(operator, db, code="rae-e-card")
     page1_assignment = db.execute(
         select(Assignment)
         .where(Assignment.session_id == review_session.id)
@@ -289,9 +283,7 @@ def test_missing_required_card_uses_two_column_list(
     `.rs-missing-list` modifier so a future markup change has to
     deliberately retire the two-column layout."""
     operator = make_client(alice)
-    review_session, first, _ = _setup_two_instrument_session(
-        operator, db, code="rae-e-cols"
-    )
+    review_session, first, _ = _setup_two_instrument_session(operator, db, code="rae-e-cols")
     page1_assignment = db.execute(
         select(Assignment)
         .where(Assignment.session_id == review_session.id)
@@ -321,9 +313,7 @@ def test_missing_required_card_carries_cancel_dismiss_button(
     that navigates back to the originating instrument page so the
     URL bar leaves the POST-only ``/submit`` endpoint behind."""
     operator = make_client(alice)
-    review_session, first, _ = _setup_two_instrument_session(
-        operator, db, code="rae-e-dismiss"
-    )
+    review_session, first, _ = _setup_two_instrument_session(operator, db, code="rae-e-dismiss")
     page1_assignment = db.execute(
         select(Assignment)
         .where(Assignment.session_id == review_session.id)
@@ -337,8 +327,7 @@ def test_missing_required_card_carries_cancel_dismiss_button(
     ).text
     assert "data-rs-missing-dismiss" in body
     assert (
-        f'href="/me/sessions/{review_session.public_id}/1">\n          Cancel\n        </a>'
-        in body
+        f'href="/me/sessions/{review_session.public_id}/1">\n          Cancel\n        </a>' in body
     )
     # Submit is a hard gate when required fields are missing; the
     # retired acknowledge-and-submit-anyway checkbox does not render.
@@ -354,13 +343,9 @@ def test_missing_required_card_absent_when_no_gaps(
     """No missing card on a fresh GET (no submit attempt) and no card
     on a successful submit (no gaps)."""
     operator = make_client(alice)
-    review_session, _, _ = _setup_two_instrument_session(
-        operator, db, code="rae-e-nocard"
-    )
+    review_session, _, _ = _setup_two_instrument_session(operator, db, code="rae-e-nocard")
     rae_client = make_client(rae)
-    body = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/1"
-    ).text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
     # The CSS rule for `.rs-missing-card` is always in the inline
     # stylesheet; assert on the element class + dismiss data attr's
     # closing `>` (the bare attr name appears inside CSS comments
@@ -387,9 +372,7 @@ def test_preview_status_panel_renders_without_per_page_pills(
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.code == "prev-eps-pills")
     ).scalar_one()
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/preview"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/preview").text
     # Status panel is part of the bottom-grid layout shared with the
     # live surface. Per-page pills (`rs-page-status-pills`) are
     # suppressed in preview.
@@ -407,9 +390,7 @@ def test_preview_status_panel_renders_without_per_page_pills(
 # by ``test_operator_preview_surface.py``.
 
 
-def test_preview_omits_pushstate_prefix(
-    client: TestClient, db: Session
-) -> None:
+def test_preview_omits_pushstate_prefix(client: TestClient, db: Session) -> None:
     """The ``data-rs-pushstate-prefix`` attribute on `.rs-paginated`
     is omitted in preview so Page #N click toggles visibility without
     rewriting the URL bar (which would push reviewer-side URLs into
@@ -422,9 +403,7 @@ def test_preview_omits_pushstate_prefix(
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.code == "prev-eps-nopush")
     ).scalar_one()
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/preview"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/preview").text
     # The attribute itself (``data-rs-pushstate-prefix="..."``) is
     # absent; the substring still appears inside JS comments, so
     # match the attribute-with-equals form.

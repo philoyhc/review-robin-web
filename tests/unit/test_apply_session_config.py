@@ -50,9 +50,7 @@ def _user(db: Session, *, email: str = "alice@example.edu") -> User:
     return user
 
 
-def _session(
-    db: Session, *, code: str, user: User | None = None, **kwargs
-) -> ReviewSession:
+def _session(db: Session, *, code: str, user: User | None = None, **kwargs) -> ReviewSession:
     user = user or _user(db, email=f"op-{code}@example.edu")
     review_session = ReviewSession(
         name=kwargs.get("name", code.title()),
@@ -90,10 +88,7 @@ def test_unknown_data_type_token_rejected_per_row(db: Session) -> None:
     ]
     result = apply_session_config(db, review_session, rows)
     assert not result.ok
-    assert any(
-        "unknown data_type" in e.message and e.row_number == 2
-        for e in result.errors
-    )
+    assert any("unknown data_type" in e.message and e.row_number == 2 for e in result.errors)
 
 
 def test_unknown_rule_set_name_rejected(db: Session) -> None:
@@ -186,9 +181,7 @@ def test_duplicate_session_rule_set_name_rejected(db: Session) -> None:
     ]
     result = apply_session_config(db, review_session, rows)
     assert not result.ok
-    assert any(
-        "duplicate session_rule_sets" in e.message for e in result.errors
-    )
+    assert any("duplicate session_rule_sets" in e.message for e in result.errors)
 
 
 def test_required_instrument_name_rejected(db: Session) -> None:
@@ -198,19 +191,14 @@ def test_required_instrument_name_rejected(db: Session) -> None:
     ]
     result = apply_session_config(db, review_session, rows)
     assert not result.ok
-    assert any(
-        e.field == "instruments[1].name" and "required" in e.message
-        for e in result.errors
-    )
+    assert any(e.field == "instruments[1].name" and "required" in e.message for e in result.errors)
 
 
 def test_malformed_boolean_rejected(db: Session) -> None:
     review_session = _bare_session(db, code="bad-bool")
     rows = [
         Row("instruments[1].name", "Eval", "string"),
-        Row(
-            "instruments[1].accepting_responses", "yesplz", "boolean"
-        ),
+        Row("instruments[1].accepting_responses", "yesplz", "boolean"),
     ]
     result = apply_session_config(db, review_session, rows)
     assert not result.ok
@@ -225,12 +213,8 @@ def test_malformed_json_rejected(db: Session) -> None:
             "Personal",
             "string",
         ),
-        Row(
-            "session_rule_sets[1].combinator", "ALL_OF", "enum"
-        ),
-        Row(
-            "session_rule_sets[1].rules_json", "{not json", "json"
-        ),
+        Row("session_rule_sets[1].combinator", "ALL_OF", "enum"),
+        Row("session_rule_sets[1].rules_json", "{not json", "json"),
     ]
     result = apply_session_config(db, review_session, rows)
     assert not result.ok
@@ -385,9 +369,7 @@ def test_enabled_on_another_email_kind_is_an_unknown_slot(
     assert not (review_session.email_template_overrides or {})
 
 
-def _integer_field_rows(
-    min_: str, step: str, data_type: str = "Integer"
-) -> list[Row]:
+def _integer_field_rows(min_: str, step: str, data_type: str = "Integer") -> list[Row]:
     prefix = "instruments[1].response_fields[1]"
     return [
         Row("instruments[1].name", "Peer", "string"),
@@ -402,17 +384,13 @@ def _integer_field_rows(
 
 
 @pytest.mark.parametrize("data_type", ["Integer", "integer"])
-def test_a_fractional_integer_bound_is_refused(
-    db: Session, data_type: str
-) -> None:
+def test_a_fractional_integer_bound_is_refused(db: Session, data_type: str) -> None:
     """Band 2 refuses a fractional Min, Max or Step on an Integer field;
     the import refuses it too, rather than storing 1.5 on the field and
     1 in the reviewer's ``validation`` block (findings 2026-10-03 A5),
     whatever case the type is written in (D2)."""
     review_session = _bare_session(db, code="int-bounds")
-    result = apply_session_config(
-        db, review_session, _integer_field_rows("1.5", "0.5", data_type)
-    )
+    result = apply_session_config(db, review_session, _integer_field_rows("1.5", "0.5", data_type))
 
     assert not result.ok
     assert [e.field for e in result.errors] == [
@@ -420,8 +398,7 @@ def test_a_fractional_integer_bound_is_refused(
         "instruments[1].response_fields[1].step",
     ]
     assert {e.message for e in result.errors} == {
-        "Integer fields take whole-number Min, Max and Step. "
-        "Choose Decimal for steps like 0.5."
+        "Integer fields take whole-number Min, Max and Step. Choose Decimal for steps like 0.5."
     }
 
 
@@ -431,17 +408,13 @@ def test_whole_integer_bounds_written_as_decimals_are_accepted(
     """A whole value written as ``1.0`` (hand-edited; the export writes
     ``1``) is not fractional."""
     review_session = _bare_session(db, code="int-bounds-ok")
-    result = apply_session_config(
-        db, review_session, _integer_field_rows("1.0", "1")
-    )
+    result = apply_session_config(db, review_session, _integer_field_rows("1.0", "1"))
 
     assert result.ok, result.errors
 
 
 @pytest.mark.parametrize("data_type", ["integer", "INTEGER", " Integer "])
-def test_a_response_field_type_in_any_case_imports_capitalised(
-    db: Session, data_type: str
-) -> None:
+def test_a_response_field_type_in_any_case_imports_capitalised(db: Session, data_type: str) -> None:
     """``spec/csv_contracts.md`` round-trip rule 5: a response field's
     type matches in any case and is stored as the model value, so the
     field is numeric and its bounds reach the ``validation`` block
@@ -449,9 +422,7 @@ def test_a_response_field_type_in_any_case_imports_capitalised(
     from app.db.models import InstrumentResponseField
 
     review_session = _bare_session(db, code="int-case")
-    result = apply_session_config(
-        db, review_session, _integer_field_rows("1", "1", data_type)
-    )
+    result = apply_session_config(db, review_session, _integer_field_rows("1", "1", data_type))
     assert result.ok, result.errors
 
     field = db.scalars(
@@ -464,9 +435,7 @@ def test_a_response_field_type_in_any_case_imports_capitalised(
 
 
 @pytest.mark.parametrize("data_type", ["", "  "])
-def test_a_blank_response_field_type_imports_as_the_default(
-    db: Session, data_type: str
-) -> None:
+def test_a_blank_response_field_type_imports_as_the_default(db: Session, data_type: str) -> None:
     """A blank type, spaces included, is an empty cell (round-trip rule
     6): the field takes the default response field's type rather than
     an error."""
@@ -477,9 +446,7 @@ def test_a_blank_response_field_type_imports_as_the_default(
     )
 
     review_session = _bare_session(db, code="int-blank")
-    result = apply_session_config(
-        db, review_session, _integer_field_rows("1", "1", data_type)
-    )
+    result = apply_session_config(db, review_session, _integer_field_rows("1", "1", data_type))
     assert result.ok, result.errors
 
     field = db.scalars(
@@ -495,9 +462,7 @@ def test_an_unknown_response_field_type_is_refused(db: Session) -> None:
     """A type outside String / Integer / Decimal / List is a row error,
     not a field stored with a type nothing recognizes (D2)."""
     review_session = _bare_session(db, code="int-unknown")
-    result = apply_session_config(
-        db, review_session, _integer_field_rows("1", "1", "Boolean")
-    )
+    result = apply_session_config(db, review_session, _integer_field_rows("1", "1", "Boolean"))
 
     assert not result.ok
     assert [(e.row_number, e.message) for e in result.errors] == [
@@ -593,9 +558,7 @@ def test_empty_rules_json_round_trips_unchanged(db: Session) -> None:
 # --------------------------------------------------------------------------- #
 
 
-def _populated_round_trip_session(
-    db: Session, *, code: str
-) -> ReviewSession:
+def _populated_round_trip_session(db: Session, *, code: str) -> ReviewSession:
     """Build a session whose every operator-input field carries a
     non-default value, exercising the full export / import surface
     Segment 18N PR 5 closes the gap on."""
@@ -625,18 +588,12 @@ def _populated_round_trip_session(
     # Start precedes the bare destination's kept End (15 May) as well
     # as this session's own, so the import's ordering check (G22)
     # passes on either.
-    review_session.scheduled_activate_at = dt.datetime(
-        2026, 5, 1, 9, 0, tzinfo=dt.UTC
-    )
-    review_session.responses_release_at = dt.datetime(
-        2026, 6, 30, 23, 59, tzinfo=dt.UTC
-    )
+    review_session.scheduled_activate_at = dt.datetime(2026, 5, 1, 9, 0, tzinfo=dt.UTC)
+    review_session.responses_release_at = dt.datetime(2026, 6, 30, 23, 59, tzinfo=dt.UTC)
     review_session.invite_offsets = ["-P7D", "-P1D"]
     review_session.reminder_offsets = ["-P3D", "-P1D", "-PT12H"]
     review_session.archive_offset = "+30d"
-    review_session.responses_release_until = dt.datetime(
-        2026, 7, 14, 23, 59, tzinfo=dt.UTC
-    )
+    review_session.responses_release_until = dt.datetime(2026, 7, 14, 23, 59, tzinfo=dt.UTC)
     review_session.retention_exception = True
     review_session.retention_overrides = {"audit_log_days": 365}
 
@@ -732,21 +689,39 @@ def _instrument_with_field_refs(db: Session, *, code: str):
     db.add(inst)
     db.flush()
     name = InstrumentDisplayField(
-        instrument_id=inst.id, label="", source_type="reviewee",
-        source_field="name", order=1, visible=True,
+        instrument_id=inst.id,
+        label="",
+        source_type="reviewee",
+        source_field="name",
+        order=1,
+        visible=True,
     )
     tag = InstrumentDisplayField(
-        instrument_id=inst.id, label="", source_type="reviewee",
-        source_field="tag_1", order=2, visible=True,
+        instrument_id=inst.id,
+        label="",
+        source_type="reviewee",
+        source_field="tag_1",
+        order=2,
+        visible=True,
     )
     rating = InstrumentResponseField(
-        instrument_id=inst.id, field_key="rating", label="Rating", order=1,
-        _inline_data_type="Integer", _inline_response_type="Likert5",
-        _inline_min=1.0, _inline_max=5.0, _inline_step=1.0,
+        instrument_id=inst.id,
+        field_key="rating",
+        label="Rating",
+        order=1,
+        _inline_data_type="Integer",
+        _inline_response_type="Likert5",
+        _inline_min=1.0,
+        _inline_max=5.0,
+        _inline_step=1.0,
     )
     notes = InstrumentResponseField(
-        instrument_id=inst.id, field_key="notes", label="Notes", order=2,
-        _inline_data_type="String", _inline_response_type="Long text",
+        instrument_id=inst.id,
+        field_key="notes",
+        label="Notes",
+        order=2,
+        _inline_data_type="String",
+        _inline_response_type="Long text",
     )
     db.add_all([name, tag, rating, notes])
     db.flush()
@@ -766,23 +741,17 @@ def _instrument_with_field_refs(db: Session, *, code: str):
 def _refs_by_name(db: Session, session_id: int):
     from app.db.models import InstrumentDisplayField, InstrumentResponseField
 
-    inst = db.execute(
-        select(Instrument).where(Instrument.session_id == session_id)
-    ).scalar_one()
+    inst = db.execute(select(Instrument).where(Instrument.session_id == session_id)).scalar_one()
     displays = {
         f.source_field: f.id
         for f in db.execute(
-            select(InstrumentDisplayField).where(
-                InstrumentDisplayField.instrument_id == inst.id
-            )
+            select(InstrumentDisplayField).where(InstrumentDisplayField.instrument_id == inst.id)
         ).scalars()
     }
     fields = {
         f.field_key: f.id
         for f in db.execute(
-            select(InstrumentResponseField).where(
-                InstrumentResponseField.instrument_id == inst.id
-            )
+            select(InstrumentResponseField).where(InstrumentResponseField.instrument_id == inst.id)
         ).scalars()
     }
     return inst, displays, fields
@@ -832,10 +801,7 @@ def test_an_old_bundles_id_keyed_sort_and_widths_are_dropped(
     rather than left pointing at another session's fields; the Group
     sentinel and the identity width, which name no field, are kept."""
     src, inst = _instrument_with_field_refs(db, code="rt-old-src")
-    rows = [
-        Row(r.field, r.value, r.data_type)
-        for r in serialize_session_config(db, src)
-    ]
+    rows = [Row(r.field, r.value, r.data_type) for r in serialize_session_config(db, src)]
     old_widths = json.dumps(inst.column_widths)
     old_sort = json.dumps(inst.sort_display_fields)
     rows = [
@@ -854,9 +820,7 @@ def test_an_old_bundles_id_keyed_sort_and_widths_are_dropped(
     db.expire_all()
     dst_inst, _, _ = _refs_by_name(db, dst.id)
     assert dst_inst.column_widths == {"identity": 200}
-    assert dst_inst.sort_display_fields == [
-        {"display_field_id": -1, "dir": "asc"}
-    ]
+    assert dst_inst.sort_display_fields == [{"display_field_id": -1, "dir": "asc"}]
 
 
 def test_serialize_omits_field_labels(db: Session) -> None:
@@ -917,9 +881,7 @@ def test_round_trip_carries_session_tags(db: Session) -> None:
     db.expire_all()
     tags = {
         t.tag
-        for t in db.execute(
-            select(SessionTag).where(SessionTag.session_id == dst.id)
-        ).scalars()
+        for t in db.execute(select(SessionTag).where(SessionTag.session_id == dst.id)).scalars()
     }
     assert tags == {"pilot", "cohort-a"}
 
@@ -1004,13 +966,9 @@ def test_round_trip_carries_band1_touched_links(db: Session) -> None:
     rows = serialize_session_config(db, src)
 
     dst = _bare_session(db, code="rt-b1-dst")
-    apply_session_config(
-        db, review_session=dst, rows=rows, user=_user(db, email="rt-b1@e.edu")
-    )
+    apply_session_config(db, review_session=dst, rows=rows, user=_user(db, email="rt-b1@e.edu"))
     db.expire_all()
-    dst_inst = db.execute(
-        select(Instrument).where(Instrument.session_id == dst.id)
-    ).scalar_one()
+    dst_inst = db.execute(select(Instrument).where(Instrument.session_id == dst.id)).scalar_one()
     assert dst_inst.band1_touched_links == ["link_1", "link_2"]
 
 
@@ -1067,9 +1025,7 @@ def test_round_trip_carries_instrument_view_policies(db: Session) -> None:
     )
     assert result.errors == []
     db.expire_all()
-    dst_inst = db.execute(
-        select(Instrument).where(Instrument.session_id == dst.id)
-    ).scalar_one()
+    dst_inst = db.execute(select(Instrument).where(Instrument.session_id == dst.id)).scalar_one()
     policies = {p.audience: p for p in dst_inst.view_policies}
     assert set(policies) == {"reviewee", "observer"}
 
@@ -1110,9 +1066,7 @@ def test_an_old_bundles_observer_tag_row_is_accepted_and_dropped(
     db.flush()
     rows = serialize_session_config(db, src)
     prefix = next(
-        r.field.rsplit(".", 1)[0]
-        for r in rows
-        if r.field.endswith(".after_release_granularity")
+        r.field.rsplit(".", 1)[0] for r in rows if r.field.endswith(".after_release_granularity")
     )
     rows.append(Row(f"{prefix}.observer_tag", "cohort-A", "string"))
 
@@ -1125,9 +1079,7 @@ def test_an_old_bundles_observer_tag_row_is_accepted_and_dropped(
     )
     assert result.errors == []
     db.expire_all()
-    dst_inst = db.execute(
-        select(Instrument).where(Instrument.session_id == dst.id)
-    ).scalar_one()
+    dst_inst = db.execute(select(Instrument).where(Instrument.session_id == dst.id)).scalar_one()
     (policy,) = dst_inst.view_policies
     assert policy.after_release_granularity == "row"
 
@@ -1145,9 +1097,7 @@ def test_an_old_bundles_responses_visible_when_closed_row_is_dropped(
     rows = serialize_session_config(db, src)
     assert not any("responses_visible_when_closed" in r.field for r in rows)
     prefix = next(
-        r.field.rsplit(".", 1)[0]
-        for r in rows
-        if r.field.endswith(".accepting_responses")
+        r.field.rsplit(".", 1)[0] for r in rows if r.field.endswith(".accepting_responses")
     )
     rows.append(Row(f"{prefix}.responses_visible_when_closed", "true", "boolean"))
 
@@ -1160,9 +1110,7 @@ def test_an_old_bundles_responses_visible_when_closed_row_is_dropped(
     )
     assert result.errors == []
     db.expire_all()
-    (dst_inst,) = db.execute(
-        select(Instrument).where(Instrument.session_id == dst.id)
-    ).scalars()
+    (dst_inst,) = db.execute(select(Instrument).where(Instrument.session_id == dst.id)).scalars()
     assert dst_inst.name == "Closed view"
 
 
@@ -1202,9 +1150,7 @@ def test_round_trip_carries_starts_new_page(db: Session) -> None:
     db.expire_all()
     dst_instruments = list(
         db.execute(
-            select(Instrument)
-            .where(Instrument.session_id == dst.id)
-            .order_by(Instrument.order)
+            select(Instrument).where(Instrument.session_id == dst.id).order_by(Instrument.order)
         ).scalars()
     )
     assert len(dst_instruments) == 2
@@ -1220,13 +1166,9 @@ def test_round_trip_carries_band2_state(db: Session) -> None:
     src = _populated_round_trip_session(db, code="rt-b2-src")
     rows = serialize_session_config(db, src)
     dst = _bare_session(db, code="rt-b2-dst")
-    apply_session_config(
-        db, review_session=dst, rows=rows, user=_user(db, email="rt-b2@e.edu")
-    )
+    apply_session_config(db, review_session=dst, rows=rows, user=_user(db, email="rt-b2@e.edu"))
     db.expire_all()
-    dst_inst = db.execute(
-        select(Instrument).where(Instrument.session_id == dst.id)
-    ).scalar_one()
+    dst_inst = db.execute(select(Instrument).where(Instrument.session_id == dst.id)).scalar_one()
     assert dst_inst.band2_state == {
         "selected_display_keys": ["reviewee.name"],
         "sample_reviewee_name": "Carol",
@@ -1249,13 +1191,9 @@ def test_round_trip_carries_response_field_inline_type_and_bounds(
     src = _populated_round_trip_session(db, code="rt-rf-src")
     rows = serialize_session_config(db, src)
     dst = _bare_session(db, code="rt-rf-dst")
-    apply_session_config(
-        db, review_session=dst, rows=rows, user=_user(db, email="rt-rf@e.edu")
-    )
+    apply_session_config(db, review_session=dst, rows=rows, user=_user(db, email="rt-rf@e.edu"))
     db.expire_all()
-    dst_inst = db.execute(
-        select(Instrument).where(Instrument.session_id == dst.id)
-    ).scalar_one()
+    dst_inst = db.execute(select(Instrument).where(Instrument.session_id == dst.id)).scalar_one()
     dst_fields = list(
         db.execute(
             select(InstrumentResponseField)
@@ -1361,9 +1299,7 @@ def test_stale_field_label_rows_silently_ignored(db: Session) -> None:
     assert result.ok, result.errors
     db.expire_all()
     stored = (
-        db.query(SessionFieldLabel)
-        .filter(SessionFieldLabel.session_id == review_session.id)
-        .all()
+        db.query(SessionFieldLabel).filter(SessionFieldLabel.session_id == review_session.id).all()
     )
     assert stored == []
     after = serialize_session_config(db, review_session)
@@ -1403,9 +1339,7 @@ def test_json_rules_apply_writes_through(db: Session) -> None:
             "WithRules",
             "string",
         ),
-        Row(
-            "session_rule_sets[1].combinator", "ALL_OF", "enum"
-        ),
+        Row("session_rule_sets[1].combinator", "ALL_OF", "enum"),
         Row(
             "session_rule_sets[1].rules_json",
             json.dumps(rules_payload),
@@ -1450,12 +1384,8 @@ def test_round_trip_preserves_group_scoped_instrument(db: Session) -> None:
     assert result.ok, result.errors
     db.expire_all()
 
-    dest = db.execute(
-        select(ReviewSession).where(ReviewSession.code == "grpdst")
-    ).scalar_one()
-    instrument = db.execute(
-        select(Instrument).where(Instrument.session_id == dest.id)
-    ).scalar_one()
+    dest = db.execute(select(ReviewSession).where(ReviewSession.code == "grpdst")).scalar_one()
+    instrument = db.execute(select(Instrument).where(Instrument.session_id == dest.id)).scalar_one()
     assert instrument.group_kind == "r1,p2"
 
 
@@ -1502,9 +1432,7 @@ def test_an_import_that_breaks_the_schedule_chain_is_refused(
     dst = _bare_session(db, code=f"chain-{field[8:16]}")
     result = apply_session_config(db, dst, rows)
     assert not result.ok
-    assert [(e.field, e.message.startswith(message)) for e in result.errors] == [
-        (field, True)
-    ]
+    assert [(e.field, e.message.startswith(message)) for e in result.errors] == [(field, True)]
     db.refresh(dst)
     assert dst.scheduled_activate_at is None
     assert dst.responses_release_at is None
@@ -1588,9 +1516,7 @@ def test_a_pair_the_import_does_not_touch_is_not_checked(db: Session) -> None:
     dst = _bare_session(db, code="chain-untouched")
     dst.responses_release_at = dt.datetime(2026, 5, 1, tzinfo=dt.UTC)
     db.flush()
-    result = apply_session_config(
-        db, dst, [Row("session.help_contact", "x@example.edu", "string")]
-    )
+    result = apply_session_config(db, dst, [Row("session.help_contact", "x@example.edu", "string")])
     assert result.errors == []
 
 
@@ -1603,12 +1529,8 @@ def _fired_invite_session(db: Session, code: str) -> ReviewSession:
     """A session with Start on 1 June, invites ``[-P3D, -P1D]``, and
     the first recorded as fired on that Start."""
     review_session = _bare_session(db, code=code)
-    review_session.scheduled_activate_at = dt.datetime(
-        2026, 6, 1, 12, 0, tzinfo=dt.UTC
-    )
-    review_session.deadline = dt.datetime(
-        2026, 6, 15, 12, 0, tzinfo=dt.UTC
-    )
+    review_session.scheduled_activate_at = dt.datetime(2026, 6, 1, 12, 0, tzinfo=dt.UTC)
+    review_session.deadline = dt.datetime(2026, 6, 15, 12, 0, tzinfo=dt.UTC)
     review_session.invite_offsets = ["-P3D", "-P1D"]
     db.add(
         AuditEvent(
@@ -1632,9 +1554,7 @@ def test_an_import_that_moves_a_sent_invite_is_refused(db: Session) -> None:
     """Bc1 (ruled 2026-10-07): the details card's rule, on the values
     the session would hold; nothing applied."""
     dst = _fired_invite_session(db, "bc1-import")
-    result = apply_session_config(
-        db, dst, [Row("session.invite_offsets", "-P1D", "string")]
-    )
+    result = apply_session_config(db, dst, [Row("session.invite_offsets", "-P1D", "string")])
     assert [e.field for e in result.errors] == ["session.invite_offsets"]
     assert "-P3D was already sent" in result.errors[0].message
     db.refresh(dst)
@@ -1645,18 +1565,24 @@ def test_an_import_that_keeps_a_sent_invite_or_moves_start_applies(
     db: Session,
 ) -> None:
     kept = _fired_invite_session(db, "bc1-import-kept")
-    assert apply_session_config(
-        db, kept, [Row("session.invite_offsets", "-P3D, -P2D", "string")]
-    ).errors == []
+    assert (
+        apply_session_config(
+            db, kept, [Row("session.invite_offsets", "-P3D, -P2D", "string")]
+        ).errors
+        == []
+    )
     moved = _fired_invite_session(db, "bc1-import-moved")
-    assert apply_session_config(
-        db,
-        moved,
-        [
-            Row("session.scheduled_activate_at", _iso(6, 2), "datetime"),
-            Row("session.invite_offsets", "-P1D", "string"),
-        ],
-    ).errors == []
+    assert (
+        apply_session_config(
+            db,
+            moved,
+            [
+                Row("session.scheduled_activate_at", _iso(6, 2), "datetime"),
+                Row("session.invite_offsets", "-P1D", "string"),
+            ],
+        ).errors
+        == []
+    )
 
 
 def test_an_import_names_each_list_that_moves_a_sent_entry(
@@ -1703,9 +1629,12 @@ def test_an_import_that_leaves_the_list_as_stored_is_not_refused(
     dst = _fired_invite_session(db, "bc1-import-untouched")
     dst.invite_offsets = ["-P1D"]
     db.flush()
-    assert apply_session_config(
-        db, dst, [Row("session.help_contact", "help@example.edu", "string")]
-    ).errors == []
+    assert (
+        apply_session_config(
+            db, dst, [Row("session.help_contact", "help@example.edu", "string")]
+        ).errors
+        == []
+    )
 
 
 def test_a_whitespace_only_email_override_cell_resets(db: Session) -> None:
@@ -1725,9 +1654,7 @@ def test_a_whitespace_only_email_override_cell_resets(db: Session) -> None:
         ],
     )
     db.refresh(review_session)
-    assert review_session.email_template_overrides == {
-        "reminder_subject": " Kept "
-    }
+    assert review_session.email_template_overrides == {"reminder_subject": " Kept "}
 
 
 @pytest.mark.parametrize(
@@ -1763,9 +1690,12 @@ def test_an_import_waives_only_the_lead_time_floor(db: Session) -> None:
     dst = _bare_session(db, code="l1-lead")
     assert dst.deadline is not None
     assert dst.deadline < dt.datetime.now(dt.UTC)
-    assert apply_session_config(
-        db, dst, [Row("session.reminder_offsets", "-P2D, -P1D", "string")]
-    ).errors == []
+    assert (
+        apply_session_config(
+            db, dst, [Row("session.reminder_offsets", "-P2D, -P1D", "string")]
+        ).errors
+        == []
+    )
     db.refresh(dst)
     assert dst.reminder_offsets == ["-P2D", "-P1D"]
 
@@ -1830,23 +1760,31 @@ def test_reminders_are_checked_against_the_end_the_session_keeps(
     """End fills a blank only, so a file's reminders meet the
     destination's End where it has one, and the file's End otherwise."""
     kept = _bare_session(db, code="l1-end-kept")
-    assert apply_session_config(
-        db,
-        kept,
-        [
-            Row("session.deadline", "2026-09-01T12:00:00+00:00", "datetime"),
-            Row("session.reminder_offsets", "PT2H", "string"),
-        ],
-    ).errors[0].field == "session.reminder_offsets"
+    assert (
+        apply_session_config(
+            db,
+            kept,
+            [
+                Row("session.deadline", "2026-09-01T12:00:00+00:00", "datetime"),
+                Row("session.reminder_offsets", "PT2H", "string"),
+            ],
+        )
+        .errors[0]
+        .field
+        == "session.reminder_offsets"
+    )
     blank = _session(db, code="l1-end-blank")
-    assert apply_session_config(
-        db,
-        blank,
-        [
-            Row("session.deadline", "2026-09-01T12:00:00+00:00", "datetime"),
-            Row("session.reminder_offsets", "-P1D", "string"),
-        ],
-    ).errors == []
+    assert (
+        apply_session_config(
+            db,
+            blank,
+            [
+                Row("session.deadline", "2026-09-01T12:00:00+00:00", "datetime"),
+                Row("session.reminder_offsets", "-P1D", "string"),
+            ],
+        ).errors
+        == []
+    )
     db.refresh(blank)
     assert blank.reminder_offsets == ["-P1D"]
 
@@ -1866,11 +1804,7 @@ def test_an_older_file_s_preview_member_ids_are_dropped_on_import(db: Session) -
         for r in serialize_session_config(db, src)
     ]
     dst = _bare_session(db, code="rt-b2-old-dst")
-    apply_session_config(
-        db, review_session=dst, rows=rows, user=_user(db, email="rt-b2-old@e.edu")
-    )
+    apply_session_config(db, review_session=dst, rows=rows, user=_user(db, email="rt-b2-old@e.edu"))
     db.expire_all()
-    dst_inst = db.execute(
-        select(Instrument).where(Instrument.session_id == dst.id)
-    ).scalar_one()
+    dst_inst = db.execute(select(Instrument).where(Instrument.session_id == dst.id)).scalar_one()
     assert dst_inst.band2_state == {"sample_reviewee_name": "Carol"}

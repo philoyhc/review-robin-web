@@ -112,7 +112,11 @@ def test_an_expired_sign_in_says_to_sign_in_again(page: Page) -> None:
     page.route(
         "**/directory-search*",
         lambda route: route.fulfill(
-            json={"available": False, "people": [], "reason": "unauthorized (401) InvalidAuthenticationToken"}
+            json={
+                "available": False,
+                "people": [],
+                "reason": "unauthorized (401) InvalidAuthenticationToken",
+            }
         ),
     )
     page.locator("#invite-email").press_sequentially("Jane")
@@ -150,14 +154,19 @@ def test_an_expired_token_is_renewed_and_the_search_asked_again(page: Page) -> N
 
 def test_a_page_renews_the_token_once_in_45_minutes(page: Page) -> None:
     refreshes: list[str] = []
-    page.route("**/.auth/refresh", lambda route: (refreshes.append(route.request.url), route.fulfill(status=200, body="")))
+    page.route(
+        "**/.auth/refresh",
+        lambda route: (refreshes.append(route.request.url), route.fulfill(status=200, body="")),
+    )
     page.goto(app_url(ACCOUNTS))
     page.wait_for_load_state("networkidle")
     assert len(refreshes) == 1
     page.reload()
     page.wait_for_load_state("networkidle")
     assert len(refreshes) == 1  # stamped: not again within 45 minutes
-    page.evaluate("localStorage.setItem('cordware.graphRenewedAt', String(Date.now() - 46 * 60 * 1000))")
+    page.evaluate(
+        "localStorage.setItem('cordware.graphRenewedAt', String(Date.now() - 46 * 60 * 1000))"
+    )
     page.reload()
     page.wait_for_load_state("networkidle")
     assert len(refreshes) == 2

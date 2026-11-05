@@ -15,6 +15,7 @@ Revises: dfedd22a38da
 Create Date: 2026-05-01 00:00:00.000000
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -29,8 +30,7 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     bind = op.get_bind()
     instrument_ids = [
-        row[0]
-        for row in bind.execute(sa.text("SELECT id FROM instruments")).fetchall()
+        row[0] for row in bind.execute(sa.text("SELECT id FROM instruments")).fetchall()
     ]
     for instrument_id in instrument_ids:
         existing = bind.execute(
@@ -56,7 +56,7 @@ def upgrade() -> None:
             bind.execute(
                 sa.text(
                     "UPDATE instrument_display_fields "
-                    "SET \"order\" = \"order\" + :shift "
+                    'SET "order" = "order" + :shift '
                     "WHERE instrument_id = :iid"
                 ),
                 {"shift": shift, "iid": instrument_id},
@@ -67,7 +67,7 @@ def upgrade() -> None:
                 sa.text(
                     "INSERT INTO instrument_display_fields "
                     "(instrument_id, source_type, source_field, label, "
-                    "\"order\", visible) "
+                    '"order", visible) '
                     "VALUES (:iid, 'reviewee', 'name', '', 0, TRUE)"
                 ),
                 {"iid": instrument_id},
@@ -78,7 +78,7 @@ def upgrade() -> None:
                 sa.text(
                     "INSERT INTO instrument_display_fields "
                     "(instrument_id, source_type, source_field, label, "
-                    "\"order\", visible) "
+                    '"order", visible) '
                     "VALUES (:iid, 'reviewee', 'email_or_identifier', '', "
                     ":ord, TRUE)"
                 ),

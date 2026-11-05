@@ -95,10 +95,7 @@ def export_settings_csv(
     audit.write_event(
         db,
         event_type="session.settings_extracted",
-        summary=(
-            f"Extracted Settings CSV for session {review_session.code} "
-            f"({len(rows)} rows)"
-        ),
+        summary=(f"Extracted Settings CSV for session {review_session.code} ({len(rows)} rows)"),
         actor_user_id=user.id,
         session=review_session,
         payload=audit.counts(rows=len(rows)),
@@ -129,8 +126,7 @@ def export_reviewers_csv(
         db,
         event_type="session.reviewers_extracted",
         summary=(
-            f"Extracted Reviewers CSV for session {review_session.code} "
-            f"({body_count} reviewers)"
+            f"Extracted Reviewers CSV for session {review_session.code} ({body_count} reviewers)"
         ),
         actor_user_id=user.id,
         session=review_session,
@@ -167,8 +163,7 @@ def export_reviewees_csv(
         db,
         event_type="session.reviewees_extracted",
         summary=(
-            f"Extracted Reviewees CSV for session {review_session.code} "
-            f"({body_count} reviewees)"
+            f"Extracted Reviewees CSV for session {review_session.code} ({body_count} reviewees)"
         ),
         actor_user_id=user.id,
         session=review_session,
@@ -231,8 +226,7 @@ def export_observers_csv(
         db,
         event_type="session.observers_extracted",
         summary=(
-            f"Extracted Observers CSV for session {review_session.code} "
-            f"({body_count} observers)"
+            f"Extracted Observers CSV for session {review_session.code} ({body_count} observers)"
         ),
         actor_user_id=user.id,
         session=review_session,
@@ -303,17 +297,12 @@ def export_responses_csv(
     # without materialising the streaming generator. ``Response``
     # row count is the body row count (header excluded), per the
     # segment plan's ``len(responses)`` invariant.
-    body_count = responses_service.session_response_count(
-        db, review_session.id
-    )
+    body_count = responses_service.session_response_count(db, review_session.id)
 
     audit.write_event(
         db,
         event_type="session.responses_extracted",
-        summary=(
-            f"Extracted Responses CSV for session {review_session.code} "
-            f"({body_count} rows)"
-        ),
+        summary=(f"Extracted Responses CSV for session {review_session.code} ({body_count} rows)"),
         actor_user_id=user.id,
         session=review_session,
         payload=audit.counts(rows=body_count),
@@ -352,9 +341,7 @@ def export_bundle_zip(
     audit.write_event(
         db,
         event_type="session.setup_bundle_extracted",
-        summary=(
-            f"Extracted Setup bundle for session {review_session.code}"
-        ),
+        summary=(f"Extracted Setup bundle for session {review_session.code}"),
         actor_user_id=user.id,
         session=review_session,
         payload=audit.counts(**counts),
@@ -374,31 +361,21 @@ def export_bundle_zip(
 @router.get("/sessions/{session_id}/export/responses_bundle.zip")
 def export_responses_bundle_zip(
     by_instrument: int = Query(default=1),
-    bi_instrument: list[int] | None = Query(
-        default=None, alias="by_instrument.instrument"
-    ),
+    bi_instrument: list[int] | None = Query(default=None, alias="by_instrument.instrument"),
     bi_meta: int = Query(default=1, alias="by_instrument.meta"),
     bi_all_rows: int = Query(default=1, alias="by_instrument.all_rows"),
     reviewer_metadata: int = Query(default=1),
-    rvr_instrument: list[int] | None = Query(
-        default=None, alias="reviewer_metadata.instrument"
-    ),
+    rvr_instrument: list[int] | None = Query(default=None, alias="reviewer_metadata.instrument"),
     rvr_all: int = Query(default=1, alias="reviewer_metadata.all"),
-    rvr_all_instruments: int = Query(
-        default=0, alias="reviewer_metadata.all_instruments"
-    ),
+    rvr_all_instruments: int = Query(default=0, alias="reviewer_metadata.all_instruments"),
     rvr_self_review_handling: str = Query(
         default=SELF_REVIEW_HANDLING_DEFAULT,
         alias="reviewer_metadata.self_review_handling",
     ),
     reviewee_metadata: int = Query(default=1),
-    rve_instrument: list[int] | None = Query(
-        default=None, alias="reviewee_metadata.instrument"
-    ),
+    rve_instrument: list[int] | None = Query(default=None, alias="reviewee_metadata.instrument"),
     rve_all: int = Query(default=1, alias="reviewee_metadata.all"),
-    rve_all_instruments: int = Query(
-        default=0, alias="reviewee_metadata.all_instruments"
-    ),
+    rve_all_instruments: int = Query(default=0, alias="reviewee_metadata.all_instruments"),
     rve_self_review_handling: str = Query(
         default=SELF_REVIEW_HANDLING_DEFAULT,
         alias="reviewee_metadata.self_review_handling",
@@ -437,9 +414,7 @@ def export_responses_bundle_zip(
                 all_instruments=rvr_all_instruments != 0,
             ),
             all_rows=rvr_all != 0,
-            self_review_handling=_normalise_self_review_handling(
-                rvr_self_review_handling
-            ),
+            self_review_handling=_normalise_self_review_handling(rvr_self_review_handling),
         )
         if reviewer_metadata != 0
         else None
@@ -453,9 +428,7 @@ def export_responses_bundle_zip(
                 all_instruments=rve_all_instruments != 0,
             ),
             all_rows=rve_all != 0,
-            self_review_handling=_normalise_self_review_handling(
-                rve_self_review_handling
-            ),
+            self_review_handling=_normalise_self_review_handling(rve_self_review_handling),
         )
         if reviewee_metadata != 0
         else None
@@ -481,9 +454,7 @@ def export_responses_bundle_zip(
     audit.write_event(
         db,
         event_type="session.responses_bundle_extracted",
-        summary=(
-            f"Extracted Responses bundle for session {review_session.code}"
-        ),
+        summary=(f"Extracted Responses bundle for session {review_session.code}"),
         actor_user_id=user.id,
         session=review_session,
         payload=audit.counts(**counts),
@@ -511,9 +482,7 @@ def export_responses_bundle_zip(
     )
 
 
-@router.get(
-    "/sessions/{session_id}/export/by_instrument_bundle.zip"
-)
+@router.get("/sessions/{session_id}/export/by_instrument_bundle.zip")
 def export_by_instrument_bundle_zip(
     instrument: list[int] | None = Query(default=None),
     meta: int = Query(default=1),
@@ -550,10 +519,7 @@ def export_by_instrument_bundle_zip(
     audit.write_event(
         db,
         event_type="session.by_instrument_bundle_extracted",
-        summary=(
-            f"Extracted By-instrument bundle for session "
-            f"{review_session.code}"
-        ),
+        summary=(f"Extracted By-instrument bundle for session {review_session.code}"),
         actor_user_id=user.id,
         session=review_session,
         payload=audit.counts(**counts),
@@ -587,10 +553,7 @@ def export_data_shapes_bundle_zip(
     audit.write_event(
         db,
         event_type="session.data_shapes_bundle_extracted",
-        summary=(
-            f"Extracted every saved data shape for session "
-            f"{review_session.code}"
-        ),
+        summary=(f"Extracted every saved data shape for session {review_session.code}"),
         actor_user_id=user.id,
         session=review_session,
         payload=audit.counts(**counts),
@@ -774,9 +737,7 @@ def export_audit_log_csv(
     # produce the full unfiltered CSV (the pre-PR-2 shape).
     # ``tz`` decides only which zone's days ``from`` / ``to`` mean, as
     # on the viewer; the file's timestamps stay UTC.
-    zone = audit_views.resolve_audit_log_zone(
-        tz, operator_settings.get_display_timezone(user)
-    )
+    zone = audit_views.resolve_audit_log_zone(tz, operator_settings.get_display_timezone(user))
     try:
         filters = audit_views.parse_audit_log_filters(
             event_types=event_type,
@@ -794,9 +755,7 @@ def export_audit_log_csv(
     # Counted in the database rather than by materialising the
     # streaming generator, with this download's own event in place
     # (findings O5).
-    audit.record_audit_log_extract(
-        db, review_session, actor_user_id=user.id, filters=filters
-    )
+    audit.record_audit_log_extract(db, review_session, actor_user_id=user.id, filters=filters)
     db.commit()
 
     download_name = filename(review_session, "audit_log")

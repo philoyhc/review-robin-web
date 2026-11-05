@@ -7,6 +7,7 @@ and (2026-10-03) its visibility policies; its short label comes across
 marked ``Copy of …``. It does not take the page-break flag. Sort entries and column widths name fields by id, so they are
 re-pointed at the copy's own fields (``spec/instruments.md``
 "Replicate semantics")."""
+
 from __future__ import annotations
 
 from sqlalchemy import select
@@ -37,9 +38,11 @@ def _setup(db: Session) -> tuple[ReviewSession, Instrument, User]:
         db, user=op, payload=SessionCreate(name="Rep", code="rep-setup")
     )
     pin_full_matrix_on_all_instruments(db, review_session.id)
-    source = db.execute(
-        select(Instrument).where(Instrument.session_id == review_session.id)
-    ).scalars().first()
+    source = (
+        db.execute(select(Instrument).where(Instrument.session_id == review_session.id))
+        .scalars()
+        .first()
+    )
     assert source is not None
     return review_session, source, op
 
@@ -80,12 +83,16 @@ def test_replicate_clones_the_rule_and_copies_the_setup(db: Session) -> None:
     assert replica.band2_state == {"selected_display_keys": ["reviewee.name"]}
     assert replica.accepting_responses is True
     assert replica.starts_new_page is False
-    created = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.session_id == review_session.id,
-            AuditEvent.event_type == "session_rule_set.created",
+    created = (
+        db.execute(
+            select(AuditEvent).where(
+                AuditEvent.session_id == review_session.id,
+                AuditEvent.event_type == "session_rule_set.created",
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert [detail_of(e)["refs"]["session_rule_set_id"] for e in created][-1] == (
         replica.rule_set_id
     )
@@ -98,9 +105,7 @@ def test_replicate_repoints_sort_and_widths_at_its_own_fields(
     src_displays = _ids(db, InstrumentDisplayField, source.id)
     src_fields = _ids(db, InstrumentResponseField, source.id)
     assert src_displays and src_fields
-    source.sort_display_fields = [
-        {"display_field_id": src_displays[0], "dir": "desc"}
-    ]
+    source.sort_display_fields = [{"display_field_id": src_displays[0], "dir": "desc"}]
     source.column_widths = {
         "identity": 200,
         f"df_{src_displays[0]}": 150,
@@ -114,9 +119,7 @@ def test_replicate_repoints_sort_and_widths_at_its_own_fields(
 
     new_displays = _ids(db, InstrumentDisplayField, replica.id)
     new_fields = _ids(db, InstrumentResponseField, replica.id)
-    assert replica.sort_display_fields == [
-        {"display_field_id": new_displays[0], "dir": "desc"}
-    ]
+    assert replica.sort_display_fields == [{"display_field_id": new_displays[0], "dir": "desc"}]
     assert replica.column_widths == {
         "identity": 200,
         f"df_{new_displays[0]}": 150,
@@ -143,9 +146,7 @@ def test_editing_the_replica_band1_leaves_the_source_alone(db: Session) -> None:
         instrument=replica,
         link1_mode="filter",
         link1_combinator="ALL_OF",
-        link1_rules=[
-            {"field": "reviewer.tag1", "op": "IS", "operand_value": "Lead"}
-        ],
+        link1_rules=[{"field": "reviewer.tag1", "op": "IS", "operand_value": "Lead"}],
         link2_mode="all",
         link2_combinator="ALL_OF",
         link2_rules=[],
@@ -204,9 +205,7 @@ def _policy_rows(db: Session, instrument_id: int) -> set[tuple]:
             p.after_release_identification,
         )
         for p in db.execute(
-            select(InstrumentViewPolicy).where(
-                InstrumentViewPolicy.instrument_id == instrument_id
-            )
+            select(InstrumentViewPolicy).where(InstrumentViewPolicy.instrument_id == instrument_id)
         ).scalars()
     }
 
@@ -248,15 +247,17 @@ def test_replicate_copies_the_visibility_policies(db: Session) -> None:
 
     assert _policy_rows(db, replica.id) == _policy_rows(db, source.id)
     assert len(_policy_rows(db, replica.id)) == 3
-    events = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.session_id == review_session.id,
-            AuditEvent.event_type == "instrument.view_policy_set",
+    events = (
+        db.execute(
+            select(AuditEvent).where(
+                AuditEvent.session_id == review_session.id,
+                AuditEvent.event_type == "instrument.view_policy_set",
+            )
         )
-    ).scalars().all()
-    assert sorted(
-        detail_of(e)["refs"]["instrument_id"] for e in events
-    ) == [replica.id] * 3
+        .scalars()
+        .all()
+    )
+    assert sorted(detail_of(e)["refs"]["instrument_id"] for e in events) == [replica.id] * 3
 
 
 # A stored illegal cell used to be pinned here as not copied by

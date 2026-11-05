@@ -80,8 +80,7 @@ def _unindexed(folder: Path) -> list[str]:
     return [
         doc.name
         for doc in _documents(folder)
-        if doc.name not in literals
-        and not any(fnmatch.fnmatch(doc.name, pat) for pat in patterns)
+        if doc.name not in literals and not any(fnmatch.fnmatch(doc.name, pat) for pat in patterns)
     ]
 
 

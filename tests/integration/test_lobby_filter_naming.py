@@ -29,9 +29,7 @@ def _create(client: TestClient, name: str, code: str) -> None:
 
 
 def _archive(db: Session, code: str) -> None:
-    row = (
-        db.query(ReviewSession).filter(ReviewSession.code == code).one()
-    )
+    row = db.query(ReviewSession).filter(ReviewSession.code == code).one()
     row.status = "archived"
     db.flush()
 
@@ -41,9 +39,7 @@ ARCHIVE = "/operator/sessions/archived"
 
 
 @pytest.mark.parametrize("path", [LOBBY, ARCHIVE])
-def test_the_card_is_headed_filter_not_search(
-    client: TestClient, db: Session, path: str
-) -> None:
+def test_the_card_is_headed_filter_not_search(client: TestClient, db: Session, path: str) -> None:
     """Both pages carry the same control and now give it the same name."""
     _create(client, "Spring Review", "spring-1")
     _create(client, "Archived One", "arch-1")
@@ -72,9 +68,7 @@ def test_the_input_says_filter_in_its_placeholder_and_label(
 
 
 @pytest.mark.parametrize("path", [LOBBY, ARCHIVE])
-def test_the_button_clears_rather_than_cancels(
-    client: TestClient, db: Session, path: str
-) -> None:
+def test_the_button_clears_rather_than_cancels(client: TestClient, db: Session, path: str) -> None:
     """`Cancel` implies something in flight to abandon. A live filter has
     nothing in flight; the button empties the box, which is `Clear` —
     the same word the tag chips' own reset already uses."""
@@ -105,9 +99,7 @@ def test_the_disabled_lobby_control_is_also_named_clear(
     assert 'aria-disabled="true">Cancel</span>' not in body
 
 
-def test_an_empty_lobby_filter_names_the_archive(
-    client: TestClient, db: Session
-) -> None:
+def test_an_empty_lobby_filter_names_the_archive(client: TestClient, db: Session) -> None:
     """A filter reports on the rows it was given, and the lobby is given
     non-archived sessions only. So an empty result is ambiguous between
     "no such session" and "it is archived" — and the Archive is the one
@@ -123,9 +115,7 @@ def test_an_empty_lobby_filter_names_the_archive(
     assert 'href="/operator/sessions/archived"' in body
 
 
-def test_the_archive_does_not_point_back_at_the_lobby(
-    client: TestClient, db: Session
-) -> None:
+def test_the_archive_does_not_point_back_at_the_lobby(client: TestClient, db: Session) -> None:
     """The asymmetry is deliberate. The Archive's own empty *page* copy
     already says where its rows come from ("Sessions you archive from
     the lobby appear here"), and an operator on the Archive knows they
@@ -161,9 +151,7 @@ def test_the_filter_input_is_bound_to_a_datalist(
     assert f'<datalist id="{list_id}">' in body
 
 
-def test_the_lobby_datalist_offers_names_codes_and_tags(
-    client: TestClient, db: Session
-) -> None:
+def test_the_lobby_datalist_offers_names_codes_and_tags(client: TestClient, db: Session) -> None:
     """All three of the fields the placeholder names.
 
     The tag comes back lower-cased: `session_tags.normalize_tag` trims
@@ -173,11 +161,7 @@ def test_the_lobby_datalist_offers_names_codes_and_tags(
     side is already lower, but the operator's typing is not.
     """
     _create(client, "Spring Review", "spring-10")
-    row = (
-        db.query(ReviewSession)
-        .filter(ReviewSession.code == "spring-10")
-        .one()
-    )
+    row = db.query(ReviewSession).filter(ReviewSession.code == "spring-10").one()
     session_tags.set_tags(
         db,
         review_session=row,
@@ -192,9 +176,7 @@ def test_the_lobby_datalist_offers_names_codes_and_tags(
     assert '<option value="cohort a">' in body
 
 
-def test_the_datalists_do_not_cross_the_archive_boundary(
-    client: TestClient, db: Session
-) -> None:
+def test_the_datalists_do_not_cross_the_archive_boundary(client: TestClient, db: Session) -> None:
     """Each page filters its own half, so each page suggests its own
     half. A lobby suggestion naming an archived session would be a
     suggestion that matches no row on the page offering it."""

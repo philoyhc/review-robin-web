@@ -43,9 +43,7 @@ HEADER: tuple[str, ...] = (
 )
 
 
-def serialize_reviewees(
-    db: Session, review_session: ReviewSession
-) -> Iterable[tuple[str, ...]]:
+def serialize_reviewees(db: Session, review_session: ReviewSession) -> Iterable[tuple[str, ...]]:
     """Yield CSV rows for ``review_session``'s reviewees.
 
     First yield is the header; subsequent yields are one tuple per

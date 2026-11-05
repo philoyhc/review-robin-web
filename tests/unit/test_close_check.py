@@ -98,8 +98,7 @@ def plan_repo(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch):
     # again: the boundary case (19G.6).
     (root / "spec" / "b.md").write_text("landed with the manifest\n")
     plan.write_text(
-        "# Segment ZZ\n\n## Doc impact\n\n"
-        "- `spec/a.md` — x (Item 1).\n- `spec/b.md` — y.\n"
+        "# Segment ZZ\n\n## Doc impact\n\n- `spec/a.md` — x (Item 1).\n- `spec/b.md` — y.\n"
     )
     run("add", "-A")
     run("commit", "-qm", "manifest + Item 1 bullet")
@@ -271,6 +270,8 @@ def test_an_unresolvable_bare_name_is_reported_as_written() -> None:
     """C2 should name the string the author wrote, not a guess at what
     they meant — otherwise its message points at a file nobody typed."""
     assert _paths("- `no_such_document.md` — nothing.") == ["no_such_document.md"]
+
+
 # --------------------------------------------------------------------
 # cited paths (19G.8)
 
@@ -327,10 +328,7 @@ def test_a_cites_naming_a_path_the_bullet_lacks_is_reported() -> None:
     direction nobody notices: the suite stays green while the marker
     quietly excuses a path that is no longer in the bullet, and the next
     path added under that name is silently uncommitted."""
-    bullet = (
-        "- `docs/x.md` — a change.\n"
-        "  <!-- cites: spec/architecture.md -->"
-    )
+    bullet = "- `docs/x.md` — a change.\n  <!-- cites: spec/architecture.md -->"
     parsed = _bullet(bullet)
     assert parsed["paths"] == ["docs/x.md"]
     assert parsed["cited_absent"] == ["spec/architecture.md"]
@@ -364,9 +362,7 @@ def test_a_guide_path_is_collected_rather_than_dropped() -> None:
     printed committed-path count smaller than the manifest just read.
     67 such commitments across 33 plans, none reported.
     """
-    assert _guide("- `guide/todo_master.md` — mark 19K.1 done.") == [
-        "guide/todo_master.md"
-    ]
+    assert _guide("- `guide/todo_master.md` — mark 19K.1 done.") == ["guide/todo_master.md"]
 
 
 def test_a_guide_path_is_not_a_committed_path() -> None:
@@ -424,9 +420,7 @@ def test_a_waiver_on_a_guide_only_bullet_still_needs_a_reason(plan_repo) -> None
     """C4 iterates bullets, not committed paths. A bullet whose only
     path is a ``guide/`` one was invisible to C4 as well — it could be
     waived with an empty reason and nothing said so."""
-    checks = _checks(
-        plan_repo, "- `guide/todo_master.md` — tick. <!-- doc-impact-waived: -->"
-    )
+    checks = _checks(plan_repo, "- `guide/todo_master.md` — tick. <!-- doc-impact-waived: -->")
     assert checks["C4"]["status"] == cc.FAIL
 
 
@@ -435,8 +429,7 @@ def test_a_reasoned_waiver_on_a_guide_only_bullet_passes(plan_repo) -> None:
     not fail the waivers that do carry a reason."""
     checks = _checks(
         plan_repo,
-        "- `guide/todo_master.md` — tick. "
-        "<!-- doc-impact-waived: the checklist retired -->",
+        "- `guide/todo_master.md` — tick. <!-- doc-impact-waived: the checklist retired -->",
     )
     assert checks["C4"]["status"] == cc.PASS
 
@@ -529,9 +522,7 @@ def test_the_committed_total_includes_the_guide_paths(plan_repo) -> None:
     """The Definition of done's own measure: 19J.7's five-bullet manifest
     read ``3 committed path(s)`` and exited 0. Counted and verified are
     separate axes; the total counts, and C5 says what is not verified."""
-    out = _report(
-        plan_repo, "- `spec/a.md` — x.\n- `guide/todo_master.md` — tick."
-    )
+    out = _report(plan_repo, "- `spec/a.md` — x.\n- `guide/todo_master.md` — tick.")
     assert "2 committed path(s), 1 noted," in out
 
 
@@ -565,9 +556,7 @@ def test_a_tools_path_in_the_leading_position_is_a_commitment() -> None:
     only one describing the close check — was invisible to every check.
     19K.4's own manifest was read at 2 of its 3 bullets.
     """
-    assert _paths("- `tools/README.md` — the close_check row.") == [
-        "tools/README.md"
-    ]
+    assert _paths("- `tools/README.md` — the close_check row.") == ["tools/README.md"]
 
 
 def test_the_same_path_after_the_dash_is_prose() -> None:
@@ -598,9 +587,7 @@ def test_a_skill_file_is_a_commitment() -> None:
 def test_a_directory_is_a_commitment() -> None:
     """Manifests commit to packages and workflow folders, not only files:
     `.github/workflows/` in 18Q, `app/services/assignments/` in 19C."""
-    assert _paths("- `.github/workflows/` — the postgres job.") == [
-        ".github/workflows/"
-    ]
+    assert _paths("- `.github/workflows/` — the postgres job.") == [".github/workflows/"]
 
 
 def test_a_root_path_can_be_cited_rather_than_committed() -> None:
@@ -675,9 +662,7 @@ def test_a_directory_path_still_matches_with_its_trailing_slash() -> None:
     """The half that must not regress: requiring a character after the
     root's slash must not lose `.github/workflows/`, which is a real
     committed directory and ends in a slash of its own."""
-    assert _paths("- `.github/workflows/` — the postgres job.") == [
-        ".github/workflows/"
-    ]
+    assert _paths("- `.github/workflows/` — the postgres job.") == [".github/workflows/"]
 
 
 # --------------------------------------------------------------------
@@ -888,8 +873,10 @@ def test_an_app_s_spec_docs_and_guide_paths_are_read() -> None:
     2026-10-30 none of those matched, so every bullet read as naming no
     path and 1A closed by hand. Its `guide/` stays counted-not-verified,
     exactly as RRW's does, and is never also a committed path."""
-    bullet = ("- `residentialapps/spec/a.md` — x; and `utilityapps/docs/b.md` "
-              "(Item 1).\n- `residentialapps/guide/todo_master.md` — y.")
+    bullet = (
+        "- `residentialapps/spec/a.md` — x; and `utilityapps/docs/b.md` "
+        "(Item 1).\n- `residentialapps/guide/todo_master.md` — y."
+    )
     assert _paths(bullet) == ["residentialapps/spec/a.md", "utilityapps/docs/b.md"]
     assert _guide(bullet) == ["residentialapps/guide/todo_master.md"]
     assert _paths("- `cordware/spec/host.md` — the host's spec.") == ["cordware/spec/host.md"]
@@ -898,8 +885,12 @@ def test_an_app_s_spec_docs_and_guide_paths_are_read() -> None:
 def test_an_app_s_code_is_a_root_in_the_leading_position_only() -> None:
     """As `app/` is: a leading `residentialapps/web/…` commits, an
     after-dash one is a citation."""
-    assert _paths("- `residentialapps/web/pages.py` — the shared pieces.") == ["residentialapps/web/pages.py"]
-    assert _paths("- `residentialapps/spec/a.md` — what `residentialapps/web/` holds.") == ["residentialapps/spec/a.md"]
+    assert _paths("- `residentialapps/web/pages.py` — the shared pieces.") == [
+        "residentialapps/web/pages.py"
+    ]
+    assert _paths("- `residentialapps/spec/a.md` — what `residentialapps/web/` holds.") == [
+        "residentialapps/spec/a.md"
+    ]
 
 
 def test_a_plan_resolves_in_an_app_s_guide_and_its_archive(
@@ -925,7 +916,9 @@ def test_a_plan_resolves_in_an_app_s_guide_and_its_archive(
 def test_the_app_folders_are_ci_lanes_app_folders() -> None:
     """One list of Cordware app folders, kept twice: here and in
     `tools/ci_lanes.py`, whose own test fails on an unclassified folder."""
-    spec = importlib.util.spec_from_file_location("ci_lanes_for_close_check", REPO_ROOT / "tools" / "ci_lanes.py")
+    spec = importlib.util.spec_from_file_location(
+        "ci_lanes_for_close_check", REPO_ROOT / "tools" / "ci_lanes.py"
+    )
     assert spec is not None
     lanes = importlib.util.module_from_spec(spec)
     assert spec.loader is not None

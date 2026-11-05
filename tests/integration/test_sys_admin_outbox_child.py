@@ -6,6 +6,7 @@ a child of the Sessions Diagnostics tab. The pre-16A per-session
 ``/operator/sessions/{id}/outbox`` route stays retired
 (bookmarks 404 there).
 """
+
 from __future__ import annotations
 
 import pytest
@@ -23,18 +24,14 @@ from ._full_matrix import (
 from ._public_id import public_id
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "Spring", "code": code},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _seed_invite_targets(client: TestClient, session_id: int) -> None:
@@ -71,9 +68,7 @@ def test_outbox_child_page_renders_back_link_and_chrome(
     monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
     review_session = _make_session(client, db, code="ob-child")
 
-    response = client.get(
-        f"/operator/sys-admin/sessions/{review_session.public_id}/outbox"
-    )
+    response = client.get(f"/operator/sys-admin/sessions/{review_session.public_id}/outbox")
     assert response.status_code == 200
     # Back-link points at the Sessions Diagnostics list.
     assert 'href="/operator/sys-admin/sessions"' in response.text
@@ -92,9 +87,7 @@ def test_outbox_child_page_empty_state(
 ) -> None:
     monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
     review_session = _make_session(client, db, code="ob-empty")
-    response = client.get(
-        f"/operator/sys-admin/sessions/{review_session.public_id}/outbox"
-    )
+    response = client.get(f"/operator/sys-admin/sessions/{review_session.public_id}/outbox")
     assert response.status_code == 200
     assert "No outbox rows yet for this session." in response.text
 
@@ -142,9 +135,7 @@ def test_outbox_child_page_lists_seeded_rows(
             "outbox content is exercised by other integration tests."
         )
 
-    response = client.get(
-        f"/operator/sys-admin/sessions/{review_session.public_id}/outbox"
-    )
+    response = client.get(f"/operator/sys-admin/sessions/{review_session.public_id}/outbox")
     assert response.status_code == 200
     assert "rae@example.edu" in response.text
     assert "/me/invite/" in response.text

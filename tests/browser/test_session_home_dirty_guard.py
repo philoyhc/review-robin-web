@@ -83,9 +83,7 @@ def test_accepting_the_prompt_leaves_and_drops_the_edit(
     expect(page.locator("#mock-description")).not_to_have_value("Dropped")
 
 
-def test_save_leaves_without_asking(
-    page: Page, new_session: Callable[[], str]
-) -> None:
+def test_save_leaves_without_asking(page: Page, new_session: Callable[[], str]) -> None:
     session_id = new_session()
     _edit_description(page, session_id, "Saved")
     seen = _record_dialogs(page)
@@ -101,9 +99,7 @@ def test_save_leaves_without_asking(
     assert seen == []
 
 
-def test_cancel_and_lock_leave_without_asking(
-    page: Page, new_session: Callable[[], str]
-) -> None:
+def test_cancel_and_lock_leave_without_asking(page: Page, new_session: Callable[[], str]) -> None:
     session_id = new_session()
     seen = _record_dialogs(page)
 

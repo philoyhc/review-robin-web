@@ -35,9 +35,7 @@ HEADER: tuple[str, ...] = (
 )
 
 
-def serialize_observers(
-    db: Session, review_session: ReviewSession
-) -> Iterable[tuple[str, ...]]:
+def serialize_observers(db: Session, review_session: ReviewSession) -> Iterable[tuple[str, ...]]:
     """Yield CSV rows for ``review_session``'s observers.
 
     First yield is ``HEADER``; subsequent yields are one tuple
@@ -47,14 +45,18 @@ def serialize_observers(
     """
 
     yield HEADER
-    rows = db.execute(
-        select(Observer)
-        .where(Observer.session_id == review_session.id)
-        .order_by(
-            (Observer.status != "active").asc(),
-            Observer.email,
+    rows = (
+        db.execute(
+            select(Observer)
+            .where(Observer.session_id == review_session.id)
+            .order_by(
+                (Observer.status != "active").asc(),
+                Observer.email,
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     for observer in rows:
         yield (
             observer.email,
@@ -63,7 +65,5 @@ def serialize_observers(
             observer.status,
             ""
             if observer.cohort_rule is None
-            else json.dumps(
-                observer.cohort_rule, separators=(",", ":"), sort_keys=True
-            ),
+            else json.dumps(observer.cohort_rule, separators=(",", ":"), sort_keys=True),
         )

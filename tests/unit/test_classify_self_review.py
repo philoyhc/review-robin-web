@@ -13,6 +13,7 @@ Exercises both arms of the rule:
 Also confirms ``_self_review_assignment_ids`` stays a faithful
 set-of-ids wrapper around the same machinery.
 """
+
 from __future__ import annotations
 
 from sqlalchemy.orm import Session
@@ -47,9 +48,7 @@ def _seed_session(db: Session, code: str) -> tuple[User, ReviewSession]:
     return user, review_session
 
 
-def _materialise_rows(
-    db: Session, session_id: int
-) -> list[tuple[Assignment, Reviewer, Reviewee]]:
+def _materialise_rows(db: Session, session_id: int) -> list[tuple[Assignment, Reviewer, Reviewee]]:
     return [
         (a, r, e)
         for a, r, e in db.query(Assignment, Reviewer, Reviewee)
@@ -89,9 +88,7 @@ def test_individual_email_match_flips_true(db: Session) -> None:
     db.add(assignment)
     db.flush()
     rows = _materialise_rows(db, review_session.id)
-    result = assignments.classify_self_review(
-        db, session_id=review_session.id, rows=rows
-    )
+    result = assignments.classify_self_review(db, session_id=review_session.id, rows=rows)
     assert result == {assignment.id: True}
 
 
@@ -119,9 +116,7 @@ def test_individual_email_mismatch_flips_false(db: Session) -> None:
     db.add(assignment)
     db.flush()
     rows = _materialise_rows(db, review_session.id)
-    result = assignments.classify_self_review(
-        db, session_id=review_session.id, rows=rows
-    )
+    result = assignments.classify_self_review(db, session_id=review_session.id, rows=rows)
     assert result == {assignment.id: False}
 
 
@@ -155,9 +150,7 @@ def test_individual_non_email_identifier_never_self_review(
     db.add(assignment)
     db.flush()
     rows = _materialise_rows(db, review_session.id)
-    result = assignments.classify_self_review(
-        db, session_id=review_session.id, rows=rows
-    )
+    result = assignments.classify_self_review(db, session_id=review_session.id, rows=rows)
     assert result == {assignment.id: False}
 
 
@@ -176,9 +169,7 @@ def _make_group_instrument(
         instrument.group_kind = "both"
     else:
         instrument.group_kind = encode_group_kind(
-            [("reviewee", "tag_1")]
-            if boundary_code == "r1"
-            else [("reviewee", "tag_2")]
+            [("reviewee", "tag_1")] if boundary_code == "r1" else [("reviewee", "tag_2")]
         )
     db.flush()
     return instrument
@@ -233,9 +224,7 @@ def test_group_reviewer_is_member_flags_every_row_in_group(
         assignment_ids.append(assignment.id)
 
     rows = _materialise_rows(db, review_session.id)
-    result = assignments.classify_self_review(
-        db, session_id=review_session.id, rows=rows
-    )
+    result = assignments.classify_self_review(db, session_id=review_session.id, rows=rows)
     # Every assignment in the group flagged — including Bob and Carol.
     assert all(result[aid] is True for aid in assignment_ids)
 
@@ -283,9 +272,7 @@ def test_group_reviewer_not_a_member_flags_no_row_in_group(
         assignment_ids.append(assignment.id)
 
     rows = _materialise_rows(db, review_session.id)
-    result = assignments.classify_self_review(
-        db, session_id=review_session.id, rows=rows
-    )
+    result = assignments.classify_self_review(db, session_id=review_session.id, rows=rows)
     assert all(result[aid] is False for aid in assignment_ids)
 
 
@@ -351,9 +338,7 @@ def test_group_two_groups_only_self_group_flips(
         target.append(assignment.id)
 
     rows = _materialise_rows(db, review_session.id)
-    result = assignments.classify_self_review(
-        db, session_id=review_session.id, rows=rows
-    )
+    result = assignments.classify_self_review(db, session_id=review_session.id, rows=rows)
     assert all(result[aid] is True for aid in self_group_ids)
     assert all(result[aid] is False for aid in other_group_ids)
 
@@ -383,9 +368,7 @@ def test_group_both_sentinel_single_global_group_flags_member(
     )
     db.add_all([alice_e, bob_e])
     db.flush()
-    instrument = _make_group_instrument(
-        db, review_session, boundary_code="both"
-    )
+    instrument = _make_group_instrument(db, review_session, boundary_code="both")
 
     ids: list[int] = []
     for reviewee in (alice_e, bob_e):
@@ -400,9 +383,7 @@ def test_group_both_sentinel_single_global_group_flags_member(
         ids.append(assignment.id)
 
     rows = _materialise_rows(db, review_session.id)
-    result = assignments.classify_self_review(
-        db, session_id=review_session.id, rows=rows
-    )
+    result = assignments.classify_self_review(db, session_id=review_session.id, rows=rows)
     assert all(result[aid] is True for aid in ids)
 
 
@@ -462,9 +443,7 @@ def test_group_pair_context_boundary_with_active_relationship(
         ids.append(assignment.id)
 
     rows = _materialise_rows(db, review_session.id)
-    result = assignments.classify_self_review(
-        db, session_id=review_session.id, rows=rows
-    )
+    result = assignments.classify_self_review(db, session_id=review_session.id, rows=rows)
     assert all(result[aid] is True for aid in ids)
 
 
@@ -514,11 +493,7 @@ def test_assignment_ids_wrapper_returns_subset_of_classify(
     db.flush()
 
     rows = _materialise_rows(db, review_session.id)
-    classified = assignments.classify_self_review(
-        db, session_id=review_session.id, rows=rows
-    )
-    ids = assignments._self_review_assignment_ids(
-        db, session_id=review_session.id, rows=rows
-    )
+    classified = assignments.classify_self_review(db, session_id=review_session.id, rows=rows)
+    ids = assignments._self_review_assignment_ids(db, session_id=review_session.id, rows=rows)
     assert ids == {aid for aid, v in classified.items() if v}
     assert ids == {a_self.id}

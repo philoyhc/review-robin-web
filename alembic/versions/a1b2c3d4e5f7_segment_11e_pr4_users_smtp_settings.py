@@ -31,6 +31,7 @@ Revises: f7a8b9c0d1e2
 Create Date: 2026-05-05 00:00:00.000000
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -47,9 +48,7 @@ def upgrade() -> None:
         "users",
         sa.Column("smtp_host", sa.String(length=255), nullable=True),
     )
-    op.add_column(
-        "users", sa.Column("smtp_port", sa.Integer(), nullable=True)
-    )
+    op.add_column("users", sa.Column("smtp_port", sa.Integer(), nullable=True))
     op.add_column(
         "users",
         sa.Column("smtp_username", sa.String(length=320), nullable=True),

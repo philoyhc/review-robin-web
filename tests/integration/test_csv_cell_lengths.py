@@ -7,6 +7,7 @@ Each parser now checks every string it writes against the model's
 declared ``String(n)``, as the Settings import already did; the friendly
 label on a tag header is checked against ``session_field_labels.label``.
 """
+
 from __future__ import annotations
 
 from sqlalchemy.orm import Session
@@ -41,10 +42,7 @@ def test_reviewer_name_and_tag_over_their_columns() -> None:
 
 def test_reviewee_profile_link_over_2000() -> None:
     link = "https://x.edu/" + "p" * 2000
-    content = (
-        "RevieweeName,RevieweeEmail,ProfileLink\n"
-        f"Al,a@x.edu,{link}\n"
-    ).encode()
+    content = (f"RevieweeName,RevieweeEmail,ProfileLink\nAl,a@x.edu,{link}\n").encode()
     result = parse_reviewee_csv(content)
     assert _fields(result) == [(1, "ProfileLink")]
     assert result.rows == []
@@ -57,10 +55,7 @@ def test_observer_name_over_its_column() -> None:
 
 
 def test_a_tag_header_label_over_its_column() -> None:
-    content = (
-        f"ReviewerName,ReviewerEmail,ReviewerTag1.{LONG}\n"
-        "Al,a@x.edu,t\n"
-    ).encode()
+    content = (f"ReviewerName,ReviewerEmail,ReviewerTag1.{LONG}\nAl,a@x.edu,t\n").encode()
     result = parse_reviewer_csv(content)
     assert result.rows == []
     assert len(result.issues) == 1
@@ -81,11 +76,7 @@ def test_a_legacy_photolink_cell_is_reported_under_its_own_header() -> None:
 def test_a_row_refused_for_length_does_not_reserve_its_email() -> None:
     """The later valid row is not "a duplicate of row 1": row 1 never
     parsed, so the caller cannot see it."""
-    content = (
-        "ReviewerName,ReviewerEmail\n"
-        f"{LONG},a@x.edu\n"
-        "Al,a@x.edu\n"
-    ).encode()
+    content = (f"ReviewerName,ReviewerEmail\n{LONG},a@x.edu\nAl,a@x.edu\n").encode()
     result = parse_reviewer_csv(content)
     assert _fields(result) == [(1, "ReviewerName")]
     assert [r.name for r in result.rows] == ["Al"]
@@ -102,9 +93,7 @@ def test_a_cell_over_the_csv_parser_limit_is_reported_not_raised() -> None:
         result = parse_reviewer_csv(content)
         assert result.rows == []
         assert result.is_blocked
-        assert result.issues[0].message == (
-            "A cell is longer than 131,072 characters"
-        )
+        assert result.issues[0].message == ("A cell is longer than 131,072 characters")
 
 
 def test_relationship_tag_over_its_column(db: Session) -> None:
@@ -118,10 +107,7 @@ def test_relationship_tag_over_its_column(db: Session) -> None:
     rve = Reviewee(session_id=rs.id, name="E", email_or_identifier="e@x.edu")
     db.add_all([rvr, rve])
     db.flush()
-    content = (
-        "ReviewerEmail,RevieweeEmail,PairContextTag3\n"
-        f"r@x.edu,e@x.edu,{LONG}\n"
-    ).encode()
+    content = (f"ReviewerEmail,RevieweeEmail,PairContextTag3\nr@x.edu,e@x.edu,{LONG}\n").encode()
     result = parse_relationship_csv(content, reviewers=[rvr], reviewees=[rve])
     assert _fields(result) == [(1, "PairContextTag3")]
     assert result.rows == []

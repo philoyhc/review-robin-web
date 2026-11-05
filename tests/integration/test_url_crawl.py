@@ -68,7 +68,10 @@ def _user(name: str) -> AuthenticatedUser:
     olive observes and carol is reviewed in the seeded session."""
     if name == "alice":
         return AuthenticatedUser(
-            principal_id="alice-oid", email="alice@example.edu", name="Alice Example", provider="aad"
+            principal_id="alice-oid",
+            email="alice@example.edu",
+            name="Alice Example",
+            provider="aad",
         )
     return AuthenticatedUser(
         principal_id=f"{name}-oid", email=f"{name}@example.edu", name=name.title(), provider="aad"
@@ -91,7 +94,9 @@ def _draft_session(client: TestClient, db: Session) -> str:
 
     base = f"{MOUNT}/operator/sessions"
     client.post(base, data={"name": "Live", "code": "live"}, follow_redirects=False)
-    review_session = db.execute(select(ReviewSession).where(ReviewSession.code == "live")).scalar_one()
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "live")
+    ).scalar_one()
     sid = review_session.public_id
     for kind, body in (
         ("reviewers", b"ReviewerName,ReviewerEmail\nRae,rae@example.edu\n"),
@@ -110,7 +115,9 @@ def _draft_session(client: TestClient, db: Session) -> str:
 def _activate(client: TestClient, db: Session, sid: str) -> None:
     for step in ("prepare", "activate"):
         client.post(f"{MOUNT}/operator/sessions/{sid}/workflow/{step}", follow_redirects=False)
-    review_session = db.execute(select(ReviewSession).where(ReviewSession.public_id == sid)).scalar_one()
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.public_id == sid)
+    ).scalar_one()
     db.refresh(review_session)
     assert review_session.status == "ready", review_session.status  # activated: open to reviewers
 
@@ -200,7 +207,9 @@ def test_a_post_redirect_lands_under_the_mount(mounted_client: TestClient) -> No
 def test_a_reviewer_redirect_lands_under_the_mount(
     active_session_id: str, rae_client: TestClient, path: str
 ) -> None:
-    response = rae_client.get(f"{MOUNT}{path.format(sid=active_session_id)}", follow_redirects=False)
+    response = rae_client.get(
+        f"{MOUNT}{path.format(sid=active_session_id)}", follow_redirects=False
+    )
     assert response.status_code in (302, 303, 307)
     assert response.headers["location"].startswith(f"{MOUNT}/me")
     assert leaks(response) == []
@@ -266,7 +275,12 @@ ROUTES: dict[str, tuple[Visit, ...]] = {
     "/redoc": _PAGE,
     "/openapi.json": _PAGE,
     # The participant surfaces.
-    "/me": (Visit("alice", 200), Visit("rae", 200), Visit("olive", 200), Visit("carol", 200, _RELEASED)),
+    "/me": (
+        Visit("alice", 200),
+        Visit("rae", 200),
+        Visit("olive", 200),
+        Visit("carol", 200, _RELEASED),
+    ),
     "/me/invite/{token}": (Visit("rae", 303),),
     "/me/sessions/{session_id}": (Visit("rae", 303),),
     "/me/sessions/{session_id}/{page_n}": (Visit("rae", 200), Visit("rae", 200, _SUBMITTED)),
@@ -354,14 +368,18 @@ def test_every_get_route_is_crawled() -> None:
     assert {path for path, ops in app.openapi()["paths"].items() if "get" in ops} <= registered
     assert set(ROUTES) == registered
     assert all(ROUTES.values()), "a route with no visit is not crawled"
-    pinned_at_404 = {route for route, visits in ROUTES.items() if any(v.status == 404 for v in visits)}
+    pinned_at_404 = {
+        route for route, visits in ROUTES.items() if any(v.status == 404 for v in visits)
+    }
     assert pinned_at_404 == {"/operator/sessions/rehydrate/dropped.csv"}
 
 
 def _seed_draft(client: TestClient, db: Session) -> tuple[ReviewSession, dict[str, str]]:
     """The draft session, and a value for every path parameter it has yet."""
     sid = _draft_session(client, db)
-    review_session = db.execute(select(ReviewSession).where(ReviewSession.public_id == sid)).scalar_one()
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.public_id == sid)
+    ).scalar_one()
     review_session.relationships_enabled = True
     review_session.observers_enabled = True
     db.add(Observer(session_id=review_session.id, email="olive@example.edu", display_name="Olive"))
@@ -394,25 +412,39 @@ def _first[M: (Instrument, Reviewer, Reviewee, DataShape, Invitation)](
     return row
 
 
-def _go_live(client: TestClient, db: Session, review_session: ReviewSession, params: dict[str, str]) -> None:
+def _go_live(
+    client: TestClient, db: Session, review_session: ReviewSession, params: dict[str, str]
+) -> None:
     """Activate, and send rae's invitation for its token."""
     _activate(client, db, review_session.public_id)
     invitation = _first(db, Invitation, review_session)
-    client.post(f"{MOUNT}/operator/sessions/{review_session.public_id}/invitations/{invitation.id}/send")
-    outbox = db.execute(select(EmailOutbox).where(EmailOutbox.invitation_id == invitation.id)).scalar_one()
+    client.post(
+        f"{MOUNT}/operator/sessions/{review_session.public_id}/invitations/{invitation.id}/send"
+    )
+    outbox = db.execute(
+        select(EmailOutbox).where(EmailOutbox.invitation_id == invitation.id)
+    ).scalar_one()
     token = re.search(r"/me/invite/([\w-]+)", outbox.body)
     assert token is not None, outbox.body
     params.update(invitation_id=str(invitation.id), token=token.group(1))
+
+
 def _submit(client: TestClient, db: Session, review_session: ReviewSession) -> None:
     """rae answers every field on page 1 and submits."""
-    assignments = db.execute(
-        select(Assignment).where(Assignment.session_id == review_session.id)
-    ).scalars().all()
-    fields = db.execute(
-        select(InstrumentResponseField).where(
-            InstrumentResponseField.instrument_id.in_({a.instrument_id for a in assignments})
+    assignments = (
+        db.execute(select(Assignment).where(Assignment.session_id == review_session.id))
+        .scalars()
+        .all()
+    )
+    fields = (
+        db.execute(
+            select(InstrumentResponseField).where(
+                InstrumentResponseField.instrument_id.in_({a.instrument_id for a in assignments})
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     data = {
         f"response[{a.id}][{f.field_key}]": "1"
         for a in assignments
@@ -427,9 +459,7 @@ def _submit(client: TestClient, db: Session, review_session: ReviewSession) -> N
     assert response.headers["location"].endswith("/summary"), response.headers["location"]
 
 
-def _release(
-    db: Session, review_session: ReviewSession, grant: Callable[..., Instrument]
-) -> None:
+def _release(db: Session, review_session: ReviewSession, grant: Callable[..., Instrument]) -> None:
     """Close the session with responses released: carol holds a grant,
     and olive may download the first instrument's rows, her cohort rule
     taking in rae's."""
@@ -441,10 +471,16 @@ def _release(
             Instrument.session_id == review_session.id, Instrument.session_seq == 1
         )
     ).scalar_one()
-    db.execute(select(Reviewer).where(Reviewer.session_id == review_session.id)).scalar_one().tag_1 = "crawl"
-    db.execute(select(Observer).where(Observer.session_id == review_session.id)).scalar_one().cohort_rule = {
+    db.execute(
+        select(Reviewer).where(Reviewer.session_id == review_session.id)
+    ).scalar_one().tag_1 = "crawl"
+    db.execute(
+        select(Observer).where(Observer.session_id == review_session.id)
+    ).scalar_one().cohort_rule = {
         "combinator": "AND",
-        "rules": [{"field": "reviewer.tag1", "op": "IS", "operand_tag": "", "operand_value": "crawl"}],
+        "rules": [
+            {"field": "reviewer.tag1", "op": "IS", "operand_tag": "", "operand_value": "crawl"}
+        ],
     }
     granularity, identification = MODE_LABELS["raw"]
     db.add(

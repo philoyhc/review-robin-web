@@ -16,6 +16,7 @@ cannot offer.
 The pairing is deliberate: the integration tests say the order is
 right, and this one says the reason it is right has not been removed.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -80,6 +81,4 @@ def test_the_guard_is_keyed_on_the_dialect_not_the_server() -> None:
     or the ordering becomes a property of the deployment."""
     pg = _code_point(_session("postgresql"), column("name", String))
     lite = _code_point(_session("sqlite"), column("name", String))
-    assert _compiled(pg, postgresql.dialect()) != _compiled(
-        lite, sqlite.dialect()
-    )
+    assert _compiled(pg, postgresql.dialect()) != _compiled(lite, sqlite.dialect())

@@ -4,6 +4,7 @@ Includes the observer-side trigger + the per-anchor dedup helper +
 the invitation-dispatch wrapper + the editor-side parser
 (``parse_and_validate_invite_offsets``).
 """
+
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
@@ -84,9 +85,7 @@ def _consumed_invite_offset_indices(
     """
     # The same record the save-time check reads, matched as an instant
     # (findings Bc1), so the two can never disagree on a position.
-    return set(
-        fired_offsets(db, session, "invite", datetime.fromisoformat(anchor_iso))
-    )
+    return set(fired_offsets(db, session, "invite", datetime.fromisoformat(anchor_iso)))
 
 
 def _observe_scheduled_invites(
@@ -139,9 +138,7 @@ def _observe_scheduled_invites(
 
     fires = _resolve_invite_fires(session)
     due = [
-        (idx, raw, fire_at)
-        for idx, raw, fire_at in fires
-        if fire_at is not None and fire_at <= now
+        (idx, raw, fire_at) for idx, raw, fire_at in fires if fire_at is not None and fire_at <= now
     ]
     if not due:
         return
@@ -162,10 +159,7 @@ def _observe_scheduled_invites(
         pending = sorted(
             (fire_at, idx, raw)
             for idx, raw, fire_at in _resolve_invite_fires(locked)
-            if fire_at is not None
-            and fire_at <= now
-            and idx not in consumed
-            and idx not in handled
+            if fire_at is not None and fire_at <= now and idx not in consumed and idx not in handled
         )
         if not pending:
             db.commit()
@@ -222,10 +216,7 @@ def _fire_invite_entry(
         audit.write_event(
             db,
             event_type="session.scheduled_invites_skipped",
-            summary=(
-                f"Scheduled invites for {locked.code} skipped "
-                f"({offset_str}): {skip_reason}"
-            ),
+            summary=(f"Scheduled invites for {locked.code} skipped ({offset_str}): {skip_reason}"),
             actor_user_id=None,
             session=locked,
             reason=skip_reason,
@@ -243,10 +234,7 @@ def _fire_invite_entry(
     audit.write_event(
         db,
         event_type="session.scheduled_invites_fired",
-        summary=(
-            f"Scheduled invites for {locked.code} fired "
-            f"({offset_str}); dispatched {sent}"
-        ),
+        summary=(f"Scheduled invites for {locked.code} fired ({offset_str}); dispatched {sent}"),
         actor_user_id=None,
         session=locked,
         payload=audit.counts(sent=sent),
@@ -354,9 +342,7 @@ def parse_and_validate_invite_offsets(
         else settings.scheduled_operational_lead_hours
     )
     notice_hours = (
-        notice_min_hours
-        if notice_min_hours is not None
-        else settings.reviewer_notice_min_hours
+        notice_min_hours if notice_min_hours is not None else settings.reviewer_notice_min_hours
     )
     current = now or datetime.now(UTC)
 
@@ -386,9 +372,7 @@ def parse_and_validate_invite_offsets(
                     f"Auto-send invite {entry} resolves outside the dates "
                     f"this app can hold; check Start."
                 ) from exc
-            exempt = (
-                index < len(aged_exempt) and entry in aged_exempt[index]
-            )
+            exempt = index < len(aged_exempt) and entry in aged_exempt[index]
             if not exempt and fire_at - current < timedelta(hours=op_hours):
                 raise ScheduledActivateError(
                     f"Auto-send invite {entry} resolves to before now + "

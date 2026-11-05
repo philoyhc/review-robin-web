@@ -34,8 +34,12 @@ def plan_detail(request: Request, pid: str) -> Response:
         raise HTTPException(status_code=404)
     owner = found.staff == me.name
     return gated(
-        request, "supportlogs/plan.html", *READERS,
-        p=found, owner=owner, senior=sample.holds(me, sample.SENIOR),
+        request,
+        "supportlogs/plan.html",
+        *READERS,
+        p=found,
+        owner=owner,
+        senior=sample.holds(me, sample.SENIOR),
         shared=not owner and not oversees,
         linked=sample.holds(me, sample.FRONTLINE) and reaches_student(me, found.student),
         current_tab="/plans/" if owner else "/students/" if not oversees else "/overview/",
@@ -51,7 +55,9 @@ def share_choices(me: sample.Viewer, sid: str) -> list[str]:
     """Frontline colleagues to share with: not the viewer, not someone who
     already holds the grant, not a colleague who shared the student with
     the viewer."""
-    taken = {g.viewer for g in sample.grants_by(me.name, sid)} | {g.grantor for g in sample.shared_with(me.name) if g.student == sid}
+    taken = {g.viewer for g in sample.grants_by(me.name, sid)} | {
+        g.grantor for g in sample.shared_with(me.name) if g.student == sid
+    }
     return [c for c in sample.FRONTLINE_COLLEAGUES if c != me.name and c not in taken]
 
 
@@ -76,8 +82,14 @@ def share(request: Request, sid: str) -> Response:
     if sample.holds(me, sample.FRONTLINE) and not owns_records(me, sid):
         raise HTTPException(status_code=404)  # nothing of the viewer's own to share
     colleagues = share_choices(me, sid)
-    return gated(request, "supportlogs/share.html", sample.FRONTLINE, chosen=found, colleagues=colleagues,
-                 current_tab="/students/")
+    return gated(
+        request,
+        "supportlogs/share.html",
+        sample.FRONTLINE,
+        chosen=found,
+        colleagues=colleagues,
+        current_tab="/students/",
+    )
 
 
 @router.get("/students/{sid}/share/sent", name="supportlogs_share_sent")
@@ -87,9 +99,17 @@ def share_sent(request: Request, sid: str) -> Response:
     if sample.holds(me, sample.FRONTLINE) and not owns_records(me, sid):
         raise HTTPException(status_code=404)
     if sample.holds(me, sample.FRONTLINE) and colleague not in share_choices(me, sid):
-        return RedirectResponse(url_path(request, f"/students/{sid}/share") + query(me), status_code=303)
-    return gated(request, "supportlogs/share_sent.html", sample.FRONTLINE, chosen=found, colleague=colleague,
-                 current_tab="/students/")
+        return RedirectResponse(
+            url_path(request, f"/students/{sid}/share") + query(me), status_code=303
+        )
+    return gated(
+        request,
+        "supportlogs/share_sent.html",
+        sample.FRONTLINE,
+        chosen=found,
+        colleague=colleague,
+        current_tab="/students/",
+    )
 
 
 @router.get("/students/{sid}/refer", name="supportlogs_refer")
@@ -99,7 +119,9 @@ def refer(request: Request, sid: str) -> Response:
     me, found = _student_for(request, sid)
     if sample.holds(me, sample.FRONTLINE) and not _referable(me, sid):
         return RedirectResponse(url_path(request, f"/students/{sid}") + query(me), status_code=303)
-    return gated(request, "supportlogs/refer.html", sample.FRONTLINE, chosen=found, current_tab="/students/")
+    return gated(
+        request, "supportlogs/refer.html", sample.FRONTLINE, chosen=found, current_tab="/students/"
+    )
 
 
 @router.get("/students/{sid}/refer/sent", name="supportlogs_refer_sent")
@@ -109,5 +131,11 @@ def refer_sent(request: Request, sid: str) -> Response:
         return RedirectResponse(url_path(request, f"/students/{sid}") + query(me), status_code=303)
     cadence = request.query_params.get("cadence", "")
     cadence = cadence if cadence in sample.ASSIGNMENT_CADENCES else ""
-    return gated(request, "supportlogs/refer_sent.html", sample.FRONTLINE, chosen=found, cadence=cadence,
-                 current_tab="/students/")
+    return gated(
+        request,
+        "supportlogs/refer_sent.html",
+        sample.FRONTLINE,
+        chosen=found,
+        cadence=cadence,
+        current_tab="/students/",
+    )

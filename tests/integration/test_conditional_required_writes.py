@@ -26,13 +26,17 @@ from .test_response_field_branching_save import _add_response, _branched, _rfs, 
 # The card's save.
 
 
-def test_the_cards_save_takes_a_mode_and_audits_it(
-    client: TestClient, db: Session
-) -> None:
+def test_the_cards_save_takes_a_mode_and_audits_it(client: TestClient, db: Session) -> None:
     review_session, instrument, rating, _ = _branched(client, db, "13-save")
-    response = _save(client, review_session, instrument, _rfs(
-        instrument, Rating={"branch_mode": "require"},
-    ))
+    response = _save(
+        client,
+        review_session,
+        instrument,
+        _rfs(
+            instrument,
+            Rating={"branch_mode": "require"},
+        ),
+    )
     assert response.status_code == 200, response.text
     db.refresh(rating)
     assert (rating.branch_op, rating.branch_mode) == ("ge", "require")
@@ -44,17 +48,21 @@ def test_the_cards_save_takes_a_mode_and_audits_it(
     ]
     assert {"branch_mode": [None, "require"]} in changes
     # Show is stored as null, and audited back to it.
-    response = _save(client, review_session, instrument, _rfs(
-        instrument, Rating={"branch_mode": "show"},
-    ))
+    response = _save(
+        client,
+        review_session,
+        instrument,
+        _rfs(
+            instrument,
+            Rating={"branch_mode": "show"},
+        ),
+    )
     assert response.status_code == 200, response.text
     db.refresh(rating)
     assert rating.branch_mode is None
 
 
-def test_the_cards_save_keeps_a_mode_an_entry_omits(
-    client: TestClient, db: Session
-) -> None:
+def test_the_cards_save_keeps_a_mode_an_entry_omits(client: TestClient, db: Session) -> None:
     """As for the other branch keys: a caller that knows nothing of modes
     can't clear one."""
     review_session, instrument, rating, _ = _branched(client, db, "13-save-omit")
@@ -66,13 +74,17 @@ def test_the_cards_save_keeps_a_mode_an_entry_omits(
     assert rating.branch_mode == "require"
 
 
-def test_the_cards_save_refuses_an_unknown_mode(
-    client: TestClient, db: Session
-) -> None:
+def test_the_cards_save_refuses_an_unknown_mode(client: TestClient, db: Session) -> None:
     review_session, instrument, rating, _ = _branched(client, db, "13-save-bad")
-    response = _save(client, review_session, instrument, _rfs(
-        instrument, Rating={"branch_mode": "maybe"},
-    ))
+    response = _save(
+        client,
+        review_session,
+        instrument,
+        _rfs(
+            instrument,
+            Rating={"branch_mode": "maybe"},
+        ),
+    )
     assert response.status_code == 422
     assert response.json()["errors"] == ["Rating: Choose what the branch condition does."]
     db.refresh(rating)
@@ -86,9 +98,15 @@ def test_saved_responses_lock_the_mode(client: TestClient, db: Session) -> None:
     db.commit()
     _add_response(db, review_session, instrument, comments)
     db.expire_all()
-    response = _save(client, review_session, instrument, _rfs(
-        instrument, Rating={"branch_mode": "show"},
-    ))
+    response = _save(
+        client,
+        review_session,
+        instrument,
+        _rfs(
+            instrument,
+            Rating={"branch_mode": "show"},
+        ),
+    )
     assert response.status_code == 422
     assert response.json()["errors"] == [
         "Rating: Its branch has saved responses, so its condition can't change."
@@ -105,9 +123,15 @@ def test_a_mode_goes_with_its_branch(client: TestClient, db: Session) -> None:
     review_session, instrument, rating, _ = _branched(client, db, "13-save-end")
     rating.branch_mode = "require"
     db.commit()
-    response = _save(client, review_session, instrument, _rfs(
-        instrument, Comments={"branch_parent": None},
-    ))
+    response = _save(
+        client,
+        review_session,
+        instrument,
+        _rfs(
+            instrument,
+            Comments={"branch_parent": None},
+        ),
+    )
     assert response.status_code == 200, response.text
     db.refresh(rating)
     assert (rating.branch_op, rating.branch_value, rating.branch_mode) == (None, None, None)
@@ -133,7 +157,9 @@ def test_the_settings_csv_round_trips_a_mode(db: Session) -> None:
     # Show exports blank.
     assert by_field[f"{prefix}[3].branch_mode"].value == ""
     target, _ = _session(db, "13-csv-dst")
-    result = apply_session_config(db, target, [r for r in rows if r.field.startswith("instruments")])
+    result = apply_session_config(
+        db, target, [r for r in rows if r.field.startswith("instruments")]
+    )
     assert result.errors == []
     copied = db.execute(select(Instrument).where(Instrument.session_id == target.id)).scalar_one()
     fields = _fields(db, copied.id)
@@ -145,10 +171,7 @@ def _with_mode(db: Session, code: str, key: str, value: str) -> list[Row]:
     source, _ = _session(db, code)
     _branched_instrument(db, source)
     rows = [r for r in serialize_session_config(db, source) if r.field.startswith("instruments")]
-    return [
-        Row(r.field, value, r.data_type) if r.field == key else r
-        for r in rows
-    ]
+    return [Row(r.field, value, r.data_type) if r.field == key else r for r in rows]
 
 
 def test_the_settings_csv_reads_show_as_null(db: Session) -> None:
@@ -163,17 +186,21 @@ def test_the_settings_csv_refuses_an_unknown_mode(db: Session) -> None:
     rows = _with_mode(db, "13-csv-bad", "instruments[1].response_fields[1].branch_mode", "maybe")
     target, _ = _session(db, "13-csv-bad-dst")
     errors = apply_session_config(db, target, rows).errors
-    assert [(e.field, e.message) for e in errors] == [(
-        "instruments[1].response_fields[1].branch_mode",
-        "unknown branch_mode 'maybe'; expected one of ['require', 'show']",
-    )]
+    assert [(e.field, e.message) for e in errors] == [
+        (
+            "instruments[1].response_fields[1].branch_mode",
+            "unknown branch_mode 'maybe'; expected one of ['require', 'show']",
+        )
+    ]
 
 
 def test_the_settings_csv_reads_show_as_blank_on_any_field(db: Session) -> None:
     """``show`` is Item 10's kind, the same as a blank cell, so on a field
     with no branch it is no orphan (Codex on #2675: the contract now says
     so)."""
-    rows = _with_mode(db, "13-csv-show-any", "instruments[1].response_fields[3].branch_mode", "show")
+    rows = _with_mode(
+        db, "13-csv-show-any", "instruments[1].response_fields[3].branch_mode", "show"
+    )
     target, _ = _session(db, "13-csv-show-any-dst")
     assert apply_session_config(db, target, rows).errors == []
     copied = db.execute(select(Instrument).where(Instrument.session_id == target.id)).scalar_one()
@@ -183,7 +210,9 @@ def test_the_settings_csv_reads_show_as_blank_on_any_field(db: Session) -> None:
 def test_the_settings_csv_refuses_a_mode_without_a_branch(db: Session) -> None:
     """``require`` on a field with no condition is an orphan, like a lone
     ``branch_value``."""
-    rows = _with_mode(db, "13-csv-orphan", "instruments[1].response_fields[3].branch_mode", "require")
+    rows = _with_mode(
+        db, "13-csv-orphan", "instruments[1].response_fields[3].branch_mode", "require"
+    )
     target, _ = _session(db, "13-csv-orphan-dst")
     errors = apply_session_config(db, target, rows).errors
     assert [e.message for e in errors] == ["Notes: Its branch condition governs no field."]
@@ -192,7 +221,9 @@ def test_the_settings_csv_refuses_a_mode_without_a_branch(db: Session) -> None:
 def test_the_settings_csv_holds_a_require_mode_branch_to_the_anchor_rule(db: Session) -> None:
     """With no active required field outside the branch, a require-mode
     branch is refused, naming its governed field (19T Item 11's rule)."""
-    rows = _with_mode(db, "13-csv-anchor", "instruments[1].response_fields[1].branch_mode", "require")
+    rows = _with_mode(
+        db, "13-csv-anchor", "instruments[1].response_fields[1].branch_mode", "require"
+    )
     target, _ = _session(db, "13-csv-anchor-dst")
     errors = apply_session_config(db, target, rows).errors
     assert [e.message for e in errors] == [

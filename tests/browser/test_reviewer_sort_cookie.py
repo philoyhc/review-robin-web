@@ -121,9 +121,7 @@ def _row_names(reviewer: Page) -> list[str]:
 
 
 def _badge(reviewer: Page, rating_key: str) -> Locator:
-    return reviewer.locator(
-        f"th[data-sort-key='response:{rating_key}'] .rrw-sort-badge"
-    )
+    return reviewer.locator(f"th[data-sort-key='response:{rating_key}'] .rrw-sort-badge")
 
 
 @pytest.mark.parametrize(

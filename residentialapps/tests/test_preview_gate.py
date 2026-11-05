@@ -47,9 +47,15 @@ def signed_in(monkeypatch: pytest.MonkeyPatch, identity: Identity | None) -> Non
     monkeypatch.setattr(web_pages, "current_identity", lambda request: identity)
 
 
-def person(*, mail: str | None = None, upn: str | None = None, email: str | None = None) -> Identity:
+def person(
+    *, mail: str | None = None, upn: str | None = None, email: str | None = None
+) -> Identity:
     return Identity(
-        principal_id="p", email=email or mail or upn, name="Someone", mail=mail, upn=upn,
+        principal_id="p",
+        email=email or mail or upn,
+        name="Someone",
+        mail=mail,
+        upn=upn,
         resolved_with=IdentitySettings(super_admin_emails=["boss@example.edu"]),
     )
 
@@ -85,8 +91,13 @@ def test_a_previewer_reaches_both_applications(
 
 @pytest.mark.parametrize(
     "identity",
-    [None, person(mail="prose@example.edu"), person(mail="nested@example.edu"),
-     person(mail="rf.one@example.edu.sg"), person()],
+    [
+        None,
+        person(mail="prose@example.edu"),
+        person(mail="nested@example.edu"),
+        person(mail="rf.one@example.edu.sg"),
+        person(),
+    ],
 )
 def test_anyone_else_gets_404_and_health_still_answers(
     preview_file: Path, monkeypatch: pytest.MonkeyPatch, identity: Identity | None
@@ -121,7 +132,9 @@ def test_comments_and_fenced_code_do_not_name_anyone() -> None:
 <!-- unterminated
 - tail@example.edu
 """
-    assert web_pages.parse_preview_list(text) == frozenset({"kept@example.edu", "after@example.edu"})
+    assert web_pages.parse_preview_list(text) == frozenset(
+        {"kept@example.edu", "after@example.edu"}
+    )
 
 
 @pytest.mark.parametrize(
@@ -137,7 +150,9 @@ def test_comments_and_fenced_code_do_not_name_anyone() -> None:
         ("- [linked@example.edu](mailto:linked@example.edu)", None),
     ],
 )
-def test_an_item_s_first_word_is_trimmed_then_must_be_one_address(item: str, address: str | None) -> None:
+def test_an_item_s_first_word_is_trimmed_then_must_be_one_address(
+    item: str, address: str | None
+) -> None:
     assert web_pages.parse_preview_list(item) == (frozenset({address}) if address else frozenset())
 
 
@@ -212,7 +227,9 @@ def test_comments_are_literal_inside_a_fence_and_only_ever_remove() -> None:
 -->
 - after@example.edu
 """
-    assert web_pages.parse_preview_list(text) == frozenset({"before.comment@example.edu", "after@example.edu"})
+    assert web_pages.parse_preview_list(text) == frozenset(
+        {"before.comment@example.edu", "after@example.edu"}
+    )
 
 
 def _gated_routes(

@@ -23,8 +23,10 @@ _BRAND = "Review Robin Web"
 def _participant(make_client) -> TestClient:
     return make_client(
         AuthenticatedUser(
-            principal_id="pat-oid", email="pat@example.edu",
-            name="Pat Participant", provider="aad",
+            principal_id="pat-oid",
+            email="pat@example.edu",
+            name="Pat Participant",
+            provider="aad",
         )
     )
 
@@ -38,9 +40,7 @@ def _seed_reviewer(client: TestClient, db: Session) -> None:
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.code == "rrw-copy")
     ).scalar_one()
-    db.add(
-        Reviewer(session_id=review_session.id, name="Pat", email="pat@example.edu")
-    )
+    db.add(Reviewer(session_id=review_session.id, name="Pat", email="pat@example.edu"))
     db.commit()
 
 
@@ -106,9 +106,7 @@ def test_an_operator_keeps_the_operator_guide_subtitle(client: TestClient) -> No
 
 def _card(name: str) -> str:
     text = (_TEMPLATES / "guide.html").read_text()
-    match = re.search(
-        rf'id="guide-{name}">(.*?)</div>', text, flags=re.DOTALL
-    )
+    match = re.search(rf'id="guide-{name}">(.*?)</div>', text, flags=re.DOTALL)
     assert match, name
     return " ".join(match.group(1).split())
 

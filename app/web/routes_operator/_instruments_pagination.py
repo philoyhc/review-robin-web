@@ -42,13 +42,10 @@ from app.web.routes_operator._shared import (
 router = APIRouter()
 
 
-@router.post(
-    "/sessions/{session_id}/instruments/{instrument_id}/page-break/create"
-)
+@router.post("/sessions/{session_id}/instruments/{instrument_id}/page-break/create")
 def instrument_page_break_create(
-    request: Request, bundle: tuple[Instrument, ReviewSession] = Depends(
-        _require_instrument_in_session
-    ),
+    request: Request,
+    bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -60,25 +57,18 @@ def instrument_page_break_create(
     instrument, review_session = bundle
     _require_instrument_editable(review_session)
     try:
-        instruments_service.create_page_break_after(
-            db, instrument=instrument, actor=user
-        )
+        instruments_service.create_page_break_after(db, instrument=instrument, actor=user)
     except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
-        ) from exc
-    return _instruments_redirect(request,
-        review_session.public_id, fragment=f"instrument-{instrument.id}"
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    return _instruments_redirect(
+        request, review_session.public_id, fragment=f"instrument-{instrument.id}"
     )
 
 
-@router.post(
-    "/sessions/{session_id}/instruments/{instrument_id}/page-break/delete"
-)
+@router.post("/sessions/{session_id}/instruments/{instrument_id}/page-break/delete")
 def instrument_page_break_delete(
-    request: Request, bundle: tuple[Instrument, ReviewSession] = Depends(
-        _require_instrument_in_session
-    ),
+    request: Request,
+    bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -90,15 +80,11 @@ def instrument_page_break_delete(
     instrument, review_session = bundle
     _require_instrument_editable(review_session)
     try:
-        instruments_service.clear_page_break(
-            db, instrument=instrument, actor=user
-        )
+        instruments_service.clear_page_break(db, instrument=instrument, actor=user)
     except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
-        ) from exc
-    return _instruments_redirect(request,
-        review_session.public_id, fragment=f"instrument-{instrument.id}"
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    return _instruments_redirect(
+        request, review_session.public_id, fragment=f"instrument-{instrument.id}"
     )
 
 
@@ -125,6 +111,7 @@ async def instruments_order(
     """
     _require_instrument_editable(review_session)
     body = await require_json_object(request, label="instruments/order")
+
     # Everything after the request body is read runs in the threadpool:
     # the instrument services lock the session row (findings Bc4), and
     # a lock wait on the event loop would stall the worker.
@@ -156,9 +143,7 @@ async def instruments_order(
                 db, review_session=review_session, items=items, actor=user
             )
         except ValueError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT, detail=str(exc)
-            ) from exc
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
         # Echo the persisted state so the client can patch the DOM (page-
         # break cards + +Page break button disabled states) without a
         # full reload.
@@ -167,7 +152,9 @@ async def instruments_order(
                 select(Instrument)
                 .where(Instrument.session_id == review_session.id)
                 .order_by(Instrument.order, Instrument.id)
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         )
         order = [inst.id for inst in rows]
         breaks_at = [inst.id for inst in rows if inst.starts_new_page]

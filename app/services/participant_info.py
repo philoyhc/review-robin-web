@@ -70,23 +70,27 @@ class _Participant:
     #: The save's lifecycle gate: the roster page's own predicate.
     #: ``require_editable`` for Reviewers and Reviewees; the Observers
     #: roster stays open while the session runs, so ``require_not_archived``.
-    require: Callable[[Session, ReviewSession], ReviewSession] = (
-        lifecycle.require_editable
-    )
+    require: Callable[[Session, ReviewSession], ReviewSession] = lifecycle.require_editable
 
 
 _PARTICIPANTS: dict[str, _Participant] = {
     "reviewer": _Participant(
-        REVIEWER_SELF_FIELD_KEYS, REVIEWER_SELF_DEFAULT,
-        "reviewer_self_fields", "reviewers",
+        REVIEWER_SELF_FIELD_KEYS,
+        REVIEWER_SELF_DEFAULT,
+        "reviewer_self_fields",
+        "reviewers",
     ),
     "reviewee": _Participant(
-        REVIEWEE_SELF_FIELD_KEYS, REVIEWEE_SELF_DEFAULT,
-        "reviewee_self_fields", "reviewees",
+        REVIEWEE_SELF_FIELD_KEYS,
+        REVIEWEE_SELF_DEFAULT,
+        "reviewee_self_fields",
+        "reviewees",
     ),
     "observer": _Participant(
-        OBSERVER_SELF_FIELD_KEYS, OBSERVER_SELF_DEFAULT,
-        "observer_self_fields", "observers",
+        OBSERVER_SELF_FIELD_KEYS,
+        OBSERVER_SELF_DEFAULT,
+        "observer_self_fields",
+        "observers",
         require=lifecycle.require_not_archived,
     ),
 }
@@ -124,9 +128,7 @@ def normalize_self_fields(participant: str, keys: Iterable[object]) -> list[str]
     return [key for key in spec.keys if key in chosen]
 
 
-def effective_self_fields(
-    review_session: ReviewSession, participant: str
-) -> tuple[str, ...]:
+def effective_self_fields(review_session: ReviewSession, participant: str) -> tuple[str, ...]:
     """The stored selection, or the default while none is stored.
 
     A stored value that no longer normalizes (a hand-edited row, a

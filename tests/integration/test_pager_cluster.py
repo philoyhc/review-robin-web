@@ -64,35 +64,24 @@ TEMPLATES = (
 )
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "Spring", "code": code},
         follow_redirects=False,
     )
     assert response.status_code == 303
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _reviewers_page(
     client: TestClient, db: Session, *, code: str, rows: int, offset: int = 0
 ) -> str:
     review_session = _make_session(client, db, code=code)
-    csv = b"".join(
-        f"Reviewer {i:05d},r{i:05d}@example.edu\n".encode()
-        for i in range(rows)
-    )
+    csv = b"".join(f"Reviewer {i:05d},r{i:05d}@example.edu\n".encode() for i in range(rows))
     response = client.post(
         f"/operator/sessions/{review_session.public_id}/reviewers/import",
-        files={
-            "file": (
-                "r.csv", b"ReviewerName,ReviewerEmail\n" + csv, "text/csv"
-            )
-        },
+        files={"file": ("r.csv", b"ReviewerName,ReviewerEmail\n" + csv, "text/csv")},
         follow_redirects=False,
     )
     assert response.status_code in (200, 303), response.status_code
@@ -121,9 +110,7 @@ def _clusters(body: str) -> list[str]:
     return out
 
 
-def test_the_cluster_renders_twice_on_a_table_that_pages(
-    client: TestClient, db: Session
-) -> None:
+def test_the_cluster_renders_twice_on_a_table_that_pages(client: TestClient, db: Session) -> None:
     """Both places, and that is not optional.
 
     ``base.html``: *"a 200-row table is several screens tall and a pager
@@ -148,14 +135,10 @@ def test_the_cluster_renders_twice_on_a_table_that_pages(
     assert toolbar < body.index('<div class="table-pager-cluster')
     # …and above the table it pages, where 19I Item 10 put the count
     # sentence the strip used to sit beside.
-    assert body.index('<div class="table-pager-cluster') < body.index(
-        'id="reviewers-table"'
-    )
+    assert body.index('<div class="table-pager-cluster') < body.index('id="reviewers-table"')
 
 
-def test_a_short_multi_page_table_still_gets_a_pager(
-    client: TestClient, db: Session
-) -> None:
+def test_a_short_multi_page_table_still_gets_a_pager(client: TestClient, db: Session) -> None:
     """The judgment call rung 1 made, and rung 2 had to unmake.
 
     Rung 1 rendered the cluster only where the strip elided: beside a
@@ -177,9 +160,7 @@ def test_a_short_multi_page_table_still_gets_a_pager(
     assert entries == ["1–200", "201–400", f"401–{SHORT_ROWS}"]
 
 
-def test_one_page_still_gets_no_pager(
-    client: TestClient, db: Session
-) -> None:
+def test_one_page_still_gets_no_pager(client: TestClient, db: Session) -> None:
     """Unchanged since 19J.5, and worth pinning through a surface
     change: a control that cannot go anywhere is noise."""
     body = _reviewers_page(client, db, code="cluster-2b", rows=ONE_PAGE_ROWS)
@@ -188,9 +169,7 @@ def test_one_page_still_gets_no_pager(
     assert "table-pager-cluster" not in body.split("</style>")[-1]
 
 
-def test_the_menu_holds_every_range_in_the_table(
-    client: TestClient, db: Session
-) -> None:
+def test_the_menu_holds_every_range_in_the_table(client: TestClient, db: Session) -> None:
     """The whole point: eight ranges reachable from any of them.
 
     The strip it replaced showed a five-wide window, so the middle of a
@@ -236,18 +215,14 @@ def _glyph_states(cluster: str) -> dict[str, str]:
     return out
 
 
-def test_the_ends_are_inactive_at_the_ends(
-    client: TestClient, db: Session
-) -> None:
+def test_the_ends_are_inactive_at_the_ends(client: TestClient, db: Session) -> None:
     """In place, never absent: absent buttons would shift the other
     cells sideways as the operator pages.
 
     Read on the first page *and* the last, because a condition wrong in
     one direction passes half of this test.
     """
-    first = _clusters(
-        _reviewers_page(client, db, code="cluster-4", rows=PAGING_ROWS)
-    )[0]
+    first = _clusters(_reviewers_page(client, db, code="cluster-4", rows=PAGING_ROWS))[0]
     assert _glyph_states(first) == {
         "«": "inactive",
         "‹": "inactive",
@@ -258,7 +233,10 @@ def test_the_ends_are_inactive_at_the_ends(
 
     last = _clusters(
         _reviewers_page(
-            client, db, code="cluster-4b", rows=PAGING_ROWS,
+            client,
+            db,
+            code="cluster-4b",
+            rows=PAGING_ROWS,
             offset=7 * PAGE_SIZE,
         )
     )[0]
@@ -272,16 +250,17 @@ def test_the_ends_are_inactive_at_the_ends(
     # And in the middle every cell goes somewhere.
     middle = _clusters(
         _reviewers_page(
-            client, db, code="cluster-4c", rows=PAGING_ROWS,
+            client,
+            db,
+            code="cluster-4c",
+            rows=PAGING_ROWS,
             offset=3 * PAGE_SIZE,
         )
     )[0]
     assert set(_glyph_states(middle).values()) == {"active"}
 
 
-def test_every_cell_navigates_and_agrees_with_the_menu(
-    client: TestClient, db: Session
-) -> None:
+def test_every_cell_navigates_and_agrees_with_the_menu(client: TestClient, db: Session) -> None:
     """Replaces rung 1's ``test_the_scaffold_navigates_nowhere``.
 
     Two things at once, because either alone would pass a broken pager:
@@ -290,7 +269,10 @@ def test_every_cell_navigates_and_agrees_with_the_menu(
     one page turn is how they drift.
     """
     body = _reviewers_page(
-        client, db, code="cluster-5", rows=PAGING_ROWS,
+        client,
+        db,
+        code="cluster-5",
+        rows=PAGING_ROWS,
         offset=3 * PAGE_SIZE,
     )
     cluster = _clusters(body)[0]
@@ -325,9 +307,7 @@ def test_every_cell_navigates_and_agrees_with_the_menu(
         assert href.endswith("#reviewers-table-card"), href
 
 
-def test_a_page_turn_from_the_menu_reaches_that_page(
-    client: TestClient, db: Session
-) -> None:
+def test_a_page_turn_from_the_menu_reaches_that_page(client: TestClient, db: Session) -> None:
     """One move to anywhere — the item's whole reason.
 
     Follows the menu's own href rather than a URL the test builds, so
@@ -368,13 +348,9 @@ def test_every_paging_template_carries_the_cluster_in_both_places() -> None:
     for name in TEMPLATES:
         markup = (root / name).read_text(encoding="utf-8", errors="replace")
         assert markup.count("_pager_cluster.html") == 2, name
-        assert "_preview_pager.html" not in markup, (
-            f"{name} still includes the retired range strip"
-        )
+        assert "_preview_pager.html" not in markup, f"{name} still includes the retired range strip"
         assert markup.count('<div class="table-card-toolbar') == 1, name
-        assert (
-            'cluster_extra_class = "table-pager-cluster-bottom"' in markup
-        ), name
+        assert 'cluster_extra_class = "table-pager-cluster-bottom"' in markup, name
         # The toolbar opens inside the anchored card, so a page turn
         # lands showing the cluster (19J.8).
         assert markup.index('id="{{ pager_anchor }}"') < markup.index(
@@ -397,9 +373,7 @@ def test_the_outside_click_handler_is_delegated_on_the_document() -> None:
     would work today and rot the first time anything re-renders, which
     is exactly the failure that leaves no trace.
     """
-    base = Path("app/web/templates/base.html").read_text(
-        encoding="utf-8", errors="replace"
-    )
+    base = Path("app/web/templates/base.html").read_text(encoding="utf-8", errors="replace")
     marker = "The range menu closes on an outside click"
     assert marker in base, "the outside-click block is gone"
 

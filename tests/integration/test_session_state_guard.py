@@ -8,6 +8,7 @@ loaded misses that write; one that re-reads under the lock sees it.
 These tests prove the reads happen in that order, not that Postgres
 blocks.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -50,11 +51,7 @@ def _lands_at_the_lock(
 
 
 def _status_becomes(session: ReviewSession, status: str):
-    return (
-        update(ReviewSession)
-        .where(ReviewSession.id == session.id)
-        .values(status=status)
-    )
+    return update(ReviewSession).where(ReviewSession.id == session.id).values(status=status)
 
 
 def _count(db: Session, session: ReviewSession, event_type: str) -> int:
@@ -74,9 +71,7 @@ def _operator(db: Session, session: ReviewSession) -> User:
     return user
 
 
-def test_manual_activate_after_the_scheduled_one_refuses(
-    db: Session, monkeypatch
-) -> None:
+def test_manual_activate_after_the_scheduled_one_refuses(db: Session, monkeypatch) -> None:
     """The scheduled activation commits as the operator's Activate
     starts: the manual one re-reads ``ready`` and refuses, rather than
     activating a second time."""
@@ -96,9 +91,7 @@ def test_manual_activate_after_the_scheduled_one_refuses(
     assert _count(db, session, "session.activated") == 0
 
 
-def test_require_editable_refuses_on_the_committed_status(
-    db: Session, monkeypatch
-) -> None:
+def test_require_editable_refuses_on_the_committed_status(db: Session, monkeypatch) -> None:
     session = _make_validated_session(db, "guard-editable")
     _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
 
@@ -121,9 +114,7 @@ def test_require_editable_passes_an_editable_session(db: Session) -> None:
         (lifecycle.require_not_ready, "ready", "session_ready"),
     ],
 )
-def test_the_other_gates_refuse_their_state(
-    db: Session, monkeypatch, guard, status, code
-) -> None:
+def test_the_other_gates_refuse_their_state(db: Session, monkeypatch, guard, status, code) -> None:
     session = _make_validated_session(db, f"guard-{code}")
     _lands_at_the_lock(monkeypatch, db, _status_becomes(session, status))
 
@@ -149,9 +140,7 @@ def _open_instruments(db: Session, session: ReviewSession) -> None:
     db.commit()
 
 
-def test_the_deadline_close_rereads_under_the_lock(
-    db: Session, monkeypatch
-) -> None:
+def test_the_deadline_close_rereads_under_the_lock(db: Session, monkeypatch) -> None:
     """Another request closed the instruments as this one starts: the
     close is not written, or audited, twice."""
     session = _make_validated_session(db, "guard-deadline")
@@ -174,9 +163,7 @@ def test_the_deadline_close_rereads_under_the_lock(
     assert _count(db, session, "instrument.closed") == 0
 
 
-def test_the_live_reopen_rereads_the_status(
-    db: Session, monkeypatch
-) -> None:
+def test_the_live_reopen_rereads_the_status(db: Session, monkeypatch) -> None:
     """A Close session committing as a reviewer's GET heals a closed
     instrument: the heal re-reads ``expired`` and leaves it closed."""
     session = _make_validated_session(db, "guard-reopen")
@@ -194,18 +181,18 @@ def test_the_live_reopen_rereads_the_status(
     lifecycle.observe_deadline(db, session)
 
     db.expire_all()
-    accepting = db.execute(
-        select(Instrument.accepting_responses).where(
-            Instrument.session_id == session.id
+    accepting = (
+        db.execute(
+            select(Instrument.accepting_responses).where(Instrument.session_id == session.id)
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert accepting and not any(accepting)
     assert _count(db, session, "instrument.opened") == 0
 
 
-def test_the_deadline_close_rereads_the_end_under_the_lock(
-    db: Session, monkeypatch
-) -> None:
+def test_the_deadline_close_rereads_the_end_under_the_lock(db: Session, monkeypatch) -> None:
     """End cleared by a save that commits as the GET starts: nothing is
     closed, and the re-read row (no deadline) is not dereferenced."""
     session = _make_validated_session(db, "guard-end-cleared")
@@ -216,43 +203,33 @@ def test_the_deadline_close_rereads_the_end_under_the_lock(
     _lands_at_the_lock(
         monkeypatch,
         db,
-        update(ReviewSession)
-        .where(ReviewSession.id == session.id)
-        .values(deadline=None),
+        update(ReviewSession).where(ReviewSession.id == session.id).values(deadline=None),
     )
 
     assert lifecycle.observe_deadline(db, session) == 0
     assert _count(db, session, "instrument.closed") == 0
 
 
-def test_release_refuses_a_session_archived_at_the_lock(
-    db: Session, monkeypatch
-) -> None:
+def test_release_refuses_a_session_archived_at_the_lock(db: Session, monkeypatch) -> None:
     session = _make_validated_session(db, "guard-release")
     session.status = "expired"
     db.commit()
     _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "archived"))
 
     with pytest.raises(lifecycle.SessionStateConflict) as raised:
-        lifecycle.release_responses_now(
-            db, review_session=session, user=_operator(db, session)
-        )
+        lifecycle.release_responses_now(db, review_session=session, user=_operator(db, session))
     assert str(raised.value) == "Archived sessions can't have responses released."
     assert _count(db, session, "session.responses_released") == 0
 
 
-def test_stop_release_refuses_a_session_archived_at_the_lock(
-    db: Session, monkeypatch
-) -> None:
+def test_stop_release_refuses_a_session_archived_at_the_lock(db: Session, monkeypatch) -> None:
     session = _make_validated_session(db, "guard-stop-release")
     session.status = "expired"
     db.commit()
     _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "archived"))
 
     with pytest.raises(lifecycle.SessionStateConflict) as raised:
-        lifecycle.stop_responses_release(
-            db, review_session=session, user=_operator(db, session)
-        )
+        lifecycle.stop_responses_release(db, review_session=session, user=_operator(db, session))
     assert str(raised.value) == "Archived sessions can't have releases stopped."
 
 
@@ -334,9 +311,7 @@ def test_each_transition_decides_under_the_lock(
     assert raised.value.code == code
 
 
-def test_operator_revert_decides_its_path_under_the_lock(
-    db: Session, monkeypatch
-) -> None:
+def test_operator_revert_decides_its_path_under_the_lock(db: Session, monkeypatch) -> None:
     """The scheduled activation commits as Revert starts on a session the
     request loaded as ``validated``: the revert takes the ``ready`` path
     (which asks for the confirm) instead of writing ``draft`` over it."""
@@ -355,9 +330,7 @@ def test_operator_revert_decides_its_path_under_the_lock(
     assert _count(db, session, "session.invalidated") == 0
 
 
-def test_a_double_submitted_bulk_unarchive_skips_the_row(
-    client, db: Session, monkeypatch
-) -> None:
+def test_a_double_submitted_bulk_unarchive_skips_the_row(client, db: Session, monkeypatch) -> None:
     client.post(
         "/operator/sessions",
         data={"name": "Unarchive", "code": "guard-unarchive"},
@@ -380,9 +353,7 @@ def test_a_double_submitted_bulk_unarchive_skips_the_row(
     assert _count(db, session, "session.unarchived") == 0
 
 
-def test_the_revert_route_decides_its_path_under_the_lock(
-    client, db: Session, monkeypatch
-) -> None:
+def test_the_revert_route_decides_its_path_under_the_lock(client, db: Session, monkeypatch) -> None:
     """Session Home's Revert goes through ``operator_revert``: a session
     activated as the request starts is answered on the ``ready`` path
     (the confirm is required) rather than invalidated."""
@@ -398,9 +369,7 @@ def test_the_revert_route_decides_its_path_under_the_lock(
     db.commit()
     _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
 
-    response = client.post(
-        f"/operator/sessions/{session.public_id}/revert", follow_redirects=False
-    )
+    response = client.post(f"/operator/sessions/{session.public_id}/revert", follow_redirects=False)
 
     assert response.status_code == 400
     assert _count(db, session, "session.invalidated") == 0
@@ -411,9 +380,7 @@ def _reviewer_emails(db: Session, session: ReviewSession) -> list[str]:
 
     db.expire_all()
     return sorted(
-        db.execute(
-            select(Reviewer.email).where(Reviewer.session_id == session.id)
-        ).scalars()
+        db.execute(select(Reviewer.email).where(Reviewer.session_id == session.id)).scalars()
     )
 
 
@@ -434,9 +401,7 @@ def test_a_roster_import_refuses_a_session_activated_at_the_lock(
     session.status = "validated"
     db.commit()
     before = _reviewer_emails(db, session)
-    _lands_at_the_lock(
-        monkeypatch, db, _status_becomes(session, "ready"), commit=True
-    )
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"), commit=True)
 
     response = client.post(
         f"/operator/sessions/{session.public_id}/reviewers/import",
@@ -460,14 +425,12 @@ _LABELLED_IMPORTS = {
     "reviewers": (
         "parse_reviewer_csv",
         "save_reviewers",
-        b"ReviewerName,ReviewerEmail,ReviewerTag1.Tutor\n"
-        b"Alice,alice@example.edu,senior\n",
+        b"ReviewerName,ReviewerEmail,ReviewerTag1.Tutor\nAlice,alice@example.edu,senior\n",
     ),
     "reviewees": (
         "parse_reviewee_csv",
         "save_reviewees",
-        b"RevieweeName,RevieweeEmail,RevieweeTag1.Cohort\n"
-        b"Carol,carol@example.edu,2026\n",
+        b"RevieweeName,RevieweeEmail,RevieweeTag1.Cohort\nCarol,carol@example.edu,2026\n",
     ),
 }
 
@@ -488,9 +451,7 @@ def _labels_session(db: Session) -> tuple[User, ReviewSession]:
     user = User(email="op-labels@example.edu", display_name="Op")
     db.add(user)
     db.flush()
-    session = ReviewSession(
-        name="Labels", code="guard-labels", created_by_user_id=user.id
-    )
+    session = ReviewSession(name="Labels", code="guard-labels", created_by_user_id=user.id)
     db.add(session)
     db.flush()
     for source_type in ("reviewer", "reviewee"):
@@ -540,9 +501,7 @@ def test_a_labelled_import_commits_nothing_before_a_later_gate_refuses(
         )
 
     assert commits == []
-    assert db.execute(
-        select(model.id).where(model.session_id == session.id)
-    ).all() == []
+    assert db.execute(select(model.id).where(model.session_id == session.id)).all() == []
 
 
 def test_a_relationship_import_commits_nothing_before_its_label_gate_refuses(
@@ -584,14 +543,12 @@ def test_a_relationship_import_commits_nothing_before_its_label_gate_refuses(
         )
 
     assert commits == []
-    assert db.execute(
-        select(Relationship.id).where(Relationship.session_id == session.id)
-    ).all() == []
+    assert (
+        db.execute(select(Relationship.id).where(Relationship.session_id == session.id)).all() == []
+    )
 
 
-def test_a_refused_import_leaves_a_validated_session_validated(
-    db: Session, monkeypatch
-) -> None:
+def test_a_refused_import_leaves_a_validated_session_validated(db: Session, monkeypatch) -> None:
     """The flip goes with the edit: a validated session whose import is
     refused at a later gate stays validated, with no ``session.invalidated``
     row, rather than being demoted for an edit that never landed."""
@@ -676,17 +633,18 @@ def test_the_label_editor_commits_nothing_before_a_later_slot_refuses(
         )
 
     assert commits == []
-    assert db.execute(
-        select(SessionFieldLabel.id).where(
-            SessionFieldLabel.session_id == session.id,
-            SessionFieldLabel.source_field == "tag_1",
-        )
-    ).all() == []
+    assert (
+        db.execute(
+            select(SessionFieldLabel.id).where(
+                SessionFieldLabel.session_id == session.id,
+                SessionFieldLabel.source_field == "tag_1",
+            )
+        ).all()
+        == []
+    )
 
 
-def test_the_validated_to_draft_flip_lands_with_the_edit(
-    db: Session, monkeypatch
-) -> None:
+def test_the_validated_to_draft_flip_lands_with_the_edit(db: Session, monkeypatch) -> None:
     """Codex on #2882: the flip committed on its own released the lock
     the edit's gate took, so an archive (or a re-validate) could land
     between the flip and the edit. It now lands in the edit's one commit."""
@@ -706,16 +664,14 @@ def test_the_validated_to_draft_flip_lands_with_the_edit(
     assert _count(db, session, "session.invalidated") == 1
 
 
-def test_a_row_edit_refuses_a_session_activated_at_the_lock(
-    db: Session, monkeypatch
-) -> None:
+def test_a_row_edit_refuses_a_session_activated_at_the_lock(db: Session, monkeypatch) -> None:
     from app.db.models import Reviewer
     from app.services import reviewers as reviewers_service
 
     session = _make_validated_session(db, "guard-row")
-    reviewer = db.execute(
-        select(Reviewer).where(Reviewer.session_id == session.id)
-    ).scalars().first()
+    reviewer = (
+        db.execute(select(Reviewer).where(Reviewer.session_id == session.id)).scalars().first()
+    )
     assert reviewer is not None
     _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
 
@@ -767,12 +723,12 @@ def test_a_relationship_write_refuses_a_session_activated_at_the_lock(
     from app.services import relationships as relationships_service
 
     session = _make_validated_session(db, "guard-rel")
-    reviewer = db.execute(
-        select(Reviewer).where(Reviewer.session_id == session.id)
-    ).scalars().first()
-    reviewee = db.execute(
-        select(Reviewee).where(Reviewee.session_id == session.id)
-    ).scalars().first()
+    reviewer = (
+        db.execute(select(Reviewer).where(Reviewer.session_id == session.id)).scalars().first()
+    )
+    reviewee = (
+        db.execute(select(Reviewee).where(Reviewee.session_id == session.id)).scalars().first()
+    )
     assert reviewer is not None and reviewee is not None
     _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
 
@@ -805,15 +761,13 @@ def _rung4_writes():
     def _rel(db, session):
         from app.db.models import Relationship, Reviewee, Reviewer
 
-        reviewer = db.execute(
-            select(Reviewer).where(Reviewer.session_id == session.id)
-        ).scalars().first()
-        reviewee = db.execute(
-            select(Reviewee).where(Reviewee.session_id == session.id)
-        ).scalars().first()
-        row = Relationship(
-            session_id=session.id, reviewer_id=reviewer.id, reviewee_id=reviewee.id
+        reviewer = (
+            db.execute(select(Reviewer).where(Reviewer.session_id == session.id)).scalars().first()
         )
+        reviewee = (
+            db.execute(select(Reviewee).where(Reviewee.session_id == session.id)).scalars().first()
+        )
+        row = Relationship(session_id=session.id, reviewer_id=reviewer.id, reviewee_id=reviewee.id)
         db.add(row)
         db.flush()
         return row
@@ -866,9 +820,7 @@ def test_each_rung4_write_refuses_a_session_activated_at_the_lock(
     scheduler activated as the write starts is refused, and stays ready."""
     session = _make_validated_session(db, f"guard-{write[:20]}")
     user = _operator(db, session)
-    _lands_at_the_lock(
-        monkeypatch, db, _status_becomes(session, "ready"), commit=True
-    )
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"), commit=True)
 
     with pytest.raises(lifecycle.SessionStateConflict):
         _rung4_writes()[write](db, session, user)
@@ -885,12 +837,12 @@ def test_a_relationship_import_refuses_at_its_entry_gate(db: Session) -> None:
     from app.services import relationships
 
     session = _make_validated_session(db, "guard-rel-entry")
-    reviewer = db.execute(
-        select(Reviewer).where(Reviewer.session_id == session.id)
-    ).scalars().first()
-    reviewee = db.execute(
-        select(Reviewee).where(Reviewee.session_id == session.id)
-    ).scalars().first()
+    reviewer = (
+        db.execute(select(Reviewer).where(Reviewer.session_id == session.id)).scalars().first()
+    )
+    reviewee = (
+        db.execute(select(Reviewee).where(Reviewee.session_id == session.id)).scalars().first()
+    )
     assert reviewer is not None
     assert reviewee is not None
     parsed = relationships.parse_relationship_csv(
@@ -901,11 +853,7 @@ def test_a_relationship_import_refuses_at_its_entry_gate(db: Session) -> None:
     assert not parsed.is_blocked, parsed.issues
     # The scheduler commits ``ready`` while the request still holds the
     # ``validated`` row it loaded.
-    db.execute(
-        _status_becomes(session, "ready").execution_options(
-            synchronize_session=False
-        )
-    )
+    db.execute(_status_becomes(session, "ready").execution_options(synchronize_session=False))
     db.commit()
     assert session.status == "validated"
 
@@ -933,9 +881,7 @@ def test_generate_is_one_commit_from_its_gate(db: Session, monkeypatch) -> None:
     from app.services import assignments
 
     session = _make_validated_session(db, "guard-generate-once")
-    monkeypatch.setattr(
-        instruments_pkg, "seed_display_fields_from_assignments", lambda db_, s_: 1
-    )
+    monkeypatch.setattr(instruments_pkg, "seed_display_fields_from_assignments", lambda db_, s_: 1)
     commits = _counting_commits(monkeypatch, db)
 
     assignments.replace_assignments(
@@ -943,14 +889,10 @@ def test_generate_is_one_commit_from_its_gate(db: Session, monkeypatch) -> None:
     )
 
     assert commits == [True]
-    assert db.execute(
-        select(Assignment.id).where(Assignment.session_id == session.id)
-    ).all()
+    assert db.execute(select(Assignment.id).where(Assignment.session_id == session.id)).all()
 
 
-def test_generate_refuses_a_session_activated_at_the_lock(
-    db: Session, monkeypatch
-) -> None:
+def test_generate_refuses_a_session_activated_at_the_lock(db: Session, monkeypatch) -> None:
     """Generate on a session the scheduler activated mid-request would
     replace the live assignments; it is refused instead."""
     from app.db.models import Assignment
@@ -968,9 +910,7 @@ def test_generate_refuses_a_session_activated_at_the_lock(
         )
 
     db.expire_all()
-    assert not db.execute(
-        select(Assignment.id).where(Assignment.session_id == session.id)
-    ).all()
+    assert not db.execute(select(Assignment.id).where(Assignment.session_id == session.id)).all()
 
 
 # --------------------------------------------------------------------------- #
@@ -984,9 +924,9 @@ def test_an_instrument_edit_refuses_a_session_activated_at_the_lock(
     from app.services import instruments as instruments_service
 
     session = _make_validated_session(db, "guard-instrument")
-    instrument = db.execute(
-        select(Instrument).where(Instrument.session_id == session.id)
-    ).scalars().first()
+    instrument = (
+        db.execute(select(Instrument).where(Instrument.session_id == session.id)).scalars().first()
+    )
     assert instrument is not None
     _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
 
@@ -1016,9 +956,9 @@ def test_an_async_instrument_route_answers_409_off_the_event_loop(
     session = db.execute(
         select(ReviewSession).where(ReviewSession.code == "guard-identity")
     ).scalar_one()
-    instrument = db.execute(
-        select(Instrument).where(Instrument.session_id == session.id)
-    ).scalars().first()
+    instrument = (
+        db.execute(select(Instrument).where(Instrument.session_id == session.id)).scalars().first()
+    )
     assert instrument is not None
     _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
 
@@ -1032,9 +972,7 @@ def test_an_async_instrument_route_answers_409_off_the_event_loop(
     assert must_get(db, Instrument, instrument.id).short_label != "Late"
 
 
-def test_an_identity_save_of_both_fields_is_one_commit(
-    client, db: Session, monkeypatch
-) -> None:
+def test_an_identity_save_of_both_fields_is_one_commit(client, db: Session, monkeypatch) -> None:
     """Short label and description each gate and used to commit apart, so
     a session archived at the description's gate refused after the label
     had landed. The route is one unit: the 409 lands neither."""
@@ -1046,9 +984,9 @@ def test_an_identity_save_of_both_fields_is_one_commit(
     session = db.execute(
         select(ReviewSession).where(ReviewSession.code == "guard-identity-two")
     ).scalar_one()
-    instrument = db.execute(
-        select(Instrument).where(Instrument.session_id == session.id)
-    ).scalars().first()
+    instrument = (
+        db.execute(select(Instrument).where(Instrument.session_id == session.id)).scalars().first()
+    )
     assert instrument is not None
     _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "archived"), at=2)
     commits = _counting_commits(monkeypatch, db)
@@ -1097,8 +1035,13 @@ def _rung5_writes():
             db, instrument=n, state={}, actor=u
         ),
         "add_display_field": lambda db, s, n, u: i.add_display_field(
-            db, instrument=n, source_type="reviewee", source_field="tag_1",
-            label="", visible=True, actor=u,
+            db,
+            instrument=n,
+            source_type="reviewee",
+            source_field="tag_1",
+            label="",
+            visible=True,
+            actor=u,
         ),
         "update_display_field": lambda db, s, n, u: i.update_display_field(
             db, field=df(n), label="x", visible=True, actor=u
@@ -1115,15 +1058,11 @@ def _rung5_writes():
         "set_sort_display_fields": lambda db, s, n, u: i.set_sort_display_fields(
             db, instrument=n, fields=[], actor=u
         ),
-        "create_instrument": lambda db, s, n, u: i.create_instrument(
-            db, review_session=s, actor=u
-        ),
+        "create_instrument": lambda db, s, n, u: i.create_instrument(db, review_session=s, actor=u),
         "replicate_instrument": lambda db, s, n, u: i.replicate_instrument(
             db, review_session=s, source=n, actor=u
         ),
-        "delete_instrument": lambda db, s, n, u: i.delete_instrument(
-            db, instrument=n, actor=u
-        ),
+        "delete_instrument": lambda db, s, n, u: i.delete_instrument(db, instrument=n, actor=u),
         "update_instrument_description": (
             lambda db, s, n, u: i.update_instrument_description(
                 db, instrument=n, description="x", actor=u
@@ -1141,24 +1080,34 @@ def _rung5_writes():
         "reorder_instruments": lambda db, s, n, u: i.reorder_instruments(
             db, review_session=s, items=[]
         ),
-        "create_page_break_after": lambda db, s, n, u: i.create_page_break_after(
-            db, instrument=n
-        ),
+        "create_page_break_after": lambda db, s, n, u: i.create_page_break_after(db, instrument=n),
         "clear_page_break": lambda db, s, n, u: i.clear_page_break(db, instrument=n),
         "bulk_save_fields": lambda db, s, n, u: i.bulk_save_fields(
             db, instrument=n, rows=[], actor=u
         ),
         "add_response_field": lambda db, s, n, u: i.add_response_field(
-            db, instrument=n, field_key="late", label="Late",
-            response_type="text", required=False, help_text="",
-            help_text_visible=False, actor=u,
+            db,
+            instrument=n,
+            field_key="late",
+            label="Late",
+            response_type="text",
+            required=False,
+            help_text="",
+            help_text_visible=False,
+            actor=u,
         ),
         "add_default_response_field": lambda db, s, n, u: i.add_default_response_field(
             db, instrument=n, actor=u
         ),
         "update_response_field": lambda db, s, n, u: i.update_response_field(
-            db, field=rf(n), label="x", required=False, validation=None,
-            help_text="", help_text_visible=False, actor=u,
+            db,
+            field=rf(n),
+            label="x",
+            required=False,
+            validation=None,
+            help_text="",
+            help_text_visible=False,
+            actor=u,
         ),
         "delete_response_field": lambda db, s, n, u: i.delete_response_field(
             db, field=rf(n), confirm=True, actor=u
@@ -1167,14 +1116,18 @@ def _rung5_writes():
             db, field=rf(n), direction="down", actor=u
         ),
         "upsert_policy": lambda db, s, n, u: vp.upsert_policy(
-            db, review_session=s, instrument=n, audience="reviewer",
-            while_ongoing_mode=None, after_release_mode=None, user=u,
+            db,
+            review_session=s,
+            instrument=n,
+            audience="reviewer",
+            while_ongoing_mode=None,
+            after_release_mode=None,
+            user=u,
         ),
         "upsert_many": lambda db, s, n, u: vp.upsert_many(
             db, review_session=s, instrument=n, rows=[], user=u
         ),
     }
-
 
 
 @pytest.mark.parametrize("write", sorted(_rung5_writes()))
@@ -1184,13 +1137,11 @@ def test_each_rung5_write_refuses_a_session_activated_at_the_lock(
     """Every instrument and visibility writer gates first: a session the
     scheduler activated as the write starts is refused, and stays ready."""
     session = _make_validated_session(db, f"g5-{write[:24]}")
-    instrument = db.execute(
-        select(Instrument).where(Instrument.session_id == session.id)
-    ).scalars().first()
-    user = _operator(db, session)
-    _lands_at_the_lock(
-        monkeypatch, db, _status_becomes(session, "ready"), commit=True
+    instrument = (
+        db.execute(select(Instrument).where(Instrument.session_id == session.id)).scalars().first()
     )
+    user = _operator(db, session)
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"), commit=True)
 
     with pytest.raises(lifecycle.SessionStateConflict):
         _rung5_writes()[write](db, session, instrument, user)
@@ -1215,14 +1166,18 @@ def test_a_band2_save_is_one_commit(client, db: Session, monkeypatch) -> None:
     session = db.execute(
         select(ReviewSession).where(ReviewSession.code == "guard-band2")
     ).scalar_one()
-    instrument = db.execute(
-        select(Instrument).where(Instrument.session_id == session.id)
-    ).scalars().first()
+    instrument = (
+        db.execute(select(Instrument).where(Instrument.session_id == session.id)).scalars().first()
+    )
     assert instrument is not None
     for field in ("tag_1", "tag_2"):
         instruments_service.add_display_field(
-            db, instrument=instrument, source_type="reviewee",
-            source_field=field, label="", visible=True,
+            db,
+            instrument=instrument,
+            source_type="reviewee",
+            source_field=field,
+            label="",
+            visible=True,
             actor=_operator(db, session),
         )
     # Lock 1 is the save's gate, 2 and 3 the two fields' visibility syncs.
@@ -1253,9 +1208,7 @@ def test_a_band2_save_is_one_commit(client, db: Session, monkeypatch) -> None:
 # --------------------------------------------------------------------------- #
 
 
-def test_update_session_refuses_a_session_activated_at_the_lock(
-    db: Session, monkeypatch
-) -> None:
+def test_update_session_refuses_a_session_activated_at_the_lock(db: Session, monkeypatch) -> None:
     from app.services import sessions as sessions_service
 
     session = _make_validated_session(db, "guard-update")
@@ -1276,9 +1229,7 @@ def test_update_session_refuses_a_session_activated_at_the_lock(
     assert must_get(db, ReviewSession, session.id).name != "Renamed"
 
 
-def test_delete_session_refuses_a_session_activated_at_the_lock(
-    db: Session, monkeypatch
-) -> None:
+def test_delete_session_refuses_a_session_activated_at_the_lock(db: Session, monkeypatch) -> None:
     from app.services import sessions as sessions_service
 
     session = _make_validated_session(db, "guard-delete")
@@ -1286,9 +1237,7 @@ def test_delete_session_refuses_a_session_activated_at_the_lock(
     _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
 
     with pytest.raises(lifecycle.SessionStateConflict) as raised:
-        sessions_service.delete_session(
-            db, review_session=session, user=_operator(db, session)
-        )
+        sessions_service.delete_session(db, review_session=session, user=_operator(db, session))
 
     assert raised.value.code == "session_ready"
     db.expire_all()
@@ -1328,9 +1277,7 @@ def test_the_lobby_bulk_delete_skips_a_session_activated_at_the_lock(
 # --------------------------------------------------------------------------- #
 
 
-def test_purge_and_archive_decides_under_the_lock(
-    db: Session, monkeypatch
-) -> None:
+def test_purge_and_archive_decides_under_the_lock(db: Session, monkeypatch) -> None:
     """A scheduled activation committing as Purge and archive starts: the
     session is not archivable on the re-read row, so nothing is purged."""
     from app.db.models import Reviewer
@@ -1349,14 +1296,10 @@ def test_purge_and_archive_decides_under_the_lock(
     # it, so assert on what the purge must not have done.
     db.expire_all()
     assert must_get(db, ReviewSession, session.id).status != "archived"
-    assert db.execute(
-        select(Reviewer.id).where(Reviewer.session_id == session.id)
-    ).all()
+    assert db.execute(select(Reviewer.id).where(Reviewer.session_id == session.id)).all()
 
 
-def test_a_quick_setup_slot_reports_the_lifecycle_reason(
-    client, db: Session, monkeypatch
-) -> None:
+def test_a_quick_setup_slot_reports_the_lifecycle_reason(client, db: Session, monkeypatch) -> None:
     """Refused under the lock, a Quick Setup roster slot answers with its
     own ``lifecycle`` reason, as its gate does, not the bare 409 page."""
     client.post(
@@ -1364,9 +1307,7 @@ def test_a_quick_setup_slot_reports_the_lifecycle_reason(
         data={"name": "QS", "code": "guard-qs"},
         follow_redirects=False,
     )
-    session = db.execute(
-        select(ReviewSession).where(ReviewSession.code == "guard-qs")
-    ).scalar_one()
+    session = db.execute(select(ReviewSession).where(ReviewSession.code == "guard-qs")).scalar_one()
     _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
 
     response = client.post(
@@ -1386,9 +1327,7 @@ def test_a_quick_setup_slot_reports_the_lifecycle_reason(
 
 
 @pytest.mark.parametrize("guarded", ["delete_responses", "apply_settings"])
-def test_the_other_session_writes_refuse_at_the_lock(
-    db: Session, monkeypatch, guarded
-) -> None:
+def test_the_other_session_writes_refuse_at_the_lock(db: Session, monkeypatch, guarded) -> None:
     from app.services import responses as responses_service
     from app.services import session_config_io
 
@@ -1428,9 +1367,7 @@ def test_purge_and_archive_commits_once(db: Session, monkeypatch) -> None:
         )
     db.rollback()
 
-    assert db.execute(
-        select(Reviewer.id).where(Reviewer.session_id == session.id)
-    ).all()
+    assert db.execute(select(Reviewer.id).where(Reviewer.session_id == session.id)).all()
 
 
 @pytest.mark.parametrize(
@@ -1470,9 +1407,7 @@ def test_the_other_quick_setup_slots_report_the_lifecycle_reason(
                 files={"file": (f"{kind}.csv", roster, "text/csv")},
                 follow_redirects=False,
             )
-    _lands_at_the_lock(
-        monkeypatch, db, _status_becomes(session, status_at_lock)
-    )
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, status_at_lock))
 
     response = client.post(
         f"/operator/sessions/{session.public_id}/quick-setup/{slot}",
@@ -1483,9 +1418,7 @@ def test_the_other_quick_setup_slots_report_the_lifecycle_reason(
     assert refusal(response).reason == "lifecycle"
 
 
-def test_a_session_home_config_save_is_one_commit(
-    client, db: Session, monkeypatch
-) -> None:
+def test_a_session_home_config_save_is_one_commit(client, db: Session, monkeypatch) -> None:
     """The config card saves the schedule and details, then the display
     zone, each gated; the first used to commit on its own, so a session
     archived at the zone's gate refused after the rename had landed."""
@@ -1517,9 +1450,7 @@ def test_a_session_home_config_save_is_one_commit(
     assert must_get(db, ReviewSession, session.id).name == "Config"
 
 
-def test_purge_logs_only_what_the_archive_committed(
-    db: Session, monkeypatch, caplog
-) -> None:
+def test_purge_logs_only_what_the_archive_committed(db: Session, monkeypatch, caplog) -> None:
     """Codex on #2885: inside Purge and archive the purges only flush, so
     their "session data purged" lines wait for the unit's commit — an
     archive that fails logs no purge; one that lands logs it."""
@@ -1536,7 +1467,9 @@ def test_purge_logs_only_what_the_archive_committed(
     monkeypatch.setattr(lifecycle, "archive_session", boom)
     with caplog.at_level(logging.INFO), pytest.raises(RuntimeError):
         session_purge.purge_and_archive(
-            db, review_session=failing, user=_operator(db, failing),
+            db,
+            review_session=failing,
+            user=_operator(db, failing),
             purge=["rosters"],
         )
     assert "session data purged" not in caplog.text
@@ -1545,7 +1478,9 @@ def test_purge_logs_only_what_the_archive_committed(
     landing = _make_validated_session(db, "guard-purge-log-ok")
     with caplog.at_level(logging.INFO):
         assert session_purge.purge_and_archive(
-            db, review_session=landing, user=_operator(db, landing),
+            db,
+            review_session=landing,
+            user=_operator(db, landing),
             purge=["rosters"],
         )
     assert "session data purged" in caplog.text
@@ -1612,9 +1547,7 @@ def test_after_commit_waits_for_the_commit_and_a_failed_commit_drops_it(
         # Outside a unit it runs at once, under the same guard.
         unit_of_work.after_commit(db, raising)
     assert order[-1] == "still runs"
-    failures = [
-        r for r in caplog.records if r.getMessage() == "after_commit callback failed"
-    ]
+    failures = [r for r in caplog.records if r.getMessage() == "after_commit callback failed"]
     assert len(failures) == 2
 
 
@@ -1628,9 +1561,9 @@ def _invited_session(db: Session, code: str, status: str):
     from app.services import invitations
 
     session = _make_validated_session(db, code)
-    reviewer = db.execute(
-        select(Reviewer).where(Reviewer.session_id == session.id)
-    ).scalars().first()
+    reviewer = (
+        db.execute(select(Reviewer).where(Reviewer.session_id == session.id)).scalars().first()
+    )
     assert reviewer is not None
     invitation = Invitation(
         session_id=session.id,
@@ -1670,9 +1603,7 @@ def test_an_invitation_action_refuses_a_state_committed_at_its_lock(
     from app.services import invitations
 
     loaded, committed = _BC5_CASES[service]
-    session, reviewer, invitation = _invited_session(
-        db, f"bc5-{service.replace('_', '-')}", loaded
-    )
+    session, reviewer, invitation = _invited_session(db, f"bc5-{service.replace('_', '-')}", loaded)
     token_before = invitation.token_hash
     user = _operator(db, session)
     _lands_at_the_lock(monkeypatch, db, _status_becomes(session, committed))
@@ -1708,14 +1639,10 @@ def test_an_invitation_action_refuses_a_state_committed_at_its_lock(
     db.refresh(invitation)
     assert invitation.token_hash == token_before
     assert invitation.status == "pending"
-    assert not db.execute(
-        select(EmailOutbox.id).where(EmailOutbox.session_id == session.id)
-    ).all()
+    assert not db.execute(select(EmailOutbox.id).where(EmailOutbox.session_id == session.id)).all()
 
 
-def test_the_per_row_reminder_lands_in_one_commit(
-    db: Session, monkeypatch
-) -> None:
+def test_the_per_row_reminder_lands_in_one_commit(db: Session, monkeypatch) -> None:
     """The reminder and its ``reminders.sent`` row commit together, so the
     lock its gate took holds to that commit (findings Bc5)."""
     from app.services import invitations
@@ -1738,9 +1665,7 @@ def _second_invitation(db: Session, session: ReviewSession):
     from app.db.models import Invitation, Reviewer
     from app.services import invitations
 
-    reviewer = Reviewer(
-        session_id=session.id, name="Bea", email=f"bea-{session.code}@example.edu"
-    )
+    reviewer = Reviewer(session_id=session.id, name="Bea", email=f"bea-{session.code}@example.edu")
     db.add(reviewer)
     db.flush()
     invitation = Invitation(
@@ -1753,9 +1678,7 @@ def _second_invitation(db: Session, session: ReviewSession):
     return reviewer, invitation
 
 
-@pytest.mark.parametrize(
-    "service", ["send_all_invitations", "send_reminders_to_incomplete"]
-)
+@pytest.mark.parametrize("service", ["send_all_invitations", "send_reminders_to_incomplete"])
 def test_a_bulk_invitation_action_lands_in_one_commit(
     db: Session, monkeypatch, service: str
 ) -> None:
@@ -1792,9 +1715,7 @@ def test_a_bulk_invitation_action_lands_in_one_commit(
         assert each.status == "sent"
 
 
-def test_the_bulk_send_lists_its_rows_after_the_lock(
-    db: Session, monkeypatch
-) -> None:
+def test_the_bulk_send_lists_its_rows_after_the_lock(db: Session, monkeypatch) -> None:
     """A second Send-all click commits first: the rows are listed under the
     lock, so the pending row it already sent is not mailed again."""
     from types import SimpleNamespace
@@ -1829,14 +1750,10 @@ def test_the_bulk_send_lists_its_rows_after_the_lock(
         build_invite_url=_invite_url,
     )
     assert sent == 0
-    assert not db.execute(
-        select(EmailOutbox.id).where(EmailOutbox.session_id == session.id)
-    ).all()
+    assert not db.execute(select(EmailOutbox.id).where(EmailOutbox.session_id == session.id)).all()
 
 
-def test_the_per_row_reminder_reads_its_invitation_after_the_lock(
-    db: Session, monkeypatch
-) -> None:
+def test_the_per_row_reminder_reads_its_invitation_after_the_lock(db: Session, monkeypatch) -> None:
     """A per-row Regenerate commits as the reminder starts: the reminder
     re-reads the invitation under the lock, sees the rotated token and
     sends a fresh invitation rather than the dead link (findings Bc5)."""
@@ -1885,9 +1802,7 @@ def _route_invited_session(client, db: Session, code: str, status: str):
         data={"name": code.title(), "code": code},
         follow_redirects=False,
     )
-    session = db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    session = db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
     reviewer = Reviewer(session_id=session.id, name="Rae", email=f"rae-{code}@example.edu")
     db.add(reviewer)
     db.flush()
@@ -1914,20 +1829,14 @@ def test_an_invitation_send_route_refuses_a_state_committed_at_the_lock(
     from app.services import invitations
 
     loaded = "validated" if route == "send-all" else "ready"
-    session, reviewer, invitation = _route_invited_session(
-        client, db, f"bc5-route-{route}", loaded
-    )
+    session, reviewer, invitation = _route_invited_session(client, db, f"bc5-route-{route}", loaded)
     monkeypatch.setattr(
         invitations,
         "list_sendable_invitations",
         lambda *_: [SimpleNamespace(invitation=invitation, reviewer=reviewer)],
     )
-    monkeypatch.setattr(
-        invitations, "is_reviewer_eligible_for_invitation", lambda *_a, **_k: True
-    )
-    _lands_at_the_lock(
-        monkeypatch, db, _status_becomes(session, "draft"), commit=True
-    )
+    monkeypatch.setattr(invitations, "is_reviewer_eligible_for_invitation", lambda *_a, **_k: True)
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "draft"), commit=True)
 
     url = (
         f"/operator/sessions/{session.public_id}/invitations/send-all"
@@ -1938,9 +1847,7 @@ def test_an_invitation_send_route_refuses_a_state_committed_at_the_lock(
 
     assert response.status_code == 409
     db.expire_all()
-    assert not db.execute(
-        select(EmailOutbox.id).where(EmailOutbox.session_id == session.id)
-    ).all()
+    assert not db.execute(select(EmailOutbox.id).where(EmailOutbox.session_id == session.id)).all()
 
 
 # --- Findings Bc8: the Instruments page's repair runs only while editable ---
@@ -1950,9 +1857,9 @@ def _instrument_missing_its_name_row(db: Session, code: str, status: str):
     from app.db.models import InstrumentDisplayField
 
     session = _make_validated_session(db, code)
-    instrument = db.execute(
-        select(Instrument).where(Instrument.session_id == session.id)
-    ).scalars().first()
+    instrument = (
+        db.execute(select(Instrument).where(Instrument.session_id == session.id)).scalars().first()
+    )
     assert instrument is not None
     from app.services import instruments as instruments_service
 
@@ -1988,30 +1895,22 @@ def _has_name_row(db: Session, instrument: Instrument) -> bool:
 
 
 @pytest.mark.parametrize("status", ["draft", "validated"])
-def test_the_instruments_repair_runs_while_editable(
-    db: Session, status: str
-) -> None:
+def test_the_instruments_repair_runs_while_editable(db: Session, status: str) -> None:
     """The control: an editable session gets its missing locked row back."""
     from app.services import instruments as instruments_service
 
-    session, instrument = _instrument_missing_its_name_row(
-        db, f"bc8-editable-{status}", status
-    )
+    session, instrument = _instrument_missing_its_name_row(db, f"bc8-editable-{status}", status)
     assert instruments_service.repair_display_fields(db, session) is True
     assert _has_name_row(db, instrument)
 
 
 @pytest.mark.parametrize("status", ["ready", "expired", "archived"])
-def test_the_instruments_repair_leaves_a_locked_session_alone(
-    db: Session, status: str
-) -> None:
+def test_the_instruments_repair_leaves_a_locked_session_alone(db: Session, status: str) -> None:
     """Rendering the Instruments page writes nothing to a session past
     setup (findings Bc8, ruled 2026-10-08)."""
     from app.services import instruments as instruments_service
 
-    session, instrument = _instrument_missing_its_name_row(
-        db, f"bc8-locked-{status}", status
-    )
+    session, instrument = _instrument_missing_its_name_row(db, f"bc8-locked-{status}", status)
     assert instruments_service.repair_display_fields(db, session) is False
     assert not _has_name_row(db, instrument)
 
@@ -2023,9 +1922,7 @@ def test_the_instruments_repair_refuses_a_state_committed_at_its_lock(
     the re-read under the lock sees ``ready`` and writes nothing."""
     from app.services import instruments as instruments_service
 
-    session, instrument = _instrument_missing_its_name_row(
-        db, "bc8-raced", "validated"
-    )
+    session, instrument = _instrument_missing_its_name_row(db, "bc8-raced", "validated")
     _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
     assert instruments_service.repair_display_fields(db, session) is False
     assert not _has_name_row(db, instrument)
@@ -2046,12 +1943,10 @@ def test_rendering_the_instruments_page_writes_nothing_past_setup(
         data={"name": code.title(), "code": code},
         follow_redirects=False,
     )
-    session = db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
-    instrument = db.execute(
-        select(Instrument).where(Instrument.session_id == session.id)
-    ).scalars().first()
+    session = db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
+    instrument = (
+        db.execute(select(Instrument).where(Instrument.session_id == session.id)).scalars().first()
+    )
     assert instrument is not None
     for row in db.execute(
         select(InstrumentDisplayField).where(

@@ -58,9 +58,7 @@ def test_a_range_condition_opens_and_titles_the_cell(
     assignment = db.execute(
         select(Assignment).where(Assignment.reviewer_id == reviewer.id)
     ).scalar_one()
-    rating = Response(
-        assignment_id=assignment.id, response_field_id=fields["rating"].id, value="5"
-    )
+    rating = Response(assignment_id=assignment.id, response_field_id=fields["rating"].id, value="5")
     db.add(rating)
     db.flush()
     body = client.get(f"/me/sessions/{review_session.public_id}").text
@@ -88,8 +86,10 @@ def test_the_settings_csv_round_trips_a_range_and_refuses_a_bad_one(
 
     def with_condition(op: str, value: str) -> list[Row]:
         return [
-            Row(r.field, op, r.data_type) if r.field.endswith("branch_op")
-            else Row(r.field, value, r.data_type) if r.field.endswith("branch_value")
+            Row(r.field, op, r.data_type)
+            if r.field.endswith("branch_op")
+            else Row(r.field, value, r.data_type)
+            if r.field.endswith("branch_value")
             else r
             for r in _rows()
         ]
@@ -98,8 +98,7 @@ def test_the_settings_csv_round_trips_a_range_and_refuses_a_bad_one(
         source, _ = _session(db, f"range-csv-{op}")
         assert apply_session_config(db, source, with_condition(op, "2 to 4")).errors == []
         exported = [
-            r for r in serialize_session_config(db, source)
-            if r.field.startswith("instruments")
+            r for r in serialize_session_config(db, source) if r.field.startswith("instruments")
         ]
         target, _ = _session(db, f"range-csv-{op}-copy")
         assert apply_session_config(db, target, exported).errors == []
@@ -117,23 +116,22 @@ def test_the_settings_csv_round_trips_a_range_and_refuses_a_bad_one(
     # lock on an answered branch doesn't read it as changed (the cumulative
     # read).
     spaced, _ = _session(db, "range-csv-spaced")
-    assert apply_session_config(
-        db, spaced, with_condition("in_inc", " 2  to  4 ")
-    ).errors == []
-    assert db.execute(
-        select(InstrumentResponseField.branch_value)
-        .join(Instrument, Instrument.id == InstrumentResponseField.instrument_id)
-        .where(
-            Instrument.session_id == spaced.id,
-            InstrumentResponseField.field_key == "rating",
-        )
-    ).scalar_one() == "2 to 4"
+    assert apply_session_config(db, spaced, with_condition("in_inc", " 2  to  4 ")).errors == []
+    assert (
+        db.execute(
+            select(InstrumentResponseField.branch_value)
+            .join(Instrument, Instrument.id == InstrumentResponseField.instrument_id)
+            .where(
+                Instrument.session_id == spaced.id,
+                InstrumentResponseField.field_key == "rating",
+            )
+        ).scalar_one()
+        == "2 to 4"
+    )
 
     bad, _ = _session(db, "range-csv-bad")
     result = apply_session_config(db, bad, with_condition("in_inc", "4 to 2"))
     assert [e.message for e in result.errors] == [
         "Rating: The range's low end must be below its high end."
     ]
-    assert db.execute(
-        select(Instrument).where(Instrument.session_id == bad.id)
-    ).first() is None
+    assert db.execute(select(Instrument).where(Instrument.session_id == bad.id)).first() is None

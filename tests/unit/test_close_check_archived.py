@@ -96,7 +96,7 @@ def test_a_stray_manifest_is_a_level_with_no_item() -> None:
         "## Follow-on\n\n### Doc impact\n\n- `spec/b.md` — y.\n"
     )
     levels = cc.manifest_levels(found)
-    assert (None in [item for _, _, item in levels])
+    assert None in [item for _, _, item in levels]
     assert len(levels) == 2
 
 
@@ -224,8 +224,7 @@ def test_a_guide_path_named_twice_in_one_level_counts_once(
     """
     plan = archive_repo / "guide" / "archive" / "segment_ZZ_demo.md"
     plan.write_text(
-        plan.read_text()
-        + "\n## Item 4 — four\n\n### Doc impact\n\n"
+        plan.read_text() + "\n## Item 4 — four\n\n### Doc impact\n\n"
         "- `guide/todo_master.md` — tick.\n"
         "- `guide/todo_master.md` — tick again.\n"
     )
@@ -256,13 +255,8 @@ def test_the_same_pickaxe_is_not_run_once_per_level(archive_repo) -> None:
     finally:
         _manifest._git = real
 
-    pickaxes = [
-        c for c in calls
-        if "-G" in c and any("Doc impact" in str(arg) for arg in c)
-    ]
-    assert len(pickaxes) == 1, (
-        f"the Doc impact pickaxe ran {len(pickaxes)} times for one plan"
-    )
+    pickaxes = [c for c in calls if "-G" in c and any("Doc impact" in str(arg) for arg in c)]
+    assert len(pickaxes) == 1, f"the Doc impact pickaxe ran {len(pickaxes)} times for one plan"
 
 
 def test_the_cache_still_answers_correctly_across_levels(archive_repo) -> None:

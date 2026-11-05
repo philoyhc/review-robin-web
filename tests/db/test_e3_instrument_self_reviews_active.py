@@ -70,15 +70,12 @@ def test_the_column_is_backfilled_from_the_session_and_dropped_again() -> None:
 
             command.upgrade(cfg, REVISION)
             connection.commit()
-            column = {
-                c["name"]: c
-                for c in inspect(connection).get_columns("instruments")
-            }["self_reviews_active"]
+            column = {c["name"]: c for c in inspect(connection).get_columns("instruments")}[
+                "self_reviews_active"
+            ]
             assert column["nullable"] is False
             flags = dict(
-                connection.execute(
-                    text("SELECT id, self_reviews_active FROM instruments")
-                ).all()
+                connection.execute(text("SELECT id, self_reviews_active FROM instruments")).all()
             )
             assert {k: bool(v) for k, v in flags.items()} == {
                 on: True,

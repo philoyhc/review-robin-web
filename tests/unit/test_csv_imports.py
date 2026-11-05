@@ -44,18 +44,11 @@ def test_reviewer_missing_email_column_blocks() -> None:
 
     assert result.is_blocked
     assert result.rows == []
-    assert any(
-        i.severity is Severity.error and i.field == "ReviewerEmail"
-        for i in result.issues
-    )
+    assert any(i.severity is Severity.error and i.field == "ReviewerEmail" for i in result.issues)
 
 
 def test_reviewer_duplicate_email_is_blocking_with_row_number() -> None:
-    csv_text = (
-        "ReviewerName,ReviewerEmail\n"
-        "Alice,dup@example.edu\n"
-        "Alice,dup@example.edu\n"
-    )
+    csv_text = "ReviewerName,ReviewerEmail\nAlice,dup@example.edu\nAlice,dup@example.edu\n"
     result = parse_reviewer_csv(_b(csv_text))
 
     assert result.is_blocked
@@ -65,12 +58,7 @@ def test_reviewer_duplicate_email_is_blocking_with_row_number() -> None:
 
 
 def test_reviewer_invalid_emails_are_blocking() -> None:
-    csv_text = (
-        "ReviewerName,ReviewerEmail\n"
-        "Alice,alice@\n"
-        "Bob,bob\n"
-        "Carol,@example.edu\n"
-    )
+    csv_text = "ReviewerName,ReviewerEmail\nAlice,alice@\nBob,bob\nCarol,@example.edu\n"
     result = parse_reviewer_csv(_b(csv_text))
 
     assert result.is_blocked
@@ -97,14 +85,15 @@ def test_valid_reviewee_csv_with_profilelink_populates_profile_link() -> None:
 def test_the_legacy_photolink_header_still_imports() -> None:
     """19T Item 5 renamed the column to `ProfileLink`. Files and exported
     bundles written before it carry `PhotoLink`, and still import."""
-    reviewers = parse_reviewer_csv(_b(
-        "ReviewerName,ReviewerEmail,PhotoLink\n"
-        "Carol,carol@example.edu,https://example.edu/c.jpg\n"
-    ))
-    reviewees = parse_reviewee_csv(_b(
-        "RevieweeName,RevieweeEmail,PhotoLink\n"
-        "Dan,dan@example.edu,https://example.edu/d.jpg\n"
-    ))
+    reviewers = parse_reviewer_csv(
+        _b(
+            "ReviewerName,ReviewerEmail,PhotoLink\n"
+            "Carol,carol@example.edu,https://example.edu/c.jpg\n"
+        )
+    )
+    reviewees = parse_reviewee_csv(
+        _b("RevieweeName,RevieweeEmail,PhotoLink\nDan,dan@example.edu,https://example.edu/d.jpg\n")
+    )
 
     assert reviewers.issues == [] and reviewees.issues == []
     assert reviewers.rows[0].profile_link == "https://example.edu/c.jpg"
@@ -114,11 +103,13 @@ def test_the_legacy_photolink_header_still_imports() -> None:
 def test_profilelink_wins_over_photolink_when_both_are_present() -> None:
     """A non-blank `ProfileLink` wins; a blank one falls back to the
     legacy column rather than erasing it."""
-    result = parse_reviewee_csv(_b(
-        "RevieweeName,RevieweeEmail,ProfileLink,PhotoLink\n"
-        "Erin,erin@example.edu,https://example.edu/new.jpg,https://example.edu/old.jpg\n"
-        "Finn,finn@example.edu,,https://example.edu/old.jpg\n"
-    ))
+    result = parse_reviewee_csv(
+        _b(
+            "RevieweeName,RevieweeEmail,ProfileLink,PhotoLink\n"
+            "Erin,erin@example.edu,https://example.edu/new.jpg,https://example.edu/old.jpg\n"
+            "Finn,finn@example.edu,,https://example.edu/old.jpg\n"
+        )
+    )
 
     assert result.issues == []
     assert result.rows[0].profile_link == "https://example.edu/new.jpg"
@@ -127,11 +118,7 @@ def test_profilelink_wins_over_photolink_when_both_are_present() -> None:
 
 def test_reviewee_non_email_identifier_is_accepted() -> None:
     """No-`@` reviewee values import as identifiers (asymmetric mode)."""
-    csv_text = (
-        "RevieweeName,RevieweeEmail\n"
-        "Dan,dan-2026\n"
-        "Eve,student-id-7\n"
-    )
+    csv_text = "RevieweeName,RevieweeEmail\nDan,dan-2026\nEve,student-id-7\n"
     result = parse_reviewee_csv(_b(csv_text))
 
     assert result.issues == []
@@ -140,12 +127,7 @@ def test_reviewee_non_email_identifier_is_accepted() -> None:
 
 def test_reviewee_malformed_at_containing_identifier_is_blocking() -> None:
     """`foo@` / `@bar` were importing cleanly and dying later on send."""
-    csv_text = (
-        "RevieweeName,RevieweeEmail\n"
-        "Carol,foo@\n"
-        "Dan,@bar\n"
-        "Eve,no-at-sign\n"
-    )
+    csv_text = "RevieweeName,RevieweeEmail\nCarol,foo@\nDan,@bar\nEve,no-at-sign\n"
     result = parse_reviewee_csv(_b(csv_text))
 
     assert result.is_blocked
@@ -166,9 +148,7 @@ def test_reviewee_missing_name_column_blocks() -> None:
 
 
 def test_reviewer_csv_with_utf8_bom_parses() -> None:
-    csv_bytes = "﻿".encode() + _b(
-        "ReviewerName,ReviewerEmail\nAlice,alice@example.edu\n"
-    )
+    csv_bytes = "﻿".encode() + _b("ReviewerName,ReviewerEmail\nAlice,alice@example.edu\n")
     result = parse_reviewer_csv(csv_bytes)
 
     assert result.issues == []
@@ -176,10 +156,7 @@ def test_reviewer_csv_with_utf8_bom_parses() -> None:
 
 
 def test_reviewer_unknown_columns_are_ignored() -> None:
-    csv_text = (
-        "ReviewerName,ReviewerEmail,Department\n"
-        "Alice,alice@example.edu,Math\n"
-    )
+    csv_text = "ReviewerName,ReviewerEmail,Department\nAlice,alice@example.edu,Math\n"
     result = parse_reviewer_csv(_b(csv_text))
 
     assert result.issues == []
@@ -187,11 +164,7 @@ def test_reviewer_unknown_columns_are_ignored() -> None:
 
 
 def test_reviewer_empty_required_cell_is_blocking() -> None:
-    csv_text = (
-        "ReviewerName,ReviewerEmail\n"
-        ",alice@example.edu\n"
-        "Bob,\n"
-    )
+    csv_text = "ReviewerName,ReviewerEmail\n,alice@example.edu\nBob,\n"
     result = parse_reviewer_csv(_b(csv_text))
 
     assert result.is_blocked
@@ -204,11 +177,7 @@ def test_reviewer_empty_required_cell_is_blocking() -> None:
 
 def test_reviewer_same_email_different_name_is_blocking() -> None:
     """Email is the unique person-id; same email + different name errors."""
-    csv_text = (
-        "ReviewerName,ReviewerEmail\n"
-        "Alice,shared@example.edu\n"
-        "Alex,shared@example.edu\n"
-    )
+    csv_text = "ReviewerName,ReviewerEmail\nAlice,shared@example.edu\nAlex,shared@example.edu\n"
     result = parse_reviewer_csv(_b(csv_text))
 
     assert result.is_blocked

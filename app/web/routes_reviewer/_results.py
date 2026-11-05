@@ -52,16 +52,12 @@ router = APIRouter(prefix="/me")
 )
 def reviewee_results(
     request: Request,
-    reviewee_session: tuple[Reviewee, ReviewSession] = Depends(
-        require_reviewee_with_current_grant
-    ),
+    reviewee_session: tuple[Reviewee, ReviewSession] = Depends(require_reviewee_with_current_grant),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
     reviewee, review_session = reviewee_session
-    context = build_reviewee_results_context(
-        db, review_session=review_session, reviewee=reviewee
-    )
+    context = build_reviewee_results_context(db, review_session=review_session, reviewee=reviewee)
     return _templates.TemplateResponse(
         request,
         "reviewer/results.html",
@@ -76,9 +72,7 @@ def reviewee_results(
             ),
             # participant info Item 4 — the reviewee's own roster
             # fields after the role pills.
-            "reviewee_self_fields": views.reviewee_self_line_for(
-                review_session, reviewee
-            ),
+            "reviewee_self_fields": views.reviewee_self_line_for(review_session, reviewee),
             "sections": context.sections,
             "acknowledged_at": reviewee.results_acknowledged_at,
         },
@@ -90,9 +84,8 @@ def reviewee_results(
     response_class=HTMLResponse,
 )
 def reviewee_results_acknowledge(
-    request: Request, reviewee_session: tuple[Reviewee, ReviewSession] = Depends(
-        require_reviewee_with_current_grant
-    ),
+    request: Request,
+    reviewee_session: tuple[Reviewee, ReviewSession] = Depends(require_reviewee_with_current_grant),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -104,7 +97,8 @@ def reviewee_results_acknowledge(
     reviewees_service.acknowledge_results(
         db, review_session=review_session, reviewee=reviewee, user=user
     )
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url=f"/me/sessions/{review_session.public_id}/results",
         status_code=status.HTTP_303_SEE_OTHER,
     )

@@ -92,11 +92,15 @@ def test_a_parent_changed_to_close_its_branch_deletes_the_answer(
     _save(db, op, reviewer, review_session, assignment, rating="5", comments="Why")
     _save(db, op, reviewer, review_session, assignment, rating="2")
     assert _answers(db, assignment.id) == {"rating": "2"}
-    event = db.execute(
-        select(AuditEvent)
-        .where(AuditEvent.event_type == "responses.saved")
-        .order_by(AuditEvent.id.desc())
-    ).scalars().first()
+    event = (
+        db.execute(
+            select(AuditEvent)
+            .where(AuditEvent.event_type == "responses.saved")
+            .order_by(AuditEvent.id.desc())
+        )
+        .scalars()
+        .first()
+    )
     assert event is not None and event.detail is not None
     assert event.detail["counts"]["branch_answers_removed"] == 1
 
@@ -121,9 +125,7 @@ def test_submit_drops_a_closed_branch_before_stamping(db: Session) -> None:
         review_session=review_session,
         reviewer=reviewer,
         user=op,
-        upserts=[
-            ResponseUpsert(assignment_id=assignment.id, field_key="rating", value="3")
-        ],
+        upserts=[ResponseUpsert(assignment_id=assignment.id, field_key="rating", value="3")],
         correlation_id="corr",
     )
     assert result.submitted is True
@@ -144,18 +146,20 @@ def test_a_blocked_submit_audits_the_answer_it_removed(db: Session) -> None:
         review_session=review_session,
         reviewer=reviewer,
         user=op,
-        upserts=[
-            ResponseUpsert(assignment_id=assignment.id, field_key="rating", value="")
-        ],
+        upserts=[ResponseUpsert(assignment_id=assignment.id, field_key="rating", value="")],
         correlation_id="corr",
     )
     assert result.submitted is False and result.missing
     assert _answers(db, assignment.id) == {}
-    event = db.execute(
-        select(AuditEvent)
-        .where(AuditEvent.event_type == "responses.saved")
-        .order_by(AuditEvent.id.desc())
-    ).scalars().first()
+    event = (
+        db.execute(
+            select(AuditEvent)
+            .where(AuditEvent.event_type == "responses.saved")
+            .order_by(AuditEvent.id.desc())
+        )
+        .scalars()
+        .first()
+    )
     assert event is not None and event.detail is not None
     assert event.detail["counts"]["branch_answers_removed"] == 1
     assert "submit blocked" in event.summary
@@ -169,9 +173,7 @@ def test_a_refused_parent_holds_its_governed_answer(db: Session) -> None:
     op, reviewer, review_session, assignment = _seed(db)
     _branch_default_instrument(db, assignment)
     _save(db, op, reviewer, review_session, assignment, rating="5", comments="old")
-    result = _save(
-        db, op, reviewer, review_session, assignment, rating="9", comments="new"
-    )
+    result = _save(db, op, reviewer, review_session, assignment, rating="9", comments="new")
     by_key = {e.field_key: e for e in result.errors}
     assert set(by_key) == {"rating", "comments"}
     assert by_key["comments"].value == "new"
@@ -190,8 +192,12 @@ def _governed_q2(db: Session, instrument, q1, *, branched: bool):
     if branched:
         q1.branch_op, q1.branch_value = "ge", "4"
     q2 = InstrumentResponseField(
-        instrument_id=instrument.id, field_key="q2", label="Q2", order=2,
-        visible=True, _inline_data_type="String",
+        instrument_id=instrument.id,
+        field_key="q2",
+        label="Q2",
+        order=2,
+        visible=True,
+        _inline_data_type="String",
         branch_parent_id=q1.id if branched else None,
     )
     db.add(q2)

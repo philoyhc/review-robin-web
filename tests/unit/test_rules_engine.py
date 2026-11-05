@@ -77,11 +77,7 @@ def _build_population(
             tag1 = f"Group{g:02d}"
             tag2 = "Lead" if (with_lead and m == 0) else "Member"
             reviewers.append(Reviewer(email=email, tag_1=tag1, tag_2=tag2))
-            reviewees.append(
-                Reviewee(
-                    email_or_identifier=email, tag_1=tag1, tag_2=tag2
-                )
-            )
+            reviewees.append(Reviewee(email_or_identifier=email, tag_1=tag1, tag_2=tag2))
     return reviewers, reviewees
 
 
@@ -143,9 +139,7 @@ def test_all_of_intersects_per_rule_allowed_sets() -> None:
     """Intra-group AND lead-only ⇒ pairs that are both intra-group
     and (reviewer is Lead AND reviewee is Lead)."""
 
-    reviewers, reviewees = _build_population(
-        groups=2, per_group=3, with_lead=True
-    )
+    reviewers, reviewees = _build_population(groups=2, per_group=3, with_lead=True)
     result = evaluate(
         _ruleset(
             combinator=Combinator.ALL_OF,
@@ -219,9 +213,7 @@ def test_any_of_unions_per_rule_allowed_sets() -> None:
         exclude_self=False,
     )
     result = evaluate(rs, reviewers=reviewers, reviewees=reviewees)
-    pair_keys = {
-        (r.email, e.email_or_identifier) for r, e in _typed(result.pairs)
-    }
+    pair_keys = {(r.email, e.email_or_identifier) for r, e in _typed(result.pairs)}
     # (a, c) intra; (a, d) same tag2; (b, d) same tag2.
     assert pair_keys == {
         ("a@x.edu", "c@x.edu"),
@@ -264,9 +256,7 @@ def test_pipeline_applies_rules_in_declaration_order() -> None:
     """Start with everything, MATCH intra-group, then FILTER away
     leads. Final = intra-group non-lead pairs (excl. self)."""
 
-    reviewers, reviewees = _build_population(
-        groups=2, per_group=3, with_lead=True
-    )
+    reviewers, reviewees = _build_population(groups=2, per_group=3, with_lead=True)
     rs = _ruleset(
         combinator=Combinator.PIPELINE,
         rules=[
@@ -280,9 +270,7 @@ def test_pipeline_applies_rules_in_declaration_order() -> None:
             ),
             FilterRule(
                 id="strip_leads",
-                predicate=Predicate(
-                    field="reviewer.tag2", operator="equals", operand="Lead"
-                ),
+                predicate=Predicate(field="reviewer.tag2", operator="equals", operand="Lead"),
             ),
         ],
     )
@@ -314,9 +302,7 @@ def test_composite_and_or_nest_correctly() -> None:
         rules=[
             MatchRule(
                 id="lead_r",
-                predicate=Predicate(
-                    field="reviewer.tag2", operator="equals", operand="L"
-                ),
+                predicate=Predicate(field="reviewer.tag2", operator="equals", operand="L"),
             ),
             MatchRule(
                 id="intra",
@@ -449,9 +435,7 @@ def test_quota_caps_per_reviewee_at_max() -> None:
     )
     by_reviewee: dict[str, int] = {}
     for _, e in _typed(result.pairs):
-        by_reviewee[e.email_or_identifier] = (
-            by_reviewee.get(e.email_or_identifier, 0) + 1
-        )
+        by_reviewee[e.email_or_identifier] = by_reviewee.get(e.email_or_identifier, 0) + 1
     assert all(count == 3 for count in by_reviewee.values())
     assert result.excluded_counts.get("quota.per_reviewee", 0) > 0
 
@@ -488,17 +472,10 @@ def test_repeated_runs_with_same_seed_produce_identical_pairs() -> None:
         selection=QuotaSelection(strategy=SelectionStrategy.RANDOM, seed=42),
     )
     rs = _ruleset(rules=[quota])
-    runs = [
-        evaluate(rs, reviewers=reviewers, reviewees=reviewees).pairs
-        for _ in range(100)
-    ]
-    first = [
-        (r.email, e.email_or_identifier) for r, e in _typed(runs[0])
-    ]
+    runs = [evaluate(rs, reviewers=reviewers, reviewees=reviewees).pairs for _ in range(100)]
+    first = [(r.email, e.email_or_identifier) for r, e in _typed(runs[0])]
     for run in runs[1:]:
-        assert [
-            (r.email, e.email_or_identifier) for r, e in _typed(run)
-        ] == first
+        assert [(r.email, e.email_or_identifier) for r, e in _typed(run)] == first
 
 
 def test_deterministic_pair_emit_order_is_lex_email() -> None:
@@ -566,10 +543,7 @@ def test_validate_flags_quota_min_exceeding_population() -> None:
         reviewers=[Reviewer(email="a@x.edu")],
         reviewees=[Reviewee(email_or_identifier="b@x.edu")],
     )
-    assert any(
-        "exceeds PER_REVIEWEE population size" in issue.message
-        for issue in issues
-    )
+    assert any("exceeds PER_REVIEWEE population size" in issue.message for issue in issues)
 
 
 def test_validate_flags_empty_populations() -> None:

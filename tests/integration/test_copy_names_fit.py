@@ -5,6 +5,7 @@ instrument ``"<name> (copy)"``. Neither trimmed, so a source name near
 the limit produced a name Postgres refuses (``String(255)``) — a 500
 there, though SQLite stores it. Duplicate cuts the tail now; Replicate
 trims the source name so the " (copy)" suffix is kept."""
+
 from __future__ import annotations
 
 from sqlalchemy import select
@@ -41,9 +42,11 @@ def test_replicate_of_a_255_char_instrument_name_fits(db: Session) -> None:
     review_session = sessions.create_session(
         db, user=op, payload=SessionCreate(name="Inst", code="long-inst")
     )
-    source = db.execute(
-        select(Instrument).where(Instrument.session_id == review_session.id)
-    ).scalars().first()
+    source = (
+        db.execute(select(Instrument).where(Instrument.session_id == review_session.id))
+        .scalars()
+        .first()
+    )
     assert source is not None
     source.name = LONG_NAME
     db.commit()

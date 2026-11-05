@@ -10,6 +10,7 @@ The filter is the roster pages' shape (All / Active / Inactive) and
 composes with the search into `Showing N of M`, as
 `views/_filters.py` puts it: *"Filters compose: status + search"*.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -26,11 +27,13 @@ from ._assignment_states import seed_session_with_assignment as _seed
 def _one_inactive(db: Session, session_id: int) -> int:
     """Flip the first pair to `include=False`, leaving the second
     active. Returns the inactivated row's id."""
-    row = db.execute(
-        select(Assignment)
-        .where(Assignment.session_id == session_id)
-        .order_by(Assignment.id)
-    ).scalars().first()
+    row = (
+        db.execute(
+            select(Assignment).where(Assignment.session_id == session_id).order_by(Assignment.id)
+        )
+        .scalars()
+        .first()
+    )
     assert row is not None
     row.include = False
     db.commit()
@@ -69,52 +72,32 @@ def test_list_pairs_agrees_with_the_count(
     assert count == expected
 
 
-def test_status_returns_the_row_it_names(
-    db: Session, client: TestClient
-) -> None:
+def test_status_returns_the_row_it_names(db: Session, client: TestClient) -> None:
     """Not just the right number — the right row."""
     s = _seed(client, db, code="asf-which")
     inactive_id = _one_inactive(db, s.id)
 
-    assert [r.id for r in assignments.list_pairs(db, s.id, status="inactive")] == [
-        inactive_id
-    ]
-    assert inactive_id not in [
-        r.id for r in assignments.list_pairs(db, s.id, status="active")
-    ]
+    assert [r.id for r in assignments.list_pairs(db, s.id, status="inactive")] == [inactive_id]
+    assert inactive_id not in [r.id for r in assignments.list_pairs(db, s.id, status="active")]
 
 
-def test_status_and_search_compose(
-    db: Session, client: TestClient
-) -> None:
+def test_status_and_search_compose(db: Session, client: TestClient) -> None:
     """`Team B` matches one pair (the reviewee's tag). Narrowing that
     to `inactive` must intersect, not replace."""
     s = _seed(client, db, code="asf-compose")
     _one_inactive(db, s.id)
 
-    both = assignments.count_pairs(
-        db, s.id, search="Team B", search_by="all", status="all"
-    )
+    both = assignments.count_pairs(db, s.id, search="Team B", search_by="all", status="all")
     assert both == 1
 
     # The `Team B` pair is the first one, which `_one_inactive` flipped.
     assert (
-        assignments.count_pairs(
-            db, s.id, search="Team B", search_by="all", status="inactive"
-        )
-        == 1
+        assignments.count_pairs(db, s.id, search="Team B", search_by="all", status="inactive") == 1
     )
-    assert (
-        assignments.count_pairs(
-            db, s.id, search="Team B", search_by="all", status="active"
-        )
-        == 0
-    )
+    assert assignments.count_pairs(db, s.id, search="Team B", search_by="all", status="active") == 0
 
 
-def test_the_page_renders_the_status_select(
-    db: Session, client: TestClient
-) -> None:
+def test_the_page_renders_the_status_select(db: Session, client: TestClient) -> None:
     s = _seed(client, db, code="asf-page")
 
     body = client.get(f"/operator/sessions/{s.public_id}/assignments").text
@@ -124,22 +107,16 @@ def test_the_page_renders_the_status_select(
     assert ">Inactive</option>" in body
 
 
-def test_the_hint_counts_both_filters(
-    db: Session, client: TestClient
-) -> None:
+def test_the_hint_counts_both_filters(db: Session, client: TestClient) -> None:
     s = _seed(client, db, code="asf-hint")
     _one_inactive(db, s.id)
 
-    body = client.get(
-        f"/operator/sessions/{s.public_id}/assignments?status=active"
-    ).text
+    body = client.get(f"/operator/sessions/{s.public_id}/assignments?status=active").text
 
     assert "Showing 1 assignment." in body
 
 
-def test_the_column_chips_ignore_the_status_filter(
-    db: Session, client: TestClient
-) -> None:
+def test_the_column_chips_ignore_the_status_filter(db: Session, client: TestClient) -> None:
     """`col_data` is answered over the session's rosters, not the
     filtered rows, on purpose — the chips' enabled state must not flip
     because the operator narrowed the view by status.
@@ -165,9 +142,7 @@ def test_the_column_chips_ignore_the_status_filter(
     active_only = enabled_chips(
         client.get(f"/operator/sessions/{s.public_id}/assignments?status=active").text
     )
-    unfiltered = enabled_chips(
-        client.get(f"/operator/sessions/{s.public_id}/assignments").text
-    )
+    unfiltered = enabled_chips(client.get(f"/operator/sessions/{s.public_id}/assignments").text)
 
     assert unfiltered, "fixture must leave some chip enabled or this proves nothing"
     assert active_only == unfiltered
@@ -186,25 +161,19 @@ def test_an_unrecognised_status_is_normalised_before_it_round_trips(
     """
     s = _seed(client, db, code="asf-junk")
 
-    body = client.get(
-        f"/operator/sessions/{s.public_id}/assignments?status=nonsense"
-    ).text
+    body = client.get(f"/operator/sessions/{s.public_id}/assignments?status=nonsense").text
 
     assert '<input type="hidden" name="filter_status" value="all">' in body
     assert "nonsense" not in body
 
 
-def test_clear_shows_for_a_status_filter_alone(
-    db: Session, client: TestClient
-) -> None:
+def test_clear_shows_for_a_status_filter_alone(db: Session, client: TestClient) -> None:
     """Status counts as a filter, so `Clear` renders with no search
     term too, as on the other table pages (findings B11, 2026-10-03)."""
     s = _seed(client, db, code="asf-clear")
 
     bare = client.get(f"/operator/sessions/{s.public_id}/assignments").text
-    filtered = client.get(
-        f"/operator/sessions/{s.public_id}/assignments?status=inactive"
-    ).text
+    filtered = client.get(f"/operator/sessions/{s.public_id}/assignments?status=inactive").text
 
     assert ">Clear</a>" not in bare
     assert ">Clear</a>" in filtered

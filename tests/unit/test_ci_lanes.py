@@ -98,10 +98,18 @@ def test_only_prose_and_residential_is_the_residential_lane(paths):
 
 @pytest.mark.parametrize(
     "outside",
-    ["cordware/main.py", "pyproject.toml", "app/main.py", ".github/workflows/ci.yml", "tools/ci_lanes.py"],
+    [
+        "cordware/main.py",
+        "pyproject.toml",
+        "app/main.py",
+        ".github/workflows/ci.yml",
+        "tools/ci_lanes.py",
+    ],
 )
 def test_residential_with_anything_shared_is_full(outside):
-    assert ci_lanes.lane(["residentialapps/residentialops/main.py", outside], "pull_request") == "full"
+    assert (
+        ci_lanes.lane(["residentialapps/residentialops/main.py", outside], "pull_request") == "full"
+    )
 
 
 def test_a_path_merely_named_like_residential_is_not():
@@ -199,7 +207,9 @@ def test_the_scan_sees_each_way_of_naming_prose(source):
     assert ci_lanes.PROSE_LITERAL.search(source)
 
 
-@pytest.mark.parametrize("source", ['Path("app/web/static/x.png")', '"operator/settings"', '"specimen"'])
+@pytest.mark.parametrize(
+    "source", ['Path("app/web/static/x.png")', '"operator/settings"', '"specimen"']
+)
 def test_the_scan_ignores_other_literals(source):
     assert not ci_lanes.PROSE_LITERAL.search(source)
 
@@ -217,7 +227,10 @@ def test_a_file_moved_into_a_prose_folder_is_full(tmp_path):
     def git(*args):
         return subprocess.run(
             ["git", "-c", "user.name=t", "-c", "user.email=t@example.com", *args],
-            cwd=tmp_path, check=True, capture_output=True, text=True,
+            cwd=tmp_path,
+            check=True,
+            capture_output=True,
+            text=True,
         ).stdout
 
     git("init", "-q")

@@ -39,9 +39,7 @@ def _session(db: Session, *, code: str) -> ReviewSession:
 def _instrument(
     db: Session, review_session: ReviewSession, *, name: str, short_label: str
 ) -> Instrument:
-    instrument = Instrument(
-        session_id=review_session.id, name=name, short_label=short_label
-    )
+    instrument = Instrument(session_id=review_session.id, name=name, short_label=short_label)
     db.add(instrument)
     db.flush()
     db.add(
@@ -61,7 +59,7 @@ def _instrument(
 def _copied(rows: list[Row], prefix: str, new_prefix: str) -> list[Row]:
     """Every row under ``prefix``, repeated under ``new_prefix``."""
     return [
-        row._replace(field=new_prefix + row.field[len(prefix):])
+        row._replace(field=new_prefix + row.field[len(prefix) :])
         for row in rows
         if row.field.startswith(prefix)
     ]
@@ -85,11 +83,10 @@ def _exported(db: Session) -> list[Row]:
 
 
 def _nothing_written(db: Session, session_id: int) -> bool:
-    return not db.execute(
-        select(Instrument.id).where(Instrument.session_id == session_id)
-    ).first() and not db.execute(
-        select(DataShape.id).where(DataShape.session_id == session_id)
-    ).first()
+    return (
+        not db.execute(select(Instrument.id).where(Instrument.session_id == session_id)).first()
+        and not db.execute(select(DataShape.id).where(DataShape.session_id == session_id)).first()
+    )
 
 
 def test_a_repeated_data_shape_name_is_a_row_error(db: Session) -> None:
@@ -117,10 +114,7 @@ def test_a_shape_phase_2_skips_does_not_count_as_a_repeat(
     are not errors."""
     rows = _exported(db)
     copy = _copied(rows, "data_shapes[0].", "data_shapes[1].")
-    rows += [
-        row._replace(value="nowhere") if row.field.endswith(".axis") else row
-        for row in copy
-    ]
+    rows += [row._replace(value="nowhere") if row.field.endswith(".axis") else row for row in copy]
     for index in (2, 3):
         rows += [
             row._replace(value="") if row.field.endswith(".name") else row
@@ -151,8 +145,7 @@ def test_a_repeated_field_key_in_one_instrument_is_a_row_error(
     assert [(e.field, e.message) for e in result.errors] == [
         (
             "instruments[1].response_fields[2].field_key",
-            "duplicate field_key 'score' "
-            "(also at instruments[1].response_fields[1])",
+            "duplicate field_key 'score' (also at instruments[1].response_fields[1])",
         )
     ]
     assert _nothing_written(db, destination.id)
@@ -201,15 +194,12 @@ def test_a_value_longer_than_its_column_is_a_row_error(db: Session) -> None:
     assert messages["instruments[1].response_fields[1].field_key"] == (
         "256 characters; at most 255 fit"
     )
-    assert messages["instruments[1].short_label"] == (
-        "33 characters; at most 32 fit"
-    )
+    assert messages["instruments[1].short_label"] == ("33 characters; at most 32 fit")
     assert _nothing_written(db, destination.id)
 
     # At the limit is fine.
     rows = [
-        row._replace(value="n" * 255) if row.field == "data_shapes[0].name"
-        else row
+        row._replace(value="n" * 255) if row.field == "data_shapes[0].name" else row
         for row in _exported_again(db)
     ]
     result = apply_session_config(db, _session(db, code="at-limit"), rows)
@@ -217,9 +207,7 @@ def test_a_value_longer_than_its_column_is_a_row_error(db: Session) -> None:
 
 
 def _exported_again(db: Session) -> list[Row]:
-    source = db.scalars(
-        select(ReviewSession).where(ReviewSession.code == "dup-src")
-    ).one()
+    source = db.scalars(select(ReviewSession).where(ReviewSession.code == "dup-src")).one()
     return serialize_session_config(db, source)
 
 
@@ -236,9 +224,7 @@ def test_only_values_phase_2_writes_are_length_checked(db: Session) -> None:
         Row("data_shapes[1].axis", "nowhere", "enum"),
     ]
     rows = [
-        row._replace(value="x" * 40)
-        if row.field == "data_shapes[0].self_review_handling"
-        else row
+        row._replace(value="x" * 40) if row.field == "data_shapes[0].self_review_handling" else row
         for row in rows
     ]
     destination = _session(db, code="fill-blanks")

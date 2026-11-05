@@ -117,9 +117,7 @@ class MaterializedRows:
     max_id: int | None
 
 
-def materialized_rows_by_instrument(
-    db: Session, session_id: int
-) -> dict[int, MaterializedRows]:
+def materialized_rows_by_instrument(db: Session, session_id: int) -> dict[int, MaterializedRows]:
     """``{instrument_id: MaterializedRows}`` for one session, in a
     single grouped aggregate.
 
@@ -152,9 +150,7 @@ def rows_for(
     """The instrument's row summary, or the empty one if it has no
     rows. Never-generated and emptied read alike here; the verdict's
     own never-generated rule lives in ``staleness_by_instrument``."""
-    return rows_by_instrument.get(
-        instrument_id, MaterializedRows(count=0, max_id=None)
-    )
+    return rows_by_instrument.get(instrument_id, MaterializedRows(count=0, max_id=None))
 
 
 def _side_attributes(side: str) -> tuple[str, ...]:
@@ -167,9 +163,7 @@ def _side_attributes(side: str) -> tuple[str, ...]:
     that false, and the failure would be a stamp that stays equal
     while the fan-out changes.
     """
-    return tuple(
-        sorted({attr for mapped_side, attr in FIELD_MAP.values() if mapped_side == side})
-    )
+    return tuple(sorted({attr for mapped_side, attr in FIELD_MAP.values() if mapped_side == side}))
 
 
 def _roster_digest(rows: Iterable[Any], *, side: str) -> list[list[Any]]:
@@ -298,7 +292,5 @@ def reconcile_stamp(
     # No ``default=`` fallback: every value above is JSON-native, and
     # a fallback would stringify an unexpected type instead of raising
     # — which is how two different values quietly become one stamp.
-    encoded = json.dumps(
-        payload, sort_keys=True, separators=(",", ":")
-    ).encode("utf-8")
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return f"{STAMP_VERSION}:{hashlib.sha256(encoded).hexdigest()}"

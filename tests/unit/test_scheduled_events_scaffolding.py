@@ -5,6 +5,7 @@ shared helpers (``parse_iso_duration``, ``resolve_offset``,
 ``lock_session``) and the no-op entry point. Per-trigger coverage
 lands with each consumer PR (1B activation, 2A invites, …).
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -32,7 +33,7 @@ from app.services import scheduled_events
         ("-PT2H", timedelta(hours=-2)),
         ("-PT240H", timedelta(hours=-240)),
         ("P1Y", timedelta(days=365)),  # year approximation
-        ("P2M", timedelta(days=60)),   # month approximation
+        ("P2M", timedelta(days=60)),  # month approximation
     ],
 )
 def test_parse_iso_duration_valid_forms(text: str, expected: timedelta) -> None:
@@ -73,47 +74,32 @@ def _make_session(db: Session, code: str, **kwargs: object) -> ReviewSession:
     op = User(email=f"op-{code}@example.edu", display_name="Op")
     db.add(op)
     db.flush()
-    review_session = ReviewSession(
-        name=code.title(), code=code, created_by_user_id=op.id, **kwargs
-    )
+    review_session = ReviewSession(name=code.title(), code=code, created_by_user_id=op.id, **kwargs)
     db.add(review_session)
     db.flush()
     return review_session
 
 
 def test_resolve_offset_anchor_null_returns_none(db: Session) -> None:
-    review_session = _make_session(
-        db, "anchor-null", invite_offsets=["-P1D"]
-    )
+    review_session = _make_session(db, "anchor-null", invite_offsets=["-P1D"])
     # scheduled_activate_at is unset
     assert (
-        scheduled_events.resolve_offset(
-            review_session, "scheduled_activate_at", "invite_offsets"
-        )
+        scheduled_events.resolve_offset(review_session, "scheduled_activate_at", "invite_offsets")
         is None
     )
 
 
 def test_resolve_offset_offset_null_returns_none(db: Session) -> None:
     when = datetime(2026, 6, 1, 9, 0, tzinfo=UTC)
-    review_session = _make_session(
-        db, "offset-null", scheduled_activate_at=when
-    )
+    review_session = _make_session(db, "offset-null", scheduled_activate_at=when)
     # archive_offset is unset
-    assert (
-        scheduled_events.resolve_offset(
-            review_session, "deadline", "archive_offset"
-        )
-        is None
-    )
+    assert scheduled_events.resolve_offset(review_session, "deadline", "archive_offset") is None
 
 
 def test_resolve_offset_both_null_returns_none(db: Session) -> None:
     review_session = _make_session(db, "both-null")
     assert (
-        scheduled_events.resolve_offset(
-            review_session, "scheduled_activate_at", "invite_offsets"
-        )
+        scheduled_events.resolve_offset(review_session, "scheduled_activate_at", "invite_offsets")
         is None
     )
 
@@ -121,13 +107,9 @@ def test_resolve_offset_both_null_returns_none(db: Session) -> None:
 def test_resolve_offset_valid_anchor_string_offset(db: Session) -> None:
     """Singleton offset string (archive_offset) anchored on deadline."""
     deadline = datetime(2026, 6, 1, 17, 0, tzinfo=UTC)
-    review_session = _make_session(
-        db, "valid-archive", deadline=deadline, archive_offset="P30D"
-    )
+    review_session = _make_session(db, "valid-archive", deadline=deadline, archive_offset="P30D")
 
-    resolved = scheduled_events.resolve_offset(
-        review_session, "deadline", "archive_offset"
-    )
+    resolved = scheduled_events.resolve_offset(review_session, "deadline", "archive_offset")
     assert resolved == deadline + timedelta(days=30)
 
 
@@ -154,26 +136,17 @@ def test_resolve_offset_invalid_duration_returns_none(db: Session) -> None:
         db, "invalid-offset", deadline=deadline, archive_offset="not-a-duration"
     )
 
-    assert (
-        scheduled_events.resolve_offset(
-            review_session, "deadline", "archive_offset"
-        )
-        is None
-    )
+    assert scheduled_events.resolve_offset(review_session, "deadline", "archive_offset") is None
 
 
 def test_resolve_offset_naive_anchor_treated_as_utc(db: Session) -> None:
     """A naive datetime on the anchor column (SQLite default) is treated as UTC."""
     naive_deadline = datetime(2026, 6, 1, 17, 0)  # no tzinfo
-    review_session = _make_session(
-        db, "naive-anchor", archive_offset="P1D"
-    )
+    review_session = _make_session(db, "naive-anchor", archive_offset="P1D")
     review_session.deadline = naive_deadline
     db.flush()
 
-    resolved = scheduled_events.resolve_offset(
-        review_session, "deadline", "archive_offset"
-    )
+    resolved = scheduled_events.resolve_offset(review_session, "deadline", "archive_offset")
     assert resolved is not None
     assert resolved.tzinfo is not None
     assert resolved == datetime(2026, 6, 2, 17, 0, tzinfo=UTC)
@@ -211,9 +184,9 @@ def test_observe_scheduled_events_is_no_op_in_pr_1a(db: Session) -> None:
     review_session = _make_session(db, "no-op")
 
     before = db.execute(
-        select(func.count()).select_from(AuditEvent).where(
-            AuditEvent.session_id == review_session.id
-        )
+        select(func.count())
+        .select_from(AuditEvent)
+        .where(AuditEvent.session_id == review_session.id)
     ).scalar()
     assert before == 0
 
@@ -221,9 +194,9 @@ def test_observe_scheduled_events_is_no_op_in_pr_1a(db: Session) -> None:
     db.flush()
 
     after = db.execute(
-        select(func.count()).select_from(AuditEvent).where(
-            AuditEvent.session_id == review_session.id
-        )
+        select(func.count())
+        .select_from(AuditEvent)
+        .where(AuditEvent.session_id == review_session.id)
     ).scalar()
     assert after == 0
 
@@ -242,6 +215,4 @@ def test_observe_scheduled_events_accepts_correlation_id(db: Session) -> None:
     """The ``correlation_id`` kwarg is consumed by future triggers'
     audit events; the no-op accepts it without raising."""
     review_session = _make_session(db, "with-corr-id")
-    scheduled_events.observe_scheduled_events(
-        db, review_session, correlation_id="abc-123"
-    )
+    scheduled_events.observe_scheduled_events(db, review_session, correlation_id="abc-123")

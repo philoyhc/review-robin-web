@@ -15,6 +15,7 @@ Postgres-backed, scoped to an operator and a session, swept
 opportunistically. Nothing here writes an audit event; a cached answer
 saves nothing until an import does, which audits as before.
 """
+
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
@@ -121,9 +122,7 @@ def known_for(
     return recall(db, user=user, session_id=session_id, keys=[k for k in keys if k], since=since)
 
 
-def remember(
-    db: Session, *, user: User, session_id: int, outcomes: Mapping[str, Outcome]
-) -> int:
+def remember(db: Session, *, user: User, session_id: int, outcomes: Mapping[str, Outcome]) -> int:
     """Keep each answer in ``outcomes``, replacing what was kept for its
     key; a failed lookup is not kept. Returns how many were kept.
 
@@ -192,11 +191,8 @@ def sweep(db: Session) -> int:
     now = _now()
     stale = [
         row_id
-        for row_id, fetched_at in db.execute(
-            select(DirectoryLookup.id, DirectoryLookup.fetched_at)
-        )
-        if now - (fetched_at if fetched_at.tzinfo else fetched_at.replace(tzinfo=UTC))
-        > CACHE_TTL
+        for row_id, fetched_at in db.execute(select(DirectoryLookup.id, DirectoryLookup.fetched_at))
+        if now - (fetched_at if fetched_at.tzinfo else fetched_at.replace(tzinfo=UTC)) > CACHE_TTL
     ]
     if stale:
         db.execute(delete(DirectoryLookup).where(DirectoryLookup.id.in_(stale)))

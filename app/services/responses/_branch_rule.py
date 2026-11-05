@@ -34,11 +34,7 @@ def closed_governed_field_ids(
     answers: the ones that may hold no value."""
     field_list = list(fields)
     applicable = applicable_field_ids(field_list, answer_by_field_id)
-    return {
-        f.id
-        for f in field_list
-        if f.branch_parent_id is not None and f.id not in applicable
-    }
+    return {f.id for f in field_list if f.branch_parent_id is not None and f.id not in applicable}
 
 
 def drop_closed_branch_answers(db: Session, assignment_ids: Iterable[int]) -> int:
@@ -54,17 +50,13 @@ def drop_closed_branch_answers(db: Session, assignment_ids: Iterable[int]) -> in
     instrument_by_assignment: dict[int, int] = {
         assignment_id: instrument_id
         for assignment_id, instrument_id in db.execute(
-            select(Assignment.id, Assignment.instrument_id).where(
-                Assignment.id.in_(ids)
-            )
+            select(Assignment.id, Assignment.instrument_id).where(Assignment.id.in_(ids))
         ).all()
     }
     branch_fields = list(
         db.execute(
             select(InstrumentResponseField).where(
-                InstrumentResponseField.instrument_id.in_(
-                    set(instrument_by_assignment.values())
-                ),
+                InstrumentResponseField.instrument_id.in_(set(instrument_by_assignment.values())),
                 or_(
                     InstrumentResponseField.branch_parent_id.is_not(None),
                     InstrumentResponseField.branch_op.is_not(None),

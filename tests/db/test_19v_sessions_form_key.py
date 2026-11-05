@@ -51,9 +51,7 @@ def test_existing_sessions_get_distinct_form_keys_and_lose_them_on_downgrade() -
 
             command.upgrade(cfg, REVISION)
             connection.commit()
-            column = {c["name"]: c for c in inspect(connection).get_columns("sessions")}[
-                "form_key"
-            ]
+            column = {c["name"]: c for c in inspect(connection).get_columns("sessions")}["form_key"]
             assert column["nullable"] is False
             keys = [r[0] for r in connection.execute(text("SELECT form_key FROM sessions"))]
             assert len(keys) == 3 and len(set(keys)) == 3

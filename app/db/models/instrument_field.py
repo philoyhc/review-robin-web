@@ -94,24 +94,14 @@ class InstrumentResponseField(Base):
     # numeric bounds for integer/decimal; ``_inline_max`` doubles
     # as char-length cap for string; ``_inline_list_csv`` carries
     # list option lists.
-    _inline_data_type: Mapped[str | None] = mapped_column(
-        "data_type", String(16), nullable=True
-    )
+    _inline_data_type: Mapped[str | None] = mapped_column("data_type", String(16), nullable=True)
     _inline_response_type: Mapped[str | None] = mapped_column(
         "response_type", String(64), nullable=True
     )
-    _inline_min: Mapped[float | None] = mapped_column(
-        "min", Float, nullable=True
-    )
-    _inline_max: Mapped[float | None] = mapped_column(
-        "max", Float, nullable=True
-    )
-    _inline_step: Mapped[float | None] = mapped_column(
-        "step", Float, nullable=True
-    )
-    _inline_list_csv: Mapped[str | None] = mapped_column(
-        "list_csv", Text, nullable=True
-    )
+    _inline_min: Mapped[float | None] = mapped_column("min", Float, nullable=True)
+    _inline_max: Mapped[float | None] = mapped_column("max", Float, nullable=True)
+    _inline_step: Mapped[float | None] = mapped_column("step", Float, nullable=True)
+    _inline_list_csv: Mapped[str | None] = mapped_column("list_csv", Text, nullable=True)
 
     instrument: Mapped[Instrument] = relationship(back_populates="response_fields")
     responses: Mapped[list[Response]] = relationship(

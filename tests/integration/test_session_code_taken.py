@@ -4,6 +4,7 @@
 constraint). Create, Session Home's Save and the lobby's row-expander
 Save each refuse a taken code before writing anything, rather than
 letting the unique constraint raise ``IntegrityError``."""
+
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
@@ -23,9 +24,7 @@ def _create(client: TestClient, db: Session, name: str, code: str) -> ReviewSess
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def test_create_with_a_taken_code_is_a_422_and_writes_nothing(
@@ -72,9 +71,7 @@ def test_session_home_save_with_a_taken_code_is_a_422_and_writes_nothing(
     assert session_tags.tags_for_sessions(db, [other.id])[other.id] == []
 
 
-def test_session_home_save_keeps_its_own_code(
-    client: TestClient, db: Session
-) -> None:
+def test_session_home_save_keeps_its_own_code(client: TestClient, db: Session) -> None:
     session = _create(client, db, "Mine", "my-code")
 
     response = client.post(
@@ -122,9 +119,7 @@ def test_lobby_edit_keeps_its_own_code(client: TestClient, db: Session) -> None:
     assert must_get(db, ReviewSession, session.id).name == "Mine renamed"
 
 
-def test_lobby_edit_when_not_editable_ignores_a_taken_code(
-    client: TestClient, db: Session
-) -> None:
+def test_lobby_edit_when_not_editable_ignores_a_taken_code(client: TestClient, db: Session) -> None:
     """Off `is_editable` the lobby ignores Name / Code, so a taken code
     there is not refused: the tags still apply and the code is untouched."""
     _create(client, db, "Holder", "lobby-held-2")

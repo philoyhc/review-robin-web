@@ -110,15 +110,11 @@ def _activate(operator_client: TestClient, review_session: ReviewSession) -> Non
     )
 
 
-def _submit(
-    rae_client: TestClient, review_session: ReviewSession, db: Session
-) -> None:
+def _submit(rae_client: TestClient, review_session: ReviewSession, db: Session) -> None:
     assignment_ids = [
         a.id
         for a in db.execute(
-            select(Assignment).where(
-                Assignment.session_id == review_session.id
-            )
+            select(Assignment).where(Assignment.session_id == review_session.id)
         ).scalars()
     ]
     data: dict[str, str] = {}
@@ -153,9 +149,7 @@ def test_summary_table_no_colgroup_when_widths_unset(
     _submit(rae_client, review_session, db)
 
     app.dependency_overrides[get_current_user] = lambda: rae
-    body = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/summary"
-    ).text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}/summary").text
     assert "<colgroup>" not in body
     # ``base.html`` carries a CSS rule ``table.rs-group-table {
     # table-layout: fixed; }``, so the bare substring would
@@ -188,17 +182,13 @@ def test_summary_table_emits_col_widths_from_instrument(
     # what Band 2's drag-resize handler writes to
     # ``instrument.column_widths``.
     instrument = db.execute(
-        select(Instrument).where(
-            Instrument.session_id == review_session.id
-        )
+        select(Instrument).where(Instrument.session_id == review_session.id)
     ).scalar_one()
     fields = list(
         db.execute(
             select(InstrumentResponseField)
             .where(InstrumentResponseField.instrument_id == instrument.id)
-            .order_by(
-                InstrumentResponseField.order, InstrumentResponseField.id
-            )
+            .order_by(InstrumentResponseField.order, InstrumentResponseField.id)
         ).scalars()
     )
     rating_field, comments_field = fields[0], fields[1]
@@ -210,9 +200,7 @@ def test_summary_table_emits_col_widths_from_instrument(
     db.commit()
 
     app.dependency_overrides[get_current_user] = lambda: rae
-    body = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/summary"
-    ).text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}/summary").text
 
     # ``<colgroup>`` is present, with the explicit widths for
     # identity + each response field. The table tag carries
@@ -221,7 +209,7 @@ def test_summary_table_emits_col_widths_from_instrument(
     assert "<colgroup>" in body
     assert 'style="table-layout: fixed;"' in body
     assert 'style="width: 220px"' in body  # identity
-    assert 'style="width: 90px"' in body   # rating
+    assert 'style="width: 90px"' in body  # rating
     assert 'style="width: 400px"' in body  # comments
 
 
@@ -243,17 +231,13 @@ def test_summary_table_partial_widths_only_styles_set_columns(
     _submit(rae_client, review_session, db)
 
     instrument = db.execute(
-        select(Instrument).where(
-            Instrument.session_id == review_session.id
-        )
+        select(Instrument).where(Instrument.session_id == review_session.id)
     ).scalar_one()
     fields = list(
         db.execute(
             select(InstrumentResponseField)
             .where(InstrumentResponseField.instrument_id == instrument.id)
-            .order_by(
-                InstrumentResponseField.order, InstrumentResponseField.id
-            )
+            .order_by(InstrumentResponseField.order, InstrumentResponseField.id)
         ).scalars()
     )
     rating_field = fields[0]
@@ -261,9 +245,7 @@ def test_summary_table_partial_widths_only_styles_set_columns(
     db.commit()
 
     app.dependency_overrides[get_current_user] = lambda: rae
-    body = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/summary"
-    ).text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}/summary").text
     # Identity column lacks an explicit width — it must NOT
     # carry a ``style="width:...px"`` attribute on any of its
     # <col> tags.
@@ -296,9 +278,7 @@ def test_summary_per_reviewee_identity_carries_name_and_email(
     _submit(rae_client, review_session, db)
 
     app.dependency_overrides[get_current_user] = lambda: rae
-    body = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/summary"
-    ).text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}/summary").text
     assert "<strong>Carol</strong>" in body
     assert "<code>carol@example.edu</code>" in body
     # Required field marker — ``rating`` is required, so the
@@ -326,15 +306,11 @@ def test_summary_includes_visible_display_field_columns(
         client, db, code="sum-disp", reviewer_email=rae.email
     )
     carol = db.execute(
-        select(Reviewee).where(
-            Reviewee.session_id == review_session.id
-        )
+        select(Reviewee).where(Reviewee.session_id == review_session.id)
     ).scalar_one()
     carol.tag_1 = "Team Alpha"
     instrument = db.execute(
-        select(Instrument).where(
-            Instrument.session_id == review_session.id
-        )
+        select(Instrument).where(Instrument.session_id == review_session.id)
     ).scalar_one()
     tag1_df = db.execute(
         select(InstrumentDisplayField)
@@ -364,9 +340,7 @@ def test_summary_includes_visible_display_field_columns(
     _submit(rae_client, review_session, db)
 
     app.dependency_overrides[get_current_user] = lambda: rae
-    body = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/summary"
-    ).text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}/summary").text
     # The display column header AND Carol's tag value land
     # on the summary, same as the surface would render.
     assert "Tag 1" in body
@@ -397,9 +371,7 @@ def test_group_summary_tag_line_includes_all_visible_reviewee_tags(
         client, db, code="sum-group-tags", reviewer_email=rae.email
     )
     carol = db.execute(
-        select(Reviewee).where(
-            Reviewee.session_id == review_session.id
-        )
+        select(Reviewee).where(Reviewee.session_id == review_session.id)
     ).scalar_one()
     # Two tag values: tag_1 will be the boundary (lands in
     # ``group_key``), tag_2 is purely display (must show up
@@ -407,9 +379,7 @@ def test_group_summary_tag_line_includes_all_visible_reviewee_tags(
     carol.tag_1 = "Cohort A"
     carol.tag_2 = "Senior"
     instrument = db.execute(
-        select(Instrument).where(
-            Instrument.session_id == review_session.id
-        )
+        select(Instrument).where(Instrument.session_id == review_session.id)
     ).scalar_one()
     # Group by tag_1 only; tag_2 is non-boundary.
     instrument.group_kind = "r1"
@@ -440,9 +410,7 @@ def test_group_summary_tag_line_includes_all_visible_reviewee_tags(
     _submit(rae_client, review_session, db)
 
     app.dependency_overrides[get_current_user] = lambda: rae
-    body = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/summary"
-    ).text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}/summary").text
     # The composed tag line carries BOTH the boundary tag value
     # ("Cohort A") and the non-boundary one ("Senior"), wrapped
     # in <strong>...</strong> inside the group-identity cell.
@@ -476,9 +444,7 @@ def test_summary_numeric_column_header_carries_rs_narrow(
     _submit(rae_client, review_session, db)
 
     app.dependency_overrides[get_current_user] = lambda: rae
-    body = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/summary"
-    ).text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}/summary").text
     # The Rating header sits inside a ``<th class="rs-narrow">``
     # cell; the asterisk lives inside the same cell.
     assert '<th scope="col" class="rs-narrow">Rating *' in body

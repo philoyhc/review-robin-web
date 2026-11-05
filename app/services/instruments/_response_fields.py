@@ -193,6 +193,7 @@ def validation_block_from_inline(
         return {"choices": choices} if choices else None
     return None
 
+
 _FIELD_KEY_REGEX = re.compile(r"^[a-z][a-z0-9_]*$")
 _FIELD_KEY_MAX_LEN = 64
 
@@ -286,16 +287,12 @@ class BranchedInstrumentError(Exception):
 
     def __init__(self) -> None:
         super().__init__(
-            "This instrument has branches; edit its response fields on "
-            "the instrument card."
+            "This instrument has branches; edit its response fields on the instrument card."
         )
 
 
 def _refuse_if_branched(instrument: Instrument) -> None:
-    if any(
-        f.branch_parent_id is not None or f.branch_op
-        for f in instrument.response_fields
-    ):
+    if any(f.branch_parent_id is not None or f.branch_op for f in instrument.response_fields):
         raise BranchedInstrumentError()
 
 
@@ -319,9 +316,7 @@ def _validate_field_key(field_key: str) -> None:
     if not field_key:
         raise FieldKeyError("Field key is required.")
     if len(field_key) > _FIELD_KEY_MAX_LEN:
-        raise FieldKeyError(
-            f"Field key must be at most {_FIELD_KEY_MAX_LEN} characters."
-        )
+        raise FieldKeyError(f"Field key must be at most {_FIELD_KEY_MAX_LEN} characters.")
     if not _FIELD_KEY_REGEX.match(field_key):
         raise FieldKeyError(
             "Field key must start with a lowercase letter and use only "
@@ -329,9 +324,7 @@ def _validate_field_key(field_key: str) -> None:
         )
 
 
-def _ordered_fields(
-    db: Session, instrument: Instrument
-) -> list[InstrumentResponseField]:
+def _ordered_fields(db: Session, instrument: Instrument) -> list[InstrumentResponseField]:
     return list(
         db.execute(
             select(InstrumentResponseField)
@@ -448,23 +441,21 @@ def bulk_save_fields(
     submitted_ids = {f.id for f in new_display_order}
     locked_existing = sorted(
         [
-            f for f in existing_display_list
+            f
+            for f in existing_display_list
             if is_locked_display_source(f.source_type, f.source_field)
         ],
         key=lambda f: _LOCKED_DISPLAY_ORDER[(f.source_type, f.source_field)],
     )
     payload_non_locked = [
-        f for f in new_display_order
-        if not is_locked_display_source(f.source_type, f.source_field)
+        f for f in new_display_order if not is_locked_display_source(f.source_type, f.source_field)
     ]
     unsubmitted_non_locked = [
-        f for f in existing_display_list
-        if f.id not in submitted_ids
-        and not is_locked_display_source(f.source_type, f.source_field)
+        f
+        for f in existing_display_list
+        if f.id not in submitted_ids and not is_locked_display_source(f.source_type, f.source_field)
     ]
-    rebuilt_display_order = (
-        locked_existing + payload_non_locked + unsubmitted_non_locked
-    )
+    rebuilt_display_order = locked_existing + payload_non_locked + unsubmitted_non_locked
 
     new_response_order: list[InstrumentResponseField] = []
     response_updated: list[dict[str, Any]] = []
@@ -494,7 +485,8 @@ def bulk_save_fields(
             new_help_visible = bool(row["help_text_visible"])
             if field.help_text_visible != new_help_visible:
                 per_row_changes["help_text_visible"] = [
-                    field.help_text_visible, new_help_visible,
+                    field.help_text_visible,
+                    new_help_visible,
                 ]
                 field.help_text_visible = new_help_visible
         if per_row_changes:
@@ -530,8 +522,7 @@ def bulk_save_fields(
             final_display_updated.append(entry)
 
     response_order_changed = any(
-        response_old_rank.get(f.id) != response_new_rank.get(f.id)
-        for f in new_response_order
+        response_old_rank.get(f.id) != response_new_rank.get(f.id) for f in new_response_order
     )
     display_changed = bool(final_display_updated)
 
@@ -539,9 +530,7 @@ def bulk_save_fields(
         # Re-query to capture the post-mutation ordered key list for the
         # audit event; this includes any unsubmitted rows in their
         # current positions.
-        new_response_keys = [
-            f.field_key for f in _ordered_fields(db, instrument)
-        ]
+        new_response_keys = [f.field_key for f in _ordered_fields(db, instrument)]
         old_order_keys = [f.field_key for f in existing_response_list]
         audit.write_event(
             db,
@@ -620,9 +609,7 @@ def add_response_field(
 
     fields = _ordered_fields(db, instrument)
     if any(existing.field_key == field_key for existing in fields):
-        raise FieldKeyError(
-            f"A field with key '{field_key}' already exists on this instrument."
-        )
+        raise FieldKeyError(f"A field with key '{field_key}' already exists on this instrument.")
 
     lifecycle.invalidate_if_validated(
         db,
@@ -822,9 +809,7 @@ def _count_now_missing_required(
     )
 
     total_assignments = db.execute(
-        select(func.count(Assignment.id)).where(
-            Assignment.instrument_id == instrument.id
-        )
+        select(func.count(Assignment.id)).where(Assignment.instrument_id == instrument.id)
     ).scalar_one()
 
     rows_with_value = db.execute(
@@ -878,9 +863,7 @@ def update_response_field(
 
     required_warning_count = 0
     if not field.required and required:
-        required_warning_count = _count_now_missing_required(
-            db, instrument=instrument, field=field
-        )
+        required_warning_count = _count_now_missing_required(db, instrument=instrument, field=field)
 
     field.label = new_label
     field.required = required

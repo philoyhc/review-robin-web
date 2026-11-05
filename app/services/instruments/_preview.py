@@ -57,9 +57,7 @@ def _preview_group_boundary(
     return boundary
 
 
-def _preview_excludes_self_reviews(
-    db: Session, instrument: Instrument
-) -> bool:
+def _preview_excludes_self_reviews(db: Session, instrument: Instrument) -> bool:
     """Whether the Band 2 preview should drop self-reviews for this
     instrument — i.e. whether its pinned rule set carries
     ``exclude_self_reviews`` (19O Item 1).
@@ -229,9 +227,7 @@ def find_sample_in_scope_reviewee(
                     reviewee_boundary_fields.append(field)
     else:
         reviewee_boundary_fields = [
-            field
-            for (src, field) in decode_group_kind(instrument.group_kind)
-            if src == "reviewee"
+            field for (src, field) in decode_group_kind(instrument.group_kind) if src == "reviewee"
         ]
 
     # Grouped or per-reviewee: the live Link 3 pill the Refresh posts,
@@ -239,9 +235,7 @@ def find_sample_in_scope_reviewee(
     # the member-id set below read it, so neither follows a unit of
     # review the other does not (Ac1).
     grouped = (
-        link3_mode == "grouped"
-        if link3_mode is not None
-        else instrument.group_kind is not None
+        link3_mode == "grouped" if link3_mode is not None else instrument.group_kind is not None
     )
 
     # 19O Item 1 — the preview follows the instrument's self-review
@@ -290,35 +284,24 @@ def find_sample_in_scope_reviewee(
             by_address: dict[str, list[Any]] = {}
             by_account: dict[str, list[Any]] = {}
             for e in roster_reviewees:
-                by_address.setdefault(
-                    normalize_email(e.email_or_identifier), []
-                ).append(e)
+                by_address.setdefault(normalize_email(e.email_or_identifier), []).append(e)
                 if e.directory_object_id:
-                    by_account.setdefault(
-                        normalize_object_id(e.directory_object_id), []
-                    ).append(e)
+                    by_account.setdefault(normalize_object_id(e.directory_object_id), []).append(e)
             from app.services.responses import is_catch_all_key
 
             def _candidates(r: Any) -> list[Any]:
                 found = by_address.get(normalize_email(r.email), [])
                 if r.directory_object_id:
-                    found = found + by_account.get(
-                        normalize_object_id(r.directory_object_id), []
-                    )
+                    found = found + by_account.get(normalize_object_id(r.directory_object_id), [])
                 return found
 
             self_groups = {
                 (r.id, _group_key(r, e))
                 for r in reviewers
                 for e in _candidates(r)
-                if is_self_review(r, e)
-                and not is_catch_all_key(_group_key(r, e))
+                if is_self_review(r, e) and not is_catch_all_key(_group_key(r, e))
             }
-            pairs = [
-                (r, e)
-                for r, e in pairs
-                if (r.id, _group_key(r, e)) not in self_groups
-            ]
+            pairs = [(r, e) for r, e in pairs if (r.id, _group_key(r, e)) not in self_groups]
         else:
             pairs = [(r, e) for r, e in pairs if not is_self_review(r, e)]
         if not pairs:
@@ -351,13 +334,8 @@ def find_sample_in_scope_reviewee(
         # one, as ``group_key_for_pair`` does with an empty boundary.
         # Both honour Links 1-2: the group is the sample reviewer's
         # surviving reviewees.
-        return reviewee, sorted(
-            {e.id for r, e in pairs if r.id == sample_reviewer.id}
-        )
-    sample_key = tuple(
-        getattr(reviewee, field, "") or ""
-        for field in reviewee_boundary_fields
-    )
+        return reviewee, sorted({e.id for r, e in pairs if r.id == sample_reviewer.id})
+    sample_key = tuple(getattr(reviewee, field, "") or "" for field in reviewee_boundary_fields)
     # Scope member-IDs to pairs involving the SAMPLE REVIEWER, not
     # every reviewer in the surviving set. The Band 2 preview
     # represents what *one* reviewer sees on their review surface;
@@ -378,9 +356,6 @@ def find_sample_in_scope_reviewee(
     for r, e in pairs:
         if r.id != sample_reviewer.id:
             continue
-        if (
-            tuple(getattr(e, field, "") or "" for field in reviewee_boundary_fields)
-            == sample_key
-        ):
+        if tuple(getattr(e, field, "") or "" for field in reviewee_boundary_fields) == sample_key:
             member_ids.add(e.id)
     return reviewee, sorted(member_ids)

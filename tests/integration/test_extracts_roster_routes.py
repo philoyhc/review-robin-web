@@ -24,9 +24,7 @@ from app.auth.identity import AuthenticatedUser
 from app.db.models import AuditEvent, ReviewSession
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str = "ext-r"
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str = "ext-r") -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "Roster", "code": code, "description": ""},
@@ -85,9 +83,7 @@ def test_reviewers_route_streams_csv_with_canonical_filename(
     review_session = _make_session(client, db, code="r-fname")
     _seed_roster(client, review_session)
 
-    response = client.get(
-        f"/operator/sessions/{review_session.public_id}/export/reviewers.csv"
-    )
+    response = client.get(f"/operator/sessions/{review_session.public_id}/export/reviewers.csv")
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/csv")
     assert response.headers["content-disposition"] == (
@@ -108,37 +104,33 @@ def test_reviewers_route_streams_csv_with_canonical_filename(
     assert {r[1] for r in body} == {"alex@example.edu", "bob@example.edu"}
 
 
-def test_reviewers_route_emits_audit_event(
-    client: TestClient, db: Session
-) -> None:
+def test_reviewers_route_emits_audit_event(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="r-audit")
     _seed_roster(client, review_session)
-    response = client.get(
-        f"/operator/sessions/{review_session.public_id}/export/reviewers.csv"
-    )
+    response = client.get(f"/operator/sessions/{review_session.public_id}/export/reviewers.csv")
     assert response.status_code == 200
     response.read()
 
     db.expire_all()
-    events = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "session.reviewers_extracted",
-            AuditEvent.session_id == review_session.id,
+    events = (
+        db.execute(
+            select(AuditEvent).where(
+                AuditEvent.event_type == "session.reviewers_extracted",
+                AuditEvent.session_id == review_session.id,
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(events) == 1
     detail = cast(dict, events[0].detail)
     assert detail["session_code"] == "r-audit"
     assert detail["counts"]["rows"] == 2
 
 
-def test_reviewers_route_empty_session_emits_header_only(
-    client: TestClient, db: Session
-) -> None:
+def test_reviewers_route_empty_session_emits_header_only(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="r-empty")
-    response = client.get(
-        f"/operator/sessions/{review_session.public_id}/export/reviewers.csv"
-    )
+    response = client.get(f"/operator/sessions/{review_session.public_id}/export/reviewers.csv")
     assert response.status_code == 200
     rows = list(csv.reader(io.StringIO(response.text)))
     assert len(rows) == 1
@@ -166,9 +158,7 @@ def test_reviewees_route_streams_csv_with_canonical_filename(
     review_session = _make_session(client, db, code="e-fname")
     _seed_roster(client, review_session)
 
-    response = client.get(
-        f"/operator/sessions/{review_session.public_id}/export/reviewees.csv"
-    )
+    response = client.get(f"/operator/sessions/{review_session.public_id}/export/reviewees.csv")
     assert response.status_code == 200
     assert response.headers["content-disposition"] == (
         'attachment; filename="e-fname_reviewees.csv"'
@@ -185,14 +175,10 @@ def test_reviewees_route_streams_csv_with_canonical_filename(
     ]
 
 
-def test_reviewees_route_emits_audit_event(
-    client: TestClient, db: Session
-) -> None:
+def test_reviewees_route_emits_audit_event(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="e-audit")
     _seed_roster(client, review_session)
-    response = client.get(
-        f"/operator/sessions/{review_session.public_id}/export/reviewees.csv"
-    )
+    response = client.get(f"/operator/sessions/{review_session.public_id}/export/reviewees.csv")
     assert response.status_code == 200
     response.read()
 
@@ -207,9 +193,7 @@ def test_reviewees_route_emits_audit_event(
     assert detail["counts"]["rows"] == 2
 
 
-def _seed_relationships(
-    client: TestClient, review_session: ReviewSession
-) -> None:
+def _seed_relationships(client: TestClient, review_session: ReviewSession) -> None:
     client.post(
         f"/operator/sessions/{review_session.public_id}/relationships/import",
         files={
@@ -239,9 +223,7 @@ def test_relationships_route_streams_csv_with_canonical_filename(
     _seed_roster(client, review_session)
     _seed_relationships(client, review_session)
 
-    response = client.get(
-        f"/operator/sessions/{review_session.public_id}/export/relationships.csv"
-    )
+    response = client.get(f"/operator/sessions/{review_session.public_id}/export/relationships.csv")
     assert response.status_code == 200
     assert response.headers["content-disposition"] == (
         'attachment; filename="p-fname_relationships.csv"'
@@ -257,15 +239,11 @@ def test_relationships_route_streams_csv_with_canonical_filename(
     ]
 
 
-def test_relationships_route_emits_audit_event(
-    client: TestClient, db: Session
-) -> None:
+def test_relationships_route_emits_audit_event(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="p-audit")
     _seed_roster(client, review_session)
     _seed_relationships(client, review_session)
-    response = client.get(
-        f"/operator/sessions/{review_session.public_id}/export/relationships.csv"
-    )
+    response = client.get(f"/operator/sessions/{review_session.public_id}/export/relationships.csv")
     assert response.status_code == 200
     response.read()
 

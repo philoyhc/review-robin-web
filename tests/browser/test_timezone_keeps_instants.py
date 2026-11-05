@@ -46,8 +46,9 @@ def test_create_re_renders_every_box_and_stores_the_instants(page: Page) -> None
     # tops out at End's new text, not its old one, and no box is out of
     # order, or the submit would be blocked.
     expect(
-        page.locator("[data-dt-field]", has=page.locator("#scheduled_activate_at"))
-        .locator("[data-dt-picker]")
+        page.locator("[data-dt-field]", has=page.locator("#scheduled_activate_at")).locator(
+            "[data-dt-picker]"
+        )
     ).to_have_attribute("max", "2027-03-01T20:00")
     assert page.evaluate("document.querySelector('form:has(#deadline)').checkValidity()")
     with page.expect_navigation():
@@ -90,8 +91,7 @@ def test_session_home_re_renders_from_the_stored_instant(
     def save(zone: str) -> None:
         response = api.post(
             f"/operator/sessions/{session_id}/config",
-            data={"name": "Zones", "code": code, "display_timezone": zone,
-                  "deadline": in_utc},
+            data={"name": "Zones", "code": code, "display_timezone": zone, "deadline": in_utc},
             follow_redirects=False,
         )
         assert response.status_code == 303, response.text

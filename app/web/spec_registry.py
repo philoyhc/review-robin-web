@@ -197,6 +197,4 @@ def routing_modules(app: FastAPI) -> set[str]:
 
 def pending_modules() -> set[str]:
     """Registered modules that have declared they have no spec yet."""
-    return {
-        module for module, paths in SPEC_COVERAGE.items() if paths == SPEC_PENDING
-    }
+    return {module for module, paths in SPEC_COVERAGE.items() if paths == SPEC_PENDING}

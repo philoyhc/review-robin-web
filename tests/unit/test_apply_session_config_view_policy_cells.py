@@ -46,9 +46,7 @@ def _session(db: Session, *, code: str) -> ReviewSession:
     user = User(email=f"op-{code}@example.edu", display_name="Op")
     db.add(user)
     db.flush()
-    review_session = ReviewSession(
-        name=code.title(), code=code, created_by_user_id=user.id
-    )
+    review_session = ReviewSession(name=code.title(), code=code, created_by_user_id=user.id)
     db.add(review_session)
     db.flush()
     return review_session
@@ -107,15 +105,8 @@ def test_round_trip_of_an_editor_authored_session_still_applies(
     rows = serialize_session_config(db, src)
     # The forbidden cell really is present in the export, and empty —
     # otherwise this test would pass for the wrong reason.
-    emitted = {
-        r.field: r.value
-        for r in rows
-        if "view_policies[reviewee]" in r.field
-    }
-    assert (
-        emitted["instruments[1].view_policies[reviewee]"
-                ".while_ongoing_granularity"] == ""
-    )
+    emitted = {r.field: r.value for r in rows if "view_policies[reviewee]" in r.field}
+    assert emitted["instruments[1].view_policies[reviewee].while_ongoing_granularity"] == ""
 
     target = _session(db, code="vp-rt2")
     result = apply_session_config(db, target, rows)
@@ -135,12 +126,8 @@ def test_reviewee_while_ongoing_is_rejected(db: Session) -> None:
     )
     assert not result.ok
     assert result.counts == {}
-    [error] = [
-        e for e in result.errors if "view_policies" in e.field
-    ]
-    assert error.field == (
-        "instruments[1].view_policies[reviewee].while_ongoing_granularity"
-    )
+    [error] = [e for e in result.errors if "view_policies" in e.field]
+    assert error.field == ("instruments[1].view_policies[reviewee].while_ongoing_granularity")
     assert "only accepts modes in" in error.message
     assert "'raw'" in error.message
 
@@ -149,16 +136,10 @@ def test_a_rejected_import_writes_no_policy_row(db: Session) -> None:
     """Asserted by querying, not inferred from ``errors`` — the point of
     validating in the parse phase is that ``_apply_plan`` never runs."""
     review_session = _session(db, code="vp-nowrite")
-    apply_session_config(
-        db, review_session, _cell_rows("reviewee", "while_ongoing", "raw")
-    )
+    apply_session_config(db, review_session, _cell_rows("reviewee", "while_ongoing", "raw"))
     assert _policies(db, review_session) == []
     assert (
-        db.execute(
-            select(Instrument).where(
-                Instrument.session_id == review_session.id
-            )
-        )
+        db.execute(select(Instrument).where(Instrument.session_id == review_session.id))
         .scalars()
         .all()
         == []
@@ -251,8 +232,7 @@ def test_a_half_set_cell_is_its_own_error(db: Session) -> None:
     rows = [
         Row("instruments[1].name", "Survey", "string"),
         Row(
-            "instruments[1].view_policies[reviewee]"
-            ".after_release_granularity",
+            "instruments[1].view_policies[reviewee].after_release_granularity",
             "row",
             "string",
         ),
@@ -287,13 +267,9 @@ def test_every_offending_cell_is_reported(db: Session) -> None:
     review_session = _session(db, code="vp-many")
     rows = [Row("instruments[1].name", "Survey", "string")]
     for audience in ("reviewee", "peer_reviewer"):
-        granularity, identification = visibility_policies.MODE_LABELS[
-            "summarized"
-        ]
+        granularity, identification = visibility_policies.MODE_LABELS["summarized"]
         prefix = f"instruments[1].view_policies[{audience}]"
-        rows.append(
-            Row(f"{prefix}.while_ongoing_granularity", granularity, "string")
-        )
+        rows.append(Row(f"{prefix}.while_ongoing_granularity", granularity, "string"))
         rows.append(
             Row(
                 f"{prefix}.while_ongoing_identification",
@@ -304,6 +280,4 @@ def test_every_offending_cell_is_reported(db: Session) -> None:
     result = apply_session_config(db, review_session, rows)
     offending = [e for e in result.errors if "view_policies" in e.field]
     assert len(offending) == 2
-    assert {"reviewee", "peer_reviewer"} == {
-        e.field.split("[")[2].split("]")[0] for e in offending
-    }
+    assert {"reviewee", "peer_reviewer"} == {e.field.split("[")[2].split("]")[0] for e in offending}

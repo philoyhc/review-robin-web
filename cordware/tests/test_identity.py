@@ -167,9 +167,7 @@ def test_claim_priority_is_honored_regardless_of_token_order(
     names, not the first the token happens to list."""
     rich = _encode_principal({"auth_typ": "aad", "claims": claims})
 
-    user = resolve_identity(
-        _request({"X-MS-CLIENT-PRINCIPAL": rich}), _settings()
-    )
+    user = resolve_identity(_request({"X-MS-CLIENT-PRINCIPAL": rich}), _settings())
 
     assert user.email == "primary@example.edu"
     assert user.name == "Short Name"
@@ -190,9 +188,7 @@ def test_claim_priority_falls_through_to_the_next_type() -> None:
         }
     )
 
-    user = resolve_identity(
-        _request({"X-MS-CLIENT-PRINCIPAL": rich}), _settings()
-    )
+    user = resolve_identity(_request({"X-MS-CLIENT-PRINCIPAL": rich}), _settings())
 
     assert user.email == "upn@example.edu"
     assert user.name == "Uri Name"
@@ -213,9 +209,7 @@ def test_a_whitespace_only_email_claim_yields_to_the_next() -> None:
         }
     )
 
-    user = resolve_identity(
-        _request({"X-MS-CLIENT-PRINCIPAL": rich}), _settings()
-    )
+    user = resolve_identity(_request({"X-MS-CLIENT-PRINCIPAL": rich}), _settings())
 
     assert user.email == "upn@example.edu"
 
@@ -234,9 +228,7 @@ def test_whitespace_only_email_claims_leave_no_email() -> None:
         }
     )
 
-    user = resolve_identity(
-        _request({"X-MS-CLIENT-PRINCIPAL": rich}), _settings()
-    )
+    user = resolve_identity(_request({"X-MS-CLIENT-PRINCIPAL": rich}), _settings())
 
     assert user.email is None
     assert user.name == "Blank Email"
@@ -546,7 +538,10 @@ def test_explicit_settings_carry_to_the_role_properties(monkeypatch: pytest.Monk
     boss = resolve_identity(_request({"X-MS-CLIENT-PRINCIPAL-NAME": "boss@example.edu"}), listed)
     assert boss.is_super_admin is True
     # The dependency's identity reads the host's settings.
-    assert get_identity(_request({"X-MS-CLIENT-PRINCIPAL-NAME": "boss@example.edu"})).is_super_admin is False
+    assert (
+        get_identity(_request({"X-MS-CLIENT-PRINCIPAL-NAME": "boss@example.edu"})).is_super_admin
+        is False
+    )
     assert boss == Identity(principal_id=None, email="boss@example.edu", name=None)
 
 
@@ -595,13 +590,19 @@ def _rich(claims: list[dict[str, str]]) -> Identity:
 def test_tenant_upn_and_mail_are_separate_fields() -> None:
     """A roster may hold either the UPN or the primary email, so an
     application tries each; one `email` field could carry only one."""
-    user = _rich([
-        {"typ": _TID_URI, "val": "tenant-1"},
-        {"typ": _UPN_URI, "val": "e0123456@example.edu"},
-        {"typ": _EMAILADDRESS, "val": "jane.tan@example.edu"},
-        {"typ": "preferred_username", "val": "e0123456@example.edu"},
-    ])
-    assert (user.tenant_id, user.upn, user.mail) == ("tenant-1", "e0123456@example.edu", "jane.tan@example.edu")
+    user = _rich(
+        [
+            {"typ": _TID_URI, "val": "tenant-1"},
+            {"typ": _UPN_URI, "val": "e0123456@example.edu"},
+            {"typ": _EMAILADDRESS, "val": "jane.tan@example.edu"},
+            {"typ": "preferred_username", "val": "e0123456@example.edu"},
+        ]
+    )
+    assert (user.tenant_id, user.upn, user.mail) == (
+        "tenant-1",
+        "e0123456@example.edu",
+        "jane.tan@example.edu",
+    )
     assert user.email == "jane.tan@example.edu"  # unchanged for RRW and the super-admin list
 
 
@@ -609,28 +610,34 @@ def test_upn_falls_back_to_preferred_username_and_mail_never_does() -> None:
     """Entra v2 tokens carry `preferred_username` (the UPN) and `tid`, often
     with no `upn` or email claim: then the UPN is known and the primary
     email is not, rather than guessed."""
-    user = _rich([
-        {"typ": "tid", "val": "tenant-2"},
-        {"typ": "preferred_username", "val": "e7654321@example.edu"},
-    ])
+    user = _rich(
+        [
+            {"typ": "tid", "val": "tenant-2"},
+            {"typ": "preferred_username", "val": "e7654321@example.edu"},
+        ]
+    )
     assert (user.tenant_id, user.upn, user.mail) == ("tenant-2", "e7654321@example.edu", None)
 
 
 def test_blank_tenant_upn_and_mail_claims_yield_to_the_next() -> None:
-    user = _rich([
-        {"typ": _TID_URI, "val": "  "},
-        {"typ": "tid", "val": "tenant-3"},
-        {"typ": _UPN_URI, "val": " "},
-        {"typ": "upn", "val": "u@example.edu"},
-        {"typ": _EMAILADDRESS, "val": ""},
-        {"typ": "email", "val": "m@example.edu"},
-    ])
+    user = _rich(
+        [
+            {"typ": _TID_URI, "val": "  "},
+            {"typ": "tid", "val": "tenant-3"},
+            {"typ": _UPN_URI, "val": " "},
+            {"typ": "upn", "val": "u@example.edu"},
+            {"typ": _EMAILADDRESS, "val": ""},
+            {"typ": "email", "val": "m@example.edu"},
+        ]
+    )
     assert (user.tenant_id, user.upn, user.mail) == ("tenant-3", "u@example.edu", "m@example.edu")
 
 
 def test_simple_headers_alone_give_no_tenant_upn_or_mail() -> None:
     user = resolve_identity(
-        _request({"X-MS-CLIENT-PRINCIPAL-NAME": "alice@example.edu", "X-MS-CLIENT-PRINCIPAL-ID": "p"}),
+        _request(
+            {"X-MS-CLIENT-PRINCIPAL-NAME": "alice@example.edu", "X-MS-CLIENT-PRINCIPAL-ID": "p"}
+        ),
         _settings(),
     )
     assert (user.tenant_id, user.upn, user.mail) == (None, None, None)
@@ -638,17 +645,27 @@ def test_simple_headers_alone_give_no_tenant_upn_or_mail() -> None:
 
 def test_the_fake_identity_carries_a_tenant_and_its_email_as_upn_and_mail() -> None:
     user = resolve_identity(_request(), _settings(allow_fake_auth=True))
-    assert (user.tenant_id, user.upn, user.mail) == ("local-tenant", "operator@example.edu", "operator@example.edu")
+    assert (user.tenant_id, user.upn, user.mail) == (
+        "local-tenant",
+        "operator@example.edu",
+        "operator@example.edu",
+    )
 
 
 def test_the_fake_upn_and_mail_can_differ_to_try_an_alias() -> None:
     settings = IdentitySettings(
-        allow_fake_auth=True, fake_auth_email="jane.tan@example.edu",
-        fake_auth_upn="e0123456@example.edu", fake_auth_tenant_id="tenant-x",
+        allow_fake_auth=True,
+        fake_auth_email="jane.tan@example.edu",
+        fake_auth_upn="e0123456@example.edu",
+        fake_auth_tenant_id="tenant-x",
     )
     user = resolve_identity(_request(), settings)
     assert (user.tenant_id, user.upn, user.mail, user.email) == (
-        "tenant-x", "e0123456@example.edu", "jane.tan@example.edu", "jane.tan@example.edu")
+        "tenant-x",
+        "e0123456@example.edu",
+        "jane.tan@example.edu",
+        "jane.tan@example.edu",
+    )
 
 
 def test_the_named_claim_wins_over_its_fallback_whatever_the_token_order() -> None:
@@ -665,7 +682,11 @@ def test_the_named_claim_wins_over_its_fallback_whatever_the_token_order() -> No
     ]
     for order in (claims, list(reversed(claims))):
         user = _rich(order)
-        assert (user.tenant_id, user.upn, user.mail) == ("tid-uri", "upn@example.edu", "primary@example.edu")
+        assert (user.tenant_id, user.upn, user.mail) == (
+            "tid-uri",
+            "upn@example.edu",
+            "primary@example.edu",
+        )
 
 
 def test_mail_never_comes_from_the_principal_name_header() -> None:
@@ -683,7 +704,9 @@ def test_a_malformed_principal_gives_no_tenant_upn_or_mail() -> None:
 
 
 def test_a_blank_fake_tenant_is_no_tenant() -> None:
-    user = resolve_identity(_request(), IdentitySettings(allow_fake_auth=True, fake_auth_tenant_id="  "))
+    user = resolve_identity(
+        _request(), IdentitySettings(allow_fake_auth=True, fake_auth_tenant_id="  ")
+    )
     assert user.tenant_id is None
 
 

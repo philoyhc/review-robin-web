@@ -127,13 +127,9 @@ def _make_session(
     payload = {"name": "S", "code": code, "description": ""}
     if data:
         payload.update(data)
-    response = client.post(
-        "/operator/sessions", data=payload, follow_redirects=False
-    )
+    response = client.post("/operator/sessions", data=payload, follow_redirects=False)
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _submit_edit(
@@ -156,9 +152,7 @@ def _submit_edit(
     return response.status_code, response.text
 
 
-def test_create_rejects_end_before_start(
-    client: TestClient, db: Session
-) -> None:
+def test_create_rejects_end_before_start(client: TestClient, db: Session) -> None:
     response = client.post(
         "/operator/sessions",
         data={
@@ -175,9 +169,7 @@ def test_create_rejects_end_before_start(
     assert "End must be on or after Start" in response.text
 
 
-def test_create_rejects_release_before_end(
-    client: TestClient, db: Session
-) -> None:
+def test_create_rejects_release_before_end(client: TestClient, db: Session) -> None:
     response = client.post(
         "/operator/sessions",
         data={
@@ -194,9 +186,7 @@ def test_create_rejects_release_before_end(
     assert "Release responses from must be on or after End" in response.text
 
 
-def test_edit_rejects_end_before_start(
-    client: TestClient, db: Session
-) -> None:
+def test_edit_rejects_end_before_start(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="ord-edit-start")
     status_code, body = _submit_edit(
         client,
@@ -208,9 +198,7 @@ def test_edit_rejects_end_before_start(
     assert "End must be on or after Start" in body
 
 
-def test_edit_rejects_release_before_end(
-    client: TestClient, db: Session
-) -> None:
+def test_edit_rejects_release_before_end(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="ord-edit-rel")
     status_code, body = _submit_edit(
         client,
@@ -222,9 +210,7 @@ def test_edit_rejects_release_before_end(
     assert "Release responses from must be on or after End" in body
 
 
-def test_edit_accepts_chain_in_order(
-    client: TestClient, db: Session
-) -> None:
+def test_edit_accepts_chain_in_order(client: TestClient, db: Session) -> None:
     """Positive control — a fully-ordered chain saves cleanly."""
     review_session = _make_session(client, db, code="ord-good-chain")
     status_code, _body = _submit_edit(
@@ -241,9 +227,7 @@ def test_edit_accepts_chain_in_order(
 # ── Client-side: min / max attributes on the inputs ────────────────────
 
 
-def test_edit_form_renders_ordered_chain_prefills(
-    client: TestClient, db: Session
-) -> None:
+def test_edit_form_renders_ordered_chain_prefills(client: TestClient, db: Session) -> None:
     """The Session Home config card (edit mode) renders the full
     four-datetime chain with each field's saved value prefilled, so
     the operator sees and can edit the ordered chain. (The Edit
@@ -263,9 +247,7 @@ def test_edit_form_renders_ordered_chain_prefills(
             "display_timezone": "UTC",
         },
     )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}?editing=1"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}?editing=1").text
     # All four datetime inputs render, each prefilled with its saved
     # value as the box's 24-hour text (19X Item 6).
     assert 'name="scheduled_activate_at"' in body
@@ -278,9 +260,7 @@ def test_edit_form_renders_ordered_chain_prefills(
     assert 'value="2027-01-30 09:00"' in body
 
 
-def test_new_session_form_includes_live_update_script(
-    client: TestClient, db: Session
-) -> None:
+def test_new_session_form_includes_live_update_script(client: TestClient, db: Session) -> None:
     """The Create New Session form has no prefill; the
     ``min``/``max`` attributes start absent. The live-update
     script wires them up as the operator types."""
@@ -293,9 +273,7 @@ def test_new_session_form_includes_live_update_script(
     )
 
 
-def test_edit_does_not_check_a_pair_neither_box_changed(
-    client: TestClient, db: Session
-) -> None:
+def test_edit_does_not_check_a_pair_neither_box_changed(client: TestClient, db: Session) -> None:
     """Close early, then Release, stamps Release-from before End; after
     a Revert every Save re-submits both stored values. A pair whose two
     boxes both still hold their stored values is not checked, so the
@@ -374,9 +352,7 @@ def test_edit_does_not_check_a_release_window_neither_box_changed(
     assert review_session.name == "Renamed"
     release_until = review_session.responses_release_until
     assert release_until is not None
-    assert release_until.replace(
-        tzinfo=_dt.UTC
-    ) == _ts(2028, 3, 1, 9)
+    assert release_until.replace(tzinfo=_dt.UTC) == _ts(2028, 3, 1, 9)
 
     status_code, body = _save(responses_release_until=_ts(2028, 3, 2, 9))
     assert status_code == 422

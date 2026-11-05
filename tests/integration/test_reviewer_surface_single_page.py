@@ -83,9 +83,7 @@ def _operator_creates_session_with_pair(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(operator_client, review_session.id)
     validate_session(review_session)
-    operator_client.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    )
+    operator_client.get(f"/operator/sessions/{review_session.public_id}/assignments")
     operator_client.post(
         f"/operator/sessions/{review_session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
@@ -130,9 +128,7 @@ def test_bare_url_303s_to_page_1(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    assert response.headers["location"] == (
-        f"/me/sessions/{review_session.public_id}/1"
-    )
+    assert response.headers["location"] == (f"/me/sessions/{review_session.public_id}/1")
 
 
 # --------------------------------------------------------------------------- #
@@ -207,32 +203,24 @@ def test_page_break_carves_session_into_separate_pages(
         extra_instruments=1,  # 2 instruments
     )
     instruments = sorted(
-        db.execute(
-            select(Instrument).where(
-                Instrument.session_id == review_session.id
-            )
-        ).scalars().all(),
+        db.execute(select(Instrument).where(Instrument.session_id == review_session.id))
+        .scalars()
+        .all(),
         key=lambda i: (i.order, i.id),
     )
     from app.services import instruments as instruments_service
 
     with past_draft_setup(db, instruments[0]):
-        instruments_service.create_page_break_after(
-            db, instrument=instruments[0]
-        )
+        instruments_service.create_page_break_after(db, instrument=instruments[0])
     rae_client = make_client(rae)
 
     # Page 1 has only the first instrument (position 1).
-    page1 = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/1"
-    ).text
+    page1 = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
     assert 'data-rs-position="1"' in page1
     assert 'data-rs-position="2"' not in page1
 
     # Page 2 has only the second (position 2).
-    page2 = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/2"
-    ).text
+    page2 = rae_client.get(f"/me/sessions/{review_session.public_id}/2").text
     assert 'data-rs-position="1"' not in page2
     assert 'data-rs-position="2"' in page2
 
@@ -264,12 +252,8 @@ def test_form_action_targets_per_page_save_endpoint(
         reviewee_ident="carol@example.edu",
     )
     rae_client = make_client(rae)
-    body = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/1"
-    ).text
-    assert (
-        f'action="/me/sessions/{review_session.public_id}/1/save"' in body
-    )
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
+    assert f'action="/me/sessions/{review_session.public_id}/1/save"' in body
 
 
 def test_save_303s_back_to_current_page(
@@ -288,19 +272,15 @@ def test_save_303s_back_to_current_page(
         extra_instruments=1,
     )
     instruments = sorted(
-        db.execute(
-            select(Instrument).where(
-                Instrument.session_id == review_session.id
-            )
-        ).scalars().all(),
+        db.execute(select(Instrument).where(Instrument.session_id == review_session.id))
+        .scalars()
+        .all(),
         key=lambda i: (i.order, i.id),
     )
     from app.services import instruments as instruments_service
 
     with past_draft_setup(db, instruments[0]):
-        instruments_service.create_page_break_after(
-            db, instrument=instruments[0]
-        )
+        instruments_service.create_page_break_after(db, instrument=instruments[0])
     rae_client = make_client(rae)
     # Page 2 save 303s back to /2.
     response = rae_client.post(
@@ -309,9 +289,7 @@ def test_save_303s_back_to_current_page(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    assert response.headers["location"] == (
-        f"/me/sessions/{review_session.public_id}/2"
-    )
+    assert response.headers["location"] == (f"/me/sessions/{review_session.public_id}/2")
 
 
 # --------------------------------------------------------------------------- #
@@ -335,36 +313,24 @@ def test_multi_page_renders_prev_next_nav(
         extra_instruments=2,  # 3 instruments
     )
     instruments = sorted(
-        db.execute(
-            select(Instrument).where(
-                Instrument.session_id == review_session.id
-            )
-        ).scalars().all(),
+        db.execute(select(Instrument).where(Instrument.session_id == review_session.id))
+        .scalars()
+        .all(),
         key=lambda i: (i.order, i.id),
     )
     from app.services import instruments as instruments_service
 
     # Break between #1 and #2 + between #2 and #3 -> 3 pages.
     with past_draft_setup(db, instruments[0]):
-        instruments_service.create_page_break_after(
-            db, instrument=instruments[0]
-        )
+        instruments_service.create_page_break_after(db, instrument=instruments[0])
     with past_draft_setup(db, instruments[1]):
-        instruments_service.create_page_break_after(
-            db, instrument=instruments[1]
-        )
+        instruments_service.create_page_break_after(db, instrument=instruments[1])
     rae_client = make_client(rae)
-    body = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/2"
-    ).text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}/2").text
     # Page 2 of 3 -> Prev to page 1, Next to page 3.
     assert "Page 2 of 3" in body
-    assert (
-        f'href="/me/sessions/{review_session.public_id}/1"' in body
-    )
-    assert (
-        f'href="/me/sessions/{review_session.public_id}/3"' in body
-    )
+    assert f'href="/me/sessions/{review_session.public_id}/1"' in body
+    assert f'href="/me/sessions/{review_session.public_id}/3"' in body
 
 
 def test_a_closed_multi_page_surface_keeps_prev_and_next(
@@ -390,20 +356,14 @@ def test_a_closed_multi_page_surface_keeps_prev_and_next(
         extra_instruments=1,
     )
     first = min(
-        db.execute(
-            select(Instrument).where(
-                Instrument.session_id == review_session.id
-            )
-        ).scalars(),
+        db.execute(select(Instrument).where(Instrument.session_id == review_session.id)).scalars(),
         key=lambda i: (i.order, i.id),
     )
     from app.services import instruments as instruments_service
 
     with past_draft_setup(db, first):
         instruments_service.create_page_break_after(db, instrument=first)
-    review_session.deadline = dt.datetime.now(dt.UTC) - dt.timedelta(
-        minutes=1
-    )
+    review_session.deadline = dt.datetime.now(dt.UTC) - dt.timedelta(minutes=1)
     db.commit()
 
     body = make_client(rae).get(f"/me/sessions/{review_session.public_id}/1").text
@@ -412,7 +372,7 @@ def test_a_closed_multi_page_surface_keeps_prev_and_next(
     assert f'href="/me/sessions/{review_session.public_id}/2"' in body
     assert "data-rs-save>Save</button>" not in body
     assert f'formaction="/me/sessions/{review_session.public_id}/submit' not in body
-    assert "<span class=\"rs-action-divider\"" not in body
+    assert '<span class="rs-action-divider"' not in body
 
 
 def test_a_blocked_submit_reopens_the_page_it_came_from(
@@ -435,11 +395,7 @@ def test_a_blocked_submit_reopens_the_page_it_came_from(
         extra_instruments=1,
     )
     first = min(
-        db.execute(
-            select(Instrument).where(
-                Instrument.session_id == review_session.id
-            )
-        ).scalars(),
+        db.execute(select(Instrument).where(Instrument.session_id == review_session.id)).scalars(),
         key=lambda i: (i.order, i.id),
     )
     from app.services import instruments as instruments_service
@@ -450,10 +406,7 @@ def test_a_blocked_submit_reopens_the_page_it_came_from(
 
     rae_client = make_client(rae)
     page_two = rae_client.get(f"/me/sessions/{review_session.public_id}/2").text
-    assert (
-        f'formaction="/me/sessions/{review_session.public_id}/submit?page=2"'
-        in page_two
-    )
+    assert f'formaction="/me/sessions/{review_session.public_id}/submit?page=2"' in page_two
 
     def blocked(query: str) -> str:
         response = rae_client.post(
@@ -468,8 +421,7 @@ def test_a_blocked_submit_reopens_the_page_it_came_from(
     body = blocked("?page=2")
     assert "Page 2 of 2" in body
     assert (
-        f'data-rs-missing-dismiss\n           href="/me/sessions/'
-        f'{review_session.public_id}/2"'
+        f'data-rs-missing-dismiss\n           href="/me/sessions/{review_session.public_id}/2"'
     ) in body
     for query in ("", "?page=x", "?page=9"):
         assert "Page 1 of 2" in blocked(query)
@@ -477,11 +429,7 @@ def test_a_blocked_submit_reopens_the_page_it_came_from(
     # An invalid value typed on page 2 comes back on page 2, in its
     # input, beside the errors card; on page 1 its input isn't rendered.
     second = max(
-        db.execute(
-            select(Instrument).where(
-                Instrument.session_id == review_session.id
-            )
-        ).scalars(),
+        db.execute(select(Instrument).where(Instrument.session_id == review_session.id)).scalars(),
         key=lambda i: (i.order, i.id),
     )
     assignment = db.execute(
@@ -489,9 +437,7 @@ def test_a_blocked_submit_reopens_the_page_it_came_from(
     ).scalar_one()
     response = rae_client.post(
         f"/me/sessions/{review_session.public_id}/submit?page=2",
-        data=answer_form(
-            db, {f"response[{assignment.id}][rating]": "9"}, page_n=2
-        ),
+        data=answer_form(db, {f"response[{assignment.id}][rating]": "9"}, page_n=2),
         follow_redirects=False,
     )
     assert response.status_code == 400
@@ -518,9 +464,7 @@ def test_single_page_session_omits_page_nav(
         reviewee_ident="carol@example.edu",
     )
     rae_client = make_client(rae)
-    body = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/1"
-    ).text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
     assert "Page 1 of" not in body
     assert "Previous page" not in body
     assert "Next page" not in body

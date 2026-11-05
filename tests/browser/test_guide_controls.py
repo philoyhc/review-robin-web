@@ -119,8 +119,7 @@ def test_every_sample_has_a_tooltip(page: Page) -> None:
     box = tip.locator("button").bounding_box()
     assert box
     reached = page.evaluate(
-        "([x, y]) => document.elementFromPoint(x, y).closest('[title]')"
-        ".getAttribute('title')",
+        "([x, y]) => document.elementFromPoint(x, y).closest('[title]').getAttribute('title')",
         [box["x"] + box["width"] / 2, box["y"] + box["height"] / 2],
     )
     assert reached == tip.get_attribute("title")

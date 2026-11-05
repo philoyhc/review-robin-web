@@ -23,14 +23,10 @@ def _make_session(client: TestClient, db: Session, code: str) -> ReviewSession:
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
-def test_details_save_refuses_an_over_long_name_with_a_422(
-    client: TestClient, db: Session
-) -> None:
+def test_details_save_refuses_an_over_long_name_with_a_422(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, "c4-home")
     response = client.post(
         f"/operator/sessions/{review_session.public_id}/config",
@@ -55,9 +51,7 @@ def test_create_refuses_an_over_long_name_or_code_and_creates_nothing(
         {"name": "N" * 256, "code": "c4-create"},
         {"name": "Spring", "code": "c" * 65},
     ):
-        response = client.post(
-            "/operator/sessions", data=data, follow_redirects=False
-        )
+        response = client.post("/operator/sessions", data=data, follow_redirects=False)
         assert response.status_code == 422, response.text
     after = db.execute(select(func.count(ReviewSession.id))).scalar_one()
     assert after == before

@@ -41,9 +41,7 @@ from ._base_css import css, rules
 # items are sized by ``flex``, which respects the box model either way.
 _BTN_SUBJECT = re.compile(r"(?:^|[\s>+~])(?:[a-z]+)?\.btn(?:[.:][A-Za-z0-9_-]+)*$")
 
-_WIDTH_DECLARATION = re.compile(
-    r"(?<![-\w])((?:min-|max-)?width)\s*:\s*([^;]+)"
-)
+_WIDTH_DECLARATION = re.compile(r"(?<![-\w])((?:min-|max-)?width)\s*:\s*([^;]+)")
 
 # Values that name a width without constraining one.
 _SIZES_NOTHING = frozenset({"auto", "0", "0px", "100%"})
@@ -164,11 +162,7 @@ def test_the_workflow_cards_width_sized_row_is_still_there() -> None:
     has changed and the cases above want re-reading rather than
     inheriting.
     """
-    width_sized = [
-        selector
-        for selector, body in _btn_subject_rules()
-        if _sizes_the_box(body)
-    ]
+    width_sized = [selector for selector, body in _btn_subject_rules() if _sizes_the_box(body)]
     assert any("next-action-buttons-row" in one for one in width_sized), (
         "the Workflow card's button row no longer sizes its .btn children; "
         f"width-sized .btn rules found: {width_sized}"

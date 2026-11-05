@@ -28,18 +28,14 @@ REVIEWEES = b"RevieweeName,RevieweeEmail\nCy,cy@example.edu\n"
 RELATIONSHIPS = b"ReviewerEmail,RevieweeEmail\nal@example.edu,cy@example.edu\n"
 
 
-def _session(
-    client: TestClient, db: Session, code: str, **toggles: bool
-) -> ReviewSession:
+def _session(client: TestClient, db: Session, code: str, **toggles: bool) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "Spring", "code": code},
         follow_redirects=False,
     )
     assert response.status_code == 303
-    rs = db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    rs = db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
     for field_name, value in toggles.items():
         setattr(rs, field_name, value)
     db.commit()
@@ -51,8 +47,7 @@ def _submit_all(client: TestClient, rs: ReviewSession, **files: bytes):
         f"/operator/sessions/{rs.public_id}/quick-setup/submit-all",
         data={"confirm_replace": "true"},
         files={
-            f"{kind}_file": (f"{kind}.csv", payload, "text/csv")
-            for kind, payload in files.items()
+            f"{kind}_file": (f"{kind}.csv", payload, "text/csv") for kind, payload in files.items()
         },
         follow_redirects=False,
     )
@@ -92,9 +87,7 @@ def _settings(observers_enabled: str) -> bytes:
     return buf.getvalue().encode()
 
 
-def test_an_observers_upload_turns_observers_on(
-    client: TestClient, db: Session
-) -> None:
+def test_an_observers_upload_turns_observers_on(client: TestClient, db: Session) -> None:
     rs = _session(client, db, "tabs-obs", observers_enabled=False)
 
     response = client.post(
@@ -112,9 +105,7 @@ def test_an_observers_upload_turns_observers_on(
     assert event.detail["reason"] == "quick_setup_upload"
 
 
-def test_a_relationships_upload_turns_relationships_on(
-    client: TestClient, db: Session
-) -> None:
+def test_a_relationships_upload_turns_relationships_on(client: TestClient, db: Session) -> None:
     rs = _session(client, db, "tabs-rel", relationships_enabled=False)
 
     response = _submit_all(
@@ -130,9 +121,7 @@ def test_a_relationships_upload_turns_relationships_on(
     assert rs.relationships_enabled is True
 
 
-def test_a_header_only_file_leaves_the_tab_off(
-    client: TestClient, db: Session
-) -> None:
+def test_a_header_only_file_leaves_the_tab_off(client: TestClient, db: Session) -> None:
     rs = _session(client, db, "tabs-empty", observers_enabled=False)
 
     response = _submit_all(client, rs, observers=OBSERVERS_EMPTY)
@@ -144,9 +133,7 @@ def test_a_header_only_file_leaves_the_tab_off(
     assert _toggled(db, rs) == []
 
 
-def test_a_tab_already_on_writes_no_event(
-    client: TestClient, db: Session
-) -> None:
+def test_a_tab_already_on_writes_no_event(client: TestClient, db: Session) -> None:
     rs = _session(client, db, "tabs-on", observers_enabled=True)
 
     _submit_all(client, rs, observers=OBSERVERS)
@@ -154,17 +141,13 @@ def test_a_tab_already_on_writes_no_event(
     assert _toggled(db, rs) == []
 
 
-def test_a_refusal_inside_the_save_leaves_the_tab_off(
-    client: TestClient, db: Session
-) -> None:
+def test_a_refusal_inside_the_save_leaves_the_tab_off(client: TestClient, db: Session) -> None:
     """The observers rows save, then a Settings error only the apply
     finds refuses the submit: the unit rolls back, toggle and event
     with it."""
     rs = _session(client, db, "tabs-refused", observers_enabled=False)
 
-    response = _submit_all(
-        client, rs, observers=OBSERVERS, settings=_bad_settings()
-    )
+    response = _submit_all(client, rs, observers=OBSERVERS, settings=_bad_settings())
 
     assert refusal(response).kind == "settings"
     db.expire_all()
@@ -179,9 +162,7 @@ def test_the_upload_wins_over_a_settings_file_turning_it_off(
     ``observers_enabled=false`` cannot hide rows the same submit saved."""
     rs = _session(client, db, "tabs-settings", observers_enabled=True)
 
-    response = _submit_all(
-        client, rs, observers=OBSERVERS, settings=_settings("false")
-    )
+    response = _submit_all(client, rs, observers=OBSERVERS, settings=_settings("false"))
 
     assert "quick_setup_error" not in response.headers["location"]
     db.refresh(rs)
@@ -202,19 +183,13 @@ def test_create_turns_observers_on_when_the_box_is_unticked(
     )
 
     assert "quick_setup_error" not in response.headers["location"]
-    rs = db.execute(
-        select(ReviewSession).where(ReviewSession.code == "tabs-create")
-    ).scalar_one()
+    rs = db.execute(select(ReviewSession).where(ReviewSession.code == "tabs-create")).scalar_one()
     assert rs.observers_enabled is True
     assert len(_toggled(db, rs)) == 1
 
 
-def test_the_rosters_without_a_tab_turn_nothing_on(
-    client: TestClient, db: Session
-) -> None:
-    rs = _session(
-        client, db, "tabs-none", observers_enabled=False, relationships_enabled=False
-    )
+def test_the_rosters_without_a_tab_turn_nothing_on(client: TestClient, db: Session) -> None:
+    rs = _session(client, db, "tabs-none", observers_enabled=False, relationships_enabled=False)
 
     _submit_all(client, rs, reviewers=REVIEWERS, reviewees=REVIEWEES)
 
@@ -271,9 +246,7 @@ def test_a_toggle_turned_on_by_another_request_is_not_logged_again(
         )
         return real_lock(db_, session_)
 
-    monkeypatch.setattr(
-        _quick_setup.session_guard, "lock_session", racer_commits_first
-    )
+    monkeypatch.setattr(_quick_setup.session_guard, "lock_session", racer_commits_first)
 
     _submit_all(client, rs, observers=OBSERVERS)
 

@@ -87,8 +87,14 @@ ASSIGNED_TERMS = (CURRENT_TERM,)
 # An Assignments upload says what it does (author, 2026-10-28), chosen on
 # the upload card and checked in the preview.
 UPLOAD_MODES = (
-    ("New slots", "The file defines the slots from its first term on, earlier terms keeping theirs. That term and every later one are wiped, after a warning naming them."),
-    ("Refresh a term", "The slots must match those on file exactly. The current term's assignments, or a future term's that already has some, are replaced, after a warning."),
+    (
+        "New slots",
+        "The file defines the slots from its first term on, earlier terms keeping theirs. That term and every later one are wiped, after a warning naming them.",
+    ),
+    (
+        "Refresh a term",
+        "The slots must match those on file exactly. The current term's assignments, or a future term's that already has some, are replaced, after a warning.",
+    ),
     ("Add a term", "The slots must match those on file exactly. The term has no assignments yet."),
 )
 
@@ -115,37 +121,248 @@ class Slot:
 
 
 SLOTS: tuple[Slot, ...] = tuple(
-    Slot(*row) for row in (
-        ('Cypress', 'Cypress A 04-12', 'Cypress A 04-05-06', 'RC1A L4: 101, 102-105; Else: 101, 102', ('Daniel Koh', 'Priya Raman'), ('Chloe Lim',)),
-        ('Cypress', 'Cypress A 04-12', 'Cypress A 07-08-09', 'RC1A L7: 101, 102-105; Else: 101, 102', ('Daniel Koh', 'Priya Raman'), ('Ethan Wong',)),
-        ('Cypress', 'Cypress A 04-12', 'Cypress A 10-11-12', 'RC1A L10: 101, 102-105; Else: 101, 102', ('Daniel Koh', 'Priya Raman'), ('Hana Ito',)),
-        ('Cypress', 'Cypress A 13-20', 'Cypress A 13-14-15', 'RC1A 101, 102', ('Mei Ling Tan', 'Priya Raman'), ('Isaac Goh',)),
-        ('Cypress', 'Cypress A 13-20', 'Cypress A 16-17-18', 'RC1A 101, 102', ('Mei Ling Tan', 'Priya Raman'), ('Jia Hui Ong',)),
-        ('Cypress', 'Cypress A 13-20', 'Cypress A 19-20', 'RC1A 101, 102', ('Mei Ling Tan', 'Priya Raman'), ('Kai Ng',)),
-        ('Cypress', 'Cypress B 03-14', 'Cypress B 03-04-05', 'RC1B 108, 107', ('Arjun Nair', 'Priya Raman'), ('Lucas Teo',)),
-        ('Cypress', 'Cypress B 03-14', 'Cypress B 06-07-08', 'RC1B 108, 107', ('Arjun Nair', 'Priya Raman'), ('Maya Seah',)),
-        ('Cypress', 'Cypress B 03-14', 'Cypress B 09-10-11', 'RC1B 108, 107', ('Arjun Nair', 'Priya Raman'), ('Nur Aisyah',)),
-        ('Cypress', 'Cypress B 03-14', 'Cypress B 12-13-14', 'RC1B 108, 107', ('Arjun Nair', 'Priya Raman'), ('Aaron Sim',)),
-        ('Maple', 'Maple 03-08', 'Maple 03-04', 'RC2 L3: 203-206, 202, 201; Else: 203, 202, 201', ('Grace Ho', 'Marcus Tan'), ('Bella Koh',)),
-        ('Maple', 'Maple 03-08', 'Maple 05-06', 'RC2 L5: 203-206, 202, 201; Else: 203, 202, 201', ('Grace Ho', 'Marcus Tan'), ('Cheng Hao Lin',)),
-        ('Maple', 'Maple 03-08', 'Maple 07-08', 'RC2 L7: 203-206, 202, 201; Else: 203, 202, 201', ('Grace Ho', 'Marcus Tan'), ('Dhruv Menon',)),
-        ('Maple', 'Maple 09-14', 'Maple 09-10', 'RC2 203, 202, 201', ('Benjamin Chua', 'Marcus Tan'), ('Elise Tan',)),
-        ('Maple', 'Maple 09-14', 'Maple 11-12', 'RC2 203, 202, 201', ('Benjamin Chua', 'Marcus Tan'), ('Faris Iskandar',)),
-        ('Maple', 'Maple 09-14', 'Maple 13-14', 'RC2 203, 202, 201', ('Benjamin Chua', 'Marcus Tan'), ('Gwen Ho',)),
-        ('Maple', 'Maple 15-22', 'Maple 15-16', 'RC2 203, 202, 201', ('Farah Aziz', 'Marcus Tan'), ('Haikal Rahim',)),
-        ('Maple', 'Maple 15-22', 'Maple 17-18', 'RC2 203, 202, 201', ('Farah Aziz', 'Marcus Tan'), ('Ivy Toh',)),
-        ('Maple', 'Maple 15-22', 'Maple 19-20', 'RC2 203, 202, 201', ('Farah Aziz', 'Marcus Tan'), ('Jasper Lee',)),
-        ('Maple', 'Maple 15-22', 'Maple 21-22', 'RC2 203, 202, 201', ('Farah Aziz', 'Marcus Tan'), ('Kavya Pillai',)),
-        ('Willow', 'Willow A 04-12', 'Willow A 04-05-06', 'RC3A 501, 502', ('Kenneth Lau', 'Nadia Hassan'), ('Leon Chia',)),
-        ('Willow', 'Willow A 04-12', 'Willow A 07-08-09', 'RC3A 501, 502', ('Kenneth Lau', 'Nadia Hassan'), ('Mira Sato',)),
-        ('Willow', 'Willow A 04-12', 'Willow A 10-11-12', 'RC3A 501, 502', ('Kenneth Lau', 'Nadia Hassan'), ('Nathan Yeo',)),
-        ('Willow', 'Willow A 13-25', 'Willow A 13-14-15', 'RC3A 501, 502', ('Siti Rahman', 'Nadia Hassan'), ('Olivia Ng',)),
-        ('Willow', 'Willow A 13-25', 'Willow A 16-17-18', 'RC3A 501, 502', ('Siti Rahman', 'Nadia Hassan'), ('Pranav Iyer',)),
-        ('Willow', 'Willow A 13-25', 'Willow A 19-20-21', 'RC3A 501, 502', ('Siti Rahman', 'Nadia Hassan'), ('Qi Xuan Lim',)),
-        ('Willow', 'Willow A 13-25', 'Willow A 22-23-24-25', 'RC3A 501, 502', ('Siti Rahman', 'Nadia Hassan'), ('Rui Chen',)),
-        ('Willow', 'Willow B 04-12', 'Willow B 04-05-06', 'RC3B L4: 506-509, 505; Else: 506, 505', ('Wei Jie Ong', 'Nadia Hassan'), ('Sofia Wee',)),
-        ('Willow', 'Willow B 04-12', 'Willow B 07-08-09', 'RC3B L7: 506-509, 505; Else: 506, 505', ('Wei Jie Ong', 'Nadia Hassan'), ('Timothy Low',)),
-        ('Willow', 'Willow B 04-12', 'Willow B 10-11-12', 'RC3B L10: 506-509, 505; Else: 506, 505', ('Wei Jie Ong', 'Nadia Hassan'), ('Umairah Salleh',)),
+    Slot(*row)
+    for row in (
+        (
+            "Cypress",
+            "Cypress A 04-12",
+            "Cypress A 04-05-06",
+            "RC1A L4: 101, 102-105; Else: 101, 102",
+            ("Daniel Koh", "Priya Raman"),
+            ("Chloe Lim",),
+        ),
+        (
+            "Cypress",
+            "Cypress A 04-12",
+            "Cypress A 07-08-09",
+            "RC1A L7: 101, 102-105; Else: 101, 102",
+            ("Daniel Koh", "Priya Raman"),
+            ("Ethan Wong",),
+        ),
+        (
+            "Cypress",
+            "Cypress A 04-12",
+            "Cypress A 10-11-12",
+            "RC1A L10: 101, 102-105; Else: 101, 102",
+            ("Daniel Koh", "Priya Raman"),
+            ("Hana Ito",),
+        ),
+        (
+            "Cypress",
+            "Cypress A 13-20",
+            "Cypress A 13-14-15",
+            "RC1A 101, 102",
+            ("Mei Ling Tan", "Priya Raman"),
+            ("Isaac Goh",),
+        ),
+        (
+            "Cypress",
+            "Cypress A 13-20",
+            "Cypress A 16-17-18",
+            "RC1A 101, 102",
+            ("Mei Ling Tan", "Priya Raman"),
+            ("Jia Hui Ong",),
+        ),
+        (
+            "Cypress",
+            "Cypress A 13-20",
+            "Cypress A 19-20",
+            "RC1A 101, 102",
+            ("Mei Ling Tan", "Priya Raman"),
+            ("Kai Ng",),
+        ),
+        (
+            "Cypress",
+            "Cypress B 03-14",
+            "Cypress B 03-04-05",
+            "RC1B 108, 107",
+            ("Arjun Nair", "Priya Raman"),
+            ("Lucas Teo",),
+        ),
+        (
+            "Cypress",
+            "Cypress B 03-14",
+            "Cypress B 06-07-08",
+            "RC1B 108, 107",
+            ("Arjun Nair", "Priya Raman"),
+            ("Maya Seah",),
+        ),
+        (
+            "Cypress",
+            "Cypress B 03-14",
+            "Cypress B 09-10-11",
+            "RC1B 108, 107",
+            ("Arjun Nair", "Priya Raman"),
+            ("Nur Aisyah",),
+        ),
+        (
+            "Cypress",
+            "Cypress B 03-14",
+            "Cypress B 12-13-14",
+            "RC1B 108, 107",
+            ("Arjun Nair", "Priya Raman"),
+            ("Aaron Sim",),
+        ),
+        (
+            "Maple",
+            "Maple 03-08",
+            "Maple 03-04",
+            "RC2 L3: 203-206, 202, 201; Else: 203, 202, 201",
+            ("Grace Ho", "Marcus Tan"),
+            ("Bella Koh",),
+        ),
+        (
+            "Maple",
+            "Maple 03-08",
+            "Maple 05-06",
+            "RC2 L5: 203-206, 202, 201; Else: 203, 202, 201",
+            ("Grace Ho", "Marcus Tan"),
+            ("Cheng Hao Lin",),
+        ),
+        (
+            "Maple",
+            "Maple 03-08",
+            "Maple 07-08",
+            "RC2 L7: 203-206, 202, 201; Else: 203, 202, 201",
+            ("Grace Ho", "Marcus Tan"),
+            ("Dhruv Menon",),
+        ),
+        (
+            "Maple",
+            "Maple 09-14",
+            "Maple 09-10",
+            "RC2 203, 202, 201",
+            ("Benjamin Chua", "Marcus Tan"),
+            ("Elise Tan",),
+        ),
+        (
+            "Maple",
+            "Maple 09-14",
+            "Maple 11-12",
+            "RC2 203, 202, 201",
+            ("Benjamin Chua", "Marcus Tan"),
+            ("Faris Iskandar",),
+        ),
+        (
+            "Maple",
+            "Maple 09-14",
+            "Maple 13-14",
+            "RC2 203, 202, 201",
+            ("Benjamin Chua", "Marcus Tan"),
+            ("Gwen Ho",),
+        ),
+        (
+            "Maple",
+            "Maple 15-22",
+            "Maple 15-16",
+            "RC2 203, 202, 201",
+            ("Farah Aziz", "Marcus Tan"),
+            ("Haikal Rahim",),
+        ),
+        (
+            "Maple",
+            "Maple 15-22",
+            "Maple 17-18",
+            "RC2 203, 202, 201",
+            ("Farah Aziz", "Marcus Tan"),
+            ("Ivy Toh",),
+        ),
+        (
+            "Maple",
+            "Maple 15-22",
+            "Maple 19-20",
+            "RC2 203, 202, 201",
+            ("Farah Aziz", "Marcus Tan"),
+            ("Jasper Lee",),
+        ),
+        (
+            "Maple",
+            "Maple 15-22",
+            "Maple 21-22",
+            "RC2 203, 202, 201",
+            ("Farah Aziz", "Marcus Tan"),
+            ("Kavya Pillai",),
+        ),
+        (
+            "Willow",
+            "Willow A 04-12",
+            "Willow A 04-05-06",
+            "RC3A 501, 502",
+            ("Kenneth Lau", "Nadia Hassan"),
+            ("Leon Chia",),
+        ),
+        (
+            "Willow",
+            "Willow A 04-12",
+            "Willow A 07-08-09",
+            "RC3A 501, 502",
+            ("Kenneth Lau", "Nadia Hassan"),
+            ("Mira Sato",),
+        ),
+        (
+            "Willow",
+            "Willow A 04-12",
+            "Willow A 10-11-12",
+            "RC3A 501, 502",
+            ("Kenneth Lau", "Nadia Hassan"),
+            ("Nathan Yeo",),
+        ),
+        (
+            "Willow",
+            "Willow A 13-25",
+            "Willow A 13-14-15",
+            "RC3A 501, 502",
+            ("Siti Rahman", "Nadia Hassan"),
+            ("Olivia Ng",),
+        ),
+        (
+            "Willow",
+            "Willow A 13-25",
+            "Willow A 16-17-18",
+            "RC3A 501, 502",
+            ("Siti Rahman", "Nadia Hassan"),
+            ("Pranav Iyer",),
+        ),
+        (
+            "Willow",
+            "Willow A 13-25",
+            "Willow A 19-20-21",
+            "RC3A 501, 502",
+            ("Siti Rahman", "Nadia Hassan"),
+            ("Qi Xuan Lim",),
+        ),
+        (
+            "Willow",
+            "Willow A 13-25",
+            "Willow A 22-23-24-25",
+            "RC3A 501, 502",
+            ("Siti Rahman", "Nadia Hassan"),
+            ("Rui Chen",),
+        ),
+        (
+            "Willow",
+            "Willow B 04-12",
+            "Willow B 04-05-06",
+            "RC3B L4: 506-509, 505; Else: 506, 505",
+            ("Wei Jie Ong", "Nadia Hassan"),
+            ("Sofia Wee",),
+        ),
+        (
+            "Willow",
+            "Willow B 04-12",
+            "Willow B 07-08-09",
+            "RC3B L7: 506-509, 505; Else: 506, 505",
+            ("Wei Jie Ong", "Nadia Hassan"),
+            ("Timothy Low",),
+        ),
+        (
+            "Willow",
+            "Willow B 04-12",
+            "Willow B 10-11-12",
+            "RC3B L10: 506-509, 505; Else: 506, 505",
+            ("Wei Jie Ong", "Nadia Hassan"),
+            ("Umairah Salleh",),
+        ),
     )
 )
 
@@ -191,17 +408,31 @@ def _student_id(n: int) -> str:
 
 
 def _staff(name: str, appointment: str, linked: bool = True) -> StaffMember:
-    return StaffMember(name, _email(name), appointment, ABBREV[appointment], DATES, linked, _enterprise(name))
+    return StaffMember(
+        name, _email(name), appointment, ABBREV[appointment], DATES, linked, _enterprise(name)
+    )
 
 
 STAFF: tuple[StaffMember, ...] = (
     _staff("Sam Lee", "Master"),
     _staff("Rachel Yeo", "Residential Admin"),
-    *(_staff(name, "Residential Student Life Manager") for name in ("Priya Raman", "Marcus Tan", "Nadia Hassan")),
+    *(
+        _staff(name, "Residential Student Life Manager")
+        for name in ("Priya Raman", "Marcus Tan", "Nadia Hassan")
+    ),
     *(
         _staff(name, "Residential Fellow", name != "Grace Ho")
-        for name in ("Daniel Koh", "Mei Ling Tan", "Arjun Nair", "Grace Ho", "Benjamin Chua",
-                     "Farah Aziz", "Kenneth Lau", "Siti Rahman", "Wei Jie Ong")
+        for name in (
+            "Daniel Koh",
+            "Mei Ling Tan",
+            "Arjun Nair",
+            "Grace Ho",
+            "Benjamin Chua",
+            "Farah Aziz",
+            "Kenneth Lau",
+            "Siti Rahman",
+            "Wei Jie Ong",
+        )
     ),
     # Unit-level staff holding no slot and overseeing no RA: RA Leave is
     # not shown to them (author, 2026-10-29).
@@ -214,14 +445,22 @@ LATE_START = {"Umairah Salleh": "2026-08-17 –"}
 
 RAS: tuple[RosterRA, ...] = tuple(
     RosterRA(
-        name, _email(name), "Residential Assistant", "RA", LATE_START.get(name, DATES), name != "Nur Aisyah",
-        _enterprise(name), _student_id(n),
+        name,
+        _email(name),
+        "Residential Assistant",
+        "RA",
+        LATE_START.get(name, DATES),
+        name != "Nur Aisyah",
+        _enterprise(name),
+        _student_id(n),
     )
     for n, name in enumerate(slot.ras[0] for slot in SLOTS)
 )
 
 
-def appointments(people: tuple[StaffMember, ...] | tuple[RosterRA, ...]) -> tuple[tuple[str, str], ...]:
+def appointments(
+    people: tuple[StaffMember, ...] | tuple[RosterRA, ...],
+) -> tuple[tuple[str, str], ...]:
     """A roster's appointments, as (appointment, abbreviation): the pairs its
     rows hold, in first-held order."""
     return tuple(dict.fromkeys((p.appointment, p.abbrev) for p in people))
@@ -247,7 +486,9 @@ def every_slot_people(term: Term) -> tuple[str, ...]:
     """Those in every slot for a term: holders of the ticked appointments,
     then anyone named, in Staff-roster order."""
     chosen = every_slot(term)
-    return tuple(p.name for p in STAFF if p.abbrev in chosen["appointments"] or p.name in chosen["names"])
+    return tuple(
+        p.name for p in STAFF if p.abbrev in chosen["appointments"] or p.name in chosen["names"]
+    )
 
 
 def coverage(neighborhoods: set[str]) -> tuple[str, ...]:
@@ -329,7 +570,9 @@ def linked_count(people: tuple[StaffMember, ...] | tuple[RosterRA, ...]) -> tupl
 def _span(dates: str) -> tuple[date, date]:
     """An appointment's first and last days; an open end runs on."""
     start, _, end = dates.partition("–")
-    return date.fromisoformat(start.strip()), date.fromisoformat(end.strip()) if end.strip() else date.max
+    return date.fromisoformat(start.strip()), date.fromisoformat(
+        end.strip()
+    ) if end.strip() else date.max
 
 
 def gap_days(dates: str, term: Term) -> int | None:
@@ -396,6 +639,7 @@ def person_id_of(email: str) -> str:
 
 PERSON_IDS = dict(_IDS)
 
+
 class _Worked(TypedDict, total=False):
     """What a worked sample person adds to the roster's fields."""
 
@@ -428,13 +672,31 @@ _WORKED: dict[str, _Worked] = {
 
 def _people() -> dict[str, Person]:
     people = [
-        Person(_IDS[s.email], s.name, "staff", s.email, s.linked, (f"{s.appointment} · {s.dates}",),
-               slots_of(s.name), enterprise_name=s.enterprise_name, **_WORKED.get(s.email, {}))
+        Person(
+            _IDS[s.email],
+            s.name,
+            "staff",
+            s.email,
+            s.linked,
+            (f"{s.appointment} · {s.dates}",),
+            slots_of(s.name),
+            enterprise_name=s.enterprise_name,
+            **_WORKED.get(s.email, {}),
+        )
         for s in STAFF
     ] + [
-        Person(_IDS[r.email], r.name, "ra", r.email, r.linked, (f"{r.appointment} · {r.dates}",),
-               slots_of(r.name), enterprise_name=r.enterprise_name, student_id=r.student_id,
-               **_WORKED.get(r.email, {}))
+        Person(
+            _IDS[r.email],
+            r.name,
+            "ra",
+            r.email,
+            r.linked,
+            (f"{r.appointment} · {r.dates}",),
+            slots_of(r.name),
+            enterprise_name=r.enterprise_name,
+            student_id=r.student_id,
+            **_WORKED.get(r.email, {}),
+        )
         for r in RAS
     ]
     return {p.person_id: p for p in people}
@@ -457,14 +719,48 @@ AUDIT_RANGE = ("2026-08-01", "2026-10-28")
 
 # (when, event, kind, actor, detail)
 AUDIT_EVENTS = (
-    ("2026-10-26 09:42", "Assignment changed", "Assignments", "Rachel Yeo",
-     "AY2026-2027, Term 1 · Maple 03-04 · Staff: + Grace Ho"),
-    ("2026-10-25 16:05", "Appointment ended", "Rosters", "Sam Lee", "A previous RA, ended 2026-10-24"),
-    ("2026-10-24 11:18", "Assignments imported", "Assignments", "Rachel Yeo",
-     "Refresh a term · AY2026-2027, Term 1: 30 slots, 2 changed"),
-    ("2026-10-24 11:02", "Level labels changed", "Assignments", "Rachel Yeo", "Level 2: “Zone” → “Precinct”"),
-    ("2026-08-01 08:05", "Roster imported", "Rosters", "Rachel Yeo", "Staff roster: 14 added; RA roster: 30 added"),
-    ("2026-08-01 08:02", "Terms imported", "Terms", "Rachel Yeo", "AY2025-2026 and AY2026-2027: 6 terms"),
+    (
+        "2026-10-26 09:42",
+        "Assignment changed",
+        "Assignments",
+        "Rachel Yeo",
+        "AY2026-2027, Term 1 · Maple 03-04 · Staff: + Grace Ho",
+    ),
+    (
+        "2026-10-25 16:05",
+        "Appointment ended",
+        "Rosters",
+        "Sam Lee",
+        "A previous RA, ended 2026-10-24",
+    ),
+    (
+        "2026-10-24 11:18",
+        "Assignments imported",
+        "Assignments",
+        "Rachel Yeo",
+        "Refresh a term · AY2026-2027, Term 1: 30 slots, 2 changed",
+    ),
+    (
+        "2026-10-24 11:02",
+        "Level labels changed",
+        "Assignments",
+        "Rachel Yeo",
+        "Level 2: “Zone” → “Precinct”",
+    ),
+    (
+        "2026-08-01 08:05",
+        "Roster imported",
+        "Rosters",
+        "Rachel Yeo",
+        "Staff roster: 14 added; RA roster: 30 added",
+    ),
+    (
+        "2026-08-01 08:02",
+        "Terms imported",
+        "Terms",
+        "Rachel Yeo",
+        "AY2025-2026 and AY2026-2027: 6 terms",
+    ),
     ("2026-08-01 08:00", "Sys admin granted", "Access grants", SUPER_ADMIN, "Sam Lee, Rachel Yeo"),
 )
 

@@ -13,6 +13,7 @@ is the probe: ``<nav class="table-pager">`` became the cluster's
 true only of the strip — its ranges all on screen at once — it says so
 and asserts the cluster's equivalent instead.
 """
+
 from __future__ import annotations
 
 import re
@@ -32,20 +33,14 @@ def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSessio
         data={"name": code.title(), "code": code},
         follow_redirects=False,
     )
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _import_reviewers(client: TestClient, session_id: int, count: int) -> None:
-    rows = b"".join(
-        f"Reviewer {i:04d},r{i:04d}@example.edu\n".encode() for i in range(count)
-    )
+    rows = b"".join(f"Reviewer {i:04d},r{i:04d}@example.edu\n".encode() for i in range(count))
     response = client.post(
         f"/operator/sessions/{public_id(session_id)}/reviewers/import",
-        files={
-            "file": ("r.csv", b"ReviewerName,ReviewerEmail\n" + rows, "text/csv")
-        },
+        files={"file": ("r.csv", b"ReviewerName,ReviewerEmail\n" + rows, "text/csv")},
         follow_redirects=False,
     )
     assert response.status_code in (200, 303), response.status_code
@@ -74,7 +69,7 @@ def test_a_roster_over_one_page_gets_a_pager_above_and_below_the_table(
     # One of the two carries the bottom modifier. Counted on the
     # rendered element: the bare class name also appears in the CSS
     # ``base.html`` ships on every page.
-    assert body.count('table-pager-cluster table-pager-cluster-bottom') == 1
+    assert body.count("table-pager-cluster table-pager-cluster-bottom") == 1
 
     # Real ranges, computed from the real roster — not placeholders.
     # They live in the menu now rather than strung across a strip, but
@@ -84,9 +79,7 @@ def test_a_roster_over_one_page_gets_a_pager_above_and_below_the_table(
     assert "401–556" in body
 
 
-def test_the_pager_is_suppressed_while_a_filter_is_active(
-    client: TestClient, db: Session
-) -> None:
+def test_the_pager_is_suppressed_while_a_filter_is_active(client: TestClient, db: Session) -> None:
     """The operator's own partition of the roster wins; the count line
     speaks for that view instead."""
     review_session = _make_session(client, db, code="pager-filtered")
@@ -106,9 +99,7 @@ def test_the_pager_is_suppressed_while_a_filter_is_active(
     assert "table-showing-hint" in body
 
 
-def test_a_roster_that_fits_one_page_gets_no_pager(
-    client: TestClient, db: Session
-) -> None:
+def test_a_roster_that_fits_one_page_gets_no_pager(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="pager-small")
     _import_reviewers(client, review_session.id, 12)
 
@@ -135,20 +126,14 @@ def test_the_setup_pager_links_navigate(client: TestClient, db: Session) -> None
     assert 'aria-current="page"' in body
 
 
-def test_a_row_past_the_first_page_is_reachable(
-    client: TestClient, db: Session
-) -> None:
+def test_a_row_past_the_first_page_is_reachable(client: TestClient, db: Session) -> None:
     """The item's whole reason for existing: before 19J.5 row 401 of
     556 could not be seen without searching for it."""
     review_session = _make_session(client, db, code="pager-reach")
     _import_reviewers(client, review_session.id, 556)
 
-    first = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-    ).text
-    last = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers?offset=400"
-    ).text
+    first = client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
+    last = client.get(f"/operator/sessions/{review_session.public_id}/reviewers?offset=400").text
 
     assert "Reviewer 0555" not in _table(first)
     assert "Reviewer 0555" in _table(last)
@@ -163,39 +148,29 @@ def test_an_out_of_range_offset_clamps_rather_than_erroring(
     review_session = _make_session(client, db, code="pager-clamp")
     _import_reviewers(client, review_session.id, 556)
 
-    past_end = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers?offset=99999"
-    )
+    past_end = client.get(f"/operator/sessions/{review_session.public_id}/reviewers?offset=99999")
     assert past_end.status_code == 200
     assert "Reviewer 0555" in _table(past_end.text)
 
-    negative = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers?offset=-50"
-    )
+    negative = client.get(f"/operator/sessions/{review_session.public_id}/reviewers?offset=-50")
     assert negative.status_code == 200
     assert "Reviewer 0000" in _table(negative.text)
 
 
-def test_an_offset_mid_page_snaps_to_its_boundary(
-    client: TestClient, db: Session
-) -> None:
+def test_an_offset_mid_page_snaps_to_its_boundary(client: TestClient, db: Session) -> None:
     """Otherwise two different offsets render overlapping windows and
     the range labels stop describing what is on screen."""
     review_session = _make_session(client, db, code="pager-snap")
     _import_reviewers(client, review_session.id, 556)
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers?offset=250"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers?offset=250").text
     table = _table(body)
     assert "Reviewer 0200" in table
     assert "Reviewer 0399" in table
     assert "Reviewer 0400" not in table
 
 
-def test_the_pager_carries_no_selection_across_a_page(
-    client: TestClient, db: Session
-) -> None:
+def test_the_pager_carries_no_selection_across_a_page(client: TestClient, db: Session) -> None:
     """Selection is page-local. Carrying a hidden one across a page
     boundary is how an operator deletes something they cannot see."""
     review_session = _make_session(client, db, code="pager-select")
@@ -222,9 +197,7 @@ def test_the_pager_carries_no_selection_across_a_page(
     assert cluster.count("offset=") >= 3
 
 
-def test_assignments_still_waits_for_its_rung(
-    client: TestClient, db: Session
-) -> None:
+def test_assignments_still_waits_for_its_rung(client: TestClient, db: Session) -> None:
     """Assignments keeps the scaffold until rung 4 settles its sort
     question. Its strip renders and goes nowhere — and because it is
     not paged, it also keeps the withheld notice the other six have
@@ -235,15 +208,11 @@ def test_assignments_still_waits_for_its_rung(
     review_session = _make_session(client, db, code="pager-unwired")
     _import_reviewers(client, review_session.id, 12)
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/assignments").text
     assert "assignments?offset=" not in body
 
 
-def test_editing_a_row_lands_on_the_page_that_holds_it(
-    client: TestClient, db: Session
-) -> None:
+def test_editing_a_row_lands_on_the_page_that_holds_it(client: TestClient, db: Session) -> None:
     """Before 19J.5 a row being edited from outside the cap was
     prepended to whatever page the operator was on, because there was
     nowhere else to put it. On a paged view there now is — and landing
@@ -256,15 +225,16 @@ def test_editing_a_row_lands_on_the_page_that_holds_it(
     _import_reviewers(client, review_session.id, 556)
 
     # A row on the third page (index 500 of the id-ordered roster).
-    target = db.execute(
-        select(Reviewer)
-        .where(Reviewer.session_id == review_session.id)
-        .order_by(Reviewer.id)
-    ).scalars().all()[500]
+    target = (
+        db.execute(
+            select(Reviewer).where(Reviewer.session_id == review_session.id).order_by(Reviewer.id)
+        )
+        .scalars()
+        .all()[500]
+    )
 
     body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-        f"?edit_id={target.id}"
+        f"/operator/sessions/{review_session.public_id}/reviewers?edit_id={target.id}"
     ).text
 
     table = _table(body)
@@ -336,15 +306,10 @@ def _seed_paged_operations_session(
 
     review_session = _make_session(client, db, code=code)
     _import_reviewers(client, review_session.id, reviewers)
-    rows = b"".join(
-        f"Reviewee {i:04d},e{i:04d}@example.edu\n".encode()
-        for i in range(reviewees)
-    )
+    rows = b"".join(f"Reviewee {i:04d},e{i:04d}@example.edu\n".encode() for i in range(reviewees))
     client.post(
         f"/operator/sessions/{review_session.public_id}/reviewees/import",
-        files={
-            "file": ("e.csv", b"RevieweeName,RevieweeEmail\n" + rows, "text/csv")
-        },
+        files={"file": ("e.csv", b"RevieweeName,RevieweeEmail\n" + rows, "text/csv")},
         follow_redirects=False,
     )
     pin_full_matrix_on_all_instruments(db, review_session.id)
@@ -358,28 +323,21 @@ def test_invitations_pages_and_reaches_the_rows_it_used_to_render_all_of(
     """The page rendered every matching row until rung 3, whatever the
     number — which is why it is one of the two that hurt most on a
     large roster."""
-    pid = _seed_paged_operations_session(
-        client, db, code="ops-page-inv", reviewers=210
-    )
+    pid = _seed_paged_operations_session(client, db, code="ops-page-inv", reviewers=210)
 
     first = client.get(f"/operator/sessions/{pid}/invitations").text
     assert '<div class="table-pager-cluster' in first
     assert (
-        f'href="/operator/sessions/{pid}/invitations'
-        f'?offset=200#invitations-table-card"'
+        f'href="/operator/sessions/{pid}/invitations?offset=200#invitations-table-card"'
     ) in first
 
-    second = client.get(
-        f"/operator/sessions/{pid}/invitations?offset=200"
-    ).text
+    second = client.get(f"/operator/sessions/{pid}/invitations?offset=200").text
     table = _ops_table(second, "invitations")
     assert "Reviewer 0209" in table
     assert "Reviewer 0000" not in table
 
 
-def test_responses_pages_on_the_same_terms(
-    client: TestClient, db: Session
-) -> None:
+def test_responses_pages_on_the_same_terms(client: TestClient, db: Session) -> None:
     """One row per reviewee, so this fixture overflows on the reviewee
     side rather than the reviewer side."""
     pid = _seed_paged_operations_session(
@@ -388,16 +346,11 @@ def test_responses_pages_on_the_same_terms(
 
     first = client.get(f"/operator/sessions/{pid}/responses").text
     assert '<div class="table-pager-cluster' in first
-    assert (
-        f'href="/operator/sessions/{pid}/responses'
-        f'?offset=200#responses-table-card"'
-    ) in first
+    assert (f'href="/operator/sessions/{pid}/responses?offset=200#responses-table-card"') in first
     assert _ops_row_count(first, "responses") == 200
     assert "Reviewee 0209" not in _ops_table(first, "responses")
 
-    second = client.get(
-        f"/operator/sessions/{pid}/responses?offset=200"
-    ).text
+    second = client.get(f"/operator/sessions/{pid}/responses?offset=200").text
     table = _ops_table(second, "responses")
     assert _ops_row_count(second, "responses") == 10
     assert "Reviewee 0209" in table
@@ -407,12 +360,8 @@ def test_responses_pages_on_the_same_terms(
 def test_an_out_of_range_offset_clamps_on_the_operations_pages_too(
     client: TestClient, db: Session
 ) -> None:
-    pid = _seed_paged_operations_session(
-        client, db, code="ops-page-clamp", reviewers=210
-    )
-    response = client.get(
-        f"/operator/sessions/{pid}/invitations?offset=99999"
-    )
+    pid = _seed_paged_operations_session(client, db, code="ops-page-clamp", reviewers=210)
+    response = client.get(f"/operator/sessions/{pid}/invitations?offset=99999")
     assert response.status_code == 200
     assert "Reviewer 0209" in _ops_table(response.text, "invitations")
 
@@ -423,13 +372,9 @@ def test_a_filtered_operations_view_carries_no_pager_and_stays_uncapped(
     """The one place these two differ from the rosters: the Setup pages
     cap a filtered view at 500, and these never had a cap to keep. The
     pager is suppressed either way."""
-    pid = _seed_paged_operations_session(
-        client, db, code="ops-page-filt", reviewers=210
-    )
+    pid = _seed_paged_operations_session(client, db, code="ops-page-filt", reviewers=210)
 
-    body = client.get(
-        f"/operator/sessions/{pid}/invitations?q=Reviewer"
-    ).text
+    body = client.get(f"/operator/sessions/{pid}/invitations?q=Reviewer").text
     assert '<div class="table-pager-cluster' not in body
     # All 210 match, and all 210 render — nothing withheld, so the
     # sentence carries no withheld clause.
@@ -449,11 +394,7 @@ def test_a_filtered_operations_view_renders_every_matching_row(
     reads as a bug rather than a decision, this is the test that says
     where the decision lives.
     """
-    pid = _seed_paged_operations_session(
-        client, db, code="ops-filtered-uncapped", reviewers=210
-    )
-    body = client.get(
-        f"/operator/sessions/{pid}/invitations?q=Reviewer"
-    ).text
+    pid = _seed_paged_operations_session(client, db, code="ops-filtered-uncapped", reviewers=210)
+    body = client.get(f"/operator/sessions/{pid}/invitations?q=Reviewer").text
     assert _ops_row_count(body, "invitations") == 210
     assert '<div class="table-pager-cluster' not in body

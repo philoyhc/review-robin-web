@@ -57,7 +57,9 @@ def _open_session(db: Session, code: str) -> ReviewSession:
     owner = User(email=f"op-{code}@example.edu")
     db.add(owner)
     db.flush()
-    review_session = ReviewSession(name=code.title(), code=code, created_by_user_id=owner.id, status="active")
+    review_session = ReviewSession(
+        name=code.title(), code=code, created_by_user_id=owner.id, status="active"
+    )
     review_session.observers_enabled = True
     db.add(review_session)
     db.flush()
@@ -88,7 +90,9 @@ def test_the_office_collision_admits_neither_wrong_account() -> None:
     Wei Ling, whose mail it is, signs in with it; Office Desk signs in
     with their mail, `office.desk@`, and never matches."""
     row = Reviewer(email="office@example.edu")
-    assert Viewer.from_parts("office@example.edu", "44444444-4444-4444-8444-444444444444").matches(row, row.email)
+    assert Viewer.from_parts("office@example.edu", "44444444-4444-4444-8444-444444444444").matches(
+        row, row.email
+    )
     assert not Viewer.from_parts("office.desk@example.edu", OFFICE_DESK_OID).matches(row, row.email)
 
 
@@ -97,7 +101,9 @@ def test_the_office_collision_admits_neither_wrong_account() -> None:
 
 def test_a_row_given_by_upn_admits_its_account_through_the_gates(db: Session, as_user) -> None:
     session = _open_session(db, "match-gates")
-    db.add(Observer(session_id=session.id, email="e0123456@example.edu", directory_object_id=JANE_OID))
+    db.add(
+        Observer(session_id=session.id, email="e0123456@example.edu", directory_object_id=JANE_OID)
+    )
     db.commit()
     jane = as_user("jane.tan@example.edu", JANE_OID)
     assert jane.get(f"/me/sessions/{session.public_id}/collation").status_code == 200
@@ -105,7 +111,14 @@ def test_a_row_given_by_upn_admits_its_account_through_the_gates(db: Session, as
 
 def test_the_reviewer_gate_admits_a_row_given_by_upn_by_account(db: Session, as_user) -> None:
     session = _open_session(db, "match-reviewer")
-    db.add(Reviewer(session_id=session.id, name="Jane", email="e0123456@example.edu", directory_object_id=JANE_OID))
+    db.add(
+        Reviewer(
+            session_id=session.id,
+            name="Jane",
+            email="e0123456@example.edu",
+            directory_object_id=JANE_OID,
+        )
+    )
     db.commit()
     path = f"/me/sessions/{session.public_id}/summary"
     assert as_user("jane.tan@example.edu", JANE_OID).get(path).status_code == 200
@@ -121,7 +134,11 @@ def test_an_address_edit_moves_access_to_the_new_account(db: Session, as_user) -
     assert operator is not None
     resolve = directory_accounts.resolver(FakeDirectory())
     row = observers.create_observer(
-        db, review_session=session, email="e0123456@example.edu", user=operator, resolve_account=resolve
+        db,
+        review_session=session,
+        email="e0123456@example.edu",
+        user=operator,
+        resolve_account=resolve,
     )
     path = f"/me/sessions/{session.public_id}/collation"
     assert as_user("jane.tan@example.edu", JANE_OID).get(path).status_code == 200
@@ -132,7 +149,9 @@ def test_an_address_edit_moves_access_to_the_new_account(db: Session, as_user) -
     assert changes["directory_object_id"] == [JANE_OID, ARUN_OID]
     assert as_user("jane.tan@example.edu", JANE_OID).get(path).status_code == 404
     assert as_user("arun.kumar@example.edu", ARUN_OID).get(path).status_code == 200
-    created = db.execute(select(AuditEvent).where(AuditEvent.event_type == "observer.created")).scalar_one()
+    created = db.execute(
+        select(AuditEvent).where(AuditEvent.event_type == "observer.created")
+    ).scalar_one()
     assert created.detail is not None
     assert created.detail["snapshot"]["directory_object_id"] == JANE_OID
 
@@ -143,7 +162,9 @@ def test_a_stored_principal_from_an_earlier_holder_binds_nothing(db: Session, as
     address to it (Codex, #3424)."""
     session = _open_session(db, "match-stale")
     db.add(User(email="jane.tan@example.edu", external_principal_id=JANE_OID))
-    db.add(Observer(session_id=session.id, email="jane.tan@example.edu", directory_object_id=JANE_OID))
+    db.add(
+        Observer(session_id=session.id, email="jane.tan@example.edu", directory_object_id=JANE_OID)
+    )
     db.commit()
     newcomer = as_user("jane.tan@example.edu", "99999999-9999-4999-8999-999999999999")
     assert newcomer.get(f"/me/sessions/{session.public_id}/collation").status_code == 404
@@ -151,7 +172,14 @@ def test_a_stored_principal_from_an_earlier_holder_binds_nothing(db: Session, as
 
 def test_the_dashboard_and_role_disclosure_follow_the_account(db: Session, as_user) -> None:
     session = _open_session(db, "match-dash")
-    db.add(Reviewer(session_id=session.id, name="Jane", email="e0123456@example.edu", directory_object_id=JANE_OID))
+    db.add(
+        Reviewer(
+            session_id=session.id,
+            name="Jane",
+            email="e0123456@example.edu",
+            directory_object_id=JANE_OID,
+        )
+    )
     db.commit()
     page = as_user("jane.tan@example.edu", JANE_OID).get("/me")
     assert session.name in page.text
@@ -168,10 +196,22 @@ def test_two_rows_on_one_account_resolve_to_the_same_row_everywhere(
     from app.services import responses as responses_service
 
     session = _open_session(db, "match-twice")
-    first = Reviewer(session_id=session.id, name="Jane", email="e0123456@example.edu", directory_object_id=JANE_OID)
+    first = Reviewer(
+        session_id=session.id,
+        name="Jane",
+        email="e0123456@example.edu",
+        directory_object_id=JANE_OID,
+    )
     db.add(first)
     db.flush()
-    db.add(Reviewer(session_id=session.id, name="Jane", email="jane.tan@example.edu", directory_object_id=JANE_OID))
+    db.add(
+        Reviewer(
+            session_id=session.id,
+            name="Jane",
+            email="jane.tan@example.edu",
+            directory_object_id=JANE_OID,
+        )
+    )
     db.commit()
     shown: list[int] = []
     real = responses_service.session_pill_for_reviewer
@@ -198,11 +238,25 @@ def test_the_chip_strip_describes_the_row_the_gate_opens(
     from app.web.routes_reviewer._shared import build_role_chips
 
     session = _open_session(db, "match-chips")
-    first = Reviewer(session_id=session.id, name="Jane", email="e0123456@example.edu", directory_object_id=JANE_OID)
+    first = Reviewer(
+        session_id=session.id,
+        name="Jane",
+        email="e0123456@example.edu",
+        directory_object_id=JANE_OID,
+    )
     db.add(first)
     db.flush()
-    db.add(Reviewer(session_id=session.id, name="Jane", email="jane.tan@example.edu", directory_object_id=JANE_OID))
-    db.add(Observer(session_id=session.id, email="e0123456@example.edu", directory_object_id=JANE_OID))
+    db.add(
+        Reviewer(
+            session_id=session.id,
+            name="Jane",
+            email="jane.tan@example.edu",
+            directory_object_id=JANE_OID,
+        )
+    )
+    db.add(
+        Observer(session_id=session.id, email="e0123456@example.edu", directory_object_id=JANE_OID)
+    )
     db.commit()
     user = User(email="jane.tan@example.edu")
     monkeypatch.setattr(user, "signed_in_principal_id", JANE_OID, raising=False)
@@ -212,7 +266,9 @@ def test_the_chip_strip_describes_the_row_the_gate_opens(
     monkeypatch.setattr(
         responses_service,
         "session_pill_for_reviewer",
-        lambda db, *, reviewer, session_id: shown.append(reviewer.id) or real(db, reviewer=reviewer, session_id=session_id),
+        lambda db, *, reviewer, session_id: (
+            shown.append(reviewer.id) or real(db, reviewer=reviewer, session_id=session_id)
+        ),
     )
     roster_selects: list[str] = []
 
@@ -238,8 +294,12 @@ def test_the_chip_strip_describes_the_row_the_gate_opens(
 
 def test_rows_bound_to_one_account_are_one_person() -> None:
     reviewer = Reviewer(email="e0123456@example.edu", directory_object_id=JANE_OID)
-    reviewee = Reviewee(email_or_identifier="jane.tan@example.edu", directory_object_id=JANE_OID.upper())
-    other = Reviewee(email_or_identifier="e0123456@example.edu", directory_object_id=OFFICE_DESK_OID)
+    reviewee = Reviewee(
+        email_or_identifier="jane.tan@example.edu", directory_object_id=JANE_OID.upper()
+    )
+    other = Reviewee(
+        email_or_identifier="e0123456@example.edu", directory_object_id=OFFICE_DESK_OID
+    )
     assert is_self_review(reviewer, reviewee)
     assert _is_self_review(reviewer, reviewee)
     assert same_person(reviewer, reviewer.email, reviewee, reviewee.email_or_identifier)
@@ -257,9 +317,17 @@ def test_group_self_review_finds_a_member_by_account(db: Session) -> None:
     mail) sits in, so every row in that group is a self-review."""
     session = _open_session(db, "match-group")
     session.status = "draft"
-    jane_r = Reviewer(session_id=session.id, name="Jane", email="e0123456@example.edu", directory_object_id=JANE_OID)
+    jane_r = Reviewer(
+        session_id=session.id,
+        name="Jane",
+        email="e0123456@example.edu",
+        directory_object_id=JANE_OID,
+    )
     jane_e = Reviewee(
-        session_id=session.id, name="Jane", email_or_identifier="jane.tan@example.edu", directory_object_id=JANE_OID
+        session_id=session.id,
+        name="Jane",
+        email_or_identifier="jane.tan@example.edu",
+        directory_object_id=JANE_OID,
     )
     carol_e = Reviewee(session_id=session.id, name="Carol", email_or_identifier="carol@example.edu")
     db.add_all([jane_r, jane_e, carol_e])
@@ -268,7 +336,12 @@ def test_group_self_review_finds_a_member_by_account(db: Session) -> None:
     instrument.group_kind = "both"
     db.flush()
     rows = [
-        Assignment(session_id=session.id, reviewer_id=jane_r.id, reviewee_id=e.id, instrument_id=instrument.id)
+        Assignment(
+            session_id=session.id,
+            reviewer_id=jane_r.id,
+            reviewee_id=e.id,
+            instrument_id=instrument.id,
+        )
         for e in (jane_e, carol_e)
     ]
     db.add_all(rows)

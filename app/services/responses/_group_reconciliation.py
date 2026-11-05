@@ -97,9 +97,7 @@ class _GroupKeyShape(Protocol):
 GroupKeyable = _GroupKeyShape | Assignment
 
 
-def _session_position_map(
-    db: Session, session_id: int
-) -> dict[int, int]:
+def _session_position_map(db: Session, session_id: int) -> dict[int, int]:
     instruments = list(
         db.execute(
             select(Instrument)
@@ -154,8 +152,8 @@ def _group_key_by_assignment(
     for instrument in db.execute(
         select(Instrument).where(Instrument.id.in_(group_instrument_ids))
     ).scalars():
-        boundary_by_instrument[instrument.id] = (
-            instruments_service.decode_group_kind(instrument.group_kind)
+        boundary_by_instrument[instrument.id] = instruments_service.decode_group_kind(
+            instrument.group_kind
         )
     # The relationships table is only needed when some boundary tag
     # is pair-context-sourced; a reviewee-tag-only boundary (the
@@ -166,9 +164,7 @@ def _group_key_by_assignment(
         for source_type, _ in boundary
     )
     pair_lookup = (
-        relationships_service.pair_context_lookup(db, session_id)
-        if needs_pair_lookup
-        else {}
+        relationships_service.pair_context_lookup(db, session_id) if needs_pair_lookup else {}
     )
 
     keys: dict[int, tuple[str, ...]] = {}
@@ -214,14 +210,9 @@ def group_key_for_pair(
         if source_type == "reviewee":
             raw = getattr(reviewee, source_field, None)
         else:  # pair_context
-            relationship = pair_context_lookup.get(
-                (reviewer_id, reviewee_id)
-            )
+            relationship = pair_context_lookup.get((reviewer_id, reviewee_id))
             raw = None
-            if (
-                relationship is not None
-                and getattr(relationship, "status", None) == "active"
-            ):
+            if relationship is not None and getattr(relationship, "status", None) == "active":
                 raw = getattr(relationship, f"tag_{source_field}", None)
         key.append((raw or "").strip())
     return tuple(key)
@@ -246,9 +237,7 @@ def group_keys(
     return _group_key_by_assignment(
         db,
         assignments=assignments,
-        group_instrument_ids=_group_instrument_ids(
-            db, {a.instrument_id for a in assignments}
-        ),
+        group_instrument_ids=_group_instrument_ids(db, {a.instrument_id for a in assignments}),
         session_id=session_id,
     )
 
@@ -267,9 +256,7 @@ def _instrument_groups(
     another could otherwise present a changed group as the same rows.
     Also returns each pair's assignment id, for the delete."""
     members = list(
-        db.execute(
-            select(Assignment).where(Assignment.instrument_id == instrument_id)
-        ).scalars()
+        db.execute(select(Assignment).where(Assignment.instrument_id == instrument_id)).scalars()
     )
     ids = {(m.reviewer_id, m.reviewee_id): m.id for m in members}
     keys = group_keys(db, assignments=members, session_id=session_id)
@@ -302,9 +289,7 @@ def session_group_instrument_ids(
         if source_type is None
         or any(
             kind == source_type
-            for kind, _ in instruments_service.decode_group_kind(
-                instrument.group_kind
-            )
+            for kind, _ in instruments_service.decode_group_kind(instrument.group_kind)
         )
     }
 
@@ -347,9 +332,7 @@ def snapshot_group_partitions(
     )
     return {
         instrument_id: set(
-            _instrument_groups(
-                db, session_id=session_id, instrument_id=instrument_id
-            )[0]
+            _instrument_groups(db, session_id=session_id, instrument_id=instrument_id)[0]
         )
         for instrument_id in answered
     }
@@ -362,9 +345,7 @@ def origins(before: set[frozenset[Pair]]) -> dict[Pair, frozenset[Pair]]:
     return {pair: group for group in before for pair in group}
 
 
-def keeps_answer(
-    group: frozenset[Pair], origin_of: dict[Pair, frozenset[Pair]]
-) -> bool:
+def keeps_answer(group: frozenset[Pair], origin_of: dict[Pair, frozenset[Pair]]) -> bool:
     """Whether ``group`` may keep its answer: every member came from
     the same group before (``origin_of``, from :func:`origins`), so it
     is that group or a subset of it (author's ruling 2026-10-17). A
@@ -413,9 +394,7 @@ def clear_changed_groups(
     changed: set[int] = set()
     for instrument_id, groups in before.items():
         origin_of = origins(groups)
-        after, ids = _instrument_groups(
-            db, session_id=session_id, instrument_id=instrument_id
-        )
+        after, ids = _instrument_groups(db, session_id=session_id, instrument_id=instrument_id)
         for group in after:
             if not keeps_answer(group, origin_of):
                 changed |= {ids[pair] for pair in group}
@@ -423,17 +402,13 @@ def clear_changed_groups(
         return 0
     if acknowledged_loss is not None:
         count = db.execute(
-            select(func.count())
-            .select_from(Response)
-            .where(Response.assignment_id.in_(changed))
+            select(func.count()).select_from(Response).where(Response.assignment_id.in_(changed))
         ).scalar_one()
         if count and count != acknowledged_loss:
             raise GroupAnswersWouldClear(count)
     # Deleted by assignment, not by response id: one bound parameter per
     # row rather than one per row and field.
-    return rowcount(db.execute(
-        delete(Response).where(Response.assignment_id.in_(changed))
-    )) or 0
+    return rowcount(db.execute(delete(Response).where(Response.assignment_id.in_(changed)))) or 0
 
 
 def _expand_group_upserts(
@@ -465,9 +440,7 @@ def _expand_group_upserts(
     for a in assignments:
         if a.instrument_id in group_instrument_ids:
             group_key = group_key_by_assignment.get(a.id, ())
-            members_by_group.setdefault(
-                (a.instrument_id, group_key), []
-            ).append(a.id)
+            members_by_group.setdefault((a.instrument_id, group_key), []).append(a.id)
 
     passthrough: list[ResponseUpsert] = []
     group_value: dict[tuple[int, tuple[str, ...], str], str] = {}

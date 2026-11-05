@@ -188,9 +188,7 @@ def build_preview_picker_context(
     reviewee_peek: list[str] = []
     reviewee_tail: list[str] = []
     if current is not None:
-        names = _picker_assigned_reviewee_names(
-            db, review_session.id, current.reviewer_id
-        )
+        names = _picker_assigned_reviewee_names(db, review_session.id, current.reviewer_id)
         reviewee_count = len(names)
         reviewee_peek = names[:PREVIEW_PICKER_REVIEWEE_PEEK_COUNT]
         reviewee_tail = names[PREVIEW_PICKER_REVIEWEE_PEEK_COUNT:]
@@ -209,9 +207,7 @@ def build_preview_picker_context(
     )
 
 
-def _picker_assigned_reviewee_names(
-    db: Session, session_id: int, reviewer_id: int
-) -> list[str]:
+def _picker_assigned_reviewee_names(db: Session, session_id: int, reviewer_id: int) -> list[str]:
     """Distinct reviewee names this reviewer is assigned to, sorted.
 
     Only counts ``include=True`` assignments (matching how the rest of
@@ -246,7 +242,9 @@ def _picker_assigned_reviewee_names(
 # A placeholder URL the operator-facing preview substitutes for `$invite_url`.
 # Real invitation tokens are one-time-use and would be wasted (and audit-
 # muddying) if minted just to power a preview render.
-PREVIEW_INVITE_URL_PLACEHOLDER = "(preview link — real invitation URL is generated when the operator sends)"
+PREVIEW_INVITE_URL_PLACEHOLDER = (
+    "(preview link — real invitation URL is generated when the operator sends)"
+)
 
 
 @dataclass(frozen=True)
@@ -394,9 +392,7 @@ def build_email_preview_body(
             body=body,
         )
     if tab.key == "responses_received":
-        subject, body = email_templates.render_responses_received(
-            review_session, reviewer
-        )
+        subject, body = email_templates.render_responses_received(review_session, reviewer)
         return EmailBody(
             subject=subject,
             from_display=from_display,
@@ -422,14 +418,14 @@ _MERGE_TAG_DESCRIPTIONS = {
     ),
     "$help_contact": (
         "Per-session help contact. When none is set, your own text "
-        "reads \"the person running this review\"; the default text "
+        'reads "the person running this review"; the default text '
         "drops its line."
     ),
     "$invite_url": "Reviewer-specific invitation URL.",
     "$submitted_at": (
         "When the reviewer submitted, as YYYY-MM-DD HH:MM in the "
         "session's timezone, followed by the zone. "
-        "Renders \"(not yet submitted)\" in previews before the "
+        'Renders "(not yet submitted)" in previews before the '
         "reviewer has submitted anything."
     ),
 }
@@ -467,5 +463,3 @@ def merge_tags_for_template(template: str) -> list[dict[str, str]]:
         {"tag": tag, "description": _MERGE_TAG_DESCRIPTIONS[tag]}
         for tag in _MERGE_TAGS_BY_TEMPLATE[template]
     ]
-
-

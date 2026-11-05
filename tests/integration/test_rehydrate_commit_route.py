@@ -55,9 +55,7 @@ def _to_csv(rows) -> bytes:
 
 
 def _seed(db: Session) -> ReviewSession:
-    user = db.execute(
-        select(User).where(User.email == "test@example.com")
-    ).scalar_one_or_none()
+    user = db.execute(select(User).where(User.email == "test@example.com")).scalar_one_or_none()
     if user is None:
         user = User(email="test@example.com", display_name="Test")
         db.add(user)
@@ -120,15 +118,11 @@ def _file_set(db: Session, rs: ReviewSession) -> dict[str, bytes]:
 
 
 def _multipart(files: dict[str, bytes]) -> list:
-    return [
-        ("files", (name, content, "text/csv")) for name, content in files.items()
-    ]
+    return [("files", (name, content, "text/csv")) for name, content in files.items()]
 
 
 def _validate_for_token(client: TestClient, files: dict[str, bytes]) -> str:
-    response = client.post(
-        "/operator/sessions/rehydrate/validate", files=_multipart(files)
-    )
+    response = client.post("/operator/sessions/rehydrate/validate", files=_multipart(files))
     assert response.status_code == 200, response.text
     assert "Validation passed" in response.text
     # The commit form carries the stash token in a hidden input.
@@ -139,9 +133,7 @@ def _validate_for_token(client: TestClient, files: dict[str, bytes]) -> str:
     return match.group(1)
 
 
-def test_commit_rebuilds_session_from_extract(
-    client: TestClient, db: Session
-) -> None:
+def test_commit_rebuilds_session_from_extract(client: TestClient, db: Session) -> None:
     rs = _seed(db)
     files = _file_set(db, rs)
     token = _validate_for_token(client, files)
@@ -169,27 +161,27 @@ def test_commit_rebuilds_session_from_extract(
     assert '"Spring"' in (rehyd.description or "")
 
     # Populations restored.
-    reviewers = db.execute(
-        select(Reviewer).where(Reviewer.session_id == rehyd.id)
-    ).scalars().all()
-    reviewees = db.execute(
-        select(Reviewee).where(Reviewee.session_id == rehyd.id)
-    ).scalars().all()
+    reviewers = db.execute(select(Reviewer).where(Reviewer.session_id == rehyd.id)).scalars().all()
+    reviewees = db.execute(select(Reviewee).where(Reviewee.session_id == rehyd.id)).scalars().all()
     assert {r.email for r in reviewers} == {"ana@e.edu"}
     assert {r.email_or_identifier for r in reviewees} == {"bo@e.edu"}
 
     # Instrument + response field restored.
-    instruments = db.execute(
-        select(Instrument).where(Instrument.session_id == rehyd.id)
-    ).scalars().all()
+    instruments = (
+        db.execute(select(Instrument).where(Instrument.session_id == rehyd.id)).scalars().all()
+    )
     assert {i.short_label for i in instruments} == {"INST"}
 
     # The response value + timestamps + version round-tripped.
-    new_responses = db.execute(
-        select(Response)
-        .join(Assignment, Response.assignment_id == Assignment.id)
-        .where(Assignment.session_id == rehyd.id)
-    ).scalars().all()
+    new_responses = (
+        db.execute(
+            select(Response)
+            .join(Assignment, Response.assignment_id == Assignment.id)
+            .where(Assignment.session_id == rehyd.id)
+        )
+        .scalars()
+        .all()
+    )
     assert len(new_responses) == 1
     r = new_responses[0]
     assert r.value == "4"
@@ -202,9 +194,7 @@ def test_commit_rebuilds_session_from_extract(
     assert db.execute(select(RehydrateStash)).scalars().first() is None
 
 
-def test_commit_twice_derives_collision_name(
-    client: TestClient, db: Session
-) -> None:
+def test_commit_twice_derives_collision_name(client: TestClient, db: Session) -> None:
     rs = _seed(db)
     files = _file_set(db, rs)
 
@@ -226,30 +216,24 @@ def test_commit_twice_derives_collision_name(
 
     names = set(
         db.execute(
-            select(ReviewSession.name).where(
-                ReviewSession.name.like("Spring_REHYD%")
-            )
+            select(ReviewSession.name).where(ReviewSession.name.like("Spring_REHYD%"))
         ).scalars()
     )
     assert names == {"Spring_REHYD", "Spring_REHYD_1"}
     # Distinct unique codes.
     codes = set(
         db.execute(
-            select(ReviewSession.code).where(
-                ReviewSession.code.like("spring-rehyd%")
-            )
+            select(ReviewSession.code).where(ReviewSession.code.like("spring-rehyd%"))
         ).scalars()
     )
     assert len(codes) == 2
 
 
-def test_commit_with_bad_token_creates_nothing(
-    client: TestClient, db: Session
-) -> None:
+def test_commit_with_bad_token_creates_nothing(client: TestClient, db: Session) -> None:
     _seed(db)
-    before = db.execute(
-        select(ReviewSession).where(ReviewSession.name.like("%_REHYD%"))
-    ).scalars().all()
+    before = (
+        db.execute(select(ReviewSession).where(ReviewSession.name.like("%_REHYD%"))).scalars().all()
+    )
     assert before == []
 
     response = client.post(
@@ -260,9 +244,9 @@ def test_commit_with_bad_token_creates_nothing(
     assert response.status_code == 200
     assert "expired or is no longer available" in response.text
     # No session created.
-    after = db.execute(
-        select(ReviewSession).where(ReviewSession.name.like("%_REHYD%"))
-    ).scalars().all()
+    after = (
+        db.execute(select(ReviewSession).where(ReviewSession.name.like("%_REHYD%"))).scalars().all()
+    )
     assert after == []
 
 
@@ -284,9 +268,10 @@ def test_commit_bounces_an_operator_revoked_since_the_gate(
     )
     assert response.status_code == 303
     assert response.headers["location"].endswith("/me?notice=organizers")
-    assert db.execute(
-        select(ReviewSession).where(ReviewSession.name.like("%_REHYD%"))
-    ).scalars().all() == []
+    assert (
+        db.execute(select(ReviewSession).where(ReviewSession.name.like("%_REHYD%"))).scalars().all()
+        == []
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -349,9 +334,7 @@ def test_a_commit_that_drops_rows_hands_the_operator_the_csv(
     # And the link serves a CSV carrying the dropped row and its reason.
     match = re.search(r'dropped\.csv\?token=([^"]+)', response.text)
     assert match, "no download link rendered"
-    csv_response = client.get(
-        f"/operator/sessions/rehydrate/dropped.csv?token={match.group(1)}"
-    )
+    csv_response = client.get(f"/operator/sessions/rehydrate/dropped.csv?token={match.group(1)}")
     assert csv_response.status_code == 200
     assert csv_response.headers["content-type"].startswith("text/csv")
     assert "attachment" in csv_response.headers["content-disposition"]
@@ -379,9 +362,7 @@ def test_a_clean_commit_still_redirects_and_stashes_nothing(
     assert db.execute(select(RehydrateStash)).scalars().all() == []
 
 
-def test_another_operator_cannot_fetch_a_dropped_csv(
-    client: TestClient, db: Session
-) -> None:
+def test_another_operator_cannot_fetch_a_dropped_csv(client: TestClient, db: Session) -> None:
     """The stash is operator-scoped; a leaked token is not a key."""
     from app.services import rehydrate_stash
 
@@ -391,11 +372,8 @@ def test_another_operator_cannot_fetch_a_dropped_csv(
     stolen = rehydrate_stash.put(db, payload=b"a,b\n1,2\n", user=other)
     db.flush()
 
-    response = client.get(
-        f"/operator/sessions/rehydrate/dropped.csv?token={stolen}"
-    )
+    response = client.get(f"/operator/sessions/rehydrate/dropped.csv?token={stolen}")
     assert response.status_code == 404
-
 
 
 # --------------------------------------------------------------------------- #
@@ -435,14 +413,11 @@ def test_a_settings_apply_failure_reaches_the_operator(
 
     assert response.status_code == 200
     assert (
-        "settings.csv failed to apply: row 7, session.name: too long; "
-        "rule_set_name: unresolved"
+        "settings.csv failed to apply: row 7, session.name: too long; rule_set_name: unresolved"
     ) in response.text
     # All or nothing: the partial session is gone.
     assert (
-        db.execute(
-            select(ReviewSession).where(ReviewSession.name.like("%_REHYD%"))
-        ).scalars().all()
+        db.execute(select(ReviewSession).where(ReviewSession.name.like("%_REHYD%"))).scalars().all()
         == []
     )
 

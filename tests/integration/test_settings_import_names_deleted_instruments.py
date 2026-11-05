@@ -77,9 +77,7 @@ def _names(db: Session, review_session: ReviewSession) -> list[str]:
     db.expire_all()
     return sorted(
         db.execute(
-            select(Instrument.name).where(
-                Instrument.session_id == review_session.id
-            )
+            select(Instrument.name).where(Instrument.session_id == review_session.id)
         ).scalars()
     )
 
@@ -145,9 +143,7 @@ def test_a_file_with_no_instrument_rows_names_every_instrument(
     assert _names(db, review_session) == ["Default", "peer"]
 
 
-def test_a_tick_for_another_count_is_refused_again(
-    client: TestClient, db: Session
-) -> None:
+def test_a_tick_for_another_count_is_refused_again(client: TestClient, db: Session) -> None:
     """The tick carries the count rather than ``true``, so a tick left
     on for one file cannot approve another that deletes more."""
     review_session = _make_session(client, db, code="s4-stale")
@@ -169,9 +165,7 @@ def test_a_tick_for_another_count_is_refused_again(
     assert _names(db, review_session) == ["Default", "peer"]
 
 
-def test_a_file_that_deletes_no_instrument_never_asks(
-    client: TestClient, db: Session
-) -> None:
+def test_a_file_that_deletes_no_instrument_never_asks(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="s4-keep")
     payload = _settings_csv(
         [
@@ -209,9 +203,7 @@ def test_create_never_asks(client: TestClient, db: Session) -> None:
     assert _names(db, review_session) == ["Eval"]
 
 
-def test_a_file_with_errors_reports_them_before_asking(
-    client: TestClient, db: Session
-) -> None:
+def test_a_file_with_errors_reports_them_before_asking(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="s4-errors")
     response = client.post(
         f"/operator/sessions/{review_session.public_id}/import-config",
@@ -236,9 +228,7 @@ def test_instruments_deleted_by_matches_one_row_per_instrument(
     user = User(email="s4-unit@example.edu", display_name="Op")
     db.add(user)
     db.flush()
-    review_session = ReviewSession(
-        name="S4 unit", code="s4-unit", created_by_user_id=user.id
-    )
+    review_session = ReviewSession(name="S4 unit", code="s4-unit", created_by_user_id=user.id)
     db.add(review_session)
     db.flush()
     for order, label in enumerate(("First", "Second")):
@@ -277,14 +267,10 @@ def _fresh_session(client: TestClient, db: Session, *, code: str) -> ReviewSessi
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
-def test_quick_setup_on_a_fresh_session_never_asks(
-    client: TestClient, db: Session
-) -> None:
+def test_quick_setup_on_a_fresh_session_never_asks(client: TestClient, db: Session) -> None:
     """The author's case: a blank session set up from Session Home's
     Quick Setup takes the file as Create would, with no question about
     the Default instrument it never touched."""
@@ -320,9 +306,7 @@ def _touch_display_label(instrument: Instrument) -> None:
 
 
 def _tag_row(instrument: Instrument, **kwargs) -> InstrumentDisplayField:
-    row = InstrumentDisplayField(
-        label="", source_type="reviewee", source_field="tag_1", **kwargs
-    )
+    row = InstrumentDisplayField(label="", source_type="reviewee", source_field="tag_1", **kwargs)
     instrument.display_fields.append(row)
     return row
 
@@ -334,10 +318,7 @@ def _touch_display_hidden(instrument: Instrument) -> None:
 def _touch_display_reorder(instrument: Instrument) -> None:
     """The Band 2 pill drag: the tag row moved above Email."""
     _tag_row(instrument, order=1, visible=True)
-    email = next(
-        f for f in instrument.display_fields
-        if f.source_field == "email_or_identifier"
-    )
+    email = next(f for f in instrument.display_fields if f.source_field == "email_or_identifier")
     email.order = 2
 
 
@@ -388,9 +369,7 @@ def _touch_group_kind(instrument: Instrument) -> None:
         _touch_group_kind,
     ],
 )
-def test_a_default_the_operator_changed_is_named(
-    client: TestClient, db: Session, touch
-) -> None:
+def test_a_default_the_operator_changed_is_named(client: TestClient, db: Session, touch) -> None:
     """Any change makes the Default instrument the operator's, and the
     import asks before deleting it."""
     review_session = _fresh_session(client, db, code=f"s4-{touch.__name__[7:]}")
@@ -415,9 +394,7 @@ def test_a_fresh_default_counts_as_untouched(client: TestClient, db: Session) ->
     assert is_untouched_default(default)
 
 
-def test_quick_setup_takes_a_fresh_sessions_whole_set_up(
-    client: TestClient, db: Session
-) -> None:
+def test_quick_setup_takes_a_fresh_sessions_whole_set_up(client: TestClient, db: Session) -> None:
     """The browser checklist's groups files, all in one Quick Setup
     submit on a blank session, apply as they do on Create. The copies in
     ``tests/fixtures/quick_setup/`` keep their first run's numbers."""
@@ -435,8 +412,7 @@ def test_quick_setup_takes_a_fresh_sessions_whole_set_up(
         f"/operator/sessions/{review_session.public_id}/quick-setup/submit-all",
         data={"confirm_replace": "true"},
         files={
-            slot: (name, (folder / name).read_bytes(), "text/csv")
-            for slot, name in slots.items()
+            slot: (name, (folder / name).read_bytes(), "text/csv") for slot, name in slots.items()
         },
         follow_redirects=False,
     )
@@ -446,9 +422,7 @@ def test_quick_setup_takes_a_fresh_sessions_whole_set_up(
     assert len(_names(db, review_session)) == 2
 
 
-def test_a_seeded_tag_row_leaves_the_default_untouched(
-    client: TestClient, db: Session
-) -> None:
+def test_a_seeded_tag_row_leaves_the_default_untouched(client: TestClient, db: Session) -> None:
     """A roster upload appends an unlabelled, shown row per tag column."""
     review_session = _fresh_session(client, db, code="s4-seeded")
     default = db.execute(
@@ -459,9 +433,7 @@ def test_a_seeded_tag_row_leaves_the_default_untouched(
     assert is_untouched_default(default)
 
 
-def test_an_untouched_default_beside_a_named_instrument(
-    client: TestClient, db: Session
-) -> None:
+def test_an_untouched_default_beside_a_named_instrument(client: TestClient, db: Session) -> None:
     """The banner names only the operator's instrument and counts it
     alone; the tick for that count applies the file, which replaces the
     untouched Default too."""

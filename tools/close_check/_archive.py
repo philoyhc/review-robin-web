@@ -43,8 +43,11 @@ def manifest_levels(found: dict) -> list[tuple[int, int, int | None]]:
     if found["segment"] is not None:
         return [(found["segment"], 2, None)]
     return (
-        [(item["doc"], 3, number) for number, item in found["items"].items()
-         if item["doc"] is not None]
+        [
+            (item["doc"], 3, number)
+            for number, item in found["items"].items()
+            if item["doc"] is not None
+        ]
         # A stray `### Doc impact` sits outside any `## Item n` block —
         # 11E has one under `## Follow-on` — so it has no item number and
         # takes the manifest heading's own window.
@@ -54,7 +57,9 @@ def manifest_levels(found: dict) -> list[tuple[int, int, int | None]]:
 
 def archived_report(stream) -> None:
     plans = sorted(
-        path for directory in plan_dirs() if directory.name == "archive"
+        path
+        for directory in plan_dirs()
+        if directory.name == "archive"
         for path in directory.glob("segment_*.md")
     )
     total_paths = total_honoured = 0
@@ -71,10 +76,11 @@ def archived_report(stream) -> None:
         for line, depth, item in levels:
             body = _section(found["lines"], line, depth)
             bullets = parse_bullets(found["lines"], *body)
-            paths = list(dict.fromkeys(
-                path for bullet in bullets
-                for path in bullet["paths"] if not bullet["waived"]
-            ))
+            paths = list(
+                dict.fromkeys(
+                    path for bullet in bullets for path in bullet["paths"] if not bullet["waived"]
+                )
+            )
             # Counted for the footer, kept out of the honour ratio: a
             # `guide/` commitment is not verified (see `GUIDE_PATH` in
             # `_manifest.py`), and folding unverifiable paths into a
@@ -106,9 +112,7 @@ def archived_report(stream) -> None:
             # the same way, and report them on their own.
             live = [path for path in paths if (_shared.REPO / path).exists()]
             plan_missing += len(paths) - len(live)
-            plan_hits += sum(
-                1 for path in live if start and honoured(path, start, end)
-            )
+            plan_hits += sum(1 for path in live if start and honoured(path, start, end))
             plan_paths += len(live)
 
         if noted_here:
@@ -133,8 +137,7 @@ def archived_report(stream) -> None:
             flags.append(f"{len(levels)} manifests")
         flag = f"  <- {', '.join(flags)}" if flags else ""
         print(
-            f"  {plan.name:58s} {plan_hits:3d}/{plan_paths:<3d} "
-            f"{earliest or '(no window)'}{flag}",
+            f"  {plan.name:58s} {plan_hits:3d}/{plan_paths:<3d} {earliest or '(no window)'}{flag}",
             file=stream,
         )
 
@@ -155,5 +158,3 @@ def archived_report(stream) -> None:
         f"{no_manifest} plans with no manifest",
         file=stream,
     )
-
-

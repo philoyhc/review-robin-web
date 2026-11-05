@@ -35,7 +35,11 @@ LINK = re.compile(r'\b(?:href|action|formaction|src)\s*=\s*"([^"]*)"')
 def page_routes() -> list[str]:
     """Every GET page of the application: its routes, less health, with no
     path parameters (the screens' detail pages arrive with their data)."""
-    routes = [r for r in flatten(ops_app().routes) if isinstance(r, APIRoute) and "GET" in (r.methods or ())]
+    routes = [
+        r
+        for r in flatten(ops_app().routes)
+        if isinstance(r, APIRoute) and "GET" in (r.methods or ())
+    ]
     return sorted(r.path for r in routes if r.name != "residentialops_health" and "{" not in r.path)
 
 
@@ -59,8 +63,10 @@ def test_the_assignments_page_lists_the_slots_with_staff_and_ra_cells() -> None:
     assert page.status_code == 200
     assert "Sample data" in page.text
     assert "<h1>Assignments</h1>" in page.text
-    slots = page.text[page.text.index('id="slots-h"'):]
-    headers = re.findall(r'<th scope="col"(?: class="sortable"[^>]*)?>([^<]*)', slots.split("<tbody>")[0])
+    slots = page.text[page.text.index('id="slots-h"') :]
+    headers = re.findall(
+        r'<th scope="col"(?: class="sortable"[^>]*)?>([^<]*)', slots.split("<tbody>")[0]
+    )
     assert headers == ["Wing", "Precinct", "Neighborhood", "Notes", "Staff", "RA"]
     assert "· 30 Neighborhoods in 9 Precincts and 3 Wings" in page.text
     staff = page.text.split('aria-label="Cypress A 04-05-06: Staff"')[1].split("</div>")[0]
@@ -68,7 +74,9 @@ def test_the_assignments_page_lists_the_slots_with_staff_and_ra_cells() -> None:
     ra = page.text.split('aria-label="Cypress A 04-05-06: RA"')[1].split("</div>")[0]
     assert re.findall(r'<span class="token">([^<]+)<button', ra) == ["Chloe Lim"]
     assert 'aria-label="Remove Chloe Lim from Cypress A 04-05-06: RA"' in ra
-    assert page.text.count('<tr data-row class="wing-start">') == 3  # a Wing's name shows on its first row only
+    assert (
+        page.text.count('<tr data-row class="wing-start">') == 3
+    )  # a Wing's name shows on its first row only
     assert "RC1A L4: 101, 102-105" in page.text  # the notes, kept as text
     assert "Appointment types" not in page.text  # no types tables (2026-10-28)
 
@@ -94,10 +102,15 @@ def test_a_roster_row_carries_its_appointment_and_abbreviation() -> None:
         roster = client.get(path).text
         assert "appointment types" not in roster.lower()
         assert "Save types" not in roster
-        headers = re.findall(r'<th scope="col"(?: class="sortable"[^>]*)?>([^<]*)', roster.split("<tbody>")[0])
+        headers = re.findall(
+            r'<th scope="col"(?: class="sortable"[^>]*)?>([^<]*)', roster.split("<tbody>")[0]
+        )
         assert headers[headers.index("Appointment") + 1] == "Abbrev"
         for person in people:
-            assert f'<td data-col="appointment">{person.appointment}</td>\n              <td data-col="abbrev">{person.abbrev}</td>' in roster
+            assert (
+                f'<td data-col="appointment">{person.appointment}</td>\n              <td data-col="abbrev">{person.abbrev}</td>'
+                in roster
+            )
         options = roster.split('id="appointment"')[1].split("</select>")[0]
         assert re.findall(r"<option>([^<]*)", options) == ["All", *(a for a, _ in appointments)]
         assert "removes no one" in roster  # an upload appends
@@ -114,9 +127,18 @@ def test_home_lists_each_roster_s_appointments() -> None:
 
 def test_each_page_shows_its_csv() -> None:
     client = TestClient(ops_app())
-    assert "Term,Level1.Wing,Level2.Precinct,Level3.Neighborhood,Notes,Staff,RA" in client.get("/rosters/assignments").text
-    assert "Name,Email,Appointment,Abbrev,From,To,Enterprise name\n" in client.get("/rosters/staff").text
-    assert "Name,Email,Appointment,Abbrev,From,To,Enterprise name,Student ID" in client.get("/rosters/ras").text
+    assert (
+        "Term,Level1.Wing,Level2.Precinct,Level3.Neighborhood,Notes,Staff,RA"
+        in client.get("/rosters/assignments").text
+    )
+    assert (
+        "Name,Email,Appointment,Abbrev,From,To,Enterprise name\n"
+        in client.get("/rosters/staff").text
+    )
+    assert (
+        "Name,Email,Appointment,Abbrev,From,To,Enterprise name,Student ID"
+        in client.get("/rosters/ras").text
+    )
 
 
 def test_every_page_is_labeled_a_placeholder(host_client: TestClient) -> None:
@@ -148,9 +170,13 @@ def test_no_page_emits_a_path_outside_its_mount(host_client: TestClient) -> None
 
 def favicon(app_key: str) -> str:
     """The favicon link the shared chrome emits for an application."""
-    request = Request({"type": "http", "path": "/", "root_path": "", "headers": [], "query_string": b""})
+    request = Request(
+        {"type": "http", "path": "/", "root_path": "", "headers": [], "query_string": b""}
+    )
     env = templates([]).env
-    page = env.get_template("residential/base.html").render(request=request, app_key=app_key, areas=(), tabs=())
+    page = env.get_template("residential/base.html").render(
+        request=request, app_key=app_key, areas=(), tabs=()
+    )
     links = re.findall(r'<link rel="icon"[^>]*href="([^"]*)"', page)
     assert len(links) <= 1, app_key
     return links[0] if links else ""
@@ -161,8 +187,14 @@ def test_each_application_has_its_own_favicon(host_client: TestClient) -> None:
     teal for Support Logs, each running off the tile as RRW's robin does
     (author, 2026-11-01); nothing for an application not yet given one."""
     house, sheet = favicon("residentialops"), favicon("supportlogs")
-    assert house.startswith(SVG_DATA) and "fill='%23a21caf'" in house and "M15.5 6.5 L37 25" in house
-    assert sheet.startswith(SVG_DATA) and "fill='%230f766e'" in sheet and "width='34' height='38'" in sheet
+    assert (
+        house.startswith(SVG_DATA) and "fill='%23a21caf'" in house and "M15.5 6.5 L37 25" in house
+    )
+    assert (
+        sheet.startswith(SVG_DATA)
+        and "fill='%230f766e'" in sheet
+        and "width='34' height='38'" in sheet
+    )
     assert "#" not in house + sheet  # every hash escaped, or the data URI ends early
     assert favicon("other") == ""
     assert f'href="{house}"' in host_client.get(f"{MOUNT}/rosters/").text
@@ -199,8 +231,19 @@ def test_the_staff_roster_shows_no_access() -> None:
     assert page.status_code == 200
     assert "<h1>Staff roster</h1>" in page.text
     assert "· 15 people, 14 linked" in page.text
-    headers = re.findall(r'<th scope="col"(?: class="sortable"[^>]*)?>([^<]*)', page.text.split('id="staff-h"')[1].split("<tbody>")[0])
-    assert headers == ["Name", "Email", "Appointment", "Abbrev", "From – to", "Oversight", "Sign-in"]
+    headers = re.findall(
+        r'<th scope="col"(?: class="sortable"[^>]*)?>([^<]*)',
+        page.text.split('id="staff-h"')[1].split("<tbody>")[0],
+    )
+    assert headers == [
+        "Name",
+        "Email",
+        "Appointment",
+        "Abbrev",
+        "From – to",
+        "Oversight",
+        "Sign-in",
+    ]
     assert "Not yet signed in</span>" in page.text
     assert "Support Logs" not in page.text and "Team Viewer" not in page.text
     assert '<a href="/sys-admin/">Sys admin</a> page' in page.text
@@ -215,8 +258,19 @@ def test_the_ra_roster_lists_people_appointments_and_neighborhoods() -> None:
     page = TestClient(ops_app()).get("/rosters/ras")
     assert page.status_code == 200
     assert "· 30 RAs, 29 linked" in page.text
-    headers = re.findall(r'<th scope="col"(?: class="sortable"[^>]*)?>([^<]*)', page.text.split('id="ra-h"')[1].split("<tbody>")[0])
-    assert headers == ["Name", "Email", "Appointment", "Abbrev", "From – to", sample_data.LEVEL_LABELS[-1], "Sign-in"]
+    headers = re.findall(
+        r'<th scope="col"(?: class="sortable"[^>]*)?>([^<]*)',
+        page.text.split('id="ra-h"')[1].split("<tbody>")[0],
+    )
+    assert headers == [
+        "Name",
+        "Email",
+        "Appointment",
+        "Abbrev",
+        "From – to",
+        sample_data.LEVEL_LABELS[-1],
+        "Sign-in",
+    ]
 
 
 def test_the_ra_roster_shows_each_ras_neighborhood(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -225,11 +279,16 @@ def test_the_ra_roster_shows_each_ras_neighborhood(monkeypatch: pytest.MonkeyPat
     Assignments, or None."""
     term = sample_data.CURRENT_TERM
     assert sample_data.assignment("Chloe Lim", term) == ("Cypress A 04-05-06",)
-    assert sample_data.assignment("Chloe Lim", sample_data.TERMS[0]) == ()  # a term with no assignments
+    assert (
+        sample_data.assignment("Chloe Lim", sample_data.TERMS[0]) == ()
+    )  # a term with no assignments
     assert sample_data.assignment("Daniel Koh", term) == ()  # staff are not an RA cell
     page = TestClient(ops_app()).get("/rosters/ras").text
     row = page.split('aria-label="Select Chloe Lim"')[1].split("</tr>")[0]
-    assert '<td data-col="neighborhood" data-sort-value="Cypress A 04-05-06"><span class="pills"><span class="pill-derived">Cypress A 04-05-06</span></span></td>' in row
+    assert (
+        '<td data-col="neighborhood" data-sort-value="Cypress A 04-05-06"><span class="pills"><span class="pill-derived">Cypress A 04-05-06</span></span></td>'
+        in row
+    )
     shown = re.findall(r'data-col="neighborhood" data-sort-value="([^"]*)"', page)
     assert len(shown) == len(sample_data.RAS) and all(shown)  # every sample RA holds a slot
     assert '<span class="chip chip-mute">None</span>' not in page
@@ -238,7 +297,10 @@ def test_the_ra_roster_shows_each_ras_neighborhood(monkeypatch: pytest.MonkeyPat
     monkeypatch.setattr(sample_data, "SLOTS", (replace(first, ras=()), *sample_data.SLOTS[1:]))
     page = TestClient(ops_app()).get("/rosters/ras").text
     row = page.split(f'aria-label="Select {first.ras[0]}"')[1].split("</tr>")[0]
-    assert '<td data-col="neighborhood" data-sort-value=""><span class="chip chip-mute">None</span></td>' in row
+    assert (
+        '<td data-col="neighborhood" data-sort-value=""><span class="chip chip-mute">None</span></td>'
+        in row
+    )
     assert page.count('<span class="chip chip-mute">None</span>') == 1
 
 
@@ -257,7 +319,9 @@ def test_person_detail_shows_identity_status_and_history() -> None:
     assert 'chip-ok">Linked</span>' in linked
     assert "e0234567@u.example.edu" in linked
     assert "Linked on first sign-in" in linked
-    unlinked = client.get(f"/rosters/people/{sample_data.person_id_of('nur.aisyah@example.edu')}").text
+    unlinked = client.get(
+        f"/rosters/people/{sample_data.person_id_of('nur.aisyah@example.edu')}"
+    ).text
     assert 'chip-mute">Unlinked</span>' in unlinked
     assert "After first sign-in" in unlinked
 
@@ -291,7 +355,9 @@ def test_not_registered_shows_the_message_and_nobody_else() -> None:
     assert "signed in as" not in page
 
 
-def test_placeholders_are_404_deployed_to_someone_not_previewing(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_placeholders_are_404_deployed_to_someone_not_previewing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Sample data, no roster gates yet: deployed, every placeholder is
     404 to a request no preview list admits (`test_preview_gate.py`)."""
     monkeypatch.setattr(web_pages, "is_local", lambda: False)
@@ -302,16 +368,19 @@ def test_placeholders_are_404_deployed_to_someone_not_previewing(monkeypatch: py
 
 
 @pytest.mark.parametrize(
-    ("path", "noun", "name"), [("/rosters/staff", "staff", "Sam Lee"), ("/rosters/ras", "RAs", "Chloe Lim")]
+    ("path", "noun", "name"),
+    [("/rosters/staff", "staff", "Sam Lee"), ("/rosters/ras", "RAs", "Chloe Lim")],
 )
-def test_a_roster_ticks_rows_into_an_expander_and_filters_from_one_box(path: str, noun: str, name: str) -> None:
+def test_a_roster_ticks_rows_into_an_expander_and_filters_from_one_box(
+    path: str, noun: str, name: str
+) -> None:
     page = TestClient(ops_app()).get(path).text
     assert f'<input type="checkbox" class="select-all" aria-label="Select all {noun}">' in page
     assert f'class="row-select" aria-label="Select {name}"' in page
     assert '<label for="q">Filter</label>' in page
     assert 'placeholder="Name or email"' in page
     assert "Upload roster CSV" not in page
-    csv_card = page[page.index('id="csv-h"'):]
+    csv_card = page[page.index('id="csv-h"') :]
     assert "Upload and preview</button>" in csv_card and "Export</button>" in csv_card
     assert "End appointment" in page
     assert 'btn-unavailable" disabled aria-disabled="true" title="Edit takes one row"' in page
@@ -366,7 +435,10 @@ def test_each_setup_step_is_inactive_until_its_prerequisite_exists() -> None:
         assert "Not open yet" not in opened and "yet. Add" in opened
     slots = client.get("/rosters/assignments?stage=slots").text
     assert "The Staff and RA cells open once both rosters have people." in slots
-    assert '<span class="token">' not in slots.split('aria-label="Cypress A 04-05-06: Staff"')[1].split("</div>")[0]
+    assert (
+        '<span class="token">'
+        not in slots.split('aria-label="Cypress A 04-05-06: Staff"')[1].split("</div>")[0]
+    )
     assert "Not open yet" not in client.get("/rosters/assignments").text
 
 
@@ -378,10 +450,15 @@ def test_an_ra_s_one_slot_and_no_slots_section_without_one() -> None:
     assert "A0230000X" in chloe and "LIM CHLOE" in chloe  # her roster row
     sam = client.get(f"/rosters/people/{sample_data.person_id_of('sam.lee@example.edu')}").text
     # The Master is in no Staff cell, but in every slot (ruled 2026-10-29).
-    assert f'<span class="pill-derived">{sample_data.UNIT_NAME}</span>' in sam and "In every slot for AY2026-2027, Term 1" in sam
+    assert (
+        f'<span class="pill-derived">{sample_data.UNIT_NAME}</span>' in sam
+        and "In every slot for AY2026-2027, Term 1" in sam
+    )
     hui = client.get(f"/rosters/people/{sample_data.person_id_of('huimin.goh@example.edu')}").text
-    assert "<h3 class=\"gap-above-sm\">Slots</h3>" not in hui  # in no slot at all
-    assert sample_data.oversight("Daniel Koh", sample_data.TERMS[0]) == ()  # a term with no assignments
+    assert '<h3 class="gap-above-sm">Slots</h3>' not in hui  # in no slot at all
+    assert (
+        sample_data.oversight("Daniel Koh", sample_data.TERMS[0]) == ()
+    )  # a term with no assignments
 
 
 def test_the_terms_page_is_a_detour_with_its_own_csv() -> None:
@@ -393,20 +470,30 @@ def test_the_terms_page_is_a_detour_with_its_own_csv() -> None:
     assert '<a class="back-link" href="/rosters/assignments">&larr; Back to Assignments</a>' in page
     assert "· 6 in 2 years" in page
     assert page.count("Past · read-only") == 3
-    assert page.count("chip-ok\">Current</span>") == 1
+    assert page.count('chip-ok">Current</span>') == 1
     assert 'aria-label="Edit AY2025-2026, Term 1"' not in page  # past: no edit
     assert 'aria-label="Edit AY2026-2027, Term 1"' in page
     assert "Year,Term,Name,Start,End" in page
-    for back, label in (("/rosters/", "Home"), ("/rosters/staff", "Staff roster"), ("/rosters/ras", "RA roster")):
+    for back, label in (
+        ("/rosters/", "Home"),
+        ("/rosters/staff", "Staff roster"),
+        ("/rosters/ras", "RA roster"),
+    ):
         page = client.get("/rosters/assignments/terms", params={"return_to": back}).text
         assert f'<a class="back-link" href="{back}">&larr; Back to {label}</a>' in page
     preview = client.get("/rosters/assignments/terms?return_to=/rosters/&stage=start").text
-    assert '<a class="back-link" href="/rosters/?stage=start">' in preview  # the preview carries through
+    assert (
+        '<a class="back-link" href="/rosters/?stage=start">' in preview
+    )  # the preview carries through
     for elsewhere in ("https://example.com/", "//evil", "/rosters/people/x"):
-        assert 'href="/rosters/assignments">&larr; Back to Assignments' in client.get(
-            "/rosters/assignments/terms", params={"return_to": elsewhere}
-        ).text
-    assert 'href="/rosters/assignments/terms?return_to=/rosters/assignments"' in client.get("/rosters/assignments").text
+        assert (
+            'href="/rosters/assignments">&larr; Back to Assignments'
+            in client.get("/rosters/assignments/terms", params={"return_to": elsewhere}).text
+        )
+    assert (
+        'href="/rosters/assignments/terms?return_to=/rosters/assignments"'
+        in client.get("/rosters/assignments").text
+    )
     assert "No terms yet." in client.get("/rosters/assignments/terms?stage=start").text
 
 
@@ -415,10 +502,20 @@ def test_assignments_show_one_term_at_a_time() -> None:
     upcoming one waits to be copied or uploaded (author, 2026-10-28)."""
     client = TestClient(ops_app())
     page = client.get("/rosters/assignments").text
-    assert '<option value="AY2026-2027.1" selected>AY2026-2027, Term 1 · Sem 1 + Winter break (Current)</option>' in page
-    assert page.split('id="term"')[1].split("</select>")[0].count("<option value=") == len(sample_data.TERMS)
-    assert '<button type="submit" class="btn btn-secondary">Show term</button>' in page  # live: navigation
-    assert '<span class="token">Chloe Lim<button' in page.split('aria-label="Cypress A 04-05-06: RA"')[1].split("</div>")[0]
+    assert (
+        '<option value="AY2026-2027.1" selected>AY2026-2027, Term 1 · Sem 1 + Winter break (Current)</option>'
+        in page
+    )
+    assert page.split('id="term"')[1].split("</select>")[0].count("<option value=") == len(
+        sample_data.TERMS
+    )
+    assert (
+        '<button type="submit" class="btn btn-secondary">Show term</button>' in page
+    )  # live: navigation
+    assert (
+        '<span class="token">Chloe Lim<button'
+        in page.split('aria-label="Cypress A 04-05-06: RA"')[1].split("</div>")[0]
+    )
     assert "Umairah Salleh's appointment covers all but 14 days of AY2026-2027, Term 1" in page
     term_select = page.split('<select id="term"')[1].split(">")[0]
     assert "disabled" not in term_select  # live: navigation
@@ -428,14 +525,24 @@ def test_assignments_show_one_term_at_a_time() -> None:
     assert "No assignments yet for AY2026-2027, Term 2." in upcoming
     assert "Copy AY2026-2027, Term 1's to edit" in upcoming
     assert ">Copy from AY2026-2027, Term 1</button>" in upcoming
-    assert '<span class="token">' not in upcoming.split('aria-label="Cypress A 04-05-06: RA"')[1].split("</div>")[0]
+    assert (
+        '<span class="token">'
+        not in upcoming.split('aria-label="Cypress A 04-05-06: RA"')[1].split("</div>")[0]
+    )
     assert "covers all but" not in upcoming
     past = client.get("/rosters/assignments?term=AY2025-2026.3").text
     assert "is past</strong> and read-only. No assignments were recorded for it." in past
-    assert 'id="copy-from"' not in past and ">Copy from" not in past  # nothing to copy into a past term
+    assert (
+        'id="copy-from"' not in past and ">Copy from" not in past
+    )  # nothing to copy into a past term
     assert "No slots in AY2025-2026, Term 3: the slots stand from AY2026-2027, Term 1." in past
     assert 'aria-label="Cypress A 04-05-06: RA"' not in past and "covers all but" not in past
-    assert "(Current)</option>" in client.get("/rosters/assignments?term=nonsense").text.split(" selected>")[1].split("\n")[0]
+    assert (
+        "(Current)</option>"
+        in client.get("/rosters/assignments?term=nonsense")
+        .text.split(" selected>")[1]
+        .split("\n")[0]
+    )
     staged = client.get("/rosters/assignments?stage=slots").text
     assert '<input type="hidden" name="stage" value="slots">' in staged
 
@@ -450,26 +557,38 @@ def test_an_assignments_upload_says_what_it_does() -> None:
         assert value is not None
         values.append(value.group(1))
     assert values == [m for m, _ in sample_data.UPLOAD_MODES]
-    assert all("disabled" not in r and "checked" not in r for r in radios)  # live; none chosen at first
-    assert 'id="upload" class="btn btn-primary btn-unavailable" disabled aria-disabled="true" title="Choose what the upload does first"' in page
+    assert all(
+        "disabled" not in r and "checked" not in r for r in radios
+    )  # live; none chosen at first
+    assert (
+        'id="upload" class="btn btn-primary btn-unavailable" disabled aria-disabled="true" title="Choose what the upload does first"'
+        in page
+    )
     for n, (mode, what) in enumerate(sample_data.UPLOAD_MODES, start=1):
-        assert f'aria-describedby="mode-{n}-what"' in radios[n - 1]  # a short name, the description apart
+        assert (
+            f'aria-describedby="mode-{n}-what"' in radios[n - 1]
+        )  # a short name, the description apart
         assert f'<label for="mode-{n}"><strong>{mode}</strong></label>' in page
         assert f'<span id="mode-{n}-what" class="subtle">{escape(what)}</span>' in page
     assert "a past one is refused" in page
     for side in ("export-from", "export-to"):
-        chosen = re.findall(r"<option selected>([^<]*)", page.split(f'id="{side}"')[1].split("</select>")[0])
+        chosen = re.findall(
+            r"<option selected>([^<]*)", page.split(f'id="{side}"')[1].split("</select>")[0]
+        )
         assert chosen == ["AY2026-2027, Term 1"]  # the term shown, by default
     assert '<button type="button" class="btn btn-secondary" disabled>Export</button>' in page
     later = TestClient(ops_app()).get("/rosters/assignments?term=AY2026-2027.2").text
-    assert re.findall(r"<option selected>([^<]*)", later.split('id="export-to"')[1].split("</select>")[0]) == [
-        "AY2026-2027, Term 2"
-    ]
+    assert re.findall(
+        r"<option selected>([^<]*)", later.split('id="export-to"')[1].split("</select>")[0]
+    ) == ["AY2026-2027, Term 2"]
 
 
 def test_home_checks_list_the_partial_overlap() -> None:
     home = TestClient(ops_app()).get("/rosters/").text
-    assert "Umairah Salleh's appointment covers all but 14 days of AY2026-2027, Term 1" in home.split('id="checks-h"')[1]
+    assert (
+        "Umairah Salleh's appointment covers all but 14 days of AY2026-2027, Term 1"
+        in home.split('id="checks-h"')[1]
+    )
 
 
 def test_home_names_the_current_term() -> None:
@@ -477,17 +596,30 @@ def test_home_names_the_current_term() -> None:
     assert "<dt>Current</dt><dd>AY2026-2027, Term 1 (Sem 1 + Winter break)</dd>" in home
     assert "<dt>Years</dt><dd>AY2025-2026, AY2026-2027</dd>" in home
     start = TestClient(ops_app()).get("/rosters/?stage=start").text
-    assert 'href="/rosters/assignments/terms?return_to=/rosters/&amp;stage=start" aria-label="Go to step 1, Setup"' in start
-    assert "Name the levels and list the area slots; set out each year&#39;s terms. Assignments are made for a term." in start
-    assert 'href="/rosters/assignments" aria-label="Go to step 1, Setup"' in home  # done: Setup opens on Assignments
+    assert (
+        'href="/rosters/assignments/terms?return_to=/rosters/&amp;stage=start" aria-label="Go to step 1, Setup"'
+        in start
+    )
+    assert (
+        "Name the levels and list the area slots; set out each year&#39;s terms. Assignments are made for a term."
+        in start
+    )
+    assert (
+        'href="/rosters/assignments" aria-label="Go to step 1, Setup"' in home
+    )  # done: Setup opens on Assignments
 
 
 def test_home_gives_one_primary_step_at_a_time() -> None:
     page = TestClient(ops_app()).get("/rosters/?stage=slots").text
-    steps = page[page.index('class="steps"'):]
+    steps = page[page.index('class="steps"') :]
     assert steps.count("btn btn-primary") == 1
-    assert 'btn btn-primary" href="/rosters/staff?stage=slots" aria-label="Go to step 2, Staff roster"' in steps
-    assert 'href="/rosters/assignments?stage=slots" aria-label="Go to step 1, Setup"' in steps  # done: no return_to
+    assert (
+        'btn btn-primary" href="/rosters/staff?stage=slots" aria-label="Go to step 2, Staff roster"'
+        in steps
+    )
+    assert (
+        'href="/rosters/assignments?stage=slots" aria-label="Go to step 1, Setup"' in steps
+    )  # done: no return_to
 
 
 def test_assignments_sets_who_is_in_every_slot(monkeypatch) -> None:
@@ -501,21 +633,32 @@ def test_assignments_sets_who_is_in_every_slot(monkeypatch) -> None:
     card = page.split('id="every-h"')[1].split("</section>")[0]
     assert page.index('id="every-h"') < page.index('id="slots-h"')
     assert re.findall(r'name="every-slot-types" value="(\w+)"( checked)?', card) == [
-        ("Master", " checked"), ("Admin", " checked"), ("Exec", ""),
+        ("Master", " checked"),
+        ("Admin", " checked"),
+        ("Exec", ""),
     ]
     assert "In every slot: Sam Lee, Rachel Yeo." in card
     assert sample_leave.overseers() == ("Sam Lee", "Rachel Yeo")
     # By name too: a named person is in every slot, and oversees every RA.
     term = sample_data.CURRENT_TERM.key
-    monkeypatch.setitem(sample_data.EVERY_SLOT, term, {"appointments": ("Master",), "names": ("Hui Min Goh",)})
-    assert sample_leave.overseers() == ("Sam Lee", "Hui Min Goh") and len(sample_leave.scope("Hui Min Goh")) == 9
+    monkeypatch.setitem(
+        sample_data.EVERY_SLOT, term, {"appointments": ("Master",), "names": ("Hui Min Goh",)}
+    )
+    assert (
+        sample_leave.overseers() == ("Sam Lee", "Hui Min Goh")
+        and len(sample_leave.scope("Hui Min Goh")) == 9
+    )
     assert sample_leave.scope("Rachel Yeo") == ()
     later = client.get("/rosters/assignments?term=AY2026-2027.2").text
     assert "No one is in every slot for AY2026-2027, Term 2; copying an earlier term" in later
     assert "set for each term on" in client.get("/ra-leave/admin/policy").text
     # It opens with the Staff cells: before the rosters have people it is
     # shown gated and names no one; a past term has none.
-    gated = client.get("/rosters/assignments?stage=slots").text.split('id="every-h"')[1].split("</section>")[0]
+    gated = (
+        client.get("/rosters/assignments?stage=slots")
+        .text.split('id="every-h"')[1]
+        .split("</section>")[0]
+    )
     assert "Not open yet." in gated and "Sam Lee" not in gated and " checked" not in gated
     page = client.get("/rosters/assignments").text
     assert page.index("Warning:") < page.index('id="every-h"')  # page-level notices first
@@ -538,16 +681,25 @@ def test_every_slot_shows_on_the_slots_and_the_staff_roster(monkeypatch) -> None
     assert sample_data.oversight("Priya Raman", term) == ("Cypress",)
     assert sample_data.oversight("Daniel Koh", term) == ("Cypress A 04-12",)
     assert sample_data.oversight("Hui Min Goh", term) == ()
-    assert sample_data.coverage({"Cypress A 04-05-06", "Maple 03-04", "Maple 05-06", "Maple 07-08"}) == (
-        "Cypress A 04-05-06", "Maple 03-08",
+    assert sample_data.coverage(
+        {"Cypress A 04-05-06", "Maple 03-04", "Maple 05-06", "Maple 07-08"}
+    ) == (
+        "Cypress A 04-05-06",
+        "Maple 03-08",
     )
     every = {s.neighborhood for s in sample_data.SLOTS}
     cypress = {s.neighborhood for s in sample_data.SLOTS if s.wing == "Cypress"}
-    assert sample_data.coverage(cypress | {"Maple 03-04"}) == ("Cypress", "Maple 03-04")  # a Wing and part of another
+    assert sample_data.coverage(cypress | {"Maple 03-04"}) == (
+        "Cypress",
+        "Maple 03-04",
+    )  # a Wing and part of another
     assert sample_data.coverage(every) == (sample_data.UNIT_NAME,)  # every slot by Staff cells
     assert sample_data.coverage(set()) == ()
     assert '<span class="chip chip-mute">None</span>' in roster
-    assert f'<span class="pill-derived">{sample_data.UNIT_NAME}</span>' in roster and '<span class="pill-derived">Cypress</span>' in roster
+    assert (
+        f'<span class="pill-derived">{sample_data.UNIT_NAME}</span>' in roster
+        and '<span class="pill-derived">Cypress</span>' in roster
+    )
     assert roster.count('<span class="chip chip-mute">None</span>') == 1  # Hui Min Goh alone
 
 
@@ -556,18 +708,33 @@ def test_the_rosters_have_column_chips_and_sortable_headers() -> None:
     but Name, and a sort button on every header."""
     client = TestClient(ops_app())
     for path, table, cols in (
-        ("/rosters/staff", "staff-table", ["email", "appointment", "abbrev", "dates", "oversight", "signin"]),
-        ("/rosters/ras", "ra-table", ["email", "appointment", "abbrev", "dates", "neighborhood", "signin"]),
+        (
+            "/rosters/staff",
+            "staff-table",
+            ["email", "appointment", "abbrev", "dates", "oversight", "signin"],
+        ),
+        (
+            "/rosters/ras",
+            "ra-table",
+            ["email", "appointment", "abbrev", "dates", "neighborhood", "signin"],
+        ),
     ):
         page = client.get(path).text
         chips = page.split(f'data-col-toggles-for="{table}"')[1].split("</p>")[0]
-        assert re.findall(r'data-col-toggle="(\w+)" aria-pressed="true"', chips) == cols  # Name has none
+        assert (
+            re.findall(r'data-col-toggle="(\w+)" aria-pressed="true"', chips) == cols
+        )  # Name has none
         head = page.split(f'id="{table}"')[1].split("</thead>")[0]
         assert re.findall(r'class="sortable" data-col="(\w+)"', head) == ["name", *cols]
         assert head.count('class="sort-btn" aria-label="Sort by ') == len(cols) + 1
         row = page.split("<tr data-row>")[1].split("</tr>")[0]
-        assert re.findall(r'data-col="(\w+)"', row) == ["name", *cols]  # each cell answers to its chip
-        assert f'data-col-toggles-for="{table}"' not in client.get(f"{path}?stage=slots").text  # no rows, no chips
+        assert re.findall(r'data-col="(\w+)"', row) == [
+            "name",
+            *cols,
+        ]  # each cell answers to its chip
+        assert (
+            f'data-col-toggles-for="{table}"' not in client.get(f"{path}?stage=slots").text
+        )  # no rows, no chips
 
 
 def test_the_slots_table_sorts_with_a_notes_chip_only() -> None:
@@ -577,7 +744,14 @@ def test_the_slots_table_sorts_with_a_notes_chip_only() -> None:
     chips = page.split('data-col-toggles-for="slots-table"')[1].split("</p>")[0]
     assert re.findall(r'data-col-toggle="(\w+)"', chips) == ["notes"]
     head = page.split('id="slots-table"')[1].split("</thead>")[0]
-    assert re.findall(r'class="sortable" data-col="(\w+)"', head) == ["wing", "precinct", "neighborhood", "notes", "staff", "ra"]
+    assert re.findall(r'class="sortable" data-col="(\w+)"', head) == [
+        "wing",
+        "precinct",
+        "neighborhood",
+        "notes",
+        "staff",
+        "ra",
+    ]
     assert '<td class="cell" data-col="ra" data-sort-value="Chloe Lim">' in page
 
 
@@ -588,13 +762,26 @@ def test_other_tables_sort_and_applications_has_column_chips() -> None:
     client = TestClient(ops_app())
     apps = client.get("/ra-leave/admin/applications").text
     chips = apps.split('data-col-toggles-for="apps-table"')[1].split("</p>")[0]
-    assert re.findall(r'data-col-toggle="(\w+)"', chips) == ["precinct", "type", "dates", "days", "cover", "stage", "submitted"]
+    assert re.findall(r'data-col-toggle="(\w+)"', chips) == [
+        "precinct",
+        "type",
+        "dates",
+        "days",
+        "cover",
+        "stage",
+        "submitted",
+    ]
     head = apps.split('id="apps-table"')[1].split("</thead>")[0]
-    assert len(re.findall(r'class="sortable[ "]', head)) == 9 and 'class="sortable num" data-col="days"' in head
+    assert (
+        len(re.findall(r'class="sortable[ "]', head)) == 9
+        and 'class="sortable num" data-col="days"' in head
+    )
     assert 'data-col="dates" data-sort-value="2026-' in apps
     for path, tables in (
-        ("/ra-leave/admin/entitlements", 1), ("/ra-leave/admin/routing", 1),
-        ("/sys-admin/", 2), ("/ra-leave/staff/precinct?as=Sam%20Lee", 3),
+        ("/ra-leave/admin/entitlements", 1),
+        ("/ra-leave/admin/routing", 1),
+        ("/sys-admin/", 2),
+        ("/ra-leave/staff/precinct?as=Sam%20Lee", 3),
     ):
         assert client.get(path).text.count("<table data-sort-auto>") == tables, path
 
@@ -608,9 +795,11 @@ def test_people_boxes_across_the_app(monkeypatch: pytest.MonkeyPatch) -> None:
 
     client = TestClient(ops_app())
     for path, label in (
-        ("/ra-leave/apply", "Covering RA"), ("/ra-leave/appeal", "Covering RA"),
+        ("/ra-leave/apply", "Covering RA"),
+        ("/ra-leave/appeal", "Covering RA"),
         ("/ra-leave/applications/L-0101", "New covering RA"),
-        ("/ra-leave/admin/appeals", "RA"), ("/ra-leave/admin/policy", "Staff who may give final approval"),
+        ("/ra-leave/admin/appeals", "RA"),
+        ("/ra-leave/admin/policy", "Staff who may give final approval"),
         ("/ra-leave/admin/policy", "Staff who may open an appeal"),
     ):
         with monkeypatch.context() as m:
@@ -637,8 +826,19 @@ def test_a_filled_one_person_box_keeps_its_label_target() -> None:
     """Once a one-person box holds someone, the typeahead goes; its id passes
     to the remove button, so `<label for>` still names a control, and the
     description moves with the group."""
-    box = pages.TEMPLATES.env.get_template("residential/_people.html").module.__dict__["person_tokens"]
-    html = str(box("Covering RA", ("Chloe Lim",), "ra-names", "cover", single=True, describedby="cover-what"))
+    box = pages.TEMPLATES.env.get_template("residential/_people.html").module.__dict__[
+        "person_tokens"
+    ]
+    html = str(
+        box(
+            "Covering RA",
+            ("Chloe Lim",),
+            "ra-names",
+            "cover",
+            single=True,
+            describedby="cover-what",
+        )
+    )
     assert "token-input" not in html
     assert 'id="cover" class="token-x"' in html
     assert 'role="group" aria-label="Covering RA" aria-describedby="cover-what"' in html
@@ -648,12 +848,12 @@ def test_add_new_slot_sits_under_the_slots_table() -> None:
     """Ruled 2026-10-29: the button moves to the table's bottom right."""
     for stage in ("start", "slots", "done"):
         page = TestClient(ops_app()).get("/rosters/assignments", params={"stage": stage}).text
-        head = page[page.index('id="slots-h"'):page.index('id="slots-table"')]
+        head = page[page.index('id="slots-h"') : page.index('id="slots-table"')]
         assert "btn-primary" not in head, stage
         table_end = page.index("</table>", page.index('id="slots-table"'))
         button = page.index(">Add new slot</button>")
         assert table_end < button < page.index("</section>", table_end), stage
-        assert "btnrow end" in page[page.rindex("<div", 0, button):button], stage
+        assert "btnrow end" in page[page.rindex("<div", 0, button) : button], stage
 
 
 @pytest.fixture(scope="module")
@@ -663,20 +863,34 @@ def both() -> TestClient:
 
 
 SAMPLE_PAGES = [
-    ("residentialops", "/"), ("residentialops", "/ra-leave/history?as=Kai%20Ng"), ("residentialops", "/ra-leave/?as=Hana%20Ito"), ("residentialops", "/ra-leave/staff/"),
-    ("supportlogs", "/?as=Daniel%20Koh"), ("supportlogs", "/log"), ("supportlogs", "/log/safety"),
+    ("residentialops", "/"),
+    ("residentialops", "/ra-leave/history?as=Kai%20Ng"),
+    ("residentialops", "/ra-leave/?as=Hana%20Ito"),
+    ("residentialops", "/ra-leave/staff/"),
+    ("supportlogs", "/?as=Daniel%20Koh"),
+    ("supportlogs", "/log"),
+    ("supportlogs", "/log/safety"),
 ]
 
 
 @pytest.mark.parametrize(("app", "path"), SAMPLE_PAGES)
-def test_the_sample_viewer_card_comes_last_and_the_chip_jumps_to_it(both: TestClient, app: str, path: str) -> None:
+def test_the_sample_viewer_card_comes_last_and_the_chip_jumps_to_it(
+    both: TestClient, app: str, path: str
+) -> None:
     """Author, 2026-10-31: the card goes after the page, and "Viewing as"
     at the top, naming the viewer's line from the card, links down to it."""
     page = both.get(f"/{app}{path}").text
-    main = page[page.index('<main class="page">'):page.index("</main>")]
-    card = re.search(r'<nav id="sample-viewer" class="card card-pad muted viewer-end" aria-label="Sample viewer">.*?</nav>', main, re.S)
-    assert card is not None and main[card.end():].strip() == ""  # nothing after it in <main>
-    chip = re.search(r'<a class="chip chip-info chip-viewing" href="#sample-viewer">Viewing as ([^<]+)<span aria-hidden="true" class="caret"> ▾</span></a>', main)
+    main = page[page.index('<main class="page">') : page.index("</main>")]
+    card = re.search(
+        r'<nav id="sample-viewer" class="card card-pad muted viewer-end" aria-label="Sample viewer">.*?</nav>',
+        main,
+        re.S,
+    )
+    assert card is not None and main[card.end() :].strip() == ""  # nothing after it in <main>
+    chip = re.search(
+        r'<a class="chip chip-info chip-viewing" href="#sample-viewer">Viewing as ([^<]+)<span aria-hidden="true" class="caret"> ▾</span></a>',
+        main,
+    )
     assert chip is not None and main.index(chip.group(0)) < card.start()
     name, _, line = chip.group(1).partition(", ")
     assert line and f"<li>{name}: {line}</li>" in card.group(0)
@@ -684,11 +898,16 @@ def test_the_sample_viewer_card_comes_last_and_the_chip_jumps_to_it(both: TestCl
 
 def test_a_page_without_the_card_keeps_the_chip_unlinked(both: TestClient) -> None:
     page = both.get("/residentialops/ra-leave/staff/decide/L-0103?as=Rachel%20Yeo").text
-    assert '<span class="chip chip-info chip-viewing">Viewing as ' in page and 'href="#sample-viewer"' not in page
+    assert (
+        '<span class="chip chip-info chip-viewing">Viewing as ' in page
+        and 'href="#sample-viewer"' not in page
+    )
     assert 'id="sample-viewer"' not in page
 
 
-def test_the_bar_is_the_shared_header(host_client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_the_bar_is_the_shared_header(
+    host_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """`docs/header_chrome.md` §2, §4 and §6, Residential's share, landed
     with RRW segment 20D: the app icon in place of the square, an account
     menu with Sign out, and the top line from the Unit, else the default."""
@@ -699,7 +918,10 @@ def test_the_bar_is_the_shared_header(host_client: TestClient, monkeypatch: pyte
     assert 'aria-label="Account: ' not in page and "data-sign-out" not in page
     page = host_client.get(
         f"{MOUNT}/rosters/",
-        headers={"X-MS-CLIENT-PRINCIPAL-NAME": "chloe.lim@example.edu", "X-MS-CLIENT-PRINCIPAL-ID": "chloe-oid"},
+        headers={
+            "X-MS-CLIENT-PRINCIPAL-NAME": "chloe.lim@example.edu",
+            "X-MS-CLIENT-PRINCIPAL-ID": "chloe-oid",
+        },
     ).text
     assert 'class="sq"' not in page
     assert '<span aria-hidden="true" class="tb-icon"></span>' in page

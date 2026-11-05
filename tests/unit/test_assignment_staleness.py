@@ -45,15 +45,11 @@ from app.services import assignments
 from app.services.instruments import ensure_default_instrument
 
 
-def _seed(
-    db: Session, *, code: str, pin: bool = True, exclude_self: bool = False
-):
+def _seed(db: Session, *, code: str, pin: bool = True, exclude_self: bool = False):
     user = User(email=f"op-{code}@example.edu")
     db.add(user)
     db.flush()
-    review_session = ReviewSession(
-        name="Spring", code=code, created_by_user_id=user.id
-    )
+    review_session = ReviewSession(name="Spring", code=code, created_by_user_id=user.id)
     db.add(review_session)
     db.flush()
     db.add_all(
@@ -100,9 +96,7 @@ def _generate(db: Session, *, review_session, user, cid: str) -> None:
 
 
 def _state(db: Session, review_session, instrument):
-    return assignments.staleness_by_instrument(db, review_session)[
-        instrument.id
-    ]
+    return assignments.staleness_by_instrument(db, review_session)[instrument.id]
 
 
 def test_freshly_generated_is_not_stale(db: Session) -> None:
@@ -126,11 +120,7 @@ def test_never_generated_is_not_stale(db: Session) -> None:
 def test_a_reviewer_added_after_generate_is_stale(db: Session) -> None:
     user, review_session, instrument = _seed(db, code="stale-added")
     _generate(db, review_session=review_session, user=user, cid="c1")
-    db.add(
-        Reviewer(
-            session_id=review_session.id, name="Bob", email="bob@example.edu"
-        )
-    )
+    db.add(Reviewer(session_id=review_session.id, name="Bob", email="bob@example.edu"))
     db.flush()
     assert _state(db, review_session, instrument).stale is True
 
@@ -180,9 +170,9 @@ def test_a_rule_change_that_keeps_the_count_equal_is_still_stale(
     build.
     """
     user, review_session, instrument = _seed(db, code="stale-rule")
-    alice = db.query(Reviewer).filter_by(
-        session_id=review_session.id, email="alice@example.edu"
-    ).one()
+    alice = (
+        db.query(Reviewer).filter_by(session_id=review_session.id, email="alice@example.edu").one()
+    )
     alice.tag_1 = "Lead"
     db.add(
         Reviewer(
@@ -192,9 +182,7 @@ def test_a_rule_change_that_keeps_the_count_equal_is_still_stale(
             tag_1="Peer",
         )
     )
-    rule_set = db.query(SessionRuleSet).filter_by(
-        session_id=review_session.id
-    ).one()
+    rule_set = db.query(SessionRuleSet).filter_by(session_id=review_session.id).one()
     rule_set.rules_json = _tag_rule("Lead")
     db.flush()
 
@@ -231,9 +219,9 @@ def test_a_narrowed_rule_that_only_deletes_pairs_is_stale(
     insert something too.
     """
     user, review_session, instrument = _seed(db, code="stale-narrow")
-    alice = db.query(Reviewer).filter_by(
-        session_id=review_session.id, email="alice@example.edu"
-    ).one()
+    alice = (
+        db.query(Reviewer).filter_by(session_id=review_session.id, email="alice@example.edu").one()
+    )
     alice.tag_1 = "Lead"
     db.add(
         Reviewer(
@@ -249,9 +237,7 @@ def test_a_narrowed_rule_that_only_deletes_pairs_is_stale(
     assert before.stale is False
     assert before.eligible == 2
 
-    rule_set = db.query(SessionRuleSet).filter_by(
-        session_id=review_session.id
-    ).one()
+    rule_set = db.query(SessionRuleSet).filter_by(session_id=review_session.id).one()
     rule_set.rules_json = _tag_rule("Lead")
     db.flush()
 
@@ -268,18 +254,12 @@ def test_an_unpinned_full_matrix_instrument_can_go_stale(
     The instrument carries no pinned rule, which since Wave 5 PR 5.3
     means Full Matrix at the diff site rather than "skipped".
     """
-    user, review_session, instrument = _seed(
-        db, code="stale-unpinned", pin=False
-    )
+    user, review_session, instrument = _seed(db, code="stale-unpinned", pin=False)
     assert instrument.rule_set_id is None
     _generate(db, review_session=review_session, user=user, cid="c1")
     assert _state(db, review_session, instrument).stale is False
 
-    db.add(
-        Reviewer(
-            session_id=review_session.id, name="Bob", email="bob@example.edu"
-        )
-    )
+    db.add(Reviewer(session_id=review_session.id, name="Bob", email="bob@example.edu"))
     db.flush()
     assert _state(db, review_session, instrument).stale is True
 

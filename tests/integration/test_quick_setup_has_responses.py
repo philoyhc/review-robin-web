@@ -14,6 +14,7 @@ is worth proving rather than asserting: the deduped count collapses a
 group's fan-out to one cell per group, so it can be *smaller* than the
 row count — but never zero while a row exists.
 """
+
 from __future__ import annotations
 
 import datetime as dt
@@ -51,9 +52,7 @@ def _session(db: Session, code: str, *, group: bool) -> ReviewSession:
         user = User(email=f"{code}@example.edu", display_name=code)
         db.add(user)
         db.flush()
-    review_session = ReviewSession(
-        name=code, code=code, status="draft", created_by_user_id=user.id
-    )
+    review_session = ReviewSession(name=code, code=code, status="draft", created_by_user_id=user.id)
     db.add(review_session)
     db.flush()
 
@@ -69,9 +68,7 @@ def _session(db: Session, code: str, *, group: bool) -> ReviewSession:
     field = InstrumentResponseField(
         instrument_id=instrument.id, field_key="q1", label="Q1", order=0
     )
-    reviewer = Reviewer(
-        session_id=review_session.id, name="R", email=f"r-{code}@example.edu"
-    )
+    reviewer = Reviewer(session_id=review_session.id, name="R", email=f"r-{code}@example.edu")
     db.add_all([field, reviewer])
     db.flush()
 
@@ -114,11 +111,7 @@ def _answer_every_assignment(db: Session, review_session: ReviewSession) -> None
         .first()
     )
     assert field is not None
-    for assignment in (
-        db.query(Assignment)
-        .filter(Assignment.session_id == review_session.id)
-        .all()
-    ):
+    for assignment in db.query(Assignment).filter(Assignment.session_id == review_session.id).all():
         db.add(
             Response(
                 assignment_id=assignment.id,
@@ -133,9 +126,7 @@ def _answer_every_assignment(db: Session, review_session: ReviewSession) -> None
 
 
 @pytest.mark.parametrize("group", [False, True])
-def test_the_boolean_agrees_with_the_count_it_replaced(
-    db: Session, group: bool
-) -> None:
+def test_the_boolean_agrees_with_the_count_it_replaced(db: Session, group: bool) -> None:
     review_session = _session(db, f"QH{int(group)}", group=group)
 
     assert lifecycle.session_has_responses(db, review_session) is False

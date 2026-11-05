@@ -1,6 +1,7 @@
 """Segment 18C — the operator-triggered "Purge and archive" action
 on the Sessions-lobby expander (`/operator/sessions/bulk-archive`
 with `purge` values)."""
+
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
@@ -28,9 +29,7 @@ from ._lookups import must_get
 
 def _count(db: Session, model, session_id: int) -> int:
     return db.execute(
-        select(func.count()).select_from(model).where(
-            model.session_id == session_id
-        )
+        select(func.count()).select_from(model).where(model.session_id == session_id)
     ).scalar_one()
 
 
@@ -40,29 +39,31 @@ def _draft_session(client: TestClient, db: Session, code: str) -> ReviewSession:
         data={"name": code.title(), "code": code},
         follow_redirects=False,
     )
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
-def _draft_session_with_rosters(
-    client: TestClient, db: Session, code: str
-) -> ReviewSession:
+def _draft_session_with_rosters(client: TestClient, db: Session, code: str) -> ReviewSession:
     review_session = _draft_session(client, db, code)
     client.post(
         f"/operator/sessions/{review_session.public_id}/reviewers/import",
-        files={"file": (
-            "r.csv", b"ReviewerName,ReviewerEmail\nR,r@example.edu\n",
-            "text/csv",
-        )},
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail\nR,r@example.edu\n",
+                "text/csv",
+            )
+        },
         follow_redirects=False,
     )
     client.post(
         f"/operator/sessions/{review_session.public_id}/reviewees/import",
-        files={"file": (
-            "e.csv", b"RevieweeName,RevieweeEmail\nE,e@example.edu\n",
-            "text/csv",
-        )},
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail\nE,e@example.edu\n",
+                "text/csv",
+            )
+        },
         follow_redirects=False,
     )
     pin_full_matrix_on_all_instruments(db, review_session.id)
@@ -71,9 +72,7 @@ def _draft_session_with_rosters(
     return review_session
 
 
-def test_purge_audit_log_and_archive(
-    client: TestClient, db: Session
-) -> None:
+def test_purge_audit_log_and_archive(client: TestClient, db: Session) -> None:
     """purge=audit_log wipes the pre-existing audit rows; afterwards
     only the purge + archive events the action itself wrote remain."""
     review_session = _draft_session(client, db, "purge-audit")
@@ -88,17 +87,15 @@ def test_purge_audit_log_and_archive(
 
     db.expire_all()
     assert must_get(db, ReviewSession, review_session.id).status == "archived"
-    events = db.execute(
-        select(AuditEvent.event_type).where(
-            AuditEvent.session_id == review_session.id
-        )
-    ).scalars().all()
+    events = (
+        db.execute(select(AuditEvent.event_type).where(AuditEvent.session_id == review_session.id))
+        .scalars()
+        .all()
+    )
     assert sorted(events) == ["session.archived", "session.audit_log_purged"]
 
 
-def test_purge_rosters_and_archive(
-    client: TestClient, db: Session
-) -> None:
+def test_purge_rosters_and_archive(client: TestClient, db: Session) -> None:
     """purge=rosters clears reviewers / reviewees / assignments;
     instruments retain."""
     review_session = _draft_session_with_rosters(client, db, "purge-rost")
@@ -121,9 +118,7 @@ def test_purge_rosters_and_archive(
     assert _count(db, Instrument, review_session.id) == instruments_before
 
 
-def test_purge_rosters_deletes_observers(
-    client: TestClient, db: Session
-) -> None:
+def test_purge_rosters_deletes_observers(client: TestClient, db: Session) -> None:
     """Observers are personal data like the other rosters, so
     purge=rosters takes them too and counts them (findings L7)."""
     review_session = _draft_session_with_rosters(client, db, "purge-obs")
@@ -156,21 +151,23 @@ def test_purge_rosters_deletes_observers(
     assert event.detail["counts"]["observers"] == 1
 
 
-def test_purge_responses_and_archive(
-    client: TestClient, db: Session
-) -> None:
+def test_purge_responses_and_archive(client: TestClient, db: Session) -> None:
     """purge=responses clears invitation rows; rosters / assignments
     retain."""
     review_session = _draft_session_with_rosters(client, db, "purge-resp")
-    reviewer = db.execute(
-        select(Reviewer).where(Reviewer.session_id == review_session.id)
-    ).scalars().first()
+    reviewer = (
+        db.execute(select(Reviewer).where(Reviewer.session_id == review_session.id))
+        .scalars()
+        .first()
+    )
     assert reviewer is not None
-    db.add(Invitation(
-        session_id=review_session.id,
-        reviewer_id=reviewer.id,
-        token_hash="purge-resp-token-hash",
-    ))
+    db.add(
+        Invitation(
+            session_id=review_session.id,
+            reviewer_id=reviewer.id,
+            token_hash="purge-resp-token-hash",
+        )
+    )
     db.commit()
     assert _count(db, Invitation, review_session.id) == 1
 
@@ -191,9 +188,11 @@ def test_purge_responses_and_archive(
 def _sent_invitation(db: Session, review_session: ReviewSession) -> Reviewer:
     """A reviewer with an invitation that was sent — i.e. an outbox row
     carrying FKs onto both (19O.3)."""
-    reviewer = db.execute(
-        select(Reviewer).where(Reviewer.session_id == review_session.id)
-    ).scalars().first()
+    reviewer = (
+        db.execute(select(Reviewer).where(Reviewer.session_id == review_session.id))
+        .scalars()
+        .first()
+    )
     assert reviewer is not None
     invitation = Invitation(
         session_id=review_session.id,
@@ -202,23 +201,23 @@ def _sent_invitation(db: Session, review_session: ReviewSession) -> Reviewer:
     )
     db.add(invitation)
     db.flush()
-    db.add(EmailOutbox(
-        session_id=review_session.id,
-        reviewer_id=reviewer.id,
-        invitation_id=invitation.id,
-        kind="invitation",
-        to_email=reviewer.email or "",
-        subject="Invitation",
-        body="Body",
-        status="sent",
-    ))
+    db.add(
+        EmailOutbox(
+            session_id=review_session.id,
+            reviewer_id=reviewer.id,
+            invitation_id=invitation.id,
+            kind="invitation",
+            to_email=reviewer.email or "",
+            subject="Invitation",
+            body="Body",
+            status="sent",
+        )
+    )
     db.commit()
     return reviewer
 
 
-def test_purge_responses_keeps_the_outbox_and_its_reviewer(
-    client: TestClient, db: Session
-) -> None:
+def test_purge_responses_keeps_the_outbox_and_its_reviewer(client: TestClient, db: Session) -> None:
     """purge=responses deletes invitations while reviewers survive, so
     the outbox loses only ``invitation_id`` (19O.3).
 
@@ -238,11 +237,11 @@ def test_purge_responses_keeps_the_outbox_and_its_reviewer(
 
     db.expire_all()
     assert _count(db, Invitation, review_session.id) == 0
-    row = db.execute(
-        select(EmailOutbox).where(
-            EmailOutbox.session_id == review_session.id
-        )
-    ).scalars().one()
+    row = (
+        db.execute(select(EmailOutbox).where(EmailOutbox.session_id == review_session.id))
+        .scalars()
+        .one()
+    )
     assert row.invitation_id is None
     assert row.reviewer_id == reviewer.id, "the reviewer survives the purge"
     assert row.status == "sent"
@@ -265,20 +264,18 @@ def test_purge_rosters_keeps_the_outbox_and_nulls_both_links(
 
     db.expire_all()
     assert _count(db, Reviewer, review_session.id) == 0
-    row = db.execute(
-        select(EmailOutbox).where(
-            EmailOutbox.session_id == review_session.id
-        )
-    ).scalars().one()
+    row = (
+        db.execute(select(EmailOutbox).where(EmailOutbox.session_id == review_session.id))
+        .scalars()
+        .one()
+    )
     assert row.reviewer_id is None
     assert row.invitation_id is None
     assert row.status == "sent"
     assert row.to_email
 
 
-def test_can_archive_gates_on_non_activated(
-    client: TestClient, db: Session
-) -> None:
+def test_can_archive_gates_on_non_activated(client: TestClient, db: Session) -> None:
     """18R harmonization — ``can_archive`` is True for non-activated,
     non-archived states (draft / validated / expired) and False for an
     activated (ready) or already-archived session."""

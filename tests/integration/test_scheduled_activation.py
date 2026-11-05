@@ -26,6 +26,7 @@ Per the Part 1 plan section in
   manual-activate path (``operator``), guarding against regression
   of the default-arg behaviour.
 """
+
 from __future__ import annotations
 
 from collections.abc import Iterator
@@ -53,7 +54,6 @@ from ._lookups import detail_of
 # --------------------------------------------------------------------------- #
 # Fixtures                                                                    #
 # --------------------------------------------------------------------------- #
-
 
 
 def _make_validated_session(db: Session, code: str) -> ReviewSession:
@@ -104,11 +104,15 @@ def _make_validated_session(db: Session, code: str) -> ReviewSession:
 
 
 def _audit_types(db: Session, session: ReviewSession) -> list[str]:
-    rows = db.execute(
-        select(AuditEvent.event_type)
-        .where(AuditEvent.session_id == session.id)
-        .order_by(AuditEvent.id)
-    ).scalars().all()
+    rows = (
+        db.execute(
+            select(AuditEvent.event_type)
+            .where(AuditEvent.session_id == session.id)
+            .order_by(AuditEvent.id)
+        )
+        .scalars()
+        .all()
+    )
     return list(rows)
 
 
@@ -133,9 +137,7 @@ def test_observer_fires_scheduled_activation_when_due(db: Session) -> None:
     invocation → status flips to ready, schedule is cleared, audit
     carries context.trigger=scheduled."""
     review_session = _make_validated_session(db, "fire-happy")
-    review_session.scheduled_activate_at = datetime(
-        2099, 1, 1, 9, 0, tzinfo=UTC
-    )
+    review_session.scheduled_activate_at = datetime(2099, 1, 1, 9, 0, tzinfo=UTC)
     db.flush()
     db.commit()
 
@@ -197,9 +199,7 @@ def test_observer_skips_when_session_not_validated(db: Session) -> None:
     review_session = _make_validated_session(db, "skip-not-val")
     # Revert to draft to simulate "operator edited setup after scheduling"
     review_session.status = lifecycle.SessionStatus.draft.value
-    review_session.scheduled_activate_at = datetime(
-        2099, 1, 1, 9, 0, tzinfo=UTC
-    )
+    review_session.scheduled_activate_at = datetime(2099, 1, 1, 9, 0, tzinfo=UTC)
     db.flush()
     db.commit()
 
@@ -227,9 +227,7 @@ def test_observer_idempotent_on_already_cleared_schedule(db: Session) -> None:
     (the lock + idempotency check returns early when
     scheduled_activate_at is already None)."""
     review_session = _make_validated_session(db, "idempotent")
-    review_session.scheduled_activate_at = datetime(
-        2099, 1, 1, 9, 0, tzinfo=UTC
-    )
+    review_session.scheduled_activate_at = datetime(2099, 1, 1, 9, 0, tzinfo=UTC)
     db.flush()
     db.commit()
 
@@ -260,9 +258,7 @@ def patched_activate_raises_transient(monkeypatch: pytest.MonkeyPatch) -> Iterat
         calls[0] += 1
         raise RuntimeError(f"simulated transient failure #{calls[0]}")
 
-    monkeypatch.setattr(
-        "app.services.scheduled_events.lifecycle.activate_session", _raise
-    )
+    monkeypatch.setattr("app.services.scheduled_events.lifecycle.activate_session", _raise)
     yield calls
 
 
@@ -272,9 +268,7 @@ def test_observer_emits_retry_on_transient_failure(
     """When activate_session raises a non-precondition error, the
     trigger writes a retry audit and *keeps* the schedule set."""
     review_session = _make_validated_session(db, "retry-first")
-    review_session.scheduled_activate_at = datetime(
-        2099, 1, 1, 9, 0, tzinfo=UTC
-    )
+    review_session.scheduled_activate_at = datetime(2099, 1, 1, 9, 0, tzinfo=UTC)
     db.flush()
     db.commit()
 
@@ -295,9 +289,7 @@ def test_observer_fails_persistent_after_three_retries(
     """After 3 retry audits, the 4th attempt emits failed_persistent
     and clears the schedule."""
     review_session = _make_validated_session(db, "retry-exhaust")
-    review_session.scheduled_activate_at = datetime(
-        2099, 1, 1, 9, 0, tzinfo=UTC
-    )
+    review_session.scheduled_activate_at = datetime(2099, 1, 1, 9, 0, tzinfo=UTC)
     db.flush()
     db.commit()
 
@@ -308,9 +300,7 @@ def test_observer_fails_persistent_after_three_retries(
     db.refresh(review_session)
 
     retries = _audit_rows(db, review_session, "session.scheduled_activation_retry")
-    failed = _audit_rows(
-        db, review_session, "session.scheduled_activation_failed_persistent"
-    )
+    failed = _audit_rows(db, review_session, "session.scheduled_activation_failed_persistent")
     assert len(retries) == 3
     assert len(failed) == 1
     assert detail_of(failed[0])["context"]["attempts"] == 4
@@ -360,9 +350,7 @@ def test_operator_activation_still_records_trigger_operator(db: Session) -> None
     """The manual-activate path defaults trigger='operator' — guards
     against regression of the default-arg behaviour."""
     review_session = _make_validated_session(db, "trigger-op")
-    op = db.execute(
-        select(User).where(User.email == "op-trigger-op@example.edu")
-    ).scalar_one()
+    op = db.execute(select(User).where(User.email == "op-trigger-op@example.edu")).scalar_one()
 
     issues = []  # empty issues = clean report
     report = lifecycle.build_readiness_report(issues)
@@ -387,9 +375,7 @@ def test_scheduled_activation_clears_schedule_via_activate_session(
     via the observer) also clears scheduled_activate_at — confirms
     the side effect is on the service, not the trigger wrapper."""
     review_session = _make_validated_session(db, "manual-clear")
-    review_session.scheduled_activate_at = datetime(
-        2099, 1, 1, 9, 0, tzinfo=UTC
-    )
+    review_session.scheduled_activate_at = datetime(2099, 1, 1, 9, 0, tzinfo=UTC)
     db.flush()
     db.commit()
 
@@ -419,15 +405,11 @@ def test_manual_activate_clears_pending_scheduled_activate_at(
     activate_session clears scheduled_activate_at as a side effect.
     The 9:00 trigger then sees status=ready and no schedule → no-op."""
     review_session = _make_validated_session(db, "manual-pre-empt")
-    review_session.scheduled_activate_at = datetime(
-        2099, 1, 1, 9, 0, tzinfo=UTC
-    )
+    review_session.scheduled_activate_at = datetime(2099, 1, 1, 9, 0, tzinfo=UTC)
     db.flush()
     db.commit()
 
-    op = db.execute(
-        select(User).where(User.email == "op-manual-pre-empt@example.edu")
-    ).scalar_one()
+    op = db.execute(select(User).where(User.email == "op-manual-pre-empt@example.edu")).scalar_one()
 
     issues = []
     report = lifecycle.build_readiness_report(issues)

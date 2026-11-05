@@ -27,27 +27,19 @@ from ._full_matrix import (
 from ._validated import validate_session
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str = "exp-r"
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str = "exp-r") -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "Settings Export", "code": code, "description": ""},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
-def test_export_streams_csv_with_canonical_filename(
-    client: TestClient, db: Session
-) -> None:
+def test_export_streams_csv_with_canonical_filename(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="filename1")
-    response = client.get(
-        f"/operator/sessions/{review_session.public_id}/export/settings.csv"
-    )
+    response = client.get(f"/operator/sessions/{review_session.public_id}/export/settings.csv")
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/csv")
     assert response.headers["content-disposition"] == (
@@ -55,13 +47,9 @@ def test_export_streams_csv_with_canonical_filename(
     )
 
 
-def test_export_body_is_well_formed_csv_with_header(
-    client: TestClient, db: Session
-) -> None:
+def test_export_body_is_well_formed_csv_with_header(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="csvshape")
-    response = client.get(
-        f"/operator/sessions/{review_session.public_id}/export/settings.csv"
-    )
+    response = client.get(f"/operator/sessions/{review_session.public_id}/export/settings.csv")
     assert response.status_code == 200
 
     reader = csv.reader(io.StringIO(response.text))
@@ -77,9 +65,7 @@ def test_export_body_is_well_formed_csv_with_header(
 
 def test_export_emits_audit_event(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="audit-em")
-    response = client.get(
-        f"/operator/sessions/{review_session.public_id}/export/settings.csv"
-    )
+    response = client.get(f"/operator/sessions/{review_session.public_id}/export/settings.csv")
     assert response.status_code == 200
     # Drain the streaming body so ``StreamingResponse`` finishes its
     # work. The audit row is written before the response yields, but
@@ -87,12 +73,16 @@ def test_export_emits_audit_event(client: TestClient, db: Session) -> None:
     response.read()
 
     db.expire_all()
-    events = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "session.settings_extracted",
-            AuditEvent.session_id == review_session.id,
+    events = (
+        db.execute(
+            select(AuditEvent).where(
+                AuditEvent.event_type == "session.settings_extracted",
+                AuditEvent.session_id == review_session.id,
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(events) == 1
     detail = cast(dict, events[0].detail)
     assert detail["session_id"] == review_session.id
@@ -101,9 +91,7 @@ def test_export_emits_audit_event(client: TestClient, db: Session) -> None:
     assert detail["counts"]["rows"] > 0
 
 
-def test_export_unknown_session_rejected(
-    client: TestClient, db: Session
-) -> None:
+def test_export_unknown_session_rejected(client: TestClient, db: Session) -> None:
     """``require_session_operator`` rejects non-existent IDs without
     distinguishing them from "not yours" — operator gets the same
     403 either way (also matches every other operator route's
@@ -126,23 +114,17 @@ def test_export_rejects_non_operator(
     review_session = _make_session(alice_client, db, code="permgate")
 
     bob_client = make_client(bob)
-    response = bob_client.get(
-        f"/operator/sessions/{review_session.public_id}/export/settings.csv"
-    )
+    response = bob_client.get(f"/operator/sessions/{review_session.public_id}/export/settings.csv")
     assert response.status_code in (403, 404)
 
 
-def test_export_works_in_every_lifecycle_state(
-    client: TestClient, db: Session
-) -> None:
+def test_export_works_in_every_lifecycle_state(client: TestClient, db: Session) -> None:
     """No lifecycle gate — extraction is read-only and useful in
     draft / validated / ready / closed alike."""
 
     review_session = _make_session(client, db, code="lifecycle")
     # Draft.
-    response = client.get(
-        f"/operator/sessions/{review_session.public_id}/export/settings.csv"
-    )
+    response = client.get(f"/operator/sessions/{review_session.public_id}/export/settings.csv")
     assert response.status_code == 200
 
     # Promote to ready: seed roster + assignments + activate.
@@ -180,7 +162,5 @@ def test_export_works_in_every_lifecycle_state(
     assert activate.status_code == 303
 
     # Activated — extract still works.
-    response = client.get(
-        f"/operator/sessions/{review_session.public_id}/export/settings.csv"
-    )
+    response = client.get(f"/operator/sessions/{review_session.public_id}/export/settings.csv")
     assert response.status_code == 200

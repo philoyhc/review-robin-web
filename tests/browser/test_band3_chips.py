@@ -29,9 +29,7 @@ def _style(chip: Locator, prop: str, pseudo: str | None = None) -> str:
 
 
 def _glyph(chip: Locator) -> str:
-    return _style(chip, "-webkit-mask-image", "::before") or _style(
-        chip, "mask-image", "::before"
-    )
+    return _style(chip, "-webkit-mask-image", "::before") or _style(chip, "mask-image", "::before")
 
 
 def _seed(api: httpx.Client, session_id: str) -> None:
@@ -127,9 +125,7 @@ def test_a_field_a_group_row_cant_show_is_fixed_off(
     expect(mode).to_have_attribute("data-new-model-unit-mode", "group")
     # The mode switch marks Band 2; its rows re-sync on the preview's
     # refresh, which disables the box. The chip follows from CSS alone.
-    card.locator("[data-new-model-band2]").first.evaluate(
-        "b2 => window.newModelRefreshBand2(b2)"
-    )
+    card.locator("[data-new-model-band2]").first.evaluate("b2 => window.newModelRefreshBand2(b2)")
 
     box = _box(card, "reviewee.email_or_identifier")
     expect(box).not_to_be_checked()
@@ -172,9 +168,7 @@ def _rf_chip(row: Locator) -> Locator:
     return row.locator("label.rf-name-chip")
 
 
-def test_a_response_chip_follows_its_name_live(
-    page: Page, new_session: Callable[[], str]
-) -> None:
+def test_a_response_chip_follows_its_name_live(page: Page, new_session: Callable[[], str]) -> None:
     card = open_unlocked(page, new_session())
     row = rows(card).first
     chip = _rf_chip(row)

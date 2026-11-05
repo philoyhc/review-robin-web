@@ -48,17 +48,13 @@ def _session(db: Session, *, code: str = "ds") -> ReviewSession:
 
 
 def _instrument(db: Session, review_session: ReviewSession) -> Instrument:
-    instrument = Instrument(
-        session_id=review_session.id, name="Form", short_label="F"
-    )
+    instrument = Instrument(session_id=review_session.id, name="Form", short_label="F")
     db.add(instrument)
     db.flush()
     return instrument
 
 
-def _field(
-    db: Session, instrument: Instrument
-) -> InstrumentResponseField:
+def _field(db: Session, instrument: Instrument) -> InstrumentResponseField:
     field = InstrumentResponseField(
         instrument_id=instrument.id,
         field_key="score",
@@ -85,9 +81,7 @@ def _shape(
         axis="reviewer",
         instrument_id=instrument.id if instrument else None,
         response_field_id=field.id if field else None,
-        column_chip_slots=json.dumps(
-            ["reviewer:name", "reviewer:email", "reviewer:assigned"]
-        ),
+        column_chip_slots=json.dumps(["reviewer:name", "reviewer:email", "reviewer:assigned"]),
     )
     db.add(shape)
     db.flush()

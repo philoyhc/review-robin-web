@@ -48,11 +48,22 @@ def _f(
     id_, *, required=False, parent=None, op=None, value=None, mode=None
 ) -> InstrumentResponseField:
     """A stand-in for a response field, carrying what the rule reads."""
-    return cast(InstrumentResponseField, SimpleNamespace(
-        id=id_, label=f"F{id_}", order=id_, required=required, visible=True,
-        branch_parent_id=parent, branch_op=op, branch_value=value, branch_mode=mode,
-        _inline_data_type="Integer", _inline_list_csv=None,
-    ))
+    return cast(
+        InstrumentResponseField,
+        SimpleNamespace(
+            id=id_,
+            label=f"F{id_}",
+            order=id_,
+            required=required,
+            visible=True,
+            branch_parent_id=parent,
+            branch_op=op,
+            branch_value=value,
+            branch_mode=mode,
+            _inline_data_type="Integer",
+            _inline_list_csv=None,
+        ),
+    )
 
 
 def _chain(*, level1_mode=None, level0_mode=None):
@@ -99,9 +110,14 @@ def test_the_structure_rules_accept_a_second_level() -> None:
 def _chain_seed(db: Session):
     op, reviewer, review_session, assignments, rating, comments = _seed(db)
     familiarity = InstrumentResponseField(
-        instrument_id=rating.instrument_id, field_key="familiarity",
-        label="Familiarity", required=False, order=rating.order - 1,
-        _inline_data_type="Integer", branch_op="gt", branch_value="0",
+        instrument_id=rating.instrument_id,
+        field_key="familiarity",
+        label="Familiarity",
+        required=False,
+        order=rating.order - 1,
+        _inline_data_type="Integer",
+        branch_op="gt",
+        branch_value="0",
     )
     db.add(familiarity)
     db.flush()
@@ -122,11 +138,17 @@ def _values(db: Session, assignment: Assignment) -> dict[int, str | None]:
 
 def test_the_save_rule_drops_a_whole_closed_chain(db: Session) -> None:
     op, reviewer, review_session, (a1, _), familiarity, rating, comments = _chain_seed(db)
-    _submit(db, op, reviewer, review_session, [
-        ResponseUpsert(assignment_id=a1.id, field_key="familiarity", value="0"),
-        ResponseUpsert(assignment_id=a1.id, field_key="rating", value="5"),
-        ResponseUpsert(assignment_id=a1.id, field_key="comments", value="gone"),
-    ])
+    _submit(
+        db,
+        op,
+        reviewer,
+        review_session,
+        [
+            ResponseUpsert(assignment_id=a1.id, field_key="familiarity", value="0"),
+            ResponseUpsert(assignment_id=a1.id, field_key="rating", value="5"),
+            ResponseUpsert(assignment_id=a1.id, field_key="comments", value="gone"),
+        ],
+    )
     assert _values(db, a1) == {familiarity.id: "0"}
 
 
@@ -138,7 +160,10 @@ def test_a_grandchild_is_held_behind_a_refused_grandparent(db: Session) -> None:
     familiarity._inline_max = 5
     db.flush()
     result = responses_service.save_draft(
-        db, review_session=review_session, reviewer=reviewer, user=op,
+        db,
+        review_session=review_session,
+        reviewer=reviewer,
+        user=op,
         upserts=[
             ResponseUpsert(assignment_id=a1.id, field_key="familiarity", value="9"),
             ResponseUpsert(assignment_id=a1.id, field_key="rating", value="5"),
@@ -164,18 +189,28 @@ def _chain_mixed(db: Session):
     branched = rows["carol"].instrument
     fields = {f.field_key: f for f in branched.response_fields}
     familiarity = InstrumentResponseField(
-        instrument_id=branched.id, field_key="familiarity", label="Familiarity",
-        required=False, order=-1, _inline_data_type="Integer",
-        branch_op="gt", branch_value="0",
+        instrument_id=branched.id,
+        field_key="familiarity",
+        label="Familiarity",
+        required=False,
+        order=-1,
+        _inline_data_type="Integer",
+        branch_op="gt",
+        branch_value="0",
     )
     db.add(familiarity)
     db.flush()
     fields["rating"].branch_parent_id = familiarity.id
     for key, value in (("carol", "3"), ("dan", "0")):
-        db.add(Response(
-            assignment_id=rows[key].id, response_field_id=familiarity.id,
-            value=value, saved_at=T0, submitted_at=T0,
-        ))
+        db.add(
+            Response(
+                assignment_id=rows[key].id,
+                response_field_id=familiarity.id,
+                value=value,
+                saved_at=T0,
+                submitted_at=T0,
+            )
+        )
     db.flush()
     return review_session, rows
 
@@ -185,9 +220,9 @@ def test_the_rollups_count_a_chain(db: Session) -> None:
     for name, rollup in REVIEWER_IMPLEMENTATIONS:
         rae = _by_email(rollup(db, review_session))["rae@example.edu"]
         # Carol's Rating and the plain Score; Dan owes nothing.
-        assert (rae.required_total, rae.missing_required_count, rae.completed_count) == (
-            2, 0, 3
-        ), name
+        assert (rae.required_total, rae.missing_required_count, rae.completed_count) == (2, 0, 3), (
+            name
+        )
     for name, rollup in REVIEWEE_IMPLEMENTATIONS:
         by_id = _by_identifier(rollup(db, review_session))
         assert by_id["carol@example.edu"].completed_count == 2, name
@@ -211,9 +246,14 @@ def test_the_extract_names_each_fields_own_parent(db: Session) -> None:
 def _chain_live(db: Session, operator: TestClient, code: str):
     review_session, fields = _live(db, operator, code)
     familiarity = InstrumentResponseField(
-        instrument_id=fields["rating"].instrument_id, field_key="familiarity",
-        label="Familiarity", required=False, order=fields["rating"].order - 1,
-        _inline_data_type="Integer", branch_op="gt", branch_value="0",
+        instrument_id=fields["rating"].instrument_id,
+        field_key="familiarity",
+        label="Familiarity",
+        required=False,
+        order=fields["rating"].order - 1,
+        _inline_data_type="Integer",
+        branch_op="gt",
+        branch_value="0",
     )
     db.add(familiarity)
     db.flush()
@@ -237,9 +277,7 @@ def test_the_surface_closes_a_chain_until_its_top_opens(
         body,
     )
     for key in ("rating", "comments"):
-        match = re.search(
-            rf'<(?:input|textarea)[^>]*name="response\[\d+\]\[{key}\]"[^>]*>', body
-        )
+        match = re.search(rf'<(?:input|textarea)[^>]*name="response\[\d+\]\[{key}\]"[^>]*>', body)
         assert match is not None
         control = match.group(0)
         assert " disabled" in control, key
@@ -255,9 +293,7 @@ def test_the_surface_closes_a_chain_until_its_top_opens(
     _answer(db, assignment, fields["rating"], "5")
     db.commit()
     body = client.get(f"/me/sessions/{review_session.public_id}").text
-    match = re.search(
-        r'<(?:input|textarea)[^>]*name="response\[\d+\]\[comments\]"[^>]*>', body
-    )
+    match = re.search(r'<(?:input|textarea)[^>]*name="response\[\d+\]\[comments\]"[^>]*>', body)
     assert match is not None
     comments = match.group(0)
     assert " disabled" in comments

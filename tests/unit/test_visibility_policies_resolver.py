@@ -40,18 +40,9 @@ def _policy(
 
 
 def test_decode_pair_to_mode_three_coherent_modes() -> None:
-    assert (
-        visibility_policies.decode_pair_to_mode("row", "identified")
-        == "raw"
-    )
-    assert (
-        visibility_policies.decode_pair_to_mode("row", "deidentified")
-        == "anonymized"
-    )
-    assert (
-        visibility_policies.decode_pair_to_mode("aggregated", "deidentified")
-        == "summarized"
-    )
+    assert visibility_policies.decode_pair_to_mode("row", "identified") == "raw"
+    assert visibility_policies.decode_pair_to_mode("row", "deidentified") == "anonymized"
+    assert visibility_policies.decode_pair_to_mode("aggregated", "deidentified") == "summarized"
 
 
 def test_decode_pair_to_mode_null_either_side_is_off() -> None:
@@ -64,10 +55,7 @@ def test_decode_pair_to_mode_reserved_incoherent_pair_returns_none() -> None:
     """``aggregated`` + ``identified`` is reserved-incoherent —
     decoder returns ``None`` rather than raising so a corrupt row
     renders as "off" instead of 500ing on render."""
-    assert (
-        visibility_policies.decode_pair_to_mode("aggregated", "identified")
-        is None
-    )
+    assert visibility_policies.decode_pair_to_mode("aggregated", "identified") is None
 
 
 # ── resolve_mode ─────────────────────────────────────────────────────
@@ -75,9 +63,7 @@ def test_decode_pair_to_mode_reserved_incoherent_pair_returns_none() -> None:
 
 def test_resolve_mode_returns_none_for_missing_policy() -> None:
     assert (
-        visibility_policies.resolve_mode(
-            None, while_ongoing_open=True, after_release_open=True
-        )
+        visibility_policies.resolve_mode(None, while_ongoing_open=True, after_release_open=True)
         is None
     )
 
@@ -92,9 +78,7 @@ def test_resolve_mode_returns_none_when_both_windows_closed() -> None:
         after_release_identification="identified",
     )
     assert (
-        visibility_policies.resolve_mode(
-            policy, while_ongoing_open=False, after_release_open=False
-        )
+        visibility_policies.resolve_mode(policy, while_ongoing_open=False, after_release_open=False)
         is None
     )
 
@@ -107,9 +91,7 @@ def test_resolve_mode_picks_while_ongoing_when_only_that_window_open() -> None:
         after_release_identification="deidentified",
     )
     assert (
-        visibility_policies.resolve_mode(
-            policy, while_ongoing_open=True, after_release_open=False
-        )
+        visibility_policies.resolve_mode(policy, while_ongoing_open=True, after_release_open=False)
         == "raw"
     )
 
@@ -122,9 +104,7 @@ def test_resolve_mode_picks_after_release_when_only_that_window_open() -> None:
         after_release_identification="deidentified",
     )
     assert (
-        visibility_policies.resolve_mode(
-            policy, while_ongoing_open=False, after_release_open=True
-        )
+        visibility_policies.resolve_mode(policy, while_ongoing_open=False, after_release_open=True)
         == "summarized"
     )
 
@@ -141,16 +121,12 @@ def test_resolve_mode_after_release_wins_when_both_open() -> None:
         after_release_identification="deidentified",
     )
     assert (
-        visibility_policies.resolve_mode(
-            policy, while_ongoing_open=True, after_release_open=True
-        )
+        visibility_policies.resolve_mode(policy, while_ongoing_open=True, after_release_open=True)
         == "anonymized"
     )
 
 
-def test_resolve_mode_falls_back_to_while_ongoing_when_after_release_pair_null() -> (
-    None
-):
+def test_resolve_mode_falls_back_to_while_ongoing_when_after_release_pair_null() -> None:
     """An open after_release window with a NULL pair falls back
     to the while_ongoing mode (when its window is also open).
     Useful when the operator picked while_ongoing-only on a
@@ -162,9 +138,7 @@ def test_resolve_mode_falls_back_to_while_ongoing_when_after_release_pair_null()
         after_release_identification=None,
     )
     assert (
-        visibility_policies.resolve_mode(
-            policy, while_ongoing_open=True, after_release_open=True
-        )
+        visibility_policies.resolve_mode(policy, while_ongoing_open=True, after_release_open=True)
         == "raw"
     )
 
@@ -180,8 +154,6 @@ def test_resolve_mode_returns_none_when_open_window_pair_is_null() -> None:
         after_release_identification="identified",
     )
     assert (
-        visibility_policies.resolve_mode(
-            policy, while_ongoing_open=True, after_release_open=False
-        )
+        visibility_policies.resolve_mode(policy, while_ongoing_open=True, after_release_open=False)
         is None
     )

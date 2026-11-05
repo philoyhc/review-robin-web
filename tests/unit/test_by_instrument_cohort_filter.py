@@ -60,9 +60,7 @@ def _make_instrument(db: Session, sess: ReviewSession) -> Instrument:
     return inst
 
 
-def _make_field(
-    db: Session, instrument: Instrument, *, field_key: str
-) -> InstrumentResponseField:
+def _make_field(db: Session, instrument: Instrument, *, field_key: str) -> InstrumentResponseField:
     field = InstrumentResponseField(
         instrument_id=instrument.id,
         field_key=field_key,
@@ -203,9 +201,7 @@ def test_row_filter_can_test_both_sides(db: Session) -> None:
             sess,
             inst,
             position=0,
-            row_filter=lambda a: (
-                a.reviewer_id == r1.id or a.reviewee_id == e2.id
-            ),
+            row_filter=lambda a: a.reviewer_id == r1.id or a.reviewee_id == e2.id,
         )
     )
     data = _data_rows(rows)

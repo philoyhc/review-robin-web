@@ -83,9 +83,7 @@ def _operator_creates_session_with_pair(
     return review_session
 
 
-def _activate(
-    operator_client: TestClient, db: Session, review_session: ReviewSession
-) -> None:
+def _activate(operator_client: TestClient, db: Session, review_session: ReviewSession) -> None:
     validate_session(review_session)
     operator_client.get(f"/operator/sessions/{review_session.public_id}/assignments")
     response = operator_client.post(
@@ -232,9 +230,7 @@ def test_surface_help_text_renders_as_inline_list(
         activate=False,
     )
     rating = db.execute(
-        select(InstrumentResponseField).where(
-            InstrumentResponseField.field_key == "rating"
-        )
+        select(InstrumentResponseField).where(InstrumentResponseField.field_key == "rating")
     ).scalar_one()
     rating.help_text = "1 (poor) to 5 (excellent)."
     rating.help_text_visible = True
@@ -249,12 +245,11 @@ def test_surface_help_text_renders_as_inline_list(
     # own (the retired `rs-help-card-solo` and per-field
     # `rs-help-card` are both gone from the intro).
     assert (
-        '<div class="rs-help-row"><strong>Rating</strong> — '
-        "1 (poor) to 5 (excellent).</div>"
+        '<div class="rs-help-row"><strong>Rating</strong> — 1 (poor) to 5 (excellent).</div>'
     ) in body
     assert 'class="card rs-help-card"' not in body
     assert 'class="card rs-help-card rs-help-card-solo"' not in body
-    assert "<dl class=\"help-block\">" not in body
+    assert '<dl class="help-block">' not in body
     assert '<ul class="help-block">' not in body
 
 
@@ -522,8 +517,8 @@ def test_surface_applies_column_classes_by_response_type(
 
     # Default seeded fields: 1-to-5int Rating (numeric → rs-narrow) +
     # Long_text Comments (textarea → rs-textlong).
-    assert '>Rating' in body
-    assert '>Comments' in body
+    assert ">Rating" in body
+    assert ">Comments" in body
     # Per-cell <td> classes match (the 13B PR 3 sort scaffolding
     # appends a ``data-sort-value`` attribute on each td, so the
     # class no longer sits right before the closing ``>``).
@@ -534,11 +529,11 @@ def test_surface_applies_column_classes_by_response_type(
 @pytest.mark.parametrize(
     ("max_length", "rows", "fit"),
     [
-        (2000, "2", 'data-fit-box '),
-        (51, "2", 'data-fit-box '),
+        (2000, "2", "data-fit-box "),
+        (51, "2", "data-fit-box "),
         (50, "1", 'data-fit-box="one-line"'),
         (10, "1", 'data-fit-box="one-line"'),
-        (None, "2", 'data-fit-box '),
+        (None, "2", "data-fit-box "),
     ],
 )
 def test_a_string_answer_is_a_box_with_a_one_or_two_line_floor(
@@ -565,9 +560,11 @@ def test_a_string_answer_is_a_box_with_a_one_or_two_line_floor(
     )
     from app.db.models import Instrument
 
-    instrument = db.execute(
-        select(Instrument).where(Instrument.session_id == review_session.id)
-    ).scalars().first()
+    instrument = (
+        db.execute(select(Instrument).where(Instrument.session_id == review_session.id))
+        .scalars()
+        .first()
+    )
     assert instrument is not None
     comments = next(rf for rf in instrument.response_fields if rf.label == "Comments")
     validation = dict(comments.validation or {})
@@ -732,9 +729,7 @@ def test_save_draft_persists_and_reload_shows_values(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    assert response.headers["location"].endswith(
-        f"/me/sessions/{review_session.public_id}/1"
-    )
+    assert response.headers["location"].endswith(f"/me/sessions/{review_session.public_id}/1")
 
     page = rae_client.get(f"/me/sessions/{review_session.public_id}")
     assert 'value="4"' in page.text
@@ -892,9 +887,7 @@ def test_an_integer_field_with_a_blank_step_steps_by_one(
         activate=False,
     )
     rating = db.execute(
-        select(InstrumentResponseField).where(
-            InstrumentResponseField.field_key == "rating"
-        )
+        select(InstrumentResponseField).where(InstrumentResponseField.field_key == "rating")
     ).scalar_one()
     rating._inline_step = None
     rating.validation = {"min": 1, "max": 5}
@@ -1059,9 +1052,7 @@ def test_submit_with_all_required_filled_succeeds_and_writes_audit(
     assert response.status_code == 303
     # 17B Phase 2 PR B — submit closes out the single-assignment
     # session so the redirect lands on the summary page.
-    assert response.headers["location"].endswith(
-        f"/me/sessions/{review_session.public_id}/summary"
-    )
+    assert response.headers["location"].endswith(f"/me/sessions/{review_session.public_id}/summary")
     audit = db.execute(
         select(AuditEvent).where(AuditEvent.event_type == "responses.submitted")
     ).scalar_one()
@@ -1223,9 +1214,11 @@ def test_resubmit_after_edit_refreshes_submitted_at(
         data=answer_form(db, {f"response[{assignment.id}][rating]": "3"}, page_n=1),
         follow_redirects=False,
     )
-    first_events = db.execute(
-        select(AuditEvent).where(AuditEvent.event_type == "responses.submitted")
-    ).scalars().all()
+    first_events = (
+        db.execute(select(AuditEvent).where(AuditEvent.event_type == "responses.submitted"))
+        .scalars()
+        .all()
+    )
     assert len(first_events) == 1
 
     rae_client.post(
@@ -1233,9 +1226,11 @@ def test_resubmit_after_edit_refreshes_submitted_at(
         data=answer_form(db, {f"response[{assignment.id}][rating]": "5"}, page_n=1),
         follow_redirects=False,
     )
-    later_events = db.execute(
-        select(AuditEvent).where(AuditEvent.event_type == "responses.submitted")
-    ).scalars().all()
+    later_events = (
+        db.execute(select(AuditEvent).where(AuditEvent.event_type == "responses.submitted"))
+        .scalars()
+        .all()
+    )
     assert len(later_events) == 2
 
 
@@ -1364,9 +1359,7 @@ def test_save_drops_foreign_assignment_id_from_post(
         reviewee_ident="dan@example.edu",
     )
     foreign_assignment = db.execute(
-        select(Assignment).where(
-            Assignment.session_id == foreign_session.id
-        )
+        select(Assignment).where(Assignment.session_id == foreign_session.id)
     ).scalar_one()
     rae_assignment = db.execute(
         select(Assignment).where(Assignment.session_id == rae_session.id)
@@ -1402,11 +1395,15 @@ def test_save_drops_foreign_assignment_id_from_post(
     )
     assert response.status_code == 409
 
-    written = db.execute(
-        select(Response).where(
-            Response.assignment_id.in_([foreign_assignment.id, rae_assignment.id])
+    written = (
+        db.execute(
+            select(Response).where(
+                Response.assignment_id.in_([foreign_assignment.id, rae_assignment.id])
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert written == []
 
 
@@ -1520,8 +1517,7 @@ def test_group_instrument_save_fans_out_to_all_members(
         files={
             "file": (
                 "e.csv",
-                b"RevieweeName,RevieweeEmail\n"
-                b"Carol,carol@example.edu\nDan,dan@example.edu\n",
+                b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\nDan,dan@example.edu\n",
                 "text/csv",
             )
         },
@@ -1565,9 +1561,11 @@ def test_group_instrument_save_fans_out_to_all_members(
 
     # The single answer landed on every member assignment.
     for assignment in group_assignments:
-        rows = db.execute(
-            select(Response).where(Response.assignment_id == assignment.id)
-        ).scalars().all()
+        rows = (
+            db.execute(select(Response).where(Response.assignment_id == assignment.id))
+            .scalars()
+            .all()
+        )
         by_key = {r.response_field.field_key: r.value for r in rows}
         assert by_key.get("rating") == "4"
         assert by_key.get("comments") == "team did well"
@@ -1655,9 +1653,11 @@ def test_group_instrument_fan_out_stays_within_boundary_group(
     assert response.status_code == 303, response.text
 
     def _rating(assignment: Assignment) -> str | None:
-        rows = db.execute(
-            select(Response).where(Response.assignment_id == assignment.id)
-        ).scalars().all()
+        rows = (
+            db.execute(select(Response).where(Response.assignment_id == assignment.id))
+            .scalars()
+            .all()
+        )
         return {r.response_field.field_key: r.value for r in rows}.get("rating")
 
     # Team A members both got the answer; Team B (Dan) is untouched.
@@ -1759,17 +1759,11 @@ def test_group_boundary_tag_change_keeps_the_group_it_left(
 
     def _rating(assignment: Assignment) -> str | None:
         rows = (
-            db.execute(
-                select(Response).where(
-                    Response.assignment_id == assignment.id
-                )
-            )
+            db.execute(select(Response).where(Response.assignment_id == assignment.id))
             .scalars()
             .all()
         )
-        return {r.response_field.field_key: r.value for r in rows}.get(
-            "rating"
-        )
+        return {r.response_field.field_key: r.value for r in rows}.get("rating")
 
     assert _rating(by_reviewee["Carol"]) == "5"
     assert _rating(by_reviewee["Eve"]) == "5"
@@ -1788,9 +1782,7 @@ def test_group_boundary_tag_change_keeps_the_group_it_left(
     lifecycle.revert_session_to_draft(
         db, review_session=review_session, user=operator_user, confirm=True
     )
-    reviewees_service.update_reviewee(
-        db, reviewee=carol, tag_1="Team B", user=operator_user
-    )
+    reviewees_service.update_reviewee(db, reviewee=carol, tag_1="Team B", user=operator_user)
 
     # Team A only lost Carol, so Eve keeps the answer; Team B gained
     # Carol, so it is cleared and she holds nothing.
@@ -1899,30 +1891,25 @@ def test_tag_change_into_answered_group_clears_it(
     lifecycle.revert_session_to_draft(
         db, review_session=review_session, user=operator_user, confirm=True
     )
-    reviewees_service.update_reviewee(
-        db, reviewee=carol, tag_1="Team B", user=operator_user
-    )
+    reviewees_service.update_reviewee(db, reviewee=carol, tag_1="Team B", user=operator_user)
 
     # Team B gained Carol, so neither she nor Dan holds Team B's "3".
     for name in ("Carol", "Dan"):
-        assert db.execute(
-            select(Response).where(
-                Response.assignment_id == by_reviewee[name].id
-            )
-        ).first() is None
+        assert (
+            db.execute(
+                select(Response).where(Response.assignment_id == by_reviewee[name].id)
+            ).first()
+            is None
+        )
 
     # The surface shows Team B unanswered once the session is live
     # again (set directly: re-activation is not what this tests).
     review_session.status = "ready"
     db.commit()
-    page = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/1"
-    )
+    page = rae_client.get(f"/me/sessions/{review_session.public_id}/1")
     marker = f"rrw-sort-rs-{review_session.public_id}-{group.session_seq}"
     table = page.text[
-        page.text.index(marker) : page.text.index(
-            "</table>", page.text.index(marker)
-        )
+        page.text.index(marker) : page.text.index("</table>", page.text.index(marker))
     ]
     assert 'value="3"' not in table
 
@@ -1972,9 +1959,7 @@ def test_relationship_pair_context_tag_change_defuncts_pair_responses(
         order=0,
     )
     db.add(field)
-    reviewer = Reviewer(
-        session_id=review_session.id, name="R", email="r@example.edu"
-    )
+    reviewer = Reviewer(session_id=review_session.id, name="R", email="r@example.edu")
     carol = Reviewee(
         session_id=review_session.id,
         name="Carol",
@@ -2047,11 +2032,7 @@ def test_relationship_pair_context_tag_change_defuncts_pair_responses(
 
     def _response_count(name: str) -> int:
         return len(
-            db.execute(
-                select(Response).where(
-                    Response.assignment_id == rows[name].id
-                )
-            )
+            db.execute(select(Response).where(Response.assignment_id == rows[name].id))
             .scalars()
             .all()
         )
@@ -2116,12 +2097,8 @@ def test_relationship_repoint_clears_the_group_it_joins(
         order=0,
     )
     db.add(field)
-    reviewer = Reviewer(
-        session_id=review_session.id, name="R", email="r@example.edu"
-    )
-    reviewer2 = Reviewer(
-        session_id=review_session.id, name="R2", email="r2@example.edu"
-    )
+    reviewer = Reviewer(session_id=review_session.id, name="R", email="r@example.edu")
+    reviewer2 = Reviewer(session_id=review_session.id, name="R2", email="r2@example.edu")
     carol = Reviewee(
         session_id=review_session.id,
         name="Carol",
@@ -2182,9 +2159,7 @@ def test_relationship_repoint_clears_the_group_it_joins(
                 assignment_id=a.id,
                 response_field_id=field.id,
                 value="4",
-                saved_at=_dt.datetime(
-                    2026, 5, 9, tzinfo=_dt.UTC
-                ),
+                saved_at=_dt.datetime(2026, 5, 9, tzinfo=_dt.UTC),
                 version=1,
             )
         )
@@ -2198,11 +2173,7 @@ def test_relationship_repoint_clears_the_group_it_joins(
 
     def _has_response(assignment: Assignment) -> bool:
         return (
-            db.execute(
-                select(Response).where(
-                    Response.assignment_id == assignment.id
-                )
-            ).first()
+            db.execute(select(Response).where(Response.assignment_id == assignment.id)).first()
             is not None
         )
 
@@ -2314,9 +2285,7 @@ def test_group_self_review_toggle_rules_out_whole_group(
     assert includes == {"R": False, "A": False, "C": True, "D": True}
 
     # The breakdown counts the whole self-review group (R, A).
-    breakdown = assignments_service.self_review_breakdown_per_instrument(
-        db, review_session.id
-    )
+    breakdown = assignments_service.self_review_breakdown_per_instrument(db, review_session.id)
     assert breakdown[group.id] == (0, 2)
 
     # Re-activating brings the whole group back.
@@ -2408,9 +2377,7 @@ def test_group_instrument_surface_renders_one_row_per_group(
     # Segment 18L: single-page-default session — every instrument
     # lives on page 1.
     rae_client = make_client(rae)
-    page = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/1"
-    )
+    page = rae_client.get(f"/me/sessions/{review_session.public_id}/1")
     assert page.status_code == 200
 
     # Isolate the group instrument's table from the rendered surface.
@@ -2491,12 +2458,16 @@ def test_group_instrument_counts_once_per_group_in_reviewer_state(
     reviewer = db.execute(
         select(Reviewer).where(Reviewer.session_id == review_session.id)
     ).scalar_one()
-    raw_assignment_count = db.execute(
-        select(Assignment).where(
-            Assignment.session_id == review_session.id,
-            Assignment.reviewer_id == reviewer.id,
+    raw_assignment_count = (
+        db.execute(
+            select(Assignment).where(
+                Assignment.session_id == review_session.id,
+                Assignment.reviewer_id == reviewer.id,
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     # 3 reviewees x 2 instruments (default per-reviewee + group) = 6
     # raw assignments.
     assert len(raw_assignment_count) == 6
@@ -2581,9 +2552,7 @@ def test_surface_visibility_policy_card_reflects_persisted_policy(
     instrument = db.execute(
         select(Instrument).where(Instrument.session_id == review_session.id)
     ).scalar_one()
-    operator_user = db.execute(
-        select(User).where(User.email == "alice@example.edu")
-    ).scalar_one()
+    operator_user = db.execute(select(User).where(User.email == "alice@example.edu")).scalar_one()
     # Reviewees: Summarized after release; Observer policy
     # authored too — should NOT appear on the reviewer surface
     # (admin-side audience). peer_reviewer takes the baseline
@@ -2622,9 +2591,9 @@ def test_surface_visibility_policy_card_reflects_persisted_policy(
     assert "Responses released" in body
     # Two audience labels in the table — Observers omitted.
     flat = " ".join(body.split())
-    assert "<td style=\"padding: 4px 8px;\">You</td>" in flat
-    assert "<td style=\"padding: 4px 8px;\">Reviewees</td>" in flat
-    assert "<td style=\"padding: 4px 8px;\">Observers</td>" not in flat
+    assert '<td style="padding: 4px 8px;">You</td>' in flat
+    assert '<td style="padding: 4px 8px;">Reviewees</td>' in flat
+    assert '<td style="padding: 4px 8px;">Observers</td>' not in flat
     # The reviewee after-release cell shows the Summarized mode,
     # which the reviewer-facing vocabulary names "Anonymized
     # summaries" (operators see "summarized" as the encoded mode;
@@ -2717,9 +2686,11 @@ def test_an_excluded_group_member_keeps_the_groups_answers(
     db.commit()
 
     def _rating(assignment: Assignment) -> str | None:
-        rows = db.execute(
-            select(Response).where(Response.assignment_id == assignment.id)
-        ).scalars().all()
+        rows = (
+            db.execute(select(Response).where(Response.assignment_id == assignment.id))
+            .scalars()
+            .all()
+        )
         return {r.response_field.field_key: r.value for r in rows}.get("rating")
 
     rae_client = make_client(rae)
@@ -2746,11 +2717,14 @@ def test_an_excluded_group_member_keeps_the_groups_answers(
     # ignored. Neither writes anything.
     page = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
     digest = must_search(r'name="page_digest" value="([0-9a-f]+)"', page).group(1)
-    past_the_page = len(
-        db.execute(
-            select(Assignment.id).where(Assignment.session_id == review_session.id)
-        ).all()
-    ) + 1
+    past_the_page = (
+        len(
+            db.execute(
+                select(Assignment.id).where(Assignment.session_id == review_session.id)
+            ).all()
+        )
+        + 1
+    )
     forged = {f"response[{past_the_page}][rating]": "99", "page_digest": digest}
     for url in ("1/save", "submit?page=1"):
         refused = rae_client.post(
@@ -2772,9 +2746,7 @@ def test_an_excluded_group_member_keeps_the_groups_answers(
     # reviewer's group: a clear leaves its old answer alone.
     dan = by_reviewee["Dan"]
     field_id = db.execute(
-        select(Response.response_field_id).where(
-            Response.assignment_id == by_reviewee["Carol"].id
-        )
+        select(Response.response_field_id).where(Response.assignment_id == by_reviewee["Carol"].id)
     ).scalar_one()
     dan.include = False
     db.add(Response(assignment_id=dan.id, response_field_id=field_id, value="3"))
@@ -2795,9 +2767,7 @@ def test_an_excluded_group_member_keeps_the_groups_answers(
     # old answer is never stamped submitted on the reviewer's behalf.
     def _dan_submitted() -> bool:
         db.expire_all()
-        row = db.execute(
-            select(Response).where(Response.assignment_id == dan.id)
-        ).scalar_one()
+        row = db.execute(select(Response).where(Response.assignment_id == dan.id)).scalar_one()
         return row.submitted_at is not None
 
     rae_client.post(
@@ -2806,9 +2776,7 @@ def test_an_excluded_group_member_keeps_the_groups_answers(
         follow_redirects=False,
     )
     assert not _dan_submitted()
-    rae_client.post(
-        f"/me/sessions/{review_session.public_id}/recall", follow_redirects=False
-    )
+    rae_client.post(f"/me/sessions/{review_session.public_id}/recall", follow_redirects=False)
     assert not _dan_submitted()
     assert _rating(dan) == "3"
 
@@ -3009,8 +2977,7 @@ def test_generate_clears_a_group_a_new_member_joins(
         files={
             "file": (
                 "e.csv",
-                b"RevieweeName,RevieweeEmail,RevieweeTag1\n"
-                b"Carol,carol@example.edu,Team A\n",
+                b"RevieweeName,RevieweeEmail,RevieweeTag1\nCarol,carol@example.edu,Team A\n",
                 "text/csv",
             )
         },
@@ -3021,12 +2988,8 @@ def test_generate_clears_a_group_a_new_member_joins(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(operator, review_session.id)
 
-    rating = next(
-        f for f in group.response_fields if f.field_key == "rating"
-    )
-    [carol_row] = db.scalars(
-        select(Assignment).where(Assignment.instrument_id == group.id)
-    ).all()
+    rating = next(f for f in group.response_fields if f.field_key == "rating")
+    [carol_row] = db.scalars(select(Assignment).where(Assignment.instrument_id == group.id)).all()
     db.add(
         Response(
             assignment_id=carol_row.id,
@@ -3067,12 +3030,10 @@ def test_generate_clears_a_group_a_new_member_joins(
         .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
         .where(Reviewee.name == "Eve")
     ).scalar_one()
-    assert db.execute(
-        select(Response).where(Response.assignment_id == eve_row.id)
-    ).first() is None
-    assert db.execute(
-        select(Response).where(Response.assignment_id == carol_row.id)
-    ).first() is None
+    assert db.execute(select(Response).where(Response.assignment_id == eve_row.id)).first() is None
+    assert (
+        db.execute(select(Response).where(Response.assignment_id == carol_row.id)).first() is None
+    )
 
     dan_row = db.execute(
         select(Assignment)
@@ -3080,16 +3041,16 @@ def test_generate_clears_a_group_a_new_member_joins(
         .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
         .where(Reviewee.name == "Dan")
     ).scalar_one()
-    assert db.execute(
-        select(Response).where(Response.assignment_id == dan_row.id)
-    ).first() is None
+    assert db.execute(select(Response).where(Response.assignment_id == dan_row.id)).first() is None
 
-    event = db.execute(
-        select(AuditEvent)
-        .where(AuditEvent.event_type == "assignments.generated")
-        .where(AuditEvent.correlation_id == "b13")
-    ).scalars().all()
-    [group_event] = [
-        e for e in event if detail_of(e)["refs"]["instrument_id"] == group.id
-    ]
+    event = (
+        db.execute(
+            select(AuditEvent)
+            .where(AuditEvent.event_type == "assignments.generated")
+            .where(AuditEvent.correlation_id == "b13")
+        )
+        .scalars()
+        .all()
+    )
+    [group_event] = [e for e in event if detail_of(e)["refs"]["instrument_id"] == group.id]
     assert detail_of(group_event)["counts"]["group_responses_cleared"] == 1

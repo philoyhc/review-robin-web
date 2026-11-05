@@ -14,6 +14,7 @@ Round-trips the four columns on ``sessions``:
 
 JSON shape validation lands with each consumer Part.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -28,9 +29,7 @@ def _make_session(db: Session, code: str, **kwargs: object) -> ReviewSession:
     op = User(email=f"op-{code}@example.edu", display_name="Op")
     db.add(op)
     db.flush()
-    review_session = ReviewSession(
-        name=code.title(), code=code, created_by_user_id=op.id, **kwargs
-    )
+    review_session = ReviewSession(name=code.title(), code=code, created_by_user_id=op.id, **kwargs)
     db.add(review_session)
     db.flush()
     return review_session
@@ -53,9 +52,7 @@ def test_offset_columns_default_to_null(db: Session) -> None:
 
 
 def test_invite_offsets_round_trips_list(db: Session) -> None:
-    review_session = _make_session(
-        db, "invite-offsets", invite_offsets=["-P1D", "-PT2H"]
-    )
+    review_session = _make_session(db, "invite-offsets", invite_offsets=["-P1D", "-PT2H"])
 
     reread = db.execute(
         select(ReviewSession).where(ReviewSession.id == review_session.id)
@@ -85,16 +82,12 @@ def test_archive_offset_round_trips_duration(db: Session) -> None:
 
 def test_responses_release_until_round_trips_datetime(db: Session) -> None:
     until = datetime(2027, 5, 1, 12, 0, tzinfo=UTC)
-    review_session = _make_session(
-        db, "release-until-dt", responses_release_until=until
-    )
+    review_session = _make_session(db, "release-until-dt", responses_release_until=until)
 
     reread = db.execute(
         select(ReviewSession).where(ReviewSession.id == review_session.id)
     ).scalar_one()
-    assert _naive_utc(reread.responses_release_until) == datetime(
-        2027, 5, 1, 12, 0
-    )
+    assert _naive_utc(reread.responses_release_until) == datetime(2027, 5, 1, 12, 0)
 
 
 def test_offset_columns_flip_persists(db: Session) -> None:
@@ -112,9 +105,7 @@ def test_offset_columns_flip_persists(db: Session) -> None:
     assert review_session.invite_offsets == ["-P1D"]
     assert review_session.reminder_offsets == ["-PT4H"]
     assert review_session.archive_offset == "P30D"
-    assert _naive_utc(review_session.responses_release_until) == datetime(
-        2027, 7, 7, 12, 0
-    )
+    assert _naive_utc(review_session.responses_release_until) == datetime(2027, 7, 7, 12, 0)
 
     review_session.invite_offsets = None
     review_session.reminder_offsets = None
@@ -133,9 +124,7 @@ def test_max_offset_string_fits(db: Session) -> None:
     representation (``-PT240H`` = 7 chars) with comfortable headroom.
     """
 
-    review_session = _make_session(
-        db, "max-offset", archive_offset="-PT240H"
-    )
+    review_session = _make_session(db, "max-offset", archive_offset="-PT240H")
 
     reread = db.execute(
         select(ReviewSession).where(ReviewSession.id == review_session.id)

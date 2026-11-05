@@ -16,6 +16,7 @@ The resolver / mutator semantics themselves are covered by
 ``tests/integration/test_field_labels_resolver.py`` — this file
 covers only the route + template wiring.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -42,9 +43,7 @@ def _make_session(client: TestClient, db: Session, code: str) -> ReviewSession:
 
 
 def _actor(db: Session) -> User:
-    return db.execute(
-        select(User).where(User.email == "alice@example.edu")
-    ).scalar_one()
+    return db.execute(select(User).where(User.email == "alice@example.edu")).scalar_one()
 
 
 def _rows(db: Session, session_id: int) -> list[SessionFieldLabel]:
@@ -60,9 +59,7 @@ def _rows(db: Session, session_id: int) -> list[SessionFieldLabel]:
 # ── Reviewers route ──────────────────────────────────────────────────────
 
 
-def test_reviewers_save_upserts_three_slots(
-    client: TestClient, db: Session
-) -> None:
+def test_reviewers_save_upserts_three_slots(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, "fle-rev")
     response = client.post(
         f"/operator/sessions/{review_session.public_id}/reviewers/field-labels",
@@ -76,8 +73,7 @@ def test_reviewers_save_upserts_three_slots(
     # keeps the landing on the card. Asserted whole rather than with
     # `in`, so dropping either part fails here.
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-        "?unlocked=1#roster-card"
+        f"/operator/sessions/{review_session.public_id}/reviewers?unlocked=1#roster-card"
     )
     rows = _rows(db, review_session.id)
     assert [(r.source_type, r.source_field, r.label) for r in rows] == [
@@ -86,9 +82,7 @@ def test_reviewers_save_upserts_three_slots(
     ]
 
 
-def test_reviewers_save_clears_empty_slots(
-    client: TestClient, db: Session
-) -> None:
+def test_reviewers_save_clears_empty_slots(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, "fle-rev-clear")
     actor = _actor(db)
     field_labels.upsert(
@@ -109,9 +103,7 @@ def test_reviewers_save_clears_empty_slots(
     assert _rows(db, review_session.id) == []
 
 
-def test_reviewers_save_emits_audit_set_per_slot(
-    client: TestClient, db: Session
-) -> None:
+def test_reviewers_save_emits_audit_set_per_slot(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, "fle-rev-audit")
     client.post(
         f"/operator/sessions/{review_session.public_id}/reviewers/field-labels",
@@ -174,9 +166,7 @@ def test_reviewers_save_still_works_while_editable(
     assert [r.label for r in _rows(db, review_session.id)] == ["Cohort"], state
 
 
-def test_reviewers_page_renders_editor_when_not_ready(
-    client: TestClient, db: Session
-) -> None:
+def test_reviewers_page_renders_editor_when_not_ready(client: TestClient, db: Session) -> None:
     """Markup presence, which since 19P.1 rung 3a is no longer the same
     as visibility on this page: on an editable session the editor
     renders inside the Unlock panel, and that panel ships `hidden`. So
@@ -186,14 +176,9 @@ def test_reviewers_page_renders_editor_when_not_ready(
     open / close behavior is checked in Chromium.
     """
     review_session = _make_session(client, db, "fle-rev-render")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
     assert "Reviewer tag labels" in body
-    assert (
-        f'action="/operator/sessions/{review_session.public_id}/reviewers/field-labels"'
-        in body
-    )
+    assert f'action="/operator/sessions/{review_session.public_id}/reviewers/field-labels"' in body
     assert "Save labels" in body
     assert 'name="tag_1"' in body
     assert 'name="tag_2"' in body
@@ -205,8 +190,8 @@ def test_reviewers_page_renders_editor_when_not_ready(
     assert 'class="btn secondary"' in body
     assert "data-field-labels-cancel" in body
     assert "data-field-labels-save" in body
-    assert 'disabled>Cancel' in body
-    assert 'disabled>Save labels' in body
+    assert "disabled>Cancel" in body
+    assert "disabled>Save labels" in body
 
 
 @pytest.mark.parametrize("state", ("ready", "expired", "archived"))
@@ -220,9 +205,7 @@ def test_reviewers_page_renders_no_editor_in_every_locked_state(
     review_session = _make_session(client, db, f"fle-ro-{state[:4]}")
     review_session.status = state
     db.flush()
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
     assert "Reviewer tag labels" not in body, state
     assert 'name="tag_1"' not in body, state
     assert "Save labels" not in body, state
@@ -237,9 +220,7 @@ def test_reviewers_page_renders_no_editor_in_every_locked_state(
 # ignored if submitted.
 
 
-def test_reviewees_save_upserts_three_tag_slots(
-    client: TestClient, db: Session
-) -> None:
+def test_reviewees_save_upserts_three_tag_slots(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, "fle-revee")
     response = client.post(
         f"/operator/sessions/{review_session.public_id}/reviewees/field-labels",
@@ -283,13 +264,9 @@ def test_reviewees_save_silently_ignores_retired_identity_slots(
     assert pairs == {("tag_1", "Lab section")}
 
 
-def test_reviewees_page_renders_one_row_three_inputs(
-    client: TestClient, db: Session
-) -> None:
+def test_reviewees_page_renders_one_row_three_inputs(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, "fle-revee-render")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewees"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewees").text
     assert "Reviewee tag labels" in body
     # Three inputs total — the three tag slots.
     for name in ("tag_1", "tag_2", "tag_3"):
@@ -302,9 +279,7 @@ def test_reviewees_page_renders_one_row_three_inputs(
 # ── Relationships route (pair_context, "1" / "2" / "3") ──────────────────
 
 
-def test_relationships_save_upserts_pair_context_slots(
-    client: TestClient, db: Session
-) -> None:
+def test_relationships_save_upserts_pair_context_slots(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, "fle-rel")
     response = client.post(
         f"/operator/sessions/{review_session.public_id}/relationships/field-labels",
@@ -323,13 +298,9 @@ def test_relationships_save_upserts_pair_context_slots(
     ]
 
 
-def test_relationships_page_renders_pair_context_editor(
-    client: TestClient, db: Session
-) -> None:
+def test_relationships_page_renders_pair_context_editor(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, "fle-rel-render")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/relationships"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/relationships").text
     assert "Pair-context labels" in body
     assert 'name="slot_1"' in body
     assert 'name="slot_2"' in body
@@ -341,9 +312,7 @@ def test_relationships_page_renders_pair_context_editor(
 # ── Validation invalidation hook ────────────────────────────────────────
 
 
-def test_save_invalidates_validated_session(
-    client: TestClient, db: Session
-) -> None:
+def test_save_invalidates_validated_session(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, "fle-invalidate")
     # Forge the session into ``validated``; the upsert flow calls
     # ``lifecycle.invalidate_if_validated`` so the status flips back

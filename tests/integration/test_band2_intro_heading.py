@@ -4,6 +4,7 @@ one-instrument session, the description in the title's place when there
 is no short label, and no blank subtitle line when there is no
 description. The browser's copy of the rule, ``newModelIntroHeading``,
 is held to the same answers by ``test_inline_scripts_parse.py``."""
+
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
@@ -26,9 +27,7 @@ def _name_card(client: TestClient, session_id: int, instrument_id: int) -> str:
 
 
 def _only_instrument(db: Session, session_id: int) -> Instrument:
-    return db.execute(
-        select(Instrument).where(Instrument.session_id == session_id)
-    ).scalar_one()
+    return db.execute(select(Instrument).where(Instrument.session_id == session_id)).scalar_one()
 
 
 def test_one_instrument_has_no_position_prefix(client: TestClient, db: Session) -> None:
@@ -59,9 +58,7 @@ def test_one_instrument_without_a_label_titles_its_description(
     assert "data-intro-description-view data-lock-only hidden></p>" in card
 
 
-def test_one_instrument_with_neither_is_an_empty_card(
-    client: TestClient, db: Session
-) -> None:
+def test_one_instrument_with_neither_is_an_empty_card(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="b2-head-none")
     instrument = _only_instrument(db, review_session.id)
     instrument.short_label = None

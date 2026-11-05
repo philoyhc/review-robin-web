@@ -13,6 +13,7 @@ dependencies stamp ``request.state.display_timezone``; the
 ``date_filters`` context processor injects it; the context-aware
 ``format_datetime`` filter resolves the zone at render time.
 """
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -36,28 +37,21 @@ from ._lookups import must_get
 from ._validated import validate_session
 
 
-def _create_session(
-    client: TestClient, db: Session, *, code: str = "tz-demo"
-) -> ReviewSession:
+def _create_session(client: TestClient, db: Session, *, code: str = "tz-demo") -> ReviewSession:
     client.post(
         "/operator/sessions",
         data={"name": code.title(), "code": code},
         follow_redirects=False,
     )
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
-def _set_session_timezone(
-    client: TestClient, session: ReviewSession, zone: str, **extra: str
-):
+def _set_session_timezone(client: TestClient, session: ReviewSession, zone: str, **extra: str):
     """Post the Edit Session Details form to set the display timezone.
     The standalone /timezone route was retired in 18B PR 5 — the
     timezone is now a field of the (lifecycle-gated) edit form, so
     this only works while the session is draft / validated."""
-    data = {"name": session.name, "code": session.code,
-            "display_timezone": zone}
+    data = {"name": session.name, "code": session.code, "display_timezone": zone}
     data.update(extra)
     return client.post(
         f"/operator/sessions/{session.public_id}/config",
@@ -66,17 +60,13 @@ def _set_session_timezone(
     )
 
 
-def test_lobby_renders_in_utc_before_any_preference(
-    client: TestClient, db: Session
-) -> None:
+def test_lobby_renders_in_utc_before_any_preference(client: TestClient, db: Session) -> None:
     session = _create_session(client, db)
     body = client.get("/operator/sessions").text
     assert format_datetime(session.created_at, "UTC") in body
 
 
-def test_lobby_renders_in_operator_zone_after_save(
-    client: TestClient, db: Session
-) -> None:
+def test_lobby_renders_in_operator_zone_after_save(client: TestClient, db: Session) -> None:
     session = _create_session(client, db)
 
     client.post(
@@ -92,9 +82,7 @@ def test_lobby_renders_in_operator_zone_after_save(
     assert format_datetime(session.created_at, "UTC") not in body
 
 
-def test_lobby_shows_session_timezone_column(
-    client: TestClient, db: Session
-) -> None:
+def test_lobby_shows_session_timezone_column(client: TestClient, db: Session) -> None:
     """The lobby names each row's resolved session zone in a Timezone
     column as a compact GMT-offset label, with the GMT-offset + raw
     IANA id in the title tooltip — the timestamp cells stay in the
@@ -104,18 +92,13 @@ def test_lobby_shows_session_timezone_column(
 
     body = client.get("/operator/sessions").text
     assert 'data-sort-key="timezone"' in body
-    assert (
-        '<abbr class="tz-gmt" title="GMT+8 Asia/Singapore">GMT+8</abbr>'
-        in body
-    )
+    assert '<abbr class="tz-gmt" title="GMT+8 Asia/Singapore">GMT+8</abbr>' in body
 
 
 # ── PR 3 — per-session timezone override ─────────────────────────────────
 
 
-def test_new_session_stamped_with_operator_default(
-    client: TestClient, db: Session
-) -> None:
+def test_new_session_stamped_with_operator_default(client: TestClient, db: Session) -> None:
     """A new session captures the creating operator's default zone at
     create time (a snapshot, not a live link)."""
     client.post(
@@ -159,9 +142,7 @@ def test_create_session_with_explicit_timezone_and_deadline(
     assert format_datetime(session.deadline, "UTC") == "2026-06-02 09:00"
 
 
-def test_create_page_renders_timezone_field(
-    client: TestClient, db: Session
-) -> None:
+def test_create_page_renders_timezone_field(client: TestClient, db: Session) -> None:
     body = client.get("/operator/sessions/new").text
     assert 'name="display_timezone"' in body
     # The datalist options carry the GMT-prefixed form so the
@@ -171,9 +152,7 @@ def test_create_page_renders_timezone_field(
     assert "GMT+8 Asia/Singapore" in body
 
 
-def test_session_timezone_override_persists_and_audits(
-    client: TestClient, db: Session
-) -> None:
+def test_session_timezone_override_persists_and_audits(client: TestClient, db: Session) -> None:
     session = _create_session(client, db, code="tz-ov")
     response = _set_session_timezone(client, session, "America/New_York")
     assert response.status_code == 303
@@ -182,9 +161,7 @@ def test_session_timezone_override_persists_and_audits(
     assert session.display_timezone == "America/New_York"
 
     event = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "session.display_timezone_set"
-        )
+        select(AuditEvent).where(AuditEvent.event_type == "session.display_timezone_set")
     ).scalar_one()
     # Stamped "UTC" at create (operator had no default), now New York.
     assert event.detail is not None
@@ -195,32 +172,24 @@ def test_session_timezone_override_persists_and_audits(
     assert event.session_id == session.id
 
 
-def test_session_timezone_rejects_unknown_zone(
-    client: TestClient, db: Session
-) -> None:
+def test_session_timezone_rejects_unknown_zone(client: TestClient, db: Session) -> None:
     session = _create_session(client, db, code="tz-bad")
     response = _set_session_timezone(client, session, "Mars/Base")
     assert response.status_code == 422
 
 
-def test_edit_deadline_interpreted_in_session_zone(
-    client: TestClient, db: Session
-) -> None:
+def test_edit_deadline_interpreted_in_session_zone(client: TestClient, db: Session) -> None:
     """The Edit form's deadline picker is wall-clock in the submitted
     timezone (18B PR 5)."""
     session = _create_session(client, db, code="tz-edit-dl")
-    _set_session_timezone(
-        client, session, "Asia/Singapore", deadline="2026-06-02T17:00"
-    )
+    _set_session_timezone(client, session, "Asia/Singapore", deadline="2026-06-02T17:00")
     db.refresh(session)
     assert session.display_timezone == "Asia/Singapore"
     # 17:00 Singapore (+08) is the 09:00 UTC instant.
     assert format_datetime(session.deadline, "UTC") == "2026-06-02 09:00"
 
 
-def test_edit_page_renders_timezone_field(
-    client: TestClient, db: Session
-) -> None:
+def test_edit_page_renders_timezone_field(client: TestClient, db: Session) -> None:
     session = _create_session(client, db, code="tz-card")
     body = client.get(f"/operator/sessions/{session.public_id}?editing=1").text
     # The timezone is a field of the Session Home config card's edit
@@ -230,9 +199,7 @@ def test_edit_page_renders_timezone_field(
     assert '<option value="GMT+8 Asia/Singapore">' in body
 
 
-def test_session_detail_renders_in_override_zone(
-    client: TestClient, db: Session
-) -> None:
+def test_session_detail_renders_in_override_zone(client: TestClient, db: Session) -> None:
     """A session-scoped page localises timestamps to the session's
     own override zone — not the viewing operator's default. The End
     (deadline) datetime on the #session-config card is the localised
@@ -271,9 +238,7 @@ def test_session_with_null_timezone_resolves_to_operator_default(
     assert format_datetime(session.deadline, "Asia/Singapore") in body
 
 
-def test_session_detail_shows_timezone_label(
-    client: TestClient, db: Session
-) -> None:
+def test_session_detail_shows_timezone_label(client: TestClient, db: Session) -> None:
     """The Session Details card's Timezone item shows the resolved
     zone as a GMT-offset + raw IANA id."""
     session = _create_session(client, db, code="tz-label")
@@ -296,9 +261,7 @@ def _build_active_session_with_reviewer(
         data={"name": code.title(), "code": code},
         follow_redirects=False,
     )
-    session = db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    session = db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
     operator.post(
         f"/operator/sessions/{session.public_id}/reviewers/import",
         files={
@@ -326,10 +289,7 @@ def _build_active_session_with_reviewer(
         files={
             "file": (
                 "rel.csv",
-                (
-                    f"ReviewerEmail,RevieweeEmail\n"
-                    f"{reviewer_email},carol@example.edu\n"
-                ).encode(),
+                (f"ReviewerEmail,RevieweeEmail\n{reviewer_email},carol@example.edu\n").encode(),
                 "text/csv",
             )
         },
@@ -423,9 +383,7 @@ def test_reviewer_dashboard_shows_deadline_with_timezone_label(
 # ── Timezone-sample preview on the config cards ──────────────────────────
 
 
-def test_settings_card_renders_timezone_sample(
-    client: TestClient, db: Session
-) -> None:
+def test_settings_card_renders_timezone_sample(client: TestClient, db: Session) -> None:
     body = client.get("/operator/settings").text
     assert 'id="tz-sample"' in body
     assert 'id="tz-sample-zone"' in body
@@ -436,9 +394,7 @@ def test_settings_card_renders_timezone_sample(
     assert 'timeZoneName: "shortOffset"' in body
 
 
-def test_settings_card_shows_a_bare_utc_once(
-    client: TestClient, db: Session
-) -> None:
+def test_settings_card_shows_a_bare_utc_once(client: TestClient, db: Session) -> None:
     """The sample line names the zone as ``gmt_offset_zone_label`` does:
     ``GMT+8 Asia/Singapore``, but a bare ``UTC`` once, not ``UTC UTC``
     (findings 2026-10-03 C3)."""
@@ -519,19 +475,12 @@ def test_config_save_keeps_datetimes_in_the_repeated_dst_hour(
     assert updated.deadline is not None
     assert updated.deadline.replace(tzinfo=UTC) == deadline
     assert updated.responses_release_at is not None
-    assert (
-        updated.responses_release_at.replace(tzinfo=UTC) == release_at
-    )
+    assert updated.responses_release_at.replace(tzinfo=UTC) == release_at
     assert updated.responses_release_until is not None
-    assert (
-        updated.responses_release_until.replace(tzinfo=UTC)
-        == release_until
-    )
+    assert updated.responses_release_until.replace(tzinfo=UTC) == release_until
 
 
-def test_config_rename_keeps_a_schedule_that_has_aged(
-    client: TestClient, db: Session
-) -> None:
+def test_config_rename_keeps_a_schedule_that_has_aged(client: TestClient, db: Session) -> None:
     """findings B4: a draft whose Start has passed, with invite and
     reminder offsets that now resolve into the past, still takes a
     rename. The unedited boxes are kept as stored rather than re-checked
@@ -576,9 +525,7 @@ def test_config_rename_keeps_a_schedule_that_has_aged(
     assert updated.reminder_offsets == ["-P1D"]
 
 
-def test_config_still_refuses_an_edited_start_in_the_past(
-    client: TestClient, db: Session
-) -> None:
+def test_config_still_refuses_an_edited_start_in_the_past(client: TestClient, db: Session) -> None:
     """The B4 exemption covers only a box left as stored: typing a new
     Start in the past is still refused by the lead-time floor."""
     from datetime import timedelta
@@ -603,9 +550,7 @@ def test_config_still_refuses_an_edited_start_in_the_past(
     assert response.status_code == 422
 
 
-def _post_aged_schedule(
-    client: TestClient, db: Session, code: str, *, stored: str, submitted: str
-):
+def _post_aged_schedule(client: TestClient, db: Session, code: str, *, stored: str, submitted: str):
     """A draft whose Start passed a day ago, invite offsets ``stored``,
     re-saved with the Start box untouched and ``submitted`` offsets."""
     from datetime import timedelta
@@ -632,9 +577,7 @@ def _post_aged_schedule(
     )
 
 
-def test_config_refuses_a_new_offset_on_an_aged_start(
-    client: TestClient, db: Session
-) -> None:
+def test_config_refuses_a_new_offset_on_an_aged_start(client: TestClient, db: Session) -> None:
     """The B4 exemption is per stored entry: an offset typed now on an
     aged Start resolves into the past and meets the floor."""
     response = _post_aged_schedule(
@@ -650,16 +593,12 @@ def test_config_still_checks_a_stored_offset_beyond_the_floor(
     """Only the lead-time floor is waived for a stored entry: one that
     breaks another rule (a positive invite offset, which a Settings
     import can write) is still refused on the next Save."""
-    response = _post_aged_schedule(
-        client, db, "tz-aged-bad-sign", stored="P1D", submitted="P1D"
-    )
+    response = _post_aged_schedule(client, db, "tz-aged-bad-sign", stored="P1D", submitted="P1D")
     assert response.status_code == 422
     assert "fires at or after Start" in response.text
 
 
-def test_config_rechecks_stored_offsets_when_start_moves(
-    client: TestClient, db: Session
-) -> None:
+def test_config_rechecks_stored_offsets_when_start_moves(client: TestClient, db: Session) -> None:
     """The exemption holds only while the anchor is unedited: moving
     Start re-checks every stored invite offset against the floor."""
     from datetime import timedelta
@@ -691,15 +630,11 @@ def test_config_rechecks_stored_offsets_when_start_moves(
     assert "leave more lead time" in response.text
 
 
-def test_config_refuses_a_duplicate_of_an_aged_offset(
-    client: TestClient, db: Session
-) -> None:
+def test_config_refuses_a_duplicate_of_an_aged_offset(client: TestClient, db: Session) -> None:
     """Exemption is by stored position: a second copy of an aged offset
     sits at an index that held nothing and meets the floor (Codex on
     #2870)."""
-    response = _post_aged_schedule(
-        client, db, "tz-aged-dup", stored="-P1D", submitted="-P1D, -P1D"
-    )
+    response = _post_aged_schedule(client, db, "tz-aged-dup", stored="-P1D", submitted="-P1D, -P1D")
     assert response.status_code == 422
     assert "leave more lead time" in response.text
 
@@ -741,9 +676,7 @@ def test_config_refuses_a_duplicate_of_an_aged_reminder_offset(
     assert "leave more lead time" in response.text
 
 
-def test_config_refuses_reordered_aged_offsets(
-    client: TestClient, db: Session
-) -> None:
+def test_config_refuses_reordered_aged_offsets(client: TestClient, db: Session) -> None:
     """Exemption is by position: the observer tracks fired offsets by
     index, so a stored entry moved to another position is new there and
     meets the floor (Codex on #2870)."""
@@ -778,9 +711,7 @@ def test_config_refuses_reordered_aged_offsets(
     assert "leave more lead time" in response.text
 
 
-def test_config_refuses_reordered_aged_reminder_offsets(
-    client: TestClient, db: Session
-) -> None:
+def test_config_refuses_reordered_aged_reminder_offsets(client: TestClient, db: Session) -> None:
     """The reminder parser's positional match: with End unedited,
     swapping two stored reminder offsets that now resolve into the past
     is refused."""
@@ -920,12 +851,8 @@ def test_config_zone_change_reads_old_text_typed_back_as_an_edit(
     from app.services.date_formatting import format_datetime_local
 
     session, stored = _l8_session(client, db, "tz-l8-retyped")
-    boxes = {
-        f: format_datetime_local(v, "America/New_York") for f, v in stored.items()
-    }
-    old_text = format_datetime_local(
-        stored["responses_release_until"], "Asia/Singapore"
-    )
+    boxes = {f: format_datetime_local(v, "America/New_York") for f, v in stored.items()}
+    old_text = format_datetime_local(stored["responses_release_until"], "Asia/Singapore")
     boxes["responses_release_until"] = old_text
     boxes["tz_converted"] = ",".join(stored)
 

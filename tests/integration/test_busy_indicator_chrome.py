@@ -24,8 +24,7 @@ def test_operator_page_carries_the_bar_hidden_and_the_status_region(
     # Hidden until armed: a page that renders with the bar showing
     # would claim to be loading forever.
     assert (
-        '<div class="rrw-busy" data-rrw-busy-bar hidden>'
-        '<div class="rrw-busy-fill"></div></div>'
+        '<div class="rrw-busy" data-rrw-busy-bar hidden><div class="rrw-busy-fill"></div></div>'
     ) in body
     # The live region is present from first paint — one created and
     # populated in the same tick is not reliably announced.

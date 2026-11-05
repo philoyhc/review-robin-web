@@ -88,10 +88,7 @@ def test_observer_malformed_cohort_rule_json_rejected(db: Session) -> None:
 
 
 def test_observer_invalid_cohort_rule_shape_rejected(db: Session) -> None:
-    bad = (
-        '{"combinator":"AND","rules":'
-        '[{"field":"nope","op":"IS","operand_value":"x"}]}'
-    )
+    bad = '{"combinator":"AND","rules":[{"field":"nope","op":"IS","operand_value":"x"}]}'
     rows = [HEADER, ("obs@example.edu", "Obs", "", "active", bad)]
     result = parse_observer_csv(_csv_bytes(rows))
     assert result.rows == []

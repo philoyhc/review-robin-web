@@ -99,13 +99,14 @@ def _rosters(
 ) -> tuple[str, str]:
     operator = make_client(alice)
     review_session = _operator_creates_session_with_pair(
-        operator, db, code=code,
-        reviewer_email="rae@example.edu", reviewee_ident="carol@example.edu",
+        operator,
+        db,
+        code=code,
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
     )
     for model in (Reviewer, Reviewee):
-        row = db.execute(
-            select(model).where(model.session_id == review_session.id)
-        ).scalar_one()
+        row = db.execute(select(model).where(model.session_id == review_session.id)).scalar_one()
         row.profile_link = value
     db.commit()
     base = f"/operator/sessions/{review_session.public_id}"
@@ -151,8 +152,11 @@ def _surface(
 ) -> str:
     operator = make_client(alice)
     review_session = _operator_creates_session_with_pair(
-        operator, db, code=code,
-        reviewer_email="rae@example.edu", reviewee_ident="carol@example.edu",
+        operator,
+        db,
+        code=code,
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
     )
     reviewee = db.execute(
         select(Reviewee).where(Reviewee.session_id == review_session.id)
@@ -161,10 +165,16 @@ def _surface(
     instrument = db.execute(
         select(Instrument).where(Instrument.session_id == review_session.id)
     ).scalar_one()
-    db.add(InstrumentDisplayField(
-        instrument_id=instrument.id, label="", source_type="reviewee",
-        source_field="profile_link", order=10, visible=True,
-    ))
+    db.add(
+        InstrumentDisplayField(
+            instrument_id=instrument.id,
+            label="",
+            source_type="reviewee",
+            source_field="profile_link",
+            order=10,
+            visible=True,
+        )
+    )
     db.commit()
     _activate(operator, db, review_session)
     response = make_client(rae_user).get(f"/me/sessions/{review_session.public_id}")
@@ -223,20 +233,30 @@ def _pages(
     )
     operator = make_client(alice)
     review_session = _seed_and_activate(operator, db, code=code)
-    instrument = db.execute(
-        select(Instrument)
-        .where(Instrument.session_id == review_session.id)
-        .order_by(Instrument.order, Instrument.id)
-    ).scalars().first()
+    instrument = (
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.order, Instrument.id)
+        )
+        .scalars()
+        .first()
+    )
     assert instrument is not None
     for reviewee in db.execute(
         select(Reviewee).where(Reviewee.session_id == review_session.id)
     ).scalars():
         reviewee.profile_link = value
-    db.add(InstrumentDisplayField(
-        instrument_id=instrument.id, label="", source_type="reviewee",
-        source_field="profile_link", order=10, visible=True,
-    ))
+    db.add(
+        InstrumentDisplayField(
+            instrument_id=instrument.id,
+            label="",
+            source_type="reviewee",
+            source_field="profile_link",
+            order=10,
+            visible=True,
+        )
+    )
     db.commit()
     _seed_submitted_responses(db, review_session, comments_value="Solid work.")
     _enable_reviewee_after_release_raw(
@@ -306,8 +326,13 @@ def test_the_reviewer_card_masks_a_value_that_is_not_an_address(
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
     body = _results(
-        db, alice, carol, make_client,
-        code="pv-card-text", level="name_email_profile", link=TEXT,
+        db,
+        alice,
+        carol,
+        make_client,
+        code="pv-card-text",
+        level="name_email_profile",
+        link=TEXT,
     )
     assert _masked(TEXT) in body
     assert TEXT not in _hrefs(body)
@@ -320,8 +345,13 @@ def test_the_reviewer_card_shows_nothing_below_the_profile_level(
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
     body = _results(
-        db, alice, carol, make_client,
-        code="pv-card-hidden", level="name_email", link=TEXT,
+        db,
+        alice,
+        carol,
+        make_client,
+        code="pv-card-hidden",
+        level="name_email",
+        link=TEXT,
     )
     assert TEXT not in body
 
@@ -332,9 +362,7 @@ def test_the_reviewer_card_shows_nothing_below_the_profile_level(
 def test_the_download_carries_a_value_that_is_not_an_address(
     client: TestClient, db: Session
 ) -> None:
-    header, row = _download(
-        client, db, code="pv-csv-text", level="name_email_profile", link=TEXT
-    )
+    header, row = _download(client, db, code="pv-csv-text", level="name_email_profile", link=TEXT)
     assert header[2] == "ReviewerProfileLink"
     assert row[2] == TEXT
 

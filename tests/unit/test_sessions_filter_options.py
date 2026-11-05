@@ -65,9 +65,7 @@ def test_a_name_equal_to_its_code_collapses_to_one_option() -> None:
 def test_options_are_sorted_case_insensitively() -> None:
     """Otherwise every lower-case name sorts below every upper-case one,
     which reads as two lists rather than one."""
-    options = sessions_filter_options(
-        [_s("beta", "b-1"), _s("Alpha", "a-1")], []
-    )
+    options = sessions_filter_options([_s("beta", "b-1"), _s("Alpha", "a-1")], [])
 
     assert options == ["a-1", "Alpha", "b-1", "beta"]
 

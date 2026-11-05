@@ -55,9 +55,7 @@ RETIRED_TERMS = ("Primary Outline", "Alert Outline", "Danger Outline")
 # one does, this fires on a true line and the answer is `TERM_ESCAPE` on
 # it, not a narrower pattern: a regex cannot tell the lobby's card from
 # a roster's, and a gate that guessed would be worse than one that asks.
-RETIRED_PATTERNS = (
-    ("Search card", re.compile(r"search[-\s]card", re.IGNORECASE)),
-)
+RETIRED_PATTERNS = (("Search card", re.compile(r"search[-\s]card", re.IGNORECASE)),)
 # Deliberate historical references carry this marker on the same line.
 TERM_ESCAPE = "<!-- retired-term-ok -->"
 # A whole document that is a historical record rather than a live contract
@@ -163,7 +161,7 @@ def _root_blocks() -> tuple[str, str]:
                     return css[start:i]
         raise AssertionError(f"unclosed block for {selector}")
 
-    return block(":root {"), block(''':root[data-theme="dark"]''')
+    return block(":root {"), block(""":root[data-theme="dark"]""")
 
 
 def test_every_primitive_is_catalogued_with_its_shipped_value() -> None:
@@ -222,7 +220,6 @@ def test_the_token_count_line_matches_the_stylesheet() -> None:
         f"spec claims {claim.group(1)} primitives / {claim.group(2)} semantic; "
         f"base.html declares {primitives} / {semantic}"
     )
-
 
 
 # --- Visibility grid: the constant is the source, spec 3.1 the transcript ---
@@ -285,9 +282,7 @@ def _documented_grid() -> dict[tuple[str, str], frozenset[str | None]]:
         audience = cells[0].strip("`*")
         for window, cell in zip(windows, cells[1:]):
             modes = {t for t in re.findall(r"`([A-Za-z_]+)`", cell) if t in GRID_VOCABULARY}
-            grid[(audience, window)] = frozenset(
-                None if m == "None" else m for m in modes
-            )
+            grid[(audience, window)] = frozenset(None if m == "None" else m for m in modes)
     return grid
 
 
@@ -378,11 +373,12 @@ def test_every_semantic_token_is_catalogued_with_its_shipped_mapping() -> None:
                 wrong.append(f"{token} ({theme}): base.html {shipped_prim} vs spec {prim}")
             elif prims.get(shipped_prim, "").lower() != hexv.lower():
                 wrong.append(
-                    f"{token} ({theme}): {shipped_prim} is "
-                    f"{prims.get(shipped_prim)} vs spec {hexv}"
+                    f"{token} ({theme}): {shipped_prim} is {prims.get(shipped_prim)} vs spec {hexv}"
                 )
 
-    assert not wrong, "catalogued Tier-2 mapping differs from the shipped one:\n  " + "\n  ".join(wrong)
+    assert not wrong, "catalogued Tier-2 mapping differs from the shipped one:\n  " + "\n  ".join(
+        wrong
+    )
 
 
 # --------------------------------------------------------------------------- #

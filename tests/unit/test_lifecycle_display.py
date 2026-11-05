@@ -20,9 +20,7 @@ from app.services.lifecycle_display import (
         ("archived", "Archived"),
     ],
 )
-def test_lifecycle_display_label_for_known_states(
-    enum_value: str, expected: str
-) -> None:
+def test_lifecycle_display_label_for_known_states(enum_value: str, expected: str) -> None:
     assert lifecycle_display_label(enum_value) == expected
 
 

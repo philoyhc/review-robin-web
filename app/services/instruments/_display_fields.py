@@ -71,19 +71,19 @@ _CSV_COL_TO_SOURCE: dict[str, tuple[str, str]] = {
 # always sit at positions 1 and 2 (orders 0 and 1) on every
 # instrument. Their visible flag is locked-checked, their order
 # is locked, and they cannot be deleted.
-_LOCKED_DISPLAY_SOURCES: frozenset[tuple[str, str]] = frozenset({
-    ("reviewee", "name"),
-    ("reviewee", "email_or_identifier"),
-})
+_LOCKED_DISPLAY_SOURCES: frozenset[tuple[str, str]] = frozenset(
+    {
+        ("reviewee", "name"),
+        ("reviewee", "email_or_identifier"),
+    }
+)
 
 _LOCKED_DISPLAY_ORDER: dict[tuple[str, str], int] = {
     ("reviewee", "name"): 0,
     ("reviewee", "email_or_identifier"): 1,
 }
 
-_VALID_DISPLAY_SOURCES: frozenset[tuple[str, str]] = frozenset(
-    _DEFAULT_DISPLAY_LABELS.keys()
-)
+_VALID_DISPLAY_SOURCES: frozenset[tuple[str, str]] = frozenset(_DEFAULT_DISPLAY_LABELS.keys())
 
 
 def is_locked_display_source(source_type: str, source_field: str) -> bool:
@@ -137,9 +137,7 @@ def display_field_label(
         # Local import to avoid a circular at module load.
         from app.services import field_labels
 
-        return field_labels.resolve(
-            session, field.source_type, field.source_field
-        )
+        return field_labels.resolve(session, field.source_type, field.source_field)
     inferred = _DEFAULT_DISPLAY_LABELS.get((field.source_type, field.source_field))
     if inferred is not None:
         return inferred
@@ -169,9 +167,7 @@ def display_field_value(
     if field.source_type == "pair_context":
         if pair_context_lookup is None:
             return None
-        relationship = pair_context_lookup.get(
-            (assignment.reviewer_id, assignment.reviewee_id)
-        )
+        relationship = pair_context_lookup.get((assignment.reviewer_id, assignment.reviewee_id))
         if relationship is None:
             return None
         if getattr(relationship, "status", None) != "active":
@@ -196,9 +192,7 @@ def display_field_value(
     return None
 
 
-def _ordered_display_fields(
-    db: Session, instrument: Instrument
-) -> list[InstrumentDisplayField]:
+def _ordered_display_fields(db: Session, instrument: Instrument) -> list[InstrumentDisplayField]:
     return list(
         db.execute(
             select(InstrumentDisplayField)
@@ -244,9 +238,7 @@ def add_display_field(
     lifecycle.require_editable(db, instrument.session)
     pair = (source_type, source_field)
     if pair not in _VALID_DISPLAY_SOURCES:
-        raise DisplaySourceError(
-            f"Unknown display-field source: {source_type}.{source_field}"
-        )
+        raise DisplaySourceError(f"Unknown display-field source: {source_type}.{source_field}")
 
     lifecycle.invalidate_if_validated(
         db,
@@ -256,12 +248,9 @@ def add_display_field(
     )
 
     existing = _ordered_display_fields(db, instrument)
-    if any(
-        (f.source_type, f.source_field) == pair for f in existing
-    ):
+    if any((f.source_type, f.source_field) == pair for f in existing):
         raise DisplaySourceError(
-            f"Display field {source_type}.{source_field} already exists "
-            f"on this instrument."
+            f"Display field {source_type}.{source_field} already exists on this instrument."
         )
 
     new_field = InstrumentDisplayField(
@@ -315,10 +304,7 @@ def update_display_field(
     ``visible`` flipped to False. Their label is freely editable.
     """
     lifecycle.require_editable(db, field.instrument.session)
-    if (
-        is_locked_display_source(field.source_type, field.source_field)
-        and not visible
-    ):
+    if is_locked_display_source(field.source_type, field.source_field) and not visible:
         raise LockedDisplayFieldError(
             f"Display field {field.source_type}.{field.source_field} "
             f"is always shown to reviewers and cannot be hidden."
@@ -362,9 +348,7 @@ def update_display_field(
     return field, changes
 
 
-def delete_display_field(
-    db: Session, *, field: InstrumentDisplayField, actor: User
-) -> None:
+def delete_display_field(db: Session, *, field: InstrumentDisplayField, actor: User) -> None:
     """Delete a display field. No cascade-confirm — display fields carry
     no per-row dependent data.
 
@@ -529,15 +513,10 @@ def reorder_display_fields(
     audit.write_event(
         db,
         event_type="instrument.fields_reordered",
-        summary=(
-            f"Reordered display fields on instrument "
-            f"{_instrument_label(instrument)}"
-        ),
+        summary=(f"Reordered display fields on instrument {_instrument_label(instrument)}"),
         actor_user_id=actor.id if actor else None,
         session=instrument.session,
-        payload=audit.changes(
-            {"display_field_order": [current_order_ids, desired_order_ids]}
-        ),
+        payload=audit.changes({"display_field_order": [current_order_ids, desired_order_ids]}),
         refs={"instrument_id": instrument.id},
     )
 
@@ -580,9 +559,7 @@ def _seed_display_fields_for_instrument(
     return created
 
 
-def _instruments_for_session(
-    db: Session, review_session: ReviewSession
-) -> list[Instrument]:
+def _instruments_for_session(db: Session, review_session: ReviewSession) -> list[Instrument]:
     return list(
         db.execute(
             select(Instrument)
@@ -636,15 +613,11 @@ def seed_display_fields_from_reviewees(
         return 0
     total = 0
     for instrument in _instruments_for_session(db, review_session):
-        total += _seed_display_fields_for_instrument(
-            db, instrument=instrument, sources=sources
-        )
+        total += _seed_display_fields_for_instrument(db, instrument=instrument, sources=sources)
     return total
 
 
-def seed_display_fields_from_assignments(
-    db: Session, review_session: ReviewSession
-) -> int:
+def seed_display_fields_from_assignments(db: Session, review_session: ReviewSession) -> int:
     """Create pair_context display fields for any populated relationship slots.
 
     Inspects the session's ``relationships`` table for non-empty
@@ -667,18 +640,12 @@ def seed_display_fields_from_assignments(
         if found is not None:
             pair_present[slot] = True
 
-    sources = [
-        ("pair_context", str(slot))
-        for slot, present in pair_present.items()
-        if present
-    ]
+    sources = [("pair_context", str(slot)) for slot, present in pair_present.items() if present]
     if not sources:
         return 0
     total = 0
     for instrument in _instruments_for_session(db, review_session):
-        total += _seed_display_fields_for_instrument(
-            db, instrument=instrument, sources=sources
-        )
+        total += _seed_display_fields_for_instrument(db, instrument=instrument, sources=sources)
     return total
 
 
@@ -727,9 +694,7 @@ def _populated_display_sources_for_session(
     return populated
 
 
-def prune_unpopulated_display_fields(
-    db: Session, review_session: ReviewSession
-) -> int:
+def prune_unpopulated_display_fields(db: Session, review_session: ReviewSession) -> int:
     """Drop Display Fields rows whose underlying data source has no
     populated value across the session — except locked rows (Name,
     Email), which are always kept regardless of data presence.
@@ -848,10 +813,7 @@ def set_sort_display_fields(
                 InstrumentDisplayField.instrument_id == instrument.id,
                 ~(
                     (InstrumentDisplayField.source_type == "reviewee")
-                    & (
-                        InstrumentDisplayField.source_field
-                        == "email_or_identifier"
-                    )
+                    & (InstrumentDisplayField.source_field == "email_or_identifier")
                 ),
             )
         ).scalars()
@@ -922,10 +884,7 @@ def _normalise_sort_spec(
     if len(fields) > _MAX_SORT_KEYS:
         raise SortSpecError(
             code="too_many",
-            message=(
-                f"Sort spec has {len(fields)} entries; the maximum is "
-                f"{_MAX_SORT_KEYS}."
-            ),
+            message=(f"Sort spec has {len(fields)} entries; the maximum is {_MAX_SORT_KEYS}."),
         )
     out: list[dict[str, Any]] = []
     for entry in fields:
@@ -941,18 +900,14 @@ def _normalise_sort_spec(
         except (TypeError, ValueError) as exc:
             raise SortSpecError(
                 code="bad_id",
-                message=(
-                    f"Sort spec entry has non-integer display_field_id "
-                    f"{field_id_raw!r}."
-                ),
+                message=(f"Sort spec entry has non-integer display_field_id {field_id_raw!r}."),
             ) from exc
         direction = str(dir_raw or "").lower()
         if direction not in _VALID_SORT_DIRS:
             raise SortSpecError(
                 code="unknown_dir",
                 message=(
-                    f"Sort spec direction {dir_raw!r} is not one of "
-                    f"{sorted(_VALID_SORT_DIRS)}."
+                    f"Sort spec direction {dir_raw!r} is not one of {sorted(_VALID_SORT_DIRS)}."
                 ),
             )
         out.append({"display_field_id": field_id, "dir": direction})

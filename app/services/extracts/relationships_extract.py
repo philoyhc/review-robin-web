@@ -49,20 +49,17 @@ def serialize_relationships(
     """
 
     yield field_label_csv.labeled_header(review_session, HEADER)
-    rows = (
-        db.execute(
-            select(Relationship, Reviewer, Reviewee)
-            .join(Reviewer, Reviewer.id == Relationship.reviewer_id)
-            .join(Reviewee, Reviewee.id == Relationship.reviewee_id)
-            .where(Relationship.session_id == review_session.id)
-            .order_by(
-                (Relationship.status != "active").asc(),
-                Reviewer.email,
-                Reviewee.email_or_identifier,
-            )
+    rows = db.execute(
+        select(Relationship, Reviewer, Reviewee)
+        .join(Reviewer, Reviewer.id == Relationship.reviewer_id)
+        .join(Reviewee, Reviewee.id == Relationship.reviewee_id)
+        .where(Relationship.session_id == review_session.id)
+        .order_by(
+            (Relationship.status != "active").asc(),
+            Reviewer.email,
+            Reviewee.email_or_identifier,
         )
-        .all()
-    )
+    ).all()
     for relationship, reviewer, reviewee in rows:
         yield (
             reviewer.email,

@@ -103,9 +103,7 @@ def test_the_role_dropdown_and_the_pager(
     assert _query(page)["role"] == ["owner"]
     expect(page.locator("#users-table")).to_contain_text("operator@example.edu")
     expect(page.locator("#users-table")).not_to_contain_text(not_an_owner)
-    expect(
-        page.locator('#accounts-filter select[name="role"]')
-    ).to_have_value("owner")
+    expect(page.locator('#accounts-filter select[name="role"]')).to_have_value("owner")
 
     page.goto(app_url(f"{ACCOUNTS}?show=unused&q=pager-{token}"))
     rows = page.locator("#users-table tr[data-user-id]")
@@ -143,6 +141,4 @@ def test_the_heading_and_the_filter_share_the_toolbar_top(page: Page) -> None:
     assert heading and right and chips
     assert heading["x"] < right["x"]
     assert abs(heading["y"] - right["y"]) <= 2, (heading, right)
-    assert abs(
-        (chips["y"] + chips["height"]) - (right["y"] + right["height"])
-    ) <= 2, (chips, right)
+    assert abs((chips["y"] + chips["height"]) - (right["y"] + right["height"])) <= 2, (chips, right)

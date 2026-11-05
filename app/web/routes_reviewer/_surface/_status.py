@@ -4,6 +4,7 @@ Pure functions — they take built row dicts and return a single
 state literal each. Stateless; no DB reads. Used by ``_context``
 when assembling the template context.
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -102,8 +103,7 @@ def _page_status_for_group(group_rows: Sequence[SurfaceRow]) -> PageStatusState:
     if saved.answered and saved.required_met:
         return "complete"
     has_any_value = any(
-        any((cell.get("value") or "") for cell in r.get("cells", []))
-        for r in group_rows
+        any((cell.get("value") or "") for cell in r.get("cells", [])) for r in group_rows
     )
     return "in_progress" if has_any_value else "not_started"
 
@@ -162,20 +162,13 @@ def _group_completion(
     built without it counts every required field, as before.
     """
     required_field_count = sum(1 for f in fields if f.required)
-    required_total = sum(
-        r.get("required_count", required_field_count) for r in group_rows
-    )
-    required_done = required_total - sum(
-        r.get("missing_count", 0) for r in group_rows
-    )
+    required_total = sum(r.get("required_count", required_field_count) for r in group_rows)
+    required_done = required_total - sum(r.get("missing_count", 0) for r in group_rows)
     # 19T Item 10 — a governed cell whose branch is closed can't be
     # answered, so it is not an item: counting it would hold "All items"
     # short of complete for good.
     open_cells = [
-        cell
-        for r in group_rows
-        for cell in r.get("cells", [])
-        if cell.get("branch_open", True)
+        cell for r in group_rows for cell in r.get("cells", []) if cell.get("branch_open", True)
     ]
     all_total = len(open_cells)
     all_done = sum(1 for cell in open_cells if (cell.get("value") or "").strip())

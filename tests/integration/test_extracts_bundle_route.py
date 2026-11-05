@@ -23,44 +23,30 @@ from sqlalchemy.orm import Session
 from app.db.models import AuditEvent, ReviewSession
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "Bundle", "code": code, "description": ""},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
-def test_bundle_route_streams_zip_with_canonical_filename(
-    client: TestClient, db: Session
-) -> None:
+def test_bundle_route_streams_zip_with_canonical_filename(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="bnd-fname")
-    response = client.get(
-        f"/operator/sessions/{review_session.public_id}/export/bundle.zip"
-    )
+    response = client.get(f"/operator/sessions/{review_session.public_id}/export/bundle.zip")
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/zip"
     # Filename changed from ``{code}_bundle.zip`` to
     # ``{code}_setup.zip`` on 2026-05-29 when the bundle slimmed
     # to setup-only.
-    assert response.headers["content-disposition"] == (
-        'attachment; filename="bnd-fname_setup.zip"'
-    )
+    assert response.headers["content-disposition"] == ('attachment; filename="bnd-fname_setup.zip"')
 
 
-def test_bundle_contains_only_the_setup_csv_members(
-    client: TestClient, db: Session
-) -> None:
+def test_bundle_contains_only_the_setup_csv_members(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="bnd-mem")
-    response = client.get(
-        f"/operator/sessions/{review_session.public_id}/export/bundle.zip"
-    )
+    response = client.get(f"/operator/sessions/{review_session.public_id}/export/bundle.zip")
     assert response.status_code == 200
 
     archive = zipfile.ZipFile(io.BytesIO(response.content))
@@ -83,9 +69,7 @@ def test_bundle_route_emits_audit_event_with_per_csv_counts(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="bnd-aud")
-    response = client.get(
-        f"/operator/sessions/{review_session.public_id}/export/bundle.zip"
-    )
+    response = client.get(f"/operator/sessions/{review_session.public_id}/export/bundle.zip")
     assert response.status_code == 200
 
     db.expire_all()

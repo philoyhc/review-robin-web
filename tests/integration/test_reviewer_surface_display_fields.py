@@ -87,9 +87,7 @@ def _operator_creates_session_with_pair(
     return review_session
 
 
-def _activate(
-    operator_client: TestClient, db: Session, review_session: ReviewSession
-) -> None:
+def _activate(operator_client: TestClient, db: Session, review_session: ReviewSession) -> None:
     validate_session(review_session)
     operator_client.get(f"/operator/sessions/{review_session.public_id}/assignments")
     response = operator_client.post(
@@ -203,11 +201,8 @@ def test_profile_link_renders_as_anchor(
 
     assert response.status_code == 200
     body = response.text
-    assert '>Profile<' in body
-    assert (
-        '<a href="https://example.edu/carol" '
-        'aria-label="View — Carol">View</a>'
-    ) in body
+    assert ">Profile<" in body
+    assert ('<a href="https://example.edu/carol" aria-label="View — Carol">View</a>') in body
 
 
 def test_profile_link_empty_renders_empty_cell(
@@ -245,5 +240,5 @@ def test_profile_link_empty_renders_empty_cell(
     response = rae_client.get(f"/me/sessions/{review_session.public_id}")
 
     assert response.status_code == 200
-    assert '>Profile<' in response.text
+    assert ">Profile<" in response.text
     assert "https://example.edu" not in response.text

@@ -113,9 +113,7 @@ OVERRIDE_KEYS = (
 RESPONSES_RECEIVED_ENABLED_KEY = "responses_received_enabled"
 
 
-def _resolve(
-    review_session: ReviewSession, key: str, default: str
-) -> str:
+def _resolve(review_session: ReviewSession, key: str, default: str) -> str:
     """Return the operator-supplied override for ``key`` if non-empty,
     otherwise ``default``. Treats ``NULL`` (no overrides at all) and
     a missing-or-empty key both as fall-through."""
@@ -139,9 +137,7 @@ def _substitute(template_str: str, **merge: Any) -> str:
     )
 
 
-def _format_in_session_zone(
-    review_session: ReviewSession, value: datetime
-) -> str:
+def _format_in_session_zone(review_session: ReviewSession, value: datetime) -> str:
     """A date in the session's resolved zone, like every other
     session-scoped surface (spec/timezone_display.md), named after it:
     an email is read outside the app, where nothing else says which
@@ -165,10 +161,7 @@ def _drop_empty_lines(template_str: str, merge: dict[str, str]) -> str:
     kept = [
         line
         for line in template_str.split("\n")
-        if not any(
-            merge.get(m.group(1) or m.group(2)) == ""
-            for m in _TAG.finditer(line)
-        )
+        if not any(merge.get(m.group(1) or m.group(2)) == "" for m in _TAG.finditer(line))
     ]
     lines: list[str] = []
     for line in kept:
@@ -180,9 +173,7 @@ def _drop_empty_lines(template_str: str, merge: dict[str, str]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def _body(
-    review_session: ReviewSession, key: str, default: str, merge: dict[str, str]
-) -> str:
+def _body(review_session: ReviewSession, key: str, default: str, merge: dict[str, str]) -> str:
     """Render a body: the operator's override as written, with
     ``$help_contact`` falling back to ``HELP_CONTACT_FALLBACK``; or the
     default with its empty lines dropped."""
@@ -254,9 +245,7 @@ def render_reminder(
     return subject, body
 
 
-def _latest_submitted_at(
-    review_session: ReviewSession, reviewer: Reviewer
-) -> datetime | None:
+def _latest_submitted_at(review_session: ReviewSession, reviewer: Reviewer) -> datetime | None:
     """Most recent ``Response.submitted_at`` across all responses for
     ``reviewer`` in ``review_session``, or ``None`` if nothing has been
     submitted yet.
@@ -284,9 +273,7 @@ def _latest_submitted_at(
     ).scalar()
 
 
-def _format_submitted_at(
-    review_session: ReviewSession, submitted_at: datetime | None
-) -> str:
+def _format_submitted_at(review_session: ReviewSession, submitted_at: datetime | None) -> str:
     """Format ``$submitted_at`` for the responses-received body, in the
     session's resolved zone.
 
@@ -298,9 +285,7 @@ def _format_submitted_at(
     return _format_in_session_zone(review_session, submitted_at)
 
 
-def render_responses_received(
-    review_session: ReviewSession, reviewer: Reviewer
-) -> tuple[str, str]:
+def render_responses_received(review_session: ReviewSession, reviewer: Reviewer) -> tuple[str, str]:
     """Returns ``(subject, body)`` for the responses-received
     confirmation sent when a reviewer submits their review.
 
@@ -372,9 +357,7 @@ def set_responses_received_enabled(
     return [old_effective, enabled]
 
 
-def cc_bcc_for(
-    review_session: ReviewSession, kind: str
-) -> tuple[str | None, str | None]:
+def cc_bcc_for(review_session: ReviewSession, kind: str) -> tuple[str | None, str | None]:
     """Returns ``(cc, bcc)`` from the override JSON for the given email
     kind. ``kind`` is ``"invitation"``, ``"reminder"``, or
     ``"responses_received"``; values are the raw operator-entered
@@ -494,9 +477,7 @@ def lock_for_edit(db: ORMSession, review_session: ReviewSession) -> ReviewSessio
     loaded refuses too."""
     from app.services import session_lifecycle
 
-    return session_lifecycle.require_not_archived(
-        db, review_session, message=ARCHIVED_MESSAGE
-    )
+    return session_lifecycle.require_not_archived(db, review_session, message=ARCHIVED_MESSAGE)
 
 
 def record_template_change(
@@ -518,10 +499,7 @@ def record_template_change(
     audit_service.write_event(
         db,
         event_type="email_template.updated",
-        summary=(
-            f"Session {review_session.code}: "
-            f"{template} template updated"
-        ),
+        summary=(f"Session {review_session.code}: {template} template updated"),
         actor_user_id=user.id,
         session=review_session,
         payload=audit_service.changes({k: list(v) for k, v in changes.items()}),
@@ -549,10 +527,7 @@ def record_template_reset(
     audit_service.write_event(
         db,
         event_type="email_template.reset",
-        summary=(
-            f"Session {review_session.code}: "
-            f"{template}.{field} reset to default"
-        ),
+        summary=(f"Session {review_session.code}: {template}.{field} reset to default"),
         actor_user_id=user.id,
         session=review_session,
         payload=audit_service.changes({k: list(v) for k, v in changes.items()}),

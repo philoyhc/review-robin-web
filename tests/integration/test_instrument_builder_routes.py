@@ -61,17 +61,23 @@ def _band2_rfs(instrument: Instrument) -> list[dict]:
             "id": rf.id,
             "name": rf.label,
             "data_type": data_type_lower,
-            "min": "" if rf._inline_min is None else (
+            "min": ""
+            if rf._inline_min is None
+            else (
                 str(int(rf._inline_min))
                 if rf._inline_min == int(rf._inline_min)
                 else f"{rf._inline_min:g}"
             ),
-            "max": "" if rf._inline_max is None else (
+            "max": ""
+            if rf._inline_max is None
+            else (
                 str(int(rf._inline_max))
                 if rf._inline_max == int(rf._inline_max)
                 else f"{rf._inline_max:g}"
             ),
-            "step": "" if rf._inline_step is None else (
+            "step": ""
+            if rf._inline_step is None
+            else (
                 str(int(rf._inline_step))
                 if rf._inline_step == int(rf._inline_step)
                 else f"{rf._inline_step:g}"
@@ -99,18 +105,14 @@ def reviewer_user() -> AuthenticatedUser:
     )
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str = "seg10a"
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str = "seg10a") -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "Spring", "code": code},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _populate_rosters(client: TestClient, session_id: int) -> None:
@@ -155,9 +157,7 @@ def _activate(client: TestClient, db: Session, session_id: int) -> None:
 
 
 def _instrument(db: Session, session_id: int) -> Instrument:
-    return db.execute(
-        select(Instrument).where(Instrument.session_id == session_id)
-    ).scalar_one()
+    return db.execute(select(Instrument).where(Instrument.session_id == session_id)).scalar_one()
 
 
 def _band2_card(body: str, instrument_id: int) -> str:
@@ -204,9 +204,7 @@ def test_instruments_index_renders_settings_and_per_instrument_card(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="card-1")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     # Header card folds the deadline + accepting status into the same
     # card as the setup nav (per the rebuild spec at
     # spec/instruments.md). The visibility-when-closed row + bulk
@@ -236,9 +234,7 @@ def test_legacy_per_instrument_get_redirects_to_consolidated(
     )
 
 
-def test_edit_description_redirects_and_invalidates(
-    client: TestClient, db: Session
-) -> None:
+def test_edit_description_redirects_and_invalidates(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="desc-1")
     _populate_rosters(client, review_session.id)
     _generate_full_matrix(client, db, review_session.id)
@@ -259,18 +255,20 @@ def test_edit_description_redirects_and_invalidates(
     db.refresh(instrument)
     assert instrument.description == "Spring 2026 Peer Review"
 
-    invalidated = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "session.invalidated",
-            AuditEvent.session_id == review_session.id,
+    invalidated = (
+        db.execute(
+            select(AuditEvent).where(
+                AuditEvent.event_type == "session.invalidated",
+                AuditEvent.session_id == review_session.id,
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(invalidated) >= 1
 
 
-def test_add_field_auto_slugifies_blank_field_key(
-    client: TestClient, db: Session
-) -> None:
+def test_add_field_auto_slugifies_blank_field_key(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="add-slug")
     instrument = _instrument(db, review_session.id)
 
@@ -295,9 +293,7 @@ def test_add_field_auto_slugifies_blank_field_key(
     assert field.field_key == "decision_point"
 
 
-def test_edit_field_required_warning_redirects_with_query(
-    client: TestClient, db: Session
-) -> None:
+def test_edit_field_required_warning_redirects_with_query(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="warn-edit")
     _populate_rosters(client, review_session.id)
     _generate_full_matrix(client, db, review_session.id)
@@ -326,9 +322,7 @@ def test_edit_field_required_warning_redirects_with_query(
     assert f"field_id={comments.id}" in location
 
 
-def test_delete_field_with_responses_blocks_then_confirms(
-    client: TestClient, db: Session
-) -> None:
+def test_delete_field_with_responses_blocks_then_confirms(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="del-cascade")
     _populate_rosters(client, review_session.id)
     _generate_full_matrix(client, db, review_session.id)
@@ -340,9 +334,11 @@ def test_delete_field_with_responses_blocks_then_confirms(
             InstrumentResponseField.field_key == "rating",
         )
     ).scalar_one()
-    assignment = db.execute(
-        select(Assignment).where(Assignment.session_id == review_session.id)
-    ).scalars().first()
+    assignment = (
+        db.execute(select(Assignment).where(Assignment.session_id == review_session.id))
+        .scalars()
+        .first()
+    )
     assert assignment is not None
     db.add(
         Response(
@@ -362,9 +358,7 @@ def test_delete_field_with_responses_blocks_then_confirms(
     assert blocked.status_code == 303
     assert "delete_blocked_field_id=" in blocked.headers["location"]
     still_present = db.execute(
-        select(InstrumentResponseField).where(
-            InstrumentResponseField.id == rating.id
-        )
+        select(InstrumentResponseField).where(InstrumentResponseField.id == rating.id)
     ).scalar_one_or_none()
     assert still_present is not None
 
@@ -376,9 +370,7 @@ def test_delete_field_with_responses_blocks_then_confirms(
     )
     assert confirmed.status_code == 303
     gone = db.execute(
-        select(InstrumentResponseField).where(
-            InstrumentResponseField.id == rating.id
-        )
+        select(InstrumentResponseField).where(InstrumentResponseField.id == rating.id)
     ).scalar_one_or_none()
     assert gone is None
 
@@ -401,18 +393,20 @@ def test_move_field_repacks_orders(client: TestClient, db: Session) -> None:
     )
     assert response.status_code == 303
 
-    fields = db.execute(
-        select(InstrumentResponseField)
-        .where(InstrumentResponseField.instrument_id == instrument.id)
-        .order_by(InstrumentResponseField.order)
-    ).scalars().all()
+    fields = (
+        db.execute(
+            select(InstrumentResponseField)
+            .where(InstrumentResponseField.instrument_id == instrument.id)
+            .order_by(InstrumentResponseField.order)
+        )
+        .scalars()
+        .all()
+    )
     assert [f.field_key for f in fields] == ["comments", "rating"]
     assert [f.order for f in fields] == [0, 1]
 
 
-def test_locked_when_ready_returns_409_for_mutations(
-    client: TestClient, db: Session
-) -> None:
+def test_locked_when_ready_returns_409_for_mutations(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="locked-1")
     _populate_rosters(client, review_session.id)
     _generate_full_matrix(client, db, review_session.id)
@@ -535,11 +529,15 @@ def test_activation_blocked_when_instrument_has_no_response_fields(
     _generate_full_matrix(client, db, review_session.id)
 
     instrument = _instrument(db, review_session.id)
-    fields = db.execute(
-        select(InstrumentResponseField).where(
-            InstrumentResponseField.instrument_id == instrument.id
+    fields = (
+        db.execute(
+            select(InstrumentResponseField).where(
+                InstrumentResponseField.instrument_id == instrument.id
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     for field in fields:
         client.post(
             f"/operator/sessions/{review_session.public_id}/instruments"
@@ -564,9 +562,7 @@ def test_activation_blocked_when_instrument_has_no_response_fields(
     assert "super_status=failed" in activate.headers["location"]
 
 
-def test_replicate_instrument_clones_content(
-    client: TestClient, db: Session
-) -> None:
+def test_replicate_instrument_clones_content(client: TestClient, db: Session) -> None:
     """Replicate clones an instrument's description, response /
     display fields, group_kind and a clone of its pinned rule (A1,
     2026-10-02) into a new card slotted immediately after the source — since
@@ -596,9 +592,7 @@ def test_replicate_instrument_clones_content(
         model: type[M], instrument_id: int
     ) -> int:
         return len(
-            db.execute(
-                select(model).where(model.instrument_id == instrument_id)
-            ).scalars().all()
+            db.execute(select(model).where(model.instrument_id == instrument_id)).scalars().all()
         )
 
     src_fields = _count(InstrumentResponseField, source_id)
@@ -607,8 +601,7 @@ def test_replicate_instrument_clones_content(
     assert src_assignments > 0  # the full matrix was generated
 
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{source_id}/replicate",
+        f"/operator/sessions/{review_session.public_id}/instruments/{source_id}/replicate",
         follow_redirects=False,
     )
     assert resp.status_code == 303
@@ -679,8 +672,7 @@ def test_replicate_instrument_clones_response_field_visibility(
     source_id = source.id
 
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{source_id}/replicate",
+        f"/operator/sessions/{review_session.public_id}/instruments/{source_id}/replicate",
         follow_redirects=False,
     )
     assert resp.status_code == 303
@@ -695,18 +687,14 @@ def test_replicate_instrument_clones_response_field_visibility(
     cloned_by_key = {
         rf.field_key: rf
         for rf in db.execute(
-            select(InstrumentResponseField).where(
-                InstrumentResponseField.instrument_id == copy.id
-            )
+            select(InstrumentResponseField).where(InstrumentResponseField.instrument_id == copy.id)
         ).scalars()
     }
     assert cloned_by_key["hidden_field"].visible is False
     assert cloned_by_key["visible_field"].visible is True
 
 
-def test_add_new_model_creates_instrument(
-    client: TestClient, db: Session
-) -> None:
+def test_add_new_model_creates_instrument(client: TestClient, db: Session) -> None:
     """The +Instrument button posts to /instruments/add-new-model
     (route name preserved for back-compat with the template form
     action) and creates a new instrument slotted immediately after
@@ -730,9 +718,7 @@ def test_add_new_model_creates_instrument(
     assert new_model.order == source.order + 1
 
     # Card renders with the bands layout.
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     assert "Instrument assignment rule" in body  # Band 1 card title (18R Item 1)
     assert "Who does the review" in body  # Band 1 Link 1 column
     assert "Who is being reviewed" in body  # Band 1 Link 2 column
@@ -748,15 +734,13 @@ def test_add_new_model_creates_instrument(
     # (no special new-model-only path) and works end-to-end.
     new_model_id = new_model.id
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model_id}/delete",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model_id}/delete",
         data={"confirm": "true"},
         follow_redirects=False,
     )
     assert resp.status_code == 303
     assert (
-        db.execute(select(Instrument).where(Instrument.id == new_model_id))
-        .scalar_one_or_none()
+        db.execute(select(Instrument).where(Instrument.id == new_model_id)).scalar_one_or_none()
         is None
     )
 
@@ -810,8 +794,7 @@ def test_new_model_band1_persists_link1_link2_link3_round_trip(
     # cross-side rule (reviewee.tag1 IS THE SAME AS reviewer.tag1),
     # and Link 3 grouped on reviewee.tag1.
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/fields/save",
         data={
             "link1_mode": "filter",
             "link1_combinator": "AND",
@@ -881,23 +864,15 @@ def test_new_model_band1_persists_link1_link2_link3_round_trip(
     assert 'data-new-model-unit-mode="group"' in flat
     # The hidden form inputs round-trip the persisted state.
     assert 'name="link1_mode" data-new-model-mode-input value="filter"' in flat
-    assert (
-        'name="link2_combinator" data-new-model-combinator-input value="OR"'
-        in flat
-    )
-    assert (
-        'name="link3_mode" data-new-model-link3-mode-input value="grouped"'
-        in flat
-    )
+    assert 'name="link2_combinator" data-new-model-combinator-input value="OR"' in flat
+    assert 'name="link3_mode" data-new-model-link3-mode-input value="grouped"' in flat
     # Link 1's operand value re-renders into its input.
     assert 'value="Lead"' in flat
     # Link 2's tag-operand select marks reviewer.tag1 as the selected option.
     assert '<option value="reviewer.tag1" selected>' in flat
 
 
-def test_new_model_band1_all_mode_clears_rules(
-    client: TestClient, db: Session
-) -> None:
+def test_new_model_band1_all_mode_clears_rules(client: TestClient, db: Session) -> None:
     """Switching a Link back to All mode drops its Composite from
     rules_json, and switching Link 3 back to Individual clears
     group_kind to NULL."""
@@ -917,8 +892,7 @@ def test_new_model_band1_all_mode_clears_rules(
 
     # Seed state: Filter + Grouped.
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/fields/save",
         data={
             "link1_mode": "filter",
             "link1_combinator": "AND",
@@ -944,8 +918,7 @@ def test_new_model_band1_all_mode_clears_rules(
 
     # Now flip both Links to All and Link 3 to Individual.
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/fields/save",
         data={
             "link1_mode": "all",
             "link1_combinator": "AND",
@@ -988,9 +961,7 @@ def test_new_model_band2_renders_selectable_pills_with_data_attrs(
         follow_redirects=False,
     )
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     flat = " ".join(body.split())
     # Band heading renamed; the "Sample reviewee:" sub-caption is gone.
     assert "Preview review instrument" in flat
@@ -1024,9 +995,7 @@ def test_new_model_band2_renders_selectable_pills_with_data_attrs(
     assert 'data-new-model-band2-sample-extra-count="0"' in flat
 
 
-def test_new_model_band2_handles_session_with_no_reviewees(
-    client: TestClient, db: Session
-) -> None:
+def test_new_model_band2_handles_session_with_no_reviewees(client: TestClient, db: Session) -> None:
     """When the session has no reviewees with data and no
     operator-authored response fields, Band 2 still renders the
     heading; the pill row collapses to a Setup-page-style
@@ -1045,17 +1014,17 @@ def test_new_model_band2_handles_session_with_no_reviewees(
     # empty. Clear those rows on every instrument so the "no
     # pills" assertion below holds (Wave 5 PR 5.3 — every
     # instrument is now a former-new-model with its own pill row).
-    all_instruments = db.execute(
-        select(Instrument).where(Instrument.session_id == review_session.id)
-    ).scalars().all()
+    all_instruments = (
+        db.execute(select(Instrument).where(Instrument.session_id == review_session.id))
+        .scalars()
+        .all()
+    )
     for inst in all_instruments:
         for rf in list(inst.response_fields):
             db.delete(rf)
     db.commit()
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     flat = " ".join(body.split())
     assert "Preview review instrument" in flat
     # The response pills and their row retired in 19T Item 9; the card
@@ -1065,9 +1034,7 @@ def test_new_model_band2_handles_session_with_no_reviewees(
     assert 'data-new-model-band2-sample-names=""' in flat
 
 
-def test_new_model_band2_column_widths_round_trip(
-    client: TestClient, db: Session
-) -> None:
+def test_new_model_band2_column_widths_round_trip(client: TestClient, db: Session) -> None:
     """POSTing column widths to /column-widths persists them on
     instruments.column_widths; reload propagates them onto the pill
     + card data attributes that drive the Band 2 preview's column
@@ -1098,8 +1065,7 @@ def test_new_model_band2_column_widths_round_trip(
 
     # POST widths: identity at 220px, tag_1 column at 180px.
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/column-widths",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/column-widths",
         json={
             "widths": {
                 "identity": 220,
@@ -1118,17 +1084,13 @@ def test_new_model_band2_column_widths_round_trip(
     }
 
     # Reload the index — widths surface as data attrs the JS reads.
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     flat = " ".join(body.split())
     assert 'data-new-model-band2-identity-width="220"' in flat
     assert f'data-display-field-id="{tag_field.id}" data-width="180"' in flat
 
 
-def test_new_model_band2_column_widths_clamps_and_clears(
-    client: TestClient, db: Session
-) -> None:
+def test_new_model_band2_column_widths_clamps_and_clears(client: TestClient, db: Session) -> None:
     """Out-of-range widths clamp to [40, 1200]; an empty widths dict
     clears the column_widths column back to NULL."""
     review_session = _make_session(client, db, code="nm-clamp")
@@ -1147,8 +1109,7 @@ def test_new_model_band2_column_widths_clamps_and_clears(
 
     # Below-min and above-max get clamped.
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/column-widths",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/column-widths",
         json={"widths": {"identity": 10, "df_unused": 9999}},
     )
     db.refresh(new_model)
@@ -1156,17 +1117,14 @@ def test_new_model_band2_column_widths_clamps_and_clears(
 
     # Empty dict clears.
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/column-widths",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/column-widths",
         json={"widths": {}},
     )
     db.refresh(new_model)
     assert new_model.column_widths is None
 
 
-def test_new_model_band2_display_fields_order_round_trip(
-    client: TestClient, db: Session
-) -> None:
+def test_new_model_band2_display_fields_order_round_trip(client: TestClient, db: Session) -> None:
     """POSTing display-field ids to /display-fields/order persists the
     new sequence onto each row's ``order`` column. Locked Name + Email
     rows stay pinned at orders 0 and 1; the non-locked rows take
@@ -1188,10 +1146,7 @@ def test_new_model_band2_display_fields_order_round_trip(
     # page first.
     client.get(f"/operator/sessions/{review_session.public_id}/instruments")
     db.refresh(new_model)
-    by_source = {
-        f.source_field: f for f in new_model.display_fields
-        if f.source_type == "reviewee"
-    }
+    by_source = {f.source_field: f for f in new_model.display_fields if f.source_type == "reviewee"}
     tag_1 = by_source["tag_1"]
     name = by_source["name"]
     email = by_source["email_or_identifier"]
@@ -1200,8 +1155,10 @@ def test_new_model_band2_display_fields_order_round_trip(
     # position. ``ordered_ids`` must enumerate every non-locked
     # display field id exactly once.
     unlocked_ids = [
-        f.id for f in new_model.display_fields
-        if (f.source_type, f.source_field) not in (("reviewee", "name"), ("reviewee", "email_or_identifier"))
+        f.id
+        for f in new_model.display_fields
+        if (f.source_type, f.source_field)
+        not in (("reviewee", "name"), ("reviewee", "email_or_identifier"))
     ]
     new_order = [tag_1.id] + [fid for fid in unlocked_ids if fid != tag_1.id]
     resp = client.post(
@@ -1244,11 +1201,7 @@ def test_pr6_save_applies_display_field_order_from_snapshot(
     ).scalar_one()
     client.get(f"/operator/sessions/{review_session.public_id}/instruments")
     db.refresh(new_model)
-    by_source = {
-        f.source_field: f
-        for f in new_model.display_fields
-        if f.source_type == "reviewee"
-    }
+    by_source = {f.source_field: f for f in new_model.display_fields if f.source_type == "reviewee"}
     tag_1 = by_source["tag_1"]
     unlocked_ids = [
         f.id
@@ -1258,8 +1211,7 @@ def test_pr6_save_applies_display_field_order_from_snapshot(
     ]
     new_order = [tag_1.id] + [fid for fid in unlocked_ids if fid != tag_1.id]
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/save",
         data={"display_field_order_snapshot": json.dumps(new_order)},
         follow_redirects=False,
     )
@@ -1269,17 +1221,11 @@ def test_pr6_save_applies_display_field_order_from_snapshot(
     assert tag_1.order == 2
 
 
-def test_pr6_display_order_staging_wiring_ships(
-    client: TestClient, db: Session
-) -> None:
+def test_pr6_display_order_staging_wiring_ships(client: TestClient, db: Session) -> None:
     """Segment 18R Item 2 PR 6 — display-field reorder stages into the
     hidden snapshot (consumed by /save) instead of an immediate POST."""
-    review_session, _new_model = _new_model_with_tags(
-        client, db, code="pr6-wiring"
-    )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    review_session, _new_model = _new_model_with_tags(client, db, code="pr6-wiring")
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     assert 'name="display_field_order_snapshot"' in body
     assert "data-new-model-band2-display-order-snapshot" in body
     # Reorder stages into the snapshot + marks the card dirty …
@@ -1309,7 +1255,8 @@ def test_new_model_band2_display_fields_order_rejects_locked_id(
     client.get(f"/operator/sessions/{review_session.public_id}/instruments")
     db.refresh(new_model)
     name = next(
-        f for f in new_model.display_fields
+        f
+        for f in new_model.display_fields
         if f.source_type == "reviewee" and f.source_field == "name"
     )
 
@@ -1330,9 +1277,7 @@ def test_new_model_band2_display_fields_order_rejects_locked_id(
     assert resp.status_code == 400
 
 
-def test_new_model_band2_state_round_trip(
-    client: TestClient, db: Session
-) -> None:
+def test_new_model_band2_state_round_trip(client: TestClient, db: Session) -> None:
     """POSTing band2-state persists the operator's selected display
     pills + response-field rows; reload renders pills with the
     selected aria-pressed state, the divider, and the Band 3 rows
@@ -1352,8 +1297,7 @@ def test_new_model_band2_state_round_trip(
     ).scalar_one()
 
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "selected_display_keys": [
                 "reviewee.name",
@@ -1402,18 +1346,23 @@ def test_new_model_band2_state_round_trip(
     assert rfs[1]["name"] == "Comments"
     assert rfs[1]["selected"] is False
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     flat = " ".join(body.split())
     # Display fields render as Band 3's table rows (19T Item 8).
-    assert 'data-key="reviewee.name" data-label="Name" data-source-type="reviewee" data-source-field="name"' in flat
+    assert (
+        'data-key="reviewee.name" data-label="Name" data-source-type="reviewee" data-source-field="name"'
+        in flat
+    )
     # The `||` divider retired with the display pills.
-    assert 'data-new-model-band2-pills-divider' not in flat
+    assert "data-new-model-band2-pills-divider" not in flat
     # Saved response rows hydrate with the saved labels and selection
     # (the pills retired in 19T Item 9).
-    assert re.search(r'<tr data-new-model-rf-row [^>]*data-selected="true" data-label="Rating"', flat)
-    assert re.search(r'<tr data-new-model-rf-row [^>]*data-selected="false" data-label="Comments"', flat)
+    assert re.search(
+        r'<tr data-new-model-rf-row [^>]*data-selected="true" data-label="Rating"', flat
+    )
+    assert re.search(
+        r'<tr data-new-model-rf-row [^>]*data-selected="false" data-label="Comments"', flat
+    )
     # Band 3 Response field rows are pre-populated with the saved
     # values.
     assert 'value="Rating"' in flat
@@ -1431,14 +1380,11 @@ def test_band2_state_save_writes_validation_json_for_reviewer_surface(
     the seeded bounds (or none, for operator-authored rows).
     Regression guard: after a band2-state POST, every saved
     response field's ``validation`` JSON reflects the inline state."""
-    review_session = _make_session(
-        client, db, code="band2-validation-roundtrip"
-    )
+    review_session = _make_session(client, db, code="band2-validation-roundtrip")
     instrument = _instrument(db, review_session.id)
 
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{instrument.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}/band2-state",
         json={
             "selected_display_keys": ["reviewee.name"],
             "response_fields": [
@@ -1544,8 +1490,7 @@ def test_new_model_band2_group_preview_partitions_by_boundary_tag(
 
     # Save: Group mode with boundary tag = reviewee.tag_1.
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/fields/save",
         data={
             "link1_mode": "all",
             "link1_combinator": "AND",
@@ -1591,8 +1536,7 @@ def test_new_model_band2_group_preview_partitions_by_boundary_tag(
 
     # Flip to individual: sample-names goes back to all reviewees.
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/fields/save",
         data={
             "link1_mode": "all",
             "link1_combinator": "AND",
@@ -1640,8 +1584,7 @@ def test_new_model_band2_unit_mode_attribute_renders_in_both_modes(
 
     # Save: Group mode with boundary tag = reviewee.tag_1.
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/fields/save",
         data={
             "link1_mode": "all",
             "link1_combinator": "AND",
@@ -1663,9 +1606,7 @@ def test_new_model_band2_unit_mode_attribute_renders_in_both_modes(
 
     # View mode (no ?editing=) — the unit-mode attr should still
     # carry "grouped" so the preview JS renders the group cell.
-    view_body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    view_body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     assert 'data-new-model-band2-unit-mode="grouped"' in view_body
     # Segment 18R Item 2 PR 1 — the link3_mode hidden input is now
     # ALWAYS rendered (the card is view-locked rather than stripped
@@ -1685,9 +1626,7 @@ def test_new_model_band2_unit_mode_attribute_renders_in_both_modes(
     assert 'data-instrument-locked="false"' in edit_body
 
 
-def test_new_model_band2_preview_sample_filters_by_link1(
-    client: TestClient, db: Session
-) -> None:
+def test_new_model_band2_preview_sample_filters_by_link1(client: TestClient, db: Session) -> None:
     """The /preview-sample route runs the rule engine against the
     posted Link 1 + Link 2 form state and returns the first reviewee
     whose pair survives the filter. Without any rules every active
@@ -1740,8 +1679,7 @@ def test_new_model_band2_preview_sample_filters_by_link1(
 
     # No rules: first reviewee (alphabetical) wins.
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/preview-sample",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/preview-sample",
         json={
             "link1_mode": "all",
             "link1_combinator": "AND",
@@ -1760,8 +1698,7 @@ def test_new_model_band2_preview_sample_filters_by_link1(
     # Eve. (Different rule would change the answer, but with this
     # filter the picked reviewee should still be a real one.)
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/preview-sample",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/preview-sample",
         json={
             "link1_mode": "filter",
             "link1_combinator": "AND",
@@ -1785,8 +1722,7 @@ def test_new_model_band2_preview_sample_filters_by_link1(
     # Link 1: no reviewer is in scope (no one matches the tag). The
     # route returns null instead of throwing.
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/preview-sample",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/preview-sample",
         json={
             "link1_mode": "filter",
             "link1_combinator": "AND",
@@ -1853,8 +1789,7 @@ def test_new_model_band2_refresh_persists_sample_to_band2_state(
     # Refresh fires the preview-sample route; the picked sample is
     # written through to band2_state.
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/preview-sample",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/preview-sample",
         json={
             "link1_mode": "all",
             "link1_combinator": "AND",
@@ -1873,8 +1808,7 @@ def test_new_model_band2_refresh_persists_sample_to_band2_state(
     # MUST NOT clobber the sample. set_band2_state preserves the
     # existing sample_reviewee_name when not in the input payload.
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "selected_display_keys": ["reviewee.name"],
             "response_fields": [],
@@ -1888,9 +1822,7 @@ def test_new_model_band2_refresh_persists_sample_to_band2_state(
     # — view mode (no ?editing=) carries the saved sample so the
     # preview-builder JS doesn't fall back to "first reviewee by
     # name" on reload.
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     assert 'data-new-model-band2-sample-name="Eve"' in body
 
 
@@ -1935,8 +1867,7 @@ def test_new_model_band2_state_preserves_other_keys_on_partial_writes(
 
     # Seed all three keys via a single full POST.
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "selected_display_keys": ["reviewee.name"],
             "response_fields": [
@@ -1964,8 +1895,7 @@ def test_new_model_band2_state_preserves_other_keys_on_partial_writes(
     # Pill-toggle write: only selected_display_keys. response_fields
     # + sample_reviewee_name must carry forward.
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={"selected_display_keys": ["reviewee.name", "reviewee.email_or_identifier"]},
     )
     db.refresh(new_model)
@@ -1979,8 +1909,7 @@ def test_new_model_band2_state_preserves_other_keys_on_partial_writes(
     # RF-save write: only response_fields. selected_display_keys +
     # sample_reviewee_name must carry forward.
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
                 {
@@ -2016,8 +1945,7 @@ def test_new_model_band2_state_preserves_other_keys_on_partial_writes(
     # preview-sample route which now persists). Both other keys
     # must survive.
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/preview-sample",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/preview-sample",
         json={
             "link1_mode": "all",
             "link1_combinator": "AND",
@@ -2058,8 +1986,7 @@ def test_new_model_link3_and_column_widths_survive_form_save(
 
     # Simulate a drag-resize: POST column-widths first.
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/column-widths",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/column-widths",
         json={"widths": {"identity": 220}},
     )
     assert resp.status_code == 200
@@ -2069,8 +1996,7 @@ def test_new_model_link3_and_column_widths_survive_form_save(
     # Now simulate the operator clicking Save on the form — POST
     # /fields/save with link3 set to grouped + boundary.
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/fields/save",
         data={
             "link1_mode": "all",
             "link1_combinator": "AND",
@@ -2102,14 +2028,11 @@ def test_new_model_link3_and_column_widths_survive_form_save(
 
     # And the re-rendered HTML should reflect both — in view mode
     # AND in edit mode.
-    view_body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    view_body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     assert 'data-new-model-band2-identity-width="220"' in view_body
     assert 'data-new-model-band2-unit-mode="grouped"' in view_body
     edit_body = client.get(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments?editing={new_model.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
     assert 'data-new-model-band2-identity-width="220"' in edit_body
     assert 'data-new-model-band2-unit-mode="grouped"' in edit_body
@@ -2117,15 +2040,11 @@ def test_new_model_link3_and_column_widths_survive_form_save(
     # reviewee.tag1 as the currently selected option (not "—").
     # If this assertion fails, the operator would see the boundary
     # cleared when re-entering edit mode after Save.
-    assert (
-        '<option value="reviewee.tag1" selected>' in edit_body
-    ), (
+    assert '<option value="reviewee.tag1" selected>' in edit_body, (
         "Link 3 boundary picker lost its reviewee.tag1 selection "
         "after Save → reload → re-edit. Re-edit body excerpt:\n"
         + edit_body[
-            edit_body.find("data-new-model-unit-cell") : edit_body.find(
-                "data-new-model-unit-cell"
-            )
+            edit_body.find("data-new-model-unit-cell") : edit_body.find("data-new-model-unit-cell")
             + 1200
         ]
     )
@@ -2175,8 +2094,7 @@ def test_new_model_band2_view_mode_saved_boundary_drives_partition(
         .where(Instrument.id != source.id)
     ).scalar_one()
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/fields/save",
         data={
             "link1_mode": "all",
             "link1_combinator": "AND",
@@ -2195,9 +2113,7 @@ def test_new_model_band2_view_mode_saved_boundary_drives_partition(
         },
         follow_redirects=False,
     )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     assert 'data-new-model-band2-saved-boundary-fields="tag_1"' in body
     assert 'data-new-model-band2-unit-mode="grouped"' in body
 
@@ -2228,8 +2144,7 @@ def test_new_model_column_widths_snapshot_rides_with_form_save(
     # where the async fetch never made it. Form Save carries the
     # snapshot.
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/fields/save",
         data={
             "link1_mode": "all",
             "link1_combinator": "AND",
@@ -2252,8 +2167,7 @@ def test_new_model_column_widths_snapshot_rides_with_form_save(
     db.refresh(new_model)
     assert new_model.column_widths == {"identity": 240}
     body = client.get(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments?editing={new_model.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
     assert 'name="column_widths_snapshot"' in body
     assert 'data-new-model-band2-identity-width="240"' in body
@@ -2284,8 +2198,7 @@ def test_column_widths_snapshot_value_survives_html_parsing(
 
     _Snapshot().feed(
         client.get(
-            f"/operator/sessions/{review_session.public_id}"
-            f"/instruments?editing={instrument.id}"
+            f"/operator/sessions/{review_session.public_id}/instruments?editing={instrument.id}"
         ).text
     )
     assert values, "the snapshot input renders"
@@ -2316,8 +2229,7 @@ def test_new_model_response_field_width_persists_on_band2_state(
 
     # Persist a response field with a drag-resized width.
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
                 {
@@ -2340,8 +2252,7 @@ def test_new_model_response_field_width_persists_on_band2_state(
 
     # Out-of-range widths clamp on store.
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
                 {
@@ -2365,8 +2276,7 @@ def test_new_model_response_field_width_persists_on_band2_state(
     # preview-builder JS picks it up to set the response column's
     # <col style="width: Npx">.
     body = client.get(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments?editing={new_model.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
     flat = " ".join(body.split())
     card = _card_slice(flat, new_model.id)
@@ -2415,17 +2325,13 @@ def _all_new_model_session(
 # per-instrument Assignment Rule picker card was retired.
 
 
-def test_rec_d1_single_active_reviewees_query_per_render(
-    client: TestClient, db: Session
-) -> None:
+def test_rec_d1_single_active_reviewees_query_per_render(client: TestClient, db: Session) -> None:
     """Rec D1 — the active-reviewees SELECT runs exactly once per
     page render even when K new-model instruments are on the page.
     Before D1 the call was per-card (O(K) queries)."""
     from sqlalchemy import event
 
-    review_session, instruments = _all_new_model_session(
-        client, db, code="rec-d1", n_extra=3
-    )
+    review_session, instruments = _all_new_model_session(client, db, code="rec-d1", n_extra=3)
     # Wave 5 PR 5.3 — every instrument is implicitly new-model.
     assert len(instruments) == 4
 
@@ -2438,18 +2344,12 @@ def test_rec_d1_single_active_reviewees_query_per_render(
         # Match the _new_model_band2_states_for active-reviewees
         # SELECT: a select against reviewees with both the
         # session_id and status filters in the WHERE.
-        if (
-            "from reviewees" in s
-            and "reviewees.session_id" in s
-            and "reviewees.status" in s
-        ):
+        if "from reviewees" in s and "reviewees.session_id" in s and "reviewees.status" in s:
             active_reviewee_selects += 1
 
     event.listen(bind, "before_cursor_execute", before_cursor_execute)
     try:
-        resp = client.get(
-            f"/operator/sessions/{review_session.public_id}/instruments"
-        )
+        resp = client.get(f"/operator/sessions/{review_session.public_id}/instruments")
     finally:
         event.remove(bind, "before_cursor_execute", before_cursor_execute)
 
@@ -2545,15 +2445,12 @@ def test_gap_10_preview_route_returns_rule_surviving_group_member_ids(
     ``band2_state.sample_group_member_ids``. With Links 1+2 narrow
     enough to exclude part of the sample's group, the persisted ID
     set must reflect only the surviving members."""
-    review_session, new_model = _group_band2_session(
-        client, db, code="gap-10-route"
-    )
+    review_session, new_model = _group_band2_session(client, db, code="gap-10-route")
     # Link 1: only Lead reviewers (Alice). Both Team A reviewees are
     # still in scope under Alice, so both Carol + Dan should appear
     # in the surviving member ID set.
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/preview-sample",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/preview-sample",
         json={
             "link1_mode": "filter",
             "link1_combinator": "AND",
@@ -2588,8 +2485,7 @@ def test_gap_10_preview_route_returns_rule_surviving_group_member_ids(
     # Now narrow Link 2 to exclude Carol (filter reviewee by name).
     # Only Dan should survive in Team A.
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/preview-sample",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/preview-sample",
         json={
             "link1_mode": "all",
             "link1_combinator": "AND",
@@ -2624,9 +2520,7 @@ def test_gap_10_render_filters_group_members_by_persisted_ids(
     persisted rule-surviving ID set. After a Refresh under Link 2
     that excludes Carol from Team A, the rendered preview must show
     only Dan in the Team A group's member list — not Carol + Dan."""
-    review_session, new_model = _group_band2_session(
-        client, db, code="gap-10-render"
-    )
+    review_session, new_model = _group_band2_session(client, db, code="gap-10-render")
     by_name = {
         r.name: r.id
         for r in db.execute(
@@ -2635,8 +2529,7 @@ def test_gap_10_render_filters_group_members_by_persisted_ids(
     }
     # Refresh with Link 2 excluding Carol; the sample falls on Dan.
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/preview-sample",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/preview-sample",
         json={
             "link1_mode": "all",
             "link1_combinator": "AND",
@@ -2655,14 +2548,10 @@ def test_gap_10_render_filters_group_members_by_persisted_ids(
     )
     db.refresh(new_model)
     assert _band2(new_model)["sample_reviewee_name"] == "Dan"
-    assert _band2(new_model)["sample_group_member_ids"] == [
-        by_name["Dan"]
-    ]
+    assert _band2(new_model)["sample_group_member_ids"] == [by_name["Dan"]]
     # Render the index page; the data-new-model-band2-sample-names
     # attribute carries the rendered group member name list.
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     flat = " ".join(_band2_card(body, new_model.id).split())
     # Find the sample-names attribute on the new-model band 2 card.
     needle = 'data-new-model-band2-sample-names="'
@@ -2674,16 +2563,12 @@ def test_gap_10_render_filters_group_members_by_persisted_ids(
     assert names == ["Dan"]
 
 
-def test_pair_context_only_preview_honours_links_1_and_2(
-    client: TestClient, db: Session
-) -> None:
+def test_pair_context_only_preview_honours_links_1_and_2(client: TestClient, db: Session) -> None:
     """A5 (ruled 2026-10-06): a pair-context-only boundary cannot be
     partitioned in the preview, but the fallback still honours the
     rules — the member list is the sample reviewer's survivors, so a
     reviewee Link 2 excludes is not listed."""
-    review_session, new_model = _group_band2_session(
-        client, db, code="a5-pair-only"
-    )
+    review_session, new_model = _group_band2_session(client, db, code="a5-pair-only")
     new_model.group_kind = "p1"
     db.commit()
     by_name = {
@@ -2693,8 +2578,7 @@ def test_pair_context_only_preview_honours_links_1_and_2(
         ).scalars()
     }
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/preview-sample",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/preview-sample",
         json={
             "link1_mode": "all",
             "link1_combinator": "AND",
@@ -2716,9 +2600,7 @@ def test_pair_context_only_preview_honours_links_1_and_2(
     db.refresh(new_model)
     assert _band2(new_model)["sample_group_member_ids"] == survivors
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     flat = " ".join(_band2_card(body, new_model.id).split())
     needle = 'data-new-model-band2-sample-names="'
     idx = flat.find(needle)
@@ -2735,9 +2617,7 @@ def test_pair_context_only_preview_honours_links_1_and_2(
     idx = flat.find(needle)
     assert idx != -1
     end = flat.find('"', idx + len(needle))
-    assert sorted(
-        int(i) for i in flat[idx + len(needle) : end].split(",")
-    ) == survivors
+    assert sorted(int(i) for i in flat[idx + len(needle) : end].split(",")) == survivors
 
 
 def test_pair_context_preview_live_empty_boundary_takes_reviewer_survivors(
@@ -2747,9 +2627,7 @@ def test_pair_context_preview_live_empty_boundary_takes_reviewer_survivors(
     Refresh posting no boundary over a saved ``p1`` is a group with no
     boundary (A4, ruled 2026-10-08): the member set is the sample
     reviewer's survivors, here every reviewee."""
-    review_session, new_model = _group_band2_session(
-        client, db, code="a5-live-empty"
-    )
+    review_session, new_model = _group_band2_session(client, db, code="a5-live-empty")
     new_model.group_kind = "p1"
     db.commit()
     everyone = sorted(
@@ -2759,8 +2637,7 @@ def test_pair_context_preview_live_empty_boundary_takes_reviewer_survivors(
         ).scalars()
     )
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/preview-sample",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/preview-sample",
         json={
             "link1_mode": "all",
             "link1_combinator": "AND",
@@ -2776,15 +2653,11 @@ def test_pair_context_preview_live_empty_boundary_takes_reviewer_survivors(
     assert _band2(new_model)["sample_group_member_ids"] == everyone
 
 
-def test_no_boundary_group_preview_honours_links_1_and_2(
-    client: TestClient, db: Session
-) -> None:
+def test_no_boundary_group_preview_honours_links_1_and_2(client: TestClient, db: Session) -> None:
     """A4 (ruled 2026-10-08): a group instrument with no boundary tag
     previews the sample reviewer's rule survivors as its one group, on
     the server render as in the browser, not the whole active roster."""
-    review_session, new_model = _group_band2_session(
-        client, db, code="a4-no-boundary"
-    )
+    review_session, new_model = _group_band2_session(client, db, code="a4-no-boundary")
     new_model.group_kind = GROUP_KIND_SENTINEL
     db.commit()
     by_name = {
@@ -2794,8 +2667,7 @@ def test_no_boundary_group_preview_honours_links_1_and_2(
         ).scalars()
     }
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/preview-sample",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/preview-sample",
         json={
             "link1_mode": "all",
             "link1_combinator": "AND",
@@ -2817,9 +2689,7 @@ def test_no_boundary_group_preview_honours_links_1_and_2(
     db.refresh(new_model)
     assert _band2(new_model)["sample_group_member_ids"] == survivors
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     flat = " ".join(_band2_card(body, new_model.id).split())
     needle = 'data-new-model-band2-sample-names="'
     idx = flat.find(needle)
@@ -2870,8 +2740,7 @@ def test_live_grouped_pill_on_a_saved_individual_takes_reviewer_survivors(
         ).scalars()
     }
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/preview-sample",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/preview-sample",
         json={
             **_A4_LINK2_EXCLUDE,
             "link3_mode": "grouped",
@@ -2888,12 +2757,9 @@ def test_live_individual_pill_on_a_saved_group_stores_no_member_ids(
     """A4: the live Individual pill wins over a saved Group and over the
     boundary selects the card still posts, so the Refresh stores no
     member set."""
-    review_session, new_model = _group_band2_session(
-        client, db, code="a4-live-individual"
-    )
+    review_session, new_model = _group_band2_session(client, db, code="a4-live-individual")
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/preview-sample",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/preview-sample",
         json={
             **_A4_LINK2_EXCLUDE,
             "link3_mode": "individual",
@@ -2912,14 +2778,11 @@ def test_per_reviewee_preview_stores_no_member_ids_and_renders_unfiltered(
     Refresh stores no member set (an unknown ``link3_mode`` falls back
     to the saved instrument), and a leftover set does not filter the
     server render."""
-    review_session, new_model = _group_band2_session(
-        client, db, code="a4-individual"
-    )
+    review_session, new_model = _group_band2_session(client, db, code="a4-individual")
     new_model.group_kind = None
     db.commit()
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/preview-sample",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/preview-sample",
         json={**_A4_LINK2_EXCLUDE, "link3_mode": "bogus"},
     )
     assert resp.json()["sample_group_member_ids"] == []
@@ -2936,9 +2799,7 @@ def test_per_reviewee_preview_stores_no_member_ids_and_renders_unfiltered(
         "sample_group_member_ids": [carol.id],
     }
     db.commit()
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     flat = " ".join(_band2_card(body, new_model.id).split())
     needle = 'data-new-model-band2-sample-names="'
     idx = flat.find(needle)
@@ -2952,23 +2813,18 @@ def test_per_reviewee_preview_stores_no_member_ids_and_renders_unfiltered(
     ]
 
 
-def test_boundary_change_drops_stale_sample_member_ids(
-    client: TestClient, db: Session
-) -> None:
+def test_boundary_change_drops_stale_sample_member_ids(client: TestClient, db: Session) -> None:
     """Codex on #2853: the member set a Refresh stored belongs to the
     boundary it ran under. Saving a different Link 3 boundary drops
     it, so the client partition does not keep narrowing the preview
     with survivors of the old boundary until the next Refresh."""
     from app.services import instruments as instruments_service
 
-    review_session, new_model = _group_band2_session(
-        client, db, code="a5-stale"
-    )
+    review_session, new_model = _group_band2_session(client, db, code="a5-stale")
     new_model.group_kind = "p1"
     db.commit()
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/preview-sample",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/preview-sample",
         json={
             "link1_mode": "all",
             "link1_combinator": "AND",
@@ -3004,12 +2860,9 @@ def test_gap_10_preview_route_json_response_returns_member_ids(
     rebuild can intersect its boundary partition against the
     engine's actual survivors without waiting for a page reload to
     pick up the persisted DB value."""
-    review_session, new_model = _group_band2_session(
-        client, db, code="gap-10-json"
-    )
+    review_session, new_model = _group_band2_session(client, db, code="gap-10-json")
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/preview-sample",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/preview-sample",
         json={
             "link1_mode": "filter",
             "link1_combinator": "AND",
@@ -3035,9 +2888,7 @@ def test_gap_10_preview_route_json_response_returns_member_ids(
             select(Reviewee).where(Reviewee.session_id == review_session.id)
         ).scalars()
     }
-    assert sorted(payload["sample_group_member_ids"]) == sorted(
-        [by_name["Carol"], by_name["Dan"]]
-    )
+    assert sorted(payload["sample_group_member_ids"]) == sorted([by_name["Carol"], by_name["Dan"]])
 
 
 def test_preview_route_uses_live_link3_boundary_not_persisted(
@@ -3057,12 +2908,9 @@ def test_preview_route_uses_live_link3_boundary_not_persisted(
     member IDs to just the sample's tag_2 group — not the whole
     tag_1 set.
     """
-    review_session, new_model = _group_band2_session(
-        client, db, code="gap-10-live-link3"
-    )
+    review_session, new_model = _group_band2_session(client, db, code="gap-10-live-link3")
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/preview-sample",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/preview-sample",
         json={
             "link1_mode": "all",
             "link1_combinator": "AND",
@@ -3110,9 +2958,7 @@ def test_preview_route_scopes_member_ids_to_sample_reviewer(
     Without the per-reviewer scoping, the union over Alice's and
     Bob's pairs would silently widen the set.
     """
-    review_session, new_model = _group_band2_session(
-        client, db, code="gap-10-per-reviewer"
-    )
+    review_session, new_model = _group_band2_session(client, db, code="gap-10-per-reviewer")
     # Add a third reviewer Cole whose tag_2 = "keep" — matches
     # Dan + Eve + Fay (Cole's tag_2 = their tag_2). Two of those
     # are Team B (Eve, Fay); one is Team A (Dan).
@@ -3131,8 +2977,7 @@ def test_preview_route_scopes_member_ids_to_sample_reviewer(
     new_model.group_kind = "r1"
     db.commit()
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/preview-sample",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/preview-sample",
         json={
             "link1_mode": "all",
             "link1_combinator": "AND",
@@ -3289,8 +3134,7 @@ def test_preview_route_includes_sample_reviewers_reviewee_twin(
     new_model.group_kind = "r1"
     db.commit()
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/preview-sample",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/preview-sample",
         json={
             "link1_mode": "all",
             "link1_combinator": "AND",
@@ -3325,12 +3169,9 @@ def test_gap_10_band2_wrapper_carries_member_ids_for_js_partition(
     Band 2 wrapper so the client-side ``partitionedSampleNames``
     JS intersects against them. Without this attr the JS rebuild
     silently widens the preview member list past Links 1+2."""
-    review_session, new_model = _group_band2_session(
-        client, db, code="gap-10-wrapper"
-    )
+    review_session, new_model = _group_band2_session(client, db, code="gap-10-wrapper")
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/preview-sample",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/preview-sample",
         json={
             "link1_mode": "filter",
             "link1_combinator": "AND",
@@ -3347,9 +3188,7 @@ def test_gap_10_band2_wrapper_carries_member_ids_for_js_partition(
             "link2_rules": [],
         },
     )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     db.refresh(new_model)
     persisted = _band2(new_model).get("sample_group_member_ids") or []
     assert len(persisted) > 0
@@ -3364,18 +3203,14 @@ def test_gap_10_legacy_band2_state_without_member_ids_falls_back(
     ``sample_group_member_ids`` key) still render via the
     unconstrained boundary partition. Render must not crash and the
     member list must equal the boundary-tag partition."""
-    review_session, new_model = _group_band2_session(
-        client, db, code="gap-10-legacy"
-    )
+    review_session, new_model = _group_band2_session(client, db, code="gap-10-legacy")
     # Simulate a legacy band2_state: only sample_reviewee_name, no
     # member ID set. Write through the ORM directly so we bypass the
     # set_band2_state sanitiser (which would carry no member IDs
     # forward anyway, but make the intent explicit).
     new_model.band2_state = {"sample_reviewee_name": "Carol"}
     db.commit()
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     flat = " ".join(_band2_card(body, new_model.id).split())
     needle = 'data-new-model-band2-sample-names="'
     idx = flat.find(needle)
@@ -3437,9 +3272,7 @@ def _new_model_with_tags(
     return review_session, new_model
 
 
-def _df_by_key(
-    db: Session, instrument_id: int
-) -> dict[str, InstrumentDisplayField]:
+def _df_by_key(db: Session, instrument_id: int) -> dict[str, InstrumentDisplayField]:
     fields = list(
         db.execute(
             select(InstrumentDisplayField).where(
@@ -3457,9 +3290,7 @@ def test_gap_1_pill_selection_writes_visible_on_display_fields(
     InstrumentDisplayField.visible is set True for each pill in the
     set and False for each non-locked field NOT in the set. Locked
     Name / Email stay visible regardless."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="gap-1-write"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="gap-1-write")
     # Sanity: by default all display fields default to visible=True.
     before = _df_by_key(db, new_model.id)
     assert before["reviewee.name"].visible is True
@@ -3472,8 +3303,7 @@ def test_gap_1_pill_selection_writes_visible_on_display_fields(
     # what the payload says, so the meaningful effect is tag_2 →
     # invisible while tag_1 stays visible.
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "selected_display_keys": [
                 "reviewee.name",
@@ -3493,8 +3323,7 @@ def test_gap_1_pill_selection_writes_visible_on_display_fields(
 
     # Re-select tag_2; it flips back to visible.
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "selected_display_keys": [
                 "reviewee.name",
@@ -3509,18 +3338,13 @@ def test_gap_1_pill_selection_writes_visible_on_display_fields(
     assert after2["reviewee.tag_2"].visible is True
 
 
-def test_gap_1_empty_selection_hides_all_non_locked_fields(
-    client: TestClient, db: Session
-) -> None:
+def test_gap_1_empty_selection_hides_all_non_locked_fields(client: TestClient, db: Session) -> None:
     """Gap 1 boundary case — an empty selected_display_keys payload
     means "operator unselected everything"; every non-locked field
     flips to invisible. Locked Name / Email still stay visible."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="gap-1-empty"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="gap-1-empty")
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={"selected_display_keys": []},
     )
     assert resp.status_code == 200
@@ -3541,14 +3365,11 @@ def test_gap_1_omitted_selection_preserves_existing_visibility(
     Refresh-only or response-fields-only save) must not touch
     InstrumentDisplayField.visible. The pill→visible sync only
     fires when the key is in the payload."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="gap-1-omit"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="gap-1-omit")
     # First: a payload that DOES include selected_display_keys, to
     # set tag_2 invisible.
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={"selected_display_keys": ["reviewee.tag_1"]},
     )
     db.expire_all()
@@ -3558,26 +3379,21 @@ def test_gap_1_omitted_selection_preserves_existing_visibility(
     # only save). tag_2 must stay invisible — not silently flipped
     # back to True.
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={"sample_reviewee_name": "Carol"},
     )
     db.expire_all()
     assert _df_by_key(db, new_model.id)["reviewee.tag_2"].visible is False
 
 
-def test_gap_1_view_derives_show_checkbox_from_visible(
-    client: TestClient, db: Session
-) -> None:
+def test_gap_1_view_derives_show_checkbox_from_visible(client: TestClient, db: Session) -> None:
     """Gap 1 read path — each display-field row's Show checkbox
     reflects ``InstrumentDisplayField.visible``, not whatever the
     legacy band2_state.selected_display_keys JSON happens to hold.
     Editing the visible flag directly on the ORM (simulating a
     Gap-7 / future-source change to the field model) shows up on
     the next render's checkbox."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="gap-1-render"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="gap-1-render")
     # Flip tag_2 invisible directly (bypassing set_band2_state) and
     # leave band2_state.selected_display_keys JSON stale / empty.
     fields = _df_by_key(db, new_model.id)
@@ -3585,8 +3401,7 @@ def test_gap_1_view_derives_show_checkbox_from_visible(
     db.commit()
 
     body = client.get(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments?editing={new_model.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
     card = _band2_card(body, new_model.id)
 
@@ -3605,16 +3420,12 @@ def test_gap_1_view_derives_show_checkbox_from_visible(
 # --------------------------------------------------------------------------- #
 
 
-def test_gap_3_band2_state_carries_sort_spec(
-    client: TestClient, db: Session
-) -> None:
+def test_gap_3_band2_state_carries_sort_spec(client: TestClient, db: Session) -> None:
     """Gap 3 — the view-layer band2 state exposes the persisted
     sort spec so the template can stamp the data attribute + the
     sort-spec hidden-inputs slot, and the preview-builder JS can
     render badges."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="gap-3-state"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="gap-3-state")
     fields = _df_by_key(db, new_model.id)
     tag1_id = fields["reviewee.tag_1"].id
     tag2_id = fields["reviewee.tag_2"].id
@@ -3631,8 +3442,7 @@ def test_gap_3_band2_state_carries_sort_spec(
     db.commit()
 
     body = client.get(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments?editing={new_model.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
     flat = " ".join(_band2_card(body, new_model.id).split())
 
@@ -3651,12 +3461,8 @@ def test_gap_3_band2_state_carries_sort_spec(
 
     slot_id = f'id="sort-spec-inputs-{new_model.id}"'
     assert slot_id in flat
-    assert (
-        flat.count(f'name="sort_display_field_id" value="{tag1_id}"') >= 1
-    )
-    assert (
-        flat.count(f'name="sort_display_field_id" value="{tag2_id}"') >= 1
-    )
+    assert flat.count(f'name="sort_display_field_id" value="{tag1_id}"') >= 1
+    assert flat.count(f'name="sort_display_field_id" value="{tag2_id}"') >= 1
     assert flat.count('name="sort_dir" value="asc"') >= 1
     assert flat.count('name="sort_dir" value="desc"') >= 1
 
@@ -3668,16 +3474,13 @@ def test_gap_3_bulk_save_persists_sort_spec_via_existing_form(
     sort_dir parallel arrays (populated by the existing
     _rebuildSortInputs JS on badge cycle) round-trip through the
     same /fields/save route the legacy card uses."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="gap-3-save"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="gap-3-save")
     fields = _df_by_key(db, new_model.id)
     tag1_id = fields["reviewee.tag_1"].id
     tag2_id = fields["reviewee.tag_2"].id
 
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/fields/save",
         data={
             "sort_display_field_id": [str(tag2_id), str(tag1_id)],
             "sort_dir": ["desc", "asc"],
@@ -3687,9 +3490,7 @@ def test_gap_3_bulk_save_persists_sort_spec_via_existing_form(
     assert resp.status_code == 303, resp.text
     # Defensive: assert the redirect didn't carry a sort_save_error
     # (which would mean the spec was rejected, not persisted).
-    assert "sort_save_error" not in resp.headers.get("location", ""), (
-        resp.headers.get("location")
-    )
+    assert "sort_save_error" not in resp.headers.get("location", ""), resp.headers.get("location")
     db.refresh(new_model)
     assert new_model.sort_display_fields == [
         {"display_field_id": tag2_id, "dir": "desc"},
@@ -3697,19 +3498,14 @@ def test_gap_3_bulk_save_persists_sort_spec_via_existing_form(
     ]
 
 
-def test_gap_3_no_sort_spec_renders_empty_inputs_slot(
-    client: TestClient, db: Session
-) -> None:
+def test_gap_3_no_sort_spec_renders_empty_inputs_slot(client: TestClient, db: Session) -> None:
     """Gap 3 — a fresh new-model card with no sort spec renders the
     sort-spec-inputs slot empty (no hidden inputs) and the
     data-new-model-band2-sort-spec attr as []. Both the JS
     preview-builder + bulk-save form handle the empty case."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="gap-3-empty"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="gap-3-empty")
     body = client.get(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments?editing={new_model.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
     flat = " ".join(body.split())
     assert "data-new-model-band2-sort-spec='[]'" in flat
@@ -3729,19 +3525,14 @@ def test_gap_3_no_sort_spec_renders_empty_inputs_slot(
 # the JSON rows to real InstrumentResponseField rows).
 
 
-def test_gap_5_required_round_trips_through_band2_state(
-    client: TestClient, db: Session
-) -> None:
+def test_gap_5_required_round_trips_through_band2_state(client: TestClient, db: Session) -> None:
     """Gap 5 — required: true persists onto
     band2_state.response_fields[i].required when included in the
     /band2-state POST. Round-trip preserves it across no-op and
     edit saves."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="gap-5-roundtrip"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="gap-5-roundtrip")
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
                 {
@@ -3764,8 +3555,7 @@ def test_gap_5_required_round_trips_through_band2_state(
     assert rfs[0]["required"] is True
     # Edit the row to required=False; the change persists.
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
                 {
@@ -3786,17 +3576,12 @@ def test_gap_5_required_round_trips_through_band2_state(
     assert _band2_rfs(new_model)[0]["required"] is False
 
 
-def test_gap_5_required_defaults_false_when_omitted(
-    client: TestClient, db: Session
-) -> None:
+def test_gap_5_required_defaults_false_when_omitted(client: TestClient, db: Session) -> None:
     """Gap 5 — payloads that omit required default to False. Matches
     bool(raw.get("required")) → False for missing keys."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="gap-5-default"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="gap-5-default")
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
                 {
@@ -3811,21 +3596,16 @@ def test_gap_5_required_defaults_false_when_omitted(
     assert _band2_rfs(new_model)[0]["required"] is False
 
 
-def test_gap_5_template_renders_checkbox_and_data_required(
-    client: TestClient, db: Session
-) -> None:
+def test_gap_5_template_renders_checkbox_and_data_required(client: TestClient, db: Session) -> None:
     """Gap 5 template — the Band 3 row's Required toggle button
     presets from rf.required (primary class + data-required="true"
     when required, secondary class + data-required="false" when
     not), and the Band 2 pill's data-required attr reflects the
     same value."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="gap-5-render"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="gap-5-render")
     # Seed a required response field directly through band2-state.
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
                 {
@@ -3844,8 +3624,7 @@ def test_gap_5_template_renders_checkbox_and_data_required(
         },
     )
     body = client.get(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments?editing={new_model.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
     flat = " ".join(body.split())
     # Row 1 (Rating, required=True): the R button carries
@@ -3854,13 +3633,13 @@ def test_gap_5_template_renders_checkbox_and_data_required(
     rating_idx = flat.find('value="Rating"')
     assert rating_idx != -1
     rating_block = flat[rating_idx : rating_idx + 2500]
-    assert 'data-new-model-rf-required' in rating_block
-    btn_idx = rating_block.find('data-new-model-rf-required')
+    assert "data-new-model-rf-required" in rating_block
+    btn_idx = rating_block.find("data-new-model-rf-required")
     btn_block = rating_block[btn_idx : btn_idx + 300]
     assert 'data-required="true"' in btn_block
     # Primary style — no "secondary" modifier on the .btn class.
-    btn_open_idx = rating_block.rfind('<button', 0, btn_idx)
-    btn_open_tag = rating_block[btn_open_idx : btn_idx]
+    btn_open_idx = rating_block.rfind("<button", 0, btn_idx)
+    btn_open_tag = rating_block[btn_open_idx:btn_idx]
     assert 'class="btn"' in btn_open_tag
 
     # Row 2 (Notes, required=False): the R button carries
@@ -3868,12 +3647,12 @@ def test_gap_5_template_renders_checkbox_and_data_required(
     notes_idx = flat.find('value="Notes"')
     assert notes_idx != -1
     notes_block = flat[notes_idx : notes_idx + 2500]
-    btn_idx2 = notes_block.find('data-new-model-rf-required')
+    btn_idx2 = notes_block.find("data-new-model-rf-required")
     assert btn_idx2 != -1
     btn_block2 = notes_block[btn_idx2 : btn_idx2 + 300]
     assert 'data-required="false"' in btn_block2
-    btn_open_idx2 = notes_block.rfind('<button', 0, btn_idx2)
-    btn_open_tag2 = notes_block[btn_open_idx2 : btn_idx2]
+    btn_open_idx2 = notes_block.rfind("<button", 0, btn_idx2)
+    btn_open_tag2 = notes_block[btn_open_idx2:btn_idx2]
     assert 'class="btn secondary"' in btn_open_tag2
 
     # Band 2 pill data-required reflects each row.
@@ -3891,12 +3670,9 @@ def test_band3_help_text_visible_toggle_persists_and_renders(
     flag, and the Band 2 pill carries the same flag on
     data-help-visible so the client-side preview rebuild can
     inject the half-width help card above the table."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="band3-help-toggle"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="band3-help-toggle")
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
                 {
@@ -3920,8 +3696,7 @@ def test_band3_help_text_visible_toggle_persists_and_renders(
     assert rfs[1]["help_text_visible"] is False
 
     body = client.get(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments?editing={new_model.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
     flat = " ".join(body.split())
 
@@ -3931,12 +3706,12 @@ def test_band3_help_text_visible_toggle_persists_and_renders(
     rating_idx = flat.find('value="Rating"')
     assert rating_idx != -1
     rating_block = flat[rating_idx : rating_idx + 2500]
-    btn_idx = rating_block.find('data-new-model-rf-help-visible')
+    btn_idx = rating_block.find("data-new-model-rf-help-visible")
     assert btn_idx != -1
     btn_block = rating_block[btn_idx : btn_idx + 300]
     assert 'data-help-visible="true"' in btn_block
-    btn_open_idx = rating_block.rfind('<button', 0, btn_idx)
-    btn_open_tag = rating_block[btn_open_idx : btn_idx]
+    btn_open_idx = rating_block.rfind("<button", 0, btn_idx)
+    btn_open_tag = rating_block[btn_open_idx:btn_idx]
     assert 'class="btn"' in btn_open_tag
 
     # Row 2 (Notes, help_text_visible=False): the ≡ button is
@@ -3945,12 +3720,12 @@ def test_band3_help_text_visible_toggle_persists_and_renders(
     notes_idx = flat.find('value="Notes"')
     assert notes_idx != -1
     notes_block = flat[notes_idx : notes_idx + 2500]
-    btn_idx2 = notes_block.find('data-new-model-rf-help-visible')
+    btn_idx2 = notes_block.find("data-new-model-rf-help-visible")
     assert btn_idx2 != -1
     btn_block2 = notes_block[btn_idx2 : btn_idx2 + 300]
     assert 'data-help-visible="false"' in btn_block2
-    btn_open_idx2 = notes_block.rfind('<button', 0, btn_idx2)
-    btn_open_tag2 = notes_block[btn_open_idx2 : btn_idx2]
+    btn_open_idx2 = notes_block.rfind("<button", 0, btn_idx2)
+    btn_open_tag2 = notes_block[btn_open_idx2:btn_idx2]
     assert 'class="btn secondary"' in btn_open_tag2
 
     # Band 2 pill data-help-visible reflects each row.
@@ -3963,12 +3738,9 @@ def test_band3_help_text_visible_defaults_to_false_when_omitted(
 ) -> None:
     """Payloads that omit help_text_visible default to False —
     matches bool(raw.get("help_text_visible")) for missing keys."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="band3-help-default"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="band3-help-default")
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
                 {
@@ -3980,26 +3752,18 @@ def test_band3_help_text_visible_defaults_to_false_when_omitted(
         },
     )
     db.refresh(new_model)
-    assert (
-        _band2_rfs(new_model)[0]["help_text_visible"]
-        is False
-    )
+    assert _band2_rfs(new_model)[0]["help_text_visible"] is False
 
 
-def test_band3_help_text_body_persists_and_renders_on_pill(
-    client: TestClient, db: Session
-) -> None:
+def test_band3_help_text_body_persists_and_renders_on_pill(client: TestClient, db: Session) -> None:
     """Help-text body persists into
     band2_state.response_fields[*].help_text and the response pill
     carries the value on data-help-text so the operator-surface
     help card (and a JS-driven preview rebuild) can render it
     without a server round-trip."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="band3-help-body"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="band3-help-body")
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
                 {
@@ -4013,33 +3777,24 @@ def test_band3_help_text_body_persists_and_renders_on_pill(
         },
     )
     db.refresh(new_model)
-    assert (
-        _band2_rfs(new_model)[0]["help_text"]
-        == "Rate from 1 (poor) to 5 (great)."
-    )
+    assert _band2_rfs(new_model)[0]["help_text"] == "Rate from 1 (poor) to 5 (great)."
 
     body = client.get(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments?editing={new_model.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
     # The Band 2 pill carries the help-text body so the JS preview
     # rebuild can inject it into the help card without re-fetching.
     assert 'data-help-text="Rate from 1 (poor) to 5 (great).' in body
 
 
-def test_band3_help_text_body_clamped_to_1000_chars(
-    client: TestClient, db: Session
-) -> None:
+def test_band3_help_text_body_clamped_to_1000_chars(client: TestClient, db: Session) -> None:
     """Help-text body is clamped to 1000 chars server-side as a
     defence-in-depth (the textarea's maxlength already enforces
     the same cap on the client). Wave 3 doc decision E."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="band3-help-clamp"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="band3-help-clamp")
     long_text = "x" * 1500
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
                 {
@@ -4064,12 +3819,9 @@ def test_band3_help_text_body_defaults_to_empty_when_omitted(
     """Payloads that omit help_text default to empty string —
     matches the sanitiser's ``str(...)[:1000] if not None else ""``
     contract."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="band3-help-body-default"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="band3-help-body-default")
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
                 {
@@ -4090,24 +3842,19 @@ def test_band3_help_text_body_defaults_to_empty_when_omitted(
 # --------------------------------------------------------------------------- #
 
 
-def test_wave3_pri_creates_irf_row_for_new_entry(
-    client: TestClient, db: Session
-) -> None:
+def test_wave3_pri_creates_irf_row_for_new_entry(client: TestClient, db: Session) -> None:
     """A response-field JSON entry without ``id`` materialises a
     new InstrumentResponseField row on first save; the JSON gets
     its ``id`` back-filled to the new row's PK so subsequent
     saves id-match instead of creating duplicates."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="w3-pri-create"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="w3-pri-create")
     # Drop the seeded defaults so we can see the create cleanly.
     for rf in list(new_model.response_fields):
         db.delete(rf)
     db.commit()
 
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
                 {
@@ -4137,21 +3884,16 @@ def test_wave3_pri_creates_irf_row_for_new_entry(
     assert _band2_rfs(new_model)[0]["id"] == row.id
 
 
-def test_wave3_pri_id_match_updates_existing_row(
-    client: TestClient, db: Session
-) -> None:
+def test_wave3_pri_id_match_updates_existing_row(client: TestClient, db: Session) -> None:
     """A response-field JSON entry with a matching ``id`` updates
     the existing row in place — no duplicate row is created."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="w3-pri-update"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="w3-pri-update")
     for rf in list(new_model.response_fields):
         db.delete(rf)
     db.commit()
 
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
                 {
@@ -4170,8 +3912,7 @@ def test_wave3_pri_id_match_updates_existing_row(
 
     # Second save — same id, updated label + bounds.
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
                 {
@@ -4210,21 +3951,14 @@ def test_full_flow_r_toggle_then_bottom_save_preserves_state(
     If this test fails, there's a server-side regression. If it
     passes, the bug the operator's seeing is client-side
     (cache, fetch abort, JS error)."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="full-flow-r-save"
-    )
-    rating = next(
-        rf for rf in new_model.response_fields if rf.label == "Rating"
-    )
-    comments = next(
-        rf for rf in new_model.response_fields if rf.label == "Comments"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="full-flow-r-save")
+    rating = next(rf for rf in new_model.response_fields if rf.label == "Rating")
+    comments = next(rf for rf in new_model.response_fields if rf.label == "Comments")
 
     # Step 1 — simulate R-toggle saveBand2State (Rating's required
     # flipped from True to False, Comments unchanged).
     band2_resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "selected_display_keys": [],
             "response_fields": [
@@ -4253,9 +3987,7 @@ def test_full_flow_r_toggle_then_bottom_save_preserves_state(
     db.expire_all()
     new_model = db.get(type(new_model), new_model.id)
     assert new_model is not None
-    rating_row = next(
-        rf for rf in new_model.response_fields if rf.label == "Rating"
-    )
+    rating_row = next(rf for rf in new_model.response_fields if rf.label == "Rating")
     assert rating_row.required is False
     assert _band2_rfs(new_model)[0]["required"] is False
 
@@ -4263,8 +3995,7 @@ def test_full_flow_r_toggle_then_bottom_save_preserves_state(
     # the dfsave form payload — Band 1 + sort spec). This MUST
     # NOT clobber band2_state.response_fields.
     save_resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/fields/save",
         data={
             "link1_mode": "all",
             "link1_combinator": "AND",
@@ -4283,16 +4014,11 @@ def test_full_flow_r_toggle_then_bottom_save_preserves_state(
     # Step 3 — Wave 3 PR iii: response-field state lives on DB rows,
     # not in band2_state JSON. The DB row's required must still be
     # False; the seeded default has NOT crept back in.
-    rating_row = next(
-        rf for rf in new_model.response_fields if rf.label == "Rating"
-    )
+    rating_row = next(rf for rf in new_model.response_fields if rf.label == "Rating")
     assert rating_row.required is False, (
         "Bottom Save reverted Rating.required back to seeded default"
     )
-    rating_view = next(
-        r for r in _band2_rfs(new_model)
-        if r.get("id") == rating_row.id
-    )
+    rating_view = next(r for r in _band2_rfs(new_model) if r.get("id") == rating_row.id)
     assert rating_view["required"] is False
 
 
@@ -4304,19 +4030,12 @@ def test_full_flow_add_new_response_field_persists_through_save(
     structure as the R-toggle test — POST a saveBand2State with a
     new field alongside the seeded rows, then POST the bottom Save,
     then verify the new field is still there."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="full-flow-new-rf"
-    )
-    rating = next(
-        rf for rf in new_model.response_fields if rf.label == "Rating"
-    )
-    comments = next(
-        rf for rf in new_model.response_fields if rf.label == "Comments"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="full-flow-new-rf")
+    rating = next(rf for rf in new_model.response_fields if rf.label == "Rating")
+    comments = next(rf for rf in new_model.response_fields if rf.label == "Comments")
 
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "selected_display_keys": [],
             "response_fields": [
@@ -4357,8 +4076,7 @@ def test_full_flow_add_new_response_field_persists_through_save(
 
     # Bottom Save — must not clobber the new field.
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/fields/save",
         data={
             "link1_mode": "all",
             "link1_combinator": "AND",
@@ -4372,33 +4090,23 @@ def test_full_flow_add_new_response_field_persists_through_save(
     new_model = db.get(type(new_model), new_model.id)
     assert new_model is not None
     labels = {rf.label for rf in new_model.response_fields}
-    assert "Bonus" in labels, (
-        "Bottom Save removed the operator-added Bonus row"
-    )
+    assert "Bonus" in labels, "Bottom Save removed the operator-added Bonus row"
     # Wave 3 PR iii — the legacy JSON-shape view (rebuilt from DB
     # rows) also shows Bonus.
     view_labels = {r["name"] for r in _band2_rfs(new_model)}
     assert "Bonus" in view_labels
 
 
-def test_r_toggle_persists_required_flag_via_dual_write(
-    client: TestClient, db: Session
-) -> None:
+def test_r_toggle_persists_required_flag_via_dual_write(client: TestClient, db: Session) -> None:
     """Reproduction for the operator-reported "R doesn't persist"
     bug. Simulates the R-toggle saveBand2State payload (which
     keeps every existing pill, with the toggled row's
     ``required`` flipped) and confirms the dual-write helper
     writes through to InstrumentResponseField.required AND
     preserves the flag in band2_state JSON across reload."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="r-toggle-persist"
-    )
-    rating = next(
-        rf for rf in new_model.response_fields if rf.label == "Rating"
-    )
-    comments = next(
-        rf for rf in new_model.response_fields if rf.label == "Comments"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="r-toggle-persist")
+    rating = next(rf for rf in new_model.response_fields if rf.label == "Rating")
+    comments = next(rf for rf in new_model.response_fields if rf.label == "Comments")
     # Seeded defaults: Rating is required=True, Comments is required=False.
     assert rating.required is True
     assert comments.required is False
@@ -4407,8 +4115,7 @@ def test_r_toggle_persists_required_flag_via_dual_write(
     # JS payload keeps Comments untouched and flips Rating's
     # required flag.
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "selected_display_keys": [],
             "response_fields": [
@@ -4445,9 +4152,7 @@ def test_r_toggle_persists_required_flag_via_dual_write(
     # band2_state.response_fields JSON also carries the new
     # required flag — used by the template's initial render
     # to set the R button's primary/secondary class.
-    json_by_id = {
-        r["id"]: r for r in _band2_rfs(new_model)
-    }
+    json_by_id = {r["id"]: r for r in _band2_rfs(new_model)}
     assert json_by_id[rating.id]["required"] is False
     assert json_by_id[comments.id]["required"] is False
 
@@ -4458,16 +4163,13 @@ def test_wave3_pri_pill_selected_flows_through_to_visible_column(
     """The Band 2 response-pill ``selected`` flag flows through
     to ``InstrumentResponseField.visible`` — mirrors Gap 1's
     display-pill → ``InstrumentDisplayField.visible`` wiring."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="w3-pri-visible"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="w3-pri-visible")
     for rf in list(new_model.response_fields):
         db.delete(rf)
     db.commit()
 
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
                 {
@@ -4490,16 +4192,13 @@ def test_wave3_pri_deletes_unreferenced_row_without_responses(
 ) -> None:
     """Posting a JSON payload that omits an existing row's id
     deletes the row (no attached Response rows)."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="w3-pri-delete"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="w3-pri-delete")
     for rf in list(new_model.response_fields):
         db.delete(rf)
     db.commit()
 
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
                 {
@@ -4526,8 +4225,7 @@ def test_wave3_pri_deletes_unreferenced_row_without_responses(
 
     # Second save — drop Notes by id.
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
                 {
@@ -4548,28 +4246,21 @@ def test_wave3_pri_deletes_unreferenced_row_without_responses(
     assert notes_id not in remaining_ids
 
 
-def test_wave3_pri_b_contract_populates_band3_from_db(
-    client: TestClient, db: Session
-) -> None:
+def test_wave3_pri_b_contract_populates_band3_from_db(client: TestClient, db: Session) -> None:
     """(b) contract — when band2_state.response_fields is empty,
     the band2 view-layer populates response_fields from the
     instrument's seeded DB rows so Band 3 renders them and the
     next save round-trips ids back through the JSON."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="w3-pri-b-contract"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="w3-pri-b-contract")
     # Fresh instrument with seeded Rating + Comments rows;
     # band2_state has no response_fields yet.
-    assert new_model.band2_state is None or "response_fields" not in (
-        new_model.band2_state or {}
-    )
+    assert new_model.band2_state is None or "response_fields" not in (new_model.band2_state or {})
     seeded_rows = {rf.label: rf.id for rf in new_model.response_fields}
     assert "Rating" in seeded_rows
     assert "Comments" in seeded_rows
 
     body = client.get(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments?editing={new_model.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
     # Band 3 rows render with the seeded rows' ids on the row
     # element (data-rf-id).
@@ -4577,26 +4268,24 @@ def test_wave3_pri_b_contract_populates_band3_from_db(
         assert f'data-rf-id="{rf_id}"' in body
 
 
-def test_wave3_pri_disabled_x_when_responses_present(
-    client: TestClient, db: Session
-) -> None:
+def test_wave3_pri_disabled_x_when_responses_present(client: TestClient, db: Session) -> None:
     """When a response field has attached Response rows, the
     Band 3 X button renders ``disabled`` (no onclick) so the
     operator can't trigger a cascade delete from the UI."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="w3-pri-disabled-x"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="w3-pri-disabled-x")
     # The seeded "Rating" row will get a Response attached.
-    rating = next(
-        rf for rf in new_model.response_fields if rf.label == "Rating"
-    )
+    rating = next(rf for rf in new_model.response_fields if rf.label == "Rating")
     # Create an assignment + a response for that field.
-    reviewer = db.execute(
-        select(Reviewer).where(Reviewer.session_id == review_session.id)
-    ).scalars().first()
-    reviewee = db.execute(
-        select(Reviewee).where(Reviewee.session_id == review_session.id)
-    ).scalars().first()
+    reviewer = (
+        db.execute(select(Reviewer).where(Reviewer.session_id == review_session.id))
+        .scalars()
+        .first()
+    )
+    reviewee = (
+        db.execute(select(Reviewee).where(Reviewee.session_id == review_session.id))
+        .scalars()
+        .first()
+    )
     assert reviewer is not None and reviewee is not None
     assignment = Assignment(
         session_id=review_session.id,
@@ -4616,8 +4305,7 @@ def test_wave3_pri_disabled_x_when_responses_present(
     db.commit()
 
     body = client.get(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments?editing={new_model.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
     # The row carries data-has-responses.
     assert f'data-rf-id="{rating.id}"' in body
@@ -4635,7 +4323,7 @@ def test_wave3_pri_disabled_x_when_responses_present(
     assert x_idx != -1
     # Walk back to the <button to read its attrs.
     x_open = rating_block.rfind("<button", 0, x_idx)
-    x_tag = rating_block[x_open : x_idx]
+    x_tag = rating_block[x_open:x_idx]
     assert "disabled" in x_tag
     assert "newModelRfDeleteRow" not in x_tag
 
@@ -4649,19 +4337,19 @@ def test_wave3_prii_disabled_type_and_bounds_when_responses_present(
     operator must clear responses before re-shaping the field;
     server-side ResponseFieldShapeChangeError is the defence-in-
     depth for direct API hits."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="w3-prii-shape-disabled"
+    review_session, new_model = _new_model_with_tags(client, db, code="w3-prii-shape-disabled")
+    rating = next(rf for rf in new_model.response_fields if rf.label == "Rating")
+    reviewer = (
+        db.execute(select(Reviewer).where(Reviewer.session_id == review_session.id))
+        .scalars()
+        .first()
     )
-    rating = next(
-        rf for rf in new_model.response_fields if rf.label == "Rating"
-    )
-    reviewer = db.execute(
-        select(Reviewer).where(Reviewer.session_id == review_session.id)
-    ).scalars().first()
     assert reviewer is not None
-    reviewee = db.execute(
-        select(Reviewee).where(Reviewee.session_id == review_session.id)
-    ).scalars().first()
+    reviewee = (
+        db.execute(select(Reviewee).where(Reviewee.session_id == review_session.id))
+        .scalars()
+        .first()
+    )
     assert reviewee is not None
     assignment = Assignment(
         session_id=review_session.id,
@@ -4681,8 +4369,7 @@ def test_wave3_prii_disabled_type_and_bounds_when_responses_present(
     db.commit()
 
     body = client.get(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments?editing={new_model.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
     # Wave 3 PR iii — ``data-rf-id`` now also rides on the response
     # pill, so anchor on the Band 3 row's combined marker instead.
@@ -4699,7 +4386,7 @@ def test_wave3_prii_disabled_type_and_bounds_when_responses_present(
     # Slice from the <select that opens this attribute to its closing >.
     sel_open = rating_block.rfind("<select", 0, sel_idx)
     sel_close = rating_block.find(">", sel_idx)
-    sel_tag = rating_block[sel_open : sel_close]
+    sel_tag = rating_block[sel_open:sel_close]
     assert "disabled" in sel_tag
 
     # Each of min / max / step / list bound inputs disabled.
@@ -4709,25 +4396,18 @@ def test_wave3_prii_disabled_type_and_bounds_when_responses_present(
         assert b_idx != -1, f"{bound} input missing from rating row"
         b_open = rating_block.rfind("<input", 0, b_idx)
         b_close = rating_block.find(">", b_idx)
-        b_tag = rating_block[b_open : b_close]
+        b_tag = rating_block[b_open:b_close]
         assert "disabled" in b_tag, f"{bound} input not disabled when has_responses"
 
 
-def test_wave3_prii_no_shape_lock_when_no_responses(
-    client: TestClient, db: Session
-) -> None:
+def test_wave3_prii_no_shape_lock_when_no_responses(client: TestClient, db: Session) -> None:
     """Wave 3 PR ii — the shape-lock attributes don't render on a
     fresh row with no responses. The data_type select + bound
     inputs stay editable so the operator can author the field."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="w3-prii-no-lock"
-    )
-    rating = next(
-        rf for rf in new_model.response_fields if rf.label == "Rating"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="w3-prii-no-lock")
+    rating = next(rf for rf in new_model.response_fields if rf.label == "Rating")
     body = client.get(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments?editing={new_model.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
     # Wave 3 PR iii — ``data-rf-id`` now also appears on the response
     # pill, so anchor on the Band 3 row's combined marker.
@@ -4736,18 +4416,16 @@ def test_wave3_prii_no_shape_lock_when_no_responses(
     rating_row_idx = flat.find(row_marker)
     assert rating_row_idx != -1, "Band 3 row for rating not found"
     rating_block = flat[rating_row_idx : rating_row_idx + 6000]
-    assert 'data-new-model-rf-shape-locked' not in rating_block
+    assert "data-new-model-rf-shape-locked" not in rating_block
     # data_type select is editable.
     sel_idx = rating_block.find("data-new-model-rf-data-type")
     sel_open = rating_block.rfind("<select", 0, sel_idx)
     sel_close = rating_block.find(">", sel_idx)
-    sel_tag = rating_block[sel_open : sel_close]
+    sel_tag = rating_block[sel_open:sel_close]
     assert "disabled" not in sel_tag
 
 
-def test_wave3_pri_cascade_blocked_delete_returns_409(
-    client: TestClient, db: Session
-) -> None:
+def test_wave3_pri_cascade_blocked_delete_returns_409(client: TestClient, db: Session) -> None:
     """Defence-in-depth — even when the X button is disabled in
     the UI, a JSON payload that omits a previously-tracked row id
     whose row has attached Response rows gets rejected with 409.
@@ -4756,17 +4434,12 @@ def test_wave3_pri_cascade_blocked_delete_returns_409(
     delete-with-cascade path we first round-trip the row's id
     into JSON, then attach a Response, then POST a payload that
     omits the id."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="w3-pri-cascade-409"
-    )
-    rating = next(
-        rf for rf in new_model.response_fields if rf.label == "Rating"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="w3-pri-cascade-409")
+    rating = next(rf for rf in new_model.response_fields if rf.label == "Rating")
     # First save — round-trip Rating's id into the JSON so a
     # subsequent omitting save lands in the delete branch.
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
                 {
@@ -4783,13 +4456,17 @@ def test_wave3_pri_cascade_blocked_delete_returns_409(
     )
 
     # Attach a Response to the rating row.
-    reviewer = db.execute(
-        select(Reviewer).where(Reviewer.session_id == review_session.id)
-    ).scalars().first()
+    reviewer = (
+        db.execute(select(Reviewer).where(Reviewer.session_id == review_session.id))
+        .scalars()
+        .first()
+    )
     assert reviewer is not None
-    reviewee = db.execute(
-        select(Reviewee).where(Reviewee.session_id == review_session.id)
-    ).scalars().first()
+    reviewee = (
+        db.execute(select(Reviewee).where(Reviewee.session_id == review_session.id))
+        .scalars()
+        .first()
+    )
     assert reviewee is not None
     assignment = Assignment(
         session_id=review_session.id,
@@ -4812,8 +4489,7 @@ def test_wave3_pri_cascade_blocked_delete_returns_409(
     # delete the row. The route converts ResponsesPresentError
     # into a 409.
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
                 {
@@ -4828,27 +4504,18 @@ def test_wave3_pri_cascade_blocked_delete_returns_409(
     assert response.status_code == 409
 
 
-def test_wave3_pri_dual_write_authors_new_response_field(
-    client: TestClient, db: Session
-) -> None:
+def test_wave3_pri_dual_write_authors_new_response_field(client: TestClient, db: Session) -> None:
     """Wave 3 PR i — operator-authored rows persist as real
     ``InstrumentResponseField`` rows alongside the seeded defaults.
     Per the PR iii contract, the incoming payload now carries the
     full id set (the view layer's (b) contract populates the JS
     payload from DB rows on first render), so the seeded rows are
     preserved and the new ``Bonus`` row gets created."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="w3-pri-reviewer-unchanged"
-    )
-    seeded_rating = next(
-        rf for rf in new_model.response_fields if rf.label == "Rating"
-    )
-    seeded_comments = next(
-        rf for rf in new_model.response_fields if rf.label == "Comments"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="w3-pri-reviewer-unchanged")
+    seeded_rating = next(rf for rf in new_model.response_fields if rf.label == "Rating")
+    seeded_comments = next(rf for rf in new_model.response_fields if rf.label == "Comments")
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
                 {
@@ -4886,9 +4553,6 @@ def test_wave3_pri_dual_write_authors_new_response_field(
     assert {"Rating", "Comments", "Bonus"} <= labels
 
 
-
-
-
 def test_band2_intro_card_renders_short_label_description_and_progress(
     client: TestClient, db: Session
 ) -> None:
@@ -4896,9 +4560,7 @@ def test_band2_intro_card_renders_short_label_description_and_progress(
     card: short_label / description + progress pills (0 done /
     required + all totals). Pill count source is
     band2_state.response_fields filtered by ``selected``."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="band2-intro"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="band2-intro")
     # Stamp the instrument with a short_label + description so the
     # heading + subtitle both render.
     new_model.short_label = "Peer Review"
@@ -4906,8 +4568,7 @@ def test_band2_intro_card_renders_short_label_description_and_progress(
     db.commit()
 
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
                 {
@@ -4931,9 +4592,7 @@ def test_band2_intro_card_renders_short_label_description_and_progress(
             ]
         },
     )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     flat = " ".join(body.split())
 
     # Card scaffolding present. Title is "#N: <short_label>"
@@ -4961,6 +4620,7 @@ def test_band2_intro_card_renders_short_label_description_and_progress(
     # the column headers, in the rebuild the preview JS renders too.
     assert "'*Required items completed: 0/'" in flat
     assert "All items completed: 0/<span data-new-model-intro-all-count>3</span>" in flat
+
     # Required pill is warning (2 required, 0 done). All pill is
     # neutral count. Anchored on each pill: the visibility editor above
     # them (19T Item 7) outgrew a fixed window.
@@ -4980,9 +4640,7 @@ def test_band2_intro_card_omits_progress_when_no_selected_response_fields(
     operator-authored entries AND seeded defaults cleared), the
     progress-pill row is omitted (matches the reviewer surface's
     "no completion data → no pills" contract)."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="band2-intro-no-rfs"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="band2-intro-no-rfs")
     new_model.short_label = "Reflection"
     new_model.description = ""
     # Wave 3 PR i (b) contract — band2 view layer surfaces the
@@ -4995,13 +4653,10 @@ def test_band2_intro_card_omits_progress_when_no_selected_response_fields(
 
     # No response fields seeded → progress row should not render.
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={"response_fields": []},
     )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     flat = " ".join(body.split())
     intro_idx = flat.find(f'data-instrument-id="{new_model.id}"')
     assert intro_idx != -1
@@ -5029,15 +4684,12 @@ def test_band2_intro_card_marks_required_pill_success_when_no_required_fields(
     """When the operator selects response fields but none are
     required, the Required pill renders as pill-success (vacuously
     complete) instead of pill-warning."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="band2-intro-no-required"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="band2-intro-no-required")
     new_model.short_label = "Notes"
     db.commit()
 
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
                 {
@@ -5049,9 +4701,7 @@ def test_band2_intro_card_marks_required_pill_success_when_no_required_fields(
             ]
         },
     )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     flat = " ".join(body.split())
     assert "*Required items completed: 0/<span data-new-model-intro-required-count>0</span>" in flat
     intro_idx = flat.find(f'data-instrument-id="{new_model.id}"')
@@ -5062,9 +4712,7 @@ def test_band2_intro_card_marks_required_pill_success_when_no_required_fields(
     assert 'class="pill pill-success"' in pill_tag
 
 
-def test_band2_intro_description_is_lock_driven_swap(
-    client: TestClient, db: Session
-) -> None:
+def test_band2_intro_description_is_lock_driven_swap(client: TestClient, db: Session) -> None:
     """Segment 18R Item 2 PR 4 — the description ✎/✓ editor retires.
     The description is a view/edit swap keyed on the card lock state:
     the read-only paragraph carries ``data-lock-only`` (shown when
@@ -5073,15 +4721,11 @@ def test_band2_intro_description_is_lock_driven_swap(
     commits via the consolidated /save. The textarea must NOT carry an
     inline ``display`` value — the lock layer's ``display: none`` owns
     visibility."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="band2-intro-desc-swap"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="band2-intro-desc-swap")
     new_model.short_label = "Swap Test"
     new_model.description = "Some description."
     db.commit()
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     flat = " ".join(body.split())
     intro_idx = flat.find(f'data-instrument-id="{new_model.id}"')
     assert intro_idx != -1
@@ -5111,16 +4755,12 @@ def test_band2_intro_description_is_lock_driven_swap(
     assert "newModelIntroSave(this)" not in intro_block
 
 
-def test_band2_intro_description_editor_no_onclick_wiring(
-    client: TestClient, db: Session
-) -> None:
+def test_band2_intro_description_editor_no_onclick_wiring(client: TestClient, db: Session) -> None:
     """Segment 18R Item 2 PR 4 — with the ✎/✓ retired, the intro
     card no longer wires the ``newModelIntroEdit`` / ``newModelIntroSave``
     onclick affordances in either the view (locked) or edit (unlocked)
     render. The description is driven purely by the lock-state swap."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="band2-intro-edit-gate"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="band2-intro-edit-gate")
     new_model.short_label = "Gated"
     new_model.description = "View-mode placeholder."
     db.commit()
@@ -5128,8 +4768,7 @@ def test_band2_intro_description_editor_no_onclick_wiring(
     for url, locked in (
         (f"/operator/sessions/{review_session.public_id}/instruments", "true"),
         (
-            f"/operator/sessions/{review_session.public_id}"
-            f"/instruments?editing={new_model.id}",
+            f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}",
             "false",
         ),
     ):
@@ -5143,17 +4782,12 @@ def test_band2_intro_description_editor_no_onclick_wiring(
         assert f'data-instrument-locked="{locked}"' in body
 
 
-def test_intro_identity_endpoint_updates_short_label(
-    client: TestClient, db: Session
-) -> None:
+def test_intro_identity_endpoint_updates_short_label(client: TestClient, db: Session) -> None:
     """POST /identity with {short_label: "..."} updates the
     instrument's short_label and returns 200."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="identity-short-label"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="identity-short-label")
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/identity",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/identity",
         json={"short_label": "Q1 Self-Eval"},
     )
     assert response.status_code == 200
@@ -5162,17 +4796,12 @@ def test_intro_identity_endpoint_updates_short_label(
     assert new_model.short_label == "Q1 Self-Eval"
 
 
-def test_intro_identity_endpoint_updates_description(
-    client: TestClient, db: Session
-) -> None:
+def test_intro_identity_endpoint_updates_description(client: TestClient, db: Session) -> None:
     """POST /identity with {description: "..."} updates the
     instrument's description and returns 200."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="identity-description"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="identity-description")
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/identity",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/identity",
         json={"description": "Reflect on the milestone."},
     )
     assert response.status_code == 200
@@ -5180,16 +4809,11 @@ def test_intro_identity_endpoint_updates_description(
     assert new_model.description == "Reflect on the milestone."
 
 
-def test_intro_identity_endpoint_updates_both_fields(
-    client: TestClient, db: Session
-) -> None:
+def test_intro_identity_endpoint_updates_both_fields(client: TestClient, db: Session) -> None:
     """A single POST can update both fields together."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="identity-both"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="identity-both")
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/identity",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/identity",
         json={
             "short_label": "Skills Check",
             "description": "Quarterly skills review.",
@@ -5207,31 +4831,23 @@ def test_intro_identity_endpoint_rejects_short_label_over_32_chars(
     """short_label > 32 chars is rejected with 400 by the service-side
     cap. UI maxlength enforces the same cap; the endpoint guards
     against bypasses."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="identity-too-long"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="identity-too-long")
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/identity",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/identity",
         json={"short_label": "x" * 33},
     )
     assert response.status_code == 400
 
 
-def test_wave3_prii_invalid_field_shape_returns_422(
-    client: TestClient, db: Session
-) -> None:
+def test_wave3_prii_invalid_field_shape_returns_422(client: TestClient, db: Session) -> None:
     """Wave 3 PR ii — authoring-shape validation. A payload whose
     bounds don't make sense (max < min on an integer field) gets
     rejected with 422 and a structured detail listing each offending
     field. The Band 3 ✓ button is client-side-gated against the same
     check; this exercises the defence-in-depth path."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="w3-prii-invalid"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="w3-prii-invalid")
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
                 {
@@ -5252,23 +4868,18 @@ def test_wave3_prii_invalid_field_shape_returns_422(
     assert "at least" in body["errors"][0]["message"].lower()
 
 
-def test_step_must_be_at_most_max_minus_min(
-    client: TestClient, db: Session
-) -> None:
+def test_step_must_be_at_most_max_minus_min(client: TestClient, db: Session) -> None:
     """Authoring-shape validation — a Step larger than (Max − Min)
     leaves only Min as a valid value, so the Step bound adds no
     expressive power. Server rejects with 422; the Band 3 ✓ button
     is client-side-gated against the same check. Equal-to-range is
     accepted (yields exactly two values: Min and Max — useful for
     Boolean-like numeric fields, e.g. 0/1)."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="step-range"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="step-range")
 
     # min=1, max=5, step=10 → (5-1) = 4, 10 > 4 → invalid.
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
                 {
@@ -5290,8 +4901,7 @@ def test_step_must_be_at_most_max_minus_min(
     # Boolean-like — min=0, max=1, step=1 → step == range, accepted
     # (yields exactly two values: 0, 1).
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
                 {
@@ -5311,13 +4921,14 @@ def test_step_must_be_at_most_max_minus_min(
     # blank Integer Step saves as 1, so a refusal would fail the card's
     # next Save (A6, ruled 2026-10-04 to leave the code as it is).
     fixed = {
-        "name": "Fixed", "data_type": "integer",
-        "min": "3", "max": "3", "step": "", "selected": True,
+        "name": "Fixed",
+        "data_type": "integer",
+        "min": "3",
+        "max": "3",
+        "step": "",
+        "selected": True,
     }
-    url = (
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state"
-    )
+    url = f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state"
     assert client.post(url, json={"response_fields": [fixed]}).status_code == 200
     db.expire_all()
     stored = db.scalars(
@@ -5328,15 +4939,17 @@ def test_step_must_be_at_most_max_minus_min(
     ).one()
     assert stored._inline_step == 1
     # The next Save sends the stored Step back, as the builder does.
-    assert client.post(
-        url,
-        json={"response_fields": [{**fixed, "id": stored.id, "step": "1"}]},
-    ).status_code == 200
+    assert (
+        client.post(
+            url,
+            json={"response_fields": [{**fixed, "id": stored.id, "step": "1"}]},
+        ).status_code
+        == 200
+    )
 
     # min=1, max=5, step=4 → equal to range, accepted (yields 1, 5).
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
                 {
@@ -5354,8 +4967,7 @@ def test_step_must_be_at_most_max_minus_min(
 
     # min=1.0, max=5.0, step=4.5 → (5-1) = 4, 4.5 > 4 → invalid.
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
                 {
@@ -5372,29 +4984,32 @@ def test_step_must_be_at_most_max_minus_min(
     assert response.status_code == 422
 
 
-def test_integer_field_refuses_fractional_bounds(
-    client: TestClient, db: Session
-) -> None:
+def test_integer_field_refuses_fractional_bounds(client: TestClient, db: Session) -> None:
     """19T Item 6 entry 2 — an Integer field's ``validation`` block
     casts its bounds with ``int``, so a Step of 0.5 used to land as 0
     and show "steps of 0" above the reviewer table. The save refuses a
     fractional Min, Max or Step on an Integer field and names Decimal;
     a Decimal field takes the same bounds."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="int-fraction"
-    )
-    url = (
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="int-fraction")
+    url = f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state"
 
     def _post(data_type: str, lo: str, hi: str, by: str):
         # A fresh name each time: a row without an id is a new row.
-        return client.post(url, json={"response_fields": [{
-            "name": f"Score {data_type} {lo} {hi} {by}",
-            "data_type": data_type,
-            "min": lo, "max": hi, "step": by, "selected": True,
-        }]})
+        return client.post(
+            url,
+            json={
+                "response_fields": [
+                    {
+                        "name": f"Score {data_type} {lo} {hi} {by}",
+                        "data_type": data_type,
+                        "min": lo,
+                        "max": hi,
+                        "step": by,
+                        "selected": True,
+                    }
+                ]
+            },
+        )
 
     for lo, hi, by in (("1", "5", "0.5"), ("1.5", "5", "1"), ("1", "4.5", "1")):
         response = _post("integer", lo, hi, by)
@@ -5407,9 +5022,7 @@ def test_integer_field_refuses_fractional_bounds(
         for bad in ("nan", "inf", "1e309"):
             response = _post(data_type, "1", "5", bad)
             assert response.status_code == 422, (data_type, bad)
-            assert response.json()["errors"][0]["message"] == (
-                "Step must be a number."
-            )
+            assert response.json()["errors"][0]["message"] == ("Step must be a number.")
     # Every bound and every type, including String (its Min crashed
     # ``int()`` too) and a List row's hidden bounds.
     for data_type, lo, hi, message in (
@@ -5442,22 +5055,30 @@ def test_integer_field_refuses_fractional_bounds(
     db.commit()
 
     def _rename() -> httpx.Response:
-        return client.post(url, json={"response_fields": [{
-            "id": field.id, "name": "Score renamed", "data_type": "integer",
-            "min": "1", "max": "5", "step": "0.5", "selected": True,
-        }]})
+        return client.post(
+            url,
+            json={
+                "response_fields": [
+                    {
+                        "id": field.id,
+                        "name": "Score renamed",
+                        "data_type": "integer",
+                        "min": "1",
+                        "max": "5",
+                        "step": "0.5",
+                        "selected": True,
+                    }
+                ]
+            },
+        )
 
     refused = _rename()
     assert refused.status_code == 422
     assert "whole-number" in refused.json()["errors"][0]["message"]
 
-    reviewer = db.scalars(
-        select(Reviewer).where(Reviewer.session_id == review_session.id)
-    ).first()
+    reviewer = db.scalars(select(Reviewer).where(Reviewer.session_id == review_session.id)).first()
     assert reviewer is not None
-    reviewee = db.scalars(
-        select(Reviewee).where(Reviewee.session_id == review_session.id)
-    ).first()
+    reviewee = db.scalars(select(Reviewee).where(Reviewee.session_id == review_session.id)).first()
     assert reviewee is not None
     assignment = Assignment(
         session_id=review_session.id,
@@ -5467,36 +5088,32 @@ def test_integer_field_refuses_fractional_bounds(
     )
     db.add(assignment)
     db.flush()
-    db.add(Response(
-        assignment_id=assignment.id, response_field_id=field.id, value="3",
-    ))
+    db.add(
+        Response(
+            assignment_id=assignment.id,
+            response_field_id=field.id,
+            value="3",
+        )
+    )
     db.commit()
     assert _rename().status_code == 200
 
 
-def test_integer_whole_bounds_rule_is_mirrored_client_side(
-    client: TestClient, db: Session
-) -> None:
+def test_integer_whole_bounds_rule_is_mirrored_client_side(client: TestClient, db: Session) -> None:
     """19T Item 6 entry 2 — the Band 3 row's ✓ gate mirrors the
     server's whole-number rule, exempting a row with responses (its
     bounds are locked)."""
     review_session, _ = _new_model_with_tags(client, db, code="int-fraction-js")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     assert (
-        "'Integer fields take whole-number Min, Max and Step. "
-        "Choose Decimal for steps like 0.5.'"
+        "'Integer fields take whole-number Min, Max and Step. Choose Decimal for steps like 0.5.'"
     ) in body
     assert "row.getAttribute('data-has-responses') !== 'true'" in body
 
 
-def _post_rating(
-    client: TestClient, review_session, new_model, rating_id: int, step: str
-):
+def _post_rating(client: TestClient, review_session, new_model, rating_id: int, step: str):
     return client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
                 {
@@ -5513,15 +5130,11 @@ def _post_rating(
     )
 
 
-def test_an_integer_fields_blank_step_saves_as_one(
-    client: TestClient, db: Session
-) -> None:
+def test_an_integer_fields_blank_step_saves_as_one(client: TestClient, db: Session) -> None:
     """An Integer field saved with Step left blank stores Step 1, and its
     reviewer-facing ``validation`` carries it; a Decimal's blank Step
     stays blank."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="int-blank-step"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="int-blank-step")
     rating = next(rf for rf in new_model.response_fields if rf.label == "Rating")
     response = _post_rating(client, review_session, new_model, rating.id, "")
     assert response.status_code == 200, response.text
@@ -5531,8 +5144,7 @@ def test_an_integer_fields_blank_step_saves_as_one(
     assert rating.validation["step"] == 1
 
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
                 {
@@ -5558,19 +5170,21 @@ def test_a_stored_blank_integer_step_fills_in_despite_responses(
     """A blank Step stored before the default existed already meant 1, so
     the next Save fills it in even though the field has responses, rather
     than refusing the card as a shape change."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="int-blank-step-responses"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="int-blank-step-responses")
     rating = next(rf for rf in new_model.response_fields if rf.label == "Rating")
     _post_rating(client, review_session, new_model, rating.id, "1")
     rating._inline_step = None
-    reviewer = db.execute(
-        select(Reviewer).where(Reviewer.session_id == review_session.id)
-    ).scalars().first()
+    reviewer = (
+        db.execute(select(Reviewer).where(Reviewer.session_id == review_session.id))
+        .scalars()
+        .first()
+    )
     assert reviewer is not None
-    reviewee = db.execute(
-        select(Reviewee).where(Reviewee.session_id == review_session.id)
-    ).scalars().first()
+    reviewee = (
+        db.execute(select(Reviewee).where(Reviewee.session_id == review_session.id))
+        .scalars()
+        .first()
+    )
     assert reviewee is not None
     assignment = Assignment(
         session_id=review_session.id,
@@ -5598,20 +5212,22 @@ def test_a_stored_non_whole_integer_min_keeps_its_blank_step(
     """Steps count from Min, so a stored Integer with a non-whole Min (kept
     by the whole-bounds exemption because it has responses) keeps its blank
     Step: filled with 1, every whole-number answer would turn invalid."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="int-non-whole-min"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="int-non-whole-min")
     rating = next(rf for rf in new_model.response_fields if rf.label == "Rating")
     _post_rating(client, review_session, new_model, rating.id, "1")
     rating._inline_min = 0.5
     rating._inline_step = None
-    reviewer = db.execute(
-        select(Reviewer).where(Reviewer.session_id == review_session.id)
-    ).scalars().first()
+    reviewer = (
+        db.execute(select(Reviewer).where(Reviewer.session_id == review_session.id))
+        .scalars()
+        .first()
+    )
     assert reviewer is not None
-    reviewee = db.execute(
-        select(Reviewee).where(Reviewee.session_id == review_session.id)
-    ).scalars().first()
+    reviewee = (
+        db.execute(select(Reviewee).where(Reviewee.session_id == review_session.id))
+        .scalars()
+        .first()
+    )
     assert reviewee is not None
     assignment = Assignment(
         session_id=review_session.id,
@@ -5625,8 +5241,7 @@ def test_a_stored_non_whole_integer_min_keeps_its_blank_step(
     db.commit()
 
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
                 {
@@ -5654,17 +5269,12 @@ def test_wave3_prii_shape_change_blocked_when_responses_exist(
     data_type select + bound inputs are rendered ``disabled`` when
     ``has_responses`` is true; this server guard catches direct API
     hits. The operator-side workflow is to clear responses first."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="w3-prii-shape-change"
-    )
-    rating = next(
-        rf for rf in new_model.response_fields if rf.label == "Rating"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="w3-prii-shape-change")
+    rating = next(rf for rf in new_model.response_fields if rf.label == "Rating")
     # Round-trip Rating's id into JSON so the subsequent update path
     # is exercised (rather than the new-row path).
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
                 {
@@ -5681,13 +5291,17 @@ def test_wave3_prii_shape_change_blocked_when_responses_exist(
     )
 
     # Attach a Response to the rating row.
-    reviewer = db.execute(
-        select(Reviewer).where(Reviewer.session_id == review_session.id)
-    ).scalars().first()
+    reviewer = (
+        db.execute(select(Reviewer).where(Reviewer.session_id == review_session.id))
+        .scalars()
+        .first()
+    )
     assert reviewer is not None
-    reviewee = db.execute(
-        select(Reviewee).where(Reviewee.session_id == review_session.id)
-    ).scalars().first()
+    reviewee = (
+        db.execute(select(Reviewee).where(Reviewee.session_id == review_session.id))
+        .scalars()
+        .first()
+    )
     assert reviewee is not None
     assignment = Assignment(
         session_id=review_session.id,
@@ -5708,8 +5322,7 @@ def test_wave3_prii_shape_change_blocked_when_responses_exist(
 
     # Try to change Rating's data_type to string — should be blocked.
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
                 {
@@ -5738,15 +5351,10 @@ def test_wave3_prii_label_rename_allowed_when_responses_exist(
     so the shape-change guard must NOT fire when only the label
     changes. Counterpart to
     test_wave3_prii_shape_change_blocked_when_responses_exist."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="w3-prii-rename-allowed"
-    )
-    rating = next(
-        rf for rf in new_model.response_fields if rf.label == "Rating"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="w3-prii-rename-allowed")
+    rating = next(rf for rf in new_model.response_fields if rf.label == "Rating")
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
                 {
@@ -5761,13 +5369,17 @@ def test_wave3_prii_label_rename_allowed_when_responses_exist(
             ]
         },
     )
-    reviewer = db.execute(
-        select(Reviewer).where(Reviewer.session_id == review_session.id)
-    ).scalars().first()
+    reviewer = (
+        db.execute(select(Reviewer).where(Reviewer.session_id == review_session.id))
+        .scalars()
+        .first()
+    )
     assert reviewer is not None
-    reviewee = db.execute(
-        select(Reviewee).where(Reviewee.session_id == review_session.id)
-    ).scalars().first()
+    reviewee = (
+        db.execute(select(Reviewee).where(Reviewee.session_id == review_session.id))
+        .scalars()
+        .first()
+    )
     assert reviewee is not None
     assignment = Assignment(
         session_id=review_session.id,
@@ -5787,8 +5399,7 @@ def test_wave3_prii_label_rename_allowed_when_responses_exist(
     db.commit()
 
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
                 {
@@ -5808,23 +5419,16 @@ def test_wave3_prii_label_rename_allowed_when_responses_exist(
     assert rating.label == "Overall Rating"
 
 
-def test_wave3_priii_band2_state_drops_response_fields_key(
-    client: TestClient, db: Session
-) -> None:
+def test_wave3_priii_band2_state_drops_response_fields_key(client: TestClient, db: Session) -> None:
     """Wave 3 PR iii — ``set_band2_state`` no longer persists
     ``response_fields`` into the JSON dict. DB rows are the source
     of truth (decision 5). After a Save, ``band2_state`` carries
     only the surviving keys (``selected_display_keys``,
     ``sample_reviewee_name``, ``sample_group_member_ids``)."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="w3-priii-no-rfs"
-    )
-    rating = next(
-        rf for rf in new_model.response_fields if rf.label == "Rating"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="w3-priii-no-rfs")
+    rating = next(rf for rf in new_model.response_fields if rf.label == "Rating")
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "selected_display_keys": ["reviewee.name"],
             "response_fields": [
@@ -5861,15 +5465,10 @@ def test_wave3_priii_response_field_width_migrates_to_column_widths(
     so reviewer-surface ``<col style="width: Npx">`` can pick it up
     and render the same width the operator saw in the Band 2
     preview."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="w3-priii-rf-width"
-    )
-    rating = next(
-        rf for rf in new_model.response_fields if rf.label == "Rating"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="w3-priii-rf-width")
+    rating = next(rf for rf in new_model.response_fields if rf.label == "Rating")
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
                 {
@@ -5931,12 +5530,9 @@ def test_wave3_priii_reviewer_surface_emits_response_column_width(
         .where(Instrument.session_id == review_session.id)
         .where(Instrument.id != source.id)
     ).scalar_one()
-    rating = next(
-        rf for rf in new_model.response_fields if rf.label == "Rating"
-    )
+    rating = next(rf for rf in new_model.response_fields if rf.label == "Rating")
     operator.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/band2-state",
         json={
             "response_fields": [
                 {
@@ -5958,9 +5554,7 @@ def test_wave3_priii_reviewer_surface_emits_response_column_width(
     # Segment 18L: single-page-default session — every instrument
     # lives on page 1.
     rae_client = make_client(reviewer_user)
-    body = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/1"
-    ).text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
     assert "width: 260px" in body
 
 
@@ -5969,17 +5563,13 @@ def test_wave3_priii_reviewer_surface_emits_response_column_width(
 # --------------------------------------------------------------------------- #
 
 
-def test_new_model_no_band1_rule_generates_full_matrix(
-    client: TestClient, db: Session
-) -> None:
+def test_new_model_no_band1_rule_generates_full_matrix(client: TestClient, db: Session) -> None:
     """Wave 4 PR 1 — a new-model instrument with no stored Band 1 rule
     (Link 1 + Link 2 both in 'all' mode → no SessionRuleSet
     materialised → ``rule_set_id IS NULL``) is no longer silently
     skipped by ``replace_assignments``. The engine treats it as
     Full Matrix and produces every (reviewer, reviewee) pair."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="w4-default-matrix"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="w4-default-matrix")
     # Add a second reviewer + reviewee so Full Matrix produces > 1 pair
     # — makes the count assertion meaningful.
     db.add_all(
@@ -6011,20 +5601,24 @@ def test_new_model_no_band1_rule_generates_full_matrix(
     assert new_model.rule_set_id is None
 
     # Full Matrix: 2 reviewers × 2 reviewees = 4 assignments.
-    rows = db.execute(
-        select(Assignment).where(
-            Assignment.session_id == review_session.id,
-            Assignment.instrument_id == new_model.id,
+    rows = (
+        db.execute(
+            select(Assignment).where(
+                Assignment.session_id == review_session.id,
+                Assignment.instrument_id == new_model.id,
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(rows) == 4
     pair_set = {(r.reviewer_id, r.reviewee_id) for r in rows}
-    reviewers = db.execute(
-        select(Reviewer).where(Reviewer.session_id == review_session.id)
-    ).scalars().all()
-    reviewees = db.execute(
-        select(Reviewee).where(Reviewee.session_id == review_session.id)
-    ).scalars().all()
+    reviewers = (
+        db.execute(select(Reviewer).where(Reviewer.session_id == review_session.id)).scalars().all()
+    )
+    reviewees = (
+        db.execute(select(Reviewee).where(Reviewee.session_id == review_session.id)).scalars().all()
+    )
     expected = {(rv.id, re.id) for rv in reviewers for re in reviewees}
     assert pair_set == expected
 
@@ -6036,9 +5630,7 @@ def test_new_model_no_band1_rule_activates_and_accepts_responses(
     new-model instruments with NULL ``rule_set_id`` (Full Matrix
     default). The legacy ``group_kind + rule_set_id IS NULL`` skip
     no longer triggers for new-model rows."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="w4-default-activate"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="w4-default-activate")
     # Delete the legacy source instrument so the session has only the
     # new-model row. (``_new_model_with_tags`` seeds a legacy
     # ``source`` instrument as the anchor for ``add-new-model``; it's
@@ -6074,14 +5666,10 @@ def test_band2_intro_progress_pills_render_inside_preview_row(
     (rs-progress-row). Mirrors the reviewer-surface layout: the
     pills + constraints share a single right-aligned line just
     above the preview table."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="band2-pills-row"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="band2-pills-row")
     new_model.short_label = "Sanity"
     db.commit()
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     flat = " ".join(body.split())
 
     intro_idx = flat.find(f'data-instrument-id="{new_model.id}"')
@@ -6100,20 +5688,15 @@ def test_band2_intro_progress_pills_render_inside_preview_row(
     # four render paths (this template, the reviewer surface, and the
     # two JS builders) share one layout instead of four copies of it.
     assert "justify-content: flex-end" not in between, (
-        "the row's layout belongs on .rs-progress-row in base.html, "
-        "not inline on this markup"
+        "the row's layout belongs on .rs-progress-row in base.html, not inline on this markup"
     )
 
 
-def test_band2_intro_inline_edit_icons_retired(
-    client: TestClient, db: Session
-) -> None:
+def test_band2_intro_inline_edit_icons_retired(client: TestClient, db: Session) -> None:
     """Segment 18R Item 2 PR 4 — the intro card's ✎ / ✓ buttons
     (``data-intro-edit`` / ``data-intro-save``) retire entirely; the
     description follows the card lock state instead."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="band2-intro-unified-edit"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="band2-intro-unified-edit")
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
@@ -6129,9 +5712,6 @@ def test_band2_intro_inline_edit_icons_retired(
     assert "data-intro-save " not in intro_block
     assert "newModelIntroEdit(this)" not in intro_block
     assert "newModelIntroSave(this)" not in intro_block
-
-
-
 
 
 def test_reviewer_surface_progress_pills_render_in_flex_row_above_table(
@@ -6170,9 +5750,7 @@ def test_reviewer_surface_progress_pills_render_in_flex_row_above_table(
     _activate(operator, db, review_session.id)
 
     rae_client = make_client(reviewer_user)
-    body = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/1"
-    ).text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
     flat = " ".join(body.split())
     # The flex row appears after the intro card's closing tags and
     # before the table wrapper, and it wraps the pills.
@@ -6192,9 +5770,7 @@ def test_reviewer_surface_progress_pills_render_in_flex_row_above_table(
     assert "</div> </div>" in between or "</div></div>" in between
     # The flex row is right-aligned — by the class, not inline.
     row_tag = flat[row_idx : flat.find(">", row_idx)]
-    assert "style=" not in row_tag, (
-        "the row's layout belongs on .rs-progress-row in base.html"
-    )
+    assert "style=" not in row_tag, "the row's layout belongs on .rs-progress-row in base.html"
 
 
 # --------------------------------------------------------------------------- #
@@ -6202,9 +5778,7 @@ def test_reviewer_surface_progress_pills_render_in_flex_row_above_table(
 # --------------------------------------------------------------------------- #
 
 
-def test_lock_scaffold_seeds_locked_state_and_lock_regions(
-    client: TestClient, db: Session
-) -> None:
+def test_lock_scaffold_seeds_locked_state_and_lock_regions(client: TestClient, db: Session) -> None:
     """PR 1 seeds the client lock-state machine from the server-side
     edit flag: a view-mode card is ``data-instrument-locked="true"``
     with its editable regions ``inert``; the edited card is
@@ -6212,16 +5786,12 @@ def test_lock_scaffold_seeds_locked_state_and_lock_regions(
     The card also carries ``data-instrument-card="<id>"`` and its
     editable regions are marked ``data-lock-region`` so the JS
     toggle (newModelSetLock) can find them."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="pr1-lock-scaffold"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="pr1-lock-scaffold")
 
     # View mode — locked. The card + its lock regions are inert.
     view = _card_slice(
         " ".join(
-            client.get(
-                f"/operator/sessions/{review_session.public_id}/instruments"
-            ).text.split()
+            client.get(f"/operator/sessions/{review_session.public_id}/instruments").text.split()
         ),
         new_model.id,
     )
@@ -6240,8 +5810,7 @@ def test_lock_scaffold_seeds_locked_state_and_lock_regions(
     edit = _card_slice(
         " ".join(
             client.get(
-                f"/operator/sessions/{review_session.public_id}"
-                f"/instruments?editing={new_model.id}"
+                f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
             ).text.split()
         ),
         new_model.id,
@@ -6251,18 +5820,12 @@ def test_lock_scaffold_seeds_locked_state_and_lock_regions(
     assert 'inert aria-hidden="true"' not in re.sub(r"<script>.*?</script>", "", edit)
 
 
-def test_lock_scaffold_ships_state_machine_js(
-    client: TestClient, db: Session
-) -> None:
+def test_lock_scaffold_ships_state_machine_js(client: TestClient, db: Session) -> None:
     """PR 1 ships the client lock-state machine — newModelSetLock
     (flips data-instrument-locked + toggles inert on lock regions),
     plus the Lock / Unlock click handlers wired to it."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="pr1-lock-js"
-    )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    review_session, new_model = _new_model_with_tags(client, db, code="pr1-lock-js")
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     assert "window.newModelSetLock" in body
     assert "window.newModelLockClick" in body
     assert "window.newModelUnlockClick" in body
@@ -6270,21 +5833,15 @@ def test_lock_scaffold_ships_state_machine_js(
     assert "return newModelUnlockClick(event" in body
 
 
-def test_help_card_editor_is_lock_driven_no_pencil(
-    client: TestClient, db: Session
-) -> None:
+def test_help_card_editor_is_lock_driven_no_pencil(client: TestClient, db: Session) -> None:
     """Segment 18R Item 2 PR 4 — the Band 2 preview help-text ✎/✓
     retires. The JS help-card builder renders an editable textarea when
     the card is unlocked (keyed on the band2 edit-mode flag, which
     newModelSetLock syncs to the lock state) and read-only text when
     locked — no per-card ✎/✓ buttons. The old lock-layer CSS that hid
     the pencil retires with it."""
-    review_session, _new_model = _new_model_with_tags(
-        client, db, code="pr4-help-lock"
-    )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    review_session, _new_model = _new_model_with_tags(client, db, code="pr4-help-lock")
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     # Builder is lock-driven off the band2 edit-mode flag.
     assert "data-new-model-band2-edit-mode') === '1'" in body
     # The help textarea still stages via oninput while unlocked.
@@ -6296,20 +5853,14 @@ def test_help_card_editor_is_lock_driven_no_pencil(
     assert "button[data-help-card-key]" not in body
 
 
-def test_pr2_dirty_tracking_and_guards_ship(
-    client: TestClient, db: Session
-) -> None:
+def test_pr2_dirty_tracking_and_guards_ship(client: TestClient, db: Session) -> None:
     """Segment 18R Item 2 PR 2 — the staging harness JS ships:
     the per-card dirty flag (the client store), the one-card-at-a-time
     unlock guard, and the nav-away (beforeunload) guard with its
     intentional-nav suppression. The behaviours run in the browser, so
     this pins the wiring is present (the suite can't click)."""
-    review_session, _new_model = _new_model_with_tags(
-        client, db, code="pr2-staging-js"
-    )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    review_session, _new_model = _new_model_with_tags(client, db, code="pr2-staging-js")
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     # Per-card dirty flag set by markDirty (the client store).
     assert "data-instrument-dirty" in body
     assert "setAttribute('data-instrument-dirty', 'true')" in body
@@ -6324,21 +5875,15 @@ def test_pr2_dirty_tracking_and_guards_ship(
     assert '[data-instrument-card][data-instrument-dirty="true"]' in body
 
 
-def test_pr3_consolidated_save_wiring_ships(
-    client: TestClient, db: Session
-) -> None:
+def test_pr3_consolidated_save_wiring_ships(client: TestClient, db: Session) -> None:
     """Segment 18R Item 2 PR 3 — the client Save path fetch-POSTs the
     JSON ``/save`` route (no reload) and renders a summary banner on
     failure. Pin the wiring: the per-card banner placeholder + CSS, the
     success / error handlers, and the fetch to the /save URL (derived
     from the /fields/save form action). The dfsave form keeps its
     /fields/save action as the no-JS fallback."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="pr3-save-wiring"
-    )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    review_session, new_model = _new_model_with_tags(client, db, code="pr3-save-wiring")
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     # Per-card error-banner placeholder; its CSS is base.html's (E14).
     assert f'data-save-error-banner="{new_model.id}"' in body
     assert 'class="save-error-banner"' in body
@@ -6356,18 +5901,13 @@ def test_pr3_consolidated_save_wiring_ships(
     ) in body
 
 
-def test_pr4_short_label_and_description_commit_via_save(
-    client: TestClient, db: Session
-) -> None:
+def test_pr4_short_label_and_description_commit_via_save(client: TestClient, db: Session) -> None:
     """Segment 18R Item 2 PR 4 — short_label + description now ride the
     dfsave form and commit through the consolidated /save (the ✎/✓
     immediate /identity POST retired)."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="pr4-identity-save"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="pr4-identity-save")
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/save",
         data={"short_label": "Renamed", "description": "Fresh description."},
         follow_redirects=False,
     )
@@ -6378,18 +5918,12 @@ def test_pr4_short_label_and_description_commit_via_save(
     assert new_model.description == "Fresh description."
 
 
-def test_pr4_inline_editor_retirement_wiring_ships(
-    client: TestClient, db: Session
-) -> None:
+def test_pr4_inline_editor_retirement_wiring_ships(client: TestClient, db: Session) -> None:
     """Segment 18R Item 2 PR 4 — the lock-driven text boxes ship: the
     view-sync helper (fires on lock) and the short_label + description
     inputs riding the dfsave form."""
-    review_session, _new_model = _new_model_with_tags(
-        client, db, code="pr4-inline-ships"
-    )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    review_session, _new_model = _new_model_with_tags(client, db, code="pr4-inline-ships")
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     # Sync the read-only views from their inputs when the card locks.
     assert "window.newModelSyncTextViews" in body
     assert "newModelSyncTextViews(card)" in body
@@ -6398,19 +5932,13 @@ def test_pr4_inline_editor_retirement_wiring_ships(
     assert 'name="description"' in body
 
 
-def test_pr5a_column_widths_stage_no_immediate_post(
-    client: TestClient, db: Session
-) -> None:
+def test_pr5a_column_widths_stage_no_immediate_post(client: TestClient, db: Session) -> None:
     """Segment 18R Item 2 PR 5a — column-width drag stages into the
     hidden snapshot input (persisted by the consolidated /save) and
     marks the card dirty; the immediate /column-widths fetch retires
     from the card."""
-    review_session, _new_model = _new_model_with_tags(
-        client, db, code="pr5a-col-widths"
-    )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    review_session, _new_model = _new_model_with_tags(client, db, code="pr5a-col-widths")
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     # No immediate /column-widths POST is wired from the card anymore.
     assert "/column-widths" not in body
     # The snapshot input (consumed by /save) is still present, and the
@@ -6420,15 +5948,11 @@ def test_pr5a_column_widths_stage_no_immediate_post(
     assert "window.newModelMarkCardDirty(instrumentCard)" in body
 
 
-def test_pr5b_save_applies_band2_state_from_snapshot(
-    client: TestClient, db: Session
-) -> None:
+def test_pr5b_save_applies_band2_state_from_snapshot(client: TestClient, db: Session) -> None:
     """Segment 18R Item 2 PR 5b — the consolidated /save applies the
     staged Band 2 state from the ``band2_state_snapshot`` form field
     (replacing the immediate /band2-state POST)."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="pr5b-save-band2"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="pr5b-save-band2")
     snapshot = json.dumps(
         {
             "selected_display_keys": [],
@@ -6446,8 +5970,7 @@ def test_pr5b_save_applies_band2_state_from_snapshot(
         }
     )
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/save",
         data={"band2_state_snapshot": snapshot},
         follow_redirects=False,
     )
@@ -6462,15 +5985,11 @@ def test_pr5b_save_applies_band2_state_from_snapshot(
     assert field is not None
 
 
-def test_pr5b_save_band2_invalid_shape_returns_422(
-    client: TestClient, db: Session
-) -> None:
+def test_pr5b_save_band2_invalid_shape_returns_422(client: TestClient, db: Session) -> None:
     """A bad response-field shape in the staged snapshot surfaces as a
     JSON summary-banner error (422), not a silent drop — the guard the
     /band2-state route enforced is reproduced in /save."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="pr5b-band2-invalid"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="pr5b-band2-invalid")
     snapshot = json.dumps(
         {
             "response_fields": [
@@ -6486,8 +6005,7 @@ def test_pr5b_save_band2_invalid_shape_returns_422(
         }
     )
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/save",
         data={"band2_state_snapshot": snapshot},
         follow_redirects=False,
     )
@@ -6502,41 +6020,40 @@ def test_pr5b_save_empty_band2_snapshot_leaves_state_untouched(
 ) -> None:
     """An empty ``band2_state_snapshot`` means no Band 2 edits — /save
     must leave the existing response fields untouched (not wipe them)."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="pr5b-band2-empty"
-    )
-    before = db.execute(
-        select(InstrumentResponseField.id).where(
-            InstrumentResponseField.instrument_id == new_model.id,
+    review_session, new_model = _new_model_with_tags(client, db, code="pr5b-band2-empty")
+    before = (
+        db.execute(
+            select(InstrumentResponseField.id).where(
+                InstrumentResponseField.instrument_id == new_model.id,
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/save",
         data={"band2_state_snapshot": ""},
         follow_redirects=False,
     )
     assert response.status_code == 200
-    after = db.execute(
-        select(InstrumentResponseField.id).where(
-            InstrumentResponseField.instrument_id == new_model.id,
+    after = (
+        db.execute(
+            select(InstrumentResponseField.id).where(
+                InstrumentResponseField.instrument_id == new_model.id,
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert set(before) == set(after)
 
 
-def test_pr5b_band2_staging_wiring_ships(
-    client: TestClient, db: Session
-) -> None:
+def test_pr5b_band2_staging_wiring_ships(client: TestClient, db: Session) -> None:
     """Segment 18R Item 2 PR 5b — the Band 2 staging JS ships: the
     hidden snapshot input, the stage-into-snapshot write, and the
     lost-edit capture of typed-but-un-✓'d rows."""
-    review_session, _new_model = _new_model_with_tags(
-        client, db, code="pr5b-wiring"
-    )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    review_session, _new_model = _new_model_with_tags(client, db, code="pr5b-wiring")
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     # Hidden snapshot input consumed by /save.
     assert 'name="band2_state_snapshot"' in body
     assert "data-new-model-band2-state-snapshot" in body
@@ -6551,23 +6068,23 @@ def test_pr5b_band2_staging_wiring_ships(
     assert "if (!name) { return null; }" in body
 
 
-def test_new_response_field_column_width_persists_via_save(
-    client: TestClient, db: Session
-) -> None:
+def test_new_response_field_column_width_persists_via_save(client: TestClient, db: Session) -> None:
     """Segment 18R Item 2 — a newly-added response field's column width
     persists on Save. saveBand2Widths can't key an id-less pill in the
     column-widths snapshot, so stageBand2State sends ``width_px`` in the
     band2 payload and set_band2_state re-maps it to the new field's
     freshly-minted id. Without this the new column is unsized and
     ``table-layout: fixed`` redistributes the whole preview on reload."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="new-rf-width"
-    )
-    existing = db.execute(
-        select(InstrumentResponseField).where(
-            InstrumentResponseField.instrument_id == new_model.id
+    review_session, new_model = _new_model_with_tags(client, db, code="new-rf-width")
+    existing = (
+        db.execute(
+            select(InstrumentResponseField).where(
+                InstrumentResponseField.instrument_id == new_model.id
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     resp = [
         {
             "name": r.label,
@@ -6588,8 +6105,7 @@ def test_new_response_field_column_width_persists_via_save(
         }
     )
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/save",
         data={
             "band2_state_snapshot": json.dumps(
                 {"selected_display_keys": [], "response_fields": resp}
@@ -6609,18 +6125,12 @@ def test_new_response_field_column_width_persists_via_save(
     assert (new_model.column_widths or {}).get(f"rf_{fresh.id}") == 444
 
 
-def test_pr7_dead_inline_editor_handlers_swept(
-    client: TestClient, db: Session
-) -> None:
+def test_pr7_dead_inline_editor_handlers_swept(client: TestClient, db: Session) -> None:
     """Segment 18R Item 2 PR 7 — the retired inline ✎/✓ handlers
     (unreferenced since PR 4) are removed from the page; the live
     help-text input handler stays."""
-    review_session, _new_model = _new_model_with_tags(
-        client, db, code="pr7-sweep"
-    )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    review_session, _new_model = _new_model_with_tags(client, db, code="pr7-sweep")
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     for dead in (
         "window.cardTitleEdit",
         "window.cardTitleSave",
@@ -6634,34 +6144,22 @@ def test_pr7_dead_inline_editor_handlers_swept(
     assert "window.newModelHelpCardInput" in body
 
 
-def test_stage_band2_sends_response_column_width_px(
-    client: TestClient, db: Session
-) -> None:
+def test_stage_band2_sends_response_column_width_px(client: TestClient, db: Session) -> None:
     """The stager includes ``width_px`` (from the row's data-width, the
     pill's before 19T Item 9) so a new field's width has a persistence
     path."""
-    review_session, _new_model = _new_model_with_tags(
-        client, db, code="width-px-wiring"
-    )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    review_session, _new_model = _new_model_with_tags(client, db, code="width-px-wiring")
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     assert "rf.width_px = rowWidth" in body
 
 
-def test_pr5c_button_state_matrix_and_shape_css_ship(
-    client: TestClient, db: Session
-) -> None:
+def test_pr5c_button_state_matrix_and_shape_css_ship(client: TestClient, db: Session) -> None:
     """Segment 18R Item 2 PR 5c — the Response-Field row button-state
     matrix + the disabled-shape-input treatment ship: R/≡ gate on a
     blank row; ✓ greys once the row matches its pill; and the frozen
     shape controls get a visibly-disabled style."""
-    review_session, _new_model = _new_model_with_tags(
-        client, db, code="pr5c-matrix"
-    )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    review_session, _new_model = _new_model_with_tags(client, db, code="pr5c-matrix")
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     # R / ≡ blank-row gate.
     assert "_blankRowGate(requiredBtn" in body
     assert "'Enter a field name first.'" in body
@@ -6673,19 +6171,13 @@ def test_pr5c_button_state_matrix_and_shape_css_ship(
     assert "[data-new-model-rf-bound]:disabled" in body
 
 
-def test_collapse_lock_wiring_ships(
-    client: TestClient, db: Session
-) -> None:
+def test_collapse_lock_wiring_ships(client: TestClient, db: Session) -> None:
     """Segment 18R Item 2 — collapse ⇒ lock: collapsing an unlocked card
     Locks it (with the unsaved-changes confirm); expanding never changes
     the lock state; a card is never unlocked-and-collapsed. Behaviour is
     browser-only; pin the wiring."""
-    review_session, _new_model = _new_model_with_tags(
-        client, db, code="collapse-lock"
-    )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    review_session, _new_model = _new_model_with_tags(client, db, code="collapse-lock")
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     # Shared lock helper + the toggle handler wired on each card
     # <details>.
     assert "window.newModelTryLock" in body
@@ -6699,9 +6191,7 @@ def test_collapse_lock_wiring_ships(
     assert "window._newModelSuppressCollapseLock" in body
 
 
-def test_cancel_keeps_card_unlocked_via_editing_reload(
-    client: TestClient, db: Session
-) -> None:
+def test_cancel_keeps_card_unlocked_via_editing_reload(client: TestClient, db: Session) -> None:
     """Segment 18R Item 2 — Cancel reloads with ?editing=<id> so the
     card stays unlocked (edits discarded from persisted state) rather
     than dropping back to the locked view. Browser-only; pin the
@@ -6711,18 +6201,11 @@ def test_cancel_keeps_card_unlocked_via_editing_reload(
     ``newModelDiscardReload(keepEditingId)``; Cancel is the caller that
     passes an id, so ``?editing`` is set and the card comes back
     unlocked."""
-    review_session, _new_model = _new_model_with_tags(
-        client, db, code="cancel-keeps-unlocked"
-    )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    review_session, _new_model = _new_model_with_tags(client, db, code="cancel-keeps-unlocked")
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     flat = " ".join(body.split())
     assert "searchParams.set('editing', keepEditingId)" in body
-    assert (
-        "window.newModelDiscardReload( "
-        "btn.getAttribute('data-new-model-cancel') )"
-    ) in flat
+    assert ("window.newModelDiscardReload( btn.getAttribute('data-new-model-cancel') )") in flat
 
 
 def test_title_input_click_does_not_toggle_card_when_unlocked(
@@ -6732,12 +6215,8 @@ def test_title_input_click_does_not_toggle_card_when_unlocked(
     card <summary>, so clicks in the title area could collapse the card
     mid-edit. The toggle guard preventDefaults title-block clicks on an
     unlocked card. Browser-only; pin the wiring."""
-    review_session, _new_model = _new_model_with_tags(
-        client, db, code="title-toggle-guard"
-    )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    review_session, _new_model = _new_model_with_tags(client, db, code="title-toggle-guard")
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     assert "_newModelWireTitleToggleGuard" in body
     assert "[data-card-title-edit-block]" in body
     # Keyboard guard: Space / Enter in the name input preventDefault the
@@ -6748,42 +6227,28 @@ def test_title_input_click_does_not_toggle_card_when_unlocked(
     assert "input.selectionStart = input.selectionEnd = start + 1" in body
 
 
-def test_cancel_preserves_card_open_state_on_reload(
-    client: TestClient, db: Session
-) -> None:
+def test_cancel_preserves_card_open_state_on_reload(client: TestClient, db: Session) -> None:
     """Segment 18R Item 2 — Cancel's discard reload preserves each
     card's open/closed layout (via the shared open-state capture) and
     strips a stale ``#instrument-N`` hash, so it doesn't pop a different
     card open. The behaviour is browser-only; pin the wiring."""
-    review_session, _new_model = _new_model_with_tags(
-        client, db, code="cancel-open-state"
-    )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    review_session, _new_model = _new_model_with_tags(client, db, code="cancel-open-state")
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     # The open-state capture is exposed for Cancel to reuse.
-    assert (
-        "window.newModelCaptureOpenState = captureOpenStateForReload" in body
-    )
+    assert "window.newModelCaptureOpenState = captureOpenStateForReload" in body
     # Cancel invokes it before the discard reload.
     assert "window.newModelCaptureOpenState()" in body
 
 
-def test_lock_unlock_replaces_edit_button_in_view_mode(
-    client: TestClient, db: Session
-) -> None:
+def test_lock_unlock_replaces_edit_button_in_view_mode(client: TestClient, db: Session) -> None:
     """An instrument card in view mode (no ``?editing=`` param) carries
     an ``Unlock`` button at the end of the action row (after
     +Instrument) — the previous ``Edit`` button retires. Clicking
     Unlock takes the operator to ``?editing=<id>``, the same URL
     state Edit used to reach. The toggle button carries
     ``data-instrument-lock-toggle=<id>`` for test + JS scoping."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="w4-lock-toggle-view"
-    )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    review_session, new_model = _new_model_with_tags(client, db, code="w4-lock-toggle-view")
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     flat = " ".join(body.split())
     card = _card_slice(flat, new_model.id)
 
@@ -6800,9 +6265,7 @@ def test_lock_unlock_replaces_edit_button_in_view_mode(
     toggle_marker = f'data-instrument-unlock-toggle="{new_model.id}"'
     toggle_idx = card.rfind(toggle_marker)
     assert toggle_idx != -1
-    toggle_tag = card[
-        card.rfind("<a", 0, toggle_idx) : card.find(">", toggle_idx) + 1
-    ]
+    toggle_tag = card[card.rfind("<a", 0, toggle_idx) : card.find(">", toggle_idx) + 1]
     assert "Unlock" in card[card.find(">", toggle_idx) + 1 : card.find("</a>", toggle_idx)]
     assert f"editing={new_model.id}" in toggle_tag
 
@@ -6811,21 +6274,15 @@ def test_lock_unlock_replaces_edit_button_in_view_mode(
     assert add_btn_idx != -1, "Unlock toggle must come after +Instrument"
 
 
-def test_lock_unlock_renders_twice_top_and_bottom(
-    client: TestClient, db: Session
-) -> None:
+def test_lock_unlock_renders_twice_top_and_bottom(client: TestClient, db: Session) -> None:
     """Each per-instrument card renders the Lock/Unlock anchor
     twice — a convenience one inline at the top of the card next
     to the visibility-when-closed form, and the canonical one in
     the bottom action row. Both carry the same
     ``data-instrument-lock-toggle`` data attribute so the
     dirty-state confirm fires from either."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="w4-lock-twice-view"
-    )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    review_session, new_model = _new_model_with_tags(client, db, code="w4-lock-twice-view")
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     flat = " ".join(body.split())
     marker = f'data-instrument-lock-toggle="{new_model.id}"'
     assert flat.count(marker) == 2
@@ -6840,24 +6297,17 @@ def test_lock_unlock_renders_twice_top_and_bottom(
 
     # Both render the same label (Unlock in view mode, Lock in
     # edit mode); both navigate to the same edit-mode URL.
-    edit_url = (
-        f'/operator/sessions/{review_session.public_id}/instruments'
-        f'?editing={new_model.id}'
-    )
+    edit_url = f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     assert flat.count(edit_url) >= 2
 
 
-def test_lock_unlock_replaces_cancel_button_in_edit_mode(
-    client: TestClient, db: Session
-) -> None:
+def test_lock_unlock_replaces_cancel_button_in_edit_mode(client: TestClient, db: Session) -> None:
     """An instrument card in edit mode (``?editing=<id>``) carries a
     ``Lock`` button — clicking takes the operator back to view mode
     (``/instruments`` without the editing param). The Save button
     sits beside it (mirrors Quick Setup card's Submit + Lock
     footer). ``Edit`` / ``Cancel`` retire."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="w4-lock-toggle-edit"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="w4-lock-toggle-edit")
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
@@ -6875,9 +6325,7 @@ def test_lock_unlock_replaces_cancel_button_in_edit_mode(
     assert toggle_idx != -1
     label = flat[flat.find(">", toggle_idx) + 1 : flat.find("</a>", toggle_idx)]
     assert "Lock" in label and "Unlock" not in label
-    toggle_tag = flat[
-        flat.rfind("<a", 0, toggle_idx) : flat.find(">", toggle_idx) + 1
-    ]
+    toggle_tag = flat[flat.rfind("<a", 0, toggle_idx) : flat.find(">", toggle_idx) + 1]
     # The Lock href clears the editing param.
     assert "editing=" not in toggle_tag
 
@@ -6903,9 +6351,7 @@ def test_save_button_initial_state_is_disabled_in_edit_mode(
     enables it on the first input change / Band 3 row action; the
     server-side redirect after a successful Save re-renders with
     Save fresh-disabled."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="w4-pr2-save-disabled"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="w4-pr2-save-disabled")
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
@@ -6927,18 +6373,13 @@ def test_save_button_initial_state_is_disabled_in_edit_mode(
     assert f'form="dfsave-{new_model.id}"' in btn_tag
 
 
-def test_fields_save_redirect_preserves_editing_param(
-    client: TestClient, db: Session
-) -> None:
+def test_fields_save_redirect_preserves_editing_param(client: TestClient, db: Session) -> None:
     """Wave 4 PR 2 — A successful Save redirects with both
     ``editing=<id>`` AND ``saved=<id>``, so the operator stays in
     edit mode (Lock owns the gate; Save owns persistence)."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="w4-pr2-save-redirect"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="w4-pr2-save-redirect")
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/fields/save",
         data={
             "link1_mode": "all",
             "link1_combinator": "AND",
@@ -6955,15 +6396,11 @@ def test_fields_save_redirect_preserves_editing_param(
     assert f"#instrument-{new_model.id}" in location
 
 
-def test_save_dirty_tracking_init_function_present(
-    client: TestClient, db: Session
-) -> None:
+def test_save_dirty_tracking_init_function_present(client: TestClient, db: Session) -> None:
     """The page ships the ``newModelInitSaveDirtyTracking`` helper
     and wires it into the new-model card's DOMContentLoaded init
     pass alongside ``newModelRefreshBand2``."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="w4-pr2-dirty-init"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="w4-pr2-dirty-init")
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
@@ -6974,9 +6411,7 @@ def test_save_dirty_tracking_init_function_present(
     assert "data-new-model-rf-add" in body
 
 
-def test_save_dirty_tracking_catches_band1_pill_clicks(
-    client: TestClient, db: Session
-) -> None:
+def test_save_dirty_tracking_catches_band1_pill_clicks(client: TestClient, db: Session) -> None:
     """Regression: clicking the Band 1 link-mode pills (Link 1 +
     Link 2 rule mode, Link 3 unit-of-review mode) and the
     combinator / operator cycle buttons must enable the Save
@@ -6986,9 +6421,7 @@ def test_save_dirty_tracking_catches_band1_pill_clicks(
     explicitly. Without this, an operator setting Link 1 = All,
     Link 2 = All, Link 3 = Individual leaves Save disabled and
     cannot persist the configuration."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="w4-dirty-pill-clicks"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="w4-dirty-pill-clicks")
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
@@ -7047,17 +6480,13 @@ def test_save_dirty_tracking_catches_band1_pill_clicks(
 # --------------------------------------------------------------------------- #
 
 
-def test_lock_anchor_wires_unsaved_changes_confirm(
-    client: TestClient, db: Session
-) -> None:
+def test_lock_anchor_wires_unsaved_changes_confirm(client: TestClient, db: Session) -> None:
     """Wave 4 PR 3 — the Lock anchor (edit-mode only) carries an
     ``onclick="return newModelLockClick(event, <id>)"`` hook that
     prompts confirm() when Save is active (dirty state). Returning
     false cancels the navigation; returning true lets the anchor
     follow its href back to view mode."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="w4-pr3-lock-confirm"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="w4-pr3-lock-confirm")
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
@@ -7078,19 +6507,13 @@ def test_lock_anchor_wires_unsaved_changes_confirm(
     assert "window.newModelLockClick" in body
 
 
-def test_unlock_anchor_does_not_wire_confirm(
-    client: TestClient, db: Session
-) -> None:
+def test_unlock_anchor_does_not_wire_confirm(client: TestClient, db: Session) -> None:
     """Wave 4 PR 3 — the Unlock anchor (view-mode → entering edit
     mode) does NOT carry the confirm hook. Going from view mode
     into edit mode never risks losing work — the operator hasn't
     typed anything yet."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="w4-pr3-unlock-no-confirm"
-    )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    review_session, new_model = _new_model_with_tags(client, db, code="w4-pr3-unlock-no-confirm")
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     flat = " ".join(body.split())
     card = _card_slice(flat, new_model.id)
 
@@ -7110,18 +6533,14 @@ def test_unlock_anchor_does_not_wire_confirm(
     assert "newModelUnlockClick" in a_tag
 
 
-def test_heading_row_ships_save_and_cancel_in_edit_mode(
-    client: TestClient, db: Session
-) -> None:
+def test_heading_row_ships_save_and_cancel_in_edit_mode(client: TestClient, db: Session) -> None:
     """In edit mode the heading row mirrors the bottom action row's
     Save + Cancel buttons, placed immediately after the heading-row
     Lock anchor so the operator doesn't have to scroll past
     Bands 1+2+3 to persist. Both share the bottom-row's
     ``data-new-model-save`` / ``data-new-model-cancel`` markers so
     the dirty tracker enables / disables them in lockstep."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="heading-save-cancel-edit"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="heading-save-cancel-edit")
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
@@ -7148,9 +6567,7 @@ def test_heading_row_ships_save_and_cancel_in_edit_mode(
     # bottom-row Lock — i.e. the heading-row Save/Cancel come
     # after the first Lock anchor and before the second Lock anchor.
     first_lock = card.find(f'data-instrument-lock-toggle="{new_model.id}"')
-    second_lock = card.find(
-        f'data-instrument-lock-toggle="{new_model.id}"', first_lock + 1
-    )
+    second_lock = card.find(f'data-instrument-lock-toggle="{new_model.id}"', first_lock + 1)
     assert first_lock != -1 and second_lock != -1
 
     heading_save = card.find(">Save</button>")
@@ -7182,12 +6599,8 @@ def test_heading_row_ships_save_and_cancel_hidden_in_view_mode(
     dfsave form + Save/Cancel buttons are present in the DOM, marked
     ``data-unlock-only``, and the card carries
     ``data-instrument-locked="true"``."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="heading-save-cancel-view"
-    )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    review_session, new_model = _new_model_with_tags(client, db, code="heading-save-cancel-view")
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     flat = " ".join(body.split())
     card = _card_slice(flat, new_model.id)
     # The rendered Save + Cancel buttons are present in the DOM.
@@ -7201,17 +6614,13 @@ def test_heading_row_ships_save_and_cancel_hidden_in_view_mode(
     assert f'id="dfsave-{new_model.id}"' in card
 
 
-def test_band3_row_pending_visual_css_ships_in_base(
-    client: TestClient, db: Session
-) -> None:
+def test_band3_row_pending_visual_css_ships_in_base(client: TestClient, db: Session) -> None:
     """Wave 4 PR 3 — the per-row pending visual (subtle amber
     left-border + tinted background on Band 3 rows whose inputs
     differ from their pill, so ✓ has something to push) lives in
     base.html as a global rule keyed by ``data-row-pending="true"``
     on the row element."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="w4-pr3-pending-css"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="w4-pr3-pending-css")
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
@@ -7235,12 +6644,8 @@ def test_action_row_retires_add_instrument_and_add_group_buttons(
     button (renamed from +New model) is the sole 'create new
     instrument' affordance. The /add and /add-group POST routes
     are retired too (findings A22)."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="w4-retire-add-buttons"
-    )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    review_session, new_model = _new_model_with_tags(client, db, code="w4-retire-add-buttons")
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     flat = " ".join(body.split())
 
     assert ">Add instrument</button>" not in flat
@@ -7250,15 +6655,11 @@ def test_action_row_retires_add_instrument_and_add_group_buttons(
     assert ">+Instrument</button>" in flat
 
 
-def test_action_row_button_order_in_edit_mode(
-    client: TestClient, db: Session
-) -> None:
+def test_action_row_button_order_in_edit_mode(client: TestClient, db: Session) -> None:
     """In edit mode the per-instrument action row carries (left → right,
     flushed right): Save | Cancel | Replicate | Delete | +Instrument
     | Lock. Each button precedes the next in the flat HTML."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="w4-row-order-edit"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="w4-row-order-edit")
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
@@ -7286,9 +6687,12 @@ def test_action_row_button_order_in_edit_mode(
         lock_idx,
     )
     for idx, name in [
-        (save_idx, "save"), (cancel_idx, "cancel"),
-        (replicate_idx, "replicate"), (delete_idx, "delete"),
-        (add_idx, "add"), (lock_idx, "lock"),
+        (save_idx, "save"),
+        (cancel_idx, "cancel"),
+        (replicate_idx, "replicate"),
+        (delete_idx, "delete"),
+        (add_idx, "add"),
+        (lock_idx, "lock"),
     ]:
         assert idx != -1, f"{name} marker missing"
     # Strict left-to-right ordering within the new-model card's
@@ -7296,21 +6700,15 @@ def test_action_row_button_order_in_edit_mode(
     assert save_idx < cancel_idx < replicate_idx < delete_idx < add_idx < lock_idx
 
 
-def test_action_row_button_order_in_view_mode(
-    client: TestClient, db: Session
-) -> None:
+def test_action_row_button_order_in_view_mode(client: TestClient, db: Session) -> None:
     """Segment 18R Item 2 PR 1 — the per-instrument action row now
     always renders the full cluster; the client lock layer hides
     Save / Cancel / Lock and shows Unlock while the card is locked.
     The rendered DOM order (left → right) in the bottom row is:
     Replicate | Delete | +Instrument | Lock | Unlock, with the
     always-rendered Save + Cancel present earlier in the row."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="w4-row-order-view"
-    )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    review_session, new_model = _new_model_with_tags(client, db, code="w4-row-order-view")
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     flat = " ".join(body.split())
     card = _card_slice(flat, new_model.id)
 
@@ -7338,24 +6736,23 @@ def test_action_row_button_order_in_view_mode(
         lock_idx,
     )
     for idx, name in [
-        (replicate_idx, "replicate"), (delete_idx, "delete"),
-        (add_idx, "add"), (lock_idx, "lock"), (unlock_idx, "unlock"),
+        (replicate_idx, "replicate"),
+        (delete_idx, "delete"),
+        (add_idx, "add"),
+        (lock_idx, "lock"),
+        (unlock_idx, "unlock"),
     ]:
         assert idx != -1, f"{name} marker missing"
     assert replicate_idx < delete_idx < add_idx < lock_idx < unlock_idx
 
 
-def test_cancel_button_starts_disabled_and_carries_marker(
-    client: TestClient, db: Session
-) -> None:
+def test_cancel_button_starts_disabled_and_carries_marker(client: TestClient, db: Session) -> None:
     """The Cancel button starts ``disabled`` (mirrors Save's clean
     state — nothing to discard until something is dirty), carries
     ``data-new-model-cancel=<id>`` for JS scoping, and wires the
     ``newModelCancelEdits`` onclick handler that confirms then
     reloads to discard the unsaved client state."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="w4-cancel-disabled"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="w4-cancel-disabled")
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
@@ -7381,23 +6778,17 @@ def test_cancel_button_starts_disabled_and_carries_marker(
 # ─────────────────────────────────────────────────────────────────
 
 
-def test_card_title_renders_short_label_when_set(
-    client: TestClient, db: Session
-) -> None:
+def test_card_title_renders_short_label_when_set(client: TestClient, db: Session) -> None:
     """Per the 2026-05-28 operator-identifier policy: the Setup →
     Instruments card title shows ``{short_label}`` when the
     operator has set one (no ``#`` prefix — the ``#`` is reserved
     for the reviewer-facing ``#{N}: …`` heading inside Band 2's
     preview card)."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="card-title-set"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="card-title-set")
     new_model.short_label = "Peer Review"
     db.commit()
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     # The card title view span carries the short_label and the
     # edit-block carries dedicated id attrs so the AJAX handler
     # can build the right ``/identity`` URL on save.
@@ -7421,15 +6812,11 @@ def test_card_title_falls_back_to_instrument_underscore_id_when_no_short_label(
     span (styled muted + italic via the inline stylesheet) so it
     reads as a placeholder nudging the operator to set a proper
     short label."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="card-title-fallback"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="card-title-fallback")
     # _new_model_with_tags doesn't set short_label.
     assert new_model.short_label is None
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     marker = f'data-card-title-instrument-id="{new_model.id}"'
     block_start = body.find(marker)
     block_end = body.find("</h2>", block_start)
@@ -7451,9 +6838,7 @@ def test_card_title_input_pre_populates_with_current_short_label_not_fallback(
     set) — NOT the ``Instrument_{session_seq}`` fallback. So an operator
     opening the edit on an unnamed card starts from a blank slate
     rather than having to delete the placeholder text."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="card-title-input-empty"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="card-title-input-empty")
     assert new_model.short_label is None
 
     body = client.get(
@@ -7464,29 +6849,23 @@ def test_card_title_input_pre_populates_with_current_short_label_not_fallback(
     block_end = body.find("</h2>", block_start)
     block = body[block_start:block_end]
     # Input present with empty value (NOT the fallback string).
-    assert 'data-card-title-input' in block
+    assert "data-card-title-input" in block
     assert 'value=""' in block
     assert f'value="Instrument_{new_model.session_seq}"' not in block
 
 
-def test_card_title_is_lock_driven_swap(
-    client: TestClient, db: Session
-) -> None:
+def test_card_title_is_lock_driven_swap(client: TestClient, db: Session) -> None:
     """Segment 18R Item 2 PR 4 — the card-title short-label ✎/✓
     retires. The title is a view/edit swap keyed on the card lock
     state: the view span carries ``data-lock-only`` (shown when
     locked); the input carries ``data-unlock-only`` (shown when
     unlocked) and rides the dfsave form (``name="short_label"``) so it
     commits via the consolidated /save. No ✎/✓ buttons."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="card-title-swap"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="card-title-swap")
     new_model.short_label = "Gate"
     db.commit()
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     start = body.find(f'data-card-title-instrument-id="{new_model.id}"')
     assert start != -1
     block = " ".join(body[start : body.find("</h2>", start)].split())
@@ -7510,21 +6889,16 @@ def test_card_title_is_lock_driven_swap(
     assert "data-card-title-save" not in block
 
 
-def test_card_title_save_endpoint_persists_short_label(
-    client: TestClient, db: Session
-) -> None:
+def test_card_title_save_endpoint_persists_short_label(client: TestClient, db: Session) -> None:
     """The AJAX handler POSTs to the existing
     ``/operator/sessions/{sid}/instruments/{iid}/identity``
     endpoint with ``{short_label: ...}``. This is the same
     endpoint the intro-card description editor uses; the regression
     test pins the contract from the client side."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="card-title-persist"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="card-title-persist")
 
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/identity",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/identity",
         json={"short_label": "Skills"},
     )
     assert response.status_code == 200
@@ -7534,8 +6908,7 @@ def test_card_title_save_endpoint_persists_short_label(
 
     # Empty save clears the label (operator can revert the rename).
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/identity",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/identity",
         json={"short_label": ""},
     )
     assert response.status_code == 200
@@ -7550,15 +6923,12 @@ def test_band2_preview_draws_the_surfaces_answer_box_floors(
     reviewer surface's answer box, one line high at a maximum of 50 or
     fewer characters and two lines otherwise, with no width-derived rows
     formula left to keep in step with the surface."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="band2-preview-rows"
-    )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    review_session, new_model = _new_model_with_tags(client, db, code="band2-preview-rows")
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     assert "var rows = (maxLenInt && maxLenInt <= 50) ? 1 : 2;" in body
     assert "textareaRowsFor" not in body
     assert "adjustPreviewTextareaRows" not in body
+
 
 # --------------------------------------------------------------------------- #
 # 18R follow-up — instrument-card UX edits (description box height; Link 2
@@ -7573,54 +6943,39 @@ def test_link2_operator_cycle_leads_with_same_as(client: TestClient, db: Session
     relationship the default for a fresh Link 2 rule (the common
     reviewee-matches-reviewer case). Guards the order string on the
     operator-cycle button."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="link2-cycle-order"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="link2-cycle-order")
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
     # The link2 cell carries the reordered cycle on its toggle button.
     assert (
-        'data-new-model-operator-cycle='
-        '"IS THE SAME AS|IS DIFFERENT FROM|IS|IS NOT|IS FILLED|IS EMPTY"'
-        in body
+        "data-new-model-operator-cycle="
+        '"IS THE SAME AS|IS DIFFERENT FROM|IS|IS NOT|IS FILLED|IS EMPTY"' in body
     )
     # And the old order is gone.
-    assert (
-        'data-new-model-operator-cycle="IS|IS NOT|IS THE SAME AS|IS DIFFERENT FROM"'
-        not in body
-    )
+    assert 'data-new-model-operator-cycle="IS|IS NOT|IS THE SAME AS|IS DIFFERENT FROM"' not in body
 
 
-def test_new_rule_operand_visibility_follows_cycle_default(
-    client: TestClient, db: Session
-):
+def test_new_rule_operand_visibility_follows_cycle_default(client: TestClient, db: Session):
     """newModelAddRule must seed a cloned cell's operand box from
     cycle[0], not a hardcoded "IS". With Link 2 now leading with a
     tag operator, a freshly-added row must show the tag dropdown —
     so the clone-init derives visibility from the cycle's default."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="link2-clone-default"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="link2-clone-default")
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
     # The clone-init reads cycle[0] and toggles operand visibility
     # off it, rather than always showing the freeform value box.
     assert "defaultUseTag" in body
-    assert (
-        "defaultCycle[0] === 'IS THE SAME AS' || defaultCycle[0] === 'IS DIFFERENT FROM'"
-        in body
-    )
+    assert "defaultCycle[0] === 'IS THE SAME AS' || defaultCycle[0] === 'IS DIFFERENT FROM'" in body
 
 
 def test_description_edit_box_is_taller(client: TestClient, db: Session):
     """The preview-band description edit box reclaims the vertical
     space the retired ✎/✓ buttons used to occupy — a taller
     min-height on the unlock-only textarea."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="descr-box-height"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="descr-box-height")
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
@@ -7628,9 +6983,7 @@ def test_description_edit_box_is_taller(client: TestClient, db: Session):
     assert "min-height: 6.5em" in body
 
 
-def test_19h1_save_returns_setup_state_for_both_pills(
-    client: TestClient, db: Session
-) -> None:
+def test_19h1_save_returns_setup_state_for_both_pills(client: TestClient, db: Session) -> None:
     """Segment 19H Item 1 — the reload-free ``/save`` returns the state
     the two setup pills are rendered from, so the client can repaint
     them without a page load: ``is_configured`` for the saved card's
@@ -7643,13 +6996,8 @@ def test_19h1_save_returns_setup_state_for_both_pills(
     """
     from app.services import instruments as instruments_service
 
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="19h1-save-pills"
-    )
-    save_url = (
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/save"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="19h1-save-pills")
+    save_url = f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/save"
     # The seeded source instrument is never configured here, so the
     # aggregate is over two instruments and only the new model moves.
     assert instruments_service.is_configured(db, new_model) is False
@@ -7688,19 +7036,14 @@ def test_19h1_save_returns_setup_state_for_both_pills(
     }
 
 
-def test_19h1_failed_save_carries_no_setup_state(
-    client: TestClient, db: Session
-) -> None:
+def test_19h1_failed_save_carries_no_setup_state(client: TestClient, db: Session) -> None:
     """Segment 19H Item 1 — a 422 carries only ``ok`` + ``errors``.
     Nothing was committed, so there is no new pill state to send; the
     client's repaint runs on the success path only and the pills stay
     where the server last rendered them."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="19h1-save-fail"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="19h1-save-fail")
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/save",
         data={"display_field_order_snapshot": json.dumps(["not-an-id"])},
         follow_redirects=False,
     )
@@ -7711,9 +7054,7 @@ def test_19h1_failed_save_carries_no_setup_state(
     assert "instruments_configured" not in body
 
 
-def test_a_refused_save_persists_nothing(
-    client: TestClient, db: Session
-) -> None:
+def test_a_refused_save_persists_nothing(client: TestClient, db: Session) -> None:
     """Findings A16 — the card's Save is all or nothing. A valid short
     label and visibility cell ride the same request as an invalid
     display-field order; the 422 used to arrive after
@@ -7721,13 +7062,10 @@ def test_a_refused_save_persists_nothing(
     half the edit landed while the card reported failure."""
     from app.db.models import InstrumentViewPolicy
 
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="a16-atomic"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="a16-atomic")
     before_label = new_model.short_label
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/save",
         data={
             "short_label": "Changed label",
             "observer_while_ongoing_mode": "summarized",
@@ -7737,43 +7075,44 @@ def test_a_refused_save_persists_nothing(
         follow_redirects=False,
     )
     assert response.status_code == 422
-    assert response.json()["errors"] == [
-        "Display-field order must be a list of integers."
-    ], "the 422 came from an earlier step, not the one under test"
+    assert response.json()["errors"] == ["Display-field order must be a list of integers."], (
+        "the 422 came from an earlier step, not the one under test"
+    )
 
     db.expire_all()
     assert must_get(db, type(new_model), new_model.id).short_label == before_label
-    assert db.execute(
-        select(InstrumentViewPolicy).where(
-            InstrumentViewPolicy.instrument_id == new_model.id,
-            InstrumentViewPolicy.audience == "observer",
-        )
-    ).scalar_one_or_none() is None
+    assert (
+        db.execute(
+            select(InstrumentViewPolicy).where(
+                InstrumentViewPolicy.instrument_id == new_model.id,
+                InstrumentViewPolicy.audience == "observer",
+            )
+        ).scalar_one_or_none()
+        is None
+    )
 
 
-def test_a_refused_save_keeps_band2_pill_flips_too(
-    client: TestClient, db: Session
-) -> None:
+def test_a_refused_save_keeps_band2_pill_flips_too(client: TestClient, db: Session) -> None:
     """A16, the Band 2 path: hiding a display pill runs
     ``update_display_field``, which used to commit on its own before the
     response-field shape check refused the request."""
     from app.db.models import InstrumentDisplayField
 
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="a16-band2"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="a16-band2")
     from app.services.instruments import is_locked_display_source
 
-    fields = db.execute(
-        select(InstrumentDisplayField).where(
-            InstrumentDisplayField.instrument_id == new_model.id
+    fields = (
+        db.execute(
+            select(InstrumentDisplayField).where(
+                InstrumentDisplayField.instrument_id == new_model.id
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     visible_before = {f.id: f.visible for f in fields}
     assert any(
-        f.visible
-        for f in fields
-        if not is_locked_display_source(f.source_type, f.source_field)
+        f.visible for f in fields if not is_locked_display_source(f.source_type, f.source_field)
     ), "fixture has no hideable visible pill"
     snapshot = json.dumps(
         {
@@ -7791,8 +7130,7 @@ def test_a_refused_save_keeps_band2_pill_flips_too(
         }
     )
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/save",
         data={"short_label": "Changed", "band2_state_snapshot": snapshot},
         follow_redirects=False,
     )
@@ -7820,15 +7158,12 @@ def test_a_refused_save_does_not_demote_a_validated_session(
     """A16, the lifecycle path: the first changing step's
     ``invalidate_session`` used to commit ``validated → draft`` and
     everything flushed before it, then the 422 arrived."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="a16-validated"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="a16-validated")
     review_session.status = "validated"
     db.commit()
 
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/save",
         data={
             "short_label": "Changed",
             "display_field_order_snapshot": json.dumps(["not-an-id"]),
@@ -7836,31 +7171,24 @@ def test_a_refused_save_does_not_demote_a_validated_session(
         follow_redirects=False,
     )
     assert response.status_code == 422
-    assert response.json()["errors"] == [
-        "Display-field order must be a list of integers."
-    ]
+    assert response.json()["errors"] == ["Display-field order must be a list of integers."]
 
     db.expire_all()
     assert must_get(db, ReviewSession, review_session.id).status == "validated"
     assert must_get(db, type(new_model), new_model.id).short_label != "Changed"
 
 
-def test_a_refused_no_js_save_persists_nothing(
-    client: TestClient, db: Session
-) -> None:
+def test_a_refused_no_js_save_persists_nothing(client: TestClient, db: Session) -> None:
     """A16 on the ``/fields/save`` fallback: the short label is written
     before the visibility check refuses an illegal cell (a reviewee may
     not see responses while ongoing), so the 422 must roll it back."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="a16-no-js"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="a16-no-js")
     review_session.status = "validated"
     db.commit()
     before_label = new_model.short_label
 
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/fields/save",
         data={
             "short_label": "Changed",
             "reviewee_while_ongoing_mode": "raw",
@@ -7875,18 +7203,12 @@ def test_a_refused_no_js_save_persists_nothing(
     assert must_get(db, ReviewSession, review_session.id).status == "validated"
 
 
-def test_19h1_setup_pill_repaint_wiring_ships(
-    client: TestClient, db: Session
-) -> None:
+def test_19h1_setup_pill_repaint_wiring_ships(client: TestClient, db: Session) -> None:
     """Segment 19H Item 1 — the client half: both pills carry the data
     hooks the repaint needs, and the success handler calls the repaint
     with the response body."""
-    review_session, _new_model = _new_model_with_tags(
-        client, db, code="19h1-pill-wiring"
-    )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    review_session, _new_model = _new_model_with_tags(client, db, code="19h1-pill-wiring")
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     # The two hooks — per-card and the page's aggregate. Asserted in
     # their markup context: the bare attribute name also appears in the
     # helper's own selector strings, so a substring match on it alone
@@ -7915,54 +7237,37 @@ def test_19h2_dirty_lock_discards_instead_of_carrying_edits(
     so the card comes back locked *and* clean.
 
     Browser-only behaviour; pin the wiring."""
-    review_session, _new_model = _new_model_with_tags(
-        client, db, code="19h2-dirty-lock"
-    )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    review_session, _new_model = _new_model_with_tags(client, db, code="19h2-dirty-lock")
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     flat = " ".join(body.split())
     # The dirty branch discards rather than locking in place.
     assert (
-        "'You have unsaved changes. Lock anyway? Your changes will be lost.' "
-        ")) { return false; } "
+        "'You have unsaved changes. Lock anyway? Your changes will be lost.' )) { return false; } "
     ) in flat
     assert "window.newModelDiscardReload(null);" in body
     # Dropping ?editing is what brings the card back locked.
     assert "url.searchParams.delete('editing');" in body
 
 
-def test_19h2_clean_lock_still_locks_in_page(
-    client: TestClient, db: Session
-) -> None:
+def test_19h2_clean_lock_still_locks_in_page(client: TestClient, db: Session) -> None:
     """Segment 19H Item 2 — the discard is the *dirty* path only. A
     clean card still locks in place with no confirm and no reload, so
     collapsing an untouched card costs nothing."""
-    review_session, _new_model = _new_model_with_tags(
-        client, db, code="19h2-clean-lock"
-    )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    review_session, _new_model = _new_model_with_tags(client, db, code="19h2-clean-lock")
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     flat = " ".join(body.split())
     # The in-page lock survives as the fall-through after the dirty
     # branch returns.
     assert "window.newModelSetLock(card, true); return true; };" in flat
 
 
-def test_19h2_discard_reload_is_shared_by_cancel_and_lock(
-    client: TestClient, db: Session
-) -> None:
+def test_19h2_discard_reload_is_shared_by_cancel_and_lock(client: TestClient, db: Session) -> None:
     """Segment 19H Item 2 — one discard path, not two that must agree.
     ``newModelDiscardReload(keepEditingId)`` carries the nav-away
     suppression and the open-state capture for both callers; the only
     difference is whether ``?editing`` survives."""
-    review_session, _new_model = _new_model_with_tags(
-        client, db, code="19h2-shared-discard"
-    )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    review_session, _new_model = _new_model_with_tags(client, db, code="19h2-shared-discard")
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     assert "window.newModelDiscardReload = window.newModelDiscardReload" in body
     # Both branches live in the one helper.
     assert "url.searchParams.set('editing', keepEditingId);" in body
@@ -8024,9 +7329,7 @@ def _band1_payload(**overrides) -> dict:
     return payload
 
 
-def test_exclude_self_reviews_checkbox_round_trips(
-    client: TestClient, db: Session
-) -> None:
+def test_exclude_self_reviews_checkbox_round_trips(client: TestClient, db: Session) -> None:
     """19O Item 1 rung 2. Ticking the Link 3 self-review checkbox
     persists to ``SessionRuleSet.exclude_self_reviews``, and clearing
     it persists the clear — the flag is no longer force-normalized on
@@ -8034,10 +7337,7 @@ def test_exclude_self_reviews_checkbox_round_trips(
     from app.db.models import SessionRuleSet
 
     review_session, new_model = _new_model_for(client, db, "nm-esr-trip")
-    url = (
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/fields/save"
-    )
+    url = f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/fields/save"
 
     client.post(
         url,
@@ -8069,8 +7369,7 @@ def test_exclude_self_reviews_materialises_rule_set_when_none_exists(
     assert new_model.rule_set_id is None
 
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/fields/save",
         data=_band1_payload(exclude_self_reviews="true"),
         follow_redirects=False,
     )
@@ -8083,9 +7382,7 @@ def test_exclude_self_reviews_materialises_rule_set_when_none_exists(
     assert rule_set.rules_json == []
 
 
-def test_exclude_self_reviews_materialisation_is_audited(
-    client: TestClient, db: Session
-) -> None:
+def test_exclude_self_reviews_materialisation_is_audited(client: TestClient, db: Session) -> None:
     """Materializing a rule set from the checkbox emits
     ``session_rule_set.created`` as well as the flag event.
 
@@ -8100,17 +7397,14 @@ def test_exclude_self_reviews_materialisation_is_audited(
     assert new_model.rule_set_id is None
 
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/fields/save",
         data=_band1_payload(exclude_self_reviews="true"),
         follow_redirects=False,
     )
     types = [
         row.event_type
         for row in db.execute(
-            select(AuditEvent).where(
-                AuditEvent.session_id == review_session.id
-            )
+            select(AuditEvent).where(AuditEvent.session_id == review_session.id)
         ).scalars()
     ]
     assert "session_rule_set.created" in types
@@ -8127,8 +7421,7 @@ def test_exclude_self_reviews_off_leaves_no_empty_rule_set_behind(
     assert new_model.rule_set_id is None
 
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/fields/save",
         data=_band1_payload(),
         follow_redirects=False,
     )
@@ -8150,8 +7443,7 @@ def test_exclude_self_reviews_does_not_yet_change_generation(
 
     review_session, new_model = _new_model_for(client, db, "nm-esr-inert")
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/fields/save",
         data=_band1_payload(exclude_self_reviews="true"),
         follow_redirects=False,
     )
@@ -8187,8 +7479,7 @@ def test_exclude_self_reviews_checkbox_renders_under_a_divider(
 
     def _page() -> str:
         return client.get(
-            f"/operator/sessions/{review_session.public_id}"
-            f"/instruments?editing={new_model.id}"
+            f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
         ).text
 
     body = _page()
@@ -8199,13 +7490,11 @@ def test_exclude_self_reviews_checkbox_renders_under_a_divider(
     assert "checked" not in card  # default off
 
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/fields/save",
         data=_band1_payload(exclude_self_reviews="true"),
         follow_redirects=False,
     )
     assert "checked" in _card(_page())
-
 
 
 # --------------------------------------------------------------------- #
@@ -8312,9 +7601,7 @@ def test_preview_sample_keeps_self_review_when_rule_permits(
     assert reviewee.email_or_identifier == "sam@example.edu"
 
 
-def test_preview_sample_exclusion_drops_the_whole_group(
-    client: TestClient, db: Session
-) -> None:
+def test_preview_sample_exclusion_drops_the_whole_group(client: TestClient, db: Session) -> None:
     """On a grouped instrument the exclusion is whole-group: a reviewer
     who is one of their own group's reviewees takes the entire group
     out of the preview, not just the ``(R, R)`` pair.
@@ -8396,9 +7683,7 @@ def test_preview_sample_exclusion_follows_the_live_link3_pill(
     assert out[1] is None
 
 
-def test_preview_sample_exclusion_is_not_the_desugar_stage(
-    client: TestClient, db: Session
-) -> None:
+def test_preview_sample_exclusion_is_not_the_desugar_stage(client: TestClient, db: Session) -> None:
     """The engine's ``excludeSelfReviews`` stays ``False`` — the flag is
     honored on the engine's OUTPUT, never in its options.
 
@@ -8415,9 +7700,7 @@ def test_preview_sample_exclusion_is_not_the_desugar_stage(
     assert "excludeSelfReviews=True" not in src
 
 
-def test_preview_sample_exclusion_keys_like_the_generator(
-    client: TestClient, db: Session
-) -> None:
+def test_preview_sample_exclusion_keys_like_the_generator(client: TestClient, db: Session) -> None:
     """A pair-context-only boundary groups in the preview exactly as it
     does in generation.
 
@@ -8434,9 +7717,7 @@ def test_preview_sample_exclusion_keys_like_the_generator(
     review_session, instrument, rule_set = _preview_session_with_self_pair(
         client, db, "prev-paircontext"
     )
-    sam_r = db.execute(
-        select(Reviewer).where(Reviewer.email == "sam@example.edu")
-    ).scalar_one()
+    sam_r = db.execute(select(Reviewer).where(Reviewer.email == "sam@example.edu")).scalar_one()
     for reviewee in db.execute(
         select(Reviewee).where(Reviewee.session_id == review_session.id)
     ).scalars():
@@ -8496,9 +7777,7 @@ def test_preview_sample_membership_matches_addresses_as_normalized(
     """Both addresses differ from the canonical form, and from each
     other, only in case and whitespace; it is still a self-review, so
     the group goes."""
-    review_session, instrument, rule_set = _preview_session_with_self_pair(
-        client, db, "prev-case"
-    )
+    review_session, instrument, rule_set = _preview_session_with_self_pair(client, db, "prev-case")
     sam_r = db.execute(
         select(Reviewer).where(Reviewer.session_id == review_session.id)
     ).scalar_one()
@@ -8522,16 +7801,12 @@ def test_preview_sample_membership_matches_addresses_as_normalized(
     assert _sample(db, instrument) is None
 
 
-def test_preview_sample_membership_survives_a_link_rule(
-    client: TestClient, db: Session
-) -> None:
+def test_preview_sample_membership_survives_a_link_rule(client: TestClient, db: Session) -> None:
     """A Link 2 rule that filters Sam's own reviewee row out while
     keeping Zoe leaves the group Sam's own, as in Generate."""
     from app.services import instruments as instruments_service
 
-    review_session, instrument, rule_set = _preview_session_with_self_pair(
-        client, db, "prev-link"
-    )
+    review_session, instrument, rule_set = _preview_session_with_self_pair(client, db, "prev-link")
     zoe = db.execute(
         select(Reviewee).where(
             Reviewee.session_id == review_session.id,
@@ -8604,8 +7879,7 @@ def test_self_review_control_is_a_cycle_chip_with_its_line_below(
     """
     review_session, new_model = _new_model_for(client, db, "nm-sr-heading")
     body = client.get(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments?editing={new_model.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
     card = _instrument_card(body, new_model.id)
     divider = card.index('<hr class="col-divider">')
@@ -8620,21 +7894,17 @@ def test_self_review_control_is_a_cycle_chip_with_its_line_below(
     assert "Self reviews</h4>" not in card
 
 
-def test_the_self_review_chip_names_a_saved_exclusion(
-    client: TestClient, db: Session
-) -> None:
+def test_the_self_review_chip_names_a_saved_exclusion(client: TestClient, db: Session) -> None:
     """A saved exclusion renders the box ticked and the chip "Exclude
     self reviews"; the sync helper names the box on every change."""
     review_session, new_model = _new_model_for(client, db, "nm-sr-chip")
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/fields/save",
         data=_band1_payload(exclude_self_reviews="true"),
         follow_redirects=False,
     )
     body = client.get(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments?editing={new_model.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
     card = _instrument_card(body, new_model.id)
     chip = card.index("data-new-model-self-review-chip")
@@ -8670,8 +7940,7 @@ def test_self_review_copy_matches_the_persisted_unit_of_review(
         """
         card = _instrument_card(
             client.get(
-                f"/operator/sessions/{review_session.public_id}"
-                f"/instruments?editing={new_model.id}"
+                f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
             ).text,
             new_model.id,
         )
@@ -8683,8 +7952,7 @@ def test_self_review_copy_matches_the_persisted_unit_of_review(
     assert "in the group being reviewed" not in _copy()
 
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/fields/save",
         data=_band1_payload(
             link3_mode="grouped",
             link3_boundary="reviewee.tag1",
@@ -8712,8 +7980,7 @@ def test_self_review_copy_carries_both_spellings_for_the_pill(
     """
     review_session, new_model = _new_model_for(client, db, "nm-sr-live")
     body = client.get(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments?editing={new_model.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
     card = _instrument_card(body, new_model.id)
     start = card.index("data-new-model-self-review-copy")
@@ -8728,13 +7995,10 @@ def test_self_review_copy_carries_both_spellings_for_the_pill(
     )
     # And the handler that owns every other live consequence of the
     # pill must be the one that swaps them — not a second listener.
-    handler = body[
-        body.index("window.newModelToggleUnitMode") :
-    ]
+    handler = body[body.index("window.newModelToggleUnitMode") :]
     handler = handler[: handler.index("window.newModel", 40)]
     assert "data-new-model-self-review-copy" in handler
     assert "data-copy-group" in handler
-
 
 
 # --------------------------------------------------------------------- #
@@ -8764,8 +8028,7 @@ def test_self_review_block_is_hidden_until_all_three_links_are_set(
     def _block() -> str:
         return _self_review_block(
             client.get(
-                f"/operator/sessions/{review_session.public_id}"
-                f"/instruments?editing={new_model.id}"
+                f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
             ).text,
             new_model.id,
         )
@@ -8774,8 +8037,7 @@ def test_self_review_block_is_hidden_until_all_three_links_are_set(
     assert "display: none" in _block()
 
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/fields/save",
         data=_band1_payload(),
         follow_redirects=False,
     )
@@ -8783,17 +8045,14 @@ def test_self_review_block_is_hidden_until_all_three_links_are_set(
 
     # Put one Link back to "Not set" — the block goes with it.
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/fields/save",
         data=_band1_payload(link2_touched="false"),
         follow_redirects=False,
     )
     assert "display: none" in _block()
 
 
-def test_unset_link_clears_the_stored_flag(
-    client: TestClient, db: Session
-) -> None:
+def test_unset_link_clears_the_stored_flag(client: TestClient, db: Session) -> None:
     """What is hidden is also false in storage.
 
     Otherwise a flag ticked while the Links were set would sit in the
@@ -8803,10 +8062,7 @@ def test_unset_link_clears_the_stored_flag(
     from app.db.models import SessionRuleSet
 
     review_session, new_model = _new_model_for(client, db, "nm-sr-clear")
-    url = (
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/fields/save"
-    )
+    url = f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/fields/save"
     client.post(
         url,
         data=_band1_payload(exclude_self_reviews="true"),
@@ -8819,18 +8075,14 @@ def test_unset_link_clears_the_stored_flag(
     # Unset Link 1 while still submitting a ticked box.
     client.post(
         url,
-        data=_band1_payload(
-            link1_touched="false", exclude_self_reviews="true"
-        ),
+        data=_band1_payload(link1_touched="false", exclude_self_reviews="true"),
         follow_redirects=False,
     )
     db.refresh(rule_set)
     assert rule_set.exclude_self_reviews is False
 
 
-def test_moving_individual_to_group_clears_the_flag(
-    client: TestClient, db: Session
-) -> None:
+def test_moving_individual_to_group_clears_the_flag(client: TestClient, db: Session) -> None:
     """The two modes except different things, so the tick does not
     carry across the move.
 
@@ -8842,10 +8094,7 @@ def test_moving_individual_to_group_clears_the_flag(
     from app.db.models import SessionRuleSet
 
     review_session, new_model = _new_model_for(client, db, "nm-sr-togroup")
-    url = (
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/fields/save"
-    )
+    url = f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/fields/save"
     client.post(
         url,
         data=_band1_payload(exclude_self_reviews="true"),
@@ -8869,24 +8118,18 @@ def test_moving_individual_to_group_clears_the_flag(
     db.refresh(rule_set)
     assert new_model.group_kind == "r1"
     assert rule_set.exclude_self_reviews is False, (
-        "a tick agreed for the individual rule must not silently "
-        "become the group rule"
+        "a tick agreed for the individual rule must not silently become the group rule"
     )
 
 
-def test_staying_in_group_mode_keeps_the_flag(
-    client: TestClient, db: Session
-) -> None:
+def test_staying_in_group_mode_keeps_the_flag(client: TestClient, db: Session) -> None:
     """The clear is the individual → group *transition*, not grouped
     mode itself — otherwise the flag could never be set on a grouped
     instrument at all."""
     from app.db.models import SessionRuleSet
 
     review_session, new_model = _new_model_for(client, db, "nm-sr-stay")
-    url = (
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/fields/save"
-    )
+    url = f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/fields/save"
     grouped = dict(link3_mode="grouped", link3_boundary="reviewee.tag1")
     client.post(url, data=_band1_payload(**grouped), follow_redirects=False)
     client.post(
@@ -8899,9 +8142,7 @@ def test_staying_in_group_mode_keeps_the_flag(
     assert rule_set.exclude_self_reviews is True
 
 
-def test_both_pill_handlers_sync_the_self_review_block(
-    client: TestClient, db: Session
-) -> None:
+def test_both_pill_handlers_sync_the_self_review_block(client: TestClient, db: Session) -> None:
     """Visibility follows the pills live, from one shared function.
 
     Both handlers call it: the rule is one rule, so it has one
@@ -8909,21 +8150,16 @@ def test_both_pill_handlers_sync_the_self_review_block(
     """
     review_session, new_model = _new_model_for(client, db, "nm-sr-sync")
     body = client.get(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments?editing={new_model.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
     assert "window.newModelSyncSelfReviewBlock" in body
     for handler in ("newModelToggleRuleMode", "newModelToggleUnitMode"):
         start = body.index(f"window.{handler} =")
         scope = body[start : body.index("};", start)]
-        assert "newModelSyncSelfReviewBlock(btn)" in scope, (
-            f"{handler} must sync the block"
-        )
+        assert "newModelSyncSelfReviewBlock(btn)" in scope, f"{handler} must sync the block"
 
 
-def test_link3_pill_cycle_cannot_go_group_to_individual(
-    client: TestClient, db: Session
-) -> None:
+def test_link3_pill_cycle_cannot_go_group_to_individual(client: TestClient, db: Session) -> None:
     """The Link 3 pill wraps ``not_set → individual → group →
     not_set``, never group → individual directly.
 
@@ -8938,8 +8174,7 @@ def test_link3_pill_cycle_cannot_go_group_to_individual(
     """
     review_session, new_model = _new_model_for(client, db, "nm-cycle")
     body = client.get(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments?editing={new_model.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
     start = body.index("window.newModelToggleUnitMode =")
     handler = body[start : body.index("btn.setAttribute('data-new-model-unit-mode'", start)]
@@ -8974,8 +8209,7 @@ def test_import_cannot_leave_the_flag_set_behind_an_unset_link(
 
     review_session, new_model = _new_model_for(client, db, "nm-sr-import")
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/fields/save",
         data=_band1_payload(exclude_self_reviews="true"),
         follow_redirects=False,
     )
@@ -8987,9 +8221,7 @@ def test_import_cannot_leave_the_flag_set_behind_an_unset_link(
     new_model.band1_touched_links = ["link1", "link3"]
     db.flush()
 
-    cleared = instruments_service.clear_unsettled_exclude_self_reviews(
-        db, review_session
-    )
+    cleared = instruments_service.clear_unsettled_exclude_self_reviews(db, review_session)
     db.refresh(rule_set)
     assert cleared == 1
     assert rule_set.exclude_self_reviews is False
@@ -9005,14 +8237,11 @@ def test_import_guard_leaves_a_fully_configured_instrument_alone(
 
     review_session, new_model = _new_model_for(client, db, "nm-sr-import-ok")
     client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/fields/save",
         data=_band1_payload(exclude_self_reviews="true"),
         follow_redirects=False,
     )
-    cleared = instruments_service.clear_unsettled_exclude_self_reviews(
-        db, review_session
-    )
+    cleared = instruments_service.clear_unsettled_exclude_self_reviews(db, review_session)
     db.refresh(new_model)
     rule_set = must_get(db, SessionRuleSet, new_model.rule_set_id)
     assert cleared == 0
@@ -9040,9 +8269,7 @@ def test_band3_renders_only_persisted_rows_no_blank_starter(
     """The template renders one row per persisted response field and
     no trailing blank row; the one blank row on the page sits inside
     the ``<template>``, outside the document."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="19t-no-blank-row"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="19t-no-blank-row")
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
@@ -9063,11 +8290,9 @@ def test_band3_renders_only_persisted_rows_no_blank_starter(
 def test_band3_add_row_clones_the_template_not_the_first_row(
     client: TestClient, db: Session
 ) -> None:
-    """"+" clones the template's row rather than a live row, and X
+    """ "+" clones the template's row rather than a live row, and X
     removes a row outright rather than blanking it."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="19t-add-from-template"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="19t-add-from-template")
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
@@ -9081,18 +8306,14 @@ def test_band3_add_row_clones_the_template_not_the_first_row(
     assert "selectedIndex = 0" not in delete_fn
 
 
-def test_band3_splits_display_and_response_fields_15_to_85(
-    client: TestClient, db: Session
-) -> None:
+def test_band3_splits_display_and_response_fields_15_to_85(client: TestClient, db: Session) -> None:
     """Band 3 gives the display-field table 15% and Response fields 85%
     (the author, 2026-09-28, 19T Item 12A; 1/5 and 4/5 from 2026-09-26;
     19T Item 8 made it 1/3 and 2/3, from
     Visibility 2/5 and Response fields 3/5). The left
     track's minimum is 0, so a long unbroken field label scrolls inside
     its column rather than widening it (Codex on #2629)."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="19t-band3-split"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="19t-band3-split")
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
@@ -9111,9 +8332,7 @@ def test_band3_row_handlers_reach_the_stager_through_its_window_handle(
     ReferenceError (measured in Chromium, 2026-09-24). They call the
     window handle instead: the automatic commit (✓'s successor, 19T Item
     9), X and ▲ ▼."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="19t-stager-handle"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="19t-stager-handle")
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
@@ -9138,16 +8357,12 @@ def _rf_fn(body: str, name: str) -> str:
     return script[start : script.index("\n        };", start)]
 
 
-def test_response_row_carries_the_shape_the_preview_shows(
-    client: TestClient, db: Session
-) -> None:
+def test_response_row_carries_the_shape_the_preview_shows(client: TestClient, db: Session) -> None:
     """Each server-rendered response-field row carries the saved type and
     bounds as its committed state, so the preview reads what the row last
     committed, not the live inputs, and the automatic commit can compare
     the inputs against it (19T Item 9; the pill carried it before)."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="19t-pill-shape"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="19t-pill-shape")
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
@@ -9155,16 +8370,19 @@ def test_response_row_carries_the_shape_the_preview_shows(
     rows, _template = _band3_rows_and_template(flat, new_model.id)
     heads = {
         m.group(1): m.group(0)
-        for m in re.finditer(
-            r'<tr data-new-model-rf-row [^>]*?data-label="([^"]*)"[^>]*>', rows
-        )
+        for m in re.finditer(r'<tr data-new-model-rf-row [^>]*?data-label="([^"]*)"[^>]*>', rows)
     }
     assert set(heads) == {"Rating", "Comments"}
     # Rating is Integer 1–5 step 1, Comments String 0–2000 (the seed);
     # the row carries the same values its inputs render.
-    for attr in ('data-committed="true"', 'data-selected="true"',
-                 'data-rf-data-type="integer"', 'data-rf-min="1"',
-                 'data-rf-max="5"', 'data-rf-step="1"'):
+    for attr in (
+        'data-committed="true"',
+        'data-selected="true"',
+        'data-rf-data-type="integer"',
+        'data-rf-min="1"',
+        'data-rf-max="5"',
+        'data-rf-step="1"',
+    ):
         assert attr in heads["Rating"], attr
     assert 'data-rf-data-type="string"' in heads["Comments"]
     assert 'data-rf-max="2000"' in heads["Comments"]
@@ -9180,17 +8398,13 @@ def test_response_row_carries_the_shape_the_preview_shows(
         assert "data-new-model-band2-pill" not in src
 
 
-def test_a_row_commits_when_its_shape_is_valid(
-    client: TestClient, db: Session
-) -> None:
+def test_a_row_commits_when_its_shape_is_valid(client: TestClient, db: Session) -> None:
     """19T Item 9 — ✓ retired. A row commits its live name and shape to
     the preview whenever they are valid and differ from what it last
     committed, on every keystroke and type change, so a half-typed bound
     never reaches the preview. Committing refreshes the preview and the
     progress counts and stages for Save."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="19t-tick-compare"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="19t-tick-compare")
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
@@ -9218,30 +8432,30 @@ def test_commit_writes_the_row_and_a_new_row_starts_selected(
     """Committing copies the row's name, type and bounds into its
     committed state; a new row (the "+" template) starts selected, so its
     column joins the preview the moment its shape is valid."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="19t-tick-writes"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="19t-tick-writes")
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
     commit = _rf_fn(body, "newModelRfCommitRow")
     assert "row.setAttribute('data-committed', 'true');" in commit
-    for attr in ("data-label", "data-rf-data-type", "data-rf-min",
-                 "data-rf-max", "data-rf-step", "data-rf-list"):
+    for attr in (
+        "data-label",
+        "data-rf-data-type",
+        "data-rf-min",
+        "data-rf-max",
+        "data-rf-step",
+        "data-rf-list",
+    ):
         assert f"row.setAttribute('{attr}'" in commit
     assert "pill" not in commit
     _rows, template = _band3_rows_and_template(body, new_model.id)
-    assert "<tr data-new-model-rf-row data-selected=\"true\">" in template
+    assert '<tr data-new-model-rf-row data-selected="true">' in template
 
 
-def test_required_and_help_toggles_stage_for_save(
-    client: TestClient, db: Session
-) -> None:
+def test_required_and_help_toggles_stage_for_save(client: TestClient, db: Session) -> None:
     """R and ≡ stage the Band 2 state, which marks the card dirty, so
     Save persists a toggle made on its own; neither needs a commit."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="19t-r-help-stage"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="19t-r-help-stage")
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
@@ -9251,16 +8465,12 @@ def test_required_and_help_toggles_stage_for_save(
         assert "typeof saveBand2State" not in fn, name
 
 
-def test_save_success_commits_every_named_row(
-    client: TestClient, db: Session
-) -> None:
+def test_save_success_commits_every_named_row(client: TestClient, db: Session) -> None:
     """Save persists each named row as typed and does not reload. Its
     success handler commits every named row and rebuilds the preview, so
     the preview and the Active checkbox match what was saved
     (diff-reviewer finding, 2026-09-24; rows since 19T Item 9)."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="19t-save-sync"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="19t-save-sync")
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
@@ -9288,17 +8498,13 @@ def test_save_success_commits_every_named_row(
     assert "window.newModelRfRecomputeActionStates(row);" in on_success
 
 
-def test_row_marker_follows_validity(
-    client: TestClient, db: Session
-) -> None:
+def test_row_marker_follows_validity(client: TestClient, db: Session) -> None:
     """19T Item 9 — the amber marker shows while a row's live name or
     shape is invalid (the preview keeps its last valid shape), with the
     reason as the row's tooltip; an empty name counts until the box
     loses focus and gets its default label back. The marker's CSS sits on the row's cells, since a <tbody>
     draws no box-shadow."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="19t-marker"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="19t-marker")
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
@@ -9307,15 +8513,17 @@ def test_row_marker_follows_validity(
     assert "row.setAttribute('data-row-pending', 'true');" in recompute
     # The tooltip says what the preview shows meanwhile; the untouched
     # placeholder on a card with no fields asks for a name.
-    for tail in ("'Type a name to add this field.'",
-                 "' The preview keeps the last valid shape.'",
-                 "' The preview shows this field once it is valid.'"):
+    for tail in (
+        "'Type a name to add this field.'",
+        "' The preview keeps the last valid shape.'",
+        "' The preview shows this field once it is valid.'",
+    ):
         assert tail in recompute, tail
     flat = " ".join(body.split())
     assert (
         '[data-new-model-rf-row][data-row-pending="true"] > td:first-child, '
         '[data-new-model-rf-condition][data-row-pending="true"] > td:first-child '
-        '{ box-shadow: inset 3px 0 0 0 var(--row-pending-marker); }'
+        "{ box-shadow: inset 3px 0 0 0 var(--row-pending-marker); }"
     ) in flat
 
 
@@ -9329,9 +8537,7 @@ def test_every_band3_row_has_a_plus_ahead_of_its_other_buttons(
 ) -> None:
     """Each row, and the template row, carries its own "+" at its head;
     the single "+" under the list is gone; X is destructive (red)."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="19t-row-plus"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="19t-row-plus")
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
@@ -9344,9 +8550,7 @@ def test_every_band3_row_has_a_plus_ahead_of_its_other_buttons(
     for chunk in rows.split("<tr data-new-model-rf-row")[1:] + [template]:
         # "+" heads the row, ahead of the name input; X is the red
         # destructive button, as Band 1's rule / unit X.
-        assert chunk.index("data-new-model-rf-add") < chunk.index(
-            "data-new-model-rf-name"
-        )
+        assert chunk.index("data-new-model-rf-add") < chunk.index("data-new-model-rf-name")
         x_start = chunk.index("data-new-model-rf-delete")
         assert 'class="btn destructive"' in chunk[chunk.rindex("<button", 0, x_start) : x_start]
     assert "Add another response field row" not in body
@@ -9357,14 +8561,10 @@ def test_every_band3_row_has_a_plus_ahead_of_its_other_buttons(
     assert "window.newModelRfInsertRow(band3, null, true);" in _rf_script(body)
 
 
-def test_the_last_band3_row_cannot_be_deleted(
-    client: TestClient, db: Session
-) -> None:
+def test_the_last_band3_row_cannot_be_deleted(client: TestClient, db: Session) -> None:
     """X is inactive on the only row left, and the delete handler
     refuses a stale click on it."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="19t-last-row"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="19t-last-row")
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
@@ -9377,14 +8577,10 @@ def test_the_last_band3_row_cannot_be_deleted(
     assert delete_fn.index(guard) < delete_fn.index("(group || row).remove();")
 
 
-def test_save_follows_band3_row_order(
-    client: TestClient, db: Session
-) -> None:
+def test_save_follows_band3_row_order(client: TestClient, db: Session) -> None:
     """The stager serializes in row order in one pass; ▲ ▼ are the only
     reorder (the pill drag retired in 19T Item 9)."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="19t-row-order"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="19t-row-order")
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
@@ -9397,31 +8593,46 @@ def test_save_follows_band3_row_order(
     assert "newModelBand2DragStart" not in body
 
 
-def test_save_persists_response_fields_in_the_order_sent(
-    client: TestClient, db: Session
-) -> None:
+def test_save_persists_response_fields_in_the_order_sent(client: TestClient, db: Session) -> None:
     """The stager sends rows in row order, so a field inserted between
     Rating and Comments saves between them, ticked or not."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="19t-save-order"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="19t-save-order")
     ids = {rf.label: rf.id for rf in new_model.response_fields}
     snapshot = json.dumps(
         {
             "selected_display_keys": [],
             "response_fields": [
-                {"id": ids["Rating"], "name": "Rating", "data_type": "integer",
-                 "selected": True, "min": "1", "max": "5", "step": "1"},
-                {"name": "Notes", "data_type": "string", "selected": False,
-                 "min": "", "max": "", "step": "", "list_options": ""},
-                {"id": ids["Comments"], "name": "Comments", "data_type": "string",
-                 "selected": True, "min": "0", "max": "2000"},
+                {
+                    "id": ids["Rating"],
+                    "name": "Rating",
+                    "data_type": "integer",
+                    "selected": True,
+                    "min": "1",
+                    "max": "5",
+                    "step": "1",
+                },
+                {
+                    "name": "Notes",
+                    "data_type": "string",
+                    "selected": False,
+                    "min": "",
+                    "max": "",
+                    "step": "",
+                    "list_options": "",
+                },
+                {
+                    "id": ids["Comments"],
+                    "name": "Comments",
+                    "data_type": "string",
+                    "selected": True,
+                    "min": "0",
+                    "max": "2000",
+                },
             ],
         }
     )
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/save",
         data={"band2_state_snapshot": snapshot},
         follow_redirects=False,
     )
@@ -9447,24 +8658,19 @@ def test_save_persists_response_fields_in_the_order_sent(
 # --------------------------------------------------------------------------- #
 
 
-def test_open_card_no_longer_disables_the_action_rows(
-    client: TestClient, db: Session
-) -> None:
+def test_open_card_no_longer_disables_the_action_rows(client: TestClient, db: Session) -> None:
     """Under ``?editing=<id>`` every card's Replicate, Delete, +Instrument
     and +Page break stay live, and so does a page-break ×. Nothing on the
     page cleared ``?editing`` (Save is a fetch; Cancel reloads into it),
     so the old disable trapped the operator."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="19t-editing-live"
-    )
-    url = (
-        f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="19t-editing-live")
+    url = f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     body = client.get(url).text
     assert "Save or cancel the open instrument edit first." not in body
     assert "Save or cancel this instrument's edits first." not in body
     instrument_ids = [
-        i.id for i in db.execute(
+        i.id
+        for i in db.execute(
             select(Instrument)
             .where(Instrument.session_id == review_session.id)
             .order_by(Instrument.order, Instrument.id)
@@ -9499,14 +8705,10 @@ def test_open_card_no_longer_disables_the_action_rows(
     assert "disabled" not in x_tag
 
 
-def test_lock_strips_the_editing_param(
-    client: TestClient, db: Session
-) -> None:
+def test_lock_strips_the_editing_param(client: TestClient, db: Session) -> None:
     """An in-page Lock drops ``?editing=<this card>`` from the URL, so a
     reload lands locked."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="19t-lock-strips"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="19t-lock-strips")
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
@@ -9527,9 +8729,7 @@ def test_delete_confirm_checkbox_does_not_mark_the_card_dirty(
     """The dirty tracker's input / change listeners skip the Delete
     confirm checkbox: ticking it enabled Save and Cancel and made Delete
     trip the leave-page prompt on a clean card."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="19t-delete-confirm"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="19t-delete-confirm")
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
@@ -9549,17 +8749,13 @@ def test_delete_confirm_checkbox_does_not_mark_the_card_dirty(
 # --------------------------------------------------------------------------- #
 
 
-def test_locked_display_fields_cannot_be_unselected(
-    client: TestClient, db: Session
-) -> None:
+def test_locked_display_fields_cannot_be_unselected(client: TestClient, db: Session) -> None:
     """Name and Email are always shown on the reviewer surface (the server
     refuses to hide them). 19T Item 3 entry 2 made their Band 2 pills
     static labels; since 19T Item 8 retired the display pills, their rows
     in Band 3's display-field table carry a ticked, disabled checkbox and
     no arrows, and every other display field stays toggleable."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="19t-locked-pills"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="19t-locked-pills")
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
@@ -9567,10 +8763,7 @@ def test_locked_display_fields_cannot_be_unselected(
     card = _card_slice(flat, new_model.id)
     # No display pill survives in Band 2; only response pills remain.
     assert re.findall(r'data-new-model-band2-pill data-key="reviewee\.', card) == []
-    rows = {
-        must_search(r'data-key="([^"]+)"', r).group(1): r
-        for r in _df_rows(flat, new_model.id)
-    }
+    rows = {must_search(r'data-key="([^"]+)"', r).group(1): r for r in _df_rows(flat, new_model.id)}
     for key, slot in (("reviewee.name", "first"), ("reviewee.email_or_identifier", "second")):
         row = rows[key]
         assert 'data-locked="true"' in row, key
@@ -9608,9 +8801,7 @@ def test_band3_visibility_cycle_repaints_band2_preview_card(
     handler repaints the matching cell. Since 19T Item 7 the chips are
     the same card's unlocked editor, and the locked table still needs
     the repaint."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="19t-vp-preview"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="19t-vp-preview")
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
@@ -9638,10 +8829,7 @@ def test_band3_visibility_cycle_repaints_band2_preview_card(
             assert f"{audience}-{window}" in cells
     start = body.index("window.newModelCycleVisibilityCell = function (chip) {")
     cycle = body[start : body.index("\n    };", start)]
-    assert (
-        "'[data-new-model-vp-preview-cell=\"' + audience + '-' + window_ + '\"]'"
-        in cycle
-    )
+    assert "'[data-new-model-vp-preview-cell=\"' + audience + '-' + window_ + '\"]'" in cycle
     assert "cell.textContent = _VP_CELL_LABELS[nextSlug] || nextSlug;" in cycle
     # 19T Item 8 — each locked cell's mode is a pill that only shows it,
     # and the key sits on the pill, so the repaint keeps the pill.
@@ -9661,27 +8849,20 @@ def test_band3_visibility_cycle_repaints_band2_preview_card(
             body[start : body.index("};", start)],
         )
     )
-    server_map = {
-        (slug or ""): label for slug, label in _REVIEWER_VP_MODE_LABELS.items()
-    }
+    server_map = {(slug or ""): label for slug, label in _REVIEWER_VP_MODE_LABELS.items()}
     assert client_map == server_map
 
 
-def test_band2_visibility_card_is_the_editor(
-    client: TestClient, db: Session
-) -> None:
+def test_band2_visibility_card_is_the_editor(client: TestClient, db: Session) -> None:
     """19T Item 7 — the "Who can see what you wrote" card keeps the
     reviewer's table for a locked card, and is the visibility editor
     while unlocked: "You (reviewer)", "Reviewees" and, below a divider,
     "Observers" with its note. The four cells that can change are cycle
     chips on the saved mode, the six hidden inputs ride the dfsave form
     from inside the card, and Band 3 no longer has a Visibility table."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="19t7-vp-editor"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="19t7-vp-editor")
     saved = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/fields/save",
         data={
             "peer_reviewer_while_ongoing_mode": "raw",
             "peer_reviewer_after_release_mode": "raw",
@@ -9695,16 +8876,16 @@ def test_band2_visibility_card_is_the_editor(
     assert saved.status_code == 303
     flat = " ".join(
         client.get(
-            f"/operator/sessions/{review_session.public_id}"
-            f"/instruments?editing={new_model.id}"
+            f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
         ).text.split()
     )
     card = _card_slice(flat, new_model.id)
     band2 = card[card.index("data-new-model-band2-vp-preview-card") :]
     # Locked: the reviewer's table, no Observers.
     locked = band2[
-        band2.index('<div class="table-scroll" data-lock-only>') :
-        band2.index("data-new-model-vp-editor")
+        band2.index('<div class="table-scroll" data-lock-only>') : band2.index(
+            "data-new-model-vp-editor"
+        )
     ]
     assert ">You<" in locked and ">Reviewees<" in locked
     assert "Observers" not in locked
@@ -9715,7 +8896,7 @@ def test_band2_visibility_card_is_the_editor(
     # the cycle handler looks its hidden inputs up in.
     assert (
         '<div class="table-scroll" data-unlock-only data-lock-region data-new-model-vp-editor '
-        'data-new-model-vp-form data-new-model-instrument-id='
+        "data-new-model-vp-form data-new-model-instrument-id="
     ) in band2
     start = band2.index("data-new-model-vp-editor")
     editor = band2[start : band2.index("</table>", start)]
@@ -9774,7 +8955,7 @@ def test_band2_visibility_card_is_the_editor(
 def _df_rows(flat: str, instrument_id: int) -> list[str]:
     """The display-field table's rows in Band 3 (19T Item 8)."""
     card = _card_slice(flat, instrument_id)
-    start = card.index("<table class=\"table-compact\" data-new-model-df-table")
+    start = card.index('<table class="table-compact" data-new-model-df-table')
     table = card[start : card.index("</table>", start)]
     return re.findall(r"<tr data-new-model-df-row.*?</tr>", table)
 
@@ -9794,9 +8975,7 @@ def _df_chip(row: str) -> str:
     return must_search(r'<label class="pill pill-count tag-chip"[^>]*>', row).group(0)
 
 
-def test_band3_display_field_table(
-    client: TestClient, db: Session
-) -> None:
+def test_band3_display_field_table(client: TestClient, db: Session) -> None:
     """19T Item 8 — Band 3's left column carries the display-field table
     (``guide/archive/advanced_instruments.md`` Item 5): one headerless row per
     display field in the pills' order, with an Active checkbox, the
@@ -9804,9 +8983,7 @@ def test_band3_display_field_table(
     ``newModelDfMove``. Name and Email have a checkbox that only shows
     their state and no arrows. Up is off on the row just below Email,
     down on the last row."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="19t8-df-table"
-    )
+    review_session, new_model = _new_model_with_tags(client, db, code="19t8-df-table")
     url = f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     flat = " ".join(client.get(url).text.split())
     rows = _df_rows(flat, new_model.id)
@@ -9815,12 +8992,24 @@ def test_band3_display_field_table(
     assert labels == ["Name", "Email", "Tag 1", "Tag 2"]
     # Each row carries the field's data the preview and Save read.
     for row in rows:
-        for attr in ("data-label", "data-source-type", "data-source-field",
-                     "data-value", "data-selectable-in-group",
-                     "data-display-field-id", "data-width", "data-reorderable"):
+        for attr in (
+            "data-label",
+            "data-source-type",
+            "data-source-field",
+            "data-value",
+            "data-selectable-in-group",
+            "data-display-field-id",
+            "data-width",
+            "data-reorderable",
+        ):
             assert f"{attr}=" in row, attr
     card = _card_slice(flat, new_model.id)
-    assert "<thead" not in card[card.index("<table class=\"table-compact\" data-new-model-df-table") :].split("</table>")[0]
+    assert (
+        "<thead"
+        not in card[card.index('<table class="table-compact" data-new-model-df-table') :].split(
+            "</table>"
+        )[0]
+    )
     # 19T Item 9, on the author's ruling — the arrows are outlined
     # buttons (the Secondary role), short enough for the compact rows.
     arrows = re.findall(r'<button [^>]*data-new-model-df-move="(?:up|down)"', card)
@@ -9828,8 +9017,9 @@ def test_band3_display_field_table(
     assert all('class="btn secondary btn-short"' in a for a in arrows)
     assert "body.ui-v2 .btn.btn-short { padding: 0 6px;" in flat
     # Compact rows, not the response-field rows' spacing (base.html).
-    assert "body.ui-v2 table.table-compact td { padding: var(--space-1) var(--space-2); }" in flat.replace(
-        "body.ui-v2 table.table-compact th, ", ""
+    assert (
+        "body.ui-v2 table.table-compact td { padding: var(--space-1) var(--space-2); }"
+        in flat.replace("body.ui-v2 table.table-compact th, ", "")
     )
 
     def _disabled(tag: str) -> bool:
@@ -9839,9 +9029,7 @@ def test_band3_display_field_table(
     for label, row in zip(labels, rows):
         box = must_search(r'<input type="checkbox"[^>]*>', row).group(0)
         assert 'onchange="newModelDfToggle(this)"' in box, label
-        arrows = dict(
-            re.findall(r'data-new-model-df-move="(up|down)"(.*?)>', row)
-        )
+        arrows = dict(re.findall(r'data-new-model-df-move="(up|down)"(.*?)>', row))
         if label in ("Name", "Email"):
             assert arrows == {}, label
             assert " checked" in box and _disabled(box), label
@@ -9868,9 +9056,7 @@ def test_band3_display_field_table(
     db.commit()
     flat = " ".join(client.get(url).text.split())
     boxes = {
-        _df_label(r): must_search(
-            r'<input type="checkbox"[^>]*>', r
-        ).group(0)
+        _df_label(r): must_search(r'<input type="checkbox"[^>]*>', r).group(0)
         for r in _df_rows(flat, new_model.id)
     }
     assert " checked" not in boxes["Tag 2"] and " disabled" not in boxes["Tag 2"]
@@ -9882,9 +9068,7 @@ def test_band3_display_field_table(
     db.commit()
     flat = " ".join(client.get(url).text.split())
     boxes = {
-        _df_label(r): must_search(
-            r'<input type="checkbox"[^>]*>', r
-        ).group(0)
+        _df_label(r): must_search(r'<input type="checkbox"[^>]*>', r).group(0)
         for r in _df_rows(flat, new_model.id)
     }
     assert " checked" in boxes["Name"]
@@ -9893,9 +9077,7 @@ def test_band3_display_field_table(
     assert 'title="Not shown on group rows"' in _df_chip(email)
 
 
-def test_band3_display_field_rows_are_the_model(
-    client: TestClient, db: Session
-) -> None:
+def test_band3_display_field_rows_are_the_model(client: TestClient, db: Session) -> None:
     """19T Item 8 rung 3 — Band 2's display pills are retired, so every
     reader of the display fields reads Band 3's rows (``dfRows``): the
     preview's selection, the Save stager's selected keys, the display
@@ -9924,18 +9106,12 @@ def test_band3_display_field_rows_are_the_model(
     assert "syncDfTable(card);" in _fn("function rebuildPreview(card) {")
 
 
-def test_band3_display_field_table_group_off_field(
-    client: TestClient, db: Session
-) -> None:
+def test_band3_display_field_table_group_off_field(client: TestClient, db: Session) -> None:
     """19T Item 8 — on a group-scoped instrument, a display field a group
     row can't show (Profile, which is not locked) renders unticked and
     fixed, and ticks and frees again on an individually scoped one."""
-    review_session, new_model = _new_model_with_tags(
-        client, db, code="19t8-df-group-off"
-    )
-    carol = db.scalars(
-        select(Reviewee).where(Reviewee.session_id == review_session.id)
-    ).one()
+    review_session, new_model = _new_model_with_tags(client, db, code="19t8-df-group-off")
+    carol = db.scalars(select(Reviewee).where(Reviewee.session_id == review_session.id)).one()
     carol.profile_link = "https://example.edu/profiles/carol"
     db.commit()
     url = f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
@@ -9945,8 +9121,7 @@ def test_band3_display_field_table_group_off_field(
     def _profile_box() -> str:
         flat = " ".join(client.get(url).text.split())
         row = next(
-            r for r in _df_rows(flat, new_model.id)
-            if 'data-source-field="profile_link"' in r
+            r for r in _df_rows(flat, new_model.id) if 'data-source-field="profile_link"' in r
         )
         assert 'data-selectable-in-group="false"' in row
         assert "data-locked" not in row
@@ -10026,8 +9201,11 @@ def test_band3_response_fields_are_a_table(client: TestClient, db: Session) -> N
         for move in re.findall(r'<button[^>]*data-new-model-rf-move="(?:up|down)"[^>]*>', row):
             assert 'onclick="newModelRfMove(this)"' in move
     boxes = {
-        must_search(r'value="([^"]+)"', c.split("data-new-model-rf-name", 1)[1]).group(1):
-        must_search(r'<input type="checkbox" class="visually-hidden" data-new-model-rf-active[^>]*>', c).group(0)
+        must_search(r'value="([^"]+)"', c.split("data-new-model-rf-name", 1)[1]).group(
+            1
+        ): must_search(
+            r'<input type="checkbox" class="visually-hidden" data-new-model-rf-active[^>]*>', c
+        ).group(0)
         for c in chunks
     }
     assert " checked" in boxes["Rating"] and " disabled" not in boxes["Rating"]
@@ -10035,10 +9213,16 @@ def test_band3_response_fields_are_a_table(client: TestClient, db: Session) -> N
     for box in boxes.values():
         assert 'onchange="newModelRfToggleActive(this)"' in box
     # The "+" template's row starts selected, its checkbox ticked and live.
-    tpl_box = must_search(r'<input type="checkbox" class="visually-hidden" data-new-model-rf-active[^>]*>', template).group(0)
+    tpl_box = must_search(
+        r'<input type="checkbox" class="visually-hidden" data-new-model-rf-active[^>]*>', template
+    ).group(0)
     assert " checked" in tpl_box and " disabled" not in tpl_box
-    ups = [must_search(r'<button[^>]*data-new-model-rf-move="up"[^>]*>', c).group(0) for c in chunks]
-    downs = [must_search(r'<button[^>]*data-new-model-rf-move="down"[^>]*>', c).group(0) for c in chunks]
+    ups = [
+        must_search(r'<button[^>]*data-new-model-rf-move="up"[^>]*>', c).group(0) for c in chunks
+    ]
+    downs = [
+        must_search(r'<button[^>]*data-new-model-rf-move="down"[^>]*>', c).group(0) for c in chunks
+    ]
     assert [" disabled" in b for b in ups] == [True, False]
     assert [" disabled" in b for b in downs] == [False, True]
     # The pills and ✓ retired in rung 4.
@@ -10104,9 +9288,7 @@ def test_band3_response_rows_are_the_model(client: TestClient, db: Session) -> N
     )
 
 
-def test_band3_response_rows_active_and_arrows_are_wired(
-    client: TestClient, db: Session
-) -> None:
+def test_band3_response_rows_active_and_arrows_are_wired(client: TestClient, db: Session) -> None:
     """19T Item 9 rung 3 — the Active checkbox sets the field's selection
     through ``rfSetSelected`` (with the "hide this field?" confirm,
     putting the tick back on cancel); ▲ ▼ move the row's ``<tbody>`` and
@@ -10143,9 +9325,7 @@ def test_band3_response_rows_active_and_arrows_are_wired(
     assert ": !(group && window.newModelRfGroupSibling(group, up));" in recompute
 
 
-def test_added_response_fields_get_a_default_label(
-    client: TestClient, db: Session
-) -> None:
+def test_added_response_fields_get_a_default_label(client: TestClient, db: Session) -> None:
     """19T Item 9, on the author's rulings — every added response field has
     a default label, the next "Field N" no row goes by, shown muted as the
     empty name box's placeholder until the operator types a name. Clearing
@@ -10169,7 +9349,9 @@ def test_added_response_fields_get_a_default_label(
     # edit to another row can't rename it; any other row takes the default
     # it was first given, else the one it has, else the next free one (the
     # rung's second read).
-    assert "if (label && row.getAttribute('data-rf-id')) { apply(row, label); return false; }" in sync
+    assert (
+        "if (label && row.getAttribute('data-rf-id')) { apply(row, label); return false; }" in sync
+    )
     assert "if (first && !used[first]) { apply(row, first); }" in sync
     assert "else if (label && !used[label]) { apply(row, label); }" in sync
     assert "row.setAttribute('data-default-first', label);" in sync
@@ -10189,7 +9371,9 @@ def test_added_response_fields_get_a_default_label(
     assert template.count('onkeydown="newModelRfNameKey(this, event)"') == 1
     assert "onblur=" not in rows + template
     insert = _rf_fn(body, "newModelRfInsertRow")
-    assert "clone.setAttribute('data-default-label', window.newModelRfDefaultLabel(rows));" in insert
+    assert (
+        "clone.setAttribute('data-default-label', window.newModelRfDefaultLabel(rows));" in insert
+    )
     assert "window.newModelRfSyncDefaults(rows);" in insert
     add = _rf_fn(body, "newModelRfAddRow")
     assert "window.newModelRfMaybeCommit(clone);" in add
@@ -10217,15 +9401,17 @@ def test_added_response_fields_get_a_default_label(
     assert "table.rf-table td.rf-name input::placeholder" in body
     # A new row lives only on the page until a successful Save (the
     # author's ruling): none of the row functions talks to the server.
-    for name in ("newModelRfAddRow", "newModelRfInsertRow",
-                 "newModelRfSyncDefaults", "newModelRfNameKey",
-                 "newModelRfMaybeCommit"):
+    for name in (
+        "newModelRfAddRow",
+        "newModelRfInsertRow",
+        "newModelRfSyncDefaults",
+        "newModelRfNameKey",
+        "newModelRfMaybeCommit",
+    ):
         assert "fetch(" not in _rf_fn(body, name), name
 
 
-def test_link3_saved_multi_tag_unit_renders_and_markers(
-    client: TestClient, db: Session
-) -> None:
+def test_link3_saved_multi_tag_unit_renders_and_markers(client: TestClient, db: Session) -> None:
     """Ec9: a saved two-tag unit renders what the add / remove refresh
     leaves — a disabled AND on every cell but the last, the X on the
     last — so a card looks the same before and after an edit."""
@@ -10245,8 +9431,7 @@ def test_link3_saved_multi_tag_unit_renders_and_markers(
     new_model.group_kind = "r1,r2"
     db.commit()
     body = client.get(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments?editing={new_model.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
     card = _card_slice(body, new_model.id)
     actions = re.findall(
@@ -10255,16 +9440,12 @@ def test_link3_saved_multi_tag_unit_renders_and_markers(
         flags=re.S,
     )
     assert actions == ["AND", "X"]
-    and_btn, x_btn = re.findall(
-        r"<button[^>]*data-new-model-cell-action[^>]*>", card, flags=re.S
-    )
+    and_btn, x_btn = re.findall(r"<button[^>]*data-new-model-cell-action[^>]*>", card, flags=re.S)
     assert "disabled" in and_btn and "btn secondary" in and_btn
     assert "disabled" not in x_btn and 'title="Remove cell"' in x_btn
 
 
-def test_link3_single_cell_x_is_disabled(
-    client: TestClient, db: Session
-) -> None:
+def test_link3_single_cell_x_is_disabled(client: TestClient, db: Session) -> None:
     """The lone boundary cell keeps a disabled X, as before."""
     review_session = _make_session(client, db, code="nm-l3-one")
     source = _instrument(db, review_session.id)
@@ -10279,8 +9460,7 @@ def test_link3_single_cell_x_is_disabled(
         .where(Instrument.id != source.id)
     ).scalar_one()
     body = client.get(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments?editing={new_model.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
     card = _card_slice(body, new_model.id)
     buttons = re.findall(
@@ -10303,15 +9483,13 @@ def test_pair_context_link3_boundary_round_trips_through_the_card(
     ``("pair_context", "1")`` as ``pair_context.1``, matching no option.
     Since 2026-10-16 the card no longer offers pair-context tags, so the
     stored one comes back as its select's stored-only option."""
-    review_session, new_model = _group_band2_session(
-        client, db, code="p1-round-trip"
+    review_session, new_model = _group_band2_session(client, db, code="p1-round-trip")
+    reviewers = (
+        db.execute(select(Reviewer).where(Reviewer.session_id == review_session.id)).scalars().all()
     )
-    reviewers = db.execute(
-        select(Reviewer).where(Reviewer.session_id == review_session.id)
-    ).scalars().all()
-    reviewees = db.execute(
-        select(Reviewee).where(Reviewee.session_id == review_session.id)
-    ).scalars().all()
+    reviewees = (
+        db.execute(select(Reviewee).where(Reviewee.session_id == review_session.id)).scalars().all()
+    )
     db.add_all(
         [
             Relationship(
@@ -10327,8 +9505,7 @@ def test_pair_context_link3_boundary_round_trips_through_the_card(
     db.commit()
 
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{new_model.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{new_model.id}/fields/save",
         data={
             "link1_mode": "all",
             "link1_touched": "true",
@@ -10344,9 +9521,7 @@ def test_pair_context_link3_boundary_round_trips_through_the_card(
     db.refresh(new_model)
     assert new_model.group_kind == "r2,p1"
 
-    page = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    page = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     assert re.search(r'<option value="reviewee\.tag2"\s+selected>', page)
     assert re.search(
         r'<option value="pair_context\.tag1"\s+selected\s+data-new-model-stored-only>',
@@ -10372,7 +9547,5 @@ def test_reviewer_surface_intro_carries_the_instruments_layout(
     db.flush()
     _activate(operator, db, review_session.id)
 
-    body = make_client(reviewer_user).get(
-        f"/me/sessions/{review_session.public_id}"
-    ).text
+    body = make_client(reviewer_user).get(f"/me/sessions/{review_session.public_id}").text
     assert '<div class="rs-intro-columns" data-intro-layout="layout_2">' in body

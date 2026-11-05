@@ -45,15 +45,15 @@ def _seeded(db: Session, *, status: str) -> tuple[Observer, ReviewSession]:
     db.add(creator)
     db.flush()
     review_session = ReviewSession(
-        name="S", code=f"obs-arch-{status}", status=status,
+        name="S",
+        code=f"obs-arch-{status}",
+        status=status,
         created_by_user_id=creator.id,
         responses_release_at=datetime.now(UTC) - timedelta(hours=1),
     )
     db.add(review_session)
     db.flush()
-    instrument = Instrument(
-        session_id=review_session.id, name="Form", order=1
-    )
+    instrument = Instrument(session_id=review_session.id, name="Form", order=1)
     db.add(instrument)
     db.flush()
     granularity, identification = visibility_policies.MODE_LABELS["raw"]
@@ -95,9 +95,7 @@ def test_an_archived_session_yields_no_sections(db: Session) -> None:
     or without the short-circuit — that is the point of the next test,
     not a flaw in this one."""
     observer, review_session = _seeded(db, status="archived")
-    context = build_observer_collation_context(
-        db, observer=observer, review_session=review_session
-    )
+    context = build_observer_collation_context(db, observer=observer, review_session=review_session)
     assert context.sections == []
 
 
@@ -113,17 +111,13 @@ def test_the_short_circuit_holds_even_if_a_window_predicate_relaxes(
     divergence comes back.
     """
     observer, review_session = _seeded(db, status="archived")
-    monkeypatch.setattr(
-        lifecycle, "is_response_release_window_open", lambda s, **kw: True
-    )
+    monkeypatch.setattr(lifecycle, "is_response_release_window_open", lambda s, **kw: True)
     monkeypatch.setattr(
         _observer_collation.lifecycle,
         "is_response_release_window_open",
         lambda s, **kw: True,
     )
-    context = build_observer_collation_context(
-        db, observer=observer, review_session=review_session
-    )
+    context = build_observer_collation_context(db, observer=observer, review_session=review_session)
     assert context.sections == []
 
 
@@ -146,7 +140,5 @@ def test_archive_does_not_claim_the_cohort_is_unconfigured(
     not rebuild.
     """
     observer, review_session = _seeded(db, status="archived")
-    context = build_observer_collation_context(
-        db, observer=observer, review_session=review_session
-    )
+    context = build_observer_collation_context(db, observer=observer, review_session=review_session)
     assert context.cohort_empty is False

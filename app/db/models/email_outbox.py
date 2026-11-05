@@ -44,9 +44,7 @@ class EmailOutbox(Base):
     __tablename__ = "email_outbox"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    session_id: Mapped[int] = mapped_column(
-        ForeignKey("sessions.id"), index=True, nullable=False
-    )
+    session_id: Mapped[int] = mapped_column(ForeignKey("sessions.id"), index=True, nullable=False)
     reviewer_id: Mapped[int | None] = mapped_column(
         ForeignKey("reviewers.id"), index=True, nullable=True
     )
@@ -79,20 +77,14 @@ class EmailOutbox(Base):
     backend_message_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     # When delivery confirmed (Graph / ACS / third-party report this;
     # SMTP typically does not).
-    delivered_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # Hash of (to, subject, body) for dedup detection.
     payload_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     # Deterministic identifier for "this send to this recipient at this
     # intent" — drives idempotent retry. Indexed because the dispatch
     # helper looks rows up by it.
-    correlation_id: Mapped[str | None] = mapped_column(
-        String(128), index=True, nullable=True
-    )
+    correlation_id: Mapped[str | None] = mapped_column(String(128), index=True, nullable=True)
 
-    session: Mapped[ReviewSession] = relationship(
-        back_populates="email_outbox_rows"
-    )
+    session: Mapped[ReviewSession] = relationship(back_populates="email_outbox_rows")
     reviewer: Mapped[Reviewer | None] = relationship()
     invitation: Mapped[Invitation | None] = relationship()

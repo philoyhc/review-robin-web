@@ -6,6 +6,7 @@ session name near its own 255-character limit rendered a subject
 Postgres refuses (a 500; SQLite stores it). Invitation and reminder
 writes now cut the subject to fit, as the responses-received queue
 already does."""
+
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
@@ -78,16 +79,13 @@ def test_invitation_and_reminder_subjects_fit_for_a_255_char_name(
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == review_session.id)
     ).scalar_one()
-    assert (
-        client.post(
-            f"{base}/{invitation.id}/remind", follow_redirects=False
-        ).status_code
-        == 303
-    )
+    assert client.post(f"{base}/{invitation.id}/remind", follow_redirects=False).status_code == 303
 
-    rows = db.execute(
-        select(EmailOutbox).where(EmailOutbox.session_id == review_session.id)
-    ).scalars().all()
+    rows = (
+        db.execute(select(EmailOutbox).where(EmailOutbox.session_id == review_session.id))
+        .scalars()
+        .all()
+    )
     assert {row.kind for row in rows} == {"invitation", "reminder"}
     for row in rows:
         assert len(row.subject) <= 255, row.kind

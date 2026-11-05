@@ -39,23 +39,39 @@ def _branched_instrument(db: Session, review_session: ReviewSession) -> Instrume
     db.add(instrument)
     db.flush()
     colour = InstrumentResponseField(
-        instrument_id=instrument.id, field_key="colour", label="Colour", order=1,
-        _inline_data_type="List", _inline_response_type="List",
-        _inline_list_csv="Red,Green,Blue", branch_op="is", branch_value="Red, Blue",
+        instrument_id=instrument.id,
+        field_key="colour",
+        label="Colour",
+        order=1,
+        _inline_data_type="List",
+        _inline_response_type="List",
+        _inline_list_csv="Red,Green,Blue",
+        branch_op="is",
+        branch_value="Red, Blue",
     )
     db.add(colour)
     db.flush()
-    db.add_all([
-        InstrumentResponseField(
-            instrument_id=instrument.id, field_key="why", label="Why", order=2,
-            _inline_data_type="String", _inline_response_type="Text",
-            branch_parent_id=colour.id,
-        ),
-        InstrumentResponseField(
-            instrument_id=instrument.id, field_key="notes", label="Notes", order=3,
-            _inline_data_type="String", _inline_response_type="Text",
-        ),
-    ])
+    db.add_all(
+        [
+            InstrumentResponseField(
+                instrument_id=instrument.id,
+                field_key="why",
+                label="Why",
+                order=2,
+                _inline_data_type="String",
+                _inline_response_type="Text",
+                branch_parent_id=colour.id,
+            ),
+            InstrumentResponseField(
+                instrument_id=instrument.id,
+                field_key="notes",
+                label="Notes",
+                order=3,
+                _inline_data_type="String",
+                _inline_response_type="Text",
+            ),
+        ]
+    )
     db.flush()
     return instrument
 
@@ -97,9 +113,7 @@ def test_the_settings_csv_round_trips_the_branch(db: Session) -> None:
         select(Instrument).where(Instrument.session_id == target.id)
     ).scalar_one()
     fields = _fields(db, instrument.id)
-    assert (fields["colour"].branch_op, fields["colour"].branch_value) == (
-        "is", "Red, Blue"
-    )
+    assert (fields["colour"].branch_op, fields["colour"].branch_value) == ("is", "Red, Blue")
     # The parent is re-pointed at the target's own field, by field_key.
     assert fields["why"].branch_parent_id == fields["colour"].id
     assert fields["notes"].branch_parent_id is None
@@ -128,28 +142,29 @@ def test_the_settings_csv_refuses_a_broken_branch(db: Session) -> None:
     review_session, _ = _session(db, "br-csv-bad")
     cases = {
         "instruments[1].response_fields[2].branch_parent": (
-            "nope", "no response field 'nope' on this instrument",
+            "nope",
+            "no response field 'nope' on this instrument",
             # …which also leaves Rating's condition governing nothing.
             "Rating: Its branch condition governs no field.",
         ),
         "instruments[1].response_fields[2].required": (
             # Rating isn't required here, so nothing outside the branch is
             # (19T Item 11).
-            "true", "Why: A field inside a branch can be required only when "
-            "the instrument has an active required field outside any branch."
+            "true",
+            "Why: A field inside a branch can be required only when "
+            "the instrument has an active required field outside any branch.",
         ),
         "instruments[1].response_fields[1].data_type": (
-            "String", "Rating: A String field can't have a branch."
+            "String",
+            "Rating: A String field can't have a branch.",
         ),
         "instruments[1].response_fields[1].branch_value": (
-            "", "Rating: The branch condition needs a number."
+            "",
+            "Rating: The branch condition needs a number.",
         ),
     }
     for path, (value, *messages) in cases.items():
-        rows = [
-            Row(r.field, value, r.data_type) if r.field == path else r
-            for r in _rows()
-        ]
+        rows = [Row(r.field, value, r.data_type) if r.field == path else r for r in _rows()]
         if path not in {r.field for r in rows}:
             rows.append(Row(path, value, "boolean"))
         result = apply_session_config(db, review_session, rows)
@@ -157,22 +172,21 @@ def test_the_settings_csv_refuses_a_broken_branch(db: Session) -> None:
     # A lone branch_value, with no operator and no governed field, is an
     # orphaned condition (Codex on #2642).
     result = apply_session_config(
-        db, review_session,
-        [r for r in _rows()
-         if not r.field.endswith(("branch_op", "branch_parent"))],
+        db,
+        review_session,
+        [r for r in _rows() if not r.field.endswith(("branch_op", "branch_parent"))],
     )
-    assert [e.message for e in result.errors] == [
-        "Rating: Its branch condition governs no field."
-    ]
+    assert [e.message for e in result.errors] == ["Rating: Its branch condition governs no field."]
     result = apply_session_config(
-        db, review_session,
-        [Row(r.field, "gte", r.data_type) if r.field.endswith("branch_op") else r
-         for r in _rows()],
+        db,
+        review_session,
+        [Row(r.field, "gte", r.data_type) if r.field.endswith("branch_op") else r for r in _rows()],
     )
     assert result.errors[0].message.startswith("unknown branch_op 'gte'")
-    assert db.execute(
-        select(Instrument).where(Instrument.session_id == review_session.id)
-    ).first() is None
+    assert (
+        db.execute(select(Instrument).where(Instrument.session_id == review_session.id)).first()
+        is None
+    )
 
 
 def test_the_settings_csv_hides_a_hidden_parents_branch(db: Session) -> None:
@@ -201,8 +215,6 @@ def test_replicate_instrument_copies_the_branch(db: Session) -> None:
     )
     fields = _fields(db, copy.id)
     source_fields = _fields(db, source.id)
-    assert (fields["colour"].branch_op, fields["colour"].branch_value) == (
-        "is", "Red, Blue"
-    )
+    assert (fields["colour"].branch_op, fields["colour"].branch_value) == ("is", "Red, Blue")
     assert fields["why"].branch_parent_id == fields["colour"].id
     assert fields["why"].branch_parent_id != source_fields["colour"].id

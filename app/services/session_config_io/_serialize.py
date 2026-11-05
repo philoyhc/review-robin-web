@@ -49,9 +49,7 @@ from app.services.visibility_policies import REVIEWER_IDENTITY_AUDIENCES
 # --------------------------------------------------------------------------- #
 
 
-def serialize_session_config(
-    db: Session, review_session: ReviewSession
-) -> list[Row]:
+def serialize_session_config(db: Session, review_session: ReviewSession) -> list[Row]:
     """Return every ``Row`` for the Settings CSV in deterministic
     order.
 
@@ -310,9 +308,7 @@ def _email_override_rows(review_session: ReviewSession) -> list[Row]:
 # --------------------------------------------------------------------------- #
 
 
-def _instruments_in_block_order(
-    db: Session, review_session: ReviewSession
-) -> list[Instrument]:
+def _instruments_in_block_order(db: Session, review_session: ReviewSession) -> list[Instrument]:
     """The session's instruments in ``instruments[n]`` order, ``(order,
     id)``. One query for both the blocks and the data-shape number
     references (D20), so the two numberings cannot drift apart."""
@@ -327,9 +323,7 @@ def _instruments_in_block_order(
     )
 
 
-def _instrument_blocks(
-    db: Session, review_session: ReviewSession
-) -> list[Row]:
+def _instrument_blocks(db: Session, review_session: ReviewSession) -> list[Row]:
     instruments = _instruments_in_block_order(db, review_session)
     rule_set_name_by_id = _rule_set_name_lookup(db, review_session)
     # An instrument with no ``rule_set_id`` exports an empty
@@ -394,11 +388,7 @@ def _instrument_rows(
         ),
         Row(
             f"{prefix}.sort_display_fields",
-            _json(
-                sort_to_positions(
-                    instrument.sort_display_fields, display_positions
-                )
-            ),
+            _json(sort_to_positions(instrument.sort_display_fields, display_positions)),
             "json",
         ),
         Row(
@@ -477,9 +467,7 @@ def _display_field_rows(instrument: Instrument, n: int) -> list[Row]:
     for m, field in enumerate(fields, start=1):
         prefix = f"instruments[{n}].display_fields[{m}]"
         rows.append(Row(f"{prefix}.source_type", field.source_type, "enum"))
-        rows.append(
-            Row(f"{prefix}.source_field", _str(field.source_field), "string")
-        )
+        rows.append(Row(f"{prefix}.source_field", _str(field.source_field), "string"))
         # No ``label`` row: display-field labels are session-wide
         # (the friendly-label resolver). The model column stays as
         # dead data, and the apply phase drops a legacy ``label`` row.
@@ -489,9 +477,7 @@ def _display_field_rows(instrument: Instrument, n: int) -> list[Row]:
 
 def _response_field_rows(instrument: Instrument, n: int) -> list[Row]:
     rows: list[Row] = []
-    fields = sorted(
-        instrument.response_fields, key=lambda f: (f.order, f.id)
-    )
+    fields = sorted(instrument.response_fields, key=lambda f: (f.order, f.id))
     by_id = {f.id: f for f in fields}
     for m, field in enumerate(fields, start=1):
         prefix = f"instruments[{n}].response_fields[{m}]"
@@ -526,15 +512,9 @@ def _response_field_rows(instrument: Instrument, n: int) -> list[Row]:
                 "string",
             )
         )
-        rows.append(
-            Row(f"{prefix}.min", _decimal(field._inline_min), "decimal")
-        )
-        rows.append(
-            Row(f"{prefix}.max", _decimal(field._inline_max), "decimal")
-        )
-        rows.append(
-            Row(f"{prefix}.step", _decimal(field._inline_step), "decimal")
-        )
+        rows.append(Row(f"{prefix}.min", _decimal(field._inline_min), "decimal"))
+        rows.append(Row(f"{prefix}.max", _decimal(field._inline_max), "decimal"))
+        rows.append(Row(f"{prefix}.step", _decimal(field._inline_step), "decimal"))
         rows.append(
             Row(
                 f"{prefix}.list_csv",
@@ -546,9 +526,7 @@ def _response_field_rows(instrument: Instrument, n: int) -> list[Row]:
         # 19T Item 10 — branching. The parent goes by ``field_key``,
         # since ids don't survive an export; the condition rides on the
         # parent as an operator token and a value.
-        parent = (
-            by_id.get(field.branch_parent_id) if field.branch_parent_id is not None else None
-        )
+        parent = by_id.get(field.branch_parent_id) if field.branch_parent_id is not None else None
         rows.append(
             Row(
                 f"{prefix}.branch_parent",
@@ -557,9 +535,7 @@ def _response_field_rows(instrument: Instrument, n: int) -> list[Row]:
             )
         )
         rows.append(Row(f"{prefix}.branch_op", _str(field.branch_op), "enum"))
-        rows.append(
-            Row(f"{prefix}.branch_value", _str(field.branch_value), "string")
-        )
+        rows.append(Row(f"{prefix}.branch_value", _str(field.branch_value), "string"))
         # 19T Item 13 — the parent's mode: ``require``, or blank for Show.
         rows.append(Row(f"{prefix}.branch_mode", _str(field.branch_mode), "enum"))
     return rows
@@ -624,9 +600,7 @@ def _view_policy_rows(instrument: Instrument, n: int) -> list[Row]:
 # --------------------------------------------------------------------------- #
 
 
-def _session_rule_set_rows(
-    db: Session, review_session: ReviewSession
-) -> list[Row]:
+def _session_rule_set_rows(db: Session, review_session: ReviewSession) -> list[Row]:
     """Every ``session_rule_sets`` row for the session, in ``id``
     order. Nothing seeds rule sets, so none is left out."""
 
@@ -635,9 +609,7 @@ def _session_rule_set_rows(
     for n, snap in enumerate(snapshots, start=1):
         prefix = f"session_rule_sets[{n}]"
         rows.append(Row(f"{prefix}.name", _str(snap.name), "string"))
-        rows.append(
-            Row(f"{prefix}.description", _str(snap.description), "string")
-        )
+        rows.append(Row(f"{prefix}.description", _str(snap.description), "string"))
         rows.append(Row(f"{prefix}.combinator", snap.combinator, "enum"))
         rows.append(
             Row(
@@ -657,9 +629,7 @@ def _session_rule_set_rows(
     return rows
 
 
-def _session_rule_sets(
-    db: Session, review_session: ReviewSession
-) -> list[SessionRuleSet]:
+def _session_rule_sets(db: Session, review_session: ReviewSession) -> list[SessionRuleSet]:
     """Every ``session_rule_sets`` row for the session, in id order."""
     return list(
         db.execute(
@@ -672,9 +642,7 @@ def _session_rule_sets(
     )
 
 
-def _rule_set_name_lookup(
-    db: Session, review_session: ReviewSession
-) -> dict[int, str]:
+def _rule_set_name_lookup(db: Session, review_session: ReviewSession) -> dict[int, str]:
     """Map every ``session_rule_sets.id`` in this session to its
     name. Used to translate ``Instrument.rule_set_id`` (DB-id FK)
     into the export's name-based reference."""
@@ -682,9 +650,7 @@ def _rule_set_name_lookup(
     return {
         row.id: row.name
         for row in db.execute(
-            select(SessionRuleSet).where(
-                SessionRuleSet.session_id == review_session.id
-            )
+            select(SessionRuleSet).where(SessionRuleSet.session_id == review_session.id)
         ).scalars()
     }
 
@@ -703,9 +669,7 @@ def _rule_set_name_lookup(
 # --------------------------------------------------------------------------- #
 
 
-def _data_shape_rows(
-    db: Session, review_session: ReviewSession
-) -> list[Row]:
+def _data_shape_rows(db: Session, review_session: ReviewSession) -> list[Row]:
     """Serialize each saved Data shape on ``review_session``
     into the Settings CSV.
 
@@ -734,14 +698,8 @@ def _data_shape_rows(
 
     # Pre-resolve the FK targets so we can emit the portable
     # short_label / field_key strings inline.
-    instrument_ids = {
-        s.instrument_id for s in shapes if s.instrument_id is not None
-    }
-    field_ids = {
-        s.response_field_id
-        for s in shapes
-        if s.response_field_id is not None
-    }
+    instrument_ids = {s.instrument_id for s in shapes if s.instrument_id is not None}
+    field_ids = {s.response_field_id for s in shapes if s.response_field_id is not None}
     instr_by_id: dict[int, Instrument] = (
         {
             i.id: i
@@ -756,9 +714,7 @@ def _data_shape_rows(
         {
             f.id: f
             for f in db.execute(
-                select(InstrumentResponseField).where(
-                    InstrumentResponseField.id.in_(field_ids)
-                )
+                select(InstrumentResponseField).where(InstrumentResponseField.id.in_(field_ids))
             ).scalars()
         }
         if field_ids
@@ -770,9 +726,7 @@ def _data_shape_rows(
     # the fallback reference for an instrument with no short label.
     number_by_instrument_id = {
         instrument.id: n
-        for n, instrument in enumerate(
-            _instruments_in_block_order(db, review_session), start=1
-        )
+        for n, instrument in enumerate(_instruments_in_block_order(db, review_session), start=1)
     }
 
     rows: list[Row] = []

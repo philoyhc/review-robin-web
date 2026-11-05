@@ -16,6 +16,7 @@ Revises: 63b1bb107eb0
 Create Date: 2026-09-28
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -29,9 +30,7 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     with op.batch_alter_table("instrument_response_fields") as batch:
-        batch.add_column(
-            sa.Column("branch_mode", sa.String(length=8), nullable=True)
-        )
+        batch.add_column(sa.Column("branch_mode", sa.String(length=8), nullable=True))
 
 
 def downgrade() -> None:

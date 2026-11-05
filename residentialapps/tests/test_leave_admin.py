@@ -15,6 +15,7 @@ from residentialapps.residentialops.pages import LEAVE_ADMIN_TABS
 
 ADMIN = "/ra-leave/admin/"
 
+
 def _by_id(application_id: str) -> sample_leave.Application:
     """A sample application the test names, which the sample holds."""
     found = sample_leave.by_id(application_id)
@@ -27,7 +28,6 @@ def _weeks(blackout: sample_leave.Blackout) -> tuple[date, date]:
     found = sample_leave.week_dates(blackout)
     assert found is not None, blackout
     return found
-
 
 
 def client() -> TestClient:
@@ -50,9 +50,13 @@ def test_the_dashboard_counts_pending_by_stage_and_flags_what_needs_attention() 
     unconfirmed cover waits at first approval and has its own tile."""
     page = client().get(ADMIN).text
     assert "Awaiting cover" not in page and "Awaiting cover" not in sample_leave.STAGES
-    tiles = re.findall(r'href="([^"]*)">\s*<span class="tile-n">(\d+)</span>\s*<span class="tile-l">([^<]*)', page)
+    tiles = re.findall(
+        r'href="([^"]*)">\s*<span class="tile-n">(\d+)</span>\s*<span class="tile-l">([^<]*)', page
+    )
     assert [(n, label) for _, n, label in tiles] == [
-        ("5", "Pending first approval"), ("1", "Pending final approval"), ("1", "Appeal to the Master"),
+        ("5", "Pending first approval"),
+        ("1", "Pending final approval"),
+        ("1", "Appeal to the Master"),
         ("4", "Cover not yet confirmed"),
     ]
     assert tiles[0][0] == "/ra-leave/admin/applications?stage=Pending%20first%20approval"
@@ -61,19 +65,34 @@ def test_the_dashboard_counts_pending_by_stage_and_flags_what_needs_attention() 
     assert re.findall(r">(L-\d+)</a>", attention) == ["L-0103", "L-0104", "L-0107", "L-0109"]
     assert "Pranav Iyer is away too" in attention and "Chloe Lim declined cover" in attention
     assert attention.count("Away on the same days in one Precinct") == 1
-    assert "<td class=\"strong\">Olivia Ng, Pranav Iyer</td>" in attention
+    assert '<td class="strong">Olivia Ng, Pranav Iyer</td>' in attention
     away = page.split('id="away-h"')[1].split("</section>")[0]
-    assert re.findall(r'<td class="strong nowrap">([^<]*)', away) == ["Maya Seah", "Olivia Ng", "Pranav Iyer"]
+    assert re.findall(r'<td class="strong nowrap">([^<]*)', away) == [
+        "Maya Seah",
+        "Olivia Ng",
+        "Pranav Iyer",
+    ]
     assert "Maple 03-08</strong>: Grace Ho has not signed in yet" in page
 
 
 def test_a_tile_opens_the_rows_it_counts() -> None:
     c = client()
     first = c.get(ADMIN + "applications", params={"stage": "Pending first approval"}).text
-    assert re.findall(r'href="/ra-leave/admin/applications/(L-\d+)"', first) == ["L-0101", "L-0114", "L-0102", "L-0109", "L-0104"]
+    assert re.findall(r'href="/ra-leave/admin/applications/(L-\d+)"', first) == [
+        "L-0101",
+        "L-0114",
+        "L-0102",
+        "L-0109",
+        "L-0104",
+    ]
     assert "<option selected>Pending first approval</option>" in first
     cover = c.get(ADMIN + "applications?cover=unconfirmed").text
-    assert sorted(re.findall(r'href="/ra-leave/admin/applications/(L-\d+)"', cover)) == ["L-0102", "L-0105", "L-0109", "L-0114"]  # L-0105: the appeal's cover awaits (audit, 2026-10-29)
+    assert sorted(re.findall(r'href="/ra-leave/admin/applications/(L-\d+)"', cover)) == [
+        "L-0102",
+        "L-0105",
+        "L-0109",
+        "L-0114",
+    ]  # L-0105: the appeal's cover awaits (audit, 2026-10-29)
     assert "· 4 of 20" in cover
 
 
@@ -85,7 +104,9 @@ def test_policy_sets_leave_types_with_their_own_entitlement_rules() -> None:
     assert [lt.name for lt in sample_leave.LEAVE_TYPES] == ["Personal leave", "Official leave"]
     for n, lt in enumerate(sample_leave.LEAVE_TYPES, start=1):
         assert f'aria-label="Leave type {n}: name" value="{lt.name}"' in page
-        earned = page.split(f'aria-label="Leave type {n}: how it is earned"')[1].split("</select>")[0]
+        earned = page.split(f'aria-label="Leave type {n}: how it is earned"')[1].split("</select>")[
+            0
+        ]
         assert re.findall(r"<option( selected)?>([^<]*)", earned) == [
             (" selected" if a == lt.accrual else "", a) for a in sample_leave.ACCRUALS
         ]
@@ -104,10 +125,15 @@ def test_policy_blackouts_count_by_week_and_refuse_or_send_to_appeal() -> None:
     page = client().get(ADMIN + "policy").text
     dates = [_weeks(b) for b in sample_leave.BLACKOUTS]
     assert [(d.isoformat(), e.isoformat()) for d, e in dates] == [
-        ("2026-08-03", "2026-08-15"), ("2026-11-15", "2026-11-28"), ("2027-01-11", "2027-01-16"),
+        ("2026-08-03", "2026-08-15"),
+        ("2026-11-15", "2026-11-28"),
+        ("2027-01-11", "2027-01-16"),
     ]  # week 1's Sundays (2 Aug, 10 Jan) fall in the previous term, so are clipped
     terms = {t.number: t for t in sample_data.TERMS if t.year == "AY2026-2027"}
-    assert all(terms[b.term].start <= d <= e <= terms[b.term].end for b, (d, e) in zip(sample_leave.BLACKOUTS, dates))
+    assert all(
+        terms[b.term].start <= d <= e <= terms[b.term].end
+        for b, (d, e) in zip(sample_leave.BLACKOUTS, dates)
+    )
     B = sample_leave.Blackout
     assert sample_leave.week_dates(B(1, 30, 31, "Past the term", "Refused")) is None
     assert sample_leave.week_dates(B(1, 3, 2, "Backwards", "Refused")) is None
@@ -118,8 +144,13 @@ def test_policy_blackouts_count_by_week_and_refuse_or_send_to_appeal() -> None:
     assert rendered == ["3 Aug – 15 Aug", "15 Nov – 28 Nov", "11 Jan – 16 Jan"]
     terms = page.split('aria-label="Blackout 1: term"')[1].split("</select>")[0]
     assert re.findall(r"<option[^>]*>([^<]*)", terms) == ["Term 1", "Term 2", "Term 3"]
-    effects = re.findall(r'aria-label="Blackout \d: leave is" disabled><option( selected)?>Refused</option><option( selected)?>Appeal only', page)
-    assert [("Refused" if r else "Appeal only") for r, _ in effects] == [b.effect for b in sample_leave.BLACKOUTS]
+    effects = re.findall(
+        r'aria-label="Blackout \d: leave is" disabled><option( selected)?>Refused</option><option( selected)?>Appeal only',
+        page,
+    )
+    assert [("Refused" if r else "Appeal only") for r, _ in effects] == [
+        b.effect for b in sample_leave.BLACKOUTS
+    ]
 
 
 def test_policy_appeals_cover_and_approvals() -> None:
@@ -128,15 +159,26 @@ def test_policy_appeals_cover_and_approvals() -> None:
     first and final approval."""
     page = client().get(ADMIN + "policy").text
     for name, options, current in (
-        ("cover", ("Required", "Not required"), "Required" if sample_leave.POLICY["cover_required"] else "Not required"),
+        (
+            "cover",
+            ("Required", "Not required"),
+            "Required" if sample_leave.POLICY["cover_required"] else "Not required",
+        ),
         ("cover-mode", sample_leave.COVER_MODES, sample_leave.POLICY["cover_mode"]),
         ("pool", sample_leave.COVER_POOLS, sample_leave.POLICY["cover_pool"]),
     ):
-        radios = re.findall(rf'<input type="radio" id="{name}-\d" name="{name}" value="([^"]*)"( checked)?', page)
+        radios = re.findall(
+            rf'<input type="radio" id="{name}-\d" name="{name}" value="([^"]*)"( checked)?', page
+        )
         assert [v for v, _ in radios] == list(options), name
         assert [v for v, c in radios if c] == [current], name
-    on_off = re.findall(r'<input type="radio" id="appeals-\d" name="appeals" value="([^"]*)"( checked)?', page)
-    assert on_off == [(m, " checked" if m == sample_leave.POLICY["appeals"] else "") for m in sample_leave.APPEAL_MODES]
+    on_off = re.findall(
+        r'<input type="radio" id="appeals-\d" name="appeals" value="([^"]*)"( checked)?', page
+    )
+    assert on_off == [
+        (m, " checked" if m == sample_leave.POLICY["appeals"] else "")
+        for m in sample_leave.APPEAL_MODES
+    ]
     assert "refused while appeals are off" in page  # system-wide switch (author, 2026-10-28)
     assert sample_leave.POLICY["appeal_terms"] in page
     assert "unless the Master overrides it" in page and "no built-in default" in page
@@ -151,7 +193,13 @@ def test_entitlements_follow_the_policy_rules() -> None:
     assert len(rows) == len(sample_data.RAS) * len(sample_leave.LEAVE_TYPES)
     pick = ("entitlement", "adjustment", "used", "pending", "available")
     # Personal leave: 5 for Term 1, available only within it.
-    assert [rows["Gwen Ho", "Personal leave"][k] for k in pick] == [5, 0, 5, 0, 0]  # used up: hence her appeal
+    assert [rows["Gwen Ho", "Personal leave"][k] for k in pick] == [
+        5,
+        0,
+        5,
+        0,
+        0,
+    ]  # used up: hence her appeal
     assert [rows["Leon Chia", "Personal leave"][k] for k in pick] == [5, 2, 0, 5, 2]
     assert [rows["Chloe Lim", "Personal leave"][k] for k in pick] == [5, 0, 0, 3, 2]
     # Official leave: 1 a month served in the term; two whole months since
@@ -159,17 +207,26 @@ def test_entitlements_follow_the_policy_rules() -> None:
     assert [rows["Hana Ito", "Official leave"][k] for k in pick] == [2, 0, 0, 2, 0]
     assert rows["Umairah Salleh", "Official leave"]["entitlement"] == 2
     assert sample_leave.months_served(sample_leave.date(2026, 9, 1)) == 1
-    assert rows["Gwen Ho", "Personal leave"]["pending"] == 0  # her appeal is extra leave, not charged (§7.5)
-    assert "+2<div class=\"subtle\">Correction: days charged twice" in page  # the reason, visible; never extra leave (§7.5, §21.3)
+    assert (
+        rows["Gwen Ho", "Personal leave"]["pending"] == 0
+    )  # her appeal is extra leave, not charged (§7.5)
+    assert (
+        '+2<div class="subtle">Correction: days charged twice' in page
+    )  # the reason, visible; never extra leave (§7.5, §21.3)
     assert "Email,Leave type,Adjustment,Reason" in page
-    assert f"<option selected>{sample_leave.TERM.label}</option>" in page and "do not carry over" in page
+    assert (
+        f"<option selected>{sample_leave.TERM.label}</option>" in page
+        and "do not carry over" in page
+    )
     assert page.count(">Adjust</button>") == len(rows)
 
 
 def test_the_approval_chain_is_derived_from_assignments_and_the_policy() -> None:
     page = client().get(ADMIN + "routing").text
     routes = sample_leave.routes()
-    assert [r.precinct for r in routes] == list(dict.fromkeys(s.precinct for s in sample_data.SLOTS))
+    assert [r.precinct for r in routes] == list(
+        dict.fromkeys(s.precinct for s in sample_data.SLOTS)
+    )
     assert sum(r.ras for r in routes) == len(sample_data.SLOTS)
     for r in routes:
         assert r.first == ("Marcus Tan" if r.rf == "Grace Ho" else r.rf)
@@ -181,16 +238,30 @@ def test_a_delegate_stands_in_for_a_person_between_dates() -> None:
     with optional dates; first approval only."""
     grace, daniel = sample_leave.DELEGATES
     assert grace.active() and grace.dates == "Until removed"
-    assert not daniel.active() and daniel.active(sample_leave.date(2026, 12, 7)) and not daniel.active(sample_leave.date(2026, 12, 19))
+    assert (
+        not daniel.active()
+        and daniel.active(sample_leave.date(2026, 12, 7))
+        and not daniel.active(sample_leave.date(2026, 12, 19))
+    )
     assert daniel.dates == "7 Dec – 18 Dec"
     cypress = next(r for r in sample_leave.routes() if r.rf == "Daniel Koh")
     assert cypress.first == "Daniel Koh" and not cypress.delegate  # not yet
     page = client().get(ADMIN + "routing").text
     card = page.split('id="delegates-h"')[1].split("</section>")[0]
-    assert "<span class=\"chip chip-warn\">Standing in</span>" in card and "<span class=\"chip chip-mute\">7 Dec – 18 Dec</span>" in card
+    assert (
+        '<span class="chip chip-warn">Standing in</span>' in card
+        and '<span class="chip chip-mute">7 Dec – 18 Dec</span>' in card
+    )
     acting_for = card.split('aria-label="Delegate 1: acting for"')[1].split("</select>")[0]
-    assert "<option selected>Grace Ho</option>" in acting_for and "Sam Lee" not in acting_for and "Rachel Yeo" not in acting_for
-    assert 'aria-label="Delegate 2: from" value="2026-12-07"' in card and 'aria-label="Delegate 1: from" value=""' in card
+    assert (
+        "<option selected>Grace Ho</option>" in acting_for
+        and "Sam Lee" not in acting_for
+        and "Rachel Yeo" not in acting_for
+    )
+    assert (
+        'aria-label="Delegate 2: from" value="2026-12-07"' in card
+        and 'aria-label="Delegate 1: from" value=""' in card
+    )
     assert "final approval and appeals are not delegable" in card
     assert "Set a delegate for" not in page  # by person now, not by Precinct
     assert "for AY2026-2027, Term 1 and the policy's first and final approvers (RF, Admin)" in page
@@ -205,10 +276,16 @@ def test_applications_list_every_one_and_open_to_their_timeline() -> None:
     assert "Gwen Ho" in detail and "family wedding" in detail
     assert "Sent to Sam Lee as an extra-leave appeal" in detail
     approved = c.get(ADMIN + "applications/L-0106").text
-    assert "Final approval by Rachel Yeo" in approved and ">Cancel approved leave</button>" in approved
+    assert (
+        "Final approval by Rachel Yeo" in approved and ">Cancel approved leave</button>" in approved
+    )
     assert "Reassign" not in approved
     rejected = c.get(ADMIN + "applications/L-0110").text
-    assert ">Correct the record</button>" in rejected and "Cancel" not in rejected and "Reassign" not in rejected
+    assert (
+        ">Correct the record</button>" in rejected
+        and "Cancel" not in rejected
+        and "Reassign" not in rejected
+    )
     assert c.get(ADMIN + "applications/L-9999").status_code == 404
 
 
@@ -238,7 +315,9 @@ def test_entitlement_rules_beyond_the_sample_types() -> None:
     per_year = lt("X", "X", "Per term", 5, 12, "year")
     assert [sample_leave.entitlement(per_year, start, t) for t in terms] == [5, 5, 2]
     assert sample_leave.ACCRUALS == ("Per term", "Per month served")
-    assert sample_leave.months_served(sample_leave.date(2024, 8, 1)) == 2  # a returning RA: this term only
+    assert (
+        sample_leave.months_served(sample_leave.date(2024, 8, 1)) == 2
+    )  # a returning RA: this term only
     assert sample_leave.months_served(sample_leave.date(2026, 9, 29)) == 0  # TODAY is the 28th
     assert sample_leave.months_served(sample_leave.date(2026, 9, 28)) == 1
     assert sample_leave.months_served(start, terms[1]) == 0  # Term 2 has not begun
@@ -254,16 +333,42 @@ def test_used_and_pending_count_only_the_terms_own_days(monkeypatch) -> None:
     before = {(r["ra"], r["type"]): r for r in sample_leave.entitlement_rows()}
     App = sample_leave.Application
     extra = (
-        App("L-0901", "Chloe Lim", "Personal leave", sample_leave.date(2027, 2, 1), sample_leave.date(2027, 2, 3),
-            "Ethan Wong", "Confirmed", "Approved", sample_leave.date(2026, 10, 20)),
-        App("L-0902", "Leon Chia", "Personal leave", sample_leave.date(2027, 1, 8), sample_leave.date(2027, 1, 12),
-            "Mira Sato", "Confirmed", "Pending first approval", sample_leave.date(2026, 10, 20)),
+        App(
+            "L-0901",
+            "Chloe Lim",
+            "Personal leave",
+            sample_leave.date(2027, 2, 1),
+            sample_leave.date(2027, 2, 3),
+            "Ethan Wong",
+            "Confirmed",
+            "Approved",
+            sample_leave.date(2026, 10, 20),
+        ),
+        App(
+            "L-0902",
+            "Leon Chia",
+            "Personal leave",
+            sample_leave.date(2027, 1, 8),
+            sample_leave.date(2027, 1, 12),
+            "Mira Sato",
+            "Confirmed",
+            "Pending first approval",
+            sample_leave.date(2026, 10, 20),
+        ),
     )
     monkeypatch.setattr(sample_leave, "APPLICATIONS", sample_leave.APPLICATIONS + extra)
     after = {(r["ra"], r["type"]): r for r in sample_leave.entitlement_rows()}
     assert after["Chloe Lim", "Personal leave"] == before["Chloe Lim", "Personal leave"]
-    assert after["Leon Chia", "Personal leave"]["pending"] == before["Leon Chia", "Personal leave"]["pending"] + 3  # 8–10 Jan
-    assert sample_leave.days_in_term(extra[1], [t for t in sample_data.TERMS if t.number == 2 and t.year == "AY2026-2027"][0]) == 2
+    assert (
+        after["Leon Chia", "Personal leave"]["pending"]
+        == before["Leon Chia", "Personal leave"]["pending"] + 3
+    )  # 8–10 Jan
+    assert (
+        sample_leave.days_in_term(
+            extra[1], [t for t in sample_data.TERMS if t.number == 2 and t.year == "AY2026-2027"][0]
+        )
+        == 2
+    )
 
 
 def test_appeals_switched_off_leave_no_appeal_route(monkeypatch) -> None:
@@ -276,11 +381,18 @@ def test_appeals_switched_off_leave_no_appeal_route(monkeypatch) -> None:
     monkeypatch.setitem(sample_leave.POLICY, "appeals", "Off")
     policy = c.get(ADMIN + "policy").text
     assert 'name="appeals" value="Off" checked' in policy
-    assert "Not available: an application beyond entitlement" in policy and "The Master (Sam Lee), personally" not in policy
+    assert (
+        "Not available: an application beyond entitlement" in policy
+        and "The Master (Sam Lee), personally" not in policy
+    )
     assert "<dt>Appeals</dt><dd>Off</dd>" in c.get(ADMIN).text
     routing = c.get(ADMIN + "routing").text
     # L-0105, made before appeals were turned off, stands and is decided.
-    assert ">Appeals</th>" in routing and "final approval and appeals are given only by those holding a place in the RA's slot" in routing
+    assert (
+        ">Appeals</th>" in routing
+        and "final approval and appeals are given only by those holding a place in the RA's slot"
+        in routing
+    )
 
 
 def test_a_delegation_follows_its_person_and_the_policys_approver(monkeypatch) -> None:
@@ -292,14 +404,20 @@ def test_a_delegation_follows_its_person_and_the_policys_approver(monkeypatch) -
     cypress = next(r for r in sample_leave.routes(in_dec) if r.rf == "Daniel Koh")
     assert cypress.first == "Priya Raman" and cypress.note == "Daniel Koh is on leave"
     # The Master, in every slot, may stand in for an RSLM on all of theirs.
-    monkeypatch.setattr(sample_leave, "DELEGATES", (D("Marcus Tan", "Sam Lee", None, None, "is on leave"),))
+    monkeypatch.setattr(
+        sample_leave, "DELEGATES", (D("Marcus Tan", "Sam Lee", None, None, "is on leave"),)
+    )
     monkeypatch.setitem(sample_leave.POLICY, "first_types", ("RSLM",))
     maple = [r for r in sample_leave.routes() if r.wing == "Maple"]
-    assert len(maple) == 3 and all(r.first == "Sam Lee" and r.delegate for r in maple)  # every slot Marcus approves
+    assert len(maple) == 3 and all(
+        r.first == "Sam Lee" and r.delegate for r in maple
+    )  # every slot Marcus approves
     assert all(not r.delegate for r in sample_leave.routes() if r.wing != "Maple")
     monkeypatch.setitem(sample_leave.POLICY, "first_types", ("RF", "RSLM"))
-    assert next(
-        r for r in sample_leave.routes() if r.precinct == "Maple 03-08").first == "Grace Ho or Sam Lee"
+    assert (
+        next(r for r in sample_leave.routes() if r.precinct == "Maple 03-08").first
+        == "Grace Ho or Sam Lee"
+    )
     page = client().get(ADMIN).text.split('id="gaps-h"')[1].split("</section>")[0]
     assert "A delegate stands in for 3 Precincts today." in page
     assert page.count("Marcus Tan is on leave; ") == 3
@@ -309,12 +427,24 @@ def test_approvals_choose_slot_and_unit_appointments_or_none_or_named(monkeypatc
     """Ruled 2026-10-28: first approval by any of the appointments on the
     RAs' slots (several = whichever approves first), or none needed; final
     approval by any Unit-level appointment, or by named staff."""
-    assert sample_leave.slot_appointments() == (("Residential Fellow", "RF"), ("Residential Student Life Manager", "RSLM"))
-    assert sample_leave.unit_appointments() == (("Master", "Master"), ("Residential Admin", "Admin"), ("Residential Executive", "Exec"))
+    assert sample_leave.slot_appointments() == (
+        ("Residential Fellow", "RF"),
+        ("Residential Student Life Manager", "RSLM"),
+    )
+    assert sample_leave.unit_appointments() == (
+        ("Master", "Master"),
+        ("Residential Admin", "Admin"),
+        ("Residential Executive", "Exec"),
+    )
     page = client().get(ADMIN + "policy").text
-    radios = re.findall(r'<input type="radio" id="(first|final)-(\w+)" name="\1" value="\2"( checked)?', page)
+    radios = re.findall(
+        r'<input type="radio" id="(first|final)-(\w+)" name="\1" value="\2"( checked)?', page
+    )
     assert [(g, v, bool(c)) for g, v, c in radios] == [
-        ("first", "slot", True), ("first", "none", False), ("final", "unit", True), ("final", "named", False),
+        ("first", "slot", True),
+        ("first", "none", False),
+        ("final", "unit", True),
+        ("final", "named", False),
     ]
     first = re.findall(r'name="first-types" value="(\w+)"( checked)?', page)
     assert first == [("RF", " checked"), ("RSLM", "")]
@@ -329,18 +459,26 @@ def test_approvals_choose_slot_and_unit_appointments_or_none_or_named(monkeypatc
     assert {r.first for r in sample_leave.routes()} == {"None needed"}
     assert sample_leave.final_approvers() == ("Sam Lee", "Rachel Yeo")
     steps = [s for _, s, _ in sample_leave.timeline(_by_id("L-0106"))]
-    assert not any(s.startswith("First approval") for s in steps) and "Final approval by Sam Lee" in steps
+    assert (
+        not any(s.startswith("First approval") for s in steps)
+        and "Final approval by Sam Lee" in steps
+    )
     named = client().get(ADMIN + "policy").text
     box = named.split('aria-label="Staff who may give final approval"')[1].split("</div>")[0]
     assert re.findall(r'<span class="token">([^<]+)<button', box) == ["Sam Lee", "Rachel Yeo"]
     assert "<td>Sam Lee or Rachel Yeo</td>" in client().get(ADMIN + "routing").text
     dash = client().get(ADMIN).text
-    assert "No first approval, then Sam Lee or Rachel Yeo" in dash and "No first approval is needed" in dash
+    assert (
+        "No first approval, then Sam Lee or Rachel Yeo" in dash
+        and "No first approval is needed" in dash
+    )
     rejected = [s for _, s, _ in sample_leave.timeline(_by_id("L-0110"))]
     assert "Rejected by Sam Lee" in rejected
     assert client().get(ADMIN + "applications/L-0106").status_code == 200
     routing = client().get(ADMIN + "routing").text.split('id="delegates-h"')[1]
-    assert "Standing in" not in routing and routing.count(">No first approval</span>") == len(sample_leave.DELEGATES)
+    assert "Standing in" not in routing and routing.count(">No first approval</span>") == len(
+        sample_leave.DELEGATES
+    )
 
 
 def test_approvals_edge_cases(monkeypatch) -> None:
@@ -352,7 +490,9 @@ def test_approvals_edge_cases(monkeypatch) -> None:
     assert "then the Master or Residential Admin (Admin)" in client().get(ADMIN).text
     monkeypatch.setitem(sample_leave.POLICY, "final", "named")
     monkeypatch.setitem(sample_leave.POLICY, "final_names", ())
-    assert "Final approval by the final approver" in [s for _, s, _ in sample_leave.timeline(_by_id("L-0106"))]
+    assert "Final approval by the final approver" in [
+        s for _, s, _ in sample_leave.timeline(_by_id("L-0106"))
+    ]
     monkeypatch.setitem(sample_leave.POLICY, "first_types", ())
     routes = sample_leave.routes()
     assert all(r.gap and r.first == "No one" for r in routes)
@@ -365,7 +505,9 @@ def test_the_sample_keeps_its_own_policy() -> None:
     policy: cover from the pool, no Refused blackout, and an Appeal-only
     blackout only by appeal."""
     slot_of = {ra: s for s in sample_data.SLOTS for ra in s.ras}
-    weeks = [(span, b.effect) for b in sample_leave.BLACKOUTS if (span := sample_leave.week_dates(b))]
+    weeks = [
+        (span, b.effect) for b in sample_leave.BLACKOUTS if (span := sample_leave.week_dates(b))
+    ]
     assert sample_leave.POLICY["cover_pool"] == "Same Precinct"
     for a in sample_leave.APPLICATIONS:
         assert slot_of[a.cover].precinct == slot_of[a.ra].precinct, a.id
@@ -382,9 +524,21 @@ def test_the_admin_pages_follow_the_policy_switches(monkeypatch) -> None:
     assert ">Reassign the approval</button>" not in c.get(ADMIN + "applications/L-0105").text
     assert ">Reassign the approval</button>" in c.get(ADMIN + "applications/L-0101").text
     detail = c.get(ADMIN + "applications/L-0101").text
-    assert '<span class="chip chip-mute">AY2026-2027</span>' in detail and "27 Oct</span> · Submitted by Chloe Lim" in detail
-    assert sample_leave.delegable() == ["Daniel Koh", "Mei Ling Tan", "Arjun Nair", "Grace Ho", "Benjamin Chua",
-                                        "Farah Aziz", "Kenneth Lau", "Siti Rahman", "Wei Jie Ong"]
+    assert (
+        '<span class="chip chip-mute">AY2026-2027</span>' in detail
+        and "27 Oct</span> · Submitted by Chloe Lim" in detail
+    )
+    assert sample_leave.delegable() == [
+        "Daniel Koh",
+        "Mei Ling Tan",
+        "Arjun Nair",
+        "Grace Ho",
+        "Benjamin Chua",
+        "Farah Aziz",
+        "Kenneth Lau",
+        "Siti Rahman",
+        "Wei Jie Ong",
+    ]
     monkeypatch.setitem(sample_leave.POLICY, "appeals", "Off")
     # An appeal already made stands (author, 2026-10-28): L-0105 keeps its tile and filter.
     assert "Appeal to the Master" in sample_leave.stages(open_only=True)
@@ -401,12 +555,23 @@ def test_the_admin_pages_follow_the_policy_switches(monkeypatch) -> None:
 
 def test_stage_names_and_titles_follow_the_policy(monkeypatch) -> None:
     c = client()
-    assert "<title>Leave dashboard" in c.get(ADMIN).text and "<h1>Leave dashboard</h1>" in c.get(ADMIN).text
+    assert (
+        "<title>Leave dashboard" in c.get(ADMIN).text
+        and "<h1>Leave dashboard</h1>" in c.get(ADMIN).text
+    )
     monkeypatch.setitem(sample_leave.POLICY, "first", "none")
     assert "Pending first approval" not in sample_leave.stages()
-    assert sample_leave.delegable()[:2] == ["Priya Raman", "Marcus Tan"]  # a kept delegation still reads
+    assert sample_leave.delegable()[:2] == [
+        "Priya Raman",
+        "Marcus Tan",
+    ]  # a kept delegation still reads
     card = c.get(ADMIN + "routing").text.split('id="delegates-h"')[1]
-    assert card.split('aria-label="Delegate 1: acting for"')[1].split("</select>")[0].count("<option selected>Grace Ho</option>") == 1
+    assert (
+        card.split('aria-label="Delegate 1: acting for"')[1]
+        .split("</select>")[0]
+        .count("<option selected>Grace Ho</option>")
+        == 1
+    )
     monkeypatch.setitem(sample_leave.POLICY, "first", "slot")
     monkeypatch.setitem(sample_leave.POLICY, "first_types", ("Master",))
     steps = [s for _, s, _ in sample_leave.timeline(_by_id("L-0103"))]
@@ -421,7 +586,10 @@ def test_appeals_by_invitation(monkeypatch) -> None:
     c = client()
     # Open, the admin page opens none, as the staff page (audit, 2026-10-29).
     open_page = c.get(ADMIN + "appeals").text
-    assert 'id="inv-ra"' not in open_page and "every RA may send one, so none is opened for them" in open_page
+    assert (
+        'id="inv-ra"' not in open_page
+        and "every RA may send one, so none is opened for them" in open_page
+    )
     assert "Invitations take effect only while appeals are by invitation" in open_page
     monkeypatch.setitem(sample_leave.POLICY, "appeals", "Off")
     off = c.get(ADMIN + "appeals").text
@@ -429,20 +597,34 @@ def test_appeals_by_invitation(monkeypatch) -> None:
     monkeypatch.setitem(sample_leave.POLICY, "appeals", "By invitation")
     page = c.get(ADMIN + "appeals").text
     assert 'href="/ra-leave/admin/appeals" aria-current="page"' in page
-    rows = re.findall(r'<td class="strong nowrap">([^<]*)</td>\s*<td class="nowrap">([^<]*)</td>', page)
+    rows = re.findall(
+        r'<td class="strong nowrap">([^<]*)</td>\s*<td class="nowrap">([^<]*)</td>', page
+    )
     assert rows[:2] == [("Gwen Ho", "Sam Lee"), ("Kai Ng", "Rachel Yeo")]
-    assert 'href="/ra-leave/admin/applications/L-0105">Sent: L-0105</a>' in page and "selected" not in page.split('id="inv-by"')[1].split("</select>")[0]
-    assert page.split('id="inv-by"')[1].split("</select>")[0].count("<option>") == 2  # the Unit's Master and Admin
+    assert (
+        'href="/ra-leave/admin/applications/L-0105">Sent: L-0105</a>' in page
+        and "selected" not in page.split('id="inv-by"')[1].split("</select>")[0]
+    )
+    assert (
+        page.split('id="inv-by"')[1].split("</select>")[0].count("<option>") == 2
+    )  # the Unit's Master and Admin
     assert ">Sent: L-0105</a>" in page and 'aria-label="Withdraw Kai Ng\'s invitation"' in page
-    assert '<span class="chip chip-mute">Lapsed</span>' in page and "Withdraw Nathan Yeo" not in page
+    assert (
+        '<span class="chip chip-mute">Lapsed</span>' in page and "Withdraw Nathan Yeo" not in page
+    )
     policy = c.get(ADMIN + "policy").text
-    assert "they open an appeal for that RA on Appeals" in policy and "once someone chosen below agrees" in policy
+    assert (
+        "they open an appeal for that RA on Appeals" in policy
+        and "once someone chosen below agrees" in policy
+    )
     inviters = re.findall(r'name="inviter-unit-types" value="(\w+)"( checked)?', policy)
     assert inviters == [("Master", " checked"), ("Admin", " checked"), ("Exec", "")]
     assert 'name="inviters" value="unit" checked' in policy
     monkeypatch.setitem(sample_leave.POLICY, "appeals", "By invitation")
     assert sample_leave.appeals_on()
-    assert sample_leave.can_appeal("Kai Ng") and not sample_leave.can_appeal("Gwen Ho")  # hers is used
+    assert sample_leave.can_appeal("Kai Ng") and not sample_leave.can_appeal(
+        "Gwen Ho"
+    )  # hers is used
     assert not sample_leave.can_appeal("Chloe Lim")
     assert not sample_leave.invitation_for("Kai Ng", sample_leave.date(2026, 11, 11))  # lapsed
     assert "Invitations take effect" not in c.get(ADMIN + "appeals").text
@@ -450,8 +632,16 @@ def test_appeals_by_invitation(monkeypatch) -> None:
     routing = c.get(ADMIN + "routing").text
     assert ">Appeals</th>" in routing and "final approval and appeals are not delegable" in routing
     assert "Extra leave the Master grants on appeal" in c.get(ADMIN + "entitlements").text
-    future = sample_leave.Invitation("Mira Sato", "Sam Lee", sample_leave.date(2026, 11, 2), sample_leave.date(2026, 11, 9), "From next week")
-    assert sample_leave.invitation_status(future) == "From 2 Nov" and not sample_leave.invitation_for("Mira Sato")
+    future = sample_leave.Invitation(
+        "Mira Sato",
+        "Sam Lee",
+        sample_leave.date(2026, 11, 2),
+        sample_leave.date(2026, 11, 9),
+        "From next week",
+    )
+    assert sample_leave.invitation_status(
+        future
+    ) == "From 2 Nov" and not sample_leave.invitation_for("Mira Sato")
     assert "<dd>By invitation, to the Master</dd>" in c.get(ADMIN).text
     assert "Appeal to the Master" in c.get(ADMIN).text  # appeals exist: the tile stays
 
@@ -463,7 +653,9 @@ def test_leave_days_count_as_the_policy_says(monkeypatch) -> None:
     assert sample_leave.leave_days(d(2026, 11, 6), d(2026, 11, 9)) == 4  # Fri to Mon
     page = client().get(ADMIN + "policy").text
     assert re.findall(r'name="day-count" value="([^"]*)"( checked)?', page) == [
-        ("Every day", " checked"), ("Weekdays", ""), ("Working days", ""),
+        ("Every day", " checked"),
+        ("Weekdays", ""),
+        ("Working days", ""),
     ]
     assert 'aria-label="Public holiday 2: date" value="2026-11-09"' in page
     assert "<dt>Days counted</dt><dd>Every day</dd>" in client().get(ADMIN).text
@@ -474,8 +666,12 @@ def test_leave_days_count_as_the_policy_says(monkeypatch) -> None:
     weekdays = {(r["ra"], r["type"]): r for r in sample_leave.entitlement_rows()}
     assert "<dt>Days counted</dt><dd>Weekdays</dd>" in client().get(ADMIN).text
     monkeypatch.setitem(sample_leave.POLICY, "day_count", "Working days")
-    assert sample_leave.leave_days(d(2026, 12, 24), d(2027, 1, 1)) == 5  # less Christmas and New Year
-    assert sample_leave.leave_days(d(2026, 11, 6), d(2026, 11, 9)) == 1  # less Deepavali, observed Mon
+    assert (
+        sample_leave.leave_days(d(2026, 12, 24), d(2027, 1, 1)) == 5
+    )  # less Christmas and New Year
+    assert (
+        sample_leave.leave_days(d(2026, 11, 6), d(2026, 11, 9)) == 1
+    )  # less Deepavali, observed Mon
     monkeypatch.setitem(sample_leave.POLICY, "day_count", "Every day")
     every = {(r["ra"], r["type"]): r for r in sample_leave.entitlement_rows()}
     chloe = ("Chloe Lim", _by_id("L-0101").leave_type)
@@ -498,7 +694,10 @@ def test_review_fixes_on_the_admin_side(monkeypatch) -> None:
     monkeypatch.setitem(sample_leave.POLICY, "final", "named")
     monkeypatch.setitem(sample_leave.POLICY, "final_names", ())
     dashboard = c.get(ADMIN).text
-    assert "No one may give final approval" in dashboard and "then no one: no final approver is set" in dashboard
+    assert (
+        "No one may give final approval" in dashboard
+        and "then no one: no final approver is set" in dashboard
+    )
     monkeypatch.setitem(sample_leave.POLICY, "cover_mode", "Named only")
     assert "declined cover" not in c.get(ADMIN).text
     assert "Every RA may send one, so no invitation is needed" in c.get(ADMIN + "appeals").text
@@ -509,9 +708,15 @@ def test_review_fixes_on_the_admin_side(monkeypatch) -> None:
     monkeypatch.setitem(sample_leave.POLICY, "first_types", ())
     assert "No first approver ticked" in c.get(ADMIN).text
     assert "(no first approver ticked, no final approver set)" in c.get(ADMIN + "routing").text
-    assert "Kai Ng" in c.get(ADMIN + "appeals").text and "agreed by email" not in c.get(ADMIN + "appeals").text
+    assert (
+        "Kai Ng" in c.get(ADMIN + "appeals").text
+        and "agreed by email" not in c.get(ADMIN + "appeals").text
+    )
     detail = c.get(ADMIN + "applications/L-0105").text
-    assert "Personal leave · extra leave" in detail and 'href="/ra-leave/admin/applications" aria-current="true"' in detail
+    assert (
+        "Personal leave · extra leave" in detail
+        and 'href="/ra-leave/admin/applications" aria-current="true"' in detail
+    )
 
 
 def test_cancelled_leave_and_decision_records(monkeypatch) -> None:
@@ -521,17 +726,29 @@ def test_cancelled_leave_and_decision_records(monkeypatch) -> None:
     c = client()
     cancelled = _by_id("L-0116")
     assert cancelled.stage == "Cancelled" and cancelled.cover_status == "Cancelled"
-    assert '<option>Cancelled</option>' in c.get(ADMIN + "applications").text
+    assert "<option>Cancelled</option>" in c.get(ADMIN + "applications").text
     steps = sample_leave.timeline(cancelled)
-    assert steps[-1] == ("20 Oct", "Cancelled by Rachel Yeo, Residential Admin", sample_leave.DECISIONS["L-0116"]["cancelled"][1])
+    assert steps[-1] == (
+        "20 Oct",
+        "Cancelled by Rachel Yeo, Residential Admin",
+        sample_leave.DECISIONS["L-0116"]["cancelled"][1],
+    )
     assert _by_id("L-0111").cover_status == "Cancelled"  # withdrawn
-    kai = next(r for r in sample_leave.entitlement_rows() if r["ra"] == "Kai Ng" and r["type"] == "Personal leave")
+    kai = next(
+        r
+        for r in sample_leave.entitlement_rows()
+        if r["ra"] == "Kai Ng" and r["type"] == "Personal leave"
+    )
     assert kai["used"] == 0  # cancelled leave is not charged
     # The final approver sees the first approver's date and remarks (§14).
     decide = c.get("/ra-leave/staff/decide/L-0103?as=Rachel%20Yeo").text
-    assert "24 Oct</span> · First approval by" in decide and "the Precinct is fully staffed" in decide
+    assert (
+        "24 Oct</span> · First approval by" in decide and "the Precinct is fully staffed" in decide
+    )
     # The Master sees the staff remarks on an appeal (§15).
-    assert "Remarks from Benjamin Chua, RF" in c.get("/ra-leave/staff/decide/L-0105?as=Sam%20Lee").text
+    assert (
+        "Remarks from Benjamin Chua, RF" in c.get("/ra-leave/staff/decide/L-0105?as=Sam%20Lee").text
+    )
 
 
 def test_dashboard_reports_and_export(monkeypatch) -> None:
@@ -540,17 +757,36 @@ def test_dashboard_reports_and_export(monkeypatch) -> None:
     the dashboard; Applications exports what it shows."""
     c = client()
     dashboard = c.get(ADMIN).text
-    for heading in ("Upcoming leave", "Extra leave granted", "Entitlement anomalies", "Recent administrative corrections"):
+    for heading in (
+        "Upcoming leave",
+        "Extra leave granted",
+        "Entitlement anomalies",
+        "Recent administrative corrections",
+    ):
         assert f">{heading}" in dashboard, heading
     assert "<dt>AY2026-2027, Term 1</dt><dd>3 days, 1 appeal</dd>" in dashboard
-    assert "Cancelled approved leave for Kai Ng" in dashboard and "no RA is over entitlement" in dashboard
+    assert (
+        "Cancelled approved leave for Kai Ng" in dashboard
+        and "no RA is over entitlement" in dashboard
+    )
     assert [a.id for a in sample_leave.upcoming()] == ["L-0115"]
     # Lucas Teo's appeal goes beyond a balance his earlier leave used.
-    lucas = next(r for r in sample_leave.entitlement_rows() if r["ra"] == "Lucas Teo" and r["type"] == "Personal leave")
-    assert lucas["available"] == 0 and "Beyond entitlement</dt><dd>3 days" in c.get("/ra-leave/staff/decide/L-0118?as=Sam%20Lee").text
+    lucas = next(
+        r
+        for r in sample_leave.entitlement_rows()
+        if r["ra"] == "Lucas Teo" and r["type"] == "Personal leave"
+    )
+    assert (
+        lucas["available"] == 0
+        and "Beyond entitlement</dt><dd>3 days"
+        in c.get("/ra-leave/staff/decide/L-0118?as=Sam%20Lee").text
+    )
     assert "Export CSV" in c.get(ADMIN + "applications").text
     monkeypatch.setitem(sample_leave.ADJUSTMENTS, ("Chloe Lim", "Personal leave"), (-9, ""))
-    assert "<strong>Chloe Lim</strong>, Personal leave: Over entitlement by 7 days, pending included." in c.get(ADMIN).text
+    assert (
+        "<strong>Chloe Lim</strong>, Personal leave: Over entitlement by 7 days, pending included."
+        in c.get(ADMIN).text
+    )
 
 
 def test_an_application_counting_no_days_is_not_submitted(monkeypatch) -> None:
@@ -558,7 +794,10 @@ def test_an_application_counting_no_days_is_not_submitted(monkeypatch) -> None:
     day cannot be submitted, and Apply says so."""
     assert sample_leave.zero_day_rule() == ""
     monkeypatch.setitem(sample_leave.POLICY, "day_count", "Weekdays")
-    assert "only on a weekend count no days, and cannot be submitted" in client().get("/ra-leave/apply").text
+    assert (
+        "only on a weekend count no days, and cannot be submitted"
+        in client().get("/ra-leave/apply").text
+    )
     monkeypatch.setitem(sample_leave.POLICY, "day_count", "Working days")
     assert "weekends or public holidays count no days" in client().get("/ra-leave/apply").text
 
@@ -571,15 +810,29 @@ def test_roles_outside_the_slots_show_as_gaps(monkeypatch) -> None:
     monkeypatch.setitem(sample_leave.POLICY, "inviters", "named")
     monkeypatch.setitem(sample_leave.POLICY, "inviter_names", ("Hui Min Goh",))
     assert sample_leave.inviter_gaps() == sample_leave.precincts()
-    assert "names Hui Min Goh, but none holds a place in any RA's slot" in c.get(ADMIN + "appeals").text
+    assert (
+        "names Hui Min Goh, but none holds a place in any RA's slot"
+        in c.get(ADMIN + "appeals").text
+    )
     routing = c.get(ADMIN + "routing").text
     assert ">Opens appeals</th>" in routing
     assert "9 Precincts where no one may open an appeal" in c.get(ADMIN).text
-    monkeypatch.setitem(sample_leave.sample_data.EVERY_SLOT, sample_leave.TERM.key, {"appointments": ("Admin",), "names": ()})
+    monkeypatch.setitem(
+        sample_leave.sample_data.EVERY_SLOT,
+        sample_leave.TERM.key,
+        {"appointments": ("Admin",), "names": ()},
+    )
     assert "9 Precincts whose appeals the Master cannot decide" in c.get(ADMIN).text
-    assert "those in every slot on <a href=\"/rosters/assignments\">Assignments</a> (Rachel Yeo) hold one in each" in c.get(ADMIN + "routing").text
+    assert (
+        'those in every slot on <a href="/rosters/assignments">Assignments</a> (Rachel Yeo) hold one in each'
+        in c.get(ADMIN + "routing").text
+    )
     D = sample_leave.Delegate
-    monkeypatch.setattr(sample_leave, "DELEGATES", (D("Grace Ho", "Benjamin Chua", None, None, "has not signed in yet"),))
+    monkeypatch.setattr(
+        sample_leave,
+        "DELEGATES",
+        (D("Grace Ho", "Benjamin Chua", None, None, "has not signed in yet"),),
+    )
     assert "Delegate not in slots" in c.get(ADMIN + "routing").text
     assert "1 Precinct with a delegate outside its slots" in c.get(ADMIN).text
 
@@ -592,19 +845,30 @@ def test_failed_emails_stay_visible_and_can_be_resent() -> None:
     failed = sample_leave.failed_emails()
     assert {e.application for e in failed} == {"L-0101", "L-0115", "L-0116"}
     board = c.get("/ra-leave/admin/").text.split('id="unsent-h"')[1].split("</section>")[0]
-    assert re.findall(r'href="/ra-leave/admin/applications/(L-\d+)"', board) == [e.application for e in failed]
+    assert re.findall(r'href="/ra-leave/admin/applications/(L-\d+)"', board) == [
+        e.application for e in failed
+    ]
     assert board.count(">Resend</button>") == len(failed)
     assert 'disabled aria-label="Resend L-0116 approved leave cancelled to Kai Ng">' in board
     # The admin sees every email on the application, sent or not.
-    page = c.get("/ra-leave/admin/applications/L-0116").text.split('id="emails-h"')[1].split("</section>")[0]
+    page = (
+        c.get("/ra-leave/admin/applications/L-0116")
+        .text.split('id="emails-h"')[1]
+        .split("</section>")[0]
+    )
     assert page.count('<span class="chip chip-ok">Sent</span>') == 1  # Cover released
     assert page.count('<span class="chip chip-warn">Not sent</span>') == 1
     assert ">Resend to Kai Ng</button>" in page and "no mailbox for the address" in page
     # An admin's resend goes from their own account, naming the original
     # sender (ruled 2026-10-29).
-    assert "it goes from the admin's account, naming its original sender" in c.get("/ra-leave/admin/applications/L-0116").text
+    assert (
+        "it goes from the admin's account, naming its original sender"
+        in c.get("/ra-leave/admin/applications/L-0116").text
+    )
     assert "from your own account, naming its original sender" in c.get("/ra-leave/admin/").text
-    assert 'id="emails-h"' not in c.get("/ra-leave/admin/applications/L-0102").text  # no emails, no card
+    assert (
+        'id="emails-h"' not in c.get("/ra-leave/admin/applications/L-0102").text
+    )  # no emails, no card
 
 
 def test_the_audit_s_consistency_fixes() -> None:
@@ -617,8 +881,10 @@ def test_the_audit_s_consistency_fixes() -> None:
     row = apps.split('href="/ra-leave/admin/applications/L-0118"')[1].split("</tr>")[0]
     assert '<span class="chip chip-accent">Extra leave</span>' in row
     assert "Hui Min Goh" not in sample_leave.delegate_choices("Daniel Koh")  # in no slot
-    assert all(sample_leave.delegate_fits(sample_leave.Delegate("Daniel Koh", p, None, None, ""))
-               for p in sample_leave.delegate_choices("Daniel Koh"))
+    assert all(
+        sample_leave.delegate_fits(sample_leave.Delegate("Daniel Koh", p, None, None, ""))
+        for p in sample_leave.delegate_choices("Daniel Koh")
+    )
     routing = c.get(ADMIN + "routing").text
     assert ">Hui Min Goh</option>" not in routing
     board = c.get(ADMIN).text

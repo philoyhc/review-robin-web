@@ -94,9 +94,7 @@ def normalize_headers(
     return canonical, captured
 
 
-def labeled_header(
-    review_session: ReviewSession, columns: tuple[str, ...]
-) -> tuple[str, ...]:
+def labeled_header(review_session: ReviewSession, columns: tuple[str, ...]) -> tuple[str, ...]:
     """Re-attach each labelable column's operator override for export.
 
     A column on its built-in default (no override) stays bare — the

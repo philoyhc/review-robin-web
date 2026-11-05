@@ -31,9 +31,7 @@ def test_a_name_a_header_cannot_hold_gets_a_fallback_and_filename_star(
     name: str, fallback: str, encoded: str
 ) -> None:
     header = content_disposition(name)
-    assert header == (
-        f'attachment; filename="{fallback}"; filename*=UTF-8\'\'{encoded}'
-    )
+    assert header == (f"attachment; filename=\"{fallback}\"; filename*=UTF-8''{encoded}")
     header.encode("latin-1")
 
 

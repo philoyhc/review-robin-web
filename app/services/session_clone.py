@@ -17,6 +17,7 @@ Nor is a reviewee's ``results_acknowledged_at``: the acknowledgement
 is the participant's, of the source session's results, so a cloned
 reviewee starts unacknowledged (``spec/roundtrip_coverage.md``).
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, cast
@@ -67,9 +68,7 @@ def _column_values(obj: object, *, skip: set[str]) -> dict[str, Any]:
     """Every mapped column value of ``obj`` except the keys in ``skip``."""
     mapper = cast("InstanceState[Any]", sa_inspect(obj)).mapper
     return {
-        attr.key: getattr(obj, attr.key)
-        for attr in mapper.column_attrs
-        if attr.key not in skip
+        attr.key: getattr(obj, attr.key) for attr in mapper.column_attrs if attr.key not in skip
     }
 
 
@@ -87,9 +86,7 @@ def _unique_code(db: Session, base: str) -> str:
     candidate = _with_suffix(base, "-copy", _CODE_MAX_LENGTH)
     n = 2
     while (
-        db.execute(
-            select(ReviewSession.id).where(ReviewSession.code == candidate)
-        ).first()
+        db.execute(select(ReviewSession.id).where(ReviewSession.code == candidate)).first()
         is not None
     ):
         candidate = _with_suffix(base, f"-copy-{n}", _CODE_MAX_LENGTH)
@@ -141,9 +138,7 @@ def clone_session(
         self_reviews_active=source.self_reviews_active,
         help_contact=source.help_contact,
         email_template_overrides=(
-            dict(source.email_template_overrides)
-            if source.email_template_overrides
-            else None
+            dict(source.email_template_overrides) if source.email_template_overrides else None
         ),
         display_timezone=source.display_timezone,
         # Segment 18P PR D1 — feature toggles + retention config the
@@ -159,34 +154,24 @@ def clone_session(
         # participant info — what each participant sees of their own
         # entry. All three columns, though Item 1 reads only the first.
         reviewer_self_fields=(
-            list(source.reviewer_self_fields)
-            if source.reviewer_self_fields is not None
-            else None
+            list(source.reviewer_self_fields) if source.reviewer_self_fields is not None else None
         ),
         reviewee_self_fields=(
-            list(source.reviewee_self_fields)
-            if source.reviewee_self_fields is not None
-            else None
+            list(source.reviewee_self_fields) if source.reviewee_self_fields is not None else None
         ),
         observer_self_fields=(
-            list(source.observer_self_fields)
-            if source.observer_self_fields is not None
-            else None
+            list(source.observer_self_fields) if source.observer_self_fields is not None else None
         ),
         retention_exception=source.retention_exception,
         retention_overrides=(
-            dict(source.retention_overrides)
-            if source.retention_overrides
-            else None
+            dict(source.retention_overrides) if source.retention_overrides else None
         ),
         created_by_user_id=user.id,
     )
     db.add(clone)
     db.flush()
 
-    db.add(
-        SessionOperator(session_id=clone.id, user_id=user.id, role="owner")
-    )
+    db.add(SessionOperator(session_id=clone.id, user_id=user.id, role="owner"))
 
     # Session rule sets — copied before instruments (rule_set_id).
     rule_set_map: dict[int, int] = {}
@@ -195,9 +180,7 @@ def clone_session(
     ).scalars():
         new_rule_set = SessionRuleSet(
             session_id=clone.id,
-            **_column_values(
-                rule_set, skip=set(_SKIP_BASE) | {"session_id"}
-            ),
+            **_column_values(rule_set, skip=set(_SKIP_BASE) | {"session_id"}),
         )
         db.add(new_rule_set)
         db.flush()
@@ -299,15 +282,11 @@ def clone_session(
                 **_column_values(label, skip={"id", "session_id"}),
             )
         )
-    for tag in db.execute(
-        select(SessionTag).where(SessionTag.session_id == source.id)
-    ).scalars():
+    for tag in db.execute(select(SessionTag).where(SessionTag.session_id == source.id)).scalars():
         db.add(
             SessionTag(
                 session_id=clone.id,
-                **_column_values(
-                    tag, skip={"id", "session_id", "created_at"}
-                ),
+                **_column_values(tag, skip={"id", "session_id", "created_at"}),
             )
         )
 
@@ -315,9 +294,7 @@ def clone_session(
     # modes. The instrument / response-field scope chips are remapped
     # through the id maps built above; a shape with no instrument scope
     # (both FKs NULL) copies straight across.
-    for shape in db.execute(
-        select(DataShape).where(DataShape.session_id == source.id)
-    ).scalars():
+    for shape in db.execute(select(DataShape).where(DataShape.session_id == source.id)).scalars():
         db.add(
             DataShape(
                 session_id=clone.id,
@@ -353,9 +330,7 @@ def clone_session(
         for reviewer in source.reviewers:
             new_reviewer = Reviewer(
                 session_id=clone.id,
-                **_column_values(
-                    reviewer, skip=set(_SKIP_BASE) | {"session_id"}
-                ),
+                **_column_values(reviewer, skip=set(_SKIP_BASE) | {"session_id"}),
             )
             db.add(new_reviewer)
             db.flush()
@@ -375,9 +350,7 @@ def clone_session(
             # the copy (Codex on #3489), or the reconcile would replace
             # the reviewee and cascade away its copied relationships.
             if reviewee.mirrors_reviewer_id is not None:
-                new_reviewee.mirrors_reviewer_id = reviewer_map.get(
-                    reviewee.mirrors_reviewer_id
-                )
+                new_reviewee.mirrors_reviewer_id = reviewer_map.get(reviewee.mirrors_reviewer_id)
             db.add(new_reviewee)
             db.flush()
             reviewee_map[reviewee.id] = new_reviewee.id
@@ -393,8 +366,7 @@ def clone_session(
                     reviewee_id=reviewee_map[rel.reviewee_id],
                     **_column_values(
                         rel,
-                        skip=set(_SKIP_BASE)
-                        | {"session_id", "reviewer_id", "reviewee_id"},
+                        skip=set(_SKIP_BASE) | {"session_id", "reviewer_id", "reviewee_id"},
                     ),
                 )
             )
@@ -406,9 +378,7 @@ def clone_session(
             db.add(
                 Observer(
                     session_id=clone.id,
-                    **_column_values(
-                        observer, skip=set(_SKIP_BASE) | {"session_id"}
-                    ),
+                    **_column_values(observer, skip=set(_SKIP_BASE) | {"session_id"}),
                 )
             )
             observer_count += 1

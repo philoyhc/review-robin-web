@@ -18,6 +18,7 @@ Revises: a1b2c3d4e5f6
 Create Date: 2026-05-02 00:00:00.000000
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -30,7 +31,7 @@ depends_on: str | Sequence[str] | None = None
 
 
 _BUMPS: list[dict] = [
-    {"name": "Long_text",  "new_max": 2000},
+    {"name": "Long_text", "new_max": 2000},
     {"name": "Short_text", "new_max": 100},
 ]
 
@@ -38,12 +39,8 @@ _BUMPS: list[dict] = [
 def upgrade() -> None:
     bind = op.get_bind()
     metadata = sa.MetaData()
-    rtd_table = sa.Table(
-        "response_type_definitions", metadata, autoload_with=bind
-    )
-    rf_table = sa.Table(
-        "instrument_response_fields", metadata, autoload_with=bind
-    )
+    rtd_table = sa.Table("response_type_definitions", metadata, autoload_with=bind)
+    rf_table = sa.Table("instrument_response_fields", metadata, autoload_with=bind)
 
     for bump in _BUMPS:
         # Force-update the seeded RTD rows to the new max.
@@ -55,11 +52,15 @@ def upgrade() -> None:
         )
         # Refresh dependent RF validation JSON blocks for any RF
         # row pointing at any seeded row of this name.
-        rtd_ids = bind.execute(
-            sa.select(rtd_table.c.id)
-            .where(rtd_table.c.response_type == bump["name"])
-            .where(rtd_table.c.is_seeded == sa.true())
-        ).scalars().all()
+        rtd_ids = (
+            bind.execute(
+                sa.select(rtd_table.c.id)
+                .where(rtd_table.c.response_type == bump["name"])
+                .where(rtd_table.c.is_seeded == sa.true())
+            )
+            .scalars()
+            .all()
+        )
         if rtd_ids:
             bind.execute(
                 rf_table.update()

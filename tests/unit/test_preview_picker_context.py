@@ -27,21 +27,15 @@ def _session(db: Session, user: User, *, code: str) -> ReviewSession:
     return s
 
 
-def _reviewer(
-    db: Session, session: ReviewSession, *, name: str, email: str
-) -> Reviewer:
+def _reviewer(db: Session, session: ReviewSession, *, name: str, email: str) -> Reviewer:
     r = Reviewer(session_id=session.id, name=name, email=email)
     db.add(r)
     db.flush()
     return r
 
 
-def _reviewee(
-    db: Session, session: ReviewSession, *, name: str, email: str
-) -> Reviewee:
-    e = Reviewee(
-        session_id=session.id, name=name, email_or_identifier=email
-    )
+def _reviewee(db: Session, session: ReviewSession, *, name: str, email: str) -> Reviewee:
+    e = Reviewee(session_id=session.id, name=name, email_or_identifier=email)
     db.add(e)
     db.flush()
     return e
@@ -147,9 +141,7 @@ def test_label_format_value_extracts_email(db: Session) -> None:
     session = _session(db, user, code="pp-label")
     _reviewer(db, session, name="Alice Smith", email="alice@x.edu")
 
-    ctx = views.build_preview_picker_context(
-        db, session, "Alice Smith (alice@x.edu)"
-    )
+    ctx = views.build_preview_picker_context(db, session, "Alice Smith (alice@x.edu)")
 
     assert ctx.current is not None
     assert ctx.current.email == "alice@x.edu"

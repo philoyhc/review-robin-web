@@ -12,6 +12,7 @@ the two numbers still meet. The pill's text is set by JS, so it is
 verified in a browser rather than here; what this file pins is where
 the hint is and, just as importantly, where it is not.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -24,18 +25,14 @@ from app.db.models import Reviewee, Reviewer, ReviewSession
 PAGES = ("reviewers", "reviewees", "observers", "relationships")
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     r = client.post(
         "/operator/sessions",
         data={"name": "S", "code": code},
         follow_redirects=False,
     )
     assert r.status_code == 303, r.text
-    s = db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    s = db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
     s.relationships_enabled = True
     s.observers_enabled = True
     db.commit()
@@ -148,9 +145,7 @@ def test_the_hint_renders_above_the_table_it_describes(
 
 
 @pytest.mark.parametrize("page", PAGES)
-def test_the_hint_carries_the_shared_class(
-    db: Session, client: TestClient, page: str
-) -> None:
+def test_the_hint_carries_the_shared_class(db: Session, client: TestClient, page: str) -> None:
     """All four pages render the line through the same partial, so
     they cannot drift apart in styling the way Assignments did — it
     used `.form-help`, which sets `--fs-small`, and so rendered a
@@ -196,9 +191,7 @@ def test_the_hint_is_absent_when_nothing_is_trimmed(
 
 
 @pytest.mark.parametrize("page", PAGES)
-def test_the_pill_ships_the_two_number_format(
-    db: Session, client: TestClient, page: str
-) -> None:
+def test_the_pill_ships_the_two_number_format(db: Session, client: TestClient, page: str) -> None:
     """The server-rendered placeholder matches the format the JS
     writes, so the two cannot drift into disagreeing about the shape.
     The live text is checked in a browser."""

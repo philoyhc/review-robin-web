@@ -73,21 +73,15 @@ def apply_quota(
     warnings: list[str] = []
     excluded = 0
 
-    seed = (
-        rule.selection.seed
-        if rule.selection.seed is not None
-        else fallback_seed
-    )
+    seed = rule.selection.seed if rule.selection.seed is not None else fallback_seed
 
-    for axis_key in sorted(grouped, key=lambda k: ("" if k is None else str(k))):
+    for axis_key in sorted(grouped, key=lambda k: "" if k is None else str(k)):
         axis_pairs = sorted(grouped[axis_key], key=_stable_pair_sort_key)
         cap = rule.max if rule.max is not None else len(axis_pairs)
 
         if rule.selection.strategy == SelectionStrategy.RANDOM:
             rng = random.Random(f"{seed}::{axis_key}")
-            chosen_indices = sorted(
-                rng.sample(range(len(axis_pairs)), min(cap, len(axis_pairs)))
-            )
+            chosen_indices = sorted(rng.sample(range(len(axis_pairs)), min(cap, len(axis_pairs))))
             kept = [axis_pairs[i] for i in chosen_indices]
         else:  # ROUND_ROBIN
             kept = axis_pairs[:cap]

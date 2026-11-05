@@ -84,14 +84,11 @@ class RollupParts:
         return RollupParts(
             total_assignments=self.total_assignments + other.total_assignments,
             completed_count=self.completed_count + other.completed_count,
-            missing_required_count=(
-                self.missing_required_count + other.missing_required_count
-            ),
+            missing_required_count=(self.missing_required_count + other.missing_required_count),
             required_total=self.required_total + other.required_total,
             any_response=self.any_response or other.any_response,
             all_required_and_submitted=(
-                self.all_required_and_submitted
-                and other.all_required_and_submitted
+                self.all_required_and_submitted and other.all_required_and_submitted
             ),
         )
 
@@ -204,15 +201,11 @@ def rollup_parts_from_assignments(
             )
         # 19T Item 11 — per assignment: a required governed field counts
         # only while its branch is open for this row's answers.
-        required_ids = required_field_ids(
-            fields, {r.response_field_id: r.value for r in rows}
-        )
+        required_ids = required_field_ids(fields, {r.response_field_id: r.value for r in rows})
         required_total += len(required_ids)
         if rows:
             any_response = True
-        present_required = {
-            r.response_field_id for r in rows if (r.value or "") != ""
-        }
+        present_required = {r.response_field_id for r in rows if (r.value or "") != ""}
         row_missing = sum(1 for fid in required_ids if fid not in present_required)
         missing_required_count += row_missing
         if not required_ids:
@@ -288,9 +281,9 @@ def responses_by_assignment(
         .where(Assignment.session_id == session_id)
     )
     if instrument_clause is not None:
-        stmt = stmt.join(
-            Instrument, Instrument.id == Assignment.instrument_id
-        ).where(instrument_clause)
+        stmt = stmt.join(Instrument, Instrument.id == Assignment.instrument_id).where(
+            instrument_clause
+        )
     rows = db.execute(stmt).scalars()
     out: dict[int, list[Response]] = {}
     for row in rows:
@@ -318,9 +311,7 @@ def reviewer_session_state(
     Both default to ``None``, so every caller that does not loop is
     unchanged and still pays one query per assignment."""
     assignments = _reviewer_assignments(db, reviewer, session_id)
-    fields_by_instrument = _instrument_fields_by_id(
-        db, {a.instrument_id for a in assignments}
-    )
+    fields_by_instrument = _instrument_fields_by_id(db, {a.instrument_id for a in assignments})
     return _state_from_assignments(
         db,
         assignments,
@@ -347,20 +338,14 @@ def reviewer_session_state_per_instrument(
     assignments = _reviewer_assignments(db, reviewer, session_id)
     by_instrument: dict[int, list[Assignment]] = {}
     for assignment in assignments:
-        by_instrument.setdefault(assignment.instrument_id, []).append(
-            assignment
-        )
+        by_instrument.setdefault(assignment.instrument_id, []).append(assignment)
     if not by_instrument:
         return {}
-    fields_by_instrument = _instrument_fields_by_id(
-        db, set(by_instrument.keys())
-    )
+    fields_by_instrument = _instrument_fields_by_id(db, set(by_instrument.keys()))
     # Compute group keys once over the reviewer's whole assignment
     # set rather than re-scanning the relationships table for each
     # instrument's slice.
-    group_key_by_assignment = group_keys(
-        db, assignments=assignments, session_id=session_id
-    )
+    group_key_by_assignment = group_keys(db, assignments=assignments, session_id=session_id)
     return {
         instrument_id: _state_from_assignments(
             db,
@@ -372,9 +357,7 @@ def reviewer_session_state_per_instrument(
     }
 
 
-def session_pill_for_reviewer(
-    db: Session, *, reviewer: Reviewer, session_id: int
-) -> SessionPill:
+def session_pill_for_reviewer(db: Session, *, reviewer: Reviewer, session_id: int) -> SessionPill:
     """`not started`, `in progress`, or `submitted`."""
     state = reviewer_session_state(db, reviewer=reviewer, session_id=session_id)
     return SessionPill(
@@ -394,13 +377,9 @@ def session_response_count(db: Session, session_id: int) -> int:
     one cell per ``(reviewer, instrument, group_key,
     response_field)`` (Segment 13C slice D2)."""
     assignments = list(
-        db.execute(
-            select(Assignment).where(Assignment.session_id == session_id)
-        ).scalars()
+        db.execute(select(Assignment).where(Assignment.session_id == session_id)).scalars()
     )
-    group_key_by_assignment = group_keys(
-        db, assignments=assignments, session_id=session_id
-    )
+    group_key_by_assignment = group_keys(db, assignments=assignments, session_id=session_id)
     if not group_key_by_assignment:
         return db.execute(
             select(func.count(Response.id))

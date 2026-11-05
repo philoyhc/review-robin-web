@@ -52,9 +52,7 @@ def header_client(db: Session) -> Iterator[TestClient]:
 def test_a_blank_email_claim_yields_to_the_fallback_claim(
     header_client: TestClient, db: Session
 ) -> None:
-    headers = _principal(
-        (_EMAILADDRESS, "   "), ("preferred_username", "pat@example.edu")
-    )
+    headers = _principal((_EMAILADDRESS, "   "), ("preferred_username", "pat@example.edu"))
 
     for _ in range(2):  # the second sign-in was the 500
         assert header_client.get("/me", headers=headers).status_code == 200
@@ -62,12 +60,8 @@ def test_a_blank_email_claim_yields_to_the_fallback_claim(
     assert db.execute(select(User.email)).scalars().all() == ["pat@example.edu"]
 
 
-def test_only_blank_email_claims_answer_401(
-    header_client: TestClient, db: Session
-) -> None:
-    headers = _principal(
-        (_EMAILADDRESS, " "), ("preferred_username", "\t"), ("email", "  ")
-    )
+def test_only_blank_email_claims_answer_401(header_client: TestClient, db: Session) -> None:
+    headers = _principal((_EMAILADDRESS, " "), ("preferred_username", "\t"), ("email", "  "))
 
     for _ in range(2):
         assert header_client.get("/me", headers=headers).status_code == 401

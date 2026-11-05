@@ -23,6 +23,7 @@ whose total row count is zero — the ``assignments.instrument_empty``
 sibling handles that case without (reviewers × instruments)
 duplicate noise.
 """
+
 from __future__ import annotations
 
 from sqlalchemy.orm import Session
@@ -50,9 +51,7 @@ def _seed(
     user = User(email=f"op-{code}@example.edu")
     db.add(user)
     db.flush()
-    review_session = ReviewSession(
-        name="PerInst", code=code, created_by_user_id=user.id
-    )
+    review_session = ReviewSession(name="PerInst", code=code, created_by_user_id=user.id)
     db.add(review_session)
     db.flush()
     reviewers = [
@@ -78,9 +77,7 @@ def _seed(
     return review_session, reviewers, reviewees
 
 
-def _add_instrument(
-    db: Session, review_session: ReviewSession, *, name: str
-) -> Instrument:
+def _add_instrument(db: Session, review_session: ReviewSession, *, name: str) -> Instrument:
     # ``short_label`` is the operator-facing label the canonical
     # ``_instrument_label`` reports (``name`` is an internal handle
     # that no longer surfaces in messages — audit S1). Set both so
@@ -115,9 +112,7 @@ def _add_assignment(
     return assignment
 
 
-def _issues_with_key(
-    issues: list, key: str
-) -> list:
+def _issues_with_key(issues: list, key: str) -> list:
     return [i for i in issues if i.rule_key == key]
 
 
@@ -136,10 +131,7 @@ def test_reviewer_missing_skipped_when_no_assignment_mode(
     issues = validate_session_setup(db, review_session)
 
     assert _issues_with_key(issues, "assignments.reviewer_missing") == []
-    assert (
-        _issues_with_key(issues, "assignments.reviewer_missing_for_instrument")
-        == []
-    )
+    assert _issues_with_key(issues, "assignments.reviewer_missing_for_instrument") == []
     assert _issues_with_key(issues, "assignments.instrument_empty") == []
     # ``assignments.no_included_pairs`` (15E successor of no_mode)
     # fires because sum of included_count_per_instrument is zero.
@@ -160,9 +152,7 @@ def test_single_instrument_flags_reviewer_with_no_assignments(
         reviewer_emails=("alice@example.edu", "bob@example.edu"),
     )
     [instrument] = list(
-        db.query(Instrument).filter(
-            Instrument.session_id == review_session.id
-        ).all()
+        db.query(Instrument).filter(Instrument.session_id == review_session.id).all()
     )
     # Alice gets an assignment; Bob doesn't.
     _add_assignment(
@@ -187,12 +177,7 @@ def test_single_instrument_flags_reviewer_with_no_assignments(
     assert single[0].fix_anchor is None
     assert single[0].fix_url == f"/operator/sessions/{review_session.public_id}/assignments"
     # Per-instrument sibling stays quiet on N==1 sessions.
-    assert (
-        _issues_with_key(
-            issues, "assignments.reviewer_missing_for_instrument"
-        )
-        == []
-    )
+    assert _issues_with_key(issues, "assignments.reviewer_missing_for_instrument") == []
 
 
 def test_multi_instrument_skips_single_rule(db: Session) -> None:
@@ -202,9 +187,7 @@ def test_multi_instrument_skips_single_rule(db: Session) -> None:
 
     review_session, reviewers, reviewees = _seed(db, code="multi-skip")
     instruments = list(
-        db.query(Instrument).filter(
-            Instrument.session_id == review_session.id
-        ).all()
+        db.query(Instrument).filter(Instrument.session_id == review_session.id).all()
     )
     second = _add_instrument(db, review_session, name="Peer survey")
     # Both instruments have at least one assignment so the
@@ -244,11 +227,7 @@ def test_multi_instrument_reviewer_missing_on_some_instruments(
         code="multi-some-missing",
         reviewer_emails=("alice@example.edu", "bob@example.edu"),
     )
-    [first] = list(
-        db.query(Instrument).filter(
-            Instrument.session_id == review_session.id
-        ).all()
-    )
+    [first] = list(db.query(Instrument).filter(Instrument.session_id == review_session.id).all())
     second = _add_instrument(db, review_session, name="Peer survey")
     for instrument in (first, second):
         _add_assignment(
@@ -270,9 +249,7 @@ def test_multi_instrument_reviewer_missing_on_some_instruments(
 
     issues = validate_session_setup(db, review_session)
 
-    per_instr = _issues_with_key(
-        issues, "assignments.reviewer_missing_for_instrument"
-    )
+    per_instr = _issues_with_key(issues, "assignments.reviewer_missing_for_instrument")
     assert len(per_instr) == 1
     issue = per_instr[0]
     assert "Bob" in issue.message
@@ -294,11 +271,7 @@ def test_multi_instrument_empty_instrument_suppresses_per_reviewer(
         code="multi-empty",
         reviewer_emails=("alice@example.edu", "bob@example.edu"),
     )
-    [first] = list(
-        db.query(Instrument).filter(
-            Instrument.session_id == review_session.id
-        ).all()
-    )
+    [first] = list(db.query(Instrument).filter(Instrument.session_id == review_session.id).all())
     second = _add_instrument(db, review_session, name="Peer survey")
     for reviewer in reviewers:
         _add_assignment(
@@ -318,7 +291,5 @@ def test_multi_instrument_empty_instrument_suppresses_per_reviewer(
     assert "Peer survey" in empties[0].message
     assert empties[0].fix_anchor == f"#instrument-{second.id}"
     # Per-(reviewer, instrument) noise suppressed for instrument B.
-    per_instr = _issues_with_key(
-        issues, "assignments.reviewer_missing_for_instrument"
-    )
+    per_instr = _issues_with_key(issues, "assignments.reviewer_missing_for_instrument")
     assert per_instr == []

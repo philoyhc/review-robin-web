@@ -34,15 +34,13 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Instrument, InstrumentResponseField, ReviewSession
 
-pytestmark = pytest.mark.skipif(
-    shutil.which("node") is None, reason="node is not installed"
-)
+pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
 
 #: Session-scoped pages that carry hand-written JS. `base.html`'s own
 #: scripts ride along on every one of them — verified, by breaking a
 #: `base.html` script and watching 7 of 8 tests fail.
 SESSION_PAGES = (
-    "",               # Session Home
+    "",  # Session Home
     "/reviewers",
     "/reviewees",
     "/relationships",
@@ -74,9 +72,7 @@ def _session(client: TestClient, db: Session) -> ReviewSession:
         data={"name": "JS", "code": "js-parse"},
         follow_redirects=False,
     )
-    s = db.execute(
-        select(ReviewSession).where(ReviewSession.code == "js-parse")
-    ).scalar_one()
+    s = db.execute(select(ReviewSession).where(ReviewSession.code == "js-parse")).scalar_one()
     s.relationships_enabled = True
     s.observers_enabled = True
     db.commit()
@@ -86,15 +82,15 @@ def _session(client: TestClient, db: Session) -> ReviewSession:
 
 def _check(source: str) -> str | None:
     """`None` if it parses, else node's message."""
-    with tempfile.NamedTemporaryFile(
-        "w", suffix=".js", delete=False, encoding="utf-8"
-    ) as fh:
+    with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False, encoding="utf-8") as fh:
         fh.write(source)
         path = fh.name
     try:
         result = subprocess.run(
             ["node", "--check", path],
-            capture_output=True, text=True, timeout=30,
+            capture_output=True,
+            text=True,
+            timeout=30,
         )
         return None if result.returncode == 0 else result.stderr.strip()
     finally:
@@ -140,16 +136,12 @@ def test_every_inline_script_outside_a_session_parses(
     _assert_parses(page, response.text)
 
 
-def test_the_observers_expander_script_is_among_them(
-    client: TestClient, db: Session
-) -> None:
+def test_the_observers_expander_script_is_among_them(client: TestClient, db: Session) -> None:
     """Pins the coverage this was written for. Without it, a refactor
     that moved the expander into a `src=`-loaded file or split the page
     would quietly drop the block that motivated the check."""
     review_session = _session(client, db)
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/observers"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/observers").text
 
     blocks = _SCRIPT.findall(body)
     assert any("observers-row-expander" in b for b in blocks), (
@@ -186,32 +178,40 @@ def test_the_previews_number_width_matches_the_surfaces() -> None:
     from app.web.views import numeric_column_ch_width
 
     template = (
-        Path(__file__).resolve().parents[2]
-        / "app/web/templates/operator/instruments_index.html"
+        Path(__file__).resolve().parents[2] / "app/web/templates/operator/instruments_index.html"
     ).read_text()
     start = template.index("          function pyG(n) {")
     end = template.index("          // A response column's <col> style", start)
     cases = [
-        {"label": label, "required": required,
-         "shape": {"dataType": kind.lower(),
-                   "min": "" if low is None else str(low),
-                   "max": "" if high is None else str(high)}}
+        {
+            "label": label,
+            "required": required,
+            "shape": {
+                "dataType": kind.lower(),
+                "min": "" if low is None else str(low),
+                "max": "" if high is None else str(high),
+            },
+        }
         for kind, low, high, label, required in _WIDTH_CASES
     ]
     script = (
         template[start:end]
-        + "\nconsole.log(JSON.stringify(" + json.dumps(cases)
+        + "\nconsole.log(JSON.stringify("
+        + json.dumps(cases)
         + ".map(function (c) { return numericColumnCh(c.label, c.required, c.shape); })));"
     )
-    out = subprocess.run(
-        ["node", "-e", script], capture_output=True, text=True, check=True
-    ).stdout
+    out = subprocess.run(["node", "-e", script], capture_output=True, text=True, check=True).stdout
     expected = [
         numeric_column_ch_width(
-            cast(InstrumentResponseField, SimpleNamespace(
-                data_type=kind, label=label, required=required,
-                validation={"min": low, "max": high},
-            ))
+            cast(
+                InstrumentResponseField,
+                SimpleNamespace(
+                    data_type=kind,
+                    label=label,
+                    required=required,
+                    validation={"min": low, "max": high},
+                ),
+            )
         )
         for kind, low, high, label, required in _WIDTH_CASES
     ]
@@ -242,19 +242,18 @@ def test_band_2s_intro_heading_matches_the_surfaces() -> None:
     from app.web.views import instrument_heading
 
     template = (
-        Path(__file__).resolve().parents[2]
-        / "app/web/templates/operator/instruments_index.html"
+        Path(__file__).resolve().parents[2] / "app/web/templates/operator/instruments_index.html"
     ).read_text()
     start = template.index("          window.newModelIntroHeading = function (")
     end = template.index("\n          };\n", start) + len("\n          };\n")
     script = (
-        "var window = {};\n" + template[start:end]
-        + "\nconsole.log(JSON.stringify(" + json.dumps(_HEADING_CASES)
+        "var window = {};\n"
+        + template[start:end]
+        + "\nconsole.log(JSON.stringify("
+        + json.dumps(_HEADING_CASES)
         + ".map(function (c) { return window.newModelIntroHeading(c[0], c[1], c[2], c[3]); })));"
     )
-    out = subprocess.run(
-        ["node", "-e", script], capture_output=True, text=True, check=True
-    ).stdout
+    out = subprocess.run(["node", "-e", script], capture_output=True, text=True, check=True).stdout
     expected = []
     for label, description, position, total in _HEADING_CASES:
         heading = instrument_heading(
@@ -299,19 +298,19 @@ def test_the_previews_profile_cell_matches_the_surfaces() -> None:
     from app.web.views import is_web_link
 
     template = (
-        Path(__file__).resolve().parents[2]
-        / "app/web/templates/operator/instruments_index.html"
+        Path(__file__).resolve().parents[2] / "app/web/templates/operator/instruments_index.html"
     ).read_text()
     start = template.index("          function esc(s) {")
     end = template.index("          // Gap 3 (18J Wave 1)", start)
     script = (
         template[start:end]
-        + "\nconsole.log(JSON.stringify(" + json.dumps(_PROFILE_CASES)
+        + "\nconsole.log(JSON.stringify("
+        + json.dumps(_PROFILE_CASES)
         + ".map(function (v) { return [isWebLink(v), profileCell(v)]; })));"
     )
-    out = json.loads(subprocess.run(
-        ["node", "-e", script], capture_output=True, text=True, check=True
-    ).stdout)
+    out = json.loads(
+        subprocess.run(["node", "-e", script], capture_output=True, text=True, check=True).stdout
+    )
     for value, (linked, cell) in zip(_PROFILE_CASES, out):
         assert linked is is_web_link(value), value
         if not value:

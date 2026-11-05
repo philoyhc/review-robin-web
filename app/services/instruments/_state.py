@@ -32,18 +32,20 @@ __all__ = [
 # Audit-event types that signal "this instrument's field tables were
 # saved by the operator" — used by ``saved_state_for_session`` to
 # render the per-instrument-card status pill.
-_SAVED_STATE_EVENT_TYPES: frozenset[str] = frozenset({
-    "instrument.display_fields_saved",
-    "instrument.display_field_added",
-    "instrument.display_field_updated",
-    "instrument.display_field_deleted",
-    "instrument.display_field_moved",
-    "instrument.field_added",
-    "instrument.field_updated",
-    "instrument.field_deleted",
-    "instrument.fields_reordered",
-    "instrument.response_fields_saved",
-})
+_SAVED_STATE_EVENT_TYPES: frozenset[str] = frozenset(
+    {
+        "instrument.display_fields_saved",
+        "instrument.display_field_added",
+        "instrument.display_field_updated",
+        "instrument.display_field_deleted",
+        "instrument.display_field_moved",
+        "instrument.field_added",
+        "instrument.field_updated",
+        "instrument.field_deleted",
+        "instrument.fields_reordered",
+        "instrument.response_fields_saved",
+    }
+)
 
 
 def _instrument_label(instrument: Instrument) -> str:
@@ -92,15 +94,11 @@ def _response_count_for_field(db: Session, field_id: int) -> int:
     existence and so uses a cheaper ``LIMIT 1`` probe.
     """
     return db.execute(
-        select(func.count(Response.id)).where(
-            Response.response_field_id == field_id
-        )
+        select(func.count(Response.id)).where(Response.response_field_id == field_id)
     ).scalar_one()
 
 
-def saved_state_for_session(
-    db: Session, *, session_id: int
-) -> dict[int, bool]:
+def saved_state_for_session(db: Session, *, session_id: int) -> dict[int, bool]:
     """Map ``instrument_id`` → True if the instrument has any audit
     event indicating an operator-driven save of its field tables; False
     otherwise. Instruments with no qualifying audit history render as

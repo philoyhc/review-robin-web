@@ -19,6 +19,7 @@ Tests cover:
 * Regenerate's strict-mode assert fires when a drift is staged
   pre-regenerate-without-recompute (synthetic ladder test).
 """
+
 from __future__ import annotations
 
 from sqlalchemy.orm import Session
@@ -48,9 +49,7 @@ def _seed_self_review_session(
     )
     db.add(review_session)
     db.flush()
-    alice_r = Reviewer(
-        session_id=review_session.id, name="Alice", email="alice@example.edu"
-    )
+    alice_r = Reviewer(session_id=review_session.id, name="Alice", email="alice@example.edu")
     alice_e = Reviewee(
         session_id=review_session.id,
         name="Alice",
@@ -81,18 +80,14 @@ def _seed_self_review_session(
 
 
 def test_verify_empty_on_freshly_regenerated_session(db: Session) -> None:
-    user, review_session, _alice_r, _alice_e = _seed_self_review_session(
-        db, code="verify-clean"
-    )
+    user, review_session, _alice_r, _alice_e = _seed_self_review_session(db, code="verify-clean")
     assignments.replace_assignments(
         db,
         review_session=review_session,
         user=user,
         correlation_id="verify-clean",
     )
-    drift = assignments.verify_self_review_classification(
-        db, session_id=review_session.id
-    )
+    drift = assignments.verify_self_review_classification(db, session_id=review_session.id)
     assert drift == []
 
 
@@ -101,9 +96,7 @@ def test_verify_detects_manually_induced_drift(db: Session) -> None:
     via a future buggy write path that skips the recompute hook),
     ``verify`` surfaces the drift in ``(id, stored, expected)``
     triples."""
-    user, review_session, alice_r, alice_e = _seed_self_review_session(
-        db, code="verify-drift"
-    )
+    user, review_session, alice_r, alice_e = _seed_self_review_session(db, code="verify-drift")
     assignments.replace_assignments(
         db,
         review_session=review_session,
@@ -125,9 +118,7 @@ def test_verify_detects_manually_induced_drift(db: Session) -> None:
     self_row.is_self_review = False
     db.flush()
 
-    drift = assignments.verify_self_review_classification(
-        db, session_id=review_session.id
-    )
+    drift = assignments.verify_self_review_classification(db, session_id=review_session.id)
     assert drift == [(self_row.id, False, True)]
 
 
@@ -135,13 +126,9 @@ def test_verify_returns_empty_for_session_with_no_assignments(
     db: Session,
 ) -> None:
     """No assignments → no drift to report."""
-    _, review_session, _, _ = _seed_self_review_session(
-        db, code="verify-empty"
-    )
+    _, review_session, _, _ = _seed_self_review_session(db, code="verify-empty")
     # Skip the regenerate; no assignments materialised.
-    drift = assignments.verify_self_review_classification(
-        db, session_id=review_session.id
-    )
+    drift = assignments.verify_self_review_classification(db, session_id=review_session.id)
     assert drift == []
 
 
@@ -150,17 +137,13 @@ def test_verify_returns_empty_for_session_with_no_assignments(
 # --------------------------------------------------------------------------- #
 
 
-def test_regenerate_strict_mode_raises_on_persistent_drift(
-    db: Session, monkeypatch
-) -> None:
+def test_regenerate_strict_mode_raises_on_persistent_drift(db: Session, monkeypatch) -> None:
     """Synthetic test: force the recompute helper to no-op so the
     invariant catches the drift the recompute would otherwise fix
     in production. In test env this raises ``AssertionError``,
     matching the strict-mode contract in
     ``guide/self_review_consolidate.md`` PR 4."""
-    user, review_session, alice_r, alice_e = _seed_self_review_session(
-        db, code="strict-drift"
-    )
+    user, review_session, alice_r, alice_e = _seed_self_review_session(db, code="strict-drift")
     # First regenerate cleanly so a self-review row exists.
     assignments.replace_assignments(
         db,
@@ -189,9 +172,7 @@ def test_regenerate_strict_mode_raises_on_persistent_drift(
     def _noop_recompute(*_args, **_kwargs) -> int:
         return 0
 
-    monkeypatch.setattr(
-        assignments, "recompute_self_review_classification", _noop_recompute
-    )
+    monkeypatch.setattr(assignments, "recompute_self_review_classification", _noop_recompute)
     # Also patch the in-module reference the regenerate body uses.
     # ``replace_assignments`` lives in ``_generate.py`` post-18O Track B
     # and imports ``recompute_self_review_classification`` into its own
@@ -216,6 +197,4 @@ def test_regenerate_strict_mode_raises_on_persistent_drift(
         assert "Self-review classification drift" in str(exc)
         assert str(review_session.id) in str(exc)
     else:
-        raise AssertionError(
-            "Expected strict-mode AssertionError on drift, none raised."
-        )
+        raise AssertionError("Expected strict-mode AssertionError on drift, none raised.")

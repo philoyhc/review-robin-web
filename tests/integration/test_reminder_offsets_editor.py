@@ -5,6 +5,7 @@ input on the Create / Edit session forms, the Manage Invitations card
 caption, and the Schedule timeline preview block. Mirrors the Part 2
 ``test_invite_offsets_editor.py`` structure.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -46,20 +47,14 @@ def _create_session(
         data["deadline"] = deadline
     if reminder_offsets:
         data["reminder_offsets"] = reminder_offsets
-    response = client.post(
-        "/operator/sessions", data=data, follow_redirects=False
-    )
+    response = client.post("/operator/sessions", data=data, follow_redirects=False)
     session_id = 0
     if response.status_code == 303:
         # Create-session redirect targets ``.../{public_id}?editing=1``;
         # strip the query and fragment before parsing the ID.
-        location = (
-            response.headers["location"].split("?", 1)[0].split("#", 1)[0]
-        )
+        location = response.headers["location"].split("?", 1)[0].split("#", 1)[0]
         session_id = db.execute(
-            select(ReviewSession.id).where(
-                ReviewSession.public_id == location.rsplit("/", 1)[-1]
-            )
+            select(ReviewSession.id).where(ReviewSession.public_id == location.rsplit("/", 1)[-1])
         ).scalar_one()
     return response.status_code, response, session_id
 
@@ -70,40 +65,21 @@ def _create_session(
 
 
 def test_parser_returns_none_for_empty(db: Session) -> None:
-    assert (
-        scheduled_events.parse_and_validate_reminder_offsets(
-            None, deadline=None
-        )
-        is None
-    )
-    assert (
-        scheduled_events.parse_and_validate_reminder_offsets(
-            "", deadline=None
-        )
-        is None
-    )
-    assert (
-        scheduled_events.parse_and_validate_reminder_offsets(
-            "   ", deadline=None
-        )
-        is None
-    )
+    assert scheduled_events.parse_and_validate_reminder_offsets(None, deadline=None) is None
+    assert scheduled_events.parse_and_validate_reminder_offsets("", deadline=None) is None
+    assert scheduled_events.parse_and_validate_reminder_offsets("   ", deadline=None) is None
 
 
 def test_parser_splits_comma_separated_entries(db: Session) -> None:
     deadline = datetime.now(UTC) + timedelta(days=30)
-    result = scheduled_events.parse_and_validate_reminder_offsets(
-        "-P1D , -PT4H", deadline=deadline
-    )
+    result = scheduled_events.parse_and_validate_reminder_offsets("-P1D , -PT4H", deadline=deadline)
     assert result == ["-P1D", "-PT4H"]
 
 
 def test_parser_rejects_invalid_iso_entry(db: Session) -> None:
     deadline = datetime.now(UTC) + timedelta(days=30)
     try:
-        scheduled_events.parse_and_validate_reminder_offsets(
-            "NOT-AN-ISO", deadline=deadline
-        )
+        scheduled_events.parse_and_validate_reminder_offsets("NOT-AN-ISO", deadline=deadline)
     except scheduled_events.ScheduledActivateError as exc:
         assert "isn't a valid ISO 8601 duration" in str(exc)
     else:
@@ -114,9 +90,7 @@ def test_parser_rejects_positive_offset(db: Session) -> None:
     """Positive offsets fire at or after End — flag at save."""
     deadline = datetime.now(UTC) + timedelta(days=30)
     try:
-        scheduled_events.parse_and_validate_reminder_offsets(
-            "P1D", deadline=deadline
-        )
+        scheduled_events.parse_and_validate_reminder_offsets("P1D", deadline=deadline)
     except scheduled_events.ScheduledActivateError as exc:
         assert "fires at or after End" in str(exc)
     else:
@@ -126,9 +100,7 @@ def test_parser_rejects_positive_offset(db: Session) -> None:
 def test_parser_rejects_too_small_notice_gap(db: Session) -> None:
     deadline = datetime.now(UTC) + timedelta(days=30)
     try:
-        scheduled_events.parse_and_validate_reminder_offsets(
-            "-PT30M", deadline=deadline
-        )
+        scheduled_events.parse_and_validate_reminder_offsets("-PT30M", deadline=deadline)
     except scheduled_events.ScheduledActivateError as exc:
         assert "minimum reviewer notice" in str(exc)
     else:
@@ -140,17 +112,13 @@ def test_parser_rejects_offset_exceeding_10_day_cap(db: Session) -> None:
     "Maximum offset" rule."""
     deadline = datetime.now(UTC) + timedelta(days=30)
     try:
-        scheduled_events.parse_and_validate_reminder_offsets(
-            "-P11D", deadline=deadline
-        )
+        scheduled_events.parse_and_validate_reminder_offsets("-P11D", deadline=deadline)
     except scheduled_events.ScheduledActivateError as exc:
         assert "10-day" in str(exc)
     else:
         raise AssertionError("expected ScheduledActivateError")
     # Boundary: -P10D should be accepted.
-    result = scheduled_events.parse_and_validate_reminder_offsets(
-        "-P10D", deadline=deadline
-    )
+    result = scheduled_events.parse_and_validate_reminder_offsets("-P10D", deadline=deadline)
     assert result == ["-P10D"]
 
 
@@ -158,9 +126,7 @@ def test_parser_rejects_too_close_to_now(db: Session) -> None:
     """deadline + offset before now + SCHEDULED_OPERATIONAL_LEAD_HOURS rejected."""
     deadline = datetime.now(UTC) + timedelta(minutes=30)
     try:
-        scheduled_events.parse_and_validate_reminder_offsets(
-            "-PT1H", deadline=deadline
-        )
+        scheduled_events.parse_and_validate_reminder_offsets("-PT1H", deadline=deadline)
     except scheduled_events.ScheduledActivateError:
         pass
     else:
@@ -169,9 +135,7 @@ def test_parser_rejects_too_close_to_now(db: Session) -> None:
 
 def test_parser_accepts_when_deadline_unset(db: Session) -> None:
     """Without deadline, only the parse-validity check runs (offsets inert)."""
-    result = scheduled_events.parse_and_validate_reminder_offsets(
-        "-P1D, -PT2H", deadline=None
-    )
+    result = scheduled_events.parse_and_validate_reminder_offsets("-P1D, -PT2H", deadline=None)
     assert result == ["-P1D", "-PT2H"]
 
 
@@ -213,9 +177,7 @@ def test_create_rejects_invalid_reminder_offset(client: TestClient) -> None:
     assert "minimum reviewer notice" in response.text
 
 
-def test_edit_round_trips_reminder_offsets(
-    client: TestClient, db: Session
-) -> None:
+def test_edit_round_trips_reminder_offsets(client: TestClient, db: Session) -> None:
     _, _, session_id = _create_session(client, db, "edit-rem")
     deadline = datetime.now(UTC) + timedelta(days=30)
 
@@ -258,9 +220,7 @@ def test_edit_round_trips_reminder_offsets(
     assert rs.reminder_offsets is None
 
 
-def test_edit_emits_reminder_schedule_updated_audit(
-    client: TestClient, db: Session
-) -> None:
+def test_edit_emits_reminder_schedule_updated_audit(client: TestClient, db: Session) -> None:
     _, _, session_id = _create_session(client, db, "audit-rem")
     deadline = datetime.now(UTC) + timedelta(days=30)
     client.post(
@@ -273,11 +233,15 @@ def test_edit_emits_reminder_schedule_updated_audit(
         },
         follow_redirects=False,
     )
-    audits = db.execute(
-        select(AuditEvent)
-        .where(AuditEvent.session_id == session_id)
-        .where(AuditEvent.event_type == "session.reminder_schedule_updated")
-    ).scalars().all()
+    audits = (
+        db.execute(
+            select(AuditEvent)
+            .where(AuditEvent.session_id == session_id)
+            .where(AuditEvent.event_type == "session.reminder_schedule_updated")
+        )
+        .scalars()
+        .all()
+    )
     assert len(audits) == 1
 
 
@@ -330,9 +294,7 @@ def test_timeline_combines_start_invites_reminders_end(db: Session) -> None:
         user=op,
         payload=SessionCreate(name="t", code="tl-all", description="d"),
     )
-    rs.scheduled_activate_at = datetime(
-        2099, 6, 1, 9, 0, tzinfo=UTC
-    )
+    rs.scheduled_activate_at = datetime(2099, 6, 1, 9, 0, tzinfo=UTC)
     rs.invite_offsets = ["-P1D"]
     rs.deadline = datetime(2099, 6, 5, 17, 0, tzinfo=UTC)
     rs.reminder_offsets = ["-P1D"]
@@ -484,9 +446,7 @@ def test_caption_green_when_ready_and_invitations_exist(
         user=op,
         payload=SessionCreate(name="t", code="rcap-green", description="d"),
     )
-    reviewer = Reviewer(
-        session_id=rs.id, name="A", email="a-rcap-green@example.edu"
-    )
+    reviewer = Reviewer(session_id=rs.id, name="A", email="a-rcap-green@example.edu")
     reviewee = Reviewee(
         session_id=rs.id,
         name="C",
@@ -497,9 +457,7 @@ def test_caption_green_when_ready_and_invitations_exist(
     # Wave 5 PR 5.2 — lazily materialise the Full Matrix
     # ``session_rule_sets`` row (auto-seed retired).
     pin_full_matrix_on_all_instruments(db, rs.id)
-    instrument = db.execute(
-        select(Instrument).where(Instrument.session_id == rs.id)
-    ).scalar_one()
+    instrument = db.execute(select(Instrument).where(Instrument.session_id == rs.id)).scalar_one()
     db.add(
         Assignment(
             session_id=rs.id,
@@ -510,9 +468,7 @@ def test_caption_green_when_ready_and_invitations_exist(
         )
     )
     db.flush()
-    invitations_service.generate_invitations(
-        db, review_session=rs, user=op
-    )
+    invitations_service.generate_invitations(db, review_session=rs, user=op)
 
     rs.deadline = datetime(2099, 6, 5, 17, 0, tzinfo=UTC)
     rs.reminder_offsets = ["-P1D"]

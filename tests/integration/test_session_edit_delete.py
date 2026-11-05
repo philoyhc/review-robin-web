@@ -23,18 +23,14 @@ from ._full_matrix import (
 from ._lookups import detail_of
 
 
-def _make_session(
-    client: TestClient, db: Session, code: str = "edit-test"
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, code: str = "edit-test") -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "Spring", "code": code, "description": "old"},
         follow_redirects=False,
     )
     assert response.status_code == 303
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _seed_with_assignments(client: TestClient, db: Session, code: str) -> ReviewSession:
@@ -66,9 +62,7 @@ def _seed_with_assignments(client: TestClient, db: Session, code: str) -> Review
     return review_session
 
 
-def test_session_edit_persists_and_audits_changes(
-    client: TestClient, db: Session
-) -> None:
+def test_session_edit_persists_and_audits_changes(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db)
 
     response = client.post(
@@ -98,9 +92,7 @@ def test_session_edit_persists_and_audits_changes(
     assert "code" not in changes
 
 
-def test_session_delete_removes_session_and_all_dependents(
-    client: TestClient, db: Session
-) -> None:
+def test_session_delete_removes_session_and_all_dependents(client: TestClient, db: Session) -> None:
     review_session = _seed_with_assignments(client, db, code="kill-me")
     sid = review_session.id
 
@@ -113,24 +105,12 @@ def test_session_delete_removes_session_and_all_dependents(
     assert response.status_code == 303
     assert response.headers["location"] == "/operator/sessions"
 
+    assert db.execute(select(ReviewSession).where(ReviewSession.id == sid)).first() is None
+    assert db.execute(select(Reviewer).where(Reviewer.session_id == sid)).first() is None
+    assert db.execute(select(Reviewee).where(Reviewee.session_id == sid)).first() is None
+    assert db.execute(select(Assignment).where(Assignment.session_id == sid)).first() is None
     assert (
-        db.execute(select(ReviewSession).where(ReviewSession.id == sid)).first() is None
-    )
-    assert (
-        db.execute(select(Reviewer).where(Reviewer.session_id == sid)).first() is None
-    )
-    assert (
-        db.execute(select(Reviewee).where(Reviewee.session_id == sid)).first() is None
-    )
-    assert (
-        db.execute(select(Assignment).where(Assignment.session_id == sid)).first()
-        is None
-    )
-    assert (
-        db.execute(
-            select(SessionOperator).where(SessionOperator.session_id == sid)
-        ).first()
-        is None
+        db.execute(select(SessionOperator).where(SessionOperator.session_id == sid)).first() is None
     )
 
     deletion_event = db.execute(
@@ -141,15 +121,11 @@ def test_session_delete_removes_session_and_all_dependents(
         "snapshot": {"id": sid, "code": "kill-me", "name": "Spring"},
     }
 
-    older_events = db.execute(
-        select(AuditEvent).where(AuditEvent.session_id == sid)
-    ).all()
+    older_events = db.execute(select(AuditEvent).where(AuditEvent.session_id == sid)).all()
     assert older_events == []
 
 
-def test_session_delete_without_confirm_returns_400(
-    client: TestClient, db: Session
-) -> None:
+def test_session_delete_without_confirm_returns_400(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="no-confirm")
 
     response = client.post(
@@ -160,16 +136,12 @@ def test_session_delete_without_confirm_returns_400(
 
     assert response.status_code == 400
     assert (
-        db.execute(
-            select(ReviewSession).where(ReviewSession.id == review_session.id)
-        ).first()
+        db.execute(select(ReviewSession).where(ReviewSession.id == review_session.id)).first()
         is not None
     )
 
 
-def test_delete_all_reviewers_cascades_assignments(
-    client: TestClient, db: Session
-) -> None:
+def test_delete_all_reviewers_cascades_assignments(client: TestClient, db: Session) -> None:
     review_session = _seed_with_assignments(client, db, code="r-del")
 
     response = client.post(
@@ -180,15 +152,10 @@ def test_delete_all_reviewers_cascades_assignments(
 
     assert response.status_code == 303
     assert (
-        db.execute(
-            select(Reviewer).where(Reviewer.session_id == review_session.id)
-        ).first()
-        is None
+        db.execute(select(Reviewer).where(Reviewer.session_id == review_session.id)).first() is None
     )
     assert (
-        db.execute(
-            select(Assignment).where(Assignment.session_id == review_session.id)
-        ).first()
+        db.execute(select(Assignment).where(Assignment.session_id == review_session.id)).first()
         is None
     )
 
@@ -206,9 +173,7 @@ def test_delete_all_reviewers_cascades_assignments(
     }
 
 
-def test_delete_all_reviewees_cascades_assignments(
-    client: TestClient, db: Session
-) -> None:
+def test_delete_all_reviewees_cascades_assignments(client: TestClient, db: Session) -> None:
     review_session = _seed_with_assignments(client, db, code="e-del")
 
     response = client.post(
@@ -219,15 +184,10 @@ def test_delete_all_reviewees_cascades_assignments(
 
     assert response.status_code == 303
     assert (
-        db.execute(
-            select(Reviewee).where(Reviewee.session_id == review_session.id)
-        ).first()
-        is None
+        db.execute(select(Reviewee).where(Reviewee.session_id == review_session.id)).first() is None
     )
     assert (
-        db.execute(
-            select(Assignment).where(Assignment.session_id == review_session.id)
-        ).first()
+        db.execute(select(Assignment).where(Assignment.session_id == review_session.id)).first()
         is None
     )
 

@@ -11,6 +11,7 @@ Revises: 543aa71cd452
 Create Date: 2026-05-02 00:00:00.000000
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -27,16 +28,86 @@ depends_on: str | Sequence[str] | None = None
 # ``app/services/instruments.py:SEEDED_RESPONSE_TYPE_DEFINITIONS``
 # and ``spec/instruments.md`` "Default seed".
 _SEEDED_RTDS: list[dict] = [
-    {"response_type": "Long_text",  "data_type": "String",  "min": 0,    "max": 200,  "step": None, "list_csv": None},
-    {"response_type": "Short_text", "data_type": "String",  "min": 0,    "max": 50,   "step": None, "list_csv": None},
-    {"response_type": "Yes_no",     "data_type": "List",    "min": None, "max": None, "step": None, "list_csv": "Yes, No"},
-    {"response_type": "Grade",      "data_type": "List",    "min": None, "max": None, "step": None, "list_csv": "A+, A, A-, B+, B, B-, C+, C, D+, D, F"},
-    {"response_type": "Likert5",    "data_type": "List",    "min": None, "max": None, "step": None, "list_csv": "Strongly Disagree, Disagree, Neutral, Agree, Strongly Agree"},
-    {"response_type": "100int",     "data_type": "Integer", "min": 0,    "max": 100,  "step": 1,    "list_csv": None},
-    {"response_type": "0-to-2int",  "data_type": "Integer", "min": 0,    "max": 2,    "step": 1,    "list_csv": None},
-    {"response_type": "1-to-5int",  "data_type": "Integer", "min": 1,    "max": 5,    "step": 1,    "list_csv": None},
-    {"response_type": "1-to-5half", "data_type": "Decimal", "min": 1.0,  "max": 5.0,  "step": 0.5,  "list_csv": None},
-    {"response_type": "1-to-5dec",  "data_type": "Decimal", "min": 1.0,  "max": 5.0,  "step": 0.1,  "list_csv": None},
+    {
+        "response_type": "Long_text",
+        "data_type": "String",
+        "min": 0,
+        "max": 200,
+        "step": None,
+        "list_csv": None,
+    },
+    {
+        "response_type": "Short_text",
+        "data_type": "String",
+        "min": 0,
+        "max": 50,
+        "step": None,
+        "list_csv": None,
+    },
+    {
+        "response_type": "Yes_no",
+        "data_type": "List",
+        "min": None,
+        "max": None,
+        "step": None,
+        "list_csv": "Yes, No",
+    },
+    {
+        "response_type": "Grade",
+        "data_type": "List",
+        "min": None,
+        "max": None,
+        "step": None,
+        "list_csv": "A+, A, A-, B+, B, B-, C+, C, D+, D, F",
+    },
+    {
+        "response_type": "Likert5",
+        "data_type": "List",
+        "min": None,
+        "max": None,
+        "step": None,
+        "list_csv": "Strongly Disagree, Disagree, Neutral, Agree, Strongly Agree",
+    },
+    {
+        "response_type": "100int",
+        "data_type": "Integer",
+        "min": 0,
+        "max": 100,
+        "step": 1,
+        "list_csv": None,
+    },
+    {
+        "response_type": "0-to-2int",
+        "data_type": "Integer",
+        "min": 0,
+        "max": 2,
+        "step": 1,
+        "list_csv": None,
+    },
+    {
+        "response_type": "1-to-5int",
+        "data_type": "Integer",
+        "min": 1,
+        "max": 5,
+        "step": 1,
+        "list_csv": None,
+    },
+    {
+        "response_type": "1-to-5half",
+        "data_type": "Decimal",
+        "min": 1.0,
+        "max": 5.0,
+        "step": 0.5,
+        "list_csv": None,
+    },
+    {
+        "response_type": "1-to-5dec",
+        "data_type": "Decimal",
+        "min": 1.0,
+        "max": 5.0,
+        "step": 0.1,
+        "list_csv": None,
+    },
 ]
 
 # Map legacy ``instrument_response_fields.response_type`` text values
@@ -67,25 +138,18 @@ def upgrade() -> None:
         sa.Column("max", sa.Float(), nullable=True),
         sa.Column("step", sa.Float(), nullable=True),
         sa.Column("list_csv", sa.Text(), nullable=True),
-        sa.Column(
-            "is_seeded", sa.Boolean(), nullable=False, server_default=sa.false()
-        ),
+        sa.Column("is_seeded", sa.Boolean(), nullable=False, server_default=sa.false()),
         sa.Column(
             "seed_order",
             sa.Integer(),
             nullable=False,
             server_default=sa.text("0"),
         ),
-        sa.UniqueConstraint(
-            "session_id", "response_type", name="uq_rtd_session_name"
-        ),
+        sa.UniqueConstraint("session_id", "response_type", name="uq_rtd_session_name"),
     )
 
     bind = op.get_bind()
-    session_ids = [
-        row[0]
-        for row in bind.execute(sa.text("SELECT id FROM sessions")).fetchall()
-    ]
+    session_ids = [row[0] for row in bind.execute(sa.text("SELECT id FROM sessions")).fetchall()]
     for session_id in session_ids:
         for index, spec in enumerate(_SEEDED_RTDS):
             bind.execute(
@@ -113,11 +177,7 @@ def upgrade() -> None:
     # legacy-to-RTD map; then enforce NOT NULL + FK + drop the old text
     # column.
     with op.batch_alter_table("instrument_response_fields") as batch:
-        batch.add_column(
-            sa.Column(
-                "response_type_id", sa.Integer(), nullable=True
-            )
-        )
+        batch.add_column(sa.Column("response_type_id", sa.Integer(), nullable=True))
 
     rf_rows = bind.execute(
         sa.text(
@@ -148,9 +208,7 @@ def upgrade() -> None:
             )
         bind.execute(
             sa.text(
-                "UPDATE instrument_response_fields "
-                "SET response_type_id = :rtd_id "
-                "WHERE id = :rf_id"
+                "UPDATE instrument_response_fields SET response_type_id = :rtd_id WHERE id = :rf_id"
             ),
             {"rtd_id": rtd_row[0], "rf_id": rf_id},
         )
@@ -186,9 +244,7 @@ def downgrade() -> None:
     # ``data_type`` (so a downgrade lands on a valid legacy value),
     # then drop the FK + index + new column.
     with op.batch_alter_table("instrument_response_fields") as batch:
-        batch.add_column(
-            sa.Column("response_type", sa.String(length=64), nullable=True)
-        )
+        batch.add_column(sa.Column("response_type", sa.String(length=64), nullable=True))
 
     rf_rows = bind.execute(
         sa.text(
@@ -203,9 +259,7 @@ def downgrade() -> None:
         legacy = rtd_to_legacy.get(rtd_name, "long_text")
         bind.execute(
             sa.text(
-                "UPDATE instrument_response_fields "
-                "SET response_type = :legacy "
-                "WHERE id = :rf_id"
+                "UPDATE instrument_response_fields SET response_type = :legacy WHERE id = :rf_id"
             ),
             {"legacy": legacy, "rf_id": rf_id},
         )

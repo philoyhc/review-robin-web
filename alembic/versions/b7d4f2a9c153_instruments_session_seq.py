@@ -27,6 +27,7 @@ Revises: a3f1c7e9b204
 Create Date: 2026-09-19
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -52,16 +53,12 @@ _BACKFILL = sa.text(
 
 def upgrade() -> None:
     with op.batch_alter_table("instruments", schema=None) as batch_op:
-        batch_op.add_column(
-            sa.Column("session_seq", sa.Integer(), nullable=True)
-        )
+        batch_op.add_column(sa.Column("session_seq", sa.Integer(), nullable=True))
 
     op.get_bind().execute(_BACKFILL)
 
     with op.batch_alter_table("instruments", schema=None) as batch_op:
-        batch_op.alter_column(
-            "session_seq", existing_type=sa.Integer(), nullable=False
-        )
+        batch_op.alter_column("session_seq", existing_type=sa.Integer(), nullable=False)
 
 
 def downgrade() -> None:

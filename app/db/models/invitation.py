@@ -17,12 +17,8 @@ class Invitation(Base):
     __tablename__ = "invitations"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    session_id: Mapped[int] = mapped_column(
-        ForeignKey("sessions.id"), index=True, nullable=False
-    )
-    reviewer_id: Mapped[int] = mapped_column(
-        ForeignKey("reviewers.id"), index=True, nullable=False
-    )
+    session_id: Mapped[int] = mapped_column(ForeignKey("sessions.id"), index=True, nullable=False)
+    reviewer_id: Mapped[int] = mapped_column(ForeignKey("reviewers.id"), index=True, nullable=False)
     token_hash: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
     status: Mapped[str] = mapped_column(String(32), default="pending", nullable=False)
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

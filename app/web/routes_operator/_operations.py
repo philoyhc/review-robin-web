@@ -101,13 +101,9 @@ def _invitations_sort_value(row: views.InvitationsRow, key: str) -> object:
     if key == "email_sent_at":
         return row.email_sent_at
     if key == "review_progress":
-        return _completion_pct(
-            row.review_progress_done, row.review_progress_total
-        )
+        return _completion_pct(row.review_progress_done, row.review_progress_total)
     if key == "required_fields":
-        return _completion_pct(
-            row.required_fields_done, row.required_fields_total
-        )
+        return _completion_pct(row.required_fields_done, row.required_fields_total)
     if key == "last_reminder_at":
         return row.last_reminder_at
     return None
@@ -212,9 +208,7 @@ def validate_session(
         clean_url += "?" + urlencode([("severity", value) for value in severity])
     if activate:
         if not lifecycle.is_validated(review_session):
-            return urls.redirect(request,
-                url=clean_url, status_code=status.HTTP_303_SEE_OTHER
-            )
+            return urls.redirect(request, url=clean_url, status_code=status.HTTP_303_SEE_OTHER)
         if report.errors:
             activate_banner = {
                 "kind": "error",
@@ -226,9 +220,7 @@ def validate_session(
                 "warnings": report.warnings,
             }
         else:
-            return urls.redirect(request,
-                url=clean_url, status_code=status.HTTP_303_SEE_OTHER
-            )
+            return urls.redirect(request, url=clean_url, status_code=status.HTTP_303_SEE_OTHER)
     # The severity chips: no ``severity`` in the URL (a nav link, a
     # bookmark, the Workflow card's Activate detour) takes the chips last
     # asked for (author, 2026-10-16); an explicit one, even every chip
@@ -236,9 +228,7 @@ def validate_session(
     severities = views.parse_validate_severities(
         severity, request.cookies.get(views.VALIDATE_SEVERITY_COOKIE)
     )
-    validate_ctx = views.build_validate_context(
-        db, review_session, issues, severities=severities
-    )
+    validate_ctx = views.build_validate_context(db, review_session, issues, severities=severities)
     workflow_ctx = views.build_workflow_card_context(
         db,
         review_session,
@@ -266,9 +256,7 @@ def validate_session(
             "validate": validate_ctx,
             "activate_banner": activate_banner,
             "activate_return_to": return_to,
-            "breadcrumbs": breadcrumbs.operator_session_child(
-                review_session, "Validate setup"
-            ),
+            "breadcrumbs": breadcrumbs.operator_session_child(review_session, "Validate setup"),
             **workflow_ctx,
         },
     )
@@ -286,10 +274,12 @@ def validate_session(
 
 @router.get("/sessions/{session_id}/previews", response_class=HTMLResponse)
 def previews_index(
-    request: Request, review_session: ReviewSession = Depends(require_session_operator),
+    request: Request,
+    review_session: ReviewSession = Depends(require_session_operator),
 ) -> RedirectResponse:
     """Keep old Previews bookmarks useful after the hub's retirement."""
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url=f"/operator/sessions/{review_session.public_id}/invitations",
         status_code=status.HTTP_308_PERMANENT_REDIRECT,
     )
@@ -297,7 +287,8 @@ def previews_index(
 
 @router.get("/sessions/{session_id}/preview")
 def session_preview(
-    request: Request, review_session: ReviewSession = Depends(require_session_operator),
+    request: Request,
+    review_session: ReviewSession = Depends(require_session_operator),
 ) -> RedirectResponse:
     """Permanent redirect from the standalone reviewer-surface preview
     (Segment 10B-3) to the operator-side full preview surface.
@@ -309,7 +300,8 @@ def session_preview(
     Status 308 keeps the GET method and preserves the bookmark / link
     semantics for stragglers.
     """
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url=f"/operator/sessions/{review_session.public_id}/preview-surface/1",
         status_code=status.HTTP_308_PERMANENT_REDIRECT,
     )
@@ -331,10 +323,7 @@ def _require_validated_or_ready(review_session: ReviewSession) -> None:
     under the session lock (``lifecycle.require_validated_or_ready``,
     findings Bc5).
     """
-    if not (
-        lifecycle.is_validated(review_session)
-        or lifecycle.is_ready(review_session)
-    ):
+    if not (lifecycle.is_validated(review_session) or lifecycle.is_ready(review_session)):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=(
@@ -359,10 +348,7 @@ def _require_ready(review_session: ReviewSession) -> None:
     if not lifecycle.is_ready(review_session):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=(
-                "This action is available only once the session is "
-                "Activated."
-            ),
+            detail=("This action is available only once the session is Activated."),
         )
 
 
@@ -382,9 +368,7 @@ def _require_invitation_in_session(
     return invitation, review_session
 
 
-def _unmatched_email(
-    db: Session, review_session: ReviewSession, candidate: str
-) -> str:
+def _unmatched_email(db: Session, review_session: ReviewSession, candidate: str) -> str:
     """The candidate address, but only if no reviewer really has it.
 
     Folds through `normalize_email` — `str.lower` since 19N Item 2,
@@ -416,9 +400,7 @@ def _unmatched_email(
     return "" if exists else candidate
 
 
-@router.get(
-    "/sessions/{session_id}/invitations", response_class=HTMLResponse
-)
+@router.get("/sessions/{session_id}/invitations", response_class=HTMLResponse)
 def invitations_index(
     request: Request,
     status: str = "all",
@@ -451,13 +433,9 @@ def invitations_index(
     # view stays uncapped and carries no pager (see the route's
     # ``pager`` entry below).
     is_filtered = bool(status != "all" or q.strip())
-    rows, offset, pager = _page_operations_rows(
-        matching, is_filtered=is_filtered, offset=offset
-    )
+    rows, offset, pager = _page_operations_rows(matching, is_filtered=is_filtered, offset=offset)
     search_options = views.invitations_search_options(all_rows)
-    invitation_rows = invitations.list_invitations_for_session(
-        db, review_session.id
-    )
+    invitation_rows = invitations.list_invitations_for_session(db, review_session.id)
     eligible = invitations.reviewers_eligible_for_invitation(db, review_session.id)
     invited_ids = {r.invitation.reviewer_id for r in invitation_rows}
     # The **sendable** set, not every pending row (19Q Item 2 rung 1).
@@ -469,22 +447,14 @@ def invitations_index(
     # forever, with no control on the page able to clear it — the
     # counter inheriting exactly the disagreement this rung removed
     # from the button. Found by a cold read of the rung that caused it.
-    pending_count = len(
-        invitations.list_sendable_invitations(db, review_session.id)
-    )
+    pending_count = len(invitations.list_sendable_invitations(db, review_session.id))
     incomplete_count = sum(1 for r in all_rows if r.is_incomplete)
     # Info-card metric inventory: eight counters across the
     # invitation / reminder / response lifecycle.
-    invitations_sent_count = sum(
-        1 for r in all_rows if r.email_sent_at is not None
-    )
-    reminders_sent_count = sum(
-        1 for r in all_rows if r.last_reminder_at is not None
-    )
+    invitations_sent_count = sum(1 for r in all_rows if r.email_sent_at is not None)
+    reminders_sent_count = sum(1 for r in all_rows if r.last_reminder_at is not None)
     pending_reminders_count = sum(
-        1
-        for r in all_rows
-        if r.is_incomplete and r.last_reminder_at is None
+        1 for r in all_rows if r.is_incomplete and r.last_reminder_at is None
     )
     completed_count = sum(1 for r in all_rows if not r.is_incomplete)
     workflow_ctx = views.build_workflow_card_context(
@@ -541,9 +511,7 @@ def invitations_index(
             # carries no filter state — and deliberately not the
             # sort cookie either, which is a cookie and travels on
             # its own.
-            "pager_url_base": (
-                f"/operator/sessions/{review_session.public_id}/invitations?"
-            ),
+            "pager_url_base": (f"/operator/sessions/{review_session.public_id}/invitations?"),
             # The fragment the range links land on (19J.8): the
             # table's card, so a page turn arrives showing the card's
             # top edge, the column chips, the page links and the new
@@ -570,9 +538,7 @@ def invitations_index(
             # narrows. A tag populated only on rows the filter excluded
             # used to read as "no data" and strike its chip out.
             "col_data": views.chip_slots(
-                tag_slot_presence(
-                    db, session_id=review_session.id, model=Reviewer
-                ),
+                tag_slot_presence(db, session_id=review_session.id, model=Reviewer),
                 prefix="tag-",
             ),
             "filter_search_options": search_options,
@@ -585,9 +551,7 @@ def invitations_index(
             "reminders_sent_count": reminders_sent_count,
             "pending_reminders_count": pending_reminders_count,
             "completed_count": completed_count,
-            "breadcrumbs": breadcrumbs.operator_session_child(
-                review_session, "Invitations"
-            ),
+            "breadcrumbs": breadcrumbs.operator_session_child(review_session, "Invitations"),
             **workflow_ctx,
         },
     )
@@ -690,9 +654,7 @@ def invitation_reviewer_detail(
     # `detach_outbox` can unlink those independently, so agreeing with
     # the URL beside it does not mean agreeing with the table.
     delivery_status = (
-        invitations.most_recent_invitation_status(
-            db, invitation_id=invitation.id
-        )
+        invitations.most_recent_invitation_status(db, invitation_id=invitation.id)
         if invitation is not None
         else None
     )
@@ -733,9 +695,8 @@ def invitation_reviewer_detail(
 
 @router.get("/sessions/{session_id}/invitations/{invitation_id}/detail")
 def invitation_reviewer_detail_legacy(
-    request: Request, bundle: tuple[Invitation, ReviewSession] = Depends(
-        _require_invitation_in_session
-    ),
+    request: Request,
+    bundle: tuple[Invitation, ReviewSession] = Depends(_require_invitation_in_session),
 ) -> RedirectResponse:
     """The pre-19P.6 invitation-keyed URL, kept for bookmarks.
 
@@ -746,7 +707,8 @@ def invitation_reviewer_detail_legacy(
     one segment earlier — so declaration order does not matter here.
     """
     invitation, review_session = bundle
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url=(
             f"/operator/sessions/{review_session.public_id}"
             f"/invitations/reviewers/{invitation.reviewer_id}"
@@ -775,12 +737,11 @@ def invitations_send_all(
         db,
         review_session=review_session,
         user=user,
-        build_invite_url=lambda token: str(
-            request.url_for("reviewer_invite", token=token)
-        ),
+        build_invite_url=lambda token: str(request.url_for("reviewer_invite", token=token)),
         correlation_id=request_correlation_id(),
     )
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url=_invitation_redirect_url(review_session.public_id, return_to),
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -788,7 +749,8 @@ def invitations_send_all(
 
 @router.post("/sessions/{session_id}/invitations/regenerate-all")
 def invitations_regenerate_all(
-    request: Request, review_session: ReviewSession = Depends(require_session_operator),
+    request: Request,
+    review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -804,17 +766,17 @@ def invitations_regenerate_all(
         user=user,
         correlation_id=request_correlation_id(),
     )
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url=f"/operator/sessions/{review_session.public_id}/invitations",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
 
-@router.post(
-    "/sessions/{session_id}/invitations/{invitation_id}/regenerate"
-)
+@router.post("/sessions/{session_id}/invitations/{invitation_id}/regenerate")
 def invitations_regenerate(
-    request: Request, bundle: tuple[Invitation, ReviewSession] = Depends(_require_invitation_in_session),
+    request: Request,
+    bundle: tuple[Invitation, ReviewSession] = Depends(_require_invitation_in_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -826,15 +788,14 @@ def invitations_regenerate(
         user=user,
         correlation_id=request_correlation_id(),
     )
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url=f"/operator/sessions/{review_session.public_id}/invitations",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
 
-@router.post(
-    "/sessions/{session_id}/invitations/{invitation_id}/send"
-)
+@router.post("/sessions/{session_id}/invitations/{invitation_id}/send")
 def invitations_send_one(
     request: Request,
     bundle: tuple[Invitation, ReviewSession] = Depends(_require_invitation_in_session),
@@ -882,12 +843,11 @@ def invitations_send_one(
         review_session=review_session,
         reviewer=reviewer,
         user=user,
-        build_invite_url=lambda token: str(
-            request.url_for("reviewer_invite", token=token)
-        ),
+        build_invite_url=lambda token: str(request.url_for("reviewer_invite", token=token)),
         correlation_id=request_correlation_id(),
     )
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url=f"/operator/sessions/{review_session.public_id}/invitations",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -907,22 +867,22 @@ def invitations_send_one(
 
 @router.get("/sessions/{session_id}/monitoring")
 def session_monitoring_redirect(
-    request: Request, review_session: ReviewSession = Depends(require_session_operator),
+    request: Request,
+    review_session: ReviewSession = Depends(require_session_operator),
 ) -> RedirectResponse:
     """Segment 11C Part 1 PR 3 retired the Monitoring template; the
     consolidated Manage Invitations page (PR 2) absorbed its
     reviewer-centric surface. Existing bookmarks land here and 308
     forward to ``/invitations``, the house rule for a moved GET
     (``spec/architecture.md``; findings F4, 2026-10-03)."""
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url=f"/operator/sessions/{review_session.public_id}/invitations",
         status_code=status.HTTP_308_PERMANENT_REDIRECT,
     )
 
 
-@router.get(
-    "/sessions/{session_id}/responses", response_class=HTMLResponse
-)
+@router.get("/sessions/{session_id}/responses", response_class=HTMLResponse)
 def session_responses(
     request: Request,
     status: str = "all",
@@ -964,9 +924,7 @@ def session_responses(
     # Segment 19J.5 rung 3 — see the Invitations route above; the two
     # pages page on identical terms.
     is_filtered = bool(status != "all" or q.strip())
-    rows, offset, pager = _page_operations_rows(
-        matching, is_filtered=is_filtered, offset=offset
-    )
+    rows, offset, pager = _page_operations_rows(matching, is_filtered=is_filtered, offset=offset)
     search_options = views.responses_search_options(all_rows)
     summary = monitoring.summary_counts(db, review_session)
     incomplete_count = summary.incomplete
@@ -974,9 +932,7 @@ def session_responses(
     # without-response split. ``no responses`` is the only
     # coverage_state value that means "this reviewee has had
     # nothing submitted about them".
-    reviewees_with_responses_count = sum(
-        1 for r in all_rows if r.coverage_state != "no responses"
-    )
+    reviewees_with_responses_count = sum(1 for r in all_rows if r.coverage_state != "no responses")
     reviewees_without_responses_count = sum(
         1 for r in all_rows if r.coverage_state == "no responses"
     )
@@ -1018,9 +974,7 @@ def session_responses(
             # carries no filter state — and deliberately not the
             # sort cookie either, which is a cookie and travels on
             # its own.
-            "pager_url_base": (
-                f"/operator/sessions/{review_session.public_id}/responses?"
-            ),
+            "pager_url_base": (f"/operator/sessions/{review_session.public_id}/responses?"),
             # The fragment the range links land on (19J.8): the
             # table's card, so a page turn arrives showing the card's
             # top edge, the column chips, the page links and the new
@@ -1047,20 +1001,14 @@ def session_responses(
             # narrows. A tag populated only on rows the filter excluded
             # used to read as "no data" and strike its chip out.
             "col_data": views.chip_slots(
-                tag_slot_presence(
-                    db, session_id=review_session.id, model=Reviewee
-                ),
+                tag_slot_presence(db, session_id=review_session.id, model=Reviewee),
                 prefix="tag-",
             ),
             "filter_search_options": search_options,
             "incomplete_count": incomplete_count,
             "reviewees_with_responses_count": reviewees_with_responses_count,
-            "reviewees_without_responses_count": (
-                reviewees_without_responses_count
-            ),
-            "breadcrumbs": breadcrumbs.operator_session_child(
-                review_session, "Responses"
-            ),
+            "reviewees_without_responses_count": (reviewees_without_responses_count),
+            "breadcrumbs": breadcrumbs.operator_session_child(review_session, "Responses"),
             **workflow_ctx,
         },
     )
@@ -1108,14 +1056,10 @@ def responses_reviewee_detail(
     )
 
 
-@router.post(
-    "/sessions/{session_id}/invitations/{invitation_id}/remind"
-)
+@router.post("/sessions/{session_id}/invitations/{invitation_id}/remind")
 def invitations_remind_one(
     request: Request,
-    bundle: tuple[Invitation, ReviewSession] = Depends(
-        _require_invitation_in_session
-    ),
+    bundle: tuple[Invitation, ReviewSession] = Depends(_require_invitation_in_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -1146,20 +1090,17 @@ def invitations_remind_one(
         review_session=review_session,
         reviewer=reviewer,
         user=user,
-        build_invite_url=lambda token: str(
-            request.url_for("reviewer_invite", token=token)
-        ),
+        build_invite_url=lambda token: str(request.url_for("reviewer_invite", token=token)),
         correlation_id=request_correlation_id(),
     )
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url=f"/operator/sessions/{review_session.public_id}/invitations",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
 
-@router.post(
-    "/sessions/{session_id}/invitations/remind-incomplete"
-)
+@router.post("/sessions/{session_id}/invitations/remind-incomplete")
 def invitations_remind_incomplete(
     request: Request,
     return_to: str | None = Form(default=None),
@@ -1177,12 +1118,11 @@ def invitations_remind_incomplete(
         db,
         review_session=review_session,
         user=user,
-        build_invite_url=lambda token: str(
-            request.url_for("reviewer_invite", token=token)
-        ),
+        build_invite_url=lambda token: str(request.url_for("reviewer_invite", token=token)),
         correlation_id=request_correlation_id(),
     )
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url=_invitation_redirect_url(review_session.public_id, return_to),
         status_code=status.HTTP_303_SEE_OTHER,
     )

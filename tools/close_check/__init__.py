@@ -198,16 +198,21 @@ __all__ = [
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("id", nargs="?", help="segment or item id, e.g. 18R or 19A.3")
-    parser.add_argument("--archived", action="store_true",
-                        help="report across every archived plan; always exits 0")
-    parser.add_argument("--stale", action="store_true",
-                        help="list live spec/ + docs/ + root docs by age, and "
-                             "report whether a sweep is due; always exits 0")
-    parser.add_argument("--since", metavar="YYYY-MM-DD",
-                        help="date of the last sweep, for --stale; defaults to "
-                             "the newest guide/sweep_<date>_*.md")
-    parser.add_argument("--json", action="store_true",
-                        help="machine-readable copy on stdout")
+    parser.add_argument(
+        "--archived", action="store_true", help="report across every archived plan; always exits 0"
+    )
+    parser.add_argument(
+        "--stale",
+        action="store_true",
+        help="list live spec/ + docs/ + root docs by age, and "
+        "report whether a sweep is due; always exits 0",
+    )
+    parser.add_argument(
+        "--since",
+        metavar="YYYY-MM-DD",
+        help="date of the last sweep, for --stale; defaults to the newest guide/sweep_<date>_*.md",
+    )
+    parser.add_argument("--json", action="store_true", help="machine-readable copy on stdout")
     args = parser.parse_args()
 
     if args.since and not args.stale:

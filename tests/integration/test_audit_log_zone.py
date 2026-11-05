@@ -52,16 +52,12 @@ def _setup(
         session=review_session,
         payload=audit.counts(n=1),
     )
-    event = db.execute(
-        select(AuditEvent).where(AuditEvent.summary == "the dated one")
-    ).scalar_one()
+    event = db.execute(select(AuditEvent).where(AuditEvent.summary == "the dated one")).scalar_one()
     event.created_at = _EVENT_AT
     db.commit()
     bob_client = make_client(bob)
     bob_client.get("/operator/sys-admin/sessions")  # creates Bob's row
-    user = db.execute(
-        select(User).where(func.lower(User.email) == "bob@example.edu")
-    ).scalar_one()
+    user = db.execute(select(User).where(func.lower(User.email) == "bob@example.edu")).scalar_one()
     user.preferences = {"display_timezone": zone} if zone else {}
     db.commit()
     url = f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log"
@@ -126,9 +122,7 @@ def test_from_and_to_are_days_in_the_page_zone(
     client: TestClient, db: Session, make_client, bob, monkeypatch, query, shown
 ) -> None:
     code = "tz-days-" + query.replace("&", "-").replace("=", "")
-    bob_client, url, csv_url = _setup(
-        client, db, make_client, bob, monkeypatch, code=code[:60]
-    )
+    bob_client, url, csv_url = _setup(client, db, make_client, bob, monkeypatch, code=code[:60])
     assert ("the dated one" in bob_client.get(f"{url}?{query}").text) is shown
     rows = list(csv.reader(io.StringIO(bob_client.get(f"{csv_url}?{query}").text)))
     summaries = [r[2] for r in rows[1:]]

@@ -26,9 +26,7 @@ from app.web.routes_reviewer._surface import _collapse_group_rows
 
 
 def _cell(source_type: str, source_field: str, value: str) -> dict:
-    field = SimpleNamespace(
-        source_type=source_type, source_field=source_field
-    )
+    field = SimpleNamespace(source_type=source_type, source_field=source_field)
     return {
         "field": field,
         "label": source_field,
@@ -43,9 +41,7 @@ def _row(
     *,
     display_cells: list[dict],
 ) -> dict:
-    assignment = SimpleNamespace(
-        id=assignment_id, reviewee=SimpleNamespace(name=reviewee_name)
-    )
+    assignment = SimpleNamespace(id=assignment_id, reviewee=SimpleNamespace(name=reviewee_name))
     return {
         "assignment": assignment,
         "display_cells": list(display_cells),

@@ -190,8 +190,7 @@ def test_activate_commits_its_started_event_before_the_warnings_detour(
     )
     assert response.status_code == 303, response.text
     assert "/validate" in response.headers["location"], (
-        "Activate did not take the warnings detour: "
-        f"{response.headers['location']}"
+        f"Activate did not take the warnings detour: {response.headers['location']}"
     )
 
     started = _events(committed_engine, session_id, "session.workflow_run_started")
@@ -220,9 +219,7 @@ def test_an_unexpected_failure_after_a_flush_lands_only_its_failure_row(
         db.flush()
         raise OperationalError("SELECT", {}, Exception("connection reset"))
 
-    monkeypatch.setattr(
-        workflow.validation, "validate_session_setup", _flush_then_fail
-    )
+    monkeypatch.setattr(workflow.validation, "validate_session_setup", _flush_then_fail)
 
     with pytest.raises(OperationalError):
         committed_client.post(

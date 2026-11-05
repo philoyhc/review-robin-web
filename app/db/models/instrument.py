@@ -69,16 +69,12 @@ def _next_session_seq(context: Any) -> int:
     """
     table = Instrument.__table__
     session_id = context.get_current_parameters()["session_id"]
-    handed_out: dict[int, int] = context.__dict__.setdefault(
-        "_rrw_session_seq", {}
-    )
+    handed_out: dict[int, int] = context.__dict__.setdefault("_rrw_session_seq", {})
     if session_id in handed_out:
         highest = handed_out[session_id]
     else:
         highest = context.connection.execute(
-            select(func.max(table.c.session_seq)).where(
-                table.c.session_id == session_id
-            )
+            select(func.max(table.c.session_seq)).where(table.c.session_id == session_id)
         ).scalar()
     handed_out[session_id] = (highest or 0) + 1
     return handed_out[session_id]
@@ -97,14 +93,10 @@ def _session_self_reviews_active(context: Any) -> bool:
     pending change to the session row before inserting its instruments,
     so the value read here is the one in memory.
     """
-    sessions = table(
-        "sessions", column("id"), column("self_reviews_active", Boolean)
-    )
+    sessions = table("sessions", column("id"), column("self_reviews_active", Boolean))
     params = context.get_current_parameters()
     value = context.connection.execute(
-        select(sessions.c.self_reviews_active).where(
-            sessions.c.id == params["session_id"]
-        )
+        select(sessions.c.self_reviews_active).where(sessions.c.id == params["session_id"])
     ).scalar()
     return True if value is None else bool(value)
 
@@ -114,22 +106,16 @@ class Instrument(Base, TimestampMixin):
     __table_args__ = (
         # The observer's CSV address names an instrument by this pair
         # (19V Item 3), so two rows must never share it.
-        UniqueConstraint(
-            "session_id", "session_seq", name="uq_instruments_session_seq"
-        ),
+        UniqueConstraint("session_id", "session_seq", name="uq_instruments_session_seq"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    session_id: Mapped[int] = mapped_column(
-        ForeignKey("sessions.id"), index=True, nullable=False
-    )
+    session_id: Mapped[int] = mapped_column(ForeignKey("sessions.id"), index=True, nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     short_label: Mapped[str | None] = mapped_column(String(32))
     description: Mapped[str | None] = mapped_column(String(2000))
     order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    session_seq: Mapped[int] = mapped_column(
-        Integer, default=_next_session_seq, nullable=False
-    )
+    session_seq: Mapped[int] = mapped_column(Integer, default=_next_session_seq, nullable=False)
     """19Q Item 6 — the instrument's per-session identity.
 
     Assigned once at creation (``_next_session_seq`` below) and
@@ -157,9 +143,7 @@ class Instrument(Base, TimestampMixin):
     observer's collation CSV is addressed by it, so a duplicate is an
     insert error rather than two instruments behind one address.
     """
-    accepting_responses: Mapped[bool] = mapped_column(
-        Boolean, default=False, nullable=False
-    )
+    accepting_responses: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     starts_new_page: Mapped[bool] = mapped_column(
         Boolean, default=False, server_default=text("false"), nullable=False
     )
@@ -204,12 +188,8 @@ class Instrument(Base, TimestampMixin):
     and one card of help texts right (19Y Item 2). One of :data:`INTRO_LAYOUTS`; the instrument card's
     layout chip sets it (``instruments.set_intro_layout``). Revision
     ``c4e9a2f7b1d3`` gave every existing row the default."""
-    deadline_closed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True)
-    )
-    sort_display_fields: Mapped[list[dict[str, Any]] | None] = mapped_column(
-        JSON, nullable=True
-    )
+    deadline_closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    sort_display_fields: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON, nullable=True)
     """Operator-defined default sort spec for this instrument's
     reviewer-surface table (Segment 13B). Each entry shapes as
     ``{"display_field_id": int, "dir": "asc"|"desc"}`` per the
@@ -264,9 +244,7 @@ class Instrument(Base, TimestampMixin):
     # instrument is implicitly a (former) new-model instrument
     # post-collapse; legacy individual / group cards retired.
 
-    band1_touched_links: Mapped[list[str] | None] = mapped_column(
-        JSON, nullable=True
-    )
+    band1_touched_links: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
     """Sticky per-link set of Band 1 link pills the operator has
     deliberately clicked into a set state. Each Band 1 link
     (Link 1 / Link 2 / Link 3 = Pool of reviewers / Pool of those
@@ -283,9 +261,7 @@ class Instrument(Base, TimestampMixin):
     are a subset of ``{"link1", "link2", "link3"}``; NULL reads
     as the empty set."""
 
-    column_widths: Mapped[dict[str, Any] | None] = mapped_column(
-        JSON, nullable=True
-    )
+    column_widths: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     """Per-column pixel widths the operator set by drag-resizing the
     Band 2 preview table on a new-model instrument. Shape:
     ``{"identity": 200, "df_<id>": 150, ...}`` — ``identity`` is the
@@ -297,9 +273,7 @@ class Instrument(Base, TimestampMixin):
     the widths take hold; an entirely NULL ``column_widths`` keeps
     today's auto-layout behaviour unchanged."""
 
-    band2_state: Mapped[dict[str, Any] | None] = mapped_column(
-        JSON, nullable=True
-    )
+    band2_state: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     """Operator's Band 2 choices on the instrument card. Shape:
     ``{"selected_display_keys": ["reviewee.name", ...],
       "sample_reviewee_name": str,
@@ -308,12 +282,8 @@ class Instrument(Base, TimestampMixin):
     (``app/services/instruments/_band2.py``) writes them to
     ``instrument_response_fields`` rows. NULL = nothing selected."""
 
-    cached_group_pair_count: Mapped[int | None] = mapped_column(
-        Integer, nullable=True
-    )
-    cached_group_pair_stamp: Mapped[str | None] = mapped_column(
-        String(64), nullable=True
-    )
+    cached_group_pair_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    cached_group_pair_stamp: Mapped[str | None] = mapped_column(String(64), nullable=True)
     """Lazy persisted cache for the reviewer-group pair count shown
     on a group-scoped instrument's rule card (Segment 13C PR 4
     slice 4b). ``cached_group_pair_stamp`` is a content-hash of the
@@ -329,17 +299,11 @@ class Instrument(Base, TimestampMixin):
     the reasoning and no longer points at a live column — 19R Item 2
     rung 1.)*"""
 
-    cached_reconcile_stamp: Mapped[str | None] = mapped_column(
-        String(80), nullable=True
-    )
-    cached_reconcile_stale: Mapped[bool | None] = mapped_column(
-        Boolean, nullable=True
-    )
-    cached_reconcile_eligible: Mapped[int | None] = mapped_column(
+    cached_reconcile_stamp: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    cached_reconcile_stale: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    cached_reconcile_eligible: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    cached_reconcile_self_reviews_excluded: Mapped[int | None] = mapped_column(
         Integer, nullable=True
-    )
-    cached_reconcile_self_reviews_excluded: Mapped[int | None] = (
-        mapped_column(Integer, nullable=True)
     )
     """Lazy persisted cache for this instrument's
     ``InstrumentReconcileState`` — *would regenerating change which

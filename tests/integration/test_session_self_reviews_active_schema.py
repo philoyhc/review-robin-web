@@ -12,6 +12,7 @@ read and 12C-1 PR 3 wires the bulk-toggle write; this file is the
 schema gate that lets that work land without further Alembic
 churn.
 """
+
 from __future__ import annotations
 
 from sqlalchemy import select
@@ -32,9 +33,7 @@ def test_default_true_on_new_session(db: Session) -> None:
     the server default (``TRUE``)."""
 
     owner = _make_user(db, "op-default@example.edu")
-    review_session = ReviewSession(
-        name="Default", code="sra-default", created_by_user_id=owner.id
-    )
+    review_session = ReviewSession(name="Default", code="sra-default", created_by_user_id=owner.id)
     db.add(review_session)
     db.flush()
     db.refresh(review_session)

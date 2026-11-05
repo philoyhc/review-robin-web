@@ -86,24 +86,37 @@ def test_a_run_keeps_every_row_and_column_in_order() -> None:
     assert {r["lookup_coverage"] for r in rows} == {"BASIC_ONLY"}
     assert rows[4]["notes"] == "No user-directory match" and rows[4]["recommended_email"] == ""
     # Each distinct key once; the blank row never asked.
-    assert sorted(directory.asked) == ["e0123456@example.edu", "jane.tan@example.edu", "nobody@example.edu"]
+    assert sorted(directory.asked) == [
+        "e0123456@example.edu",
+        "jane.tan@example.edu",
+        "nobody@example.edu",
+    ]
     assert result.lookups == 3 and result.rows == 5
     assert result.counts == {
-        "OK": 2, "USE_PRIMARY": 1, "FOUND_NO_PRIMARY": 0, "NOT_FOUND": 1,
-        "AMBIGUOUS": 0, "INVALID_INPUT": 1, "ERROR": 0,
+        "OK": 2,
+        "USE_PRIMARY": 1,
+        "FOUND_NO_PRIMARY": 0,
+        "NOT_FOUND": 1,
+        "AMBIGUOUS": 0,
+        "INVALID_INPUT": 1,
+        "ERROR": 0,
     }
 
 
 def test_two_addresses_for_one_account_form_a_group_and_repeats_do_not() -> None:
     data = (
         b"email\r\n"
-        b"jane.tan@example.edu\r\n"      # Jane by mail
-        b"other@example.edu\r\n"         # Other, twice by the same address
+        b"jane.tan@example.edu\r\n"  # Jane by mail
+        b"other@example.edu\r\n"  # Other, twice by the same address
         b"OTHER@example.edu\r\n"
-        b"e0123456@example.edu\r\n"      # Jane by UPN
+        b"e0123456@example.edu\r\n"  # Jane by UPN
     )
     directory = Recording(
-        {"jane.tan@example.edu": [JANE], "e0123456@example.edu": [JANE], "other@example.edu": [OTHER]}
+        {
+            "jane.tan@example.edu": [JANE],
+            "e0123456@example.edu": [JANE],
+            "other@example.edu": [OTHER],
+        }
     )
     result = check.run(csvio.parse(data), 0, directory)
     groups = [r["duplicate_account_group"] for r in _rows(result.csv)]
@@ -150,7 +163,9 @@ def test_lookups_past_the_budget_are_error_and_the_rest_download() -> None:
             return [JANE] if address == "jane.tan@example.edu" else []
 
     try:
-        outcomes = check.look_up_all(Stuck(), ["jane.tan@example.edu", "slow@example.edu"], budget=0.2)
+        outcomes = check.look_up_all(
+            Stuck(), ["jane.tan@example.edu", "slow@example.edu"], budget=0.2
+        )
     finally:
         release.set()
     assert outcomes["jane.tan@example.edu"].status == "OK"
@@ -161,7 +176,9 @@ def test_lookups_past_the_budget_are_error_and_the_rest_download() -> None:
 def test_the_result_page_says_to_sign_in_again_after_a_refusal(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(routes, "directory_for", lambda request: Recording({"a@x.edu": GraphError("unauthorized")}))
+    monkeypatch.setattr(
+        routes, "directory_for", lambda request: Recording({"a@x.edu": GraphError("unauthorized")})
+    )
     text = _post_check(client, b"email\r\na@x.edu\r\n").text
     # An expired token: the page renews it and says to check again.
     assert "this page is renewing it" in text
@@ -172,7 +189,9 @@ def test_the_result_page_says_to_sign_in_again_after_a_refusal(
 def test_the_result_page_says_to_sign_in_again_after_a_forbidden(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(routes, "directory_for", lambda request: Recording({"a@x.edu": GraphError("forbidden")}))
+    monkeypatch.setattr(
+        routes, "directory_for", lambda request: Recording({"a@x.edu": GraphError("forbidden")})
+    )
     text = _post_check(client, b"email\r\na@x.edu\r\n").text
     assert "The directory refused your sign-in: sign out and in again" in text
     assert "renewing" not in text
@@ -221,7 +240,9 @@ def _download(text: str) -> tuple[str, str]:
     return base64.b64decode(href).decode("utf-8-sig"), name
 
 
-def test_the_check_against_the_fake_directory_renders_counts_and_the_download(client: TestClient) -> None:
+def test_the_check_against_the_fake_directory_renders_counts_and_the_download(
+    client: TestClient,
+) -> None:
     data = (
         b"Who,Work email\r\n"
         b"Jane,jane.tan@example.edu\r\n"
@@ -230,7 +251,7 @@ def test_the_check_against_the_fake_directory_renders_counts_and_the_download(cl
         b"Shared,office@example.edu\r\n"
         b"Busy,throttled@example.edu\r\n"
         b"Bad,not an address\r\n"
-        b"Who,=HYPERLINK(\"x\")\r\n"
+        b'Who,=HYPERLINK("x")\r\n'
     )
     page = _post_check(client, data, column="1")
     assert page.status_code == 200
@@ -243,9 +264,15 @@ def test_the_check_against_the_fake_directory_renders_counts_and_the_download(cl
     assert re.fullmatch(r"email-check-results-\d{8}\.csv", name)
     rows = _rows(body)
     assert [r["status"] for r in rows] == [
-        "OK", "USE_PRIMARY", "FOUND_NO_PRIMARY", "AMBIGUOUS", "ERROR", "INVALID_INPUT", "INVALID_INPUT",
+        "OK",
+        "USE_PRIMARY",
+        "FOUND_NO_PRIMARY",
+        "AMBIGUOUS",
+        "ERROR",
+        "INVALID_INPUT",
+        "INVALID_INPUT",
     ]
-    assert rows[6]["Work email"] == "'=HYPERLINK(\"x\")"
+    assert rows[6]["Work email"] == '\'=HYPERLINK("x")'
     assert list(rows[0])[:2] == ["Who", "Work email"]
 
 
@@ -254,7 +281,9 @@ def test_the_check_without_a_column_returns_to_the_preview(client: TestClient) -
     assert page.status_code == 200 and "Choose a column" in page.text
 
 
-def test_without_a_token_nothing_is_checked(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_without_a_token_nothing_is_checked(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     def no_token(request: object) -> FakeDirectory:
         raise GraphError("no_token")
 
@@ -266,11 +295,17 @@ def test_without_a_token_nothing_is_checked(client: TestClient, monkeypatch: pyt
     assert re.search(r'formaction="/utilities/email-check/check" disabled>', page.text)
 
 
-def test_the_log_carries_counts_never_the_file(client: TestClient, caplog: pytest.LogCaptureFixture) -> None:
+def test_the_log_carries_counts_never_the_file(
+    client: TestClient, caplog: pytest.LogCaptureFixture
+) -> None:
     caplog.set_level(logging.INFO, logger="utilityapps")
     _post_check(client, b"email,name\r\njane.tan@example.edu,Jane Tan\r\noutage@example.edu,X\r\n")
     (record,) = [r for r in caplog.records if getattr(r, "event", "") == "email_check.completed"]
-    assert record.__dict__["rows"] == 2 and record.__dict__["lookups"] == 2 and record.__dict__["error_kinds"] == ["server"]
+    assert (
+        record.__dict__["rows"] == 2
+        and record.__dict__["lookups"] == 2
+        and record.__dict__["error_kinds"] == ["server"]
+    )
     assert record.__dict__["counts"]["OK"] == 1 and record.__dict__["counts"]["ERROR"] == 1
     everything = " ".join(r.getMessage() + repr(r.__dict__) for r in caplog.records)
     for secret in ("jane.tan", "Jane Tan", "outage@", "11111111-1111"):

@@ -41,9 +41,7 @@ class SessionRuleSet(Base, TimestampMixin):
     __tablename__ = "session_rule_sets"
 
     __table_args__ = (
-        UniqueConstraint(
-            "session_id", "name", name="uq_session_rule_set_session_name"
-        ),
+        UniqueConstraint("session_id", "name", name="uq_session_rule_set_session_name"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
@@ -53,22 +51,16 @@ class SessionRuleSet(Base, TimestampMixin):
         nullable=False,
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    description: Mapped[str] = mapped_column(
-        Text, nullable=False, default=""
-    )
+    description: Mapped[str] = mapped_column(Text, nullable=False, default="")
 
     combinator: Mapped[str] = mapped_column(String(16), nullable=False)
     """``ALL_OF`` / ``ANY_OF`` / ``PIPELINE`` — see
     ``app/schemas/rules.py::Combinator``."""
-    exclude_self_reviews: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=True
-    )
+    exclude_self_reviews: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     seed: Mapped[int | None] = mapped_column(Integer, nullable=True)
     """Global RNG seed for any RANDOM-strategy quota rule whose own
     selection seed is unset."""
-    rules_json: Mapped[list[dict[str, Any]]] = mapped_column(
-        JSON, nullable=False
-    )
+    rules_json: Mapped[list[dict[str, Any]]] = mapped_column(JSON, nullable=False)
     """Serialised rule tree. Empty list = Full Matrix (no
     content rules)."""
 

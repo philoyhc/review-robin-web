@@ -7,6 +7,7 @@ pages for ``HTTPException`` (404 / 403), a service's
 (500, traceback logged not shown), and request-validation errors
 (400). Plus the invitation-specific 404 copy.
 """
+
 from __future__ import annotations
 
 import logging
@@ -54,9 +55,7 @@ def _not_found_bare() -> dict[str, str]:
 
 @_test_router.get("/__test/err/state-conflict")
 def _state_conflict() -> dict[str, str]:
-    raise SessionStateConflict(
-        "Session is ready; revert to draft to edit", code="not_editable"
-    )
+    raise SessionStateConflict("Session is ready; revert to draft to edit", code="not_editable")
 
 
 @_test_router.get("/__test/err/boom")
@@ -76,9 +75,7 @@ def _mount_test_routes() -> Iterator[None]:
         yield
     finally:
         app.router.routes = [
-            r
-            for r in app.router.routes
-            if not getattr(r, "path", "").startswith("/__test/err/")
+            r for r in app.router.routes if not getattr(r, "path", "").startswith("/__test/err/")
         ]
 
 
@@ -106,9 +103,7 @@ def test_the_error_page_draws_no_drop_shadow() -> None:
     card = re.search(r"\.error-card\s*\{([^}]*)\}", style)
     assert card, "premise: the card rule is there to read"
     shadows = re.findall(r"box-shadow\s*:\s*([^;]+);", card.group(1))
-    assert all(
-        value.strip() == "none" or "inset" in value for value in shadows
-    ), shadows
+    assert all(value.strip() == "none" or "inset" in value for value in shadows), shadows
 
 
 def test_the_error_card_takes_the_card_shape() -> None:
@@ -127,9 +122,7 @@ def test_the_error_card_takes_the_card_shape() -> None:
     # The edge is base.html's --border-default, which points at
     # --slate-dim in both themes: read it there rather than copy the hex,
     # so a repointed token fails here instead of drifting.
-    base = (
-        Path(__file__).resolve().parents[2] / "app/web/templates/base.html"
-    ).read_text()
+    base = (Path(__file__).resolve().parents[2] / "app/web/templates/base.html").read_text()
     assert re.findall(r"--border-default:\s*([^;]+);", base) == [
         "var(--slate-dim)",
         "var(--slate-dim)",

@@ -40,9 +40,7 @@ class ResponsesRow:
         return monitoring.is_at_risk_state(self.coverage_state)
 
 
-def build_responses_rows(
-    db: Session, review_session: ReviewSession
-) -> list[ResponsesRow]:
+def build_responses_rows(db: Session, review_session: ReviewSession) -> list[ResponsesRow]:
     coverage = monitoring.per_reviewee_coverage(db, review_session)
     return [
         ResponsesRow(

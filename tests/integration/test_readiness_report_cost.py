@@ -55,9 +55,7 @@ from ._validation_scenarios import SCENARIOS
 CARD_PAGES = ["", "/assignments", "/validate", "/invitations", "/responses"]
 
 
-def _seed_validated(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _seed_validated(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     """A `validated` session with both rosters imported and every
     instrument pinned to Full Matrix. No assignments generated, so the
     report carries a warning and no errors — enough to mark it
@@ -95,9 +93,7 @@ def _seed_validated(
     )
     pin_full_matrix_on_all_instruments(db, review_session.id)
     validate_session(review_session)
-    client.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    )
+    client.get(f"/operator/sessions/{review_session.public_id}/assignments")
     db.refresh(review_session)
     assert review_session.status == "validated"
     return review_session
@@ -116,9 +112,7 @@ def report_runs(monkeypatch: pytest.MonkeyPatch) -> list[int]:
         validation.validate_session_setup
     )
 
-    def counting(
-        db: Session, review_session: ReviewSession
-    ) -> list[ValidationIssue]:
+    def counting(db: Session, review_session: ReviewSession) -> list[ValidationIssue]:
         runs.append(review_session.id)
         return real(db, review_session)
 
@@ -132,9 +126,7 @@ def test_the_validate_page_builds_the_readiness_report_once(
     review_session = _seed_validated(client, db, code="rc1")
     report_runs.clear()
 
-    response = client.get(
-        f"/operator/sessions/{review_session.public_id}/validate"
-    )
+    response = client.get(f"/operator/sessions/{review_session.public_id}/validate")
 
     assert response.status_code == 200, response.text
     assert report_runs == [review_session.id]
@@ -147,14 +139,10 @@ def test_no_workflow_card_page_builds_the_report_more_than_once(
     """The ceiling, not the floor: a page is free to run the report
     zero times (the card skips it outside `validated`), but never
     twice for one render."""
-    review_session = _seed_validated(
-        client, db, code="rc" + (suffix.strip("/") or "home")
-    )
+    review_session = _seed_validated(client, db, code="rc" + (suffix.strip("/") or "home"))
     report_runs.clear()
 
-    response = client.get(
-        f"/operator/sessions/{review_session.public_id}{suffix}"
-    )
+    response = client.get(f"/operator/sessions/{review_session.public_id}{suffix}")
 
     assert response.status_code == 200, response.text
     assert len(report_runs) <= 1, (
@@ -163,9 +151,7 @@ def test_no_workflow_card_page_builds_the_report_more_than_once(
     )
 
 
-def test_the_card_reports_the_issues_it_was_handed(
-    client: TestClient, db: Session
-) -> None:
+def test_the_card_reports_the_issues_it_was_handed(client: TestClient, db: Session) -> None:
     """The hand-off is load-bearing, not decorative: the summary the
     card renders comes from the passed-in list, so a builder that
     quietly ran its own would show this session's real verdict (clean,
@@ -202,9 +188,7 @@ def test_every_other_caller_still_builds_its_own_report(
     review_session = _seed_validated(client, db, code="rc3")
     report_runs.clear()
 
-    views.build_workflow_card_context(
-        db, review_session, return_to="assignments"
-    )
+    views.build_workflow_card_context(db, review_session, return_to="assignments")
 
     assert report_runs == [review_session.id]
 
@@ -223,6 +207,7 @@ def _is_report(module: str) -> bool:
     """Whether ``module`` is the report's own code: any module of the
     validation package, a single file until segment 20E rung 4b."""
     return module.startswith(REPORT_MODULE)
+
 
 #: The one call the exception is for. `_check_instruments_stale_generated`
 #: asks the assignments engine whether regenerating would change
@@ -266,14 +251,10 @@ def _issuing_module() -> str:
 def _under_staleness() -> bool:
     """Whether this query is being issued inside the engine call the
     exception is for, rather than merely inside its package."""
-    return any(
-        frame.name == STALENESS_CALL for frame in traceback.extract_stack()
-    )
+    return any(frame.name == STALENESS_CALL for frame in traceback.extract_stack())
 
 
-def _capture(
-    db: Session, review_session: ReviewSession
-) -> list[tuple[tuple[str, str], str, bool]]:
+def _capture(db: Session, review_session: ReviewSession) -> list[tuple[tuple[str, str], str, bool]]:
     """Run the report, returning one entry per statement it issued:
     ``((normalized SQL, bound parameters), issuing module, whether it
     came from inside the staleness call)``.
@@ -302,9 +283,7 @@ def _capture(
 
 
 @pytest.mark.parametrize("scenario", sorted(SCENARIOS))
-def test_the_report_never_issues_one_of_its_own_queries_twice(
-    db: Session, scenario: str
-) -> None:
+def test_the_report_never_issues_one_of_its_own_queries_twice(db: Session, scenario: str) -> None:
     """The guard. One run, one load of anything the report loads.
 
     This is rung 2's change stated as a rule. Before it, eight checks
@@ -314,11 +293,7 @@ def test_the_report_never_issues_one_of_its_own_queries_twice(
     """
     review_session = SCENARIOS[scenario](db)
 
-    own = Counter(
-        key
-        for key, module, _ in _capture(db, review_session)
-        if _is_report(module)
-    )
+    own = Counter(key for key, module, _ in _capture(db, review_session) if _is_report(module))
 
     assert own, (
         "the report issued no query this test could attribute to "
@@ -326,15 +301,12 @@ def test_the_report_never_issues_one_of_its_own_queries_twice(
     )
     repeated = {key: count for key, count in own.items() if count > 1}
     assert not repeated, "\n".join(
-        f"{count}x  {sql[:110]}  params={params}"
-        for (sql, params), count in repeated.items()
+        f"{count}x  {sql[:110]}  params={params}" for (sql, params), count in repeated.items()
     )
 
 
 @pytest.mark.parametrize("scenario", sorted(SCENARIOS))
-def test_every_remaining_repeat_belongs_to_the_staleness_call(
-    db: Session, scenario: str
-) -> None:
+def test_every_remaining_repeat_belongs_to_the_staleness_call(db: Session, scenario: str) -> None:
     """The boundary, pinned rather than quietly excluded.
 
     `_check_instruments_stale_generated` asks

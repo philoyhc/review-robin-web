@@ -183,15 +183,9 @@ def test_email_overrides_round_trip_set_values(db: Session) -> None:
     db.flush()
 
     by_field = _row_dict(serialize_session_config(db, review_session))
-    assert (
-        by_field["email_overrides.invitation.subject"].value
-        == "Custom subject"
-    )
+    assert by_field["email_overrides.invitation.subject"].value == "Custom subject"
     assert by_field["email_overrides.reminder.body"].value == "Custom body"
-    assert (
-        by_field["email_overrides.responses_received.enabled"].value
-        == "false"
-    )
+    assert by_field["email_overrides.responses_received.enabled"].value == "false"
 
 
 # --------------------------------------------------------------------------- #
@@ -264,9 +258,7 @@ def test_instrument_block_emits_canonical_fields(db: Session) -> None:
     # Instrument-level rows.
     assert by_field["instruments[1].name"].value == "Peer evaluation"
     assert by_field["instruments[1].short_label"].value == "Peer"
-    assert by_field["instruments[1].description"].value == (
-        "Mid-semester peer review"
-    )
+    assert by_field["instruments[1].description"].value == ("Mid-semester peer review")
     assert by_field["instruments[1].order"].value == "0"
     assert by_field["instruments[1].accepting_responses"].value == "true"
     # Retired with its column (findings B21): no longer exported.
@@ -275,9 +267,7 @@ def test_instrument_block_emits_canonical_fields(db: Session) -> None:
     assert by_field["instruments[1].sort_display_fields"] == Row(
         "instruments[1].sort_display_fields", "[]", "json"
     )
-    assert by_field["instruments[1].group_kind"] == Row(
-        "instruments[1].group_kind", "", "enum"
-    )
+    assert by_field["instruments[1].group_kind"] == Row("instruments[1].group_kind", "", "enum")
     assert by_field["instruments[1].rule_set_name"] == Row(
         "instruments[1].rule_set_name", "", "string"
     )
@@ -286,39 +276,20 @@ def test_instrument_block_emits_canonical_fields(db: Session) -> None:
     # Segment 15A Slice 1 — per-instrument display-field labels
     # are no longer round-tripped (the resolver reads only
     # ``session_field_labels`` + built-in defaults).
-    assert by_field["instruments[1].display_fields[1].source_type"].value == (
-        "reviewee"
-    )
-    assert (
-        by_field["instruments[1].display_fields[1].source_field"].value
-        == "tag_1"
-    )
+    assert by_field["instruments[1].display_fields[1].source_type"].value == ("reviewee")
+    assert by_field["instruments[1].display_fields[1].source_field"].value == "tag_1"
     assert "instruments[1].display_fields[1].label" not in by_field
     assert by_field["instruments[1].display_fields[1].visible"].value == "true"
 
     # Response field row.
+    assert by_field["instruments[1].response_fields[1].field_key"].value == "overall"
+    assert by_field["instruments[1].response_fields[1].label"].value == ("Overall")
+    assert by_field["instruments[1].response_fields[1].response_type"].value == "Likert5"
+    assert by_field["instruments[1].response_fields[1].required"].value == "true"
     assert (
-        by_field["instruments[1].response_fields[1].field_key"].value
-        == "overall"
+        by_field["instruments[1].response_fields[1].help_text"].value == "How would you rate them?"
     )
-    assert by_field["instruments[1].response_fields[1].label"].value == (
-        "Overall"
-    )
-    assert (
-        by_field["instruments[1].response_fields[1].response_type"].value
-        == "Likert5"
-    )
-    assert (
-        by_field["instruments[1].response_fields[1].required"].value == "true"
-    )
-    assert (
-        by_field["instruments[1].response_fields[1].help_text"].value
-        == "How would you rate them?"
-    )
-    assert (
-        by_field["instruments[1].response_fields[1].help_text_visible"].value
-        == "true"
-    )
+    assert by_field["instruments[1].response_fields[1].help_text_visible"].value == "true"
 
 
 def test_multiple_instruments_indexed_by_order_position(db: Session) -> None:
@@ -379,22 +350,13 @@ def test_session_rule_sets_emit_all_rows(db: Session) -> None:
 
     by_field = _row_dict(serialize_session_config(db, review_session))
     assert "session_rule_sets[1].name" in by_field
-    assert (
-        by_field["session_rule_sets[1].name"].value == "Cross-cohort fanout"
-    )
+    assert by_field["session_rule_sets[1].name"].value == "Cross-cohort fanout"
 
     # Field shape.
-    assert (
-        by_field["session_rule_sets[1].combinator"].value == "PIPELINE"
-    )
-    assert (
-        by_field["session_rule_sets[1].exclude_self_reviews"].value == "false"
-    )
+    assert by_field["session_rule_sets[1].combinator"].value == "PIPELINE"
+    assert by_field["session_rule_sets[1].exclude_self_reviews"].value == "false"
     assert by_field["session_rule_sets[1].seed"].value == "42"
-    assert (
-        by_field["session_rule_sets[1].rules_json"].value
-        == '[{"id":"r1","kind":"MATCH"}]'
-    )
+    assert by_field["session_rule_sets[1].rules_json"].value == '[{"id":"r1","kind":"MATCH"}]'
     assert by_field["session_rule_sets[1].rules_json"].data_type == "json"
 
 
@@ -483,9 +445,7 @@ def test_section_ordering_is_deterministic(db: Session) -> None:
     operator-facing template stays diff-stable."""
 
     review_session = _bare_session(db, code="order")
-    instr = Instrument(
-        session_id=review_session.id, name="Only", order=0
-    )
+    instr = Instrument(session_id=review_session.id, name="Only", order=0)
     db.add(instr)
     db.flush()
     db.add(
@@ -564,7 +524,6 @@ def _add_instrument(
 # _stamp_assignments_generated_audit helpers and the 5
 # test_audit_log_* + 1 test_post_15b_per_instrument_selection
 # tests that exercised the fallback retired with it.
-
 
 
 # --------------------------------------------------------------------------- #

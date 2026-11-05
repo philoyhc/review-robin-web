@@ -233,9 +233,7 @@ _CROSS_ROSTER_WHY = (
 # ``(source, ValidationInputs roster attribute, identifier attribute,
 # name attribute, anchor prefix)`` in the order the Validate page reads
 # best: reviewers, reviewees, observers.
-_ROSTER_IDENTITY_FIELDS: tuple[
-    tuple[str, str, str, str, str], ...
-] = (
+_ROSTER_IDENTITY_FIELDS: tuple[tuple[str, str, str, str, str], ...] = (
     ("reviewers", "reviewers", "email", "name", "reviewer-row"),
     (
         "reviewees",
@@ -288,9 +286,7 @@ def _identity_holders_by_email(
     rule.
     """
     holders: dict[str, list[_IdentityHolder]] = {}
-    for source, roster_attr, id_attr, name_attr, anchor_prefix in (
-        _ROSTER_IDENTITY_FIELDS
-    ):
+    for source, roster_attr, id_attr, name_attr, anchor_prefix in _ROSTER_IDENTITY_FIELDS:
         for row in getattr(inputs, roster_attr):
             identifier = getattr(row, id_attr) or ""
             name = getattr(row, name_attr) or ""
@@ -331,9 +327,7 @@ def _cross_roster_identity_issues(
             if not others:
                 continue
             spelled = ", ".join(
-                f"'{other.name}' as a "
-                f"{_ROSTER_SINGULAR[other.source]}"
-                for other in others
+                f"'{other.name}' as a {_ROSTER_SINGULAR[other.source]}" for other in others
             )
             yield ValidationIssue(
                 severity=Severity.error,
@@ -423,9 +417,7 @@ def _duplicate_accounts(
                 severity=Severity.warning,
                 source=source,
                 field=address_attr,
-                message=(
-                    f"{len(dupes)} {label} rows are one directory account: {addresses}"
-                ),
+                message=(f"{len(dupes)} {label} rows are one directory account: {addresses}"),
                 fix_anchor=f"#{label}-row-{dupes[0].id}",
             )
 
@@ -433,7 +425,9 @@ def _duplicate_accounts(
 def _check_reviewers_duplicate_account(
     db: Session, review_session: ReviewSession, inputs: ValidationInputs
 ) -> Iterable[ValidationIssue]:
-    return _duplicate_accounts(inputs.reviewers, source="reviewers", label="reviewer", address_attr="email")
+    return _duplicate_accounts(
+        inputs.reviewers, source="reviewers", label="reviewer", address_attr="email"
+    )
 
 
 def _check_reviewees_duplicate_account(
@@ -447,7 +441,9 @@ def _check_reviewees_duplicate_account(
 def _check_observers_duplicate_account(
     db: Session, review_session: ReviewSession, inputs: ValidationInputs
 ) -> Iterable[ValidationIssue]:
-    return _duplicate_accounts(inputs.observers, source="observers", label="observer", address_attr="email")
+    return _duplicate_accounts(
+        inputs.observers, source="observers", label="observer", address_attr="email"
+    )
 
 
 def _check_reviewees_mirror_drift(
@@ -476,8 +472,7 @@ def _check_reviewees_mirror_drift(
                 source="reviewees",
                 field="mirrors_reviewer_id",
                 message=(
-                    f"Reviewee '{reviewee.email_or_identifier}' mirrors no reviewer "
-                    "on the roster"
+                    f"Reviewee '{reviewee.email_or_identifier}' mirrors no reviewer on the roster"
                 ),
             )
     for reviewer in inputs.reviewers:
@@ -546,9 +541,7 @@ def _check_reviewees_unreachable_for_results(
     Non-blocking — the operator may have non-email reviewees on
     purpose (anonymous IDs for analysis-only). The warning just
     surfaces the implication so they decide knowingly."""
-    unreachable = [
-        r for r in inputs.active_reviewees if not is_email_identified(r)
-    ]
+    unreachable = [r for r in inputs.active_reviewees if not is_email_identified(r)]
     if not unreachable:
         return
     noun = "reviewee" if len(unreachable) == 1 else "reviewees"
@@ -575,7 +568,6 @@ def _check_email_template_no_help_contact(
             severity=Severity.info,
             source="email_template",
             message=(
-                "No help contact set — the default emails omit their "
-                "'Questions? Contact …' line"
+                "No help contact set — the default emails omit their 'Questions? Contact …' line"
             ),
         )

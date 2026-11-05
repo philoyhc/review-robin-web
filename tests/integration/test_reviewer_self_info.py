@@ -36,7 +36,6 @@ from .test_reviewer_surface_display_fields import (
 LINK = "https://example.edu/rae"
 
 
-
 @pytest.fixture
 def rae() -> AuthenticatedUser:
     """The reviewer ``_operator_creates_session_with_pair`` rosters."""
@@ -48,16 +47,15 @@ def rae() -> AuthenticatedUser:
     )
 
 
-def _pair(
-    client: TestClient, db: Session, code: str, *, profile: str = LINK
-) -> ReviewSession:
+def _pair(client: TestClient, db: Session, code: str, *, profile: str = LINK) -> ReviewSession:
     rs = _operator_creates_session_with_pair(
-        client, db, code=code,
-        reviewer_email="rae@example.edu", reviewee_ident="carol@example.edu",
+        client,
+        db,
+        code=code,
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
     )
-    reviewer = db.execute(
-        select(Reviewer).where(Reviewer.session_id == rs.id)
-    ).scalar_one()
+    reviewer = db.execute(select(Reviewer).where(Reviewer.session_id == rs.id)).scalar_one()
     reviewer.name = "Rae Reviewer"
     reviewer.profile_link = profile
     reviewer.tag_1 = "Blue"
@@ -80,7 +78,7 @@ def _div_at(html: str, marker: str) -> str:
         if depth == 0:
             i = start + m.end()
             break
-    return html[start:html.index(">", i) + 1]
+    return html[start : html.index(">", i) + 1]
 
 
 # ── The view helpers ─────────────────────────────────────────────────
@@ -91,12 +89,20 @@ def _session_stub() -> ReviewSession:
 
 
 def test_the_line_keeps_roster_order_and_skips_empty_fields() -> None:
-    reviewer = cast(Reviewer, SimpleNamespace(
-        name="Rae", email="rae@example.edu", profile_link="",
-        tag_1="Blue", tag_2=None, tag_3="  ",
-    ))
+    reviewer = cast(
+        Reviewer,
+        SimpleNamespace(
+            name="Rae",
+            email="rae@example.edu",
+            profile_link="",
+            tag_1="Blue",
+            tag_2=None,
+            tag_3="  ",
+        ),
+    )
     line = views.reviewer_self_line(
-        _session_stub(), reviewer,
+        _session_stub(),
+        reviewer,
         ["tag_3", "tag_1", "profile_link", "email", "name", "tag_2"],
     )
     assert [f.key for f in line] == ["name", "email", "tag_1"]
@@ -104,18 +110,14 @@ def test_the_line_keeps_roster_order_and_skips_empty_fields() -> None:
 
 def test_the_default_shows_name_email_and_profile_not_tags() -> None:
     assert views.REVIEWER_SELF_DEFAULT == ("name", "email", "profile_link")
-    readout = views.reviewer_self_readout(
-        _session_stub(), views.REVIEWER_SELF_DEFAULT
-    )
+    readout = views.reviewer_self_readout(_session_stub(), views.REVIEWER_SELF_DEFAULT)
     assert readout == ["Name", "Email", "Profile"]
 
 
 # ── The Reviewers page ───────────────────────────────────────────────
 
 
-def test_the_readout_row_reports_what_the_surface_shows(
-    client: TestClient, db: Session
-) -> None:
+def test_the_readout_row_reports_what_the_surface_shows(client: TestClient, db: Session) -> None:
     rs = _pair(client, db, "rsi-readout")
     html = client.get(f"/operator/sessions/{rs.public_id}/reviewers").text
     readouts = _div_at(html, 'class="roster-readouts"')
@@ -130,7 +132,9 @@ def test_the_readout_row_reports_what_the_surface_shows(
     shown = _div_at(html, "data-reviewer-self-readout")
     assert "Reviewers see:" in shown
     assert re.findall(r'<span class="pill pill-count">([^<]*)</span>', shown) == [
-        "Name", "Email", "Profile",
+        "Name",
+        "Email",
+        "Profile",
     ]
 
 
@@ -139,9 +143,7 @@ def test_the_card_sits_above_upload_with_a_chip_per_populated_column(
 ) -> None:
     rs = _pair(client, db, "rsi-card")
     html = client.get(f"/operator/sessions/{rs.public_id}/reviewers").text
-    card = re.search(
-        r"<section[^>]*data-reviewer-self-card[^>]*>.*?</section>", html, re.S
-    )
+    card = re.search(r"<section[^>]*data-reviewer-self-card[^>]*>.*?</section>", html, re.S)
     assert card, "the reviewer-information card is missing"
     card_html = card.group(0)
     assert "What reviewers see of their own entry" in card_html
@@ -181,17 +183,19 @@ def test_a_failed_import_still_renders_the_card_and_readout(
         r"<section[^>]*data-reviewer-self-card[^>]*>.*?</section>", html, re.S
     ).group(0)
     assert re.findall(r'value="(\w+)"\s+checked', card) == [
-        "name", "email", "profile_link",
+        "name",
+        "email",
+        "profile_link",
     ], card
     shown = _div_at(html, "data-reviewer-self-readout")
     assert re.findall(r'<span class="pill pill-count">([^<]*)</span>', shown) == [
-        "Name", "Email", "Profile",
+        "Name",
+        "Email",
+        "Profile",
     ]
 
 
-def test_no_profile_chip_without_a_profile(
-    client: TestClient, db: Session
-) -> None:
+def test_no_profile_chip_without_a_profile(client: TestClient, db: Session) -> None:
     rs = _pair(client, db, "rsi-noprof", profile="")
     html = client.get(f"/operator/sessions/{rs.public_id}/reviewers").text
     card = must_search(
@@ -203,9 +207,7 @@ def test_no_profile_chip_without_a_profile(
     assert ">Profile<" in shown
 
 
-def test_locked_the_readout_stays_and_the_card_goes(
-    client: TestClient, db: Session
-) -> None:
+def test_locked_the_readout_stays_and_the_card_goes(client: TestClient, db: Session) -> None:
     rs = _pair(client, db, "rsi-locked")
     _activate(client, db, rs)
     html = client.get(f"/operator/sessions/{rs.public_id}/reviewers").text
@@ -219,7 +221,8 @@ def test_locked_the_readout_stays_and_the_card_goes(
 def _info(html: str) -> str:
     m = re.search(
         r'<span class="rs-self-info" data-reviewer-self-info>(.*?)</span>\s*<(?:span|a) class="pill',
-        html, re.S,
+        html,
+        re.S,
     )
     assert m, "no reviewer info on the role row"
     return m.group(1)
@@ -253,10 +256,12 @@ def test_the_preview_shows_a_static_reviewer_pill_and_the_line(
         params={"reviewer_email": "rae@example.edu"},
     ).text
     nav = _div_at(html, 'class="rs-role-nav"')
-    assert re.search(r'<span class="pill pill-role-reviewer rs-role-nav-active">Reviewer</span>', nav)
+    assert re.search(
+        r'<span class="pill pill-role-reviewer rs-role-nav-active">Reviewer</span>', nav
+    )
     # No navigator links to the previewed reviewer's other surfaces.
     # The pills follow the own line (19X Item 11), whose Profile is a link.
-    assert "<a " not in nav[nav.index('class="pill pill-role'):]
+    assert "<a " not in nav[nav.index('class="pill pill-role') :]
     assert "Rae Reviewer" in _info(html)
 
 
@@ -288,7 +293,8 @@ def test_a_save_stores_the_selection_and_the_surface_follows(
     html = client.get(f"/operator/sessions/{rs.public_id}/reviewers").text
     shown = _div_at(html, "data-reviewer-self-readout")
     assert re.findall(r'<span class="pill pill-count">([^<]*)</span>', shown) == [
-        "Email", "Cohort",
+        "Email",
+        "Cohort",
     ]
     _activate(client, db, rs)
     info = _info(make_client(rae).get(f"/me/sessions/{rs.public_id}").text)
@@ -296,9 +302,7 @@ def test_a_save_stores_the_selection_and_the_surface_follows(
     assert "Rae Reviewer" not in info and "Profile" not in info
 
 
-def test_an_empty_save_shows_nothing_after_the_pill(
-    client: TestClient, db: Session
-) -> None:
+def test_an_empty_save_shows_nothing_after_the_pill(client: TestClient, db: Session) -> None:
     rs = _pair(client, db, "rsi-empty")
     assert _save(client, rs).status_code == 303
     db.refresh(rs)
@@ -312,9 +316,7 @@ def test_an_empty_save_shows_nothing_after_the_pill(
     assert "data-reviewer-self-info" not in preview
 
 
-def test_a_key_with_no_chip_survives_a_save(
-    client: TestClient, db: Session
-) -> None:
+def test_a_key_with_no_chip_survives_a_save(client: TestClient, db: Session) -> None:
     """The NULL default selects profile_link; with no profile in the
     roster the card offers no chip for it, so it rides as `keep`."""
     rs = _pair(client, db, "rsi-keep", profile="")
@@ -335,9 +337,7 @@ def test_an_unknown_key_is_refused(client: TestClient, db: Session) -> None:
     assert rs.reviewer_self_fields is None
 
 
-def test_a_locked_session_refuses_the_save(
-    client: TestClient, db: Session
-) -> None:
+def test_a_locked_session_refuses_the_save(client: TestClient, db: Session) -> None:
     rs = _pair(client, db, "rsi-409")
     _activate(client, db, rs)
     assert _save(client, rs, fields=["name"]).status_code == 409
@@ -351,21 +351,23 @@ def test_a_save_writes_one_audit_event(client: TestClient, db: Session) -> None:
     rs = _pair(client, db, "rsi-audit")
     _save(client, rs, fields=["name"])
     _save(client, rs, fields=["name"])  # unchanged once stored: no event
-    events = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.session_id == rs.id,
-            AuditEvent.event_type == "session.reviewer_self_fields_set",
+    events = (
+        db.execute(
+            select(AuditEvent).where(
+                AuditEvent.session_id == rs.id,
+                AuditEvent.event_type == "session.reviewer_self_fields_set",
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(events) == 1
     assert events[0].detail is not None
     # The old value is what was stored, NULL, not the effective default.
     assert events[0].detail["changes"]["reviewer_self_fields"] == [None, ["name"]]
 
 
-def test_saving_the_default_over_null_records_it(
-    client: TestClient, db: Session
-) -> None:
+def test_saving_the_default_over_null_records_it(client: TestClient, db: Session) -> None:
     """With nothing stored, saving the default as it stands still writes
     it, so a later change to the default does not move this session."""
     from app.db.models import AuditEvent
@@ -382,13 +384,12 @@ def test_saving_the_default_over_null_records_it(
     ).scalar_one()
     assert event.detail is not None
     assert event.detail["changes"]["reviewer_self_fields"] == [
-        None, ["name", "email", "profile_link"],
+        None,
+        ["name", "email", "profile_link"],
     ]
 
 
-def test_a_save_repairs_a_hand_edited_stored_value(
-    client: TestClient, db: Session
-) -> None:
+def test_a_save_repairs_a_hand_edited_stored_value(client: TestClient, db: Session) -> None:
     rs = _pair(client, db, "rsi-repair")
     rs.reviewer_self_fields = ["status"]
     db.commit()
@@ -406,13 +407,13 @@ def test_a_hand_edited_stored_value_falls_back_to_the_default(
     for bad in ([1], {"a": 1}, ["status"], "name"):
         rs.reviewer_self_fields = bad  # pyright: ignore[reportAttributeAccessIssue]  -- a hand-edited stored value the column type rules out
         assert effective_reviewer_self_fields(rs) == (
-            "name", "email", "profile_link",
+            "name",
+            "email",
+            "profile_link",
         ), bad
 
 
-def test_a_save_leaves_a_validated_session_validated(
-    client: TestClient, db: Session
-) -> None:
+def test_a_save_leaves_a_validated_session_validated(client: TestClient, db: Session) -> None:
     from ._validated import validate_session
 
     rs = _pair(client, db, "rsi-valid")
@@ -443,10 +444,7 @@ def test_the_settings_csv_round_trips_the_selection(
     source = _pair(client, db, f"rsi-csv-{len(cell)}")
     source.reviewer_self_fields = stored
     db.commit()
-    row = next(
-        r for r in _session_rows(source)
-        if r[0] == "session.reviewer_self_fields"
-    )
+    row = next(r for r in _session_rows(source) if r[0] == "session.reviewer_self_fields")
     assert row[1] == cell
     plan = _ParsedConfig()
     _apply_session_kv(plan, "session.reviewer_self_fields", row[1])
@@ -469,9 +467,7 @@ def test_the_settings_csv_refuses_a_bad_selection(cell: str) -> None:
         _apply_session_kv(_ParsedConfig(), "session.reviewer_self_fields", cell)
 
 
-def test_duplicate_copies_all_three_selections(
-    client: TestClient, db: Session
-) -> None:
+def test_duplicate_copies_all_three_selections(client: TestClient, db: Session) -> None:
     from app.services.session_clone import clone_session
 
     rs = _pair(client, db, "rsi-dup")
@@ -500,9 +496,7 @@ def test_the_summary_shows_the_line_before_the_pills(
     rs = _pair(client, db, "rsi-summary")
     _save(client, rs, fields=["name", "tag_1"])
     _activate(client, db, rs)
-    assignment = db.execute(
-        select(Assignment).where(Assignment.session_id == rs.id)
-    ).scalar_one()
+    assignment = db.execute(select(Assignment).where(Assignment.session_id == rs.id)).scalar_one()
     rae_client = make_client(rae)
     submitted = rae_client.post(
         f"/me/sessions/{rs.public_id}/submit",
@@ -540,7 +534,7 @@ def test_the_pre_open_page_shows_a_reviewer_pill_and_the_line(
         nav,
     )
     # The pills follow the own line (19X Item 11), whose Profile is a link.
-    assert "<a " not in nav[nav.index('class="pill pill-role'):]
+    assert "<a " not in nav[nav.index('class="pill pill-role') :]
     info = _info(html)
     assert "Rae Reviewer" in info and "rae@example.edu" in info
 
@@ -576,18 +570,19 @@ def test_results_and_collation_carry_no_reviewer_line(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    rs = db.execute(
-        select(ReviewSession).where(ReviewSession.code == "rsi-roles")
-    ).scalar_one()
+    rs = db.execute(select(ReviewSession).where(ReviewSession.code == "rsi-roles")).scalar_one()
     # `client` signs in as alice@example.edu (tests/conftest.py).
-    db.add_all([
-        Reviewer(session_id=rs.id, name="Alice", email="alice@example.edu"),
-        Reviewee(
-            session_id=rs.id, name="Alice",
-            email_or_identifier="alice@example.edu",
-        ),
-        Observer(session_id=rs.id, email="alice@example.edu", display_name="Alice"),
-    ])
+    db.add_all(
+        [
+            Reviewer(session_id=rs.id, name="Alice", email="alice@example.edu"),
+            Reviewee(
+                session_id=rs.id,
+                name="Alice",
+                email_or_identifier="alice@example.edu",
+            ),
+            Observer(session_id=rs.id, email="alice@example.edu", display_name="Alice"),
+        ]
+    )
     db.commit()
     grant_reviewee_visibility(rs)
     for page in ("results", "collation"):

@@ -87,7 +87,8 @@ router = APIRouter()
 
 @router.post("/sessions", response_model=None)
 async def create_session(
-    request: Request, name: str = Form(...),
+    request: Request,
+    name: str = Form(...),
     code: str = Form(...),
     description: str | None = Form(default=None),
     deadline: str | None = Form(default=None),
@@ -114,10 +115,9 @@ async def create_session(
     # 18B PR 4: the Create form carries the per-session display
     # timezone. Blank ⇒ fall back to the operator's default. The
     # deadline picker is wall-clock in this zone.
-    timezone_name = (
-        operator_settings.parse_display_timezone_input(display_timezone)
-        or operator_settings.get_display_timezone(user)
-    )
+    timezone_name = operator_settings.parse_display_timezone_input(
+        display_timezone
+    ) or operator_settings.get_display_timezone(user)
     if not operator_settings.is_valid_timezone(timezone_name):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -127,9 +127,7 @@ async def create_session(
     parsed_deadline: datetime | None = None
     if deadline:
         try:
-            parsed_deadline = date_formatting.parse_local_datetime(
-                deadline, timezone_name
-            )
+            parsed_deadline = date_formatting.parse_local_datetime(deadline, timezone_name)
         except ValueError as exc:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -138,10 +136,8 @@ async def create_session(
 
     # 18G Part 1: optional Start anchor for scheduled activation.
     try:
-        parsed_scheduled_activate_at = (
-            scheduled_events.parse_and_validate_scheduled_activate_at(
-                scheduled_activate_at, timezone_name=timezone_name
-            )
+        parsed_scheduled_activate_at = scheduled_events.parse_and_validate_scheduled_activate_at(
+            scheduled_activate_at, timezone_name=timezone_name
         )
     except scheduled_events.ScheduledActivateError as exc:
         raise HTTPException(
@@ -158,11 +154,9 @@ async def create_session(
     # 18G Part 2: optional auto-send invite offsets. Per-entry rules
     # validate against the (possibly freshly-set) Start anchor.
     try:
-        parsed_invite_offsets = (
-            scheduled_events.parse_and_validate_invite_offsets(
-                invite_offsets,
-                scheduled_activate_at=parsed_scheduled_activate_at,
-            )
+        parsed_invite_offsets = scheduled_events.parse_and_validate_invite_offsets(
+            invite_offsets,
+            scheduled_activate_at=parsed_scheduled_activate_at,
         )
     except scheduled_events.ScheduledActivateError as exc:
         raise HTTPException(
@@ -174,11 +168,9 @@ async def create_session(
     # ``deadline``. Per-entry rules validate against the (possibly
     # freshly-set) deadline.
     try:
-        parsed_reminder_offsets = (
-            scheduled_events.parse_and_validate_reminder_offsets(
-                reminder_offsets,
-                deadline=parsed_deadline,
-            )
+        parsed_reminder_offsets = scheduled_events.parse_and_validate_reminder_offsets(
+            reminder_offsets,
+            deadline=parsed_deadline,
         )
     except scheduled_events.ScheduledActivateError as exc:
         raise HTTPException(
@@ -190,10 +182,8 @@ async def create_session(
     # close datetime. Until is validated against the (possibly
     # freshly-set) anchor.
     try:
-        parsed_responses_release_at = (
-            scheduled_events.parse_and_validate_responses_release_at(
-                responses_release_at, timezone_name=timezone_name
-            )
+        parsed_responses_release_at = scheduled_events.parse_and_validate_responses_release_at(
+            responses_release_at, timezone_name=timezone_name
         )
         parsed_responses_release_until = (
             scheduled_events.parse_and_validate_responses_release_until(
@@ -367,7 +357,8 @@ async def create_session(
         # No slot fragment (19X Item 7): Home's banner script scrolls
         # to the shown banner on load.
         query = _quick_setup_error_query(kind, "refused")
-        return urls.redirect(request,
+        return urls.redirect(
+            request,
             url=f"{home_url}?{query}",
             status_code=status.HTTP_303_SEE_OTHER,
         )
@@ -405,7 +396,8 @@ async def create_session(
     # A bare create (no uploads) opens the Session details card in edit
     # mode (``edit_url``) so the operator continues setting up details.
     target_url = home_url if uploads else edit_url
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url=target_url,
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -527,9 +519,7 @@ def _merge_held(
 ) -> _Merged:
     token = (held_token or "").strip() or None
     held = (
-        held_uploads.take(db, token=token, user=user, session_id=review_session.id)
-        if token
-        else {}
+        held_uploads.take(db, token=token, user=user, session_id=review_session.id) if token else {}
     )
     contents: dict[str, bytes] = {}
     filenames: dict[str, str] = {}
@@ -561,9 +551,7 @@ def _settle_hold(
     in play. The names come from the hold itself, so a file it skipped
     (over the cap) is neither named nor sent again."""
     if refusal is None or refusal.failure.reason not in _ASKS:
-        release_hold(
-            db, token=merged.token, user=user, review_session=review_session
-        )
+        release_hold(db, token=merged.token, user=user, review_session=review_session)
         return None, None
     # Nothing of the refused unit rides with the hold's commit.
     db.rollback()
@@ -582,9 +570,7 @@ def _settle_hold(
     db.commit()
     if token is None:
         return None, None
-    held = held_uploads.take(
-        db, token=token, user=user, session_id=review_session.id
-    )
+    held = held_uploads.take(db, token=token, user=user, session_id=review_session.id)
     if not held:
         return None, None
     return {kind: f.filename for kind, f in held.items()}, token
@@ -683,9 +669,7 @@ async def _run_quick_setup_contents(
         if "settings" in contents
         else None
     )
-    symmetric = sessions.symmetric_review_after_settings(
-        db, review_session, settings_symmetric
-    )
+    symmetric = sessions.symmetric_review_after_settings(db, review_session, settings_symmetric)
     if "reviewees" in contents and symmetric:
         return _SlotRefusal("reviewees", _SlotFailure("symmetric_reviewees"))
 
@@ -734,9 +718,7 @@ async def _run_quick_setup_contents(
             correlation_id=correlation_id or request_correlation_id(),
             symmetric_target=settings_symmetric,
             acknowledged_deletions=(
-                acknowledged_loss(acknowledge_instrument_deletion)
-                if replacing
-                else None
+                acknowledged_loss(acknowledge_instrument_deletion) if replacing else None
             ),
             acknowledged_group_loss=acknowledged_loss(acknowledge_response_loss),
         )
@@ -778,9 +760,7 @@ def _replace_gate(
         return _SlotFailure("needs_confirm")
     if kind in {"reviewers", "reviewees", "settings"}:
         try:
-            _require_response_loss_ack(
-                db, review_session, acknowledge_response_loss
-            )
+            _require_response_loss_ack(db, review_session, acknowledge_response_loss)
         except HTTPException:
             return _SlotFailure("needs_confirm")
     return None
@@ -805,9 +785,7 @@ def _check_uploads(
     one reported — what the slot-by-slot dispatch reported before."""
 
     parsed = {
-        kind: _ROSTER_PARSERS[kind](contents[kind])
-        for kind in contents
-        if kind in _ROSTER_PARSERS
+        kind: _ROSTER_PARSERS[kind](contents[kind]) for kind in contents if kind in _ROSTER_PARSERS
     }
     # Each roster file against the other uploads and the rosters they
     # do not replace. A blocked file has no rows to hold a name, but its
@@ -818,8 +796,7 @@ def _check_uploads(
         db,
         session_id=review_session.id,
         incoming={
-            kind: [] if result.is_blocked else result.rows
-            for kind, result in parsed.items()
+            kind: [] if result.is_blocked else result.rows for kind, result in parsed.items()
         },
     )
 
@@ -828,9 +805,7 @@ def _check_uploads(
         if kind in parsed:
             result = parsed[kind]
             issues = [*result.issues, *identity.get(kind, [])]
-            if result.is_blocked or any(
-                issue.severity == "error" for issue in issues
-            ):
+            if result.is_blocked or any(issue.severity == "error" for issue in issues):
                 return _SlotRefusal(
                     kind,
                     _SlotFailure("parse", views.roster_problem_details(issues)),
@@ -840,9 +815,7 @@ def _check_uploads(
                 filenames[kind],
                 rows=result.rows,
                 # Observers carry no friendly labels (19C Item 1).
-                field_labels=(
-                    None if kind == "observers" else result.field_labels
-                ),
+                field_labels=(None if kind == "observers" else result.field_labels),
             )
         elif kind == "relationships":
             # Each parser's result, by the slot it was parsed for.
@@ -862,14 +835,10 @@ def _check_uploads(
                 incoming_reviewees=reviewees.rows if reviewees else None,
                 symmetric=symmetric,
             )
-            if result.is_blocked or any(
-                issue.severity == "error" for issue in result.issues
-            ):
+            if result.is_blocked or any(issue.severity == "error" for issue in result.issues):
                 return _SlotRefusal(
                     kind,
-                    _SlotFailure(
-                        "parse", views.roster_problem_details(result.issues)
-                    ),
+                    _SlotFailure("parse", views.roster_problem_details(result.issues)),
                 )
             item = _StagedSlot(kind, filenames[kind], content=contents[kind])
         else:  # settings
@@ -957,9 +926,7 @@ def _save_uploads(
             # which deletes every response after this slot's save, so
             # Relationships has nothing to ask about (the read of S1).
             group_ack = (
-                None
-                if any(item.kind == "settings" for item in staged)
-                else acknowledged_group_loss
+                None if any(item.kind == "settings" for item in staged) else acknowledged_group_loss
             )
             for item in staged:
                 current = item.kind
@@ -990,9 +957,7 @@ def _save_uploads(
     except lifecycle.SessionStateConflict as exc:
         # Segment 20B: a turn-on committed since the checks refuses a
         # Reviewees file under the lock (Codex on #3490).
-        reason = (
-            "symmetric_reviewees" if exc.code == "symmetric_review" else "lifecycle"
-        )
+        reason = "symmetric_reviewees" if exc.code == "symmetric_review" else "lifecycle"
         raise _UnitRefused(_SlotRefusal(current, _SlotFailure(reason))) from exc
 
 
@@ -1071,15 +1036,11 @@ def _save_slot(
         result = relationships_service.parse_relationship_csv(
             item.content, reviewers=reviewers, reviewees=reviewees
         )
-        if result.is_blocked or any(
-            issue.severity == "error" for issue in result.issues
-        ):
+        if result.is_blocked or any(issue.severity == "error" for issue in result.issues):
             raise _UnitRefused(
                 _SlotRefusal(
                     "relationships",
-                    _SlotFailure(
-                        "parse", views.roster_problem_details(result.issues)
-                    ),
+                    _SlotFailure("parse", views.roster_problem_details(result.issues)),
                 )
             )
         try:
@@ -1126,9 +1087,7 @@ def _save_slot(
             raise _UnitRefused(
                 _SlotRefusal(
                     "settings",
-                    _SlotFailure(
-                        "parse", views.settings_error_details(result.errors)
-                    ),
+                    _SlotFailure("parse", views.settings_error_details(result.errors)),
                 )
             )
         return 0
@@ -1155,7 +1114,8 @@ def _slot_response(
 
     if refusal is None:
         query = f"?quick_setup_notice={notice}" if notice else ""
-        return urls.redirect(request,
+        return urls.redirect(
+            request,
             url=f"/operator/sessions/{review_session.public_id}{query}#quick-setup-{kind}",
             status_code=status.HTTP_303_SEE_OTHER,
         )
@@ -1423,12 +1383,12 @@ async def quick_setup_submit_all(
             held_token=token,
             notice=(
                 "kept_reviewees"
-                if refusal is None
-                and views.quick_setup_kept_reviewees(review_session, contents)
+                if refusal is None and views.quick_setup_kept_reviewees(review_session, contents)
                 else None
             ),
         )
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url=f"/operator/sessions/{review_session.public_id}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -1436,7 +1396,8 @@ async def quick_setup_submit_all(
 
 @router.post("/sessions/{session_id}/quick-setup/dismiss")
 def quick_setup_dismiss(
-    request: Request, held_token: str | None = Form(default=None),
+    request: Request,
+    held_token: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -1444,7 +1405,8 @@ def quick_setup_dismiss(
     """A Quick Setup banner's Dismiss while its ask holds the submit's
     files: end the hold and land on the card (segment 19W)."""
     release_hold(db, token=held_token, user=user, review_session=review_session)
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url=f"/operator/sessions/{review_session.public_id}#quick-setup",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -1509,9 +1471,7 @@ def _quick_setup_error_query(kind: str, reason: str) -> str:
 
 def _read_settings_csv(
     content: bytes,
-) -> tuple[
-    list[session_config_io.Row], list[session_config_io.ApplyError], str | None
-]:
+) -> tuple[list[session_config_io.Row], list[session_config_io.ApplyError], str | None]:
     """Parse the 3-column ``field,value,data_type`` CSV bytes
     into a list of ``Row`` records.
 

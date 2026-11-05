@@ -10,23 +10,17 @@ from app.auth.identity import AuthenticatedUser
 from app.db.models import ReviewSession
 
 
-def _make_session(
-    client: TestClient, db: Session, code: str = "spring-2026"
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, code: str = "spring-2026") -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "Spring", "code": code},
         follow_redirects=False,
     )
     assert response.status_code == 303
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
-def test_validate_renders_with_errors_for_empty_session(
-    client: TestClient, db: Session
-) -> None:
+def test_validate_renders_with_errors_for_empty_session(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db)
 
     response = client.get(f"/operator/sessions/{review_session.public_id}/validate")
@@ -40,9 +34,7 @@ def test_validate_renders_with_errors_for_empty_session(
     assert ">Errors (" in body
 
 
-def test_validate_renders_clean_for_populated_session(
-    client: TestClient, db: Session
-) -> None:
+def test_validate_renders_clean_for_populated_session(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db)
     client.post(
         f"/operator/sessions/{review_session.public_id}/reviewers/import",
@@ -89,9 +81,7 @@ def test_non_operator_cannot_view_validate(
     assert response.status_code == 404
 
 
-def test_session_detail_shows_counts_and_validate_link(
-    client: TestClient, db: Session
-) -> None:
+def test_session_detail_shows_counts_and_validate_link(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db)
 
     empty_response = client.get(f"/operator/sessions/{review_session.public_id}")
@@ -111,9 +101,7 @@ def test_session_detail_shows_counts_and_validate_link(
         files={
             "file": (
                 "r.csv",
-                b"ReviewerName,ReviewerEmail\n"
-                b"Alice,alice@example.edu\n"
-                b"Bob,bob@example.edu\n",
+                b"ReviewerName,ReviewerEmail\nAlice,alice@example.edu\nBob,bob@example.edu\n",
                 "text/csv",
             )
         },

@@ -12,6 +12,7 @@ The migration is self-contained — no ``app.services`` imports —
 so this test exercises the migration's own classifier in
 isolation.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -38,10 +39,7 @@ def _seed_pre_migration(connection) -> dict[str, int]:
     covers every arm of the rule. Returns a dict of stable names →
     assignment ids so the assertions can read by intent."""
     connection.execute(
-        text(
-            "INSERT INTO users (email, display_name) "
-            "VALUES ('op@example.edu', 'Op')"
-        )
+        text("INSERT INTO users (email, display_name) VALUES ('op@example.edu', 'Op')")
     )
     user_id = connection.execute(
         text("SELECT id FROM users WHERE email = 'op@example.edu'")
@@ -70,9 +68,7 @@ def _seed_pre_migration(connection) -> dict[str, int]:
     )
     reviewer_ids = dict(
         connection.execute(
-            text(
-                "SELECT name, id FROM reviewers WHERE session_id = :sid"
-            ),
+            text("SELECT name, id FROM reviewers WHERE session_id = :sid"),
             {"sid": session_id},
         ).all()
     )
@@ -92,9 +88,7 @@ def _seed_pre_migration(connection) -> dict[str, int]:
     )
     reviewee_ids = dict(
         connection.execute(
-            text(
-                "SELECT name, id FROM reviewees WHERE session_id = :sid"
-            ),
+            text("SELECT name, id FROM reviewees WHERE session_id = :sid"),
             {"sid": session_id},
         ).all()
     )
@@ -117,9 +111,7 @@ def _seed_pre_migration(connection) -> dict[str, int]:
     )
     instrument_ids = dict(
         connection.execute(
-            text(
-                "SELECT name, id FROM instruments WHERE session_id = :sid"
-            ),
+            text("SELECT name, id FROM instruments WHERE session_id = :sid"),
             {"sid": session_id},
         ).all()
     )
@@ -136,7 +128,7 @@ def _seed_pre_migration(connection) -> dict[str, int]:
         connection.execute(
             text(
                 "INSERT INTO assignments "
-                '(session_id, reviewer_id, reviewee_id, instrument_id, '
+                "(session_id, reviewer_id, reviewee_id, instrument_id, "
                 '"include", created_by_mode) '
                 "VALUES (:sid, :rid, :eid, :iid, 1, 'manual')"
             ),
@@ -272,9 +264,7 @@ def test_backfill_sets_is_self_review_correctly_for_every_arm() -> None:
             # Per-row assertions, by intent.
             def value(label: str) -> bool:
                 raw = connection.execute(
-                    text(
-                        "SELECT is_self_review FROM assignments WHERE id = :id"
-                    ),
+                    text("SELECT is_self_review FROM assignments WHERE id = :id"),
                     {"id": ids[label]},
                 ).scalar_one()
                 # SQLite stores boolean as 0/1.
@@ -319,15 +309,10 @@ def test_backfill_no_op_on_empty_session() -> None:
             command.upgrade(cfg, _PRE_MIGRATION)
             connection.commit()
             connection.execute(
-                text(
-                    "INSERT INTO users (email, display_name) "
-                    "VALUES ('op@example.edu', 'Op')"
-                )
+                text("INSERT INTO users (email, display_name) VALUES ('op@example.edu', 'Op')")
             )
             user_id = connection.execute(
-                text(
-                    "SELECT id FROM users WHERE email = 'op@example.edu'"
-                )
+                text("SELECT id FROM users WHERE email = 'op@example.edu'")
             ).scalar_one()
             connection.execute(
                 text(
@@ -341,9 +326,7 @@ def test_backfill_no_op_on_empty_session() -> None:
             command.upgrade(cfg, _TARGET_MIGRATION)
             connection.commit()
             # Column exists, no rows to assert on.
-            count = connection.execute(
-                text("SELECT COUNT(*) FROM assignments")
-            ).scalar_one()
+            count = connection.execute(text("SELECT COUNT(*) FROM assignments")).scalar_one()
             assert count == 0
     finally:
         eng.dispose()

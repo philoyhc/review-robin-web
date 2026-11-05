@@ -7,6 +7,7 @@ pair it no longer generates together with its responses, so leaving
 them out would make deactivate → Prepare → reactivate destroy a
 reviewer's saved answers.
 """
+
 from __future__ import annotations
 
 from sqlalchemy import select
@@ -30,9 +31,7 @@ def _seed(db: Session) -> tuple[User, ReviewSession]:
     user = User(email="op@example.edu")
     db.add(user)
     db.flush()
-    review_session = ReviewSession(
-        name="Spring", code="inactive-pairs", created_by_user_id=user.id
-    )
+    review_session = ReviewSession(name="Spring", code="inactive-pairs", created_by_user_id=user.id)
     db.add(review_session)
     db.flush()
     db.add_all(
@@ -151,9 +150,7 @@ def test_validate_warns_an_active_reviewer_left_with_no_active_work(
     _set_status(db, Reviewer, "Ana", "inactive")
     db.refresh(review_session)
     messages = _reviewer_missing(db, review_session)
-    assert messages == [
-        "Reviewer 'Bo' (bo@example.edu) has no active assignments"
-    ]
+    assert messages == ["Reviewer 'Bo' (bo@example.edu) has no active assignments"]
 
 
 def test_the_self_review_column_ignores_a_row_excluded_by_status(
@@ -176,15 +173,13 @@ def test_the_self_review_column_ignores_a_row_excluded_by_status(
     _prepare(db, user, review_session)
     instrument_id = db.execute(select(Assignment.instrument_id)).scalars().first()
     assert instrument_id is not None
-    assert assignments.self_review_breakdown_per_instrument(
-        db, review_session.id
-    ) == {instrument_id: (1, 0)}
+    assert assignments.self_review_breakdown_per_instrument(db, review_session.id) == {
+        instrument_id: (1, 0)
+    }
 
     _set_status(db, Reviewer, "Ana", "inactive")
     _prepare(db, user, review_session)
-    assert assignments.self_review_breakdown_per_instrument(
-        db, review_session.id
-    ) == {}
+    assert assignments.self_review_breakdown_per_instrument(db, review_session.id) == {}
     assignments.set_instrument_self_reviews_active(
         db,
         review_session=review_session,
@@ -209,9 +204,7 @@ def test_nothing_included_is_reported_once_not_per_reviewer(
     for row in db.execute(select(Assignment)).scalars():
         row.include = False
     db.commit()
-    keys = [
-        i.rule_key for i in validation.validate_session_setup(db, review_session)
-    ]
+    keys = [i.rule_key for i in validation.validate_session_setup(db, review_session)]
     assert "assignments.no_included_pairs" in keys
     assert "assignments.reviewer_missing" not in keys
 

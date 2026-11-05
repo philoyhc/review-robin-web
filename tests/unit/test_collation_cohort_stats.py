@@ -44,9 +44,7 @@ def _make_session(db: Session, *, code: str) -> ReviewSession:
     return sess
 
 
-def _make_instrument(
-    db: Session, sess: ReviewSession, *, name: str = "Instrument 1"
-) -> Instrument:
+def _make_instrument(db: Session, sess: ReviewSession, *, name: str = "Instrument 1") -> Instrument:
     inst = Instrument(session_id=sess.id, name=name, order=0)
     db.add(inst)
     db.flush()
@@ -77,18 +75,14 @@ def _make_field(
     return field
 
 
-def _make_reviewer(
-    db: Session, sess: ReviewSession, *, name: str, email: str
-) -> Reviewer:
+def _make_reviewer(db: Session, sess: ReviewSession, *, name: str, email: str) -> Reviewer:
     r = Reviewer(session_id=sess.id, name=name, email=email)
     db.add(r)
     db.flush()
     return r
 
 
-def _make_reviewee(
-    db: Session, sess: ReviewSession, *, name: str, email: str
-) -> Reviewee:
+def _make_reviewee(db: Session, sess: ReviewSession, *, name: str, email: str) -> Reviewee:
     r = Reviewee(session_id=sess.id, name=name, email_or_identifier=email)
     db.add(r)
     db.flush()
@@ -126,9 +120,7 @@ def _submit_response(
             assignment_id=assignment.id,
             response_field_id=field.id,
             value=value,
-            submitted_at=(
-                datetime.now(UTC) if submitted else None
-            ),
+            submitted_at=(datetime.now(UTC) if submitted else None),
         )
     )
 
@@ -193,11 +185,7 @@ def test_both_rows_share_aggregate_differ_only_in_distinct_count(
     assert reviewee_row.distinct_count == 1
     # Same aggregate on both sides.
     assert reviewer_row.response_count == reviewee_row.response_count == 2
-    assert (
-        reviewer_row.field_cells[0].average
-        == reviewee_row.field_cells[0].average
-        == 5.0
-    )
+    assert reviewer_row.field_cells[0].average == reviewee_row.field_cells[0].average == 5.0
 
 
 def test_assignments_outside_pool_are_excluded(db: Session) -> None:
@@ -222,9 +210,7 @@ def test_assignments_outside_pool_are_excluded(db: Session) -> None:
         distinct_reviewer_count=1,
         distinct_reviewee_count=1,
     )
-    reviewer_row, _ = build_cohort_stats_for_instrument(
-        db, instrument=inst, cohort=cohort
-    )
+    reviewer_row, _ = build_cohort_stats_for_instrument(db, instrument=inst, cohort=cohort)
     # Only a_in's "4" feeds the average; a_out's "9" is outside the pool.
     assert reviewer_row.response_count == 1
     assert reviewer_row.field_cells[0].average == 4.0
@@ -252,9 +238,7 @@ def test_only_submitted_responses_count(db: Session) -> None:
         distinct_reviewer_count=1,
         distinct_reviewee_count=2,
     )
-    reviewer_row, _ = build_cohort_stats_for_instrument(
-        db, instrument=inst, cohort=cohort
-    )
+    reviewer_row, _ = build_cohort_stats_for_instrument(db, instrument=inst, cohort=cohort)
     assert reviewer_row.response_count == 1
     assert reviewer_row.field_cells[0].average == 4.0
 
@@ -288,9 +272,7 @@ def test_empty_cells_for_fields_with_no_data(db: Session) -> None:
     sess = _make_session(db, code="stats-mixed")
     inst = _make_instrument(db, sess)
     rating = _make_field(db, inst, field_key="rating", data_type="Integer")
-    notes = _make_field(
-        db, inst, field_key="notes", data_type="String", order=1
-    )
+    notes = _make_field(db, inst, field_key="notes", data_type="String", order=1)
     db.refresh(inst)
 
     r1 = _make_reviewer(db, sess, name="R1", email="r1@x")
@@ -305,9 +287,7 @@ def test_empty_cells_for_fields_with_no_data(db: Session) -> None:
         distinct_reviewer_count=1,
         distinct_reviewee_count=1,
     )
-    reviewer_row, _ = build_cohort_stats_for_instrument(
-        db, instrument=inst, cohort=cohort
-    )
+    reviewer_row, _ = build_cohort_stats_for_instrument(db, instrument=inst, cohort=cohort)
     assert reviewer_row.field_cells[0].response_count == 1
     assert reviewer_row.field_cells[1].response_count == 0
     assert reviewer_row.response_count == 1

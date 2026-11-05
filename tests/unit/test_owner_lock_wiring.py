@@ -145,9 +145,7 @@ def _owner_arg(call: ast.Call) -> str | None:
 @pytest.mark.parametrize(
     "where, function", _route_callers(), ids=lambda v: v if isinstance(v, str) else ""
 )
-def test_the_lock_gates_the_route_before_the_session_is_made(
-    where: str, function
-) -> None:
+def test_the_lock_gates_the_route_before_the_session_is_made(where: str, function) -> None:
     body = function.body
     makes = next(
         i for i, s in enumerate(body) if any(_name(c) in MAKES_AN_OWNER for c in _calls(s))
@@ -160,6 +158,6 @@ def test_the_lock_gates_the_route_before_the_session_is_made(
         f"{where}: the lock is not on the session's owner"
     )
     between = body[gates[-1] + 1 : makes]
-    assert not any(
-        _name(c) in {"commit", "rollback"} for s in between for c in _calls(s)
-    ), f"{where}: the lock is released before the session is made"
+    assert not any(_name(c) in {"commit", "rollback"} for s in between for c in _calls(s)), (
+        f"{where}: the lock is released before the session is made"
+    )

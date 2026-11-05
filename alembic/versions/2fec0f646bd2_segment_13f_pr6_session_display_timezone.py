@@ -23,6 +23,7 @@ Revises: a4c8e91b2d6f
 Create Date: 2026-05-15
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -36,9 +37,7 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     with op.batch_alter_table("sessions", schema=None) as batch_op:
-        batch_op.add_column(
-            sa.Column("display_timezone", sa.String(length=64), nullable=True)
-        )
+        batch_op.add_column(sa.Column("display_timezone", sa.String(length=64), nullable=True))
 
 
 def downgrade() -> None:

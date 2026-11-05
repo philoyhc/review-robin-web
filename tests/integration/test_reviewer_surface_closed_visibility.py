@@ -113,9 +113,7 @@ def _seed_session_with_rae_and_one_reviewee(
     return review_session
 
 
-def _activate(
-    operator_client: TestClient, review_session: ReviewSession
-) -> None:
+def _activate(operator_client: TestClient, review_session: ReviewSession) -> None:
     operator_client.post(
         f"/operator/sessions/{review_session.public_id}/workflow/prepare",
         follow_redirects=False,
@@ -137,9 +135,7 @@ def _submit_rating(
     assignment_ids = [
         a.id
         for a in db.execute(
-            select(Assignment).where(
-                Assignment.session_id == review_session.id
-            )
+            select(Assignment).where(Assignment.session_id == review_session.id)
         ).scalars()
     ]
     data: dict[str, str] = {}
@@ -177,25 +173,27 @@ def _close_after_rae_submits(
     identity installed."""
     two = second_instrument_mode != "unused"
     review_session = _seed_session_with_rae_and_one_reviewee(
-        client, db, code=code, reviewer_email=rae.email,
+        client,
+        db,
+        code=code,
+        reviewer_email=rae.email,
         extra_instruments=1 if two else 0,
     )
     _activate(client, review_session)
     rae_client = make_client(rae)
     _submit_rating(
-        rae_client, review_session, rating_value="5",
-        comments_value="great review", db=db,
+        rae_client,
+        review_session,
+        rating_value="5",
+        comments_value="great review",
+        db=db,
     )
     _restore_operator_identity(alice)
     instruments = sorted(
-        db.execute(
-            select(Instrument).where(Instrument.session_id == review_session.id)
-        ).scalars(),
+        db.execute(select(Instrument).where(Instrument.session_id == review_session.id)).scalars(),
         key=lambda i: (i.order, i.id),
     )
-    operator = db.execute(
-        select(User).where(User.email == alice.email)
-    ).scalar_one()
+    operator = db.execute(select(User).where(User.email == alice.email)).scalar_one()
     modes = [released_mode] + ([second_instrument_mode] if two else [])
     for instrument, mode in zip(instruments, modes):
         with past_draft_setup(db, review_session):
@@ -217,9 +215,7 @@ def _close_after_rae_submits(
     db.refresh(review_session)
     assert lifecycle.is_expired(review_session)
     if open_release:
-        review_session.responses_release_at = dt.datetime.now(
-            dt.UTC
-        ) - dt.timedelta(hours=1)
+        review_session.responses_release_at = dt.datetime.now(dt.UTC) - dt.timedelta(hours=1)
         db.commit()
     app.dependency_overrides[get_current_user] = lambda: rae
     return review_session, rae_client
@@ -230,8 +226,14 @@ def test_released_raw_shows_the_reviewers_own_values(
 ) -> None:
     """The policy alone shows them."""
     review_session, rae_client = _close_after_rae_submits(
-        client, db, alice, rae, make_client,
-        code="vis-raw", released_mode="raw", open_release=True,
+        client,
+        db,
+        alice,
+        rae,
+        make_client,
+        code="vis-raw",
+        released_mode="raw",
+        open_release=True,
     )
     body = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
     assert 'value="5"' in body
@@ -242,9 +244,7 @@ def test_released_raw_shows_the_reviewers_own_values(
     assert "disabled" in body
     summary = rae_client.get(f"/me/sessions/{review_session.public_id}/summary")
     assert "great review" in summary.text
-    csv_body = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/summary.csv"
-    ).text
+    csv_body = rae_client.get(f"/me/sessions/{review_session.public_id}/summary.csv").text
     assert "great review" in csv_body
 
 
@@ -265,7 +265,11 @@ def test_otherwise_a_closed_session_hides_them(
     """Outside the release window, or with the released cell off, the
     reviewer's values are hidden."""
     review_session, rae_client = _close_after_rae_submits(
-        client, db, alice, rae, make_client,
+        client,
+        db,
+        alice,
+        rae,
+        make_client,
         code=f"vis-hide-{released_mode}-{open_release}",
         released_mode=released_mode,
         open_release=open_release,
@@ -279,9 +283,7 @@ def test_otherwise_a_closed_session_hides_them(
     assert "great review" not in summary
     assert "Your responses are not shown" in summary
     assert "summary.csv" not in summary
-    csv_body = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/summary.csv"
-    ).text
+    csv_body = rae_client.get(f"/me/sessions/{review_session.public_id}/summary.csv").text
     assert "great review" not in csv_body
 
 
@@ -292,8 +294,14 @@ def test_visibility_is_decided_per_instrument(
     values are hidden, the summary shows one section and says so, and the
     CSV carries instrument 1 only."""
     review_session, rae_client = _close_after_rae_submits(
-        client, db, alice, rae, make_client,
-        code="vis-mixed", released_mode="raw", open_release=True,
+        client,
+        db,
+        alice,
+        rae,
+        make_client,
+        code="vis-mixed",
+        released_mode="raw",
+        open_release=True,
         second_instrument_mode=None,
     )
     body = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
@@ -303,9 +311,7 @@ def test_visibility_is_decided_per_instrument(
     assert "Some of your responses are not shown" in summary
     assert summary.count('<section class="card"') == 1
     assert "summary.csv" in summary
-    csv_body = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/summary.csv"
-    ).text
+    csv_body = rae_client.get(f"/me/sessions/{review_session.public_id}/summary.csv").text
     assert "instrument_1" in csv_body
     assert "instrument_2" not in csv_body
 
@@ -316,16 +322,20 @@ def test_archiving_ends_all_visibility(
     """Archived: nothing, whatever the policy says — not on the summary,
     not in its CSV (the surface already shows the not-open page)."""
     review_session, rae_client = _close_after_rae_submits(
-        client, db, alice, rae, make_client,
-        code="vis-archived", released_mode="raw", open_release=True,
+        client,
+        db,
+        alice,
+        rae,
+        make_client,
+        code="vis-archived",
+        released_mode="raw",
+        open_release=True,
     )
     review_session.status = "archived"
     db.commit()
     summary = rae_client.get(f"/me/sessions/{review_session.public_id}/summary").text
     assert "great review" not in summary
-    csv_body = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/summary.csv"
-    ).text
+    csv_body = rae_client.get(f"/me/sessions/{review_session.public_id}/summary.csv").text
     assert "great review" not in csv_body
 
 
@@ -348,8 +358,11 @@ def test_dashboard_shows_closed_status_and_keeps_link_after_close(
     _activate(client, review_session)
     rae_client = make_client(rae)
     _submit_rating(
-        rae_client, review_session, rating_value="5",
-        comments_value="great review", db=db,
+        rae_client,
+        review_session,
+        rating_value="5",
+        comments_value="great review",
+        db=db,
     )
     _restore_operator_identity(alice)
     client.post(
@@ -363,11 +376,8 @@ def test_dashboard_shows_closed_status_and_keeps_link_after_close(
     # on ``not opened`` sessions; an ``expired`` session should
     # read as ``closed`` so the link stays enabled.
     reviewer_row = db.execute(
-        select(__import__(
-            "app.db.models", fromlist=["Reviewer"]
-        ).Reviewer).where(
-            __import__("app.db.models", fromlist=["Reviewer"])
-            .Reviewer.session_id
+        select(__import__("app.db.models", fromlist=["Reviewer"]).Reviewer).where(
+            __import__("app.db.models", fromlist=["Reviewer"]).Reviewer.session_id
             == review_session.id
         )
     ).scalar_one()

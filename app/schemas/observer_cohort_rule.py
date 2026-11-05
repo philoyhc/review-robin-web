@@ -70,9 +70,7 @@ ALLOWED_OBSERVER_FIELDS: frozenset[str] = frozenset(
 the cohort filter can compare a roster attribute against."""
 
 
-ALLOWED_RIGHT_FIELDS: frozenset[str] = (
-    ALLOWED_OBSERVER_FIELDS | ALLOWED_LEFT_FIELDS
-)
+ALLOWED_RIGHT_FIELDS: frozenset[str] = ALLOWED_OBSERVER_FIELDS | ALLOWED_LEFT_FIELDS
 """Right-side operand vocabulary for the ``IS THE SAME AS`` /
 ``IS DIFFERENT FROM`` operators — observer-side attributes plus
 the same left-side cross-roster attributes (so a cohort rule
@@ -81,12 +79,8 @@ Tag 2`` for a session-wide filter that doesn't reference the
 observer)."""
 
 
-_FIELD_OPERATORS: frozenset[str] = frozenset(
-    {"IS THE SAME AS", "IS DIFFERENT FROM"}
-)
-_VALUE_OPERATORS: frozenset[str] = frozenset(
-    {"IS", "IS NOT", "CONTAINS", "DOES NOT CONTAIN"}
-)
+_FIELD_OPERATORS: frozenset[str] = frozenset({"IS THE SAME AS", "IS DIFFERENT FROM"})
+_VALUE_OPERATORS: frozenset[str] = frozenset({"IS", "IS NOT", "CONTAINS", "DOES NOT CONTAIN"})
 #: The operators whose operand is typed rather than picked — the row
 #: editor's half-filled check reads them, server and page alike.
 VALUE_OPERATORS = _VALUE_OPERATORS
@@ -112,14 +106,11 @@ class CohortRule(BaseModel):
     def _validate_shape(self) -> CohortRule:
         if self.field not in ALLOWED_LEFT_FIELDS:
             raise ValueError(
-                f"unknown cohort-rule field {self.field!r}; "
-                f"allowed: {sorted(ALLOWED_LEFT_FIELDS)}"
+                f"unknown cohort-rule field {self.field!r}; allowed: {sorted(ALLOWED_LEFT_FIELDS)}"
             )
         if self.op in _FIELD_OPERATORS:
             if not self.operand_tag:
-                raise ValueError(
-                    f"operator {self.op!r} requires operand_tag"
-                )
+                raise ValueError(f"operator {self.op!r} requires operand_tag")
             if self.operand_tag not in ALLOWED_RIGHT_FIELDS:
                 raise ValueError(
                     f"unknown cohort-rule operand_tag "
@@ -131,9 +122,7 @@ class CohortRule(BaseModel):
             # every row, so it is refused here, under every writer — the
             # row editor, the bulk Save and the CSV import alike
             # (operator pages Item 4; Codex on #2989).
-            raise ValueError(
-                f"operator {self.op!r} requires operand_value"
-            )
+            raise ValueError(f"operator {self.op!r} requires operand_value")
         return self
 
 

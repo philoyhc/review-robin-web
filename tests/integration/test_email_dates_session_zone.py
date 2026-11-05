@@ -46,9 +46,7 @@ def test_the_sessions_own_zone_wins(db: Session) -> None:
     db.add(reviewer)
     db.flush()
 
-    _, body = email_templates.render_reminder(
-        review_session, reviewer, invite_url="https://app/x"
-    )
+    _, body = email_templates.render_reminder(review_session, reviewer, invite_url="https://app/x")
     assert body == "Due 2026-06-30 17:00 (GMT+8 Asia/Singapore)"
 
 
@@ -58,9 +56,7 @@ def test_without_one_the_creators_zone_applies(db: Session) -> None:
     db.add(reviewer)
     db.flush()
 
-    _, body = email_templates.render_reminder(
-        review_session, reviewer, invite_url="https://app/x"
-    )
+    _, body = email_templates.render_reminder(review_session, reviewer, invite_url="https://app/x")
     assert body == "Due 2026-06-30 05:00 (GMT-4 America/New_York)"
 
 
@@ -73,13 +69,9 @@ def test_submitted_at_reads_a_real_submission_in_the_session_zone(
     from app.services.instruments import ensure_default_instrument
 
     review_session = _session(db, code="mail-sub", own_zone="Asia/Singapore")
-    review_session.email_template_overrides = {
-        "responses_received_body": "Sent $submitted_at"
-    }
+    review_session.email_template_overrides = {"responses_received_body": "Sent $submitted_at"}
     reviewer = Reviewer(session_id=review_session.id, name="R", email="r@e.edu")
-    reviewee = Reviewee(
-        session_id=review_session.id, name="E", email_or_identifier="e@e.edu"
-    )
+    reviewee = Reviewee(session_id=review_session.id, name="E", email_or_identifier="e@e.edu")
     db.add_all([reviewer, reviewee])
     db.flush()
     instrument = ensure_default_instrument(db, review_session)

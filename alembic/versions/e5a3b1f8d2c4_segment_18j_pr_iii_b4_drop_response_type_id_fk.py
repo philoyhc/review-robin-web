@@ -17,6 +17,7 @@ Revision ID: e5a3b1f8d2c4
 Revises: d4e1c8b5f372
 Create Date: 2026-05-24
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -29,9 +30,7 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    with op.batch_alter_table(
-        "instrument_response_fields", schema=None
-    ) as batch_op:
+    with op.batch_alter_table("instrument_response_fields", schema=None) as batch_op:
         # ``ix_irf_response_type_id`` is the explicit index name
         # given when the column was introduced (Segment 10D Slice 4a).
         batch_op.drop_index("ix_irf_response_type_id")
@@ -47,9 +46,7 @@ def downgrade() -> None:
     # of this downgrade used different names — SQLite tolerates
     # the mismatch in batch-recreate mode, but Postgres's strict
     # DROP INDEX requires the original name.
-    with op.batch_alter_table(
-        "instrument_response_fields", schema=None
-    ) as batch_op:
+    with op.batch_alter_table("instrument_response_fields", schema=None) as batch_op:
         batch_op.add_column(
             sa.Column(
                 "response_type_id",

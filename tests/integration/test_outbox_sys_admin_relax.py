@@ -14,6 +14,7 @@ The companion Outbox tests moved to
 ``/operator/sessions/{id}/outbox`` route retired and Outbox
 content moved to a child page under Sessions Diagnostics.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -25,18 +26,14 @@ from app.config import settings
 from app.db.models import ReviewSession
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "Spring", "code": code},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 # --- Audit log CSV — gate tightened to require_sys_admin (16C PR 1) --------

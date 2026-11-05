@@ -76,9 +76,7 @@ def _session(db: Session, *, code: str = "meta") -> ReviewSession:
     return review_session
 
 
-def _reviewer(
-    db: Session, review_session: ReviewSession, *, name: str, email: str
-) -> Reviewer:
+def _reviewer(db: Session, review_session: ReviewSession, *, name: str, email: str) -> Reviewer:
     r = Reviewer(session_id=review_session.id, name=name, email=email)
     db.add(r)
     db.flush()
@@ -88,9 +86,7 @@ def _reviewer(
 def _reviewee(
     db: Session, review_session: ReviewSession, *, name: str, identifier: str
 ) -> Reviewee:
-    e = Reviewee(
-        session_id=review_session.id, name=name, email_or_identifier=identifier
-    )
+    e = Reviewee(session_id=review_session.id, name=name, email_or_identifier=identifier)
     db.add(e)
     db.flush()
     return e
@@ -196,9 +192,7 @@ def _response(
     return resp
 
 
-def _row_by_name(
-    rows: list[tuple[str, ...]], header: tuple[str, ...], name: str
-) -> dict[str, str]:
+def _row_by_name(rows: list[tuple[str, ...]], header: tuple[str, ...], name: str) -> dict[str, str]:
     for row in rows[1:]:
         if row[0] == name:
             return dict(zip(header, row))
@@ -214,9 +208,7 @@ def test_no_instruments_selected_ships_base_header_only(db: Session) -> None:
     review_session = _session(db, code="no-instr")
     _reviewer(db, review_session, name="Rita", email="rita@x.edu")
 
-    rows = build_reviewer_metadata(
-        db, review_session, instrument_ids=None, all_reviewers=True
-    )
+    rows = build_reviewer_metadata(db, review_session, instrument_ids=None, all_reviewers=True)
     assert rows[0] == (
         "ReviewerName",
         "ReviewerEmail",
@@ -229,9 +221,7 @@ def test_selected_numeric_field_ships_mean_median_min_max(
     db: Session,
 ) -> None:
     review_session = _session(db, code="num")
-    instrument = _instrument(
-        db, review_session, short_label="Peer", order=0
-    )
+    instrument = _instrument(db, review_session, short_label="Peer", order=0)
     _field(db, instrument, _NUMERIC, field_key="score", label="Score")
 
     rows = build_reviewer_metadata(
@@ -254,9 +244,7 @@ def test_selected_numeric_field_ships_mean_median_min_max(
 
 def test_selected_string_field_ships_length(db: Session) -> None:
     review_session = _session(db, code="str")
-    instrument = _instrument(
-        db, review_session, short_label="Peer", order=0
-    )
+    instrument = _instrument(db, review_session, short_label="Peer", order=0)
     _field(db, instrument, _LONG_TEXT, field_key="notes", label="Notes")
 
     rows = build_reviewer_metadata(
@@ -340,9 +328,7 @@ def test_assigned_counts_reviewee_times_fields(db: Session) -> None:
         instrument=instrument,
     )
 
-    rows = build_reviewer_metadata(
-        db, review_session, instrument_ids=None, all_reviewers=True
-    )
+    rows = build_reviewer_metadata(db, review_session, instrument_ids=None, all_reviewers=True)
     rita = _row_by_name(rows, rows[0], "Rita")
     assert rita["Assigned_self"] == "4"
     assert rita["Count_self"] == "0"
@@ -354,9 +340,7 @@ def test_count_includes_non_empty_responses_only(db: Session) -> None:
     eli = _reviewee(db, review_session, name="Eli", identifier="eli@x")
     instrument = _instrument(db, review_session, short_label="P", order=0)
     f_a = _field(db, instrument, _NUMERIC, field_key="a", label="A")
-    f_b = _field(
-        db, instrument, _LONG_TEXT, field_key="b", label="B", order=1
-    )
+    f_b = _field(db, instrument, _LONG_TEXT, field_key="b", label="B", order=1)
     assignment = _assignment(
         db,
         review_session,
@@ -367,9 +351,7 @@ def test_count_includes_non_empty_responses_only(db: Session) -> None:
     _response(db, assignment=assignment, field=f_a, value="80")
     _response(db, assignment=assignment, field=f_b, value="")  # blank
 
-    rows = build_reviewer_metadata(
-        db, review_session, instrument_ids=None, all_reviewers=True
-    )
+    rows = build_reviewer_metadata(db, review_session, instrument_ids=None, all_reviewers=True)
     rita = _row_by_name(rows, rows[0], "Rita")
     assert rita["Count_self"] == "1"
     assert rita["Assigned_self"] == "2"
@@ -381,9 +363,7 @@ def test_numeric_aggregates_compute_from_values(db: Session) -> None:
     instrument = _instrument(db, review_session, short_label="P", order=0)
     f = _field(db, instrument, _NUMERIC, field_key="s", label="S")
     for value in ("10", "20", "40"):
-        reviewee = _reviewee(
-            db, review_session, name=value, identifier=f"r{value}@x"
-        )
+        reviewee = _reviewee(db, review_session, name=value, identifier=f"r{value}@x")
         assignment = _assignment(
             db,
             review_session,
@@ -415,9 +395,7 @@ def test_string_length_sums_chars(db: Session) -> None:
     instrument = _instrument(db, review_session, short_label="P", order=0)
     f = _field(db, instrument, _LONG_TEXT, field_key="n", label="N")
     for chars in ("hi", "world!"):
-        reviewee = _reviewee(
-            db, review_session, name=chars, identifier=f"{chars}@x"
-        )
+        reviewee = _reviewee(db, review_session, name=chars, identifier=f"{chars}@x")
         assignment = _assignment(
             db,
             review_session,
@@ -461,9 +439,7 @@ def test_all_reviewers_false_drops_zero_response_rows(db: Session) -> None:
     )
     _response(db, assignment=a_rita, field=f, value="80")
 
-    rows_all = build_reviewer_metadata(
-        db, review_session, instrument_ids=None, all_reviewers=True
-    )
+    rows_all = build_reviewer_metadata(db, review_session, instrument_ids=None, all_reviewers=True)
     assert {row[0] for row in rows_all[1:]} == {"Rita", "Sam"}
 
     rows_active = build_reviewer_metadata(
@@ -564,15 +540,11 @@ def test_group_scoped_reviewer_dedupes_by_group(db: Session) -> None:
     rob = _reviewer(db, review_session, name="Rob", email="rob@x.edu")
 
     # Individual instrument: 3 reviewees, 2 fields, no fan-out.
-    individual = _instrument(
-        db, review_session, short_label="I", order=0
-    )
+    individual = _instrument(db, review_session, short_label="I", order=0)
     _field(db, individual, _NUMERIC, field_key="a", label="A")
     _field(db, individual, _NUMERIC, field_key="b", label="B", order=1)
     for n in range(3):
-        ree = _reviewee(
-            db, review_session, name=f"Ind{n}", identifier=f"i{n}@x"
-        )
+        ree = _reviewee(db, review_session, name=f"Ind{n}", identifier=f"i{n}@x")
         _assignment(
             db,
             review_session,
@@ -584,9 +556,7 @@ def test_group_scoped_reviewer_dedupes_by_group(db: Session) -> None:
     # Group instrument: 3 groups (Team A / Team B / Team C),
     # 2 members each, 2 fields. Fan-out gives Rob 6
     # member-assignments here.
-    group = _instrument(
-        db, review_session, short_label="G", order=1, group_kind="r1"
-    )
+    group = _instrument(db, review_session, short_label="G", order=1, group_kind="r1")
     _field(db, group, _NUMERIC, field_key="x", label="X")
     _field(db, group, _NUMERIC, field_key="y", label="Y", order=1)
     for team in ("A", "B", "C"):
@@ -606,9 +576,7 @@ def test_group_scoped_reviewer_dedupes_by_group(db: Session) -> None:
                 instrument=group,
             )
 
-    rows = build_reviewer_metadata(
-        db, review_session, instrument_ids=None, all_reviewers=True
-    )
+    rows = build_reviewer_metadata(db, review_session, instrument_ids=None, all_reviewers=True)
     rob_row = _row_by_name(rows, rows[0], "Rob")
     assert rob_row["Assigned_self"] == "12"
 
@@ -620,9 +588,7 @@ def test_group_scoped_reviewer_count_dedupes_too(db: Session) -> None:
     received the fan-out."""
     review_session = _session(db, code="rob-count")
     rob = _reviewer(db, review_session, name="Rob", email="rob@x.edu")
-    group = _instrument(
-        db, review_session, short_label="G", order=0, group_kind="r1"
-    )
+    group = _instrument(db, review_session, short_label="G", order=0, group_kind="r1")
     fld = _field(db, group, _NUMERIC, field_key="x", label="X")
     # One group, 3 members; Rob's group answer is "50" — fanned
     # to all 3 member-assignments.
@@ -683,21 +649,15 @@ def test_group_scoped_reviewee_does_not_dedupe(db: Session) -> None:
             tag_1="TeamE",
         )
 
-    individual = _instrument(
-        db, review_session, short_label="I", order=0
-    )
+    individual = _instrument(db, review_session, short_label="I", order=0)
     _field(db, individual, _NUMERIC, field_key="a", label="A")
     _field(db, individual, _NUMERIC, field_key="b", label="B", order=1)
-    group = _instrument(
-        db, review_session, short_label="G", order=1, group_kind="r1"
-    )
+    group = _instrument(db, review_session, short_label="G", order=1, group_kind="r1")
     _field(db, group, _NUMERIC, field_key="x", label="X")
     _field(db, group, _NUMERIC, field_key="y", label="Y", order=1)
 
     for n in range(3):
-        reviewer = _reviewer(
-            db, review_session, name=f"R{n}", email=f"r{n}@x.edu"
-        )
+        reviewer = _reviewer(db, review_session, name=f"R{n}", email=f"r{n}@x.edu")
         _assignment(
             db,
             review_session,
@@ -722,9 +682,7 @@ def test_group_scoped_reviewee_does_not_dedupe(db: Session) -> None:
                 instrument=group,
             )
 
-    rows = build_reviewee_metadata(
-        db, review_session, instrument_ids=None, all_reviewees=True
-    )
+    rows = build_reviewee_metadata(db, review_session, instrument_ids=None, all_reviewees=True)
     eli_row = _row_by_name(rows, rows[0], "Eli")
     assert eli_row["Assigned_self"] == "12"
 
@@ -756,9 +714,7 @@ def test_no_instrument_filter_scans_every_instrument(db: Session) -> None:
         instrument=second,
     )
 
-    rows = build_reviewer_metadata(
-        db, review_session, instrument_ids=None, all_reviewers=True
-    )
+    rows = build_reviewer_metadata(db, review_session, instrument_ids=None, all_reviewers=True)
     rita = _row_by_name(rows, rows[0], "Rita")
     # 2 assignments × 1 field each = 2 Assigned slots.
     assert rita["Assigned_self"] == "2"
@@ -784,21 +740,15 @@ def _seed_self_review_session(
     per the PR 2 (write paths) of the self-review consolidation
     slice."""
     review_session = _session(db, code=code)
-    alice_r = _reviewer(
-        db, review_session, name="Alice", email="alice@example.edu"
-    )
+    alice_r = _reviewer(db, review_session, name="Alice", email="alice@example.edu")
     alice_e = _reviewee(
         db,
         review_session,
         name="Alice",
         identifier="alice@example.edu",
     )
-    bob_e = _reviewee(
-        db, review_session, name="Bob", identifier="bob@example.edu"
-    )
-    instrument = _instrument(
-        db, review_session, short_label="Peer", order=0
-    )
+    bob_e = _reviewee(db, review_session, name="Bob", identifier="bob@example.edu")
+    instrument = _instrument(db, review_session, short_label="Peer", order=0)
     field = _field(db, instrument, _NUMERIC, field_key="score", label="Score")
     a_self = _assignment(
         db,
@@ -816,9 +766,7 @@ def _seed_self_review_session(
     )
     _response(db, assignment=a_self, field=field, value="50")
     _response(db, assignment=a_other, field=field, value="80")
-    assignments_service.recompute_self_review_classification(
-        db, session_id=review_session.id
-    )
+    assignments_service.recompute_self_review_classification(db, session_id=review_session.id)
     return review_session, alice_r, alice_e, bob_e, instrument, field
 
 
@@ -839,9 +787,7 @@ def test_include_self_state_carries_self_suffix_and_includes_pair(
     """Default ``include_self`` state folds every ``include=True``
     row in (including the self-review pair). Header columns carry
     the ``_self`` suffix per the always-emit-suffix rule."""
-    review_session, alice_r, _, _, instrument, _ = _seed_self_review_session(
-        db, code="srh-include"
-    )
+    review_session, alice_r, _, _, instrument, _ = _seed_self_review_session(db, code="srh-include")
     rows = build_reviewer_metadata(
         db,
         review_session,
@@ -863,9 +809,7 @@ def test_exclude_self_state_drops_self_review_pairs(db: Session) -> None:
     """``exclude_self`` state filters ``WHERE NOT is_self_review``
     so Alice's self-review pair drops from her aggregates. Headers
     carry the ``_noself`` suffix."""
-    review_session, _, _, _, instrument, _ = _seed_self_review_session(
-        db, code="srh-exclude"
-    )
+    review_session, _, _, _, instrument, _ = _seed_self_review_session(db, code="srh-exclude")
     rows = build_reviewer_metadata(
         db,
         review_session,
@@ -889,9 +833,7 @@ def test_both_state_emits_self_and_noself_blocks_side_by_side(
     """``both`` state runs two passes and concatenates the column
     blocks — ``_self`` first, ``_noself`` second — so a single CSV
     side-by-sides both views (Q1 / Q2 resolutions)."""
-    review_session, _, _, _, instrument, _ = _seed_self_review_session(
-        db, code="srh-both"
-    )
+    review_session, _, _, _, instrument, _ = _seed_self_review_session(db, code="srh-both")
     rows = build_reviewer_metadata(
         db,
         review_session,
@@ -914,9 +856,7 @@ def test_both_state_emits_self_and_noself_blocks_side_by_side(
 def test_reviewee_metadata_honours_state_machine_too(db: Session) -> None:
     """The reviewee side mirrors the reviewer side — same three
     states, same suffixes, same filter."""
-    review_session, _, _, _, instrument, _ = _seed_self_review_session(
-        db, code="srh-ree"
-    )
+    review_session, _, _, _, instrument, _ = _seed_self_review_session(db, code="srh-ree")
     rows = build_reviewee_metadata(
         db,
         review_session,

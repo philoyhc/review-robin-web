@@ -28,12 +28,8 @@ def _user(db: Session, email: str, name: str | None = None) -> User:
     return user
 
 
-def _session(
-    db: Session, name: str, code: str, *owners: User, **fields: object
-) -> ReviewSession:
-    review_session = ReviewSession(
-        name=name, code=code, created_by_user_id=owners[0].id, **fields
-    )
+def _session(db: Session, name: str, code: str, *owners: User, **fields: object) -> ReviewSession:
+    review_session = ReviewSession(name=name, code=code, created_by_user_id=owners[0].id, **fields)
     db.add(review_session)
     db.flush()
     for owner in owners:
@@ -68,7 +64,11 @@ def test_a_row_carries_its_name_code_and_owners_for_the_filter(
     body = client.get(PAGE).text
     text = body.split('data-filter-text="', 1)[1].split('"', 1)[0]
     assert text.split("\n") == [
-        "spring review", "spring-26", "ann lee", "ann@example.edu", "ben@example.edu",
+        "spring review",
+        "spring-26",
+        "ann lee",
+        "ann@example.edu",
+        "ben@example.edu",
     ]
     # The typeahead offers names and codes, then owners by label.
     options = body.split('id="diagnostics-filter-options"', 1)[1].split("</datalist>", 1)[0]
@@ -129,7 +129,10 @@ def test_created_deadline_and_timezone_sort_by_the_routes_values(
     ann = _user(db, "ann@example.edu")
     _session(db, "Open", "zz-open", ann)
     _session(
-        db, "Due", "zz-due", ann,
+        db,
+        "Due",
+        "zz-due",
+        ann,
         created_at=datetime(2026, 10, 1, 9, 30, 15, 250000, tzinfo=UTC),
         deadline=datetime(2026, 11, 1, 12, 0, tzinfo=UTC),
         display_timezone="Asia/Singapore",
@@ -201,7 +204,7 @@ def test_a_session_the_admin_owns_shows_owned_not_manage(
     }
     owned = re.compile(
         r'<button type="button" class="btn secondary" disabled aria-disabled="true"\s+'
-        r'data-diagnostics-owned>Owned</button>'
+        r"data-diagnostics-owned>Owned</button>"
     )
     for code, review_session in (("zz-mine", mine), ("zz-shared", shared)):
         assert owned.search(rows[code]), code
@@ -269,16 +272,27 @@ def test_an_empty_workspace_keeps_the_cards_with_a_disabled_filter(
 
 
 def test_session_status_counts_shared_by_the_lobby_and_diagnostics() -> None:
-    rows = [ReviewSession(status=s) for s in
-            ("draft", "validated", "ready", "ready", "expired", "archived")]
+    rows = [
+        ReviewSession(status=s)
+        for s in ("draft", "validated", "ready", "ready", "expired", "archived")
+    ]
     # Diagnostics: the total holds every session it lists.
     assert views.session_status_counts(rows) == {
-        "total": 6, "draft": 2, "activated": 2, "archived": 1,
+        "total": 6,
+        "draft": 2,
+        "activated": 2,
+        "archived": 1,
     }
     # The lobby: archived sessions count in their own pill only (19X Item 9).
     assert views.session_status_counts(rows, archived_in_total=False) == {
-        "total": 5, "draft": 2, "activated": 2, "archived": 1,
+        "total": 5,
+        "draft": 2,
+        "activated": 2,
+        "archived": 1,
     }
     assert views.session_status_counts([]) == {
-        "total": 0, "draft": 0, "activated": 0, "archived": 0,
+        "total": 0,
+        "draft": 0,
+        "activated": 0,
+        "archived": 0,
     }

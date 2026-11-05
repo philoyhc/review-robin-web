@@ -22,10 +22,7 @@ PREVIOUS = "63b1bb107eb0"
 
 
 def _columns(connection) -> dict[str, dict]:
-    return {
-        c["name"]: c
-        for c in inspect(connection).get_columns("instrument_response_fields")
-    }
+    return {c["name"]: c for c in inspect(connection).get_columns("instrument_response_fields")}
 
 
 def test_rung_2_adds_a_nullable_branch_mode_and_drops_it_again() -> None:

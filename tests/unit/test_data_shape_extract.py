@@ -95,12 +95,8 @@ def _reviewee(
     return e
 
 
-def _instrument(
-    db: Session, review_session: ReviewSession
-) -> Instrument:
-    i = Instrument(
-        session_id=review_session.id, name="Form", short_label="F"
-    )
+def _instrument(db: Session, review_session: ReviewSession) -> Instrument:
+    i = Instrument(session_id=review_session.id, name="Form", short_label="F")
     db.add(i)
     db.flush()
     return i
@@ -217,9 +213,7 @@ def test_per_individual_with_assigned_and_count(db: Session) -> None:
     eli = _reviewee(db, review_session, name="Eli", identifier="e@x")
     instrument = _instrument(db, review_session)
     fld = _field(db, instrument, _INLINE_NUMERIC, field_key="s")
-    a = _assignment(
-        db, review_session, reviewer=rita, reviewee=eli, instrument=instrument
-    )
+    a = _assignment(db, review_session, reviewer=rita, reviewee=eli, instrument=instrument)
     _response(db, assignment=a, field=fld, value="3")
     shape = _shape(
         db,
@@ -257,15 +251,9 @@ def test_per_tag_combo_aggregates_across_individuals(
     db: Session,
 ) -> None:
     review_session = _session(db, code="tag")
-    a1 = _reviewer(
-        db, review_session, name="A1", email="a1@x.edu", tag_1="A"
-    )
-    a2 = _reviewer(
-        db, review_session, name="A2", email="a2@x.edu", tag_1="A"
-    )
-    b1 = _reviewer(
-        db, review_session, name="B1", email="b1@x.edu", tag_1="B"
-    )
+    a1 = _reviewer(db, review_session, name="A1", email="a1@x.edu", tag_1="A")
+    a2 = _reviewer(db, review_session, name="A2", email="a2@x.edu", tag_1="A")
+    b1 = _reviewer(db, review_session, name="B1", email="b1@x.edu", tag_1="B")
     eli = _reviewee(db, review_session, name="Eli", identifier="e@x")
     instrument = _instrument(db, review_session)
     fld = _field(db, instrument, _INLINE_NUMERIC, field_key="s")
@@ -362,7 +350,12 @@ def test_discrete_steps_fan_out_one_column_per_value(
     rows = build_shape_rows(db, review_session, shape)
     # Header: name + 5 discrete steps (1..5)
     assert rows[0] == (
-        "ReviewerName", "1_self", "2_self", "3_self", "4_self", "5_self",
+        "ReviewerName",
+        "1_self",
+        "2_self",
+        "3_self",
+        "4_self",
+        "5_self",
     )
     rita_row = next(r for r in rows[1:] if r[0] == "Rita")
     # Counts: 0 for 1, 0 for 2, 1 for 3, 0 for 4, 1 for 5
@@ -373,15 +366,11 @@ def test_list_items_fan_out(db: Session) -> None:
     review_session = _session(db, code="list")
     rita = _reviewer(db, review_session, name="Rita", email="r@x.edu")
     instrument = _instrument(db, review_session)
-    fld = _field(
-        db, instrument, _INLINE_LIST, field_key="choice", label="Choice"
-    )
+    fld = _field(db, instrument, _INLINE_LIST, field_key="choice", label="Choice")
     # Three distinct (reviewer × reviewee × instrument)
     # assignments so the unique constraint doesn't fire.
     for n, val in (("Eli", "Yes"), ("Ann", "Yes"), ("Bea", "No")):
-        ree = _reviewee(
-            db, review_session, name=n, identifier=f"{n.lower()}@x"
-        )
+        ree = _reviewee(db, review_session, name=n, identifier=f"{n.lower()}@x")
         a = _assignment(
             db,
             review_session,
@@ -400,7 +389,10 @@ def test_list_items_fan_out(db: Session) -> None:
     rows = build_shape_rows(db, review_session, shape)
     # Header: name + the three list options.
     assert rows[0] == (
-        "ReviewerName", "Yes_self", "No_self", "Maybe_self",
+        "ReviewerName",
+        "Yes_self",
+        "No_self",
+        "Maybe_self",
     )
     rita_row = next(r for r in rows[1:] if r[0] == "Rita")
     # 2 ``Yes`` (Eli + Ann), 1 ``No`` (Bea), 0 ``Maybe``.
@@ -420,15 +412,9 @@ def _seed_alice_with_self_pair(
     recompute hook so ``Assignment.is_self_review`` is populated
     for the Self-review handling chip's per-state filter."""
     review_session = _session(db, code=code)
-    alice_r = _reviewer(
-        db, review_session, name="Alice", email="alice@example.edu"
-    )
-    alice_e = _reviewee(
-        db, review_session, name="Alice", identifier="alice@example.edu"
-    )
-    bob_e = _reviewee(
-        db, review_session, name="Bob", identifier="bob@example.edu"
-    )
+    alice_r = _reviewer(db, review_session, name="Alice", email="alice@example.edu")
+    alice_e = _reviewee(db, review_session, name="Alice", identifier="alice@example.edu")
+    bob_e = _reviewee(db, review_session, name="Bob", identifier="bob@example.edu")
     instrument = _instrument(db, review_session)
     fld = _field(db, instrument, _INLINE_NUMERIC, field_key="s")
     for ree, val in [(alice_e, "10"), (bob_e, "80")]:
@@ -442,18 +428,14 @@ def _seed_alice_with_self_pair(
         _response(db, assignment=a, field=fld, value=val)
     from app.services import assignments as assignments_service
 
-    assignments_service.recompute_self_review_classification(
-        db, session_id=review_session.id
-    )
+    assignments_service.recompute_self_review_classification(db, session_id=review_session.id)
     return review_session, alice_r, alice_e, bob_e, instrument, fld
 
 
 def test_include_self_state_carries_self_suffix(db: Session) -> None:
     """``include_self`` rolls every ``include=True`` row in;
     aggregate columns carry the ``_self`` suffix."""
-    review_session, _, _, _, instrument, fld = _seed_alice_with_self_pair(
-        db, code="ds-incl"
-    )
+    review_session, _, _, _, instrument, fld = _seed_alice_with_self_pair(db, code="ds-incl")
     shape = _shape(
         db,
         review_session,
@@ -483,9 +465,7 @@ def test_include_self_state_carries_self_suffix(db: Session) -> None:
 def test_exclude_self_state_drops_self_review(db: Session) -> None:
     """``exclude_self`` filters out Alice's self-review row;
     aggregate columns carry the ``_noself`` suffix."""
-    review_session, _, _, _, instrument, fld = _seed_alice_with_self_pair(
-        db, code="ds-excl"
-    )
+    review_session, _, _, _, instrument, fld = _seed_alice_with_self_pair(db, code="ds-excl")
     shape = _shape(
         db,
         review_session,
@@ -515,9 +495,7 @@ def test_both_state_emits_self_and_noself_blocks_side_by_side(
 ) -> None:
     """``both`` runs the pipeline twice and concatenates the
     aggregate-column blocks (``_self`` first, then ``_noself``)."""
-    review_session, _, _, _, instrument, fld = _seed_alice_with_self_pair(
-        db, code="ds-both"
-    )
+    review_session, _, _, _, instrument, fld = _seed_alice_with_self_pair(db, code="ds-both")
     shape = _shape(
         db,
         review_session,
@@ -575,12 +553,8 @@ def test_per_tag_combo_exclude_self_drops_self_pair_from_tag_aggregate(
         email="bob@example.edu",
         tag_1="Y",
     )
-    alice_e = _reviewee(
-        db, review_session, name="Alice", identifier="alice@example.edu"
-    )
-    bob_e = _reviewee(
-        db, review_session, name="Bob", identifier="bob@example.edu"
-    )
+    alice_e = _reviewee(db, review_session, name="Alice", identifier="alice@example.edu")
+    bob_e = _reviewee(db, review_session, name="Bob", identifier="bob@example.edu")
     instrument = _instrument(db, review_session)
     fld = _field(db, instrument, _INLINE_NUMERIC, field_key="s")
     for r, ree, val in [
@@ -588,15 +562,11 @@ def test_per_tag_combo_exclude_self_drops_self_pair_from_tag_aggregate(
         (alice_r, bob_e, "80"),  # non-self
         (bob_r, alice_e, "60"),  # non-self
     ]:
-        a = _assignment(
-            db, review_session, reviewer=r, reviewee=ree, instrument=instrument
-        )
+        a = _assignment(db, review_session, reviewer=r, reviewee=ree, instrument=instrument)
         _response(db, assignment=a, field=fld, value=val)
     from app.services import assignments as assignments_service
 
-    assignments_service.recompute_self_review_classification(
-        db, session_id=review_session.id
-    )
+    assignments_service.recompute_self_review_classification(db, session_id=review_session.id)
 
     shape = _shape(
         db,
@@ -621,18 +591,10 @@ def test_single_summary_both_state_emits_dual_blocks(db: Session) -> None:
     aggregate-column blocks side-by-side (``_self`` first, then
     ``_noself``). Single row composed across every individual."""
     review_session = _session(db, code="ds-sum-both")
-    alice_r = _reviewer(
-        db, review_session, name="Alice", email="alice@example.edu"
-    )
-    bob_r = _reviewer(
-        db, review_session, name="Bob", email="bob@example.edu"
-    )
-    alice_e = _reviewee(
-        db, review_session, name="Alice", identifier="alice@example.edu"
-    )
-    bob_e = _reviewee(
-        db, review_session, name="Bob", identifier="bob@example.edu"
-    )
+    alice_r = _reviewer(db, review_session, name="Alice", email="alice@example.edu")
+    bob_r = _reviewer(db, review_session, name="Bob", email="bob@example.edu")
+    alice_e = _reviewee(db, review_session, name="Alice", identifier="alice@example.edu")
+    bob_e = _reviewee(db, review_session, name="Bob", identifier="bob@example.edu")
     instrument = _instrument(db, review_session)
     fld = _field(db, instrument, _INLINE_NUMERIC, field_key="s")
     for r, ree, val in [
@@ -640,15 +602,11 @@ def test_single_summary_both_state_emits_dual_blocks(db: Session) -> None:
         (alice_r, bob_e, "80"),
         (bob_r, alice_e, "60"),
     ]:
-        a = _assignment(
-            db, review_session, reviewer=r, reviewee=ree, instrument=instrument
-        )
+        a = _assignment(db, review_session, reviewer=r, reviewee=ree, instrument=instrument)
         _response(db, assignment=a, field=fld, value=val)
     from app.services import assignments as assignments_service
 
-    assignments_service.recompute_self_review_classification(
-        db, session_id=review_session.id
-    )
+    assignments_service.recompute_self_review_classification(db, session_id=review_session.id)
 
     shape = _shape(
         db,
@@ -682,9 +640,7 @@ def test_group_scoped_per_individual_exclude_self_honours_whole_group_rule(
     ``exclude_self`` the per-individual reviewee rows for those
     members drop entirely from her aggregates."""
     review_session = _session(db, code="ds-grp-excl")
-    alice_r = _reviewer(
-        db, review_session, name="Alice", email="alice@example.edu"
-    )
+    alice_r = _reviewer(db, review_session, name="Alice", email="alice@example.edu")
     # Group X members: Alice + Bob. Group Y: Carol (control).
     alice_e = _reviewee(
         db,
@@ -728,9 +684,7 @@ def test_group_scoped_per_individual_exclude_self_honours_whole_group_rule(
         _response(db, assignment=a, field=fld, value=val)
     from app.services import assignments as assignments_service
 
-    assignments_service.recompute_self_review_classification(
-        db, session_id=review_session.id
-    )
+    assignments_service.recompute_self_review_classification(db, session_id=review_session.id)
 
     shape = _shape(
         db,
@@ -942,12 +896,8 @@ def test_per_tag_combo_drop_chip_on_drops_empty_combo_rows(
     per-individual. A combo whose entities have no data is
     dropped."""
     review_session = _session(db, code="ier-combo")
-    rita = _reviewer(
-        db, review_session, name="Rita", email="r@x.edu", tag_1="A"
-    )
-    _reviewer(
-        db, review_session, name="Sam", email="s@x.edu", tag_1="B"
-    )
+    rita = _reviewer(db, review_session, name="Rita", email="r@x.edu", tag_1="A")
+    _reviewer(db, review_session, name="Sam", email="s@x.edu", tag_1="B")
     eli = _reviewee(db, review_session, name="Eli", identifier="e@x")
     instrument = _instrument(db, review_session)
     fld = _field(db, instrument, _INLINE_NUMERIC, field_key="s")

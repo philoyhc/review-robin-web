@@ -17,9 +17,7 @@ from .test_response_field_branching_builder import _page, _row, _rows_table
 from .test_reviewer_response_flow import intro_columns
 
 
-def test_join_reads_the_up_arrow_and_detach_the_down_arrow(
-    client: TestClient, db: Session
-) -> None:
+def test_join_reads_the_up_arrow_and_detach_the_down_arrow(client: TestClient, db: Session) -> None:
     """The row script rewrites every join button's glyph at load, so the
     glyph an operator sees is the one ``newModelRfSyncJoin`` sets: pin each
     of its ``set(...)`` calls, and the template row's (the item's read)."""
@@ -45,9 +43,7 @@ def test_join_reads_the_up_arrow_and_detach_the_down_arrow(
     assert re.search(r"<button[^>]*data-new-model-rf-join[^>]*>↰</button>", template)
 
 
-def test_the_name_chip_starts_every_row_flush_left(
-    client: TestClient, db: Session
-) -> None:
+def test_the_name_chip_starts_every_row_flush_left(client: TestClient, db: Session) -> None:
     """ux_refinements Item 1 (12A centered the checkbox it replaces): the
     Active checkbox sits in the field's name chip, the row's first cell,
     flush left and capped."""
@@ -56,16 +52,24 @@ def test_the_name_chip_starts_every_row_flush_left(
     for name in ("Rating", "Comments"):
         row = _row(table, name)
         first = must_search(r"<td[^>]*>.*?</td>", row.split(">", 1)[1]).group(0)
-        assert first.startswith('<td class="col-shrink rf-active-cell"><label class="pill pill-count tag-chip rf-name-chip"'), name
+        assert first.startswith(
+            '<td class="col-shrink rf-active-cell"><label class="pill pill-count tag-chip rf-name-chip"'
+        ), name
         assert "data-new-model-rf-active" in first, name
         assert f"<span data-new-model-rf-chip-label>{name}</span>" in first, name
     # A row the script adds from the template has one too, labeled by the
     # row script.
     template = flat.split("<template data-new-model-rf-row-template>")[1].split("</template>")[0]
-    assert '<td class="col-shrink rf-active-cell"><label class="pill pill-count tag-chip rf-name-chip"' in template
+    assert (
+        '<td class="col-shrink rf-active-cell"><label class="pill pill-count tag-chip rf-name-chip"'
+        in template
+    )
     assert "<span data-new-model-rf-chip-label></span>" in template
     assert "body.ui-v2 table.rf-table td.rf-active-cell { text-align: left; }" in flat
-    assert "max-width: 8em;" in flat.split("body.ui-v2 table.rf-table label.rf-name-chip {")[1].split("}")[0]
+    assert (
+        "max-width: 8em;"
+        in flat.split("body.ui-v2 table.rf-table label.rf-name-chip {")[1].split("}")[0]
+    )
 
 
 def test_a_numbers_condition_boxes_follow_the_parents_min_box(
@@ -91,9 +95,7 @@ def test_a_numbers_condition_boxes_follow_the_parents_min_box(
     assert "window.newModelRfSizeCondition(parent);" in recompute
 
 
-def test_join_and_detach_leave_room_for_two_more_buttons(
-    client: TestClient, db: Session
-) -> None:
+def test_join_and_detach_leave_room_for_two_more_buttons(client: TestClient, db: Session) -> None:
     """The author's later 12A entries: after ↰ / ↳, space for two more
     buttons, ahead of a second level of branching (it was one), still
     of the same width, on the server's rows and the template's. 19T Item
@@ -133,7 +135,10 @@ def test_the_operator_takes_the_name_column_and_the_lead_aligns_right(
     condition = _rows_table(card).split("<tr data-new-model-rf-condition>")[1].split("</tr>")[0]
     cells = condition.split("<td")[1:]
     # A level-1 condition's lead spans the join column and both slots.
-    assert 'class="col-shrink rf-condition-cell rf-condition-lead" colspan="3">If the above</td>' in cells[3]
+    assert (
+        'class="col-shrink rf-condition-cell rf-condition-lead" colspan="3">If the above</td>'
+        in cells[3]
+    )
     assert 'class="rf-condition-cell rf-condition-op">' in cells[4]
     assert "<select data-new-model-rf-condition-op" in cells[4]
     assert "body.ui-v2 table.rf-table td.rf-condition-lead { text-align: right; }" in flat
@@ -156,8 +161,10 @@ def test_the_first_value_box_starts_at_the_type_columns_edge(
     condition = _rows_table(card).split("<tr data-new-model-rf-condition>")[1].split("</tr>")[0]
     rest = condition.split("<td")[6]
     assert rest.startswith(' colspan="7" class="rf-condition-cell">')
-    assert rest.split(">", 1)[1].lstrip().startswith(
-        '<input type="text" data-new-model-rf-condition-value'
+    assert (
+        rest.split(">", 1)[1]
+        .lstrip()
+        .startswith('<input type="text" data-new-model-rf-condition-value')
     )
     assert (
         "body.ui-v2 table.rf-table td.rf-condition-cell "
@@ -201,25 +208,40 @@ def test_a_lists_condition_puts_its_box_beside_a_shrunk_operator(
     from .test_response_field_branching_save import _branched, _rfs, _save
 
     review_session, instrument, _, _ = _branched(client, db, "12a-list-condition")
-    response = _save(client, review_session, instrument, _rfs(
+    response = _save(
+        client,
+        review_session,
         instrument,
-        Rating={"data_type": "list", "list_options": "Agree, Neutral, Disagree",
-                "min": "", "max": "", "step": "",
-                "branch_op": "is_not", "branch_value": "Agree"},
-    ))
+        _rfs(
+            instrument,
+            Rating={
+                "data_type": "list",
+                "list_options": "Agree, Neutral, Disagree",
+                "min": "",
+                "max": "",
+                "step": "",
+                "branch_op": "is_not",
+                "branch_value": "Agree",
+            },
+        ),
+    )
     assert response.status_code == 200, response.text
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/instruments?editing={instrument.id}"
     ).text
     flat = " ".join(body.split())
-    condition = _rows_table(_card_slice(flat, instrument.id)).split(
-        '<tr data-new-model-rf-condition class="rf-condition-list">'
-    )[1].split("</tr>")[0]
+    condition = (
+        _rows_table(_card_slice(flat, instrument.id))
+        .split('<tr data-new-model-rf-condition class="rf-condition-list">')[1]
+        .split("</tr>")[0]
+    )
     cells = condition.split("<td")[1:]
     op = cells[4]
     assert op.startswith(' class="rf-condition-cell rf-condition-op" colspan="8">')
     assert op.index("<select") < op.index("data-new-model-rf-condition-value")
-    assert "<span data-new-model-rf-condition-then>then<select data-new-model-rf-condition-mode" in op
+    assert (
+        "<span data-new-model-rf-condition-then>then<select data-new-model-rf-condition-mode" in op
+    )
     assert cells[5].startswith(' colspan="7" class="rf-condition-cell" hidden>')
     # One value box, in the operator's cell, not a second in the hidden one.
     assert condition.count("data-new-model-rf-condition-value") == 1
@@ -237,8 +259,7 @@ def test_a_lists_condition_puts_its_box_beside_a_shrunk_operator(
     size = _rf_fn(body, "newModelRfSizeCondition")
     assert "|| (list ? list.getBoundingClientRect().width : 0);" in size
     assert (
-        "body.ui-v2 table.rf-table tr.rf-condition-list td.rf-condition-op select "
-        "{ width: auto; }"
+        "body.ui-v2 table.rf-table tr.rf-condition-list td.rf-condition-op select { width: auto; }"
     ) in flat
 
 
@@ -271,7 +292,9 @@ def test_the_response_field_table_scrolls_rather_than_squeezing(
     assert "body.ui-v2 table.rf-table { min-width: 66rem; }" in flat
     assert ".band3-grid[inert]" not in flat
     table_at = card.index('<table class="rf-table" data-new-model-rf-rows')
-    assert card.rindex('<div class="table-scroll">', 0, table_at) > card.rindex("</div>", 0, table_at)
+    assert card.rindex('<div class="table-scroll">', 0, table_at) > card.rindex(
+        "</div>", 0, table_at
+    )
 
 
 def test_a_locked_card_locks_band_3s_tables_not_their_scrollers(
@@ -283,9 +306,7 @@ def test_a_locked_card_locks_band_3s_tables_not_their_scrollers(
     stay outside them."""
     review_session, instrument, _, _ = _page(client, db, "12a-locked-scroll")
     for query, locked in (("", True), (f"?editing={instrument.id}", False)):
-        body = client.get(
-            f"/operator/sessions/{review_session.public_id}/instruments{query}"
-        ).text
+        body = client.get(f"/operator/sessions/{review_session.public_id}/instruments{query}").text
         card = _card_slice(" ".join(body.split()), instrument.id)
         band3 = card[card.index("<div data-new-model-band3 ") :]
         assert band3[: band3.index(">")] == '<div data-new-model-band3 class="band3-grid"'
@@ -310,9 +331,7 @@ def _open_tag(html: str, marker: str) -> str:
     return html[html.rindex("<", 0, at) : html.index(">", at)]
 
 
-def test_a_locked_card_scrolls_band_2s_visibility_table(
-    client: TestClient, db: Session
-) -> None:
+def test_a_locked_card_scrolls_band_2s_visibility_table(client: TestClient, db: Session) -> None:
     """The author's later 12A entry, after the read of Band 3's: Band 2's
     lock regions are the intro card, the visibility editor and the
     preview, so the locked "Who can see what you wrote" table, which holds
@@ -325,9 +344,7 @@ def test_a_locked_card_scrolls_band_2s_visibility_table(
         "[data-new-model-band2-vp-preview-card] { opacity: 0.75; }"
     ) in flat
     for query, locked in (("", True), (f"?editing={instrument.id}", False)):
-        body = client.get(
-            f"/operator/sessions/{review_session.public_id}/instruments{query}"
-        ).text
+        body = client.get(f"/operator/sessions/{review_session.public_id}/instruments{query}").text
         card = _card_slice(" ".join(body.split()), instrument.id)
         band2 = card[card.index("<div data-new-model-band2-editable") :]
         band2 = band2[: band2.index("<script>")]
@@ -348,7 +365,11 @@ def test_a_locked_card_scrolls_band_2s_visibility_table(
         # Band 2 holds no control outside its lock regions (the
         # item's read). Each region is cut out up to the next sibling
         # after it: the vp card's heading, then its editor's close.
-        outside = band2[: band2.index('<div class="card rs-instrument-card rs-intro-name" data-intro-edit-block')]
+        outside = band2[
+            : band2.index(
+                '<div class="card rs-instrument-card rs-intro-name" data-intro-edit-block'
+            )
+        ]
         vp = band2[band2.index("data-new-model-band2-vp-preview-card") :]
         outside += vp[: vp.index("data-new-model-vp-editor")]
         after_editor = vp[vp.index("</table>", vp.index("data-new-model-vp-editor")) :]
@@ -357,9 +378,7 @@ def test_a_locked_card_scrolls_band_2s_visibility_table(
             assert re.search(control, outside) is None, control
 
 
-def test_band_1_scrolls_rather_than_spilling(
-    client: TestClient, db: Session
-) -> None:
+def test_band_1_scrolls_rather_than_spilling(client: TestClient, db: Session) -> None:
     """The author's later 12A entry: Band 1's three columns keep a floor
     and scroll in a ``.table-scroll`` on a narrow card, locked or not; the
     grid inside it is the lock region, never the scroller."""
@@ -370,9 +389,7 @@ def test_band_1_scrolls_rather_than_spilling(
         flat,
     )
     for query, locked in (("", True), (f"?editing={instrument.id}", False)):
-        body = client.get(
-            f"/operator/sessions/{review_session.public_id}/instruments{query}"
-        ).text
+        body = client.get(f"/operator/sessions/{review_session.public_id}/instruments{query}").text
         card = _card_slice(" ".join(body.split()), instrument.id)
         tag = _open_tag(card, 'class="band1-grid"')
         assert "data-lock-region" in tag

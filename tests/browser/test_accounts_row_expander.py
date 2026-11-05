@@ -57,9 +57,7 @@ def _setup(page: Page, api: httpx.Client) -> tuple[str, str, str]:
     return first, second, unused
 
 
-def test_two_operators_open_the_expander(
-    page: Page, api: httpx.Client
-) -> None:
+def test_two_operators_open_the_expander(page: Page, api: httpx.Client) -> None:
     first, second, _ = _setup(page, api)
     _tick(page, first)
     _tick(page, second)
@@ -72,7 +70,10 @@ def test_two_operators_open_the_expander(
     # sessions doesn't.
     assert _expander_actions(page) == ["Revoke", "Promote", "Set unit", "Delete"]
     assert expander.locator(".row-expander-group > .muted").all_inner_texts() == [
-        "Operator:", "Admin:", "Unit:", "|",
+        "Operator:",
+        "Admin:",
+        "Unit:",
+        "|",
     ]
     for name in ("Revoke", "Promote"):
         expect(expander.locator(f'[data-expander-action="{name}"]')).to_be_enabled()
@@ -83,9 +84,7 @@ def test_two_operators_open_the_expander(
     expect(delete).to_be_enabled()
     # Anchored after the most recently ticked row.
     anchor = page.locator(f'tr[data-user-id]:has(code:text-is("{second}"))')
-    expect(anchor.locator("xpath=following-sibling::tr[1]")).to_have_id(
-        "users-row-expander"
-    )
+    expect(anchor.locator("xpath=following-sibling::tr[1]")).to_have_id("users-row-expander")
     # The toolbar is gone.
     expect(page.locator("#user-actions")).to_have_count(0)
 
@@ -98,9 +97,9 @@ def test_a_mixed_selection_shows_only_what_applies_to_every_row(
     _tick(page, unused)
     assert _expander_actions(page) == ["Delete"]
     # No Operator or Admin control fits, so neither label renders.
-    assert page.locator(
-        "#users-row-expander .row-expander-group > .muted"
-    ).all_inner_texts() == ["|"]
+    assert page.locator("#users-row-expander .row-expander-group > .muted").all_inner_texts() == [
+        "|"
+    ]
 
 
 def test_one_unused_row_offers_admit(page: Page, api: httpx.Client) -> None:
@@ -120,9 +119,7 @@ def test_select_all_is_tri_state_and_clearing_removes_the_expander(
     expect(page.locator(".user-row-select:checked")).to_have_count(3)
     expect(page.locator("#users-row-expander")).to_contain_text("3 of 3 selected")
 
-    page.locator(
-        f'tr[data-user-id]:has(code:text-is("{first}")) .user-row-select'
-    ).uncheck()
+    page.locator(f'tr[data-user-id]:has(code:text-is("{first}")) .user-row-select').uncheck()
     assert select_all.evaluate("box => box.indeterminate") is True
     expect(page.locator("#users-row-expander")).to_contain_text("2 of 3 selected")
 
@@ -153,9 +150,7 @@ def test_the_count_the_confirm_and_the_buttons_share_one_line(
     assert abs(count - button) <= 2, (count, button)
 
 
-def test_a_narrow_row_wraps_between_groups_not_inside_one(
-    page: Page, api: httpx.Client
-) -> None:
+def test_a_narrow_row_wraps_between_groups_not_inside_one(page: Page, api: httpx.Client) -> None:
     """Codex on #3036: each label and its buttons are one group, so a
     label never ends a line with its buttons on the next."""
     first, second, _ = _setup(page, api)
@@ -250,9 +245,7 @@ def test_a_row_with_history_offers_no_delete_and_says_why(
     # first, so a browser that restores checkboxes on reload can't keep
     # the old selection.
     for email in (first, unused):
-        page.locator(
-            f'tr[data-user-id]:has(code:text-is("{email}")) .user-row-select'
-        ).uncheck()
+        page.locator(f'tr[data-user-id]:has(code:text-is("{email}")) .user-row-select').uncheck()
     _co_own(api, new_session(), second)
     page.reload()
     _tick(page, first)
@@ -272,9 +265,7 @@ def test_dropping_the_row_with_history_brings_delete_back(
     _tick(page, first)
     _tick(page, second)
     expect(expander.locator("[data-delete-blocked]")).to_have_count(1)
-    page.locator(
-        f'tr[data-user-id]:has(code:text-is("{first}")) .user-row-select'
-    ).uncheck()
+    page.locator(f'tr[data-user-id]:has(code:text-is("{first}")) .user-row-select').uncheck()
     assert _expander_actions(page)[-1] == "Delete"
     expect(expander.locator(".exp-confirm-label")).to_have_count(1)
     expect(expander.locator("[data-delete-blocked]")).to_have_count(0)
@@ -293,7 +284,9 @@ def test_an_owner_offers_remove_from_all_sessions_not_revoke(
     _tick(page, first)
     # A co-owner has history, so no Delete.
     assert _expander_actions(page) == [
-        "Remove from all sessions", "Promote", "Set unit",
+        "Remove from all sessions",
+        "Promote",
+        "Set unit",
     ]
     # With an operator who owns nothing, neither session control fits both.
     _tick(page, second)
@@ -316,16 +309,11 @@ def test_an_owner_offers_remove_from_all_sessions_not_revoke(
     assert _expander_actions(page) == ["Promote", "Set unit"]
 
 
-
 def _unit_cell(page: Page, email: str):
-    return page.locator(
-        f'tr[data-user-id]:has(code:text-is("{email}")) [data-unit-cell]'
-    )
+    return page.locator(f'tr[data-user-id]:has(code:text-is("{email}")) [data-unit-cell]')
 
 
-def test_set_unit_by_enter_sets_it_and_revokes_nothing(
-    page: Page, api: httpx.Client
-) -> None:
+def test_set_unit_by_enter_sets_it_and_revokes_nothing(page: Page, api: httpx.Client) -> None:
     """20D: Enter in the Unit input presses Set unit, never the form's
     first button, Revoke here (Codex on #3508)."""
     first, second, unused = _setup(page, api)

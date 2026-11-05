@@ -5,6 +5,7 @@ Bottom-of-stack: defines the parsed-plan dataclasses, the
 allowlist constants, and the cell parsers. Every other slice
 in this package reads from here; nothing here reads from them.
 """
+
 from __future__ import annotations
 
 import json
@@ -235,15 +236,9 @@ _VALID_VP_IDENTIFICATION = frozenset({"identified", "deidentified"})
 
 # Bracketed-key parsers. Each pattern captures the index / name and
 # an optional sub-key tail; the apply step routes by tail.
-_RX_INSTRUMENT_DF = re.compile(
-    r"^instruments\[(\d+)\]\.display_fields\[(\d+)\]\.(\w+)$"
-)
-_RX_INSTRUMENT_RF = re.compile(
-    r"^instruments\[(\d+)\]\.response_fields\[(\d+)\]\.(\w+)$"
-)
-_RX_INSTRUMENT_VP = re.compile(
-    r"^instruments\[(\d+)\]\.view_policies\[(\w+)\]\.(\w+)$"
-)
+_RX_INSTRUMENT_DF = re.compile(r"^instruments\[(\d+)\]\.display_fields\[(\d+)\]\.(\w+)$")
+_RX_INSTRUMENT_RF = re.compile(r"^instruments\[(\d+)\]\.response_fields\[(\d+)\]\.(\w+)$")
+_RX_INSTRUMENT_VP = re.compile(r"^instruments\[(\d+)\]\.view_policies\[(\w+)\]\.(\w+)$")
 _RX_INSTRUMENT = re.compile(r"^instruments\[(\d+)\]\.(\w+)$")
 _RX_RULE_SET = re.compile(r"^session_rule_sets\[(\d+)\]\.(\w+)$")
 _RX_EMAIL = re.compile(r"^email_overrides\.(\w+)\.(\w+)$")
@@ -291,9 +286,7 @@ def _parse_datetime(value: str) -> datetime | None:
     try:
         parsed = datetime.fromisoformat(value)
     except ValueError as exc:
-        raise _ParseError(
-            f"expected ISO-8601 datetime, got {value!r}"
-        ) from exc
+        raise _ParseError(f"expected ISO-8601 datetime, got {value!r}") from exc
     # The range the card's boxes accept (findings L2): nearer the
     # calendar's edge, the instant cannot be shown in every zone.
     if not date_formatting.in_entry_range(parsed):

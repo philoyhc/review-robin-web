@@ -63,18 +63,14 @@ class ParticipantTokenizer:
         # Mapped as ``datetime``, but a server default: unset until the
         # row is flushed, so an unsaved session hashes with ``"0"``.
         created_at = cast("datetime | None", review_session.created_at)
-        created_token = (
-            created_at.isoformat() if created_at is not None else "0"
-        )
+        created_token = created_at.isoformat() if created_at is not None else "0"
         self._salt_prefix = f"{env_salt}|{created_token}"
 
     def token(self, role: str, individual_id: int) -> str:
         if role not in _ROLE_PREFIXES:
             raise KeyError(role)
         raw = f"{self._salt_prefix}|{role}|{individual_id}"
-        digest = hashlib.blake2b(
-            raw.encode("utf-8"), digest_size=_DIGEST_BYTES
-        ).hexdigest()
+        digest = hashlib.blake2b(raw.encode("utf-8"), digest_size=_DIGEST_BYTES).hexdigest()
         return f"{_ROLE_PREFIXES[role]}-{digest}"
 
 

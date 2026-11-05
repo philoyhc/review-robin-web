@@ -71,9 +71,7 @@ _SEQ_SHAPE = re.compile(r"[1-9][0-9]{0,8}")
 )
 def observer_collation(
     request: Request,
-    observer_session: tuple[Observer, ReviewSession] = Depends(
-        require_observer_in_session
-    ),
+    observer_session: tuple[Observer, ReviewSession] = Depends(require_observer_in_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
@@ -97,22 +95,16 @@ def observer_collation(
             ),
             # participant info Item 5 — the observer's own roster fields
             # after the role pills.
-            "observer_self_fields": views.observer_self_line_for(
-                review_session, observer
-            ),
+            "observer_self_fields": views.observer_self_line_for(review_session, observer),
             "collation": context,
         },
     )
 
 
-@router.get(
-    "/sessions/{session_id}/collation/instruments/{instrument_seq}.csv"
-)
+@router.get("/sessions/{session_id}/collation/instruments/{instrument_seq}.csv")
 def observer_collation_instrument_csv(
     instrument_seq: str,
-    observer_session: tuple[Observer, ReviewSession] = Depends(
-        require_observer_in_session
-    ),
+    observer_session: tuple[Observer, ReviewSession] = Depends(require_observer_in_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> StreamingResponse:
@@ -141,9 +133,7 @@ def observer_collation_instrument_csv(
     mode = visibility_policies.resolve_mode(
         policy,
         while_ongoing_open=lifecycle.is_ongoing(review_session),
-        after_release_open=(
-            lifecycle.is_response_release_window_open(review_session)
-        ),
+        after_release_open=(lifecycle.is_response_release_window_open(review_session)),
     )
     if mode is None or mode == "summarized":
         # Observer can't see this instrument right now, or the
@@ -155,9 +145,7 @@ def observer_collation_instrument_csv(
     # predicate matched zero rows). Catches the typical "operator
     # hasn't authored a cohort yet" case without writing an
     # empty CSV.
-    cohort = materialize_cohort_assignments(
-        db, observer=observer, instrument_id=instrument.id
-    )
+    cohort = materialize_cohort_assignments(db, observer=observer, instrument_id=instrument.id)
     if not cohort.assignment_ids:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
@@ -176,9 +164,7 @@ def observer_collation_instrument_csv(
         ).scalars()
     )
     try:
-        position = next(
-            i for i, x in enumerate(instruments_in_order) if x.id == instrument.id
-        )
+        position = next(i for i, x in enumerate(instruments_in_order) if x.id == instrument.id)
     except StopIteration:
         position = 0
 
@@ -213,9 +199,7 @@ def observer_collation_instrument_csv(
     # mode visible from the filename alone — useful when the same
     # observer downloads both Raw and Anonymized copies of the same
     # instrument.
-    instrument_slug = by_instrument_filename_slug(
-        instrument, position=position, used=set()
-    )
+    instrument_slug = by_instrument_filename_slug(instrument, position=position, used=set())
     anon_suffix = "_anon" if mode == "anonymized" else ""
     filename = extracts.filename(review_session, f"{instrument_slug}{anon_suffix}")
     return StreamingResponse(

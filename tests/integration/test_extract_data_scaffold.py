@@ -31,23 +31,17 @@ from ._lookups import must_get
 from ._validated import validate_session
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str = "ed-scaffold"
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str = "ed-scaffold") -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "ExtractScaffold", "code": code, "description": "d"},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
-def _seed_pair(
-    client: TestClient, db: Session, *, code: str, reviewer_email: str
-) -> ReviewSession:
+def _seed_pair(client: TestClient, db: Session, *, code: str, reviewer_email: str) -> ReviewSession:
     review_session = _make_session(client, db, code=code)
     client.post(
         f"/operator/sessions/{review_session.public_id}/reviewers/import",
@@ -76,9 +70,7 @@ def _seed_pair(
     return review_session
 
 
-def _activate(
-    client: TestClient, db: Session, review_session: ReviewSession
-) -> None:
+def _activate(client: TestClient, db: Session, review_session: ReviewSession) -> None:
     validate_session(review_session)
     client.get(f"/operator/sessions/{review_session.public_id}/assignments")
     client.post(
@@ -161,16 +153,12 @@ def test_build_extract_data_context_returns_four_rows_plus_bundle(
     assert "audit_log" not in by_key
 
 
-def test_per_entity_rows_go_live_when_populated(
-    client: TestClient, db: Session
-) -> None:
+def test_per_entity_rows_go_live_when_populated(client: TestClient, db: Session) -> None:
     """Once the operator uploads any rosters / generates any
     rule-based assignments / etc., the corresponding per-entity
     row's button flips from grey to live."""
 
-    review_session = _seed_pair(
-        client, db, code="ed-live", reviewer_email="r@example.edu"
-    )
+    review_session = _seed_pair(client, db, code="ed-live", reviewer_email="r@example.edu")
     context = views.build_extract_data_context(db, review_session)
     by_key = {r.key: r for r in context.rows}
 
@@ -187,9 +175,7 @@ def test_per_entity_rows_go_live_when_populated(
     assert "responses" not in by_key
 
 
-def test_extract_data_filenames_carry_session_code(
-    client: TestClient, db: Session
-) -> None:
+def test_extract_data_filenames_carry_session_code(client: TestClient, db: Session) -> None:
     """The download filename surfaces the operator-typed session
     code so the file is identifiable downstream."""
 
@@ -208,9 +194,7 @@ def test_extract_data_filenames_carry_session_code(
     assert context.bundle.filename == "abc123_setup.zip"
 
 
-def test_extract_data_count_summaries_pluralise_correctly(
-    client: TestClient, db: Session
-) -> None:
+def test_extract_data_count_summaries_pluralise_correctly(client: TestClient, db: Session) -> None:
     """Empty / singular / plural copy variants render correctly so
     the count line reads naturally on screen."""
 
@@ -219,33 +203,25 @@ def test_extract_data_count_summaries_pluralise_correctly(
     empty_by_key = {row.key: row for row in empty_ctx.rows}
     assert empty_by_key["reviewers"].count_summary == "0 reviewers"
 
-    populated = _seed_pair(
-        client, db, code="ed-populated", reviewer_email="r@example.edu"
-    )
+    populated = _seed_pair(client, db, code="ed-populated", reviewer_email="r@example.edu")
     populated_ctx = views.build_extract_data_context(db, populated)
     populated_by_key = {row.key: row for row in populated_ctx.rows}
     assert populated_by_key["reviewers"].count == 1
     assert populated_by_key["reviewers"].count_summary == "1 reviewer"
 
 
-def test_extract_data_bundle_count_sums_per_entity_counts(
-    client: TestClient, db: Session
-) -> None:
+def test_extract_data_bundle_count_sums_per_entity_counts(client: TestClient, db: Session) -> None:
     """The bundle row's count summary aggregates the per-entity
     counts; useful to give the operator a single "total rows in
     the zip" number."""
 
-    review_session = _seed_pair(
-        client, db, code="ed-sum", reviewer_email="r@example.edu"
-    )
+    review_session = _seed_pair(client, db, code="ed-sum", reviewer_email="r@example.edu")
     context = views.build_extract_data_context(db, review_session)
 
     assert context.bundle.count == sum(row.count for row in context.rows)
 
 
-def test_extract_data_dom_carries_wire_target_attributes(
-    client: TestClient, db: Session
-) -> None:
+def test_extract_data_dom_carries_wire_target_attributes(client: TestClient, db: Session) -> None:
     """Each row's wrapping ``<section>`` carries
     ``data-wire-target="extract-data-{key}"`` for 12A's wiring
     seam."""
@@ -282,9 +258,7 @@ def test_extract_data_card_renders_counts_for_entity_rows_only(
     signal) or already implied (zip aggregates everything
     above)."""
 
-    review_session = _seed_pair(
-        client, db, code="ed-counts", reviewer_email="r@example.edu"
-    )
+    review_session = _seed_pair(client, db, code="ed-counts", reviewer_email="r@example.edu")
     body = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
 
     # Entity rows render their count after the title.
@@ -307,9 +281,7 @@ def test_extract_data_card_renders_counts_for_entity_rows_only(
     assert context.bundle.show_count is False
 
 
-def test_extract_data_buttons_are_aria_disabled_anchors(
-    client: TestClient, db: Session
-) -> None:
+def test_extract_data_buttons_are_aria_disabled_anchors(client: TestClient, db: Session) -> None:
     """While inert, every Download button renders as an anchor
     without an ``href`` and with ``aria-disabled="true"`` (anchors
     don't honour native ``disabled``). On a freshly-created draft
@@ -323,9 +295,7 @@ def test_extract_data_buttons_are_aria_disabled_anchors(
 
     # Inert rows render as aria-disabled anchors.
     download_count = body.count(
-        '<a class="btn secondary"\n'
-        '       role="button"\n'
-        '       aria-disabled="true"'
+        '<a class="btn secondary"\n       role="button"\n       aria-disabled="true"'
     )
     assert download_count == 3
 
@@ -341,9 +311,7 @@ def test_extract_data_card_renders_when_session_is_activated(
     will be interactive even on Activated sessions."""
 
     operator = make_client(alice)
-    review_session = _seed_pair(
-        operator, db, code="ed-activated", reviewer_email="r@example.edu"
-    )
+    review_session = _seed_pair(operator, db, code="ed-activated", reviewer_email="r@example.edu")
     _activate(operator, db, review_session)
 
     body = operator.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
@@ -371,7 +339,7 @@ def _archive_card(body: str) -> str:
     # bound the archive card there. (id="extract-data-archive-session" has no
     # closing quote after "extract-data", so it won't self-match.)
     end = body.find('id="extract-data"', start)
-    return body[start:end if end != -1 else len(body)]
+    return body[start : end if end != -1 else len(body)]
 
 
 def test_archive_card_purge_and_archive_active_for_non_activated(
@@ -383,9 +351,7 @@ def test_archive_card_purge_and_archive_active_for_non_activated(
     bulk-archive route, landing on the archived index."""
     review_session = _make_session(client, db, code="ed-arch-draft")
     card = _archive_card(
-        client.get(
-            f"/operator/sessions/{review_session.public_id}/extract-data"
-        ).text
+        client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
     )
     assert 'action="/operator/sessions/bulk-archive"' in card
     assert f'name="session_ids" value="{review_session.id}"' in card
@@ -398,9 +364,7 @@ def test_archive_card_purge_and_archive_active_for_non_activated(
     assert "disabled" not in card
 
 
-def test_archive_card_controls_disabled_when_activated(
-    client: TestClient, db: Session
-) -> None:
+def test_archive_card_controls_disabled_when_activated(client: TestClient, db: Session) -> None:
     """18R — an activated (ready) session can't be archived, so the purge
     checkboxes and the "Purge and archive" button render disabled (the form
     is present but inert, greyed)."""
@@ -409,9 +373,7 @@ def test_archive_card_controls_disabled_when_activated(
     db.commit()
 
     card = _archive_card(
-        client.get(
-            f"/operator/sessions/{review_session.public_id}/extract-data"
-        ).text
+        client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
     )
     # No explanatory note (removed 2026-08-18 as unnecessary).
     assert "Revert the session to draft before archiving" not in card
@@ -422,9 +384,7 @@ def test_archive_card_controls_disabled_when_activated(
     assert "exp-purge-opts is-disabled" in card  # greyed block
 
 
-def test_archive_card_shows_already_archived(
-    client: TestClient, db: Session
-) -> None:
+def test_archive_card_shows_already_archived(client: TestClient, db: Session) -> None:
     """An archived session's card reads 'Already archived' with the controls
     disabled."""
     review_session = _make_session(client, db, code="ed-arch-done")
@@ -432,9 +392,7 @@ def test_archive_card_shows_already_archived(
     db.commit()
 
     card = _archive_card(
-        client.get(
-            f"/operator/sessions/{review_session.public_id}/extract-data"
-        ).text
+        client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
     )
     assert "Already archived" in card
     assert "This session is already archived." in card
@@ -459,9 +417,7 @@ def test_archive_card_post_archives_and_redirects_to_archived_index(
     assert must_get(db, ReviewSession, review_session.id).status == "archived"
 
 
-def test_extract_data_wrapup_layout_with_token_keys(
-    client: TestClient, db: Session
-) -> None:
+def test_extract_data_wrapup_layout_with_token_keys(client: TestClient, db: Session) -> None:
     """18R layout tidy — when observers are enabled, the left column stacks
     Token keys then Archive session directly beneath it; Extract Setup is the
     right column. DOM order (left column before right): token-keys →
@@ -470,9 +426,7 @@ def test_extract_data_wrapup_layout_with_token_keys(
     review_session.observers_enabled = True
     db.commit()
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/extract-data"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
     token_pos = body.find('id="extract-data-token-keys"')
     archive_pos = body.find('id="extract-data-archive-session"')
     # Extract Setup card id is ``extract-data``; find it after the token-keys
@@ -485,16 +439,12 @@ def test_extract_data_wrapup_layout_with_token_keys(
     assert token_pos < archive_pos < setup_pos
 
 
-def test_extract_data_wrapup_layout_without_token_keys(
-    client: TestClient, db: Session
-) -> None:
+def test_extract_data_wrapup_layout_without_token_keys(client: TestClient, db: Session) -> None:
     """When observers are off there's no Token keys card — the left column is
     just Archive session (below the full-width Data shaper), with Extract Setup
     as the right column. DOM order: Archive session → Extract Setup."""
     review_session = _make_session(client, db, code="ed-wrapup-noobs")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/extract-data"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
     assert 'id="extract-data-token-keys"' not in body
     archive_pos = body.find('id="extract-data-archive-session"')
     setup_pos = body.find('id="extract-data"', body.find("Data shaper"))
@@ -502,9 +452,7 @@ def test_extract_data_wrapup_layout_without_token_keys(
     assert archive_pos < setup_pos
 
 
-def test_no_button_on_the_page_carries_an_inline_style(
-    client: TestClient, db: Session
-) -> None:
+def test_no_button_on_the_page_carries_an_inline_style(client: TestClient, db: Session) -> None:
     """``spec/ui_elements.md`` §6: an inline ``style`` on a button is a
     defect. Three of the data shaper's buttons were hidden with
     ``style="display: none;"``; they use ``hidden`` now

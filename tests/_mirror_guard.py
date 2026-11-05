@@ -62,7 +62,5 @@ def mirror_problems(connection: Connection) -> list[str]:
                     f"session {session_id}: reviewer {reviewer_id} has {len(mirrors)} mirrors"
                 )
             elif mirrors[0] != values:
-                problems.append(
-                    f"session {session_id}: reviewer {reviewer_id}'s mirror differs"
-                )
+                problems.append(f"session {session_id}: reviewer {reviewer_id}'s mirror differs")
     return problems

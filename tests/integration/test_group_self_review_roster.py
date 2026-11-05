@@ -183,12 +183,8 @@ def test_moving_the_reviewer_to_another_team_moves_the_flag(
     assignments.replace_assignments(
         db, review_session=review_session, user=user, correlation_id="b7"
     )
-    sam_own = db.execute(
-        select(Reviewee).where(Reviewee.name == "Sam")
-    ).scalar_one()
-    reviewees_service.update_reviewee(
-        db, reviewee=sam_own, tag_1="TeamB", user=user
-    )
+    sam_own = db.execute(select(Reviewee).where(Reviewee.name == "Sam")).scalar_one()
+    reviewees_service.update_reviewee(db, reviewee=sam_own, tag_1="TeamB", user=user)
     rows = _rows_by_reviewee(db, instrument)
     assert rows["Zoe"].is_self_review is False
     assert rows["Kit"].is_self_review is True
@@ -199,9 +195,7 @@ def test_adding_the_reviewers_own_row_flags_existing_rows(
 ) -> None:
     """A reviewee added after Generate that shares the reviewer's email
     puts him in a group; the rows already written are flagged."""
-    user, review_session, instrument = _seed(
-        db, self_reviews_active=True, with_own_row=False
-    )
+    user, review_session, instrument = _seed(db, self_reviews_active=True, with_own_row=False)
     assignments.replace_assignments(
         db, review_session=review_session, user=user, correlation_id="b7"
     )
@@ -225,9 +219,7 @@ def test_deleting_the_reviewers_own_row_clears_the_flag(
     assignments.replace_assignments(
         db, review_session=review_session, user=user, correlation_id="b7"
     )
-    sam_own = db.execute(
-        select(Reviewee).where(Reviewee.name == "Sam")
-    ).scalar_one()
+    sam_own = db.execute(select(Reviewee).where(Reviewee.name == "Sam")).scalar_one()
     reviewees_service.delete_selected(
         db, review_session=review_session, reviewee_ids=[sam_own.id], user=user
     )
@@ -246,9 +238,7 @@ def test_a_row_that_stops_being_a_self_review_is_included_again(
         db, review_session=review_session, user=user, correlation_id="b7"
     )
     assert _rows_by_reviewee(db, instrument)["Zoe"].include is False
-    sam_own = db.execute(
-        select(Reviewee).where(Reviewee.name == "Sam")
-    ).scalar_one()
+    sam_own = db.execute(select(Reviewee).where(Reviewee.name == "Sam")).scalar_one()
     reviewees_service.delete_selected(
         db, review_session=review_session, reviewee_ids=[sam_own.id], user=user
     )
@@ -263,9 +253,7 @@ def test_a_row_that_becomes_a_self_review_follows_the_session_setting(
     """The inverse: adding Sam's own row after Generate makes Zoe's row
     a self-review, so with self-reviews off it is excluded, as Generate
     would have written it."""
-    user, review_session, instrument = _seed(
-        db, self_reviews_active=False, with_own_row=False
-    )
+    user, review_session, instrument = _seed(db, self_reviews_active=False, with_own_row=False)
     assignments.replace_assignments(
         db, review_session=review_session, user=user, correlation_id="b7"
     )
@@ -292,15 +280,9 @@ def test_an_inactive_side_keeps_a_reclassified_row_off(db: Session) -> None:
     assignments.replace_assignments(
         db, review_session=review_session, user=user, correlation_id="b7"
     )
-    zoe_e = db.execute(
-        select(Reviewee).where(Reviewee.name == "Zoe")
-    ).scalar_one()
-    reviewees_service.update_reviewee(
-        db, reviewee=zoe_e, status="inactive", user=user
-    )
-    sam_own = db.execute(
-        select(Reviewee).where(Reviewee.name == "Sam")
-    ).scalar_one()
+    zoe_e = db.execute(select(Reviewee).where(Reviewee.name == "Zoe")).scalar_one()
+    reviewees_service.update_reviewee(db, reviewee=zoe_e, status="inactive", user=user)
+    sam_own = db.execute(select(Reviewee).where(Reviewee.name == "Sam")).scalar_one()
     reviewees_service.delete_selected(
         db, review_session=review_session, reviewee_ids=[sam_own.id], user=user
     )
@@ -314,22 +296,23 @@ def test_an_include_change_is_audited(db: Session) -> None:
     assignments.replace_assignments(
         db, review_session=review_session, user=user, correlation_id="b7"
     )
-    sam_own = db.execute(
-        select(Reviewee).where(Reviewee.name == "Sam")
-    ).scalar_one()
+    sam_own = db.execute(select(Reviewee).where(Reviewee.name == "Sam")).scalar_one()
     reviewees_service.delete_selected(
         db, review_session=review_session, reviewee_ids=[sam_own.id], user=user
     )
-    events = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.session_id == review_session.id,
-            AuditEvent.event_type == "assignments.include_reconciled",
+    events = (
+        db.execute(
+            select(AuditEvent).where(
+                AuditEvent.session_id == review_session.id,
+                AuditEvent.event_type == "assignments.include_reconciled",
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(events) == 1
     assert events[0].detail is not None
     assert events[0].detail["counts"]["include_changed"] == 1
-
 
 
 def test_the_blank_boundary_group_is_never_the_reviewers_own(
@@ -378,9 +361,7 @@ def test_the_blank_boundary_group_is_never_the_reviewers_own(
     assert rows["Kit"].is_self_review is False
 
     sam_own = db.execute(
-        select(Reviewee).where(
-            Reviewee.session_id == review_session.id, Reviewee.name == "Sam"
-        )
+        select(Reviewee).where(Reviewee.session_id == review_session.id, Reviewee.name == "Sam")
     ).scalar_one()
     reviewees_service.update_reviewee(db, reviewee=sam_own, tag_1="TeamB", user=user)
     rows = _rows_by_reviewee(db, instrument)

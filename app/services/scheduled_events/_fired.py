@@ -36,10 +36,8 @@ _EVENT_TYPES = {
 
 #: Per kind: the column, the anchor's column, and the copy's names.
 _LISTS = (
-    ("invite", "invite_offsets", "scheduled_activate_at",
-     "Auto-send invite", "Start"),
-    ("reminder", "reminder_offsets", "deadline",
-     "Auto-send reminder", "End"),
+    ("invite", "invite_offsets", "scheduled_activate_at", "Auto-send invite", "Start"),
+    ("reminder", "reminder_offsets", "deadline", "Auto-send reminder", "End"),
 )
 
 
@@ -108,9 +106,7 @@ def offsets_lead_exempt(
     stored list that predates the sent-entry check keeps saving as it
     stands, and restoring the sent entry is allowed too."""
     column = "invite_offsets" if kind == "invite" else "reminder_offsets"
-    stored: list[str] = (
-        (getattr(review_session, column) or []) if anchor_unedited else []
-    )
+    stored: list[str] = (getattr(review_session, column) or []) if anchor_unedited else []
     fired = fired_offsets(db, review_session, kind, anchor)
     size = max([len(stored), *(index + 1 for index in fired)])
     return [
@@ -166,13 +162,15 @@ def fired_offset_errors(
             if not fired[index]:
                 continue
             if index < len(entries) and entries[index] != fired[index]:
-                errors.append((
-                    column,
-                    f"{label} {fired[index]} was already sent (or "
-                    f"skipped) at position {index + 1} for this "
-                    f"{anchor_label}, so {entries[index]} there would "
-                    f"never be sent. Keep {fired[index]} at position "
-                    f"{index + 1} and add new entries after it.",
-                ))
+                errors.append(
+                    (
+                        column,
+                        f"{label} {fired[index]} was already sent (or "
+                        f"skipped) at position {index + 1} for this "
+                        f"{anchor_label}, so {entries[index]} there would "
+                        f"never be sent. Keep {fired[index]} at position "
+                        f"{index + 1} and add new entries after it.",
+                    )
+                )
                 break
     return errors

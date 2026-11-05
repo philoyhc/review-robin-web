@@ -108,25 +108,17 @@ def parse_relationship_csv(
         return ParseResult(rows=[], issues=[decode_issue])
     assert text is not None
 
-    raw_rows, fieldnames, captured_labels, count_issue = _read_dict_rows(
-        text, source
-    )
+    raw_rows, fieldnames, captured_labels, count_issue = _read_dict_rows(text, source)
     if count_issue is not None:
         return ParseResult(rows=[], issues=[count_issue])
     assert raw_rows is not None
 
-    issues.extend(
-        _missing_columns_issues(
-            fieldnames, ["ReviewerEmail", "RevieweeEmail"], source
-        )
-    )
+    issues.extend(_missing_columns_issues(fieldnames, ["ReviewerEmail", "RevieweeEmail"], source))
     if issues:
         return ParseResult(rows=[], issues=issues)
 
     reviewer_by_email = {normalize_email(r.email): r for r in reviewers}
-    reviewee_by_identifier = {
-        normalize_email(r.email_or_identifier): r for r in reviewees
-    }
+    reviewee_by_identifier = {normalize_email(r.email_or_identifier): r for r in reviewees}
 
     parsed: list[RelationshipImportRow] = []
     seen_pairs: dict[tuple[int, int], int] = {}
@@ -168,17 +160,14 @@ def parse_relationship_csv(
                     row_number=index,
                     field="ReviewerEmail",
                     message=(
-                        f"Unknown reviewer '{reviewer_email}' — not in "
-                        f"the uploaded Reviewers file."
+                        f"Unknown reviewer '{reviewer_email}' — not in the uploaded Reviewers file."
                         if reviewers_uploaded
-                        else f"Unknown reviewer '{reviewer_email}' — "
-                        f"import reviewers first."
+                        else f"Unknown reviewer '{reviewer_email}' — import reviewers first."
                     ),
                     problem=(
                         "ReviewerEmail is not in the uploaded Reviewers file"
                         if reviewers_uploaded
-                        else "ReviewerEmail is not on the Reviewers roster "
-                        "(import reviewers first)"
+                        else "ReviewerEmail is not on the Reviewers roster (import reviewers first)"
                     ),
                 )
             )
@@ -198,17 +187,14 @@ def parse_relationship_csv(
                         else f"Unknown reviewee '{reviewee_email}' — not in "
                         f"the uploaded Reviewees file."
                         if reviewees_uploaded
-                        else f"Unknown reviewee '{reviewee_email}' — "
-                        f"import reviewees first."
+                        else f"Unknown reviewee '{reviewee_email}' — import reviewees first."
                     ),
                     problem=(
-                        "RevieweeEmail is not in the uploaded Reviewers file "
-                        "(symmetric review)"
+                        "RevieweeEmail is not in the uploaded Reviewers file (symmetric review)"
                         if reviewees_mirrored
                         else "RevieweeEmail is not in the uploaded Reviewees file"
                         if reviewees_uploaded
-                        else "RevieweeEmail is not on the Reviewees roster "
-                        "(import reviewees first)"
+                        else "RevieweeEmail is not on the Reviewees roster (import reviewees first)"
                     ),
                 )
             )
@@ -242,10 +228,7 @@ def parse_relationship_csv(
                     source=source,
                     row_number=index,
                     field="Status",
-                    message=(
-                        f"Status must be 'active' or 'inactive' "
-                        f"(got '{status_raw}')"
-                    ),
+                    message=(f"Status must be 'active' or 'inactive' (got '{status_raw}')"),
                     problem="Status is not active or inactive",
                 )
             )
@@ -346,9 +329,7 @@ def rosters_for_relationships(
     )
     reviewees: list[Reviewee | IncomingReviewee] = (
         [
-            IncomingReviewee(
-                id=-index, email_or_identifier=row.email_or_identifier
-            )
+            IncomingReviewee(id=-index, email_or_identifier=row.email_or_identifier)
             for index, row in enumerate(incoming_reviewees, start=1)
         ]
         if incoming_reviewees is not None
@@ -380,9 +361,7 @@ def parse_relationship_upload(
         incoming_reviewers=incoming_reviewers,
         incoming_reviewees=incoming_reviewees,
     )
-    mirrored = (
-        symmetric and incoming_reviewers is not None and incoming_reviewees is None
-    )
+    mirrored = symmetric and incoming_reviewers is not None and incoming_reviewees is None
     if mirrored and incoming_reviewers is not None:
         reviewees = [
             IncomingReviewee(id=-index, email_or_identifier=row.email)
@@ -399,15 +378,11 @@ def parse_relationship_upload(
 
 
 def existing_count(db: Session, session_id: int) -> int:
-    stmt = select(func.count(Relationship.id)).where(
-        Relationship.session_id == session_id
-    )
+    stmt = select(func.count(Relationship.id)).where(Relationship.session_id == session_id)
     return int(db.execute(stmt).scalar_one())
 
 
-def list_for_session(
-    db: Session, session_id: int
-) -> list[Relationship]:
+def list_for_session(db: Session, session_id: int) -> list[Relationship]:
     """Deterministic ordering for preview / round-trip stability."""
 
     return list(
@@ -419,17 +394,12 @@ def list_for_session(
     )
 
 
-def pair_context_lookup(
-    db: Session, session_id: int
-) -> dict[tuple[int, int], Relationship]:
+def pair_context_lookup(db: Session, session_id: int) -> dict[tuple[int, int], Relationship]:
     """Eager-loaded ``(reviewer_id, reviewee_id) -> Relationship`` map
     for the rule engine's ``pair_context.tag_N`` resolver
     (15D PR 4)."""
 
-    return {
-        (row.reviewer_id, row.reviewee_id): row
-        for row in list_for_session(db, session_id)
-    }
+    return {(row.reviewer_id, row.reviewee_id): row for row in list_for_session(db, session_id)}
 
 
 def relationship_append_conflicts(
@@ -499,9 +469,7 @@ def save_relationships(
     with unit_of_work.atomic(db):
         lifecycle.require_editable(db, session)
         if append:
-            conflicts = relationship_append_conflicts(
-                db, session_id=session.id, rows=rows
-            )
+            conflicts = relationship_append_conflicts(db, session_id=session.id, rows=rows)
             if conflicts:
                 raise AppendConflict(conflicts)
         lifecycle.invalidate_if_validated(
@@ -513,9 +481,7 @@ def save_relationships(
         )
 
         existing_rows = list(
-            db.execute(
-                select(Relationship).where(Relationship.session_id == session.id)
-            ).scalars()
+            db.execute(select(Relationship).where(Relationship.session_id == session.id)).scalars()
         )
         before = pair_context_groups_before(db, session_id=session.id)
         if append or merge:
@@ -558,9 +524,7 @@ def save_relationships(
             )
             updated += 1
         db.flush()
-        context: dict[str, str | int | bool] = (
-            {"filename": filename} if filename else {}
-        )
+        context: dict[str, str | int | bool] = {"filename": filename} if filename else {}
         if append:
             context["mode"] = "append"
         if merge:
@@ -624,9 +588,7 @@ def save_relationships(
     return replaced, (added if merge else len(rows))
 
 
-def _relationship_to_orm(
-    row: RelationshipImportRow, session_id: int
-) -> Relationship:
+def _relationship_to_orm(row: RelationshipImportRow, session_id: int) -> Relationship:
     return Relationship(
         session_id=session_id,
         reviewer_id=row.reviewer_id,
@@ -675,9 +637,7 @@ def delete_all_relationships(
 
     existing_rows = list(
         db.execute(
-            select(Relationship).where(
-                Relationship.session_id == review_session.id
-            )
+            select(Relationship).where(Relationship.session_id == review_session.id)
         ).scalars()
     )
     before = pair_context_groups_before(db, session_id=review_session.id)
@@ -728,9 +688,7 @@ def delete_all_group_loss(db: Session, *, session_id: int) -> int:
         db.flush()
         try:
             # An acknowledged count of 0 refuses any loss, with the count.
-            clear_redrawn_groups(
-                db, session_id=session_id, before=before, acknowledged_loss=0
-            )
+            clear_redrawn_groups(db, session_id=session_id, before=before, acknowledged_loss=0)
         except responses_service.GroupAnswersWouldClear as exc:
             return exc.count
         return 0
@@ -813,9 +771,7 @@ def _require_session_member[M: (Reviewer, Reviewee)](
     label: str,
 ) -> M:
     obj = db.execute(
-        select(model).where(
-            model.id == member_id, model.session_id == session_id
-        )
+        select(model).where(model.id == member_id, model.session_id == session_id)
     ).scalar_one_or_none()
     if obj is None:
         raise RelationshipOperationError(
@@ -881,9 +837,7 @@ def create_relationship(
     clean_tag_1 = _normalised_rel_tag(tag_1)
     clean_tag_2 = _normalised_rel_tag(tag_2)
     clean_tag_3 = _normalised_rel_tag(tag_3)
-    _refuse_over_long(
-        {"tag_1": clean_tag_1, "tag_2": clean_tag_2, "tag_3": clean_tag_3}
-    )
+    _refuse_over_long({"tag_1": clean_tag_1, "tag_2": clean_tag_2, "tag_3": clean_tag_3})
 
     if _pair_taken(
         db,
@@ -893,8 +847,7 @@ def create_relationship(
     ):
         raise RelationshipOperationError(
             "duplicate_pair",
-            "A relationship for this reviewer / reviewee pair "
-            "already exists.",
+            "A relationship for this reviewer / reviewee pair already exists.",
         )
 
     lifecycle.invalidate_if_validated(
@@ -1002,8 +955,7 @@ def update_relationship(
     _refuse_over_long(proposed)
 
     if (
-        final_reviewer != relationship.reviewer_id
-        or final_reviewee != relationship.reviewee_id
+        final_reviewer != relationship.reviewer_id or final_reviewee != relationship.reviewee_id
     ) and _pair_taken(
         db,
         session_id=session_id,
@@ -1013,8 +965,7 @@ def update_relationship(
     ):
         raise RelationshipOperationError(
             "duplicate_pair",
-            "A relationship for this reviewer / reviewee pair "
-            "already exists.",
+            "A relationship for this reviewer / reviewee pair already exists.",
         )
 
     changes: dict[str, list[object]] = {}

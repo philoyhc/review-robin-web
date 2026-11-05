@@ -17,6 +17,7 @@ Slice 3a flips it to:
   eligible and materialised counts diverge for any pinned
   instrument.
 """
+
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
@@ -37,18 +38,14 @@ from ._instrument_states import add_group_instrument
 from ._public_id import public_id
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "AsgnPage", "code": code, "description": "d"},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _seed_pair(client: TestClient, session_id: int) -> None:
@@ -77,9 +74,7 @@ def _seed_pair(client: TestClient, session_id: int) -> None:
     )
 
 
-def test_status_block_reports_type_individual(
-    client: TestClient, db: Session
-) -> None:
+def test_status_block_reports_type_individual(client: TestClient, db: Session) -> None:
     """The per-reviewee instrument reports its Type ("Individual")
     in the per-instrument status table. (The Rule column retired —
     the engine pass still feeds the block's staleness check, the
@@ -89,16 +84,12 @@ def test_status_block_reports_type_individual(
     _seed_pair(client, review_session.id)
     pin_full_matrix_on_all_instruments(db, review_session.id)
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/assignments").text
     status_section = body.split('id="assignments-status-blocks"', 1)[1]
     assert "Individual" in status_section
 
 
-def test_status_block_reports_group_type_and_group_count(
-    client: TestClient, db: Session
-) -> None:
+def test_status_block_reports_group_type_and_group_count(client: TestClient, db: Session) -> None:
     """A group-scoped instrument's status block reports Type
     "Group" and, once generated, a Groups count — distinct
     (reviewer, group_key) over its assignments (Segment 13C)."""
@@ -140,26 +131,18 @@ def test_status_block_reports_group_type_and_group_count(
 
     status_url = f"/operator/sessions/{review_session.public_id}/assignments"
     # Before generation: Type "Group", Groups column shows "—".
-    section = client.get(status_url).text.split(
-        'id="assignments-status-blocks"', 1
-    )[1]
+    section = client.get(status_url).text.split('id="assignments-status-blocks"', 1)[1]
     assert "Group" in section
 
     generate_via_page_button(client, review_session.id)
 
     # After generation: 2 boundary groups (Team A, Team B).
-    section = client.get(status_url).text.split(
-        'id="assignments-status-blocks"', 1
-    )[1]
-    row = section.split(f'id="status-block-{group.id}"', 1)[1].split(
-        "</tr>", 1
-    )[0]
+    section = client.get(status_url).text.split('id="assignments-status-blocks"', 1)[1]
+    row = section.split(f'id="status-block-{group.id}"', 1)[1].split("</tr>", 1)[0]
     assert ">2</span>" in row  # Groups count
 
 
-def test_bulk_inactivate_and_activate_assignments(
-    client: TestClient, db: Session
-) -> None:
+def test_bulk_inactivate_and_activate_assignments(client: TestClient, db: Session) -> None:
     """The bulk Inactivate / Activate controls flip the ``include``
     flag on the selected assignment rows (Segment 13C slice 2).
 
@@ -178,26 +161,20 @@ def test_bulk_inactivate_and_activate_assignments(
         return [
             a.include
             for a in db.execute(
-                select(Assignment).where(
-                    Assignment.session_id == review_session.id
-                )
+                select(Assignment).where(Assignment.session_id == review_session.id)
             ).scalars()
         ]
 
     ids = [
         a.id
         for a in db.execute(
-            select(Assignment).where(
-                Assignment.session_id == review_session.id
-            )
+            select(Assignment).where(Assignment.session_id == review_session.id)
         ).scalars()
     ]
     assert ids and all(_includes())  # generated rows start included
 
     # The page renders the row-select column + bulk buttons.
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/assignments").text
     assert 'id="assignments-select-all"' in body
     assert 'class="assignment-select"' in body
     assert 'tr.id = "assignments-row-expander"' in body
@@ -223,9 +200,7 @@ def test_bulk_inactivate_and_activate_assignments(
     assert all(_includes())
 
 
-def test_assignment_search_filters_the_preview_table(
-    client: TestClient, db: Session
-) -> None:
+def test_assignment_search_filters_the_preview_table(client: TestClient, db: Session) -> None:
     """Card B's free-text search filters the assignments preview by
     reviewer / reviewee name or email; a non-matching term shows
     the no-match message and keeps the term (Segment 13C slice 3)."""
@@ -252,9 +227,7 @@ def test_assignment_search_filters_the_preview_table(
     assert '<p class="muted table-showing-hint">' not in body
 
 
-def test_assignment_search_by_scopes_the_match(
-    client: TestClient, db: Session
-) -> None:
+def test_assignment_search_by_scopes_the_match(client: TestClient, db: Session) -> None:
     """The 'Search by' dropdown scopes the search to the reviewer
     or the reviewee side only (Segment 13C)."""
     review_session = _make_session(client, db, code="page-searchby")
@@ -278,9 +251,7 @@ def test_assignment_search_by_scopes_the_match(
     assert '<option value="reviewer" selected>Reviewers</option>' in body
 
 
-def test_generate_materialises_per_instrument(
-    client: TestClient, db: Session
-) -> None:
+def test_generate_materialises_per_instrument(client: TestClient, db: Session) -> None:
     """Posting the page-level Generate route runs the materialiser
     over every pinned instrument; per-instrument status block
     flips from "Not generated yet" to a count + last-generated
@@ -295,22 +266,15 @@ def test_generate_materialises_per_instrument(
     # Post-generate redirect lands plain on the Assignments page —
     # the ``?generated=1`` flash signal retired with the banner.
     assert (
-        response.headers["location"]
-        == f"/operator/sessions/{review_session.public_id}/assignments"
+        response.headers["location"] == f"/operator/sessions/{review_session.public_id}/assignments"
     )
 
     rows = list(
-        db.execute(
-            select(Assignment).where(
-                Assignment.session_id == review_session.id
-            )
-        ).scalars()
+        db.execute(select(Assignment).where(Assignment.session_id == review_session.id)).scalars()
     )
     assert len(rows) == 1
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/assignments").text
     assert 'id="generated-flash"' not in body
     # Status block flips from "Not generated yet" placeholder to a
     # generated-count pill. The "last generated …" timestamp
@@ -322,9 +286,7 @@ def test_generate_materialises_per_instrument(
     assert ">1</span>" in body.split('id="assignments-status-blocks"', 1)[1]
 
 
-def test_generate_with_existing_pairs_requires_confirm(
-    client: TestClient, db: Session
-) -> None:
+def test_generate_with_existing_pairs_requires_confirm(client: TestClient, db: Session) -> None:
     """Re-Generating with existing pairs requires
     ``confirm_replace=true``; without it the route 303s with
     ``?needs_confirm=1`` and the existing rows survive."""
@@ -339,35 +301,25 @@ def test_generate_with_existing_pairs_requires_confirm(
     assert "needs_confirm=1" in response.headers["location"]
     page = client.get(response.headers["location"])
     assert 'id="missing-confirm-banner"' in page.text
-    assert (
-        "Replace not confirmed. The existing assignments were kept."
-        in page.text
-    )
+    assert "Replace not confirmed. The existing assignments were kept." in page.text
     # The banner's Cancel (spec/ui_elements.md §5a) returns to the page
     # without the flag.
     banner = page.text.split('id="missing-confirm-banner"', 1)[1]
     banner = banner.split("</div>", 1)[0]  # up to the actions row's close
-    assert (
-        f'href="/operator/sessions/{review_session.public_id}/assignments">Cancel</a>'
-        in banner
-    )
+    assert f'href="/operator/sessions/{review_session.public_id}/assignments">Cancel</a>' in banner
     assert 'class="btn secondary"' in banner
     assert (
         len(
             list(
                 db.execute(
-                    select(Assignment).where(
-                        Assignment.session_id == review_session.id
-                    )
+                    select(Assignment).where(Assignment.session_id == review_session.id)
                 ).scalars()
             )
         )
         == 1
     )
 
-    confirmed = generate_via_page_button(
-        client, review_session.id, confirm_replace=True
-    )
+    confirmed = generate_via_page_button(client, review_session.id, confirm_replace=True)
     assert confirmed.status_code == 303
     # Redirect lands plain on the Assignments page (flash retired).
     assert (

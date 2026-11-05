@@ -43,8 +43,11 @@ def _surface_cols(
 ) -> list[str]:
     operator = make_client(alice)
     review_session = _operator_creates_session_with_pair(
-        operator, db, code=code,
-        reviewer_email="rae@example.edu", reviewee_ident="carol@example.edu",
+        operator,
+        db,
+        code=code,
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
     )
     reviewee = db.execute(
         select(Reviewee).where(Reviewee.session_id == review_session.id)
@@ -54,8 +57,12 @@ def _surface_cols(
         select(Instrument).where(Instrument.session_id == review_session.id)
     ).scalar_one()
     profile = InstrumentDisplayField(
-        instrument_id=instrument.id, label="", source_type="reviewee",
-        source_field="profile_link", order=10, visible=True,
+        instrument_id=instrument.id,
+        label="",
+        source_type="reviewee",
+        source_field="profile_link",
+        order=10,
+        visible=True,
     )
     db.add(profile)
     db.flush()
@@ -78,9 +85,13 @@ def test_the_surface_starts_an_unsized_profile_column_at_its_header(
     cols = _surface_cols(db, make_client, alice, rae, "prof-width", {"identity": 200})
     assert f'<col style="width: {profile_column_ch_width("Profile")}ch">' in cols
     # The numeric Rating column starts at its header / digit span.
-    rating = db.execute(
-        select(InstrumentResponseField).where(InstrumentResponseField.field_key == "rating")
-    ).scalars().first()
+    rating = (
+        db.execute(
+            select(InstrumentResponseField).where(InstrumentResponseField.field_key == "rating")
+        )
+        .scalars()
+        .first()
+    )
     assert rating is not None
     assert f'<col style="width: {numeric_column_ch_width(rating)}ch">' in cols
 
@@ -90,7 +101,10 @@ def test_the_status_column_takes_a_fixed_width() -> None:
 
     templates = Path(__file__).resolve().parents[2] / "app" / "web" / "templates"
     surface = (templates / "reviewer" / "review_surface.html").read_text()
-    assert '<th scope="col" class="rs-status"><span class="visually-hidden">Status</span></th>' in surface
+    assert (
+        '<th scope="col" class="rs-status"><span class="visually-hidden">Status</span></th>'
+        in surface
+    )
     assert "th.rs-status { width: 4ch; }" in (templates / "base.html").read_text()
 
 
@@ -120,10 +134,7 @@ def test_the_preview_mirrors_it(client: TestClient, db: Session) -> None:
     assert "? 'width: ' + profileColumnCh(o.label) + 'ch;' : colStyle(o.width);" in flat
     # An unsized number column starts at the surface's width, in both the
     # per-reviewee and the group preview (19T Item 16).
-    assert (
-        "return Math.max(String(label || '').length + (required ? 2 : 0) + 4, span + 3);"
-        in flat
-    )
+    assert "return Math.max(String(label || '').length + (required ? 2 : 0) + 4, span + 3);" in flat
     assert "return ch ? 'width: ' + ch + 'ch;' : colStyle(r.width);" in flat
     assert "'\" style=\"' + responseColStyle(card, r) + '\">'" in flat
     assert "'\" style=\"' + colStyle(r.width) + '\">'" not in flat
@@ -135,7 +146,7 @@ def test_the_preview_mirrors_it(client: TestClient, db: Session) -> None:
         "return sized ? ' style=\"' + style + '\"' : ' data-start-style=\"' + style + '\"';",
         "c.setAttribute('style', c.getAttribute('data-start-style'));",
         "if (shape.dataType === 'integer' || shape.dataType === 'decimal') { return 'rs-narrow'; }",
-        "return '<span class=\"rrw-sort-btn\" aria-hidden=\"true\"><span class=\"rrw-sort-badge\">↕</span></span>';",
+        'return \'<span class="rrw-sort-btn" aria-hidden="true"><span class="rrw-sort-badge">↕</span></span>\';',
         "+ (sortBadgeHtml(card, o.displayFieldId) || surfaceSortStub())",
         # Any width counts, a hidden column's too, as has_custom_widths does.
         "var sized = identityW > 0 || dfRows(card).some(hasWidth) || rfRows(card).some(hasWidth);",
@@ -176,20 +187,30 @@ def test_the_summary_and_the_results_start_it_the_same_way(
     )
     operator = make_client(alice)
     review_session = _seed_and_activate(operator, db, code="prof-width-pages")
-    instrument = db.execute(
-        select(Instrument)
-        .where(Instrument.session_id == review_session.id)
-        .order_by(Instrument.order, Instrument.id)
-    ).scalars().first()
+    instrument = (
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.order, Instrument.id)
+        )
+        .scalars()
+        .first()
+    )
     assert instrument is not None
     for reviewee in db.execute(
         select(Reviewee).where(Reviewee.session_id == review_session.id)
     ).scalars():
         reviewee.profile_link = "https://example.edu/p"
-    db.add(InstrumentDisplayField(
-        instrument_id=instrument.id, label="", source_type="reviewee",
-        source_field="profile_link", order=10, visible=True,
-    ))
+    db.add(
+        InstrumentDisplayField(
+            instrument_id=instrument.id,
+            label="",
+            source_type="reviewee",
+            source_field="profile_link",
+            order=10,
+            visible=True,
+        )
+    )
     instrument.column_widths = {"identity": 220}
     db.commit()
     _seed_submitted_responses(db, review_session, comments_value="Solid work.")

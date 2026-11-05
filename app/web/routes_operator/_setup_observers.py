@@ -73,9 +73,7 @@ router = APIRouter()
 def _list_observers(db: Session, session_id: int) -> list[Observer]:
     return list(
         db.execute(
-            select(Observer)
-            .where(Observer.session_id == session_id)
-            .order_by(Observer.id)
+            select(Observer).where(Observer.session_id == session_id).order_by(Observer.id)
         ).scalars()
     )
 
@@ -161,9 +159,7 @@ def _render_observers_page(
         rule_edit_ids = []
 
     all_observers = _list_observers(db, review_session.id)
-    filtered = views.filter_observers_rows(
-        all_observers, status=status_filter, search=search
-    )
+    filtered = views.filter_observers_rows(all_observers, status=status_filter, search=search)
     is_filtered = status_filter != "all" or bool(search.strip())
     # Segment 19J.5 rung 2 — the cap became a page size. The shared
     # helper cuts the window, clamps a stale ``offset`` onto a real
@@ -180,9 +176,9 @@ def _render_observers_page(
         # a roster over one page the new row is not on the page the form
         # was submitted from and the redirect's fragment would name a row
         # this response never renders. `locate_id` moves the window to it.
-        locate_id=focus_id if focus_id is not None else (
-            rule_edit_ids[0] if rule_edit_ids else None
-        ),
+        locate_id=focus_id
+        if focus_id is not None
+        else (rule_edit_ids[0] if rule_edit_ids else None),
     )
     observers: list[Observer] = window.rows
     offset = window.offset
@@ -190,9 +186,7 @@ def _render_observers_page(
     displayed_row_count = len(observers)
 
     if edit_values is None and edit_id is not None:
-        edited = next(
-            (o for o in observers if o.id == edit_id), None
-        )
+        edited = next((o for o in observers if o.id == edit_id), None)
         if edited is not None:
             edit_values = {
                 "email": edited.email,
@@ -212,7 +206,8 @@ def _render_observers_page(
     if edit_cohort_rule is _STORED_RULE:
         edited = (
             next((o for o in all_observers if o.id == edit_id), None)
-            if edit_id is not None else None
+            if edit_id is not None
+            else None
         )
         edit_cohort_rule = edited.cohort_rule if edited is not None else None
     if edit_values is None and add_mode:
@@ -223,9 +218,7 @@ def _render_observers_page(
             "status": "active",
         }
 
-    existing_count = csv_imports.existing_observer_count(
-        db, review_session.id
-    )
+    existing_count = csv_imports.existing_observer_count(db, review_session.id)
 
     cohort_match_tags = views.new_model_usable_tags(db, review_session)
     col_readouts = views.observer_column_state(db, review_session).readouts
@@ -272,9 +265,7 @@ def _render_observers_page(
             # not ``selected``: selection is page-local, and carrying
             # a hidden one across a page boundary is how an operator
             # deletes something they cannot see.
-            "pager_url_base": (
-                f"/operator/sessions/{review_session.public_id}/observers?"
-            ),
+            "pager_url_base": (f"/operator/sessions/{review_session.public_id}/observers?"),
             # The fragment the range links land on (19J.8): the
             # table's card, so a page turn arrives showing the card's
             # top edge, the column chips, the page links and the new
@@ -320,9 +311,7 @@ def _render_observers_page(
             "filter_status": status_filter,
             "filter_search": search,
             "filter_status_options": views.OBSERVERS_STATUS_OPTIONS,
-            "filter_search_options": views.observers_search_options(
-                all_observers
-            ),
+            "filter_search_options": views.observers_search_options(all_observers),
             "existing_count": existing_count,
             "directory_check": views.last_directory_check(db, review_session, "observers"),
             "directory_unmatched": views.unmatched_count(db, review_session, "observers"),
@@ -387,17 +376,13 @@ def _render_observers_page(
                 }
                 for obs in observers
             },
-            "breadcrumbs": breadcrumbs.operator_session_child(
-                review_session, "Observers"
-            ),
+            "breadcrumbs": breadcrumbs.operator_session_child(review_session, "Observers"),
         },
         status_code=http_status,
     )
 
 
-@router.get(
-    "/sessions/{session_id}/observers", response_class=HTMLResponse
-)
+@router.get("/sessions/{session_id}/observers", response_class=HTMLResponse)
 def observers_page(
     request: Request,
     status_filter: str = Query(default="all", alias="status"),
@@ -409,9 +394,7 @@ def observers_page(
     rule_id: list[int] = Query(default=[]),
     unlocked: int = 0,
     selected: list[int] = Query(default=[]),
-    review_session: ReviewSession = Depends(
-        require_observers_enabled_session
-    ),
+    review_session: ReviewSession = Depends(require_observers_enabled_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
@@ -451,9 +434,7 @@ def observers_create(
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
-    review_session: ReviewSession = Depends(
-        require_observers_enabled_session
-    ),
+    review_session: ReviewSession = Depends(require_observers_enabled_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
@@ -502,7 +483,8 @@ def observers_create(
     # the end and, on a roster over one page, is not on the page the
     # form was submitted from. `focus` relocates the window to it and
     # the fragment then resolves.
-    return _redirect_keeping_selection(request,
+    return _redirect_keeping_selection(
+        request,
         f"/operator/sessions/{review_session.public_id}/observers",
         [],
         filter_params=[("status", filter_status), ("q", filter_q)],
@@ -532,9 +514,7 @@ def observers_update(
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
-    review_session: ReviewSession = Depends(
-        require_observers_enabled_session
-    ),
+    review_session: ReviewSession = Depends(require_observers_enabled_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
@@ -579,7 +559,8 @@ def observers_update(
             edit_cohort_rule=rule.shown,
             http_status=status.HTTP_400_BAD_REQUEST,
         )
-    return _redirect_keeping_selection(request,
+    return _redirect_keeping_selection(
+        request,
         f"/operator/sessions/{review_session.public_id}/observers",
         [observer_id],
         filter_params=[("status", filter_status), ("q", filter_q)],
@@ -590,13 +571,12 @@ def observers_update(
 
 @router.post("/sessions/{session_id}/observers/bulk-inactivate")
 def observers_bulk_inactivate(
-    request: Request, observer_ids: list[int] = Form(default=[]),
+    request: Request,
+    observer_ids: list[int] = Form(default=[]),
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
-    review_session: ReviewSession = Depends(
-        require_observers_enabled_session
-    ),
+    review_session: ReviewSession = Depends(require_observers_enabled_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -610,10 +590,9 @@ def observers_bulk_inactivate(
             correlation_id=request_correlation_id(),
         )
     except ObserverOperationError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
-        ) from exc
-    return _redirect_keeping_selection(request,
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
+    return _redirect_keeping_selection(
+        request,
         f"/operator/sessions/{review_session.public_id}/observers",
         observer_ids,
         filter_params=[("status", filter_status), ("q", filter_q)],
@@ -624,13 +603,12 @@ def observers_bulk_inactivate(
 
 @router.post("/sessions/{session_id}/observers/bulk-reactivate")
 def observers_bulk_reactivate(
-    request: Request, observer_ids: list[int] = Form(default=[]),
+    request: Request,
+    observer_ids: list[int] = Form(default=[]),
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
-    review_session: ReviewSession = Depends(
-        require_observers_enabled_session
-    ),
+    review_session: ReviewSession = Depends(require_observers_enabled_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -644,10 +622,9 @@ def observers_bulk_reactivate(
             correlation_id=request_correlation_id(),
         )
     except ObserverOperationError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
-        ) from exc
-    return _redirect_keeping_selection(request,
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
+    return _redirect_keeping_selection(
+        request,
         f"/operator/sessions/{review_session.public_id}/observers",
         observer_ids,
         filter_params=[("status", filter_status), ("q", filter_q)],
@@ -688,22 +665,16 @@ def _row_editor_rule(
     def pad(xs: list[str]) -> list[str]:
         return list(xs) + [""] * (n - len(xs))
 
-    fields, operand_tags, operand_values = (
-        pad(fields), pad(operand_tags), pad(operand_values)
-    )
+    fields, operand_tags, operand_values = (pad(fields), pad(operand_tags), pad(operand_values))
     cells: list[dict[str, str]] = []
     half = False
-    for field, op, tag, value in zip(
-        fields, ops, operand_tags, operand_values, strict=False
-    ):
+    for field, op, tag, value in zip(fields, ops, operand_tags, operand_values, strict=False):
         typed = op in VALUE_OPERATORS
         if not field and not (typed and value.strip()):
             continue
         if not field or (typed and not value.strip()):
             half = True
-        cells.append(
-            {"field": field, "op": op, "operand_tag": tag, "operand_value": value}
-        )
+        cells.append({"field": field, "op": op, "operand_tag": tag, "operand_value": value})
     shown: dict[str, Any] = {
         "combinator": (combinator or "AND").strip().upper(),
         "rules": cells,
@@ -712,8 +683,9 @@ def _row_editor_rule(
         payload=shown if cells else None,
         shown=shown,
         error=(
-            "Finish or clear each rule cell: every cell needs a field "
-            "and an operand." if half else None
+            "Finish or clear each rule cell: every cell needs a field and an operand."
+            if half
+            else None
         ),
     )
 
@@ -728,9 +700,7 @@ async def observers_cohort_rule_save(
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
-    review_session: ReviewSession = Depends(
-        require_observers_enabled_session
-    ),
+    review_session: ReviewSession = Depends(require_observers_enabled_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
@@ -768,9 +738,7 @@ async def observers_cohort_rule_save(
         fields=[str(v) for v in form.getlist("cohort_rule_field")],
         ops=[str(v) for v in form.getlist("cohort_rule_op")],
         operand_tags=[str(v) for v in form.getlist("cohort_rule_operand_tag")],
-        operand_values=[
-            str(v) for v in form.getlist("cohort_rule_operand_value")
-        ],
+        operand_values=[str(v) for v in form.getlist("cohort_rule_operand_value")],
         combinator=str(form.get("cohort_combinator") or "AND"),
     )
     try:
@@ -807,7 +775,8 @@ async def observers_cohort_rule_save(
             edit_cohort_rule=rule.shown,
             http_status=status.HTTP_400_BAD_REQUEST,
         )
-    return _redirect_keeping_selection(request,
+    return _redirect_keeping_selection(
+        request,
         f"/operator/sessions/{review_session.public_id}/observers",
         observer_ids,
         filter_params=[("status", filter_status), ("q", filter_q)],
@@ -822,9 +791,7 @@ async def observers_cohort_rule_save(
 )
 async def observers_save_self_fields(
     request: Request,
-    review_session: ReviewSession = Depends(
-        require_observers_enabled_session
-    ),
+    review_session: ReviewSession = Depends(require_observers_enabled_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -853,21 +820,18 @@ async def observers_save_self_fields(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
         ) from exc
-    return urls.redirect(request,
-        url=(
-            f"/operator/sessions/{review_session.public_id}/observers"
-            "?unlocked=1#roster-card"
-        ),
+    return urls.redirect(
+        request,
+        url=(f"/operator/sessions/{review_session.public_id}/observers?unlocked=1#roster-card"),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
 
 @router.post("/sessions/{session_id}/observers/delete-all")
 def observers_delete_all(
-    request: Request, confirm: str | None = Form(default=None),
-    review_session: ReviewSession = Depends(
-        require_observers_enabled_session
-    ),
+    request: Request,
+    confirm: str | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_observers_enabled_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -900,11 +864,9 @@ def observers_delete_all(
     # after the fact: a control inside the panel must not close the
     # panel it was used from. Matching the status code is not matching
     # the contract.
-    return urls.redirect(request,
-        url=(
-            f"/operator/sessions/{review_session.public_id}/observers"
-            "?unlocked=1#roster-card"
-        ),
+    return urls.redirect(
+        request,
+        url=(f"/operator/sessions/{review_session.public_id}/observers?unlocked=1#roster-card"),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -925,9 +887,7 @@ async def observers_import_submit(
     # tick.
     append: str | None = Form(default=None),
     merge: str | None = Form(default=None),
-    review_session: ReviewSession = Depends(
-        require_observers_enabled_session
-    ),
+    review_session: ReviewSession = Depends(require_observers_enabled_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
@@ -1011,20 +971,19 @@ async def observers_import_submit(
 
     def ask() -> dict[str, str] | None:
         return hold_for_ask(
-            db, upload=upload, user=user, review_session=review_session,
+            db,
+            upload=upload,
+            user=user,
+            review_session=review_session,
             slot="observers",
         )
 
     if result.is_blocked:
-        release_hold(
-            db, token=upload.token, user=user, review_session=review_session
-        )
+        release_hold(db, token=upload.token, user=user, review_session=review_session)
         return render(status_code=status.HTTP_400_BAD_REQUEST)
 
     if existing > 0 and ticked > 1:
-        return render(
-            status_code=status.HTTP_400_BAD_REQUEST, both_ticks=True, held_upload=ask()
-        )
+        return render(status_code=status.HTTP_400_BAD_REQUEST, both_ticks=True, held_upload=ask())
 
     if existing > 0 and ticked == 0:
         # An ask: hold the file so the tick is all the answer needs
@@ -1076,9 +1035,7 @@ async def observers_import_submit(
             )
         )
         if result.is_blocked:
-            release_hold(
-                db, token=upload.token, user=user, review_session=review_session
-            )
+            release_hold(db, token=upload.token, user=user, review_session=review_session)
             return render(status_code=status.HTTP_400_BAD_REQUEST)
     # A merge refuses two file rows on one directory account.
     if merging:
@@ -1088,9 +1045,7 @@ async def observers_import_submit(
             )
         )
         if result.is_blocked:
-            release_hold(
-                db, token=upload.token, user=user, review_session=review_session
-            )
+            release_hold(db, token=upload.token, user=user, review_session=review_session)
             return render(status_code=status.HTTP_400_BAD_REQUEST)
     # The service locks the session row (findings Bc4): wait for it off
     # the event loop.
@@ -1117,43 +1072,43 @@ async def observers_import_submit(
     # Open, like the failure path above and like `delete-all`: one rule
     # about the panel rather than three about its controls. A Save does
     # not close this card; the Lock button does.
-    return urls.redirect(request,
-        url=(
-            f"/operator/sessions/{review_session.public_id}/observers"
-            "?unlocked=1#roster-card"
-        ),
+    return urls.redirect(
+        request,
+        url=(f"/operator/sessions/{review_session.public_id}/observers?unlocked=1#roster-card"),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
 
 @router.post("/sessions/{session_id}/observers/import/dismiss")
 def observers_import_dismiss(
-    request: Request, held_token: str | None = Form(default=None),
-    review_session: ReviewSession = Depends(
-        require_observers_enabled_session
-    ),
+    request: Request,
+    held_token: str | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_observers_enabled_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     """The upload card's Dismiss while an ask holds its file: end the
     hold and return to the card (segment 19W)."""
-    return dismiss_held_upload(request,
-        db, held_token=held_token, user=user,
-        review_session=review_session, page="observers",
+    return dismiss_held_upload(
+        request,
+        db,
+        held_token=held_token,
+        user=user,
+        review_session=review_session,
+        page="observers",
     )
 
 
 @router.post("/sessions/{session_id}/observers/bulk-delete")
 def observers_bulk_delete(
-    request: Request, observer_ids: list[int] = Form(default=[]),
+    request: Request,
+    observer_ids: list[int] = Form(default=[]),
     confirm: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
-    review_session: ReviewSession = Depends(
-        require_observers_enabled_session
-    ),
+    review_session: ReviewSession = Depends(require_observers_enabled_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -1182,10 +1137,9 @@ def observers_bulk_delete(
             correlation_id=request_correlation_id(),
         )
     except ObserverOperationError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
-        ) from exc
-    return _redirect_keeping_selection(request,
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
+    return _redirect_keeping_selection(
+        request,
         f"/operator/sessions/{review_session.public_id}/observers",
         [],
         filter_params=[("status", filter_status), ("q", filter_q)],

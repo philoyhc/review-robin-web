@@ -73,9 +73,7 @@ def test_an_unmarked_sweep_is_rejected_rather_than_guessed(tmp_path) -> None:
 
     guide = tmp_path / "guide"
     guide.mkdir()
-    (guide / "sweep_2026-01-01_marked.md").write_text(
-        "# Sweep\n<!-- sweep-scope: corpus -->\n"
-    )
+    (guide / "sweep_2026-01-01_marked.md").write_text("# Sweep\n<!-- sweep-scope: corpus -->\n")
     (guide / "sweep_2026-02-02_unmarked.md").write_text("# Sweep\nno marker\n")
 
     original = shared.REPO
@@ -102,26 +100,16 @@ def test_a_partial_sweep_does_not_move_the_cadence(tmp_path) -> None:
 
     guide = tmp_path / "guide"
     guide.mkdir()
-    (guide / "sweep_2026-03-03_spec-docs.md").write_text(
-        "<!-- sweep-scope: corpus -->\n"
-    )
+    (guide / "sweep_2026-03-03_spec-docs.md").write_text("<!-- sweep-scope: corpus -->\n")
 
     original = shared.REPO
     shared.REPO = tmp_path
     try:
         assert last_sweep_date() == "2026-03-03"
-        (guide / "sweep_2026-06-06_one_file.md").write_text(
-            "<!-- sweep-scope: partial -->\n"
-        )
-        assert last_sweep_date() == "2026-03-03", (
-            "a partial sweep moved the cadence clock"
-        )
-        (guide / "sweep_2026-09-09_spec-docs.md").write_text(
-            "<!-- sweep-scope: corpus -->\n"
-        )
-        assert last_sweep_date() == "2026-09-09", (
-            "a corpus sweep failed to move the cadence clock"
-        )
+        (guide / "sweep_2026-06-06_one_file.md").write_text("<!-- sweep-scope: partial -->\n")
+        assert last_sweep_date() == "2026-03-03", "a partial sweep moved the cadence clock"
+        (guide / "sweep_2026-09-09_spec-docs.md").write_text("<!-- sweep-scope: corpus -->\n")
+        assert last_sweep_date() == "2026-09-09", "a corpus sweep failed to move the cadence clock"
     finally:
         shared.REPO = original
 

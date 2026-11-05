@@ -32,6 +32,7 @@ Revises: a2d16ffeb59a
 Create Date: 2026-10-05
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -97,10 +98,8 @@ def upgrade() -> None:
         params = {"id": row.id}
         changed = False
         for window, g, i in (
-            ("while_ongoing", row.while_ongoing_granularity,
-             row.while_ongoing_identification),
-            ("after_release", row.after_release_granularity,
-             row.after_release_identification),
+            ("while_ongoing", row.while_ongoing_granularity, row.while_ongoing_identification),
+            ("after_release", row.after_release_granularity, row.after_release_identification),
         ):
             mode = _mode(g, i)
             target = _normalized(row.audience, window, mode)

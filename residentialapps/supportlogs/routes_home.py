@@ -35,11 +35,23 @@ def home(request: Request) -> Response:
         return forbidden(request, me)
     if sample.holds(me, sample.FRONTLINE):
         flags = sample.holds(me, sample.RECIPIENT)
-        return render(request, "supportlogs/home.html", me=me, area=MAIN, tabs=tabs_for(me), flags=flags)
+        return render(
+            request, "supportlogs/home.html", me=me, area=MAIN, tabs=tabs_for(me), flags=flags
+        )
     places = destinations(me)
     if not home_is_a_page(me):
-        return RedirectResponse(url_path(request, places[0]["path"]) + places[0]["query"], status_code=302)
-    return render(request, "supportlogs/home_list.html", me=me, area=MAIN, tabs=tabs_for(me), places=places, flags=home_flags(me))
+        return RedirectResponse(
+            url_path(request, places[0]["path"]) + places[0]["query"], status_code=302
+        )
+    return render(
+        request,
+        "supportlogs/home_list.html",
+        me=me,
+        area=MAIN,
+        tabs=tabs_for(me),
+        places=places,
+        flags=home_flags(me),
+    )
 
 
 @router.get("/not-registered", name="supportlogs_not_registered")
@@ -47,4 +59,6 @@ def not_registered(request: Request) -> Response:
     # The preview of what a signed-in person Residential cannot link sees at
     # any path (`residentialapps/docs/residentialapps_identity.md` §6): no
     # switcher, no tabs, nothing about anyone else.
-    return render(request, "supportlogs/not_registered.html", me=sample.DEFAULT, area=MAIN, areas=())
+    return render(
+        request, "supportlogs/not_registered.html", me=sample.DEFAULT, area=MAIN, areas=()
+    )

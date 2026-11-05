@@ -15,6 +15,7 @@ Two claims here are load-bearing beyond "it deletes":
   needs a response-loss gate. Asserted from behaviour rather than read
   off the model file.
 """
+
 from __future__ import annotations
 
 import datetime as _dt
@@ -47,9 +48,7 @@ def _session(db: Session, *, code: str) -> tuple[ReviewSession, User]:
     user = User(email=f"op-{code}@example.edu", display_name="Op")
     db.add(user)
     db.flush()
-    review_session = ReviewSession(
-        name="Spring", code=code, created_by_user_id=user.id
-    )
+    review_session = ReviewSession(name="Spring", code=code, created_by_user_id=user.id)
     db.add(review_session)
     db.flush()
     return review_session, user
@@ -87,9 +86,7 @@ def _assignment_with_responses(
     reviewee: Reviewee,
     responses: int,
 ) -> Assignment:
-    instrument = Instrument(
-        session_id=s.id, name=f"I-{reviewer.id}-{reviewee.id}", order=0
-    )
+    instrument = Instrument(session_id=s.id, name=f"I-{reviewer.id}-{reviewee.id}", order=0)
     db.add(instrument)
     db.flush()
     # One field per response: `responses` is unique on
@@ -146,9 +143,7 @@ def test_only_the_selected_rows_go(db: Session) -> None:
     )
 
     assert deleted == 2
-    left = db.execute(
-        select(Reviewer.name).where(Reviewer.session_id == s.id)
-    ).scalars()
+    left = db.execute(select(Reviewer.name).where(Reviewer.session_id == s.id)).scalars()
     assert sorted(left) == ["R1", "R3"]
 
 
@@ -157,12 +152,12 @@ def test_an_empty_selection_is_a_no_op(db: Session) -> None:
     _reviewers(db, s, 2)
     db.commit()
 
-    assert reviewers_service.delete_selected(
-        db, review_session=s, reviewer_ids=[], user=user
-    ) == (0, 0, 0)
-    assert db.execute(
-        select(Reviewer).where(Reviewer.session_id == s.id)
-    ).scalars().all()
+    assert reviewers_service.delete_selected(db, review_session=s, reviewer_ids=[], user=user) == (
+        0,
+        0,
+        0,
+    )
+    assert db.execute(select(Reviewer).where(Reviewer.session_id == s.id)).scalars().all()
 
 
 def test_an_id_from_another_session_is_refused_and_nothing_is_deleted(
@@ -189,11 +184,9 @@ def test_an_id_from_another_session_is_refused_and_nothing_is_deleted(
     # No rollback here on purpose: the refusal happens *before* any
     # `db.delete`, so an intact roster is the claim. Rolling back
     # first would make the assertion true whatever the code did.
-    assert len(
-        db.execute(select(Reviewer).where(Reviewer.session_id == mine.id))
-        .scalars()
-        .all()
-    ) == 2, "the valid id in the same call must not have been deleted"
+    assert (
+        len(db.execute(select(Reviewer).where(Reviewer.session_id == mine.id)).scalars().all()) == 2
+    ), "the valid id in the same call must not have been deleted"
 
 
 # ── The cascade ────────────────────────────────────────────────────────
@@ -205,12 +198,8 @@ def test_deleting_a_reviewer_takes_its_assignments_and_responses(
     s, user = _session(db, code="bd-cascade")
     reviewer, spared = _reviewers(db, s, 2)
     reviewee = _reviewees(db, s, 1)[0]
-    doomed = _assignment_with_responses(
-        db, s, reviewer=reviewer, reviewee=reviewee, responses=3
-    )
-    kept = _assignment_with_responses(
-        db, s, reviewer=spared, reviewee=reviewee, responses=2
-    )
+    doomed = _assignment_with_responses(db, s, reviewer=reviewer, reviewee=reviewee, responses=3)
+    kept = _assignment_with_responses(db, s, reviewer=spared, reviewee=reviewee, responses=2)
     db.commit()
 
     deleted, assignments, responses = reviewers_service.delete_selected(
@@ -221,17 +210,11 @@ def test_deleting_a_reviewer_takes_its_assignments_and_responses(
     remaining = db.execute(select(Assignment.id)).scalars().all()
     assert remaining == [kept.id], "only the spared reviewer's assignment"
     assert (
-        db.execute(
-            select(Response).where(Response.assignment_id == doomed.id)
-        ).scalars().all()
+        db.execute(select(Response).where(Response.assignment_id == doomed.id)).scalars().all()
         == []
     )
     assert (
-        len(
-            db.execute(
-                select(Response).where(Response.assignment_id == kept.id)
-            ).scalars().all()
-        )
+        len(db.execute(select(Response).where(Response.assignment_id == kept.id)).scalars().all())
         == 2
     )
 
@@ -261,9 +244,7 @@ def test_deleting_a_reviewee_cascades_the_same_way(db: Session) -> None:
     s, user = _session(db, code="bd-reviewee")
     reviewer = _reviewers(db, s, 1)[0]
     reviewee = _reviewees(db, s, 1)[0]
-    _assignment_with_responses(
-        db, s, reviewer=reviewer, reviewee=reviewee, responses=2
-    )
+    _assignment_with_responses(db, s, reviewer=reviewer, reviewee=reviewee, responses=2)
     db.commit()
 
     assert reviewees_service.delete_selected(
@@ -282,15 +263,9 @@ def test_observers_and_relationships_destroy_no_responses(
     s, user = _session(db, code="bd-noresp")
     reviewer = _reviewers(db, s, 1)[0]
     reviewee = _reviewees(db, s, 1)[0]
-    kept = _assignment_with_responses(
-        db, s, reviewer=reviewer, reviewee=reviewee, responses=4
-    )
-    observer = Observer(
-        session_id=s.id, email="o@example.edu", display_name="Obs"
-    )
-    pair = Relationship(
-        session_id=s.id, reviewer_id=reviewer.id, reviewee_id=reviewee.id
-    )
+    kept = _assignment_with_responses(db, s, reviewer=reviewer, reviewee=reviewee, responses=4)
+    observer = Observer(session_id=s.id, email="o@example.edu", display_name="Obs")
+    pair = Relationship(session_id=s.id, reviewer_id=reviewer.id, reviewee_id=reviewee.id)
     db.add_all([observer, pair])
     db.commit()
 
@@ -303,9 +278,9 @@ def test_observers_and_relationships_destroy_no_responses(
 
     # The assignment and every response it carries are untouched.
     assert db.execute(select(Assignment.id)).scalars().all() == [kept.id]
-    assert (
-        len(db.execute(select(Response)).scalars().all()) == 4
-    ), "a pair-context delete must not reach a response"
+    assert len(db.execute(select(Response)).scalars().all()) == 4, (
+        "a pair-context delete must not reach a response"
+    )
 
 
 def test_cascade_counts_reports_nothing_for_unreferenced_models(
@@ -316,20 +291,12 @@ def test_cascade_counts_reports_nothing_for_unreferenced_models(
     s, _user = _session(db, code="bd-counts")
     reviewer = _reviewers(db, s, 1)[0]
     reviewee = _reviewees(db, s, 1)[0]
-    _assignment_with_responses(
-        db, s, reviewer=reviewer, reviewee=reviewee, responses=2
-    )
+    _assignment_with_responses(db, s, reviewer=reviewer, reviewee=reviewee, responses=2)
     db.commit()
 
-    assert roster_bulk.cascade_counts(
-        db, model=Reviewer, ids=[reviewer.id]
-    ) == (1, 2)
-    assert roster_bulk.cascade_counts(
-        db, model=Observer, ids=[1, 2, 3]
-    ) == (0, 0)
-    assert roster_bulk.cascade_counts(
-        db, model=Relationship, ids=[1]
-    ) == (0, 0)
+    assert roster_bulk.cascade_counts(db, model=Reviewer, ids=[reviewer.id]) == (1, 2)
+    assert roster_bulk.cascade_counts(db, model=Observer, ids=[1, 2, 3]) == (0, 0)
+    assert roster_bulk.cascade_counts(db, model=Relationship, ids=[1]) == (0, 0)
     assert roster_bulk.cascade_counts(db, model=Reviewer, ids=[]) == (0, 0)
 
 
@@ -343,12 +310,8 @@ def test_one_audit_event_carries_the_three_counts(db: Session) -> None:
     s, user = _session(db, code="bd-audit")
     first, second = _reviewers(db, s, 2)
     reviewee = _reviewees(db, s, 1)[0]
-    _assignment_with_responses(
-        db, s, reviewer=first, reviewee=reviewee, responses=2
-    )
-    _assignment_with_responses(
-        db, s, reviewer=second, reviewee=reviewee, responses=3
-    )
+    _assignment_with_responses(db, s, reviewer=first, reviewee=reviewee, responses=2)
+    _assignment_with_responses(db, s, reviewer=second, reviewee=reviewee, responses=3)
     db.commit()
 
     reviewers_service.delete_selected(
@@ -357,9 +320,7 @@ def test_one_audit_event_carries_the_three_counts(db: Session) -> None:
 
     events = [
         e
-        for e in db.execute(
-            select(AuditEvent).where(AuditEvent.session_id == s.id)
-        ).scalars()
+        for e in db.execute(select(AuditEvent).where(AuditEvent.session_id == s.id)).scalars()
         if e.event_type == "reviewer.bulk_deleted"
     ]
     assert len(events) == 1, "one event per call, not one per row"
@@ -397,9 +358,7 @@ def test_every_roster_service_emits_its_registered_event(
     row = {
         "reviewer_ids": reviewer,
         "reviewee_ids": reviewee,
-        "observer_ids": Observer(
-            session_id=s.id, email="o@example.edu", display_name="O"
-        ),
+        "observer_ids": Observer(session_id=s.id, email="o@example.edu", display_name="O"),
         "relationship_ids": Relationship(
             session_id=s.id, reviewer_id=reviewer.id, reviewee_id=reviewee.id
         ),
@@ -408,15 +367,11 @@ def test_every_roster_service_emits_its_registered_event(
         db.add(row)
     db.commit()
 
-    service.delete_selected(
-        db, review_session=s, user=user, **{kwarg: [row.id]}
-    )
+    service.delete_selected(db, review_session=s, user=user, **{kwarg: [row.id]})
 
     kinds = [
         e.event_type
-        for e in db.execute(
-            select(AuditEvent).where(AuditEvent.session_id == s.id)
-        ).scalars()
+        for e in db.execute(select(AuditEvent).where(AuditEvent.session_id == s.id)).scalars()
     ]
     assert event_type in kinds
 
@@ -427,9 +382,7 @@ def test_a_validated_session_is_invalidated(db: Session) -> None:
     s.status = "validated"
     db.commit()
 
-    reviewers_service.delete_selected(
-        db, review_session=s, reviewer_ids=[rows[0].id], user=user
-    )
+    reviewers_service.delete_selected(db, review_session=s, reviewer_ids=[rows[0].id], user=user)
 
     db.refresh(s)
     assert s.status == "draft"

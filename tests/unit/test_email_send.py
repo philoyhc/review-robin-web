@@ -169,9 +169,7 @@ def test_from_header_quotes_a_display_name_with_specials() -> None:
         ("bcc", ["bcc@x.edu\r\nRCPT TO:<evil@x.edu>"]),
     ],
 )
-def test_smtp_send_refuses_a_line_break_in_a_header_or_recipient(
-    field: str, value: object
-) -> None:
+def test_smtp_send_refuses_a_line_break_in_a_header_or_recipient(field: str, value: object) -> None:
     """A CR or LF in the subject, a recipient or Cc / Bcc is refused as a
     failed ``SendResult`` before anything connects — never raised, and
     Bcc, which the stdlib never sees as a header, included (findings
@@ -194,9 +192,7 @@ def test_smtp_send_refuses_a_line_break_in_a_header_or_recipient(
         ("from_display_name", "Alice\r\nBcc: evil@x.edu"),
     ],
 )
-def test_smtp_send_refuses_a_line_break_in_the_operator_settings(
-    setting: str, value: str
-) -> None:
+def test_smtp_send_refuses_a_line_break_in_the_operator_settings(setting: str, value: str) -> None:
     """The envelope sender is the SMTP username and the From name the
     display name, both from the operator's settings: a line break in
     either is refused the same way (findings O10, the read of #3111)."""
@@ -228,9 +224,7 @@ def test_smtp_auth_error_returns_failed_send_result() -> None:
 def test_smtp_connection_error_returns_failed_send_result() -> None:
     transport = SmtpEmailTransport(_settings())
     with patch.object(transport, "_connect") as connect:
-        connect.side_effect = smtplib.SMTPConnectError(
-            421, b"4.4.1 Service not available"
-        )
+        connect.side_effect = smtplib.SMTPConnectError(421, b"4.4.1 Service not available")
         result = transport.send(_msg())
     assert result.ok is False
     assert "Couldn't connect" in (result.error_message or "")

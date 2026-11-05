@@ -13,6 +13,7 @@ Revises: 4e8a2b9c3d11
 Create Date: 2026-04-30 12:00:00.000000
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -37,8 +38,7 @@ def upgrade() -> None:
         )
     )
     instrument_ids = [
-        row[0]
-        for row in bind.execute(sa.text("SELECT id FROM instruments")).fetchall()
+        row[0] for row in bind.execute(sa.text("SELECT id FROM instruments")).fetchall()
     ]
     for instrument_id in instrument_ids:
         for source_field, order_index in _PAIR_CONTEXT_SLOTS:

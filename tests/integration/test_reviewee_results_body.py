@@ -53,11 +53,15 @@ from ._validated import validate_session
 
 def _first_instrument(db: Session, review_session: ReviewSession) -> Instrument:
     """The session's first instrument, which every seeded session has."""
-    instrument = db.execute(
-        select(Instrument)
-        .where(Instrument.session_id == review_session.id)
-        .order_by(Instrument.order, Instrument.id)
-    ).scalars().first()
+    instrument = (
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.order, Instrument.id)
+        )
+        .scalars()
+        .first()
+    )
     assert instrument is not None
     return instrument
 
@@ -123,9 +127,7 @@ def _seed_and_activate(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(operator_client, review_session.id)
     validate_session(review_session)
-    operator_client.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    )
+    operator_client.get(f"/operator/sessions/{review_session.public_id}/assignments")
     response = operator_client.post(
         f"/operator/sessions/{review_session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
@@ -165,13 +167,17 @@ def _seed_submitted_responses(
         )
     ).scalar_one()
     submitted_at = datetime.now(UTC) if submitted else None
-    assignments = db.execute(
-        select(Assignment).where(
-            Assignment.session_id == review_session.id,
-            Assignment.instrument_id == instrument.id,
-            Assignment.include.is_(True),
+    assignments = (
+        db.execute(
+            select(Assignment).where(
+                Assignment.session_id == review_session.id,
+                Assignment.instrument_id == instrument.id,
+                Assignment.include.is_(True),
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     for assignment in assignments:
         db.add(
             Response(
@@ -219,9 +225,7 @@ def _enable_reviewee_after_release_raw(
         # 19F PR 2a — the after-release window also needs the
         # session closed: released *because the session is over*.
         review_session.status = "expired"
-        review_session.responses_release_at = datetime.now(
-            UTC
-        ) - timedelta(hours=1)
+        review_session.responses_release_at = datetime.now(UTC) - timedelta(hours=1)
     db.commit()
 
 
@@ -251,9 +255,7 @@ def _enable_reviewer_after_release_raw(
 
 
 def _operator_user(db: Session) -> User:
-    return db.execute(
-        select(User).where(User.email == "alice@example.edu")
-    ).scalar_one()
+    return db.execute(select(User).where(User.email == "alice@example.edu")).scalar_one()
 
 
 def test_results_body_renders_raw_responses_for_reviewee(
@@ -273,9 +275,7 @@ def test_results_body_renders_raw_responses_for_reviewee(
         db, review_session, operator=_operator_user(db), open_window=True
     )
 
-    body = make_client(carol).get(
-        f"/me/sessions/{review_session.public_id}/results"
-    ).text
+    body = make_client(carol).get(f"/me/sessions/{review_session.public_id}/results").text
 
     # No empty-state copy.
     assert "No responses to view yet." not in body
@@ -314,10 +314,10 @@ def test_results_404_when_no_visibility_policy(
     review_session = _seed_and_activate(operator, db, code="vp-none")
     _seed_submitted_responses(db, review_session, comments_value="Hi")
 
-    response = make_client(carol).get(
-        f"/me/sessions/{review_session.public_id}/results"
-    )
+    response = make_client(carol).get(f"/me/sessions/{review_session.public_id}/results")
     assert response.status_code == 404
+
+
 def test_results_404_before_the_window_opens_retiring_the_scaffolding(
     db: Session,
     alice: AuthenticatedUser,
@@ -344,19 +344,17 @@ def test_results_404_before_the_window_opens_retiring_the_scaffolding(
     """
     operator = make_client(alice)
     review_session = _seed_and_activate(operator, db, code="vp-raw-future")
-    _seed_submitted_responses(
-        db, review_session, comments_value="Solid work."
-    )
+    _seed_submitted_responses(db, review_session, comments_value="Solid work.")
     _enable_reviewee_after_release_raw(
         db, review_session, operator=_operator_user(db), open_window=False
     )
 
-    response = make_client(carol).get(
-        f"/me/sessions/{review_session.public_id}/results"
-    )
+    response = make_client(carol).get(f"/me/sessions/{review_session.public_id}/results")
     assert response.status_code == 404
     # The reviewer's identity, which the scaffolding used to show.
     assert "Rae" not in response.text
+
+
 def test_results_body_drafts_render_empty_value_cells(
     db: Session,
     alice: AuthenticatedUser,
@@ -380,9 +378,7 @@ def test_results_body_drafts_render_empty_value_cells(
         db, review_session, operator=_operator_user(db), open_window=True
     )
 
-    body = make_client(carol).get(
-        f"/me/sessions/{review_session.public_id}/results"
-    ).text
+    body = make_client(carol).get(f"/me/sessions/{review_session.public_id}/results").text
     # Draft content never leaks.
     assert "draft text" not in body
     # The section still renders — the reviewer's row is there.
@@ -415,9 +411,7 @@ def test_results_body_lists_unsubmitted_reviewers_with_empty_cells(
         db, review_session, operator=_operator_user(db), open_window=True
     )
 
-    body = make_client(carol).get(
-        f"/me/sessions/{review_session.public_id}/results"
-    ).text
+    body = make_client(carol).get(f"/me/sessions/{review_session.public_id}/results").text
     assert "No responses to view yet." not in body
     assert '<th scope="col" class="rs-reviewee">Reviewer</th>' in body
     assert "Rae" in body
@@ -471,11 +465,15 @@ def test_results_body_omits_instrument_with_policy_off(
     )
     # Label the seeded first instrument + add a second before
     # generating assignments.
-    first_instrument = db.execute(
-        select(Instrument)
-        .where(Instrument.session_id == review_session.id)
-        .order_by(Instrument.order, Instrument.id)
-    ).scalars().first()
+    first_instrument = (
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.order, Instrument.id)
+        )
+        .scalars()
+        .first()
+    )
     assert first_instrument is not None
     first_instrument.short_label = "First Form"
     db.commit()
@@ -499,9 +497,7 @@ def test_results_body_omits_instrument_with_policy_off(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(operator, review_session.id)
     validate_session(review_session)
-    operator.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    )
+    operator.get(f"/operator/sessions/{review_session.public_id}/assignments")
     response = operator.post(
         f"/operator/sessions/{review_session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
@@ -511,12 +507,8 @@ def test_results_body_omits_instrument_with_policy_off(
     db.refresh(review_session)
 
     # Submit responses for both instruments.
-    _seed_submitted_responses(
-        db, review_session, instrument=first_instrument
-    )
-    _seed_submitted_responses(
-        db, review_session, instrument=second_instrument
-    )
+    _seed_submitted_responses(db, review_session, instrument=first_instrument)
+    _seed_submitted_responses(db, review_session, instrument=second_instrument)
 
     # Open Raw on the first instrument; leave second off.
     with past_draft_setup(db, review_session):
@@ -532,14 +524,10 @@ def test_results_body_omits_instrument_with_policy_off(
     # 19F PR 2a — the after-release window also needs the
     # session closed: released *because the session is over*.
     review_session.status = "expired"
-    review_session.responses_release_at = datetime.now(
-        UTC
-    ) - timedelta(hours=1)
+    review_session.responses_release_at = datetime.now(UTC) - timedelta(hours=1)
     db.commit()
 
-    body = make_client(carol).get(
-        f"/me/sessions/{review_session.public_id}/results"
-    ).text
+    body = make_client(carol).get(f"/me/sessions/{review_session.public_id}/results").text
     assert "First Form" in body
     assert "Second Form" not in body
 
@@ -561,23 +549,19 @@ def test_results_404_when_release_window_explicitly_closed(
     """
     operator = make_client(alice)
     review_session = _seed_and_activate(operator, db, code="vp-raw-closed")
-    _seed_submitted_responses(
-        db, review_session, comments_value="Solid work."
-    )
+    _seed_submitted_responses(db, review_session, comments_value="Solid work.")
     _enable_reviewee_after_release_raw(
         db, review_session, operator=_operator_user(db), open_window=True
     )
-    review_session.responses_release_until = datetime.now(
-        UTC
-    ) - timedelta(minutes=30)
+    review_session.responses_release_until = datetime.now(UTC) - timedelta(minutes=30)
     db.commit()
 
-    response = make_client(carol).get(
-        f"/me/sessions/{review_session.public_id}/results"
-    )
+    response = make_client(carol).get(f"/me/sessions/{review_session.public_id}/results")
     assert response.status_code == 404
     assert "Rae" not in response.text
     assert "Solid work." not in response.text
+
+
 def _enable_reviewee_after_release_anonymized(
     db: Session,
     review_session: ReviewSession,
@@ -604,9 +588,7 @@ def _enable_reviewee_after_release_anonymized(
         # 19F PR 2a — the after-release window also needs the
         # session closed: released *because the session is over*.
         review_session.status = "expired"
-        review_session.responses_release_at = datetime.now(
-            UTC
-        ) - timedelta(hours=1)
+        review_session.responses_release_at = datetime.now(UTC) - timedelta(hours=1)
     db.commit()
 
 
@@ -641,9 +623,7 @@ def _enable_reviewee_after_release_summarized(
         # 19F PR 2a — the after-release window also needs the
         # session closed: released *because the session is over*.
         review_session.status = "expired"
-        review_session.responses_release_at = datetime.now(
-            UTC
-        ) - timedelta(hours=1)
+        review_session.responses_release_at = datetime.now(UTC) - timedelta(hours=1)
     db.commit()
 
 
@@ -660,16 +640,12 @@ def test_results_body_anonymized_dashes_identification_keeps_values(
     response values themselves still surface."""
     operator = make_client(alice)
     review_session = _seed_and_activate(operator, db, code="vp-anon-ok")
-    _seed_submitted_responses(
-        db, review_session, comments_value="Solid work."
-    )
+    _seed_submitted_responses(db, review_session, comments_value="Solid work.")
     _enable_reviewee_after_release_anonymized(
         db, review_session, operator=_operator_user(db), open_window=True
     )
 
-    body = make_client(carol).get(
-        f"/me/sessions/{review_session.public_id}/results"
-    ).text
+    body = make_client(carol).get(f"/me/sessions/{review_session.public_id}/results").text
     # Section renders + Reviewer column header still labeled.
     assert "No responses to view yet." not in body
     assert '<th scope="col" class="rs-reviewee">Reviewer</th>' in body
@@ -720,8 +696,7 @@ def test_results_row_order_does_not_follow_reviewer_names_when_anonymized(
         select(ReviewSession).where(ReviewSession.code == code)
     ).scalar_one()
     reviewer_csv = "ReviewerName,ReviewerEmail\n" + "".join(
-        f"{name},{name.lower()}@example.edu\n"
-        for name in _ROW_ORDER_REVIEWERS
+        f"{name},{name.lower()}@example.edu\n" for name in _ROW_ORDER_REVIEWERS
     )
     operator.post(
         f"/operator/sessions/{review_session.public_id}/reviewers/import",
@@ -765,9 +740,7 @@ def test_results_row_order_does_not_follow_reviewer_names_when_anonymized(
         select(Reviewee).where(Reviewee.session_id == review_session.id)
     ).scalar_one()
 
-    context = build_reviewee_results_context(
-        db, review_session=review_session, reviewee=reviewee
-    )
+    context = build_reviewee_results_context(db, review_session=review_session, reviewee=reviewee)
     (section,) = context.sections
     assert section.mode == mode
     rendered = [row.reviewer_name for row in section.rows]
@@ -777,12 +750,11 @@ def test_results_row_order_does_not_follow_reviewer_names_when_anonymized(
         return
 
     tokenizer = ParticipantTokenizer(review_session)
-    reviewers = db.execute(
-        select(Reviewer).where(Reviewer.session_id == review_session.id)
-    ).scalars().all()
+    reviewers = (
+        db.execute(select(Reviewer).where(Reviewer.session_id == review_session.id)).scalars().all()
+    )
     by_token = [
-        r.name
-        for r in sorted(reviewers, key=lambda r: (tokenizer.token("reviewer", r.id), r.id))
+        r.name for r in sorted(reviewers, key=lambda r: (tokenizer.token("reviewer", r.id), r.id))
     ]
     # Premise: the pinned salt yields a non-alphabetical permutation.
     assert by_token != alphabetical
@@ -806,23 +778,19 @@ def test_results_404_when_anonymized_window_closed_explicitly(
     """
     operator = make_client(alice)
     review_session = _seed_and_activate(operator, db, code="vp-anon-closed")
-    _seed_submitted_responses(
-        db, review_session, comments_value="Solid work."
-    )
+    _seed_submitted_responses(db, review_session, comments_value="Solid work.")
     _enable_reviewee_after_release_anonymized(
         db, review_session, operator=_operator_user(db), open_window=True
     )
-    review_session.responses_release_until = datetime.now(
-        UTC
-    ) - timedelta(minutes=30)
+    review_session.responses_release_until = datetime.now(UTC) - timedelta(minutes=30)
     db.commit()
 
-    response = make_client(carol).get(
-        f"/me/sessions/{review_session.public_id}/results"
-    )
+    response = make_client(carol).get(f"/me/sessions/{review_session.public_id}/results")
     assert response.status_code == 404
     assert "Rae" not in response.text
     assert "Solid work." not in response.text
+
+
 def test_results_body_summarized_aggregates_numerical_and_strings(
     db: Session,
     alice: AuthenticatedUser,
@@ -848,9 +816,7 @@ def test_results_body_summarized_aggregates_numerical_and_strings(
         db, review_session, operator=_operator_user(db), open_window=True
     )
 
-    body = make_client(carol).get(
-        f"/me/sessions/{review_session.public_id}/results"
-    ).text
+    body = make_client(carol).get(f"/me/sessions/{review_session.public_id}/results").text
     # Section renders; the per-row table chrome is gone.
     assert "No responses to view yet." not in body
     assert "Reviewer</th>" not in body
@@ -925,9 +891,7 @@ def test_results_body_summarized_aggregates_list_choice_frequencies(
         db, review_session, operator=_operator_user(db), open_window=True
     )
 
-    body = make_client(carol).get(
-        f"/me/sessions/{review_session.public_id}/results"
-    ).text
+    body = make_client(carol).get(f"/me/sessions/{review_session.public_id}/results").text
     # Every declared option surfaces — including the two with zero
     # responses — so the operator/reviewee can see the distribution.
     # Percentages are computed over the total response count.
@@ -956,9 +920,7 @@ def test_results_body_summarized_zero_responses_shows_label_scaffolding(
         db, review_session, operator=_operator_user(db), open_window=True
     )
 
-    body = make_client(carol).get(
-        f"/me/sessions/{review_session.public_id}/results"
-    ).text
+    body = make_client(carol).get(f"/me/sessions/{review_session.public_id}/results").text
     assert ">Summary</th>" in body
     assert "Number of reviewers assigned: 1" in body
     assert "Number of reviewers with some responses: 0" in body
@@ -1021,20 +983,14 @@ def test_results_columns_mirror_reviewer_surface_widths(
     }
     db.commit()
 
-    _seed_submitted_responses(
-        db, review_session, comments_value="Solid work."
-    )
+    _seed_submitted_responses(db, review_session, comments_value="Solid work.")
     _enable_reviewee_after_release_raw(
         db, review_session, operator=_operator_user(db), open_window=True
     )
 
     # Both surfaces should render the same widths.
-    reviewer_body = make_client(rae).get(
-        f"/me/sessions/{review_session.public_id}/1"
-    ).text
-    reviewee_body = make_client(carol).get(
-        f"/me/sessions/{review_session.public_id}/results"
-    ).text
+    reviewer_body = make_client(rae).get(f"/me/sessions/{review_session.public_id}/1").text
+    reviewee_body = make_client(carol).get(f"/me/sessions/{review_session.public_id}/results").text
     for body in (reviewer_body, reviewee_body):
         assert 'style="table-layout: fixed;"' in body
         assert 'style="width: 220px"' in body
@@ -1066,16 +1022,12 @@ def test_results_columns_drop_deselected_response_fields(
     comments.visible = False
     db.commit()
 
-    _seed_submitted_responses(
-        db, review_session, comments_value="Solid work."
-    )
+    _seed_submitted_responses(db, review_session, comments_value="Solid work.")
     _enable_reviewee_after_release_raw(
         db, review_session, operator=_operator_user(db), open_window=True
     )
 
-    body = make_client(carol).get(
-        f"/me/sessions/{review_session.public_id}/results"
-    ).text
+    body = make_client(carol).get(f"/me/sessions/{review_session.public_id}/results").text
     assert "Rating" in body
     assert "Comments" not in body
     # The hidden comments value also doesn't leak.
@@ -1096,9 +1048,7 @@ def test_results_columns_drop_reviewee_identity_display_fields(
     ``source_field in {"name", "email_or_identifier",
     "profile_link"}``."""
     operator = make_client(alice)
-    review_session = _seed_and_activate(
-        operator, db, code="vp-cols-identity"
-    )
+    review_session = _seed_and_activate(operator, db, code="vp-cols-identity")
     instrument = _first_instrument(db, review_session)
     # Add a reviewee Name display field (would-be identity
     # column) + a reviewee.tag_1 column (would-be tag column).
@@ -1129,9 +1079,7 @@ def test_results_columns_drop_reviewee_identity_display_fields(
         db, review_session, operator=_operator_user(db), open_window=True
     )
 
-    body = make_client(carol).get(
-        f"/me/sessions/{review_session.public_id}/results"
-    ).text
+    body = make_client(carol).get(f"/me/sessions/{review_session.public_id}/results").text
     # tag_1 column survives (visible non-identity). Its label
     # ("Tag 1" by default) appears as a column header.
     assert "tag_1" in body.lower() or "Tag" in body
@@ -1226,11 +1174,15 @@ def test_results_body_group_scoped_drops_display_field_columns(
         .where(Instrument.session_id == review_session.id)
         .where(Instrument.group_kind.is_not(None))
     ).scalar_one()
-    other_instruments = db.execute(
-        select(Instrument)
-        .where(Instrument.session_id == review_session.id)
-        .where(Instrument.group_kind.is_(None))
-    ).scalars().all()
+    other_instruments = (
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .where(Instrument.group_kind.is_(None))
+        )
+        .scalars()
+        .all()
+    )
     for other in other_instruments:
         db.delete(other)
     db.commit()
@@ -1251,9 +1203,7 @@ def test_results_body_group_scoped_drops_display_field_columns(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(operator, review_session.id)
     validate_session(review_session)
-    operator.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    )
+    operator.get(f"/operator/sessions/{review_session.public_id}/assignments")
     activate_response = operator.post(
         f"/operator/sessions/{review_session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
@@ -1281,14 +1231,10 @@ def test_results_body_group_scoped_drops_display_field_columns(
     # 19F PR 2a — the after-release window also needs the
     # session closed: released *because the session is over*.
     review_session.status = "expired"
-    review_session.responses_release_at = datetime.now(
-        UTC
-    ) - timedelta(hours=1)
+    review_session.responses_release_at = datetime.now(UTC) - timedelta(hours=1)
     db.commit()
 
-    body = make_client(carol).get(
-        f"/me/sessions/{review_session.public_id}/results"
-    ).text
+    body = make_client(carol).get(f"/me/sessions/{review_session.public_id}/results").text
 
     # Section + Reviewer column render.
     assert "No responses to view yet." not in body
@@ -1353,9 +1299,7 @@ def test_results_body_excludes_responses_about_other_reviewees(
         files={
             "file": (
                 "e.csv",
-                b"RevieweeName,RevieweeEmail\n"
-                b"Carol,carol@example.edu\n"
-                b"Dan,dan@example.edu\n",
+                b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\nDan,dan@example.edu\n",
                 "text/csv",
             )
         },
@@ -1364,9 +1308,7 @@ def test_results_body_excludes_responses_about_other_reviewees(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(operator, review_session.id)
     validate_session(review_session)
-    operator.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    )
+    operator.get(f"/operator/sessions/{review_session.public_id}/assignments")
     operator.post(
         f"/operator/sessions/{review_session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
@@ -1391,13 +1333,17 @@ def test_results_body_excludes_responses_about_other_reviewees(
     ).scalar_one()
     # Distinct comments per assignment so we can detect a leak
     # by string match: Carol's row should NOT carry Dan's text.
-    assignments = db.execute(
-        select(Assignment).where(
-            Assignment.session_id == review_session.id,
-            Assignment.instrument_id == instrument.id,
-            Assignment.include.is_(True),
+    assignments = (
+        db.execute(
+            select(Assignment).where(
+                Assignment.session_id == review_session.id,
+                Assignment.instrument_id == instrument.id,
+                Assignment.include.is_(True),
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     submitted_at = datetime.now(UTC)
     for assignment in assignments:
         reviewee_row = assignment.reviewee
@@ -1436,14 +1382,10 @@ def test_results_body_excludes_responses_about_other_reviewees(
     # 19F PR 2a — the after-release window also needs the
     # session closed: released *because the session is over*.
     review_session.status = "expired"
-    review_session.responses_release_at = datetime.now(
-        UTC
-    ) - timedelta(hours=1)
+    review_session.responses_release_at = datetime.now(UTC) - timedelta(hours=1)
     db.commit()
 
-    body = make_client(carol).get(
-        f"/me/sessions/{review_session.public_id}/results"
-    ).text
+    body = make_client(carol).get(f"/me/sessions/{review_session.public_id}/results").text
     # Carol's own comment surfaces.
     assert "About-Carol comment." in body
     # Dan's comment must NOT leak — it's not about Carol.
@@ -1502,11 +1444,15 @@ def test_results_body_excludes_responses_about_other_groups(
     )
     # Drop the seeded per-reviewee instrument so we only test
     # the group-scoped one.
-    other_instruments = db.execute(
-        select(Instrument)
-        .where(Instrument.session_id == review_session.id)
-        .where(Instrument.group_kind.is_(None))
-    ).scalars().all()
+    other_instruments = (
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .where(Instrument.group_kind.is_(None))
+        )
+        .scalars()
+        .all()
+    )
     for other in other_instruments:
         db.delete(other)
     db.commit()
@@ -1518,9 +1464,7 @@ def test_results_body_excludes_responses_about_other_groups(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(operator, review_session.id)
     validate_session(review_session)
-    operator.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    )
+    operator.get(f"/operator/sessions/{review_session.public_id}/assignments")
     operator.post(
         f"/operator/sessions/{review_session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
@@ -1542,13 +1486,17 @@ def test_results_body_excludes_responses_about_other_groups(
     ).scalar_one()
     # Look up which assignments belong to which group via the
     # reviewee's tag_1 — Squad-A vs Squad-B.
-    assignments = db.execute(
-        select(Assignment).where(
-            Assignment.session_id == review_session.id,
-            Assignment.instrument_id == group_instrument.id,
-            Assignment.include.is_(True),
+    assignments = (
+        db.execute(
+            select(Assignment).where(
+                Assignment.session_id == review_session.id,
+                Assignment.instrument_id == group_instrument.id,
+                Assignment.include.is_(True),
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     submitted_at = datetime.now(UTC)
     for assignment in assignments:
         reviewee_row = assignment.reviewee
@@ -1587,14 +1535,10 @@ def test_results_body_excludes_responses_about_other_groups(
     # 19F PR 2a — the after-release window also needs the
     # session closed: released *because the session is over*.
     review_session.status = "expired"
-    review_session.responses_release_at = datetime.now(
-        UTC
-    ) - timedelta(hours=1)
+    review_session.responses_release_at = datetime.now(UTC) - timedelta(hours=1)
     db.commit()
 
-    body = make_client(carol).get(
-        f"/me/sessions/{review_session.public_id}/results"
-    ).text
+    body = make_client(carol).get(f"/me/sessions/{review_session.public_id}/results").text
     # Carol's own group's response surfaces.
     assert "Squad-A: team did well." in body
     # Squad-B's response must not leak.
@@ -1639,11 +1583,15 @@ def test_results_body_team_unit_of_review_scopes_to_own_team(
     add_group_instrument(db, review_session)
     # Drop the seeded per-reviewee instrument so this test is
     # scoped to the group-by-team instrument.
-    pri = db.execute(
-        select(Instrument)
-        .where(Instrument.session_id == review_session.id)
-        .where(Instrument.group_kind.is_(None))
-    ).scalars().all()
+    pri = (
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .where(Instrument.group_kind.is_(None))
+        )
+        .scalars()
+        .all()
+    )
     for inst in pri:
         db.delete(inst)
     db.commit()
@@ -1674,9 +1622,7 @@ def test_results_body_team_unit_of_review_scopes_to_own_team(
             "file": (
                 "r.csv",
                 b"ReviewerName,ReviewerEmail,ReviewerTag2,ReviewerTag3\n"
-                + b"".join(
-                    f"{n},{e},Alpha,{t}\n".encode() for n, e, t in rosters
-                ),
+                + b"".join(f"{n},{e},Alpha,{t}\n".encode() for n, e, t in rosters),
                 "text/csv",
             )
         },
@@ -1757,12 +1703,16 @@ def test_results_body_team_unit_of_review_scopes_to_own_team(
         )
     ).scalar_one()
     submitted_at = datetime.now(UTC)
-    assignments = db.execute(
-        select(Assignment).where(
-            Assignment.session_id == review_session.id,
-            Assignment.instrument_id == group_instrument.id,
+    assignments = (
+        db.execute(
+            select(Assignment).where(
+                Assignment.session_id == review_session.id,
+                Assignment.instrument_id == group_instrument.id,
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     for a in assignments:
         # The "team being reviewed" is the reviewee's team.
         target_team = a.reviewee.tag_3
@@ -1798,14 +1748,10 @@ def test_results_body_team_unit_of_review_scopes_to_own_team(
     # 19F PR 2a — the after-release window also needs the
     # session closed: released *because the session is over*.
     review_session.status = "expired"
-    review_session.responses_release_at = datetime.now(
-        UTC
-    ) - timedelta(hours=1)
+    review_session.responses_release_at = datetime.now(UTC) - timedelta(hours=1)
     db.commit()
 
-    body = make_client(carol).get(
-        f"/me/sessions/{review_session.public_id}/results"
-    ).text
+    body = make_client(carol).get(f"/me/sessions/{review_session.public_id}/results").text
 
     # Carol (A11, Team-1) should see responses ABOUT Team-1
     # from reviewers on Teams 2/3/4. Each surfaces as
@@ -1839,9 +1785,7 @@ def test_results_acknowledge_card_renders_before_ack(
         db, review_session, operator=_operator_user(db), open_window=True
     )
 
-    body = make_client(carol).get(
-        f"/me/sessions/{review_session.public_id}/results"
-    ).text
+    body = make_client(carol).get(f"/me/sessions/{review_session.public_id}/results").text
     # Bottom card present with the form.
     assert "rs-acknowledge-card" in body
     assert "I have read these results." in body
@@ -1878,9 +1822,7 @@ def test_results_acknowledge_post_stamps_and_redirects(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    assert response.headers["location"].endswith(
-        f"/me/sessions/{review_session.public_id}/results"
-    )
+    assert response.headers["location"].endswith(f"/me/sessions/{review_session.public_id}/results")
 
     # DB stamped.
     reviewee_row = db.execute(
@@ -1891,17 +1833,17 @@ def test_results_acknowledge_post_stamps_and_redirects(
     assert first_stamp is not None
 
     # Audit emitted.
-    ack_events = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "reviewee.results_acknowledged"
+    ack_events = (
+        db.execute(
+            select(AuditEvent).where(AuditEvent.event_type == "reviewee.results_acknowledged")
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(ack_events) == 1
 
     # Subsequent GET: header pill + confirmation strip; no form.
-    body = carol_client.get(
-        f"/me/sessions/{review_session.public_id}/results"
-    ).text
+    body = carol_client.get(f"/me/sessions/{review_session.public_id}/results").text
     assert "&#10003; Acknowledged" in body
     assert "Acknowledged on" in body
     assert 'data-delete-confirm="ack-results"' not in body
@@ -1913,9 +1855,11 @@ def test_results_acknowledge_post_stamps_and_redirects(
     )
     db.refresh(reviewee_row)
     assert reviewee_row.results_acknowledged_at == first_stamp
-    ack_events_after = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "reviewee.results_acknowledged"
+    ack_events_after = (
+        db.execute(
+            select(AuditEvent).where(AuditEvent.event_type == "reviewee.results_acknowledged")
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(ack_events_after) == 1

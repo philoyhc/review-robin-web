@@ -114,9 +114,7 @@ def _staleness(
     if "staleness" not in inputs._memo:
         from app.services import assignments as assignments_service
 
-        inputs._memo["staleness"] = assignments_service.staleness_by_instrument(
-            db, review_session
-        )
+        inputs._memo["staleness"] = assignments_service.staleness_by_instrument(db, review_session)
     return inputs._memo["staleness"]
 
 
@@ -282,8 +280,7 @@ def _check_instruments_no_display_fields(
                 severity=Severity.warning,
                 source="instruments",
                 message=(
-                    f"Instrument '{label}' has no display fields — reviewer "
-                    f"pages will be sparse"
+                    f"Instrument '{label}' has no display fields — reviewer pages will be sparse"
                 ),
                 fix_anchor=f"#instrument-{instrument.id}",
             )

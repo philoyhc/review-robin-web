@@ -5,6 +5,7 @@ ordered list of boundary ``(source_type, source_field)`` tag pairs
 the operator ticks *Group by* and the compact comma-joined code
 string stored in ``Instrument.group_kind``.
 """
+
 from __future__ import annotations
 
 from app.services.instruments import (
@@ -21,35 +22,17 @@ def test_encode_empty_yields_sentinel() -> None:
 
 
 def test_encode_orders_and_codes_pairs() -> None:
-    assert (
-        encode_group_kind(
-            [("reviewee", "tag_1"), ("pair_context", "2")]
-        )
-        == "r1,p2"
-    )
-    assert (
-        encode_group_kind(
-            [("pair_context", "3"), ("reviewee", "tag_2")]
-        )
-        == "p3,r2"
-    )
+    assert encode_group_kind([("reviewee", "tag_1"), ("pair_context", "2")]) == "r1,p2"
+    assert encode_group_kind([("pair_context", "3"), ("reviewee", "tag_2")]) == "p3,r2"
 
 
 def test_encode_skips_non_boundary_pairs() -> None:
     """Name / Email are not boundary-eligible — silently dropped."""
-    assert (
-        encode_group_kind(
-            [("reviewee", "name"), ("reviewee", "tag_1")]
-        )
-        == "r1"
-    )
+    assert encode_group_kind([("reviewee", "name"), ("reviewee", "tag_1")]) == "r1"
 
 
 def test_encode_dedups_repeated_pairs() -> None:
-    assert (
-        encode_group_kind([("reviewee", "tag_1"), ("reviewee", "tag_1")])
-        == "r1"
-    )
+    assert encode_group_kind([("reviewee", "tag_1"), ("reviewee", "tag_1")]) == "r1"
 
 
 def test_decode_none_and_sentinel_yield_empty() -> None:

@@ -43,7 +43,13 @@ def _context(request: Request) -> _Encounter:
 def safety(request: Request) -> Response:
     """Safety concern (UI spec screen 4): the call actions first, then the
     encounter's context, the crisis protocol and the escalation step."""
-    return gated(request, "supportlogs/safety.html", sample.FRONTLINE, current_tab="/log", **_context(request))
+    return gated(
+        request,
+        "supportlogs/safety.html",
+        sample.FRONTLINE,
+        current_tab="/log",
+        **_context(request),
+    )
 
 
 @router.get("/log/safety/raised", name="supportlogs_log_safety_raised")
@@ -55,15 +61,35 @@ def safety_raised(request: Request) -> Response:
         return gated(request, "supportlogs/safety_raised.html", sample.FRONTLINE)  # the 403 page
     context = _context(request)
     step = request.query_params.get("step")
-    if not (context["chosen"] and context["duration"] and context["kind"] and step in sample.ESCALATION_STEPS):
-        kept = {"student": context["chosen"].id if context["chosen"] else "",
-                "duration": context["duration"] or "", "type": context["kind"] or ""}
-        return RedirectResponse(url_path(request, "/log/safety") + query(me, **kept), status_code=303)
+    if not (
+        context["chosen"]
+        and context["duration"]
+        and context["kind"]
+        and step in sample.ESCALATION_STEPS
+    ):
+        kept = {
+            "student": context["chosen"].id if context["chosen"] else "",
+            "duration": context["duration"] or "",
+            "type": context["kind"] or "",
+        }
+        return RedirectResponse(
+            url_path(request, "/log/safety") + query(me, **kept), status_code=303
+        )
     in_set = any(s.id == context["chosen"].id for s, _, _ in sample.working_set(me.name))
     at = request.query_params.get("at", "")
-    at = at.replace("T", " ") if len(at) == 16 and at[10] == "T" else ""  # a datetime-local value, shown as given
-    return gated(request, "supportlogs/safety_raised.html", sample.FRONTLINE, current_tab="/log",
-                 step=step, at=at, in_set=in_set, **context)
+    at = (
+        at.replace("T", " ") if len(at) == 16 and at[10] == "T" else ""
+    )  # a datetime-local value, shown as given
+    return gated(
+        request,
+        "supportlogs/safety_raised.html",
+        sample.FRONTLINE,
+        current_tab="/log",
+        step=step,
+        at=at,
+        in_set=in_set,
+        **context,
+    )
 
 
 @router.get("/flags/{fid}", name="supportlogs_flag")
@@ -74,11 +100,21 @@ def flag_detail(request: Request, fid: str) -> Response:
     viewer may not see is not found."""
     me = sample.viewer(request.query_params.get("as"))
     if not sample.holds(me, sample.FRONTLINE, sample.RECIPIENT):
-        return gated(request, "supportlogs/flag.html", sample.FRONTLINE, sample.RECIPIENT)  # the 403 page
+        return gated(
+            request, "supportlogs/flag.html", sample.FRONTLINE, sample.RECIPIENT
+        )  # the 403 page
     found = sample.flag(fid)
     if found is None or not sample.may_see(me, found):
         raise HTTPException(status_code=404)
     back = flags_tab(me) or "/"
     in_set = any(s.id == found.student for s, _, _ in sample.working_set(me.name))
-    return gated(request, "supportlogs/flag.html", sample.FRONTLINE, sample.RECIPIENT,
-                 f=found, back=back, in_set=in_set, current_tab=back)
+    return gated(
+        request,
+        "supportlogs/flag.html",
+        sample.FRONTLINE,
+        sample.RECIPIENT,
+        f=found,
+        back=back,
+        in_set=in_set,
+        current_tab=back,
+    )

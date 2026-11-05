@@ -12,6 +12,7 @@ strip that rendered them is gone and the cluster shows every range.
 What is left is what never depended on the strip — where the ranges
 fall, and what an out-of-range offset does.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -121,9 +122,7 @@ def test_the_pager_carries_only_what_the_cluster_reads() -> None:
     """
     pager = views.build_pager(total=40000, offset=20000)
     assert pager is not None
-    assert {f for f in pager.__dataclass_fields__} == {
-        "offset", "page_size", "total"
-    }
+    assert {f for f in pager.__dataclass_fields__} == {"offset", "page_size", "total"}
 
 
 # --------------------------------------------------------------------- #
@@ -137,9 +136,7 @@ def test_the_pager_carries_only_what_the_cluster_reads() -> None:
 
 from pathlib import Path  # noqa: E402
 
-OPERATOR_TEMPLATES = (
-    Path(__file__).resolve().parents[2] / "app" / "web" / "templates" / "operator"
-)
+OPERATOR_TEMPLATES = Path(__file__).resolve().parents[2] / "app" / "web" / "templates" / "operator"
 
 # The seven pages that carry a roster table, named in 19J.5's Decision.
 ROSTER_PAGES = [
@@ -168,9 +165,7 @@ def test_every_roster_page_includes_the_pager_twice(page: str) -> None:
 @pytest.mark.parametrize("page", ROSTER_PAGES)
 def test_the_second_copy_carries_the_bottom_modifier(page: str) -> None:
     src = (OPERATOR_TEMPLATES / page).read_text(encoding="utf-8")
-    assert src.count(
-        'cluster_extra_class = "table-pager-cluster-bottom"'
-    ) == 1
+    assert src.count('cluster_extra_class = "table-pager-cluster-bottom"') == 1
 
 
 @pytest.mark.parametrize("page", ROSTER_PAGES)

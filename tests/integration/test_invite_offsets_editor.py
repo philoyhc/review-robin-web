@@ -4,6 +4,7 @@ End-to-end checks on the Auto-send (``invite_offsets``) input on
 the Create / Edit session forms, the Manage Invitations card
 caption, and the Schedule timeline preview block.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -45,15 +46,11 @@ def _create_session(
         data["scheduled_activate_at"] = scheduled_activate_at
     if invite_offsets:
         data["invite_offsets"] = invite_offsets
-    response = client.post(
-        "/operator/sessions", data=data, follow_redirects=False
-    )
+    response = client.post("/operator/sessions", data=data, follow_redirects=False)
     if response.status_code == 303:
         # Create-session redirect targets ``.../{public_id}``; strip
         # the query and fragment before parsing the public id.
-        location = (
-            response.headers["location"].split("?", 1)[0].split("#", 1)[0]
-        )
+        location = response.headers["location"].split("?", 1)[0].split("#", 1)[0]
         return (
             response.status_code,
             response,
@@ -74,21 +71,13 @@ def _create_session(
 def test_parser_returns_none_for_empty(db: Session) -> None:
     """Empty or whitespace-only inputs round-trip to None (cleared)."""
     assert (
-        scheduled_events.parse_and_validate_invite_offsets(
-            None, scheduled_activate_at=None
-        )
-        is None
+        scheduled_events.parse_and_validate_invite_offsets(None, scheduled_activate_at=None) is None
     )
     assert (
-        scheduled_events.parse_and_validate_invite_offsets(
-            "", scheduled_activate_at=None
-        )
-        is None
+        scheduled_events.parse_and_validate_invite_offsets("", scheduled_activate_at=None) is None
     )
     assert (
-        scheduled_events.parse_and_validate_invite_offsets(
-            "   ", scheduled_activate_at=None
-        )
+        scheduled_events.parse_and_validate_invite_offsets("   ", scheduled_activate_at=None)
         is None
     )
 
@@ -118,9 +107,7 @@ def test_parser_rejects_positive_offset(db: Session) -> None:
     """Positive offsets fire at or after Start — flag at save."""
     start = datetime.now(UTC) + timedelta(days=30)
     try:
-        scheduled_events.parse_and_validate_invite_offsets(
-            "P1D", scheduled_activate_at=start
-        )
+        scheduled_events.parse_and_validate_invite_offsets("P1D", scheduled_activate_at=start)
     except scheduled_events.ScheduledActivateError as exc:
         assert "fires at or after Start" in str(exc)
     else:
@@ -131,9 +118,7 @@ def test_parser_rejects_too_small_notice_gap(db: Session) -> None:
     """|offset| less than REVIEWER_NOTICE_MIN_HOURS is rejected."""
     start = datetime.now(UTC) + timedelta(days=30)
     try:
-        scheduled_events.parse_and_validate_invite_offsets(
-            "-PT30M", scheduled_activate_at=start
-        )
+        scheduled_events.parse_and_validate_invite_offsets("-PT30M", scheduled_activate_at=start)
     except scheduled_events.ScheduledActivateError as exc:
         assert "minimum reviewer notice" in str(exc)
     else:
@@ -146,9 +131,7 @@ def test_parser_rejects_offset_exceeding_10_day_cap(db: Session) -> None:
     set (the cap is shape-only)."""
     start = datetime.now(UTC) + timedelta(days=30)
     try:
-        scheduled_events.parse_and_validate_invite_offsets(
-            "-P11D", scheduled_activate_at=start
-        )
+        scheduled_events.parse_and_validate_invite_offsets("-P11D", scheduled_activate_at=start)
     except scheduled_events.ScheduledActivateError as exc:
         assert "10-day" in str(exc)
     else:
@@ -165,9 +148,7 @@ def test_parser_rejects_too_close_to_now(db: Session) -> None:
     # Start in 30 minutes; offset of -PT1H resolves to 30 minutes ago.
     start = datetime.now(UTC) + timedelta(minutes=30)
     try:
-        scheduled_events.parse_and_validate_invite_offsets(
-            "-PT1H", scheduled_activate_at=start
-        )
+        scheduled_events.parse_and_validate_invite_offsets("-PT1H", scheduled_activate_at=start)
     except scheduled_events.ScheduledActivateError:
         pass
     else:
@@ -187,9 +168,7 @@ def test_parser_accepts_when_start_unset(db: Session) -> None:
 # --------------------------------------------------------------------------- #
 
 
-def test_create_accepts_invite_offsets_with_valid_start(
-    client: TestClient, db: Session
-) -> None:
+def test_create_accepts_invite_offsets_with_valid_start(client: TestClient, db: Session) -> None:
     start = datetime.now(UTC) + timedelta(days=30)
     status_code, _, session_id = _create_session(
         client,
@@ -220,9 +199,7 @@ def test_create_rejects_invalid_invite_offset(client: TestClient) -> None:
     assert "minimum reviewer notice" in response.text
 
 
-def test_edit_round_trips_invite_offsets(
-    client: TestClient, db: Session
-) -> None:
+def test_edit_round_trips_invite_offsets(client: TestClient, db: Session) -> None:
     _, _, session_id = _create_session(client, db, "edit-inv")
     public_id = must_get(db, ReviewSession, session_id).public_id
     start = datetime.now(UTC) + timedelta(days=30)
@@ -264,9 +241,7 @@ def test_edit_round_trips_invite_offsets(
     assert rs.invite_offsets is None
 
 
-def test_edit_emits_invite_schedule_updated_audit(
-    client: TestClient, db: Session
-) -> None:
+def test_edit_emits_invite_schedule_updated_audit(client: TestClient, db: Session) -> None:
     _, _, session_id = _create_session(client, db, "audit-inv")
     public_id = must_get(db, ReviewSession, session_id).public_id
     start = datetime.now(UTC) + timedelta(days=30)
@@ -280,11 +255,15 @@ def test_edit_emits_invite_schedule_updated_audit(
         },
         follow_redirects=False,
     )
-    audits = db.execute(
-        select(AuditEvent)
-        .where(AuditEvent.session_id == session_id)
-        .where(AuditEvent.event_type == "session.invite_schedule_updated")
-    ).scalars().all()
+    audits = (
+        db.execute(
+            select(AuditEvent)
+            .where(AuditEvent.session_id == session_id)
+            .where(AuditEvent.event_type == "session.invite_schedule_updated")
+        )
+        .scalars()
+        .all()
+    )
     assert len(audits) == 1
 
 
@@ -326,9 +305,7 @@ def test_timeline_renders_start_and_invite_offsets_chronologically(
         user=op,
         payload=SessionCreate(name="t", code="tl-rows", description="d"),
     )
-    rs.scheduled_activate_at = datetime(
-        2099, 6, 1, 9, 0, tzinfo=UTC
-    )
+    rs.scheduled_activate_at = datetime(2099, 6, 1, 9, 0, tzinfo=UTC)
     rs.invite_offsets = ["-PT2H", "-P1D"]
     db.flush()
     db.commit()
@@ -380,9 +357,7 @@ def test_caption_amber_warning_when_draft_not_prepared(db: Session) -> None:
         user=op,
         payload=SessionCreate(name="t", code="cap-not-prep", description="d"),
     )
-    rs.scheduled_activate_at = datetime(
-        2099, 6, 1, 9, 0, tzinfo=UTC
-    )
+    rs.scheduled_activate_at = datetime(2099, 6, 1, 9, 0, tzinfo=UTC)
     rs.invite_offsets = ["-P1D"]
     db.flush()
     db.commit()
@@ -419,9 +394,7 @@ def test_caption_amber_when_validated_but_no_invitations(
         user=op,
         payload=SessionCreate(name="t", code="cap-amber", description="d"),
     )
-    rs.scheduled_activate_at = datetime(
-        2099, 6, 1, 9, 0, tzinfo=UTC
-    )
+    rs.scheduled_activate_at = datetime(2099, 6, 1, 9, 0, tzinfo=UTC)
     rs.invite_offsets = ["-P1D"]
     rs.status = lifecycle.SessionStatus.validated.value
     db.flush()
@@ -471,9 +444,7 @@ def test_caption_green_when_invitations_exist(db: Session) -> None:
         user=op,
         payload=SessionCreate(name="t", code="cap-green", description="d"),
     )
-    reviewer = Reviewer(
-        session_id=rs.id, name="A", email="a-cap-green@example.edu"
-    )
+    reviewer = Reviewer(session_id=rs.id, name="A", email="a-cap-green@example.edu")
     reviewee = Reviewee(
         session_id=rs.id,
         name="C",
@@ -484,9 +455,7 @@ def test_caption_green_when_invitations_exist(db: Session) -> None:
     # Wave 5 PR 5.2 — lazily materialise the Full Matrix
     # ``session_rule_sets`` row (auto-seed retired).
     pin_full_matrix_on_all_instruments(db, rs.id)
-    instrument = db.execute(
-        select(Instrument).where(Instrument.session_id == rs.id)
-    ).scalar_one()
+    instrument = db.execute(select(Instrument).where(Instrument.session_id == rs.id)).scalar_one()
     db.add(
         Assignment(
             session_id=rs.id,
@@ -497,13 +466,9 @@ def test_caption_green_when_invitations_exist(db: Session) -> None:
         )
     )
     db.flush()
-    invitations_service.generate_invitations(
-        db, review_session=rs, user=op
-    )
+    invitations_service.generate_invitations(db, review_session=rs, user=op)
 
-    rs.scheduled_activate_at = datetime(
-        2099, 6, 1, 9, 0, tzinfo=UTC
-    )
+    rs.scheduled_activate_at = datetime(2099, 6, 1, 9, 0, tzinfo=UTC)
     rs.invite_offsets = ["-P1D"]
     rs.status = lifecycle.SessionStatus.validated.value
     db.flush()
@@ -540,9 +505,7 @@ def test_caption_renders_on_workflow_card_not_invitations_page(
     assert rs is not None
     assert rs.invite_offsets == ["-P1D"]
 
-    body = client.get(
-        f"/operator/sessions/{rs.public_id}/invitations"
-    ).text
+    body = client.get(f"/operator/sessions/{rs.public_id}/invitations").text
     # New caption id sits inside the Workflow card right column.
     assert 'id="next-action-auto-send-invites-caption"' in body
     # Old standalone caption id is gone from the Invitations page.

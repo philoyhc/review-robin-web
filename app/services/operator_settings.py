@@ -50,9 +50,7 @@ SMTP_ENCRYPTION_MODES = ("starttls", "ssl")
 
 # Every IANA zone name, resolved once at import. Used both to
 # validate operator input and to populate the Settings-card picker.
-_AVAILABLE_TIMEZONES: frozenset[str] = frozenset(
-    zoneinfo.available_timezones()
-)
+_AVAILABLE_TIMEZONES: frozenset[str] = frozenset(zoneinfo.available_timezones())
 
 # The ``users.preferences`` key holding the operator's default
 # display timezone (Segment 18B PR 2).

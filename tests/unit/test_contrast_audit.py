@@ -151,6 +151,7 @@ RECORDED = set(OPEN_SHORTFALLS) | set(harness.ACCEPTED_BELOW_AA)
 #: enough that any real repoint trips it.
 DRIFT = 0.02
 
+
 def _srgb(channel: int) -> float:
     c = channel / 255
     return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
@@ -192,7 +193,9 @@ def collect_pairs() -> dict[tuple[str, str], str]:
     The four sources and why each exists are documented on
     ``collect_contrast_pairs``.
     """
-    return harness.collect_contrast_pairs(harness.lift_base_style(BASE_HTML.read_text(encoding="utf-8")))
+    return harness.collect_contrast_pairs(
+        harness.lift_base_style(BASE_HTML.read_text(encoding="utf-8"))
+    )
 
 
 def measured() -> list[tuple[float, str, str, str, str]]:
@@ -252,7 +255,9 @@ def test_the_sweep_finds_the_palette_it_claims_to() -> None:
     assert "rule" in kinds, (
         "no pair came from a CSS rule — the source that caught --nav-home-bg is dead"
     )
-    assert {"name", "surface", "fill"} <= kinds, f"sources missing: {sorted({'name', 'surface', 'fill'} - kinds)}"
+    assert {"name", "surface", "fill"} <= kinds, (
+        f"sources missing: {sorted({'name', 'surface', 'fill'} - kinds)}"
+    )
 
 
 def test_every_pair_clears_aa_but_for_the_recorded_shortfalls() -> None:
@@ -310,8 +315,7 @@ def test_the_recorded_shortfalls_are_still_what_was_recorded() -> None:
         "docs/known_limitations.md lines:\n  " + "\n  ".join(fixed)
     )
     assert not moved, (
-        "recorded shortfalls moved; re-record them with today's values:\n  "
-        + "\n  ".join(moved)
+        "recorded shortfalls moved; re-record them with today's values:\n  " + "\n  ".join(moved)
     )
 
 
@@ -346,9 +350,7 @@ def test_decoration_never_paints_text() -> None:
     """
     declaration = re.compile(r"(?<![-\w])color\s*:\s*var\(" + DECORATION + r"\)")
 
-    offenders = sorted(
-        selector for selector, body in rules(css()) if declaration.search(body)
-    )
+    offenders = sorted(selector for selector, body in rules(css()) if declaration.search(body))
 
     assert offenders == [], (
         f"{DECORATION} is decoration, not text — these paint text with it:\n  "
@@ -412,11 +414,13 @@ def test_the_customizer_panel_lists_every_audited_pair() -> None:
     would pass while the committed page was stale. Nothing else in the
     repo tests generator-versus-output drift.
     """
-    page = (
-        Path(__file__).resolve().parents[2] / "tools/theme_customizer.html"
-    ).read_text(encoding="utf-8")
+    page = (Path(__file__).resolve().parents[2] / "tools/theme_customizer.html").read_text(
+        encoding="utf-8"
+    )
 
-    rendered = set(re.findall(r'class="tc-cx" data-fg="(--[a-z0-9-]+)" data-bg="(--[a-z0-9-]+)"', page))
+    rendered = set(
+        re.findall(r'class="tc-cx" data-fg="(--[a-z0-9-]+)" data-bg="(--[a-z0-9-]+)"', page)
+    )
     audited = set(collect_pairs())
 
     assert rendered == audited, (
@@ -437,9 +441,9 @@ def test_the_customizer_panel_can_show_a_shortfall() -> None:
     where a silent failure would otherwise sit, the panel rendering 73
     rows and flagging none of them.
     """
-    page = (
-        Path(__file__).resolve().parents[2] / "tools/theme_customizer.html"
-    ).read_text(encoding="utf-8")
+    page = (Path(__file__).resolve().parents[2] / "tools/theme_customizer.html").read_text(
+        encoding="utf-8"
+    )
 
     assert ".tc-cx-ratio.below-aa" in page, "the sub-AA outline rule is gone"
     assert 'classList.toggle("below-aa"' in page, "nothing toggles the sub-AA class"
@@ -517,9 +521,9 @@ def test_the_panel_marks_every_accepted_pair_in_its_own_theme() -> None:
     there — so the attribute is `data-accepted-light`, never a bare
     `data-accepted`.
     """
-    page = (
-        Path(__file__).resolve().parents[2] / "tools/theme_customizer.html"
-    ).read_text(encoding="utf-8")
+    page = (Path(__file__).resolve().parents[2] / "tools/theme_customizer.html").read_text(
+        encoding="utf-8"
+    )
 
     for (theme, fg, bg), entry in harness.ACCEPTED_BELOW_AA.items():
         row = re.search(
@@ -563,16 +567,18 @@ def test_the_unresolved_branch_clears_every_contrast_state() -> None:
     name every class the paint step can add, so adding a fourth state
     without extending it fails.
     """
-    page = (
-        Path(__file__).resolve().parents[2] / "tools/theme_customizer.html"
-    ).read_text(encoding="utf-8")
+    page = (Path(__file__).resolve().parents[2] / "tools/theme_customizer.html").read_text(
+        encoding="utf-8"
+    )
 
     # Scoped to the contrast paint function: the page toggles unrelated
     # classes elsewhere (`is-coupled`, `tc-orphan`) and clears
     # `tc-picked` in the colour picker, and an unscoped scan compares
     # those against each other and fails on a correct page. It did, the
     # first time this test ran.
-    body = page[page.index("function updateContrast()") : page.index("function updateContrastCounts")]
+    body = page[
+        page.index("function updateContrast()") : page.index("function updateContrastCounts")
+    ]
 
     painted = set(re.findall(r'classList\.toggle\("([a-z-]+)"', body))
     assert painted, "no contrast-state classes are toggled at all"
@@ -593,14 +599,12 @@ def test_the_customizer_paints_success_pill_text_with_its_fg_token() -> None:
     """``body.ui-v2 .pill.pill-success`` takes ``--status-success-fg``; the
     customizer's facet named ``-accent``, so editing it there changed a
     token the pill does not use (findings 2026-10-07 E7)."""
-    gen = (
-        Path(__file__).resolve().parents[2] / "tools/theme_customizer.gen.py"
-    ).read_text(encoding="utf-8")
+    gen = (Path(__file__).resolve().parents[2] / "tools/theme_customizer.gen.py").read_text(
+        encoding="utf-8"
+    )
     assert '_pill("success", "Success pill")' in gen
     assert '"--status-success-accent")]),' not in gen
     # …and ``_pill`` paints with the token the pill's own rule uses.
-    block = re.search(
-        r"body\.ui-v2 \.pill\.pill-success \{([^}]*)\}", css()
-    )
+    block = re.search(r"body\.ui-v2 \.pill\.pill-success \{([^}]*)\}", css())
     assert block is not None and "var(--status-success-fg)" in block.group(1)
     assert '("text", "fg", f"--status-{name}-fg")' in gen

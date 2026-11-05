@@ -5,6 +5,7 @@ Pure-function helper that orders reviewer-surface rows per the
 operator's sort spec. Covers cascade + NULL-last + render-time
 defense for stale display-field IDs + asc/desc inversion.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -30,16 +31,12 @@ def _resolver(row: _Row, display_field_id: int) -> object | None:
 
 def test_empty_spec_returns_input_order() -> None:
     rows = [_Row(1, {7: "b"}), _Row(2, {7: "a"})]
-    assert [r.rid for r in order_rows_by_sort_spec(
-        rows, [], key_resolver=_resolver
-    )] == [1, 2]
+    assert [r.rid for r in order_rows_by_sort_spec(rows, [], key_resolver=_resolver)] == [1, 2]
 
 
 def test_none_spec_returns_input_order() -> None:
     rows = [_Row(1, {7: "b"}), _Row(2, {7: "a"})]
-    assert [r.rid for r in order_rows_by_sort_spec(
-        rows, None, key_resolver=_resolver
-    )] == [1, 2]
+    assert [r.rid for r in order_rows_by_sort_spec(rows, None, key_resolver=_resolver)] == [1, 2]
 
 
 # --- Single-key sort ------------------------------------------------------
@@ -48,17 +45,13 @@ def test_none_spec_returns_input_order() -> None:
 def test_single_key_asc() -> None:
     rows = [_Row(1, {7: "b"}), _Row(2, {7: "a"}), _Row(3, {7: "c"})]
     spec = [{"display_field_id": 7, "dir": "asc"}]
-    assert [r.rid for r in order_rows_by_sort_spec(
-        rows, spec, key_resolver=_resolver
-    )] == [2, 1, 3]
+    assert [r.rid for r in order_rows_by_sort_spec(rows, spec, key_resolver=_resolver)] == [2, 1, 3]
 
 
 def test_single_key_desc() -> None:
     rows = [_Row(1, {7: "b"}), _Row(2, {7: "a"}), _Row(3, {7: "c"})]
     spec = [{"display_field_id": 7, "dir": "desc"}]
-    assert [r.rid for r in order_rows_by_sort_spec(
-        rows, spec, key_resolver=_resolver
-    )] == [3, 1, 2]
+    assert [r.rid for r in order_rows_by_sort_spec(rows, spec, key_resolver=_resolver)] == [3, 1, 2]
 
 
 # --- NULL handling --------------------------------------------------------
@@ -71,9 +64,7 @@ def test_null_values_sort_last_under_asc() -> None:
         _Row(3, {7: "a"}),
     ]
     spec = [{"display_field_id": 7, "dir": "asc"}]
-    assert [r.rid for r in order_rows_by_sort_spec(
-        rows, spec, key_resolver=_resolver
-    )] == [3, 1, 2]
+    assert [r.rid for r in order_rows_by_sort_spec(rows, spec, key_resolver=_resolver)] == [3, 1, 2]
 
 
 def test_null_values_sort_last_under_desc() -> None:
@@ -85,9 +76,7 @@ def test_null_values_sort_last_under_desc() -> None:
         _Row(3, {7: "a"}),
     ]
     spec = [{"display_field_id": 7, "dir": "desc"}]
-    assert [r.rid for r in order_rows_by_sort_spec(
-        rows, spec, key_resolver=_resolver
-    )] == [1, 3, 2]
+    assert [r.rid for r in order_rows_by_sort_spec(rows, spec, key_resolver=_resolver)] == [1, 3, 2]
 
 
 # --- Multi-key cascade ----------------------------------------------------
@@ -104,9 +93,7 @@ def test_two_key_cascade() -> None:
         {"display_field_id": 7, "dir": "asc"},
         {"display_field_id": 9, "dir": "asc"},
     ]
-    assert [r.rid for r in order_rows_by_sort_spec(
-        rows, spec, key_resolver=_resolver
-    )] == [2, 1, 3]
+    assert [r.rid for r in order_rows_by_sort_spec(rows, spec, key_resolver=_resolver)] == [2, 1, 3]
 
 
 def test_three_key_cascade_with_mixed_directions() -> None:
@@ -120,9 +107,7 @@ def test_three_key_cascade_with_mixed_directions() -> None:
         {"display_field_id": 9, "dir": "asc"},
         {"display_field_id": 11, "dir": "desc"},
     ]
-    assert [r.rid for r in order_rows_by_sort_spec(
-        rows, spec, key_resolver=_resolver
-    )] == [2, 3, 1]
+    assert [r.rid for r in order_rows_by_sort_spec(rows, spec, key_resolver=_resolver)] == [2, 3, 1]
 
 
 # --- Render-time defense ---------------------------------------------------
@@ -166,9 +151,7 @@ def test_known_ids_none_skips_filter() -> None:
     has already validated the spec — every entry runs."""
     rows = [_Row(1, {9: "b"}), _Row(2, {9: "a"})]
     spec = [{"display_field_id": 9, "dir": "asc"}]
-    out = order_rows_by_sort_spec(
-        rows, spec, key_resolver=_resolver, known_display_field_ids=None
-    )
+    out = order_rows_by_sort_spec(rows, spec, key_resolver=_resolver, known_display_field_ids=None)
     assert [r.rid for r in out] == [2, 1]
 
 
@@ -184,9 +167,7 @@ def test_rows_tied_on_every_key_keep_input_order() -> None:
         _Row(3, {7: "a"}),
     ]
     spec = [{"display_field_id": 7, "dir": "asc"}]
-    assert [r.rid for r in order_rows_by_sort_spec(
-        rows, spec, key_resolver=_resolver
-    )] == [1, 2, 3]
+    assert [r.rid for r in order_rows_by_sort_spec(rows, spec, key_resolver=_resolver)] == [1, 2, 3]
 
 
 def test_bad_dir_entries_skipped() -> None:

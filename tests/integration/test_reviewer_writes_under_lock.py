@@ -27,17 +27,11 @@ from .test_responses_service import _seed
 
 
 def _action(name: str, assignment_id: int):
-    upserts = [
-        ResponseUpsert(assignment_id=assignment_id, field_key="rating", value="2")
-    ]
+    upserts = [ResponseUpsert(assignment_id=assignment_id, field_key="rating", value="2")]
     if name == "save":
-        return lambda db, **kw: responses_service.save_draft(
-            db, upserts=upserts, **kw
-        )
+        return lambda db, **kw: responses_service.save_draft(db, upserts=upserts, **kw)
     if name == "submit":
-        return lambda db, **kw: responses_service.submit(
-            db, upserts=upserts, **kw
-        )
+        return lambda db, **kw: responses_service.submit(db, upserts=upserts, **kw)
     if name == "clear":
         return responses_service.clear_all
     return responses_service.recall
@@ -59,9 +53,7 @@ def test_a_close_committed_before_the_lock_refuses_the_write(
         Response(
             assignment_id=assignment.id,
             response_field_id=next(
-                f.id
-                for f in assignment.instrument.response_fields
-                if f.field_key == "rating"
+                f.id for f in assignment.instrument.response_fields if f.field_key == "rating"
             ),
             value="5",
             saved_at=stamped,
@@ -78,11 +70,7 @@ def test_a_close_committed_before_the_lock_refuses_the_write(
         db_: Session, session: ReviewSession, *, shared: bool = False
     ) -> ReviewSession:
         calls.append((session.id, shared))
-        db_.execute(
-            update(ReviewSession)
-            .where(ReviewSession.id == session.id)
-            .values(**racer)
-        )
+        db_.execute(update(ReviewSession).where(ReviewSession.id == session.id).values(**racer))
         return real_lock(db_, session, shared=shared)
 
     monkeypatch.setattr(session_guard, "lock_session", closing_lock)
@@ -100,10 +88,6 @@ def test_a_close_committed_before_the_lock_refuses_the_write(
     # Shared, so reviewers writing at once don't queue behind each other.
     assert calls == [(review_session.id, True)]
     rows = list(
-        db.execute(
-            select(Response).where(Response.assignment_id == assignment.id)
-        ).scalars()
+        db.execute(select(Response).where(Response.assignment_id == assignment.id)).scalars()
     )
-    assert [(r.value, r.submitted_at is not None) for r in rows] == [
-        ("5", True)
-    ]
+    assert [(r.value, r.submitted_at is not None) for r in rows] == [("5", True)]

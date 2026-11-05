@@ -29,9 +29,7 @@ from .test_scheduled_reminders import (
 )
 
 
-def _saved_behind_the_orm(
-    db: Session, session: ReviewSession, column: str, value: object
-) -> None:
+def _saved_behind_the_orm(db: Session, session: ReviewSession, column: str, value: object) -> None:
     db.execute(
         text(f"UPDATE sessions SET {column} = :value WHERE id = :id"),
         {
@@ -87,9 +85,7 @@ def test_the_observer_fires_from_the_lists_saved_after_it_loaded(
     db.commit()
     _saved_behind_the_orm(db, session, "reminder_offsets", ["-PT1H"])
 
-    scheduled_events.observe_scheduled_events(
-        db, session, build_invite_url=_stub_build_url
-    )
+    scheduled_events.observe_scheduled_events(db, session, build_invite_url=_stub_build_url)
 
     assert _count(db, session, "session.scheduled_reminders_fired") == 0
     assert _reminder_rows(db, session) == []
@@ -112,15 +108,11 @@ def test_activation_rereads_its_anchor(db: Session) -> None:
     assert _count(db, session, "session.activated") == 0
 
 
-def test_an_entry_is_sent_and_recorded_in_one_transaction(
-    db: Session, monkeypatch
-) -> None:
+def test_an_entry_is_sent_and_recorded_in_one_transaction(db: Session, monkeypatch) -> None:
     """A failure part-way through an entry's sends rolls the whole
     entry back, the sends already made included, so the record and the
     outbox never disagree; the next pass sends it whole."""
-    session = _ready_session_with_invitations(
-        db, "lock-atomic", reviewer_count=2
-    )
+    session = _ready_session_with_invitations(db, "lock-atomic", reviewer_count=2)
     session.deadline = datetime.now(UTC) + timedelta(hours=4)
     session.reminder_offsets = ["-PT8H"]
     db.commit()
@@ -135,16 +127,12 @@ def test_an_entry_is_sent_and_recorded_in_one_transaction(
         return real(*args, **kwargs)
 
     monkeypatch.setattr(invitations_service, "send_reminder", fail_on_second)
-    scheduled_events.observe_scheduled_events(
-        db, session, build_invite_url=_stub_build_url
-    )
+    scheduled_events.observe_scheduled_events(db, session, build_invite_url=_stub_build_url)
     assert _reminder_rows(db, session) == []
     assert _count(db, session, "session.scheduled_reminders_fired") == 0
 
     monkeypatch.setattr(invitations_service, "send_reminder", real)
-    scheduled_events.observe_scheduled_events(
-        db, session, build_invite_url=_stub_build_url
-    )
+    scheduled_events.observe_scheduled_events(db, session, build_invite_url=_stub_build_url)
     assert len(_reminder_rows(db, session)) == 2
     assert _count(db, session, "session.scheduled_reminders_fired") == 1
 
@@ -178,9 +166,7 @@ def test_activation_rechecks_that_it_is_due_under_the_lock(db: Session) -> None:
     session = _make_validated_session(db, "lock-activation-later")
     session.scheduled_activate_at = datetime(2099, 1, 1, 9, 0, tzinfo=UTC)
     db.commit()
-    _saved_behind_the_orm(
-        db, session, "scheduled_activate_at", "2099-01-05 09:00:00.000000"
-    )
+    _saved_behind_the_orm(db, session, "scheduled_activate_at", "2099-01-05 09:00:00.000000")
 
     scheduled_events.observe_scheduled_events(
         db, session, now=datetime(2099, 1, 1, 10, 0, tzinfo=UTC)
@@ -202,7 +188,6 @@ def test_lock_session_keeps_an_unflushed_edit(db: Session) -> None:
         assert session.help_contact == "pending@x.edu"
     finally:
         db.autoflush = True
-
 
 
 def _commit_lands_at_the_lock(monkeypatch, db: Session, apply) -> None:
@@ -257,9 +242,7 @@ def test_the_session_home_save_locks_before_its_editability_gate(
     assert current.name != "Renamed"
 
 
-def test_the_lobby_save_locks_before_its_editability_gate(
-    client, db: Session, monkeypatch
-) -> None:
+def test_the_lobby_save_locks_before_its_editability_gate(client, db: Session, monkeypatch) -> None:
     client.post(
         "/operator/sessions",
         data={"name": "Lobby", "code": "lock-lobby"},
@@ -287,9 +270,7 @@ def test_the_lobby_save_locks_before_its_editability_gate(
     assert current.name != "Renamed"
 
 
-def test_the_settings_import_checks_under_the_lock(
-    db: Session, monkeypatch
-) -> None:
+def test_the_settings_import_checks_under_the_lock(db: Session, monkeypatch) -> None:
     """End moved earlier by a save landing as the import starts: the
     ordering check reads it and refuses a Start after the new End."""
     from app.services.session_config_io import Row, apply_session_config
@@ -300,9 +281,7 @@ def test_the_settings_import_checks_under_the_lock(
     _commit_lands_at_the_lock(
         monkeypatch,
         db,
-        lambda s: _saved_behind_the_orm(
-            db, s, "deadline", "2026-05-05 12:00:00.000000"
-        ),
+        lambda s: _saved_behind_the_orm(db, s, "deadline", "2026-05-05 12:00:00.000000"),
     )
 
     result = apply_session_config(
@@ -371,8 +350,12 @@ def test_a_busy_session_skips_the_pass_without_a_failure_row(db: Session, monkey
         raise SessionBusy()
 
     monkeypatch.setattr(scheduled_events, "_observe_scheduled_invites", busy)
-    monkeypatch.setattr(scheduled_events, "_observe_scheduled_activation", lambda *a, **k: ran.append("activation"))
-    monkeypatch.setattr(scheduled_events, "_observe_scheduled_reminders", lambda *a, **k: ran.append("reminders"))
+    monkeypatch.setattr(
+        scheduled_events, "_observe_scheduled_activation", lambda *a, **k: ran.append("activation")
+    )
+    monkeypatch.setattr(
+        scheduled_events, "_observe_scheduled_reminders", lambda *a, **k: ran.append("reminders")
+    )
     scheduled_events.observe_scheduled_events(db, session)
     assert ran == ["invites"]
     assert _count(db, session, scheduled_events.SCHEDULED_EVENT_FAILED) == 0

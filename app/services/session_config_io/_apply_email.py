@@ -1,4 +1,5 @@
 """``email_overrides.*`` parse + apply."""
+
 from __future__ import annotations
 
 from app.db.models import ReviewSession
@@ -22,9 +23,7 @@ __all__ = [
 ]
 
 
-def _apply_email_kv(
-    plan: _ParsedConfig, field_path: str, value: str, data_type: str
-) -> None:
+def _apply_email_kv(plan: _ParsedConfig, field_path: str, value: str, data_type: str) -> None:
     match = _RX_EMAIL.match(field_path)
     if match is None:
         raise _ParseError(f"unrecognised email_overrides key {field_path!r}")
@@ -48,9 +47,7 @@ def _apply_email_kv(
         return
     legacy_key = f"{kind}_{slot}"
     if legacy_key not in OVERRIDE_KEYS:
-        raise _ParseError(
-            f"unknown email override slot {field_path!r}"
-        )
+        raise _ParseError(f"unknown email override slot {field_path!r}")
     if value.strip():
         plan.email_overrides[legacy_key] = value
     # A blank or whitespace-only cell ⇒ key absent ⇒ "use default", as
@@ -59,9 +56,7 @@ def _apply_email_kv(
     del data_type  # unused; cell is always string here
 
 
-def _apply_email_overrides(
-    review_session: ReviewSession, plan: _ParsedConfig
-) -> int:
+def _apply_email_overrides(review_session: ReviewSession, plan: _ParsedConfig) -> int:
     """Replace ``email_template_overrides`` JSON wholesale from
     the parsed dict. Empty cells collapsed into "key absent" by
     the parser, so the dict is the resolver-ready shape."""

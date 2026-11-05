@@ -10,6 +10,7 @@ bootstrap read + the ``require_sys_admin`` dependency; the
 value-set constant sits inert until Segment 16B PR 1 starts
 policing role writes.
 """
+
 from __future__ import annotations
 
 from sqlalchemy import select
@@ -77,9 +78,7 @@ def test_session_operator_role_default_is_owner(db: Session) -> None:
     db.add(op_row)
     db.flush()
 
-    reread = db.execute(
-        select(SessionOperator).where(SessionOperator.id == op_row.id)
-    ).scalar_one()
+    reread = db.execute(select(SessionOperator).where(SessionOperator.id == op_row.id)).scalar_one()
     assert reread.role == "owner"
 
 

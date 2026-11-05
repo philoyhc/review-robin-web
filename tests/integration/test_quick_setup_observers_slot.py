@@ -24,10 +24,7 @@ from app.web import views
 
 from ._quick_setup_refusal import refusal
 
-OBSERVER_CSV = (
-    b"ObserverName,ObserverEmail,ObserverTag1\n"
-    b"Oren,oren@example.edu,Mentor\n"
-)
+OBSERVER_CSV = b"ObserverName,ObserverEmail,ObserverTag1\nOren,oren@example.edu,Mentor\n"
 
 
 def _make_session(
@@ -56,16 +53,12 @@ def _make_session(
 # ---------------------------------------------------------------------------
 
 
-def test_observers_slot_renders_whatever_the_toggle(
-    client: TestClient, db: Session
-) -> None:
+def test_observers_slot_renders_whatever_the_toggle(client: TestClient, db: Session) -> None:
     """The Observers slot renders between Relationships and Session
     settings whether ``observers_enabled`` is on or off, as on the New
     session card (``guide/quick_setup_update.md`` Item 2; it was hidden
     while the toggle was off until then)."""
-    rs_off = _make_session(
-        client, db, code="qsobs-off", observers_enabled=False
-    )
+    rs_off = _make_session(client, db, code="qsobs-off", observers_enabled=False)
     context_off = views.build_quick_setup_context(db, rs_off)
     assert [s.key for s in context_off.slots] == [
         "reviewers",
@@ -92,9 +85,7 @@ def test_observers_slot_renders_whatever_the_toggle(
     )
 
 
-def test_observers_slot_count_reflects_population(
-    client: TestClient, db: Session
-) -> None:
+def test_observers_slot_count_reflects_population(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="qsobs-count")
     context_empty = views.build_quick_setup_context(db, review_session)
     by_key = {s.key: s for s in context_empty.slots}
@@ -115,9 +106,7 @@ def test_observers_slot_count_reflects_population(
 # ---------------------------------------------------------------------------
 
 
-def test_observers_route_imports_rows(
-    client: TestClient, db: Session
-) -> None:
+def test_observers_route_imports_rows(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="qsobs-route")
 
     response = client.post(
@@ -128,17 +117,15 @@ def test_observers_route_imports_rows(
     assert response.status_code == 303
     assert response.headers["location"].endswith("#quick-setup-observers")
 
-    rows = db.execute(
-        select(Observer).where(Observer.session_id == review_session.id)
-    ).scalars().all()
+    rows = (
+        db.execute(select(Observer).where(Observer.session_id == review_session.id)).scalars().all()
+    )
     assert len(rows) == 1
     assert rows[0].display_name == "Oren"
     assert rows[0].tag_1 == "Mentor"
 
 
-def test_observers_route_replace_requires_confirm(
-    client: TestClient, db: Session
-) -> None:
+def test_observers_route_replace_requires_confirm(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="qsobs-confirm")
 
     # First upload populates.
@@ -193,9 +180,7 @@ def test_observers_lifecycle_gate_on_ready(
 # ---------------------------------------------------------------------------
 
 
-def test_submit_all_runs_observers_branch(
-    client: TestClient, db: Session
-) -> None:
+def test_submit_all_runs_observers_branch(client: TestClient, db: Session) -> None:
     """``submit-all`` with only an observers file imports them and
     redirects to the observers fragment. No other slot needs to be
     attached for the branch to fire."""
@@ -209,7 +194,7 @@ def test_submit_all_runs_observers_branch(
     assert response.status_code == 303
     assert response.headers["location"].endswith("#quick-setup-observers")
 
-    rows = db.execute(
-        select(Observer).where(Observer.session_id == review_session.id)
-    ).scalars().all()
+    rows = (
+        db.execute(select(Observer).where(Observer.session_id == review_session.id)).scalars().all()
+    )
     assert len(rows) == 1
