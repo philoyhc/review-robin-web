@@ -66,6 +66,15 @@ Taken 2026-11-04 at `2ed1de42`.
 | Jinja-namespace wrappers | 3 files (`urls.py`, both `routes_*/_shared.py`) | `grep -rln "_JinjaNamespaces\|_TemplateEnv\|def add_globals" app --include=*.py` |
 | `Result.tuples()` | 1 (`app/services/relationships.py`) | `grep -rn "\.tuples()" app` |
 
+## Status
+
+- **Rung 2** (base `095844ef`): ruling 3, the workflow card reads a
+  non-string `scheduled_at` as unknown
+  (`test_caption_skipped_reads_a_non_string_time_as_unknown`, which fails
+  three ways on the old code); ruling 4, `set_band2_state`'s docstring
+  says `None` keeps the stored state; `relationships.py` reads rows
+  without `Result.tuples()`.
+
 ## PR ladder
 
 1. **Plan and rulings** (this file). Prose only.

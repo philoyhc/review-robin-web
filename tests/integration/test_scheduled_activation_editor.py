@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -340,3 +341,35 @@ def test_caption_skipped_clears_after_next_audit(db: Session) -> None:
     db.commit()
     cap = build_scheduled_activation_caption(db, rs)
     assert cap is None
+
+
+@pytest.mark.parametrize("scheduled_at", [12345, ["2099-01-01"], {"at": "x"}])
+def test_caption_skipped_reads_a_non_string_time_as_unknown(
+    db: Session, scheduled_at: object
+) -> None:
+    """Segment 22F, ruling 3: a malformed audit row's `scheduled_at` once
+    raised `TypeError` and took Session Home down; it reads as unknown."""
+    from app.services import audit
+
+    rs = _make_session_in_status(
+        db, "cap-skipped-bad-time", lifecycle.SessionStatus.draft.value
+    )
+    audit.write_event(
+        db,
+        event_type="session.scheduled_activation_skipped",
+        summary="skipped",
+        actor_user_id=None,
+        session=rs,
+        reason="not_validated",
+        context={"scheduled_at": "2099-01-01T09:00:00+00:00", "status_at_fire": "draft"},
+    )
+    db.commit()
+    event = db.scalars(
+        select(AuditEvent).where(AuditEvent.session_id == rs.id).order_by(AuditEvent.id.desc())
+    ).first()
+    assert event is not None and event.detail is not None
+    event.detail = {**event.detail, "context": {**event.detail["context"], "scheduled_at": scheduled_at}}
+    db.commit()
+    cap = build_scheduled_activation_caption(db, rs)
+    assert cap is not None
+    assert "at unknown" in cap["text"]

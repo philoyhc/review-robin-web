@@ -442,7 +442,7 @@ def relationship_append_conflicts(
             select(Relationship.reviewer_id, Relationship.reviewee_id).where(
                 Relationship.session_id == session_id
             )
-        ).tuples()
+        ).all()
     )
     return [
         ValidationIssue(

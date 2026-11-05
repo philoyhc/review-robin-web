@@ -34,7 +34,7 @@ Workflow card's Prepare is how a session is validated.
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Any, cast
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -342,11 +342,11 @@ def build_scheduled_activation_caption(
     context = json_object(detail.get("context", {})) if detail is not None else None
     scheduled_at_iso = context.get("scheduled_at") if context is not None else None
     when_text = "unknown"
-    if scheduled_at_iso:
+    # The emitter writes an ISO string; any other shape reads as unknown,
+    # as an unparseable string does (segment 22F, ruling 3).
+    if isinstance(scheduled_at_iso, str) and scheduled_at_iso:
         try:
-            # The emitter writes an ISO string; any other shape raises
-            # TypeError here, as it did before the value was typed.
-            parsed = datetime.fromisoformat(cast("str", scheduled_at_iso))
+            parsed = datetime.fromisoformat(scheduled_at_iso)
         except ValueError:
             parsed = None
         if parsed is not None:
