@@ -18,7 +18,6 @@ Final layout (post-PR-10):
 - ``_instruments.py``    — Instruments page context
 - ``_quick_setup.py``    — Quick Setup card
 - ``_validate.py``       — Validate page
-- ``_share_link.py``     — Invitations' Share the session link card
 - ``_previews.py``       — Email + reviewer-surface previews
 - ``_rule_builder.py``   — Rule Builder + Rule Based card
 
@@ -268,7 +267,6 @@ from ._setup import (
     reviewer_column_state,
     session_status_pills,
 )
-from ._share_link import SharedMessage, ShareLinkCard, build_share_link_card
 
 # Sort helpers (Segment 13B PR 1 + Part 2 PR 5 + PR 6).
 from ._sort import (
@@ -478,9 +476,6 @@ __all__ = [
     "merge_tags_for_template",
     "row_send_notice",
     "send_test_notice",
-    "ShareLinkCard",
-    "SharedMessage",
-    "build_share_link_card",
     "ComposerFields",
     "build_composer_fields",
     "AuditDetailChangeRow",

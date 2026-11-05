@@ -1,10 +1,7 @@
 """14F rungs 3b–3c: the Share the session link card on Invitations.
 
-The card shows the session's stable link, absolute, and the session's
-invitation and reminder templates written for everyone: that link as
-``$invite_url`` and no reviewer. Its boxes are editable and unsaved, and
-each Copy button names the box it copies. The Workflow card's bulk-off
-line links to it.
+The card shows the session's stable link, absolute, with a Copy link
+button. The Workflow card's bulk-off line links to it.
 """
 
 from __future__ import annotations
@@ -17,7 +14,6 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db.models import ReviewSession
-from app.services import email_templates
 
 from .test_invitations import _ready_session
 
@@ -32,8 +28,6 @@ def _page(client: TestClient, session: ReviewSession) -> str:
 
 def _value(card: str, element_id: str) -> str:
     tag = card.split(f'id="{element_id}"', 1)[1]
-    if tag.lstrip().startswith("rows"):
-        return html.unescape(tag.split(">", 1)[1].split("</textarea>", 1)[0])
     return html.unescape(tag.split('value="', 1)[1].split('"', 1)[0])
 
 
@@ -44,39 +38,18 @@ def test_the_link_is_the_sessions_stable_link_absolute(client: TestClient, db: S
     assert link.endswith(f"/me/sessions/{session.public_id}")
 
 
-def test_the_messages_carry_the_link_and_no_name(client: TestClient, db: Session) -> None:
-    session = _ready_session(client, db, code="share-msgs")
+def test_the_card_is_the_link_alone(client: TestClient, db: Session) -> None:
+    """The author cut the card to its title, help text, link and Copy
+    link (2026-11-05): no message boxes."""
+    session = _ready_session(client, db, code="share-alone")
     card = _card(_page(client, session))
-    link = _value(card, "share-session-link-url")
-    for key in ("invite", "reminder"):
-        body = _value(card, f"share-{key}-body")
-        assert link in body, key
-        assert "Hi ," not in body and "Hi\n" not in body, key
-        assert session.name in _value(card, f"share-{key}-subject"), key
-
-
-def test_an_override_renders_as_written(client: TestClient, db: Session) -> None:
-    session = _ready_session(client, db, code="share-override")
-    email_templates.set_overrides(session, {"reminder_body": "Nudge: $invite_url"})
-    db.commit()
-    card = _card(_page(client, session))
-    link = _value(card, "share-session-link-url")
-    assert _value(card, "share-reminder-body").strip() == f"Nudge: {link}"
-
-
-def test_every_copy_button_is_live_and_names_its_box(client: TestClient, db: Session) -> None:
-    session = _ready_session(client, db, code="share-copy")
-    card = _card(_page(client, session))
-    for button_id, source in (
-        ("share-session-link-copy", "share-session-link-url"),
-        ("share-invite-copy-subject", "share-invite-subject"),
-        ("share-invite-copy-body", "share-invite-body"),
-        ("share-reminder-copy-subject", "share-reminder-subject"),
-        ("share-reminder-copy-body", "share-reminder-body"),
-    ):
-        tag = card.split(f'id="{button_id}"', 1)[1].split(">", 1)[0]
-        assert "disabled" not in tag, button_id
-        assert f'data-copy-from="{source}"' in tag, button_id
+    assert "Only eligible participants will be able to reach the session" in card
+    assert "Sign-in is required to validate access." in card
+    assert "<textarea" not in card
+    assert "data-share-message" not in card
+    tag = card.split('id="share-session-link-copy"', 1)[1].split(">", 1)[0]
+    assert "disabled" not in tag
+    assert 'data-copy-from="share-session-link-url"' in tag
     assert 'id="share-copy-status"' in card
 
 

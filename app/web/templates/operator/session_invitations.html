@@ -95,47 +95,21 @@
 
   {# 14F rungs 3b–3c: Share the session link. Until bulk email is
      paced (14G), the operator delivers the session's stable link through
-     their own channels. ``share_link`` is ``views.build_share_link_card``:
-     the absolute link and the two templates written for everyone. The
-     boxes are editable and never saved; Copy writes the box's current
-     text to the clipboard. #}
+     their own channels. ``share_link_url`` is absolute, built by the
+     route. The author cut the card to the link alone (2026-11-05): the
+     message boxes the plan named are gone. #}
   <div class="card" id="share-session-link" data-share-link>
     <h2>Share the session link</h2>
     <p class="muted">
-      Every reviewer reaches this session at one link. They sign in with
-      their own account and see only what is assigned to them; anyone
-      not on the roster gets a page that isn't found. Paste the link, or
-      a whole message below, into your own email, learning management
-      system or announcements.
+      Only eligible participants will be able to reach the session using
+      the below link, and when it is open to receive responses or for
+      viewing responses. Sign-in is required to validate access.
     </p>
-    <label for="share-session-link-url">Session link</label>
     <div class="share-link-row">
       <input type="text" id="share-session-link-url" readonly
-             value="{{ share_link.session_link }}">
+             aria-label="Session link" value="{{ share_link_url }}">
       <button class="btn secondary" type="button" id="share-session-link-copy"
               data-copy-from="share-session-link-url">Copy link</button>
-    </div>
-    <div class="share-link-messages">
-      {% for message in share_link.messages %}
-        <div data-share-message="{{ message.key }}">
-          <h3>{{ message.title }}</h3>
-          <p class="muted">
-            Your {{ message.title | lower }} template, written for everyone:
-            the session link in place of each reviewer's own, and no name.
-            Edit it here before you copy it; edits aren't saved.
-          </p>
-          <label for="share-{{ message.key }}-subject">Subject</label>
-          <input type="text" id="share-{{ message.key }}-subject" value="{{ message.subject }}">
-          <label for="share-{{ message.key }}-body">Message</label>
-          <textarea id="share-{{ message.key }}-body" rows="10">{{ message.body }}</textarea>
-          <div class="share-link-actions">
-            <button class="btn secondary" type="button" id="share-{{ message.key }}-copy-subject"
-                    data-copy-from="share-{{ message.key }}-subject">Copy subject</button>
-            <button class="btn secondary" type="button" id="share-{{ message.key }}-copy-body"
-                    data-copy-from="share-{{ message.key }}-body">Copy message</button>
-          </div>
-        </div>
-      {% endfor %}
     </div>
     <p class="muted" role="status" aria-live="polite" id="share-copy-status"></p>
   </div>
@@ -144,32 +118,28 @@
      says which happened, so a refused copy is not silent. #}
   <script>
     (function () {
-      var card = document.getElementById("share-session-link");
+      var button = document.getElementById("share-session-link-copy");
+      var field = document.getElementById("share-session-link-url");
       var status = document.getElementById("share-copy-status");
-      if (!card || !status) return;
-      function fallback(field) {
+      if (!button || !field || !status) return;
+      function fallback() {
         field.focus();
         field.select();
         try { return document.execCommand("copy"); } catch (e) { return false; }
       }
-      card.addEventListener("click", function (event) {
-        var button = event.target.closest("[data-copy-from]");
-        if (!button) return;
-        var field = document.getElementById(button.getAttribute("data-copy-from"));
-        if (!field) return;
-        var label = button.textContent.replace(/^Copy /, "");
-        function done(ok) {
-          status.textContent = ok
-            ? "Copied the " + label + "."
-            : "Couldn't copy: select the " + label + " and copy it yourself.";
-        }
+      function done(ok) {
+        status.textContent = ok
+          ? "Copied the link."
+          : "Couldn't copy: select the link and copy it yourself.";
+      }
+      button.addEventListener("click", function () {
         if (navigator.clipboard && window.isSecureContext) {
           navigator.clipboard.writeText(field.value).then(
             function () { done(true); },
-            function () { done(fallback(field)); }
+            function () { done(fallback()); }
           );
         } else {
-          done(fallback(field));
+          done(fallback());
         }
       });
     })();

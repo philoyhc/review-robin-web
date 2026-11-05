@@ -554,15 +554,11 @@ def invitations_index(
             # word for what the roster contains.
             "no_match": _unmatched_email(db, review_session, no_match),
             # 14F rung 3c: the stable session link, absolute (the host's
-            # public origin, as invitation links are), and the templates
-            # written for everyone.
-            "share_link": views.build_share_link_card(
-                review_session,
-                str(
-                    request.url_for(
-                        "review_surface_default_position", session_id=review_session.public_id
-                    )
-                ),
+            # public origin, as invitation links are).
+            "share_link_url": str(
+                request.url_for(
+                    "review_surface_default_position", session_id=review_session.public_id
+                )
             ),
             "total_row_count": len(all_rows),
             # Segment 19I Item 10 — the shared preview-count
