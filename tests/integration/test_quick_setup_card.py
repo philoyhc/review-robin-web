@@ -30,30 +30,22 @@ from ._validated import validate_session
 REVIEWER_CSV = b"ReviewerName,ReviewerEmail\nAlice,alice@example.edu\n"
 REVIEWEE_CSV = b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\n"
 SECOND_REVIEWER_CSV = (
-    b"ReviewerName,ReviewerEmail\n"
-    b"Beth,beth@example.edu\n"
-    b"Carlos,carlos@example.edu\n"
+    b"ReviewerName,ReviewerEmail\nBeth,beth@example.edu\nCarlos,carlos@example.edu\n"
 )
 BAD_CSV = b"ReviewerName,WrongColumn\nAlice,oops\n"
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str = "qs-pra"
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str = "qs-pra") -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "Spring", "code": code, "description": "d"},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
-def _seed_pair(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _seed_pair(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     review_session = _make_session(client, db, code=code)
     client.post(
         f"/operator/sessions/{review_session.public_id}/quick-setup/reviewers",
@@ -68,9 +60,7 @@ def _seed_pair(
     return review_session
 
 
-def _activate(
-    client: TestClient, db: Session, review_session: ReviewSession
-) -> None:
+def _activate(client: TestClient, db: Session, review_session: ReviewSession) -> None:
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(client, review_session.id)
     validate_session(review_session)
@@ -93,9 +83,7 @@ def _tag(body: str, marker: str) -> str:
     return body[body.rfind("<", 0, at) : body.index(">", at) + 1]
 
 
-def test_the_card_is_live_on_load_with_no_lock(
-    client: TestClient, db: Session
-) -> None:
+def test_the_card_is_live_on_load_with_no_lock(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="qs-live")
     body = client.get(f"/operator/sessions/{review_session.public_id}").text
 
@@ -128,8 +116,14 @@ def test_an_unavailable_card_is_locked_with_nothing_to_unlock(
     assert 'class="quick-setup-body locked"' in body
     assert "disabled" in _tag(body, 'name="reviewers_file"')
     assert "disabled" in _tag(body, 'id="quick-setup-confirm-replace-toggle"')
-    assert "Unlock" not in body[body.index('class="quick-setup-body locked"') :
-                                body.index('id="quick-setup-submit-all"')]
+    assert (
+        "Unlock"
+        not in body[
+            body.index('class="quick-setup-body locked"') : body.index(
+                'id="quick-setup-submit-all"'
+            )
+        ]
+    )
     assert "quick-setup-lock-toggle" not in body
 
 
@@ -138,9 +132,7 @@ def test_an_unavailable_card_is_locked_with_nothing_to_unlock(
 # --------------------------------------------------------------------------- #
 
 
-def test_reviewers_upload_golden_path_no_banner_on_success(
-    client: TestClient, db: Session
-) -> None:
+def test_reviewers_upload_golden_path_no_banner_on_success(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="qs-r-golden")
     response = client.post(
         f"/operator/sessions/{review_session.public_id}/quick-setup/reviewers",
@@ -158,19 +150,12 @@ def test_reviewers_upload_golden_path_no_banner_on_success(
         '<div class="banner banner-error banner-scroll-target"\n'
         '       id="quick-setup-reviewers-error-banner"\n'
         "       hidden"
-    ) in body or (
-        'id="quick-setup-reviewers-error-banner"' in body
-        and "hidden" in body
-    )
+    ) in body or ('id="quick-setup-reviewers-error-banner"' in body and "hidden" in body)
     # DB confirms the row landed.
     from app.db.models import Reviewer
 
     assert (
-        db.execute(
-            select(Reviewer).where(Reviewer.session_id == review_session.id)
-        )
-        .scalars()
-        .all()
+        db.execute(select(Reviewer).where(Reviewer.session_id == review_session.id)).scalars().all()
     )
 
 
@@ -187,11 +172,7 @@ def test_reviewees_upload_golden_path(client: TestClient, db: Session) -> None:
     from app.db.models import Reviewee
 
     assert (
-        db.execute(
-            select(Reviewee).where(Reviewee.session_id == review_session.id)
-        )
-        .scalars()
-        .all()
+        db.execute(select(Reviewee).where(Reviewee.session_id == review_session.id)).scalars().all()
     )
 
 
@@ -200,9 +181,7 @@ def test_reviewees_upload_golden_path(client: TestClient, db: Session) -> None:
 # --------------------------------------------------------------------------- #
 
 
-def test_card_level_replacement_checkbox_renders_once(
-    client: TestClient, db: Session
-) -> None:
+def test_card_level_replacement_checkbox_renders_once(client: TestClient, db: Session) -> None:
     """One card-level confirmation checkbox at the top of the body
     wrapper, regardless of how many slots already have data. Inline
     JS mirrors its state into each slot form's hidden
@@ -214,10 +193,7 @@ def test_card_level_replacement_checkbox_renders_once(
 
     # Exactly one card-level toggle.
     assert body.count('id="quick-setup-confirm-replace-toggle"') == 1
-    assert (
-        "Yes, replace existing reviewers, reviewees"
-        in body
-    )
+    assert "Yes, replace existing reviewers, reviewees" in body
     # No per-slot ``banner-warning`` cascade-confirm banners anymore.
     for key in ("reviewers", "reviewees", "settings"):
         assert f"quick-setup-{key}-confirm-banner" not in body
@@ -228,9 +204,7 @@ def test_card_level_replacement_checkbox_renders_once(
     # toggle on submit. (Count the actual ``<input ... name="confirm_replace"``
     # markup; the inline JS also references the name as a CSS
     # selector but that's not a render of the input itself.)
-    assert (
-        body.count('type="hidden" name="confirm_replace"') == 1
-    )
+    assert body.count('type="hidden" name="confirm_replace"') == 1
 
 
 # --------------------------------------------------------------------------- #
@@ -251,10 +225,7 @@ def test_reviewers_replace_without_confirm_renders_the_error(
     assert (refused.kind, refused.reason) == ("reviewers", "needs_confirm")
 
     body = response.text
-    assert (
-        "Tick the replacement-confirmation box just above "
-        "Submit, then submit again."
-    ) in body
+    assert ("Tick the replacement-confirmation box just above Submit, then submit again.") in body
     # Where the banner says it is: after the slot grid, before Submit.
     # It once said "at the top of Quick Setup", which it has not been
     # since the checkbox moved to the footer (post_assessment_1oct E6).
@@ -264,15 +235,10 @@ def test_reviewers_replace_without_confirm_renders_the_error(
     assert grid < toggle < submit
     # Cancel button on the error banner points at clean URL with the
     # slot fragment.
-    assert (
-        f'href="/operator/sessions/{review_session.public_id}#quick-setup-reviewers"'
-        in body
-    )
+    assert f'href="/operator/sessions/{review_session.public_id}#quick-setup-reviewers"' in body
 
 
-def test_reviewers_replace_with_confirm_applies(
-    client: TestClient, db: Session
-) -> None:
+def test_reviewers_replace_with_confirm_applies(client: TestClient, db: Session) -> None:
     review_session = _seed_pair(client, db, code="qs-confirm-applies")
     response = client.post(
         f"/operator/sessions/{review_session.public_id}/quick-setup/reviewers",
@@ -286,11 +252,7 @@ def test_reviewers_replace_with_confirm_applies(
     from app.db.models import Reviewer
 
     rows = (
-        db.execute(
-            select(Reviewer).where(Reviewer.session_id == review_session.id)
-        )
-        .scalars()
-        .all()
+        db.execute(select(Reviewer).where(Reviewer.session_id == review_session.id)).scalars().all()
     )
     assert len(rows) == 2
 
@@ -316,10 +278,7 @@ def test_reviewers_parse_error_routes_to_scoped_error_banner(
     # Error banner scoped to Reviewers slot only.
     assert "Could not import reviewers." in body
     # Reviewees slot's error banner stays hidden.
-    assert (
-        'id="quick-setup-reviewees-error-banner"\n'
-        '       hidden' in body
-    ) or (
+    assert ('id="quick-setup-reviewees-error-banner"\n       hidden' in body) or (
         'id="quick-setup-reviewees-error-banner"' in body
         and "Could not import reviewees" not in body
     )
@@ -383,9 +342,7 @@ def test_reviewers_submit_on_validated_applies_and_demotes(
     # The card's one Submit.
     response = operator.post(
         f"/operator/sessions/{review_session.public_id}/quick-setup/submit-all",
-        files={
-            "reviewers_file": ("r2.csv", SECOND_REVIEWER_CSV, "text/csv")
-        },
+        files={"reviewers_file": ("r2.csv", SECOND_REVIEWER_CSV, "text/csv")},
         data={"confirm_replace": "true"},
         follow_redirects=False,
     )
@@ -396,19 +353,19 @@ def test_reviewers_submit_on_validated_applies_and_demotes(
     from app.db.models import Reviewer
 
     names = sorted(
-        db.execute(
-            select(Reviewer.name).where(
-                Reviewer.session_id == review_session.id
-            )
-        ).scalars()
+        db.execute(select(Reviewer.name).where(Reviewer.session_id == review_session.id)).scalars()
     )
     assert names == ["Beth", "Carlos"]
-    invalidated = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.session_id == review_session.id,
-            AuditEvent.event_type == "session.invalidated",
+    invalidated = (
+        db.execute(
+            select(AuditEvent).where(
+                AuditEvent.session_id == review_session.id,
+                AuditEvent.event_type == "session.invalidated",
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert invalidated
 
 
@@ -417,10 +374,7 @@ def test_reviewers_submit_on_validated_applies_and_demotes(
 # --------------------------------------------------------------------------- #
 
 
-MANUAL_CSV = (
-    b"ReviewerEmail,RevieweeEmail\n"
-    b"alice@example.edu,carol@example.edu\n"
-)
+MANUAL_CSV = b"ReviewerEmail,RevieweeEmail\nalice@example.edu,carol@example.edu\n"
 BAD_MANUAL_CSV = b"WrongHeader,Whatever\nfoo,bar\n"
 
 
@@ -429,9 +383,7 @@ BAD_MANUAL_CSV = b"WrongHeader,Whatever\nfoo,bar\n"
 # ---------------------------------------------------------------------------
 
 
-def test_card_renders_single_bottom_submit_button(
-    client: TestClient, db: Session
-) -> None:
+def test_card_renders_single_bottom_submit_button(client: TestClient, db: Session) -> None:
     """One Submit button at the bottom of the card, associated with
     the outer submit-all form via the HTML ``form="..."`` attribute,
     and starting ``disabled`` because no file is attached on first
@@ -446,22 +398,16 @@ def test_card_renders_single_bottom_submit_button(
     submit_block = body[submit_start - 200 : submit_start + 200]
     assert "disabled" in submit_block
     # Form is the consolidated submit-all endpoint.
-    assert (
-        'action="/operator/sessions/'
-        f'{review_session.public_id}/quick-setup/submit-all"' in body
-    )
+    assert f'action="/operator/sessions/{review_session.public_id}/quick-setup/submit-all"' in body
     # Per-slot Submit buttons are gone.
     assert "Submit</button>" in body  # the bottom Submit
     submit_count = body.count("Submit</button>")
     assert submit_count == 1, (
-        "Only the bottom Submit should remain; per-slot Submits "
-        "were retired in PR C."
+        "Only the bottom Submit should remain; per-slot Submits were retired in PR C."
     )
 
 
-def test_submit_all_runs_reviewers_slot_when_file_attached(
-    client: TestClient, db: Session
-) -> None:
+def test_submit_all_runs_reviewers_slot_when_file_attached(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="qs-sa-rev")
     csv = REVIEWER_CSV
     response = client.post(
@@ -474,27 +420,19 @@ def test_submit_all_runs_reviewers_slot_when_file_attached(
     from app.db.models import Reviewer
 
     rows = (
-        db.execute(
-            select(Reviewer).where(Reviewer.session_id == review_session.id)
-        )
-        .scalars()
-        .all()
+        db.execute(select(Reviewer).where(Reviewer.session_id == review_session.id)).scalars().all()
     )
     assert rows
 
 
-def test_submit_all_with_no_input_is_a_clean_redirect(
-    client: TestClient, db: Session
-) -> None:
+def test_submit_all_with_no_input_is_a_clean_redirect(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="qs-sa-empty")
     response = client.post(
         f"/operator/sessions/{review_session.public_id}/quick-setup/submit-all",
         follow_redirects=False,
     )
     assert response.status_code == 303
-    assert response.headers["location"].startswith(
-        f"/operator/sessions/{review_session.public_id}"
-    )
+    assert response.headers["location"].startswith(f"/operator/sessions/{review_session.public_id}")
 
 
 def test_submit_all_runs_reviewers_and_reviewees_in_one_post(

@@ -46,9 +46,7 @@ class SessionCodeTakenError(ValueError):
     """
 
 
-def ensure_code_available(
-    db: Session, code: str, *, exclude_session_id: int | None = None
-) -> None:
+def ensure_code_available(db: Session, code: str, *, exclude_session_id: int | None = None) -> None:
     """Raise ``SessionCodeTakenError`` when another session holds ``code``.
 
     ``exclude_session_id`` is the session being edited, so saving a
@@ -58,9 +56,7 @@ def ensure_code_available(
     if exclude_session_id is not None:
         query = query.where(ReviewSession.id != exclude_session_id)
     if db.execute(query.limit(1)).first() is not None:
-        raise SessionCodeTakenError(
-            f"Session code {code!r} is already used by another session."
-        )
+        raise SessionCodeTakenError(f"Session code {code!r} is already used by another session.")
 
 
 def create_session(
@@ -109,10 +105,7 @@ def create_session(
         # fall back to the operator default here. Either way it's a
         # snapshot — changing the operator default later leaves this
         # untouched.
-        display_timezone=(
-            payload.display_timezone
-            or operator_settings.get_display_timezone(user)
-        ),
+        display_timezone=(payload.display_timezone or operator_settings.get_display_timezone(user)),
     )
     db.add(review_session)
     db.flush()
@@ -268,9 +261,7 @@ def datetime_box_unedited(
 def converted_box_names(tz_converted: str) -> frozenset[str]:
     """The box names a details-card form says its script re-rendered
     in a new zone (the ``tz_converted`` field, comma-separated)."""
-    return frozenset(
-        name.strip() for name in tz_converted.split(",") if name.strip()
-    )
+    return frozenset(name.strip() for name in tz_converted.split(",") if name.strip())
 
 
 def datetime_box_kept(
@@ -297,9 +288,7 @@ def datetime_box_kept(
     return datetime_box_unedited(stored, submitted, submitted_zone)
 
 
-def payload_changes_session(
-    review_session: ReviewSession, payload: SessionCreate
-) -> bool:
+def payload_changes_session(review_session: ReviewSession, payload: SessionCreate) -> bool:
     """Whether applying ``payload`` would change any field
     ``update_session`` writes.
 
@@ -358,18 +347,14 @@ def update_session(
     # 18R Item 4 and ``/sessions/{id}/edit`` is a 308 redirect.)
     if "relationships_enabled" in diffs:
         old, new = diffs["relationships_enabled"]
-        if old is True and new is False and _has_relationships(
-            db, review_session.id
-        ):
+        if old is True and new is False and _has_relationships(db, review_session.id):
             review_session.relationships_enabled = True
             del diffs["relationships_enabled"]
     # Observers symmetric — defensive even though the table ships
     # empty today; future operators may flip after populating.
     if "observers_enabled" in diffs:
         old, new = diffs["observers_enabled"]
-        if old is True and new is False and _has_observers(
-            db, review_session.id
-        ):
+        if old is True and new is False and _has_observers(db, review_session.id):
             review_session.observers_enabled = True
             del diffs["observers_enabled"]
     # Segment 20B — symmetric review turns on only while both rosters
@@ -397,9 +382,7 @@ def update_session(
             summary=f"Session {review_session.code} scheduled-activation updated",
             actor_user_id=user.id,
             session=review_session,
-            payload=audit.changes(
-                {"scheduled_activate_at": diffs["scheduled_activate_at"]}
-            ),
+            payload=audit.changes({"scheduled_activate_at": diffs["scheduled_activate_at"]}),
             correlation_id=correlation_id,
         )
     # 18G Part 2 — same dedicated-event pattern for invite_offsets.
@@ -410,9 +393,7 @@ def update_session(
             summary=f"Session {review_session.code} invite schedule updated",
             actor_user_id=user.id,
             session=review_session,
-            payload=audit.changes(
-                {"invite_offsets": diffs["invite_offsets"]}
-            ),
+            payload=audit.changes({"invite_offsets": diffs["invite_offsets"]}),
             correlation_id=correlation_id,
         )
     # 18G Part 3 — same dedicated-event pattern for reminder_offsets.
@@ -423,9 +404,7 @@ def update_session(
             summary=f"Session {review_session.code} reminder schedule updated",
             actor_user_id=user.id,
             session=review_session,
-            payload=audit.changes(
-                {"reminder_offsets": diffs["reminder_offsets"]}
-            ),
+            payload=audit.changes({"reminder_offsets": diffs["reminder_offsets"]}),
             correlation_id=correlation_id,
         )
     # Participant-model §3.8 — dedicated event when either of the
@@ -441,9 +420,7 @@ def update_session(
         audit.write_event(
             db,
             event_type="session.feature_toggled",
-            summary=(
-                f"Session {review_session.code} feature toggle(s) updated"
-            ),
+            summary=(f"Session {review_session.code} feature toggle(s) updated"),
             actor_user_id=user.id,
             session=review_session,
             payload=audit.changes(toggle_changes),
@@ -478,9 +455,7 @@ def resolve_session_timezone(review_session: ReviewSession) -> str:
     override = review_session.display_timezone
     if override and operator_settings.is_valid_timezone(override):
         return override
-    return operator_settings.get_display_timezone(
-        review_session.created_by_user
-    )
+    return operator_settings.get_display_timezone(review_session.created_by_user)
 
 
 def set_session_display_timezone(
@@ -498,9 +473,7 @@ def set_session_display_timezone(
     value is unchanged. Raises ``ValueError`` for an unknown zone.
     """
     lifecycle.require_editable(db, review_session)
-    if timezone_name is not None and not operator_settings.is_valid_timezone(
-        timezone_name
-    ):
+    if timezone_name is not None and not operator_settings.is_valid_timezone(timezone_name):
         raise ValueError(f"unknown timezone {timezone_name!r}")
 
     old = review_session.display_timezone
@@ -568,7 +541,6 @@ def delete_session(
     )
 
 
-
 #: The rosters with a session feature toggle, and the toggle each turns
 #: on when an upload gives it rows (``guide/quick_setup_update.md`` Item 2).
 FEATURE_TOGGLE_FOR_ROSTER = {
@@ -632,20 +604,24 @@ def _has_relationships(db: Session, session_id: int) -> bool:
     the operator cannot flip the toggle off (it would orphan the
     data) without first deleting the rows.
     """
-    return db.execute(
-        select(Relationship.id)
-        .where(Relationship.session_id == session_id)
-        .limit(1)
-    ).scalar_one_or_none() is not None
+    return (
+        db.execute(
+            select(Relationship.id).where(Relationship.session_id == session_id).limit(1)
+        ).scalar_one_or_none()
+        is not None
+    )
 
 
 def has_roster_rows(db: Session, session_id: int) -> bool:
     """Whether the Reviewers or the Reviewees roster has a row: the
     condition that keeps symmetric review from turning on (20B)."""
     for model in (Reviewer, Reviewee):
-        if db.execute(
-            select(model.id).where(model.session_id == session_id).limit(1)
-        ).scalar_one_or_none() is not None:
+        if (
+            db.execute(
+                select(model.id).where(model.session_id == session_id).limit(1)
+            ).scalar_one_or_none()
+            is not None
+        ):
             return True
     return False
 
@@ -715,8 +691,9 @@ def _has_observers(db: Session, session_id: int) -> bool:
     Symmetric helper to ``_has_relationships`` for the
     ``observers_enabled`` toggle.
     """
-    return db.execute(
-        select(Observer.id)
-        .where(Observer.session_id == session_id)
-        .limit(1)
-    ).scalar_one_or_none() is not None
+    return (
+        db.execute(
+            select(Observer.id).where(Observer.session_id == session_id).limit(1)
+        ).scalar_one_or_none()
+        is not None
+    )

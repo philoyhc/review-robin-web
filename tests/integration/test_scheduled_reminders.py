@@ -4,6 +4,7 @@ Tests run the observer end-to-end with a stub ``build_invite_url``
 closure so the dispatch path runs without a live FastAPI Request.
 Mirrors the structure of ``test_scheduled_invites.py``.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -41,7 +42,6 @@ from ._lookups import detail_of
 # --------------------------------------------------------------------------- #
 # Fixtures                                                                    #
 # --------------------------------------------------------------------------- #
-
 
 
 def _stub_build_url(token: str) -> str:
@@ -90,9 +90,7 @@ def _seed_session_with_reviewers(
     return rs
 
 
-def _audit_rows(
-    db: Session, rs: ReviewSession, event_type: str
-) -> list[AuditEvent]:
+def _audit_rows(db: Session, rs: ReviewSession, event_type: str) -> list[AuditEvent]:
     return list(
         db.execute(
             select(AuditEvent)
@@ -104,15 +102,9 @@ def _audit_rows(
 
 
 def _seed_assignments(db: Session, rs: ReviewSession) -> None:
-    instrument = db.execute(
-        select(Instrument).where(Instrument.session_id == rs.id)
-    ).scalar_one()
-    reviewers = db.execute(
-        select(Reviewer).where(Reviewer.session_id == rs.id)
-    ).scalars().all()
-    reviewees = db.execute(
-        select(Reviewee).where(Reviewee.session_id == rs.id)
-    ).scalars().all()
+    instrument = db.execute(select(Instrument).where(Instrument.session_id == rs.id)).scalar_one()
+    reviewers = db.execute(select(Reviewer).where(Reviewer.session_id == rs.id)).scalars().all()
+    reviewees = db.execute(select(Reviewee).where(Reviewee.session_id == rs.id)).scalars().all()
     for reviewer in reviewers:
         for reviewee in reviewees:
             db.add(
@@ -153,9 +145,7 @@ def _ready_session_with_invitations(
     db.flush()
     db.commit()
     _seed_assignments(db, rs)
-    invitations_service.generate_invitations(
-        db, review_session=rs, user=op, correlation_id=None
-    )
+    invitations_service.generate_invitations(db, review_session=rs, user=op, correlation_id=None)
     rs.status = lifecycle.SessionStatus.ready.value
     db.flush()
     db.commit()
@@ -173,9 +163,7 @@ def test_no_op_when_reminder_offsets_unset(db: Session) -> None:
     db.flush()
     db.commit()
 
-    scheduled_events.observe_scheduled_events(
-        db, rs, build_invite_url=_stub_build_url
-    )
+    scheduled_events.observe_scheduled_events(db, rs, build_invite_url=_stub_build_url)
     assert _audit_rows(db, rs, "session.scheduled_reminders_fired") == []
     assert _audit_rows(db, rs, "session.scheduled_reminders_skipped") == []
 
@@ -187,9 +175,7 @@ def test_no_op_when_deadline_unset(db: Session) -> None:
     db.flush()
     db.commit()
 
-    scheduled_events.observe_scheduled_events(
-        db, rs, build_invite_url=_stub_build_url
-    )
+    scheduled_events.observe_scheduled_events(db, rs, build_invite_url=_stub_build_url)
     assert _audit_rows(db, rs, "session.scheduled_reminders_fired") == []
     assert _audit_rows(db, rs, "session.scheduled_reminders_skipped") == []
 
@@ -214,9 +200,7 @@ def test_no_op_when_offset_in_future(db: Session) -> None:
     db.flush()
     db.commit()
 
-    scheduled_events.observe_scheduled_events(
-        db, rs, build_invite_url=_stub_build_url
-    )
+    scheduled_events.observe_scheduled_events(db, rs, build_invite_url=_stub_build_url)
     assert _audit_rows(db, rs, "session.scheduled_reminders_fired") == []
 
 
@@ -234,18 +218,14 @@ def test_skip_when_not_ready(db: Session) -> None:
     db.flush()
     db.commit()
 
-    scheduled_events.observe_scheduled_events(
-        db, rs, build_invite_url=_stub_build_url
-    )
+    scheduled_events.observe_scheduled_events(db, rs, build_invite_url=_stub_build_url)
     skipped = _audit_rows(db, rs, "session.scheduled_reminders_skipped")
     assert len(skipped) == 1
     assert detail_of(skipped[0])["reason"] == "not_ready"
     assert detail_of(skipped[0])["context"]["offset_index"] == 0
 
     # Second pass: dedup holds.
-    scheduled_events.observe_scheduled_events(
-        db, rs, build_invite_url=_stub_build_url
-    )
+    scheduled_events.observe_scheduled_events(db, rs, build_invite_url=_stub_build_url)
     assert len(_audit_rows(db, rs, "session.scheduled_reminders_skipped")) == 1
 
 
@@ -258,9 +238,7 @@ def test_skip_when_no_invitations(db: Session) -> None:
     db.flush()
     db.commit()
 
-    scheduled_events.observe_scheduled_events(
-        db, rs, build_invite_url=_stub_build_url
-    )
+    scheduled_events.observe_scheduled_events(db, rs, build_invite_url=_stub_build_url)
     skipped = _audit_rows(db, rs, "session.scheduled_reminders_skipped")
     assert len(skipped) == 1
     assert detail_of(skipped[0])["reason"] == "no_invitations"
@@ -276,9 +254,7 @@ def test_skip_when_past_deadline(db: Session) -> None:
     db.flush()
     db.commit()
 
-    scheduled_events.observe_scheduled_events(
-        db, rs, build_invite_url=_stub_build_url
-    )
+    scheduled_events.observe_scheduled_events(db, rs, build_invite_url=_stub_build_url)
     skipped = _audit_rows(db, rs, "session.scheduled_reminders_skipped")
     assert len(skipped) == 1
     assert detail_of(skipped[0])["reason"] == "outside_response_window"
@@ -299,9 +275,7 @@ def test_fires_to_incomplete_reviewers_at_due_time(db: Session) -> None:
     db.flush()
     db.commit()
 
-    scheduled_events.observe_scheduled_events(
-        db, rs, build_invite_url=_stub_build_url
-    )
+    scheduled_events.observe_scheduled_events(db, rs, build_invite_url=_stub_build_url)
 
     fired = _audit_rows(db, rs, "session.scheduled_reminders_fired")
     assert len(fired) == 1
@@ -313,9 +287,7 @@ def test_fires_to_incomplete_reviewers_at_due_time(db: Session) -> None:
 
     # All three reviewers got an outbox row stamped with the
     # per-reviewer correlation_id.
-    reviewers = db.execute(
-        select(Reviewer).where(Reviewer.session_id == rs.id)
-    ).scalars().all()
+    reviewers = db.execute(select(Reviewer).where(Reviewer.session_id == rs.id)).scalars().all()
     for reviewer in reviewers:
         cid = f"reminder:{rs.id}:{reviewer.id}:0"
         row = db.execute(
@@ -334,17 +306,13 @@ def test_idempotent_on_repeated_observer_calls(db: Session) -> None:
     db.commit()
 
     for _ in range(3):
-        scheduled_events.observe_scheduled_events(
-            db, rs, build_invite_url=_stub_build_url
-        )
+        scheduled_events.observe_scheduled_events(db, rs, build_invite_url=_stub_build_url)
 
     fired = _audit_rows(db, rs, "session.scheduled_reminders_fired")
     assert len(fired) == 1
 
     # Each reviewer received exactly one reminder-correlated outbox row.
-    rows = db.execute(
-        select(EmailOutbox).where(EmailOutbox.session_id == rs.id)
-    ).scalars().all()
+    rows = db.execute(select(EmailOutbox).where(EmailOutbox.session_id == rs.id)).scalars().all()
     reminder_rows = [r for r in rows if (r.correlation_id or "").startswith("reminder:")]
     assert len(reminder_rows) == 2  # two reviewers, one each
 
@@ -353,9 +321,11 @@ def test_per_reviewer_dedup_via_correlation_id(db: Session) -> None:
     """Pre-stamp an outbox row with the dedup correlation_id; the
     trigger should skip that reviewer and only dispatch to the other."""
     rs = _ready_session_with_invitations(db, "per-rev-dedup", reviewer_count=2)
-    reviewers = db.execute(
-        select(Reviewer).where(Reviewer.session_id == rs.id).order_by(Reviewer.id)
-    ).scalars().all()
+    reviewers = (
+        db.execute(select(Reviewer).where(Reviewer.session_id == rs.id).order_by(Reviewer.id))
+        .scalars()
+        .all()
+    )
     pre_reviewer = reviewers[0]
     pre_cid = f"reminder:{rs.id}:{pre_reviewer.id}:0"
     db.add(
@@ -375,9 +345,7 @@ def test_per_reviewer_dedup_via_correlation_id(db: Session) -> None:
     db.flush()
     db.commit()
 
-    scheduled_events.observe_scheduled_events(
-        db, rs, build_invite_url=_stub_build_url
-    )
+    scheduled_events.observe_scheduled_events(db, rs, build_invite_url=_stub_build_url)
 
     fired = _audit_rows(db, rs, "session.scheduled_reminders_fired")
     assert len(fired) == 1
@@ -395,18 +363,14 @@ def test_multi_entry_fires_in_chronological_order(db: Session) -> None:
     here (two past-due at once) deliberately delivers two — the
     operator picks fewer cadences to avoid that.
     """
-    rs = _ready_session_with_invitations(
-        db, "multi-entry-rem", reviewer_count=1
-    )
+    rs = _ready_session_with_invitations(db, "multi-entry-rem", reviewer_count=1)
     rs.deadline = datetime.now(UTC) + timedelta(hours=4)
     # Both resolve to the past; list order is out of chronological order.
     rs.reminder_offsets = ["-PT8H", "-P2D"]
     db.flush()
     db.commit()
 
-    scheduled_events.observe_scheduled_events(
-        db, rs, build_invite_url=_stub_build_url
-    )
+    scheduled_events.observe_scheduled_events(db, rs, build_invite_url=_stub_build_url)
 
     fired = _audit_rows(db, rs, "session.scheduled_reminders_fired")
     assert len(fired) == 2
@@ -418,9 +382,7 @@ def test_multi_entry_fires_in_chronological_order(db: Session) -> None:
     assert detail_of(fired[0])["counts"]["sent"] == 1
     assert detail_of(fired[1])["counts"]["sent"] == 1
     # Outbox rows exist under both correlation_ids.
-    reviewer = db.execute(
-        select(Reviewer).where(Reviewer.session_id == rs.id)
-    ).scalar_one()
+    reviewer = db.execute(select(Reviewer).where(Reviewer.session_id == rs.id)).scalar_one()
     for idx in (0, 1):
         cid = f"reminder:{rs.id}:{reviewer.id}:{idx}"
         row = db.execute(
@@ -440,18 +402,14 @@ def test_reschedule_resets_per_entry_dedup(db: Session) -> None:
     audit consume resets (a new ``_fired`` row gets emitted); count of
     actually-dispatched reminders can legitimately be zero.
     """
-    rs = _ready_session_with_invitations(
-        db, "reanchor-rem", reviewer_count=1
-    )
+    rs = _ready_session_with_invitations(db, "reanchor-rem", reviewer_count=1)
     first_deadline = datetime.now(UTC) + timedelta(hours=4)
     rs.deadline = first_deadline
     rs.reminder_offsets = ["-PT8H"]
     db.flush()
     db.commit()
 
-    scheduled_events.observe_scheduled_events(
-        db, rs, build_invite_url=_stub_build_url
-    )
+    scheduled_events.observe_scheduled_events(db, rs, build_invite_url=_stub_build_url)
     assert len(_audit_rows(db, rs, "session.scheduled_reminders_fired")) == 1
 
     # Operator reschedules deadline; the same offset entry should
@@ -461,14 +419,11 @@ def test_reschedule_resets_per_entry_dedup(db: Session) -> None:
     db.flush()
     db.commit()
 
-    scheduled_events.observe_scheduled_events(
-        db, rs, build_invite_url=_stub_build_url
-    )
+    scheduled_events.observe_scheduled_events(db, rs, build_invite_url=_stub_build_url)
     fired = _audit_rows(db, rs, "session.scheduled_reminders_fired")
     assert len(fired) == 2
     assert (
-        detail_of(fired[0])["context"]["anchor_at"]
-        != detail_of(fired[1])["context"]["anchor_at"]
+        detail_of(fired[0])["context"]["anchor_at"] != detail_of(fired[1])["context"]["anchor_at"]
     )
 
 
@@ -482,17 +437,13 @@ def test_unparseable_offset_skipped_silently(db: Session) -> None:
     db.flush()
     db.commit()
 
-    scheduled_events.observe_scheduled_events(
-        db, rs, build_invite_url=_stub_build_url
-    )
+    scheduled_events.observe_scheduled_events(db, rs, build_invite_url=_stub_build_url)
     fired = _audit_rows(db, rs, "session.scheduled_reminders_fired")
     assert len(fired) == 1
     assert detail_of(fired[0])["context"]["offset"] == "-PT8H"
 
 
-def test_partial_failure_does_not_requeue_sent_reminders(
-    db: Session, monkeypatch
-) -> None:
+def test_partial_failure_does_not_requeue_sent_reminders(db: Session, monkeypatch) -> None:
     """Findings B31: a pass that fails partway must not re-queue the
     reminders it already queued.
 
@@ -518,25 +469,23 @@ def test_partial_failure_does_not_requeue_sent_reminders(
         return real_send(*args, **kwargs)
 
     monkeypatch.setattr(invitations_service, "send_reminder", _second_fails)
-    scheduled_events.observe_scheduled_events(
-        db, rs, build_invite_url=_stub_build_url
-    )
+    scheduled_events.observe_scheduled_events(db, rs, build_invite_url=_stub_build_url)
     monkeypatch.setattr(invitations_service, "send_reminder", real_send)
-    scheduled_events.observe_scheduled_events(
-        db, rs, build_invite_url=_stub_build_url
-    )
+    scheduled_events.observe_scheduled_events(db, rs, build_invite_url=_stub_build_url)
 
     db.expire_all()
-    reviewers = db.execute(
-        select(Reviewer).where(Reviewer.session_id == rs.id)
-    ).scalars().all()
+    reviewers = db.execute(select(Reviewer).where(Reviewer.session_id == rs.id)).scalars().all()
     for reviewer in reviewers:
-        rows = db.execute(
-            select(EmailOutbox).where(
-                EmailOutbox.session_id == rs.id,
-                EmailOutbox.reviewer_id == reviewer.id,
+        rows = (
+            db.execute(
+                select(EmailOutbox).where(
+                    EmailOutbox.session_id == rs.id,
+                    EmailOutbox.reviewer_id == reviewer.id,
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         assert len(rows) == 1, (
             f"{reviewer.email} got {len(rows)} messages; the first pass's "
             "send was queued again after the rollback"

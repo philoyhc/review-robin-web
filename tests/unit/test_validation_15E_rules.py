@@ -25,6 +25,7 @@ Rules covered:
 - ``instruments.zero_included`` — warning per instrument with
   ``generated_count > 0`` and ``included_count == 0``.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -66,9 +67,7 @@ def _seed(
     user = User(email=f"op-{code}@example.edu")
     db.add(user)
     db.flush()
-    review_session = ReviewSession(
-        name="V15E", code=code, created_by_user_id=user.id
-    )
+    review_session = ReviewSession(name="V15E", code=code, created_by_user_id=user.id)
     db.add(review_session)
     db.flush()
     if with_reviewers:
@@ -104,9 +103,7 @@ def _seed(
     return user, review_session, instrument, rule_set
 
 
-def _generate(
-    db: Session, *, review_session: ReviewSession, user: User
-) -> None:
+def _generate(db: Session, *, review_session: ReviewSession, user: User) -> None:
     assignments_service.replace_assignments(
         db,
         review_session=review_session,
@@ -165,13 +162,9 @@ def test_no_rule_pinned_silent_per_unpinned_instrument_after_wave_5(
     """Wave 5 PR 5.3 — multi-instrument sessions with some pinned
     and some unpinned no longer trigger the retired rule. Every
     instrument with no stored Band 1 rule evaluates as Full Matrix."""
-    _user, review_session, instrument_a, rule_set = _seed(
-        db, code="nrp-multi"
-    )
+    _user, review_session, instrument_a, rule_set = _seed(db, code="nrp-multi")
     instrument_a.rule_set_id = rule_set.id
-    instrument_b = Instrument(
-        session_id=review_session.id, name="Peer survey", order=99
-    )
+    instrument_b = Instrument(session_id=review_session.id, name="Peer survey", order=99)
     db.add(instrument_b)
     db.flush()
     db.commit()
@@ -218,9 +211,7 @@ def test_no_visible_response_fields_fires_when_all_hidden(db: Session) -> None:
     db.flush()
     db.commit()
     issues = validate_session_setup(db, review_session)
-    fired = _issues_with_key(
-        issues, "instruments.no_visible_response_fields"
-    )
+    fired = _issues_with_key(issues, "instruments.no_visible_response_fields")
     assert len(fired) == 1
     assert fired[0].fix_anchor == f"#instrument-{instrument.id}"
 
@@ -240,9 +231,7 @@ def test_no_visible_response_fields_fires_when_none_visible(
     db.flush()
     db.commit()
     issues = validate_session_setup(db, review_session)
-    fired = _issues_with_key(
-        issues, "instruments.no_visible_response_fields"
-    )
+    fired = _issues_with_key(issues, "instruments.no_visible_response_fields")
     assert len(fired) == 1
     assert fired[0].severity is Severity.warning
     assert fired[0].fix_anchor == f"#instrument-{instrument.id}"
@@ -257,10 +246,7 @@ def test_no_visible_response_fields_silent_when_at_least_one_visible(
     db.flush()
     db.commit()
     issues = validate_session_setup(db, review_session)
-    assert (
-        _issues_with_key(issues, "instruments.no_visible_response_fields")
-        == []
-    )
+    assert _issues_with_key(issues, "instruments.no_visible_response_fields") == []
 
 
 # --------------------------------------------------------------------------- #
@@ -296,9 +282,9 @@ def test_no_included_pairs_fires_when_all_deactivated(db: Session) -> None:
     db.flush()
     db.commit()
     _generate(db, review_session=review_session, user=user)
-    db.query(Assignment).filter(
-        Assignment.session_id == review_session.id
-    ).update({Assignment.include: False})
+    db.query(Assignment).filter(Assignment.session_id == review_session.id).update(
+        {Assignment.include: False}
+    )
     db.flush()
     db.commit()
     issues = validate_session_setup(db, review_session)
@@ -348,23 +334,27 @@ def test_stale_generated_fires_once_rows_fall_out_of_step(
     - **After a roster change: fires.** The materialised rows no longer
       match what the engine would produce, which is the definition.
     """
-    user, review_session, instrument, rule_set = _seed(
-        db, code="stale-retired"
-    )
+    user, review_session, instrument, rule_set = _seed(db, code="stale-retired")
     instrument.rule_set_id = rule_set.id
     db.flush()
     db.commit()
     # Nothing materialised yet — not stale, by design.
-    assert _issues_with_key(
-        validate_session_setup(db, review_session),
-        "instruments.stale_generated",
-    ) == []
+    assert (
+        _issues_with_key(
+            validate_session_setup(db, review_session),
+            "instruments.stale_generated",
+        )
+        == []
+    )
     _generate(db, review_session=review_session, user=user)
     # Freshly generated — in step with the engine, so still silent.
-    assert _issues_with_key(
-        validate_session_setup(db, review_session),
-        "instruments.stale_generated",
-    ) == []
+    assert (
+        _issues_with_key(
+            validate_session_setup(db, review_session),
+            "instruments.stale_generated",
+        )
+        == []
+    )
     db.add(
         Reviewer(
             session_id=review_session.id,
@@ -380,8 +370,7 @@ def test_stale_generated_fires_once_rows_fall_out_of_step(
         "instruments.stale_generated",
     )
     assert len(issues) == 1, (
-        "a reviewer added after Generate should raise the staleness "
-        f"warning; got {issues}"
+        f"a reviewer added after Generate should raise the staleness warning; got {issues}"
     )
     assert issues[0].severity is Severity.warning
 
@@ -419,9 +408,9 @@ def test_zero_included_fires_when_all_rows_deactivated(db: Session) -> None:
     db.flush()
     db.commit()
     _generate(db, review_session=review_session, user=user)
-    db.query(Assignment).filter(
-        Assignment.session_id == review_session.id
-    ).update({Assignment.include: False})
+    db.query(Assignment).filter(Assignment.session_id == review_session.id).update(
+        {Assignment.include: False}
+    )
     db.flush()
     db.commit()
     issues = validate_session_setup(db, review_session)

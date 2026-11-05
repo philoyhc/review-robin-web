@@ -28,21 +28,37 @@ def _names(db: Session, session_id: int) -> dict[str, str | None]:
     }
 
 
-def test_the_merge_tick_updates_matched_rows_and_adds_the_rest(client: TestClient, db: Session) -> None:
+def test_the_merge_tick_updates_matched_rows_and_adds_the_rest(
+    client: TestClient, db: Session
+) -> None:
     s = _session(client, db, code="mrr-basic")
     url = f"/operator/sessions/{s.public_id}/reviewers/import"
-    _upload(client, url, b"ReviewerName,ReviewerEmail,ReviewerTag1\nAnn,ann@example.edu,A\nKim,kim@example.edu,K\n")
+    _upload(
+        client,
+        url,
+        b"ReviewerName,ReviewerEmail,ReviewerTag1\nAnn,ann@example.edu,A\nKim,kim@example.edu,K\n",
+    )
 
     merged = _upload(
-        client, url, b"ReviewerName,ReviewerEmail,ReviewerTag1\nAnn,ann@example.edu,B\nBea,bea@example.edu,\n",
+        client,
+        url,
+        b"ReviewerName,ReviewerEmail,ReviewerTag1\nAnn,ann@example.edu,B\nBea,bea@example.edu,\n",
         merge="true",
     )
     assert merged.status_code == 303, merged.text[:400]
-    assert _names(db, s.id) == {"ann@example.edu": "B", "kim@example.edu": "K", "bea@example.edu": None}
+    assert _names(db, s.id) == {
+        "ann@example.edu": "B",
+        "kim@example.edu": "K",
+        "bea@example.edu": None,
+    }
 
 
-@pytest.mark.parametrize("ticks", [{"merge": "true", "append": "true"}, {"merge": "true", "confirm_replace": "true"}])
-def test_more_than_one_tick_asks_and_holds(client: TestClient, db: Session, ticks: dict[str, str]) -> None:
+@pytest.mark.parametrize(
+    "ticks", [{"merge": "true", "append": "true"}, {"merge": "true", "confirm_replace": "true"}]
+)
+def test_more_than_one_tick_asks_and_holds(
+    client: TestClient, db: Session, ticks: dict[str, str]
+) -> None:
     s = _session(client, db, code=f"mrr-two-{len(ticks)}-{sorted(ticks)[0]}")
     url = f"/operator/sessions/{s.public_id}/observers/import"
     _upload(client, url, b"ObserverName,ObserverEmail\nAnn,ann@example.edu\n")
@@ -64,7 +80,8 @@ def test_two_file_rows_on_one_account_refuse_the_merge(
     url = f"/operator/sessions/{s.public_id}/reviewers/import"
     _upload(client, url, b"ReviewerName,ReviewerEmail\nKim,kim@example.edu\n")
     refused = _upload(
-        client, url,
+        client,
+        url,
         b"ReviewerName,ReviewerEmail\nJane,jane.tan@example.edu\nJane,e0123456@example.edu\n",
         merge="true",
     )
@@ -73,7 +90,9 @@ def test_two_file_rows_on_one_account_refuse_the_merge(
     assert set(_names(db, s.id)) == {"kim@example.edu"}
 
 
-def test_a_reviewees_merge_that_redraws_an_answered_group_asks_first(client: TestClient, db: Session) -> None:
+def test_a_reviewees_merge_that_redraws_an_answered_group_asks_first(
+    client: TestClient, db: Session
+) -> None:
     """Ann moves from red into blue by a merged tag: the card asks with
     the count in its banner, on `acknowledge_group_clear` (the card's
     hidden `acknowledge_response_loss` carries `true` for a replace), the
@@ -105,13 +124,15 @@ def test_a_reviewees_merge_that_redraws_an_answered_group_asks_first(client: Tes
 def test_relationships_merge_updates_a_held_pairs_tags(client: TestClient, db: Session) -> None:
     s, url = _relationships_session(client, db, "mrr-rel")
     merged = _upload(
-        client, url,
+        client,
+        url,
         b"ReviewerEmail,RevieweeEmail,PairContextTag1\nal@example.edu,cy@example.edu,G\nbo@example.edu,cy@example.edu,\n",
         merge="true",
     )
     assert merged.status_code == 303, merged.text[:400]
     db.expire_all()
     tags = sorted(
-        (r.tag_1 or "") for r in db.execute(select(Relationship).where(Relationship.session_id == s.id)).scalars()
+        (r.tag_1 or "")
+        for r in db.execute(select(Relationship).where(Relationship.session_id == s.id)).scalars()
     )
     assert tags == ["", "G"]

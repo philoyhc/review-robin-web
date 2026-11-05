@@ -52,7 +52,8 @@ def page() -> Iterator[Page]:
 
 def choose(page: Page, legend: str, label: str) -> None:
     page.locator("fieldset", has=page.locator(f"legend:text-is('{legend}')")).locator(
-        "label.choice", has_text=label).first.click()
+        "label.choice", has_text=label
+    ).first.click()
 
 
 def test_save_waits_for_student_duration_and_type(page: Page) -> None:
@@ -67,7 +68,11 @@ def test_save_waits_for_student_duration_and_type(page: Page) -> None:
     save.click()
     page.wait_for_url("**/log/saved?**")
     sent = parse_qs(urlparse(page.url).query)
-    assert sent["student"] == ["S-02"] and sent["duration"] == ["10 min"] and sent["type"] == ["Practical support"]
+    assert (
+        sent["student"] == ["S-02"]
+        and sent["duration"] == ["10 min"]
+        and sent["type"] == ["Practical support"]
+    )
     assert "note" not in sent
 
 
@@ -117,7 +122,10 @@ def test_the_follow_ups_follow_the_student_chosen(page: Page) -> None:
     assert page.locator("#cadence-field").is_hidden()
     choose(page, "Student", "Bao Nguyen")
     assert page.locator("#on-plan").is_hidden() and page.locator("#add-follow").is_visible()
-    assert page.locator("#cadence-field").is_visible() and page.locator("#cadence").input_value() == "No fixed cadence"
+    assert (
+        page.locator("#cadence-field").is_visible()
+        and page.locator("#cadence").input_value() == "No fixed cadence"
+    )
 
 
 def test_marking_a_safety_concern_carries_the_choices(page: Page) -> None:
@@ -159,11 +167,15 @@ def test_a_filter_turns_a_matched_name_or_email_into_a_pill(page: Page) -> None:
     pill = staff_box(page).locator(".token")
     assert pill.inner_text().startswith("Grace Ho")
     assert pill.locator("input[type=hidden]").get_attribute("value") == "Grace Ho"
-    assert page.locator("#dl-staff").get_attribute("aria-label") == "Remove Grace Ho from Staff"  # the label names it
+    assert (
+        page.locator("#dl-staff").get_attribute("aria-label") == "Remove Grace Ho from Staff"
+    )  # the label names it
     assert staff_box(page).locator(".token-input").is_hidden()
     page.locator("#dl-staff").click()
     assert staff_box(page).locator(".token").count() == 0
-    assert page.locator("#dl-staff").evaluate("el => el.classList.contains('token-input') && document.activeElement === el")
+    assert page.locator("#dl-staff").evaluate(
+        "el => el.classList.contains('token-input') && document.activeElement === el"
+    )
 
 
 def test_typing_a_name_then_enter_keeps_the_pill(page: Page) -> None:
@@ -187,7 +199,9 @@ def test_an_unmatched_name_blocks_the_download(page: Page) -> None:
     page.on("request", lambda r: requests.append(r.url))
     page.locator("#dl-staff").press_sequentially("Daniel Kho")
     page.keyboard.press("Enter")
-    assert page.locator("#dl-staff").evaluate("el => el.validationMessage").startswith("Choose a name")
+    assert (
+        page.locator("#dl-staff").evaluate("el => el.validationMessage").startswith("Choose a name")
+    )
     download(page).click()
     page.wait_for_timeout(300)
     assert not [u for u in requests if "records.csv" in u]

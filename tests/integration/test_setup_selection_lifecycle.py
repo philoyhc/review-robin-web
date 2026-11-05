@@ -24,6 +24,7 @@ So the `FROZEN` parametrizations below cover the three pages that still
 freeze at `is_editable`; Observers has its own section at the foot,
 which asserts the opposite in the same shape.
 """
+
 from __future__ import annotations
 
 import re
@@ -73,23 +74,15 @@ def _session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    s = db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    s = db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
     s.relationships_enabled = True
     s.observers_enabled = True
     reviewer = Reviewer(session_id=s.id, name="R", email="r@example.edu")
-    reviewee = Reviewee(
-        session_id=s.id, name="E", email_or_identifier="e@example.edu"
-    )
+    reviewee = Reviewee(session_id=s.id, name="E", email_or_identifier="e@example.edu")
     db.add_all([reviewer, reviewee])
     db.add(Observer(session_id=s.id, email="o@example.edu", display_name="O"))
     db.flush()
-    db.add(
-        Relationship(
-            session_id=s.id, reviewer_id=reviewer.id, reviewee_id=reviewee.id
-        )
-    )
+    db.add(Relationship(session_id=s.id, reviewer_id=reviewer.id, reviewee_id=reviewee.id))
     db.commit()
     return s
 
@@ -258,9 +251,7 @@ def test_the_route_still_refuses_even_though_the_page_no_longer_asks(
         "observers": Observer,
         "relationships": Relationship,
     }[page]
-    row_id = db.execute(
-        select(model.id).where(model.session_id == s.id)
-    ).scalars().first()
+    row_id = db.execute(select(model.id).where(model.session_id == s.id)).scalars().first()
     s.status = status
     db.commit()
 
@@ -374,36 +365,46 @@ def test_delete_all_still_refuses_when_frozen(
 #: Parametrized per route on purpose: relaxing the template alone, or
 #: six of the seven, must fail here rather than pass on a spot check.
 _OBSERVER_MUTATORS = (
-    ("create", {
-        "email": "new@example.org", "display_name": "New",
-        "tag_1": "", "status": "active",
-    }),
-    ("{id}/update", {
-        "email": "o@example.edu", "display_name": "Renamed",
-        "tag_1": "", "status": "active",
-    }),
+    (
+        "create",
+        {
+            "email": "new@example.org",
+            "display_name": "New",
+            "tag_1": "",
+            "status": "active",
+        },
+    ),
+    (
+        "{id}/update",
+        {
+            "email": "o@example.edu",
+            "display_name": "Renamed",
+            "tag_1": "",
+            "status": "active",
+        },
+    ),
     ("bulk-inactivate", {"observer_ids": ["{id}"]}),
     ("bulk-reactivate", {"observer_ids": ["{id}"]}),
     ("bulk-delete", {"observer_ids": ["{id}"], "confirm": "true"}),
-    ("cohort-rule", {
-        "observer_ids": ["{id}"],
-        "cohort_combinator": "AND",
-        "cohort_rule_field": "reviewer.tag1",
-        "cohort_rule_op": "IS",
-        "cohort_rule_operand_tag": "observer.tag1",
-        "cohort_rule_operand_value": "blue",
-    }),
+    (
+        "cohort-rule",
+        {
+            "observer_ids": ["{id}"],
+            "cohort_combinator": "AND",
+            "cohort_rule_field": "reviewer.tag1",
+            "cohort_rule_op": "IS",
+            "cohort_rule_operand_tag": "observer.tag1",
+            "cohort_rule_operand_value": "blue",
+        },
+    ),
     ("delete-all", {"confirm": "true"}),
 )
 
 
 def _post_mutator(client, s, row_id, suffix, data):
-    payload = {
-        k: ([row_id] if v == ["{id}"] else v) for k, v in data.items()
-    }
+    payload = {k: ([row_id] if v == ["{id}"] else v) for k, v in data.items()}
     return client.post(
-        f"/operator/sessions/{s.public_id}/observers/"
-        + suffix.format(id=row_id),
+        f"/operator/sessions/{s.public_id}/observers/" + suffix.format(id=row_id),
         data=payload,
         follow_redirects=False,
     )
@@ -425,17 +426,14 @@ def test_every_observers_mutator_accepts_where_it_used_to_409(
     is what is asserted.
     """
     s = _session(client, db, code=f"ob-relax-{status[:3]}-{suffix[:6]}")
-    row_id = db.execute(
-        select(Observer.id).where(Observer.session_id == s.id)
-    ).scalars().one()
+    row_id = db.execute(select(Observer.id).where(Observer.session_id == s.id)).scalars().one()
     s.status = status
     db.commit()
 
     response = _post_mutator(client, s, row_id, suffix, data)
 
     assert response.status_code == 303, (
-        f"{suffix} did not accept on {status}: "
-        f"{response.status_code} {response.text[:200]}"
+        f"{suffix} did not accept on {status}: {response.status_code} {response.text[:200]}"
     )
 
 
@@ -446,17 +444,13 @@ def test_every_observers_mutator_still_refuses_on_archived(
     """The half the relaxation must not take with it. `archived` is
     the hard stop, and it is the only one left."""
     s = _session(client, db, code=f"ob-arch-{suffix[:8]}")
-    row_id = db.execute(
-        select(Observer.id).where(Observer.session_id == s.id)
-    ).scalars().one()
+    row_id = db.execute(select(Observer.id).where(Observer.session_id == s.id)).scalars().one()
     s.status = "archived"
     db.commit()
 
     response = _post_mutator(client, s, row_id, suffix, data)
 
-    assert response.status_code == 409, (
-        f"{suffix} accepted on archived: {response.status_code}"
-    )
+    assert response.status_code == 409, f"{suffix} accepted on archived: {response.status_code}"
     assert db.get(Observer, row_id) is not None
 
 
@@ -475,36 +469,43 @@ def test_the_observers_import_accepts_mid_session(
 
     response = client.post(
         f"/operator/sessions/{s.public_id}/observers/import",
-        files={"file": (
-            "o.csv",
-            b"ObserverEmail,ObserverName\nnew@example.org,New\n",
-            "text/csv",
-        )},
+        files={
+            "file": (
+                "o.csv",
+                b"ObserverEmail,ObserverName\nnew@example.org,New\n",
+                "text/csv",
+            )
+        },
         data={"confirm_replace": "true"},
         follow_redirects=False,
     )
 
     assert response.status_code == 303, response.status_code
-    assert db.execute(
-        select(Observer).where(
-            Observer.session_id == s.id,
-            Observer.email == "new@example.org",
-        )
-    ).scalar_one_or_none() is not None
+    assert (
+        db.execute(
+            select(Observer).where(
+                Observer.session_id == s.id,
+                Observer.email == "new@example.org",
+            )
+        ).scalar_one_or_none()
+        is not None
+    )
 
 
-def test_the_observers_import_still_refuses_on_archived(
-    db: Session, client: TestClient
-) -> None:
+def test_the_observers_import_still_refuses_on_archived(db: Session, client: TestClient) -> None:
     s = _session(client, db, code="ob-imp-arch")
     s.status = "archived"
     db.commit()
 
     response = client.post(
         f"/operator/sessions/{s.public_id}/observers/import",
-        files={"file": (
-            "o.csv", b"ObserverEmail\nnew@example.org\n", "text/csv",
-        )},
+        files={
+            "file": (
+                "o.csv",
+                b"ObserverEmail\nnew@example.org\n",
+                "text/csv",
+            )
+        },
         data={"confirm_replace": "true"},
         follow_redirects=False,
     )
@@ -542,7 +543,8 @@ def test_the_whole_observers_surface_renders_wherever_the_routes_accept(
     # page in the app.
     panel = re.search(
         r"<script>(?:(?!</script>).)*?observers-row-expander.*?</script>",
-        body, re.S,
+        body,
+        re.S,
     )
     assert panel, "no expander builder"
     assert "/bulk-delete" in panel.group(0)
@@ -563,9 +565,7 @@ def test_add_and_edit_actually_open_an_editor_wherever_they_render(
     `Edit` rendering on `ready` and opening nothing.
     """
     s = _session(client, db, code=f"ob-editor-{status[:4]}")
-    row_id = db.execute(
-        select(Observer.id).where(Observer.session_id == s.id)
-    ).scalars().one()
+    row_id = db.execute(select(Observer.id).where(Observer.session_id == s.id)).scalars().one()
     s.status = status
     db.commit()
     base = f"/operator/sessions/{s.public_id}/observers"
@@ -577,30 +577,25 @@ def test_add_and_edit_actually_open_an_editor_wherever_they_render(
     # carries is the builder. Scoped to the script's own text.
     panel = re.search(
         r"<script>(?:(?!</script>).)*?observers-row-expander.*?</script>",
-        listing, re.S,
+        listing,
+        re.S,
     )
     assert panel and "exp-edit" in panel.group(0), "no Edit in the expander"
 
     # ...and both open a real editor. Scoped to the `<tr>`: `Add`'s own
     # href carries `#observers-row-editor`, so a bare substring check
     # on the id passes on a page with no add row at all.
-    add_row = re.search(
-        r'<tr\b[^>]*id="observers-row-editor"', client.get(f"{base}?add=1").text
-    )
+    add_row = re.search(r'<tr\b[^>]*id="observers-row-editor"', client.get(f"{base}?add=1").text)
     assert add_row, f"Add opens no editor on {status}"
 
     edit_body = client.get(f"{base}?edit_id={row_id}").text
-    edit_row = re.search(
-        rf'<tr\b[^>]*id="observer-row-{row_id}"[^>]*>', edit_body, re.S
-    )
+    edit_row = re.search(rf'<tr\b[^>]*id="observer-row-{row_id}"[^>]*>', edit_body, re.S)
     assert edit_row and "observer-edit-row" in edit_row.group(0), (
         f"Edit opens no editor on {status}"
     )
 
 
-def test_archived_opens_no_editor_even_by_hand_crafted_url(
-    db: Session, client: TestClient
-) -> None:
+def test_archived_opens_no_editor_even_by_hand_crafted_url(db: Session, client: TestClient) -> None:
     """The upper bound of the fix above.
 
     Deleting the suppression outright — rather than moving it from
@@ -610,9 +605,7 @@ def test_archived_opens_no_editor_even_by_hand_crafted_url(
     survived until this was written.
     """
     s = _session(client, db, code="ob-arch-editor")
-    row_id = db.execute(
-        select(Observer.id).where(Observer.session_id == s.id)
-    ).scalars().one()
+    row_id = db.execute(select(Observer.id).where(Observer.session_id == s.id)).scalars().one()
     s.status = "archived"
     db.commit()
     base = f"/operator/sessions/{s.public_id}/observers"
@@ -623,7 +616,8 @@ def test_archived_opens_no_editor_even_by_hand_crafted_url(
 
     edit_row = re.search(
         rf'<tr\b[^>]*id="observer-row-{row_id}"[^>]*>',
-        client.get(f"{base}?edit_id={row_id}").text, re.S,
+        client.get(f"{base}?edit_id={row_id}").text,
+        re.S,
     )
     assert edit_row and "observer-edit-row" not in edit_row.group(0), (
         "archived opens an edit editor the routes refuse"
@@ -650,17 +644,17 @@ def test_a_rejected_save_comes_back_editable_wherever_it_can_save(
         data={
             # Duplicate of the row `_session` seeds — a guaranteed
             # rejection that is the service's, not the gate's.
-            "email": "o@example.edu", "display_name": "Typo",
-            "tag_1": "", "status": "active",
+            "email": "o@example.edu",
+            "display_name": "Typo",
+            "tag_1": "",
+            "status": "active",
         },
         follow_redirects=False,
     )
 
     assert response.status_code == 400, response.status_code
     body = response.text
-    assert 'id="observer-edit-form"' in body, (
-        f"the rejected save lost its form on {status}"
-    )
+    assert 'id="observer-edit-form"' in body, f"the rejected save lost its form on {status}"
     assert "Typo" in body, "the operator's typed values were dropped"
     # The banner, read inside the edit-mode block it lives in rather
     # than page-wide — `base.html` inlines the whole app's CSS, so a
@@ -726,9 +720,7 @@ def test_frozen_pages_open_no_editor_even_by_hand_crafted_url(
     alone, so `expired` and `archived` opened it."""
     s = _session(client, db, code=f"ed-{page[:5]}-{status[:3]}")
     model = _ROW_MODEL[page]
-    row_id = db.execute(
-        select(model.id).where(model.session_id == s.id)
-    ).scalars().first()
+    row_id = db.execute(select(model.id).where(model.session_id == s.id)).scalars().first()
     s.status = status
     db.commit()
     base = f"/operator/sessions/{s.public_id}/{page}"
@@ -739,4 +731,3 @@ def test_frozen_pages_open_no_editor_even_by_hand_crafted_url(
         assert f'id="{_EDIT_FORM[page]}"' not in r.text, (
             f"{page}{query} on {status} renders an editor the routes refuse"
         )
-

@@ -46,9 +46,7 @@ def _reviewer_csv(*rows: tuple[str, str]) -> bytes:
     return body.encode("utf-8")
 
 
-def test_reviewer_import_redirects_and_persists_rows(
-    client: TestClient, db: Session
-) -> None:
+def test_reviewer_import_redirects_and_persists_rows(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db)
 
     response = client.post(
@@ -69,13 +67,10 @@ def test_reviewer_import_redirects_and_persists_rows(
     # close the panel it was made from; the Lock button is what closes
     # it. Same contract as the labels save (3a) and delete-all (3b).
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-        "?unlocked=1#roster-card"
+        f"/operator/sessions/{review_session.public_id}/reviewers?unlocked=1#roster-card"
     )
     reviewers = list(
-        db.execute(
-            select(Reviewer).where(Reviewer.session_id == review_session.id)
-        ).scalars()
+        db.execute(select(Reviewer).where(Reviewer.session_id == review_session.id)).scalars()
     )
     assert {r.email for r in reviewers} == {"alice@example.edu", "bob@example.edu"}
 
@@ -115,9 +110,7 @@ def test_reviewer_import_writes_audit_event(client: TestClient, db: Session) -> 
     assert "Imported 1 reviewers" in event.summary
 
 
-def test_reviewer_import_blocks_replace_without_confirm(
-    client: TestClient, db: Session
-) -> None:
+def test_reviewer_import_blocks_replace_without_confirm(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db)
     client.post(
         f"/operator/sessions/{review_session.public_id}/reviewers/import",
@@ -145,16 +138,12 @@ def test_reviewer_import_blocks_replace_without_confirm(
 
     assert response.status_code == 400
     reviewers = list(
-        db.execute(
-            select(Reviewer).where(Reviewer.session_id == review_session.id)
-        ).scalars()
+        db.execute(select(Reviewer).where(Reviewer.session_id == review_session.id)).scalars()
     )
     assert {r.email for r in reviewers} == {"alice@example.edu"}
 
 
-def test_reviewer_import_replace_with_confirm_succeeds(
-    client: TestClient, db: Session
-) -> None:
+def test_reviewer_import_replace_with_confirm_succeeds(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db)
     client.post(
         f"/operator/sessions/{review_session.public_id}/reviewers/import",
@@ -183,9 +172,7 @@ def test_reviewer_import_replace_with_confirm_succeeds(
 
     assert response.status_code == 303
     reviewers = list(
-        db.execute(
-            select(Reviewer).where(Reviewer.session_id == review_session.id)
-        ).scalars()
+        db.execute(select(Reviewer).where(Reviewer.session_id == review_session.id)).scalars()
     )
     assert {r.email for r in reviewers} == {"carol@example.edu"}
 
@@ -209,9 +196,7 @@ def test_reviewer_import_replace_with_confirm_succeeds(
     assert events[0].detail["context"] == {"filename": "reviewers.csv"}
 
 
-def test_reviewer_import_renders_issues_for_bad_csv(
-    client: TestClient, db: Session
-) -> None:
+def test_reviewer_import_renders_issues_for_bad_csv(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db)
 
     response = client.post(
@@ -222,9 +207,7 @@ def test_reviewer_import_renders_issues_for_bad_csv(
 
     assert response.status_code == 400
     assert "Missing required column" in response.text
-    reviewers = db.execute(
-        select(Reviewer).where(Reviewer.session_id == review_session.id)
-    ).all()
+    reviewers = db.execute(select(Reviewer).where(Reviewer.session_id == review_session.id)).all()
     assert reviewers == []
 
 
@@ -279,15 +262,18 @@ def test_cross_table_reviewer_matches_reviewee_same_name_is_allowed(
 ) -> None:
     """Person who is both reviewer + reviewee imports cleanly when names match."""
     review_session = _make_session(client, db)
-    assert _post_reviewees(client, review_session.public_id, ("Alice", "alice@example.edu")).status_code == 303
+    assert (
+        _post_reviewees(
+            client, review_session.public_id, ("Alice", "alice@example.edu")
+        ).status_code
+        == 303
+    )
 
     response = _post_reviewers(client, review_session.public_id, ("Alice", "alice@example.edu"))
 
     assert response.status_code == 303
     reviewers = list(
-        db.execute(
-            select(Reviewer).where(Reviewer.session_id == review_session.id)
-        ).scalars()
+        db.execute(select(Reviewer).where(Reviewer.session_id == review_session.id)).scalars()
     )
     assert {r.email for r in reviewers} == {"alice@example.edu"}
 
@@ -296,7 +282,12 @@ def test_cross_table_reviewer_matches_reviewee_different_name_blocks(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db)
-    assert _post_reviewees(client, review_session.public_id, ("Alice", "alice@example.edu")).status_code == 303
+    assert (
+        _post_reviewees(
+            client, review_session.public_id, ("Alice", "alice@example.edu")
+        ).status_code
+        == 303
+    )
 
     response = _post_reviewers(client, review_session.public_id, ("Alex", "alice@example.edu"))
 
@@ -304,9 +295,7 @@ def test_cross_table_reviewer_matches_reviewee_different_name_blocks(
     body = response.text
     assert "ReviewerEmail is already used under a different name in another roster (1 row)" in body
     reviewers = list(
-        db.execute(
-            select(Reviewer).where(Reviewer.session_id == review_session.id)
-        ).scalars()
+        db.execute(select(Reviewer).where(Reviewer.session_id == review_session.id)).scalars()
     )
     assert reviewers == []
 
@@ -315,14 +304,18 @@ def test_cross_table_reviewee_matches_reviewer_different_name_blocks(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db)
-    assert _post_reviewers(client, review_session.public_id, ("Alice", "alice@example.edu")).status_code == 303
+    assert (
+        _post_reviewers(
+            client, review_session.public_id, ("Alice", "alice@example.edu")
+        ).status_code
+        == 303
+    )
 
     response = _post_reviewees(client, review_session.public_id, ("Alex", "alice@example.edu"))
 
     assert response.status_code == 400
     assert (
-        "RevieweeEmail is already used under a different name in another "
-        "roster (1 row)"
+        "RevieweeEmail is already used under a different name in another roster (1 row)"
     ) in response.text
 
 
@@ -331,16 +324,19 @@ def test_cross_table_reviewee_non_email_identifier_never_collides(
 ) -> None:
     """Reviewees without @ in identifier can't collide with reviewer emails."""
     review_session = _make_session(client, db)
-    assert _post_reviewers(client, review_session.public_id, ("Alice", "alice@example.edu")).status_code == 303
+    assert (
+        _post_reviewers(
+            client, review_session.public_id, ("Alice", "alice@example.edu")
+        ).status_code
+        == 303
+    )
 
     response = _post_reviewees(client, review_session.public_id, ("Different Person", "alice"))
 
     assert response.status_code == 303
 
 
-def test_reviewee_import_persists_with_profilelink(
-    client: TestClient, db: Session
-) -> None:
+def test_reviewee_import_persists_with_profilelink(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db)
 
     csv_body = (
@@ -367,15 +363,12 @@ def test_reviewee_import_persists_with_profilelink(
     # panel on this page too, so a bare redirect would close the panel
     # the operator just used.
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.public_id}/reviewees"
-        "?unlocked=1#roster-card"
+        f"/operator/sessions/{review_session.public_id}/reviewees?unlocked=1#roster-card"
     )
     from app.db.models import Reviewee
 
     reviewees = list(
-        db.execute(
-            select(Reviewee).where(Reviewee.session_id == review_session.id)
-        ).scalars()
+        db.execute(select(Reviewee).where(Reviewee.session_id == review_session.id)).scalars()
     )
     by_id = {r.email_or_identifier: r for r in reviewees}
     assert by_id["carol@example.edu"].profile_link == "https://example.edu/c.jpg"
@@ -383,9 +376,7 @@ def test_reviewee_import_persists_with_profilelink(
     assert by_id["dan-2026"].profile_link is None
 
 
-def test_reviewer_replace_cascades_assignments(
-    client: TestClient, db: Session
-) -> None:
+def test_reviewer_replace_cascades_assignments(client: TestClient, db: Session) -> None:
     from sqlalchemy import select as _select
 
     from app.db.models import Assignment, ReviewSession
@@ -425,9 +416,7 @@ def test_reviewer_replace_cascades_assignments(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(client, review_session.id)
     assignments_before = list(
-        db.execute(
-            _select(Assignment).where(Assignment.session_id == review_session.id)
-        ).scalars()
+        db.execute(_select(Assignment).where(Assignment.session_id == review_session.id)).scalars()
     )
     assert len(assignments_before) == 1
 
@@ -446,9 +435,7 @@ def test_reviewer_replace_cascades_assignments(
 
     assert response.status_code == 303
     assignments_after = list(
-        db.execute(
-            _select(Assignment).where(Assignment.session_id == review_session.id)
-        ).scalars()
+        db.execute(_select(Assignment).where(Assignment.session_id == review_session.id)).scalars()
     )
     assert assignments_after == []
 
@@ -464,9 +451,7 @@ def test_reviewer_replace_cascades_assignments(
     assert events[0].detail["counts"]["replaced"] == 1
 
 
-def test_reviewee_replace_cascades_assignments(
-    client: TestClient, db: Session
-) -> None:
+def test_reviewee_replace_cascades_assignments(client: TestClient, db: Session) -> None:
     from sqlalchemy import select as _select
 
     from app.db.models import Assignment, Reviewee, ReviewSession
@@ -506,9 +491,7 @@ def test_reviewee_replace_cascades_assignments(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(client, review_session.id)
     assignments_before = list(
-        db.execute(
-            _select(Assignment).where(Assignment.session_id == review_session.id)
-        ).scalars()
+        db.execute(_select(Assignment).where(Assignment.session_id == review_session.id)).scalars()
     )
     assert len(assignments_before) == 2
 
@@ -528,16 +511,12 @@ def test_reviewee_replace_cascades_assignments(
     assert response.status_code == 303
 
     reviewees = list(
-        db.execute(
-            _select(Reviewee).where(Reviewee.session_id == review_session.id)
-        ).scalars()
+        db.execute(_select(Reviewee).where(Reviewee.session_id == review_session.id)).scalars()
     )
     assert {r.email_or_identifier for r in reviewees} == {"eve@example.edu"}
 
     assignments_after = list(
-        db.execute(
-            _select(Assignment).where(Assignment.session_id == review_session.id)
-        ).scalars()
+        db.execute(_select(Assignment).where(Assignment.session_id == review_session.id)).scalars()
     )
     assert assignments_after == []
 
@@ -552,9 +531,7 @@ def test_reviewee_replace_cascades_assignments(
     assert events[0].detail["counts"]["cascaded_assignments"] == 2
 
 
-def test_reviewer_import_form_warns_about_cascade(
-    client: TestClient, db: Session
-) -> None:
+def test_reviewer_import_form_warns_about_cascade(client: TestClient, db: Session) -> None:
     from sqlalchemy import select as _select
 
     from app.db.models import ReviewSession
@@ -594,9 +571,7 @@ def test_reviewer_import_form_warns_about_cascade(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(client, review_session.id)
 
-    page = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-    )
+    page = client.get(f"/operator/sessions/{review_session.public_id}/reviewers")
 
     assert page.status_code == 200
     # The cascade warning now lives inline in the confirm-replace
@@ -629,7 +604,7 @@ def test_reviewers_page_lists_imported_rows(client: TestClient, db: Session) -> 
     assert "Bob" in body
     assert "bob@example.edu" in body
     assert "senior" in body
-    assert f"/operator/sessions/{review_session.public_id}\"" in body  # back link
+    assert f'/operator/sessions/{review_session.public_id}"' in body  # back link
 
 
 def test_reviewers_page_renders_tag_columns_with_visibility_toggles(
@@ -685,9 +660,7 @@ def test_reviewers_page_renders_tag_columns_with_visibility_toggles(
     # rendered page, so an unscoped ``"is-disabled" not in body``
     # matches the prose describing the thing it is checking for.
     chips = flat[
-        flat.index('class="col-chip-row"') : flat.index(
-            "</p>", flat.index('class="col-chip-row"')
-        )
+        flat.index('class="col-chip-row"') : flat.index("</p>", flat.index('class="col-chip-row"'))
     ]
     assert "is-disabled" not in chips
     assert "aria-disabled" not in chips
@@ -776,9 +749,7 @@ def test_reviewers_page_offers_a_profile_chip_only_with_data(
     assert 'class="profile-col"' not in bare_page
 
 
-def test_relationships_page_renders_column_chips(
-    client: TestClient, db: Session
-) -> None:
+def test_relationships_page_renders_column_chips(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="rel-chips")
     client.post(
         f"/operator/sessions/{review_session.public_id}/reviewers/import",
@@ -816,9 +787,7 @@ def test_relationships_page_renders_column_chips(
     )
 
     flat = re.sub(
-        r"\s+", " ", client.get(
-            f"/operator/sessions/{review_session.public_id}/relationships"
-        ).text
+        r"\s+", " ", client.get(f"/operator/sessions/{review_session.public_id}/relationships").text
     )
 
     assert "Show columns:" in flat
@@ -833,9 +802,7 @@ def test_relationships_page_renders_column_chips(
     # rendered page, so an unscoped ``"is-disabled" not in body``
     # matches the prose describing the thing it is checking for.
     chips = flat[
-        flat.index('class="col-chip-row"') : flat.index(
-            "</p>", flat.index('class="col-chip-row"')
-        )
+        flat.index('class="col-chip-row"') : flat.index("</p>", flat.index('class="col-chip-row"'))
     ]
     assert "is-disabled" not in chips
     assert "data-tag-toggle" not in flat

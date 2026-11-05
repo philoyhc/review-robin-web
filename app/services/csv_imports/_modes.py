@@ -67,16 +67,10 @@ def append_conflicts(
     parser numbers them, from 1."""
     spec = _IDENTITY_ROSTERS[kind]
     model = _IDENTITY_MODELS[kind]
-    held = list(
-        db.execute(select(model).where(model.session_id == session_id)).scalars()
-    )
-    addresses = {
-        normalize_email(getattr(row, spec["model_attr"])) for row in held
-    } - {""}
+    held = list(db.execute(select(model).where(model.session_id == session_id)).scalars())
+    addresses = {normalize_email(getattr(row, spec["model_attr"])) for row in held} - {""}
     accounts = {
-        normalize_object_id(row.directory_object_id)
-        for row in held
-        if row.directory_object_id
+        normalize_object_id(row.directory_object_id) for row in held if row.directory_object_id
     }
     issues: list[ValidationIssue] = []
     for index, row in enumerate(rows, start=1):
@@ -141,8 +135,7 @@ def merge_conflicts(
                     row_number=index,
                     field=spec["field"],
                     message=(
-                        f"{spec['field']} '{address}' is the same directory "
-                        f"account as row {held}."
+                        f"{spec['field']} '{address}' is the same directory account as row {held}."
                     ),
                     problem=f"{spec['field']} is a directory account named twice in the file",
                 )

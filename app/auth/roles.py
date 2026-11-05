@@ -13,6 +13,7 @@ one place RRW reads it, for both the identity seam
 ``super_admin_configured()`` is the no-super-tier fallback's test: with
 none configured, any admin manages admins (18S Item 2).
 """
+
 from __future__ import annotations
 
 from cordware.identity import (

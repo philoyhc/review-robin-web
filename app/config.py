@@ -130,9 +130,7 @@ class Settings(BaseSettings):
     # deploy. See ``spec/architecture.md`` "Audit-event detail schema".
     audit_strict_mode: bool = False
 
-    model_config = SettingsConfigDict(
-        env_file=".env", extra="ignore", populate_by_name=True
-    )
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore", populate_by_name=True)
 
 
 class ConfigurationError(RuntimeError):
@@ -165,8 +163,7 @@ def validate_critical_settings(s: "Settings", env: str | None = None) -> None:
         )
     if problems:
         raise ConfigurationError(
-            f"Critical configuration problem(s) for app_env={env!r}: "
-            + "; ".join(problems)
+            f"Critical configuration problem(s) for app_env={env!r}: " + "; ".join(problems)
         )
 
 

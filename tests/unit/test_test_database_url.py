@@ -29,9 +29,7 @@ def test_an_exported_database_url_is_ignored(
 ) -> None:
     resolve, default = _resolver()
     monkeypatch.delenv("TEST_DATABASE_URL", raising=False)
-    monkeypatch.setenv(
-        "DATABASE_URL", "postgresql+psycopg://app:pw@prod.example:5432/rrw"
-    )
+    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://app:pw@prod.example:5432/rrw")
     assert resolve() == default
 
 
@@ -81,9 +79,7 @@ def test_an_unexpected_worker_id_is_refused(worker) -> None:
 
 def test_a_database_name_that_cannot_be_quoted_safely_is_refused() -> None:
     with pytest.raises(RuntimeError, match="cannot derive"):
-        _conftest()._worker_database_url(
-            'postgresql+psycopg://u:p@localhost/rrw"x', "gw0"
-        )
+        _conftest()._worker_database_url('postgresql+psycopg://u:p@localhost/rrw"x', "gw0")
 
 
 def test_a_worker_database_past_postgres_identifier_limit_is_refused() -> None:

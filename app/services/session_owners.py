@@ -64,9 +64,7 @@ class OwnerOperationError(ValueError):
         self.message = message
 
 
-def owners_by_session(
-    db: Session, session_ids: list[int]
-) -> dict[int, list[User]]:
+def owners_by_session(db: Session, session_ids: list[int]) -> dict[int, list[User]]:
     """Each session's owners in one query, oldest first, for tables that
     show many sessions (Sessions Diagnostics' filter). A session with no
     owner row is absent from the map."""
@@ -117,9 +115,7 @@ def _workspace_operators(db: Session) -> list[User]:
     )
 
 
-def session_owner_candidates(
-    db: Session, review_session: ReviewSession
-) -> list[User]:
+def session_owner_candidates(db: Session, review_session: ReviewSession) -> list[User]:
     """The Add-owner picker's candidates on Session Home: workspace
     operators not already owners. Add owner saves at once (author's
     ruling, 2026-09-23), so an existing owner would only be refused
@@ -242,9 +238,7 @@ def _insert_owner(
         summary=f"Added {target.email} as owner of session {review_session.code}",
         actor_user_id=actor.id,
         session=review_session,
-        payload=audit.snapshot(
-            {"user_id": target.id, "email": target.email, "role": "owner"}
-        ),
+        payload=audit.snapshot({"user_id": target.id, "email": target.email, "role": "owner"}),
         refs={"target_user_id": target.id},
         correlation_id=correlation_id,
     )
@@ -268,9 +262,7 @@ def remove_owner(
     # ignores ``FOR UPDATE`` silently — fine for tests, no
     # concurrency to race in-process.
     locked_rows = _lock_owner_rows(db, review_session)
-    target_row = next(
-        (r for r in locked_rows if r.user_id == target.id), None
-    )
+    target_row = next((r for r in locked_rows if r.user_id == target.id), None)
     if target_row is None:
         raise OwnerOperationError(
             code="not_owner",
@@ -295,9 +287,7 @@ def remove_owner(
     db.commit()
 
 
-def _lock_owner_rows(
-    db: Session, review_session: ReviewSession
-) -> list[SessionOperator]:
+def _lock_owner_rows(db: Session, review_session: ReviewSession) -> list[SessionOperator]:
     """The session's owner rows, locked ``FOR UPDATE`` (see ``remove_owner``).
 
     In ``id`` order, so two lockers take the row locks in the same order
@@ -330,9 +320,7 @@ def _delete_owner(
         summary=f"Removed {target.email} as owner of session {review_session.code}",
         actor_user_id=actor.id,
         session=review_session,
-        payload=audit.snapshot(
-            {"user_id": target.id, "email": target.email, "role": row.role}
-        ),
+        payload=audit.snapshot({"user_id": target.id, "email": target.email, "role": row.role}),
         refs={"target_user_id": target.id},
         correlation_id=correlation_id,
     )

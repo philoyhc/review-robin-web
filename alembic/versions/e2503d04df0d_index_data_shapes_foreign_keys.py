@@ -13,6 +13,7 @@ Revises: 14db60023e88
 Create Date: 2026-10-05
 
 """
+
 from collections.abc import Sequence
 
 from alembic import op

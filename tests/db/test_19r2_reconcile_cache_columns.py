@@ -65,9 +65,7 @@ def _seed_instrument(connection, *, code: str) -> int:
     Python-side default (19Q Item 6), which a raw insert does not get.
     """
     connection.execute(
-        text(
-            "INSERT INTO users (email, display_name) VALUES (:e, 'O')"
-        ),
+        text("INSERT INTO users (email, display_name) VALUES (:e, 'O')"),
         {"e": f"op-{code}@example.edu"},
     )
     uid = connection.execute(

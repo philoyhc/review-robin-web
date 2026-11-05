@@ -42,17 +42,13 @@ def test_zip_all_carries_each_cards_chips(
     assert query["reviewee_metadata.all_instruments"] == ["1"]
 
     page.locator("[data-by-instrument-chip='include-metadata']").click()
-    page.locator(
-        "[data-self-review-handling-chip='reviewer-metadata']"
-    ).click()
+    page.locator("[data-self-review-handling-chip='reviewer-metadata']").click()
     page.locator("[data-extract-all-chip='reviewee-metadata']").click()
     page.locator("[data-extract-all-chip='data-shaper']").click()
 
     query = _zip_all_query(page)
     assert query["by_instrument.meta"] == ["0"]
-    assert query["reviewer_metadata.self_review_handling"] == [
-        "exclude_self"
-    ]
+    assert query["reviewer_metadata.self_review_handling"] == ["exclude_self"]
     assert query["reviewee_metadata"] == ["0"]
     assert not any(key.startswith("reviewee_metadata.") for key in query)
     assert query["data_shapes"] == ["0"]

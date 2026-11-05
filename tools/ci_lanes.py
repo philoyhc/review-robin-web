@@ -51,7 +51,16 @@ README = "README.md"
 PROSE_FILES = frozenset(app + README for app in APP_DIRS)
 SHIPPED_DIRS = ("app/", "alembic/", "cordware/", *APP_DIRS)
 # Every other top-level folder, so a new one is a decision, not a default.
-OTHER_DIRS = ("docs/", "guide/", "spec/", "tests/", "tools/", ".claude/", ".devcontainer/", ".github/")
+OTHER_DIRS = (
+    "docs/",
+    "guide/",
+    "spec/",
+    "tests/",
+    "tools/",
+    ".claude/",
+    ".devcontainer/",
+    ".github/",
+)
 
 # What the prose lane runs: every unit test (the doc gates live there), plus
 # each test file elsewhere that reads a prose path.

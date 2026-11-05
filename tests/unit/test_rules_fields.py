@@ -1,5 +1,6 @@
 """Unit tests for ``app/services/rules/fields.py`` — Segment 13A
 PR 2."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

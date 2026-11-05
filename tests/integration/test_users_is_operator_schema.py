@@ -8,6 +8,7 @@ The column sits inert until Segment 16A PR 1 wires
 the Option C strict-allowlist access model) and the
 ``OPERATOR_EMAILS`` env-var bootstrap on first-sign-in.
 """
+
 from __future__ import annotations
 
 from sqlalchemy import select

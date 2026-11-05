@@ -58,9 +58,7 @@ def page_assignments(
     )
 
 
-def page_assignment_ids(
-    assignments: Iterable[Assignment], instrument_ids: set[int]
-) -> list[int]:
+def page_assignment_ids(assignments: Iterable[Assignment], instrument_ids: set[int]) -> list[int]:
     """The IDs of ``page_assignments``, ascending."""
     return [a.id for a in page_assignments(assignments, instrument_ids)]
 

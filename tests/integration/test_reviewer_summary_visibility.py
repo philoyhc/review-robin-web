@@ -16,6 +16,7 @@ Pins that the summary HTML and the CSV honour ``visible``:
   column from both surfaces; the underlying ``Response`` row
   survives in the DB and rehydrates if visibility flips back.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -109,16 +110,13 @@ def _activate(operator_client: TestClient, review_session: ReviewSession) -> Non
     )
 
 
-def _submit(
-    rae_client: TestClient, review_session: ReviewSession, db: Session
-) -> None:
+def _submit(rae_client: TestClient, review_session: ReviewSession, db: Session) -> None:
     from app.db.models import Assignment
+
     assignment_ids = [
         a.id
         for a in db.execute(
-            select(Assignment).where(
-                Assignment.session_id == review_session.id
-            )
+            select(Assignment).where(Assignment.session_id == review_session.id)
         ).scalars()
     ]
     data: dict[str, str] = {}
@@ -136,16 +134,12 @@ def _submit(
     )
 
 
-def _hide_field(
-    db: Session, review_session: ReviewSession, field_key: str
-) -> None:
+def _hide_field(db: Session, review_session: ReviewSession, field_key: str) -> None:
     """Mirror the Band 2 chip un-pin: flip
     ``InstrumentResponseField.visible`` to ``False`` directly on
     the (only) instrument's matching field."""
     instrument = db.execute(
-        select(Instrument).where(
-            Instrument.session_id == review_session.id
-        )
+        select(Instrument).where(Instrument.session_id == review_session.id)
     ).scalar_one()
     field = db.execute(
         select(InstrumentResponseField)
@@ -176,9 +170,7 @@ def test_summary_html_hides_column_for_invisible_response_field(
     _hide_field(db, review_session, "comments")
 
     app.dependency_overrides[get_current_user] = lambda: rae
-    body = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/summary"
-    ).text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}/summary").text
     # Comments column dropped; its value not rendered.
     assert "Comments" not in body
     assert "Carol did fine work" not in body
@@ -202,9 +194,7 @@ def test_summary_html_keeps_column_when_visible(
     _submit(rae_client, review_session, db)
 
     app.dependency_overrides[get_current_user] = lambda: rae
-    body = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/summary"
-    ).text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}/summary").text
     assert "Rating" in body
     assert "Comments" in body
     assert "Carol did fine work" in body
@@ -228,16 +218,12 @@ def test_summary_html_round_trips_when_visibility_toggles_back(
 
     _hide_field(db, review_session, "comments")
     app.dependency_overrides[get_current_user] = lambda: rae
-    body_hidden = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/summary"
-    ).text
+    body_hidden = rae_client.get(f"/me/sessions/{review_session.public_id}/summary").text
     assert "Carol did fine work" not in body_hidden
 
     # Flip back to visible.
     instrument = db.execute(
-        select(Instrument).where(
-            Instrument.session_id == review_session.id
-        )
+        select(Instrument).where(Instrument.session_id == review_session.id)
     ).scalar_one()
     field = db.execute(
         select(InstrumentResponseField)
@@ -247,9 +233,7 @@ def test_summary_html_round_trips_when_visibility_toggles_back(
     field.visible = True
     db.commit()
 
-    body_again = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/summary"
-    ).text
+    body_again = rae_client.get(f"/me/sessions/{review_session.public_id}/summary").text
     assert "Comments" in body_again
     assert "Carol did fine work" in body_again
 
@@ -273,9 +257,7 @@ def test_summary_csv_hides_column_for_invisible_response_field(
     _hide_field(db, review_session, "comments")
 
     app.dependency_overrides[get_current_user] = lambda: rae
-    csv_resp = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/summary.csv"
-    )
+    csv_resp = rae_client.get(f"/me/sessions/{review_session.public_id}/summary.csv")
     assert csv_resp.status_code == 200
     body = csv_resp.text
     # Comments field_key absent from the preamble lines and the
@@ -302,9 +284,7 @@ def test_summary_csv_keeps_column_when_visible(
     _submit(rae_client, review_session, db)
 
     app.dependency_overrides[get_current_user] = lambda: rae
-    csv_resp = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/summary.csv"
-    )
+    csv_resp = rae_client.get(f"/me/sessions/{review_session.public_id}/summary.csv")
     assert csv_resp.status_code == 200
     body = csv_resp.text
     assert "rating" in body
@@ -315,9 +295,7 @@ def test_summary_csv_keeps_column_when_visible(
 # ── Segment 18K PR 4 — visibility-drop confirm guard ──────────────────────
 
 
-def _band2_un_pin_response_field_payload(
-    instrument: Instrument, un_pin_key: str
-) -> dict:
+def _band2_un_pin_response_field_payload(instrument: Instrument, un_pin_key: str) -> dict:
     """Build a band2-state payload that mirrors the live JS round-
     trip — every existing response field appears with its current
     inline shape, but ``selected=False`` on the one we're un-
@@ -397,10 +375,11 @@ def test_band2_state_un_pin_with_responses_requires_acknowledgement(
         .where(InstrumentResponseField.instrument_id == instrument.id)
         .where(InstrumentResponseField.field_key == "comments")
     ).scalar_one()
-    assignment = db.execute(
-        select(Assignment)
-        .where(Assignment.instrument_id == instrument.id)
-    ).scalars().first()
+    assignment = (
+        db.execute(select(Assignment).where(Assignment.instrument_id == instrument.id))
+        .scalars()
+        .first()
+    )
     assert assignment is not None
     _seed_response_for_assignment(
         db,
@@ -410,14 +389,11 @@ def test_band2_state_un_pin_with_responses_requires_acknowledgement(
         submitted=True,
     )
 
-    payload = _band2_un_pin_response_field_payload(
-        instrument, un_pin_key="comments"
-    )
+    payload = _band2_un_pin_response_field_payload(instrument, un_pin_key="comments")
 
     # Without ack — 409 with structured detail.
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{instrument.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}/band2-state",
         json=payload,
     )
     assert resp.status_code == 409
@@ -438,8 +414,7 @@ def test_band2_state_un_pin_with_responses_requires_acknowledgement(
     # Now re-POST with ack=true — succeeds.
     payload["acknowledged_drop"] = True
     resp_ok = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{instrument.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}/band2-state",
         json=payload,
     )
     assert resp_ok.status_code == 200
@@ -467,12 +442,9 @@ def test_band2_state_un_pin_without_responses_no_ack_needed(
     instrument = db.execute(
         select(Instrument).where(Instrument.session_id == review_session.id)
     ).scalar_one()
-    payload = _band2_un_pin_response_field_payload(
-        instrument, un_pin_key="comments"
-    )
+    payload = _band2_un_pin_response_field_payload(instrument, un_pin_key="comments")
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{instrument.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}/band2-state",
         json=payload,
     )
     assert resp.status_code == 200
@@ -510,9 +482,11 @@ def test_pill_state_stays_submitted_after_chip_un_pin_post_submit(
         select(Instrument).where(Instrument.session_id == review_session.id)
     ).scalar_one()
     fields = {f.field_key: f for f in instrument.response_fields}
-    assignment = db.execute(
-        select(Assignment).where(Assignment.instrument_id == instrument.id)
-    ).scalars().first()
+    assignment = (
+        db.execute(select(Assignment).where(Assignment.instrument_id == instrument.id))
+        .scalars()
+        .first()
+    )
     assert assignment is not None
     # Seed both required-field rows as submitted so the rollup
     # genuinely rolls up to "submitted".
@@ -534,18 +508,13 @@ def test_pill_state_stays_submitted_after_chip_un_pin_post_submit(
     reviewer = db.execute(
         select(Reviewer).where(Reviewer.session_id == review_session.id)
     ).scalar_one()
-    before = reviewer_session_state(
-        db, reviewer=reviewer, session_id=review_session.id
-    )
+    before = reviewer_session_state(db, reviewer=reviewer, session_id=review_session.id)
     assert before.pill_state == "submitted"
 
-    payload = _band2_un_pin_response_field_payload(
-        instrument, un_pin_key="comments"
-    )
+    payload = _band2_un_pin_response_field_payload(instrument, un_pin_key="comments")
     payload["acknowledged_drop"] = True
     resp = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{instrument.id}/band2-state",
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}/band2-state",
         json=payload,
     )
     assert resp.status_code == 200
@@ -557,18 +526,18 @@ def test_pill_state_stays_submitted_after_chip_un_pin_post_submit(
         .where(InstrumentResponseField.field_key == "comments")
     ).scalar_one()
     assert comments_field.visible is False
-    saved = db.execute(
-        select(Response).where(Response.response_field_id == comments_field.id)
-    ).scalars().all()
+    saved = (
+        db.execute(select(Response).where(Response.response_field_id == comments_field.id))
+        .scalars()
+        .all()
+    )
     assert len(saved) == 1
     assert saved[0].submitted_at is not None
     assert saved[0].value == "Carol did fine work"
 
     # And the rollup still reads "submitted" — un-pinning didn't
     # recall the assignment.
-    after = reviewer_session_state(
-        db, reviewer=reviewer, session_id=review_session.id
-    )
+    after = reviewer_session_state(db, reviewer=reviewer, session_id=review_session.id)
     assert after.pill_state == "submitted"
 
 
@@ -596,9 +565,7 @@ def test_reviewer_surface_banner_names_dropped_field(
     _hide_field(db, review_session, "comments")
 
     app.dependency_overrides[get_current_user] = lambda: rae
-    body = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/1"
-    ).text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
     assert "Some saved responses are no longer collected" in body
     assert "<em>Comments</em>" in body
     # Field rendered alongside an instrument-context label (the
@@ -668,9 +635,7 @@ def test_reviewer_surface_no_banner_when_no_dropped_fields(
     _submit(rae_client, review_session, db)
 
     app.dependency_overrides[get_current_user] = lambda: rae
-    body = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/1"
-    ).text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
     assert "Some saved responses are no longer collected" not in body
 
 
@@ -693,9 +658,7 @@ def test_reviewer_surface_banner_disappears_when_visibility_restored(
     _hide_field(db, review_session, "comments")
 
     app.dependency_overrides[get_current_user] = lambda: rae
-    body_hidden = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/1"
-    ).text
+    body_hidden = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
     assert "Some saved responses are no longer collected" in body_hidden
 
     # Restore visibility.
@@ -710,9 +673,7 @@ def test_reviewer_surface_banner_disappears_when_visibility_restored(
     field.visible = True
     db.commit()
 
-    body_restored = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/1"
-    ).text
+    body_restored = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
     assert "Some saved responses are no longer collected" not in body_restored
 
 
@@ -771,16 +732,12 @@ def test_group_scoped_instrument_visibility_filter_applies(
     _hide_field(db, review_session, "comments")
 
     app.dependency_overrides[get_current_user] = lambda: rae
-    summary_html = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/summary"
-    ).text
+    summary_html = rae_client.get(f"/me/sessions/{review_session.public_id}/summary").text
     assert "Comments" not in summary_html
     assert "Carol did fine work" not in summary_html
     assert "Rating" in summary_html
 
-    csv_resp = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/summary.csv"
-    )
+    csv_resp = rae_client.get(f"/me/sessions/{review_session.public_id}/summary.csv")
     assert csv_resp.status_code == 200
     csv_body = csv_resp.text
     assert "comments" not in csv_body

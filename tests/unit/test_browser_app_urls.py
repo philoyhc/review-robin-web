@@ -52,9 +52,7 @@ _URL_KEYWORDS = ("url", "url_or_reg_exp", "url_or_request")
 
 def _is_app_url(node: ast.AST) -> bool:
     return (
-        isinstance(node, ast.Call)
-        and isinstance(node.func, ast.Name)
-        and node.func.id == "app_url"
+        isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "app_url"
     )
 
 
@@ -137,9 +135,7 @@ def _is_request_verb(func: ast.Attribute) -> bool:
 
 def _pathname_read(node: ast.AST) -> bool:
     return any(
-        isinstance(n, ast.Constant)
-        and isinstance(n.value, str)
-        and "location.pathname" in n.value
+        isinstance(n, ast.Constant) and isinstance(n.value, str) and "location.pathname" in n.value
         for n in ast.walk(node)
     )
 
@@ -203,9 +199,7 @@ def offences(source: str) -> list[str]:
     return found
 
 
-@pytest.mark.parametrize(
-    "path", sorted(BROWSER.glob("*.py")), ids=lambda path: path.name
-)
+@pytest.mark.parametrize("path", sorted(BROWSER.glob("*.py")), ids=lambda path: path.name)
 def test_browser_tests_navigate_under_the_mount(path: Path) -> None:
     assert offences(path.read_text()) == []
 
@@ -232,12 +226,12 @@ def test_browser_tests_navigate_under_the_mount(path: Path) -> None:
         ('expect(link).not_to_have_attribute("href", "/operator/sessions")', "B2"),
         ('expect(link).to_have_attribute(name="href", value="/operator/sessions")', "B2"),
         ('expect(link).to_have_attribute("href", value="/operator/sessions")', "B2"),
-        ('page.evaluate("window.location.href = \'/about\'")', "B3"),
-        ('page.evaluate("location.href = \'/about\'")', "B3"),
-        ('page.evaluate("window.location.assign(\'/about\')")', "B3"),
-        ('page.evaluate("window.location.replace(\'/about\')")', "B3"),
+        ("page.evaluate(\"window.location.href = '/about'\")", "B3"),
+        ("page.evaluate(\"location.href = '/about'\")", "B3"),
+        ("page.evaluate(\"window.location.assign('/about')\")", "B3"),
+        ("page.evaluate(\"window.location.replace('/about')\")", "B3"),
         ('page.evaluate(f"window.location.href = {MISSING!r}")', "B3"),
-        ('page.evaluate(f"window.location.href = \'{path}\'")', "B3"),
+        ("page.evaluate(f\"window.location.href = '{path}'\")", "B3"),
         ('assert page.evaluate("window.location.pathname") == "/me"', "B3"),
         ('assert page.evaluate("location.pathname") == "/me"', "B3"),
         ('assert app_url("/me") == page.evaluate("location.pathname") == "/me"', "B3"),
@@ -261,7 +255,7 @@ def test_the_rules_catch_a_root_path(source: str, rule: str) -> None:
         'page.wait_for_url("**/operator/sessions")',
         'expect(page).to_have_url(re.compile(r"/operator/sessions/\\w+"))',
         'expect(zip_all).to_have_attribute("href", "#")',
-        'page.evaluate("window.location.href = \'/.auth/logout\'")',
+        "page.evaluate(\"window.location.href = '/.auth/logout'\")",
         'page.evaluate(f"window.location.href = {app_url(MISSING)!r}")',
         'assert page.evaluate("window.location.pathname") == app_url("/me")',
     ],

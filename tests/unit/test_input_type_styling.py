@@ -14,6 +14,7 @@ So this derives the types from the templates rather than listing them:
 a template that starts using a new type fails here until the rule
 names it, or until it is added to `NOT_TEXT_LIKE` with a reason.
 """
+
 from __future__ import annotations
 
 import re
@@ -44,9 +45,7 @@ def _rule_types(pseudo: str) -> set[str]:
     css = BASE.read_text()
     # The selector group that ends in `body.ui-v2 select<pseudo> {`.
     match = re.search(
-        r"((?:\s*body\.ui-v2 [^,{]+,)+)\s*body\.ui-v2 select"
-        + re.escape(pseudo)
-        + r"\s*\{",
+        r"((?:\s*body\.ui-v2 [^,{]+,)+)\s*body\.ui-v2 select" + re.escape(pseudo) + r"\s*\{",
         css,
     )
     assert match, f"no `body.ui-v2 select{pseudo}` rule in base.html"

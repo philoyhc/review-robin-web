@@ -127,9 +127,7 @@ class InstrumentHeading:
     subtitle: str | None
 
 
-def instrument_delete_landing_id(
-    db: Session, *, session_id: int, instrument_id: int
-) -> int | None:
+def instrument_delete_landing_id(db: Session, *, session_id: int, instrument_id: int) -> int | None:
     """Which instrument the operator should land on after deleting
     ``instrument_id`` — the next sibling by id, or the previous one
     when deleting the last.
@@ -144,9 +142,7 @@ def instrument_delete_landing_id(
     """
     sibling_ids = list(
         db.execute(
-            select(Instrument.id)
-            .where(Instrument.session_id == session_id)
-            .order_by(Instrument.id)
+            select(Instrument.id).where(Instrument.session_id == session_id).order_by(Instrument.id)
         ).scalars()
     )
     if instrument_id not in sibling_ids:
@@ -383,9 +379,7 @@ def _response_field_groups(
     )
 
     parent_ids = {
-        rf["branch_parent_id"]
-        for rf in response_fields
-        if rf.get("branch_parent_id") is not None
+        rf["branch_parent_id"] for rf in response_fields if rf.get("branch_parent_id") is not None
     }
     # 19T Item 14 — answers lock every branch above them, as Save's lock
     # does: the answered field's parent and each parent above that.
@@ -405,8 +399,7 @@ def _response_field_groups(
     require_parent_ids = {
         rf.get("id")
         for rf in response_fields
-        if rf.get("id") in parent_ids
-        and rf.get("branch_mode") == BRANCH_MODE_REQUIRE
+        if rf.get("id") in parent_ids and rf.get("branch_mode") == BRANCH_MODE_REQUIRE
     }
     by_id = {rf.get("id"): rf for rf in response_fields if rf.get("id") is not None}
     # How many fields each parent governs directly, for ↳'s title on its
@@ -435,9 +428,7 @@ def _response_field_groups(
         parent_id = rf.get("branch_parent_id")
         ancestors = chain(rf)
         rf["level"] = min(len(ancestors), 2)
-        rf["require_governed"] = (
-            parent_id is not None and parent_id in require_parent_ids
-        )
+        rf["require_governed"] = parent_id is not None and parent_id in require_parent_ids
         rf["item_now"] = all(a.get("id") in require_parent_ids for a in ancestors)
         rf["branch_locked"] = (
             parent_id in locked_parent_ids
@@ -463,15 +454,11 @@ def _response_field_groups(
             last_member[parent_id] = rf
         rf["condition"] = None
         if rf["is_parent"]:
-            ops = list(
-                LIST_OP_CHOICES if rf["data_type"] == "list" else NUMERIC_OP_CHOICES
-            )
+            ops = list(LIST_OP_CHOICES if rf["data_type"] == "list" else NUMERIC_OP_CHOICES)
             value, high = rf["branch_value"] or "", ""
             is_range = rf["branch_op"] in RANGE_OPS
             if is_range and RANGE_SEPARATOR in value:
-                value, high = (
-                    part.strip() for part in value.split(RANGE_SEPARATOR, 1)
-                )
+                value, high = (part.strip() for part in value.split(RANGE_SEPARATOR, 1))
             rf["condition"] = {
                 "op": rf["branch_op"],
                 "value": value,
@@ -487,15 +474,12 @@ def _response_field_groups(
         if top_id is not None and groups and groups[-1]["parent_id"] == top_id:
             groups[-1]["rows"].append(rf)
             continue
-        groups.append(
-            {"parent_id": rf.get("id"), "rows": [rf], "condition": rf["condition"]}
-        )
+        groups.append({"parent_id": rf.get("id"), "rows": [rf], "condition": rf["condition"]})
     for index, rf in enumerate(response_fields):
         following = response_fields[index + 1] if index + 1 < len(response_fields) else None
         rf["inner_top"] = rf["level"] == 1 and rf["is_parent"]
         rf["inner_end"] = rf["level"] == 2 and (
-            following is None
-            or following.get("branch_parent_id") != rf.get("branch_parent_id")
+            following is None or following.get("branch_parent_id") != rf.get("branch_parent_id")
         )
     return groups
 
@@ -547,9 +531,7 @@ def _new_model_band2_state(
     # active reviewee by name when the saved sample no longer exists
     # (deleted / deactivated) or when nothing has been refreshed
     # yet.
-    saved_sample_name = (
-        (instrument.band2_state or {}).get("sample_reviewee_name") or ""
-    )
+    saved_sample_name = (instrument.band2_state or {}).get("sample_reviewee_name") or ""
     sample: Reviewee | None = None
     if saved_sample_name:
         sample = next(
@@ -569,24 +551,14 @@ def _new_model_band2_state(
     # boundary is pair-context-side, or there is no boundary at all,
     # narrowed to the rule survivors the last Refresh persisted
     # (A5, A4).
-    boundary_pairs = instruments_service.decode_group_kind(
-        instrument.group_kind
-    )
-    reviewee_boundary_fields = [
-        field for (src, field) in boundary_pairs if src == "reviewee"
-    ]
+    boundary_pairs = instruments_service.decode_group_kind(instrument.group_kind)
+    reviewee_boundary_fields = [field for (src, field) in boundary_pairs if src == "reviewee"]
     if sample is not None and reviewee_boundary_fields:
-        sample_key = tuple(
-            getattr(sample, field, "") or ""
-            for field in reviewee_boundary_fields
-        )
+        sample_key = tuple(getattr(sample, field, "") or "" for field in reviewee_boundary_fields)
         group_members = [
             r
             for r in active_reviewees
-            if tuple(
-                getattr(r, field, "") or ""
-                for field in reviewee_boundary_fields
-            )
+            if tuple(getattr(r, field, "") or "" for field in reviewee_boundary_fields)
             == sample_key
         ]
         # Gap 10: intersect with the rule-surviving member-ID set
@@ -665,13 +637,9 @@ def _new_model_band2_state(
                 "source_type": f.source_type,
                 "source_field": f.source_field,
                 "value": value,
-                "selectable_in_group": _is_selectable_in_group(
-                    f.source_type, f.source_field
-                ),
+                "selectable_in_group": _is_selectable_in_group(f.source_type, f.source_field),
                 "display_field_id": f.id,
-                "width_px": (instrument.column_widths or {}).get(
-                    f"df_{f.id}"
-                ),
+                "width_px": (instrument.column_widths or {}).get(f"df_{f.id}"),
                 "reorderable": not instruments_service.is_locked_display_source(
                     f.source_type, f.source_field
                 ),
@@ -683,9 +651,7 @@ def _new_model_band2_state(
                 ),
                 # Its tooltip's slot word: Name "first", Email "second".
                 "pinned": _PINNED_WORDS.get(
-                    instruments_service.locked_display_position(
-                        f.source_type, f.source_field
-                    )
+                    instruments_service.locked_display_position(f.source_type, f.source_field)
                 ),
             }
         )
@@ -697,9 +663,7 @@ def _new_model_band2_state(
     # the dict but is no longer authoritative — set_band2_state
     # writes both together via _sync_display_field_visibility.
     selected_display_keys = {
-        f"{f.source_type}.{f.source_field}"
-        for f in instrument.display_fields
-        if f.visible
+        f"{f.source_type}.{f.source_field}" for f in instrument.display_fields if f.visible
     }
     # Wave 3 PR iii — DB rows are the only source of truth for
     # response-field metadata. ``band2_state.response_fields`` JSON
@@ -714,15 +678,9 @@ def _new_model_band2_state(
             "id": rf.id,
             "name": rf.label,
             "data_type": data_type_lower,
-            "min": ""
-            if rf._inline_min is None
-            else _format_band2_bound(rf._inline_min),
-            "max": ""
-            if rf._inline_max is None
-            else _format_band2_bound(rf._inline_max),
-            "step": ""
-            if rf._inline_step is None
-            else _format_band2_bound(rf._inline_step),
+            "min": "" if rf._inline_min is None else _format_band2_bound(rf._inline_min),
+            "max": "" if rf._inline_max is None else _format_band2_bound(rf._inline_max),
+            "step": "" if rf._inline_step is None else _format_band2_bound(rf._inline_step),
             "list_options": rf._inline_list_csv or "",
             "selected": rf.visible,
             "required": rf.required,
@@ -748,10 +706,7 @@ def _new_model_band2_state(
     # un-pin confirm dialog. Entries without an id (newly
     # authored, not yet saved) carry ``response_count=0`` /
     # ``has_responses=False``.
-    rf_ids_with_id = [
-        rf.get("id") for rf in response_fields
-        if isinstance(rf.get("id"), int)
-    ]
+    rf_ids_with_id = [rf.get("id") for rf in response_fields if isinstance(rf.get("id"), int)]
     response_count_by_id: dict[int, int] = {}
     if rf_ids_with_id:
         rows = db.execute(
@@ -765,15 +720,12 @@ def _new_model_band2_state(
         response_count_by_id = {fid: count for fid, count in rows}
     for rf in response_fields:
         rf_id = rf.get("id")
-        count = (
-            response_count_by_id.get(rf_id, 0)
-            if isinstance(rf_id, int)
-            else 0
-        )
+        count = response_count_by_id.get(rf_id, 0) if isinstance(rf_id, int) else 0
         rf["response_count"] = count
         rf["has_responses"] = count > 0
     response_field_groups = _response_field_groups(response_fields)
     from app.services.responses import LIST_OP_CHOICES, NUMERIC_OP_CHOICES, RANGE_OPS
+
     sort_spec = list(instrument.sort_display_fields or [])
     return {
         "fields": fields,
@@ -806,9 +758,7 @@ def _new_model_band2_state(
         # A pair-context-only boundary, or a group with no boundary,
         # carries the sample reviewer's survivors here (A5, A4).
         "sample_group_member_ids": list(
-            (instrument.band2_state or {}).get(
-                "sample_group_member_ids"
-            ) or []
+            (instrument.band2_state or {}).get("sample_group_member_ids") or []
         ),
         # Comma-joined list of reviewee-side boundary field names
         # (``tag_1`` / ``tag_2`` / ``tag_3``) so the preview JS can
@@ -839,9 +789,7 @@ def _is_selectable_in_group(source_type: str, source_field: str) -> bool:
     return source_field in {"name", "tag_1", "tag_2", "tag_3"}
 
 
-def _display_field_has_data(
-    db: Session, session_id: int, field: InstrumentDisplayField
-) -> bool:
+def _display_field_has_data(db: Session, session_id: int, field: InstrumentDisplayField) -> bool:
     """``True`` iff the display field's underlying source column has
     at least one populated row in the session. Reuses
     :func:`slot_has_data` for the column-level check; pair-context
@@ -856,9 +804,7 @@ def _display_field_has_data(
         col = getattr(Relationship, f"tag_{field.source_field}", None)
         if col is None:
             return False
-        return slot_has_data(
-            db, session_id=session_id, column=col, active_only=True
-        )
+        return slot_has_data(db, session_id=session_id, column=col, active_only=True)
     return False
 
 
@@ -916,15 +862,9 @@ def new_model_usable_tags(
             # Field labels store pair_context slots as "1" / "2" / "3"
             # (without the "tag_" prefix); reviewer / reviewee use
             # "tag_1" / "tag_2" / "tag_3".
-            label_field = (
-                str(slot) if namespace == "pair_context" else column_name
-            )
-            friendly = field_labels.resolve(
-                review_session, namespace, label_field
-            )
-            result[namespace].append(
-                (f"{canonical_prefix}{slot}", friendly)
-            )
+            label_field = str(slot) if namespace == "pair_context" else column_name
+            friendly = field_labels.resolve(review_session, namespace, label_field)
+            result[namespace].append((f"{canonical_prefix}{slot}", friendly))
     return result
 
 
@@ -1022,8 +962,7 @@ def build_instruments_context(
     # rendered on each per-instrument <summary> in place of the
     # retired accepting / showing-when-closed pills.
     is_configured_by_instrument = {
-        inst.id: instruments_service.is_configured(db, inst)
-        for inst in instruments
+        inst.id: instruments_service.is_configured(db, inst) for inst in instruments
     }
 
     return {
@@ -1046,37 +985,27 @@ def build_instruments_context(
         "saved_instrument_id": saved,
         "sort_save_error": SORT_SAVE_ERROR_MESSAGES.get(sort_save_error or ""),
         "sort_save_error_instrument_id": sort_save_error_instrument_id,
-        "breadcrumbs": breadcrumbs.operator_session_child(
-            review_session, "Instruments"
-        ),
+        "breadcrumbs": breadcrumbs.operator_session_child(review_session, "Instruments"),
         "new_model_tags": new_model_usable_tags(db, review_session),
         "new_model_band1_state": {
-            instrument.id: instruments_service.decode_band1_state(
-                instrument, db
-            )
+            instrument.id: instruments_service.decode_band1_state(instrument, db)
             for instrument in instruments
         },
         "new_model_link3_state": {
             instrument.id: {
                 "mode": "individual" if instrument.group_kind is None else "grouped",
-                "boundary_pairs": instruments_service.decode_group_kind(
-                    instrument.group_kind
-                ),
+                "boundary_pairs": instruments_service.decode_group_kind(instrument.group_kind),
                 "touched": "link3" in (instrument.band1_touched_links or []),
                 # 19O Item 1 — the self-review exclusion checkbox
                 # shares this column for space, not because it is a
                 # unit-of-review setting.
                 "exclude_self_reviews": (
-                    instruments_service.get_exclude_self_reviews(
-                        db, instrument
-                    )
+                    instruments_service.get_exclude_self_reviews(db, instrument)
                 ),
             }
             for instrument in instruments
         },
-        "new_model_band2_state": _new_model_band2_states_for(
-            db, instruments
-        ),
+        "new_model_band2_state": _new_model_band2_states_for(db, instruments),
         # Band 3 type-picker quick-fill presets (each one writes
         # ``data_type=list`` + a pre-filled comma-separated
         # ``list_options``; identity-less at storage time).
@@ -1086,20 +1015,15 @@ def build_instruments_context(
         # the audience's default (disabled + default mode +
         # default visible_when). See
         # ``spec/visibility_policy.md`` for the contract.
-        "band3_visibility_by_instrument": _band3_visibility_states_for(
-            db, instruments
-        ),
+        "band3_visibility_by_instrument": _band3_visibility_states_for(db, instruments),
         # ProfileLink updates Item 2 — the identity chip offers
         # "Reviewer name, email, profile" only when some reviewer has a link.
         "reviewer_identity_labels": REVIEWER_IDENTITY_LABELS,
         "intro_layout_choices": INTRO_LAYOUT_CHOICES,
         "intro_layout_choice_by_instrument": {
-            instrument.id: intro_layout_choice_for(instrument)
-            for instrument in instruments
+            instrument.id: intro_layout_choice_for(instrument) for instrument in instruments
         },
-        "reviewers_have_profile_link": _reviewers_have_profile_link(
-            db, review_session
-        ),
+        "reviewers_have_profile_link": _reviewers_have_profile_link(db, review_session),
         # Reviewer-surface "Who can see what you wrote (other than
         # admin)" rows, served back to the operator's Band 2 intro
         # grid as a preview alongside the description card. Same
@@ -1157,9 +1081,7 @@ _BAND3_VISIBILITY_DEFAULTS: dict[str, dict[str, str | None]] = {
 _decode_pair_to_mode = visibility_policies.decode_pair_to_mode
 
 
-def _reviewers_have_profile_link(
-    db: Session, review_session: ReviewSession
-) -> bool:
+def _reviewers_have_profile_link(db: Session, review_session: ReviewSession) -> bool:
     """Whether any reviewer in the session carries a ``ProfileLink``."""
     return (
         db.execute(
@@ -1189,9 +1111,7 @@ def _band3_visibility_states_for(
     ``reviewer_identity`` (the level a Raw view shows)."""
     result: dict[int, dict[str, dict[str, object]]] = {}
     for instrument in instruments:
-        persisted = visibility_policies.list_for_instrument(
-            db, instrument.id
-        )
+        persisted = visibility_policies.list_for_instrument(db, instrument.id)
         per_audience: dict[str, dict[str, object]] = {}
         for audience in visibility_policies.AUDIENCES:
             row = persisted.get(audience)
@@ -1204,9 +1124,7 @@ def _band3_visibility_states_for(
             stored = row.after_release_reviewer_identity if row else None
             identity = {
                 "reviewer_identity_stored": (
-                    stored
-                    if stored in visibility_policies.REVIEWER_IDENTITY_LEVELS
-                    else ""
+                    stored if stored in visibility_policies.REVIEWER_IDENTITY_LEVELS else ""
                 ),
                 "reviewer_identity": visibility_policies.reviewer_identity(row),
             }
@@ -1286,9 +1204,7 @@ def build_reviewer_visibility_rows(
         ("reviewee", "Reviewees"),
     ]
     for instrument in instruments:
-        persisted = visibility_policies.list_for_instrument(
-            db, instrument.id
-        )
+        persisted = visibility_policies.list_for_instrument(db, instrument.id)
         rows: list[dict[str, str]] = []
         for audience, label in audiences:
             row = persisted.get(audience)
@@ -1345,8 +1261,6 @@ def _new_model_band2_states_for(
         ).scalars()
     )
     return {
-        instrument.id: _new_model_band2_state(
-            db, instrument, active_reviewees=active_reviewees
-        )
+        instrument.id: _new_model_band2_state(db, instrument, active_reviewees=active_reviewees)
         for instrument in new_model_instruments
     }

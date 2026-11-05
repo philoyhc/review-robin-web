@@ -36,10 +36,7 @@ def test_pr_iii_a_makes_response_type_id_nullable() -> None:
 
             inspector_before = inspect(connection)
             cols_before = {
-                c["name"]: c
-                for c in inspector_before.get_columns(
-                    "instrument_response_fields"
-                )
+                c["name"]: c for c in inspector_before.get_columns("instrument_response_fields")
             }
             # Pre-iii-a: column is NOT NULL.
             assert cols_before["response_type_id"]["nullable"] is False
@@ -49,24 +46,14 @@ def test_pr_iii_a_makes_response_type_id_nullable() -> None:
 
             inspector_after = inspect(connection)
             cols_after = {
-                c["name"]: c
-                for c in inspector_after.get_columns(
-                    "instrument_response_fields"
-                )
+                c["name"]: c for c in inspector_after.get_columns("instrument_response_fields")
             }
             assert cols_after["response_type_id"]["nullable"] is True
 
             # And the column can actually hold NULL — exercise the
             # write path with a minimal seed.
-            connection.execute(
-                text(
-                    "INSERT INTO users (email, display_name) "
-                    "VALUES ('o@x', 'O')"
-                )
-            )
-            uid = connection.execute(
-                text("SELECT id FROM users WHERE email = 'o@x'")
-            ).scalar_one()
+            connection.execute(text("INSERT INTO users (email, display_name) VALUES ('o@x', 'O')"))
+            uid = connection.execute(text("SELECT id FROM users WHERE email = 'o@x'")).scalar_one()
             connection.execute(
                 text(
                     "INSERT INTO sessions "
@@ -94,7 +81,7 @@ def test_pr_iii_a_makes_response_type_id_nullable() -> None:
             connection.execute(
                 text(
                     "INSERT INTO instrument_response_fields "
-                    '(instrument_id, field_key, label, response_type_id, '
+                    "(instrument_id, field_key, label, response_type_id, "
                     'required, "order") '
                     "VALUES (:iid, 'k', 'L', NULL, 0, 0)"
                 ),

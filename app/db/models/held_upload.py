@@ -31,9 +31,7 @@ class HeldUpload(Base):
     """
 
     __tablename__ = "held_uploads"
-    __table_args__ = (
-        UniqueConstraint("token", "slot", name="uq_held_uploads_token_slot"),
-    )
+    __table_args__ = (UniqueConstraint("token", "slot", name="uq_held_uploads_token_slot"),)
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     token: Mapped[str] = mapped_column(String(64), index=True, nullable=False)

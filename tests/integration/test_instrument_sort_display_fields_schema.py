@@ -12,6 +12,7 @@ to consume:
 
 The column sits inert until 13B's render-path slice reads it.
 """
+
 from __future__ import annotations
 
 from sqlalchemy import select
@@ -24,9 +25,7 @@ def _make_session(db: Session, code: str) -> ReviewSession:
     op = User(email=f"op-{code}@example.edu", display_name="Op")
     db.add(op)
     db.flush()
-    review_session = ReviewSession(
-        name=code.title(), code=code, created_by_user_id=op.id
-    )
+    review_session = ReviewSession(name=code.title(), code=code, created_by_user_id=op.id)
     db.add(review_session)
     db.flush()
     return review_session
@@ -36,15 +35,11 @@ def test_default_state_is_null(db: Session) -> None:
     """A fresh instrument carries ``sort_display_fields = NULL``."""
 
     review_session = _make_session(db, "isdf-default")
-    instrument = Instrument(
-        session_id=review_session.id, name="Default", order=0
-    )
+    instrument = Instrument(session_id=review_session.id, name="Default", order=0)
     db.add(instrument)
     db.flush()
 
-    fetched = db.execute(
-        select(Instrument).where(Instrument.id == instrument.id)
-    ).scalar_one()
+    fetched = db.execute(select(Instrument).where(Instrument.id == instrument.id)).scalar_one()
     assert fetched.sort_display_fields is None
 
 
@@ -53,9 +48,7 @@ def test_round_trip_sort_spec(db: Session) -> None:
     column. Mirrors the shape 13B's render-path slice will read."""
 
     review_session = _make_session(db, "isdf-rt")
-    instrument = Instrument(
-        session_id=review_session.id, name="Sorted", order=0
-    )
+    instrument = Instrument(session_id=review_session.id, name="Sorted", order=0)
     # Canonical value shape per ``spec/sort_by_reviewee.md`` and
     # the column docstring on ``Instrument.sort_display_fields``.
     # Earlier shape variants (``source_type`` / ``source_field`` /
@@ -70,9 +63,7 @@ def test_round_trip_sort_spec(db: Session) -> None:
     db.add(instrument)
     db.flush()
 
-    fetched = db.execute(
-        select(Instrument).where(Instrument.id == instrument.id)
-    ).scalar_one()
+    fetched = db.execute(select(Instrument).where(Instrument.id == instrument.id)).scalar_one()
     assert fetched.sort_display_fields == spec
 
 
@@ -90,8 +81,6 @@ def test_empty_list_distinct_from_null(db: Session) -> None:
     db.add(instrument)
     db.flush()
 
-    fetched = db.execute(
-        select(Instrument).where(Instrument.id == instrument.id)
-    ).scalar_one()
+    fetched = db.execute(select(Instrument).where(Instrument.id == instrument.id)).scalar_one()
     assert fetched.sort_display_fields == []
     assert fetched.sort_display_fields is not None

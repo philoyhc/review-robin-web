@@ -25,9 +25,7 @@ from .test_response_field_branching_roundtrip import (
 from .test_response_field_branching_save import _branched, _rfs, _save
 
 
-def test_the_card_saves_a_required_governed_field(
-    client: TestClient, db: Session
-) -> None:
+def test_the_card_saves_a_required_governed_field(client: TestClient, db: Session) -> None:
     review_session, instrument, rating, comments = _branched(client, db, "rg-save")
     assert rating.required
     response = _save(
@@ -39,9 +37,7 @@ def test_the_card_saves_a_required_governed_field(
     assert comments.branch_parent_id == rating.id
 
 
-def test_the_anchor_can_be_any_active_required_field(
-    client: TestClient, db: Session
-) -> None:
+def test_the_anchor_can_be_any_active_required_field(client: TestClient, db: Session) -> None:
     """Not only the parent: with Rating optional, another active required
     field outside the branch will do, and hiding it is refused."""
     review_session, instrument, rating, comments = _branched(client, db, "rg-anchor")
@@ -55,9 +51,7 @@ def test_the_anchor_can_be_any_active_required_field(
     rfs = _rfs(instrument, Overall={"selected": False})
     response = _save(client, review_session, instrument, rfs)
     assert response.status_code == 422
-    assert response.json()["errors"] == [
-        f"Comments: {REQUIRED_GOVERNED_NEEDS_ANCHOR_MESSAGE}"
-    ]
+    assert response.json()["errors"] == [f"Comments: {REQUIRED_GOVERNED_NEEDS_ANCHOR_MESSAGE}"]
 
 
 def test_the_settings_csv_round_trips_a_required_governed_field(db: Session) -> None:
@@ -85,17 +79,11 @@ def test_the_settings_csv_round_trips_a_required_governed_field(db: Session) -> 
     ]
     other, _ = _session(db, "rg-csv-bad")
     result = apply_session_config(db, other, unanchored)
-    assert [e.message for e in result.errors] == [
-        f"Why: {REQUIRED_GOVERNED_NEEDS_ANCHOR_MESSAGE}"
-    ]
-    assert db.execute(
-        select(Instrument).where(Instrument.session_id == other.id)
-    ).first() is None
+    assert [e.message for e in result.errors] == [f"Why: {REQUIRED_GOVERNED_NEEDS_ANCHOR_MESSAGE}"]
+    assert db.execute(select(Instrument).where(Instrument.session_id == other.id)).first() is None
 
 
-def test_a_required_governed_row_renders_r_pressed(
-    client: TestClient, db: Session
-) -> None:
+def test_a_required_governed_row_renders_r_pressed(client: TestClient, db: Session) -> None:
     review_session, instrument, _, _ = _page(client, db, "rg-builder")
     comments = next(f for f in instrument.response_fields if f.label == "Comments")
     comments.required = True
@@ -124,8 +112,7 @@ def test_both_csv_phases_see_a_hidden_parents_branch_as_hidden(db: Session) -> N
     db.flush()
     rows = [
         # The file says Why is visible; its hidden parent overrides it.
-        Row(r.field, "true", r.data_type)
-        if r.field.endswith("response_fields[2].visible") else r
+        Row(r.field, "true", r.data_type) if r.field.endswith("response_fields[2].visible") else r
         for r in serialize_session_config(db, source)
         if r.field.startswith("instruments")
     ]

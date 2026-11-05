@@ -107,9 +107,11 @@ def test_a_lookup_answers_status_only_and_keeps_the_answers(
     assert set(outcomes) == set(KEYS)
     assert outcomes["nobody@example.edu"] == {"status": "NOT_FOUND", "error_kind": ""}
     assert all(set(o) == {"status", "error_kind"} for o in outcomes.values())  # no account
-    kept = db.execute(
-        select(DirectoryLookup.key).where(DirectoryLookup.session_id == session_id)
-    ).scalars().all()
+    kept = (
+        db.execute(select(DirectoryLookup.key).where(DirectoryLookup.session_id == session_id))
+        .scalars()
+        .all()
+    )
     assert sorted(kept) == sorted(KEYS)
 
 
@@ -127,16 +129,15 @@ def test_the_upload_reads_the_kept_answers(
     assert jane.directory_upn == "e0123456@example.edu"  # bound from the kept answer
 
 
-def test_a_failed_lookup_is_not_kept(
-    client: TestClient, db: Session, directory: _Counting
-) -> None:
+def test_a_failed_lookup_is_not_kept(client: TestClient, db: Session, directory: _Counting) -> None:
     base, session_id = _base(client, db, "cd-failed")
     directory.refuse = "unauthorized"
     outcomes = _look_up(client, base, KEYS[:1]).json()["outcomes"]
     assert outcomes[KEYS[0]] == {"status": "ERROR", "error_kind": "unauthorized"}
-    assert db.execute(
-        select(DirectoryLookup).where(DirectoryLookup.session_id == session_id)
-    ).first() is None
+    assert (
+        db.execute(select(DirectoryLookup).where(DirectoryLookup.session_id == session_id)).first()
+        is None
+    )
     # The upload asks again, and an expired token stops it (20G).
     response = client.post(f"{base}/reviewers/import", files={"file": ("r.csv", CSV, "text/csv")})
     assert response.status_code == 400
@@ -218,9 +219,11 @@ def test_an_answer_another_request_just_kept_is_left_standing(
     answer = _look_up(client, base, KEYS[:2])
     monkeypatch.undo()
     assert answer.status_code == 200
-    kept = db.execute(
-        select(DirectoryLookup.key).where(DirectoryLookup.session_id == session_id)
-    ).scalars().all()
+    kept = (
+        db.execute(select(DirectoryLookup.key).where(DirectoryLookup.session_id == session_id))
+        .scalars()
+        .all()
+    )
     assert sorted(kept) == sorted(KEYS[:2])
 
 

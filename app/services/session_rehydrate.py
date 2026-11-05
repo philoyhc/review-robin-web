@@ -11,6 +11,7 @@ verdict of blocking errors vs warnings.
 The ``_REHYD`` name / unique-code derivation lives here too, shared with
 the commit orchestrator (PR H). No DB writes — this is read-only.
 """
+
 from __future__ import annotations
 
 import csv
@@ -55,9 +56,7 @@ _KIND_SUFFIX = {
 _BY_INSTRUMENT_MARK = "_by_instrument_"
 
 _RX_SHORT_LABEL = re.compile(r"^instruments\[(\d+)\]\.short_label$")
-_RX_FIELD_KEY = re.compile(
-    r"^instruments\[(\d+)\]\.response_fields\[\d+\]\.field_key$"
-)
+_RX_FIELD_KEY = re.compile(r"^instruments\[(\d+)\]\.response_fields\[\d+\]\.field_key$")
 
 
 @dataclass
@@ -215,9 +214,7 @@ def _examples(items: set[str], n: int = 3) -> str:
 # --------------------------------------------------------------------------- #
 
 
-def derive_rehydrate_name(
-    db: Session, *, user: User, original_name: str
-) -> str:
+def derive_rehydrate_name(db: Session, *, user: User, original_name: str) -> str:
     """``<original>_REHYD``, or ``_REHYD_1`` / ``_REHYD_2`` … on collision
     against the operator's own session names."""
     existing = {
@@ -259,9 +256,7 @@ def derive_unique_code(db: Session, *, original_code: str) -> str:
     candidate = _fit("-rehyd")
     n = 2
     while (
-        db.execute(
-            select(ReviewSession.id).where(ReviewSession.code == candidate)
-        ).first()
+        db.execute(select(ReviewSession.id).where(ReviewSession.code == candidate)).first()
         is not None
     ):
         candidate = _fit(f"-rehyd-{n}")
@@ -274,9 +269,7 @@ def derive_unique_code(db: Session, *, original_code: str) -> str:
 # --------------------------------------------------------------------------- #
 
 
-def analyze_rehydrate_set(
-    db: Session, *, files: dict[str, bytes], user: User
-) -> RehydrateReport:
+def analyze_rehydrate_set(db: Session, *, files: dict[str, bytes], user: User) -> RehydrateReport:
     errors: list[str] = []
     warnings: list[str] = []
     resolved = _resolve_files(files)
@@ -285,9 +278,7 @@ def analyze_rehydrate_set(
     # required below unless the settings turn symmetric review on.
     for kind in ("settings", "reviewers", "responses"):
         if kind not in resolved:
-            errors.append(
-                f"Missing {kind}.csv — rehydrate needs the full extract set."
-            )
+            errors.append(f"Missing {kind}.csv — rehydrate needs the full extract set.")
     if errors:
         return RehydrateReport(ok=False, errors=errors, warnings=warnings)
 
@@ -297,10 +288,7 @@ def analyze_rehydrate_set(
 
     settings = _parse_settings(resolved["settings"])
     if settings is None:
-        errors.append(
-            "settings.csv header/format not recognised "
-            "(expected field,value,data_type)."
-        )
+        errors.append("settings.csv header/format not recognised (expected field,value,data_type).")
         return RehydrateReport(ok=False, errors=errors, warnings=warnings)
 
     reviewer_emails = _emails_from_csv(resolved["reviewers"], "ReviewerEmail")
@@ -316,9 +304,7 @@ def analyze_rehydrate_set(
         reviewee_emails = reviewer_emails
         reviewee_source = "reviewers.csv (symmetric review)"
     elif "reviewees" not in resolved:
-        errors.append(
-            "Missing reviewees.csv — rehydrate needs the full extract set."
-        )
+        errors.append("Missing reviewees.csv — rehydrate needs the full extract set.")
         reviewee_emails = None
     else:
         reviewee_emails = _emails_from_csv(resolved["reviewees"], "RevieweeEmail")
@@ -327,14 +313,9 @@ def analyze_rehydrate_set(
 
     # Conditional files — required when the settings imply them.
     if settings.observers_enabled and "observers" not in resolved:
-        errors.append(
-            "settings.csv has observers enabled, but observers.csv is missing."
-        )
+        errors.append("settings.csv has observers enabled, but observers.csv is missing.")
     if settings.relationships_enabled and "relationships" not in resolved:
-        errors.append(
-            "settings.csv has relationships enabled, but relationships.csv "
-            "is missing."
-        )
+        errors.append("settings.csv has relationships enabled, but relationships.csv is missing.")
     if errors:
         return RehydrateReport(ok=False, errors=errors, warnings=warnings)
 
@@ -391,18 +372,10 @@ def analyze_rehydrate_set(
         )
 
     # 3. Preview — what a Rehydrate would create.
-    observers = (
-        _row_count(resolved["observers"]) if "observers" in resolved else 0
-    )
-    relationships = (
-        _row_count(resolved["relationships"])
-        if "relationships" in resolved
-        else 0
-    )
+    observers = _row_count(resolved["observers"]) if "observers" in resolved else 0
+    relationships = _row_count(resolved["relationships"]) if "relationships" in resolved else 0
     preview: dict[str, str | int] = {
-        "name": derive_rehydrate_name(
-            db, user=user, original_name=settings.name
-        ),
+        "name": derive_rehydrate_name(db, user=user, original_name=settings.name),
         "code": derive_unique_code(db, original_code=settings.code),
         "original_name": settings.name,
         "original_code": settings.code,
@@ -414,9 +387,7 @@ def analyze_rehydrate_set(
         "responses": len(parsed),
     }
 
-    return RehydrateReport(
-        ok=not errors, errors=errors, warnings=warnings, preview=preview
-    )
+    return RehydrateReport(ok=not errors, errors=errors, warnings=warnings, preview=preview)
 
 
 # --------------------------------------------------------------------------- #
@@ -515,7 +486,7 @@ def _compose_description(
     §5). The date is stamped by this (non-pure) layer, injectable for
     deterministic tests."""
     note = (
-        f'[Rehydrated {today.isoformat()} from an extract of '
+        f"[Rehydrated {today.isoformat()} from an extract of "
         f'"{settings.name}" ({settings.code}).\n'
         "Restored: settings, reviewers, reviewees, observers, "
         "relationships, assignments (regenerated), and submitted "
@@ -599,9 +570,7 @@ def rehydrate_session(
     if settings is None:
         raise RehydrateError("settings.csv header/format not recognised.")
 
-    new_name = derive_rehydrate_name(
-        db, user=user, original_name=settings.name
-    )
+    new_name = derive_rehydrate_name(db, user=user, original_name=settings.name)
     new_code = derive_unique_code(db, original_code=settings.code)
     settings_rows, row_errors = _settings_rows(resolved["settings"])
     description = _compose_description(
@@ -626,9 +595,7 @@ def rehydrate_session(
     try:
         # 1. Settings — rewrite the identity rows so apply keeps our
         #    derived name / code, then rebuild instruments + config.
-        apply_rows = _rewrite_identity_rows(
-            settings_rows, name=new_name, code=new_code
-        )
+        apply_rows = _rewrite_identity_rows(settings_rows, name=new_name, code=new_code)
         settings_errors = apply_session_config(
             db,
             review_session,
@@ -666,7 +633,9 @@ def rehydrate_session(
             directory,
             [
                 [row.email for row in reviewers_parse.rows],
-                [row.email_or_identifier for row in reviewees_parse.rows] if reviewees_parse else [],
+                [row.email_or_identifier for row in reviewees_parse.rows]
+                if reviewees_parse
+                else [],
                 [row.email for row in observers_parse.rows] if observers_parse else [],
             ],
         )
@@ -713,16 +682,12 @@ def rehydrate_session(
         if "relationships" in resolved:
             roster_reviewers = list(
                 db.execute(
-                    select(Reviewer).where(
-                        Reviewer.session_id == review_session.id
-                    )
+                    select(Reviewer).where(Reviewer.session_id == review_session.id)
                 ).scalars()
             )
             roster_reviewees = list(
                 db.execute(
-                    select(Reviewee).where(
-                        Reviewee.session_id == review_session.id
-                    )
+                    select(Reviewee).where(Reviewee.session_id == review_session.id)
                 ).scalars()
             )
             rel_parse = relationships.parse_relationship_csv(
@@ -754,9 +719,7 @@ def rehydrate_session(
         #    Rows naming a pair the rules did not produce are dropped,
         #    not backfilled: assignments are always generated.
         parsed_responses = parse_responses_csv(resolved["responses"])
-        load_result = load_responses(
-            db, review_session=review_session, rows=parsed_responses
-        )
+        load_result = load_responses(db, review_session=review_session, rows=parsed_responses)
 
         counts = {
             "reviewers": len(reviewers_parse.rows),

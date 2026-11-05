@@ -23,6 +23,7 @@ Revises: 8d57b772ffc4
 Create Date: 2026-05-07 12:30:00.000000
 
 """
+
 from collections.abc import Sequence
 from datetime import UTC, datetime
 
@@ -150,18 +151,8 @@ def downgrade() -> None:
     )
 
     bind.execute(
-        sa.update(rule_sets)
-        .where(rule_sets.c.is_seed.is_(True))
-        .values(current_revision_id=None)
+        sa.update(rule_sets).where(rule_sets.c.is_seed.is_(True)).values(current_revision_id=None)
     )
-    seed_ids_subquery = sa.select(rule_sets.c.id).where(
-        rule_sets.c.is_seed.is_(True)
-    )
-    bind.execute(
-        sa.delete(revisions).where(
-            revisions.c.rule_set_id.in_(seed_ids_subquery)
-        )
-    )
-    bind.execute(
-        sa.delete(rule_sets).where(rule_sets.c.is_seed.is_(True))
-    )
+    seed_ids_subquery = sa.select(rule_sets.c.id).where(rule_sets.c.is_seed.is_(True))
+    bind.execute(sa.delete(revisions).where(revisions.c.rule_set_id.in_(seed_ids_subquery)))
+    bind.execute(sa.delete(rule_sets).where(rule_sets.c.is_seed.is_(True)))

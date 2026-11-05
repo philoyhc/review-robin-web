@@ -38,12 +38,16 @@ def _user(db: Session) -> User:
 
 def _assert_mirrored(db: Session, review_session: ReviewSession) -> list[Reviewee]:
     db.expire_all()
-    revs = db.execute(
-        select(Reviewer).where(Reviewer.session_id == review_session.id).order_by(Reviewer.id)
-    ).scalars().all()
-    ees = db.execute(
-        select(Reviewee).where(Reviewee.session_id == review_session.id)
-    ).scalars().all()
+    revs = (
+        db.execute(
+            select(Reviewer).where(Reviewer.session_id == review_session.id).order_by(Reviewer.id)
+        )
+        .scalars()
+        .all()
+    )
+    ees = (
+        db.execute(select(Reviewee).where(Reviewee.session_id == review_session.id)).scalars().all()
+    )
     by_link = {e.mirrors_reviewer_id: e for e in ees}
     assert len(ees) == len(revs) and set(by_link) == {r.id for r in revs}
     for r in revs:
@@ -69,8 +73,12 @@ def _add(
     db: Session, review_session: ReviewSession, email: str, **kw: Unpack[_ReviewerFields]
 ) -> Reviewer:
     return reviewers.create_reviewer(
-        db, review_session=review_session, name=email.split("@")[0], email=email,
-        user=_user(db), **kw,
+        db,
+        review_session=review_session,
+        name=email.split("@")[0],
+        email=email,
+        user=_user(db),
+        **kw,
     )
 
 
@@ -80,8 +88,13 @@ def _import(
     parsed = csv_imports.parse_reviewer_csv(body.encode())
     assert not parsed.issues, parsed.issues
     csv_imports.save_reviewers(
-        db, session=review_session, user=_user(db), rows=parsed.rows,
-        filename="r.csv", correlation_id="c", **kw,
+        db,
+        session=review_session,
+        user=_user(db),
+        rows=parsed.rows,
+        filename="r.csv",
+        correlation_id="c",
+        **kw,
     )
     db.commit()
 
@@ -96,7 +109,9 @@ def test_an_address_correction_keeps_the_reviewee(client: TestClient, db: Sessio
     review_session = _session(client, db, "sym-m-edit")
     reviewer = _add(db, review_session, "ann@example.edu")
     [before] = _assert_mirrored(db, review_session)
-    reviewers.update_reviewer(db, reviewer=reviewer, email="ann.tan@example.edu", name="Ann Tan", user=_user(db))
+    reviewers.update_reviewer(
+        db, reviewer=reviewer, email="ann.tan@example.edu", name="Ann Tan", user=_user(db)
+    )
     [after] = _assert_mirrored(db, review_session)
     assert after.id == before.id and after.email_or_identifier == "ann.tan@example.edu"
 
@@ -104,10 +119,14 @@ def test_an_address_correction_keeps_the_reviewee(client: TestClient, db: Sessio
 def test_status_mirrors(client: TestClient, db: Session) -> None:
     review_session = _session(client, db, "sym-m-status")
     reviewer = _add(db, review_session, "ann@example.edu")
-    reviewers.bulk_inactivate(db, review_session=review_session, reviewer_ids=[reviewer.id], user=_user(db))
+    reviewers.bulk_inactivate(
+        db, review_session=review_session, reviewer_ids=[reviewer.id], user=_user(db)
+    )
     [reviewee] = _assert_mirrored(db, review_session)
     assert reviewee.status == "inactive"
-    reviewers.bulk_reactivate(db, review_session=review_session, reviewer_ids=[reviewer.id], user=_user(db))
+    reviewers.bulk_reactivate(
+        db, review_session=review_session, reviewer_ids=[reviewer.id], user=_user(db)
+    )
     [reviewee] = _assert_mirrored(db, review_session)
     assert reviewee.status == "active"
 
@@ -116,14 +135,18 @@ def test_delete_selected_takes_the_reviewee(client: TestClient, db: Session) -> 
     review_session = _session(client, db, "sym-m-delete")
     ann = _add(db, review_session, "ann@example.edu")
     _add(db, review_session, "bob@example.edu")
-    reviewers.delete_selected(db, review_session=review_session, reviewer_ids=[ann.id], user=_user(db))
+    reviewers.delete_selected(
+        db, review_session=review_session, reviewer_ids=[ann.id], user=_user(db)
+    )
     [bob] = _assert_mirrored(db, review_session)
     assert bob.email_or_identifier == "bob@example.edu"
 
 
 def test_imports_mirror_replace_append_and_merge(client: TestClient, db: Session) -> None:
     review_session = _session(client, db, "sym-m-import")
-    _import(db, review_session, "ReviewerName,ReviewerEmail\nAnn,ann@example.edu\nBob,bob@example.edu\n")
+    _import(
+        db, review_session, "ReviewerName,ReviewerEmail\nAnn,ann@example.edu\nBob,bob@example.edu\n"
+    )
     assert len(_assert_mirrored(db, review_session)) == 2
     _import(db, review_session, "ReviewerName,ReviewerEmail\nCai,cai@example.edu\n", append=True)
     assert len(_assert_mirrored(db, review_session)) == 3
@@ -138,7 +161,9 @@ def test_imports_mirror_replace_append_and_merge(client: TestClient, db: Session
 def test_delete_all_takes_every_reviewee(client: TestClient, db: Session) -> None:
     review_session = _session(client, db, "sym-m-delall")
     _add(db, review_session, "ann@example.edu")
-    csv_imports.delete_all_reviewers(db, review_session=review_session, user=_user(db), correlation_id="c")
+    csv_imports.delete_all_reviewers(
+        db, review_session=review_session, user=_user(db), correlation_id="c"
+    )
     assert _assert_mirrored(db, review_session) == []
 
 
@@ -169,7 +194,10 @@ def test_labels_and_self_fields_follow(client: TestClient, db: Session) -> None:
     ).scalar_one()
     assert label.label == "Team"
     participant_info.set_self_fields(
-        db, review_session=review_session, user=_user(db), participant="reviewer",
+        db,
+        review_session=review_session,
+        user=_user(db),
+        participant="reviewer",
         keys=["name", "email", "tag_1"],
     )
     db.refresh(review_session)
@@ -179,13 +207,17 @@ def test_labels_and_self_fields_follow(client: TestClient, db: Session) -> None:
 def test_off_mirrors_nothing(client: TestClient, db: Session) -> None:
     review_session = _session(client, db, "sym-m-off", on=False)
     _add(db, review_session, "ann@example.edu")
-    assert db.execute(select(Reviewee).where(Reviewee.session_id == review_session.id)).first() is None
+    assert (
+        db.execute(select(Reviewee).where(Reviewee.session_id == review_session.id)).first() is None
+    )
 
 
 # --- Codex on #3489 ---------------------------------------------------------
 
 
-def test_a_name_correction_is_not_refused_by_the_own_mirror(client: TestClient, db: Session) -> None:
+def test_a_name_correction_is_not_refused_by_the_own_mirror(
+    client: TestClient, db: Session
+) -> None:
     review_session = _session(client, db, "sym-m-rename")
     reviewer = _add(db, review_session, "ann@example.edu")
     reviewers.update_reviewer(db, reviewer=reviewer, name="Ann Tan", user=_user(db))
@@ -201,10 +233,16 @@ def test_an_address_correction_keeps_the_self_review_flag(client: TestClient, db
     reviewer = _add(db, review_session, "ann@example.edu")
     [reviewee] = _assert_mirrored(db, review_session)
     instrument = ensure_default_instrument(db, review_session)
-    db.add(Assignment(
-        session_id=review_session.id, reviewer_id=reviewer.id, reviewee_id=reviewee.id,
-        instrument_id=instrument.id, include=False, is_self_review=True,
-    ))
+    db.add(
+        Assignment(
+            session_id=review_session.id,
+            reviewer_id=reviewer.id,
+            reviewee_id=reviewee.id,
+            instrument_id=instrument.id,
+            include=False,
+            is_self_review=True,
+        )
+    )
     db.commit()
     reviewers.update_reviewer(db, reviewer=reviewer, email="ann.tan@example.edu", user=_user(db))
     db.expire_all()
@@ -233,21 +271,34 @@ def test_a_mirrored_tag_change_asks_before_clearing_group_answers(
     instrument = ensure_default_instrument(db, review_session)
     instrument.group_kind = instruments_service.encode_group_kind([("reviewee", "tag_1")])
     field = InstrumentResponseField(
-        instrument_id=instrument.id, field_key="sym_rating", label="Rating",
-        _inline_data_type="Integer", _inline_response_type="Likert5", order=0,
+        instrument_id=instrument.id,
+        field_key="sym_rating",
+        label="Rating",
+        _inline_data_type="Integer",
+        _inline_response_type="Likert5",
+        order=0,
     )
     db.add(field)
     db.flush()
     rows = [
-        Assignment(session_id=review_session.id, reviewer_id=people[0].id,
-                   reviewee_id=reviewee.id, instrument_id=instrument.id)
+        Assignment(
+            session_id=review_session.id,
+            reviewer_id=people[0].id,
+            reviewee_id=reviewee.id,
+            instrument_id=instrument.id,
+        )
         for reviewee in reviewees
     ]
     db.add_all(rows)
     db.flush()
     db.add_all(
-        Response(assignment_id=row.id, response_field_id=field.id, value="3",
-                 saved_at=dt.datetime(2026, 11, 1, tzinfo=dt.UTC), version=1)
+        Response(
+            assignment_id=row.id,
+            response_field_id=field.id,
+            value="3",
+            saved_at=dt.datetime(2026, 11, 1, tzinfo=dt.UTC),
+            version=1,
+        )
         for row in rows
     )
     db.commit()
@@ -264,7 +315,9 @@ def test_a_mirrored_tag_change_asks_before_clearing_group_answers(
     acknowledge = re.search(r'name="acknowledge_response_loss"\s+value="(\d+)"', refused.text)
     assert acknowledge is not None
     count = acknowledge.group(1)
-    accepted = client.post(path, data={**form, "acknowledge_response_loss": count}, follow_redirects=False)
+    accepted = client.post(
+        path, data={**form, "acknowledge_response_loss": count}, follow_redirects=False
+    )
     assert accepted.status_code == 303
     assert responses() == 4 - int(count)
 
@@ -277,17 +330,32 @@ def _answered(db: Session, review_session: ReviewSession, reviewer: Reviewer, re
 
     instrument = ensure_default_instrument(db, review_session)
     field = InstrumentResponseField(
-        instrument_id=instrument.id, field_key=f"q{reviewer.id}_{reviewee.id}", label="Q",
-        _inline_data_type="Integer", _inline_response_type="Likert5", order=0,
+        instrument_id=instrument.id,
+        field_key=f"q{reviewer.id}_{reviewee.id}",
+        label="Q",
+        _inline_data_type="Integer",
+        _inline_response_type="Likert5",
+        order=0,
     )
     db.add(field)
     db.flush()
-    row = Assignment(session_id=review_session.id, reviewer_id=reviewer.id,
-                     reviewee_id=reviewee.id, instrument_id=instrument.id)
+    row = Assignment(
+        session_id=review_session.id,
+        reviewer_id=reviewer.id,
+        reviewee_id=reviewee.id,
+        instrument_id=instrument.id,
+    )
     db.add(row)
     db.flush()
-    db.add(Response(assignment_id=row.id, response_field_id=field.id, value="3",
-                    saved_at=dt.datetime(2026, 11, 1, tzinfo=dt.UTC), version=1))
+    db.add(
+        Response(
+            assignment_id=row.id,
+            response_field_id=field.id,
+            value="3",
+            saved_at=dt.datetime(2026, 11, 1, tzinfo=dt.UTC),
+            version=1,
+        )
+    )
     db.commit()
     return instrument, row
 
@@ -300,12 +368,19 @@ def test_a_full_clone_keeps_its_relationships(client: TestClient, db: Session) -
     ann = _add(db, review_session, "ann@example.edu")
     _add(db, review_session, "bob@example.edu")
     by_email = {e.email_or_identifier: e for e in _assert_mirrored(db, review_session)}
-    db.add(Relationship(session_id=review_session.id, reviewer_id=ann.id,
-                        reviewee_id=by_email["bob@example.edu"].id))
+    db.add(
+        Relationship(
+            session_id=review_session.id,
+            reviewer_id=ann.id,
+            reviewee_id=by_email["bob@example.edu"].id,
+        )
+    )
     db.commit()
     clone = session_clone.clone_session(db, source=review_session, user=_user(db), mode="all")
     _assert_mirrored(db, clone)
-    assert db.execute(select(Relationship).where(Relationship.session_id == clone.id)).scalars().all()
+    assert (
+        db.execute(select(Relationship).where(Relationship.session_id == clone.id)).scalars().all()
+    )
 
 
 def test_a_selected_delete_counts_answers_about_the_person(client: TestClient, db: Session) -> None:
@@ -346,7 +421,9 @@ def test_an_email_correction_keeps_an_operator_exclusion(client: TestClient, db:
     assert (row.is_self_review, row.include) == (True, False)
 
 
-def test_the_per_row_relationship_count_includes_the_mirror(client: TestClient, db: Session) -> None:
+def test_the_per_row_relationship_count_includes_the_mirror(
+    client: TestClient, db: Session
+) -> None:
     from app.db.models import Relationship
     from app.services import roster_bulk
 
@@ -355,9 +432,17 @@ def test_the_per_row_relationship_count_includes_the_mirror(client: TestClient, 
     bob = _add(db, review_session, "bob@example.edu")
     by_reviewer = {e.mirrors_reviewer_id: e for e in _assert_mirrored(db, review_session)}
     # Bob -> Ann alone: deleting Ann takes it, through her mirror.
-    db.add(Relationship(session_id=review_session.id, reviewer_id=bob.id, reviewee_id=by_reviewer[ann.id].id))
+    db.add(
+        Relationship(
+            session_id=review_session.id, reviewer_id=bob.id, reviewee_id=by_reviewer[ann.id].id
+        )
+    )
     # Ann -> Ann counts once for her.
-    db.add(Relationship(session_id=review_session.id, reviewer_id=ann.id, reviewee_id=by_reviewer[ann.id].id))
+    db.add(
+        Relationship(
+            session_id=review_session.id, reviewer_id=ann.id, reviewee_id=by_reviewer[ann.id].id
+        )
+    )
     db.commit()
     counts = roster_bulk.relationships_per_row(db, model=Reviewer, session_id=review_session.id)
     assert counts == {ann.id: 2, bob.id: 1}
@@ -377,12 +462,14 @@ def test_a_name_correction_does_not_bring_back_a_deleted_display_field(
 
     def tag_fields() -> list[InstrumentDisplayField]:
         db.expire_all()
-        return list(db.execute(
-            select(InstrumentDisplayField).where(
-                InstrumentDisplayField.source_type == "reviewee",
-                InstrumentDisplayField.source_field == "tag_1",
-            )
-        ).scalars())
+        return list(
+            db.execute(
+                select(InstrumentDisplayField).where(
+                    InstrumentDisplayField.source_type == "reviewee",
+                    InstrumentDisplayField.source_field == "tag_1",
+                )
+            ).scalars()
+        )
 
     seeded = tag_fields()
     assert seeded, "a newly filled tag seeds its display field"
@@ -420,8 +507,12 @@ def test_a_replace_never_hands_a_removed_persons_reviewee_to_a_new_reviewer(
         parsed = csv_imports.parse_reviewer_csv(body.encode())
         assert not parsed.issues
         csv_imports.save_reviewers(
-            db, session=review_session, user=owner, rows=parsed.rows,
-            filename="r.csv", correlation_id="c",
+            db,
+            session=review_session,
+            user=owner,
+            rows=parsed.rows,
+            filename="r.csv",
+            correlation_id="c",
         )
         db.commit()
 
@@ -434,10 +525,11 @@ def test_a_replace_never_hands_a_removed_persons_reviewee_to_a_new_reviewer(
 
     replace("ReviewerName,ReviewerEmail\nCarl,carl@example.edu\nDan,dan@example.edu\n")
     db.expire_all()
-    reviewees = db.execute(
-        select(Reviewee).where(Reviewee.session_id == review_session.id)
-    ).scalars().all()
+    reviewees = (
+        db.execute(select(Reviewee).where(Reviewee.session_id == review_session.id)).scalars().all()
+    )
     assert sorted(r.email_or_identifier for r in reviewees) == [
-        "carl@example.edu", "dan@example.edu",
+        "carl@example.edu",
+        "dan@example.edu",
     ]
     assert all(r.results_acknowledged_at is None for r in reviewees)

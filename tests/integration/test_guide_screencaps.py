@@ -19,17 +19,12 @@ import re
 import pytest
 from fastapi.testclient import TestClient
 
-STATIC_GUIDE = (
-    pathlib.Path(__file__).resolve().parents[2] / "app" / "web" / "static" / "guide"
-)
+STATIC_GUIDE = pathlib.Path(__file__).resolve().parents[2] / "app" / "web" / "static" / "guide"
 GUIDE_TEMPLATE = (
-    pathlib.Path(__file__).resolve().parents[2]
-    / "app"
-    / "web"
-    / "templates"
-    / "guide.html"
+    pathlib.Path(__file__).resolve().parents[2] / "app" / "web" / "templates" / "guide.html"
 )
 BASE_TEMPLATE = GUIDE_TEMPLATE.with_name("base.html")
+
 
 def _src(name: str) -> str:
     """How ``guide.html`` writes a screencap's ``src`` (through ``url()``)."""
@@ -49,9 +44,7 @@ def test_the_guide_references_its_screencaps() -> None:
 
 
 @pytest.mark.parametrize("name", REFERENCED)
-def test_every_referenced_screencap_is_served(
-    client: TestClient, name: str
-) -> None:
+def test_every_referenced_screencap_is_served(client: TestClient, name: str) -> None:
     response = client.get(f"/static/guide/{name}")
 
     assert response.status_code == 200, name
@@ -88,10 +81,7 @@ def test_the_guide_links_the_setup_templates_download(client: TestClient) -> Non
     # to tell an attachment link (which never replaces the page) from a
     # navigation. Pinned here rather than loosened, so dropping it fails
     # a test instead of leaving the bar spinning on every download.
-    assert (
-        'href="/templates/starter.zip" download>template CSV files with mock data'
-        in body
-    )
+    assert 'href="/templates/starter.zip" download>template CSV files with mock data' in body
     assert client.get("/templates/starter.zip").status_code == 200
 
 
@@ -202,9 +192,7 @@ def test_a_pair_is_shot_at_one_scale(name: str) -> None:
     checks each file against the markup; this checks the two against each
     other, which is what the markup cannot say."""
     light_narrow = _png_width(STATIC_GUIDE / name) < NARROW_MAX_WIDTH
-    dark_narrow = (
-        _png_width(STATIC_GUIDE / f"{_stem(name)}{DARK_SUFFIX}") < NARROW_MAX_WIDTH
-    )
+    dark_narrow = _png_width(STATIC_GUIDE / f"{_stem(name)}{DARK_SUFFIX}") < NARROW_MAX_WIDTH
 
     assert light_narrow == dark_narrow, name
 
@@ -286,9 +274,7 @@ def test_a_replaced_screencap_is_served_fresh(client: TestClient) -> None:
 
     try:
         path.write_bytes(replacement)
-        response = client.get(
-            f"/static/guide/{name}", headers={"If-None-Match": stale_etag}
-        )
+        response = client.get(f"/static/guide/{name}", headers={"If-None-Match": stale_etag})
     finally:
         path.write_bytes(original)
 

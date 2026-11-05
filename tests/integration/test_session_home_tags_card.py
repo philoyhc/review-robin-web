@@ -49,9 +49,7 @@ def _create(client: TestClient, db: Session, code: str) -> ReviewSession:
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _tag(db: Session, review_session: ReviewSession, tags: list[str]) -> None:
@@ -61,9 +59,7 @@ def _tag(db: Session, review_session: ReviewSession, tags: list[str]) -> None:
 
 
 def _tags_of(db: Session, review_session: ReviewSession) -> list[str]:
-    return session_tags.tags_for_sessions(db, [review_session.id])[
-        review_session.id
-    ]
+    return session_tags.tags_for_sessions(db, [review_session.id])[review_session.id]
 
 
 def _save(
@@ -103,11 +99,11 @@ def _tag_events(db: Session, review_session: ReviewSession) -> int:
         db.execute(
             select(AuditEvent).where(
                 AuditEvent.session_id == review_session.id,
-                AuditEvent.event_type.in_(
-                    ["session.tag_added", "session.tag_removed"]
-                ),
+                AuditEvent.event_type.in_(["session.tag_added", "session.tag_removed"]),
             )
-        ).scalars().all()
+        )
+        .scalars()
+        .all()
     )
 
 
@@ -157,10 +153,8 @@ def test_the_card_helper_is_bounded(client: TestClient, db: Session) -> None:
 
     assert card.startswith('<div id="config-tags-field"')
     assert card.count("<div") == card.count("</div>")
-    assert "data-config-save" not in card, (
-        "the Save cluster follows the field and is not inside it"
-    )
-    assert "data-config-save" in body[body.index(card) + len(card):]
+    assert "data-config-save" not in card, "the Save cluster follows the field and is not inside it"
+    assert "data-config-save" in body[body.index(card) + len(card) :]
 
 
 def test_the_field_sits_under_description_above_the_optional_tabs(
@@ -191,9 +185,7 @@ def test_the_field_sits_under_description_above_the_optional_tabs(
     assert ">Optional setup tabs and pages</label>" in config
 
 
-def test_the_field_sits_a_wider_gap_below_description(
-    client: TestClient, db: Session
-) -> None:
+def test_the_field_sits_a_wider_gap_below_description(client: TestClient, db: Session) -> None:
     """19U Item 3 (author, 2026-10-08): Tags moves down from the
     Description box — its own step of top margin over its label's."""
     review_session = _create(client, db, "HOME-TAGS-GAP")
@@ -203,9 +195,7 @@ def test_the_field_sits_a_wider_gap_below_description(
     assert ".config-field-gap { margin-top: var(--space-3); }" in body
 
 
-def test_locked_it_renders_the_lobbys_pills(
-    client: TestClient, db: Session
-) -> None:
+def test_locked_it_renders_the_lobbys_pills(client: TestClient, db: Session) -> None:
     """One ``.pill.pill-count`` per tag inside ``.session-tags`` — the
     sessions lobby's own markup (author's ruling, 2026-09-23) — under a
     display-only wrapper, since ``.session-tags``'s ``display: flex``
@@ -228,9 +218,7 @@ def test_locked_it_renders_the_lobbys_pills(
     assert card.count("<label") == 1
 
 
-def test_the_helper_text_shows_only_while_editing(
-    client: TestClient, db: Session
-) -> None:
+def test_the_helper_text_shows_only_while_editing(client: TestClient, db: Session) -> None:
     """The helper text describes the comma-separated box, so it is
     ``data-edit-only`` and sits below the box as ``.form-help`` — a
     field's helper, since 19U Item 2 made Tags a field of the details
@@ -249,9 +237,7 @@ def test_the_helper_text_shows_only_while_editing(
     assert card.index('id="config-tags"') < card.index('class="form-help"')
 
 
-def test_an_untagged_session_shows_an_em_dash(
-    client: TestClient, db: Session
-) -> None:
+def test_an_untagged_session_shows_an_em_dash(client: TestClient, db: Session) -> None:
     review_session = _create(client, db, "HOME-TAGS-EMPTY")
     card = _card(client.get(f"/operator/sessions/{review_session.public_id}").text)
 
@@ -270,17 +256,13 @@ def test_unlocked_the_input_is_prefilled(client: TestClient, db: Session) -> Non
     assert "data-edit-only" in card
 
 
-def test_the_input_is_wired_to_the_config_form(
-    client: TestClient, db: Session
-) -> None:
+def test_the_input_is_wired_to_the_config_form(client: TestClient, db: Session) -> None:
     """The inversion of rung 1's inertness assertion, kept in that shape
     so the diff shows the control going live: a ``name`` is what a browser
     submits, and ``form=`` is what associates a control rendered outside
     ``<form>`` with the card's save."""
     review_session = _create(client, db, "HOME-TAGS-WIRED")
-    card = _card(
-        client.get(f"/operator/sessions/{review_session.public_id}?editing=1").text
-    )
+    card = _card(client.get(f"/operator/sessions/{review_session.public_id}?editing=1").text)
 
     assert 'id="config-tags"' in card
     assert 'name="tags"' in card
@@ -296,8 +278,7 @@ def test_saving_the_card_writes_the_tags(client: TestClient, db: Session) -> Non
     db.refresh(review_session)
     assert review_session.name == "Renamed", "the save went through"
     assert _tags_of(db, review_session) == ["alpha", "beta"], (
-        "a replace, normalized: pilot dropped, case and spaces folded, "
-        "the duplicate collapsed"
+        "a replace, normalized: pilot dropped, case and spaces folded, the duplicate collapsed"
     )
 
 
@@ -331,20 +312,14 @@ def test_a_save_from_a_page_without_the_tags_field_leaves_them_alone(
     assert _tags_of(db, review_session) == ["pilot"]
 
 
-def test_the_card_posts_the_marker_beside_the_field(
-    client: TestClient, db: Session
-) -> None:
+def test_the_card_posts_the_marker_beside_the_field(client: TestClient, db: Session) -> None:
     review_session = _create(client, db, "HOME-TAGS-MARKER")
-    card = _card(
-        client.get(f"/operator/sessions/{review_session.public_id}?editing=1").text
-    )
+    card = _card(client.get(f"/operator/sessions/{review_session.public_id}?editing=1").text)
     assert 'name="tags_present"' in card
     assert f'form="config-save-{review_session.id}"' in card
 
 
-def test_an_untouched_box_emits_no_tag_events(
-    client: TestClient, db: Session
-) -> None:
+def test_an_untouched_box_emits_no_tag_events(client: TestClient, db: Session) -> None:
     """Saving the card for another field resubmits the prefilled tags;
     ``set_tags`` diffs, so nothing is added, removed or audited."""
     review_session = _create(client, db, "HOME-TAGS-QUIET")
@@ -369,24 +344,26 @@ def test_one_save_is_one_correlation_id(client: TestClient, db: Session) -> None
     route mints one and hands it to both (Codex, #2569)."""
     review_session = _create(client, db, "HOME-TAGS-CORR")
     _tag(db, review_session, ["pilot"])
-    last = db.execute(
-        select(AuditEvent.id).order_by(AuditEvent.id.desc())
-    ).scalars().first()
+    last = db.execute(select(AuditEvent.id).order_by(AuditEvent.id.desc())).scalars().first()
 
     response = _save(client, review_session, tags="pilot, 2026")
     assert response.status_code == 303, response.text
-    events = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.session_id == review_session.id, AuditEvent.id > last
+    events = (
+        db.execute(
+            select(AuditEvent).where(
+                AuditEvent.session_id == review_session.id, AuditEvent.id > last
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     kinds = {e.event_type for e in events}
     assert "session.tag_added" in kinds, "the save changed a tag"
     assert kinds - {"session.tag_added", "session.tag_removed"}, (
         "and emitted a config event beside it — the rename"
     )
-    assert len({e.correlation_id for e in events}) == 1, (
-        sorted((e.event_type, e.correlation_id) for e in events)
+    assert len({e.correlation_id for e in events}) == 1, sorted(
+        (e.event_type, e.correlation_id) for e in events
     )
 
 
@@ -396,9 +373,7 @@ def test_a_rejected_save_writes_no_tags(client: TestClient, db: Session) -> None
     review_session = _create(client, db, "HOME-TAGS-REJECT")
     _tag(db, review_session, ["pilot"])
 
-    response = _save(
-        client, review_session, display_timezone="Not/AZone", tags="other"
-    )
+    response = _save(client, review_session, display_timezone="Not/AZone", tags="other")
     assert response.status_code == 422, response.text
     db.refresh(review_session)
     assert review_session.name == "Tagged", "the save was rejected"
@@ -420,11 +395,7 @@ def test_a_settings_csv_tag_is_stored_lower_case_and_the_lobby_can_remove_it(
     response = client.post(
         "/operator/sessions",
         data={"name": "Imported", "code": "HOME-TAGS-IMPORT", "description": ""},
-        files={
-            "settings_file": (
-                "s.csv", _settings_csv(["Pilot", "  Cohort-A "]), "text/csv"
-            )
-        },
+        files={"settings_file": ("s.csv", _settings_csv(["Pilot", "  Cohort-A "]), "text/csv")},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text

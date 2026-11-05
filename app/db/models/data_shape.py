@@ -45,11 +45,7 @@ from app.db.base import Base, TimestampMixin
 
 class DataShape(Base, TimestampMixin):
     __tablename__ = "data_shapes"
-    __table_args__ = (
-        UniqueConstraint(
-            "session_id", "name", name="uq_data_shape_session_name"
-        ),
-    )
+    __table_args__ = (UniqueConstraint("session_id", "name", name="uq_data_shape_session_name"),)
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     session_id: Mapped[int] = mapped_column(

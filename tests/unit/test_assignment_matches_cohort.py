@@ -80,9 +80,7 @@ def test_none_rule_set_returns_false(db: Session) -> None:
     obs = _observer(db, sess)
     r = _reviewer(db, sess, tag_1="math")
     e = _reviewee(db, sess, tag_1="junior")
-    assert assignment_matches_cohort(
-        None, observer=obs, reviewer=r, reviewee=e
-    ) is False
+    assert assignment_matches_cohort(None, observer=obs, reviewer=r, reviewee=e) is False
 
 
 def test_empty_rules_returns_false(db: Session) -> None:
@@ -90,12 +88,15 @@ def test_empty_rules_returns_false(db: Session) -> None:
     obs = _observer(db, sess)
     r = _reviewer(db, sess, tag_1="math")
     e = _reviewee(db, sess, tag_1="junior")
-    assert assignment_matches_cohort(
-        {"combinator": "AND", "rules": []},
-        observer=obs,
-        reviewer=r,
-        reviewee=e,
-    ) is False
+    assert (
+        assignment_matches_cohort(
+            {"combinator": "AND", "rules": []},
+            observer=obs,
+            reviewer=r,
+            reviewee=e,
+        )
+        is False
+    )
 
 
 def test_reviewer_only_rule_ignores_reviewee_side(db: Session) -> None:
@@ -120,16 +121,10 @@ def test_reviewer_only_rule_ignores_reviewee_side(db: Session) -> None:
         ],
     }
     # Reviewer matches → passes regardless of reviewee.
-    assert assignment_matches_cohort(
-        rule_set, observer=obs, reviewer=r_pass, reviewee=e_a
-    )
-    assert assignment_matches_cohort(
-        rule_set, observer=obs, reviewer=r_pass, reviewee=e_b
-    )
+    assert assignment_matches_cohort(rule_set, observer=obs, reviewer=r_pass, reviewee=e_a)
+    assert assignment_matches_cohort(rule_set, observer=obs, reviewer=r_pass, reviewee=e_b)
     # Reviewer fails → fails regardless of reviewee.
-    assert not assignment_matches_cohort(
-        rule_set, observer=obs, reviewer=r_fail, reviewee=e_a
-    )
+    assert not assignment_matches_cohort(rule_set, observer=obs, reviewer=r_fail, reviewee=e_a)
 
 
 def test_reviewee_only_rule_ignores_reviewer_side(db: Session) -> None:
@@ -150,12 +145,8 @@ def test_reviewee_only_rule_ignores_reviewer_side(db: Session) -> None:
             }
         ],
     }
-    assert assignment_matches_cohort(
-        rule_set, observer=obs, reviewer=r_a, reviewee=e_pass
-    )
-    assert not assignment_matches_cohort(
-        rule_set, observer=obs, reviewer=r_a, reviewee=e_fail
-    )
+    assert assignment_matches_cohort(rule_set, observer=obs, reviewer=r_a, reviewee=e_pass)
+    assert not assignment_matches_cohort(rule_set, observer=obs, reviewer=r_a, reviewee=e_fail)
 
 
 def test_and_requires_every_rule_to_pass(db: Session) -> None:
@@ -181,12 +172,8 @@ def test_and_requires_every_rule_to_pass(db: Session) -> None:
             },
         ],
     }
-    assert assignment_matches_cohort(
-        rule_set, observer=obs, reviewer=r, reviewee=e_pass
-    )
-    assert not assignment_matches_cohort(
-        rule_set, observer=obs, reviewer=r, reviewee=e_fail
-    )
+    assert assignment_matches_cohort(rule_set, observer=obs, reviewer=r, reviewee=e_pass)
+    assert not assignment_matches_cohort(rule_set, observer=obs, reviewer=r, reviewee=e_fail)
 
 
 def test_or_passes_if_any_rule_passes(db: Session) -> None:
@@ -218,21 +205,13 @@ def test_or_passes_if_any_rule_passes(db: Session) -> None:
         ],
     }
     # Matches via reviewer side only.
-    assert assignment_matches_cohort(
-        rule_set, observer=obs, reviewer=r_math, reviewee=e_senior
-    )
+    assert assignment_matches_cohort(rule_set, observer=obs, reviewer=r_math, reviewee=e_senior)
     # Matches via reviewee side only.
-    assert assignment_matches_cohort(
-        rule_set, observer=obs, reviewer=r_bio, reviewee=e_junior
-    )
+    assert assignment_matches_cohort(rule_set, observer=obs, reviewer=r_bio, reviewee=e_junior)
     # Matches both.
-    assert assignment_matches_cohort(
-        rule_set, observer=obs, reviewer=r_math, reviewee=e_junior
-    )
+    assert assignment_matches_cohort(rule_set, observer=obs, reviewer=r_math, reviewee=e_junior)
     # Matches neither — DOES NOT pass.
-    assert not assignment_matches_cohort(
-        rule_set, observer=obs, reviewer=r_bio, reviewee=e_senior
-    )
+    assert not assignment_matches_cohort(rule_set, observer=obs, reviewer=r_bio, reviewee=e_senior)
 
 
 def test_contains_is_case_insensitive_substring(db: Session) -> None:
@@ -252,12 +231,8 @@ def test_contains_is_case_insensitive_substring(db: Session) -> None:
             }
         ],
     }
-    assert assignment_matches_cohort(
-        rule_set, observer=obs, reviewer=r_pass, reviewee=e
-    )
-    assert not assignment_matches_cohort(
-        rule_set, observer=obs, reviewer=r_fail, reviewee=e
-    )
+    assert assignment_matches_cohort(rule_set, observer=obs, reviewer=r_pass, reviewee=e)
+    assert not assignment_matches_cohort(rule_set, observer=obs, reviewer=r_fail, reviewee=e)
 
 
 def test_does_not_contain_negates_substring(db: Session) -> None:
@@ -277,12 +252,8 @@ def test_does_not_contain_negates_substring(db: Session) -> None:
             }
         ],
     }
-    assert assignment_matches_cohort(
-        rule_set, observer=obs, reviewer=r_pass, reviewee=e
-    )
-    assert not assignment_matches_cohort(
-        rule_set, observer=obs, reviewer=r_fail, reviewee=e
-    )
+    assert assignment_matches_cohort(rule_set, observer=obs, reviewer=r_pass, reviewee=e)
+    assert not assignment_matches_cohort(rule_set, observer=obs, reviewer=r_fail, reviewee=e)
 
 
 def _same_as_rule(op: str) -> dict:
@@ -340,9 +311,7 @@ def test_the_literal_ops_on_no_value(db: Session, op: str, expected: bool) -> No
     e = _reviewee(db, sess)
     rule_set = {
         "combinator": "AND",
-        "rules": [
-            {"field": "reviewer.tag1", "op": op, "operand_tag": "", "operand_value": "math"}
-        ],
+        "rules": [{"field": "reviewer.tag1", "op": op, "operand_tag": "", "operand_value": "math"}],
     }
     assert assignment_matches_cohort(rule_set, observer=obs, reviewer=r, reviewee=e) is expected
 
@@ -363,9 +332,7 @@ def test_pair_context_rule_returns_false_for_now(db: Session) -> None:
             }
         ],
     }
-    assert not assignment_matches_cohort(
-        rule_set, observer=obs, reviewer=r, reviewee=e
-    )
+    assert not assignment_matches_cohort(rule_set, observer=obs, reviewer=r, reviewee=e)
 
 
 def test_cross_roster_operand_tag_returns_false_for_now(
@@ -386,9 +353,7 @@ def test_cross_roster_operand_tag_returns_false_for_now(
             }
         ],
     }
-    assert not assignment_matches_cohort(
-        rule_set, observer=obs, reviewer=r, reviewee=e
-    )
+    assert not assignment_matches_cohort(rule_set, observer=obs, reviewer=r, reviewee=e)
 
 
 def test_a_padded_value_matches_like_the_tag_it_names(db: Session) -> None:

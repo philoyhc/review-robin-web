@@ -24,11 +24,7 @@ from ._base_css import css, rules
 
 
 def _declarations_for(selector_fragment: str) -> str:
-    return " ".join(
-        body
-        for selector, body in rules(css())
-        if selector_fragment in selector
-    )
+    return " ".join(body for selector, body in rules(css()) if selector_fragment in selector)
 
 
 def test_progress_row_has_a_rule_at_all() -> None:

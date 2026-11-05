@@ -29,7 +29,9 @@ class DirectoryLookup(Base):
     __tablename__ = "directory_lookups"
     __table_args__ = (
         UniqueConstraint(
-            "operator_user_id", "session_id", "key",
+            "operator_user_id",
+            "session_id",
+            "key",
             name="uq_directory_lookups_operator_session_key",
         ),
     )

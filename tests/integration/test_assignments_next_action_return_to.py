@@ -7,6 +7,7 @@ allowlist on the ``/revert`` route (existing) and a matching
 this slice). The Activate-with-warnings detour carries ``?return_to=assignments``
 through to the Validate-page banner.
 """
+
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
@@ -20,23 +21,17 @@ from ._full_matrix import pin_full_matrix_on_all_instruments
 from ._validated import validate_session
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": f"RT-{code}", "code": code, "description": "d"},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
-def _seed_pair_plus_pinned(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _seed_pair_plus_pinned(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     review_session = _make_session(client, db, code=code)
     client.post(
         f"/operator/sessions/{review_session.public_id}/reviewers/import",
@@ -80,9 +75,7 @@ def test_workflow_card_right_column_renders_setup_checklist_in_state_1(
     Operations-row pages. Pin the markup so subsequent template
     tweaks can't silently strip the checklist."""
     review_session = _make_session(client, db, code="rt-state1")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/assignments").text
     # Right-column aside contains the inline checklist line.
     assert 'class="next-action-checklist-inline"' in body
     assert "<strong>Setup checklist</strong>" in body
@@ -92,9 +85,7 @@ def test_workflow_card_right_column_renders_setup_checklist_in_state_1(
     assert f'href="/operator/sessions/{review_session.public_id}/instruments"' in body
 
 
-def test_workflow_card_right_column_renders_once_validated(
-    client: TestClient, db: Session
-) -> None:
+def test_workflow_card_right_column_renders_once_validated(client: TestClient, db: Session) -> None:
     """A validated session → the right-column aside renders, and the
     left-column body does not carry the generate form or a second pill
     row. (State 3, a draft with validation issues, is retired —
@@ -106,9 +97,7 @@ def test_workflow_card_right_column_renders_once_validated(
     )
     # Validate, to populate validation_summary.
     validate_session(review_session)
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/assignments").text
     # The right-column aside is present.
     assert 'id="next-action-status"' in body
     # When validation reports issues the issue list renders in the
@@ -122,9 +111,7 @@ def test_workflow_card_right_column_renders_once_validated(
     assert ">1 warning" not in left_body_block
 
 
-def test_workflow_card_renders_two_column_grid(
-    client: TestClient, db: Session
-) -> None:
+def test_workflow_card_renders_two_column_grid(client: TestClient, db: Session) -> None:
     """The Workflow card on the Assignments page wraps its existing
     body + stepper row in a ``.next-action-grid`` two-column layout,
     with an empty ``<aside class="next-action-status">`` as the right
@@ -132,9 +119,7 @@ def test_workflow_card_renders_two_column_grid(
     test pins the structural markup so the layout can't silently
     regress."""
     review_session = _seed_pair_plus_pinned(client, db, code="rt-grid")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/assignments").text
     assert 'class="next-action-grid"' in body
     assert 'class="next-action-main"' in body
     assert 'class="next-action-status"' in body
@@ -155,22 +140,15 @@ def test_workflow_card_renders_two_column_grid(
     assert main_open != -1 and status_open != -1 and status_open > main_open
 
 
-def test_prepare_session_form_targets_workflow_route(
-    client: TestClient, db: Session
-) -> None:
+def test_prepare_session_form_targets_workflow_route(client: TestClient, db: Session) -> None:
     """Draft session past setup-empty → Workflow card's Prepare
     session form posts to /workflow/prepare. Per 18F Part 1 the
     super-button split: Prepare runs Generate + Validate, Activate
     runs Activate only."""
     review_session = _seed_pair_plus_pinned(client, db, code="rt-prepare-form")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/assignments").text
     assert 'id="next-action-prepare-form"' in body
-    assert (
-        f'action="/operator/sessions/{review_session.public_id}/workflow/prepare"'
-        in body
-    )
+    assert f'action="/operator/sessions/{review_session.public_id}/workflow/prepare"' in body
     # Retired per-step forms must not render in the card.
     assert 'id="next-action-generate-form"' not in body
 
@@ -180,9 +158,7 @@ def test_prepare_session_form_targets_workflow_route(
 # --------------------------------------------------------------------------- #
 
 
-def test_activate_form_includes_return_to_assignments(
-    client: TestClient, db: Session
-) -> None:
+def test_activate_form_includes_return_to_assignments(client: TestClient, db: Session) -> None:
     """Validated session with no warnings → Next Action card's
     Activate form on Assignments page carries
     ``<input type="hidden" name="return_to" value="assignments">`` so the
@@ -199,13 +175,12 @@ def test_activate_form_includes_return_to_assignments(
     )
     db.refresh(review_session)
     assert lifecycle.is_validated(review_session)
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/assignments").text
     # The Activate session super-button form on the Workflow card
     # carries the hidden return_to=assignments token. Posts to
     # /workflow/activate (super-button collapse, PR 3).
     import re
+
     activate_form = re.search(
         r'(<form[^>]*id="next-action-activate-session-form"[^>]*>.*?</form>)',
         body,
@@ -225,9 +200,7 @@ def test_activate_post_with_return_to_redirects_to_assignments(
 ) -> None:
     """POST /activate with ``return_to=assignments`` lands the
     operator back on the Assignments page rather than Session Home."""
-    review_session = _seed_pair_plus_pinned(
-        client, db, code="rt-activate-post"
-    )
+    review_session = _seed_pair_plus_pinned(client, db, code="rt-activate-post")
     client.post(
         f"/operator/sessions/{review_session.public_id}/assignments/generate",
         follow_redirects=False,
@@ -253,9 +226,7 @@ def test_activate_post_without_return_to_redirects_to_session_home(
 ) -> None:
     """No ``return_to`` field → /activate preserves its legacy
     behaviour and lands on Session Home."""
-    review_session = _seed_pair_plus_pinned(
-        client, db, code="rt-activate-home"
-    )
+    review_session = _seed_pair_plus_pinned(client, db, code="rt-activate-home")
     client.post(
         f"/operator/sessions/{review_session.public_id}/assignments/generate",
         follow_redirects=False,
@@ -270,9 +241,7 @@ def test_activate_post_without_return_to_redirects_to_session_home(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.public_id}"
-    )
+    assert response.headers["location"] == (f"/operator/sessions/{review_session.public_id}")
 
 
 # --------------------------------------------------------------------------- #
@@ -280,9 +249,7 @@ def test_activate_post_without_return_to_redirects_to_session_home(
 # --------------------------------------------------------------------------- #
 
 
-def test_revert_form_on_assignments_carries_return_to(
-    client: TestClient, db: Session
-) -> None:
+def test_revert_form_on_assignments_carries_return_to(client: TestClient, db: Session) -> None:
     """Validated session → Revert to draft form on Assignments
     carries ``return_to=assignments`` so revert lands back here."""
     review_session = _seed_pair_plus_pinned(client, db, code="rt-revert")
@@ -297,10 +264,9 @@ def test_revert_form_on_assignments_carries_return_to(
     )
     db.refresh(review_session)
     assert lifecycle.is_validated(review_session)
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/assignments").text
     import re
+
     revert_form = re.search(
         r'(<form[^>]*id="next-action-revert-form"[^>]*>.*?</form>)',
         body,
@@ -311,9 +277,7 @@ def test_revert_form_on_assignments_carries_return_to(
     assert 'value="assignments"' in revert_form.group(1)
 
 
-def test_pause_form_on_assignments_carries_return_to(
-    client: TestClient, db: Session
-) -> None:
+def test_pause_form_on_assignments_carries_return_to(client: TestClient, db: Session) -> None:
     """Ready session → Pause form on Assignments carries
     ``return_to=assignments``."""
     review_session = _seed_pair_plus_pinned(client, db, code="rt-pause")
@@ -332,10 +296,9 @@ def test_pause_form_on_assignments_carries_return_to(
     )
     db.refresh(review_session)
     assert lifecycle.is_ready(review_session)
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/assignments").text
     import re
+
     pause_form = re.search(
         r'(<form[^>]*id="next-action-pause-form"[^>]*>.*?</form>)',
         body,
@@ -351,9 +314,7 @@ def test_pause_form_on_assignments_carries_return_to(
 # --------------------------------------------------------------------------- #
 
 
-def test_activate_warnings_detour_link_carries_return_to(
-    client: TestClient, db: Session
-) -> None:
+def test_activate_warnings_detour_link_carries_return_to(client: TestClient, db: Session) -> None:
     """When the Next Action card on Assignments routes Activate
     through ``/validate?activate=1`` (warnings present), the link
     appends ``return_to=assignments`` so the eventual /activate
@@ -361,9 +322,7 @@ def test_activate_warnings_detour_link_carries_return_to(
     # Set up a validated session with warnings: generate, validate,
     # then deactivate all rows to introduce ``no_included_pairs`` +
     # ``zero_included`` warnings.
-    review_session = _seed_pair_plus_pinned(
-        client, db, code="rt-activate-warn"
-    )
+    review_session = _seed_pair_plus_pinned(client, db, code="rt-activate-warn")
     client.post(
         f"/operator/sessions/{review_session.public_id}/assignments/generate",
         follow_redirects=False,
@@ -378,21 +337,18 @@ def test_activate_warnings_detour_link_carries_return_to(
     # Deactivate to introduce warnings.
     from app.db.models import Assignment
 
-    db.query(Assignment).filter(
-        Assignment.session_id == review_session.id
-    ).update({Assignment.include: False})
+    db.query(Assignment).filter(Assignment.session_id == review_session.id).update(
+        {Assignment.include: False}
+    )
     db.flush()
     db.commit()
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/assignments").text
     # The Activate button is an anchor to the warnings detour, with
     # return_to appended. HTML escapes the ``&`` as ``&amp;`` so
     # match the rendered form rather than the raw URL.
     assert (
         f'href="/operator/sessions/{review_session.public_id}/validate?activate=1'
-        f'&amp;return_to=assignments"'
-        in body
+        f'&amp;return_to=assignments"' in body
     )
 
 
@@ -402,9 +358,7 @@ def test_validate_warnings_banner_acknowledge_form_carries_return_to(
     """Visiting ``/validate?activate=1&return_to=assignments`` on a
     validated session with warnings renders the Acknowledge-and-
     Activate banner with the return_to hidden input attached."""
-    review_session = _seed_pair_plus_pinned(
-        client, db, code="rt-validate-banner"
-    )
+    review_session = _seed_pair_plus_pinned(client, db, code="rt-validate-banner")
     client.post(
         f"/operator/sessions/{review_session.public_id}/assignments/generate",
         follow_redirects=False,
@@ -416,14 +370,13 @@ def test_validate_warnings_banner_acknowledge_form_carries_return_to(
     )
     from app.db.models import Assignment
 
-    db.query(Assignment).filter(
-        Assignment.session_id == review_session.id
-    ).update({Assignment.include: False})
+    db.query(Assignment).filter(Assignment.session_id == review_session.id).update(
+        {Assignment.include: False}
+    )
     db.flush()
     db.commit()
     body = client.get(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/validate?activate=1&return_to=assignments"
+        f"/operator/sessions/{review_session.public_id}/validate?activate=1&return_to=assignments"
     ).text
     assert 'name="return_to"' in body
     assert 'value="assignments"' in body
@@ -442,13 +395,12 @@ def test_session_home_renders_workflow_card_with_return_to_home(
     an Operations-row page. Per 18F Part 1 the draft+populated state
     shows the Prepare-session form as the primary forward action."""
     review_session = _seed_pair_plus_pinned(client, db, code="rt-home")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}").text
     assert 'id="next-action"' in body
     assert "<h2>Workflow</h2>" in body
     # Prepare session form carries return_to=home.
     import re
+
     prepare_form = re.search(
         r'(<form[^>]*id="next-action-prepare-form"[^>]*>.*?</form>)',
         body,

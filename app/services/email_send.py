@@ -101,8 +101,7 @@ class SmtpEmailTransport:
     def __init__(self, settings: EmailSettings) -> None:
         if settings.transport != "smtp":
             raise ValueError(
-                f"SmtpEmailTransport requires settings.transport='smtp', "
-                f"got {settings.transport!r}"
+                f"SmtpEmailTransport requires settings.transport='smtp', got {settings.transport!r}"
             )
         self._settings = settings
 
@@ -130,8 +129,7 @@ class SmtpEmailTransport:
             return SendResult(ok=True)
         except smtplib.SMTPAuthenticationError as exc:
             return _failure(
-                "Authentication failed. Check the SMTP username and app "
-                "password.",
+                "Authentication failed. Check the SMTP username and app password.",
                 str(exc),
             )
         except smtplib.SMTPRecipientsRefused as exc:
@@ -151,8 +149,7 @@ class SmtpEmailTransport:
             )
         except smtplib.SMTPConnectError as exc:
             return _failure(
-                "Couldn't connect to the SMTP server. Check the host "
-                "and port.",
+                "Couldn't connect to the SMTP server. Check the host and port.",
                 str(exc),
             )
         except (smtplib.SMTPException, OSError) as exc:

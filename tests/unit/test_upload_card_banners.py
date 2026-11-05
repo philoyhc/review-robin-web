@@ -69,7 +69,10 @@ def test_the_recheck_button_sits_left_of_upload(kind: str) -> None:
     assert f'name="roster" value="{kind}"' in card[form:], kind
     # Only while the form it resubmits is on the page.
     renew = card.index("{% if directory_renew_recheck and directory_unmatched %}")
-    assert 'directory_renew_form = "directory-recheck-form"' in card[renew : card.index("{% endwith %}", renew)], kind
+    assert (
+        'directory_renew_form = "directory-recheck-form"'
+        in card[renew : card.index("{% endwith %}", renew)]
+    ), kind
 
 
 @pytest.mark.parametrize("kind", ["reviewers", "reviewees", "relationships"])

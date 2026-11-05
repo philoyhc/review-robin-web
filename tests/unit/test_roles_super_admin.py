@@ -5,6 +5,7 @@ Segment 18S Item 1, moved onto Cordware's switches by segment 21C C3.
 ``SUPER_ADMIN_EMAILS`` list plus, under local fake auth, the fake
 account's email. Never a DB column.
 """
+
 from __future__ import annotations
 
 import pytest

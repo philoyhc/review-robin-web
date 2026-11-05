@@ -169,8 +169,17 @@ def test_a_form_key_with_an_id_past_a_64_bit_column_is_ignored() -> None:
 
 @pytest.mark.parametrize(
     ("raw", "parsed"),
-    [("12", 12), (" 7 ", 7), (3, 3), ("²", None), ("١٢", None), ("-1", None),
-     (str(MAX_SQL_INT + 1), None), (True, None), ("", None)],
+    [
+        ("12", 12),
+        (" 7 ", 7),
+        (3, 3),
+        ("²", None),
+        ("١٢", None),
+        ("-1", None),
+        (str(MAX_SQL_INT + 1), None),
+        (True, None),
+        ("", None),
+    ],
 )
 def test_parse_id(raw: object, parsed: int | None) -> None:
     assert parse_id(raw) == parsed
@@ -199,7 +208,10 @@ _FORM_ID_LIST_ROUTES = [
     *(
         (f"/operator/sessions/{action}", "session_ids")
         for action in (
-            "bulk-tags", "bulk-unarchive", "bulk-delete-archived", "bulk-archive",
+            "bulk-tags",
+            "bulk-unarchive",
+            "bulk-delete-archived",
+            "bulk-archive",
             "bulk-delete",
         )
     ),
@@ -215,9 +227,7 @@ _FORM_ID_LIST_ROUTES = [
 
 
 @pytest.fixture
-def owned_session_id(
-    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
-) -> str:
+def owned_session_id(client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch) -> str:
     """A session alice owns, with relationships and observers on, and
     alice a sys-admin, so every route above reaches its own handler."""
     monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
@@ -243,9 +253,7 @@ def test_an_oversized_id_in_a_form_body_answers_404(
     url = path.format(sid=owned_session_id)
 
     def post(row_id: int) -> int:
-        return client.post(
-            url, data={field: [str(row_id)]}, follow_redirects=False
-        ).status_code
+        return client.post(url, data={field: [str(row_id)]}, follow_redirects=False).status_code
 
     # The largest 64-bit id still binds; one past it was SQLite's 500.
     # (The Accounts route's own answer to an unknown id is a 404 too.)
@@ -315,8 +323,13 @@ def test_an_integer_longer_than_int_reads_is_refused(db: Session) -> None:
 
 @pytest.mark.parametrize(
     ("value", "stored"),
-    [("1e23", "100000000000000000000000"), ("12345678901234567890", "12345678901234567890"),
-     ("0.1000000000000000000001", "0.1000000000000000000001"), ("-0.0", "0"), ("100", "100")],
+    [
+        ("1e23", "100000000000000000000000"),
+        ("12345678901234567890", "12345678901234567890"),
+        ("0.1000000000000000000001", "0.1000000000000000000001"),
+        ("-0.0", "0"),
+        ("100", "100"),
+    ],
 )
 def test_a_decimal_keeps_its_typed_digits(value: str, stored: str) -> None:
     assert canonical_number("Decimal", value) == stored

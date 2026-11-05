@@ -14,27 +14,19 @@ from sqlalchemy.orm import Session
 from app.db.models import Instrument, ReviewSession
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str = "extract-tab"
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str = "extract-tab") -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "ExtractTab", "code": code, "description": "d"},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
-def test_extract_data_tab_renders_skeleton(
-    client: TestClient, db: Session
-) -> None:
+def test_extract_data_tab_renders_skeleton(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="ed-tab-basic")
-    response = client.get(
-        f"/operator/sessions/{review_session.public_id}/extract-data"
-    )
+    response = client.get(f"/operator/sessions/{review_session.public_id}/extract-data")
     assert response.status_code == 200, response.text
     body = response.text
 
@@ -52,9 +44,7 @@ def test_extract_data_tab_renders_skeleton(
     assert ">Reviewee response metadata</h2>" in body
 
 
-def test_extract_data_tab_appears_in_operations_strip(
-    client: TestClient, db: Session
-) -> None:
+def test_extract_data_tab_appears_in_operations_strip(client: TestClient, db: Session) -> None:
     """The Extract data tab is the last Operations tab (after
     Responses). Both the new page and the sibling Responses page
     should render the tab in their nav strip."""
@@ -62,53 +52,35 @@ def test_extract_data_tab_appears_in_operations_strip(
     review_session = _make_session(client, db, code="ed-tab-nav")
 
     # On the new Extract data page itself, the tab is active.
-    own = client.get(
-        f"/operator/sessions/{review_session.public_id}/extract-data"
-    )
+    own = client.get(f"/operator/sessions/{review_session.public_id}/extract-data")
     assert own.status_code == 200
     assert "Extract data</a>" in own.text
-    assert (
-        f'href="/operator/sessions/{review_session.public_id}/extract-data"'
-        in own.text
-    )
+    assert f'href="/operator/sessions/{review_session.public_id}/extract-data"' in own.text
     # The active class lands on the matching tab.
     assert 'class="nav-tab active"' in own.text
 
     # On a sibling Operations page (Responses), the tab also
     # appears (inactive).
-    sibling = client.get(
-        f"/operator/sessions/{review_session.public_id}/responses"
-    )
+    sibling = client.get(f"/operator/sessions/{review_session.public_id}/responses")
     assert sibling.status_code == 200
-    assert (
-        f'href="/operator/sessions/{review_session.public_id}/extract-data"'
-        in sibling.text
-    )
+    assert f'href="/operator/sessions/{review_session.public_id}/extract-data"' in sibling.text
 
 
-def test_extract_data_tab_breadcrumbs(
-    client: TestClient, db: Session
-) -> None:
+def test_extract_data_tab_breadcrumbs(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="ed-tab-crumbs")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/extract-data"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
 
     # operator_session_child renders "Sessions › <name> › Extract data".
     assert "Extract data" in body
 
 
-def test_data_shaper_card_renders(
-    client: TestClient, db: Session
-) -> None:
+def test_data_shaper_card_renders(client: TestClient, db: Session) -> None:
     """The Data shaper lives below the 2-column grid as a
     full-width card; the intro card's chip row carries a matching
     ``Data shaper`` selector defaulting to selected, so the top-level
     ``Zip all`` bundles every saved shape."""
     review_session = _make_session(client, db, code="ed-shaper")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/extract-data"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
 
     # Intro card chip.
     assert 'data-extract-all-chip="data-shaper"' in body
@@ -119,9 +91,7 @@ def test_data_shaper_card_renders(
     assert 'id="extract-data-shaper-zip"' in body
 
 
-def test_data_shaper_axis_chip_row_and_pools(
-    client: TestClient, db: Session
-) -> None:
+def test_data_shaper_axis_chip_row_and_pools(client: TestClient, db: Session) -> None:
     """The axis chip row at the top of the outer Data shaper
     card carries the two **mutually exclusive** axis chips
     (Reviewer / Reviewee), all default-unselected. Each axis
@@ -131,9 +101,7 @@ def test_data_shaper_axis_chip_row_and_pools(
     longer an axis — it became a per-axis-pool scope filter
     rendered to the right of the intra-pool pipe."""
     review_session = _make_session(client, db, code="ed-shaper-axes")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/extract-data"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
 
     for axis, label in [
         ("reviewer", "Reviewer"),
@@ -141,7 +109,7 @@ def test_data_shaper_axis_chip_row_and_pools(
     ]:
         # Axis chip itself.
         assert f'data-shaper-axis-chip="{axis}"' in body
-        assert f'>{label}</span>' in body
+        assert f">{label}</span>" in body
         # Hidden pool template for the axis's column chips.
         assert f'data-shaper-chip-pool="{axis}"' in body
 
@@ -202,9 +170,7 @@ def test_data_shaper_numeric_field_carries_discrete_steps_attribute(
     db.add(field)
     db.commit()
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/extract-data"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
     assert 'data-shaper-field-discrete-steps="1,2,3,4,5"' in body
     # The per-axis ``Discrete steps`` chip + its leading pipe
     # render gated behind ``data-shaper-relevant-for="discrete-steps"``
@@ -222,9 +188,7 @@ def test_data_shaper_oversized_numeric_field_skips_discrete_steps(
     so the JS keeps the chip hidden when the field is selected."""
     from app.db.models import InstrumentResponseField
 
-    review_session = _make_session(
-        client, db, code="ed-shaper-discrete-skip"
-    )
+    review_session = _make_session(client, db, code="ed-shaper-discrete-skip")
     instrument = db.execute(
         select(Instrument).where(Instrument.session_id == review_session.id)
     ).scalar_one()
@@ -243,9 +207,7 @@ def test_data_shaper_oversized_numeric_field_skips_discrete_steps(
     db.add(field)
     db.commit()
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/extract-data"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
     # Slice the body around the oversized field's chip to
     # confirm its tag doesn't carry the attribute (the
     # default-seeded session may include other in-range
@@ -258,9 +220,7 @@ def test_data_shaper_oversized_numeric_field_skips_discrete_steps(
     assert "data-shaper-field-discrete-steps" not in chip_html
 
 
-def test_data_shaper_list_field_carries_options_attribute(
-    client: TestClient, db: Session
-) -> None:
+def test_data_shaper_list_field_carries_options_attribute(client: TestClient, db: Session) -> None:
     """List-type response fields render an extra
     ``data-shaper-field-list-options`` attribute on their chip
     carrying the CSV of options. The progressive-enhancement
@@ -288,12 +248,8 @@ def test_data_shaper_list_field_carries_options_attribute(
     db.add(list_field)
     db.commit()
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/extract-data"
-    ).text
-    assert (
-        'data-shaper-field-list-options="Strong yes,Yes,Maybe,No"' in body
-    )
+    body = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
+    assert 'data-shaper-field-list-options="Strong yes,Yes,Maybe,No"' in body
 
 
 def test_data_shaper_aggregate_chips_carry_data_type_attribute(
@@ -310,9 +266,7 @@ def test_data_shaper_aggregate_chips_carry_data_type_attribute(
     ``data-shaper-field-data-type`` so the JS knows which
     bucket to apply on toggle."""
     review_session = _make_session(client, db, code="ed-shaper-dtype")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/extract-data"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
 
     # Numeric aggregates carry the ``numeric`` marker.
     for slot in ("reviewer:mean", "reviewer:median", "reviewer:min", "reviewer:max"):
@@ -338,9 +292,7 @@ def test_data_shaper_aggregate_chips_carry_data_type_attribute(
     assert "data-shaper-field-data-type=" in body
 
 
-def test_data_shaper_response_field_chip_pool(
-    client: TestClient, db: Session
-) -> None:
+def test_data_shaper_response_field_chip_pool(client: TestClient, db: Session) -> None:
     """Each session instrument carries a hidden
     ``<template data-shaper-field-pool="{id}">`` on the page,
     each member chip carrying the response field's friendly
@@ -356,9 +308,7 @@ def test_data_shaper_response_field_chip_pool(
     instrument = db.execute(
         select(Instrument).where(Instrument.session_id == review_session.id)
     ).scalar_one()
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/extract-data"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
 
     # Field-section pipe and slot live on the top axis row.
     assert "data-shaper-field-pipe" in body
@@ -368,9 +318,7 @@ def test_data_shaper_response_field_chip_pool(
     # ``data-shaper-field-chip`` attribute carrying
     # ``{instrument_id}:{field_id}`` as the slot key.
     assert f'data-shaper-field-pool="{instrument.id}"' in body
-    pool = body.split(
-        f'data-shaper-field-pool="{instrument.id}"'
-    )[1].split("</template>")[0]
+    pool = body.split(f'data-shaper-field-pool="{instrument.id}"')[1].split("</template>")[0]
     assert f'data-shaper-field-chip="{instrument.id}:' in pool
 
 
@@ -407,15 +355,9 @@ def test_data_shaper_tag_chip_labels_resolve_friendly_overrides(
         correlation_id="ed-shaper-friendly-test",
     )
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/extract-data"
-    ).text
-    reviewer_pool = body.split('data-shaper-chip-pool="reviewer"')[1].split(
-        "</template>"
-    )[0]
-    reviewee_pool = body.split('data-shaper-chip-pool="reviewee"')[1].split(
-        "</template>"
-    )[0]
+    body = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
+    reviewer_pool = body.split('data-shaper-chip-pool="reviewer"')[1].split("</template>")[0]
+    reviewee_pool = body.split('data-shaper-chip-pool="reviewee"')[1].split("</template>")[0]
     # Renamed slots render the override.
     assert ">Position<" in reviewer_pool
     assert ">Cohort<" in reviewee_pool
@@ -428,9 +370,7 @@ def test_data_shaper_tag_chip_labels_resolve_friendly_overrides(
     assert ">Tag 3<" in reviewee_pool
 
 
-def test_data_shaper_instrument_chips_live_on_axis_row(
-    client: TestClient, db: Session
-) -> None:
+def test_data_shaper_instrument_chips_live_on_axis_row(client: TestClient, db: Session) -> None:
     """Per-instrument scope chips sit on the **top axis chip
     row** (right after the ``|`` pipe), not inside the
     per-axis pools. They're session-level filters: visible
@@ -443,9 +383,7 @@ def test_data_shaper_instrument_chips_live_on_axis_row(
     span every session instrument — matching the "By
     reviewer" / "By reviewee" general-data framing."""
     review_session = _make_session(client, db, code="ed-shaper-pool")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/extract-data"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
 
     # The card opens with the **scope** chip row (axis chips +
     # instrument scope chips + response-field scope slot)
@@ -455,13 +393,11 @@ def test_data_shaper_instrument_chips_live_on_axis_row(
     # hidden ``<template data-shaper-chip-pool>`` blocks, so
     # slicing up to the first ``data-shaper-chip-pool`` and
     # asserting ordering is sufficient.
-    card_slice = body.split('id="extract-data-shaper"')[1].split(
-        "data-shaper-chip-pool"
-    )[0]
+    card_slice = body.split('id="extract-data-shaper"')[1].split("data-shaper-chip-pool")[0]
     axis_chip_at = card_slice.index('data-shaper-axis-chip="reviewer"')
-    pipe_at = card_slice.index('shaper-axis-pipe')
+    pipe_at = card_slice.index("shaper-axis-pipe")
     instrument_at = card_slice.index('data-shaper-instrument-chip="')
-    relevant_slot_at = card_slice.index('data-shaper-relevant-chips')
+    relevant_slot_at = card_slice.index("data-shaper-relevant-chips")
     # Axis chip ➝ pipe ➝ instrument chip on row 1; the
     # ``data-shaper-relevant-chips`` slot follows on row 2.
     assert axis_chip_at < pipe_at < instrument_at < relevant_slot_at
@@ -473,20 +409,16 @@ def test_data_shaper_instrument_chips_live_on_axis_row(
     # identification + pipe + aggregate. The instrument
     # ``data-shaper-col-chip`` slot retired from both pools.
     for axis in ("reviewer", "reviewee"):
-        pool = body.split(f'data-shaper-chip-pool="{axis}"')[1].split(
-            "</template>"
-        )[0]
+        pool = body.split(f'data-shaper-chip-pool="{axis}"')[1].split("</template>")[0]
         name_at = pool.index(f'data-shaper-col-chip="{axis}:name"')
-        pipe_at = pool.index('shaper-axis-pipe')
+        pipe_at = pool.index("shaper-axis-pipe")
         count_at = pool.index(f'data-shaper-col-chip="{axis}:count"')
         assert name_at < pipe_at < count_at
         # No instrument-prefixed col chips inside the pool.
         assert f'data-shaper-col-chip="{axis}:instrument-' not in pool
 
 
-def test_data_shaper_initial_blank_shape_card(
-    client: TestClient, db: Session
-) -> None:
+def test_data_shaper_initial_blank_shape_card(client: TestClient, db: Session) -> None:
     """One always-present blank Data shape sub-card renders on
     initial load so the operator has an immediate edit target
     (matches the band-3 response-field builder's
@@ -495,9 +427,7 @@ def test_data_shaper_initial_blank_shape_card(
     delete / add), and a placeholder ``Download`` button at
     the bottom-right."""
     review_session = _make_session(client, db, code="ed-shaper-blank")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/extract-data"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
 
     assert "data-shaper-stack" in body
     # Slice from the stack opening to the OUTER card-level
@@ -505,9 +435,7 @@ def test_data_shaper_initial_blank_shape_card(
     # inside the sub-card stack (the per-sub-card
     # ``.extract-data-card-actions`` row carrying the
     # ``Download`` button sits in between).
-    stack_block = body.split("data-shaper-stack")[1].split(
-        'id="extract-data-shaper-zip"'
-    )[0]
+    stack_block = body.split("data-shaper-stack")[1].split('id="extract-data-shaper-zip"')[0]
     assert 'data-shape-mode="edit"' in stack_block
     # Initial sub-card also carries ``data-shape-selected``
     # ⇒ the accent-blue border CSS rule kicks in on first
@@ -521,18 +449,14 @@ def test_data_shaper_initial_blank_shape_card(
         assert f"data-shape-{action}" in stack_block
 
 
-def test_extract_all_card_renders_lens_selector_chips(
-    client: TestClient, db: Session
-) -> None:
+def test_extract_all_card_renders_lens_selector_chips(client: TestClient, db: Session) -> None:
     """The intro card (``Extract all data``) carries three
     placeholder selector chips — ``By instruments``,
     ``Reviewer response metadata``, ``Reviewee response
     metadata`` — all defaulting to selected. Wiring lands
     later; this slice is layout."""
     review_session = _make_session(client, db, code="ed-all-chips")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/extract-data"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
 
     assert 'data-extract-all-chip="by-instruments"' in body
     assert ">By instrument<" in body
@@ -544,16 +468,12 @@ def test_extract_all_card_renders_lens_selector_chips(
     assert ">Data shaper<" in body
 
     # All three chips start selected.
-    chip_block = body.split('id="extract-data-intro"')[1].split(
-        "extract-data-card-actions"
-    )[0]
+    chip_block = body.split('id="extract-data-intro"')[1].split("extract-data-card-actions")[0]
     assert chip_block.count("is-selected") == 4
     assert chip_block.count('aria-pressed="true"') == 4
 
 
-def test_reviewer_metadata_card_renders_selectable_chips(
-    client: TestClient, db: Session
-) -> None:
+def test_reviewer_metadata_card_renders_selectable_chips(client: TestClient, db: Session) -> None:
     """The Reviewer response metadata card carries one chip per
     instrument (``#{n}``, with the short label when set)
     inline before the ``All reviewers`` toggle. All chips
@@ -561,13 +481,11 @@ def test_reviewer_metadata_card_renders_selectable_chips(
     extract column shape (numeric fields ship
     ``.Mean/.Median/.Min/.Max``, string fields ship ``.Length``)."""
     review_session = _make_session(client, db, code="ed-revwr-meta-chips")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/extract-data"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
 
-    chip_block = body.split('id="extract-data-by-reviewer"')[1].split(
-        "extract-data-card-actions"
-    )[0]
+    chip_block = body.split('id="extract-data-by-reviewer"')[1].split("extract-data-card-actions")[
+        0
+    ]
     # Default-seeded session has one instrument; its chip plus
     # the ``All reviewers`` toggle plus the Self-review handling
     # chip (PR A of the chip slice) = 3 chips.
@@ -581,20 +499,16 @@ def test_reviewer_metadata_card_renders_selectable_chips(
     assert chip_block.count('aria-pressed="true"') == 3
 
 
-def test_reviewee_metadata_card_renders_selectable_chips(
-    client: TestClient, db: Session
-) -> None:
+def test_reviewee_metadata_card_renders_selectable_chips(client: TestClient, db: Session) -> None:
     """Mirror of the Reviewer metadata chips on the Reviewee
     card — one chip per instrument followed by ``All
     reviewees``."""
     review_session = _make_session(client, db, code="ed-revwe-meta-chips")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/extract-data"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
 
-    chip_block = body.split('id="extract-data-by-reviewee"')[1].split(
-        "extract-data-card-actions"
-    )[0]
+    chip_block = body.split('id="extract-data-by-reviewee"')[1].split("extract-data-card-actions")[
+        0
+    ]
     assert 'data-reviewee-metadata-chip="instrument-' in chip_block
     assert 'data-reviewee-metadata-chip="all-reviewees"' in chip_block
     assert ">All reviewees<" in chip_block
@@ -604,26 +518,18 @@ def test_reviewee_metadata_card_renders_selectable_chips(
     assert chip_block.count('aria-pressed="true"') == 3
 
 
-def test_self_review_handling_chips_render(
-    client: TestClient, db: Session
-) -> None:
+def test_self_review_handling_chips_render(client: TestClient, db: Session) -> None:
     """The Self-review handling chip lives on three cards. PR A
     wired the two metadata cards; PR C wires the Data shaper
     scope row's chip with the same cycling-pill semantics, just
     backed by the per-shape persisted column."""
     review_session = _make_session(client, db, code="ed-self-review-chips")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/extract-data"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
 
     # Reviewer / Reviewee metadata — wired chip with the live
     # attribute + the cycle's initial state.
-    assert (
-        'data-self-review-handling-chip="reviewer-metadata"' in body
-    )
-    assert (
-        'data-self-review-handling-chip="reviewee-metadata"' in body
-    )
+    assert 'data-self-review-handling-chip="reviewer-metadata"' in body
+    assert 'data-self-review-handling-chip="reviewee-metadata"' in body
     # Default chip state is include_self and reads "Include".
     reviewer_block = body.split('id="extract-data-by-reviewer"')[1].split(
         "extract-data-card-actions"
@@ -644,93 +550,63 @@ def test_self_review_handling_chips_render(
     # Data shaper card — PR C wires the chip in place of the
     # PR-A placeholder. Same cycling-pill state machine; backed
     # by the per-shape persisted column.
-    assert (
-        'data-shaper-self-review-chip="data-shaper"' in body
-    )
-    assert (
-        'data-self-review-handling-placeholder="data-shaper"' not in body
-    )
-    shaper_block = body.split('id="extract-data-shaper"')[1].split(
-        "data-shaper-stack"
-    )[0]
-    assert (
-        'data-shaper-self-review-state="include_self"' in shaper_block
-    )
+    assert 'data-shaper-self-review-chip="data-shaper"' in body
+    assert 'data-self-review-handling-placeholder="data-shaper"' not in body
+    shaper_block = body.split('id="extract-data-shaper"')[1].split("data-shaper-stack")[0]
+    assert 'data-shaper-self-review-state="include_self"' in shaper_block
     assert ">Self-review: Include<" in shaper_block
     reviewee_pos = shaper_block.index('data-shaper-axis-chip="reviewee"')
-    chip_pos = shaper_block.index(
-        'data-shaper-self-review-chip="data-shaper"'
-    )
+    chip_pos = shaper_block.index('data-shaper-self-review-chip="data-shaper"')
     first_pipe_pos = shaper_block.index("shaper-axis-pipe")
     assert reviewee_pos < chip_pos < first_pipe_pos
 
 
-def test_by_instrument_card_renders_selectable_chips(
-    client: TestClient, db: Session
-) -> None:
+def test_by_instrument_card_renders_selectable_chips(client: TestClient, db: Session) -> None:
     """The By instrument card carries one chip per instrument
     (``#{n}``, with the short label when set) plus the two
     cross-cutting toggles. All default to selected
     (``is-selected`` + ``aria-pressed="true"``)."""
     review_session = _make_session(client, db, code="ed-chips")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/extract-data"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
 
     # Default-seeded session has one instrument with no short
     # label — the chip carries the bare ``#1`` positional prefix
     # (matches the Reviewer-surface heading helper's no-label
     # branch).
-    assert "data-by-instrument-chip=\"instrument-" in body
+    assert 'data-by-instrument-chip="instrument-' in body
     assert ">#1<" in body
     # Cross-cutting toggles.
-    assert "data-by-instrument-chip=\"include-metadata\"" in body
+    assert 'data-by-instrument-chip="include-metadata"' in body
     assert ">Include metadata<" in body
-    assert "data-by-instrument-chip=\"all-assignment-rows\"" in body
+    assert 'data-by-instrument-chip="all-assignment-rows"' in body
     assert ">All assignment rows<" in body
     # All chips start selected — the toggle JS flips this later.
-    chip_block = body.split("extract-data-by-instrument")[1].split(
-        "extract-data-card-actions"
-    )[0]
+    chip_block = body.split("extract-data-by-instrument")[1].split("extract-data-card-actions")[0]
     assert chip_block.count("is-selected") >= 3
     assert chip_block.count('aria-pressed="true"') >= 3
 
 
-def test_include_empty_rows_chip_renders_on_data_shaper(
-    client: TestClient, db: Session
-) -> None:
+def test_include_empty_rows_chip_renders_on_data_shaper(client: TestClient, db: Session) -> None:
     """PR 6 of the chip-controlled-drop slice — the new
     ``All rows`` / ``Rows with data`` cycling-pill chip lives
     on the Data shaper scope row, before the Self-review
     handling chip. Default state is ``true`` (``All rows``)."""
     review_session = _make_session(client, db, code="ed-ier-chip")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/extract-data"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
 
-    shaper_block = body.split('id="extract-data-shaper"')[1].split(
-        "data-shaper-stack"
-    )[0]
-    assert (
-        'data-shaper-include-empty-rows-chip="data-shaper"' in shaper_block
-    )
+    shaper_block = body.split('id="extract-data-shaper"')[1].split("data-shaper-stack")[0]
+    assert 'data-shaper-include-empty-rows-chip="data-shaper"' in shaper_block
     assert 'data-shaper-include-empty-rows-state="true"' in shaper_block
     assert ">All rows<" in shaper_block
     # Order: empty-row drop chip lives between the axis chips
     # and the self-review chip per the spec.
     reviewee_pos = shaper_block.index('data-shaper-axis-chip="reviewee"')
-    ier_pos = shaper_block.index(
-        'data-shaper-include-empty-rows-chip="data-shaper"'
-    )
-    srh_pos = shaper_block.index(
-        'data-shaper-self-review-chip="data-shaper"'
-    )
+    ier_pos = shaper_block.index('data-shaper-include-empty-rows-chip="data-shaper"')
+    srh_pos = shaper_block.index('data-shaper-self-review-chip="data-shaper"')
     assert reviewee_pos < ier_pos < srh_pos
 
 
-def test_empty_row_drop_chips_carry_dual_labels(
-    client: TestClient, db: Session
-) -> None:
+def test_empty_row_drop_chips_carry_dual_labels(client: TestClient, db: Session) -> None:
     """PR 8 of the chip-controlled-drop slice — the three
     existing empty-row-drop chips on By instrument / Reviewer
     response metadata / Reviewee response metadata become
@@ -739,35 +615,25 @@ def test_empty_row_drop_chips_carry_dual_labels(
     ``data-label-off`` so the page JS can swap on toggle; the
     initial render shows the on-label."""
     review_session = _make_session(client, db, code="ed-dual-labels")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/extract-data"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
 
     # By instrument card.
-    bi_block = body.split("extract-data-by-instrument")[1].split(
-        "extract-data-card-actions"
-    )[0]
+    bi_block = body.split("extract-data-by-instrument")[1].split("extract-data-card-actions")[0]
     assert 'data-by-instrument-chip="all-assignment-rows"' in bi_block
     assert 'data-label-on="All assignment rows"' in bi_block
-    assert (
-        'data-label-off="Assignment rows with data"' in bi_block
-    )
+    assert 'data-label-off="Assignment rows with data"' in bi_block
     # Initial render still shows the on-label.
     assert ">All assignment rows<" in bi_block
 
     # Reviewer response metadata card.
-    rwr_block = body.split('id="extract-data-by-reviewer"')[1].split(
-        "extract-data-card-actions"
-    )[0]
+    rwr_block = body.split('id="extract-data-by-reviewer"')[1].split("extract-data-card-actions")[0]
     assert 'data-reviewer-metadata-chip="all-reviewers"' in rwr_block
     assert 'data-label-on="All reviewers"' in rwr_block
     assert 'data-label-off="Reviewers with responses"' in rwr_block
     assert ">All reviewers<" in rwr_block
 
     # Reviewee response metadata card.
-    rwe_block = body.split('id="extract-data-by-reviewee"')[1].split(
-        "extract-data-card-actions"
-    )[0]
+    rwe_block = body.split('id="extract-data-by-reviewee"')[1].split("extract-data-card-actions")[0]
     assert 'data-reviewee-metadata-chip="all-reviewees"' in rwe_block
     assert 'data-label-on="All reviewees"' in rwe_block
     assert 'data-label-off="Reviewees with responses"' in rwe_block

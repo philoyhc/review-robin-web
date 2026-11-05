@@ -9,6 +9,7 @@ See the tool's docstring for why this exists. Short version: the suite
 has no layout engine, so which CSS rule *wins* on which element is
 invisible to it, and 19P lost two declarations that way.
 """
+
 from __future__ import annotations
 
 import json
@@ -30,10 +31,9 @@ def _pages_carrying_the_strip() -> list[str]:
     return sorted(
         path.stem.removeprefix("session_")
         for path in (_TEMPLATES / "operator").rglob("session_*.html")
-        if 'class="filter-row"' in path.read_text(
-            encoding="utf-8", errors="replace"
-        )
+        if 'class="filter-row"' in path.read_text(encoding="utf-8", errors="replace")
     )
+
 
 _ROWS = b"".join(f"P{n},p{n}@example.com\n".encode() for n in range(1, 4))
 
@@ -46,9 +46,9 @@ def test_dump_filter_strip_pages(client, db) -> None:
     out = pathlib.Path(os.environ["RRW_PARITY_DUMP"])
     out.mkdir(parents=True, exist_ok=True)
 
-    client.post("/operator/sessions",
-                data={"name": "Parity", "code": "parity"},
-                follow_redirects=False)
+    client.post(
+        "/operator/sessions", data={"name": "Parity", "code": "parity"}, follow_redirects=False
+    )
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.code == "parity")
     ).scalar_one()
@@ -64,11 +64,15 @@ def test_dump_filter_strip_pages(client, db) -> None:
     db.commit()
 
     base = f"/operator/sessions/{review_session.public_id}"
-    for role, header in (("reviewers", b"ReviewerName,ReviewerEmail\n"),
-                         ("reviewees", b"RevieweeName,RevieweeEmail\n")):
-        client.post(f"{base}/{role}/import",
-                    files={"file": ("r.csv", header + _ROWS, "text/csv")},
-                    follow_redirects=False)
+    for role, header in (
+        ("reviewers", b"ReviewerName,ReviewerEmail\n"),
+        ("reviewees", b"RevieweeName,RevieweeEmail\n"),
+    ):
+        client.post(
+            f"{base}/{role}/import",
+            files={"file": ("r.csv", header + _ROWS, "text/csv")},
+            follow_redirects=False,
+        )
 
     pages = _pages_carrying_the_strip()
     assert len(pages) >= 7, f"vacuity: only found {pages}"

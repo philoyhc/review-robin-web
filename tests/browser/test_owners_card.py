@@ -45,9 +45,7 @@ def _add(page: Page, email: str) -> None:
         page.locator("#owners-add-submit").click()
 
 
-def _two_owner_session(
-    page: Page, api: httpx.Client, new_session: Callable[[], str]
-) -> str:
+def _two_owner_session(page: Page, api: httpx.Client, new_session: Callable[[], str]) -> str:
     _sign_in_colleague(api)
     session_id = new_session()
     _open_home(page, session_id)
@@ -110,9 +108,7 @@ def test_removing_another_owner_asks_and_cancel_posts_nothing(
     remove.click()
     expect(_owner_row(page, COLLEAGUE_EMAIL)).to_have_count(1)
     assert len(asked) == 1 and asked[0].type == "confirm"
-    assert asked[0].message == (
-        f"Remove {COLLEAGUE_EMAIL} as an owner of this session?"
-    )
+    assert asked[0].message == (f"Remove {COLLEAGUE_EMAIL} as an owner of this session?")
     assert posted == []
     # Declining leaves no busy indicator behind (base.html skips a
     # submit whose onsubmit cancelled it).
@@ -120,9 +116,7 @@ def test_removing_another_owner_asks_and_cancel_posts_nothing(
     expect(page.locator("[data-rrw-busy-bar]")).to_be_hidden()
 
 
-def test_the_last_owner_cannot_be_removed(
-    page: Page, new_session: Callable[[], str]
-) -> None:
+def test_the_last_owner_cannot_be_removed(page: Page, new_session: Callable[[], str]) -> None:
     """Item 5, 'The last owner cannot go'."""
     _open_home(page, new_session())
 
@@ -212,10 +206,7 @@ def test_an_owners_refusal_lands_the_card_not_its_banner(
     page.goto(app_url(f"/operator/sessions/{session_id}?owners_error=already_owner#owners-card"))
     expect(page.locator("#owners-card .banner-scroll-target")).to_be_visible()
     page.wait_for_function(
-        "Math.abs(document.getElementById('owners-card')"
-        ".getBoundingClientRect().top - 24) < 4"
+        "Math.abs(document.getElementById('owners-card').getBoundingClientRect().top - 24) < 4"
     )
-    top = page.evaluate(
-        "document.getElementById('owners-card').getBoundingClientRect().top"
-    )
+    top = page.evaluate("document.getElementById('owners-card').getBoundingClientRect().top")
     assert 0 < top < 40

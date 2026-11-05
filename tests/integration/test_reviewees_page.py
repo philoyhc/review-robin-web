@@ -5,6 +5,7 @@ Reviewee-side mirror of test_reviewers_page_filter +
 test_reviewers_page_mutate, condensed into one file since PR 4 is
 a single clone PR.
 """
+
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
@@ -51,15 +52,11 @@ def _seed(db: Session, session_id: int, names: list[str]) -> list[Reviewee]:
 # --------------------------------------------------------------------------- #
 
 
-def test_plain_render_has_checkbox_column_and_buttons(
-    db: Session, client: TestClient
-) -> None:
+def test_plain_render_has_checkbox_column_and_buttons(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rve-plain")
     _seed(db, review_session.id, ["Alice", "Bob"])
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewees"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewees").text
     assert 'class="reviewee-select"' in body
     assert 'id="reviewees-select-all"' in body
     # 19P.3 rung 3 — `Edit` is built into the row expander against the
@@ -69,9 +66,7 @@ def test_plain_render_has_checkbox_column_and_buttons(
     assert "reviewee-edit-row" not in body
 
 
-def test_status_filter_narrows_to_inactive(
-    db: Session, client: TestClient
-) -> None:
+def test_status_filter_narrows_to_inactive(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rve-filter")
     rows = _seed(db, review_session.id, ["Alice", "Bob", "Carol"])
     rows[1].status = "inactive"
@@ -85,15 +80,11 @@ def test_status_filter_narrows_to_inactive(
     assert "Alice" not in table
 
 
-def test_search_filter_substring_match(
-    db: Session, client: TestClient
-) -> None:
+def test_search_filter_substring_match(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rve-search")
     _seed(db, review_session.id, ["Alpha", "Beta"])
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewees?q=alph"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewees?q=alph").text
     table = body[body.find('id="reviewees-table"') :]
     assert "Alpha" in table
     assert "Beta" not in table
@@ -111,9 +102,7 @@ def test_unfiltered_cap_is_200(db: Session, client: TestClient) -> None:
         )
     db.commit()
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewees"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewees").text
     table = body[body.find('id="reviewees-table"') :]
     assert "E0199" in table
     assert "E0200" not in table
@@ -129,15 +118,12 @@ def test_unfiltered_cap_is_200(db: Session, client: TestClient) -> None:
 # --------------------------------------------------------------------------- #
 
 
-def test_edit_id_renders_target_row_as_inputs(
-    db: Session, client: TestClient
-) -> None:
+def test_edit_id_renders_target_row_as_inputs(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rve-editget")
     rows = _seed(db, review_session.id, ["Alice", "Bob"])
 
     body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewees"
-        f"?edit_id={rows[0].id}"
+        f"/operator/sessions/{review_session.public_id}/reviewees?edit_id={rows[0].id}"
     ).text
     assert "reviewee-edit-row" in body
     assert 'id="reviewee-edit-form"' in body
@@ -152,9 +138,7 @@ def test_edit_id_renders_target_row_as_inputs(
     assert "operator-actions-filter is-locked" in body
 
 
-def test_edit_post_updates_row_and_redirects(
-    db: Session, client: TestClient
-) -> None:
+def test_edit_post_updates_row_and_redirects(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rve-editpost")
     rows = _seed(db, review_session.id, ["Alice"])
 
@@ -173,17 +157,13 @@ def test_edit_post_updates_row_and_redirects(
     )
     assert response.status_code == 303
     db.expire_all()
-    reviewee = db.execute(
-        select(Reviewee).where(Reviewee.id == rows[0].id)
-    ).scalar_one()
+    reviewee = db.execute(select(Reviewee).where(Reviewee.id == rows[0].id)).scalar_one()
     assert reviewee.name == "Alice Renamed"
     assert reviewee.profile_link == "https://example.edu/a"
     assert reviewee.status == "inactive"
 
 
-def test_edit_post_validation_error_rerenders(
-    db: Session, client: TestClient
-) -> None:
+def test_edit_post_validation_error_rerenders(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rve-editerr")
     rows = _seed(db, review_session.id, ["Alice", "Bob"])
 
@@ -205,13 +185,9 @@ def test_edit_post_validation_error_rerenders(
     assert "banner-error" in response.text
 
 
-def test_add_renders_blank_edit_row(
-    db: Session, client: TestClient
-) -> None:
+def test_add_renders_blank_edit_row(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rve-addget")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewees?add=1"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewees?add=1").text
     assert "reviewee-edit-row" in body
     assert ">Add new reviewee</h2>" not in body
     assert "Add new reviewee" in body
@@ -240,9 +216,7 @@ def test_add_post_creates_row(db: Session, client: TestClient) -> None:
     assert reviewee.email_or_identifier == "newbie-2026"
 
 
-def test_add_post_validation_error_rerenders(
-    db: Session, client: TestClient
-) -> None:
+def test_add_post_validation_error_rerenders(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rve-adderr")
     response = client.post(
         f"/operator/sessions/{review_session.public_id}/reviewees/create",
@@ -269,18 +243,11 @@ def test_add_post_validation_error_rerenders(
     assert 'class="banner banner-error"' not in response.text
     assert "row-editor-error" in response.text
     assert (
-        db.execute(
-            select(Reviewee).where(
-                Reviewee.session_id == review_session.id
-            )
-        ).first()
-        is None
+        db.execute(select(Reviewee).where(Reviewee.session_id == review_session.id)).first() is None
     )
 
 
-def test_bulk_inactivate_flips_selected(
-    db: Session, client: TestClient
-) -> None:
+def test_bulk_inactivate_flips_selected(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rve-bulk")
     rows = _seed(db, review_session.id, ["Alice", "Bob", "Carol"])
 
@@ -294,9 +261,7 @@ def test_bulk_inactivate_flips_selected(
     statuses = {
         r.name: r.status
         for r in db.execute(
-            select(Reviewee).where(
-                Reviewee.session_id == review_session.id
-            )
+            select(Reviewee).where(Reviewee.session_id == review_session.id)
         ).scalars()
     }
     assert statuses == {
@@ -306,9 +271,7 @@ def test_bulk_inactivate_flips_selected(
     }
 
 
-def test_bulk_action_keeps_filter(
-    db: Session, client: TestClient
-) -> None:
+def test_bulk_action_keeps_filter(db: Session, client: TestClient) -> None:
     """The active search / status filter rides through a bulk
     action so the operator lands back on the same filtered view."""
     review_session = _make_session(client, db, code="rve-keepfilter")
@@ -328,9 +291,7 @@ def test_bulk_action_keeps_filter(
     assert "q=Ali" in loc
 
 
-def test_bulk_reactivate_flips_selected(
-    db: Session, client: TestClient
-) -> None:
+def test_bulk_reactivate_flips_selected(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rve-bulk-react")
     rows = _seed(db, review_session.id, ["Alice"])
     rows[0].status = "inactive"
@@ -344,9 +305,7 @@ def test_bulk_reactivate_flips_selected(
     assert response.status_code == 303
     db.expire_all()
     assert (
-        db.execute(
-            select(Reviewee).where(Reviewee.id == rows[0].id)
-        ).scalar_one().status
+        db.execute(select(Reviewee).where(Reviewee.id == rows[0].id)).scalar_one().status
         == "active"
     )
 
@@ -356,28 +315,19 @@ def test_bulk_reactivate_flips_selected(
 # --------------------------------------------------------------------------- #
 
 
-def test_edit_mode_suppressed_on_ready_session(
-    db: Session, client: TestClient
-) -> None:
-    review_session = _make_session(
-        client, db, code="rve-ready", status="ready"
-    )
+def test_edit_mode_suppressed_on_ready_session(db: Session, client: TestClient) -> None:
+    review_session = _make_session(client, db, code="rve-ready", status="ready")
     rows = _seed(db, review_session.id, ["Alice"])
 
     body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewees"
-        f"?edit_id={rows[0].id}"
+        f"/operator/sessions/{review_session.public_id}/reviewees?edit_id={rows[0].id}"
     ).text
     assert "reviewee-edit-row" not in body
     assert "card lock" in body
 
 
-def test_create_on_ready_session_is_409(
-    db: Session, client: TestClient
-) -> None:
-    review_session = _make_session(
-        client, db, code="rve-ready-create", status="ready"
-    )
+def test_create_on_ready_session_is_409(db: Session, client: TestClient) -> None:
+    review_session = _make_session(client, db, code="rve-ready-create", status="ready")
     response = client.post(
         f"/operator/sessions/{review_session.public_id}/reviewees/create",
         data={

@@ -5,6 +5,7 @@ Assignments page consume. Writes nothing (the unreached
 ``delete_all_assignments`` was retired, findings B7 2026-10-03: no
 assignment is deleted by hand, ``spec/assignments.md``).
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -41,9 +42,7 @@ from app.services.email_identity import normalize_email
 PAIR_PREVIEW_LIMIT = 200
 
 
-def get_or_create_default_instrument(
-    db: Session, review_session: ReviewSession
-) -> Instrument:
+def get_or_create_default_instrument(db: Session, review_session: ReviewSession) -> Instrument:
     """Return the session's default instrument, creating it if missing.
 
     Thin alias for ``app.services.instruments.ensure_default_instrument``;
@@ -66,17 +65,13 @@ def existing_count(
     """
     # Not ``session_scoped``: it infers the model from ``target.class_``,
     # which an aggregate does not have.
-    stmt = select(func.count(Assignment.id)).where(
-        Assignment.session_id == session_id
-    )
+    stmt = select(func.count(Assignment.id)).where(Assignment.session_id == session_id)
     if instrument_id is not None:
         stmt = stmt.where(Assignment.instrument_id == instrument_id)
     return int(db.execute(stmt).scalar_one())
 
 
-def included_count_per_instrument(
-    db: Session, session_id: int
-) -> dict[int, int]:
+def included_count_per_instrument(db: Session, session_id: int) -> dict[int, int]:
     """Materialised ``Assignment`` row count keyed by
     ``instrument_id``, restricted to rows where ``include=True``.
 
@@ -86,18 +81,15 @@ def included_count_per_instrument(
     row count regardless of ``include``.
     """
     rows = db.execute(
-        session_scoped(
-            Assignment.instrument_id, session_id
-        ).add_columns(func.count(Assignment.id))
+        session_scoped(Assignment.instrument_id, session_id)
+        .add_columns(func.count(Assignment.id))
         .where(Assignment.include.is_(True))
         .group_by(Assignment.instrument_id)
     ).all()
     return {instrument_id: count for instrument_id, count in rows}
 
 
-def existing_count_per_instrument(
-    db: Session, session_id: int
-) -> dict[int, int]:
+def existing_count_per_instrument(db: Session, session_id: int) -> dict[int, int]:
     """Materialised ``Assignment`` row count keyed by ``instrument_id``.
 
     Drives the per-instrument **Generated** count on the Slice 3a
@@ -106,33 +98,22 @@ def existing_count_per_instrument(
     the dict — callers default-to-zero on lookup.
     """
     rows = db.execute(
-        session_scoped(
-            Assignment.instrument_id, session_id
-        ).add_columns(func.count(Assignment.id))
+        session_scoped(Assignment.instrument_id, session_id)
+        .add_columns(func.count(Assignment.id))
         .group_by(Assignment.instrument_id)
     ).all()
     return {instrument_id: count for instrument_id, count in rows}
 
 
 def list_reviewers(db: Session, session_id: int) -> list[Reviewer]:
-    return list(
-        db.execute(
-            session_scoped(Reviewer, session_id).order_by(Reviewer.id)
-        ).scalars()
-    )
+    return list(db.execute(session_scoped(Reviewer, session_id).order_by(Reviewer.id)).scalars())
 
 
 def list_reviewees(db: Session, session_id: int) -> list[Reviewee]:
-    return list(
-        db.execute(
-            session_scoped(Reviewee, session_id).order_by(Reviewee.id)
-        ).scalars()
-    )
+    return list(db.execute(session_scoped(Reviewee, session_id).order_by(Reviewee.id)).scalars())
 
 
-def _tag_matches(
-    term: str, *columns: QueryableAttribute[str | None]
-) -> list[ColumnElement[bool]]:
+def _tag_matches(term: str, *columns: QueryableAttribute[str | None]) -> list[ColumnElement[bool]]:
     """Whole-value tag predicates for ``term`` (Segment 19I Item 7).
 
     The tag half of Item 1's per-column rule, expressed in SQL:
@@ -213,9 +194,9 @@ def _apply_pair_search(
     # ``autoescape`` makes ``%`` and ``_`` literal, as they are in the
     # Python matcher this mirrors (findings E5).
     term = search.strip()
-    stmt = stmt.join(
-        Reviewer, Assignment.reviewer_id == Reviewer.id
-    ).join(Reviewee, Assignment.reviewee_id == Reviewee.id)
+    stmt = stmt.join(Reviewer, Assignment.reviewer_id == Reviewer.id).join(
+        Reviewee, Assignment.reviewee_id == Reviewee.id
+    )
 
     # Segment 19I Item 9 — a typeahead label the operator picked
     # resolves to that side's handle, matched by **equality**. Without
@@ -242,9 +223,7 @@ def _apply_pair_search(
                     == normalize_email(picked_reviewee_handle),
                 )
             )
-        allowed = [
-            clause for side, clause in sides if search_by in ("all", side)
-        ]
+        allowed = [clause for side, clause in sides if search_by in ("all", side)]
         if not allowed:
             # The pick names a side the scope excludes — nothing
             # matches, rather than falling back to a substring search
@@ -255,16 +234,12 @@ def _apply_pair_search(
     reviewer_match = or_(
         Reviewer.name.icontains(term, autoescape=True),
         Reviewer.email.icontains(term, autoescape=True),
-        *_tag_matches(
-            search, Reviewer.tag_1, Reviewer.tag_2, Reviewer.tag_3
-        ),
+        *_tag_matches(search, Reviewer.tag_1, Reviewer.tag_2, Reviewer.tag_3),
     )
     reviewee_match = or_(
         Reviewee.name.icontains(term, autoescape=True),
         Reviewee.email_or_identifier.icontains(term, autoescape=True),
-        *_tag_matches(
-            search, Reviewee.tag_1, Reviewee.tag_2, Reviewee.tag_3
-        ),
+        *_tag_matches(search, Reviewee.tag_1, Reviewee.tag_2, Reviewee.tag_3),
     )
     if search_by == "reviewer":
         return stmt.where(reviewer_match)
@@ -305,9 +280,7 @@ def _apply_pair_search(
 # --------------------------------------------------------------------- #
 
 
-def _code_point(
-    db: Session, expression: ColumnElement[str]
-) -> ColumnElement[str]:
+def _code_point(db: Session, expression: ColumnElement[str]) -> ColumnElement[str]:
     """Order ``expression`` by code point on either dialect.
 
     SQLite's default collation is BINARY, which already is code-point
@@ -379,26 +352,18 @@ def _pair_sort_order(
         if key == "reviewer" or key.startswith("reviewer_tag_"):
             alias, fresh = _reviewer()
             if fresh:
-                stmt = stmt.outerjoin(
-                    alias, Assignment.reviewer_id == alias.id
-                )
+                stmt = stmt.outerjoin(alias, Assignment.reviewer_id == alias.id)
             column = (
-                alias.name
-                if key == "reviewer"
-                else getattr(alias, f"tag_{key.rsplit('_', 1)[-1]}")
+                alias.name if key == "reviewer" else getattr(alias, f"tag_{key.rsplit('_', 1)[-1]}")
             )
             expression = _code_point(db, func.nullif(column, ""))
 
         elif key == "reviewee" or key.startswith("reviewee_tag_"):
             alias, fresh = _reviewee()
             if fresh:
-                stmt = stmt.outerjoin(
-                    alias, Assignment.reviewee_id == alias.id
-                )
+                stmt = stmt.outerjoin(alias, Assignment.reviewee_id == alias.id)
             column = (
-                alias.name
-                if key == "reviewee"
-                else getattr(alias, f"tag_{key.rsplit('_', 1)[-1]}")
+                alias.name if key == "reviewee" else getattr(alias, f"tag_{key.rsplit('_', 1)[-1]}")
             )
             expression = _code_point(db, func.nullif(column, ""))
 
@@ -427,12 +392,8 @@ def _pair_sort_order(
             if "instrument" not in joined:
                 alias = aliased(Instrument)
                 joined["instrument"] = alias
-                stmt = stmt.outerjoin(
-                    alias, Assignment.instrument_id == alias.id
-                )
-            expression = _code_point(
-                db, _instrument_label_sql(joined["instrument"])
-            )
+                stmt = stmt.outerjoin(alias, Assignment.instrument_id == alias.id)
+            expression = _code_point(db, _instrument_label_sql(joined["instrument"]))
 
         elif key == "include":
             # Render-text parity: the Python resolver sorted the strings
@@ -443,9 +404,7 @@ def _pair_sort_order(
         if expression is None:
             continue
 
-        clause = (
-            expression.desc() if direction == "desc" else expression.asc()
-        )
+        clause = expression.desc() if direction == "desc" else expression.asc()
         # Rule 2: NULL last in **both** directions — not the default
         # either dialect would pick, and the reason every clause is
         # wrapped rather than only the ascending ones.

@@ -21,8 +21,18 @@ HEADERS = {
     "assignments_slots": ["Term", *UNITS],
     "assignments": ["Term", *UNITS, "Staff", "RA"],
     "terms": ["Year", "Term", "Name", "Start", "End"],
-    "quick_setup": [*UNITS, "Roster", "Name", "Email", "Appointment", "Abbrev", "From", "To", "Enterprise name",
-                    "Student ID"],
+    "quick_setup": [
+        *UNITS,
+        "Roster",
+        "Name",
+        "Email",
+        "Appointment",
+        "Abbrev",
+        "From",
+        "To",
+        "Enterprise name",
+        "Student ID",
+    ],
 }
 
 
@@ -83,7 +93,12 @@ def test_the_roster_error_files_warn_on_one_identity_change_each() -> None:
     or student ID warns. Each error file has one such row, differing from
     the roster in exactly the fields its README row names."""
     for file, roster, email, changed in (
-        ("staff_roster_errors.csv", "staff_roster.csv", "meiling.tan@example.edu", {"Name", "Enterprise name"}),
+        (
+            "staff_roster_errors.csv",
+            "staff_roster.csv",
+            "meiling.tan@example.edu",
+            {"Name", "Enterprise name"},
+        ),
         ("ra_roster_errors.csv", "ra_roster.csv", "ethan.wong@example.edu", {"Student ID"}),
     ):
         on_file = {p["Email"]: p for p in rows(roster)}
@@ -97,15 +112,17 @@ def test_the_terms_never_overlap_and_match_the_pages() -> None:
     from residentialapps.residentialops import sample_data
 
     terms = rows("terms.csv")
-    assert [(t.year, str(t.number), t.name, str(t.start), str(t.end)) for t in sample_data.TERMS] == [
-        tuple(t.values()) for t in terms
-    ]
+    assert [
+        (t.year, str(t.number), t.name, str(t.start), str(t.end)) for t in sample_data.TERMS
+    ] == [tuple(t.values()) for t in terms]
     for earlier, later in zip(sample_data.TERMS, sample_data.TERMS[1:]):
         assert earlier.end < later.start
     years = Counter(t["Year"] for t in terms)
     assert max(years.values()) <= sample_data.MAX_TERMS
     for year in years:
-        assert [t["Term"] for t in terms if t["Year"] == year] == [str(n) for n in range(1, years[year] + 1)]
+        assert [t["Term"] for t in terms if t["Year"] == year] == [
+            str(n) for n in range(1, years[year] + 1)
+        ]
     lines = (DATA / "terms.csv").read_text().splitlines()
     assert all(line in lines for line in sample_data.TERMS_CSV.splitlines())
 
@@ -120,14 +137,23 @@ def test_the_assignments_files_name_set_up_terms() -> None:
     codes = {t.code: t for t in sample_data.TERMS}
     term1, term2 = (t for t in sample_data.TERMS if t.year == "AY2026-2027" and t.number in (1, 2))
     for file in ("assignments.csv", "assignments_slots.csv"):
-        assert {row["Term"] for row in rows(file)} == {term1.code} == {sample_data.CURRENT_TERM.code}, file
+        assert (
+            {row["Term"] for row in rows(file)} == {term1.code} == {sample_data.CURRENT_TERM.code}
+        ), file
     assert {row["Term"] for row in rows("assignments_term2.csv")} == {term2.code}
     first, second = slots(), slots("assignments_term2.csv")
     assert [{k: v for k, v in r.items() if k != "RA"} for r in first] == [
         {k: v for k, v in r.items() if k != "RA"} for r in second
     ]
-    swapped = [(a["Level3.Neighborhood"], a["RA"], b["RA"]) for a, b in zip(first, second) if a["RA"] != b["RA"]]
-    assert sorted(ra for _, ra, _ in swapped) == sorted(ra for _, _, ra in swapped) and len(swapped) == 2
+    swapped = [
+        (a["Level3.Neighborhood"], a["RA"], b["RA"])
+        for a, b in zip(first, second)
+        if a["RA"] != b["RA"]
+    ]
+    assert (
+        sorted(ra for _, ra, _ in swapped) == sorted(ra for _, _, ra in swapped)
+        and len(swapped) == 2
+    )
     errors = [row["Term"] for row in rows("assignments_errors.csv")]
     assert [codes[e].status for e in errors if e in codes and e != term1.code] == ["Past"]
     assert [e for e in errors if e not in codes] == ["AY2027-2028 Term 1"]
@@ -139,9 +165,15 @@ def test_one_assignee_starts_partway_into_the_term() -> None:
     from residentialapps.residentialops import sample_data
 
     start = sample_data.CURRENT_TERM.start
-    late = {p["Email"]: p["From"] for p in (*rows("staff_roster.csv"), *rows("ra_roster.csv")) if p["From"] > str(start)}
+    late = {
+        p["Email"]: p["From"]
+        for p in (*rows("staff_roster.csv"), *rows("ra_roster.csv"))
+        if p["From"] > str(start)
+    }
     assert late == {"umairah.salleh@example.edu": "2026-08-17"}
-    assert sample_data.late_starts(sample_data.CURRENT_TERM) == (("Umairah Salleh", "Willow B 10-11-12", 14),)
+    assert sample_data.late_starts(sample_data.CURRENT_TERM) == (
+        ("Umairah Salleh", "Willow B 10-11-12", 14),
+    )
 
 
 def test_the_guard_covers_qualifies_and_refuses() -> None:
@@ -165,7 +197,10 @@ def test_every_person_cell_names_someone_on_its_roster() -> None:
     ras = {p["Email"] for p in rows("ra_roster.csv")}
     for slot in slots():
         people = slot["Staff"].split("; ")
-        assert sorted(staff[e] for e in people) == ["Residential Fellow", "Residential Student Life Manager"], slot
+        assert sorted(staff[e] for e in people) == [
+            "Residential Fellow",
+            "Residential Student Life Manager",
+        ], slot
         assert slot["RA"] in ras
 
 
@@ -182,23 +217,41 @@ def test_the_placeholders_show_the_mock_data() -> None:
     from residentialapps.residentialops import sample_data
 
     staff, ras = rows("staff_roster.csv"), rows("ra_roster.csv")
+
     def dates(p: dict[str, str]) -> str:
         return f"{p['From']} – {p['To']}".rstrip()
 
-    assert [(p.name, p.email, p.appointment, p.abbrev, p.dates, p.enterprise_name) for p in sample_data.STAFF] == [
-        (p["Name"], p["Email"], p["Appointment"], p["Abbrev"], dates(p), p["Enterprise name"]) for p in staff
+    assert [
+        (p.name, p.email, p.appointment, p.abbrev, p.dates, p.enterprise_name)
+        for p in sample_data.STAFF
+    ] == [
+        (p["Name"], p["Email"], p["Appointment"], p["Abbrev"], dates(p), p["Enterprise name"])
+        for p in staff
     ]
     assert [
-        (p.name, p.email, p.appointment, p.abbrev, p.dates, p.enterprise_name, p.student_id) for p in sample_data.RAS
+        (p.name, p.email, p.appointment, p.abbrev, p.dates, p.enterprise_name, p.student_id)
+        for p in sample_data.RAS
     ] == [
-        (p["Name"], p["Email"], p["Appointment"], p["Abbrev"], dates(p), p["Enterprise name"], p["Student ID"])
+        (
+            p["Name"],
+            p["Email"],
+            p["Appointment"],
+            p["Abbrev"],
+            dates(p),
+            p["Enterprise name"],
+            p["Student ID"],
+        )
         for p in ras
     ]
     name = {p["Email"]: p["Name"] for p in (*staff, *ras)}
     assert [
         (s.wing, s.precinct, s.neighborhood, s.notes, s.staff, s.ras) for s in sample_data.SLOTS
     ] == [
-        (*(row[k] for k in UNITS), tuple(name[e] for e in row["Staff"].split("; ")), (name[row["RA"]],))
+        (
+            *(row[k] for k in UNITS),
+            tuple(name[e] for e in row["Staff"].split("; ")),
+            (name[row["RA"]],),
+        )
         for row in slots()
     ]
     for sample, file in (
@@ -233,13 +286,19 @@ def test_quick_setup_holds_every_other_file() -> None:
     person = ["Name", "Email", "Appointment", "Abbrev", "From", "To", "Enterprise name"]
     for roster, file in (("Staff", "staff_roster.csv"), ("RA", "ra_roster.csv")):
         extra = ["Student ID"] if roster == "RA" else []
-        people = {r["Email"]: {k: r[k] for k in person + extra} for r in quick if r["Roster"] == roster}
+        people = {
+            r["Email"]: {k: r[k] for k in person + extra} for r in quick if r["Roster"] == roster
+        }
         by_email = {p["Email"]: p for p in rows(file)}
         assert people == by_email, file  # the same people; the file's order is its own
     slots_of_file = slots()
     held: dict[str, dict[str, Any]] = {}
     for r in quick:
         if r["Level3.Neighborhood"]:
-            slot = held.setdefault(r["Level3.Neighborhood"], {k: r[k] for k in UNITS} | {"Staff": [], "RA": []})
+            slot = held.setdefault(
+                r["Level3.Neighborhood"], {k: r[k] for k in UNITS} | {"Staff": [], "RA": []}
+            )
             slot[r["Roster"]].append(r["Email"])
-    assert [s | {"Staff": "; ".join(s["Staff"]), "RA": "; ".join(s["RA"])} for s in held.values()] == slots_of_file
+    assert [
+        s | {"Staff": "; ".join(s["Staff"]), "RA": "; ".join(s["RA"])} for s in held.values()
+    ] == slots_of_file

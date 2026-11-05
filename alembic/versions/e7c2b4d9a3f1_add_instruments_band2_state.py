@@ -35,6 +35,7 @@ Revision ID: e7c2b4d9a3f1
 Revises: d3b8e9a5f721
 Create Date: 2026-05-23
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -48,9 +49,7 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     with op.batch_alter_table("instruments", schema=None) as batch_op:
-        batch_op.add_column(
-            sa.Column("band2_state", sa.JSON(), nullable=True)
-        )
+        batch_op.add_column(sa.Column("band2_state", sa.JSON(), nullable=True))
 
 
 def downgrade() -> None:

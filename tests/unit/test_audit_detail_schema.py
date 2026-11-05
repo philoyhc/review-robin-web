@@ -13,6 +13,7 @@ PR 8 of Segment 11K. ``audit.write_event`` validates every emitted
 The integration-level "this emit produces this row" coverage lives
 in the per-feature tests; this file pins the gate itself.
 """
+
 from __future__ import annotations
 
 import re
@@ -29,9 +30,7 @@ def _make_user_and_session(db: Session, code: str) -> tuple[User, ReviewSession]
     user = User(email=f"op-{code}@example.edu", display_name="Op")
     db.add(user)
     db.flush()
-    review_session = ReviewSession(
-        name=code.title(), code=code, created_by_user_id=user.id
-    )
+    review_session = ReviewSession(name=code.title(), code=code, created_by_user_id=user.id)
     db.add(review_session)
     db.flush()
     return user, review_session
@@ -119,9 +118,7 @@ def test_every_emitted_event_type_has_a_registered_schema() -> None:
         "session.audit_log_purged",
     }
     missing = expected - set(audit.EVENT_SCHEMAS.keys())
-    assert not missing, (
-        f"event_types missing from EVENT_SCHEMAS: {sorted(missing)}"
-    )
+    assert not missing, f"event_types missing from EVENT_SCHEMAS: {sorted(missing)}"
 
 
 # --------------------------------------------------------------------------- #
@@ -225,9 +222,7 @@ def test_strict_mode_rejects_a_ref_key_without_the_id_suffix(
     """Findings F4: ``refs`` keys end in ``_id``, so a ref named for
     the entity rather than its PK is drift."""
     user, review_session = _make_user_and_session(db, "strict-refkey")
-    with pytest.raises(
-        audit.AuditDetailValidationError, match="refs keys must end in _id"
-    ):
+    with pytest.raises(audit.AuditDetailValidationError, match="refs keys must end in _id"):
         audit.write_event(
             db,
             event_type="instrument.field_added",
@@ -340,7 +335,8 @@ def test_lenient_mode_logs_and_writes_anyway(
         "session_id": review_session.id,
     }
     matched = [
-        r for r in caplog.records
+        r
+        for r in caplog.records
         if getattr(r, "event", None) == "audit.detail_schema_violation"
         and r.__dict__["event_type"] == "instrument.field_added"
         and re.search(r"instrument\.field_added", r.getMessage())

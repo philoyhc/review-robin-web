@@ -19,9 +19,7 @@ class SessionTag(Base):
     """
 
     __tablename__ = "session_tags"
-    __table_args__ = (
-        UniqueConstraint("session_id", "tag", name="uq_session_tag_session_tag"),
-    )
+    __table_args__ = (UniqueConstraint("session_id", "tag", name="uq_session_tag_session_tag"),)
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     session_id: Mapped[int] = mapped_column(

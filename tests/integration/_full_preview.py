@@ -23,9 +23,7 @@ from fastapi.testclient import TestClient
 from ._public_id import public_id
 
 
-def get_full_preview_html(
-    client: TestClient, session_id: int, reviewer_email: str
-) -> str:
+def get_full_preview_html(client: TestClient, session_id: int, reviewer_email: str) -> str:
     """Fetch the operator-side full reviewer-surface preview body
     for ``session_id`` with the given ``reviewer_email`` selected and
     return the rendered HTML.

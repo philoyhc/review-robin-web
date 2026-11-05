@@ -9,6 +9,7 @@ The new columns sit inert until Segment 14-1 Part A wires the
 dispatch helper; this file is the schema gate that lets that work
 land without any further Alembic churn.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -24,9 +25,7 @@ def _make_session(db: Session, code: str) -> ReviewSession:
     op = User(email=f"op-{code}@example.edu", display_name="Op")
     db.add(op)
     db.flush()
-    review_session = ReviewSession(
-        name=code.title(), code=code, created_by_user_id=op.id
-    )
+    review_session = ReviewSession(name=code.title(), code=code, created_by_user_id=op.id)
     db.add(review_session)
     db.flush()
     return review_session
@@ -54,9 +53,7 @@ def test_audit_log_columns_round_trip(db: Session) -> None:
     db.add(row)
     db.flush()
 
-    fetched = db.execute(
-        select(EmailOutbox).where(EmailOutbox.id == row.id)
-    ).scalar_one()
+    fetched = db.execute(select(EmailOutbox).where(EmailOutbox.id == row.id)).scalar_one()
 
     assert fetched.error_message == "SMTP 451 transient"
     assert fetched.from_address == "noreply@example.edu"
@@ -83,9 +80,7 @@ def test_audit_log_columns_default_to_null(db: Session) -> None:
     db.add(row)
     db.flush()
 
-    fetched = db.execute(
-        select(EmailOutbox).where(EmailOutbox.id == row.id)
-    ).scalar_one()
+    fetched = db.execute(select(EmailOutbox).where(EmailOutbox.id == row.id)).scalar_one()
 
     assert fetched.error_message is None
     assert fetched.from_address is None

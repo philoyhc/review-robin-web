@@ -89,14 +89,10 @@ PredicateOperator = Literal[
 
 
 # Operators that take no operand at all.
-_NULLARY_OPERATORS: frozenset[str] = frozenset(
-    {"is_empty", "is_not_empty"}
-)
+_NULLARY_OPERATORS: frozenset[str] = frozenset({"is_empty", "is_not_empty"})
 # Operators whose operand is another field on the opposite side
 # (cross-side comparison).
-_FIELD_OPERATORS: frozenset[str] = frozenset(
-    {"same_as", "different_from"}
-)
+_FIELD_OPERATORS: frozenset[str] = frozenset({"same_as", "different_from"})
 # Operators whose operand is a list of literals.
 _LIST_OPERATORS: frozenset[str] = frozenset({"in", "not_in"})
 # Operators whose operand is a regex string.
@@ -159,9 +155,7 @@ class Predicate(BaseModel):
 
         if op in _NULLARY_OPERATORS:
             if operand is not None:
-                raise ValueError(
-                    f"operator {op!r} takes no operand; got {operand!r}"
-                )
+                raise ValueError(f"operator {op!r} takes no operand; got {operand!r}")
             return self
 
         if op in _FIELD_OPERATORS:
@@ -172,8 +166,7 @@ class Predicate(BaseModel):
                 )
             if operand not in ALLOWED_PREDICATE_FIELDS:
                 raise ValueError(
-                    f"operator {op!r} operand {operand!r} is not a "
-                    "known predicate field"
+                    f"operator {op!r} operand {operand!r} is not a known predicate field"
                 )
             # Cross-side: same_as / different_from address the opposite
             # population.
@@ -189,22 +182,18 @@ class Predicate(BaseModel):
         if op in _LIST_OPERATORS:
             if not isinstance(operand, list) or not operand:
                 raise ValueError(
-                    f"operator {op!r} requires a non-empty list of "
-                    "literals as operand"
+                    f"operator {op!r} requires a non-empty list of literals as operand"
                 )
             return self
 
         if op in _REGEX_OPERATORS:
             if not isinstance(operand, str):
-                raise ValueError(
-                    f"operator {op!r} requires a regex string operand"
-                )
+                raise ValueError(f"operator {op!r} requires a regex string operand")
             try:
                 re.compile(operand)
             except re.error as exc:
                 raise ValueError(
-                    f"operator {op!r} regex {operand!r} does not "
-                    f"compile: {exc}"
+                    f"operator {op!r} regex {operand!r} does not compile: {exc}"
                 ) from exc
             return self
 
@@ -264,9 +253,7 @@ class QuotaRule(_RuleBase):
     @model_validator(mode="after")
     def _validate_min_max(self) -> QuotaRule:
         if self.min is not None and self.max is not None and self.min > self.max:
-            raise ValueError(
-                f"quota min ({self.min}) exceeds max ({self.max})"
-            )
+            raise ValueError(f"quota min ({self.min}) exceeds max ({self.max})")
         return self
 
 
@@ -351,9 +338,7 @@ class RuleSetSchema(BaseModel):
         while stack:
             rule = stack.pop()
             if rule.id in seen:
-                raise ValueError(
-                    f"duplicate rule id {rule.id!r} within RuleSet"
-                )
+                raise ValueError(f"duplicate rule id {rule.id!r} within RuleSet")
             seen.add(rule.id)
             if isinstance(rule, CompositeRule):
                 stack.extend(rule.rules)

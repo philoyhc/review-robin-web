@@ -152,8 +152,7 @@ def sys_admin_sessions(
             # The filter matches name, code and owner; the text it
             # matches rides each row.
             "filter_text_by_session": {
-                s.id: views.diagnostics_filter_text(s, owners.get(s.id, []))
-                for s in rows
+                s.id: views.diagnostics_filter_text(s, owners.get(s.id, [])) for s in rows
             },
             "filter_options": views.diagnostics_filter_options(rows, owners),
             "owned_session_ids": views.owned_session_ids(owners, user),
@@ -223,9 +222,7 @@ def sys_admin_session_outbox(
         {
             "user": user,
             "outbox_session": review_session,
-            "outbox_rows": invitations.list_outbox_for_session(
-                db, review_session.id
-            ),
+            "outbox_rows": invitations.list_outbox_for_session(db, review_session.id),
         },
     )
 
@@ -269,9 +266,7 @@ def sys_admin_session_audit_log(
     review_session = sessions.get_by_public_id(db, session_id)
     if review_session is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-    zone = views.resolve_audit_log_zone(
-        tz, operator_settings.get_display_timezone(user)
-    )
+    zone = views.resolve_audit_log_zone(tz, operator_settings.get_display_timezone(user))
     try:
         filters = views.parse_audit_log_filters(
             event_types=event_type,
@@ -293,12 +288,8 @@ def sys_admin_session_audit_log(
         limit=_AUDIT_LOG_PAGE_SIZE,
         filters=filters,
     )
-    base_url = (
-        f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log"
-    )
-    csv_base_url = (
-        f"/operator/sessions/{review_session.public_id}/export/audit_log.csv"
-    )
+    base_url = f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log"
+    csv_base_url = f"/operator/sessions/{review_session.public_id}/export/audit_log.csv"
     return _templates.TemplateResponse(
         request,
         "operator/sys_admin_session_audit_log.html",
@@ -310,9 +301,7 @@ def sys_admin_session_audit_log(
             ),
             "filter_form": views.build_audit_log_filter_form(
                 filters,
-                distinct_actor_emails=audit.list_distinct_actor_emails(
-                    db, review_session
-                ),
+                distinct_actor_emails=audit.list_distinct_actor_emails(db, review_session),
                 base_url=base_url,
                 csv_base_url=csv_base_url,
                 zone=zone,
@@ -352,8 +341,10 @@ def sys_admin_users(
     # No ``show`` in the URL (the tab strip, the chrome, a bare link)
     # takes the chips last asked for (author, 2026-10-14); an explicit
     # one, even every chip off, is remembered for next time.
-    chips = show if show is not None else views.remembered_account_chips(
-        request.cookies.get(views.ACCOUNT_CHIPS_COOKIE)
+    chips = (
+        show
+        if show is not None
+        else views.remembered_account_chips(request.cookies.get(views.ACCOUNT_CHIPS_COOKIE))
     )
     view = views.parse_account_view(show=chips, role=role, search=q, offset=offset)
     if selected is not None:
@@ -415,16 +406,16 @@ def sys_admin_users(
             # search: a role can match every account (Codex on #3025). So
             # the count line, which the roster pages show instead of a
             # pager, shows only when everything fits one page.
-            "preview_count_line": None if pager else views.preview_count_line(
+            "preview_count_line": None
+            if pager
+            else views.preview_count_line(
                 shown=len(page.rows),
                 pool=page.total,
                 noun="accounts",
                 is_filtered=view.is_filtered,
             ),
             "pager_url_base": (
-                f"{_ACCOUNTS_URL}?"
-                + views.account_view_query(view, offset=False)
-                + "&"
+                f"{_ACCOUNTS_URL}?" + views.account_view_query(view, offset=False) + "&"
             ),
             "pager_anchor": "accounts-table-card",
             "actor_is_super_admin": user.is_super_admin,
@@ -432,9 +423,7 @@ def sys_admin_users(
             # same rule as the service actor guard: a super-admin actor,
             # OR (no super tier configured) any admin, so the UI never
             # hides a control the server would actually accept.
-            "can_manage_admins": (
-                user.is_super_admin or not super_admin_configured()
-            ),
+            "can_manage_admins": (user.is_super_admin or not super_admin_configured()),
             "invite_error": invite_error,
             "invite_unchecked": bool(invite_unchecked),
             # A refused batch names its row: the email is looked up, the
@@ -470,15 +459,14 @@ def sys_admin_users_search_options(
     # any account can be suggested, however late in the alphabet.
     view = views.parse_account_view(show=show, role=None, search=q, offset=0)
     return JSONResponse(
-        account_listing.search_options(
-            db, categories=view.show, search=view.search
-        )
+        account_listing.search_options(db, categories=view.show, search=view.search)
     )
 
 
 @router.post("/sys-admin/sessions/{session_id}/adopt")
 def sys_admin_adopt_session(
-    request: Request, session_id: str,
+    request: Request,
+    session_id: str,
     actor: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -508,23 +496,23 @@ def sys_admin_adopt_session(
                 target=actor,
                 correlation_id=request_correlation_id(),
             )
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url=f"/operator/sessions/{session_id}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
 
 def _load_target(db: Session, user_id: int) -> User:
-    target = db.execute(
-        select(User).where(User.id == user_id)
-    ).scalar_one_or_none()
+    target = db.execute(select(User).where(User.id == user_id)).scalar_one_or_none()
     if target is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     return target
 
 
 def _users_redirect(
-    request: Request, error_code: str | None = None,
+    request: Request,
+    error_code: str | None = None,
     selected_user_id: int | None = None,
     view: str = "",
     refused_user_id: int | None = None,
@@ -537,9 +525,7 @@ def _users_redirect(
     url = _ACCOUNTS_URL
     params: list[str] = []
     if view:
-        params.append(
-            views.account_view_query(views.account_view_from_query(view))
-        )
+        params.append(views.account_view_query(views.account_view_from_query(view)))
     if error_code:
         params.append(f"toggle_error={quote(error_code, safe='')}")
     if refused_user_id is not None:
@@ -572,9 +558,7 @@ def _handle_toggle(
         if exc.code == "requires_super_admin":
             # Actor lacks super-admin — forbidden to manage admins
             # (Segment 18S Item 1).
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail=exc.message
-            ) from exc
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=exc.message) from exc
         if exc.code in {
             "last_admin",
             "owns_sessions",
@@ -583,21 +567,21 @@ def _handle_toggle(
             "sole_owner",
             "protected_super_admin",
         }:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT, detail=exc.message
-            ) from exc
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=exc.message) from exc
         raise
     return _users_redirect(request, selected_user_id=selected_user_id, view=view)
 
 
 @router.post("/sys-admin/users/{user_id}/admit")
 def admit_user(
-    request: Request, user_id: int,
+    request: Request,
+    user_id: int,
     view: str = Form(default=""),
     actor: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    return _handle_toggle(request,
+    return _handle_toggle(
+        request,
         users_service.admit,
         db=db,
         actor=actor,
@@ -609,12 +593,14 @@ def admit_user(
 
 @router.post("/sys-admin/users/{user_id}/revoke")
 def revoke_user(
-    request: Request, user_id: int,
+    request: Request,
+    user_id: int,
     view: str = Form(default=""),
     actor: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    return _handle_toggle(request,
+    return _handle_toggle(
+        request,
         users_service.revoke,
         db=db,
         actor=actor,
@@ -626,12 +612,14 @@ def revoke_user(
 
 @router.post("/sys-admin/users/{user_id}/promote")
 def promote_user(
-    request: Request, user_id: int,
+    request: Request,
+    user_id: int,
     view: str = Form(default=""),
     actor: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    return _handle_toggle(request,
+    return _handle_toggle(
+        request,
         users_service.promote,
         db=db,
         actor=actor,
@@ -643,12 +631,14 @@ def promote_user(
 
 @router.post("/sys-admin/users/{user_id}/demote")
 def demote_user(
-    request: Request, user_id: int,
+    request: Request,
+    user_id: int,
     view: str = Form(default=""),
     actor: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    return _handle_toggle(request,
+    return _handle_toggle(
+        request,
         users_service.demote,
         db=db,
         actor=actor,
@@ -660,12 +650,14 @@ def demote_user(
 
 @router.post("/sys-admin/users/{user_id}/remove-from-all-sessions")
 def remove_from_all_sessions(
-    request: Request, user_id: int,
+    request: Request,
+    user_id: int,
     view: str = Form(default=""),
     actor: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    return _handle_toggle(request,
+    return _handle_toggle(
+        request,
         users_service.remove_from_all_sessions,
         db=db,
         actor=actor,
@@ -677,14 +669,16 @@ def remove_from_all_sessions(
 
 @router.post("/sys-admin/users/{user_id}/delete")
 def remove_user(
-    request: Request, user_id: int,
+    request: Request,
+    user_id: int,
     view: str = Form(default=""),
     actor: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     # ``remove_user`` deletes the row outright, so there's no row
     # to re-select on the redirect target.
-    return _handle_toggle(request,
+    return _handle_toggle(
+        request,
         users_service.remove_user,
         db=db,
         actor=actor,
@@ -733,21 +727,16 @@ def bulk_set_unit(
                 status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
             ) from exc
         if exc.code == "not_found":
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail=exc.message
-            ) from exc
-        return _users_redirect(request,
-            error_code=exc.code, refused_user_id=exc.user_id, view=view
-        )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=exc.message) from exc
+        return _users_redirect(request, error_code=exc.code, refused_user_id=exc.user_id, view=view)
     single = len(set(user_ids)) == 1
-    return _users_redirect(request,
-        selected_user_id=user_ids[0] if single else None, view=view
-    )
+    return _users_redirect(request, selected_user_id=user_ids[0] if single else None, view=view)
 
 
 @router.post("/sys-admin/users/bulk-{action}")
 def bulk_account_action(
-    request: Request, action: str,
+    request: Request,
+    action: str,
     user_ids: list[int] = Form(default_factory=list),
     view: str = Form(default=""),
     confirm: str = Form(default=""),
@@ -781,22 +770,14 @@ def bulk_account_action(
                 status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
             ) from exc
         if exc.code == "not_found":
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail=exc.message
-            ) from exc
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=exc.message) from exc
         if exc.code == "requires_super_admin":
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail=exc.message
-            ) from exc
-        return _users_redirect(request,
-            error_code=exc.code, refused_user_id=exc.user_id, view=view
-        )
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=exc.message) from exc
+        return _users_redirect(request, error_code=exc.code, refused_user_id=exc.user_id, view=view)
     # One row keeps the single-row actions' landing: its chip on, its
     # page open. Several have no one row to land on; a delete, none left.
     single = len(set(user_ids)) == 1 and batch_action != "delete"
-    return _users_redirect(request,
-        selected_user_id=user_ids[0] if single else None, view=view
-    )
+    return _users_redirect(request, selected_user_id=user_ids[0] if single else None, view=view)
 
 
 @router.get("/sys-admin/users/directory-search")
@@ -812,7 +793,8 @@ def invite_directory_search(
 
 @router.post("/sys-admin/users/invite")
 def invite_user(
-    request: Request, email: str = Form(...),
+    request: Request,
+    email: str = Form(...),
     invite_as_sys_admin: str | None = Form(default=None),
     actor: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
@@ -844,6 +826,4 @@ def invite_user(
         return urls.redirect(request, url=url, status_code=status.HTTP_303_SEE_OTHER)
     # The new row is not selected (19X Item 14, author): the table stays
     # as the admin left it.
-    return _users_redirect(
-        request, invite_unchecked=invited.external_principal_id is None
-    )
+    return _users_redirect(request, invite_unchecked=invited.external_principal_id is None)

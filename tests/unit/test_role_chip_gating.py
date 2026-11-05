@@ -71,9 +71,7 @@ def _grant_reviewee_view(db: Session, review_session: ReviewSession) -> None:
         )
     )
     review_session.status = "expired"
-    review_session.responses_release_at = datetime.now(
-        UTC
-    ) - timedelta(hours=1)
+    review_session.responses_release_at = datetime.now(UTC) - timedelta(hours=1)
     review_session.responses_release_until = None
     db.flush()
 
@@ -100,9 +98,7 @@ def test_reviewee_chip_absent_without_a_grant(db: Session) -> None:
         )
     )
     db.flush()
-    chips = build_role_chips(
-        db, user=user, review_session=review_session, active_role="observer"
-    )
+    chips = build_role_chips(db, user=user, review_session=review_session, active_role="observer")
     # Absent, not disabled: a greyed chip still discloses the role.
     assert _chip(chips, "reviewee") is None
     assert _chip(chips, "observer") is not None
@@ -127,9 +123,7 @@ def test_reviewee_chip_present_once_a_grant_resolves(db: Session) -> None:
     )
     db.flush()
     _grant_reviewee_view(db, review_session)
-    chips = build_role_chips(
-        db, user=user, review_session=review_session, active_role="observer"
-    )
+    chips = build_role_chips(db, user=user, review_session=review_session, active_role="observer")
     reviewee = _chip(chips, "reviewee")
     assert reviewee is not None
     assert reviewee["enabled"] is True
@@ -147,9 +141,7 @@ def test_observer_chip_live_on_an_unarchived_session(db: Session) -> None:
         )
     )
     db.flush()
-    chips = build_role_chips(
-        db, user=user, review_session=review_session, active_role="reviewer"
-    )
+    chips = build_role_chips(db, user=user, review_session=review_session, active_role="reviewer")
     observer = _chip(chips, "observer")
     assert observer is not None
     assert observer["enabled"] is True

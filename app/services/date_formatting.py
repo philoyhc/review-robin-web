@@ -46,6 +46,7 @@ def _strftime(value: date | datetime, fmt: str) -> str:
     (findings L2)."""
     return value.strftime(fmt.replace("%Y", f"{value.year:04d}"))
 
+
 DEFAULT_TIMEZONE = "UTC"
 
 # Single internal switch for the trailing zone token on date-time
@@ -135,9 +136,7 @@ def format_datetime(value: datetime | None, tz_name: str | None = None) -> str:
     return rendered
 
 
-def format_date(
-    value: date | datetime | None, tz_name: str | None = None
-) -> str:
+def format_date(value: date | datetime | None, tz_name: str | None = None) -> str:
     """Render a date (or the date part of a datetime) as ``YYYY-MM-DD``.
 
     For a datetime, the calendar date is taken in ``tz_name``'s zone
@@ -228,9 +227,7 @@ def parse_local_datetime(value: str, tz_name: str | None) -> datetime:
     return local.astimezone(UTC).replace(tzinfo=None)
 
 
-def iso_in_zone(
-    value: datetime | None, tz_name: str | None, *, timespec: str = "auto"
-) -> str:
+def iso_in_zone(value: datetime | None, tz_name: str | None, *, timespec: str = "auto") -> str:
     """ISO 8601 rendering of a stored UTC datetime, converted into
     ``tz_name``'s zone so the trailing offset reflects that zone —
     e.g. ``2026-06-02T08:00:00+08:00``. ``""`` for ``None``.
@@ -267,9 +264,7 @@ def box_text(value: str | None) -> str:
     return text
 
 
-def format_datetime_local(
-    value: datetime | None, tz_name: str | None
-) -> str:
+def format_datetime_local(value: datetime | None, tz_name: str | None) -> str:
     """Render a stored UTC datetime as a browser ``datetime-local``
     value (``YYYY-MM-DDTHH:MM``) in ``tz_name``'s zone — the inverse
     of :func:`parse_local_datetime`. Session Home's ``data-tz-utc``

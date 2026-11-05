@@ -31,9 +31,7 @@ def _session_with_user(db: Session, *, code: str) -> tuple[ReviewSession, User]:
     return review_session, user
 
 
-def _add_observer(
-    db: Session, *, review_session: ReviewSession, email: str
-) -> Observer:
+def _add_observer(db: Session, *, review_session: ReviewSession, email: str) -> Observer:
     observer = Observer(session_id=review_session.id, email=email)
     db.add(observer)
     db.flush()
@@ -216,10 +214,17 @@ def test_set_cohort_rule_emits_audit_event(db: Session) -> None:
     session, user = _session_with_user(db, code="cohort-audit")
     o1 = _add_observer(db, review_session=session, email="a@example.org")
     o2 = _add_observer(db, review_session=session, email="b@example.org")
-    payload = {"combinator": "AND", "rules": [{
-        "field": "reviewer.tag1", "op": "IS",
-        "operand_tag": "", "operand_value": "x",
-    }]}
+    payload = {
+        "combinator": "AND",
+        "rules": [
+            {
+                "field": "reviewer.tag1",
+                "op": "IS",
+                "operand_tag": "",
+                "operand_value": "x",
+            }
+        ],
+    }
 
     observers_service.set_cohort_rule(
         db,
@@ -259,8 +264,7 @@ def test_same_cohort_rule_counts_null_and_an_empty_set_alike() -> None:
     from app.services.observers import same_cohort_rule
 
     empty = {"combinator": "AND", "rules": []}
-    cell = {"field": "reviewer.tag1", "op": "IS",
-            "operand_tag": "", "operand_value": "x"}
+    cell = {"field": "reviewer.tag1", "op": "IS", "operand_tag": "", "operand_value": "x"}
     assert same_cohort_rule(None, empty)
     assert same_cohort_rule(empty, {"combinator": "OR", "rules": []})
     assert not same_cohort_rule(None, {"combinator": "AND", "rules": [cell]})
@@ -276,18 +280,28 @@ def test_set_cohort_rule_skips_observers_whose_rule_is_unchanged(
     """operator pages Item 4: an untouched Save over a shared rule is not
     N events — only observers whose rule changes are written."""
     session, user = _session_with_user(db, code="cohort-same")
-    rule = {"combinator": "AND", "rules": [{
-        "field": "reviewer.tag1", "op": "IS",
-        "operand_tag": "", "operand_value": "x",
-    }]}
+    rule = {
+        "combinator": "AND",
+        "rules": [
+            {
+                "field": "reviewer.tag1",
+                "op": "IS",
+                "operand_tag": "",
+                "operand_value": "x",
+            }
+        ],
+    }
     o1 = _add_observer(db, review_session=session, email="a@example.org")
     o2 = _add_observer(db, review_session=session, email="b@example.org")
     o1.cohort_rule = rule
     db.commit()
 
     observers_service.set_cohort_rule(
-        db, review_session=session, observer_ids=[o1.id, o2.id],
-        payload=rule, user=user,
+        db,
+        review_session=session,
+        observer_ids=[o1.id, o2.id],
+        payload=rule,
+        user=user,
     )
     refs = []
     for e in db.execute(

@@ -43,9 +43,7 @@ def test_reviewer_create_and_update_refuse_an_over_long_value(
 ) -> None:
     user, rs = _seed(db)
     with pytest.raises(reviewers.ReviewerOperationError) as exc:
-        reviewers.create_reviewer(
-            db, review_session=rs, name=LONG, email="a@x.edu", user=user
-        )
+        reviewers.create_reviewer(db, review_session=rs, name=LONG, email="a@x.edu", user=user)
     assert exc.value.code == "too_long"
     assert exc.value.message == "Name is 256 characters; at most 255 fit."
 
@@ -53,9 +51,7 @@ def test_reviewer_create_and_update_refuse_an_over_long_value(
         db, review_session=rs, name="Al", email="a@x.edu", user=user
     )
     with pytest.raises(reviewers.ReviewerOperationError) as exc:
-        reviewers.update_reviewer(
-            db, reviewer=reviewer, profile_link="h" * 2001, user=user
-        )
+        reviewers.update_reviewer(db, reviewer=reviewer, profile_link="h" * 2001, user=user)
     assert exc.value.code == "too_long"
     assert "Profile link is 2001 characters" in exc.value.message
 
@@ -98,9 +94,7 @@ def test_observer_create_and_update_refuse_an_over_long_value(
         )
     assert exc.value.code == "too_long"
 
-    observer = observers.create_observer(
-        db, review_session=rs, email="o@x.edu", user=user
-    )
+    observer = observers.create_observer(db, review_session=rs, email="o@x.edu", user=user)
     with pytest.raises(observers.ObserverOperationError) as exc:
         observers.update_observer(db, observer=observer, tag_1=LONG, user=user)
     assert exc.value.code == "too_long"
@@ -129,23 +123,17 @@ def test_relationship_create_and_update_refuse_an_over_long_tag(
         db, review_session=rs, reviewer_id=rvr.id, reviewee_id=rve.id, user=user
     )
     with pytest.raises(relationships.RelationshipOperationError) as exc:
-        relationships.update_relationship(
-            db, relationship=rel, tag_1=LONG, user=user
-        )
+        relationships.update_relationship(db, relationship=rel, tag_1=LONG, user=user)
     assert exc.value.code == "too_long"
 
 
-def test_the_add_row_renders_the_refusal(
-    client: TestClient, db: Session
-) -> None:
+def test_the_add_row_renders_the_refusal(client: TestClient, db: Session) -> None:
     client.post(
         "/operator/sessions",
         data={"name": "Cc3 Add", "code": "cc3-add"},
         follow_redirects=False,
     )
-    rs = db.execute(
-        select(ReviewSession).where(ReviewSession.code == "cc3-add")
-    ).scalar_one()
+    rs = db.execute(select(ReviewSession).where(ReviewSession.code == "cc3-add")).scalar_one()
     response = client.post(
         f"/operator/sessions/{rs.public_id}/reviewers/create",
         data={"name": LONG, "email": "a@x.edu"},
@@ -153,22 +141,16 @@ def test_the_add_row_renders_the_refusal(
     )
     assert response.status_code == 400
     assert "Name is 256 characters; at most 255 fit." in response.text
-    assert db.execute(
-        select(Reviewer).where(Reviewer.session_id == rs.id)
-    ).first() is None
+    assert db.execute(select(Reviewer).where(Reviewer.session_id == rs.id)).first() is None
 
 
-def test_the_label_editor_refuses_an_over_long_label_whole(
-    client: TestClient, db: Session
-) -> None:
+def test_the_label_editor_refuses_an_over_long_label_whole(client: TestClient, db: Session) -> None:
     client.post(
         "/operator/sessions",
         data={"name": "Cc3 Labels", "code": "cc3-labels"},
         follow_redirects=False,
     )
-    rs = db.execute(
-        select(ReviewSession).where(ReviewSession.code == "cc3-labels")
-    ).scalar_one()
+    rs = db.execute(select(ReviewSession).where(ReviewSession.code == "cc3-labels")).scalar_one()
     response = client.post(
         f"/operator/sessions/{rs.public_id}/reviewers/field-labels",
         data={"tag_1": "Cohort", "tag_2": LONG, "tag_3": ""},
@@ -177,6 +159,7 @@ def test_the_label_editor_refuses_an_over_long_label_whole(
     assert response.status_code == 422
     assert "256 characters; at most 255 fit" in response.text
     # Checked before any slot is written: the valid Tag 1 did not land.
-    assert db.execute(
-        select(SessionFieldLabel).where(SessionFieldLabel.session_id == rs.id)
-    ).first() is None
+    assert (
+        db.execute(select(SessionFieldLabel).where(SessionFieldLabel.session_id == rs.id)).first()
+        is None
+    )

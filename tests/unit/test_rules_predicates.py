@@ -4,6 +4,7 @@ PR 2.
 One test per operator (plus the empty-value rule and the
 case-sensitive override).
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -270,9 +271,7 @@ def test_unknown_operator_raises_keyerror() -> None:
     save time, but the dispatch table guards against a programmer
     error too."""
 
-    fake = Predicate.model_construct(
-        field="reviewer.tag1", operator="invented", operand="x"
-    )
+    fake = Predicate.model_construct(field="reviewer.tag1", operator="invented", operand="x")
     with pytest.raises(KeyError):
         evaluate_predicate(
             fake,

@@ -186,9 +186,7 @@ def _add_assignment(
     # Mirror the production write-path so the
     # ``Assignment.is_self_review`` column is populated for the
     # post-PR-3 column-reading extracts.
-    assignments_service.recompute_self_review_classification(
-        db, session_id=review_session.id
-    )
+    assignments_service.recompute_self_review_classification(db, session_id=review_session.id)
     return a
 
 
@@ -283,12 +281,15 @@ def test_preamble_lists_instrument_with_field_help_texts(
     likert = _likert(db, review_session)
     instr = _add_instrument(db, review_session, name="Default")
     _add_field(
-        db, instr, field_key="q1", label="Q1", rtd=likert, order=0,
+        db,
+        instr,
+        field_key="q1",
+        label="Q1",
+        rtd=likert,
+        order=0,
         help_text="How clear was the explanation?",
     )
-    _add_field(
-        db, instr, field_key="q2", label="Q2", rtd=likert, order=1
-    )
+    _add_field(db, instr, field_key="q2", label="Q2", rtd=likert, order=1)
 
     rows = list(serialize_responses(db, review_session))
     assert _preamble(rows) == [
@@ -307,7 +308,11 @@ def test_preamble_stacks_multiple_instruments(db: Session) -> None:
     second = _add_instrument(db, review_session, name="B", order=1)
     _add_field(db, first, field_key="a1", label="A1", rtd=likert)
     _add_field(
-        db, second, field_key="b1", label="B1", rtd=likert,
+        db,
+        second,
+        field_key="b1",
+        label="B1",
+        rtd=likert,
         help_text="B help",
     )
 
@@ -355,9 +360,7 @@ def test_per_row_shape_denormalises_all_join_keys(db: Session) -> None:
         name="Peer evaluation",
         short_label="Peer",
     )
-    field = _add_field(
-        db, instr, field_key="overall", label="Overall", rtd=likert
-    )
+    field = _add_field(db, instr, field_key="overall", label="Overall", rtd=likert)
     assignment = _add_assignment(
         db,
         review_session,
@@ -420,16 +423,10 @@ def test_null_value_emits_empty_cell_with_row_still_present(
 
     review_session = _session(db, code="null")
     likert = _likert(db, review_session)
-    reviewer = _add_reviewer(
-        db, review_session, email="r@example.edu", name="R"
-    )
-    reviewee = _add_reviewee(
-        db, review_session, identifier="e@example.edu", name="E"
-    )
+    reviewer = _add_reviewer(db, review_session, email="r@example.edu", name="R")
+    reviewee = _add_reviewee(db, review_session, identifier="e@example.edu", name="E")
     instr = _add_instrument(db, review_session, name="I")
-    field = _add_field(
-        db, instr, field_key="q", label="Q", rtd=likert
-    )
+    field = _add_field(db, instr, field_key="q", label="Q", rtd=likert)
     a = _add_assignment(
         db,
         review_session,
@@ -452,12 +449,8 @@ def test_assignment_with_no_responses_emits_no_row(db: Session) -> None:
 
     review_session = _session(db, code="absent")
     likert = _likert(db, review_session)
-    reviewer = _add_reviewer(
-        db, review_session, email="r@example.edu", name="R"
-    )
-    reviewee = _add_reviewee(
-        db, review_session, identifier="e@example.edu", name="E"
-    )
+    reviewer = _add_reviewer(db, review_session, email="r@example.edu", name="R")
+    reviewee = _add_reviewee(db, review_session, identifier="e@example.edu", name="E")
     instr = _add_instrument(db, review_session, name="I")
     _add_field(db, instr, field_key="q", label="Q", rtd=likert)
     _add_assignment(
@@ -481,12 +474,8 @@ def test_submitted_at_distinguishes_drafts_from_submitted(
 ) -> None:
     review_session = _session(db, code="lifecycle")
     likert = _likert(db, review_session)
-    reviewer = _add_reviewer(
-        db, review_session, email="r@example.edu", name="R"
-    )
-    reviewee = _add_reviewee(
-        db, review_session, identifier="e@example.edu", name="E"
-    )
+    reviewer = _add_reviewer(db, review_session, email="r@example.edu", name="R")
+    reviewee = _add_reviewee(db, review_session, identifier="e@example.edu", name="E")
     instr = _add_instrument(db, review_session, name="I")
     field = _add_field(db, instr, field_key="q", label="Q", rtd=likert)
     a = _add_assignment(
@@ -513,27 +502,17 @@ def test_ordering_groups_by_reviewer_then_reviewee_then_instrument_then_field(
 ) -> None:
     review_session = _session(db, code="order")
     likert = _likert(db, review_session)
-    alice = _add_reviewer(
-        db, review_session, email="alice@example.edu", name="Alice"
-    )
-    bob = _add_reviewer(
-        db, review_session, email="bob@example.edu", name="Bob"
-    )
+    alice = _add_reviewer(db, review_session, email="alice@example.edu", name="Alice")
+    bob = _add_reviewer(db, review_session, email="bob@example.edu", name="Bob")
     carol = _add_reviewee(
         db,
         review_session,
         identifier="carol@example.edu",
         name="Carol",
     )
-    instr_first = _add_instrument(
-        db, review_session, name="First", order=0
-    )
-    instr_second = _add_instrument(
-        db, review_session, name="Second", order=1
-    )
-    f1 = _add_field(
-        db, instr_first, field_key="q1", label="Q1", rtd=likert, order=0
-    )
+    instr_first = _add_instrument(db, review_session, name="First", order=0)
+    instr_second = _add_instrument(db, review_session, name="Second", order=1)
+    f1 = _add_field(db, instr_first, field_key="q1", label="Q1", rtd=likert, order=0)
     f2 = _add_field(
         db,
         instr_second,
@@ -603,19 +582,11 @@ def test_response_type_resolves_for_seeded_and_operator_defined_rtds(
         "_inline_max": 4.0,
     }
 
-    reviewer = _add_reviewer(
-        db, review_session, email="r@example.edu", name="R"
-    )
-    reviewee = _add_reviewee(
-        db, review_session, identifier="e@example.edu", name="E"
-    )
+    reviewer = _add_reviewer(db, review_session, email="r@example.edu", name="R")
+    reviewee = _add_reviewee(db, review_session, identifier="e@example.edu", name="E")
     instr = _add_instrument(db, review_session, name="I")
-    field_seed = _add_field(
-        db, instr, field_key="q1", label="Q1", rtd=likert, order=0
-    )
-    field_custom = _add_field(
-        db, instr, field_key="q2", label="Q2", rtd=custom, order=1
-    )
+    field_seed = _add_field(db, instr, field_key="q1", label="Q1", rtd=likert, order=0)
+    field_custom = _add_field(db, instr, field_key="q2", label="Q2", rtd=custom, order=1)
     a = _add_assignment(
         db,
         review_session,
@@ -642,16 +613,10 @@ def test_list_response_value_round_trips_as_stored(db: Session) -> None:
         "_inline_list_csv": "design,research,ops",
     }
 
-    reviewer = _add_reviewer(
-        db, review_session, email="r@example.edu", name="R"
-    )
-    reviewee = _add_reviewee(
-        db, review_session, identifier="e@example.edu", name="E"
-    )
+    reviewer = _add_reviewer(db, review_session, email="r@example.edu", name="R")
+    reviewee = _add_reviewee(db, review_session, identifier="e@example.edu", name="E")
     instr = _add_instrument(db, review_session, name="I")
-    field = _add_field(
-        db, instr, field_key="topics", label="Topics", rtd=list_rtd
-    )
+    field = _add_field(db, instr, field_key="topics", label="Topics", rtd=list_rtd)
     a = _add_assignment(
         db,
         review_session,
@@ -678,9 +643,7 @@ def test_self_review_emits_TRUE_when_reviewer_email_matches_reviewee_id(
 
     review_session = _session(db, code="self-true")
     likert = _likert(db, review_session)
-    reviewer = _add_reviewer(
-        db, review_session, email="alex@example.edu", name="Alex"
-    )
+    reviewer = _add_reviewer(db, review_session, email="alex@example.edu", name="Alex")
     reviewee = _add_reviewee(
         db,
         review_session,
@@ -705,12 +668,8 @@ def test_self_review_emits_TRUE_when_reviewer_email_matches_reviewee_id(
 def test_self_review_emits_FALSE_when_emails_differ(db: Session) -> None:
     review_session = _session(db, code="self-false")
     likert = _likert(db, review_session)
-    reviewer = _add_reviewer(
-        db, review_session, email="alex@example.edu", name="Alex"
-    )
-    reviewee = _add_reviewee(
-        db, review_session, identifier="carol@example.edu", name="Carol"
-    )
+    reviewer = _add_reviewer(db, review_session, email="alex@example.edu", name="Alex")
+    reviewee = _add_reviewee(db, review_session, identifier="carol@example.edu", name="Carol")
     instr = _add_instrument(db, review_session, name="I")
     field = _add_field(db, instr, field_key="q", label="Q", rtd=likert)
     a = _add_assignment(
@@ -733,12 +692,8 @@ def test_self_review_is_case_insensitive(db: Session) -> None:
 
     review_session = _session(db, code="self-case")
     likert = _likert(db, review_session)
-    reviewer = _add_reviewer(
-        db, review_session, email="Alex@Example.Edu", name="Alex"
-    )
-    reviewee = _add_reviewee(
-        db, review_session, identifier="alex@example.edu", name="Alex"
-    )
+    reviewer = _add_reviewer(db, review_session, email="Alex@Example.Edu", name="Alex")
+    reviewee = _add_reviewee(db, review_session, identifier="alex@example.edu", name="Alex")
     instr = _add_instrument(db, review_session, name="I")
     field = _add_field(db, instr, field_key="q", label="Q", rtd=likert)
     a = _add_assignment(
@@ -764,12 +719,8 @@ def test_self_review_emits_FALSE_when_reviewee_id_is_not_an_email(
 
     review_session = _session(db, code="self-noemail")
     likert = _likert(db, review_session)
-    reviewer = _add_reviewer(
-        db, review_session, email="alex@example.edu", name="Alex"
-    )
-    reviewee = _add_reviewee(
-        db, review_session, identifier="student-001", name="Student 1"
-    )
+    reviewer = _add_reviewer(db, review_session, email="alex@example.edu", name="Alex")
+    reviewee = _add_reviewee(db, review_session, identifier="student-001", name="Student 1")
     instr = _add_instrument(db, review_session, name="I")
     field = _add_field(db, instr, field_key="q", label="Q", rtd=likert)
     a = _add_assignment(
@@ -799,20 +750,27 @@ def test_group_scoped_instrument_collapses_to_one_row_per_group(
     empty, and InstrumentFlavour reads ``group-scoped``."""
     review_session = _session(db, code="grp-collapse")
     likert = _likert(db, review_session)
-    reviewer = _add_reviewer(
-        db, review_session, email="r@example.edu", name="R"
-    )
+    reviewer = _add_reviewer(db, review_session, email="r@example.edu", name="R")
     carol = _add_reviewee(
-        db, review_session, identifier="carol@example.edu",
-        name="Carol", tag_1="Team A",
+        db,
+        review_session,
+        identifier="carol@example.edu",
+        name="Carol",
+        tag_1="Team A",
     )
     eve = _add_reviewee(
-        db, review_session, identifier="eve@example.edu",
-        name="Eve", tag_1="Team A",
+        db,
+        review_session,
+        identifier="eve@example.edu",
+        name="Eve",
+        tag_1="Team A",
     )
     dan = _add_reviewee(
-        db, review_session, identifier="dan@example.edu",
-        name="Dan", tag_1="Team B",
+        db,
+        review_session,
+        identifier="dan@example.edu",
+        name="Dan",
+        tag_1="Team B",
     )
     instr = _add_instrument(db, review_session, name="Grp")
     instr.group_kind = "r1"  # group by reviewee tag 1
@@ -820,8 +778,11 @@ def test_group_scoped_instrument_collapses_to_one_row_per_group(
     field = _add_field(db, instr, field_key="q", label="Q", rtd=likert)
     for reviewee in (carol, eve, dan):
         a = _add_assignment(
-            db, review_session, reviewer=reviewer,
-            reviewee=reviewee, instrument=instr,
+            db,
+            review_session,
+            reviewer=reviewer,
+            reviewee=reviewee,
+            instrument=instr,
         )
         # The save-time fan-out writes the same value to every
         # member assignment of the group.
@@ -850,16 +811,20 @@ def test_group_identity_includes_member_names_whatever_the_name_flag(
     held does not drop the names."""
     review_session = _session(db, code="grp-names")
     likert = _likert(db, review_session)
-    reviewer = _add_reviewer(
-        db, review_session, email="r@example.edu", name="R"
-    )
+    reviewer = _add_reviewer(db, review_session, email="r@example.edu", name="R")
     carol = _add_reviewee(
-        db, review_session, identifier="carol@example.edu",
-        name="Carol", tag_1="Team A",
+        db,
+        review_session,
+        identifier="carol@example.edu",
+        name="Carol",
+        tag_1="Team A",
     )
     eve = _add_reviewee(
-        db, review_session, identifier="eve@example.edu",
-        name="Eve", tag_1="Team A",
+        db,
+        review_session,
+        identifier="eve@example.edu",
+        name="Eve",
+        tag_1="Team A",
     )
     instr = _add_instrument(db, review_session, name="Grp")
     instr.group_kind = "r1"
@@ -877,8 +842,11 @@ def test_group_identity_includes_member_names_whatever_the_name_flag(
     field = _add_field(db, instr, field_key="q", label="Q", rtd=likert)
     for reviewee in (carol, eve):
         a = _add_assignment(
-            db, review_session, reviewer=reviewer,
-            reviewee=reviewee, instrument=instr,
+            db,
+            review_session,
+            reviewer=reviewer,
+            reviewee=reviewee,
+            instrument=instr,
         )
         _add_response(db, assignment=a, field=field, value="4")
 
@@ -901,37 +869,38 @@ def test_reviewer_summary_group_names_only_the_reviewers_included_members(
     rae = _add_reviewer(db, review_session, email="rae@example.edu", name="Rae")
     sam = _add_reviewer(db, review_session, email="sam@example.edu", name="Sam")
     carol = _add_reviewee(
-        db, review_session, identifier="carol@example.edu",
-        name="Carol", tag_1="Team A",
+        db,
+        review_session,
+        identifier="carol@example.edu",
+        name="Carol",
+        tag_1="Team A",
     )
     eve = _add_reviewee(
-        db, review_session, identifier="eve@example.edu",
-        name="Eve", tag_1="Team A",
+        db,
+        review_session,
+        identifier="eve@example.edu",
+        name="Eve",
+        tag_1="Team A",
     )
     dan = _add_reviewee(
-        db, review_session, identifier="dan@example.edu",
-        name="Dan", tag_1="Team A",
+        db,
+        review_session,
+        identifier="dan@example.edu",
+        name="Dan",
+        tag_1="Team A",
     )
     instr = _add_instrument(db, review_session, name="Grp")
     instr.group_kind = "r1"
     db.flush()
     field = _add_field(db, instr, field_key="q", label="Q", rtd=likert)
-    rae_carol = _add_assignment(
-        db, review_session, reviewer=rae, reviewee=carol, instrument=instr
-    )
+    rae_carol = _add_assignment(db, review_session, reviewer=rae, reviewee=carol, instrument=instr)
     _add_response(db, assignment=rae_carol, field=field, value="4")
-    rae_eve = _add_assignment(
-        db, review_session, reviewer=rae, reviewee=eve, instrument=instr
-    )
+    rae_eve = _add_assignment(db, review_session, reviewer=rae, reviewee=eve, instrument=instr)
     rae_eve.include = False
-    _add_assignment(
-        db, review_session, reviewer=sam, reviewee=dan, instrument=instr
-    )
+    _add_assignment(db, review_session, reviewer=sam, reviewee=dan, instrument=instr)
     db.flush()
 
-    own = _data(
-        list(serialize_reviewer_session_summary(db, review_session, rae))
-    )
+    own = _data(list(serialize_reviewer_session_summary(db, review_session, rae)))
     assert [r[5] for r in own] == ["Team A (Carol)"]
     operator = _data(list(serialize_responses(db, review_session)))
     assert [r[5] for r in operator] == ["Team A (Carol, Dan, Eve)"]

@@ -84,9 +84,7 @@ def _setup_two_instrument_session(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(operator_client, review_session.id)
     [first] = list(
-        db.execute(
-            select(Instrument).where(Instrument.session_id == review_session.id)
-        ).scalars()
+        db.execute(select(Instrument).where(Instrument.session_id == review_session.id)).scalars()
     )
     operator_client.post(
         f"/operator/sessions/{review_session.public_id}/instruments/add-new-model",
@@ -104,9 +102,7 @@ def _setup_two_instrument_session(
     # exist, so the route requires ``confirm_replace``; without it the
     # POST is a no-op redirect and the second instrument stays empty.
     pin_full_matrix_on_all_instruments(db, review_session.id)
-    generate_via_page_button(
-        operator_client, review_session.id, confirm_replace=True
-    )
+    generate_via_page_button(operator_client, review_session.id, confirm_replace=True)
     with past_draft_setup(db, first):
         instruments_service.update_short_label(
             db, instrument=first, short_label="Self-eval", actor=None
@@ -154,13 +150,9 @@ def test_inputs_carry_data_rs_saved_value(
     empty so the attribute renders as ``data-rs-saved-value=""`` —
     the existence of the attribute matters, not its content."""
     operator = make_client(alice)
-    review_session, _, _ = _setup_two_instrument_session(
-        operator, db, code="rae-d-savedval"
-    )
+    review_session, _, _ = _setup_two_instrument_session(operator, db, code="rae-d-savedval")
     rae_client = make_client(rae)
-    body = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/1"
-    ).text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
     # At least one input carries the attribute.
     assert "data-rs-saved-value=" in body
 
@@ -219,16 +211,12 @@ def test_save_still_filters_cross_page_inputs_under_pr_delta(
         follow_redirects=False,
     )
     page1_responses = (
-        db.execute(
-            select(Response).where(Response.assignment_id == page1_assignment.id)
-        )
+        db.execute(select(Response).where(Response.assignment_id == page1_assignment.id))
         .scalars()
         .all()
     )
     page2_responses = (
-        db.execute(
-            select(Response).where(Response.assignment_id == page2_assignment.id)
-        )
+        db.execute(select(Response).where(Response.assignment_id == page2_assignment.id))
         .scalars()
         .all()
     )
@@ -280,21 +268,15 @@ def test_submit_persists_inputs_from_every_group(
         follow_redirects=False,
     )
     page1_responses = (
-        db.execute(
-            select(Response).where(Response.assignment_id == page1_assignment.id)
-        )
+        db.execute(select(Response).where(Response.assignment_id == page1_assignment.id))
         .scalars()
         .all()
     )
     page2_responses = (
-        db.execute(
-            select(Response).where(Response.assignment_id == page2_assignment.id)
-        )
+        db.execute(select(Response).where(Response.assignment_id == page2_assignment.id))
         .scalars()
         .all()
     )
     # Both pages' values land in the DB after Submit.
     assert any(r.value == "page-1 submit" for r in page1_responses)
     assert any(r.value == "page-2 submit" for r in page2_responses)
-
-

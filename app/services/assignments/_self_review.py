@@ -8,6 +8,7 @@ creation / fan-out / recompute) and the PR-1 backfill reach it, either
 directly or through the entity-shaped :func:`classify_self_review`
 adapter, so the rule lives in exactly one place.
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -82,27 +83,27 @@ def _is_self_review_pair(
 
 class AssignmentPair(NamedTuple):
     """The projection of an assignment row that the self-review rule
-    and the group-key computation actually read.
+        and the group-key computation actually read.
 
-Seven slots, traced 19S Item 3: the group key needs ``id``,
-    ``instrument_id``, ``reviewer_id``, ``reviewee_id`` and the
-    ``Reviewee`` (boundary tags are read off it); the pair test needs
-    the reviewer's email; and ``is_self_review`` carries the **stored**
-    value so the recompute can report how many rows it changed without
-    re-reading them. (Six is the count of ``Assignment`` attributes the
-    two passes read; this class also carries a ``Reviewer`` column, so
-    the two figures are not the same one.)
+    Seven slots, traced 19S Item 3: the group key needs ``id``,
+        ``instrument_id``, ``reviewer_id``, ``reviewee_id`` and the
+        ``Reviewee`` (boundary tags are read off it); the pair test needs
+        the reviewer's email; and ``is_self_review`` carries the **stored**
+        value so the recompute can report how many rows it changed without
+        re-reading them. (Six is the count of ``Assignment`` attributes the
+        two passes read; this class also carries a ``Reviewer`` column, so
+        the two figures are not the same one.)
 
-    Deliberately duck-compatible with ``Assignment`` on the five
-    attributes ``app.services.responses.group_keys`` reads, so that
-    function takes either shape unchanged.
+        Deliberately duck-compatible with ``Assignment`` on the five
+        attributes ``app.services.responses.group_keys`` reads, so that
+        function takes either shape unchanged.
 
-    ``Reviewee`` stays an entity rather than a tag projection because
-    the boundary spec names its fields dynamically
-    (``group_key_for_pair`` does ``getattr(reviewee, source_field)``).
-    It costs little: the ORM dedupes by primary key, so a session with
-    200 reviewees builds 200 instances however many assignment rows
-    join to them.
+        ``Reviewee`` stays an entity rather than a tag projection because
+        the boundary spec names its fields dynamically
+        (``group_key_for_pair`` does ``getattr(reviewee, source_field)``).
+        It costs little: the ORM dedupes by primary key, so a session with
+        200 reviewees builds 200 instances however many assignment rows
+        join to them.
     """
 
     id: int
@@ -118,9 +119,7 @@ Seven slots, traced 19S Item 3: the group key needs ``id``,
 
 #: One ``(Assignment, Reviewer, Reviewee)`` row: a query's ``Row``, or a
 #: plain tuple (the unit tests build these).
-type _PairRow = (
-    Row[Assignment, Reviewer, Reviewee] | tuple[Assignment, Reviewer, Reviewee]
-)
+type _PairRow = Row[Assignment, Reviewer, Reviewee] | tuple[Assignment, Reviewer, Reviewee]
 
 
 def classify_self_review(
@@ -209,13 +208,11 @@ def classify_self_review_pairs(
     # ones the real rows use and are loaded once.
     roster_by_email: dict[str, list[Reviewee]] = {}
     roster_by_account: dict[str, list[Reviewee]] = {}
-    for reviewee in db.execute(
-        select(Reviewee).where(Reviewee.session_id == session_id)
-    ).scalars():
+    for reviewee in db.execute(select(Reviewee).where(Reviewee.session_id == session_id)).scalars():
         if "@" in reviewee.email_or_identifier:
-            roster_by_email.setdefault(
-                normalize_email(reviewee.email_or_identifier), []
-            ).append(reviewee)
+            roster_by_email.setdefault(normalize_email(reviewee.email_or_identifier), []).append(
+                reviewee
+            )
         if reviewee.directory_object_id:
             roster_by_account.setdefault(
                 normalize_object_id(reviewee.directory_object_id), []
@@ -234,9 +231,7 @@ def classify_self_review_pairs(
             r.id: r
             for r in [
                 *roster_by_email.get(normalize_email(pair.reviewer_email), []),
-                *roster_by_account.get(
-                    normalize_object_id(pair.reviewer_object_id), []
-                ),
+                *roster_by_account.get(normalize_object_id(pair.reviewer_object_id), []),
             ]
         }
         for own in candidates.values():
@@ -259,9 +254,7 @@ def classify_self_review_pairs(
                     reviewer_object_id=pair.reviewer_object_id,
                 )
             )
-    keys = group_keys(
-        db, assignments=[*pairs, *membership], session_id=session_id
-    )
+    keys = group_keys(db, assignments=[*pairs, *membership], session_id=session_id)
     # Synthetic rows on individual-scoped instruments get no key and
     # drop out here; only group instruments read ``member_keys``.
     member_keys: dict[tuple[int, int], set[tuple[str, ...]]] = {}
@@ -269,9 +262,7 @@ def classify_self_review_pairs(
         # The catch-all group is never the reviewer's own, as Generate
         # and the Band 1 preview read it (findings E2).
         if row.id in keys and not is_catch_all_key(keys[row.id]):
-            member_keys.setdefault(
-                (row.instrument_id, row.reviewer_id), set()
-            ).add(keys[row.id])
+            member_keys.setdefault((row.instrument_id, row.reviewer_id), set()).add(keys[row.id])
     group_key_by_assignment = keys
     result: dict[int, bool] = {}
     for pair in pairs:
@@ -310,9 +301,7 @@ def _self_review_assignment_ids(
     }
 
 
-def recompute_self_review_classification(
-    db: Session, *, session_id: int
-) -> int:
+def recompute_self_review_classification(db: Session, *, session_id: int) -> int:
     """Recompute :attr:`Assignment.is_self_review` for every
     assignment in the session and persist any row whose stored
     value diverged from what :func:`classify_self_review` now
@@ -395,12 +384,8 @@ def recompute_self_review_classification(
         for row_id, *_, reviewee, reviewer_status, _include in rows
     }
     included = {row[0]: bool(row[-1]) for row in rows}
-    classification = classify_self_review_pairs(
-        db, session_id=session_id, pairs=pairs
-    )
-    flipped = [
-        pair for pair in pairs if pair.is_self_review != classification[pair.id]
-    ]
+    classification = classify_self_review_pairs(db, session_id=session_id, pairs=pairs)
+    flipped = [pair for pair in pairs if pair.is_self_review != classification[pair.id]]
     changed: list[dict[str, Any]] = []
     if flipped:
         # A row whose classification flips moves its ``include`` towards
@@ -427,16 +412,13 @@ def recompute_self_review_classification(
                     "id": pair.id,
                     "is_self_review": is_self,
                     "include": (
-                        included[pair.id]
-                        and self_reviews_active.get(pair.instrument_id, True)
+                        included[pair.id] and self_reviews_active.get(pair.instrument_id, True)
                         if is_self
                         else included[pair.id] or both_active[pair.id]
                     ),
                 }
             )
-    include_changed = sum(
-        1 for row in changed if row["include"] != included[row["id"]]
-    )
+    include_changed = sum(1 for row in changed if row["include"] != included[row["id"]])
     if changed:
         # ORM bulk UPDATE by primary key. Unlike the bulk *insert* in
         # ``_materialise_one_instrument``, this form keeps the identity
@@ -461,9 +443,7 @@ def recompute_self_review_classification(
                 f"on or off"
             ),
             session=db.get(ReviewSession, session_id),
-            payload=audit.counts(
-                reclassified=len(changed), include_changed=include_changed
-            ),
+            payload=audit.counts(reclassified=len(changed), include_changed=include_changed),
         )
     return len(changed)
 
@@ -495,9 +475,7 @@ def verify_self_review_classification(
     ).all()
     if not rows:
         return []
-    classification = classify_self_review(
-        db, session_id=session_id, rows=rows
-    )
+    classification = classify_self_review(db, session_id=session_id, rows=rows)
     return [
         (assignment.id, assignment.is_self_review, expected)
         for assignment, _, _ in rows
@@ -543,11 +521,15 @@ def self_review_breakdown_per_instrument(
     toggle (findings B2), and counting them would show the column
     mixed when no one touched it.
     """
-    rows = db.execute(
-        _active_self_review_rows().where(
-            Assignment.session_id == session_id,
+    rows = (
+        db.execute(
+            _active_self_review_rows().where(
+                Assignment.session_id == session_id,
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     out: dict[int, tuple[int, int]] = {}
     for assignment in rows:
         active, deactivated = out.get(assignment.instrument_id, (0, 0))
@@ -596,12 +578,16 @@ def set_instrument_self_reviews_active(
     # consolidation (PR 1/2 of ``guide/self_review_consolidate.md``).
     # Rows with an inactive side stay excluded: the toggle is about
     # self-review, not roster status (findings B2).
-    rows = db.execute(
-        _active_self_review_rows().where(
-            Assignment.session_id == review_session.id,
-            Assignment.instrument_id == instrument_id,
+    rows = (
+        db.execute(
+            _active_self_review_rows().where(
+                Assignment.session_id == review_session.id,
+                Assignment.instrument_id == instrument_id,
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     flipped = 0
     for assignment in rows:
         if assignment.include != active:

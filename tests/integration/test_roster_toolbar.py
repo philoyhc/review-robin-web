@@ -106,9 +106,7 @@ def _make_session(client: TestClient, db: Session, code: str) -> ReviewSession:
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    rs = db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    rs = db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
     # Relationships is gate-hidden — its routes 404 behind
     # `require_relationships_enabled_session`.
     rs.relationships_enabled = True
@@ -126,9 +124,7 @@ def _seed(db: Session, sid: int, page: str, n: int = 3) -> list[int]:
     two-row fixture let the Reviewers original prove nothing.
     """
     reviewers = [
-        Reviewer(
-            session_id=sid, name=f"Rr{i}", email=f"rr{i}@example.org", tag_1=f"T{i}"
-        )
+        Reviewer(session_id=sid, name=f"Rr{i}", email=f"rr{i}@example.org", tag_1=f"T{i}")
         for i in range(n)
     ]
     reviewees = [
@@ -379,9 +375,9 @@ def test_the_moved_filter_locks_while_a_row_is_being_edited(
     )
     assert moved, "moved filter form not found in the toolbar"
     assert "is-locked" in moved.group(1), "the moved filter does not lock"
-    assert re.search(
-        r"\.toolbar-right \.operator-actions-filter\.is-locked \{", html
-    ), "`is-locked` on the moved filter matches no rule"
+    assert re.search(r"\.toolbar-right \.operator-actions-filter\.is-locked \{", html), (
+        "`is-locked` on the moved filter matches no rule"
+    )
 
     # `is-locked` greys the pane; it does not disable the link inside it.
     # `Add new` mid-edit must be the DISABLED variant, or an operator one

@@ -34,7 +34,11 @@ def _token(page: Page, name: str) -> str:
 
 
 _OFF = {"info": "--status-info-bg", "warning": "--status-warning-bg", "error": "--status-error-bg"}
-_ON = {"info": "--selected-bg", "warning": "--status-warning-solid-bg", "error": "--status-error-solid-bg"}
+_ON = {
+    "info": "--selected-bg",
+    "warning": "--status-warning-solid-bg",
+    "error": "--status-error-solid-bg",
+}
 
 
 def _check_fills(page: Page) -> None:
@@ -73,9 +77,7 @@ def test_severity_chips_fill_by_state_in_both_themes(
         assert light[value] != dark[value], value
 
 
-def test_a_severity_chip_filters_and_stays_on(
-    page: Page, new_session: Callable[[], str]
-) -> None:
+def test_a_severity_chip_filters_and_stays_on(page: Page, new_session: Callable[[], str]) -> None:
     session_id = new_session()
     page.goto(app_url(f"/operator/sys-admin/sessions/{session_id}/audit-log"))
     warning = page.locator("label.status-chip-warning")
@@ -99,9 +101,7 @@ def test_a_validate_chip_submits_at_once_and_is_remembered(
     strip = page.locator("form[data-severity-chips]")
     for value in ("error", "warning", "info"):
         expect(strip.locator(f"label.status-chip-{value} input")).to_be_checked()
-    assert _bg(strip.locator("label.status-chip-error")) == _token(
-        page, "--status-error-solid-bg"
-    )
+    assert _bg(strip.locator("label.status-chip-error")) == _token(page, "--status-error-solid-bg")
     with page.expect_navigation():
         strip.locator("label.status-chip-warning").click()
     assert "severity=error" in page.url and "severity=warning" not in page.url
@@ -109,9 +109,7 @@ def test_a_validate_chip_submits_at_once_and_is_remembered(
     strip = page.locator("form[data-severity-chips]")
     expect(strip.locator("label.status-chip-warning input")).not_to_be_checked()
     expect(strip.locator("label.status-chip-error input")).to_be_checked()
-    assert _bg(strip.locator("label.status-chip-warning")) == _token(
-        page, "--status-warning-bg"
-    )
+    assert _bg(strip.locator("label.status-chip-warning")) == _token(page, "--status-warning-bg")
 
 
 def test_the_guide_sample_answers_a_click(page: Page) -> None:

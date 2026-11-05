@@ -99,9 +99,7 @@ def inputs(db: Session) -> Inputs:
     user = User(email="op-stamp@example.edu")
     db.add(user)
     db.flush()
-    review_session = ReviewSession(
-        name="Spring", code="stamp-1", created_by_user_id=user.id
-    )
+    review_session = ReviewSession(name="Spring", code="stamp-1", created_by_user_id=user.id)
     db.add(review_session)
     db.flush()
 
@@ -166,9 +164,7 @@ def inputs(db: Session) -> Inputs:
         session_rule_set=rule_set,
         reviewers=list(reviewers),
         reviewees=list(reviewees),
-        pair_context_lookup={
-            (relationship.reviewer_id, relationship.reviewee_id): relationship
-        },
+        pair_context_lookup={(relationship.reviewer_id, relationship.reviewee_id): relationship},
         materialized=cache.MaterializedRows(count=4, max_id=40),
     )
 
@@ -229,17 +225,19 @@ def _roster_cases() -> list[tuple[str, Callable[[Inputs], Undo]]]:
         ("reviewer status", lambda i: _set(i.reviewers[0], "status", "removed")),
         (
             "reviewer directory account",
-            lambda i: _set(i.reviewers[0], "directory_object_id", "11111111-1111-4111-8111-111111111111"),
+            lambda i: _set(
+                i.reviewers[0], "directory_object_id", "11111111-1111-4111-8111-111111111111"
+            ),
         ),
         (
             "reviewee directory account",
-            lambda i: _set(i.reviewees[0], "directory_object_id", "11111111-1111-4111-8111-111111111111"),
+            lambda i: _set(
+                i.reviewees[0], "directory_object_id", "11111111-1111-4111-8111-111111111111"
+            ),
         ),
         (
             "reviewee identifier",
-            lambda i: _set(
-                i.reviewees[0], "email_or_identifier", "moved@example.edu"
-            ),
+            lambda i: _set(i.reviewees[0], "email_or_identifier", "moved@example.edu"),
         ),
         ("reviewee tag_1", lambda i: _set(i.reviewees[0], "tag_1", "Team Z")),
         ("reviewee status", lambda i: _set(i.reviewees[0], "status", "removed")),
@@ -347,27 +345,19 @@ def _row_set_cases() -> list[tuple[str, Callable[[Inputs], Undo]]]:
     return [
         (
             "a row is deleted",
-            lambda i: _set(
-                i, "materialized", cache.MaterializedRows(count=3, max_id=40)
-            ),
+            lambda i: _set(i, "materialized", cache.MaterializedRows(count=3, max_id=40)),
         ),
         (
             "a row is inserted",
-            lambda i: _set(
-                i, "materialized", cache.MaterializedRows(count=5, max_id=41)
-            ),
+            lambda i: _set(i, "materialized", cache.MaterializedRows(count=5, max_id=41)),
         ),
         (
             "one out, one in — the count returns but the id does not",
-            lambda i: _set(
-                i, "materialized", cache.MaterializedRows(count=4, max_id=41)
-            ),
+            lambda i: _set(i, "materialized", cache.MaterializedRows(count=4, max_id=41)),
         ),
         (
             "the instrument has never generated",
-            lambda i: _set(
-                i, "materialized", cache.MaterializedRows(count=0, max_id=None)
-            ),
+            lambda i: _set(i, "materialized", cache.MaterializedRows(count=0, max_id=None)),
         ),
     ]
 
@@ -381,12 +371,8 @@ ALL_CASES = [
 ]
 
 
-@pytest.mark.parametrize(
-    "mutate", [c[1] for c in ALL_CASES], ids=[c[0] for c in ALL_CASES]
-)
-def test_every_input_moves_the_stamp(
-    inputs: Inputs, mutate: Callable[[Inputs], Undo]
-) -> None:
+@pytest.mark.parametrize("mutate", [c[1] for c in ALL_CASES], ids=[c[0] for c in ALL_CASES])
+def test_every_input_moves_the_stamp(inputs: Inputs, mutate: Callable[[Inputs], Undo]) -> None:
     before = inputs.stamp()
     undo = mutate(inputs)
     assert inputs.stamp() != before
@@ -513,9 +499,7 @@ def test_materialized_rows_counts_per_instrument_within_the_session(
     )
     db.add(decoy_session)
     db.flush()
-    decoy_reviewer = Reviewer(
-        session_id=decoy_session.id, name="Zoe", email="zoe@example.edu"
-    )
+    decoy_reviewer = Reviewer(session_id=decoy_session.id, name="Zoe", email="zoe@example.edu")
     decoy_reviewees = [
         Reviewee(
             session_id=decoy_session.id,
@@ -552,21 +536,15 @@ def test_materialized_rows_counts_per_instrument_within_the_session(
     db.add_all(rows)
     db.flush()
 
-    by_instrument = cache.materialized_rows_by_instrument(
-        db, inputs.review_session.id
-    )
+    by_instrument = cache.materialized_rows_by_instrument(db, inputs.review_session.id)
     assert set(by_instrument) == {inputs.instrument.id}
     summary = by_instrument[inputs.instrument.id]
     assert summary.count == 4
     assert summary.max_id == max(row.id for row in rows)
 
 
-def test_an_instrument_with_no_rows_reads_as_empty(
-    db: Session, inputs: Inputs
-) -> None:
-    by_instrument = cache.materialized_rows_by_instrument(
-        db, inputs.review_session.id
-    )
+def test_an_instrument_with_no_rows_reads_as_empty(db: Session, inputs: Inputs) -> None:
+    by_instrument = cache.materialized_rows_by_instrument(db, inputs.review_session.id)
     assert inputs.instrument.id not in by_instrument
     assert cache.rows_for(by_instrument, inputs.instrument.id) == (
         cache.MaterializedRows(count=0, max_id=None)

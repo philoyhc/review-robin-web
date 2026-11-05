@@ -72,14 +72,11 @@ def test_every_route_404s_when_the_gate_is_shut(
     monkeypatch.setattr(live_settings, "rehydrate_enabled", False)
     response = getattr(client, method)(path)
     assert response.status_code == status.HTTP_404_NOT_FOUND, (
-        f"{method.upper()} {path} returned {response.status_code} "
-        f"with the gate shut"
+        f"{method.upper()} {path} returned {response.status_code} with the gate shut"
     )
 
 
-def test_the_lobby_hides_the_button_when_the_gate_is_shut(
-    client: TestClient, monkeypatch
-) -> None:
+def test_the_lobby_hides_the_button_when_the_gate_is_shut(client: TestClient, monkeypatch) -> None:
     """A rendered button pointing at a 404 is worse than no button."""
     from app.config import settings as live_settings
 

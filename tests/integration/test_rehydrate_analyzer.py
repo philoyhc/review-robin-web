@@ -60,9 +60,7 @@ def _seed(db: Session) -> tuple[User, ReviewSession]:
     db.add(rs)
     db.flush()
     db.add(SessionOperator(session_id=rs.id, user_id=user.id, role="owner"))
-    inst = Instrument(
-        session_id=rs.id, name="Inst", short_label="INST", order=1
-    )
+    inst = Instrument(session_id=rs.id, name="Inst", short_label="INST", order=1)
     db.add(inst)
     db.flush()
     field = InstrumentResponseField(
@@ -105,8 +103,7 @@ def _seed(db: Session) -> tuple[User, ReviewSession]:
 
 def _file_set(db: Session, rs: ReviewSession) -> dict[str, bytes]:
     settings_rows = [("field", "value", "data_type")] + [
-        (r.field, r.value, r.data_type)
-        for r in serialize_session_config(db, rs)
+        (r.field, r.value, r.data_type) for r in serialize_session_config(db, rs)
     ]
     return {
         f"{rs.code}_settings.csv": _to_csv(settings_rows),
@@ -155,8 +152,7 @@ def test_a_code_containing_the_by_instrument_mark_is_reported_missing(
     user, rs = _seed(db)
     for code in ("x_by_instrument_spring", "Peer_BY_INSTRUMENT"):
         files = {
-            name.replace(rs.code, code, 1): content
-            for name, content in _file_set(db, rs).items()
+            name.replace(rs.code, code, 1): content for name, content in _file_set(db, rs).items()
         }
         assert all(code in name for name in files)
         report = analyze_rehydrate_set(db, files=files, user=user)
@@ -216,9 +212,7 @@ def test_cross_session_reviewer_mix_blocks(db: Session) -> None:
     )
     report = analyze_rehydrate_set(db, files=files, user=user)
     assert not report.ok
-    assert any(
-        "reviewer email" in e and "responses.csv" in e for e in report.errors
-    )
+    assert any("reviewer email" in e and "responses.csv" in e for e in report.errors)
 
 
 def test_observers_enabled_but_missing_file_blocks(db: Session) -> None:
@@ -259,9 +253,7 @@ def test_a_cell_past_the_csv_field_limit_blocks_rather_than_raising(
         files[f"{rs.code}_{kind}.csv"] += b'"' + b"x" * 200_000 + b'"\r\n'
         report = analyze_rehydrate_set(db, files=files, user=user)
         assert not report.ok
-        assert report.errors == [
-            f"{kind}.csv: A cell is longer than 131,072 characters."
-        ]
+        assert report.errors == [f"{kind}.csv: A cell is longer than 131,072 characters."]
         with pytest.raises(RehydrateError, match=f"{kind}.csv"):
             rehydrate_session(db, files=files, user=user, directory=FakeDirectory())
 
@@ -269,14 +261,9 @@ def test_a_cell_past_the_csv_field_limit_blocks_rather_than_raising(
 def test_derive_name_suffixes_on_collision(db: Session) -> None:
     user, rs = _seed(db)
     # An existing "Spring_REHYD" the operator owns forces the _1 suffix.
-    existing = ReviewSession(
-        name="Spring_REHYD", code="spring-rehyd", created_by_user_id=user.id
-    )
+    existing = ReviewSession(name="Spring_REHYD", code="spring-rehyd", created_by_user_id=user.id)
     db.add(existing)
     db.flush()
     db.add(SessionOperator(session_id=existing.id, user_id=user.id, role="owner"))
     db.flush()
-    assert (
-        derive_rehydrate_name(db, user=user, original_name="Spring")
-        == "Spring_REHYD_1"
-    )
+    assert derive_rehydrate_name(db, user=user, original_name="Spring") == "Spring_REHYD_1"

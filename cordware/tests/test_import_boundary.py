@@ -205,6 +205,8 @@ def test_the_entry_point_check_reads_both_import_forms() -> None:
     assert "cordware.main" in imported_modules("import cordware.main\n")
     assert "cordware.main" in imported_modules("from cordware import main\n")
     assert "cordware.main" in imported_modules("def f():\n    from cordware.main import app\n")
-    assert "cordware.main" in imported_modules("import importlib\nimportlib.import_module('cordware.main')\n")
+    assert "cordware.main" in imported_modules(
+        "import importlib\nimportlib.import_module('cordware.main')\n"
+    )
     assert "cordware.main" in imported_modules("__import__('cordware.main')\n")
     assert "cordware.main" not in imported_modules("from cordware.identity import fake_auth\n")

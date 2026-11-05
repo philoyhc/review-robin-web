@@ -20,7 +20,9 @@ def test_tick_and_upload_with_the_file_held(
     url = f"/operator/sessions/{session_id}/reviewers"
     first = api.post(
         f"{url}/import",
-        files={"file": ("first.csv", b"ReviewerName,ReviewerEmail\nAnn,ann@example.edu\n", "text/csv")},
+        files={
+            "file": ("first.csv", b"ReviewerName,ReviewerEmail\nAnn,ann@example.edu\n", "text/csv")
+        },
         follow_redirects=False,
     )
     assert first.status_code == 303

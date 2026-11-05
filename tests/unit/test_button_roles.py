@@ -24,9 +24,7 @@ _CLASS = re.compile(r'class="([^"]*)"')
 _TAG = re.compile(r"<[^>]+>")
 # Comments and script / style bodies can name `<a>` or `<button>` in
 # prose; a match opened there would swallow the real elements after it.
-_NOT_MARKUP = re.compile(
-    r"\{#.*?#\}|<!--.*?-->|<(script|style)\b.*?</\1>", re.S
-)
+_NOT_MARKUP = re.compile(r"\{#.*?#\}|<!--.*?-->|<(script|style)\b.*?</\1>", re.S)
 
 
 def _buttons(template: str) -> list[tuple[str, str]]:
@@ -42,21 +40,20 @@ def _buttons(template: str) -> list[tuple[str, str]]:
 
 MOVED = [
     ("operator/partials/next_action_card.html", "Archive session", "btn alert"),
-    ("operator/partials/next_action_card.html", "Regenerate &amp; prepare",
-     "btn destructive"),
+    ("operator/partials/next_action_card.html", "Regenerate &amp; prepare", "btn destructive"),
     ("operator/session_validate.html", "Acknowledge and activate", "btn alert"),
     ("operator/sessions_list.html", "Purge and archive", "btn alert"),
     ("operator/sessions_list.html", "Purge and archive all", "btn alert"),
-    ("operator/session_extract_data.html",
-     "{% if is_archived %}Already archived{% else %}Purge and archive{% endif %}",
-     "btn alert"),
+    (
+        "operator/session_extract_data.html",
+        "{% if is_archived %}Already archived{% else %}Purge and archive{% endif %}",
+        "btn alert",
+    ),
 ]
 
 
 @pytest.mark.parametrize(("template", "label", "cls"), MOVED)
-def test_each_moved_button_keeps_its_role(
-    template: str, label: str, cls: str
-) -> None:
+def test_each_moved_button_keeps_its_role(template: str, label: str, cls: str) -> None:
     classes = [c for text, c in _buttons(template) if text == label]
     assert classes == [cls], (template, label, classes)
 

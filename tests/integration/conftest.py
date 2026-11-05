@@ -48,9 +48,7 @@ def grant_reviewee_visibility(db: Session) -> Callable[..., Instrument]:
     *parent* conftest and fails.
     """
 
-    def _grant(
-        review_session: ReviewSession, *, mode: str = "raw"
-    ) -> Instrument:
+    def _grant(review_session: ReviewSession, *, mode: str = "raw") -> Instrument:
         return _grant_reviewee_visibility(db, review_session, mode=mode)
 
     return _grant
@@ -101,9 +99,7 @@ def _grant_reviewee_visibility(
         )
     )
     review_session.status = "expired"
-    review_session.responses_release_at = datetime.now(
-        UTC
-    ) - timedelta(hours=1)
+    review_session.responses_release_at = datetime.now(UTC) - timedelta(hours=1)
     review_session.responses_release_until = None
     db.commit()
     return instrument
@@ -300,15 +296,11 @@ def committed_engine(tmp_path: Path) -> Iterator[Engine]:
 
 
 @pytest.fixture
-def committed_client(
-    committed_engine: Engine, alice: AuthenticatedUser
-) -> Iterator[TestClient]:
+def committed_client(committed_engine: Engine, alice: AuthenticatedUser) -> Iterator[TestClient]:
     """TestClient whose routes commit to ``committed_engine`` (no SAVEPOINT
     isolation). Pair with ``committed_engine`` and a fresh ``Session`` to
     verify persistence after each route call."""
-    SessionLocal = sessionmaker(
-        bind=committed_engine, autoflush=False, expire_on_commit=False
-    )
+    SessionLocal = sessionmaker(bind=committed_engine, autoflush=False, expire_on_commit=False)
 
     def override_get_db() -> Iterator[Session]:
         session = SessionLocal()

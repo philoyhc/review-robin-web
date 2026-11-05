@@ -123,16 +123,10 @@ class _Acc:
         fan-out counts accrued to this row. Drives the
         ``include_empty_rows=False`` drop predicate per PR 6 of
         the chip-controlled-drop slice."""
-        return (
-            self.assigned == 0
-            and self.count == 0
-            and not self.fanout_counts
-        )
+        return self.assigned == 0 and self.count == 0 and not self.fanout_counts
 
 
-def _ingest(
-    acc: _Acc, field: InstrumentResponseField | None, value: str
-) -> None:
+def _ingest(acc: _Acc, field: InstrumentResponseField | None, value: str) -> None:
     data_type = field._inline_data_type if field is not None else None
     if data_type in _NUMERIC:
         try:
@@ -178,9 +172,7 @@ class _Scope:
     anchor_field: InstrumentResponseField | None
 
 
-def _resolve_scope(
-    db: Session, review_session: ReviewSession, shape: DataShape
-) -> _Scope:
+def _resolve_scope(db: Session, review_session: ReviewSession, shape: DataShape) -> _Scope:
     instruments = list(
         db.execute(
             select(Instrument)
@@ -197,14 +189,14 @@ def _resolve_scope(
         for f in instrument.response_fields:
             field_by_id[f.id] = f
     if shape.response_field_id is not None:
-        field_by_id = {
-            shape.response_field_id: field_by_id[shape.response_field_id]
-        } if shape.response_field_id in field_by_id else {}
+        field_by_id = (
+            {shape.response_field_id: field_by_id[shape.response_field_id]}
+            if shape.response_field_id in field_by_id
+            else {}
+        )
     field_ids = set(field_by_id.keys())
     anchor_field = (
-        field_by_id.get(shape.response_field_id)
-        if shape.response_field_id is not None
-        else None
+        field_by_id.get(shape.response_field_id) if shape.response_field_id is not None else None
     )
     return _Scope(
         instrument_ids=instrument_ids,
@@ -219,15 +211,11 @@ def _resolve_scope(
 # --------------------------------------------------------------------------- #
 
 
-def _tag_header_label(
-    review_session: ReviewSession, axis: str, tag_slot: str
-) -> str:
+def _tag_header_label(review_session: ReviewSession, axis: str, tag_slot: str) -> str:
     """``tag-1`` → ``Tag 1`` (or the operator-renamed label
     via ``field_labels.resolve``)."""
     slot_n = tag_slot.rsplit("-", 1)[-1]
-    return field_labels.resolve(
-        review_session, axis, f"tag_{slot_n}"
-    )
+    return field_labels.resolve(review_session, axis, f"tag_{slot_n}")
 
 
 def discrete_step_values(
@@ -273,9 +261,7 @@ def discrete_step_values(
     values: list[str] = []
     for i in range(count):
         v = first + i * increment
-        values.append(
-            str(int(v.to_integral_value())) if is_int else decimal_text(v)
-        )
+        values.append(str(int(v.to_integral_value())) if is_int else decimal_text(v))
     return values
 
 
@@ -291,9 +277,7 @@ def _list_option_values(
 # --------------------------------------------------------------------------- #
 
 
-def _entity_tuple_individual(
-    axis: str, entity: _Entity, slots: list[str]
-) -> tuple[str, ...]:
+def _entity_tuple_individual(axis: str, entity: _Entity, slots: list[str]) -> tuple[str, ...]:
     """Identification cells for a per-individual row."""
     cells: list[str] = []
     for slot in slots:
@@ -303,9 +287,7 @@ def _entity_tuple_individual(
             # The axis picked the entity class (``build_shape_rows``),
             # so the class answers the axis question.
             cells.append(
-                entity.email
-                if isinstance(entity, Reviewer)
-                else entity.email_or_identifier
+                entity.email if isinstance(entity, Reviewer) else entity.email_or_identifier
             )
         elif slot.startswith(f"{axis}:tag-"):
             n = slot.rsplit("-", 1)[-1]
@@ -328,45 +310,21 @@ def _aggregate_cells(
         elif slot == f"{axis}:count":
             cells.append(str(acc.count))
         elif slot == f"{axis}:mean":
-            cells.append(
-                _format_number(mean(acc.numeric_values))
-                if acc.numeric_values
-                else ""
-            )
+            cells.append(_format_number(mean(acc.numeric_values)) if acc.numeric_values else "")
         elif slot == f"{axis}:median":
-            cells.append(
-                _format_number(median(acc.numeric_values))
-                if acc.numeric_values
-                else ""
-            )
+            cells.append(_format_number(median(acc.numeric_values)) if acc.numeric_values else "")
         elif slot == f"{axis}:min":
-            cells.append(
-                _format_number(min(acc.numeric_values))
-                if acc.numeric_values
-                else ""
-            )
+            cells.append(_format_number(min(acc.numeric_values)) if acc.numeric_values else "")
         elif slot == f"{axis}:max":
-            cells.append(
-                _format_number(max(acc.numeric_values))
-                if acc.numeric_values
-                else ""
-            )
+            cells.append(_format_number(max(acc.numeric_values)) if acc.numeric_values else "")
         elif slot == f"{axis}:length":
             cells.append(str(acc.string_chars))
         elif slot == f"{axis}:list-items":
-            options = (
-                _list_option_values(anchor_field)
-                if anchor_field
-                else []
-            )
+            options = _list_option_values(anchor_field) if anchor_field else []
             for opt in options:
                 cells.append(str(acc.fanout_counts.get(opt, 0)))
         elif slot == f"{axis}:discrete-steps":
-            steps = (
-                discrete_step_values(anchor_field)
-                if anchor_field
-                else []
-            )
+            steps = discrete_step_values(anchor_field) if anchor_field else []
             for step in steps:
                 cells.append(str(acc.fanout_counts.get(step, 0)))
     return cells
@@ -408,11 +366,7 @@ def compose_shape_preview_headers(
         elif slot == f"{axis}:email":
             headers.append(f"{axis_title} Email")
         elif slot.startswith(f"{axis}:tag-"):
-            headers.append(
-                _tag_header_label(
-                    review_session, axis, slot.split(":", 1)[1]
-                )
-            )
+            headers.append(_tag_header_label(review_session, axis, slot.split(":", 1)[1]))
         elif slot == f"{axis}:assigned":
             headers.append("Assigned")
         elif slot == f"{axis}:count":
@@ -428,18 +382,10 @@ def compose_shape_preview_headers(
         elif slot == f"{axis}:length":
             headers.append("Length")
         elif slot == f"{axis}:list-items":
-            options = (
-                _list_option_values(anchor_field)
-                if anchor_field
-                else []
-            )
+            options = _list_option_values(anchor_field) if anchor_field else []
             headers.extend(options)
         elif slot == f"{axis}:discrete-steps":
-            steps = (
-                discrete_step_values(anchor_field)
-                if anchor_field
-                else []
-            )
+            steps = discrete_step_values(anchor_field) if anchor_field else []
             headers.extend(steps)
     return tuple(headers)
 
@@ -464,18 +410,10 @@ def compose_shape_preview_aggregates(
         if _slot_is_identity(axis, slot):
             flags.append(False)
         elif slot == f"{axis}:list-items":
-            options = (
-                _list_option_values(anchor_field)
-                if anchor_field
-                else []
-            )
+            options = _list_option_values(anchor_field) if anchor_field else []
             flags.extend([True] * len(options))
         elif slot == f"{axis}:discrete-steps":
-            steps = (
-                discrete_step_values(anchor_field)
-                if anchor_field
-                else []
-            )
+            steps = discrete_step_values(anchor_field) if anchor_field else []
             flags.extend([True] * len(steps))
         else:
             flags.append(True)
@@ -538,11 +476,7 @@ def _compose_identity_header(
         elif slot == f"{axis}:email":
             header.append(f"{axis_title}Email")
         elif slot.startswith(f"{axis}:tag-"):
-            header.append(
-                _tag_header_label(
-                    review_session, axis, slot.split(":", 1)[1]
-                )
-            )
+            header.append(_tag_header_label(review_session, axis, slot.split(":", 1)[1]))
     return header
 
 
@@ -575,18 +509,10 @@ def _compose_aggregate_header(
         elif slot == f"{axis}:length":
             header.append(f"Length{suffix}")
         elif slot == f"{axis}:list-items":
-            options = (
-                _list_option_values(anchor_field)
-                if anchor_field
-                else []
-            )
+            options = _list_option_values(anchor_field) if anchor_field else []
             header.extend(f"{opt}{suffix}" for opt in options)
         elif slot == f"{axis}:discrete-steps":
-            steps = (
-                discrete_step_values(anchor_field)
-                if anchor_field
-                else []
-            )
+            steps = discrete_step_values(anchor_field) if anchor_field else []
             header.extend(f"{step}{suffix}" for step in steps)
     return header
 
@@ -610,14 +536,9 @@ def _compose_header(
     """
     identity = _compose_identity_header(review_session, axis, slots)
     if self_review_handling == "both":
-        aggregates = (
-            _compose_aggregate_header(
-                axis, slots, anchor_field, "_self"
-            )
-            + _compose_aggregate_header(
-                axis, slots, anchor_field, "_noself"
-            )
-        )
+        aggregates = _compose_aggregate_header(
+            axis, slots, anchor_field, "_self"
+        ) + _compose_aggregate_header(axis, slots, anchor_field, "_noself")
     else:
         aggregates = _compose_aggregate_header(
             axis,
@@ -633,9 +554,7 @@ def _compose_header(
 # --------------------------------------------------------------------------- #
 
 
-def _entity_tag_combo(
-    axis: str, entity: _Entity, selected_tag_slots: list[str]
-) -> tuple[str, ...]:
+def _entity_tag_combo(axis: str, entity: _Entity, selected_tag_slots: list[str]) -> tuple[str, ...]:
     parts: list[str] = []
     for slot in selected_tag_slots:
         n = slot.rsplit("-", 1)[-1]
@@ -660,9 +579,7 @@ def build_shape_rows(
 
     has_name = f"{axis}:name" in slots
     has_email = f"{axis}:email" in slots
-    selected_tag_slots = [
-        s for s in slots if s.startswith(f"{axis}:tag-")
-    ]
+    selected_tag_slots = [s for s in slots if s.startswith(f"{axis}:tag-")]
     per_individual = has_name or has_email
     per_tag_combo = bool(selected_tag_slots) and not per_individual
 
@@ -694,9 +611,7 @@ def build_shape_rows(
         if per_individual:
             return ("ind", entity.id)
         if per_tag_combo:
-            return ("tag",) + _entity_tag_combo(
-                axis, entity, selected_tag_slots
-            )
+            return ("tag",) + _entity_tag_combo(axis, entity, selected_tag_slots)
         return ("sum",)
 
     # Self-review handling chip — PR B of the chip slice per
@@ -707,9 +622,7 @@ def build_shape_rows(
     # column blocks side by side (Q1 / Q2 resolutions).
     state = shape.self_review_handling
     states_to_run: tuple[str, ...] = (
-        ("include_self", "exclude_self")
-        if state == "both"
-        else (state,)
+        ("include_self", "exclude_self") if state == "both" else (state,)
     )
 
     per_state_accs: dict[str, dict[_RowKey, _Acc]] = {}
@@ -745,9 +658,7 @@ def build_shape_rows(
             acc = per_state_accs[run_state].get(row_key)
             if acc is None:
                 acc = fallback if fallback is not None else _Acc()
-            cells.extend(
-                _aggregate_cells(axis, slots, acc, scope.anchor_field)
-            )
+            cells.extend(_aggregate_cells(axis, slots, acc, scope.anchor_field))
         return tuple(cells)
 
     # Empty-row drop chip — PR 6 of the chip-controlled-drop
@@ -786,8 +697,7 @@ def build_shape_rows(
         # identification cells are the combo itself (the key less
         # its ``"tag"`` head), so any member of it supplies them.
         combo_by_key = {
-            _row_key_for_entity(e): _entity_tag_combo(axis, e, selected_tag_slots)
-            for e in entities
+            _row_key_for_entity(e): _entity_tag_combo(axis, e, selected_tag_slots) for e in entities
         }
         for key in sorted(combo_by_key):
             if drop_empty and _row_is_empty(key):
@@ -834,9 +744,7 @@ def _build_state_accumulators(
         else []
     )
     group_key_by_assignment = (
-        responses_service.group_keys(
-            db, assignments=assignments, session_id=review_session.id
-        )
+        responses_service.group_keys(db, assignments=assignments, session_id=review_session.id)
         if assignments
         else {}
     )
@@ -849,13 +757,9 @@ def _build_state_accumulators(
         accs.setdefault(row_key_for_entity(entity), _Acc())
 
     # Assigned counts.
-    seen_reviewer_assigned: set[
-        tuple[int, int, tuple[str, ...], int]
-    ] = set()
+    seen_reviewer_assigned: set[tuple[int, int, tuple[str, ...], int]] = set()
     for a in assignments:
-        owner_id = (
-            a.reviewer_id if axis == "reviewer" else a.reviewee_id
-        )
+        owner_id = a.reviewer_id if axis == "reviewer" else a.reviewee_id
         owner = entity_by_id.get(owner_id)
         if owner is None:
             continue
@@ -882,9 +786,7 @@ def _build_state_accumulators(
         for a_id, owner_id, fid, value in db.execute(
             select(
                 Assignment.id,
-                Assignment.reviewer_id
-                if axis == "reviewer"
-                else Assignment.reviewee_id,
+                Assignment.reviewer_id if axis == "reviewer" else Assignment.reviewee_id,
                 Response.response_field_id,
                 Response.value,
             )
@@ -921,9 +823,7 @@ def _build_state_accumulators(
             summary.string_count += acc.string_count
             summary.other_count += acc.other_count
             for k, v in acc.fanout_counts.items():
-                summary.fanout_counts[k] = (
-                    summary.fanout_counts.get(k, 0) + v
-                )
+                summary.fanout_counts[k] = summary.fanout_counts.get(k, 0) + v
         # Fold whatever already accumulated into the summary key
         # (under ``(sum,)`` the entity loop already wrote there).
         existing = accs[("sum",)]
@@ -933,8 +833,6 @@ def _build_state_accumulators(
         summary.string_count += existing.string_count
         summary.other_count += existing.other_count
         for k, v in existing.fanout_counts.items():
-            summary.fanout_counts[k] = (
-                summary.fanout_counts.get(k, 0) + v
-            )
+            summary.fanout_counts[k] = summary.fanout_counts.get(k, 0) + v
         accs[("sum",)] = summary
     return accs

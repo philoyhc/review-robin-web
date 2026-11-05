@@ -81,9 +81,7 @@ def test_replicate_delete_and_generate_summaries_name_the_label(
     session, instrument = _labelled_session(db, "name-int-crud")
     actor = _operator(db, session)
 
-    replace_assignments(
-        db, review_session=session, user=actor, correlation_id="c-gen"
-    )
+    replace_assignments(db, review_session=session, user=actor, correlation_id="c-gen")
     db.commit()
     replica = instruments_service.replicate_instrument(
         db, review_session=session, source=instrument, actor=actor
@@ -117,9 +115,7 @@ def test_self_review_toggle_summary_names_the_label(db: Session) -> None:
     )
     db.commit()
 
-    (summary,) = _summaries(
-        db, session, "assignments.instrument_self_reviews_active_set"
-    )
+    (summary,) = _summaries(db, session, "assignments.instrument_self_reviews_active_set")
     assert summary.startswith("Self-reviews on instrument Peer ")
 
 
@@ -144,8 +140,6 @@ def test_self_review_toggle_never_names_another_sessions_instrument(
     )
 
     assert flipped == 0
-    (summary,) = _summaries(
-        db, session, "assignments.instrument_self_reviews_active_set"
-    )
+    (summary,) = _summaries(db, session, "assignments.instrument_self_reviews_active_set")
     assert summary.startswith("Self-reviews on instrument (unknown) ")
     assert "Elsewhere" not in summary

@@ -26,6 +26,7 @@ Revises: c7d1e9f3a4b2
 Create Date: 2026-05-18
 
 """
+
 from collections.abc import Sequence
 
 from alembic import op
@@ -45,6 +46,4 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_index(
-        "ix_audit_events_session_created", table_name="audit_events"
-    )
+    op.drop_index("ix_audit_events_session_created", table_name="audit_events")

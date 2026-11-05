@@ -35,9 +35,7 @@ from app.services.setup_templates import (
     templates_in,
 )
 
-ALL_SETS = pytest.mark.parametrize(
-    "template_set", SETS, ids=[s.key for s in SETS]
-)
+ALL_SETS = pytest.mark.parametrize("template_set", SETS, ids=[s.key for s in SETS])
 
 
 def test_every_header_is_the_extracts_own_tuple() -> None:
@@ -112,12 +110,8 @@ def test_the_relationship_rows_reference_the_roster_rows(template_set) -> None:
     """Each set is one coherent scenario, not files that happen to parse
     alone: every pair names people the rosters define. A typo in an
     address here is a row the importer rejects as an unknown reviewer."""
-    reviewer_emails = {
-        r["ReviewerEmail"] for r in template_set.rows["reviewers"]
-    }
-    reviewee_emails = {
-        r["RevieweeEmail"] for r in template_set.rows["reviewees"]
-    }
+    reviewer_emails = {r["ReviewerEmail"] for r in template_set.rows["reviewers"]}
+    reviewee_emails = {r["RevieweeEmail"] for r in template_set.rows["reviewees"]}
 
     for pair in template_set.rows.get("relationships", ()):
         assert pair["ReviewerEmail"] in reviewer_emails, pair
@@ -168,9 +162,7 @@ def test_an_unknown_set_key_raises() -> None:
 def test_the_zip_holds_every_file_and_parses_as_csv(template_set) -> None:
     archive = zipfile.ZipFile(io.BytesIO(build_zip(template_set)))
 
-    assert sorted(archive.namelist()) == sorted(
-        t.filename for t in templates_in(template_set)
-    )
+    assert sorted(archive.namelist()) == sorted(t.filename for t in templates_in(template_set))
     for template in templates_in(template_set):
         text = archive.read(template.filename).decode("utf-8")
         parsed = list(csv.reader(io.StringIO(text)))

@@ -22,9 +22,7 @@ from app.web.routes_reviewer._surface._context import page_assignments_for
 _BY_ID = re.compile(r"^response\[(?P<aid>[0-9]+)\]\[(?P<key>[^\]]+)\]$")
 
 
-def answer_form(
-    db: Session, data: Mapping[str, str], *, page_n: int = 1
-) -> dict[str, str]:
+def answer_form(db: Session, data: Mapping[str, str], *, page_n: int = 1) -> dict[str, str]:
     """``data`` with its ``response[<assignment id>][<key>]`` keys renamed
     to page ``page_n``'s ordinals, plus the page digest. Other keys pass
     through. Every assignment named must belong to one reviewer and sit

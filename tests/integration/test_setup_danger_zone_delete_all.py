@@ -11,6 +11,7 @@ The acknowledgement now rides with the same single tick the
 selected-rows gate uses, and the label names what goes, modelled on the
 Instruments page's sentence.
 """
+
 from __future__ import annotations
 
 import datetime as _dt
@@ -44,9 +45,7 @@ def _session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
         follow_redirects=False,
     )
     assert r.status_code == 303, r.text
-    s = db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    s = db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
     s.relationships_enabled = True
     s.observers_enabled = True
     db.commit()
@@ -55,17 +54,11 @@ def _session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
 
 def _roster(db: Session, s: ReviewSession) -> tuple[Reviewer, Reviewee]:
     reviewer = Reviewer(session_id=s.id, name="R", email="r@example.edu")
-    reviewee = Reviewee(
-        session_id=s.id, name="E", email_or_identifier="e@example.edu"
-    )
+    reviewee = Reviewee(session_id=s.id, name="E", email_or_identifier="e@example.edu")
     db.add_all([reviewer, reviewee])
     db.flush()
     db.add(Observer(session_id=s.id, email="o@example.edu", display_name="O"))
-    db.add(
-        Relationship(
-            session_id=s.id, reviewer_id=reviewer.id, reviewee_id=reviewee.id
-        )
-    )
+    db.add(Relationship(session_id=s.id, reviewer_id=reviewer.id, reviewee_id=reviewee.id))
     db.commit()
     return reviewer, reviewee
 
@@ -163,9 +156,7 @@ def test_the_form_carries_the_acknowledgement_only_when_there_is_loss(
     assert 'name="acknowledge_response_loss"' in loaded
 
 
-def test_the_route_still_refuses_an_unacknowledged_post(
-    db: Session, client: TestClient
-) -> None:
+def test_the_route_still_refuses_an_unacknowledged_post(db: Session, client: TestClient) -> None:
     """The hidden field is the page's convenience, not a weakening of
     the gate: post without it and the 400 still stands."""
     s = _session(client, db, code="dz-refuse")

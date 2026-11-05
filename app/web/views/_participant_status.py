@@ -42,9 +42,7 @@ AVAILABLE = ParticipantStatus("Available", "pill-success")
 CLOSED = ParticipantStatus("Closed", "pill-error")
 
 
-def _reviewer_can_read_back(
-    db: Session, review_session: ReviewSession, reviewer: Reviewer
-) -> bool:
+def _reviewer_can_read_back(db: Session, review_session: ReviewSession, reviewer: Reviewer) -> bool:
     """The reviewer has saved an answer, on a field the surface still
     shows, of an instrument whose ``peer_reviewer`` setting lets them
     read it back now."""
@@ -68,9 +66,7 @@ def _reviewer_can_read_back(
         return False
     policies = visibility_policies.peer_reviewer_policies(db, instrument_ids)
     return any(
-        visibility_policies.reviewer_sees_own_responses(
-            review_session, policies.get(instrument_id)
-        )
+        visibility_policies.reviewer_sees_own_responses(review_session, policies.get(instrument_id))
         for instrument_id in instrument_ids
     )
 
@@ -86,23 +82,15 @@ def participant_session_status(
     list, which carries ``reviewee`` only while a reviewee grant
     resolves (19F). Never called for an archived session, which ``/me``
     does not list."""
-    if not (
-        lifecycle.is_ready(review_session) or lifecycle.is_expired(review_session)
-    ):
+    if not (lifecycle.is_ready(review_session) or lifecycle.is_expired(review_session)):
         return NOT_OPEN_YET
-    if lifecycle.is_ready(review_session) and not lifecycle.deadline_has_passed(
-        review_session
-    ):
+    if lifecycle.is_ready(review_session) and not lifecycle.deadline_has_passed(review_session):
         return OPEN
     if "reviewee" in roles:
         return AVAILABLE
-    if "observer" in roles and visibility_policies.observer_has_current_grant(
-        db, review_session
-    ):
+    if "observer" in roles and visibility_policies.observer_has_current_grant(db, review_session):
         return AVAILABLE
-    if reviewer is not None and _reviewer_can_read_back(
-        db, review_session, reviewer
-    ):
+    if reviewer is not None and _reviewer_can_read_back(db, review_session, reviewer):
         return AVAILABLE
     return CLOSED
 

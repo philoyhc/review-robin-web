@@ -64,7 +64,15 @@ class GraphError(Exception):
     """A lookup that did not finish. ``kind`` is one of `KINDS`; the
     message carries no address, name or token."""
 
-    KINDS = ("no_token", "unauthorized", "forbidden", "throttled", "server", "network", "bad_response")
+    KINDS = (
+        "no_token",
+        "unauthorized",
+        "forbidden",
+        "throttled",
+        "server",
+        "network",
+        "bad_response",
+    )
 
     def __init__(self, kind: str, status: int | None = None, code: str | None = None) -> None:
         assert kind in self.KINDS, kind
@@ -92,7 +100,6 @@ class Finder(Protocol):
 
 
 class Directory(Finder, Protocol):
-
     def search_users(self, prefix: str) -> list[DirectoryUser]:
         """Up to `SEARCH_TOP` users whose display name, surname, `mail`
         or `userPrincipalName` starts with ``prefix`` (as Graph's
@@ -255,7 +262,12 @@ def _logged(error: GraphError) -> GraphError:
     log.warning(
         "graph request failed: %s",
         error.reason,
-        extra={"event": "graph.request_failed", "kind": error.kind, "status": error.status, "code": error.code},
+        extra={
+            "event": "graph.request_failed",
+            "kind": error.kind,
+            "status": error.status,
+            "code": error.code,
+        },
     )
     return error
 
@@ -265,7 +277,8 @@ def _users(body: bytes) -> list[DirectoryUser]:
         values = json.loads(body)["value"]
         # Only a real empty list is "nobody there" (Codex, `#3410`).
         if not isinstance(values, list) or not all(
-            isinstance(v, dict) and cast(dict[str, Any], v).get("id") for v in cast(list[object], values)
+            isinstance(v, dict) and cast(dict[str, Any], v).get("id")
+            for v in cast(list[object], values)
         ):
             raise TypeError
         rows = cast(list[dict[str, Any]], values)
@@ -285,11 +298,31 @@ def _users(body: bytes) -> list[DirectoryUser]:
 # The fake directory: invented `example.edu` accounts, one per case a
 # caller must handle. Never real data (functional spec §9).
 FAKE_USERS = (
-    DirectoryUser("11111111-1111-4111-8111-111111111111", "Jane Tan", "jane.tan@example.edu", "e0123456@example.edu"),
-    DirectoryUser("22222222-2222-4222-8222-222222222222", "Arun Kumar", "arun.kumar@example.edu", "arun.kumar@example.edu"),
+    DirectoryUser(
+        "11111111-1111-4111-8111-111111111111",
+        "Jane Tan",
+        "jane.tan@example.edu",
+        "e0123456@example.edu",
+    ),
+    DirectoryUser(
+        "22222222-2222-4222-8222-222222222222",
+        "Arun Kumar",
+        "arun.kumar@example.edu",
+        "arun.kumar@example.edu",
+    ),
     DirectoryUser("33333333-3333-4333-8333-333333333333", "Lab Account", None, "lab01@example.edu"),
-    DirectoryUser("44444444-4444-4444-8444-444444444444", "Wei Ling Lim", "office@example.edu", "e0222222@example.edu"),
-    DirectoryUser("55555555-5555-4555-8555-555555555555", "Office Desk", "office.desk@example.edu", "office@example.edu"),
+    DirectoryUser(
+        "44444444-4444-4444-8444-444444444444",
+        "Wei Ling Lim",
+        "office@example.edu",
+        "e0222222@example.edu",
+    ),
+    DirectoryUser(
+        "55555555-5555-4555-8555-555555555555",
+        "Office Desk",
+        "office.desk@example.edu",
+        "office@example.edu",
+    ),
 )
 #: Addresses the fake directory fails on, by kind, to show each failure.
 FAKE_FAILURES = {
@@ -329,7 +362,12 @@ class FakeDirectory:
             surname = names.rsplit(" ", 1)[-1]
             return any(
                 value.startswith(key)
-                for value in (names, surname, (user.mail or "").lower(), user.user_principal_name.lower())
+                for value in (
+                    names,
+                    surname,
+                    (user.mail or "").lower(),
+                    user.user_principal_name.lower(),
+                )
             )
 
         return [user for user in self._users if starts(user)][:SEARCH_TOP]
@@ -391,7 +429,9 @@ def classify(key: str, users: list[DirectoryUser]) -> Outcome:
         return Outcome("FOUND_NO_PRIMARY", "UPN", user, note="The account has no primary email")
     # The directory matched on neither field as this compares them: name
     # no winner rather than guess.
-    return Outcome("AMBIGUOUS", "MULTIPLE", note="The match is neither the account's mail nor its UPN")
+    return Outcome(
+        "AMBIGUOUS", "MULTIPLE", note="The match is neither the account's mail nor its UPN"
+    )
 
 
 def error_outcome(kind: str) -> Outcome:
@@ -399,7 +439,12 @@ def error_outcome(kind: str) -> Outcome:
     advice = "sign out and in again" if kind in SIGN_IN_KINDS else "try again later"
     if kind == "incomplete":
         # The checker's page stopped before sending this key (segment U2).
-        return Outcome("ERROR", "NONE", note=f"Not looked up: the check stopped first; {advice}", error_kind=kind)
+        return Outcome(
+            "ERROR",
+            "NONE",
+            note=f"Not looked up: the check stopped first; {advice}",
+            error_kind=kind,
+        )
     return Outcome("ERROR", "NONE", note=f"Lookup incomplete ({kind}); {advice}", error_kind=kind)
 
 
@@ -432,6 +477,8 @@ def look_up_all(
     # finishes on its own and is dropped.
     pool.shutdown(wait=False, cancel_futures=True)
     return {
-        key: future.result() if future.done() and not future.cancelled() else error_outcome("timeout")
+        key: future.result()
+        if future.done() and not future.cancelled()
+        else error_outcome("timeout")
         for key, future in futures.items()
     }

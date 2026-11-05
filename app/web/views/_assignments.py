@@ -18,6 +18,7 @@ Read alongside:
   .evaluate_session_rule_eligibility` — the engine pass shared
   with the Instruments page picker.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -155,9 +156,7 @@ def build_assignments_page_context(
     # for the session, keyed by instrument id. The retired per-rule
     # eligible count it replaces could not answer the question: equal
     # counts hide a rule change that swaps one pair for another.
-    reconcile_state = assignments_service.staleness_by_instrument(
-        db, review_session
-    )
+    reconcile_state = assignments_service.staleness_by_instrument(db, review_session)
 
     instruments = list(
         db.execute(
@@ -169,9 +168,7 @@ def build_assignments_page_context(
     # Per-instrument group count — distinct (reviewer, group_key)
     # over a group-scoped instrument's generated assignments. Empty
     # for a session with no group-scoped instrument.
-    group_instrument_ids = {
-        i.id for i in instruments if i.group_kind is not None
-    }
+    group_instrument_ids = {i.id for i in instruments if i.group_kind is not None}
     group_count_by_instrument: dict[int, int] = {}
     if group_instrument_ids:
         group_assignments = list(
@@ -198,15 +195,12 @@ def build_assignments_page_context(
                 )
             )
         group_count_by_instrument = {
-            instrument_id: len(groups)
-            for instrument_id, groups in groups_seen.items()
+            instrument_id: len(groups) for instrument_id, groups in groups_seen.items()
         }
     rule_set_rows = {
         row.id: row
         for row in db.execute(
-            select(SessionRuleSet).where(
-                SessionRuleSet.session_id == review_session.id
-            )
+            select(SessionRuleSet).where(SessionRuleSet.session_id == review_session.id)
         ).scalars()
     }
     generated_by_instrument = assignments_service.existing_count_per_instrument(
@@ -215,10 +209,8 @@ def build_assignments_page_context(
     included_by_instrument = assignments_service.included_count_per_instrument(
         db, review_session.id
     )
-    self_review_breakdown = (
-        assignments_service.self_review_breakdown_per_instrument(
-            db, review_session.id
-        )
+    self_review_breakdown = assignments_service.self_review_breakdown_per_instrument(
+        db, review_session.id
     )
 
     pinned_count = 0
@@ -241,9 +233,7 @@ def build_assignments_page_context(
         is_stale = state.stale if state is not None else False
         rule_load_error = state.load_error if state is not None else None
         eligible_count = state.eligible if state is not None else 0
-        sr_active, sr_deactivated = self_review_breakdown.get(
-            instrument.id, (0, 0)
-        )
+        sr_active, sr_deactivated = self_review_breakdown.get(instrument.id, (0, 0))
         sr_total = sr_active + sr_deactivated
         if sr_total == 0 or sr_active == sr_total:
             sr_state = "checked"
@@ -260,9 +250,7 @@ def build_assignments_page_context(
                 eligible_count=eligible_count,
                 generated_count=generated_count,
                 group_count=(
-                    group_count_by_instrument.get(instrument.id)
-                    if generated_count
-                    else None
+                    group_count_by_instrument.get(instrument.id) if generated_count else None
                 ),
                 included_count=included_count,
                 self_review_total=sr_total,
@@ -290,7 +278,5 @@ def build_assignments_page_context(
     return AssignmentsPageContext(
         status_blocks=blocks,
         pinned_instrument_count=pinned_count,
-        instruments_url=(
-            f"/operator/sessions/{review_session.public_id}/instruments"
-        ),
+        instruments_url=(f"/operator/sessions/{review_session.public_id}/instruments"),
     )

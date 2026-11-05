@@ -10,8 +10,10 @@ from cordware.graph import DirectoryUser, Outcome
 
 def _user(object_id: str) -> DirectoryUser:
     return DirectoryUser(
-        id=object_id, display_name="Jane",
-        mail="jane@example.edu", user_principal_name="e0123456@example.edu",
+        id=object_id,
+        display_name="Jane",
+        mail="jane@example.edu",
+        user_principal_name="e0123456@example.edu",
     )
 
 

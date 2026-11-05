@@ -75,8 +75,7 @@ def _toggle_button(card: str) -> str:
     `<noscript>` twin of the control, so "Unlock" in the card is true
     with the BUTTON relabelled `Lock`.
     """
-    m = re.search(r'<button[^>]*id="roster-unlock-btn"[^>]*>(.*?)</button>',
-                  card, re.S)
+    m = re.search(r'<button[^>]*id="roster-unlock-btn"[^>]*>(.*?)</button>', card, re.S)
     assert m, "no toggle button in the card"
     return m.group(1).strip()
 
@@ -95,9 +94,7 @@ def _mk(client: TestClient, db: Session, code: str) -> ReviewSession:
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    rs = db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    rs = db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
     rs.relationships_enabled = True
     db.commit()
     db.refresh(rs)
@@ -106,8 +103,7 @@ def _mk(client: TestClient, db: Session, code: str) -> ReviewSession:
 
 def _seed(db: Session, sid: int, page: str, n: int = 3, *, profiles: int = 0):
     reviewers = [
-        Reviewer(session_id=sid, name=f"Rr{i}", email=f"rr{i}@example.org")
-        for i in range(n)
+        Reviewer(session_id=sid, name=f"Rr{i}", email=f"rr{i}@example.org") for i in range(n)
     ]
     reviewees = [
         Reviewee(
@@ -123,14 +119,16 @@ def _seed(db: Session, sid: int, page: str, n: int = 3, *, profiles: int = 0):
     for r in reviewers + reviewees:
         db.refresh(r)
     if page == "relationships":
-        db.add_all([
-            Relationship(
-                session_id=sid,
-                reviewer_id=reviewers[i].id,
-                reviewee_id=reviewees[i].id,
-            )
-            for i in range(n)
-        ])
+        db.add_all(
+            [
+                Relationship(
+                    session_id=sid,
+                    reviewer_id=reviewers[i].id,
+                    reviewee_id=reviewees[i].id,
+                )
+                for i in range(n)
+            ]
+        )
         db.commit()
 
 
@@ -201,9 +199,7 @@ def test_the_toggle_moves_one_control_rather_than_rendering_two(
     Item 2) -> back on each click.
     """
     body = _get(client, _mk(client, db, f"up-m-{page[:4]}"), page)
-    assert body.count('class="roster-card-actions"') == 1, (
-        "two copies of the Lock control"
-    )
+    assert body.count('class="roster-card-actions"') == 1, "two copies of the Lock control"
     assert 'panel.querySelector(".unlock-right").appendChild(actions)' in body, (
         "the control has no second home; opening the panel orphans it"
     )
@@ -262,9 +258,9 @@ def test_upload_goes_left_and_the_labels_editor_right_over_the_danger_zone(
     _, left, right = panel_columns(card)
     assert 'id="upload-csv"' in left and "field-labels-form" not in left
     assert "field-labels-form" in right and 'id="upload-csv"' not in right
-    assert right.index("field-labels-form") < right.index(
-        'class="card danger-zone"'
-    ), "the Danger Zone is not under the labels editor"
+    assert right.index("field-labels-form") < right.index('class="card danger-zone"'), (
+        "the Danger Zone is not under the labels editor"
+    )
     assert_lock_ends_right_column(card)
 
 
@@ -282,9 +278,7 @@ def test_the_danger_zone_is_gated_on_rows_and_upload_is_not(
     """
     rs = _mk(client, db, f"up-g-{page[:4]}")
     empty = _card(_get(client, rs, page, "?unlocked=1"), page)
-    assert 'class="card danger-zone"' not in empty, (
-        "Delete-all offered on an empty roster"
-    )
+    assert 'class="card danger-zone"' not in empty, "Delete-all offered on an empty roster"
     assert 'id="upload-csv"' in empty, "Upload hidden on the roster that needs it"
 
     _seed(db, rs.id, page)
@@ -315,7 +309,7 @@ def test_each_confirm_sentence_is_one_flex_item(
     # line (19Z) is a div holding two ticks, not a label.
     assert len(labels) == 2, f"expected the upload + delete-all confirms, got {len(labels)}"
     for body in labels:
-        text_after_input = body[body.index(">", body.index("<input")) + 1:]
+        text_after_input = body[body.index(">", body.index("<input")) + 1 :]
         assert text_after_input.lstrip().startswith("<span>"), (
             f"the sentence is not wrapped: {text_after_input[:120]!r}"
         )
@@ -355,15 +349,18 @@ def test_the_index_reports_the_roster_and_its_populated_columns(
     m = re.search(
         r'roster-readout-label">Roster:</span>\s*'
         r'<span class="pill pill-count">(.*?)</span>',
-        card, re.S,
+        card,
+        re.S,
     )
     assert m, "no roster readout"
     assert " ".join(m.group(1).split()) == f"{Noun} (3)"
 
     # The column pills, without the roster count pill that leads the run.
-    chips = [c.strip() for c in
-             re.findall(r'<span class="pill pill-count">([^<]*)</span>', card)
-             if not c.strip().startswith(f"{Noun} (")]
+    chips = [
+        c.strip()
+        for c in re.findall(r'<span class="pill pill-count">([^<]*)</span>', card)
+        if not c.strip().startswith(f"{Noun} (")
+    ]
     if page == "reviewees":
         # Identity columns are text and always listed, at their count.
         assert any("(3)" in c for c in chips), chips
@@ -402,19 +399,19 @@ def test_an_empty_roster_reports_what_its_index_can_report(
     m = re.search(
         r'roster-readout-label">Roster:</span>\s*'
         r'<span class="pill pill-count">(.*?)</span>',
-        card, re.S,
+        card,
+        re.S,
     )
     assert m and " ".join(m.group(1).split()) == f"{Noun} (0)", card[:400]
 
     chips = [
-        c for c in re.findall(r'<span class="pill pill-count">([^<]*)</span>', card)
+        c
+        for c in re.findall(r'<span class="pill pill-count">([^<]*)</span>', card)
         if not c.strip().startswith(f"{Noun} (")
     ]
     identity = [c.strip() for c in chips if "(0)" in c]
     if page == "reviewees":
-        assert len(identity) == 2, (
-            f"expected both identity columns listed at zero, got {chips}"
-        )
+        assert len(identity) == 2, f"expected both identity columns listed at zero, got {chips}"
         assert _SEP in card
     else:
         assert identity == [], chips
@@ -439,7 +436,8 @@ def test_relationship_tags_run_on_from_the_count_after_the_divider(
         r'<span class="pill pill-count">\s*Relationships \(3\)\s*</span>\s*'
         + re.escape(_SEP)
         + r'\s*<span class="roster-readout-values">(.*?)</div>',
-        card, re.S,
+        card,
+        re.S,
     )
     assert m, card[:600]
     pills = re.findall(r'<span class="pill pill-count">([^<]*)</span>', m.group(1))
@@ -502,9 +500,7 @@ def test_the_relationships_index_omits_its_foreign_key_columns() -> None:
     # `co_names` is what the compiled body reaches for, so this reads
     # the code and not the docstring beside it — which names
     # `slot_row_count` precisely to explain its absence.
-    assert "slot_row_count" not in (
-        _setup.relationship_column_state.__code__.co_names
-    ), (
+    assert "slot_row_count" not in (_setup.relationship_column_state.__code__.co_names), (
         "a text-predicate count is back on this page's FK columns; "
         "Postgres will refuse it and SQLite will not tell you"
     )
@@ -575,9 +571,7 @@ def test_a_failed_import_arrives_with_the_panel_open(
     )
     assert response.status_code == 400, response.status_code
     card = _card(response.text, page)
-    assert "hidden" not in _panel_tag(card), (
-        "a failed import shows a closed panel and no errors"
-    )
+    assert "hidden" not in _panel_tag(card), "a failed import shows a closed panel and no errors"
 
 
 @pytest.mark.parametrize("page", ["reviewers", "reviewees"])
@@ -617,8 +611,7 @@ def test_a_failed_import_still_reports_the_real_columns(
     card = _card(response.text, page)
 
     assert _SEP in card, (
-        "the failed-import re-render reports an empty index over a "
-        "roster it is showing"
+        "the failed-import re-render reports an empty index over a roster it is showing"
     )
     assert re.search(r"Name \(3\)", card), card[:800]
     if page == "reviewees":
@@ -637,8 +630,7 @@ def test_the_relationships_replace_confirmation_also_arrives_open(
     reviewee = db.execute(select(Reviewee)).scalars().first()
     assert reviewer is not None and reviewee is not None
     csv = (
-        "ReviewerEmail,RevieweeEmail\n"
-        f"{reviewer.email},{reviewee.email_or_identifier}\n"
+        f"ReviewerEmail,RevieweeEmail\n{reviewer.email},{reviewee.email_or_identifier}\n"
     ).encode()
     response = client.post(
         f"/operator/sessions/{rs.public_id}/relationships/import",
@@ -676,7 +668,7 @@ def test_both_panel_cards_right_align_their_action_with_no_inline_style(
 
     assert "style=" not in card, (
         f"an inline style came back into the panel: "
-        f"{card[max(0, card.find('style=') - 120):card.find('style=') + 80]!r}"
+        f"{card[max(0, card.find('style=') - 120) : card.find('style=') + 80]!r}"
     )
     assert "btn-pair" not in card, "the upload action row reverted to `.btn-pair`"
     # Upload and Delete-all use the panel's own row; on Reviewees so does

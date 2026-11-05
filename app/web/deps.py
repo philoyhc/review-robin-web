@@ -108,9 +108,7 @@ def _stash_display_timezone(request: Request, user: User) -> None:
     """Resolve the signed-in operator's default display timezone and
     park it on ``request.state`` for the Jinja context processor
     (``app/web/date_filters.py``) to pick up. Segment 18B PR 2."""
-    request.state.display_timezone = operator_settings.get_display_timezone(
-        user
-    )
+    request.state.display_timezone = operator_settings.get_display_timezone(user)
 
 
 def find_user(
@@ -257,16 +255,12 @@ def _stash_guide_visibility(request: Request, db: Session, user: User) -> None:
         request.state.guide_hidden = True
 
 
-def _stash_session_timezone(
-    request: Request, review_session: ReviewSession
-) -> None:
+def _stash_session_timezone(request: Request, review_session: ReviewSession) -> None:
     """Re-stamp ``request.state.display_timezone`` with the session's
     resolved zone, overriding the viewing-operator default that
     ``get_or_create_user`` parked there. Every session-scoped render
     then localises to the session zone. Segment 18B PR 3."""
-    request.state.display_timezone = sessions.resolve_session_timezone(
-        review_session
-    )
+    request.state.display_timezone = sessions.resolve_session_timezone(review_session)
 
 
 def _session_by_public_id(db: Session, public_id: str) -> ReviewSession | None:
@@ -287,9 +281,7 @@ def require_session_operator(
     db: Session = Depends(get_db),
 ) -> ReviewSession:
     review_session = _session_by_public_id(db, session_id)
-    if review_session is None or not permissions.user_can_view_session(
-        db, user, review_session.id
-    ):
+    if review_session is None or not permissions.user_can_view_session(db, user, review_session.id):
         log.warning(
             "permission denied",
             extra={
@@ -357,9 +349,7 @@ def require_sys_admin_or_session_operator(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
         _stash_session_timezone(request, review_session)
         return review_session
-    return require_session_operator(
-        session_id=session_id, request=request, user=user, db=db
-    )
+    return require_session_operator(session_id=session_id, request=request, user=user, db=db)
 
 
 def _participant_session_or_404(db: Session, session_id: str) -> ReviewSession:
@@ -393,7 +383,8 @@ def require_reviewer_in_session(
     review_session = _participant_session_or_404(db, session_id)
 
     reviewer = db.execute(
-        select(Reviewer).where(
+        select(Reviewer)
+        .where(
             Reviewer.session_id == review_session.id,
             Reviewer.status == "active",
         )
@@ -448,7 +439,8 @@ def require_reviewee_in_session(
 
     viewer = participants.Viewer.of(user)
     candidates = db.execute(
-        select(Reviewee).where(
+        select(Reviewee)
+        .where(
             Reviewee.session_id == review_session.id,
             Reviewee.status == "active",
         )
@@ -479,9 +471,7 @@ def require_reviewee_in_session(
 
 
 def require_reviewee_with_current_grant(
-    reviewee_session: tuple[Reviewee, ReviewSession] = Depends(
-        require_reviewee_in_session
-    ),
+    reviewee_session: tuple[Reviewee, ReviewSession] = Depends(require_reviewee_in_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> tuple[Reviewee, ReviewSession]:
@@ -509,9 +499,7 @@ def require_reviewee_with_current_grant(
     ``roles_held_anywhere`` is being renamed out of.
     """
     reviewee, review_session = reviewee_session
-    if not visibility_policies.reviewee_has_current_grant(
-        db, review_session
-    ):
+    if not visibility_policies.reviewee_has_current_grant(db, review_session):
         log.warning(
             "permission denied",
             extra={
@@ -547,7 +535,8 @@ def require_observer_in_session(
 
     viewer = participants.Viewer.of(user)
     candidates = db.execute(
-        select(Observer).where(
+        select(Observer)
+        .where(
             Observer.session_id == review_session.id,
             Observer.status == "active",
         )

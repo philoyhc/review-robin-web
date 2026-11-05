@@ -29,15 +29,9 @@ class Assignment(Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    session_id: Mapped[int] = mapped_column(
-        ForeignKey("sessions.id"), index=True, nullable=False
-    )
-    reviewer_id: Mapped[int] = mapped_column(
-        ForeignKey("reviewers.id"), index=True, nullable=False
-    )
-    reviewee_id: Mapped[int] = mapped_column(
-        ForeignKey("reviewees.id"), index=True, nullable=False
-    )
+    session_id: Mapped[int] = mapped_column(ForeignKey("sessions.id"), index=True, nullable=False)
+    reviewer_id: Mapped[int] = mapped_column(ForeignKey("reviewers.id"), index=True, nullable=False)
+    reviewee_id: Mapped[int] = mapped_column(ForeignKey("reviewees.id"), index=True, nullable=False)
     instrument_id: Mapped[int] = mapped_column(
         ForeignKey("instruments.id"), index=True, nullable=False
     )
@@ -48,9 +42,7 @@ class Assignment(Base):
     # whenever the underlying composition changes (reviewer/reviewee identity
     # edits, reviewee tag edits affecting group composition, instrument
     # ``group_kind`` edits). See ``guide/self_review_consolidate.md``.
-    is_self_review: Mapped[bool] = mapped_column(
-        Boolean, default=False, nullable=False
-    )
+    is_self_review: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     # ``context: JSON`` retired in 15D PR 6b. ``pair_context_*`` keys
     # lifted to the ``relationships`` table; ``assignment_context_*``
     # keys retired entirely (operator-typed via the manual CSV only).
@@ -65,9 +57,7 @@ class Assignment(Base):
     # a literal rather than importing ``AssignmentMode``: no model imports
     # from ``app/schemas/``, and one column default is not the reason to
     # start.
-    created_by_mode: Mapped[str] = mapped_column(
-        String(32), default="rule_based", nullable=False
-    )
+    created_by_mode: Mapped[str] = mapped_column(String(32), default="rule_based", nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

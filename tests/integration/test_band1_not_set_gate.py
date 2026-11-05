@@ -25,24 +25,18 @@ from app.services import instruments as instruments_service
 from app.web import views
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": f"NS-{code}", "code": code, "description": "d"},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _default_instrument(db: Session, session_id: int) -> Instrument:
-    return db.execute(
-        select(Instrument).where(Instrument.session_id == session_id)
-    ).scalar_one()
+    return db.execute(select(Instrument).where(Instrument.session_id == session_id)).scalar_one()
 
 
 # --------------------------------------------------------------------------- #
@@ -227,9 +221,7 @@ def test_set_band1_assignment_rules_preserves_exclude_self_reviews(
     db.refresh(legacy_rule_set)
     assert legacy_rule_set.exclude_self_reviews is True
     # The rules themselves did land, so this is not a no-op save.
-    assert legacy_rule_set.rules_json[0]["rules"][0]["predicate"][
-        "operand"
-    ] == "Manager"
+    assert legacy_rule_set.rules_json[0]["rules"][0]["predicate"]["operand"] == "Manager"
 
 
 def test_set_band1_assignment_rules_materialises_rule_set_without_self_review_exclusion(
@@ -273,9 +265,7 @@ def test_set_band1_assignment_rules_materialises_rule_set_without_self_review_ex
     assert rule_set.exclude_self_reviews is False
 
 
-def test_set_unit_of_review_toggles_link3_touched_bit(
-    client: TestClient, db: Session
-) -> None:
+def test_set_unit_of_review_toggles_link3_touched_bit(client: TestClient, db: Session) -> None:
     """Link 3's writer (``set_unit_of_review``) owns just the
     ``link3`` bit and flips it both ways — ``touched=True`` adds,
     ``touched=False`` removes — without touching the Link 1 / 2
@@ -366,9 +356,7 @@ def test_parse_band1_form_pads_missing_field_when_tag_options_empty() -> None:
 def test_parse_link3_form_returns_touched_bit() -> None:
     from starlette.datastructures import FormData
 
-    form_touched = FormData(
-        [("link3_mode", "individual"), ("link3_touched", "true")]
-    )
+    form_touched = FormData([("link3_mode", "individual"), ("link3_touched", "true")])
     mode, pairs, touched = instruments_service.parse_link3_form(form_touched)
     assert mode == "individual"
     assert pairs == []
@@ -416,9 +404,7 @@ def test_workflow_card_surfaces_untouched_band1_as_setup_empty(
         follow_redirects=False,
     )
 
-    ctx = views.build_workflow_card_context(
-        db, review_session, return_to="assignments"
-    )
+    ctx = views.build_workflow_card_context(db, review_session, return_to="assignments")
     assert ctx["setup_checklist"]["reviewers_ok"] is True
     assert ctx["setup_checklist"]["reviewees_ok"] is True
     assert ctx["setup_checklist"]["instruments_configured_ok"] is False
@@ -430,9 +416,7 @@ def test_workflow_card_surfaces_untouched_band1_as_setup_empty(
     db.flush()
     db.commit()
 
-    ctx = views.build_workflow_card_context(
-        db, review_session, return_to="assignments"
-    )
+    ctx = views.build_workflow_card_context(db, review_session, return_to="assignments")
     assert ctx["setup_checklist"]["instruments_configured_ok"] is True
     assert ctx["is_setup_empty"] is False
 
@@ -442,9 +426,7 @@ def test_workflow_card_surfaces_untouched_band1_as_setup_empty(
 # --------------------------------------------------------------------------- #
 
 
-def test_instruments_page_renders_not_set_pill_for_default(
-    client: TestClient, db: Session
-) -> None:
+def test_instruments_page_renders_not_set_pill_for_default(client: TestClient, db: Session) -> None:
     """The Instruments page renders each Band 1 link pill as
     ``"Not set"`` for an untouched default instrument and emits
     the hidden ``{link}_touched=false`` inputs the bulk-save form
@@ -452,8 +434,7 @@ def test_instruments_page_renders_not_set_pill_for_default(
     review_session = _make_session(client, db, code="render-not-set")
     instrument = _default_instrument(db, review_session.id)
     body = client.get(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments?editing={instrument.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={instrument.id}"
     ).text
     flat = " ".join(body.split())
     # All three Band 1 pills render the "not_set" data-attr.
@@ -461,18 +442,9 @@ def test_instruments_page_renders_not_set_pill_for_default(
     assert 'data-new-model-unit-mode="not_set"' in flat
     # Each link carries a touched hidden input wired into the
     # per-instrument bulk-save form.
-    assert (
-        'name="link1_touched" data-new-model-touched-input value="false"'
-        in flat
-    )
-    assert (
-        'name="link2_touched" data-new-model-touched-input value="false"'
-        in flat
-    )
-    assert (
-        'name="link3_touched" data-new-model-link3-touched-input value="false"'
-        in flat
-    )
+    assert 'name="link1_touched" data-new-model-touched-input value="false"' in flat
+    assert 'name="link2_touched" data-new-model-touched-input value="false"' in flat
+    assert 'name="link3_touched" data-new-model-link3-touched-input value="false"' in flat
     # The visible pill label reads "Not set" three times.
     assert flat.count(">Not set</span>") >= 3
 
@@ -509,20 +481,14 @@ def test_configured_counts_agrees_with_is_configured_instrument_by_instrument(
         second.band1_touched_links = touched_second
         db.flush()
 
-        total, configured = instruments_service.configured_counts(
-            db, review_session.id
-        )
+        total, configured = instruments_service.configured_counts(db, review_session.id)
         one_by_one = sum(
-            1
-            for inst in (first, second)
-            if instruments_service.is_configured(db, inst)
+            1 for inst in (first, second) if instruments_service.is_configured(db, inst)
         )
 
         assert total == 2
         assert configured == one_by_one
-        assert instruments_service.has_unconfigured(db, review_session.id) is (
-            configured < total
-        )
+        assert instruments_service.has_unconfigured(db, review_session.id) is (configured < total)
 
 
 def test_configured_counts_is_zero_zero_without_instruments(
@@ -588,9 +554,7 @@ def test_status_row_reports_instruments_as_configured_over_total(
     assert '<span class="pill pill-info" data-instruments-configured-pill>2 / 2</span>' in body
 
 
-def test_status_row_reports_no_instruments_as_none(
-    client: TestClient, db: Session
-) -> None:
+def test_status_row_reports_no_instruments_as_none(client: TestClient, db: Session) -> None:
     """Zero reads `none` like Reviewers and Reviewees, not "0 / 0".
 
     Instruments are required to validate, so it takes the same warning
@@ -601,4 +565,7 @@ def test_status_row_reports_no_instruments_as_none(
     db.flush()
 
     body = " ".join(client.get(f"/operator/sessions/{review_session.public_id}").text.split())
-    assert "Instruments: <span class=\"pill pill-warning\" data-instruments-configured-pill>none</span>" in body
+    assert (
+        'Instruments: <span class="pill pill-warning" data-instruments-configured-pill>none</span>'
+        in body
+    )

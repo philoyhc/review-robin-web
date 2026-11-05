@@ -15,18 +15,13 @@ Structural assertions over the stylesheet, in the idiom
 renders CSS, so what can be checked is that the rule says what it is
 supposed to say — and that the literal has not crept back.
 """
+
 from __future__ import annotations
 
 import re
 from pathlib import Path
 
-BASE = (
-    Path(__file__).resolve().parents[2]
-    / "app"
-    / "web"
-    / "templates"
-    / "base.html"
-)
+BASE = Path(__file__).resolve().parents[2] / "app" / "web" / "templates" / "base.html"
 CSS = BASE.read_text(encoding="utf-8")
 
 
@@ -41,9 +36,7 @@ def test_the_tab_strip_no_longer_hovers_to_a_hardcoded_white() -> None:
     """The literal this change removed. Asserted by absence from the
     declarations rather than from the file, because the comment that
     explains the change quotes it."""
-    selector = (
-        'body.ui-v2 .nav-tab:not(.disabled):not([aria-disabled="true"]):hover'
-    )
+    selector = 'body.ui-v2 .nav-tab:not(.disabled):not([aria-disabled="true"]):hover'
     assert "rgba(255, 255, 255" not in _rule(selector)
 
 
@@ -51,33 +44,21 @@ def test_v2_tab_hover_matches_the_v2_selected_tab() -> None:
     """v2's ``.nav-tab.active`` sets only the color and takes its
     background from the unscoped ``.nav-tab.active`` rule, so hover has
     to wear both or the two disagree about what "selected" looks like."""
-    hover = _rule(
-        'body.ui-v2 .nav-tab:not(.disabled):not([aria-disabled="true"]):hover'
-    )
+    hover = _rule('body.ui-v2 .nav-tab:not(.disabled):not([aria-disabled="true"]):hover')
     active = _rule("body.ui-v2 .nav-tab.active")
     assert "background: var(--nav-tab-active-bg);" in hover
     assert "color: var(--text-body);" in hover
     assert "color: var(--text-body);" in active
-    assert "background: var(--nav-tab-active-bg);" in _rule(
-        "      .nav-tab.active {"
-    )
+    assert "background: var(--nav-tab-active-bg);" in _rule("      .nav-tab.active {")
 
 
 def test_the_home_anchor_hover_matches_its_own_selected_style() -> None:
     """Both versions, because the anchor's selected background differs
     between them — v1 uses the shared tab token, v2 the page surface."""
-    assert "background: var(--nav-tab-active-bg);" in _rule(
-        ".session-home-anchor:hover"
-    )
-    assert "background: var(--nav-tab-active-bg);" in _rule(
-        ".session-home-anchor.active"
-    )
-    assert "background: var(--surface-page);" in _rule(
-        "body.ui-v2 .session-home-anchor:hover"
-    )
-    assert "background: var(--surface-page);" in _rule(
-        "body.ui-v2 .session-home-anchor.active"
-    )
+    assert "background: var(--nav-tab-active-bg);" in _rule(".session-home-anchor:hover")
+    assert "background: var(--nav-tab-active-bg);" in _rule(".session-home-anchor.active")
+    assert "background: var(--surface-page);" in _rule("body.ui-v2 .session-home-anchor:hover")
+    assert "background: var(--surface-page);" in _rule("body.ui-v2 .session-home-anchor.active")
 
 
 def test_a_disabled_tab_is_excluded_from_hover() -> None:

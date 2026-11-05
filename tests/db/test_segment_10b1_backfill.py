@@ -28,10 +28,7 @@ def test_upgrade_replaces_pair_context_rows_and_seeds_three_per_instrument() -> 
             command.upgrade(cfg, "4e8a2b9c3d11")
             connection.commit()
             connection.execute(
-                text(
-                    "INSERT INTO users (email, display_name) "
-                    "VALUES ('op@example.edu', 'Op')"
-                )
+                text("INSERT INTO users (email, display_name) VALUES ('op@example.edu', 'Op')")
             )
             user_id = connection.execute(
                 text("SELECT id FROM users WHERE email = 'op@example.edu'")
@@ -76,10 +73,10 @@ def test_upgrade_replaces_pair_context_rows_and_seeds_three_per_instrument() -> 
 
             rows = connection.execute(
                 text(
-                    "SELECT source_type, source_field, label, \"order\", visible "
+                    'SELECT source_type, source_field, label, "order", visible '
                     "FROM instrument_display_fields "
                     "WHERE instrument_id = :iid "
-                    "ORDER BY \"order\""
+                    'ORDER BY "order"'
                 ),
                 {"iid": instrument_id},
             ).fetchall()

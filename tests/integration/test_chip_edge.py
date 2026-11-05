@@ -34,18 +34,14 @@ from app.db.models import ReviewSession
 EDGE = "var(--selected-bg)"
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "Spring", "code": code},
         follow_redirects=False,
     )
     assert response.status_code == 303
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _rule(css: str, selector: str) -> str | None:
@@ -70,9 +66,7 @@ def test_the_chip_rule_declares_a_two_pixel_edge_in_the_reserved_shade(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="19j7r3-1")
-    css = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    css = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     block = _chip_rule(css)
 
     assert f"border-color: {EDGE}" in block
@@ -86,9 +80,7 @@ def test_the_chip_rule_declares_a_two_pixel_edge_in_the_reserved_shade(
     assert "border: 1px solid transparent" in baseline
 
 
-def test_the_chip_rule_leaves_the_fill_alone(
-    client: TestClient, db: Session
-) -> None:
+def test_the_chip_rule_leaves_the_fill_alone(client: TestClient, db: Session) -> None:
     """The decision this rung turns on.
 
     A blanket ``background: transparent`` would have read as the tidier
@@ -97,22 +89,16 @@ def test_the_chip_rule_leaves_the_fill_alone(
     needs both.
     """
     review_session = _make_session(client, db, code="19j7r3-2")
-    css = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    css = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
 
     assert "background" not in _chip_rule(css)
 
 
-def test_an_inert_chip_does_not_wear_the_shade(
-    client: TestClient, db: Session
-) -> None:
+def test_an_inert_chip_does_not_wear_the_shade(client: TestClient, db: Session) -> None:
     """``is-disabled`` sets ``cursor: default``. A chip that says it
     cannot be clicked must not also say it can."""
     review_session = _make_session(client, db, code="19j7r3-3")
-    css = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    css = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
 
     block = _rule(css, "body.ui-v2 .tag-chip.is-disabled")
     assert block is not None
@@ -122,29 +108,19 @@ def test_an_inert_chip_does_not_wear_the_shade(
     # member (``.pill.tag-chip``), so source order decides, and the
     # cancellation has to come after it to win rather than merely be
     # written.
-    assert css.index("body.ui-v2 .tag-chip.is-disabled") > css.index(
-        "body.ui-v2 .tag-chip,"
-    )
+    assert css.index("body.ui-v2 .tag-chip.is-disabled") > css.index("body.ui-v2 .tag-chip,")
 
 
-def test_the_chips_the_rule_targets_are_really_on_the_page(
-    client: TestClient, db: Session
-) -> None:
+def test_the_chips_the_rule_targets_are_really_on_the_page(client: TestClient, db: Session) -> None:
     """The other half. A rule matching nothing would pass every
     assertion above."""
     review_session = _make_session(client, db, code="19j7r3-4")
 
-    assignments = client.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    ).text
-    toggles = re.findall(
-        r'<span class="([^"]*tag-chip[^"]*)"[^>]*data-col-toggle=', assignments
-    )
+    assignments = client.get(f"/operator/sessions/{review_session.public_id}/assignments").text
+    toggles = re.findall(r'<span class="([^"]*tag-chip[^"]*)"[^>]*data-col-toggle=', assignments)
     assert toggles, "no column-toggle chip rendered on Assignments"
 
-    instruments = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    instruments = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     # The response pills retired in 19T Item 9 (the display pills in
     # Item 8), so the page's clickable chips are the visibility editor's
     # cycle chips; each carries tag-chip. No Band 2 pill remains.
@@ -159,9 +135,7 @@ def test_the_chips_the_rule_targets_are_really_on_the_page(
         assert "tag-chip" in classes, tag
 
 
-def test_a_locked_chip_drops_the_edge_and_keeps_its_state(
-    client: TestClient, db: Session
-) -> None:
+def test_a_locked_chip_drops_the_edge_and_keeps_its_state(client: TestClient, db: Session) -> None:
     """19U Item 3: Session Home's optional-tab chips lock with the card.
     A locked chip cancels the edge and the pointer, as ``is-disabled``
     does, but says on or off in the card's display-value colors rather
@@ -175,9 +149,7 @@ def test_a_locked_chip_drops_the_edge_and_keeps_its_state(
     assert "border-color: transparent" in block
     assert "box-shadow: none" in block
     assert "line-through" not in block
-    assert css.index("body.ui-v2 .tag-chip.is-locked {") > css.index(
-        "body.ui-v2 .tag-chip,"
-    )
+    assert css.index("body.ui-v2 .tag-chip.is-locked {") > css.index("body.ui-v2 .tag-chip,")
     on = _rule(
         css,
         "body.ui-v2 .tag-chip.is-locked.is-selected,\n"
@@ -195,9 +167,7 @@ def test_a_locked_chip_drops_the_edge_and_keeps_its_state(
     assert off is not None and "opacity: 0.55" in off
 
 
-def test_a_fixed_chip_drops_the_edge_and_keeps_the_fill(
-    client: TestClient, db: Session
-) -> None:
+def test_a_fixed_chip_drops_the_edge_and_keeps_the_fill(client: TestClient, db: Session) -> None:
     """guide/ux_refinements.md Item 2: a fixed switch cancels the edge and
     the pointer, as ``is-locked`` does, but keeps the live chips' dark
     fill — a ``<span>`` always, a ``<label>`` only while its box is
@@ -207,17 +177,14 @@ def test_a_fixed_chip_drops_the_edge_and_keeps_the_fill(
 
     block = _rule(
         css,
-        "body.ui-v2 .tag-chip.is-fixed,\n"
-        "      body.ui-v2 label.tag-chip:has(> input:disabled)",
+        "body.ui-v2 .tag-chip.is-fixed,\n      body.ui-v2 label.tag-chip:has(> input:disabled)",
     )
     assert block is not None
     assert "cursor: default" in block
     assert "border-color: transparent" in block
     assert "box-shadow: none" in block
     assert EDGE not in block
-    assert css.index("body.ui-v2 .tag-chip.is-fixed,") > css.index(
-        "body.ui-v2 .tag-chip,"
-    )
+    assert css.index("body.ui-v2 .tag-chip.is-fixed,") > css.index("body.ui-v2 .tag-chip,")
     fill = _rule(
         css,
         "body.ui-v2 span.tag-chip.is-fixed,\n"
@@ -232,9 +199,7 @@ def test_a_fixed_chip_drops_the_edge_and_keeps_the_fill(
     assert glyph is not None and "mask:" in glyph and "currentColor" in glyph
 
 
-def test_a_checkbox_chip_fills_from_its_box(
-    client: TestClient, db: Session
-) -> None:
+def test_a_checkbox_chip_fills_from_its_box(client: TestClient, db: Session) -> None:
     """A chip wrapping a checkbox is selected when the box is ticked, so a
     Cancel's ``form.reset()`` repaints it with no script."""
     review_session = _make_session(client, db, code="19u3-has")
@@ -242,8 +207,7 @@ def test_a_checkbox_chip_fills_from_its_box(
 
     block = _rule(
         css,
-        "body.ui-v2 .tag-chip.is-selected,\n"
-        "      body.ui-v2 .tag-chip:has(> input:checked)",
+        "body.ui-v2 .tag-chip.is-selected,\n      body.ui-v2 .tag-chip:has(> input:checked)",
     )
     assert block is not None
     assert "var(--selected-bg)" in block
@@ -267,9 +231,7 @@ def test_a_linked_role_pill_wears_the_edge_and_a_span_does_not(
     That the templates render the anchors is pinned by
     ``test_me_surface_role_chips.py`` and ``test_me_dashboard_links.py``."""
     review_session = _make_session(client, db, code="e13-role-edge")
-    css = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    css = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
 
     block = _rule(
         css,
@@ -305,11 +267,18 @@ def test_a_locked_instrument_cards_chips_read_as_display_pills(
     locked = 'body.ui-v2 [data-instrument-card][data-instrument-locked="true"] [data-lock-region] label.tag-chip'
     block = _rule(css, locked)
     assert block is not None
-    for decl in ("cursor: default", "border-color: transparent", "box-shadow: none",
-                 "background: var(--status-info-bg)", "color: var(--text-body)"):
+    for decl in (
+        "cursor: default",
+        "border-color: transparent",
+        "box-shadow: none",
+        "background: var(--status-info-bg)",
+        "color: var(--text-body)",
+    ):
         assert decl in block, decl
     assert EDGE not in block
     assert _rule(css, locked + "::before") == " content: none; "
     # A cycle chip (Band 1's self-review chip, Item 8) names its state,
     # so ``is-selected`` exempts it from the fade.
-    assert _rule(css, locked + ":not(.is-selected):not(:has(> input:checked))") == " opacity: 0.55; "
+    assert (
+        _rule(css, locked + ":not(.is-selected):not(:has(> input:checked))") == " opacity: 0.55; "
+    )

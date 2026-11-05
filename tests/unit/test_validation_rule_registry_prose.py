@@ -13,9 +13,7 @@ import re
 from app.services.validation import REGISTERED_RULES
 
 #: What the three named: a code literal, a route, a spec path, a column.
-INTERNALS = re.compile(
-    r"``|/me/|/operator/|spec/|\.py\b|rule_set_id|\bNULL\b|\binclude`` flag"
-)
+INTERNALS = re.compile(r"``|/me/|/operator/|spec/|\.py\b|rule_set_id|\bNULL\b|\binclude`` flag")
 
 
 def test_no_why_line_names_an_internal() -> None:

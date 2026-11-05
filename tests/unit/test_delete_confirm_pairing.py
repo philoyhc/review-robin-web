@@ -31,6 +31,7 @@ makes the difference is `test_every_programmatic_dispatch_is_reachable`,
 which is a cross-file check rather than a substring: it is the one that
 would have caught it.
 """
+
 from __future__ import annotations
 
 import re
@@ -56,9 +57,7 @@ def pairing() -> str:
         for m in re.finditer(r"<script>(.*?)</script>", source, re.S)
         if "data-delete-btn" in m.group(1)
     ]
-    assert len(blocks) == 1, (
-        f"expected one script to own the pairing, found {len(blocks)}"
-    )
+    assert len(blocks) == 1, f"expected one script to own the pairing, found {len(blocks)}"
     return blocks[0]
 
 
@@ -86,8 +85,7 @@ def test_responding_to_a_tick_is_delegated(pairing: str) -> None:
     # ...and the handler must actually DO something. An empty-bodied
     # listener passed the previous version of this test.
     assert "sync(cb)" in handler.group(1), (
-        "the delegated listener never calls `sync`, so a tick changes "
-        "nothing"
+        "the delegated listener never calls `sync`, so a tick changes nothing"
     )
 
 
@@ -99,7 +97,7 @@ def test_the_delegated_listener_is_capture_bound(pairing: str) -> None:
         re.S,
     ), (
         "the pairing listens in the bubble phase, so the four roster "
-        "pages' non-bubbling `new Event(\"change\")` never reaches it "
+        'pages\' non-bubbling `new Event("change")` never reaches it '
         "and `Delete` stays enabled after the tick is cleared"
     )
 
@@ -111,26 +109,22 @@ def test_every_programmatic_dispatch_is_reachable(pairing: str) -> None:
     a bubbling event or rely on the capture binding. Enumerated from
     the templates, not asserted about one file.
     """
-    capture_bound = bool(re.search(
-        r'document\.addEventListener\(\s*"change",.*?\}\s*,\s*true\s*\);',
-        pairing,
-        re.S,
-    ))
+    capture_bound = bool(
+        re.search(
+            r'document\.addEventListener\(\s*"change",.*?\}\s*,\s*true\s*\);',
+            pairing,
+            re.S,
+        )
+    )
     dispatches = []
     for path in sorted(TEMPLATES.rglob("*.html")):
-        markup = _without_comments(
-            path.read_text(encoding="utf-8", errors="replace")
-        )
-        for m in re.finditer(
-            r'(\w+)\.dispatchEvent\(\s*new Event\(\s*"change"([^)]*)\)', markup
-        ):
+        markup = _without_comments(path.read_text(encoding="utf-8", errors="replace"))
+        for m in re.finditer(r'(\w+)\.dispatchEvent\(\s*new Event\(\s*"change"([^)]*)\)', markup):
             var, opts = m.group(1), m.group(2)
             # Only the ones aimed at a confirm checkbox matter here.
             if "confirm" not in var.lower():
                 continue
-            dispatches.append(
-                (path.name, var, "bubbles" in opts)
-            )
+            dispatches.append((path.name, var, "bubbles" in opts))
 
     # **The floor bottomed out at 19P.3 rung 3**, exactly as the note it
     # replaced predicted. Every roster page rebuilds its panel wholesale
@@ -170,7 +164,7 @@ def test_every_programmatic_dispatch_is_reachable(pairing: str) -> None:
 def test_the_load_time_pass_survives(pairing: str) -> None:
     """Not redundant with the delegation: it sets initial state."""
     assert re.search(
-        r'forEach\.call\(\s*\n?\s*document\.querySelectorAll\('
+        r"forEach\.call\(\s*\n?\s*document\.querySelectorAll\("
         r'"\[data-delete-confirm\]"\)\s*,\s*sync\s*\)',
         pairing,
     ), (
@@ -200,8 +194,7 @@ def test_the_one_button_that_depends_on_the_load_pass_still_does() -> None:
     `disabled`, dropping the load pass would be nearly harmless and
     that test would guard much less."""
     acks = [
-        (name, tag) for name, tag in _paired_buttons()
-        if 'data-delete-btn="ack-results"' in tag
+        (name, tag) for name, tag in _paired_buttons() if 'data-delete-btn="ack-results"' in tag
     ]
     assert len(acks) == 1, f"expected one Acknowledge button, got {acks}"
     assert not _ships_disabled(acks[0][1]), (
@@ -219,8 +212,8 @@ def test_every_other_paired_button_ships_disabled() -> None:
     buttons = _paired_buttons()
     assert len(buttons) >= 19, f"vacuity: only found {len(buttons)}"
     offenders = [
-        f"{name}: {tag[:70]}" for name, tag in buttons
-        if not _ships_disabled(tag)
-        and 'data-delete-btn="ack-results"' not in tag
+        f"{name}: {tag[:70]}"
+        for name, tag in buttons
+        if not _ships_disabled(tag) and 'data-delete-btn="ack-results"' not in tag
     ]
     assert not offenders, offenders

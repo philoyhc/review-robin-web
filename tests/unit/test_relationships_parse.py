@@ -19,17 +19,11 @@ def _seed(db: Session) -> tuple[Reviewer, Reviewer, Reviewee, Reviewee]:
     user = User(email="op@example.edu", display_name="Op")
     db.add(user)
     db.flush()
-    review_session = ReviewSession(
-        name="Spring", code="rel-parse", created_by_user_id=user.id
-    )
+    review_session = ReviewSession(name="Spring", code="rel-parse", created_by_user_id=user.id)
     db.add(review_session)
     db.flush()
-    alice = Reviewer(
-        session_id=review_session.id, name="Alice", email="alice@example.edu"
-    )
-    bob = Reviewer(
-        session_id=review_session.id, name="Bob", email="bob@example.edu"
-    )
+    alice = Reviewer(session_id=review_session.id, name="Alice", email="alice@example.edu")
+    bob = Reviewer(session_id=review_session.id, name="Bob", email="bob@example.edu")
     carol = Reviewee(
         session_id=review_session.id,
         name="Carol",
@@ -57,9 +51,7 @@ def test_parse_happy_path(db: Session) -> None:
         b"alice@example.edu,carol@example.edu,Mentor,,,active\n"
         b"bob@example.edu,dan-2026,,,Prior cohort,\n"
     )
-    result = parse_relationship_csv(
-        csv_body, reviewers=[alice, bob], reviewees=[carol, dan]
-    )
+    result = parse_relationship_csv(csv_body, reviewers=[alice, bob], reviewees=[carol, dan])
 
     assert result.issues == []
     assert len(result.rows) == 2
@@ -82,13 +74,8 @@ def test_parse_happy_path(db: Session) -> None:
 
 def test_parse_inactive_status_round_trips(db: Session) -> None:
     alice, _bob, carol, _dan = _seed(db)
-    csv_body = (
-        b"ReviewerEmail,RevieweeEmail,Status\n"
-        b"alice@example.edu,carol@example.edu,inactive\n"
-    )
-    result = parse_relationship_csv(
-        csv_body, reviewers=[alice], reviewees=[carol]
-    )
+    csv_body = b"ReviewerEmail,RevieweeEmail,Status\nalice@example.edu,carol@example.edu,inactive\n"
+    result = parse_relationship_csv(csv_body, reviewers=[alice], reviewees=[carol])
     assert result.issues == []
     assert len(result.rows) == 1
     assert result.rows[0].status == "inactive"
@@ -99,13 +86,8 @@ def test_parse_unknown_reviewer_email(db: Session) -> None:
     row-level validation error."""
 
     _alice, _bob, carol, _dan = _seed(db)
-    csv_body = (
-        b"ReviewerEmail,RevieweeEmail\n"
-        b"ghost@example.edu,carol@example.edu\n"
-    )
-    result = parse_relationship_csv(
-        csv_body, reviewers=[], reviewees=[carol]
-    )
+    csv_body = b"ReviewerEmail,RevieweeEmail\nghost@example.edu,carol@example.edu\n"
+    result = parse_relationship_csv(csv_body, reviewers=[], reviewees=[carol])
     assert result.rows == []
     assert len(result.issues) == 1
     issue = result.issues[0]
@@ -116,13 +98,8 @@ def test_parse_unknown_reviewer_email(db: Session) -> None:
 
 def test_parse_unknown_reviewee_identifier(db: Session) -> None:
     alice, _bob, _carol, _dan = _seed(db)
-    csv_body = (
-        b"ReviewerEmail,RevieweeEmail\n"
-        b"alice@example.edu,nobody@example.edu\n"
-    )
-    result = parse_relationship_csv(
-        csv_body, reviewers=[alice], reviewees=[]
-    )
+    csv_body = b"ReviewerEmail,RevieweeEmail\nalice@example.edu,nobody@example.edu\n"
+    result = parse_relationship_csv(csv_body, reviewers=[alice], reviewees=[])
     assert result.rows == []
     assert len(result.issues) == 1
     assert result.issues[0].field == "RevieweeEmail"
@@ -138,9 +115,7 @@ def test_parse_duplicate_pair(db: Session) -> None:
         b"alice@example.edu,carol@example.edu,Mentor\n"
         b"alice@example.edu,carol@example.edu,COI\n"
     )
-    result = parse_relationship_csv(
-        csv_body, reviewers=[alice], reviewees=[carol]
-    )
+    result = parse_relationship_csv(csv_body, reviewers=[alice], reviewees=[carol])
     # The first row parses; the second row is rejected.
     assert len(result.rows) == 1
     assert len(result.issues) == 1
@@ -169,9 +144,7 @@ def test_parse_rejected_row_does_not_reserve_its_pair(db: Session) -> None:
         b"alice@example.edu,carol@example.edu,bogus\n"
         b"alice@example.edu,carol@example.edu,active\n"
     )
-    result = parse_relationship_csv(
-        csv_body, reviewers=[alice], reviewees=[carol]
-    )
+    result = parse_relationship_csv(csv_body, reviewers=[alice], reviewees=[carol])
 
     # The valid second row is the one that parses.
     assert len(result.rows) == 1
@@ -192,12 +165,9 @@ def test_parse_rejected_row_does_not_reserve_its_pair(db: Session) -> None:
 def test_parse_invalid_status(db: Session) -> None:
     alice, _bob, carol, _dan = _seed(db)
     csv_body = (
-        b"ReviewerEmail,RevieweeEmail,Status\n"
-        b"alice@example.edu,carol@example.edu,suspended\n"
+        b"ReviewerEmail,RevieweeEmail,Status\nalice@example.edu,carol@example.edu,suspended\n"
     )
-    result = parse_relationship_csv(
-        csv_body, reviewers=[alice], reviewees=[carol]
-    )
+    result = parse_relationship_csv(csv_body, reviewers=[alice], reviewees=[carol])
     assert result.rows == []
     assert len(result.issues) == 1
     assert result.issues[0].field == "Status"
@@ -205,13 +175,8 @@ def test_parse_invalid_status(db: Session) -> None:
 
 def test_parse_missing_required_column(db: Session) -> None:
     alice, _bob, carol, _dan = _seed(db)
-    csv_body = (
-        b"ReviewerEmail\n"
-        b"alice@example.edu\n"
-    )
-    result = parse_relationship_csv(
-        csv_body, reviewers=[alice], reviewees=[carol]
-    )
+    csv_body = b"ReviewerEmail\nalice@example.edu\n"
+    result = parse_relationship_csv(csv_body, reviewers=[alice], reviewees=[carol])
     assert result.rows == []
     assert any(
         issue.field == "RevieweeEmail" or "RevieweeEmail" in issue.message
@@ -221,13 +186,8 @@ def test_parse_missing_required_column(db: Session) -> None:
 
 def test_parse_resolves_email_case_insensitively(db: Session) -> None:
     alice, _bob, carol, _dan = _seed(db)
-    csv_body = (
-        b"ReviewerEmail,RevieweeEmail\n"
-        b"ALICE@example.edu,Carol@Example.edu\n"
-    )
-    result = parse_relationship_csv(
-        csv_body, reviewers=[alice], reviewees=[carol]
-    )
+    csv_body = b"ReviewerEmail,RevieweeEmail\nALICE@example.edu,Carol@Example.edu\n"
+    result = parse_relationship_csv(csv_body, reviewers=[alice], reviewees=[carol])
     assert result.issues == []
     assert len(result.rows) == 1
     assert result.rows[0].reviewer_id == alice.id
@@ -236,14 +196,8 @@ def test_parse_resolves_email_case_insensitively(db: Session) -> None:
 
 def test_parse_empty_required_cells(db: Session) -> None:
     alice, _bob, carol, _dan = _seed(db)
-    csv_body = (
-        b"ReviewerEmail,RevieweeEmail\n"
-        b",carol@example.edu\n"
-        b"alice@example.edu,\n"
-    )
-    result = parse_relationship_csv(
-        csv_body, reviewers=[alice], reviewees=[carol]
-    )
+    csv_body = b"ReviewerEmail,RevieweeEmail\n,carol@example.edu\nalice@example.edu,\n"
+    result = parse_relationship_csv(csv_body, reviewers=[alice], reviewees=[carol])
     assert result.rows == []
     assert len(result.issues) == 2
     assert {issue.field for issue in result.issues} == {

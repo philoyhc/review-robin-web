@@ -11,6 +11,7 @@ classes, `disabled` attributes, the server-rendered counts — not the
 appearance. 19L stated the same limit for the lobby bracket
 (`guide/archive/segment_19L_ux_refinements.md:207-209`).
 """
+
 from __future__ import annotations
 
 import pathlib
@@ -31,16 +32,13 @@ from ._unlock_panel import div_block as _div_block
 R_CSV = b"ReviewerName,ReviewerEmail\nR1,r1@example.com\nR2,r2@example.com\n"
 
 
-
 def _session(client: TestClient, db: Session, code: str) -> ReviewSession:
     client.post(
         "/operator/sessions",
         data={"name": code.title(), "code": code},
         follow_redirects=False,
     )
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _with_reviewers(
@@ -55,9 +53,7 @@ def _with_reviewers(
     return rs
 
 
-def _give_it_assignments(
-    client: TestClient, db: Session, rs: ReviewSession
-) -> None:
+def _give_it_assignments(client: TestClient, db: Session, rs: ReviewSession) -> None:
     """A reviewee roster plus generated assignments, so the confirm's
     optional clauses are reachable."""
     client.post(
@@ -221,7 +217,9 @@ def test_the_panel_holds_its_four_cards_and_nothing_else(client, db):
     # the same way they are now, rather than by div-balancing.
     labels = re.search(
         r'<section[^>]*class="card field-labels-editor"[^>]*>'
-        r'.*?</section>', scope, re.S,
+        r".*?</section>",
+        scope,
+        re.S,
     )
     assert labels, "the wired labels editor is not in the panel"
     labels_card = labels.group(0)
@@ -231,7 +229,9 @@ def test_the_panel_holds_its_four_cards_and_nothing_else(client, db):
 
     danger = re.search(
         r'<section[^>]*aria-labelledby="reviewers-danger-h"[^>]*>'
-        r'.*?</section>', scope, re.S,
+        r".*?</section>",
+        scope,
+        re.S,
     )
     assert danger, "the wired Danger Zone is not in the panel"
     assert f"/operator/sessions/{rs_id}/reviewers/delete-all" in danger.group(0)
@@ -239,7 +239,9 @@ def test_the_panel_holds_its_four_cards_and_nothing_else(client, db):
     assert "reviewers-danger-h" not in scope, "the excision missed a copy"
 
     upload = re.search(
-        r'<section[^>]*id="upload-csv"[^>]*>.*?</section>', scope, re.S,
+        r'<section[^>]*id="upload-csv"[^>]*>.*?</section>',
+        scope,
+        re.S,
     )
     assert upload, "the wired upload card is not in the panel"
     assert f"/operator/sessions/{rs_id}/reviewers/import" in upload.group(0), (
@@ -249,7 +251,9 @@ def test_the_panel_holds_its_four_cards_and_nothing_else(client, db):
     assert "upload-csv" not in scope, "the excision missed a copy"
 
     self_card = re.search(
-        r'<section[^>]*data-reviewer-self-card[^>]*>.*?</section>', scope, re.S,
+        r"<section[^>]*data-reviewer-self-card[^>]*>.*?</section>",
+        scope,
+        re.S,
     )
     assert self_card, "the reviewer-information card is not in the panel"
     assert f"/operator/sessions/{rs_id}/reviewers/self-fields" in self_card.group(0)
@@ -264,9 +268,7 @@ def test_the_panel_holds_its_four_cards_and_nothing_else(client, db):
     # scaffold copy left beside a real one, lands here.
     leftovers = re.findall(r"<(?:button|input|textarea|select)\b[^>]*>", scope)
     assert not leftovers, f"unaccounted controls in the panel: {leftovers}"
-    assert "<section" not in scope and 'class="card' not in scope, (
-        "a fifth card is in the panel"
-    )
+    assert "<section" not in scope and 'class="card' not in scope, "a fifth card is in the panel"
 
 
 def test_the_replace_confirm_is_one_tick_naming_every_loss(client, db):
@@ -343,9 +345,7 @@ def test_nothing_is_left_below_the_table(client, db):
     html = _markup(_page(client, rs))
 
     # Moved at 3c, along with the grid that held it.
-    assert "bottom-grid" not in html, (
-        "the bottom grid is back below the table"
-    )
+    assert "bottom-grid" not in html, "the bottom grid is back below the table"
     assert 'id="upload-csv"' in html, "the upload card vanished entirely"
     assert 'id="upload-csv"' in _panel(html), (
         "the upload card is not below the table, but not in the panel either"
@@ -406,7 +406,9 @@ def test_the_replace_roster_key_appears_exactly_once(client, db):
     # The pair must be in the same card, or the gate resolves across
     # cards and ties a tick to a button the operator cannot see.
     upload = re.search(
-        r'<section[^>]*id="upload-csv"[^>]*>.*?</section>', html, re.S,
+        r'<section[^>]*id="upload-csv"[^>]*>.*?</section>',
+        html,
+        re.S,
     )
     assert upload, "the upload card is not on the page"
     assert 'data-delete-confirm="replace-roster"' in upload.group(0)
@@ -439,8 +441,7 @@ def test_a_pill_confirm_keeps_its_sentence_in_one_piece(client, db):
     # The Danger Zone's confirm and the Upload card's replace tick. The
     # append / merge line (19Z) is a div holding two ticks, not a label.
     assert len(labels) == 2, (
-        f"expected the Danger Zone's and the upload's confirms, got "
-        f"{len(labels)}"
+        f"expected the Danger Zone's and the upload's confirms, got {len(labels)}"
     )
     for label in labels:
         assert 'class="pill' in label, (
@@ -485,8 +486,7 @@ def test_the_panel_is_reachable_without_javascript(client, db):
 
     closed = _markup(_page(client, rs))
     assert re.search(r'id="roster-unlock-panel"[^>]*\bhidden', closed), (
-        "the panel is not hidden here, so no fallback is needed and this "
-        "test asserts nothing"
+        "the panel is not hidden here, so no fallback is needed and this test asserts nothing"
     )
     opener = re.search(r"<noscript>.*?</noscript>", closed, re.S)
     assert opener, "no no-JS fallback on the collapsed page"
@@ -575,9 +575,7 @@ def test_the_row_expander_script_is_gated_on_selectable(client, db):
     assert '"session-expander session-expander-bracketed"' in html
 
     edit_id = must_search(r'id="reviewer-row-(\d+)"', html).group(1)
-    editing = client.get(
-        f"/operator/sessions/{rs.public_id}/reviewers?edit_id={edit_id}"
-    ).text
+    editing = client.get(f"/operator/sessions/{rs.public_id}/reviewers?edit_id={edit_id}").text
     # Vacuity guard: the param is `edit_id`, and an unrecognized name is
     # ignored silently rather than erroring — so a typo here would leave
     # the page in its normal state and the assertions below would pass
@@ -615,7 +613,7 @@ def test_the_panel_counts_against_the_rendered_window(client, db):
     """
     html = _page(client, _with_reviewers(client, db, "rc14"))
     assert "rows().length +" in html, "panel counts against the wrong pool"
-    assert "{{ total_row_count }} + \" selected" not in html
+    assert '{{ total_row_count }} + " selected' not in html
 
 
 def test_the_panel_survives_a_sort(client, db):
@@ -634,7 +632,7 @@ def test_the_panel_survives_a_sort(client, db):
     `tests/unit/test_sort_drops_injected_panel.py`.
     """
     html = _page(client, _with_reviewers(client, db, "rc15"))
-    assert '.rrw-sort-btn' in html, "no sort hook"
+    assert ".rrw-sort-btn" in html, "no sort hook"
     assert 'table.addEventListener("rrw:sorted"' in html, (
         "the page must re-anchor its panel on the shared sort signal"
     )
@@ -652,18 +650,15 @@ def test_a_server_restored_selection_renders_its_panel(client, db):
     rs = _with_reviewers(client, db, "rc16")
     html = _page(client, rs)
     row_id = must_search(r'id="reviewer-row-(\d+)"', html).group(1)
-    restored = client.get(
-        f"/operator/sessions/{rs.public_id}/reviewers?selected={row_id}"
-    ).text
+    restored = client.get(f"/operator/sessions/{rs.public_id}/reviewers?selected={row_id}").text
     # Vacuity guard: prove the server actually restored the tick, or the
     # assertion below would pass against an unselected page.
-    assert re.search(
-        rf'value="{row_id}"[^>]*checked', restored
-    ), "server did not restore the selection"
+    assert re.search(rf'value="{row_id}"[^>]*checked', restored), (
+        "server did not restore the selection"
+    )
     # The script seeds tick order from the restored boxes and renders once.
-    assert 'if (box && box.checked) tickOrder.push(row.id);' in restored
-    assert re.search(r'render\(\);\s*\}\)\(\);', restored), \
-        "no init render"
+    assert "if (box && box.checked) tickOrder.push(row.id);" in restored
+    assert re.search(r"render\(\);\s*\}\)\(\);", restored), "no init render"
 
 
 def test_the_panel_renders_no_pill(client, db):
@@ -677,9 +672,7 @@ def test_the_panel_renders_no_pill(client, db):
     lobby renders the same count as bare text.
     """
     html = _page(client, _with_reviewers(client, db, "rc17"))
-    builder = re.search(
-        r'function build\(sel\).*?return tr;', html, re.S
-    )
+    builder = re.search(r"function build\(sel\).*?return tr;", html, re.S)
     assert builder, "panel builder not found"
     assert "pill-count" not in builder.group(0), builder.group(0)
     assert "pill" not in builder.group(0), builder.group(0)
@@ -699,31 +692,22 @@ def test_tick_order_prunes_on_untick_and_rebuilds_on_select_all(client, db):
     html = _page(client, _with_reviewers(client, db, "rc18"))
     # Anchored on the handler's own `render();` — a bare `});` stops at
     # the inner filter callback's close and captures half the body.
-    handler = re.search(
-        r'body\.addEventListener\("change".*?render\(\);\s*\}\);', html, re.S
-    )
+    handler = re.search(r'body\.addEventListener\("change".*?render\(\);\s*\}\);', html, re.S)
     assert handler, "row change handler not found"
     # The filter runs unconditionally; only the push is gated on checked.
     body = handler.group(0)
     filter_at = body.index("tickOrder = tickOrder.filter")
     push_at = body.index("tickOrder.push")
     gate_at = body.index("if (event.target.checked)")
-    assert filter_at < gate_at < push_at, (
-        "untick does not prune the tick order"
-    )
+    assert filter_at < gate_at < push_at, "untick does not prune the tick order"
     select_all = re.search(
-        r'selectAll\.addEventListener\("change".*?render, 0\);\s*\}\);',
-        html, re.S
+        r'selectAll\.addEventListener\("change".*?render, 0\);\s*\}\);', html, re.S
     )
     assert select_all, "select-all handler not found"
-    assert "rows().map" in select_all.group(0), (
-        "select-all does not rebuild the tick order"
-    )
+    assert "rows().map" in select_all.group(0), "select-all does not rebuild the tick order"
 
 
-def test_the_unlock_panel_puts_self_and_upload_left_labels_and_danger_right(
-    client, db
-):
+def test_the_unlock_panel_puts_self_and_upload_left_labels_and_danger_right(client, db):
     """Left column: `What reviewers see of their own entry` over `Upload
     Reviewers`. Right column: `Reviewer tag labels` over `Danger Zone`.
     The author's arrangement (participant info Item 2), so it is pinned
@@ -761,9 +745,7 @@ def test_the_unlock_panel_puts_self_and_upload_left_labels_and_danger_right(
     assert "data-reviewer-self-card" in left and 'id="reviewers-upload-h"' in left
     assert 'class="card field-labels-editor"' in right
     assert 'id="reviewers-danger-h"' in right
-    assert 'id="reviewers-upload-h"' not in right, (
-        "upload belongs in the left column"
-    )
+    assert 'id="reviewers-upload-h"' not in right, "upload belongs in the left column"
 
 
 def test_the_replace_confirm_is_set_apart_from_the_file_input(client, db):
@@ -787,9 +769,9 @@ def test_the_panel_does_not_compound_the_base_card_margin(client, db):
     measured result is confirmed in a browser.
     """
     html = _page(client, _with_reviewers(client, db, "rc21"))
-    assert re.search(
-        r"\.unlock-panel \.card \{[^}]*margin-bottom:\s*0", html
-    ), "the base card margin is not zeroed inside the panel"
+    assert re.search(r"\.unlock-panel \.card \{[^}]*margin-bottom:\s*0", html), (
+        "the base card margin is not zeroed inside the panel"
+    )
     # And the gap the page uses between cards, not the token scale's 16.
     for selector in (r"\.unlock-panel \{", r"\.unlock-stack \{"):
         rule = re.search(selector + r"([^}]*)\}", html)
@@ -810,13 +792,13 @@ def test_the_hidden_unlock_panel_is_actually_hidden(client, db):
     browser.
     """
     html = _page(client, _with_reviewers(client, db, "rc22"))
-    assert re.search(
-        r"\.unlock-panel\[hidden\] \{[^}]*display:\s*none", html
-    ), "an author display rule would defeat the hidden attribute"
+    assert re.search(r"\.unlock-panel\[hidden\] \{[^}]*display:\s*none", html), (
+        "an author display rule would defeat the hidden attribute"
+    )
     # And the attribute is on the element, which is the half that always held.
-    assert re.search(
-        r'id="roster-unlock-panel"[^>]*hidden', html
-    ), "the panel does not carry the hidden attribute"
+    assert re.search(r'id="roster-unlock-panel"[^>]*hidden', html), (
+        "the panel does not carry the hidden attribute"
+    )
 
 
 def test_the_lock_control_ships_as_the_cards_last_child(client, db):
@@ -825,15 +807,13 @@ def test_the_lock_control_ships_as_the_cards_last_child(client, db):
     column —
     see the test below."""
     html = _page(client, _with_reviewers(client, db, "rc23"))
-    card = re.search(r'id="roster-card".*?(?=<!-- |\n  <div class="card-columns")',
-                     html, re.S)
+    card = re.search(r'id="roster-card".*?(?=<!-- |\n  <div class="card-columns")', html, re.S)
     assert card, "roster card not found"
     body = card.group(0)
     panel = body.index('id="roster-unlock-panel"')
     actions = body.index('class="roster-card-actions"')
     assert panel < actions, (
-        "the control must follow the panel, so it is the card's foot "
-        "when the panel is hidden"
+        "the control must follow the panel, so it is the card's foot when the panel is hidden"
     )
 
 
@@ -846,8 +826,7 @@ def test_the_lock_ends_the_right_column(client, db):
     html = _page(client, _with_reviewers(client, db, "rc24"))
     assert "body.ui-v2 .unlock-panel > .unlock-right { align-self: stretch; }" in html
     assert (
-        "body.ui-v2 .unlock-right > .roster-card-actions:first-child "
-        "{ margin-top: auto; }" in html
+        "body.ui-v2 .unlock-right > .roster-card-actions:first-child { margin-top: auto; }" in html
     )
     # The full-width row it replaced left a gap under a shorter column.
     assert ".unlock-panel > .roster-card-actions" not in html
@@ -859,14 +838,11 @@ def test_the_lock_control_moves_between_its_two_homes(client, db):
     second copy outside is how two copies of one control drift apart.
     The toggle moves the node instead."""
     html = _page(client, _with_reviewers(client, db, "rc25"))
-    handler = re.search(
-        r'btn\.addEventListener\("click".*?\}\);', html, re.S
-    )
+    handler = re.search(r'btn\.addEventListener\("click".*?\}\);', html, re.S)
     assert handler, "toggle handler not found"
     body = handler.group(0)
     assert "card.appendChild(actions)" in body, body
     assert 'panel.querySelector(".unlock-right").appendChild(actions)' in body, body
-
 
 
 def test_a_zero_match_filter_still_offers_the_control_that_clears_it(client, db):
@@ -880,9 +856,7 @@ def test_a_zero_match_filter_still_offers_the_control_that_clears_it(client, db)
     table is gated on the filtered list.
     """
     rs = _with_reviewers(client, db, "rc26")
-    html = client.get(
-        f"/operator/sessions/{rs.public_id}/reviewers?q=nothingmatchesthis"
-    ).text
+    html = client.get(f"/operator/sessions/{rs.public_id}/reviewers?q=nothingmatchesthis").text
     # Vacuity guard: prove the filter really did match nothing.
     assert "No reviewers match the current filter." in html
     assert 'id="reviewers-table"' not in html
@@ -906,8 +880,7 @@ def _markup(html: str) -> str:
 # version of this test passed while proving nothing about placement.
 _PAGE_SIZE = 200
 R_CSV_TAGGED = b"ReviewerName,ReviewerEmail,ReviewerTag1.Tutor\n" + b"".join(
-    f"R{n},r{n}@example.com,T{n % 3}\n".encode()
-    for n in range(1, _PAGE_SIZE + 61)
+    f"R{n},r{n}@example.com,T{n % 3}\n".encode() for n in range(1, _PAGE_SIZE + 61)
 )
 
 
@@ -923,7 +896,7 @@ def _left_pane(html: str) -> str:
     for m in re.finditer(r"<div\b|</div>", html[start:]):
         depth += 1 if m.group(0) != "</div>" else -1
         if depth == 0:
-            return html[start:start + m.end()]
+            return html[start : start + m.end()]
     raise AssertionError("left pane never closes")
 
 
@@ -952,23 +925,17 @@ def test_the_filter_strip_sits_in_the_tables_toolbar(client, db):
     # render together; the left pane's three tenants are really two
     # plus an alternative, and each has to be checked where it appears.
     left = _left_pane(html)
-    assert left.strip() != (
-        '<div class="toolbar-pane toolbar-left"></div>'
-    ), "left pane is empty — this fixture proves nothing"
+    assert left.strip() != ('<div class="toolbar-pane toolbar-left"></div>'), (
+        "left pane is empty — this fixture proves nothing"
+    )
     assert "col-chip-row" in left, "the column chips are not in the left pane"
     assert "table-pager" in left, "the pager is not in the left pane"
-    assert "table-showing-hint" not in left, (
-        "vacuity: an unfiltered view should have no count line"
-    )
+    assert "table-showing-hint" not in left, "vacuity: an unfiltered view should have no count line"
 
     # Filtered: the chip row and the count line, and no pager.
-    filtered = _markup(
-        client.get(f"/operator/sessions/{rs.public_id}/reviewers?q=r1").text
-    )
+    filtered = _markup(client.get(f"/operator/sessions/{rs.public_id}/reviewers?q=r1").text)
     fleft = _left_pane(filtered)
-    assert "table-showing-hint" in fleft, (
-        "the count line is not in the toolbar's left pane"
-    )
+    assert "table-showing-hint" in fleft, "the count line is not in the toolbar's left pane"
     assert "col-chip-row" in fleft
     assert "table-pager" not in fleft, "a filtered view should have no pager"
 
@@ -984,9 +951,7 @@ def test_the_toolbar_panes_are_not_cards(client, db):
     panes = re.findall(r'<div class="([^"]*\btoolbar-pane\b[^"]*)"', html)
     assert len(panes) == 2, f"expected two panes, found {panes}"
     for classes in panes:
-        assert "card" not in classes.split(), (
-            f"a toolbar pane is styled as a card: {classes!r}"
-        )
+        assert "card" not in classes.split(), f"a toolbar pane is styled as a card: {classes!r}"
 
 
 def test_an_empty_roster_still_offers_add_new(client, db):
@@ -1043,9 +1008,9 @@ def test_the_moved_filter_locks_while_a_row_is_being_edited(client, db):
     assert moved, "moved filter form not found in the toolbar"
     assert "is-locked" in moved.group(1), "the moved filter does not lock"
     # ...and a rule that actually reaches it, not just the class.
-    assert re.search(
-        r"\.toolbar-right \.operator-actions-filter\.is-locked \{", html
-    ), "`is-locked` on the moved filter matches no rule"
+    assert re.search(r"\.toolbar-right \.operator-actions-filter\.is-locked \{", html), (
+        "`is-locked` on the moved filter matches no rule"
+    )
 
 
 def test_every_table_toolbar_splits_and_the_panes_stay_a_modifier(client, db):
@@ -1082,9 +1047,7 @@ def test_every_table_toolbar_splits_and_the_panes_stay_a_modifier(client, db):
     assert '<div class="table-card-toolbar is-split">' in _markup(reviewers)
 
     # The shared rule stays flex; only the modifier is a grid.
-    shared = re.search(
-        r"body\.ui-v2 \.table-card-toolbar \{(.*?)\}", reviewers, re.S
-    )
+    shared = re.search(r"body\.ui-v2 \.table-card-toolbar \{(.*?)\}", reviewers, re.S)
     assert shared, "shared .table-card-toolbar rule is gone"
     assert "display: flex" in shared.group(1), (
         "the shared toolbar rule became a grid; the other pages use it"
@@ -1092,9 +1055,7 @@ def test_every_table_toolbar_splits_and_the_panes_stay_a_modifier(client, db):
 
     enable_observers(db, rs)
     observers = client.get(f"/operator/sessions/{rs.public_id}/observers")
-    assert observers.status_code == 200, (
-        "the Observers assertion below needs a page that renders"
-    )
+    assert observers.status_code == 200, "the Observers assertion below needs a page that renders"
     assert "table-card-toolbar is-split" in _markup(observers.text), (
         "Observers opted in at 19P.2 rung 3"
     )
@@ -1116,15 +1077,12 @@ def test_every_table_toolbar_splits_and_the_panes_stay_a_modifier(client, db):
     # carries the class.
     carriers = {
         path.name: path.read_text()
-        for path in pathlib.Path("app/web/templates/operator").glob(
-            "session_*.html"
-        )
+        for path in pathlib.Path("app/web/templates/operator").glob("session_*.html")
         if '"table-card-toolbar' in path.read_text()
     }
     assert len(carriers) == 7, sorted(carriers)
     unsplit = sorted(
-        name for name, text in carriers.items()
-        if "table-card-toolbar is-split" not in text
+        name for name, text in carriers.items() if "table-card-toolbar is-split" not in text
     )
     assert unsplit == [], unsplit
 
@@ -1174,9 +1132,7 @@ def test_full_width_guidance_runs_its_prose_in_two_columns(client, db):
     assert "page-guidance-wide" not in other_markup
 
 
-def test_the_moved_filters_buttons_keep_their_gap_from_the_search_box(
-    client, db
-):
+def test_the_moved_filters_buttons_keep_their_gap_from_the_search_box(client, db):
     """The gap now comes from the unscoped base, not from this scope.
 
     It was lost twice by moving the markup — `.operator-actions-card
@@ -1220,13 +1176,10 @@ def test_the_moved_filters_buttons_keep_their_gap_from_the_search_box(
 
     # ...and this scope narrows the button gap only. A `margin-top`
     # here would mean the per-scope copy is back.
-    scoped = re.search(
-        r"body\.ui-v2 \.toolbar-right \.filter-actions \{(.*?)\}", html, re.S
-    )
+    scoped = re.search(r"body\.ui-v2 \.toolbar-right \.filter-actions \{(.*?)\}", html, re.S)
     assert scoped, "no rule narrowing the moved filter's button row"
     assert "margin-top" not in scoped.group(1), (
-        "`.toolbar-right` re-declares `margin-top`, hiding the base rule: "
-        f"{scoped.group(1)!r}"
+        f"`.toolbar-right` re-declares `margin-top`, hiding the base rule: {scoped.group(1)!r}"
     )
     assert re.search(r"gap:\s*var\(--space-2\)", scoped.group(1)), (
         "the half-width pane lost its tighter button gap"
@@ -1246,13 +1199,11 @@ def _toolbar_right(html: str) -> str:
     for tag in re.finditer(r"<div\b|</div>", html[i:]):
         depth += 1 if tag.group(0) != "</div>" else -1
         if depth == 0:
-            return html[start:i + tag.end()]
+            return html[start : i + tag.end()]
     raise AssertionError("the right pane never closes")
 
 
-def test_the_toolbar_controls_land_on_the_table_not_the_top_of_the_page(
-    client, db
-):
+def test_the_toolbar_controls_land_on_the_table_not_the_top_of_the_page(client, db):
     """Reported from the dev slot: `Clear`, `Add new` and `Search` threw
     the operator to the very top of the page, away from the rows they
     were filtering.
@@ -1265,9 +1216,7 @@ def test_the_toolbar_controls_land_on_the_table_not_the_top_of_the_page(
     `Add new` does NOT: see the test below.
     """
     rs = _with_reviewers(client, db, "rc35")
-    html = _markup(client.get(
-        f"/operator/sessions/{rs.public_id}/reviewers?q=R1"
-    ).text)
+    html = _markup(client.get(f"/operator/sessions/{rs.public_id}/reviewers?q=R1").text)
 
     # Vacuity guard: `Clear` renders only while a filter is active.
     assert ">Clear</a>" in html, "the filter is not active on this render"
@@ -1280,7 +1229,7 @@ def test_the_toolbar_controls_land_on_the_table_not_the_top_of_the_page(
         f"`Search` submits without the anchor: {form.group(0)!r}"
     )
 
-    clear = re.search(r'<a[^>]*>\s*Clear</a>', right, re.S)
+    clear = re.search(r"<a[^>]*>\s*Clear</a>", right, re.S)
     assert clear, "`Clear` is not in the toolbar"
     assert re.search(r'href="[^"]*#reviewers-table-card"', clear.group(0)), (
         f"`Clear` lands at the top of the page: {clear.group(0)!r}"
@@ -1303,7 +1252,7 @@ def test_add_new_lands_on_the_editor_not_the_table(client, db):
     html = _markup(client.get(f"/operator/sessions/{rs.public_id}/reviewers").text)
     right = _toolbar_right(html)
 
-    add = re.search(r'<a[^>]*>\s*Add new</a>', right, re.S)
+    add = re.search(r"<a[^>]*>\s*Add new</a>", right, re.S)
     assert add, "`Add new` is not in the toolbar"
     assert 'href="' in add.group(0), "vacuity: the disabled variant has no href"
     assert re.search(r'href="[^"]*#reviewers-row-editor"', add.group(0)), (
@@ -1312,15 +1261,13 @@ def test_add_new_lands_on_the_editor_not_the_table(client, db):
 
     # ...and the anchor it names exists once edit mode is on, or it is a
     # fragment pointing at nothing.
-    editing = _markup(
-        client.get(f"/operator/sessions/{rs.public_id}/reviewers?add=1").text
-    )
+    editing = _markup(client.get(f"/operator/sessions/{rs.public_id}/reviewers?add=1").text)
     assert 'id="reviewers-row-editor"' in editing, (
         "`Add new` points at an id the add-mode render does not have"
     )
     assert ">Save<" in editing, "vacuity: not actually in add mode"
     # Cancel returns to the list, so it lands where the list is.
-    cancel = re.search(r'<a[^>]*>\s*Cancel</a>', editing, re.S)
+    cancel = re.search(r"<a[^>]*>\s*Cancel</a>", editing, re.S)
     assert cancel and "#reviewers-table-card" in cancel.group(0), (
         f"`Cancel` lands at the top of the page: {cancel and cancel.group(0)!r}"
     )
@@ -1348,8 +1295,7 @@ def test_a_failed_import_still_renders_real_anchors(client, db):
     assert 'id=""' not in html, "an element on the error page has an empty id"
     assert 'id="reviewers-table-card"' in html
     assert not re.search(r'(?:href|action)="[^"]*#"', html), (
-        "a control on the error page points at a bare `#`, which means "
-        "the top of the document"
+        "a control on the error page points at a bare `#`, which means the top of the document"
     )
 
 
@@ -1370,9 +1316,7 @@ def test_the_busy_indicator_skips_a_same_url_form_submit(client, db):
     rs = _with_reviewers(client, db, "rc38")
     html = _page(client, rs)
 
-    submit_handler = re.search(
-        r'addEventListener\("submit".*?\n\s*\}\);', html, re.S
-    )
+    submit_handler = re.search(r'addEventListener\("submit".*?\n\s*\}\);', html, re.S)
     assert submit_handler, "the submit listener is gone"
     body = submit_handler.group(0)
     assert "target.href === window.location.href" in body, (
@@ -1380,18 +1324,19 @@ def test_the_busy_indicator_skips_a_same_url_form_submit(client, db):
         "sent again unchanged leaves the busy indicator armed"
     )
     # ...and it must return rather than fall through to arming.
-    assert re.search(
-        r"if \(target\.href === window\.location\.href\) return;", body
-    ), "the same-URL guard does not actually skip arming"
+    assert re.search(r"if \(target\.href === window\.location\.href\) return;", body), (
+        "the same-URL guard does not actually skip arming"
+    )
 
 
 # --- 19P.1 rung 2b: the expander's controls are live -----------------
+
 
 def _builder(html: str) -> str:
     """The expander's build function, which is where its markup lives
     now — as JS string literals, not as rendered HTML."""
     start = html.index('tr.id = "reviewers-row-expander"')
-    return html[start:html.index("td.innerHTML = html;", start)]
+    return html[start : html.index("td.innerHTML = html;", start)]
 
 
 def test_the_expander_posts_to_the_same_routes_the_card_did(client, db):
@@ -1421,10 +1366,10 @@ def test_the_expanders_delete_ships_disabled_and_is_paired(client, db):
     assert 'data-delete-btn=\\"reviewers-bulk-delete\\"' in build or (
         'data-delete-btn="reviewers-bulk-delete"' in build
     ), "Delete is not paired to a confirm"
-    assert 'data-delete-confirm' in build, "no confirm checkbox"
+    assert "data-delete-confirm" in build, "no confirm checkbox"
     # The button ships disabled; the checkbox does not.
     delete_at = build.index("btn destructive")
-    assert "disabled" in build[delete_at:delete_at + 400], (
+    assert "disabled" in build[delete_at : delete_at + 400], (
         "the expander's Delete does not ship `disabled`"
     )
     # The confirm has to post with the selection, or the route 400s.
@@ -1452,12 +1397,8 @@ def test_edit_is_offered_for_exactly_one_row(client, db):
     # so what a test can reach here is the expression, and the rendered
     # behavior is checked in Chromium (one row enabled and carrying
     # the id, two rows disabled).
-    assert re.search(
-        r"var editable = sel\.length === 1;", build
-    ), "no arity gate on Edit"
-    assert re.search(
-        r"""\(editable\s*\?\s*' data-edit-id="'""", build
-    ), (
+    assert re.search(r"var editable = sel\.length === 1;", build), "no arity gate on Edit"
+    assert re.search(r"""\(editable\s*\?\s*' data-edit-id="'""", build), (
         "the arity gate is inverted or restructured: Edit must carry the "
         "row id when `editable`, not when it is not"
     )
@@ -1473,9 +1414,7 @@ def test_edit_lands_on_the_row_it_is_about_to_edit(client, db):
     enough to scroll.
     """
     html = _page(client, _with_reviewers(client, db, "rc42"))
-    handler = re.search(
-        r'\.exp-edit\[data-edit-id\].*?window\.location =.*?;', html, re.S
-    )
+    handler = re.search(r"\.exp-edit\[data-edit-id\].*?window\.location =.*?;", html, re.S)
     assert handler, "no Edit click handler"
     assert "edit_id=" in handler.group(0)
     assert '"#reviewer-row-"' in handler.group(0), (
@@ -1501,15 +1440,13 @@ def test_the_status_actions_are_offered_only_where_they_act(client, db):
     # an action offered for the status it cannot change is a control
     # that does nothing. `statusActions` is defined above `build`, so
     # this reads the whole script.
-    assert re.search(
-        r'if \(hasActive\) out\.push\("Inactivate"\);', html
-    ), "active rows are not offered `Inactivate`"
-    assert re.search(
-        r'if \(hasInactive\) out\.push\("Activate"\);', html
-    ), "inactive rows are not offered `Activate`"
-    assert 'row.dataset.status === "active"' in html, (
-        "the expander no longer reads row status"
+    assert re.search(r'if \(hasActive\) out\.push\("Inactivate"\);', html), (
+        "active rows are not offered `Inactivate`"
     )
+    assert re.search(r'if \(hasInactive\) out\.push\("Activate"\);', html), (
+        "inactive rows are not offered `Activate`"
+    )
+    assert 'row.dataset.status === "active"' in html, "the expander no longer reads row status"
 
     # ...and the label -> route mapping, which is the second place the
     # same swap could hide.
@@ -1576,9 +1513,7 @@ def test_the_labels_editor_lives_only_in_the_unlock_panel(client, db):
 
     # Add mode: the panel stands down, and nothing takes its place.
     adding = _add_page(client, rs)
-    assert 'id="roster-unlock-panel"' not in adding, (
-        "the panel renders during an edit"
-    )
+    assert 'id="roster-unlock-panel"' not in adding, "the panel renders during an edit"
     assert "Reviewer tag labels" not in adding, "the fallback is back"
     assert 'class="card-columns"' not in adding
 
@@ -1594,39 +1529,25 @@ def test_the_editor_is_the_row_and_the_anchor_names_it(client, db):
     """
     html = _add_page(client, _with_reviewers(client, db, "rc-iseditor"))
 
-    assert 'class="card row-editor-anchored"' not in html, (
-        "the editor card is back"
-    )
-    assert ">Add new reviewer</h2>" not in html, (
-        "the retired card's heading is back"
-    )
+    assert 'class="card row-editor-anchored"' not in html, "the editor card is back"
+    assert ">Add new reviewer</h2>" not in html, "the retired card's heading is back"
 
     # The anchor is on the add row itself, and that row is in the table.
-    row = re.search(
-        r'<tr[^>]*id="reviewers-row-editor"[^>]*>', html
-    )
+    row = re.search(r'<tr[^>]*id="reviewers-row-editor"[^>]*>', html)
     assert row, "nothing carries the editor anchor"
-    assert "reviewer-edit-row" in row.group(0), (
-        "the anchor is on something other than the edit row"
-    )
+    assert "reviewer-edit-row" in row.group(0), "the anchor is on something other than the edit row"
     table = _div_block(html, '<div class="card table-pager-anchored"')
-    assert 'id="reviewers-row-editor"' in table, (
-        "the editor anchor is outside the table card"
-    )
+    assert 'id="reviewers-row-editor"' in table, "the editor anchor is outside the table card"
 
     # ...and it carries the landing margin, or it arrives flush.
-    assert "row-action-target" in row.group(0), (
-        "the add row has no landing margin"
-    )
+    assert "row-action-target" in row.group(0), "the add row has no landing margin"
 
     # The mode is still ANNOUNCED. The card's `<h2>` was the only
     # accessible name for "you are adding" versus "you are editing";
     # what replaced it visually is a highlighted row, which reaches
     # nobody using a screen reader. Removing the card lost this
     # silently, so it is pinned rather than trusted.
-    bar = re.search(
-        r'<tr class="[^"]*\brow-editor-bar\b[^"]*">.*?</tr>', html, re.S
-    )
+    bar = re.search(r'<tr class="[^"]*\brow-editor-bar\b[^"]*">.*?</tr>', html, re.S)
     assert bar, "no editor bar"
     label = re.search(
         r'<span class="visually-hidden"[^>]*>\s*([^<]+?)\s*</span>',
@@ -1634,7 +1555,7 @@ def test_the_editor_is_the_row_and_the_anchor_names_it(client, db):
     )
     assert label, "the edit mode has no accessible name"
     assert label.group(1) == "Add new reviewer", label.group(1)
-    assert 'aria-live' in bar.group(0), (
+    assert "aria-live" in bar.group(0), (
         "the mode is not announced when a failed save re-renders the "
         "page into it under the operator"
     )
@@ -1642,11 +1563,18 @@ def test_the_editor_is_the_row_and_the_anchor_names_it(client, db):
 
 @pytest.mark.parametrize(
     "state,adding,panel_expected",
-    [("draft", False, True), ("draft", True, False),
-     ("validated", False, True), ("validated", True, False),
-     ("ready", False, False), ("ready", True, False),
-     ("expired", False, False), ("expired", True, False),
-     ("archived", False, False), ("archived", True, False)],
+    [
+        ("draft", False, True),
+        ("draft", True, False),
+        ("validated", False, True),
+        ("validated", True, False),
+        ("ready", False, False),
+        ("ready", True, False),
+        ("expired", False, False),
+        ("expired", True, False),
+        ("archived", False, False),
+        ("archived", True, False),
+    ],
 )
 def test_the_labels_editor_renders_once_with_its_panel_else_never(
     client, db, state, adding, panel_expected
@@ -1687,10 +1615,12 @@ def test_the_labels_editor_renders_once_with_its_panel_else_never(
         assert "field-labels-editor" in panel, f"{where}: editor outside panel"
         # The form's TARGET: a cold read once pointed a copy at
         # `/reviewees/field-labels` and the whole suite passed.
-        assert html.count(
-            f'action="/operator/sessions/{review_session.public_id}'
-            f'/reviewers/field-labels"'
-        ) == 1, where
+        assert (
+            html.count(
+                f'action="/operator/sessions/{review_session.public_id}/reviewers/field-labels"'
+            )
+            == 1
+        ), where
         for slot in ("tag_1", "tag_2", "tag_3"):
             assert f'name="{slot}"' in panel, f"{where}: {slot} missing"
 
@@ -1767,12 +1697,8 @@ def test_the_retired_roster_note_stays_retired(client, db):
     rs = _with_reviewers(client, db, "rc-note-gone")
     html = _markup(_page(client, rs))
 
-    assert 'class="form-help roster-card-note"' not in html, (
-        "the retired roster-card note is back"
-    )
-    assert "live behind" not in html, (
-        "something is promising controls live behind Unlock again"
-    )
+    assert 'class="form-help roster-card-note"' not in html, "the retired roster-card note is back"
+    assert "live behind" not in html, "something is promising controls live behind Unlock again"
     # The card it used to sit in still renders, and so does the Unlock
     # control the note used to point at — without which this asserts
     # only that the page failed to render.
@@ -1796,9 +1722,7 @@ def test_the_panel_arrives_open_when_the_flag_is_set(client, db):
     """
     rs = _with_reviewers(client, db, "rc-open")
     closed = _markup(_page(client, rs))
-    opened = _markup(
-        client.get(f"/operator/sessions/{rs.public_id}/reviewers?unlocked=1").text
-    )
+    opened = _markup(client.get(f"/operator/sessions/{rs.public_id}/reviewers?unlocked=1").text)
 
     assert re.search(r'id="roster-unlock-panel"[^>]*\bhidden', closed), (
         "the panel does not ship collapsed by default"
@@ -1822,9 +1746,7 @@ def test_the_panel_arrives_open_when_the_flag_is_set(client, db):
     assert_lock_ends_right_column(opened)
     # The label is on its own line inside the button, so match the
     # element and read its text rather than needling `>Lock<`.
-    btn = re.search(
-        r'<button[^>]*id="roster-unlock-btn".*?</button>', _panel(opened), re.S
-    )
+    btn = re.search(r'<button[^>]*id="roster-unlock-btn".*?</button>', _panel(opened), re.S)
     assert btn, "no Lock control in the open panel"
     assert "Lock" in btn.group(0) and "Unlock" not in btn.group(0), (
         "the open panel offers Unlock, not Lock"
@@ -1849,9 +1771,7 @@ def test_add_mode_puts_the_caret_in_the_new_rows_name_field(client, db):
     assert ".row-editor-first-field" in html, "nothing focuses the field"
 
     # It is the Name box of the edit row, not some other input.
-    edit_row = re.search(
-        r'<tr class="reviewer-edit-row[^"]*"[^>]*>.*?</tr>', html, re.S
-    )
+    edit_row = re.search(r'<tr class="reviewer-edit-row[^"]*"[^>]*>.*?</tr>', html, re.S)
     assert edit_row, "no edit row"
     assert 'class="row-editor-first-field"' in edit_row.group(0), (
         "the caret target is outside the edit row"
@@ -1873,9 +1793,7 @@ def test_add_mode_puts_the_caret_in_the_new_rows_name_field(client, db):
 
 
 @pytest.mark.parametrize("url_suffix", ["?add=1", "?edit_id={rid}"])
-def test_the_edit_row_carries_an_expander_bar_beneath_it(
-    client, db, url_suffix
-):
+def test_the_edit_row_carries_an_expander_bar_beneath_it(client, db, url_suffix):
     """Both editors: the Add row and the Edit row.
 
     The bar is the row's own controls, on the analogy of a selected row,
@@ -1884,18 +1802,14 @@ def test_the_edit_row_carries_an_expander_bar_beneath_it(
     once is a macro that can silently stop being used twice.
     """
     rs = _with_reviewers(client, db, f"rc-bar-{len(url_suffix)}")
-    rid = db.execute(
-        select(Reviewer.id).where(Reviewer.session_id == rs.id)
-    ).scalars().first()
+    rid = db.execute(select(Reviewer.id).where(Reviewer.session_id == rs.id)).scalars().first()
     html = _markup(
-        client.get(
-            f"/operator/sessions/{rs.public_id}/reviewers"
-            + url_suffix.format(rid=rid)
-        ).text
+        client.get(f"/operator/sessions/{rs.public_id}/reviewers" + url_suffix.format(rid=rid)).text
     )
 
-    assert html.count('class="session-expander session-expander-bracketed '
-                      'row-editor-bar"') == 1, "no editor bar, or two"
+    assert html.count('class="session-expander session-expander-bracketed row-editor-bar"') == 1, (
+        "no editor bar, or two"
+    )
 
     # It follows the edit row IMMEDIATELY: a bar separated from its row
     # by another row is not the selected-row analogy.
@@ -1907,7 +1821,8 @@ def test_the_edit_row_carries_an_expander_bar_beneath_it(
         r'<tr class="[^"]*\breviewer-edit-row\b[^"]*"[^>]*>.*?</tr>\s*'
         r'<tr class="session-expander session-expander-bracketed '
         r'row-editor-bar">',
-        html, re.S,
+        html,
+        re.S,
     )
     assert m, "the bar does not directly follow the row it belongs to"
 
@@ -1918,11 +1833,11 @@ def test_the_edit_row_carries_an_expander_bar_beneath_it(
     )
     bar = must_search(
         r'<tr class="session-expander session-expander-bracketed '
-        r'row-editor-bar">.*?</tr>', html, re.S,
+        r'row-editor-bar">.*?</tr>',
+        html,
+        re.S,
     ).group(0)
-    assert ">Save</button>" in bar and ">Cancel</a>" in bar, (
-        "the bar is missing a control"
-    )
+    assert ">Save</button>" in bar and ">Cancel</a>" in bar, "the bar is missing a control"
 
 
 def test_the_editor_bar_spans_the_row_it_hangs_from(client, db):
@@ -1938,13 +1853,9 @@ def test_the_editor_bar_spans_the_row_it_hangs_from(client, db):
     columns = len(re.findall(r"<th\b", header.group(0)))
     assert columns > 3, f"only {columns} columns found; the count is wrong"
 
-    span = re.search(
-        r'row-editor-bar">\s*<td colspan="(\d+)"', html
-    )
+    span = re.search(r'row-editor-bar">\s*<td colspan="(\d+)"', html)
     assert span, "the bar's cell has no colspan"
-    assert int(span.group(1)) == columns, (
-        f"bar spans {span.group(1)} of {columns} columns"
-    )
+    assert int(span.group(1)) == columns, f"bar spans {span.group(1)} of {columns} columns"
 
 
 # ------------------------------------------------------------- rung 3b
@@ -1962,7 +1873,8 @@ def _danger(html: str) -> str:
     """
     m = re.search(
         r'<section[^>]*aria-labelledby="reviewers-danger-h"[^>]*>.*?</section>',
-        _panel(html), re.S,
+        _panel(html),
+        re.S,
     )
     return m.group(0) if m else ""
 
@@ -2003,9 +1915,7 @@ def test_the_danger_zone_is_wired_in_the_panel(client, db):
     # `.confirm-label` this slice kept the scaffold's markup FOR. All
     # three could be changed with the suite green.
     assert ">Danger Zone</h2>" in card, "the card lost its name"
-    assert "danger-zone" in card, (
-        "the card lost the class that frames it as destructive"
-    )
+    assert "danger-zone" in card, "the card lost the class that frames it as destructive"
     assert 'class="confirm-label"' in card, (
         "the confirm lost the class kept over the live card's inline style"
     )
@@ -2044,9 +1954,7 @@ def test_the_danger_zone_is_gated_on_the_roster_having_rows(client, db):
     empty = _session(client, db, "rc-3b-empty")
     html = _markup(_page(client, empty))
     assert 'id="roster-unlock-panel"' in html, "no panel to look in"
-    assert not _danger(html), (
-        "an empty roster offers Delete all reviewers"
-    )
+    assert not _danger(html), "an empty roster offers Delete all reviewers"
     # The ROUTE, not the bare word: the roster card's own note says
     # "delete-all lives behind Unlock", so the substring matches the
     # page's prose. Third instance of that trap in this segment.
@@ -2092,18 +2000,15 @@ def test_add_new_is_disabled_while_a_row_is_being_edited(client, db):
     rs = _with_reviewers(client, db, "rc-addlock")
     reviewer = db.execute(select(Reviewer)).scalars().first()
     html = _markup(
-        client.get(
-            f"/operator/sessions/{rs.public_id}/reviewers?edit_id={reviewer.id}"
-        ).text
+        client.get(f"/operator/sessions/{rs.public_id}/reviewers?edit_id={reviewer.id}").text
     )
     assert 'name="name"' in html, "edit mode did not engage"
 
     right = html[html.index('<div class="toolbar-pane toolbar-right">') :]
     right = right[: right.index("</form>")]
-    assert (
-        '<a class="btn secondary disabled" aria-disabled="true">Add new</a>'
-        in right
-    ), right[-500:]
+    assert '<a class="btn secondary disabled" aria-disabled="true">Add new</a>' in right, right[
+        -500:
+    ]
     assert "?add=1" not in right, "a live Add new while a row is being edited"
     assert 'type="submit" disabled>Search</button>' in right, (
         "a live Search while a row is being edited"

@@ -82,7 +82,11 @@ def what(v: Viewer) -> str:
     """The viewer's access, as the sample card lists it."""
     if not v.grants:
         return f"{v.appointment}, no Support Logs access"
-    held = ", ".join(g for g in (FRONTLINE, SENIOR, RECIPIENT, CONSULTATION, *VIEW, *ADMINISTRATION) if g in v.grants)
+    held = ", ".join(
+        g
+        for g in (FRONTLINE, SENIOR, RECIPIENT, CONSULTATION, *VIEW, *ADMINISTRATION)
+        if g in v.grants
+    )
     return f"{v.appointment}: {held}" if v.appointment else held
 
 
@@ -94,7 +98,15 @@ TODAY = date(2026, 10, 29)  # a Thursday
 NOW = datetime(2026, 10, 29, 14, 0)
 
 DURATIONS = ("5 min", "10 min", "15 min", "30 min", "45 min", "60 min", "60+ min")
-MINUTES = {"5 min": 5, "10 min": 10, "15 min": 15, "30 min": 30, "45 min": 45, "60 min": 60, "60+ min": 60}
+MINUTES = {
+    "5 min": 5,
+    "10 min": 10,
+    "15 min": 15,
+    "30 min": 30,
+    "45 min": 45,
+    "60 min": 60,
+    "60+ min": 60,
+}
 ENCOUNTER_TYPES = (
     "Check-in",
     "Student-initiated conversation",
@@ -109,7 +121,10 @@ CONCERN_AREAS = (
     ("Academic / career", "academic concerns, career, internships"),
     ("Adjustment", "transition, settling in, homesickness"),
     ("Wellbeing", "emotional and mental wellbeing, stress"),
-    ("Health and accessibility", "medical matters, accessibility support, disability accommodations, substance use"),
+    (
+        "Health and accessibility",
+        "medical matters, accessibility support, disability accommodations, substance use",
+    ),
     ("Family", "family circumstances"),
     ("Relationships", "friends, partners, roommates, other interpersonal matters"),
     ("Financial / practical", "money, logistics, practical arrangements"),
@@ -121,7 +136,9 @@ MODES = ("In person", "Phone", "Online", "Other")
 STARTED_BY = ("Student", "Staff", "Other")
 FOLLOW_UP_CADENCES = ("No fixed cadence", "Fortnightly", "Weekly", "Custom")
 NOTE_LIMIT = 300  # within §5.8's 250–500 (UI spec §3)
-NOTE_GUIDANCE = "Brief context only. Detailed case notes belong in the appropriate substantive record system."
+NOTE_GUIDANCE = (
+    "Brief context only. Detailed case notes belong in the appropriate substantive record system."
+)
 # Days between expected contacts; "3+ times weekly" is every second day.
 INTERVALS = {"Monthly": 30, "Fortnightly": 14, "Weekly": 7, "Twice weekly": 3, "3+ times weekly": 2}
 
@@ -136,8 +153,18 @@ class Student:
 STUDENTS = tuple(
     Student(f"S-{n:02d}", name, name.lower().replace(" ", ".") + "@u.example.edu")
     for n, name in enumerate(
-        ("Aiden Chen", "Bao Nguyen", "Clara Tan", "Dev Menon", "Elena Park",
-         "Farid Osman", "Gwyneth Low", "Hana Rahim", "Ivan Seet", "Jia Wen Lee"),
+        (
+            "Aiden Chen",
+            "Bao Nguyen",
+            "Clara Tan",
+            "Dev Menon",
+            "Elena Park",
+            "Farid Osman",
+            "Gwyneth Low",
+            "Hana Rahim",
+            "Ivan Seet",
+            "Jia Wen Lee",
+        ),
         start=1,
     )
 )
@@ -169,22 +196,178 @@ class Encounter:
 
 
 ENCOUNTERS = (
-    Encounter("E-01", "S-03", "Daniel Koh", datetime(2026, 10, 13, 18, 0), "30 min", "Check-in", ("Wellbeing",), "Yes", "In person", "Regular check-in; going to plan."),
-    Encounter("E-02", "S-01", "Daniel Koh", datetime(2026, 10, 15, 21, 0), "10 min", "Check-in", ("Adjustment",), "Yes", "In person"),
-    Encounter("E-03", "S-04", "Daniel Koh", datetime(2026, 10, 19, 12, 0), "15 min", "Welfare follow-up", ("Academic / career",), "Yes", "Online"),
-    Encounter("E-04", "S-03", "Daniel Koh", datetime(2026, 10, 20, 18, 30), "30 min", "Check-in", ("Wellbeing",), "Yes", "In person", "Regular check-in; going to plan."),
-    Encounter("E-05", "S-01", "Daniel Koh", datetime(2026, 10, 22, 21, 0), "15 min", "Check-in", ("Adjustment",), "Yes", "In person", "Settling in better; joined a club."),
-    Encounter("E-06", "S-02", "Daniel Koh", datetime(2026, 10, 24, 20, 0), "10 min", "Practical support", ("Financial / practical",), "No", "In person", "Pointed to the bursary office."),
-    Encounter("E-07", "S-05", "Daniel Koh", datetime(2026, 10, 26, 19, 0), "30 min", "Student-initiated conversation", ("Relationships",), "Yes", "In person"),
-    Encounter("E-08", "S-06", "Daniel Koh", datetime(2026, 10, 27, 13, 0), "5 min", "Staff-initiated conversation", ("Residential / community",), "No", "In person", "Noise on the floor; passed on."),
-    Encounter("E-09", "S-08", "Priya Raman", datetime(2026, 10, 14, 17, 0), "15 min", "Check-in", ("Adjustment",), "Yes", "In person"),
-    Encounter("E-10", "S-09", "Priya Raman", datetime(2026, 10, 25, 11, 0), "10 min", "Practical support", ("Residential / community",), "No", "Phone", "Room repair chased."),
-    Encounter("E-11", "S-10", "Priya Raman", datetime(2026, 10, 28, 20, 0), "30 min", "Student-initiated conversation", ("Academic / career",), "", "In person"),
+    Encounter(
+        "E-01",
+        "S-03",
+        "Daniel Koh",
+        datetime(2026, 10, 13, 18, 0),
+        "30 min",
+        "Check-in",
+        ("Wellbeing",),
+        "Yes",
+        "In person",
+        "Regular check-in; going to plan.",
+    ),
+    Encounter(
+        "E-02",
+        "S-01",
+        "Daniel Koh",
+        datetime(2026, 10, 15, 21, 0),
+        "10 min",
+        "Check-in",
+        ("Adjustment",),
+        "Yes",
+        "In person",
+    ),
+    Encounter(
+        "E-03",
+        "S-04",
+        "Daniel Koh",
+        datetime(2026, 10, 19, 12, 0),
+        "15 min",
+        "Welfare follow-up",
+        ("Academic / career",),
+        "Yes",
+        "Online",
+    ),
+    Encounter(
+        "E-04",
+        "S-03",
+        "Daniel Koh",
+        datetime(2026, 10, 20, 18, 30),
+        "30 min",
+        "Check-in",
+        ("Wellbeing",),
+        "Yes",
+        "In person",
+        "Regular check-in; going to plan.",
+    ),
+    Encounter(
+        "E-05",
+        "S-01",
+        "Daniel Koh",
+        datetime(2026, 10, 22, 21, 0),
+        "15 min",
+        "Check-in",
+        ("Adjustment",),
+        "Yes",
+        "In person",
+        "Settling in better; joined a club.",
+    ),
+    Encounter(
+        "E-06",
+        "S-02",
+        "Daniel Koh",
+        datetime(2026, 10, 24, 20, 0),
+        "10 min",
+        "Practical support",
+        ("Financial / practical",),
+        "No",
+        "In person",
+        "Pointed to the bursary office.",
+    ),
+    Encounter(
+        "E-07",
+        "S-05",
+        "Daniel Koh",
+        datetime(2026, 10, 26, 19, 0),
+        "30 min",
+        "Student-initiated conversation",
+        ("Relationships",),
+        "Yes",
+        "In person",
+    ),
+    Encounter(
+        "E-08",
+        "S-06",
+        "Daniel Koh",
+        datetime(2026, 10, 27, 13, 0),
+        "5 min",
+        "Staff-initiated conversation",
+        ("Residential / community",),
+        "No",
+        "In person",
+        "Noise on the floor; passed on.",
+    ),
+    Encounter(
+        "E-09",
+        "S-08",
+        "Priya Raman",
+        datetime(2026, 10, 14, 17, 0),
+        "15 min",
+        "Check-in",
+        ("Adjustment",),
+        "Yes",
+        "In person",
+    ),
+    Encounter(
+        "E-10",
+        "S-09",
+        "Priya Raman",
+        datetime(2026, 10, 25, 11, 0),
+        "10 min",
+        "Practical support",
+        ("Residential / community",),
+        "No",
+        "Phone",
+        "Room repair chased.",
+    ),
+    Encounter(
+        "E-11",
+        "S-10",
+        "Priya Raman",
+        datetime(2026, 10, 28, 20, 0),
+        "30 min",
+        "Student-initiated conversation",
+        ("Academic / career",),
+        "",
+        "In person",
+    ),
     # Colleagues who are not sample viewers, so Overview has a team (rung 5).
-    Encounter("E-12", "S-07", "Mei Ling Tan", datetime(2026, 10, 17, 18, 0), "15 min", "Check-in", ("Adjustment",), "Yes", "In person"),
-    Encounter("E-13", "S-07", "Mei Ling Tan", datetime(2026, 10, 22, 19, 0), "30 min", "Welfare follow-up", ("Wellbeing",), "Yes", "In person"),
-    Encounter("E-14", "S-07", "Mei Ling Tan", datetime(2026, 10, 28, 21, 0), "30 min", "Student-initiated conversation", ("Wellbeing",), "Yes", "In person"),
-    Encounter("E-15", "S-08", "Arjun Nair", datetime(2026, 10, 21, 12, 0), "10 min", "Practical support", ("Residential / community",), "No", "In person"),
+    Encounter(
+        "E-12",
+        "S-07",
+        "Mei Ling Tan",
+        datetime(2026, 10, 17, 18, 0),
+        "15 min",
+        "Check-in",
+        ("Adjustment",),
+        "Yes",
+        "In person",
+    ),
+    Encounter(
+        "E-13",
+        "S-07",
+        "Mei Ling Tan",
+        datetime(2026, 10, 22, 19, 0),
+        "30 min",
+        "Welfare follow-up",
+        ("Wellbeing",),
+        "Yes",
+        "In person",
+    ),
+    Encounter(
+        "E-14",
+        "S-07",
+        "Mei Ling Tan",
+        datetime(2026, 10, 28, 21, 0),
+        "30 min",
+        "Student-initiated conversation",
+        ("Wellbeing",),
+        "Yes",
+        "In person",
+    ),
+    Encounter(
+        "E-15",
+        "S-08",
+        "Arjun Nair",
+        datetime(2026, 10, 21, 12, 0),
+        "10 min",
+        "Practical support",
+        ("Residential / community",),
+        "No",
+        "In person",
+    ),
 )
 
 
@@ -208,16 +391,47 @@ class Plan:
 
 
 PLANS = (
-    Plan("P-01", "S-03", "Daniel Koh", True, date(2026, 9, 21), "Weekly", "Counselling", "Sam Lee",
-         date(2026, 11, 16), "Weekly check-in; a reminder of the coping plan.", safety_plan=True),
-    Plan("P-02", "S-04", "Daniel Koh", True, date(2026, 10, 5), "Fortnightly", "Dean's Office", "Sam Lee",
-         date(2026, 12, 7), "Fortnightly check-in on settling in."),
+    Plan(
+        "P-01",
+        "S-03",
+        "Daniel Koh",
+        True,
+        date(2026, 9, 21),
+        "Weekly",
+        "Counselling",
+        "Sam Lee",
+        date(2026, 11, 16),
+        "Weekly check-in; a reminder of the coping plan.",
+        safety_plan=True,
+    ),
+    Plan(
+        "P-02",
+        "S-04",
+        "Daniel Koh",
+        True,
+        date(2026, 10, 5),
+        "Fortnightly",
+        "Dean's Office",
+        "Sam Lee",
+        date(2026, 12, 7),
+        "Fortnightly check-in on settling in.",
+    ),
     Plan("P-03", "S-01", "Daniel Koh", False, date(2026, 10, 8), "Weekly"),
     Plan("P-04", "S-05", "Daniel Koh", False, date(2026, 10, 20), "No fixed cadence"),
     Plan("P-05", "S-08", "Priya Raman", False, date(2026, 10, 1), "Fortnightly"),
     Plan("P-06", "S-07", "Mei Ling Tan", False, date(2026, 10, 17), "Weekly"),
-    Plan("P-07", "S-09", "Arjun Nair", True, date(2026, 10, 12), "Monthly", "Residential staff referral", "Sam Lee",
-         date(2026, 12, 14), "Monthly check-in on settling in."),
+    Plan(
+        "P-07",
+        "S-09",
+        "Arjun Nair",
+        True,
+        date(2026, 10, 12),
+        "Monthly",
+        "Residential staff referral",
+        "Sam Lee",
+        date(2026, 12, 14),
+        "Monthly check-in on settling in.",
+    ),
 )
 
 
@@ -229,7 +443,11 @@ def encounters_by(staff: str, sid: str | None = None) -> list[Encounter]:
 
 def plans_of(staff: str, sid: str | None = None) -> list[Plan]:
     """A staff member's active plans, formal assignments first."""
-    found = [p for p in PLANS if p.staff == staff and p.status == "Active" and (sid is None or p.student == sid)]
+    found = [
+        p
+        for p in PLANS
+        if p.staff == staff and p.status == "Active" and (sid is None or p.student == sid)
+    ]
     return sorted(found, key=lambda p: (not p.formal, p.start))
 
 
@@ -337,7 +555,9 @@ CRISIS_STEPS = (
     "Call the counselling duty line, then tell the duty senior staff member.",
     "Record below the step you took and when.",
 )
-MINIMISE = "Record that escalation happened and the step taken; never method, plan or clinical detail."
+MINIMISE = (
+    "Record that escalation happened and the step taken; never method, plan or clinical detail."
+)
 
 
 @dataclass(frozen=True)
@@ -361,16 +581,51 @@ class Flag:
 
 
 FLAGS = (
-    Flag("F-01", "S-05", "Daniel Koh", datetime(2026, 10, 26, 19, 40), "Counselling duty line contacted", "open",
-         step_at=datetime(2026, 10, 26, 19, 25)),
-    Flag("F-02", "S-10", "Priya Raman", datetime(2026, 10, 28, 20, 45), "Duty senior staff contacted", "acknowledged",
-         acknowledged_by="Sam Lee", acknowledged_at=datetime(2026, 10, 29, 8, 30)),
-    Flag("F-03", "S-03", "Daniel Koh", datetime(2026, 9, 18, 22, 0), "Counselling duty line contacted", "closed",
-         acknowledged_by="Sam Lee", acknowledged_at=datetime(2026, 9, 18, 22, 30),
-         outcome="Assessed by counselling", closed_by="Sam Lee", closed_at=datetime(2026, 9, 19, 16, 0)),
-    Flag("F-04", "S-08", "Priya Raman", datetime(2026, 10, 3, 18, 15), "Duty senior staff contacted", "closed",
-         acknowledged_by="Hui Min Goh", acknowledged_at=datetime(2026, 10, 3, 18, 40),
-         outcome="No further action", closed_by="Hui Min Goh", closed_at=datetime(2026, 10, 4, 10, 0)),
+    Flag(
+        "F-01",
+        "S-05",
+        "Daniel Koh",
+        datetime(2026, 10, 26, 19, 40),
+        "Counselling duty line contacted",
+        "open",
+        step_at=datetime(2026, 10, 26, 19, 25),
+    ),
+    Flag(
+        "F-02",
+        "S-10",
+        "Priya Raman",
+        datetime(2026, 10, 28, 20, 45),
+        "Duty senior staff contacted",
+        "acknowledged",
+        acknowledged_by="Sam Lee",
+        acknowledged_at=datetime(2026, 10, 29, 8, 30),
+    ),
+    Flag(
+        "F-03",
+        "S-03",
+        "Daniel Koh",
+        datetime(2026, 9, 18, 22, 0),
+        "Counselling duty line contacted",
+        "closed",
+        acknowledged_by="Sam Lee",
+        acknowledged_at=datetime(2026, 9, 18, 22, 30),
+        outcome="Assessed by counselling",
+        closed_by="Sam Lee",
+        closed_at=datetime(2026, 9, 19, 16, 0),
+    ),
+    Flag(
+        "F-04",
+        "S-08",
+        "Priya Raman",
+        datetime(2026, 10, 3, 18, 15),
+        "Duty senior staff contacted",
+        "closed",
+        acknowledged_by="Hui Min Goh",
+        acknowledged_at=datetime(2026, 10, 3, 18, 40),
+        outcome="No further action",
+        closed_by="Hui Min Goh",
+        closed_at=datetime(2026, 10, 4, 10, 0),
+    ),
 )
 
 
@@ -387,10 +642,17 @@ def may_see(v: Viewer, f: Flag) -> bool:
 def flags_for(v: Viewer, active: bool | None = None, sid: str | None = None) -> list[Flag]:
     """The flags a viewer may see: active first, unacknowledged above
     acknowledged, then closed ones, the latest first in each."""
-    found = [f for f in FLAGS if may_see(v, f) and (active is None or f.active == active)
-             and (sid is None or f.student == sid)]
+    found = [
+        f
+        for f in FLAGS
+        if may_see(v, f)
+        and (active is None or f.active == active)
+        and (sid is None or f.student == sid)
+    ]
     order = {"open": 0, "acknowledged": 1, "closed": 2}
-    return sorted(sorted(found, key=lambda f: f.raised_at, reverse=True), key=lambda f: order[f.status])
+    return sorted(
+        sorted(found, key=lambda f: f.raised_at, reverse=True), key=lambda f: order[f.status]
+    )
 
 
 def unacknowledged(v: Viewer) -> int:
@@ -405,24 +667,48 @@ def when(moment: datetime) -> str:
 
 # --- Plans and sharing (rung 4, §7, §8, §11.1).
 
-ASSIGNMENT_SOURCES = ("Counselling", "Dean's Office", "Master / residential leadership", "Residential staff referral", "Other")
-ASSIGNMENT_CADENCES = ("Monthly", "Fortnightly", "Weekly", "Twice weekly", "3+ times weekly", "Custom")
+ASSIGNMENT_SOURCES = (
+    "Counselling",
+    "Dean's Office",
+    "Master / residential leadership",
+    "Residential staff referral",
+    "Other",
+)
+ASSIGNMENT_CADENCES = (
+    "Monthly",
+    "Fortnightly",
+    "Weekly",
+    "Twice weekly",
+    "3+ times weekly",
+    "Custom",
+)
 PLAN_STATUSES = ("Active", "Paused", "Closed")
 # Frontline colleagues a record can be shared with (§11.1): RFs and RSLMs
 # holding frontline access, copied from the roster's mock with the sample
 # viewers who hold it.
 FRONTLINE_COLLEAGUES = ("Daniel Koh", "Priya Raman", "Mei Ling Tan", "Arjun Nair", "Grace Ho")
 # Their Staff-roster emails, so a filter matches a name or an email.
-STAFF_EMAILS = {"Daniel Koh": "daniel.koh@example.edu", "Priya Raman": "priya.raman@example.edu",
-                "Mei Ling Tan": "meiling.tan@example.edu", "Arjun Nair": "arjun.nair@example.edu",
-                "Grace Ho": "grace.ho@example.edu"}
+STAFF_EMAILS = {
+    "Daniel Koh": "daniel.koh@example.edu",
+    "Priya Raman": "priya.raman@example.edu",
+    "Mei Ling Tan": "meiling.tan@example.edu",
+    "Arjun Nair": "arjun.nair@example.edu",
+    "Grace Ho": "grace.ho@example.edu",
+}
 
 # Each plan's history (§8): how it began and what changed, so a converted
 # follow-up keeps one record rather than a disconnected duplicate.
 PLAN_HISTORY: dict[str, tuple[tuple[date, str], ...]] = {
-    "P-01": ((date(2026, 9, 21), "Sam Lee assigned it: Counselling, weekly, with safety-plan support"),),
-    "P-02": ((date(2026, 9, 28), "Daniel Koh began following up, no fixed cadence"),
-             (date(2026, 10, 5), "Sam Lee converted it to a formal assignment: Dean's Office, fortnightly, review 7 Dec")),
+    "P-01": (
+        (date(2026, 9, 21), "Sam Lee assigned it: Counselling, weekly, with safety-plan support"),
+    ),
+    "P-02": (
+        (date(2026, 9, 28), "Daniel Koh began following up, no fixed cadence"),
+        (
+            date(2026, 10, 5),
+            "Sam Lee converted it to a formal assignment: Dean's Office, fortnightly, review 7 Dec",
+        ),
+    ),
     "P-03": ((date(2026, 10, 8), "Daniel Koh began following up, weekly"),),
     "P-04": ((date(2026, 10, 20), "Daniel Koh began following up, no fixed cadence"),),
     "P-05": ((date(2026, 10, 1), "Priya Raman began following up, fortnightly"),),
@@ -494,13 +780,17 @@ def shared_plans(staff: str, sid: str) -> list[Plan]:
 def may_read_plan(staff: str, p: Plan) -> bool:
     """A plan's owner, or a colleague its owner has shared the student's
     records with (§11.1)."""
-    return p.staff == staff or any(g.grantor == p.staff and g.student == p.student for g in shared_with(staff))
+    return p.staff == staff or any(
+        g.grantor == p.staff and g.student == p.student for g in shared_with(staff)
+    )
 
 
 def shared_encounters(staff: str, sid: str) -> list[Encounter]:
     """A colleague's encounters with a student shared with the viewer,
     labelled with that colleague when shown (UI spec screen 5)."""
-    found = [e for g in shared_with(staff) if g.student == sid for e in encounters_by(g.grantor, sid)]
+    found = [
+        e for g in shared_with(staff) if g.student == sid for e in encounters_by(g.grantor, sid)
+    ]
     return sorted(found, key=lambda e: e.when, reverse=True)
 
 
@@ -539,15 +829,17 @@ def workload() -> list[WorkloadRow]:
     for staff in FRONTLINE_COLLEAGUES:
         plans = plans_of(staff)
         recent = [e for e in encounters_by(staff) if in_period(e)]
-        rows.append({
-            "staff": staff,
-            "formal": sum(1 for p in plans if p.formal),
-            "informal": sum(1 for p in plans if not p.formal),
-            "students": len({e.student for e in recent}),
-            "encounters": len(recent),
-            "minutes": sum(MINUTES[e.duration] for e in recent),
-            "load": sum(WEIGHTS.get(p.cadence, 0) for p in plans if p.formal),
-        })
+        rows.append(
+            {
+                "staff": staff,
+                "formal": sum(1 for p in plans if p.formal),
+                "informal": sum(1 for p in plans if not p.formal),
+                "students": len({e.student for e in recent}),
+                "encounters": len(recent),
+                "minutes": sum(MINUTES[e.duration] for e in recent),
+                "load": sum(WEIGHTS.get(p.cadence, 0) for p in plans if p.formal),
+            }
+        )
     return sorted(rows, key=lambda r: (-r["load"], -r["encounters"], r["staff"]))
 
 
@@ -595,17 +887,23 @@ def hotspots() -> list[Hotspot]:
         flags_active = sum(1 for f in FLAGS if f.student == s.id and f.active)
         if not now and not flags_active:
             continue
-        rows.append({
-            "student": s,
-            "contacts": len(now),
-            "before": len(before),
-            "minutes": sum(MINUTES[e.duration] for e in now),
-            "staff": len({e.staff for e in now}),
-            "formal": any(p.formal for p in PLANS if p.student == s.id and p.status == "Active"),
-            "flags": flags_active,
-            "rising": len(now) >= 2 and len(now) > len(before),
-        })
-    return sorted(rows, key=lambda r: (-r["flags"], not r["rising"], -r["contacts"], r["student"].name))
+        rows.append(
+            {
+                "student": s,
+                "contacts": len(now),
+                "before": len(before),
+                "minutes": sum(MINUTES[e.duration] for e in now),
+                "staff": len({e.staff for e in now}),
+                "formal": any(
+                    p.formal for p in PLANS if p.student == s.id and p.status == "Active"
+                ),
+                "flags": flags_active,
+                "rising": len(now) >= 2 and len(now) > len(before),
+            }
+        )
+    return sorted(
+        rows, key=lambda r: (-r["flags"], not r["rising"], -r["contacts"], r["student"].name)
+    )
 
 
 class Coverage(TypedDict):
@@ -645,10 +943,14 @@ AUDIT = (
     AuditEvent(datetime(2026, 10, 28, 20, 0), "Priya Raman", "Logged an encounter", "S-10"),
     AuditEvent(datetime(2026, 10, 28, 16, 0), "Sam Lee", "Reviewed the support-activity audit"),
     AuditEvent(datetime(2026, 10, 27, 13, 0), "Daniel Koh", "Logged an encounter", "S-06"),
-    AuditEvent(datetime(2026, 10, 27, 9, 10), "Daniel Koh", "Flagged for formal assignment", "S-05"),
+    AuditEvent(
+        datetime(2026, 10, 27, 9, 10), "Daniel Koh", "Flagged for formal assignment", "S-05"
+    ),
     AuditEvent(datetime(2026, 10, 26, 19, 40), "Daniel Koh", "Raised a safety flag", "S-05"),
     AuditEvent(datetime(2026, 10, 24, 11, 0), "Sam Lee", "Downloaded records across staff"),
-    AuditEvent(datetime(2026, 10, 20, 9, 0), "Priya Raman", "Shared records with Daniel Koh", "S-08"),
+    AuditEvent(
+        datetime(2026, 10, 20, 9, 0), "Priya Raman", "Shared records with Daniel Koh", "S-08"
+    ),
     AuditEvent(datetime(2026, 10, 20, 8, 55), "Daniel Koh", "Viewed the student", "S-08"),
 )
 
@@ -672,10 +974,18 @@ CONSULTATION_REASONS = (
     ("Marked increase in recent support", SUGGESTED),
     ("Several staff recently involved", SUGGESTED),
 )
-NONE_MEANS = ("No consultation indicated means only that nothing recorded in Support Logs prompted a second look. "
-              "It never means a student is well or suitable.")
-SAMPLE_EMAILS = ("clara.tan@u.example.edu", "gwyneth.low@u.example.edu", "hana.rahim@u.example.edu",
-                 "jia.wen.lee@u.example.edu", "farid.osman@u.example.edu", "someone.else@u.example.edu")
+NONE_MEANS = (
+    "No consultation indicated means only that nothing recorded in Support Logs prompted a second look. "
+    "It never means a student is well or suitable."
+)
+SAMPLE_EMAILS = (
+    "clara.tan@u.example.edu",
+    "gwyneth.low@u.example.edu",
+    "hana.rahim@u.example.edu",
+    "jia.wen.lee@u.example.edu",
+    "farid.osman@u.example.edu",
+    "someone.else@u.example.edu",
+)
 
 
 @dataclass(frozen=True)
@@ -710,7 +1020,11 @@ def consultation(email: str) -> Consultation:
     brought = {state for r, state in CONSULTATION_REASONS if r in reasons}
     state = next((st for st in CONSULTATION_STATES if st in brought), NONE_INDICATED)
     raisers = [f.raised_by for f in FLAGS if f.student == s.id and f.active]
-    consult = () if not reasons else tuple(dict.fromkeys([p.staff for p in plans] + raisers + [e.staff for e in recent]))
+    consult = (
+        ()
+        if not reasons
+        else tuple(dict.fromkeys([p.staff for p in plans] + raisers + [e.staff for e in recent]))
+    )
     return Consultation(email, s, state, reasons, consult)
 
 
@@ -761,13 +1075,29 @@ CHECK_RUNS = (
 # Logs reads it as the eligibility list and never writes to it). A test
 # holds the copy to the file.
 STAFF_ROSTER = (
-    ("Sam Lee", "Master"), ("Rachel Yeo", "Admin"), ("Priya Raman", "RSLM"), ("Marcus Tan", "RSLM"),
-    ("Nadia Hassan", "RSLM"), ("Daniel Koh", "RF"), ("Mei Ling Tan", "RF"), ("Arjun Nair", "RF"),
-    ("Grace Ho", "RF"), ("Benjamin Chua", "RF"), ("Farah Aziz", "RF"), ("Kenneth Lau", "RF"),
-    ("Siti Rahman", "RF"), ("Wei Jie Ong", "RF"), ("Hui Min Goh", "Exec"),
+    ("Sam Lee", "Master"),
+    ("Rachel Yeo", "Admin"),
+    ("Priya Raman", "RSLM"),
+    ("Marcus Tan", "RSLM"),
+    ("Nadia Hassan", "RSLM"),
+    ("Daniel Koh", "RF"),
+    ("Mei Ling Tan", "RF"),
+    ("Arjun Nair", "RF"),
+    ("Grace Ho", "RF"),
+    ("Benjamin Chua", "RF"),
+    ("Farah Aziz", "RF"),
+    ("Kenneth Lau", "RF"),
+    ("Siti Rahman", "RF"),
+    ("Wei Jie Ong", "RF"),
+    ("Hui Min Goh", "Exec"),
 )
-APPOINTMENTS = {"Master": "Master", "Admin": "Residential Admin", "RSLM": "Residential Student Life Manager",
-                "RF": "Residential Fellow", "Exec": "Residential Executive"}
+APPOINTMENTS = {
+    "Master": "Master",
+    "Admin": "Residential Admin",
+    "RSLM": "Residential Student Life Manager",
+    "RF": "Residential Fellow",
+    "Exec": "Residential Executive",
+}
 # The Access page's columns, each a grant; Other Staff view is one column
 # with its scope (roles rule 8).
 ACCESS_COLUMNS = (FRONTLINE, SENIOR, RECIPIENT, CONSULTATION, "Other Staff view", SYS_ADMIN)
@@ -788,7 +1118,13 @@ def view_scope(name: str) -> str:
     """Other Staff view's scope for a person: None, Aggregate or
     Identifiable."""
     held = grants_of(name)
-    return "Identifiable" if VIEW_IDENTIFIABLE in held else "Aggregate" if VIEW_AGGREGATE in held else "None"
+    return (
+        "Identifiable"
+        if VIEW_IDENTIFIABLE in held
+        else "Aggregate"
+        if VIEW_AGGREGATE in held
+        else "None"
+    )
 
 
 @dataclass(frozen=True)
@@ -802,7 +1138,11 @@ class Lapsed:
     why: str
 
 
-LAPSED = (Lapsed("Jason Teo", (FRONTLINE,), date(2026, 9, 30), "Left the Staff roster: RF appointment ended"),)
+LAPSED = (
+    Lapsed(
+        "Jason Teo", (FRONTLINE,), date(2026, 9, 30), "Left the Staff roster: RF appointment ended"
+    ),
+)
 
 
 @dataclass(frozen=True)
@@ -818,15 +1158,40 @@ class AdminEvent:
 
 
 ADMIN_AUDIT = (
-    AdminEvent(datetime(2026, 10, 27, 10, 5), "Rachel Yeo", "Access", "Granted Consultation check to Nadia Hassan",
-               "Exchange nominations, as the Master asked"),
-    AdminEvent(datetime(2026, 10, 20, 9, 30), "Rachel Yeo", "Configuration", "Added the closure outcome “No further action”"),
-    AdminEvent(datetime(2026, 10, 12, 16, 0), "Rachel Yeo", "Access", "Granted Other Staff view (identifiable) to Siti Rahman",
-               "Covering the Master's oversight, as the Master asked"),
-    AdminEvent(datetime(2026, 9, 30, 0, 0), "Support Logs", "Access", "Jason Teo's Frontline lapsed",
-               "Residential Operations: Jason Teo's RF appointment ended"),
-    AdminEvent(datetime(2026, 8, 1, 9, 0), "Platform super-admin", "Access", "Granted Sys admin to Rachel Yeo",
-               "Support Logs set up for the term"),
+    AdminEvent(
+        datetime(2026, 10, 27, 10, 5),
+        "Rachel Yeo",
+        "Access",
+        "Granted Consultation check to Nadia Hassan",
+        "Exchange nominations, as the Master asked",
+    ),
+    AdminEvent(
+        datetime(2026, 10, 20, 9, 30),
+        "Rachel Yeo",
+        "Configuration",
+        "Added the closure outcome “No further action”",
+    ),
+    AdminEvent(
+        datetime(2026, 10, 12, 16, 0),
+        "Rachel Yeo",
+        "Access",
+        "Granted Other Staff view (identifiable) to Siti Rahman",
+        "Covering the Master's oversight, as the Master asked",
+    ),
+    AdminEvent(
+        datetime(2026, 9, 30, 0, 0),
+        "Support Logs",
+        "Access",
+        "Jason Teo's Frontline lapsed",
+        "Residential Operations: Jason Teo's RF appointment ended",
+    ),
+    AdminEvent(
+        datetime(2026, 8, 1, 9, 0),
+        "Platform super-admin",
+        "Access",
+        "Granted Sys admin to Rachel Yeo",
+        "Support Logs set up for the term",
+    ),
 )
 
 
@@ -841,11 +1206,22 @@ ADMIN_AUDIT = (
 # the one exception to "nobody changes their own access", and it is recorded.
 SELF_GRANT_SENIOR = False
 # Every grant, Other Staff view by its scope, as Who holds access lists them.
-ACCESS_GRANTS = (FRONTLINE, SENIOR, RECIPIENT, CONSULTATION, VIEW_IDENTIFIABLE, VIEW_AGGREGATE, SYS_ADMIN)
+ACCESS_GRANTS = (
+    FRONTLINE,
+    SENIOR,
+    RECIPIENT,
+    CONSULTATION,
+    VIEW_IDENTIFIABLE,
+    VIEW_AGGREGATE,
+    SYS_ADMIN,
+)
 # The reads only Senior identifiable makes (§11.2–11.3): a flag a senior
 # reads as its recipient, or their own student as frontline, is not one.
-SENIOR_READS = ("Viewed a student's history", "Reviewed the support-activity audit",
-                "Downloaded records across staff")
+SENIOR_READS = (
+    "Viewed a student's history",
+    "Reviewed the support-activity audit",
+    "Downloaded records across staff",
+)
 
 
 def holders(grant: str) -> list[str]:
@@ -866,10 +1242,19 @@ def senior_reads(days: int = PERIOD_DAYS) -> list[SeniorReads]:
     since = TODAY - timedelta(days=days - 1)  # as `in_period`
     rows: list[SeniorReads] = []
     for name in holders(SENIOR):
-        reads = [a for a in AUDIT if a.actor == name and a.at.date() >= since and a.action in SENIOR_READS]
-        rows.append({"staff": name, "reads": len(reads),
-                     "downloads": sum(a.action == "Downloaded records across staff" for a in reads),
-                     "last": max((a.at for a in reads), default=None)})
+        reads = [
+            a
+            for a in AUDIT
+            if a.actor == name and a.at.date() >= since and a.action in SENIOR_READS
+        ]
+        rows.append(
+            {
+                "staff": name,
+                "reads": len(reads),
+                "downloads": sum(a.action == "Downloaded records across staff" for a in reads),
+                "last": max((a.at for a in reads), default=None),
+            }
+        )
     return rows
 
 
@@ -879,6 +1264,7 @@ def senior_reads(days: int = PERIOD_DAYS) -> list[SeniorReads]:
 # them, or purge them all. A purge hides records from every page and keeps
 # them; senior identifiable access alone deletes them, a whole purge or
 # one student's records in it (rung 8; author, 2026-10-30).
+
 
 # Residential's terms (`residentialapps/docs/sample_data/terms.csv`,
 # copied: Support Logs may not import Residential Operations, which sets
@@ -916,9 +1302,28 @@ def term(key: str | None) -> Term | None:
     return next((t for t in TERMS if t.key == key), None)
 
 
-ENCOUNTER_COLUMNS = ("Date", "Time", "Student email", "Student", "Duration", "Type", "Concern areas",
-                     "Follow-up needed", "How", "Note")
-PLAN_COLUMNS = ("Student email", "Student", "Kind", "Source", "Cadence", "Since", "Review", "Status")
+ENCOUNTER_COLUMNS = (
+    "Date",
+    "Time",
+    "Student email",
+    "Student",
+    "Duration",
+    "Type",
+    "Concern areas",
+    "Follow-up needed",
+    "How",
+    "Note",
+)
+PLAN_COLUMNS = (
+    "Student email",
+    "Student",
+    "Kind",
+    "Source",
+    "Cadence",
+    "Since",
+    "Review",
+    "Status",
+)
 # An upload adds follow-ups only: formal assignments are senior staff's
 # (§7), so the plans template has no Kind or Source.
 PLAN_TEMPLATE_COLUMNS = ("Student email", "Student", "Cadence", "Since")
@@ -932,8 +1337,20 @@ def encounter_rows(staff: str, t: Term | None, sid: str | None = None) -> list[l
         if (t and not t.start <= e.when.date() <= t.end) or (sid and e.student != sid):
             continue
         s = _named(e.student)
-        rows.append([e.when.date().isoformat(), e.when.strftime("%H:%M"), s.email, s.name, e.duration, e.type,
-                     "; ".join(e.concerns), e.follow_up, e.mode, e.note])
+        rows.append(
+            [
+                e.when.date().isoformat(),
+                e.when.strftime("%H:%M"),
+                s.email,
+                s.name,
+                e.duration,
+                e.type,
+                "; ".join(e.concerns),
+                e.follow_up,
+                e.mode,
+                e.note,
+            ]
+        )
     return rows
 
 
@@ -947,8 +1364,18 @@ def plan_rows(staff: str, t: Term | None, sid: str | None = None) -> list[list[s
         if (t and p.start > t.end) or (sid and p.student != sid):
             continue
         s = _named(p.student)
-        rows.append([s.email, s.name, "Formal assignment" if p.formal else "Follow-up", p.source, p.cadence,
-                     p.start.isoformat(), p.review.isoformat() if p.review else "", p.status])
+        rows.append(
+            [
+                s.email,
+                s.name,
+                "Formal assignment" if p.formal else "Follow-up",
+                p.source,
+                p.cadence,
+                p.start.isoformat(),
+                p.review.isoformat() if p.review else "",
+                p.status,
+            ]
+        )
     return rows
 
 
@@ -990,15 +1417,21 @@ def term_of(d: date) -> Term | None:
 # them by staff, student and term, and deletes purged records, every action
 # audited. A download names the staff member in its own column.
 
-RECORD_KINDS: dict[str, tuple[str, tuple[str, ...]]] = {"encounters": ("Encounters", ENCOUNTER_COLUMNS), "plans": ("Plans", PLAN_COLUMNS)}
+RECORD_KINDS: dict[str, tuple[str, tuple[str, ...]]] = {
+    "encounters": ("Encounters", ENCOUNTER_COLUMNS),
+    "plans": ("Plans", PLAN_COLUMNS),
+}
 # What a senior upload takes after its Staff column: a plan may be a formal
 # assignment (§7), and a new one is always Active, so no Status.
-STAFF_TEMPLATE_COLUMNS: dict[str, tuple[str, ...]] = {"encounters": ENCOUNTER_COLUMNS,
-                          "plans": tuple(c for c in PLAN_COLUMNS if c != "Status")}
+STAFF_TEMPLATE_COLUMNS: dict[str, tuple[str, ...]] = {
+    "encounters": ENCOUNTER_COLUMNS,
+    "plans": tuple(c for c in PLAN_COLUMNS if c != "Status"),
+}
 
 
-def staff_rows(what: str, staff: str | None, t: Term | None,
-               sid: str | None = None) -> tuple[tuple[str, ...], list[list[str]]]:
+def staff_rows(
+    what: str, staff: str | None, t: Term | None, sid: str | None = None
+) -> tuple[tuple[str, ...], list[list[str]]]:
     """Every staff member's records of a kind (one staff member's when
     named) in a term or all terms, each row led by its staff member."""
     columns = ("Staff", *RECORD_KINDS[what][1])
@@ -1022,7 +1455,11 @@ def record_students(staff: str, page: str = "students") -> list[Student]:
     """The students a staff member's own records of a page's kind are about
     (encounters on Students, plans on My plans), for Your records' student
     filter, by name."""
-    ids = {e.student for e in encounters_by(staff)} if page == "students" else {p.student for p in PLANS if p.staff == staff}
+    ids = (
+        {e.student for e in encounters_by(staff)}
+        if page == "students"
+        else {p.student for p in PLANS if p.staff == staff}
+    )
     return sorted((s for s in STUDENTS if s.id in ids), key=lambda s: s.name)
 
 

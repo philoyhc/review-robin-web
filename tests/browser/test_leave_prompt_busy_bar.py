@@ -45,9 +45,7 @@ def _reviewers_tab(page: Page):
     return page.locator("a.nav-tab", has_text="Reviewers")
 
 
-def test_instruments_declined_leave_arms_no_bar(
-    page: Page, new_session: Callable[[], str]
-) -> None:
+def test_instruments_declined_leave_arms_no_bar(page: Page, new_session: Callable[[], str]) -> None:
     session_id = new_session()
     card = open_unlocked(page, session_id)
     name = rows(card).first.locator("[data-new-model-rf-name]")

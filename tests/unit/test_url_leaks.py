@@ -43,10 +43,10 @@ URLS_MODULE = "app/web/urls.py"
 _HELPERS = re.compile(r"\b(?:url|is_here|here_in|here_under|host_url)\(")
 # Jinja and HTML comments, CSS and script block comments, and script
 # line comments: none of them is emitted as a URL.
-_COMMENTS = re.compile(
-    r"\{#.*?#\}|<!--.*?-->|/\*.*?\*/|^[ \t]*//[^\n]*", re.DOTALL | re.MULTILINE
+_COMMENTS = re.compile(r"\{#.*?#\}|<!--.*?-->|/\*.*?\*/|^[ \t]*//[^\n]*", re.DOTALL | re.MULTILINE)
+_TEMPLATED_ATTR = re.compile(
+    r"""\b(?:href|action|formaction|src)=(["'])\{[{%]-?\s*+(?!(?:host_)?url\()"""
 )
-_TEMPLATED_ATTR = re.compile(r"""\b(?:href|action|formaction|src)=(["'])\{[{%]-?\s*+(?!(?:host_)?url\()""")
 _BARE_ROOT_ATTR = re.compile(r"""\b(?:href|action|formaction|src)=(["'])/\1""")
 _URL_PATH = re.compile(r"\burl\.path\b")
 _HELPER_NAMES = r"(?:url|here|is_here|here_in|here_under)"

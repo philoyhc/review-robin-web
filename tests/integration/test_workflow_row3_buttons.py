@@ -46,9 +46,7 @@ def test_release_responses_now_stamps_release_at(db: Session) -> None:
     review_session.status = "expired"
     db.commit()
     assert review_session.responses_release_at is None
-    lifecycle.release_responses_now(
-        db, review_session=review_session, user=op
-    )
+    lifecycle.release_responses_now(db, review_session=review_session, user=op)
     assert review_session.responses_release_at is not None
     assert lifecycle.is_response_release_window_open(review_session)
 
@@ -60,9 +58,7 @@ def test_release_responses_now_is_inert_on_an_unclosed_session(
     does not open, and closing the session later opens it on the
     schedule that was written."""
     review_session, op = _draft_session(db, "rel-inert")
-    lifecycle.release_responses_now(
-        db, review_session=review_session, user=op
-    )
+    lifecycle.release_responses_now(db, review_session=review_session, user=op)
     assert review_session.responses_release_at is not None
     assert not lifecycle.is_response_release_window_open(review_session)
 
@@ -72,25 +68,17 @@ def test_release_responses_now_is_inert_on_an_unclosed_session(
 
 def test_release_responses_now_clears_prior_until(db: Session) -> None:
     review_session, op = _draft_session(db, "rel-clear")
-    review_session.responses_release_until = datetime.now(
-        UTC
-    ) - timedelta(hours=1)
+    review_session.responses_release_until = datetime.now(UTC) - timedelta(hours=1)
     db.commit()
-    lifecycle.release_responses_now(
-        db, review_session=review_session, user=op
-    )
+    lifecycle.release_responses_now(db, review_session=review_session, user=op)
     assert review_session.responses_release_until is None
 
 
 def test_release_responses_now_emits_audit_event(db: Session) -> None:
     review_session, op = _draft_session(db, "rel-audit")
-    review_session.responses_release_until = datetime.now(
-        UTC
-    ) - timedelta(hours=1)
+    review_session.responses_release_until = datetime.now(UTC) - timedelta(hours=1)
     db.commit()
-    lifecycle.release_responses_now(
-        db, review_session=review_session, user=op
-    )
+    lifecycle.release_responses_now(db, review_session=review_session, user=op)
     event = db.execute(
         select(AuditEvent).where(
             AuditEvent.event_type == "session.responses_released",
@@ -111,23 +99,17 @@ def test_stop_responses_release_stamps_until(db: Session) -> None:
     # Open the release window first — closed session plus a reached
     # anchor, since 19F PR 2a.
     review_session.status = "expired"
-    review_session.responses_release_at = datetime.now(
-        UTC
-    ) - timedelta(hours=1)
+    review_session.responses_release_at = datetime.now(UTC) - timedelta(hours=1)
     db.commit()
     assert lifecycle.is_response_release_window_open(review_session)
-    lifecycle.stop_responses_release(
-        db, review_session=review_session, user=op
-    )
+    lifecycle.stop_responses_release(db, review_session=review_session, user=op)
     assert review_session.responses_release_until is not None
     assert not lifecycle.is_response_release_window_open(review_session)
 
 
 def test_stop_responses_release_emits_audit_event(db: Session) -> None:
     review_session, op = _draft_session(db, "stop-audit")
-    lifecycle.stop_responses_release(
-        db, review_session=review_session, user=op
-    )
+    lifecycle.stop_responses_release(db, review_session=review_session, user=op)
     event = db.execute(
         select(AuditEvent).where(
             AuditEvent.event_type == "session.responses_release_stopped",
@@ -162,9 +144,7 @@ def test_workflow_release_responses_route_stamps_and_redirects(
     assert review_session.responses_release_at is not None
 
 
-def test_workflow_stop_release_route_stamps_and_redirects(
-    client: TestClient, db: Session
-) -> None:
+def test_workflow_stop_release_route_stamps_and_redirects(client: TestClient, db: Session) -> None:
     response = client.post(
         "/operator/sessions",
         data={"name": "Stop", "code": "stop-route", "description": ""},
@@ -209,9 +189,7 @@ def test_workflow_archive_route_redirects_to_archived_lobby(
     assert review_session.status == "archived"
 
 
-def test_workflow_archive_route_works_from_ready_state(
-    client: TestClient, db: Session
-) -> None:
+def test_workflow_archive_route_works_from_ready_state(client: TestClient, db: Session) -> None:
     """The underlying ``lifecycle.archive_session`` service is
     permissive (accepts any non-archived state) — distinct from
     the bulk-archive route's draft-only filter. Pins that

@@ -14,6 +14,7 @@ audit envelope → preview render. The legacy
 ``/assignments/rule-based/generate`` route + the Rule Based card
 template + the ``test_rule_based_*`` files retired with this slice.
 """
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -33,9 +34,7 @@ from ._lookups import detail_of
 from ._public_id import public_id
 
 
-def _make_session(
-    client: TestClient, db: Session, code: str = "spring-2026"
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, code: str = "spring-2026") -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "Spring", "code": code},
@@ -93,9 +92,7 @@ def test_full_matrix_save_persists_assignments_and_sets_mode(
         f"/operator/sessions/{review_session.public_id}/assignments"
     )
     rows = list(
-        db.execute(
-            select(Assignment).where(Assignment.session_id == review_session.id)
-        ).scalars()
+        db.execute(select(Assignment).where(Assignment.session_id == review_session.id)).scalars()
     )
     assert len(rows) == 2
     assert all(r.created_by_mode == "rule_based" for r in rows)
@@ -114,9 +111,7 @@ def test_full_matrix_save_persists_assignments_and_sets_mode(
     assert event.detail["context"]["mode"] == "rule_based"
 
 
-def test_full_matrix_fans_pairs_out_per_instrument(
-    client: TestClient, db: Session
-) -> None:
+def test_full_matrix_fans_pairs_out_per_instrument(client: TestClient, db: Session) -> None:
     """Each (reviewer, reviewee) pair gets one Assignment row per
     instrument. Multi-instrument sessions need the fanout for the
     reviewer surface's per-instrument paginated view to find rows."""
@@ -130,9 +125,7 @@ def test_full_matrix_fans_pairs_out_per_instrument(
         reviewee_idents=["carol@example.edu", "dan-2026"],
     )
     [default_instrument] = list(
-        db.execute(
-            select(Instrument).where(Instrument.session_id == review_session.id)
-        ).scalars()
+        db.execute(select(Instrument).where(Instrument.session_id == review_session.id)).scalars()
     )
     client.post(
         f"/operator/sessions/{review_session.public_id}/instruments/add-new-model",
@@ -145,9 +138,7 @@ def test_full_matrix_fans_pairs_out_per_instrument(
     assert response.status_code == 303
 
     rows = list(
-        db.execute(
-            select(Assignment).where(Assignment.session_id == review_session.id)
-        ).scalars()
+        db.execute(select(Assignment).where(Assignment.session_id == review_session.id)).scalars()
     )
     # 2 pairs × 2 instruments = 4 Assignment rows.
     assert len(rows) == 4
@@ -175,14 +166,10 @@ def test_full_matrix_fans_pairs_out_per_instrument(
         assert event.detail is not None
         assert event.detail["counts"]["instruments"] == 1
         assert isinstance(event.detail["refs"]["instrument_id"], int)
-    assert {
-        detail_of(event)["refs"]["instrument_id"] for event in events
-    } == set(instrument_ids)
+    assert {detail_of(event)["refs"]["instrument_id"] for event in events} == set(instrument_ids)
 
 
-def test_re_save_without_confirm_blocks(
-    client: TestClient, db: Session
-) -> None:
+def test_re_save_without_confirm_blocks(client: TestClient, db: Session) -> None:
     """Re-Generate on a session with existing pairs requires
     ``confirm_replace=true``; without it the route 303s back with
     ``?needs_confirm=1`` and the existing rows survive."""
@@ -201,16 +188,12 @@ def test_re_save_without_confirm_blocks(
     assert response.status_code == 303
     assert "needs_confirm=1" in response.headers["location"]
     rows = list(
-        db.execute(
-            select(Assignment).where(Assignment.session_id == review_session.id)
-        ).scalars()
+        db.execute(select(Assignment).where(Assignment.session_id == review_session.id)).scalars()
     )
     assert len(rows) == 1
 
 
-def test_re_save_with_confirm_replaces(
-    client: TestClient, db: Session
-) -> None:
+def test_re_save_with_confirm_replaces(client: TestClient, db: Session) -> None:
     """``confirm_replace=true`` lets the page-level Generate run
     again over existing rows. The roster is unchanged, so the
     reconcile keeps the single pair and deletes nothing — the new
@@ -226,9 +209,7 @@ def test_re_save_with_confirm_replaces(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(client, review_session.id)
 
-    response = generate_via_page_button(
-        client, review_session.id, confirm_replace=True
-    )
+    response = generate_via_page_button(client, review_session.id, confirm_replace=True)
     assert response.status_code == 303
 
     events = list(
@@ -243,9 +224,7 @@ def test_re_save_with_confirm_replaces(
     assert events[0].detail["counts"]["kept"] == 1
 
 
-def test_assignments_hub_renders_count_and_mode(
-    client: TestClient, db: Session
-) -> None:
+def test_assignments_hub_renders_count_and_mode(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db)
     _seed_roster(
         client,
@@ -284,20 +263,18 @@ def test_assignments_hub_renders_count_and_mode(
     assert "data-show-pill=" not in populated.text
     assert "data-included-count=" in populated.text
     assert '<span class="pill pill-count">Individual</span>' in populated.text
-    instrument_id = db.execute(
-        select(Instrument.id).where(Instrument.session_id == review_session.id)
-    ).scalars().first()
-    show_cell = populated.text.split(
-        f'data-filter-instrument="{instrument_id}"', 1
-    )[1][:200]
+    instrument_id = (
+        db.execute(select(Instrument.id).where(Instrument.session_id == review_session.id))
+        .scalars()
+        .first()
+    )
+    show_cell = populated.text.split(f'data-filter-instrument="{instrument_id}"', 1)[1][:200]
     assert "checked" in show_cell
     chip = populated.text.split(f'data-filter-instrument="{instrument_id}"', 1)[0]
     assert chip.rsplit("<label", 1)[1].startswith(' class="pill pill-count tag-chip"')
 
 
-def test_assignments_hub_no_flash_banner_after_generate(
-    client: TestClient, db: Session
-) -> None:
+def test_assignments_hub_no_flash_banner_after_generate(client: TestClient, db: Session) -> None:
     """Post-15B refinement: the blue "Assignments generated" flash
     banner retired. The redirect after Generate lands plain on the
     Assignments page; the status table is the only post-generate
@@ -371,9 +348,7 @@ def test_ready_session_preview_rows_render_alongside_show_script(
     review_session.status = "ready"
     db.commit()
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/assignments").text
     # Status table renders in ready state too.
     assert 'id="assignments-status-blocks"' in body
     assert "data-filter-instrument=" in body
@@ -413,9 +388,7 @@ def test_non_operator_gets_404_on_assignments_hub_and_post(
     assert post.status_code == 404
 
 
-def test_the_count_line_uses_the_shared_partial_and_class(
-    client: TestClient, db: Session
-) -> None:
+def test_the_count_line_uses_the_shared_partial_and_class(client: TestClient, db: Session) -> None:
     """Segment 19I Item 10 — the page carried three separate
     notices: a filter count flush right in the actions row, a
     `Showing first N of M unique pairs.` line in `.form-help`, and
@@ -449,8 +422,7 @@ def test_the_count_line_uses_the_shared_partial_and_class(
     # than on the chip row: since 19I Item 12 rung 3 a roster with no
     # tags at all renders no chip row, and this seed has none.
     # Unquoted ``card``: it gained ``table-pager-anchored`` at 19J.8.
-    preview = body[body.rindex('<div class="card', 0,
-                               body.index('id="assignments-table"')) :]
+    preview = body[body.rindex('<div class="card', 0, body.index('id="assignments-table"')) :]
     assert '<p class="muted table-showing-hint">' in preview
     # The class the page used to use, and the wording that went with
     # it. `.form-help` survives elsewhere in the app, so this is
@@ -469,9 +441,7 @@ def test_the_count_line_uses_the_shared_partial_and_class(
     assert '<span class="muted">Showing' not in body
 
 
-def test_assignments_hub_pages_a_large_pair_list(
-    client: TestClient, db: Session
-) -> None:
+def test_assignments_hub_pages_a_large_pair_list(client: TestClient, db: Session) -> None:
     """Renamed at 19J.5 rung 4, because the page stopped truncating.
     217 assignments used to mean 200 rendered and 17 unreachable; they
     are now a second page, and the sentence that announced the loss is
@@ -486,9 +456,7 @@ def test_assignments_hub_pages_a_large_pair_list(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(client, review_session.id)
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/assignments").text
     # No withheld sentence: nothing is withheld. What was
     # `Showing first 200 of 217 assignments; 17 more not shown.` until
     # rung 4 is now a pager, and the 17 are on its second page.
@@ -526,9 +494,7 @@ def test_hub_renders_current_pairs_card_when_assignments_exist(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(client, review_session.id)
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/assignments").text
     assert 'id="assignments-table"' in body
     assert "alice@example.edu" in body
     assert "carol@example.edu" in body
@@ -542,27 +508,20 @@ def test_hub_renders_per_slot_columns_with_visibility_toggles(
     column visibility on the preview table."""
 
     review_session = _make_session(client, db, code="hub-cols")
-    reviewer_csv = (
-        "ReviewerName,ReviewerEmail,ReviewerTag1\n"
-        "Alice,alice@example.edu,senior\n"
-    )
+    reviewer_csv = "ReviewerName,ReviewerEmail,ReviewerTag1\nAlice,alice@example.edu,senior\n"
     client.post(
         f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={"file": ("r.csv", reviewer_csv.encode(), "text/csv")},
         follow_redirects=False,
     )
-    reviewee_csv = (
-        "RevieweeName,RevieweeEmail,RevieweeTag2\n"
-        "Carol,carol@example.edu,cohort-a\n"
-    )
+    reviewee_csv = "RevieweeName,RevieweeEmail,RevieweeTag2\nCarol,carol@example.edu,cohort-a\n"
     client.post(
         f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={"file": ("e.csv", reviewee_csv.encode(), "text/csv")},
         follow_redirects=False,
     )
     rel_csv = (
-        "ReviewerEmail,RevieweeEmail,PairContextTag1\n"
-        "alice@example.edu,carol@example.edu,bench-a\n"
+        "ReviewerEmail,RevieweeEmail,PairContextTag1\nalice@example.edu,carol@example.edu,bench-a\n"
     )
     client.post(
         f"/operator/sessions/{review_session.public_id}/relationships/import",
@@ -572,9 +531,7 @@ def test_hub_renders_per_slot_columns_with_visibility_toggles(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(client, review_session.id)
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/assignments").text
 
     # The header carries exactly the slots that hold data. Until
     # 19I Item 12 rung 3 it carried all nine, the six empty ones
@@ -596,8 +553,7 @@ def test_hub_renders_per_slot_columns_with_visibility_toggles(
     # empty across the roster and render no column at all. Scoped to
     # the table because the page's <style> block still names every
     # ``col-{slot}`` in its (now partly dead) col-hidden rules.
-    for empty in ("col-rt2", "col-rt3", "col-et1", "col-et3",
-                  "col-p2", "col-p3"):
+    for empty in ("col-rt2", "col-rt3", "col-et1", "col-et3", "col-p2", "col-p3"):
         assert empty not in table, empty
     assert "col-a3" not in body
     assert 'data-sort-key="reviewer"' in body
@@ -623,14 +579,11 @@ def test_hub_renders_per_slot_columns_with_visibility_toggles(
         assert f'data-col-toggle="{empty}"' not in body, empty
 
     # All three groups still render, because each has one live slot.
-    for group in ("Show reviewers:", "Show reviewees:",
-                  "Show relationships:"):
+    for group in ("Show reviewers:", "Show reviewees:", "Show relationships:"):
         assert group in body
 
 
-def test_the_selected_count_leads_the_expander_panel(
-    client: TestClient, db: Session
-) -> None:
+def test_the_selected_count_leads_the_expander_panel(client: TestClient, db: Session) -> None:
     """The count sits left of every button it shares a row with.
 
     It read as a control when it sat between `Clear` and `Inactivate`
@@ -658,13 +611,9 @@ def test_the_selected_count_leads_the_expander_panel(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(client, review_session.id)
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/assignments").text
     builder = body[
-        body.index('tr.id = "assignments-row-expander"') : body.index(
-            "function render()"
-        )
+        body.index('tr.id = "assignments-row-expander"') : body.index("function render()")
     ]
 
     count = builder.index('<span class="row-expander-count">')

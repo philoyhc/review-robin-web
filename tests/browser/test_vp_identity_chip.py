@@ -24,9 +24,7 @@ def _cycle(card: Locator, audience: str) -> Locator:
     )
 
 
-def test_enter_and_space_cycle_a_mode_chip(
-    page: Page, new_session: Callable[[], str]
-) -> None:
+def test_enter_and_space_cycle_a_mode_chip(page: Page, new_session: Callable[[], str]) -> None:
     """A keyboard user reaches Raw, and so the identity chip, without a
     mouse (the author, 2026-10-11)."""
     card = open_unlocked(page, new_session())
@@ -41,14 +39,12 @@ def test_enter_and_space_cycle_a_mode_chip(
     chip = card.locator('[data-new-model-vp-identity="reviewee"]')
     expect(chip).to_be_visible()
     page.keyboard.press("Space")  # Raw → Anonymized
-    expect(cycle).to_have_attribute(
-        "data-new-model-vp-current-slug", "anonymized"
-    )
+    expect(cycle).to_have_attribute("data-new-model-vp-current-slug", "anonymized")
     expect(chip).to_be_hidden()
     # The keyed cycle wrote the hidden input Save sends.
-    expect(
-        card.locator('[data-new-model-vp-input="reviewee-after_release"]')
-    ).to_have_value("anonymized")
+    expect(card.locator('[data-new-model-vp-input="reviewee-after_release"]')).to_have_value(
+        "anonymized"
+    )
 
 
 def test_the_identity_chip_follows_its_cell_and_cycles(

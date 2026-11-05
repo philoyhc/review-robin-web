@@ -14,6 +14,7 @@ Exercises F6-F9:
   invite_error query param.
 - Non-sys-admin GET /operator/sys-admin/users → 403.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -28,15 +29,11 @@ from cordware.settings import identity_settings
 from ._lookups import detail_of
 
 
-def _bootstrap_sys_admin(
-    monkeypatch: pytest.MonkeyPatch, *, email: str
-) -> None:
+def _bootstrap_sys_admin(monkeypatch: pytest.MonkeyPatch, *, email: str) -> None:
     monkeypatch.setattr(settings, "sys_admin_emails", [email])
 
 
-def _bootstrap_super_admin(
-    monkeypatch: pytest.MonkeyPatch, *, email: str
-) -> None:
+def _bootstrap_super_admin(monkeypatch: pytest.MonkeyPatch, *, email: str) -> None:
     """Segment 18S — actor becomes a super-admin (top tier). Super-admin
     implies is_sys_admin + is_operator via the sign-in self-heal, so the
     actor passes ``require_sys_admin`` AND the actor-super guard on
@@ -98,24 +95,17 @@ def test_admit_flips_is_operator_and_emits_audit(
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
     target = _seed_target(db, email="bob@example.edu", is_operator=False)
 
-    response = client.post(
-        f"/operator/sys-admin/users/{target.id}/admit", follow_redirects=False
-    )
+    response = client.post(f"/operator/sys-admin/users/{target.id}/admit", follow_redirects=False)
     assert response.status_code == 303
     # Selection persists on the redirect so the toolbar comes
     # back ready for the next action against the same row.
-    assert (
-        response.headers["location"]
-        == f"/operator/sys-admin/users?selected={target.id}"
-    )
+    assert response.headers["location"] == f"/operator/sys-admin/users?selected={target.id}"
 
     db.refresh(target)
     assert target.is_operator is True
 
     event = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "workspace.operator_admitted"
-        )
+        select(AuditEvent).where(AuditEvent.event_type == "workspace.operator_admitted")
     ).scalar_one()
     assert detail_of(event)["refs"] == {"target_user_id": target.id}
     assert detail_of(event)["changes"] == {"is_operator": [False, True]}
@@ -129,18 +119,14 @@ def test_revoke_flips_is_operator_back_and_emits_audit(
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
     target = _seed_target(db, email="bob@example.edu", is_operator=True)
 
-    response = client.post(
-        f"/operator/sys-admin/users/{target.id}/revoke", follow_redirects=False
-    )
+    response = client.post(f"/operator/sys-admin/users/{target.id}/revoke", follow_redirects=False)
     assert response.status_code == 303
 
     db.refresh(target)
     assert target.is_operator is False
 
     event = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "workspace.operator_revoked"
-        )
+        select(AuditEvent).where(AuditEvent.event_type == "workspace.operator_revoked")
     ).scalar_one()
     assert detail_of(event)["refs"] == {"target_user_id": target.id}
     assert detail_of(event)["changes"] == {"is_operator": [True, False]}
@@ -168,9 +154,7 @@ def test_revoke_refuses_when_user_still_owns_sessions(
         data={"name": "Bob", "code": "bob-1"},
         follow_redirects=False,
     )
-    bob_row = db.execute(
-        select(User).where(User.email == "bob@example.edu")
-    ).scalar_one()
+    bob_row = db.execute(select(User).where(User.email == "bob@example.edu")).scalar_one()
 
     # Alice (sys-admin) tries to revoke; refused with 409.
     alice_client = make_client(_alice_auth_user())
@@ -182,11 +166,7 @@ def test_revoke_refuses_when_user_still_owns_sessions(
     db.refresh(bob_row)
     assert bob_row.is_operator is True  # unchanged
     ops_after = (
-        db.execute(
-            select(SessionOperator).where(
-                SessionOperator.user_id == bob_row.id
-            )
-        )
+        db.execute(select(SessionOperator).where(SessionOperator.user_id == bob_row.id))
         .scalars()
         .all()
     )
@@ -245,9 +225,7 @@ def test_promote_with_confirm_flips_is_sys_admin_and_emits_audit(
     assert target.is_sys_admin is True
 
     event = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "sys_admin.role_promoted"
-        )
+        select(AuditEvent).where(AuditEvent.event_type == "sys_admin.role_promoted")
     ).scalar_one()
     assert detail_of(event)["refs"] == {"target_user_id": target.id}
     assert detail_of(event)["changes"] == {"is_sys_admin": [False, True]}
@@ -285,9 +263,7 @@ def test_demote_with_confirm_flips_is_sys_admin_and_emits_audit(
     # Alice signs in via the gate as a super-admin (self-heals to
     # is_sys_admin=True); bob is pre-seeded as a second sys-admin so
     # demoting him isn't the last-admin case.
-    target = _seed_target(
-        db, email="bob@example.edu", is_operator=True, is_sys_admin=True
-    )
+    target = _seed_target(db, email="bob@example.edu", is_operator=True, is_sys_admin=True)
 
     response = client.post(
         f"/operator/sys-admin/users/{target.id}/demote",
@@ -300,9 +276,7 @@ def test_demote_with_confirm_flips_is_sys_admin_and_emits_audit(
     assert target.is_sys_admin is False
 
     event = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "sys_admin.role_demoted"
-        )
+        select(AuditEvent).where(AuditEvent.event_type == "sys_admin.role_demoted")
     ).scalar_one()
     assert detail_of(event)["refs"] == {"target_user_id": target.id}
 
@@ -327,27 +301,19 @@ def test_demote_last_sys_admin_at_service_layer(
 
     _bootstrap_super_admin(monkeypatch, email="super@example.edu")
     super_actor = _seed_target(db, email="super@example.edu", is_operator=True)
-    solo_admin = _seed_target(
-        db, email="solo@example.edu", is_operator=True, is_sys_admin=True
-    )
+    solo_admin = _seed_target(db, email="solo@example.edu", is_operator=True, is_sys_admin=True)
 
     # Only one column-True sys-admin exists → demoting them trips the
     # floor even though the actor is a valid super-admin.
     with pytest.raises(users_service.UserOperationError) as excinfo:
-        users_service.demote(
-            db, actor=super_actor, target=solo_admin, correlation_id="corr-floor"
-        )
+        users_service.demote(db, actor=super_actor, target=solo_admin, correlation_id="corr-floor")
     assert excinfo.value.code == "last_admin"
     db.refresh(solo_admin)
     assert solo_admin.is_sys_admin is True  # unchanged
 
     # A non-last demote succeeds: add a second admin, then demote one.
-    _seed_target(
-        db, email="second@example.edu", is_operator=True, is_sys_admin=True
-    )
-    users_service.demote(
-        db, actor=super_actor, target=solo_admin, correlation_id="corr-ok"
-    )
+    _seed_target(db, email="second@example.edu", is_operator=True, is_sys_admin=True)
+    users_service.demote(db, actor=super_actor, target=solo_admin, correlation_id="corr-ok")
     db.refresh(solo_admin)
     assert solo_admin.is_sys_admin is False
 
@@ -368,22 +334,16 @@ def test_demote_refuses_an_owner_left_with_no_operator_flag(
     super_actor = _seed_target(db, email="super@example.edu", is_operator=True)
     _seed_target(db, email="other@example.edu", is_operator=True, is_sys_admin=True)
     admin_only = _seed_target(db, email="solo@example.edu", is_sys_admin=True)
-    both = _seed_target(
-        db, email="both@example.edu", is_operator=True, is_sys_admin=True
-    )
+    both = _seed_target(db, email="both@example.edu", is_operator=True, is_sys_admin=True)
     for code, owner in (("p1-solo", admin_only), ("p1-both", both)):
-        review_session = ReviewSession(
-            name=code, code=code, created_by_user_id=owner.id
-        )
+        review_session = ReviewSession(name=code, code=code, created_by_user_id=owner.id)
         db.add(review_session)
         db.flush()
         db.add(SessionOperator(session_id=review_session.id, user_id=owner.id))
     db.commit()
 
     with pytest.raises(users_service.UserOperationError) as excinfo:
-        users_service.demote(
-            db, actor=super_actor, target=admin_only, correlation_id="c1"
-        )
+        users_service.demote(db, actor=super_actor, target=admin_only, correlation_id="c1")
     assert excinfo.value.code == "still_owner"
     with pytest.raises(users_service.UserOperationError) as excinfo:
         users_service.apply_batch(
@@ -420,9 +380,7 @@ def test_self_admit_blocked(
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
     client.get("/operator/sys-admin/users")  # bootstrap alice
 
-    alice_row = db.execute(
-        select(User).where(User.email == "alice@example.edu")
-    ).scalar_one()
+    alice_row = db.execute(select(User).where(User.email == "alice@example.edu")).scalar_one()
     response = client.post(
         f"/operator/sys-admin/users/{alice_row.id}/admit",
         follow_redirects=False,
@@ -437,9 +395,7 @@ def test_self_demote_blocked(
 ) -> None:
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
     client.get("/operator/sys-admin/users")
-    alice_row = db.execute(
-        select(User).where(User.email == "alice@example.edu")
-    ).scalar_one()
+    alice_row = db.execute(select(User).where(User.email == "alice@example.edu")).scalar_one()
     response = client.post(
         f"/operator/sys-admin/users/{alice_row.id}/demote",
         data={"confirm": "true"},
@@ -466,18 +422,14 @@ def test_invite_creates_user_row_and_emits_audit(
     )
     assert response.status_code == 303
 
-    new_row = db.execute(
-        select(User).where(User.email == "new@example.edu")
-    ).scalar_one()
+    new_row = db.execute(select(User).where(User.email == "new@example.edu")).scalar_one()
     # Not selected (19X Item 14, author); no directory in tests: not checked.
     assert response.headers["location"] == "/operator/sys-admin/users?invite_unchecked=1"
     assert new_row.is_operator is True
     assert new_row.is_sys_admin is False
 
     event = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "workspace.user_invited"
-        )
+        select(AuditEvent).where(AuditEvent.event_type == "workspace.user_invited")
     ).scalar_one()
     assert detail_of(event)["refs"] == {"target_user_id": new_row.id}
     assert detail_of(event)["snapshot"]["email"] == "new@example.edu"
@@ -496,9 +448,7 @@ def test_invite_as_sys_admin_flips_both_flags(
         data={"email": "newadmin@example.edu", "invite_as_sys_admin": "true"},
         follow_redirects=False,
     )
-    new_row = db.execute(
-        select(User).where(User.email == "newadmin@example.edu")
-    ).scalar_one()
+    new_row = db.execute(select(User).where(User.email == "newadmin@example.edu")).scalar_one()
     assert new_row.is_operator is True
     assert new_row.is_sys_admin is True
 
@@ -585,9 +535,7 @@ def test_admit_404s_on_missing_target(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
-    response = client.post(
-        "/operator/sys-admin/users/99999/admit", follow_redirects=False
-    )
+    response = client.post("/operator/sys-admin/users/99999/admit", follow_redirects=False)
     assert response.status_code == 404
 
 
@@ -611,16 +559,11 @@ def test_remove_user_deletes_row_and_emits_audit(
     assert response.headers["location"] == "/operator/sys-admin/users"
 
     # Row is gone.
-    assert (
-        db.execute(select(User).where(User.id == target_id)).scalar_one_or_none()
-        is None
-    )
+    assert db.execute(select(User).where(User.id == target_id)).scalar_one_or_none() is None
 
     # Audit event captured the snapshot.
     event = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "workspace.user_removed"
-        )
+        select(AuditEvent).where(AuditEvent.event_type == "workspace.user_removed")
     ).scalar_one()
     assert detail_of(event)["refs"] == {"target_user_id": target_id}
     assert detail_of(event)["snapshot"] == {
@@ -639,9 +582,7 @@ def test_remove_user_refuses_self(
     # Trigger first-sign-in to seed the alice user row, then look
     # her up.
     client.get("/operator/sys-admin/users")
-    alice = db.execute(
-        select(User).where(User.email == "alice@example.edu")
-    ).scalar_one()
+    alice = db.execute(select(User).where(User.email == "alice@example.edu")).scalar_one()
     response = client.post(
         f"/operator/sys-admin/users/{alice.id}/delete",
         follow_redirects=False,
@@ -712,11 +653,7 @@ def test_remove_user_refuses_when_user_owns_sessions(
     )
     db.add(review_session)
     db.flush()
-    db.add(
-        SessionOperator(
-            session_id=review_session.id, user_id=target.id, role="owner"
-        )
-    )
+    db.add(SessionOperator(session_id=review_session.id, user_id=target.id, role="owner"))
     db.commit()
 
     response = client.post(
@@ -735,16 +672,13 @@ def _seed_session_created_by(db: Session, creator: User, owner: User):
     from app.db.models import ReviewSession
 
     review_session = ReviewSession(
-        name="Handed-over session", code="handed-over",
+        name="Handed-over session",
+        code="handed-over",
         created_by_user_id=creator.id,
     )
     db.add(review_session)
     db.flush()
-    db.add(
-        SessionOperator(
-            session_id=review_session.id, user_id=owner.id, role="owner"
-        )
-    )
+    db.add(SessionOperator(session_id=review_session.id, user_id=owner.id, role="owner"))
     db.commit()
     return review_session
 
@@ -764,9 +698,7 @@ def test_remove_user_refuses_creator_of_a_session_someone_else_owns(
     carol = _seed_target(db, email="carol@example.edu", is_operator=True)
     session_id = _seed_session_created_by(db, bob, carol).id
 
-    response = client.post(
-        f"/operator/sys-admin/users/{bob.id}/delete", follow_redirects=False
-    )
+    response = client.post(f"/operator/sys-admin/users/{bob.id}/delete", follow_redirects=False)
     assert response.status_code == 409
     assert "revoke it" in response.text
     db.expire_all()
@@ -786,22 +718,24 @@ def test_remove_user_refuses_an_audit_actor(
     bob = _seed_target(db, email="bob@example.edu")
     db.add(
         AuditEvent(
-            event_type="response.submitted", summary="Submitted",
-            actor_user_id=bob.id, detail={},
+            event_type="response.submitted",
+            summary="Submitted",
+            actor_user_id=bob.id,
+            detail={},
         )
     )
     db.commit()
 
-    response = client.post(
-        f"/operator/sys-admin/users/{bob.id}/delete", follow_redirects=False
-    )
+    response = client.post(f"/operator/sys-admin/users/{bob.id}/delete", follow_redirects=False)
     assert response.status_code == 409
     db.expire_all()
-    actors = db.execute(
-        select(AuditEvent.actor_user_id).where(
-            AuditEvent.event_type == "response.submitted"
+    actors = (
+        db.execute(
+            select(AuditEvent.actor_user_id).where(AuditEvent.event_type == "response.submitted")
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert actors == [bob.id]
 
 
@@ -856,9 +790,7 @@ def test_remove_user_404s_on_missing_target(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
-    response = client.post(
-        "/operator/sys-admin/users/99999/delete", follow_redirects=False
-    )
+    response = client.post("/operator/sys-admin/users/99999/delete", follow_redirects=False)
     assert response.status_code == 404
 
 
@@ -877,7 +809,7 @@ def test_workspace_users_page_renders_the_row_expander_form(
     bob = _seed_target(db, email="bob@example.edu", is_operator=True)
     body = client.get("/operator/sys-admin/users").text
     assert 'id="user-actions"' not in body
-    assert 'data-action-form=' not in body
+    assert "data-action-form=" not in body
     assert 'id="users-bulk-form"' in body
     row = body.split(f'data-user-id="{bob.id}"', 1)[1].split("</tr>", 1)[0]
     assert f'name="user_ids" value="{bob.id}"' in row
@@ -897,8 +829,8 @@ def test_invite_card_renders_secondary_buttons_disabled_by_default(
     # data-invite-* markers + start ``disabled``.
     assert "data-invite-submit" in body
     assert "data-invite-cancel" in body
-    assert 'disabled>Invite' in body
-    assert 'disabled>Cancel' in body
+    assert "disabled>Invite" in body
+    assert "disabled>Cancel" in body
 
 
 # --- Remove from all sessions (post-15A bulk-action refinement) -------------
@@ -917,15 +849,11 @@ def test_remove_from_all_sessions_deletes_operator_rows_and_emits_audit(
     # Bob shares two sessions with someone else (so he's not sole owner).
     co_owner = _seed_target(db, email="carol@example.edu", is_operator=True)
     for code in ("s1", "s2"):
-        rs = ReviewSession(
-            name=code, code=code, created_by_user_id=co_owner.id
-        )
+        rs = ReviewSession(name=code, code=code, created_by_user_id=co_owner.id)
         db.add(rs)
         db.flush()
         db.add(SessionOperator(session_id=rs.id, user_id=target.id, role="owner"))
-        db.add(
-            SessionOperator(session_id=rs.id, user_id=co_owner.id, role="owner")
-        )
+        db.add(SessionOperator(session_id=rs.id, user_id=co_owner.id, role="owner"))
     db.commit()
 
     response = client.post(
@@ -935,11 +863,7 @@ def test_remove_from_all_sessions_deletes_operator_rows_and_emits_audit(
     assert response.status_code == 303
     # All of bob's session_operators rows are gone.
     leftover = (
-        db.execute(
-            select(SessionOperator).where(
-                SessionOperator.user_id == target.id
-            )
-        )
+        db.execute(select(SessionOperator).where(SessionOperator.user_id == target.id))
         .scalars()
         .all()
     )
@@ -952,8 +876,7 @@ def test_remove_from_all_sessions_deletes_operator_rows_and_emits_audit(
     event = (
         db.execute(
             select(AuditEvent).where(
-                AuditEvent.event_type
-                == "workspace.user_detached_from_all_sessions"
+                AuditEvent.event_type == "workspace.user_detached_from_all_sessions"
             )
         )
         .scalars()
@@ -973,9 +896,7 @@ def test_remove_from_all_sessions_refuses_when_sole_owner(
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
     target = _seed_target(db, email="bob@example.edu", is_operator=True)
     # Bob is the sole owner of a session.
-    rs = ReviewSession(
-        name="solo", code="solo", created_by_user_id=target.id
-    )
+    rs = ReviewSession(name="solo", code="solo", created_by_user_id=target.id)
     db.add(rs)
     db.flush()
     db.add(SessionOperator(session_id=rs.id, user_id=target.id, role="owner"))
@@ -988,11 +909,7 @@ def test_remove_from_all_sessions_refuses_when_sole_owner(
     assert response.status_code == 409
     # No rows touched.
     leftover = (
-        db.execute(
-            select(SessionOperator).where(
-                SessionOperator.user_id == target.id
-            )
-        )
+        db.execute(select(SessionOperator).where(SessionOperator.user_id == target.id))
         .scalars()
         .all()
     )
@@ -1006,9 +923,7 @@ def test_remove_from_all_sessions_refuses_self(
 ) -> None:
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
     client.get("/operator/sys-admin/users")
-    alice = db.execute(
-        select(User).where(User.email == "alice@example.edu")
-    ).scalar_one()
+    alice = db.execute(select(User).where(User.email == "alice@example.edu")).scalar_one()
     response = client.post(
         f"/operator/sys-admin/users/{alice.id}/remove-from-all-sessions",
         follow_redirects=False,
@@ -1066,25 +981,18 @@ def test_selection_persists_via_redirect_and_renders_checked(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    assert (
-        response.headers["location"]
-        == f"/operator/sys-admin/users?selected={target.id}"
-    )
+    assert response.headers["location"] == f"/operator/sys-admin/users?selected={target.id}"
 
     # Following the redirect renders the row checkbox already
     # checked (so the toolbar JS picks up the selection on first
     # paint without operator interaction). The template wraps
     # attributes across lines so the substring check normalises
     # whitespace.
-    body = client.get(
-        f"/operator/sys-admin/users?selected={target.id}"
-    ).text
+    body = client.get(f"/operator/sys-admin/users?selected={target.id}").text
     import re
 
     normalised = re.sub(r"\s+", " ", body)
-    assert (
-        'aria-label="Select bob@example.edu" checked' in normalised
-    )
+    assert 'aria-label="Select bob@example.edu" checked' in normalised
 
 
 def test_remove_user_redirects_without_selection(
@@ -1140,9 +1048,7 @@ def test_plain_sys_admin_cannot_demote(
     strict rule applies: demoting another admin is super-admin-only → 403."""
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
     monkeypatch.setattr(identity_settings, "super_admin_emails", ["boss@example.edu"])
-    target = _seed_target(
-        db, email="bob@example.edu", is_operator=True, is_sys_admin=True
-    )
+    target = _seed_target(db, email="bob@example.edu", is_operator=True, is_sys_admin=True)
 
     response = client.post(
         f"/operator/sys-admin/users/{target.id}/demote",
@@ -1174,9 +1080,10 @@ def test_plain_sys_admin_cannot_invite_as_sys_admin(
     )
     assert response.status_code == 303
     assert "invite_error=requires_super_admin" in response.headers["location"]
-    assert db.execute(
-        select(User).where(User.email == "mallory@example.edu")
-    ).scalar_one_or_none() is None
+    assert (
+        db.execute(select(User).where(User.email == "mallory@example.edu")).scalar_one_or_none()
+        is None
+    )
 
     banner = client.get(response.headers["location"]).text
     assert "Only a super-admin can invite someone as a sys-admin." in banner
@@ -1196,10 +1103,10 @@ def test_plain_sys_admin_can_still_invite_an_operator(
         data={"email": "carol@example.edu"},
         follow_redirects=False,
     )
-    row = db.execute(
-        select(User).where(User.email == "carol@example.edu")
-    ).scalar_one()
-    assert response.headers["location"] == "/operator/sys-admin/users?invite_unchecked=1"  # not selected; not checked
+    row = db.execute(select(User).where(User.email == "carol@example.edu")).scalar_one()
+    assert (
+        response.headers["location"] == "/operator/sys-admin/users?invite_unchecked=1"
+    )  # not selected; not checked
     assert row.is_sys_admin is False
 
 
@@ -1220,9 +1127,7 @@ def test_plain_admin_can_invite_as_sys_admin_when_no_super_tier_configured(
         data={"email": "dave@example.edu", "invite_as_sys_admin": "true"},
         follow_redirects=False,
     )
-    row = db.execute(
-        select(User).where(User.email == "dave@example.edu")
-    ).scalar_one()
+    row = db.execute(select(User).where(User.email == "dave@example.edu")).scalar_one()
     assert row.is_sys_admin is True
 
 
@@ -1265,9 +1170,7 @@ def test_super_admin_target_cannot_be_demoted(
         "super_admin_emails",
         ["alice@example.edu", "boss@example.edu"],
     )
-    target = _seed_target(
-        db, email="boss@example.edu", is_operator=True, is_sys_admin=True
-    )
+    target = _seed_target(db, email="boss@example.edu", is_operator=True, is_sys_admin=True)
 
     response = client.post(
         f"/operator/sys-admin/users/{target.id}/demote",
@@ -1288,9 +1191,7 @@ def test_super_admin_target_cannot_be_revoked(
         "super_admin_emails",
         ["alice@example.edu", "boss@example.edu"],
     )
-    target = _seed_target(
-        db, email="boss@example.edu", is_operator=True, is_sys_admin=True
-    )
+    target = _seed_target(db, email="boss@example.edu", is_operator=True, is_sys_admin=True)
 
     response = client.post(
         f"/operator/sys-admin/users/{target.id}/revoke",
@@ -1311,18 +1212,14 @@ def test_super_admin_target_cannot_be_removed(
         "super_admin_emails",
         ["alice@example.edu", "boss@example.edu"],
     )
-    target = _seed_target(
-        db, email="boss@example.edu", is_operator=True, is_sys_admin=True
-    )
+    target = _seed_target(db, email="boss@example.edu", is_operator=True, is_sys_admin=True)
 
     response = client.post(
         f"/operator/sys-admin/users/{target.id}/delete",
         follow_redirects=False,
     )
     assert response.status_code == 409
-    still = db.execute(
-        select(User).where(User.email == "boss@example.edu")
-    ).scalar_one_or_none()
+    still = db.execute(select(User).where(User.email == "boss@example.edu")).scalar_one_or_none()
     assert still is not None  # not deleted
 
 
@@ -1366,9 +1263,7 @@ def test_super_admin_row_shows_super_admin_badge(
         "super_admin_emails",
         ["alice@example.edu", "boss@example.edu"],
     )
-    _seed_target(
-        db, email="boss@example.edu", is_operator=True, is_sys_admin=True
-    )
+    _seed_target(db, email="boss@example.edu", is_operator=True, is_sys_admin=True)
     body = client.get("/operator/sys-admin/users").text
     assert "pill-super" in body
     assert "Super-admin" in body
@@ -1381,9 +1276,7 @@ def test_plain_admin_row_shows_admin_badge(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _bootstrap_super_admin(monkeypatch, email="alice@example.edu")
-    _seed_target(
-        db, email="bob@example.edu", is_operator=True, is_sys_admin=True
-    )
+    _seed_target(db, email="bob@example.edu", is_operator=True, is_sys_admin=True)
     body = client.get("/operator/sys-admin/users").text
     # bob is a plain admin (not super) → the Admin (info) badge.
     assert '<span class="pill pill-info">Admin</span>' in body
@@ -1473,9 +1366,7 @@ def test_plain_admin_can_demote_when_no_super_tier_configured(
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
     monkeypatch.setattr(identity_settings, "super_admin_emails", [])
     # Two admins so the demote isn't the last-admin case.
-    target = _seed_target(
-        db, email="bob@example.edu", is_operator=True, is_sys_admin=True
-    )
+    target = _seed_target(db, email="bob@example.edu", is_operator=True, is_sys_admin=True)
 
     response = client.post(
         f"/operator/sys-admin/users/{target.id}/demote",

@@ -80,7 +80,10 @@ def test_the_fields_render_disabled_with_their_line(
 ) -> None:
     page = client.get("/operator/sessions/new").text
     assert LINE in page
-    assert 'name="invite_offsets"' in page and "disabled" in page.split('name="invite_offsets"')[1].split(">")[0]
+    assert (
+        'name="invite_offsets"' in page
+        and "disabled" in page.split('name="invite_offsets"')[1].split(">")[0]
+    )
 
     rs = _client_session(client, db, "off-render")
     rs.invite_offsets = ["-P1D"]
@@ -104,15 +107,11 @@ def test_session_home_shows_offsets_without_a_send_time(
     assert 'class="config-value config-value-resolved"' not in home
 
 
-def test_the_guide_says_auto_send_is_off(
-    client: TestClient, send_off: None
-) -> None:
+def test_the_guide_says_auto_send_is_off(client: TestClient, send_off: None) -> None:
     assert LINE in client.get("/guide").text
 
 
-def test_an_end_change_from_the_lobby_ignores_stored_reminders(
-    db: Session, send_off: None
-) -> None:
+def test_an_end_change_from_the_lobby_ignores_stored_reminders(db: Session, send_off: None) -> None:
     rs = _seed_session_with_reviewers(db, "off-lobby-end")
     # A stored reminder the new End would put inside the lead time.
     rs.reminder_offsets = ["-PT2H"]
@@ -155,9 +154,7 @@ def test_a_save_keeps_the_stored_offsets_and_ignores_posted_ones(
     assert rs.reminder_offsets == ["-P1D"]
 
 
-def test_a_create_stores_no_offsets(
-    client: TestClient, db: Session, send_off: None
-) -> None:
+def test_a_create_stores_no_offsets(client: TestClient, db: Session, send_off: None) -> None:
     start = datetime.now(UTC) + timedelta(days=30)
     response = client.post(
         "/operator/sessions",
@@ -171,9 +168,7 @@ def test_a_create_stores_no_offsets(
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    rs = db.execute(
-        select(ReviewSession).where(ReviewSession.code == "off-create")
-    ).scalar_one()
+    rs = db.execute(select(ReviewSession).where(ReviewSession.code == "off-create")).scalar_one()
     assert not rs.invite_offsets
     assert not rs.reminder_offsets
 

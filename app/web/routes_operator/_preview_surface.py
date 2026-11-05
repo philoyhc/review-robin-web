@@ -61,9 +61,7 @@ def _resolve_preview_reviewer(
     (alphabetical-by-email, matching the picker's option order) so
     the surface still renders. An unmatched non-empty email returns
     ``None``. Returns ``None`` too when the session has zero reviewers."""
-    picker = views.build_preview_picker_context(
-        db, review_session, reviewer_email
-    )
+    picker = views.build_preview_picker_context(db, review_session, reviewer_email)
     if picker.current is not None:
         return db.execute(
             select(Reviewer).where(
@@ -90,13 +88,15 @@ def _resolve_preview_reviewer(
     response_model=None,
 )
 def preview_surface_default_page(
-    request: Request, session_id: str,
+    request: Request,
+    session_id: str,
     reviewer_email: str = "",
     review_session: ReviewSession = Depends(require_session_operator),
 ) -> RedirectResponse:
     """Bare-URL fallback. 303s to ``/preview-surface/1`` preserving the
     optional reviewer-email picker."""
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url=_preview_url(review_session.public_id, 1, reviewer_email),
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -167,9 +167,5 @@ def preview_surface(
     # entry point, where the operator is inspecting real responses; the
     # breadcrumb is the same word on the same page for the same reason,
     # and leaving it would be two labels for one surface.
-    context["breadcrumbs"] = breadcrumbs.operator_session_child(
-        review_session, "Reviewer surface"
-    )
-    return _templates.TemplateResponse(
-        request, "reviewer/review_surface.html", context
-    )
+    context["breadcrumbs"] = breadcrumbs.operator_session_child(review_session, "Reviewer surface")
+    return _templates.TemplateResponse(request, "reviewer/review_surface.html", context)

@@ -149,9 +149,11 @@ def guide_is_reachable(db: Session, user: User) -> bool:
     """
     if user.is_operator or user.is_sys_admin:
         return True
-    return bool(participants.disclosable_roles(
-        db, user.email, principal_id=getattr(user, "signed_in_principal_id", None)
-    ))
+    return bool(
+        participants.disclosable_roles(
+            db, user.email, principal_id=getattr(user, "signed_in_principal_id", None)
+        )
+    )
 
 
 def visible_sections(db: Session, user: User) -> frozenset[str]:

@@ -6,6 +6,7 @@ nothing here reads from them. Keeps the dependency graph acyclic
 so the per-trigger observers can each lock the session row without
 having to import siblings.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta

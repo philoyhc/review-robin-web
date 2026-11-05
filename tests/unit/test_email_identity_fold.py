@@ -96,8 +96,7 @@ def test_eszett_addresses_stay_distinct() -> None:
     double = normalize_email("strasse@example.com")
 
     assert sharp != double, (
-        "casefold would merge these; identity equality is the mail "
-        "protocol's, not Unicode's"
+        "casefold would merge these; identity equality is the mail protocol's, not Unicode's"
     )
     assert sharp == "straße@example.com"
     assert "straße@example.com".casefold() == double, (
@@ -182,9 +181,7 @@ def test_python_and_postgres_lower_disagree_on_dotted_capital_i() -> None:
     assert folded == "i̇stanbul@x.com"
     assert len(folded.split("@")[0]) == 9, "i + U+0307, not a plain i"
     assert "\u0307" in folded
-    assert folded != "istanbul@x.com", (
-        "Postgres lower() yields this 8-char form; Python does not"
-    )
+    assert folded != "istanbul@x.com", "Postgres lower() yields this 8-char form; Python does not"
 
 
 # --------------------------------------------------------------------- #
@@ -229,9 +226,7 @@ def test_super_admin_membership_does_not_merge_eszett(monkeypatch) -> None:
     monkeypatch.setattr(identity_settings, "allow_fake_auth", False)
 
     assert is_super_admin("strasse@example.edu")
-    assert is_super_admin("  STRASSE@Example.EDU  "), (
-        "the fold still has to do its ASCII job"
-    )
+    assert is_super_admin("  STRASSE@Example.EDU  "), "the fold still has to do its ASCII job"
     assert not is_super_admin("straße@example.edu"), (
         "casefold would admit this; it is a different mailbox"
     )
@@ -406,9 +401,7 @@ def test_identity_columns_are_compared_through_the_fold() -> None:
         code = _code_lines(path)
         tree = ast.parse(src, filename=str(path))
         funcs = [
-            n
-            for n in ast.walk(tree)
-            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+            n for n in ast.walk(tree) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
         ]
         for n, line in enumerate(lines, 1):
             bare = code[n - 1]
@@ -424,8 +417,7 @@ def test_identity_columns_are_compared_through_the_fold() -> None:
                 continue
             enclosing = [f for f in funcs if f.lineno <= n <= (f.end_lineno or n)]
             if any(
-                "normalize_email" in "\n".join(code[f.lineno - 1 : f.end_lineno])
-                for f in enclosing
+                "normalize_email" in "\n".join(code[f.lineno - 1 : f.end_lineno]) for f in enclosing
             ):
                 continue
             start = min((f.lineno for f in enclosing), default=1)
@@ -441,6 +433,5 @@ def test_identity_columns_are_compared_through_the_fold() -> None:
     )
     assert not offenders, (
         "a comparison against an identity column neither folds through "
-        "normalize_email nor carries a '# not-identity:' marker:\n  "
-        + "\n  ".join(offenders)
+        "normalize_email nor carries a '# not-identity:' marker:\n  " + "\n  ".join(offenders)
     )

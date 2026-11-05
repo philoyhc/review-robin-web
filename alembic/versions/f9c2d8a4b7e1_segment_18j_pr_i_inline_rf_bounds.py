@@ -35,6 +35,7 @@ Revision ID: f9c2d8a4b7e1
 Revises: e7c2b4d9a3f1
 Create Date: 2026-05-24
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -48,12 +49,8 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     with op.batch_alter_table("instrument_response_fields", schema=None) as batch_op:
-        batch_op.add_column(
-            sa.Column("data_type", sa.String(length=16), nullable=True)
-        )
-        batch_op.add_column(
-            sa.Column("response_type", sa.String(length=64), nullable=True)
-        )
+        batch_op.add_column(sa.Column("data_type", sa.String(length=16), nullable=True))
+        batch_op.add_column(sa.Column("response_type", sa.String(length=64), nullable=True))
         batch_op.add_column(sa.Column("min", sa.Float(), nullable=True))
         batch_op.add_column(sa.Column("max", sa.Float(), nullable=True))
         batch_op.add_column(sa.Column("step", sa.Float(), nullable=True))

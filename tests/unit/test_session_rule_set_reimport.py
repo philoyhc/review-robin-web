@@ -50,9 +50,7 @@ def _user(db: Session, email: str) -> User:
 
 def _session(db: Session, code: str) -> ReviewSession:
     user = _user(db, f"op-{code}@example.edu")
-    review_session = ReviewSession(
-        name=code.title(), code=code, created_by_user_id=user.id
-    )
+    review_session = ReviewSession(name=code.title(), code=code, created_by_user_id=user.id)
     db.add(review_session)
     db.flush()
     return review_session
@@ -76,9 +74,7 @@ def _rule_set(db: Session, review_session: ReviewSession, name: str) -> SessionR
 def _names(db: Session, review_session: ReviewSession) -> list[str]:
     return list(
         db.execute(
-            select(SessionRuleSet.name).where(
-                SessionRuleSet.session_id == review_session.id
-            )
+            select(SessionRuleSet.name).where(SessionRuleSet.session_id == review_session.id)
         )
         .scalars()
         .all()
@@ -124,12 +120,10 @@ def test_two_rows_sharing_a_name_are_rejected_before_any_write(db: Session) -> N
             Row(f"{prefix}.rules_json", "[]", "json"),
         ]
 
-    result = apply_session_config(
-        db, review_session, _row_set(1, "Dupe") + _row_set(2, "Dupe")
-    )
+    result = apply_session_config(db, review_session, _row_set(1, "Dupe") + _row_set(2, "Dupe"))
 
     assert result.errors, "a duplicate name must be reported, not written"
-    assert any(
-        "duplicate session_rule_sets name" in error.message for error in result.errors
-    ), result.errors
+    assert any("duplicate session_rule_sets name" in error.message for error in result.errors), (
+        result.errors
+    )
     assert _names(db, review_session) == [], "phase 2 must not have run"

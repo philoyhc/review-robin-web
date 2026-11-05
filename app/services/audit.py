@@ -15,6 +15,7 @@ writes anyway — auditing is observability, and dropping audit
 events because of a shape bug would hide the very mutations
 we're auditing.
 """
+
 from __future__ import annotations
 
 import os
@@ -176,8 +177,11 @@ def write_event(
     in CI.
     """
     using_canonical = (
-        session is not _LEGACY_SENTINEL or payload is not None
-        or reason is not None or refs is not None or context is not None
+        session is not _LEGACY_SENTINEL
+        or payload is not None
+        or reason is not None
+        or refs is not None
+        or context is not None
     )
     if using_canonical and detail is not None:
         raise TypeError(
@@ -205,7 +209,7 @@ def write_event(
             warnings.warn(
                 f"audit.write_event for {event_type!r} called via legacy "
                 "detail= kwarg; migrate to payload= helpers per "
-                "spec/architecture.md \"Audit-event detail schema\".",
+                'spec/architecture.md "Audit-event detail schema".',
                 DeprecationWarning,
                 stacklevel=2,
             )
@@ -311,9 +315,7 @@ def _serialise(value: Any) -> Any:
 
 
 def _is_test_env() -> bool:
-    return "PYTEST_CURRENT_TEST" in os.environ or "pytest" in os.environ.get(
-        "_", ""
-    )
+    return "PYTEST_CURRENT_TEST" in os.environ or "pytest" in os.environ.get("_", "")
 
 
 # --------------------------------------------------------------------------- #
@@ -382,9 +384,7 @@ class _CanonicalDetail(BaseModel):
 
     @field_validator("refs")
     @classmethod
-    def _ref_keys_end_in_id(
-        cls, value: dict[str, int] | None
-    ) -> dict[str, int] | None:
+    def _ref_keys_end_in_id(cls, value: dict[str, int] | None) -> dict[str, int] | None:
         if value is not None:
             bad = sorted(k for k in value if not k.endswith("_id"))
             if bad:
@@ -433,12 +433,8 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # ``session.activation_scheduled`` fires when the operator sets /
     # changes / clears ``scheduled_activate_at`` via the Create / Edit
     # session forms (PR 1C).
-    "session.scheduled_activation_skipped": EventSchema(
-        _IDENTITY | {"reason", "context"}
-    ),
-    "session.scheduled_activation_retry": EventSchema(
-        _IDENTITY | {"reason", "context"}
-    ),
+    "session.scheduled_activation_skipped": EventSchema(_IDENTITY | {"reason", "context"}),
+    "session.scheduled_activation_retry": EventSchema(_IDENTITY | {"reason", "context"}),
     "session.scheduled_activation_failed_persistent": EventSchema(
         _IDENTITY | {"reason", "context"}
     ),
@@ -449,12 +445,8 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # ``context.actual_fired_at`` so late-fires from observer lag are
     # observable. ``counts.sent`` (also in *_fired*) records how many
     # invitations were dispatched on the entry's fire.
-    "session.scheduled_invites_skipped": EventSchema(
-        _IDENTITY | {"reason", "context"}
-    ),
-    "session.scheduled_invites_fired": EventSchema(
-        _IDENTITY | {"counts", "context"}
-    ),
+    "session.scheduled_invites_skipped": EventSchema(_IDENTITY | {"reason", "context"}),
+    "session.scheduled_invites_fired": EventSchema(_IDENTITY | {"counts", "context"}),
     # Segment 18G PR 2B — dedicated edit event when the operator sets /
     # changes / clears the ``invite_offsets`` JSON list via the Create
     # / Edit Session forms. The general ``session.updated`` still
@@ -473,19 +465,13 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # dedup within a single offset's fire is layered on top via the
     # ``EmailOutbox.correlation_id`` row stamp (``reminder:{sid}:{rid}:{idx}``),
     # so a partial-failure re-pass doesn't double-send.
-    "session.scheduled_reminders_skipped": EventSchema(
-        _IDENTITY | {"reason", "context"}
-    ),
-    "session.scheduled_reminders_fired": EventSchema(
-        _IDENTITY | {"counts", "context"}
-    ),
+    "session.scheduled_reminders_skipped": EventSchema(_IDENTITY | {"reason", "context"}),
+    "session.scheduled_reminders_fired": EventSchema(_IDENTITY | {"counts", "context"}),
     # B20 (2026-10-02): a trigger that raised inside
     # ``observe_scheduled_events`` — rolled back and logged so the page
     # still renders. ``context.trigger`` names it (``invites`` /
     # ``activation`` / ``reminders``); ``reason`` carries the error.
-    "session.scheduled_event_failed": EventSchema(
-        _IDENTITY | {"reason", "context"}
-    ),
+    "session.scheduled_event_failed": EventSchema(_IDENTITY | {"reason", "context"}),
     # Segment 18A Part 3 — session archiving (draft ⇄ archived).
     "session.archived": EventSchema(_IDENTITY | {"changes"}),
     "session.unarchived": EventSchema(_IDENTITY | {"changes"}),
@@ -528,32 +514,16 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "instrument.closed": EventSchema(_IDENTITY | {"refs", "reason", "context"}),
     # PR 2 — instruments
     "response_type.added": EventSchema(_IDENTITY | {"snapshot"}),
-    "response_type.updated": EventSchema(
-        _IDENTITY | {"changes", "refs", "context"}
-    ),
-    "response_type.deleted": EventSchema(
-        _IDENTITY | {"snapshot", "refs", "context"}
-    ),
+    "response_type.updated": EventSchema(_IDENTITY | {"changes", "refs", "context"}),
+    "response_type.deleted": EventSchema(_IDENTITY | {"snapshot", "refs", "context"}),
     "instrument.created": EventSchema(_IDENTITY | {"snapshot", "refs", "context"}),
-    "instrument.replicated": EventSchema(
-        _IDENTITY | {"snapshot", "refs", "context"}
-    ),
+    "instrument.replicated": EventSchema(_IDENTITY | {"snapshot", "refs", "context"}),
     "instrument.deleted": EventSchema(_IDENTITY | {"snapshot", "refs"}),
-    "instrument.display_field_added": EventSchema(
-        _IDENTITY | {"snapshot", "refs"}
-    ),
-    "instrument.display_field_updated": EventSchema(
-        _IDENTITY | {"changes", "refs", "context"}
-    ),
-    "instrument.display_field_deleted": EventSchema(
-        _IDENTITY | {"snapshot", "refs", "context"}
-    ),
-    "instrument.display_field_moved": EventSchema(
-        _IDENTITY | {"refs", "context"}
-    ),
-    "instrument.sort_fields_updated": EventSchema(
-        _IDENTITY | {"changes", "refs"}
-    ),
+    "instrument.display_field_added": EventSchema(_IDENTITY | {"snapshot", "refs"}),
+    "instrument.display_field_updated": EventSchema(_IDENTITY | {"changes", "refs", "context"}),
+    "instrument.display_field_deleted": EventSchema(_IDENTITY | {"snapshot", "refs", "context"}),
+    "instrument.display_field_moved": EventSchema(_IDENTITY | {"refs", "context"}),
+    "instrument.sort_fields_updated": EventSchema(_IDENTITY | {"changes", "refs"}),
     # Emitterless — ``pin_rule_set`` was deleted as a dead write path
     # with no route, template or test reaching it
     # (``guide/archive/findings_2026-09-13_spec_discrepancies.md`` NF-16). The key
@@ -563,51 +533,27 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # would make any historic row carrying this type unfilterable. Same
     # reasoning the retired ``instruments.no_rule_pinned`` validation
     # rule is kept for (``spec/validate_page.md``).
-    "instrument.rule_pinned": EventSchema(
-        _IDENTITY | {"changes", "refs"}
-    ),
-    "instrument.group_boundary_updated": EventSchema(
-        _IDENTITY | {"changes", "refs", "context"}
-    ),
-    "instrument.column_widths_updated": EventSchema(
-        _IDENTITY | {"changes", "refs"}
-    ),
+    "instrument.rule_pinned": EventSchema(_IDENTITY | {"changes", "refs"}),
+    "instrument.group_boundary_updated": EventSchema(_IDENTITY | {"changes", "refs", "context"}),
+    "instrument.column_widths_updated": EventSchema(_IDENTITY | {"changes", "refs"}),
     # Segment 19Y Item 1 — the instrument card's intro layout chip.
-    "instrument.intro_layout_updated": EventSchema(
-        _IDENTITY | {"changes", "refs"}
-    ),
-    "instrument.band2_state_updated": EventSchema(
-        _IDENTITY | {"changes", "refs"}
-    ),
-    "instrument.field_added": EventSchema(
-        _IDENTITY | {"snapshot", "refs", "context"}
-    ),
-    "instrument.field_updated": EventSchema(
-        _IDENTITY | {"changes", "refs", "context"}
-    ),
-    "instrument.field_deleted": EventSchema(
-        _IDENTITY | {"snapshot", "refs", "context"}
-    ),
+    "instrument.intro_layout_updated": EventSchema(_IDENTITY | {"changes", "refs"}),
+    "instrument.band2_state_updated": EventSchema(_IDENTITY | {"changes", "refs"}),
+    "instrument.field_added": EventSchema(_IDENTITY | {"snapshot", "refs", "context"}),
+    "instrument.field_updated": EventSchema(_IDENTITY | {"changes", "refs", "context"}),
+    "instrument.field_deleted": EventSchema(_IDENTITY | {"snapshot", "refs", "context"}),
     "instrument.fields_reordered": EventSchema(_IDENTITY | {"changes", "refs"}),
-    "instrument.display_fields_saved": EventSchema(
-        _IDENTITY | {"set_changes", "refs"}
-    ),
-    "instrument.response_fields_saved": EventSchema(
-        _IDENTITY | {"set_changes", "refs"}
-    ),
+    "instrument.display_fields_saved": EventSchema(_IDENTITY | {"set_changes", "refs"}),
+    "instrument.response_fields_saved": EventSchema(_IDENTITY | {"set_changes", "refs"}),
     "instrument.described": EventSchema(_IDENTITY | {"changes", "refs"}),
-    "instrument.short_label_updated": EventSchema(
-        _IDENTITY | {"changes", "refs"}
-    ),
+    "instrument.short_label_updated": EventSchema(_IDENTITY | {"changes", "refs"}),
     # ``instruments.bulk_accepting_responses`` +
     # ``instruments.bulk_visibility_when_closed`` retired in 18R Item 3
     # with their emitters (bulk_set_accepting / bulk_set_visibility).
     # Segment 18M PR 1 — instrument reorder + per-instrument page break.
     "instruments.reordered": EventSchema(_IDENTITY | {"changes"}),
     "instrument.page_break_set": EventSchema(_IDENTITY | {"changes", "refs"}),
-    "instrument.page_break_cleared": EventSchema(
-        _IDENTITY | {"changes", "refs"}
-    ),
+    "instrument.page_break_cleared": EventSchema(_IDENTITY | {"changes", "refs"}),
     # PR 3 — invitations
     "invitations.generated": EventSchema(_IDENTITY | {"set_changes"}),
     "invitation.regenerated": EventSchema(_IDENTITY | {"refs"}),
@@ -626,9 +572,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "responses.cleared": EventSchema(_IDENTITY | {"counts", "refs"}),
     "responses.deleted_all": EventSchema(_IDENTITY | {"counts"}),
     # PR 5 — assignments
-    "assignments.generated": EventSchema(
-        _IDENTITY | {"counts", "context", "refs"}
-    ),
+    "assignments.generated": EventSchema(_IDENTITY | {"counts", "context", "refs"}),
     # Emitterless — the unreached delete-all route and its service
     # retired (findings B7, 2026-10-03). Kept registered so historic
     # rows stay filterable, as ``instrument.rule_pinned`` is.
@@ -639,9 +583,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # Findings B7: a self-review recompute that moved ``include`` on a
     # reclassified row (``recompute_self_review_classification``).
     "assignments.include_reconciled": EventSchema(_IDENTITY | {"counts"}),
-    "assignments.bulk_include_set": EventSchema(
-        _IDENTITY | {"counts", "context"}
-    ),
+    "assignments.bulk_include_set": EventSchema(_IDENTITY | {"counts", "context"}),
     # Wave 5 PR 5.1 — RuleSet library tier retired. The schemas for
     # ``rule_set.created`` / ``.updated`` / ``.deleted`` and the
     # cross-tier ``session_rule_sets.materialised_from_library`` /
@@ -651,34 +593,22 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # validation only fires on write. Segment 18J Wave 2 PR iii-b3
     # similarly retired the parallel RTD library family
     # (operator_response_type_definitions table + its UI).
-
     # Wave 5 PR 5.2 — RuleSet seeding retired, so
     # ``session_rule_sets.materialised_from_seed`` is no longer
     # emitted. Historical rows with this event_type remain
     # readable; strict-mode validation only fires on write.
-
     # Session-tier RuleSet mutations from Band 1's inline editor.
     # ``session_rule_set.*`` (singular) is the per-row family that
     # stays — Band 1 writes through to ``session_rule_sets.rules_json``.
-    "session_rule_set.created": EventSchema(
-        _IDENTITY | {"snapshot", "refs", "context"}
-    ),
-    "session_rule_set.updated": EventSchema(
-        _IDENTITY | {"changes", "refs", "context"}
-    ),
-    "session_rule_set.deleted": EventSchema(
-        _IDENTITY | {"snapshot", "refs"}
-    ),
-    "session_rule_set.exclude_self_reviews_set": EventSchema(
-        _IDENTITY | {"changes", "refs"}
-    ),
+    "session_rule_set.created": EventSchema(_IDENTITY | {"snapshot", "refs", "context"}),
+    "session_rule_set.updated": EventSchema(_IDENTITY | {"changes", "refs", "context"}),
+    "session_rule_set.deleted": EventSchema(_IDENTITY | {"snapshot", "refs"}),
+    "session_rule_set.exclude_self_reviews_set": EventSchema(_IDENTITY | {"changes", "refs"}),
     # PR 7 — settings
     "reviewers.imported": EventSchema(_IDENTITY | {"counts", "context"}),
     "reviewees.imported": EventSchema(_IDENTITY | {"counts", "context"}),
     "relationships.imported": EventSchema(_IDENTITY | {"counts", "context"}),
-    "relationships.migrated_from_assignment_context": EventSchema(
-        _IDENTITY | {"counts"}
-    ),
+    "relationships.migrated_from_assignment_context": EventSchema(_IDENTITY | {"counts"}),
     "reviewers.deleted_all": EventSchema(_IDENTITY | {"counts"}),
     "reviewees.deleted_all": EventSchema(_IDENTITY | {"counts"}),
     # Segment 20F — an unchanged reviewer save that re-ran the symmetric
@@ -698,9 +628,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # Segment 15F PR 4 — per-row reviewee authoring + bulk status
     # flips. ``app/services/reviewees.py`` is the sole emitter.
     "reviewee.created": EventSchema(_IDENTITY | {"snapshot"}),
-    "reviewee.updated": EventSchema(
-        _IDENTITY | {"changes", "refs", "context"}
-    ),
+    "reviewee.updated": EventSchema(_IDENTITY | {"changes", "refs", "context"}),
     "reviewee.bulk_inactivated": EventSchema(_IDENTITY | {"snapshot"}),
     "reviewee.bulk_reactivated": EventSchema(_IDENTITY | {"snapshot"}),
     # Reviewee taps Acknowledge on /results to confirm they've seen
@@ -711,15 +639,9 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # Segment 15F PR 5 — per-row relationship authoring + bulk
     # status flips. ``app/services/relationships.py`` emits.
     "relationship.created": EventSchema(_IDENTITY | {"snapshot", "context"}),
-    "relationship.updated": EventSchema(
-        _IDENTITY | {"changes", "refs", "context"}
-    ),
-    "relationship.bulk_inactivated": EventSchema(
-        _IDENTITY | {"snapshot", "context"}
-    ),
-    "relationship.bulk_reactivated": EventSchema(
-        _IDENTITY | {"snapshot", "context"}
-    ),
+    "relationship.updated": EventSchema(_IDENTITY | {"changes", "refs", "context"}),
+    "relationship.bulk_inactivated": EventSchema(_IDENTITY | {"snapshot", "context"}),
+    "relationship.bulk_reactivated": EventSchema(_IDENTITY | {"snapshot", "context"}),
     # Participant-model Phase 1 — event-schema allowlist entries
     # for the post-MVP arc. Registered here ahead of any emitter
     # (so adding the emitter in a later slice is a one-line code
@@ -730,9 +652,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # ``guide/archive/participant_model_upgrade.md`` §3.5.
     "observer.created": EventSchema(_IDENTITY | {"snapshot"}),
     "observer.updated": EventSchema(_IDENTITY | {"changes", "refs"}),
-    "observer.cohort_rule_assigned": EventSchema(
-        _IDENTITY | {"snapshot", "refs"}
-    ),
+    "observer.cohort_rule_assigned": EventSchema(_IDENTITY | {"snapshot", "refs"}),
     "observer.bulk_inactivated": EventSchema(_IDENTITY | {"snapshot"}),
     "observer.bulk_reactivated": EventSchema(_IDENTITY | {"snapshot"}),
     "observers.imported": EventSchema(_IDENTITY | {"counts", "context"}),
@@ -753,9 +673,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "reviewee.bulk_deleted": EventSchema(_IDENTITY | {"counts", "context"}),
     "observer.bulk_deleted": EventSchema(_IDENTITY | {"counts"}),
     "relationship.bulk_deleted": EventSchema(_IDENTITY | {"counts", "context"}),
-    "instrument.view_policy_set": EventSchema(
-        _IDENTITY | {"changes", "refs"}
-    ),
+    "instrument.view_policy_set": EventSchema(_IDENTITY | {"changes", "refs"}),
     "session.schedule_set": EventSchema(_IDENTITY | {"changes"}),
     "session.feature_toggled": EventSchema(_IDENTITY | {"changes", "reason"}),
     # Participant-model S12 — operator-explicit release-window
@@ -777,9 +695,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "session.release_window_opened": EventSchema(_IDENTITY | {"context"}),
     "session.release_window_ended": EventSchema(_IDENTITY | {"context"}),
     "session.deadline_reached": EventSchema(_IDENTITY | {"counts", "context"}),
-    "session.responses_release_stopped": EventSchema(
-        _IDENTITY | {"snapshot"}
-    ),
+    "session.responses_release_stopped": EventSchema(_IDENTITY | {"snapshot"}),
     "results.released": EventSchema(_IDENTITY | {"snapshot"}),
     "results.acknowledged": EventSchema(_IDENTITY | {"snapshot", "refs"}),
     "operator_email_settings.updated": EventSchema(frozenset({"changes"})),
@@ -797,12 +713,8 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # participant info Item 5 — what observers see of their own entry.
     "session.observer_self_fields_set": EventSchema(_IDENTITY | {"changes"}),
     # Segment 15A Slice 1 — per-session friendly-label resolver mutations.
-    "session_field_label.set": EventSchema(
-        _IDENTITY | {"changes", "context"}
-    ),
-    "session_field_label.cleared": EventSchema(
-        _IDENTITY | {"snapshot", "context"}
-    ),
+    "session_field_label.set": EventSchema(_IDENTITY | {"changes", "context"}),
+    "session_field_label.cleared": EventSchema(_IDENTITY | {"snapshot", "context"}),
     "email_template.updated": EventSchema(_IDENTITY | {"changes", "context"}),
     "email_template.reset": EventSchema(_IDENTITY | {"changes", "context"}),
     # Segment 12A-1 — Extract Data card downloads (read-only).
@@ -817,9 +729,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # Participant tokens extract — operator-side deanonymization
     # key. Same counts envelope as the per-entity extracts; the
     # body row count covers reviewers + reviewees combined.
-    "session.participant_tokens_extracted": EventSchema(
-        _IDENTITY | {"counts"}
-    ),
+    "session.participant_tokens_extracted": EventSchema(_IDENTITY | {"counts"}),
     # Segment 12A-3 PR 3 — Settings importer.
     "session.settings_imported": EventSchema(_IDENTITY | {"counts"}),
     # Segment 12B PR 1 — Audit-events export.
@@ -833,16 +743,10 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "session.setup_bundle_extracted": EventSchema(_IDENTITY | {"counts"}),
     # D28 (2026-10-03): the bundle passes each lens card through,
     # so ``context`` carries the metadata cards' self-review pools.
-    "session.responses_bundle_extracted": EventSchema(
-        _IDENTITY | {"counts", "context"}
-    ),
-    "session.by_instrument_bundle_extracted": EventSchema(
-        _IDENTITY | {"counts"}
-    ),
+    "session.responses_bundle_extracted": EventSchema(_IDENTITY | {"counts", "context"}),
+    "session.by_instrument_bundle_extracted": EventSchema(_IDENTITY | {"counts"}),
     # The Data shaper card's Zip all (findings D13, 2026-10-03).
-    "session.data_shapes_bundle_extracted": EventSchema(
-        _IDENTITY | {"counts"}
-    ),
+    "session.data_shapes_bundle_extracted": EventSchema(_IDENTITY | {"counts"}),
     # Extract data tab — Data shaper card saved-shape
     # lifecycle. Per the wiring decisions in
     # ``spec/extract_data.md`` "Audit events":
@@ -852,15 +756,9 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # what existed pre-edit / pre-delete; ``refs.shape_id``
     # carries the row id. ``data_shape_extracted`` carries
     # ``counts.rows`` for the body row count.
-    "session.data_shape_saved": EventSchema(
-        _IDENTITY | {"snapshot", "refs"}
-    ),
-    "session.data_shape_deleted": EventSchema(
-        _IDENTITY | {"snapshot", "refs"}
-    ),
-    "session.data_shape_extracted": EventSchema(
-        _IDENTITY | {"counts", "refs", "context"}
-    ),
+    "session.data_shape_saved": EventSchema(_IDENTITY | {"snapshot", "refs"}),
+    "session.data_shape_deleted": EventSchema(_IDENTITY | {"snapshot", "refs"}),
+    "session.data_shape_extracted": EventSchema(_IDENTITY | {"counts", "refs", "context"}),
     # Extract data tab — Reviewer / Reviewee response metadata
     # cards. ``counts.rows`` carries the body row count
     # (header excluded); ``counts.instruments`` carries the chip
@@ -869,12 +767,8 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # Self-review handling chip state (``include_self`` /
     # ``exclude_self`` / ``both``) per ``guide/archive/extract_data.md``
     # § *Self-review handling*. PR A wired the slot 2026-05-30.
-    "session.reviewer_metadata_extracted": EventSchema(
-        _IDENTITY | {"counts", "context"}
-    ),
-    "session.reviewee_metadata_extracted": EventSchema(
-        _IDENTITY | {"counts", "context"}
-    ),
+    "session.reviewer_metadata_extracted": EventSchema(_IDENTITY | {"counts", "context"}),
+    "session.reviewee_metadata_extracted": EventSchema(_IDENTITY | {"counts", "context"}),
     # Segment 16A PR 6 — workspace user-role management.
     # Workspace-scoped (no session identity); the actor is on the
     # audit row's ``actor_user_id`` slot, the target user goes
@@ -883,21 +777,15 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # Findings P5: a sign-in whose email finds no row but whose Entra
     # object id does moves that row to the new email. No actor — the
     # sign-in did it — and ``changes.email`` carries old -> new.
-    "workspace.user_email_changed": EventSchema(
-        frozenset({"changes", "refs"})
-    ),
+    "workspace.user_email_changed": EventSchema(frozenset({"changes", "refs"})),
     # Findings P5: the new email was held by a row never signed in to
     # (an invite), folded into the principal-id row. ``changes`` carries
     # the email and any flag the fold raised; ``refs`` names both rows
     # (``absorbed_user_id`` is deleted); ``context.memberships_moved``.
-    "workspace.user_absorbed": EventSchema(
-        frozenset({"changes", "refs", "context"})
-    ),
+    "workspace.user_absorbed": EventSchema(frozenset({"changes", "refs", "context"})),
     # Findings P5: a sign-in recorded its principal id on the invited
     # row its email matched; that identity decides the row from then on.
-    "workspace.user_principal_recorded": EventSchema(
-        frozenset({"changes", "refs"})
-    ),
+    "workspace.user_principal_recorded": EventSchema(frozenset({"changes", "refs"})),
     "workspace.operator_admitted": EventSchema(frozenset({"changes", "refs"})),
     "workspace.operator_revoked": EventSchema(frozenset({"changes", "refs"})),
     "workspace.user_removed": EventSchema(frozenset({"snapshot", "refs"})),
@@ -916,9 +804,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
 }
 
 
-def validate_detail(
-    event_type: str, detail: dict[str, Any] | None
-) -> None:
+def validate_detail(event_type: str, detail: dict[str, Any] | None) -> None:
     """Raise ``AuditDetailValidationError`` if ``detail`` doesn't
     conform to the canonical schema for ``event_type``.
 
@@ -938,7 +824,10 @@ def validate_detail(
             for error in exc.errors(include_input=False)
         ]
         loggable = sorted(
-            {(str(error["loc"][0]) if error["loc"] else "", error["type"]) for error in exc.errors()}
+            {
+                (str(error["loc"][0]) if error["loc"] else "", error["type"])
+                for error in exc.errors()
+            }
         )
         raise AuditDetailValidationError(
             event_type, detail, f"shape: {problems!r}", loggable=f"shape: {loggable!r}"
@@ -1081,9 +970,7 @@ def _apply_filters[S: Select[*tuple[Any, ...]]](
         # strip, because the value comes from the typeahead verbatim.
         from sqlalchemy import func as _func
 
-        stmt = stmt.where(
-            _func.lower(user_table.email) == filters.actor_email.lower()
-        )
+        stmt = stmt.where(_func.lower(user_table.email) == filters.actor_email.lower())
     if filters.created_from or filters.created_to:
         from datetime import datetime as _dt
         from datetime import time as _time
@@ -1145,12 +1032,9 @@ def count_events_for_session(
         .where(AuditEvent.session_id == review_session.id)
     )
     if filters is not None and filters.actor_email:
-        stmt = stmt.outerjoin(
-            _User, _User.id == AuditEvent.actor_user_id
-        )
+        stmt = stmt.outerjoin(_User, _User.id == AuditEvent.actor_user_id)
     stmt = _apply_filters(stmt, filters, _User)
     return db.execute(stmt).scalar_one()
-
 
 
 def record_audit_log_extract(
@@ -1209,6 +1093,7 @@ def record_audit_log_extract(
         event.detail = detail
     return rows
 
+
 def list_events_for_session(
     db: Session,
     review_session: ReviewSession,
@@ -1256,9 +1141,7 @@ def list_events_for_session(
     ]
 
 
-def list_distinct_actor_emails(
-    db: Session, review_session: ReviewSession
-) -> list[str]:
+def list_distinct_actor_emails(db: Session, review_session: ReviewSession) -> list[str]:
     """Distinct actor emails on this session's audit events, sorted.
 
     Drives the actor-email typeahead `<datalist>` on the filter

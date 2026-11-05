@@ -109,15 +109,11 @@ def _activate(operator_client: TestClient, review_session: ReviewSession) -> Non
     )
 
 
-def _submit(
-    rae_client: TestClient, review_session: ReviewSession, db: Session
-) -> None:
+def _submit(rae_client: TestClient, review_session: ReviewSession, db: Session) -> None:
     assignment_ids = [
         a.id
         for a in db.execute(
-            select(Assignment).where(
-                Assignment.session_id == review_session.id
-            )
+            select(Assignment).where(Assignment.session_id == review_session.id)
         ).scalars()
     ]
     data: dict[str, str] = {}
@@ -153,13 +149,9 @@ def test_recall_button_renders_on_summary_when_session_is_ready(
     _submit(rae_client, review_session, db)
 
     app.dependency_overrides[get_current_user] = lambda: rae
-    body = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/summary"
-    ).text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}/summary").text
     assert "Recall my submission" in body
-    assert (
-        f'action="/me/sessions/{review_session.public_id}/recall"' in body
-    )
+    assert f'action="/me/sessions/{review_session.public_id}/recall"' in body
     # One name for the dashboard (participant audit L1).
     assert '<a class="btn secondary" href="/me">Your reviews</a>' in body
 
@@ -189,9 +181,7 @@ def test_recall_button_hidden_on_summary_when_session_is_expired(
     assert lifecycle.is_expired(review_session)
 
     app.dependency_overrides[get_current_user] = lambda: rae
-    body = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/summary"
-    ).text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}/summary").text
     assert "Recall my submission" not in body
 
 
@@ -230,9 +220,7 @@ def test_recall_post_nulls_submitted_at_and_lands_on_form(
         follow_redirects=False,
     )
     assert resp.status_code == 303
-    assert resp.headers["location"] == (
-        f"/me/sessions/{review_session.public_id}/1"
-    )
+    assert resp.headers["location"] == (f"/me/sessions/{review_session.public_id}/1")
 
     # Same rows, ``submitted_at`` now None; values intact.
     db.expire_all()
@@ -378,9 +366,9 @@ def test_recall_post_403s_once_the_deadline_passes(
     )
     assert resp.status_code == 403
     assert "This review has closed" in resp.text
-    still_submitted = db.execute(
-        select(Response).where(Response.submitted_at.is_(None))
-    ).scalars().first()
+    still_submitted = (
+        db.execute(select(Response).where(Response.submitted_at.is_(None))).scalars().first()
+    )
     assert still_submitted is None
 
 

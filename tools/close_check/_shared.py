@@ -33,5 +33,7 @@ class Unresolvable(Exception):
 def _git(*args: str) -> str:
     return subprocess.run(
         ["git", "-C", str(REPO), *args],
-        capture_output=True, text=True, check=False,
+        capture_output=True,
+        text=True,
+        check=False,
     ).stdout

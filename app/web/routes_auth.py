@@ -93,6 +93,7 @@ def me_debug(
         },
     )
 
+
 # ``GET /request-access`` retired in 18R Item 6. A non-operator/non-sys-admin
 # who wanders to an operator page is now bounced to ``/me`` (the operator-denied
 # handler in ``app/main.py``); the "how do I get access" messaging moved to

@@ -30,9 +30,7 @@ def _selected(page: Page) -> list[str]:
     )
 
 
-def test_two_filters_build_one_selection(
-    page: Page, new_session: Callable[[], str]
-) -> None:
+def test_two_filters_build_one_selection(page: Page, new_session: Callable[[], str]) -> None:
     session_id = new_session()
     page.goto(app_url(f"/operator/sys-admin/sessions/{session_id}/audit-log"))
     everything = _visible(page)

@@ -36,9 +36,7 @@ def _count(db: Session) -> int:
 
 
 def _age(db: Session, token: str, *, hours: float) -> None:
-    for row in db.execute(
-        select(HeldUpload).where(HeldUpload.token == token)
-    ).scalars():
+    for row in db.execute(select(HeldUpload).where(HeldUpload.token == token)).scalars():
         row.created_at = datetime.now(UTC) - timedelta(hours=hours)
     db.flush()
 
@@ -57,9 +55,10 @@ def test_hold_and_take_round_trip_by_slot(db: Session) -> None:
         files={"reviewers": _ROSTER, "settings": _SETTINGS},
     )
     assert token is not None
-    assert held_uploads.take(
-        db, token=token, user=user, session_id=review_session.id
-    ) == {"reviewers": _ROSTER, "settings": _SETTINGS}
+    assert held_uploads.take(db, token=token, user=user, session_id=review_session.id) == {
+        "reviewers": _ROSTER,
+        "settings": _SETTINGS,
+    }
     # Taking does not end the hold.
     assert _count(db) == 2
 
@@ -69,9 +68,7 @@ def test_another_operator_or_session_reads_nothing(db: Session) -> None:
     other = _user(db, "other@e.edu")
     mine = _session(db, owner, "held-b")
     theirs = _session(db, owner, "held-c")
-    token = held_uploads.hold(
-        db, user=owner, session_id=mine.id, files={"reviewers": _ROSTER}
-    )
+    token = held_uploads.hold(db, user=owner, session_id=mine.id, files={"reviewers": _ROSTER})
     assert token is not None
     assert held_uploads.take(db, token=token, user=other, session_id=mine.id) == {}
     assert held_uploads.take(db, token=token, user=owner, session_id=theirs.id) == {}
@@ -87,9 +84,7 @@ def test_an_expired_hold_reads_empty_and_is_deleted(db: Session) -> None:
     )
     assert token is not None
     _age(db, token, hours=2)
-    assert held_uploads.take(
-        db, token=token, user=user, session_id=review_session.id
-    ) == {}
+    assert held_uploads.take(db, token=token, user=user, session_id=review_session.id) == {}
     assert _count(db) == 0
 
 
@@ -101,9 +96,7 @@ def test_a_new_hold_sweeps_expired_ones(db: Session) -> None:
     )
     assert old is not None
     _age(db, old, hours=2)
-    held_uploads.hold(
-        db, user=user, session_id=review_session.id, files={"settings": _SETTINGS}
-    )
+    held_uploads.hold(db, user=user, session_id=review_session.id, files={"settings": _SETTINGS})
     assert _count(db) == 1
 
 
@@ -126,9 +119,10 @@ def test_joining_a_hold_replaces_only_its_slot(db: Session) -> None:
         token=token,
     )
     assert again == token
-    assert held_uploads.take(
-        db, token=token, user=user, session_id=review_session.id
-    ) == {"reviewers": newer, "settings": _SETTINGS}
+    assert held_uploads.take(db, token=token, user=user, session_id=review_session.id) == {
+        "reviewers": newer,
+        "settings": _SETTINGS,
+    }
 
 
 def test_someone_elses_token_starts_a_new_hold(db: Session) -> None:
@@ -147,24 +141,25 @@ def test_someone_elses_token_starts_a_new_hold(db: Session) -> None:
         token=token,
     )
     assert theirs is not None and theirs != token
-    assert held_uploads.take(
-        db, token=token, user=owner, session_id=review_session.id
-    ) == {"reviewers": _ROSTER}
+    assert held_uploads.take(db, token=token, user=owner, session_id=review_session.id) == {
+        "reviewers": _ROSTER
+    }
 
 
 def test_empty_and_oversized_files_are_not_held(db: Session) -> None:
     user = _user(db, "op@e.edu")
     review_session = _session(db, user, "held-h")
-    big = HeldFile(
-        filename="big.csv", content=b"x" * (held_uploads.MAX_HELD_BYTES + 1)
-    )
+    big = HeldFile(filename="big.csv", content=b"x" * (held_uploads.MAX_HELD_BYTES + 1))
     empty = HeldFile(filename="empty.csv", content=b"")
-    assert held_uploads.hold(
-        db,
-        user=user,
-        session_id=review_session.id,
-        files={"settings": big, "reviewers": empty},
-    ) is None
+    assert (
+        held_uploads.hold(
+            db,
+            user=user,
+            session_id=review_session.id,
+            files={"settings": big, "reviewers": empty},
+        )
+        is None
+    )
     assert _count(db) == 0
 
 
@@ -178,20 +173,14 @@ def test_discard_ends_the_hold(db: Session) -> None:
         files={"reviewers": _ROSTER, "settings": _SETTINGS},
     )
     assert token is not None
-    assert held_uploads.discard(
-        db, token=token, user=user, session_id=review_session.id
-    ) == 2
-    assert held_uploads.take(
-        db, token=token, user=user, session_id=review_session.id
-    ) == {}
+    assert held_uploads.discard(db, token=token, user=user, session_id=review_session.id) == 2
+    assert held_uploads.take(db, token=token, user=user, session_id=review_session.id) == {}
 
 
 def test_deleting_the_session_drops_its_holds(db: Session) -> None:
     user = _user(db, "op@e.edu")
     review_session = _session(db, user, "held-j")
-    held_uploads.hold(
-        db, user=user, session_id=review_session.id, files={"reviewers": _ROSTER}
-    )
+    held_uploads.hold(db, user=user, session_id=review_session.id, files={"reviewers": _ROSTER})
     db.delete(review_session)
     db.flush()
     assert _count(db) == 0
@@ -209,9 +198,7 @@ def test_an_oversized_file_still_drops_the_one_it_replaces(db: Session) -> None:
         files={"reviewers": _ROSTER, "settings": _SETTINGS},
     )
     assert token is not None
-    big = HeldFile(
-        filename="big.csv", content=b"x" * (held_uploads.MAX_HELD_BYTES + 1)
-    )
+    big = HeldFile(filename="big.csv", content=b"x" * (held_uploads.MAX_HELD_BYTES + 1))
     again = held_uploads.hold(
         db,
         user=user,
@@ -220,6 +207,6 @@ def test_an_oversized_file_still_drops_the_one_it_replaces(db: Session) -> None:
         token=token,
     )
     assert again == token
-    assert held_uploads.take(
-        db, token=token, user=user, session_id=review_session.id
-    ) == {"reviewers": _ROSTER}
+    assert held_uploads.take(db, token=token, user=user, session_id=review_session.id) == {
+        "reviewers": _ROSTER
+    }

@@ -61,18 +61,19 @@ def test_a_string_position_is_not_read() -> None:
 
 
 def test_old_id_keys_and_bad_shapes_are_dropped_on_import() -> None:
-    assert sort_from_positions(
-        [{"display_field_id": 7, "dir": "asc"}], {1: 501}
-    ) == []
+    assert sort_from_positions([{"display_field_id": 7, "dir": "asc"}], {1: 501}) == []
     assert sort_from_positions("not a list", {}) == []
-    assert widths_from_positions(
-        {"df_7": 100, "rf_8": 50},
-        display_ids_by_position={1: 501},
-        field_ids_by_position={1: 601},
-    ) is None
-    assert widths_from_positions(
-        [1, 2], display_ids_by_position={}, field_ids_by_position={}
-    ) is None
+    assert (
+        widths_from_positions(
+            {"df_7": 100, "rf_8": 50},
+            display_ids_by_position={1: 501},
+            field_ids_by_position={1: 601},
+        )
+        is None
+    )
+    assert (
+        widths_from_positions([1, 2], display_ids_by_position={}, field_ids_by_position={}) is None
+    )
 
 
 def test_id_maps_repoint_and_drop_strays() -> None:

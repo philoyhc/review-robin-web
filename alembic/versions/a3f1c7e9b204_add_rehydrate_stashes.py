@@ -14,6 +14,7 @@ Revision ID: a3f1c7e9b204
 Revises: c4e7d2a8f165
 Create Date: 2026-06-05
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -34,9 +35,7 @@ def upgrade() -> None:
         sa.Column("token", sa.String(length=64), nullable=False),
         sa.Column("operator_user_id", sa.Integer(), nullable=False),
         sa.Column("payload", sa.LargeBinary(), nullable=False),
-        sa.Column(
-            "created_at", sa.DateTime(timezone=True), nullable=False
-        ),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(
             ["operator_user_id"],
             ["users.id"],
@@ -58,9 +57,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_index(
-        "ix_rehydrate_stashes_token", table_name="rehydrate_stashes"
-    )
+    op.drop_index("ix_rehydrate_stashes_token", table_name="rehydrate_stashes")
     op.drop_index(
         "ix_rehydrate_stashes_operator_user_id",
         table_name="rehydrate_stashes",

@@ -471,9 +471,7 @@ REGISTERED_RULES: tuple[ValidationRule, ...] = (
 # --------------------------------------------------------------------------- #
 
 
-def validate_session_setup(
-    db: Session, review_session: ReviewSession
-) -> list[ValidationIssue]:
+def validate_session_setup(db: Session, review_session: ReviewSession) -> list[ValidationIssue]:
     """Run every registered rule against the session.
 
     Stamps each emitted issue with the rule's ``rule_key``, ``fix_url``,

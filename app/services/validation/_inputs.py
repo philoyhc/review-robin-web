@@ -92,9 +92,7 @@ class ValidationInputs:
     #: Loads filled on first use and shared for the run, for checks that
     #: need a heavier read only some runs reach: ``staleness``, the
     #: engine's per-instrument verdicts (findings E4's cold read).
-    _memo: dict[str, Any] = field(
-        default_factory=dict[str, Any], compare=False, repr=False
-    )
+    _memo: dict[str, Any] = field(default_factory=dict[str, Any], compare=False, repr=False)
 
     @property
     def active_reviewees(self) -> tuple[Reviewee, ...]:
@@ -102,9 +100,7 @@ class ValidationInputs:
         return tuple(r for r in self.reviewees if r.status == "active")
 
 
-def load_validation_inputs(
-    db: Session, review_session: ReviewSession
-) -> ValidationInputs:
+def load_validation_inputs(db: Session, review_session: ReviewSession) -> ValidationInputs:
     """Load everything more than one registered rule needs, once.
 
     The three rosters are ordered by id so that "the first duplicate's
@@ -122,8 +118,7 @@ def load_validation_inputs(
     from app.services import assignments as assignments_service
 
     def _instrument_ids(
-        field_model: type[InstrumentResponseField]
-        | type[InstrumentDisplayField],
+        field_model: type[InstrumentResponseField] | type[InstrumentDisplayField],
         *extra: ColumnElement[bool],
     ) -> frozenset[int]:
         stmt = (
@@ -165,18 +160,12 @@ def load_validation_inputs(
                 .order_by(Observer.id)
             ).scalars()
         ),
-        instruments_with_response_fields=_instrument_ids(
-            InstrumentResponseField
-        ),
+        instruments_with_response_fields=_instrument_ids(InstrumentResponseField),
         instruments_with_visible_response_fields=_instrument_ids(
             InstrumentResponseField, InstrumentResponseField.visible.is_(True)
         ),
-        instruments_with_display_fields=_instrument_ids(
-            InstrumentDisplayField
-        ),
+        instruments_with_display_fields=_instrument_ids(InstrumentDisplayField),
         included_count_by_instrument=(
-            assignments_service.included_count_per_instrument(
-                db, review_session.id
-            )
+            assignments_service.included_count_per_instrument(db, review_session.id)
         ),
     )

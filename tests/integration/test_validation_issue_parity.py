@@ -84,9 +84,7 @@ def _ordinals(db: Session, review_session: ReviewSession) -> dict[tuple[str, int
     ordinals: dict[tuple[str, int], int] = {}
     for prefix, model in _ID_PREFIXES:
         rows = db.execute(
-            select(model.id)
-            .where(model.session_id == review_session.id)
-            .order_by(model.id)
+            select(model.id).where(model.session_id == review_session.id).order_by(model.id)
         ).scalars()
         for position, row_id in enumerate(rows, start=1):
             ordinals[(prefix, row_id)] = position
@@ -104,9 +102,7 @@ def _to_ordinals(value: str | None, ordinals: dict[tuple[str, int], int]) -> str
     )
 
 
-def _normalize(
-    issues: list, db: Session, review_session: ReviewSession
-) -> list[dict[str, object]]:
+def _normalize(issues: list, db: Session, review_session: ReviewSession) -> list[dict[str, object]]:
     """Issue order is part of the contract — the Validate page renders
     them in registry order — so this preserves it rather than sorting.
 
@@ -131,22 +127,16 @@ def _normalize(
 #: Captured from `origin/main` before the inputs object landed; see the
 #: module docstring for how to re-capture it.
 GOLDEN_PATH = Path(__file__).with_name("_validation_issue_parity.json")
-EXPECTED: dict[str, list[dict[str, object]]] = json.loads(
-    GOLDEN_PATH.read_text()
-)
+EXPECTED: dict[str, list[dict[str, object]]] = json.loads(GOLDEN_PATH.read_text())
 
 _DUMP_PATH = os.environ.get("RRW_VALIDATION_PARITY_DUMP")
 
 
 @pytest.mark.parametrize("name", sorted(SCENARIOS))
-def test_the_issue_list_is_what_it_was_before_the_inputs_object(
-    db: Session, name: str
-) -> None:
+def test_the_issue_list_is_what_it_was_before_the_inputs_object(db: Session, name: str) -> None:
     review_session = SCENARIOS[name](db)
 
-    observed = _normalize(
-        validate_session_setup(db, review_session), db, review_session
-    )
+    observed = _normalize(validate_session_setup(db, review_session), db, review_session)
 
     if _DUMP_PATH:
         _dump(name, observed)

@@ -96,9 +96,7 @@ async def read_upload(
             filename=file.filename if file is not None else None,
             token=token,
         )
-    held = held_uploads.take(
-        db, token=token, user=user, session_id=review_session.id
-    ).get(slot)
+    held = held_uploads.take(db, token=token, user=user, session_id=review_session.id).get(slot)
     if held is None:
         return UploadIn(content=b"", filename=None, token=None, lost=True)
     return UploadIn(content=held.content, filename=held.filename, token=token)
@@ -134,9 +132,7 @@ def hold_for_ask(
         return None
     # Name what the hold holds, not what was sent: a file it skipped (an
     # empty or oversized one) is not held, and must not read as held.
-    held = held_uploads.take(
-        db, token=token, user=user, session_id=review_session.id
-    ).get(slot)
+    held = held_uploads.take(db, token=token, user=user, session_id=review_session.id).get(slot)
     if held is None:
         return None
     return {"token": token, "filename": held.filename}
@@ -155,14 +151,13 @@ def release_hold(
     token = (token or "").strip()
     if not token:
         return
-    if held_uploads.discard(
-        db, token=token, user=user, session_id=review_session.id
-    ):
+    if held_uploads.discard(db, token=token, user=user, session_id=review_session.id):
         db.commit()
 
 
 def dismiss_held_upload(
-    request: Request, db: Session,
+    request: Request,
+    db: Session,
     *,
     held_token: str | None,
     user: User,
@@ -174,11 +169,9 @@ def dismiss_held_upload(
     ``page`` is the route segment (``reviewers``, ``reviewees``,
     ``relationships``, ``observers``), never a URL from the form."""
     release_hold(db, token=held_token, user=user, review_session=review_session)
-    return urls.redirect(request,
-        url=(
-            f"/operator/sessions/{review_session.public_id}/{page}"
-            "?unlocked=1#upload-csv"
-        ),
+    return urls.redirect(
+        request,
+        url=(f"/operator/sessions/{review_session.public_id}/{page}?unlocked=1#upload-csv"),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -197,8 +190,7 @@ async def _handle_import(
     existing_count_fn: Callable[[Session, int], int],
     parse_fn: Callable[
         [bytes],
-        csv_imports.ParseResult[ReviewerImportRow]
-        | csv_imports.ParseResult[RevieweeImportRow],
+        csv_imports.ParseResult[ReviewerImportRow] | csv_imports.ParseResult[RevieweeImportRow],
     ],
     # Called with the import's keywords plus a merge's ``**extra``, so
     # its parameters are not spelled here.
@@ -239,6 +231,7 @@ async def _handle_import(
         acknowledged_loss,
         roster_address,
     )
+
     _require_editable(review_session)
     upload = await read_upload(
         db,
@@ -366,9 +359,7 @@ async def _handle_import(
             # A Reviewees merge refused for clearing group answers: the
             # count and line, offered back with a tick in the card.
             "group_clear": group_clear,
-            "breadcrumbs": breadcrumbs.operator_session_child(
-                review_session, crumb_label
-            ),
+            "breadcrumbs": breadcrumbs.operator_session_child(review_session, crumb_label),
         }
         if kind in ("reviewers", "reviewees"):
             # Segment 15F — the Reviewers / Reviewees templates'
@@ -397,11 +388,7 @@ async def _handle_import(
                 # participant info Item 1 — the same lesson again: the
                 # Unlock panel's self-fields card and the readout row's
                 # `Reviewers see:` pills read three keys this path owes.
-                context.update(
-                    views.reviewer_self_card_context(
-                        review_session, col_readouts
-                    )
-                )
+                context.update(views.reviewer_self_card_context(review_session, col_readouts))
             else:
                 status_options = views.REVIEWEES_STATUS_OPTIONS
                 search_options = views.reviewees_search_options(
@@ -420,11 +407,7 @@ async def _handle_import(
                 col_readouts = column_state.readouts
                 # participant info Item 4 — Item 1's lesson, kept: this
                 # path owes the own-entry card and readout their keys.
-                context.update(
-                    views.reviewee_self_card_context(
-                        review_session, col_readouts
-                    )
-                )
+                context.update(views.reviewee_self_card_context(review_session, col_readouts))
             context.update(
                 {
                     "total_row_count": len(list_items),
@@ -460,9 +443,7 @@ async def _handle_import(
                         lifecycle.session_has_responses(db, review_session)
                     ),
                     "delete_discards_assignments": assignment_count > 0,
-                    "roster_response_count": (
-                        lifecycle.session_response_count(db, review_session)
-                    ),
+                    "roster_response_count": (lifecycle.session_response_count(db, review_session)),
                     # 19O.5 rung 2 — this path builds its own context,
                     # so it owes the per-row counts the rows read. An
                     # absent key raises in the `<tr>` rather than
@@ -483,20 +464,19 @@ async def _handle_import(
                     "selected_ids": set[int](),
                 }
             )
-        return _templates.TemplateResponse(
-            request, template, context, status_code=status_code
-        )
+        return _templates.TemplateResponse(request, template, context, status_code=status_code)
 
     def ask() -> dict[str, str] | None:
         return hold_for_ask(
-            db, upload=upload, user=user, review_session=review_session,
+            db,
+            upload=upload,
+            user=user,
+            review_session=review_session,
             slot=kind,
         )
 
     if result.is_blocked:
-        release_hold(
-            db, token=upload.token, user=user, review_session=review_session
-        )
+        release_hold(db, token=upload.token, user=user, review_session=review_session)
         return render(status_code=status.HTTP_400_BAD_REQUEST)
 
     if existing > 0 and ticked > 1:
@@ -570,9 +550,7 @@ async def _handle_import(
             )
         )
         if result.is_blocked:
-            release_hold(
-                db, token=upload.token, user=user, review_session=review_session
-            )
+            release_hold(db, token=upload.token, user=user, review_session=review_session)
             return render(status_code=status.HTTP_400_BAD_REQUEST)
     # A merge refuses two file rows on one directory account.
     if merging:
@@ -580,9 +558,7 @@ async def _handle_import(
             csv_imports.merge_conflicts(kind=kind, rows=result.rows, directory=directory_check)
         )
         if result.is_blocked:
-            release_hold(
-                db, token=upload.token, user=user, review_session=review_session
-            )
+            release_hold(db, token=upload.token, user=user, review_session=review_session)
             return render(status_code=status.HTTP_400_BAD_REQUEST)
     extra: dict[str, object] = {}
     if merging:
@@ -633,11 +609,9 @@ async def _handle_import(
     # 19P.3 rung 4 — unconditional now. This was
     # `if kind == "reviewers" else ""` while Reviewees had no panel to
     # keep open; it has one, and this handler serves no other kind.
-    return urls.redirect(request,
-        url=(
-            f"/operator/sessions/{review_session.public_id}/{kind}"
-            "?unlocked=1#roster-card"
-        ),
+    return urls.redirect(
+        request,
+        url=(f"/operator/sessions/{review_session.public_id}/{kind}?unlocked=1#roster-card"),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -670,18 +644,13 @@ def _save_field_labels(
     if not lifecycle.is_editable(review_session):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=(
-                f"Session is {review_session.status}; revert to "
-                "draft to rename labels."
-            ),
+            detail=(f"Session is {review_session.status}; revert to draft to rename labels."),
         )
     # Every slot is checked before any is written, so an over-long label
     # refuses the save whole rather than landing the slots before it, or
     # reaching Postgres as a 500 (findings Cc3).
     for form_param, _ in slots:
-        too_long = field_labels_service.label_length_error(
-            submitted.get(form_param) or ""
-        )
+        too_long = field_labels_service.label_length_error(submitted.get(form_param) or "")
         if too_long is not None:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

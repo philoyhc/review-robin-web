@@ -77,9 +77,7 @@ def _make_session_with_reviewer(
         follow_redirects=False,
     )
     for _ in range(extra_instruments):
-        operator.post(
-            f"/operator/sessions/{review_session.public_id}/instruments/add-new-model"
-        )
+        operator.post(f"/operator/sessions/{review_session.public_id}/instruments/add-new-model")
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(operator, review_session.id)
     return review_session
@@ -102,26 +100,20 @@ def test_bare_url_303s_to_page_1(client: TestClient, db: Session) -> None:
     )
 
 
-def test_bare_url_preserves_reviewer_email(
-    client: TestClient, db: Session
-) -> None:
+def test_bare_url_preserves_reviewer_email(client: TestClient, db: Session) -> None:
     session = _make_session_with_reviewer(client, db, code="prev-s-2")
     response = client.get(
-        f"/operator/sessions/{session.public_id}/preview-surface"
-        "?reviewer_email=rae@example.edu",
+        f"/operator/sessions/{session.public_id}/preview-surface?reviewer_email=rae@example.edu",
         follow_redirects=False,
     )
     assert response.status_code == 303
     assert (
-        response.headers["location"]
-        == f"/operator/sessions/{session.public_id}/preview-surface/1"
+        response.headers["location"] == f"/operator/sessions/{session.public_id}/preview-surface/1"
         "?reviewer_email=rae%40example.edu"
     )
 
 
-def test_out_of_range_page_returns_404(
-    client: TestClient, db: Session
-) -> None:
+def test_out_of_range_page_returns_404(client: TestClient, db: Session) -> None:
     session = _make_session_with_reviewer(client, db, code="prev-s-3")
     response = client.get(
         f"/operator/sessions/{session.public_id}/preview-surface/99",
@@ -130,9 +122,7 @@ def test_out_of_range_page_returns_404(
     assert response.status_code == 404
 
 
-def test_session_without_reviewers_303s_to_invitations(
-    client: TestClient, db: Session
-) -> None:
+def test_session_without_reviewers_303s_to_invitations(client: TestClient, db: Session) -> None:
     """Empty roster means the reviewer surface has no subject.
 
     **And lands without a hint** (19O Item 6). A blank `reviewer_email`
@@ -154,15 +144,11 @@ def test_session_without_reviewers_303s_to_invitations(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    assert response.headers["location"] == (
-        f"/operator/sessions/{session.public_id}/invitations"
-    )
+    assert response.headers["location"] == (f"/operator/sessions/{session.public_id}/invitations")
     assert "no_match" not in response.headers["location"]
 
 
-def test_unmatched_reviewer_email_303s_to_invitations(
-    client: TestClient, db: Session
-) -> None:
+def test_unmatched_reviewer_email_303s_to_invitations(client: TestClient, db: Session) -> None:
     """An unknown reviewer does not silently select another reviewer.
 
     **The address rides along since 19O Item 6.** The Previews hub
@@ -180,8 +166,7 @@ def test_unmatched_reviewer_email_303s_to_invitations(
     )
     assert response.status_code == 303
     assert response.headers["location"] == (
-        f"/operator/sessions/{session.public_id}/invitations"
-        "?no_match=ghost%40example.edu"
+        f"/operator/sessions/{session.public_id}/invitations?no_match=ghost%40example.edu"
     )
 
 
@@ -205,14 +190,11 @@ def test_a_whitespace_email_on_an_empty_roster_carries_no_hint(
         select(ReviewSession).where(ReviewSession.code == "prev-s-ws")
     ).scalar_one()
     response = client.get(
-        f"/operator/sessions/{session.public_id}/preview-surface/1"
-        "?reviewer_email=%20%20%20",
+        f"/operator/sessions/{session.public_id}/preview-surface/1?reviewer_email=%20%20%20",
         follow_redirects=False,
     )
     assert response.status_code == 303
-    assert response.headers["location"] == (
-        f"/operator/sessions/{session.public_id}/invitations"
-    )
+    assert response.headers["location"] == (f"/operator/sessions/{session.public_id}/invitations")
 
 
 def test_a_hand_typed_no_match_for_a_real_reviewer_is_ignored(
@@ -228,8 +210,7 @@ def test_a_hand_typed_no_match_for_a_real_reviewer_is_ignored(
     """
     session = _make_session_with_reviewer(client, db, code="prev-s-liar")
     response = client.get(
-        f"/operator/sessions/{session.public_id}/invitations"
-        "?no_match=RAE@example.edu"
+        f"/operator/sessions/{session.public_id}/invitations?no_match=RAE@example.edu"
     )
     assert response.status_code == 200
     # Anchor the negative. Without this, a 403 from
@@ -261,8 +242,7 @@ def test_a_picker_label_is_reported_as_the_address_inside_it(
     )
     assert response.status_code == 303
     assert response.headers["location"] == (
-        f"/operator/sessions/{session.public_id}/invitations"
-        "?no_match=ghost%40example.edu"
+        f"/operator/sessions/{session.public_id}/invitations?no_match=ghost%40example.edu"
     )
 
 
@@ -283,7 +263,6 @@ def test_the_landing_page_names_the_address_that_did_not_match(
     ).text
     assert "No reviewer matched" in html
     assert "ghost@example.edu" in html
-
 
 
 # --------------------------------------------------------------------------- #
@@ -312,9 +291,7 @@ def test_renders_reviewer_surface_template_with_operator_banner(
     caught either.
     """
     session = _make_session_with_reviewer(client, db, code="prev-s-render")
-    body = client.get(
-        f"/operator/sessions/{session.public_id}/preview-surface/1"
-    ).text
+    body = client.get(f"/operator/sessions/{session.public_id}/preview-surface/1").text
     # The banner's sentences wrap in the template, so prose assertions
     # run against collapsed whitespace — matching what a reader sees
     # rather than where the source happens to break its lines.
@@ -377,9 +354,9 @@ def test_preview_surface_renders_the_reviewer_s_saved_responses(
     false the day that helper starts activating its session.
     """
     session = _make_session_with_reviewer(client, db, code="prev-s-saved")
-    instrument = db.execute(
-        select(Instrument).where(Instrument.session_id == session.id)
-    ).scalars().first()
+    instrument = (
+        db.execute(select(Instrument).where(Instrument.session_id == session.id)).scalars().first()
+    )
     assert instrument is not None
     assert instrument.accepting_responses is False, (
         "premise: the session is not accepting, so `accepting` is false "
@@ -390,15 +367,19 @@ def test_preview_surface_renders_the_reviewer_s_saved_responses(
         "and a released expiry, so it is not what puts the saved value on "
         "the page"
     )
-    assignment = db.execute(
-        select(Assignment).where(Assignment.session_id == session.id)
-    ).scalars().first()
+    assignment = (
+        db.execute(select(Assignment).where(Assignment.session_id == session.id)).scalars().first()
+    )
     assert assignment is not None
-    field = db.execute(
-        select(InstrumentResponseField)
-        .where(InstrumentResponseField.instrument_id == assignment.instrument_id)
-        .order_by(InstrumentResponseField.order)
-    ).scalars().first()
+    field = (
+        db.execute(
+            select(InstrumentResponseField)
+            .where(InstrumentResponseField.instrument_id == assignment.instrument_id)
+            .order_by(InstrumentResponseField.order)
+        )
+        .scalars()
+        .first()
+    )
     assert field is not None, "the generated instrument has no response field"
 
     db.add(
@@ -413,41 +394,30 @@ def test_preview_surface_renders_the_reviewer_s_saved_responses(
     db.commit()
 
     body = client.get(
-        f"/operator/sessions/{session.public_id}/preview-surface/1"
-        "?reviewer_email=rae@example.edu"
+        f"/operator/sessions/{session.public_id}/preview-surface/1?reviewer_email=rae@example.edu"
     ).text
     assert "SAVED-BY-THE-REVIEWER" in body
 
 
-def test_no_write_form_in_preview(
-    client: TestClient, db: Session
-) -> None:
+def test_no_write_form_in_preview(client: TestClient, db: Session) -> None:
     """``preview_mode=True`` replaces ``<form action=".../save">``
     with a ``<div>`` so the page contains no write-path
     ``<form action>``."""
     session = _make_session_with_reviewer(client, db, code="prev-s-noform")
-    body = client.get(
-        f"/operator/sessions/{session.public_id}/preview-surface/1"
-    ).text
+    body = client.get(f"/operator/sessions/{session.public_id}/preview-surface/1").text
     # No reviewer save endpoint as a form action.
     assert f'action="/me/sessions/{session.public_id}/1/save"' not in body
     # No session-wide submit formaction either.
-    assert (
-        f'formaction="/me/sessions/{session.public_id}/submit' not in body
-    )
+    assert f'formaction="/me/sessions/{session.public_id}/submit' not in body
 
 
-def test_action_row_renders_save_discard_submit_disabled(
-    client: TestClient, db: Session
-) -> None:
+def test_action_row_renders_save_discard_submit_disabled(client: TestClient, db: Session) -> None:
     """In ``preview_mode`` the action row IS included (so the
     operator sees the form chrome) but Save / Discard / Submit
     render as inert disabled ``<button>`` — no ``data-rs-save`` /
     ``data-rs-discard`` hooks, no ``type="submit"``."""
     session = _make_session_with_reviewer(client, db, code="prev-s-actrow")
-    body = client.get(
-        f"/operator/sessions/{session.public_id}/preview-surface/1"
-    ).text
+    body = client.get(f"/operator/sessions/{session.public_id}/preview-surface/1").text
     # The action row container is present (a rendered ``<div
     # class="rs-action-row…``, not just the inline-CSS class
     # definition in ``base.html``).
@@ -475,25 +445,17 @@ def _split_into_two_pages(db: Session, session_id: int) -> None:
     from app.services import instruments as instruments_service
 
     instruments = sorted(
-        db.execute(
-            select(Instrument).where(Instrument.session_id == session_id)
-        ).scalars().all(),
+        db.execute(select(Instrument).where(Instrument.session_id == session_id)).scalars().all(),
         key=lambda i: (i.order, i.id),
     )
     instruments_service.create_page_break_after(db, instrument=instruments[0])
 
 
-def test_multi_page_nav_links_point_at_operator_preview(
-    client: TestClient, db: Session
-) -> None:
-    session = _make_session_with_reviewer(
-        client, db, code="prev-s-mp", extra_instruments=1
-    )
+def test_multi_page_nav_links_point_at_operator_preview(client: TestClient, db: Session) -> None:
+    session = _make_session_with_reviewer(client, db, code="prev-s-mp", extra_instruments=1)
     _split_into_two_pages(db, session.id)
 
-    body1 = client.get(
-        f"/operator/sessions/{session.public_id}/preview-surface/1"
-    ).text
+    body1 = client.get(f"/operator/sessions/{session.public_id}/preview-surface/1").text
     # Page 1 has no Prev (disabled button), has Next pointing at /2.
     next_href = f'href="/operator/sessions/{session.public_id}/preview-surface/2"'
     assert next_href in body1
@@ -502,17 +464,13 @@ def test_multi_page_nav_links_point_at_operator_preview(
     # Page counter renders.
     assert "Page 1 of 2" in body1
 
-    body2 = client.get(
-        f"/operator/sessions/{session.public_id}/preview-surface/2"
-    ).text
+    body2 = client.get(f"/operator/sessions/{session.public_id}/preview-surface/2").text
     prev_href = f'href="/operator/sessions/{session.public_id}/preview-surface/1"'
     assert prev_href in body2
     assert "Page 2 of 2" in body2
 
 
-def test_group_scoped_instrument_on_later_page_renders(
-    client: TestClient, db: Session
-) -> None:
+def test_group_scoped_instrument_on_later_page_renders(client: TestClient, db: Session) -> None:
     """Regression — ``review_surface.html`` calls the
     ``numeric_column_ch_width`` Jinja global inside the
     group-scoped branch (``{% if group.is_group %}``). That global
@@ -521,13 +479,9 @@ def test_group_scoped_instrument_on_later_page_renders(
     pages hold a group-scoped instrument 500s on render from the
     operator preview route — silently fine on page 1 if all the
     group-scoped instruments live on page 2+."""
-    session = _make_session_with_reviewer(
-        client, db, code="prev-s-grp", extra_instruments=1
-    )
+    session = _make_session_with_reviewer(client, db, code="prev-s-grp", extra_instruments=1)
     instruments = sorted(
-        db.execute(
-            select(Instrument).where(Instrument.session_id == session.id)
-        ).scalars().all(),
+        db.execute(select(Instrument).where(Instrument.session_id == session.id)).scalars().all(),
         key=lambda i: (i.order, i.id),
     )
     # Flip the second instrument into a group-scoped one and split
@@ -538,30 +492,22 @@ def test_group_scoped_instrument_on_later_page_renders(
 
     instruments_service.create_page_break_after(db, instrument=instruments[0])
 
-    response = client.get(
-        f"/operator/sessions/{session.public_id}/preview-surface/2"
-    )
+    response = client.get(f"/operator/sessions/{session.public_id}/preview-surface/2")
     assert response.status_code == 200, response.text
     # The second instrument's section should render on page 2.
     assert 'data-rs-position="2"' in response.text
 
 
-def test_prev_next_preserve_reviewer_email_query(
-    client: TestClient, db: Session
-) -> None:
+def test_prev_next_preserve_reviewer_email_query(client: TestClient, db: Session) -> None:
     """Page nav must preserve ``?reviewer_email=`` so the operator
     stays on the same reviewer's preview when flipping pages."""
-    session = _make_session_with_reviewer(
-        client, db, code="prev-s-mp-q", extra_instruments=1
-    )
+    session = _make_session_with_reviewer(client, db, code="prev-s-mp-q", extra_instruments=1)
     _split_into_two_pages(db, session.id)
     body = client.get(
-        f"/operator/sessions/{session.public_id}/preview-surface/1"
-        "?reviewer_email=rae@example.edu"
+        f"/operator/sessions/{session.public_id}/preview-surface/1?reviewer_email=rae@example.edu"
     ).text
     expected_next = (
-        f"/operator/sessions/{session.public_id}/preview-surface/2"
-        "?reviewer_email=rae%40example.edu"
+        f"/operator/sessions/{session.public_id}/preview-surface/2?reviewer_email=rae%40example.edu"
     )
     assert f'href="{expected_next}"' in body
 
@@ -571,9 +517,7 @@ def test_prev_next_preserve_reviewer_email_query(
 # --------------------------------------------------------------------------- #
 
 
-def test_preview_works_on_draft_session(
-    client: TestClient, db: Session
-) -> None:
+def test_preview_works_on_draft_session(client: TestClient, db: Session) -> None:
     """The session created above is never activated — it's still in
     the draft state. The preview must still render the action row
     (Save / Discard / Submit disabled) per the banner's
@@ -583,9 +527,7 @@ def test_preview_works_on_draft_session(
     session = _make_session_with_reviewer(client, db, code="prev-s-draft")
     db.refresh(session)
     assert session.status == "draft"
-    body = client.get(
-        f"/operator/sessions/{session.public_id}/preview-surface/1"
-    ).text
+    body = client.get(f"/operator/sessions/{session.public_id}/preview-surface/1").text
     # Action row rendered (the inert form chrome).
     assert 'class="rs-action-row' in body
     assert ">Save</button>" in body

@@ -9,6 +9,7 @@ Also pins the reviewer-surface friendly-only render and the
 column-visibility toggle widget on the Assignments page picking
 up the friendly label.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -40,9 +41,7 @@ def _make_session(client: TestClient, db: Session, code: str) -> ReviewSession:
 
 
 def _actor(db: Session) -> User:
-    return db.execute(
-        select(User).where(User.email == "alice@example.edu")
-    ).scalar_one()
+    return db.execute(select(User).where(User.email == "alice@example.edu")).scalar_one()
 
 
 # ── Reviewers Setup page ─────────────────────────────────────────────────
@@ -53,18 +52,13 @@ def test_reviewers_page_renders_canonical_default_when_no_override(
 ) -> None:
     review_session = _make_session(client, db, "fl-rev-default")
     # Seed at least one reviewer so the table renders.
-    csv = (
-        "ReviewerName,ReviewerEmail,ReviewerTag1\n"
-        "Alice,alice@example.edu,senior\n"
-    )
+    csv = "ReviewerName,ReviewerEmail,ReviewerTag1\nAlice,alice@example.edu,senior\n"
     client.post(
         f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={"file": ("r.csv", csv.encode(), "text/csv")},
         follow_redirects=False,
     )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
     # Single-line canonical render — no .field-label-canonical
     # span. (The CSS class name appears in the inline <style> block
     # in base.html; match on the span tag itself to dodge that.)
@@ -72,18 +66,13 @@ def test_reviewers_page_renders_canonical_default_when_no_override(
     assert 'class="field-label-canonical"' not in body
 
 
-def test_reviewers_page_renders_two_line_when_override_set(
-    client: TestClient, db: Session
-) -> None:
+def test_reviewers_page_renders_two_line_when_override_set(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, "fl-rev-override")
     actor = _actor(db)
     # Import the roster first — a roster import reconciles labels from
     # its header (Segment 19C Item 1), so setting the override via the
     # editor path afterwards is what this test pins.
-    csv = (
-        "ReviewerName,ReviewerEmail,ReviewerTag1\n"
-        "Alice,alice@example.edu,senior\n"
-    )
+    csv = "ReviewerName,ReviewerEmail,ReviewerTag1\nAlice,alice@example.edu,senior\n"
     client.post(
         f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={"file": ("r.csv", csv.encode(), "text/csv")},
@@ -97,9 +86,7 @@ def test_reviewers_page_renders_two_line_when_override_set(
         label="Cohort",
         user=actor,
     )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
     # Friendly label appears in primary header text; canonical
     # name appears inside the .field-label-canonical subtext.
     assert "Cohort" in body
@@ -108,9 +95,7 @@ def test_reviewers_page_renders_two_line_when_override_set(
     # button inline with the friendly label on the first row
     # rather than getting pushed below by a block-level span.
     btn_idx = body.index('aria-label="Sort by Tag1"')
-    canonical_idx = body.index(
-        'class="field-label-canonical">Tag 1</span>'
-    )
+    canonical_idx = body.index('class="field-label-canonical">Tag 1</span>')
     assert canonical_idx > btn_idx
 
 
@@ -137,28 +122,18 @@ def test_reviewees_page_renders_canonical_labels_on_identity_slots(
         files={"file": ("e.csv", csv.encode(), "text/csv")},
         follow_redirects=False,
     )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewees"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewees").text
     # Canonical defaults render; the override-subtext span never
     # appears for the identity slots because no override can exist.
     assert ">Name<" in body
     assert ">Email<" in body
     assert ">Profile<" in body
-    assert (
-        'class="field-label-canonical">Name</span>' not in body
-    )
-    assert (
-        'class="field-label-canonical">Email</span>' not in body
-    )
-    assert (
-        'class="field-label-canonical">Profile</span>' not in body
-    )
+    assert 'class="field-label-canonical">Name</span>' not in body
+    assert 'class="field-label-canonical">Email</span>' not in body
+    assert 'class="field-label-canonical">Profile</span>' not in body
 
 
-def test_upsert_rejects_retired_reviewee_identity_slots(
-    client: TestClient, db: Session
-) -> None:
+def test_upsert_rejects_retired_reviewee_identity_slots(client: TestClient, db: Session) -> None:
     """Retired slots — ``name`` / ``email_or_identifier`` /
     ``profile_link`` — raise ``FieldLabelSourceError`` on upsert.
     The defaults still resolve through ``field_labels.resolve``
@@ -177,20 +152,9 @@ def test_upsert_rejects_retired_reviewee_identity_slots(
             )
     # Read path stays permissive — resolver still returns canonical
     # defaults so display surfaces keep working.
-    assert (
-        field_labels.resolve(review_session, "reviewee", "name")
-        == "Name"
-    )
-    assert (
-        field_labels.resolve(
-            review_session, "reviewee", "email_or_identifier"
-        )
-        == "Email"
-    )
-    assert (
-        field_labels.resolve(review_session, "reviewee", "profile_link")
-        == "Profile"
-    )
+    assert field_labels.resolve(review_session, "reviewee", "name") == "Name"
+    assert field_labels.resolve(review_session, "reviewee", "email_or_identifier") == "Email"
+    assert field_labels.resolve(review_session, "reviewee", "profile_link") == "Profile"
 
 
 # ── Relationships Setup page ─────────────────────────────────────────────
@@ -247,9 +211,7 @@ def test_relationships_page_renders_pair_context_friendly_label(
         label="Module reference",
         user=actor,
     )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/relationships"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/relationships").text
     assert "Module reference" in body
     assert 'class="field-label-canonical">Pair context 1</span>' in body
 
@@ -279,8 +241,7 @@ def test_assignments_page_picks_up_friendly_label_in_table_and_toggle(
         files={
             "file": (
                 "e.csv",
-                b"RevieweeName,RevieweeEmail,RevieweeTag2\n"
-                b"Carol,carol@example.edu,cohort-a\n",
+                b"RevieweeName,RevieweeEmail,RevieweeTag2\nCarol,carol@example.edu,cohort-a\n",
                 "text/csv",
             )
         },
@@ -301,9 +262,7 @@ def test_assignments_page_picks_up_friendly_label_in_table_and_toggle(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(client, review_session.id)
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/assignments").text
     # Two-line render in the table header.
     assert "Lab section" in body
     assert 'class="field-label-canonical">Tag 2</span>' in body
@@ -349,9 +308,7 @@ def _chip_row(body: str) -> str:
     return flat[i : flat.index("</p>", i)]
 
 
-def test_reviewers_chip_uses_the_friendly_override(
-    client: TestClient, db: Session
-) -> None:
+def test_reviewers_chip_uses_the_friendly_override(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, "fl-rev-chip")
     actor = _actor(db)
     client.post(
@@ -359,8 +316,7 @@ def test_reviewers_chip_uses_the_friendly_override(
         files={
             "file": (
                 "r.csv",
-                b"ReviewerName,ReviewerEmail,ReviewerTag1\n"
-                b"Alice,alice@example.edu,senior\n",
+                b"ReviewerName,ReviewerEmail,ReviewerTag1\nAlice,alice@example.edu,senior\n",
                 "text/csv",
             )
         },
@@ -374,16 +330,12 @@ def test_reviewers_chip_uses_the_friendly_override(
         label="Cohort",
         user=actor,
     )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
     assert _chip_label(body, "tag-1") == "Cohort"
     assert "ReviewerTag1" not in _chip_row(body)
 
 
-def test_reviewees_chips_use_the_builtin_friendly_defaults(
-    client: TestClient, db: Session
-) -> None:
+def test_reviewees_chips_use_the_builtin_friendly_defaults(client: TestClient, db: Session) -> None:
     """No override set, so each chip falls back to its builtin
     default rather than the CSV column name."""
     review_session = _make_session(client, db, "fl-ree-chip")
@@ -400,9 +352,7 @@ def test_reviewees_chips_use_the_builtin_friendly_defaults(
         },
         follow_redirects=False,
     )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewees"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewees").text
     assert _chip_label(body, "profile") == "Profile"
     assert _chip_label(body, "tag-1") == "Tag 1"
     chips = _chip_row(body)
@@ -410,9 +360,7 @@ def test_reviewees_chips_use_the_builtin_friendly_defaults(
     assert "RevieweeTag1" not in chips
 
 
-def test_relationships_chip_uses_the_friendly_override(
-    client: TestClient, db: Session
-) -> None:
+def test_relationships_chip_uses_the_friendly_override(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, "fl-rel-chip")
     actor = _actor(db)
     for path, payload in (
@@ -437,16 +385,12 @@ def test_relationships_chip_uses_the_friendly_override(
         label="Mentorship",
         user=actor,
     )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/relationships"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/relationships").text
     assert _chip_label(body, "tag-1") == "Mentorship"
     assert "PairContextTag1" not in _chip_row(body)
 
 
-def test_no_page_renders_a_fields_with_data_card(
-    client: TestClient, db: Session
-) -> None:
+def test_no_page_renders_a_fields_with_data_card(client: TestClient, db: Session) -> None:
     """The card itself is gone from all three Setup pages."""
     review_session = _make_session(client, db, "fl-no-card")
     for path, payload in (
@@ -463,7 +407,5 @@ def test_no_page_renders_a_fields_with_data_card(
             follow_redirects=False,
         )
     for page in ("reviewers", "reviewees", "relationships"):
-        body = client.get(
-            f"/operator/sessions/{review_session.public_id}/{page}"
-        ).text
+        body = client.get(f"/operator/sessions/{review_session.public_id}/{page}").text
         assert "Fields with data" not in body, page

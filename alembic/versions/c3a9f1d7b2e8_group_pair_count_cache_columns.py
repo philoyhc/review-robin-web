@@ -26,6 +26,7 @@ Revises: c5a9b7e3d1f0
 Create Date: 2026-05-19
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -44,9 +45,7 @@ def upgrade() -> None:
     )
     op.add_column(
         "instruments",
-        sa.Column(
-            "cached_group_pair_stamp", sa.String(length=64), nullable=True
-        ),
+        sa.Column("cached_group_pair_stamp", sa.String(length=64), nullable=True),
     )
 
 

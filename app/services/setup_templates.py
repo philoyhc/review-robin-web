@@ -212,9 +212,7 @@ def _pair_row(reviewer: str, reviewee: str, interest: str) -> dict[str, str]:
     }
 
 
-def _peer_pairs(
-    group: tuple[str, ...], interest: str
-) -> tuple[dict[str, str], ...]:
+def _peer_pairs(group: tuple[str, ...], interest: str) -> tuple[dict[str, str], ...]:
     """Every ordered within-group pair, excluding self-review.
 
     Generated rather than written out: a hand-listed set of pairs across
@@ -236,9 +234,7 @@ _STARTER = TemplateSet(
     rows={
         "reviewers": (_student_row("Reviewer", _TW01[0], _TUTOR_TW01, "TW01"),),
         "reviewees": (_student_row("Reviewee", _TW01[1], _TUTOR_TW01, "TW01"),),
-        "relationships": (
-            _pair_row(_TW01[0], _TW01[1], "Chess club 2026"),
-        ),
+        "relationships": (_pair_row(_TW01[0], _TW01[1], "Chess club 2026"),),
         "observers": (_observer_row(_TUTOR_TW01, "TW01"),),
     },
 )
@@ -289,26 +285,116 @@ _DEMO = TemplateSet(
 #: eleven tutorial groups of fourteen, each split into teams of 5 / 5 / 4.
 #: Teams are numbered across the class, so a team names its group.
 _FULL_FIRST = (
-    "Aisha", "Ben", "Chen", "Diego", "Emma", "Farah", "George", "Hana",
-    "Ivan", "Julia", "Kwame", "Lena", "Mateo", "Nadia", "Omar", "Priya",
-    "Quinn", "Rafael", "Sofia", "Tariq", "Uma", "Victor", "Wen", "Ximena",
-    "Yusuf", "Zara", "Amir", "Bianca", "Caleb", "Dina", "Elias", "Fatima",
-    "Gabriel", "Helena", "Idris", "Jasmine", "Kenji", "Leila", "Marcus",
-    "Noor", "Oliver", "Paula", "Ravi", "Sara", "Tomas", "Valentina",
-    "William", "Yara", "Zain", "Alice", "Bruno", "Clara", "Daniel",
-    "Esther", "Felix", "Grace", "Hugo", "Isla", "Jonah", "Kira",
+    "Aisha",
+    "Ben",
+    "Chen",
+    "Diego",
+    "Emma",
+    "Farah",
+    "George",
+    "Hana",
+    "Ivan",
+    "Julia",
+    "Kwame",
+    "Lena",
+    "Mateo",
+    "Nadia",
+    "Omar",
+    "Priya",
+    "Quinn",
+    "Rafael",
+    "Sofia",
+    "Tariq",
+    "Uma",
+    "Victor",
+    "Wen",
+    "Ximena",
+    "Yusuf",
+    "Zara",
+    "Amir",
+    "Bianca",
+    "Caleb",
+    "Dina",
+    "Elias",
+    "Fatima",
+    "Gabriel",
+    "Helena",
+    "Idris",
+    "Jasmine",
+    "Kenji",
+    "Leila",
+    "Marcus",
+    "Noor",
+    "Oliver",
+    "Paula",
+    "Ravi",
+    "Sara",
+    "Tomas",
+    "Valentina",
+    "William",
+    "Yara",
+    "Zain",
+    "Alice",
+    "Bruno",
+    "Clara",
+    "Daniel",
+    "Esther",
+    "Felix",
+    "Grace",
+    "Hugo",
+    "Isla",
+    "Jonah",
+    "Kira",
 )
 _FULL_LAST = (
-    "Khan", "Carter", "Wei", "Alvarez", "Novak", "Haddad", "Mensah", "Sato",
-    "Petrov", "Rossi", "Owusu", "Fischer", "Silva", "Rahman", "Ali",
-    "Sharma", "Nguyen", "Costa", "Moreau", "Aziz", "Patel", "Ivanova",
-    "Zhang", "Reyes", "Demir", "Okafor", "Lindqvist", "Kowalski", "Tanaka",
-    "Hughes", "Banerjee", "Duarte", "Park", "Nielsen", "Mwangi", "Russo",
-    "Yilmaz", "Cohen", "Andersen", "Bakr",
+    "Khan",
+    "Carter",
+    "Wei",
+    "Alvarez",
+    "Novak",
+    "Haddad",
+    "Mensah",
+    "Sato",
+    "Petrov",
+    "Rossi",
+    "Owusu",
+    "Fischer",
+    "Silva",
+    "Rahman",
+    "Ali",
+    "Sharma",
+    "Nguyen",
+    "Costa",
+    "Moreau",
+    "Aziz",
+    "Patel",
+    "Ivanova",
+    "Zhang",
+    "Reyes",
+    "Demir",
+    "Okafor",
+    "Lindqvist",
+    "Kowalski",
+    "Tanaka",
+    "Hughes",
+    "Banerjee",
+    "Duarte",
+    "Park",
+    "Nielsen",
+    "Mwangi",
+    "Russo",
+    "Yilmaz",
+    "Cohen",
+    "Andersen",
+    "Bakr",
 )
 _FULL_TUTORS = (
-    "Margaret Liu", "Samuel Adeyemi", "Rosa Martinez", "Thomas Becker",
-    "Anjali Rao", "Daniel O'Brien",
+    "Margaret Liu",
+    "Samuel Adeyemi",
+    "Rosa Martinez",
+    "Thomas Becker",
+    "Anjali Rao",
+    "Daniel O'Brien",
 )
 _FULL_OPERATOR = ("Operator Example", "operator@example.edu")
 _FULL_GROUP_SIZE = 14
@@ -332,19 +418,19 @@ def _full_cohort() -> tuple[tuple[str, str, str, str, str], ...]:
         group = index // _FULL_GROUP_SIZE + 1
         position = index % _FULL_GROUP_SIZE
         team_in_group = 0 if position < 5 else (1 if position < 10 else 2)
-        cohort.append((
-            name,
-            email,
-            _FULL_TUTORS[(group - 1) // 2],
-            f"TW{group:02d}",
-            f"Team {(group - 1) * 3 + team_in_group + 1}",
-        ))
+        cohort.append(
+            (
+                name,
+                email,
+                _FULL_TUTORS[(group - 1) // 2],
+                f"TW{group:02d}",
+                f"Team {(group - 1) * 3 + team_in_group + 1}",
+            )
+        )
     return tuple(cohort)
 
 
-def _full_row(
-    prefix: str, person: tuple[str, str, str, str, str], profile: bool
-) -> dict[str, str]:
+def _full_row(prefix: str, person: tuple[str, str, str, str, str], profile: bool) -> dict[str, str]:
     name, email, tutor, group, team = person
     return {
         f"{prefix}Name": name,
@@ -353,8 +439,7 @@ def _full_row(
         f"{prefix}Tag2": group,
         f"{prefix}Tag3": team,
         "ProfileLink": (
-            f"https://{EXAMPLE_DOMAIN}/profiles/{email.split('@')[0]}"
-            if profile else ""
+            f"https://{EXAMPLE_DOMAIN}/profiles/{email.split('@')[0]}" if profile else ""
         ),
         "Status": "active",
     }
@@ -364,12 +449,8 @@ _FULL = TemplateSet(
     key="full",
     zip_name="review-robin-sample-rosters-154.zip",
     rows={
-        "reviewers": tuple(
-            _full_row("Reviewer", p, profile=False) for p in _full_cohort()
-        ),
-        "reviewees": tuple(
-            _full_row("Reviewee", p, profile=True) for p in _full_cohort()
-        ),
+        "reviewers": tuple(_full_row("Reviewer", p, profile=False) for p in _full_cohort()),
+        "reviewees": tuple(_full_row("Reviewee", p, profile=True) for p in _full_cohort()),
     },
     labels={
         "ReviewerTag1": "Tutor",
@@ -397,9 +478,7 @@ def templates_in(template_set: TemplateSet) -> tuple[SetupTemplate, ...]:
     return tuple(t for t in TEMPLATES if t.key in template_set.rows)
 
 
-def template_header(
-    template: SetupTemplate, labels: Mapping[str, str] = LABELS
-) -> tuple[str, ...]:
+def template_header(template: SetupTemplate, labels: Mapping[str, str] = LABELS) -> tuple[str, ...]:
     """``template``'s header row, with ``labels`` suffixes attached
     (:data:`LABELS` unless a set brings its own).
 
@@ -408,14 +487,11 @@ def template_header(
     overrides — these templates are generic and have no session.
     """
     return tuple(
-        f"{column}.{labels[column]}" if column in labels else column
-        for column in template.header
+        f"{column}.{labels[column]}" if column in labels else column for column in template.header
     )
 
 
-def row_tuple(
-    template: SetupTemplate, row: Mapping[str, str]
-) -> tuple[str, ...]:
+def row_tuple(template: SetupTemplate, row: Mapping[str, str]) -> tuple[str, ...]:
     """One row's cells in header order.
 
     Raises ``KeyError`` for a header column the row does not supply — a
@@ -426,9 +502,7 @@ def row_tuple(
     return tuple(row[column] for column in template.header)
 
 
-def template_rows(
-    template_set: TemplateSet, template: SetupTemplate
-) -> list[tuple[str, ...]]:
+def template_rows(template_set: TemplateSet, template: SetupTemplate) -> list[tuple[str, ...]]:
     """``[header, *body]`` — the whole file."""
     return [
         template_header(template, template_set.labels),
@@ -446,8 +520,6 @@ def build_zip(template_set: TemplateSet) -> bytes:
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
         for template in templates_in(template_set):
-            csv_bytes = b"".join(
-                stream_csv(template_rows(template_set, template))
-            )
+            csv_bytes = b"".join(stream_csv(template_rows(template_set, template)))
             archive.writestr(template.filename, csv_bytes)
     return buffer.getvalue()

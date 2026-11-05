@@ -39,19 +39,19 @@ def _session(client: TestClient, db: Session, code: str, rows: int = 3):
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    s = db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    s = db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
     s.observers_enabled = True
-    db.add_all([
-        Observer(
-            session_id=s.id,
-            email=f"o{n}@example.org",
-            display_name=f"O{n}",
-            status="active" if n % 2 == 0 else "inactive",
-        )
-        for n in range(rows)
-    ])
+    db.add_all(
+        [
+            Observer(
+                session_id=s.id,
+                email=f"o{n}@example.org",
+                display_name=f"O{n}",
+                status="active" if n % 2 == 0 else "inactive",
+            )
+            for n in range(rows)
+        ]
+    )
     db.commit()
     db.refresh(s)
     return s
@@ -62,7 +62,8 @@ def _builder(body: str) -> str:
     position — `base.html` ships a dozen other scripts on this page."""
     m = re.search(
         r"<script>(?:(?!</script>).)*?observers-row-expander.*?</script>",
-        body, re.S,
+        body,
+        re.S,
     )
     assert m, "the expander builder is not in the response"
     return _code(m.group(0))
@@ -88,23 +89,17 @@ def _code(js: str) -> str:
     it opened. Nothing in this file asserts on reasoning text; if
     something ever needs to, it can read the response directly.
     """
-    return "\n".join(
-        re.sub(r"//.*$", "", line) for line in js.split("\n")
-    )
+    return "\n".join(re.sub(r"//.*$", "", line) for line in js.split("\n"))
 
 
 def _page(client: TestClient, s: ReviewSession, suffix: str = "") -> str:
-    return client.get(
-        f"/operator/sessions/{s.public_id}/observers{suffix}"
-    ).text
+    return client.get(f"/operator/sessions/{s.public_id}/observers{suffix}").text
 
 
 # ── What the builder would produce ────────────────────────────────────
 
 
-def test_the_panel_carries_all_four_row_actions(
-    client: TestClient, db: Session
-) -> None:
+def test_the_panel_carries_all_four_row_actions(client: TestClient, db: Session) -> None:
     s = _session(client, db, "exp-four")
     js = _builder(_page(client, s))
 
@@ -143,9 +138,7 @@ def test_the_count_is_bare_text_because_the_panel_is_pill_free(
     assert 'id="observers-selected-count"' not in body
 
 
-def test_the_delete_ships_disabled_with_its_gate_beside_it(
-    client: TestClient, db: Session
-) -> None:
+def test_the_delete_ships_disabled_with_its_gate_beside_it(client: TestClient, db: Session) -> None:
     """Nothing syncs an injected pair until its first tick, so a
     live-by-default Delete would be a destructive control with its gate
     open."""
@@ -162,9 +155,7 @@ def test_the_delete_ships_disabled_with_its_gate_beside_it(
     assert 'form="observers-bulk-form"' in confirm.group(0)
 
 
-def test_the_status_actions_are_chosen_by_the_selection(
-    client: TestClient, db: Session
-) -> None:
+def test_the_status_actions_are_chosen_by_the_selection(client: TestClient, db: Session) -> None:
     """`Inactivate` acts on active rows and `Activate` on inactive ones,
     so a selection that is all one status gets exactly one actionable
     button. Rendering the other offers a control that no-ops on every
@@ -180,7 +171,7 @@ def test_the_status_actions_are_chosen_by_the_selection(
 
     assert "statusActions" in js
     assert 'dataset.status === "active"' in js
-    assert 'tr[data-status]' in js, "the builder reads no rows"
+    assert "tr[data-status]" in js, "the builder reads no rows"
 
     # The CONDITIONALS, not just the read. Making `statusActions` push
     # both labels unconditionally passed every other assertion here:
@@ -226,15 +217,13 @@ def test_edit_takes_any_selection(client: TestClient, db: Session) -> None:
     assert "disabled" not in edit.group(0), "Edit renders disabled"
 
 
-def test_edit_navigates_to_the_editor_for_its_arity(
-    client: TestClient, db: Session
-) -> None:
+def test_edit_navigates_to_the_editor_for_its_arity(client: TestClient, db: Session) -> None:
     """Entering edit mode is a navigation, and without a fragment it
     lands at the top of the document. Delegated from the table, because
     the panel is replaced on every selection change."""
     js = _builder(_page(client, _session(client, db, "exp-editnav")))
 
-    assert '.exp-edit[data-edit-ids]' in js, "the handler is not delegated"
+    assert ".exp-edit[data-edit-ids]" in js, "the handler is not delegated"
     assert '"#observer-row-"' in js, "Edit navigates without a fragment"
     assert '"?edit_id="' in js, "one row does not open the row editor"
     assert '"rule_id="' in js, "several rows do not open the rule editor"
@@ -243,9 +232,7 @@ def test_edit_navigates_to_the_editor_for_its_arity(
 # ── What the panel replaced ───────────────────────────────────────────
 
 
-def test_nothing_the_panel_builds_is_also_server_rendered(
-    client: TestClient, db: Session
-) -> None:
+def test_nothing_the_panel_builds_is_also_server_rendered(client: TestClient, db: Session) -> None:
     """A survivor would be a second control with the same id — and both
     the delete pairing and this page's own script reach theirs with a
     first-match `querySelector`, so the copy would silently take the
@@ -277,15 +264,16 @@ def test_the_editor_carries_its_save_and_cancel_in_a_row_bar(
     if mode == "add":
         body = _page(client, s, "?add=1")
     else:
-        row_id = db.execute(
-            select(Observer.id).where(Observer.session_id == s.id)
-        ).scalars().first()
+        row_id = (
+            db.execute(select(Observer.id).where(Observer.session_id == s.id)).scalars().first()
+        )
         body = _page(client, s, f"?edit_id={row_id}")
 
     bar = re.search(
         r'<tr class="session-expander session-expander-bracketed '
         r'row-editor-bar">.*?</tr>',
-        body, re.S,
+        body,
+        re.S,
     )
     assert bar, f"no editor bar in {mode} mode"
     held = bar.group(0)
@@ -311,9 +299,7 @@ def test_the_editor_carries_its_save_and_cancel_in_a_row_bar(
     assert "#observers-table-card" in held
 
 
-def test_the_editor_bar_announces_the_mode_it_is_in(
-    client: TestClient, db: Session
-) -> None:
+def test_the_editor_bar_announces_the_mode_it_is_in(client: TestClient, db: Session) -> None:
     """The card carried an `<h2>` — "Add new observer" / "Edit observer"
     — and that heading was the only accessible name for the state the
     page is in. What replaces it visually is a highlighted row, and a
@@ -324,24 +310,25 @@ def test_the_editor_bar_announces_the_mode_it_is_in(
     bar = re.search(
         r'<tr class="session-expander session-expander-bracketed '
         r'row-editor-bar">.*?</tr>',
-        body, re.S,
+        body,
+        re.S,
     )
     assert bar
     assert 'class="visually-hidden" aria-live="polite"' in bar.group(0)
     assert "Add new observer" in bar.group(0)
 
 
-def test_a_rejected_save_puts_its_reason_in_the_row_bar(
-    client: TestClient, db: Session
-) -> None:
+def test_a_rejected_save_puts_its_reason_in_the_row_bar(client: TestClient, db: Session) -> None:
     """The error lived in the editor card. It belongs with the row
     anyway: the message is about the values in the row above."""
     s = _session(client, db, "exp-err")
     response = client.post(
         f"/operator/sessions/{s.public_id}/observers/create",
         data={
-            "email": "o0@example.org", "display_name": "Dup",
-            "tag_1": "", "status": "active",
+            "email": "o0@example.org",
+            "display_name": "Dup",
+            "tag_1": "",
+            "status": "active",
         },
         follow_redirects=False,
     )
@@ -350,21 +337,18 @@ def test_a_rejected_save_puts_its_reason_in_the_row_bar(
     bar = re.search(
         r'<tr class="session-expander session-expander-bracketed '
         r'row-editor-bar">.*?</tr>',
-        response.text, re.S,
+        response.text,
+        re.S,
     )
     assert bar, "no editor bar on a rejected save"
     assert "row-editor-error" in bar.group(0), "the reason is elsewhere"
 
 
-def test_the_edit_row_reads_as_selected(
-    client: TestClient, db: Session
-) -> None:
+def test_the_edit_row_reads_as_selected(client: TestClient, db: Session) -> None:
     """The row being edited takes the same rails a selected row does, so
     the bar beneath it closes the same bracket."""
     s = _session(client, db, "exp-sel")
-    row_id = db.execute(
-        select(Observer.id).where(Observer.session_id == s.id)
-    ).scalars().first()
+    row_id = db.execute(select(Observer.id).where(Observer.session_id == s.id)).scalars().first()
     body = _page(client, s, f"?edit_id={row_id}")
 
     row = re.search(rf'<tr[^>]*id="observer-row-{row_id}"[^>]*>', body)
@@ -382,9 +366,7 @@ def test_the_edit_row_reads_as_selected(
 # on add, the mixed reset — is measured in Chromium.
 
 
-def test_the_cohort_card_and_its_grid_are_gone(
-    client: TestClient, db: Session
-) -> None:
+def test_the_cohort_card_and_its_grid_are_gone(client: TestClient, db: Session) -> None:
     s = _session(client, db, "coh-gone")
     body = _page(client, s)
 
@@ -398,9 +380,7 @@ def test_the_cohort_card_and_its_grid_are_gone(
     assert 'id="observers-cohort-save-btn"' not in body
 
 
-def test_the_expander_carries_no_builder(
-    client: TestClient, db: Session
-) -> None:
+def test_the_expander_carries_no_builder(client: TestClient, db: Session) -> None:
     """operator pages Item 4 rung 4, the author's ruling: selecting rows
     shows no cohort builder; `Edit` opens the one editing surface. So the
     page ships no builder template, and the panel neither splits nor
@@ -410,23 +390,25 @@ def test_the_expander_carries_no_builder(
 
     assert 'id="observers-cohort-template"' not in body
     assert "data-observer-cohort-builder" not in _markup_only(body)
-    for retired in ("COHORT_TPL", "is-split", "cohort-save-btn",
-                    "cohortDirty", "okToDiscardCohortEdit", "beforeunload"):
+    for retired in (
+        "COHORT_TPL",
+        "is-split",
+        "cohort-save-btn",
+        "cohortDirty",
+        "okToDiscardCohortEdit",
+        "beforeunload",
+    ):
         assert retired not in js, f"the expander still carries {retired}"
 
 
-def test_the_split_modifier_has_a_rule_behind_it(
-    client: TestClient, db: Session
-) -> None:
+def test_the_split_modifier_has_a_rule_behind_it(client: TestClient, db: Session) -> None:
     """The row editor's bar splits as the expander's panel once did
     (operator pages Item 4), and the class is inert without this. Read
     off the response rather than `base.html` on disk, because what ships
     is what the page carries."""
     body = _page(client, _session(client, db, "coh-css"))
 
-    assert "body.ui-v2 .row-expander-body.is-split {" in body, (
-        "nothing lays the two panes out"
-    )
+    assert "body.ui-v2 .row-expander-body.is-split {" in body, "nothing lays the two panes out"
     assert "body.ui-v2 .row-expander-pane-right {" in body
     assert "body.ui-v2 .row-expander-label {" in body
     # The builder's two sizes, `button.<class>` in both cases. A
@@ -446,9 +428,5 @@ def test_the_split_modifier_has_a_rule_behind_it(
     # Top-flush, not a shared bottom edge: the builder is taller, and
     # bottom-aligning would anchor Save to a button row it has no
     # relationship with.
-    rule = re.search(
-        r"body\.ui-v2 \.row-expander-body\.is-split \{(.*?)\}", body, re.S
-    )
-    assert rule and "align-items: start" in rule.group(1), (
-        "the panes share a bottom edge"
-    )
+    rule = re.search(r"body\.ui-v2 \.row-expander-body\.is-split \{(.*?)\}", body, re.S)
+    assert rule and "align-items: start" in rule.group(1), "the panes share a bottom edge"

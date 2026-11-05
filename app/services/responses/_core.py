@@ -148,9 +148,7 @@ def _format_number(v: float, *, integer: bool) -> str:
     return f"{v:g}"
 
 
-def validate_value(
-    field: InstrumentResponseField, value: str
-) -> str | None:
+def validate_value(field: InstrumentResponseField, value: str) -> str | None:
     """Validate a non-empty form value against the field's inline
     type + bounds (Wave 3 PR ii — reads ``_inline_*`` directly per
     locked decision 11; the ``validation`` JSON cache stays for now
@@ -181,13 +179,8 @@ def validate_value(
             offset = (v - anchor) / step
             # A value near a float's limit can overflow the division
             # even though it is finite itself (findings R3).
-            if not math.isfinite(offset) or (
-                abs(offset - round(offset)) > _STEP_TOLERANCE
-            ):
-                return (
-                    "Must be in increments of "
-                    f"{_format_number(step, integer=integer)}."
-                )
+            if not math.isfinite(offset) or (abs(offset - round(offset)) > _STEP_TOLERANCE):
+                return f"Must be in increments of {_format_number(step, integer=integer)}."
         return None
     if data_type == "String":
         # ``_inline_max`` doubles as the char-length cap for String
@@ -205,9 +198,7 @@ def validate_value(
     return None
 
 
-def _reviewer_assignments(
-    db: Session, reviewer: Reviewer, session_id: int
-) -> list[Assignment]:
+def _reviewer_assignments(db: Session, reviewer: Reviewer, session_id: int) -> list[Assignment]:
     """Active (include=true) assignments for this reviewer in this session."""
     stmt = (
         select(Assignment)
@@ -272,11 +263,7 @@ def _excluded_group_members(
         group_instrument_ids=group_instrument_ids,
         session_id=session_id,
     )
-    members = [
-        a
-        for a in candidates
-        if (a.instrument_id, keys.get(a.id, ())) in included_groups
-    ]
+    members = [a for a in candidates if (a.instrument_id, keys.get(a.id, ())) in included_groups]
     return members, {a.id: keys.get(a.id, ()) for a in members}
 
 
@@ -286,9 +273,7 @@ def _with_excluded_group_members(
     """The reviewer's included rows plus :func:`_excluded_group_members`
     — the rows a recall or clear acts on."""
     assignments = _reviewer_assignments(db, reviewer, session_id)
-    group_instrument_ids = _group_instrument_ids(
-        db, {a.instrument_id for a in assignments}
-    )
+    group_instrument_ids = _group_instrument_ids(db, {a.instrument_id for a in assignments})
     group_key_by_assignment = _group_key_by_assignment(
         db,
         assignments=assignments,
@@ -396,11 +381,7 @@ def _apply_upserts(
                     blanked_groups.add((assignment.instrument_id, group_key))
                 db.delete(existing)
             continue
-        cell = (
-            (assignment.instrument_id, group_key, field.id)
-            if group_key is not None
-            else None
-        )
+        cell = (assignment.instrument_id, group_key, field.id) if group_key is not None else None
         if existing is None:
             db.add(
                 Response(
@@ -485,16 +466,12 @@ def _compute_missing_required(
         if not may_be_required_field_ids(fields):
             continue
         rows = list(
-            db.execute(
-                select(Response).where(Response.assignment_id == assignment.id)
-            ).scalars()
+            db.execute(select(Response).where(Response.assignment_id == assignment.id)).scalars()
         )
         present_field_ids = {r.response_field_id for r in rows if (r.value or "") != ""}
         # 19T Item 11 — a required governed field is required only while
         # its branch is open, judged on the answers the submit leaves.
-        required_ids = required_field_ids(
-            fields, {r.response_field_id: r.value for r in rows}
-        )
+        required_ids = required_field_ids(fields, {r.response_field_id: r.value for r in rows})
         for field in fields:
             if field.id not in required_ids:
                 continue
@@ -506,17 +483,13 @@ def _compute_missing_required(
                     field_key=field.field_key,
                     field_label=field.label,
                     reviewee_name=assignment.reviewee.name,
-                    position=position_by_instrument_id.get(
-                        assignment.instrument_id, 0
-                    ),
+                    position=position_by_instrument_id.get(assignment.instrument_id, 0),
                 )
             )
     # Sort by (position, reviewee_name, field_label) so the rendered
     # banner reads top-to-bottom in the order the reviewer walks the
     # instruments — #1's entries first, then #2's, etc.
-    missing.sort(
-        key=lambda m: (m.position, m.reviewee_name, m.field_label)
-    )
+    missing.sort(key=lambda m: (m.position, m.reviewee_name, m.field_label))
     return missing
 
 
@@ -556,13 +529,9 @@ def row_completion(db: Session, assignment: Assignment) -> RowCompletion:
         ).scalars()
     )
     rows = list(
-        db.execute(
-            select(Response).where(Response.assignment_id == assignment.id)
-        ).scalars()
+        db.execute(select(Response).where(Response.assignment_id == assignment.id)).scalars()
     )
-    required_ids = required_field_ids(
-        fields, {r.response_field_id: r.value for r in rows}
-    )
+    required_ids = required_field_ids(fields, {r.response_field_id: r.value for r in rows})
     present_field_ids = {r.response_field_id for r in rows if (r.value or "") != ""}
     missing = sum(1 for fid in required_ids if fid not in present_field_ids)
     submitted_ats = [r.submitted_at for r in rows if r.submitted_at is not None]
@@ -655,14 +624,10 @@ def _split_validated(
                 reviewee_name=assignment.reviewee.name,
                 value=u.value,
                 message=message,
-                position=position_by_instrument_id.get(
-                    assignment.instrument_id, 0
-                ),
+                position=position_by_instrument_id.get(assignment.instrument_id, 0),
             )
         )
-    valid, held = _hold_answers_behind_refused_parents(
-        valid, errors, assignment_index, field_index
-    )
+    valid, held = _hold_answers_behind_refused_parents(valid, errors, assignment_index, field_index)
     errors.extend(
         ValidationError(
             assignment_id=assignment.id,
@@ -703,9 +668,7 @@ def _hold_answers_behind_refused_parents(
     field_by_id = {field.id: field for field in field_index.values()}
     kept: list[ResponseUpsert] = []
     held: list[
-        tuple[
-            ResponseUpsert, Assignment, InstrumentResponseField, InstrumentResponseField
-        ]
+        tuple[ResponseUpsert, Assignment, InstrumentResponseField, InstrumentResponseField]
     ] = []
     for u in valid:
         assignment = assignment_index.get(u.assignment_id)
@@ -734,11 +697,7 @@ def _hold_answers_behind_refused_parents(
             )
         # A refused ancestor is found only through ``field``, which is
         # found only through ``assignment``: all three are set together.
-        if (
-            refused_ancestor is not None
-            and assignment is not None
-            and field is not None
-        ):
+        if refused_ancestor is not None and assignment is not None and field is not None:
             held.append((u, assignment, field, refused_ancestor))
         else:
             kept.append(u)
@@ -766,18 +725,14 @@ def save_draft(
     lifecycle.require_accepting_responses(db, review_session)
     assignments = _reviewer_assignments(db, reviewer, review_session.id)
     assignment_index = {a.id: a for a in assignments}
-    group_instrument_ids = _group_instrument_ids(
-        db, {a.instrument_id for a in assignments}
-    )
+    group_instrument_ids = _group_instrument_ids(db, {a.instrument_id for a in assignments})
     group_key_by_assignment = _group_key_by_assignment(
         db,
         assignments=assignments,
         group_instrument_ids=group_instrument_ids,
         session_id=review_session.id,
     )
-    fields_by_instrument = _instrument_fields_by_id(
-        db, {a.instrument_id for a in assignments}
-    )
+    fields_by_instrument = _instrument_fields_by_id(db, {a.instrument_id for a in assignments})
     field_index: dict[tuple[int, str], InstrumentResponseField] = {}
     for instrument_id, fields in fields_by_instrument.items():
         for field in fields:
@@ -829,9 +784,7 @@ def save_draft(
     written = outcome.written
     # 19T Item 10 — a closed branch holds no value, judged on the answers
     # as this save leaves them.
-    removed = drop_closed_branch_answers(
-        db, {u.assignment_id for u in valid_upserts}
-    )
+    removed = drop_closed_branch_answers(db, {u.assignment_id for u in valid_upserts})
 
     counts: dict[str, int] = {
         "assignments_touched": len({u.assignment_id for u in upserts}),
@@ -888,18 +841,14 @@ def submit(
     lifecycle.require_accepting_responses(db, review_session)
     assignments = _reviewer_assignments(db, reviewer, review_session.id)
     assignment_index = {a.id: a for a in assignments}
-    group_instrument_ids = _group_instrument_ids(
-        db, {a.instrument_id for a in assignments}
-    )
+    group_instrument_ids = _group_instrument_ids(db, {a.instrument_id for a in assignments})
     group_key_by_assignment = _group_key_by_assignment(
         db,
         assignments=assignments,
         group_instrument_ids=group_instrument_ids,
         session_id=review_session.id,
     )
-    fields_by_instrument = _instrument_fields_by_id(
-        db, {a.instrument_id for a in assignments}
-    )
+    fields_by_instrument = _instrument_fields_by_id(db, {a.instrument_id for a in assignments})
     field_index: dict[tuple[int, str], InstrumentResponseField] = {}
     for instrument_id, fields in fields_by_instrument.items():
         for field in fields:
@@ -954,9 +903,7 @@ def submit(
     written = outcome.written
     # 19T Item 10 — a closed branch holds no value, judged on the answers
     # as this submit leaves them, before anything is stamped submitted.
-    removed = drop_closed_branch_answers(
-        db, {u.assignment_id for u in valid_upserts}
-    )
+    removed = drop_closed_branch_answers(db, {u.assignment_id for u in valid_upserts})
 
     def _audit_blocked_drafts() -> None:
         """A blocked submit still commits its draft writes. When they
@@ -977,10 +924,7 @@ def submit(
         audit.write_event(
             db,
             event_type="responses.saved",
-            summary=(
-                f"Saved {written} {pluralize(written, 'response')} "
-                "(draft, submit blocked)"
-            ),
+            summary=(f"Saved {written} {pluralize(written, 'response')} (draft, submit blocked)"),
             actor_user_id=user.id,
             session=review_session,
             payload=audit.counts(**counts),
@@ -993,9 +937,7 @@ def submit(
         # reviewer can fix and retry without losing their other typing.
         _audit_blocked_drafts()
         db.commit()
-        return SubmitResult(
-            submitted=False, missing=[], errors=errors, submitted_count=0
-        )
+        return SubmitResult(submitted=False, missing=[], errors=errors, submitted_count=0)
 
     missing = _compute_missing_required(
         db,
@@ -1010,17 +952,13 @@ def submit(
         # check; they're useful for the user even on a blocked submit.
         _audit_blocked_drafts()
         db.commit()
-        return SubmitResult(
-            submitted=False, missing=missing, errors=[], submitted_count=0
-        )
+        return SubmitResult(submitted=False, missing=missing, errors=[], submitted_count=0)
 
     now = datetime.now(UTC)
     submitted_count = 0
     for assignment in assignments + excluded:
         rows = list(
-            db.execute(
-                select(Response).where(Response.assignment_id == assignment.id)
-            ).scalars()
+            db.execute(select(Response).where(Response.assignment_id == assignment.id)).scalars()
         )
         for row in rows:
             row.submitted_at = now
@@ -1030,9 +968,7 @@ def submit(
     audit.write_event(
         db,
         event_type="responses.submitted",
-        summary=(
-            f"Submitted {submitted_count} {pluralize(submitted_count, 'response')}"
-        ),
+        summary=(f"Submitted {submitted_count} {pluralize(submitted_count, 'response')}"),
         actor_user_id=user.id,
         session=review_session,
         payload=audit.counts(
@@ -1082,9 +1018,7 @@ def recall(
     recalled_count = 0
     for assignment in assignments:
         rows = list(
-            db.execute(
-                select(Response).where(Response.assignment_id == assignment.id)
-            ).scalars()
+            db.execute(select(Response).where(Response.assignment_id == assignment.id)).scalars()
         )
         for row in rows:
             if row.submitted_at is not None:
@@ -1127,9 +1061,7 @@ def clear_all(
     deleted = 0
     for assignment in assignments:
         rows = list(
-            db.execute(
-                select(Response).where(Response.assignment_id == assignment.id)
-            ).scalars()
+            db.execute(select(Response).where(Response.assignment_id == assignment.id)).scalars()
         )
         for row in rows:
             db.delete(row)
@@ -1172,19 +1104,13 @@ def delete_all_for_session(
     lifecycle.require_not_ready(db, review_session)
     assignment_ids = list(
         db.execute(
-            select(Assignment.id).where(
-                Assignment.session_id == review_session.id
-            )
+            select(Assignment.id).where(Assignment.session_id == review_session.id)
         ).scalars()
     )
     deleted = 0
     if assignment_ids:
         rows = list(
-            db.execute(
-                select(Response).where(
-                    Response.assignment_id.in_(assignment_ids)
-                )
-            ).scalars()
+            db.execute(select(Response).where(Response.assignment_id.in_(assignment_ids))).scalars()
         )
         for row in rows:
             db.delete(row)

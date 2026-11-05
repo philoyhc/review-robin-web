@@ -39,23 +39,17 @@ from ._full_matrix import (
 from ._validated import validate_session
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str = "restruct-test"
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str = "restruct-test") -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "Spring", "code": code, "description": "d"},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
-def _seed_pair(
-    client: TestClient, db: Session, *, code: str, reviewer_email: str
-) -> ReviewSession:
+def _seed_pair(client: TestClient, db: Session, *, code: str, reviewer_email: str) -> ReviewSession:
     review_session = _make_session(client, db, code=code)
     client.post(
         f"/operator/sessions/{review_session.public_id}/reviewers/import",
@@ -101,12 +95,8 @@ def _activate(client: TestClient, db: Session, review_session: ReviewSession) ->
 # ---------------------------------------------------------------------------
 
 
-def test_build_setup_rows_returns_expected_shape(
-    client: TestClient, db: Session
-) -> None:
-    review_session = _seed_pair(
-        client, db, code="rows", reviewer_email="r@example.edu"
-    )
+def test_build_setup_rows_returns_expected_shape(client: TestClient, db: Session) -> None:
+    review_session = _seed_pair(client, db, code="rows", reviewer_email="r@example.edu")
 
     rows = views.build_setup_rows(db, review_session)
     by_label = {r.label: r for r in rows}
@@ -127,12 +117,8 @@ def test_build_setup_rows_returns_expected_shape(
     assert by_label["Email Invites"].manage_url.endswith("/setup-invite")
 
 
-def test_session_detail_renders_session_layout(
-    client: TestClient, db: Session
-) -> None:
-    review_session = _seed_pair(
-        client, db, code="layout-cards", reviewer_email="r@example.edu"
-    )
+def test_session_detail_renders_session_layout(client: TestClient, db: Session) -> None:
+    review_session = _seed_pair(client, db, code="layout-cards", reviewer_email="r@example.edu")
 
     response = client.get(f"/operator/sessions/{review_session.public_id}")
     body = response.text
@@ -166,9 +152,7 @@ def _status_strip(body: str) -> str:
     return body.split('class="status-row"', 1)[1].split("</div>", 1)[0]
 
 
-def _attach_one_response(
-    db: Session, review_session: ReviewSession, *, submitted: bool
-) -> None:
+def _attach_one_response(db: Session, review_session: ReviewSession, *, submitted: bool) -> None:
     """Attach one ``Response`` to one of the session's assignments so the
     chrome Responses pill counts it. ``submitted`` stamps ``submitted_at``
     (a submitted review) vs. leaving it null (an in-progress draft)."""
@@ -176,9 +160,11 @@ def _attach_one_response(
 
     from app.db.models import InstrumentResponseField
 
-    assignment = db.execute(
-        select(Assignment).where(Assignment.session_id == review_session.id)
-    ).scalars().first()
+    assignment = (
+        db.execute(select(Assignment).where(Assignment.session_id == review_session.id))
+        .scalars()
+        .first()
+    )
     assert assignment is not None
     field = InstrumentResponseField(
         instrument_id=assignment.instrument_id,
@@ -200,16 +186,12 @@ def _attach_one_response(
     db.commit()
 
 
-def test_status_row_responses_awaiting_when_no_responses(
-    client: TestClient, db: Session
-) -> None:
+def test_status_row_responses_awaiting_when_no_responses(client: TestClient, db: Session) -> None:
     """18R Item 3 — the chrome Responses pill reads "Awaiting" only while
     there is no response activity at all. A draft session with no responses
     qualifies. The gate is data-driven, not lifecycle-driven."""
     review_session = _make_session(client, db, code="resp-await")
-    strip = _status_strip(
-        client.get(f"/operator/sessions/{review_session.public_id}").text
-    )
+    strip = _status_strip(client.get(f"/operator/sessions/{review_session.public_id}").text)
     assert "Responses:" in strip
     assert "Awaiting" in strip.split("Responses:", 1)[1]
 
@@ -219,30 +201,22 @@ def test_status_row_responses_awaiting_when_active_but_empty(
 ) -> None:
     """An activated session with zero responses still reads "Awaiting" —
     the pill flips on response data, not on activation."""
-    review_session = _seed_pair(
-        client, db, code="resp-active", reviewer_email="r@example.edu"
-    )
+    review_session = _seed_pair(client, db, code="resp-active", reviewer_email="r@example.edu")
     _activate(client, db, review_session)
-    strip = _status_strip(
-        client.get(f"/operator/sessions/{review_session.public_id}").text
-    )
+    strip = _status_strip(client.get(f"/operator/sessions/{review_session.public_id}").text)
     assert "Awaiting" in strip.split("Responses:", 1)[1]
 
 
-def test_status_row_responses_reports_drafts_only(
-    client: TestClient, db: Session
-) -> None:
+def test_status_row_responses_reports_drafts_only(client: TestClient, db: Session) -> None:
     """A saved-but-unsubmitted response reads "<n> drafts / <reviewees>"
     (the submitted term is omitted when zero)."""
-    review_session = _seed_pair(
-        client, db, code="resp-draft", reviewer_email="r@example.edu"
-    )
+    review_session = _seed_pair(client, db, code="resp-draft", reviewer_email="r@example.edu")
     _activate(client, db, review_session)
     _attach_one_response(db, review_session, submitted=False)
 
-    after = _status_strip(
-        client.get(f"/operator/sessions/{review_session.public_id}").text
-    ).split("Responses:", 1)[1]
+    after = _status_strip(client.get(f"/operator/sessions/{review_session.public_id}").text).split(
+        "Responses:", 1
+    )[1]
     assert "Awaiting" not in after
     assert "1 draft / 1" in after
     assert "submitted" not in after
@@ -255,15 +229,13 @@ def test_status_row_responses_submitted_persists_through_revert_to_draft(
     <reviewees>" (the drafts term omitted when zero) and keeps reporting it
     even after the session is reverted to draft (18R Item 3 — data-driven
     gate)."""
-    review_session = _seed_pair(
-        client, db, code="resp-persist", reviewer_email="r@example.edu"
-    )
+    review_session = _seed_pair(client, db, code="resp-persist", reviewer_email="r@example.edu")
     _activate(client, db, review_session)
     _attach_one_response(db, review_session, submitted=True)
 
-    after = _status_strip(
-        client.get(f"/operator/sessions/{review_session.public_id}").text
-    ).split("Responses:", 1)[1]
+    after = _status_strip(client.get(f"/operator/sessions/{review_session.public_id}").text).split(
+        "Responses:", 1
+    )[1]
     assert "Awaiting" not in after
     assert "1 submitted / 1" in after  # one submitted review, one reviewee
     assert "draft" not in after
@@ -310,9 +282,7 @@ def test_responses_label_composition() -> None:
     assert _label(3, 2) == "3 drafts / 2 submitted / 5"
 
 
-def test_session_detail_description_preserves_line_breaks(
-    client: TestClient, db: Session
-) -> None:
+def test_session_detail_description_preserves_line_breaks(client: TestClient, db: Session) -> None:
     """A multi-paragraph session description renders in the #session-config
     display value with the ``config-value-multiline`` styling hook
     (``white-space: pre-wrap``) so the operator's line breaks survive
@@ -340,29 +310,17 @@ def test_session_detail_description_preserves_line_breaks(
     assert description in body
 
 
-def test_setup_table_renders_manage_links(
-    client: TestClient, db: Session
-) -> None:
+def test_setup_table_renders_manage_links(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="disabled-manage")
 
     body = client.get(f"/operator/sessions/{review_session.public_id}").text
 
     # All five Manage buttons are real anchors after 9.4C
-    assert (
-        f'href="/operator/sessions/{review_session.public_id}/reviewers"' in body
-    )
-    assert (
-        f'href="/operator/sessions/{review_session.public_id}/reviewees"' in body
-    )
-    assert (
-        f'href="/operator/sessions/{review_session.public_id}/assignments"' in body
-    )
-    assert (
-        f'href="/operator/sessions/{review_session.public_id}/instruments"' in body
-    )
-    assert (
-        f'href="/operator/sessions/{review_session.public_id}/setup-invite"' in body
-    )
+    assert f'href="/operator/sessions/{review_session.public_id}/reviewers"' in body
+    assert f'href="/operator/sessions/{review_session.public_id}/reviewees"' in body
+    assert f'href="/operator/sessions/{review_session.public_id}/assignments"' in body
+    assert f'href="/operator/sessions/{review_session.public_id}/instruments"' in body
+    assert f'href="/operator/sessions/{review_session.public_id}/setup-invite"' in body
 
 
 # ---------------------------------------------------------------------------
@@ -370,12 +328,8 @@ def test_setup_table_renders_manage_links(
 # ---------------------------------------------------------------------------
 
 
-def test_session_detail_no_validate_summary_by_default(
-    client: TestClient, db: Session
-) -> None:
-    review_session = _seed_pair(
-        client, db, code="no-summary", reviewer_email="r@example.edu"
-    )
+def test_session_detail_no_validate_summary_by_default(client: TestClient, db: Session) -> None:
+    review_session = _seed_pair(client, db, code="no-summary", reviewer_email="r@example.edu")
     body = client.get(f"/operator/sessions/{review_session.public_id}").text
     # Populated draft session — the Workflow card surfaces State 2
     # (Validate-not-yet-run), so no validation-summary pill row
@@ -389,22 +343,13 @@ def test_session_detail_no_validate_summary_by_default(
     assert 'id="next-action-activate-form"' not in body
 
 
-def test_validate_page_activate_form_removed(
-    client: TestClient, db: Session
-) -> None:
+def test_validate_page_activate_form_removed(client: TestClient, db: Session) -> None:
     """The Validate page itself does not host an Activate form —
     activation lives on Session Home (or via the warnings detour
     when present, which posts from /validate?activate=1)."""
-    review_session = _seed_pair(
-        client, db, code="no-activate-form", reviewer_email="r@example.edu"
-    )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/validate"
-    ).text
-    assert (
-        f'action="/operator/sessions/{review_session.public_id}/activate"'
-        not in body
-    )
+    review_session = _seed_pair(client, db, code="no-activate-form", reviewer_email="r@example.edu")
+    body = client.get(f"/operator/sessions/{review_session.public_id}/validate").text
+    assert f'action="/operator/sessions/{review_session.public_id}/activate"' not in body
     # Setup-coverage card surfaces the inventory.
     assert "Setup coverage" in body
 
@@ -419,9 +364,7 @@ def _seed_responses(client: TestClient, db: Session) -> tuple[ReviewSession, int
 
     Returns ``(review_session, response_count)``.
     """
-    review_session = _seed_pair(
-        client, db, code="del-data", reviewer_email="rae@example.edu"
-    )
+    review_session = _seed_pair(client, db, code="del-data", reviewer_email="rae@example.edu")
     _activate(client, db, review_session)
 
     rae = AuthenticatedUser(
@@ -513,21 +456,15 @@ def test_delete_data_wipes_responses_and_preserves_setup(
 
     # Setup intact
     assert (
-        db.execute(
-            select(Reviewer).where(Reviewer.session_id == review_session.id)
-        ).first()
+        db.execute(select(Reviewer).where(Reviewer.session_id == review_session.id)).first()
         is not None
     )
     assert (
-        db.execute(
-            select(Reviewee).where(Reviewee.session_id == review_session.id)
-        ).first()
+        db.execute(select(Reviewee).where(Reviewee.session_id == review_session.id)).first()
         is not None
     )
     assert (
-        db.execute(
-            select(Assignment).where(Assignment.session_id == review_session.id)
-        ).first()
+        db.execute(select(Assignment).where(Assignment.session_id == review_session.id)).first()
         is not None
     )
 
@@ -549,9 +486,7 @@ def test_danger_zone_delete_coupling_script_present(
     suite can't execute, so assert both confirm checkboxes and the coupling
     script render — a regression that drops the wiring is caught here."""
     operator = make_client(alice)
-    review_session = _seed_pair(
-        operator, db, code="dz-couple", reviewer_email="r@example.edu"
-    )
+    review_session = _seed_pair(operator, db, code="dz-couple", reviewer_email="r@example.edu")
     body = operator.get(f"/operator/sessions/{review_session.public_id}").text
     assert 'data-delete-confirm="delete-session"' in body
     assert 'data-delete-confirm="delete-data"' in body
@@ -600,12 +535,8 @@ def test_edit_session_details_succeeds_with_responses_present(
     assert len(remaining) == count_before
 
 
-def test_delete_data_requires_confirm(
-    client: TestClient, db: Session
-) -> None:
-    review_session = _seed_pair(
-        client, db, code="confirm-req", reviewer_email="r@example.edu"
-    )
+def test_delete_data_requires_confirm(client: TestClient, db: Session) -> None:
+    review_session = _seed_pair(client, db, code="confirm-req", reviewer_email="r@example.edu")
 
     response = client.post(
         f"/operator/sessions/{review_session.public_id}/delete-data",
@@ -616,9 +547,7 @@ def test_delete_data_requires_confirm(
 
     # No audit event written
     rows = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "responses.deleted_all"
-        )
+        select(AuditEvent).where(AuditEvent.event_type == "responses.deleted_all")
     ).all()
     assert rows == []
 
@@ -666,9 +595,7 @@ def test_delete_data_rejected_when_ready(
 # ---------------------------------------------------------------------------
 
 
-def test_retired_edit_url_redirects_to_home_config(
-    client: TestClient, db: Session
-) -> None:
+def test_retired_edit_url_redirects_to_home_config(client: TestClient, db: Session) -> None:
     """18R Item 4 Slice 5b — the Edit page routes/template are deleted; a
     stale ``/edit`` bookmark permanently redirects (308, preserving the
     GET) to Session Home's config card in edit mode (the redirect keeps
@@ -679,36 +606,22 @@ def test_retired_edit_url_redirects_to_home_config(
         follow_redirects=False,
     )
     assert resp.status_code == 308
-    assert resp.headers["location"] == (
-        f"/operator/sessions/{review_session.public_id}?editing=1"
-    )
+    assert resp.headers["location"] == (f"/operator/sessions/{review_session.public_id}?editing=1")
 
 
-def test_session_card_buttons_when_draft(
-    client: TestClient, db: Session
-) -> None:
+def test_session_card_buttons_when_draft(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="draft-buttons")
     body = client.get(f"/operator/sessions/{review_session.public_id}").text
 
     # 18R Item 4 Slice 5 — the standalone Edit page is retired from the UI:
     # no /edit link on Home. Editing happens in place on #session-config.
-    assert (
-        f'href="/operator/sessions/{review_session.public_id}/edit"' not in body
-    )
+    assert f'href="/operator/sessions/{review_session.public_id}/edit"' not in body
     # Revert to draft form NOT present
-    assert (
-        f'action="/operator/sessions/{review_session.public_id}/revert"' not in body
-    )
+    assert f'action="/operator/sessions/{review_session.public_id}/revert"' not in body
     # Danger Zone now lives on Home — Delete Data / Delete session forms
     # are wired here (draft session → not locked).
-    assert (
-        f'action="/operator/sessions/{review_session.public_id}/delete-data"'
-        in body
-    )
-    assert (
-        f'action="/operator/sessions/{review_session.public_id}/delete"'
-        in body
-    )
+    assert f'action="/operator/sessions/{review_session.public_id}/delete-data"' in body
+    assert f'action="/operator/sessions/{review_session.public_id}/delete"' in body
 
 
 # ---------------------------------------------------------------------------
@@ -716,9 +629,7 @@ def test_session_card_buttons_when_draft(
 # ---------------------------------------------------------------------------
 
 
-def test_quick_setup_card_renders_scaffold_in_draft(
-    client: TestClient, db: Session
-) -> None:
+def test_quick_setup_card_renders_scaffold_in_draft(client: TestClient, db: Session) -> None:
     """The Quick Setup card on Session Home renders five slots in draft
     (Reviewers, Reviewees, Relationships, Observers, Settings) —
     Observers whatever its toggle since quick_setup_update Item 2. The
@@ -732,8 +643,7 @@ def test_quick_setup_card_renders_scaffold_in_draft(
     assert "<h2>Quick Setup</h2>" in body
     # Action-oriented body copy in draft / validated.
     assert (
-        "Bulk-populate reviewers, reviewees, relationships, observers, "
-        "and session settings"
+        "Bulk-populate reviewers, reviewees, relationships, observers, and session settings"
     ) in body
     # Five slots render with stable fragment anchors.
     for key in ("reviewers", "reviewees", "relationships", "observers", "settings"):
@@ -746,10 +656,7 @@ def test_quick_setup_card_renders_scaffold_in_draft(
     # The consolidated submit-all form posts at the card level —
     # the per-slot Submit buttons + per-slot form actions were
     # retired in PR C of the rule-builder follow-on stream.
-    assert (
-        f'action="/operator/sessions/{review_session.public_id}/quick-setup/submit-all"'
-        in body
-    )
+    assert f'action="/operator/sessions/{review_session.public_id}/quick-setup/submit-all"' in body
     # Replacement confirmation lives at the card level (single
     # checkbox above the slot grid), not per-slot inline banners.
     # Per-slot error banners stay (parse / lifecycle).
@@ -771,9 +678,7 @@ def test_quick_setup_card_greys_in_ready(
     description's single static copy names the availability rule."""
 
     operator = make_client(alice)
-    review_session = _seed_pair(
-        operator, db, code="qs-ready", reviewer_email="r@example.edu"
-    )
+    review_session = _seed_pair(operator, db, code="qs-ready", reviewer_email="r@example.edu")
     _activate(operator, db, review_session)
 
     body = operator.get(f"/operator/sessions/{review_session.public_id}").text
@@ -810,26 +715,17 @@ def test_delete_session_visible_but_disabled_when_ready(
     path forward."""
 
     operator = make_client(alice)
-    review_session = _seed_pair(
-        operator, db, code="del-visible", reviewer_email="r@example.edu"
-    )
+    review_session = _seed_pair(operator, db, code="del-visible", reviewer_email="r@example.edu")
     _activate(operator, db, review_session)
 
     # 18R Item 4 — Danger Zone lives on Session Home; assert the
     # visible-but-disabled Delete session state there (gated by ``is_ready``).
-    body = operator.get(
-        f"/operator/sessions/{review_session.public_id}"
-    ).text
+    body = operator.get(f"/operator/sessions/{review_session.public_id}").text
 
     # Form, button, and confirmation checkbox all rendered.
-    assert (
-        f'action="/operator/sessions/{review_session.public_id}/delete"' in body
-    )
+    assert f'action="/operator/sessions/{review_session.public_id}/delete"' in body
     assert "Delete session" in body
-    assert (
-        'name="confirm" value="true" required'
-        in body
-    )
+    assert 'name="confirm" value="true" required' in body
     # Disabled attribute carried on both controls.
     assert 'disabled aria-disabled="true"' in body
     # Explanatory note present.
@@ -852,9 +748,7 @@ def test_delete_session_post_still_rejected_when_ready(
     direct POST should still 4xx."""
 
     operator = make_client(alice)
-    review_session = _seed_pair(
-        operator, db, code="del-block", reviewer_email="r@example.edu"
-    )
+    review_session = _seed_pair(operator, db, code="del-block", reviewer_email="r@example.edu")
     _activate(operator, db, review_session)
 
     response = operator.post(
@@ -923,9 +817,7 @@ def test_delete_data_and_session_allowed_after_the_end(
 # ---------------------------------------------------------------------------
 
 
-def test_extract_setup_card_relocated_off_session_home(
-    client: TestClient, db: Session
-) -> None:
+def test_extract_setup_card_relocated_off_session_home(client: TestClient, db: Session) -> None:
     """18R Item 4 Slice 1 — the Extract Setup card moved off Session
     Home to the Extract data page. Home no longer renders it; the
     Extract data page does (its scaffold is covered by
@@ -937,9 +829,7 @@ def test_extract_setup_card_relocated_off_session_home(
     assert 'id="extract-data"' not in home
     assert "<h2>Extract Setup</h2>" not in home
 
-    tab = client.get(
-        f"/operator/sessions/{review_session.public_id}/extract-data"
-    ).text
+    tab = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
     assert 'id="extract-data"' in tab
     assert "<h2>Extract Setup</h2>" in tab
     # And the placeholder Archive session card sits beside it.
@@ -982,17 +872,13 @@ def test_chrome_status_pill_renders_activated_for_ready_session(
 # ---------------------------------------------------------------------------
 
 
-def test_revert_route_handles_validated_to_draft(
-    client: TestClient, db: Session
-) -> None:
+def test_revert_route_handles_validated_to_draft(client: TestClient, db: Session) -> None:
     """The "Revert to draft" supporting button in the validated-state
     action card POSTs to /revert; the route now dispatches to
     ``invalidate_session`` for ``validated → draft`` transitions
     (previously only handled ``ready → draft``)."""
 
-    review_session = _seed_pair(
-        client, db, code="validated-revert", reviewer_email="r@example.edu"
-    )
+    review_session = _seed_pair(client, db, code="validated-revert", reviewer_email="r@example.edu")
     # Mark validated.
     validate_session(review_session)
     client.get(f"/operator/sessions/{review_session.public_id}/assignments")
@@ -1010,20 +896,14 @@ def test_revert_route_handles_validated_to_draft(
 
     # An audit row was written for the operator-initiated invalidation.
     audit = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "session.invalidated"
-        )
+        select(AuditEvent).where(AuditEvent.event_type == "session.invalidated")
     ).scalar_one()
     assert audit.detail is not None
     assert audit.detail["reason"] == "operator_revert"
 
 
-def test_session_card_buttons_when_ready(
-    client: TestClient, db: Session
-) -> None:
-    review_session = _seed_pair(
-        client, db, code="ready-buttons", reviewer_email="r@example.edu"
-    )
+def test_session_card_buttons_when_ready(client: TestClient, db: Session) -> None:
+    review_session = _seed_pair(client, db, code="ready-buttons", reviewer_email="r@example.edu")
     _activate(client, db, review_session)
 
     body = client.get(f"/operator/sessions/{review_session.public_id}").text
@@ -1031,33 +911,20 @@ def test_session_card_buttons_when_ready(
     # 18R Item 4 Slice 5 — no /edit link (Edit page retired). Editing is
     # lifecycle-gated: on an activated session the config card's Unlock
     # control is rendered inert (aria-disabled), not a live edit affordance.
-    assert (
-        f'href="/operator/sessions/{review_session.public_id}/edit"' not in body
-    )
+    assert f'href="/operator/sessions/{review_session.public_id}/edit"' not in body
     assert 'data-config-lock-toggle aria-disabled="true"' in body
     # Workflow card is back on Session Home (PR 6 of
     # spec/workflow_card.md) — its ready-state pause form
     # posts to /revert.
-    assert (
-        f'action="/operator/sessions/{review_session.public_id}/revert"'
-        in body
-    )
+    assert f'action="/operator/sessions/{review_session.public_id}/revert"' in body
     # Danger Zone lives on Home now. Delete Data has no lifecycle gate;
     # Delete session is present but locked (disabled) while Activated.
-    assert (
-        f'action="/operator/sessions/{review_session.public_id}/delete-data"'
-        in body
-    )
-    assert (
-        f'action="/operator/sessions/{review_session.public_id}/delete"'
-        in body
-    )
+    assert f'action="/operator/sessions/{review_session.public_id}/delete-data"' in body
+    assert f'action="/operator/sessions/{review_session.public_id}/delete"' in body
     assert "Session deletion is locked while status is Activated" in body
 
 
-def test_session_config_card_display_edit_swap(
-    client: TestClient, db: Session
-) -> None:
+def test_session_config_card_display_edit_swap(client: TestClient, db: Session) -> None:
     """18R Item 4 Slice 2 — the "Session details" config card sits below
     Workflow and renders each field as a display value + an edit input in
     one slot, toggled by the card's data-config-mode and the Edit button
@@ -1071,7 +938,7 @@ def test_session_config_card_display_edit_swap(
     assert workflow_pos < config_pos  # below Workflow
     assert "<h2>Session details</h2>" in body
 
-    end = body.find('window.sessionConfig', config_pos)
+    end = body.find("window.sessionConfig", config_pos)
     card = body[config_pos:end]
 
     # Card defaults to display mode; both view + edit slots exist.
@@ -1112,17 +979,13 @@ def test_session_config_card_display_edit_swap(
     assert "window.sessionConfig" in body
 
     # The edit inputs post as one form to the config route.
-    assert (
-        f'action="/operator/sessions/{review_session.public_id}/config"' in card
-    )
+    assert f'action="/operator/sessions/{review_session.public_id}/config"' in card
     assert 'name="name"' in card
     assert 'name="display_timezone"' in card
     assert 'name="relationships_enabled"' in card
 
 
-def test_offset_boxes_carry_the_create_pages_examples(
-    client: TestClient, db: Session
-) -> None:
+def test_offset_boxes_carry_the_create_pages_examples(client: TestClient, db: Session) -> None:
     """Session Home's two offset boxes show the same example offsets as
     the Create page's (author, 2026-10-13): they were blank there."""
     import re
@@ -1143,18 +1006,14 @@ def test_offset_boxes_carry_the_create_pages_examples(
         assert f'placeholder="{placeholder.group(1)}"' in home_input.group(0)
 
 
-def test_config_card_editing_param_renders_edit_mode(
-    client: TestClient, db: Session
-) -> None:
+def test_config_card_editing_param_renders_edit_mode(client: TestClient, db: Session) -> None:
     """18R Item 4 Slice 3 — ``?editing=1`` is the canonical edit-mode state:
     the GET renders the card in edit mode and the Lock link drops the param."""
     review_session = _make_session(client, db, code="cfg-editing")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}?editing=1"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}?editing=1").text
 
     config_pos = body.find('id="session-config"')
-    card = body[config_pos:body.find("window.sessionConfig", config_pos)]
+    card = body[config_pos : body.find("window.sessionConfig", config_pos)]
     assert 'data-config-mode="edit"' in card
     # Edit mode → the toggle reads Lock and its href has no ?editing param.
     assert ">Lock</a>" in card
@@ -1165,22 +1024,16 @@ def test_config_card_editing_param_ignored_when_not_editable(
 ) -> None:
     """An activated session isn't editable — ``?editing=1`` degrades to
     display mode (the route gates the flag on lifecycle)."""
-    review_session = _seed_pair(
-        client, db, code="cfg-noedit", reviewer_email="rev@example.edu"
-    )
+    review_session = _seed_pair(client, db, code="cfg-noedit", reviewer_email="rev@example.edu")
     _activate(client, db, review_session)
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}?editing=1"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}?editing=1").text
 
     config_pos = body.find('id="session-config"')
-    card = body[config_pos:body.find("window.sessionConfig", config_pos)]
+    card = body[config_pos : body.find("window.sessionConfig", config_pos)]
     assert 'data-config-mode="display"' in card
 
 
-def test_config_card_save_persists_and_redirects_home(
-    client: TestClient, db: Session
-) -> None:
+def test_config_card_save_persists_and_redirects_home(client: TestClient, db: Session) -> None:
     """Saving the config card POSTs to /config, persists the change, and
     redirects back to Session Home with the card still unlocked
     (``?editing=1``) and no ``#session-config`` (19U Item 4: Save only
@@ -1207,9 +1060,7 @@ def test_config_card_save_persists_and_redirects_home(
     assert review_session.relationships_enabled is True
 
 
-def test_config_card_save_rejects_bad_schedule_ordering(
-    client: TestClient, db: Session
-) -> None:
+def test_config_card_save_rejects_bad_schedule_ordering(client: TestClient, db: Session) -> None:
     """The config route reuses the Edit route's validation — an End before
     Start is a 422, and nothing is persisted."""
     review_session = _make_session(client, db, code="cfg-badorder")
@@ -1240,15 +1091,13 @@ def test_config_card_invite_offset_shows_offset_plus_resolved_datetime(
     # Far-future Start so the resolved send datetime stays ahead of "now"
     # (a past Start flips the config card's display and drops the resolved
     # pill — the assertion below). Matches the 2099 dates used elsewhere here.
-    review_session.scheduled_activate_at = datetime(
-        2099, 8, 30, 0, 0, tzinfo=UTC
-    )
+    review_session.scheduled_activate_at = datetime(2099, 8, 30, 0, 0, tzinfo=UTC)
     review_session.invite_offsets = ["-P1D"]
     db.commit()
 
     body = client.get(f"/operator/sessions/{review_session.public_id}").text
     config_pos = body.find('id="session-config"')
-    end = body.find('window.sessionConfig', config_pos)
+    end = body.find("window.sessionConfig", config_pos)
     card = body[config_pos:end]
 
     # The offset pill.
@@ -1259,9 +1108,7 @@ def test_config_card_invite_offset_shows_offset_plus_resolved_datetime(
     assert "config-offset-row" in card
 
 
-def test_owners_left_the_session_config_card_for_their_own(
-    client: TestClient, db: Session
-) -> None:
+def test_owners_left_the_session_config_card_for_their_own(client: TestClient, db: Session) -> None:
     """18R Item 4 put an Owners sub-card inside the Session details card;
     19S Item 10 moved it to a card of its own, stacked above the Danger
     Zone in one column (author's ruling 2026-09-23), with
@@ -1271,7 +1118,7 @@ def test_owners_left_the_session_config_card_for_their_own(
     body = client.get(f"/operator/sessions/{review_session.public_id}").text
 
     config_pos = body.find('id="session-config"')
-    end = body.find('window.sessionConfig', config_pos)
+    end = body.find("window.sessionConfig", config_pos)
     card = body[config_pos:end]
     assert 'id="owners-card"' not in card
     assert ">Owners</h3>" not in card
@@ -1287,7 +1134,7 @@ def test_owners_left_the_session_config_card_for_their_own(
     # The creator is an owner — their email shows in the table, with a
     # Remove that saves at once (covered in test_session_home_owners_card).
     assert "alice@example.edu" in owners
-    assert "/remove\"" in owners
+    assert '/remove"' in owners
 
     assert 'id="config-optional-tabs"' in card
     assert ">Optional setup tabs and pages</label>" in card
@@ -1298,26 +1145,21 @@ def test_owners_left_the_session_config_card_for_their_own(
     assert "<h2>Schedule timeline</h2>" not in body
 
 
-def test_config_owners_error_surfaces_on_home(
-    client: TestClient, db: Session
-) -> None:
+def test_config_owners_error_surfaces_on_home(client: TestClient, db: Session) -> None:
     """18R Item 4 Slice 4 — owner add/remove redirect back to Home with an
     ``owners_error`` param; the Owners card renders the banner, without
     unlocking the details card (19S Item 10)."""
     review_session = _make_session(client, db, code="cfg-ownerr")
     body = client.get(
-        f"/operator/sessions/{review_session.public_id}"
-        "?owners_error=not_in_workspace"
+        f"/operator/sessions/{review_session.public_id}?owners_error=not_in_workspace"
     ).text
     owners_pos = body.find('id="owners-card"')
-    card = body[owners_pos:body.find("<script", owners_pos)]
+    card = body[owners_pos : body.find("<script", owners_pos)]
     assert 'role="alert"' in card
     assert "workspace operator allowlist" in card
 
 
-def test_session_home_danger_zone_wired(
-    client: TestClient, db: Session
-) -> None:
+def test_session_home_danger_zone_wired(client: TestClient, db: Session) -> None:
     """18R Item 4 Slice 5 — the Danger Zone card in the bottom-right column
     is wired (relocated from the retired Edit page): real Delete Data /
     Delete session forms posting to the delete routes, each gated by a
@@ -1334,9 +1176,7 @@ def test_session_home_danger_zone_wired(
     card = body[danger_pos:]
     assert ">Danger Zone</h2>" in card
     # Both destructive actions post to their real routes.
-    assert (
-        f'action="/operator/sessions/{review_session.public_id}/delete-data"' in card
-    )
+    assert f'action="/operator/sessions/{review_session.public_id}/delete-data"' in card
     assert f'action="/operator/sessions/{review_session.public_id}/delete"' in card
     assert ">Delete Data</button>" in card
     assert ">Delete session</button>" in card

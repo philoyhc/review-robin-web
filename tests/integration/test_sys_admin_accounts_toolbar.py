@@ -5,6 +5,7 @@ Category chips, the Session role, the search and the pager, all filtered
 on the server (``app/services/account_listing.py``) with the view held in
 the URL.
 """
+
 from __future__ import annotations
 
 import re
@@ -42,17 +43,17 @@ def _seed(db: Session, email: str, name: str | None = None, **flags: bool) -> Us
 def _acted(db: Session, user: User) -> None:
     db.add(
         AuditEvent(
-            event_type="response.submitted", summary="Submitted",
-            actor_user_id=user.id, detail={},
+            event_type="response.submitted",
+            summary="Submitted",
+            actor_user_id=user.id,
+            detail={},
         )
     )
     db.commit()
 
 
 def _session(db: Session, creator: User, code: str) -> ReviewSession:
-    review_session = ReviewSession(
-        name=f"Session {code}", code=code, created_by_user_id=creator.id
-    )
+    review_session = ReviewSession(name=f"Session {code}", code=code, created_by_user_id=creator.id)
     db.add(review_session)
     db.commit()
     return review_session
@@ -135,14 +136,8 @@ def test_every_account_sits_under_exactly_one_chip(
 
 
 def test_the_view_tables_line_up_with_the_service() -> None:
-    assert (
-        tuple(key for key, _, _ in views.ACCOUNT_CATEGORIES)
-        == account_listing.CATEGORIES
-    )
-    assert (
-        tuple(key for key, _ in views.ACCOUNT_ROLE_OPTIONS[1:])
-        == account_listing.SESSION_ROLES
-    )
+    assert tuple(key for key, _, _ in views.ACCOUNT_CATEGORIES) == account_listing.CATEGORIES
+    assert tuple(key for key, _ in views.ACCOUNT_ROLE_OPTIONS[1:]) == account_listing.SESSION_ROLES
 
 
 # --- Chips ------------------------------------------------------------------
@@ -163,14 +158,10 @@ def test_chips_count_the_whole_table_and_default_to_operators_and_admins(
         assert label in chip, key
         assert ("checked" in chip) is on, key
         assert 'form="accounts-filter"' in chip, key
-    assert _emails(body) == {
-        "alice@example.edu", "bob@example.edu", "carol@example.edu"
-    }
+    assert _emails(body) == {"alice@example.edu", "bob@example.edu", "carol@example.edu"}
 
 
-def test_a_chip_shows_only_its_rows(
-    workspace: dict[str, User], client: TestClient
-) -> None:
+def test_a_chip_shows_only_its_rows(workspace: dict[str, User], client: TestClient) -> None:
     body = client.get(f"{ACCOUNTS}?show=unused").text
     assert _emails(body) == {"Erin@Example.edu"}
     assert "checked" in _chip(body, "unused")
@@ -204,16 +195,12 @@ def test_search_matches_email_or_name_case_insensitively(
     workspace: dict[str, User], client: TestClient
 ) -> None:
     assert _emails(client.get(f"{ACCOUNTS}?q=BOB").text) == {"bob@example.edu"}
-    assert _emails(client.get(f"{ACCOUNTS}?q=carol+adm").text) == {
-        "carol@example.edu"
-    }
+    assert _emails(client.get(f"{ACCOUNTS}?q=carol+adm").text) == {"carol@example.edu"}
     # A wildcard is a literal, not a pattern.
     assert _emails(client.get(f"{ACCOUNTS}?q=%25").text) == set()
     # The search spans only the chips that are on.
     assert _emails(client.get(f"{ACCOUNTS}?q=erin").text) == set()
-    assert _emails(client.get(f"{ACCOUNTS}?show=unused&q=erin").text) == {
-        "Erin@Example.edu"
-    }
+    assert _emails(client.get(f"{ACCOUNTS}?show=unused&q=erin").text) == {"Erin@Example.edu"}
 
 
 def test_session_role_matches_roster_emails_in_any_session(
@@ -224,13 +211,12 @@ def test_session_role_matches_roster_emails_in_any_session(
         [
             Reviewer(session_id=session.id, name="Bob", email="BOB@example.edu"),
             Reviewee(
-                session_id=session.id, name="Carol",
+                session_id=session.id,
+                name="Carol",
                 email_or_identifier="carol@EXAMPLE.edu",
             ),
             Observer(session_id=session.id, email="bob@example.edu"),
-            SessionOperator(
-                session_id=session.id, user_id=workspace["carol"].id, role="owner"
-            ),
+            SessionOperator(session_id=session.id, user_id=workspace["carol"].id, role="owner"),
         ]
     )
     db.commit()
@@ -279,7 +265,12 @@ def test_the_typeahead_reaches_past_the_first_two_hundred(
     _many(db, 250, is_operator=True)
     late = _seed(db, "zoe@example.edu", "Zoe Last", is_operator=True)
     body = client.get(ACCOUNTS).text
-    assert late.email not in body.split('<datalist id="accounts-search-options">', 1)[1].split("</datalist>", 1)[0]
+    assert (
+        late.email
+        not in body.split('<datalist id="accounts-search-options">', 1)[1].split("</datalist>", 1)[
+            0
+        ]
+    )
 
     # The page's own first list matches what the box already holds.
     reloaded = client.get(f"{ACCOUNTS}?q=zoe").text
@@ -294,13 +285,12 @@ def test_the_typeahead_reaches_past_the_first_two_hundred(
     assert len(client.get(f"{ACCOUNTS}/search-options?q=user02").json()) == 50
 
 
-def test_the_typeahead_follows_the_chips(
-    workspace: dict[str, User], client: TestClient
-) -> None:
+def test_the_typeahead_follows_the_chips(workspace: dict[str, User], client: TestClient) -> None:
     assert client.get(f"{ACCOUNTS}/search-options?q=erin").json() == []
-    assert client.get(
-        f"{ACCOUNTS}/search-options?show=unused&q=erin"
-    ).json() == ["Erin Unused", "Erin@Example.edu"]
+    assert client.get(f"{ACCOUNTS}/search-options?show=unused&q=erin").json() == [
+        "Erin Unused",
+        "Erin@Example.edu",
+    ]
     # A blank ``show`` is no chip at all, as on the page.
     assert client.get(f"{ACCOUNTS}/search-options?show=&q=bob").json() == []
 
@@ -336,8 +326,7 @@ def test_two_hundred_rows_a_page_with_the_pager_above_and_below(
     assert body.count('<div class="table-pager-cluster') == 2
     assert "<summary>1–200</summary>" in body
     assert (
-        f'href="{ACCOUNTS}?show=operators&amp;show=admins&amp;offset=200'
-        '#accounts-table-card"'
+        f'href="{ACCOUNTS}?show=operators&amp;show=admins&amp;offset=200#accounts-table-card"'
     ) in body
     rest = client.get(f"{ACCOUNTS}?offset=200").text
     assert len(_emails(rest)) == 51  # 250 and Alice
@@ -365,9 +354,7 @@ def test_a_filtered_single_page_says_how_many(
 # --- Actions keep the view --------------------------------------------------
 
 
-def test_an_action_redirect_keeps_the_view(
-    workspace: dict[str, User], client: TestClient
-) -> None:
+def test_an_action_redirect_keeps_the_view(workspace: dict[str, User], client: TestClient) -> None:
     erin = workspace["erin"]
     body = client.get(f"{ACCOUNTS}?show=unused&q=erin").text
     view = body.split('name="view" value="', 1)[1].split('"', 1)[0]
@@ -396,9 +383,7 @@ def test_the_selected_rows_chip_turns_on_as_if_clicked(
     assert parse_qs(view.replace("&amp;", "&"))["show"] == ["no_role", "unused"]
 
 
-def test_the_selected_row_lands_on_its_page(
-    db: Session, client: TestClient, admin: None
-) -> None:
+def test_the_selected_row_lands_on_its_page(db: Session, client: TestClient, admin: None) -> None:
     client.get(ACCOUNTS)
     oldest = _seed(db, "oldest@example.edu", is_operator=True)
     _many(db, 250, is_operator=True)
@@ -444,12 +429,12 @@ def test_each_row_carries_its_chip_for_the_expander(
 ) -> None:
     """The expander picks its controls by the selected rows' chips, so
     each row says which chip it sits under, from the same SQL rule."""
-    body = client.get(
-        f"{ACCOUNTS}?show=operators&show=admins&show=no_role&show=unused"
-    ).text
+    body = client.get(f"{ACCOUNTS}?show=operators&show=admins&show=no_role&show=unused").text
     for name, category in (
-        ("bob", "operators"), ("carol", "admins"),
-        ("dave", "no_role"), ("erin", "unused"),
+        ("bob", "operators"),
+        ("carol", "admins"),
+        ("dave", "no_role"),
+        ("erin", "unused"),
     ):
         user = workspace[name]
         row = body.split(f'data-user-id="{user.id}"', 1)[1].split(">", 1)[0]

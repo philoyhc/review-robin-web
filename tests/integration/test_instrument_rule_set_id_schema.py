@@ -14,6 +14,7 @@ Slice 2 to consume:
 The column sits inert until 15B Slice 2 starts persisting the
 selection.
 """
+
 from __future__ import annotations
 
 from sqlalchemy import select
@@ -31,9 +32,7 @@ def _make_session(db: Session, code: str) -> ReviewSession:
     op = User(email=f"op-{code}@example.edu", display_name="Op")
     db.add(op)
     db.flush()
-    review_session = ReviewSession(
-        name=code.title(), code=code, created_by_user_id=op.id
-    )
+    review_session = ReviewSession(name=code.title(), code=code, created_by_user_id=op.id)
     db.add(review_session)
     db.flush()
     return review_session
@@ -46,9 +45,7 @@ def _make_instrument(db: Session, session: ReviewSession, name: str) -> Instrume
     return instrument
 
 
-def _make_session_rule_set(
-    db: Session, session: ReviewSession, name: str
-) -> SessionRuleSet:
+def _make_session_rule_set(db: Session, session: ReviewSession, name: str) -> SessionRuleSet:
     row = SessionRuleSet(
         session_id=session.id,
         name=name,
@@ -69,9 +66,7 @@ def test_initial_state_is_null(db: Session) -> None:
     review_session = _make_session(db, "irs-init")
     instrument = _make_instrument(db, review_session, "Default")
 
-    fetched = db.execute(
-        select(Instrument).where(Instrument.id == instrument.id)
-    ).scalar_one()
+    fetched = db.execute(select(Instrument).where(Instrument.id == instrument.id)).scalar_one()
     assert fetched.rule_set_id is None
 
 
@@ -87,9 +82,7 @@ def test_round_trip_with_session_rule_set(db: Session) -> None:
     instrument.rule_set_id = srs.id
     db.flush()
 
-    fetched = db.execute(
-        select(Instrument).where(Instrument.id == instrument.id)
-    ).scalar_one()
+    fetched = db.execute(select(Instrument).where(Instrument.id == instrument.id)).scalar_one()
     assert fetched.rule_set_id == srs.id
 
 
@@ -110,9 +103,7 @@ def test_set_null_on_session_rule_set_delete(db: Session) -> None:
     db.flush()
     db.expire_all()
 
-    fetched = db.execute(
-        select(Instrument).where(Instrument.id == instrument_id)
-    ).scalar_one()
+    fetched = db.execute(select(Instrument).where(Instrument.id == instrument_id)).scalar_one()
     assert fetched.rule_set_id is None
     # Instrument itself is intact.
     assert fetched.name == "Default"
@@ -134,9 +125,7 @@ def test_instrument_delete_does_not_touch_session_rule_set(
     db.delete(instrument)
     db.flush()
 
-    fetched = db.execute(
-        select(SessionRuleSet).where(SessionRuleSet.id == srs_id)
-    ).scalar_one()
+    fetched = db.execute(select(SessionRuleSet).where(SessionRuleSet.id == srs_id)).scalar_one()
     assert fetched.name == "Survivor"
 
 
@@ -155,9 +144,13 @@ def test_two_instruments_can_share_the_same_session_rule_set(
     inst_b.rule_set_id = srs.id
     db.flush()
 
-    rows = db.execute(
-        select(Instrument)
-        .where(Instrument.session_id == review_session.id)
-        .order_by(Instrument.name)
-    ).scalars().all()
+    rows = (
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.name)
+        )
+        .scalars()
+        .all()
+    )
     assert [r.rule_set_id for r in rows] == [srs.id, srs.id]

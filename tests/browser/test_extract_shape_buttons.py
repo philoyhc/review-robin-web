@@ -151,19 +151,16 @@ def test_delete_waits_for_its_confirm_tick_and_the_tick_resets(
     expect(second).to_have_attribute("data-shape-selected", "true")
     second_tick.check()
     with page.expect_response(
-        lambda r: r.request.method == "DELETE"
-        and r.url.endswith(f"/extract-data/shapes/{second_id}")
+        lambda r: (
+            r.request.method == "DELETE" and r.url.endswith(f"/extract-data/shapes/{second_id}")
+        )
     ) as deleted:
         second_delete.click()
     assert deleted.value.status == 204
     expect(second).to_have_count(0)
     page.reload()
-    expect(
-        page.locator(f'[data-shape][data-shape-id="{second_id}"]')
-    ).to_have_count(0)
-    expect(
-        page.locator(f'[data-shape][data-shape-id="{first_id}"]')
-    ).to_have_count(1)
+    expect(page.locator(f'[data-shape][data-shape-id="{second_id}"]')).to_have_count(0)
+    expect(page.locator(f'[data-shape][data-shape-id="{first_id}"]')).to_have_count(1)
 
 
 def test_deleting_the_only_editing_shape_selects_the_fresh_blank(
@@ -211,9 +208,7 @@ def test_zip_all_waits_for_a_shape_delete_to_land(
     second_id = _save_shape(api, session_id, "Second")
 
     held: list[Route] = []
-    page.route(
-        f"**/extract-data/shapes/{first_id}", lambda route: held.append(route)
-    )
+    page.route(f"**/extract-data/shapes/{first_id}", lambda route: held.append(route))
     page.goto(app_url(f"/operator/sessions/{session_id}/extract-data"))
     zip_all = page.locator("#extract-data-shaper-zip")
     expect(zip_all).not_to_have_attribute("aria-disabled", "true")
@@ -223,8 +218,7 @@ def test_zip_all_waits_for_a_shape_delete_to_land(
     # Wait for the request so the route has caught it before ``held``
     # is read below.
     with page.expect_request(
-        lambda r: r.method == "DELETE"
-        and r.url.endswith(f"/extract-data/shapes/{first_id}")
+        lambda r: r.method == "DELETE" and r.url.endswith(f"/extract-data/shapes/{first_id}")
     ):
         first.locator("[data-shape-delete]").click()
     expect(first).to_have_count(0)
@@ -235,8 +229,9 @@ def test_zip_all_waits_for_a_shape_delete_to_land(
     expect(zip_all).to_have_attribute("href", "#")
 
     with page.expect_response(
-        lambda r: r.request.method == "DELETE"
-        and r.url.endswith(f"/extract-data/shapes/{first_id}")
+        lambda r: (
+            r.request.method == "DELETE" and r.url.endswith(f"/extract-data/shapes/{first_id}")
+        )
     ):
         held[0].continue_()
     expect(zip_all).not_to_have_attribute("aria-disabled", "true")

@@ -96,9 +96,7 @@ def _normalised_name(name: str) -> str:
 def _normalised_email(email: str) -> str:
     value = (email or "").strip()
     if not looks_like_email(value):
-        raise ReviewerOperationError(
-            "invalid_email", f"{value!r} is not a valid email address."
-        )
+        raise ReviewerOperationError("invalid_email", f"{value!r} is not a valid email address.")
     return value
 
 
@@ -126,9 +124,7 @@ def _email_taken(
     # session-bounded, so the in-Python scan is cheap.
     key = normalize_email(email)
     rows = db.execute(
-        select(Reviewer.id, Reviewer.email).where(
-            Reviewer.session_id == session_id
-        )
+        select(Reviewer.id, Reviewer.email).where(Reviewer.session_id == session_id)
     ).all()
     return any(
         normalize_email(existing) == key
@@ -321,16 +317,19 @@ def update_reviewer(
     # not-identity: a dirty check — did the operator edit this field?
     # A case-only edit is a real edit, so this compares raw values
     # deliberately. The uniqueness gate below folds.
-    if "email" in proposed and proposed["email"] != reviewer.email and _email_taken(
-        db,
-        session_id=reviewer.session_id,
-        email=proposed["email"],
-        exclude_reviewer_id=reviewer.id,
+    if (
+        "email" in proposed
+        and proposed["email"] != reviewer.email
+        and _email_taken(
+            db,
+            session_id=reviewer.session_id,
+            email=proposed["email"],
+            exclude_reviewer_id=reviewer.id,
+        )
     ):
         raise ReviewerOperationError(
             "duplicate_email",
-            f"Another reviewer in this session already uses "
-            f"{proposed['email']!r}.",
+            f"Another reviewer in this session already uses {proposed['email']!r}.",
         )
 
     # The conflict depends on the resulting (email, name) pair, so this
@@ -358,9 +357,7 @@ def update_reviewer(
     # 20H Item 1: an address edit onto an account another row of this
     # roster holds is refused. Resolved once, and the answer reused for
     # the rebind below.
-    rebind_resolve: Callable[[str], directory_accounts.Account | None] | None = (
-        resolve_account
-    )
+    rebind_resolve: Callable[[str], directory_accounts.Account | None] | None = resolve_account
     new_address = proposed.get("email")
     if (
         new_address is not None
@@ -374,9 +371,7 @@ def update_reviewer(
         if holder is not None:
             raise ReviewerOperationError(
                 "duplicate_account",
-                directory_accounts.same_account_message(
-                    new_address, "reviewer", holder.email
-                ),
+                directory_accounts.same_account_message(new_address, "reviewer", holder.email),
             )
 
         def _resolve_held(
@@ -469,9 +464,7 @@ def update_reviewer(
             recompute_self_review_classification,
         )
 
-        recompute_self_review_classification(
-            db, session_id=reviewer.session_id
-        )
+        recompute_self_review_classification(db, session_id=reviewer.session_id)
 
     audit.write_event(
         db,

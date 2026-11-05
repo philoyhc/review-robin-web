@@ -105,19 +105,13 @@ _PER_CELL_VALID_MODES: dict[tuple[str, str], frozenset[str | None]] = {
     ("peer_reviewer", "while_ongoing"): frozenset({"raw"}),
     ("peer_reviewer", "after_release"): frozenset({None, "raw"}),
     ("reviewee", "while_ongoing"): frozenset({None}),
-    ("reviewee", "after_release"): frozenset(
-        {None, "raw", "anonymized", "summarized"}
-    ),
+    ("reviewee", "after_release"): frozenset({None, "raw", "anonymized", "summarized"}),
     ("observer", "while_ongoing"): frozenset({None, "summarized"}),
-    ("observer", "after_release"): frozenset(
-        {None, "raw", "anonymized", "summarized"}
-    ),
+    ("observer", "after_release"): frozenset({None, "raw", "anonymized", "summarized"}),
 }
 
 
-def valid_modes_for_cell(
-    audience: str, window: str
-) -> frozenset[str | None]:
+def valid_modes_for_cell(audience: str, window: str) -> frozenset[str | None]:
     """Return the set of allowed modes for the ``(audience,
     window)`` cell in the visibility editor. Includes ``None`` when
     "off in this window" is a permitted state. Used by the
@@ -138,9 +132,7 @@ REVIEWER_IDENTITY_LEVELS: tuple[str, ...] = (
     "name_email_profile",
 )
 DEFAULT_REVIEWER_IDENTITY = "name_email"
-REVIEWER_IDENTITY_AUDIENCES: frozenset[str] = frozenset(
-    {"reviewee", "observer"}
-)
+REVIEWER_IDENTITY_AUDIENCES: frozenset[str] = frozenset({"reviewee", "observer"})
 
 
 def reviewer_identity(policy: InstrumentViewPolicy | None) -> str:
@@ -162,8 +154,7 @@ def validate_reviewer_identity(audience: str, level: str | None) -> None:
     if level not in REVIEWER_IDENTITY_LEVELS:
         raise VisibilityPolicyError(
             "invalid_reviewer_identity",
-            f"reviewer identity must be one of "
-            f"{list(REVIEWER_IDENTITY_LEVELS)}; got {level!r}.",
+            f"reviewer identity must be one of {list(REVIEWER_IDENTITY_LEVELS)}; got {level!r}.",
         )
     if audience not in REVIEWER_IDENTITY_AUDIENCES:
         raise VisibilityPolicyError(
@@ -218,25 +209,19 @@ def decode_mode(granularity: str, identification: str) -> str:
     )
 
 
-def list_for_instrument(
-    db: Session, instrument_id: int
-) -> dict[str, InstrumentViewPolicy]:
+def list_for_instrument(db: Session, instrument_id: int) -> dict[str, InstrumentViewPolicy]:
     """Read every persisted policy row for the instrument, keyed
     by audience. Audiences with no row simply aren't in the dict —
     the resolver treats a missing row as "this audience cannot
     view this instrument in any form".
     """
     rows = db.execute(
-        select(InstrumentViewPolicy).where(
-            InstrumentViewPolicy.instrument_id == instrument_id
-        )
+        select(InstrumentViewPolicy).where(InstrumentViewPolicy.instrument_id == instrument_id)
     ).scalars()
     return {row.audience: row for row in rows}
 
 
-def decode_pair_to_mode(
-    granularity: str | None, identification: str | None
-) -> str | None:
+def decode_pair_to_mode(granularity: str | None, identification: str | None) -> str | None:
     """Decode a per-window ``(granularity, identification)`` pair
     into an operator-facing mode (``"raw"`` / ``"anonymized"`` /
     ``"summarized"``). ``None`` on either side means "off in this
@@ -298,9 +283,7 @@ def resolve_mode(
     return None
 
 
-def reviewee_has_current_grant(
-    db: Session, review_session: ReviewSession
-) -> bool:
+def reviewee_has_current_grant(db: Session, review_session: ReviewSession) -> bool:
     """Does the ``reviewee`` audience have a grant that resolves
     **right now** on any instrument in this session?
 
@@ -339,9 +322,7 @@ def reviewee_has_current_grant(
     """
     if lifecycle.is_archived(review_session):
         return False
-    after_release_open = lifecycle.is_response_release_window_open(
-        review_session
-    )
+    after_release_open = lifecycle.is_response_release_window_open(review_session)
     if not after_release_open:
         # `resolve_mode` would return None for every row anyway; skip
         # the query rather than ask the database to prove it.
@@ -368,9 +349,7 @@ def reviewee_has_current_grant(
     )
 
 
-def observer_has_current_grant(
-    db: Session, review_session: ReviewSession
-) -> bool:
+def observer_has_current_grant(db: Session, review_session: ReviewSession) -> bool:
     """Does the ``observer`` audience have a grant that resolves **right
     now** on any instrument in this session — the observer's collation
     has something to show? Per session, like
@@ -380,9 +359,7 @@ def observer_has_current_grant(
     if lifecycle.is_archived(review_session):
         return False
     while_ongoing_open = lifecycle.is_ongoing(review_session)
-    after_release_open = lifecycle.is_response_release_window_open(
-        review_session
-    )
+    after_release_open = lifecycle.is_response_release_window_open(review_session)
     if not (while_ongoing_open or after_release_open):
         return False
     rows = db.execute(
@@ -459,10 +436,7 @@ def reviewer_sees_own_responses(
         and lifecycle.is_response_release_window_open(review_session, now=now)
     ):
         return False
-    return (
-        resolve_mode(policy, while_ongoing_open=False, after_release_open=True)
-        == "raw"
-    )
+    return resolve_mode(policy, while_ongoing_open=False, after_release_open=True) == "raw"
 
 
 def _validate_per_window(
@@ -477,8 +451,7 @@ def _validate_per_window(
     if audience not in AUDIENCES:
         raise VisibilityPolicyError(
             "invalid_audience",
-            f"audience must be one of {sorted(AUDIENCES)}; got "
-            f"{audience!r}.",
+            f"audience must be one of {sorted(AUDIENCES)}; got {audience!r}.",
         )
     for window_name, mode in (
         ("while_ongoing", while_ongoing_mode),
@@ -568,9 +541,7 @@ def upsert_policy(
         "after_release_identification": after_release_pair[1],
     }
     if after_release_reviewer_identity is not KEEP:
-        proposed["after_release_reviewer_identity"] = (
-            after_release_reviewer_identity
-        )
+        proposed["after_release_reviewer_identity"] = after_release_reviewer_identity
     changes: dict[str, list[object]] = {}
     if existing is None:
         # On insert every column is a "change" from default →
@@ -607,11 +578,7 @@ def upsert_policy(
     audit.write_event(
         db,
         event_type="instrument.view_policy_set",
-        summary=(
-            f"Visibility for instrument "
-            f"{_instrument_label(instrument)} "
-            f"({audience}) updated"
-        ),
+        summary=(f"Visibility for instrument {_instrument_label(instrument)} ({audience}) updated"),
         actor_user_id=user.id,
         session=review_session,
         payload=audit.changes(changes),

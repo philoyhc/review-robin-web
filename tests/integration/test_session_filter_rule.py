@@ -30,9 +30,7 @@ import pytest
 
 BASE = Path("app/web/templates/base.html")
 
-pytestmark = pytest.mark.skipif(
-    shutil.which("node") is None, reason="node is not installed"
-)
+pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
 
 
 def _extract_rule() -> str:
@@ -56,9 +54,7 @@ def _run(cases: list[dict]) -> list[bool]:
         "console.log(JSON.stringify(cases.map(c =>"
         "  rrwSessionFilterMatches(c.name, c.code, c.tags, c.term))));\n"
     )
-    result = subprocess.run(
-        ["node", "-e", script], capture_output=True, text=True, timeout=30
-    )
+    result = subprocess.run(["node", "-e", script], capture_output=True, text=True, timeout=30)
     assert result.returncode == 0, result.stderr
     return json.loads(result.stdout)
 
@@ -109,17 +105,13 @@ def test_a_term_spanning_name_and_code_does_not_match() -> None:
 def test_a_row_with_no_tags_still_matches_on_name() -> None:
     """The tag branch is last, so an empty tag list must not swallow a
     name that already matched — nor throw."""
-    assert _run([{"name": "Bare", "code": "b-1", "tags": [], "term": "bare"}]) == [
-        True
-    ]
+    assert _run([{"name": "Bare", "code": "b-1", "tags": [], "term": "bare"}]) == [True]
 
 
 def test_tag_values_are_compared_trimmed() -> None:
     """Surrounding whitespace was never a difference on the seven
     server-side filters (`spec/setup_pages.md`), and is not one here."""
-    assert _run(
-        [{"name": "X", "code": "x-1", "tags": ["  team a  "], "term": "team a"}]
-    ) == [True]
+    assert _run([{"name": "X", "code": "x-1", "tags": ["  team a  "], "term": "team a"}]) == [True]
 
 
 def test_the_extraction_is_anchored_to_something_that_exists() -> None:

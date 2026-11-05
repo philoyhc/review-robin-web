@@ -27,23 +27,17 @@ from ._full_matrix import (
 from ._validated import validate_session
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str = "qs-scaffold"
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str = "qs-scaffold") -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "Scaffold", "code": code, "description": "d"},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
-def _seed_pair(
-    client: TestClient, db: Session, *, code: str, reviewer_email: str
-) -> ReviewSession:
+def _seed_pair(client: TestClient, db: Session, *, code: str, reviewer_email: str) -> ReviewSession:
     review_session = _make_session(client, db, code=code)
     client.post(
         f"/operator/sessions/{review_session.public_id}/reviewers/import",
@@ -72,9 +66,7 @@ def _seed_pair(
     return review_session
 
 
-def _activate(
-    client: TestClient, db: Session, review_session: ReviewSession
-) -> None:
+def _activate(client: TestClient, db: Session, review_session: ReviewSession) -> None:
     validate_session(review_session)
     client.get(f"/operator/sessions/{review_session.public_id}/assignments")
     client.post(
@@ -85,9 +77,7 @@ def _activate(
     db.refresh(review_session)
 
 
-def test_build_quick_setup_context_returns_five_slots(
-    client: TestClient, db: Session
-) -> None:
+def test_build_quick_setup_context_returns_five_slots(client: TestClient, db: Session) -> None:
     """15D PR 7c re-introduced a Relationships slot at position 3
     after PR 7a retired the legacy Assignments slot; Observers renders
     whatever its toggle since quick_setup_update Item 2."""
@@ -127,9 +117,7 @@ def test_build_quick_setup_context_returns_five_slots(
     assert context.is_disabled is False
 
 
-def test_quick_setup_count_reflects_population(
-    client: TestClient, db: Session
-) -> None:
+def test_quick_setup_count_reflects_population(client: TestClient, db: Session) -> None:
     """The slot ``count`` field surfaces the live population so other
     code paths can branch on whether the slot is empty."""
 
@@ -139,9 +127,7 @@ def test_quick_setup_count_reflects_population(
     assert by_key["reviewers"].count == 0
     assert by_key["reviewees"].count == 0
 
-    populated = _seed_pair(
-        client, db, code="qs-populated", reviewer_email="r@example.edu"
-    )
+    populated = _seed_pair(client, db, code="qs-populated", reviewer_email="r@example.edu")
     populated_ctx = views.build_quick_setup_context(db, populated)
     populated_by_key = {slot.key: slot for slot in populated_ctx.slots}
     assert populated_by_key["reviewers"].count == 1
@@ -157,9 +143,7 @@ def test_quick_setup_disables_when_session_is_activated(
     line covering both gates (setup editable + no responses)."""
 
     operator = make_client(alice)
-    review_session = _seed_pair(
-        operator, db, code="qs-activated", reviewer_email="r@example.edu"
-    )
+    review_session = _seed_pair(operator, db, code="qs-activated", reviewer_email="r@example.edu")
     _activate(operator, db, review_session)
 
     context = views.build_quick_setup_context(db, review_session)
@@ -181,9 +165,7 @@ def test_quick_setup_available_on_validated(
     with no responses offers it, live on load (no Lock / Unlock since
     operator pages Item 1)."""
     operator = make_client(alice)
-    review_session = _seed_pair(
-        operator, db, code="qs-validated", reviewer_email="r@example.edu"
-    )
+    review_session = _seed_pair(operator, db, code="qs-validated", reviewer_email="r@example.edu")
     validate_session(review_session)
     db.flush()
     assert review_session.status == "validated"
@@ -247,9 +229,7 @@ def test_quick_setup_unavailable_when_responses_exist_even_on_draft(
     assert views.build_quick_setup_context(db, review_session).is_disabled is False
 
     instrument = Instrument(session_id=review_session.id, name="I", order=0)
-    reviewer = Reviewer(
-        session_id=review_session.id, name="R", email="r-qshr@example.edu"
-    )
+    reviewer = Reviewer(session_id=review_session.id, name="R", email="r-qshr@example.edu")
     reviewee = Reviewee(
         session_id=review_session.id,
         name="E",
@@ -286,9 +266,7 @@ def test_quick_setup_unavailable_when_responses_exist_even_on_draft(
     assert context.is_locked is True
 
 
-def test_quick_setup_slot_modes_all_file_upload(
-    client: TestClient, db: Session
-) -> None:
+def test_quick_setup_slot_modes_all_file_upload(client: TestClient, db: Session) -> None:
     """Post-15D PR 7a every slot is plain ``file_upload`` — the
     legacy ``rule_or_csv`` mode retired with the Assignments slot.
     PR 7c re-introduces a Relationships slot in the same
@@ -303,9 +281,7 @@ def test_quick_setup_slot_modes_all_file_upload(
     assert by_key["settings"].mode == "file_upload"
 
 
-def test_quick_setup_dom_carries_wire_target_attributes(
-    client: TestClient, db: Session
-) -> None:
+def test_quick_setup_dom_carries_wire_target_attributes(client: TestClient, db: Session) -> None:
     """Each slot's wrapping ``<section>`` carries
     ``data-wire-target="quick-setup-{key}"`` so Segment 11J's
     wiring patches can locate the slot without a CSS-selector
@@ -332,10 +308,7 @@ def test_quick_setup_card_level_replacement_checkbox_renders(
     body = client.get(f"/operator/sessions/{review_session.public_id}").text
 
     assert 'id="quick-setup-confirm-replace-toggle"' in body
-    assert (
-        "Yes, replace existing reviewers, reviewees"
-        in body
-    )
+    assert "Yes, replace existing reviewers, reviewees" in body
     # Error-banner containers per slot stay (parse / lifecycle / etc.).
     for key in ("reviewers", "reviewees", "settings"):
         assert f'id="quick-setup-{key}-error-banner"' in body
@@ -343,9 +316,7 @@ def test_quick_setup_card_level_replacement_checkbox_renders(
     assert 'id="quick-setup-assignments-error-banner"' not in body
 
 
-def test_quick_setup_is_live_in_draft(
-    client: TestClient, db: Session
-) -> None:
+def test_quick_setup_is_live_in_draft(client: TestClient, db: Session) -> None:
     """No Lock / Unlock (``guide/operator_pages_enhancements.md``
     Item 1): an editable draft's card is live on load, and the footer
     carries only Submit."""
@@ -389,9 +360,7 @@ def test_quick_setup_locked_when_session_activated(
     assert 'class="quick-setup-body locked"' in body
 
 
-def test_quick_setup_card_lives_at_bottom_left(
-    client: TestClient, db: Session
-) -> None:
+def test_quick_setup_card_lives_at_bottom_left(client: TestClient, db: Session) -> None:
     """18R Item 4 Slices 1/5b — Session Home layout:
 
        Workflow                  (full-width, top)
@@ -425,9 +394,7 @@ def test_quick_setup_card_lives_at_bottom_left(
     assert workflow_pos < config_pos < quick_setup_pos
 
 
-def test_quick_setup_top_grid_layout(
-    client: TestClient, db: Session
-) -> None:
+def test_quick_setup_top_grid_layout(client: TestClient, db: Session) -> None:
     """Two-column card layout: Reviewers + Reviewees on the left,
     Relationships + Session settings on the right."""
 
@@ -451,13 +418,7 @@ def test_quick_setup_top_grid_layout(
 
     # Document order: left column (Reviewers, Reviewees) precedes
     # right column (Relationships, Settings).
-    assert (
-        grid_start
-        < reviewers_pos
-        < reviewees_pos
-        < relationships_pos
-        < config_pos
-    )
+    assert grid_start < reviewers_pos < reviewees_pos < relationships_pos < config_pos
     # Assignments slot is gone.
     assert 'id="quick-setup-assignments"' not in body
     # Two column wrappers — left + right.

@@ -34,6 +34,7 @@ Three properties have to survive that, and each has a test here:
    upgrade that stops synchronizing the ORM bulk-UPDATE-by-primary-key
    form fails here instead of in the regenerate path.
 """
+
 from __future__ import annotations
 
 from sqlalchemy import Engine, event, select
@@ -71,17 +72,11 @@ def _seed_group_scoped(db: Session) -> tuple[ReviewSession, Instrument]:
     user = User(email="op@example.edu")
     db.add(user)
     db.flush()
-    review_session = ReviewSession(
-        name="Groups", code="grp-recompute", created_by_user_id=user.id
-    )
+    review_session = ReviewSession(name="Groups", code="grp-recompute", created_by_user_id=user.id)
     db.add(review_session)
     db.flush()
-    alice_r = Reviewer(
-        session_id=review_session.id, name="Alice", email="alice@example.edu"
-    )
-    dave_r = Reviewer(
-        session_id=review_session.id, name="Dave", email="dave@example.edu"
-    )
+    alice_r = Reviewer(session_id=review_session.id, name="Alice", email="alice@example.edu")
+    dave_r = Reviewer(session_id=review_session.id, name="Dave", email="dave@example.edu")
     reviewees = [
         Reviewee(
             session_id=review_session.id,
@@ -123,9 +118,7 @@ def _seed_group_scoped(db: Session) -> tuple[ReviewSession, Instrument]:
     return review_session, instrument
 
 
-def _reference_classification(
-    db: Session, session_id: int
-) -> dict[int, bool]:
+def _reference_classification(db: Session, session_id: int) -> dict[int, bool]:
     """The pre-19S entity-shaped computation, reproduced here as an
     independent oracle rather than called through the service.
 
@@ -148,9 +141,7 @@ def _reference_classification(
     self_group: dict[tuple[int, int], tuple[str, ...]] = {}
     for assignment, reviewer, reviewee in rows:
         if assignment.id in keys and is_self_review(reviewer, reviewee):
-            self_group[
-                (assignment.instrument_id, assignment.reviewer_id)
-            ] = keys[assignment.id]
+            self_group[(assignment.instrument_id, assignment.reviewer_id)] = keys[assignment.id]
     out: dict[int, bool] = {}
     for assignment, reviewer, reviewee in rows:
         key = keys.get(assignment.id)
@@ -158,10 +149,7 @@ def _reference_classification(
             out[assignment.id] = is_self_review(reviewer, reviewee)
         else:
             out[assignment.id] = (
-                self_group.get(
-                    (assignment.instrument_id, assignment.reviewer_id)
-                )
-                == key
+                self_group.get((assignment.instrument_id, assignment.reviewer_id)) == key
             )
     return out
 
@@ -190,9 +178,7 @@ def test_projection_gives_the_same_answer_as_the_entity_version(
     # Every row starts at the column default, so the expected number of
     # changed rows is the number the reference says are self-reviews.
     assert set(_stored_flags(db, review_session.id).values()) == {False}
-    changed = recompute_self_review_classification(
-        db, session_id=review_session.id
-    )
+    changed = recompute_self_review_classification(db, session_id=review_session.id)
 
     assert changed == sum(expected.values()) > 0, (
         "the count came from the stored flag in the projection"
@@ -219,9 +205,7 @@ def test_projection_gives_the_same_answer_as_the_entity_version(
     )
 
     # Idempotent: nothing left to change, and the count says so.
-    assert recompute_self_review_classification(
-        db, session_id=review_session.id
-    ) == 0
+    assert recompute_self_review_classification(db, session_id=review_session.id) == 0
 
 
 def test_recompute_builds_no_assignment_entities(db: Session) -> None:
@@ -260,9 +244,7 @@ def test_recompute_builds_no_assignment_entities(db: Session) -> None:
     for entity, handler in handlers:
         event.listen(entity, "load", handler)
     try:
-        changed = recompute_self_review_classification(
-            db, session_id=review_session.id
-        )
+        changed = recompute_self_review_classification(db, session_id=review_session.id)
     finally:
         for entity, handler in handlers:
             event.remove(entity, "load", handler)
@@ -279,9 +261,7 @@ def test_recompute_builds_no_assignment_entities(db: Session) -> None:
     )
 
 
-def test_changed_rows_go_out_as_one_statement(
-    db: Session, engine: Engine
-) -> None:
+def test_changed_rows_go_out_as_one_statement(db: Session, engine: Engine) -> None:
     """The write is one bulk UPDATE, not one per changed row — and a
     recompute with nothing to change issues none.
 
@@ -301,18 +281,12 @@ def test_changed_rows_go_out_as_one_statement(
             updates.append(statement)
 
     try:
-        changed = recompute_self_review_classification(
-            db, session_id=review_session.id
-        )
+        changed = recompute_self_review_classification(db, session_id=review_session.id)
         assert changed == 2, "Alice's two rows about her own group"
-        assert len(updates) == 1, (
-            f"one bulk statement for {changed} rows, got {len(updates)}"
-        )
+        assert len(updates) == 1, f"one bulk statement for {changed} rows, got {len(updates)}"
 
         updates.clear()
-        assert recompute_self_review_classification(
-            db, session_id=review_session.id
-        ) == 0
+        assert recompute_self_review_classification(db, session_id=review_session.id) == 0
         assert updates == [], "a no-op recompute writes nothing"
     finally:
         event.remove(engine, "before_cursor_execute", _record)
@@ -333,9 +307,7 @@ def test_bulk_update_keeps_loaded_entities_in_step(db: Session) -> None:
     loaded = {
         assignment.id: assignment
         for assignment in db.execute(
-            select(Assignment).where(
-                Assignment.session_id == review_session.id
-            )
+            select(Assignment).where(Assignment.session_id == review_session.id)
         ).scalars()
     }
     assert loaded and not any(a.is_self_review for a in loaded.values())
@@ -343,10 +315,7 @@ def test_bulk_update_keeps_loaded_entities_in_step(db: Session) -> None:
     recompute_self_review_classification(db, session_id=review_session.id)
 
     stored = _stored_flags(db, review_session.id)
-    assert {
-        row_id: assignment.is_self_review
-        for row_id, assignment in loaded.items()
-    } == stored, "loaded entities agree with the rows"
-    assert verify_self_review_classification(
-        db, session_id=review_session.id
-    ) == []
+    assert {row_id: assignment.is_self_review for row_id, assignment in loaded.items()} == stored, (
+        "loaded entities agree with the rows"
+    )
+    assert verify_self_review_classification(db, session_id=review_session.id) == []

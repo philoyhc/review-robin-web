@@ -77,15 +77,11 @@ def new_session_form(
         "operator/session_new.html",
         {
             "user": user,
-            "quick_setup": views.build_new_session_quick_setup_context(
-                db, user
-            ),
+            "quick_setup": views.build_new_session_quick_setup_context(db, user),
             "breadcrumbs": breadcrumbs.operator_new_session(),
             "current_timezone": current_timezone,
             "timezone_options": operator_settings.timezone_options(),
-            "timezone_sample": date_formatting.format_datetime(
-                datetime.now(UTC), current_timezone
-            ),
+            "timezone_sample": date_formatting.format_datetime(datetime.now(UTC), current_timezone),
             # 18G PR 2B: the Create form has no existing session, so the
             # timeline starts empty. The template renders the block
             # only when at least one row is present.
@@ -94,9 +90,7 @@ def new_session_form(
             "scheduled_send": scheduled_events.scheduled_send_enabled(),
             # 19S Item 9 Part A — the Owners card's Add-owner picker. The
             # creator is the first owner, so the list is everyone else.
-            "new_session_owner_candidates": (
-                session_owners.new_session_owner_candidates(db, user)
-            ),
+            "new_session_owner_candidates": (session_owners.new_session_owner_candidates(db, user)),
             # 19S Item 7 — the Tags box's typeahead.
             "tag_vocabulary": session_tags.vocabulary_for_user(db, user),
         },
@@ -136,9 +130,7 @@ def session_detail(
             db,
             review_session,
             user=user,
-            **views.quick_setup_url_failure(
-                quick_setup_error, quick_setup_reason
-            ),
+            **views.quick_setup_url_failure(quick_setup_error, quick_setup_reason),
             kept_reviewees=quick_setup_notice == "kept_reviewees",
         ),
         super_failure=views.parse_super_failure(
@@ -164,9 +156,11 @@ def session_detail(
 # 2026-09-08.)
 @router.get("/sessions/{session_id}/edit")
 def session_edit_redirect(
-    request: Request, review_session: ReviewSession = Depends(require_session_operator),
+    request: Request,
+    review_session: ReviewSession = Depends(require_session_operator),
 ) -> RedirectResponse:
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url=f"/operator/sessions/{review_session.public_id}?editing=1",
         # 308 (not 301) preserves the GET method and matches the other
         # legacy-URL shim (``/preview`` → operations); audit R11.
@@ -215,9 +209,7 @@ def _apply_session_config_form(
     # A code another session holds is refused before anything is
     # written, rather than reaching the unique constraint as a 500.
     try:
-        sessions.ensure_code_available(
-            db, code, exclude_session_id=review_session.id
-        )
+        sessions.ensure_code_available(db, code, exclude_session_id=review_session.id)
     except sessions.SessionCodeTakenError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -227,10 +219,9 @@ def _apply_session_config_form(
     # 18B PR 5: the display timezone is a field of this form. Blank ⇒
     # leave the session's current zone unchanged. An edited datetime box
     # is wall-clock in this zone.
-    timezone_name = (
-        operator_settings.parse_display_timezone_input(display_timezone)
-        or sessions.resolve_session_timezone(review_session)
-    )
+    timezone_name = operator_settings.parse_display_timezone_input(
+        display_timezone
+    ) or sessions.resolve_session_timezone(review_session)
     if not operator_settings.is_valid_timezone(timezone_name):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -253,9 +244,7 @@ def _apply_session_config_form(
     converted = sessions.converted_box_names(tz_converted)
     unedited: set[str] = set()
 
-    def _read_as(
-        field: str, raw: str | None, stored: datetime | None
-    ) -> tuple[str | None, str]:
+    def _read_as(field: str, raw: str | None, stored: datetime | None) -> tuple[str | None, str]:
         if sessions.datetime_box_kept(
             stored,
             raw,
@@ -275,9 +264,7 @@ def _apply_session_config_form(
     def _kept(field: str, parsed: datetime | None) -> datetime | None:
         return getattr(review_session, field) if field in unedited else parsed
 
-    deadline_raw, deadline_zone = _read_as(
-        "deadline", deadline, review_session.deadline
-    )
+    deadline_raw, deadline_zone = _read_as("deadline", deadline, review_session.deadline)
     start_raw, start_zone = _read_as(
         "scheduled_activate_at",
         scheduled_activate_at,
@@ -294,9 +281,7 @@ def _apply_session_config_form(
         review_session.responses_release_until,
     )
 
-    parsed_deadline = _kept(
-        "deadline", parse_session_deadline(deadline_raw, deadline_zone)
-    )
+    parsed_deadline = _kept("deadline", parse_session_deadline(deadline_raw, deadline_zone))
 
     # A value that aged past its save-time floor after saving "stays
     # put" (``spec/lifecycle.md`` §8.3): an unedited Start, and the
@@ -330,14 +315,18 @@ def _apply_session_config_form(
     # unvalidated, since nothing fires them and the operator cannot edit
     # them.
     send = scheduled_events.scheduled_send_enabled()
-    fired_errors = scheduled_events.fired_offset_errors(
-        db,
-        review_session,
-        scheduled_activate_at=parsed_scheduled_activate_at,
-        invite_offsets=scheduled_events.split_offsets(invite_offsets),
-        deadline=parsed_deadline,
-        reminder_offsets=scheduled_events.split_offsets(reminder_offsets),
-    ) if send else []
+    fired_errors = (
+        scheduled_events.fired_offset_errors(
+            db,
+            review_session,
+            scheduled_activate_at=parsed_scheduled_activate_at,
+            invite_offsets=scheduled_events.split_offsets(invite_offsets),
+            deadline=parsed_deadline,
+            reminder_offsets=scheduled_events.split_offsets(reminder_offsets),
+        )
+        if send
+        else []
+    )
     if fired_errors:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -347,17 +336,21 @@ def _apply_session_config_form(
     # 18G Part 2: optional auto-send invite offsets, validated against
     # the (possibly freshly-edited) Start.
     try:
-        parsed_invite_offsets = list(review_session.invite_offsets or []) if not send else (
-            scheduled_events.parse_and_validate_invite_offsets(
-                invite_offsets,
-                scheduled_activate_at=parsed_scheduled_activate_at,
-                aged_exempt=scheduled_events.offsets_lead_exempt(
-                    db,
-                    review_session,
-                    "invite",
-                    parsed_scheduled_activate_at,
-                    anchor_unedited=start_unedited,
-                ),
+        parsed_invite_offsets = (
+            list(review_session.invite_offsets or [])
+            if not send
+            else (
+                scheduled_events.parse_and_validate_invite_offsets(
+                    invite_offsets,
+                    scheduled_activate_at=parsed_scheduled_activate_at,
+                    aged_exempt=scheduled_events.offsets_lead_exempt(
+                        db,
+                        review_session,
+                        "invite",
+                        parsed_scheduled_activate_at,
+                        anchor_unedited=start_unedited,
+                    ),
+                )
             )
         )
     except scheduled_events.ScheduledActivateError as exc:
@@ -369,17 +362,21 @@ def _apply_session_config_form(
     # 18G Part 3: optional auto-send reminder offsets, validated
     # against the (possibly freshly-edited) deadline.
     try:
-        parsed_reminder_offsets = list(review_session.reminder_offsets or []) if not send else (
-            scheduled_events.parse_and_validate_reminder_offsets(
-                reminder_offsets,
-                deadline=parsed_deadline,
-                aged_exempt=scheduled_events.offsets_lead_exempt(
-                    db,
-                    review_session,
-                    "reminder",
-                    parsed_deadline,
-                    anchor_unedited="deadline" in unedited,
-                ),
+        parsed_reminder_offsets = (
+            list(review_session.reminder_offsets or [])
+            if not send
+            else (
+                scheduled_events.parse_and_validate_reminder_offsets(
+                    reminder_offsets,
+                    deadline=parsed_deadline,
+                    aged_exempt=scheduled_events.offsets_lead_exempt(
+                        db,
+                        review_session,
+                        "reminder",
+                        parsed_deadline,
+                        anchor_unedited="deadline" in unedited,
+                    ),
+                )
             )
         )
     except scheduled_events.ScheduledActivateError as exc:
@@ -415,9 +412,7 @@ def _apply_session_config_form(
                 timezone_name=release_until_zone,
                 responses_release_at=(
                     parsed_responses_release_at
-                    if _pair_edited(
-                        "responses_release_at", "responses_release_until"
-                    )
+                    if _pair_edited("responses_release_at", "responses_release_until")
                     else None
                 ),
             ),
@@ -494,7 +489,8 @@ def _apply_session_config_form(
 
 @router.post("/sessions/{session_id}/config")
 def session_config_submit(
-    request: Request, name: str = Form(...),
+    request: Request,
+    name: str = Form(...),
     code: str = Form(...),
     description: str | None = Form(default=None),
     deadline: str | None = Form(default=None),
@@ -564,7 +560,8 @@ def session_config_submit(
             tags=tags.split(","),
             correlation_id=correlation_id,
         )
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         # No ``#session-config``: the page's own script restores the
         # operator's scroll position, and a fragment would scroll the
         # card's top edge into view first (19U Item 4).
@@ -575,7 +572,8 @@ def session_config_submit(
 
 @router.post("/sessions/{session_id}/delete-data")
 def session_delete_data(
-    request: Request, confirm: str | None = Form(default=None),
+    request: Request,
+    confirm: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -592,7 +590,8 @@ def session_delete_data(
         user=user,
         correlation_id=request_correlation_id(),
     )
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url=f"/operator/sessions/{review_session.public_id}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -600,7 +599,8 @@ def session_delete_data(
 
 @router.post("/sessions/{session_id}/delete")
 def session_delete(
-    request: Request, confirm: str | None = Form(default=None),
+    request: Request,
+    confirm: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -617,7 +617,8 @@ def session_delete(
         user=user,
         correlation_id=request_correlation_id(),
     )
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url="/operator/sessions",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -625,7 +626,8 @@ def session_delete(
 
 @router.post("/sessions/{session_id}/activate")
 def session_activate(
-    request: Request, acknowledge_warnings: str | None = Form(default=None),
+    request: Request,
+    acknowledge_warnings: str | None = Form(default=None),
     return_to: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
@@ -648,7 +650,8 @@ def session_activate(
         # ``_redirect_url``) rather than raising an error page, so an
         # activation failure looks the same from either activate button
         # (audit R2).
-        return urls.redirect(request,
+        return urls.redirect(
+            request,
             url=_redirect_url(
                 review_session.public_id,
                 return_to,
@@ -662,7 +665,8 @@ def session_activate(
     target = f"/operator/sessions/{review_session.public_id}"
     if return_to in _REVERT_RETURN_TO:
         target = f"{target}/{return_to}"
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url=target,
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -670,7 +674,8 @@ def session_activate(
 
 @router.post("/sessions/{session_id}/revert")
 def session_revert_to_draft(
-    request: Request, confirm: str | None = Form(default=None),
+    request: Request,
+    confirm: str | None = Form(default=None),
     return_to: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
@@ -689,7 +694,8 @@ def session_revert_to_draft(
     target = f"/operator/sessions/{review_session.public_id}"
     if return_to in _REVERT_RETURN_TO:
         target = f"{target}/{return_to}"
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url=target,
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -707,30 +713,27 @@ def _owners_redirect_url(session_id: str, error_code: str | None = None) -> str:
 
         # Anchor stays at the end; the query param sits before the #.
         return (
-            f"/operator/sessions/{session_id}"
-            f"?owners_error={quote(error_code, safe='')}#owners-card"
+            f"/operator/sessions/{session_id}?owners_error={quote(error_code, safe='')}#owners-card"
         )
     return f"/operator/sessions/{session_id}#owners-card"
 
 
 @router.post("/sessions/{session_id}/owners/add")
 def session_owners_add(
-    request: Request, target_email: str = Form(...),
-    review_session: ReviewSession = Depends(
-        require_sys_admin_or_session_operator
-    ),
+    request: Request,
+    target_email: str = Form(...),
+    review_session: ReviewSession = Depends(require_sys_admin_or_session_operator),
     actor: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     from sqlalchemy import func as sa_func
 
     target = db.execute(
-        select(User).where(
-            sa_func.lower(User.email) == normalize_email(target_email)
-        )
+        select(User).where(sa_func.lower(User.email) == normalize_email(target_email))
     ).scalar_one_or_none()
     if target is None:
-        return urls.redirect(request,
+        return urls.redirect(
+            request,
             url=_owners_redirect_url(review_session.public_id, "not_in_workspace"),
             status_code=status.HTTP_303_SEE_OTHER,
         )
@@ -744,7 +747,8 @@ def session_owners_add(
         not permissions.user_can_view_session(db, actor, review_session.id)
         and target.id != actor.id
     ):
-        return urls.redirect(request,
+        return urls.redirect(
+            request,
             url=_owners_redirect_url(review_session.public_id, "self_only"),
             status_code=status.HTTP_303_SEE_OTHER,
         )
@@ -757,11 +761,13 @@ def session_owners_add(
             correlation_id=request_correlation_id(),
         )
     except session_owners.OwnerOperationError as exc:
-        return urls.redirect(request,
+        return urls.redirect(
+            request,
             url=_owners_redirect_url(review_session.public_id, exc.code),
             status_code=status.HTTP_303_SEE_OTHER,
         )
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url=_owners_redirect_url(review_session.public_id),
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -769,14 +775,13 @@ def session_owners_add(
 
 @router.post("/sessions/{session_id}/owners/{user_id}/remove")
 def session_owners_remove(
-    request: Request, user_id: int,
+    request: Request,
+    user_id: int,
     review_session: ReviewSession = Depends(require_session_operator),
     actor: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    target = db.execute(
-        select(User).where(User.id == user_id)
-    ).scalar_one_or_none()
+    target = db.execute(select(User).where(User.id == user_id)).scalar_one_or_none()
     if target is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     try:
@@ -790,23 +795,23 @@ def session_owners_remove(
     except session_owners.OwnerOperationError as exc:
         # last_owner / not_owner both fall through here.
         status_code = (
-            status.HTTP_409_CONFLICT
-            if exc.code == "last_owner"
-            else status.HTTP_303_SEE_OTHER
+            status.HTTP_409_CONFLICT if exc.code == "last_owner" else status.HTTP_303_SEE_OTHER
         )
         if status_code == status.HTTP_409_CONFLICT:
             raise HTTPException(status_code=status_code, detail=exc.message) from exc
-        return urls.redirect(request,
+        return urls.redirect(
+            request,
             url=_owners_redirect_url(review_session.public_id, exc.code),
             status_code=status.HTTP_303_SEE_OTHER,
         )
     # Removing yourself leaves Session Home a 404 for you, so land on the
     # sessions lobby instead (19S Item 10, author's ruling).
     if target.id == actor.id:
-        return urls.redirect(request,
-            url="/operator/sessions", status_code=status.HTTP_303_SEE_OTHER
+        return urls.redirect(
+            request, url="/operator/sessions", status_code=status.HTTP_303_SEE_OTHER
         )
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url=_owners_redirect_url(review_session.public_id),
         status_code=status.HTTP_303_SEE_OTHER,
     )

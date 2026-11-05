@@ -26,7 +26,11 @@ from ._invitation_states import _create_session
 from ._lookups import detail_of, must_search
 
 JANE_ID = "11111111-1111-4111-8111-111111111111"
-JANE = {"directory_object_id": JANE_ID, "directory_mail": "jane.tan@example.edu", "directory_upn": "e0123456@example.edu"}
+JANE = {
+    "directory_object_id": JANE_ID,
+    "directory_mail": "jane.tan@example.edu",
+    "directory_upn": "e0123456@example.edu",
+}
 ROSTER_FORM = {"profile_link": "", "tag_1": "", "tag_2": "", "tag_3": "", "status": "active"}
 
 
@@ -166,7 +170,13 @@ def test_an_observer_import_binds_too(
     ],
 )
 def test_the_single_add_binds_and_an_address_edit_rebinds_or_clears(
-    client: TestClient, db: Session, directory: FakeDirectory, roster: str, model, field: str, name_field: str
+    client: TestClient,
+    db: Session,
+    directory: FakeDirectory,
+    roster: str,
+    model,
+    field: str,
+    name_field: str,
 ) -> None:
     session = _session(client, db, f"dir-edit-{roster}")
     base = f"/operator/sessions/{session.public_id}/{roster}"
@@ -205,14 +215,19 @@ def test_without_a_token_nothing_binds_and_an_edit_clears(
     monkeypatch.setattr(_shared, "directory_or_none", lambda request: None)
     session = _session(client, db, "dir-none")
     base = f"/operator/sessions/{session.public_id}/reviewers"
-    client.post(f"{base}/create", data={**ROSTER_FORM, "email": "e0123456@example.edu", "name": "Jane"})
+    client.post(
+        f"{base}/create", data={**ROSTER_FORM, "email": "e0123456@example.edu", "name": "Jane"}
+    )
     row = _row(db, Reviewer, session.id)
     assert _bound(row) == directory_accounts.UNBOUND
     # A bound row edited with no directory to ask loses its binding.
     for name, value in JANE.items():
         setattr(row, name, value)
     db.commit()
-    client.post(f"{base}/{row.id}/update", data={**ROSTER_FORM, "email": "jane.tan@example.edu", "name": "Jane"})
+    client.post(
+        f"{base}/{row.id}/update",
+        data={**ROSTER_FORM, "email": "jane.tan@example.edu", "name": "Jane"},
+    )
     db.refresh(row)
     assert _bound(row) == directory_accounts.UNBOUND
 
@@ -221,7 +236,11 @@ def test_mail_for_a_row_given_by_upn_goes_to_the_directory_mail() -> None:
     by_upn = Reviewer(name="Jane", email="e0123456@example.edu", **JANE)
     unbound = Reviewer(name="Ext", email="guest@other.example")
     no_mail = Reviewer(
-        name="Lab", email="lab01@example.edu", directory_object_id="x", directory_mail=None, directory_upn="lab01@example.edu"
+        name="Lab",
+        email="lab01@example.edu",
+        directory_object_id="x",
+        directory_mail=None,
+        directory_upn="lab01@example.edu",
     )
     assert directory_accounts.recipient(by_upn) == "jane.tan@example.edu"
     assert directory_accounts.recipient(unbound) == "guest@other.example"
@@ -260,7 +279,13 @@ def test_an_unchecked_import_says_so(
     session = _session(client, db, "dir-page-none")
     client.post(
         f"/operator/sessions/{session.public_id}/observers/import",
-        files={"file": ("o.csv", b"ObserverName,ObserverEmail\nJane,e0123456@example.edu\n", "text/csv")},
+        files={
+            "file": (
+                "o.csv",
+                b"ObserverName,ObserverEmail\nJane,e0123456@example.edu\n",
+                "text/csv",
+            )
+        },
         follow_redirects=False,
     )
     text = client.get(f"/operator/sessions/{session.public_id}/observers?unlocked=1").text
@@ -292,14 +317,20 @@ def test_several_rosters_share_one_lookup_and_are_counted_apart(
     calls: list[list[str]] = []
     real = directory_accounts.look_up_all
     monkeypatch.setattr(
-        directory_accounts, "look_up_all", lambda d, keys, **kw: calls.append(keys) or real(d, keys, **kw)
+        directory_accounts,
+        "look_up_all",
+        lambda d, keys, **kw: calls.append(keys) or real(d, keys, **kw),
     )
     reviewers, reviewees = csv_imports.directory_checks(
         directory, [["e0123456@example.edu"], ["jane.tan@example.edu", "nobody@example.edu"]]
     )
     assert len(calls) == 1
-    assert reviewers.counts["directory_by_upn"] == 1 and reviewers.counts["directory_not_found"] == 0
-    assert reviewees.counts["directory_by_mail"] == 1 and reviewees.counts["directory_not_found"] == 1
+    assert (
+        reviewers.counts["directory_by_upn"] == 1 and reviewers.counts["directory_not_found"] == 0
+    )
+    assert (
+        reviewees.counts["directory_by_mail"] == 1 and reviewees.counts["directory_not_found"] == 1
+    )
 
 
 class _ExpiredToken(FakeDirectory):
@@ -356,11 +387,17 @@ def test_a_replace_the_directory_cannot_answer_keeps_each_rows_account(
     db.expire_all()
     assert _bound(_row(db, Reviewer, session.id, name="Jane")) == JANE
     assert _bound(_row(db, Reviewer, session.id, name="New")) == directory_accounts.UNBOUND
-    event = db.execute(
-        select(AuditEvent)
-        .where(AuditEvent.session_id == session.id, AuditEvent.event_type == "reviewers.imported")
-        .order_by(AuditEvent.id.desc())
-    ).scalars().first()
+    event = (
+        db.execute(
+            select(AuditEvent)
+            .where(
+                AuditEvent.session_id == session.id, AuditEvent.event_type == "reviewers.imported"
+            )
+            .order_by(AuditEvent.id.desc())
+        )
+        .scalars()
+        .first()
+    )
     assert event is not None
     counts = detail_of(event)["counts"]
     assert counts["directory_not_checked"] == 2 and counts["directory_kept"] == 1
@@ -409,8 +446,10 @@ def test_a_reviewee_replace_keeps_an_unanswered_rows_account_too(
     client.post(url, files={"file": ("e.csv", csv, "text/csv")}, follow_redirects=False)
     monkeypatch.setattr(_shared, "directory_or_none", lambda request: _Down())
     response = client.post(
-        url, files={"file": ("e.csv", csv, "text/csv")},
-        data={"confirm_replace": "true"}, follow_redirects=False,
+        url,
+        files={"file": ("e.csv", csv, "text/csv")},
+        data={"confirm_replace": "true"},
+        follow_redirects=False,
     )
     assert response.status_code == 303
     db.expire_all()
@@ -432,7 +471,8 @@ def test_a_kept_account_the_file_binds_elsewhere_is_not_carried(
         _shared, "directory_or_none", lambda request: _FailsFor("jane.tan@example.edu")
     )
     _import_reviewers(
-        client, session,
+        client,
+        session,
         b"ReviewerName,ReviewerEmail\nJane,jane.tan@example.edu\nJane UPN,e0123456@example.edu\n",
     )
     db.expire_all()
@@ -478,7 +518,8 @@ def test_an_expired_token_saves_nothing_holds_the_file_and_asks_to_renew(
     }[kind]
     url = f"/operator/sessions/{session.public_id}/{kind}/import"
     response = client.post(
-        url, files={"file": (f"{kind}.csv", header + b"\nJane,e0123456@example.edu\n", "text/csv")},
+        url,
+        files={"file": (f"{kind}.csv", header + b"\nJane,e0123456@example.edu\n", "text/csv")},
         follow_redirects=False,
     )
     assert response.status_code == 400
@@ -528,7 +569,13 @@ def test_a_failure_renewing_cannot_cure_saves_and_the_line_says_why(
     monkeypatch.setattr(_shared, "directory_or_none", lambda request: directory)
     response = client.post(
         f"/operator/sessions/{session.public_id}/reviewers/import",
-        files={"file": ("r.csv", b"ReviewerName,ReviewerEmail\nJane,e0123456@example.edu\n", "text/csv")},
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail\nJane,e0123456@example.edu\n",
+                "text/csv",
+            )
+        },
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -549,5 +596,5 @@ def test_each_upload_card_carries_the_countdown_hidden(
     without the script the upload is as before (20H Item 6)."""
     session = _session(client, db, f"dir-countdown-{roster}")
     text = client.get(f"/operator/sessions/{session.public_id}/{roster}?unlocked=1").text
-    line = text[text.index("<p class=\"muted\" data-directory-countdown") :].split("</p>")[0]
+    line = text[text.index('<p class="muted" data-directory-countdown') :].split("</p>")[0]
     assert " hidden>" in line and "more to go" in line

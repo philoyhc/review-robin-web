@@ -44,9 +44,7 @@ def operator_session_invitations_reviewer(
     ]
 
 
-def operator_session_responses_reviewee(
-    session: ReviewSession, reviewee_label: str
-) -> list[Crumb]:
+def operator_session_responses_reviewee(session: ReviewSession, reviewee_label: str) -> list[Crumb]:
     """Breadcrumb for the reviewee-detail drill-in from the Responses
     page (Segment 11C Part 1 PR 3)."""
     return [

@@ -65,7 +65,12 @@ router = APIRouter()
 
 
 _RELATIONSHIP_SORT_KEYS = {
-    "reviewer", "reviewee", "tag_1", "tag_2", "tag_3", "status",
+    "reviewer",
+    "reviewee",
+    "tag_1",
+    "tag_2",
+    "tag_3",
+    "status",
     "updated_at",
 }
 
@@ -148,6 +153,7 @@ async def relationships_import_submit(
     appending = append == "true" and existing > 0
     merging = merge == "true" and existing > 0
     ticked = (confirm_replace == "true") + appending + merging
+
     # 19P.3 rung 4 — `panel_open=True` on BOTH in-place 400 paths. A
     # refused file's problems render inside the upload card, which is
     # inside the Unlock panel, and a 400
@@ -167,14 +173,15 @@ async def relationships_import_submit(
     # plain refusal ends the hold.
     def ask() -> dict[str, str] | None:
         return hold_for_ask(
-            db, upload=upload, user=user, review_session=review_session,
+            db,
+            upload=upload,
+            user=user,
+            review_session=review_session,
             slot="relationships",
         )
 
     if result.is_blocked:
-        release_hold(
-            db, token=upload.token, user=user, review_session=review_session
-        )
+        release_hold(db, token=upload.token, user=user, review_session=review_session)
         return _render_relationships_page(
             request=request,
             review_session=review_session,
@@ -205,9 +212,7 @@ async def relationships_import_submit(
         )
 
     def refuse(issues: list[ValidationIssue]) -> HTMLResponse:
-        release_hold(
-            db, token=upload.token, user=user, review_session=review_session
-        )
+        release_hold(db, token=upload.token, user=user, review_session=review_session)
         return _render_relationships_page(
             request=request,
             review_session=review_session,
@@ -257,9 +262,15 @@ async def relationships_import_submit(
         db.rollback()
         held = ask()
         return _refuse_group_clear(
-            request, review_session, user, db, exc,
-            surface="import", panel_open=True,
-            issues=result.issues, filename=upload.filename,
+            request,
+            review_session,
+            user,
+            db,
+            exc,
+            surface="import",
+            panel_open=True,
+            issues=result.issues,
+            filename=upload.filename,
             held_upload=held,
             confirm_replace_checked=held is not None and not (appending or merging),
             append_checked=held is not None and appending,
@@ -271,27 +282,30 @@ async def relationships_import_submit(
     # operator was working in: a Save does not close the card, the Lock
     # control does. The fragment lands on the card rather than the top of
     # the document.
-    return urls.redirect(request,
-        url=(
-            f"/operator/sessions/{review_session.public_id}/relationships"
-            "?unlocked=1#roster-card"
-        ),
+    return urls.redirect(
+        request,
+        url=(f"/operator/sessions/{review_session.public_id}/relationships?unlocked=1#roster-card"),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
 
 @router.post("/sessions/{session_id}/relationships/import/dismiss")
 def relationships_import_dismiss(
-    request: Request, held_token: str | None = Form(default=None),
+    request: Request,
+    held_token: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_relationships_enabled_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     """The upload card's Dismiss while an ask holds its file: end the
     hold and return to the card (segment 19W)."""
-    return dismiss_held_upload(request,
-        db, held_token=held_token, user=user,
-        review_session=review_session, page="relationships",
+    return dismiss_held_upload(
+        request,
+        db,
+        held_token=held_token,
+        user=user,
+        review_session=review_session,
+        page="relationships",
     )
 
 
@@ -324,19 +338,22 @@ def relationships_delete_all(
         )
     except responses_service.GroupAnswersWouldClear as exc:
         return _refuse_group_clear(
-            request, review_session, user, db, exc,
-            surface="delete_all", panel_open=True,
+            request,
+            review_session,
+            user,
+            db,
+            exc,
+            surface="delete_all",
+            panel_open=True,
         )
     # 19P.3 rung 4 — `?unlocked=1#roster-card`. This control lives INSIDE
     # the Unlock panel now, and a bare redirect closes the panel the
     # operator was working in: a Save does not close the card, the Lock
     # control does. The fragment lands on the card rather than the top of
     # the document.
-    return urls.redirect(request,
-        url=(
-            f"/operator/sessions/{review_session.public_id}/relationships"
-            "?unlocked=1#roster-card"
-        ),
+    return urls.redirect(
+        request,
+        url=(f"/operator/sessions/{review_session.public_id}/relationships?unlocked=1#roster-card"),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -444,9 +461,17 @@ def relationships_create(
         )
     except responses_service.GroupAnswersWouldClear as exc:
         return _refuse_group_clear(
-            request, review_session, user, db, exc,
-            surface="editor", add_mode=True, edit_values=edit_values,
-            status=filter_status, search=filter_q, offset=filter_offset,
+            request,
+            review_session,
+            user,
+            db,
+            exc,
+            surface="editor",
+            add_mode=True,
+            edit_values=edit_values,
+            status=filter_status,
+            search=filter_q,
+            offset=filter_offset,
         )
     # 19P.3 rung 1 — this route answered with a BARE redirect: no
     # selection, no filter, no offset, no fragment. So a create from a
@@ -461,7 +486,8 @@ def relationships_create(
     # page the form was submitted from — the fragment would name a row
     # the response never rendered. It relocates the pager window; the
     # fragment then resolves onto the row.
-    return _redirect_keeping_selection(request,
+    return _redirect_keeping_selection(
+        request,
         f"/operator/sessions/{review_session.public_id}/relationships",
         [],
         filter_params=[("status", filter_status), ("q", filter_q)],
@@ -494,9 +520,7 @@ def relationships_update(
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
     _require_editable(review_session)
-    relationship = _require_relationship_in_session(
-        db, review_session, relationship_id
-    )
+    relationship = _require_relationship_in_session(db, review_session, relationship_id)
     # The edit row's reviewer / reviewee cells are name-or-email
     # search boxes — resolve the submitted label back to a roster id
     # (Segment 15F).
@@ -564,11 +588,20 @@ def relationships_update(
         )
     except responses_service.GroupAnswersWouldClear as exc:
         return _refuse_group_clear(
-            request, review_session, user, db, exc,
-            surface="editor", edit_id=relationship_id, edit_values=edit_values,
-            status=filter_status, search=filter_q, offset=filter_offset,
+            request,
+            review_session,
+            user,
+            db,
+            exc,
+            surface="editor",
+            edit_id=relationship_id,
+            edit_values=edit_values,
+            status=filter_status,
+            search=filter_q,
+            offset=filter_offset,
         )
-    return _redirect_keeping_selection(request,
+    return _redirect_keeping_selection(
+        request,
         f"/operator/sessions/{review_session.public_id}/relationships",
         [relationship_id],
         filter_params=[("status", filter_status), ("q", filter_q)],
@@ -604,16 +637,22 @@ def relationships_bulk_inactivate(
             acknowledged_loss=acknowledged_loss(acknowledge_response_loss),
         )
     except RelationshipOperationError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
-        ) from exc
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
     except responses_service.GroupAnswersWouldClear as exc:
         return _refuse_group_clear(
-            request, review_session, user, db, exc,
-            surface="bulk", selected_ids=set(relationship_ids),
-            status=filter_status, search=filter_q, offset=filter_offset,
+            request,
+            review_session,
+            user,
+            db,
+            exc,
+            surface="bulk",
+            selected_ids=set(relationship_ids),
+            status=filter_status,
+            search=filter_q,
+            offset=filter_offset,
         )
-    return _redirect_keeping_selection(request,
+    return _redirect_keeping_selection(
+        request,
         f"/operator/sessions/{review_session.public_id}/relationships",
         relationship_ids,
         filter_params=[("status", filter_status), ("q", filter_q)],
@@ -649,16 +688,22 @@ def relationships_bulk_reactivate(
             acknowledged_loss=acknowledged_loss(acknowledge_response_loss),
         )
     except RelationshipOperationError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
-        ) from exc
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
     except responses_service.GroupAnswersWouldClear as exc:
         return _refuse_group_clear(
-            request, review_session, user, db, exc,
-            surface="bulk", selected_ids=set(relationship_ids),
-            status=filter_status, search=filter_q, offset=filter_offset,
+            request,
+            review_session,
+            user,
+            db,
+            exc,
+            surface="bulk",
+            selected_ids=set(relationship_ids),
+            status=filter_status,
+            search=filter_q,
+            offset=filter_offset,
         )
-    return _redirect_keeping_selection(request,
+    return _redirect_keeping_selection(
+        request,
         f"/operator/sessions/{review_session.public_id}/relationships",
         relationship_ids,
         filter_params=[("status", filter_status), ("q", filter_q)],
@@ -692,9 +737,7 @@ def _relationship_picker_options(
     ]
 
 
-def _resolve_picker_label(
-    value: str, options: list[tuple[int, str]]
-) -> int | None:
+def _resolve_picker_label(value: str, options: list[tuple[int, str]]) -> int | None:
     """Map a submitted picker string back to its member id by exact
     label match. ``None`` when the operator typed something that
     isn't a roster member — the route then re-renders with an error
@@ -805,6 +848,7 @@ def _render_relationships_page(
     relationship_prereqs = views.relationship_prerequisites(
         has_reviewers=bool(reviewers), has_reviewees=bool(reviewees)
     )
+
     # Segment 13B Part 2 PR 7 — cookie-backed personal sort.
     # ``reviewer`` / ``reviewee`` resolve via the lookup maps; the
     # sort keys on the rendered name (Segment 15F PR 5 stage 2 —
@@ -866,17 +910,13 @@ def _render_relationships_page(
     # reviewer / reviewee cells prefill with the picker label so the
     # search box shows the current member.
     if edit_values is None and edit_id is not None:
-        edited = next(
-            (r for r in relationships if r.id == edit_id), None
-        )
+        edited = next((r for r in relationships if r.id == edit_id), None)
         if edited is not None:
             edit_reviewer = reviewer_by_id.get(edited.reviewer_id)
             edit_reviewee = reviewee_by_id.get(edited.reviewee_id)
             edit_values = {
                 "reviewer_label": (
-                    _picker_label(edit_reviewer, "email")
-                    if edit_reviewer is not None
-                    else ""
+                    _picker_label(edit_reviewer, "email") if edit_reviewer is not None else ""
                 ),
                 "reviewee_label": (
                     _picker_label(edit_reviewee, "email_or_identifier")
@@ -925,9 +965,7 @@ def _render_relationships_page(
             # Counted only where the Danger Zone can render: the template's
             # ``unlock_available``, editable and no row editor open.
             "delete_all_group_loss": (
-                relationships_service.delete_all_group_loss(
-                    db, session_id=review_session.id
-                )
+                relationships_service.delete_all_group_loss(db, session_id=review_session.id)
                 if all_rows
                 and lifecycle.is_editable(review_session)
                 and edit_id is None
@@ -954,9 +992,7 @@ def _render_relationships_page(
             # not ``selected``: selection is page-local, and carrying
             # a hidden one across a page boundary is how an operator
             # deletes something they cannot see.
-            "pager_url_base": (
-                f"/operator/sessions/{review_session.public_id}/relationships?"
-            ),
+            "pager_url_base": (f"/operator/sessions/{review_session.public_id}/relationships?"),
             # The fragment the range links land on (19J.8): the
             # table's card, so a page turn arrives showing the card's
             # top edge, the column chips, the page links and the new
@@ -1011,9 +1047,7 @@ def _render_relationships_page(
             "edit_values": edit_values,
             "edit_error": edit_error,
             "group_clear": group_clear,
-            "reviewer_picker_options": _relationship_picker_options(
-                reviewers, handle_attr="email"
-            ),
+            "reviewer_picker_options": _relationship_picker_options(reviewers, handle_attr="email"),
             "reviewee_picker_options": _relationship_picker_options(
                 reviewees, handle_attr="email_or_identifier"
             ),
@@ -1058,9 +1092,7 @@ def _render_relationships_page(
             "confirm_replace_checked": confirm_replace_checked,
             "append_checked": append_checked,
             "merge_checked": merge_checked,
-            "breadcrumbs": breadcrumbs.operator_session_child(
-                review_session, "Relationships"
-            ),
+            "breadcrumbs": breadcrumbs.operator_session_child(review_session, "Relationships"),
         },
         status_code=status_code,
     )
@@ -1089,9 +1121,7 @@ async def relationships_save_field_labels(
 ) -> RedirectResponse:
     """Save the three pair-context labels for this session."""
     form = await request.form()
-    submitted = {
-        param: str(form.get(param, "")) for param, _ in _PAIR_CONTEXT_SLOTS
-    }
+    submitted = {param: str(form.get(param, "")) for param, _ in _PAIR_CONTEXT_SLOTS}
     # The labels service locks the session row (findings Bc4): wait for
     # it off the event loop.
     await run_in_threadpool(
@@ -1109,11 +1139,9 @@ async def relationships_save_field_labels(
     # operator was working in: a Save does not close the card, the Lock
     # control does. The fragment lands on the card rather than the top of
     # the document.
-    return urls.redirect(request,
-        url=(
-            f"/operator/sessions/{review_session.public_id}/relationships"
-            "?unlocked=1#roster-card"
-        ),
+    return urls.redirect(
+        request,
+        url=(f"/operator/sessions/{review_session.public_id}/relationships?unlocked=1#roster-card"),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -1161,16 +1189,22 @@ def relationships_bulk_delete(
             acknowledged_loss=acknowledged_loss(acknowledge_response_loss),
         )
     except RelationshipOperationError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
-        ) from exc
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
     except responses_service.GroupAnswersWouldClear as exc:
         return _refuse_group_clear(
-            request, review_session, user, db, exc,
-            surface="bulk", selected_ids=set(relationship_ids),
-            status=filter_status, search=filter_q, offset=filter_offset,
+            request,
+            review_session,
+            user,
+            db,
+            exc,
+            surface="bulk",
+            selected_ids=set(relationship_ids),
+            status=filter_status,
+            search=filter_q,
+            offset=filter_offset,
         )
-    return _redirect_keeping_selection(request,
+    return _redirect_keeping_selection(
+        request,
         f"/operator/sessions/{review_session.public_id}/relationships",
         [],
         filter_params=[("status", filter_status), ("q", filter_q)],

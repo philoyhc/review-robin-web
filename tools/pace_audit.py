@@ -109,7 +109,8 @@ def resolve_ref(ref: str = MAIN_REF) -> str:
     for candidate in (ref, "main"):
         probe = subprocess.run(
             ["git", "rev-parse", "--verify", "--quiet", f"{candidate}^{{commit}}"],
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
         )
         if probe.returncode == 0:
             return candidate
@@ -123,7 +124,11 @@ def load(since: str, ref: str = MAIN_REF) -> list[dict]:
     """Every merge on ``ref``'s first-parent line since ``since``, oldest first."""
     rows: list[dict] = []
     log = git(
-        "log", "--merges", "--first-parent", resolve_ref(ref), f"--since={since_arg(since)}",
+        "log",
+        "--merges",
+        "--first-parent",
+        resolve_ref(ref),
+        f"--since={since_arg(since)}",
         "--format=%H|%ct|%s|%b",
     )
     for line in log.splitlines():
@@ -237,7 +242,9 @@ def report(label: str, rows: list[dict]) -> None:
     within = [r for r in rows if r["cycle"] is not None and r["cycle"] < SESSION_GAP_MIN]
     days = {dt.date.fromtimestamp(r["merge"]) for r in rows}
     hours = sum(r["cycle"] for r in within) / 60
-    print(f"\n== {label}: {len(rows)} PRs, {len(days)} active days, {hours:.1f} within-session hours")
+    print(
+        f"\n== {label}: {len(rows)} PRs, {len(days)} active days, {hours:.1f} within-session hours"
+    )
     print(
         f"  cycle med {median(r['cycle'] for r in within):5.1f}  "
         f"mean {mean(r['cycle'] for r in within):5.1f} = "
@@ -299,12 +306,16 @@ def report(label: str, rows: list[dict]) -> None:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("--cut", type=int, required=True, help="first PR number under the new rules")
     ap.add_argument("--since", default="2026-09-04", help="earliest merge date to read")
     ap.add_argument("--recent", default="2026-09-14", help="start of the last BEFORE window")
     ap.add_argument("--prs", help="JSONL of PR number/created_at/merged_at from the GitHub API")
-    ap.add_argument("--ref", default=MAIN_REF, help="the main line to read (default origin/main, then main)")
+    ap.add_argument(
+        "--ref", default=MAIN_REF, help="the main line to read (default origin/main, then main)"
+    )
     args = ap.parse_args()
 
     rows = load(args.since, ref=args.ref)

@@ -132,13 +132,10 @@ def test_the_arithmetic_has_exactly_one_home() -> None:
         for path in root.rglob("*.py")
         if re.search(r"^def _?discrete_steps?_values\(", path.read_text(), re.M)
     ]
-    assert len(definers) == 1, (
-        "expected one definition, found: "
-        + ", ".join(str(p) for p in definers)
+    assert len(definers) == 1, "expected one definition, found: " + ", ".join(
+        str(p) for p in definers
     )
-    assert definers[0].name == "data_shape_extract.py", (
-        f"the implementation moved to {definers[0]}"
-    )
+    assert definers[0].name == "data_shape_extract.py", f"the implementation moved to {definers[0]}"
 
 
 def test_no_literal_threshold_survives_beside_the_constant() -> None:
@@ -152,8 +149,7 @@ def test_no_literal_threshold_survives_beside_the_constant() -> None:
     import pathlib
 
     src = (
-        pathlib.Path(__file__).resolve().parents[2]
-        / "app/services/extracts/data_shape_extract.py"
+        pathlib.Path(__file__).resolve().parents[2] / "app/services/extracts/data_shape_extract.py"
     ).read_text()
     assert "count > DISCRETE_STEPS_THRESHOLD" in src
     assert "count > 12" not in src

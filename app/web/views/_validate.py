@@ -187,11 +187,7 @@ def _setup_coverage_rows(
     reviewee_count = csv_imports.existing_reviewee_count(db, sid)
     assignment_count = assignments.existing_count(db, sid)
     instrument_count = len(
-        list(
-            db.execute(
-                select(Instrument).where(Instrument.session_id == sid)
-            ).scalars()
-        )
+        list(db.execute(select(Instrument).where(Instrument.session_id == sid)).scalars())
     )
     has_email_overrides = bool(review_session.email_template_overrides)
     help_contact_set = bool((review_session.help_contact or "").strip())
@@ -262,9 +258,7 @@ def _setup_coverage_rows(
     rows.append(
         SetupCoverageRow(
             label="Instruments",
-            status=(
-                f"{instrument_count}" if instrument_count else "—"
-            ),
+            status=(f"{instrument_count}" if instrument_count else "—"),
             source="instruments",
             error_count=e,
             warning_count=w,
@@ -287,9 +281,7 @@ def _setup_coverage_rows(
     rows.append(
         SetupCoverageRow(
             label="Email template",
-            status=(
-                "Custom overrides" if has_email_overrides else "Default (no overrides)"
-            ),
+            status=("Custom overrides" if has_email_overrides else "Default (no overrides)"),
             source="email_template",
             error_count=0,
             warning_count=0,
@@ -391,9 +383,7 @@ def build_validate_context(
         elif issue.severity.value == "warning":
             issue_counts_by_source[issue.source] = (e, w + 1)
 
-    setup_coverage = _setup_coverage_rows(
-        db, review_session, issue_counts_by_source
-    )
+    setup_coverage = _setup_coverage_rows(db, review_session, issue_counts_by_source)
 
     counts = {"error": error_count, "warning": warning_count, "info": info_count}
     severity_chips = [

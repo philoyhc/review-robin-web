@@ -17,6 +17,7 @@ group, runs Generate, downloads the by-instrument CSV, and asserts
 the SelfReview column reads ``TRUE`` on Alice's row about her
 group.
 """
+
 from __future__ import annotations
 
 import io
@@ -37,23 +38,17 @@ from app.services import assignments as assignments_service
 from app.services.instruments import encode_group_kind
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "BIGroupSelf", "code": code, "description": ""},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
-def test_group_scoped_self_review_row_reads_TRUE(
-    client: TestClient, db: Session
-) -> None:
+def test_group_scoped_self_review_row_reads_TRUE(client: TestClient, db: Session) -> None:
     """Reviewer Alice reviews a tag_1=X group whose members
     include Alice herself + Bob. Pre-PR-3 the SelfReview column
     on the (single, collapsed) group row read ``FALSE``; post-
@@ -104,14 +99,11 @@ def test_group_scoped_self_review_row_reads_TRUE(
     )
     db.flush()
     # Mirror the production write path: recompute the column.
-    assignments_service.recompute_self_review_classification(
-        db, session_id=review_session.id
-    )
+    assignments_service.recompute_self_review_classification(db, session_id=review_session.id)
     db.commit()
 
     response = client.get(
-        f"/operator/sessions/{review_session.public_id}"
-        "/export/by_instrument_bundle.zip"
+        f"/operator/sessions/{review_session.public_id}/export/by_instrument_bundle.zip"
     )
     assert response.status_code == 200
     archive = zipfile.ZipFile(io.BytesIO(response.content))
@@ -127,9 +119,7 @@ def test_group_scoped_self_review_row_reads_TRUE(
         )
 
 
-def test_group_scoped_non_member_row_reads_FALSE(
-    client: TestClient, db: Session
-) -> None:
+def test_group_scoped_non_member_row_reads_FALSE(client: TestClient, db: Session) -> None:
     """Control case: Alice reviews a group she's NOT a member of
     (tag_1=Y; Bob and Carol). SelfReview reads ``FALSE`` because
     Alice is not a member. Ensures we didn't over-correct."""
@@ -175,14 +165,11 @@ def test_group_scoped_non_member_row_reads_FALSE(
         ]
     )
     db.flush()
-    assignments_service.recompute_self_review_classification(
-        db, session_id=review_session.id
-    )
+    assignments_service.recompute_self_review_classification(db, session_id=review_session.id)
     db.commit()
 
     response = client.get(
-        f"/operator/sessions/{review_session.public_id}"
-        "/export/by_instrument_bundle.zip"
+        f"/operator/sessions/{review_session.public_id}/export/by_instrument_bundle.zip"
     )
     assert response.status_code == 200
     archive = zipfile.ZipFile(io.BytesIO(response.content))
@@ -202,8 +189,6 @@ def _self_review_column(payload: str) -> tuple[int, list[str]]:
     (the line starting ``ReviewerName,``) and return its
     ``SelfReview`` column index plus the data rows following it."""
     lines = [line for line in payload.splitlines() if line.strip()]
-    header_index = next(
-        i for i, line in enumerate(lines) if line.startswith("ReviewerName,")
-    )
+    header_index = next(i for i, line in enumerate(lines) if line.startswith("ReviewerName,"))
     header = lines[header_index].split(",")
     return header.index("SelfReview"), lines[header_index + 1 :]

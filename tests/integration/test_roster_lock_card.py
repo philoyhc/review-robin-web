@@ -10,6 +10,7 @@ they could edit relationships* landed somewhere else, and a 303 to a
 real page looks like success — which is why nothing caught it. Rung 2
 renders that control in two more states, so it had to work first.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -93,9 +94,7 @@ def _seed(client: TestClient, db: Session, *, code: str) -> ReviewSession:
         follow_redirects=False,
     )
     assert r.status_code == 303, r.text
-    s = db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    s = db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
     enable_relationships(db, s)
     enable_observers(db, s)
     return s
@@ -118,9 +117,7 @@ def test_every_roster_page_posts_a_return_to_its_own_route_honours(
     )
 
     assert response.status_code == 303, (page, response.text[:200])
-    assert response.headers["location"] == (
-        f"/operator/sessions/{s.public_id}/{page}"
-    ), page
+    assert response.headers["location"] == (f"/operator/sessions/{s.public_id}/{page}"), page
 
 
 @pytest.mark.parametrize("page", FROZEN_PAGES)
@@ -284,9 +281,10 @@ def test_the_offered_revert_actually_works(
     db.expire_all()
 
     assert response.status_code == 303, (page, state, response.text[:200])
-    assert response.headers["location"] == (
-        f"/operator/sessions/{s.public_id}/{page}"
-    ), (page, state)
+    assert response.headers["location"] == (f"/operator/sessions/{s.public_id}/{page}"), (
+        page,
+        state,
+    )
     current = db.get(ReviewSession, s.id)
     assert current is not None
     assert current.status == "draft", (page, state)

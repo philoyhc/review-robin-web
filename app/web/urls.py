@@ -54,8 +54,12 @@ def url_path(request: HTTPConnection, path: str | None) -> str:
         return path  # Easy Auth's, at the host level (v0.8 §3)
     if path.startswith("/") and not path.startswith("//"):
         prefix = root_path(request)
-        if prefix and (path == prefix or path.startswith((prefix + "/", prefix + "?", prefix + "#"))):
-            return path  # already emitted once: a value wrapped where it is set and where it is used
+        if prefix and (
+            path == prefix or path.startswith((prefix + "/", prefix + "?", prefix + "#"))
+        ):
+            return (
+                path  # already emitted once: a value wrapped where it is set and where it is used
+            )
         return prefix + path
     return path
 

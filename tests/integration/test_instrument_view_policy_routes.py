@@ -55,9 +55,7 @@ def test_encode_mode_round_trips_three_coherent_modes() -> None:
         ("summarized", ("aggregated", "deidentified")),
     ]:
         assert visibility_policies.encode_mode(mode) == expected_pair
-        assert (
-            visibility_policies.decode_mode(*expected_pair) == mode
-        )
+        assert visibility_policies.decode_mode(*expected_pair) == mode
 
 
 def test_encode_mode_rejects_unknown_label() -> None:
@@ -73,41 +71,26 @@ def test_decode_mode_rejects_incoherent_aggregated_identified() -> None:
 
 def test_valid_modes_for_cell_locks_per_audience() -> None:
     """Spot-check the per-(audience, window) valid-mode map."""
-    assert (
-        visibility_policies.valid_modes_for_cell(
-            "peer_reviewer", "while_ongoing"
-        )
-        == frozenset({"raw"})
+    assert visibility_policies.valid_modes_for_cell("peer_reviewer", "while_ongoing") == frozenset(
+        {"raw"}
     )
     # peer_reviewer after_release: off / Raw. ``anonymized`` is
     # incoherent for one's own work; ``summarized`` was retired
     # (findings A18) — no reviewer summary view was ever built.
-    assert (
-        visibility_policies.valid_modes_for_cell(
-            "peer_reviewer", "after_release"
-        )
-        == frozenset({None, "raw"})
+    assert visibility_policies.valid_modes_for_cell("peer_reviewer", "after_release") == frozenset(
+        {None, "raw"}
     )
-    assert (
-        visibility_policies.valid_modes_for_cell(
-            "reviewee", "while_ongoing"
-        )
-        == frozenset({None})
+    assert visibility_policies.valid_modes_for_cell("reviewee", "while_ongoing") == frozenset(
+        {None}
     )
     # observer Session-ongoing: off / Anonymized summaries only.
     # Per-row downloads (Raw + Anonymized rows) only open once
     # ``after_release`` does.
-    assert (
-        visibility_policies.valid_modes_for_cell(
-            "observer", "while_ongoing"
-        )
-        == frozenset({None, "summarized"})
+    assert visibility_policies.valid_modes_for_cell("observer", "while_ongoing") == frozenset(
+        {None, "summarized"}
     )
-    assert (
-        visibility_policies.valid_modes_for_cell(
-            "observer", "after_release"
-        )
-        == frozenset({None, "raw", "anonymized", "summarized"})
+    assert visibility_policies.valid_modes_for_cell("observer", "after_release") == frozenset(
+        {None, "raw", "anonymized", "summarized"}
     )
 
 
@@ -118,9 +101,7 @@ def test_upsert_policy_refuses_peer_reviewer_summarized_after_release(
     'Anonymized summaries' option was retired because no reviewer
     summary view was ever built (findings A18)."""
     review_session, instrument, user = _setup(db)
-    with pytest.raises(
-        visibility_policies.VisibilityPolicyError
-    ) as excinfo:
+    with pytest.raises(visibility_policies.VisibilityPolicyError) as excinfo:
         visibility_policies.upsert_policy(
             db,
             review_session=review_session,
@@ -137,9 +118,7 @@ def _setup(db: Session) -> tuple[ReviewSession, Instrument, User]:
     user = User(email="op@example.edu", display_name="Op")
     db.add(user)
     db.flush()
-    review_session = ReviewSession(
-        name="S", code="vp-test", created_by_user_id=user.id
-    )
+    review_session = ReviewSession(name="S", code="vp-test", created_by_user_id=user.id)
     db.add(review_session)
     db.flush()
     instrument = Instrument(
@@ -168,11 +147,11 @@ def test_upsert_policy_insert_writes_per_window_pairs(db: Session) -> None:
     assert row.while_ongoing_identification is None
     assert row.after_release_granularity == "row"
     assert row.after_release_identification == "deidentified"
-    events = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "instrument.view_policy_set"
-        )
-    ).scalars().all()
+    events = (
+        db.execute(select(AuditEvent).where(AuditEvent.event_type == "instrument.view_policy_set"))
+        .scalars()
+        .all()
+    )
     assert len(events) == 1
     # Insert paints every column as a change.
     assert "while_ongoing_granularity" in changes
@@ -253,11 +232,11 @@ def test_upsert_policy_no_op_emits_no_audit(db: Session) -> None:
     )
     db.commit()
     assert changes == {}
-    events = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "instrument.view_policy_set"
-        )
-    ).scalars().all()
+    events = (
+        db.execute(select(AuditEvent).where(AuditEvent.event_type == "instrument.view_policy_set"))
+        .scalars()
+        .all()
+    )
     assert len(events) == 1  # only the insert
 
 
@@ -267,9 +246,7 @@ def test_upsert_policy_rejects_peer_reviewer_session_ongoing_off(
     """Reviewer Session-ongoing is the baseline self-view
     guarantee — must be ``"raw"``, never ``None``."""
     review_session, instrument, user = _setup(db)
-    with pytest.raises(
-        visibility_policies.VisibilityPolicyError
-    ) as excinfo:
+    with pytest.raises(visibility_policies.VisibilityPolicyError) as excinfo:
         visibility_policies.upsert_policy(
             db,
             review_session=review_session,
@@ -393,9 +370,7 @@ def test_list_for_instrument_returns_persisted_audiences_only(
         user=user,
     )
     db.commit()
-    persisted = visibility_policies.list_for_instrument(
-        db, instrument.id
-    )
+    persisted = visibility_policies.list_for_instrument(db, instrument.id)
     assert set(persisted.keys()) == {"observer"}
     row = persisted["observer"]
     assert row.while_ongoing_granularity == "aggregated"
@@ -411,33 +386,27 @@ def test_list_for_instrument_returns_persisted_audiences_only(
 # they land in the same POST as Band 1 / column widths / etc.
 
 
-def _alice_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _alice_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "S", "code": code, "description": ""},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    session = db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    session = db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
     db.refresh(session)
     return session
 
 
 def _instrument_for(db: Session, session: ReviewSession) -> Instrument:
-    instrument = db.execute(
-        select(Instrument).where(Instrument.session_id == session.id)
-    ).scalars().first()
+    instrument = (
+        db.execute(select(Instrument).where(Instrument.session_id == session.id)).scalars().first()
+    )
     assert instrument is not None
     return instrument
 
 
-def test_route_save_persists_three_audiences(
-    client: TestClient, db: Session
-) -> None:
+def test_route_save_persists_three_audiences(client: TestClient, db: Session) -> None:
     review_session = _alice_session(client, db, code="vp-route")
     instrument = _instrument_for(db, review_session)
     response = client.post(
@@ -455,11 +424,13 @@ def test_route_save_persists_three_audiences(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    rows = db.execute(
-        select(InstrumentViewPolicy).where(
-            InstrumentViewPolicy.instrument_id == instrument.id
+    rows = (
+        db.execute(
+            select(InstrumentViewPolicy).where(InstrumentViewPolicy.instrument_id == instrument.id)
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     by_audience = {row.audience: row for row in rows}
     # Reviewers: both windows Raw.
     assert by_audience["peer_reviewer"].while_ongoing_granularity == "row"
@@ -490,9 +461,7 @@ def test_route_save_rejects_reviewee_session_ongoing_with_mode(
     assert "Session-ongoing" in response.text or "while_ongoing" in response.text
 
 
-def test_route_save_skips_audiences_with_missing_slots(
-    client: TestClient, db: Session
-) -> None:
+def test_route_save_skips_audiences_with_missing_slots(client: TestClient, db: Session) -> None:
     """An audience absent from the form payload doesn't get a row."""
     review_session = _alice_session(client, db, code="vp-partial")
     instrument = _instrument_for(db, review_session)
@@ -505,11 +474,13 @@ def test_route_save_skips_audiences_with_missing_slots(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    rows = db.execute(
-        select(InstrumentViewPolicy).where(
-            InstrumentViewPolicy.instrument_id == instrument.id
+    rows = (
+        db.execute(
+            select(InstrumentViewPolicy).where(InstrumentViewPolicy.instrument_id == instrument.id)
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert {r.audience for r in rows} == {"reviewee"}
 
 
@@ -527,9 +498,7 @@ def test_observer_session_ongoing_chip_cycle_limited_to_off_and_summarized(
     # ``_instrument_for`` is the implicit fixture — the default
     # template that lands on session creation; the chip-slug
     # assertion below doesn't need the row itself.
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
 
     # The Observer / Session-ongoing chip's ``data-new-model-vp-cycle-slugs``
     # carries the two allowed values, joined with ``|``.
@@ -555,14 +524,10 @@ def test_observer_session_ongoing_chip_cycle_limited_to_off_and_summarized(
     assert after_match.group(1) == "|raw|anonymized|summarized"
 
 
-def test_instruments_page_renders_per_window_form(
-    client: TestClient, db: Session
-) -> None:
+def test_instruments_page_renders_per_window_form(client: TestClient, db: Session) -> None:
     review_session = _alice_session(client, db, code="vp-render")
     instrument = _instrument_for(db, review_session)
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     # Hidden inputs hitch a ride on the card's main Save form via
     # ``form="dfsave-<id>"`` — no standalone visibility submit.
     assert f'form="dfsave-{instrument.id}"' in body
@@ -577,14 +542,17 @@ def test_instruments_page_renders_per_window_form(
     flat = " ".join(body.split())
     start = flat.index("data-new-model-vp-editor")
     editor = flat[start : flat.index("</table>", start)]
-    for label in ("You (reviewer)", "Reviewees", "Observers",
-                  "Session ongoing", "Responses released"):
+    for label in (
+        "You (reviewer)",
+        "Reviewees",
+        "Observers",
+        "Session ongoing",
+        "Responses released",
+    ):
         assert f">{label}</" in editor, label
 
 
-def test_instruments_page_reflects_persisted_state(
-    client: TestClient, db: Session
-) -> None:
+def test_instruments_page_reflects_persisted_state(client: TestClient, db: Session) -> None:
     import re
 
     review_session = _alice_session(client, db, code="vp-prefill")
@@ -597,9 +565,7 @@ def test_instruments_page_reflects_persisted_state(
         },
         follow_redirects=False,
     )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
 
     def _vp_value(audience_window: str) -> str | None:
         match = re.search(

@@ -25,18 +25,14 @@ from app.config import settings
 from app.db.models import AuditEvent, ReviewSession
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str = "al"
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str = "al") -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "AuditLog", "code": code, "description": ""},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 @pytest.fixture(autouse=True)
@@ -53,9 +49,7 @@ def test_audit_log_route_streams_csv_with_canonical_filename(
 ) -> None:
     review_session = _make_session(client, db, code="al-fname")
 
-    response = client.get(
-        f"/operator/sessions/{review_session.public_id}/export/audit_log.csv"
-    )
+    response = client.get(f"/operator/sessions/{review_session.public_id}/export/audit_log.csv")
     assert response.status_code == 200
     assert response.headers["content-disposition"] == (
         'attachment; filename="al-fname_audit_log.csv"'
@@ -72,17 +66,13 @@ def test_audit_log_route_streams_csv_with_canonical_filename(
     ]
 
 
-def test_audit_log_route_emits_audit_event(
-    client: TestClient, db: Session
-) -> None:
+def test_audit_log_route_emits_audit_event(client: TestClient, db: Session) -> None:
     """The act of downloading the audit log goes into the audit
     log, and counts itself among the file's rows
     (``test_audit_log_recorded_count_matches_the_file``)."""
 
     review_session = _make_session(client, db, code="al-audit")
-    response = client.get(
-        f"/operator/sessions/{review_session.public_id}/export/audit_log.csv"
-    )
+    response = client.get(f"/operator/sessions/{review_session.public_id}/export/audit_log.csv")
     assert response.status_code == 200
     response.read()
 
@@ -99,17 +89,13 @@ def test_audit_log_route_emits_audit_event(
     assert detail["counts"]["rows"] >= 1
 
 
-def test_audit_log_route_returns_session_events(
-    client: TestClient, db: Session
-) -> None:
+def test_audit_log_route_returns_session_events(client: TestClient, db: Session) -> None:
     """A freshly-created session has a ``session.created``
     event; the download surfaces it as a row."""
 
     review_session = _make_session(client, db, code="al-rows")
 
-    response = client.get(
-        f"/operator/sessions/{review_session.public_id}/export/audit_log.csv"
-    )
+    response = client.get(f"/operator/sessions/{review_session.public_id}/export/audit_log.csv")
     rows = list(csv.reader(io.StringIO(response.text)))
     # Header + at least one row (session.created).
     assert len(rows) >= 2
@@ -155,9 +141,7 @@ def _extract_events(db: Session, session_id: int) -> list[AuditEvent]:
     )
 
 
-def test_audit_log_recorded_count_matches_the_file(
-    client: TestClient, db: Session
-) -> None:
+def test_audit_log_recorded_count_matches_the_file(client: TestClient, db: Session) -> None:
     """The extract's own event is in the file it describes (the file is
     read after the event commits), so its recorded count includes it;
     a filter that excludes it leaves the count at the rows it keeps
@@ -171,11 +155,9 @@ def test_audit_log_recorded_count_matches_the_file(
     assert cast(dict, event.detail)["counts"]["rows"] == len(rows)
     assert f"({len(rows)} rows)" in event.summary
 
-    filtered = list(
-        csv.reader(
-            io.StringIO(client.get(f"{base}?event_type=session.created").text)
-        )
-    )[1:]
+    filtered = list(csv.reader(io.StringIO(client.get(f"{base}?event_type=session.created").text)))[
+        1:
+    ]
     latest = _extract_events(db, review_session.id)[-1]
     assert [r[0] for r in filtered] == ["session.created"]
     assert cast(dict, latest.detail)["counts"]["rows"] == len(filtered) == 1

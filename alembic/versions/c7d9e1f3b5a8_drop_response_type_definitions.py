@@ -20,6 +20,7 @@ Revision ID: c7d9e1f3b5a8
 Revises: a3f7e2d1c9b5
 Create Date: 2026-05-26
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -57,16 +58,12 @@ def downgrade() -> None:
         sa.Column("max", sa.Float(), nullable=True),
         sa.Column("step", sa.Float(), nullable=True),
         sa.Column("list_csv", sa.Text(), nullable=True),
-        sa.Column(
-            "is_seeded", sa.Boolean(), nullable=False, server_default=sa.false()
-        ),
+        sa.Column("is_seeded", sa.Boolean(), nullable=False, server_default=sa.false()),
         sa.Column(
             "seed_order",
             sa.Integer(),
             nullable=False,
             server_default=sa.text("0"),
         ),
-        sa.UniqueConstraint(
-            "session_id", "response_type", name="uq_rtd_session_name"
-        ),
+        sa.UniqueConstraint("session_id", "response_type", name="uq_rtd_session_name"),
     )

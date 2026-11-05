@@ -19,6 +19,7 @@ Two things here are not obvious and are the reason the file exists:
    table does — the exact failure Segment 19I Item 9 found on the
    Assignments sort tests.
 """
+
 from __future__ import annotations
 
 import json
@@ -88,17 +89,13 @@ def _seed(client: TestClient, db: Session, code: str) -> ReviewSession:
         follow_redirects=False,
     )
     assert r.status_code == 303, r.text
-    s = db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    s = db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
-    reviewers = (
-        "ReviewerName,ReviewerEmail,ReviewerTag1,ReviewerTag2\n"
-        + "\n".join(f"{n},{e},{t1},{t2}" for n, e, t1, t2 in REVIEWERS)
+    reviewers = "ReviewerName,ReviewerEmail,ReviewerTag1,ReviewerTag2\n" + "\n".join(
+        f"{n},{e},{t1},{t2}" for n, e, t1, t2 in REVIEWERS
     )
-    reviewees = (
-        "RevieweeName,RevieweeEmail,RevieweeTag1,RevieweeTag2\n"
-        + "\n".join(f"{n},{e},{t1},{t2}" for n, e, t1, t2 in REVIEWEES)
+    reviewees = "RevieweeName,RevieweeEmail,RevieweeTag1,RevieweeTag2\n" + "\n".join(
+        f"{n},{e},{t1},{t2}" for n, e, t1, t2 in REVIEWEES
     )
     for path, payload in (
         ("reviewers", reviewers),
@@ -125,9 +122,7 @@ def _seed(client: TestClient, db: Session, code: str) -> ReviewSession:
     return s
 
 
-def _sorted_body(
-    client: TestClient, session_id: int, page: str, key: str, direction: str
-) -> str:
+def _sorted_body(client: TestClient, session_id: int, page: str, key: str, direction: str) -> str:
     pid = public_id(session_id)
     client.cookies.set(
         f"rrw-sort-{page}-{pid}",
@@ -142,29 +137,19 @@ def _sorted_body(
 # --------------------------------------------------------------------------- #
 
 
-def test_invitations_cookie_sort_by_name_asc(
-    client: TestClient, db: Session
-) -> None:
+def test_invitations_cookie_sort_by_name_asc(client: TestClient, db: Session) -> None:
     s = _seed(client, db, "inv-sort-asc")
     rows = _rows(_sorted_body(client, s.id, "invitations", "name", "asc"))
-    assert (
-        rows.find("Alpha R") < rows.find("Bravo R") < rows.find("Charlie R")
-    )
+    assert rows.find("Alpha R") < rows.find("Bravo R") < rows.find("Charlie R")
 
 
-def test_invitations_cookie_sort_by_name_desc(
-    client: TestClient, db: Session
-) -> None:
+def test_invitations_cookie_sort_by_name_desc(client: TestClient, db: Session) -> None:
     s = _seed(client, db, "inv-sort-desc")
     rows = _rows(_sorted_body(client, s.id, "invitations", "name", "desc"))
-    assert (
-        rows.find("Charlie R") < rows.find("Bravo R") < rows.find("Alpha R")
-    )
+    assert rows.find("Charlie R") < rows.find("Bravo R") < rows.find("Alpha R")
 
 
-def test_invitations_sort_reaches_through_the_row_wrapper(
-    client: TestClient, db: Session
-) -> None:
+def test_invitations_sort_reaches_through_the_row_wrapper(client: TestClient, db: Session) -> None:
     """The assertion that fails if the resolver is `getattr(row, key)`.
 
     `InvitationsRow` has no `name` — it lives on `.reviewer`. A
@@ -176,9 +161,7 @@ def test_invitations_sort_reaches_through_the_row_wrapper(
     s = _seed(client, db, "inv-sort-wrapper")
     # Unsorted first — `client.cookies` persists, so a fetch after
     # `_sorted_body` would still carry the cookie and prove nothing.
-    unsorted = _rows(
-        client.get(f"/operator/sessions/{s.public_id}/invitations").text
-    )
+    unsorted = _rows(client.get(f"/operator/sessions/{s.public_id}/invitations").text)
     assert [unsorted.find(n) for n in DEFAULT_ORDER] == sorted(
         unsorted.find(n) for n in DEFAULT_ORDER
     )
@@ -188,9 +171,7 @@ def test_invitations_sort_reaches_through_the_row_wrapper(
     assert positions == sorted(positions)
 
 
-def test_invitations_unsorted_without_a_cookie(
-    client: TestClient, db: Session
-) -> None:
+def test_invitations_unsorted_without_a_cookie(client: TestClient, db: Session) -> None:
     """No cookie ⇒ no reordering: the builder's email order survives."""
     s = _seed(client, db, "inv-sort-none")
     rows = _rows(client.get(f"/operator/sessions/{s.public_id}/invitations").text)
@@ -203,17 +184,13 @@ def test_invitations_unsorted_without_a_cookie(
 # --------------------------------------------------------------------------- #
 
 
-def test_responses_cookie_sort_by_name_asc(
-    client: TestClient, db: Session
-) -> None:
+def test_responses_cookie_sort_by_name_asc(client: TestClient, db: Session) -> None:
     s = _seed(client, db, "resp-sort-asc")
     rows = _rows(_sorted_body(client, s.id, "responses", "name", "asc"))
     assert rows.find("Delta E") < rows.find("Echo E")
 
 
-def test_responses_cookie_sort_by_name_desc(
-    client: TestClient, db: Session
-) -> None:
+def test_responses_cookie_sort_by_name_desc(client: TestClient, db: Session) -> None:
     s = _seed(client, db, "resp-sort-desc")
     rows = _rows(_sorted_body(client, s.id, "responses", "name", "desc"))
     assert rows.find("Echo E") < rows.find("Delta E")
@@ -224,9 +201,7 @@ def test_responses_cookie_sort_by_name_desc(
 # --------------------------------------------------------------------------- #
 
 
-def test_both_tables_carry_the_sort_markers(
-    client: TestClient, db: Session
-) -> None:
+def test_both_tables_carry_the_sort_markers(client: TestClient, db: Session) -> None:
     s = _seed(client, db, "ops-sort-markers")
     for page, table in (
         ("invitations", "invitations-table"),
@@ -273,9 +248,7 @@ def test_progress_columns_sort_by_percentage_not_raw_count() -> None:
 # --------------------------------------------------------------------------- #
 
 
-def test_both_pages_render_the_tag_columns(
-    client: TestClient, db: Session
-) -> None:
+def test_both_pages_render_the_tag_columns(client: TestClient, db: Session) -> None:
     """The tags were always on the row objects — `InvitationsRow.reviewer`
     and `ResponsesRow.reviewee` are the ORM objects — so this rung is
     template-only. That is what makes it worth asserting: nothing in
@@ -288,9 +261,7 @@ def test_both_pages_render_the_tag_columns(
     assert "Group A" in resp and "Wave 2" in resp
 
 
-def test_an_empty_tag_slot_renders_no_chip_and_no_column(
-    client: TestClient, db: Session
-) -> None:
+def test_an_empty_tag_slot_renders_no_chip_and_no_column(client: TestClient, db: Session) -> None:
     """`tag_3` is empty across the roster, so neither its chip nor its
     column renders. Slots 1 and 2 have data and are live.
 
@@ -306,7 +277,9 @@ def test_an_empty_tag_slot_renders_no_chip_and_no_column(
     for page in ("invitations", "responses"):
         body = client.get(f"/operator/sessions/{s.public_id}/{page}").text
         chips = body[
-            body.index('class="col-chip-row"') : body.index("</p>", body.index('class="col-chip-row"'))
+            body.index('class="col-chip-row"') : body.index(
+                "</p>", body.index('class="col-chip-row"')
+            )
         ]
         for slot in ("tag-1", "tag-2"):
             i = chips.index(f'data-col-toggle="{slot}"')
@@ -326,9 +299,7 @@ def test_an_empty_tag_slot_renders_no_chip_and_no_column(
         assert "tag-col-1" in table and "tag-col-2" in table, page
 
 
-def test_both_pages_declare_the_shared_primitive(
-    client: TestClient, db: Session
-) -> None:
+def test_both_pages_declare_the_shared_primitive(client: TestClient, db: Session) -> None:
     s = _seed(client, db, "ops-tags-primitive")
     for page, table, key in (
         ("invitations", "invitations-table", "rrw-invitation-tag-visibility"),
@@ -342,9 +313,7 @@ def test_both_pages_declare_the_shared_primitive(
         assert f"#{table}.col-hidden-tag-1 .tag-col-1" in body
 
 
-def test_invitations_cookie_sort_by_tag(
-    client: TestClient, db: Session
-) -> None:
+def test_invitations_cookie_sort_by_tag(client: TestClient, db: Session) -> None:
     """Tag columns are sortable like the rosters'. Tag order is the
     reverse of name order in the seed, so this cannot pass by
     accident."""
@@ -352,14 +321,10 @@ def test_invitations_cookie_sort_by_tag(
     rows = _rows(_sorted_body(client, s.id, "invitations", "tag_1", "asc"))
     # Team A (Bravo), Team B (Alpha), Team C (Charlie) — an order that
     # matches neither the email default nor the name sort.
-    assert (
-        rows.find("Bravo R") < rows.find("Alpha R") < rows.find("Charlie R")
-    )
+    assert rows.find("Bravo R") < rows.find("Alpha R") < rows.find("Charlie R")
 
 
-def test_responses_cookie_sort_by_tag(
-    client: TestClient, db: Session
-) -> None:
+def test_responses_cookie_sort_by_tag(client: TestClient, db: Session) -> None:
     s = _seed(client, db, "resp-tag-sort")
     rows = _rows(_sorted_body(client, s.id, "responses", "tag_1", "asc"))
     # Group A (Delta) before Group B (Echo) — the reverse of the email

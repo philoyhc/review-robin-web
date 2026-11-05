@@ -18,8 +18,14 @@ router = APIRouter(dependencies=[Depends(placeholders_previewers_only)])
 
 def _page(request: Request, template: str, **context: object) -> Response:
     me = sample.viewer(request.query_params.get("as"))
-    return gated(request, f"supportlogs/sys_admin/{template}", *sample.ADMINISTRATION, area=SYS_ADMIN_AREA,
-                 super_admin=sample.holds(me, sample.SUPER_ADMIN), **context)
+    return gated(
+        request,
+        f"supportlogs/sys_admin/{template}",
+        *sample.ADMINISTRATION,
+        area=SYS_ADMIN_AREA,
+        super_admin=sample.holds(me, sample.SUPER_ADMIN),
+        **context,
+    )
 
 
 @router.get("/sys-admin/", name="supportlogs_sys_admin")

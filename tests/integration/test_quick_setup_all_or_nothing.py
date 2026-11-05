@@ -42,27 +42,26 @@ def _session(client: TestClient, db: Session, code: str) -> ReviewSession:
         follow_redirects=False,
     )
     assert response.status_code == 303
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _reviewers(*rows: tuple[str, str]) -> bytes:
-    return ("ReviewerName,ReviewerEmail\n" + "".join(
-        f"{name},{email}\n" for name, email in rows
-    )).encode()
+    return (
+        "ReviewerName,ReviewerEmail\n" + "".join(f"{name},{email}\n" for name, email in rows)
+    ).encode()
 
 
 def _reviewees(*rows: tuple[str, str]) -> bytes:
-    return ("RevieweeName,RevieweeEmail\n" + "".join(
-        f"{name},{email}\n" for name, email in rows
-    )).encode()
+    return (
+        "RevieweeName,RevieweeEmail\n" + "".join(f"{name},{email}\n" for name, email in rows)
+    ).encode()
 
 
 def _relationships(*pairs: tuple[str, str]) -> bytes:
-    return ("ReviewerEmail,RevieweeEmail\n" + "".join(
-        f"{reviewer},{reviewee}\n" for reviewer, reviewee in pairs
-    )).encode()
+    return (
+        "ReviewerEmail,RevieweeEmail\n"
+        + "".join(f"{reviewer},{reviewee}\n" for reviewer, reviewee in pairs)
+    ).encode()
 
 
 def _bad_settings() -> bytes:
@@ -80,8 +79,7 @@ def _submit_all(client: TestClient, rs: ReviewSession, **files: bytes):
         f"/operator/sessions/{rs.public_id}/quick-setup/submit-all",
         data={"confirm_replace": "true"},
         files={
-            f"{kind}_file": (f"{kind}.csv", payload, "text/csv")
-            for kind, payload in files.items()
+            f"{kind}_file": (f"{kind}.csv", payload, "text/csv") for kind, payload in files.items()
         },
         follow_redirects=False,
     )
@@ -105,10 +103,7 @@ def _query(response) -> dict[str, list[str]]:
 def _names(db: Session, model, rs: ReviewSession) -> list[str]:
     db.expire_all()
     return sorted(
-        row.name
-        for row in db.execute(
-            select(model).where(model.session_id == rs.id)
-        ).scalars()
+        row.name for row in db.execute(select(model).where(model.session_id == rs.id)).scalars()
     )
 
 
@@ -174,16 +169,13 @@ def test_two_uploads_that_disagree_are_refused_naming_the_other_file(
     query = _query(response)
     assert query["quick_setup_error"] == ["reviewers"]
     assert query["quick_setup_detail"] == [
-        "ReviewerEmail is used under a different name in the uploaded "
-        "Reviewees file (1 row)"
+        "ReviewerEmail is used under a different name in the uploaded Reviewees file (1 row)"
     ]
     assert _names(db, Reviewer, rs) == []
     assert _names(db, Reviewee, rs) == []
 
 
-def test_a_later_refusal_leaves_the_earlier_slots_unsaved(
-    client: TestClient, db: Session
-) -> None:
+def test_a_later_refusal_leaves_the_earlier_slots_unsaved(client: TestClient, db: Session) -> None:
     """Reviewers passes and Reviewees does not: the reviewers already on
     the roster stay, and the new file is not half-applied."""
     rs = _session(client, db, "aon-later")
@@ -201,9 +193,7 @@ def test_a_later_refusal_leaves_the_earlier_slots_unsaved(
     assert _names(db, Reviewer, rs) == ["Old"]
 
 
-def test_a_settings_apply_failure_rolls_the_rosters_back(
-    client: TestClient, db: Session
-) -> None:
+def test_a_settings_apply_failure_rolls_the_rosters_back(client: TestClient, db: Session) -> None:
     """Settings applies last, inside the unit; an error only the apply
     finds undoes the rosters saved before it."""
     rs = _session(client, db, "aon-settings")
@@ -315,13 +305,9 @@ def test_create_keeps_its_session_tags_and_saves_no_upload_on_a_refusal(
     )
 
     assert _query(response)["quick_setup_error"] == ["reviewees"]
-    rs = db.execute(
-        select(ReviewSession).where(ReviewSession.code == "aon-create")
-    ).scalar_one()
+    rs = db.execute(select(ReviewSession).where(ReviewSession.code == "aon-create")).scalar_one()
     assert _names(db, Reviewer, rs) == []
-    tags = db.execute(
-        select(SessionTag).where(SessionTag.session_id == rs.id)
-    ).scalars()
+    tags = db.execute(select(SessionTag).where(SessionTag.session_id == rs.id)).scalars()
     assert [tag.tag for tag in tags] == ["typed"]
 
 
@@ -343,15 +329,11 @@ def test_a_blocked_file_is_the_refusal_reported_not_its_old_roster(
 
     query = _query(response)
     assert query["quick_setup_error"] == ["reviewees"]
-    assert query["quick_setup_detail"] == [
-        "Missing required column: RevieweeName"
-    ]
+    assert query["quick_setup_detail"] == ["Missing required column: RevieweeName"]
     assert _names(db, Reviewer, rs) == ["Bob Smith"]
 
 
-def test_create_survives_a_refusal_found_inside_the_save(
-    client: TestClient, db: Session
-) -> None:
+def test_create_survives_a_refusal_found_inside_the_save(client: TestClient, db: Session) -> None:
     """A Settings error only the apply finds rolls the unit back before
     Create writes its tags, which must still land."""
     response = client.post(
@@ -369,7 +351,5 @@ def test_create_survives_a_refusal_found_inside_the_save(
         select(ReviewSession).where(ReviewSession.code == "aon-create-apply")
     ).scalar_one()
     assert _names(db, Reviewer, rs) == []
-    tags = db.execute(
-        select(SessionTag).where(SessionTag.session_id == rs.id)
-    ).scalars()
+    tags = db.execute(select(SessionTag).where(SessionTag.session_id == rs.id)).scalars()
     assert [tag.tag for tag in tags] == ["typed"]

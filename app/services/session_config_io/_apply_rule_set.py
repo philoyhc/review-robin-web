@@ -4,6 +4,7 @@ Upsert by ``name`` so the per-instrument ``rule_set_name`` references
 resolve against the same row pool whether the CSV came from a fresh
 export or a hand-edited one.
 """
+
 from __future__ import annotations
 
 from sqlalchemy import select
@@ -33,14 +34,10 @@ __all__ = [
 ]
 
 
-def _apply_rule_set_kv(
-    plan: _ParsedConfig, field_path: str, value: str, data_type: str
-) -> None:
+def _apply_rule_set_kv(plan: _ParsedConfig, field_path: str, value: str, data_type: str) -> None:
     match = _RX_RULE_SET.match(field_path)
     if match is None:
-        raise _ParseError(
-            f"unrecognised session_rule_sets[] key {field_path!r}"
-        )
+        raise _ParseError(f"unrecognised session_rule_sets[] key {field_path!r}")
     n, attr = int(match.group(1)), match.group(2)
     spec = plan.session_rule_sets.setdefault(n, _RuleSetSpec())
     if attr == "name":
@@ -50,8 +47,7 @@ def _apply_rule_set_kv(
     elif attr == "combinator":
         if value and value not in _VALID_COMBINATORS:
             raise _ParseError(
-                f"unknown combinator {value!r}; expected one of "
-                f"{sorted(_VALID_COMBINATORS)}"
+                f"unknown combinator {value!r}; expected one of {sorted(_VALID_COMBINATORS)}"
             )
         spec.combinator = value or None
     elif attr == "exclude_self_reviews":
@@ -65,9 +61,7 @@ def _apply_rule_set_kv(
         # names a retired field less helpfully
         # (``guide/archive/pair_context_tags_further_clarify.md`` Item 1).
         rule_list = json_list(rules)
-        unoffered = (
-            unoffered_pair_rule(rule_list) if rule_list is not None else None
-        )
+        unoffered = unoffered_pair_rule(rule_list) if rule_list is not None else None
         if unoffered is not None:
             raise _ParseError(f"rules_json is not a valid rule list: {unoffered}")
         # Phase 1 holds the rules to the shape the engine reads, so a
@@ -95,9 +89,7 @@ def _apply_session_rule_sets(
     existing = {
         snap.name: snap
         for snap in db.execute(
-            select(SessionRuleSet).where(
-                SessionRuleSet.session_id == review_session.id
-            )
+            select(SessionRuleSet).where(SessionRuleSet.session_id == review_session.id)
         ).scalars()
     }
 

@@ -74,9 +74,7 @@ class AccountView:
     def with_category(self, key: str) -> AccountView:
         if key in self.show:
             return self
-        return replace(
-            self, show=tuple(k for k in CATEGORIES if k in self.show or k == key)
-        )
+        return replace(self, show=tuple(k for k in CATEGORIES if k in self.show or k == key))
 
 
 def parse_account_view(
@@ -110,9 +108,7 @@ def account_view_query(view: AccountView, *, offset: bool = True) -> str:
     """The view as a query string, ``show=`` always present so an empty
     chip set stays empty. ``offset=False`` leaves the offset off, for the
     pager to append its own."""
-    pairs: list[tuple[str, str]] = [("show", key) for key in view.show] or [
-        ("show", "")
-    ]
+    pairs: list[tuple[str, str]] = [("show", key) for key in view.show] or [("show", "")]
     if view.role != "any":
         pairs.append(("role", view.role))
     if view.search:
@@ -170,14 +166,10 @@ class AccountChip:
     selected: bool
 
 
-def build_account_chips(
-    counts: Mapping[str, int], view: AccountView
-) -> list[AccountChip]:
+def build_account_chips(counts: Mapping[str, int], view: AccountView) -> list[AccountChip]:
     """One chip per category, counted over the whole table."""
     return [
-        AccountChip(
-            key=key, label=label, count=counts.get(key, 0), selected=key in view.show
-        )
+        AccountChip(key=key, label=label, count=counts.get(key, 0), selected=key in view.show)
         for key, label, _ in ACCOUNT_CATEGORIES
     ]
 
@@ -204,7 +196,11 @@ _OVERVIEW_SINGULAR: dict[str, str] = {
 #: 2026-10-14): the kinds with a role and the super-admins among them,
 #: then the kinds without.
 _OVERVIEW_ORDER: tuple[str, ...] = (
-    "operators", "admins", "super_admins", "no_role", "unused",
+    "operators",
+    "admins",
+    "super_admins",
+    "no_role",
+    "unused",
 )
 
 

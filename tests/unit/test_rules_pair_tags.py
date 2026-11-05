@@ -100,9 +100,7 @@ def test_pair_tag_is_keeps_exactly_the_tagged_pairs() -> None:
 
 
 def test_pair_tag_is_not_rules_out_exactly_the_tagged_pairs() -> None:
-    assert _pairs("pair_context.tag1", "not_equals", "COI", LOOKUP) == EVERY_PAIR - {
-        ("sam", "eve")
-    }
+    assert _pairs("pair_context.tag1", "not_equals", "COI", LOOKUP) == EVERY_PAIR - {("sam", "eve")}
 
 
 def test_pair_tag_filled_keeps_exactly_the_pairs_with_a_value() -> None:

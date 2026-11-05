@@ -35,9 +35,7 @@ def test_arriving_from_an_app_page_offers_go_back_to_it(page: Page) -> None:
     assert page.url.endswith("/about")
 
 
-def test_a_new_tab_from_an_app_page_still_goes_back(
-    browser: Browser, live_server
-) -> None:
+def test_a_new_tab_from_an_app_page_still_goes_back(browser: Browser, live_server) -> None:
     """The case history.back() could not serve: a fresh tab, so no
     history, but an app page as its referrer."""
     context = browser.new_context(base_url=live_server.base_url)
@@ -52,9 +50,7 @@ def test_a_new_tab_from_an_app_page_still_goes_back(
         context.close()
 
 
-def test_the_sign_in_service_is_not_somewhere_to_go_back_to(
-    browser: Browser, live_server
-) -> None:
+def test_the_sign_in_service_is_not_somewhere_to_go_back_to(browser: Browser, live_server) -> None:
     context = browser.new_context(base_url=live_server.base_url)
     try:
         tab = context.new_page()

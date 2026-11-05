@@ -79,9 +79,7 @@ class ExtractDataContext:
     col_two: list[ExtractDataRow]
 
 
-def build_extract_data_context(
-    db: Session, review_session: ReviewSession
-) -> ExtractDataContext:
+def build_extract_data_context(db: Session, review_session: ReviewSession) -> ExtractDataContext:
     sid = review_session.id
     code = review_session.code or "session"
 
@@ -90,11 +88,7 @@ def build_extract_data_context(
     relationship_count = relationships_service.existing_count(db, sid)
     observer_count = csv_imports.existing_observer_count(db, sid)
     instrument_count = len(
-        list(
-            db.execute(
-                select(Instrument).where(Instrument.session_id == sid)
-            ).scalars()
-        )
+        list(db.execute(select(Instrument).where(Instrument.session_id == sid)).scalars())
     )
 
     # Two-column layout matching the Quick Setup slot placement:
@@ -177,26 +171,21 @@ def build_extract_data_context(
     # then col 2 (rows[2:4]).
     rows = col_one + col_two
 
-    bundle_member_count = (
-        (5 if review_session.observers_enabled else 4)
-        - (1 if review_session.symmetric_review else 0)
+    bundle_member_count = (5 if review_session.observers_enabled else 4) - (
+        1 if review_session.symmetric_review else 0
     )
     bundle = ExtractDataRow(
         key="bundle",
         label="Zip all",
         filename=f"{code}_setup.zip",
         count=sum(r.count for r in rows),
-        count_summary=(
-            f"zip of the {bundle_member_count} setup CSVs"
-        ),
+        count_summary=(f"zip of the {bundle_member_count} setup CSVs"),
         is_wired=True,
         download_url=f"/operator/sessions/{review_session.public_id}/export/bundle.zip",
         coming_in=None,
     )
 
-    return ExtractDataContext(
-        rows=rows, bundle=bundle, col_one=col_one, col_two=col_two
-    )
+    return ExtractDataContext(rows=rows, bundle=bundle, col_one=col_one, col_two=col_two)
 
 
 def _entity_row(
@@ -220,11 +209,7 @@ def _entity_row(
         count=count,
         count_summary=_extract_summary(noun, count),
         is_wired=has_data,
-        download_url=(
-            f"/operator/sessions/{public_id}/export/{key}.csv"
-            if has_data
-            else None
-        ),
+        download_url=(f"/operator/sessions/{public_id}/export/{key}.csv" if has_data else None),
         coming_in=None if has_data else f"No {noun}s to download yet",
     )
 

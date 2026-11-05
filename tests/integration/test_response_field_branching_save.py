@@ -43,11 +43,12 @@ def _branched(
 
 def _save(client: TestClient, review_session, instrument, rfs: list[dict]):
     return client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{instrument.id}/save",
-        data={"band2_state_snapshot": json.dumps(
-            {"selected_display_keys": [], "response_fields": rfs}
-        )},
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}/save",
+        data={
+            "band2_state_snapshot": json.dumps(
+                {"selected_display_keys": [], "response_fields": rfs}
+            )
+        },
         follow_redirects=False,
     )
 
@@ -65,12 +66,16 @@ def _rfs(instrument: Instrument, **changes: dict | None) -> list[dict]:
 
 
 def _add_response(db: Session, review_session, instrument, field) -> None:
-    reviewer = db.execute(
-        select(Reviewer).where(Reviewer.session_id == review_session.id)
-    ).scalars().first()
-    reviewee = db.execute(
-        select(Reviewee).where(Reviewee.session_id == review_session.id)
-    ).scalars().first()
+    reviewer = (
+        db.execute(select(Reviewer).where(Reviewer.session_id == review_session.id))
+        .scalars()
+        .first()
+    )
+    reviewee = (
+        db.execute(select(Reviewee).where(Reviewee.session_id == review_session.id))
+        .scalars()
+        .first()
+    )
     assert reviewer is not None and reviewee is not None
     assignment = Assignment(
         session_id=review_session.id,
@@ -84,9 +89,7 @@ def _add_response(db: Session, review_session, instrument, field) -> None:
     db.commit()
 
 
-def test_a_save_that_leaves_the_branch_alone_keeps_it(
-    client: TestClient, db: Session
-) -> None:
+def test_a_save_that_leaves_the_branch_alone_keeps_it(client: TestClient, db: Session) -> None:
     review_session, instrument, rating, comments = _branched(client, db, "19t10-keep")
     response = _save(client, review_session, instrument, _rfs(instrument))
     assert response.status_code == 200, response.text
@@ -95,21 +98,33 @@ def test_a_save_that_leaves_the_branch_alone_keeps_it(
     assert comments.branch_parent_id == rating.id
 
 
-def test_a_save_creates_a_branch_by_row_key(
-    client: TestClient, db: Session
-) -> None:
+def test_a_save_creates_a_branch_by_row_key(client: TestClient, db: Session) -> None:
     """The stager names a governed field's parent by row key, so one Save
     can create both (the builder's ⑂)."""
     review_session, instrument = _new_model_with_tags(client, db, code="19t10-keys")
     rfs = _rfs(instrument)
     rfs = [{**rf, "row_key": f"rf_{i}"} for i, rf in enumerate(rfs)]
     rfs += [
-        {"name": "Score", "data_type": "integer", "min": "1", "max": "5",
-         "row_key": "rf_9", "branch_op": "le", "branch_value": "2",
-         "branch_parent": None, "selected": True},
-        {"name": "Why low", "data_type": "string", "row_key": "rf_10",
-         "branch_parent": "rf_9", "branch_op": None, "branch_value": None,
-         "selected": True},
+        {
+            "name": "Score",
+            "data_type": "integer",
+            "min": "1",
+            "max": "5",
+            "row_key": "rf_9",
+            "branch_op": "le",
+            "branch_value": "2",
+            "branch_parent": None,
+            "selected": True,
+        },
+        {
+            "name": "Why low",
+            "data_type": "string",
+            "row_key": "rf_10",
+            "branch_parent": "rf_9",
+            "branch_op": None,
+            "branch_value": None,
+            "selected": True,
+        },
     ]
     response = _save(client, review_session, instrument, rfs)
     assert response.status_code == 200, response.text
@@ -117,27 +132,29 @@ def test_a_save_creates_a_branch_by_row_key(
     fields = {f.label: f for f in instrument.response_fields}
     assert (fields["Score"].branch_op, fields["Score"].branch_value) == ("le", "2")
     assert fields["Why low"].branch_parent_id == fields["Score"].id
-    events = db.execute(
-        select(AuditEvent).where(AuditEvent.event_type == "instrument.field_updated")
-    ).scalars().all()
+    events = (
+        db.execute(select(AuditEvent).where(AuditEvent.event_type == "instrument.field_updated"))
+        .scalars()
+        .all()
+    )
     assert {detail_of(e)["context"]["field_key"]: detail_of(e)["changes"] for e in events} == {
         fields["Score"].field_key: {"branch_op": [None, "le"], "branch_value": [None, "2"]},
         fields["Why low"].field_key: {"branch_parent_id": [None, fields["Score"].id]},
     }
 
 
-def test_a_saved_field_can_join_a_branch_and_leave_it(
-    client: TestClient, db: Session
-) -> None:
+def test_a_saved_field_can_join_a_branch_and_leave_it(client: TestClient, db: Session) -> None:
     """Rung 7b's ↰ and ↳ are membership changes to fields that already
     exist; with no responses, Save takes both."""
     review_session, instrument = _new_model_with_tags(client, db, code="19t10-join2")
     keyed = [{**rf, "row_key": f"rf_{i}"} for i, rf in enumerate(_rfs(instrument))]
     parent_key = next(rf["row_key"] for rf in keyed if rf["name"] == "Rating")
     joined = [
-        {**rf, "branch_op": "ge", "branch_value": "4"} if rf["name"] == "Rating"
+        {**rf, "branch_op": "ge", "branch_value": "4"}
+        if rf["name"] == "Rating"
         else {**rf, "branch_parent": parent_key, "required": False}
-        if rf["name"] == "Comments" else rf
+        if rf["name"] == "Comments"
+        else rf
         for rf in keyed
     ]
     response = _save(client, review_session, instrument, joined)
@@ -146,15 +163,13 @@ def test_a_saved_field_can_join_a_branch_and_leave_it(
     fields = {f.label: f for f in instrument.response_fields}
     assert fields["Comments"].branch_parent_id == fields["Rating"].id
     detached = [
-        {**rf, "branch_parent": None, "branch_op": None, "branch_value": None}
-        for rf in joined
+        {**rf, "branch_parent": None, "branch_op": None, "branch_value": None} for rf in joined
     ]
     response = _save(client, review_session, instrument, detached)
     assert response.status_code == 200, response.text
     db.expire_all()
     assert all(
-        (f.branch_parent_id, f.branch_op) == (None, None)
-        for f in instrument.response_fields
+        (f.branch_parent_id, f.branch_op) == (None, None) for f in instrument.response_fields
     )
 
 
@@ -163,18 +178,24 @@ def test_the_branch_keys_are_checked(client: TestClient, db: Session) -> None:
     writes are rolled back by the request in production, not by the
     test's shared session."""
     cases = [
-        ({"Comments": {"branch_parent": "rf_99"}},
-         "Comments: Its branch's parent field is missing."),
-        ({"Rating": {"branch_op": "ge", "branch_value": "x"},
-          "Comments": {"branch_parent": "parent"}},
-         "Rating: The branch condition needs a number."),
-        ({"Rating": {"branch_op": "ge", "branch_value": "4"}},
-         "Rating: Its branch condition governs no field."),
+        (
+            {"Comments": {"branch_parent": "rf_99"}},
+            "Comments: Its branch's parent field is missing.",
+        ),
+        (
+            {
+                "Rating": {"branch_op": "ge", "branch_value": "x"},
+                "Comments": {"branch_parent": "parent"},
+            },
+            "Rating: The branch condition needs a number.",
+        ),
+        (
+            {"Rating": {"branch_op": "ge", "branch_value": "4"}},
+            "Rating: Its branch condition governs no field.",
+        ),
     ]
     for n, (changes, error) in enumerate(cases):
-        review_session, instrument = _new_model_with_tags(
-            client, db, code=f"19t10-bad-{n}"
-        )
+        review_session, instrument = _new_model_with_tags(client, db, code=f"19t10-bad-{n}")
         rfs = []
         for i, rf in enumerate(_rfs(instrument)):
             rf = {**rf, "row_key": "parent" if rf["name"] == "Rating" else f"rf_{i}"}
@@ -188,7 +209,9 @@ def test_a_hidden_parent_hides_its_branch(client: TestClient, db: Session) -> No
     """The Active cascade, held by the service as well as the card."""
     review_session, instrument, rating, comments = _branched(client, db, "19t10-hide")
     response = _save(
-        client, review_session, instrument,
+        client,
+        review_session,
+        instrument,
         _rfs(instrument, Rating={"selected": False}, Comments={"selected": True}),
     )
     assert response.status_code == 200, response.text
@@ -196,9 +219,7 @@ def test_a_hidden_parent_hides_its_branch(client: TestClient, db: Session) -> No
     assert (rating.visible, comments.visible) == (False, False)
 
 
-def test_a_parent_with_a_branch_cannot_be_deleted(
-    client: TestClient, db: Session
-) -> None:
+def test_a_parent_with_a_branch_cannot_be_deleted(client: TestClient, db: Session) -> None:
     review_session, instrument, rating, _ = _branched(client, db, "19t10-parent")
     response = _save(client, review_session, instrument, _rfs(instrument, Rating=None))
     assert response.status_code == 422
@@ -218,15 +239,17 @@ def test_deleting_the_last_governed_field_deletes_the_condition(
     assert db.get(InstrumentResponseField, comments_id) is None
     assert (rating.branch_op, rating.branch_value) == (None, None)
     # The cleared condition is audited on the parent (Codex on #2639).
-    event = db.execute(
-        select(AuditEvent)
-        .where(AuditEvent.event_type == "instrument.field_updated")
-        .order_by(AuditEvent.id.desc())
-    ).scalars().first()
+    event = (
+        db.execute(
+            select(AuditEvent)
+            .where(AuditEvent.event_type == "instrument.field_updated")
+            .order_by(AuditEvent.id.desc())
+        )
+        .scalars()
+        .first()
+    )
     assert event is not None
-    assert detail_of(event)["changes"] == {
-        "branch_op": ["ge", None], "branch_value": ["4", None]
-    }
+    assert detail_of(event)["changes"] == {"branch_op": ["ge", None], "branch_value": ["4", None]}
     assert detail_of(event)["refs"]["response_field_id"] == rating.id
 
 
@@ -239,7 +262,9 @@ def test_deleting_a_parent_with_its_whole_branch_in_one_save_is_bottom_up(
     review_session, instrument, rating, comments = _branched(client, db, "19t10-both")
     ids = (rating.id, comments.id)
     response = _save(
-        client, review_session, instrument,
+        client,
+        review_session,
+        instrument,
         _rfs(instrument, Rating=None, Comments=None),
     )
     assert response.status_code == 200, response.text
@@ -247,16 +272,17 @@ def test_deleting_a_parent_with_its_whole_branch_in_one_save_is_bottom_up(
     assert all(db.get(InstrumentResponseField, i) is None for i in ids)
 
 
-def test_governed_answers_lock_the_branch_fields(
-    client: TestClient, db: Session
-) -> None:
+def test_governed_answers_lock_the_branch_fields(client: TestClient, db: Session) -> None:
     """Once a governed field has responses, none of the branch's fields
     can go, not only the answered one."""
     review_session, instrument, rating, comments = _branched(client, db, "19t10-lock")
     why = InstrumentResponseField(
-        instrument_id=instrument.id, field_key="why", label="Why",
+        instrument_id=instrument.id,
+        field_key="why",
+        label="Why",
         order=comments.order + 1,
-        _inline_data_type="String", branch_parent_id=rating.id,
+        _inline_data_type="String",
+        branch_parent_id=rating.id,
     )
     db.add(why)
     db.commit()
@@ -277,19 +303,16 @@ def test_governed_answers_lock_the_condition_and_membership(
     db.expire_all()
     keyed = [{**rf, "row_key": f"rf_{i}"} for i, rf in enumerate(_rfs(instrument))]
     parent_key = next(rf["row_key"] for rf in keyed if rf["name"] == "Rating")
-    condition = [
-        {**rf, "branch_value": "3"} if rf["name"] == "Rating" else rf for rf in keyed
-    ]
+    condition = [{**rf, "branch_value": "3"} if rf["name"] == "Rating" else rf for rf in keyed]
     at = next(i for i, rf in enumerate(keyed) if rf["name"] == "Comments") + 1
-    joined = keyed[:at] + [
-        {"name": "More", "data_type": "string", "row_key": "rf_99",
-         "branch_parent": parent_key}
-    ] + keyed[at:]
+    joined = (
+        keyed[:at]
+        + [{"name": "More", "data_type": "string", "row_key": "rf_99", "branch_parent": parent_key}]
+        + keyed[at:]
+    )
     for rfs, error in (
-        (condition, "Rating: Its branch has saved responses, so its condition "
-                    "can't change."),
-        (joined, "More: Its branch has saved responses, so the branch's fields "
-                 "can't change."),
+        (condition, "Rating: Its branch has saved responses, so its condition can't change."),
+        (joined, "More: Its branch has saved responses, so the branch's fields can't change."),
     ):
         response = _save(client, review_session, instrument, rfs)
         assert response.status_code == 422, error
@@ -297,9 +320,7 @@ def test_governed_answers_lock_the_condition_and_membership(
         db.expire_all()
 
 
-def test_an_answered_field_cannot_move_into_a_branch(
-    client: TestClient, db: Session
-) -> None:
+def test_an_answered_field_cannot_move_into_a_branch(client: TestClient, db: Session) -> None:
     """Its answers could then sit in a closed branch."""
     review_session, instrument = _new_model_with_tags(client, db, code="19t10-join")
     comments = next(f for f in instrument.response_fields if f.label == "Comments")
@@ -308,8 +329,10 @@ def test_an_answered_field_cannot_move_into_a_branch(
     keyed = [{**rf, "row_key": f"rf_{i}"} for i, rf in enumerate(_rfs(instrument))]
     parent_key = next(rf["row_key"] for rf in keyed if rf["name"] == "Rating")
     rfs = [
-        {**rf, "branch_op": "ge", "branch_value": "4"} if rf["name"] == "Rating"
-        else {**rf, "branch_parent": parent_key} if rf["name"] == "Comments"
+        {**rf, "branch_op": "ge", "branch_value": "4"}
+        if rf["name"] == "Rating"
+        else {**rf, "branch_parent": parent_key}
+        if rf["name"] == "Comments"
         else rf
         for rf in keyed
     ]
@@ -320,9 +343,7 @@ def test_an_answered_field_cannot_move_into_a_branch(
     ]
 
 
-def test_parent_answers_alone_do_not_lock_the_branch(
-    client: TestClient, db: Session
-) -> None:
+def test_parent_answers_alone_do_not_lock_the_branch(client: TestClient, db: Session) -> None:
     review_session, instrument, rating, comments = _branched(client, db, "19t10-parent-ans")
     _add_response(db, review_session, instrument, rating)
     db.expire_all()
@@ -337,16 +358,22 @@ def test_the_saved_state_is_checked_against_the_branch_rules(
     cases = [
         # 19T Item 11 — a required governed field needs an active required
         # field outside the branch, and Rating is the only one.
-        (_rfs(instrument, Rating={"required": False}, Comments={"required": True}),
-         "Comments: A field inside a branch can be required only when the "
-         "instrument has an active required field outside any branch."),
-        (_rfs(instrument, Rating={"data_type": "string", "min": "", "max": "",
-                                  "step": ""}),
-         "Rating: A String field can't have a branch."),
+        (
+            _rfs(instrument, Rating={"required": False}, Comments={"required": True}),
+            "Comments: A field inside a branch can be required only when the "
+            "instrument has an active required field outside any branch.",
+        ),
+        (
+            _rfs(instrument, Rating={"data_type": "string", "min": "", "max": "", "step": ""}),
+            "Rating: A String field can't have a branch.",
+        ),
         # A new field inserted between the parent and its branch.
-        (_rfs(instrument)[:1] + [{"name": "Notes", "data_type": "string"}]
-         + _rfs(instrument)[1:],
-         "Rating: A branch's fields must directly follow their parent."),
+        (
+            _rfs(instrument)[:1]
+            + [{"name": "Notes", "data_type": "string"}]
+            + _rfs(instrument)[1:],
+            "Rating: A branch's fields must directly follow their parent.",
+        ),
     ]
     for rfs, error in cases:
         response = _save(client, review_session, instrument, rfs)
@@ -355,9 +382,7 @@ def test_the_saved_state_is_checked_against_the_branch_rules(
         db.expire_all()
 
 
-def test_the_per_field_routes_refuse_a_branched_instrument(
-    client: TestClient, db: Session
-) -> None:
+def test_the_per_field_routes_refuse_a_branched_instrument(client: TestClient, db: Session) -> None:
     """Edit, delete, move and insert act on one field and can't keep a
     branch's rules, so they refuse; the card's Save checks it whole."""
     review_session, instrument, rating, comments = _branched(client, db, "19t10-legacy")
@@ -376,9 +401,7 @@ def test_the_per_field_routes_refuse_a_branched_instrument(
     assert comments.required is False
 
 
-def test_an_instrument_with_a_branch_can_be_deleted(
-    client: TestClient, db: Session
-) -> None:
+def test_an_instrument_with_a_branch_can_be_deleted(client: TestClient, db: Session) -> None:
     """The parent reference is ``ON DELETE SET NULL``, so deleting the
     instrument's fields in any order passes Postgres's foreign-key check."""
     review_session, instrument, *_ = _branched(client, db, "19t10-delete-inst")
@@ -390,11 +413,14 @@ def test_an_instrument_with_a_branch_can_be_deleted(
     )
     assert response.status_code == 303, response.text
     db.expire_all()
-    assert db.execute(
-        select(InstrumentResponseField).where(
-            InstrumentResponseField.instrument_id == instrument_id
-        )
-    ).first() is None
+    assert (
+        db.execute(
+            select(InstrumentResponseField).where(
+                InstrumentResponseField.instrument_id == instrument_id
+            )
+        ).first()
+        is None
+    )
 
 
 def test_a_session_clone_points_the_branch_at_the_cloned_parent(
@@ -405,14 +431,10 @@ def test_a_session_clone_points_the_branch_at_the_cloned_parent(
     from app.db.models import User
     from app.services import session_clone
 
-    review_session, instrument, rating, comments = _branched(
-        client, db, "19t10-clone"
-    )
+    review_session, instrument, rating, comments = _branched(client, db, "19t10-clone")
     user = db.execute(select(User)).scalars().first()
     assert user is not None
-    clone = session_clone.clone_session(
-        db, source=review_session, user=user, mode="all"
-    )
+    clone = session_clone.clone_session(db, source=review_session, user=user, mode="all")
     db.flush()
     cloned = {
         f.label: f
@@ -429,9 +451,7 @@ def test_a_session_clone_points_the_branch_at_the_cloned_parent(
     assert cloned["Rating"].id != rating.id
 
 
-def test_an_unknown_operator_is_refused_by_name(
-    client: TestClient, db: Session
-) -> None:
+def test_an_unknown_operator_is_refused_by_name(client: TestClient, db: Session) -> None:
     """The cumulative read's finding 3: refused before any flush, so a
     long token never reaches Postgres's ``String(8)`` as a 500."""
     review_session, instrument = _new_model_with_tags(client, db, code="19t10-op")
@@ -439,6 +459,4 @@ def test_an_unknown_operator_is_refused_by_name(
     rfs.append({"name": "New", "data_type": "string"})
     response = _save(client, review_session, instrument, rfs)
     assert response.status_code == 422
-    assert response.json()["errors"] == [
-        "Rating: Choose a comparison for the branch condition."
-    ]
+    assert response.json()["errors"] == ["Rating: Choose a comparison for the branch condition."]

@@ -81,16 +81,12 @@ def _validation_error_response(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={
             "error": str(exc),
-            "conflict": isinstance(
-                exc, data_shapes.DataShapeNameConflictError
-            ),
+            "conflict": isinstance(exc, data_shapes.DataShapeNameConflictError),
         },
     )
 
 
-@router.get(
-    "/sessions/{session_id}/extract-data", response_class=HTMLResponse
-)
+@router.get("/sessions/{session_id}/extract-data", response_class=HTMLResponse)
 def session_extract_data(
     request: Request,
     super_status: str | None = None,
@@ -161,18 +157,12 @@ def session_extract_data(
             "instrument_id": shape.instrument_id,
             "response_field_id": shape.response_field_id,
             "column_chip_slots": json.loads(shape.column_chip_slots),
-            "column_headers": list(
-                compose_shape_preview_headers(db, review_session, shape)
-            ),
+            "column_headers": list(compose_shape_preview_headers(db, review_session, shape)),
             # Parallel list of per-header aggregate flags — used
             # by the preview row to underline columns that the
             # CSV will duplicate under ``self_review_handling=
             # "both"``. Same length as ``column_headers``.
-            "column_aggregates": list(
-                compose_shape_preview_aggregates(
-                    db, review_session, shape
-                )
-            ),
+            "column_aggregates": list(compose_shape_preview_aggregates(db, review_session, shape)),
             # Self-review handling chip state (PR C wires the
             # UI; PR B persists the column).
             "self_review_handling": shape.self_review_handling,
@@ -190,9 +180,7 @@ def session_extract_data(
             "user": user,
             "session": review_session,
             "status_pills": views.session_status_pills(db, review_session),
-            "breadcrumbs": breadcrumbs.operator_session_child(
-                review_session, "Extract data"
-            ),
+            "breadcrumbs": breadcrumbs.operator_session_child(review_session, "Extract data"),
             "instruments": instruments,
             "reviewer_tag_labels": reviewer_tag_labels,
             "reviewee_tag_labels": reviewee_tag_labels,
@@ -246,21 +234,13 @@ def create_data_shape(
             "column_chip_slots": json.loads(shape.column_chip_slots),
             "self_review_handling": shape.self_review_handling,
             "include_empty_rows": shape.include_empty_rows,
-            "column_headers": list(
-                compose_shape_preview_headers(db, review_session, shape)
-            ),
-            "column_aggregates": list(
-                compose_shape_preview_aggregates(
-                    db, review_session, shape
-                )
-            ),
+            "column_headers": list(compose_shape_preview_headers(db, review_session, shape)),
+            "column_aggregates": list(compose_shape_preview_aggregates(db, review_session, shape)),
         },
     )
 
 
-@router.patch(
-    "/sessions/{session_id}/extract-data/shapes/{shape_id}"
-)
+@router.patch("/sessions/{session_id}/extract-data/shapes/{shape_id}")
 def update_data_shape(
     shape_id: int,
     payload: DataShapePayload,
@@ -305,21 +285,13 @@ def update_data_shape(
             "column_chip_slots": json.loads(shape.column_chip_slots),
             "self_review_handling": shape.self_review_handling,
             "include_empty_rows": shape.include_empty_rows,
-            "column_headers": list(
-                compose_shape_preview_headers(db, review_session, shape)
-            ),
-            "column_aggregates": list(
-                compose_shape_preview_aggregates(
-                    db, review_session, shape
-                )
-            ),
+            "column_headers": list(compose_shape_preview_headers(db, review_session, shape)),
+            "column_aggregates": list(compose_shape_preview_aggregates(db, review_session, shape)),
         },
     )
 
 
-@router.delete(
-    "/sessions/{session_id}/extract-data/shapes/{shape_id}"
-)
+@router.delete("/sessions/{session_id}/extract-data/shapes/{shape_id}")
 def delete_data_shape(
     shape_id: int,
     review_session: ReviewSession = Depends(require_session_operator),
@@ -340,9 +312,7 @@ def delete_data_shape(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.get(
-    "/sessions/{session_id}/extract-data/shapes/{shape_id}/download.csv"
-)
+@router.get("/sessions/{session_id}/extract-data/shapes/{shape_id}/download.csv")
 def download_data_shape(
     shape_id: int,
     review_session: ReviewSession = Depends(require_session_operator),

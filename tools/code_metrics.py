@@ -78,7 +78,9 @@ CHURN_SAMPLE_ALL = 0
 def _git(*args: str) -> str:
     return subprocess.run(
         ["git", "-C", str(REPO), *args],
-        capture_output=True, text=True, check=False,
+        capture_output=True,
+        text=True,
+        check=False,
     ).stdout
 
 
@@ -108,9 +110,7 @@ def duplication(root: pathlib.Path) -> None:
         locations: dict[str, list[tuple[pathlib.Path, int]]] = collections.defaultdict(list)
         for f, rows in per_file.items():
             for i in range(len(rows) - size + 1):
-                key = hashlib.md5(
-                    "\n".join(s for _, s in rows[i:i + size]).encode()
-                ).hexdigest()
+                key = hashlib.md5("\n".join(s for _, s in rows[i : i + size]).encode()).hexdigest()
                 windows[key] += 1
                 locations[key].append((f, i))
         for key, count in windows.items():
@@ -119,7 +119,9 @@ def duplication(root: pathlib.Path) -> None:
             for f, i in locations[key]:
                 seen[f].update(range(i, i + size))
         dup = sum(len(v) for v in seen.values())
-        print(f"      blocks >= {size:>2} lines: {dup:>6,} lines duplicated  ({dup / total * 100:4.1f}%)")
+        print(
+            f"      blocks >= {size:>2} lines: {dup:>6,} lines duplicated  ({dup / total * 100:4.1f}%)"
+        )
         if size == 10:
             worst_at_10 = sorted(seen.items(), key=lambda kv: -len(kv[1]))[:5]
 
@@ -127,7 +129,9 @@ def duplication(root: pathlib.Path) -> None:
         print("      most-duplicated files (>= 10-line blocks):")
         for f, lines in worst_at_10:
             own = len(per_file[f])
-            print(f"        {str(f.relative_to(REPO)):<52} {len(lines):>5}/{own:<5} ({len(lines) / own * 100:3.0f}%)")
+            print(
+                f"        {str(f.relative_to(REPO)):<52} {len(lines):>5}/{own:<5} ({len(lines) / own * 100:3.0f}%)"
+            )
 
 
 def is_shallow_repository() -> bool:
@@ -142,9 +146,17 @@ def is_shallow_repository() -> bool:
 
 
 def churn(days: int, sample: int) -> None:
-    all_merges = [m for m in _git(
-        "log", "origin/main", "--first-parent", "--merges", "--format=%H %ct",
-    ).split("\n") if m.strip()]
+    all_merges = [
+        m
+        for m in _git(
+            "log",
+            "origin/main",
+            "--first-parent",
+            "--merges",
+            "--format=%H %ct",
+        ).split("\n")
+        if m.strip()
+    ]
     # Sampling is opt-in and evenly spread across the whole history, never the
     # most recent N: a run of documentation-only PRs at the head would
     # otherwise dominate and report a figure computed from a handful of lines.
@@ -170,7 +182,7 @@ def churn(days: int, sample: int) -> None:
             if row.startswith("--- a/"):
                 current = row[6:]
             elif row.startswith("--- /dev/null"):
-                current = None            # file added; nothing to blame
+                current = None  # file added; nothing to blame
             elif row.startswith("@@"):
                 # "@@ -12,3 +12,0 @@" and the single-line form "@@ -89 +89 @@".
                 match = HUNK.match(row)
@@ -216,11 +228,15 @@ def churn(days: int, sample: int) -> None:
     if len(merges) == len(all_merges):
         print(f"  all {len(all_merges):,} merges on origin/main")
     else:
-        print(f"  sampled {len(merges)} merges spread evenly across "
-              f"{len(all_merges):,} on origin/main")
-        print("  WARNING: sampled. The ratio below is sample-dependent at any "
-              "size — do not compare it against a threshold or against another "
-              "snapshot. Drop --churn-sample for the reproducible figure.")
+        print(
+            f"  sampled {len(merges)} merges spread evenly across "
+            f"{len(all_merges):,} on origin/main"
+        )
+        print(
+            "  WARNING: sampled. The ratio below is sample-dependent at any "
+            "size — do not compare it against a threshold or against another "
+            "snapshot. Drop --churn-sample for the reproducible figure."
+        )
     base_total = base_young + base_old
     base_pct = base_young / base_total * 100 if base_total else 0.0
     churn_pct = young / total * 100
@@ -241,9 +257,11 @@ def main() -> int:
     parser.add_argument("--churn-only", action="store_true")
     parser.add_argument("--churn-days", type=int, default=14)
     parser.add_argument(
-        "--churn-sample", type=int, default=CHURN_SAMPLE_ALL,
+        "--churn-sample",
+        type=int,
+        default=CHURN_SAMPLE_ALL,
         help="sample N merges instead of walking all of them; sample-dependent, "
-             "for iterating on this tool only",
+        "for iterating on this tool only",
     )
     args = parser.parse_args()
 

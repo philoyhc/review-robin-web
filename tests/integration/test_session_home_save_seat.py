@@ -22,14 +22,10 @@ def _make_session(client: TestClient, db: Session, code: str) -> ReviewSession:
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
-def test_only_saves_reload_opts_into_the_cross_fade(
-    client: TestClient, db: Session
-) -> None:
+def test_only_saves_reload_opts_into_the_cross_fade(client: TestClient, db: Session) -> None:
     """``@view-transition`` takes no selector, so no page declares it in
     CSS: Session Home adds it from script, on the way out when the card's
     form submits and on the way back when the card's scroll key waits,
@@ -51,9 +47,7 @@ def test_only_saves_reload_opts_into_the_cross_fade(
     assert "if (!e.persisted) return;" in head
     assert "getElementById('rrw-save-fade')" in head
     # Never a static rule, on this page or any other.
-    assert "@view-transition {" not in home.replace(
-        "'@view-transition { navigation: auto; }'", ""
-    )
+    assert "@view-transition {" not in home.replace("'@view-transition { navigation: auto; }'", "")
     assert "@view-transition" not in client.get("/operator/sessions").text
 
 
@@ -78,13 +72,11 @@ def test_the_card_form_remembers_the_scroll_and_lock_drops_the_param(
     # the browser test alone catches its loss only some runs).
     assert "hold.setAttribute('blocking', 'render');" in body
     assert "document.head.appendChild(hold);" in body
-    assert body.index('<div id="rrw-seat-restored" hidden></div>') > body.index(
-        "</script>", marker
-    )
+    assert body.index('<div id="rrw-seat-restored" hidden></div>') > body.index("</script>", marker)
     # The banner check matches base.html's: only a shown banner wins.
     assert "getClientRects().length" in script
 
-    set_mode = body[body.index("function setMode(card, mode)"):]
+    set_mode = body[body.index("function setMode(card, mode)") :]
     set_mode = set_mode[: set_mode.index("sync(card);")]
     assert "searchParams.delete('editing')" in set_mode
     assert "history.replaceState" in set_mode

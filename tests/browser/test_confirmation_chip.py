@@ -13,9 +13,7 @@ from playwright.sync_api import Page, expect
 from .conftest import app_url
 
 
-def test_the_confirmation_chip_cycles_and_saves(
-    page: Page, new_session: Callable[[], str]
-) -> None:
+def test_the_confirmation_chip_cycles_and_saves(page: Page, new_session: Callable[[], str]) -> None:
     session_id = new_session()
     page.goto(app_url(f"/operator/sessions/{session_id}/setup-invite?template=responses_received"))
     chip = page.locator("[data-send-confirmation-chip]")

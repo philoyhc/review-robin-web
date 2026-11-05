@@ -8,6 +8,7 @@ afterwards, as setup rather than as the behavior under test. This
 wraps such a write: it reads as draft for the call, then the status the
 test set is restored.
 """
+
 from __future__ import annotations
 
 from collections.abc import Iterator
@@ -20,9 +21,7 @@ from app.services import session_lifecycle as lifecycle
 
 
 @contextmanager
-def past_draft_setup(
-    db: Session, owner: ReviewSession | Instrument
-) -> Iterator[None]:
+def past_draft_setup(db: Session, owner: ReviewSession | Instrument) -> Iterator[None]:
     """``owner`` is the session, or an instrument (its ``session``)."""
     session = owner if isinstance(owner, ReviewSession) else owner.session
     if lifecycle.is_editable(session):

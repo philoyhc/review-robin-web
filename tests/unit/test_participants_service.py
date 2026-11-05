@@ -32,9 +32,7 @@ def _session(db: Session, *, code: str = "psvc") -> ReviewSession:
     return review_session
 
 
-def _reviewee(
-    db: Session, *, session: ReviewSession, identifier: str
-) -> Reviewee:
+def _reviewee(db: Session, *, session: ReviewSession, identifier: str) -> Reviewee:
     r = Reviewee(
         session_id=session.id,
         name="Subj",
@@ -78,17 +76,12 @@ def test_is_email_identified_rejects_whitespace_only(db: Session) -> None:
     # service layer normalises before persist. The helper still
     # needs to handle the edge cases — exercise via a fresh, not-yet-
     # flushed Reviewee so we can carry whitespace.
-    r = Reviewee(
-        session_id=1, name="X", email_or_identifier="   "
-    )
+    r = Reviewee(session_id=1, name="X", email_or_identifier="   ")
     assert participants.is_email_identified(r) is False
 
 
 def test_is_email_identified_trims_surrounding_whitespace(
     db: Session,
 ) -> None:
-    r = Reviewee(
-        session_id=1, name="X", email_or_identifier="  bob@example.org  "
-    )
+    r = Reviewee(session_id=1, name="X", email_or_identifier="  bob@example.org  ")
     assert participants.is_email_identified(r) is True
-

@@ -24,24 +24,18 @@ from app.services import field_labels
 from app.services import reviewers as reviewers_service
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "RevP", "code": code},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _operator_user(db: Session) -> User:
-    return db.execute(
-        select(User).where(User.email == "alice@example.edu")
-    ).scalar_one()
+    return db.execute(select(User).where(User.email == "alice@example.edu")).scalar_one()
 
 
 # ---------------------------------------------------------------------------
@@ -80,9 +74,7 @@ def test_create_reviewer_blank_profile_link_normalises_to_none(
     assert reviewer.profile_link is None
 
 
-def test_update_reviewer_diffs_and_persists_profile_link(
-    db: Session, client: TestClient
-) -> None:
+def test_update_reviewer_diffs_and_persists_profile_link(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rev-pl-update")
     reviewer = reviewers_service.create_reviewer(
         db,
@@ -106,14 +98,9 @@ def test_update_reviewer_diffs_and_persists_profile_link(
 # ---------------------------------------------------------------------------
 
 
-def test_reviewer_profile_link_default_label_is_profile(
-    db: Session, client: TestClient
-) -> None:
+def test_reviewer_profile_link_default_label_is_profile(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rev-pl-label")
-    assert (
-        field_labels.resolve(review_session, "reviewer", "profile_link")
-        == "Profile"
-    )
+    assert field_labels.resolve(review_session, "reviewer", "profile_link") == "Profile"
 
 
 # ---------------------------------------------------------------------------
@@ -121,9 +108,7 @@ def test_reviewer_profile_link_default_label_is_profile(
 # ---------------------------------------------------------------------------
 
 
-def test_create_form_round_trips_profile_link(
-    db: Session, client: TestClient
-) -> None:
+def test_create_form_round_trips_profile_link(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rev-pl-form-c")
 
     response = client.post(
@@ -140,15 +125,11 @@ def test_create_form_round_trips_profile_link(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    row = db.execute(
-        select(Reviewer).where(Reviewer.email == "dee@example.edu")
-    ).scalar_one()
+    row = db.execute(select(Reviewer).where(Reviewer.email == "dee@example.edu")).scalar_one()
     assert row.profile_link == "https://example.edu/dee"
 
 
-def test_update_form_round_trips_profile_link(
-    db: Session, client: TestClient
-) -> None:
+def test_update_form_round_trips_profile_link(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rev-pl-form-u")
     reviewer = reviewers_service.create_reviewer(
         db,
@@ -173,9 +154,7 @@ def test_update_form_round_trips_profile_link(
     )
     assert response.status_code == 303
     db.expire_all()
-    row = db.execute(
-        select(Reviewer).where(Reviewer.id == reviewer.id)
-    ).scalar_one()
+    row = db.execute(select(Reviewer).where(Reviewer.id == reviewer.id)).scalar_one()
     assert row.profile_link == "https://example.edu/eli"
 
 
@@ -196,9 +175,7 @@ def test_reviewers_table_hides_profile_link_column_when_no_data(
         user=_operator_user(db),
     )
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
     # Non-edit mode + no profile_link data anywhere ⇒ column is hidden.
     #
     # Scoped to the table (Segment 19I Item 11). This read
@@ -225,9 +202,7 @@ def test_reviewers_table_surfaces_profile_link_column_with_data(
         user=_operator_user(db),
     )
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
     # One row has data ⇒ column appears with the rendered link.
     assert "profile-col" in body
     assert 'href="https://example.edu/gus"' in body

@@ -24,6 +24,7 @@ Revision ID: b1e8f3c47d92
 Revises: f9c2d8a4b7e1
 Create Date: 2026-05-24
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -36,9 +37,7 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    with op.batch_alter_table(
-        "instrument_response_fields", schema=None
-    ) as batch_op:
+    with op.batch_alter_table("instrument_response_fields", schema=None) as batch_op:
         batch_op.alter_column(
             "response_type_id",
             existing_type=sa.Integer(),
@@ -47,9 +46,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    with op.batch_alter_table(
-        "instrument_response_fields", schema=None
-    ) as batch_op:
+    with op.batch_alter_table("instrument_response_fields", schema=None) as batch_op:
         batch_op.alter_column(
             "response_type_id",
             existing_type=sa.Integer(),

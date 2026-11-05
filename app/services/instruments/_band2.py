@@ -66,9 +66,7 @@ _BAND2_ALLOWED_DISPLAY_KEYS: frozenset[str] = frozenset(
         "pair_context.tag_3",
     }
 )
-_BAND2_ALLOWED_DATA_TYPES: frozenset[str] = frozenset(
-    {"string", "integer", "decimal", "list"}
-)
+_BAND2_ALLOWED_DATA_TYPES: frozenset[str] = frozenset({"string", "integer", "decimal", "list"})
 _BAND2_RF_BOUND_KEYS: tuple[str, ...] = (
     "min",
     "max",
@@ -228,9 +226,7 @@ def set_band2_state(
                 rf["required"] = bool(raw.get("required"))
                 rf["help_text_visible"] = bool(raw.get("help_text_visible"))
                 help_text_raw = raw.get("help_text")
-                rf["help_text"] = (
-                    str(help_text_raw)[:1000] if help_text_raw is not None else ""
-                )
+                rf["help_text"] = str(help_text_raw)[:1000] if help_text_raw is not None else ""
                 rf.update(_band2_branch_entry(raw))
                 # Wave 3 PR iii — per-response-field column width (px)
                 # moves out of band2_state JSON into the canonical
@@ -245,9 +241,7 @@ def set_band2_state(
                     # ``int`` refuses with a TypeError.
                     try:
                         width_int = (
-                            int(raw_width)
-                            if isinstance(raw_width, str | int | float)
-                            else 0
+                            int(raw_width) if isinstance(raw_width, str | int | float) else 0
                         )
                     except (TypeError, ValueError):
                         width_int = 0
@@ -362,15 +356,10 @@ def set_band2_state(
     audit.write_event(
         db,
         event_type="instrument.band2_state_updated",
-        summary=(
-            f"Updated new-model band2 state on instrument "
-            f"{_instrument_label(instrument)}"
-        ),
+        summary=(f"Updated new-model band2 state on instrument {_instrument_label(instrument)}"),
         actor_user_id=actor.id if actor else None,
         session=instrument.session,
-        payload=audit.changes(
-            {"band2_state": [old_value, new_value]}
-        ),
+        payload=audit.changes({"band2_state": [old_value, new_value]}),
         refs={"instrument_id": instrument.id},
     )
     return instrument
@@ -515,8 +504,7 @@ def _band2_parse_float(value: Any) -> float | None:
 
 
 INTEGER_WHOLE_BOUNDS_MESSAGE = (
-    "Integer fields take whole-number Min, Max and Step. "
-    "Choose Decimal for steps like 0.5."
+    "Integer fields take whole-number Min, Max and Step. Choose Decimal for steps like 0.5."
 )
 
 #: What an Integer field's blank Step saves as.
@@ -547,17 +535,20 @@ def _integer_bounds_error(
     operator could do about it."""
     if rf.get("data_type") != "integer":
         return None
-    bounds = tuple(
-        _band2_parse_float(rf.get(k)) for k in ("min", "max", "step")
-    )
+    bounds = tuple(_band2_parse_float(rf.get(k)) for k in ("min", "max", "step"))
     if all(v is None or v == int(v) for v in bounds):
         return None
-    if stored is not None and (
-        stored._inline_data_type,
-        stored._inline_min,
-        stored._inline_max,
-        stored._inline_step,
-    ) == ("Integer", *bounds) and _response_count_for_field(db, stored.id):
+    if (
+        stored is not None
+        and (
+            stored._inline_data_type,
+            stored._inline_min,
+            stored._inline_max,
+            stored._inline_step,
+        )
+        == ("Integer", *bounds)
+        and _response_count_for_field(db, stored.id)
+    ):
         return None
     return INTEGER_WHOLE_BOUNDS_MESSAGE
 
@@ -607,10 +598,7 @@ def _validate_response_field_shape(rf: dict[str, Any]) -> str | None:
             and max_ > min_
             and step > (max_ - min_) + 1e-9
         ):
-            return (
-                "Step must be at most (Max − Min) so the field has "
-                "at least two valid values."
-            )
+            return "Step must be at most (Max − Min) so the field has at least two valid values."
         return None
     if data_type == "string":
         max_ = _band2_parse_float(rf.get("max"))
@@ -626,9 +614,7 @@ def _validate_response_field_shape(rf: dict[str, Any]) -> str | None:
     return None
 
 
-def _band2_unique_field_key(
-    name: str, used_keys: set[str], existing_key: str | None = None
-) -> str:
+def _band2_unique_field_key(name: str, used_keys: set[str], existing_key: str | None = None) -> str:
     """Slugify ``name`` to a field_key, suffixing -2 / -3 / ...
     on collision. If ``existing_key`` is supplied and already
     matches the slug of the new name (or is already taken), keep
@@ -725,9 +711,7 @@ def _sync_response_fields_to_db(
     existing_by_id: dict[int, InstrumentResponseField] = {
         f.id: f for f in instrument.response_fields
     }
-    used_field_keys: set[str] = {
-        f.field_key for f in instrument.response_fields
-    }
+    used_field_keys: set[str] = {f.field_key for f in instrument.response_fields}
     seen_ids: set[int] = set()
     new_fields: list[InstrumentResponseField] = []
     # 19T Item 10 — the branches as stored, which the rules compare the
@@ -736,9 +720,7 @@ def _sync_response_fields_to_db(
         f.id: (f.branch_parent_id, f.branch_op, f.branch_value, f.branch_mode)
         for f in instrument.response_fields
     }
-    entry_by_row_key = {
-        rf["row_key"]: rf for rf in sanitised_rfs if rf.get("row_key")
-    }
+    entry_by_row_key = {rf["row_key"]: rf for rf in sanitised_rfs if rf.get("row_key")}
     entry_by_id: dict[int, dict[str, Any]] = {}
     for rf in sanitised_rfs:
         entry_id = _band2_rf_id(rf)
@@ -811,11 +793,7 @@ def _sync_response_fields_to_db(
                 break
             seen_entries.add(id(ancestor))
             ancestor = _entry_parent(ancestor)
-        if (
-            prior_visible
-            and not incoming_visible
-            and not acknowledged_drop
-        ):
+        if prior_visible and not incoming_visible and not acknowledged_drop:
             drop_response_count = _response_count_for_field(db, field.id)
             if drop_response_count:
                 raise ResponseFieldDropAcknowledgementRequired(
@@ -824,9 +802,7 @@ def _sync_response_fields_to_db(
                 )
         field.visible = incoming_visible
         help_text_raw = rf.get("help_text")
-        field.help_text = (
-            str(help_text_raw)[:1000] if help_text_raw else None
-        )
+        field.help_text = str(help_text_raw)[:1000] if help_text_raw else None
         field.help_text_visible = bool(rf.get("help_text_visible"))
         if "branch_op" in rf:
             field.branch_op = rf["branch_op"]
@@ -840,9 +816,7 @@ def _sync_response_fields_to_db(
         # inline column keeps the legacy capitalised form for
         # round-trip compat with the Wave 2 _inline_* columns.
         data_type_lower = rf.get("data_type", "string")
-        new_data_type = _BAND2_DATA_TYPE_TO_INLINE.get(
-            data_type_lower, "String"
-        )
+        new_data_type = _BAND2_DATA_TYPE_TO_INLINE.get(data_type_lower, "String")
         new_min = _band2_parse_float(rf.get("min"))
         new_max = _band2_parse_float(rf.get("max"))
         new_step = _band2_parse_float(rf.get("step"))
@@ -850,11 +824,7 @@ def _sync_response_fields_to_db(
         # takes anyway; the builder writes the 1 into the box on Save.
         # Steps count from Min, so a stored non-whole Min (kept by the
         # whole-bounds exemption) keeps its blank Step.
-        if (
-            new_data_type == "Integer"
-            and new_step is None
-            and _is_whole_or_blank(new_min)
-        ):
+        if new_data_type == "Integer" and new_step is None and _is_whole_or_blank(new_min):
             new_step = INTEGER_DEFAULT_STEP
         new_list_csv_raw = rf.get("list_options") or ""
         new_list_csv = new_list_csv_raw if new_list_csv_raw else None
@@ -913,7 +883,11 @@ def _sync_response_fields_to_db(
         # just authored so the surface sees the same bounds the
         # Band 2 preview shows.
         field.validation = validation_block_from_inline(
-            new_data_type, new_min, new_max, new_step, new_list_csv,
+            new_data_type,
+            new_min,
+            new_max,
+            new_step,
+            new_list_csv,
         )
 
     # Delete rows whose ids were in the *previous* JSON state but
@@ -931,9 +905,7 @@ def _sync_response_fields_to_db(
     # intercept by checking for attached Response rows first and
     # raising so the route surfaces the error rather than letting
     # the operator nuke saved response data invisibly.
-    to_delete = {
-        rf_id for rf_id in previous_json_ids - seen_ids if rf_id in existing_by_id
-    }
+    to_delete = {rf_id for rf_id in previous_json_ids - seen_ids if rf_id in existing_by_id}
     # 19T Item 10 — point each governed field at its parent, named by row
     # key, now that every field in the save has an id.
     parent_errors: list[tuple[str, str]] = []
@@ -966,15 +938,9 @@ def _sync_response_fields_to_db(
         db.delete(field)
 
 
-BRANCH_LOCKED_MESSAGE = (
-    "Its branch has saved responses, so the branch's fields can't change."
-)
-BRANCH_CONDITION_LOCKED_MESSAGE = (
-    "Its branch has saved responses, so its condition can't change."
-)
-ANSWERED_FIELD_CANT_JOIN_MESSAGE = (
-    "It has saved responses, so it can't move into a branch."
-)
+BRANCH_LOCKED_MESSAGE = "Its branch has saved responses, so the branch's fields can't change."
+BRANCH_CONDITION_LOCKED_MESSAGE = "Its branch has saved responses, so its condition can't change."
+ANSWERED_FIELD_CANT_JOIN_MESSAGE = "It has saved responses, so it can't move into a branch."
 # 19T Item 14 — a parent carries its branch with it, so answers below it
 # hold it where it is too (the Item 14 cumulative read).
 ANSWERED_BRANCH_CANT_JOIN_MESSAGE = (
@@ -1043,9 +1009,8 @@ def _apply_branch_rules(
 
     def has_responses(field_id: int) -> bool:
         if field_id not in answered:
-            answered[field_id] = (
-                field_id in existing_by_id
-                and bool(_response_count_for_field(db, field_id))
+            answered[field_id] = field_id in existing_by_id and bool(
+                _response_count_for_field(db, field_id)
             )
         return answered[field_id]
 
@@ -1068,9 +1033,7 @@ def _apply_branch_rules(
     for parent_id, old_ids in old_governed.items():
         # Answers anywhere below lock every branch above them (19T Item
         # 14, the author's ruling): a change here could close theirs.
-        if not any(
-            has_responses(i) for i in old_below(parent_id)
-        ):
+        if not any(has_responses(i) for i in old_below(parent_id)):
             continue
         changed = old_ids ^ new_governed.get(parent_id, set())
         errors.extend(
@@ -1078,16 +1041,15 @@ def _apply_branch_rules(
             for i in sorted(changed, key=lambda i: all_by_id[i].order)
         )
         parent = kept_by_id.get(parent_id)
-        if parent is not None and (
-            parent.branch_op, parent.branch_value, parent.branch_mode
-        ) != old_branch[parent_id][1:]:
+        if (
+            parent is not None
+            and (parent.branch_op, parent.branch_value, parent.branch_mode)
+            != old_branch[parent_id][1:]
+        ):
             errors.append((parent.label, BRANCH_CONDITION_LOCKED_MESSAGE))
     for field in kept:
         old_parent = old_branch.get(field.id, (None, None, None, None))[0]
-        if (
-            field.branch_parent_id is None
-            or field.branch_parent_id == old_parent
-        ):
+        if field.branch_parent_id is None or field.branch_parent_id == old_parent:
             continue
         if has_responses(field.id):
             errors.append((field.label, ANSWERED_FIELD_CANT_JOIN_MESSAGE))

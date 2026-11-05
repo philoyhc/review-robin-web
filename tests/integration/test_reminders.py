@@ -37,9 +37,7 @@ def _create_session(client: TestClient, db: Session, code: str) -> ReviewSession
         follow_redirects=False,
     )
     assert response.status_code == 303
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _populate(client: TestClient, db: Session, session_id: int, *, reviewers: list[str]) -> None:
@@ -129,14 +127,10 @@ def _extract_url(body: str) -> str:
 # --------------------------------------------------------------------------- #
 
 
-def test_monitoring_url_redirects_to_invitations(
-    client: TestClient, db: Session
-) -> None:
+def test_monitoring_url_redirects_to_invitations(client: TestClient, db: Session) -> None:
     """Segment 11C Part 1 PR 3 retired the Monitoring page; existing
     bookmarks 308 forward to ``/invitations`` (findings F4)."""
-    session = _ready_session(
-        client, db, "mon-redir", reviewers=["rae@example.edu"]
-    )
+    session = _ready_session(client, db, "mon-redir", reviewers=["rae@example.edu"])
     response = client.get(
         f"/operator/sessions/{session.public_id}/monitoring",
         follow_redirects=False,
@@ -150,15 +144,11 @@ def test_monitoring_url_redirects_to_invitations(
 def test_send_reminder_reuses_invitation_url_without_rotating_token(
     client: TestClient, db: Session
 ) -> None:
-    session = _ready_session(
-        client, db, "rem-reuse", reviewers=["rae@example.edu"]
-    )
+    session = _ready_session(client, db, "rem-reuse", reviewers=["rae@example.edu"])
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
-    client.post(
-        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
-    )
+    client.post(f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send")
     invitation_outbox = db.execute(
         select(EmailOutbox).where(
             EmailOutbox.invitation_id == invitation.id,
@@ -191,9 +181,7 @@ def test_send_reminder_reuses_invitation_url_without_rotating_token(
 def test_send_reminder_falls_back_to_fresh_send_when_never_sent(
     client: TestClient, db: Session
 ) -> None:
-    session = _ready_session(
-        client, db, "rem-fallback", reviewers=["rae@example.edu"]
-    )
+    session = _ready_session(client, db, "rem-fallback", reviewers=["rae@example.edu"])
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
@@ -205,9 +193,11 @@ def test_send_reminder_falls_back_to_fresh_send_when_never_sent(
     )
     assert response.status_code == 303
 
-    rows = db.execute(
-        select(EmailOutbox).where(EmailOutbox.invitation_id == invitation.id)
-    ).scalars().all()
+    rows = (
+        db.execute(select(EmailOutbox).where(EmailOutbox.invitation_id == invitation.id))
+        .scalars()
+        .all()
+    )
     assert len(rows) == 1
     assert rows[0].kind == "invitation"  # fell back to fresh send
     db.refresh(invitation)
@@ -227,21 +217,15 @@ def _reminders_sent_events(db: Session, session_id: int) -> list[AuditEvent]:
     )
 
 
-def test_per_row_reminder_writes_a_reminders_sent_event(
-    client: TestClient, db: Session
-) -> None:
+def test_per_row_reminder_writes_a_reminders_sent_event(client: TestClient, db: Session) -> None:
     """Findings G3 (2026-10-07): the per-row reminder queued its outbox
     row and stamped ``last_reminder_at`` but wrote no audit row. It now
     writes the bulk path's ``reminders.sent`` with one entry."""
-    session = _ready_session(
-        client, db, "rem-audit", reviewers=["rae@example.edu"]
-    )
+    session = _ready_session(client, db, "rem-audit", reviewers=["rae@example.edu"])
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
-    client.post(
-        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
-    )
+    client.post(f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send")
     response = client.post(
         f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/remind",
         follow_redirects=False,
@@ -257,16 +241,12 @@ def test_per_row_reminder_writes_a_reminders_sent_event(
     assert events[0].detail["context"] == {"fell_back": 0}
 
 
-def test_per_row_reminder_that_falls_back_counts_it(
-    client: TestClient, db: Session
-) -> None:
+def test_per_row_reminder_that_falls_back_counts_it(client: TestClient, db: Session) -> None:
     """With no invitation email yet, the reminder falls back to a fresh
     send: ``invitation.sent`` records the send and ``reminders.sent``
     the operator's reminder, with ``context.fell_back`` = 1, as the bulk
     path counts it."""
-    session = _ready_session(
-        client, db, "rem-audit-fallback", reviewers=["rae@example.edu"]
-    )
+    session = _ready_session(client, db, "rem-audit-fallback", reviewers=["rae@example.edu"])
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
@@ -280,36 +260,35 @@ def test_per_row_reminder_that_falls_back_counts_it(
     assert len(events) == 1
     assert events[0].detail is not None
     assert events[0].detail["context"] == {"fell_back": 1}
-    assert db.execute(
-        select(AuditEvent).where(
-            AuditEvent.session_id == session.id,
-            AuditEvent.event_type == "invitation.sent",
-        )
-    ).first() is not None
+    assert (
+        db.execute(
+            select(AuditEvent).where(
+                AuditEvent.session_id == session.id,
+                AuditEvent.event_type == "invitation.sent",
+            )
+        ).first()
+        is not None
+    )
 
 
-def test_send_reminder_after_regenerate_sends_a_live_link(
-    client: TestClient, db: Session
-) -> None:
+def test_send_reminder_after_regenerate_sends_a_live_link(client: TestClient, db: Session) -> None:
     """A regenerate rotates the token without sending, so the last
     invitation email's link is dead. The reminder must not reuse it:
     it falls back to a fresh invitation whose link resolves (Gc1)."""
-    session = _ready_session(
-        client, db, "rem-regen", reviewers=["rae@example.edu"]
-    )
+    session = _ready_session(client, db, "rem-regen", reviewers=["rae@example.edu"])
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
-    client.post(
-        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
-    )
+    client.post(f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send")
     first_url = _extract_url(
         db.execute(
             select(EmailOutbox).where(
                 EmailOutbox.invitation_id == invitation.id,
                 EmailOutbox.kind == "invitation",
             )
-        ).scalar_one().body
+        )
+        .scalar_one()
+        .body
     )
     response = client.post(
         f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/regenerate",
@@ -338,14 +317,14 @@ def test_send_reminder_after_regenerate_sends_a_live_link(
 
 
 def _sent_session_with_two(client: TestClient, db: Session, code: str):
-    session = _ready_session(
-        client, db, code, reviewers=["rae@example.edu", "sam@example.edu"]
+    session = _ready_session(client, db, code, reviewers=["rae@example.edu", "sam@example.edu"])
+    rows = (
+        db.execute(
+            select(Invitation).where(Invitation.session_id == session.id).order_by(Invitation.id)
+        )
+        .scalars()
+        .all()
     )
-    rows = db.execute(
-        select(Invitation)
-        .where(Invitation.session_id == session.id)
-        .order_by(Invitation.id)
-    ).scalars().all()
     for inv in rows:
         client.post(f"/operator/sessions/{session.public_id}/invitations/{inv.id}/send")
     return session, rows
@@ -368,9 +347,7 @@ def test_bulk_reminder_after_one_regenerate_sends_that_one_a_live_link(
     row gets a fresh invitation; the other keeps its link (Gc1)."""
     session, (regen, kept) = _sent_session_with_two(client, db, "rem-bulk-regen")
     kept_url = _extract_url(_latest_outbox(db, kept.id).body)
-    client.post(
-        f"/operator/sessions/{session.public_id}/invitations/{regen.id}/regenerate"
-    )
+    client.post(f"/operator/sessions/{session.public_id}/invitations/{regen.id}/regenerate")
 
     response = client.post(
         f"/operator/sessions/{session.public_id}/invitations/remind-incomplete",
@@ -387,9 +364,7 @@ def test_bulk_reminder_after_one_regenerate_sends_that_one_a_live_link(
     assert _extract_url(reminder.body) == kept_url
 
 
-def test_reminders_after_regenerate_all_send_live_links(
-    client: TestClient, db: Session
-) -> None:
+def test_reminders_after_regenerate_all_send_live_links(client: TestClient, db: Session) -> None:
     session, rows = _sent_session_with_two(client, db, "rem-regen-all")
     response = client.post(
         f"/operator/sessions/{session.public_id}/invitations/regenerate-all",
@@ -431,12 +406,8 @@ def test_remind_incomplete_targets_only_incomplete(
         .join(Reviewer, Reviewer.id == Invitation.reviewer_id)
         .where(Reviewer.email == "sam@example.edu")
     ).one()[0]
-    operator.post(
-        f"/operator/sessions/{session.public_id}/invitations/{rae_inv.id}/send"
-    )
-    operator.post(
-        f"/operator/sessions/{session.public_id}/invitations/{sam_inv.id}/send"
-    )
+    operator.post(f"/operator/sessions/{session.public_id}/invitations/{rae_inv.id}/send")
+    operator.post(f"/operator/sessions/{session.public_id}/invitations/{sam_inv.id}/send")
 
     # Rae submits in full so she's "submitted" and excluded from reminders.
     rae_assignment = db.execute(
@@ -444,9 +415,7 @@ def test_remind_incomplete_targets_only_incomplete(
         .join(Reviewer, Reviewer.id == Assignment.reviewer_id)
         .where(Reviewer.email == "rae@example.edu")
     ).one()[0]
-    rae = AuthenticatedUser(
-        principal_id="r", email="rae@example.edu", name="Rae", provider="aad"
-    )
+    rae = AuthenticatedUser(principal_id="r", email="rae@example.edu", name="Rae", provider="aad")
     rae_client = make_client(rae)
     rae_client.post(
         f"/me/sessions/{session.public_id}/submit",
@@ -462,64 +431,66 @@ def test_remind_incomplete_targets_only_incomplete(
     assert response.status_code == 303
 
     # Sam (incomplete) got a reminder. Rae (submitted) did not.
-    sam_reminders = db.execute(
-        select(EmailOutbox).where(
-            EmailOutbox.invitation_id == sam_inv.id,
-            EmailOutbox.kind == "reminder",
+    sam_reminders = (
+        db.execute(
+            select(EmailOutbox).where(
+                EmailOutbox.invitation_id == sam_inv.id,
+                EmailOutbox.kind == "reminder",
+            )
         )
-    ).scalars().all()
-    rae_reminders = db.execute(
-        select(EmailOutbox).where(
-            EmailOutbox.invitation_id == rae_inv.id,
-            EmailOutbox.kind == "reminder",
+        .scalars()
+        .all()
+    )
+    rae_reminders = (
+        db.execute(
+            select(EmailOutbox).where(
+                EmailOutbox.invitation_id == rae_inv.id,
+                EmailOutbox.kind == "reminder",
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(sam_reminders) == 1
     assert len(rae_reminders) == 0
 
 
-def test_remind_incomplete_writes_single_batch_audit_event(
-    client: TestClient, db: Session
-) -> None:
+def test_remind_incomplete_writes_single_batch_audit_event(client: TestClient, db: Session) -> None:
     session = _ready_session(
         client, db, "rem-audit", reviewers=["rae@example.edu", "sam@example.edu"]
     )
-    invitations_rows = db.execute(
-        select(Invitation).where(Invitation.session_id == session.id)
-    ).scalars().all()
+    invitations_rows = (
+        db.execute(select(Invitation).where(Invitation.session_id == session.id)).scalars().all()
+    )
     for inv in invitations_rows:
-        client.post(
-            f"/operator/sessions/{session.public_id}/invitations/{inv.id}/send"
-        )
+        client.post(f"/operator/sessions/{session.public_id}/invitations/{inv.id}/send")
 
     client.post(
         f"/operator/sessions/{session.public_id}/invitations/remind-incomplete",
         follow_redirects=False,
     )
 
-    events = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "reminders.sent",
-            AuditEvent.session_id == session.id,
+    events = (
+        db.execute(
+            select(AuditEvent).where(
+                AuditEvent.event_type == "reminders.sent",
+                AuditEvent.session_id == session.id,
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(events) == 1
     assert events[0].detail is not None
     assert len(events[0].detail["set_changes"]["updated"]) == 2
 
 
-def test_per_row_and_bulk_reminders_stamp_last_reminder_at(
-    client: TestClient, db: Session
-) -> None:
-    session = _ready_session(
-        client, db, "rem-stamp", reviewers=["rae@example.edu"]
-    )
+def test_per_row_and_bulk_reminders_stamp_last_reminder_at(client: TestClient, db: Session) -> None:
+    session = _ready_session(client, db, "rem-stamp", reviewers=["rae@example.edu"])
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
-    client.post(
-        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
-    )
+    client.post(f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send")
 
     client.post(
         f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/remind",
@@ -538,16 +509,12 @@ def test_per_row_and_bulk_reminders_stamp_last_reminder_at(
     assert invitation.last_reminder_at >= first
 
 
-def test_reminder_actions_409_while_session_draft(
-    client: TestClient, db: Session
-) -> None:
+def test_reminder_actions_409_while_session_draft(client: TestClient, db: Session) -> None:
     session = _create_session(client, db, "draft-rem")
     _populate(client, db, session.id, reviewers=["rae@example.edu"])
     # Cannot generate invitations on a draft session, so we fabricate one
     # directly to simulate stale state and exercise the gating.
-    reviewer = db.execute(
-        select(Reviewer).where(Reviewer.session_id == session.id)
-    ).scalar_one()
+    reviewer = db.execute(select(Reviewer).where(Reviewer.session_id == session.id)).scalar_one()
     invitation = Invitation(
         session_id=session.id,
         reviewer_id=reviewer.id,
@@ -576,23 +543,17 @@ def test_submitted_with_warn_override_classified_incomplete(
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
     operator = make_client(alice)
-    session = _ready_session(
-        operator, db, "rem-override", reviewers=["rae@example.edu"]
-    )
+    session = _ready_session(operator, db, "rem-override", reviewers=["rae@example.edu"])
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
-    operator.post(
-        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
-    )
+    operator.post(f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send")
 
     # Rae attempts a submit with the required ``rating`` left blank.
     # Submit blocks (no acknowledge-and-override path), but the
     # ``comments`` draft commits — Rae still ends up classified as
     # incomplete by the monitoring path.
-    rae = AuthenticatedUser(
-        principal_id="r", email="rae@example.edu", name="Rae", provider="aad"
-    )
+    rae = AuthenticatedUser(principal_id="r", email="rae@example.edu", name="Rae", provider="aad")
     rae_client = make_client(rae)
     assignment = db.execute(
         select(Assignment).where(Assignment.session_id == session.id)
@@ -609,12 +570,16 @@ def test_submitted_with_warn_override_classified_incomplete(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    reminders = db.execute(
-        select(EmailOutbox).where(
-            EmailOutbox.invitation_id == invitation.id,
-            EmailOutbox.kind == "reminder",
+    reminders = (
+        db.execute(
+            select(EmailOutbox).where(
+                EmailOutbox.invitation_id == invitation.id,
+                EmailOutbox.kind == "reminder",
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(reminders) == 1
 
 
@@ -624,19 +589,13 @@ def test_remind_incomplete_writes_no_audit_when_zero_targets(
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
     operator = make_client(alice)
-    session = _ready_session(
-        operator, db, "rem-empty", reviewers=["rae@example.edu"]
-    )
+    session = _ready_session(operator, db, "rem-empty", reviewers=["rae@example.edu"])
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
-    operator.post(
-        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
-    )
+    operator.post(f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send")
 
-    rae = AuthenticatedUser(
-        principal_id="r", email="rae@example.edu", name="Rae", provider="aad"
-    )
+    rae = AuthenticatedUser(principal_id="r", email="rae@example.edu", name="Rae", provider="aad")
     rae_client = make_client(rae)
     assignment = db.execute(
         select(Assignment).where(Assignment.session_id == session.id)
@@ -652,18 +611,26 @@ def test_remind_incomplete_writes_no_audit_when_zero_targets(
         f"/operator/sessions/{session.public_id}/invitations/remind-incomplete",
         follow_redirects=False,
     )
-    events = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "reminders.sent",
-            AuditEvent.session_id == session.id,
+    events = (
+        db.execute(
+            select(AuditEvent).where(
+                AuditEvent.event_type == "reminders.sent",
+                AuditEvent.session_id == session.id,
+            )
         )
-    ).scalars().all()
-    reminders = db.execute(
-        select(EmailOutbox).where(
-            EmailOutbox.session_id == session.id,
-            EmailOutbox.kind == "reminder",
+        .scalars()
+        .all()
+    )
+    reminders = (
+        db.execute(
+            select(EmailOutbox).where(
+                EmailOutbox.session_id == session.id,
+                EmailOutbox.kind == "reminder",
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert events == []
     assert reminders == []
 

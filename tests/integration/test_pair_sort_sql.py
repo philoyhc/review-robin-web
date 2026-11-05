@@ -18,6 +18,7 @@ Postgres in CI as well as SQLite: under a locale-aware collation the
 same names order differently, and the ``ci-postgres`` container's
 ``C.UTF-8`` would not have caught it.
 """
+
 from __future__ import annotations
 
 import json
@@ -55,21 +56,15 @@ def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSessio
         data={"name": code.title(), "code": code},
         follow_redirects=False,
     )
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _seed(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     review_session = _make_session(client, db, code=code)
-    rows = b"".join(
-        f"{name},r{i}@example.edu\n".encode() for i, name in enumerate(NAMES)
-    )
+    rows = b"".join(f"{name},r{i}@example.edu\n".encode() for i, name in enumerate(NAMES))
     client.post(
         f"/operator/sessions/{review_session.public_id}/reviewers/import",
-        files={
-            "file": ("r.csv", b"ReviewerName,ReviewerEmail\n" + rows, "text/csv")
-        },
+        files={"file": ("r.csv", b"ReviewerName,ReviewerEmail\n" + rows, "text/csv")},
         follow_redirects=False,
     )
     client.post(
@@ -89,9 +84,7 @@ def _seed(client: TestClient, db: Session, *, code: str) -> ReviewSession:
 
 
 def _sql_order(db: Session, session_id: int, spec) -> list[str]:
-    pairs = assignments_service.list_pairs(
-        db, session_id, limit=1000, sort=spec
-    )
+    pairs = assignments_service.list_pairs(db, session_id, limit=1000, sort=spec)
     return [a.reviewer.name for a in pairs]
 
 
@@ -110,15 +103,10 @@ def _python_order(db: Session, session_id: int, spec) -> list[str]:
             return "yes" if assignment.include else "no"
         return None
 
-    return [
-        a.reviewer.name
-        for a in apply_cookie_sort(pairs, spec, value_resolver=resolver)
-    ]
+    return [a.reviewer.name for a in apply_cookie_sort(pairs, spec, value_resolver=resolver)]
 
 
-def test_the_sql_sort_matches_the_python_one_it_replaced(
-    client: TestClient, db: Session
-) -> None:
+def test_the_sql_sort_matches_the_python_one_it_replaced(client: TestClient, db: Session) -> None:
     """Rule 3, and the whole point: same rows, same order."""
     review_session = _seed(client, db, code="sortsql-parity")
     for direction in ("asc", "desc"):
@@ -153,9 +141,7 @@ def test_an_empty_tag_sorts_as_absent_not_as_the_empty_string(
     the Python rule, so this is the branch a naive ORDER BY inverts."""
     review_session = _seed(client, db, code="sortsql-empty")
     reviewers = list(
-        db.execute(
-            select(Reviewer).where(Reviewer.session_id == review_session.id)
-        ).scalars()
+        db.execute(select(Reviewer).where(Reviewer.session_id == review_session.id)).scalars()
     )
     for reviewer in reviewers:
         reviewer.tag_1 = "" if reviewer.name == "Bravo" else reviewer.name
@@ -165,32 +151,24 @@ def test_an_empty_tag_sorts_as_absent_not_as_the_empty_string(
     assert order[-1] == "Bravo"
 
 
-def test_null_sorts_last_in_both_directions(
-    client: TestClient, db: Session
-) -> None:
+def test_null_sorts_last_in_both_directions(client: TestClient, db: Session) -> None:
     """Rule 2 — not what either dialect does by default, which is why
     every clause is wrapped in ``NULLS LAST`` rather than only the
     ascending ones."""
     review_session = _seed(client, db, code="sortsql-nulls")
     reviewers = list(
-        db.execute(
-            select(Reviewer).where(Reviewer.session_id == review_session.id)
-        ).scalars()
+        db.execute(select(Reviewer).where(Reviewer.session_id == review_session.id)).scalars()
     )
     for reviewer in reviewers:
         reviewer.tag_1 = None if reviewer.name == "Delta" else reviewer.name
     db.commit()
 
     for direction in ("asc", "desc"):
-        order = _sql_order(
-            db, review_session.id, [("reviewer_tag_1", direction)]
-        )
+        order = _sql_order(db, review_session.id, [("reviewer_tag_1", direction)])
         assert order[-1] == "Delta", direction
 
 
-def test_pair_tags_sort_through_the_relationship_join(
-    client: TestClient, db: Session
-) -> None:
+def test_pair_tags_sort_through_the_relationship_join(client: TestClient, db: Session) -> None:
     """``pair_tag_*`` was the key my own recommendation proposed leaving
     out of the SQL sort. It joins cleanly, so it went in — and an
     assignment with no active relationship sorts as absent, which is
@@ -222,9 +200,7 @@ def test_pair_tags_sort_through_the_relationship_join(
     assert set(order[2:]) == set(NAMES) - set(tagged)
 
 
-def test_an_inactive_relationship_contributes_no_pair_tag(
-    client: TestClient, db: Session
-) -> None:
+def test_an_inactive_relationship_contributes_no_pair_tag(client: TestClient, db: Session) -> None:
     """The rule engine only reads active relationships, and the Python
     resolver agreed. The join carries the same condition."""
     from app.db.models import Relationship
@@ -264,9 +240,7 @@ def test_the_order_is_total_so_paging_neither_drops_nor_doubles_a_row(
     assert len(seen) == len(set(seen)) == len(NAMES)
 
 
-def test_the_page_carries_the_sort_cookie_into_the_query(
-    client: TestClient, db: Session
-) -> None:
+def test_the_page_carries_the_sort_cookie_into_the_query(client: TestClient, db: Session) -> None:
     """End to end: the cookie the header writes reaches the ORDER BY,
     which is what makes page 2 a page of the *sorted* roster."""
     review_session = _seed(client, db, code="sortsql-route")
@@ -274,9 +248,7 @@ def test_the_page_carries_the_sort_cookie_into_the_query(
         f"rrw-sort-assignments-{review_session.id}",
         json.dumps([{"key": "reviewer", "dir": "desc"}]),
     )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/assignments").text
     table = body[body.index('id="assignments-table"') :]
     # Descending code point: `charlie` first, `Ana Lim` last.
     assert table.index("charlie") < table.index("Ana Lim")

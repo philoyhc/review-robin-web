@@ -10,6 +10,7 @@ Revises: b8f4e2a6c1d3
 Create Date: 2026-05-23
 
 """
+
 from collections.abc import Sequence
 
 from alembic import op

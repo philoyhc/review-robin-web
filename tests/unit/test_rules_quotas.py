@@ -1,5 +1,6 @@
 """Unit tests for ``app/services/rules/quotas.py`` — Segment 13A
 PR 2."""
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -53,18 +54,11 @@ def _quota(
     )
 
 
-def _build_pairs(
-    *, n_reviewers: int, n_reviewees: int
-) -> list[tuple[object, object]]:
+def _build_pairs(*, n_reviewers: int, n_reviewees: int) -> list[tuple[object, object]]:
     """Every reviewer paired with every reviewee, typed as ``apply_quota``
     takes them."""
-    reviewers = [
-        Reviewer(email=f"r{i:02d}@x.edu") for i in range(n_reviewers)
-    ]
-    reviewees = [
-        Reviewee(email_or_identifier=f"e{i:02d}@x.edu")
-        for i in range(n_reviewees)
-    ]
+    reviewers = [Reviewer(email=f"r{i:02d}@x.edu") for i in range(n_reviewers)]
+    reviewees = [Reviewee(email_or_identifier=f"e{i:02d}@x.edu") for i in range(n_reviewees)]
     return [(r, e) for r in reviewers for e in reviewees]
 
 
@@ -76,9 +70,7 @@ def test_round_robin_caps_at_max_per_reviewee() -> None:
         max_=3,
         strategy=SelectionStrategy.ROUND_ROBIN,
     )
-    survivors, excluded, warnings = apply_quota(
-        pairs, rule, fallback_seed=0
-    )
+    survivors, excluded, warnings = apply_quota(pairs, rule, fallback_seed=0)
     assert len(survivors) == 6  # 3 per reviewee × 2 reviewees
     assert excluded == 4
     assert warnings == []
@@ -125,9 +117,7 @@ def test_under_min_emits_warning_but_keeps_pairs() -> None:
         max_=3,
         strategy=SelectionStrategy.ROUND_ROBIN,
     )
-    survivors, excluded, warnings = apply_quota(
-        pairs, rule, fallback_seed=0
-    )
+    survivors, excluded, warnings = apply_quota(pairs, rule, fallback_seed=0)
     assert len(survivors) == 2  # Only 2 candidates available.
     assert excluded == 0
     assert any("minimum 3 not met" in w for w in warnings)

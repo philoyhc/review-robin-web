@@ -87,27 +87,21 @@ class _SpanCollector(HTMLParser):
             self._open[-1].text += data
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "Spring", "code": code},
         follow_redirects=False,
     )
     assert response.status_code == 303
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _band3_spans(client: TestClient, db: Session, *, code: str) -> list[Span]:
     """Every ``<span class=...>`` inside the first card's visibility
     editor (``data-new-model-vp-editor``)."""
     review_session = _make_session(client, db, code=code)
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     start = body.index("data-new-model-vp-editor")
     # The grid is the editor's only table; the hidden mode inputs sit
     # between the div and it.
@@ -117,9 +111,7 @@ def _band3_spans(client: TestClient, db: Session, *, code: str) -> list[Span]:
     return collector.spans
 
 
-def test_fixed_cells_are_fixed_switches_not_controls(
-    client: TestClient, db: Session
-) -> None:
+def test_fixed_cells_are_fixed_switches_not_controls(client: TestClient, db: Session) -> None:
     """The two ``b3_static_pill`` cells are fixed switches, not controls."""
     spans = _band3_spans(client, db, code="19j7-1")
     fixed = [s for s in spans if s.attrs.get("title") == "Fixed"]
@@ -134,18 +126,14 @@ def test_fixed_cells_are_fixed_switches_not_controls(
         assert not span.is_control
 
 
-def test_cycle_chips_are_still_controls(
-    client: TestClient, db: Session
-) -> None:
+def test_cycle_chips_are_still_controls(client: TestClient, db: Session) -> None:
     """The mutation guard: rung 1 must not disarm the real chips.
 
     Without this, stripping ``tag-chip`` from *both* macros would pass
     the test above while removing the only affordance the grid has.
     """
     spans = _band3_spans(client, db, code="19j7-2")
-    cycles = [
-        s for s in spans if "data-new-model-vp-cycle-audience" in s.attrs
-    ]
+    cycles = [s for s in spans if "data-new-model-vp-cycle-audience" in s.attrs]
 
     # Reviewers × released, reviewees × released, observers × both.
     assert len(cycles) == 4
@@ -156,9 +144,7 @@ def test_cycle_chips_are_still_controls(
         assert span.attrs.get("tabindex") == "0"
 
 
-def test_no_label_in_the_grid_pretends_to_be_clickable(
-    client: TestClient, db: Session
-) -> None:
+def test_no_label_in_the_grid_pretends_to_be_clickable(client: TestClient, db: Session) -> None:
     """The invariant this rung establishes, stated once.
 
     Inside the Band 3 grid, an element that carries a control's classes
@@ -169,9 +155,7 @@ def test_no_label_in_the_grid_pretends_to_be_clickable(
 
     for span in spans:
         has_control_class = "tag-chip" in span.classes and "is-fixed" not in span.classes
-        has_control_behaviour = (
-            span.attrs.get("role") == "button" or "onclick" in span.attrs
-        )
+        has_control_behaviour = span.attrs.get("role") == "button" or "onclick" in span.attrs
         assert has_control_class == has_control_behaviour, (
             f"{span.text.strip()!r} carries {span.classes} with "
             f"role={span.attrs.get('role')!r} — a pill either offers a "

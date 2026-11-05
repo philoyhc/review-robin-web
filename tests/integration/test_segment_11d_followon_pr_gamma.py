@@ -88,9 +88,7 @@ def _setup_two_instrument_session(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(operator_client, review_session.id)
     [first] = list(
-        db.execute(
-            select(Instrument).where(Instrument.session_id == review_session.id)
-        ).scalars()
+        db.execute(select(Instrument).where(Instrument.session_id == review_session.id)).scalars()
     )
     operator_client.post(
         f"/operator/sessions/{review_session.public_id}/instruments/add-new-model",
@@ -108,9 +106,7 @@ def _setup_two_instrument_session(
     # exist, so the route requires ``confirm_replace``; without it the
     # POST is a no-op redirect and the second instrument stays empty.
     pin_full_matrix_on_all_instruments(db, review_session.id)
-    generate_via_page_button(
-        operator_client, review_session.id, confirm_replace=True
-    )
+    generate_via_page_button(operator_client, review_session.id, confirm_replace=True)
     # Apply heading metadata via the service helper (the operator route
     # writes through it; either path is fine for fixtures).
     if first_short_label is not None:
@@ -178,9 +174,7 @@ def test_instrument_heading_uses_short_label_when_set(
         second_short_label="Peer review",
     )
     rae_client = make_client(rae)
-    body = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/1"
-    ).text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
     assert "#1: Self-eval" in body
     assert "#2: Peer review" in body
 
@@ -194,13 +188,9 @@ def test_instrument_heading_falls_back_to_position_only(
     """When ``short_label`` isn't set, the heading degrades to a bare
     ``#N`` label with no trailing colon."""
     operator = make_client(alice)
-    review_session, _, _ = _setup_two_instrument_session(
-        operator, db, code="rae-g-noshort"
-    )
+    review_session, _, _ = _setup_two_instrument_session(operator, db, code="rae-g-noshort")
     rae_client = make_client(rae)
-    body = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/1"
-    ).text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
     # No trailing colon in the heading itself (the status pills above
     # carry their own ``#N: <state>`` colon — out of scope here).
     assert "<h2>#1</h2>" in body
@@ -231,9 +221,7 @@ def test_instrument_heading_multi_with_short_label_and_description(
         second_description="Rate your teammates.",
     )
     rae_client = make_client(rae)
-    body = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/1"
-    ).text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
     # PR γ wrapped the heading in a flex `.rs-instrument-heading` row
     # of bare text; the per-instrument intro grid follow-up moved it
     # into a half-width `.card.rs-instrument-card`, heading the left
@@ -261,9 +249,7 @@ def test_instrument_heading_multi_short_label_only(
         second_short_label="Peer review",
     )
     rae_client = make_client(rae)
-    body = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/1"
-    ).text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
     assert "<h2>#1: Self-eval</h2>" in body
     assert 'class="rs-instrument-subtitle muted"' not in body
 
@@ -284,9 +270,7 @@ def test_instrument_heading_multi_description_only(
         first_description="Reflect on your own progress.",
     )
     rae_client = make_client(rae)
-    body = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/1"
-    ).text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
     assert "<h2>#1</h2>" in body
     assert "Reflect on your own progress." in body
     assert 'class="rs-instrument-subtitle muted"' in body
@@ -301,13 +285,9 @@ def test_instrument_heading_multi_neither(
     """Multi-instrument with neither short_label nor description → bare
     ``#N`` title, no subtitle."""
     operator = make_client(alice)
-    review_session, _, _ = _setup_two_instrument_session(
-        operator, db, code="rae-g-h-multi-none"
-    )
+    review_session, _, _ = _setup_two_instrument_session(operator, db, code="rae-g-h-multi-none")
     rae_client = make_client(rae)
-    body = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/1"
-    ).text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
     assert "<h2>#1</h2>" in body
     assert 'class="rs-instrument-subtitle muted"' not in body
 
@@ -355,9 +335,7 @@ def test_instrument_heading_single_short_label_only(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(operator, review_session.id)
     [instrument] = list(
-        db.execute(
-            select(Instrument).where(Instrument.session_id == review_session.id)
-        ).scalars()
+        db.execute(select(Instrument).where(Instrument.session_id == review_session.id)).scalars()
     )
     with past_draft_setup(db, instrument):
         instruments_service.update_short_label(
@@ -372,9 +350,7 @@ def test_instrument_heading_single_short_label_only(
     )
 
     rae_client = make_client(rae)
-    body = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/1"
-    ).text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
     assert "<h2>Self-eval</h2>" in body
     # No #1 prefix in the *heading* — single-instrument sessions
     # don't need page-numbering.
@@ -425,9 +401,7 @@ def test_save_drops_cross_page_assignment_inputs(
     # POST to /1/save with page 1's form plus an input for a second row.
     # Each page has one row, so the page-2 entry can only be ordinal 2,
     # past page 1's rows, and must be filtered out.
-    form = answer_form(
-        db, {f"response[{page1_assignment.id}][comments]": "page-1 ok"}, page_n=1
-    )
+    form = answer_form(db, {f"response[{page1_assignment.id}][comments]": "page-1 ok"}, page_n=1)
     form["response[2][comments]"] = "page-2 leak"
     rae_client.post(
         f"/me/sessions/{review_session.public_id}/1/save",
@@ -446,16 +420,12 @@ def test_save_drops_cross_page_assignment_inputs(
     assert refused.status_code == 409
 
     page1_responses = (
-        db.execute(
-            select(Response).where(Response.assignment_id == page1_assignment.id)
-        )
+        db.execute(select(Response).where(Response.assignment_id == page1_assignment.id))
         .scalars()
         .all()
     )
     page2_responses = (
-        db.execute(
-            select(Response).where(Response.assignment_id == page2_assignment.id)
-        )
+        db.execute(select(Response).where(Response.assignment_id == page2_assignment.id))
         .scalars()
         .all()
     )
@@ -463,5 +433,3 @@ def test_save_drops_cross_page_assignment_inputs(
     # Cross-page leak dropped, on neither page.
     assert not any(r.value == "page-2 leak" for r in page1_responses)
     assert not any(r.value == "page-2 leak" for r in page2_responses)
-
-

@@ -37,23 +37,17 @@ from ._full_matrix import (
 from ._validated import validate_session
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "Responses", "code": code, "description": ""},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
-def _seed_pair_with_response(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _seed_pair_with_response(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     """Seed a session with a single reviewer/reviewee/assignment and
     one submitted Response so the route returns a non-empty body."""
 
@@ -99,9 +93,7 @@ def _seed_pair_with_response(
     db.add(field)
     db.flush()
     assignment = db.execute(
-        select(Assignment).where(
-            Assignment.session_id == review_session.id
-        )
+        select(Assignment).where(Assignment.session_id == review_session.id)
     ).scalar_one()
     db.add(
         Response(
@@ -114,15 +106,9 @@ def _seed_pair_with_response(
     return review_session
 
 
-def test_route_streams_csv_with_canonical_filename(
-    client: TestClient, db: Session
-) -> None:
-    review_session = _seed_pair_with_response(
-        client, db, code="rsp-fname"
-    )
-    response = client.get(
-        f"/operator/sessions/{review_session.public_id}/export/responses.csv"
-    )
+def test_route_streams_csv_with_canonical_filename(client: TestClient, db: Session) -> None:
+    review_session = _seed_pair_with_response(client, db, code="rsp-fname")
+    response = client.get(f"/operator/sessions/{review_session.public_id}/export/responses.csv")
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/csv")
     assert response.headers["content-disposition"] == (
@@ -132,9 +118,7 @@ def test_route_streams_csv_with_canonical_filename(
     rows = list(csv.reader(io.StringIO(response.text)))
     # The file opens with a per-instrument preamble; locate the
     # data table by its header row.
-    header_idx = next(
-        i for i, r in enumerate(rows) if r and r[0] == "ReviewerName"
-    )
+    header_idx = next(i for i, r in enumerate(rows) if r and r[0] == "ReviewerName")
     # 21 columns (PR 4a added ``SelfReview``; 13C D2 appended
     # ``InstrumentFlavour``).
     assert len(rows[header_idx]) == 21
@@ -151,13 +135,9 @@ def test_route_streams_csv_with_canonical_filename(
     assert data[0][20] == "per-reviewee"  # InstrumentFlavour
 
 
-def test_route_emits_audit_event_with_row_count(
-    client: TestClient, db: Session
-) -> None:
+def test_route_emits_audit_event_with_row_count(client: TestClient, db: Session) -> None:
     review_session = _seed_pair_with_response(client, db, code="rsp-aud")
-    response = client.get(
-        f"/operator/sessions/{review_session.public_id}/export/responses.csv"
-    )
+    response = client.get(f"/operator/sessions/{review_session.public_id}/export/responses.csv")
     assert response.status_code == 200
     response.read()
 
@@ -173,21 +153,15 @@ def test_route_emits_audit_event_with_row_count(
     assert detail["counts"]["rows"] == 1
 
 
-def test_session_with_no_responses_emits_no_data_rows(
-    client: TestClient, db: Session
-) -> None:
+def test_session_with_no_responses_emits_no_data_rows(client: TestClient, db: Session) -> None:
     """A session with setup but no reviewer responses: the
     preamble still lists the instrument's fields, but there are no
     data rows below the header."""
     review_session = _make_session(client, db, code="rsp-empty")
-    response = client.get(
-        f"/operator/sessions/{review_session.public_id}/export/responses.csv"
-    )
+    response = client.get(f"/operator/sessions/{review_session.public_id}/export/responses.csv")
     assert response.status_code == 200
     rows = list(csv.reader(io.StringIO(response.text)))
-    header_idx = next(
-        i for i, r in enumerate(rows) if r and r[0] == "ReviewerName"
-    )
+    header_idx = next(i for i, r in enumerate(rows) if r and r[0] == "ReviewerName")
     # No data rows below the header.
     assert rows[header_idx + 1 :] == []
     # The preamble names the default instrument positionally.
@@ -204,20 +178,14 @@ def test_session_with_no_responses_emits_no_data_rows(
     assert detail["counts"]["rows"] == 0
 
 
-def test_route_works_in_every_lifecycle_state(
-    client: TestClient, db: Session
-) -> None:
+def test_route_works_in_every_lifecycle_state(client: TestClient, db: Session) -> None:
     """No lifecycle gate — the responses extract is most useful
     in ``ready`` (mid-flight snapshot) and ``closed`` (final
     dataset). Spot-check that ``draft`` + ``ready`` both work."""
 
-    review_session = _seed_pair_with_response(
-        client, db, code="rsp-states"
-    )
+    review_session = _seed_pair_with_response(client, db, code="rsp-states")
     # Draft state — hits before activation.
-    response = client.get(
-        f"/operator/sessions/{review_session.public_id}/export/responses.csv"
-    )
+    response = client.get(f"/operator/sessions/{review_session.public_id}/export/responses.csv")
     assert response.status_code == 200
 
     # Activate.
@@ -231,9 +199,7 @@ def test_route_works_in_every_lifecycle_state(
     assert activate.status_code == 303
 
     # Activated state — extract still works.
-    response = client.get(
-        f"/operator/sessions/{review_session.public_id}/export/responses.csv"
-    )
+    response = client.get(f"/operator/sessions/{review_session.public_id}/export/responses.csv")
     assert response.status_code == 200
 
 
@@ -247,7 +213,5 @@ def test_route_rejects_non_operator(
     review_session = _make_session(alice_client, db, code="rsp-perm")
 
     bob_client = make_client(bob)
-    response = bob_client.get(
-        f"/operator/sessions/{review_session.public_id}/export/responses.csv"
-    )
+    response = bob_client.get(f"/operator/sessions/{review_session.public_id}/export/responses.csv")
     assert response.status_code in (403, 404)

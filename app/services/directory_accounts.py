@@ -67,7 +67,9 @@ def account_of(outcome: Outcome | None) -> Account | None:
     if not object_id:
         return None
     return Account(
-        object_id=object_id, mail=user.mail, upn=user.user_principal_name,
+        object_id=object_id,
+        mail=user.mail,
+        upn=user.user_principal_name,
         name=user.display_name,
     )
 
@@ -159,7 +161,9 @@ def search(directory: Directory | None, text: str) -> Search:
         users = directory.search_users(prefix)
     except GraphError as exc:
         return Search(None, exc.reason)
-    return Search([Person(name=u.display_name, mail=u.mail, upn=u.user_principal_name) for u in users])
+    return Search(
+        [Person(name=u.display_name, mail=u.mail, upn=u.user_principal_name) for u in users]
+    )
 
 
 def resolver(directory: Directory | None) -> Callable[[str], Account | None]:
@@ -219,9 +223,7 @@ def unchecked(
     keys = {k for k in (key(a) for a in addresses) if k is not None}
     if not checked:
         return frozenset(keys)
-    return frozenset(
-        k for k in keys if (o := outcomes.get(k)) is None or o.status not in ANSWERED
-    )
+    return frozenset(k for k in keys if (o := outcomes.get(k)) is None or o.status not in ANSWERED)
 
 
 #: Why an address went unchecked when there was no delegated token to
@@ -294,7 +296,12 @@ def recipient(row: object) -> str:
 
 
 def account_holder(
-    db: Session, model: Any, *, session_id: int, account: Account | None, exclude_id: int | None = None
+    db: Session,
+    model: Any,
+    *,
+    session_id: int,
+    account: Account | None,
+    exclude_id: int | None = None,
 ) -> Any:
     """The row of ``model``'s roster (`Reviewer`, `Reviewee`, `Observer`)
     in the session already bound to ``account``, other than

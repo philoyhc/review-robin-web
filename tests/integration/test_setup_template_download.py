@@ -47,7 +47,6 @@ DOWNLOAD_URL = "/templates/starter.zip"
 DEMO_URL = "/templates/demo.zip"
 
 
-
 def _files(set_key: str = "starter") -> dict[str, bytes]:
     archive = zipfile.ZipFile(io.BytesIO(build_zip(set_by_key(set_key))))
     return {name: archive.read(name) for name in archive.namelist()}
@@ -142,14 +141,11 @@ def test_the_relationships_template_parses_against_its_own_rosters(
     user = User(email="op@example.edu", display_name="Op")
     db.add(user)
     db.flush()
-    review_session = ReviewSession(
-        name="Templates", code="tpl-parse", created_by_user_id=user.id
-    )
+    review_session = ReviewSession(name="Templates", code="tpl-parse", created_by_user_id=user.id)
     db.add(review_session)
     db.flush()
     reviewers = [
-        Reviewer(session_id=review_session.id, name=r.name, email=r.email)
-        for r in reviewer_rows
+        Reviewer(session_id=review_session.id, name=r.name, email=r.email) for r in reviewer_rows
     ]
     reviewees = [
         Reviewee(
@@ -227,9 +223,7 @@ def test_the_demo_roster_files_parse_with_no_issues() -> None:
         assert result.issues == [], filename
 
 
-def test_the_demo_set_builds_a_validated_session(
-    client: TestClient, db: Session
-) -> None:
+def test_the_demo_set_builds_a_validated_session(client: TestClient, db: Session) -> None:
     """The rung's acceptance test: download -> Quick Setup -> Band 1
     save -> Prepare -> `validated`, through the real import and save
     paths rather than a fixture.
@@ -248,9 +242,7 @@ def test_the_demo_set_builds_a_validated_session(
         follow_redirects=False,
     )
     session_id = db.execute(
-        select(ReviewSession.id).where(
-            ReviewSession.code == "demo-round-trip"
-        )
+        select(ReviewSession.id).where(ReviewSession.code == "demo-round-trip")
     ).scalar_one()
     public_id = must_get(db, ReviewSession, session_id).public_id
 
@@ -276,9 +268,7 @@ def test_the_demo_set_builds_a_validated_session(
 
     review_session = db.get(ReviewSession, session_id)
     assert review_session is not None
-    card = views.build_workflow_card_context(
-        db, review_session, return_to="home"
-    )
+    card = views.build_workflow_card_context(db, review_session, return_to="home")
     # Rosters are in; only the Band 1 links are still Not set.
     assert card["setup_checklist"]["reviewers_ok"] is True
     assert card["setup_checklist"]["reviewees_ok"] is True
@@ -289,8 +279,7 @@ def test_the_demo_set_builds_a_validated_session(
         select(Instrument.id).where(Instrument.session_id == session_id)
     ).scalar_one()
     saved = client.post(
-        f"/operator/sessions/{public_id}"
-        f"/instruments/{instrument_id}/fields/save",
+        f"/operator/sessions/{public_id}/instruments/{instrument_id}/fields/save",
         data={
             "link1_mode": "all",
             "link1_touched": "true",
@@ -304,9 +293,7 @@ def test_the_demo_set_builds_a_validated_session(
     assert saved.status_code == 303
 
     db.expire_all()
-    card = views.build_workflow_card_context(
-        db, review_session, return_to="home"
-    )
+    card = views.build_workflow_card_context(db, review_session, return_to="home")
     assert card["setup_checklist"]["instruments_configured_ok"] is True
     assert card["prepare_visible"] is True
 
@@ -358,25 +345,17 @@ def test_the_demo_set_populates_the_surfaces_it_is_meant_to_show(
 
     demo = set_by_key("demo")
     assert db.scalar(
-        select(func.count()).select_from(Reviewer).where(
-            Reviewer.session_id == session_id
-        )
+        select(func.count()).select_from(Reviewer).where(Reviewer.session_id == session_id)
     ) == len(demo.rows["reviewers"])
     assert db.scalar(
-        select(func.count()).select_from(Reviewee).where(
-            Reviewee.session_id == session_id
-        )
+        select(func.count()).select_from(Reviewee).where(Reviewee.session_id == session_id)
     ) == len(demo.rows["reviewees"])
     assert db.scalar(
-        select(func.count()).select_from(Observer).where(
-            Observer.session_id == session_id
-        )
+        select(func.count()).select_from(Observer).where(Observer.session_id == session_id)
     ) == len(demo.rows["observers"])
 
     assignments = db.scalar(
-        select(func.count()).select_from(Assignment).where(
-            Assignment.session_id == session_id
-        )
+        select(func.count()).select_from(Assignment).where(Assignment.session_id == session_id)
     )
     assert assignments is not None
     assert assignments > len(demo.rows["reviewers"]), assignments

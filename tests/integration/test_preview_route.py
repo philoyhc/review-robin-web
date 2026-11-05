@@ -46,18 +46,14 @@ def reviewer_user() -> AuthenticatedUser:
     )
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "Spring", "code": code},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _populate_rosters(client: TestClient, session_id: int) -> None:
@@ -100,9 +96,7 @@ def _activate(client: TestClient, db: Session, session_id: int) -> None:
     )
 
 
-def test_preview_route_returns_308_to_full_preview(
-    client: TestClient, db: Session
-) -> None:
+def test_preview_route_returns_308_to_full_preview(client: TestClient, db: Session) -> None:
     """``/preview`` (singular) is a permanent redirect. Through
     Segment 11F PR C it pointed at the Previews hub's iframe surface
     card; the Segment 18Q follow-on retired that card and the
@@ -148,9 +142,7 @@ def test_preview_route_redirects_non_operator_to_me(
     assert response.headers["location"] == "/me?notice=organizers"
 
 
-def test_preview_does_not_observe_deadline_side_effect(
-    client: TestClient, db: Session
-) -> None:
+def test_preview_does_not_observe_deadline_side_effect(client: TestClient, db: Session) -> None:
     """Bypassing deadline observation per D9 means an expired deadline
     does NOT trigger the lazy-close path on a preview render. The
     contract carries through the operator-side full preview route:
@@ -168,18 +160,20 @@ def test_preview_does_not_observe_deadline_side_effect(
     review_session.deadline = datetime.now(UTC) - timedelta(hours=1)
     db.flush()
 
-    body = get_full_preview_html(
-        client, review_session.id, "r@example.edu"
-    )
+    body = get_full_preview_html(client, review_session.id, "r@example.edu")
     # Surface still renders without observing the deadline.
     assert f"<h1>{review_session.name}</h1>" in body
 
-    deadline_close = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "instrument.closed",
-            AuditEvent.session_id == review_session.id,
+    deadline_close = (
+        db.execute(
+            select(AuditEvent).where(
+                AuditEvent.event_type == "instrument.closed",
+                AuditEvent.session_id == review_session.id,
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     for ev in deadline_close:
         assert ev.detail is not None
         assert ev.detail.get("reason") != "deadline"
@@ -202,9 +196,7 @@ def test_reviewer_side_surface_still_renders_write_path(
     _activate(operator, db, review_session.id)
 
     reviewer_client = make_client(reviewer_user)
-    body = reviewer_client.get(
-        f"/me/sessions/{review_session.public_id}/1"
-    ).text
+    body = reviewer_client.get(f"/me/sessions/{review_session.public_id}/1").text
 
     # Re-aimed at 19P.6 rung 2. This watched for
     # "Preview — not visible to reviewers", which that rung deleted from
@@ -213,10 +205,6 @@ def test_reviewer_side_surface_still_renders_write_path(
     # reviewer's live surface. It watches the live string now.
     assert "Operator view" not in body
     assert ">Save</button>" in body
-    assert (
-        f'formaction="/me/sessions/{review_session.public_id}/submit?page=1"' in body
-    )
+    assert f'formaction="/me/sessions/{review_session.public_id}/submit?page=1"' in body
     assert ">Cancel</a>" in body
-    assert (
-        f'action="/me/sessions/{review_session.public_id}/1/save"' in body
-    )
+    assert f'action="/me/sessions/{review_session.public_id}/1/save"' in body

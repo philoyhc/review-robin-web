@@ -65,12 +65,16 @@ def test_it_turns_on_only_while_both_rosters_are_empty(client: TestClient, db: S
     _save(client, empty, symmetric_review="true")
     db.refresh(empty)
     assert empty.symmetric_review is True
-    events = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "session.feature_toggled",
-            AuditEvent.session_id == empty.id,
+    events = (
+        db.execute(
+            select(AuditEvent).where(
+                AuditEvent.event_type == "session.feature_toggled",
+                AuditEvent.session_id == empty.id,
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert any("symmetric_review" in str(e.detail) for e in events)
 
 
@@ -80,15 +84,21 @@ def test_it_turns_on_only_while_both_rosters_are_empty(client: TestClient, db: S
 def test_off_is_always_allowed_and_clears_the_links(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, "sym-off", symmetric_review="true")
     reviewer = _add_reviewer(db, review_session)
-    db.add(Reviewee(
-        session_id=review_session.id, name="Ann", email_or_identifier="ann@example.edu",
-        mirrors_reviewer_id=reviewer.id,
-    ))
+    db.add(
+        Reviewee(
+            session_id=review_session.id,
+            name="Ann",
+            email_or_identifier="ann@example.edu",
+            mirrors_reviewer_id=reviewer.id,
+        )
+    )
     db.commit()
     _save(client, review_session)
     db.refresh(review_session)
     assert review_session.symmetric_review is False
-    reviewee = db.execute(select(Reviewee).where(Reviewee.session_id == review_session.id)).scalar_one()
+    reviewee = db.execute(
+        select(Reviewee).where(Reviewee.session_id == review_session.id)
+    ).scalar_one()
     db.refresh(reviewee)
     assert reviewee.mirrors_reviewer_id is None
 
@@ -96,8 +106,8 @@ def test_off_is_always_allowed_and_clears_the_links(client: TestClient, db: Sess
 def _home_box(body: str) -> tuple[str, str]:
     """The Symmetric review chip's label tag and its input tag."""
     at = body.index('name="symmetric_review"')
-    label = body[body.rindex("<label", 0, at):body.index(">", body.rindex("<label", 0, at))]
-    box = body[body.rindex("<input", 0, at):body.index(">", at)]
+    label = body[body.rindex("<label", 0, at) : body.index(">", body.rindex("<label", 0, at))]
+    box = body[body.rindex("<input", 0, at) : body.index(">", at)]
     return label, box
 
 
@@ -115,7 +125,7 @@ def test_on_greys_the_reviewees_slot_and_locks_the_page(client: TestClient, db: 
     review_session = _make_session(client, db, "sym-ui", symmetric_review="true")
     base = f"/operator/sessions/{review_session.public_id}"
     home = client.get(base).text
-    slot = home[home.find('id="quick-setup-reviewees"'):]
+    slot = home[home.find('id="quick-setup-reviewees"') :]
     slot = slot[: slot.find("</section>")]
     assert "data-symmetric-mirrored" in slot and 'name="reviewees_file"' not in slot
     page = client.get(f"{base}/reviewees").text
@@ -134,10 +144,10 @@ def test_off_leaves_the_pages_as_they_were(client: TestClient, db: Session) -> N
 
 def test_new_session_ticks_grey_the_slot_in_the_browser(client: TestClient) -> None:
     body = client.get("/operator/sessions/new").text
-    card = body[body.find('id="user-interface-settings"'):]
+    card = body[body.find('id="user-interface-settings"') :]
     box = card.find('name="symmetric_review"')
     assert box != -1 and box < card.find("Symmetric review\n")
-    slot = body[body.find('id="quick-setup-reviewees"'):]
+    slot = body[body.find('id="quick-setup-reviewees"') :]
     assert "data-symmetric-reason hidden" in slot[: slot.find("</section>")]
     assert "[data-symmetric-reason]" in body
 

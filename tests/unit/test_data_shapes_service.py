@@ -44,9 +44,7 @@ def _user(db: Session, *, email: str = "op@x.edu") -> User:
     return user
 
 
-def _session(
-    db: Session, *, code: str = "ds", actor: User | None = None
-) -> ReviewSession:
+def _session(db: Session, *, code: str = "ds", actor: User | None = None) -> ReviewSession:
     actor = actor or _user(db, email=f"{code}@x.edu")
     review_session = ReviewSession(
         name="DS",
@@ -59,20 +57,14 @@ def _session(
     return review_session
 
 
-def _instrument(
-    db: Session, review_session: ReviewSession
-) -> Instrument:
-    instrument = Instrument(
-        session_id=review_session.id, name="Form", short_label="F"
-    )
+def _instrument(db: Session, review_session: ReviewSession) -> Instrument:
+    instrument = Instrument(session_id=review_session.id, name="Form", short_label="F")
     db.add(instrument)
     db.flush()
     return instrument
 
 
-def _field(
-    db: Session, instrument: Instrument
-) -> InstrumentResponseField:
+def _field(db: Session, instrument: Instrument) -> InstrumentResponseField:
     field = InstrumentResponseField(
         instrument_id=instrument.id,
         field_key="score",
@@ -119,9 +111,7 @@ def test_create_rejects_a_name_longer_than_its_column(db: Session) -> None:
     longer one at flush, a 500 (findings D11)."""
     review_session = _session(db, code="long-name")
     actor = _user(db, email="long-name-actor@x.edu")
-    with pytest.raises(
-        data_shapes.DataShapeValidationError, match="at most 255"
-    ):
+    with pytest.raises(data_shapes.DataShapeValidationError, match="at most 255"):
         data_shapes.create_shape(
             db,
             review_session=review_session,
@@ -145,9 +135,7 @@ def test_create_rejects_invalid_axis(db: Session) -> None:
 def test_create_rejects_empty_columns(db: Session) -> None:
     review_session = _session(db, code="no-cols")
     actor = _user(db, email="no-cols-actor@x.edu")
-    with pytest.raises(
-        data_shapes.DataShapeValidationError, match="column chip"
-    ):
+    with pytest.raises(data_shapes.DataShapeValidationError, match="column chip"):
         data_shapes.create_shape(
             db,
             review_session=review_session,
@@ -165,9 +153,7 @@ def test_create_rejects_instrument_from_other_session(
     session_b = _session(db, code="b")
     instrument_b = _instrument(db, session_b)
     actor = _user(db, email="cross@x.edu")
-    with pytest.raises(
-        data_shapes.DataShapeValidationError, match="Instrument"
-    ):
+    with pytest.raises(data_shapes.DataShapeValidationError, match="Instrument"):
         data_shapes.create_shape(
             db,
             review_session=session_a,
@@ -181,16 +167,12 @@ def test_create_rejects_field_without_instrument(db: Session) -> None:
     instrument = _instrument(db, review_session)
     field = _field(db, instrument)
     actor = _user(db, email="orphan-field-actor@x.edu")
-    with pytest.raises(
-        data_shapes.DataShapeValidationError, match="field"
-    ):
+    with pytest.raises(data_shapes.DataShapeValidationError, match="field"):
         data_shapes.create_shape(
             db,
             review_session=review_session,
             actor=actor,
-            **_make_args(
-                instrument_id=None, response_field_id=field.id
-            ),
+            **_make_args(instrument_id=None, response_field_id=field.id),
         )
 
 
@@ -200,16 +182,12 @@ def test_create_rejects_field_from_other_instrument(db: Session) -> None:
     instr_b = _instrument(db, review_session)
     field_a = _field(db, instr_a)
     actor = _user(db, email="cross-field-actor@x.edu")
-    with pytest.raises(
-        data_shapes.DataShapeValidationError, match="field"
-    ):
+    with pytest.raises(data_shapes.DataShapeValidationError, match="field"):
         data_shapes.create_shape(
             db,
             review_session=review_session,
             actor=actor,
-            **_make_args(
-                instrument_id=instr_b.id, response_field_id=field_a.id
-            ),
+            **_make_args(instrument_id=instr_b.id, response_field_id=field_a.id),
         )
 
 
@@ -292,9 +270,7 @@ def test_update_persists_and_emits_audit(db: Session) -> None:
     )
     # Reset audit events count baseline.
     saved_events_pre = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "session.data_shape_saved"
-        )
+        select(AuditEvent).where(AuditEvent.event_type == "session.data_shape_saved")
     ).all()
     assert len(saved_events_pre) == 1
 
@@ -310,9 +286,7 @@ def test_update_persists_and_emits_audit(db: Session) -> None:
         column_chip_slots=["reviewee:name", "reviewee:email"],
     )
     db.expire_all()
-    refreshed = db.execute(
-        select(DataShape).where(DataShape.id == shape.id)
-    ).scalar_one()
+    refreshed = db.execute(select(DataShape).where(DataShape.id == shape.id)).scalar_one()
     assert refreshed.name == "New"
     assert refreshed.axis == "reviewee"
     assert json.loads(refreshed.column_chip_slots) == [
@@ -321,9 +295,7 @@ def test_update_persists_and_emits_audit(db: Session) -> None:
     ]
 
     saved_events_post = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "session.data_shape_saved"
-        )
+        select(AuditEvent).where(AuditEvent.event_type == "session.data_shape_saved")
     ).all()
     # ``update`` re-emits the same event type with the new
     # snapshot — so the count goes from 1 to 2.
@@ -378,10 +350,7 @@ def test_delete_removes_row_and_emits_audit(db: Session) -> None:
     )
     db.expire_all()
     assert (
-        db.execute(
-            select(DataShape).where(DataShape.id == shape_id)
-        ).scalar_one_or_none()
-        is None
+        db.execute(select(DataShape).where(DataShape.id == shape_id)).scalar_one_or_none() is None
     )
     event = db.execute(
         select(AuditEvent).where(
@@ -435,9 +404,7 @@ def test_get_shape_scoped_to_session(db: Session) -> None:
         actor=actor,
         **_make_args(),
     )
-    assert (
-        data_shapes.get_shape(db, session_a, a_shape.id) is not None
-    )
+    assert data_shapes.get_shape(db, session_a, a_shape.id) is not None
     # ``get_shape`` on the wrong session returns ``None`` —
     # the route uses this to reject cross-session access.
     assert data_shapes.get_shape(db, session_b, a_shape.id) is None

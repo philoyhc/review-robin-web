@@ -23,9 +23,7 @@ def _user(db: Session, email: str) -> User:
 
 
 def _age(db: Session, token: str, *, hours: float) -> None:
-    row = db.execute(
-        select(RehydrateStash).where(RehydrateStash.token == token)
-    ).scalar_one()
+    row = db.execute(select(RehydrateStash).where(RehydrateStash.token == token)).scalar_one()
     row.created_at = datetime.now(UTC) - timedelta(hours=hours)
     db.flush()
 
@@ -57,9 +55,7 @@ def test_expired_token_rejected_and_deleted(db: Session) -> None:
     assert rehydrate_stash.get(db, token=token, user=user) is None
     # The expired row is dropped on the way out.
     assert (
-        db.execute(
-            select(RehydrateStash).where(RehydrateStash.token == token)
-        ).scalar_one_or_none()
+        db.execute(select(RehydrateStash).where(RehydrateStash.token == token)).scalar_one_or_none()
         is None
     )
 

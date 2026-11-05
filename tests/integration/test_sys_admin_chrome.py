@@ -23,6 +23,7 @@ A separate file (`test_outbox_sys_admin_relax.py`) covers the
 sys-admin reach a per-session outbox they aren't a
 ``session_operators`` member of.
 """
+
 from __future__ import annotations
 
 import re
@@ -38,18 +39,14 @@ from app.db.models import ReviewSession, SessionOperator, User
 from app.web.deps import require_sys_admin
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "Spring", "code": code},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _hand_to_another_owner(db: Session, review_session: ReviewSession) -> None:
@@ -135,8 +132,7 @@ def test_sessions_diagnostics_renders_for_sys_admin(
     # (self-add as owner → open), replacing the old back-door link to
     # /edit now that editing a non-owned session requires ownership.
     assert (
-        f'action="/operator/sys-admin/sessions/{review_session.public_id}/adopt"'
-        in response.text
+        f'action="/operator/sys-admin/sessions/{review_session.public_id}/adopt"' in response.text
     )
     assert ">Manage</button>" in response.text
     # 2026-09-08 — the three per-row actions are canonical Secondary
@@ -154,10 +150,7 @@ def test_sessions_diagnostics_renders_for_sys_admin(
     assert "style=" not in actions
     # Status renders as a lifecycle-coloured pill matching the
     # session_setup_status_row partial used on session-home pages.
-    assert (
-        '<span class="pill pill-lifecycle-draft">Draft</span>'
-        in response.text
-    )
+    assert '<span class="pill pill-lifecycle-draft">Draft</span>' in response.text
 
 
 def test_sessions_diagnostics_columns_present(
@@ -176,8 +169,14 @@ def test_sessions_diagnostics_columns_present(
     assert keys == ["name", "code", "created_by", "created", "deadline", "timezone"]
     labels = re.findall(r"<th(?:\s[^>]*)?>([^<]*)", head)
     assert labels == [
-        "Session Name", "Session Code", "Created by", "Created", "Deadline",
-        "Timezone", "Status", "Actions",
+        "Session Name",
+        "Session Code",
+        "Created by",
+        "Created",
+        "Deadline",
+        "Timezone",
+        "Status",
+        "Actions",
     ]
     assert head.count("rrw-sort-btn") == 6
     assert "Last Modified" not in body
@@ -326,9 +325,7 @@ def test_manage_invitations_no_longer_renders_view_outbox_button(
     retired in 16A PR 3 — Outbox is reached via the Admin chrome
     instead. Existing per-session URL stays reachable directly."""
     review_session = _make_session(client, db, code="inv-no-outbox")
-    response = client.get(
-        f"/operator/sessions/{review_session.public_id}/invitations"
-    )
+    response = client.get(f"/operator/sessions/{review_session.public_id}/invitations")
     assert response.status_code == 200
     # The button (an <a class="btn ..." href="...outbox">View outbox</a>)
     # is gone; check for the distinctive ">View outbox</a>" tail.
@@ -376,7 +373,12 @@ def test_system_status_renders_for_sys_admin(
     monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
     response = client.get("/operator/sys-admin/system")
     assert response.status_code == 200
-    for card in ("data-system-clock", "data-system-due", "data-system-sending", "data-system-instance"):
+    for card in (
+        "data-system-clock",
+        "data-system-due",
+        "data-system-sending",
+        "data-system-instance",
+    ):
         assert card in response.text
     # The tab is active here, and the other two link away.
     assert re.search(
@@ -421,7 +423,9 @@ def test_system_status_clock_card_reads_the_clock(
 
     monkeypatch.setattr(settings, "scheduler_interval_seconds", 120)
     monkeypatch.setattr(
-        _clock, "_status", _clock.ClockStatus(since=_clock.clock_status().since, running=True, interval_seconds=120)
+        _clock,
+        "_status",
+        _clock.ClockStatus(since=_clock.clock_status().since, running=True, interval_seconds=120),
     )
     response = client.get("/operator/sys-admin/system")
     assert 'data-clock-state="on"' in response.text
@@ -437,7 +441,13 @@ def test_system_status_due_card_renders_its_rows(
     monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
     response = client.get("/operator/sys-admin/system")
     assert response.status_code == 200
-    for row in ("data-due-start", "data-due-close", "data-due-release", "data-due-now", "data-due-failed"):
+    for row in (
+        "data-due-start",
+        "data-due-close",
+        "data-due-release",
+        "data-due-now",
+        "data-due-failed",
+    ):
         assert row in response.text
     assert "Nothing scheduled" in response.text
 

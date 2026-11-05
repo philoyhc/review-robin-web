@@ -64,17 +64,19 @@ _SHORT_LABEL_MAX = 32
 _COPY_LABEL_PREFIX = "Copy of "
 
 
-def ensure_default_instrument(
-    db: Session, review_session: ReviewSession
-) -> Instrument:
+def ensure_default_instrument(db: Session, review_session: ReviewSession) -> Instrument:
     """Return the session's Default Instrument, creating it if missing,
     and ensuring it carries the default response fields and the locked
     Name / Email Display Fields rows."""
-    instrument = db.execute(
-        select(Instrument)
-        .where(Instrument.session_id == review_session.id)
-        .order_by(Instrument.id)
-    ).scalars().first()
+    instrument = (
+        db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.id)
+        )
+        .scalars()
+        .first()
+    )
 
     if instrument is None:
         instrument = Instrument(
@@ -195,16 +197,12 @@ def is_untouched_default(instrument: Instrument) -> bool:
     return True
 
 
-def ensure_locked_display_fields(
-    db: Session, *, instrument: Instrument
-) -> int:
+def ensure_locked_display_fields(db: Session, *, instrument: Instrument) -> int:
     """Idempotently seed the two locked Display Fields rows
     (RevieweeName, RevieweeEmail) on the given instrument. Returns the
     number of new rows created (0, 1, or 2). Rows that already exist
     are left alone — including their operator-typed labels."""
-    existing_pairs = {
-        (f.source_type, f.source_field) for f in instrument.display_fields
-    }
+    existing_pairs = {(f.source_type, f.source_field) for f in instrument.display_fields}
     created = 0
     if ("reviewee", "name") not in existing_pairs:
         # New locked rows shift any existing rows up by 2 (or 1 if only
@@ -241,7 +239,6 @@ def ensure_locked_display_fields(
         db.flush()
         db.refresh(instrument)
     return created
-
 
 
 def repair_display_fields(db: Session, review_session: ReviewSession) -> bool:
@@ -314,16 +311,16 @@ def create_instrument(
             select(Instrument)
             .where(Instrument.session_id == review_session.id)
             .order_by(Instrument.order, Instrument.id)
-        ).scalars().all()
+        )
+        .scalars()
+        .all()
     )
 
     new_order: int
     if after_instrument_id is None:
         new_order = (existing[-1].order + 1) if existing else 0
     else:
-        anchor = next(
-            (i for i in existing if i.id == after_instrument_id), None
-        )
+        anchor = next((i for i in existing if i.id == after_instrument_id), None)
         if anchor is None:
             new_order = (existing[-1].order + 1) if existing else 0
         else:
@@ -483,9 +480,7 @@ def replicate_instrument(
     instrument.rule_set_id = _clone_rule_set(db, source, instrument, actor)
 
     source_fields = db.execute(
-        select(InstrumentResponseField).where(
-            InstrumentResponseField.instrument_id == source.id
-        )
+        select(InstrumentResponseField).where(InstrumentResponseField.instrument_id == source.id)
     ).scalars()
     # 19T Item 10 — a governed field's parent is re-pointed at the
     # parent's copy once every field has one; the condition is copied
@@ -499,11 +494,7 @@ def replicate_instrument(
             label=field.label,
             required=field.required,
             order=field.order,
-            validation=(
-                dict(field.validation)
-                if field.validation is not None
-                else None
-            ),
+            validation=(dict(field.validation) if field.validation is not None else None),
             help_text=field.help_text,
             help_text_visible=field.help_text_visible,
             visible=field.visible,
@@ -526,9 +517,7 @@ def replicate_instrument(
         for copy, source_parent_id in governed:
             copy.branch_parent_id = copy_of[source_parent_id].id
     source_displays = db.execute(
-        select(InstrumentDisplayField).where(
-            InstrumentDisplayField.instrument_id == source.id
-        )
+        select(InstrumentDisplayField).where(InstrumentDisplayField.instrument_id == source.id)
     ).scalars()
     display_copy_of: dict[int, InstrumentDisplayField] = {}
     for display in source_displays:
@@ -545,9 +534,7 @@ def replicate_instrument(
     db.flush()
     display_ids = {old: new.id for old, new in display_copy_of.items()}
     field_ids = {old: new.id for old, new in copy_of.items()}
-    instrument.sort_display_fields = repoint_sort(
-        source.sort_display_fields, display_ids
-    )
+    instrument.sort_display_fields = repoint_sort(source.sort_display_fields, display_ids)
     instrument.column_widths = repoint_widths(
         source.column_widths, display_ids=display_ids, field_ids=field_ids
     )
@@ -605,11 +592,15 @@ def copy_view_policies(
     cell's one permitted mode where off is not allowed."""
     from app.services import visibility_policies as vp
 
-    policies = db.execute(
-        select(InstrumentViewPolicy)
-        .where(InstrumentViewPolicy.instrument_id == source.id)
-        .order_by(InstrumentViewPolicy.audience)
-    ).scalars().all()
+    policies = (
+        db.execute(
+            select(InstrumentViewPolicy)
+            .where(InstrumentViewPolicy.instrument_id == source.id)
+            .order_by(InstrumentViewPolicy.audience)
+        )
+        .scalars()
+        .all()
+    )
     for policy in policies:
         if policy.audience not in vp.AUDIENCES:
             continue
@@ -629,9 +620,7 @@ def copy_view_policies(
             # today). A future cell with several modes and no off would
             # need a decision here, not the alphabetical first.
             if mode not in allowed:
-                mode = None if None in allowed else sorted(
-                    m for m in allowed if m is not None
-                )[0]
+                mode = None if None in allowed else sorted(m for m in allowed if m is not None)[0]
             modes[window] = mode
         # The reviewer-identity level travels with the row
         # (``guide/profilelink_updates.md`` Item 2); a stored value
@@ -680,10 +669,7 @@ def _clone_rule_set(
     clone = SessionRuleSet(
         session_id=replica.session_id,
         name=_band1_rule_set_name(db, replica),
-        description=(
-            f"Auto-managed by Band 1 of new-model instrument "
-            f"#{replica.id}."
-        ),
+        description=(f"Auto-managed by Band 1 of new-model instrument #{replica.id}."),
         combinator=original.combinator,
         exclude_self_reviews=original.exclude_self_reviews,
         seed=original.seed,
@@ -694,10 +680,7 @@ def _clone_rule_set(
     audit.write_event(
         db,
         event_type="session_rule_set.created",
-        summary=(
-            f"Copied Band 1 RuleSet for replicated instrument "
-            f"{_instrument_label(replica)}"
-        ),
+        summary=(f"Copied Band 1 RuleSet for replicated instrument {_instrument_label(replica)}"),
         actor_user_id=actor.id if actor else None,
         session=replica.session,
         payload=audit.snapshot(
@@ -749,9 +732,7 @@ def delete_instrument(
         .where(Instrument.session_id == review_session.id)
     ).scalar_one()
     if total <= 1:
-        raise LastInstrumentError(
-            "Cannot delete the last instrument"
-        )
+        raise LastInstrumentError("Cannot delete the last instrument")
     lifecycle.invalidate_if_validated(
         db, review_session=review_session, user=actor, reason="instrument_deleted"
     )
@@ -768,7 +749,9 @@ def delete_instrument(
             select(Instrument)
             .where(Instrument.session_id == review_session.id)
             .order_by(Instrument.order, Instrument.id)
-        ).scalars().all()
+        )
+        .scalars()
+        .all()
     )
     for idx, inst in enumerate(remaining):
         if inst.order != idx:
@@ -781,9 +764,7 @@ def delete_instrument(
         summary=f"Deleted instrument {deleted_label}",
         actor_user_id=actor.id if actor else None,
         session=review_session,
-        payload=audit.snapshot(
-            {"id": deleted_id, "name": deleted_name, "order": deleted_order}
-        ),
+        payload=audit.snapshot({"id": deleted_id, "name": deleted_name, "order": deleted_order}),
         refs={"instrument_id": deleted_id},
     )
     db.commit()
@@ -848,9 +829,7 @@ def update_short_label(
     cleaned = short_label.strip() if isinstance(short_label, str) else None
     new_value = cleaned or None
     if new_value is not None and len(new_value) > 32:
-        raise ValueError(
-            f"short_label exceeds 32 chars: {len(new_value)}"
-        )
+        raise ValueError(f"short_label exceeds 32 chars: {len(new_value)}")
     if instrument.short_label == new_value:
         return instrument  # no-op; no audit, no invalidate
     lifecycle.invalidate_if_validated(
@@ -865,9 +844,7 @@ def update_short_label(
     audit.write_event(
         db,
         event_type="instrument.short_label_updated",
-        summary=(
-            f"Updated short_label on instrument {_instrument_label(instrument)}"
-        ),
+        summary=(f"Updated short_label on instrument {_instrument_label(instrument)}"),
         actor_user_id=actor.id if actor else None,
         session=instrument.session,
         payload=audit.changes({"short_label": [old_value, new_value]}),
@@ -898,11 +875,14 @@ def is_configured(db: Session, instrument: Instrument) -> bool:
       forces the operator to acknowledge them on the card before
       the workflow card lights up as ready.
     """
-    visible_count = db.scalar(
-        select(func.count(InstrumentResponseField.id))
-        .where(InstrumentResponseField.instrument_id == instrument.id)
-        .where(InstrumentResponseField.visible.is_(True))
-    ) or 0
+    visible_count = (
+        db.scalar(
+            select(func.count(InstrumentResponseField.id))
+            .where(InstrumentResponseField.instrument_id == instrument.id)
+            .where(InstrumentResponseField.visible.is_(True))
+        )
+        or 0
+    )
     if visible_count <= 0:
         return False
     touched = set(instrument.band1_touched_links or [])
@@ -923,20 +903,14 @@ def configured_counts(db: Session, session_id: int) -> tuple[int, int]:
     returns ``(0, 0)``.
     """
     instruments = list(
-        db.execute(
-            select(Instrument).where(Instrument.session_id == session_id)
-        ).scalars()
+        db.execute(select(Instrument).where(Instrument.session_id == session_id)).scalars()
     )
     if not instruments:
         return (0, 0)
     # Batched: which instruments have at least one visible response field?
     rows = db.execute(
         select(InstrumentResponseField.instrument_id)
-        .where(
-            InstrumentResponseField.instrument_id.in_(
-                [inst.id for inst in instruments]
-            )
-        )
+        .where(InstrumentResponseField.instrument_id.in_([inst.id for inst in instruments]))
         .where(InstrumentResponseField.visible.is_(True))
         .distinct()
     ).all()
@@ -1088,9 +1062,7 @@ def set_group_boundary(
     """
     lifecycle.require_editable(db, instrument.session)
     if instrument.group_kind is None:
-        raise ValueError(
-            "set_group_boundary is only valid on a group-scoped instrument."
-        )
+        raise ValueError("set_group_boundary is only valid on a group-scoped instrument.")
     new_value = encode_group_kind(boundary_pairs)
     if instrument.group_kind == new_value:
         return instrument
@@ -1113,26 +1085,19 @@ def set_group_boundary(
         recompute_self_review_classification,
     )
 
-    recompute_self_review_classification(
-        db, session_id=instrument.session_id
-    )
+    recompute_self_review_classification(db, session_id=instrument.session_id)
     defuncted = _reconcile_regrouped(
         db, instrument, groups_before, acknowledged_loss=acknowledged_loss
     )
     audit.write_event(
         db,
         event_type="instrument.group_boundary_updated",
-        summary=(
-            f"Updated group boundary on instrument "
-            f"{_instrument_label(instrument)}"
-        ),
+        summary=(f"Updated group boundary on instrument {_instrument_label(instrument)}"),
         actor_user_id=actor.id if actor else None,
         session=instrument.session,
         payload=audit.changes({"group_kind": [old_value, new_value]}),
         refs={"instrument_id": instrument.id},
-        context=(
-            {"defuncted_group_responses": defuncted} if defuncted else None
-        ),
+        context=({"defuncted_group_responses": defuncted} if defuncted else None),
     )
     db.commit()
     return instrument
@@ -1170,15 +1135,9 @@ def set_unit_of_review(
     elif mode == "grouped":
         new_value = encode_group_kind(boundary_pairs)
     else:
-        raise ValueError(
-            f"unit_of_review mode must be 'individual' or 'grouped'; "
-            f"got {mode!r}"
-        )
+        raise ValueError(f"unit_of_review mode must be 'individual' or 'grouped'; got {mode!r}")
     existing_touched = set(instrument.band1_touched_links or [])
-    desired_touched = (
-        (existing_touched | {"link3"}) if touched
-        else (existing_touched - {"link3"})
-    )
+    desired_touched = (existing_touched | {"link3"}) if touched else (existing_touched - {"link3"})
     if desired_touched != existing_touched:
         instrument.band1_touched_links = sorted(desired_touched)
         db.flush()
@@ -1202,9 +1161,7 @@ def set_unit_of_review(
         recompute_self_review_classification,
     )
 
-    recompute_self_review_classification(
-        db, session_id=instrument.session_id
-    )
+    recompute_self_review_classification(db, session_id=instrument.session_id)
     defuncted = _reconcile_regrouped(
         db, instrument, groups_before, acknowledged_loss=acknowledged_loss
     )
@@ -1220,9 +1177,7 @@ def set_unit_of_review(
         session=instrument.session,
         payload=audit.changes({"group_kind": [old_value, new_value]}),
         refs={"instrument_id": instrument.id},
-        context=(
-            {"defuncted_group_responses": defuncted} if defuncted else None
-        ),
+        context=({"defuncted_group_responses": defuncted} if defuncted else None),
     )
     return instrument
 
@@ -1258,15 +1213,11 @@ def set_column_widths(
     sanitised: dict[str, int] = {}
     for raw_key, raw_value in (widths or {}).items():
         key = str(raw_key).strip()
-        if (
-            key != "identity"
-            and not key.startswith("df_")
-            and not key.startswith("rf_")
-        ):
+        if key != "identity" and not key.startswith("df_") and not key.startswith("rf_"):
             continue
         if key.startswith("df_"):
             try:
-                field_id = int(key[len("df_"):])
+                field_id = int(key[len("df_") :])
             except (TypeError, ValueError):
                 continue
             if field_id not in valid_display_field_ids:
@@ -1278,7 +1229,7 @@ def set_column_widths(
             # ids the same way df_ keys validate against display field
             # ids.
             try:
-                field_id = int(key[len("rf_"):])
+                field_id = int(key[len("rf_") :])
             except (TypeError, ValueError):
                 continue
             if field_id not in valid_response_field_ids:
@@ -1304,14 +1255,11 @@ def set_column_widths(
         db,
         event_type="instrument.column_widths_updated",
         summary=(
-            f"Updated reviewer-surface column widths on instrument "
-            f"{_instrument_label(instrument)}"
+            f"Updated reviewer-surface column widths on instrument {_instrument_label(instrument)}"
         ),
         actor_user_id=actor.id if actor else None,
         session=instrument.session,
-        payload=audit.changes(
-            {"column_widths": [old_value, new_value]}
-        ),
+        payload=audit.changes({"column_widths": [old_value, new_value]}),
         refs={"instrument_id": instrument.id},
     )
     return instrument
@@ -1360,10 +1308,7 @@ def set_intro_layout(
     audit.write_event(
         db,
         event_type="instrument.intro_layout_updated",
-        summary=(
-            f"Set the intro layout on instrument "
-            f"{_instrument_label(instrument)} to {value}"
-        ),
+        summary=(f"Set the intro layout on instrument {_instrument_label(instrument)} to {value}"),
         actor_user_id=actor.id if actor else None,
         session=instrument.session,
         payload=audit.changes({"intro_layout": [old_value, value]}),

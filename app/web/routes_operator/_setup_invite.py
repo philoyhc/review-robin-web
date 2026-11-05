@@ -42,9 +42,7 @@ def _require_editable_templates(review_session: ReviewSession) -> None:
         )
 
 
-def _build_field_rows(
-    review_session: ReviewSession, template: str
-) -> list[dict[str, Any]]:
+def _build_field_rows(review_session: ReviewSession, template: str) -> list[dict[str, Any]]:
     """For each (field, key, default) tuple on the active template,
     return the dict the editor template iterates over to render
     each editable field plus its per-field "Reset to default" link.
@@ -92,9 +90,7 @@ def setupinvite_form(
                 email_templates.responses_received_enabled(review_session)
             ),
             "locked": lifecycle.is_archived(review_session),
-            "breadcrumbs": breadcrumbs.operator_session_child(
-                review_session, "Email Template"
-            ),
+            "breadcrumbs": breadcrumbs.operator_session_child(review_session, "Email Template"),
         },
     )
 
@@ -115,9 +111,7 @@ async def setupinvite_save(
     _require_editable_templates(review_session)
     form = await request.form()
     # The lock waits off the event loop (``spec/lifecycle.md``).
-    review_session = await run_in_threadpool(
-        email_templates.lock_for_edit, db, review_session
-    )
+    review_session = await run_in_threadpool(email_templates.lock_for_edit, db, review_session)
     updates: dict[str, str | None] = {}
     for spec in email_templates.TEMPLATE_FIELDS[template]:
         raw = form.get(spec["field"])
@@ -148,7 +142,8 @@ async def setupinvite_save(
         correlation_id=request_correlation_id(),
     )
     db.commit()
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url=f"/operator/sessions/{review_session.public_id}/setup-invite?template={template}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -156,7 +151,8 @@ async def setupinvite_save(
 
 @router.post("/sessions/{session_id}/setup-invite/reset")
 def setupinvite_reset(
-    request: Request, template: str = Form(...),
+    request: Request,
+    template: str = Form(...),
     field: str = Form(...),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
@@ -189,10 +185,8 @@ def setupinvite_reset(
         correlation_id=request_correlation_id(),
     )
     db.commit()
-    return urls.redirect(request,
-        url=(
-            f"/operator/sessions/{review_session.public_id}/setup-invite"
-            f"?template={template}"
-        ),
+    return urls.redirect(
+        request,
+        url=(f"/operator/sessions/{review_session.public_id}/setup-invite?template={template}"),
         status_code=status.HTTP_303_SEE_OTHER,
     )

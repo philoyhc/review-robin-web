@@ -43,13 +43,18 @@ def _grant_tabs(v: sample.Viewer) -> list[tuple[str, str]]:
 def home_flags(v: sample.Viewer) -> bool:
     """A recipient off the frontline without Overview finds the flags on
     Home; one with Overview finds them there."""
-    return sample.holds(v, sample.RECIPIENT) and not sample.holds(v, sample.FRONTLINE, sample.SENIOR, *sample.VIEW)
+    return sample.holds(v, sample.RECIPIENT) and not sample.holds(
+        v, sample.FRONTLINE, sample.SENIOR, *sample.VIEW
+    )
 
 
 def destinations(v: sample.Viewer) -> list[dict[str, str]]:
     """Where Home sends a viewer off the frontline: each grant's tab, and
     Sys admin."""
-    found = [{"label": label, "path": path, "query": sample.as_query(v)} for label, path in _grant_tabs(v)]
+    found = [
+        {"label": label, "path": path, "query": sample.as_query(v)}
+        for label, path in _grant_tabs(v)
+    ]
     if sample.holds(v, *sample.ADMINISTRATION):
         found.append({"label": SYS_ADMIN_AREA, "path": "/sys-admin/", "query": sample.as_query(v)})
     return found
@@ -76,8 +81,12 @@ def tabs_for(v: sample.Viewer) -> tuple[dict[str, str | int], ...]:
     tabs = ([("Home", "/")] if home_is_a_page(v) else []) + _grant_tabs(v)
     count = sample.unacknowledged(v)
     return tuple(
-        {"label": label, "path": path, "query": sample.as_query(v),
-         "badge": count if path == flags_tab(v) and count else 0}
+        {
+            "label": label,
+            "path": path,
+            "query": sample.as_query(v),
+            "badge": count if path == flags_tab(v) and count else 0,
+        }
         for label, path in tabs
     )
 
@@ -90,7 +99,10 @@ SYS_ADMIN_TABS = (
 
 
 def sys_admin_tabs(v: sample.Viewer) -> tuple[dict[str, str], ...]:
-    return tuple({"label": label, "path": path, "query": sample.as_query(v)} for label, path in SYS_ADMIN_TABS)
+    return tuple(
+        {"label": label, "path": path, "query": sample.as_query(v)}
+        for label, path in SYS_ADMIN_TABS
+    )
 
 
 def reaches_main(v: sample.Viewer) -> bool:
@@ -119,7 +131,9 @@ def reaches_student(me: sample.Viewer, sid: str) -> bool:
 
 def query(me: sample.Viewer, **params: str) -> str:
     """A query string carrying the sample viewer and ``params``, or empty."""
-    pairs = ([("as", me.name)] if me != sample.DEFAULT else []) + [(k, v) for k, v in params.items() if v]
+    pairs = ([("as", me.name)] if me != sample.DEFAULT else []) + [
+        (k, v) for k, v in params.items() if v
+    ]
     return "?" + urlencode(pairs, quote_via=quote) if pairs else ""
 
 
@@ -149,7 +163,12 @@ def render(
             "top_line": top_line(sample.UNIT_NAME),
             "area": area,
             # Sys admin is the account's, in its menu, not a place (§4).
-            **dict(zip(("areas", "account_links"), split_areas(areas_for(me) if areas is None else areas))),
+            **dict(
+                zip(
+                    ("areas", "account_links"),
+                    split_areas(areas_for(me) if areas is None else areas),
+                )
+            ),
             "tabs": tabs,
             "viewer": identity,
             "initials": initials(identity.display_label) if identity else "?",
@@ -159,7 +178,10 @@ def render(
             "sample": sample,
             # The viewer switch goes to each person's Home, which sends them
             # where they belong.
-            "viewer_choices": [{"name": v.name, "what": sample.what(v), "path": "/" + sample.as_query(v)} for v in sample.VIEWERS],
+            "viewer_choices": [
+                {"name": v.name, "what": sample.what(v), "path": "/" + sample.as_query(v)}
+                for v in sample.VIEWERS
+            ],
             **context,
         },
         status_code=status_code,
@@ -170,13 +192,24 @@ def forbidden(request: Request, me: sample.Viewer) -> Response:
     """The `403` page: a linked viewer with no grant at all, or at a page
     their grants do not reach (`residentialapps/spec/applications.md`)."""
     if reaches_main(me):
-        return render(request, "supportlogs/forbidden.html", me=me, area=MAIN, tabs=tabs_for(me), status_code=403)
+        return render(
+            request,
+            "supportlogs/forbidden.html",
+            me=me,
+            area=MAIN,
+            tabs=tabs_for(me),
+            status_code=403,
+        )
     area = SYS_ADMIN_AREA if sample.holds(me, *sample.ADMINISTRATION) else MAIN
     tabs = sys_admin_tabs(me) if area == SYS_ADMIN_AREA else ()
-    return render(request, "supportlogs/forbidden.html", me=me, area=area, tabs=tabs, status_code=403)
+    return render(
+        request, "supportlogs/forbidden.html", me=me, area=area, tabs=tabs, status_code=403
+    )
 
 
-def gated(request: Request, template: str, *grants: str, area: str = MAIN, **context: Any) -> Response:
+def gated(
+    request: Request, template: str, *grants: str, area: str = MAIN, **context: Any
+) -> Response:
     """A page for the sample viewer, or the `403` page when they hold none
     of the grants it needs."""
     me = sample.viewer(request.query_params.get("as"))
@@ -193,4 +226,3 @@ def records_unlocked(request: Request) -> bool:
     in the address, so leaving the page locks it again."""
     q = request.query_params
     return q.get("records") == "open" and q.get("understood") == "yes"
-

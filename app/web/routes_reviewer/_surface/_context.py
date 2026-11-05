@@ -6,6 +6,7 @@ in the package — plus the small loaders and the write gate
 (operator-side full preview) is honored here so the operator path
 renders against identical plumbing without mutating session state.
 """
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -71,9 +72,7 @@ def _load_assignments_with_relations(
 
 
 def _instruments_for_session(db: Session, session_id: int) -> dict[int, Instrument]:
-    rows = db.execute(
-        select(Instrument).where(Instrument.session_id == session_id)
-    ).scalars()
+    rows = db.execute(select(Instrument).where(Instrument.session_id == session_id)).scalars()
     return {i.id: i for i in rows}
 
 
@@ -134,23 +133,17 @@ def page_assignments_for(
     if not 1 <= page_n <= len(pages):
         return []
     return responses_service.page_assignments(
-        _load_assignments_with_relations(
-            db, session_id=review_session.id, reviewer_id=reviewer.id
-        ),
+        _load_assignments_with_relations(db, session_id=review_session.id, reviewer_id=reviewer.id),
         {inst.id for inst in pages[page_n - 1]},
     )
 
 
-def _write_refusal(
-    db: Session, review_session: ReviewSession, reviewer: Reviewer
-) -> str | None:
+def _write_refusal(db: Session, review_session: ReviewSession, reviewer: Reviewer) -> str | None:
     """Why the reviewer can't Save / Submit / Clear right now, as one of
     the ``REFUSED_*`` causes (``views/_refused_write.py``, which also
     words them), or ``None`` when every instrument they would write to
     is accepting."""
-    lifecycle.observe_deadline(
-        db, review_session, correlation_id=request_correlation_id()
-    )
+    lifecycle.observe_deadline(db, review_session, correlation_id=request_correlation_id())
     db.refresh(review_session)
     if lifecycle.is_expired(review_session):
         return REFUSED_CLOSED
@@ -176,9 +169,7 @@ def _write_refusal(
     return None
 
 
-def _race_refusal(
-    db: Session, review_session: ReviewSession, reviewer: Reviewer
-) -> str:
+def _race_refusal(db: Session, review_session: ReviewSession, reviewer: Reviewer) -> str:
     """The cause to show when the service refused a write the route's
     check let through, because the session closed or was reverted in
     between (findings L3): the write's transaction is rolled back and
@@ -215,9 +206,7 @@ def _surface_context(
     # Save/Discard/Submit as inert disabled buttons, so the
     # ``accepting=True`` override cannot leak writes.
     if not preview_mode:
-        lifecycle.observe_deadline(
-            db, review_session, correlation_id=request_correlation_id()
-        )
+        lifecycle.observe_deadline(db, review_session, correlation_id=request_correlation_id())
         db.refresh(review_session)
     assignments = _load_assignments_with_relations(
         db, session_id=review_session.id, reviewer_id=reviewer.id
@@ -252,9 +241,7 @@ def _surface_context(
     # identity cell rather than as separate columns. Segment 13B
     # PR 1's sort needs the full set so an operator can sort by
     # the Reviewee column.
-    all_display_fields_by_instrument: dict[
-        int, list[InstrumentDisplayField]
-    ] = {}
+    all_display_fields_by_instrument: dict[int, list[InstrumentDisplayField]] = {}
     if instrument_ids:
         stmt = (
             select(InstrumentDisplayField)
@@ -262,15 +249,11 @@ def _surface_context(
             .order_by(InstrumentDisplayField.order, InstrumentDisplayField.id)
         )
         for field in db.execute(stmt).scalars():
-            all_display_fields_by_instrument.setdefault(
-                field.instrument_id, []
-            ).append(field)
+            all_display_fields_by_instrument.setdefault(field.instrument_id, []).append(field)
 
     response_rows: dict[tuple[int, int], Response] = {}
     if assignments:
-        stmt = select(Response).where(
-            Response.assignment_id.in_([a.id for a in assignments])
-        )
+        stmt = select(Response).where(Response.assignment_id.in_([a.id for a in assignments]))
         for r in db.execute(stmt).scalars():
             response_rows[(r.assignment_id, r.response_field_id)] = r
 
@@ -302,18 +285,14 @@ def _surface_context(
         dropped_fields = sorted(set(dropped_fields))
 
     instruments = _instruments_for_session(db, review_session.id)
-    pair_context_lookup = relationships_service.pair_context_lookup(
-        db, review_session.id
-    )
+    pair_context_lookup = relationships_service.pair_context_lookup(db, review_session.id)
 
     # G10 (author's ruling, 2026-10-01): once an instrument no longer
     # accepts, the reviewer's own saved values show only as the
     # instrument's peer_reviewer visibility policy allows, and never once
     # the session is archived (``visibility_policies
     # .reviewer_sees_own_responses``).
-    peer_policies = visibility_policies.peer_reviewer_policies(
-        db, instrument_ids
-    )
+    peer_policies = visibility_policies.peer_reviewer_policies(db, instrument_ids)
     rows_by_instrument: dict[int, list[SurfaceRow]] = {}
     any_accepting = False
     any_closed_with_hidden_values = False
@@ -323,12 +302,7 @@ def _surface_context(
         instrument = instruments.get(assignment.instrument_id)
         accepting = bool(
             instrument
-            and (
-                preview_mode
-                or lifecycle.session_accepts_responses(
-                    review_session, instrument
-                )
-            )
+            and (preview_mode or lifecycle.session_accepts_responses(review_session, instrument))
         )
         if accepting:
             any_accepting = True
@@ -347,11 +321,7 @@ def _surface_context(
             existing = response_rows.get((assignment.id, field.id))
             # In the form a Save posts, so an unedited re-save of an
             # older or imported form is no change (findings R2).
-            value = (
-                responses_service.stored_as_posted(existing.value, field)
-                if existing
-                else ""
-            )
+            value = responses_service.stored_as_posted(existing.value, field) if existing else ""
             # On a re-render after server-side validation, the user's
             # typed-but-invalid value (which never reached the DB) wins
             # so they can correct it in place.
@@ -413,13 +383,13 @@ def _surface_context(
         missing_count = completion.missing_count
         latest_submitted = completion.latest_submitted_at
         display_cells: list[dict[str, object]] = []
-        for display_field in display_fields_by_instrument.get(
-            assignment.instrument_id, []
-        ):
+        for display_field in display_fields_by_instrument.get(assignment.instrument_id, []):
             display_cells.append(
                 {
                     "field": display_field,
-                    "label": instruments_service.display_field_label(display_field, session=review_session),
+                    "label": instruments_service.display_field_label(
+                        display_field, session=review_session
+                    ),
                     "value": instruments_service.display_field_value(
                         display_field,
                         assignment,
@@ -443,9 +413,7 @@ def _surface_context(
                 assignment,
                 pair_context_lookup=pair_context_lookup,
             )
-            for df in all_display_fields_by_instrument.get(
-                assignment.instrument_id, []
-            )
+            for df in all_display_fields_by_instrument.get(assignment.instrument_id, [])
         }
         rows_by_instrument.setdefault(assignment.instrument_id, []).append(
             {
@@ -512,7 +480,7 @@ def _surface_context(
         if is_group:
             from app.services.instruments import GROUP_IDENTITY_SORT_KEY
 
-            for entry in (instrument.sort_display_fields or []):
+            for entry in instrument.sort_display_fields or []:
                 if entry.get("display_field_id") == GROUP_IDENTITY_SORT_KEY:
                     if entry.get("dir") == "desc":
                         group_rows = list(reversed(group_rows))
@@ -522,10 +490,7 @@ def _surface_context(
             # fields the visible-cells filter excludes — so the
             # operator can sort by Reviewee name.
             known_display_field_ids = {
-                df.id
-                for df in all_display_fields_by_instrument.get(
-                    instrument_id, []
-                )
+                df.id for df in all_display_fields_by_instrument.get(instrument_id, [])
             }
             # Effective sort spec for this instrument (Segment 13B
             # Part 2 PR 5):
@@ -541,14 +506,10 @@ def _surface_context(
                 cookies=cookies or {},
                 session_id=review_session.public_id,
                 instrument_seq=instrument.session_seq,
-                display_fields=all_display_fields_by_instrument.get(
-                    instrument_id, []
-                ),
+                display_fields=all_display_fields_by_instrument.get(instrument_id, []),
             )
             effective_spec = (
-                cookie_spec
-                if cookie_spec is not None
-                else instrument.sort_display_fields
+                cookie_spec if cookie_spec is not None else instrument.sort_display_fields
             )
             group_rows = views.order_rows_by_sort_spec(
                 group_rows,
@@ -557,9 +518,7 @@ def _surface_context(
                 known_display_field_ids=known_display_field_ids,
             )
         fields = fields_by_instrument.get(instrument_id, [])
-        help_block_items = [
-            f for f in fields if f.help_text and f.help_text_visible
-        ]
+        help_block_items = [f for f in fields if f.help_text and f.help_text_visible]
         heading = views.instrument_heading(
             instrument=instrument,
             position=position_by_id[instrument_id],
@@ -581,12 +540,9 @@ def _surface_context(
             else [
                 {
                     "field": df,
-                    "label": instruments_service.display_field_label(
-                        df, session=review_session
-                    ),
+                    "label": instruments_service.display_field_label(df, session=review_session),
                     "is_profile_link": (
-                        df.source_type == "reviewee"
-                        and df.source_field == "profile_link"
+                        df.source_type == "reviewee" and df.source_field == "profile_link"
                     ),
                     "width_px": widths_by_col_key.get(f"df_{df.id}"),
                 }
@@ -634,9 +590,7 @@ def _surface_context(
     # ``_session_status`` for the lead rollup pill (Submitted /
     # Saved-not-submitted / Draft).
     page_statuses: list[PageStatus] = []
-    instrument_groups_by_id = {
-        g["instrument"].id: g for g in instrument_groups
-    }
+    instrument_groups_by_id = {g["instrument"].id: g for g in instrument_groups}
     for inst in sorted(instruments.values(), key=lambda i: (i.order, i.id)):
         if inst.id not in instrument_groups_by_id:
             continue
@@ -647,9 +601,7 @@ def _surface_context(
             PageStatus(
                 position=position,
                 label=label,
-                state=_page_status_for_group(
-                    instrument_groups_by_id[inst.id]["rows"]
-                ),
+                state=_page_status_for_group(instrument_groups_by_id[inst.id]["rows"]),
             )
         )
 
@@ -664,18 +616,15 @@ def _surface_context(
     pages = _pages_for_session(db, review_session.id)
     page_count = len(pages) or 1
     safe_page_n = page_n if 1 <= page_n <= page_count else 1
-    current_page_instrument_ids: set[int] = {
-        inst.id for inst in pages[safe_page_n - 1]
-    } if pages else set()
+    current_page_instrument_ids: set[int] = (
+        {inst.id for inst in pages[safe_page_n - 1]} if pages else set()
+    )
     instrument_groups = [
-        g for g in instrument_groups
-        if g["instrument"].id in current_page_instrument_ids
+        g for g in instrument_groups if g["instrument"].id in current_page_instrument_ids
     ]
     instrument_groups.sort(key=lambda g: g["position"])
     # 19V Item 2 — answers are named by ordinal, not assignment ID.
-    page_rows = responses_service.page_assignments(
-        assignments, current_page_instrument_ids
-    )
+    page_rows = responses_service.page_assignments(assignments, current_page_instrument_ids)
 
     # "Who can see what you wrote" transparency table — one
     # half-width card per instrument, under the heading card in the
@@ -687,27 +636,21 @@ def _surface_context(
         db, [g["instrument"] for g in instrument_groups]
     )
     for group in instrument_groups:
-        group["visibility_rows"] = visibility_rows_by_instrument.get(
-            group["instrument"].id, []
-        )
+        group["visibility_rows"] = visibility_rows_by_instrument.get(group["instrument"].id, [])
 
     if preview_mode and page_url_builder is not None:
-        prev_page_url = (
-            page_url_builder(safe_page_n - 1) if safe_page_n > 1 else None
-        )
-        next_page_url = (
-            page_url_builder(safe_page_n + 1)
-            if safe_page_n < page_count
-            else None
-        )
+        prev_page_url = page_url_builder(safe_page_n - 1) if safe_page_n > 1 else None
+        next_page_url = page_url_builder(safe_page_n + 1) if safe_page_n < page_count else None
     else:
         prev_page_url = (
             f"/me/sessions/{review_session.public_id}/{safe_page_n - 1}"
-            if safe_page_n > 1 else None
+            if safe_page_n > 1
+            else None
         )
         next_page_url = (
             f"/me/sessions/{review_session.public_id}/{safe_page_n + 1}"
-            if safe_page_n < page_count else None
+            if safe_page_n < page_count
+            else None
         )
 
     return {
@@ -733,15 +676,11 @@ def _surface_context(
         # The missing-answer and error cards name an instrument by its
         # status-pill label (findings A2, 2026-10-03): ``position`` is
         # the instrument's place in the session, not its page.
-        "instrument_label_by_position": {
-            ps.position: ps.label for ps in page_statuses
-        },
+        "instrument_label_by_position": {ps.position: ps.label for ps in page_statuses},
         "session_status": _session_status(page_statuses, flat_rows),
         "current_page_n": safe_page_n,
         "page_count": page_count,
-        "answer_ordinals": responses_service.answer_ordinals(
-            [a.id for a in page_rows]
-        ),
+        "answer_ordinals": responses_service.answer_ordinals([a.id for a in page_rows]),
         "page_digest": responses_service.page_digest(
             review_session, page_rows, group_keys=group_keys
         ),
@@ -754,9 +693,7 @@ def _surface_context(
         "preview_mode": preview_mode,
         # participant info Item 1 — the reviewer's own roster fields
         # after the role pills: the stored selection, or the default.
-        "reviewer_self_fields": views.reviewer_self_line_for(
-            review_session, reviewer
-        ),
+        "reviewer_self_fields": views.reviewer_self_line_for(review_session, reviewer),
     }
 
 

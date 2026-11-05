@@ -4,6 +4,7 @@ The operator-controlled lifecycle that gates reviewer write access. The
 canonical session status values live here as a Python enum (no DB CHECK
 constraint); all five are written (``spec/lifecycle.md``).
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -222,9 +223,7 @@ def require_not_archived(
     )
 
 
-def require_not_ready(
-    db: Session, review_session: ReviewSession
-) -> ReviewSession:
+def require_not_ready(db: Session, review_session: ReviewSession) -> ReviewSession:
     """Lock + re-read, refuse a ``ready`` session — Session Home's
     Delete Data and Delete session gate (rulings C7 = G7)."""
     return session_guard.require_state(
@@ -236,9 +235,7 @@ def require_not_ready(
     )
 
 
-def require_validated_or_ready(
-    db: Session, review_session: ReviewSession
-) -> ReviewSession:
+def require_validated_or_ready(db: Session, review_session: ReviewSession) -> ReviewSession:
     """Lock + re-read, refuse unless ``validated`` or ``ready`` — the bulk
     invitation Send and Regenerate gate (findings Bc5)."""
     return session_guard.require_state(
@@ -265,9 +262,7 @@ def require_ready(db: Session, review_session: ReviewSession) -> ReviewSession:
     )
 
 
-def require_accepting_responses(
-    db: Session, review_session: ReviewSession
-) -> ReviewSession:
+def require_accepting_responses(db: Session, review_session: ReviewSession) -> ReviewSession:
     """Lock + re-read, refuse unless ``ready`` and before its deadline —
     the reviewer's Save, Submit, Clear and Recall gate (findings L3), so
     a write cannot land on a session closed or reverted since the
@@ -532,9 +527,7 @@ def activate_session(
     # manual click during the window, the schedule has done its job.
     review_session.scheduled_activate_at = None
     instruments = list(
-        db.execute(
-            select(Instrument).where(Instrument.session_id == review_session.id)
-        ).scalars()
+        db.execute(select(Instrument).where(Instrument.session_id == review_session.id)).scalars()
     )
     for instrument in instruments:
         # Wave 5 PR 5.3 — every instrument flips to accepting on
@@ -601,9 +594,7 @@ def expire_session(
             code="not_ready",
         )
     instruments = list(
-        db.execute(
-            select(Instrument).where(Instrument.session_id == review_session.id)
-        ).scalars()
+        db.execute(select(Instrument).where(Instrument.session_id == review_session.id)).scalars()
     )
     closed_instrument_ids: list[int] = []
     for instrument in instruments:
@@ -662,9 +653,7 @@ def revert_session_to_draft(
         )
 
     instruments = list(
-        db.execute(
-            select(Instrument).where(Instrument.session_id == review_session.id)
-        ).scalars()
+        db.execute(select(Instrument).where(Instrument.session_id == review_session.id)).scalars()
     )
     closed_instrument_ids: list[int] = []
     for instrument in instruments:
@@ -780,10 +769,7 @@ def release_responses_now(
     audit.write_event(
         db,
         event_type="session.responses_released",
-        summary=(
-            f"Session {review_session.code} responses released "
-            f"({now.isoformat()})"
-        ),
+        summary=(f"Session {review_session.code} responses released ({now.isoformat()})"),
         actor_user_id=user.id,
         session=review_session,
         payload=audit.snapshot(
@@ -832,15 +818,10 @@ def stop_responses_release(
     audit.write_event(
         db,
         event_type="session.responses_release_stopped",
-        summary=(
-            f"Session {review_session.code} response release "
-            f"stopped ({now.isoformat()})"
-        ),
+        summary=(f"Session {review_session.code} response release stopped ({now.isoformat()})"),
         actor_user_id=user.id,
         session=review_session,
-        payload=audit.snapshot(
-            {"responses_release_until": now.isoformat()}
-        ),
+        payload=audit.snapshot({"responses_release_until": now.isoformat()}),
         correlation_id=correlation_id,
     )
     db.commit()
@@ -890,9 +871,7 @@ def archive_session(
         summary=f"Session {review_session.code} archived",
         actor_user_id=user.id,
         session=review_session,
-        payload=audit.changes(
-            {"status": [from_status, SessionStatus.archived.value]}
-        ),
+        payload=audit.changes({"status": [from_status, SessionStatus.archived.value]}),
         correlation_id=correlation_id,
     )
     unit_of_work.commit(db)
@@ -912,8 +891,7 @@ def unarchive_session(
     session_guard.lock_session(db, review_session)
     if review_session.status != SessionStatus.archived.value:
         raise LifecycleError(
-            f"Session is {review_session.status}, can only unarchive from "
-            "archived",
+            f"Session is {review_session.status}, can only unarchive from archived",
             code="not_archived",
         )
     review_session.status = SessionStatus.draft.value
@@ -953,9 +931,7 @@ def _aware(value: datetime) -> datetime:
     return value
 
 
-def deadline_has_passed(
-    review_session: ReviewSession, *, now: datetime | None = None
-) -> bool:
+def deadline_has_passed(review_session: ReviewSession, *, now: datetime | None = None) -> bool:
     """Whether the review's end (:func:`review_end`: End, or with no End,
     Release from) is set and behind us. With neither set it never
     passes."""
@@ -966,17 +942,13 @@ def deadline_has_passed(
     return current >= end
 
 
-def recall_allowed(
-    review_session: ReviewSession, *, now: datetime | None = None
-) -> bool:
+def recall_allowed(review_session: ReviewSession, *, now: datetime | None = None) -> bool:
     """Whether a reviewer may recall their submission: the session is
     ``ready`` and its deadline hasn't passed. Past either, the form a
     recall lands on is read-only and Submit is refused (participant
     audit M1). The summary's button and the Recall route both read
     this."""
-    return is_ready(review_session) and not deadline_has_passed(
-        review_session, now=now
-    )
+    return is_ready(review_session) and not deadline_has_passed(review_session, now=now)
 
 
 def session_accepts_responses(
@@ -1051,9 +1023,7 @@ def session_status_for_reviewer(
         # Treat as closed from their POV — there is nothing to
         # open.
         return "closed"
-    instruments = db.execute(
-        select(Instrument).where(Instrument.id.in_(instrument_ids))
-    ).scalars()
+    instruments = db.execute(select(Instrument).where(Instrument.id.in_(instrument_ids))).scalars()
     for instrument in instruments:
         if session_accepts_responses(review_session, instrument, now=now):
             return "open"
@@ -1109,8 +1079,7 @@ def _reopen_while_live(
             db,
             event_type="instrument.opened",
             summary=(
-                f"Instrument {_instrument_label(instrument)} reopened (accepting is "
-                "session-wide)"
+                f"Instrument {_instrument_label(instrument)} reopened (accepting is session-wide)"
             ),
             actor_user_id=None,
             session=review_session,
@@ -1169,14 +1138,17 @@ def closed_at_deadline(db: Session, review_session: ReviewSession) -> bool:
     this session's instruments (``deadline_closed_at`` set), as against the
     operator's Close session before it, which does not stamp it. The
     refused-write notice names the deadline only for a real End."""
-    return db.execute(
-        select(Instrument.id)
-        .where(
-            Instrument.session_id == review_session.id,
-            Instrument.deadline_closed_at.is_not(None),
-        )
-        .limit(1)
-    ).first() is not None
+    return (
+        db.execute(
+            select(Instrument.id)
+            .where(
+                Instrument.session_id == review_session.id,
+                Instrument.deadline_closed_at.is_not(None),
+            )
+            .limit(1)
+        ).first()
+        is not None
+    )
 
 
 def observe_deadline(
@@ -1235,9 +1207,7 @@ def observe_deadline(
         # already shut. The session still closes, once.
         if is_ready(review_session):
             session_guard.lock_session(db, review_session)
-            if is_ready(review_session) and deadline_has_passed(
-                review_session, now=current
-            ):
+            if is_ready(review_session) and deadline_has_passed(review_session, now=current):
                 _expire_at_end(db, review_session, closed=0, correlation_id=correlation_id)
                 db.flush()
                 db.commit()
@@ -1292,17 +1262,14 @@ def observe_deadline(
     # A release that ends a review with no End is not a deadline.
     if review_session.deadline is not None:
         audit.write_event(
-        db,
+            db,
             event_type="session.deadline_reached",
             summary=(
-                f"Deadline reached: {progress.submitted} of "
-                f"{progress.assigned} reviewers submitted"
+                f"Deadline reached: {progress.submitted} of {progress.assigned} reviewers submitted"
             ),
             actor_user_id=None,
             session=review_session,
-            payload=audit.counts(
-                submitted=progress.submitted, assigned=progress.assigned
-            ),
+            payload=audit.counts(submitted=progress.submitted, assigned=progress.assigned),
             context={"deadline": review_session.deadline.isoformat()},
             correlation_id=correlation_id,
         )

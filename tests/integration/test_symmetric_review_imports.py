@@ -50,7 +50,9 @@ def _user(db: Session) -> User:
 
 def _reviewees(db: Session, review_session: ReviewSession) -> list[Reviewee]:
     db.expire_all()
-    return list(db.execute(select(Reviewee).where(Reviewee.session_id == review_session.id)).scalars())
+    return list(
+        db.execute(select(Reviewee).where(Reviewee.session_id == review_session.id)).scalars()
+    )
 
 
 def _csv(rows) -> bytes:
@@ -100,7 +102,9 @@ def test_quick_setup_refuses_a_reviewees_file(client: TestClient, db: Session) -
     )
     assert response.status_code == 422
     assert "Reviewees slot empty" in response.text
-    assert db.execute(select(Reviewer).where(Reviewer.session_id == review_session.id)).first() is None
+    assert (
+        db.execute(select(Reviewer).where(Reviewer.session_id == review_session.id)).first() is None
+    )
 
 
 def test_quick_setup_reviewers_mirror(client: TestClient, db: Session) -> None:
@@ -112,7 +116,8 @@ def test_quick_setup_reviewers_mirror(client: TestClient, db: Session) -> None:
     )
     assert response.status_code == 303
     assert sorted(e.email_or_identifier for e in _reviewees(db, review_session)) == [
-        "ann@example.edu", "bob@example.edu",
+        "ann@example.edu",
+        "bob@example.edu",
     ]
 
 
@@ -120,9 +125,10 @@ def test_a_settings_file_turning_it_on_mirrors_this_submits_reviewers(
     client: TestClient, db: Session
 ) -> None:
     source = _session(client, db, "sym-i-src")
-    settings = _csv([("field", "value", "data_type")] + [
-        (r.field, r.value, r.data_type) for r in serialize_session_config(db, source)
-    ])
+    settings = _csv(
+        [("field", "value", "data_type")]
+        + [(r.field, r.value, r.data_type) for r in serialize_session_config(db, source)]
+    )
     target = _session(client, db, "sym-i-target", on=False)
     response = client.post(
         f"/operator/sessions/{target.public_id}/quick-setup/submit-all",
@@ -139,9 +145,13 @@ def test_a_settings_file_turning_it_on_mirrors_this_submits_reviewers(
     assert len(_reviewees(db, target)) == 2
 
 
-def test_the_setup_bundle_and_card_carry_the_reviewers_alone(client: TestClient, db: Session) -> None:
+def test_the_setup_bundle_and_card_carry_the_reviewers_alone(
+    client: TestClient, db: Session
+) -> None:
     review_session = _session(client, db, "sym-i-zip")
-    reviewers.create_reviewer(db, review_session=review_session, name="Ann", email="ann@example.edu", user=_user(db))
+    reviewers.create_reviewer(
+        db, review_session=review_session, name="Ann", email="ann@example.edu", user=_user(db)
+    )
     data, counts = zip_bundle.build_setup_bundle(db, review_session)
     names = zipfile.ZipFile(io.BytesIO(data)).namelist()
     assert any(n.endswith("_reviewers.csv") for n in names)
@@ -151,23 +161,36 @@ def test_the_setup_bundle_and_card_carry_the_reviewers_alone(client: TestClient,
     assert "reviewers" in keys and "reviewees" not in keys
 
 
-def test_rehydrate_rebuilds_the_reviewees_from_the_reviewers(client: TestClient, db: Session) -> None:
+def test_rehydrate_rebuilds_the_reviewees_from_the_reviewers(
+    client: TestClient, db: Session
+) -> None:
     review_session = _session(client, db, "sym-i-rehyd")
     user = _user(db)
-    reviewers.create_reviewer(db, review_session=review_session, name="Ann", email="ann@example.edu", user=user)
+    reviewers.create_reviewer(
+        db, review_session=review_session, name="Ann", email="ann@example.edu", user=user
+    )
     # The extract's reviewees.csv names someone the reviewers do not; it is
     # left unread, so they do not appear.
     files = {
-        "settings.csv": _csv([("field", "value", "data_type")] + [
-            (r.field, r.value, r.data_type) for r in serialize_session_config(db, review_session)
-        ]),
+        "settings.csv": _csv(
+            [("field", "value", "data_type")]
+            + [
+                (r.field, r.value, r.data_type)
+                for r in serialize_session_config(db, review_session)
+            ]
+        ),
         "reviewers.csv": _csv(serialize_reviewers(db, review_session)),
-        "reviewees.csv": _csv(list(serialize_reviewees(db, review_session)) + [
-            ("Zed", "zed@example.edu", "", "", "", "", "active"),
-        ]),
+        "reviewees.csv": _csv(
+            list(serialize_reviewees(db, review_session))
+            + [
+                ("Zed", "zed@example.edu", "", "", "", "", "active"),
+            ]
+        ),
         "responses.csv": _csv(serialize_responses(db, review_session)),
     }
-    outcome = session_rehydrate.rehydrate_session(db, files=files, user=user, directory=FakeDirectory())
+    outcome = session_rehydrate.rehydrate_session(
+        db, files=files, user=user, directory=FakeDirectory()
+    )
     rehyd = outcome.session
     assert rehyd.symmetric_review is True
     assert [e.email_or_identifier for e in _reviewees(db, rehyd)] == ["ann@example.edu"]
@@ -175,7 +198,9 @@ def test_rehydrate_rebuilds_the_reviewees_from_the_reviewers(client: TestClient,
 
 def test_the_row_editor_never_renders_under_the_mode(client: TestClient, db: Session) -> None:
     review_session = _session(client, db, "sym-i-editor")
-    reviewers.create_reviewer(db, review_session=review_session, name="Ann", email="ann@example.edu", user=_user(db))
+    reviewers.create_reviewer(
+        db, review_session=review_session, name="Ann", email="ann@example.edu", user=_user(db)
+    )
     [reviewee] = _reviewees(db, review_session)
     base = f"/operator/sessions/{review_session.public_id}/reviewees"
     for query in (f"?edit_id={reviewee.id}", "?add=1"):
@@ -187,9 +212,10 @@ def test_a_reviewees_file_is_accepted_when_the_settings_turn_the_mode_off(
 ) -> None:
     review_session = _session(client, db, "sym-i-off-settings")
     off = _session(client, db, "sym-i-off-src", on=False)
-    settings = _csv([("field", "value", "data_type")] + [
-        (r.field, r.value, r.data_type) for r in serialize_session_config(db, off)
-    ])
+    settings = _csv(
+        [("field", "value", "data_type")]
+        + [(r.field, r.value, r.data_type) for r in serialize_session_config(db, off)]
+    )
     response = client.post(
         f"/operator/sessions/{review_session.public_id}/quick-setup/submit-all",
         files={
@@ -204,16 +230,24 @@ def test_a_reviewees_file_is_accepted_when_the_settings_turn_the_mode_off(
     assert review_session.symmetric_review is False
 
 
-def test_a_symmetric_setup_bundle_round_trips_in_one_submit(client: TestClient, db: Session) -> None:
+def test_a_symmetric_setup_bundle_round_trips_in_one_submit(
+    client: TestClient, db: Session
+) -> None:
     """The bundle carries no reviewees, so its relationships are checked
     against the reviewers that will mirror (Codex on #3490)."""
     from app.db.models import Relationship
 
     source = _session(client, db, "sym-i-bundle-src")
     user = _user(db)
-    ann = reviewers.create_reviewer(db, review_session=source, name="Ann", email="ann@example.edu", user=user)
-    reviewers.create_reviewer(db, review_session=source, name="Bob", email="bob@example.edu", user=user)
-    bob_reviewee = next(e for e in _reviewees(db, source) if e.email_or_identifier == "bob@example.edu")
+    ann = reviewers.create_reviewer(
+        db, review_session=source, name="Ann", email="ann@example.edu", user=user
+    )
+    reviewers.create_reviewer(
+        db, review_session=source, name="Bob", email="bob@example.edu", user=user
+    )
+    bob_reviewee = next(
+        e for e in _reviewees(db, source) if e.email_or_identifier == "bob@example.edu"
+    )
     source.relationships_enabled = True
     db.add(Relationship(session_id=source.id, reviewer_id=ann.id, reviewee_id=bob_reviewee.id))
     db.commit()
@@ -240,37 +274,55 @@ def test_a_symmetric_setup_bundle_round_trips_in_one_submit(client: TestClient, 
     db.refresh(target)
     assert target.symmetric_review is True
     assert len(_reviewees(db, target)) == 2
-    assert db.execute(select(Relationship).where(Relationship.session_id == target.id)).scalars().all()
+    assert (
+        db.execute(select(Relationship).where(Relationship.session_id == target.id)).scalars().all()
+    )
 
 
-def test_rehydrate_takes_a_symmetric_set_without_reviewees_csv(client: TestClient, db: Session) -> None:
+def test_rehydrate_takes_a_symmetric_set_without_reviewees_csv(
+    client: TestClient, db: Session
+) -> None:
     """The setup bundle carries no reviewees.csv under the mode, so the
     pre-flight neither requires it nor checks the responses' reviewees
     against it (Codex on #3490)."""
     review_session = _session(client, db, "sym-i-rehyd-nofile")
     user = _user(db)
-    reviewers.create_reviewer(db, review_session=review_session, name="Ann", email="ann@example.edu", user=user)
+    reviewers.create_reviewer(
+        db, review_session=review_session, name="Ann", email="ann@example.edu", user=user
+    )
     files = {
-        "settings.csv": _csv([("field", "value", "data_type")] + [
-            (r.field, r.value, r.data_type) for r in serialize_session_config(db, review_session)
-        ]),
+        "settings.csv": _csv(
+            [("field", "value", "data_type")]
+            + [
+                (r.field, r.value, r.data_type)
+                for r in serialize_session_config(db, review_session)
+            ]
+        ),
         "reviewers.csv": _csv(serialize_reviewers(db, review_session)),
         "responses.csv": _csv(serialize_responses(db, review_session)),
     }
     report = session_rehydrate.analyze_rehydrate_set(db, files=files, user=user)
     assert report.ok, report.errors
     assert report.preview["reviewees"] == 1
-    outcome = session_rehydrate.rehydrate_session(db, files=files, user=user, directory=FakeDirectory())
+    outcome = session_rehydrate.rehydrate_session(
+        db, files=files, user=user, directory=FakeDirectory()
+    )
     assert [e.email_or_identifier for e in _reviewees(db, outcome.session)] == ["ann@example.edu"]
 
 
-def test_rehydrate_still_requires_reviewees_csv_with_the_mode_off(client: TestClient, db: Session) -> None:
+def test_rehydrate_still_requires_reviewees_csv_with_the_mode_off(
+    client: TestClient, db: Session
+) -> None:
     review_session = _session(client, db, "sym-i-rehyd-off", on=False)
     user = _user(db)
     files = {
-        "settings.csv": _csv([("field", "value", "data_type")] + [
-            (r.field, r.value, r.data_type) for r in serialize_session_config(db, review_session)
-        ]),
+        "settings.csv": _csv(
+            [("field", "value", "data_type")]
+            + [
+                (r.field, r.value, r.data_type)
+                for r in serialize_session_config(db, review_session)
+            ]
+        ),
         "reviewers.csv": _csv(serialize_reviewers(db, review_session)),
         "responses.csv": _csv(serialize_responses(db, review_session)),
     }
@@ -279,7 +331,9 @@ def test_rehydrate_still_requires_reviewees_csv_with_the_mode_off(client: TestCl
     assert any("reviewees.csv" in e for e in report.errors)
 
 
-def test_a_turn_on_committed_after_the_route_gate_still_refuses(client: TestClient, db: Session) -> None:
+def test_a_turn_on_committed_after_the_route_gate_still_refuses(
+    client: TestClient, db: Session
+) -> None:
     """The route reads the flag before the lock; the service re-reads it
     under the lock, so a turn-on committed in between refuses the
     reviewee (Codex on #3490)."""
@@ -294,14 +348,20 @@ def test_a_turn_on_committed_after_the_route_gate_still_refuses(client: TestClie
     user = _user(db)
     # Another request turns the mode on; this one still holds the stale row.
     db.execute(
-        update(ReviewSession).where(ReviewSession.id == review_session.id).values(symmetric_review=True)
+        update(ReviewSession)
+        .where(ReviewSession.id == review_session.id)
+        .values(symmetric_review=True)
     )
     db.commit()
     db.expire_all()
     vars(review_session)["symmetric_review"] = False  # the route's stale read
     with pytest.raises(SessionStateConflict):
         reviewees_service.create_reviewee(
-            db, review_session=review_session, name="X", email_or_identifier="x@example.edu", user=user
+            db,
+            review_session=review_session,
+            name="X",
+            email_or_identifier="x@example.edu",
+            user=user,
         )
     db.rollback()
     with pytest.raises(SessionStateConflict):
@@ -370,11 +430,15 @@ def test_a_symmetric_bundle_into_a_session_with_rows_says_its_reviewees_stay(
     page says so."""
     source = _session(client, db, "sym-i-l3-src")
     user = _user(db)
-    reviewers.create_reviewer(db, review_session=source, name="Ann", email="ann@example.edu", user=user)
+    reviewers.create_reviewer(
+        db, review_session=source, name="Ann", email="ann@example.edu", user=user
+    )
     db.commit()
 
     target = _session(client, db, "sym-i-l3-target", on=False)
-    reviewers.create_reviewer(db, review_session=target, name="Kim", email="kim@example.edu", user=user)
+    reviewers.create_reviewer(
+        db, review_session=target, name="Kim", email="kim@example.edu", user=user
+    )
     db.add(Reviewee(session_id=target.id, name="Lee", email_or_identifier="lee@example.edu"))
     db.commit()
 
@@ -402,7 +466,9 @@ def test_a_symmetric_bundle_into_an_empty_session_says_nothing(
     client: TestClient, db: Session
 ) -> None:
     source = _session(client, db, "sym-i-l3e-src")
-    reviewers.create_reviewer(db, review_session=source, name="Ann", email="ann@example.edu", user=_user(db))
+    reviewers.create_reviewer(
+        db, review_session=source, name="Ann", email="ann@example.edu", user=_user(db)
+    )
     db.commit()
     target = _session(client, db, "sym-i-l3e-target", on=False)
     response = client.post(
@@ -423,14 +489,20 @@ def test_a_symmetric_bundle_with_a_reviewees_file_says_nothing(
     """A Reviewees file in the same submit saves, so nothing was left."""
     source = _session(client, db, "sym-i-l3r-src")
     user = _user(db)
-    reviewers.create_reviewer(db, review_session=source, name="Ann", email="ann@example.edu", user=user)
+    reviewers.create_reviewer(
+        db, review_session=source, name="Ann", email="ann@example.edu", user=user
+    )
     db.commit()
     target = _session(client, db, "sym-i-l3r-target", on=False)
-    reviewers.create_reviewer(db, review_session=target, name="Kim", email="kim@example.edu", user=user)
+    reviewers.create_reviewer(
+        db, review_session=target, name="Kim", email="kim@example.edu", user=user
+    )
     db.commit()
     files = _bundle_files(db, source)
     files["reviewees_file"] = (
-        "e.csv", b"RevieweeName,RevieweeEmail\nLee,lee@example.edu\n", "text/csv",
+        "e.csv",
+        b"RevieweeName,RevieweeEmail\nLee,lee@example.edu\n",
+        "text/csv",
     )
     response = client.post(
         f"/operator/sessions/{target.public_id}/quick-setup/submit-all",
@@ -448,10 +520,14 @@ def test_a_symmetric_bundle_into_a_symmetric_session_says_nothing(
     """The mode is already on, so the bundle's reviewers mirror."""
     source = _session(client, db, "sym-i-l3s-src")
     user = _user(db)
-    reviewers.create_reviewer(db, review_session=source, name="Ann", email="ann@example.edu", user=user)
+    reviewers.create_reviewer(
+        db, review_session=source, name="Ann", email="ann@example.edu", user=user
+    )
     db.commit()
     target = _session(client, db, "sym-i-l3s-target")
-    reviewers.create_reviewer(db, review_session=target, name="Kim", email="kim@example.edu", user=user)
+    reviewers.create_reviewer(
+        db, review_session=target, name="Kim", email="kim@example.edu", user=user
+    )
     db.commit()
     response = client.post(
         f"/operator/sessions/{target.public_id}/quick-setup/submit-all",
@@ -465,7 +541,5 @@ def test_a_symmetric_bundle_into_a_symmetric_session_says_nothing(
 
 def test_an_unknown_notice_code_shows_nothing(client: TestClient, db: Session) -> None:
     target = _session(client, db, "sym-i-l3u", on=False)
-    page = client.get(
-        f"/operator/sessions/{target.public_id}?quick_setup_notice=anything"
-    ).text
+    page = client.get(f"/operator/sessions/{target.public_id}?quick_setup_notice=anything").text
     assert "data-quick-setup-kept-reviewees" not in page

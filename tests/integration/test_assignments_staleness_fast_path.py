@@ -125,20 +125,33 @@ def test_the_count_equals_the_walk_on_bound_rows(db: Session) -> None:
     sid = review_session.id
     db.add_all(
         [
-            Reviewer(session_id=sid, name="Jane", email="e0123456@example.edu", directory_object_id=JANE_OID),
-            Reviewer(session_id=sid, name="Pat", email="pat@example.edu", directory_object_id=PAT_OID),
+            Reviewer(
+                session_id=sid,
+                name="Jane",
+                email="e0123456@example.edu",
+                directory_object_id=JANE_OID,
+            ),
+            Reviewer(
+                session_id=sid, name="Pat", email="pat@example.edu", directory_object_id=PAT_OID
+            ),
             Reviewer(session_id=sid, name="Lee", email="lee@example.edu"),
             Reviewee(
-                session_id=sid, name="Jane", email_or_identifier="jane.tan@example.edu",
+                session_id=sid,
+                name="Jane",
+                email_or_identifier="jane.tan@example.edu",
                 directory_object_id=JANE_OID.upper(),
             ),
             Reviewee(
-                session_id=sid, name="Not Pat", email_or_identifier="pat@example.edu",
+                session_id=sid,
+                name="Not Pat",
+                email_or_identifier="pat@example.edu",
                 directory_object_id="33333333-3333-4333-8333-333333333333",
             ),
             Reviewee(session_id=sid, name="Pat unbound", email_or_identifier="PAT@example.edu"),
             Reviewee(
-                session_id=sid, name="Lee bound", email_or_identifier="lee@example.edu",
+                session_id=sid,
+                name="Lee bound",
+                email_or_identifier="lee@example.edu",
                 directory_object_id="44444444-4444-4444-8444-444444444444",
             ),
         ]
@@ -184,9 +197,7 @@ def test_a_never_generated_full_matrix_instrument_is_not_walked(
     assert db.info.get(_generate._RECONCILE_WARM_PENDING) is True
 
 
-def test_persist_commits_only_a_warm(
-    db: Session, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_persist_commits_only_a_warm(db: Session, monkeypatch: pytest.MonkeyPatch) -> None:
     commits: list[None] = []
     original = db.commit
     monkeypatch.setattr(db, "commit", lambda: (commits.append(None), original()))

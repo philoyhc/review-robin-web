@@ -38,9 +38,7 @@ _ID_KEYS = frozenset({"sid", "editing", "saved", "selected", "focus", "cursor"})
 
 
 def _is_id_key(key: str) -> bool:
-    return (
-        key == "id" or key.endswith("_id") or key.endswith("_ids") or key in _ID_KEYS
-    )
+    return key == "id" or key.endswith("_id") or key.endswith("_ids") or key in _ID_KEYS
 
 
 def _too_large(value: object) -> bool:

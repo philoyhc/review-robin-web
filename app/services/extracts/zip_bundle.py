@@ -88,9 +88,7 @@ class MetadataOptions:
     self_review_handling: str = SELF_REVIEW_HANDLING_DEFAULT
 
 
-def build_setup_bundle(
-    db: Session, review_session: ReviewSession
-) -> tuple[bytes, dict[str, int]]:
+def build_setup_bundle(db: Session, review_session: ReviewSession) -> tuple[bytes, dict[str, int]]:
     """Build the setup-only zip for ``review_session``.
 
     Returns ``(zip_bytes, counts)`` — the zip archive bytes and a
@@ -107,9 +105,7 @@ def build_setup_bundle(
     # 3-column header, exactly as the standalone Settings route does.
     settings_rows = serialize_session_config(db, review_session)
     settings_csv: list[tuple[str, ...]] = [SETTINGS_HEADER]
-    settings_csv.extend(
-        (r.field, r.value, r.data_type) for r in settings_rows
-    )
+    settings_csv.extend((r.field, r.value, r.data_type) for r in settings_rows)
 
     members: dict[str, list[tuple[str, ...]]] = {
         "reviewers": reviewers,
@@ -185,9 +181,7 @@ def build_responses_bundle(
 
     by_instrument_files = 0
     if by_instrument is not None:
-        for name, rows in _by_instrument_members(
-            db, review_session, by_instrument
-        ):
+        for name, rows in _by_instrument_members(db, review_session, by_instrument):
             members.append((name, rows))
             by_instrument_files += 1
 
@@ -217,9 +211,7 @@ def build_responses_bundle(
         )
         members.append(
             (
-                metadata_filename(
-                    review_session, kind, options.self_review_handling
-                ),
+                metadata_filename(review_session, kind, options.self_review_handling),
                 rows,
             )
         )
@@ -238,15 +230,11 @@ def build_responses_bundle(
     participant_tokens_rows = 0
     if include_participant_tokens and review_session.observers_enabled:
         token_rows = list(serialize_participant_tokens(db, review_session))
-        members.append(
-            (filename(review_session, "participant_tokens"), token_rows)
-        )
+        members.append((filename(review_session, "participant_tokens"), token_rows))
         participant_tokens_rows = max(0, len(token_rows) - 1)
 
     counts = {
-        "responses": responses_service.session_response_count(
-            db, review_session.id
-        ),
+        "responses": responses_service.session_response_count(db, review_session.id),
         "by_instrument_files": by_instrument_files,
         "reviewer_metadata_files": metadata_files["reviewer_metadata"],
         "reviewee_metadata_files": metadata_files["reviewee_metadata"],
@@ -352,14 +340,9 @@ def _by_instrument_members(
     code = (review_session.code or "session").strip() or "session"
     used_slugs: set[str] = set()
     for position, instrument in enumerate(instruments, start=1):
-        if (
-            options.instrument_ids is not None
-            and instrument.id not in options.instrument_ids
-        ):
+        if options.instrument_ids is not None and instrument.id not in options.instrument_ids:
             continue
-        slug = by_instrument_filename_slug(
-            instrument, position, used=used_slugs
-        )
+        slug = by_instrument_filename_slug(instrument, position, used=used_slugs)
         rows = list(
             serialize_by_instrument(
                 db,

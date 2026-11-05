@@ -83,9 +83,7 @@ def _seed(
     user = User(email=f"op-{code}@example.edu")
     db.add(user)
     db.flush()
-    review_session = ReviewSession(
-        name="Spring", code=code, created_by_user_id=user.id
-    )
+    review_session = ReviewSession(name="Spring", code=code, created_by_user_id=user.id)
     db.add(review_session)
     db.flush()
 
@@ -168,9 +166,7 @@ def _generate_rows(db: Session, *, review_session, user, cid: str) -> None:
 
 
 def _read(db: Session, review_session, instrument):
-    return assignments.staleness_by_instrument(db, review_session)[
-        instrument.id
-    ]
+    return assignments.staleness_by_instrument(db, review_session)[instrument.id]
 
 
 def _go_cold(db: Session, instrument) -> None:
@@ -187,9 +183,7 @@ def _go_cold(db: Session, instrument) -> None:
 # --- the hit ---------------------------------------------------------
 
 
-def test_generate_leaves_the_verdict_warm(
-    db: Session, engine_runs: EngineRuns
-) -> None:
+def test_generate_leaves_the_verdict_warm(db: Session, engine_runs: EngineRuns) -> None:
     """The write-through is the point: Generate has just diffed, so the
     first render after it should not diff again."""
     user, review_session, instrument, *_ = _seed(db, code="rc-warm")
@@ -202,9 +196,7 @@ def test_generate_leaves_the_verdict_warm(
     assert state.eligible == 4
 
 
-def test_a_cold_instrument_warms_within_the_session(
-    db: Session, engine_runs: EngineRuns
-) -> None:
+def test_a_cold_instrument_warms_within_the_session(db: Session, engine_runs: EngineRuns) -> None:
     """One walk, then none — and the ``1`` is the anti-vacuity control
     for every ``0`` in this file. If the probe counted nothing, the
     hits above would prove nothing either.
@@ -269,11 +261,7 @@ def _add_a_reviewer(db: Session, ctx) -> None:
 
 def _edit_the_relationship(db: Session, ctx) -> None:
     _, review_session, _, reviewers, reviewees, _ = ctx
-    row = (
-        db.query(Relationship)
-        .filter(Relationship.session_id == review_session.id)
-        .one()
-    )
+    row = db.query(Relationship).filter(Relationship.session_id == review_session.id).one()
     row.tag_1 = "peer"
     db.flush()
     db.commit()
@@ -335,9 +323,7 @@ def _unpin_the_instrument(db: Session, ctx) -> None:
 #: is not a weakness in the case but the reason the stamp covers
 #: inputs rather than answers. A stamp over the verdict would hit
 #: here, and hit wrongly the first time one of these did move a pair.
-MISS_CASES: list[
-    tuple[str, Callable[[Session, tuple], None], tuple[bool, int] | None]
-] = [
+MISS_CASES: list[tuple[str, Callable[[Session, tuple], None], tuple[bool, int] | None]] = [
     ("a reviewer joins the roster", _add_a_reviewer, (True, 6)),
     ("a relationship tag is edited", _edit_the_relationship, None),
     ("the pinned rule's predicates change", _change_the_rule, (True, 2)),

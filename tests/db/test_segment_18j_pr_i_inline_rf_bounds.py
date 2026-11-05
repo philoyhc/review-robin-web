@@ -40,10 +40,7 @@ def test_pr_i_migration_backfills_inline_bounds_from_rtd() -> None:
             # RTD. ``InstrumentResponseField`` requires
             # instrument → session → user.
             connection.execute(
-                text(
-                    "INSERT INTO users (email, display_name) "
-                    "VALUES ('op@example.edu', 'Op')"
-                )
+                text("INSERT INTO users (email, display_name) VALUES ('op@example.edu', 'Op')")
             )
             user_id = connection.execute(
                 text("SELECT id FROM users WHERE email = 'op@example.edu'")
@@ -106,7 +103,7 @@ def test_pr_i_migration_backfills_inline_bounds_from_rtd() -> None:
                 connection.execute(
                     text(
                         "INSERT INTO instrument_response_fields "
-                        '(instrument_id, field_key, label, response_type_id, '
+                        "(instrument_id, field_key, label, response_type_id, "
                         'required, "order") '
                         "VALUES (:iid, :key, :label, :rtd, 0, 0)"
                     ),

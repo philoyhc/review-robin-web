@@ -8,6 +8,7 @@ and a ``group_label`` for aria text.
 Pure: takes built row dicts + the assignment → group key map,
 returns a fresh list. No DB reads.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -42,9 +43,7 @@ def _collapse_group_rows(
         partitions.setdefault(group_key, []).append(row)
     collapsed: list[SurfaceRow] = []
     for group_key in sorted(partitions):
-        members = sorted(
-            partitions[group_key], key=lambda r: r["assignment"].id
-        )
+        members = sorted(partitions[group_key], key=lambda r: r["assignment"].id)
         representative = dict(members[0])
         names = sorted(r["assignment"].reviewee.name for r in members)
         shown = names[:GROUP_MEMBER_NAME_LIMIT]
@@ -58,9 +57,7 @@ def _collapse_group_rows(
         # visible reviewee.tag_* display fields, so the line is
         # never blank when a boundary tag value exists.
         tag_values: list[str] = []
-        display_cells: list[dict[str, Any]] = (
-            members[0].get("display_cells", []) or []
-        )
+        display_cells: list[dict[str, Any]] = members[0].get("display_cells", []) or []
         for cell in display_cells:
             field = cell.get("field")
             if field is None:
@@ -83,9 +80,7 @@ def _collapse_group_rows(
             "member_names": shown,
             "extra_count": len(names) - len(shown),
         }
-        representative["group_label"] = (
-            tag_line or ", ".join(shown) or "the group"
-        )
+        representative["group_label"] = tag_line or ", ".join(shown) or "the group"
         collapsed.append(representative)
     return collapsed
 

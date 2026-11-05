@@ -40,9 +40,7 @@ def mark_band1_touched_on_all_instruments(
     """
     target = sorted(set(links or _BAND1_LINKS_ALL))
     instruments = list(
-        db.execute(
-            select(Instrument).where(Instrument.session_id == session_id)
-        ).scalars()
+        db.execute(select(Instrument).where(Instrument.session_id == session_id)).scalars()
     )
     for instrument in instruments:
         instrument.band1_touched_links = list(target)
@@ -94,9 +92,7 @@ def pin_full_matrix_on_all_instruments(
         db.flush()
         rule_set_id = rs.id
     instruments = list(
-        db.execute(
-            select(Instrument).where(Instrument.session_id == session_id)
-        ).scalars()
+        db.execute(select(Instrument).where(Instrument.session_id == session_id)).scalars()
     )
     for instrument in instruments:
         instrument.rule_set_id = rule_set_id

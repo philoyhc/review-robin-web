@@ -105,9 +105,7 @@ def test_without_a_warning_the_same_session_renders_state_5_alone(
     assert OVERLAY_HELP not in body
 
 
-def test_the_overlay_reaches_state_6_too(
-    client: TestClient, db: Session
-) -> None:
+def test_the_overlay_reaches_state_6_too(client: TestClient, db: Session) -> None:
     """`6W`, which the old cascade also said could not exist."""
     session = _prepared_session(client, db, "w-over-6", warning=True)
     response = client.post(
@@ -121,9 +119,7 @@ def test_the_overlay_reaches_state_6_too(
     assert STATE_5_BODY not in body
 
 
-def test_the_overlay_changes_no_button_visibility(
-    client: TestClient, db: Session
-) -> None:
+def test_the_overlay_changes_no_button_visibility(client: TestClient, db: Session) -> None:
     """Four slots either way — Revert, Prepare, Send invites, Activate.
 
     ``send_invites_visible`` reads invitation state alone, so the
@@ -178,10 +174,6 @@ def test_the_session_really_is_validated_with_an_invitation(
     session = _prepared_session(client, db, "w-premise", warning=True)
     assert session.status == "validated"
     invitations = (
-        db.execute(
-            select(Invitation).where(Invitation.session_id == session.id)
-        )
-        .scalars()
-        .all()
+        db.execute(select(Invitation).where(Invitation.session_id == session.id)).scalars().all()
     )
     assert len(invitations) == 1

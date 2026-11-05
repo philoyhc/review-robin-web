@@ -25,6 +25,7 @@ Revises: e216f472ac47
 Create Date: 2026-05-09
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -77,9 +78,7 @@ def upgrade() -> None:
     # second batch — same shape as 8b3c1d4e5f7a's
     # `instrument_response_fields.response_type_id` add.
     with op.batch_alter_table("response_type_definitions") as batch:
-        batch.add_column(
-            sa.Column("library_origin_id", sa.Integer(), nullable=True)
-        )
+        batch.add_column(sa.Column("library_origin_id", sa.Integer(), nullable=True))
     with op.batch_alter_table("response_type_definitions") as batch:
         batch.create_foreign_key(
             "fk_response_type_definitions_library_origin_id",

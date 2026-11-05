@@ -8,6 +8,7 @@ download's shape, and the PR A dashboard link wiring (Session
 column points at the summary URL when Reviewer Status is
 ``submitted``).
 """
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -76,6 +77,7 @@ def _make_ready_session(
     # Wave 5 PR 5.2 — lazily materialise the Full Matrix
     # ``session_rule_sets`` row (auto-seed retired).
     from ._full_matrix import pin_full_matrix_on_all_instruments
+
     pin_full_matrix_on_all_instruments(db, review_session.id)
     # Workflow card's Prepare + Activate flow (post-18F Part 1).
     operator.post(
@@ -133,19 +135,13 @@ def test_summary_renders_after_full_submission(
         follow_redirects=False,
     )
     assert submit.status_code == 303
-    assert submit.headers["location"] == (
-        f"/me/sessions/{review_session.public_id}/summary"
-    )
-    page = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/summary"
-    )
+    assert submit.headers["location"] == (f"/me/sessions/{review_session.public_id}/summary")
+    page = rae_client.get(f"/me/sessions/{review_session.public_id}/summary")
     assert page.status_code == 200
     body = page.text
     assert "Your responses" in body
     # CSV download button is visible at the top of the page.
-    assert (
-        f'/me/sessions/{review_session.public_id}/summary.csv' in body
-    )
+    assert f"/me/sessions/{review_session.public_id}/summary.csv" in body
     # The Carol row appears under the (only) instrument section.
     assert "Carol" in body
 
@@ -173,15 +169,11 @@ def test_summary_csv_streams_reviewer_only_rows(
         ),
         follow_redirects=False,
     )
-    response = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/summary.csv"
-    )
+    response = rae_client.get(f"/me/sessions/{review_session.public_id}/summary.csv")
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/csv")
     # Filename ``{code}_my_responses.csv``.
-    assert "summ-csv_my_responses.csv" in (
-        response.headers["content-disposition"]
-    )
+    assert "summ-csv_my_responses.csv" in (response.headers["content-disposition"])
     body = response.text
     # The reviewer's row should be in the CSV; the 21-column
     # header from the unified extract is present too.
@@ -226,9 +218,7 @@ def test_dashboard_link_points_at_summary_when_submitted(
     body = rae_client.get("/me").text
     # Session column now anchors at the summary URL, not the
     # surface position.
-    assert (
-        f'href="/me/sessions/{review_session.public_id}/summary"' in body
-    )
+    assert f'href="/me/sessions/{review_session.public_id}/summary"' in body
 
 
 def test_summary_single_instrument_heading_uses_short_label_when_set(
@@ -271,10 +261,8 @@ def test_summary_single_instrument_heading_uses_short_label_when_set(
         ),
         follow_redirects=False,
     )
-    body = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/summary"
-    ).text
-    assert "<h2 style=\"margin-top: 0;\">Self-eval</h2>" in body
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}/summary").text
+    assert '<h2 style="margin-top: 0;">Self-eval</h2>' in body
     # No #1 prefix on a single-instrument session.
     assert "#1: Self-eval" not in body
     assert "#1 Self-eval" not in body
@@ -322,9 +310,7 @@ def test_summary_single_instrument_heading_uses_operator_label_not_name(
         ),
         follow_redirects=False,
     )
-    body = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/summary"
-    ).text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}/summary").text
     # 19Q Item 6 rung 2 — derived from ``session_seq``, not ``id``.
     # The ``id`` form passed on SQLite only because each test gets a
     # fresh in-memory DB where the two coincide; on Postgres the run
@@ -410,6 +396,7 @@ def test_summary_multi_instrument_headings_use_page_prefix(
             db, instrument=instrument_2, short_label="Peer review", actor=None
         )
     from ._full_matrix import pin_full_matrix_on_all_instruments
+
     pin_full_matrix_on_all_instruments(db, review_session.id)
     operator.post(
         f"/operator/sessions/{review_session.public_id}/workflow/prepare",
@@ -426,14 +413,10 @@ def test_summary_multi_instrument_headings_use_page_prefix(
     # lives on page 1, so one /1/save POST carries every assignment's
     # payload.
     assignments = list(
-        db.execute(
-            select(Assignment).where(Assignment.session_id == review_session.id)
-        ).scalars()
+        db.execute(select(Assignment).where(Assignment.session_id == review_session.id)).scalars()
     )
     rae_client = make_client(rae)
-    page_data: dict[str, str] = {
-        f"response[{a.id}][rating]": "5" for a in assignments
-    }
+    page_data: dict[str, str] = {f"response[{a.id}][rating]": "5" for a in assignments}
     rae_client.post(
         f"/me/sessions/{review_session.public_id}/1/save",
         data=answer_form(db, page_data, page_n=1),
@@ -444,12 +427,6 @@ def test_summary_multi_instrument_headings_use_page_prefix(
         follow_redirects=False,
     )
 
-    body = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/summary"
-    ).text
-    assert (
-        "<h2 style=\"margin-top: 0;\">#1: Self-eval</h2>" in body
-    )
-    assert (
-        "<h2 style=\"margin-top: 0;\">#2: Peer review</h2>" in body
-    )
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}/summary").text
+    assert '<h2 style="margin-top: 0;">#1: Self-eval</h2>' in body
+    assert '<h2 style="margin-top: 0;">#2: Peer review</h2>' in body

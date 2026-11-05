@@ -17,9 +17,7 @@ from app.services import visibility_policies
 ALICE_EMAIL = "alice@example.edu"
 
 
-def _session(
-    client: TestClient, db: Session, *, code: str, status: str
-) -> ReviewSession:
+def _session(client: TestClient, db: Session, *, code: str, status: str) -> ReviewSession:
     """A session with the signed-in operator (Alice) also on its
     reviewer and observer rosters."""
     resp = client.post(
@@ -34,9 +32,7 @@ def _session(
     review_session.status = status
     db.add_all(
         [
-            Reviewer(
-                session_id=review_session.id, name="Alice", email=ALICE_EMAIL
-            ),
+            Reviewer(session_id=review_session.id, name="Alice", email=ALICE_EMAIL),
             Observer(
                 session_id=review_session.id,
                 email=ALICE_EMAIL,
@@ -49,9 +45,7 @@ def _session(
 
 
 @pytest.mark.parametrize("status", ["draft", "validated"])
-def test_every_not_open_state_reads_the_same(
-    client: TestClient, db: Session, status: str
-) -> None:
+def test_every_not_open_state_reads_the_same(client: TestClient, db: Session, status: str) -> None:
     review_session = _session(client, db, code=f"no-{status}", status=status)
     body = client.get(f"/me/sessions/{review_session.public_id}/1").text
     assert "This review is not currently open." in body
@@ -65,9 +59,7 @@ def test_a_prepared_session_shows_when_it_is_scheduled_to_open(
     client: TestClient, db: Session
 ) -> None:
     review_session = _session(client, db, code="no-sched", status="validated")
-    review_session.scheduled_activate_at = datetime(
-        2031, 3, 4, 9, 30, tzinfo=UTC
-    )
+    review_session.scheduled_activate_at = datetime(2031, 3, 4, 9, 30, tzinfo=UTC)
     db.commit()
     body = client.get(f"/me/sessions/{review_session.public_id}/1").text
     assert "data-pre-open-scheduled" in body
@@ -77,18 +69,14 @@ def test_a_prepared_session_shows_when_it_is_scheduled_to_open(
 def test_a_draft_shows_no_schedule(client: TestClient, db: Session) -> None:
     """A draft can't open on its schedule until it is prepared again."""
     review_session = _session(client, db, code="no-sched-draft", status="draft")
-    review_session.scheduled_activate_at = datetime(
-        2031, 3, 4, 9, 30, tzinfo=UTC
-    )
+    review_session.scheduled_activate_at = datetime(2031, 3, 4, 9, 30, tzinfo=UTC)
     db.commit()
     body = client.get(f"/me/sessions/{review_session.public_id}/1").text
     assert "data-pre-open-scheduled" not in body
 
 
 @pytest.mark.parametrize("status", ["draft", "validated"])
-def test_the_help_contact_shows(
-    client: TestClient, db: Session, status: str
-) -> None:
+def test_the_help_contact_shows(client: TestClient, db: Session, status: str) -> None:
     review_session = _session(client, db, code=f"no-help-{status}", status=status)
     review_session.help_contact = "help@example.edu"
     db.commit()
@@ -100,13 +88,9 @@ def test_the_help_contact_shows(
     "path",
     ["1", "summary", "summary.csv", "collation", "results"],
 )
-def test_an_archived_session_is_off_limits(
-    client: TestClient, db: Session, path: str
-) -> None:
+def test_an_archived_session_is_off_limits(client: TestClient, db: Session, path: str) -> None:
     review_session = _session(client, db, code=f"arch-{path}", status="archived")
-    resp = client.get(
-        f"/me/sessions/{review_session.public_id}/{path}", follow_redirects=False
-    )
+    resp = client.get(f"/me/sessions/{review_session.public_id}/{path}", follow_redirects=False)
     assert resp.status_code == 404
 
 
@@ -124,16 +108,12 @@ def test_results_404_once_archived_even_with_a_grant(
         )
     )
     db.commit()
-    monkeypatch.setattr(
-        visibility_policies, "reviewee_has_current_grant", lambda *a, **k: True
-    )
+    monkeypatch.setattr(visibility_policies, "reviewee_has_current_grant", lambda *a, **k: True)
     resp = client.get(f"/me/sessions/{review_session.public_id}/results")
     assert resp.status_code == 404
 
 
-def test_collation_still_answers_before_archive(
-    client: TestClient, db: Session
-) -> None:
+def test_collation_still_answers_before_archive(client: TestClient, db: Session) -> None:
     """The 404 is archive's, not the observer gate's or the roster's."""
     review_session = _session(client, db, code="arch-before", status="expired")
     resp = client.get(f"/me/sessions/{review_session.public_id}/collation")
@@ -153,9 +133,7 @@ def test_a_write_to_an_archived_session_is_refused_like_a_strangers(
     assert "Spring" not in resp.text
 
 
-def test_the_surface_still_answers_before_archive(
-    client: TestClient, db: Session
-) -> None:
+def test_the_surface_still_answers_before_archive(client: TestClient, db: Session) -> None:
     review_session = _session(client, db, code="arch-surf-before", status="expired")
     assert client.get(f"/me/sessions/{review_session.public_id}/1").status_code == 200
 

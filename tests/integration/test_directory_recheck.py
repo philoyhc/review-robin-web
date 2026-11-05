@@ -127,7 +127,10 @@ def test_no_button_when_every_row_is_matched(
     session.observers_enabled = True
     db.flush()
     _upload(
-        client, session.public_id, "observers", "ObserverName,ObserverEmail\nJane,e0123456@example.edu\n"
+        client,
+        session.public_id,
+        "observers",
+        "ObserverName,ObserverEmail\nJane,e0123456@example.edu\n",
     )
     card = _card(client, session.public_id, "observers")
     # The button, not the countdown script that names its selector.
@@ -148,11 +151,15 @@ def _rows[M: (Reviewer, Reviewee, Observer)](
 
 
 def _event(db: Session, session_id: int, event_type: str) -> AuditEvent | None:
-    return db.execute(
-        select(AuditEvent)
-        .where(AuditEvent.session_id == session_id, AuditEvent.event_type == event_type)
-        .order_by(AuditEvent.id.desc())
-    ).scalars().first()
+    return (
+        db.execute(
+            select(AuditEvent)
+            .where(AuditEvent.session_id == session_id, AuditEvent.event_type == event_type)
+            .order_by(AuditEvent.id.desc())
+        )
+        .scalars()
+        .first()
+    )
 
 
 def _detail(db: Session, session_id: int, event_type: str) -> dict[str, Any]:
@@ -235,7 +242,12 @@ def test_a_directory_still_down_binds_nothing_and_says_why(
 ) -> None:
     session = _create_session(client, db, "recheck-down")
     switch.current = _Failing("server")
-    _upload(client, session.public_id, "reviewers", "ReviewerName,ReviewerEmail\nArun,arun.kumar@example.edu\n")
+    _upload(
+        client,
+        session.public_id,
+        "reviewers",
+        "ReviewerName,ReviewerEmail\nArun,arun.kumar@example.edu\n",
+    )
     _recheck(client, session.public_id, "reviewers")
     assert _rows(db, Reviewer, session.id)["arun.kumar@example.edu"].directory_object_id is None
     event = _event(db, session.id, "reviewers.directory_rechecked")
@@ -253,7 +265,12 @@ def test_an_expired_sign_in_saves_nothing_and_asks_to_renew(
 ) -> None:
     session = _create_session(client, db, "recheck-expired")
     switch.current = _Failing("server")
-    _upload(client, session.public_id, "reviewers", "ReviewerName,ReviewerEmail\nArun,arun.kumar@example.edu\n")
+    _upload(
+        client,
+        session.public_id,
+        "reviewers",
+        "ReviewerName,ReviewerEmail\nArun,arun.kumar@example.edu\n",
+    )
     switch.current = _Failing("unauthorized")
     response = _recheck(client, session.public_id, "reviewers")
     assert "recheck_renew=1" in response.headers["location"]
@@ -272,15 +289,29 @@ def test_reviewees_and_observers_recheck_too(
     session.observers_enabled = True
     db.commit()
     switch.current = _Failing("server")
-    _upload(client, session.public_id, "reviewees", "RevieweeName,RevieweeEmail\nArun,arun.kumar@example.edu\nAnon,STU-1\n")
-    _upload(client, session.public_id, "observers", "ObserverName,ObserverEmail\nJane,jane.tan@example.edu\n")
+    _upload(
+        client,
+        session.public_id,
+        "reviewees",
+        "RevieweeName,RevieweeEmail\nArun,arun.kumar@example.edu\nAnon,STU-1\n",
+    )
+    _upload(
+        client,
+        session.public_id,
+        "observers",
+        "ObserverName,ObserverEmail\nJane,jane.tan@example.edu\n",
+    )
     switch.current = FakeDirectory()
     _recheck(client, session.public_id, "reviewees")
     _recheck(client, session.public_id, "observers")
     assert _rows(db, Reviewee, session.id)["arun.kumar@example.edu"].directory_object_id
     assert _rows(db, Observer, session.id)["jane.tan@example.edu"].directory_object_id
-    assert _detail(db, session.id, "reviewees.directory_rechecked")["counts"]["directory_by_mail"] == 1
-    assert _detail(db, session.id, "observers.directory_rechecked")["counts"]["directory_by_mail"] == 1
+    assert (
+        _detail(db, session.id, "reviewees.directory_rechecked")["counts"]["directory_by_mail"] == 1
+    )
+    assert (
+        _detail(db, session.id, "observers.directory_rechecked")["counts"]["directory_by_mail"] == 1
+    )
 
 
 def test_reviewers_and_reviewees_recheck_only_while_editable(
@@ -293,9 +324,24 @@ def test_reviewers_and_reviewees_recheck_only_while_editable(
     session.observers_enabled = True
     db.commit()
     switch.current = _Failing("server")
-    _upload(client, session.public_id, "reviewers", "ReviewerName,ReviewerEmail\nArun,arun.kumar@example.edu\n")
-    _upload(client, session.public_id, "reviewees", "RevieweeName,RevieweeEmail\nArun,arun.kumar@example.edu\n")
-    _upload(client, session.public_id, "observers", "ObserverName,ObserverEmail\nJane,jane.tan@example.edu\n")
+    _upload(
+        client,
+        session.public_id,
+        "reviewers",
+        "ReviewerName,ReviewerEmail\nArun,arun.kumar@example.edu\n",
+    )
+    _upload(
+        client,
+        session.public_id,
+        "reviewees",
+        "RevieweeName,RevieweeEmail\nArun,arun.kumar@example.edu\n",
+    )
+    _upload(
+        client,
+        session.public_id,
+        "observers",
+        "ObserverName,ObserverEmail\nJane,jane.tan@example.edu\n",
+    )
     switch.current = FakeDirectory()
     row = db.get(ReviewSession, session.id)
     assert row is not None
@@ -331,7 +377,12 @@ def test_a_recheck_that_binds_sends_a_validated_session_to_draft(
     nothing leaves the session validated."""
     session = _create_session(client, db, "recheck-validated")
     switch.current = _Failing("server")
-    _upload(client, session.public_id, "reviewers", "ReviewerName,ReviewerEmail\nArun,arun.kumar@example.edu\n")
+    _upload(
+        client,
+        session.public_id,
+        "reviewers",
+        "ReviewerName,ReviewerEmail\nArun,arun.kumar@example.edu\n",
+    )
     row = db.get(ReviewSession, session.id)
     assert row is not None
     row.status = "validated"
@@ -382,23 +433,31 @@ def test_under_symmetric_review_the_reviewers_recheck_reaches_the_mirror(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    session = db.execute(select(ReviewSession).where(ReviewSession.code == "recheck-sym")).scalar_one()
+    session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "recheck-sym")
+    ).scalar_one()
     switch.current = _Failing("server")
     _upload(
-        client, session.public_id, "reviewers",
+        client,
+        session.public_id,
+        "reviewers",
         "ReviewerName,ReviewerEmail\nArun,arun.kumar@example.edu\nNobody,nobody@example.edu\n",
     )
     switch.current = FakeDirectory()
     _recheck(client, session.public_id, "reviewers")
     mirror = _rows(db, Reviewee, session.id)["arun.kumar@example.edu"]
-    assert mirror.directory_object_id == _rows(db, Reviewer, session.id)["arun.kumar@example.edu"].directory_object_id
+    assert (
+        mirror.directory_object_id
+        == _rows(db, Reviewer, session.id)["arun.kumar@example.edu"].directory_object_id
+    )
     _recheck(client, session.public_id, "reviewees", status=409)
     # Nobody stays unmatched: the Reviewers card offers the recheck, the
     # mirrored Reviewees card does not.
     assert "Recheck 1 unmatched</button>" in _card(client, session.public_id, "reviewers")
-    assert "data-directory-recheck" not in client.get(
-        f"/operator/sessions/{session.public_id}/reviewees?unlocked=1"
-    ).text
+    assert (
+        "data-directory-recheck"
+        not in client.get(f"/operator/sessions/{session.public_id}/reviewees?unlocked=1").text
+    )
 
 
 # --- rung 3: the countdown's keys for a recheck ---
@@ -438,7 +497,12 @@ def test_without_the_script_the_recheck_asks_afresh(
     `since` (no script) every address is looked up on the server, and
     with one, only answers fetched since then are read."""
     session = _create_session(client, db, "recheck-fresh")
-    _upload(client, session.public_id, "reviewers", "ReviewerName,ReviewerEmail\nNobody,nobody@example.edu\n")
+    _upload(
+        client,
+        session.public_id,
+        "reviewers",
+        "ReviewerName,ReviewerEmail\nNobody,nobody@example.edu\n",
+    )
     kept = client.post(
         f"/operator/sessions/{session.public_id}/directory-lookup",
         json={"keys": ["nobody@example.edu"]},
@@ -459,8 +523,16 @@ def test_without_the_script_the_recheck_asks_afresh(
     # With `since` after the kept answer, it is not read either.
     session2 = _create_session(client, db, "recheck-fresh-2")
     switch.current = FakeDirectory()
-    _upload(client, session2.public_id, "reviewers", "ReviewerName,ReviewerEmail\nNobody,nobody@example.edu\n")
-    client.post(f"/operator/sessions/{session2.public_id}/directory-lookup", json={"keys": ["nobody@example.edu"]})
+    _upload(
+        client,
+        session2.public_id,
+        "reviewers",
+        "ReviewerName,ReviewerEmail\nNobody,nobody@example.edu\n",
+    )
+    client.post(
+        f"/operator/sessions/{session2.public_id}/directory-lookup",
+        json={"keys": ["nobody@example.edu"]},
+    )
     since = client.post(
         f"/operator/sessions/{session2.public_id}/directory-keys",
         data={"roster": "reviewers", "recheck": "true"},
@@ -480,7 +552,12 @@ def test_a_recheck_with_nothing_unmatched_leaves_the_line_alone(
     client: TestClient, db: Session, directory: FakeDirectory
 ) -> None:
     session = _create_session(client, db, "recheck-nothing")
-    _upload(client, session.public_id, "reviewers", "ReviewerName,ReviewerEmail\nJane,jane.tan@example.edu\n")
+    _upload(
+        client,
+        session.public_id,
+        "reviewers",
+        "ReviewerName,ReviewerEmail\nJane,jane.tan@example.edu\n",
+    )
     _recheck(client, session.public_id, "reviewers")
     assert _event(db, session.id, "reviewers.directory_rechecked") is None
     assert "Directory check of the last import" in _card(client, session.public_id, "reviewers")
@@ -491,13 +568,24 @@ def test_an_import_after_a_recheck_takes_the_line_back(
 ) -> None:
     session = _create_session(client, db, "recheck-then-import")
     switch.current = _Failing("server")
-    _upload(client, session.public_id, "reviewers", "ReviewerName,ReviewerEmail\nArun,arun.kumar@example.edu\n")
+    _upload(
+        client,
+        session.public_id,
+        "reviewers",
+        "ReviewerName,ReviewerEmail\nArun,arun.kumar@example.edu\n",
+    )
     switch.current = FakeDirectory()
     _recheck(client, session.public_id, "reviewers")
     assert "Recheck of the unmatched addresses" in _card(client, session.public_id, "reviewers")
     response = client.post(
         f"/operator/sessions/{session.public_id}/reviewers/import",
-        files={"file": ("f.csv", b"ReviewerName,ReviewerEmail\nArun,arun.kumar@example.edu\n", "text/csv")},
+        files={
+            "file": (
+                "f.csv",
+                b"ReviewerName,ReviewerEmail\nArun,arun.kumar@example.edu\n",
+                "text/csv",
+            )
+        },
         data={"confirm_replace": "true"},
         follow_redirects=False,
     )
@@ -512,7 +600,12 @@ def test_an_archived_session_is_refused_before_any_lookup(
 ) -> None:
     session = _create_session(client, db, "recheck-archived-early")
     switch.current = _Failing("server")
-    _upload(client, session.public_id, "reviewers", "ReviewerName,ReviewerEmail\nArun,arun.kumar@example.edu\n")
+    _upload(
+        client,
+        session.public_id,
+        "reviewers",
+        "ReviewerName,ReviewerEmail\nArun,arun.kumar@example.edu\n",
+    )
     asked: list[str] = []
 
     class _Counting(FakeDirectory):
@@ -541,23 +634,32 @@ def test_a_recheck_that_binds_recomputes_self_review(
 
     session = _create_session(client, db, "recheck-selfrev")
     jane_r = Reviewer(session_id=session.id, name="Jane", email="e0123456@example.edu")
-    jane_e = Reviewee(session_id=session.id, name="Jane", email_or_identifier="jane.tan@example.edu")
+    jane_e = Reviewee(
+        session_id=session.id, name="Jane", email_or_identifier="jane.tan@example.edu"
+    )
     db.add_all([jane_r, jane_e])
     db.flush()
     instrument = ensure_default_instrument(db, session)
     row = Assignment(
-        session_id=session.id, reviewer_id=jane_r.id, reviewee_id=jane_e.id,
-        instrument_id=instrument.id, is_self_review=False,
+        session_id=session.id,
+        reviewer_id=jane_r.id,
+        reviewee_id=jane_e.id,
+        instrument_id=instrument.id,
+        is_self_review=False,
     )
     db.add(row)
     db.commit()
     user = db.execute(select(User).order_by(User.id)).scalars().first()
     assert user is not None
-    directory_recheck.recheck(db, review_session=session, user=user, kind="reviewers", directory=directory)
+    directory_recheck.recheck(
+        db, review_session=session, user=user, kind="reviewers", directory=directory
+    )
     db.commit()
     db.expire_all()
     assert must_get(db, Assignment, row.id).is_self_review is False  # the reviewee is still unbound
-    directory_recheck.recheck(db, review_session=session, user=user, kind="reviewees", directory=directory)
+    directory_recheck.recheck(
+        db, review_session=session, user=user, kind="reviewees", directory=directory
+    )
     db.commit()
     db.expire_all()
     assert must_get(db, Assignment, row.id).is_self_review is True
@@ -572,7 +674,9 @@ def test_stop_and_save_reads_what_the_count_fetched_and_asks_nothing(
     session = _create_session(client, db, "recheck-stop-save")
     switch.current = _Failing("server")
     _upload(
-        client, session.public_id, "reviewers",
+        client,
+        session.public_id,
+        "reviewers",
         "ReviewerName,ReviewerEmail\nJane,e0123456@example.edu\nNobody,nobody@example.edu\n",
     )
     switch.current = FakeDirectory()
@@ -600,7 +704,9 @@ def test_stop_and_save_reads_what_the_count_fetched_and_asks_nothing(
     )
     assert response.status_code == 303
     assert asked == []
-    rows = {r.email: r for r in db.scalars(select(Reviewer).where(Reviewer.session_id == session.id))}
+    rows = {
+        r.email: r for r in db.scalars(select(Reviewer).where(Reviewer.session_id == session.id))
+    }
     assert rows["e0123456@example.edu"].directory_object_id
     assert rows["nobody@example.edu"].directory_object_id is None
     card = _card(client, session.public_id, "reviewers")
@@ -618,7 +724,12 @@ def test_stop_without_since_is_an_ordinary_recheck(
 ) -> None:
     session = _create_session(client, db, "recheck-stop-no-since")
     switch.current = _Failing("server")
-    _upload(client, session.public_id, "reviewers", "ReviewerName,ReviewerEmail\nJane,e0123456@example.edu\n")
+    _upload(
+        client,
+        session.public_id,
+        "reviewers",
+        "ReviewerName,ReviewerEmail\nJane,e0123456@example.edu\n",
+    )
     switch.current = FakeDirectory()
     client.post(
         f"/operator/sessions/{session.public_id}/directory-recheck",

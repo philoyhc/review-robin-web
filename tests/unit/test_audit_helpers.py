@@ -15,6 +15,7 @@ The integration-level "this emit produces this row" coverage
 lives in the per-feature integration tests; this file only
 covers the helpers themselves in isolation.
 """
+
 from __future__ import annotations
 
 import warnings
@@ -32,9 +33,7 @@ def _make_user_and_session(db: Session, code: str) -> tuple[User, ReviewSession]
     user = User(email=f"op-{code}@example.edu", display_name="Op")
     db.add(user)
     db.flush()
-    review_session = ReviewSession(
-        name=code.title(), code=code, created_by_user_id=user.id
-    )
+    review_session = ReviewSession(name=code.title(), code=code, created_by_user_id=user.id)
     db.add(review_session)
     db.flush()
     return user, review_session
@@ -79,9 +78,7 @@ def test_snapshot_mirrors_columns_and_serialises_dates() -> None:
 
 def test_counts_keeps_only_named_integers() -> None:
     payload = audit.counts(reviewers=8, reviewees=13, assignments=104)
-    assert payload.to_dict() == {
-        "counts": {"reviewers": 8, "reviewees": 13, "assignments": 104}
-    }
+    assert payload.to_dict() == {"counts": {"reviewers": 8, "reviewees": 13, "assignments": 104}}
 
 
 def test_set_changes_defaults_each_branch_to_empty_list() -> None:
@@ -148,9 +145,7 @@ def test_write_event_with_session_none_omits_top_level_identity(db: Session) -> 
         summary="Deleted session wrt-deleted",
         actor_user_id=user.id,
         session=None,
-        payload=audit.snapshot(
-            {"id": original_id, "code": "wrt-deleted", "name": "Wrt-Deleted"}
-        ),
+        payload=audit.snapshot({"id": original_id, "code": "wrt-deleted", "name": "Wrt-Deleted"}),
         correlation_id="corr-del",
     )
     assert event.session_id is None
@@ -243,6 +238,4 @@ def test_write_event_legacy_call_without_detail_does_not_warn(db: Session) -> No
             actor_user_id=user.id,
             session_id=review_session.id,
         )
-    assert not [
-        w for w in caught if issubclass(w.category, DeprecationWarning)
-    ]
+    assert not [w for w in caught if issubclass(w.category, DeprecationWarning)]

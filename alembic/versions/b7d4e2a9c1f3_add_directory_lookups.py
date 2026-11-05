@@ -13,6 +13,7 @@ Revision ID: b7d4e2a9c1f3
 Revises: e4b2c7a91d36
 Create Date: 2026-11-03
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -45,7 +46,9 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["session_id"], ["sessions.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
-            "operator_user_id", "session_id", "key",
+            "operator_user_id",
+            "session_id",
+            "key",
             name="uq_directory_lookups_operator_session_key",
         ),
     )

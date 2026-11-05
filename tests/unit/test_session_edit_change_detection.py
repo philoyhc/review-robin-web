@@ -60,6 +60,4 @@ def test_the_second_pass_of_a_repeated_dst_hour_is_unedited() -> None:
     # 06:30 UTC on 2026-11-01 is 01:30 EST, the second 01:30 in New York;
     # parsing "01:30" back would land on 05:30 UTC, the first (Codex, #2832).
     stored = datetime(2026, 11, 1, 6, 30, tzinfo=UTC)
-    assert sessions.datetime_box_unedited(
-        stored, "2026-11-01T01:30", "America/New_York"
-    )
+    assert sessions.datetime_box_unedited(stored, "2026-11-01T01:30", "America/New_York")

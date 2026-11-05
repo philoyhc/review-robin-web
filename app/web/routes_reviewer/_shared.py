@@ -158,7 +158,8 @@ def build_role_chips(
         (
             r
             for r in db.execute(
-                select(Reviewer).where(
+                select(Reviewer)
+                .where(
                     Reviewer.session_id == review_session.id,
                     Reviewer.status == "active",
                 )
@@ -171,7 +172,8 @@ def build_role_chips(
 
     reviewee_match = None
     for r in db.execute(
-        select(Reviewee).where(
+        select(Reviewee)
+        .where(
             Reviewee.session_id == review_session.id,
             Reviewee.status == "active",
         )
@@ -187,7 +189,8 @@ def build_role_chips(
         (
             o
             for o in db.execute(
-                select(Observer).where(
+                select(Observer)
+                .where(
                     Observer.session_id == review_session.id,
                     Observer.status == "active",
                 )

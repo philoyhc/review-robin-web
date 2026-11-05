@@ -15,6 +15,7 @@ The five behaviours land together with PR 2C:
    BEFORE the activation in the same pass.
 5. Manual-activate clears Start; invite_offsets becomes inert.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -75,17 +76,13 @@ def _create_session(
         data["scheduled_activate_at"] = scheduled_activate_at
     if invite_offsets:
         data["invite_offsets"] = invite_offsets
-    response = client.post(
-        "/operator/sessions", data=data, follow_redirects=False
-    )
+    response = client.post("/operator/sessions", data=data, follow_redirects=False)
     assert response.status_code == 303, response.text
     # Create-session redirect targets ``.../{public_id}?editing=1#...``;
     # strip the query and fragment before parsing the public id.
     location = response.headers["location"].split("?", 1)[0].split("#", 1)[0]
     return db.execute(
-        select(ReviewSession.id).where(
-            ReviewSession.public_id == location.rsplit("/", 1)[-1]
-        )
+        select(ReviewSession.id).where(ReviewSession.public_id == location.rsplit("/", 1)[-1])
     ).scalar_one()
 
 
@@ -104,9 +101,7 @@ def _audit_types(db: Session, session_id: int) -> list[str]:
 # --------------------------------------------------------------------------- #
 
 
-def test_edit_start_change_revalidates_invite_offsets(
-    client: TestClient, db: Session
-) -> None:
+def test_edit_start_change_revalidates_invite_offsets(client: TestClient, db: Session) -> None:
     """Operator moves Start closer to now; previously-valid
     invite_offsets now violates the operational-lead rule → 422."""
     far_start = datetime.now(UTC) + timedelta(days=10)
@@ -138,9 +133,7 @@ def test_edit_start_change_revalidates_invite_offsets(
     assert rs.invite_offsets == ["-P5D"]
 
 
-def test_edit_start_change_within_rules_succeeds(
-    client: TestClient, db: Session
-) -> None:
+def test_edit_start_change_within_rules_succeeds(client: TestClient, db: Session) -> None:
     """Counterpart to the above — moving Start while keeping the
     rules satisfied saves cleanly."""
     far_start = datetime.now(UTC) + timedelta(days=10)
@@ -277,9 +270,7 @@ def _seed_full_session(db: Session, code: str) -> ReviewSession:
         user=op,
         payload=SessionCreate(name=code.title(), code=code, description="d"),
     )
-    reviewer = Reviewer(
-        session_id=rs.id, name="A", email=f"a-{code}@example.edu"
-    )
+    reviewer = Reviewer(session_id=rs.id, name="A", email=f"a-{code}@example.edu")
     reviewee = Reviewee(
         session_id=rs.id,
         name="C",
@@ -290,9 +281,7 @@ def _seed_full_session(db: Session, code: str) -> ReviewSession:
     # Wave 5 PR 5.2 — lazily materialise the Full Matrix
     # ``session_rule_sets`` row (auto-seed retired).
     pin_full_matrix_on_all_instruments(db, rs.id)
-    instrument = db.execute(
-        select(Instrument).where(Instrument.session_id == rs.id)
-    ).scalar_one()
+    instrument = db.execute(select(Instrument).where(Instrument.session_id == rs.id)).scalar_one()
     db.add(
         Assignment(
             session_id=rs.id,
@@ -303,9 +292,7 @@ def _seed_full_session(db: Session, code: str) -> ReviewSession:
         )
     )
     db.flush()
-    invitations_service.generate_invitations(
-        db, review_session=rs, user=op
-    )
+    invitations_service.generate_invitations(db, review_session=rs, user=op)
     rs.status = lifecycle.SessionStatus.validated.value
     db.flush()
     db.commit()
@@ -321,9 +308,7 @@ def test_observer_fires_invites_before_activation_on_catch_up(
     one pass. Audit ordering: scheduled_invites_fired before
     session.activated."""
     rs = _seed_full_session(db, "catchup")
-    rs.scheduled_activate_at = datetime.now(UTC) - timedelta(
-        seconds=30
-    )  # already past
+    rs.scheduled_activate_at = datetime.now(UTC) - timedelta(seconds=30)  # already past
     rs.invite_offsets = ["-P1D"]  # also past
     db.flush()
     db.commit()
@@ -359,9 +344,7 @@ def test_manual_activate_clears_start_invite_offsets_inert(
     db.flush()
     db.commit()
 
-    op = db.execute(
-        select(User).where(User.email == "op-manual-cancel@example.edu")
-    ).scalar_one()
+    op = db.execute(select(User).where(User.email == "op-manual-cancel@example.edu")).scalar_one()
     report = lifecycle.build_readiness_report([])
     lifecycle.activate_session(
         db,
@@ -379,9 +362,13 @@ def test_manual_activate_clears_start_invite_offsets_inert(
         rs,
         build_invite_url=lambda token: f"https://test/invite/{token}",
     )
-    fired = db.execute(
-        select(AuditEvent)
-        .where(AuditEvent.session_id == rs.id)
-        .where(AuditEvent.event_type == "session.scheduled_invites_fired")
-    ).scalars().all()
+    fired = (
+        db.execute(
+            select(AuditEvent)
+            .where(AuditEvent.session_id == rs.id)
+            .where(AuditEvent.event_type == "session.scheduled_invites_fired")
+        )
+        .scalars()
+        .all()
+    )
     assert fired == []  # no fire after manual activate clears anchor

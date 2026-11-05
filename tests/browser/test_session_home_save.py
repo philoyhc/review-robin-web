@@ -105,9 +105,7 @@ def test_a_seat_left_by_a_refused_save_is_not_inherited(
     page.set_viewport_size({"width": 1280, "height": 500})
     page.goto(app_url(f"/operator/sessions/{session_id}?editing=1"))
     taken = page.locator("#mock-code")
-    taken.fill(
-        other_code.split('id="mock-code"', 1)[1].split('value="', 1)[1].split('"', 1)[0]
-    )
+    taken.fill(other_code.split('id="mock-code"', 1)[1].split('value="', 1)[1].split('"', 1)[0])
     page.locator("[data-config-save]").scroll_into_view_if_needed()
     page.locator("[data-config-save]").click()
     page.wait_for_load_state("load")

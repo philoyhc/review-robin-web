@@ -85,10 +85,7 @@ def serialize_audit_events(
         .where(AuditEvent.session_id == review_session.id)
     )
     stmt = _apply_filters(stmt, filters, User)
-    stmt = (
-        stmt.order_by(AuditEvent.created_at, AuditEvent.id)
-        .execution_options(yield_per=1000)
-    )
+    stmt = stmt.order_by(AuditEvent.created_at, AuditEvent.id).execution_options(yield_per=1000)
     for event, actor_email in db.execute(stmt):
         yield (
             event.event_type,

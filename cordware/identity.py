@@ -159,9 +159,7 @@ def _decode_client_principal(header_value: str) -> dict[str, Any] | None:
     return cast(dict[str, Any], payload)
 
 
-def _claim(
-    payload: dict[str, Any], *types: str, blank_counts: bool = True
-) -> str | None:
+def _claim(payload: dict[str, Any], *types: str, blank_counts: bool = True) -> str | None:
     """The value of the first of ``types`` the claim set carries, in
     the order ``types`` names them — not the token's own claim order.
     Within one type the token's first non-empty value wins. With

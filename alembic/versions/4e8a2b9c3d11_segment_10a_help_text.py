@@ -5,6 +5,7 @@ Revises: 7d4f5b3c1a92
 Create Date: 2026-04-30 10:00:00.000000
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -18,9 +19,7 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     with op.batch_alter_table("instrument_response_fields", schema=None) as batch_op:
-        batch_op.add_column(
-            sa.Column("help_text", sa.Text(), nullable=True)
-        )
+        batch_op.add_column(sa.Column("help_text", sa.Text(), nullable=True))
         batch_op.add_column(
             sa.Column(
                 "help_text_visible",

@@ -48,9 +48,7 @@ def _make_session(client: TestClient, db: Session, code: str) -> ReviewSession:
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    rs = db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    rs = db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
     # Relationships is gate-hidden like Observers — its routes 404
     # behind `require_relationships_enabled_session`.
     rs.relationships_enabled = True
@@ -66,8 +64,7 @@ def _seed(db: Session, sid: int, page: str, n: int = 3) -> list[int]:
     seed reviewers/reviewees; only the row type differs.
     """
     reviewers = [
-        Reviewer(session_id=sid, name=f"Rr{i}", email=f"rr{i}@example.org")
-        for i in range(n)
+        Reviewer(session_id=sid, name=f"Rr{i}", email=f"rr{i}@example.org") for i in range(n)
     ]
     reviewees = [
         Reviewee(session_id=sid, name=f"Re{i}", email_or_identifier=f"re{i}@example.org")
@@ -82,9 +79,7 @@ def _seed(db: Session, sid: int, page: str, n: int = 3) -> list[int]:
         return [r.id for r in reviewees]
 
     rows = [
-        Relationship(
-            session_id=sid, reviewer_id=reviewers[i].id, reviewee_id=reviewees[i].id
-        )
+        Relationship(session_id=sid, reviewer_id=reviewers[i].id, reviewee_id=reviewees[i].id)
         for i in range(n)
     ]
     db.add_all(rows)
@@ -103,8 +98,12 @@ def _row_action_payloads(page: str, rid: int) -> list[tuple[str, str, dict]]:
     ids_field = f"{page[:-1]}_ids"
     if page == "reviewees":
         update = {
-            "name": "Alice", "email_or_identifier": "alice@example.org",
-            "profile_link": "", "tag_1": "", "tag_2": "", "tag_3": "",
+            "name": "Alice",
+            "email_or_identifier": "alice@example.org",
+            "profile_link": "",
+            "tag_1": "",
+            "tag_2": "",
+            "tag_3": "",
             "status_value": "active",
         }
     else:
@@ -113,7 +112,10 @@ def _row_action_payloads(page: str, rid: int) -> list[tuple[str, str, dict]]:
         update = {
             "reviewer_pick": "Rr0 (rr0@example.org)",
             "reviewee_pick": "Re0 (re0@example.org)",
-            "tag_1": "", "tag_2": "", "tag_3": "", "status_value": "active",
+            "tag_1": "",
+            "tag_2": "",
+            "tag_3": "",
+            "status_value": "active",
         }
     return [
         ("update", "{base}/{rid}/update", update),
@@ -140,7 +142,8 @@ def test_every_row_action_lands_on_the_row_it_acted_on(
     for name, template, data in _row_action_payloads(page, ids[0]):
         response = client.post(
             template.format(base=base, rid=ids[0]),
-            data=data, follow_redirects=False,
+            data=data,
+            follow_redirects=False,
         )
         assert response.status_code == 303, (name, response.text[:300])
         loc = response.headers["location"]
@@ -160,7 +163,8 @@ def test_every_row_action_carries_the_pager_offset(
     for name, template, data in _row_action_payloads(page, ids[0]):
         response = client.post(
             template.format(base=base, rid=ids[0]),
-            data={**data, "filter_offset": "200"}, follow_redirects=False,
+            data={**data, "filter_offset": "200"},
+            follow_redirects=False,
         )
         q = parse_qs(urlparse(response.headers["location"]).query)
         assert q.get("offset") == ["200"], (name, response.headers["location"])
@@ -176,8 +180,7 @@ def test_delete_lands_on_the_table_card_because_its_rows_are_gone(
     ids = _seed(db, rs.id, page)
     response = client.post(
         f"{_base(rs.public_id, page)}/bulk-delete",
-        data={f"{page[:-1]}_ids": [ids[0]], "confirm": "true",
-              "filter_offset": "200"},
+        data={f"{page[:-1]}_ids": [ids[0]], "confirm": "true", "filter_offset": "200"},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text[:300]
@@ -211,20 +214,26 @@ def test_a_create_carries_the_filter_offset_and_focus(
     _seed(db, rs.id, page)
     if page == "reviewees":
         payload = {
-            "name": "Zed", "email_or_identifier": "zed@example.org",
-            "profile_link": "", "tag_1": "", "tag_2": "", "tag_3": "",
+            "name": "Zed",
+            "email_or_identifier": "zed@example.org",
+            "profile_link": "",
+            "tag_1": "",
+            "tag_2": "",
+            "tag_3": "",
             "status_value": "active",
         }
     else:
         payload = {
             "reviewer_pick": "Rr1 (rr1@example.org)",
             "reviewee_pick": "Re2 (re2@example.org)",
-            "tag_1": "", "tag_2": "", "tag_3": "", "status_value": "active",
+            "tag_1": "",
+            "tag_2": "",
+            "tag_3": "",
+            "status_value": "active",
         }
     response = client.post(
         f"{_base(rs.public_id, page)}/create",
-        data={**payload, "filter_status": "active", "filter_q": "e",
-              "filter_offset": "200"},
+        data={**payload, "filter_status": "active", "filter_q": "e", "filter_offset": "200"},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text[:400]
@@ -258,15 +267,22 @@ def test_creating_a_row_pages_to_where_the_new_row_actually_is(
     _seed(db, rs.id, page, n=230)
     if page == "reviewees":
         payload = {
-            "name": "Zed", "email_or_identifier": "zed@example.org",
-            "profile_link": "", "tag_1": "", "tag_2": "", "tag_3": "",
+            "name": "Zed",
+            "email_or_identifier": "zed@example.org",
+            "profile_link": "",
+            "tag_1": "",
+            "tag_2": "",
+            "tag_3": "",
             "status_value": "active",
         }
     else:
         payload = {
             "reviewer_pick": "Rr1 (rr1@example.org)",
             "reviewee_pick": "Re2 (re2@example.org)",
-            "tag_1": "", "tag_2": "", "tag_3": "", "status_value": "active",
+            "tag_1": "",
+            "tag_2": "",
+            "tag_3": "",
+            "status_value": "active",
         }
     response = client.post(
         f"{_base(rs.public_id, page)}/create", data=payload, follow_redirects=False
@@ -290,7 +306,7 @@ def _shell(markup: str, form_id: str) -> str:
     one renders per request, and a `>= 1` count over the page cannot
     tell which."""
     i = markup.index(f'id="{form_id}"')
-    return markup[i:markup.index("</form>", i)]
+    return markup[i : markup.index("</form>", i)]
 
 
 @pytest.mark.parametrize("page,noun", PAGES)
@@ -315,17 +331,16 @@ def test_both_form_shells_send_the_offset_the_route_reads(
 
     bulk = client.get(f"{_base(rs.public_id, page)}?offset=200").text
     bulk = re.sub(r"<(style|script)\b.*?</\1>", "", bulk, flags=re.S)
-    assert 'name="filter_offset" value="200"' in _shell(
-        bulk, f"{page}-bulk-form"
-    ), "the bulk shell does not send the live offset"
+    assert 'name="filter_offset" value="200"' in _shell(bulk, f"{page}-bulk-form"), (
+        "the bulk shell does not send the live offset"
+    )
 
     edit = client.get(f"{_base(rs.public_id, page)}?edit_id={ids[210]}").text
     edit = re.sub(r"<(style|script)\b.*?</\1>", "", edit, flags=re.S)
     shell = _shell(edit, f"{noun}-edit-form")
     m = re.search(r'name="filter_offset" value="(\d+)"', shell)
     assert m and m.group(1) != "0", (
-        "the edit shell does not send the offset of the page the edited "
-        f"row is on: {shell[:200]}"
+        f"the edit shell does not send the offset of the page the edited row is on: {shell[:200]}"
     )
 
 
@@ -383,17 +398,14 @@ def test_the_fallback_survives_an_empty_filtered_view(
     assert '<p class="muted table-showing-hint">' not in body, (
         "a count line beside the no-match message (findings C1)"
     )
-    assert f'hash.indexOf("#{noun}-row-")' in body, (
-        "the fallback is trapped inside the rows branch"
-    )
+    assert f'hash.indexOf("#{noun}-row-")' in body, "the fallback is trapped inside the rows branch"
     # ...and it has something to scroll to. The script looks up
     # `pager_anchor` by id; on the empty-filtered branch the table card
     # is not rendered, so without an id here `getElementById` returns
     # null and the fallback no-ops in the one state its first case
     # actually reaches.
     assert f'id="{page}-table-card"' in body, (
-        "the empty-filtered card carries no landing anchor, so the "
-        "fallback has nothing to find"
+        "the empty-filtered card carries no landing anchor, so the fallback has nothing to find"
     )
 
 

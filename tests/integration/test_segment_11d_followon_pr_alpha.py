@@ -134,13 +134,9 @@ def test_dashboard_rows_link_to_position_1(
     )
     rae_client = make_client(rae)
     body = rae_client.get("/me").text
-    assert (
-        f'<a href="/me/sessions/{review_session.public_id}/1">' in body
-    )
+    assert f'<a href="/me/sessions/{review_session.public_id}/1">' in body
     # The bare URL no longer appears in the dashboard.
-    assert (
-        f'href="/me/sessions/{review_session.public_id}">' not in body
-    )
+    assert f'href="/me/sessions/{review_session.public_id}">' not in body
 
 
 # ── Save URL shape ─────────────────────────────────────────────────────
@@ -171,10 +167,7 @@ def test_save_post_url_carries_position(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    assert (
-        response.headers["location"]
-        == f"/me/sessions/{review_session.public_id}/1"
-    )
+    assert response.headers["location"] == f"/me/sessions/{review_session.public_id}/1"
 
 
 # ── Submit redirect ────────────────────────────────────────────────────
@@ -224,10 +217,7 @@ def test_submit_redirect_lands_on_summary_when_session_complete(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    assert (
-        response.headers["location"]
-        == f"/me/sessions/{review_session.public_id}/summary"
-    )
+    assert response.headers["location"] == f"/me/sessions/{review_session.public_id}/summary"
 
 
 # ── Clear redirect → bare URL ──────────────────────────────────────────
@@ -257,7 +247,4 @@ def test_clear_redirect_goes_to_bare_url(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    assert (
-        response.headers["location"]
-        == f"/me/sessions/{review_session.public_id}"
-    )
+    assert response.headers["location"] == f"/me/sessions/{review_session.public_id}"

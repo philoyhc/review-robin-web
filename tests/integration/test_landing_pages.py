@@ -71,9 +71,9 @@ def test_about_shows_identity_and_my_reviews(make_client) -> None:
         provider="aad",
     )
     body = make_client(rae).get("/about").text
-    assert "rae@example.edu" in body          # signed-in identity
-    assert 'href="/me"' in body               # link to their reviews
-    assert "Access" in body                   # the access-help card
+    assert "rae@example.edu" in body  # signed-in identity
+    assert 'href="/me"' in body  # link to their reviews
+    assert "Access" in body  # the access-help card
 
 
 def test_about_shows_contact_mailto_when_configured(

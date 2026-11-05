@@ -34,6 +34,7 @@ def _session(client: TestClient, db: Session, code: str):
     db.flush()
     return review_session
 
+
 EMAIL = "aisha.haddad@example.edu"
 ROSTER_FORM = {"profile_link": "", "tag_1": "", "tag_2": "", "tag_3": "", "status": "active"}
 
@@ -54,14 +55,10 @@ def _add(client: TestClient, session_id: str, path: str, **fields: str):
 
 
 def _rows(db: Session, model, session_id: int) -> list:
-    return list(
-        db.execute(select(model).where(model.session_id == session_id)).scalars()
-    )
+    return list(db.execute(select(model).where(model.session_id == session_id)).scalars())
 
 
-def test_the_add_form_and_the_csv_reach_the_same_verdict(
-    client: TestClient, db: Session
-) -> None:
+def test_the_add_form_and_the_csv_reach_the_same_verdict(client: TestClient, db: Session) -> None:
     """The item's whole point, and the measurement that opened it.
 
     A reviewee holds the mailbox under one name. Both paths are then
@@ -69,8 +66,13 @@ def test_the_add_form_and_the_csv_reach_the_same_verdict(
     19Q Item 7 the CSV refused and the form accepted.
     """
     session = _session(client, db, "xr-parity")
-    _add(client, session.public_id, "reviewees/create",
-         name="Aisha Haddadx", email_or_identifier=EMAIL)
+    _add(
+        client,
+        session.public_id,
+        "reviewees/create",
+        name="Aisha Haddadx",
+        email_or_identifier=EMAIL,
+    )
 
     csv = f"ReviewerName,ReviewerEmail\nAisha Haddad,{EMAIL}\n".encode()
     uploaded = client.post(
@@ -78,22 +80,27 @@ def test_the_add_form_and_the_csv_reach_the_same_verdict(
         files={"file": ("r.csv", csv, "text/csv")},
         follow_redirects=True,
     )
-    assert "ReviewerEmail is already used under a different name in another roster (1 row)" in uploaded.text
+    assert (
+        "ReviewerEmail is already used under a different name in another roster (1 row)"
+        in uploaded.text
+    )
     assert _rows(db, Reviewer, session.id) == []
 
-    typed = _add(client, session.public_id, "reviewers/create",
-                 name="Aisha Haddad", email=EMAIL)
+    typed = _add(client, session.public_id, "reviewers/create", name="Aisha Haddad", email=EMAIL)
     assert typed.status_code == 400, (
-        "the Add form accepted what the CSV refused — the asymmetry 19Q "
-        "Item 7 exists to remove"
+        "the Add form accepted what the CSV refused — the asymmetry 19Q Item 7 exists to remove"
     )
     assert _rows(db, Reviewer, session.id) == []
 
 
 @pytest.mark.parametrize(("roster", "path", "id_field", "name_field"), ROSTERS)
 def test_every_roster_refuses_a_mailbox_held_under_another_name(
-    client: TestClient, db: Session, roster: str, path: str,
-    id_field: str, name_field: str,
+    client: TestClient,
+    db: Session,
+    roster: str,
+    path: str,
+    id_field: str,
+    name_field: str,
 ) -> None:
     """Three-way since the author's ruling: each roster checks the other
     two. A reviewee holds the mailbox; every roster must refuse a
@@ -101,39 +108,45 @@ def test_every_roster_refuses_a_mailbox_held_under_another_name(
     via the reviewer seeded below."""
     session = _session(client, db, f"xr-{roster}")
     holder_path, holder_id = (
-        ("reviewers/create", "email") if roster == "reviewees"
+        ("reviewers/create", "email")
+        if roster == "reviewees"
         else ("reviewees/create", "email_or_identifier")
     )
     _add(client, session.public_id, holder_path, name="Held Name", **{holder_id: EMAIL})
 
-    response = _add(client, session.public_id, path,
-                    **{id_field: EMAIL, name_field: "Different Name"})
+    response = _add(
+        client, session.public_id, path, **{id_field: EMAIL, name_field: "Different Name"}
+    )
     assert response.status_code == 400, f"{roster} accepted a conflicting name"
 
 
 @pytest.mark.parametrize(("roster", "path", "id_field", "name_field"), ROSTERS)
 def test_the_same_name_is_the_legitimate_case_and_still_creates(
-    client: TestClient, db: Session, roster: str, path: str,
-    id_field: str, name_field: str,
+    client: TestClient,
+    db: Session,
+    roster: str,
+    path: str,
+    id_field: str,
+    name_field: str,
 ) -> None:
     """The control, and the reason this is a name check and not an email
     check: one person is commonly reviewer and reviewee both, and may
     observe too. Without this the item would have banned self-review."""
     session = _session(client, db, f"xr-same-{roster}")
     holder_path, holder_id = (
-        ("reviewers/create", "email") if roster == "reviewees"
+        ("reviewers/create", "email")
+        if roster == "reviewees"
         else ("reviewees/create", "email_or_identifier")
     )
     _add(client, session.public_id, holder_path, name="Aisha Haddad", **{holder_id: EMAIL})
 
-    response = _add(client, session.public_id, path,
-                    **{id_field: EMAIL, name_field: "Aisha Haddad"})
+    response = _add(
+        client, session.public_id, path, **{id_field: EMAIL, name_field: "Aisha Haddad"}
+    )
     assert response.status_code == 303, f"{roster} refused the same name"
 
 
-def test_an_unnamed_observer_does_not_collide(
-    client: TestClient, db: Session
-) -> None:
+def test_an_unnamed_observer_does_not_collide(client: TestClient, db: Session) -> None:
     """Where the author's two answers meet.
 
     `Observer.display_name` is nullable and its CSV column optional,
@@ -145,8 +158,7 @@ def test_an_unnamed_observer_does_not_collide(
     session = _session(client, db, "xr-unnamed")
     _add(client, session.public_id, "reviewers/create", name="Aisha Haddad", email=EMAIL)
 
-    response = _add(client, session.public_id, "observers/create",
-                    email=EMAIL, display_name="")
+    response = _add(client, session.public_id, "observers/create", email=EMAIL, display_name="")
     assert response.status_code == 303
     assert len(_rows(db, Observer, session.id)) == 1
 
@@ -157,8 +169,13 @@ def test_a_name_only_edit_is_caught(client: TestClient, db: Session) -> None:
     guard keys on the resulting pair instead."""
     session = _session(client, db, "xr-rename")
     _add(client, session.public_id, "reviewers/create", name="Aisha Haddad", email=EMAIL)
-    _add(client, session.public_id, "reviewees/create",
-         name="Aisha Haddad", email_or_identifier=EMAIL)
+    _add(
+        client,
+        session.public_id,
+        "reviewees/create",
+        name="Aisha Haddad",
+        email_or_identifier=EMAIL,
+    )
     reviewee = _rows(db, Reviewee, session.id)[0]
 
     response = client.post(
@@ -180,7 +197,10 @@ def test_an_unknown_kind_is_loud() -> None:
 
     with pytest.raises(ValueError, match="unknown kind"):
         csv_imports.check_cross_table_identity(
-            None, session_id=1, rows=[], kind="relationships"  # pyright: ignore[reportArgumentType]  -- the kind guard fires before db is read
+            None,  # pyright: ignore[reportArgumentType]  -- the kind guard fires before db is read
+            session_id=1,
+            rows=[],
+            kind="relationships",  # pyright: ignore[reportArgumentType]  -- an unknown kind, the point of the test
         )
 
 
@@ -203,9 +223,7 @@ def test_the_single_row_helper_is_loud_too() -> None:
         )
 
 
-def test_an_unnamed_holder_does_not_block_a_named_row(
-    client: TestClient, db: Session
-) -> None:
+def test_an_unnamed_holder_does_not_block_a_named_row(client: TestClient, db: Session) -> None:
     """The skip runs on both sides of the comparison.
 
     `test_an_unnamed_observer_does_not_collide` covers the *incoming*
@@ -216,17 +234,14 @@ def test_an_unnamed_holder_does_not_block_a_named_row(
     session = _session(client, db, "xr-unnamed-holder")
     _add(client, session.public_id, "observers/create", email=EMAIL, display_name="")
 
-    response = _add(client, session.public_id, "reviewers/create",
-                    name="Aisha Haddad", email=EMAIL)
+    response = _add(client, session.public_id, "reviewers/create", name="Aisha Haddad", email=EMAIL)
     assert response.status_code == 303, (
         "an unnamed observer blocked a named reviewer; a missing name "
         "cannot disagree with one, on either side"
     )
 
 
-def test_the_name_comparison_is_case_sensitive(
-    client: TestClient, db: Session
-) -> None:
+def test_the_name_comparison_is_case_sensitive(client: TestClient, db: Session) -> None:
     """The author's ruling of 2026-09-19, which nothing pinned until a
     mutant folded the comparison and every test passed.
 
@@ -235,17 +250,20 @@ def test_the_name_comparison_is_case_sensitive(
     """
     session = _session(client, db, "xr-exact-case")
     _add(client, session.public_id, "reviewers/create", name="Aisha Haddad", email=EMAIL)
-    response = _add(client, session.public_id, "reviewees/create",
-                    name="aisha haddad", email_or_identifier=EMAIL)
+    response = _add(
+        client,
+        session.public_id,
+        "reviewees/create",
+        name="aisha haddad",
+        email_or_identifier=EMAIL,
+    )
     assert response.status_code == 400, (
         "'aisha haddad' was accepted against 'Aisha Haddad' — the "
         "comparison is case-sensitive by ruling, not incidentally"
     )
 
 
-def test_surrounding_whitespace_is_not_a_difference(
-    client: TestClient, db: Session
-) -> None:
+def test_surrounding_whitespace_is_not_a_difference(client: TestClient, db: Session) -> None:
     """**And this is the half "exact" does not mean.**
 
     Both paths trim a name long before it reaches the comparison —
@@ -256,17 +274,20 @@ def test_surrounding_whitespace_is_not_a_difference(
     """
     session = _session(client, db, "xr-exact-space")
     _add(client, session.public_id, "reviewers/create", name="Aisha Haddad", email=EMAIL)
-    response = _add(client, session.public_id, "reviewees/create",
-                    name="Aisha Haddad ", email_or_identifier=EMAIL)
+    response = _add(
+        client,
+        session.public_id,
+        "reviewees/create",
+        name="Aisha Haddad ",
+        email_or_identifier=EMAIL,
+    )
     assert response.status_code == 303, (
         "a trailing space was treated as a conflict; names are trimmed "
         "upstream, so it never reaches the comparison"
     )
 
 
-def test_the_observer_csv_import_checks_too(
-    client: TestClient, db: Session
-) -> None:
+def test_the_observer_csv_import_checks_too(client: TestClient, db: Session) -> None:
     """The call site 19Q Item 7 added, and the one no test reached.
 
     The observers CSV skipped the cross-table check entirely and said so
@@ -285,15 +306,12 @@ def test_the_observer_csv_import_checks_too(
         follow_redirects=True,
     )
     assert (
-        "ObserverEmail is already used under a different name in another "
-        "roster (1 row)"
+        "ObserverEmail is already used under a different name in another roster (1 row)"
     ) in response.text
     assert _rows(db, Observer, session.id) == []
 
 
-def test_an_unnamed_observer_row_in_a_csv_does_not_collide(
-    client: TestClient, db: Session
-) -> None:
+def test_an_unnamed_observer_row_in_a_csv_does_not_collide(client: TestClient, db: Session) -> None:
     """The CSV path has its own blank-name skip, and needs its own case.
 
     `test_an_unnamed_observer_does_not_collide` drives the Add form,
@@ -340,10 +358,7 @@ def _seed(db: Session, model, **fields):
 def _issues(db: Session, review_session, rule_key: str) -> list:
     from app.services.validation import validate_session_setup
 
-    return [
-        i for i in validate_session_setup(db, review_session)
-        if i.rule_key == rule_key
-    ]
+    return [i for i in validate_session_setup(db, review_session) if i.rule_key == rule_key]
 
 
 def test_a_pre_existing_cross_roster_pair_is_reported_on_both_sides(
@@ -357,10 +372,10 @@ def test_a_pre_existing_cross_roster_pair_is_reported_on_both_sides(
     them.
     """
     session = _session(client, db, "xr-val-pair")
-    reviewer = _seed(db, Reviewer, session_id=session.id,
-                     name="Aisha Haddad", email=EMAIL)
-    reviewee = _seed(db, Reviewee, session_id=session.id,
-                     name="Aisha Hadad", email_or_identifier=EMAIL)
+    reviewer = _seed(db, Reviewer, session_id=session.id, name="Aisha Haddad", email=EMAIL)
+    reviewee = _seed(
+        db, Reviewee, session_id=session.id, name="Aisha Hadad", email_or_identifier=EMAIL
+    )
 
     on_reviewers = _issues(db, session, "reviewers.cross_roster_identity")
     on_reviewees = _issues(db, session, "reviewees.cross_roster_identity")
@@ -378,14 +393,11 @@ def test_a_pre_existing_cross_roster_pair_is_reported_on_both_sides(
     assert "'Aisha Haddad' as a reviewer" in on_reviewees[0].message
 
 
-def test_the_same_name_across_rosters_is_not_a_finding(
-    client: TestClient, db: Session
-) -> None:
+def test_the_same_name_across_rosters_is_not_a_finding(client: TestClient, db: Session) -> None:
     """The self-review case, which the app has machinery for."""
     session = _session(client, db, "xr-val-self")
     _seed(db, Reviewer, session_id=session.id, name="Aisha Haddad", email=EMAIL)
-    _seed(db, Reviewee, session_id=session.id,
-          name="Aisha Haddad", email_or_identifier=EMAIL)
+    _seed(db, Reviewee, session_id=session.id, name="Aisha Haddad", email_or_identifier=EMAIL)
 
     assert _issues(db, session, "reviewers.cross_roster_identity") == []
     assert _issues(db, session, "reviewees.cross_roster_identity") == []
@@ -394,8 +406,7 @@ def test_the_same_name_across_rosters_is_not_a_finding(
 def test_an_observer_joins_the_report(client: TestClient, db: Session) -> None:
     """Three-way on Validate too, not just on the write paths."""
     session = _session(client, db, "xr-val-obs")
-    observer = _seed(db, Observer, session_id=session.id,
-                     display_name="A. Haddad", email=EMAIL)
+    observer = _seed(db, Observer, session_id=session.id, display_name="A. Haddad", email=EMAIL)
     _seed(db, Reviewer, session_id=session.id, name="Aisha Haddad", email=EMAIL)
 
     found = _issues(db, session, "observers.cross_roster_identity")
@@ -404,9 +415,7 @@ def test_an_observer_joins_the_report(client: TestClient, db: Session) -> None:
     assert "'Aisha Haddad' as a reviewer" in found[0].message
 
 
-def test_an_unnamed_observer_is_not_a_finding(
-    client: TestClient, db: Session
-) -> None:
+def test_an_unnamed_observer_is_not_a_finding(client: TestClient, db: Session) -> None:
     """A missing name cannot disagree with one — the answer exact
     comparison forced (`Semantics`). Without the skip, every unnamed
     observer would collide with the reviewer sharing its mailbox."""
@@ -418,16 +427,12 @@ def test_an_unnamed_observer_is_not_a_finding(
     assert _issues(db, session, "reviewers.cross_roster_identity") == []
 
 
-def test_a_non_email_reviewee_identifier_cannot_collide(
-    client: TestClient, db: Session
-) -> None:
+def test_a_non_email_reviewee_identifier_cannot_collide(client: TestClient, db: Session) -> None:
     """An anonymous handle is not a mailbox, so it is skipped here for
     the same reason the write guards skip it."""
     session = _session(client, db, "xr-val-anon")
-    _seed(db, Reviewee, session_id=session.id,
-          name="Subject 14", email_or_identifier="subject-14")
-    _seed(db, Reviewer, session_id=session.id,
-          name="Aisha Haddad", email="subject-14")
+    _seed(db, Reviewee, session_id=session.id, name="Subject 14", email_or_identifier="subject-14")
+    _seed(db, Reviewer, session_id=session.id, name="Aisha Haddad", email="subject-14")
 
     assert _issues(db, session, "reviewees.cross_roster_identity") == []
     assert _issues(db, session, "reviewers.cross_roster_identity") == []
@@ -440,19 +445,15 @@ def test_the_email_match_is_case_insensitive_and_the_name_match_is_not(
     (open question 2). A capitalisation difference in the name is
     therefore a finding, and one in the email is not a miss."""
     session = _session(client, db, "xr-val-case")
-    _seed(db, Reviewer, session_id=session.id,
-          name="Aisha Haddad", email=EMAIL.upper())
-    _seed(db, Reviewee, session_id=session.id,
-          name="aisha haddad", email_or_identifier=EMAIL)
+    _seed(db, Reviewer, session_id=session.id, name="Aisha Haddad", email=EMAIL.upper())
+    _seed(db, Reviewee, session_id=session.id, name="aisha haddad", email_or_identifier=EMAIL)
 
     found = _issues(db, session, "reviewers.cross_roster_identity")
     assert len(found) == 1, "the upper-case mailbox still matched"
     assert "'aisha haddad' as a reviewee" in found[0].message
 
 
-def test_a_within_roster_duplicate_is_left_to_its_own_rule(
-    client: TestClient, db: Session
-) -> None:
+def test_a_within_roster_duplicate_is_left_to_its_own_rule(client: TestClient, db: Session) -> None:
     """Two reviewers, one mailbox, two names is
     `reviewers.duplicate_email`'s finding and only that one. Reporting
     it twice under one heading would read as two problems."""
@@ -464,17 +465,13 @@ def test_a_within_roster_duplicate_is_left_to_its_own_rule(
     assert _issues(db, session, "reviewers.cross_roster_identity") == []
 
 
-def test_observers_duplicate_email_is_reported(
-    client: TestClient, db: Session
-) -> None:
+def test_observers_duplicate_email_is_reported(client: TestClient, db: Session) -> None:
     """Piece 3. The database refuses a second row today, so the only
     way to hold one is to be older than the constraint — seeded here by
     writing the pair the services would reject."""
     session = _session(client, db, "xr-val-obs-dup")
-    first = _seed(db, Observer, session_id=session.id,
-                  display_name="A. Haddad", email=EMAIL)
-    _seed(db, Observer, session_id=session.id,
-          display_name="A. Haddad", email=EMAIL.upper())
+    first = _seed(db, Observer, session_id=session.id, display_name="A. Haddad", email=EMAIL)
+    _seed(db, Observer, session_id=session.id, display_name="A. Haddad", email=EMAIL.upper())
 
     found = _issues(db, session, "observers.duplicate_email")
     assert len(found) == 1
@@ -484,19 +481,14 @@ def test_observers_duplicate_email_is_reported(
     assert "(2 rows)" in found[0].message
 
 
-def test_a_clean_session_raises_neither_new_rule(
-    client: TestClient, db: Session
-) -> None:
+def test_a_clean_session_raises_neither_new_rule(client: TestClient, db: Session) -> None:
     """The control. A reviewer, a reviewee and an observer who agree —
     including one person holding all three — raise nothing."""
     session = _session(client, db, "xr-val-clean")
     _seed(db, Reviewer, session_id=session.id, name="Aisha Haddad", email=EMAIL)
-    _seed(db, Reviewee, session_id=session.id,
-          name="Aisha Haddad", email_or_identifier=EMAIL)
-    _seed(db, Observer, session_id=session.id,
-          display_name="Aisha Haddad", email=EMAIL)
-    _seed(db, Observer, session_id=session.id,
-          display_name="Bo Lin", email="bo.lin@example.edu")
+    _seed(db, Reviewee, session_id=session.id, name="Aisha Haddad", email_or_identifier=EMAIL)
+    _seed(db, Observer, session_id=session.id, display_name="Aisha Haddad", email=EMAIL)
+    _seed(db, Observer, session_id=session.id, display_name="Bo Lin", email="bo.lin@example.edu")
 
     for key in (
         "reviewers.cross_roster_identity",
@@ -521,8 +513,7 @@ def test_the_reviewee_finding_names_the_column_reviewees_have(
     not have."""
     session = _session(client, db, "xr-field")
     _seed(db, Reviewer, session_id=session.id, name="Aisha Haddad", email=EMAIL)
-    _seed(db, Reviewee, session_id=session.id,
-          name="Aisha Hadad", email_or_identifier=EMAIL)
+    _seed(db, Reviewee, session_id=session.id, name="Aisha Hadad", email_or_identifier=EMAIL)
 
     on_reviewees = _issues(db, session, "reviewees.cross_roster_identity")
     on_reviewers = _issues(db, session, "reviewers.cross_roster_identity")
@@ -530,9 +521,7 @@ def test_the_reviewee_finding_names_the_column_reviewees_have(
     assert on_reviewers[0].field == "email"
 
 
-def test_the_coverage_grid_badges_an_observer_error(
-    client: TestClient, db: Session
-) -> None:
+def test_the_coverage_grid_badges_an_observer_error(client: TestClient, db: Session) -> None:
     """An error source with no coverage row badges nothing on the
     at-a-glance grid (`spec/validate_page.md` §7 step 5). Observers
     became a source with these rules and had no row."""
@@ -540,14 +529,10 @@ def test_the_coverage_grid_badges_an_observer_error(
     from app.web.views._validate import build_validate_context
 
     session = _session(client, db, "xr-grid")
-    _seed(db, Observer, session_id=session.id,
-          display_name="A. Haddad", email=EMAIL)
-    _seed(db, Observer, session_id=session.id,
-          display_name="A. Haddad", email=EMAIL.upper())
+    _seed(db, Observer, session_id=session.id, display_name="A. Haddad", email=EMAIL)
+    _seed(db, Observer, session_id=session.id, display_name="A. Haddad", email=EMAIL.upper())
 
-    context = build_validate_context(
-        db, session, validate_session_setup(db, session)
-    )
+    context = build_validate_context(db, session, validate_session_setup(db, session))
     row = next(r for r in context.setup_coverage if r.label == "Observers")
     assert row.source == "observers", "the anchor link must reach the group"
     assert row.status == "2"
@@ -566,9 +551,7 @@ def test_the_coverage_grid_omits_observers_when_the_flag_is_off(
     session.observers_enabled = False
     db.flush()
 
-    context = build_validate_context(
-        db, session, validate_session_setup(db, session)
-    )
+    context = build_validate_context(db, session, validate_session_setup(db, session))
     assert [r for r in context.setup_coverage if r.label == "Observers"] == []
 
 
@@ -589,11 +572,10 @@ def test_a_matching_name_does_not_slip_past_a_second_disagreeing_holder(
     _seed(db, Reviewer, session_id=session.id, name="Alpha Name", email=EMAIL)
     _seed(db, Reviewer, session_id=session.id, name="Zed Name", email=EMAIL)
 
-    matching = _add(client, session.public_id, "observers/create",
-                    display_name="Zed Name", email=EMAIL)
-    assert matching.status_code == 400, (
-        "matching one holder is not agreeing with the mailbox"
+    matching = _add(
+        client, session.public_id, "observers/create", display_name="Zed Name", email=EMAIL
     )
+    assert matching.status_code == 400, "matching one holder is not agreeing with the mailbox"
     assert "Alpha Name" in matching.text, "the 400 cites the row that disagrees"
     assert _rows(db, Observer, session.id) == []
 
@@ -614,25 +596,24 @@ def test_the_cited_holder_is_picked_from_the_values_not_the_query(
     _seed(db, Reviewer, session_id=session.id, name="Zed Name", email=EMAIL)
     _seed(db, Reviewer, session_id=session.id, name="Alpha Name", email=EMAIL)
 
-    refused = _add(client, session.public_id, "observers/create",
-                   display_name="Third Name", email=EMAIL)
+    refused = _add(
+        client, session.public_id, "observers/create", display_name="Third Name", email=EMAIL
+    )
     assert refused.status_code == 400
     assert "Alpha Name" in refused.text
     assert "Zed Name" not in refused.text
 
 
-def test_a_reviewee_holder_is_cited_after_a_reviewer_one(
-    client: TestClient, db: Session
-) -> None:
+def test_a_reviewee_holder_is_cited_after_a_reviewer_one(client: TestClient, db: Session) -> None:
     """Roster order beats name order: `_IDENTITY_ROSTERS` runs reviewers,
     reviewees, observers, and the message follows it."""
     session = _session(client, db, "xr-order-roster")
     _seed(db, Reviewer, session_id=session.id, name="Zed Name", email=EMAIL)
-    _seed(db, Reviewee, session_id=session.id,
-          name="Alpha Name", email_or_identifier=EMAIL)
+    _seed(db, Reviewee, session_id=session.id, name="Alpha Name", email_or_identifier=EMAIL)
 
-    refused = _add(client, session.public_id, "observers/create",
-                   display_name="Third Name", email=EMAIL)
+    refused = _add(
+        client, session.public_id, "observers/create", display_name="Third Name", email=EMAIL
+    )
     assert refused.status_code == 400
     # Jinja escapes the quotes the message puts round a name, so the
     # roster label and the name are matched apart rather than together.
@@ -640,9 +621,7 @@ def test_a_reviewee_holder_is_cited_after_a_reviewer_one(
     assert "Alpha Name" not in refused.text
 
 
-def test_one_predicate_decides_membership_on_every_path(
-    client: TestClient, db: Session
-) -> None:
+def test_one_predicate_decides_membership_on_every_path(client: TestClient, db: Session) -> None:
     """`is_comparable_identity` is called by the single-row guard, the
     CSV row loop and the Validate rule. A mutant that removed only one
     copy survived at rung 1; there is now one copy to remove."""

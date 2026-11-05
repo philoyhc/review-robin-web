@@ -15,15 +15,11 @@ def _create_session(client: TestClient, db: Session) -> ReviewSession:
     )
     assert response.status_code == 303
     return db.execute(
-        select(ReviewSession).where(
-            ReviewSession.code == "retired-previews"
-        )
+        select(ReviewSession).where(ReviewSession.code == "retired-previews")
     ).scalar_one()
 
 
-def test_previews_get_permanently_redirects_to_invitations(
-    client: TestClient, db: Session
-) -> None:
+def test_previews_get_permanently_redirects_to_invitations(client: TestClient, db: Session) -> None:
     session = _create_session(client, db)
 
     response = client.get(
@@ -32,14 +28,10 @@ def test_previews_get_permanently_redirects_to_invitations(
     )
 
     assert response.status_code == 308
-    assert response.headers["location"] == (
-        f"/operator/sessions/{session.public_id}/invitations"
-    )
+    assert response.headers["location"] == (f"/operator/sessions/{session.public_id}/invitations")
 
 
-def test_previews_random_post_is_retired(
-    client: TestClient, db: Session
-) -> None:
+def test_previews_random_post_is_retired(client: TestClient, db: Session) -> None:
     session = _create_session(client, db)
 
     response = client.post(

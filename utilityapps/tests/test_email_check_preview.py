@@ -39,7 +39,12 @@ def test_a_file_with_an_email_column_previews_its_counts(client: TestClient) -> 
     assert "Placeholder" not in text
     assert "Preview: <code>list.csv</code>" in text
     assert '<option value="1" selected>Email</option>' in text
-    for label, n in [("Rows", 3), ("kept, not checked", 1), ("checked once", 1), ("Addresses to check", 1)]:
+    for label, n in [
+        ("Rows", 3),
+        ("kept, not checked", 1),
+        ("checked once", 1),
+        ("Addresses to check", 1),
+    ]:
         assert re.search(label + r"[^<]*</th><td class=\"n\"[^>]*>" + str(n) + "<", text), label
     assert _carried(text) == data
 
@@ -66,7 +71,8 @@ def test_without_an_email_column_the_operator_chooses(client: TestClient) -> Non
     assert '<option value="" selected>Choose a column' in first
     assert "Addresses to check" not in first
     chosen = client.post(
-        URL, data={"content": base64.b64encode(data).decode(), "filename": "list.csv", "column": "1"}
+        URL,
+        data={"content": base64.b64encode(data).decode(), "filename": "list.csv", "column": "1"},
     )
     assert chosen.status_code == 200
     assert '<option value="1" selected>Work address</option>' in chosen.text
@@ -119,7 +125,10 @@ def test_an_upload_over_the_limit_is_refused_before_it_is_read(client: TestClien
 def test_an_upload_without_a_length_is_refused(client: TestClient) -> None:
     # A streamed body goes chunked, with no `Content-Length`.
     request = client.build_request(
-        "POST", URL, content=iter([b"x"]), headers={"content-type": "multipart/form-data; boundary=b"}
+        "POST",
+        URL,
+        content=iter([b"x"]),
+        headers={"content-type": "multipart/form-data; boundary=b"},
     )
     page = client.send(request)
     assert page.status_code == 400 and "did not say its size" in page.text

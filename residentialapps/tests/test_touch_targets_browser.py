@@ -17,11 +17,21 @@ from residentialapps.tests.test_sort_persistence_browser import (  # noqa: F401 
 )
 
 # Easy Auth's headers for a signed-in viewer: the account menu needs one.
-SIGNED_IN = {"X-MS-CLIENT-PRINCIPAL-NAME": "chloe.lim@example.edu", "X-MS-CLIENT-PRINCIPAL-ID": "chloe-oid"}
+SIGNED_IN = {
+    "X-MS-CLIENT-PRINCIPAL-NAME": "chloe.lim@example.edu",
+    "X-MS-CLIENT-PRINCIPAL-ID": "chloe-oid",
+}
 
 PHONE_PAGES = (
-    "/", "/ra-leave/", "/ra-leave/apply", "/ra-leave/appeal", "/ra-leave/applications/L-0101", "/ra-leave/cover",
-    "/ra-leave/staff/", "/ra-leave/staff/decide", "/ra-leave/staff/decide/L-0101",
+    "/",
+    "/ra-leave/",
+    "/ra-leave/apply",
+    "/ra-leave/appeal",
+    "/ra-leave/applications/L-0101",
+    "/ra-leave/cover",
+    "/ra-leave/staff/",
+    "/ra-leave/staff/decide",
+    "/ra-leave/staff/decide/L-0101",
 )
 
 SMALL = """() => [...document.querySelectorAll('a[href], button, input, select, textarea')]
@@ -47,7 +57,8 @@ def test_a_token_s_remove_button_is_a_thumb_s_width(page: Page) -> None:  # noqa
     page.set_viewport_size({"width": 390, "height": 844})
     page.goto(ORIGIN + "/rosters/assignments")
     sizes = page.eval_on_selector_all(
-        ".token-x", "xs => xs.map(x => [Math.round(x.getBoundingClientRect().height), Math.round(x.getBoundingClientRect().width)])"
+        ".token-x",
+        "xs => xs.map(x => [Math.round(x.getBoundingClientRect().height), Math.round(x.getBoundingClientRect().width)])",
     )
     assert sizes and all(h >= 44 and w >= 44 for h, w in sizes)
 

@@ -17,9 +17,7 @@ from .conftest import LiveServer
 REVIEWERS_CSV = b"ReviewerName,ReviewerEmail,ReviewerTag1\nRana,rana@example.edu,Red\n"
 REVIEWEES_CSV = b"RevieweeName,RevieweeEmail,RevieweeTag1\nCarol,carol@example.edu,Blue\n"
 
-LINK_CHIPS = (
-    "[data-new-model-rule-mode][role=button], [data-new-model-unit-mode][role=button]"
-)
+LINK_CHIPS = "[data-new-model-rule-mode][role=button], [data-new-model-unit-mode][role=button]"
 
 
 def _seed(api: httpx.Client, session_id: str) -> None:

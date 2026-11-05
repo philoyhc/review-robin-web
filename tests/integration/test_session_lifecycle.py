@@ -38,9 +38,7 @@ def _create_session(client: TestClient, db: Session, code: str = "spring-2026") 
         follow_redirects=False,
     )
     assert response.status_code == 303
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _populate_rosters(client: TestClient, session_id: int) -> None:
@@ -75,9 +73,7 @@ def _generate_full_matrix(client: TestClient, db: Session, session_id: int) -> N
     assert response.status_code == 303, response.text
 
 
-def _build_ready_session(
-    client: TestClient, db: Session, code: str = "ready-1"
-) -> ReviewSession:
+def _build_ready_session(client: TestClient, db: Session, code: str = "ready-1") -> ReviewSession:
     session = _create_session(client, db, code=code)
     _populate_rosters(client, session.id)
     _generate_full_matrix(client, db, session.id)
@@ -154,13 +150,11 @@ def test_activate_requires_acknowledge_when_warnings_present(
     assert session.status == "ready"
 
 
-def test_activate_opens_all_instruments_and_writes_audit(
-    client: TestClient, db: Session
-) -> None:
+def test_activate_opens_all_instruments_and_writes_audit(client: TestClient, db: Session) -> None:
     session = _build_ready_session(client, db, code="ready-instr")
-    instruments = db.execute(
-        select(Instrument).where(Instrument.session_id == session.id)
-    ).scalars().all()
+    instruments = (
+        db.execute(select(Instrument).where(Instrument.session_id == session.id)).scalars().all()
+    )
     assert all(i.accepting_responses for i in instruments)
     audit = db.execute(
         select(AuditEvent).where(
@@ -172,9 +166,7 @@ def test_activate_opens_all_instruments_and_writes_audit(
     assert audit.detail["context"]["override_warnings"] is False
 
 
-def test_revert_requires_confirm_and_preserves_responses(
-    client: TestClient, db: Session
-) -> None:
+def test_revert_requires_confirm_and_preserves_responses(client: TestClient, db: Session) -> None:
     session = _build_ready_session(client, db, code="revert-1")
     assignment = db.execute(
         select(Assignment).where(Assignment.session_id == session.id)
@@ -183,8 +175,7 @@ def test_revert_requires_confirm_and_preserves_responses(
         Response(
             assignment_id=assignment.id,
             response_field_id=db.execute(
-                select(Instrument)
-                .where(Instrument.session_id == session.id)
+                select(Instrument).where(Instrument.session_id == session.id)
             )
             .scalar_one()
             .response_fields[0]
@@ -210,9 +201,9 @@ def test_revert_requires_confirm_and_preserves_responses(
 
     db.refresh(session)
     assert session.status == "draft"
-    instruments = db.execute(
-        select(Instrument).where(Instrument.session_id == session.id)
-    ).scalars().all()
+    instruments = (
+        db.execute(select(Instrument).where(Instrument.session_id == session.id)).scalars().all()
+    )
     assert all(not i.accepting_responses for i in instruments)
     response_row = db.execute(
         select(Response).where(Response.assignment_id == assignment.id)
@@ -229,9 +220,7 @@ def test_revert_requires_confirm_and_preserves_responses(
     assert audit.detail["counts"]["responses_at_revert"] == 1
 
 
-def test_each_mutating_endpoint_returns_409_while_ready(
-    client: TestClient, db: Session
-) -> None:
+def test_each_mutating_endpoint_returns_409_while_ready(client: TestClient, db: Session) -> None:
     session = _build_ready_session(client, db, code="locked-1")
     sid = session.public_id
 
@@ -266,9 +255,7 @@ def test_each_mutating_endpoint_returns_409_while_ready(
     assert session.status == "ready"
 
 
-def test_response_loss_ack_required_after_revert(
-    client: TestClient, db: Session
-) -> None:
+def test_response_loss_ack_required_after_revert(client: TestClient, db: Session) -> None:
     session = _build_ready_session(client, db, code="ack-1")
     assignment = db.execute(
         select(Assignment).where(Assignment.session_id == session.id)
@@ -386,12 +373,16 @@ def test_a_live_session_left_split_by_the_retired_close_heals(
 
     db.refresh(instrument)
     assert instrument.accepting_responses is True
-    healed = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "instrument.opened",
-            AuditEvent.session_id == session.id,
+    healed = (
+        db.execute(
+            select(AuditEvent).where(
+                AuditEvent.event_type == "instrument.opened",
+                AuditEvent.session_id == session.id,
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(healed) == 1
     assert healed[0].detail is not None
     assert healed[0].detail["reason"] == "session_wide"
@@ -504,12 +495,16 @@ def test_lazy_deadline_close_fires_once(
     assert instrument.accepting_responses is False
     assert instrument.deadline_closed_at is not None
 
-    deadline_events = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "instrument.closed",
-            AuditEvent.session_id == session.id,
+    deadline_events = (
+        db.execute(
+            select(AuditEvent).where(
+                AuditEvent.event_type == "instrument.closed",
+                AuditEvent.session_id == session.id,
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     deadline_only = [e for e in deadline_events if (e.detail or {}).get("reason") == "deadline"]
     assert len(deadline_only) == 1
 
@@ -538,15 +533,17 @@ def test_lazy_deadline_close_audit_carries_correlation_id(
     rae_client = make_client(rae)
     rae_client.get(f"/me/sessions/{session.public_id}")
 
-    deadline_events = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "instrument.closed",
-            AuditEvent.session_id == session.id,
+    deadline_events = (
+        db.execute(
+            select(AuditEvent).where(
+                AuditEvent.event_type == "instrument.closed",
+                AuditEvent.session_id == session.id,
+            )
         )
-    ).scalars().all()
-    deadline_only = [
-        e for e in deadline_events if (e.detail or {}).get("reason") == "deadline"
-    ]
+        .scalars()
+        .all()
+    )
+    deadline_only = [e for e in deadline_events if (e.detail or {}).get("reason") == "deadline"]
     assert len(deadline_only) == 1
     assert deadline_only[0].correlation_id is not None
     assert deadline_only[0].correlation_id != ""
@@ -568,9 +565,7 @@ def _add_group_instrument(db: Session, session_id: int) -> Instrument:
     ).scalar_one()
 
 
-def test_activation_opens_a_group_instrument(
-    client: TestClient, db: Session
-) -> None:
+def test_activation_opens_a_group_instrument(client: TestClient, db: Session) -> None:
     """Activation opens a group-scoped instrument like any other."""
     session = _create_session(client, db, code="grp-rule")
     group = _add_group_instrument(db, session.id)

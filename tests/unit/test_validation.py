@@ -175,14 +175,16 @@ def test_no_help_contact_emits_info_severity(db: Session) -> None:
     user = _user(db)
     session = _session(db, user)
     issues = validate_session_setup(db, session)
-    info = [
-        i for i in issues if i.rule_key == "email_template.no_help_contact"
-    ]
+    info = [i for i in issues if i.rule_key == "email_template.no_help_contact"]
     assert len(info) == 1
     assert info[0].severity is Severity.info
     # Crucially info issues don't appear under errors → activation
     # gate keeps working.
-    assert [i for i in issues if i.severity is Severity.error and i.rule_key == "email_template.no_help_contact"] == []
+    assert [
+        i
+        for i in issues
+        if i.severity is Severity.error and i.rule_key == "email_template.no_help_contact"
+    ] == []
 
 
 def test_no_display_fields_warning_fires_when_response_fields_exist(
@@ -202,9 +204,7 @@ def test_no_display_fields_warning_fires_when_response_fields_exist(
             email_or_identifier="c@example.edu",
         )
     )
-    instrument = Instrument(
-        session_id=session.id, name="Test", description="Test instrument"
-    )
+    instrument = Instrument(session_id=session.id, name="Test", description="Test instrument")
     db.add(instrument)
     db.flush()
     db.add(
@@ -221,9 +221,7 @@ def test_no_display_fields_warning_fires_when_response_fields_exist(
     db.flush()
 
     issues = validate_session_setup(db, session)
-    warns = [
-        i for i in issues if i.rule_key == "instruments.no_display_fields"
-    ]
+    warns = [i for i in issues if i.rule_key == "instruments.no_display_fields"]
     assert len(warns) == 1
     assert warns[0].severity is Severity.warning
     assert warns[0].fix_anchor == f"#instrument-{instrument.id}"
@@ -260,11 +258,7 @@ def test_unreachable_warning_fires_for_non_email_identifiers(
     db.flush()
 
     issues = validate_session_setup(db, session)
-    warns = [
-        i
-        for i in issues
-        if i.rule_key == "reviewees.unreachable_for_results"
-    ]
+    warns = [i for i in issues if i.rule_key == "reviewees.unreachable_for_results"]
     assert len(warns) == 1
     assert warns[0].severity is Severity.warning
     assert warns[0].fix_anchor == f"#reviewee-row-{bad.id}"
@@ -287,11 +281,7 @@ def test_unreachable_warning_silent_when_all_reviewees_are_email_identified(
     db.flush()
 
     issues = validate_session_setup(db, session)
-    warns = [
-        i
-        for i in issues
-        if i.rule_key == "reviewees.unreachable_for_results"
-    ]
+    warns = [i for i in issues if i.rule_key == "reviewees.unreachable_for_results"]
     assert warns == []
 
 
@@ -328,11 +318,7 @@ def test_unreachable_warning_pluralises_and_only_counts_active(
     db.flush()
 
     issues = validate_session_setup(db, session)
-    warns = [
-        i
-        for i in issues
-        if i.rule_key == "reviewees.unreachable_for_results"
-    ]
+    warns = [i for i in issues if i.rule_key == "reviewees.unreachable_for_results"]
     assert len(warns) == 1
     # Inactive Anon3 excluded; plural noun for the two remaining.
     assert "2 reviewees" in warns[0].message

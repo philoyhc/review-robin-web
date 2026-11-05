@@ -5,6 +5,7 @@ renders the component gallery from here; `tests/unit/test_contrast_audit.py`
 reads the same parse and contrast pairs, so the page and the test cannot
 disagree. Not production code.
 """
+
 import re
 
 _STYLE_RE = re.compile(r"(?m)^[ \t]*<style>[ \t]*\n(.*?)</style>", re.DOTALL)
@@ -70,17 +71,18 @@ def _block_text(base_css, selector_re):
 
 def parse_primitives(base_css):
     """Ordered `[(name, hex)]` — the Tier-1 primitives (hex-valued, light root)."""
-    return [(m.group(1), m.group(2))
-            for m in _TOKEN_RE.finditer(_block_text(base_css, _LIGHT_SEL))]
+    return [(m.group(1), m.group(2)) for m in _TOKEN_RE.finditer(_block_text(base_css, _LIGHT_SEL))]
 
 
 def parse_semantic(base_css):
     """`{"light": [(sem, prim)], "dark": [(sem, prim)]}` — semantic→primitive maps."""
     return {
-        "light": [(m.group(1), m.group(2))
-                  for m in _SEM_RE.finditer(_block_text(base_css, _LIGHT_SEL))],
-        "dark": [(m.group(1), m.group(2))
-                 for m in _SEM_RE.finditer(_block_text(base_css, _DARK_SEL))],
+        "light": [
+            (m.group(1), m.group(2)) for m in _SEM_RE.finditer(_block_text(base_css, _LIGHT_SEL))
+        ],
+        "dark": [
+            (m.group(1), m.group(2)) for m in _SEM_RE.finditer(_block_text(base_css, _DARK_SEL))
+        ],
     }
 
 
@@ -104,9 +106,7 @@ _FG_RE = re.compile(r"(?<![-\w])color\s*:\s*var\((--[a-z0-9-]+)\)")
 #: yield a pair that never renders. Latent when this was written —
 #: ``base.html``'s two gradient rules set no ``color:`` — and wrong the
 #: first time one does.
-_BG_RE = re.compile(
-    r"background(?:-color)?\s*:\s*(?![^;]*gradient\()[^;]*?var\((--[a-z0-9-]+)\)"
-)
+_BG_RE = re.compile(r"background(?:-color)?\s*:\s*(?![^;]*gradient\()[^;]*?var\((--[a-z0-9-]+)\)")
 
 #: Every innermost ``selector { declarations }`` pair. ``[^{}]*`` cannot
 #: cross a brace, so it lands inside ``@media`` wrappers rather than on
@@ -202,9 +202,7 @@ def collect_contrast_pairs(base_css):
     for selector, body in (m.groups() for m in _RULE_RE.finditer(css)):
         fg, bg = _FG_RE.search(body), _BG_RE.search(body)
         if fg and bg:
-            pairs.setdefault(
-                (fg.group(1), bg.group(1)), "rule:" + " ".join(selector.split())[:58]
-            )
+            pairs.setdefault((fg.group(1), bg.group(1)), "rule:" + " ".join(selector.split())[:58])
 
     for name in names:
         if name.endswith("-fg") and (name[:-3] + "-bg") in light:
@@ -229,7 +227,7 @@ def parse_clusters(base_css):
     """Ordered `[(cluster_label, [sem_token, …])]` from the light Tier-2
     `/* Label */` comments — the data-driven cluster grouping."""
     text = _block_text(base_css, _LIGHT_SEL)
-    if "Tier 2" in text:                       # drop the Tier-1 half
+    if "Tier 2" in text:  # drop the Tier-1 half
         text = text.split("Tier 2", 1)[1]
     clusters, cur = [], None
     for line in text.splitlines():
@@ -331,7 +329,9 @@ def component_sections():
         for i in range(1, 7)
     )
     return [
-        ("chrome", """    <section class="ph-section">
+        (
+            "chrome",
+            """    <section class="ph-section">
       <h2 class="ph-h">Chrome — top bar</h2>
       <div class="chrome">
         <div class="chrome-left">
@@ -346,8 +346,11 @@ def component_sections():
           <a class="signout" href="#">Sign out</a>
         </div>
       </div>
-    </section>"""),
-        ("nav", """    <section class="ph-section">
+    </section>""",
+        ),
+        (
+            "nav",
+            """    <section class="ph-section">
       <h2 class="ph-h">Session navigation, back-link, page header &amp; chips</h2>
       <div class="session-nav-grid">
         <a class="session-home-anchor active" href="#" style="grid-row: 1;" title="Session Home (selected)"><span class="home-anchor-text">Session Home</span></a>
@@ -375,12 +378,18 @@ def component_sections():
         <span class="pill pill-count tag-chip is-selected">Mentor</span>
         <span class="pill pill-count tag-chip">External</span>
       </div>
-    </section>"""),
-        ("text", f"""    <section class="ph-section">
+    </section>""",
+        ),
+        (
+            "text",
+            f"""    <section class="ph-section">
       <h2 class="ph-h">Text &amp; links</h2>
 {TEXT_LINKS_SAMPLE}
-    </section>"""),
-        ("cards", f"""    <section class="ph-section">
+    </section>""",
+        ),
+        (
+            "cards",
+            f"""    <section class="ph-section">
       <h2 class="ph-h">Cards</h2>
       <!-- The h2 is its own pick target ("Card heading"), and it stops
            propagation — so whatever it says is what you select by clicking it.
@@ -418,8 +427,11 @@ def component_sections():
       <div class="ph-row">
 {tints}
       </div>
-    </section>"""),
-        ("forms", """    <section class="ph-section">
+    </section>""",
+        ),
+        (
+            "forms",
+            """    <section class="ph-section">
       <h2 class="ph-h">Form controls (the settings / setup pages are form-heavy)</h2>
       <div class="card">
         <label for="ph-in">Text input</label>
@@ -436,8 +448,11 @@ def component_sections():
         <input type="text" id="ph-dis" value="frozen value" disabled>
         <p class="muted ph-anno" style="margin-top: 10px;">Click a field to see the focus ring (accent-blue border + halo).</p>
       </div>
-    </section>"""),
-        ("buttons", """    <section class="ph-section">
+    </section>""",
+        ),
+        (
+            "buttons",
+            """    <section class="ph-section">
       <h2 class="ph-h">Buttons — canonical roles (spec/ui_elements.md §6): Primary <code>.btn</code>, Secondary <code>.secondary</code>, Destructive <code>.destructive</code>, Outline-amber <code>.alert</code></h2>
       <p class="muted ph-anno" style="margin: 0 0 6px;">Active</p>
       <div class="ph-row" style="margin-bottom: 14px;">
@@ -453,8 +468,11 @@ def component_sections():
         <button class="btn destructive" disabled>Destructive</button>
         <button class="btn alert" disabled>Outline-amber</button>
       </div>
-    </section>"""),
-        ("pills", """    <section class="ph-section">
+    </section>""",
+        ),
+        (
+            "pills",
+            """    <section class="ph-section">
       <h2 class="ph-h">Pills</h2>
       <div class="ph-row">
         <span class="pill pill-error">error</span>
@@ -463,14 +481,20 @@ def component_sections():
         <span class="pill pill-success">success</span>
         <span class="pill pill-super">super</span>
       </div>
-    </section>"""),
-        ("banners", """    <section class="ph-section">
+    </section>""",
+        ),
+        (
+            "banners",
+            """    <section class="ph-section">
       <h2 class="ph-h">Banners</h2>
       <div class="warning-banner">Warning banner — an amber advisory.</div>
       <div class="danger-banner">Danger banner — a hard red alert.</div>
       <p class="ph-save-error"><strong>Couldn't save.</strong> Soft inline-error treatment (the <code>--red-warm-*</code> tokens).</p>
-    </section>"""),
-        ("table", """    <section class="ph-section">
+    </section>""",
+        ),
+        (
+            "table",
+            """    <section class="ph-section">
       <h2 class="ph-h">Table &amp; config values</h2>
       <table>
         <thead><tr><th>Field</th><th>Value</th><th>Status</th></tr></thead>
@@ -480,7 +504,8 @@ def component_sections():
           <tr><td>App password</td><td><span class="muted">not set</span></td><td><span class="pill pill-warning">pending</span></td></tr>
         </tbody>
       </table>
-    </section>"""),
+    </section>""",
+        ),
     ]
 
 

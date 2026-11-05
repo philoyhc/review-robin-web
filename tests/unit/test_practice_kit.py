@@ -84,20 +84,26 @@ def test_every_copied_path_exists() -> None:
     absent by design until setup step 7 lands it: `app/main.py` triggers the
     `app` pair, and the theme group needs a `base.html` the kit built, since
     a hand-written one is not the group arriving."""
+
     def required(tier: str, needs: str) -> bool:
         if tier in ("verbatim", "adapt"):
             return True
         return tier == "deferred" and _deferred_group_landed(needs)
 
     missing = [
-        p for p, tier, needs, _ in pk.MANIFEST
+        p
+        for p, tier, needs, _ in pk.MANIFEST
         if required(tier, needs) and not (REPO_ROOT / p).is_file()
     ]
     assert not missing, f"manifest names files that are not in the tree: {missing}"
 
 
 def test_every_skeleton_has_a_generator() -> None:
-    absent = [p for p, tier, _, _ in pk.MANIFEST if tier == "skeleton" and p != ".gitignore" and p not in pk.SKELETONS]
+    absent = [
+        p
+        for p, tier, _, _ in pk.MANIFEST
+        if tier == "skeleton" and p != ".gitignore" and p not in pk.SKELETONS
+    ]
     assert not absent, f"skeleton entries with no SKELETONS text: {absent}"
 
 
@@ -146,7 +152,11 @@ def test_skeleton_indexes_satisfy_the_guide_index_gate(tmp_path: pathlib.Path) -
     dest = tmp_path / "fresh"
     pk.export(dest)
     row = re.compile(r"^\|\s*`([^`]+)`")
-    names = {m.group(1) for line in (dest / "guide/README.md").read_text().splitlines() if (m := row.match(line))}
+    names = {
+        m.group(1)
+        for line in (dest / "guide/README.md").read_text().splitlines()
+        if (m := row.match(line))
+    }
     for doc in (dest / "guide").glob("*.md"):
         if doc.name == "README.md":
             continue
@@ -175,7 +185,8 @@ def test_an_executable_kit_file_lands_executable(tmp_path: pathlib.Path) -> None
     pre-PR gate is simply absent with nothing failing to say so.
     """
     executable = [
-        path for path, tier, needs, _ in pk.MANIFEST
+        path
+        for path, tier, needs, _ in pk.MANIFEST
         if tier in ("verbatim", "adapt")
         and (REPO_ROOT / path).is_file()
         and os.access(REPO_ROOT / path, os.X_OK)

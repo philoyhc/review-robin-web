@@ -8,6 +8,7 @@ column, Prepare writes each self-review row with both sides active from
 it (kept or inserted), a new instrument seeds it from the session, and
 Replicate / Duplicate / the Settings CSV carry it.
 """
+
 from __future__ import annotations
 
 from sqlalchemy import select
@@ -38,9 +39,7 @@ from app.services.session_config_io import (
 def _person(db: Session, review_session: ReviewSession, name: str):
     email = f"{name.lower()}@example.edu"
     reviewer = Reviewer(session_id=review_session.id, name=name, email=email)
-    reviewee = Reviewee(
-        session_id=review_session.id, name=name, email_or_identifier=email
-    )
+    reviewee = Reviewee(session_id=review_session.id, name=name, email_or_identifier=email)
     db.add_all([reviewer, reviewee])
     db.flush()
     return reviewer, reviewee
@@ -108,9 +107,7 @@ def _toggle(
     )
 
 
-def _self_includes(
-    db: Session, instrument: Instrument
-) -> dict[str, bool]:
+def _self_includes(db: Session, instrument: Instrument) -> dict[str, bool]:
     """Reviewer email -> ``include`` of their self-review row here."""
     rows = db.execute(
         select(Reviewer.email, Assignment.include)
@@ -143,9 +140,7 @@ def test_toggle_off_survives_the_next_prepare(db: Session) -> None:
 def test_toggle_on_survives_prepare_with_the_session_default_off(
     db: Session,
 ) -> None:
-    user, review_session, instrument = _seed(
-        db, code="e3-on", session_active=False
-    )
+    user, review_session, instrument = _seed(db, code="e3-on", session_active=False)
     # Seeded from the session at creation.
     assert instrument.self_reviews_active is False
     _prepare(db, user, review_session)
@@ -179,9 +174,7 @@ def test_a_reactivated_reviewer_rejoins_the_instruments_state(
         db, code="e3-react", session_active=False, people=("Alice", "Dave")
     )
     _prepare(db, user, review_session)
-    alice = db.execute(
-        select(Reviewer).where(Reviewer.email == "alice@example.edu")
-    ).scalar_one()
+    alice = db.execute(select(Reviewer).where(Reviewer.email == "alice@example.edu")).scalar_one()
     alice.status = "inactive"
     db.commit()
     _prepare(db, user, review_session)
@@ -226,9 +219,7 @@ def test_two_instruments_toggled_differently_stay_independent(
 
 
 def test_a_new_instrument_seeds_from_the_session(db: Session) -> None:
-    user, review_session, _ = _seed(
-        db, code="e3-seed", session_active=False
-    )
+    user, review_session, _ = _seed(db, code="e3-seed", session_active=False)
     created = create_instrument(db, review_session=review_session, actor=user)
     assert created.self_reviews_active is False
     review_session.self_reviews_active = True
@@ -244,9 +235,7 @@ def test_replicate_carries_the_flag(db: Session) -> None:
     user, review_session, instrument = _seed(db, code="e3-repl")
     instrument.self_reviews_active = False
     db.commit()
-    replica = replicate_instrument(
-        db, review_session=review_session, source=instrument, actor=user
-    )
+    replica = replicate_instrument(db, review_session=review_session, source=instrument, actor=user)
     assert replica.self_reviews_active is False
 
 
@@ -258,9 +247,7 @@ def test_duplicate_carries_each_instruments_flag(db: Session) -> None:
     first.self_reviews_active = False
     db.commit()
 
-    clone = session_clone.clone_session(
-        db, source=review_session, user=user, mode="config"
-    )
+    clone = session_clone.clone_session(db, source=review_session, user=user, mode="config")
     flags = dict(
         db.execute(
             select(Instrument.name, Instrument.self_reviews_active).where(

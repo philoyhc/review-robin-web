@@ -116,15 +116,11 @@ def test_landing_id_is_the_next_sibling(db: Session) -> None:
     db.flush()
 
     assert (
-        views.instrument_delete_landing_id(
-            db, session_id=session.id, instrument_id=first.id
-        )
+        views.instrument_delete_landing_id(db, session_id=session.id, instrument_id=first.id)
         == second.id
     )
     assert (
-        views.instrument_delete_landing_id(
-            db, session_id=session.id, instrument_id=second.id
-        )
+        views.instrument_delete_landing_id(db, session_id=session.id, instrument_id=second.id)
         == third.id
     )
 
@@ -139,9 +135,7 @@ def test_landing_id_falls_back_to_the_previous_sibling_at_the_end(
     db.flush()
 
     assert (
-        views.instrument_delete_landing_id(
-            db, session_id=session.id, instrument_id=last.id
-        )
+        views.instrument_delete_landing_id(db, session_id=session.id, instrument_id=last.id)
         == first.id
     )
 
@@ -156,10 +150,7 @@ def test_landing_id_is_none_for_a_lone_instrument(db: Session) -> None:
     db.flush()
 
     assert (
-        views.instrument_delete_landing_id(
-            db, session_id=session.id, instrument_id=only.id
-        )
-        is None
+        views.instrument_delete_landing_id(db, session_id=session.id, instrument_id=only.id) is None
     )
 
 
@@ -177,8 +168,6 @@ def test_landing_id_is_none_for_an_id_outside_the_session(
     db.flush()
 
     assert (
-        views.instrument_delete_landing_id(
-            db, session_id=session.id, instrument_id=stranger.id
-        )
+        views.instrument_delete_landing_id(db, session_id=session.id, instrument_id=stranger.id)
         is None
     )

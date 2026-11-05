@@ -25,10 +25,7 @@ def _governed(card: Locator) -> Locator:
 
 
 def _levels(card: Locator) -> list[str]:
-    return [
-        row.get_attribute("data-new-model-rf-level") or ""
-        for row in rows(card).all()
-    ]
+    return [row.get_attribute("data-new-model-rf-level") or "" for row in rows(card).all()]
 
 
 def test_fork_adds_a_pending_branch_under_a_number_field(
@@ -51,9 +48,7 @@ def test_fork_adds_a_pending_branch_under_a_number_field(
     governed_name = _governed(card).first.locator("[data-new-model-rf-name]")
     expect(governed_name).to_have_attribute("placeholder", "Field 1")
     expect(parent.locator("[data-new-model-rf-delete]")).to_be_disabled()
-    expect(
-        parent.locator("[data-new-model-rf-data-type] option[value=string]")
-    ).to_be_disabled()
+    expect(parent.locator("[data-new-model-rf-data-type] option[value=string]")).to_be_disabled()
 
     condition.locator("[data-new-model-rf-condition-value]").fill("4")
     expect(condition).not_to_have_attribute("data-row-pending", "true")

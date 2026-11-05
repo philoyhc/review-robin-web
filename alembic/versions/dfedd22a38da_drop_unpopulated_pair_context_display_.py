@@ -18,6 +18,7 @@ Revises: c2143bd329c7
 Create Date: 2026-05-01 00:00:00.000000
 
 """
+
 import json
 from collections.abc import Sequence
 
@@ -37,9 +38,7 @@ def _populated_slots_by_session(bind) -> dict[int, set[str]]:
     JSONB and yields a dict via the driver; SQLite stores it as TEXT
     and yields the raw JSON string. Handle both."""
     populated: dict[int, set[str]] = {}
-    rows = bind.execute(
-        sa.text("SELECT session_id, context FROM assignments")
-    ).fetchall()
+    rows = bind.execute(sa.text("SELECT session_id, context FROM assignments")).fetchall()
     for session_id, context in rows:
         if not context:
             continue
@@ -84,9 +83,9 @@ def upgrade() -> None:
 
     if to_delete:
         bind.execute(
-            sa.text(
-                "DELETE FROM instrument_display_fields WHERE id IN :ids"
-            ).bindparams(sa.bindparam("ids", expanding=True)),
+            sa.text("DELETE FROM instrument_display_fields WHERE id IN :ids").bindparams(
+                sa.bindparam("ids", expanding=True)
+            ),
             {"ids": to_delete},
         )
 
@@ -97,15 +96,14 @@ def upgrade() -> None:
             sa.text(
                 "SELECT id FROM instrument_display_fields "
                 "WHERE instrument_id = :iid "
-                "ORDER BY \"order\", id"
+                'ORDER BY "order", id'
             ),
             {"iid": instrument_id},
         ).fetchall()
         for new_order, (df_id,) in enumerate(remaining):
             bind.execute(
                 sa.text(
-                    "UPDATE instrument_display_fields "
-                    "SET \"order\" = :new_order WHERE id = :df_id"
+                    'UPDATE instrument_display_fields SET "order" = :new_order WHERE id = :df_id'
                 ),
                 {"new_order": new_order, "df_id": df_id},
             )

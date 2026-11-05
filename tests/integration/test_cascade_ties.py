@@ -61,14 +61,23 @@ BASE = pathlib.Path(__file__).resolve().parents[2] / "app/web/templates/base.htm
 # involving one of these is a defect by definition — the repo has
 # committed to keeping them stable. A tie between two ad-hoc classes may
 # be intentional and is not reported.
-CANONICAL = frozenset({
-    # §6 buttons
-    "btn", "secondary", "alert", "destructive",
-    "danger", "btn-icon",
-    # §10 primitives that live on an element rather than in a combinator
-    "table-pager-step", "table-pager-cluster", "table-pager-menu",
-    "btn-pair", "chip-group",
-})
+CANONICAL = frozenset(
+    {
+        # §6 buttons
+        "btn",
+        "secondary",
+        "alert",
+        "destructive",
+        "danger",
+        "btn-icon",
+        # §10 primitives that live on an element rather than in a combinator
+        "table-pager-step",
+        "table-pager-cluster",
+        "table-pager-menu",
+        "btn-pair",
+        "chip-group",
+    }
+)
 
 _SIMPLE = re.compile(r"^(?:body\.ui-v2\s+)?(?:\.[A-Za-z0-9_-]+)+$")
 _CLASS = re.compile(r"\.([A-Za-z0-9_-]+)")
@@ -102,11 +111,10 @@ def _style_element(html: str) -> str:
     """
     lines = html.splitlines()
     start = next(
-        i for i, line in enumerate(lines)
-        if line.strip().startswith("<style") and "{#" not in line
+        i for i, line in enumerate(lines) if line.strip().startswith("<style") and "{#" not in line
     )
     end = next(i for i, line in enumerate(lines) if "</style>" in line)
-    return "\n".join(lines[start + 1:end])
+    return "\n".join(lines[start + 1 : end])
 
 
 def _top_level_rules(css: str) -> list[tuple[str, dict[str, str], int]]:
@@ -159,9 +167,7 @@ def _top_level_rules(css: str) -> list[tuple[str, dict[str, str], int]]:
 def _class_sets(html: str) -> set[frozenset[str]]:
     """Every multi-class element class set in a rendered page."""
     return {
-        frozenset(m.split())
-        for m in re.findall(r'class="([^"]+)"', html)
-        if len(m.split()) > 1
+        frozenset(m.split()) for m in re.findall(r'class="([^"]+)"', html) if len(m.split()) > 1
     }
 
 
@@ -174,16 +180,10 @@ def _is_variant_of(later: set[str], earlier: set[str]) -> bool:
     prefix so `.btn` does not read as the base of `.btn-icon`'s
     unrelated neighbours.
     """
-    return any(
-        name != base and name.startswith(base + "-")
-        for name in later
-        for base in earlier
-    )
+    return any(name != base and name.startswith(base + "-") for name in later for base in earlier)
 
 
-def find_ties(
-    css: str, class_sets: set[frozenset[str]]
-) -> list[tuple[str, str, str]]:
+def find_ties(css: str, class_sets: set[frozenset[str]]) -> list[tuple[str, str, str]]:
     """(dead selector, winning selector, property) for each live tie.
 
     A tie where the **variant comes later and wins** is the CSS idiom
@@ -206,15 +206,13 @@ def find_ties(
             if set(_CLASS.findall(sel)) - {"ui-v2"} <= classes
         ]
         for i, (sel_a, decls_a, order_a, spec_a) in enumerate(matching):
-            for sel_b, decls_b, order_b, spec_b in matching[i + 1:]:
+            for sel_b, decls_b, order_b, spec_b in matching[i + 1 :]:
                 if spec_a != spec_b or sel_a == sel_b:
                     continue
                 names = set(_CLASS.findall(sel_a)) | set(_CLASS.findall(sel_b))
                 if not (names & CANONICAL):
                     continue
-                dead, winner = (
-                    (sel_a, sel_b) if order_a < order_b else (sel_b, sel_a)
-                )
+                dead, winner = (sel_a, sel_b) if order_a < order_b else (sel_b, sel_a)
                 dead_decls = decls_a if order_a < order_b else decls_b
                 live_decls = decls_b if order_a < order_b else decls_a
                 dead_names = set(_CLASS.findall(dead)) - {"ui-v2"}
@@ -254,9 +252,7 @@ def _rendered_pages(client: TestClient, db: Session) -> list[str]:
         data={"name": "Cascade", "code": "CASCADE", "description": "d"},
         follow_redirects=False,
     )
-    session = db.execute(
-        select(ReviewSession).where(ReviewSession.code == "CASCADE")
-    ).scalar_one()
+    session = db.execute(select(ReviewSession).where(ReviewSession.code == "CASCADE")).scalar_one()
     csv = b"ReviewerName,ReviewerEmail\n" + b"".join(
         f"R{i},r{i}@example.edu\n".encode() for i in range(_ROSTER_ROWS)
     )
@@ -345,9 +341,7 @@ def test_a_canonical_tie_is_reported() -> None:
         "body.ui-v2 .btn-icon { font-size: 1em; }\n"
     )
     ties = find_ties(css, {frozenset({"btn-icon", "table-pager-step"})})
-    assert ties == [
-        ("body.ui-v2 .table-pager-step", "body.ui-v2 .btn-icon", "font-size")
-    ]
+    assert ties == [("body.ui-v2 .table-pager-step", "body.ui-v2 .btn-icon", "font-size")]
 
 
 def test_the_real_fix_is_not_reported() -> None:
@@ -380,9 +374,7 @@ def test_different_properties_do_not_tie() -> None:
     assert find_ties(css, {frozenset({"btn", "thing"})}) == []
 
 
-def test_base_html_has_no_live_canonical_tie(
-    client: TestClient, db: Session
-) -> None:
+def test_base_html_has_no_live_canonical_tie(client: TestClient, db: Session) -> None:
     """The check, against the real stylesheet and real pages.
 
     If this fails, a canonical rule is dead in the shipped app: read the
@@ -434,9 +426,7 @@ def test_a_variant_losing_earlier_is_reported() -> None:
     ]
 
 
-def test_the_fixture_renders_the_classes_the_check_needs(
-    client: TestClient, db: Session
-) -> None:
+def test_the_fixture_renders_the_classes_the_check_needs(client: TestClient, db: Session) -> None:
     """Non-vacuity, as its own test rather than an assertion inside the
     check — deleting a guard that lives beside the thing it guards is
     invisible, and a mutation proved it: removing the inline version

@@ -57,9 +57,7 @@ def test_can_create_a_session_owned_by_a_user(db: Session) -> None:
     user = _make_user(db)
     _make_session(db, user)
 
-    refreshed = db.scalars(
-        select(ReviewSession).where(ReviewSession.code == "SESS-001")
-    ).one()
+    refreshed = db.scalars(select(ReviewSession).where(ReviewSession.code == "SESS-001")).one()
     assert refreshed.created_by_user_id == user.id
     assert refreshed.created_by_user.email == "operator@example.edu"
     assert len(refreshed.operators) == 1
@@ -70,9 +68,7 @@ def test_can_add_reviewer_and_reviewee_to_a_session(db: Session) -> None:
     user = _make_user(db)
     review = _make_session(db, user)
 
-    reviewer = Reviewer(
-        session_id=review.id, name="Alice Reviewer", email="alice@example.edu"
-    )
+    reviewer = Reviewer(session_id=review.id, name="Alice Reviewer", email="alice@example.edu")
     reviewee = Reviewee(
         session_id=review.id,
         name="Bob Reviewee",
@@ -122,9 +118,7 @@ def test_can_add_an_instrument_with_display_and_response_fields(db: Session) -> 
     )
     db.flush()
 
-    refreshed = db.scalars(
-        select(Instrument).where(Instrument.id == instrument.id)
-    ).one()
+    refreshed = db.scalars(select(Instrument).where(Instrument.id == instrument.id)).one()
     assert len(refreshed.display_fields) == 1
     assert len(refreshed.response_fields) == 2
     rating = next(f for f in refreshed.response_fields if f.field_key == "rating")
@@ -135,12 +129,8 @@ def test_can_add_an_instrument_with_display_and_response_fields(db: Session) -> 
 def test_can_create_an_assignment_linking_reviewer_reviewee_instrument(db: Session) -> None:
     user = _make_user(db)
     review = _make_session(db, user)
-    reviewer = Reviewer(
-        session_id=review.id, name="Alice", email="alice@example.edu"
-    )
-    reviewee = Reviewee(
-        session_id=review.id, name="Bob", email_or_identifier="bob@example.edu"
-    )
+    reviewer = Reviewer(session_id=review.id, name="Alice", email="alice@example.edu")
+    reviewee = Reviewee(session_id=review.id, name="Bob", email_or_identifier="bob@example.edu")
     instrument = Instrument(session_id=review.id, name="General review")
     db.add_all([reviewer, reviewee, instrument])
     db.flush()
@@ -173,9 +163,7 @@ def test_an_assignment_built_without_a_mode_is_not_labelled_hand_made(
     user = _make_user(db)
     review = _make_session(db, user)
     reviewer = Reviewer(session_id=review.id, name="A", email="a@example.edu")
-    reviewee = Reviewee(
-        session_id=review.id, name="B", email_or_identifier="b@example.edu"
-    )
+    reviewee = Reviewee(session_id=review.id, name="B", email_or_identifier="b@example.edu")
     instrument = Instrument(session_id=review.id, name="I")
     db.add_all([reviewer, reviewee, instrument])
     db.flush()
@@ -252,9 +240,7 @@ def test_can_create_an_invitation_for_a_reviewer(db: Session) -> None:
     db.add(invitation)
     db.flush()
 
-    fetched = db.scalars(
-        select(Invitation).where(Invitation.token_hash == "hashed-token-1")
-    ).one()
+    fetched = db.scalars(select(Invitation).where(Invitation.token_hash == "hashed-token-1")).one()
     assert fetched.reviewer.email == "a@example.edu"
     assert fetched.status == "pending"
 
@@ -275,9 +261,7 @@ def test_can_write_an_audit_event(db: Session) -> None:
     db.add(event)
     db.flush()
 
-    fetched = db.scalars(
-        select(AuditEvent).where(AuditEvent.correlation_id == "corr-1")
-    ).one()
+    fetched = db.scalars(select(AuditEvent).where(AuditEvent.correlation_id == "corr-1")).one()
     assert fetched.event_type == "session.created"
     assert fetched.severity == "info"
     assert fetched.detail == {"session_code": "SESS-001"}

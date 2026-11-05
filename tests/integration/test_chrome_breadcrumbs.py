@@ -15,9 +15,7 @@ def _create_session(client: TestClient, db: Session, *, code: str = "spring-2026
         data={"name": code.title(), "code": code},
         follow_redirects=False,
     )
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def test_operator_chrome_renders_the_shared_bar_and_account_menu(
@@ -136,8 +134,7 @@ def test_sessions_list_row_renders_name_link_and_select_checkbox(
     # the redundant Access button was retired once the name became the
     # primary affordance.
     assert (
-        f'<a href="/operator/sessions/{review_session.public_id}">{review_session.name}</a>'
-        in body
+        f'<a href="/operator/sessions/{review_session.public_id}">{review_session.name}</a>' in body
     )
     assert ">Access</a>" not in body
     # The trailing column carries the bulk-action select-row checkbox;
@@ -149,9 +146,7 @@ def test_sessions_list_row_renders_name_link_and_select_checkbox(
     assert f'value="{review_session.id}"' in body
 
 
-def test_sessions_list_create_button_lives_in_header(
-    client: TestClient, db: Session
-) -> None:
+def test_sessions_list_create_button_lives_in_header(client: TestClient, db: Session) -> None:
     _create_session(client, db)
     response = client.get("/operator/sessions")
     body = response.text
@@ -173,9 +168,7 @@ def test_about_page_is_reachable_without_easy_auth(client: TestClient) -> None:
     assert "version dev" in body
 
 
-def test_back_links_are_removed_from_nested_operator_pages(
-    client: TestClient, db: Session
-) -> None:
+def test_back_links_are_removed_from_nested_operator_pages(client: TestClient, db: Session) -> None:
     review_session = _create_session(client, db)
     response = client.get(f"/operator/sessions/{review_session.public_id}/reviewers")
     body = response.text
@@ -190,9 +183,7 @@ def test_back_links_are_removed_from_nested_operator_pages(
     )
 
 
-def test_session_home_has_danger_zone_anchor(
-    client: TestClient, db: Session
-) -> None:
+def test_session_home_has_danger_zone_anchor(client: TestClient, db: Session) -> None:
     """18R Item 4 — Danger Zone is wired on Session Home (bottom-right),
     relocated from the retired Edit page."""
     review_session = _create_session(client, db)

@@ -25,6 +25,7 @@ Item 4 retired the Edit page — its own card (``#owners-card``) since
   already names every session and the refusal has to stay legible on a
   link that page renders.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -38,18 +39,14 @@ from app.db.models import AuditEvent, ReviewSession, SessionOperator, User
 from ._lookups import detail_of
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "Spring", "code": code},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _seed_user(
@@ -167,9 +164,7 @@ def test_add_owner_inserts_session_operator_and_emits_audit(
         f"/operator/sessions/{review_session.public_id}#owners-card"
     )
 
-    bob_row = db.execute(
-        select(User).where(User.email == "bob@example.edu")
-    ).scalar_one()
+    bob_row = db.execute(select(User).where(User.email == "bob@example.edu")).scalar_one()
     session_op = db.execute(
         select(SessionOperator).where(
             SessionOperator.session_id == review_session.id,
@@ -179,9 +174,7 @@ def test_add_owner_inserts_session_operator_and_emits_audit(
     assert session_op.role == "owner"
 
     event = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "session.owner_added"
-        )
+        select(AuditEvent).where(AuditEvent.event_type == "session.owner_added")
     ).scalar_one()
     assert detail_of(event)["refs"]["target_user_id"] == bob_row.id
     assert detail_of(event)["snapshot"]["email"] == "bob@example.edu"
@@ -201,22 +194,19 @@ def test_config_owners_card_renders_add_form_when_candidates_exist(
 
     body = client.get(f"/operator/sessions/{review_session.public_id}").text
     owners_pos = body.find('id="owners-card"')
-    card = body[owners_pos:body.find("<script", owners_pos)]
+    card = body[owners_pos : body.find("<script", owners_pos)]
 
     assert 'id="owners-add-email"' in card
     # A sibling label, as on Create's picker: nesting the input in the
     # label tightened the text-to-box gap to 1.9px against 5.9px on every
     # other field (measured in Chromium, 2026-09-23).
     assert (
-        '<label for="owners-add-email">'
-        "Pick or search for a workspace operator:</label>"
+        '<label for="owners-add-email">Pick or search for a workspace operator:</label>'
     ) in card
     # Add owner saves at once through ``owners/add`` (author's ruling,
     # 2026-09-23, retiring the card's staged Save).
     assert 'name="target_email"' in card
-    assert (
-        f'action="/operator/sessions/{review_session.public_id}/owners/add"' in card
-    )
+    assert f'action="/operator/sessions/{review_session.public_id}/owners/add"' in card
     # Bob is offered as a candidate in the datalist.
     assert "bob@example.edu" in card
 
@@ -278,9 +268,7 @@ def test_owners_banner_maps_codes_and_ignores_text_from_the_url(
     known = client.get(f"{base}?owners_error=already_owner").text
     assert "That user is already an owner of this session." in known
 
-    forged = client.get(
-        f"{base}?owners_error=Your+session+is+compromised"
-    ).text
+    forged = client.get(f"{base}?owners_error=Your+session+is+compromised").text
     assert "compromised" not in forged
     assert "Couldn't apply that change" not in forged
 
@@ -316,9 +304,7 @@ def test_remove_owner_deletes_session_operator_and_emits_audit(
     assert remaining is None
 
     event = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "session.owner_removed"
-        )
+        select(AuditEvent).where(AuditEvent.event_type == "session.owner_removed")
     ).scalar_one()
     assert detail_of(event)["refs"]["target_user_id"] == bob_row.id
 
@@ -330,9 +316,7 @@ def test_remove_last_owner_409s(
     """Alice is the sole owner of her session. Trying to remove her
     must 409."""
     review_session = _make_session(client, db, code="own-last")
-    alice_row = db.execute(
-        select(User).where(User.email == "alice@example.edu")
-    ).scalar_one()
+    alice_row = db.execute(select(User).where(User.email == "alice@example.edu")).scalar_one()
 
     response = client.post(
         f"/operator/sessions/{review_session.public_id}/owners/{alice_row.id}/remove",
@@ -354,23 +338,19 @@ def test_self_remove_allowed_when_not_last_owner(
         follow_redirects=False,
     )
 
-    alice_row = db.execute(
-        select(User).where(User.email == "alice@example.edu")
-    ).scalar_one()
+    alice_row = db.execute(select(User).where(User.email == "alice@example.edu")).scalar_one()
     response = client.post(
         f"/operator/sessions/{review_session.public_id}/owners/{alice_row.id}/remove",
         follow_redirects=False,
     )
     assert response.status_code == 303
 
-    bob_row = db.execute(
-        select(User).where(User.email == "bob@example.edu")
-    ).scalar_one()
-    remaining = db.execute(
-        select(SessionOperator).where(
-            SessionOperator.session_id == review_session.id
-        )
-    ).scalars().all()
+    bob_row = db.execute(select(User).where(User.email == "bob@example.edu")).scalar_one()
+    remaining = (
+        db.execute(select(SessionOperator).where(SessionOperator.session_id == review_session.id))
+        .scalars()
+        .all()
+    )
     assert {r.user_id for r in remaining} == {bob_row.id}
 
 
@@ -402,9 +382,7 @@ def test_sys_admin_can_self_add_to_session_via_relaxed_gate(
     )
     assert response.status_code == 303
 
-    bob_row = db.execute(
-        select(User).where(User.email == "bob@example.edu")
-    ).scalar_one()
+    bob_row = db.execute(select(User).where(User.email == "bob@example.edu")).scalar_one()
     session_op = db.execute(
         select(SessionOperator).where(
             SessionOperator.session_id == review_session.id,
@@ -445,8 +423,7 @@ def test_diagnostics_row_renders_manage_adopt_action(
     response = client.get("/operator/sys-admin/sessions")
     assert response.status_code == 200
     assert (
-        f'action="/operator/sys-admin/sessions/{review_session.public_id}/adopt"'
-        in response.text
+        f'action="/operator/sys-admin/sessions/{review_session.public_id}/adopt"' in response.text
     )
     assert ">Manage</button>" in response.text
     # The old back-door edit link is gone.
@@ -459,7 +436,10 @@ def test_diagnostics_row_renders_manage_adopt_action(
 
 
 def test_non_owner_sys_admin_denied_edit_submit(
-    db: Session, client: TestClient, make_client, bob,
+    db: Session,
+    client: TestClient,
+    make_client,
+    bob,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(settings, "sys_admin_emails", ["bob@example.edu"])
@@ -478,7 +458,10 @@ def test_non_owner_sys_admin_denied_edit_submit(
 
 
 def test_non_owner_sys_admin_denied_lobby_edit(
-    db: Session, client: TestClient, make_client, bob,
+    db: Session,
+    client: TestClient,
+    make_client,
+    bob,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(settings, "sys_admin_emails", ["bob@example.edu"])
@@ -496,7 +479,10 @@ def test_non_owner_sys_admin_denied_lobby_edit(
 
 
 def test_non_owner_sys_admin_denied_owners_remove(
-    db: Session, client: TestClient, make_client, bob,
+    db: Session,
+    client: TestClient,
+    make_client,
+    bob,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(settings, "sys_admin_emails", ["bob@example.edu"])
@@ -514,7 +500,10 @@ def test_non_owner_sys_admin_denied_owners_remove(
 
 
 def test_owners_add_self_only_blocks_adding_other(
-    db: Session, client: TestClient, make_client, bob,
+    db: Session,
+    client: TestClient,
+    make_client,
+    bob,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A non-owner sys-admin may add only themselves; adding someone
@@ -541,7 +530,10 @@ def test_owners_add_self_only_blocks_adding_other(
 
 
 def test_non_owner_sys_admin_can_still_clone(
-    db: Session, client: TestClient, make_client, bob,
+    db: Session,
+    client: TestClient,
+    make_client,
+    bob,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(settings, "sys_admin_emails", ["bob@example.edu"])
@@ -562,9 +554,7 @@ def test_non_owner_sys_admin_can_still_clone(
         select(ReviewSession).where(ReviewSession.public_id == clone_public_id)
     ).scalar_one()
     clone_id = clone.id
-    bob_row = db.execute(
-        select(User).where(User.email == "bob@example.edu")
-    ).scalar_one()
+    bob_row = db.execute(select(User).where(User.email == "bob@example.edu")).scalar_one()
     event = db.execute(
         select(AuditEvent).where(
             AuditEvent.event_type == "session.duplicated",
@@ -580,7 +570,9 @@ def test_non_owner_sys_admin_can_still_clone(
 
 
 def test_adopt_idempotent_when_already_owner(
-    db: Session, client: TestClient, monkeypatch: pytest.MonkeyPatch,
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Adopting a session you already own is a no-op 303 (no duplicate
     owner, no error)."""
@@ -591,9 +583,9 @@ def test_adopt_idempotent_when_already_owner(
         follow_redirects=False,
     )
     assert resp.status_code == 303
-    owners = db.execute(
-        select(SessionOperator).where(
-            SessionOperator.session_id == review_session.id
-        )
-    ).scalars().all()
+    owners = (
+        db.execute(select(SessionOperator).where(SessionOperator.session_id == review_session.id))
+        .scalars()
+        .all()
+    )
     assert len(owners) == 1  # still just alice

@@ -63,9 +63,7 @@ class _RevalidatingStaticFiles(StaticFiles):
         scope: Scope,
         status_code: int = 200,
     ) -> Response:
-        response = super().file_response(
-            full_path, stat_result, scope, status_code
-        )
+        response = super().file_response(full_path, stat_result, scope, status_code)
         response.headers["cache-control"] = "no-cache"
         return response
 
@@ -88,9 +86,7 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
         yield
         return
     stop = threading.Event()
-    task = asyncio.create_task(
-        _clock.run_forever(get_sessionmaker(), interval=interval, stop=stop)
-    )
+    task = asyncio.create_task(_clock.run_forever(get_sessionmaker(), interval=interval, stop=stop))
     _log.info(
         "scheduled clock started",
         extra={"event": "scheduled_clock.started", "interval_seconds": interval},
@@ -130,9 +126,7 @@ def create_app() -> FastAPI:
     # a smaller commitment than a general asset pipeline.
     app.mount(
         "/static",
-        _RevalidatingStaticFiles(
-            directory=pathlib.Path(__file__).parent / "web" / "static"
-        ),
+        _RevalidatingStaticFiles(directory=pathlib.Path(__file__).parent / "web" / "static"),
         name="static",
     )
     app.include_router(health_router)
@@ -180,4 +174,3 @@ def create_app() -> FastAPI:
         return urls.redirect(request, url="/operator/sessions", status_code=302)
 
     return app
-

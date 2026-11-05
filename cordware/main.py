@@ -295,14 +295,10 @@ def create_app(
     propagates: the host does not start (v0.8 §3), as it does not when
     the fake-auth guard refuses (`check_fake_auth`)."""
     settings = CordwareSettings()
-    configure_logging(
-        settings.log_level, {entry.logger: name for name, entry in registry.items()}
-    )
+    configure_logging(settings.log_level, {entry.logger: name for name, entry in registry.items()})
     check_fake_auth(identity_settings)
     warn_if_no_super_admin(identity_settings)
-    origin = parse_public_origin(
-        settings.cordware_public_origin, local=is_local(identity_settings)
-    )
+    origin = parse_public_origin(settings.cordware_public_origin, local=is_local(identity_settings))
     names = parse_apps(settings.cordware_apps if apps is None else ",".join(apps), registry)
     mounted = [(registry[name], _build(name, registry[name])) for name in names]
 
@@ -331,9 +327,7 @@ def create_app(
                             f"lifespan state key {key!r} from {name!r} is already set"
                         )
                     state[key] = value
-            log.info(
-                "host started", extra={"event": "host.started", "mounted": list(names)}
-            )
+            log.info("host started", extra={"event": "host.started", "mounted": list(names)})
             try:
                 yield state
             finally:

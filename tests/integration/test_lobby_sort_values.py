@@ -40,7 +40,9 @@ def test_the_lobby_dates_and_timezone_carry_the_routes_values(
 ) -> None:
     no_zone = _session(client, db, "zz-open", display_timezone=None)
     _session(
-        client, db, "zz-due",
+        client,
+        db,
+        "zz-due",
         created_at=datetime(2026, 10, 1, 9, 30, 15, 250000, tzinfo=UTC),
         deadline=datetime(2026, 11, 1, 12, 0, tzinfo=UTC),
         display_timezone="Asia/Singapore",
@@ -69,7 +71,11 @@ def test_the_archive_dates_and_timezone_carry_the_routes_values(
     client: TestClient, db: Session
 ) -> None:
     _session(
-        client, db, "zz-gone", status="archived", display_timezone="Europe/Paris",
+        client,
+        db,
+        "zz-gone",
+        status="archived",
+        display_timezone="Europe/Paris",
         created_at=datetime(2026, 9, 1, 8, 0, 0, 1, tzinfo=UTC),
         updated_at=datetime(2026, 10, 2, 17, 45, 0, 999999, tzinfo=UTC),
     )
@@ -91,11 +97,16 @@ def test_status_sorts_in_lifecycle_order_on_a_reload_and_a_click(
     # Ages chosen so the default order (newest first) is neither the
     # lifecycle order nor its reverse: closed, draft, active, valid.
     for code, status, day in (
-        ("zz-closed", "expired", 4), ("zz-draft", "draft", 3),
-        ("zz-active", "ready", 2), ("zz-valid", "validated", 1),
+        ("zz-closed", "expired", 4),
+        ("zz-draft", "draft", 3),
+        ("zz-active", "ready", 2),
+        ("zz-valid", "validated", 1),
     ):
         _session(
-            client, db, code, status=status,
+            client,
+            db,
+            code,
+            status=status,
             created_at=datetime(2026, 10, day, tzinfo=UTC),
         )
     lifecycle = ["zz-draft", "zz-valid", "zz-active", "zz-closed"]
@@ -120,15 +131,16 @@ def test_an_unknown_status_has_no_lifecycle_place() -> None:
     assert views.status_sort_cell("retired") == ""
 
 
-def test_name_and_code_sort_as_a_click_does(
-    client: TestClient, db: Session
-) -> None:
+def test_name_and_code_sort_as_a_click_does(client: TestClient, db: Session) -> None:
     """A reload sorts text as a click does (author, 2026-10-15): case
     aside, and digit runs as numbers. Python's `<` alone put "Beta"
     before "alpha", and "Session 10" before "session 2", where the
     browser's `localeCompare(…, {numeric: true})` doesn't."""
     for name, code in (
-        ("Session 10", "S-10"), ("beta", "b-two"), ("session 2", "s-2"), ("Alpha", "A-one"),
+        ("Session 10", "S-10"),
+        ("beta", "b-two"),
+        ("session 2", "s-2"),
+        ("Alpha", "A-one"),
     ):
         client.post("/operator/sessions", data={"name": name, "code": code})
     expected = ["A-one", "b-two", "s-2", "S-10"]
@@ -168,9 +180,21 @@ def test_text_keys_order_as_the_browser_does() -> None:
     """Pairs a read checked against `localeCompare(…, {numeric: true})`:
     a space or hyphen before a digit sorts before the digit itself."""
     browser_order = [
-        "a-1", "a1", "alpha", "Beta", "CS 101", "CS-101", "CS101", "cs102",
-        "Session 2", "Session 10", "Session1", "Spring 2024", "Spring2024",
-        "x 10", "x9",
+        "a-1",
+        "a1",
+        "alpha",
+        "Beta",
+        "CS 101",
+        "CS-101",
+        "CS101",
+        "cs102",
+        "Session 2",
+        "Session 10",
+        "Session1",
+        "Spring 2024",
+        "Spring2024",
+        "x 10",
+        "x9",
     ]
     # Reversed first: `sorted` is stable, so in-order input would let a
     # key that ties two of these pass.
@@ -179,17 +203,18 @@ def test_text_keys_order_as_the_browser_does() -> None:
     assert views.text_sort_value("   ") is None
 
 
-def test_the_lobby_count_pills_come_from_the_shared_helper(
-    client: TestClient, db: Session
-) -> None:
+def test_the_lobby_count_pills_come_from_the_shared_helper(client: TestClient, db: Session) -> None:
     """The lobby's Sessions card and Sessions Diagnostics' Sessions
     Overview read `views.session_status_counts` (2026-10-15). Validated
     counts as draft; Closed counts only in the total; archived counts in
     its own pill only, not in the lobby's total (19X Item 9), though
     Diagnostics' total still holds it (test_sys_admin_sessions_table)."""
     for code, status in (
-        ("zz-a", "draft"), ("zz-b", "validated"), ("zz-c", "ready"),
-        ("zz-d", "expired"), ("zz-e", "archived"),
+        ("zz-a", "draft"),
+        ("zz-b", "validated"),
+        ("zz-c", "ready"),
+        ("zz-d", "expired"),
+        ("zz-e", "archived"),
     ):
         _session(client, db, code, status=status)
     body = client.get("/operator/sessions").text

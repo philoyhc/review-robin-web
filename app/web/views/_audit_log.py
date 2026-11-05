@@ -205,11 +205,7 @@ def build_audit_log_rows(
     # events for the session, the next page renders empty and the
     # operator sees "No older events." False positive is one
     # wasted click; the alternative is a second COUNT query.
-    next_cursor = (
-        table_rows[-1].id
-        if table_rows and len(table_rows) == limit
-        else None
-    )
+    next_cursor = table_rows[-1].id if table_rows and len(table_rows) == limit else None
     return AuditLogRowsContext(rows=table_rows, next_cursor=next_cursor)
 
 
@@ -257,12 +253,8 @@ def parse_audit_log_filters(
     from app.services.audit import EVENT_SCHEMAS
 
     valid_event_types = set(EVENT_SCHEMAS.keys())
-    event_type_tuple = tuple(
-        et for et in (event_types or []) if et in valid_event_types
-    )
-    severity_tuple = tuple(
-        s for s in (severities or []) if s in _VALID_SEVERITIES
-    )
+    event_type_tuple = tuple(et for et in (event_types or []) if et in valid_event_types)
+    severity_tuple = tuple(s for s in (severities or []) if s in _VALID_SEVERITIES)
     actor_email = (actor or "").strip() or None
     created_from = _parse_date(from_)
     created_to = _parse_date(to)
@@ -305,14 +297,10 @@ def build_audit_log_filter_form(
         ((et, et in filters.event_types) for et in EVENT_SCHEMAS),
         key=lambda pair: pair[0],
     )
-    severity_options = [
-        (sev, sev in filters.severities) for sev in _VALID_SEVERITIES
-    ]
+    severity_options = [(sev, sev in filters.severities) for sev in _VALID_SEVERITIES]
 
     filter_qs = _filters_querystring(filters, zone)
-    csv_url = (
-        f"{csv_base_url}?{filter_qs}" if filter_qs else csv_base_url
-    )
+    csv_url = f"{csv_base_url}?{filter_qs}" if filter_qs else csv_base_url
     zone_qs = urlencode(zone.query_pairs)
     flipped = replace(zone, utc_chosen=not zone.utc_chosen)
     toggle_qs = _filters_querystring(filters, flipped)
@@ -321,12 +309,8 @@ def build_audit_log_filter_form(
         severity_options=severity_options,
         actor_options=distinct_actor_emails,
         actor_email_value=filters.actor_email or "",
-        created_from_value=(
-            filters.created_from.isoformat() if filters.created_from else ""
-        ),
-        created_to_value=(
-            filters.created_to.isoformat() if filters.created_to else ""
-        ),
+        created_from_value=(filters.created_from.isoformat() if filters.created_from else ""),
+        created_to_value=(filters.created_to.isoformat() if filters.created_to else ""),
         cleared_url=f"{base_url}?{zone_qs}" if zone_qs else base_url,
         download_csv_url=csv_url,
         is_active=filters.is_active,
@@ -335,9 +319,7 @@ def build_audit_log_filter_form(
     )
 
 
-def _filters_querystring(
-    filters: AuditFilters, zone: AuditLogZone | None = None
-) -> str:
+def _filters_querystring(filters: AuditFilters, zone: AuditLogZone | None = None) -> str:
     """Encode an ``AuditFilters`` into a stable URL query string.
 
     Uses ``urlencode(doseq=True)`` so multi-value slots
@@ -360,9 +342,7 @@ def _filters_querystring(
     return urlencode(pairs)
 
 
-def filters_querystring(
-    filters: AuditFilters, zone: AuditLogZone | None = None
-) -> str:
+def filters_querystring(filters: AuditFilters, zone: AuditLogZone | None = None) -> str:
     """Public alias so route layers can build pagination URLs that
     carry the filter state, and the zone choice, forward."""
     return _filters_querystring(filters, zone)
@@ -474,11 +454,7 @@ def format_audit_detail(
         payload_rendered = True
 
     if isinstance(reason := detail.get("reason"), str):
-        sections.append(
-            AuditDetailSection(
-                kind="reason", label="Reason", text=reason
-            )
-        )
+        sections.append(AuditDetailSection(kind="reason", label="Reason", text=reason))
     if (refs := json_object(detail.get("refs"))) is not None:
         sections.append(_render_kv("refs", "Refs", refs))
     if (context := json_object(detail.get("context"))) is not None:
@@ -526,9 +502,7 @@ def _change_row(field: str, pair: list[object]) -> AuditDetailChangeRow:
     )
 
 
-def _render_kv(
-    kind: str, label: str, data: dict[str, object]
-) -> AuditDetailSection:
+def _render_kv(kind: str, label: str, data: dict[str, object]) -> AuditDetailSection:
     rows = tuple(
         AuditDetailKVRow(label=k, value=_format_scalar(v))
         for k, v in sorted(data.items(), key=lambda kv: str(kv[0]))

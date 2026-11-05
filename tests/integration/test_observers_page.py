@@ -16,23 +16,17 @@ from sqlalchemy.orm import Session
 from app.db.models import Observer, ReviewSession
 
 
-def _make_session(
-    client: TestClient, db: Session, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "Obs", "code": code, "description": ""},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
-def _enable_observers(
-    db: Session, review_session: ReviewSession
-) -> None:
+def _enable_observers(db: Session, review_session: ReviewSession) -> None:
     review_session.observers_enabled = True
     db.commit()
     db.refresh(review_session)
@@ -41,70 +35,44 @@ def _enable_observers(
 # ── Route gate ────────────────────────────────────────────────────────
 
 
-def test_observers_route_404_when_flag_off(
-    client: TestClient, db: Session
-) -> None:
+def test_observers_route_404_when_flag_off(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, "obs-off")
-    response = client.get(
-        f"/operator/sessions/{review_session.public_id}/observers"
-    )
+    response = client.get(f"/operator/sessions/{review_session.public_id}/observers")
     assert response.status_code == 404
 
 
-def test_observers_route_200_when_flag_on(
-    client: TestClient, db: Session
-) -> None:
+def test_observers_route_200_when_flag_on(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, "obs-on")
     _enable_observers(db, review_session)
-    response = client.get(
-        f"/operator/sessions/{review_session.public_id}/observers"
-    )
+    response = client.get(f"/operator/sessions/{review_session.public_id}/observers")
     assert response.status_code == 200
 
 
 # ── Nav tab visibility ───────────────────────────────────────────────
 
 
-def test_observers_nav_tab_hidden_when_flag_off(
-    client: TestClient, db: Session
-) -> None:
+def test_observers_nav_tab_hidden_when_flag_off(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, "obs-nav-off")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}"
-    ).text
-    assert (
-        f'href="/operator/sessions/{review_session.public_id}/observers"'
-        not in body
-    )
+    body = client.get(f"/operator/sessions/{review_session.public_id}").text
+    assert f'href="/operator/sessions/{review_session.public_id}/observers"' not in body
 
 
-def test_observers_nav_tab_visible_when_flag_on(
-    client: TestClient, db: Session
-) -> None:
+def test_observers_nav_tab_visible_when_flag_on(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, "obs-nav-on")
     _enable_observers(db, review_session)
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}"
-    ).text
-    assert (
-        f'href="/operator/sessions/{review_session.public_id}/observers"'
-        in body
-    )
+    body = client.get(f"/operator/sessions/{review_session.public_id}").text
+    assert f'href="/operator/sessions/{review_session.public_id}/observers"' in body
 
 
 # ── Card surface ─────────────────────────────────────────────────────
 
 
-def test_observers_page_renders_core_cards(
-    client: TestClient, db: Session
-) -> None:
+def test_observers_page_renders_core_cards(client: TestClient, db: Session) -> None:
     """Upload and the selection's bulk form render; the preview
     table's empty state shows; Danger Zone is hidden until rows exist."""
     review_session = _make_session(client, db, "obs-cards")
     _enable_observers(db, review_session)
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/observers"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/observers").text
     assert 'id="upload-csv"' in body
     assert "Upload Observers" in body
     assert 'id="observers-bulk-form"' in body
@@ -114,9 +82,7 @@ def test_observers_page_renders_core_cards(
     assert "No observers yet." in body
 
 
-def test_observers_page_danger_zone_shows_when_rows_exist(
-    client: TestClient, db: Session
-) -> None:
+def test_observers_page_danger_zone_shows_when_rows_exist(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, "obs-dz")
     _enable_observers(db, review_session)
     db.add(
@@ -127,16 +93,12 @@ def test_observers_page_danger_zone_shows_when_rows_exist(
         )
     )
     db.commit()
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/observers"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/observers").text
     assert "Danger Zone" in body
     assert "Delete all observers" in body
 
 
-def test_observers_page_renders_seeded_rows(
-    client: TestClient, db: Session
-) -> None:
+def test_observers_page_renders_seeded_rows(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, "obs-seeded")
     _enable_observers(db, review_session)
     db.add_all(
@@ -155,9 +117,7 @@ def test_observers_page_renders_seeded_rows(
         ]
     )
     db.commit()
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/observers"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/observers").text
     assert "zoe@example.org" in body
     assert "alex@example.org" in body
     assert ">Zoe<" in body
@@ -169,9 +129,7 @@ def test_observers_page_renders_seeded_rows(
 # ── CRUD smoke ───────────────────────────────────────────────────────
 
 
-def test_observer_create_persists_and_redirects(
-    client: TestClient, db: Session
-) -> None:
+def test_observer_create_persists_and_redirects(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, "obs-create")
     _enable_observers(db, review_session)
     response = client.post(
@@ -196,9 +154,7 @@ def test_observer_create_persists_and_redirects(
     assert row.status == "active"
 
 
-def test_observer_create_rejects_duplicate_email(
-    client: TestClient, db: Session
-) -> None:
+def test_observer_create_rejects_duplicate_email(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, "obs-dupe")
     _enable_observers(db, review_session)
     db.add(
@@ -223,9 +179,7 @@ def test_observer_create_rejects_duplicate_email(
     assert "already uses" in response.text
 
 
-def test_observer_update_changes_fields(
-    client: TestClient, db: Session
-) -> None:
+def test_observer_update_changes_fields(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, "obs-update")
     _enable_observers(db, review_session)
     observer = Observer(
@@ -238,8 +192,7 @@ def test_observer_update_changes_fields(
     db.commit()
     db.refresh(observer)
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/observers/{observer.id}/update",
+        f"/operator/sessions/{review_session.public_id}/observers/{observer.id}/update",
         data={
             "email": "new@example.org",
             "display_name": "New",
@@ -256,9 +209,7 @@ def test_observer_update_changes_fields(
     assert observer.status == "inactive"
 
 
-def test_observer_bulk_inactivate(
-    client: TestClient, db: Session
-) -> None:
+def test_observer_bulk_inactivate(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, "obs-bulk")
     _enable_observers(db, review_session)
     o1 = Observer(
@@ -287,20 +238,12 @@ def test_observer_bulk_inactivate(
     assert o2.status == "inactive"
 
 
-def test_observer_cohort_rule_save_persists_to_selected(
-    client: TestClient, db: Session
-) -> None:
+def test_observer_cohort_rule_save_persists_to_selected(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, "obs-cohort-route")
     _enable_observers(db, review_session)
-    o1 = Observer(
-        session_id=review_session.id, email="a@example.org", display_name="A"
-    )
-    o2 = Observer(
-        session_id=review_session.id, email="b@example.org", display_name="B"
-    )
-    o3 = Observer(
-        session_id=review_session.id, email="c@example.org", display_name="C"
-    )
+    o1 = Observer(session_id=review_session.id, email="a@example.org", display_name="A")
+    o2 = Observer(session_id=review_session.id, email="b@example.org", display_name="B")
+    o3 = Observer(session_id=review_session.id, email="c@example.org", display_name="C")
     db.add_all([o1, o2, o3])
     db.commit()
     db.refresh(o1)
@@ -340,9 +283,7 @@ def test_observer_cohort_rule_save_persists_to_selected(
     assert o3.cohort_rule is None
 
 
-def test_observer_cohort_rule_save_rejects_empty_selection(
-    client: TestClient, db: Session
-) -> None:
+def test_observer_cohort_rule_save_rejects_empty_selection(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, "obs-cohort-empty")
     _enable_observers(db, review_session)
     response = client.post(
@@ -361,9 +302,7 @@ def test_observer_cohort_rule_save_refuses_a_value_without_a_field(
     was dropped silently before, saving an empty rule over the old."""
     review_session = _make_session(client, db, "obs-cohort-blank")
     _enable_observers(db, review_session)
-    obs = Observer(
-        session_id=review_session.id, email="x@example.org", display_name="X"
-    )
+    obs = Observer(session_id=review_session.id, email="x@example.org", display_name="X")
     db.add(obs)
     db.commit()
     db.refresh(obs)
@@ -393,11 +332,20 @@ def test_observer_cohort_rule_save_of_blank_cells_clears_the_rule(
     review_session = _make_session(client, db, "obs-cohort-clear")
     _enable_observers(db, review_session)
     obs = Observer(
-        session_id=review_session.id, email="x@example.org", display_name="X",
-        cohort_rule={"combinator": "AND", "rules": [{
-            "field": "reviewer.tag1", "op": "IS",
-            "operand_tag": "", "operand_value": "math",
-        }]},
+        session_id=review_session.id,
+        email="x@example.org",
+        display_name="X",
+        cohort_rule={
+            "combinator": "AND",
+            "rules": [
+                {
+                    "field": "reviewer.tag1",
+                    "op": "IS",
+                    "operand_tag": "",
+                    "operand_value": "math",
+                }
+            ],
+        },
     )
     db.add(obs)
     db.commit()
@@ -419,9 +367,7 @@ def test_observer_cohort_rule_save_of_blank_cells_clears_the_rule(
     assert obs.cohort_rule is None
 
 
-def test_observer_cohort_rule_round_trips_into_template(
-    client: TestClient, db: Session
-) -> None:
+def test_observer_cohort_rule_round_trips_into_template(client: TestClient, db: Session) -> None:
     """After a save, the Cohort column carries the friendly summary."""
     review_session = _make_session(client, db, "obs-cohort-roundtrip")
     _enable_observers(db, review_session)
@@ -455,9 +401,7 @@ def test_observer_cohort_rule_round_trips_into_template(
     )
     assert save_response.status_code == 303
 
-    get_response = client.get(
-        f"/operator/sessions/{review_session.public_id}/observers"
-    )
+    get_response = client.get(f"/operator/sessions/{review_session.public_id}/observers")
     assert get_response.status_code == 200
     body = get_response.text
     assert f"observer-row-{o1.id}" in body
@@ -476,9 +420,7 @@ def test_observer_cohort_rule_save_allowed_when_session_is_ready(
     ``_require_editable`` would have 409'd."""
     review_session = _make_session(client, db, "obs-cohort-ready")
     _enable_observers(db, review_session)
-    obs = Observer(
-        session_id=review_session.id, email="x@example.org", display_name="X"
-    )
+    obs = Observer(session_id=review_session.id, email="x@example.org", display_name="X")
     db.add(obs)
     review_session.status = "ready"
     db.commit()
@@ -519,9 +461,7 @@ def test_observer_cohort_rule_save_rejected_when_session_is_archived(
     of writing through."""
     review_session = _make_session(client, db, "obs-cohort-archived")
     _enable_observers(db, review_session)
-    obs = Observer(
-        session_id=review_session.id, email="x@example.org", display_name="X"
-    )
+    obs = Observer(session_id=review_session.id, email="x@example.org", display_name="X")
     db.add(obs)
     review_session.status = "archived"
     db.commit()
@@ -553,9 +493,7 @@ def test_an_archived_session_refuses_any_observer_edit_by_name(
     2026-10-03 B3)."""
     review_session = _make_session(client, db, "obs-archived-msg")
     _enable_observers(db, review_session)
-    obs = Observer(
-        session_id=review_session.id, email="y@example.org", display_name="Y"
-    )
+    obs = Observer(session_id=review_session.id, email="y@example.org", display_name="Y")
     db.add(obs)
     review_session.status = "archived"
     db.commit()
@@ -583,9 +521,7 @@ def test_observer_cohort_rule_save_pads_short_operand_arrays(
     """
     review_session = _make_session(client, db, "obs-cohort-pad")
     _enable_observers(db, review_session)
-    obs = Observer(
-        session_id=review_session.id, email="x@example.org", display_name="X"
-    )
+    obs = Observer(session_id=review_session.id, email="x@example.org", display_name="X")
     db.add(obs)
     db.commit()
     db.refresh(obs)
@@ -606,6 +542,7 @@ def test_observer_cohort_rule_save_pads_short_operand_arrays(
     assert response.status_code == 400
     db.refresh(obs)
     assert obs.cohort_rule is None
+
 
 def test_observer_cohort_rule_save_rejects_cross_session_ids(
     client: TestClient, db: Session
@@ -657,9 +594,7 @@ def test_observer_cohort_rule_save_rejects_unknown_combinator(
     silently coercing to ``AND``."""
     review_session = _make_session(client, db, "obs-cohort-bad-comb")
     _enable_observers(db, review_session)
-    obs = Observer(
-        session_id=review_session.id, email="x@example.org", display_name="X"
-    )
+    obs = Observer(session_id=review_session.id, email="x@example.org", display_name="X")
     db.add(obs)
     db.commit()
     db.refresh(obs)
@@ -679,14 +614,10 @@ def test_observer_cohort_rule_save_rejects_unknown_combinator(
     assert response.status_code == 400
 
 
-def test_observer_cohort_rule_save_rejects_invalid_payload(
-    client: TestClient, db: Session
-) -> None:
+def test_observer_cohort_rule_save_rejects_invalid_payload(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, "obs-cohort-bad")
     _enable_observers(db, review_session)
-    obs = Observer(
-        session_id=review_session.id, email="x@example.org", display_name="X"
-    )
+    obs = Observer(session_id=review_session.id, email="x@example.org", display_name="X")
     db.add(obs)
     db.commit()
     db.refresh(obs)
@@ -706,9 +637,7 @@ def test_observer_cohort_rule_save_rejects_invalid_payload(
     assert response.status_code == 400
 
 
-def test_observer_delete_all_clears_roster(
-    client: TestClient, db: Session
-) -> None:
+def test_observer_delete_all_clears_roster(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, "obs-delall")
     _enable_observers(db, review_session)
     db.add_all(
@@ -732,15 +661,13 @@ def test_observer_delete_all_clears_roster(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    remaining = db.execute(
-        select(Observer).where(Observer.session_id == review_session.id)
-    ).scalars().all()
+    remaining = (
+        db.execute(select(Observer).where(Observer.session_id == review_session.id)).scalars().all()
+    )
     assert remaining == []
 
 
-def test_observer_csv_import_persists(
-    client: TestClient, db: Session
-) -> None:
+def test_observer_csv_import_persists(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, "obs-import")
     _enable_observers(db, review_session)
     csv_bytes = (
@@ -754,20 +681,22 @@ def test_observer_csv_import_persists(
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    rows = db.execute(
-        select(Observer)
-        .where(Observer.session_id == review_session.id)
-        .order_by(Observer.email)
-    ).scalars().all()
+    rows = (
+        db.execute(
+            select(Observer)
+            .where(Observer.session_id == review_session.id)
+            .order_by(Observer.email)
+        )
+        .scalars()
+        .all()
+    )
     assert [(o.email, o.display_name, o.tag_1) for o in rows] == [
         ("x@example.org", "Xavier", "committee"),
         ("y@example.org", "Yara", None),
     ]
 
 
-def test_observer_csv_import_rejects_missing_email_column(
-    client: TestClient, db: Session
-) -> None:
+def test_observer_csv_import_rejects_missing_email_column(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, "obs-bad-csv")
     _enable_observers(db, review_session)
     response = client.post(
@@ -784,14 +713,10 @@ def test_observer_csv_import_rejects_missing_email_column(
 # ── Chrome ───────────────────────────────────────────────────────────
 
 
-def test_observers_page_marks_observers_nav_tab_active(
-    client: TestClient, db: Session
-) -> None:
+def test_observers_page_marks_observers_nav_tab_active(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, "obs-active")
     _enable_observers(db, review_session)
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/observers"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/observers").text
     assert 'class="nav-tab active"' in body
     assert (
         f'class="nav-tab active"\n       href="/operator/sessions/{review_session.public_id}/observers"'
@@ -824,30 +749,30 @@ def _observers_page(client: TestClient, db: Session, code: str, rows: int = 2):
     review_session = _make_session(client, db, code)
     _enable_observers(db, review_session)
     if rows:
-        db.add_all([
-            Observer(
-                session_id=review_session.id,
-                email=f"o{n}@example.org",
-                display_name=f"O{n}",
-            )
-            for n in range(rows)
-        ])
+        db.add_all(
+            [
+                Observer(
+                    session_id=review_session.id,
+                    email=f"o{n}@example.org",
+                    display_name=f"O{n}",
+                )
+                for n in range(rows)
+            ]
+        )
         db.commit()
     return review_session
 
 
-def test_the_filter_strip_sits_in_the_tables_toolbar(
-    client: TestClient, db: Session
-) -> None:
+def test_the_filter_strip_sits_in_the_tables_toolbar(client: TestClient, db: Session) -> None:
     review_session = _observers_page(client, db, "obs-toolbar")
-    body = _markup(
-        client.get(f"/operator/sessions/{review_session.public_id}/observers").text
-    )
+    body = _markup(client.get(f"/operator/sessions/{review_session.public_id}/observers").text)
 
     import re as _re
+
     toolbar = _re.search(
         r'<div class="table-card-toolbar is-split">.*?id="observers-table"',
-        body, _re.S,
+        body,
+        _re.S,
     )
     assert toolbar, "the table card has no split toolbar"
     pane = toolbar.group(0)
@@ -879,9 +804,7 @@ def test_the_filter_strip_sits_in_the_tables_toolbar(
         )
 
 
-def test_the_left_pane_is_deliberately_chipless(
-    client: TestClient, db: Session
-) -> None:
+def test_the_left_pane_is_deliberately_chipless(client: TestClient, db: Session) -> None:
     """Observers have one tag slot and it always renders, so there is
     nothing to toggle — the empty left pane is intended, not a bug.
 
@@ -907,7 +830,8 @@ def test_the_left_pane_is_deliberately_chipless(
         m = _re.search(
             r'<div class="toolbar-pane toolbar-left">(.*?)'
             r'<div class="toolbar-pane toolbar-right">',
-            _markup(client.get(url).text), _re.S,
+            _markup(client.get(url).text),
+            _re.S,
         )
         assert m, f"no left pane on {url}"
         return m.group(1)
@@ -916,14 +840,10 @@ def test_the_left_pane_is_deliberately_chipless(
         "a column-toggle chip appeared on a page with one fixed tag slot"
     )
     assert "table-pager" in left_pane(base), "the pager left the left pane"
-    assert "table-showing-hint" in left_pane(f"{base}?q=o1"), (
-        "the count line left the left pane"
-    )
+    assert "table-showing-hint" in left_pane(f"{base}?q=o1"), "the count line left the left pane"
 
 
-def test_the_operator_actions_card_is_retired(
-    client: TestClient, db: Session
-) -> None:
+def test_the_operator_actions_card_is_retired(client: TestClient, db: Session) -> None:
     """Rung 3 slimmed it to the row actions; rung 4 moved those into the
     row expander and the card went with them.
 
@@ -932,9 +852,7 @@ def test_the_operator_actions_card_is_retired(
     editor's Save / Cancel moved into the edit row's own bar.
     """
     review_session = _observers_page(client, db, "obs-retired")
-    body = _markup(
-        client.get(f"/operator/sessions/{review_session.public_id}/observers").text
-    )
+    body = _markup(client.get(f"/operator/sessions/{review_session.public_id}/observers").text)
 
     assert 'class="card operator-actions-card"' not in body
     assert ">Operator actions</h2>" not in body
@@ -968,9 +886,11 @@ def test_the_moved_filter_locks_while_a_row_is_being_edited(
     that throws the half-typed row away."
     """
     review_session = _observers_page(client, db, "obs-lock")
-    row_id = db.execute(
-        select(Observer.id).where(Observer.session_id == review_session.id)
-    ).scalars().first()
+    row_id = (
+        db.execute(select(Observer.id).where(Observer.session_id == review_session.id))
+        .scalars()
+        .first()
+    )
     base = f"/operator/sessions/{review_session.public_id}/observers"
 
     import re as _re
@@ -983,9 +903,7 @@ def test_the_moved_filter_locks_while_a_row_is_being_edited(
         assert m, f"no filter form on {url}"
         return m.group(1)
 
-    assert "is-locked" not in filter_form(base), (
-        "the filter is locked on an ordinary render"
-    )
+    assert "is-locked" not in filter_form(base), "the filter is locked on an ordinary render"
     assert "is-locked" in filter_form(f"{base}?edit_id={row_id}"), (
         "the moved filter stays live while a row is being edited"
     )
@@ -998,16 +916,11 @@ def test_the_moved_filter_locks_while_a_row_is_being_edited(
     for url in (f"{base}?edit_id={row_id}", f"{base}?add=1"):
         locked = _markup(client.get(url).text)
         assert 'type="submit" disabled>Search</button>' in locked, url
-        assert (
-            '<a class="btn secondary disabled" aria-disabled="true">Add new</a>'
-            in locked
-        ), url
+        assert '<a class="btn secondary disabled" aria-disabled="true">Add new</a>' in locked, url
 
     # The rule that gives the class its effect.
     edit_body = client.get(f"{base}?edit_id={row_id}").text
-    assert ".operator-actions-filter.is-locked" in edit_body, (
-        "no rule backs the class"
-    )
+    assert ".operator-actions-filter.is-locked" in edit_body, "no rule backs the class"
     # The second half of this check used to read
     # `operator-actions-main is-locked` — the row actions' own lock in
     # the card beside it. 19P.2 rung 4 retired that card, and the row
@@ -1021,9 +934,7 @@ def test_the_moved_filter_locks_while_a_row_is_being_edited(
     # read added it. Caught by the next cold read.
 
 
-def test_add_new_is_absent_on_an_archived_session(
-    client: TestClient, db: Session
-) -> None:
+def test_add_new_is_absent_on_an_archived_session(client: TestClient, db: Session) -> None:
     """`Add new` moved into the toolbar at rung 3 and took its own
     lifecycle gate with it — so the surface test that brackets
     `archived` no longer enumerates it. Asserted here instead.
@@ -1034,13 +945,9 @@ def test_add_new_is_absent_on_an_archived_session(
     review_session = _observers_page(client, db, "obs-addarch")
     review_session.status = "archived"
     db.commit()
-    body = _markup(
-        client.get(f"/operator/sessions/{review_session.public_id}/observers").text
-    )
+    body = _markup(client.get(f"/operator/sessions/{review_session.public_id}/observers").text)
 
-    assert ">Add new</a>" not in body, (
-        "archived offers an Add new the create route refuses"
-    )
+    assert ">Add new</a>" not in body, "archived offers an Add new the create route refuses"
     assert "?add=1" not in body, "an archived page links into add mode"
     # The roster is still readable, and the filter still filters it —
     # this is a gate on one control, not on the page.
@@ -1048,9 +955,7 @@ def test_add_new_is_absent_on_an_archived_session(
     assert 'name="q"' in body
 
 
-def test_every_filter_control_lands_on_the_table_card(
-    client: TestClient, db: Session
-) -> None:
+def test_every_filter_control_lands_on_the_table_card(client: TestClient, db: Session) -> None:
     """The controls reload the page, and a reload with no fragment lands
     at the top of the document — throwing the operator away from the
     rows they were filtering. The pager settled this at 19J.8; Search
@@ -1061,16 +966,13 @@ def test_every_filter_control_lands_on_the_table_card(
     body = _markup(client.get(f"{base}?status=active&q=o1").text)
 
     import re as _re
+
     form = _re.search(r'<form method="get"[^>]*>', body)
     assert form, "no filter form"
-    assert "#observers-table-card" in form.group(0), (
-        "a search lands at the top of the document"
-    )
-    clear = _re.search(r'<a[^>]*>\s*Clear\s*</a>', body)
+    assert "#observers-table-card" in form.group(0), "a search lands at the top of the document"
+    clear = _re.search(r"<a[^>]*>\s*Clear\s*</a>", body)
     assert clear, "no Clear link on a filtered view"
-    assert "#observers-table-card" in clear.group(0), (
-        "Clear lands at the top of the document"
-    )
+    assert "#observers-table-card" in clear.group(0), "Clear lands at the top of the document"
 
 
 def test_a_filter_matching_nothing_keeps_the_control_that_clears_it(
@@ -1085,9 +987,7 @@ def test_a_filter_matching_nothing_keeps_the_control_that_clears_it(
     """
     review_session = _observers_page(client, db, "obs-nomatch")
     body = _markup(
-        client.get(
-            f"/operator/sessions/{review_session.public_id}/observers?q=zzzznope"
-        ).text
+        client.get(f"/operator/sessions/{review_session.public_id}/observers?q=zzzznope").text
     )
 
     assert "No observers match the current filter." in body
@@ -1100,16 +1000,12 @@ def test_a_filter_matching_nothing_keeps_the_control_that_clears_it(
     )
 
 
-def test_an_empty_roster_still_offers_add_new(
-    client: TestClient, db: Session
-) -> None:
+def test_an_empty_roster_still_offers_add_new(client: TestClient, db: Session) -> None:
     """The operator who most needs `Add new` is the one whose roster is
     empty. Gating the card on the row list would hide it from exactly
     them."""
     review_session = _observers_page(client, db, "obs-empty", rows=0)
-    body = _markup(
-        client.get(f"/operator/sessions/{review_session.public_id}/observers").text
-    )
+    body = _markup(client.get(f"/operator/sessions/{review_session.public_id}/observers").text)
 
     assert "No observers yet." in body
     assert ">Add new</a>" in body, "an empty roster offers no way to start"

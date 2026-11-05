@@ -92,10 +92,7 @@ def _parse_iso_duration(text: str) -> timedelta:
     if match is None:
         raise ValueError(f"not an ISO 8601 duration: {text!r}")
     parts = match.groupdict()
-    if all(
-        parts[k] is None
-        for k in ("years", "months", "days", "hours", "minutes", "seconds")
-    ):
+    if all(parts[k] is None for k in ("years", "months", "days", "hours", "minutes", "seconds")):
         raise ValueError(f"empty ISO 8601 duration: {text!r}")
     years = int(parts["years"] or 0)
     months = int(parts["months"] or 0)
@@ -115,9 +112,7 @@ def _parse_iso_duration(text: str) -> timedelta:
 def upgrade() -> None:
     # 1. visible_when on instrument_view_policies.
     with op.batch_alter_table("instrument_view_policies") as batch_op:
-        batch_op.add_column(
-            sa.Column("visible_when", sa.String(length=16), nullable=True)
-        )
+        batch_op.add_column(sa.Column("visible_when", sa.String(length=16), nullable=True))
 
     # 2. responses_release_until on sessions.
     with op.batch_alter_table("sessions") as batch_op:
@@ -153,10 +148,7 @@ def upgrade() -> None:
             # dropped below anyway and the operator can re-enter).
             continue
         bind.execute(
-            sa.text(
-                "UPDATE sessions SET responses_release_until = "
-                ":until WHERE id = :id"
-            ),
+            sa.text("UPDATE sessions SET responses_release_until = :until WHERE id = :id"),
             {"until": row.responses_release_at + delta, "id": row.id},
         )
 
@@ -168,9 +160,7 @@ def upgrade() -> None:
 def downgrade() -> None:
     # 1. Re-add release_until_offset.
     with op.batch_alter_table("sessions") as batch_op:
-        batch_op.add_column(
-            sa.Column("release_until_offset", sa.String(length=16), nullable=True)
-        )
+        batch_op.add_column(sa.Column("release_until_offset", sa.String(length=16), nullable=True))
 
     # 2. Backfill release_until_offset from
     #    (responses_release_until - responses_release_at) where both
@@ -213,10 +203,7 @@ def downgrade() -> None:
         if offset == "P":
             continue
         bind.execute(
-            sa.text(
-                "UPDATE sessions SET release_until_offset = :offset "
-                "WHERE id = :id"
-            ),
+            sa.text("UPDATE sessions SET release_until_offset = :offset WHERE id = :id"),
             {"offset": offset, "id": row.id},
         )
 

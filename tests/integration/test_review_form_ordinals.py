@@ -41,9 +41,7 @@ def _session_alice_reviews(
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    session = db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    session = db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
     for kind, body in (
         ("reviewers", b"ReviewerName,ReviewerEmail\nAlice,alice@example.edu\n"),
         (
@@ -67,9 +65,7 @@ def _session_alice_reviews(
 def _assignments(db: Session, session: ReviewSession) -> list[Assignment]:
     return list(
         db.execute(
-            select(Assignment)
-            .where(Assignment.session_id == session.id)
-            .order_by(Assignment.id)
+            select(Assignment).where(Assignment.session_id == session.id).order_by(Assignment.id)
         ).scalars()
     )
 
@@ -84,9 +80,7 @@ def _rating(db: Session, assignment: Assignment) -> str | None:
     return None
 
 
-def test_answers_are_named_by_ordinal_not_assignment_id(
-    db: Session, client: TestClient
-) -> None:
+def test_answers_are_named_by_ordinal_not_assignment_id(db: Session, client: TestClient) -> None:
     # Another session's assignments first, so this page's IDs are not 1-3.
     _session_alice_reviews(db, client, code="ordinals-other")
     session = _session_alice_reviews(db, client)
@@ -131,9 +125,7 @@ def test_a_column_sort_leaves_the_ordinals_on_the_same_rows(
     assert unsorted == descending
 
 
-def test_a_save_lands_on_the_row_its_ordinal_names(
-    db: Session, client: TestClient
-) -> None:
+def test_a_save_lands_on_the_row_its_ordinal_names(db: Session, client: TestClient) -> None:
     session = _session_alice_reviews(db, client)
     first, second, third = _assignments(db, session)
 
@@ -149,9 +141,7 @@ def test_a_save_lands_on_the_row_its_ordinal_names(
     assert _rating(db, third) is None
 
 
-def test_an_ordinal_the_page_does_not_have_is_ignored(
-    db: Session, client: TestClient
-) -> None:
+def test_an_ordinal_the_page_does_not_have_is_ignored(db: Session, client: TestClient) -> None:
     session = _session_alice_reviews(db, client)
     page = client.get(f"/me/sessions/{session.public_id}/1").text
     digest = _digest(page)
@@ -189,9 +179,7 @@ def test_a_post_against_a_changed_page_is_refused_and_saves_nothing(
     assert _rating(db, third) is None
 
 
-def test_answers_without_a_digest_are_refused(
-    db: Session, client: TestClient
-) -> None:
+def test_answers_without_a_digest_are_refused(db: Session, client: TestClient) -> None:
     session = _session_alice_reviews(db, client)
     second = _assignments(db, session)[1]
 
@@ -199,16 +187,12 @@ def test_answers_without_a_digest_are_refused(
         f"/me/sessions/{session.public_id}/1/save",
         f"/me/sessions/{session.public_id}/submit?page=1",
     ):
-        response = client.post(
-            path, data={"response[2][rating]": "4"}, follow_redirects=False
-        )
+        response = client.post(path, data={"response[2][rating]": "4"}, follow_redirects=False)
         assert response.status_code == 409, path
     assert _rating(db, second) is None
 
 
-def test_a_refused_stale_form_lists_its_answers_bare(
-    db: Session, client: TestClient
-) -> None:
+def test_a_refused_stale_form_lists_its_answers_bare(db: Session, client: TestClient) -> None:
     """Past the deadline a Save is refused (403) and its typed answers come
     back to copy. A form whose page changed since it rendered lists them
     bare, not under the rows its ordinals name now."""
@@ -233,9 +217,7 @@ def test_a_refused_stale_form_lists_its_answers_bare(
     assert "Dan" not in listed and "Eve" not in listed
 
 
-def test_a_group_page_posts_back_the_ordinals_it_rendered(
-    db: Session, make_client
-) -> None:
+def test_a_group_page_posts_back_the_ordinals_it_rendered(db: Session, make_client) -> None:
     """A group instrument renders one row for its members, so the page's
     ordinals have a gap (1 and 3 render; 2 is the group's other member).
     Posting the rendered names back lands each answer on its row, the
@@ -266,12 +248,16 @@ def test_a_group_page_posts_back_the_ordinals_it_rendered(
     db.add_all([reviewer, carol, dan])
     db.flush()
     in_group = [
-        Assignment(session_id=session.id, reviewer_id=reviewer.id, reviewee_id=r.id, instrument_id=group.id)
+        Assignment(
+            session_id=session.id, reviewer_id=reviewer.id, reviewee_id=r.id, instrument_id=group.id
+        )
         for r in (carol, dan)
     ]
     db.add_all(in_group)
     db.flush()
-    alone = Assignment(session_id=session.id, reviewer_id=reviewer.id, reviewee_id=carol.id, instrument_id=solo.id)
+    alone = Assignment(
+        session_id=session.id, reviewer_id=reviewer.id, reviewee_id=carol.id, instrument_id=solo.id
+    )
     db.add(alone)
     session.status = "ready"
     db.commit()
@@ -312,9 +298,7 @@ def test_the_digest_is_keyed_by_a_secret_the_page_never_shows(
     assert session.form_key not in html
     rows = [cast(Assignment, SimpleNamespace(id=7)), cast(Assignment, SimpleNamespace(id=9))]
     other_key = cast(ReviewSession, SimpleNamespace(form_key="0" * 64))
-    assert page_digest(session, rows, group_keys={}) != page_digest(
-        other_key, rows, group_keys={}
-    )
+    assert page_digest(session, rows, group_keys={}) != page_digest(other_key, rows, group_keys={})
     assert page_digest(session, rows, group_keys={}) != page_digest(
         session, rows[:1], group_keys={}
     )
@@ -353,9 +337,7 @@ def test_the_service_still_drops_an_excluded_or_foreign_assignment(
     foreign = _assignments(db, other)[0]
     excluded.include = False
     db.commit()
-    reviewer = db.execute(
-        select(Reviewer).where(Reviewer.session_id == session.id)
-    ).scalar_one()
+    reviewer = db.execute(select(Reviewer).where(Reviewer.session_id == session.id)).scalar_one()
     user = db.execute(select(User).where(User.email == "alice@example.edu")).scalar_one()
 
     responses_service.save_draft(
@@ -448,17 +430,13 @@ def _tagged_group_page(db: Session, make_client, *, boundary: str = "reviewee"):
 def _rendered_form(rae, session: ReviewSession) -> dict[str, str]:
     html = rae.get(f"/me/sessions/{session.public_id}/1").text
     form = {
-        f"response[{n}][{key}]": "4"
-        for n, key in _ANSWER_NAME.findall(html)
-        if key == "rating"
+        f"response[{n}][{key}]": "4" for n, key in _ANSWER_NAME.findall(html) if key == "rating"
     }
     form["page_digest"] = _digest(html)
     return form
 
 
-def test_a_group_page_s_rendered_form_posts_back_unchanged(
-    db: Session, make_client
-) -> None:
+def test_a_group_page_s_rendered_form_posts_back_unchanged(db: Session, make_client) -> None:
     """The digest the page renders is the one a post recomputes: with
     nothing changed, the form saves, every member taking its group's
     answer. Guards render and post computing the group keys alike."""
@@ -495,9 +473,7 @@ def test_a_relationship_tag_regroup_is_refused(db: Session, make_client) -> None
     """On a pair-context boundary the groups come from each pair's
     relationship tag, and a change there regroups just as a reviewee tag
     does."""
-    session, relationships, rows, rae = _tagged_group_page(
-        db, make_client, boundary="pair_context"
-    )
+    session, relationships, rows, rae = _tagged_group_page(db, make_client, boundary="pair_context")
     form = _rendered_form(rae, session)
     relationships["Ann"].tag_1 = "blue"
     db.commit()
@@ -518,9 +494,7 @@ def test_a_form_from_before_a_regroup_is_refused(db: Session, make_client) -> No
     session, people, rows, rae = _tagged_group_page(db, make_client)
     html = rae.get(f"/me/sessions/{session.public_id}/1").text
     form = {
-        f"response[{n}][{key}]": "4"
-        for n, key in _ANSWER_NAME.findall(html)
-        if key == "rating"
+        f"response[{n}][{key}]": "4" for n, key in _ANSWER_NAME.findall(html) if key == "rating"
     }
     assert len(form) == 2  # one row per group
     form["page_digest"] = _digest(html)
@@ -551,9 +525,7 @@ def test_renaming_a_whole_group_keeps_the_digest(db: Session, make_client) -> No
     assert after == before
 
 
-def test_a_page_with_no_group_rows_digests_as_before(
-    db: Session, client: TestClient
-) -> None:
+def test_a_page_with_no_group_rows_digests_as_before(db: Session, client: TestClient) -> None:
     """A page with no group instrument keeps the digest 19V gave it, so a
     tab open across the R1 fix is not refused."""
     import hashlib

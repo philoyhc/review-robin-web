@@ -133,31 +133,33 @@ def appeals_preview() -> str | None:
     return mode if mode in APPEAL_MODES and mode != policy_appeals() else None
 
 
-_POLICY = _Policy({
-    "day_count": "Every day",  # one of DAY_COUNTS; see leave_days()
-    # Appeals beyond entitlement (author, 2026-10-28, refined 2026-10-29):
-    # open to every RA, by invitation once someone the policy names agrees
-    # in principle, or off.
-    "appeals": "Open",  # one of APPEAL_MODES
-    # Who may open an appeal by invitation (author, 2026-10-29), chosen as
-    # approvers are: appointments on the RA's slot, Unit-level
-    # appointments, or named staff.
-    "inviters": "unit",  # "slot", "unit" or "named"
-    "inviter_types": ("Master", "Admin"),
-    "inviter_names": (),
-    "appeal_terms": "Granted on the understanding that you take on extra duties, as agreed with your RF.",
-    "cover_required": True,
-    "cover_mode": "Named and confirmed",
-    "cover_pool": "Same Precinct",
-    # Approvals (author, 2026-10-28): first by one or more of the
-    # appointments on the RA's slot, whichever approves first, or none;
-    # final by one or more Unit-level appointments, or by named staff.
-    "first": "slot",  # or "none"
-    "first_types": ("RF",),
-    "final": "unit",  # or "named"
-    "final_types": ("Admin",),
-    "final_names": (),
-})
+_POLICY = _Policy(
+    {
+        "day_count": "Every day",  # one of DAY_COUNTS; see leave_days()
+        # Appeals beyond entitlement (author, 2026-10-28, refined 2026-10-29):
+        # open to every RA, by invitation once someone the policy names agrees
+        # in principle, or off.
+        "appeals": "Open",  # one of APPEAL_MODES
+        # Who may open an appeal by invitation (author, 2026-10-29), chosen as
+        # approvers are: appointments on the RA's slot, Unit-level
+        # appointments, or named staff.
+        "inviters": "unit",  # "slot", "unit" or "named"
+        "inviter_types": ("Master", "Admin"),
+        "inviter_names": (),
+        "appeal_terms": "Granted on the understanding that you take on extra duties, as agreed with your RF.",
+        "cover_required": True,
+        "cover_mode": "Named and confirmed",
+        "cover_pool": "Same Precinct",
+        # Approvals (author, 2026-10-28): first by one or more of the
+        # appointments on the RA's slot, whichever approves first, or none;
+        # final by one or more Unit-level appointments, or by named staff.
+        "first": "slot",  # or "none"
+        "first_types": ("RF",),
+        "final": "unit",  # or "named"
+        "final_types": ("Admin",),
+        "final_names": (),
+    }
+)
 # Read through its keys' types: `_Policy` is the runtime object, `Policy`
 # what each key holds.
 POLICY = cast(Policy, _POLICY)
@@ -235,7 +237,9 @@ def in_slots(person: str, precinct: str) -> bool:
     Precinct is a place in each RA's slot. Only such a person approves,
     first or final, decides or opens an appeal for its RAs (author,
     2026-10-29)."""
-    return person in overseers() or any(person in s.staff for s in sample_data.SLOTS if s.precinct == precinct)
+    return person in overseers() or any(
+        person in s.staff for s in sample_data.SLOTS if s.precinct == precinct
+    )
 
 
 def precincts() -> tuple[str, ...]:
@@ -278,13 +282,16 @@ def final_label(full: bool = False) -> str:
     if POLICY["final"] != "unit":
         return " or ".join(POLICY["final_names"])
     titles = {abbrev: title for title, abbrev in unit_appointments()}
-    return " or ".join(f"{titles[t]} ({t})" if full and titles.get(t, t) != t else t for t in POLICY["final_types"])
+    return " or ".join(
+        f"{titles[t]} ({t})" if full and titles.get(t, t) != t else t for t in POLICY["final_types"]
+    )
 
 
 def final_decider(application: Application) -> str:
     """The sample's final approver on a decided application: the first who
     may give it for its Precinct."""
     return next(iter(final_for(application.precinct)), "the final approver")
+
 
 # Cover is tracked beside the workflow, not as a stage of it: an
 # application whose cover is unconfirmed waits at first approval (spec §11).
@@ -363,7 +370,7 @@ class Application:
 
 
 def short_date(day: date) -> str:
-    """"28 Oct": the day without a leading zero, built by hand because
+    """ "28 Oct": the day without a leading zero, built by hand because
     `%-d` is glibc's and Windows' strftime refuses it."""
     return f"{day.day} {day.strftime('%b')}"
 
@@ -375,43 +382,232 @@ def _d(text: str) -> date:
 #: An application's fields after its id; ``remarks`` is optional.
 _ApplicationRow = tuple[str, str, date, date, str, str, str, date, *tuple[str, ...]]
 _APPLICATION_ROWS: tuple[_ApplicationRow, ...] = (
-    ("Chloe Lim", "Personal leave", _d("2026-11-06"), _d("2026-11-08"), "Ethan Wong", "Confirmed", "Pending first approval", _d("2026-10-27")),
-    ("Isaac Goh", "Personal leave", _d("2026-11-12"), _d("2026-11-14"), "Kai Ng", "Awaiting", "Pending first approval", _d("2026-10-26")),
-    ("Bella Koh", "Personal leave", _d("2026-10-30"), _d("2026-11-01"), "Cheng Hao Lin", "Confirmed", "Pending final approval", _d("2026-10-23")),
-    ("Leon Chia", "Personal leave", _d("2026-12-01"), _d("2026-12-05"), "Mira Sato", "Confirmed", "Pending first approval", _d("2026-10-21")),
+    (
+        "Chloe Lim",
+        "Personal leave",
+        _d("2026-11-06"),
+        _d("2026-11-08"),
+        "Ethan Wong",
+        "Confirmed",
+        "Pending first approval",
+        _d("2026-10-27"),
+    ),
+    (
+        "Isaac Goh",
+        "Personal leave",
+        _d("2026-11-12"),
+        _d("2026-11-14"),
+        "Kai Ng",
+        "Awaiting",
+        "Pending first approval",
+        _d("2026-10-26"),
+    ),
+    (
+        "Bella Koh",
+        "Personal leave",
+        _d("2026-10-30"),
+        _d("2026-11-01"),
+        "Cheng Hao Lin",
+        "Confirmed",
+        "Pending final approval",
+        _d("2026-10-23"),
+    ),
+    (
+        "Leon Chia",
+        "Personal leave",
+        _d("2026-12-01"),
+        _d("2026-12-05"),
+        "Mira Sato",
+        "Confirmed",
+        "Pending first approval",
+        _d("2026-10-21"),
+    ),
     # Cover not yet confirmed: the Master may decide over it, on the
     # record (spec §7.4; audit, 2026-10-29).
-    ("Gwen Ho", "Personal leave", _d("2026-11-20"), _d("2026-11-23"), "Elise Tan", "Awaiting", "Appeal to the Master", _d("2026-10-25"),
-     "Balance exhausted; family wedding overseas."),
-    ("Maya Seah", "Personal leave", _d("2026-10-27"), _d("2026-10-29"), "Lucas Teo", "Confirmed", "Approved", _d("2026-10-12")),
-    ("Olivia Ng", "Personal leave", _d("2026-10-28"), _d("2026-10-30"), "Pranav Iyer", "Confirmed", "Approved", _d("2026-10-14")),
-    ("Pranav Iyer", "Personal leave", _d("2026-10-29"), _d("2026-10-31"), "Qi Xuan Lim", "Confirmed", "Approved", _d("2026-10-15")),
-    ("Hana Ito", "Official leave", _d("2026-11-02"), _d("2026-11-03"), "Chloe Lim", "Declined", "Pending first approval", _d("2026-10-24")),
-    ("Faris Iskandar", "Personal leave", _d("2026-10-10"), _d("2026-10-11"), "Elise Tan", "Confirmed", "Rejected", _d("2026-10-02")),
-    ("Ethan Wong", "Personal leave", _d("2026-10-17"), _d("2026-10-18"), "Hana Ito", "Confirmed", "Withdrawn", _d("2026-10-05")),
-    ("Gwen Ho", "Personal leave", _d("2026-08-17"), _d("2026-08-19"), "Elise Tan", "Confirmed", "Approved", _d("2026-08-05")),
-    ("Gwen Ho", "Personal leave", _d("2026-09-21"), _d("2026-09-22"), "Faris Iskandar", "Confirmed", "Approved", _d("2026-09-10")),
+    (
+        "Gwen Ho",
+        "Personal leave",
+        _d("2026-11-20"),
+        _d("2026-11-23"),
+        "Elise Tan",
+        "Awaiting",
+        "Appeal to the Master",
+        _d("2026-10-25"),
+        "Balance exhausted; family wedding overseas.",
+    ),
+    (
+        "Maya Seah",
+        "Personal leave",
+        _d("2026-10-27"),
+        _d("2026-10-29"),
+        "Lucas Teo",
+        "Confirmed",
+        "Approved",
+        _d("2026-10-12"),
+    ),
+    (
+        "Olivia Ng",
+        "Personal leave",
+        _d("2026-10-28"),
+        _d("2026-10-30"),
+        "Pranav Iyer",
+        "Confirmed",
+        "Approved",
+        _d("2026-10-14"),
+    ),
+    (
+        "Pranav Iyer",
+        "Personal leave",
+        _d("2026-10-29"),
+        _d("2026-10-31"),
+        "Qi Xuan Lim",
+        "Confirmed",
+        "Approved",
+        _d("2026-10-15"),
+    ),
+    (
+        "Hana Ito",
+        "Official leave",
+        _d("2026-11-02"),
+        _d("2026-11-03"),
+        "Chloe Lim",
+        "Declined",
+        "Pending first approval",
+        _d("2026-10-24"),
+    ),
+    (
+        "Faris Iskandar",
+        "Personal leave",
+        _d("2026-10-10"),
+        _d("2026-10-11"),
+        "Elise Tan",
+        "Confirmed",
+        "Rejected",
+        _d("2026-10-02"),
+    ),
+    (
+        "Ethan Wong",
+        "Personal leave",
+        _d("2026-10-17"),
+        _d("2026-10-18"),
+        "Hana Ito",
+        "Confirmed",
+        "Withdrawn",
+        _d("2026-10-05"),
+    ),
+    (
+        "Gwen Ho",
+        "Personal leave",
+        _d("2026-08-17"),
+        _d("2026-08-19"),
+        "Elise Tan",
+        "Confirmed",
+        "Approved",
+        _d("2026-08-05"),
+    ),
+    (
+        "Gwen Ho",
+        "Personal leave",
+        _d("2026-09-21"),
+        _d("2026-09-22"),
+        "Faris Iskandar",
+        "Confirmed",
+        "Approved",
+        _d("2026-09-10"),
+    ),
     # Chloe Lim, the RA pages' sample viewer, is asked to cover one
     # and has agreed to cover another.
-    ("Ethan Wong", "Personal leave", _d("2026-12-04"), _d("2026-12-06"), "Chloe Lim", "Awaiting", "Pending first approval", _d("2026-10-27")),
-    ("Hana Ito", "Personal leave", _d("2026-12-14"), _d("2026-12-15"), "Chloe Lim", "Confirmed", "Approved", _d("2026-10-20")),
-    ("Kai Ng", "Personal leave", _d("2026-11-04"), _d("2026-11-05"), "Isaac Goh", "Confirmed", "Cancelled", _d("2026-10-08")),
-    ("Chloe Lim", "Official leave", _d("2026-09-25"), _d("2026-09-25"), "Hana Ito", "Confirmed", "Approved", _d("2026-09-14"),
-     "Representing the hall at the inter-hall games."),
-    ("Lucas Teo", "Personal leave", _d("2026-09-07"), _d("2026-09-09"), "Maya Seah", "Confirmed", "Approved", _d("2026-08-28"),
-     "Balance used; grandmother's funeral abroad."),
+    (
+        "Ethan Wong",
+        "Personal leave",
+        _d("2026-12-04"),
+        _d("2026-12-06"),
+        "Chloe Lim",
+        "Awaiting",
+        "Pending first approval",
+        _d("2026-10-27"),
+    ),
+    (
+        "Hana Ito",
+        "Personal leave",
+        _d("2026-12-14"),
+        _d("2026-12-15"),
+        "Chloe Lim",
+        "Confirmed",
+        "Approved",
+        _d("2026-10-20"),
+    ),
+    (
+        "Kai Ng",
+        "Personal leave",
+        _d("2026-11-04"),
+        _d("2026-11-05"),
+        "Isaac Goh",
+        "Confirmed",
+        "Cancelled",
+        _d("2026-10-08"),
+    ),
+    (
+        "Chloe Lim",
+        "Official leave",
+        _d("2026-09-25"),
+        _d("2026-09-25"),
+        "Hana Ito",
+        "Confirmed",
+        "Approved",
+        _d("2026-09-14"),
+        "Representing the hall at the inter-hall games.",
+    ),
+    (
+        "Lucas Teo",
+        "Personal leave",
+        _d("2026-09-07"),
+        _d("2026-09-09"),
+        "Maya Seah",
+        "Confirmed",
+        "Approved",
+        _d("2026-08-28"),
+        "Balance used; grandmother's funeral abroad.",
+    ),
     # The leave that used Lucas Teo's balance before his appeal.
-    ("Lucas Teo", "Personal leave", _d("2026-08-24"), _d("2026-08-28"), "Maya Seah", "Confirmed", "Approved", _d("2026-08-17")),
+    (
+        "Lucas Teo",
+        "Personal leave",
+        _d("2026-08-24"),
+        _d("2026-08-28"),
+        "Maya Seah",
+        "Confirmed",
+        "Approved",
+        _d("2026-08-17"),
+    ),
     # An appeal the Master refused (scenario I; audit, 2026-10-29).
-    ("Maya Seah", "Personal leave", _d("2026-09-21"), _d("2026-09-27"), "Lucas Teo", "Confirmed", "Rejected", _d("2026-09-08"),
-     "Seven days, two more than my five: a friend's wedding overseas."),
+    (
+        "Maya Seah",
+        "Personal leave",
+        _d("2026-09-21"),
+        _d("2026-09-27"),
+        "Lucas Teo",
+        "Confirmed",
+        "Rejected",
+        _d("2026-09-08"),
+        "Seven days, two more than my five: a friend's wedding overseas.",
+    ),
 )
 
 
 def _application(n: int, row: _ApplicationRow) -> Application:
     ra, leave_type, start, end, cover, cover_recorded, recorded, submitted, *remarks = row
     return Application(
-        f"L-{n:04d}", ra, leave_type, start, end, cover, cover_recorded, recorded, submitted, *remarks
+        f"L-{n:04d}",
+        ra,
+        leave_type,
+        start,
+        end,
+        cover,
+        cover_recorded,
+        recorded,
+        submitted,
+        *remarks,
     )
 
 
@@ -427,23 +623,50 @@ REJECTED_APPEALS: frozenset[str] = frozenset({"L-0120"})  # an appeal the Master
 # (spec §14, §15, §19). Who decided is read from today's chain in
 # `timeline`; a wired record keeps the person too.
 DECISIONS: dict[str, dict[str, tuple[date, str]]] = {
-    "L-0103": {"first": (_d("2026-10-24"), "Cover agreed; the Precinct is fully staffed that weekend.")},
-    "L-0105": {"staff": (_d("2026-10-26"), "Gwen has taken extra duty nights this term; I support the appeal.")},
+    "L-0103": {
+        "first": (_d("2026-10-24"), "Cover agreed; the Precinct is fully staffed that weekend.")
+    },
+    "L-0105": {
+        "staff": (
+            _d("2026-10-26"),
+            "Gwen has taken extra duty nights this term; I support the appeal.",
+        )
+    },
     "L-0106": {"first": (_d("2026-10-13"), ""), "final": (_d("2026-10-14"), "")},
     "L-0107": {"first": (_d("2026-10-15"), ""), "final": (_d("2026-10-16"), "")},
-    "L-0108": {"first": (_d("2026-10-16"), ""), "final": (_d("2026-10-19"), "Two of the Precinct are away on the 29th; cover is key.")},
-    "L-0110": {"rejected": (_d("2026-10-05"), "Clashes with the Precinct's orientation duties that weekend.")},
+    "L-0108": {
+        "first": (_d("2026-10-16"), ""),
+        "final": (_d("2026-10-19"), "Two of the Precinct are away on the 29th; cover is key."),
+    },
+    "L-0110": {
+        "rejected": (
+            _d("2026-10-05"),
+            "Clashes with the Precinct's orientation duties that weekend.",
+        )
+    },
     "L-0111": {"withdrawn": (_d("2026-10-09"), "")},
     "L-0112": {"first": (_d("2026-08-06"), ""), "final": (_d("2026-08-07"), "")},
     "L-0113": {"first": (_d("2026-09-11"), ""), "final": (_d("2026-09-14"), "")},
     "L-0115": {"first": (_d("2026-10-21"), "Fine."), "final": (_d("2026-10-22"), "")},
     "L-0116": {
-        "first": (_d("2026-10-09"), ""), "final": (_d("2026-10-12"), ""),
-        "cancelled": (_d("2026-10-20"), "Kai Ng is leading the Precinct's November event; cancelled at his request."),
+        "first": (_d("2026-10-09"), ""),
+        "final": (_d("2026-10-12"), ""),
+        "cancelled": (
+            _d("2026-10-20"),
+            "Kai Ng is leading the Precinct's November event; cancelled at his request.",
+        ),
     },
-    "L-0117": {"first": (_d("2026-09-15"), "Good luck at the games."), "final": (_d("2026-09-16"), "")},
+    "L-0117": {
+        "first": (_d("2026-09-15"), "Good luck at the games."),
+        "final": (_d("2026-09-16"), ""),
+    },
     "L-0119": {"first": (_d("2026-08-18"), ""), "final": (_d("2026-08-19"), "")},
-    "L-0120": {"appeal": (_d("2026-09-11"), "The Precinct is short that week; take your five days, or apply in a quieter week.")},
+    "L-0120": {
+        "appeal": (
+            _d("2026-09-11"),
+            "The Precinct is short that week; take your five days, or apply in a quieter week.",
+        )
+    },
     "L-0118": {
         "staff": (_d("2026-08-29"), "Lucas has covered two extra weekends; I support it."),
         "appeal": (_d("2026-08-31"), "Granted, on the extra duties agreed with Arjun Nair."),
@@ -468,7 +691,9 @@ def history_steps(application: Application) -> tuple[tuple[str, str, str], ...]:
     """The decisions and closing actions on an application, as its timeline
     shows them under today's policy, for a history item (spec §19): each
     with its date and remarks."""
-    return tuple(s for s in timeline(application) if not s[1].startswith(("Submitted", "Cover ", "Sent to")))
+    return tuple(
+        s for s in timeline(application) if not s[1].startswith(("Submitted", "Cover ", "Sent to"))
+    )
 
 
 def by_id(application_id: str) -> Application | None:
@@ -487,14 +712,19 @@ def stages(open_only: bool = False) -> tuple[str, ...]:
 
 
 def pending_by_stage() -> tuple[tuple[str, int], ...]:
-    return tuple((stage, sum(1 for a in APPLICATIONS if a.stage == stage)) for stage in stages(open_only=True))
+    return tuple(
+        (stage, sum(1 for a in APPLICATIONS if a.stage == stage))
+        for stage in stages(open_only=True)
+    )
 
 
 def cover_unconfirmed() -> tuple[Application, ...]:
     """Open applications whose cover has not confirmed (spec §25,
     outstanding cover confirmations)."""
     return tuple(
-        a for a in APPLICATIONS if a.stage in OPEN_STAGES and a.cover_status != "Confirmed" and confirmation_needed(a)
+        a
+        for a in APPLICATIONS
+        if a.stage in OPEN_STAGES and a.cover_status != "Confirmed" and confirmation_needed(a)
     )
 
 
@@ -502,7 +732,12 @@ def upcoming() -> tuple[Application, ...]:
     """Approved leave starting after this week, to the term's end (spec
     §25, upcoming leave), soonest first."""
     after = date.fromordinal(TODAY.toordinal() + 6)
-    return tuple(sorted((a for a in APPLICATIONS if a.stage == "Approved" and after < a.start <= TERM.end), key=lambda a: a.start))
+    return tuple(
+        sorted(
+            (a for a in APPLICATIONS if a.stage == "Approved" and after < a.start <= TERM.end),
+            key=lambda a: a.start,
+        )
+    )
 
 
 def extra_by_term() -> tuple[tuple[str, int, int], ...]:
@@ -510,9 +745,13 @@ def extra_by_term() -> tuple[tuple[str, int, int], ...]:
     appeals, days), kept apart from entitlement (spec §25, §7.5)."""
     granted = [a for a in APPLICATIONS if a.appeal and a.stage == "Approved"]
     return tuple(
-        (t.label, sum(1 for a in granted if t.start <= a.start <= t.end),
-         sum(appeal_split(a)["extra"] for a in granted if t.start <= a.start <= t.end))
-        for t in sample_data.TERMS if t.year == PERIOD_LABEL
+        (
+            t.label,
+            sum(1 for a in granted if t.start <= a.start <= t.end),
+            sum(appeal_split(a)["extra"] for a in granted if t.start <= a.start <= t.end),
+        )
+        for t in sample_data.TERMS
+        if t.year == PERIOD_LABEL
     )
 
 
@@ -528,8 +767,19 @@ class Correction:
 
 
 CORRECTIONS = (
-    Correction(date(2026, 10, 20), "Rachel Yeo", "Cancelled approved leave for Kai Ng", "Leading the Precinct's November event; at his request", "L-0116"),
-    Correction(date(2026, 8, 3), "Rachel Yeo", "Adjusted Leon Chia's Personal leave by +2", "Days charged twice for one application"),
+    Correction(
+        date(2026, 10, 20),
+        "Rachel Yeo",
+        "Cancelled approved leave for Kai Ng",
+        "Leading the Precinct's November event; at his request",
+        "L-0116",
+    ),
+    Correction(
+        date(2026, 8, 3),
+        "Rachel Yeo",
+        "Adjusted Leon Chia's Personal leave by +2",
+        "Days charged twice for one application",
+    ),
 )
 
 
@@ -541,7 +791,12 @@ def away_this_week() -> tuple[Application, ...]:
 # Precinct leave's period (spec §22, "for a selected period"; author,
 # 2026-10-29): a week from TODAY by default, the week after, four weeks
 # from TODAY, or what is left of the term.
-PERIODS = (("week", "This week"), ("next", "Next week"), ("four", "These four weeks"), ("term", "Rest of term"))
+PERIODS = (
+    ("week", "This week"),
+    ("next", "Next week"),
+    ("four", "These four weeks"),
+    ("term", "Rest of term"),
+)
 
 
 def period(key: str | None = None) -> tuple[str, str, date, date]:
@@ -550,25 +805,43 @@ def period(key: str | None = None) -> tuple[str, str, date, date]:
     key = key if key in dict(PERIODS) else "week"
     first = TODAY.toordinal()
     span = {"week": (0, 6), "next": (7, 13), "four": (0, 27)}.get(key)
-    start, end = (date.fromordinal(first + span[0]), date.fromordinal(first + span[1])) if span else (TODAY, TERM.end)
+    start, end = (
+        (date.fromordinal(first + span[0]), date.fromordinal(first + span[1]))
+        if span
+        else (TODAY, TERM.end)
+    )
     return key, dict(PERIODS)[key], start, end
 
 
 def away_between(start: date, end: date) -> tuple[Application, ...]:
     """Approved leave overlapping the days from start to end."""
-    return tuple(a for a in APPLICATIONS if a.stage == "Approved" and a.start <= end and a.end >= start)
+    return tuple(
+        a for a in APPLICATIONS if a.stage == "Approved" and a.start <= end and a.end >= start
+    )
 
 
-def clashes(start: date | None = None, end: date | None = None) -> tuple[tuple[str, tuple[str, str]], ...]:
+def clashes(
+    start: date | None = None, end: date | None = None
+) -> tuple[tuple[str, tuple[str, str]], ...]:
     """Each pair of RAs in one Precinct away on approved or pending leave on
     overlapping days, one row per pair; given a period, only pairs whose
     shared days fall in it."""
     live = [a for a in APPLICATIONS if a.stage in ("Approved", *OPEN_STAGES)]
     return tuple(
         (a.precinct, (a.ra, b.ra))
-        for a in live for b in live
-        if a.id < b.id and a.ra != b.ra and a.precinct == b.precinct and a.start <= b.end and b.start <= a.end
-        and (start is None or end is None or max(a.start, b.start) <= end and min(a.end, b.end) >= start)
+        for a in live
+        for b in live
+        if a.id < b.id
+        and a.ra != b.ra
+        and a.precinct == b.precinct
+        and a.start <= b.end
+        and b.start <= a.end
+        and (
+            start is None
+            or end is None
+            or max(a.start, b.start) <= end
+            and min(a.end, b.end) >= start
+        )
     )
 
 
@@ -576,6 +849,7 @@ def clashes(start: date | None = None, end: date | None = None) -> tuple[tuple[s
 class Email:
     """An outbox row (spec §17.2): written first, then sent as the actor; a
     failed send stays here, and the actor or a Leave admin resends it."""
+
     application: str
     sender: str  # the actor, whose account sends it
     to: str
@@ -588,19 +862,42 @@ class Email:
 OUTBOX: tuple[Email, ...] = (
     Email("L-0101", "Chloe Lim", "Ethan Wong", "Cover asked", "27 Oct, 09:12", "Sent"),
     Email("L-0101", "Ethan Wong", "Chloe Lim", "Cover confirmed", "27 Oct, 11:30", "Sent"),
-    Email("L-0101", "Chloe Lim", "Daniel Koh", "Application submitted", "27 Oct, 09:12", "Failed",
-          "Microsoft 365 did not accept the send: the sign-in had expired"),
-    Email("L-0115", "Daniel Koh", "Hana Ito", "First approval", "21 Oct, 18:40", "Failed",
-          "Microsoft 365 did not accept the send: the sign-in had expired"),
-    Email("L-0116", "Rachel Yeo", "Kai Ng", "Approved leave cancelled", "20 Oct, 14:03", "Failed",
-          "Microsoft 365 did not accept the send: no mailbox for the address"),
+    Email(
+        "L-0101",
+        "Chloe Lim",
+        "Daniel Koh",
+        "Application submitted",
+        "27 Oct, 09:12",
+        "Failed",
+        "Microsoft 365 did not accept the send: the sign-in had expired",
+    ),
+    Email(
+        "L-0115",
+        "Daniel Koh",
+        "Hana Ito",
+        "First approval",
+        "21 Oct, 18:40",
+        "Failed",
+        "Microsoft 365 did not accept the send: the sign-in had expired",
+    ),
+    Email(
+        "L-0116",
+        "Rachel Yeo",
+        "Kai Ng",
+        "Approved leave cancelled",
+        "20 Oct, 14:03",
+        "Failed",
+        "Microsoft 365 did not accept the send: no mailbox for the address",
+    ),
     Email("L-0116", "Rachel Yeo", "Isaac Goh", "Cover released", "20 Oct, 14:03", "Sent"),
 )
 
 
 def emails_for(application: Application, sender: str | None = None) -> tuple[Email, ...]:
     """An application's outbox rows, or only those one actor sent."""
-    return tuple(e for e in OUTBOX if e.application == application.id and sender in (None, e.sender))
+    return tuple(
+        e for e in OUTBOX if e.application == application.id and sender in (None, e.sender)
+    )
 
 
 def failed_emails() -> tuple[Email, ...]:
@@ -611,7 +908,8 @@ def cover_while_away() -> tuple[Application, ...]:
     """Applications whose cover is away themselves on overlapping dates."""
     live = [a for a in APPLICATIONS if a.stage in ("Approved", *OPEN_STAGES)]
     return tuple(
-        a for a in live
+        a
+        for a in live
         if any(b.ra == a.cover and b.start <= a.end and a.start <= b.end for b in live)
     )
 
@@ -619,7 +917,10 @@ def cover_while_away() -> tuple[Application, ...]:
 # Adjustments for TERM: (RA, leave type) -> (adjustment, reason); a wired
 # store keys them by term too.
 ADJUSTMENTS = {
-    ("Leon Chia", "Personal leave"): (2, "Correction: days charged twice for one application, 2026-08-03"),
+    ("Leon Chia", "Personal leave"): (
+        2,
+        "Correction: days charged twice for one application, 2026-08-03",
+    ),
 }
 
 
@@ -648,7 +949,9 @@ def earned(leave_type: LeaveType, appointment_start: date, term: sample_data.Ter
     return leave_type.amount * months_served(appointment_start, term)
 
 
-def entitlement(leave_type: LeaveType, appointment_start: date, term: sample_data.Term = TERM) -> int:
+def entitlement(
+    leave_type: LeaveType, appointment_start: date, term: sample_data.Term = TERM
+) -> int:
     """A term's entitlement so far. Leave days go with their term and are
     available only within it (author, 2026-10-28): nothing carries to the
     next. A cap per term holds the term's days; a cap per year holds them to
@@ -660,7 +963,8 @@ def entitlement(leave_type: LeaveType, appointment_start: date, term: sample_dat
         return min(days, leave_type.cap)
     before = sum(
         min(earned(leave_type, appointment_start, t), leave_type.cap)
-        for t in sample_data.TERMS if t.year == term.year and t.number < term.number
+        for t in sample_data.TERMS
+        if t.year == term.year and t.number < term.number
     )
     return max(0, min(days, leave_type.cap - before))
 
@@ -678,7 +982,12 @@ def entitlement_anomalies() -> tuple[tuple[EntitlementRow, str], ...]:
     found: list[tuple[EntitlementRow, str]] = []
     for r in entitlement_rows():
         if r["available"] < 0:
-            found.append((r, f"Over entitlement by {-r['available']} day{'s' if r['available'] != -1 else ''}, pending included"))
+            found.append(
+                (
+                    r,
+                    f"Over entitlement by {-r['available']} day{'s' if r['available'] != -1 else ''}, pending included",
+                )
+            )
         elif r["adjustment"] and not r["reason"]:
             found.append((r, "Adjusted with no reason recorded"))
     return tuple(found)
@@ -695,9 +1004,19 @@ def _appeal_charges() -> dict[str, int]:
         for leave_type in LEAVE_TYPES:
             name = leave_type.name
             mine = [a for a in APPLICATIONS if a.ra == ra.name and a.leave_type == name]
-            left = entitlement(leave_type, start) + ADJUSTMENTS.get((ra.name, name), (0, ""))[0] - sum(
-                days_in_term(a) for a in mine if not a.appeal and (a.stage == "Approved" or a.stage in OPEN_STAGES))
-            for a in sorted((a for a in mine if a.appeal and (a.stage == "Approved" or a.stage in OPEN_STAGES)), key=lambda a: a.submitted):
+            left = (
+                entitlement(leave_type, start)
+                + ADJUSTMENTS.get((ra.name, name), (0, ""))[0]
+                - sum(
+                    days_in_term(a)
+                    for a in mine
+                    if not a.appeal and (a.stage == "Approved" or a.stage in OPEN_STAGES)
+                )
+            )
+            for a in sorted(
+                (a for a in mine if a.appeal and (a.stage == "Approved" or a.stage in OPEN_STAGES)),
+                key=lambda a: a.submitted,
+            ):
                 charges[a.id] = min(days_in_term(a), max(left, 0))
                 left -= charges[a.id]
     return charges
@@ -729,11 +1048,22 @@ def entitlement_rows() -> tuple[EntitlementRow, ...]:
             # An appeal's own-days part is charged as ordinary leave is; its
             # extra part never touches the entitlement (§7.5).
             used = sum(charges.get(a.id, days_in_term(a)) for a in mine if a.stage == "Approved")
-            pending = sum(charges.get(a.id, days_in_term(a)) for a in mine if a.stage in OPEN_STAGES)
-            rows.append({
-                "ra": ra.name, "email": ra.email, "type": name, "entitlement": days, "adjustment": adjustment,
-                "reason": reason, "used": used, "pending": pending, "available": days + adjustment - used - pending,
-            })
+            pending = sum(
+                charges.get(a.id, days_in_term(a)) for a in mine if a.stage in OPEN_STAGES
+            )
+            rows.append(
+                {
+                    "ra": ra.name,
+                    "email": ra.email,
+                    "type": name,
+                    "entitlement": days,
+                    "adjustment": adjustment,
+                    "reason": reason,
+                    "used": used,
+                    "pending": pending,
+                    "available": days + adjustment - used - pending,
+                }
+            )
     return tuple(rows)
 
 
@@ -793,7 +1123,11 @@ DELEGATES = (
 def delegate_fits(d: Delegate) -> bool:
     """Whether a delegate holds a place in every slot of the person they
     stand in for; one who does not cannot approve there."""
-    return all(d.delegate in s.staff or d.delegate in overseers() for s in sample_data.SLOTS if d.acting_for in s.staff)
+    return all(
+        d.delegate in s.staff or d.delegate in overseers()
+        for s in sample_data.SLOTS
+        if d.acting_for in s.staff
+    )
 
 
 def delegate_choices(person: str) -> list[str]:
@@ -801,7 +1135,11 @@ def delegate_choices(person: str) -> list[str]:
     they approve for (the overseers hold one in every slot)."""
     if not any(person in s.staff for s in sample_data.SLOTS):
         return []  # in no slot: no one stands in for them
-    return [p.name for p in sample_data.STAFF if p.name != person and delegate_fits(Delegate(person, p.name, None, None, ""))]
+    return [
+        p.name
+        for p in sample_data.STAFF
+        if p.name != person and delegate_fits(Delegate(person, p.name, None, None, ""))
+    ]
 
 
 def delegable() -> list[str]:
@@ -809,14 +1147,19 @@ def delegable() -> list[str]:
     appointment the policy ticks for first approval; with no first approval,
     every slot approver, so a kept delegation still reads."""
     on_slots = {n for s in sample_data.SLOTS for n in s.staff}
-    ticked = POLICY["first_types"] if POLICY["first"] == "slot" else {a for _, a in slot_appointments()}
+    ticked = (
+        POLICY["first_types"] if POLICY["first"] == "slot" else {a for _, a in slot_appointments()}
+    )
     return [p.name for p in sample_data.STAFF if p.name in on_slots and p.abbrev in ticked]
 
 
 def acting(person: str, day: date | None = None) -> Delegate | None:
     """The delegate standing in for a person on the day, if one fits."""
     day = day or TODAY
-    return next((d for d in DELEGATES if d.acting_for == person and d.active(day) and delegate_fits(d)), None)
+    return next(
+        (d for d in DELEGATES if d.acting_for == person and d.active(day) and delegate_fits(d)),
+        None,
+    )
 
 
 def routes(day: date | None = None) -> tuple[Route, ...]:
@@ -827,15 +1170,26 @@ def routes(day: date | None = None) -> tuple[Route, ...]:
     found: dict[str, Route] = {}
     for slot in sample_data.SLOTS:
         if slot.precinct in found:
-            found[slot.precinct] = replace(found[slot.precinct], ras=found[slot.precinct].ras + len(slot.ras))
+            found[slot.precinct] = replace(
+                found[slot.precinct], ras=found[slot.precinct].ras + len(slot.ras)
+            )
             continue
         rf = next(n for n in slot.staff if staff[n].abbrev == "RF")
         rslm = next(n for n in slot.staff if staff[n].abbrev == "RSLM")
         by_type = {staff[n].abbrev: n for n in slot.staff}
-        named = [by_type[t] for t in POLICY["first_types"] if t in by_type] if POLICY["first"] == "slot" else []
+        named = (
+            [by_type[t] for t in POLICY["first_types"] if t in by_type]
+            if POLICY["first"] == "slot"
+            else []
+        )
         standing_in = [d for n in named if (d := acting(n, day))]
         first = " or ".join(d.delegate if (d := acting(n, day)) else n for n in named)
-        unfit = [d for n in named for d in DELEGATES if d.acting_for == n and d.active(day or TODAY) and not delegate_fits(d)]
+        unfit = [
+            d
+            for n in named
+            for d in DELEGATES
+            if d.acting_for == n and d.active(day or TODAY) and not delegate_fits(d)
+        ]
         note = "; ".join(
             [f"{d.acting_for} {d.reason}" for d in standing_in]
             + [f"{d.acting_for}'s delegate {d.delegate} is not in these slots" for d in unfit]
@@ -846,7 +1200,16 @@ def routes(day: date | None = None) -> tuple[Route, ...]:
         elif gap:
             first, note = "No one", f"no {first_label() or 'ticked appointment'} on its slots"
         found[slot.precinct] = Route(
-            slot.precinct, slot.wing, len(slot.ras), rf, rslm, first, bool(standing_in), note, gap, bool(unfit)
+            slot.precinct,
+            slot.wing,
+            len(slot.ras),
+            rf,
+            rslm,
+            first,
+            bool(standing_in),
+            note,
+            gap,
+            bool(unfit),
         )
     return tuple(found.values())
 
@@ -863,7 +1226,11 @@ def timeline(application: Application) -> tuple[tuple[str, str, str], ...]:
     route = next(r for r in routes() if r.precinct == application.precinct)
     first = "the first approver" if route.gap else route.first.split(" or ")[0]
     if application.appeal:
-        decider = APPEAL_DECIDER if decides_appeals(application.precinct) else "the Master (no one holds a place in these slots to decide it)"
+        decider = (
+            APPEAL_DECIDER
+            if decides_appeals(application.precinct)
+            else "the Master (no one holds a place in these slots to decide it)"
+        )
         steps.append(("", f"Sent to {decider} as an extra-leave appeal", ""))
         if "staff" in DECISIONS.get(application.id, {}):
             steps.append(_step(application, "staff", f"Remarks from {route.rf}, RF"))
@@ -871,7 +1238,10 @@ def timeline(application: Application) -> tuple[tuple[str, str, str], ...]:
             verb = "Granted" if application.stage == "Approved" else "Rejected"
             steps.append(_step(application, "appeal", f"{verb} by {APPEAL_DECIDER}"))
         return tuple(steps)
-    if application.stage in ("Pending final approval", "Approved", "Cancelled") and POLICY["first"] == "slot":
+    if (
+        application.stage in ("Pending final approval", "Approved", "Cancelled")
+        and POLICY["first"] == "slot"
+    ):
         steps.append(_step(application, "first", f"First approval by {first}"))
     if application.stage in ("Approved", "Cancelled"):
         steps.append(_step(application, "final", f"Final approval by {final_decider(application)}"))
@@ -881,7 +1251,9 @@ def timeline(application: Application) -> tuple[tuple[str, str, str], ...]:
     if application.stage == "Withdrawn":
         steps.append(_step(application, "withdrawn", f"Withdrawn by {application.ra}"))
     if application.stage == "Cancelled":
-        steps.append(_step(application, "cancelled", f"Cancelled by {CANCELLED_BY}, Residential Admin"))
+        steps.append(
+            _step(application, "cancelled", f"Cancelled by {CANCELLED_BY}, Residential Admin")
+        )
     return tuple(steps)
 
 
@@ -913,6 +1285,7 @@ class Draft:
     first approval on submit). Ordinary leave only; an appeal's draft
     (§30, `APPEAL_DRAFT`) waits for the wiring. The RA's alone: no one is asked or told, and
     it counts against nothing, until it is submitted (author, 2026-10-29)."""
+
     id: str
     ra: str
     leave_type: str
@@ -924,7 +1297,11 @@ class Draft:
 
     @property
     def dates(self) -> str:
-        return short_date(self.start) if self.start == self.end else f"{short_date(self.start)} – {short_date(self.end)}"
+        return (
+            short_date(self.start)
+            if self.start == self.end
+            else f"{short_date(self.start)} – {short_date(self.end)}"
+        )
 
     @property
     def days(self) -> int:
@@ -932,10 +1309,26 @@ class Draft:
 
 
 DRAFTS: tuple[Draft, ...] = (
-    Draft("D-0001", "Chloe Lim", "Official leave", _d("2026-12-18"), _d("2026-12-20"), "Ethan Wong",
-          "Hall games away fixture; dates to confirm.", _d("2026-10-26")),
-    Draft("D-0002", "Ethan Wong", "Personal leave", _d("2026-12-21"), _d("2026-12-22"), "Chloe Lim",
-          "", _d("2026-10-27")),  # another RA's: not the sample viewer's to open
+    Draft(
+        "D-0001",
+        "Chloe Lim",
+        "Official leave",
+        _d("2026-12-18"),
+        _d("2026-12-20"),
+        "Ethan Wong",
+        "Hall games away fixture; dates to confirm.",
+        _d("2026-10-26"),
+    ),
+    Draft(
+        "D-0002",
+        "Ethan Wong",
+        "Personal leave",
+        _d("2026-12-21"),
+        _d("2026-12-22"),
+        "Chloe Lim",
+        "",
+        _d("2026-10-27"),
+    ),  # another RA's: not the sample viewer's to open
 )
 
 
@@ -944,7 +1337,9 @@ def my_drafts(ra: str = VIEWER) -> tuple[Draft, ...]:
 
 
 def my_applications(ra: str = VIEWER) -> tuple[Application, ...]:
-    return tuple(sorted((a for a in APPLICATIONS if a.ra == ra), key=lambda a: a.submitted, reverse=True))
+    return tuple(
+        sorted((a for a in APPLICATIONS if a.ra == ra), key=lambda a: a.submitted, reverse=True)
+    )
 
 
 def my_balances(ra: str = VIEWER) -> tuple[EntitlementRow, ...]:
@@ -964,19 +1359,33 @@ def confirmation_needed(application: Application) -> bool:
     """Whether the cover must confirm: always for an appeal (spec §7.4); for
     ordinary leave only when the policy requires named and confirmed cover
     (§12)."""
-    return application.appeal or (POLICY["cover_required"] and POLICY["cover_mode"] == "Named and confirmed")
+    return application.appeal or (
+        POLICY["cover_required"] and POLICY["cover_mode"] == "Named and confirmed"
+    )
 
 
 def cover_asked(ra: str = VIEWER) -> dict[str, tuple[Application, ...]]:
     """Where an RA is named as cover (spec §23): to answer, covering now or
     to come (agreed, or named where no answer is owed), and the rest."""
-    named = [a for a in APPLICATIONS if a.cover == ra and a.stage not in ("Rejected", "Withdrawn", "Cancelled")]
+    named = [
+        a
+        for a in APPLICATIONS
+        if a.cover == ra and a.stage not in ("Rejected", "Withdrawn", "Cancelled")
+    ]
     answer = tuple(
-        a for a in named if a.cover_status == "Awaiting" and a.stage in OPEN_STAGES and confirmation_needed(a)
+        a
+        for a in named
+        if a.cover_status == "Awaiting" and a.stage in OPEN_STAGES and confirmation_needed(a)
     )
     coming = tuple(
-        a for a in named if a not in answer and a.end >= TODAY
-        and (a.cover_status == "Confirmed" or (a.cover_status == "Awaiting" and not confirmation_needed(a)))
+        a
+        for a in named
+        if a not in answer
+        and a.end >= TODAY
+        and (
+            a.cover_status == "Confirmed"
+            or (a.cover_status == "Awaiting" and not confirmation_needed(a))
+        )
     )
     past = tuple(a for a in named if a not in answer and a not in coming)
     return {"answer": answer, "coming": coming, "past": past}
@@ -989,7 +1398,9 @@ def cover_choices(ra: str = VIEWER) -> tuple[str, ...]:
     mine = slot_of[ra]
     level = {"Same Precinct": "precinct", "Same Wing": "wing"}.get(POLICY["cover_pool"])
     return tuple(
-        name for s in sample_data.SLOTS for name in s.ras
+        name
+        for s in sample_data.SLOTS
+        for name in s.ras
         if name != ra and (level is None or getattr(s, level) == getattr(mine, level))
     )
 
@@ -1015,14 +1426,24 @@ def staff_role(name: str) -> str:
         does.append("first approver for " + ", ".join(first))
     if final_precincts(name):
         mine = final_precincts(name)
-        does.append("final approver" + ("" if len(mine) == len(precincts()) else " for " + ", ".join(mine)))
-    if name == APPEAL_DECIDER and appeals_decided() and any(decides_appeals(p) for p in precincts()):
+        does.append(
+            "final approver" + ("" if len(mine) == len(precincts()) else " for " + ", ".join(mine))
+        )
+    if (
+        name == APPEAL_DECIDER
+        and appeals_decided()
+        and any(decides_appeals(p) for p in precincts())
+    ):
         does.append("decides appeals")
     if POLICY["appeals"] == "By invitation" and invitable_ras(name):
         does.append("opens appeals")
     if not scope(name):
         return f"{appointment}, oversees no RA, so RA Leave is not shown"
-    return f"{appointment}, {', '.join(does)}" if does else f"{appointment}, no decisions under the policy"
+    return (
+        f"{appointment}, {', '.join(does)}"
+        if does
+        else f"{appointment}, no decisions under the policy"
+    )
 
 
 def staff_viewer(name: str | None) -> str:
@@ -1045,7 +1466,11 @@ def queue(viewer: str) -> tuple[tuple[Application, str], ...]:
             found.append((a, "First approval"))
         elif a.stage == "Pending final approval" and viewer in final_for(a.precinct):
             found.append((a, "Final approval"))
-        elif a.stage == "Appeal to the Master" and viewer == APPEAL_DECIDER and decides_appeals(a.precinct):
+        elif (
+            a.stage == "Appeal to the Master"
+            and viewer == APPEAL_DECIDER
+            and decides_appeals(a.precinct)
+        ):
             found.append((a, "Appeal"))
     return tuple(sorted(found, key=lambda pair: pair[0].submitted))
 
@@ -1066,10 +1491,17 @@ def decided(viewer: str) -> tuple[tuple[Application, str, str], ...]:
     found: list[tuple[Application, str, str]] = []
     for a in APPLICATIONS:
         if a.appeal:
-            if viewer == APPEAL_DECIDER and decides_appeals(a.precinct) and a.stage in ("Approved", "Rejected"):
+            if (
+                viewer == APPEAL_DECIDER
+                and decides_appeals(a.precinct)
+                and a.stage in ("Approved", "Rejected")
+            ):
                 found.append((a, "Appeal", a.stage))
             continue
-        if a.stage in ("Pending final approval", "Approved", "Cancelled") and first_decider_of(a) == viewer:
+        if (
+            a.stage in ("Pending final approval", "Approved", "Cancelled")
+            and first_decider_of(a) == viewer
+        ):
             found.append((a, "First approval", "Approved"))
         if a.stage == "Rejected" and first_decider_of(a) == viewer:
             found.append((a, "First approval", "Rejected"))
@@ -1118,8 +1550,12 @@ def other_leave(application: Application) -> tuple[Application, ...]:
     """The applicant's other applications this term, for the decider (spec
     §15): leave days go with their term."""
     return tuple(
-        a for a in APPLICATIONS
-        if a.ra == application.ra and a.id != application.id and a.start <= TERM.end and a.end >= TERM.start
+        a
+        for a in APPLICATIONS
+        if a.ra == application.ra
+        and a.id != application.id
+        and a.start <= TERM.end
+        and a.end >= TERM.start
     )
 
 
@@ -1132,7 +1568,9 @@ class PrecinctCount(TypedDict):
     pending: int
 
 
-def by_precinct(viewer: str, start: date | None = None, end: date | None = None) -> tuple[PrecinctCount, ...]:
+def by_precinct(
+    viewer: str, start: date | None = None, end: date | None = None
+) -> tuple[PrecinctCount, ...]:
     """Numbers away (this week, or in the period given) and pending per
     Precinct in the viewer's scope (§22)."""
     away = away_between(start, end) if start and end else away_this_week()
@@ -1163,9 +1601,13 @@ def away_on(application: Application) -> tuple[Application, ...]:
     days: the Precinct context a decision needs (spec §13)."""
     live = [a for a in APPLICATIONS if a.stage in ("Approved", *OPEN_STAGES)]
     return tuple(
-        b for b in live
-        if b.id != application.id and b.ra != application.ra and b.precinct == application.precinct
-        and b.start <= application.end and application.start <= b.end
+        b
+        for b in live
+        if b.id != application.id
+        and b.ra != application.ra
+        and b.precinct == application.precinct
+        and b.start <= application.end
+        and application.start <= b.end
     )
 
 
@@ -1191,7 +1633,10 @@ def approvers_for(ra: str) -> str:
     (§9.1; audit, 2026-10-29): the slot's first approver, then the final."""
     precinct = next(s.precinct for s in sample_data.SLOTS if ra in s.ras)
     route = next(r for r in routes() if r.precinct == precinct)
-    final = " or ".join(final_for(precinct)) or "no final approver yet (none holds a place in your slot)"
+    final = (
+        " or ".join(final_for(precinct))
+        or "no final approver yet (none holds a place in your slot)"
+    )
     if POLICY["first"] == "none":
         return final
     first = "the first approver (none named yet)" if route.gap else route.first
@@ -1211,7 +1656,11 @@ def term_blackouts() -> tuple[tuple[Blackout, date, date], ...]:
 def draft_short(draft: Draft) -> int:
     """How many days a draft asks beyond what the RA has of its type; 0 when
     it fits (§10, scenario G)."""
-    available = next(r["available"] for r in entitlement_rows() if r["ra"] == draft.ra and r["type"] == draft.leave_type)
+    available = next(
+        r["available"]
+        for r in entitlement_rows()
+        if r["ra"] == draft.ra and r["type"] == draft.leave_type
+    )
     return max(draft.days - max(available, 0), 0)
 
 
@@ -1221,7 +1670,11 @@ def coming_up(viewer: str) -> tuple[Application, ...]:
 
 
 def balance_of(application: Application) -> EntitlementRow:
-    return next(r for r in entitlement_rows() if r["ra"] == application.ra and r["type"] == application.leave_type)
+    return next(
+        r
+        for r in entitlement_rows()
+        if r["ra"] == application.ra and r["type"] == application.leave_type
+    )
 
 
 def waiting_on_cover_count(viewer: str) -> int:
@@ -1255,9 +1708,28 @@ class Invitation:
 
 
 INVITATIONS = (
-    Invitation("Gwen Ho", "Sam Lee", date(2026, 10, 24), date(2026, 11, 7), "Family wedding overseas; agreed in principle", "L-0105"),
-    Invitation("Kai Ng", "Rachel Yeo", date(2026, 10, 27), date(2026, 11, 10), "Sibling's graduation abroad; agreed in principle"),
-    Invitation("Nathan Yeo", "Sam Lee", date(2026, 9, 14), date(2026, 9, 28), "Conference abroad; not sent in time"),
+    Invitation(
+        "Gwen Ho",
+        "Sam Lee",
+        date(2026, 10, 24),
+        date(2026, 11, 7),
+        "Family wedding overseas; agreed in principle",
+        "L-0105",
+    ),
+    Invitation(
+        "Kai Ng",
+        "Rachel Yeo",
+        date(2026, 10, 27),
+        date(2026, 11, 10),
+        "Sibling's graduation abroad; agreed in principle",
+    ),
+    Invitation(
+        "Nathan Yeo",
+        "Sam Lee",
+        date(2026, 9, 14),
+        date(2026, 9, 28),
+        "Conference abroad; not sent in time",
+    ),
 )
 
 
@@ -1279,13 +1751,25 @@ def inviters_for(ra: str) -> tuple[str, ...]:
 
 def inviters_in(precinct: str) -> tuple[str, ...]:
     """Who may open an appeal for a Precinct's RAs."""
-    return tuple(dict.fromkeys(n for s in sample_data.SLOTS if s.precinct == precinct for ra in s.ras for n in inviters_for(ra)))
+    return tuple(
+        dict.fromkeys(
+            n
+            for s in sample_data.SLOTS
+            if s.precinct == precinct
+            for ra in s.ras
+            for n in inviters_for(ra)
+        )
+    )
 
 
 def inviter_gaps() -> tuple[str, ...]:
     """The Precincts whose RAs no one may open an appeal for, while appeals
     are by invitation."""
-    return tuple(p for p in precincts() if not inviters_in(p)) if POLICY["appeals"] == "By invitation" else ()
+    return (
+        tuple(p for p in precincts() if not inviters_in(p))
+        if POLICY["appeals"] == "By invitation"
+        else ()
+    )
 
 
 def appeal_gaps() -> tuple[str, ...]:
@@ -1317,7 +1801,10 @@ def inviter_label() -> str:
 def invitation_for(ra: str, day: date | None = None) -> Invitation | None:
     """An RA's unused invitation still in date."""
     day = day or TODAY
-    return next((i for i in INVITATIONS if i.ra == ra and not i.used_by and i.opened <= day <= i.until), None)
+    return next(
+        (i for i in INVITATIONS if i.ra == ra and not i.used_by and i.opened <= day <= i.until),
+        None,
+    )
 
 
 def invitation_status(invitation: Invitation) -> str:
@@ -1331,4 +1818,6 @@ def invitation_status(invitation: Invitation) -> str:
 def can_appeal(ra: str) -> bool:
     """Whether an RA may send an appeal now: always while appeals are open,
     with an invitation while they are by invitation, never while off."""
-    return POLICY["appeals"] == "Open" or (POLICY["appeals"] == "By invitation" and invitation_for(ra) is not None)
+    return POLICY["appeals"] == "Open" or (
+        POLICY["appeals"] == "By invitation" and invitation_for(ra) is not None
+    )

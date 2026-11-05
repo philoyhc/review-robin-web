@@ -6,6 +6,7 @@ raw token is shown to the operator at outbox-write time and stored in
 the outbox row body for re-copy. No transport sends yet: outbox rows stay
 ``queued`` and are visible on a per-session operator page.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -84,13 +85,9 @@ def detach_outbox(
 
     scope = [EmailOutbox.session_id == session_id]
 
-    doomed_invitations = select(Invitation.id).where(
-        Invitation.session_id == session_id
-    )
+    doomed_invitations = select(Invitation.id).where(Invitation.session_id == session_id)
     if reviewer_ids is not None:
-        doomed_invitations = doomed_invitations.where(
-            Invitation.reviewer_id.in_(reviewer_ids)
-        )
+        doomed_invitations = doomed_invitations.where(Invitation.reviewer_id.in_(reviewer_ids))
     db.execute(
         update(EmailOutbox)
         .where(*scope, EmailOutbox.invitation_id.in_(doomed_invitations))
@@ -104,11 +101,7 @@ def detach_outbox(
             stmt = stmt.where(EmailOutbox.reviewer_id.in_(reviewer_ids))
         else:
             stmt = stmt.where(EmailOutbox.reviewer_id.is_not(None))
-        db.execute(
-            stmt.values(reviewer_id=None).execution_options(
-                synchronize_session=False
-            )
-        )
+        db.execute(stmt.values(reviewer_id=None).execution_options(synchronize_session=False))
 
 
 def hash_token(raw: str) -> str:
@@ -169,9 +162,7 @@ def generate_invitations(
     candidate_ids = set(_assigned_active_reviewer_ids(db, review_session.id))
     existing_ids = set(
         db.execute(
-            select(Invitation.reviewer_id).where(
-                Invitation.session_id == review_session.id
-            )
+            select(Invitation.reviewer_id).where(Invitation.session_id == review_session.id)
         ).scalars()
     )
     to_create = candidate_ids - existing_ids
@@ -193,10 +184,7 @@ def generate_invitations(
         audit.write_event(
             db,
             event_type="invitations.generated",
-            summary=(
-                f"Generated {len(new_ids)} invitation"
-                f"{'' if len(new_ids) == 1 else 's'}"
-            ),
+            summary=(f"Generated {len(new_ids)} invitation{'' if len(new_ids) == 1 else 's'}"),
             actor_user_id=user.id,
             session=review_session,
             payload=audit.set_changes(
@@ -279,11 +267,7 @@ def regenerate_all_tokens(
     Bc5)."""
     lifecycle.require_validated_or_ready(db, review_session)
     rows = list(
-        db.execute(
-            select(Invitation).where(
-                Invitation.session_id == review_session.id
-            )
-        ).scalars()
+        db.execute(select(Invitation).where(Invitation.session_id == review_session.id)).scalars()
     )
     rotated_ids: list[int] = []
     rotated_reviewer_ids: list[int] = []
@@ -301,8 +285,7 @@ def regenerate_all_tokens(
             db,
             event_type="invitations.regenerated",
             summary=(
-                f"Regenerated {len(rotated_ids)} invitation"
-                f"{'' if len(rotated_ids) == 1 else 's'}"
+                f"Regenerated {len(rotated_ids)} invitation{'' if len(rotated_ids) == 1 else 's'}"
             ),
             actor_user_id=user.id,
             session=review_session,
@@ -372,12 +355,8 @@ def send_invitation(
     invitation.token_hash = token_hash
 
     invite_url = build_invite_url(raw_token)
-    subject, body = email_templates.render_invitation(
-        review_session, reviewer, invite_url
-    )
-    cc_emails, bcc_emails = email_templates.cc_bcc_for(
-        review_session, INVITATION_KIND
-    )
+    subject, body = email_templates.render_invitation(review_session, reviewer, invite_url)
+    cc_emails, bcc_emails = email_templates.cc_bcc_for(review_session, INVITATION_KIND)
 
     outbox = EmailOutbox(
         session_id=review_session.id,
@@ -408,9 +387,7 @@ def send_invitation(
     audit.write_event(
         db,
         event_type="invitation.sent",
-        summary=(
-            f"Sent invitation #{invitation.id} to {reviewer.email}"
-        ),
+        summary=(f"Sent invitation #{invitation.id} to {reviewer.email}"),
         actor_user_id=user.id if user is not None else None,
         session=review_session,
         refs={
@@ -561,9 +538,7 @@ class InvitationRow:
     reviewer: Reviewer
 
 
-def list_invitations_for_session(
-    db: Session, session_id: int
-) -> list[InvitationRow]:
+def list_invitations_for_session(db: Session, session_id: int) -> list[InvitationRow]:
     rows = db.execute(
         select(Invitation, Reviewer)
         .join(Reviewer, Reviewer.id == Invitation.reviewer_id)
@@ -573,9 +548,7 @@ def list_invitations_for_session(
     return [InvitationRow(invitation=r[0], reviewer=r[1]) for r in rows]
 
 
-def is_reviewer_eligible_for_invitation(
-    db: Session, *, session_id: int, reviewer_id: int
-) -> bool:
+def is_reviewer_eligible_for_invitation(db: Session, *, session_id: int, reviewer_id: int) -> bool:
     """Would a Prepare enrol this reviewer for an invitation?
 
     The single-reviewer form of the rule `list_sendable_invitations`
@@ -592,9 +565,7 @@ def is_reviewer_eligible_for_invitation(
     return reviewer_id in _assigned_active_reviewer_ids(db, session_id)
 
 
-def list_sendable_invitations(
-    db: Session, session_id: int
-) -> list[InvitationRow]:
+def list_sendable_invitations(db: Session, session_id: int) -> list[InvitationRow]:
     """Pending invitations whose reviewer is still eligible to receive one.
 
     **The send set, as distinct from the listing.**
@@ -646,26 +617,20 @@ def list_outbox_for_session(db: Session, session_id: int) -> list[EmailOutbox]:
     )
 
 
-def reviewers_eligible_for_invitation(
-    db: Session, session_id: int
-) -> list[Reviewer]:
+def reviewers_eligible_for_invitation(db: Session, session_id: int) -> list[Reviewer]:
     """Active reviewers with at least one include=true assignment."""
     ids = _assigned_active_reviewer_ids(db, session_id)
     if not ids:
         return []
     return list(
-        db.execute(
-            select(Reviewer).where(Reviewer.id.in_(ids)).order_by(Reviewer.email)
-        ).scalars()
+        db.execute(select(Reviewer).where(Reviewer.id.in_(ids)).order_by(Reviewer.email)).scalars()
     )
 
 
 def has_invitations(db: Session, session_id: int) -> bool:
     """True iff at least one ``Invitation`` row exists for the session."""
     row = db.execute(
-        select(Invitation.id)
-        .where(Invitation.session_id == session_id)
-        .limit(1)
+        select(Invitation.id).where(Invitation.session_id == session_id).limit(1)
     ).first()
     return row is not None
 
@@ -694,9 +659,7 @@ RESPONSES_RECEIVED_KIND = "responses_received"
 _INVITE_URL_PATTERN = re.compile(r"https?://\S+/me/invite/[A-Za-z0-9_\-]+")
 
 
-def _most_recent_invitation_outbox(
-    db: Session, invitation_id: int
-) -> EmailOutbox | None:
+def _most_recent_invitation_outbox(db: Session, invitation_id: int) -> EmailOutbox | None:
     """The latest ``kind="invitation"`` outbox row for this invitation.
 
     Hoisted at 19P.6 rung 2b so the URL and the delivery status come
@@ -713,9 +676,7 @@ def _most_recent_invitation_outbox(
     ).scalar_one_or_none()
 
 
-def most_recent_invitation_url(
-    db: Session, *, invitation_id: int
-) -> str | None:
+def most_recent_invitation_url(db: Session, *, invitation_id: int) -> str | None:
     """Pull the raw token URL from the most recent invitation outbox row.
 
     Reminders reuse its token, so the previously-sent link keeps
@@ -757,9 +718,7 @@ def url_matches_current_token(url: str, invitation: Invitation) -> bool:
     return hash_token(raw) == invitation.token_hash
 
 
-def most_recent_invitation_status(
-    db: Session, *, invitation_id: int
-) -> str | None:
+def most_recent_invitation_status(db: Session, *, invitation_id: int) -> str | None:
     """The latest invitation email's delivery status, or None if unsent.
 
     The value set is the model's ``EMAIL_OUTBOX_STATUSES`` —
@@ -841,16 +800,10 @@ def send_reminder(
         db.flush()
         if commit:
             db.commit()
-        return ReminderResult(
-            outbox_id=result.outbox_id, fell_back_to_invitation=True
-        )
+        return ReminderResult(outbox_id=result.outbox_id, fell_back_to_invitation=True)
 
-    subject, body = email_templates.render_reminder(
-        review_session, reviewer, existing_url
-    )
-    cc_emails, bcc_emails = email_templates.cc_bcc_for(
-        review_session, REMINDER_KIND
-    )
+    subject, body = email_templates.render_reminder(review_session, reviewer, existing_url)
+    cc_emails, bcc_emails = email_templates.cc_bcc_for(review_session, REMINDER_KIND)
     outbox = EmailOutbox(
         session_id=review_session.id,
         reviewer_id=reviewer.id,
@@ -1006,9 +959,7 @@ def _write_reminders_sent(
         actor_user_id=user.id,
         session=review_session,
         payload=audit.set_changes(
-            updated=[
-                {"invitation_id": iid, "reviewer_id": rid} for iid, rid in pairs
-            ]
+            updated=[{"invitation_id": iid, "reviewer_id": rid} for iid, rid in pairs]
         ),
         context={"fell_back": fell_back},
         correlation_id=correlation_id,
@@ -1065,20 +1016,20 @@ def queue_responses_received(
         ).first()
         if submitted is None:
             return None
-        subject, body = email_templates.render_responses_received(
-            review_session, reviewer
-        )
-        cc_emails, bcc_emails = email_templates.cc_bcc_for(
-            review_session, RESPONSES_RECEIVED_KIND
-        )
-        outbox = db.execute(
-            select(EmailOutbox).where(
-                EmailOutbox.session_id == review_session.id,
-                EmailOutbox.reviewer_id == reviewer.id,
-                EmailOutbox.kind == RESPONSES_RECEIVED_KIND,
-                EmailOutbox.status == "queued",
+        subject, body = email_templates.render_responses_received(review_session, reviewer)
+        cc_emails, bcc_emails = email_templates.cc_bcc_for(review_session, RESPONSES_RECEIVED_KIND)
+        outbox = (
+            db.execute(
+                select(EmailOutbox).where(
+                    EmailOutbox.session_id == review_session.id,
+                    EmailOutbox.reviewer_id == reviewer.id,
+                    EmailOutbox.kind == RESPONSES_RECEIVED_KIND,
+                    EmailOutbox.status == "queued",
+                )
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         refreshed = outbox is not None
         if outbox is None:
             outbox = EmailOutbox(

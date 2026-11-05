@@ -34,9 +34,7 @@ def _user(db: Session, *, email: str = "alice@example.edu") -> User:
 
 def _session(db: Session, *, code: str = "ae") -> ReviewSession:
     user = _user(db, email=f"op-{code}@example.edu")
-    review_session = ReviewSession(
-        name=code.title(), code=code, created_by_user_id=user.id
-    )
+    review_session = ReviewSession(name=code.title(), code=code, created_by_user_id=user.id)
     db.add(review_session)
     db.flush()
     return review_session
@@ -88,9 +86,7 @@ def test_per_row_shape_includes_all_columns(db: Session) -> None:
         actor=actor,
         correlation_id="req-abc",
         detail={"counts": {"rows": 3}},
-        created_at=dt.datetime(
-            2026, 5, 10, 12, 0, 0, tzinfo=dt.UTC
-        ),
+        created_at=dt.datetime(2026, 5, 10, 12, 0, 0, tzinfo=dt.UTC),
     )
     rows = list(serialize_audit_events(db, review_session))
     assert rows[0] == HEADER

@@ -30,11 +30,24 @@ def test_a_sys_admin_finds_people_by_name_and_the_address_is_the_mail_else_the_u
     assert found.status_code == 200 and found.headers["cache-control"] == "no-store"
     assert found.json() == {
         "available": True,
-        "people": [{"name": "Jane Tan", "mail": "jane.tan@example.edu", "upn": "e0123456@example.edu",
-                    "address": "jane.tan@example.edu"}],
+        "people": [
+            {
+                "name": "Jane Tan",
+                "mail": "jane.tan@example.edu",
+                "upn": "e0123456@example.edu",
+                "address": "jane.tan@example.edu",
+            }
+        ],
     }
     lab = client.get(SEARCH, params={"q": "lab"}).json()["people"]
-    assert lab == [{"name": "Lab Account", "mail": None, "upn": "lab01@example.edu", "address": "lab01@example.edu"}]
+    assert lab == [
+        {
+            "name": "Lab Account",
+            "mail": None,
+            "upn": "lab01@example.edu",
+            "address": "lab01@example.edu",
+        }
+    ]
 
 
 def test_fewer_than_three_characters_ask_nothing(
@@ -51,10 +64,18 @@ def test_a_directory_that_cannot_be_asked_reads_unavailable(
     from cordware.graph import FakeDirectory
 
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
-    monkeypatch.setattr(_sys_admin, "directory_or_none", lambda request: None if directory == "none" else FakeDirectory())
+    monkeypatch.setattr(
+        _sys_admin,
+        "directory_or_none",
+        lambda request: None if directory == "none" else FakeDirectory(),
+    )
     q = "jan" if directory == "none" else "throttled@example.edu"
     reason = "no_token" if directory == "none" else "throttled (429)"
-    assert client.get(SEARCH, params={"q": q}).json() == {"available": False, "people": [], "reason": reason}
+    assert client.get(SEARCH, params={"q": q}).json() == {
+        "available": False,
+        "people": [],
+        "reason": reason,
+    }
 
 
 def test_an_operator_who_is_not_a_sys_admin_is_refused(client: TestClient, fake: None) -> None:

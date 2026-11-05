@@ -30,6 +30,7 @@ Revises: f2c7b9d3e8a4
 Create Date: 2026-05-20
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -43,12 +44,8 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     with op.batch_alter_table("sessions", schema=None) as batch_op:
-        batch_op.add_column(
-            sa.Column("retention_exception", sa.Boolean(), nullable=True)
-        )
-        batch_op.add_column(
-            sa.Column("retention_overrides", sa.JSON(), nullable=True)
-        )
+        batch_op.add_column(sa.Column("retention_exception", sa.Boolean(), nullable=True))
+        batch_op.add_column(sa.Column("retention_overrides", sa.JSON(), nullable=True))
 
 
 def downgrade() -> None:

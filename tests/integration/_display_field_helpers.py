@@ -35,18 +35,14 @@ from ._public_id import public_id
 from ._validated import validate_session
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "Spring", "code": code},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _populate_rosters(client: TestClient, session_id: int) -> None:
@@ -81,9 +77,7 @@ def _populate_rosters(client: TestClient, session_id: int) -> None:
 # id from the returned value when needed.
 
 
-def _generate_full_matrix(
-    client: TestClient, db: Session, session_id: int
-) -> None:
+def _generate_full_matrix(client: TestClient, db: Session, session_id: int) -> None:
     """Generate via the seeded "Full Matrix" RuleSet through the
     rule-based generate route. Replaces the standalone full-matrix
     route retired in 12C-1 PR 3.
@@ -112,9 +106,7 @@ def _validate(client: TestClient, db: Session, session_id: int) -> None:
 
 
 def _instrument(db: Session, session_id: int) -> Instrument:
-    return db.execute(
-        select(Instrument).where(Instrument.session_id == session_id)
-    ).scalar_one()
+    return db.execute(select(Instrument).where(Instrument.session_id == session_id)).scalar_one()
 
 
 def _seed_pair_context_display_fields(db: Session, instrument: Instrument) -> None:

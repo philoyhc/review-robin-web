@@ -69,9 +69,7 @@ class ReviewSession(Base, TimestampMixin):
     # 19V Item 2 — the secret key of the review form's page digest
     # (``responses._form_keys``). Never rendered or exported; a session
     # made by Duplicate or Rehydrate draws its own.
-    form_key: Mapped[str] = mapped_column(
-        String(64), nullable=False, default=_new_form_key
-    )
+    form_key: Mapped[str] = mapped_column(String(64), nullable=False, default=_new_form_key)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     code: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
     description: Mapped[str | None] = mapped_column(String(2000))
@@ -110,9 +108,7 @@ class ReviewSession(Base, TimestampMixin):
     # scheduled activation the same column will show the planned
     # open time pre-activation and the actual stamp afterwards.
     # ``NULL`` until the session is first activated.
-    activated_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Segment 18G Part 0a — anchor datetime columns. The operator
     # sets these directly; every Part 0b offset is anchored on one
@@ -153,15 +149,9 @@ class ReviewSession(Base, TimestampMixin):
     # participant is shown of their own roster entry: a list of roster
     # field keys, ``NULL`` meaning that participant's default. One
     # migration added all three; Item 1 reads and writes the reviewers'.
-    reviewer_self_fields: Mapped[list[str] | None] = mapped_column(
-        JSON, nullable=True
-    )
-    reviewee_self_fields: Mapped[list[str] | None] = mapped_column(
-        JSON, nullable=True
-    )
-    observer_self_fields: Mapped[list[str] | None] = mapped_column(
-        JSON, nullable=True
-    )
+    reviewer_self_fields: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    reviewee_self_fields: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    observer_self_fields: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
     invite_offsets: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
     reminder_offsets: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
     archive_offset: Mapped[str | None] = mapped_column(String(16), nullable=True)

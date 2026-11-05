@@ -19,6 +19,7 @@ Revises: b8d4f1a92c50
 Create Date: 2026-05-07 13:15:00.000000
 
 """
+
 from collections.abc import Sequence
 from datetime import UTC
 
@@ -67,11 +68,7 @@ def upgrade() -> None:
             rule_sets.c.name == _SEED_NAME,
         )
     )
-    bind.execute(
-        sa.delete(revisions).where(
-            revisions.c.rule_set_id.in_(seed_id_subquery)
-        )
-    )
+    bind.execute(sa.delete(revisions).where(revisions.c.rule_set_id.in_(seed_id_subquery)))
     bind.execute(
         sa.delete(rule_sets).where(
             sa.and_(

@@ -235,31 +235,21 @@ def build_reviewer_summary_context(
     )
 
     instrument_ids = {a.instrument_id for a in assignments}
-    display_fields_by_instrument: dict[
-        int, list[InstrumentDisplayField]
-    ] = {}
+    display_fields_by_instrument: dict[int, list[InstrumentDisplayField]] = {}
     if instrument_ids:
         stmt = (
             select(InstrumentDisplayField)
             .where(InstrumentDisplayField.instrument_id.in_(instrument_ids))
             .where(InstrumentDisplayField.visible.is_(True))
             .where(_NOT_REVIEWEE_IDENTITY_DISPLAY_FIELD)
-            .order_by(
-                InstrumentDisplayField.order, InstrumentDisplayField.id
-            )
+            .order_by(InstrumentDisplayField.order, InstrumentDisplayField.id)
         )
         for field in db.execute(stmt).scalars():
-            display_fields_by_instrument.setdefault(
-                field.instrument_id, []
-            ).append(field)
+            display_fields_by_instrument.setdefault(field.instrument_id, []).append(field)
 
-    pair_context = relationships_service.pair_context_lookup(
-        db, review_session.id
-    )
+    pair_context = relationships_service.pair_context_lookup(db, review_session.id)
 
-    def _identity_for_group(
-        instrument_id: int, group_key: tuple[str, ...]
-    ) -> SummaryGroupIdentity:
+    def _identity_for_group(instrument_id: int, group_key: tuple[str, ...]) -> SummaryGroupIdentity:
         """Compose a group-row's identity block — reviewee-tag
         values joined by ", " above the member-name list, capped
         at GROUP_MEMBER_NAME_LIMIT with a ``+N more`` suffix.
@@ -288,15 +278,10 @@ def build_reviewer_summary_context(
         # for each. The reviewer surface does the same so the
         # two tables agree on the identity composition.
         tag_values: list[str] = []
-        representative = (
-            min(group_members, key=lambda a: a.id) if group_members else None
-        )
+        representative = min(group_members, key=lambda a: a.id) if group_members else None
         if representative is not None:
             for df in display_fields_by_instrument.get(instrument_id, []):
-                if (
-                    df.source_type != "reviewee"
-                    or not (df.source_field or "").startswith("tag_")
-                ):
+                if df.source_type != "reviewee" or not (df.source_field or "").startswith("tag_"):
                     continue
                 value = instruments_service.display_field_value(
                     df, representative, pair_context_lookup=pair_context
@@ -313,9 +298,7 @@ def build_reviewer_summary_context(
             tag_line=tag_line,
             member_names=shown,
             extra_count=extra,
-            fallback_label=(
-                tag_line or ", ".join(shown) or "the group"
-            ),
+            fallback_label=(tag_line or ", ".join(shown) or "the group"),
         )
 
     # Pull all of the reviewer's responses + denormalised reviewee /
@@ -366,9 +349,7 @@ def build_reviewer_summary_context(
         # fan-out invariant).
         if cell_key in cells:
             continue
-        cells[cell_key] = (
-            response.value if response.value is not None else ""
-        )
+        cells[cell_key] = response.value if response.value is not None else ""
         order_list = row_order.setdefault(instrument.id, [])
         if key not in order_list:
             order_list.append(key)
@@ -388,9 +369,7 @@ def build_reviewer_summary_context(
     # G10: only the instruments the reviewer's peer_reviewer policy lets
     # them read now, and none once the session is archived — the same
     # rule as the review surface and the summary CSV.
-    peer_policies = visibility_policies.peer_reviewer_policies(
-        db, row_order.keys()
-    )
+    peer_policies = visibility_policies.peer_reviewer_policies(db, row_order.keys())
     sections: list[SummarySection] = []
     hidden_count = 0
     total_instrument_count = len(instruments)
@@ -411,14 +390,11 @@ def build_reviewer_summary_context(
         # (``Instrument_{session_seq}``) — never the internal ``name`` — when
         # the reviewer-facing title is empty, so the card always has
         # *some* heading.
-        heading_title = (
-            instrument_heading(
-                instrument=instrument,
-                position=position,
-                total_count=total_instrument_count,
-            ).title
-            or instruments_service._instrument_label(instrument)
-        )
+        heading_title = instrument_heading(
+            instrument=instrument,
+            position=position,
+            total_count=total_instrument_count,
+        ).title or instruments_service._instrument_label(instrument)
         # Filter response fields by ``visible`` so the summary
         # table mirrors the reviewer surface form
         # (``routes_reviewer/_surface.py`` filters the same way).
@@ -430,9 +406,7 @@ def build_reviewer_summary_context(
             key=lambda f: (f.order, f.id),
         )
         instrument_display_fields = (
-            []
-            if is_group
-            else display_fields_by_instrument.get(instrument.id, [])
+            [] if is_group else display_fields_by_instrument.get(instrument.id, [])
         )
         # Operator-set per-column pixel widths from the Band 2
         # editor live on ``instrument.column_widths``. Keys:
@@ -442,19 +416,14 @@ def build_reviewer_summary_context(
         # display columns), and ``"rf_<id>"`` for each response
         # field. Mirrors the reviewer-surface render path in
         # ``routes_reviewer/_surface.py``.
-        widths_by_col_key: dict[str, int] = dict(
-            instrument.column_widths or {}
-        )
+        widths_by_col_key: dict[str, int] = dict(instrument.column_widths or {})
         identity_width_px = widths_by_col_key.get("identity")
         display_field_cols = [
             SummaryDisplayCol(
                 field_id=df.id,
-                label=instruments_service.display_field_label(
-                    df, session=review_session
-                ),
+                label=instruments_service.display_field_label(df, session=review_session),
                 is_profile_link=(
-                    df.source_type == "reviewee"
-                    and df.source_field == "profile_link"
+                    df.source_type == "reviewee" and df.source_field == "profile_link"
                 ),
                 width_px=widths_by_col_key.get(f"df_{df.id}"),
             )
@@ -469,12 +438,10 @@ def build_reviewer_summary_context(
                 # require-mode parent grants its governed fields.
                 required=f.id in may_be_required,
                 width_px=widths_by_col_key.get(f"rf_{f.id}"),
-                is_narrow=(
-                    not is_group
-                    and f.data_type in ("Integer", "Decimal")
-                ),
+                is_narrow=(not is_group and f.data_type in ("Integer", "Decimal")),
                 narrow_ch=(
-                    None if is_group
+                    None
+                    if is_group
                     else numeric_column_ch_width(f, required=f.id in may_be_required)
                 ),
                 is_textlong=(
@@ -504,9 +471,7 @@ def build_reviewer_summary_context(
         ordered_keys = sorted(row_order[instrument.id], key=_row_sort_label)
         section_rows: list[SummaryRow] = []
         for key in ordered_keys:
-            values = [
-                cells.get((instrument.id, key, f.id), "") for f in fields
-            ]
+            values = [cells.get((instrument.id, key, f.id), "") for f in fields]
             if isinstance(key, tuple):
                 # Group-scoped row.
                 identity = _identity_for_group(instrument.id, key)
@@ -537,17 +502,14 @@ def build_reviewer_summary_context(
                         SummaryDisplayCell(
                             value=value,
                             is_profile_link=(
-                                df.source_type == "reviewee"
-                                and df.source_field == "profile_link"
+                                df.source_type == "reviewee" and df.source_field == "profile_link"
                             ),
                         )
                     )
             section_rows.append(
                 SummaryRow(
                     reviewee_name=reviewee.name if reviewee else "",
-                    reviewee_email=(
-                        reviewee.email_or_identifier if reviewee else None
-                    ),
+                    reviewee_email=(reviewee.email_or_identifier if reviewee else None),
                     display_cells=display_cells,
                     values=values,
                 )

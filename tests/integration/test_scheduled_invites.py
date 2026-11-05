@@ -3,6 +3,7 @@
 Tests run the observer end-to-end with a stub ``build_invite_url``
 closure so the dispatch path runs without a live FastAPI Request.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -41,7 +42,6 @@ from ._lookups import detail_of
 # --------------------------------------------------------------------------- #
 # Fixtures                                                                    #
 # --------------------------------------------------------------------------- #
-
 
 
 def _stub_build_url(token: str) -> str:
@@ -91,9 +91,7 @@ def _seed_session_with_reviewers(
     return rs
 
 
-def _audit_rows(
-    db: Session, rs: ReviewSession, event_type: str
-) -> list[AuditEvent]:
+def _audit_rows(db: Session, rs: ReviewSession, event_type: str) -> list[AuditEvent]:
     return list(
         db.execute(
             select(AuditEvent)
@@ -110,15 +108,9 @@ def _seed_assignments(db: Session, rs: ReviewSession) -> None:
     Bypasses the rule engine — the test fixtures pre-pin Full Matrix,
     but materialise_session_rule_eligibility isn't worth running for
     this layer of tests."""
-    instrument = db.execute(
-        select(Instrument).where(Instrument.session_id == rs.id)
-    ).scalar_one()
-    reviewers = db.execute(
-        select(Reviewer).where(Reviewer.session_id == rs.id)
-    ).scalars().all()
-    reviewees = db.execute(
-        select(Reviewee).where(Reviewee.session_id == rs.id)
-    ).scalars().all()
+    instrument = db.execute(select(Instrument).where(Instrument.session_id == rs.id)).scalar_one()
+    reviewers = db.execute(select(Reviewer).where(Reviewer.session_id == rs.id)).scalars().all()
+    reviewees = db.execute(select(Reviewee).where(Reviewee.session_id == rs.id)).scalars().all()
     for reviewer in reviewers:
         for reviewee in reviewees:
             db.add(
@@ -134,15 +126,11 @@ def _seed_assignments(db: Session, rs: ReviewSession) -> None:
     db.commit()
 
 
-def _generate_invitations(
-    db: Session, rs: ReviewSession, op: User
-) -> None:
+def _generate_invitations(db: Session, rs: ReviewSession, op: User) -> None:
     """Call the existing operator path that materialises Invitation
     rows for every assigned reviewer."""
     _seed_assignments(db, rs)
-    invitations_service.generate_invitations(
-        db, review_session=rs, user=op, correlation_id=None
-    )
+    invitations_service.generate_invitations(db, review_session=rs, user=op, correlation_id=None)
 
 
 def _operator(db: Session, rs: ReviewSession) -> User:
@@ -162,9 +150,7 @@ def test_no_op_when_invite_offsets_unset(db: Session) -> None:
     db.flush()
     db.commit()
 
-    scheduled_events.observe_scheduled_events(
-        db, rs, build_invite_url=_stub_build_url
-    )
+    scheduled_events.observe_scheduled_events(db, rs, build_invite_url=_stub_build_url)
     assert _audit_rows(db, rs, "session.scheduled_invites_fired") == []
     assert _audit_rows(db, rs, "session.scheduled_invites_skipped") == []
 
@@ -176,9 +162,7 @@ def test_no_op_when_anchor_unset(db: Session) -> None:
     db.flush()
     db.commit()
 
-    scheduled_events.observe_scheduled_events(
-        db, rs, build_invite_url=_stub_build_url
-    )
+    scheduled_events.observe_scheduled_events(db, rs, build_invite_url=_stub_build_url)
     assert _audit_rows(db, rs, "session.scheduled_invites_fired") == []
 
 
@@ -202,9 +186,7 @@ def test_no_op_when_offset_in_future(db: Session) -> None:
     db.flush()
     db.commit()
 
-    scheduled_events.observe_scheduled_events(
-        db, rs, build_invite_url=_stub_build_url
-    )
+    scheduled_events.observe_scheduled_events(db, rs, build_invite_url=_stub_build_url)
     assert _audit_rows(db, rs, "session.scheduled_invites_fired") == []
 
 
@@ -224,18 +206,14 @@ def test_skip_when_not_prepared(db: Session) -> None:
     db.flush()
     db.commit()
 
-    scheduled_events.observe_scheduled_events(
-        db, rs, build_invite_url=_stub_build_url
-    )
+    scheduled_events.observe_scheduled_events(db, rs, build_invite_url=_stub_build_url)
     skipped = _audit_rows(db, rs, "session.scheduled_invites_skipped")
     assert len(skipped) == 1
     assert detail_of(skipped[0])["reason"] == "not_prepared"
     assert detail_of(skipped[0])["context"]["offset_index"] == 0
 
     # Second observer pass should not re-emit (dedup keyed on entry).
-    scheduled_events.observe_scheduled_events(
-        db, rs, build_invite_url=_stub_build_url
-    )
+    scheduled_events.observe_scheduled_events(db, rs, build_invite_url=_stub_build_url)
     assert len(_audit_rows(db, rs, "session.scheduled_invites_skipped")) == 1
 
 
@@ -250,18 +228,14 @@ def test_skip_when_invitations_not_created(db: Session) -> None:
     db.flush()
     db.commit()
 
-    scheduled_events.observe_scheduled_events(
-        db, rs, build_invite_url=_stub_build_url
-    )
+    scheduled_events.observe_scheduled_events(db, rs, build_invite_url=_stub_build_url)
     skipped = _audit_rows(db, rs, "session.scheduled_invites_skipped")
     assert len(skipped) == 1
     assert detail_of(skipped[0])["reason"] == "invitations_not_created"
     assert detail_of(skipped[0])["context"]["offset_index"] == 0
 
     # Second observer pass should not re-emit (dedup keyed on entry).
-    scheduled_events.observe_scheduled_events(
-        db, rs, build_invite_url=_stub_build_url
-    )
+    scheduled_events.observe_scheduled_events(db, rs, build_invite_url=_stub_build_url)
     assert len(_audit_rows(db, rs, "session.scheduled_invites_skipped")) == 1
 
 
@@ -289,9 +263,7 @@ def test_fires_pending_invitations_at_due_time(db: Session) -> None:
     db.flush()
     db.commit()
 
-    scheduled_events.observe_scheduled_events(
-        db, rs, build_invite_url=_stub_build_url
-    )
+    scheduled_events.observe_scheduled_events(db, rs, build_invite_url=_stub_build_url)
 
     fired = _audit_rows(db, rs, "session.scheduled_invites_fired")
     assert len(fired) == 1
@@ -301,12 +273,16 @@ def test_fires_pending_invitations_at_due_time(db: Session) -> None:
     assert "scheduled_at" in detail_of(fired[0])["context"]
 
     # Every invitation should now be sent
-    pending = db.execute(
-        select(Invitation).where(
-            Invitation.session_id == rs.id,
-            Invitation.status == "pending",
+    pending = (
+        db.execute(
+            select(Invitation).where(
+                Invitation.session_id == rs.id,
+                Invitation.status == "pending",
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert pending == []
 
     # invitation.sent audit rows should carry context.trigger=scheduled
@@ -332,9 +308,7 @@ def test_idempotent_on_repeated_observer_calls(db: Session) -> None:
     db.commit()
 
     for _ in range(3):
-        scheduled_events.observe_scheduled_events(
-            db, rs, build_invite_url=_stub_build_url
-        )
+        scheduled_events.observe_scheduled_events(db, rs, build_invite_url=_stub_build_url)
 
     fired = _audit_rows(db, rs, "session.scheduled_invites_fired")
     assert len(fired) == 1
@@ -359,9 +333,7 @@ def test_multi_entry_fires_in_chronological_order(db: Session) -> None:
     db.flush()
     db.commit()
 
-    scheduled_events.observe_scheduled_events(
-        db, rs, build_invite_url=_stub_build_url
-    )
+    scheduled_events.observe_scheduled_events(db, rs, build_invite_url=_stub_build_url)
 
     fired = _audit_rows(db, rs, "session.scheduled_invites_fired")
     assert len(fired) == 2
@@ -391,36 +363,27 @@ def test_reschedule_resets_per_entry_dedup(db: Session) -> None:
     db.flush()
     db.commit()
 
-    scheduled_events.observe_scheduled_events(
-        db, rs, build_invite_url=_stub_build_url
-    )
+    scheduled_events.observe_scheduled_events(db, rs, build_invite_url=_stub_build_url)
     assert len(_audit_rows(db, rs, "session.scheduled_invites_fired")) == 1
 
     # Operator reschedules; one invitation was sent already so we
     # manually create a fresh "pending" invitation for the test.
-    new_reviewer = Reviewer(
-        session_id=rs.id, name="Late", email="late-reanchor@example.edu"
-    )
+    new_reviewer = Reviewer(session_id=rs.id, name="Late", email="late-reanchor@example.edu")
     db.add(new_reviewer)
     db.flush()
-    invitations_service.generate_invitations(
-        db, review_session=rs, user=op, correlation_id=None
-    )
+    invitations_service.generate_invitations(db, review_session=rs, user=op, correlation_id=None)
 
     new_anchor = datetime.now(UTC) + timedelta(days=2)
     rs.scheduled_activate_at = new_anchor
     db.flush()
     db.commit()
 
-    scheduled_events.observe_scheduled_events(
-        db, rs, build_invite_url=_stub_build_url
-    )
+    scheduled_events.observe_scheduled_events(db, rs, build_invite_url=_stub_build_url)
     fired = _audit_rows(db, rs, "session.scheduled_invites_fired")
     assert len(fired) == 2  # entry fires again against the new anchor
     # The second fire's anchor_at differs from the first
     assert (
-        detail_of(fired[0])["context"]["anchor_at"]
-        != detail_of(fired[1])["context"]["anchor_at"]
+        detail_of(fired[0])["context"]["anchor_at"] != detail_of(fired[1])["context"]["anchor_at"]
     )
 
 
@@ -439,9 +402,7 @@ def test_unparseable_offset_skipped_silently(db: Session) -> None:
     db.flush()
     db.commit()
 
-    scheduled_events.observe_scheduled_events(
-        db, rs, build_invite_url=_stub_build_url
-    )
+    scheduled_events.observe_scheduled_events(db, rs, build_invite_url=_stub_build_url)
     # The good entry fired; the bad one was silently skipped (no fire,
     # no skip audit — the editor save-time validator is responsible
     # for catching these, not the runtime trigger).
@@ -478,11 +439,11 @@ def test_scheduled_fire_skips_a_reviewer_who_is_no_longer_eligible(
     # One reviewer goes inactive after the invitations exist. This is
     # what `reviewers.bulk_inactivate` does — `status` only, the
     # invitation row untouched.
-    stranded = db.execute(
-        select(Reviewer)
-        .where(Reviewer.session_id == rs.id)
-        .order_by(Reviewer.email)
-    ).scalars().first()
+    stranded = (
+        db.execute(select(Reviewer).where(Reviewer.session_id == rs.id).order_by(Reviewer.email))
+        .scalars()
+        .first()
+    )
     assert stranded is not None
     stranded.status = "inactive"
     db.flush()
@@ -493,9 +454,7 @@ def test_scheduled_fire_skips_a_reviewer_who_is_no_longer_eligible(
     db.flush()
     db.commit()
 
-    scheduled_events.observe_scheduled_events(
-        db, rs, build_invite_url=_stub_build_url
-    )
+    scheduled_events.observe_scheduled_events(db, rs, build_invite_url=_stub_build_url)
 
     fired = _audit_rows(db, rs, "session.scheduled_invites_fired")
     assert len(fired) == 1
@@ -515,9 +474,7 @@ def test_scheduled_fire_skips_a_reviewer_who_is_no_longer_eligible(
     # in this repo proved less than it claimed.
     mailed = {
         row.to_email
-        for row in db.execute(
-            select(EmailOutbox).where(EmailOutbox.session_id == rs.id)
-        ).scalars()
+        for row in db.execute(select(EmailOutbox).where(EmailOutbox.session_id == rs.id)).scalars()
     }
     assert mailed, "nothing was mailed at all; the fixture is not exercising a send"
     assert stranded.email not in mailed

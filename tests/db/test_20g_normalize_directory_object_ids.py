@@ -78,18 +78,26 @@ def test_stored_ids_are_normalized_and_the_downgrade_keeps_them() -> None:
             command.upgrade(cfg, REVISION)
             connection.commit()
             for table in ("reviewers", "reviewees", "observers"):
-                assert connection.execute(
-                    text(f"SELECT directory_object_id FROM {table}")
-                ).scalar_one() == NORMAL
+                assert (
+                    connection.execute(
+                        text(f"SELECT directory_object_id FROM {table}")
+                    ).scalar_one()
+                    == NORMAL
+                )
             principals = dict(
                 connection.execute(text("SELECT email, external_principal_id FROM users")).all()
             )
-            assert principals == {"a@example.edu": NORMAL, "b@example.edu": None, "c@example.edu": None}
+            assert principals == {
+                "a@example.edu": NORMAL,
+                "b@example.edu": None,
+                "c@example.edu": None,
+            }
 
             command.downgrade(cfg, PREVIOUS)
             connection.commit()
-            assert connection.execute(
-                text("SELECT directory_object_id FROM reviewers")
-            ).scalar_one() == NORMAL
+            assert (
+                connection.execute(text("SELECT directory_object_id FROM reviewers")).scalar_one()
+                == NORMAL
+            )
     finally:
         eng.dispose()

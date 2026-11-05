@@ -33,52 +33,197 @@ REPO = pathlib.Path(__file__).resolve().parents[1]
 #: (path, tier, needs, one-line note). ``needs`` is the deferred group, or "".
 #: Order is the order the setup document works in.
 MANIFEST: tuple[tuple[str, str, str, str], ...] = (
-    ("CLAUDE.md", "adapt", "", "rewrite Project conventions + Architecture + Where to look; keep Where work runs; cp to AGENTS.md"),
-    ("constitution.md", "adapt", "", "keep the six articles; drop the dated annotations; re-point 'derived from'"),
-    ("CONTRIBUTING.md", "adapt", "", "fill the merge-policy paragraph's <slow job> and <paths> for the new CI"),
-    (".gitignore", "skeleton", "", "the harness lines only — .claude/* negations plus the hook's build products; appended if absent"),
-    (".claude/agents/diff-reviewer.md", "adapt", "", "project name in line 1, check 4's seams (routes_operator/_shared.py, base.html)"),
-    (".claude/agents/spec-writer.md", "adapt", "", "cites this project's specs and close procedure; re-point once your spec/ has a second file"),
+    (
+        "CLAUDE.md",
+        "adapt",
+        "",
+        "rewrite Project conventions + Architecture + Where to look; keep Where work runs; cp to AGENTS.md",
+    ),
+    (
+        "constitution.md",
+        "adapt",
+        "",
+        "keep the six articles; drop the dated annotations; re-point 'derived from'",
+    ),
+    (
+        "CONTRIBUTING.md",
+        "adapt",
+        "",
+        "fill the merge-policy paragraph's <slow job> and <paths> for the new CI",
+    ),
+    (
+        ".gitignore",
+        "skeleton",
+        "",
+        "the harness lines only — .claude/* negations plus the hook's build products; appended if absent",
+    ),
+    (
+        ".claude/agents/diff-reviewer.md",
+        "adapt",
+        "",
+        "project name in line 1, check 4's seams (routes_operator/_shared.py, base.html)",
+    ),
+    (
+        ".claude/agents/spec-writer.md",
+        "adapt",
+        "",
+        "cites this project's specs and close procedure; re-point once your spec/ has a second file",
+    ),
     (".claude/skills/segment-plan/SKILL.md", "verbatim", "", "the plan / item / close procedure"),
-    (".claude/hooks/session-start.sh", "adapt", "", "builds the 3.12 venv the pre-PR gate needs; retarget the node-warning comment at your own JS-parsing test"),
-    (".claude/settings.json", "verbatim", "", "registers the SessionStart hook; project-relative, so it needs no edit"),
+    (
+        ".claude/hooks/session-start.sh",
+        "adapt",
+        "",
+        "builds the 3.12 venv the pre-PR gate needs; retarget the node-warning comment at your own JS-parsing test",
+    ),
+    (
+        ".claude/settings.json",
+        "verbatim",
+        "",
+        "registers the SessionStart hook; project-relative, so it needs no edit",
+    ),
     ("guide/segment_plan_template.md", "verbatim", "", "the shape every plan copies"),
     ("guide/sweep_template.md", "verbatim", "", "the shape every spec/docs sweep copies"),
-    ("guide/README.md", "skeleton", "", "index with the documented shapes the guide-index gate reads"),
-    ("guide/archive/README.md", "skeleton", "", "index the archive gate reads; one row per file, no patterns"),
+    (
+        "guide/README.md",
+        "skeleton",
+        "",
+        "index with the documented shapes the guide-index gate reads",
+    ),
+    (
+        "guide/archive/README.md",
+        "skeleton",
+        "",
+        "index the archive gate reads; one row per file, no patterns",
+    ),
     ("guide/todo_master.md", "skeleton", "", "Open work only"),
     ("guide/deferred_consolidated.md", "skeleton", "", "everything scoped but not scheduled"),
     ("spec/README.md", "skeleton", "", "index of the surface contracts"),
     ("docs/README.md", "skeleton", "", "index of the operational docs"),
-    ("docs/unenforced_conventions.md", "skeleton", "", "constitution VI's short list; starts empty"),
-    (".github/workflows/ci.yml", "adapt", "", "ruff + pytest -n auto on 3.12; the Chromium step waits for tests/browser/"),
-    (".github/workflows/ci-postgres.yml", "adapt", "", "DB user / password / name; the alembic round-trip stays"),
-    ("tests/unit/test_doc_references.py", "verbatim", "", "the twins, path-reference, section-reference and node-id gates; read only the tree. The node-id floor and archive check skip on a fresh export — both need a corpus a new repo has not got"),
-    ("tests/unit/test_guide_indexes.py", "verbatim", "", "the guide-index gate; reads the skeleton READMEs"),
-    ("tests/unit/__init__.py", "skeleton", "", "makes tests/unit a package; the contrast audit imports its helper relatively"),
-    ("app/web/spec_registry.py", "deferred", "app", "imports the app; export with --include-deferred once app/main.py exists, then empty the table and lower _MINIMUM_ROUTES"),
-    ("tests/unit/test_spec_coverage.py", "deferred", "app", "pairs with spec_registry; imports the app, so it cannot collect before one exists"),
-    ("app/web/templates/base.html", "deferred", "theme", "BUILT, not copied: the source's head through </style> (no-flash theme script, both :root blocks, every component class), a body.ui-v2 with the theme toggle and its script, a content block; rename the title, favicon and storage key"),
-    ("tools/_harness_common.py", "deferred", "theme", "the stylesheet lift, token parse and contrast pairs; ACCEPTED_BELOW_AA is the inherited palette's list"),
-    ("tools/theme_customizer.gen.py", "deferred", "theme", "regenerate tools/theme_customizer.html after export and commit it"),
+    (
+        "docs/unenforced_conventions.md",
+        "skeleton",
+        "",
+        "constitution VI's short list; starts empty",
+    ),
+    (
+        ".github/workflows/ci.yml",
+        "adapt",
+        "",
+        "ruff + pytest -n auto on 3.12; the Chromium step waits for tests/browser/",
+    ),
+    (
+        ".github/workflows/ci-postgres.yml",
+        "adapt",
+        "",
+        "DB user / password / name; the alembic round-trip stays",
+    ),
+    (
+        "tests/unit/test_doc_references.py",
+        "verbatim",
+        "",
+        "the twins, path-reference, section-reference and node-id gates; read only the tree. The node-id floor and archive check skip on a fresh export — both need a corpus a new repo has not got",
+    ),
+    (
+        "tests/unit/test_guide_indexes.py",
+        "verbatim",
+        "",
+        "the guide-index gate; reads the skeleton READMEs",
+    ),
+    (
+        "tests/unit/__init__.py",
+        "skeleton",
+        "",
+        "makes tests/unit a package; the contrast audit imports its helper relatively",
+    ),
+    (
+        "app/web/spec_registry.py",
+        "deferred",
+        "app",
+        "imports the app; export with --include-deferred once app/main.py exists, then empty the table and lower _MINIMUM_ROUTES",
+    ),
+    (
+        "tests/unit/test_spec_coverage.py",
+        "deferred",
+        "app",
+        "pairs with spec_registry; imports the app, so it cannot collect before one exists",
+    ),
+    (
+        "app/web/templates/base.html",
+        "deferred",
+        "theme",
+        "BUILT, not copied: the source's head through </style> (no-flash theme script, both :root blocks, every component class), a body.ui-v2 with the theme toggle and its script, a content block; rename the title, favicon and storage key",
+    ),
+    (
+        "tools/_harness_common.py",
+        "deferred",
+        "theme",
+        "the stylesheet lift, token parse and contrast pairs; ACCEPTED_BELOW_AA is the inherited palette's list",
+    ),
+    (
+        "tools/theme_customizer.gen.py",
+        "deferred",
+        "theme",
+        "regenerate tools/theme_customizer.html after export and commit it",
+    ),
     ("tests/unit/_base_css.py", "deferred", "theme", "parsing helpers the contrast audit imports"),
-    ("tests/unit/test_generated_tools_are_current.py", "deferred", "theme", "fails until the page is regenerated and committed"),
-    ("tests/unit/test_contrast_audit.py", "deferred", "theme", "13 of its 14 pass on the inherited stylesheet; test_the_muted_token_absorbed_the_retired_one asserts this project's template counts"),
-    ("spec/color_tokens.md", "deferred", "theme", "the inherited palette's catalogue; it cites specs, an archived plan and a test that stay in the source, so the path gate goes red again on export"),
+    (
+        "tests/unit/test_generated_tools_are_current.py",
+        "deferred",
+        "theme",
+        "fails until the page is regenerated and committed",
+    ),
+    (
+        "tests/unit/test_contrast_audit.py",
+        "deferred",
+        "theme",
+        "13 of its 14 pass on the inherited stylesheet; test_the_muted_token_absorbed_the_retired_one asserts this project's template counts",
+    ),
+    (
+        "spec/color_tokens.md",
+        "deferred",
+        "theme",
+        "the inherited palette's catalogue; it cites specs, an archived plan and a test that stay in the source, so the path gate goes red again on export",
+    ),
     ("tools/close_check.py", "verbatim", "", "close check entry point"),
     ("tools/close_check/__init__.py", "verbatim", "", "close check package"),
     ("tools/close_check/_shared.py", "verbatim", "", "close check package"),
     ("tools/close_check/_manifest.py", "verbatim", "", "close check package"),
     ("tools/close_check/_archive.py", "verbatim", "", "close check package"),
     ("tools/close_check/_sweep.py", "verbatim", "", "close check package"),
-    ("tests/unit/test_close_check.py", "verbatim", "", "builds its own repo; runs on an empty guide/"),
-    ("tests/unit/test_close_check_archived.py", "verbatim", "", "builds its own repo; passes on an empty archive"),
+    (
+        "tests/unit/test_close_check.py",
+        "verbatim",
+        "",
+        "builds its own repo; runs on an empty guide/",
+    ),
+    (
+        "tests/unit/test_close_check_archived.py",
+        "verbatim",
+        "",
+        "builds its own repo; passes on an empty archive",
+    ),
     ("tools/pace_audit.py", "verbatim", "", "merge-history pace audit; needs full history"),
     ("tests/unit/test_pace_audit.py", "verbatim", "", "builds its own repo"),
-    ("tools/practice_kit.py", "verbatim", "", "this tool, so the next project can inherit from yours"),
-    ("tests/unit/test_practice_kit.py", "verbatim", "", "keeps the manifest, the tree and the setup document in step"),
+    (
+        "tools/practice_kit.py",
+        "verbatim",
+        "",
+        "this tool, so the next project can inherit from yours",
+    ),
+    (
+        "tests/unit/test_practice_kit.py",
+        "verbatim",
+        "",
+        "keeps the manifest, the tree and the setup document in step",
+    ),
     ("tools/README.md", "adapt", "", "keep the rows and sections for the tools you copied"),
-    ("new_project_practices_setup.md", "adapt", "", "the procedure; set the Provenance line, and mark the paths that stay in the source"),
+    (
+        "new_project_practices_setup.md",
+        "adapt",
+        "",
+        "the procedure; set the Provenance line, and mark the paths that stay in the source",
+    ),
 )
 
 TIERS = ("verbatim", "adapt", "skeleton", "deferred")
@@ -199,24 +344,31 @@ def build_base_template(source: pathlib.Path) -> str:
     text = (source / "app/web/templates/base.html").read_text(encoding="utf-8")
     end = text.index("</style>") + len("</style>")
     toggle_markup = _toggle_markup(source, text)
-    start = text.index("var opts = document.querySelectorAll(\".theme-toggle-opt\")")
+    start = text.index('var opts = document.querySelectorAll(".theme-toggle-opt")')
     script_open = text.rindex("<script>", 0, start)
     script_close = text.index("</script>", start) + len("</script>")
     toggle_script = text[script_open:script_close]
-    return text[:end] + """
+    return (
+        text[:end]
+        + """
     {% block extra_head %}{% endblock %}
   </head>
   <body class="ui-v2 {% block body_class %}{% endblock %}">
     <header class="site-header">
-""" + toggle_markup.rstrip("\n") + """
+"""
+        + toggle_markup.rstrip("\n")
+        + """
     </header>
     <main id="main-content">
       {% block content %}{% endblock %}
     </main>
-    """ + toggle_script + """
+    """
+        + toggle_script
+        + """
   </body>
 </html>
 """
+    )
 
 
 def _toggle_markup(source: pathlib.Path, base_text: str) -> str:
@@ -228,8 +380,10 @@ def _toggle_markup(source: pathlib.Path, base_text: str) -> str:
     if partial.is_file():
         return partial.read_text(encoding="utf-8")
     open_at = base_text.index('<div class="theme-toggle"')
-    close_at = base_text.index("</div>", base_text.index("</button>", base_text.index("</button>", open_at) + 1))
-    return base_text[open_at:close_at + len("</div>")] + "\n"
+    close_at = base_text.index(
+        "</div>", base_text.index("</button>", base_text.index("</button>", open_at) + 1)
+    )
+    return base_text[open_at : close_at + len("</div>")] + "\n"
 
 
 #: Deferred entries that are generated from the source rather than copied.
@@ -263,7 +417,9 @@ def export(
     """Copy the kit into ``dest``. Returns one report line per manifest entry."""
     unknown = set(include_deferred) - set(DEFERRED_GROUPS)
     if unknown:
-        raise ValueError(f"unknown deferred group(s) {sorted(unknown)}; known: {sorted(DEFERRED_GROUPS)}")
+        raise ValueError(
+            f"unknown deferred group(s) {sorted(unknown)}; known: {sorted(DEFERRED_GROUPS)}"
+        )
     report: list[str] = []
     for path, tier, needs, _note in MANIFEST:
         target = dest / path
@@ -282,7 +438,9 @@ def export(
             if path == ".gitignore":
                 missing = _gitignore_lines_missing(target)
                 if not missing:
-                    report.append(f"kept     {path} (all {len(GITIGNORE_REQUIRED)} harness lines present)")
+                    report.append(
+                        f"kept     {path} (all {len(GITIGNORE_REQUIRED)} harness lines present)"
+                    )
                     continue
                 target.parent.mkdir(parents=True, exist_ok=True)
                 with target.open("a", encoding="utf-8") as fh:
@@ -310,13 +468,21 @@ def export(
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("--list", action="store_true", help="print the manifest as a markdown table")
     ap.add_argument("--export", metavar="DEST", help="copy the kit into DEST")
-    ap.add_argument("--force", action="store_true", help="overwrite files that already exist in DEST")
     ap.add_argument(
-        "--include-deferred", action="append", choices=sorted(DEFERRED_GROUPS), default=[],
-        metavar="GROUP", help="also export a deferred group: app (imports the application) "
+        "--force", action="store_true", help="overwrite files that already exist in DEST"
+    )
+    ap.add_argument(
+        "--include-deferred",
+        action="append",
+        choices=sorted(DEFERRED_GROUPS),
+        default=[],
+        metavar="GROUP",
+        help="also export a deferred group: app (imports the application) "
         "or theme (reads base.html); repeatable",
     )
     args = ap.parse_args(argv)

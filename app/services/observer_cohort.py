@@ -219,10 +219,7 @@ def assignment_matches_cohort(
         return False
     combinator = str(rule_set.get("combinator", "AND")).upper()
     results = [
-        _rule_matches_row(
-            r, observer=observer, reviewer=reviewer, reviewee=reviewee
-        )
-        for r in rules
+        _rule_matches_row(r, observer=observer, reviewer=reviewer, reviewee=reviewee) for r in rules
     ]
     if combinator == "OR":
         return any(results)

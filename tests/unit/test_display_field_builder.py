@@ -40,9 +40,7 @@ def _seed_pair_context_display_fields(db: Session, instrument: Instrument) -> No
     """Append pair_context_1/2/3 display fields after any existing rows
     (``ensure_default_instrument`` seeds two locked Name + Email rows
     at the top, so pair_context rows here start at order 2)."""
-    base = max(
-        (f.order for f in instrument.display_fields), default=-1
-    ) + 1
+    base = max((f.order for f in instrument.display_fields), default=-1) + 1
     for offset, slot in enumerate(("1", "2", "3")):
         db.add(
             InstrumentDisplayField(
@@ -84,12 +82,16 @@ def test_add_display_field_rejects_unknown_source_pair(db: Session) -> None:
             actor=user,
         )
 
-    rows = db.execute(
-        select(InstrumentDisplayField).where(
-            InstrumentDisplayField.instrument_id == instrument.id,
-            InstrumentDisplayField.source_field == "phone",
+    rows = (
+        db.execute(
+            select(InstrumentDisplayField).where(
+                InstrumentDisplayField.instrument_id == instrument.id,
+                InstrumentDisplayField.source_field == "phone",
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert rows == []
 
 
@@ -108,13 +110,17 @@ def test_add_display_field_rejects_duplicate_pair(db: Session) -> None:
             actor=user,
         )
 
-    pair_one = db.execute(
-        select(InstrumentDisplayField).where(
-            InstrumentDisplayField.instrument_id == instrument.id,
-            InstrumentDisplayField.source_type == "pair_context",
-            InstrumentDisplayField.source_field == "1",
+    pair_one = (
+        db.execute(
+            select(InstrumentDisplayField).where(
+                InstrumentDisplayField.instrument_id == instrument.id,
+                InstrumentDisplayField.source_type == "pair_context",
+                InstrumentDisplayField.source_field == "1",
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(pair_one) == 1
 
 
@@ -135,18 +141,24 @@ def test_add_display_field_appends_packed_order_and_audits(db: Session) -> None:
     assert new_field.order == 5
     assert new_field.label == "Cohort"
 
-    rows = db.execute(
-        select(InstrumentDisplayField)
-        .where(InstrumentDisplayField.instrument_id == instrument.id)
-        .order_by(InstrumentDisplayField.order)
-    ).scalars().all()
+    rows = (
+        db.execute(
+            select(InstrumentDisplayField)
+            .where(InstrumentDisplayField.instrument_id == instrument.id)
+            .order_by(InstrumentDisplayField.order)
+        )
+        .scalars()
+        .all()
+    )
     assert [r.order for r in rows] == [0, 1, 2, 3, 4, 5]
 
-    events = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "instrument.display_field_added"
+    events = (
+        db.execute(
+            select(AuditEvent).where(AuditEvent.event_type == "instrument.display_field_added")
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(events) == 1
     assert events[0].detail is not None
     snapshot = events[0].detail["snapshot"]
@@ -160,32 +172,33 @@ def test_add_display_field_appends_packed_order_and_audits(db: Session) -> None:
 def test_update_display_field_records_only_changed_keys(db: Session) -> None:
     user, instrument = _seed_instrument(db, code="upd-changes")
     field = next(
-        f for f in instrument.display_fields
+        f
+        for f in instrument.display_fields
         if (f.source_type, f.source_field) == ("pair_context", "1")
     )
 
     # Flip both label and visibility
-    _, changes = update_display_field(
-        db, field=field, label="P1", visible=False, actor=user
-    )
+    _, changes = update_display_field(db, field=field, label="P1", visible=False, actor=user)
     assert changes == {
         "label": ["", "P1"],
         "visible": [True, False],
     }
 
     # Second call: no-op edit -> empty changes dict, but still emits one event
-    _, changes2 = update_display_field(
-        db, field=field, label="P1", visible=False, actor=user
-    )
+    _, changes2 = update_display_field(db, field=field, label="P1", visible=False, actor=user)
     assert changes2 == {}
 
     # Ordered by id: Postgres returns unordered rows in any order, and
     # events[1] must be the second write.
-    events = db.execute(
-        select(AuditEvent)
-        .where(AuditEvent.event_type == "instrument.display_field_updated")
-        .order_by(AuditEvent.id)
-    ).scalars().all()
+    events = (
+        db.execute(
+            select(AuditEvent)
+            .where(AuditEvent.event_type == "instrument.display_field_updated")
+            .order_by(AuditEvent.id)
+        )
+        .scalars()
+        .all()
+    )
     assert len(events) == 2
     assert events[1].detail is not None
     assert events[1].detail["changes"] == {}
@@ -194,46 +207,50 @@ def test_update_display_field_records_only_changed_keys(db: Session) -> None:
 def test_update_display_field_strips_label(db: Session) -> None:
     user, instrument = _seed_instrument(db, code="upd-strip")
     field = next(
-        f for f in instrument.display_fields
+        f
+        for f in instrument.display_fields
         if (f.source_type, f.source_field) == ("pair_context", "2")
     )
 
-    update_display_field(
-        db, field=field, label="  Hi  ", visible=True, actor=user
-    )
+    update_display_field(db, field=field, label="  Hi  ", visible=True, actor=user)
     assert field.label == "Hi"
 
 
 def test_delete_display_field_repacks_and_audits(db: Session) -> None:
     user, instrument = _seed_instrument(db, code="del-repack")
     pair_two = next(
-        f for f in instrument.display_fields
+        f
+        for f in instrument.display_fields
         if (f.source_type, f.source_field) == ("pair_context", "2")
     )
 
     delete_display_field(db, field=pair_two, actor=user)
 
-    rows = db.execute(
-        select(InstrumentDisplayField)
-        .where(InstrumentDisplayField.instrument_id == instrument.id)
-        .order_by(InstrumentDisplayField.order)
-    ).scalars().all()
+    rows = (
+        db.execute(
+            select(InstrumentDisplayField)
+            .where(InstrumentDisplayField.instrument_id == instrument.id)
+            .order_by(InstrumentDisplayField.order)
+        )
+        .scalars()
+        .all()
+    )
     # After delete + repack: locked Name/Email at 0/1, pair_context_1
     # and pair_context_3 at 2/3.
-    assert [
-        (r.source_type, r.source_field, r.order) for r in rows
-    ] == [
+    assert [(r.source_type, r.source_field, r.order) for r in rows] == [
         ("reviewee", "name", 0),
         ("reviewee", "email_or_identifier", 1),
         ("pair_context", "1", 2),
         ("pair_context", "3", 3),
     ]
 
-    events = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "instrument.display_field_deleted"
+    events = (
+        db.execute(
+            select(AuditEvent).where(AuditEvent.event_type == "instrument.display_field_deleted")
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(events) == 1
     assert events[0].detail is not None
     snapshot = events[0].detail["snapshot"]
@@ -250,18 +267,16 @@ def test_bulk_save_fields_repacks_per_table_independently(db: Session) -> None:
     #   rating @ 1, comments @ 2 (Segment 10A repack hasn't run yet on
     #   freshly-seeded rows, so they keep their default-spec orders).
 
-    rating = next(
-        f for f in instrument.response_fields if f.field_key == "rating"
-    )
-    comments = next(
-        f for f in instrument.response_fields if f.field_key == "comments"
-    )
+    rating = next(f for f in instrument.response_fields if f.field_key == "rating")
+    comments = next(f for f in instrument.response_fields if f.field_key == "comments")
     pc_one = next(
-        f for f in instrument.display_fields
+        f
+        for f in instrument.display_fields
         if (f.source_type, f.source_field) == ("pair_context", "1")
     )
     pc_two = next(
-        f for f in instrument.display_fields
+        f
+        for f in instrument.display_fields
         if (f.source_type, f.source_field) == ("pair_context", "2")
     )
 
@@ -291,19 +306,19 @@ def test_bulk_save_fields_repacks_per_table_independently(db: Session) -> None:
     # change (rating was at rank 0, comments at rank 1; they end at the
     # same ranks but with different absolute values), so
     # ``response_order_changed`` is False.
-    assert summary == {"display_changed": False, "response_changed": False, "response_order_changed": False}
+    assert summary == {
+        "display_changed": False,
+        "response_changed": False,
+        "response_order_changed": False,
+    }
 
 
 def test_bulk_save_fields_emits_fields_reordered_when_response_order_changes(
     db: Session,
 ) -> None:
     user, instrument = _seed_instrument(db, code="bulk-resp-reorder")
-    rating = next(
-        f for f in instrument.response_fields if f.field_key == "rating"
-    )
-    comments = next(
-        f for f in instrument.response_fields if f.field_key == "comments"
-    )
+    rating = next(f for f in instrument.response_fields if f.field_key == "rating")
+    comments = next(f for f in instrument.response_fields if f.field_key == "comments")
 
     # Swap response order: comments before rating
     rows = [
@@ -314,11 +329,15 @@ def test_bulk_save_fields_emits_fields_reordered_when_response_order_changes(
 
     assert summary["response_order_changed"] is True
 
-    events = db.execute(
-        select(AuditEvent)
-        .where(AuditEvent.event_type == "instrument.fields_reordered")
-        .order_by(AuditEvent.id)
-    ).scalars().all()
+    events = (
+        db.execute(
+            select(AuditEvent)
+            .where(AuditEvent.event_type == "instrument.fields_reordered")
+            .order_by(AuditEvent.id)
+        )
+        .scalars()
+        .all()
+    )
     assert len(events) == 1
     assert events[0].detail is not None
     order_change = events[0].detail["changes"]["order"]
@@ -330,15 +349,18 @@ def test_bulk_save_fields_emits_display_fields_saved_with_diff(
 ) -> None:
     user, instrument = _seed_instrument(db, code="bulk-disp-diff")
     pc_one = next(
-        f for f in instrument.display_fields
+        f
+        for f in instrument.display_fields
         if (f.source_type, f.source_field) == ("pair_context", "1")
     )
     pc_two = next(
-        f for f in instrument.display_fields
+        f
+        for f in instrument.display_fields
         if (f.source_type, f.source_field) == ("pair_context", "2")
     )
     pc_three = next(
-        f for f in instrument.display_fields
+        f
+        for f in instrument.display_fields
         if (f.source_type, f.source_field) == ("pair_context", "3")
     )
 
@@ -355,19 +377,19 @@ def test_bulk_save_fields_emits_display_fields_saved_with_diff(
     assert summary["display_changed"] is True
     assert summary["response_order_changed"] is False
 
-    events = db.execute(
-        select(AuditEvent)
-        .where(AuditEvent.event_type == "instrument.display_fields_saved")
-    ).scalars().all()
+    events = (
+        db.execute(
+            select(AuditEvent).where(AuditEvent.event_type == "instrument.display_fields_saved")
+        )
+        .scalars()
+        .all()
+    )
     assert len(events) == 1
     assert events[0].detail is not None
     set_changes = events[0].detail["set_changes"]
     assert set_changes["added"] == []
     assert set_changes["removed"] == []
-    updated = {
-        (e["source_type"], e["source_field"]): e["changes"]
-        for e in set_changes["updated"]
-    }
+    updated = {(e["source_type"], e["source_field"]): e["changes"] for e in set_changes["updated"]}
     # 15A Slice 2: only the visibility change makes the diff; the
     # ``label`` change on pc_one is silently dropped.
     assert updated == {
@@ -378,12 +400,11 @@ def test_bulk_save_fields_emits_display_fields_saved_with_diff(
 def test_bulk_save_fields_no_op_emits_zero_events(db: Session) -> None:
     user, instrument = _seed_instrument(db, code="bulk-noop")
     pc_one = next(
-        f for f in instrument.display_fields
+        f
+        for f in instrument.display_fields
         if (f.source_type, f.source_field) == ("pair_context", "1")
     )
-    rating = next(
-        f for f in instrument.response_fields if f.field_key == "rating"
-    )
+    rating = next(f for f in instrument.response_fields if f.field_key == "rating")
 
     # Submit current state — no actual changes
     rows = [
@@ -392,19 +413,26 @@ def test_bulk_save_fields_no_op_emits_zero_events(db: Session) -> None:
     ]
     summary = bulk_save_fields(db, instrument=instrument, rows=rows, actor=user)
 
-    assert summary == {"display_changed": False, "response_changed": False, "response_order_changed": False}
+    assert summary == {
+        "display_changed": False,
+        "response_changed": False,
+        "response_order_changed": False,
+    }
 
-    events = db.execute(
-        select(AuditEvent)
-        .where(
-            AuditEvent.event_type.in_(
-                [
-                    "instrument.fields_reordered",
-                    "instrument.display_fields_saved",
-                ]
+    events = (
+        db.execute(
+            select(AuditEvent).where(
+                AuditEvent.event_type.in_(
+                    [
+                        "instrument.fields_reordered",
+                        "instrument.display_fields_saved",
+                    ]
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert events == []
 
 
@@ -416,7 +444,8 @@ def test_bulk_save_keeps_name_shown_on_a_group_instrument(db: Session) -> None:
     instrument.group_kind = GROUP_KIND_SENTINEL
     db.flush()
     name = next(
-        f for f in instrument.display_fields
+        f
+        for f in instrument.display_fields
         if (f.source_type, f.source_field) == ("reviewee", "name")
     )
 
@@ -424,8 +453,7 @@ def test_bulk_save_keeps_name_shown_on_a_group_instrument(db: Session) -> None:
         db,
         instrument=instrument,
         rows=[
-            {"kind": "display", "id": name.id, "order": 0, "label": "",
-             "visible": False},
+            {"kind": "display", "id": name.id, "order": 0, "label": "", "visible": False},
         ],
         actor=user,
     )

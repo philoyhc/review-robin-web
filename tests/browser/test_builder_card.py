@@ -100,8 +100,7 @@ def test_name_and_email_are_fixed_display_fields(
 
 def _chip(card, audience: str, window: str):
     return card.locator(
-        f"[data-new-model-vp-cycle-audience={audience}]"
-        f"[data-new-model-vp-cycle-window={window}]"
+        f"[data-new-model-vp-cycle-audience={audience}][data-new-model-vp-cycle-window={window}]"
     )
 
 
@@ -128,9 +127,9 @@ def test_visibility_is_edited_in_the_card_and_survives_lock_and_reload(
     expect(card.locator("[data-new-model-vp-observers-row]")).to_be_hidden()
 
     card = open_card(page, session_id)
-    expect(
-        card.locator("[data-new-model-vp-preview-cell=reviewee-after_release]")
-    ).to_have_text("Raw responses")
+    expect(card.locator("[data-new-model-vp-preview-cell=reviewee-after_release]")).to_have_text(
+        "Raw responses"
+    )
     card.locator("[data-instrument-unlock-toggle]:visible").first.click()
     expect(_chip(card, "reviewee", "after_release")).to_have_attribute(
         "data-new-model-vp-current-slug", "raw"
@@ -154,8 +153,7 @@ def test_link3_cells_keep_their_markers_through_add_and_remove(
         files={
             "file": (
                 "reviewees.csv",
-                b"RevieweeName,RevieweeEmail,RevieweeTag1\n"
-                b"Carol,carol@example.edu,Blue\n",
+                b"RevieweeName,RevieweeEmail,RevieweeTag1\nCarol,carol@example.edu,Blue\n",
                 "text/csv",
             )
         },

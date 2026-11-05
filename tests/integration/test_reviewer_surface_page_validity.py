@@ -11,6 +11,7 @@ out-of-range case (including the unreachable-in-practice empty-
 pages case). These integration tests pin that all three routes
 agree on every reachable in-range / out-of-range combination.
 """
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -123,9 +124,7 @@ def test_get_out_of_range_page_returns_404(
         client, db, code=f"pg-get-{bad_page_n}", reviewer_email=rae.email
     )
     rae_client = make_client(rae)
-    resp = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/{bad_page_n}"
-    )
+    resp = rae_client.get(f"/me/sessions/{review_session.public_id}/{bad_page_n}")
     assert resp.status_code == 404
 
 

@@ -103,9 +103,7 @@ def test_the_marking_clears_before_it_applies() -> None:
     wrong.
     """
     body = _lobby()
-    match = re.search(
-        r"function markSelectedRows\(selected\) \{(.*?)\n        \}", body, re.S
-    )
+    match = re.search(r"function markSelectedRows\(selected\) \{(.*?)\n        \}", body, re.S)
     assert match, "markSelectedRows() not found"
     fn = match.group(1)
     clear_at = fn.find(f'classList.remove("{MARK}")')
@@ -145,8 +143,7 @@ def test_the_selected_row_has_a_rail_at_each_end() -> None:
         f"{right.group(1)}px); they read as one bracket only if they match"
     )
     assert int(left.group(1)) >= MIN_RAIL_PX, (
-        "a 1px rail on a full-width row reads as a table rule, not as a "
-        "selected state"
+        "a 1px rail on a full-width row reads as a table rule, not as a selected state"
     )
 
 
@@ -235,8 +232,7 @@ def test_the_panel_closes_the_bracket_and_opts_in_by_class() -> None:
 
     lobby = _lobby()
     assert lobby.count(BRACKET) == 2, (
-        f"expected both lobby expander templates to carry .{BRACKET}; "
-        f"found {lobby.count(BRACKET)}"
+        f"expected both lobby expander templates to carry .{BRACKET}; found {lobby.count(BRACKET)}"
     )
     assert ARCHIVED.read_text().count(BRACKET) == 1, (
         "the archived sessions page's single bulk expander should carry "
@@ -301,9 +297,7 @@ def test_the_field_label_resets_the_global_label_margin() -> None:
     carried the reset, with a comment naming this hazard.
     """
     css = _base()
-    block = re.search(
-        r"\.session-expander-fields label \{(.*?)\}", css, re.S
-    )
+    block = re.search(r"\.session-expander-fields label \{(.*?)\}", css, re.S)
     assert block, ".session-expander-fields label has no rule"
     assert re.search(r"margin:\s*0\s*;", block.group(1)), (
         "the expander's field label no longer resets the global "
@@ -323,9 +317,7 @@ def test_the_spec_and_the_stylesheet_agree_on_the_rail_width() -> None:
     cannot pin a number.
     """
     css = _base()
-    shipped = re.search(
-        rf"tr\.{MARK} > td:first-child \{{\s*box-shadow: inset (\d+)px", css
-    )
+    shipped = re.search(rf"tr\.{MARK} > td:first-child \{{\s*box-shadow: inset (\d+)px", css)
     assert shipped, "cannot read the shipped rail width"
     width = shipped.group(1)
 
@@ -341,8 +333,7 @@ def test_the_spec_and_the_stylesheet_agree_on_the_rail_width() -> None:
         "rail width, so the two cannot be checked against each other"
     )
     assert set(quoted) == {width}, (
-        f"the stylesheet ships a {width}px rail; spec/ui_elements.md "
-        f"states {sorted(set(quoted))}px"
+        f"the stylesheet ships a {width}px rail; spec/ui_elements.md states {sorted(set(quoted))}px"
     )
 
 
@@ -359,9 +350,7 @@ def test_the_archived_page_follows_the_same_convention() -> None:
     written against the opt-in class.
     """
     body = _archived()
-    match = re.search(
-        r"function refreshExpander\(\) \{(.*?)\n        \}", body, re.S
-    )
+    match = re.search(r"function refreshExpander\(\) \{(.*?)\n        \}", body, re.S)
     assert match, "refreshExpander() not found — the archived script moved"
     assert "markSelectedRows(" in match.group(1), (
         "the archived page's refreshExpander no longer marks its selected "
@@ -382,9 +371,7 @@ def test_the_archived_marking_clears_before_it_applies() -> None:
     item accepted when it chose duplication over a shared module.
     """
     body = _archived()
-    match = re.search(
-        r"function markSelectedRows\(selected\) \{(.*?)\n        \}", body, re.S
-    )
+    match = re.search(r"function markSelectedRows\(selected\) \{(.*?)\n        \}", body, re.S)
     assert match, "markSelectedRows() not found on the archived page"
     fn = match.group(1)
     clear_at = fn.find(f'classList.remove("{MARK}")')
@@ -407,9 +394,7 @@ def test_the_archived_marking_runs_before_the_empty_early_return() -> None:
     pins the copy.
     """
     body = _archived()
-    match = re.search(
-        r"function refreshExpander\(\) \{(.*?)\n        \}", body, re.S
-    )
+    match = re.search(r"function refreshExpander\(\) \{(.*?)\n        \}", body, re.S)
     assert match, "refreshExpander() not found — the archived script moved"
     fn = match.group(1)
     mark_at = fn.find("markSelectedRows(selected)")
@@ -435,15 +420,13 @@ def test_the_archived_panel_hosts_no_pill() -> None:
     should not host any pills."*
     """
     for name, body in (("archived", _archived()), ("lobby", _lobby())):
-        for match in re.finditer(
-            r"<template[^>]*>(.*?)</template>", body, re.S
-        ):
+        for match in re.finditer(r"<template[^>]*>(.*?)</template>", body, re.S):
             block = match.group(1)
             if BRACKET not in block:
                 continue
             assert "pill" not in block, (
                 f"a bracketed expander template on the {name} page renders "
-                "a pill. Its background is --status-info-bg\'s primitive, "
+                "a pill. Its background is --status-info-bg's primitive, "
                 "so the pill has no visible boundary — the collision 19L.2 "
                 "moved that token off the row to escape"
             )

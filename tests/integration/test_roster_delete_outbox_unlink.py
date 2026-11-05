@@ -11,6 +11,7 @@ Each test below therefore puts a **sent** invitation in the fixture.
 That is the one thing no existing test did, which is the whole
 explanation for a green suite over a live 500.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -31,18 +32,14 @@ E_CSV = b"RevieweeName,RevieweeEmail\nE1,e1@example.com\nE2,e2@example.com\n"
 E2_CSV = b"RevieweeName,RevieweeEmail\nE3,e3@example.com\nE4,e4@example.com\n"
 
 
-def _session_with_sent_invitations(
-    client: TestClient, db: Session, code: str
-) -> ReviewSession:
+def _session_with_sent_invitations(client: TestClient, db: Session, code: str) -> ReviewSession:
     """Roster + generated assignments + a *sent* invitation per reviewer."""
     client.post(
         "/operator/sessions",
         data={"name": code.title(), "code": code},
         follow_redirects=False,
     )
-    rs = db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    rs = db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
     client.post(
         f"/operator/sessions/{rs.public_id}/reviewers/import",
         files={"file": ("r.csv", R_CSV, "text/csv")},
@@ -57,13 +54,9 @@ def _session_with_sent_invitations(
     generate_via_page_button(client, rs.id)
 
     for i, reviewer in enumerate(
-        db.execute(select(Reviewer).where(Reviewer.session_id == rs.id))
-        .scalars()
-        .all()
+        db.execute(select(Reviewer).where(Reviewer.session_id == rs.id)).scalars().all()
     ):
-        invitation = Invitation(
-            session_id=rs.id, reviewer_id=reviewer.id, token_hash=f"{code}-{i}"
-        )
+        invitation = Invitation(session_id=rs.id, reviewer_id=reviewer.id, token_hash=f"{code}-{i}")
         db.add(invitation)
         db.flush()
         db.add(
@@ -84,9 +77,7 @@ def _session_with_sent_invitations(
 
 def _outbox(db: Session, session_id: int) -> list[EmailOutbox]:
     return list(
-        db.execute(
-            select(EmailOutbox).where(EmailOutbox.session_id == session_id)
-        ).scalars()
+        db.execute(select(EmailOutbox).where(EmailOutbox.session_id == session_id)).scalars()
     )
 
 
@@ -114,9 +105,7 @@ def _outbox(db: Session, session_id: int) -> list[EmailOutbox]:
     ],
     ids=["import-replace", "quick-setup", "delete-all"],
 )
-def test_reviewer_delete_path_survives_a_sent_invitation(
-    client, db, code, path, files, data
-):
+def test_reviewer_delete_path_survives_a_sent_invitation(client, db, code, path, files, data):
     rs = _session_with_sent_invitations(client, db, code)
     assert _outbox(db, rs.id), "precondition: outbox rows exist"
 
@@ -145,9 +134,7 @@ def test_bulk_delete_survives_a_sent_invitation(client, db):
     rs = _session_with_sent_invitations(client, db, "unlnk4")
     reviewer_ids = [
         r.id
-        for r in db.execute(select(Reviewer).where(Reviewer.session_id == rs.id))
-        .scalars()
-        .all()
+        for r in db.execute(select(Reviewer).where(Reviewer.session_id == rs.id)).scalars().all()
     ]
 
     response = client.post(
@@ -162,9 +149,7 @@ def test_bulk_delete_survives_a_sent_invitation(client, db):
 
     assert response.status_code == 303, response.status_code
     db.expire_all()
-    assert not db.execute(
-        select(Reviewer).where(Reviewer.session_id == rs.id)
-    ).scalars().all()
+    assert not db.execute(select(Reviewer).where(Reviewer.session_id == rs.id)).scalars().all()
     rows = _outbox(db, rs.id)
     assert len(rows) == 2
     assert all(r.reviewer_id is None and r.invitation_id is None for r in rows)
@@ -186,6 +171,4 @@ def test_reviewee_import_leaves_the_outbox_linked(client, db):
 
     assert response.status_code == 303
     db.expire_all()
-    assert {
-        (r.id, r.reviewer_id, r.invitation_id) for r in _outbox(db, rs.id)
-    } == before
+    assert {(r.id, r.reviewer_id, r.invitation_id) for r in _outbox(db, rs.id)} == before

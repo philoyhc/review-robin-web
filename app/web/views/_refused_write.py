@@ -35,7 +35,6 @@ REFUSED_NO_ASSIGNMENTS = "no_assignments"
 REFUSED_PAGE_CHANGED = "page_changed"
 
 
-
 def write_refused_notice(
     review_session: ReviewSession,
     cause: str,
@@ -65,17 +64,17 @@ def write_refused_notice(
     # (``closed_at_deadline``, from the caller).
     # Named only for a real End: a review that a release ended (no End)
     # reads as closed.
-    if review_session.deadline is not None and lifecycle.deadline_has_passed(
-        review_session
-    ) and (
-        lifecycle.is_ready(review_session)
-        or (lifecycle.is_expired(review_session) and closed_at_deadline)
+    if (
+        review_session.deadline is not None
+        and lifecycle.deadline_has_passed(review_session)
+        and (
+            lifecycle.is_ready(review_session)
+            or (lifecycle.is_expired(review_session) and closed_at_deadline)
+        )
     ):
         zone = sessions_service.resolve_session_timezone(review_session)
         when = date_formatting.format_datetime(review_session.deadline, zone)
-        label = date_formatting.gmt_offset_zone_label(
-            zone, at=review_session.deadline
-        )
+        label = date_formatting.gmt_offset_zone_label(zone, at=review_session.deadline)
         return f"This review closed at its deadline, {when} ({label}), so {outcome}."
     return f"This review has closed, so {outcome}."
 
@@ -171,9 +170,7 @@ def unsaved_answers(
             continue
         out.append(
             {
-                "instrument_label": instruments_service._instrument_label(
-                    assignment.instrument
-                ),
+                "instrument_label": instruments_service._instrument_label(assignment.instrument),
                 "reviewee_name": assignment.reviewee.name,
                 "field_label": field.label,
                 "value": upsert.value,

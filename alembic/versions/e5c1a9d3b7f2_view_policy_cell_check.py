@@ -25,6 +25,7 @@ Revises: c4a8e2f6d1b3
 Create Date: 2026-10-15
 
 """
+
 import logging
 from collections.abc import Sequence
 
@@ -62,9 +63,7 @@ def _window_sql(window: str, modes) -> str:
     terms = []
     for mode in modes:
         if mode is None:
-            terms.append(
-                f"({window}_granularity IS NULL AND {window}_identification IS NULL)"
-            )
+            terms.append(f"({window}_granularity IS NULL AND {window}_identification IS NULL)")
         else:
             granularity, identification = _PAIRS[mode]
             # COALESCE: a CHECK passes on NULL, so `=` against a NULL
@@ -125,10 +124,8 @@ def _normalize(bind) -> list[int]:
         params = {"id": row.id}
         changed = False
         for window, g, i in (
-            ("while_ongoing", row.while_ongoing_granularity,
-             row.while_ongoing_identification),
-            ("after_release", row.after_release_granularity,
-             row.after_release_identification),
+            ("while_ongoing", row.while_ongoing_granularity, row.while_ongoing_identification),
+            ("after_release", row.after_release_granularity, row.after_release_identification),
         ):
             target = _normalized(row.audience, window, _mode(g, i))
             pair = _PAIRS[target] if target is not None else (None, None)

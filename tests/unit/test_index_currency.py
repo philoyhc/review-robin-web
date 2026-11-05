@@ -158,11 +158,7 @@ def queued_archived_plans(upcoming_text: str) -> list[str]:
     check cannot see: a pointer correctly repointed at the archive while
     the entry stays queued as upcoming work.
     """
-    return [
-        path
-        for path in plan_pointers(upcoming_text)
-        if path.startswith("guide/archive/")
-    ]
+    return [path for path in plan_pointers(upcoming_text) if path.startswith("guide/archive/")]
 
 
 # --- the live tree -------------------------------------------------
@@ -287,8 +283,7 @@ def test_no_upcoming_entry_points_at_an_archived_plan() -> None:
     """G4 on the tree."""
     queued = queued_archived_plans(_todo_text())
     assert not queued, (
-        "`## Upcoming` entries whose `**Plan:**` is already archived:\n  "
-        + "\n  ".join(queued)
+        "`## Upcoming` entries whose `**Plan:**` is already archived:\n  " + "\n  ".join(queued)
     )
 
 
@@ -425,16 +420,10 @@ def test_g5_sees_the_sections_it_claims_to_cover() -> None:
     assert len(every) >= 98, f"only {len(every)} `Blast radius` sections seen"
 
     item_level = sum(
-        1
-        for _, text in texts
-        for line in text.split("\n")
-        if line.startswith("### Blast radius")
+        1 for _, text in texts for line in text.split("\n") if line.startswith("### Blast radius")
     )
     segment_level = sum(
-        1
-        for _, text in texts
-        for line in text.split("\n")
-        if line.startswith("## Blast radius")
+        1 for _, text in texts for line in text.split("\n") if line.startswith("## Blast radius")
     )
     assert item_level >= 95, f"only {item_level} item-level sections seen"
     assert segment_level >= 3, (
@@ -457,9 +446,7 @@ def test_g5_excludes_the_legacy_corpus_and_that_exclusion_is_load_bearing() -> N
         for index, body in blast_radius_sections(text)
         if not section_is_anchored(body)
     ]
-    assert legacy_unanchored, (
-        "no legacy section lacks an anchor, so the cutoff is decorative"
-    )
+    assert legacy_unanchored, "no legacy section lacks an anchor, so the cutoff is decorative"
     # …and none of them reaches G5.
     assert unanchored_sections() == []
 
@@ -502,9 +489,7 @@ def test_a_bare_prose_date_is_not_an_anchor() -> None:
     section written is where it would appear.
     """
     assert not section_is_anchored(["✅ Shipped 2026-05-04."])
-    assert not section_is_anchored(
-        ["Promoted from Item 1 on the author's ruling, 2026-09-22."]
-    )
+    assert not section_is_anchored(["Promoted from Item 1 on the author's ruling, 2026-09-22."])
     assert not section_is_anchored(["(round 3, 2026-05-01)"])
     # …and the same date with the verb is an anchor.
     assert section_is_anchored(["Taken 2026-05-01."])

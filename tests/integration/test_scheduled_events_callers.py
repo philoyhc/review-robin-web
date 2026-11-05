@@ -9,6 +9,7 @@ per request. The observable effect used here is the cheapest one: a
 ``draft`` session whose Start has passed is skipped and its schedule
 cleared (``session.scheduled_activation_skipped``, §8.2.3).
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -33,16 +34,12 @@ def _make_session(client: TestClient, db: Session, code: str) -> ReviewSession:
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _past_due_start(db: Session, review_session: ReviewSession) -> None:
     # Stored directly: the save-time lead-time floor refuses a past Start.
-    review_session.scheduled_activate_at = datetime.now(UTC) - timedelta(
-        hours=1
-    )
+    review_session.scheduled_activate_at = datetime.now(UTC) - timedelta(hours=1)
     db.commit()
 
 
@@ -85,9 +82,7 @@ def test_operator_get_fires_the_past_due_schedule(
     assert review_session.scheduled_activate_at is None
 
 
-def test_lobby_runs_the_pass_for_every_listed_session(
-    client: TestClient, db: Session
-) -> None:
+def test_lobby_runs_the_pass_for_every_listed_session(client: TestClient, db: Session) -> None:
     first = _make_session(client, db, "l4-lobby-a")
     second = _make_session(client, db, "l4-lobby-b")
     _past_due_start(db, first)

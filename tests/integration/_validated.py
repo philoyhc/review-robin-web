@@ -7,6 +7,7 @@ is clean and the session is still a draft, call
 ``session_lifecycle.mark_validated`` as the session's creator. Otherwise
 it is a no-op, as the path was.
 """
+
 from __future__ import annotations
 
 from sqlalchemy.orm import Session, object_session
@@ -16,9 +17,7 @@ from app.services import session_lifecycle as lifecycle
 from app.services import validation
 
 
-def validate_session(
-    target: ReviewSession | Session, session_id: int | None = None
-) -> None:
+def validate_session(target: ReviewSession | Session, session_id: int | None = None) -> None:
     """``validate_session(review_session)`` or ``validate_session(db, id)``."""
     if isinstance(target, ReviewSession):
         db = object_session(target)
@@ -31,9 +30,7 @@ def validate_session(
     db.refresh(review_session)
     if not lifecycle.is_draft(review_session):
         return
-    report = lifecycle.build_readiness_report(
-        validation.validate_session_setup(db, review_session)
-    )
+    report = lifecycle.build_readiness_report(validation.validate_session_setup(db, review_session))
     if not report.can_activate:
         return
     lifecycle.mark_validated(

@@ -21,6 +21,7 @@ Layout:
   schema + diff / materialise / reconcile pipeline +
   ``bulk_set_assignment_include``.
 """
+
 from __future__ import annotations
 
 # Public + private re-exports. The redundant ``as`` aliases on the

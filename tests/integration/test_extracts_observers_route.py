@@ -21,10 +21,7 @@ from sqlalchemy.orm import Session
 from app.db.models import AuditEvent, ReviewSession
 from app.web import views
 
-OBSERVER_CSV = (
-    b"ObserverName,ObserverEmail,ObserverTag1\n"
-    b"Oren,oren@example.edu,Mentor\n"
-)
+OBSERVER_CSV = b"ObserverName,ObserverEmail,ObserverTag1\nOren,oren@example.edu,Mentor\n"
 
 
 def _make_session(
@@ -48,9 +45,7 @@ def _make_session(
     return review_session
 
 
-def _seed_observers(
-    client: TestClient, review_session: ReviewSession
-) -> None:
+def _seed_observers(client: TestClient, review_session: ReviewSession) -> None:
     client.post(
         f"/operator/sessions/{review_session.public_id}/quick-setup/observers",
         files={"file": ("obs.csv", OBSERVER_CSV, "text/csv")},
@@ -69,9 +64,7 @@ def test_extract_setup_card_renders_observers_row_only_when_toggle_on(
     """The Observers row sits between Relationships and Session
     settings in the right column when ``observers_enabled``;
     drops out when off."""
-    rs_off = _make_session(
-        client, db, code="ext-obs-off", observers_enabled=False
-    )
+    rs_off = _make_session(client, db, code="ext-obs-off", observers_enabled=False)
     context_off = views.build_extract_data_context(db, rs_off)
     assert [r.key for r in context_off.col_two] == [
         "relationships",
@@ -92,9 +85,7 @@ def test_extract_setup_card_renders_observers_row_only_when_toggle_on(
     assert by_key["observers"].is_wired is False
 
 
-def test_observers_row_lights_up_after_population(
-    client: TestClient, db: Session
-) -> None:
+def test_observers_row_lights_up_after_population(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="ext-obs-live")
     _seed_observers(client, review_session)
 
@@ -107,21 +98,13 @@ def test_observers_row_lights_up_after_population(
     )
 
 
-def test_zip_all_count_summary_reflects_observers_toggle(
-    client: TestClient, db: Session
-) -> None:
+def test_zip_all_count_summary_reflects_observers_toggle(client: TestClient, db: Session) -> None:
     """The Zip-all row's count-summary copy includes 5 setup CSVs
     when observers_enabled, 4 when off."""
-    rs_off = _make_session(
-        client, db, code="ext-obs-zip-off", observers_enabled=False
-    )
+    rs_off = _make_session(client, db, code="ext-obs-zip-off", observers_enabled=False)
     rs_on = _make_session(client, db, code="ext-obs-zip-on")
-    assert "4 setup CSVs" in (
-        views.build_extract_data_context(db, rs_off).bundle.count_summary
-    )
-    assert "5 setup CSVs" in (
-        views.build_extract_data_context(db, rs_on).bundle.count_summary
-    )
+    assert "4 setup CSVs" in (views.build_extract_data_context(db, rs_off).bundle.count_summary)
+    assert "5 setup CSVs" in (views.build_extract_data_context(db, rs_on).bundle.count_summary)
 
 
 # ---------------------------------------------------------------------------
@@ -129,20 +112,15 @@ def test_zip_all_count_summary_reflects_observers_toggle(
 # ---------------------------------------------------------------------------
 
 
-def test_export_observers_csv_round_trips_uploaded_row(
-    client: TestClient, db: Session
-) -> None:
+def test_export_observers_csv_round_trips_uploaded_row(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="ext-obs-csv")
     _seed_observers(client, review_session)
 
-    response = client.get(
-        f"/operator/sessions/{review_session.public_id}/export/observers.csv"
-    )
+    response = client.get(f"/operator/sessions/{review_session.public_id}/export/observers.csv")
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/csv")
     assert (
-        f'filename="{review_session.code}_observers.csv"'
-        in response.headers["content-disposition"]
+        f'filename="{review_session.code}_observers.csv"' in response.headers["content-disposition"]
     )
 
     rows = list(csv.reader(io.StringIO(response.text)))
@@ -159,11 +137,11 @@ def test_export_observers_csv_round_trips_uploaded_row(
     assert rows[1][3] == "active"
 
     # Audit event emitted.
-    ext_events = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "session.observers_extracted"
-        )
-    ).scalars().all()
+    ext_events = (
+        db.execute(select(AuditEvent).where(AuditEvent.event_type == "session.observers_extracted"))
+        .scalars()
+        .all()
+    )
     assert len(ext_events) == 1
 
 
@@ -172,34 +150,20 @@ def test_export_observers_csv_round_trips_uploaded_row(
 # ---------------------------------------------------------------------------
 
 
-def test_setup_bundle_includes_observers_when_toggle_on(
-    client: TestClient, db: Session
-) -> None:
+def test_setup_bundle_includes_observers_when_toggle_on(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="ext-obs-bundle")
     _seed_observers(client, review_session)
 
-    response = client.get(
-        f"/operator/sessions/{review_session.public_id}/export/bundle.zip"
-    )
+    response = client.get(f"/operator/sessions/{review_session.public_id}/export/bundle.zip")
     assert response.status_code == 200
     archive = zipfile.ZipFile(io.BytesIO(response.content))
-    assert (
-        f"{review_session.code}_observers.csv" in archive.namelist()
-    )
+    assert f"{review_session.code}_observers.csv" in archive.namelist()
 
 
-def test_setup_bundle_omits_observers_when_toggle_off(
-    client: TestClient, db: Session
-) -> None:
-    review_session = _make_session(
-        client, db, code="ext-obs-bundle-off", observers_enabled=False
-    )
+def test_setup_bundle_omits_observers_when_toggle_off(client: TestClient, db: Session) -> None:
+    review_session = _make_session(client, db, code="ext-obs-bundle-off", observers_enabled=False)
 
-    response = client.get(
-        f"/operator/sessions/{review_session.public_id}/export/bundle.zip"
-    )
+    response = client.get(f"/operator/sessions/{review_session.public_id}/export/bundle.zip")
     assert response.status_code == 200
     archive = zipfile.ZipFile(io.BytesIO(response.content))
-    assert all(
-        "observers" not in name for name in archive.namelist()
-    )
+    assert all("observers" not in name for name in archive.namelist())

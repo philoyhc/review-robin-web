@@ -36,6 +36,7 @@ non-zero rather than pretending to have checked.
 Which selectors and properties it samples is deliberately a constant
 below, not a flag: the point is that both sides sample identically.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -72,10 +73,25 @@ VIEWPORTS = (1280, 700)
 #: Every property the sampled rules declare, plus the geometry that
 #: would move if one of them stopped applying.
 PROPERTIES = [
-    "display", "flexDirection", "gap", "rowGap", "columnGap",
-    "alignItems", "justifyContent", "flexWrap", "marginTop",
-    "marginRight", "marginBottom", "marginLeft", "flexGrow",
-    "flexShrink", "flexBasis", "width", "boxSizing", "fontSize", "color",
+    "display",
+    "flexDirection",
+    "gap",
+    "rowGap",
+    "columnGap",
+    "alignItems",
+    "justifyContent",
+    "flexWrap",
+    "marginTop",
+    "marginRight",
+    "marginBottom",
+    "marginLeft",
+    "flexGrow",
+    "flexShrink",
+    "flexBasis",
+    "width",
+    "boxSizing",
+    "fontSize",
+    "color",
 ]
 
 _EXTRACT_JS = """
@@ -124,9 +140,11 @@ def _render_pages(into: Path) -> list[str]:
     """
     env = dict(os.environ, RRW_PARITY_DUMP=str(into))
     proc = subprocess.run(
-        [sys.executable, "-m", "pytest", "-q",
-         "tests/integration/test_css_parity_dump.py"],
-        cwd=REPO, env=env, capture_output=True, text=True,
+        [sys.executable, "-m", "pytest", "-q", "tests/integration/test_css_parity_dump.py"],
+        cwd=REPO,
+        env=env,
+        capture_output=True,
+        text=True,
     )
     if proc.returncode != 0:
         print(proc.stdout[-3000:], file=sys.stderr)
@@ -138,16 +156,17 @@ def _render_pages(into: Path) -> list[str]:
 
 def record(out: Path) -> int:
     if shutil.which("node") is None:
-        print("node not found; this tool needs node + playwright.",
-              file=sys.stderr)
+        print("node not found; this tool needs node + playwright.", file=sys.stderr)
         return 2
     node_root = Path(os.environ.get("RRW_NODE_ROOT", REPO)).resolve()
     if not (node_root / "node_modules" / "playwright").is_dir():
-        print(f"no node_modules/playwright under {node_root}.\n"
-              "Set RRW_NODE_ROOT to a directory that has it "
-              "(`npm i playwright` there). ESM resolves from the "
-              "importing file's directory, so it cannot be elsewhere.",
-              file=sys.stderr)
+        print(
+            f"no node_modules/playwright under {node_root}.\n"
+            "Set RRW_NODE_ROOT to a directory that has it "
+            "(`npm i playwright` there). ESM resolves from the "
+            "importing file's directory, so it cannot be elsewhere.",
+            file=sys.stderr,
+        )
         return 2
     out.mkdir(parents=True, exist_ok=True)
     script = node_root / ".rrw_css_parity_extract.mjs"
@@ -158,10 +177,19 @@ def record(out: Path) -> int:
         env.setdefault("RRW_CHROMIUM", "/opt/pw-browsers/chromium")
         try:
             proc = subprocess.run(
-                ["node", str(script), tmp, str(out / "styles.json"),
-                 json.dumps(SELECTORS), json.dumps(PROPERTIES),
-                 json.dumps(list(VIEWPORTS))],
-                cwd=node_root, env=env, capture_output=True, text=True,
+                [
+                    "node",
+                    str(script),
+                    tmp,
+                    str(out / "styles.json"),
+                    json.dumps(SELECTORS),
+                    json.dumps(PROPERTIES),
+                    json.dumps(list(VIEWPORTS)),
+                ],
+                cwd=node_root,
+                env=env,
+                capture_output=True,
+                text=True,
             )
         finally:
             script.unlink(missing_ok=True)
@@ -179,8 +207,11 @@ def record(out: Path) -> int:
         print("no pages rendered; nothing was sampled", file=sys.stderr)
         return 2
     if n == 0:
-        print("every page sampled zero elements; the selectors match "
-              "nothing, so a diff would be meaningless", file=sys.stderr)
+        print(
+            "every page sampled zero elements; the selectors match "
+            "nothing, so a diff would be meaningless",
+            file=sys.stderr,
+        )
         return 2
 
     # F5: HTTP 200 does not mean the shape was on the page. Assignments
@@ -192,18 +223,25 @@ def record(out: Path) -> int:
     for page, count in per_page.items():
         print(f"  {page:24s} {count:3d}")
     if empty:
-        print(f"  ! {len(empty)} page(s) sampled NOTHING and are not "
-              f"covered by any comparison: {', '.join(empty)}",
-              file=sys.stderr)
+        print(
+            f"  ! {len(empty)} page(s) sampled NOTHING and are not "
+            f"covered by any comparison: {', '.join(empty)}",
+            file=sys.stderr,
+        )
 
     # The snapshot records what it sampled, so `diff` can refuse to
     # compare two runs that asked different questions.
-    (out / "manifest.json").write_text(json.dumps(
-        {"selectors": SELECTORS, "properties": PROPERTIES,
-         "viewports": list(VIEWPORTS)}, indent=1))
-    print(f"recorded {n} elements over {len(VIEWPORTS)} viewport(s) "
-          f"across {len(per_page) - len(empty)} covered sample(s) of "
-          f"{len(per_page)} ({n_pages} pages) -> {out}")
+    (out / "manifest.json").write_text(
+        json.dumps(
+            {"selectors": SELECTORS, "properties": PROPERTIES, "viewports": list(VIEWPORTS)},
+            indent=1,
+        )
+    )
+    print(
+        f"recorded {n} elements over {len(VIEWPORTS)} viewport(s) "
+        f"across {len(per_page) - len(empty)} covered sample(s) of "
+        f"{len(per_page)} ({n_pages} pages) -> {out}"
+    )
     return 0
 
 
@@ -220,9 +258,12 @@ def diff(before: Path, after: Path) -> int:
         path = side / "manifest.json"
         manifests.append(json.loads(path.read_text()) if path.exists() else None)
     if manifests[0] != manifests[1]:
-        print("the two snapshots sampled different selectors or "
-              "properties, so they are not comparable; re-record BOTH "
-              "sides", file=sys.stderr)
+        print(
+            "the two snapshots sampled different selectors or "
+            "properties, so they are not comparable; re-record BOTH "
+            "sides",
+            file=sys.stderr,
+        )
         return 2
 
     if a.keys() != b.keys():
@@ -231,8 +272,7 @@ def diff(before: Path, after: Path) -> int:
     total = diffs = 0
     for page in a:
         if len(a[page]) != len(b[page]):
-            print(f"{page}: element count changed "
-                  f"{len(a[page])} -> {len(b[page])}")
+            print(f"{page}: element count changed {len(a[page])} -> {len(b[page])}")
             diffs += 1
             continue
         for r1, r2 in zip(a[page], b[page]):
@@ -240,25 +280,30 @@ def diff(before: Path, after: Path) -> int:
             for k in r1:
                 if r1[k] != r2[k]:
                     diffs += 1
-                    print(f"DIFF {page} {r1['sel']}[{r1['i']}] "
-                          f"cls={r1['cls']!r} {k}: {r1[k]!r} -> {r2[k]!r}")
+                    print(
+                        f"DIFF {page} {r1['sel']}[{r1['i']}] "
+                        f"cls={r1['cls']!r} {k}: {r1[k]!r} -> {r2[k]!r}"
+                    )
     # F3 again, on the reading side.
     if total == 0:
-        print("compared 0 elements; the snapshots are empty, so this is "
-              "not evidence of anything", file=sys.stderr)
+        print(
+            "compared 0 elements; the snapshots are empty, so this is not evidence of anything",
+            file=sys.stderr,
+        )
         return 2
     n_pages = len({k.rsplit("@", 1)[0] for k in a})
     views = len({k.rsplit("@", 1)[1] for k in a if "@" in k}) or 1
-    print(f"\n{total} elements x {len(PROPERTIES)} properties across "
-          f"{n_pages} pages x {views} viewport(s) -> {diffs} difference(s)")
+    print(
+        f"\n{total} elements x {len(PROPERTIES)} properties across "
+        f"{n_pages} pages x {views} viewport(s) -> {diffs} difference(s)"
+    )
     return 1 if diffs else 0
 
 
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--out", type=Path, help="record a snapshot here")
-    p.add_argument("--diff", nargs=2, type=Path,
-                   metavar=("BEFORE", "AFTER"))
+    p.add_argument("--diff", nargs=2, type=Path, metavar=("BEFORE", "AFTER"))
     args = p.parse_args()
     if args.diff:
         return diff(*args.diff)

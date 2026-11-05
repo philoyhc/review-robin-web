@@ -14,6 +14,7 @@ complete, as ``_assignment_complete`` defines it (every required field
 answered and submitted, or any response row when none is required). Thresholds live in ``AT_RISK_THRESHOLDS``,
 a module constant; no setting overrides it.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -93,12 +94,8 @@ def _assigned_active_reviewers(db: Session, session_id: int) -> list[Reviewer]:
     return list(rows)
 
 
-def _invitations_by_reviewer(
-    db: Session, session_id: int
-) -> dict[int, Invitation]:
-    rows = db.execute(
-        select(Invitation).where(Invitation.session_id == session_id)
-    ).scalars()
+def _invitations_by_reviewer(db: Session, session_id: int) -> dict[int, Invitation]:
+    rows = db.execute(select(Invitation).where(Invitation.session_id == session_id)).scalars()
     return {inv.reviewer_id: inv for inv in rows}
 
 
@@ -125,8 +122,7 @@ def _required_governed_instrument_ids():
             # 19T Item 13 — a require-mode parent makes its governed fields
             # required while its condition holds, whatever their stored
             # ``required`` (Codex on #2671).
-            InstrumentResponseField.branch_mode
-            == responses_service.BRANCH_MODE_REQUIRE,
+            InstrumentResponseField.branch_mode == responses_service.BRANCH_MODE_REQUIRE,
         )
     )
 
@@ -198,15 +194,11 @@ def _plain_instrument_parts(
         select(
             Assignment.reviewer_id.label("reviewer_id"),
             func.count(Response.id).label("row_count"),
-            func.coalesce(
-                required_per_instrument.c.required_total, 0
-            ).label("required_total"),
-            func.count(distinct(present_required_field)).label(
-                "present_required"
+            func.coalesce(required_per_instrument.c.required_total, 0).label("required_total"),
+            func.count(distinct(present_required_field)).label("present_required"),
+            func.count(case((Response.submitted_at.is_(None), Response.id), else_=None)).label(
+                "unsubmitted_rows"
             ),
-            func.count(
-                case((Response.submitted_at.is_(None), Response.id), else_=None)
-            ).label("unsubmitted_rows"),
         )
         .select_from(Assignment)
         .join(Instrument, Instrument.id == Assignment.instrument_id)
@@ -217,8 +209,7 @@ def _plain_instrument_parts(
         )
         .outerjoin(
             required_per_instrument,
-            required_per_instrument.c.instrument_id
-            == Assignment.instrument_id,
+            required_per_instrument.c.instrument_id == Assignment.instrument_id,
         )
         .where(
             Assignment.session_id == session_id,
@@ -260,11 +251,8 @@ def _plain_instrument_parts(
             # Anything unmet or unsubmitted anywhere keeps the pill off
             # `submitted`; summing both and testing for zero is the
             # additive form of the Python loop's two flags.
-            func.sum(missing + per_assignment.c.unsubmitted_rows).label(
-                "blockers"
-            ),
-        )
-        .group_by(per_assignment.c.reviewer_id)
+            func.sum(missing + per_assignment.c.unsubmitted_rows).label("blockers"),
+        ).group_by(per_assignment.c.reviewer_id)
     ).all()
 
     return {
@@ -336,11 +324,7 @@ def _python_instrument_parts(
     fields_by_instrument: dict[int, list[InstrumentResponseField]] = {}
     for field in db.execute(
         select(InstrumentResponseField)
-        .where(
-            InstrumentResponseField.instrument_id.in_(
-                {a.instrument_id for a in grouped}
-            )
-        )
+        .where(InstrumentResponseField.instrument_id.in_({a.instrument_id for a in grouped}))
         # Same filter, same reason as the aggregate half above — this
         # stands in for ``_instrument_fields_by_id``, which carries it.
         .where(InstrumentResponseField.visible.is_(True))
@@ -376,9 +360,7 @@ def _python_instrument_parts(
     }
 
 
-def per_reviewer_progress(
-    db: Session, review_session: ReviewSession
-) -> list[ReviewerProgress]:
+def per_reviewer_progress(db: Session, review_session: ReviewSession) -> list[ReviewerProgress]:
     """Per-reviewer progress rows for the Invitations page.
 
     **Split by instrument kind** (19R Item 3 rung 3): per-reviewee
@@ -414,9 +396,7 @@ def per_reviewer_progress(
                 missing_required_count=parts.missing_required_count,
                 required_total=parts.required_total,
                 pill_state=parts.pill_state(),
-                last_reminder_at=(
-                    invitation.last_reminder_at if invitation else None
-                ),
+                last_reminder_at=(invitation.last_reminder_at if invitation else None),
             )
         )
     return out
@@ -492,16 +472,10 @@ class SummaryCounts:
     incomplete: int
 
 
-def summary_counts(
-    db: Session, review_session: ReviewSession
-) -> SummaryCounts:
+def summary_counts(db: Session, review_session: ReviewSession) -> SummaryCounts:
     rows = per_reviewer_progress(db, review_session)
-    invited = sum(
-        1 for r in rows if r.invitation is not None and r.invitation.status != "pending"
-    )
-    opened = sum(
-        1 for r in rows if r.invitation is not None and r.invitation.status == "opened"
-    )
+    invited = sum(1 for r in rows if r.invitation is not None and r.invitation.status != "pending")
+    opened = sum(1 for r in rows if r.invitation is not None and r.invitation.status == "opened")
     submitted = sum(1 for r in rows if r.pill_state == "submitted")
     incomplete = sum(1 for r in rows if r.is_incomplete)
     return SummaryCounts(
@@ -555,9 +529,7 @@ def _assignment_complete(
         rows = responses_by_assignment.get(assignment.id, [])
     else:
         rows = list(
-            db.execute(
-                select(Response).where(Response.assignment_id == assignment.id)
-            ).scalars()
+            db.execute(select(Response).where(Response.assignment_id == assignment.id)).scalars()
         )
     if not rows:
         return False, None
@@ -579,9 +551,7 @@ def _assignment_complete(
     return is_complete, latest
 
 
-def per_reviewee_coverage(
-    db: Session, review_session: ReviewSession
-) -> list[RevieweeCoverage]:
+def per_reviewee_coverage(db: Session, review_session: ReviewSession) -> list[RevieweeCoverage]:
     """Per-reviewee coverage rows for the Responses page.
 
     **One aggregate query** (19R Item 3 rung 2), in place of loading
@@ -651,9 +621,7 @@ def per_reviewee_coverage(
         select(
             Assignment.reviewee_id.label("reviewee_id"),
             func.count(Response.id).label("row_count"),
-            func.coalesce(
-                required_per_instrument.c.required_total, 0
-            ).label("required_total"),
+            func.coalesce(required_per_instrument.c.required_total, 0).label("required_total"),
             func.count(distinct(satisfied_field)).label("satisfied"),
             func.max(Response.submitted_at).label("last_at"),
         )
@@ -665,8 +633,7 @@ def per_reviewee_coverage(
         )
         .outerjoin(
             required_per_instrument,
-            required_per_instrument.c.instrument_id
-            == Assignment.instrument_id,
+            required_per_instrument.c.instrument_id == Assignment.instrument_id,
         )
         .where(
             Assignment.session_id == sid,
@@ -698,9 +665,7 @@ def per_reviewee_coverage(
         select(
             per_assignment.c.reviewee_id.label("reviewee_id"),
             func.count().label("reviewer_count"),
-            func.sum(case((is_complete, 1), else_=0)).label(
-                "completed_count"
-            ),
+            func.sum(case((is_complete, 1), else_=0)).label("completed_count"),
             func.max(per_assignment.c.last_at).label("last_response_at"),
         )
         .group_by(per_assignment.c.reviewee_id)
@@ -730,16 +695,12 @@ def per_reviewee_coverage(
 
     out: list[RevieweeCoverage] = []
     for reviewee, reviewer_count, completed_count, last_response_at in rows:
-        reviewer_count, completed_count = int(reviewer_count or 0), int(
-            completed_count or 0
-        )
+        reviewer_count, completed_count = int(reviewer_count or 0), int(completed_count or 0)
         extra = python_half.get(reviewee.id)
         if extra is not None:
             reviewer_count += extra[0]
             completed_count += extra[1]
-            if extra[2] is not None and (
-                last_response_at is None or extra[2] > last_response_at
-            ):
+            if extra[2] is not None and (last_response_at is None or extra[2] > last_response_at):
                 last_response_at = extra[2]
         out.append(
             RevieweeCoverage(
@@ -791,9 +752,7 @@ def _python_routed_coverage(
     fields_by_instrument: dict[int, list[InstrumentResponseField]] = {}
     for field in db.execute(
         select(InstrumentResponseField).where(
-            InstrumentResponseField.instrument_id.in_(
-                {a.instrument_id for a in routed}
-            )
+            InstrumentResponseField.instrument_id.in_({a.instrument_id for a in routed})
         )
     ).scalars():
         fields_by_instrument.setdefault(field.instrument_id, []).append(field)
@@ -833,8 +792,7 @@ def _per_reviewee_coverage_python(  # pyright: ignore[reportUnusedFunction]  -- 
     classifies each reviewee per ``AT_RISK_THRESHOLDS``."""
     assignments = list(
         db.execute(
-            select(Assignment)
-            .where(
+            select(Assignment).where(
                 Assignment.session_id == review_session.id,
                 Assignment.include.is_(True),
             )
@@ -879,9 +837,7 @@ def _per_reviewee_coverage_python(  # pyright: ignore[reportUnusedFunction]  -- 
         latest: datetime | None = None
         for a in rs:
             fields = fields_by_instrument.get(a.instrument_id, [])
-            is_complete, last_at = _assignment_complete(
-                db, a, fields, responses_by_assignment
-            )
+            is_complete, last_at = _assignment_complete(db, a, fields, responses_by_assignment)
             if is_complete:
                 completed += 1
             if last_at is not None and (latest is None or last_at > latest):

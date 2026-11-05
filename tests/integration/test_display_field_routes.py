@@ -35,18 +35,21 @@ def test_add_display_field_appends_row_and_invalidates_validated(
     assert review_session.status == "validated"
 
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}"
-        f"/display-fields",
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}/display-fields",
         data={"source_pair": "reviewee:tag_1", "label": "Cohort", "visible": "true"},
         follow_redirects=False,
     )
     assert response.status_code == 303
 
-    rows = db.execute(
-        select(InstrumentDisplayField)
-        .where(InstrumentDisplayField.instrument_id == instrument.id)
-        .order_by(InstrumentDisplayField.order)
-    ).scalars().all()
+    rows = (
+        db.execute(
+            select(InstrumentDisplayField)
+            .where(InstrumentDisplayField.instrument_id == instrument.id)
+            .order_by(InstrumentDisplayField.order)
+        )
+        .scalars()
+        .all()
+    )
     assert [(r.source_type, r.source_field) for r in rows] == [
         ("reviewee", "name"),
         ("reviewee", "email_or_identifier"),
@@ -62,12 +65,16 @@ def test_add_display_field_appends_row_and_invalidates_validated(
 
     db.refresh(review_session)
     assert review_session.status == "draft"
-    invalidated = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "session.invalidated",
-            AuditEvent.session_id == review_session.id,
+    invalidated = (
+        db.execute(
+            select(AuditEvent).where(
+                AuditEvent.event_type == "session.invalidated",
+                AuditEvent.session_id == review_session.id,
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(invalidated) == 1
 
 
@@ -78,8 +85,7 @@ def test_add_display_field_unknown_source_redirects_with_error(
     instrument = _instrument(db, review_session.id)
 
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}"
-        f"/display-fields",
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}/display-fields",
         data={"source_pair": "reviewee:phone", "label": "", "visible": "true"},
         follow_redirects=False,
     )
@@ -95,28 +101,28 @@ def test_add_display_field_duplicate_source_redirects_with_error(
     _seed_pair_context_display_fields(db, instrument)
 
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}"
-        f"/display-fields",
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}/display-fields",
         data={"source_pair": "pair_context:1", "label": "", "visible": "true"},
         follow_redirects=False,
     )
     assert response.status_code == 303
     assert "display_source_error=pair_context:1" in response.headers["location"]
 
-    pair_one_count = db.execute(
-        select(InstrumentDisplayField)
-        .where(
-            InstrumentDisplayField.instrument_id == instrument.id,
-            InstrumentDisplayField.source_type == "pair_context",
-            InstrumentDisplayField.source_field == "1",
+    pair_one_count = (
+        db.execute(
+            select(InstrumentDisplayField).where(
+                InstrumentDisplayField.instrument_id == instrument.id,
+                InstrumentDisplayField.source_type == "pair_context",
+                InstrumentDisplayField.source_field == "1",
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(pair_one_count) == 1
 
 
-def test_edit_display_field_toggles_visibility_only(
-    client: TestClient, db: Session
-) -> None:
+def test_edit_display_field_toggles_visibility_only(client: TestClient, db: Session) -> None:
     """Segment 15A Slice 2: per-row edit endpoint now only toggles
     visibility. ``label`` form param is retired and any value is
     silently dropped — the column stays at the existing seed
@@ -158,9 +164,7 @@ def test_edit_display_field_toggles_visibility_only(
     assert pair_one.visible is False
 
 
-def test_delete_display_field_removes_row_and_repacks(
-    client: TestClient, db: Session
-) -> None:
+def test_delete_display_field_removes_row_and_repacks(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="del-disp")
     instrument = _instrument(db, review_session.id)
     _seed_pair_context_display_fields(db, instrument)
@@ -178,11 +182,15 @@ def test_delete_display_field_removes_row_and_repacks(
     )
     assert response.status_code == 303
 
-    rows = db.execute(
-        select(InstrumentDisplayField)
-        .where(InstrumentDisplayField.instrument_id == instrument.id)
-        .order_by(InstrumentDisplayField.order)
-    ).scalars().all()
+    rows = (
+        db.execute(
+            select(InstrumentDisplayField)
+            .where(InstrumentDisplayField.instrument_id == instrument.id)
+            .order_by(InstrumentDisplayField.order)
+        )
+        .scalars()
+        .all()
+    )
     # Locked Name + Email rows kept at 0/1; pc_1 + pc_3 repack to 2/3.
     assert [(r.source_type, r.source_field, r.order) for r in rows] == [
         ("reviewee", "name", 0),
@@ -212,8 +220,7 @@ def test_locked_when_ready_returns_409_for_display_field_routes(
     ).scalar_one()
 
     add = client.post(
-        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}"
-        f"/display-fields",
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}/display-fields",
         data={"source_pair": "reviewee:tag_1", "label": "", "visible": "true"},
         follow_redirects=False,
     )
@@ -235,18 +242,14 @@ def test_locked_when_ready_returns_409_for_display_field_routes(
     assert delete.status_code == 409
 
     bulk = client.post(
-        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}"
-        f"/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}/fields/save",
         data={"kind": ["display"], "id": [str(pair_one.id)], "order": ["0"]},
         follow_redirects=False,
     )
     assert bulk.status_code == 409
 
 
-
-def test_move_display_field_swap_preserves_locked_top(
-    client: TestClient, db: Session
-) -> None:
+def test_move_display_field_swap_preserves_locked_top(client: TestClient, db: Session) -> None:
     """Moving a non-locked row up never crosses into the locked region
     (Name + Email always stay at orders 0 / 1)."""
     review_session = _make_session(client, db, code="move-swap")
@@ -269,11 +272,15 @@ def test_move_display_field_swap_preserves_locked_top(
     # Editing-mode preserved on the redirect.
     assert f"editing={instrument.id}" in response.headers["location"]
 
-    rows = db.execute(
-        select(InstrumentDisplayField)
-        .where(InstrumentDisplayField.instrument_id == instrument.id)
-        .order_by(InstrumentDisplayField.order)
-    ).scalars().all()
+    rows = (
+        db.execute(
+            select(InstrumentDisplayField)
+            .where(InstrumentDisplayField.instrument_id == instrument.id)
+            .order_by(InstrumentDisplayField.order)
+        )
+        .scalars()
+        .all()
+    )
     pairs = [(r.source_type, r.source_field) for r in rows]
     # Name + Email at top; pc_2 swapped above pc_1.
     assert pairs == [
@@ -283,4 +290,3 @@ def test_move_display_field_swap_preserves_locked_top(
         ("pair_context", "1"),
         ("pair_context", "3"),
     ]
-

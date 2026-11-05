@@ -29,9 +29,7 @@ def _session(client: TestClient, db: Session, code: str) -> ReviewSession:
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _members(client: TestClient, review_session: ReviewSession, path: str) -> list[str]:
@@ -45,7 +43,7 @@ def _members(client: TestClient, review_session: ReviewSession, path: str) -> li
     [
         ("../../evil_reviewers.csv", "_.._evil_reviewers.csv"),
         ("2026/Q1_reviewers.csv", "2026_Q1_reviewers.csv"),
-        ("a\\b:c*d?e\"f<g>h|i_settings.csv", "a_b_c_d_e_f_g_h_i_settings.csv"),
+        ('a\\b:c*d?e"f<g>h|i_settings.csv', "a_b_c_d_e_f_g_h_i_settings.csv"),
         ("tab\there_responses.csv", "tab_here_responses.csv"),
         (" .hidden_reviewers.csv", "hidden_reviewers.csv"),
         ("课程 2026_reviewers.csv", "课程 2026_reviewers.csv"),
@@ -63,9 +61,7 @@ def test_a_member_name_is_made_safe(name: str, safe: str) -> None:
     assert _member_name(name) == safe
 
 
-def test_a_traversing_code_stays_inside_every_bundle(
-    client: TestClient, db: Session
-) -> None:
+def test_a_traversing_code_stays_inside_every_bundle(client: TestClient, db: Session) -> None:
     review_session = _session(client, db, "../../evil")
     for path in ("bundle.zip", "responses_bundle.zip", "by_instrument_bundle.zip"):
         names = _members(client, review_session, path)
@@ -76,9 +72,7 @@ def test_a_traversing_code_stays_inside_every_bundle(
             assert name.startswith("_.._evil_"), (path, name)
 
 
-def test_a_plain_code_keeps_its_member_names(
-    client: TestClient, db: Session
-) -> None:
+def test_a_plain_code_keeps_its_member_names(client: TestClient, db: Session) -> None:
     review_session = _session(client, db, "PSY-101")
     assert sorted(_members(client, review_session, "bundle.zip")) == [
         "PSY-101_relationships.csv",

@@ -47,11 +47,14 @@ def _line(count: int) -> str:
 
 def _reselected(page: str, relationship_id: int) -> bool:
     """Whether the refused selection's own row box comes back checked."""
-    return re.search(
-        rf'class="relationship-select"\s+name="relationship_ids" value="{relationship_id}"'
-        r"[^>]*\bchecked\b",
-        page,
-    ) is not None
+    return (
+        re.search(
+            rf'class="relationship-select"\s+name="relationship_ids" value="{relationship_id}"'
+            r"[^>]*\bchecked\b",
+            page,
+        )
+        is not None
+    )
 
 
 def _seed(
@@ -156,9 +159,7 @@ def _base(session: ReviewSession) -> str:
 def _tick_inside_banner(html: str, count: int) -> bool:
     """The tick the refusal throws up sits inside its red banner, under
     the message (browser run 2026-10-19), not below it."""
-    banner = re.search(
-        r"<div[^>]*data-group-clear-banner[^>]*>(.*?)</div>", html, re.S
-    )
+    banner = re.search(r"<div[^>]*data-group-clear-banner[^>]*>(.*?)</div>", html, re.S)
     if banner is None:
         return False
     body = banner.group(1)
@@ -195,9 +196,7 @@ def test_an_edit_into_an_answered_group_is_refused_then_goes_through(
     assert _responses(db) == 1
 
 
-def test_a_count_too_long_for_int_is_refused_not_a_500(
-    db: Session, client: TestClient
-) -> None:
+def test_a_count_too_long_for_int_is_refused_not_a_500(db: Session, client: TestClient) -> None:
     """Findings register L1: ``int`` refuses a string past 4,300 digits,
     so the tick's count answered 500. A count that long matches none, so
     the change is refused and asks again, persisting nothing."""
@@ -270,9 +269,7 @@ def test_an_add_that_clears_nothing_never_asks(db: Session, client: TestClient) 
     assert _responses(db) == 4
 
 
-def test_a_refusal_leaves_a_validated_session_validated(
-    db: Session, client: TestClient
-) -> None:
+def test_a_refusal_leaves_a_validated_session_validated(db: Session, client: TestClient) -> None:
     # Every service demotes a validated session before the clear: the
     # refusal's rollback must take the demotion, and any audit row, with it.
     session = _seed(db, client, "rgc-validated")
@@ -428,7 +425,10 @@ def test_delete_all_names_the_answers_it_clears_on_its_tick(
     # The table still lists every row the dry run deleted and rolled back.
     assert len(set(re.findall(r'id="relationship-row-(\d+)"', page))) == 4
     label = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", form))
-    assert "Yes, delete the existing 4 relationships and the 4 reviewer responses on the groups they form." in label
+    assert (
+        "Yes, delete the existing 4 relationships and the 4 reviewer responses on the groups they form."
+        in label
+    )
     assert re.findall(r'name="acknowledge_response_loss"[^>]*value="(\d+)"', form) == ["4"]
     # Counting deleted nothing.
     assert db.execute(select(func.count()).select_from(Relationship)).scalar_one() == 4
@@ -540,9 +540,7 @@ def test_quick_setup_refuses_with_the_count_then_goes_through(
     for path, field in (("relationships", "file"), ("submit-all", "relationships_file")):
         refused = refusal(submit(path, field, {"acknowledge_response_loss": "true"}))
         assert (refused.kind, refused.reason) == ("relationships", "clears_group_answers")
-        assert "clears 3 saved responses on groups whose members it changes" in (
-            refused.lead
-        )
+        assert "clears 3 saved responses on groups whose members it changes" in (refused.lead)
         assert _relationship(db, session.id, "Ann").tag_1 == "x"
         assert _responses(db) == 4
 
@@ -553,9 +551,7 @@ def test_quick_setup_refuses_with_the_count_then_goes_through(
     assert refused.reason == "clears_group_answers"
     assert _responses(db) == 4
 
-    accepted = submit(
-        "submit-all", "relationships_file", {"acknowledge_response_loss": "3"}
-    )
+    accepted = submit("submit-all", "relationships_file", {"acknowledge_response_loss": "3"})
     assert accepted.status_code == 303
     assert _relationship(db, session.id, "Ann").tag_1 == "y"
     assert _responses(db) == 1

@@ -7,6 +7,7 @@ A ``_``-prefixed helper imported relatively, per the convention
 
 Segment 19I Item 8.
 """
+
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
@@ -26,9 +27,7 @@ LOCKED = ("ready", "expired", "archived")
 ALL_STATES = EDITABLE + LOCKED
 
 
-def seed_session_with_assignment(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def seed_session_with_assignment(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     """One reviewer / reviewee / instrument and the pair between them,
     with tags on both people so the same fixture serves Item 7."""
     r = client.post(
@@ -37,9 +36,7 @@ def seed_session_with_assignment(
         follow_redirects=False,
     )
     assert r.status_code == 303, r.text
-    s = db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    s = db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
     reviewer = Reviewer(
         session_id=s.id,

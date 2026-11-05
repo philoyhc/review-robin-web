@@ -138,24 +138,9 @@ def test_get_field_value_pair_context_stub_returns_none() -> None:
 
     reviewer = _Stub()
     reviewee = _Stub()
-    assert (
-        get_field_value(
-            "pair_context.tag1", reviewer=reviewer, reviewee=reviewee
-        )
-        is None
-    )
-    assert (
-        get_field_value(
-            "pair_context.tag2", reviewer=reviewer, reviewee=reviewee
-        )
-        is None
-    )
-    assert (
-        get_field_value(
-            "pair_context.tag3", reviewer=reviewer, reviewee=reviewee
-        )
-        is None
-    )
+    assert get_field_value("pair_context.tag1", reviewer=reviewer, reviewee=reviewee) is None
+    assert get_field_value("pair_context.tag2", reviewer=reviewer, reviewee=reviewee) is None
+    assert get_field_value("pair_context.tag3", reviewer=reviewer, reviewee=reviewee) is None
 
 
 def test_get_field_value_reviewer_path_unchanged() -> None:
@@ -168,15 +153,5 @@ def test_get_field_value_reviewer_path_unchanged() -> None:
     class _Reviewee:
         tag_2 = "B"
 
-    assert (
-        get_field_value(
-            "reviewer.tag1", reviewer=_Reviewer(), reviewee=None
-        )
-        == "A"
-    )
-    assert (
-        get_field_value(
-            "reviewee.tag2", reviewer=None, reviewee=_Reviewee()
-        )
-        == "B"
-    )
+    assert get_field_value("reviewer.tag1", reviewer=_Reviewer(), reviewee=None) == "A"
+    assert get_field_value("reviewee.tag2", reviewer=None, reviewee=_Reviewee()) == "B"

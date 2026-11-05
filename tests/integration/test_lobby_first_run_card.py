@@ -18,7 +18,7 @@ from app.db.models import ReviewSession
 from ._lookups import must_get
 
 CARD_MARKER = 'id="lobby-first-run"'
-GUIDE_LINK = '/guide?return_to=/operator/sessions'
+GUIDE_LINK = "/guide?return_to=/operator/sessions"
 
 
 def _create_session(client: TestClient, name: str, code: str) -> None:
@@ -64,9 +64,7 @@ def test_the_guide_link_resolves_and_returns_to_the_lobby(
     response = client.get(GUIDE_LINK)
 
     assert response.status_code == 200
-    assert "&larr; Back to Sessions" in response.text or (
-        "← Back to Sessions" in response.text
-    )
+    assert "&larr; Back to Sessions" in response.text or ("← Back to Sessions" in response.text)
 
 
 def test_operator_with_a_session_does_not_see_the_card(
@@ -93,9 +91,7 @@ def test_the_populated_lobby_still_renders_its_table_and_search(
     assert "Spring Reviews" in body
 
 
-def test_archiving_every_session_brings_the_card_back(
-    client: TestClient, db: Session
-) -> None:
+def test_archiving_every_session_brings_the_card_back(client: TestClient, db: Session) -> None:
     """The trigger is zero *visible* sessions, not "has never had one" —
     an operator who archives everything is back at the start and gets the
     orientation again (`guide/archive/segment_19E_operator_onboarding.md` ->
@@ -162,10 +158,7 @@ def test_the_empty_lobby_leaves_only_the_two_ways_out_active(
     # Whitespace-normalised: the template wraps these attributes, and
     # re-wrapping should not break the test.
     flat = " ".join(body.split())
-    assert (
-        '<span class="btn secondary disabled" aria-disabled="true">'
-        "Clear</span>" in flat
-    )
+    assert '<span class="btn secondary disabled" aria-disabled="true">Clear</span>' in flat
     assert 'aria-label="Filter sessions" disabled>' in flat
 
 
@@ -294,8 +287,5 @@ def test_an_all_archived_lobby_keeps_the_route_to_the_archive(
     assert '<span class="pill pill-count">0 sessions</span>' in flat
     assert 'href="/operator/sessions/archived">Go to Archive</a>' in flat
     # Still nothing live to search.
-    assert (
-        '<span class="btn secondary disabled" aria-disabled="true">'
-        "Clear</span>" in flat
-    )
+    assert '<span class="btn secondary disabled" aria-disabled="true">Clear</span>' in flat
     assert 'aria-label="Filter sessions" disabled>' in flat

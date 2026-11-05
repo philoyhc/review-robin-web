@@ -29,9 +29,7 @@ def _session(client: TestClient, db: Session, code: str) -> ReviewSession:
         follow_redirects=False,
     )
     assert response.status_code == 303
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _upload(client: TestClient, rs: ReviewSession, kind: str, body: str):
@@ -86,8 +84,7 @@ def _banner(html: str) -> str:
             # One problem per row: the parser stops at the first unknown
             # email on a row.
             [
-                "ReviewerEmail is not on the Reviewers roster "
-                "(import reviewers first) (1 row)",
+                "ReviewerEmail is not on the Reviewers roster (import reviewers first) (1 row)",
             ],
         ),
     ],
@@ -125,33 +122,21 @@ def test_each_upload_card_lists_kinds_of_problem_with_counts(
     ) in response.text
 
 
-def test_a_hundred_bad_rows_make_one_line(
-    client: TestClient, db: Session
-) -> None:
+def test_a_hundred_bad_rows_make_one_line(client: TestClient, db: Session) -> None:
     rs = _session(client, db, "up-hundred")
-    body = "ReviewerName,ReviewerEmail\n" + "".join(
-        f"R{i},\n" for i in range(100)
-    )
+    body = "ReviewerName,ReviewerEmail\n" + "".join(f"R{i},\n" for i in range(100))
 
     banner = _banner(_upload(client, rs, "reviewers", body).text)
 
-    assert re.findall(r"<li>(.*?)</li>", banner) == [
-        "ReviewerEmail is blank (100 rows)"
-    ]
+    assert re.findall(r"<li>(.*?)</li>", banner) == ["ReviewerEmail is blank (100 rows)"]
 
 
-def test_a_missing_column_reads_as_itself(
-    client: TestClient, db: Session
-) -> None:
+def test_a_missing_column_reads_as_itself(client: TestClient, db: Session) -> None:
     rs = _session(client, db, "up-missing")
 
-    banner = _banner(
-        _upload(client, rs, "reviewers", "ReviewerName,Email\nAl,a@x.edu\n").text
-    )
+    banner = _banner(_upload(client, rs, "reviewers", "ReviewerName,Email\nAl,a@x.edu\n").text)
 
-    assert re.findall(r"<li>(.*?)</li>", banner) == [
-        "Missing required column: ReviewerEmail"
-    ]
+    assert re.findall(r"<li>(.*?)</li>", banner) == ["Missing required column: ReviewerEmail"]
 
 
 @pytest.mark.parametrize(
@@ -190,15 +175,11 @@ def test_a_replace_without_the_tick_says_so(
     assert "data-upload-problems" in response.text
     # The three person rosters offer the append tick too (19Z), so the
     # ask names both.
-    assert (
-        "Tick replace, append or merge just above Upload, then upload again."
-    ) in response.text
+    assert ("Tick replace, append or merge just above Upload, then upload again.") in response.text
     assert "data-upload-problem-lines" not in response.text
 
 
-def test_a_relationships_replace_without_the_tick_says_so(
-    client: TestClient, db: Session
-) -> None:
+def test_a_relationships_replace_without_the_tick_says_so(client: TestClient, db: Session) -> None:
     rs = _session(client, db, "up-confirm-rel")
     rs.relationships_enabled = True
     db.commit()

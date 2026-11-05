@@ -39,9 +39,7 @@ def test_assignments_table_lacks_context_column(db: Session) -> None:
     columns = {col["name"] for col in inspect(db.bind).get_columns("assignments")}
     assert "context" not in columns
     # Sanity: other columns still there.
-    assert {"include", "session_id", "reviewer_id", "reviewee_id"}.issubset(
-        columns
-    )
+    assert {"include", "session_id", "reviewer_id", "reviewee_id"}.issubset(columns)
 
 
 def test_replace_assignments_signature_drops_contexts_param() -> None:
@@ -58,16 +56,18 @@ def test_replace_assignments_signature_drops_contexts_param() -> None:
 
     params = inspect_mod.signature(assignments.replace_assignments).parameters
     for retired in (
-        "contexts", "includes", "pairs",
-        "rule_set_revision", "filename", "excluded_counts",
+        "contexts",
+        "includes",
+        "pairs",
+        "rule_set_revision",
+        "filename",
+        "excluded_counts",
     ):
         assert retired not in params, retired
     assert "instrument_id" in params
 
 
-def test_lazy_seed_fires_from_relationships_save(
-    client, db: Session
-) -> None:
+def test_lazy_seed_fires_from_relationships_save(client, db: Session) -> None:
     """Uploading a Relationships CSV with populated tags lazy-seeds
     pair_context display fields on every instrument (post-15D PR 6b
     the seeding hook moved from ``replace_assignments`` to
@@ -80,9 +80,7 @@ def test_lazy_seed_fires_from_relationships_save(
     )
     assert response.status_code == 303, response.text
     review_session = db.execute(
-        select(ReviewSession).where(
-            ReviewSession.code == "lazy-seed-rel"
-        )
+        select(ReviewSession).where(ReviewSession.code == "lazy-seed-rel")
     ).scalar_one()
     review_session.relationships_enabled = True
     db.commit()
@@ -127,15 +125,22 @@ def test_lazy_seed_fires_from_relationships_save(
     # Look up any instrument on the session.
     from app.db.models import Instrument
 
-    instrument = db.execute(
-        select(Instrument).where(Instrument.session_id == review_session.id)
-    ).scalars().first()
+    instrument = (
+        db.execute(select(Instrument).where(Instrument.session_id == review_session.id))
+        .scalars()
+        .first()
+    )
     assert instrument is not None
 
-    rows = db.execute(
-        select(InstrumentDisplayField)
-        .where(InstrumentDisplayField.instrument_id == instrument.id)
-    ).scalars().all()
+    rows = (
+        db.execute(
+            select(InstrumentDisplayField).where(
+                InstrumentDisplayField.instrument_id == instrument.id
+            )
+        )
+        .scalars()
+        .all()
+    )
     pairs = {(r.source_type, r.source_field) for r in rows}
     # Only slot 2 is populated → only that display field gets seeded.
     assert ("pair_context", "2") in pairs
@@ -151,6 +156,4 @@ def test_backfill_service_function_retired() -> None:
 
     from app.services import relationships as relationships_service
 
-    assert not hasattr(
-        relationships_service, "backfill_from_assignment_context"
-    )
+    assert not hasattr(relationships_service, "backfill_from_assignment_context")

@@ -43,26 +43,18 @@ def _public_id(client: TestClient, db: Session) -> str:
     return must_get(db, ReviewSession, _session_id(client, db)).public_id
 
 
-def test_the_email_template_page_carries_one_guidance_card(
-    client: TestClient, db: Session
-) -> None:
-    body = client.get(
-        f"/operator/sessions/{_public_id(client, db)}/setup-invite"
-    ).text
+def test_the_email_template_page_carries_one_guidance_card(client: TestClient, db: Session) -> None:
+    body = client.get(f"/operator/sessions/{_public_id(client, db)}/setup-invite").text
 
     assert body.count(CARD) == 1
     assert "<summary>What this page is for</summary>" in body
 
 
-def test_the_disclosure_is_closed_by_default(
-    client: TestClient, db: Session
-) -> None:
+def test_the_disclosure_is_closed_by_default(client: TestClient, db: Session) -> None:
     """An operator who knows the page should not scroll past a paragraph
     they have read. `<details>` without `open` is closed — asserted
     because adding `open` is a one-word change that would go unnoticed."""
-    body = client.get(
-        f"/operator/sessions/{_public_id(client, db)}/setup-invite"
-    ).text
+    body = client.get(f"/operator/sessions/{_public_id(client, db)}/setup-invite").text
 
     assert CARD in body
     # The attribute would land inside the opening tag, whatever classes
@@ -71,16 +63,12 @@ def test_the_disclosure_is_closed_by_default(
     assert "open" not in opening_tag
 
 
-def test_the_guidance_sits_above_the_merge_tags_card(
-    client: TestClient, db: Session
-) -> None:
+def test_the_guidance_sits_above_the_merge_tags_card(client: TestClient, db: Session) -> None:
     """The right column stacks guidance above the merge-tag reference it
     introduces. Supersedes rung 6a's "above the tab strip" placement,
     which the author replaced when the help cards became half-width
     cards (see the segment plan's `## Status`)."""
-    body = client.get(
-        f"/operator/sessions/{_public_id(client, db)}/setup-invite"
-    ).text
+    body = client.get(f"/operator/sessions/{_public_id(client, db)}/setup-invite").text
 
     assert body.index(CARD) < body.index('id="merge-tags"')
 
@@ -123,9 +111,7 @@ def test_every_guide_section_an_operator_sees_carries_its_anchor(
     body = client.get("/guide").text
 
     missing = [
-        s.key
-        for s in SECTIONS
-        if s.audience == OPERATOR and f'id="guide-{s.key}"' not in body
+        s.key for s in SECTIONS if s.audience == OPERATOR and f'id="guide-{s.key}"' not in body
     ]
     assert not missing, f"guide sections with no anchor: {missing}"
 
@@ -153,8 +139,7 @@ def test_no_guide_deep_link_points_at_a_section_its_reader_cannot_see(
     operator_keys = {s.key for s in SECTIONS if s.audience == OPERATOR}
     unreachable = sorted(linked - operator_keys)
     assert not unreachable, (
-        f"deep-linked from an operator page but not shown to operators: "
-        f"{unreachable}"
+        f"deep-linked from an operator page but not shown to operators: {unreachable}"
     )
 
 
@@ -189,9 +174,7 @@ def test_every_setup_page_carries_exactly_one_guidance_card(
         assert "<summary>What this page is for</summary>" in body, page
 
 
-def test_the_gated_setup_pages_carry_one_too(
-    client: TestClient, db: Session
-) -> None:
+def test_the_gated_setup_pages_carry_one_too(client: TestClient, db: Session) -> None:
     """Relationships and Observers 404 until their session toggle is on,
     so they need the flag set rather than riding the loop above. Both are
     Setup pages and both take the scaffold."""
@@ -213,9 +196,7 @@ def test_the_guidance_card_is_a_card(client: TestClient, db: Session) -> None:
     """The author's decision: these are half-width cards, not inline
     disclosures. Width comes from the grid slot each page puts them in,
     so what is asserted here is the card class the styling hangs off."""
-    body = client.get(
-        f"/operator/sessions/{_public_id(client, db)}/reviewers"
-    ).text
+    body = client.get(f"/operator/sessions/{_public_id(client, db)}/reviewers").text
 
     assert CARD in body
 
@@ -226,18 +207,14 @@ def test_the_instruments_bulk_toggles_moved_into_the_deadline_card(
     """Their old card became the guidance card. The buttons still have to
     be on the page and ahead of the guidance — losing them would be a
     silent regression, since nothing else expands an instrument card."""
-    body = client.get(
-        f"/operator/sessions/{_public_id(client, db)}/instruments"
-    ).text
+    body = client.get(f"/operator/sessions/{_public_id(client, db)}/instruments").text
 
     assert "data-instruments-expand-all" in body
     assert "data-instruments-collapse-all" in body
     # Still inside the deadline card — that is the claim worth pinning.
     # Their position relative to the guidance card is not: the two cards
     # swapped columns, so the guidance now precedes them.
-    assert body.index("Session deadline") < body.index(
-        "data-instruments-expand-all"
-    )
+    assert body.index("Session deadline") < body.index("data-instruments-expand-all")
     assert body.index(CARD) < body.index("Session deadline")
 
 
@@ -276,9 +253,7 @@ class _NestingCheck(HTMLParser):
             self.stack.pop()
 
 
-def test_every_setup_page_nests_correctly(
-    client: TestClient, db: Session
-) -> None:
+def test_every_setup_page_nests_correctly(client: TestClient, db: Session) -> None:
     """Wrapping cards in column stacks means hand-balancing `<div>`s
     across Jinja conditionals, and an unbalanced one renders a page that
     still returns 200 and still contains every string a content test
@@ -302,9 +277,7 @@ def test_every_setup_page_nests_correctly(
         assert parser.stack == [], (page, parser.stack)
 
 
-def test_the_observers_guidance_leads_the_left_column(
-    client: TestClient, db: Session
-) -> None:
+def test_the_observers_guidance_leads_the_left_column(client: TestClient, db: Session) -> None:
     """Full width at the top of the page, which is where it ended up.
 
     It led the LEFT COLUMN of a `.card-columns` grid until 19P.2: rung
@@ -328,12 +301,8 @@ def test_the_observers_guidance_leads_the_left_column(
 
     # Markup markers, not bare class names: both classes are also
     # styled in base.html, and a bare-name index finds the stylesheet.
-    assert 'class="card operator-actions-card"' not in body, (
-        "rung 4 retired the card"
-    )
-    assert 'class="card-columns"' not in body, (
-        "rung 5 retired the grid"
-    )
+    assert 'class="card operator-actions-card"' not in body, "rung 4 retired the card"
+    assert 'class="card-columns"' not in body, "rung 5 retired the grid"
     # First, and before the table it introduces.
     assert body.index(CARD) < body.index('id="observers-table-card"')
     # No cohort editor renders until `Edit` (operator pages Item 4).
@@ -415,9 +384,7 @@ def test_no_roster_page_renders_the_column_container_beside_its_panel(
         assert body.count('class="card-columns"') == 0, (
             f"{page} rendered a container beside its Unlock panel"
         )
-        assert 'id="roster-unlock-panel"' in body, (
-            f"{page} has neither a container nor a panel"
-        )
+        assert 'id="roster-unlock-panel"' in body, f"{page} has neither a container nor a panel"
         assert 'class="card operator-actions-card"' not in body, page
         # The guidance card leads the page, full width, where the
         # container used to be.
@@ -447,26 +414,20 @@ def test_no_roster_page_renders_the_container_where_the_panel_cannot(
     for page in ("reviewers", "reviewees", "relationships"):
         body = client.get(f"/operator/sessions/{public_id}/{page}").text
         assert 'class="card-columns"' not in body, page
-        assert 'id="roster-unlock-panel"' not in body, (
-            f"{page} offers Unlock on a locked session"
-        )
+        assert 'id="roster-unlock-panel"' not in body, f"{page} offers Unlock on a locked session"
         assert "field-labels-form" not in body, f"{page} kept the fallback"
         assert "Save labels" not in body, page
 
     review_session.status = "draft"
     db.flush()
     for page in ("reviewers", "reviewees", "relationships"):
-        body = client.get(
-            f"/operator/sessions/{public_id}/{page}?add=1"
-        ).text
+        body = client.get(f"/operator/sessions/{public_id}/{page}?add=1").text
         assert 'class="card-columns"' not in body, page
         assert 'id="roster-unlock-panel"' not in body, page
         assert "field-labels-form" not in body, f"{page} kept the fallback"
 
 
-def test_the_activated_lock_card_leads_the_roster_card(
-    client: TestClient, db: Session
-) -> None:
+def test_the_activated_lock_card_leads_the_roster_card(client: TestClient, db: Session) -> None:
     """It is full width, and reads at the top of the page, which is where
     a "you cannot edit this" notice belongs.
 
@@ -491,9 +452,7 @@ def test_the_activated_lock_card_leads_the_roster_card(
 # --------------------------------------------------------------------------- #
 
 
-def test_the_assignments_page_says_where_pairs_come_from(
-    client: TestClient, db: Session
-) -> None:
+def test_the_assignments_page_says_where_pairs_come_from(client: TestClient, db: Session) -> None:
     """The page's one invisible fact: pairs are a materialised
     derivative, so an operator hunting for an add/remove control will
     not find one — the change they want is upstream on the instrument's
@@ -508,19 +467,12 @@ def test_the_assignments_page_says_where_pairs_come_from(
     # re-wrapping the paragraph should not break the test.
     flat = " ".join(body.split())
 
-    assert (
-        "Pairs are materialised from each instrument's rule and appear "
-        "at Prepare." in flat
-    )
-    assert flat.index("Per-instrument status") < flat.index(
-        "Pairs are materialised"
-    )
+    assert "Pairs are materialised from each instrument's rule and appear at Prepare." in flat
+    assert flat.index("Per-instrument status") < flat.index("Pairs are materialised")
     assert body.count(CARD) == 0  # not a guidance card
 
 
-def test_the_invitations_page_says_sends_are_not_delivered(
-    client: TestClient, db: Session
-) -> None:
+def test_the_invitations_page_says_sends_are_not_delivered(client: TestClient, db: Session) -> None:
     """Send records an invitation or reminder today, and its counters
     move, but no email is delivered until Segment 14F ships (findings
     F12; 14F replaced 14B). Without the note the page claims a send nobody
@@ -610,9 +562,7 @@ def _guidance_body(body: str) -> str:
     return " ".join(body[start:end].split())
 
 
-def test_every_setup_page_states_its_own_invisible_fact(
-    client: TestClient, db: Session
-) -> None:
+def test_every_setup_page_states_its_own_invisible_fact(client: TestClient, db: Session) -> None:
     """Rule 2 of the copy: earn the disclosure by naming the
     consequence the page's controls do not. These are the five claims
     the bodies were written around."""
@@ -625,9 +575,7 @@ def test_every_setup_page_states_its_own_invisible_fact(
     db.flush()
 
     for page, claims in PAGE_CLAIMS.items():
-        prose = _guidance_body(
-            client.get(f"/operator/sessions/{public_id}/{page}").text
-        )
+        prose = _guidance_body(client.get(f"/operator/sessions/{public_id}/{page}").text)
         for claim in claims:
             assert claim in prose, f"{page}: {claim!r}"
 
@@ -647,13 +595,13 @@ def test_no_setup_page_still_carries_the_scaffold_placeholder(
     db.flush()
 
     for page, _flag in GATED_SETUP_PAGES:
-        assert "Guidance to follow" not in client.get(
-            f"/operator/sessions/{public_id}/{page}"
-        ).text, page
+        assert (
+            "Guidance to follow" not in client.get(f"/operator/sessions/{public_id}/{page}").text
+        ), page
     for page in SETUP_PAGES:
-        assert "Guidance to follow" not in client.get(
-            f"/operator/sessions/{public_id}/{page}"
-        ).text, page
+        assert (
+            "Guidance to follow" not in client.get(f"/operator/sessions/{public_id}/{page}").text
+        ), page
 
 
 def test_the_five_bodies_link_into_the_guide_and_return_here(
@@ -673,13 +621,9 @@ def test_the_five_bodies_link_into_the_guide_and_return_here(
     for page in PAGE_CLAIMS:
         path = f"/operator/sessions/{public_id}/{page}"
         prose = _guidance_body(client.get(path).text)
-        assert (
-            f'href="/guide?return_to={path}#guide-create_and_set_up"' in prose
-        ), page
+        assert f'href="/guide?return_to={path}#guide-create_and_set_up"' in prose, page
 
-    guide = client.get(
-        f"/guide?return_to=/operator/sessions/{public_id}/reviewers"
-    )
+    guide = client.get(f"/guide?return_to=/operator/sessions/{public_id}/reviewers")
     assert guide.status_code == 200
     assert 'id="guide-create_and_set_up"' in guide.text
     assert "Back to Guidance" in guide.text
@@ -700,6 +644,4 @@ def test_the_observers_copy_matches_the_empty_cohort_default() -> None:
     """
     assert not observer_has_rule(Observer(cohort_rule=None))
     assert not observer_has_rule(Observer(cohort_rule={"rules": []}))
-    assert observer_has_rule(
-        Observer(cohort_rule={"rules": [{"field": "reviewer.tag1"}]})
-    )
+    assert observer_has_rule(Observer(cohort_rule={"rules": [{"field": "reviewer.tag1"}]}))

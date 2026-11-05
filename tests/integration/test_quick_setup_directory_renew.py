@@ -32,8 +32,16 @@ def test_a_sign_in_stop_holds_the_submit_and_asks_to_renew(
     response = client.post(
         url,
         files={
-            "reviewers_file": ("r.csv", b"ReviewerName,ReviewerEmail\nJane,e0123456@example.edu\n", "text/csv"),
-            "observers_file": ("o.csv", b"ObserverName,ObserverEmail\nOli,oli@example.edu\n", "text/csv"),
+            "reviewers_file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail\nJane,e0123456@example.edu\n",
+                "text/csv",
+            ),
+            "observers_file": (
+                "o.csv",
+                b"ObserverName,ObserverEmail\nOli,oli@example.edu\n",
+                "text/csv",
+            ),
         },
         follow_redirects=False,
     )
@@ -41,7 +49,7 @@ def test_a_sign_in_stop_holds_the_submit_and_asks_to_renew(
     page = response.text
     assert "data-directory-renew" in page and "Renew sign-in and submit" in page
     assert 'form="quick-setup-submit-all-form"' in page[page.index("data-directory-renew") :]
-    assert "data-quick-setup-reason=\"" not in page  # no slot is at fault
+    assert 'data-quick-setup-reason="' not in page  # no slot is at fault
     token = must_search(r'name="held_token" value="([^"]+)"', page).group(1)
     db.expire_all()
     assert db.execute(select(Reviewer).where(Reviewer.session_id == session.id)).first() is None
@@ -64,7 +72,13 @@ def test_a_per_slot_route_holds_nothing_so_its_banner_says_reload(
     monkeypatch.setattr(_quick_setup, "directory_or_none", lambda request: _Expired())
     response = client.post(
         f"/operator/sessions/{session.public_id}/quick-setup/reviewers",
-        files={"file": ("r.csv", b"ReviewerName,ReviewerEmail\nJane,e0123456@example.edu\n", "text/csv")},
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail\nJane,e0123456@example.edu\n",
+                "text/csv",
+            )
+        },
         follow_redirects=False,
     )
     assert response.status_code == 422

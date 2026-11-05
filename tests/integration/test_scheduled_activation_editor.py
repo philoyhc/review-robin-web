@@ -4,6 +4,7 @@ End-to-end checks on the Start (``scheduled_activate_at``) input on
 the Create / Edit session forms, plus the Workflow card's
 right-column caption.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -35,17 +36,13 @@ def _create_session(
     }
     if scheduled_activate_at:
         data["scheduled_activate_at"] = scheduled_activate_at
-    response = client.post(
-        "/operator/sessions", data=data, follow_redirects=False
-    )
+    response = client.post("/operator/sessions", data=data, follow_redirects=False)
     assert response.status_code == 303, response.text
     # Create-session redirect targets ``.../{public_id}?editing=1#...``;
     # strip the query and fragment before parsing the public id.
     location = response.headers["location"].split("?", 1)[0].split("#", 1)[0]
     return db.execute(
-        select(ReviewSession.id).where(
-            ReviewSession.public_id == location.rsplit("/", 1)[-1]
-        )
+        select(ReviewSession.id).where(ReviewSession.public_id == location.rsplit("/", 1)[-1])
     ).scalar_one()
 
 
@@ -59,9 +56,7 @@ def _fmt_local_input(dt: datetime) -> str:
 # --------------------------------------------------------------------------- #
 
 
-def test_create_accepts_valid_scheduled_activate_at(
-    client: TestClient, db: Session
-) -> None:
+def test_create_accepts_valid_scheduled_activate_at(client: TestClient, db: Session) -> None:
     """A Start at least the configured lead time in the future saves."""
     future = datetime.now(UTC) + timedelta(hours=24)
     session_id = _create_session(
@@ -74,9 +69,7 @@ def test_create_accepts_valid_scheduled_activate_at(
     assert review_session is not None
     assert review_session.scheduled_activate_at is not None
     # Compare via _ensure_aware_utc to absorb SQLite tzinfo stripping.
-    saved = scheduled_events._ensure_aware_utc(
-        review_session.scheduled_activate_at
-    )
+    saved = scheduled_events._ensure_aware_utc(review_session.scheduled_activate_at)
     # Tolerate the timezone-localisation round-trip; both should be
     # the same wall-clock moment, but the form interprets the value
     # in the session's display timezone (UTC by default for tests).
@@ -101,9 +94,7 @@ def test_create_rejects_past_scheduled_activate_at(
     assert "1 hour" in response.text or "in the future" in response.text
 
 
-def test_create_without_scheduled_activate_at_works(
-    client: TestClient, db: Session
-) -> None:
+def test_create_without_scheduled_activate_at_works(client: TestClient, db: Session) -> None:
     """Empty Start input keeps scheduled_activate_at NULL — no regression."""
     session_id = _create_session(client, db, "create-empty")
     review_session = db.get(ReviewSession, session_id)
@@ -116,9 +107,7 @@ def test_create_without_scheduled_activate_at_works(
 # --------------------------------------------------------------------------- #
 
 
-def test_edit_accepts_setting_scheduled_activate_at(
-    client: TestClient, db: Session
-) -> None:
+def test_edit_accepts_setting_scheduled_activate_at(client: TestClient, db: Session) -> None:
     """Operator sets Start on an existing draft session via the Edit form."""
     session_id = _create_session(client, db, "edit-set")
     future = datetime.now(UTC) + timedelta(hours=24)
@@ -138,9 +127,7 @@ def test_edit_accepts_setting_scheduled_activate_at(
     assert review_session.scheduled_activate_at is not None
 
 
-def test_edit_clearing_emits_activation_scheduled_audit(
-    client: TestClient, db: Session
-) -> None:
+def test_edit_clearing_emits_activation_scheduled_audit(client: TestClient, db: Session) -> None:
     """Setting then clearing Start emits session.activation_scheduled twice."""
     session_id = _create_session(client, db, "edit-clear")
     future = datetime.now(UTC) + timedelta(hours=24)
@@ -164,11 +151,15 @@ def test_edit_clearing_emits_activation_scheduled_audit(
         },
         follow_redirects=False,
     )
-    audits = db.execute(
-        select(AuditEvent)
-        .where(AuditEvent.session_id == session_id)
-        .where(AuditEvent.event_type == "session.activation_scheduled")
-    ).scalars().all()
+    audits = (
+        db.execute(
+            select(AuditEvent)
+            .where(AuditEvent.session_id == session_id)
+            .where(AuditEvent.event_type == "session.activation_scheduled")
+        )
+        .scalars()
+        .all()
+    )
     assert len(audits) == 2  # one for set, one for clear
     db.refresh(db.get(ReviewSession, session_id))
     review_session = db.get(ReviewSession, session_id)
@@ -222,9 +213,7 @@ def test_edit_get_prefills_scheduled_activate_at_input_value(
 # --------------------------------------------------------------------------- #
 
 
-def _make_session_in_status(
-    db: Session, code: str, status: str
-) -> ReviewSession:
+def _make_session_in_status(db: Session, code: str, status: str) -> ReviewSession:
     """Tiny ORM-only helper for the caption tests — bypasses the
     routes since the caption builder just reads session state."""
     from app.db.models import User
@@ -235,9 +224,7 @@ def _make_session_in_status(
     from app.schemas.sessions import SessionCreate
     from app.services import sessions as sessions_service
 
-    payload = SessionCreate(
-        name=code.title(), code=code, description="d"
-    )
+    payload = SessionCreate(name=code.title(), code=code, description="d")
     rs = sessions_service.create_session(db, user=op, payload=payload)
     rs.status = status
     db.flush()
@@ -259,9 +246,7 @@ def test_caption_none_when_draft_no_schedule(db: Session) -> None:
 def test_caption_amber_warning_when_draft_with_future_schedule(
     db: Session,
 ) -> None:
-    rs = _make_session_in_status(
-        db, "cap-draft-future", lifecycle.SessionStatus.draft.value
-    )
+    rs = _make_session_in_status(db, "cap-draft-future", lifecycle.SessionStatus.draft.value)
     rs.scheduled_activate_at = datetime.now(UTC) + timedelta(days=1)
     db.flush()
     db.commit()
@@ -290,9 +275,7 @@ def test_caption_skipped_when_latest_audit_is_skip(db: Session) -> None:
     """Schedule cleared + most-recent audit is skip → amber-grey caption."""
     from app.services import audit
 
-    rs = _make_session_in_status(
-        db, "cap-skipped", lifecycle.SessionStatus.draft.value
-    )
+    rs = _make_session_in_status(db, "cap-skipped", lifecycle.SessionStatus.draft.value)
     # No scheduled_activate_at (already cleared by the skip)
     audit.write_event(
         db,
@@ -317,9 +300,7 @@ def test_caption_skipped_clears_after_next_audit(db: Session) -> None:
     """The skipped caption disappears once any newer audit event lands."""
     from app.services import audit
 
-    rs = _make_session_in_status(
-        db, "cap-skipped-cleared", lifecycle.SessionStatus.draft.value
-    )
+    rs = _make_session_in_status(db, "cap-skipped-cleared", lifecycle.SessionStatus.draft.value)
     audit.write_event(
         db,
         event_type="session.scheduled_activation_skipped",
@@ -351,9 +332,7 @@ def test_caption_skipped_reads_a_non_string_time_as_unknown(
     raised `TypeError` and took Session Home down; it reads as unknown."""
     from app.services import audit
 
-    rs = _make_session_in_status(
-        db, "cap-skipped-bad-time", lifecycle.SessionStatus.draft.value
-    )
+    rs = _make_session_in_status(db, "cap-skipped-bad-time", lifecycle.SessionStatus.draft.value)
     audit.write_event(
         db,
         event_type="session.scheduled_activation_skipped",
@@ -368,7 +347,10 @@ def test_caption_skipped_reads_a_non_string_time_as_unknown(
         select(AuditEvent).where(AuditEvent.session_id == rs.id).order_by(AuditEvent.id.desc())
     ).first()
     assert event is not None and event.detail is not None
-    event.detail = {**event.detail, "context": {**event.detail["context"], "scheduled_at": scheduled_at}}
+    event.detail = {
+        **event.detail,
+        "context": {**event.detail["context"], "scheduled_at": scheduled_at},
+    }
     db.commit()
     cap = build_scheduled_activation_caption(db, rs)
     assert cap is not None

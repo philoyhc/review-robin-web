@@ -13,6 +13,7 @@ gate. It asserts **both halves on every state** — what the route
 answers and what the page offers — so neither can drift from the
 other without a failure.
 """
+
 from __future__ import annotations
 
 import re
@@ -38,9 +39,7 @@ def _live_delete_buttons(page: str) -> int:
     """Delete buttons an operator can actually submit — the confirm
     tick enables them client-side, but `type="button"` ones are dead
     markup that no tick reaches."""
-    buttons = re.findall(
-        r'<button class="btn destructive"[^>]*>Delete</button>', page, re.S
-    )
+    buttons = re.findall(r'<button class="btn destructive"[^>]*>Delete</button>', page, re.S)
     return len([b for b in buttons if 'type="submit"' in b])
 
 
@@ -89,9 +88,7 @@ def test_a_locked_session_keeps_its_instrument_assignment_and_response(
 
 
 @pytest.mark.parametrize("state", EDITABLE)
-def test_an_editable_session_still_deletes(
-    db: Session, client: TestClient, state: str
-) -> None:
+def test_an_editable_session_still_deletes(db: Session, client: TestClient, state: str) -> None:
     """The gate narrows `expired` / `archived` only — `validated`
     keeps every control it had."""
     s, iid = _seed(client, db, code=f"ilg-del-{state}")
@@ -161,9 +158,7 @@ def test_editing_query_param_cannot_open_a_card_on_a_locked_session(
     s.status = state
     db.commit()
 
-    page = client.get(
-        f"/operator/sessions/{s.public_id}/instruments?editing={iid}"
-    ).text
+    page = client.get(f"/operator/sessions/{s.public_id}/instruments?editing={iid}").text
     # Match the card element, not the bare attribute: `base.html`'s
     # inline CSS carries `[data-instrument-locked="false"]` selectors,
     # so a substring test for the attribute is true on every page and

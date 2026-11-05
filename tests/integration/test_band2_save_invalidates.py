@@ -53,10 +53,24 @@ def _setup(client: TestClient, db: Session, code: str) -> tuple[ReviewSession, I
         review_session.id,
         instrument.id,
         [
-            {"name": "Rating", "data_type": "integer", "min": "1", "max": "5",
-             "step": "1", "list_options": "", "selected": True},
-            {"name": "Comments", "data_type": "string", "min": "", "max": "200",
-             "step": "", "list_options": "", "selected": True},
+            {
+                "name": "Rating",
+                "data_type": "integer",
+                "min": "1",
+                "max": "5",
+                "step": "1",
+                "list_options": "",
+                "selected": True,
+            },
+            {
+                "name": "Comments",
+                "data_type": "string",
+                "min": "",
+                "max": "200",
+                "step": "",
+                "list_options": "",
+                "selected": True,
+            },
         ],
     )
     assert resp.status_code == 200, resp.text
@@ -64,9 +78,7 @@ def _setup(client: TestClient, db: Session, code: str) -> tuple[ReviewSession, I
     return review_session, instrument
 
 
-def test_changing_a_response_field_demotes_and_audits(
-    client: TestClient, db: Session
-) -> None:
+def test_changing_a_response_field_demotes_and_audits(client: TestClient, db: Session) -> None:
     review_session, instrument = _setup(client, db, "s1-change")
     _validated(db, review_session)
     before = len(_events(db, review_session.id))

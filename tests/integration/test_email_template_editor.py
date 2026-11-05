@@ -25,30 +25,22 @@ from app.db.models import AuditEvent, ReviewSession
 from ._lookups import must_search
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str = "tpl-test"
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str = "tpl-test") -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "Spring", "code": code, "description": ""},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 # ── GET ──────────────────────────────────────────────────────────────────
 
 
-def test_get_default_template_is_invitation(
-    client: TestClient, db: Session
-) -> None:
+def test_get_default_template_is_invitation(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db)
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/setup-invite"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/setup-invite").text
     assert "Invitation email" in body
     # The other template is reachable as a Secondary tab.
     assert (
@@ -57,9 +49,7 @@ def test_get_default_template_is_invitation(
     )
 
 
-def test_get_with_reminder_template_renders_reminder(
-    client: TestClient, db: Session
-) -> None:
+def test_get_with_reminder_template_renders_reminder(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db)
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/setup-invite?template=reminder"
@@ -71,9 +61,7 @@ def test_get_with_reminder_template_renders_reminder(
     )
 
 
-def test_get_with_unknown_template_404s(
-    client: TestClient, db: Session
-) -> None:
+def test_get_with_unknown_template_404s(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db)
     response = client.get(
         f"/operator/sessions/{review_session.public_id}/setup-invite?template=garbage"
@@ -84,9 +72,7 @@ def test_get_with_unknown_template_404s(
 # ── Save ─────────────────────────────────────────────────────────────────
 
 
-def test_save_persists_overrides_and_audits(
-    client: TestClient, db: Session
-) -> None:
+def test_save_persists_overrides_and_audits(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db)
     response = client.post(
         f"/operator/sessions/{review_session.public_id}/setup-invite",
@@ -100,9 +86,7 @@ def test_save_persists_overrides_and_audits(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    assert response.headers["location"].endswith(
-        "/setup-invite?template=invitation"
-    )
+    assert response.headers["location"].endswith("/setup-invite?template=invitation")
 
     db.refresh(review_session)
     overrides = review_session.email_template_overrides or {}
@@ -123,9 +107,7 @@ def test_save_persists_overrides_and_audits(
     assert changes["invitation_subject"][1] == "Custom: $session_name"
 
 
-def test_save_does_not_audit_when_nothing_changed(
-    client: TestClient, db: Session
-) -> None:
+def test_save_does_not_audit_when_nothing_changed(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db)
     # Empty submission == no overrides; second submission == still no
     # overrides; the second save is a no-op and emits no audit event.
@@ -139,15 +121,15 @@ def test_save_does_not_audit_when_nothing_changed(
         data={"template": "invitation", "subject": "", "body": "", "cc": "", "bcc": ""},
         follow_redirects=False,
     )
-    events = db.execute(
-        select(AuditEvent).where(AuditEvent.event_type == "email_template.updated")
-    ).scalars().all()
+    events = (
+        db.execute(select(AuditEvent).where(AuditEvent.event_type == "email_template.updated"))
+        .scalars()
+        .all()
+    )
     assert events == []
 
 
-def test_save_clearing_a_field_removes_override(
-    client: TestClient, db: Session
-) -> None:
+def test_save_clearing_a_field_removes_override(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db)
     # First save: set the subject.
     client.post(
@@ -172,9 +154,7 @@ def test_save_clearing_a_field_removes_override(
     assert "invitation_subject" not in overrides
 
 
-def test_save_unknown_template_404s(
-    client: TestClient, db: Session
-) -> None:
+def test_save_unknown_template_404s(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db)
     response = client.post(
         f"/operator/sessions/{review_session.public_id}/setup-invite",
@@ -187,9 +167,7 @@ def test_save_unknown_template_404s(
 # ── Reset ────────────────────────────────────────────────────────────────
 
 
-def test_reset_removes_override_and_audits(
-    client: TestClient, db: Session
-) -> None:
+def test_reset_removes_override_and_audits(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db)
     # Set overrides for two fields on invitation.
     client.post(
@@ -210,9 +188,7 @@ def test_reset_removes_override_and_audits(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    assert response.headers["location"].endswith(
-        "/setup-invite?template=invitation"
-    )
+    assert response.headers["location"].endswith("/setup-invite?template=invitation")
 
     db.refresh(review_session)
     overrides = review_session.email_template_overrides or {}
@@ -228,9 +204,7 @@ def test_reset_removes_override_and_audits(
     assert event.detail["context"]["field"] == "subject"
 
 
-def test_reset_unknown_field_404s(
-    client: TestClient, db: Session
-) -> None:
+def test_reset_unknown_field_404s(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db)
     response = client.post(
         f"/operator/sessions/{review_session.public_id}/setup-invite/reset",
@@ -243,14 +217,10 @@ def test_reset_unknown_field_404s(
 # ── Per-field reset link visibility ──────────────────────────────────────
 
 
-def test_reset_link_only_renders_for_overridden_fields(
-    client: TestClient, db: Session
-) -> None:
+def test_reset_link_only_renders_for_overridden_fields(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db)
     # Pre-save state: no overrides — no reset links anywhere.
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/setup-invite"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/setup-invite").text
     assert "Reset subject to default" not in body
 
     # Override only the subject.
@@ -265,9 +235,7 @@ def test_reset_link_only_renders_for_overridden_fields(
         },
         follow_redirects=False,
     )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/setup-invite"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/setup-invite").text
     assert "Reset subject to default" in body
     assert "Reset body to default" not in body
     # The reset row sits clear of its field (author, 2026-10-13): a
@@ -285,8 +253,7 @@ def test_get_with_responses_received_template_renders_third_tab(
 ) -> None:
     review_session = _make_session(client, db, code="rr-tab")
     body = client.get(
-        f"/operator/sessions/{review_session.public_id}/setup-invite"
-        "?template=responses_received"
+        f"/operator/sessions/{review_session.public_id}/setup-invite?template=responses_received"
     ).text
 
     assert "Responses received email" in body
@@ -344,9 +311,7 @@ def test_save_responses_received_persists_overrides_and_audits(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    assert response.headers["location"].endswith(
-        "/setup-invite?template=responses_received"
-    )
+    assert response.headers["location"].endswith("/setup-invite?template=responses_received")
 
     db.refresh(review_session)
     overrides = review_session.email_template_overrides or {}
@@ -375,17 +340,17 @@ def test_the_confirmation_chip_reads_dont_send_once_turned_off(
         follow_redirects=False,
     )
     body = client.get(
-        f"/operator/sessions/{review_session.public_id}/setup-invite"
-        "?template=responses_received"
+        f"/operator/sessions/{review_session.public_id}/setup-invite?template=responses_received"
     ).text
     chip = body[body.index("data-send-confirmation-chip") :]
     chip = chip[: chip.index("</label>")]
     assert "Don&#39;t send response confirmation</span>" in chip
     box = chip[chip.index("<input") : chip.index(">", chip.index("<input"))]
     assert "checked" not in box
-    assert 'class="pill pill-count tag-chip is-selected"' in body[
-        body.rindex("<label", 0, body.index("data-send-confirmation-chip")) :
-    ][:60]
+    assert (
+        'class="pill pill-count tag-chip is-selected"'
+        in body[body.rindex("<label", 0, body.index("data-send-confirmation-chip")) :][:60]
+    )
 
 
 def test_save_responses_received_unchecking_persists_explicit_false(
@@ -419,9 +384,7 @@ def test_save_responses_received_unchecking_persists_explicit_false(
     assert changes["responses_received_enabled"] == [True, False]
 
 
-def test_save_responses_received_re_check_resets_enabled(
-    client: TestClient, db: Session
-) -> None:
+def test_save_responses_received_re_check_resets_enabled(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="rr-recheck")
     # First save: uncheck → store explicit False.
     client.post(
@@ -458,9 +421,7 @@ def test_save_responses_received_re_check_resets_enabled(
     assert "responses_received_enabled" not in overrides
 
 
-def test_save_responses_received_no_change_does_not_audit(
-    client: TestClient, db: Session
-) -> None:
+def test_save_responses_received_no_change_does_not_audit(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="rr-noop")
     # Two empty saves with the default-checked checkbox: nothing
     # changes either time, so no audit events.
@@ -477,15 +438,15 @@ def test_save_responses_received_no_change_does_not_audit(
             },
             follow_redirects=False,
         )
-    events = db.execute(
-        select(AuditEvent).where(AuditEvent.event_type == "email_template.updated")
-    ).scalars().all()
+    events = (
+        db.execute(select(AuditEvent).where(AuditEvent.event_type == "email_template.updated"))
+        .scalars()
+        .all()
+    )
     assert events == []
 
 
-def test_reset_responses_received_subject_removes_override(
-    client: TestClient, db: Session
-) -> None:
+def test_reset_responses_received_subject_removes_override(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="rr-reset")
     # Set a subject override on responses_received.
     client.post(
@@ -507,18 +468,14 @@ def test_reset_responses_received_subject_removes_override(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    assert response.headers["location"].endswith(
-        "/setup-invite?template=responses_received"
-    )
+    assert response.headers["location"].endswith("/setup-invite?template=responses_received")
 
     db.refresh(review_session)
     overrides = review_session.email_template_overrides or {}
     assert "responses_received_subject" not in overrides
 
 
-def test_an_archived_sessions_templates_are_read_only(
-    client: TestClient, db: Session
-) -> None:
+def test_an_archived_sessions_templates_are_read_only(client: TestClient, db: Session) -> None:
     """Findings O2, ruled 2026-10-22: the editor moved ``updated_at``,
     which the Archive page reads as the archived date, so on an
     archived session both writes answer 409 and the page renders its
@@ -539,11 +496,13 @@ def test_an_archived_sessions_templates_are_read_only(
     before = review_session.updated_at
 
     saved = client.post(
-        base, data={"template": "reminder", "subject": "Changed"},
+        base,
+        data={"template": "reminder", "subject": "Changed"},
         follow_redirects=False,
     )
     reset = client.post(
-        f"{base}/reset", data={"template": "reminder", "field": "subject"},
+        f"{base}/reset",
+        data={"template": "reminder", "field": "subject"},
         follow_redirects=False,
     )
     assert (saved.status_code, reset.status_code) == (409, 409)
@@ -563,7 +522,7 @@ def test_an_archived_sessions_templates_are_read_only(
     # Nothing to cancel either: Cancel renders disabled, not as a link
     # (round 3's browser check).
     assert '<span class="btn secondary disabled" aria-disabled="true">Cancel</span>' in page
-    assert re.search(r'<a [^>]*>Cancel</a>', page) is None
+    assert re.search(r"<a [^>]*>Cancel</a>", page) is None
 
 
 def test_an_archive_committed_since_the_page_loaded_still_refuses(

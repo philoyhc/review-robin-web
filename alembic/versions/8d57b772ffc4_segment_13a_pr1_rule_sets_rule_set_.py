@@ -15,6 +15,7 @@ Revises: c4f6a8b0d2e5
 Create Date: 2026-05-07 11:48:50.314450
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -42,9 +43,7 @@ def upgrade() -> None:
         ),
         sa.Column("is_seed", sa.Boolean(), nullable=False),
         sa.Column("current_revision_id", sa.Integer(), nullable=True),
-        sa.Column(
-            "deleted_at", sa.DateTime(timezone=True), nullable=True
-        ),
+        sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -74,18 +73,14 @@ def upgrade() -> None:
         sa.Column("exclude_self_reviews", sa.Boolean(), nullable=False),
         sa.Column("seed", sa.Integer(), nullable=True),
         sa.Column("rules_json", sa.JSON(), nullable=False),
-        sa.Column(
-            "created_at", sa.DateTime(timezone=True), nullable=False
-        ),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column(
             "created_by_user_id",
             sa.Integer(),
             sa.ForeignKey("users.id"),
             nullable=True,
         ),
-        sa.UniqueConstraint(
-            "rule_set_id", "revision_no", name="uq_rule_set_revision_no"
-        ),
+        sa.UniqueConstraint("rule_set_id", "revision_no", name="uq_rule_set_revision_no"),
     )
 
     # The forward FK from ``rule_sets.current_revision_id`` to
@@ -102,8 +97,6 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     with op.batch_alter_table("rule_sets") as batch:
-        batch.drop_constraint(
-            "fk_rule_sets_current_revision_id", type_="foreignkey"
-        )
+        batch.drop_constraint("fk_rule_sets_current_revision_id", type_="foreignkey")
     op.drop_table("rule_set_revisions")
     op.drop_table("rule_sets")

@@ -4,6 +4,7 @@ Author's ruling, 2026-10-02 (G4): when the session's "send on submit"
 toggle is on, a reviewer's successful submit writes a
 ``responses_received`` outbox row. It is work in progress awaiting
 Azure: the row stays ``queued`` because no transport exists yet."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -92,9 +93,7 @@ def _ready_session(
     return review_session
 
 
-def _answer_and_submit(
-    rae_client: TestClient, db: Session, review_session: ReviewSession
-) -> int:
+def _answer_and_submit(rae_client: TestClient, db: Session, review_session: ReviewSession) -> int:
     data: dict[str, str] = {}
     for assignment in db.execute(
         select(Assignment).where(Assignment.session_id == review_session.id)
@@ -145,9 +144,7 @@ def test_a_submit_queues_the_confirmation(
     ).scalar_one()
     assert event.detail is not None
     assert event.detail["refs"]["outbox_id"] == row.id
-    rae_user = db.execute(
-        select(User).where(User.email == "rae@example.edu")
-    ).scalar_one()
+    rae_user = db.execute(select(User).where(User.email == "rae@example.edu")).scalar_one()
     assert event.actor_user_id == rae_user.id
 
 
@@ -185,9 +182,7 @@ def test_a_second_submit_refreshes_the_one_queued_row(
 def test_a_long_session_name_keeps_the_subject_within_its_column(
     client: TestClient, db: Session, rae: AuthenticatedUser, make_client
 ) -> None:
-    review_session = _ready_session(
-        client, db, "received-long", name="n" * 255
-    )
+    review_session = _ready_session(client, db, "received-long", name="n" * 255)
 
     assert _answer_and_submit(make_client(rae), db, review_session) == 303
 
@@ -214,14 +209,18 @@ def test_a_queue_failure_does_not_fail_the_submit(
     assert _answer_and_submit(make_client(rae), db, review_session) == 303
 
     assert _received_rows(db, review_session.id) == []
-    submitted = db.execute(
-        select(Response)
-        .join(Assignment, Response.assignment_id == Assignment.id)
-        .where(
-            Assignment.session_id == review_session.id,
-            Response.submitted_at.is_not(None),
+    submitted = (
+        db.execute(
+            select(Response)
+            .join(Assignment, Response.assignment_id == Assignment.id)
+            .where(
+                Assignment.session_id == review_session.id,
+                Response.submitted_at.is_not(None),
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert submitted
 
 

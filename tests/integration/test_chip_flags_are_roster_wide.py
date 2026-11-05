@@ -22,6 +22,7 @@ The seeds put the tagged row where the old code could not see it:
 past the cap, or behind the filter. A test that tagged row 1 would
 pass against the code this rung replaces.
 """
+
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
@@ -58,9 +59,7 @@ def _session(
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _rows(body: str) -> str:
@@ -118,9 +117,7 @@ def test_a_tag_past_the_reviewers_cap_still_lights_its_chip(
         )
     db.commit()
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
     assert "R0249" not in _rows(body), "seed is vacuous"
     assert _chip_state(body, "tag-1") == "live"
     assert _chip_state(body, "tag-2") == "absent"
@@ -141,9 +138,7 @@ def test_a_tag_past_the_reviewees_cap_still_lights_its_chip(
         )
     db.commit()
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewees"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewees").text
     assert "E0249" not in _rows(body), "seed is vacuous"
     assert _chip_state(body, "tag-2") == "live"
     assert _chip_state(body, "tag-1") == "absent"
@@ -165,9 +160,7 @@ def test_a_photo_past_the_cap_still_lights_the_profile_chip(
         )
     db.commit()
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewees"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewees").text
     assert "E0249" not in _rows(body), "seed is vacuous"
     assert _chip_state(body, "profile") == "live"
 
@@ -200,9 +193,7 @@ def test_a_filter_that_excludes_the_tagged_row_keeps_its_chip_live(
     )
     db.commit()
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers?q=Alpha"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers?q=Alpha").text
     assert "Bravo" not in _rows(body), "seed is vacuous"
     assert _chip_state(body, "tag-1") == "live"
 
@@ -239,9 +230,7 @@ def test_the_invitations_chip_reads_the_roster_not_the_filtered_rows(
         follow_redirects=False,
     )
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/invitations?q=Alpha"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/invitations?q=Alpha").text
     assert "bravo@example.edu" not in _rows(body), "seed is vacuous"
     assert _chip_state(body, "tag-3") == "live"
 
@@ -278,9 +267,7 @@ def test_the_responses_chip_reads_the_roster_not_the_filtered_rows(
         follow_redirects=False,
     )
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/responses?q=Echo"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/responses?q=Echo").text
     assert "foxtrot@example.edu" not in _rows(body), "seed is vacuous"
     assert _chip_state(body, "tag-2") == "live"
 
@@ -306,9 +293,7 @@ def test_a_slot_with_no_data_anywhere_renders_no_chip_and_no_column(
     )
     db.commit()
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
     assert _chip_state(body, "tag-1") == "live"
     assert _chip_state(body, "tag-2") == "absent"
     assert _chip_state(body, "tag-3") == "absent"
@@ -323,9 +308,7 @@ def test_a_slot_with_no_data_anywhere_renders_no_chip_and_no_column(
     assert "tag-col-3" not in table
 
 
-def test_a_roster_with_no_tags_at_all_renders_no_chip_row(
-    db: Session, client: TestClient
-) -> None:
+def test_a_roster_with_no_tags_at_all_renders_no_chip_row(db: Session, client: TestClient) -> None:
     """``Show columns:`` with nothing after it is a label, not a
     control."""
     review_session = _session(client, db, code="chip-none")
@@ -338,9 +321,7 @@ def test_a_roster_with_no_tags_at_all_renders_no_chip_row(
     )
     db.commit()
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
     assert "Show columns:" not in body
     assert 'data-col-toggles-for="reviewers-table"' not in body
     _t = body.index("<table id=")
@@ -372,12 +353,8 @@ def test_edit_mode_renders_every_tag_column_even_when_empty(
     )
     db.commit()
 
-    plain = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-    ).text
-    adding = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers?add=1"
-    ).text
+    plain = client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
+    adding = client.get(f"/operator/sessions/{review_session.public_id}/reviewers?add=1").text
 
     _p = plain.index("<table id=")
     _a = adding.index("<table id=")
@@ -428,9 +405,7 @@ def test_a_tag_past_the_assignments_pair_cap_still_lights_its_chip(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(client, review_session.id)
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/assignments").text
     assert "r15@example.edu" not in _rows(body), (
         "seed is vacuous — the tagged reviewer's pairs rendered, so the "
         "capped sample could have seen the tag"
@@ -439,17 +414,13 @@ def test_a_tag_past_the_assignments_pair_cap_still_lights_its_chip(
     assert _chip_state(body, "rt2") == "absent"
 
 
-def test_assignments_pair_context_chips_stay_active_only(
-    db: Session, client: TestClient
-) -> None:
+def test_assignments_pair_context_chips_stay_active_only(db: Session, client: TestClient) -> None:
     """``active_only`` is preserved, not rationalized: the pair-context
     group counts only ``active`` relationships, matching the rule
     engine, while the Relationships Setup page counts every row. An
     inactive relationship's tag lights the chip on one page and not
     the other."""
-    review_session = _session(
-        client, db, code="chip-active-only", relationships=True
-    )
+    review_session = _session(client, db, code="chip-active-only", relationships=True)
     reviewer = Reviewer(
         session_id=review_session.id,
         name="Alpha",
@@ -476,9 +447,7 @@ def test_assignments_pair_context_chips_stay_active_only(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(client, review_session.id)
 
-    assignments_body = client.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    ).text
+    assignments_body = client.get(f"/operator/sessions/{review_session.public_id}/assignments").text
     relationships_body = client.get(
         f"/operator/sessions/{review_session.public_id}/relationships"
     ).text
@@ -487,9 +456,7 @@ def test_assignments_pair_context_chips_stay_active_only(
     assert _chip_state(relationships_body, "tag-1") == "live"
 
 
-def test_the_photo_chip_and_the_photo_column_agree(
-    db: Session, client: TestClient
-) -> None:
+def test_the_photo_chip_and_the_photo_column_agree(db: Session, client: TestClient) -> None:
     """A chip that governs a column that is not rendered is a control
     wired to nothing.
 
@@ -510,9 +477,7 @@ def test_the_photo_chip_and_the_photo_column_agree(
         )
     db.commit()
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewees"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewees").text
     assert "E0249" not in _rows(body), "seed is vacuous"
     assert _chip_state(body, "profile") == "live"
     assert 'class="profile-col"' in body, (
@@ -557,9 +522,7 @@ def test_the_reviewers_profile_column_reads_the_roster_not_the_window(
     )
     db.commit()
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers?q=Alpha"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers?q=Alpha").text
     assert "Bravo" not in _rows(body), "seed is vacuous"
     assert 'class="profile-col"' in body, (
         "a filter that excludes the only profile row dropped the column"
@@ -585,16 +548,12 @@ def test_the_reviewers_index_omits_profile_when_no_row_carries_one(
     )
     db.commit()
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
     assert 'class="profile-col"' not in body
     assert "Profile (" not in " ".join(body.split())
 
 
-def test_an_assignments_group_with_no_data_renders_no_row(
-    db: Session, client: TestClient
-) -> None:
+def test_an_assignments_group_with_no_data_renders_no_row(db: Session, client: TestClient) -> None:
     """Assignments is the only page with several chip rows, so it is
     the only one that can render a group label with no chips after
     it. Reviewer tags are populated here; reviewee tags and
@@ -624,9 +583,7 @@ def test_an_assignments_group_with_no_data_renders_no_row(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(client, review_session.id)
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/assignments").text
     assert "Show reviewers:" in body
     assert "Show reviewees:" not in body
     assert "Show relationships:" not in body

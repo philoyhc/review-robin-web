@@ -24,9 +24,7 @@ from app.services.scheduled_events import _ensure_aware_utc
 KINDS = ("invite", "reminder")
 
 
-def _session(
-    client: TestClient, db: Session, code: str, *, kind: str
-) -> ReviewSession:
+def _session(client: TestClient, db: Session, code: str, *, kind: str) -> ReviewSession:
     """The ``kind`` list's anchor two days out (Start a day before End
     for reminders, End a day after Start for invites); ``[-P3D, -P1D]``
     on that list, the first recorded as sent on its anchor."""
@@ -35,21 +33,13 @@ def _session(
         data={"name": code.title(), "code": code},
         follow_redirects=False,
     )
-    session = db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    session = db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
     now = datetime.now(UTC).replace(second=0, microsecond=0)
     session.display_timezone = "UTC"
     two_days = now + timedelta(days=2)
-    session.scheduled_activate_at = (
-        two_days if kind == "invite" else two_days - timedelta(days=1)
-    )
-    session.deadline = (
-        two_days + timedelta(days=1) if kind == "invite" else two_days
-    )
-    anchor = (
-        session.scheduled_activate_at if kind == "invite" else session.deadline
-    )
+    session.scheduled_activate_at = two_days if kind == "invite" else two_days - timedelta(days=1)
+    session.deadline = two_days + timedelta(days=1) if kind == "invite" else two_days
+    anchor = session.scheduled_activate_at if kind == "invite" else session.deadline
     assert anchor is not None
     setattr(session, f"{kind}_offsets", ["-P3D", "-P1D"])
     _record_sent(db, session, kind, anchor, "-P3D")
@@ -111,53 +101,37 @@ def _save(
     )
 
 
-def test_removing_a_sent_entry_before_another_is_refused(
-    client: TestClient, db: Session
-) -> None:
+def test_removing_a_sent_entry_before_another_is_refused(client: TestClient, db: Session) -> None:
     for kind in KINDS:
         session = _session(client, db, f"bc1-remove-{kind}", kind=kind)
         response = _save(client, session, kind=kind, offsets="-P1D")
         assert response.status_code == 422, kind
-        assert "-P3D was already sent (or skipped) at position 1" in (
-            response.text
-        )
+        assert "-P3D was already sent (or skipped) at position 1" in (response.text)
         db.expire_all()
         assert getattr(session, f"{kind}_offsets") == ["-P3D", "-P1D"]
 
 
-def test_inserting_before_a_sent_entry_is_refused_by_name(
-    client: TestClient, db: Session
-) -> None:
+def test_inserting_before_a_sent_entry_is_refused_by_name(client: TestClient, db: Session) -> None:
     """Not as "leave more lead time": the moved -P3D is in the past, but
     the operator is told what actually went wrong."""
     for kind in KINDS:
         session = _session(client, db, f"bc1-insert-{kind}", kind=kind)
-        response = _save(
-            client, session, kind=kind, offsets="-P1DT12H, -P3D, -P1D"
-        )
+        response = _save(client, session, kind=kind, offsets="-P1DT12H, -P3D, -P1D")
         assert response.status_code == 422, kind
         assert "so -P1DT12H there would never be sent" in response.text
         assert "lead time" not in response.text
 
 
-def test_keeping_a_sent_entry_and_editing_after_it_saves(
-    client: TestClient, db: Session
-) -> None:
+def test_keeping_a_sent_entry_and_editing_after_it_saves(client: TestClient, db: Session) -> None:
     for kind in KINDS:
         session = _session(client, db, f"bc1-append-{kind}", kind=kind)
-        response = _save(
-            client, session, kind=kind, offsets="-P3D, -P1DT12H, -PT12H"
-        )
+        response = _save(client, session, kind=kind, offsets="-P3D, -P1DT12H, -PT12H")
         assert response.status_code == 303, (kind, response.text)
         db.expire_all()
-        assert getattr(session, f"{kind}_offsets") == [
-            "-P3D", "-P1DT12H", "-PT12H"
-        ]
+        assert getattr(session, f"{kind}_offsets") == ["-P3D", "-P1DT12H", "-PT12H"]
 
 
-def test_removing_only_trailing_sent_entries_saves(
-    client: TestClient, db: Session
-) -> None:
+def test_removing_only_trailing_sent_entries_saves(client: TestClient, db: Session) -> None:
     """Clearing the list puts nothing on a sent position."""
     session = _session(client, db, "bc1-clear", kind="invite")
     assert _save(client, session, kind="invite", offsets="").status_code == 303
@@ -174,17 +148,13 @@ def test_a_new_anchor_frees_the_list_and_returning_restores_its_record(
     assert first_start is not None
     other_start = first_start + timedelta(hours=1)
     assert (
-        _save(client, session, kind="invite", offsets="-P1D", anchor=other_start)
-        .status_code
-        == 303
+        _save(client, session, kind="invite", offsets="-P1D", anchor=other_start).status_code == 303
     )
     db.expire_all()
     back = _save(client, session, kind="invite", offsets="-P1D", anchor=first_start)
     assert back.status_code == 422
     assert "-P3D was already sent" in back.text
-    restored = _save(
-        client, session, kind="invite", offsets="-P3D, -P1D", anchor=first_start
-    )
+    restored = _save(client, session, kind="invite", offsets="-P3D, -P1D", anchor=first_start)
     assert restored.status_code == 303, restored.text
 
 
@@ -208,14 +178,10 @@ def test_a_sent_position_past_the_lists_end_takes_no_new_entry(
     fires again, so an entry appended onto it is refused."""
     session = _session(client, db, "bc1-past-end", kind="invite")
     assert session.scheduled_activate_at is not None
-    _record_sent(
-        db, session, "invite", session.scheduled_activate_at, "-P1D", index=1
-    )
+    _record_sent(db, session, "invite", session.scheduled_activate_at, "-P1D", index=1)
     session.invite_offsets = ["-P3D"]
     db.commit()
-    response = _save(
-        client, session, kind="invite", offsets="-P3D, -PT12H"
-    )
+    response = _save(client, session, kind="invite", offsets="-P3D, -PT12H")
     assert response.status_code == 422
     assert "-P1D was already sent (or skipped) at position 2" in response.text
 
@@ -230,9 +196,7 @@ def test_the_lobby_cannot_move_end_back_onto_sent_reminders(
     first_end = session.deadline
     assert first_end is not None
     other_end = first_end + timedelta(hours=1)
-    moved = _save(
-        client, session, kind="reminder", offsets="-P1D", anchor=other_end
-    )
+    moved = _save(client, session, kind="reminder", offsets="-P1D", anchor=other_end)
     assert moved.status_code == 303, moved.text
     db.expire_all()
     back = client.post(
@@ -260,9 +224,7 @@ def test_the_lobby_names_a_moved_sent_reminder_before_its_lead_time(
     assert first_end is not None
     # -P2D on an End three hours later resolves three hours out.
     other_end = first_end + timedelta(hours=3)
-    moved = _save(
-        client, session, kind="reminder", offsets="-P2D", anchor=other_end
-    )
+    moved = _save(client, session, kind="reminder", offsets="-P2D", anchor=other_end)
     assert moved.status_code == 303, moved.text
     db.expire_all()
     # Back on the first End, -P2D resolves about now: short of the floor.

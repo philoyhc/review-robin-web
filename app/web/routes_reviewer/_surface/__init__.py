@@ -39,6 +39,7 @@ bare session URL ``/me/sessions/{id}`` which 303s on to
 page number, so a "go back to where you were" round-trip is no
 longer possible after a session-wide POST.
 """
+
 from __future__ import annotations
 
 # Only the names the docstring lists are re-exported; the sub-modules

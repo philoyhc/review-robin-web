@@ -247,10 +247,7 @@ def test_merge_tags_for_invitation_includes_invite_url() -> None:
 
 
 def test_merge_tags_for_reminder_matches_invitation() -> None:
-    assert (
-        views.merge_tags_for_template("reminder")
-        == views.merge_tags_for_template("invitation")
-    )
+    assert views.merge_tags_for_template("reminder") == views.merge_tags_for_template("invitation")
 
 
 def test_merge_tags_for_responses_received_drops_invite_url_adds_submitted_at() -> None:

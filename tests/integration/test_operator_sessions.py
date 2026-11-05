@@ -40,8 +40,7 @@ def test_create_redirects_to_edit(client: TestClient, db: Session) -> None:
         select(ReviewSession).where(ReviewSession.code == "spring-2026")
     ).scalar_one()
     assert (
-        response.headers["location"]
-        == f"/operator/sessions/{review_session.public_id}?editing=1"
+        response.headers["location"] == f"/operator/sessions/{review_session.public_id}?editing=1"
     )
 
 
@@ -55,9 +54,7 @@ def test_create_inserts_session_operator_row(client: TestClient, db: Session) ->
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.code == "spring-2026")
     ).scalar_one()
-    user = db.execute(
-        select(User).where(User.email == "alice@example.edu")
-    ).scalar_one()
+    user = db.execute(select(User).where(User.email == "alice@example.edu")).scalar_one()
     operator = db.execute(
         select(SessionOperator).where(
             SessionOperator.session_id == review_session.id,
@@ -67,9 +64,7 @@ def test_create_inserts_session_operator_row(client: TestClient, db: Session) ->
     assert operator.role == "owner"
 
 
-def test_create_writes_session_created_audit_event(
-    client: TestClient, db: Session
-) -> None:
+def test_create_writes_session_created_audit_event(client: TestClient, db: Session) -> None:
     client.post(
         "/operator/sessions",
         data={"name": "Spring Reviews", "code": "spring-2026"},
@@ -154,9 +149,7 @@ def test_list_empty_state_renders_for_new_user(client: TestClient) -> None:
     assert "don't have any sessions yet" in body or "no sessions" in body.lower()
 
 
-def test_delete_session_with_email_outbox_rows_succeeds(
-    client: TestClient, db: Session
-) -> None:
+def test_delete_session_with_email_outbox_rows_succeeds(client: TestClient, db: Session) -> None:
     """Regression: deleting a session that has ``email_outbox`` rows
     pointing at its invitations must not trip a FOREIGN KEY constraint
     failure. Before the fix, ``ReviewSession.invitations`` cascade-
@@ -210,15 +203,20 @@ def test_delete_session_with_email_outbox_rows_succeeds(
     assert response.status_code == 303, response.text
 
     # All session-scoped rows are gone.
-    assert db.execute(
-        select(ReviewSession).where(ReviewSession.id == review_session.id)
-    ).scalar_one_or_none() is None
-    assert db.execute(
-        select(Invitation).where(Invitation.id == invitation.id)
-    ).scalar_one_or_none() is None
-    assert db.execute(
-        select(EmailOutbox).where(EmailOutbox.id == outbox.id)
-    ).scalar_one_or_none() is None
+    assert (
+        db.execute(
+            select(ReviewSession).where(ReviewSession.id == review_session.id)
+        ).scalar_one_or_none()
+        is None
+    )
+    assert (
+        db.execute(select(Invitation).where(Invitation.id == invitation.id)).scalar_one_or_none()
+        is None
+    )
+    assert (
+        db.execute(select(EmailOutbox).where(EmailOutbox.id == outbox.id)).scalar_one_or_none()
+        is None
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -298,9 +296,7 @@ def test_sessions_list_renders_inline_expander_fragments(
     assert "data-expander-clear-others" in body
 
 
-def test_lobby_edit_updates_draft_session_and_tags(
-    client: TestClient, db: Session
-) -> None:
+def test_lobby_edit_updates_draft_session_and_tags(client: TestClient, db: Session) -> None:
     """The single-session expander Save route updates a draft
     session's name / code and replaces its tag set."""
     client.post(
@@ -335,9 +331,7 @@ def test_lobby_edit_updates_draft_session_and_tags(
     ]
 
 
-def test_lobby_edit_skips_name_code_when_not_editable(
-    client: TestClient, db: Session
-) -> None:
+def test_lobby_edit_skips_name_code_when_not_editable(client: TestClient, db: Session) -> None:
     """Off `is_editable`, the lobby-edit route ignores Name / Code (the
     boxes render read-only) but still applies the always-editable tags."""
     client.post(
@@ -445,9 +439,7 @@ def _validated_session(client: TestClient, db: Session, code: str) -> int:
     return review_session.id
 
 
-def test_lobby_edit_applies_name_code_on_validated(
-    client: TestClient, db: Session
-) -> None:
+def test_lobby_edit_applies_name_code_on_validated(client: TestClient, db: Session) -> None:
     """The expander's gate is `is_editable`, Session Home's (findings
     B2): on `validated` Name / Code apply, and the session stays
     `validated`, as the same edit on Session Home does (findings Cc5)."""
@@ -467,9 +459,7 @@ def test_lobby_edit_applies_name_code_on_validated(
     assert updated.status == "validated"
 
 
-def test_lobby_tags_only_save_keeps_validated(
-    client: TestClient, db: Session
-) -> None:
+def test_lobby_tags_only_save_keeps_validated(client: TestClient, db: Session) -> None:
     """A Save that changes only the tags writes no session edit, so it
     does not cost the session its validation."""
     session_id = _validated_session(client, db, "val-tags-1")
@@ -558,18 +548,14 @@ def test_lobby_tags_only_save_keeps_a_deadline_in_the_repeated_dst_hour(
     assert updated.deadline.replace(tzinfo=dt.UTC) == stored
 
 
-def test_lobby_edit_keeps_every_field_it_does_not_show(
-    client: TestClient, db: Session
-) -> None:
+def test_lobby_edit_keeps_every_field_it_does_not_show(client: TestClient, db: Session) -> None:
     """The expander edits Name, Code and Deadline only; a Save keeps the
     schedule, the send offsets, the release window, the roster toggles,
     the description and the help contact, and writes no schedule or
     toggle audit event (findings 2026-10-03 C1)."""
     session_id = _draft_with_schedule(client, db, "kept-1")
 
-    response = _lobby_save(
-        client, session_id, code="kept-2", deadline="2030-01-21T09:00"
-    )
+    response = _lobby_save(client, session_id, code="kept-2", deadline="2030-01-21T09:00")
 
     assert response.status_code == 303
     db.expire_all()
@@ -616,9 +602,7 @@ def test_lobby_edit_refuses_a_deadline_out_of_order(
     tags are not written either."""
     session_id = _draft_with_schedule(client, db, "order-1")
 
-    response = _lobby_save(
-        client, session_id, code="order-1", deadline=deadline, tags="never"
-    )
+    response = _lobby_save(client, session_id, code="order-1", deadline=deadline, tags="never")
 
     assert response.status_code == 422
     assert message in response.text
@@ -667,9 +651,7 @@ def test_lobby_edit_rename_skips_the_checks_when_the_deadline_is_unchanged(
     review_session.scheduled_activate_at = _utc(dt.datetime(2030, 1, 30, 9))
     db.commit()
 
-    response = _lobby_save(
-        client, session_id, code="aged-1", deadline="2030-01-20T09:00"
-    )
+    response = _lobby_save(client, session_id, code="aged-1", deadline="2030-01-20T09:00")
 
     assert response.status_code == 303
     db.expire_all()
@@ -708,9 +690,7 @@ def test_edit_payload_rejects_a_field_update_session_does_not_write(
         sessions.edit_payload(review_session, nmae="x")
 
 
-def test_lobby_renders_real_session_tags(
-    client: TestClient, db: Session
-) -> None:
+def test_lobby_renders_real_session_tags(client: TestClient, db: Session) -> None:
     """The Tags column renders each session's real tags, and the
     filter strip lists the operator's tag vocabulary."""
     client.post(
@@ -733,9 +713,7 @@ def test_lobby_renders_real_session_tags(
     assert "HSH1000" not in body
 
 
-def test_lobby_tag_filter_strip_is_interactive(
-    client: TestClient, db: Session
-) -> None:
+def test_lobby_tag_filter_strip_is_interactive(client: TestClient, db: Session) -> None:
     """The tag-filter strip ships clickable chips, an AND/OR mode
     chip, and a clear chip; each row carries its tag set for the
     client-side filter."""
@@ -824,9 +802,7 @@ def test_archive_selected_archives_draft_and_excludes_from_lobby(
     assert "1 archived" in body
 
 
-def test_archive_selected_skips_activated(
-    client: TestClient, db: Session
-) -> None:
+def test_archive_selected_skips_activated(client: TestClient, db: Session) -> None:
     """An activated (ready) session ticked for archive is silently skipped —
     archiving applies to non-activated sessions only (18R harmonization)."""
     client.post(
@@ -851,9 +827,7 @@ def test_archive_selected_skips_activated(
     assert must_get(db, ReviewSession, session_id).status == "ready"
 
 
-def test_archive_selected_archives_non_activated_states(
-    client: TestClient, db: Session
-) -> None:
+def test_archive_selected_archives_non_activated_states(client: TestClient, db: Session) -> None:
     """18R harmonization — archive now applies to any non-activated session,
     not just draft. A validated and an expired session both archive."""
     for code, state in (("arch-validated", "validated"), ("arch-expired", "expired")):
@@ -862,9 +836,7 @@ def test_archive_selected_archives_non_activated_states(
             data={"name": code, "code": code},
             follow_redirects=False,
         )
-        rs = db.execute(
-            select(ReviewSession).where(ReviewSession.code == code)
-        ).scalar_one()
+        rs = db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
         rs.status = state
         db.commit()
         client.post(
@@ -890,9 +862,7 @@ def test_lobby_filter_card_has_go_to_archive(client: TestClient) -> None:
     assert "Go to Archive" in body
 
 
-def test_archived_page_lists_archived_sessions(
-    client: TestClient, db: Session
-) -> None:
+def test_archived_page_lists_archived_sessions(client: TestClient, db: Session) -> None:
     """The archived-sessions child page lists the operator's archived
     sessions; a draft stays off it."""
     client.post(
@@ -930,9 +900,7 @@ def test_archived_page_lists_archived_sessions(
     assert 'id="archived-bulk-expander"' in body
 
 
-def test_unarchive_selected_restores_session_to_draft(
-    client: TestClient, db: Session
-) -> None:
+def test_unarchive_selected_restores_session_to_draft(client: TestClient, db: Session) -> None:
     """The archived-page bulk expander's Unarchive flips a session
     archived → draft, returning it to the main lobby."""
     client.post(
@@ -960,9 +928,7 @@ def test_unarchive_selected_restores_session_to_draft(
     assert must_get(db, ReviewSession, session_id).status == "draft"
 
 
-def test_delete_archived_selected_removes_session(
-    client: TestClient, db: Session
-) -> None:
+def test_delete_archived_selected_removes_session(client: TestClient, db: Session) -> None:
     """The archived-page bulk Delete removes an archived session; it
     requires the confirm gate."""
     client.post(
@@ -1005,9 +971,7 @@ def _two_sessions(client: TestClient, db: Session) -> list[int]:
             follow_redirects=False,
         )
     return [
-        db.execute(
-            select(ReviewSession.id).where(ReviewSession.code == code)
-        ).scalar_one()
+        db.execute(select(ReviewSession.id).where(ReviewSession.code == code)).scalar_one()
         for code in ("bt-a", "bt-b")
     ]
 
@@ -1025,9 +989,7 @@ def test_bulk_tags_add_to_all(client: TestClient, db: Session) -> None:
 
     assert response.status_code == 303
     for session_id in ids:
-        assert session_tags.tags_for_sessions(db, [session_id])[
-            session_id
-        ] == ["alpha", "beta"]
+        assert session_tags.tags_for_sessions(db, [session_id])[session_id] == ["alpha", "beta"]
 
 
 def test_bulk_tags_remove_from_all(client: TestClient, db: Session) -> None:
@@ -1048,9 +1010,7 @@ def test_bulk_tags_remove_from_all(client: TestClient, db: Session) -> None:
 
     assert response.status_code == 303
     for session_id in ids:
-        assert session_tags.tags_for_sessions(db, [session_id])[
-            session_id
-        ] == ["shared"]
+        assert session_tags.tags_for_sessions(db, [session_id])[session_id] == ["shared"]
 
 
 def test_bulk_tags_rejects_unknown_op(client: TestClient, db: Session) -> None:
@@ -1095,9 +1055,7 @@ def test_lobby_renders_no_tags_state(client: TestClient) -> None:
     assert "Show sessions tagged with:" not in body
 
 
-def test_delete_selected_removes_ticked_drafts(
-    client: TestClient, db: Session
-) -> None:
+def test_delete_selected_removes_ticked_drafts(client: TestClient, db: Session) -> None:
     client.post(
         "/operator/sessions",
         data={"name": "Keep", "code": "keep-1"},
@@ -1108,12 +1066,8 @@ def test_delete_selected_removes_ticked_drafts(
         data={"name": "Bin", "code": "bin-1"},
         follow_redirects=False,
     )
-    keep = db.execute(
-        select(ReviewSession).where(ReviewSession.code == "keep-1")
-    ).scalar_one()
-    bin_ = db.execute(
-        select(ReviewSession).where(ReviewSession.code == "bin-1")
-    ).scalar_one()
+    keep = db.execute(select(ReviewSession).where(ReviewSession.code == "keep-1")).scalar_one()
+    bin_ = db.execute(select(ReviewSession).where(ReviewSession.code == "bin-1")).scalar_one()
 
     response = client.post(
         "/operator/sessions/bulk-delete",
@@ -1123,17 +1077,17 @@ def test_delete_selected_removes_ticked_drafts(
 
     assert response.status_code == 303
     assert response.headers.get("location") == "/operator/sessions"
-    assert db.execute(
-        select(ReviewSession).where(ReviewSession.id == bin_.id)
-    ).scalar_one_or_none() is None
-    assert db.execute(
-        select(ReviewSession).where(ReviewSession.id == keep.id)
-    ).scalar_one_or_none() is not None
+    assert (
+        db.execute(select(ReviewSession).where(ReviewSession.id == bin_.id)).scalar_one_or_none()
+        is None
+    )
+    assert (
+        db.execute(select(ReviewSession).where(ReviewSession.id == keep.id)).scalar_one_or_none()
+        is not None
+    )
 
 
-def test_delete_selected_accepts_expired_and_skips_ready(
-    client: TestClient, db: Session
-) -> None:
+def test_delete_selected_accepts_expired_and_skips_ready(client: TestClient, db: Session) -> None:
     """Author's ruling 2026-10-02: the lobby's Delete accepts an
     ``expired`` session, as Session Home's Delete session does; an
     Activated (``ready``) one is still skipped silently."""
@@ -1143,12 +1097,8 @@ def test_delete_selected_accepts_expired_and_skips_ready(
             data={"name": name, "code": code},
             follow_redirects=False,
         )
-    done = db.execute(
-        select(ReviewSession).where(ReviewSession.code == "done-1")
-    ).scalar_one()
-    live = db.execute(
-        select(ReviewSession).where(ReviewSession.code == "live-1")
-    ).scalar_one()
+    done = db.execute(select(ReviewSession).where(ReviewSession.code == "done-1")).scalar_one()
+    live = db.execute(select(ReviewSession).where(ReviewSession.code == "live-1")).scalar_one()
     done.status = "expired"
     live.status = "ready"
     db.commit()
@@ -1166,17 +1116,13 @@ def test_delete_selected_accepts_expired_and_skips_ready(
     assert db.get(ReviewSession, live_id) is not None
 
 
-def test_delete_selected_without_confirm_returns_400(
-    client: TestClient, db: Session
-) -> None:
+def test_delete_selected_without_confirm_returns_400(client: TestClient, db: Session) -> None:
     client.post(
         "/operator/sessions",
         data={"name": "NoConfirm", "code": "noconf-1"},
         follow_redirects=False,
     )
-    target = db.execute(
-        select(ReviewSession).where(ReviewSession.code == "noconf-1")
-    ).scalar_one()
+    target = db.execute(select(ReviewSession).where(ReviewSession.code == "noconf-1")).scalar_one()
 
     response = client.post(
         "/operator/sessions/bulk-delete",
@@ -1186,9 +1132,10 @@ def test_delete_selected_without_confirm_returns_400(
 
     assert response.status_code == 400
     # Session is still in place.
-    assert db.execute(
-        select(ReviewSession).where(ReviewSession.id == target.id)
-    ).scalar_one_or_none() is not None
+    assert (
+        db.execute(select(ReviewSession).where(ReviewSession.id == target.id)).scalar_one_or_none()
+        is not None
+    )
 
 
 def test_delete_selected_with_no_ids_is_a_clean_redirect(
@@ -1248,12 +1195,18 @@ def test_delete_selected_skips_other_users_sessions(
     )
     assert response.status_code == 303
 
-    assert db.execute(
-        select(ReviewSession).where(ReviewSession.id == bob_session.id)
-    ).scalar_one_or_none() is None
-    assert db.execute(
-        select(ReviewSession).where(ReviewSession.id == alice_session.id)
-    ).scalar_one_or_none() is not None
+    assert (
+        db.execute(
+            select(ReviewSession).where(ReviewSession.id == bob_session.id)
+        ).scalar_one_or_none()
+        is None
+    )
+    assert (
+        db.execute(
+            select(ReviewSession).where(ReviewSession.id == alice_session.id)
+        ).scalar_one_or_none()
+        is not None
+    )
 
 
 def test_lobby_status_cell_renders_closed_pill_for_expired_session(
@@ -1281,9 +1234,7 @@ def test_lobby_status_cell_renders_closed_pill_for_expired_session(
     db.commit()
 
     body = client.get("/operator/sessions").text
-    assert (
-        '<span class="pill pill-lifecycle-expired">Closed</span>' in body
-    )
+    assert '<span class="pill pill-lifecycle-expired">Closed</span>' in body
     # Confirm the CSS rule itself ships (regression guard against
     # the rule getting removed and the pill silently falling back
     # to the un-styled state).

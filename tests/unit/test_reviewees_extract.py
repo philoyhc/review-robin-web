@@ -31,9 +31,7 @@ def _user(db: Session) -> User:
 
 def _session(db: Session, *, code: str = "rev") -> ReviewSession:
     user = _user(db)
-    review_session = ReviewSession(
-        name="Reviewees", code=code, created_by_user_id=user.id
-    )
+    review_session = ReviewSession(name="Reviewees", code=code, created_by_user_id=user.id)
     db.add(review_session)
     db.flush()
     return review_session

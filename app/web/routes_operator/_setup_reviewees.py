@@ -120,16 +120,21 @@ async def reviewees_import_submit(
 
 @router.post("/sessions/{session_id}/reviewees/import/dismiss")
 def reviewees_import_dismiss(
-    request: Request, held_token: str | None = Form(default=None),
+    request: Request,
+    held_token: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_reviewees_editable_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     """The upload card's Dismiss while an ask holds its file: end the
     hold and return to the card (segment 19W)."""
-    return dismiss_held_upload(request,
-        db, held_token=held_token, user=user,
-        review_session=review_session, page="reviewees",
+    return dismiss_held_upload(
+        request,
+        db,
+        held_token=held_token,
+        user=user,
+        review_session=review_session,
+        page="reviewees",
     )
 
 
@@ -189,9 +194,7 @@ def _render_reviewees_page(
         value_resolver=_reviewee_sort_value,
     )
 
-    filtered = views.filter_reviewees_rows(
-        all_reviewees, status=status_filter, search=search
-    )
+    filtered = views.filter_reviewees_rows(all_reviewees, status=status_filter, search=search)
     is_filtered = status_filter != "all" or bool(search.strip())
     # Segment 19J.5 rung 2 — the cap became a page size. The shared
     # helper cuts the window, clamps a stale ``offset`` onto a real
@@ -212,9 +215,7 @@ def _render_reviewees_page(
     displayed_row_count = len(reviewees)
 
     if edit_values is None and edit_id is not None:
-        edited = next(
-            (r for r in reviewees if r.id == edit_id), None
-        )
+        edited = next((r for r in reviewees if r.id == edit_id), None)
         if edited is not None:
             edit_values = {
                 "name": edited.name,
@@ -261,9 +262,7 @@ def _render_reviewees_page(
             "delete_discards_assignments": (
                 csv_imports.existing_assignment_count(db, review_session.id) > 0
             ),
-            "roster_response_count": lifecycle.session_response_count(
-                db, review_session
-            ),
+            "roster_response_count": lifecycle.session_response_count(db, review_session),
             # 19O.5 rung 2 — per row, because the expander's
             # confirmation names what THIS SELECTION costs and the
             # selection lives in the browser. `data-status` is the
@@ -272,9 +271,7 @@ def _render_reviewees_page(
             "relationships_per_row": roster_bulk.relationships_per_row(
                 db, model=Reviewee, session_id=review_session.id
             ),
-            "delete_discards_responses": (
-                lifecycle.session_has_responses(db, review_session)
-            ),
+            "delete_discards_responses": (lifecycle.session_has_responses(db, review_session)),
             "displayed_row_count": displayed_row_count,
             # Segment 19I Item 10 — the one preview-count
             # sentence the seven table pages share. The
@@ -294,9 +291,7 @@ def _render_reviewees_page(
             # not ``selected``: selection is page-local, and carrying
             # a hidden one across a page boundary is how an operator
             # deletes something they cannot see.
-            "pager_url_base": (
-                f"/operator/sessions/{review_session.public_id}/reviewees?"
-            ),
+            "pager_url_base": (f"/operator/sessions/{review_session.public_id}/reviewees?"),
             # The fragment the range links land on (19J.8): the
             # table's card, so a page turn arrives showing the card's
             # top edge, the column chips, the page links and the new
@@ -326,9 +321,7 @@ def _render_reviewees_page(
             "filter_status": status_filter,
             "filter_search": search,
             "filter_status_options": views.REVIEWEES_STATUS_OPTIONS,
-            "filter_search_options": views.reviewees_search_options(
-                all_reviewees
-            ),
+            "filter_search_options": views.reviewees_search_options(all_reviewees),
             "existing_count": csv_imports.existing_reviewee_count(db, review_session.id),
             "directory_check": views.last_directory_check(db, review_session, "reviewees"),
             "directory_unmatched": views.unmatched_count(db, review_session, "reviewees"),
@@ -362,17 +355,13 @@ def _render_reviewees_page(
             # participant info Item 4 — what reviewees see of their own
             # entry on `/results`: the Unlock panel's chips and the
             # readout row's pills (rung 2, the scaffold: the default).
-            **views.reviewee_self_card_context(
-                review_session, column_state.readouts
-            ),
+            **views.reviewee_self_card_context(review_session, column_state.readouts),
             "edit_id": edit_id,
             "add_mode": add_mode,
             "edit_values": edit_values,
             "edit_error": edit_error,
             "edit_confirm_group_clear": edit_confirm_group_clear,
-            "breadcrumbs": breadcrumbs.operator_session_child(
-                review_session, "Reviewees"
-            ),
+            "breadcrumbs": breadcrumbs.operator_session_child(review_session, "Reviewees"),
         },
         status_code=http_status,
     )
@@ -499,7 +488,8 @@ def reviewees_create(
     # page the form was submitted from — the fragment would name a row
     # the response never rendered. It relocates the pager window; the
     # fragment then resolves onto the row.
-    return _redirect_keeping_selection(request,
+    return _redirect_keeping_selection(
+        request,
         f"/operator/sessions/{review_session.public_id}/reviewees",
         [],
         filter_params=[("status", filter_status), ("q", filter_q)],
@@ -591,7 +581,8 @@ def reviewees_update(
             edit_confirm_group_clear=exc.count,
             http_status=status.HTTP_400_BAD_REQUEST,
         )
-    return _redirect_keeping_selection(request,
+    return _redirect_keeping_selection(
+        request,
         f"/operator/sessions/{review_session.public_id}/reviewees",
         [reviewee_id],
         filter_params=[("status", filter_status), ("q", filter_q)],
@@ -631,18 +622,17 @@ async def reviewees_save_self_fields(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
         ) from exc
-    return urls.redirect(request,
-        url=(
-            f"/operator/sessions/{review_session.public_id}/reviewees"
-            "?unlocked=1#roster-card"
-        ),
+    return urls.redirect(
+        request,
+        url=(f"/operator/sessions/{review_session.public_id}/reviewees?unlocked=1#roster-card"),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
 
 @router.post("/sessions/{session_id}/reviewees/bulk-inactivate")
 def reviewees_bulk_inactivate(
-    request: Request, reviewee_ids: list[int] = Form(default=[]),
+    request: Request,
+    reviewee_ids: list[int] = Form(default=[]),
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
@@ -660,10 +650,9 @@ def reviewees_bulk_inactivate(
             correlation_id=request_correlation_id(),
         )
     except RevieweeOperationError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
-        ) from exc
-    return _redirect_keeping_selection(request,
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
+    return _redirect_keeping_selection(
+        request,
         f"/operator/sessions/{review_session.public_id}/reviewees",
         reviewee_ids,
         filter_params=[("status", filter_status), ("q", filter_q)],
@@ -674,7 +663,8 @@ def reviewees_bulk_inactivate(
 
 @router.post("/sessions/{session_id}/reviewees/bulk-reactivate")
 def reviewees_bulk_reactivate(
-    request: Request, reviewee_ids: list[int] = Form(default=[]),
+    request: Request,
+    reviewee_ids: list[int] = Form(default=[]),
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
@@ -692,10 +682,9 @@ def reviewees_bulk_reactivate(
             correlation_id=request_correlation_id(),
         )
     except RevieweeOperationError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
-        ) from exc
-    return _redirect_keeping_selection(request,
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
+    return _redirect_keeping_selection(
+        request,
         f"/operator/sessions/{review_session.public_id}/reviewees",
         reviewee_ids,
         filter_params=[("status", filter_status), ("q", filter_q)],
@@ -706,7 +695,8 @@ def reviewees_bulk_reactivate(
 
 @router.post("/sessions/{session_id}/reviewees/delete-all")
 def reviewees_delete_all(
-    request: Request, confirm: str | None = Form(default=None),
+    request: Request,
+    confirm: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_reviewees_editable_session),
     user: User = Depends(get_or_create_user),
@@ -730,11 +720,9 @@ def reviewees_delete_all(
     # operator was working in: a Save does not close the card, the Lock
     # control does. The fragment lands on the card rather than the top of
     # the document.
-    return urls.redirect(request,
-        url=(
-            f"/operator/sessions/{review_session.public_id}/reviewees"
-            "?unlocked=1#roster-card"
-        ),
+    return urls.redirect(
+        request,
+        url=(f"/operator/sessions/{review_session.public_id}/reviewees?unlocked=1#roster-card"),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -768,9 +756,7 @@ async def reviewees_save_field_labels(
     are silently ignored if submitted.
     """
     form = await request.form()
-    submitted = {
-        param: str(form.get(param, "")) for param, _ in _REVIEWEE_SLOTS
-    }
+    submitted = {param: str(form.get(param, "")) for param, _ in _REVIEWEE_SLOTS}
     # The labels service locks the session row (findings Bc4): wait for
     # it off the event loop.
     await run_in_threadpool(
@@ -788,18 +774,17 @@ async def reviewees_save_field_labels(
     # operator was working in: a Save does not close the card, the Lock
     # control does. The fragment lands on the card rather than the top of
     # the document.
-    return urls.redirect(request,
-        url=(
-            f"/operator/sessions/{review_session.public_id}/reviewees"
-            "?unlocked=1#roster-card"
-        ),
+    return urls.redirect(
+        request,
+        url=(f"/operator/sessions/{review_session.public_id}/reviewees?unlocked=1#roster-card"),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
 
 @router.post("/sessions/{session_id}/reviewees/bulk-delete")
 def reviewees_bulk_delete(
-    request: Request, reviewee_ids: list[int] = Form(default=[]),
+    request: Request,
+    reviewee_ids: list[int] = Form(default=[]),
     confirm: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
     filter_status: str = Form(default="all"),
@@ -834,10 +819,9 @@ def reviewees_bulk_delete(
             correlation_id=request_correlation_id(),
         )
     except RevieweeOperationError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
-        ) from exc
-    return _redirect_keeping_selection(request,
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
+    return _redirect_keeping_selection(
+        request,
         f"/operator/sessions/{review_session.public_id}/reviewees",
         [],
         filter_params=[("status", filter_status), ("q", filter_q)],

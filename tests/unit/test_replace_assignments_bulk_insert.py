@@ -28,6 +28,7 @@ fourth, ``test_the_insert_constructs_no_assignment_objects``, is the
 one the change owns; it was added after the item's cold read pointed
 out that nothing here would notice a revert.
 """
+
 from __future__ import annotations
 
 from sqlalchemy import Engine, event, select
@@ -141,17 +142,12 @@ def test_inserted_rows_are_visible_to_the_self_review_passes(
     flags = _stored_flags(db, review_session.id)
     assert len(flags) == 4, "every reviewer x reviewee pair got a row"
     assert sorted(flags.values()) == [False, False, False, True], (
-        "the recompute saw the freshly inserted rows and flagged "
-        "Alice-reviews-Alice"
+        "the recompute saw the freshly inserted rows and flagged Alice-reviews-Alice"
     )
-    assert verify_self_review_classification(
-        db, session_id=review_session.id
-    ) == []
+    assert verify_self_review_classification(db, session_id=review_session.id) == []
 
 
-def test_regenerate_with_nothing_to_insert_issues_no_insert(
-    db: Session, engine: Engine
-) -> None:
+def test_regenerate_with_nothing_to_insert_issues_no_insert(db: Session, engine: Engine) -> None:
     """An empty ``diff.to_insert`` issues no insert statement.
 
     The guard in front of it is load-bearing in a way the ``for`` loop
@@ -186,11 +182,9 @@ def test_regenerate_with_nothing_to_insert_issues_no_insert(
         event.remove(engine, "before_cursor_execute", _record)
 
     assert statements, "the second regenerate did run statements"
-    assert not [
-        s
-        for s in statements
-        if "INSERT INTO assignments" in s.replace("\n", " ")
-    ], "a no-op reconcile writes no assignment rows"
+    assert not [s for s in statements if "INSERT INTO assignments" in s.replace("\n", " ")], (
+        "a no-op reconcile writes no assignment rows"
+    )
 
 
 def test_the_insert_constructs_no_assignment_objects(db: Session) -> None:

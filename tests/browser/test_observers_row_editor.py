@@ -50,13 +50,20 @@ def _seed_observer(database_url: str, session_id: str) -> int:
             assert review_session is not None
             review_session.observers_enabled = True
             # A populated tag, so the builder offers a field to pick.
-            db.add(Reviewee(
-                session_id=pk, name="E",
-                email_or_identifier="e@example.org", tag_1="Blue",
-            ))
+            db.add(
+                Reviewee(
+                    session_id=pk,
+                    name="E",
+                    email_or_identifier="e@example.org",
+                    tag_1="Blue",
+                )
+            )
             observer = Observer(
-                session_id=pk, email="o@example.org",
-                display_name="O", status="active", cohort_rule=RULE,
+                session_id=pk,
+                email="o@example.org",
+                display_name="O",
+                status="active",
+                cohort_rule=RULE,
             )
             db.add(observer)
             db.commit()
@@ -71,9 +78,7 @@ def test_edit_loads_the_observers_rule_into_the_builder(
     session_id = new_session()
     observer_id = _seed_observer(live_server.database_url, session_id)
     page.goto(app_url(f"/operator/sessions/{session_id}/observers?edit_id={observer_id}"))
-    builder = page.locator(
-        "[data-observer-edit-cohort] [data-observer-cohort-builder]"
-    )
+    builder = page.locator("[data-observer-edit-cohort] [data-observer-cohort-builder]")
     assert builder.locator("[data-observer-combinator-toggle]").inner_text() == "OR"
     cells = builder.locator("[data-observer-rule-cell]")
     assert cells.count() == 2
@@ -92,9 +97,7 @@ def test_add_starts_from_one_default_cell_and_the_buttons_work(
     session_id = new_session()
     _seed_observer(live_server.database_url, session_id)
     page.goto(app_url(f"/operator/sessions/{session_id}/observers?add=1"))
-    builder = page.locator(
-        "[data-observer-edit-cohort] [data-observer-cohort-builder]"
-    )
+    builder = page.locator("[data-observer-edit-cohort] [data-observer-cohort-builder]")
     cells = builder.locator("[data-observer-rule-cell]")
     assert cells.count() == 1
     builder.locator("[data-observer-rule-add]").click()
@@ -132,16 +135,13 @@ def test_save_waits_for_an_email_and_a_finished_rule(
     _seed_observer(live_server.database_url, session_id)
     page.goto(app_url(f"/operator/sessions/{session_id}/observers?add=1"))
     save = page.locator("[data-observer-edit-save]")
-    builder = page.locator(
-        "[data-observer-edit-cohort] [data-observer-cohort-builder]"
-    )
+    builder = page.locator("[data-observer-edit-cohort] [data-observer-cohort-builder]")
     cell = builder.locator("[data-observer-rule-cell]").first
     field = cell.locator('select[name="cohort_rule_field"]')
     # An untouched builder is "no rule": blank field, nothing to finish.
     assert field.input_value() == ""
     expect(save, "no email yet").to_be_disabled()
-    page.locator('input[name="email"][form="observer-edit-form"]').fill(
-        "gate@example.org")
+    page.locator('input[name="email"][form="observer-edit-form"]').fill("gate@example.org")
     expect(save).to_be_enabled()
     # A field with a typed operator and no value is half-filled.
     field.select_option("reviewee.tag1")
@@ -175,11 +175,15 @@ def test_a_rule_the_dropdown_lacks_survives_a_rename(
     observer_id = _seed_observer(live_server.database_url, session_id)
     stale = {
         "combinator": "AND",
-        "rules": [{
-            # The pair-level join is not in the dropdown at all.
-            "field": "pair_context.tag1", "op": "IS THE SAME AS",
-            "operand_tag": "reviewer.tag2", "operand_value": "",
-        }],
+        "rules": [
+            {
+                # The pair-level join is not in the dropdown at all.
+                "field": "pair_context.tag1",
+                "op": "IS THE SAME AS",
+                "operand_tag": "reviewer.tag2",
+                "operand_value": "",
+            }
+        ],
     }
     engine = create_engine(live_server.database_url)
     try:
@@ -192,17 +196,14 @@ def test_a_rule_the_dropdown_lacks_survives_a_rename(
         engine.dispose()
 
     page.goto(app_url(f"/operator/sessions/{session_id}/observers?edit_id={observer_id}"))
-    builder = page.locator(
-        "[data-observer-edit-cohort] [data-observer-cohort-builder]"
-    )
+    builder = page.locator("[data-observer-edit-cohort] [data-observer-cohort-builder]")
     # `+` clones the first cell, but not its stale option: a key the
     # dropdown omits is not offered in a new cell.
     builder.locator("[data-observer-rule-add]").click()
     new_cell = builder.locator("[data-observer-rule-cell]").nth(1)
     assert new_cell.locator("option[data-observer-stale]").count() == 0
     new_cell.locator("[data-observer-rule-remove]").click()
-    page.locator('input[name="display_name"][form="observer-edit-form"]').fill(
-        "Renamed")
+    page.locator('input[name="display_name"][form="observer-edit-form"]').fill("Renamed")
     with page.expect_navigation():
         page.locator("[data-observer-edit-save]").click()
 
@@ -210,8 +211,9 @@ def test_a_rule_the_dropdown_lacks_survives_a_rename(
     try:
         with Session(engine) as db:
             name, rule = db.execute(
-                select(Observer.display_name, Observer.cohort_rule)
-                .where(Observer.id == observer_id)
+                select(Observer.display_name, Observer.cohort_rule).where(
+                    Observer.id == observer_id
+                )
             ).one()
     finally:
         engine.dispose()
@@ -229,11 +231,13 @@ def _rules(database_url: str, session_id: str) -> list[dict[str, Any] | None]:
     engine = create_engine(database_url)
     try:
         with Session(engine) as db:
-            return list(db.execute(
-                select(Observer.cohort_rule)
-                .where(Observer.session_id == pk)
-                .order_by(Observer.id)
-            ).scalars())
+            return list(
+                db.execute(
+                    select(Observer.cohort_rule)
+                    .where(Observer.session_id == pk)
+                    .order_by(Observer.id)
+                ).scalars()
+            )
     finally:
         engine.dispose()
 
@@ -253,9 +257,14 @@ def test_edit_on_several_rows_saves_one_rule_to_each(
     engine = create_engine(live_server.database_url)
     try:
         with Session(engine) as db:
-            db.add(Observer(session_id=session_pk(live_server.database_url, session_id),
-                            email="p@example.org",
-                            display_name="P", status="active"))
+            db.add(
+                Observer(
+                    session_id=session_pk(live_server.database_url, session_id),
+                    email="p@example.org",
+                    display_name="P",
+                    status="active",
+                )
+            )
             db.commit()
     finally:
         engine.dispose()
@@ -270,9 +279,7 @@ def test_edit_on_several_rows_saves_one_rule_to_each(
     page.wait_for_load_state("load")
     assert page.url.count("rule_id=") == 2
 
-    builder = page.locator(
-        "[data-observer-edit-cohort] [data-observer-cohort-builder]"
-    )
+    builder = page.locator("[data-observer-edit-cohort] [data-observer-cohort-builder]")
     # The two differ (a rule and none), so the builder starts empty.
     assert page.get_by_text("currently have different cohort rules").is_visible()
     cell = builder.locator("[data-observer-rule-cell]").first
@@ -292,7 +299,10 @@ def test_edit_on_several_rows_saves_one_rule_to_each(
         # Both operands ride along in storage (the schema's idiom); the
         # operator picks which one counts.
         assert (cell["field"], cell["op"], cell["operand_value"]) == (
-            "reviewee.tag1", "IS", "Green")
+            "reviewee.tag1",
+            "IS",
+            "Green",
+        )
 
 
 def test_several_rows_save_waits_for_a_change(
@@ -314,17 +324,21 @@ def test_several_rows_save_waits_for_a_change(
     engine = create_engine(live_server.database_url)
     try:
         with Session(engine) as db:
-            second = Observer(session_id=session_pk(live_server.database_url, session_id),
-                              email="p@example.org",
-                              display_name="P", status="active")
+            second = Observer(
+                session_id=session_pk(live_server.database_url, session_id),
+                email="p@example.org",
+                display_name="P",
+                status="active",
+            )
             db.add(second)
             db.commit()
             second_id = second.id
     finally:
         engine.dispose()
 
-    page.goto(app_url(f"/operator/sessions/{session_id}/observers"
-              f"?rule_id={first}&rule_id={second_id}"))
+    page.goto(
+        app_url(f"/operator/sessions/{session_id}/observers?rule_id={first}&rule_id={second_id}")
+    )
     save = page.locator("[data-observer-edit-save]")
     expect(save, "Save is live over an untouched builder").to_be_disabled()
     page.locator("[data-observer-edit-cohort] [data-observer-combinator-toggle]").click()

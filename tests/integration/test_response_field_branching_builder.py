@@ -38,7 +38,7 @@ def _page(client: TestClient, db: Session, code: str, *, branched: bool = True):
 
 
 def _rows_table(card: str) -> str:
-    start = card.index("<table class=\"rf-table\" data-new-model-rf-rows")
+    start = card.index('<table class="rf-table" data-new-model-rf-rows')
     return card[start : card.index("</table>", start)]
 
 
@@ -57,9 +57,11 @@ def test_a_branch_is_one_ruled_group(client: TestClient, db: Session) -> None:
     group = groups[0]
     assert group.startswith(" data-new-model-rf-branch>")
     # Parent, then its condition row, then the governed field.
-    assert group.index('data-label="Rating"') < group.index(
-        "data-new-model-rf-condition>"
-    ) < group.index('data-label="Comments"')
+    assert (
+        group.index('data-label="Rating"')
+        < group.index("data-new-model-rf-condition>")
+        < group.index('data-label="Comments"')
+    )
 
 
 def test_rows_align_from_the_name_onward(client: TestClient, db: Session) -> None:
@@ -93,7 +95,10 @@ def test_rows_align_from_the_name_onward(client: TestClient, db: Session) -> Non
     assert condition.count("<td") == 6 and 'colspan="7"' in condition
     assert 'colspan="3">If the above' in condition.split("<td")[4]
     assert "data-new-model-rf-condition-op" in condition.split("<td")[5]
-    assert "<span data-new-model-rf-condition-then>then<select data-new-model-rf-condition-mode" in condition.split("<td")[6]
+    assert (
+        "<span data-new-model-rf-condition-then>then<select data-new-model-rf-condition-mode"
+        in condition.split("<td")[6]
+    )
 
 
 def test_fork_shows_its_three_states(client: TestClient, db: Session) -> None:
@@ -105,9 +110,9 @@ def test_fork_shows_its_three_states(client: TestClient, db: Session) -> None:
     assert 'title="This field has a branch"' in fork and " disabled" in fork
     _, _, card, _ = _page(client, db, "br-builder-fork-none", branched=False)
     table = _rows_table(card)
-    rating = must_search(
-        r"<button[^>]*data-new-model-rf-fork[^>]*>", _row(table, "Rating")
-    ).group(0)
+    rating = must_search(r"<button[^>]*data-new-model-rf-fork[^>]*>", _row(table, "Rating")).group(
+        0
+    )
     comments = must_search(
         r"<button[^>]*data-new-model-rf-fork[^>]*>", _row(table, "Comments")
     ).group(0)
@@ -119,20 +124,24 @@ def test_fork_shows_its_three_states(client: TestClient, db: Session) -> None:
     assert " disabled" in comments
 
 
-def test_the_condition_row_shows_the_saved_condition(
-    client: TestClient, db: Session
-) -> None:
+def test_the_condition_row_shows_the_saved_condition(client: TestClient, db: Session) -> None:
     _, _, card, _ = _page(client, db, "br-builder-cond")
     condition = _rows_table(card).split("<tr data-new-model-rf-condition>")[1]
     select = condition.split("</select>")[0]
-    assert (
-        '<option value="ge" data-symbol="≥" selected>is more than (inclusive)</option>'
-        in select
-    )
+    assert '<option value="ge" data-symbol="≥" selected>is more than (inclusive)</option>' in select
     # An Integer parent offers the ten spelled-out operators in the
     # author's order (19T Item 12), not "is" / "is not".
     assert re.findall(r'<option value="(\w+)"', select) == [
-        "eq", "ne", "ge", "gt", "le", "lt", "in_inc", "in_exc", "out_inc", "out_exc"
+        "eq",
+        "ne",
+        "ge",
+        "gt",
+        "le",
+        "lt",
+        "in_inc",
+        "in_exc",
+        "out_inc",
+        "out_exc",
     ]
     assert re.search(
         r'<input type="text" data-new-model-rf-condition-value[^>]*value="4"',
@@ -162,7 +171,8 @@ def test_branch_controls_are_wired(client: TestClient, db: Session) -> None:
     ops = must_search(r"data-new-model-rf-branch-ops='([^']*)'", table).group(1)
     assert json.loads(ops.replace("&#34;", '"')) == {
         "numeric": [
-            ["eq", "is equal to", "="], ["ne", "is not equal to", "≠"],
+            ["eq", "is equal to", "="],
+            ["ne", "is not equal to", "≠"],
             ["ge", "is more than (inclusive)", "≥"],
             ["gt", "is more than (exclusive)", ">"],
             ["le", "is less than (inclusive)", "≤"],
@@ -178,9 +188,7 @@ def test_branch_controls_are_wired(client: TestClient, db: Session) -> None:
     assert "<template data-new-model-rf-condition-template>" in flat
 
 
-def test_governed_answers_lock_the_branch_on_the_page(
-    client: TestClient, db: Session
-) -> None:
+def test_governed_answers_lock_the_branch_on_the_page(client: TestClient, db: Session) -> None:
     from sqlalchemy import select
 
     from app.db.models import Assignment, Response, Reviewee, Reviewer
@@ -189,12 +197,12 @@ def test_governed_answers_lock_the_branch_on_the_page(
     comments = next(f for f in instrument.response_fields if f.label == "Comments")
     assignment = Assignment(
         session_id=review_session.id,
-        reviewer_id=db.execute(
-            select(Reviewer.id).where(Reviewer.session_id == review_session.id)
-        ).scalars().first(),
-        reviewee_id=db.execute(
-            select(Reviewee.id).where(Reviewee.session_id == review_session.id)
-        ).scalars().first(),
+        reviewer_id=db.execute(select(Reviewer.id).where(Reviewer.session_id == review_session.id))
+        .scalars()
+        .first(),
+        reviewee_id=db.execute(select(Reviewee.id).where(Reviewee.session_id == review_session.id))
+        .scalars()
+        .first(),
         instrument_id=instrument.id,
     )
     db.add(assignment)
@@ -235,7 +243,7 @@ def test_the_row_script_holds_the_branch_rules(client: TestClient, db: Session) 
     # 19T Item 11 — R is live inside a branch: nothing turns it off there,
     # and the stager sends a governed row's R as it stands.
     assert "requiredBtn.setAttribute('data-required', 'false');" not in recompute
-    stager = body[body.index("rf.row_key = row.getAttribute('data-row-key')"):]
+    stager = body[body.index("rf.row_key = row.getAttribute('data-row-key')") :]
     stager = stager[: stager.index("var cond = row.hasAttribute(")]
     assert "rf.required = false" not in stager
     # The condition mirrors ``condition_error``'s messages.
@@ -275,7 +283,10 @@ def test_the_row_script_holds_the_branch_rules(client: TestClient, db: Session) 
     # The preview mutes a governed column, unless a Require branch governs
     # it (19T Item 13).
     assert "branchHint: rfRowIsItemNow(row)" in flat
-    assert "var cls = [hint, r.branchHint ? 'rs-branch-closed' : ''].filter(Boolean).join(' ');" in flat
+    assert (
+        "var cls = [hint, r.branchHint ? 'rs-branch-closed' : ''].filter(Boolean).join(' ');"
+        in flat
+    )
 
 
 def test_join_and_detach_show_their_states(client: TestClient, db: Session) -> None:
@@ -339,9 +350,7 @@ def test_the_row_script_joins_and_detaches(client: TestClient, db: Session) -> N
     assert "window.newModelRfSyncJoin(row);" in recompute
 
 
-def test_the_preview_counts_items_as_the_surface_does(
-    client: TestClient, db: Session
-) -> None:
+def test_the_preview_counts_items_as_the_surface_does(client: TestClient, db: Session) -> None:
     """The cumulative read's finding 4: the sample row is unanswered, so a
     governed field's branch is closed and it isn't an item, as the
     surface's "All items completed" counts it."""
@@ -371,9 +380,11 @@ def test_saving_the_card_keeps_the_branch(client: TestClient, db: Session) -> No
     review_session, instrument, _, _ = _page(client, db, "br-builder-save")
     response = client.post(
         f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}/save",
-        data={"band2_state_snapshot": json.dumps(
-            {"selected_display_keys": [], "response_fields": _band2_rfs(instrument)}
-        )},
+        data={
+            "band2_state_snapshot": json.dumps(
+                {"selected_display_keys": [], "response_fields": _band2_rfs(instrument)}
+            )
+        },
         follow_redirects=False,
     )
     assert response.status_code == 200, response.text

@@ -27,9 +27,7 @@ from app.services.session_tags import normalize_tag
 
 PARTIAL = Path("app/web/templates/operator/partials/_tag_typeahead.html")
 
-pytestmark = pytest.mark.skipif(
-    shutil.which("node") is None, reason="node is not installed"
-)
+pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
 
 VOCABULARY = ["2026", "alpha", "beta", "betamax", "legacy", "pilot"]
 
@@ -57,9 +55,7 @@ def _options(value: str, vocabulary: list[str] = VOCABULARY) -> list[str]:
         + json.dumps(vocabulary)
         + ")));\n"
     )
-    result = subprocess.run(
-        ["node", "-e", script], capture_output=True, text=True, timeout=30
-    )
+    result = subprocess.run(["node", "-e", script], capture_output=True, text=True, timeout=30)
     assert result.returncode == 0, result.stderr
     return json.loads(result.stdout)
 
@@ -86,20 +82,22 @@ def test_an_empty_box_offers_the_whole_vocabulary() -> None:
         ),
         (
             "alpha, beta, ",
-            ["alpha, beta, 2026", "alpha, beta, betamax",
-             "alpha, beta, legacy", "alpha, beta, pilot"],
+            [
+                "alpha, beta, 2026",
+                "alpha, beta, betamax",
+                "alpha, beta, legacy",
+                "alpha, beta, pilot",
+            ],
             "after a comma, every tag not already in the box",
         ),
         (
             "Be",
             ["Beta", "Betamax"],
-            "the typed part keeps its case, so the browser's match "
-            "cannot miss on case",
+            "the typed part keeps its case, so the browser's match cannot miss on case",
         ),
         ("beta", ["betamax"], "a finished tag is not offered again"),
         ("x", [], "no match, no options"),
-        ("PILOT, al", ["PILOT, alpha"], "a tag already in the box is "
-         "matched case-insensitively"),
+        ("PILOT, al", ["PILOT, alpha"], "a tag already in the box is matched case-insensitively"),
     ],
 )
 def test_the_options_for_a_box(value: str, expected: list[str], why: str) -> None:

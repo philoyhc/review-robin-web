@@ -61,9 +61,7 @@ def _reviewer(
     email: str,
     tag_1: str | None = None,
 ) -> Reviewer:
-    r = Reviewer(
-        session_id=session_id, name=name, email=email, tag_1=tag_1
-    )
+    r = Reviewer(session_id=session_id, name=name, email=email, tag_1=tag_1)
     db.add(r)
     db.flush()
     return r
@@ -143,9 +141,7 @@ def test_no_saved_rule_returns_empty_cohort(db: Session) -> None:
     sess = _session(db, code="mca-none")
     inst = _instrument(db, sess)
     obs = _observer(db, sess.id, email="o@x")
-    cohort = materialize_cohort_assignments(
-        db, observer=obs, instrument_id=inst.id
-    )
+    cohort = materialize_cohort_assignments(db, observer=obs, instrument_id=inst.id)
     assert cohort == EMPTY_COHORT
 
 
@@ -158,9 +154,7 @@ def test_empty_rules_returns_empty_cohort(db: Session) -> None:
         email="o@x",
         cohort_rule={"combinator": "AND", "rules": []},
     )
-    cohort = materialize_cohort_assignments(
-        db, observer=obs, instrument_id=inst.id
-    )
+    cohort = materialize_cohort_assignments(db, observer=obs, instrument_id=inst.id)
     assert cohort == EMPTY_COHORT
 
 
@@ -176,14 +170,10 @@ def test_single_side_rule_picks_out_matching_assignments(
     e1 = _reviewee(db, sess.id, name="E", email_or_identifier="e@x")
     a_in = _assignment(db, sess, inst, r1, e1)
     a_out = _assignment(db, sess, inst, r2, e1)
-    obs = _observer(
-        db, sess.id, email="o@x", cohort_rule=_rule_reviewer_tag1_is("math")
-    )
+    obs = _observer(db, sess.id, email="o@x", cohort_rule=_rule_reviewer_tag1_is("math"))
     db.commit()
 
-    cohort = materialize_cohort_assignments(
-        db, observer=obs, instrument_id=inst.id
-    )
+    cohort = materialize_cohort_assignments(db, observer=obs, instrument_id=inst.id)
     assert cohort.assignment_ids == frozenset({a_in.id})
     assert a_out.id not in cohort.assignment_ids
     assert cohort.distinct_reviewer_count == 1
@@ -202,14 +192,10 @@ def test_distinct_counts_can_differ(db: Session) -> None:
     _assignment(db, sess, inst, r1, e1)
     _assignment(db, sess, inst, r1, e2)
     _assignment(db, sess, inst, r1, e3)
-    obs = _observer(
-        db, sess.id, email="o@x", cohort_rule=_rule_reviewer_tag1_is("math")
-    )
+    obs = _observer(db, sess.id, email="o@x", cohort_rule=_rule_reviewer_tag1_is("math"))
     db.commit()
 
-    cohort = materialize_cohort_assignments(
-        db, observer=obs, instrument_id=inst.id
-    )
+    cohort = materialize_cohort_assignments(db, observer=obs, instrument_id=inst.id)
     assert len(cohort.assignment_ids) == 3
     assert cohort.distinct_reviewer_count == 1
     assert cohort.distinct_reviewee_count == 3
@@ -225,14 +211,10 @@ def test_no_matches_returns_empty_ids_but_keeps_zero_counts(
     r1 = _reviewer(db, sess.id, name="A", email="a@x", tag_1="bio")
     e1 = _reviewee(db, sess.id, name="E", email_or_identifier="e@x")
     _assignment(db, sess, inst, r1, e1)
-    obs = _observer(
-        db, sess.id, email="o@x", cohort_rule=_rule_reviewer_tag1_is("math")
-    )
+    obs = _observer(db, sess.id, email="o@x", cohort_rule=_rule_reviewer_tag1_is("math"))
     db.commit()
 
-    cohort = materialize_cohort_assignments(
-        db, observer=obs, instrument_id=inst.id
-    )
+    cohort = materialize_cohort_assignments(db, observer=obs, instrument_id=inst.id)
     assert cohort.assignment_ids == frozenset()
     assert cohort.distinct_reviewer_count == 0
     assert cohort.distinct_reviewee_count == 0
@@ -253,14 +235,10 @@ def test_other_instruments_assignments_are_excluded(
     e1 = _reviewee(db, sess.id, name="E", email_or_identifier="e@x")
     a_a = _assignment(db, sess, inst_a, r1, e1)
     _assignment(db, sess, inst_b, r1, e1)
-    obs = _observer(
-        db, sess.id, email="o@x", cohort_rule=_rule_reviewer_tag1_is("math")
-    )
+    obs = _observer(db, sess.id, email="o@x", cohort_rule=_rule_reviewer_tag1_is("math"))
     db.commit()
 
-    cohort = materialize_cohort_assignments(
-        db, observer=obs, instrument_id=inst_a.id
-    )
+    cohort = materialize_cohort_assignments(db, observer=obs, instrument_id=inst_a.id)
     assert cohort.assignment_ids == frozenset({a_a.id})
 
 
@@ -285,7 +263,5 @@ def test_only_in_session_assignments_match(db: Session) -> None:
     )
     db.commit()
 
-    cohort = materialize_cohort_assignments(
-        db, observer=obs, instrument_id=inst_a.id
-    )
+    cohort = materialize_cohort_assignments(db, observer=obs, instrument_id=inst_a.id)
     assert cohort.assignment_ids == frozenset({a_a.id})

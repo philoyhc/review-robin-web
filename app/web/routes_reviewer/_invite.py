@@ -74,7 +74,8 @@ def reviewer_invite(
         user=user,
         correlation_id=request_correlation_id(),
     )
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url=f"/me/sessions/{review_session.public_id}",
         status_code=status.HTTP_303_SEE_OTHER,
     )

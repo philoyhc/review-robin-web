@@ -109,14 +109,10 @@ def _ruleset(*rules: Rule, combinator: Combinator = Combinator.ALL_OF) -> RuleSe
 def test_get_field_value_reads_active_relationship_tag() -> None:
     reviewer = _Reviewer(id=1, email="a@example.edu")
     reviewee = _Reviewee(id=10, email_or_identifier="b@example.edu")
-    rel = _relationship(
-        reviewer_id=1, reviewee_id=10, tag_1="Mentor", status="active"
-    )
+    rel = _relationship(reviewer_id=1, reviewee_id=10, tag_1="Mentor", status="active")
     token = set_pair_context_lookup({(1, 10): rel})
     try:
-        value = get_field_value(
-            "pair_context.tag1", reviewer=reviewer, reviewee=reviewee
-        )
+        value = get_field_value("pair_context.tag1", reviewer=reviewer, reviewee=reviewee)
     finally:
         reset_pair_context_lookup(token)
     assert value == "Mentor"
@@ -128,14 +124,10 @@ def test_get_field_value_returns_none_for_inactive_relationship() -> None:
 
     reviewer = _Reviewer(id=1, email="a@example.edu")
     reviewee = _Reviewee(id=10, email_or_identifier="b@example.edu")
-    rel = _relationship(
-        reviewer_id=1, reviewee_id=10, tag_1="Mentor", status="inactive"
-    )
+    rel = _relationship(reviewer_id=1, reviewee_id=10, tag_1="Mentor", status="inactive")
     token = set_pair_context_lookup({(1, 10): rel})
     try:
-        value = get_field_value(
-            "pair_context.tag1", reviewer=reviewer, reviewee=reviewee
-        )
+        value = get_field_value("pair_context.tag1", reviewer=reviewer, reviewee=reviewee)
     finally:
         reset_pair_context_lookup(token)
     assert value is None
@@ -147,9 +139,7 @@ def test_get_field_value_returns_none_when_no_lookup_bound() -> None:
 
     reviewer = _Reviewer(id=1, email="a@example.edu")
     reviewee = _Reviewee(id=10, email_or_identifier="b@example.edu")
-    value = get_field_value(
-        "pair_context.tag1", reviewer=reviewer, reviewee=reviewee
-    )
+    value = get_field_value("pair_context.tag1", reviewer=reviewer, reviewee=reviewee)
     assert value is None
 
 
@@ -158,9 +148,7 @@ def test_get_field_value_returns_none_when_pair_missing_from_lookup() -> None:
     reviewee = _Reviewee(id=10, email_or_identifier="b@example.edu")
     token = set_pair_context_lookup({})
     try:
-        value = get_field_value(
-            "pair_context.tag1", reviewer=reviewer, reviewee=reviewee
-        )
+        value = get_field_value("pair_context.tag1", reviewer=reviewer, reviewee=reviewee)
     finally:
         reset_pair_context_lookup(token)
     assert value is None
@@ -242,14 +230,10 @@ def test_evaluate_inactive_row_invisible_but_pair_remains() -> None:
     set; reviewer / reviewee tag rules still see it."""
 
     alice = _Reviewer(id=1, email="alice@example.edu", tag_1="A-team")
-    carol = _Reviewee(
-        id=10, email_or_identifier="carol@example.edu", tag_1="A-team"
-    )
+    carol = _Reviewee(id=10, email_or_identifier="carol@example.edu", tag_1="A-team")
 
     lookup = {
-        (1, 10): _relationship(
-            reviewer_id=1, reviewee_id=10, tag_1="Mentor", status="inactive"
-        ),
+        (1, 10): _relationship(reviewer_id=1, reviewee_id=10, tag_1="Mentor", status="inactive"),
     }
 
     # MATCH on pair_context.tag1 — the inactive row's value is hidden,
@@ -313,9 +297,7 @@ def test_evaluate_resets_context_var_after_run() -> None:
         pair_context_lookup=lookup,
     )
     # Outside the evaluate() call, no lookup is bound.
-    value = get_field_value(
-        "pair_context.tag1", reviewer=alice, reviewee=carol
-    )
+    value = get_field_value("pair_context.tag1", reviewer=alice, reviewee=carol)
     assert value is None
 
 
@@ -346,9 +328,7 @@ def test_evaluate_resets_context_var_on_exception() -> None:
         )
 
     # ContextVar reset cleanly despite the exception.
-    value = get_field_value(
-        "pair_context.tag1", reviewer=alice, reviewee=carol
-    )
+    value = get_field_value("pair_context.tag1", reviewer=alice, reviewee=carol)
     assert value is None
 
 

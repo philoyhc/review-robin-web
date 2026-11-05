@@ -1,6 +1,7 @@
 """Sys Admin → Accounts: the Invite card beside the Overview card, and its
 role chip (``guide/admin_pages_refine.md`` Item 3). The Overview's own
 counts are in ``test_sys_admin_accounts_overview.py``."""
+
 from __future__ import annotations
 
 import pytest

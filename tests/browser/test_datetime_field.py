@@ -88,9 +88,9 @@ def test_create_flags_an_out_of_order_box_and_saves_text(page: Page) -> None:
     assert message == "End must be on or after Start."
     assert start.evaluate("el => el.validity.valid")
     # The picker behind End offers nothing before Start.
-    expect(
-        page.locator("[data-dt-field]", has=end).locator("[data-dt-picker]")
-    ).to_have_attribute("min", "2027-03-02T09:00")
+    expect(page.locator("[data-dt-field]", has=end).locator("[data-dt-picker]")).to_have_attribute(
+        "min", "2027-03-02T09:00"
+    )
     assert not page.evaluate("document.getElementById('deadline').form.checkValidity()")
 
     end.fill("2027-03-02T17:30")
@@ -106,14 +106,16 @@ def test_create_flags_an_out_of_order_box_and_saves_text(page: Page) -> None:
     expect(page.locator("#mock-end")).to_have_value("2027-03-02 17:30")
 
 
-def test_the_lobby_expanders_end_is_the_field(
-    page: Page, api: httpx.Client
-) -> None:
+def test_the_lobby_expanders_end_is_the_field(page: Page, api: httpx.Client) -> None:
     code = f"dl{uuid.uuid4().hex[:8]}"
     response = api.post(
         "/operator/sessions",
-        data={"name": f"Lobby {code}", "code": code, "display_timezone": "UTC",
-              "deadline": "2027-04-01T10:00"},
+        data={
+            "name": f"Lobby {code}",
+            "code": code,
+            "display_timezone": "UTC",
+            "deadline": "2027-04-01T10:00",
+        },
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
@@ -135,17 +137,13 @@ def test_the_lobby_expanders_end_is_the_field(
         page.locator("[data-expander-save]").click()
     page.wait_for_load_state("load")
     page.locator(f'tr[data-session-id="{session_id}"] .sessions-list-select-row').check()
-    expect(page.locator('[data-expander-field="deadline"]')).to_have_value(
-        "2027-04-02 11:15"
-    )
+    expect(page.locator('[data-expander-field="deadline"]')).to_have_value("2027-04-02 11:15")
 
 
 def _pick(page: Page, box: str, value: str) -> None:
     """What the browser's picker does on a choice: set its value and fire
     change. A headless run cannot open the pop-up itself."""
-    page.locator("[data-dt-field]", has=page.locator(box)).locator(
-        "[data-dt-picker]"
-    ).evaluate(
+    page.locator("[data-dt-field]", has=page.locator(box)).locator("[data-dt-picker]").evaluate(
         "(el, v) => { el.value = v; el.dispatchEvent(new Event('change', {bubbles: true})); }",
         value,
     )
@@ -197,9 +195,7 @@ def test_a_zone_change_leaves_an_impossible_time_as_typed(page: Page) -> None:
 
 
 @pytest.mark.parametrize("root_font", [None, "20px", "13px"])
-def test_both_buttons_are_squares_as_tall_as_the_box(
-    page: Page, root_font: str | None
-) -> None:
+def test_both_buttons_are_squares_as_tall_as_the_box(page: Page, root_font: str | None) -> None:
     """The calendar glyph is wider than ✕; neither widens its button
     (19X Item 8), at the default font size and at a larger or smaller
     one (Codex on #3167)."""

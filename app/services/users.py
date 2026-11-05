@@ -136,9 +136,7 @@ def find_signed_in_user(
     """
     principal_id = identity.principal_id
     usable_principal = (
-        not identity.is_fake
-        and principal_id is not None
-        and bool(principal_id.strip())
+        not identity.is_fake and principal_id is not None and bool(principal_id.strip())
     )
     new_email = (identity.email or "").strip()
 
@@ -147,11 +145,7 @@ def find_signed_in_user(
         # row with the same principal id; the one holding the resolved
         # email is the account in use, so it wins (the
         # read of the P5 PR).
-        rows = list(
-            db.execute(
-                users_by_principal(principal_id).order_by(User.id.desc())
-            ).scalars()
-        )
+        rows = list(db.execute(users_by_principal(principal_id).order_by(User.id.desc())).scalars())
         for row in rows:
             if new_email and normalize_email(row.email) == normalize_email(new_email):
                 return row
@@ -189,12 +183,9 @@ def find_signed_in_user(
     return by_email
 
 
-def _by_email(
-    db: Session, email: str, *, other_than: int | None = None
-) -> User | None:
+def _by_email(db: Session, email: str, *, other_than: int | None = None) -> User | None:
     stmt = select(User).where(
-        func.lower(func.trim(User.email, _ASCII_WHITESPACE))
-        == normalize_email(email)
+        func.lower(func.trim(User.email, _ASCII_WHITESPACE)) == normalize_email(email)
     )
     if other_than is not None:
         stmt = stmt.where(User.id != other_than)
@@ -250,21 +241,21 @@ def _absorb(db: Session, target: User, holder: User, new_email: str) -> None:
     holder_id = holder.id
     target.is_operator = target.is_operator or holder.is_operator
     target.is_sys_admin = target.is_sys_admin or holder.is_sys_admin
-    shared = select(SessionOperator.session_id).where(
-        SessionOperator.user_id == target.id
-    )
+    shared = select(SessionOperator.session_id).where(SessionOperator.user_id == target.id)
     db.execute(
         delete(SessionOperator)
         .where(SessionOperator.user_id == holder_id)
         .where(SessionOperator.session_id.in_(shared))
         .execution_options(synchronize_session=False)
     )
-    moved = rowcount(db.execute(
-        update(SessionOperator)
-        .where(SessionOperator.user_id == holder_id)
-        .values(user_id=target.id)
-        .execution_options(synchronize_session=False)
-    ))
+    moved = rowcount(
+        db.execute(
+            update(SessionOperator)
+            .where(SessionOperator.user_id == holder_id)
+            .values(user_id=target.id)
+            .execution_options(synchronize_session=False)
+        )
+    )
     # The memberships were moved in SQL; a collection loaded before
     # would make the delete cascade take them with the row.
     db.expire(holder, ["session_operators"])
@@ -286,9 +277,7 @@ def _absorb(db: Session, target: User, holder: User, new_email: str) -> None:
             f"Sign-in email changed from {old['email']} to {new_email}; "
             f"absorbed the row that held it"
         ),
-        payload=audit.changes(
-            {key: [old[key], new[key]] for key in old if old[key] != new[key]}
-        ),
+        payload=audit.changes({key: [old[key], new[key]] for key in old if old[key] != new[key]}),
         refs={"target_user_id": target.id, "absorbed_user_id": holder_id},
         context={"memberships_moved": int(moved or 0)},
     )
@@ -315,7 +304,9 @@ def is_verified(user: User) -> bool:
     a local run's) is no one's, so it never counts, as 21F's matchers
     hold it."""
     principal = normalize_object_id(user.external_principal_id)
-    return bool(principal) and principal != normalize_object_id(identity_settings.fake_auth_principal_id)
+    return bool(principal) and principal != normalize_object_id(
+        identity_settings.fake_auth_principal_id
+    )
 
 
 @dataclass(frozen=True)
@@ -346,9 +337,7 @@ class UserOperationError(ValueError):
     human-readable explanation. ``user_id`` is the row a batch refusal
     names (``apply_batch``), so the page can say which one."""
 
-    def __init__(
-        self, code: str, message: str, user_id: int | None = None
-    ) -> None:
+    def __init__(self, code: str, message: str, user_id: int | None = None) -> None:
         super().__init__(message)
         self.code = code
         self.message = message
@@ -357,9 +346,7 @@ class UserOperationError(ValueError):
 
 def _has_history(db: Session, user_id: int) -> bool:
     created = db.execute(
-        select(ReviewSession.id)
-        .where(ReviewSession.created_by_user_id == user_id)
-        .limit(1)
+        select(ReviewSession.id).where(ReviewSession.created_by_user_id == user_id).limit(1)
     ).first()
     if created is not None:
         return True
@@ -373,10 +360,7 @@ def _guard_self(actor: User, target: User) -> None:
     if actor.id == target.id:
         raise UserOperationError(
             code="self_action",
-            message=(
-                "You can't change your own roles. Ask another sys-admin "
-                "to flip your flags."
-            ),
+            message=("You can't change your own roles. Ask another sys-admin to flip your flags."),
         )
 
 
@@ -385,9 +369,7 @@ def sys_admin_count(db: Session) -> int:
     ``last_admin`` guard counts, so the page's Demote gate can ask the
     same question rather than counting the rows it happens to show."""
     return int(
-        db.execute(
-            select(func.count(User.id)).where(User.is_sys_admin.is_(True))
-        ).scalar_one()
+        db.execute(select(func.count(User.id)).where(User.is_sys_admin.is_(True))).scalar_one()
     )
 
 
@@ -444,9 +426,7 @@ def admit(
     db.commit()
 
 
-def _write_admit(
-    db: Session, actor: User, target: User, correlation_id: str | None
-) -> None:
+def _write_admit(db: Session, actor: User, target: User, correlation_id: str | None) -> None:
     old = target.is_operator
     target.is_operator = True
     audit.write_event(
@@ -490,9 +470,7 @@ def revoke(
 def _owned_count(db: Session, target: User) -> int:
     return int(
         db.execute(
-            select(func.count(SessionOperator.id)).where(
-                SessionOperator.user_id == target.id
-            )
+            select(func.count(SessionOperator.id)).where(SessionOperator.user_id == target.id)
         ).scalar_one()
     )
 
@@ -531,9 +509,7 @@ def _guard_demote_not_owner(db: Session, target: User) -> None:
         )
 
 
-def _write_revoke(
-    db: Session, actor: User, target: User, correlation_id: str | None
-) -> None:
+def _write_revoke(db: Session, actor: User, target: User, correlation_id: str | None) -> None:
     old = target.is_operator
     target.is_operator = False
     audit.write_event(
@@ -560,9 +536,7 @@ def promote(
     db.commit()
 
 
-def _write_promote(
-    db: Session, actor: User, target: User, correlation_id: str | None
-) -> None:
+def _write_promote(db: Session, actor: User, target: User, correlation_id: str | None) -> None:
     old = target.is_sys_admin
     target.is_sys_admin = True
     audit.write_event(
@@ -602,9 +576,7 @@ def demote(
     db.commit()
 
 
-def _write_demote(
-    db: Session, actor: User, target: User, correlation_id: str | None
-) -> None:
+def _write_demote(db: Session, actor: User, target: User, correlation_id: str | None) -> None:
     old = target.is_sys_admin
     target.is_sys_admin = False
     audit.write_event(
@@ -643,9 +615,7 @@ def remove_from_all_sessions(
     _guard_target_not_super_admin(target, "removed from sessions")
 
     rows = list(
-        db.execute(
-            select(SessionOperator).where(SessionOperator.user_id == target.id)
-        ).scalars()
+        db.execute(select(SessionOperator).where(SessionOperator.user_id == target.id)).scalars()
     )
     if not rows:
         return 0
@@ -694,10 +664,8 @@ def _write_detach(
     audit.write_event(
         db,
         event_type="workspace.user_detached_from_all_sessions",
-        summary=(
-            f"Removed {target.email} from {len(rows)} "
-            f"session{'s' if len(rows) != 1 else ''}"
-        ),
+        # not-identity: the `!=` below counts sessions, not addresses.
+        summary=(f"Removed {target.email} from {len(rows)} session{'s' if len(rows) != 1 else ''}"),
         actor_user_id=actor.id,
         payload=audit.counts(sessions_detached=len(rows)),
         refs={"target_user_id": target.id},
@@ -775,9 +743,7 @@ def _guard_deletable(db: Session, target: User) -> None:
         )
 
 
-def _write_remove(
-    db: Session, actor: User, target: User, correlation_id: str | None
-) -> None:
+def _write_remove(db: Session, actor: User, target: User, correlation_id: str | None) -> None:
     snapshot: dict[str, str | bool] = {
         "email": target.email,
         "is_operator": target.is_operator,
@@ -847,9 +813,7 @@ def apply_batch(
         raise ValueError(f"unknown batch action {action!r}")
     ids = sorted(set(user_ids))
     if not ids:
-        raise UserOperationError(
-            code="empty_selection", message="Select at least one account."
-        )
+        raise UserOperationError(code="empty_selection", message="Select at least one account.")
     if action in ("promote", "demote"):
         _guard_actor_super_admin(actor)
 
@@ -941,16 +905,12 @@ def set_unit(
         )
     ids = sorted(set(user_ids))
     if not ids:
-        raise UserOperationError(
-            code="empty_selection", message="Select at least one account."
-        )
+        raise UserOperationError(code="empty_selection", message="Select at least one account.")
     targets = list(db.execute(_batch_lock("set_unit", ids)).scalars())
     found = {target.id for target in targets}
     missing = [user_id for user_id in ids if user_id not in found]
     if missing:
-        raise UserOperationError(
-            code="not_found", message=f"No account with id {missing[0]}."
-        )
+        raise UserOperationError(code="not_found", message=f"No account with id {missing[0]}.")
     for target in targets:
         if not (target.is_operator or target.is_sys_admin):
             raise UserOperationError(
@@ -1024,16 +984,12 @@ def _guard_row(db: Session, actor: User, action: str, target: User) -> None:
         _guard_deletable(db, target)
 
 
-def _guard_admins_remain(
-    action: str, locked: list[User], targets: list[User]
-) -> None:
+def _guard_admins_remain(action: str, locked: list[User], targets: list[User]) -> None:
     """``last_admin`` on the state after the batch."""
     leaving = {target.id for target in targets if target.is_sys_admin}
     if not leaving:
         return
-    remaining = [
-        user for user in locked if user.is_sys_admin and user.id not in leaving
-    ]
+    remaining = [user for user in locked if user.is_sys_admin and user.id not in leaving]
     if not remaining:
         verb = "demote" if action == "demote" else "remove"
         raise UserOperationError(
@@ -1048,9 +1004,7 @@ def _guard_admins_remain(
         )
 
 
-def _lock_and_check_owners(
-    db: Session, targets: list[User]
-) -> dict[int, list[SessionOperator]]:
+def _lock_and_check_owners(db: Session, targets: list[User]) -> dict[int, list[SessionOperator]]:
     """``sole_owner`` on the state after the batch: lock the owner rows of
     every session a selected row owns, in id order, and refuse when a
     session would be left with no owner. Returns each target's own rows,
@@ -1084,10 +1038,7 @@ def _lock_and_check_owners(
     if orphaned:
         by_id = {target.id: target for target in targets}
         first = min(
-            row.user_id
-            for rows in mine.values()
-            for row in rows
-            if row.session_id == orphaned[0]
+            row.user_id for rows in mine.values() for row in rows if row.session_id == orphaned[0]
         )
         raise UserOperationError(
             user_id=first,
@@ -1183,9 +1134,7 @@ def invite(
             message=f"'{email}' is not a valid email address.",
         )
     existing = db.execute(
-        select(User).where(
-            func.lower(User.email) == normalize_email(email_normalised)
-        )
+        select(User).where(func.lower(User.email) == normalize_email(email_normalised))
     ).scalar_one_or_none()
     if existing is not None:
         raise UserOperationError(
@@ -1205,9 +1154,8 @@ def invite(
     # the row reads as its person; with no directory answer, the name the
     # picker filled. Sign-in never names an existing row, so this one
     # stays until someone edits it. The column holds 255.
-    display_name = (
-        ((account.name.strip() or None) if account else None)
-        or ((display_name or "").strip() or None)
+    display_name = ((account.name.strip() or None) if account else None) or (
+        (display_name or "").strip() or None
     )
     display_name = display_name[:255] if display_name else None
     user = User(

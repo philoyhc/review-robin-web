@@ -6,6 +6,7 @@ left, help cards right). The instrument card's chip sets it through both
 Saves; Replicate, Duplicate and the Settings CSV carry it; the reviewer
 surface and the card's preview render it as ``data-intro-layout``.
 """
+
 from __future__ import annotations
 
 import re
@@ -42,9 +43,7 @@ def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSessio
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _instrument(db: Session, review_session: ReviewSession) -> Instrument:
@@ -61,8 +60,7 @@ def _layout_events(db: Session, instrument: Instrument) -> list[AuditEvent]:
             .where(AuditEvent.event_type == "instrument.intro_layout_updated")
             .order_by(AuditEvent.id)
         ).scalars()
-        if (event.detail or {}).get("refs", {}).get("instrument_id")
-        == instrument.id
+        if (event.detail or {}).get("refs", {}).get("instrument_id") == instrument.id
     ]
 
 
@@ -70,9 +68,7 @@ def _seed(db: Session, *, code: str) -> tuple[User, ReviewSession, Instrument]:
     user = User(email=f"op-{code}@example.edu")
     db.add(user)
     db.flush()
-    review_session = ReviewSession(
-        name="19Y", code=code, created_by_user_id=user.id
-    )
+    review_session = ReviewSession(name="19Y", code=code, created_by_user_id=user.id)
     db.add(review_session)
     db.flush()
     instrument = ensure_default_instrument(db, review_session)
@@ -104,9 +100,7 @@ def test_the_setter_stores_audits_and_skips_a_no_op(db: Session) -> None:
     events = _layout_events(db, instrument)
     assert len(events) == 1
     assert events[0].detail is not None
-    assert events[0].detail["changes"] == {
-        "intro_layout": ["layout_1", "layout_2"]
-    }
+    assert events[0].detail["changes"] == {"intro_layout": ["layout_1", "layout_2"]}
 
 
 def test_the_setter_refuses_an_unknown_layout(db: Session) -> None:
@@ -131,9 +125,7 @@ def test_the_card_renders_the_chip_input_and_preview_attribute(
     instrument.intro_layout = "layout_2"
     db.commit()
     flat = " ".join(
-        client.get(
-            f"/operator/sessions/{review_session.public_id}/instruments"
-        ).text.split()
+        client.get(f"/operator/sessions/{review_session.public_id}/instruments").text.split()
     )
     heading = flat.index("Preview review instrument</h3>")
     chip = re.search(r"<span [^>]*data-intro-layout-chip[^>]*>([^<]*)</span>", flat)
@@ -156,14 +148,11 @@ def test_the_card_renders_the_chip_input_and_preview_attribute(
 
 
 @pytest.mark.parametrize("path", ["fields/save", "save"])
-def test_both_saves_store_the_layout(
-    client: TestClient, db: Session, path: str
-) -> None:
+def test_both_saves_store_the_layout(client: TestClient, db: Session, path: str) -> None:
     review_session = _make_session(client, db, code=f"19y-{path.replace('/', '-')}")
     instrument = _instrument(db, review_session)
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{instrument.id}/{path}",
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}/{path}",
         data={"intro_layout": "layout_2"},
         follow_redirects=False,
     )
@@ -182,8 +171,7 @@ def test_a_save_without_the_input_keeps_the_layout(
     instrument.intro_layout = "layout_2"
     db.commit()
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{instrument.id}/{path}",
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}/{path}",
         data={},
         follow_redirects=False,
     )
@@ -192,17 +180,14 @@ def test_a_save_without_the_input_keeps_the_layout(
     assert must_get(db, Instrument, instrument.id).intro_layout == "layout_2"
 
 
-@pytest.mark.parametrize(
-    ("path", "status_code"), [("fields/save", 400), ("save", 422)]
-)
+@pytest.mark.parametrize(("path", "status_code"), [("fields/save", 400), ("save", 422)])
 def test_both_saves_refuse_an_unknown_layout(
     client: TestClient, db: Session, path: str, status_code: int
 ) -> None:
     review_session = _make_session(client, db, code=f"19y-bad-{path.replace('/', '-')}")
     instrument = _instrument(db, review_session)
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/instruments/{instrument.id}/{path}",
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}/{path}",
         data={"intro_layout": "sideways", "short_label": "Changed"},
         follow_redirects=False,
     )
@@ -218,9 +203,7 @@ def test_replicate_carries_the_layout(db: Session) -> None:
     user, review_session, instrument = _seed(db, code="19y-repl")
     instrument.intro_layout = "layout_2"
     db.commit()
-    replica = replicate_instrument(
-        db, review_session=review_session, source=instrument, actor=user
-    )
+    replica = replicate_instrument(db, review_session=review_session, source=instrument, actor=user)
     assert replica.intro_layout == "layout_2"
 
 
@@ -231,9 +214,7 @@ def test_duplicate_carries_each_instruments_layout(db: Session) -> None:
     db.flush()
     first.intro_layout = "layout_2"
     db.commit()
-    clone = session_clone.clone_session(
-        db, source=review_session, user=user, mode="config"
-    )
+    clone = session_clone.clone_session(db, source=review_session, user=user, mode="config")
     layouts = dict(
         db.execute(
             select(Instrument.name, Instrument.intro_layout).where(
@@ -287,9 +268,7 @@ def test_settings_csv_round_trip_carries_each_instruments_layout(
 
 def test_an_older_settings_csv_takes_the_default(db: Session) -> None:
     destination = _bare(db, "19y-csv-old")
-    result = apply_session_config(
-        db, destination, [Row("instruments[1].name", "Eval", "string")]
-    )
+    result = apply_session_config(db, destination, [Row("instruments[1].name", "Eval", "string")])
     assert result.ok, result.errors
     instrument = db.execute(
         select(Instrument).where(Instrument.session_id == destination.id)
@@ -322,9 +301,7 @@ def test_a_stray_stored_value_reads_exports_and_cycles_as_layout_1(
     db.commit()
 
     flat = " ".join(
-        client.get(
-            f"/operator/sessions/{review_session.public_id}/instruments"
-        ).text.split()
+        client.get(f"/operator/sessions/{review_session.public_id}/instruments").text.split()
     )
     chip = re.search(r"<span [^>]*data-intro-layout-chip[^>]*>([^<]*)</span>", flat)
     assert chip is not None and chip.group(1) == "Layout 1"

@@ -17,6 +17,7 @@ The PR 1 tests already cover the service-layer behaviour
 end-to-end; this file is the small route-shaped surface tied
 to the operator UI.
 """
+
 from __future__ import annotations
 
 from urllib.parse import parse_qs, urlparse
@@ -34,18 +35,14 @@ from app.db.models import (
 from ._public_id import public_id
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "Spring", "code": code},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _instrument(db: Session, review_session: ReviewSession) -> Instrument:
@@ -77,8 +74,7 @@ def _populate_rosters(client: TestClient, session_id: int) -> None:
         files={
             "file": (
                 "e.csv",
-                b"RevieweeName,RevieweeEmail,RevieweeTag1,RevieweeTag2\n"
-                b"A,a@example.edu,t1,t2\n",
+                b"RevieweeName,RevieweeEmail,RevieweeTag1,RevieweeTag2\nA,a@example.edu,t1,t2\n",
                 "text/csv",
             )
         },
@@ -109,15 +105,11 @@ def _lookup_two_display_fields(
     )
 
 
-def _seed_display_fields_via_get(
-    client: TestClient, review_session: ReviewSession
-) -> None:
+def _seed_display_fields_via_get(client: TestClient, review_session: ReviewSession) -> None:
     """Trigger the lazy seed of the tag_1 / tag_2 display fields
     on the default instrument by hitting the Instruments page
     (which runs the seed inside the view builder)."""
-    client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-    )
+    client.get(f"/operator/sessions/{review_session.public_id}/instruments")
 
 
 def _bulk_save_form(
@@ -142,18 +134,14 @@ def _bulk_save_form(
         "sort_display_field_id": [],
         "sort_dir": [],
     }
-    for idx, df in enumerate(
-        sorted(instrument.display_fields, key=lambda f: (f.order, f.id))
-    ):
+    for idx, df in enumerate(sorted(instrument.display_fields, key=lambda f: (f.order, f.id))):
         out["kind"].append("display")
         out["id"].append(str(df.id))
         out["order"].append(str(idx))
         out["label"].append(df.label or "")
         if df.visible:
             out["visible_ids"].append(str(df.id))
-    for idx, rf in enumerate(
-        sorted(instrument.response_fields, key=lambda f: (f.order, f.id))
-    ):
+    for idx, rf in enumerate(sorted(instrument.response_fields, key=lambda f: (f.order, f.id))):
         out["kind"].append("response")
         out["id"].append(str(rf.id))
         out["order"].append(str(idx))
@@ -177,101 +165,89 @@ def _query_param(url: str, name: str) -> str | None:
 # --- Bulk-save persistence -----------------------------------------------
 
 
-def test_bulk_save_persists_sort_spec(
-    db: Session, client: TestClient
-) -> None:
+def test_bulk_save_persists_sort_spec(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="dfsort-save")
     _populate_rosters(client, review_session.id)
     instrument = _instrument(db, review_session)
-    f1, f2 = _seed_display_fields_via_get(client, review_session) or _lookup_two_display_fields(db, instrument)
+    f1, f2 = _seed_display_fields_via_get(client, review_session) or _lookup_two_display_fields(
+        db, instrument
+    )
     form = _bulk_save_form(instrument)
     form["sort_display_field_id"] = [str(f1.id), str(f2.id)]
     form["sort_dir"] = ["asc", "desc"]
 
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-        f"/{instrument.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}/fields/save",
         data=form,
         follow_redirects=False,
     )
     assert response.status_code == 303
 
     db.expire_all()
-    refreshed = db.execute(
-        select(Instrument).where(Instrument.id == instrument.id)
-    ).scalar_one()
+    refreshed = db.execute(select(Instrument).where(Instrument.id == instrument.id)).scalar_one()
     assert refreshed.sort_display_fields == [
         {"display_field_id": f1.id, "dir": "asc"},
         {"display_field_id": f2.id, "dir": "desc"},
     ]
 
 
-def test_bulk_save_empty_sort_arrays_clear_the_spec(
-    db: Session, client: TestClient
-) -> None:
+def test_bulk_save_empty_sort_arrays_clear_the_spec(db: Session, client: TestClient) -> None:
     """Submitting the bulk-save form with no
     ``sort_display_field_id`` inputs clears any previously-set
     spec back to the unsorted default."""
     review_session = _make_session(client, db, code="dfsort-clear")
     _populate_rosters(client, review_session.id)
     instrument = _instrument(db, review_session)
-    f1, _ = _seed_display_fields_via_get(client, review_session) or _lookup_two_display_fields(db, instrument)
-    instrument.sort_display_fields = [
-        {"display_field_id": f1.id, "dir": "asc"}
-    ]
+    f1, _ = _seed_display_fields_via_get(client, review_session) or _lookup_two_display_fields(
+        db, instrument
+    )
+    instrument.sort_display_fields = [{"display_field_id": f1.id, "dir": "asc"}]
     db.commit()
 
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-        f"/{instrument.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}/fields/save",
         data=_bulk_save_form(instrument),
         follow_redirects=False,
     )
     assert response.status_code == 303
 
     db.expire_all()
-    refreshed = db.execute(
-        select(Instrument).where(Instrument.id == instrument.id)
-    ).scalar_one()
+    refreshed = db.execute(select(Instrument).where(Instrument.id == instrument.id)).scalar_one()
     assert refreshed.sort_display_fields == []
 
 
 # --- Validation errors → banner ------------------------------------------
 
 
-def test_bulk_save_misaligned_arrays_redirects_with_banner(
-    db: Session, client: TestClient
-) -> None:
+def test_bulk_save_misaligned_arrays_redirects_with_banner(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="dfsort-misalign")
     _populate_rosters(client, review_session.id)
     instrument = _instrument(db, review_session)
-    f1, _ = _seed_display_fields_via_get(client, review_session) or _lookup_two_display_fields(db, instrument)
+    f1, _ = _seed_display_fields_via_get(client, review_session) or _lookup_two_display_fields(
+        db, instrument
+    )
     form = _bulk_save_form(instrument)
     form["sort_display_field_id"] = [str(f1.id)]
     # No matching sort_dir → misaligned arrays.
     form["sort_dir"] = []
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-        f"/{instrument.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}/fields/save",
         data=form,
         follow_redirects=False,
     )
     assert response.status_code == 303
     location = response.headers["location"]
-    assert (
-        _query_param(location, "sort_save_error_instrument_id")
-        == str(instrument.id)
-    )
+    assert _query_param(location, "sort_save_error_instrument_id") == str(instrument.id)
     assert _query_param(location, "sort_save_error") == "misaligned"
 
 
-def test_bulk_save_over_cap_redirects_with_banner(
-    db: Session, client: TestClient
-) -> None:
+def test_bulk_save_over_cap_redirects_with_banner(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="dfsort-cap")
     _populate_rosters(client, review_session.id)
     instrument = _instrument(db, review_session)
-    f1, f2 = _seed_display_fields_via_get(client, review_session) or _lookup_two_display_fields(db, instrument)
+    f1, f2 = _seed_display_fields_via_get(client, review_session) or _lookup_two_display_fields(
+        db, instrument
+    )
     f3 = InstrumentDisplayField(
         instrument_id=instrument.id,
         source_type="reviewee",
@@ -284,13 +260,10 @@ def test_bulk_save_over_cap_redirects_with_banner(
     db.commit()
 
     form = _bulk_save_form(instrument)
-    form["sort_display_field_id"] = [
-        str(f1.id), str(f2.id), str(f3.id), str(f1.id)
-    ]
+    form["sort_display_field_id"] = [str(f1.id), str(f2.id), str(f3.id), str(f1.id)]
     form["sort_dir"] = ["asc", "asc", "asc", "desc"]
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-        f"/{instrument.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}/fields/save",
         data=form,
         follow_redirects=False,
     )
@@ -301,22 +274,21 @@ def test_bulk_save_over_cap_redirects_with_banner(
     assert "the maximum is 3." in body
 
 
-def test_rejected_sort_spec_renders_the_error_banner(
-    db: Session, client: TestClient
-) -> None:
+def test_rejected_sort_spec_renders_the_error_banner(db: Session, client: TestClient) -> None:
     """The redirect target shows the rejection: a page reached with the
     flash params renders the banner, with a Cancel back to the card in
     edit mode; the same page without them renders none."""
     review_session = _make_session(client, db, code="dfsort-banner")
     _populate_rosters(client, review_session.id)
     instrument = _instrument(db, review_session)
-    f1, _ = _seed_display_fields_via_get(client, review_session) or _lookup_two_display_fields(db, instrument)
+    f1, _ = _seed_display_fields_via_get(client, review_session) or _lookup_two_display_fields(
+        db, instrument
+    )
     form = _bulk_save_form(instrument)
     form["sort_display_field_id"] = [str(f1.id)]
     form["sort_dir"] = []
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-        f"/{instrument.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}/fields/save",
         data=form,
         follow_redirects=False,
     )
@@ -331,25 +303,23 @@ def test_rejected_sort_spec_renders_the_error_banner(
     assert '<div class="banner-actions">' in _banner(body, "sort-save-error-banner")
 
     clean = client.get(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-        f"?editing={instrument.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={instrument.id}"
     ).text
     assert 'id="sort-save-error-banner"' not in clean
 
 
-def test_bulk_save_unknown_dir_redirects_with_banner(
-    db: Session, client: TestClient
-) -> None:
+def test_bulk_save_unknown_dir_redirects_with_banner(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="dfsort-bad-dir")
     _populate_rosters(client, review_session.id)
     instrument = _instrument(db, review_session)
-    f1, _ = _seed_display_fields_via_get(client, review_session) or _lookup_two_display_fields(db, instrument)
+    f1, _ = _seed_display_fields_via_get(client, review_session) or _lookup_two_display_fields(
+        db, instrument
+    )
     form = _bulk_save_form(instrument)
     form["sort_display_field_id"] = [str(f1.id)]
     form["sort_dir"] = ["sideways"]
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-        f"/{instrument.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}/fields/save",
         data=form,
         follow_redirects=False,
     )
@@ -365,31 +335,28 @@ def test_bulk_save_unknown_dir_redirects_with_banner(
 # ─────────────────────────────────────────────────────────────────
 
 
-def test_consolidated_save_returns_ok_json_and_persists(
-    db: Session, client: TestClient
-) -> None:
+def test_consolidated_save_returns_ok_json_and_persists(db: Session, client: TestClient) -> None:
     """The JSON ``/save`` twin of ``/fields/save`` applies the same
     payload and returns ``{"ok": true}`` (200) — no redirect. Persists
     the sort spec so the client can stay unlocked with no reload."""
     review_session = _make_session(client, db, code="save-json-ok")
     _populate_rosters(client, review_session.id)
     instrument = _instrument(db, review_session)
-    f1, _ = _seed_display_fields_via_get(client, review_session) or _lookup_two_display_fields(db, instrument)
+    f1, _ = _seed_display_fields_via_get(client, review_session) or _lookup_two_display_fields(
+        db, instrument
+    )
     form = _bulk_save_form(instrument)
     form["sort_display_field_id"] = [str(f1.id)]
     form["sort_dir"] = ["asc"]
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-        f"/{instrument.id}/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}/save",
         data=form,
         follow_redirects=False,
     )
     assert response.status_code == 200
     assert response.json()["ok"] is True
     db.refresh(instrument)
-    assert instrument.sort_display_fields == [
-        {"display_field_id": f1.id, "dir": "asc"}
-    ]
+    assert instrument.sort_display_fields == [{"display_field_id": f1.id, "dir": "asc"}]
 
 
 def test_consolidated_save_drops_a_sort_key_whose_field_was_deleted(
@@ -402,7 +369,9 @@ def test_consolidated_save_drops_a_sort_key_whose_field_was_deleted(
     review_session = _make_session(client, db, code="save-json-stale")
     _populate_rosters(client, review_session.id)
     instrument = _instrument(db, review_session)
-    f1, f2 = _seed_display_fields_via_get(client, review_session) or _lookup_two_display_fields(db, instrument)
+    f1, f2 = _seed_display_fields_via_get(client, review_session) or _lookup_two_display_fields(
+        db, instrument
+    )
     stale_id = f1.id
     db.delete(f1)
     db.commit()
@@ -410,35 +379,31 @@ def test_consolidated_save_drops_a_sort_key_whose_field_was_deleted(
     form["sort_display_field_id"] = [str(stale_id), str(f2.id)]
     form["sort_dir"] = ["asc", "desc"]
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-        f"/{instrument.id}/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}/save",
         data=form,
         follow_redirects=False,
     )
     assert response.status_code == 200, response.text
     assert response.json()["ok"] is True
     db.refresh(instrument)
-    assert instrument.sort_display_fields == [
-        {"display_field_id": f2.id, "dir": "desc"}
-    ]
+    assert instrument.sort_display_fields == [{"display_field_id": f2.id, "dir": "desc"}]
 
 
-def test_consolidated_save_misaligned_returns_422_json(
-    db: Session, client: TestClient
-) -> None:
+def test_consolidated_save_misaligned_returns_422_json(db: Session, client: TestClient) -> None:
     """A validation failure returns ``{"ok": false, "errors": [...]}``
     (422) instead of a 303 redirect — the client renders the summary
     banner from ``errors`` and keeps the operator's edits."""
     review_session = _make_session(client, db, code="save-json-misalign")
     _populate_rosters(client, review_session.id)
     instrument = _instrument(db, review_session)
-    f1, _ = _seed_display_fields_via_get(client, review_session) or _lookup_two_display_fields(db, instrument)
+    f1, _ = _seed_display_fields_via_get(client, review_session) or _lookup_two_display_fields(
+        db, instrument
+    )
     form = _bulk_save_form(instrument)
     form["sort_display_field_id"] = [str(f1.id)]
     form["sort_dir"] = []  # misaligned arrays
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-        f"/{instrument.id}/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}/save",
         data=form,
         follow_redirects=False,
     )
@@ -448,15 +413,15 @@ def test_consolidated_save_misaligned_returns_422_json(
     assert any("misaligned" in e for e in body["errors"])
 
 
-def test_consolidated_save_over_cap_returns_422_json(
-    db: Session, client: TestClient
-) -> None:
+def test_consolidated_save_over_cap_returns_422_json(db: Session, client: TestClient) -> None:
     """A service-level SortSpecError (sort over the 3-field cap)
     surfaces as a JSON error, not a redirect."""
     review_session = _make_session(client, db, code="save-json-cap")
     _populate_rosters(client, review_session.id)
     instrument = _instrument(db, review_session)
-    f1, f2 = _seed_display_fields_via_get(client, review_session) or _lookup_two_display_fields(db, instrument)
+    f1, f2 = _seed_display_fields_via_get(client, review_session) or _lookup_two_display_fields(
+        db, instrument
+    )
     f3 = InstrumentDisplayField(
         instrument_id=instrument.id,
         source_type="reviewee",
@@ -468,13 +433,10 @@ def test_consolidated_save_over_cap_returns_422_json(
     db.add(f3)
     db.commit()
     form = _bulk_save_form(instrument)
-    form["sort_display_field_id"] = [
-        str(f1.id), str(f2.id), str(f3.id), str(f1.id)
-    ]
+    form["sort_display_field_id"] = [str(f1.id), str(f2.id), str(f3.id), str(f1.id)]
     form["sort_dir"] = ["asc", "asc", "asc", "desc"]
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}/instruments"
-        f"/{instrument.id}/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}/save",
         data=form,
         follow_redirects=False,
     )
@@ -511,8 +473,7 @@ def test_instruments_error_banners_show_no_text_from_the_url(
     assert "compromised" not in forged
 
     known = client.get(
-        f"{base}?sort_save_error=duplicate_id"
-        f"&sort_save_error_instrument_id={instrument.id}"
+        f"{base}?sort_save_error=duplicate_id&sort_save_error_instrument_id={instrument.id}"
     ).text
     banner = _banner(known, "sort-save-error-banner")
     assert (

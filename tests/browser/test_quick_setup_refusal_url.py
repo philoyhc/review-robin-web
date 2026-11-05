@@ -153,14 +153,11 @@ def test_a_refused_later_slot_lands_a_line_above_the_card(
     expect(page.locator("#quick-setup-settings-error-banner")).to_be_visible()
 
     def card_top() -> float:
-        return page.evaluate(
-            "document.getElementById('quick-setup').getBoundingClientRect().top"
-        )
+        return page.evaluate("document.getElementById('quick-setup').getBoundingClientRect().top")
 
     # The smooth scroll settles over a few frames.
     page.wait_for_function(
-        "Math.abs(document.getElementById('quick-setup')"
-        ".getBoundingClientRect().top - 24) < 4"
+        "Math.abs(document.getElementById('quick-setup').getBoundingClientRect().top - 24) < 4"
     )
     assert page.evaluate("window.scrollY") > 0
     assert 0 < card_top() < 40

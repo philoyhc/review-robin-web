@@ -28,7 +28,9 @@ def directory(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def _invite(client: TestClient, email: str):
-    return client.post("/operator/sys-admin/users/invite", data={"email": email}, follow_redirects=False)
+    return client.post(
+        "/operator/sys-admin/users/invite", data={"email": email}, follow_redirects=False
+    )
 
 
 def _row(db: Session, email: str) -> User | None:
@@ -48,7 +50,9 @@ def test_a_match_binds_the_person_and_keeps_the_address(
     # The directory's display name, so the row reads as its person (19Z,
     # invite from the directory, rung 19).
     assert row.display_name == "Jane Tan"
-    event = db.execute(select(AuditEvent).where(AuditEvent.event_type == "workspace.user_invited")).scalar_one()
+    event = db.execute(
+        select(AuditEvent).where(AuditEvent.event_type == "workspace.user_invited")
+    ).scalar_one()
     assert event.detail is not None
     assert event.detail["snapshot"]["directory_verified"] is True
     assert event.detail["snapshot"]["display_name"] == "Jane Tan"
@@ -59,14 +63,23 @@ def test_a_match_binds_the_person_and_keeps_the_address(
     [("nobody@example.edu", "not_in_directory"), ("office@example.edu", "ambiguous_in_directory")],
 )
 def test_not_found_and_ambiguous_are_refused(
-    db: Session, client: TestClient, monkeypatch: pytest.MonkeyPatch, directory: None, address: str, code: str
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    directory: None,
+    address: str,
+    code: str,
 ) -> None:
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
     response = _invite(client, address)
     assert response.headers["location"].endswith(f"invite_error={code}")
     assert _row(db, address) is None
     page = client.get(response.headers["location"]).text
-    assert ("isn't in the institution's directory" if code == "not_in_directory" else "more than one directory account") in page
+    assert (
+        "isn't in the institution's directory"
+        if code == "not_in_directory"
+        else "more than one directory account"
+    ) in page
 
 
 def test_a_person_who_already_has_an_account_is_refused(
@@ -109,7 +122,9 @@ def test_the_bound_invitee_signs_in_by_either_address(
     assert found is not None and found.id == invited.id
 
 
-def test_a_local_run_checks_nothing(db: Session, client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_local_run_checks_nothing(
+    db: Session, client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Its directory is the fake one, and its invitees are made up."""
     from cordware.graph import FakeDirectory
 
@@ -117,7 +132,9 @@ def test_a_local_run_checks_nothing(db: Session, client: TestClient, monkeypatch
     monkeypatch.setattr(_sys_admin, "is_local", lambda: True)
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
     response = _invite(client, "made.up@example.edu")
-    assert _row(db, "made.up@example.edu") is not None and response.headers["location"].endswith("invite_unchecked=1")
+    assert _row(db, "made.up@example.edu") is not None and response.headers["location"].endswith(
+        "invite_unchecked=1"
+    )
 
 
 def test_a_lookup_error_creates_the_row_unbound(
@@ -136,7 +153,9 @@ def test_the_audit_records_the_object_id_bound(
 ) -> None:
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
     _invite(client, "jane.tan@example.edu")
-    event = db.execute(select(AuditEvent).where(AuditEvent.event_type == "workspace.user_invited")).scalar_one()
+    event = db.execute(
+        select(AuditEvent).where(AuditEvent.event_type == "workspace.user_invited")
+    ).scalar_one()
     assert event.detail is not None
     assert event.detail["snapshot"]["external_principal_id"] == JANE
 
@@ -151,18 +170,30 @@ def test_the_object_id_is_matched_in_any_case(db: Session, monkeypatch: pytest.M
     from cordware.graph import DirectoryUser, FakeDirectory
 
     upper = JANE.upper()
-    shouting = FakeDirectory((DirectoryUser(upper, "Jane Tan", "jane.tan@example.edu", "e0123456@example.edu"),))
+    shouting = FakeDirectory(
+        (DirectoryUser(upper, "Jane Tan", "jane.tan@example.edu", "e0123456@example.edu"),)
+    )
     actor = User(email="alice@example.edu", is_operator=True, is_sys_admin=True)
     db.add(actor)
     db.commit()
-    invited = users.invite(db, actor=actor, email="jane.tan@example.edu",
-                           directory=lambda: look_up_one(shouting, "jane.tan@example.edu"))
+    invited = users.invite(
+        db,
+        actor=actor,
+        email="jane.tan@example.edu",
+        directory=lambda: look_up_one(shouting, "jane.tan@example.edu"),
+    )
     assert invited.external_principal_id == JANE  # folded
     with pytest.raises(users.UserOperationError) as refused:
-        users.invite(db, actor=actor, email="e0123456@example.edu",
-                     directory=lambda: look_up_one(shouting, "e0123456@example.edu"))
+        users.invite(
+            db,
+            actor=actor,
+            email="e0123456@example.edu",
+            directory=lambda: look_up_one(shouting, "e0123456@example.edu"),
+        )
     assert refused.value.code == "account_exists"
-    found = users.find_signed_in_user(db, AuthenticatedUser(principal_id=upper, email="jane.tan@example.edu", name="Jane"))
+    found = users.find_signed_in_user(
+        db, AuthenticatedUser(principal_id=upper, email="jane.tan@example.edu", name="Jane")
+    )
     assert found is not None and found.id == invited.id
 
 
@@ -175,10 +206,16 @@ def test_the_cheap_refusals_come_before_the_lookup(
 
     asked: list[str] = []
     real = directory_accounts.look_up_one
-    monkeypatch.setattr(directory_accounts, "look_up_one", lambda d, a: asked.append(a) or real(d, a))
+    monkeypatch.setattr(
+        directory_accounts, "look_up_one", lambda d, a: asked.append(a) or real(d, a)
+    )
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
     _invite(client, "jane.tan@example.edu")
-    assert _invite(client, "jane.tan@example.edu").headers["location"].endswith("invite_error=duplicate")
+    assert (
+        _invite(client, "jane.tan@example.edu")
+        .headers["location"]
+        .endswith("invite_error=duplicate")
+    )
     assert asked == ["jane.tan@example.edu"]  # once, for the first invite
 
 
@@ -186,7 +223,11 @@ def test_the_fake_sign_in_s_id_is_no_one_s(db: Session) -> None:
     from app.services.users import is_verified
     from cordware.settings import identity_settings
 
-    assert not is_verified(User(email="dev@example.edu", external_principal_id=identity_settings.fake_auth_principal_id))
+    assert not is_verified(
+        User(
+            email="dev@example.edu", external_principal_id=identity_settings.fake_auth_principal_id
+        )
+    )
     assert not is_verified(User(email="dev@example.edu", external_principal_id="  "))
     assert is_verified(User(email="dev@example.edu", external_principal_id=JANE))
 
@@ -223,7 +264,9 @@ def test_an_unbound_picked_invite_keeps_the_picked_name(
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
     _invite(client, "New Person <new@example.edu>")  # no directory: nothing asked
     row = _row(db, "new@example.edu")
-    assert row is not None and row.external_principal_id is None and row.display_name == "New Person"
+    assert (
+        row is not None and row.external_principal_id is None and row.display_name == "New Person"
+    )
 
 
 @pytest.mark.parametrize(
@@ -238,7 +281,12 @@ def test_text_that_is_not_one_address_is_refused_not_invited_unchecked(
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
     response = _invite(client, text)
     assert response.headers["location"].endswith("invite_error=invalid_email")
-    assert db.execute(select(User).where(User.email.contains("@"), User.email != "alice@example.edu")).first() is None
+    assert (
+        db.execute(
+            select(User).where(User.email.contains("@"), User.email != "alice@example.edu")
+        ).first()
+        is None
+    )
 
 
 def test_a_picked_name_is_kept_to_the_column_s_length(

@@ -33,6 +33,7 @@ the byte-shape of the handler it is hunting, because two earlier drafts
 that guessed at a spelling were both defeated by a spelling nobody had
 guessed.
 """
+
 from __future__ import annotations
 
 import re
@@ -178,9 +179,7 @@ def _apply_sort_body() -> str:
 #: `if (` looks exactly like a call to a regex and is not one. The
 #: control-flow keywords that take a parenthesis are skipped so that
 #: `if (expanderIsDirty())` reports the function rather than the `if`.
-_NOT_A_CALL = frozenset(
-    {"if", "for", "while", "switch", "catch", "return", "function", "typeof"}
-)
+_NOT_A_CALL = frozenset({"if", "for", "while", "switch", "catch", "return", "function", "typeof"})
 
 
 def _first_call(js: str) -> str | None:
@@ -246,9 +245,7 @@ def test_the_panel_is_removed_rather_than_hidden() -> None:
         "the `removeChild` must act on the panels this function "
         "selected, so the selector comes first"
     )
-    assert "style.display" not in body, (
-        "the panel must leave the DOM; hiding it keeps its index"
-    )
+    assert "style.display" not in body, "the panel must leave the DOM; hiding it keeps its index"
 
 
 def test_the_sort_signals_after_the_rows_land() -> None:
@@ -285,8 +282,7 @@ def test_every_page_that_sorts_and_injects_listens(page: str) -> None:
     """The dispatch is only half a fix without an owner on the other end."""
     src = (OPERATOR / page).read_text(encoding="utf-8")
     assert 'addEventListener("rrw:sorted"' in src, (
-        f"{page} injects a selection panel and sorts, so it must "
-        "re-anchor on `rrw:sorted`"
+        f"{page} injects a selection panel and sorts, so it must re-anchor on `rrw:sorted`"
     )
 
 
@@ -361,9 +357,7 @@ def test_the_lobby_gate_stays_a_gate() -> None:
     must be the dirty check. Anything else fails, whatever it is called.
     """
     page = PAGE_WITH_A_SORT_BUTTON_HANDLER_OF_ITS_OWN
-    script = _strip_line_comments(
-        _script_text((OPERATOR / page).read_text(encoding="utf-8"))
-    )
+    script = _strip_line_comments(_script_text((OPERATOR / page).read_text(encoding="utf-8")))
 
     hits = [m.start() for m in re.finditer("rrw-sort-btn", script)]
     assert hits, (

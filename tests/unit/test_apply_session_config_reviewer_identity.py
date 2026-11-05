@@ -27,9 +27,7 @@ def _session(db: Session, *, code: str) -> ReviewSession:
     user = User(email=f"op-{code}@example.edu", display_name="Op")
     db.add(user)
     db.flush()
-    review_session = ReviewSession(
-        name=code.title(), code=code, created_by_user_id=user.id
-    )
+    review_session = ReviewSession(name=code.title(), code=code, created_by_user_id=user.id)
     db.add(review_session)
     db.flush()
     return review_session
@@ -60,9 +58,7 @@ def test_the_level_round_trips_and_only_its_audiences_emit_it(db: Session) -> No
                 instrument_id=instrument.id,
                 audience=audience,
                 # The reviewer's own Session ongoing cell is always Raw.
-                while_ongoing_granularity=(
-                    granularity if audience == "peer_reviewer" else None
-                ),
+                while_ongoing_granularity=(granularity if audience == "peer_reviewer" else None),
                 while_ongoing_identification=(
                     identification if audience == "peer_reviewer" else None
                 ),

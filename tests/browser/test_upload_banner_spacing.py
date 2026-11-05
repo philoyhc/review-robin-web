@@ -65,9 +65,7 @@ def test_the_directory_line_sits_8px_under_the_buttons(
     page.goto(app_url(f"/operator/sessions/{session_id}/reviewers?unlocked=1#upload-csv"))
     if addresses:
         roster = tmp_path / "r.csv"
-        roster.write_text(
-            "ReviewerName,ReviewerEmail\n" + "".join(f"P,{a}\n" for a in addresses)
-        )
+        roster.write_text("ReviewerName,ReviewerEmail\n" + "".join(f"P,{a}\n" for a in addresses))
         form = page.locator("#upload-csv-form")
         form.locator('input[name="file"]').set_input_files(str(roster))
         with page.expect_navigation():

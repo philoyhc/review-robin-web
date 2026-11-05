@@ -20,6 +20,7 @@ Revises: d8e4f1a2b3c4
 Create Date: 2026-05-18
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -38,9 +39,7 @@ def upgrade() -> None:
     )
     op.add_column(
         "session_rule_sets",
-        sa.Column(
-            "cached_eligibility_stamp", sa.String(length=64), nullable=True
-        ),
+        sa.Column("cached_eligibility_stamp", sa.String(length=64), nullable=True),
     )
 
 

@@ -17,9 +17,7 @@ class Reviewer(Base, TimestampMixin):
     __tablename__ = "reviewers"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    session_id: Mapped[int] = mapped_column(
-        ForeignKey("sessions.id"), index=True, nullable=False
-    )
+    session_id: Mapped[int] = mapped_column(ForeignKey("sessions.id"), index=True, nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     email: Mapped[str] = mapped_column(String(320), index=True, nullable=False)
     profile_link: Mapped[str | None] = mapped_column(String(2000))

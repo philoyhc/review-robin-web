@@ -24,9 +24,14 @@ def _chain_page(client: TestClient, db: Session, code: str, **modes: str):
     review_session, instrument, _, _ = _page(client, db, code)
     fields = {f.label: f for f in instrument.response_fields}
     familiarity = InstrumentResponseField(
-        instrument_id=instrument.id, field_key="familiarity", label="Familiarity",
-        order=fields["Rating"].order - 1, _inline_data_type="Integer",
-        branch_op="gt", branch_value="0", branch_mode=modes.get("familiarity"),
+        instrument_id=instrument.id,
+        field_key="familiarity",
+        label="Familiarity",
+        order=fields["Rating"].order - 1,
+        _inline_data_type="Integer",
+        branch_op="gt",
+        branch_value="0",
+        branch_mode=modes.get("familiarity"),
     )
     db.add(familiarity)
     db.flush()
@@ -53,16 +58,16 @@ def test_a_chain_is_one_ruled_group_with_two_condition_rows(
     chain = next(g for g in groups if 'data-label="Familiarity"' in g)
     order = [
         m.group(1) or "condition"
-        for m in re.finditer(r'<tr data-new-model-rf-(?:row[^>]*data-label="([^"]+)"|condition)', chain)
+        for m in re.finditer(
+            r'<tr data-new-model-rf-(?:row[^>]*data-label="([^"]+)"|condition)', chain
+        )
     ]
     assert order == ["Familiarity", "condition", "Rating", "condition", "Comments"]
     for label, level in (("Familiarity", 0), ("Rating", 1), ("Comments", 2)):
         assert f'data-new-model-rf-level="{level}"' in _row(table, label), label
 
 
-def test_each_level_shifts_one_column_and_the_name_stays(
-    client: TestClient, db: Session
-) -> None:
+def test_each_level_shifts_one_column_and_the_name_stays(client: TestClient, db: Session) -> None:
     _, _, card, _, _ = _chain_page(client, db, "two-level-align")
     table = _rows_table(card)
     rows = {label: _cells(_row(table, label)) for label in ("Familiarity", "Rating", "Comments")}
@@ -77,7 +82,9 @@ def test_each_level_shifts_one_column_and_the_name_stays(
     fam = rows["Familiarity"]
     assert "data-new-model-rf-add" in fam[1] and "rf-branch-bar-start" in fam[1]
     assert "data-new-model-rf-fork" in fam[2] and "data-new-model-rf-join" in fam[3]
-    assert fam[4].startswith(' class="col-shrink rf-slot">') and fam[5].startswith(' class="col-shrink rf-slot">')
+    assert fam[4].startswith(' class="col-shrink rf-slot">') and fam[5].startswith(
+        ' class="col-shrink rf-slot">'
+    )
     # Rating: chip, bar, + (its own bar starts here), ⑂, ↰ (rung 5), ↳.
     rating = rows["Rating"]
     assert "rf-branch-bar" in rating[1] and "rf-branch-bar-start" not in rating[1]
@@ -93,9 +100,7 @@ def test_each_level_shifts_one_column_and_the_name_stays(
     assert "data-new-model-rf-fork" not in _row(table, "Comments")
 
 
-def test_a_condition_rows_plus_sits_under_its_parents_fork(
-    client: TestClient, db: Session
-) -> None:
+def test_a_condition_rows_plus_sits_under_its_parents_fork(client: TestClient, db: Session) -> None:
     _, _, card, _, _ = _chain_page(client, db, "two-level-conditions")
     table = _rows_table(card)
     conditions = [c.split("</tr>")[0] for c in table.split("<tr data-new-model-rf-condition")[1:]]
@@ -130,7 +135,9 @@ def test_a_governed_number_forks_one_level_down(client: TestClient, db: Session)
     why not, and an answered branch's is off like its "+"s."""
     review_session, instrument, card, _ = _page(client, db, "two-level-fork-live")
     comments = next(f for f in instrument.response_fields if f.label == "Comments")
-    fork = must_search(r"<button[^>]*data-new-model-rf-fork[^>]*>", _row(_rows_table(card), "Comments")).group(0)
+    fork = must_search(
+        r"<button[^>]*data-new-model-rf-fork[^>]*>", _row(_rows_table(card), "Comments")
+    ).group(0)
     assert " disabled" in fork and "A String field can't have a branch" in fork
     comments._inline_data_type = "Integer"
     db.commit()
@@ -138,14 +145,16 @@ def test_a_governed_number_forks_one_level_down(client: TestClient, db: Session)
         f"/operator/sessions/{review_session.public_id}/instruments?editing={instrument.id}"
     ).text
     card = _card_slice(" ".join(body.split()), instrument.id)
-    fork = must_search(r"<button[^>]*data-new-model-rf-fork[^>]*>", _row(_rows_table(card), "Comments")).group(0)
+    fork = must_search(
+        r"<button[^>]*data-new-model-rf-fork[^>]*>", _row(_rows_table(card), "Comments")
+    ).group(0)
     assert " disabled" not in fork
     assert 'title="Add a branch inside this branch, below this field"' in fork
     recompute = " ".join(_rf_fn(body, "newModelRfRecomputeActionStates").split())
     assert (
         "} else if (governed && locked) { "
         "// 19T Item 14 — a branch inside an answered branch would "
-        "// change it, so a locked branch's ⑂ is off like its \"+\"s. "
+        '// change it, so a locked branch\'s ⑂ is off like its "+"s. '
         "forkBtn.disabled = true;"
     ) in recompute
     fork_fn = " ".join(_rf_fn(body, "newModelRfFork").split())
@@ -160,8 +169,10 @@ def test_the_row_script_works_on_a_rows_own_branch(client: TestClient, db: Sessi
     """Rung 4b: every edit acts on the row's own branch and unit — the
     row, its condition and every deeper row — at either level."""
     _, _, _, _, body = _chain_page(client, db, "two-level-ops")
+
     def fn(name: str) -> str:
         return " ".join(_rf_fn(body, name).split())
+
     set_level = fn("newModelRfSetLevel")
     for line in (
         "if (forkCell) { forkCell.remove(); }",
@@ -177,7 +188,9 @@ def test_the_row_script_works_on_a_rows_own_branch(client: TestClient, db: Sessi
     assert "var members = window.newModelRfBranchMembers(parent);" in sibling
     join = fn("newModelRfJoin")
     assert "window.newModelRfMakeUngoverned(row, level - 1);" in join
-    assert "joinLevel = Math.max(1, window.newModelRfRowLevel(lastRows[lastRows.length - 1]));" in join
+    assert (
+        "joinLevel = Math.max(1, window.newModelRfRowLevel(lastRows[lastRows.length - 1]));" in join
+    )
     end = fn("newModelRfEndBranch")
     assert "if (window.newModelRfRowLevel(parentRow) === 0) {" in end
     condition = fn("newModelRfNewConditionRow")
@@ -195,8 +208,12 @@ def test_answers_lock_every_branch_above_on_the_page(client: TestClient, db: Ses
     comments = next(f for f in instrument.response_fields if f.label == "Comments")
     assignment = Assignment(
         session_id=review_session.id,
-        reviewer_id=db.execute(select(Reviewer.id).where(Reviewer.session_id == review_session.id)).scalars().first(),
-        reviewee_id=db.execute(select(Reviewee.id).where(Reviewee.session_id == review_session.id)).scalars().first(),
+        reviewer_id=db.execute(select(Reviewer.id).where(Reviewer.session_id == review_session.id))
+        .scalars()
+        .first(),
+        reviewee_id=db.execute(select(Reviewee.id).where(Reviewee.session_id == review_session.id))
+        .scalars()
+        .first(),
         instrument_id=instrument.id,
     )
     db.add(assignment)
@@ -238,7 +255,10 @@ def test_the_row_script_reads_a_rows_own_parent_and_condition(
     assert "var parentRow = rfRowParent(row);" in stager
     assert "? rfRowCondition(row) : null;" in stager
     hint = " ".join(_rf_fn(body, "newModelRfBranchHint").split())
-    assert "var parent = window.newModelRfParentOf(row); var cond = window.newModelRfConditionOf(parent);" in hint
+    assert (
+        "var parent = window.newModelRfParentOf(row); var cond = window.newModelRfConditionOf(parent);"
+        in hint
+    )
     sync = " ".join(_rf_fn(body, "newModelRfSyncConditionOps").split())
     assert "var parent = parentRow || group.querySelector('[data-new-model-rf-parent]');" in sync
 
@@ -256,7 +276,9 @@ def test_the_row_script_locks_per_branch(client: TestClient, db: Session) -> Non
     helper = fn("newModelRfBranchLocked")
     assert "return el !== parentRow && el.getAttribute('data-has-responses') === 'true';" in helper
     assert "window.newModelRfUnit(parentRow).some(" in helper
-    assert "var locked = window.newModelRfBranchLocked(parent);" in fn("newModelRfRecomputeCondition")
+    assert "var locked = window.newModelRfBranchLocked(parent);" in fn(
+        "newModelRfRecomputeCondition"
+    )
     assert (
         "var locked = governed && window.newModelRfBranchLocked(window.newModelRfParentOf(row));"
         in fn("newModelRfRecomputeActionStates")
@@ -280,8 +302,12 @@ def test_detachs_title_counts_the_rows_own_branch(client: TestClient, db: Sessio
 
 
 def _with_other(
-    client: TestClient, db: Session, code: str, *,
-    answered: str | None = None, other_type: str = "String",
+    client: TestClient,
+    db: Session,
+    code: str,
+    *,
+    answered: str | None = None,
+    other_type: str = "String",
 ):
     """The chain plus Other and Last, level-1 fields under Familiarity
     after Rating's branch; ``answered`` names one to give a response,
@@ -292,7 +318,9 @@ def _with_other(
     fields = {f.label: f for f in instrument.response_fields}
     for offset, label in ((1, "Other"), (2, "Last")):
         fields[label] = InstrumentResponseField(
-            instrument_id=instrument.id, field_key=label.lower(), label=label,
+            instrument_id=instrument.id,
+            field_key=label.lower(),
+            label=label,
             order=fields["Comments"].order + offset,
             _inline_data_type=other_type if label == "Other" else "String",
             branch_parent_id=fields["Familiarity"].id,
@@ -379,9 +407,7 @@ def test_the_row_script_nests_a_level_one_row(client: TestClient, db: Session) -
     assert "window.newModelRfSyncInnerBorders(group);" in recompute
 
 
-def test_a_branch_inside_a_branch_is_ruled_above_and_below(
-    client: TestClient, db: Session
-) -> None:
+def test_a_branch_inside_a_branch_is_ruled_above_and_below(client: TestClient, db: Session) -> None:
     """The author's second rung-5 entry: Rating's branch is ruled above
     Rating and below Comments, its last field, from Rating's + column
     rightward (its checkbox column before ux_refinements Item 1), clear of

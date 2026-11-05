@@ -8,6 +8,7 @@ event per processed instrument with ``refs.instrument_id`` set.
 An instrument with NULL ``rule_set_id`` generates against the
 synthetic Full Matrix default.
 """
+
 from __future__ import annotations
 
 from sqlalchemy import select
@@ -31,7 +32,9 @@ from app.services.instruments import ensure_default_instrument
 from ._lookups import detail_of, must_get
 
 
-def _seed_two_instruments(db: Session) -> tuple[
+def _seed_two_instruments(
+    db: Session,
+) -> tuple[
     User,
     ReviewSession,
     Instrument,
@@ -123,9 +126,7 @@ def test_one_event_per_pinned_instrument(db: Session) -> None:
         ).scalars()
     )
     assert len(events) == 2
-    seen_instrument_ids = {
-        detail_of(e)["refs"]["instrument_id"] for e in events
-    }
+    seen_instrument_ids = {detail_of(e)["refs"]["instrument_id"] for e in events}
     assert seen_instrument_ids == {inst_a.id, inst_b.id}
     for event in events:
         assert detail_of(event)["counts"]["instruments"] == 1
@@ -163,19 +164,13 @@ def test_scoped_replace_only_touches_named_instrument(db: Session) -> None:
     # inserts and deletes nothing — every pair is kept in place.
     # inst_b is out of scope and untouched.
     assert (replaced, new) == (0, 0)
-    inst_a_rows = assignments.existing_count(
-        db, review_session.id, instrument_id=inst_a.id
-    )
-    inst_b_rows = assignments.existing_count(
-        db, review_session.id, instrument_id=inst_b.id
-    )
+    inst_a_rows = assignments.existing_count(db, review_session.id, instrument_id=inst_a.id)
+    inst_b_rows = assignments.existing_count(db, review_session.id, instrument_id=inst_b.id)
     assert inst_a_rows == 4
     assert inst_b_rows == 4
 
 
-def _attach_response(
-    db: Session, *, instrument_id: int, assignment: Assignment, key: str
-) -> int:
+def _attach_response(db: Session, *, instrument_id: int, assignment: Assignment, key: str) -> int:
     """Attach one ``Response`` to ``assignment`` and return its id.
 
     Builds the response-type definition + instrument field the
@@ -269,9 +264,7 @@ def test_reconcile_unchanged_run_keeps_responses(db: Session) -> None:
         db, review_session=review_session, user=user, correlation_id="c1"
     )
     an_assignment = (
-        db.execute(
-            select(Assignment).where(Assignment.instrument_id == inst_a.id)
-        )
+        db.execute(select(Assignment).where(Assignment.instrument_id == inst_a.id))
         .scalars()
         .first()
     )
@@ -290,12 +283,7 @@ def test_reconcile_unchanged_run_keeps_responses(db: Session) -> None:
 
     assert (replaced, new) == (0, 0)
     assert db.get(Response, resp_id) is not None
-    assert (
-        assignments.existing_count(
-            db, review_session.id, instrument_id=inst_a.id
-        )
-        == 4
-    )
+    assert assignments.existing_count(db, review_session.id, instrument_id=inst_a.id) == 4
 
 
 def test_reconcile_added_reviewer_inserts_pairs_and_keeps_responses(
@@ -312,16 +300,12 @@ def test_reconcile_added_reviewer_inserts_pairs_and_keeps_responses(
         db, review_session=review_session, user=user, correlation_id="c1"
     )
     an_assignment = (
-        db.execute(
-            select(Assignment).where(Assignment.instrument_id == inst_a.id)
-        )
+        db.execute(select(Assignment).where(Assignment.instrument_id == inst_a.id))
         .scalars()
         .first()
     )
     assert an_assignment is not None
-    resp_id = _attach_response(
-        db, instrument_id=inst_a.id, assignment=an_assignment, key="added"
-    )
+    resp_id = _attach_response(db, instrument_id=inst_a.id, assignment=an_assignment, key="added")
 
     # Add a third reviewer — the engine now produces 3 x 2 = 6 pairs.
     db.add(
@@ -343,12 +327,7 @@ def test_reconcile_added_reviewer_inserts_pairs_and_keeps_responses(
 
     assert (replaced, new) == (0, 2)
     assert db.get(Response, resp_id) is not None
-    assert (
-        assignments.existing_count(
-            db, review_session.id, instrument_id=inst_a.id
-        )
-        == 6
-    )
+    assert assignments.existing_count(db, review_session.id, instrument_id=inst_a.id) == 6
 
 
 def test_reconcile_dropped_pair_deletes_only_its_responses(
@@ -366,11 +345,7 @@ def test_reconcile_dropped_pair_deletes_only_its_responses(
         db, review_session=review_session, user=user, correlation_id="c1"
     )
     rows = list(
-        db.execute(
-            select(Assignment).where(
-                Assignment.instrument_id == instrument.id
-            )
-        ).scalars()
+        db.execute(select(Assignment).where(Assignment.instrument_id == instrument.id)).scalars()
     )
     # Full Matrix over 2 reviewers x 1 reviewee — Sam's self-review
     # plus Tom -> Sam.
@@ -383,9 +358,7 @@ def test_reconcile_dropped_pair_deletes_only_its_responses(
     )
     other_pair = next(r for r in rows if r.id != self_pair.id)
 
-    self_resp = _attach_response(
-        db, instrument_id=instrument.id, assignment=self_pair, key="selfp"
-    )
+    self_resp = _attach_response(db, instrument_id=instrument.id, assignment=self_pair, key="selfp")
     other_resp = _attach_response(
         db, instrument_id=instrument.id, assignment=other_pair, key="otherp"
     )
@@ -403,12 +376,7 @@ def test_reconcile_dropped_pair_deletes_only_its_responses(
     assert (replaced, new) == (1, 0)
     assert db.get(Response, self_resp) is None
     assert db.get(Response, other_resp) is not None
-    assert (
-        assignments.existing_count(
-            db, review_session.id, instrument_id=instrument.id
-        )
-        == 1
-    )
+    assert assignments.existing_count(db, review_session.id, instrument_id=instrument.id) == 1
 
 
 def test_reconcile_audit_event_carries_reconcile_counts(
@@ -474,18 +442,8 @@ def test_existing_count_filters_by_instrument(db: Session) -> None:
     )
 
     assert assignments.existing_count(db, review_session.id) == 8
-    assert (
-        assignments.existing_count(
-            db, review_session.id, instrument_id=inst_a.id
-        )
-        == 4
-    )
-    assert (
-        assignments.existing_count(
-            db, review_session.id, instrument_id=inst_b.id
-        )
-        == 4
-    )
+    assert assignments.existing_count(db, review_session.id, instrument_id=inst_a.id) == 4
+    assert assignments.existing_count(db, review_session.id, instrument_id=inst_b.id) == 4
 
 
 def _self_review_rows(db: Session, instrument_id: int) -> list[Assignment]:
@@ -514,11 +472,7 @@ def test_exclude_self_reviews_writes_no_row_individual(
     assert _self_review_rows(db, instrument.id) == []
     # The non-self pairs still generate: this excludes, it does not empty.
     assert (
-        db.execute(
-            select(Assignment).where(
-                Assignment.instrument_id == instrument.id
-            )
-        )
+        db.execute(select(Assignment).where(Assignment.instrument_id == instrument.id))
         .scalars()
         .all()
     )
@@ -557,9 +511,7 @@ def test_exclude_self_reviews_drops_the_whole_group(db: Session) -> None:
         )
     )
     sam = db.execute(
-        select(Reviewee).where(
-            Reviewee.email_or_identifier == "sam@example.edu"
-        )
+        select(Reviewee).where(Reviewee.email_or_identifier == "sam@example.edu")
     ).scalar_one()
     sam.tag_1 = "TeamA"
     instrument.group_kind = "r1"
@@ -609,12 +561,9 @@ def test_exclude_self_reviews_ignores_non_email_identifiers(
     anon_rows = [
         row
         for row in db.execute(
-            select(Assignment).where(
-                Assignment.instrument_id == instrument.id
-            )
+            select(Assignment).where(Assignment.instrument_id == instrument.id)
         ).scalars()
-        if must_get(db, Reviewee, row.reviewee_id).email_or_identifier
-        == "anon-001"
+        if must_get(db, Reviewee, row.reviewee_id).email_or_identifier == "anon-001"
     ]
     assert anon_rows, "the anonymous reviewee's rows must survive"
 
@@ -658,9 +607,7 @@ def test_exclude_self_reviews_deletes_saved_responses(db: Session) -> None:
         db, review_session=review_session, user=user, correlation_id="c1"
     )
     self_row = _self_review_rows(db, instrument.id)[0]
-    resp_id = _attach_response(
-        db, instrument_id=instrument.id, assignment=self_row, key="selfrev"
-    )
+    resp_id = _attach_response(db, instrument_id=instrument.id, assignment=self_row, key="selfrev")
 
     rule_set = must_get(db, SessionRuleSet, instrument.rule_set_id)
     rule_set.exclude_self_reviews = True
@@ -694,9 +641,7 @@ def test_exclude_self_reviews_survives_a_link_rule_hiding_the_self_pair(
     """
     user, review_session, instrument = _seed_self_review_session(db)
     sam_e = db.execute(
-        select(Reviewee).where(
-            Reviewee.email_or_identifier == "sam@example.edu"
-        )
+        select(Reviewee).where(Reviewee.email_or_identifier == "sam@example.edu")
     ).scalar_one()
     sam_e.tag_1 = "TeamA"
     sam_e.tag_2 = "SELF"
@@ -743,20 +688,18 @@ def test_exclude_self_reviews_survives_a_link_rule_hiding_the_self_pair(
         db, review_session=review_session, user=user, correlation_id="p1"
     )
 
-    sam_r_id = db.execute(
-        select(Reviewer).where(Reviewer.email == "sam@example.edu")
-    ).scalar_one().id
-    zoe_id = db.execute(
-        select(Reviewee).where(
-            Reviewee.email_or_identifier == "zoe@example.edu"
-        )
-    ).scalar_one().id
+    sam_r_id = (
+        db.execute(select(Reviewer).where(Reviewer.email == "sam@example.edu")).scalar_one().id
+    )
+    zoe_id = (
+        db.execute(select(Reviewee).where(Reviewee.email_or_identifier == "zoe@example.edu"))
+        .scalar_one()
+        .id
+    )
     leaked = [
         row
         for row in db.execute(
-            select(Assignment).where(
-                Assignment.instrument_id == instrument.id
-            )
+            select(Assignment).where(Assignment.instrument_id == instrument.id)
         ).scalars()
         if row.reviewer_id == sam_r_id and row.reviewee_id == zoe_id
     ]

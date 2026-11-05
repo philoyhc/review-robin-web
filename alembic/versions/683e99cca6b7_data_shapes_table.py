@@ -20,6 +20,7 @@ Revision ID: 683e99cca6b7
 Revises: e5c1a3b9d472
 Create Date: 2026-05-30
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -34,9 +35,7 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     op.create_table(
         "data_shapes",
-        sa.Column(
-            "id", sa.Integer(), primary_key=True, autoincrement=True
-        ),
+        sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
         sa.Column("session_id", sa.Integer(), nullable=False),
         sa.Column("name", sa.String(length=255), nullable=False),
         sa.Column("axis", sa.String(length=16), nullable=False),
@@ -56,27 +55,17 @@ def upgrade() -> None:
             server_default=sa.func.now(),
             nullable=False,
         ),
-        sa.ForeignKeyConstraint(
-            ["session_id"], ["sessions.id"], ondelete="CASCADE"
-        ),
-        sa.ForeignKeyConstraint(
-            ["instrument_id"], ["instruments.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["session_id"], ["sessions.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["instrument_id"], ["instruments.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(
             ["response_field_id"],
             ["instrument_response_fields.id"],
             ondelete="CASCADE",
         ),
-        sa.ForeignKeyConstraint(
-            ["created_by_user_id"], ["users.id"], ondelete="SET NULL"
-        ),
-        sa.UniqueConstraint(
-            "session_id", "name", name="uq_data_shape_session_name"
-        ),
+        sa.ForeignKeyConstraint(["created_by_user_id"], ["users.id"], ondelete="SET NULL"),
+        sa.UniqueConstraint("session_id", "name", name="uq_data_shape_session_name"),
     )
-    op.create_index(
-        "ix_data_shapes_session_id", "data_shapes", ["session_id"]
-    )
+    op.create_index("ix_data_shapes_session_id", "data_shapes", ["session_id"])
 
 
 def downgrade() -> None:

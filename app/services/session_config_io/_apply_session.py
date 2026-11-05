@@ -5,6 +5,7 @@ Two sides of one section: ``_apply_session_kv`` consumes
 writes the parsed overrides onto the live ``ReviewSession`` during the
 apply phase.
 """
+
 from __future__ import annotations
 
 from sqlalchemy.orm import object_session
@@ -44,9 +45,7 @@ _SELF_FIELDS_KEYS = self_fields_columns()
 SESSION_FALLBACK_KEYS = ("name", "code", "description", "deadline", "help_contact")
 
 
-def _apply_session_kv(
-    plan: _ParsedConfig, field_path: str, value: str
-) -> None:
+def _apply_session_kv(plan: _ParsedConfig, field_path: str, value: str) -> None:
     key = field_path.removeprefix("session.")
     if key in {"assignment_mode", "status"}:
         # Defensively ignored even if exported — these are
@@ -91,9 +90,7 @@ def _apply_session_kv(
         if not value:
             plan.session_overrides[key] = None
         else:
-            entries = [
-                entry.strip() for entry in value.split(",") if entry.strip()
-            ]
+            entries = [entry.strip() for entry in value.split(",") if entry.strip()]
             plan.session_overrides[key] = entries or None
         return
     if key == "archive_offset":
@@ -120,13 +117,9 @@ def _apply_session_kv(
         parsed = _parse_json(value, default=None)
         keys = json_list(parsed)
         if keys is None or not all(isinstance(item, str) for item in keys):
-            raise _ParseError(
-                f"expected a JSON list of field keys, got {value!r}"
-            )
+            raise _ParseError(f"expected a JSON list of field keys, got {value!r}")
         try:
-            plan.session_overrides[key] = normalize_self_fields(
-                _SELF_FIELDS_KEYS[key], keys
-            )
+            plan.session_overrides[key] = normalize_self_fields(_SELF_FIELDS_KEYS[key], keys)
         except SelfFieldsError as exc:
             raise _ParseError(str(exc)) from exc
         return
@@ -134,9 +127,7 @@ def _apply_session_kv(
         plan.session_overrides[key] = value or None
 
 
-def _apply_session_metadata(
-    review_session: ReviewSession, plan: _ParsedConfig
-) -> int:
+def _apply_session_metadata(review_session: ReviewSession, plan: _ParsedConfig) -> int:
     """Apply session.* keys with the fallback rule: write the
     snapshot value only when the destination's existing field is
     empty / None.
@@ -192,7 +183,11 @@ def _apply_session_metadata(
             continue
         if _locked_on(review_session, key, overrides[key]):
             continue
-        if key == "symmetric_review" and overrides[key] is False and review_session.symmetric_review:
+        if (
+            key == "symmetric_review"
+            and overrides[key] is False
+            and review_session.symmetric_review
+        ):
             db = object_session(review_session)
             assert db is not None  # the session being applied is stored
             sessions.clear_mirror_links(db, review_session.id)

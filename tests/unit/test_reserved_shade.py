@@ -90,10 +90,7 @@ RESERVED = {"light": "#2563eb", "dark": "#4b8bf5"}
 #: other than by a ruling recorded here, is the bug the file exists to
 #: catch.
 CONTROL_SELECTORS = {
-    (
-        "body.ui-v2 .tag-chip.is-selected, "
-        "body.ui-v2 .tag-chip:has(> input:checked)"
-    ),
+    ("body.ui-v2 .tag-chip.is-selected, body.ui-v2 .tag-chip:has(> input:checked)"),
     "body.ui-v2 label.tag-chip:has(> input:focus-visible)",
     "body.ui-v2 .tag-chip.status-chip-info:has(> input:checked)",
     "body.ui-v2 .pill.pill-tag-clear, body.ui-v2 .pill.tag-mode-chip",
@@ -142,9 +139,7 @@ def test_only_controls_reach_the_reserved_shade() -> None:
     found: set[str] = set()
     scanned = 0
     for selector, body in _rules(css):
-        if not re.search(
-            r"\.(?:[a-z0-9-]*(?:pill|chip)|btn-icon)\b", selector
-        ):
+        if not re.search(r"\.(?:[a-z0-9-]*(?:pill|chip)|btn-icon)\b", selector):
             continue
         scanned += 1
         for theme, reserved in RESERVED.items():

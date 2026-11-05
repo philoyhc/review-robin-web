@@ -24,14 +24,10 @@ def _user(db: Session, email: str, *, is_operator: bool = True) -> User:
 
 
 def _owned_session(db: Session, owner: User, code: str) -> ReviewSession:
-    review_session = ReviewSession(
-        name=code, code=code, created_by_user_id=owner.id
-    )
+    review_session = ReviewSession(name=code, code=code, created_by_user_id=owner.id)
     db.add(review_session)
     db.flush()
-    db.add(
-        SessionOperator(session_id=review_session.id, user_id=owner.id, role="owner")
-    )
+    db.add(SessionOperator(session_id=review_session.id, user_id=owner.id, role="owner"))
     db.flush()
     return review_session
 
@@ -46,9 +42,7 @@ def _owner_events(db: Session, review_session: ReviewSession) -> list[str]:
         for e in db.execute(
             select(AuditEvent).where(
                 AuditEvent.session_id == review_session.id,
-                AuditEvent.event_type.in_(
-                    ["session.owner_added", "session.owner_removed"]
-                ),
+                AuditEvent.event_type.in_(["session.owner_added", "session.owner_removed"]),
             )
         ).scalars()
     ]
@@ -69,16 +63,12 @@ def test_resolve_skips_blanks_folds_case_and_collapses_duplicates(
 
 
 @pytest.mark.parametrize("known", [True, False], ids=["non-operator", "unknown"])
-def test_resolve_refuses_anyone_add_owner_would_refuse(
-    db: Session, known: bool
-) -> None:
+def test_resolve_refuses_anyone_add_owner_would_refuse(db: Session, known: bool) -> None:
     _user(db, "ok@example.edu")
     if known:
         _user(db, "outsider@example.edu", is_operator=False)
     with pytest.raises(session_owners.OwnerOperationError) as exc:
-        session_owners.resolve_owners(
-            db, ["ok@example.edu", "outsider@example.edu"]
-        )
+        session_owners.resolve_owners(db, ["ok@example.edu", "outsider@example.edu"])
     assert exc.value.code == "not_in_workspace"
     assert "outsider@example.edu" in exc.value.message
 
@@ -109,9 +99,7 @@ def test_set_owners_can_hand_a_session_to_someone_else(db: Session) -> None:
     b = _user(db, "b@example.edu")
     review_session = _owned_session(db, a, "SET-HANDOVER")
 
-    session_owners.set_owners(
-        db, review_session=review_session, actor=a, targets=[b]
-    )
+    session_owners.set_owners(db, review_session=review_session, actor=a, targets=[b])
     assert _owner_emails(db, review_session) == ["b@example.edu"]
 
 
@@ -138,9 +126,7 @@ def test_an_empty_set_is_refused_before_anything_is_removed(db: Session) -> None
     session_owners.add_owner(db, review_session=review_session, actor=a, target=b)
 
     with pytest.raises(session_owners.OwnerOperationError) as exc:
-        session_owners.set_owners(
-            db, review_session=review_session, actor=a, targets=[]
-        )
+        session_owners.set_owners(db, review_session=review_session, actor=a, targets=[])
     assert exc.value.code == "last_owner"
     assert _owner_emails(db, review_session) == ["a@example.edu", "b@example.edu"]
 
@@ -185,9 +171,7 @@ def test_skip_refused_skips_both_codes_and_adds_the_rest(
     gone = _user(db, "gone@example.edu", is_operator=False)
     taken = _user(db, "taken@example.edu")
     carl = _user(db, "carl@example.edu")
-    db.add(
-        SessionOperator(session_id=review_session.id, user_id=taken.id, role="owner")
-    )
+    db.add(SessionOperator(session_id=review_session.id, user_id=taken.id, role="owner"))
     db.flush()
     real_list = session_owners.list_owners
     monkeypatch.setattr(
@@ -226,7 +210,10 @@ def test_skip_refused_still_raises_any_other_refusal(
     monkeypatch.setattr(session_owners, "add_owner", add)
     with pytest.raises(session_owners.OwnerOperationError) as refused:
         session_owners.set_owners(
-            db, review_session=review_session, actor=alice,
-            targets=[alice, carl], skip_refused=True,
+            db,
+            review_session=review_session,
+            actor=alice,
+            targets=[alice, carl],
+            skip_refused=True,
         )
     assert refused.value.code == "self_only"

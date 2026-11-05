@@ -40,8 +40,8 @@ TEMPLATES = pathlib.Path(__file__).resolve().parents[2] / "app" / "web" / "templ
 #: A ``<table>`` inside a comment or a script is documentation, not markup.
 #: Several templates explain the sortable-table contract by quoting it.
 _NON_MARKUP = (
-    re.compile(r"\{#.*?#\}", re.S),           # Jinja comment
-    re.compile(r"<!--.*?-->", re.S),          # HTML comment
+    re.compile(r"\{#.*?#\}", re.S),  # Jinja comment
+    re.compile(r"<!--.*?-->", re.S),  # HTML comment
     re.compile(r"<script\b.*?</script>", re.S | re.I),
     re.compile(r"<style\b.*?</style>", re.S | re.I),
 )
@@ -85,9 +85,7 @@ _BUILT_TABLE_HOSTS = {
 #: Anchored to a CSS decision, not to a judgment about width.
 _NOT_LAID_OUT_AS_A_TABLE = "shaper-preview-table"
 
-_VOID = frozenset(
-    "area base br col embed hr img input link meta param source track wbr".split()
-)
+_VOID = frozenset("area base br col embed hr img input link meta param source track wbr".split())
 
 
 def _blank(match: re.Match[str]) -> str:
@@ -113,9 +111,10 @@ class _TableFinder(HTMLParser):
         classes = dict(attrs).get("class") or ""
         if tag == "table":
             # Token match, not substring: `no-table-scroll` is not a wrapper.
-            wrapped = any(
-                "table-scroll" in cls.split() for _, cls in self._stack
-            ) or _NOT_LAID_OUT_AS_A_TABLE in classes.split()
+            wrapped = (
+                any("table-scroll" in cls.split() for _, cls in self._stack)
+                or _NOT_LAID_OUT_AS_A_TABLE in classes.split()
+            )
             self.tables.append((self.getpos()[0], wrapped))
         if tag not in _VOID:
             self._stack.append((tag, classes))
@@ -178,8 +177,7 @@ def test_the_parser_sees_every_table_that_is_written() -> None:
         written = len(_RAW_TABLE.findall(text))
         parsed = len(_scan(path))
         if written != parsed:
-            mismatched.append(f"{path.relative_to(TEMPLATES)}: "
-                              f"{written} written, {parsed} parsed")
+            mismatched.append(f"{path.relative_to(TEMPLATES)}: {written} written, {parsed} parsed")
 
     assert not mismatched, (
         "a <table> was written but not parsed, so the wrapper check never "
@@ -246,22 +244,20 @@ def test_the_scan_can_tell_wrapped_from_unwrapped() -> None:
     file. The only way to see that is a table known to be unwrapped.
     """
     wrapped = _TableFinder()
-    wrapped.feed('<div class="card"><div class="table-scroll">'
-                 "<table><tr><td>x</td></tr></table></div></div>")
+    wrapped.feed(
+        '<div class="card"><div class="table-scroll"><table><tr><td>x</td></tr></table></div></div>'
+    )
     unwrapped = _TableFinder()
     unwrapped.feed('<div class="card"><table><tr><td>x</td></tr></table></div>')
     # A sibling is not an ancestor: the wrapper has to enclose the table.
     sibling = _TableFinder()
-    sibling.feed('<div class="table-scroll"></div>'
-                 "<table><tr><td>x</td></tr></table>")
+    sibling.feed('<div class="table-scroll"></div><table><tr><td>x</td></tr></table>')
     # A class that merely contains the name is not the class.
     lookalike = _TableFinder()
-    lookalike.feed('<div class="no-table-scroll">'
-                   "<table><tr><td>x</td></tr></table></div>")
+    lookalike.feed('<div class="no-table-scroll"><table><tr><td>x</td></tr></table></div>')
     # One class among several still counts.
     among = _TableFinder()
-    among.feed('<div class="card table-scroll wide">'
-               "<table><tr><td>x</td></tr></table></div>")
+    among.feed('<div class="card table-scroll wide"><table><tr><td>x</td></tr></table></div>')
 
     assert [w for _, w in wrapped.tables] == [True]
     assert [w for _, w in unwrapped.tables] == [False]
@@ -297,7 +293,7 @@ def test_every_table_sits_in_a_table_scroll_wrapper() -> None:
     assert not unwrapped, (
         "a <table> with no `.table-scroll` ancestor:\n  "
         + "\n  ".join(unwrapped)
-        + "\n\nWrap it: <div class=\"table-scroll\"> ... </div>. The wrapper "
+        + '\n\nWrap it: <div class="table-scroll"> ... </div>. The wrapper '
         "keeps a wide table's overflow inside its card instead of scrolling "
         "the whole page sideways (spec/ui_elements.md section 10). There is "
         "no width threshold and no exceptions list — a template cannot know "

@@ -61,6 +61,7 @@ class MirrorChanges:
     def __bool__(self) -> bool:
         return bool(self.created or self.updated or self.deleted)
 
+
 #: A reviewer's "what they see of their own entry" key as the reviewee's
 #: list names it (``participant_info``): only the address is spelled
 #: differently.
@@ -190,11 +191,12 @@ def sync_reviewees_from_reviewers(
     # its reviewee display field on the session's instruments. Only for a
     # slot this change newly fills, so a name correction does not bring
     # back a field the operator deleted (Codex on #3490).
-    newly_filled = _filled_display_slots(
-        db.execute(
-            select(Reviewee).where(Reviewee.session_id == review_session.id)
-        ).scalars()
-    ) - filled_before
+    newly_filled = (
+        _filled_display_slots(
+            db.execute(select(Reviewee).where(Reviewee.session_id == review_session.id)).scalars()
+        )
+        - filled_before
+    )
     if newly_filled:
         from app.services.instruments import seed_display_fields_from_reviewees
 
@@ -218,11 +220,7 @@ _DISPLAY_SLOTS = ("profile_link", "tag_1", "tag_2", "tag_3")
 def _filled_display_slots(reviewees: Iterable[Reviewee]) -> set[str]:
     """The reviewee display-field slots any of these rows fills."""
     reviewees = list(reviewees)
-    return {
-        slot
-        for slot in _DISPLAY_SLOTS
-        if any(getattr(r, slot) for r in reviewees)
-    }
+    return {slot for slot in _DISPLAY_SLOTS if any(getattr(r, slot) for r in reviewees)}
 
 
 def refuse_reviewee_write(review_session: ReviewSession) -> None:
@@ -238,8 +236,7 @@ def refuse_reviewee_write(review_session: ReviewSession) -> None:
 
     if review_session.symmetric_review:
         raise SessionStateConflict(
-            "Under symmetric review the reviewees mirror the reviewers; "
-            "edit the Reviewers roster.",
+            "Under symmetric review the reviewees mirror the reviewers; edit the Reviewers roster.",
             code="symmetric_review",
         )
 
@@ -265,11 +262,13 @@ def _mirror_labels(db: Session, review_session: ReviewSession) -> None:
             if target is not None:
                 db.delete(target)
         elif target is None:
-            db.add(SessionFieldLabel(
-                session_id=review_session.id,
-                source_type="reviewee",
-                source_field=slot,
-                label=source.label,
-            ))
+            db.add(
+                SessionFieldLabel(
+                    session_id=review_session.id,
+                    source_type="reviewee",
+                    source_field=slot,
+                    label=source.label,
+                )
+            )
         elif target.label != source.label:
             target.label = source.label

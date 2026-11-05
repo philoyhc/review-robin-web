@@ -6,6 +6,7 @@ sessions linked through to the surface's own pager rather than
 deep-linked from the lobby. The tests below cover what's left:
 the 5-column header + lifecycle pill rendering.
 """
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -78,7 +79,6 @@ def _make_session_with_pair(
     return review_session
 
 
-
 def _add_assignment_for_reviewer(
     db: Session,
     *,
@@ -107,15 +107,12 @@ def _activate(operator_client: TestClient, review_session: ReviewSession) -> Non
     """Force-set assignment_mode + transition session through
     validate → active so the reviewer dashboard treats it as live."""
     validate_session(review_session)
-    operator_client.get(
-        f"/operator/sessions/{review_session.public_id}/assignments"
-    )
+    operator_client.get(f"/operator/sessions/{review_session.public_id}/assignments")
     operator_client.post(
         f"/operator/sessions/{review_session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
-
 
 
 # --------------------------------------------------------------------------- #
@@ -136,9 +133,7 @@ def test_lobby_renders_five_column_header(
     [instrument] = list(
         db.execute(select(Instrument).where(Instrument.session_id == review_session.id)).scalars()
     )
-    _add_assignment_for_reviewer(
-        db, review_session=review_session, instrument=instrument
-    )
+    _add_assignment_for_reviewer(db, review_session=review_session, instrument=instrument)
     rae_client = make_client(rae)
     body = rae_client.get("/me").text
     assert "<th>Session</th>" in body
@@ -162,18 +157,13 @@ def test_lobby_pre_ready_session_renders_not_opened_unlinked(
     [instrument] = list(
         db.execute(select(Instrument).where(Instrument.session_id == review_session.id)).scalars()
     )
-    _add_assignment_for_reviewer(
-        db, review_session=review_session, instrument=instrument
-    )
+    _add_assignment_for_reviewer(db, review_session=review_session, instrument=instrument)
     rae_client = make_client(rae)
     body = rae_client.get("/me").text
     assert ">Not open yet</span>" in body
     # The Session column should not link the session name when the
     # session isn't opened — the row carries the name as plain text.
-    assert (
-        f'<a href="/me/sessions/{review_session.public_id}/1">'
-        not in body
-    )
+    assert f'<a href="/me/sessions/{review_session.public_id}/1">' not in body
 
 
 def test_lobby_ready_session_renders_open_and_start_stamp(
@@ -189,13 +179,12 @@ def test_lobby_ready_session_renders_open_and_start_stamp(
     [instrument] = list(
         db.execute(select(Instrument).where(Instrument.session_id == review_session.id)).scalars()
     )
-    _add_assignment_for_reviewer(
-        db, review_session=review_session, instrument=instrument
-    )
+    _add_assignment_for_reviewer(db, review_session=review_session, instrument=instrument)
     # Pin a rule + activate so the session reaches ``ready``.
     # Wave 5 PR 5.2 — lazily materialise the Full Matrix
     # ``session_rule_sets`` row (auto-seed retired).
     from ._full_matrix import pin_full_matrix_on_all_instruments
+
     pin_full_matrix_on_all_instruments(db, review_session.id)
     _activate(operator, review_session)
     db.refresh(review_session)
@@ -203,8 +192,6 @@ def test_lobby_ready_session_renders_open_and_start_stamp(
     rae_client = make_client(rae)
     body = rae_client.get("/me").text
     assert ">Open</span>" in body
-    assert (
-        f'<a href="/me/sessions/{review_session.public_id}/1">' in body
-    )
+    assert f'<a href="/me/sessions/{review_session.public_id}/1">' in body
     # ``activated_at`` is stamped on the first activation.
     assert review_session.activated_at is not None

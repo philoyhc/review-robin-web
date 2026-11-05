@@ -55,14 +55,14 @@ def test_existing_instruments_take_layout_1_and_the_column_drops_again() -> None
 
             command.upgrade(cfg, REVISION)
             connection.commit()
-            column = {
-                c["name"]: c
-                for c in inspect(connection).get_columns("instruments")
-            }["intro_layout"]
+            column = {c["name"]: c for c in inspect(connection).get_columns("instruments")}[
+                "intro_layout"
+            ]
             assert column["nullable"] is False
-            assert connection.execute(
-                text("SELECT intro_layout FROM instruments")
-            ).scalar_one() == "layout_1"
+            assert (
+                connection.execute(text("SELECT intro_layout FROM instruments")).scalar_one()
+                == "layout_1"
+            )
 
             command.downgrade(cfg, PREVIOUS)
             connection.commit()

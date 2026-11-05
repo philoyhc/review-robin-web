@@ -106,7 +106,9 @@ def test_a_pick_never_overwrites_an_address_already_there(
     expect(address).to_have_value("jane.tan@example.edu")
     name.fill("Arun")
     name.dispatch_event("input")
-    expect(page.locator("#directory-name-options option").first).to_have_attribute("value", "Arun Kumar")
+    expect(page.locator("#directory-name-options option").first).to_have_attribute(
+        "value", "Arun Kumar"
+    )
     name.fill("Arun Kumar")
     name.dispatch_event("input")
     expect(address).to_have_value("arun.kumar@example.edu")
@@ -121,12 +123,25 @@ def test_a_shared_name_is_offered_per_person_and_a_pick_fills_its_address(
     page.goto(app_url(f"/operator/sessions/{new_session()}/reviewers?add=1"))
     page.route(
         "**/directory-search*",
-        lambda route: route.fulfill(json={"available": True, "people": [
-            {"name": "Wei Tan", "mail": "wei.tan@example.edu", "upn": "e0000001@example.edu",
-             "address": "wei.tan@example.edu"},
-            {"name": "Wei Tan", "mail": "wei.tan2@example.edu", "upn": "wei.tan2@example.edu",
-             "address": "wei.tan2@example.edu"},
-        ]}),
+        lambda route: route.fulfill(
+            json={
+                "available": True,
+                "people": [
+                    {
+                        "name": "Wei Tan",
+                        "mail": "wei.tan@example.edu",
+                        "upn": "e0000001@example.edu",
+                        "address": "wei.tan@example.edu",
+                    },
+                    {
+                        "name": "Wei Tan",
+                        "mail": "wei.tan2@example.edu",
+                        "upn": "wei.tan2@example.edu",
+                        "address": "wei.tan2@example.edu",
+                    },
+                ],
+            }
+        ),
     )
     name = page.locator('tr input[name="name"][data-directory-field]')
     address = page.locator('tr input[name="email"][data-directory-field]')
@@ -154,15 +169,37 @@ def test_a_shared_name_pick_leaves_a_typed_address_and_typed_case_alone(
     page.goto(app_url(f"/operator/sessions/{new_session()}/reviewers?add=1"))
     page.route(
         "**/directory-search*",
-        lambda route: route.fulfill(json={"available": True, "people": [
-            {"name": "Wei Tan", "mail": "wei.tan@example.edu", "upn": "wei.tan@example.edu",
-             "address": "wei.tan@example.edu"},
-            {"name": "WEI TAN", "mail": "wei.tan2@example.edu", "upn": "wei.tan2@example.edu",
-             "address": "wei.tan2@example.edu"},
-            {"name": "Ann Lee", "mail": "ann.lee@example.edu", "upn": "ann.lee@example.edu",
-             "address": "ann.lee@example.edu"},
-            {"name": "", "mail": None, "upn": "lab01@example.edu", "address": "lab01@example.edu"},
-        ]}),
+        lambda route: route.fulfill(
+            json={
+                "available": True,
+                "people": [
+                    {
+                        "name": "Wei Tan",
+                        "mail": "wei.tan@example.edu",
+                        "upn": "wei.tan@example.edu",
+                        "address": "wei.tan@example.edu",
+                    },
+                    {
+                        "name": "WEI TAN",
+                        "mail": "wei.tan2@example.edu",
+                        "upn": "wei.tan2@example.edu",
+                        "address": "wei.tan2@example.edu",
+                    },
+                    {
+                        "name": "Ann Lee",
+                        "mail": "ann.lee@example.edu",
+                        "upn": "ann.lee@example.edu",
+                        "address": "ann.lee@example.edu",
+                    },
+                    {
+                        "name": "",
+                        "mail": None,
+                        "upn": "lab01@example.edu",
+                        "address": "lab01@example.edu",
+                    },
+                ],
+            }
+        ),
     )
     name = page.locator('tr input[name="name"][data-directory-field]')
     address = page.locator('tr input[name="email"][data-directory-field]')
@@ -204,7 +241,10 @@ def test_an_expired_token_is_renewed_and_the_roster_search_asked_again(
             route.continue_()
 
     page.goto(app_url(f"/operator/sessions/{new_session()}/reviewers?add=1"))
-    page.route("**/.auth/refresh", lambda route: (refreshes.append(route.request.url), route.fulfill(status=200, body="")))
+    page.route(
+        "**/.auth/refresh",
+        lambda route: (refreshes.append(route.request.url), route.fulfill(status=200, body="")),
+    )
     page.route("**/directory-search*", search)
     page.locator('tr input[name="name"][data-directory-field]').press_sequentially("Jane")
     expect(page.locator("#directory-name-options option")).to_have_count(1)

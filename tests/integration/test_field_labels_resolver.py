@@ -10,6 +10,7 @@ Also covers the 12-slot allowlist (``upsert`` / ``clear`` strict
 on unknown slots, ``resolve`` permissive) and the regression
 that ``InstrumentDisplayField.label`` no longer feeds the chain.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -30,9 +31,7 @@ def _make_session(db: Session, code: str) -> tuple[ReviewSession, User]:
     op = User(email=f"op-{code}@example.edu", display_name="Op")
     db.add(op)
     db.flush()
-    review_session = ReviewSession(
-        name=code.title(), code=code, created_by_user_id=op.id
-    )
+    review_session = ReviewSession(name=code.title(), code=code, created_by_user_id=op.id)
     db.add(review_session)
     db.flush()
     return review_session, op
@@ -47,24 +46,11 @@ def test_resolve_returns_built_in_default_when_no_override(
     review_session, _ = _make_session(db, "fl-default")
     # No session_field_labels rows; chain falls through to
     # _DEFAULT_LABELS.
-    assert (
-        field_labels.resolve(review_session, "reviewer", "tag_1") == "Tag 1"
-    )
-    assert (
-        field_labels.resolve(review_session, "reviewee", "name") == "Name"
-    )
-    assert (
-        field_labels.resolve(review_session, "reviewee", "email_or_identifier")
-        == "Email"
-    )
-    assert (
-        field_labels.resolve(review_session, "reviewee", "profile_link")
-        == "Profile"
-    )
-    assert (
-        field_labels.resolve(review_session, "pair_context", "1")
-        == "Pair context 1"
-    )
+    assert field_labels.resolve(review_session, "reviewer", "tag_1") == "Tag 1"
+    assert field_labels.resolve(review_session, "reviewee", "name") == "Name"
+    assert field_labels.resolve(review_session, "reviewee", "email_or_identifier") == "Email"
+    assert field_labels.resolve(review_session, "reviewee", "profile_link") == "Profile"
+    assert field_labels.resolve(review_session, "pair_context", "1") == "Pair context 1"
 
 
 def test_resolve_returns_session_override_when_present(
@@ -80,14 +66,9 @@ def test_resolve_returns_session_override_when_present(
         user=op,
     )
     # Override wins over the built-in "Tag 1".
-    assert (
-        field_labels.resolve(review_session, "reviewee", "tag_1")
-        == "Lab section"
-    )
+    assert field_labels.resolve(review_session, "reviewee", "tag_1") == "Lab section"
     # Other slots still fall through.
-    assert (
-        field_labels.resolve(review_session, "reviewee", "tag_2") == "Tag 2"
-    )
+    assert field_labels.resolve(review_session, "reviewee", "tag_2") == "Tag 2"
 
 
 def test_resolve_falls_back_to_canonical_string_for_unknown_slot(
@@ -97,10 +78,7 @@ def test_resolve_falls_back_to_canonical_string_for_unknown_slot(
     ``{source_type}:{source_field}`` fallback string. Strict
     validation happens in ``upsert`` / ``clear``."""
     review_session, _ = _make_session(db, "fl-unknown")
-    assert (
-        field_labels.resolve(review_session, "mystery", "orb")
-        == "mystery:orb"
-    )
+    assert field_labels.resolve(review_session, "mystery", "orb") == "mystery:orb"
 
 
 def test_resolve_covers_all_12_slots(db: Session) -> None:
@@ -123,10 +101,9 @@ def test_resolve_covers_all_12_slots(db: Session) -> None:
         ("pair_context", "3"): "Pair context 3",
     }
     for (source_type, source_field), built_in in expected.items():
-        assert (
-            field_labels.resolve(review_session, source_type, source_field)
-            == built_in
-        ), f"{source_type}.{source_field} fell through default chain"
+        assert field_labels.resolve(review_session, source_type, source_field) == built_in, (
+            f"{source_type}.{source_field} fell through default chain"
+        )
 
 
 def test_all_labels_returns_only_overridden_slots(db: Session) -> None:
@@ -181,9 +158,7 @@ def test_resolve_does_not_consult_instrument_display_field_label(
     db.flush()
     # Resolver returns the built-in default, not the per-instrument
     # override.
-    assert (
-        field_labels.resolve(review_session, "reviewee", "tag_1") == "Tag 1"
-    )
+    assert field_labels.resolve(review_session, "reviewee", "tag_1") == "Tag 1"
 
 
 # ── upsert + clear (write path) ───────────────────────────────────────────
@@ -216,9 +191,7 @@ def test_upsert_creates_then_updates_row(db: Session) -> None:
     # Only one row exists for this slot.
     rows = (
         db.execute(
-            select(SessionFieldLabel).where(
-                SessionFieldLabel.session_id == review_session.id
-            )
+            select(SessionFieldLabel).where(SessionFieldLabel.session_id == review_session.id)
         )
         .scalars()
         .all()
@@ -303,17 +276,13 @@ def test_clear_removes_row(db: Session) -> None:
     # Row is gone, resolver falls back to built-in default.
     rows = (
         db.execute(
-            select(SessionFieldLabel).where(
-                SessionFieldLabel.session_id == review_session.id
-            )
+            select(SessionFieldLabel).where(SessionFieldLabel.session_id == review_session.id)
         )
         .scalars()
         .all()
     )
     assert rows == []
-    assert (
-        field_labels.resolve(review_session, "reviewer", "tag_1") == "Tag 1"
-    )
+    assert field_labels.resolve(review_session, "reviewer", "tag_1") == "Tag 1"
 
 
 def test_clear_is_idempotent(db: Session) -> None:
@@ -321,9 +290,7 @@ def test_clear_is_idempotent(db: Session) -> None:
     audit event."""
     review_session, op = _make_session(db, "fl-idem")
     pre_count = db.execute(
-        select(audit.AuditEvent).where(
-            audit.AuditEvent.event_type == "session_field_label.cleared"
-        )
+        select(audit.AuditEvent).where(audit.AuditEvent.event_type == "session_field_label.cleared")
     ).all()
     field_labels.clear(
         db,
@@ -333,9 +300,7 @@ def test_clear_is_idempotent(db: Session) -> None:
         user=op,
     )
     post_count = db.execute(
-        select(audit.AuditEvent).where(
-            audit.AuditEvent.event_type == "session_field_label.cleared"
-        )
+        select(audit.AuditEvent).where(audit.AuditEvent.event_type == "session_field_label.cleared")
     ).all()
     assert len(pre_count) == len(post_count)
 
@@ -468,9 +433,7 @@ def test_upsert_with_the_label_already_stored_is_a_no_op(db: Session) -> None:
     def events() -> int:
         return len(
             db.execute(
-                select(audit.AuditEvent).where(
-                    audit.AuditEvent.session_id == review_session.id
-                )
+                select(audit.AuditEvent).where(audit.AuditEvent.session_id == review_session.id)
             ).all()
         )
 

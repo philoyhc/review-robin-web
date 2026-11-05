@@ -20,6 +20,7 @@ Revises: c3a9f1d7b2e8
 Create Date: 2026-05-20
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa

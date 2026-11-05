@@ -143,9 +143,7 @@ def test_the_dashboard_does_not_link_to_itself(
     assert response.status_code == 200
     # Since 20D the switcher lists it, marked current rather than
     # linked as a way back (`docs/header_chrome.md` §3).
-    assert (
-        'data-your-reviews aria-current="page">Your reviews' in response.text
-    )
+    assert 'data-your-reviews aria-current="page">Your reviews' in response.text
 
 
 # ── D5: status icons ────────────────────────────────────────────────────
@@ -232,9 +230,7 @@ def test_invite_mismatch_renders_banner_warning(
     # reviewer email (rae), so the GET below 403s into the mismatch
     # template, which is what we want to test the markup of.
     outbox_row = db.execute(
-        select(EmailOutbox).where(
-            EmailOutbox.invitation_id == invitation.id
-        )
+        select(EmailOutbox).where(EmailOutbox.invitation_id == invitation.id)
     ).scalar_one()
     import re
 
@@ -244,9 +240,7 @@ def test_invite_mismatch_renders_banner_warning(
 
     review_session.help_contact = "help@example.edu"
     db.commit()
-    response = operator.get(
-        f"/me/invite/{raw_token}", follow_redirects=False
-    )
+    response = operator.get(f"/me/invite/{raw_token}", follow_redirects=False)
     assert response.status_code == 403
     body = response.text
     assert 'class="banner banner-warning"' in body
@@ -264,10 +258,7 @@ def test_invite_mismatch_renders_banner_warning(
     # primitive carries the framing now.
     assert 'style="border-color: #b91c1c' not in body
     # Body is a banner, not the legacy red `.card` wrapper.
-    assert (
-        'class="card" style="border-color: #b91c1c'
-        not in body
-    )
+    assert 'class="card" style="border-color: #b91c1c' not in body
 
 
 def test_review_surface_preview_banner_is_banner_info(
@@ -285,9 +276,7 @@ def test_review_surface_preview_banner_is_banner_info(
         reviewer_email="rae@example.edu",
         reviewee_ident="carol@example.edu",
     )
-    body = get_full_preview_html(
-        operator, review_session.id, "rae@example.edu"
-    )
+    body = get_full_preview_html(operator, review_session.id, "rae@example.edu")
     assert 'class="banner banner-info"' in body
     assert 'class="warning-banner"' not in body
     # This test's subject is the CLASS, not the wording. It used to
@@ -349,9 +338,7 @@ def test_review_surface_action_rows_render_above_and_below_tables(
         reviewee_ident="carol@example.edu",
     )
     rae_client = make_client(rae)
-    body = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/1"
-    ).text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
     # Two .rs-action-row containers, mirrored top + bottom (PR γ
     # collapsed the previous review-level + page-level rows into a
     # single unified row, both flush right).
@@ -363,10 +350,7 @@ def test_review_surface_action_rows_render_above_and_below_tables(
     assert body.count(">Cancel</a>") >= 2
     # Submit lives at both rows too — formaction routes the click to
     # /submit instead of the form's default /save action.
-    assert (
-        body.count(f'formaction="/me/sessions/{review_session.public_id}/submit?page=1"')
-        >= 2
-    )
+    assert body.count(f'formaction="/me/sessions/{review_session.public_id}/submit?page=1"') >= 2
 
 
 def test_review_surface_session_description_renders_in_overview_card(
@@ -422,9 +406,7 @@ def test_review_surface_clear_all_card_is_half_width_flush_right(
 # ── Operator preview keeps operator chrome ──────────────────────────────
 
 
-def test_operator_preview_keeps_operator_chrome(
-    client: TestClient, db: Session
-) -> None:
+def test_operator_preview_keeps_operator_chrome(client: TestClient, db: Session) -> None:
     """The operator preview reuses review_surface.html but should keep
     the operator chrome (with breadcrumb back to the session) — the
     reviewer top bar override is suppressed in preview_mode. After
@@ -463,9 +445,7 @@ def test_operator_preview_keeps_operator_chrome(
     )
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(client, review_session.id)
-    body = get_full_preview_html(
-        client, review_session.id, "r@example.edu"
-    )
+    body = get_full_preview_html(client, review_session.id, "r@example.edu")
     # Operator chrome present (the shared bar, with its breadcrumb).
     assert 'class="tb-app">Review Robin' in body
     assert 'class="breadcrumb"' in body

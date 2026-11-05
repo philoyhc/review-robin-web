@@ -14,6 +14,7 @@ super-button, the roster bulk actions). A test is the only thing
 standing between that edit and a production bug nobody would trace
 back to the indicator.
 """
+
 from __future__ import annotations
 
 import re
@@ -112,9 +113,7 @@ def test_every_attachment_link_is_marked_download() -> None:
     unmarked = [
         (path.relative_to(TEMPLATES).as_posix(), anchor)
         for path, anchor in _download_anchors()
-        if "download" not in anchor.replace("download_url", "").replace(
-            "download_csv_url", ""
-        )
+        if "download" not in anchor.replace("download_url", "").replace("download_csv_url", "")
     ]
     assert unmarked == [], (
         "attachment links missing the `download` attribute — the busy "

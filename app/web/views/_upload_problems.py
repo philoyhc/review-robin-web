@@ -43,8 +43,7 @@ def problem_kinds(issues: Sequence[ValidationIssue]) -> list[str]:
         if issue.row_number is not None:
             rows[label] += 1
     return [
-        f"{label} ({n} row{'' if n == 1 else 's'})" if n else label
-        for label, n in rows.items()
+        f"{label} ({n} row{'' if n == 1 else 's'})" if n else label for label, n in rows.items()
     ]
 
 
@@ -68,18 +67,14 @@ class UploadProblems:
 #: The sentence when a clean file would go onto a populated roster but
 #: none of the replace, append or merge ticks was ticked (segment 19Z):
 #: any one answers it. Quick Setup's twin names its Submit.
-NEEDS_CONFIRM_SENTENCE = (
-    "Tick replace, append or merge just above Upload, then upload again."
-)
+NEEDS_CONFIRM_SENTENCE = "Tick replace, append or merge just above Upload, then upload again."
 
 
 #: The sentence when more than one of the replace, append and merge
 #: ticks arrives (no script on the page to untick the others, or a
 #: direct POST): they ask for different things, so none is guessed
 #: (segment 19Z).
-BOTH_TICKS_SENTENCE = (
-    "Tick only one of replace, append or merge, then upload again."
-)
+BOTH_TICKS_SENTENCE = "Tick only one of replace, append or merge, then upload again."
 
 
 #: The sentence when a Reviewers or Reviewees replace would discard

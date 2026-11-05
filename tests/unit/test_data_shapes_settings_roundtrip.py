@@ -42,9 +42,7 @@ def _user(db: Session, *, email: str = "op@x.edu") -> User:
     return user
 
 
-def _session(
-    db: Session, *, code: str, actor: User | None = None
-) -> ReviewSession:
+def _session(db: Session, *, code: str, actor: User | None = None) -> ReviewSession:
     actor = actor or _user(db, email=f"{code}@x.edu")
     review_session = ReviewSession(
         name="DS",
@@ -88,9 +86,7 @@ def _field(
 def _seed_three_shapes(
     db: Session, review_session: ReviewSession
 ) -> tuple[Instrument, InstrumentResponseField]:
-    instrument = _instrument(
-        db, review_session, short_label="Peer Review"
-    )
+    instrument = _instrument(db, review_session, short_label="Peer Review")
     field = _field(db, instrument, field_key="score")
 
     # Shape 1 — session-wide (no scope). Default Self-review
@@ -102,9 +98,7 @@ def _seed_three_shapes(
             axis="reviewer",
             instrument_id=None,
             response_field_id=None,
-            column_chip_slots=json.dumps(
-                ["reviewer:name", "reviewer:email"]
-            ),
+            column_chip_slots=json.dumps(["reviewer:name", "reviewer:email"]),
             self_review_handling="include_self",
         )
     )
@@ -116,9 +110,7 @@ def _seed_three_shapes(
             axis="reviewer",
             instrument_id=instrument.id,
             response_field_id=None,
-            column_chip_slots=json.dumps(
-                ["reviewer:name", "reviewer:count"]
-            ),
+            column_chip_slots=json.dumps(["reviewer:name", "reviewer:count"]),
             self_review_handling="exclude_self",
         )
     )
@@ -130,9 +122,7 @@ def _seed_three_shapes(
             axis="reviewee",
             instrument_id=instrument.id,
             response_field_id=field.id,
-            column_chip_slots=json.dumps(
-                ["reviewee:name", "reviewee:mean"]
-            ),
+            column_chip_slots=json.dumps(["reviewee:name", "reviewee:mean"]),
             self_review_handling="both",
         )
     )
@@ -162,17 +152,11 @@ def test_export_serialises_all_three_shape_variants(
     assert by_field["data_shapes[2].name"] == "Whole roster"
     # Portable references — instrument's short_label and
     # response field's field_key, not their FKs.
-    assert (
-        by_field["data_shapes[0].instrument_short_label"]
-        == "Peer Review"
-    )
+    assert by_field["data_shapes[0].instrument_short_label"] == "Peer Review"
     assert by_field["data_shapes[0].response_field_key"] == "score"
     # "Per instrument" carries the instrument ref but no field
     # ref.
-    assert (
-        by_field["data_shapes[1].instrument_short_label"]
-        == "Peer Review"
-    )
+    assert by_field["data_shapes[1].instrument_short_label"] == "Peer Review"
     assert by_field["data_shapes[1].response_field_key"] == ""
     # "Whole roster" carries neither.
     assert by_field["data_shapes[2].instrument_short_label"] == ""
@@ -213,26 +197,23 @@ def test_a_shape_on_an_unlabelled_instrument_keeps_its_scope(
     assert by_field["data_shapes[0].instrument"] == "2"
 
     session_b = _session(db, code="d20-dst")
-    result = session_config_io.apply_session_config(
-        db, session_b, list(rows), user=None
-    )
+    result = session_config_io.apply_session_config(db, session_b, list(rows), user=None)
     assert result.ok, result.errors
     db.expire_all()
-    shape = db.execute(
-        select(DataShape).where(DataShape.session_id == session_b.id)
-    ).scalar_one()
+    shape = db.execute(select(DataShape).where(DataShape.session_id == session_b.id)).scalar_one()
     second = db.execute(
-        select(Instrument).where(
-            Instrument.session_id == session_b.id, Instrument.order == 1
-        )
+        select(Instrument).where(Instrument.session_id == session_b.id, Instrument.order == 1)
     ).scalar_one()
     assert shape.instrument_id == second.id
-    assert shape.response_field_id == db.execute(
-        select(InstrumentResponseField.id).where(
-            InstrumentResponseField.instrument_id == second.id,
-            InstrumentResponseField.field_key == "score",
-        )
-    ).scalar_one()
+    assert (
+        shape.response_field_id
+        == db.execute(
+            select(InstrumentResponseField.id).where(
+                InstrumentResponseField.instrument_id == second.id,
+                InstrumentResponseField.field_key == "score",
+            )
+        ).scalar_one()
+    )
 
 
 def test_the_instrument_row_parses_blank_or_a_number() -> None:
@@ -272,9 +253,7 @@ def _shape_rows(rows: list, *, drop: set[str] | None = None, **edits: str) -> li
     return out
 
 
-def _two_instrument_bundle(
-    db: Session, code: str, *, labels: tuple[str, str], on: int = 1
-):
+def _two_instrument_bundle(db: Session, code: str, *, labels: tuple[str, str], on: int = 1):
     """Session with two instruments (``order`` 0 and 1) carrying
     ``labels``, ``score`` only on the one at ``order == on``, and one
     shape on that one."""
@@ -300,19 +279,13 @@ def _two_instrument_bundle(
 
 def _imported_shape(db: Session, code: str, rows: list):
     target = _session(db, code=code)
-    result = session_config_io.apply_session_config(
-        db, target, list(rows), user=None
-    )
+    result = session_config_io.apply_session_config(db, target, list(rows), user=None)
     assert result.ok, result.errors
     db.expire_all()
-    shape = db.execute(
-        select(DataShape).where(DataShape.session_id == target.id)
-    ).scalar_one()
+    shape = db.execute(select(DataShape).where(DataShape.session_id == target.id)).scalar_one()
     by_order = {
         i.order: i
-        for i in db.execute(
-            select(Instrument).where(Instrument.session_id == target.id)
-        ).scalars()
+        for i in db.execute(select(Instrument).where(Instrument.session_id == target.id)).scalars()
     }
     return shape, by_order
 
@@ -332,17 +305,13 @@ def test_a_unique_label_wins_over_the_number(db: Session) -> None:
     """D20: the short label is the portable reference; the number is
     only the fallback, so a label that names one instrument wins even
     when a hand edit points the number elsewhere."""
-    rows = _shape_rows(
-        _two_instrument_bundle(db, "d20-pref", labels=("A", "B")), instrument="1"
-    )
+    rows = _shape_rows(_two_instrument_bundle(db, "d20-pref", labels=("A", "B")), instrument="1")
     shape, by_order = _imported_shape(db, "d20-pref-dst", rows)
     assert shape.instrument_id == by_order[1].id
 
 
 def test_a_number_naming_no_block_leaves_the_shape_unscoped(db: Session) -> None:
-    rows = _shape_rows(
-        _two_instrument_bundle(db, "d20-miss", labels=("", "")), instrument="9"
-    )
+    rows = _shape_rows(_two_instrument_bundle(db, "d20-miss", labels=("", "")), instrument="9")
     shape, _ = _imported_shape(db, "d20-miss-dst", rows)
     assert shape.instrument_id is None
     assert shape.response_field_id is None
@@ -394,23 +363,17 @@ def test_roundtrip_applies_shapes_with_portable_references(
     # Build a destination session with matching short_label /
     # field_key so the references resolve.
     session_b = _session(db, code="dst")
-    instr_b = _instrument(
-        db, session_b, short_label="Peer Review"
-    )
+    instr_b = _instrument(db, session_b, short_label="Peer Review")
     _field(db, instr_b, field_key="score")
     db.flush()
 
-    result = session_config_io.apply_session_config(
-        db, session_b, list(rows), user=None
-    )
+    result = session_config_io.apply_session_config(db, session_b, list(rows), user=None)
     assert result.ok, result.errors
     db.expire_all()
 
     shapes_b = list(
         db.execute(
-            select(DataShape)
-            .where(DataShape.session_id == session_b.id)
-            .order_by(DataShape.name)
+            select(DataShape).where(DataShape.session_id == session_b.id).order_by(DataShape.name)
         ).scalars()
     )
     assert len(shapes_b) == 3
@@ -477,16 +440,12 @@ def test_apply_wipes_existing_shapes_before_replacing(
     )
     db.flush()
 
-    session_config_io.apply_session_config(
-        db, session_b, list(rows), user=None
-    )
+    session_config_io.apply_session_config(db, session_b, list(rows), user=None)
     db.expire_all()
 
     names = {
         s.name
-        for s in db.execute(
-            select(DataShape).where(DataShape.session_id == session_b.id)
-        ).scalars()
+        for s in db.execute(select(DataShape).where(DataShape.session_id == session_b.id)).scalars()
     }
     assert "Stale" not in names
     assert names == {"Whole roster", "Per instrument", "Per field"}
@@ -514,14 +473,8 @@ def test_self_review_handling_state_roundtrips_through_settings_csv(
     # Shapes sorted by name on serialize: Per field, Per
     # instrument, Whole roster.
     assert field_by_path["data_shapes[0].self_review_handling"] == "both"
-    assert (
-        field_by_path["data_shapes[1].self_review_handling"]
-        == "exclude_self"
-    )
-    assert (
-        field_by_path["data_shapes[2].self_review_handling"]
-        == "include_self"
-    )
+    assert field_by_path["data_shapes[1].self_review_handling"] == "exclude_self"
+    assert field_by_path["data_shapes[2].self_review_handling"] == "include_self"
 
     # Import onto a fresh session with matching short_label /
     # field_key and confirm the state survives.
@@ -529,15 +482,12 @@ def test_self_review_handling_state_roundtrips_through_settings_csv(
     instr_b = _instrument(db, session_b, short_label="Peer Review")
     _field(db, instr_b, field_key="score")
     db.flush()
-    result = session_config_io.apply_session_config(
-        db, session_b, list(rows), user=None
-    )
+    result = session_config_io.apply_session_config(db, session_b, list(rows), user=None)
     assert result.ok, result.errors
     db.expire_all()
     shapes_b = {
-        s.name: s for s in db.execute(
-            select(DataShape).where(DataShape.session_id == session_b.id)
-        ).scalars()
+        s.name: s
+        for s in db.execute(select(DataShape).where(DataShape.session_id == session_b.id)).scalars()
     }
     assert shapes_b["Whole roster"].self_review_handling == "include_self"
     assert shapes_b["Per instrument"].self_review_handling == "exclude_self"
@@ -555,17 +505,12 @@ def test_apply_falls_through_to_default_on_missing_self_review_handling_row(
     rows = list(session_config_io.serialize_session_config(db, session_a))
     # Strip the new column from the row set to simulate a
     # pre-PR-B export.
-    rows = [
-        r for r in rows
-        if not r.field.endswith(".self_review_handling")
-    ]
+    rows = [r for r in rows if not r.field.endswith(".self_review_handling")]
     session_b = _session(db, code="srh-legacy-dst")
     instr_b = _instrument(db, session_b, short_label="Peer Review")
     _field(db, instr_b, field_key="score")
     db.flush()
-    result = session_config_io.apply_session_config(
-        db, session_b, rows, user=None
-    )
+    result = session_config_io.apply_session_config(db, session_b, rows, user=None)
     assert result.ok, result.errors
     db.expire_all()
     for shape in db.execute(
@@ -606,12 +551,8 @@ def test_a_loaded_instruments_relationship_does_not_mislead_the_apply(
 
     result = session_config_io.apply_session_config(db, target, rows, user=None)
     assert result.ok, result.errors
-    new = db.execute(
-        select(Instrument).where(Instrument.session_id == target.id)
-    ).scalar_one()
-    shape = db.execute(
-        select(DataShape).where(DataShape.session_id == target.id)
-    ).scalar_one()
+    new = db.execute(select(Instrument).where(Instrument.session_id == target.id)).scalar_one()
+    shape = db.execute(select(DataShape).where(DataShape.session_id == target.id)).scalar_one()
     assert new.id != old.id
     assert shape.instrument_id == new.id
     assert shape.response_field_id is not None

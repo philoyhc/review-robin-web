@@ -94,12 +94,8 @@ def build_workflow_card_context(
     ``group_responses_cleared`` / ``deleted_pairs`` so the card renders
     its confirmation block.
     """
-    reviewer_count = csv_imports.existing_reviewer_count(
-        db, review_session.id
-    )
-    reviewee_count = csv_imports.existing_reviewee_count(
-        db, review_session.id
-    )
+    reviewer_count = csv_imports.existing_reviewer_count(db, review_session.id)
+    reviewee_count = csv_imports.existing_reviewee_count(db, review_session.id)
     # Wave 4 PR 2 — switched from a rule-set-centric check to
     # ``has_unconfigured``: a NULL rule_set_id is fine (Generate uses
     # Full Matrix). Since the Wave 5 "Not set" gate, an instrument also
@@ -108,9 +104,7 @@ def build_workflow_card_context(
     # a docstring claiming this card still drove it, and has since been
     # deleted as dead
     # (``guide/archive/findings_2026-09-13_spec_discrepancies.md`` NF-17).
-    has_unconfigured = instruments_service.has_unconfigured(
-        db, review_session.id
-    )
+    has_unconfigured = instruments_service.has_unconfigured(db, review_session.id)
     is_draft = lifecycle.is_draft(review_session)
     is_validated = lifecycle.is_validated(review_session)
     is_ready = lifecycle.is_ready(review_session)
@@ -124,9 +118,7 @@ def build_workflow_card_context(
     }
     if is_validated:
         run_issues = (
-            validation.validate_session_setup(db, review_session)
-            if issues is None
-            else issues
+            validation.validate_session_setup(db, review_session) if issues is None else issues
         )
         report = lifecycle.build_readiness_report(run_issues)
         validation_summary = {
@@ -142,14 +134,10 @@ def build_workflow_card_context(
             "info": report.info,
         }
 
-    is_setup_empty = is_draft and (
-        reviewer_count == 0 or reviewee_count == 0 or has_unconfigured
-    )
+    is_setup_empty = is_draft and (reviewer_count == 0 or reviewee_count == 0 or has_unconfigured)
 
     prepare_confirm_ctx: dict[str, int] | None = None
-    if prepare_confirm == "responses" and lifecycle.session_has_responses(
-        db, review_session
-    ):
+    if prepare_confirm == "responses" and lifecycle.session_has_responses(db, review_session):
         try:
             impact = assignments.reconcile_impact(db, review_session)
         except ValueError:
@@ -165,9 +153,7 @@ def build_workflow_card_context(
             }
 
     is_archived = lifecycle.is_archived(review_session)
-    response_release_window_open = (
-        lifecycle.is_response_release_window_open(review_session)
-    )
+    response_release_window_open = lifecycle.is_response_release_window_open(review_session)
     # Single-row Workflow card (2026-06-03 redesign). Every state
     # surfaces ≤ 4 live buttons; inactive buttons are hidden, not
     # rendered as disabled greys. Each visible button fills 25%
@@ -177,12 +163,8 @@ def build_workflow_card_context(
     # - Release / Stop share a slot, mutually exclusive on
     #   ``is_response_release_window_open``;
     # - Archive surfaces only once the session is ``expired``.
-    invitations_generated = invitations.has_invitations(
-        db, review_session.id
-    )
-    invitations_sent = invitations.has_sent_invitations(
-        db, review_session.id
-    )
+    invitations_generated = invitations.has_invitations(db, review_session.id)
+    invitations_sent = invitations.has_sent_invitations(db, review_session.id)
     revert_visible = is_validated or is_ready or is_expired
     prepare_visible = (is_draft and not is_setup_empty) or is_validated
     # `create_invites_visible` retired at 19Q Item 2 rung 3 — Prepare
@@ -191,9 +173,7 @@ def build_workflow_card_context(
     # Send invites below, and a clean Prepare can leave it False when
     # no reviewer is eligible.
     send_invites_visible = (
-        (is_validated or is_ready)
-        and invitations_generated
-        and not invitations_sent
+        (is_validated or is_ready) and invitations_generated and not invitations_sent
     )
     activate_visible = is_validated
     send_reminders_visible = is_ready and invitations_sent
@@ -207,16 +187,8 @@ def build_workflow_card_context(
     # been 4 already, leaving no room for Stop on top of a
     # backdated release_at) and matches the spec narrative —
     # responses are released *because the session is over*.
-    release_responses_visible = (
-        is_expired
-        and not is_archived
-        and not response_release_window_open
-    )
-    stop_release_visible = (
-        response_release_window_open
-        and is_expired
-        and not is_archived
-    )
+    release_responses_visible = is_expired and not is_archived and not response_release_window_open
+    stop_release_visible = response_release_window_open and is_expired and not is_archived
     archive_visible = is_expired
     return {
         "is_draft": is_draft,
@@ -245,18 +217,10 @@ def build_workflow_card_context(
         },
         "super_failure": super_failure,
         "prepare_confirm": prepare_confirm_ctx,
-        "scheduled_activation_caption": build_scheduled_activation_caption(
-            db, review_session
-        ),
-        "manual_activate_cancellation": build_manual_activate_cancellation(
-            review_session
-        ),
-        "auto_send_invites_caption": build_auto_send_invites_caption(
-            db, review_session
-        ),
-        "auto_send_reminders_caption": build_auto_send_reminders_caption(
-            db, review_session
-        ),
+        "scheduled_activation_caption": build_scheduled_activation_caption(db, review_session),
+        "manual_activate_cancellation": build_manual_activate_cancellation(review_session),
+        "auto_send_invites_caption": build_auto_send_invites_caption(db, review_session),
+        "auto_send_reminders_caption": build_auto_send_reminders_caption(db, review_session),
         "next_action_return_to": return_to,
     }
 
@@ -304,8 +268,7 @@ def build_scheduled_activation_caption(
             return {
                 "tone": "green",
                 "text": (
-                    f"System will auto-activate at {when_text}. "
-                    f"You can also click Activate now."
+                    f"System will auto-activate at {when_text}. You can also click Activate now."
                 ),
             }
         # draft + scheduled in future → amber warning. (A past schedule
@@ -360,12 +323,8 @@ def build_scheduled_activation_caption(
     )
     return {
         "tone": "amber-grey",
-        "text": (
-            f"{headline} at {when_text} — reason: {reason}."
-        ),
+        "text": (f"{headline} at {when_text} — reason: {reason}."),
     }
-
-
 
 
 SUPER_ERROR_MESSAGES: dict[str, str] = {
@@ -474,13 +433,9 @@ def build_schedule_timeline(
                 )
     deadline = review_session.deadline
     if deadline is not None:
-        deadline_aware = (
-            deadline if deadline.tzinfo else deadline.replace(tzinfo=UTC)
-        )
+        deadline_aware = deadline if deadline.tzinfo else deadline.replace(tzinfo=UTC)
         rows.append((deadline_aware, "Session ends (End)"))
-        reminder_offsets = json_list(
-            (review_session.reminder_offsets or []) if send else []
-        )
+        reminder_offsets = json_list((review_session.reminder_offsets or []) if send else [])
         if reminder_offsets is not None:
             for entry in reminder_offsets:
                 if not isinstance(entry, str):
@@ -524,9 +479,7 @@ def build_offset_display_rows(
         return rows
     anchor_aware = None
     if anchor is not None:
-        anchor_aware = (
-            anchor if anchor.tzinfo else anchor.replace(tzinfo=UTC)
-        )
+        anchor_aware = anchor if anchor.tzinfo else anchor.replace(tzinfo=UTC)
     for entry in entries:
         if not isinstance(entry, str) or not entry:
             continue
@@ -534,9 +487,7 @@ def build_offset_display_rows(
         if anchor_aware is not None:
             try:
                 delta = scheduled_events.parse_iso_duration(entry)
-                at = date_formatting.format_datetime(
-                    anchor_aware + delta, session_timezone
-                )
+                at = date_formatting.format_datetime(anchor_aware + delta, session_timezone)
             except (ValueError, AttributeError):
                 at = ""
         rows.append({"offset": entry, "at": at})

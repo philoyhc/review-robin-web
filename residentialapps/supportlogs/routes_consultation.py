@@ -26,10 +26,14 @@ def consultation(request: Request) -> Response:
     list."""
     q = request.query_params
     filled = q.get("sample") == "1"
-    return gated(request, "supportlogs/consultation.html", sample.CONSULTATION,
-                 purpose="Overseas field trip, Semester 2" if filled else q.get("purpose", ""),
-                 emails="\n".join(sample.SAMPLE_EMAILS) if filled else q.get("emails", ""),
-                 filled=filled)
+    return gated(
+        request,
+        "supportlogs/consultation.html",
+        sample.CONSULTATION,
+        purpose="Overseas field trip, Semester 2" if filled else q.get("purpose", ""),
+        emails="\n".join(sample.SAMPLE_EMAILS) if filled else q.get("emails", ""),
+        filled=filled,
+    )
 
 
 @router.get("/consultation/check", name="supportlogs_consultation_check")
@@ -44,9 +48,18 @@ def check(request: Request) -> Response:
     text = request.query_params.get("emails", "")
     emails, unread = sample.emails_in(text)
     if not purpose or not emails:
-        return RedirectResponse(url_path(request, "/consultation/") + query(me, purpose=purpose, emails=text.strip()),
-                                status_code=303)
+        return RedirectResponse(
+            url_path(request, "/consultation/") + query(me, purpose=purpose, emails=text.strip()),
+            status_code=303,
+        )
     rank = {state: n for n, state in enumerate(sample.CONSULTATION_STATES)}
     results = sorted((sample.consultation(e) for e in emails), key=lambda r: rank[r.state])
-    return gated(request, "supportlogs/consultation_check.html", sample.CONSULTATION,
-                 purpose=purpose, results=results, unread=unread, current_tab="/consultation/")
+    return gated(
+        request,
+        "supportlogs/consultation_check.html",
+        sample.CONSULTATION,
+        purpose=purpose,
+        results=results,
+        unread=unread,
+        current_tab="/consultation/",
+    )

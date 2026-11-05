@@ -24,6 +24,7 @@ Call sites use the stdlib logger directly::
 Any keyword passed in ``extra=`` that is not a reserved
 ``LogRecord`` attribute is merged into the JSON object.
 """
+
 from __future__ import annotations
 
 import logging

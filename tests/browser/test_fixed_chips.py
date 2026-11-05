@@ -60,9 +60,7 @@ def _seed_relationship(database_url: str, session_id: str) -> None:
             assert review_session is not None
             review_session.relationships_enabled = True
             reviewer = Reviewer(session_id=pk, name="R", email="r@example.org")
-            reviewee = Reviewee(
-                session_id=pk, name="E", email_or_identifier="e@example.org"
-            )
+            reviewee = Reviewee(session_id=pk, name="E", email_or_identifier="e@example.org")
             db.add_all([reviewer, reviewee])
             db.flush()
             db.add(

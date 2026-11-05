@@ -50,9 +50,7 @@ def test_full_matrix_pairs_every_reviewer_with_every_reviewee(db: Session) -> No
         _reviewee(db, session.id, "Eve", "eve@example.edu"),
     ]
 
-    pairs, excluded = generate_full_matrix(
-        reviewers, reviewees, exclude_self_review=False
-    )
+    pairs, excluded = generate_full_matrix(reviewers, reviewees, exclude_self_review=False)
 
     assert len(pairs) == 6
     assert excluded == {}
@@ -85,9 +83,7 @@ def test_full_matrix_does_not_exclude_when_reviewee_has_no_at_sign(
     alice_r = _reviewer(db, session.id, "Alice", "alice@example.edu")
     dan_e = _reviewee(db, session.id, "Dan", "alice")
 
-    pairs, excluded = generate_full_matrix(
-        [alice_r], [dan_e], exclude_self_review=True
-    )
+    pairs, excluded = generate_full_matrix([alice_r], [dan_e], exclude_self_review=True)
 
     assert excluded == {}
     assert pairs == [(alice_r, dan_e)]
@@ -102,9 +98,7 @@ def test_full_matrix_skips_inactive_reviewers(db: Session) -> None:
     carol = _reviewee(db, session.id, "Carol", "carol@example.edu")
     db.flush()
 
-    pairs, excluded = generate_full_matrix(
-        [alice, bob], [carol], exclude_self_review=False
-    )
+    pairs, excluded = generate_full_matrix([alice, bob], [carol], exclude_self_review=False)
 
     assert pairs == [(alice, carol)]
     assert excluded == {"inactive_reviewer": 1}
@@ -119,9 +113,7 @@ def test_full_matrix_skips_inactive_reviewees(db: Session) -> None:
     dan.status = "inactive"
     db.flush()
 
-    pairs, excluded = generate_full_matrix(
-        [alice], [carol, dan], exclude_self_review=False
-    )
+    pairs, excluded = generate_full_matrix([alice], [carol, dan], exclude_self_review=False)
 
     assert pairs == [(alice, carol)]
     assert excluded == {"inactive_reviewee": 1}

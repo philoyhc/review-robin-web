@@ -40,19 +40,12 @@ from app.web.views._reviewer_summary import build_reviewer_summary_context
 router = APIRouter(prefix="/me")
 
 
-def _is_session_fully_submitted(
-    db: Session, *, reviewer: Reviewer, session_id: int
-) -> bool:
+def _is_session_fully_submitted(db: Session, *, reviewer: Reviewer, session_id: int) -> bool:
     """Whether every row the reviewer is assigned has been
     submitted. Drives the summary route's gate and the
     submit-flow's redirect-to-summary decision."""
-    state = responses_service.reviewer_session_state(
-        db, reviewer=reviewer, session_id=session_id
-    )
-    return (
-        state.total_assignments > 0
-        and state.pill_state == "submitted"
-    )
+    state = responses_service.reviewer_session_state(db, reviewer=reviewer, session_id=session_id)
+    return state.total_assignments > 0 and state.pill_state == "submitted"
 
 
 @router.get(
@@ -62,27 +55,22 @@ def _is_session_fully_submitted(
 )
 def reviewer_session_summary(
     request: Request,
-    reviewer_session: tuple[Reviewer, ReviewSession] = Depends(
-        require_reviewer_in_session
-    ),
+    reviewer_session: tuple[Reviewer, ReviewSession] = Depends(require_reviewer_in_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
     # An archived session never reaches here: the gate answers 404
     # (``deps._participant_session_or_404``).
     reviewer, review_session = reviewer_session
-    if not _is_session_fully_submitted(
-        db, reviewer=reviewer, session_id=review_session.id
-    ):
+    if not _is_session_fully_submitted(db, reviewer=reviewer, session_id=review_session.id):
         # Not all rows submitted — redirect to the dashboard.
         # With a one-line notice saying why (participant audit M11).
-        return urls.redirect(request,
+        return urls.redirect(
+            request,
             url="/me?notice=summary",
             status_code=status.HTTP_303_SEE_OTHER,
         )
-    summary = build_reviewer_summary_context(
-        db, review_session=review_session, reviewer=reviewer
-    )
+    summary = build_reviewer_summary_context(db, review_session=review_session, reviewer=reviewer)
     session_zone = sessions_service.resolve_session_timezone(review_session)
     return _templates.TemplateResponse(
         request,
@@ -97,9 +85,7 @@ def reviewer_session_summary(
                 else None
             ),
             "submitted_at_zone_label": (
-                gmt_offset_zone_label(
-                    session_zone, at=summary.last_submitted_at
-                )
+                gmt_offset_zone_label(session_zone, at=summary.last_submitted_at)
                 if summary.last_submitted_at
                 else None
             ),
@@ -111,9 +97,7 @@ def reviewer_session_summary(
             ),
             # participant info Item 3 — the reviewer's own roster
             # fields after the role pills, as on the surface.
-            "reviewer_self_fields": views.reviewer_self_line_for(
-                review_session, reviewer
-            ),
+            "reviewer_self_fields": views.reviewer_self_line_for(review_session, reviewer),
             # ``Recall my submission`` button is shown only while
             # the session is ``ready`` and before its deadline —
             # past either, the form it lands on is read-only and
@@ -127,30 +111,22 @@ def reviewer_session_summary(
 
 @router.get("/sessions/{session_id}/summary.csv", response_model=None)
 def reviewer_session_summary_csv(
-    request: Request, reviewer_session: tuple[Reviewer, ReviewSession] = Depends(
-        require_reviewer_in_session
-    ),
+    request: Request,
+    reviewer_session: tuple[Reviewer, ReviewSession] = Depends(require_reviewer_in_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> StreamingResponse | RedirectResponse:
     reviewer, review_session = reviewer_session
-    if not _is_session_fully_submitted(
-        db, reviewer=reviewer, session_id=review_session.id
-    ):
+    if not _is_session_fully_submitted(db, reviewer=reviewer, session_id=review_session.id):
         # With a one-line notice saying why (participant audit M11).
-        return urls.redirect(request,
+        return urls.redirect(
+            request,
             url="/me?notice=summary",
             status_code=status.HTTP_303_SEE_OTHER,
         )
     download_name = filename(review_session, "my_responses")
     return StreamingResponse(
-        stream_csv(
-            serialize_reviewer_session_summary(
-                db, review_session, reviewer
-            )
-        ),
+        stream_csv(serialize_reviewer_session_summary(db, review_session, reviewer)),
         media_type="text/csv",
-        headers={
-            "Content-Disposition": content_disposition(download_name)
-        },
+        headers={"Content-Disposition": content_disposition(download_name)},
     )

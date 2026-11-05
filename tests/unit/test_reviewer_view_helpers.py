@@ -73,9 +73,7 @@ def test_instrument_heading_multi_instrument_cases(
     """Multi-instrument always has a `#N` prefix in the title; the
     subtitle is the description verbatim when present."""
     inst = _instrument(short_label=short_label, description=description)
-    assert (
-        instrument_heading(instrument=inst, position=2, total_count=3) == expected
-    )
+    assert instrument_heading(instrument=inst, position=2, total_count=3) == expected
 
 
 # ── instrument_heading — single-instrument cases ─────────────────────────
@@ -102,9 +100,7 @@ def test_instrument_heading_multi_instrument_cases(
         (
             None,
             "Reflect on your own progress.",
-            InstrumentHeading(
-                title="Reflect on your own progress.", subtitle=None
-            ),
+            InstrumentHeading(title="Reflect on your own progress.", subtitle=None),
         ),
         (
             None,
@@ -119,21 +115,19 @@ def test_instrument_heading_single_instrument_cases(
     expected: InstrumentHeading,
 ) -> None:
     inst = _instrument(short_label=short_label, description=description)
-    assert (
-        instrument_heading(instrument=inst, position=1, total_count=1) == expected
-    )
+    assert instrument_heading(instrument=inst, position=1, total_count=1) == expected
 
 
 def test_instrument_heading_treats_blank_strings_as_unset() -> None:
     """Whitespace-only short_label / description are treated as unset
     so they don't render an empty title or subtitle slot."""
     inst = _instrument(short_label="   ", description="\n\t")
-    assert instrument_heading(
-        instrument=inst, position=1, total_count=1
-    ) == InstrumentHeading(title=None, subtitle=None)
-    assert instrument_heading(
-        instrument=inst, position=2, total_count=2
-    ) == InstrumentHeading(title="#2", subtitle=None)
+    assert instrument_heading(instrument=inst, position=1, total_count=1) == InstrumentHeading(
+        title=None, subtitle=None
+    )
+    assert instrument_heading(instrument=inst, position=2, total_count=2) == InstrumentHeading(
+        title="#2", subtitle=None
+    )
 
 
 # ── placeholder_for_field ────────────────────────────────────────────────
@@ -248,7 +242,9 @@ def test_placeholder_for_field_table(
 def test_constraint_summary_for_field_table(
     data_type: str, validation: dict | None, expected: str
 ) -> None:
-    assert constraint_summary_for_field(_field(data_type=data_type, validation=validation)) == expected
+    assert (
+        constraint_summary_for_field(_field(data_type=data_type, validation=validation)) == expected
+    )
 
 
 def test_integer_bounds_round_trip_the_validation_block() -> None:
@@ -277,16 +273,10 @@ def test_integer_bound_error_reads_the_bound_as_entered() -> None:
     its truncation."""
     from app.services.responses._core import validate_value
 
-    field = _stand_in(
-        data_type="Integer", _inline_min=0.5, _inline_max=10.0, _inline_step=None
-    )
+    field = _stand_in(data_type="Integer", _inline_min=0.5, _inline_max=10.0, _inline_step=None)
     assert validate_value(field, "0") == "Must be at least 0.5."
-    whole = _stand_in(
-        data_type="Integer", _inline_min=1.0, _inline_max=5.0, _inline_step=1.0
-    )
+    whole = _stand_in(data_type="Integer", _inline_min=1.0, _inline_max=5.0, _inline_step=1.0)
     assert validate_value(whole, "0") == "Must be at least 1."
     # No scientific notation, matching the constraint line.
-    tiny = _stand_in(
-        data_type="Integer", _inline_min=0.00001, _inline_max=None, _inline_step=None
-    )
+    tiny = _stand_in(data_type="Integer", _inline_min=0.00001, _inline_max=None, _inline_step=None)
     assert validate_value(tiny, "0") == "Must be at least 0.00001."

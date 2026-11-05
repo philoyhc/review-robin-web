@@ -45,9 +45,7 @@ from app.db.session import get_db
 app = rrw_app()
 
 
-def _make_client(
-    db: Session, user: AuthenticatedUser
-) -> TestClient:
+def _make_client(db: Session, user: AuthenticatedUser) -> TestClient:
     def override_get_db() -> Iterator[Session]:
         yield db
 
@@ -89,9 +87,7 @@ def _alice_session(client: TestClient, db: Session, code: str) -> ReviewSession:
         follow_redirects=False,
     )
     assert response.status_code == 303
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 # ── Workspace gate: participants without operator allowlist ──────────
@@ -150,9 +146,7 @@ def test_participant_only_user_redirected_from_per_session_route(
     db.commit()
 
     carol_client = _make_client(db, auth_carol)
-    response = carol_client.get(
-        f"/operator/sessions/{review_session.public_id}"
-    )
+    response = carol_client.get(f"/operator/sessions/{review_session.public_id}")
     assert response.status_code == 303
     assert response.headers["location"] == "/me?notice=organizers"
 
@@ -230,9 +224,7 @@ def test_workspace_operator_non_owner_lobby_excludes_others_sessions(
 # ── Owner / sys-admin: positive control ──────────────────────────────
 
 
-def test_session_owner_reaches_per_session_route(
-    client: TestClient, db: Session
-) -> None:
+def test_session_owner_reaches_per_session_route(client: TestClient, db: Session) -> None:
     """Alice (the SessionOperator owner) reaches her own
     session's per-session page — the positive control for the
     gate."""
@@ -269,12 +261,8 @@ def test_sys_admin_reaches_other_owners_per_session_route(
     by the absence of one status code.
     """
     review_session = _alice_session(client, db, "gate-6")
-    monkeypatch.setattr(
-        settings, "sys_admin_emails", ["dave@example.edu"]
-    )
-    monkeypatch.setattr(
-        settings, "operator_emails", ["dave@example.edu"]
-    )
+    monkeypatch.setattr(settings, "sys_admin_emails", ["dave@example.edu"])
+    monkeypatch.setattr(settings, "operator_emails", ["dave@example.edu"])
     auth_dave = AuthenticatedUser(
         principal_id="dave-oid",
         email="dave@example.edu",
@@ -292,12 +280,13 @@ def test_sys_admin_reaches_other_owners_per_session_route(
     # non-member with the 404 that 19F PR 1 made uniform.
     assert response.status_code == 303
     # And the effect, so a redirect for some other reason cannot pass:
-    dave = db.execute(
-        select(User).where(User.email == "dave@example.edu")
-    ).scalar_one()
-    assert db.execute(
-        select(SessionOperator).where(
-            SessionOperator.session_id == review_session.id,
-            SessionOperator.user_id == dave.id,
-        )
-    ).first() is not None
+    dave = db.execute(select(User).where(User.email == "dave@example.edu")).scalar_one()
+    assert (
+        db.execute(
+            select(SessionOperator).where(
+                SessionOperator.session_id == review_session.id,
+                SessionOperator.user_id == dave.id,
+            )
+        ).first()
+        is not None
+    )

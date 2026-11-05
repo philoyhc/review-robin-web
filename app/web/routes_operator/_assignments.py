@@ -187,9 +187,7 @@ def _render_assignments_hub(
     # **uncapped** label sets, the rendered list is capped.
     roster_reviewers = assignments.list_reviewers(db, review_session.id)
     roster_reviewees = assignments.list_reviewees(db, review_session.id)
-    search_options = views.assignments_search_options(
-        roster_reviewers, roster_reviewees
-    )
+    search_options = views.assignments_search_options(roster_reviewers, roster_reviewees)
     picked_reviewer, picked_reviewee = views.assignments_picked_handles(
         q, roster_reviewers, roster_reviewees
     )
@@ -204,11 +202,7 @@ def _render_assignments_hub(
     is_filtered = bool(q or filter_status in _STATUS_VALUES)
     # A filtered view carries no pager, so it keeps the first window —
     # the suppression rule the other six pages follow.
-    offset = (
-        0
-        if is_filtered
-        else views.clamp_offset(offset, total=assignment_count)
-    )
+    offset = 0 if is_filtered else views.clamp_offset(offset, total=assignment_count)
     if is_filtered:
         matching_count = assignments.count_pairs(
             db,
@@ -236,9 +230,7 @@ def _render_assignments_hub(
     else:
         matching_count = assignment_count
         pair_sample = (
-            assignments.list_pairs(
-                db, review_session.id, offset=offset, sort=sort_spec
-            )
+            assignments.list_pairs(db, review_session.id, offset=offset, sort=sort_spec)
             if assignment_count
             else []
         )
@@ -246,9 +238,7 @@ def _render_assignments_hub(
     # sort (Segment 13B Part 2 PR 8) can resolve ``pair_tag_*``
     # keys without a second pass through the relationships table.
     pair_context_lookup = (
-        relationships_service.pair_context_lookup(db, review_session.id)
-        if assignment_count
-        else {}
+        relationships_service.pair_context_lookup(db, review_session.id) if assignment_count else {}
     )
 
     status_code = (
@@ -277,12 +267,8 @@ def _render_assignments_hub(
             "session": review_session,
             "status_pills": views.session_status_pills(db, review_session),
             "assignment_count": assignment_count,
-            "reviewer_count": csv_imports.existing_reviewer_count(
-                db, review_session.id
-            ),
-            "reviewee_count": csv_imports.existing_reviewee_count(
-                db, review_session.id
-            ),
+            "reviewer_count": csv_imports.existing_reviewer_count(db, review_session.id),
+            "reviewee_count": csv_imports.existing_reviewee_count(db, review_session.id),
             "pair_sample": pair_sample,
             # 19I Item 12 rung 2 — nine chip flags, answered over the
             # session's rosters rather than over a sample of assignment
@@ -299,15 +285,11 @@ def _render_assignments_hub(
             # the two answers differ on purpose.
             "col_data": (
                 views.chip_slots(
-                    tag_slot_presence(
-                        db, session_id=review_session.id, model=Reviewer
-                    ),
+                    tag_slot_presence(db, session_id=review_session.id, model=Reviewer),
                     prefix="rt",
                 )
                 | views.chip_slots(
-                    tag_slot_presence(
-                        db, session_id=review_session.id, model=Reviewee
-                    ),
+                    tag_slot_presence(db, session_id=review_session.id, model=Reviewee),
                     prefix="et",
                 )
                 | views.chip_slots(
@@ -334,15 +316,9 @@ def _render_assignments_hub(
             # flag, so the two affordances can never disagree about
             # which mode the page is in.
             "pager": (
-                None
-                if is_filtered
-                else views.build_pager(
-                    total=assignment_count, offset=offset
-                )
+                None if is_filtered else views.build_pager(total=assignment_count, offset=offset)
             ),
-            "pager_url_base": (
-                f"/operator/sessions/{review_session.public_id}/assignments?"
-            ),
+            "pager_url_base": (f"/operator/sessions/{review_session.public_id}/assignments?"),
             # The fragment the range links land on (19J.8): the
             # table's card, so a page turn arrives showing the card's
             # top edge, the column chips, the page links and the new
@@ -368,12 +344,8 @@ def _render_assignments_hub(
             "pair_context_lookup": pair_context_lookup,
             "missing_confirm": missing_confirm,
             "is_blocked": is_blocked,
-            "breadcrumbs": breadcrumbs.operator_session_child(
-                review_session, "Assignments"
-            ),
-            "page_ctx": views.build_assignments_page_context(
-                db, review_session
-            ),
+            "breadcrumbs": breadcrumbs.operator_session_child(review_session, "Assignments"),
+            "page_ctx": views.build_assignments_page_context(db, review_session),
             # Segment 19I Item 8 — the page's half of the gate the
             # five mutating routes already enforce. The template read
             # `is_ready` from the shared workflow context, which
@@ -410,7 +382,8 @@ def _render_assignments_hub(
 
 @router.post("/sessions/{session_id}/assignments/generate")
 def assignments_generate(
-    request: Request, confirm_replace: str | None = Form(default=None),
+    request: Request,
+    confirm_replace: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
@@ -431,24 +404,21 @@ def assignments_generate(
     _require_editable(review_session)
     existing = assignments.existing_count(db, review_session.id)
     if existing > 0 and confirm_replace != "true":
-        return urls.redirect(request,
-            url=(
-                f"/operator/sessions/{review_session.public_id}/assignments"
-                f"?needs_confirm=1"
-            ),
+        return urls.redirect(
+            request,
+            url=(f"/operator/sessions/{review_session.public_id}/assignments?needs_confirm=1"),
             status_code=status.HTTP_303_SEE_OTHER,
         )
     if existing > 0:
-        _require_response_loss_ack(
-            db, review_session, acknowledge_response_loss
-        )
+        _require_response_loss_ack(db, review_session, acknowledge_response_loss)
     assignments.replace_assignments(
         db,
         review_session=review_session,
         user=user,
         correlation_id=request_correlation_id(),
     )
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url=f"/operator/sessions/{review_session.public_id}/assignments",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -460,7 +430,8 @@ def assignments_generate(
     response_model=None,
 )
 def assignments_instrument_self_reviews_active(
-    request: Request, session_id: str,
+    request: Request,
+    session_id: str,
     active: str = Form(...),
     bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
     user: User = Depends(get_or_create_user),
@@ -490,7 +461,8 @@ def assignments_instrument_self_reviews_active(
         active=is_active,
         correlation_id=request_correlation_id(),
     )
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url=f"/operator/sessions/{review_session.public_id}/assignments",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -502,7 +474,8 @@ def assignments_instrument_self_reviews_active(
     response_model=None,
 )
 def assignments_bulk_inactivate(
-    request: Request, session_id: str,
+    request: Request,
+    session_id: str,
     assignment_ids: list[int] = Form(default=[]),
     filter_q: str = Form(default=""),
     filter_search_by: str = Form(default="all"),
@@ -523,10 +496,9 @@ def assignments_bulk_inactivate(
         user=user,
         correlation_id=request_correlation_id(),
     )
-    return urls.redirect(request,
-        url=_assignments_url(
-            review_session.public_id, filter_q, filter_search_by, filter_status
-        ),
+    return urls.redirect(
+        request,
+        url=_assignments_url(review_session.public_id, filter_q, filter_search_by, filter_status),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -537,7 +509,8 @@ def assignments_bulk_inactivate(
     response_model=None,
 )
 def assignments_bulk_activate(
-    request: Request, session_id: str,
+    request: Request,
+    session_id: str,
     assignment_ids: list[int] = Form(default=[]),
     filter_q: str = Form(default=""),
     filter_search_by: str = Form(default="all"),
@@ -558,9 +531,8 @@ def assignments_bulk_activate(
         user=user,
         correlation_id=request_correlation_id(),
     )
-    return urls.redirect(request,
-        url=_assignments_url(
-            review_session.public_id, filter_q, filter_search_by, filter_status
-        ),
+    return urls.redirect(
+        request,
+        url=_assignments_url(review_session.public_id, filter_q, filter_search_by, filter_status),
         status_code=status.HTTP_303_SEE_OTHER,
     )

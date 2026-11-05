@@ -27,18 +27,14 @@ from ._lookups import must_get
 from ._quick_setup_refusal import refusal
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str = "ic-r"
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str = "ic-r") -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "Imp", "code": code, "description": ""},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _build_csv(rows: list[tuple[str, str, str]]) -> bytes:
@@ -50,9 +46,7 @@ def _build_csv(rows: list[tuple[str, str, str]]) -> bytes:
     return buf.getvalue().encode("utf-8")
 
 
-def test_import_config_success_redirects_to_the_slot(
-    client: TestClient, db: Session
-) -> None:
+def test_import_config_success_redirects_to_the_slot(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="ic-ok")
     payload = _build_csv(
         [
@@ -73,9 +67,7 @@ def test_import_config_success_redirects_to_the_slot(
     )
 
 
-def test_import_config_lifecycle_gate_rejects_ready(
-    client: TestClient, db: Session
-) -> None:
+def test_import_config_lifecycle_gate_rejects_ready(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="ic-ready")
     review_session.status = "ready"
     db.commit()
@@ -110,9 +102,7 @@ def test_import_config_parse_error_is_refused_with_parse_reason(
     assert (refused.kind, refused.reason) == ("settings", "parse")
 
 
-def test_import_config_validation_errors_reach_the_slot(
-    client: TestClient, db: Session
-) -> None:
+def test_import_config_validation_errors_reach_the_slot(client: TestClient, db: Session) -> None:
     """D31: the slot used to show only "Could not import session
     settings." and drop ``ApplyResult.errors``, though
     ``spec/csv_contracts.md`` §3.3 has the route surface them. Session
@@ -133,9 +123,7 @@ def test_import_config_validation_errors_reach_the_slot(
     assert "<li>instruments[1].name: name is required</li>" in response.text
 
     # Seven bad rows: five lines and a count of the other two.
-    payload = _build_csv(
-        [(f"instruments[{n}].short_label", "X", "string") for n in range(1, 8)]
-    )
+    payload = _build_csv([(f"instruments[{n}].short_label", "X", "string") for n in range(1, 8)])
     response = client.post(
         url,
         data={"confirm_replace": "true"},
@@ -233,9 +221,7 @@ def test_a_short_row_report_takes_the_lock_off_the_event_loop(
     assert not any(on_loop)
 
 
-def test_import_config_bad_header_rejected(
-    client: TestClient, db: Session
-) -> None:
+def test_import_config_bad_header_rejected(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="ic-hdr")
     response = client.post(
         f"/operator/sessions/{review_session.public_id}/import-config",
@@ -252,9 +238,7 @@ def test_import_config_bad_header_rejected(
     assert refusal(response).reason == "parse"
 
 
-def test_import_config_emits_audit_event(
-    client: TestClient, db: Session
-) -> None:
+def test_import_config_emits_audit_event(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="ic-audit")
     payload = _build_csv(
         [
@@ -309,19 +293,23 @@ def _session_with_a_response(client: TestClient, db: Session, code: str):
     )
 
     review_session = _make_session(client, db, code=code)
-    instrument = db.execute(
-        select(Instrument).where(Instrument.session_id == review_session.id)
-    ).scalars().first()
-    assert instrument is not None
-    field = db.execute(
-        select(InstrumentResponseField).where(
-            InstrumentResponseField.instrument_id == instrument.id
-        )
-    ).scalars().first()
-    assert field is not None
-    reviewer = Reviewer(
-        session_id=review_session.id, name="Ana", email="ana@example.edu"
+    instrument = (
+        db.execute(select(Instrument).where(Instrument.session_id == review_session.id))
+        .scalars()
+        .first()
     )
+    assert instrument is not None
+    field = (
+        db.execute(
+            select(InstrumentResponseField).where(
+                InstrumentResponseField.instrument_id == instrument.id
+            )
+        )
+        .scalars()
+        .first()
+    )
+    assert field is not None
+    reviewer = Reviewer(session_id=review_session.id, name="Ana", email="ana@example.edu")
     reviewee = Reviewee(
         session_id=review_session.id,
         name="Ben",

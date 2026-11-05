@@ -85,9 +85,7 @@ def test_filter_invitations_label_format_does_exact_email_match() -> None:
     ]
     # Substring "ali" would match BOTH; the label-format pick narrows
     # to exactly Alice via the bracketed email.
-    out = views.filter_invitations_rows(
-        rows, status="all", search="Alice (alice@x.edu)"
-    )
+    out = views.filter_invitations_rows(rows, status="all", search="Alice (alice@x.edu)")
 
     assert len(out) == 1
     assert out[0].reviewer.email == "alice@x.edu"
@@ -113,9 +111,7 @@ def test_filter_responses_label_format_does_exact_identifier_match() -> None:
         _resp_row(name="Aliyah", identifier="aliyah@x.edu"),
     ]
 
-    out = views.filter_responses_rows(
-        rows, status="all", search="Alice (alice@x.edu)"
-    )
+    out = views.filter_responses_rows(rows, status="all", search="Alice (alice@x.edu)")
 
     assert len(out) == 1
     assert out[0].reviewee.email_or_identifier == "alice@x.edu"
@@ -128,9 +124,7 @@ def test_filter_responses_label_format_works_with_non_email_identifier() -> None
         _resp_row(name="Bob", identifier="STU-002"),
     ]
 
-    out = views.filter_responses_rows(
-        rows, status="all", search="Alice (STU-001)"
-    )
+    out = views.filter_responses_rows(rows, status="all", search="Alice (STU-001)")
 
     assert len(out) == 1
     assert out[0].reviewee.email_or_identifier == "STU-001"
@@ -145,9 +139,7 @@ def test_filter_invitations_parenthesized_name_is_not_a_pick() -> None:
         _inv_row(name="Bob", email="bob@x.edu"),
     ]
 
-    out = views.filter_invitations_rows(
-        rows, status="all", search="Alice (Smith)"
-    )
+    out = views.filter_invitations_rows(rows, status="all", search="Alice (Smith)")
 
     assert len(out) == 1
     assert out[0].reviewer.email == "alice@x.edu"
@@ -192,14 +184,7 @@ def test_an_unoffered_label_is_not_a_pick() -> None:
     handle in its brackets — on Invitations and on the Reviewers page
     alike, which no longer check the handle for an ``@``."""
     inv = [_inv_row(name="Alice", email="alice@x.edu")]
-    out = views.filter_invitations_rows(
-        inv, status="all", search="Zed (alice@x.edu)"
-    )
+    out = views.filter_invitations_rows(inv, status="all", search="Zed (alice@x.edu)")
     assert out == []
     reviewers = [Reviewer(name="Alice", email="alice@x.edu", status="active")]
-    assert (
-        views.filter_reviewers_rows(
-            reviewers, status="all", search="Zed (alice@x.edu)"
-        )
-        == []
-    )
+    assert views.filter_reviewers_rows(reviewers, status="all", search="Zed (alice@x.edu)") == []

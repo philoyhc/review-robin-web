@@ -1,4 +1,5 @@
 """``data_shapes[N].*`` parse + apply."""
+
 from __future__ import annotations
 
 import json
@@ -40,9 +41,7 @@ def _apply_data_shape_kv(
     keys raise ``_ParseError`` so a typo'd hand-edit surfaces."""
     match = _RX_DATA_SHAPE.match(field_path)
     if match is None:
-        raise _ParseError(
-            f"unrecognised data_shapes.* key {field_path!r}"
-        )
+        raise _ParseError(f"unrecognised data_shapes.* key {field_path!r}")
     idx = int(match.group(1))
     key = match.group(2)
     spec = plan.data_shapes.setdefault(idx, _DataShapeSpec())
@@ -58,8 +57,7 @@ def _apply_data_shape_kv(
                 spec.instrument_number = int(value)
             except ValueError:
                 raise _ParseError(
-                    f"data_shapes[{idx}].instrument must be an "
-                    f"instruments[n] number, got {value!r}"
+                    f"data_shapes[{idx}].instrument must be an instruments[n] number, got {value!r}"
                 ) from None
     elif key == "response_field_key":
         spec.response_field_key = value or None
@@ -77,18 +75,14 @@ def _apply_data_shape_kv(
     elif key == "include_empty_rows":
         spec.include_empty_rows = _parse_bool(value, default=True)
     else:
-        raise _ParseError(
-            f"unknown data_shapes key {key!r} in {field_path!r}"
-        )
+        raise _ParseError(f"unknown data_shapes key {key!r} in {field_path!r}")
     # ``data_type`` is unused in this branch — every
     # ``data_shapes`` row's intended interpretation is fixed
     # by the suffix, not by the column hint.
     _ = data_type
 
 
-def _apply_data_shapes(
-    db: Session, review_session: ReviewSession, plan: _ParsedConfig
-) -> int:
+def _apply_data_shapes(db: Session, review_session: ReviewSession, plan: _ParsedConfig) -> int:
     """Wipe-and-replace the session's saved Data shapes from
     the CSV plan.
 
@@ -115,9 +109,7 @@ def _apply_data_shapes(
     # were wiped above are already gone; this pass clears
     # session-scope-only shapes too.
     db.execute(
-        delete(cast(Table, DataShape.__table__)).where(
-            DataShape.session_id == review_session.id
-        )
+        delete(cast(Table, DataShape.__table__)).where(DataShape.session_id == review_session.id)
     )
 
     # A label two instruments share names neither: the number, from
@@ -136,9 +128,7 @@ def _apply_data_shapes(
     # instrument at that rank.
     by_order = {i.order: i for i in review_session.instruments}
     instr_by_number = {
-        n: by_order[rank]
-        for rank, n in enumerate(sorted(plan.instruments))
-        if rank in by_order
+        n: by_order[rank] for rank, n in enumerate(sorted(plan.instruments)) if rank in by_order
     }
 
     written = 0
@@ -148,21 +138,13 @@ def _apply_data_shapes(
         if spec.axis not in ("reviewer", "reviewee"):
             continue
         label = (spec.instrument_short_label or "").strip()
-        instr = (
-            instr_by_short.get(label)
-            if label and label not in ambiguous_labels
-            else None
-        )
+        instr = instr_by_short.get(label) if label and label not in ambiguous_labels else None
         if instr is None and spec.instrument_number is not None:
             instr = instr_by_number.get(spec.instrument_number)
         field: InstrumentResponseField | None = None
         if instr is not None and spec.response_field_key:
             field = next(
-                (
-                    f
-                    for f in instr.response_fields
-                    if f.field_key == spec.response_field_key
-                ),
+                (f for f in instr.response_fields if f.field_key == spec.response_field_key),
                 None,
             )
         # ``self_review_handling`` defaults to ``include_self`` on
@@ -172,9 +154,7 @@ def _apply_data_shapes(
         # default so a hand-tampered CSV never crashes the import.
         valid_srh = {"include_self", "exclude_self", "both"}
         srh = (
-            spec.self_review_handling
-            if spec.self_review_handling in valid_srh
-            else "include_self"
+            spec.self_review_handling if spec.self_review_handling in valid_srh else "include_self"
         )
         db.add(
             DataShape(

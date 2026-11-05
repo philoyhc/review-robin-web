@@ -39,18 +39,14 @@ from app.db.models import ReviewSession
 RESERVED_SHADE = ("#2563eb", "#4b8bf5")
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "Spring", "code": code},
         follow_redirects=False,
     )
     assert response.status_code == 303
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _rule(css: str, selector: str) -> str | None:
@@ -61,14 +57,10 @@ def _rule(css: str, selector: str) -> str | None:
 
 def _stylesheet(client: TestClient, db: Session) -> str:
     review_session = _make_session(client, db, code="pager-css")
-    return client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-    ).text
+    return client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
 
 
-def test_the_retired_strip_left_no_rules_behind(
-    client: TestClient, db: Session
-) -> None:
+def test_the_retired_strip_left_no_rules_behind(client: TestClient, db: Session) -> None:
     """A rule for markup nothing renders is worse than no rule: the next
     reader has to work out whether it is dead or whether they have
     missed the page that uses it."""
@@ -83,9 +75,7 @@ def test_the_retired_strip_left_no_rules_behind(
         assert _rule(css, selector) is None, f"{selector} outlived the strip"
 
 
-def test_no_pager_rule_reaches_the_reserved_shade(
-    client: TestClient, db: Session
-) -> None:
+def test_no_pager_rule_reaches_the_reserved_shade(client: TestClient, db: Session) -> None:
     """The rung's contract, stated once and checkable by grep.
 
     Reads every declaration block whose selector mentions the pager and
@@ -108,9 +98,7 @@ def test_no_pager_rule_reaches_the_reserved_shade(
             "--selected-bg; the pager is not a selection surface"
         )
         for hex_value in RESERVED_SHADE:
-            assert hex_value not in block.lower(), (
-                f"{selector.strip()} hard-codes {hex_value}"
-            )
+            assert hex_value not in block.lower(), f"{selector.strip()} hard-codes {hex_value}"
 
 
 def test_the_glyph_buttons_and_menu_rows_carry_no_link_underline(
@@ -143,9 +131,7 @@ def test_the_glyph_buttons_and_menu_rows_carry_no_link_underline(
     ):
         block = _rule(css, f"body.ui-v2 {selector}")
         assert block is not None, f"{selector} lost its rule"
-        assert "text-decoration: none" in block, (
-            f"{selector} would take the page's link underline"
-        )
+        assert "text-decoration: none" in block, f"{selector} would take the page's link underline"
 
     # And each has a hover state, so an anchor that looks like neither a
     # link nor a button still says it is live.

@@ -45,18 +45,14 @@ def _settings_csv(rows: list[tuple[str, str, str]]) -> bytes:
     return buf.getvalue().encode("utf-8")
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "QSCfg", "code": code, "description": "d"},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 # --------------------------------------------------------------------------- #
@@ -64,9 +60,7 @@ def _make_session(
 # --------------------------------------------------------------------------- #
 
 
-def test_quick_setup_settings_slot_is_wired_live(
-    client: TestClient, db: Session
-) -> None:
+def test_quick_setup_settings_slot_is_wired_live(client: TestClient, db: Session) -> None:
     """Slot 4 (Settings) graduates to live in 12A-3 PR 4 with
     ``wire_url`` pointing at the import-config route shipped in
     PR 3."""
@@ -105,9 +99,7 @@ def test_new_session_quick_setup_settings_slot_is_wired(
 # --------------------------------------------------------------------------- #
 
 
-def test_import_config_route_via_quick_setup_slot(
-    client: TestClient, db: Session
-) -> None:
+def test_import_config_route_via_quick_setup_slot(client: TestClient, db: Session) -> None:
     """The Settings slot's file input posts directly to
     ``/import-config`` (per its ``wire_url``). Verify the route
     accepts the multipart upload and rehydrates the session."""
@@ -130,11 +122,7 @@ def test_import_config_route_via_quick_setup_slot(
         f"/operator/sessions/{review_session.public_id}#quick-setup-settings"
     )
     instruments = (
-        db.execute(
-            select(Instrument).where(
-                Instrument.session_id == review_session.id
-            )
-        )
+        db.execute(select(Instrument).where(Instrument.session_id == review_session.id))
         .scalars()
         .all()
     )
@@ -179,11 +167,7 @@ def test_submit_all_runs_settings_after_rosters_and_relationships(
     # step in the chain.
     assert response.headers["location"].endswith("#quick-setup-settings")
     instruments = (
-        db.execute(
-            select(Instrument).where(
-                Instrument.session_id == review_session.id
-            )
-        )
+        db.execute(select(Instrument).where(Instrument.session_id == review_session.id))
         .scalars()
         .all()
     )
@@ -302,11 +286,7 @@ def test_create_session_with_settings_file_processes_upload(
         select(ReviewSession).where(ReviewSession.code == "qsc-newsess")
     ).scalar_one()
     instruments = (
-        db.execute(
-            select(Instrument).where(
-                Instrument.session_id == review_session.id
-            )
-        )
+        db.execute(select(Instrument).where(Instrument.session_id == review_session.id))
         .scalars()
         .all()
     )
@@ -327,9 +307,7 @@ def test_create_session_with_settings_file_processes_upload(
 # --------------------------------------------------------------------------- #
 
 
-def test_quick_setup_card_renders_settings_slot_live(
-    client: TestClient, db: Session
-) -> None:
+def test_quick_setup_card_renders_settings_slot_live(client: TestClient, db: Session) -> None:
     """The Settings slot renders as a live file input (not the
     inert ``disabled`` shape) and uses the ``settings_file``
     form-field name."""
@@ -343,9 +321,7 @@ def test_quick_setup_card_renders_settings_slot_live(
     assert 'name="settings_file"' in body
 
 
-def test_submit_all_settings_without_the_tick_is_refused(
-    client: TestClient, db: Session
-) -> None:
+def test_submit_all_settings_without_the_tick_is_refused(client: TestClient, db: Session) -> None:
     """A settings file rebuilds every instrument, so submit-all refuses
     it on an existing session without the replacement tick, and leaves
     the instruments alone (findings C3). A file that is not a settings
@@ -353,9 +329,11 @@ def test_submit_all_settings_without_the_tick_is_refused(
     checked first, as the roster slots do. (A well-formed file whose
     content the apply refuses is found only after the tick.)"""
     review_session = _make_session(client, db, code="qsc-tick")
-    before = db.execute(
-        select(Instrument).where(Instrument.session_id == review_session.id)
-    ).scalars().all()
+    before = (
+        db.execute(select(Instrument).where(Instrument.session_id == review_session.id))
+        .scalars()
+        .all()
+    )
     good = _settings_csv([("instruments[1].name", "Renamed", "string")])
     response = client.post(
         f"/operator/sessions/{review_session.public_id}/quick-setup/submit-all",
@@ -365,9 +343,11 @@ def test_submit_all_settings_without_the_tick_is_refused(
     refused = refusal(response)
     assert (refused.kind, refused.reason) == ("settings", "needs_confirm")
     db.expire_all()
-    after = db.execute(
-        select(Instrument).where(Instrument.session_id == review_session.id)
-    ).scalars().all()
+    after = (
+        db.execute(select(Instrument).where(Instrument.session_id == review_session.id))
+        .scalars()
+        .all()
+    )
     assert [i.id for i in after] == [i.id for i in before]
     assert all(i.name != "Renamed" for i in after)
 
@@ -439,10 +419,7 @@ def test_settings_error_lines_are_clipped_and_budgeted() -> None:
     assert len(line) == views._quick_setup.SETTINGS_ERROR_DETAIL_MAX_CHARS
     assert line.endswith("…")
 
-    wide = [
-        ApplyError(row_number=n, field="f", message="名" * 300)
-        for n in range(1, 6)
-    ]
+    wide = [ApplyError(row_number=n, field="f", message="名" * 300) for n in range(1, 6)]
     lines = views.settings_error_details(wide)
     shown = lines[:-1]
     assert lines[-1] == f"…and {5 - len(shown)} more."

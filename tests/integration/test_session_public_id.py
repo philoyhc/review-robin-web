@@ -103,9 +103,7 @@ def test_an_integer_session_url_answers_404(db: Session, client: TestClient) -> 
         assert client.get(path).status_code == 404, path
 
 
-def test_no_page_links_a_session_by_its_integer_id(
-    db: Session, client: TestClient
-) -> None:
+def test_no_page_links_a_session_by_its_integer_id(db: Session, client: TestClient) -> None:
     session = _live_session_alice_reviews(db, client)
 
     for path in (
@@ -143,9 +141,7 @@ def test_an_ill_formed_public_id_never_reaches_the_database() -> None:
         assert get_by_public_id(cast(Session, _NoQueries()), raw) is None, raw
 
 
-def test_a_nul_byte_in_a_session_url_answers_404(
-    db: Session, client: TestClient
-) -> None:
+def test_a_nul_byte_in_a_session_url_answers_404(db: Session, client: TestClient) -> None:
     _create(db, client, "pid-nul")
     for path in (
         "/operator/sessions/%00",

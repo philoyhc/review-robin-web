@@ -36,9 +36,7 @@ def _create(client: TestClient, db: Session, code: str) -> ReviewSession:
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _add_bob(db: Session, review_session: ReviewSession) -> User:
@@ -46,9 +44,7 @@ def _add_bob(db: Session, review_session: ReviewSession) -> User:
     db.add(bob)
     db.commit()
     alice = db.execute(select(User).where(User.email == CREATOR)).scalar_one()
-    session_owners.add_owner(
-        db, review_session=review_session, actor=alice, target=bob
-    )
+    session_owners.add_owner(db, review_session=review_session, actor=alice, target=bob)
     return bob
 
 
@@ -85,9 +81,7 @@ def _tag(card: str, marker: str) -> str:
     return card[card.rfind("<", 0, at) : card.index(">", at) + 1]
 
 
-def test_the_card_is_bounded_and_outside_the_details_card(
-    client: TestClient, db: Session
-) -> None:
+def test_the_card_is_bounded_and_outside_the_details_card(client: TestClient, db: Session) -> None:
     review_session = _create(client, db, "OWN-CARD-1")
     body = _home(client, review_session)
     card = _card(body)
@@ -101,9 +95,7 @@ def test_the_card_is_bounded_and_outside_the_details_card(
     assert "<h2>Owners</h2>" in card
 
 
-def test_the_card_does_not_swap_with_the_details_card(
-    client: TestClient, db: Session
-) -> None:
+def test_the_card_does_not_swap_with_the_details_card(client: TestClient, db: Session) -> None:
     """No display / edit halves: the card is the same locked or not."""
     review_session = _create(client, db, "OWN-CARD-2")
     locked = _card(_home(client, review_session))
@@ -115,9 +107,7 @@ def test_the_card_does_not_swap_with_the_details_card(
     assert locked == editing
 
 
-def test_the_card_has_no_save_cancel_or_staging(
-    client: TestClient, db: Session
-) -> None:
+def test_the_card_has_no_save_cancel_or_staging(client: TestClient, db: Session) -> None:
     review_session = _create(client, db, "OWN-CARD-3")
     body = _home(client, review_session)
     card = _card(body)
@@ -177,10 +167,7 @@ def test_each_row_removes_at_once(client: TestClient, db: Session) -> None:
     bob = _add_bob(db, review_session)
     card = _card(_home(client, review_session))
 
-    assert (
-        f'action="/operator/sessions/{review_session.public_id}/owners/{bob.id}/remove"'
-        in card
-    )
+    assert f'action="/operator/sessions/{review_session.public_id}/owners/{bob.id}/remove"' in card
     response = client.post(
         f"/operator/sessions/{review_session.public_id}/owners/{bob.id}/remove",
         follow_redirects=False,
@@ -229,9 +216,7 @@ def test_removing_yourself_asks_first_and_lands_on_the_lobby(
     assert response.headers["location"] == "/operator/sessions"
 
 
-def test_the_card_is_editable_on_an_activated_session(
-    client: TestClient, db: Session
-) -> None:
+def test_the_card_is_editable_on_an_activated_session(client: TestClient, db: Session) -> None:
     """Every lifecycle state, as the lobby's tags (author's ruling)."""
     review_session = _create(client, db, "OWN-CARD-9")
     bob = _add_bob(db, review_session)
@@ -252,9 +237,7 @@ def test_the_card_is_editable_on_an_activated_session(
     assert "carol@example.edu" in _card(_home(client, review_session))
 
 
-def test_candidates_are_operators_not_already_owners(
-    client: TestClient, db: Session
-) -> None:
+def test_candidates_are_operators_not_already_owners(client: TestClient, db: Session) -> None:
     """Add owner saves at once, so an existing owner would only be
     refused ``already_owner``."""
     review_session = _create(client, db, "OWN-CARD-10")
@@ -270,9 +253,7 @@ def test_candidates_are_operators_not_already_owners(
     assert 'value="bob@example.edu"' not in datalist
 
 
-def test_with_no_candidates_left_the_card_says_so(
-    client: TestClient, db: Session
-) -> None:
+def test_with_no_candidates_left_the_card_says_so(client: TestClient, db: Session) -> None:
     """The creator is the workspace's only operator: nobody to add."""
     review_session = _create(client, db, "OWN-CARD-11")
     card = _card(_home(client, review_session))
@@ -282,9 +263,7 @@ def test_with_no_candidates_left_the_card_says_so(
     assert "<datalist" not in card
 
 
-def test_create_ships_its_add_owner_hidden_too(
-    client: TestClient, db: Session, bob
-) -> None:
+def test_create_ships_its_add_owner_hidden_too(client: TestClient, db: Session, bob) -> None:
     """Create's card still stages: the shared stager shows the button;
     without JavaScript it does nothing there."""
     db.add(User(email="bob@example.edu", is_operator=True))
@@ -298,9 +277,7 @@ def test_create_ships_its_add_owner_hidden_too(
 
 
 def _remove_form(card: str, user: User) -> str:
-    form = re.search(
-        rf"<form method=\"post\"[^>]*/owners/{user.id}/remove\"[^>]*>", card
-    )
+    form = re.search(rf"<form method=\"post\"[^>]*/owners/{user.id}/remove\"[^>]*>", card)
     assert form is not None
     return form.group(0)
 
@@ -335,9 +312,7 @@ def test_the_owners_lock_route_is_gone(client: TestClient, db: Session) -> None:
     assert "set-cookie" not in response.headers
 
 
-def test_removing_another_owner_asks_first_by_name(
-    client: TestClient, db: Session
-) -> None:
+def test_removing_another_owner_asks_first_by_name(client: TestClient, db: Session) -> None:
     review_session = _create(client, db, "OWN-LIVE-3")
     bob = _add_bob(db, review_session)
     card = _card(_home(client, review_session))
@@ -346,9 +321,7 @@ def test_removing_another_owner_asks_first_by_name(
     form = _remove_form(card, bob)
     assert "data-owners-remove" in form
     assert 'onsubmit="return window.confirm(this.dataset.confirm);"' in form
-    assert (
-        'data-confirm="Remove bob@example.edu as an owner of this session?"' in form
-    )
+    assert 'data-confirm="Remove bob@example.edu as an owner of this session?"' in form
 
     # A display name wins, and rides autoescaped: quotes and markup in a
     # name can't break out of the attribute (the script reads it, never
@@ -358,13 +331,11 @@ def test_removing_another_owner_asks_first_by_name(
     form = _remove_form(_card(_home(client, review_session)), bob)
     assert (
         'data-confirm="Remove Bob &#34;B&#34; &lt;b&gt;Builder&lt;/b&gt; as an owner'
-        " of this session?\"" in form
+        ' of this session?"' in form
     )
 
 
-def test_an_owners_change_leaves_quick_setup_live(
-    client: TestClient, db: Session
-) -> None:
+def test_an_owners_change_leaves_quick_setup_live(client: TestClient, db: Session) -> None:
     """Neither card has a lock to lose: an owner add lands on Home with
     Quick Setup live."""
     review_session = _create(client, db, "OWN-LIVE-4")
@@ -382,4 +353,3 @@ def test_an_owners_change_leaves_quick_setup_live(
     card = _card(body)
     assert "bob@example.edu" in card[card.index("<table>") : card.index("</table>")]
     assert 'class="quick-setup-body"' in body
-

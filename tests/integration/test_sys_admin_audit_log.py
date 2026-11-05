@@ -4,6 +4,7 @@ Mirrors the Outbox child-page tests under
 ``test_sys_admin_outbox_child.py`` — same chrome / back-link /
 gate convention.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -15,18 +16,14 @@ from app.config import settings
 from app.db.models import ReviewSession
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "Spring", "code": code},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 # --- Gate ------------------------------------------------------------------
@@ -57,9 +54,7 @@ def test_audit_log_page_renders_for_sys_admin(
     monkeypatch.setattr(settings, "sys_admin_emails", ["bob@example.edu"])
     review_session = _make_session(client, db, code="audit-page-200")
     bob_client = make_client(bob)
-    response = bob_client.get(
-        f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log"
-    )
+    response = bob_client.get(f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log")
     assert response.status_code == 200
     # Chrome conventions: back-link + Admin nav + audit-log section
     # heading + Download CSV affordance.
@@ -112,9 +107,7 @@ def test_audit_log_page_renders_seeded_events(
     monkeypatch.setattr(settings, "sys_admin_emails", ["bob@example.edu"])
     review_session = _make_session(client, db, code="audit-seeded")
     bob_client = make_client(bob)
-    response = bob_client.get(
-        f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log"
-    )
+    response = bob_client.get(f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log")
     body = response.text
     # All 8 column headers present.
     for header in (
@@ -161,9 +154,7 @@ def test_audit_log_page_renders_next_link_when_page_fills(
         )
 
     bob_client = make_client(bob)
-    response = bob_client.get(
-        f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log"
-    )
+    response = bob_client.get(f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log")
     assert response.status_code == 200
     body = response.text
     assert "Older events" in body
@@ -194,9 +185,7 @@ def test_audit_log_pagination_round_trip(
         )
 
     bob_client = make_client(bob)
-    page1 = bob_client.get(
-        f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log"
-    )
+    page1 = bob_client.get(f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log")
     assert page1.status_code == 200
     # Pull the cursor out of the rendered next-page anchor.
     import re
@@ -206,8 +195,7 @@ def test_audit_log_pagination_round_trip(
     cursor = int(match.group(1))
 
     page2 = bob_client.get(
-        f"/operator/sys-admin/sessions/{review_session.public_id}"
-        f"/audit-log?cursor={cursor}"
+        f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log?cursor={cursor}"
     )
     assert page2.status_code == 200
     # Page 2 should contain events older than the cursor; the
@@ -231,8 +219,7 @@ def test_audit_log_page_no_events_renders_empty_copy(
     review_session = _make_session(client, db, code="audit-empty-cursor")
     bob_client = make_client(bob)
     response = bob_client.get(
-        f"/operator/sys-admin/sessions/{review_session.public_id}"
-        f"/audit-log?cursor=1"
+        f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log?cursor=1"
     )
     assert response.status_code == 200
     assert "older than the requested cursor" in response.text
@@ -259,8 +246,7 @@ def test_diagnostics_row_audit_log_link_points_at_child_page(
     )
     # The old direct-CSV link no longer renders.
     assert (
-        f"/operator/sessions/{review_session.public_id}/export/audit_log.csv"
-        not in response.text
+        f"/operator/sessions/{review_session.public_id}/export/audit_log.csv" not in response.text
     )
 
 
@@ -303,9 +289,7 @@ def test_audit_log_filter_strip_renders(
     monkeypatch.setattr(settings, "sys_admin_emails", ["bob@example.edu"])
     review_session = _make_session(client, db, code="filter-render")
     bob_client = make_client(bob)
-    response = bob_client.get(
-        f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log"
-    )
+    response = bob_client.get(f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log")
     assert response.status_code == 200
     body = response.text
     assert 'name="event_type"' in body
@@ -316,8 +300,7 @@ def test_audit_log_filter_strip_renders(
     # The multiselect's hint is `.form-help`, not a bare
     # `<small class="muted">` (findings Ec6, 2026-10-05).
     assert (
-        '<p class="form-help" data-audit-event-hint>Ctrl/Cmd-click to select multiple.</p>'
-        in body
+        '<p class="form-help" data-audit-event-hint>Ctrl/Cmd-click to select multiple.</p>' in body
     )
     # The filter-reset ("Clear") link is always there, before Apply
     # filters (20H Item 3, author 2026-11-03).
@@ -363,8 +346,7 @@ def test_audit_log_filter_by_severity_narrows_table(
     _seed_mixed_events(db, review_session)
     bob_client = make_client(bob)
     response = bob_client.get(
-        f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log"
-        "?severity=warning"
+        f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log?severity=warning"
     )
     assert response.status_code == 200
     body = response.text
@@ -389,16 +371,14 @@ def test_audit_log_filter_by_actor_narrows_table(
     bob_client = make_client(bob)
     # Alice is the session creator → on session.created rows.
     response = bob_client.get(
-        f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log"
-        "?actor=alice@example.edu"
+        f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log?actor=alice@example.edu"
     )
     assert response.status_code == 200
     assert "session.created" in response.text
 
     # Unknown actor → empty.
     empty = bob_client.get(
-        f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log"
-        "?actor=ghost@example.edu"
+        f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log?actor=ghost@example.edu"
     )
     assert empty.status_code == 200
     assert "match the current filter" in empty.text
@@ -536,9 +516,7 @@ def test_audit_log_csv_no_context_on_unfiltered_extract(
     monkeypatch.setattr(settings, "sys_admin_emails", ["bob@example.edu"])
     review_session = _make_session(client, db, code="filter-csv-noctx")
     bob_client = make_client(bob)
-    bob_client.get(
-        f"/operator/sessions/{review_session.public_id}/export/audit_log.csv"
-    )
+    bob_client.get(f"/operator/sessions/{review_session.public_id}/export/audit_log.csv")
     db.expire_all()
     event = (
         db.execute(
@@ -596,8 +574,7 @@ def test_audit_log_filter_invalid_date_422s(
     review_session = _make_session(client, db, code="filter-bad-date")
     bob_client = make_client(bob)
     response = bob_client.get(
-        f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log"
-        "?from=2026-13-99"
+        f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log?from=2026-13-99"
     )
     assert response.status_code == 422
 
@@ -821,9 +798,7 @@ def test_audit_log_page_renders_expander_with_structured_detail(
     monkeypatch.setattr(settings, "sys_admin_emails", ["bob@example.edu"])
     review_session = _make_session(client, db, code="audit-detail-render")
     bob_client = make_client(bob)
-    response = bob_client.get(
-        f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log"
-    )
+    response = bob_client.get(f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log")
     assert response.status_code == 200
     body = response.text
     # Each row owns a "Show detail" expander.
@@ -833,4 +808,3 @@ def test_audit_log_page_renders_expander_with_structured_detail(
     # session.created emits a snapshot envelope; the section
     # heading should be present.
     assert "Snapshot" in body
-

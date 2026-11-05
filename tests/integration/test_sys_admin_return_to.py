@@ -29,9 +29,7 @@ def _back(body: str) -> str:
 
 def _session(client: TestClient, db: Session) -> ReviewSession:
     client.post("/operator/sessions", data={"name": "Spring", "code": "back-1"})
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == "back-1")
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == "back-1")).scalar_one()
 
 
 def test_both_tabs_return_to_the_page_the_admin_link_left(
@@ -55,9 +53,7 @@ def test_without_a_remembered_origin_the_back_link_is_the_lobby(
         assert _back(client.get(page).text) == '/operator/sessions">&larr; Back to Sessions'
 
 
-def test_a_forged_origin_falls_back_to_the_lobby(
-    client: TestClient, admin: None
-) -> None:
+def test_a_forged_origin_falls_back_to_the_lobby(client: TestClient, admin: None) -> None:
     client.cookies.set("rrw-admin-return-to", "https://evil.example/", path="/operator/sys-admin")
     assert _back(client.get(ACCOUNTS).text) == '/operator/sessions">&larr; Back to Sessions'
 

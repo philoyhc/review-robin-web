@@ -21,6 +21,7 @@ Revises: e1c8f4d57a92
 Create Date: 2026-05-05 00:00:00.000000
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -46,29 +47,25 @@ _NEW_CHOICES = [
 def upgrade() -> None:
     bind = op.get_bind()
     metadata = sa.MetaData()
-    rtd_table = sa.Table(
-        "response_type_definitions", metadata, autoload_with=bind
-    )
-    rf_table = sa.Table(
-        "instrument_response_fields", metadata, autoload_with=bind
-    )
+    rtd_table = sa.Table("response_type_definitions", metadata, autoload_with=bind)
+    rf_table = sa.Table("instrument_response_fields", metadata, autoload_with=bind)
 
     # Pick up the seeded Likert5 rows that still carry the original CSV.
     # Operator-edited rows (different list_csv) are left untouched.
-    target_ids = bind.execute(
-        sa.select(rtd_table.c.id)
-        .where(rtd_table.c.response_type == "Likert5")
-        .where(rtd_table.c.is_seeded == sa.true())
-        .where(rtd_table.c.list_csv == _OLD_CSV)
-    ).scalars().all()
+    target_ids = (
+        bind.execute(
+            sa.select(rtd_table.c.id)
+            .where(rtd_table.c.response_type == "Likert5")
+            .where(rtd_table.c.is_seeded == sa.true())
+            .where(rtd_table.c.list_csv == _OLD_CSV)
+        )
+        .scalars()
+        .all()
+    )
     if not target_ids:
         return
 
-    bind.execute(
-        rtd_table.update()
-        .where(rtd_table.c.id.in_(target_ids))
-        .values(list_csv=_NEW_CSV)
-    )
+    bind.execute(rtd_table.update().where(rtd_table.c.id.in_(target_ids)).values(list_csv=_NEW_CSV))
     bind.execute(
         rf_table.update()
         .where(rf_table.c.response_type_id.in_(target_ids))
@@ -79,27 +76,23 @@ def upgrade() -> None:
 def downgrade() -> None:
     bind = op.get_bind()
     metadata = sa.MetaData()
-    rtd_table = sa.Table(
-        "response_type_definitions", metadata, autoload_with=bind
-    )
-    rf_table = sa.Table(
-        "instrument_response_fields", metadata, autoload_with=bind
-    )
+    rtd_table = sa.Table("response_type_definitions", metadata, autoload_with=bind)
+    rf_table = sa.Table("instrument_response_fields", metadata, autoload_with=bind)
 
-    target_ids = bind.execute(
-        sa.select(rtd_table.c.id)
-        .where(rtd_table.c.response_type == "Likert5")
-        .where(rtd_table.c.is_seeded == sa.true())
-        .where(rtd_table.c.list_csv == _NEW_CSV)
-    ).scalars().all()
+    target_ids = (
+        bind.execute(
+            sa.select(rtd_table.c.id)
+            .where(rtd_table.c.response_type == "Likert5")
+            .where(rtd_table.c.is_seeded == sa.true())
+            .where(rtd_table.c.list_csv == _NEW_CSV)
+        )
+        .scalars()
+        .all()
+    )
     if not target_ids:
         return
 
-    bind.execute(
-        rtd_table.update()
-        .where(rtd_table.c.id.in_(target_ids))
-        .values(list_csv=_OLD_CSV)
-    )
+    bind.execute(rtd_table.update().where(rtd_table.c.id.in_(target_ids)).values(list_csv=_OLD_CSV))
     bind.execute(
         rf_table.update()
         .where(rf_table.c.response_type_id.in_(target_ids))

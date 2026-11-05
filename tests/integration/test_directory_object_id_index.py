@@ -39,7 +39,11 @@ def postgres_only(db: Session) -> None:
 
 @pytest.mark.parametrize(
     ("model", "address"),
-    [(Reviewer, Reviewer.email), (Reviewee, Reviewee.email_or_identifier), (Observer, Observer.email)],
+    [
+        (Reviewer, Reviewer.email),
+        (Reviewee, Reviewee.email_or_identifier),
+        (Observer, Observer.email),
+    ],
 )
 def test_a_roster_rows_account_match_uses_the_index(
     db: Session, postgres_only: None, model, address

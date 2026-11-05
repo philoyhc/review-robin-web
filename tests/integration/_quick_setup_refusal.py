@@ -11,9 +11,7 @@ import html
 import re
 from dataclasses import dataclass
 
-_BANNER = re.compile(
-    r'id="quick-setup-(\w+)-error-banner"\s+data-quick-setup-reason="([\w-]*)"'
-)
+_BANNER = re.compile(r'id="quick-setup-(\w+)-error-banner"\s+data-quick-setup-reason="([\w-]*)"')
 _LINE = re.compile(r"<li>(.*?)</li>", re.S)
 
 
@@ -35,9 +33,7 @@ def refusal(response) -> Refusal:
     match = found[0]
     body = text[match.end() : text.index('class="banner-actions"', match.end())]
     lead = re.search(r'<p class="banner-lead">(.*?)</p>', body, re.S)
-    details_block = re.search(
-        r"<ul data-quick-setup-error-details>(.*?)</ul>", body, re.S
-    )
+    details_block = re.search(r"<ul data-quick-setup-error-details>(.*?)</ul>", body, re.S)
     return Refusal(
         kind=match.group(1),
         reason=match.group(2),

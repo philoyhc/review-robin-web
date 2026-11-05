@@ -69,9 +69,7 @@ __all__ = [
 VALID_AXES: frozenset[str] = frozenset({"reviewer", "reviewee"})
 # Per-shape Self-review handling chip state — PR B of the chip
 # slice per ``guide/archive/extract_data.md`` § *Self-review handling*.
-VALID_SELF_REVIEW_HANDLING: frozenset[str] = frozenset(
-    {"include_self", "exclude_self", "both"}
-)
+VALID_SELF_REVIEW_HANDLING: frozenset[str] = frozenset({"include_self", "exclude_self", "both"})
 DEFAULT_SELF_REVIEW_HANDLING = "include_self"
 # Empty-row drop chip — PR 6 of the chip-controlled-drop slice per
 # the self-review consolidation addendum. ``True`` keeps every
@@ -102,9 +100,7 @@ class DataShapeNameConflictError(DataShapeValidationError):
 # --------------------------------------------------------------------------- #
 
 
-def list_shapes(
-    db: Session, review_session: ReviewSession
-) -> list[DataShape]:
+def list_shapes(db: Session, review_session: ReviewSession) -> list[DataShape]:
     """Every shape on ``review_session``, sorted by name for
     stable rendering on the page."""
     return list(
@@ -116,9 +112,7 @@ def list_shapes(
     )
 
 
-def get_shape(
-    db: Session, review_session: ReviewSession, shape_id: int
-) -> DataShape | None:
+def get_shape(db: Session, review_session: ReviewSession, shape_id: int) -> DataShape | None:
     """Return the shape with ``shape_id`` if it lives on
     ``review_session``; ``None`` otherwise. Used by the
     Download route + the PATCH / DELETE routes to confirm the
@@ -167,17 +161,11 @@ def _validate(
             f"Shape name is {len(name)} characters; at most {name_limit} fit."
         )
     if axis not in VALID_AXES:
-        raise DataShapeValidationError(
-            f"Axis must be one of {sorted(VALID_AXES)}, got {axis!r}."
-        )
+        raise DataShapeValidationError(f"Axis must be one of {sorted(VALID_AXES)}, got {axis!r}.")
     if not column_chip_slots:
-        raise DataShapeValidationError(
-            "A shape needs at least one column chip selected."
-        )
+        raise DataShapeValidationError("A shape needs at least one column chip selected.")
     if not all(isinstance(s, str) and s for s in column_chip_slots):
-        raise DataShapeValidationError(
-            "Column chip slots must be non-empty strings."
-        )
+        raise DataShapeValidationError("Column chip slots must be non-empty strings.")
     if self_review_handling not in VALID_SELF_REVIEW_HANDLING:
         raise DataShapeValidationError(
             f"Self-review handling must be one of "
@@ -196,15 +184,11 @@ def _validate(
             )
         ).scalar_one_or_none()
         if instrument is None:
-            raise DataShapeValidationError(
-                "Instrument does not belong to this session."
-            )
+            raise DataShapeValidationError("Instrument does not belong to this session.")
 
     if response_field_id is not None:
         if instrument is None:
-            raise DataShapeValidationError(
-                "Response field requires an instrument."
-            )
+            raise DataShapeValidationError("Response field requires an instrument.")
         response_field = db.execute(
             select(InstrumentResponseField).where(
                 InstrumentResponseField.id == response_field_id,
@@ -305,10 +289,7 @@ def create_shape(
     audit.write_event(
         db,
         event_type="session.data_shape_saved",
-        summary=(
-            f"Saved Data shape {name!r} on session "
-            f"{review_session.code}"
-        ),
+        summary=(f"Saved Data shape {name!r} on session {review_session.code}"),
         actor_user_id=actor.id if actor else None,
         session=review_session,
         payload=audit.snapshot(_audit_snapshot(shape)),
@@ -370,10 +351,7 @@ def update_shape(
     audit.write_event(
         db,
         event_type="session.data_shape_saved",
-        summary=(
-            f"Updated Data shape {name!r} on session "
-            f"{review_session.code}"
-        ),
+        summary=(f"Updated Data shape {name!r} on session {review_session.code}"),
         actor_user_id=actor.id if actor else None,
         session=review_session,
         payload=audit.snapshot(_audit_snapshot(shape)),
@@ -403,10 +381,7 @@ def delete_shape(
     audit.write_event(
         db,
         event_type="session.data_shape_deleted",
-        summary=(
-            f"Deleted Data shape {shape_name!r} from session "
-            f"{review_session.code}"
-        ),
+        summary=(f"Deleted Data shape {shape_name!r} from session {review_session.code}"),
         actor_user_id=actor.id if actor else None,
         session=review_session,
         payload=audit.snapshot(snapshot),

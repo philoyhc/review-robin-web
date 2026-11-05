@@ -23,6 +23,7 @@ state as Item 3 requires, and the card is now exactly the
 selection-driven half. What each test asserts moved with it; the
 predicate the file is about did not.
 """
+
 from __future__ import annotations
 
 import re
@@ -82,9 +83,7 @@ def _page(client: TestClient, s, *, q: str = "") -> str:
 
 
 @pytest.mark.parametrize("state", ALL_STATES)
-def test_the_bulk_routes_answer_by_editability(
-    db: Session, client: TestClient, state: str
-) -> None:
+def test_the_bulk_routes_answer_by_editability(db: Session, client: TestClient, state: str) -> None:
     s = _seed(client, db, code=f"alg-route-{state}")
     s.status = state
     db.commit()
@@ -127,7 +126,7 @@ def test_the_read_only_half_renders_in_every_state(
     assert TOOLBAR_RIGHT in page, state
     # Bounded by the pane's own form rather than by counting `</div>`,
     # which a nested element would throw off.
-    right = page[page.index(TOOLBAR_RIGHT):]
+    right = page[page.index(TOOLBAR_RIGHT) :]
     right = right[: right.index("</form>")]
     assert SEARCH_INPUT in right, state
     assert SEARCH_BY in right, state
@@ -182,7 +181,9 @@ def test_the_self_review_toggle_is_disabled_on_every_locked_state(
     db.commit()
 
     page = _page(client, s)
-    boxes = re.findall(r"<input type=\"checkbox\"[^>]*data-self-review-instrument[^>]*>", page, re.S)
+    boxes = re.findall(
+        r"<input type=\"checkbox\"[^>]*data-self-review-instrument[^>]*>", page, re.S
+    )
 
     assert boxes, state
     assert all("disabled" in b for b in boxes), state
@@ -197,7 +198,9 @@ def test_the_self_review_toggle_is_live_while_editable(
     db.commit()
 
     page = _page(client, s)
-    boxes = re.findall(r"<input type=\"checkbox\"[^>]*data-self-review-instrument[^>]*>", page, re.S)
+    boxes = re.findall(
+        r"<input type=\"checkbox\"[^>]*data-self-review-instrument[^>]*>", page, re.S
+    )
 
     assert boxes, state
     assert all("disabled" not in b for b in boxes), state

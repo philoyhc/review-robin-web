@@ -37,9 +37,13 @@ ANON = ("row", "deidentified")
 SUMM = ("aggregated", "deidentified")
 OFF = (None, None)
 PAIRS = [
-    OFF, RAW, ANON, SUMM,
+    OFF,
+    RAW,
+    ANON,
+    SUMM,
     ("aggregated", "identified"),  # reserved-incoherent
-    ("row", None), (None, "identified"),  # half-set
+    ("row", None),
+    (None, "identified"),  # half-set
     ("bogus", "identified"),
 ]
 AUDIENCES = ["peer_reviewer", "reviewee", "observer", "nobody"]
@@ -74,8 +78,12 @@ def _python_allows(audience: str, ongoing: tuple, released: tuple) -> bool:
 
 def _params(row_id: int, audience: str, ongoing: tuple, released: tuple) -> dict:
     return {
-        "id": row_id, "aud": audience,
-        "wg": ongoing[0], "wi": ongoing[1], "ag": released[0], "ai": released[1],
+        "id": row_id,
+        "aud": audience,
+        "wg": ongoing[0],
+        "wi": ongoing[1],
+        "ag": released[0],
+        "ai": released[1],
     }
 
 
@@ -92,7 +100,9 @@ def _assert_database_agrees(engine) -> int:
                 connection.rollback()
                 stored = False
         assert stored == _python_allows(audience, ongoing, released), (
-            audience, ongoing, released,
+            audience,
+            ongoing,
+            released,
         )
         accepted += stored
     return accepted
@@ -150,11 +160,13 @@ def test_the_migration_normalizes_constrains_and_downgrades(
                     (row.while_ongoing_granularity, row.while_ongoing_identification),
                     (row.after_release_granularity, row.after_release_identification),
                 )
-                for row in connection.execute(text(
-                    "SELECT id, while_ongoing_granularity, while_ongoing_identification, "
-                    "after_release_granularity, after_release_identification "
-                    "FROM instrument_view_policies"
-                ))
+                for row in connection.execute(
+                    text(
+                        "SELECT id, while_ongoing_granularity, while_ongoing_identification, "
+                        "after_release_granularity, after_release_identification "
+                        "FROM instrument_view_policies"
+                    )
+                )
             }
             assert after == {1: (RAW, OFF), 2: (SUMM, OFF), 3: (OFF, SUMM)}
             connection.execute(text("DELETE FROM instrument_view_policies"))

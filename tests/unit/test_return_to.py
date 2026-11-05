@@ -125,9 +125,7 @@ def test_reviewer_root_resolves_to_your_reviews(db: Session) -> None:
 
 def test_reviewer_session_resolves_to_session_name(db: Session) -> None:
     session = _seed_session(db, name="Reviewer Session")
-    target = resolve_return_to(
-        f"/me/sessions/{session.public_id}", db, viewer=_owner(db, session)
-    )
+    target = resolve_return_to(f"/me/sessions/{session.public_id}", db, viewer=_owner(db, session))
     assert target.url == f"/me/sessions/{session.public_id}"
     assert target.label == "Reviewer Session"
 
@@ -155,9 +153,7 @@ def test_query_string_and_fragment_are_stripped(db: Session) -> None:
         "/operator/settings\n",
     ],
 )
-def test_paths_outside_allowlist_fall_back_to_default(
-    db: Session, raw: str
-) -> None:
+def test_paths_outside_allowlist_fall_back_to_default(db: Session, raw: str) -> None:
     assert resolve_return_to(raw, db, viewer=None) == PARTICIPANT_DEFAULT
 
 
@@ -206,9 +202,7 @@ def _fullwidth(text: str) -> str:
         "/operator/sessions/{id}/no/such/page",
     ],
 )
-def test_an_existing_session_still_falls_back_on_a_bad_path(
-    db: Session, shape: str
-) -> None:
+def test_an_existing_session_still_falls_back_on_a_bad_path(db: Session, shape: str) -> None:
     session = _seed_session(db)
     raw = shape.format(id=session.public_id, fw=_fullwidth(session.public_id))
     assert resolve_return_to(raw, db, viewer=_owner(db, session)) == DEFAULT_TARGET
@@ -237,9 +231,7 @@ def test_a_sys_admin_is_told_any_session_name(db: Session) -> None:
 
 
 @pytest.mark.parametrize("role", ["reviewer", "observer"])
-def test_an_active_reviewer_or_observer_is_told_the_name(
-    db: Session, role: str
-) -> None:
+def test_an_active_reviewer_or_observer_is_told_the_name(db: Session, role: str) -> None:
     session = _seed_session(db, name="Mine Too")
     viewer = _user(db, "pat@example.edu")
     if role == "reviewer":
@@ -286,11 +278,7 @@ def test_a_reviewee_without_a_grant_is_not_told_the_name(db: Session) -> None:
     link must not name the session either."""
     session = _seed_session(db, name="About You")
     viewer = _user(db, "dana@example.edu")
-    db.add(
-        Reviewee(
-            session_id=session.id, name="Dana", email_or_identifier="dana@example.edu"
-        )
-    )
+    db.add(Reviewee(session_id=session.id, name="Dana", email_or_identifier="dana@example.edu"))
     db.flush()
     raw = f"/me/sessions/{session.public_id}"
     assert resolve_return_to(raw, db, viewer=viewer) == PARTICIPANT_DEFAULT
@@ -329,11 +317,7 @@ def test_a_reviewee_is_told_the_name_while_a_grant_resolves(db: Session) -> None
     resolves, and not once the session goes back to draft."""
     session = _seed_session(db, name="Released")
     viewer = _user(db, "dana@example.edu")
-    db.add(
-        Reviewee(
-            session_id=session.id, name="Dana", email_or_identifier="dana@example.edu"
-        )
-    )
+    db.add(Reviewee(session_id=session.id, name="Dana", email_or_identifier="dana@example.edu"))
     _grant_reviewees(db, session)
     raw = f"/me/sessions/{session.public_id}"
     assert resolve_return_to(raw, db, viewer=viewer).label == "Released"
@@ -350,15 +334,10 @@ def test_a_grant_on_one_session_does_not_name_another(db: Session) -> None:
     ungranted = _second_session(db, granted, "Ungranted")
     viewer = _user(db, "dana@example.edu")
     for s in (granted, ungranted):
-        db.add(
-            Reviewee(
-                session_id=s.id, name="Dana", email_or_identifier="dana@example.edu"
-            )
-        )
+        db.add(Reviewee(session_id=s.id, name="Dana", email_or_identifier="dana@example.edu"))
     _grant_reviewees(db, granted)
     assert (
-        resolve_return_to(f"/me/sessions/{granted.public_id}", db, viewer=viewer).label
-        == "Granted"
+        resolve_return_to(f"/me/sessions/{granted.public_id}", db, viewer=viewer).label == "Granted"
     )
     raw = f"/me/sessions/{ungranted.public_id}"
     assert resolve_return_to(raw, db, viewer=viewer) == PARTICIPANT_DEFAULT

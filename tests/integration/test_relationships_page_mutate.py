@@ -7,6 +7,7 @@ server-rendered edit state + reviewer / reviewee search-box
 pickers, and the name-display table reshape. Add a new row is
 stage 3.
 """
+
 from __future__ import annotations
 
 import re
@@ -98,9 +99,7 @@ def _operator(db: Session) -> User:
 # --------------------------------------------------------------------------- #
 
 
-def test_update_repoints_reviewer_and_emits_changes(
-    db: Session, client: TestClient
-) -> None:
+def test_update_repoints_reviewer_and_emits_changes(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rel-m-svc-upd")
     rv, re_, rels = _seed(
         db,
@@ -117,17 +116,13 @@ def test_update_repoints_reviewer_and_emits_changes(
     )
     assert changes == {"reviewer_id": [rv[1].id, rv[0].id]}
     event = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "relationship.updated"
-        )
+        select(AuditEvent).where(AuditEvent.event_type == "relationship.updated")
     ).scalar_one()
     assert event.detail is not None
     assert event.detail["refs"]["relationship_id"] == rels[0].id
 
 
-def test_update_rejects_duplicate_pair(
-    db: Session, client: TestClient
-) -> None:
+def test_update_rejects_duplicate_pair(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rel-m-svc-dup")
     rv, re_, rels = _seed(
         db,
@@ -147,9 +142,7 @@ def test_update_rejects_duplicate_pair(
     assert exc_info.value.code == "duplicate_pair"
 
 
-def test_update_rejects_reviewer_outside_session(
-    db: Session, client: TestClient
-) -> None:
+def test_update_rejects_reviewer_outside_session(db: Session, client: TestClient) -> None:
     session_a = _make_session(client, db, code="rel-m-svc-xs-a")
     rv_a, re_a, rels_a = _seed(
         db,
@@ -176,9 +169,7 @@ def test_update_rejects_reviewer_outside_session(
     assert exc_info.value.code == "not_in_session"
 
 
-def test_bulk_inactivate_and_reactivate(
-    db: Session, client: TestClient
-) -> None:
+def test_bulk_inactivate_and_reactivate(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rel-m-svc-bulk")
     _rv, _re, rels = _seed(
         db,
@@ -209,9 +200,10 @@ def test_bulk_inactivate_and_reactivate(
         user=user,
     )
     db.expire_all()
-    assert db.execute(
-        select(Relationship).where(Relationship.id == rels[0].id)
-    ).scalar_one().status == "active"
+    assert (
+        db.execute(select(Relationship).where(Relationship.id == rels[0].id)).scalar_one().status
+        == "active"
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -219,9 +211,7 @@ def test_bulk_inactivate_and_reactivate(
 # --------------------------------------------------------------------------- #
 
 
-def test_plain_render_has_checkbox_column_and_name_display(
-    db: Session, client: TestClient
-) -> None:
+def test_plain_render_has_checkbox_column_and_name_display(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rel-m-plain")
     _seed(
         db,
@@ -230,9 +220,7 @@ def test_plain_render_has_checkbox_column_and_name_display(
         reviewees=["Jane Doe"],
         pairs=[(0, 0)],
     )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/relationships"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/relationships").text
     table = body[body.find('id="relationships-table"') :]
     # Checkbox column + selection-driven Edit button.
     assert 'class="relationship-select"' in table
@@ -246,9 +234,7 @@ def test_plain_render_has_checkbox_column_and_name_display(
     assert "reviewer-edit-row" not in table
 
 
-def test_edit_id_renders_pickers(
-    db: Session, client: TestClient
-) -> None:
+def test_edit_id_renders_pickers(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rel-m-editget")
     _rv, _re, rels = _seed(
         db,
@@ -258,8 +244,7 @@ def test_edit_id_renders_pickers(
         pairs=[(0, 0)],
     )
     body = client.get(
-        f"/operator/sessions/{review_session.public_id}/relationships"
-        f"?edit_id={rels[0].id}"
+        f"/operator/sessions/{review_session.public_id}/relationships?edit_id={rels[0].id}"
     ).text
     assert "relationship-edit-row" in body
     assert 'id="relationship-edit-form"' in body
@@ -279,9 +264,7 @@ def test_edit_id_renders_pickers(
     assert "operator-actions-filter is-locked" in body
 
 
-def test_picker_marks_inactive_members(
-    db: Session, client: TestClient
-) -> None:
+def test_picker_marks_inactive_members(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rel-m-inactopt")
     rv, _re, rels = _seed(
         db,
@@ -294,16 +277,13 @@ def test_picker_marks_inactive_members(
     db.commit()
 
     body = client.get(
-        f"/operator/sessions/{review_session.public_id}/relationships"
-        f"?edit_id={rels[0].id}"
+        f"/operator/sessions/{review_session.public_id}/relationships?edit_id={rels[0].id}"
     ).text
     assert "Peter (peter@example.edu) — inactive" in body
     assert "Ali (ali@example.edu) — inactive" not in body
 
 
-def test_edit_post_updates_and_redirects(
-    db: Session, client: TestClient
-) -> None:
+def test_edit_post_updates_and_redirects(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rel-m-editpost")
     rv, _re, rels = _seed(
         db,
@@ -313,8 +293,7 @@ def test_edit_post_updates_and_redirects(
         pairs=[(1, 0)],
     )
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/relationships/{rels[0].id}/update",
+        f"/operator/sessions/{review_session.public_id}/relationships/{rels[0].id}/update",
         data={
             "reviewer_pick": "Ali (ali@example.edu)",
             "reviewee_pick": "Jane (jane@example.edu)",
@@ -327,17 +306,13 @@ def test_edit_post_updates_and_redirects(
     )
     assert response.status_code == 303
     db.expire_all()
-    row = db.execute(
-        select(Relationship).where(Relationship.id == rels[0].id)
-    ).scalar_one()
+    row = db.execute(select(Relationship).where(Relationship.id == rels[0].id)).scalar_one()
     assert row.reviewer_id == rv[0].id
     assert row.tag_1 == "Supervisor"
     assert row.status == "inactive"
 
 
-def test_edit_post_duplicate_pair_rerenders_400(
-    db: Session, client: TestClient
-) -> None:
+def test_edit_post_duplicate_pair_rerenders_400(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rel-m-editdup")
     _rv, _re, rels = _seed(
         db,
@@ -347,8 +322,7 @@ def test_edit_post_duplicate_pair_rerenders_400(
         pairs=[(0, 0), (1, 0)],
     )
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/relationships/{rels[1].id}/update",
+        f"/operator/sessions/{review_session.public_id}/relationships/{rels[1].id}/update",
         data={
             # Ali (ali@example.edu) collides with rels[0].
             "reviewer_pick": "Ali (ali@example.edu)",
@@ -365,9 +339,7 @@ def test_edit_post_duplicate_pair_rerenders_400(
     assert "banner-error" in response.text
 
 
-def test_edit_post_unresolvable_pick_rerenders_400(
-    db: Session, client: TestClient
-) -> None:
+def test_edit_post_unresolvable_pick_rerenders_400(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rel-m-editbadpick")
     _rv, _re, rels = _seed(
         db,
@@ -377,8 +349,7 @@ def test_edit_post_unresolvable_pick_rerenders_400(
         pairs=[(0, 0)],
     )
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/relationships/{rels[0].id}/update",
+        f"/operator/sessions/{review_session.public_id}/relationships/{rels[0].id}/update",
         data={
             "reviewer_pick": "Nobody In Particular",
             "reviewee_pick": "Jane (jane@example.edu)",
@@ -403,21 +374,19 @@ def test_bulk_inactivate_route(db: Session, client: TestClient) -> None:
         pairs=[(0, 0), (0, 1)],
     )
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        "/relationships/bulk-inactivate",
+        f"/operator/sessions/{review_session.public_id}/relationships/bulk-inactivate",
         data={"relationship_ids": [rels[0].id]},
         follow_redirects=False,
     )
     assert response.status_code == 303
     db.expire_all()
-    assert db.execute(
-        select(Relationship).where(Relationship.id == rels[0].id)
-    ).scalar_one().status == "inactive"
+    assert (
+        db.execute(select(Relationship).where(Relationship.id == rels[0].id)).scalar_one().status
+        == "inactive"
+    )
 
 
-def test_bulk_action_keeps_filter(
-    db: Session, client: TestClient
-) -> None:
+def test_bulk_action_keeps_filter(db: Session, client: TestClient) -> None:
     """The active status + search filter rides through a bulk action
     so the operator lands back on the same filtered view."""
     review_session = _make_session(client, db, code="rel-m-keepfilter")
@@ -429,8 +398,7 @@ def test_bulk_action_keeps_filter(
         pairs=[(0, 0), (0, 1)],
     )
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        "/relationships/bulk-inactivate",
+        f"/operator/sessions/{review_session.public_id}/relationships/bulk-inactivate",
         data={
             "relationship_ids": [rels[0].id],
             "filter_status": "inactive",
@@ -443,12 +411,8 @@ def test_bulk_action_keeps_filter(
     assert "q=Jane" in loc
 
 
-def test_edit_mode_suppressed_on_ready_session(
-    db: Session, client: TestClient
-) -> None:
-    review_session = _make_session(
-        client, db, code="rel-m-ready", status="ready"
-    )
+def test_edit_mode_suppressed_on_ready_session(db: Session, client: TestClient) -> None:
+    review_session = _make_session(client, db, code="rel-m-ready", status="ready")
     _rv, _re, rels = _seed(
         db,
         review_session.id,
@@ -457,19 +421,14 @@ def test_edit_mode_suppressed_on_ready_session(
         pairs=[(0, 0)],
     )
     body = client.get(
-        f"/operator/sessions/{review_session.public_id}/relationships"
-        f"?edit_id={rels[0].id}"
+        f"/operator/sessions/{review_session.public_id}/relationships?edit_id={rels[0].id}"
     ).text
     assert "relationship-edit-row" not in body
     assert "card lock" in body
 
 
-def test_update_on_ready_session_is_409(
-    db: Session, client: TestClient
-) -> None:
-    review_session = _make_session(
-        client, db, code="rel-m-ready-upd", status="ready"
-    )
+def test_update_on_ready_session_is_409(db: Session, client: TestClient) -> None:
+    review_session = _make_session(client, db, code="rel-m-ready-upd", status="ready")
     _rv, _re, rels = _seed(
         db,
         review_session.id,
@@ -478,8 +437,7 @@ def test_update_on_ready_session_is_409(
         pairs=[(0, 0)],
     )
     response = client.post(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/relationships/{rels[0].id}/update",
+        f"/operator/sessions/{review_session.public_id}/relationships/{rels[0].id}/update",
         data={
             "reviewer_pick": "Ali (ali@example.edu)",
             "reviewee_pick": "Jane (jane@example.edu)",
@@ -495,9 +453,7 @@ def test_update_on_ready_session_is_409(
 # --------------------------------------------------------------------------- #
 
 
-def test_create_relationship_service(
-    db: Session, client: TestClient
-) -> None:
+def test_create_relationship_service(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rel-m-svc-create")
     rv, re_, _rels = _seed(
         db,
@@ -517,17 +473,13 @@ def test_create_relationship_service(
     assert rel.id is not None
     assert rel.tag_1 == "Supervisor"
     event = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "relationship.created"
-        )
+        select(AuditEvent).where(AuditEvent.event_type == "relationship.created")
     ).scalar_one()
     assert event.detail is not None
     assert event.detail["snapshot"]["reviewer_id"] == rv[0].id
 
 
-def test_create_service_rejects_duplicate_pair(
-    db: Session, client: TestClient
-) -> None:
+def test_create_service_rejects_duplicate_pair(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rel-m-svc-cdup")
     rv, re_, _rels = _seed(
         db,
@@ -547,9 +499,7 @@ def test_create_service_rejects_duplicate_pair(
     assert exc_info.value.code == "duplicate_pair"
 
 
-def test_add_renders_blank_picker_row(
-    db: Session, client: TestClient
-) -> None:
+def test_add_renders_blank_picker_row(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rel-m-addget")
     _seed(
         db,
@@ -558,9 +508,7 @@ def test_add_renders_blank_picker_row(
         reviewees=["Jane"],
         pairs=[],
     )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/relationships?add=1"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/relationships?add=1").text
     assert "relationship-edit-row" in body
     assert ">Add new relationship</h2>" not in body
     assert "Add new relationship" in body
@@ -572,9 +520,7 @@ def test_add_renders_blank_picker_row(
     assert "operator-actions-filter is-locked" in body
 
 
-def test_add_post_creates_and_redirects(
-    db: Session, client: TestClient
-) -> None:
+def test_add_post_creates_and_redirects(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rel-m-addpost")
     _seed(
         db,
@@ -597,16 +543,12 @@ def test_add_post_creates_and_redirects(
     )
     assert response.status_code == 303
     row = db.execute(
-        select(Relationship).where(
-            Relationship.session_id == review_session.id
-        )
+        select(Relationship).where(Relationship.session_id == review_session.id)
     ).scalar_one()
     assert row.tag_1 == "Supervisor"
 
 
-def test_add_post_duplicate_pair_rerenders_400(
-    db: Session, client: TestClient
-) -> None:
+def test_add_post_duplicate_pair_rerenders_400(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rel-m-adddup")
     _seed(
         db,
@@ -635,9 +577,7 @@ def test_add_post_duplicate_pair_rerenders_400(
     assert "Add new relationship" in response.text
 
 
-def test_add_post_unresolvable_pick_rerenders_400(
-    db: Session, client: TestClient
-) -> None:
+def test_add_post_unresolvable_pick_rerenders_400(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rel-m-addbadpick")
     _seed(
         db,
@@ -660,9 +600,7 @@ def test_add_post_unresolvable_pick_rerenders_400(
     assert "Nobody In Particular" in response.text
 
 
-def test_add_disabled_when_a_roster_is_empty(
-    db: Session, client: TestClient
-) -> None:
+def test_add_disabled_when_a_roster_is_empty(db: Session, client: TestClient) -> None:
     """A relationship needs both sides — Add is disabled with a hint
     when either roster is empty.
 
@@ -679,12 +617,8 @@ def test_add_disabled_when_a_roster_is_empty(
         reviewees=[],
         pairs=[],
     )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/relationships"
-    ).text
-    tooltip = re.search(
-        r'aria-disabled="true"\s+title="([^"]*)">Add new', body
-    )
+    body = client.get(f"/operator/sessions/{review_session.public_id}/relationships").text
+    tooltip = re.search(r'aria-disabled="true"\s+title="([^"]*)">Add new', body)
     assert tooltip is not None, "Add new should be disabled here"
     # Scoped to the tooltip, not the page: the guidance card says
     # "Replacing the Reviewers or Reviewees roster" a few hundred lines
@@ -696,12 +630,8 @@ def test_add_disabled_when_a_roster_is_empty(
     )
 
 
-def test_create_on_ready_session_is_409(
-    db: Session, client: TestClient
-) -> None:
-    review_session = _make_session(
-        client, db, code="rel-m-ready-create", status="ready"
-    )
+def test_create_on_ready_session_is_409(db: Session, client: TestClient) -> None:
+    review_session = _make_session(client, db, code="rel-m-ready-create", status="ready")
     _seed(
         db,
         review_session.id,

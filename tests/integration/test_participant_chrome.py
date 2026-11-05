@@ -22,8 +22,10 @@ _VERSION = f"<small>version {settings.app_version}</small>"
 def _participant(make_client) -> TestClient:
     return make_client(
         AuthenticatedUser(
-            principal_id="pat-oid", email="pat@example.edu",
-            name="Pat Participant", provider="aad",
+            principal_id="pat-oid",
+            email="pat@example.edu",
+            name="Pat Participant",
+            provider="aad",
         )
     )
 
@@ -37,9 +39,7 @@ def _seed_reviewer_session(client: TestClient, db: Session) -> ReviewSession:
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.code == "rrw-chrome")
     ).scalar_one()
-    db.add(
-        Reviewer(session_id=review_session.id, name="Pat", email="pat@example.edu")
-    )
+    db.add(Reviewer(session_id=review_session.id, name="Pat", email="pat@example.edu"))
     db.commit()
     return review_session
 
@@ -58,9 +58,7 @@ def test_an_operator_still_gets_the_settings_link(client: TestClient) -> None:
     assert _SETTINGS_LINK in client.get("/about").text
 
 
-def test_the_guide_shows_the_app_version(
-    client: TestClient, db: Session, make_client
-) -> None:
+def test_the_guide_shows_the_app_version(client: TestClient, db: Session, make_client) -> None:
     """The Guide's template environment never set `app_version`, so the
     operator chrome read "(version )". The account menu now shows it
     beside About, for operators only (20D)."""

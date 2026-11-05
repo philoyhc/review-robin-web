@@ -16,6 +16,7 @@ The gate itself isn't applied to every operator route until 16A
 PR 1b; here we exercise the dependency in isolation via a
 single test-only route mounted on the live FastAPI app.
 """
+
 from __future__ import annotations
 
 from collections.abc import Iterator
@@ -62,9 +63,7 @@ def _mount_test_route() -> Iterator[None]:
         yield
     finally:
         app.router.routes = [
-            r
-            for r in app.router.routes
-            if getattr(r, "path", None) != "/__test/operator-gated"
+            r for r in app.router.routes if getattr(r, "path", None) != "/__test/operator-gated"
         ]
 
 
@@ -136,9 +135,7 @@ def test_first_sign_in_outside_allowlist_creates_user_with_both_flags_false(
     assert response.status_code == 303
     assert response.headers["location"] == "/me?notice=organizers"
 
-    user = db.execute(
-        select(User).where(User.email == "alice@example.edu")
-    ).scalar_one()
+    user = db.execute(select(User).where(User.email == "alice@example.edu")).scalar_one()
     assert user.is_operator is False
     assert user.is_sys_admin is False
 
@@ -159,9 +156,7 @@ def test_operator_email_bootstrap_flips_is_operator_on_first_sign_in(
         "is_sys_admin": False,
     }
 
-    user = db.execute(
-        select(User).where(User.email == "alice@example.edu")
-    ).scalar_one()
+    user = db.execute(select(User).where(User.email == "alice@example.edu")).scalar_one()
     assert user.is_operator is True
     assert user.is_sys_admin is False
 
@@ -289,9 +284,7 @@ def test_super_admin_self_heals_existing_demoted_row_every_sign_in(
 
     # And the flags are persisted, not just computed for the response.
     db.expire_all()
-    refreshed = db.execute(
-        select(User).where(User.email == "alice@example.edu")
-    ).scalar_one()
+    refreshed = db.execute(select(User).where(User.email == "alice@example.edu")).scalar_one()
     assert refreshed.is_operator is True
     assert refreshed.is_sys_admin is True
 
@@ -361,9 +354,7 @@ def test_fake_auth_operator_toggle_grants_operator_on_first_sign_in(
 
     response = client.get("/__test/operator-gated")
     assert response.status_code == 200
-    user = db.execute(
-        select(User).where(User.email == "fake-op@example.edu")
-    ).scalar_one()
+    user = db.execute(select(User).where(User.email == "fake-op@example.edu")).scalar_one()
     assert user.is_operator is True
     assert user.is_sys_admin is False
 
@@ -384,9 +375,7 @@ def test_fake_auth_sys_admin_toggle_grants_sys_admin_on_first_sign_in(
 
     response = client.get("/__test/operator-gated")
     assert response.status_code == 200
-    user = db.execute(
-        select(User).where(User.email == "fake-admin@example.edu")
-    ).scalar_one()
+    user = db.execute(select(User).where(User.email == "fake-admin@example.edu")).scalar_one()
     assert user.is_sys_admin is True
 
 
@@ -414,9 +403,7 @@ def test_fake_user_roles_key_off_is_fake_alone(
         is_fake=True,
     )
     _make_client(db, fake_user).get("/__test/operator-gated")
-    user = db.execute(
-        select(User).where(User.email == "fake-both@example.edu")
-    ).scalar_one()
+    user = db.execute(select(User).where(User.email == "fake-both@example.edu")).scalar_one()
     assert (user.is_operator, user.is_sys_admin) == (operator_on, sys_admin_on)
 
 
@@ -524,9 +511,7 @@ def test_get_or_create_user_reuses_existing_row_without_reapplying_bootstrap(
     monkeypatch.setattr(settings, "operator_emails", ["alice@example.edu"])
 
     # Drive through the dependency to mimic a sign-in.
-    returned = get_or_create_user(
-        request=Request({"type": "http"}), current_user=auth_alice, db=db
-    )
+    returned = get_or_create_user(request=Request({"type": "http"}), current_user=auth_alice, db=db)
     assert returned.id == user.id
     assert returned.is_operator is False
 
@@ -552,17 +537,11 @@ def test_get_or_create_user_matches_existing_row_case_insensitively(
         name="Alice",
         provider="aad",
     )
-    returned = get_or_create_user(
-        request=Request({"type": "http"}), current_user=auth, db=db
-    )
+    returned = get_or_create_user(request=Request({"type": "http"}), current_user=auth, db=db)
     assert returned.id == existing.id
-    assert (
-        db.execute(select(User).where(User.email.ilike("alice@example.edu")))
-        .scalars()
-        .unique()
-        .all()
-        == [existing]
-    )
+    assert db.execute(
+        select(User).where(User.email.ilike("alice@example.edu"))
+    ).scalars().unique().all() == [existing]
 
 
 def test_get_or_create_user_resolves_historical_case_variant_duplicates(
@@ -595,9 +574,7 @@ def test_get_or_create_user_resolves_historical_case_variant_duplicates(
         name="Alice",
         provider="aad",
     )
-    returned = get_or_create_user(
-        request=Request({"type": "http"}), current_user=auth, db=db
-    )
+    returned = get_or_create_user(request=Request({"type": "http"}), current_user=auth, db=db)
     assert returned.id == older.id
 
 
@@ -621,9 +598,7 @@ def test_get_or_create_user_matches_existing_row_reverse_casing(
         name="Bob",
         provider="aad",
     )
-    returned = get_or_create_user(
-        request=Request({"type": "http"}), current_user=auth, db=db
-    )
+    returned = get_or_create_user(request=Request({"type": "http"}), current_user=auth, db=db)
     assert returned.id == existing.id
 
 
@@ -640,20 +615,14 @@ def test_get_or_create_user_stores_a_padded_claim_trimmed(
         name="Pad",
         provider="aad",
     )
-    first = get_or_create_user(
-        request=Request({"type": "http"}), current_user=auth, db=db
-    )
+    first = get_or_create_user(request=Request({"type": "http"}), current_user=auth, db=db)
     assert first.email == "Pad@example.edu"
-    second = get_or_create_user(
-        request=Request({"type": "http"}), current_user=auth, db=db
-    )
+    second = get_or_create_user(request=Request({"type": "http"}), current_user=auth, db=db)
     assert second.id == first.id
 
 
 @pytest.mark.parametrize("stored", [" Old@example.edu ", "\tOld@example.edu\r\n"])
-def test_a_row_stored_padded_before_the_fix_still_finds_its_owner(
-    db: Session, stored: str
-) -> None:
+def test_a_row_stored_padded_before_the_fix_still_finds_its_owner(db: Session, stored: str) -> None:
     """Findings P3, the read of #3108: a row an older build stored
     padded is found by the trimmed lookup, not shadowed by a second row
     that would lose its flags."""
@@ -667,9 +636,7 @@ def test_a_row_stored_padded_before_the_fix_still_finds_its_owner(
         provider="aad",
     )
 
-    found = get_or_create_user(
-        request=Request({"type": "http"}), current_user=auth, db=db
-    )
+    found = get_or_create_user(request=Request({"type": "http"}), current_user=auth, db=db)
 
     assert found.id == padded.id
     assert found.is_operator

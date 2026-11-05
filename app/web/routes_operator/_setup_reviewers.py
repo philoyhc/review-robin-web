@@ -58,7 +58,13 @@ router = APIRouter()
 
 
 _REVIEWER_SORT_KEYS = {
-    "name", "email", "tag_1", "tag_2", "tag_3", "status", "updated_at",
+    "name",
+    "email",
+    "tag_1",
+    "tag_2",
+    "tag_3",
+    "status",
+    "updated_at",
 }
 
 
@@ -111,16 +117,21 @@ async def reviewers_import_submit(
 
 @router.post("/sessions/{session_id}/reviewers/import/dismiss")
 def reviewers_import_dismiss(
-    request: Request, held_token: str | None = Form(default=None),
+    request: Request,
+    held_token: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     """The upload card's Dismiss while an ask holds its file: end the
     hold and return to the card (segment 19W)."""
-    return dismiss_held_upload(request,
-        db, held_token=held_token, user=user,
-        review_session=review_session, page="reviewers",
+    return dismiss_held_upload(
+        request,
+        db,
+        held_token=held_token,
+        user=user,
+        review_session=review_session,
+        page="reviewers",
     )
 
 
@@ -182,9 +193,7 @@ def _render_reviewers_page(
     # cap (200 unfiltered, 500 when either filter is applied). Cap is
     # applied after sort so the visible window is the same as the
     # operator's chosen sort order.
-    filtered = views.filter_reviewers_rows(
-        all_reviewers, status=status_filter, search=search
-    )
+    filtered = views.filter_reviewers_rows(all_reviewers, status=status_filter, search=search)
     is_filtered = status_filter != "all" or bool(search.strip())
     # Segment 19J.5 rung 2 — the cap became a page size. The shared
     # helper cuts the window, clamps a stale ``offset`` onto a real
@@ -208,9 +217,7 @@ def _render_reviewers_page(
     # plain edit GET, or left as the caller-supplied dict on an
     # error re-render.
     if edit_values is None and edit_id is not None:
-        edited = next(
-            (r for r in reviewers if r.id == edit_id), None
-        )
+        edited = next((r for r in reviewers if r.id == edit_id), None)
         if edited is not None:
             edit_values = {
                 "name": edited.name,
@@ -259,9 +266,7 @@ def _render_reviewers_page(
             "delete_discards_assignments": (
                 csv_imports.existing_assignment_count(db, review_session.id) > 0
             ),
-            "roster_response_count": lifecycle.session_response_count(
-                db, review_session
-            ),
+            "roster_response_count": lifecycle.session_response_count(db, review_session),
             # 19O.5 rung 2 — per row, because the expander's
             # confirmation names what THIS SELECTION costs and the
             # selection lives in the browser. `data-status` is the
@@ -270,9 +275,7 @@ def _render_reviewers_page(
             "relationships_per_row": roster_bulk.relationships_per_row(
                 db, model=Reviewer, session_id=review_session.id
             ),
-            "delete_discards_responses": (
-                lifecycle.session_has_responses(db, review_session)
-            ),
+            "delete_discards_responses": (lifecycle.session_has_responses(db, review_session)),
             "displayed_row_count": displayed_row_count,
             # Segment 19I Item 10 — the one preview-count
             # sentence the seven table pages share. The
@@ -296,9 +299,7 @@ def _render_reviewers_page(
             # not ``selected``: selection is page-local, and carrying
             # a hidden one across a page boundary is how an operator
             # deletes something they cannot see.
-            "pager_url_base": (
-                f"/operator/sessions/{review_session.public_id}/reviewers?"
-            ),
+            "pager_url_base": (f"/operator/sessions/{review_session.public_id}/reviewers?"),
             # The fragment the range links land on (19J.8): the
             # table's card, so a page turn arrives showing the card's
             # top edge, the column chips, the page links and the new
@@ -325,9 +326,7 @@ def _render_reviewers_page(
             "filter_status": status_filter,
             "filter_search": search,
             "filter_status_options": views.REVIEWERS_STATUS_OPTIONS,
-            "filter_search_options": views.reviewers_search_options(
-                all_reviewers
-            ),
+            "filter_search_options": views.reviewers_search_options(all_reviewers),
             "existing_count": csv_imports.existing_reviewer_count(db, review_session.id),
             "directory_check": views.last_directory_check(db, review_session, "reviewers"),
             "directory_unmatched": views.unmatched_count(db, review_session, "reviewers"),
@@ -358,9 +357,7 @@ def _render_reviewers_page(
             # participant info Item 1 — the reviewer's own fields on
             # the surface: the Unlock panel's chips and the readout
             # row's pills, from the stored selection or the default.
-            **views.reviewer_self_card_context(
-                review_session, column_state.readouts
-            ),
+            **views.reviewer_self_card_context(review_session, column_state.readouts),
             "edit_id": edit_id,
             "add_mode": add_mode,
             # 19P.1 — the Unlock panel's open state, server-rendered.
@@ -374,9 +371,7 @@ def _render_reviewers_page(
             "edit_values": edit_values,
             "edit_error": edit_error,
             "edit_confirm_group_clear": edit_confirm_group_clear,
-            "breadcrumbs": breadcrumbs.operator_session_child(
-                review_session, "Reviewers"
-            ),
+            "breadcrumbs": breadcrumbs.operator_session_child(review_session, "Reviewers"),
         },
         status_code=http_status,
     )
@@ -475,7 +470,8 @@ def reviewers_create(
     # sent and discarded, and the redirect was bare: after adding a
     # reviewer the page went back to the top of the document with the
     # filter dropped.
-    return _redirect_keeping_selection(request,
+    return _redirect_keeping_selection(
+        request,
         f"/operator/sessions/{review_session.public_id}/reviewers",
         [],
         filter_params=[("status", filter_status), ("q", filter_q)],
@@ -574,7 +570,8 @@ def reviewers_update(
             edit_confirm_group_clear=exc.count,
             http_status=status.HTTP_400_BAD_REQUEST,
         )
-    return _redirect_keeping_selection(request,
+    return _redirect_keeping_selection(
+        request,
         f"/operator/sessions/{review_session.public_id}/reviewers",
         [reviewer_id],
         filter_params=[("status", filter_status), ("q", filter_q)],
@@ -585,7 +582,8 @@ def reviewers_update(
 
 @router.post("/sessions/{session_id}/reviewers/bulk-inactivate")
 def reviewers_bulk_inactivate(
-    request: Request, reviewer_ids: list[int] = Form(default=[]),
+    request: Request,
+    reviewer_ids: list[int] = Form(default=[]),
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
@@ -603,10 +601,9 @@ def reviewers_bulk_inactivate(
             correlation_id=request_correlation_id(),
         )
     except ReviewerOperationError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
-        ) from exc
-    return _redirect_keeping_selection(request,
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
+    return _redirect_keeping_selection(
+        request,
         f"/operator/sessions/{review_session.public_id}/reviewers",
         reviewer_ids,
         filter_params=[("status", filter_status), ("q", filter_q)],
@@ -617,7 +614,8 @@ def reviewers_bulk_inactivate(
 
 @router.post("/sessions/{session_id}/reviewers/bulk-reactivate")
 def reviewers_bulk_reactivate(
-    request: Request, reviewer_ids: list[int] = Form(default=[]),
+    request: Request,
+    reviewer_ids: list[int] = Form(default=[]),
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
@@ -635,10 +633,9 @@ def reviewers_bulk_reactivate(
             correlation_id=request_correlation_id(),
         )
     except ReviewerOperationError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
-        ) from exc
-    return _redirect_keeping_selection(request,
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
+    return _redirect_keeping_selection(
+        request,
         f"/operator/sessions/{review_session.public_id}/reviewers",
         reviewer_ids,
         filter_params=[("status", filter_status), ("q", filter_q)],
@@ -649,7 +646,8 @@ def reviewers_bulk_reactivate(
 
 @router.post("/sessions/{session_id}/reviewers/delete-all")
 def reviewers_delete_all(
-    request: Request, confirm: str | None = Form(default=None),
+    request: Request,
+    confirm: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
@@ -679,11 +677,9 @@ def reviewers_delete_all(
     # route answers 303 like 3a's. It matched the status code; it did
     # not match the contract, which is what moving a control into the
     # panel actually costs.
-    return urls.redirect(request,
-        url=(
-            f"/operator/sessions/{review_session.public_id}/reviewers"
-            "?unlocked=1#roster-card"
-        ),
+    return urls.redirect(
+        request,
+        url=(f"/operator/sessions/{review_session.public_id}/reviewers?unlocked=1#roster-card"),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -718,11 +714,9 @@ async def reviewers_save_self_fields(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
         ) from exc
-    return urls.redirect(request,
-        url=(
-            f"/operator/sessions/{review_session.public_id}/reviewers"
-            "?unlocked=1#roster-card"
-        ),
+    return urls.redirect(
+        request,
+        url=(f"/operator/sessions/{review_session.public_id}/reviewers?unlocked=1#roster-card"),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -749,9 +743,7 @@ async def reviewers_save_field_labels(
 ) -> RedirectResponse:
     """Save the three reviewer tag labels for this session."""
     form = await request.form()
-    submitted = {
-        param: str(form.get(param, "")) for param, _ in _REVIEWER_SLOTS
-    }
+    submitted = {param: str(form.get(param, "")) for param, _ in _REVIEWER_SLOTS}
     # The labels service locks the session row (findings Bc4): wait for
     # it off the event loop.
     await run_in_threadpool(
@@ -767,18 +759,17 @@ async def reviewers_save_field_labels(
     # `?unlocked=1`: saving a label must not close the panel the label
     # editor lives in — the Lock control is what closes it. The fragment
     # lands on the card rather than the top of the document.
-    return urls.redirect(request,
-        url=(
-            f"/operator/sessions/{review_session.public_id}/reviewers"
-            "?unlocked=1#roster-card"
-        ),
+    return urls.redirect(
+        request,
+        url=(f"/operator/sessions/{review_session.public_id}/reviewers?unlocked=1#roster-card"),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
 
 @router.post("/sessions/{session_id}/reviewers/bulk-delete")
 def reviewers_bulk_delete(
-    request: Request, reviewer_ids: list[int] = Form(default=[]),
+    request: Request,
+    reviewer_ids: list[int] = Form(default=[]),
     confirm: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
     filter_status: str = Form(default="all"),
@@ -813,10 +804,9 @@ def reviewers_bulk_delete(
             correlation_id=request_correlation_id(),
         )
     except ReviewerOperationError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
-        ) from exc
-    return _redirect_keeping_selection(request,
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
+    return _redirect_keeping_selection(
+        request,
         f"/operator/sessions/{review_session.public_id}/reviewers",
         [],
         filter_params=[("status", filter_status), ("q", filter_q)],

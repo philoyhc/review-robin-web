@@ -33,6 +33,7 @@ Revises: e3ba5737e841
 Create Date: 2026-05-10
 
 """
+
 from __future__ import annotations
 
 import json
@@ -73,9 +74,7 @@ def upgrade() -> None:
         )
     ).fetchall()
 
-    pair_tags: dict[
-        tuple[int, int, int], dict[str, str | None]
-    ] = {}
+    pair_tags: dict[tuple[int, int, int], dict[str, str | None]] = {}
     for row in rows:
         session_id, reviewer_id, reviewee_id, context = row
         ctx = _coerce_context(context)
@@ -105,10 +104,7 @@ def upgrade() -> None:
     existing_relationships = {
         (s, r, e)
         for s, r, e in bind.execute(
-            sa.text(
-                "SELECT session_id, reviewer_id, reviewee_id "
-                "FROM relationships"
-            )
+            sa.text("SELECT session_id, reviewer_id, reviewee_id FROM relationships")
         ).fetchall()
     }
 
@@ -117,9 +113,7 @@ def upgrade() -> None:
 
     now = datetime.now(UTC)
     for (session_id, reviewer_id, reviewee_id), tags in pair_tags.items():
-        counts = by_session.setdefault(
-            session_id, {"scanned": 0, "migrated": 0, "skipped": 0}
-        )
+        counts = by_session.setdefault(session_id, {"scanned": 0, "migrated": 0, "skipped": 0})
         counts["scanned"] += 1
         if (session_id, reviewer_id, reviewee_id) in existing_relationships:
             counts["skipped"] += 1
@@ -151,10 +145,7 @@ def upgrade() -> None:
     for session_id, counts in by_session.items():
         # Pull the session row for the canonical detail envelope.
         session_row = bind.execute(
-            sa.text(
-                "SELECT code, created_by_user_id "
-                "FROM sessions WHERE id = :id"
-            ),
+            sa.text("SELECT code, created_by_user_id FROM sessions WHERE id = :id"),
             {"id": session_id},
         ).fetchone()
         if session_row is None:

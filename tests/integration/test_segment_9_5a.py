@@ -1,4 +1,5 @@
 """Segment 9.5A — `validated` lifecycle state and invalidation triggers."""
+
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
@@ -15,18 +16,14 @@ from ._public_id import public_id
 from ._validated import validate_session
 
 
-def _create_session(
-    client: TestClient, db: Session, code: str = "v1"
-) -> ReviewSession:
+def _create_session(client: TestClient, db: Session, code: str = "v1") -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "Spring Reviews", "code": code},
         follow_redirects=False,
     )
     assert response.status_code == 303
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _populate(client: TestClient, db: Session, session_id: int) -> None:
@@ -60,9 +57,7 @@ def _validate(db: Session, session_id: int) -> None:
     validate_session(db, session_id)
 
 
-def _validated_session(
-    client: TestClient, db: Session, code: str = "v1"
-) -> ReviewSession:
+def _validated_session(client: TestClient, db: Session, code: str = "v1") -> ReviewSession:
     session = _create_session(client, db, code=code)
     _populate(client, db, session.id)
     _validate(db, session.id)
@@ -76,9 +71,7 @@ def _validated_session(
 # --------------------------------------------------------------------------- #
 
 
-def test_the_assignments_page_never_promotes_a_draft(
-    client: TestClient, db: Session
-) -> None:
+def test_the_assignments_page_never_promotes_a_draft(client: TestClient, db: Session) -> None:
     """The retired ``?validated=1`` entry path (findings B15) used to
     flip a clean draft to ``validated`` on this GET; nothing does now."""
     session = _create_session(client, db, code="t1-ok")
@@ -91,9 +84,7 @@ def test_the_assignments_page_never_promotes_a_draft(
     assert session.status == "draft"
 
 
-def test_validate_deep_dive_does_not_flip_status(
-    client: TestClient, db: Session
-) -> None:
+def test_validate_deep_dive_does_not_flip_status(client: TestClient, db: Session) -> None:
     session = _create_session(client, db, code="t1-readonly")
     _populate(client, db, session.id)
 
@@ -128,9 +119,7 @@ def test_activate_rejects_from_draft(client: TestClient, db: Session) -> None:
     assert session.status == "draft"
 
 
-def test_activate_succeeds_from_validated(
-    client: TestClient, db: Session
-) -> None:
+def test_activate_succeeds_from_validated(client: TestClient, db: Session) -> None:
     session = _validated_session(client, db, code="t2-ok")
 
     response = client.post(
@@ -149,9 +138,7 @@ def test_activate_succeeds_from_validated(
 # --------------------------------------------------------------------------- #
 
 
-def _assert_invalidated(
-    db: Session, session: ReviewSession, *, expected_reason: str
-) -> None:
+def _assert_invalidated(db: Session, session: ReviewSession, *, expected_reason: str) -> None:
     db.refresh(session)
     assert session.status == "draft"
     event = db.execute(
@@ -164,9 +151,7 @@ def _assert_invalidated(
     assert event.detail["reason"] == expected_reason
 
 
-def test_reviewer_import_invalidates_validated(
-    client: TestClient, db: Session
-) -> None:
+def test_reviewer_import_invalidates_validated(client: TestClient, db: Session) -> None:
     session = _validated_session(client, db, code="inv-ri")
 
     client.post(
@@ -185,9 +170,7 @@ def test_reviewer_import_invalidates_validated(
     _assert_invalidated(db, session, expected_reason="reviewers_imported")
 
 
-def test_reviewee_import_invalidates_validated(
-    client: TestClient, db: Session
-) -> None:
+def test_reviewee_import_invalidates_validated(client: TestClient, db: Session) -> None:
     session = _validated_session(client, db, code="inv-ei")
 
     client.post(
@@ -206,9 +189,7 @@ def test_reviewee_import_invalidates_validated(
     _assert_invalidated(db, session, expected_reason="reviewees_imported")
 
 
-def test_reviewers_delete_all_invalidates_validated(
-    client: TestClient, db: Session
-) -> None:
+def test_reviewers_delete_all_invalidates_validated(client: TestClient, db: Session) -> None:
     session = _validated_session(client, db, code="inv-rda")
 
     client.post(
@@ -220,9 +201,7 @@ def test_reviewers_delete_all_invalidates_validated(
     _assert_invalidated(db, session, expected_reason="reviewers_deleted_all")
 
 
-def test_reviewees_delete_all_invalidates_validated(
-    client: TestClient, db: Session
-) -> None:
+def test_reviewees_delete_all_invalidates_validated(client: TestClient, db: Session) -> None:
     session = _validated_session(client, db, code="inv-eda")
 
     client.post(
@@ -234,9 +213,7 @@ def test_reviewees_delete_all_invalidates_validated(
     _assert_invalidated(db, session, expected_reason="reviewees_deleted_all")
 
 
-def test_assignments_generate_invalidates_validated(
-    client: TestClient, db: Session
-) -> None:
+def test_assignments_generate_invalidates_validated(client: TestClient, db: Session) -> None:
     session = _validated_session(client, db, code="inv-ag")
 
     pin_full_matrix_on_all_instruments(db, session.id)
@@ -250,9 +227,7 @@ def test_assignments_generate_invalidates_validated(
 # --------------------------------------------------------------------------- #
 
 
-def test_session_details_edit_does_not_invalidate(
-    client: TestClient, db: Session
-) -> None:
+def test_session_details_edit_does_not_invalidate(client: TestClient, db: Session) -> None:
     """findings Cc5 (author's ruling, 2026-10-05): no Details field can
     change the readiness verdict, so a Details save keeps `validated`."""
     session = _validated_session(client, db, code="noinv-se")
@@ -288,9 +263,7 @@ def test_session_details_edit_does_not_invalidate(
     ).first()
 
 
-def test_delete_data_does_not_invalidate(
-    client: TestClient, db: Session
-) -> None:
+def test_delete_data_does_not_invalidate(client: TestClient, db: Session) -> None:
     session = _validated_session(client, db, code="noinv-dd")
 
     response = client.post(
@@ -315,12 +288,16 @@ def test_validating_leaves_instruments_closed_without_invalidating(
     # Instruments open only on Activate (accepting is session-wide), so a
     # validated session's instrument is still closed, and validating it
     # fired no invalidate event.
-    invalidated = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "session.invalidated",
-            AuditEvent.session_id == session.id,
+    invalidated = (
+        db.execute(
+            select(AuditEvent).where(
+                AuditEvent.event_type == "session.invalidated",
+                AuditEvent.session_id == session.id,
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert invalidated == []
     db.refresh(session)
     assert session.status == "validated"
@@ -332,9 +309,7 @@ def test_validating_leaves_instruments_closed_without_invalidating(
 # --------------------------------------------------------------------------- #
 
 
-def test_revert_from_ready_lands_on_draft(
-    client: TestClient, db: Session
-) -> None:
+def test_revert_from_ready_lands_on_draft(client: TestClient, db: Session) -> None:
     session = _validated_session(client, db, code="d4")
     client.post(
         f"/operator/sessions/{session.public_id}/activate",
@@ -359,9 +334,7 @@ def test_revert_from_ready_lands_on_draft(
 # --------------------------------------------------------------------------- #
 
 
-def test_session_validated_audit_event(
-    client: TestClient, db: Session
-) -> None:
+def test_session_validated_audit_event(client: TestClient, db: Session) -> None:
     session = _create_session(client, db, code="audit-v")
     _populate(client, db, session.id)
 
@@ -383,9 +356,7 @@ def test_session_validated_audit_event(
 # --------------------------------------------------------------------------- #
 
 
-def test_reviewer_import_rejected_when_ready(
-    client: TestClient, db: Session
-) -> None:
+def test_reviewer_import_rejected_when_ready(client: TestClient, db: Session) -> None:
     session = _validated_session(client, db, code="lock-ready")
     client.post(
         f"/operator/sessions/{session.public_id}/activate",

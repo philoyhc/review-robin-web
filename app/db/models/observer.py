@@ -32,14 +32,10 @@ class Observer(Base, TimestampMixin):
     """
 
     __tablename__ = "observers"
-    __table_args__ = (
-        UniqueConstraint("session_id", "email", name="uq_observer_session_email"),
-    )
+    __table_args__ = (UniqueConstraint("session_id", "email", name="uq_observer_session_email"),)
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    session_id: Mapped[int] = mapped_column(
-        ForeignKey("sessions.id"), index=True, nullable=False
-    )
+    session_id: Mapped[int] = mapped_column(ForeignKey("sessions.id"), index=True, nullable=False)
     email: Mapped[str] = mapped_column(String(320), index=True, nullable=False)
     display_name: Mapped[str | None] = mapped_column(String(255))
     status: Mapped[str] = mapped_column(String(32), default="active", nullable=False)
@@ -49,9 +45,7 @@ class Observer(Base, TimestampMixin):
     directory_object_id: Mapped[str | None] = mapped_column(String(64), index=True)
     directory_mail: Mapped[str | None] = mapped_column(String(320))
     directory_upn: Mapped[str | None] = mapped_column(String(320))
-    cohort_rule: Mapped[dict[str, Any] | None] = mapped_column(
-        JSON, nullable=True
-    )
+    cohort_rule: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     """Per-observer cohort match rule (the Cohort match rule
     editor's payload). ``None`` = operator hasn't authored
     anything for this observer yet. Shape validated by

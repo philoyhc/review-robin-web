@@ -266,9 +266,7 @@ def build_quick_setup_context(
     # and only with a count to carry.
     _deletion_count = (
         error_count
-        if error_kind == "settings"
-        and error_reason == "deletes_instruments"
-        and error_count > 0
+        if error_kind == "settings" and error_reason == "deletes_instruments" and error_count > 0
         else 0
     )
     # The group answers a refused Relationships file would clear: named,
@@ -276,8 +274,7 @@ def build_quick_setup_context(
     # (findings S1).
     _clear_count = (
         error_count
-        if error_kind == "relationships"
-        and error_reason == "clears_group_answers"
+        if error_kind == "relationships" and error_reason == "clears_group_answers"
         else 0
     )
 
@@ -389,10 +386,7 @@ def build_quick_setup_context(
 
     # The description copy lists the slots that actually render so
     # the operator can see at a glance what they can bulk-populate.
-    slot_phrase = (
-        "reviewers, reviewees, relationships, observers, and "
-        "session settings"
-    )
+    slot_phrase = "reviewers, reviewees, relationships, observers, and session settings"
     if has_responses:
         # A session reverted from ``ready`` keeps its responses, so it
         # lands here in ``draft`` but permanently locked. Spell out
@@ -435,15 +429,11 @@ def build_quick_setup_context(
 #: The slots a refusal names, and the one reason a redirect carries:
 #: the Create page's ``refused`` (findings O7). Every other refusal
 #: re-renders Session Home, so no other code reaches the page by URL.
-_SLOT_KEYS = frozenset(
-    {"reviewers", "reviewees", "relationships", "observers", "settings"}
-)
+_SLOT_KEYS = frozenset({"reviewers", "reviewees", "relationships", "observers", "settings"})
 URL_REASONS = frozenset({"refused"})
 
 
-def quick_setup_kept_reviewees(
-    review_session: ReviewSession, contents: dict[str, bytes]
-) -> bool:
+def quick_setup_kept_reviewees(review_session: ReviewSession, contents: dict[str, bytes]) -> bool:
     """Whether a saved submit-all shows the kept-reviewees notice: its
     Settings file asked for symmetric review, which stayed off beside the
     session's roster rows, and it brought no Reviewees file, so the
@@ -462,9 +452,7 @@ class QuickSetupUrlFailure(TypedDict, total=False):
     error_reason: str
 
 
-def quick_setup_url_failure(
-    kind: str | None, reason: str | None
-) -> QuickSetupUrlFailure:
+def quick_setup_url_failure(kind: str | None, reason: str | None) -> QuickSetupUrlFailure:
     """The ``error_kind`` / ``error_reason`` keywords for
     :func:`build_quick_setup_context` from Session Home's
     ``?quick_setup_error=…&quick_setup_reason=…`` codes, or none for a
@@ -509,9 +497,7 @@ def settings_error_details(
             where.append(f"Row {error.row_number}")
         if error.field:
             where.append(error.field)
-        lines.append(
-            f"{', '.join(where)}: {error.message}" if where else error.message
-        )
+        lines.append(f"{', '.join(where)}: {error.message}" if where else error.message)
     return _capped(lines)
 
 
@@ -605,10 +591,7 @@ def _quick_setup_error_message(
             "Revert the session to draft before applying setup changes."
         )
     if reason == "needs_confirm":
-        return (
-            "Tick the replacement-confirmation box just above "
-            "Submit, then submit again."
-        )
+        return "Tick the replacement-confirmation box just above Submit, then submit again."
     if reason == "symmetric_reviewees":
         return (
             "Nothing was imported. Under symmetric review the reviewees are "
@@ -740,5 +723,3 @@ def build_new_session_quick_setup_context(
         show_confirm_replace=False,
         external_form_id="create-session-form" if is_wired else None,
     )
-
-

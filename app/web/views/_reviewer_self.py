@@ -76,9 +76,7 @@ def reviewer_self_chips(
     return self_chips(REVIEWER_SPEC, readouts, selected)
 
 
-def reviewer_self_kept(
-    chips: Iterable[SelfFieldChip], selected: Iterable[str]
-) -> list[str]:
+def reviewer_self_kept(chips: Iterable[SelfFieldChip], selected: Iterable[str]) -> list[str]:
     """Selected keys the card offers no chip for, in roster order."""
     return self_kept(REVIEWER_SPEC, chips, selected)
 
@@ -103,9 +101,7 @@ def reviewer_self_card_context(
     }
 
 
-def reviewer_self_readout(
-    review_session: ReviewSession, selected: Iterable[str]
-) -> list[str]:
+def reviewer_self_readout(review_session: ReviewSession, selected: Iterable[str]) -> list[str]:
     """The roster card's `Reviewers see:` pills, in roster order."""
     return self_readout(REVIEWER_SPEC, review_session, selected)
 

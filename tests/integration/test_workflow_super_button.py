@@ -8,6 +8,7 @@ the super-button itself is gone — every test below exercises one
 or both of the new ``POST /workflow/prepare`` and
 ``POST /workflow/activate`` routes.
 """
+
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
@@ -30,23 +31,17 @@ from ._full_matrix import pin_full_matrix_on_all_instruments
 from ._public_id import public_id
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": f"WSB-{code}", "code": code, "description": "d"},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
-def _seed_pair_plus_pinned(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _seed_pair_plus_pinned(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     review_session = _make_session(client, db, code=code)
     client.post(
         f"/operator/sessions/{review_session.public_id}/reviewers/import",
@@ -77,9 +72,7 @@ def _seed_pair_plus_pinned(
     return review_session
 
 
-def _seed_two_reviewers_plus_pinned(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _seed_two_reviewers_plus_pinned(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     """`_seed_pair_plus_pinned` with a second reviewer, for the cases
     that need one reviewer to change eligibility while another holds
     an invitation."""
@@ -89,8 +82,7 @@ def _seed_two_reviewers_plus_pinned(
         files={
             "file": (
                 "r.csv",
-                b"ReviewerName,ReviewerEmail\n"
-                b"Alice,alice@example.edu\nBob,bob@example.edu\n",
+                b"ReviewerName,ReviewerEmail\nAlice,alice@example.edu\nBob,bob@example.edu\n",
                 "text/csv",
             )
         },
@@ -132,9 +124,7 @@ def _full_activation(
         follow_redirects=False,
     )
     # Activate carries no acknowledge_response_loss form field.
-    activate_data = (
-        {"return_to": return_to} if return_to is not None else {}
-    )
+    activate_data = {"return_to": return_to} if return_to is not None else {}
     activate = client.post(
         f"/operator/sessions/{public_id(session_id)}/workflow/activate",
         data=activate_data,
@@ -181,11 +171,7 @@ def _seed_reverted_session_with_response(
     assert lifecycle.is_ready(review_session)
 
     assignment = (
-        db.execute(
-            select(Assignment).where(
-                Assignment.session_id == review_session.id
-            )
-        )
+        db.execute(select(Assignment).where(Assignment.session_id == review_session.id))
         .scalars()
         .first()
     )
@@ -230,8 +216,7 @@ def _seed_session_with_droppable_response(
         files={
             "file": (
                 "r.csv",
-                b"ReviewerName,ReviewerEmail\n"
-                b"Sam,sam@example.edu\nTom,tom@example.edu\n",
+                b"ReviewerName,ReviewerEmail\nSam,sam@example.edu\nTom,tom@example.edu\n",
                 "text/csv",
             )
         },
@@ -242,8 +227,7 @@ def _seed_session_with_droppable_response(
         files={
             "file": (
                 "e.csv",
-                b"RevieweeName,RevieweeEmail\n"
-                b"Sam,sam@example.edu\nDan,dan@example.edu\n",
+                b"RevieweeName,RevieweeEmail\nSam,sam@example.edu\nDan,dan@example.edu\n",
                 "text/csv",
             )
         },
@@ -289,10 +273,9 @@ def _seed_session_with_droppable_response(
     # "Self-review policy"). This is the recommended operator
     # path for suppressing self-reviews.
     from app.db.models import SessionRuleSet
+
     rule_set = db.execute(
-        select(SessionRuleSet).where(
-            SessionRuleSet.session_id == review_session.id
-        )
+        select(SessionRuleSet).where(SessionRuleSet.session_id == review_session.id)
     ).scalar_one()
     rule_set.rules_json = [
         {
@@ -348,9 +331,7 @@ def _audit_event_types(db: Session, session_id: int) -> list[str]:
 # --------------------------------------------------------------------------- #
 
 
-def test_prepare_lands_session_in_validated_and_audits(
-    client: TestClient, db: Session
-) -> None:
+def test_prepare_lands_session_in_validated_and_audits(client: TestClient, db: Session) -> None:
     review_session = _seed_pair_plus_pinned(client, db, code="happy-prep")
 
     response = client.post(
@@ -400,9 +381,7 @@ def test_prepare_redirects_to_session_home_without_return_to(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.public_id}"
-    )
+    assert response.headers["location"] == (f"/operator/sessions/{review_session.public_id}")
 
 
 def test_activate_redirects_to_session_home_without_return_to(
@@ -418,9 +397,7 @@ def test_activate_redirects_to_session_home_without_return_to(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.public_id}"
-    )
+    assert response.headers["location"] == (f"/operator/sessions/{review_session.public_id}")
 
 
 def test_activate_with_errors_at_revalidation_stays_validated(
@@ -445,9 +422,7 @@ def test_activate_with_errors_at_revalidation_stays_validated(
         _workflow.validation,
         "validate_session_setup",
         lambda db, session: [
-            ValidationIssue(
-                severity=Severity.error, source="instruments", message="broken"
-            )
+            ValidationIssue(severity=Severity.error, source="instruments", message="broken")
         ],
     )
     response = client.post(
@@ -491,9 +466,7 @@ def test_prepare_validate_failure_lands_in_draft_and_audits(
     )
     assert response.status_code == 303
     location = response.headers["location"]
-    assert location.startswith(
-        f"/operator/sessions/{review_session.public_id}/assignments?"
-    )
+    assert location.startswith(f"/operator/sessions/{review_session.public_id}/assignments?")
     assert "super_status=failed" in location
     assert "super_button=prepare" in location
     assert "super_step=validate" in location
@@ -513,12 +486,8 @@ def test_prepare_validate_failure_lands_in_draft_and_audits(
 # --------------------------------------------------------------------------- #
 
 
-def test_activate_refuses_when_session_already_ready(
-    client: TestClient, db: Session
-) -> None:
-    review_session = _seed_pair_plus_pinned(
-        client, db, code="precondition-ready"
-    )
+def test_activate_refuses_when_session_already_ready(client: TestClient, db: Session) -> None:
+    review_session = _seed_pair_plus_pinned(client, db, code="precondition-ready")
     _full_activation(client, review_session.id)
     db.refresh(review_session)
     assert lifecycle.is_ready(review_session)
@@ -535,15 +504,11 @@ def test_activate_refuses_when_session_already_ready(
     assert "super_step=precondition" in location
 
 
-def test_activate_refuses_when_session_not_prepared(
-    client: TestClient, db: Session
-) -> None:
+def test_activate_refuses_when_session_not_prepared(client: TestClient, db: Session) -> None:
     """Pre-flight gate — Activate runs only after Prepare has flipped
     the session to ``validated``. A draft session activates with
     super_button=activate&super_step=precondition."""
-    review_session = _seed_pair_plus_pinned(
-        client, db, code="precondition-draft"
-    )
+    review_session = _seed_pair_plus_pinned(client, db, code="precondition-draft")
     response = client.post(
         f"/operator/sessions/{review_session.public_id}/workflow/activate",
         data={"return_to": "assignments"},
@@ -561,9 +526,7 @@ def test_activate_refuses_when_session_not_prepared(
 # --------------------------------------------------------------------------- #
 
 
-def test_prepare_failure_banner_renders_in_right_column(
-    client: TestClient, db: Session
-) -> None:
+def test_prepare_failure_banner_renders_in_right_column(client: TestClient, db: Session) -> None:
     review_session = _seed_pair_plus_pinned(client, db, code="banner-prep")
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/assignments"
@@ -576,9 +539,7 @@ def test_prepare_failure_banner_renders_in_right_column(
     assert "Validation reported errors. The Validate page lists them." in body
 
 
-def test_activate_failure_banner_renders_in_right_column(
-    client: TestClient, db: Session
-) -> None:
+def test_activate_failure_banner_renders_in_right_column(client: TestClient, db: Session) -> None:
     review_session = _seed_pair_plus_pinned(client, db, code="banner-act")
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/assignments"
@@ -590,9 +551,7 @@ def test_activate_failure_banner_renders_in_right_column(
     assert "Activation requires acknowledging the warnings." in body
 
 
-def test_failure_banner_shows_no_text_from_the_url(
-    client: TestClient, db: Session
-) -> None:
+def test_failure_banner_shows_no_text_from_the_url(client: TestClient, db: Session) -> None:
     """``super_error`` is a code the card maps to fixed copy; a link
     carrying a sentence, or any unlisted code, adds no line under the
     headline, so a link cannot put its own words on the card (findings
@@ -620,9 +579,7 @@ def test_prepare_runs_through_when_reconcile_deletes_no_responses(
     """A reverted session whose roster is unchanged reconciles with no
     response loss — Prepare runs straight through with no
     confirmation detour, and the saved response survives."""
-    review_session = _seed_reverted_session_with_response(
-        client, db, code="no-loss"
-    )
+    review_session = _seed_reverted_session_with_response(client, db, code="no-loss")
     assert _response_count(db, review_session.id) == 1
 
     response = client.post(
@@ -645,9 +602,7 @@ def test_prepare_detours_when_reconcile_would_delete_responses(
 ) -> None:
     """When the reconcile would drop a pair that holds a response,
     Prepare 303s to ``?prepare_confirm=responses`` instead of running."""
-    review_session = _seed_session_with_droppable_response(
-        client, db, code="loss-detour"
-    )
+    review_session = _seed_session_with_droppable_response(client, db, code="loss-detour")
     assert _response_count(db, review_session.id) == 1
 
     response = client.post(
@@ -657,8 +612,7 @@ def test_prepare_detours_when_reconcile_would_delete_responses(
     )
     assert response.status_code == 303
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.public_id}"
-        f"/assignments?prepare_confirm=responses"
+        f"/operator/sessions/{review_session.public_id}/assignments?prepare_confirm=responses"
     )
 
     db.refresh(review_session)
@@ -672,9 +626,7 @@ def test_prepare_acknowledged_loss_regenerates_and_validates(
     """``acknowledge_response_loss=true`` runs past the detour: the
     orphaned self-pair and its response are deleted and the session
     lands in ``validated``."""
-    review_session = _seed_session_with_droppable_response(
-        client, db, code="loss-ack"
-    )
+    review_session = _seed_session_with_droppable_response(client, db, code="loss-ack")
     assert _response_count(db, review_session.id) == 1
 
     response = client.post(
@@ -695,18 +647,13 @@ def test_prepare_acknowledged_loss_regenerates_and_validates(
     assert _response_count(db, review_session.id) == 0
 
 
-def test_prepare_confirm_banner_renders_on_host_page(
-    client: TestClient, db: Session
-) -> None:
+def test_prepare_confirm_banner_renders_on_host_page(client: TestClient, db: Session) -> None:
     """The Workflow card renders the saved-response confirmation
     banner with the reconcile impact counts when a Prepare run
     would delete responses."""
-    review_session = _seed_session_with_droppable_response(
-        client, db, code="loss-banner"
-    )
+    review_session = _seed_session_with_droppable_response(client, db, code="loss-banner")
     body = client.get(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/assignments?prepare_confirm=responses"
+        f"/operator/sessions/{review_session.public_id}/assignments?prepare_confirm=responses"
     ).text
     assert 'id="next-action-prepare-confirm-banner"' in body
     normalized = " ".join(body.split())
@@ -723,12 +670,9 @@ def test_prepare_confirm_param_ignored_when_no_responses_lost(
     a run would delete no responses — the builder dry-runs the
     reconcile and guards on its impact, not on whether responses
     merely exist."""
-    review_session = _seed_reverted_session_with_response(
-        client, db, code="no-banner"
-    )
+    review_session = _seed_reverted_session_with_response(client, db, code="no-banner")
     body = client.get(
-        f"/operator/sessions/{review_session.public_id}"
-        f"/assignments?prepare_confirm=responses"
+        f"/operator/sessions/{review_session.public_id}/assignments?prepare_confirm=responses"
     ).text
     assert 'id="next-action-prepare-confirm-banner"' not in body
 
@@ -750,12 +694,11 @@ def test_workflow_close_flips_ready_to_expired_and_closes_instruments(
     assert lifecycle.is_ready(review_session)
 
     from app.db.models import Instrument
+
     open_instrument_ids_pre = [
         i.id
         for i in db.execute(
-            select(Instrument).where(
-                Instrument.session_id == review_session.id
-            )
+            select(Instrument).where(Instrument.session_id == review_session.id)
         ).scalars()
         if i.accepting_responses
     ]
@@ -770,9 +713,7 @@ def test_workflow_close_flips_ready_to_expired_and_closes_instruments(
     assert lifecycle.is_expired(review_session)
 
     for instrument in db.execute(
-        select(Instrument).where(
-            Instrument.session_id == review_session.id
-        )
+        select(Instrument).where(Instrument.session_id == review_session.id)
     ).scalars():
         assert instrument.accepting_responses is False
 
@@ -786,15 +727,10 @@ def test_workflow_close_flips_ready_to_expired_and_closes_instruments(
     )
     assert len(audit_rows) == 1
     assert audit_rows[0].detail is not None
-    assert (
-        audit_rows[0].detail["counts"]["closed_instruments"]
-        == len(open_instrument_ids_pre)
-    )
+    assert audit_rows[0].detail["counts"]["closed_instruments"] == len(open_instrument_ids_pre)
 
 
-def test_workflow_close_rejects_when_session_not_ready(
-    client: TestClient, db: Session
-) -> None:
+def test_workflow_close_rejects_when_session_not_ready(client: TestClient, db: Session) -> None:
     """``/workflow/close`` from a non-``ready`` session 303s with a
     failure-banner redirect rather than mutating state."""
     review_session = _seed_pair_plus_pinned(client, db, code="close-draft")
@@ -812,9 +748,7 @@ def test_workflow_close_rejects_when_session_not_ready(
     assert lifecycle.is_draft(review_session)
 
 
-def test_revert_from_expired_returns_session_to_draft(
-    client: TestClient, db: Session
-) -> None:
+def test_revert_from_expired_returns_session_to_draft(client: TestClient, db: Session) -> None:
     """Once the operator closes a session, Revert to draft reopens it
     for editing — same ``/sessions/{id}/revert`` route, the service
     accepts ``expired`` alongside ``ready``."""
@@ -837,20 +771,14 @@ def test_revert_from_expired_returns_session_to_draft(
     assert lifecycle.is_draft(review_session)
 
 
-def test_revert_from_expired_preserves_responses(
-    client: TestClient, db: Session
-) -> None:
+def test_revert_from_expired_preserves_responses(client: TestClient, db: Session) -> None:
     """``expired → draft`` revert keeps every ``Response`` row intact
     — same contract as ``ready → draft`` revert."""
-    review_session = _seed_pair_plus_pinned(
-        client, db, code="revert-expired-rows"
-    )
+    review_session = _seed_pair_plus_pinned(client, db, code="revert-expired-rows")
     _full_activation(client, review_session.id)
     db.refresh(review_session)
     assignment = db.execute(
-        select(Assignment).where(
-            Assignment.session_id == review_session.id
-        )
+        select(Assignment).where(Assignment.session_id == review_session.id)
     ).scalar_one()
     response_id = _attach_response(db, assignment=assignment, key="kept")
 
@@ -866,9 +794,7 @@ def test_revert_from_expired_preserves_responses(
     db.refresh(review_session)
     assert lifecycle.is_draft(review_session)
 
-    surviving = db.execute(
-        select(Response).where(Response.id == response_id)
-    ).scalar_one_or_none()
+    surviving = db.execute(select(Response).where(Response.id == response_id)).scalar_one_or_none()
     assert surviving is not None, "revert from expired must not drop responses"
 
 
@@ -889,9 +815,7 @@ def test_revert_from_expired_preserves_responses(
 # renders it in ``next_action_card.html``.
 
 
-def _failure_banner(
-    client: TestClient, session_id: int, *, button: str, step: str
-) -> str:
+def _failure_banner(client: TestClient, session_id: int, *, button: str, step: str) -> str:
     return client.get(
         f"/operator/sessions/{public_id(session_id)}/assignments"
         f"?super_status=failed&super_button={button}&super_step={step}"
@@ -899,23 +823,17 @@ def _failure_banner(
     ).text
 
 
-def test_close_failure_is_not_headlined_as_activate(
-    client: TestClient, db: Session
-) -> None:
+def test_close_failure_is_not_headlined_as_activate(client: TestClient, db: Session) -> None:
     """The defect itself. ``_workflow.py`` passes
     ``super_button="close"`` from both of Close session's failure
     paths."""
     review_session = _seed_pair_plus_pinned(client, db, code="hdl-close")
-    body = _failure_banner(
-        client, review_session.id, button="close", step="precondition"
-    )
+    body = _failure_banner(client, review_session.id, button="close", step="precondition")
     assert "Close session failed" in body
     assert "Activate session failed" not in body
 
 
-def test_release_responses_failure_uses_its_own_label(
-    client: TestClient, db: Session
-) -> None:
+def test_release_responses_failure_uses_its_own_label(client: TestClient, db: Session) -> None:
     review_session = _seed_pair_plus_pinned(client, db, code="hdl-rel")
     body = _failure_banner(
         client,
@@ -943,9 +861,7 @@ def test_stop_release_failure_uses_the_buttons_two_line_label(
     assert "Activate session failed" not in body
 
 
-def test_prepare_and_activate_still_read_as_before(
-    client: TestClient, db: Session
-) -> None:
+def test_prepare_and_activate_still_read_as_before(client: TestClient, db: Session) -> None:
     """The two the ternary got right stay right."""
     review_session = _seed_pair_plus_pinned(client, db, code="hdl-keep")
     assert "Prepare session failed" in _failure_banner(
@@ -956,16 +872,12 @@ def test_prepare_and_activate_still_read_as_before(
     )
 
 
-def test_unknown_button_reads_vague_rather_than_wrong(
-    client: TestClient, db: Session
-) -> None:
+def test_unknown_button_reads_vague_rather_than_wrong(client: TestClient, db: Session) -> None:
     """A value the map doesn't carry must not fall through to a
     named button. "Action failed" is uninformative; "Activate
     session failed" would be false."""
     review_session = _seed_pair_plus_pinned(client, db, code="hdl-unk")
-    body = _failure_banner(
-        client, review_session.id, button="teleport", step="precondition"
-    )
+    body = _failure_banner(client, review_session.id, button="teleport", step="precondition")
     assert "Action failed" in body
     for label in (
         "Prepare session failed",
@@ -977,28 +889,20 @@ def test_unknown_button_reads_vague_rather_than_wrong(
         assert label not in body
 
 
-def test_a_step_that_repeats_the_action_is_suppressed(
-    client: TestClient, db: Session
-) -> None:
+def test_a_step_that_repeats_the_action_is_suppressed(client: TestClient, db: Session) -> None:
     """``super_step="close"`` is Close session's own failure step
     (``_workflow.py`` LifecycleError path). "Close session failed
     at the Close session." says nothing twice."""
     review_session = _seed_pair_plus_pinned(client, db, code="hdl-dup")
-    body = _failure_banner(
-        client, review_session.id, button="close", step="close"
-    )
+    body = _failure_banner(client, review_session.id, button="close", step="close")
     assert "Close session failed." in body
     assert "at the Close session" not in body
 
 
-def test_a_distinct_step_still_renders(
-    client: TestClient, db: Session
-) -> None:
+def test_a_distinct_step_still_renders(client: TestClient, db: Session) -> None:
     """Suppression must not swallow an informative step."""
     review_session = _seed_pair_plus_pinned(client, db, code="hdl-step")
-    body = _failure_banner(
-        client, review_session.id, button="close", step="precondition"
-    )
+    body = _failure_banner(client, review_session.id, button="close", step="precondition")
     assert "at the pre-flight check" in body
 
 
@@ -1022,11 +926,7 @@ def test_prepare_creates_one_invitation_per_eligible_reviewer(
     assert lifecycle.is_validated(review_session)
 
     rows = list(
-        db.execute(
-            select(Invitation).where(
-                Invitation.session_id == review_session.id
-            )
-        ).scalars()
+        db.execute(select(Invitation).where(Invitation.session_id == review_session.id)).scalars()
     )
     assert len(rows) == 1
     assert rows[0].status == "pending"
@@ -1044,9 +944,7 @@ def test_prepare_creates_one_invitation_per_eligible_reviewer(
         ).scalars()
     )
     generated = [e for e in events if e.event_type == "invitations.generated"]
-    started = [
-        e for e in events if e.event_type == "session.workflow_run_started"
-    ]
+    started = [e for e in events if e.event_type == "session.workflow_run_started"]
     assert len(generated) == 1
     assert len(started) == 1
     assert generated[0].correlation_id is not None
@@ -1056,9 +954,7 @@ def test_prepare_creates_one_invitation_per_eligible_reviewer(
     )
 
 
-def test_a_failed_validation_creates_no_invitations(
-    client: TestClient, db: Session
-) -> None:
+def test_a_failed_validation_creates_no_invitations(client: TestClient, db: Session) -> None:
     """The reason creation sits *after* `mark_validated`.
 
     Minting rows for a setup the operator is still fixing is what
@@ -1082,9 +978,11 @@ def test_a_failed_validation_creates_no_invitations(
     # reachable by other means (a CSV that differs only in case, a
     # bundle import) and the point here is the validation branch, not
     # how the roster got there.
-    existing = db.execute(
-        select(Reviewee).where(Reviewee.session_id == review_session.id)
-    ).scalars().first()
+    existing = (
+        db.execute(select(Reviewee).where(Reviewee.session_id == review_session.id))
+        .scalars()
+        .first()
+    )
     assert existing is not None
     db.add(
         Reviewee(
@@ -1120,16 +1018,10 @@ def test_a_failed_validation_creates_no_invitations(
     ), "no included assignment, so this test cannot tell the orderings apart"
 
     assert (
-        db.execute(
-            select(Invitation).where(
-                Invitation.session_id == review_session.id
-            )
-        ).first()
+        db.execute(select(Invitation).where(Invitation.session_id == review_session.id)).first()
         is None
     )
-    assert "invitations.generated" not in _audit_event_types(
-        db, review_session.id
-    )
+    assert "invitations.generated" not in _audit_event_types(db, review_session.id)
 
 
 def test_re_prepare_is_additive_and_preserves_existing_tokens(
@@ -1151,9 +1043,7 @@ def test_re_prepare_is_additive_and_preserves_existing_tokens(
     an inactive reviewer reaches the same state through a route an
     operator actually has.
     """
-    review_session = _seed_two_reviewers_plus_pinned(
-        client, db, code="prep-inv-again"
-    )
+    review_session = _seed_two_reviewers_plus_pinned(client, db, code="prep-inv-again")
     latecomer = db.execute(
         select(Reviewer).where(
             Reviewer.session_id == review_session.id,
@@ -1194,18 +1084,13 @@ def test_re_prepare_is_additive_and_preserves_existing_tokens(
     assert lifecycle.is_validated(review_session)
 
     rows = list(
-        db.execute(
-            select(Invitation).where(
-                Invitation.session_id == review_session.id
-            )
-        ).scalars()
+        db.execute(select(Invitation).where(Invitation.session_id == review_session.id)).scalars()
     )
     assert len(rows) == 2, "the newly eligible reviewer was not picked up"
 
     kept = next(r for r in rows if r.id == original_id)
     assert kept.token_hash == original_hash, (
-        "the re-Prepare rotated an existing token; every invitation URL "
-        "already sent would be dead"
+        "the re-Prepare rotated an existing token; every invitation URL already sent would be dead"
     )
     assert kept.status == "pending"
 
@@ -1227,15 +1112,11 @@ def test_the_invite_step_names_itself_in_the_failure_banner(
     three steps went down, which is the whole reason the map exists.
     """
     review_session = _seed_pair_plus_pinned(client, db, code="prep-inv-banner")
-    body = _failure_banner(
-        client, review_session.id, button="prepare", step="invite"
-    )
+    body = _failure_banner(client, review_session.id, button="prepare", step="invite")
     assert "Prepare session failed at the Create invitations." in body
 
 
-def test_the_create_invites_route_is_gone(
-    client: TestClient, db: Session
-) -> None:
+def test_the_create_invites_route_is_gone(client: TestClient, db: Session) -> None:
     """Rung 2's constraint, inverted by rung 3.
 
     One rung ago this asserted the opposite —
@@ -1253,11 +1134,7 @@ def test_the_create_invites_route_is_gone(
         follow_redirects=False,
     )
     rows = list(
-        db.execute(
-            select(Invitation).where(
-                Invitation.session_id == review_session.id
-            )
-        ).scalars()
+        db.execute(select(Invitation).where(Invitation.session_id == review_session.id)).scalars()
     )
     assert len(rows) == 1, "Prepare is the creator now; it made nothing"
 

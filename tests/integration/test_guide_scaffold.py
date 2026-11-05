@@ -72,9 +72,7 @@ def test_every_committed_section_exists_in_the_template() -> None:
     card exists. Deleting a card would otherwise look identical to being
     filtered out of that viewer's page.
     """
-    template = (
-        REPO / "app" / "web" / "templates" / "guide.html"
-    ).read_text()
+    template = (REPO / "app" / "web" / "templates" / "guide.html").read_text()
     missing = [s for s in SECTION_HEADINGS if f"<h2>{s}</h2>" not in template]
     assert not missing, f"missing Guide sections: {missing}"
 
@@ -165,7 +163,6 @@ def test_chrome_omits_the_guide_link_on_the_guide_itself(client: TestClient) -> 
     assert 'href="/about?return_to=' in body
 
 
-
 # --------------------------------------------------------------------
 # The audience filter — Segment 19E rung 2.
 #
@@ -174,22 +171,16 @@ def test_chrome_omits_the_guide_link_on_the_guide_itself(client: TestClient) -> 
 # rot between now and then.
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     client.post(
         "/operator/sessions",
         data={"name": f"Guide {code}", "code": code},
         follow_redirects=False,
     )
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
-def _viewer(
-    db: Session, *, email: str = "nobody@example.edu", operator: bool = False
-) -> User:
+def _viewer(db: Session, *, email: str = "nobody@example.edu", operator: bool = False) -> User:
     user = User(
         email=email,
         display_name="Nobody",
@@ -252,9 +243,7 @@ def test_a_sys_admin_counts_as_an_operator(db: Session) -> None:
     assert OPERATOR in visible_audiences(db, viewer)
 
 
-def test_roles_come_from_roster_rows_in_any_session(
-    client: TestClient, db: Session
-) -> None:
+def test_roles_come_from_roster_rows_in_any_session(client: TestClient, db: Session) -> None:
     """Held-anywhere, not held-here: the Guide is one page for the whole
     workspace, so a reviewer on one session is a reviewer while reading it."""
     review_session = _make_session(client, db, code="guide-roles")
@@ -275,9 +264,7 @@ def test_roles_come_from_roster_rows_in_any_session(
     assert "create_and_set_up" not in visible_sections(db, viewer)
 
 
-def test_an_operator_who_is_also_a_reviewer_sees_both(
-    client: TestClient, db: Session
-) -> None:
+def test_an_operator_who_is_also_a_reviewer_sees_both(client: TestClient, db: Session) -> None:
     """The roles are not exclusive, and an operator reviewing on someone
     else's session is the ordinary case, not an edge one."""
     review_session = _make_session(client, db, code="guide-both")
@@ -350,8 +337,10 @@ def test_guide_bounces_a_no_audience_viewer_to_about(
 
     stranger = make_client(
         AuthenticatedUser(
-            principal_id="nul-oid", email="nul@example.edu",
-            name="Nul", provider="aad",
+            principal_id="nul-oid",
+            email="nul@example.edu",
+            name="Nul",
+            provider="aad",
         )
     )
     response = stranger.get("/guide", follow_redirects=False)
@@ -388,8 +377,10 @@ def test_an_ungranted_reviewee_is_bounced_like_a_stranger(
     db.commit()
     dana = make_client(
         AuthenticatedUser(
-            principal_id="dana-oid", email="dana@example.edu",
-            name="Dana", provider="aad",
+            principal_id="dana-oid",
+            email="dana@example.edu",
+            name="Dana",
+            provider="aad",
         )
     )
 
@@ -428,8 +419,10 @@ def test_a_padded_reviewee_identifier_reaches_the_guide(
     grant_reviewee_visibility(review_session)
     dana = make_client(
         AuthenticatedUser(
-            principal_id="dana-oid", email="dana@example.edu",
-            name="Dana", provider="aad",
+            principal_id="dana-oid",
+            email="dana@example.edu",
+            name="Dana",
+            provider="aad",
         )
     )
     assert dana.get("/guide", follow_redirects=False).status_code == 200
@@ -455,12 +448,18 @@ def test_the_chrome_hides_the_guide_link_for_a_no_audience_viewer(
     operator_body = make_client(bob).get("/about").text
     assert 'href="/guide?return_to=' in operator_body
 
-    stranger_body = make_client(
-        AuthenticatedUser(
-            principal_id="nul2-oid", email="nul2@example.edu",
-            name="Nul", provider="aad",
+    stranger_body = (
+        make_client(
+            AuthenticatedUser(
+                principal_id="nul2-oid",
+                email="nul2@example.edu",
+                name="Nul",
+                provider="aad",
+            )
         )
-    ).get("/about").text
+        .get("/about")
+        .text
+    )
     assert 'href="/guide?return_to=' not in stranger_body
     # And the identity line renders a name — /about depended on the
     # header-derived user until 19F PR 3, so this read "Signed in as "
@@ -486,11 +485,7 @@ def test_the_participant_chrome_gates_its_guide_link_like_base(
     but had no route to it from `/me` — the surface they land on.
     """
     review_session = _make_session(client, db, code="topbar")
-    db.add(
-        Reviewer(
-            session_id=review_session.id, name="Bob", email="bob@example.edu"
-        )
-    )
+    db.add(Reviewer(session_id=review_session.id, name="Bob", email="bob@example.edu"))
     db.commit()
 
     # Resolves the reviewer audience → the link renders, with the same
@@ -502,13 +497,17 @@ def test_the_participant_chrome_gates_its_guide_link_like_base(
     # Resolves nothing → no link, exactly as before. This is the half
     # that must not regress: `/guide` bounces such a viewer to `/about`,
     # so a link here would offer them the page that turns them away.
-    stranger = make_client(
-        AuthenticatedUser(
-            principal_id="topbar-oid",
-            email="topbar-stranger@example.edu",
-            name="Nul",
-            provider="aad",
+    stranger = (
+        make_client(
+            AuthenticatedUser(
+                principal_id="topbar-oid",
+                email="topbar-stranger@example.edu",
+                name="Nul",
+                provider="aad",
+            )
         )
-    ).get("/me").text
+        .get("/me")
+        .text
+    )
     assert 'href="/about' in stranger
     assert 'href="/guide' not in stranger

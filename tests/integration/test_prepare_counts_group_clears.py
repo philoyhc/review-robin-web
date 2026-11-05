@@ -266,7 +266,9 @@ def test_the_pages_that_read_staleness_report_a_rule_set_they_cannot_load(
     )
     assert confirm.status_code == 200
 
-    assert operator.get(f"/operator/sessions/{review_session.public_id}/validate").status_code == 200
+    assert (
+        operator.get(f"/operator/sessions/{review_session.public_id}/validate").status_code == 200
+    )
     issues = [
         issue
         for issue in validation.validate_session_setup(db, review_session)

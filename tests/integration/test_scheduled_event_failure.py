@@ -6,6 +6,7 @@ awaiting Azure), so an uncaught render or write error used to propagate
 and answer 500 on every load. Each trigger now runs guarded: rolled
 back, logged, recorded once as ``session.scheduled_event_failed``.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -26,9 +27,7 @@ def _make_session(client: TestClient, db: Session, code: str) -> ReviewSession:
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _failed_rows(db: Session, review_session: ReviewSession) -> list[AuditEvent]:
@@ -63,9 +62,7 @@ def test_session_home_renders_when_a_trigger_raises(
     client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     review_session = _make_session(client, db, "b20-home")
-    monkeypatch.setattr(
-        scheduled_events, "_observe_scheduled_invites", _boom("render failed")
-    )
+    monkeypatch.setattr(scheduled_events, "_observe_scheduled_invites", _boom("render failed"))
 
     response = client.get(f"/operator/sessions/{review_session.public_id}")
 
@@ -81,9 +78,7 @@ def test_later_triggers_still_run_after_one_raises(
 ) -> None:
     review_session = _make_session(client, db, "b20-later")
     ran: list[str] = []
-    monkeypatch.setattr(
-        scheduled_events, "_observe_scheduled_invites", lambda *a, **k: None
-    )
+    monkeypatch.setattr(scheduled_events, "_observe_scheduled_invites", lambda *a, **k: None)
     monkeypatch.setattr(
         scheduled_events, "_observe_scheduled_activation", _boom("activation failed")
     )
@@ -102,9 +97,7 @@ def test_a_repeated_failure_is_recorded_once(
     client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     review_session = _make_session(client, db, "b20-repeat")
-    monkeypatch.setattr(
-        scheduled_events, "_observe_scheduled_reminders", _boom("write failed")
-    )
+    monkeypatch.setattr(scheduled_events, "_observe_scheduled_reminders", _boom("write failed"))
 
     for _ in range(3):
         assert client.get(f"/operator/sessions/{review_session.public_id}").status_code == 200
@@ -118,13 +111,9 @@ def test_a_changed_failure_is_recorded_again(
     client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     review_session = _make_session(client, db, "b20-changed")
-    monkeypatch.setattr(
-        scheduled_events, "_observe_scheduled_reminders", _boom("first")
-    )
+    monkeypatch.setattr(scheduled_events, "_observe_scheduled_reminders", _boom("first"))
     scheduled_events.observe_scheduled_events(db, review_session)
-    monkeypatch.setattr(
-        scheduled_events, "_observe_scheduled_reminders", _boom("second")
-    )
+    monkeypatch.setattr(scheduled_events, "_observe_scheduled_reminders", _boom("second"))
     scheduled_events.observe_scheduled_events(db, review_session)
 
     reasons = [detail_of(row)["reason"] for row in _failed_rows(db, review_session)]
@@ -136,12 +125,8 @@ def test_two_failing_triggers_each_record_once(
     client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     review_session = _make_session(client, db, "b20-two")
-    monkeypatch.setattr(
-        scheduled_events, "_observe_scheduled_invites", _boom("invites failed")
-    )
-    monkeypatch.setattr(
-        scheduled_events, "_observe_scheduled_reminders", _boom("reminders failed")
-    )
+    monkeypatch.setattr(scheduled_events, "_observe_scheduled_invites", _boom("invites failed"))
+    monkeypatch.setattr(scheduled_events, "_observe_scheduled_reminders", _boom("reminders failed"))
 
     for _ in range(3):
         assert client.get(f"/operator/sessions/{review_session.public_id}").status_code == 200
@@ -170,9 +155,7 @@ def test_a_failure_to_record_is_swallowed(
     client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     review_session = _make_session(client, db, "b20-norecord")
-    monkeypatch.setattr(
-        scheduled_events, "_observe_scheduled_invites", _boom("render failed")
-    )
+    monkeypatch.setattr(scheduled_events, "_observe_scheduled_invites", _boom("render failed"))
 
     real_write = scheduled_events.audit.write_event
 
@@ -194,9 +177,7 @@ def test_an_audit_schema_error_recording_the_failure_propagates(
     client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     review_session = _make_session(client, db, "b20-strict-record")
-    monkeypatch.setattr(
-        scheduled_events, "_observe_scheduled_invites", _boom("render failed")
-    )
+    monkeypatch.setattr(scheduled_events, "_observe_scheduled_invites", _boom("render failed"))
     real_write = scheduled_events.audit.write_event
 
     def _drift(*args, **kwargs):
@@ -220,9 +201,7 @@ def test_an_invites_failure_holds_activation_for_that_pass(
     invitations. Reminders, anchored on the deadline, still run."""
     review_session = _make_session(client, db, "b20-hold")
     ran: list[str] = []
-    monkeypatch.setattr(
-        scheduled_events, "_observe_scheduled_invites", _boom("invites failed")
-    )
+    monkeypatch.setattr(scheduled_events, "_observe_scheduled_invites", _boom("invites failed"))
     monkeypatch.setattr(
         scheduled_events,
         "_observe_scheduled_activation",

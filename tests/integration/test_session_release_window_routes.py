@@ -44,13 +44,9 @@ def _make_session(
     payload = {"name": "S", "code": code, "description": ""}
     if data:
         payload.update(data)
-    response = client.post(
-        "/operator/sessions", data=payload, follow_redirects=False
-    )
+    response = client.post("/operator/sessions", data=payload, follow_redirects=False)
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _submit_edit(
@@ -76,9 +72,7 @@ def _submit_edit(
 # ── Create-session route ──────────────────────────────────────────────
 
 
-def test_create_persists_release_window_pair(
-    client: TestClient, db: Session
-) -> None:
+def test_create_persists_release_window_pair(client: TestClient, db: Session) -> None:
     review_session = _make_session(
         client,
         db,
@@ -90,17 +84,11 @@ def test_create_persists_release_window_pair(
         },
     )
     db.refresh(review_session)
-    assert _naive_utc(review_session.responses_release_at) == datetime(
-        2027, 1, 1, 12, 0
-    )
-    assert _naive_utc(review_session.responses_release_until) == datetime(
-        2027, 1, 31, 12, 0
-    )
+    assert _naive_utc(review_session.responses_release_at) == datetime(2027, 1, 1, 12, 0)
+    assert _naive_utc(review_session.responses_release_until) == datetime(2027, 1, 31, 12, 0)
 
 
-def test_create_allows_until_without_anchor(
-    client: TestClient, db: Session
-) -> None:
+def test_create_allows_until_without_anchor(client: TestClient, db: Session) -> None:
     """The §8.2.2 anchor-null rule is enforced at view time; save
     allows an until alone, which the consumer will treat as inert
     until the anchor is set. Magnitude / ordering checks skip when
@@ -116,14 +104,10 @@ def test_create_allows_until_without_anchor(
     )
     db.refresh(review_session)
     assert review_session.responses_release_at is None
-    assert _naive_utc(review_session.responses_release_until) == datetime(
-        2027, 2, 15, 12, 0
-    )
+    assert _naive_utc(review_session.responses_release_until) == datetime(2027, 2, 15, 12, 0)
 
 
-def test_create_rejects_malformed_release_at(
-    client: TestClient, db: Session
-) -> None:
+def test_create_rejects_malformed_release_at(client: TestClient, db: Session) -> None:
     response = client.post(
         "/operator/sessions",
         data={
@@ -139,9 +123,7 @@ def test_create_rejects_malformed_release_at(
     assert "Release responses from" in response.text
 
 
-def test_create_rejects_malformed_until(
-    client: TestClient, db: Session
-) -> None:
+def test_create_rejects_malformed_until(client: TestClient, db: Session) -> None:
     response = client.post(
         "/operator/sessions",
         data={
@@ -157,9 +139,7 @@ def test_create_rejects_malformed_until(
     assert "Release responses until" in response.text
 
 
-def test_create_rejects_until_at_or_before_anchor(
-    client: TestClient, db: Session
-) -> None:
+def test_create_rejects_until_at_or_before_anchor(client: TestClient, db: Session) -> None:
     response = client.post(
         "/operator/sessions",
         data={
@@ -176,9 +156,7 @@ def test_create_rejects_until_at_or_before_anchor(
     assert "after Release responses from" in response.text
 
 
-def test_create_rejects_until_exceeding_365d_from_anchor(
-    client: TestClient, db: Session
-) -> None:
+def test_create_rejects_until_exceeding_365d_from_anchor(client: TestClient, db: Session) -> None:
     response = client.post(
         "/operator/sessions",
         data={
@@ -198,9 +176,7 @@ def test_create_rejects_until_exceeding_365d_from_anchor(
 # ── Edit route ────────────────────────────────────────────────────────
 
 
-def test_edit_persists_release_window_pair(
-    client: TestClient, db: Session
-) -> None:
+def test_edit_persists_release_window_pair(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="rw-edit")
     code = _submit_edit(
         client,
@@ -211,17 +187,11 @@ def test_edit_persists_release_window_pair(
     )
     assert code == 303
     db.refresh(review_session)
-    assert _naive_utc(review_session.responses_release_at) == datetime(
-        2027, 2, 1, 9, 30
-    )
-    assert _naive_utc(review_session.responses_release_until) == datetime(
-        2027, 2, 8, 9, 30
-    )
+    assert _naive_utc(review_session.responses_release_at) == datetime(2027, 2, 1, 9, 30)
+    assert _naive_utc(review_session.responses_release_until) == datetime(2027, 2, 8, 9, 30)
 
 
-def test_edit_clears_release_window_on_blank_input(
-    client: TestClient, db: Session
-) -> None:
+def test_edit_clears_release_window_on_blank_input(client: TestClient, db: Session) -> None:
     review_session = _make_session(
         client,
         db,
@@ -245,9 +215,7 @@ def test_edit_clears_release_window_on_blank_input(
     assert review_session.responses_release_until is None
 
 
-def test_edit_form_prefills_saved_release_window_values(
-    client: TestClient, db: Session
-) -> None:
+def test_edit_form_prefills_saved_release_window_values(client: TestClient, db: Session) -> None:
     review_session = _make_session(
         client,
         db,
@@ -258,23 +226,17 @@ def test_edit_form_prefills_saved_release_window_values(
             "display_timezone": "UTC",
         },
     )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}?editing=1"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}?editing=1").text
     # Both inputs prefilled in session zone (UTC), as 24-hour text.
     assert 'value="2027-03-01 10:00"' in body
     assert 'value="2027-03-15 10:00"' in body
 
 
-def test_edit_until_renders_as_a_date_time_field(
-    client: TestClient, db: Session
-) -> None:
+def test_edit_until_renders_as_a_date_time_field(client: TestClient, db: Session) -> None:
     """S12 swapped the text+ISO-duration input to a date-time box; 19X
     Item 6 made it the 24-hour text field. The offset shape is gone."""
     review_session = _make_session(client, db, code="rw-shape")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}?editing=1"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}?editing=1").text
     assert 'type="text" id="mock-release-until"' in body
     assert 'type="datetime-local" id="mock-release-until"' not in body
     assert 'name="release_until_offset"' not in body
@@ -295,27 +257,35 @@ def test_home_boxes_are_date_time_fields_and_a_spaced_save_keeps_them(
             "display_timezone": "UTC",
         },
     )
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}?editing=1"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}?editing=1").text
     for box in ("mock-start", "mock-end", "mock-release-from", "mock-release-until"):
         assert f'type="text" id="{box}"' in body
     assert body.count('class="dt-field" data-dt-field') == 4
-    assert body.count('data-dt-pick hidden') == 4
-    assert body.count('data-dt-clear hidden') == 4
+    assert body.count("data-dt-pick hidden") == 4
+    assert body.count("data-dt-clear hidden") == 4
     # The data-tz-utc seed keeps its `T` form for the zone script.
     assert 'data-tz-utc="2027-03-01T10:00"' in body
 
     # The box's own text saves as no change; a typed one reads either way.
-    assert _submit_edit(
-        client, review_session, display_timezone="UTC",
-        responses_release_at="2027-03-01 10:00",
-    ) == 303
+    assert (
+        _submit_edit(
+            client,
+            review_session,
+            display_timezone="UTC",
+            responses_release_at="2027-03-01 10:00",
+        )
+        == 303
+    )
     db.refresh(review_session)
     assert _naive_utc(review_session.responses_release_at) == datetime(2027, 3, 1, 10, 0)
-    assert _submit_edit(
-        client, review_session, display_timezone="UTC",
-        responses_release_at="2027-03-02 08:30",
-    ) == 303
+    assert (
+        _submit_edit(
+            client,
+            review_session,
+            display_timezone="UTC",
+            responses_release_at="2027-03-02 08:30",
+        )
+        == 303
+    )
     db.refresh(review_session)
     assert _naive_utc(review_session.responses_release_at) == datetime(2027, 3, 2, 8, 30)

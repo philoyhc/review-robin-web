@@ -34,23 +34,17 @@ from ._public_id import public_id
 # --------------------------------------------------------------------------- #
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": f"Session {code}", "code": code},
         follow_redirects=False,
     )
     assert response.status_code == 303
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
-def _add_instruments(
-    client: TestClient, session_id: int, n: int
-) -> None:
+def _add_instruments(client: TestClient, session_id: int, n: int) -> None:
     """Add n more instruments to the session (default-seeded session
     already has one)."""
     pid = public_id(session_id)
@@ -68,7 +62,9 @@ def _ordered(db: Session, session_id: int) -> list[Instrument]:
             select(Instrument)
             .where(Instrument.session_id == session_id)
             .order_by(Instrument.order, Instrument.id)
-        ).scalars().all()
+        )
+        .scalars()
+        .all()
     )
 
 
@@ -83,9 +79,7 @@ def _actor(db: Session) -> User:
 # --------------------------------------------------------------------------- #
 
 
-def test_new_instrument_defaults_starts_new_page_false(
-    client: TestClient, db: Session
-) -> None:
+def test_new_instrument_defaults_starts_new_page_false(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="bf-1")
     instruments = _ordered(db, review_session.id)
     # Seeded default instrument: False per model default (post-migration
@@ -99,9 +93,7 @@ def test_new_instrument_defaults_starts_new_page_false(
 # --------------------------------------------------------------------------- #
 
 
-def test_reorder_swaps_two_instruments(
-    client: TestClient, db: Session
-) -> None:
+def test_reorder_swaps_two_instruments(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="ro-1")
     _add_instruments(client, review_session.id, 1)
     a, b = _ordered(db, review_session.id)
@@ -119,9 +111,7 @@ def test_reorder_swaps_two_instruments(
     assert a.starts_new_page is False
 
 
-def test_reorder_inserts_a_page_break(
-    client: TestClient, db: Session
-) -> None:
+def test_reorder_inserts_a_page_break(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="ro-2")
     _add_instruments(client, review_session.id, 2)
     a, b, c = _ordered(db, review_session.id)
@@ -142,9 +132,7 @@ def test_reorder_inserts_a_page_break(
     assert c.starts_new_page is False
 
 
-def test_reorder_removes_a_page_break(
-    client: TestClient, db: Session
-) -> None:
+def test_reorder_removes_a_page_break(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="ro-3")
     _add_instruments(client, review_session.id, 1)
     a, b = _ordered(db, review_session.id)
@@ -161,9 +149,7 @@ def test_reorder_removes_a_page_break(
     assert b.starts_new_page is False
 
 
-def test_reorder_drag_across_break_relocates_via_re_derive(
-    client: TestClient, db: Session
-) -> None:
+def test_reorder_drag_across_break_relocates_via_re_derive(client: TestClient, db: Session) -> None:
     """Per the locked algorithm, flags are re-derived from list
     position — so dragging an instrument across a break makes the
     break stay where the post-drop list places it."""
@@ -194,9 +180,7 @@ def test_reorder_drag_across_break_relocates_via_re_derive(
     assert d.starts_new_page is False
 
 
-def test_reorder_no_op_skips_audit_and_lifecycle(
-    client: TestClient, db: Session
-) -> None:
+def test_reorder_no_op_skips_audit_and_lifecycle(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="ro-5")
     _add_instruments(client, review_session.id, 1)
     a, b = _ordered(db, review_session.id)
@@ -224,11 +208,15 @@ def test_reorder_emits_audit_event(client: TestClient, db: Session) -> None:
         actor=_actor(db),
     )
     assert _audit_count(db, "instruments.reordered") == before + 1
-    event = db.execute(
-        select(AuditEvent)
-        .where(AuditEvent.event_type == "instruments.reordered")
-        .order_by(AuditEvent.id.desc())
-    ).scalars().first()
+    event = (
+        db.execute(
+            select(AuditEvent)
+            .where(AuditEvent.event_type == "instruments.reordered")
+            .order_by(AuditEvent.id.desc())
+        )
+        .scalars()
+        .first()
+    )
     assert event is not None
     assert event.detail is not None
     assert event.detail["changes"]["instrument_order"] == [
@@ -243,9 +231,7 @@ def test_reorder_emits_audit_event(client: TestClient, db: Session) -> None:
 # --------------------------------------------------------------------------- #
 
 
-def test_reorder_rejects_leading_page_break(
-    client: TestClient, db: Session
-) -> None:
+def test_reorder_rejects_leading_page_break(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="rj-1")
     _add_instruments(client, review_session.id, 1)
     a, b = _ordered(db, review_session.id)
@@ -258,9 +244,7 @@ def test_reorder_rejects_leading_page_break(
         )
 
 
-def test_reorder_rejects_trailing_page_break(
-    client: TestClient, db: Session
-) -> None:
+def test_reorder_rejects_trailing_page_break(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="rj-2")
     _add_instruments(client, review_session.id, 1)
     a, b = _ordered(db, review_session.id)
@@ -273,9 +257,7 @@ def test_reorder_rejects_trailing_page_break(
         )
 
 
-def test_reorder_rejects_double_stacked_breaks(
-    client: TestClient, db: Session
-) -> None:
+def test_reorder_rejects_double_stacked_breaks(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="rj-3")
     _add_instruments(client, review_session.id, 1)
     a, b = _ordered(db, review_session.id)
@@ -288,9 +270,7 @@ def test_reorder_rejects_double_stacked_breaks(
         )
 
 
-def test_reorder_rejects_duplicate_instrument_id(
-    client: TestClient, db: Session
-) -> None:
+def test_reorder_rejects_duplicate_instrument_id(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="rj-4")
     _add_instruments(client, review_session.id, 1)
     a, b = _ordered(db, review_session.id)
@@ -303,9 +283,7 @@ def test_reorder_rejects_duplicate_instrument_id(
         )
 
 
-def test_reorder_rejects_missing_instrument_id(
-    client: TestClient, db: Session
-) -> None:
+def test_reorder_rejects_missing_instrument_id(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="rj-5")
     _add_instruments(client, review_session.id, 1)
     a, _b = _ordered(db, review_session.id)
@@ -318,11 +296,9 @@ def test_reorder_rejects_missing_instrument_id(
         )
 
 
-def test_reorder_rejects_unknown_instrument_id(
-    client: TestClient, db: Session
-) -> None:
+def test_reorder_rejects_unknown_instrument_id(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="rj-6")
-    a, = _ordered(db, review_session.id)
+    (a,) = _ordered(db, review_session.id)
     with pytest.raises(ValueError, match="enumerate every instrument"):
         instruments_service.reorder_instruments(
             db,
@@ -337,25 +313,25 @@ def test_reorder_rejects_unknown_instrument_id(
 # --------------------------------------------------------------------------- #
 
 
-def test_create_page_break_after_sets_flag_on_successor(
-    client: TestClient, db: Session
-) -> None:
+def test_create_page_break_after_sets_flag_on_successor(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="cb-1")
     _add_instruments(client, review_session.id, 1)
     a, b = _ordered(db, review_session.id)
     before = _audit_count(db, "instrument.page_break_set")
 
-    instruments_service.create_page_break_after(
-        db, instrument=a, actor=_actor(db)
-    )
+    instruments_service.create_page_break_after(db, instrument=a, actor=_actor(db))
     db.refresh(b)
     assert b.starts_new_page is True
     assert _audit_count(db, "instrument.page_break_set") == before + 1
-    event = db.execute(
-        select(AuditEvent)
-        .where(AuditEvent.event_type == "instrument.page_break_set")
-        .order_by(AuditEvent.id.desc())
-    ).scalars().first()
+    event = (
+        db.execute(
+            select(AuditEvent)
+            .where(AuditEvent.event_type == "instrument.page_break_set")
+            .order_by(AuditEvent.id.desc())
+        )
+        .scalars()
+        .first()
+    )
     assert event is not None
     assert event.detail is not None
     assert event.detail["refs"]["instrument_id"] == b.id
@@ -369,24 +345,16 @@ def test_create_page_break_after_rejects_on_last_instrument(
     _add_instruments(client, review_session.id, 1)
     _a, b = _ordered(db, review_session.id)
     with pytest.raises(ValueError, match="trailing breaks"):
-        instruments_service.create_page_break_after(
-            db, instrument=b, actor=_actor(db)
-        )
+        instruments_service.create_page_break_after(db, instrument=b, actor=_actor(db))
 
 
-def test_create_page_break_after_rejects_when_already_set(
-    client: TestClient, db: Session
-) -> None:
+def test_create_page_break_after_rejects_when_already_set(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="cb-3")
     _add_instruments(client, review_session.id, 1)
     a, b = _ordered(db, review_session.id)
-    instruments_service.create_page_break_after(
-        db, instrument=a, actor=_actor(db)
-    )
+    instruments_service.create_page_break_after(db, instrument=a, actor=_actor(db))
     with pytest.raises(ValueError, match="already exists"):
-        instruments_service.create_page_break_after(
-            db, instrument=a, actor=_actor(db)
-        )
+        instruments_service.create_page_break_after(db, instrument=a, actor=_actor(db))
 
 
 # --------------------------------------------------------------------------- #
@@ -394,35 +362,25 @@ def test_create_page_break_after_rejects_when_already_set(
 # --------------------------------------------------------------------------- #
 
 
-def test_clear_page_break_flips_flag_and_emits_audit(
-    client: TestClient, db: Session
-) -> None:
+def test_clear_page_break_flips_flag_and_emits_audit(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="xb-1")
     _add_instruments(client, review_session.id, 1)
     a, b = _ordered(db, review_session.id)
-    instruments_service.create_page_break_after(
-        db, instrument=a, actor=_actor(db)
-    )
+    instruments_service.create_page_break_after(db, instrument=a, actor=_actor(db))
     before = _audit_count(db, "instrument.page_break_cleared")
 
-    instruments_service.clear_page_break(
-        db, instrument=b, actor=_actor(db)
-    )
+    instruments_service.clear_page_break(db, instrument=b, actor=_actor(db))
     db.refresh(b)
     assert b.starts_new_page is False
     assert _audit_count(db, "instrument.page_break_cleared") == before + 1
 
 
-def test_clear_page_break_rejects_when_no_break(
-    client: TestClient, db: Session
-) -> None:
+def test_clear_page_break_rejects_when_no_break(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="xb-2")
     _add_instruments(client, review_session.id, 1)
     _a, b = _ordered(db, review_session.id)
     with pytest.raises(ValueError, match="does not carry a page break"):
-        instruments_service.clear_page_break(
-            db, instrument=b, actor=_actor(db)
-        )
+        instruments_service.clear_page_break(db, instrument=b, actor=_actor(db))
 
 
 # --------------------------------------------------------------------------- #
@@ -432,7 +390,5 @@ def test_clear_page_break_rejects_when_no_break(
 
 def _audit_count(db: Session, event_type: str) -> int:
     return len(
-        db.execute(
-            select(AuditEvent).where(AuditEvent.event_type == event_type)
-        ).scalars().all()
+        db.execute(select(AuditEvent).where(AuditEvent.event_type == event_type)).scalars().all()
     )

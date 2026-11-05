@@ -70,38 +70,71 @@ def _mixed_session(db: Session):
     db.add_all([rae, carol, dan, branched, plain])
     db.flush()
     rating = InstrumentResponseField(
-        instrument_id=branched.id, field_key="rating", label="Rating",
-        required=True, order=0, _inline_data_type="Integer",
-        branch_op="ge", branch_value="4",
+        instrument_id=branched.id,
+        field_key="rating",
+        label="Rating",
+        required=True,
+        order=0,
+        _inline_data_type="Integer",
+        branch_op="ge",
+        branch_value="4",
     )
     comments = InstrumentResponseField(
-        instrument_id=branched.id, field_key="comments", label="Comments",
-        required=True, order=1,
+        instrument_id=branched.id,
+        field_key="comments",
+        label="Comments",
+        required=True,
+        order=1,
     )
     score = InstrumentResponseField(
-        instrument_id=plain.id, field_key="score", label="Score", required=True, order=0,
+        instrument_id=plain.id,
+        field_key="score",
+        label="Score",
+        required=True,
+        order=0,
     )
     db.add_all([rating, comments, score])
     db.flush()
     comments.branch_parent_id = rating.id
     rows = {}
     for key, reviewee, instrument in (
-        ("carol", carol, branched), ("dan", dan, branched), ("plain", carol, plain),
+        ("carol", carol, branched),
+        ("dan", dan, branched),
+        ("plain", carol, plain),
     ):
         rows[key] = Assignment(
-            session_id=sid, reviewer_id=rae.id, reviewee_id=reviewee.id,
+            session_id=sid,
+            reviewer_id=rae.id,
+            reviewee_id=reviewee.id,
             instrument_id=instrument.id,
         )
     db.add_all(rows.values())
     db.flush()
-    db.add_all([
-        Response(assignment_id=rows["carol"].id, response_field_id=rating.id,
-                 value="2", saved_at=T0, submitted_at=T0),
-        Response(assignment_id=rows["dan"].id, response_field_id=rating.id,
-                 value="5", saved_at=T0, submitted_at=T0),
-        Response(assignment_id=rows["plain"].id, response_field_id=score.id,
-                 value="7", saved_at=T0, submitted_at=T0 + timedelta(hours=2)),
-    ])
+    db.add_all(
+        [
+            Response(
+                assignment_id=rows["carol"].id,
+                response_field_id=rating.id,
+                value="2",
+                saved_at=T0,
+                submitted_at=T0,
+            ),
+            Response(
+                assignment_id=rows["dan"].id,
+                response_field_id=rating.id,
+                value="5",
+                saved_at=T0,
+                submitted_at=T0,
+            ),
+            Response(
+                assignment_id=rows["plain"].id,
+                response_field_id=score.id,
+                value="7",
+                saved_at=T0,
+                submitted_at=T0 + timedelta(hours=2),
+            ),
+        ]
+    )
     db.flush()
     return review_session, rows
 
@@ -127,9 +160,7 @@ def test_the_reviewee_rollups_count_only_open_branches(db: Session) -> None:
         # Carol's two rows add the SQL half (plain) and the Python half.
         assert (carol.reviewer_count, carol.completed_count) == (2, 2), name
         assert carol.pill_state == "complete", name
-        assert _utc_naive(carol.last_response_at) == _utc_naive(
-            T0 + timedelta(hours=2)
-        ), name
+        assert _utc_naive(carol.last_response_at) == _utc_naive(T0 + timedelta(hours=2)), name
         assert (dan.reviewer_count, dan.completed_count) == (1, 0), name
         assert dan.pill_state == "no responses", name
         assert _utc_naive(dan.last_response_at) == _utc_naive(T0), name
@@ -172,7 +203,9 @@ def test_a_closed_branch_isnt_reminded(
     Comments optional, Sam's Rating 5 owes it."""
     operator = make_client(alice)
     session = _ready_session(
-        operator, db, f"rg-remind-{mode or 'show'}",
+        operator,
+        db,
+        f"rg-remind-{mode or 'show'}",
         reviewers=["rae@example.edu", "sam@example.edu"],
     )
     fields = {
@@ -225,7 +258,9 @@ def test_a_closed_branch_isnt_reminded(
                 EmailOutbox.invitation_id == invitation.id,
                 EmailOutbox.kind == "reminder",
             )
-        ).scalars().all()
+        )
+        .scalars()
+        .all()
         for email, invitation in invitations.items()
     }
     assert len(reminded["rae@example.edu"]) == 0

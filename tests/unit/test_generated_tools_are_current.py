@@ -78,11 +78,8 @@ def test_every_generator_in_tools_is_covered() -> None:
     The failure mode this file exists for is a generated artefact nobody
     re-runs; a generator absent from `GENERATED` reproduces it exactly.
     """
-    generators = {
-        f"tools/{p.name}" for p in (REPO / "tools").glob("*.gen.py")
-    }
+    generators = {f"tools/{p.name}" for p in (REPO / "tools").glob("*.gen.py")}
 
     assert generators == set(GENERATED.values()), (
-        "generators not covered by this check: "
-        f"{sorted(generators - set(GENERATED.values()))}"
+        f"generators not covered by this check: {sorted(generators - set(GENERATED.values()))}"
     )

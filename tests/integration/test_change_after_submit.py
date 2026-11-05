@@ -45,14 +45,10 @@ def _seed(
     op = User(email="op@example.edu", display_name="Op")
     db.add(op)
     db.flush()
-    review_session = ReviewSession(
-        name="Spring", code="spring-r1", created_by_user_id=op.id
-    )
+    review_session = ReviewSession(name="Spring", code="spring-r1", created_by_user_id=op.id)
     db.add(review_session)
     db.flush()
-    db.add(
-        SessionOperator(session_id=review_session.id, user_id=op.id, role="owner")
-    )
+    db.add(SessionOperator(session_id=review_session.id, user_id=op.id, role="owner"))
     if group:
         instrument = instruments_service.create_instrument(
             db,
@@ -62,9 +58,7 @@ def _seed(
         )
     else:
         instrument = ensure_default_instrument(db, review_session)
-    reviewer = Reviewer(
-        session_id=review_session.id, name="Rae", email="rae@example.edu"
-    )
+    reviewer = Reviewer(session_id=review_session.id, name="Rae", email="rae@example.edu")
     db.add(reviewer)
     reviewees = [
         Reviewee(
@@ -123,9 +117,7 @@ def _submit(db, op, reviewer, review_session, assignment, **values) -> None:
 
 
 def _stamps(db: Session, assignment: Assignment) -> dict[str, bool]:
-    rows = db.execute(
-        select(Response).where(Response.assignment_id == assignment.id)
-    ).scalars()
+    rows = db.execute(select(Response).where(Response.assignment_id == assignment.id)).scalars()
     return {r.response_field.field_key: r.submitted_at is not None for r in rows}
 
 
@@ -149,11 +141,15 @@ def test_changed_value_after_submit_clears_its_stamp(db: Session) -> None:
     assert _pill(db, reviewer, review_session) == "in progress"
     [progress] = monitoring.per_reviewer_progress(db, review_session)
     assert progress.pill_state == "in progress"
-    event = db.execute(
-        select(AuditEvent)
-        .where(AuditEvent.event_type == "responses.saved")
-        .order_by(AuditEvent.id.desc())
-    ).scalars().first()
+    event = (
+        db.execute(
+            select(AuditEvent)
+            .where(AuditEvent.event_type == "responses.saved")
+            .order_by(AuditEvent.id.desc())
+        )
+        .scalars()
+        .first()
+    )
     assert event is not None
     assert event.detail is not None
     assert event.detail["counts"]["submissions_cleared"] == 1
@@ -173,11 +169,15 @@ def test_unchanged_value_after_submit_keeps_its_stamp(db: Session) -> None:
 
     assert _stamps(db, a) == {"rating": True, "comments": True}
     assert _pill(db, reviewer, review_session) == "submitted"
-    event = db.execute(
-        select(AuditEvent)
-        .where(AuditEvent.event_type == "responses.saved")
-        .order_by(AuditEvent.id.desc())
-    ).scalars().first()
+    event = (
+        db.execute(
+            select(AuditEvent)
+            .where(AuditEvent.event_type == "responses.saved")
+            .order_by(AuditEvent.id.desc())
+        )
+        .scalars()
+        .first()
+    )
     assert event is not None
     assert event.detail is not None
     assert "submissions_cleared" not in event.detail["counts"]
@@ -216,11 +216,15 @@ def test_blocked_submit_that_changes_a_value_clears_its_stamp(
 
     assert not result.submitted
     assert _stamps(db, a) == {"comments": False}
-    event = db.execute(
-        select(AuditEvent)
-        .where(AuditEvent.event_type == "responses.saved")
-        .order_by(AuditEvent.id.desc())
-    ).scalars().first()
+    event = (
+        db.execute(
+            select(AuditEvent)
+            .where(AuditEvent.event_type == "responses.saved")
+            .order_by(AuditEvent.id.desc())
+        )
+        .scalars()
+        .first()
+    )
     assert event is not None
     assert event.detail is not None
     assert event.detail["counts"]["submissions_cleared"] == 1
@@ -247,9 +251,7 @@ def test_group_copy_already_holding_the_new_value_is_cleared_too(
     op, reviewer, review_session, [first, second] = _seed(db, group=True)
     _submit(db, op, reviewer, review_session, first, rating="3")
     rating_field_id = db.execute(
-        select(Response.response_field_id).where(
-            Response.assignment_id == second.id
-        )
+        select(Response.response_field_id).where(Response.assignment_id == second.id)
     ).scalar_one()
     copy = db.execute(
         select(Response).where(
@@ -276,11 +278,15 @@ def test_blanking_a_submitted_answer_unsubmits_the_rest(db: Session) -> None:
     # released as submitted without it.
     assert _stamps(db, a) == {"rating": False}
     assert _pill(db, reviewer, review_session) == "in progress"
-    event = db.execute(
-        select(AuditEvent)
-        .where(AuditEvent.event_type == "responses.saved")
-        .order_by(AuditEvent.id.desc())
-    ).scalars().first()
+    event = (
+        db.execute(
+            select(AuditEvent)
+            .where(AuditEvent.event_type == "responses.saved")
+            .order_by(AuditEvent.id.desc())
+        )
+        .scalars()
+        .first()
+    )
     assert event is not None
     assert event.detail is not None
     assert event.detail["counts"]["submissions_cleared"] == 1

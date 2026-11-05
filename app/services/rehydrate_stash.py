@@ -9,6 +9,7 @@ token is only usable by the operator who created it, briefly.
 The caller decides what ``payload`` is (a re-zipped bundle of the
 resolved files); this module just stores / fetches / expires it.
 """
+
 from __future__ import annotations
 
 import secrets

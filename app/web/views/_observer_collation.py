@@ -140,9 +140,7 @@ def build_observer_collation_context(
         return ObserverCollationContext(sections=[], cohort_empty=False)
 
     while_ongoing_open = lifecycle.is_ongoing(review_session)
-    after_release_open = lifecycle.is_response_release_window_open(
-        review_session
-    )
+    after_release_open = lifecycle.is_response_release_window_open(review_session)
 
     instruments = list(
         db.execute(
@@ -155,9 +153,7 @@ def build_observer_collation_context(
 
     sections: list[InstrumentCollationSection] = []
     for position, instrument in enumerate(instruments, start=1):
-        policies = visibility_policies.list_for_instrument(
-            db, instrument.id
-        )
+        policies = visibility_policies.list_for_instrument(db, instrument.id)
         policy = policies.get("observer")
         mode = visibility_policies.resolve_mode(
             policy,
@@ -167,14 +163,10 @@ def build_observer_collation_context(
         if mode is None:
             continue
 
-        cohort = materialize_cohort_assignments(
-            db, observer=observer, instrument_id=instrument.id
-        )
+        cohort = materialize_cohort_assignments(db, observer=observer, instrument_id=instrument.id)
 
-        reviewer_stats, reviewee_stats = (
-            build_cohort_stats_for_instrument(
-                db, instrument=instrument, cohort=cohort
-            )
+        reviewer_stats, reviewee_stats = build_cohort_stats_for_instrument(
+            db, instrument=instrument, cohort=cohort
         )
 
         # The same two refusals the CSV route makes, so the page never

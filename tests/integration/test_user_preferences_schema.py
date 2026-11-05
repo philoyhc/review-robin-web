@@ -8,6 +8,7 @@ The column sits inert until Segment 18B PR 2 lights it up
 (per-operator default timezone + ``/operator/settings`` card).
 ``NULL`` (or an absent key) means "no preference set".
 """
+
 from __future__ import annotations
 
 from sqlalchemy import select

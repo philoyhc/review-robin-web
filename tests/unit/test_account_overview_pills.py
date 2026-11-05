@@ -18,8 +18,11 @@ def test_a_pill_counts_as_its_chip_does() -> None:
     counts = {"operators": 3, "admins": 2, "no_role": 5, "unused": 4}
     pills = _accounts.build_account_overview_pills(counts, super_admins=0)
     assert [(p.count, p.label) for p in pills] == [
-        (3, "Operators"), (2, "Admins"), (0, "super-admins"),
-        (5, "No role"), (4, "Unused"),
+        (3, "Operators"),
+        (2, "Admins"),
+        (0, "super-admins"),
+        (5, "No role"),
+        (4, "Unused"),
     ]
 
 
@@ -27,5 +30,9 @@ def test_a_count_of_one_reads_singular() -> None:
     counts = {"operators": 1, "admins": 1, "no_role": 1, "unused": 1}
     pills = _accounts.build_account_overview_pills(counts, super_admins=1)
     assert [p.label for p in pills] == [
-        "Operator", "Admin", "super-admin", "No role", "Unused",
+        "Operator",
+        "Admin",
+        "super-admin",
+        "No role",
+        "Unused",
     ]

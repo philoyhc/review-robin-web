@@ -15,6 +15,7 @@ and two expressions of one rule drift. `CASES` below runs against
 **both** paths, so an edit to either shows up as a disagreement
 rather than as a silent divergence between two pages.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -53,9 +54,7 @@ CASES: tuple[tuple[str, bool, str], ...] = (
 @pytest.mark.parametrize(("term", "expected", "label"), CASES)
 def test_the_python_rule(term: str, expected: bool, label: str) -> None:
     """Item 1's rule, as the roster pages run it."""
-    assert (
-        _matches_row(term, text=REVIEWER_TEXT, tags=REVIEWER_TAGS) is expected
-    ), label
+    assert _matches_row(term, text=REVIEWER_TEXT, tags=REVIEWER_TAGS) is expected, label
 
 
 @pytest.mark.parametrize(("term", "expected", "label"), CASES)
@@ -65,9 +64,7 @@ def test_the_sql_rule_agrees(
     """The same table, through the query the page actually runs."""
     s = seed_session_with_assignment(client, db, code=f"ast-{abs(hash(term)) % 99999}")
 
-    count = assignments.count_pairs(
-        db, s.id, search=term, search_by="reviewer"
-    )
+    count = assignments.count_pairs(db, s.id, search=term, search_by="reviewer")
 
     assert (count > 0) is expected, (label, term, count)
 
@@ -88,9 +85,7 @@ def test_list_and_count_agree(
     assert (count > 0) is expected, (label, term)
 
 
-def test_search_by_scopes_the_tags_to_their_own_side(
-    db: Session, client: TestClient
-) -> None:
+def test_search_by_scopes_the_tags_to_their_own_side(db: Session, client: TestClient) -> None:
     """Tags belong to the reviewer and the reviewee individually, so
     the existing `Search by:` select scopes them for free — this is
     what made a separate tag control unnecessary.
@@ -129,9 +124,7 @@ def test_a_tag_shared_across_the_pair_matches_on_both_sides(
     assert assignments.count_pairs(db, s.id, search="Team A", search_by="reviewee") == 1
 
 
-def test_the_page_renders_tag_matches(
-    db: Session, client: TestClient
-) -> None:
+def test_the_page_renders_tag_matches(db: Session, client: TestClient) -> None:
     """End to end through the route, which is where the operator meets
     it: the hint counts the tag match rather than reporting nothing.
 
@@ -140,9 +133,7 @@ def test_the_page_renders_tag_matches(
     """
     s = seed_session_with_assignment(client, db, code="ast-page")
 
-    body = client.get(
-        f"/operator/sessions/{s.public_id}/assignments?q=Team+B&search_by=all"
-    ).text
+    body = client.get(f"/operator/sessions/{s.public_id}/assignments?q=Team+B&search_by=all").text
 
     assert "Showing 1 assignment." in body
 

@@ -16,6 +16,7 @@ Revises: c4e9a1d27b58
 Create Date: 2026-10-02
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -34,6 +35,4 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     with op.batch_alter_table("instrument_view_policies") as batch:
-        batch.add_column(
-            sa.Column("observer_tag", sa.String(length=255), nullable=True)
-        )
+        batch.add_column(sa.Column("observer_tag", sa.String(length=255), nullable=True))

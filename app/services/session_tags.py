@@ -6,6 +6,7 @@ Tags are stored lowercased + trimmed in the ``session_tags`` table;
 layer; the operator-facing editors (the inline row expander) wire to
 it in later 18A slices.
 """
+
 from __future__ import annotations
 
 from sqlalchemy import func, select
@@ -31,9 +32,7 @@ def normalize_tag(raw: str) -> str:
     return tag
 
 
-def tags_for_sessions(
-    db: Session, session_ids: list[int]
-) -> dict[int, list[str]]:
+def tags_for_sessions(db: Session, session_ids: list[int]) -> dict[int, list[str]]:
     """Tags for many sessions in one query, grouped by session id and
     sorted within each session. Every requested id is a key (empty
     list when the session carries no tags)."""
@@ -55,12 +54,16 @@ def vocabulary(db: Session, session_ids: list[int]) -> list[str]:
     operator's tag vocabulary for the lobby filter strip."""
     if not session_ids:
         return []
-    rows = db.execute(
-        select(SessionTag.tag)
-        .where(SessionTag.session_id.in_(session_ids))
-        .distinct()
-        .order_by(SessionTag.tag)
-    ).scalars().all()
+    rows = (
+        db.execute(
+            select(SessionTag.tag)
+            .where(SessionTag.session_id.in_(session_ids))
+            .distinct()
+            .order_by(SessionTag.tag)
+        )
+        .scalars()
+        .all()
+    )
     return list(rows)
 
 
@@ -82,16 +85,20 @@ def vocabulary_for_user(db: Session, user: User) -> list[str]:
     ``Pilot`` would be offered beside ``pilot``, and offered again when
     already in the box (Item 7 cold read, finding 1)."""
     tag = func.lower(SessionTag.tag)
-    rows = db.execute(
-        select(tag)
-        .join(
-            SessionOperator,
-            SessionOperator.session_id == SessionTag.session_id,
+    rows = (
+        db.execute(
+            select(tag)
+            .join(
+                SessionOperator,
+                SessionOperator.session_id == SessionTag.session_id,
+            )
+            .where(SessionOperator.user_id == user.id)
+            .distinct()
+            .order_by(tag)
         )
-        .where(SessionOperator.user_id == user.id)
-        .distinct()
-        .order_by(tag)
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     return list(rows)
 
 
@@ -153,9 +160,7 @@ def set_tags(
             continue
     current = set(
         db.execute(
-            select(SessionTag.tag).where(
-                SessionTag.session_id == review_session.id
-            )
+            select(SessionTag.tag).where(SessionTag.session_id == review_session.id)
         ).scalars()
     )
     to_add = sorted(desired - current)

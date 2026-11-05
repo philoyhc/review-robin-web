@@ -7,6 +7,7 @@ the 200/500 cap on the row table. Mutation routes + per-row edit
 UI ship in PR 3; PR 2's tests cover the find-a-row machinery and
 the inert button placeholders that lock in the layout.
 """
+
 from __future__ import annotations
 
 import re
@@ -18,23 +19,17 @@ from sqlalchemy.orm import Session
 from app.db.models import Reviewer, ReviewSession
 
 
-def _make_session(
-    client: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "Spring", "code": code},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
-def _seed_reviewers_via_orm(
-    db: Session, session_id: int, count: int
-) -> None:
+def _seed_reviewers_via_orm(db: Session, session_id: int, count: int) -> None:
     """Bypass the CSV importer for fast bulk seeding (the importer
     caps at 5000 rows but per-import perf isn't what we're testing
     here). Uses zero-padded names so the alphabetical sort is
@@ -55,24 +50,18 @@ def _seed_reviewers_via_orm(
 # --------------------------------------------------------------------------- #
 
 
-def test_no_filter_renders_all_rows(
-    db: Session, client: TestClient
-) -> None:
+def test_no_filter_renders_all_rows(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rev-f-none")
     _seed_reviewers_via_orm(db, review_session.id, 3)
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
     table = body[body.find('id="reviewers-table"') :]
     assert "R0000" in table
     assert "R0001" in table
     assert "R0002" in table
 
 
-def test_status_only_filter_narrows_to_inactive(
-    db: Session, client: TestClient
-) -> None:
+def test_status_only_filter_narrows_to_inactive(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rev-f-stat")
     _seed_reviewers_via_orm(db, review_session.id, 4)
     # Flip R0001 + R0003 to inactive.
@@ -95,9 +84,7 @@ def test_status_only_filter_narrows_to_inactive(
     assert "R0002" not in table
 
 
-def test_search_only_filter_substring_match(
-    db: Session, client: TestClient
-) -> None:
+def test_search_only_filter_substring_match(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rev-f-search")
     db.add(
         Reviewer(
@@ -115,17 +102,13 @@ def test_search_only_filter_substring_match(
     )
     db.commit()
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers?q=alph"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers?q=alph").text
     table = body[body.find('id="reviewers-table"') :]
     assert "Alpha" in table
     assert "Beta" not in table
 
 
-def test_status_and_search_filters_compose(
-    db: Session, client: TestClient
-) -> None:
+def test_status_and_search_filters_compose(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rev-f-both")
     alice_active = Reviewer(
         session_id=review_session.id,
@@ -148,8 +131,7 @@ def test_status_and_search_filters_compose(
     db.commit()
 
     body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-        "?status=inactive&q=alice"
+        f"/operator/sessions/{review_session.public_id}/reviewers?status=inactive&q=alice"
     ).text
     table = body[body.find('id="reviewers-table"') :]
     # Only Aliceanne matches both filters.
@@ -167,9 +149,7 @@ def test_unfiltered_cap_is_200(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rev-cap-200")
     _seed_reviewers_via_orm(db, review_session.id, 250)
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
     table = body[body.find('id="reviewers-table"') :]
     # First 200 rendered (R0000-R0199).
     assert "R0000" in table
@@ -194,17 +174,13 @@ def test_unfiltered_cap_is_200(db: Session, client: TestClient) -> None:
     assert "R0199" not in table_two
 
 
-def test_filtered_cap_lifts_to_500(
-    db: Session, client: TestClient
-) -> None:
+def test_filtered_cap_lifts_to_500(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rev-cap-500")
     _seed_reviewers_via_orm(db, review_session.id, 600)
 
     # status=active narrows to all 600 (default status); the cap
     # lifts to 500.
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers?status=active"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers?status=active").text
     table = body[body.find('id="reviewers-table"') :]
     assert "R0000" in table
     assert "R0499" in table
@@ -241,9 +217,7 @@ def test_capped_and_filtered_counts_against_the_matching_set(
         )
     db.commit()
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers?q=Keep"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers?q=Keep").text
 
     assert "Showing 500 of 550 reviewers, 50 more not shown." in body
     # The two numbers a wrong denominator would produce.
@@ -275,9 +249,7 @@ def test_the_selection_actions_left_the_operator_actions_card(
     review_session = _make_session(client, db, code="rev-layout-buttons")
     _seed_reviewers_via_orm(db, review_session.id, 3)
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
     # Absence has to be asserted against MARKUP, not the whole response:
     # the expander's builder is a JS string that contains the very
     # labels this test says are gone, so a bare `not in body` would
@@ -310,9 +282,14 @@ def test_the_selection_actions_left_the_operator_actions_card(
         ">Delete</button>",
     ):
         assert label not in markup, f"{label} is still rendered server-side"
-    for dead in ("reviewers-edit-btn", "reviewers-inactivate-btn",
-                 "reviewers-reactivate-btn", "reviewers-delete-btn",
-                 "reviewers-selected-count", "reviewers-delete-confirm"):
+    for dead in (
+        "reviewers-edit-btn",
+        "reviewers-inactivate-btn",
+        "reviewers-reactivate-btn",
+        "reviewers-delete-btn",
+        "reviewers-selected-count",
+        "reviewers-delete-confirm",
+    ):
         assert dead not in markup, f"{dead} outlived the card's action row"
 
     # `Add` needs no selection, so rung 2a moved it to the table's
@@ -348,9 +325,7 @@ def test_search_filter_form_renders_status_options_and_datalist(
     )
     db.commit()
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
     # Status select carries the two REVIEWERS_STATUS_OPTIONS plus All.
     assert '<option value="all"' in body
     assert '<option value="active"' in body
@@ -368,9 +343,7 @@ def test_datalist_capped_at_200(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rev-datalist-cap")
     _seed_reviewers_via_orm(db, review_session.id, 300)
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
     datalist_start = body.find('id="reviewers-search-options"')
     datalist_end = body.find("</datalist>", datalist_start)
     datalist = body[datalist_start:datalist_end]
@@ -383,29 +356,21 @@ def test_datalist_capped_at_200(db: Session, client: TestClient) -> None:
 # --------------------------------------------------------------------------- #
 
 
-def test_no_filter_no_cap_hides_showing_line(
-    db: Session, client: TestClient
-) -> None:
+def test_no_filter_no_cap_hides_showing_line(db: Session, client: TestClient) -> None:
     """When displayed == total, the muted line stays hidden so the
     operator's screen reads quiet."""
     review_session = _make_session(client, db, code="rev-showing-hidden")
     _seed_reviewers_via_orm(db, review_session.id, 3)
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
     assert "Showing 3 of 3" not in body
 
 
-def test_clear_link_only_renders_when_filter_active(
-    db: Session, client: TestClient
-) -> None:
+def test_clear_link_only_renders_when_filter_active(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rev-clear-link")
     _seed_reviewers_via_orm(db, review_session.id, 3)
 
-    body_unfiltered = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-    ).text
+    body_unfiltered = client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
     body_filtered = client.get(
         f"/operator/sessions/{review_session.public_id}/reviewers?q=foo"
     ).text
@@ -420,9 +385,7 @@ def test_filter_no_match_shows_empty_state_with_table_count_preserved(
     review_session = _make_session(client, db, code="rev-no-match")
     _seed_reviewers_via_orm(db, review_session.id, 3)
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers?q=nomatchpls"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers?q=nomatchpls").text
     assert "No reviewers match the current filter." in body
     # The no-match message owns this state; no `Showing 0` beside it
     # (findings C1).
@@ -431,9 +394,7 @@ def test_filter_no_match_shows_empty_state_with_table_count_preserved(
     assert "Delete all reviewers" in body
 
 
-def test_delete_all_button_gated_by_confirm_checkbox(
-    db: Session, client: TestClient
-) -> None:
+def test_delete_all_button_gated_by_confirm_checkbox(db: Session, client: TestClient) -> None:
     """The destructive "Delete all reviewers" button conforms to
     the confirm-checkbox-gates-button standard — it ships
     `disabled` and is paired to the confirm checkbox by the
@@ -441,9 +402,7 @@ def test_delete_all_button_gated_by_confirm_checkbox(
     review_session = _make_session(client, db, code="rev-delete-gate")
     _seed_reviewers_via_orm(db, review_session.id, 2)
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
     assert 'data-delete-confirm="delete-all"' in body
     button = body[body.find('data-delete-btn="delete-all"') :][:200]
     assert "disabled" in button
@@ -467,9 +426,7 @@ def _tagged(session_id: int, name: str, tag: str) -> Reviewer:
     )
 
 
-def test_searching_a_tag_value_narrows_the_table(
-    db: Session, client: TestClient
-) -> None:
+def test_searching_a_tag_value_narrows_the_table(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rev-f-tag")
     db.add_all(
         [
@@ -479,18 +436,14 @@ def test_searching_a_tag_value_narrows_the_table(
     )
     db.commit()
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers?q=TW01"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers?q=TW01").text
     table = body[body.find('id="reviewers-table"') :]
 
     assert "Ana" in table
     assert "Ben" not in table
 
 
-def test_the_datalist_offers_distinct_tag_values(
-    db: Session, client: TestClient
-) -> None:
+def test_the_datalist_offers_distinct_tag_values(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rev-f-tag-list")
     db.add_all(
         [
@@ -501,9 +454,7 @@ def test_the_datalist_offers_distinct_tag_values(
     )
     db.commit()
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
     datalist = body[body.find('id="reviewers-search-options"') :]
     datalist = datalist[: datalist.find("</datalist>")]
 
@@ -524,15 +475,11 @@ def test_a_tag_is_offered_even_when_its_rows_fall_past_the_cap(
     db.add(_tagged(review_session.id, "Zed", "Rare"))
     db.commit()
 
-    unfiltered = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers"
-    ).text
+    unfiltered = client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
     datalist = unfiltered[unfiltered.find('id="reviewers-search-options"') :]
     datalist = datalist[: datalist.find("</datalist>")]
     assert '<option value="Rare">' in datalist
 
-    picked = client.get(
-        f"/operator/sessions/{review_session.public_id}/reviewers?q=Rare"
-    ).text
+    picked = client.get(f"/operator/sessions/{review_session.public_id}/reviewers?q=Rare").text
     table = picked[picked.find('id="reviewers-table"') :]
     assert "Zed" in table

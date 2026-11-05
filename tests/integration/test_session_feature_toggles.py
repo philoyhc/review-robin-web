@@ -18,18 +18,14 @@ from sqlalchemy.orm import Session
 from app.db.models import AuditEvent, Observer, Relationship, Reviewee, Reviewer, ReviewSession
 
 
-def _make_session(
-    client: TestClient, db: Session, code: str = "feat-toggle"
-) -> ReviewSession:
+def _make_session(client: TestClient, db: Session, code: str = "feat-toggle") -> ReviewSession:
     response = client.post(
         "/operator/sessions",
         data={"name": "FT", "code": code, "description": ""},
         follow_redirects=False,
     )
     assert response.status_code == 303
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _submit_edit(
@@ -55,17 +51,13 @@ def _submit_edit(
 # ── Defaults + persistence ───────────────────────────────────────────
 
 
-def test_session_defaults_both_toggles_to_false(
-    client: TestClient, db: Session
-) -> None:
+def test_session_defaults_both_toggles_to_false(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="ft-default")
     assert review_session.relationships_enabled is False
     assert review_session.observers_enabled is False
 
 
-def test_form_persists_relationships_enabled_true(
-    client: TestClient, db: Session
-) -> None:
+def test_form_persists_relationships_enabled_true(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="ft-relon")
     _submit_edit(client, review_session, relationships_enabled="true")
     db.refresh(review_session)
@@ -73,9 +65,7 @@ def test_form_persists_relationships_enabled_true(
     assert review_session.observers_enabled is False
 
 
-def test_form_omission_persists_false(
-    client: TestClient, db: Session
-) -> None:
+def test_form_omission_persists_false(client: TestClient, db: Session) -> None:
     # Start with both on, then submit without the fields — they
     # should flip back to False (HTML checkbox absence semantics).
     review_session = _make_session(client, db, code="ft-omit")
@@ -88,9 +78,7 @@ def test_form_omission_persists_false(
     assert review_session.observers_enabled is False
 
 
-def test_form_persists_observers_enabled_true(
-    client: TestClient, db: Session
-) -> None:
+def test_form_persists_observers_enabled_true(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="ft-obson")
     _submit_edit(client, review_session, observers_enabled="true")
     db.refresh(review_session)
@@ -100,9 +88,7 @@ def test_form_persists_observers_enabled_true(
 # ── Audit ─────────────────────────────────────────────────────────────
 
 
-def _audit_events(
-    db: Session, session_id: int, event_type: str
-) -> list[AuditEvent]:
+def _audit_events(db: Session, session_id: int, event_type: str) -> list[AuditEvent]:
     return list(
         db.execute(
             select(AuditEvent)
@@ -115,9 +101,7 @@ def _audit_events(
     )
 
 
-def test_feature_toggled_audit_fires_on_change(
-    client: TestClient, db: Session
-) -> None:
+def test_feature_toggled_audit_fires_on_change(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="ft-audit")
     _submit_edit(client, review_session, relationships_enabled="true")
     events = _audit_events(db, review_session.id, "session.feature_toggled")
@@ -128,9 +112,7 @@ def test_feature_toggled_audit_fires_on_change(
     assert changes["relationships_enabled"] == [False, True]
 
 
-def test_feature_toggled_audit_silent_when_no_change(
-    client: TestClient, db: Session
-) -> None:
+def test_feature_toggled_audit_silent_when_no_change(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="ft-noop")
     # No toggle in payload → defaults to False → matches current → no event.
     _submit_edit(client, review_session)
@@ -138,9 +120,7 @@ def test_feature_toggled_audit_silent_when_no_change(
     assert events == []
 
 
-def test_feature_toggled_audit_carries_both_flag_diffs(
-    client: TestClient, db: Session
-) -> None:
+def test_feature_toggled_audit_carries_both_flag_diffs(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="ft-both")
     _submit_edit(
         client,
@@ -161,9 +141,7 @@ def test_feature_toggled_audit_carries_both_flag_diffs(
 # ── Lock-on-data ──────────────────────────────────────────────────────
 
 
-def _seed_one_relationship(
-    db: Session, review_session: ReviewSession
-) -> None:
+def _seed_one_relationship(db: Session, review_session: ReviewSession) -> None:
     reviewer = Reviewer(
         session_id=review_session.id,
         name="R",
@@ -186,9 +164,7 @@ def _seed_one_relationship(
     db.commit()
 
 
-def test_lock_on_data_silent_noop_on_true_to_false(
-    client: TestClient, db: Session
-) -> None:
+def test_lock_on_data_silent_noop_on_true_to_false(client: TestClient, db: Session) -> None:
     """When relationship rows exist, an attempt to flip
     relationships_enabled True→False is silently ignored — the
     column stays True so data doesn't orphan."""
@@ -204,23 +180,17 @@ def test_lock_on_data_silent_noop_on_true_to_false(
     assert review_session.relationships_enabled is True
 
 
-def test_lock_on_data_renders_disabled_checkbox(
-    client: TestClient, db: Session
-) -> None:
+def test_lock_on_data_renders_disabled_checkbox(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="ft-lock-ui")
     review_session.relationships_enabled = True
     db.commit()
     _seed_one_relationship(db, review_session)
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}?editing=1"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}?editing=1").text
     assert 'name="relationships_enabled"' in body
     # The disabled attribute appears on the (edit-mode) relationships
     # checkbox — the lock-on-data guard reflected in the markup.
-    relationships_chunk = body.split(
-        'name="relationships_enabled"', 1
-    )[1].split("</label>", 1)[0]
+    relationships_chunk = body.split('name="relationships_enabled"', 1)[1].split("</label>", 1)[0]
     assert "disabled" in relationships_chunk
     # …and on the chip around it, a fixed switch: dark, no click
     # affordance, a lock glyph (guide/ux_refinements.md Item 2).
@@ -229,9 +199,7 @@ def test_lock_on_data_renders_disabled_checkbox(
     assert "is-locked" not in chip
 
 
-def test_observers_chip_with_data_is_a_fixed_switch(
-    client: TestClient, db: Session
-) -> None:
+def test_observers_chip_with_data_is_a_fixed_switch(client: TestClient, db: Session) -> None:
     """The Observers chip takes the same fixed-switch look once the
     session has an observer (guide/ux_refinements.md Item 2)."""
     review_session = _make_session(client, db, code="ft-lock-obs")
@@ -239,9 +207,7 @@ def test_observers_chip_with_data_is_a_fixed_switch(
     db.add(Observer(session_id=review_session.id, email="o@example.org", status="active"))
     db.commit()
 
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}?editing=1"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}?editing=1").text
     box = body.split('name="observers_enabled"', 1)[1].split("</label>", 1)[0]
     assert "disabled" in box
     chip = body.split('name="observers_enabled"', 1)[0].rsplit("<label", 1)[1]
@@ -252,32 +218,18 @@ def test_observers_chip_with_data_is_a_fixed_switch(
 # ── Nav tab visibility ────────────────────────────────────────────────
 
 
-def test_relationships_nav_tab_hidden_when_flag_off(
-    client: TestClient, db: Session
-) -> None:
+def test_relationships_nav_tab_hidden_when_flag_off(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="ft-nav-off")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}"
-    ).text
-    assert (
-        f'href="/operator/sessions/{review_session.public_id}/relationships"'
-        not in body
-    )
+    body = client.get(f"/operator/sessions/{review_session.public_id}").text
+    assert f'href="/operator/sessions/{review_session.public_id}/relationships"' not in body
 
 
-def test_relationships_nav_tab_visible_when_flag_on(
-    client: TestClient, db: Session
-) -> None:
+def test_relationships_nav_tab_visible_when_flag_on(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="ft-nav-on")
     review_session.relationships_enabled = True
     db.commit()
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}"
-    ).text
-    assert (
-        f'href="/operator/sessions/{review_session.public_id}/relationships"'
-        in body
-    )
+    body = client.get(f"/operator/sessions/{review_session.public_id}").text
+    assert f'href="/operator/sessions/{review_session.public_id}/relationships"' in body
 
 
 # ── Chrome status-row pills (18R Item 3) ──────────────────────────────
@@ -314,25 +266,17 @@ def test_status_row_shows_relationships_and_observers_when_flags_on(
 # ── Route guard ───────────────────────────────────────────────────────
 
 
-def test_relationships_route_404_when_flag_off(
-    client: TestClient, db: Session
-) -> None:
+def test_relationships_route_404_when_flag_off(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="ft-route-off")
-    response = client.get(
-        f"/operator/sessions/{review_session.public_id}/relationships"
-    )
+    response = client.get(f"/operator/sessions/{review_session.public_id}/relationships")
     assert response.status_code == 404
 
 
-def test_relationships_route_200_when_flag_on(
-    client: TestClient, db: Session
-) -> None:
+def test_relationships_route_200_when_flag_on(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="ft-route-on")
     review_session.relationships_enabled = True
     db.commit()
-    response = client.get(
-        f"/operator/sessions/{review_session.public_id}/relationships"
-    )
+    response = client.get(f"/operator/sessions/{review_session.public_id}/relationships")
     assert response.status_code == 200
 
 
@@ -345,30 +289,28 @@ def test_session_home_renders_the_optional_setup_tabs_field(
     """Since 19U Item 2 the toggles are a field of the details card,
     "Optional setup tabs", not a "User interface settings" sub-card."""
     review_session = _make_session(client, db, code="ft-ui")
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}?editing=1"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}?editing=1").text
     assert 'id="config-optional-tabs"' in body
     assert ">Optional setup tabs and pages</label>" in body
     assert 'name="relationships_enabled"' in body
     assert 'name="observers_enabled"' in body
     # Both unchecked by default.
-    rel_chunk = body.split(
-        'name="relationships_enabled"', 1
-    )[1].split(">", 1)[0]
+    rel_chunk = body.split('name="relationships_enabled"', 1)[1].split(">", 1)[0]
     assert "checked" not in rel_chunk
-    obs_chunk = body.split(
-        'name="observers_enabled"', 1
-    )[1].split(">", 1)[0]
+    obs_chunk = body.split('name="observers_enabled"', 1)[1].split(">", 1)[0]
     assert "checked" not in obs_chunk
 
 
 def _chips(body: str, mode: str) -> str:
     """The display- or edit-mode chip pair of the optional-tabs field."""
-    field = body[body.index('id="config-optional-tabs"'):]
+    field = body[body.index('id="config-optional-tabs"') :]
     # The field ends where the next one begins: 20B's Rosters group, or
     # the details card's right column.
-    ends = [i for i in (field.find('id="config-symmetric-review"'), field.find('<div class="fill-col"')) if i != -1]
+    ends = [
+        i
+        for i in (field.find('id="config-symmetric-review"'), field.find('<div class="fill-col"'))
+        if i != -1
+    ]
     field = field[: min(ends)]
     marker = "<div data-display-only>" if mode == "display" else "<div data-edit-only>"
     start = field.index(marker)
@@ -377,9 +319,7 @@ def _chips(body: str, mode: str) -> str:
     return field[start:] if stop == -1 else field[start:stop]
 
 
-def test_the_optional_tabs_are_selector_chips(
-    client: TestClient, db: Session
-) -> None:
+def test_the_optional_tabs_are_selector_chips(client: TestClient, db: Session) -> None:
     """19U Item 3 (author, 2026-10-08): the two toggles are selector
     chips styled as the rosters' "Show columns" chips. Unlocked, each
     chip is a label around its checkbox, so the form posts it as
@@ -387,9 +327,7 @@ def test_the_optional_tabs_are_selector_chips(
     review_session = _make_session(client, db, code="ft-chips")
     review_session.relationships_enabled = True
     db.commit()
-    body = client.get(
-        f"/operator/sessions/{review_session.public_id}?editing=1"
-    ).text
+    body = client.get(f"/operator/sessions/{review_session.public_id}?editing=1").text
 
     edit = _chips(body, "edit")
     for name, label, on in (

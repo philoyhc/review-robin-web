@@ -33,7 +33,9 @@ def test_runs_alone() -> None:
     # (author, 2026-10-31).
     landing = client.get("/", follow_redirects=False)
     assert landing.status_code == 200
-    assert re.search(r'<a href="/utilities/"><img [^>]*>Utilities</a>', landing.text)  # its icon first
+    assert re.search(
+        r'<a href="/utilities/"><img [^>]*>Utilities</a>', landing.text
+    )  # its icon first
     assert client.get("/reviewrobin/health").status_code == 404
     assert client.get("/supportlogs/health").status_code == 404
 

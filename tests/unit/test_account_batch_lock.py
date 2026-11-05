@@ -39,9 +39,7 @@ def test_an_action_that_can_lower_the_admin_count_locks_every_admin(
     assert "users.is_sys_admin IS true" in _sql(action)
 
 
-@pytest.mark.parametrize(
-    "action", [a for a in BATCH_ACTIONS if a not in ("demote", "delete")]
-)
+@pytest.mark.parametrize("action", [a for a in BATCH_ACTIONS if a not in ("demote", "delete")])
 def test_others_lock_the_selection_only(action: str) -> None:
     assert "is_sys_admin IS true" not in _sql(action)
     assert "ORDER BY users.id" in _sql(action)

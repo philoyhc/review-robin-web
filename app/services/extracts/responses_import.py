@@ -33,6 +33,7 @@ find-or-create backfill that fabricated an ``Assignment`` per unmatched
 row — which both invented pairs no rule had authorised and wrote the last
 ``created_by_mode="manual"`` in the codebase.
 """
+
 from __future__ import annotations
 
 import csv
@@ -122,9 +123,7 @@ class DroppedResponseRow:
 @dataclass
 class ResponseLoadResult:
     responses: int = 0
-    dropped: list[DroppedResponseRow] = _dc_field(
-        default_factory=list[DroppedResponseRow]
-    )
+    dropped: list[DroppedResponseRow] = _dc_field(default_factory=list[DroppedResponseRow])
 
     @property
     def dropped_count(self) -> int:
@@ -156,9 +155,7 @@ def parse_responses_csv(content: bytes) -> list[_ParsedResponseRow]:
         malformed_reason = None
         cells = raw
         if len(raw) < len(HEADER):
-            malformed_reason = (
-                f"row has {len(raw)} of {len(HEADER)} columns"
-            )
+            malformed_reason = f"row has {len(raw)} of {len(HEADER)} columns"
             cells = raw + [""] * (len(HEADER) - len(raw))
         parsed.append(
             _ParsedResponseRow(
@@ -178,9 +175,7 @@ def parse_responses_csv(content: bytes) -> list[_ParsedResponseRow]:
             )
         )
     if not header_seen:
-        raise ResponsesFormatError(
-            "responses.csv is missing its expected 21-column header row"
-        )
+        raise ResponsesFormatError("responses.csv is missing its expected 21-column header row")
     return parsed
 
 
@@ -258,10 +253,7 @@ def load_responses(
         instr_by_short[short] = inst
     for short in ambiguous_labels:
         del instr_by_short[short]
-    instr_by_position = {
-        f"instrument_{n}": inst
-        for n, inst in enumerate(instruments, start=1)
-    }
+    instr_by_position = {f"instrument_{n}": inst for n, inst in enumerate(instruments, start=1)}
     fields = {
         (f.instrument_id, f.field_key): f
         for f in db.execute(
@@ -275,23 +267,15 @@ def load_responses(
     }
 
     assignments = list(
-        db.execute(
-            select(Assignment).where(
-                Assignment.session_id == review_session.id
-            )
-        ).scalars()
+        db.execute(select(Assignment).where(Assignment.session_id == review_session.id)).scalars()
     )
-    asgn_by_triple = {
-        (a.reviewer_id, a.reviewee_id, a.instrument_id): a
-        for a in assignments
-    }
+    asgn_by_triple = {(a.reviewer_id, a.reviewee_id, a.instrument_id): a for a in assignments}
 
     # Reuse the exporter's group-identity computation so the identity we
     # match on import is byte-identical to the one the export composed.
     key_by_assignment, identity = _group_export_index(db, review_session)
     identity_to_key = {
-        (instrument_id, ident): group_key
-        for (instrument_id, group_key), ident in identity.items()
+        (instrument_id, ident): group_key for (instrument_id, group_key), ident in identity.items()
     }
     # A file exported while a group instrument's Name could be hidden
     # (before findings G1) names the group by its tag values alone; accept
@@ -311,9 +295,7 @@ def load_responses(
         group_key = key_by_assignment.get(a.id)
         if group_key is None:
             continue
-        members_by.setdefault(
-            (a.reviewer_id, a.instrument_id, group_key), []
-        ).append(a)
+        members_by.setdefault((a.reviewer_id, a.instrument_id, group_key), []).append(a)
 
     # Stage by (assignment_id, response_field_id) — the Response unique
     # key — so a group fan-out or a duplicate row can't double-insert.
@@ -353,8 +335,7 @@ def load_responses(
         if instrument is None:
             _drop(
                 row,
-                "unknown instrument "
-                f"{row.instrument_short_label or row.instrument_name!r}",
+                f"unknown instrument {row.instrument_short_label or row.instrument_name!r}",
             )
             continue
         field = fields.get((instrument.id, row.field_key.strip()))
@@ -374,9 +355,7 @@ def load_responses(
         value = row.value if row.value != "" else None
 
         if row.flavour == "group-scoped":
-            group_key = identity_to_key.get(
-                (instrument.id, row.reviewee_name.strip())
-            )
+            group_key = identity_to_key.get((instrument.id, row.reviewee_name.strip()))
             if group_key is None:
                 _drop(
                     row,
@@ -384,9 +363,7 @@ def load_responses(
                     f"instrument {_instrument_label(instrument)!r}",
                 )
                 continue
-            member_assignments = members_by.get(
-                (reviewer.id, instrument.id, group_key), []
-            )
+            member_assignments = members_by.get((reviewer.id, instrument.id, group_key), [])
             if not member_assignments:
                 _drop(
                     row,
@@ -396,7 +373,12 @@ def load_responses(
                 continue
             for member in member_assignments:
                 _stage(
-                    row, member.id, field.id, value, saved_at, submitted_at,
+                    row,
+                    member.id,
+                    field.id,
+                    value,
+                    saved_at,
+                    submitted_at,
                     version,
                 )
             continue
@@ -419,9 +401,7 @@ def load_responses(
                 f"{_instrument_label(instrument)!r}",
             )
             continue
-        _stage(
-            row, assignment.id, field.id, value, saved_at, submitted_at, version
-        )
+        _stage(row, assignment.id, field.id, value, saved_at, submitted_at, version)
 
     # 19T Item 10 — a closed branch holds no value: an answer to a governed
     # field whose parent's imported answer closes its branch is dropped
@@ -432,9 +412,7 @@ def load_responses(
     instrument_by_assignment = {a.id: a.instrument_id for a in assignments}
     answers_by_assignment: dict[int, dict[int, str | None]] = {}
     for (assignment_id, field_id), response in staged.items():
-        answers_by_assignment.setdefault(assignment_id, {})[field_id] = (
-            response.value
-        )
+        answers_by_assignment.setdefault(assignment_id, {})[field_id] = response.value
     reported: set[int] = set()
     for assignment_id, answers in answers_by_assignment.items():
         closed = closed_governed_field_ids(

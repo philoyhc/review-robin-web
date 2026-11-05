@@ -60,15 +60,11 @@ def _status_aside(body: str) -> str:
     return body[start:end]
 
 
-def test_the_overlay_column_carries_one_validate_link(
-    client: TestClient, db: Session
-) -> None:
+def test_the_overlay_column_carries_one_validate_link(client: TestClient, db: Session) -> None:
     session = _prepared_session(client, db, "ptr-one", warning=True)
     aside = _status_aside(_home(client, session.public_id))
 
-    links = re.findall(
-        rf'href="/operator/sessions/{session.public_id}/validate"', aside
-    )
+    links = re.findall(rf'href="/operator/sessions/{session.public_id}/validate"', aside)
     assert len(links) == 1, (
         f"expected exactly one Validate link in the right column, got "
         f"{len(links)} — one per block, never one per severity"
@@ -76,9 +72,7 @@ def test_the_overlay_column_carries_one_validate_link(
     assert aside.count("next-action-issue-pointer") == 1
 
 
-def test_the_per_issue_enumeration_is_gone(
-    client: TestClient, db: Session
-) -> None:
+def test_the_per_issue_enumeration_is_gone(client: TestClient, db: Session) -> None:
     """The other half: the link replaced the list rather than joining it."""
     session = _prepared_session(client, db, "ptr-gone", warning=True)
     aside = _status_aside(_home(client, session.public_id))
@@ -154,9 +148,7 @@ def test_the_same_partial_does_render_when_there_is_something() -> None:
     assert rendered.count("next-action-issue-pointer") == 1
 
 
-def test_a_state_without_issues_never_reaches_the_partial(
-    client: TestClient, db: Session
-) -> None:
+def test_a_state_without_issues_never_reaches_the_partial(client: TestClient, db: Session) -> None:
     """The page-level half, stated for what it is: States 4 / 5 / 6
     without the overlay do not include the partial, so the column
     carries no pointer."""
@@ -189,6 +181,5 @@ def test_the_card_includes_the_partial_at_exactly_two_sites() -> None:
     )
     for marker in RETIRED_MARKUP:
         assert marker not in source, (
-            f"{marker!r} is back in {CARD}; the per-issue list retired "
-            f"at 19Q Item 4"
+            f"{marker!r} is back in {CARD}; the per-issue list retired at 19Q Item 4"
         )

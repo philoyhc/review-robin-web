@@ -6,6 +6,7 @@ Segment 14A PR 6a. ``validate_critical_settings`` runs from
 sys-admin allowlists are empty — a state in which no one could
 sign in. Local development is exempt.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -37,15 +38,11 @@ def test_deployed_env_with_empty_allowlists_fails() -> None:
 
 
 def test_deployed_env_passes_with_operator_allowlist() -> None:
-    validate_critical_settings(
-        _settings(operator_emails=["op@example.edu"]), env="production"
-    )
+    validate_critical_settings(_settings(operator_emails=["op@example.edu"]), env="production")
 
 
 def test_deployed_env_passes_with_sys_admin_allowlist() -> None:
-    validate_critical_settings(
-        _settings(sys_admin_emails=["admin@example.edu"]), env="production"
-    )
+    validate_critical_settings(_settings(sys_admin_emails=["admin@example.edu"]), env="production")
 
 
 def test_rrw_database_url_wins_over_database_url(monkeypatch: pytest.MonkeyPatch) -> None:

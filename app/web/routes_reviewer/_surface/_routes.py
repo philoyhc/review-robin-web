@@ -5,6 +5,7 @@ the session-wide Submit / Recall / Clear POSTs, plus the GET redirects
 that catch a revisit of any of those POST addresses. Each handler stays thin — the template
 context comes from :func:`_surface_context` in ``_context``.
 """
+
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -85,7 +86,8 @@ def review_surface_default_position(request: Request, session_id: str) -> Redire
     Segment 18L multi-page replan. Auth happens on the destination
     handler; the redirect is harmless without it.
     """
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url=f"/me/sessions/{session_id}/1",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -101,20 +103,22 @@ def review_surface_default_position(request: Request, session_id: str) -> Redire
 # would otherwise take ``submit`` / ``recall`` / ``clear`` as a page
 # number and 422.
 @router.get("/sessions/{session_id}/{page_n}/save", response_model=None)
-def review_surface_save_revisited(request: Request, session_id: str, page_n: int) -> RedirectResponse:
-    return urls.redirect(request,
+def review_surface_save_revisited(
+    request: Request, session_id: str, page_n: int
+) -> RedirectResponse:
+    return urls.redirect(
+        request,
         url=f"/me/sessions/{session_id}/{page_n}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
 
 @router.get("/sessions/{session_id}/submit", response_model=None)
-def review_surface_submit_revisited(
-    request: Request, session_id: str
-) -> RedirectResponse:
+def review_surface_submit_revisited(request: Request, session_id: str) -> RedirectResponse:
     # ``?page=N`` is the page Submit was pressed on; parsed to an int,
     # so nothing but a number reaches the Location.
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url=f"/me/sessions/{session_id}/{_submitted_from_page(request)}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -123,7 +127,8 @@ def review_surface_submit_revisited(
 @router.get("/sessions/{session_id}/recall", response_model=None)
 def review_surface_recall_revisited(request: Request, session_id: str) -> RedirectResponse:
     # Recall is posted from the summary page.
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url=f"/me/sessions/{session_id}/summary",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -131,7 +136,8 @@ def review_surface_recall_revisited(request: Request, session_id: str) -> Redire
 
 @router.get("/sessions/{session_id}/clear", response_model=None)
 def review_surface_clear_revisited(request: Request, session_id: str) -> RedirectResponse:
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url=f"/me/sessions/{session_id}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -178,9 +184,7 @@ def _pre_open_response(
         else None
     )
     deadline_timezone_label = (
-        date_formatting.gmt_offset_zone_label(
-            session_zone, at=review_session.deadline
-        )
+        date_formatting.gmt_offset_zone_label(session_zone, at=review_session.deadline)
         if review_session.deadline
         else None
     )
@@ -188,9 +192,7 @@ def _pre_open_response(
     # draft can't open on a schedule until it is prepared again, so it
     # shows none.
     scheduled_open_at = (
-        review_session.scheduled_activate_at
-        if lifecycle.is_validated(review_session)
-        else None
+        review_session.scheduled_activate_at if lifecycle.is_validated(review_session) else None
     )
     return _templates.TemplateResponse(
         request,
@@ -206,17 +208,13 @@ def _pre_open_response(
                 else None
             ),
             "scheduled_open_timezone_label": (
-                date_formatting.gmt_offset_zone_label(
-                    session_zone, at=scheduled_open_at
-                )
+                date_formatting.gmt_offset_zone_label(session_zone, at=scheduled_open_at)
                 if scheduled_open_at
                 else None
             ),
             # participant info Item 3 — the reviewer's own roster
             # fields, so they can check them before the review opens.
-            "reviewer_self_fields": views.reviewer_self_line_for(
-                review_session, reviewer
-            ),
+            "reviewer_self_fields": views.reviewer_self_line_for(review_session, reviewer),
             **(extra or {}),
         },
         status_code=status_code,
@@ -262,10 +260,7 @@ def _refused_write_response(
             page_assignment_ids=page_assignment_ids or [],
         ),
     }
-    if not (
-        lifecycle.is_ready(review_session)
-        or lifecycle.is_expired(review_session)
-    ):
+    if not (lifecycle.is_ready(review_session) or lifecycle.is_expired(review_session)):
         return _pre_open_response(
             request,
             user,
@@ -305,9 +300,7 @@ def _refused_write_response(
 def review_surface(
     request: Request,
     page_n: int,
-    reviewer_session: tuple[Reviewer, ReviewSession] = Depends(
-        require_reviewer_in_session
-    ),
+    reviewer_session: tuple[Reviewer, ReviewSession] = Depends(require_reviewer_in_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
@@ -324,14 +317,9 @@ def review_surface(
     via the Prev / Next links in the page-nav row.
     """
     reviewer, review_session = reviewer_session
-    lifecycle.observe_deadline(
-        db, review_session, correlation_id=request_correlation_id()
-    )
+    lifecycle.observe_deadline(db, review_session, correlation_id=request_correlation_id())
     db.refresh(review_session)
-    if not (
-        lifecycle.is_ready(review_session)
-        or lifecycle.is_expired(review_session)
-    ):
+    if not (lifecycle.is_ready(review_session) or lifecycle.is_expired(review_session)):
         return _pre_open_response(request, user, reviewer, review_session)
     pages = _pages_for_session(db, review_session.id)
     validate_page_n(page_n, pages)
@@ -346,9 +334,7 @@ def review_surface(
     context["role_chips"] = build_role_chips(
         db, user=user, review_session=review_session, active_role="reviewer"
     )
-    return _templates.TemplateResponse(
-        request, "reviewer/review_surface.html", context
-    )
+    return _templates.TemplateResponse(request, "reviewer/review_surface.html", context)
 
 
 @router.post(
@@ -359,9 +345,7 @@ def review_surface(
 async def reviewer_save(
     request: Request,
     page_n: int,
-    reviewer_session: tuple[Reviewer, ReviewSession] = Depends(
-        require_reviewer_in_session
-    ),
+    reviewer_session: tuple[Reviewer, ReviewSession] = Depends(require_reviewer_in_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
@@ -385,18 +369,14 @@ async def reviewer_save(
     string_form = {k: v for k, v in form.items() if isinstance(v, str)}
     page_rows = page_assignments_for(db, review_session, reviewer, page_n)
     page_ids = [a.id for a in page_rows]
-    upserts = responses_service.parse_form_payload(
-        string_form, page_assignment_ids=page_ids
-    )
+    upserts = responses_service.parse_form_payload(string_form, page_assignment_ids=page_ids)
     page_changed = _page_changed(db, string_form, review_session, page_rows)
     # A refusal lists the typed answers under their rows only when the
     # form's ordinals still name them.
     listed_ids = [] if page_changed else page_ids
     # Off the event loop: the gate's deadline observer may wait on the
     # session row lock (findings Bc4).
-    refusal = await run_in_threadpool(
-        _write_refusal, db, review_session, reviewer
-    )
+    refusal = await run_in_threadpool(_write_refusal, db, review_session, reviewer)
     if refusal is not None:
         return await run_in_threadpool(
             _refused_write_response,
@@ -439,9 +419,7 @@ async def reviewer_save(
             correlation_id=request_correlation_id(),
         )
     except SessionStateConflict:
-        refusal = await run_in_threadpool(
-            _race_refusal, db, review_session, reviewer
-        )
+        refusal = await run_in_threadpool(_race_refusal, db, review_session, reviewer)
         return await run_in_threadpool(
             _refused_write_response,
             request,
@@ -456,9 +434,7 @@ async def reviewer_save(
             page_assignment_ids=listed_ids,
         )
     if result.errors:
-        bad_values = {
-            (e.assignment_id, e.field_key): e.value for e in result.errors
-        }
+        bad_values = {(e.assignment_id, e.field_key): e.value for e in result.errors}
         # Off the event loop, like the gate: the context runs the deadline
         # observer, which may wait on the session row lock (findings Bc4).
         context = await run_in_threadpool(
@@ -484,7 +460,8 @@ async def reviewer_save(
             context,
             status_code=status.HTTP_400_BAD_REQUEST,
         )
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url=f"/me/sessions/{review_session.public_id}/{page_n}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -497,9 +474,7 @@ async def reviewer_save(
 )
 async def reviewer_submit(
     request: Request,
-    reviewer_session: tuple[Reviewer, ReviewSession] = Depends(
-        require_reviewer_in_session
-    ),
+    reviewer_session: tuple[Reviewer, ReviewSession] = Depends(require_reviewer_in_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
@@ -508,20 +483,14 @@ async def reviewer_submit(
     string_form = {k: v for k, v in form.items() if isinstance(v, str)}
     # Submit is pressed on a page and carries that page's answers, named
     # by ordinal like a Save's (19V Item 2).
-    page_rows = page_assignments_for(
-        db, review_session, reviewer, _submitted_from_page(request)
-    )
+    page_rows = page_assignments_for(db, review_session, reviewer, _submitted_from_page(request))
     page_ids = [a.id for a in page_rows]
-    upserts = responses_service.parse_form_payload(
-        string_form, page_assignment_ids=page_ids
-    )
+    upserts = responses_service.parse_form_payload(string_form, page_assignment_ids=page_ids)
     page_changed = _page_changed(db, string_form, review_session, page_rows)
     listed_ids = [] if page_changed else page_ids
     # Off the event loop: the gate's deadline observer may wait on the
     # session row lock (findings Bc4).
-    refusal = await run_in_threadpool(
-        _write_refusal, db, review_session, reviewer
-    )
+    refusal = await run_in_threadpool(_write_refusal, db, review_session, reviewer)
     if refusal is not None:
         return await run_in_threadpool(
             _refused_write_response,
@@ -562,9 +531,7 @@ async def reviewer_submit(
             correlation_id=request_correlation_id(),
         )
     except SessionStateConflict:
-        refusal = await run_in_threadpool(
-            _race_refusal, db, review_session, reviewer
-        )
+        refusal = await run_in_threadpool(_race_refusal, db, review_session, reviewer)
         return await run_in_threadpool(
             _refused_write_response,
             request,
@@ -579,9 +546,7 @@ async def reviewer_submit(
             page_assignment_ids=listed_ids,
         )
     if not result.submitted:
-        bad_values = {
-            (e.assignment_id, e.field_key): e.value for e in result.errors
-        }
+        bad_values = {(e.assignment_id, e.field_key): e.value for e in result.errors}
         # Off the event loop, like the gate: the context runs the deadline
         # observer, which may wait on the session row lock (findings Bc4).
         context = await run_in_threadpool(
@@ -619,13 +584,11 @@ async def reviewer_submit(
     state = responses_service.reviewer_session_state(
         db, reviewer=reviewer, session_id=review_session.id
     )
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url=submit_redirect_url(
             review_session,
-            fully_submitted=(
-                state.total_assignments > 0
-                and state.pill_state == "submitted"
-            ),
+            fully_submitted=(state.total_assignments > 0 and state.pill_state == "submitted"),
         ),
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -633,16 +596,13 @@ async def reviewer_submit(
 
 def _recall_refused(review_session: ReviewSession) -> HTTPException:
     """The 403 a Recall gets when the review no longer allows it."""
-    closed = lifecycle.is_ready(review_session) or lifecycle.is_expired(
-        review_session
-    )
+    closed = lifecycle.is_ready(review_session) or lifecycle.is_expired(review_session)
     return HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
         detail=(
             "This review has closed, so your submission can't be recalled."
             if closed
-            else "This review is not currently open, so your "
-            "submission can't be recalled."
+            else "This review is not currently open, so your submission can't be recalled."
         ),
     )
 
@@ -653,9 +613,8 @@ def _recall_refused(review_session: ReviewSession) -> HTTPException:
     response_model=None,
 )
 def reviewer_recall(
-    request: Request, reviewer_session: tuple[Reviewer, ReviewSession] = Depends(
-        require_reviewer_in_session
-    ),
+    request: Request,
+    reviewer_session: tuple[Reviewer, ReviewSession] = Depends(require_reviewer_in_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -672,9 +631,7 @@ def reviewer_recall(
     in the same states; this refuses a stale or hand-made POST.
     """
     reviewer, review_session = reviewer_session
-    lifecycle.observe_deadline(
-        db, review_session, correlation_id=request_correlation_id()
-    )
+    lifecycle.observe_deadline(db, review_session, correlation_id=request_correlation_id())
     db.refresh(review_session)
     if not lifecycle.recall_allowed(review_session):
         raise _recall_refused(review_session)
@@ -691,7 +648,8 @@ def reviewer_recall(
         db.rollback()
         db.refresh(review_session)
         raise _recall_refused(review_session) from None
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url=f"/me/sessions/{review_session.public_id}/1",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -704,18 +662,14 @@ def reviewer_recall(
 )
 async def reviewer_clear(
     request: Request,
-    reviewer_session: tuple[Reviewer, ReviewSession] = Depends(
-        require_reviewer_in_session
-    ),
+    reviewer_session: tuple[Reviewer, ReviewSession] = Depends(require_reviewer_in_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
     reviewer, review_session = reviewer_session
     # Off the event loop: the gate's deadline observer may wait on the
     # session row lock (findings Bc4).
-    refusal = await run_in_threadpool(
-        _write_refusal, db, review_session, reviewer
-    )
+    refusal = await run_in_threadpool(_write_refusal, db, review_session, reviewer)
     if refusal is not None:
         return await run_in_threadpool(
             _refused_write_response,
@@ -746,9 +700,7 @@ async def reviewer_clear(
             correlation_id=request_correlation_id(),
         )
     except SessionStateConflict:
-        refusal = await run_in_threadpool(
-            _race_refusal, db, review_session, reviewer
-        )
+        refusal = await run_in_threadpool(_race_refusal, db, review_session, reviewer)
         return await run_in_threadpool(
             _refused_write_response,
             request,
@@ -761,7 +713,8 @@ async def reviewer_clear(
             page_n=1,
             form={},
         )
-    return urls.redirect(request,
+    return urls.redirect(
+        request,
         url=f"/me/sessions/{review_session.public_id}",
         status_code=status.HTTP_303_SEE_OTHER,
     )

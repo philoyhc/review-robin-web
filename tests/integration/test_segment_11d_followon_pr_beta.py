@@ -100,7 +100,7 @@ def rae() -> AuthenticatedUser:
 
 def _between(body: str, start: str, end: str) -> str:
     i = body.index(start)
-    return body[i:body.index(end, i)]
+    return body[i : body.index(end, i)]
 
 
 def test_the_header_is_two_rows_and_no_card(
@@ -421,9 +421,7 @@ def test_session_status_pill_rolls_up_draft_saved_submitted(
         ),
         follow_redirects=False,
     )
-    submitted = rae_client.get(
-        f"/me/sessions/{review_session.public_id}/1"
-    ).text
+    submitted = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
     assert "Submitted" in submitted
 
 

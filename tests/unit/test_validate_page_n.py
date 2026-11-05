@@ -13,6 +13,7 @@ all three routes now call.
 Strict semantics: empty pages list, ``page_n < 1``, and
 ``page_n > len(pages)`` all raise 404.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -63,9 +64,7 @@ def test_validate_page_n_returns_page_n_when_in_range(
         (0, []),
     ],
 )
-def test_validate_page_n_raises_404_on_out_of_range(
-    page_n: int, pages: list[list[object]]
-) -> None:
+def test_validate_page_n_raises_404_on_out_of_range(page_n: int, pages: list[list[object]]) -> None:
     with pytest.raises(HTTPException) as exc_info:
         validate_page_n(page_n, pages)
     assert exc_info.value.status_code == 404

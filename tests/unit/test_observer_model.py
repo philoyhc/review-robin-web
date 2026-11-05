@@ -48,9 +48,7 @@ def test_observer_persists_and_refetches(db: Session) -> None:
 
 def test_observer_display_name_and_tag_optional(db: Session) -> None:
     review_session = _session(db)
-    observer = Observer(
-        session_id=review_session.id, email="nobody@example.org"
-    )
+    observer = Observer(session_id=review_session.id, email="nobody@example.org")
     db.add(observer)
     db.commit()
 
@@ -62,14 +60,10 @@ def test_observer_display_name_and_tag_optional(db: Session) -> None:
 
 def test_observer_unique_per_session_email(db: Session) -> None:
     review_session = _session(db)
-    db.add(
-        Observer(session_id=review_session.id, email="dup@example.org")
-    )
+    db.add(Observer(session_id=review_session.id, email="dup@example.org"))
     db.commit()
 
-    db.add(
-        Observer(session_id=review_session.id, email="dup@example.org")
-    )
+    db.add(Observer(session_id=review_session.id, email="dup@example.org"))
     with pytest.raises(IntegrityError):
         db.commit()
     db.rollback()
@@ -93,17 +87,13 @@ def test_session_observers_cascade(db: Session) -> None:
     db.delete(review_session)
     db.commit()
 
-    remaining = (
-        db.query(Observer).filter(Observer.session_id == session_id).count()
-    )
+    remaining = db.query(Observer).filter(Observer.session_id == session_id).count()
     assert remaining == 0
 
 
 def test_observer_cohort_rule_defaults_to_null(db: Session) -> None:
     review_session = _session(db, code="obs-cohort-null")
-    observer = Observer(
-        session_id=review_session.id, email="no-rule@example.org"
-    )
+    observer = Observer(session_id=review_session.id, email="no-rule@example.org")
     db.add(observer)
     db.commit()
 

@@ -91,11 +91,21 @@ def test_each_grant_gives_its_tabs(client: TestClient) -> None:
     """Author, 2026-10-29: the frontline's Home, Log, Students and Plans;
     senior staff and Other Staff view an Overview tab; no Safety flags tab."""
     assert tabs(client.get("/").text) == ["Home", "Log", "Students", "Plans"]
-    assert tabs(client.get(at("/overview/", "Sam Lee")).text) == ["Overview"]  # no Home: it would only come back here
+    assert tabs(client.get(at("/overview/", "Sam Lee")).text) == [
+        "Overview"
+    ]  # no Home: it would only come back here
     assert tabs(client.get(at("/overview/", "Kenneth Lau")).text) == ["Overview"]
     assert tabs(client.get(at("/consultation/", "Marcus Tan")).text) == ["Consultation check"]
-    assert tabs(client.get(at("/", "Nadia Hassan")).text) == ["Home", "Overview", "Consultation check"]
-    assert tabs(client.get(at("/sys-admin/", "Rachel Yeo")).text) == ["Access", "Configuration", "Audit log"]
+    assert tabs(client.get(at("/", "Nadia Hassan")).text) == [
+        "Home",
+        "Overview",
+        "Consultation check",
+    ]
+    assert tabs(client.get(at("/sys-admin/", "Rachel Yeo")).text) == [
+        "Access",
+        "Configuration",
+        "Audit log",
+    ]
     for v in sample.VIEWERS:
         assert "Safety flags</a>" not in client.get(at("/", v.name)).text
 
@@ -105,8 +115,13 @@ def test_home_is_the_dashboard_or_goes_where_the_viewer_belongs(client: TestClie
     assert 'id="due-h">Due and overdue' in dashboard and ">Log encounter</a>" in dashboard
     assert "The flags you raised" in dashboard
     assert "Every active flag, unacknowledged first" in client.get(at("/", "Priya Raman")).text
-    for name, there in [("Sam Lee", "/overview/"), ("Siti Rahman", "/overview/"), ("Marcus Tan", "/consultation/"),
-                        ("Rachel Yeo", "/sys-admin/"), ("Platform super-admin", "/sys-admin/")]:
+    for name, there in [
+        ("Sam Lee", "/overview/"),
+        ("Siti Rahman", "/overview/"),
+        ("Marcus Tan", "/consultation/"),
+        ("Rachel Yeo", "/sys-admin/"),
+        ("Platform super-admin", "/sys-admin/"),
+    ]:
         page = client.get(at("/", name), follow_redirects=False)
         assert (page.status_code, page.headers["location"]) == (302, at(there, name)), name
 
@@ -115,7 +130,8 @@ def test_home_lists_the_pages_of_a_viewer_reaching_more_than_one(client: TestCli
     page = client.get(at("/", "Nadia Hassan")).text
     places = page.split('aria-label="Your pages"')[1].split("</ul>")[0]
     assert re.findall(r'href="([^"]*)"><span class="app-name">([^<]*)', places) == [
-        (at("/overview/", "Nadia Hassan"), "Overview"), (at("/consultation/", "Nadia Hassan"), "Consultation check"),
+        (at("/overview/", "Nadia Hassan"), "Overview"),
+        (at("/consultation/", "Nadia Hassan"), "Consultation check"),
     ]
     assert 'href="/?as=Nadia%20Hassan" aria-current="page">Home</a>' in page
     assert "flags-h" not in page
@@ -138,7 +154,9 @@ def test_a_recipient_with_nothing_else_lands_on_the_flags(client: TestClient) ->
 def test_the_switcher_shows_the_areas_the_viewer_reaches(client: TestClient) -> None:
     def areas(page: str) -> list[str]:
         menu = page.split('aria-label="Switch area"', 2)[-1].split("</nav>")[0]
-        return re.findall(r'href="[^"]*"[^>]*>([^<]+?)\s*(?:<|$)', menu)[:-1]  # less All applications
+        return re.findall(r'href="[^"]*"[^>]*>([^<]+?)\s*(?:<|$)', menu)[
+            :-1
+        ]  # less All applications
 
     assert areas(client.get("/").text) == ["Support Logs"]
     # Sys admin is the account's, not a place (author, 2026-11-02): an
@@ -148,16 +166,26 @@ def test_the_switcher_shows_the_areas_the_viewer_reaches(client: TestClient) -> 
 
 
 def test_sys_admin_is_in_the_account_menu(client: TestClient) -> None:
-    signed_in = {"X-MS-CLIENT-PRINCIPAL-NAME": "rachel@example.edu", "X-MS-CLIENT-PRINCIPAL-ID": "rachel-oid"}
+    signed_in = {
+        "X-MS-CLIENT-PRINCIPAL-NAME": "rachel@example.edu",
+        "X-MS-CLIENT-PRINCIPAL-ID": "rachel-oid",
+    }
 
     def account(path: str, name: str) -> str:
-        return client.get(at(path, name), headers=signed_in).text.split('aria-label="Account"')[1].split("</nav>")[0]
+        return (
+            client.get(at(path, name), headers=signed_in)
+            .text.split('aria-label="Account"')[1]
+            .split("</nav>")[0]
+        )
 
     # No sample viewer holds Sys admin beside another page, so it shows
     # only where it is omitted, on its own area; Residential Operations'
     # staff test shows the entry itself. The split is the shared helper's.
     assert web_pages.split_areas(sample_pages.areas_for(sample.viewer("Rachel Yeo")))[1] == (
-        {"label": "Sys admin", "path": "/sys-admin/" + sample.as_query(sample.viewer("Rachel Yeo"))},
+        {
+            "label": "Sys admin",
+            "path": "/sys-admin/" + sample.as_query(sample.viewer("Rachel Yeo")),
+        },
     )
     assert ">Sys admin</a>" not in account("/sys-admin/", "Rachel Yeo")
     assert ">Sys admin</a>" not in account("/", "Priya Raman")
@@ -167,16 +195,25 @@ def test_every_link_keeps_the_sample_viewer(client: TestClient) -> None:
     """Every link carries `?as=`, a form its hidden `as`; the viewer switch
     names each person; only the host's landing page and the in-page jump
     to the switch (the "Viewing as" chip) go without."""
-    pages = [("Priya Raman", "/"), ("Priya Raman", "/log"), ("Priya Raman", "/students/S-08"),
-             ("Priya Raman", "/plans/?show=week"), ("Rachel Yeo", "/sys-admin/configuration")]
+    pages = [
+        ("Priya Raman", "/"),
+        ("Priya Raman", "/log"),
+        ("Priya Raman", "/students/S-08"),
+        ("Priya Raman", "/plans/?show=week"),
+        ("Rachel Yeo", "/sys-admin/configuration"),
+    ]
     for name, path in pages:
         page = client.get(path + ("&" if "?" in path else "?") + "as=" + quote(name)).text
         card = page.split('aria-label="Sample viewer"')[1].split("</nav>")[0]
         rest = page.replace(card, "")
         for link in re.findall(r'\bhref="([^"]*)"', FAVICON.sub("", rest)):
             # Sign out (the host's, RRW segment 20D) carries no viewer either.
-            assert link in ("/", "#sample-viewer", "/.auth/logout") or "as=" + quote(name) in link, (path, link)
-        assert rest.count("<form") == rest.count(f'<input type="hidden" name="as" value="{name}">'), path
+            assert (
+                link in ("/", "#sample-viewer", "/.auth/logout") or "as=" + quote(name) in link
+            ), (path, link)
+        assert rest.count("<form") == rest.count(
+            f'<input type="hidden" name="as" value="{name}">'
+        ), path
 
 
 def test_the_viewer_switch_lists_every_viewer(client: TestClient) -> None:
@@ -199,7 +236,9 @@ def test_not_registered_shows_the_message_and_nobody_else(client: TestClient) ->
     assert "example.edu" not in page and "Example College" not in page
 
 
-def test_placeholders_are_404_deployed_to_someone_not_previewing(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_placeholders_are_404_deployed_to_someone_not_previewing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(web_pages, "is_local", lambda: False)
     local = TestClient(create_app())
     for path in ["/", "/not-registered", *(path for path, _, _ in PAGES)]:
@@ -215,14 +254,23 @@ def test_route_names_carry_the_application_s_prefix() -> None:
 def test_mounted_pages_stay_under_the_mount() -> None:
     host, _ = host_with(("supportlogs",))
     mounted = TestClient(host)
-    pages = ["/", "/not-registered", at("/", "Nadia Hassan"), at("/log", "Rachel Yeo"), at("/", "Wei Jie Ong"),
-             *(at(path, holder(*grants).name) for path, _, grants in PAGES),
-             at("/sys-admin/", "Platform super-admin")]
+    pages = [
+        "/",
+        "/not-registered",
+        at("/", "Nadia Hassan"),
+        at("/log", "Rachel Yeo"),
+        at("/", "Wei Jie Ong"),
+        *(at(path, holder(*grants).name) for path, _, grants in PAGES),
+        at("/sys-admin/", "Platform super-admin"),
+    ]
     for path in pages:
         page = mounted.get(MOUNT + path)
         assert page.status_code in (200, 403), path
         for link in LINK.findall(FAVICON.sub("", page.text)):
-            assert link in ("/", "/.auth/logout") or link.startswith((f"{MOUNT}/", "#")), (path, link)
+            assert link in ("/", "/.auth/logout") or link.startswith((f"{MOUNT}/", "#")), (
+                path,
+                link,
+            )
     redirect = mounted.get(MOUNT + at("/", "Rachel Yeo"), follow_redirects=False)
     assert redirect.headers["location"] == MOUNT + at("/sys-admin/", "Rachel Yeo")
 
@@ -236,5 +284,9 @@ def test_the_sample_staff_are_the_roster_s() -> None:
         if v.appointment:
             assert roster.get(v.name) == v.appointment, v.name
     assert sample.DEFAULT.grants == {sample.FRONTLINE}
-    for name in (*sample.FRONTLINE_COLLEAGUES, *(g.viewer for g in sample.PEER_GRANTS), *(g.grantor for g in sample.PEER_GRANTS)):
+    for name in (
+        *sample.FRONTLINE_COLLEAGUES,
+        *(g.viewer for g in sample.PEER_GRANTS),
+        *(g.grantor for g in sample.PEER_GRANTS),
+    ):
         assert roster.get(name) in ("RF", "RSLM"), name

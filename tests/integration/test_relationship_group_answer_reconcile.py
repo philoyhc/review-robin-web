@@ -53,23 +53,17 @@ class _World:
         self.rows = rows
 
 
-def _seed(
-    db: Session, *, tags: dict[str, str | None], answers: dict[str, str]
-) -> _World:
+def _seed(db: Session, *, tags: dict[str, str | None], answers: dict[str, str]) -> _World:
     """One reviewer on a ``p1`` group instrument, a reviewee per key of
     ``tags``. A ``None`` tag means no relationship for that pair; each
     ``answers`` entry is the copy that pair's assignment carries."""
     user = User(email="op-b34@example.edu")
     db.add(user)
     db.flush()
-    review_session = ReviewSession(
-        name="B34", code="b34", created_by_user_id=user.id
-    )
+    review_session = ReviewSession(name="B34", code="b34", created_by_user_id=user.id)
     db.add(review_session)
     db.flush()
-    instrument = Instrument(
-        session_id=review_session.id, name="Grp", order=0, group_kind="p1"
-    )
+    instrument = Instrument(session_id=review_session.id, name="Grp", order=0, group_kind="p1")
     db.add(instrument)
     db.flush()
     field = InstrumentResponseField(
@@ -80,9 +74,7 @@ def _seed(
         _inline_response_type="Likert5",
         order=0,
     )
-    reviewer = Reviewer(
-        session_id=review_session.id, name="Rae", email="rae@example.edu"
-    )
+    reviewer = Reviewer(session_id=review_session.id, name="Rae", email="rae@example.edu")
     reviewees = {
         name: Reviewee(
             session_id=review_session.id,
@@ -130,9 +122,11 @@ def _answers(db: Session, world: _World) -> dict[str, str | None]:
     db.expire_all()
     out: dict[str, str | None] = {}
     for name, row in world.rows.items():
-        values = db.execute(
-            select(Response.value).where(Response.assignment_id == row.id)
-        ).scalars().all()
+        values = (
+            db.execute(select(Response.value).where(Response.assignment_id == row.id))
+            .scalars()
+            .all()
+        )
         out[name] = values[0] if values else None
     return out
 
@@ -147,11 +141,15 @@ def _relationship(db: Session, world: _World, name: str) -> Relationship:
 
 
 def _last_context(db: Session, event_type: str) -> dict | None:
-    event = db.execute(
-        select(AuditEvent)
-        .where(AuditEvent.event_type == event_type)
-        .order_by(AuditEvent.id.desc())
-    ).scalars().first()
+    event = (
+        db.execute(
+            select(AuditEvent)
+            .where(AuditEvent.event_type == event_type)
+            .order_by(AuditEvent.id.desc())
+        )
+        .scalars()
+        .first()
+    )
     assert event is not None
     return (event.detail or {}).get("context")
 
@@ -159,9 +157,7 @@ def _last_context(db: Session, event_type: str) -> dict | None:
 def test_creating_a_relationship_clears_both_groups(
     db: Session,
 ) -> None:
-    world = _seed(
-        db, tags={"Ann": "A", "Cal": None}, answers={"Ann": "4", "Cal": "2"}
-    )
+    world = _seed(db, tags={"Ann": "A", "Cal": None}, answers={"Ann": "4", "Cal": "2"})
 
     relationships_service.create_relationship(
         db,
@@ -173,17 +169,13 @@ def test_creating_a_relationship_clears_both_groups(
     )
 
     assert _answers(db, world) == {"Ann": None, "Cal": None}
-    assert _last_context(db, "relationship.created") == {
-        "defuncted_group_responses": 2
-    }
+    assert _last_context(db, "relationship.created") == {"defuncted_group_responses": 2}
 
 
 def test_inactivating_keeps_both_parts_and_reactivating_clears_the_merge(
     db: Session,
 ) -> None:
-    world = _seed(
-        db, tags={"Ann": "A", "Bob": "A"}, answers={"Ann": "4", "Bob": "4"}
-    )
+    world = _seed(db, tags={"Ann": "A", "Bob": "A"}, answers={"Ann": "4", "Bob": "4"})
     bob = _relationship(db, world, "Bob").id
 
     relationships_service.bulk_inactivate(
@@ -204,9 +196,7 @@ def test_inactivating_keeps_both_parts_and_reactivating_clears_the_merge(
     )
     # Bob rejoins Ann: her group gained a member.
     assert _answers(db, world) == {"Ann": None, "Bob": None}
-    assert _last_context(db, "relationship.bulk_reactivated") == {
-        "defuncted_group_responses": 2
-    }
+    assert _last_context(db, "relationship.bulk_reactivated") == {"defuncted_group_responses": 2}
 
 
 def test_a_status_edit_moves_the_pair_out(db: Session) -> None:
@@ -226,17 +216,13 @@ def test_a_status_edit_moves_the_pair_out(db: Session) -> None:
     # Bob now reads as an empty tag, joining Dan: the group he joined
     # gained a member; the one he left only shrank.
     assert _answers(db, world) == {"Ann": "4", "Bob": None, "Dan": None}
-    assert _last_context(db, "relationship.updated") == {
-        "defuncted_group_responses": 2
-    }
+    assert _last_context(db, "relationship.updated") == {"defuncted_group_responses": 2}
 
 
 def test_deleting_the_selected_relationship_moves_the_pair_out(
     db: Session,
 ) -> None:
-    world = _seed(
-        db, tags={"Ann": "A", "Bob": "A"}, answers={"Ann": "4", "Bob": "4"}
-    )
+    world = _seed(db, tags={"Ann": "A", "Bob": "A"}, answers={"Ann": "4", "Bob": "4"})
 
     relationships_service.delete_selected(
         db,
@@ -268,9 +254,7 @@ def test_deleting_every_relationship_moves_each_pair_to_the_empty_group(
 
     # The others join Dan's group, which changes it too.
     assert _answers(db, world) == {"Ann": None, "Cal": None, "Dan": None}
-    assert _last_context(db, "relationships.deleted_all") == {
-        "defuncted_group_responses": 3
-    }
+    assert _last_context(db, "relationships.deleted_all") == {"defuncted_group_responses": 3}
 
 
 def test_importing_moves_only_the_pairs_whose_group_changed(
@@ -303,9 +287,7 @@ def test_importing_moves_only_the_pairs_whose_group_changed(
     # answer is touched.
     _import({"Ann": "A", "Bob": "A", "Cal": "B"})
     assert _answers(db, world) == {"Ann": "4", "Bob": "4", "Cal": "2"}
-    assert _last_context(db, "relationships.imported") == {
-        "filename": "relationships.csv"
-    }
+    assert _last_context(db, "relationships.imported") == {"filename": "relationships.csv"}
 
     _import({"Ann": "A", "Bob": "A", "Cal": "A"})
     assert _answers(db, world) == {"Ann": None, "Bob": None, "Cal": None}
@@ -340,9 +322,7 @@ def test_a_status_edit_with_a_re_point_moves_the_old_pair(db: Session) -> None:
         "Cal": None,
         "Dan": None,
     }
-    assert _last_context(db, "relationship.updated") == {
-        "defuncted_group_responses": 3
-    }
+    assert _last_context(db, "relationship.updated") == {"defuncted_group_responses": 3}
 
 
 def test_re_pointing_an_untagged_relationship_moves_nothing(
@@ -381,9 +361,7 @@ def test_another_reviewers_answers_are_untouched(db: Session) -> None:
     db.add(other)
     db.flush()
     instrument_id = world.rows["Ann"].instrument_id
-    field_id = db.execute(
-        select(Response.response_field_id).limit(1)
-    ).scalar_one()
+    field_id = db.execute(select(Response.response_field_id).limit(1)).scalar_one()
     other_rows = {}
     for name in ("Ann", "Bob"):
         db.add(

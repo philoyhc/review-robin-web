@@ -108,9 +108,7 @@ def clamp_offset(offset: int, *, total: int, page_size: int = PAGE_SIZE) -> int:
     return (offset // page_size) * page_size
 
 
-def build_pager(
-    *, total: int, offset: int = 0, page_size: int = PAGE_SIZE
-) -> Pager | None:
+def build_pager(*, total: int, offset: int = 0, page_size: int = PAGE_SIZE) -> Pager | None:
     """The pager for a table of ``total`` rows positioned at ``offset``,
     or ``None`` when the table holds one page or less."""
     if page_size <= 0 or total <= page_size:

@@ -6,6 +6,7 @@ import / delete, retention purge, and permission denial. The
 JSON-formatter shape itself is covered in
 ``cordware/tests/test_logging.py``.
 """
+
 from __future__ import annotations
 
 import logging
@@ -24,9 +25,7 @@ def _seed(db: Session) -> tuple[User, ReviewSession]:
     op = User(email="op@example.edu", display_name="Op")
     db.add(op)
     db.flush()
-    review_session = ReviewSession(
-        name="Spring", code="spring-2026", created_by_user_id=op.id
-    )
+    review_session = ReviewSession(name="Spring", code="spring-2026", created_by_user_id=op.id)
     db.add(review_session)
     db.flush()
     db.add(SessionOperator(session_id=review_session.id, user_id=op.id, role="owner"))
@@ -57,9 +56,7 @@ def test_non_utf8_csv_logs_rejection(caplog: pytest.LogCaptureFixture) -> None:
     assert rejected[0].__dict__["reason"] == "not_utf8"
 
 
-def test_roster_import_logs_outcome(
-    db: Session, caplog: pytest.LogCaptureFixture
-) -> None:
+def test_roster_import_logs_outcome(db: Session, caplog: pytest.LogCaptureFixture) -> None:
     op, review_session = _seed(db)
 
     with caplog.at_level(logging.INFO):
@@ -96,9 +93,7 @@ def test_purge_responses_logs_retention_action(
     assert purged[0].__dict__["session_id"] == review_session.id
 
 
-def test_permission_denial_logs_warning(
-    db: Session, caplog: pytest.LogCaptureFixture
-) -> None:
+def test_permission_denial_logs_warning(db: Session, caplog: pytest.LogCaptureFixture) -> None:
     bob = User(
         email="bob@example.edu",
         display_name="Bob",
@@ -132,9 +127,7 @@ def test_grant_denial_logs_the_user_and_the_reviewee(
     ree = User(email="ree-a4@example.edu", display_name="Ree")
     db.add_all([owner, ree])
     db.flush()
-    review_session = ReviewSession(
-        name="A4", code="a4-log", created_by_user_id=owner.id
-    )
+    review_session = ReviewSession(name="A4", code="a4-log", created_by_user_id=owner.id)
     db.add(review_session)
     db.flush()
     # Pad the reviewee table so the two ids cannot coincide.

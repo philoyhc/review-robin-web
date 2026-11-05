@@ -13,6 +13,7 @@ Three layers:
   view-shape's tri-state signal driving the checkbox render
   (``"checked"`` / ``"unchecked"`` / ``"indeterminate"``).
 """
+
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
@@ -35,24 +36,18 @@ from app.web.views import build_assignments_page_context
 
 def _seed_multi_instrument(
     db: Session, *, code: str = "sr-multi"
-) -> tuple[
-    User, ReviewSession, Instrument, Instrument, Reviewer, Reviewee
-]:
+) -> tuple[User, ReviewSession, Instrument, Instrument, Reviewer, Reviewee]:
     """Two instruments + an Alice reviewer / Alice reviewee pair
     (the self-review). Caller wires per-instrument Assignment
     rows + their include flags."""
     user = User(email="op@example.edu")
     db.add(user)
     db.flush()
-    review_session = ReviewSession(
-        name="SR", code=code, created_by_user_id=user.id
-    )
+    review_session = ReviewSession(name="SR", code=code, created_by_user_id=user.id)
     db.add(review_session)
     db.flush()
     inst_a = ensure_default_instrument(db, review_session)
-    inst_b = Instrument(
-        session_id=review_session.id, name="Peer survey", order=2
-    )
+    inst_b = Instrument(session_id=review_session.id, name="Peer survey", order=2)
     db.add(inst_b)
     db.flush()
     alice_r = Reviewer(
@@ -93,9 +88,7 @@ def _self_review(
     # ``is_self_review`` column so downstream readers (which now
     # consume the column post-PR-3 of
     # ``guide/self_review_consolidate.md``) see the correct value.
-    assignments_service.recompute_self_review_classification(
-        db, session_id=review_session.id
-    )
+    assignments_service.recompute_self_review_classification(db, session_id=review_session.id)
     db.commit()
     return a
 
@@ -105,8 +98,8 @@ def test_breakdown_returns_per_instrument_counts(db: Session) -> None:
     ``(active, deactivated)`` tuples keyed by instrument_id —
     instruments with no self-review rows are absent from the dict."""
 
-    user, review_session, inst_a, inst_b, alice_r, alice_e = (
-        _seed_multi_instrument(db, code="sr-counts")
+    user, review_session, inst_a, inst_b, alice_r, alice_e = _seed_multi_instrument(
+        db, code="sr-counts"
     )
     _self_review(
         db,
@@ -125,9 +118,7 @@ def test_breakdown_returns_per_instrument_counts(db: Session) -> None:
         include=False,
     )
 
-    out = assignments_service.self_review_breakdown_per_instrument(
-        db, review_session.id
-    )
+    out = assignments_service.self_review_breakdown_per_instrument(db, review_session.id)
 
     assert out == {
         inst_a.id: (1, 0),
@@ -142,8 +133,8 @@ def test_set_instrument_self_reviews_active_scopes_to_one_instrument(
     instrument's self-review rows; other instruments' rows survive
     untouched."""
 
-    user, review_session, inst_a, inst_b, alice_r, alice_e = (
-        _seed_multi_instrument(db, code="sr-scoped")
+    user, review_session, inst_a, inst_b, alice_r, alice_e = _seed_multi_instrument(
+        db, code="sr-scoped"
     )
     sr_a = _self_review(
         db,
@@ -186,8 +177,8 @@ def test_set_instrument_self_reviews_active_emits_audit_event(
     ``refs.instrument_id`` + ``counts.flipped`` +
     ``context.active``."""
 
-    user, review_session, inst_a, inst_b, alice_r, alice_e = (
-        _seed_multi_instrument(db, code="sr-audit")
+    user, review_session, inst_a, inst_b, alice_r, alice_e = _seed_multi_instrument(
+        db, code="sr-audit"
     )
     _self_review(
         db,
@@ -211,8 +202,7 @@ def test_set_instrument_self_reviews_active_emits_audit_event(
 
     event = db.execute(
         select(AuditEvent).where(
-            AuditEvent.event_type
-            == "assignments.instrument_self_reviews_active_set",
+            AuditEvent.event_type == "assignments.instrument_self_reviews_active_set",
             AuditEvent.session_id == review_session.id,
         )
     ).scalar_one()
@@ -229,8 +219,8 @@ def test_status_block_indeterminate_state_when_mixed(db: Session) -> None:
     page's Self review chip is amber, and its inline JS reads
     ``data-self-review-state`` to set the box ``indeterminate``."""
 
-    user, review_session, inst_a, inst_b, alice_r, alice_e = (
-        _seed_multi_instrument(db, code="sr-mixed")
+    user, review_session, inst_a, inst_b, alice_r, alice_e = _seed_multi_instrument(
+        db, code="sr-mixed"
     )
     # Add a second reviewer so the self-review-rows-per-instrument
     # count is > 1 and we can have a mixed state on inst_a.
@@ -284,8 +274,8 @@ def test_status_block_unchecked_state_when_all_deactivated(
     """All self-review rows on an instrument set to
     ``include=False`` → ``self_review_checkbox_state == "unchecked"``."""
 
-    user, review_session, inst_a, inst_b, alice_r, alice_e = (
-        _seed_multi_instrument(db, code="sr-all-off")
+    user, review_session, inst_a, inst_b, alice_r, alice_e = _seed_multi_instrument(
+        db, code="sr-all-off"
     )
     _self_review(
         db,
@@ -309,9 +299,7 @@ def test_status_block_uses_short_label_when_available(
     otherwise (mirrors the reviewer surface page-button label
     convention from Segment 11D)."""
 
-    user, review_session, inst_a, inst_b, _, _ = _seed_multi_instrument(
-        db, code="sr-label"
-    )
+    user, review_session, inst_a, inst_b, _, _ = _seed_multi_instrument(db, code="sr-label")
     inst_b.short_label = "peer"
     db.flush()
     db.commit()
@@ -328,10 +316,7 @@ def test_status_block_uses_short_label_when_available(
     # fresh in-memory DB where the two coincide; on Postgres the run
     # shares one database and ids climb into the hundreds, which is
     # how `ci-postgres` caught it and the sandbox did not.
-    assert (
-        by_id[inst_a.id].instrument_label
-        == f"Instrument_{inst_a.session_seq}"
-    )
+    assert by_id[inst_a.id].instrument_label == f"Instrument_{inst_a.session_seq}"
     # inst_b's short_label wins.
     assert by_id[inst_b.id].instrument_label == "peer"
 
@@ -344,8 +329,8 @@ def test_status_block_reports_included_count_per_instrument(
     counterpart of the **Generated** total). Drives the new
     ``data-included-count`` pill."""
 
-    user, review_session, inst_a, inst_b, alice_r, alice_e = (
-        _seed_multi_instrument(db, code="sr-included")
+    user, review_session, inst_a, inst_b, alice_r, alice_e = _seed_multi_instrument(
+        db, code="sr-included"
     )
     bob_r = Reviewer(
         session_id=review_session.id,
@@ -395,9 +380,7 @@ def test_status_block_reports_included_count_per_instrument(
     assert by_id[inst_b.id].included_count == 1
 
 
-def test_self_review_chip_tracks_the_include_state(
-    client: TestClient, db: Session
-) -> None:
+def test_self_review_chip_tracks_the_include_state(client: TestClient, db: Session) -> None:
     """ux_refinements Item 7 — the Self review cell is an on/off chip,
     "Include N self reviews" with N the included rows: dark (its box
     ticked) when all are in, light when none are, amber
@@ -419,9 +402,7 @@ def test_self_review_chip_tracks_the_include_state(
 
     def chip() -> str:
         """The chip's ``<label …>…</label>``, its box inside it."""
-        body = client.get(
-            f"/operator/sessions/{review_session.public_id}/assignments"
-        ).text
+        body = client.get(f"/operator/sessions/{review_session.public_id}/assignments").text
         head, tail = body.split(f'data-self-review-chip="{instrument_id}"', 1)
         return "<label" + head.rsplit("<label", 1)[1] + tail.split("</label>", 1)[0] + "</label>"
 
@@ -452,8 +433,12 @@ def test_self_review_chip_tracks_the_include_state(
     db.add_all([bob_r, bob_e])
     db.flush()
     bob_row = _self_review(
-        db, review_session=review_session, instrument=instrument,
-        reviewer=bob_r, reviewee=bob_e, include=True,
+        db,
+        review_session=review_session,
+        instrument=instrument,
+        reviewer=bob_r,
+        reviewee=bob_e,
+        include=True,
     )
     # The recompute switches a new self-review row to the instrument's
     # stored toggle, here off (findings E3), so the mixed state is made
@@ -467,9 +452,7 @@ def test_self_review_chip_tracks_the_include_state(
     assert "Include 1 self review" in mixed
 
 
-def test_toggle_route_404s_another_sessions_instrument(
-    client: TestClient, db: Session
-) -> None:
+def test_toggle_route_404s_another_sessions_instrument(client: TestClient, db: Session) -> None:
     """The row query is scoped to the session, so a foreign instrument
     id flipped nothing — but the route still answered 303 and wrote an
     audit row. It now 404s, like the Instruments-page routes."""
@@ -486,8 +469,7 @@ def test_toggle_route_404s_another_sessions_instrument(
     before = db.execute(select(func.count()).select_from(AuditEvent)).scalar_one()
 
     response = client.post(
-        f"/operator/sessions/{mine.public_id}"
-        f"/assignments/{foreign_id}/self-reviews/active",
+        f"/operator/sessions/{mine.public_id}/assignments/{foreign_id}/self-reviews/active",
         data={"active": "false"},
         follow_redirects=False,
     )
@@ -531,8 +513,8 @@ def test_excluded_by_rule_distinguishes_none_exist_from_none_possible(
     the roster* and *self-pairs deliberately not generated* are
     different facts, and a bare ``0`` renders them identically.
     """
-    user, review_session, inst_a, inst_b, alice_r, alice_e = (
-        _seed_multi_instrument(db, code="sr-excl")
+    user, review_session, inst_a, inst_b, alice_r, alice_e = _seed_multi_instrument(
+        db, code="sr-excl"
     )
     _pin_rule_set(
         db,
@@ -568,8 +550,8 @@ def test_excluded_by_rule_is_false_while_rows_still_exist(
     The plan assumed the count is always ``0`` when the flag is set.
     Between ticking the box and the next Generate it is not.
     """
-    user, review_session, inst_a, inst_b, alice_r, alice_e = (
-        _seed_multi_instrument(db, code="sr-excl-pending")
+    user, review_session, inst_a, inst_b, alice_r, alice_e = _seed_multi_instrument(
+        db, code="sr-excl-pending"
     )
     _pin_rule_set(
         db,
@@ -603,8 +585,8 @@ def test_excluded_by_rule_does_not_leak_across_unpinned_instruments(
     ``else`` binding it keeps the previous iteration's value and an
     unpinned instrument inherits the last pinned one's rule set.
     """
-    user, review_session, inst_a, inst_b, alice_r, alice_e = (
-        _seed_multi_instrument(db, code="sr-excl-leak")
+    user, review_session, inst_a, inst_b, alice_r, alice_e = _seed_multi_instrument(
+        db, code="sr-excl-leak"
     )
     _pin_rule_set(
         db,
@@ -634,8 +616,8 @@ def test_excluded_by_rule_needs_evidence_not_just_configuration(
     the field exists to remove, one step over: it makes *nothing to
     exclude* look like *something was excluded*.
     """
-    user, review_session, inst_a, inst_b, alice_r, alice_e = (
-        _seed_multi_instrument(db, code="sr-excl-noev")
+    user, review_session, inst_a, inst_b, alice_r, alice_e = _seed_multi_instrument(
+        db, code="sr-excl-noev"
     )
     # Break the self-pair: the reviewee is no longer the reviewer.
     alice_e.email_or_identifier = "someone-else@example.edu"

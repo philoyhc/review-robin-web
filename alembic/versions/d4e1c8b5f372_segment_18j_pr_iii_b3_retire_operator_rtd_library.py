@@ -27,6 +27,7 @@ Revision ID: d4e1c8b5f372
 Revises: c5e2d7a3f81b
 Create Date: 2026-05-24
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -43,18 +44,10 @@ def upgrade() -> None:
     # 1. NULL all provenance refs (defensive — the column drops
     #    next, but if a downgrade attempt re-creates the column it
     #    won't try to restore stale ids).
-    bind.execute(
-        sa.text(
-            "UPDATE response_type_definitions SET library_origin_id = NULL"
-        )
-    )
+    bind.execute(sa.text("UPDATE response_type_definitions SET library_origin_id = NULL"))
     # 2. Drop the column (which also drops its FK + index).
-    with op.batch_alter_table(
-        "response_type_definitions", schema=None
-    ) as batch_op:
-        batch_op.drop_index(
-            "ix_response_type_definitions_library_origin_id"
-        )
+    with op.batch_alter_table("response_type_definitions", schema=None) as batch_op:
+        batch_op.drop_index("ix_response_type_definitions_library_origin_id")
         batch_op.drop_column("library_origin_id")
     # 3. Drop the operator-library table entirely.
     op.drop_table("operator_response_type_definitions")
@@ -65,9 +58,11 @@ def downgrade() -> None:
         "operator_response_type_definitions",
         sa.Column("id", sa.Integer(), primary_key=True),
         sa.Column(
-            "owner_user_id", sa.Integer(),
+            "owner_user_id",
+            sa.Integer(),
             sa.ForeignKey("users.id", ondelete="CASCADE"),
-            nullable=False, index=True,
+            nullable=False,
+            index=True,
         ),
         sa.Column("response_type", sa.String(length=64), nullable=False),
         sa.Column("data_type", sa.String(length=16), nullable=False),
@@ -76,26 +71,25 @@ def downgrade() -> None:
         sa.Column("step", sa.Float(), nullable=True),
         sa.Column("list_csv", sa.Text(), nullable=True),
         sa.Column(
-            "created_at", sa.DateTime(timezone=True),
+            "created_at",
+            sa.DateTime(timezone=True),
             server_default=sa.text("CURRENT_TIMESTAMP"),
             nullable=False,
         ),
         sa.Column(
-            "updated_at", sa.DateTime(timezone=True),
+            "updated_at",
+            sa.DateTime(timezone=True),
             server_default=sa.text("CURRENT_TIMESTAMP"),
             nullable=False,
         ),
         sa.UniqueConstraint(
-            "owner_user_id", "response_type",
+            "owner_user_id",
+            "response_type",
             name="uq_operator_rtd_owner_name",
         ),
     )
-    with op.batch_alter_table(
-        "response_type_definitions", schema=None
-    ) as batch_op:
-        batch_op.add_column(
-            sa.Column("library_origin_id", sa.Integer(), nullable=True)
-        )
+    with op.batch_alter_table("response_type_definitions", schema=None) as batch_op:
+        batch_op.add_column(sa.Column("library_origin_id", sa.Integer(), nullable=True))
         batch_op.create_foreign_key(
             "fk_response_type_definitions_library_origin_id",
             "operator_response_type_definitions",

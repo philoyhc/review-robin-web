@@ -1,5 +1,6 @@
 """Coverage for ``app.services.session_clone`` and the lobby clone
 route — Segment 18A Part 1 session cloning."""
+
 from __future__ import annotations
 
 import datetime as dt
@@ -35,9 +36,7 @@ def _source_session(db: Session, code: str) -> tuple[ReviewSession, User]:
     review_session = sessions.create_session(
         db, user=op, payload=SessionCreate(name=code.title(), code=code)
     )
-    reviewer = Reviewer(
-        session_id=review_session.id, name="R One", email="r1@example.edu"
-    )
+    reviewer = Reviewer(session_id=review_session.id, name="R One", email="r1@example.edu")
     reviewee = Reviewee(
         session_id=review_session.id,
         name="E One",
@@ -54,18 +53,14 @@ def _source_session(db: Session, code: str) -> tuple[ReviewSession, User]:
         )
     )
     db.commit()
-    session_tags.add_tag(
-        db, review_session=review_session, user=op, tag="pilot"
-    )
+    session_tags.add_tag(db, review_session=review_session, user=op, tag="pilot")
     return review_session, op
 
 
 def test_clone_all_copies_full_graph(db: Session) -> None:
     source, op = _source_session(db, "clone-all")
 
-    clone = session_clone.clone_session(
-        db, source=source, user=op, mode="all"
-    )
+    clone = session_clone.clone_session(db, source=source, user=op, mode="all")
 
     assert clone.id != source.id
     assert clone.name == "Copy of Clone-All"
@@ -75,15 +70,15 @@ def test_clone_all_copies_full_graph(db: Session) -> None:
     assert clone.created_by_user_id == op.id
 
     # Roster copied, with relationship FKs re-pointed at the clones.
-    clone_reviewers = db.execute(
-        select(Reviewer).where(Reviewer.session_id == clone.id)
-    ).scalars().all()
-    clone_reviewees = db.execute(
-        select(Reviewee).where(Reviewee.session_id == clone.id)
-    ).scalars().all()
-    clone_rels = db.execute(
-        select(Relationship).where(Relationship.session_id == clone.id)
-    ).scalars().all()
+    clone_reviewers = (
+        db.execute(select(Reviewer).where(Reviewer.session_id == clone.id)).scalars().all()
+    )
+    clone_reviewees = (
+        db.execute(select(Reviewee).where(Reviewee.session_id == clone.id)).scalars().all()
+    )
+    clone_rels = (
+        db.execute(select(Relationship).where(Relationship.session_id == clone.id)).scalars().all()
+    )
     assert len(clone_reviewers) == 1
     assert len(clone_reviewees) == 1
     assert len(clone_rels) == 1
@@ -91,12 +86,8 @@ def test_clone_all_copies_full_graph(db: Session) -> None:
     assert clone_rels[0].reviewee_id == clone_reviewees[0].id
 
     # Config copied; tags copied in every mode.
-    assert db.execute(
-        select(Instrument).where(Instrument.session_id == clone.id)
-    ).scalars().all()
-    assert session_tags.tags_for_sessions(db, [clone.id])[clone.id] == [
-        "pilot"
-    ]
+    assert db.execute(select(Instrument).where(Instrument.session_id == clone.id)).scalars().all()
+    assert session_tags.tags_for_sessions(db, [clone.id])[clone.id] == ["pilot"]
 
 
 def test_clone_copies_data_shapes_retention_and_toggles(db: Session) -> None:
@@ -109,20 +100,22 @@ def test_clone_copies_data_shapes_retention_and_toggles(db: Session) -> None:
     source.retention_exception = True
     source.retention_overrides = {"audit_log_days": 365}
     # A scheduling anchor that must NOT survive the clone.
-    source.scheduled_activate_at = dt.datetime(
-        2026, 6, 1, 9, 0, tzinfo=dt.UTC
-    )
+    source.scheduled_activate_at = dt.datetime(2026, 6, 1, 9, 0, tzinfo=dt.UTC)
     db.flush()
 
-    src_inst = db.execute(
-        select(Instrument).where(Instrument.session_id == source.id)
-    ).scalars().first()
+    src_inst = (
+        db.execute(select(Instrument).where(Instrument.session_id == source.id)).scalars().first()
+    )
     assert src_inst is not None
-    src_rf = db.execute(
-        select(InstrumentResponseField).where(
-            InstrumentResponseField.instrument_id == src_inst.id
+    src_rf = (
+        db.execute(
+            select(InstrumentResponseField).where(
+                InstrumentResponseField.instrument_id == src_inst.id
+            )
         )
-    ).scalars().first()
+        .scalars()
+        .first()
+    )
     assert src_rf is not None
     db.add(
         DataShape(
@@ -137,9 +130,7 @@ def test_clone_copies_data_shapes_retention_and_toggles(db: Session) -> None:
     )
     db.commit()
 
-    clone = session_clone.clone_session(
-        db, source=source, user=op, mode="config"
-    )
+    clone = session_clone.clone_session(db, source=source, user=op, mode="config")
     db.refresh(clone)
 
     assert clone.relationships_enabled is True
@@ -149,22 +140,26 @@ def test_clone_copies_data_shapes_retention_and_toggles(db: Session) -> None:
     # Schedule resets by design.
     assert clone.scheduled_activate_at is None
 
-    clone_shapes = db.execute(
-        select(DataShape).where(DataShape.session_id == clone.id)
-    ).scalars().all()
+    clone_shapes = (
+        db.execute(select(DataShape).where(DataShape.session_id == clone.id)).scalars().all()
+    )
     assert len(clone_shapes) == 1
     shape = clone_shapes[0]
     assert shape.name == "My shape"
 
-    clone_inst = db.execute(
-        select(Instrument).where(Instrument.session_id == clone.id)
-    ).scalars().first()
+    clone_inst = (
+        db.execute(select(Instrument).where(Instrument.session_id == clone.id)).scalars().first()
+    )
     assert clone_inst is not None
-    clone_rf = db.execute(
-        select(InstrumentResponseField).where(
-            InstrumentResponseField.instrument_id == clone_inst.id
+    clone_rf = (
+        db.execute(
+            select(InstrumentResponseField).where(
+                InstrumentResponseField.instrument_id == clone_inst.id
+            )
         )
-    ).scalars().first()
+        .scalars()
+        .first()
+    )
     assert clone_rf is not None
     # Scope chips re-pointed at the clone's rows, not the source's.
     assert shape.instrument_id == clone_inst.id
@@ -181,14 +176,10 @@ def test_clone_all_does_not_copy_results_acknowledgement(
     source_reviewee = db.execute(
         select(Reviewee).where(Reviewee.session_id == source.id)
     ).scalar_one()
-    source_reviewee.results_acknowledged_at = dt.datetime(
-        2026, 9, 1, 9, 0, tzinfo=dt.UTC
-    )
+    source_reviewee.results_acknowledged_at = dt.datetime(2026, 9, 1, 9, 0, tzinfo=dt.UTC)
     db.commit()
 
-    clone = session_clone.clone_session(
-        db, source=source, user=op, mode="all"
-    )
+    clone = session_clone.clone_session(db, source=source, user=op, mode="all")
 
     clone_reviewee = db.execute(
         select(Reviewee).where(Reviewee.session_id == clone.id)
@@ -208,8 +199,12 @@ def test_clone_all_copies_observers_with_their_cohort_rules(
     rule = {
         "combinator": "AND",
         "rules": [
-            {"field": "reviewee.tag1", "op": "IS THE SAME AS",
-             "operand_tag": "observer.tag1", "operand_value": ""}
+            {
+                "field": "reviewee.tag1",
+                "op": "IS THE SAME AS",
+                "operand_tag": "observer.tag1",
+                "operand_value": "",
+            }
         ],
     }
     db.add(
@@ -224,9 +219,7 @@ def test_clone_all_copies_observers_with_their_cohort_rules(
     )
     db.commit()
 
-    clone = session_clone.clone_session(
-        db, source=source, user=op, mode="all"
-    )
+    clone = session_clone.clone_session(db, source=source, user=op, mode="all")
 
     clone_observer = db.execute(
         select(Observer).where(Observer.session_id == clone.id)
@@ -252,43 +245,23 @@ def test_clone_config_skips_roster(db: Session) -> None:
     db.add(Observer(session_id=source.id, email="obs-cfg@example.edu"))
     db.commit()
 
-    clone = session_clone.clone_session(
-        db, source=source, user=op, mode="config"
-    )
+    clone = session_clone.clone_session(db, source=source, user=op, mode="config")
 
+    assert db.execute(select(Reviewer).where(Reviewer.session_id == clone.id)).scalars().all() == []
     assert (
-        db.execute(
-            select(Reviewer).where(Reviewer.session_id == clone.id)
-        ).scalars().all()
+        db.execute(select(Relationship).where(Relationship.session_id == clone.id)).scalars().all()
         == []
     )
-    assert (
-        db.execute(
-            select(Relationship).where(Relationship.session_id == clone.id)
-        ).scalars().all()
-        == []
-    )
-    assert (
-        db.execute(
-            select(Observer).where(Observer.session_id == clone.id)
-        ).scalars().all()
-        == []
-    )
+    assert db.execute(select(Observer).where(Observer.session_id == clone.id)).scalars().all() == []
     # Config + tags still copied.
-    assert db.execute(
-        select(Instrument).where(Instrument.session_id == clone.id)
-    ).scalars().all()
-    assert session_tags.tags_for_sessions(db, [clone.id])[clone.id] == [
-        "pilot"
-    ]
+    assert db.execute(select(Instrument).where(Instrument.session_id == clone.id)).scalars().all()
+    assert session_tags.tags_for_sessions(db, [clone.id])[clone.id] == ["pilot"]
 
 
 def test_clone_writes_audit_event(db: Session) -> None:
     source, op = _source_session(db, "clone-audit")
 
-    clone = session_clone.clone_session(
-        db, source=source, user=op, mode="all"
-    )
+    clone = session_clone.clone_session(db, source=source, user=op, mode="all")
 
     event = db.execute(
         select(AuditEvent).where(
@@ -306,9 +279,7 @@ def test_clone_writes_an_event_on_the_source(db: Session) -> None:
     the copy, by id and code; the clone's trail carries none of it."""
     source, op = _source_session(db, "clone-src-audit")
 
-    clone = session_clone.clone_session(
-        db, source=source, user=op, mode="config"
-    )
+    clone = session_clone.clone_session(db, source=source, user=op, mode="config")
 
     event = db.execute(
         select(AuditEvent).where(
@@ -328,19 +299,13 @@ def test_clone_writes_an_event_on_the_source(db: Session) -> None:
 def test_clone_derives_a_unique_code(db: Session) -> None:
     source, op = _source_session(db, "clone-dup")
 
-    first = session_clone.clone_session(
-        db, source=source, user=op, mode="all"
-    )
-    second = session_clone.clone_session(
-        db, source=source, user=op, mode="all"
-    )
+    first = session_clone.clone_session(db, source=source, user=op, mode="all")
+    second = session_clone.clone_session(db, source=source, user=op, mode="all")
 
     assert first.code != second.code
 
 
-def test_clone_route_redirects_to_the_clone(
-    client: TestClient, db: Session
-) -> None:
+def test_clone_route_redirects_to_the_clone(client: TestClient, db: Session) -> None:
     client.post(
         "/operator/sessions",
         data={"name": "Routed", "code": "clone-route"},
@@ -392,9 +357,7 @@ def test_a_clone_starts_with_no_assignment_mode(db: Session) -> None:
     source.assignment_mode = "rule_based"
     db.flush()
 
-    clone = session_clone.clone_session(
-        db, source=source, user=op, mode="all"
-    )
+    clone = session_clone.clone_session(db, source=source, user=op, mode="all")
     db.flush()
 
     assert clone.assignment_mode is None, (
@@ -420,9 +383,7 @@ def test_a_clone_does_not_trip_the_never_generated_rules(
     source.assignment_mode = "rule_based"
     db.flush()
 
-    clone = session_clone.clone_session(
-        db, source=source, user=op, mode="all"
-    )
+    clone = session_clone.clone_session(db, source=source, user=op, mode="all")
     db.flush()
 
     keys = {
@@ -431,8 +392,7 @@ def test_a_clone_does_not_trip_the_never_generated_rules(
         if getattr(issue, "rule_key", None)
     }
     assert "assignments.reviewer_missing" not in keys, (
-        "the clone has no assignments, so the never-Generated skip "
-        "should suppress this rule"
+        "the clone has no assignments, so the never-Generated skip should suppress this rule"
     )
 
 
@@ -451,16 +411,24 @@ def test_a_clone_repoints_sort_and_widths_at_its_own_fields(
         select(Instrument).where(Instrument.session_id == source.id)
     ).scalar_one()
     display = InstrumentDisplayField(
-        instrument_id=instrument.id, label="", source_type="reviewee",
-        source_field="tag_1", order=9, visible=True,
+        instrument_id=instrument.id,
+        label="",
+        source_type="reviewee",
+        source_field="tag_1",
+        order=9,
+        visible=True,
     )
     db.add(display)
     db.flush()
-    field = db.execute(
-        select(InstrumentResponseField)
-        .where(InstrumentResponseField.instrument_id == instrument.id)
-        .order_by(InstrumentResponseField.order)
-    ).scalars().first()
+    field = (
+        db.execute(
+            select(InstrumentResponseField)
+            .where(InstrumentResponseField.instrument_id == instrument.id)
+            .order_by(InstrumentResponseField.order)
+        )
+        .scalars()
+        .first()
+    )
     assert field is not None
     instrument.sort_display_fields = [
         {"display_field_id": display.id, "dir": "desc"},
@@ -475,9 +443,7 @@ def test_a_clone_repoints_sort_and_widths_at_its_own_fields(
 
     clone = session_clone.clone_session(db, source=source, user=op, mode="all")
 
-    copy = db.execute(
-        select(Instrument).where(Instrument.session_id == clone.id)
-    ).scalar_one()
+    copy = db.execute(select(Instrument).where(Instrument.session_id == clone.id)).scalar_one()
     copy_display = db.execute(
         select(InstrumentDisplayField).where(
             InstrumentDisplayField.instrument_id == copy.id,
@@ -509,14 +475,14 @@ def test_a_clone_drops_a_width_naming_another_instruments_field(
     Replicate's do: a stray ``rf_<id>`` naming an earlier instrument's
     field is dropped, not re-pointed at that field's clone."""
     source, op = _source_session(db, "clone-stray")
-    first = db.execute(
-        select(Instrument).where(Instrument.session_id == source.id)
-    ).scalar_one()
-    first_field = db.execute(
-        select(InstrumentResponseField).where(
-            InstrumentResponseField.instrument_id == first.id
+    first = db.execute(select(Instrument).where(Instrument.session_id == source.id)).scalar_one()
+    first_field = (
+        db.execute(
+            select(InstrumentResponseField).where(InstrumentResponseField.instrument_id == first.id)
         )
-    ).scalars().first()
+        .scalars()
+        .first()
+    )
     assert first_field is not None
     second = Instrument(
         session_id=source.id,
@@ -530,9 +496,7 @@ def test_a_clone_drops_a_width_naming_another_instruments_field(
     clone = session_clone.clone_session(db, source=source, user=op, mode="all")
 
     copy = db.execute(
-        select(Instrument).where(
-            Instrument.session_id == clone.id, Instrument.name == "Second"
-        )
+        select(Instrument).where(Instrument.session_id == clone.id, Instrument.name == "Second")
     ).scalar_one()
     assert copy.column_widths == {"identity": 180}
 
@@ -545,9 +509,7 @@ def test_a_clone_copies_each_instruments_visibility_grid(db: Session) -> None:
     from app.services import visibility_policies as vp
 
     source, op = _source_session(db, "clone-vis")
-    first = db.execute(
-        select(Instrument).where(Instrument.session_id == source.id)
-    ).scalar_one()
+    first = db.execute(select(Instrument).where(Instrument.session_id == source.id)).scalar_one()
     second = Instrument(session_id=source.id, name="Second", order=first.order + 1)
     db.add(second)
     db.flush()
@@ -593,9 +555,7 @@ def test_a_clone_copies_each_instruments_visibility_grid(db: Session) -> None:
                     else None
                     for w in ("while_ongoing", "after_release")
                 )
-                for audience, policy in vp.list_for_instrument(
-                    db, instrument.id
-                ).items()
+                for audience, policy in vp.list_for_instrument(db, instrument.id).items()
             }
         return out
 
@@ -609,12 +569,16 @@ def test_a_clone_copies_each_instruments_visibility_grid(db: Session) -> None:
             db, source=source, user=op, mode=mode, correlation_id=f"cid-{mode}"
         )
         assert grids(clone.id) == expected, mode
-        events = db.execute(
-            select(AuditEvent).where(
-                AuditEvent.event_type == "instrument.view_policy_set",
-                AuditEvent.session_id == clone.id,
+        events = (
+            db.execute(
+                select(AuditEvent).where(
+                    AuditEvent.event_type == "instrument.view_policy_set",
+                    AuditEvent.session_id == clone.id,
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         assert len(events) == 3, mode
         assert {e.correlation_id for e in events} == {f"cid-{mode}"}, mode
         assert clone.deadline is None
@@ -641,9 +605,7 @@ def test_a_clone_leaves_the_preview_member_ids_behind(db: Session) -> None:
 
     clone = session_clone.clone_session(db, source=source, user=op, mode="config")
 
-    copied = db.execute(
-        select(Instrument).where(Instrument.session_id == clone.id)
-    ).scalar_one()
+    copied = db.execute(select(Instrument).where(Instrument.session_id == clone.id)).scalar_one()
     assert copied.band2_state == {"sample_reviewee_name": "E One"}
     source_state = instrument.band2_state
     assert source_state is not None

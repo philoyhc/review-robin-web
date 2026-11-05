@@ -5,6 +5,7 @@ Revises: b2c3d4e5f6a7
 Create Date: 2026-05-05 00:00:00.000000
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -26,9 +27,7 @@ def upgrade() -> None:
     or empty (PR γ of the multi-instrument rewrite consumes this).
     """
     with op.batch_alter_table("instruments", schema=None) as batch_op:
-        batch_op.add_column(
-            sa.Column("short_label", sa.String(length=32), nullable=True)
-        )
+        batch_op.add_column(sa.Column("short_label", sa.String(length=32), nullable=True))
 
 
 def downgrade() -> None:

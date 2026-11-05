@@ -8,6 +8,7 @@ flip a ``validated`` session back to ``draft`` (``update_session``
 excepted since findings Cc5), and the two
 visibility-when-closed surfaces must NOT (item #16).
 """
+
 from __future__ import annotations
 
 import pytest
@@ -54,16 +55,12 @@ def setup(
     op = User(email="op@example.edu", display_name="Op")
     db.add(op)
     db.flush()
-    review_session = ReviewSession(
-        name="Spring", code="spring-2026", created_by_user_id=op.id
-    )
+    review_session = ReviewSession(name="Spring", code="spring-2026", created_by_user_id=op.id)
     db.add(review_session)
     db.flush()
     db.add(SessionOperator(session_id=review_session.id, user_id=op.id, role="owner"))
     instrument = instruments_service.ensure_default_instrument(db, review_session)
-    reviewer = Reviewer(
-        session_id=review_session.id, name="Rae", email="rae@example.edu"
-    )
+    reviewer = Reviewer(session_id=review_session.id, name="Rae", email="rae@example.edu")
     reviewee = Reviewee(
         session_id=review_session.id,
         name="Carol",
@@ -111,9 +108,7 @@ def test_invalidate_if_validated_flips_validated_to_draft(
 ) -> None:
     op, review_session, *_ = setup
 
-    lifecycle.invalidate_if_validated(
-        db, review_session=review_session, user=op, reason="probe"
-    )
+    lifecycle.invalidate_if_validated(db, review_session=review_session, user=op, reason="probe")
 
     db.refresh(review_session)
     assert review_session.status == "draft"
@@ -129,20 +124,22 @@ def test_invalidate_if_validated_with_no_actor_records_the_flip_unattributed(
     22C)."""
     _, review_session, *_ = setup
 
-    lifecycle.invalidate_if_validated(
-        db, review_session=review_session, user=None, reason="probe"
-    )
+    lifecycle.invalidate_if_validated(db, review_session=review_session, user=None, reason="probe")
 
     db.refresh(review_session)
     assert review_session.status == "draft"
-    event = db.execute(
-        select(AuditEvent)
-        .where(
-            AuditEvent.session_id == review_session.id,
-            AuditEvent.event_type == "session.invalidated",
+    event = (
+        db.execute(
+            select(AuditEvent)
+            .where(
+                AuditEvent.session_id == review_session.id,
+                AuditEvent.event_type == "session.invalidated",
+            )
+            .order_by(AuditEvent.id.desc())
         )
-        .order_by(AuditEvent.id.desc())
-    ).scalars().first()
+        .scalars()
+        .first()
+    )
     assert event is not None and event.actor_user_id is None
 
 
@@ -156,9 +153,7 @@ def test_invalidate_if_validated_is_noop_on_draft(
     review_session.status = "draft"
     db.flush()
 
-    lifecycle.invalidate_if_validated(
-        db, review_session=review_session, user=op, reason="probe"
-    )
+    lifecycle.invalidate_if_validated(db, review_session=review_session, user=op, reason="probe")
 
     db.refresh(review_session)
     assert review_session.status == "draft"
@@ -283,9 +278,7 @@ def test_response_field_add_invalidates(
     op, review_session, _, _, assignment = setup
     instrument = assignment.instrument
 
-    instruments_service.add_default_response_field(
-        db, instrument=instrument, actor=op
-    )
+    instruments_service.add_default_response_field(db, instrument=instrument, actor=op)
 
     db.refresh(review_session)
     assert review_session.status == "draft"

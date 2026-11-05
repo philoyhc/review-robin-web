@@ -59,8 +59,11 @@ class Repo:
         if minute is not None:
             env["GIT_AUTHOR_DATE"] = env["GIT_COMMITTER_DATE"] = _at(minute)
         return subprocess.run(
-            ["git", "-C", str(self.root), *args], check=True, capture_output=True,
-            text=True, env=env,
+            ["git", "-C", str(self.root), *args],
+            check=True,
+            capture_output=True,
+            text=True,
+            env=env,
         ).stdout
 
     def commit(self, message: str, minute: int) -> None:
@@ -79,7 +82,11 @@ class Repo:
             self.commit(message, minute)
         self.git("checkout", "-q", "main")
         self.git(
-            "merge", "-q", "--no-ff", branch, "-m",
+            "merge",
+            "-q",
+            "--no-ff",
+            branch,
+            "-m",
             f"Merge pull request #{self.n} from x/{branch}\n\nSlice {self.n}",
             minute=merge_minute,
         )

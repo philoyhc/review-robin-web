@@ -130,20 +130,19 @@ def _activate_and_respond(
             follow_redirects=False,
         )
         if index % 2 == 0:
-            reviewer_client.post(
-                f"/me/sessions/{session.public_id}/submit", follow_redirects=False
-            )
+            reviewer_client.post(f"/me/sessions/{session.public_id}/submit", follow_redirects=False)
 
 
 def _seeded(client: TestClient, db: Session, n: int, code: str) -> ReviewSession:
-    assert client.post(
-        "/operator/sessions",
-        data={"name": f"Pre{n}", "code": code, "description": "d"},
-        follow_redirects=False,
-    ).status_code == 303
-    session = db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    assert (
+        client.post(
+            "/operator/sessions",
+            data={"name": f"Pre{n}", "code": code, "description": "d"},
+            follow_redirects=False,
+        ).status_code
+        == 303
+    )
+    session = db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
     for kind in ("reviewers", "reviewees"):
         client.post(
             f"/operator/sessions/{session.public_id}/{kind}/import",
@@ -211,13 +210,9 @@ def test_the_prefetched_path_agrees_with_the_per_assignment_path(
     assert db.execute(select(Response)).scalars().first() is not None, (
         "fixture produced no responses; the comparison below would be vacuous"
     )
-    prefetched = responses_service.responses_by_assignment(
-        db, session_id=session.id
-    )
+    prefetched = responses_service.responses_by_assignment(db, session_id=session.id)
     assignments = list(
-        db.execute(
-            select(Assignment).where(Assignment.session_id == session.id)
-        ).scalars()
+        db.execute(select(Assignment).where(Assignment.session_id == session.id)).scalars()
     )
     assert assignments, "fixture produced no assignments"
 
@@ -239,12 +234,10 @@ def test_an_assignment_with_no_responses_reads_the_same_either_way(
     no rows is absent from it, and `.get(id, [])` has to return what the
     query returned — an empty list, not a KeyError and not None."""
     session = _seeded(client, db, 3, code="PREFEMPTY")
-    prefetched = responses_service.responses_by_assignment(
-        db, session_id=session.id
+    prefetched = responses_service.responses_by_assignment(db, session_id=session.id)
+    assignment = (
+        db.execute(select(Assignment).where(Assignment.session_id == session.id)).scalars().first()
     )
-    assignment = db.execute(
-        select(Assignment).where(Assignment.session_id == session.id)
-    ).scalars().first()
     assert assignment is not None
     assert assignment.id not in prefetched, "fixture has responses; test is void"
     assert _assignment_complete(db, assignment, []) == _assignment_complete(
@@ -252,9 +245,7 @@ def test_an_assignment_with_no_responses_reads_the_same_either_way(
     )
 
 
-def test_coverage_does_not_scale_with_the_assignment_count(
-    client: TestClient, db: Session
-) -> None:
+def test_coverage_does_not_scale_with_the_assignment_count(client: TestClient, db: Session) -> None:
     """The regression guard, and the one an equivalence test cannot give.
 
     Doubling the roster quadruples the assignments (n x n). If the query
@@ -266,23 +257,15 @@ def test_coverage_does_not_scale_with_the_assignment_count(
     large = _seeded(client, db, 8, code="PRELG")
 
     small_assignments = len(
-        db.execute(
-            select(Assignment).where(Assignment.session_id == small.id)
-        ).scalars().all()
+        db.execute(select(Assignment).where(Assignment.session_id == small.id)).scalars().all()
     )
     large_assignments = len(
-        db.execute(
-            select(Assignment).where(Assignment.session_id == large.id)
-        ).scalars().all()
+        db.execute(select(Assignment).where(Assignment.session_id == large.id)).scalars().all()
     )
     assert large_assignments >= small_assignments * 3, "fixture is not quadratic"
 
-    small_q = _count_queries(
-        db, lambda: monitoring.per_reviewee_coverage(db, small)
-    )
-    large_q = _count_queries(
-        db, lambda: monitoring.per_reviewee_coverage(db, large)
-    )
+    small_q = _count_queries(db, lambda: monitoring.per_reviewee_coverage(db, small))
+    large_q = _count_queries(db, lambda: monitoring.per_reviewee_coverage(db, large))
     growth = large_q / small_q
     assert growth < 2.5, (
         f"query count grew {growth:.1f}x for {large_assignments / small_assignments:.0f}x "
@@ -298,21 +281,13 @@ def test_reviewer_progress_does_not_scale_with_the_assignment_count(
     time for the Responses page."""
     small = _seeded(client, db, 4, code="PRGSM")
     large = _seeded(client, db, 8, code="PRGLG")
-    small_q = _count_queries(
-        db, lambda: monitoring.per_reviewer_progress(db, small)
-    )
-    large_q = _count_queries(
-        db, lambda: monitoring.per_reviewer_progress(db, large)
-    )
+    small_q = _count_queries(db, lambda: monitoring.per_reviewer_progress(db, small))
+    large_q = _count_queries(db, lambda: monitoring.per_reviewer_progress(db, large))
     growth = large_q / small_q
-    assert growth < 2.5, (
-        f"query count grew {growth:.1f}x ({small_q} -> {large_q})"
-    )
+    assert growth < 2.5, f"query count grew {growth:.1f}x ({small_q} -> {large_q})"
 
 
-def test_the_rollups_do_not_load_a_row_per_assignment(
-    client: TestClient, db: Session
-) -> None:
+def test_the_rollups_do_not_load_a_row_per_assignment(client: TestClient, db: Session) -> None:
     """The 19R Item 3 guard, and the one the query counts above cannot
     give.
 
@@ -328,14 +303,10 @@ def test_the_rollups_do_not_load_a_row_per_assignment(
     large = _seeded(client, db, 8, code="ORMLG")
 
     small_assignments = len(
-        db.execute(
-            select(Assignment).where(Assignment.session_id == small.id)
-        ).scalars().all()
+        db.execute(select(Assignment).where(Assignment.session_id == small.id)).scalars().all()
     )
     large_assignments = len(
-        db.execute(
-            select(Assignment).where(Assignment.session_id == large.id)
-        ).scalars().all()
+        db.execute(select(Assignment).where(Assignment.session_id == large.id)).scalars().all()
     )
     assert large_assignments >= small_assignments * 3, "fixture is not quadratic"
 
@@ -357,9 +328,7 @@ def test_the_rollups_do_not_load_a_row_per_assignment(
         )
 
 
-def test_the_prefetch_loads_only_this_session(
-    client: TestClient, db: Session, make_client
-) -> None:
+def test_the_prefetch_loads_only_this_session(client: TestClient, db: Session, make_client) -> None:
     """Scoping, guarded as the performance property it is.
 
     Dropping the ``session_id`` filter is not a correctness bug —
@@ -379,15 +348,11 @@ def test_the_prefetch_loads_only_this_session(
 
     other_assignment_ids = {
         a.id
-        for a in db.execute(
-            select(Assignment).where(Assignment.session_id == other.id)
-        ).scalars()
+        for a in db.execute(select(Assignment).where(Assignment.session_id == other.id)).scalars()
     }
     assert other_assignment_ids, "fixture is void"
 
-    prefetched = responses_service.responses_by_assignment(
-        db, session_id=mine.id
-    )
+    prefetched = responses_service.responses_by_assignment(db, session_id=mine.id)
     assert not (set(prefetched) & other_assignment_ids), (
         "the prefetch reached into another session's assignments"
     )
@@ -425,14 +390,10 @@ def test_the_assignments_page_query_count_is_flat_in_the_roster(
     large = _seeded(client, db, 8, code="QBLG")
 
     small_assignments = len(
-        db.execute(
-            select(Assignment).where(Assignment.session_id == small.id)
-        ).scalars().all()
+        db.execute(select(Assignment).where(Assignment.session_id == small.id)).scalars().all()
     )
     large_assignments = len(
-        db.execute(
-            select(Assignment).where(Assignment.session_id == large.id)
-        ).scalars().all()
+        db.execute(select(Assignment).where(Assignment.session_id == large.id)).scalars().all()
     )
     assert large_assignments >= small_assignments * 3, "fixture is not quadratic"
 
@@ -469,16 +430,13 @@ def _mixed(db: Session, n: int, code: str) -> ReviewSession:
     user = User(email=f"op-{code}@example.edu")
     db.add(user)
     db.flush()
-    review_session = ReviewSession(
-        name=code, code=code, created_by_user_id=user.id
-    )
+    review_session = ReviewSession(name=code, code=code, created_by_user_id=user.id)
     db.add(review_session)
     db.flush()
     sid = review_session.id
 
     reviewers = [
-        Reviewer(session_id=sid, name=f"R{i}", email=f"r{i}-{code}@example.edu")
-        for i in range(n)
+        Reviewer(session_id=sid, name=f"R{i}", email=f"r{i}-{code}@example.edu") for i in range(n)
     ]
     reviewees = [
         Reviewee(
@@ -491,12 +449,8 @@ def _mixed(db: Session, n: int, code: str) -> ReviewSession:
     ]
     db.add_all([*reviewers, *reviewees])
 
-    plain = Instrument(
-        session_id=sid, name="Plain", order=0, session_seq=1, group_kind=None
-    )
-    grouped = Instrument(
-        session_id=sid, name="Grouped", order=1, session_seq=2, group_kind="r1"
-    )
+    plain = Instrument(session_id=sid, name="Plain", order=0, session_seq=1, group_kind=None)
+    grouped = Instrument(session_id=sid, name="Grouped", order=1, session_seq=2, group_kind="r1")
     db.add_all([plain, grouped])
     db.flush()
 
@@ -536,9 +490,7 @@ def _mixed(db: Session, n: int, code: str) -> ReviewSession:
     return review_session
 
 
-def test_the_grouped_half_reads_only_grouped_work(
-    client: TestClient, db: Session
-) -> None:
+def test_the_grouped_half_reads_only_grouped_work(client: TestClient, db: Session) -> None:
     """Codex P1 on the rung-3 diff, and the gap the guard above admits.
 
     ``per_reviewer_progress`` keeps a Python path for group-scoped
@@ -586,9 +538,7 @@ def test_the_grouped_half_reads_only_grouped_work(
         event.remove(db, "loaded_as_persistent", cb)
 
     assert loaded, "no responses loaded at all; the assertion below is vacuous"
-    strays = {
-        r.assignment_id for r in loaded
-    } - grouped_assignment_ids
+    strays = {r.assignment_id for r in loaded} - grouped_assignment_ids
     assert not strays, (
         f"{len(strays)} per-reviewee assignments' responses were loaded as "
         "ORM rows by the grouped half. The aggregate half already counted "

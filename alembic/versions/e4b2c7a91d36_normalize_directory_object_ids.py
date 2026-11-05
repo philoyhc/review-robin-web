@@ -15,6 +15,7 @@ Revision ID: e4b2c7a91d36
 Revises: c3e9a1f7d2b4
 Create Date: 2026-11-03
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -45,9 +46,7 @@ def upgrade() -> None:
         t = sa.table(table, sa.column(column, sa.String))
         c = t.c[column]
         normal = sa.func.lower(sa.func.trim(c, _WHITESPACE))
-        op.execute(
-            t.update().where(c.is_not(None)).where(c != normal).values({column: normal})
-        )
+        op.execute(t.update().where(c.is_not(None)).where(c != normal).values({column: normal}))
         # A value that was only whitespace becomes NULL, as an unbound
         # row is stored.
         op.execute(t.update().where(c == "").values({column: None}))

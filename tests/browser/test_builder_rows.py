@@ -24,9 +24,7 @@ from ._builder import (
 )
 
 
-def test_plus_inserts_a_default_named_row_below(
-    page: Page, new_session: Callable[[], str]
-) -> None:
+def test_plus_inserts_a_default_named_row_below(page: Page, new_session: Callable[[], str]) -> None:
     """Item 6, '"+" inserts below'."""
     card = open_unlocked(page, new_session())
     assert names(card) == ["Rating", "Comments"]
@@ -157,9 +155,7 @@ def test_a_new_field_saved_twice_is_still_one_field_in_its_place(
     assert names(card) == ["Rating", "Effort level", "Comments"]
 
 
-def test_the_last_row_cannot_be_deleted(
-    page: Page, new_session: Callable[[], str]
-) -> None:
+def test_the_last_row_cannot_be_deleted(page: Page, new_session: Callable[[], str]) -> None:
     """Item 6, 'The last row stays'."""
     card = open_unlocked(page, new_session())
     rows(card).nth(1).locator("[data-new-model-rf-delete]").click()

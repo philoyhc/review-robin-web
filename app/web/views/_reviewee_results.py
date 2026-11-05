@@ -198,9 +198,7 @@ class RevieweeResultsContext:
     sections: list[ResultsSection]
 
 
-def summarize_field(
-    field: InstrumentResponseField, raw_values: list[str]
-) -> SummarizedFieldCell:
+def summarize_field(field: InstrumentResponseField, raw_values: list[str]) -> SummarizedFieldCell:
     """Per-data-type aggregation for one response field's
     submitted values. ``raw_values`` is the list of non-empty
     submitted strings keyed for this field across every assigned
@@ -226,9 +224,7 @@ def summarize_field(
         )
     if data_type == "List":
         choices_csv = field._inline_list_csv or ""
-        choices = [
-            opt.strip() for opt in choices_csv.split(",") if opt.strip()
-        ]
+        choices = [opt.strip() for opt in choices_csv.split(",") if opt.strip()]
         counts: dict[str, int] = {choice: 0 for choice in choices}
         for value in raw_values:
             if value in counts:
@@ -284,9 +280,7 @@ def build_reviewee_results_context(
     # Archive forces every audience off — short-circuit before
     # touching the policy table.
     if lifecycle.is_archived(review_session):
-        return RevieweeResultsContext(
-            session=review_session, sections=[]
-        )
+        return RevieweeResultsContext(session=review_session, sections=[])
 
     instruments = list(
         db.execute(
@@ -310,17 +304,13 @@ def build_reviewee_results_context(
     # a different render shape — one summary row with per-field
     # aggregates. The section's ``mode`` carries the resolved mode
     # through to the template's per-cell branch.
-    after_release_open = lifecycle.is_response_release_window_open(
-        review_session
-    )
+    after_release_open = lifecycle.is_response_release_window_open(review_session)
     instrument_mode: dict[int, str] = {}
     # How much of the reviewer a Raw section names (ProfileLink
     # updates Item 2); the other modes never read it.
     instrument_identity: dict[int, str] = {}
     for instrument in instruments:
-        policy = visibility_policies.list_for_instrument(
-            db, instrument.id
-        ).get("reviewee")
+        policy = visibility_policies.list_for_instrument(db, instrument.id).get("reviewee")
         mode = visibility_policies.resolve_mode(
             policy,
             while_ongoing_open=False,
@@ -328,14 +318,10 @@ def build_reviewee_results_context(
         )
         if mode in ("raw", "anonymized", "summarized"):
             instrument_mode[instrument.id] = mode
-            instrument_identity[instrument.id] = (
-                visibility_policies.reviewer_identity(policy)
-            )
+            instrument_identity[instrument.id] = visibility_policies.reviewer_identity(policy)
 
     if not instrument_mode:
-        return RevieweeResultsContext(
-            session=review_session, sections=[]
-        )
+        return RevieweeResultsContext(session=review_session, sections=[])
 
     # Assignment fan-out for the reviewee — every reviewer
     # assigned to review the signed-in reviewee on one of the
@@ -371,27 +357,19 @@ def build_reviewee_results_context(
     )
 
     instrument_ids = set(instrument_mode.keys())
-    display_fields_by_instrument: dict[
-        int, list[InstrumentDisplayField]
-    ] = {}
+    display_fields_by_instrument: dict[int, list[InstrumentDisplayField]] = {}
     if instrument_ids:
         stmt = (
             select(InstrumentDisplayField)
             .where(InstrumentDisplayField.instrument_id.in_(instrument_ids))
             .where(InstrumentDisplayField.visible.is_(True))
             .where(_NOT_REVIEWEE_IDENTITY_DISPLAY_FIELD)
-            .order_by(
-                InstrumentDisplayField.order, InstrumentDisplayField.id
-            )
+            .order_by(InstrumentDisplayField.order, InstrumentDisplayField.id)
         )
         for field in db.execute(stmt).scalars():
-            display_fields_by_instrument.setdefault(
-                field.instrument_id, []
-            ).append(field)
+            display_fields_by_instrument.setdefault(field.instrument_id, []).append(field)
 
-    pair_context = relationships_service.pair_context_lookup(
-        db, review_session.id
-    )
+    pair_context = relationships_service.pair_context_lookup(db, review_session.id)
 
     # Seed the (instrument, reviewer) row set from the
     # assignment fan-out — every assigned reviewer surfaces a
@@ -451,9 +429,7 @@ def build_reviewee_results_context(
         cell_key = (instrument.id, reviewer.id, field.id)
         if cell_key in cells:
             continue
-        cells[cell_key] = (
-            response.value if response.value is not None else ""
-        )
+        cells[cell_key] = response.value if response.value is not None else ""
 
     tokenizer = participant_tokens.ParticipantTokenizer(review_session)
     sections: list[ResultsSection] = []
@@ -474,14 +450,11 @@ def build_reviewee_results_context(
         # label (``Instrument_{session_seq}``) — never the internal ``name`` —
         # when the reviewer-facing title is empty (single-instrument,
         # no short_label, no description).
-        heading_title = (
-            instrument_heading(
-                instrument=instrument,
-                position=position,
-                total_count=total_instrument_count,
-            ).title
-            or instruments_service._instrument_label(instrument)
-        )
+        heading_title = instrument_heading(
+            instrument=instrument,
+            position=position,
+            total_count=total_instrument_count,
+        ).title or instruments_service._instrument_label(instrument)
 
         # Contract: for Raw + Anonymized modes, the table
         # columns must mirror the reviewer surface
@@ -527,23 +500,16 @@ def build_reviewee_results_context(
         # Reviewer identity column + the response field columns
         # render.
         instrument_display_fields = (
-            []
-            if is_group
-            else display_fields_by_instrument.get(instrument.id, [])
+            [] if is_group else display_fields_by_instrument.get(instrument.id, [])
         )
-        widths_by_col_key: dict[str, int] = dict(
-            instrument.column_widths or {}
-        )
+        widths_by_col_key: dict[str, int] = dict(instrument.column_widths or {})
         identity_width_px = widths_by_col_key.get("identity")
         display_field_cols = [
             SummaryDisplayCol(
                 field_id=df.id,
-                label=instruments_service.display_field_label(
-                    df, session=review_session
-                ),
+                label=instruments_service.display_field_label(df, session=review_session),
                 is_profile_link=(
-                    df.source_type == "reviewee"
-                    and df.source_field == "profile_link"
+                    df.source_type == "reviewee" and df.source_field == "profile_link"
                 ),
                 width_px=widths_by_col_key.get(f"df_{df.id}"),
             )
@@ -558,12 +524,10 @@ def build_reviewee_results_context(
                 # require-mode parent grants its governed fields.
                 required=f.id in may_be_required,
                 width_px=widths_by_col_key.get(f"rf_{f.id}"),
-                is_narrow=(
-                    not is_group
-                    and f.data_type in ("Integer", "Decimal")
-                ),
+                is_narrow=(not is_group and f.data_type in ("Integer", "Decimal")),
                 narrow_ch=(
-                    None if is_group
+                    None
+                    if is_group
                     else numeric_column_ch_width(f, required=f.id in may_be_required)
                 ),
                 is_textlong=(
@@ -602,16 +566,11 @@ def build_reviewee_results_context(
             field_cells: list[SummarizedFieldCell] = []
             for f in fields:
                 raw_values = [
-                    (
-                        cells.get((instrument.id, rid, f.id), "")
-                        or ""
-                    ).strip()
+                    (cells.get((instrument.id, rid, f.id), "") or "").strip()
                     for rid in row_order[instrument.id]
                 ]
                 raw_values = [v for v in raw_values if v]
-                field_cells.append(
-                    summarize_field(f, raw_values)
-                )
+                field_cells.append(summarize_field(f, raw_values))
             summarized_row = SummarizedRow(
                 reviewers_assigned=reviewers_assigned,
                 reviewers_with_responses=reviewers_with_responses,
@@ -650,14 +609,9 @@ def build_reviewee_results_context(
                 )
             for reviewer_id in ordered_reviewer_ids:
                 reviewer = reviewer_by_id[reviewer_id]
-                values = [
-                    cells.get((instrument.id, reviewer_id, f.id), "")
-                    for f in fields
-                ]
+                values = [cells.get((instrument.id, reviewer_id, f.id), "") for f in fields]
                 display_cells: list[SummaryDisplayCell] = []
-                assignment = representative_assignment.get(
-                    (instrument.id, reviewer_id)
-                )
+                assignment = representative_assignment.get((instrument.id, reviewer_id))
                 if assignment is not None:
                     for df in instrument_display_fields:
                         value = instruments_service.display_field_value(
@@ -680,9 +634,8 @@ def build_reviewee_results_context(
                     ResultsRow(
                         reviewer_name=reviewer.name or "",
                         reviewer_email=(
-                            None
-                            if is_raw and identity == "name"
-                            else reviewer.email or None
+                            # not-identity: `identity` is the display mode, not an address.
+                            None if is_raw and identity == "name" else reviewer.email or None
                         ),
                         display_cells=display_cells,
                         values=values,
@@ -709,9 +662,7 @@ def build_reviewee_results_context(
             )
         )
 
-    return RevieweeResultsContext(
-        session=review_session, sections=sections
-    )
+    return RevieweeResultsContext(session=review_session, sections=sections)
 
 
 __all__ = [

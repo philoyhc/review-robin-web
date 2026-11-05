@@ -16,6 +16,7 @@ Revises: e5c1a9d3b7f2
 Create Date: 2026-10-17
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -51,9 +52,7 @@ def upgrade() -> None:
         instruments.update()
         .where(
             instruments.c.session_id.in_(
-                sa.select(sessions.c.id).where(
-                    sessions.c.self_reviews_active.is_(sa.false())
-                )
+                sa.select(sessions.c.id).where(sessions.c.self_reviews_active.is_(sa.false()))
             )
         )
         .values(self_reviews_active=sa.false())

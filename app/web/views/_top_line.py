@@ -63,9 +63,7 @@ def resolve_top_line(
         return session_unit(review_session) or default
     if dashboard_sessions is not None:
         return dashboard_top_line(dashboard_sessions, default)
-    is_operator = getattr(viewer, "is_operator", False) or getattr(
-        viewer, "is_sys_admin", False
-    )
+    is_operator = getattr(viewer, "is_operator", False) or getattr(viewer, "is_sys_admin", False)
     if is_operator:
         return getattr(viewer, "unit", None) or default
     return default

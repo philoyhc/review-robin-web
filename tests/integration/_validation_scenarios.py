@@ -221,12 +221,8 @@ def _build_single_instrument_generated(db: Session) -> ReviewSession:
         help_contact="h@example.edu",
         assignment_mode="rule_based",
     )
-    covered = Reviewer(
-        session_id=review_session.id, name="Ana", email="ana@example.edu"
-    )
-    missing = Reviewer(
-        session_id=review_session.id, name="Cal", email="cal@example.edu"
-    )
+    covered = Reviewer(session_id=review_session.id, name="Ana", email="ana@example.edu")
+    missing = Reviewer(session_id=review_session.id, name="Cal", email="cal@example.edu")
     reviewee = Reviewee(
         session_id=review_session.id,
         name="Ben",
@@ -261,16 +257,10 @@ def _build_multi_instrument_gaps(db: Session) -> ReviewSession:
         help_contact="h@example.edu",
         assignment_mode="rule_based",
     )
-    reviewer = Reviewer(
-        session_id=review_session.id, name="Ana", email="ana@example.edu"
-    )
+    reviewer = Reviewer(session_id=review_session.id, name="Ana", email="ana@example.edu")
     # No rows anywhere, so the per-instrument reviewer-missing rule
     # fires on every instrument that does have rows.
-    db.add(
-        Reviewer(
-            session_id=review_session.id, name="Cal", email="cal@example.edu"
-        )
-    )
+    db.add(Reviewer(session_id=review_session.id, name="Cal", email="cal@example.edu"))
     reviewee = Reviewee(
         session_id=review_session.id,
         name="Ben",

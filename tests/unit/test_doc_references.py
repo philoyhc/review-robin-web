@@ -74,9 +74,7 @@ def test_agent_instruction_twins_are_identical() -> None:
 #: would silently exempt a live document that happened to carry the word,
 #: and a new lineage needs a `guide/README.md` row anyway, so one line
 #: here is the same edit.
-DATED_DOC = re.compile(
-    r"(codebase_assessment_|codex_assessment_|sweep_|practice-audit-|segment_)"
-)
+DATED_DOC = re.compile(r"(codebase_assessment_|codex_assessment_|sweep_|practice-audit-|segment_)")
 
 #: Live prose: top-level `.md` in the three doc folders plus the root.
 #: `archive/` is excluded by not recursing; there are no other nested
@@ -142,13 +140,7 @@ def _unresolved_path_refs() -> list[tuple[str, int, str, str]]:
                 target = match.group(1)
                 if (REPO / target).exists():
                     continue
-                cover = (
-                    "inline"
-                    if PATH_ESCAPE in line
-                    else "section"
-                    if number in opted
-                    else ""
-                )
+                cover = "inline" if PATH_ESCAPE in line else "section" if number in opted else ""
                 found.append((rel, number, target, cover))
     return found
 
@@ -269,9 +261,7 @@ def _unresolved_section_refs() -> list[tuple[str, int, str, str, bool]]:
                 continue
             start = text[: match.start()].count("\n") + 1
             spanned = lines[start - 1 : start + match.group(0).count("\n")]
-            found.append(
-                (rel, start, target, number, any(SECTION_ESCAPE in ln for ln in spanned))
-            )
+            found.append((rel, start, target, number, any(SECTION_ESCAPE in ln for ln in spanned)))
     return found
 
 
@@ -308,9 +298,7 @@ def test_no_section_marker_outlives_the_reference_it_covers() -> None:
     covering nothing is stale, and it is the direction that stays green.
     One marker exists today, and it is how the hatch stays that size.
     """
-    covered = {
-        (rel, number) for rel, number, _, _, marked in _unresolved_section_refs() if marked
-    }
+    covered = {(rel, number) for rel, number, _, _, marked in _unresolved_section_refs() if marked}
     stale = [
         f"{doc.relative_to(REPO)}:{number}"
         for doc in LIVE_PROSE
@@ -589,9 +577,7 @@ def test_the_node_id_recogniser_works_outside_its_live_examples() -> None:
     def matched(text: str) -> list[tuple[str, str]]:
         return NODE_REF.findall(text)
 
-    assert matched("proof: `tests/unit/test_a.py::test_b`") == [
-        ("tests/unit/test_a.py", "test_b")
-    ]
+    assert matched("proof: `tests/unit/test_a.py::test_b`") == [("tests/unit/test_a.py", "test_b")]
     assert matched("`tests/integration/sub/test_a.py::test_b_c-d`") == [
         ("tests/integration/sub/test_a.py", "test_b_c-d")
     ]
@@ -618,16 +604,12 @@ def test_the_node_id_recogniser_works_outside_its_live_examples() -> None:
     # string-derived ids and a narrower class skipped three of these.
     here = "tests/unit/test_doc_references.py"
     for case in ("[True-1]", "[a.b]", "[spec/foo.md]", "[case id]"):
-        assert matched(f"`tests/a.py::test_x{case}`") == [
-            ("tests/a.py", f"test_x{case}")
-        ], case
+        assert matched(f"`tests/a.py::test_x{case}`") == [("tests/a.py", f"test_x{case}")], case
         assert "parametrised" in _node_ref_failure(here, f"test_x{case}"), case
 
     # Resolution, on a file that exists so the reason is never the path.
     assert _node_ref_failure("tests/nope.py", "test_x") == "no such file"
-    assert _node_ref_failure(here, "test_not_here") == (
-        "file has no test by that name"
-    )
+    assert _node_ref_failure(here, "test_not_here") == ("file has no test by that name")
     resolves = "test_the_node_id_scan_still_sees_the_citations_that_exist"
     assert _node_ref_failure(here, resolves) == ""
     # The bare form resolves through the glob.
@@ -640,18 +622,12 @@ def test_the_node_id_recogniser_works_outside_its_live_examples() -> None:
 
     # Only a column-0 `def` counts: an indented one is a method, a nested
     # helper, or text inside a string, and pytest collects none of them.
-    assert _node_ref_failure(here, "test_nested_or_indented") == (
-        "file has no test by that name"
-    )
+    assert _node_ref_failure(here, "test_nested_or_indented") == ("file has no test by that name")
     # ...and only a collectible *name* counts. `_dated_register_lines` is
     # a real column-0 def in this very file, and pytest collects nothing
     # by that id — so resolving it would be a false pass.
-    assert "not a collectible test name" in _node_ref_failure(
-        here, "_dated_register_lines"
-    )
-    assert "not a collectible test name" in _node_ref_failure(
-        here, "matched"
-    )
+    assert "not a collectible test name" in _node_ref_failure(here, "_dated_register_lines")
+    assert "not a collectible test name" in _node_ref_failure(here, "matched")
 
     # PATH_REF cannot reach a node id's closing backtick, so the two
     # patterns do not double-cover. A widening of PATH_REF breaks this.
@@ -696,6 +672,5 @@ def test_archived_prose_is_exempt_from_the_node_id_check() -> None:
     )
     live = {str(p.relative_to(REPO)) for p in LIVE_PROSE}
     assert not (live & {str(p.relative_to(REPO)) for p in archived}), (
-        "LIVE_PROSE has started including guide/archive/, which would put "
-        "the suite red on history"
+        "LIVE_PROSE has started including guide/archive/, which would put the suite red on history"
     )

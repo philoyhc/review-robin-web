@@ -225,9 +225,7 @@ def decode_cookie_sort_spec_for_reviewer_surface(
     import json
     from urllib.parse import unquote
 
-    cookie_name = (
-        f"{_REVIEWER_COOKIE_PREFIX}-{session_id}-{instrument_seq}"
-    )
+    cookie_name = f"{_REVIEWER_COOKIE_PREFIX}-{session_id}-{instrument_seq}"
     raw = cookies.get(cookie_name)
     if not raw:
         return None
@@ -239,24 +237,19 @@ def decode_cookie_sort_spec_for_reviewer_surface(
     if items is None:
         return None
     name_id_by_source = {
-        df.source_field: df.id
-        for df in display_fields
-        if df.source_type == "reviewee"
+        df.source_field: df.id for df in display_fields if df.source_type == "reviewee"
     }
     # 19V Item 4: a display header is keyed by its source, not its
     # ID, so the page names no row of the workspace.
     id_by_display_key: dict[str, int] = {}
     for df in sorted(display_fields, key=lambda df: (df.order, df.id)):
-        id_by_display_key.setdefault(
-            f"display:{df.source_type}.{df.source_field}", df.id
-        )
+        id_by_display_key.setdefault(f"display:{df.source_type}.{df.source_field}", df.id)
     # Drop malformed entries, then cap — the order ``_rrwReadCookie``
     # uses, so the server and the browser keep the same entries.
     entries = [
         entry
         for entry in _object_entries(items)
-        if isinstance(entry.get("key"), str)
-        and entry.get("dir") in ("asc", "desc")
+        if isinstance(entry.get("key"), str) and entry.get("dir") in ("asc", "desc")
     ][:3]
     out: list[dict[str, object]] = []
     for entry in entries:
@@ -281,9 +274,7 @@ def decode_cookie_sort_spec_for_reviewer_surface(
 
 def _object_entries(items: list[object]) -> list[dict[str, object]]:
     """The JSON objects in a decoded cookie list, in order."""
-    return [
-        entry for item in items if (entry := json_object(item)) is not None
-    ]
+    return [entry for item in items if (entry := json_object(item)) is not None]
 
 
 def order_rows_by_sort_spec[Row](

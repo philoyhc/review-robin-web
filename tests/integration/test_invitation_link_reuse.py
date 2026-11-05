@@ -35,9 +35,7 @@ def _setup(db: Session, overrides: dict) -> tuple:
     )
     db.add(review_session)
     db.flush()
-    reviewer = Reviewer(
-        session_id=review_session.id, name="Rae", email="rae@example.edu"
-    )
+    reviewer = Reviewer(session_id=review_session.id, name="Rae", email="rae@example.edu")
     db.add(reviewer)
     db.flush()
     invitation = Invitation(
@@ -66,9 +64,7 @@ def test_a_reminder_reuses_the_link_after_an_override_without_the_tag(
     )
     db.refresh(invitation)
     token_hash = invitation.token_hash
-    sent_url = invitations.most_recent_invitation_url(
-        db, invitation_id=invitation.id
-    )
+    sent_url = invitations.most_recent_invitation_url(db, invitation_id=invitation.id)
     assert sent_url is not None
 
     result = invitations.send_reminder(
@@ -83,10 +79,7 @@ def test_a_reminder_reuses_the_link_after_an_override_without_the_tag(
     db.refresh(invitation)
     assert result.fell_back_to_invitation is False
     assert invitation.token_hash == token_hash
-    assert (
-        invitations.most_recent_invitation_url(db, invitation_id=invitation.id)
-        == sent_url
-    )
+    assert invitations.most_recent_invitation_url(db, invitation_id=invitation.id) == sent_url
 
 
 def test_a_reminder_rebuilds_a_link_sent_under_another_prefix(
@@ -107,9 +100,7 @@ def test_a_reminder_rebuilds_a_link_sent_under_another_prefix(
     )
     db.refresh(invitation)
     token_hash = invitation.token_hash
-    sent_url = invitations.most_recent_invitation_url(
-        db, invitation_id=invitation.id
-    )
+    sent_url = invitations.most_recent_invitation_url(db, invitation_id=invitation.id)
     assert sent_url is not None
     token = sent_url.rsplit("/", 1)[-1]
 

@@ -5,6 +5,7 @@ relationships replace that would clear group answers) holds the file, so
 the operator answers with a tick and Upload, no file chosen; a save, a
 plain refusal or Dismiss ends the hold.
 """
+
 from __future__ import annotations
 
 import re
@@ -32,13 +33,12 @@ REVIEWERS_3 = b"ReviewerName,ReviewerEmail\nCal,cal@example.edu\n"
 
 def _session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
     r = client.post(
-        "/operator/sessions", data={"name": "S", "code": code},
+        "/operator/sessions",
+        data={"name": "S", "code": code},
         follow_redirects=False,
     )
     assert r.status_code == 303, r.text
-    s = db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    s = db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
     s.observers_enabled = True
     db.commit()
     return s
@@ -63,10 +63,7 @@ def _upload(client: TestClient, url: str, content: bytes | None, **data: str):
 def _reviewers(db: Session, s: ReviewSession) -> list[str]:
     db.expire_all()
     return [
-        r.name
-        for r in db.execute(
-            select(Reviewer).where(Reviewer.session_id == s.id)
-        ).scalars()
+        r.name for r in db.execute(select(Reviewer).where(Reviewer.session_id == s.id)).scalars()
     ]
 
 
@@ -87,25 +84,24 @@ def test_a_missing_replace_tick_holds_the_file_for_the_next_submit(
     assert re.search(r'name="file"[^>]*\brequired\b', asked.text) is None
     assert _held(db) == 1
 
-    answered = _upload(
-        client, url, None, confirm_replace="true", held_token=_token(asked.text)
-    )
+    answered = _upload(client, url, None, confirm_replace="true", held_token=_token(asked.text))
     assert answered.status_code == 303, answered.text[:300]
     assert _reviewers(db, s) == ["Bea"]
     assert _held(db) == 0
 
 
-def test_a_newly_chosen_file_wins_over_the_held_one(
-    db: Session, client: TestClient
-) -> None:
+def test_a_newly_chosen_file_wins_over_the_held_one(db: Session, client: TestClient) -> None:
     s = _session(client, db, code="held-new")
     url = f"/operator/sessions/{s.public_id}/reviewers/import"
     _upload(client, url, REVIEWERS_1)
     asked = _upload(client, url, REVIEWERS_2)
 
     answered = _upload(
-        client, url, REVIEWERS_3,
-        confirm_replace="true", held_token=_token(asked.text),
+        client,
+        url,
+        REVIEWERS_3,
+        confirm_replace="true",
+        held_token=_token(asked.text),
     )
     assert answered.status_code == 303
     assert _reviewers(db, s) == ["Cal"]
@@ -119,17 +115,18 @@ def test_a_plain_refusal_ends_the_hold(db: Session, client: TestClient) -> None:
     asked = _upload(client, url, REVIEWERS_2)
 
     refused = _upload(
-        client, url, b"Nothing,Useful\n1,2\n",
-        confirm_replace="true", held_token=_token(asked.text),
+        client,
+        url,
+        b"Nothing,Useful\n1,2\n",
+        confirm_replace="true",
+        held_token=_token(asked.text),
     )
     assert refused.status_code == 400
     assert 'name="held_token"' not in refused.text
     assert _held(db) == 0
 
 
-def test_dismiss_ends_the_hold_and_reopens_the_card(
-    db: Session, client: TestClient
-) -> None:
+def test_dismiss_ends_the_hold_and_reopens_the_card(db: Session, client: TestClient) -> None:
     s = _session(client, db, code="held-obs")
     url = f"/operator/sessions/{s.public_id}/observers/import"
     first = b"ObserverEmail,ObserverName\no1@example.edu,O1\n"
@@ -139,7 +136,8 @@ def test_dismiss_ends_the_hold_and_reopens_the_card(
     assert f'formaction="{url}/dismiss"' in asked.text
 
     dismissed = client.post(
-        f"{url}/dismiss", data={"held_token": _token(asked.text)},
+        f"{url}/dismiss",
+        data={"held_token": _token(asked.text)},
         follow_redirects=False,
     )
     assert dismissed.status_code == 303
@@ -148,14 +146,10 @@ def test_dismiss_ends_the_hold_and_reopens_the_card(
     )
     assert _held(db) == 0
     db.expire_all()
-    assert [o.email for o in db.execute(select(Observer)).scalars()] == [
-        "o1@example.edu"
-    ]
+    assert [o.email for o in db.execute(select(Observer)).scalars()] == ["o1@example.edu"]
 
 
-def test_another_sessions_token_holds_nothing_here(
-    db: Session, client: TestClient
-) -> None:
+def test_another_sessions_token_holds_nothing_here(db: Session, client: TestClient) -> None:
     """A hold belongs to one session: presented on another, it reads as
     lapsed, and the hold itself is left alone. (Another operator's
     token is the service's test, ``test_held_uploads``.)"""
@@ -168,7 +162,10 @@ def test_another_sessions_token_holds_nothing_here(
     asked = _upload(client, url_one, REVIEWERS_2)
 
     tried = _upload(
-        client, url_two, None, confirm_replace="true",
+        client,
+        url_two,
+        None,
+        confirm_replace="true",
         held_token=_token(asked.text),
     )
     assert tried.status_code == 400
@@ -196,8 +193,11 @@ def test_a_group_clear_ask_holds_the_file_and_keeps_the_replace_tick(
     assert _relationship(db, session.id, "Ann").tag_1 == "x"
 
     answered = _upload(
-        client, url, None,
-        confirm_replace="true", acknowledge_response_loss="3",
+        client,
+        url,
+        None,
+        confirm_replace="true",
+        acknowledge_response_loss="3",
         held_token=_token(asked.text),
     )
     assert answered.status_code == 303, answered.text[:300]
@@ -205,15 +205,14 @@ def test_a_group_clear_ask_holds_the_file_and_keeps_the_replace_tick(
     assert _held(db) == 0
 
 
-def test_each_setup_cards_dismiss_route_ends_the_hold(
-    db: Session, client: TestClient
-) -> None:
+def test_each_setup_cards_dismiss_route_ends_the_hold(db: Session, client: TestClient) -> None:
     s = _session(client, db, code="held-dismiss-all")
     url = f"/operator/sessions/{s.public_id}/reviewers/import"
     _upload(client, url, REVIEWERS_1)
     asked = _upload(client, url, REVIEWERS_2)
     dismissed = client.post(
-        f"{url}/dismiss", data={"held_token": _token(asked.text)},
+        f"{url}/dismiss",
+        data={"held_token": _token(asked.text)},
         follow_redirects=False,
     )
     assert dismissed.status_code == 303
@@ -251,9 +250,7 @@ _EMPTY_FILE_CARDS = {
 
 def _row_ids(db: Session, model, s: ReviewSession) -> list[int]:
     db.expire_all()
-    return sorted(
-        db.execute(select(model.id).where(model.session_id == s.id)).scalars()
-    )
+    return sorted(db.execute(select(model.id).where(model.session_id == s.id)).scalars())
 
 
 @pytest.mark.parametrize("page", list(_EMPTY_FILE_CARDS))
@@ -290,9 +287,7 @@ def test_an_empty_file_chosen_is_read_not_swapped_for_the_held_one(
     assert _held(db) == 0
 
 
-def test_an_untouched_file_input_still_sends_the_held_file(
-    db: Session, client: TestClient
-) -> None:
+def test_an_untouched_file_input_still_sends_the_held_file(db: Session, client: TestClient) -> None:
     """The other side of S2: a browser posts an untouched file input as
     an empty part with ``filename=""``, and that is no file chosen.
     Written by hand because httpx drops an empty filename."""
@@ -303,8 +298,7 @@ def test_an_untouched_file_input_still_sends_the_held_file(
 
     fields = {"confirm_replace": "true", "held_token": _token(asked.text)}
     body = b"".join(
-        f'--BB\r\nContent-Disposition: form-data; name="{name}"\r\n\r\n'
-        f"{value}\r\n".encode()
+        f'--BB\r\nContent-Disposition: form-data; name="{name}"\r\n\r\n{value}\r\n'.encode()
         for name, value in fields.items()
     ) + (
         b'--BB\r\nContent-Disposition: form-data; name="file"; filename=""\r\n'

@@ -50,19 +50,13 @@ class SetupRow:
     manage_disabled_reason: str | None = None
 
 
-def build_setup_rows(
-    db: Session, review_session: ReviewSession
-) -> list[SetupRow]:
+def build_setup_rows(db: Session, review_session: ReviewSession) -> list[SetupRow]:
     """Rows for the Session setup card on session detail."""
     sid = review_session.id
     reviewer_count = csv_imports.existing_reviewer_count(db, sid)
     reviewee_count = csv_imports.existing_reviewee_count(db, sid)
     relationship_count = relationships_service.existing_count(db, sid)
-    instruments = list(
-        db.execute(
-            select(Instrument).where(Instrument.session_id == sid)
-        ).scalars()
-    )
+    instruments = list(db.execute(select(Instrument).where(Instrument.session_id == sid)).scalars())
     instrument_count = len(instruments)
     if instrument_count == 0:
         instruments_value = "Number of instruments: 0"
@@ -75,9 +69,7 @@ def build_setup_rows(
             status_word = "Closed"
         else:
             status_word = "Mixed"
-        instruments_value = (
-            f"Number of instruments: {instrument_count}, Status: {status_word}"
-        )
+        instruments_value = f"Number of instruments: {instrument_count}, Status: {status_word}"
 
     return [
         SetupRow(
@@ -161,10 +153,7 @@ class SessionStatusPills:
             return "Awaiting"
         parts: list[str] = []
         if self.responses_drafts:
-            parts.append(
-                f"{self.responses_drafts} "
-                f"{pluralize(self.responses_drafts, 'draft')}"
-            )
+            parts.append(f"{self.responses_drafts} {pluralize(self.responses_drafts, 'draft')}")
         if self.responses_submitted:
             parts.append(f"{self.responses_submitted} submitted")
         parts.append(str(self.reviewee_count))
@@ -193,9 +182,7 @@ def _invitations_state(db: Session, session_id: int) -> str:
     """
     invitation_reviewer_ids: set[int] = set(
         db.execute(
-            select(Invitation.reviewer_id).where(
-                Invitation.session_id == session_id
-            )
+            select(Invitation.reviewer_id).where(Invitation.session_id == session_id)
         ).scalars()
     )
     if not invitation_reviewer_ids:
@@ -215,9 +202,7 @@ def _invitations_state(db: Session, session_id: int) -> str:
     return "partial_sent"
 
 
-def session_status_pills(
-    db: Session, review_session: ReviewSession
-) -> SessionStatusPills:
+def session_status_pills(db: Session, review_session: ReviewSession) -> SessionStatusPills:
     sid = review_session.id
     # Responses pill: "<n> drafts / <m> submitted / <reviewees>", omitting
     # whichever of drafts / submitted is zero, or "Awaiting" while there is no
@@ -247,9 +232,7 @@ def session_status_pills(
     # Drafts = assignments with saved responses but none submitted.
     responses_drafts = responses_with_any - responses_submitted
     responses_reportable = responses_with_any > 0
-    instrument_total, instruments_configured = (
-        instruments_service.configured_counts(db, sid)
-    )
+    instrument_total, instruments_configured = instruments_service.configured_counts(db, sid)
     return SessionStatusPills(
         reviewer_count=csv_imports.existing_reviewer_count(db, sid),
         reviewee_count=csv_imports.existing_reviewee_count(db, sid),
@@ -269,9 +252,7 @@ def session_status_pills(
     )
 
 
-def chip_slots(
-    presence: dict[str, bool], *, prefix: str
-) -> dict[str, bool]:
+def chip_slots(presence: dict[str, bool], *, prefix: str) -> dict[str, bool]:
     """Re-key a ``{"tag_1": bool, ...}`` presence map to the chip slot
     names a page's markup actually uses.
 
@@ -288,10 +269,7 @@ def chip_slots(
     — the divergence that let every one of them disagree with the
     roster.
     """
-    return {
-        f"{prefix}{key.removeprefix('tag_')}": value
-        for key, value in presence.items()
-    }
+    return {f"{prefix}{key.removeprefix('tag_')}": value for key, value in presence.items()}
 
 
 @dataclass(frozen=True)
@@ -319,9 +297,7 @@ class RosterColumnState:
     col_data: dict[str, bool]
 
 
-def reviewer_column_state(
-    db: Session, review_session: ReviewSession
-) -> RosterColumnState:
+def reviewer_column_state(db: Session, review_session: ReviewSession) -> RosterColumnState:
     """Populated-column chips and visibility flags for the Reviewers roster.
 
     Identity columns (`Name`, `Email`) are always listed — they are
@@ -348,9 +324,7 @@ def reviewer_column_state(
     """
     sid = review_session.id
     counts = tag_slot_counts(db, session_id=sid, model=Reviewer)
-    profile_count = slot_row_count(
-        db, session_id=sid, column=Reviewer.profile_link
-    )
+    profile_count = slot_row_count(db, session_id=sid, column=Reviewer.profile_link)
     readouts = [
         ColumnReadout(
             slot="name",
@@ -390,9 +364,7 @@ def reviewer_column_state(
     )
 
 
-def observer_column_state(
-    db: Session, review_session: ReviewSession
-) -> RosterColumnState:
+def observer_column_state(db: Session, review_session: ReviewSession) -> RosterColumnState:
     """Populated-column chips and visibility flags for the Observers roster.
 
     The second caller `reviewer_column_state` was written waiting for
@@ -424,32 +396,24 @@ def observer_column_state(
             ColumnReadout(
                 slot="name",
                 label="Name",
-                count=slot_row_count(
-                    db, session_id=sid, column=Observer.display_name
-                ),
+                count=slot_row_count(db, session_id=sid, column=Observer.display_name),
             ),
             ColumnReadout(
                 slot="email",
                 label="Email",
-                count=slot_row_count(
-                    db, session_id=sid, column=Observer.email
-                ),
+                count=slot_row_count(db, session_id=sid, column=Observer.email),
             ),
             ColumnReadout(
                 slot="tag-1",
                 label="Tag",
-                count=slot_row_count(
-                    db, session_id=sid, column=Observer.tag_1
-                ),
+                count=slot_row_count(db, session_id=sid, column=Observer.tag_1),
             ),
         ],
         col_data={},
     )
 
 
-def reviewee_column_state(
-    db: Session, review_session: ReviewSession
-) -> RosterColumnState:
+def reviewee_column_state(db: Session, review_session: ReviewSession) -> RosterColumnState:
     """Populated-column chips and visibility flags for the Reviewees roster.
 
     The rule `observer_column_state` settled — **the readouts mirror the
@@ -474,9 +438,7 @@ def reviewee_column_state(
     """
     sid = review_session.id
     counts = tag_slot_counts(db, session_id=sid, model=Reviewee)
-    profile_count = slot_row_count(
-        db, session_id=sid, column=Reviewee.profile_link
-    )
+    profile_count = slot_row_count(db, session_id=sid, column=Reviewee.profile_link)
     readouts = [
         ColumnReadout(
             slot="name",
@@ -486,9 +448,7 @@ def reviewee_column_state(
         ColumnReadout(
             slot="email",
             label="Email",
-            count=slot_row_count(
-                db, session_id=sid, column=Reviewee.email_or_identifier
-            ),
+            count=slot_row_count(db, session_id=sid, column=Reviewee.email_or_identifier),
         ),
     ]
     if profile_count > 0:
@@ -518,9 +478,7 @@ def reviewee_column_state(
     )
 
 
-def relationship_column_state(
-    db: Session, review_session: ReviewSession
-) -> RosterColumnState:
+def relationship_column_state(db: Session, review_session: ReviewSession) -> RosterColumnState:
     """Populated-column chips and visibility flags for the Relationships
     roster.
 
@@ -622,11 +580,7 @@ class RelationshipPrerequisites:
         surfaces shared *which* roster was missing and not the grammar
         for saying so; a cold read caught it.
         """
-        return (
-            "rosters both have rows"
-            if len(self.missing) > 1
-            else "roster has rows"
-        )
+        return "rosters both have rows" if len(self.missing) > 1 else "roster has rows"
 
     @property
     def add_disabled_title(self) -> str:
@@ -643,8 +597,7 @@ class RelationshipPrerequisites:
             return ""
         names = " and ".join(roster.label for roster in self.missing)
         return (
-            f"Add rows to the {names} {self.roster_noun} first — "
-            "a relationship needs one of each."
+            f"Add rows to the {names} {self.roster_noun} first — a relationship needs one of each."
         )
 
 

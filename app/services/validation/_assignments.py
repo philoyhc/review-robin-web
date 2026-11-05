@@ -65,9 +65,7 @@ def _check_assignments_no_included_pairs(
         )
 
 
-def _active_assignment_presence(
-    db: Session, session_id: int
-) -> set[tuple[int, int]]:
+def _active_assignment_presence(db: Session, session_id: int) -> set[tuple[int, int]]:
     """``(instrument_id, reviewer_id)`` for every row that gives an
     active reviewer work: included, with both sides active.
 
@@ -142,10 +140,7 @@ def _check_assignments_reviewer_missing(
         # reports it once, rather than once per reviewer.
         return
     with_work = {
-        reviewer_id
-        for _, reviewer_id in _active_assignment_presence(
-            db, review_session.id
-        )
+        reviewer_id for _, reviewer_id in _active_assignment_presence(db, review_session.id)
     }
     for reviewer in _active_reviewers(inputs):
         if reviewer.id in with_work:
@@ -154,10 +149,7 @@ def _check_assignments_reviewer_missing(
             severity=Severity.warning,
             source="assignments",
             field=f"reviewer_id:{reviewer.id}",
-            message=(
-                f"Reviewer {reviewer.name!r} ({reviewer.email}) has no "
-                "active assignments"
-            ),
+            message=(f"Reviewer {reviewer.name!r} ({reviewer.email}) has no active assignments"),
             # No anchor: the fix is Generate on the Assignments page,
             # which has no per-reviewer row to land on. The
             # ``reviewer-row-`` ids live on the Reviewers page only.
@@ -190,12 +182,8 @@ def _check_assignments_reviewer_missing_for_instrument(
         return
     if len(inputs.instruments) <= 1:
         return
-    presence: dict[int, set[int]] = {
-        i.id: set() for i in inputs.instruments
-    }
-    for instrument_id, reviewer_id in _active_assignment_presence(
-        db, review_session.id
-    ):
+    presence: dict[int, set[int]] = {i.id: set() for i in inputs.instruments}
+    for instrument_id, reviewer_id in _active_assignment_presence(db, review_session.id):
         if instrument_id in presence:
             presence[instrument_id].add(reviewer_id)
     included = _included_instrument_ids(inputs)
@@ -211,10 +199,7 @@ def _check_assignments_reviewer_missing_for_instrument(
             yield ValidationIssue(
                 severity=Severity.warning,
                 source="assignments",
-                field=(
-                    f"reviewer_id:{reviewer.id}"
-                    f"|instrument_id:{instrument.id}"
-                ),
+                field=(f"reviewer_id:{reviewer.id}|instrument_id:{instrument.id}"),
                 message=(
                     f"Reviewer {reviewer.name!r} ({reviewer.email}) "
                     f"has no active assignments on the "

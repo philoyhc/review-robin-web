@@ -63,9 +63,7 @@ def _policy(after_release: str | None) -> InstrumentViewPolicy:
         ("archived", True, "raw", False),
     ],
 )
-def test_the_rule(
-    status: str, released: bool, after_release: str | None, expected: bool
-) -> None:
+def test_the_rule(status: str, released: bool, after_release: str | None, expected: bool) -> None:
     assert (
         visibility_policies.reviewer_sees_own_responses(
             _session(status, released=released), _policy(after_release), now=_NOW
@@ -77,9 +75,7 @@ def test_the_rule(
 def test_ready_shows_even_with_no_policy_row() -> None:
     """The ``while_ongoing`` reviewer cell is Raw by rule, so a missing
     row reads the same while the session is ready."""
-    assert visibility_policies.reviewer_sees_own_responses(
-        _session("ready"), None, now=_NOW
-    )
+    assert visibility_policies.reviewer_sees_own_responses(_session("ready"), None, now=_NOW)
 
 
 def test_archived_is_refused_before_any_window_is_read(
@@ -90,9 +86,7 @@ def test_archived_is_refused_before_any_window_is_read(
     archived session still shows nothing."""
     monkeypatch.setattr(lifecycle, "is_ready", lambda _session: True)
     monkeypatch.setattr(lifecycle, "is_expired", lambda _session: True)
-    monkeypatch.setattr(
-        lifecycle, "is_response_release_window_open", lambda *a, **k: True
-    )
+    monkeypatch.setattr(lifecycle, "is_response_release_window_open", lambda *a, **k: True)
     assert not visibility_policies.reviewer_sees_own_responses(
         _session("archived", released=True), _policy("raw"), now=_NOW
     )

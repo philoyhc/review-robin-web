@@ -13,9 +13,7 @@ from app.services.participant_tokens import (
 )
 
 
-def _session(
-    db, *, code: str, created_at: datetime | None = None
-) -> ReviewSession:
+def _session(db, *, code: str, created_at: datetime | None = None) -> ReviewSession:
     user = User(email=f"{code}@x.edu", display_name="Op")
     db.add(user)
     db.flush()

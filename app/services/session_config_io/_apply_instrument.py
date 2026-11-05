@@ -5,6 +5,7 @@ response_fields[] sub-sections, each with the per-attribute parser
 above the apply phase that re-creates the rows from scratch in one
 transaction.
 """
+
 from __future__ import annotations
 
 import copy
@@ -87,9 +88,7 @@ __all__ = [
 ]
 
 
-def _apply_instrument_kv(
-    plan: _ParsedConfig, field_path: str, value: str, data_type: str
-) -> None:
+def _apply_instrument_kv(plan: _ParsedConfig, field_path: str, value: str, data_type: str) -> None:
     df_match = _RX_INSTRUMENT_DF.match(field_path)
     if df_match is not None:
         n, m, attr = (
@@ -117,9 +116,7 @@ def _apply_instrument_kv(
         elif attr == "visible":
             df.visible = _parse_bool(value, default=True)
         else:
-            raise _ParseError(
-                f"unknown display_fields[] attribute {attr!r}"
-            )
+            raise _ParseError(f"unknown display_fields[] attribute {attr!r}")
         return
 
     rf_match = _RX_INSTRUMENT_RF.match(field_path)
@@ -192,8 +189,7 @@ def _apply_instrument_kv(
         elif attr == "branch_op":
             if value and value not in BRANCH_OPS:
                 raise _ParseError(
-                    f"unknown branch_op {value!r}; expected one of "
-                    f"{sorted(BRANCH_OPS)}"
+                    f"unknown branch_op {value!r}; expected one of {sorted(BRANCH_OPS)}"
                 )
             rf.branch_op = value or None
         elif attr == "branch_value":
@@ -202,16 +198,13 @@ def _apply_instrument_kv(
         elif attr == "branch_mode":
             if value and value not in BRANCH_MODES:
                 raise _ParseError(
-                    f"unknown branch_mode {value!r}; expected one of "
-                    f"{sorted(BRANCH_MODES)}"
+                    f"unknown branch_mode {value!r}; expected one of {sorted(BRANCH_MODES)}"
                 )
             # ``show`` reads exactly as blank, as on the card: Item 10's
             # kind, so only ``require`` can be an orphan (Codex on #2675).
             rf.branch_mode = value if value == BRANCH_MODE_REQUIRE else None
         else:
-            raise _ParseError(
-                f"unknown response_fields[] attribute {attr!r}"
-            )
+            raise _ParseError(f"unknown response_fields[] attribute {attr!r}")
         return
 
     vp_match = _RX_INSTRUMENT_VP.match(field_path)
@@ -296,9 +289,7 @@ def _apply_instrument_kv(
     elif attr == "starts_new_page":
         instrument.starts_new_page = _parse_bool(value)
     elif attr == "self_reviews_active":
-        instrument.self_reviews_active = (
-            _parse_bool(value) if value else None
-        )
+        instrument.self_reviews_active = _parse_bool(value) if value else None
     elif attr == "intro_layout":
         instrument.intro_layout = _parse_intro_layout(value)
     elif attr == "band2_state":
@@ -310,9 +301,7 @@ def _apply_instrument_kv(
         instrument.band2_state = portable_band2_state(state or None)
     elif attr == "band1_touched_links":
         # Segment 18P PR D2 — the Band 1 "set"-pill link list.
-        instrument.band1_touched_links = (
-            _parse_json(value, default=[]) or None
-        )
+        instrument.band1_touched_links = _parse_json(value, default=[]) or None
     else:
         raise _ParseError(f"unknown instruments[] attribute {attr!r}")
     del data_type  # unused; type-checked by parser per attr
@@ -366,14 +355,11 @@ def _apply_branches(
     errors = branch_structure_errors([field for _, field in created])
     if errors:
         raise _ParseError(
-            f"instruments[{n}]: "
-            + "; ".join(f"{label}: {msg}" for label, msg in errors)
+            f"instruments[{n}]: " + "; ".join(f"{label}: {msg}" for label, msg in errors)
         )
 
 
-def _wipe_instruments_and_dependents(
-    db: Session, review_session: ReviewSession
-) -> None:
+def _wipe_instruments_and_dependents(db: Session, review_session: ReviewSession) -> None:
     """Wipe-and-replace prelude for the settings re-import.
 
     Drops the session's Responses + Assignments + Instrument rows
@@ -391,22 +377,15 @@ def _wipe_instruments_and_dependents(
     db.execute(
         delete(cast(Table, Response.__table__)).where(
             Response.assignment_id.in_(
-                select(Assignment.id).where(
-                    Assignment.session_id == review_session.id
-                )
+                select(Assignment.id).where(Assignment.session_id == review_session.id)
             )
         )
     )
     db.execute(
-        delete(cast(Table, Assignment.__table__)).where(
-            Assignment.session_id == review_session.id
-        )
+        delete(cast(Table, Assignment.__table__)).where(Assignment.session_id == review_session.id)
     )
     instruments_to_delete = (
-        db.execute(
-            select(Instrument)
-            .where(Instrument.session_id == review_session.id)
-        )
+        db.execute(select(Instrument).where(Instrument.session_id == review_session.id))
         .scalars()
         .all()
     )
@@ -415,9 +394,7 @@ def _wipe_instruments_and_dependents(
     db.flush()
 
 
-def _copy_rule_set(
-    db: Session, rule_set_id: int, instrument: Instrument
-) -> int:
+def _copy_rule_set(db: Session, rule_set_id: int, instrument: Instrument) -> int:
     """A copy of rule set ``rule_set_id`` for ``instrument`` to own,
     named as Band 1 names an instrument's own row."""
     original = db.get(SessionRuleSet, rule_set_id)
@@ -458,9 +435,7 @@ def _apply_instruments(
     rule_sets_by_name = {
         snap.name: snap
         for snap in db.execute(
-            select(SessionRuleSet).where(
-                SessionRuleSet.session_id == review_session.id
-            )
+            select(SessionRuleSet).where(SessionRuleSet.session_id == review_session.id)
         ).scalars()
     }
     rule_set_id_by_name = {name: snap.id for name, snap in rule_sets_by_name.items()}
@@ -501,9 +476,7 @@ def _apply_instruments(
             band2_state=spec.band2_state,
             band1_touched_links=_touched_with_rules(
                 spec.band1_touched_links,
-                rule_sets_by_name[spec.rule_set_name].rules_json
-                if spec.rule_set_name
-                else None,
+                rule_sets_by_name[spec.rule_set_name].rules_json if spec.rule_set_name else None,
             ),
         )
         # Findings E3 — absent from an older file, the column's default
@@ -521,9 +494,7 @@ def _apply_instruments(
         # gets its own copy, as Replicate does (findings S5, 2026-10-16).
         if resolved_rule_set_id is not None:
             if resolved_rule_set_id in pinned_rule_set_ids:
-                instrument.rule_set_id = _copy_rule_set(
-                    db, resolved_rule_set_id, instrument
-                )
+                instrument.rule_set_id = _copy_rule_set(db, resolved_rule_set_id, instrument)
                 rule_set_copies += 1
             else:
                 pinned_rule_set_ids.add(resolved_rule_set_id)
@@ -542,9 +513,7 @@ def _apply_instruments(
                 # the file says — every in-app setter enforces the
                 # same (findings G1, 2026-10-07).
                 visible=df_spec.visible
-                or is_locked_display_source(
-                    df_spec.source_type, df_spec.source_field or ""
-                ),
+                or is_locked_display_source(df_spec.source_type, df_spec.source_field or ""),
             )
             db.add(created_displays[m])
             counts["display_fields"] += 1
@@ -566,9 +535,7 @@ def _apply_instruments(
         default_spec = DEFAULT_RESPONSE_FIELDS[0]
         default_inline = _inline_kwargs_from_default_spec(default_spec)
         default_validation = _validation_block_from_default_spec(default_spec)
-        created_fields: list[
-            tuple[_ResponseFieldSpec, InstrumentResponseField]
-        ] = []
+        created_fields: list[tuple[_ResponseFieldSpec, InstrumentResponseField]] = []
         for m in sorted(spec.response_fields.keys()):
             rf_spec = spec.response_fields[m]
             inline_kwargs = dict(default_inline)
@@ -627,13 +594,9 @@ def _apply_instruments(
         display_ids = {m: f.id for m, f in created_displays.items()}
         field_ids = {
             m: field.id
-            for m, (_, field) in zip(
-                sorted(spec.response_fields.keys()), created_fields
-            )
+            for m, (_, field) in zip(sorted(spec.response_fields.keys()), created_fields)
         }
-        instrument.sort_display_fields = sort_from_positions(
-            spec.sort_display_fields, display_ids
-        )
+        instrument.sort_display_fields = sort_from_positions(spec.sort_display_fields, display_ids)
         instrument.column_widths = widths_from_positions(
             spec.column_widths,
             display_ids_by_position=display_ids,
@@ -651,16 +614,10 @@ def _apply_instruments(
                     instrument_id=instrument.id,
                     audience=audience,
                     while_ongoing_granularity=vp_spec.while_ongoing_granularity,
-                    while_ongoing_identification=(
-                        vp_spec.while_ongoing_identification
-                    ),
+                    while_ongoing_identification=(vp_spec.while_ongoing_identification),
                     after_release_granularity=vp_spec.after_release_granularity,
-                    after_release_identification=(
-                        vp_spec.after_release_identification
-                    ),
-                    after_release_reviewer_identity=(
-                        vp_spec.after_release_reviewer_identity
-                    ),
+                    after_release_identification=(vp_spec.after_release_identification),
+                    after_release_reviewer_identity=(vp_spec.after_release_reviewer_identity),
                 )
             )
             counts["view_policies"] += 1

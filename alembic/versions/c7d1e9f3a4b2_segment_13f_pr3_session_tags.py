@@ -16,6 +16,7 @@ Revises: e9277c43b251
 Create Date: 2026-05-17
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -40,9 +41,7 @@ def upgrade() -> None:
         ),
         sa.Column("tag", sa.String(length=64), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.UniqueConstraint(
-            "session_id", "tag", name="uq_session_tag_session_tag"
-        ),
+        sa.UniqueConstraint("session_id", "tag", name="uq_session_tag_session_tag"),
     )
 
 

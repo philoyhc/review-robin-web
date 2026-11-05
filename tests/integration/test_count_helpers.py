@@ -13,6 +13,7 @@ quietly changed the predicate rather than the aggregate. For
 ``list_pairs`` with the same filters, which is an independent
 implementation rather than a restatement of the same SQL.
 """
+
 from __future__ import annotations
 
 from typing import TypedDict
@@ -53,9 +54,7 @@ def _old_count(db: Session, model, session_id: int) -> int:
 def _populate(db: Session, session: ReviewSession, *, reviewers: int) -> None:
     """A second session's worth of rows, so a helper that loses its
     ``session_id`` predicate counts too many instead of the same."""
-    instrument = Instrument(
-        session_id=session.id, name="Other", order=0, session_seq=1
-    )
+    instrument = Instrument(session_id=session.id, name="Other", order=0, session_seq=1)
     db.add(instrument)
     db.flush()
     for n in range(reviewers):
@@ -71,27 +70,33 @@ def _populate(db: Session, session: ReviewSession, *, reviewers: int) -> None:
             email_or_identifier=f"othere{n}@example.edu",
             status="active",
         )
-        db.add(Observer(
-            session_id=session.id,
-            email=f"othero{n}@example.edu",
-            status="active",
-        ))
+        db.add(
+            Observer(
+                session_id=session.id,
+                email=f"othero{n}@example.edu",
+                status="active",
+            )
+        )
         db.add_all([reviewer, reviewee])
         db.flush()
-        db.add(Relationship(
-            session_id=session.id,
-            reviewer_id=reviewer.id,
-            reviewee_id=reviewee.id,
-            status="active",
-        ))
-        db.add(Assignment(
-            session_id=session.id,
-            reviewer_id=reviewer.id,
-            reviewee_id=reviewee.id,
-            instrument_id=instrument.id,
-            include=True,
-            created_by_mode="rule_based",
-        ))
+        db.add(
+            Relationship(
+                session_id=session.id,
+                reviewer_id=reviewer.id,
+                reviewee_id=reviewee.id,
+                status="active",
+            )
+        )
+        db.add(
+            Assignment(
+                session_id=session.id,
+                reviewer_id=reviewer.id,
+                reviewee_id=reviewee.id,
+                instrument_id=instrument.id,
+                include=True,
+                created_by_mode="rule_based",
+            )
+        )
     db.flush()
 
 
@@ -103,9 +108,7 @@ def decoy(db: Session) -> ReviewSession:
     user = User(email="d@example.edu", display_name="D")
     db.add(user)
     db.flush()
-    other = ReviewSession(
-        name="Decoy", code="CNT9", status="draft", created_by_user_id=user.id
-    )
+    other = ReviewSession(name="Decoy", code="CNT9", status="draft", created_by_user_id=user.id)
     db.add(other)
     db.flush()
     _populate(db, other, reviewers=5)
@@ -120,9 +123,7 @@ def seeded(db: Session, decoy: ReviewSession) -> ReviewSession:
     user = User(email="c@example.edu", display_name="C")
     db.add(user)
     db.flush()
-    session = ReviewSession(
-        name="Counts", code="CNT1", status="draft", created_by_user_id=user.id
-    )
+    session = ReviewSession(name="Counts", code="CNT1", status="draft", created_by_user_id=user.id)
     db.add(session)
     db.flush()
 
@@ -149,9 +150,7 @@ def seeded(db: Session, decoy: ReviewSession) -> ReviewSession:
         for n in range(2)
     ]
     observers = [
-        Observer(
-            session_id=session.id, email=f"obs{n}@example.edu", status="active"
-        )
+        Observer(session_id=session.id, email=f"obs{n}@example.edu", status="active")
         for n in range(4)
     ]
     db.add_all([*reviewers, *reviewees, *instruments, *observers])
@@ -193,36 +192,24 @@ def test_roster_counts_match_the_shape_they_replaced(
     db: Session, seeded: ReviewSession, decoy: ReviewSession
 ) -> None:
     for model in (Reviewer, Reviewee, Observer):
-        assert csv_imports._count(db, model, seeded.id) == _old_count(
-            db, model, seeded.id
-        )
+        assert csv_imports._count(db, model, seeded.id) == _old_count(db, model, seeded.id)
     assert csv_imports._count(db, Reviewer, seeded.id) == 3
     assert csv_imports._count(db, Observer, seeded.id) == 4
     # The decoy's rows are not in any of them.
     assert csv_imports._count(db, Reviewer, decoy.id) == 5
 
 
-def test_assignment_and_relationship_counts_match(
-    db: Session, seeded: ReviewSession
-) -> None:
-    assert csv_imports._count_assignments(db, seeded.id) == _old_count(
-        db, Assignment, seeded.id
-    )
+def test_assignment_and_relationship_counts_match(db: Session, seeded: ReviewSession) -> None:
+    assert csv_imports._count_assignments(db, seeded.id) == _old_count(db, Assignment, seeded.id)
     assert relationships_service.existing_count(db, seeded.id) == _old_count(
         db, Relationship, seeded.id
     )
-    assert _coverage.existing_count(db, seeded.id) == _old_count(
-        db, Assignment, seeded.id
-    )
+    assert _coverage.existing_count(db, seeded.id) == _old_count(db, Assignment, seeded.id)
 
 
-def test_existing_count_still_scopes_to_one_instrument(
-    db: Session, seeded: ReviewSession
-) -> None:
+def test_existing_count_still_scopes_to_one_instrument(db: Session, seeded: ReviewSession) -> None:
     instruments = list(
-        db.execute(
-            select(Instrument).where(Instrument.session_id == seeded.id)
-        ).scalars()
+        db.execute(select(Instrument).where(Instrument.session_id == seeded.id)).scalars()
     )
     per_instrument = [
         _coverage.existing_count(db, seeded.id, instrument_id=instrument.id)
@@ -257,9 +244,7 @@ def test_count_pairs_agrees_with_the_rows_it_counts(
     assert counted == len(listed)
 
 
-def test_count_pairs_sees_the_search_narrow(
-    db: Session, seeded: ReviewSession
-) -> None:
+def test_count_pairs_sees_the_search_narrow(db: Session, seeded: ReviewSession) -> None:
     """The same hazard as the status guard below, on the search path:
     two of the parametrised cases above are ``0 == 0``, and a
     ``_apply_pair_search`` that matched *nothing* would satisfy every
@@ -271,9 +256,7 @@ def test_count_pairs_sees_the_search_narrow(
     assert 0 < ana < everything
 
 
-def test_count_pairs_sees_the_status_split(
-    db: Session, seeded: ReviewSession
-) -> None:
+def test_count_pairs_sees_the_status_split(db: Session, seeded: ReviewSession) -> None:
     """A guard the parametrised comparison cannot give: both sides could
     agree on zero if the filter silently matched nothing."""
     active = _coverage.count_pairs(db, seeded.id, status="active")
@@ -282,17 +265,13 @@ def test_count_pairs_sees_the_status_split(
     assert active + inactive == _coverage.count_pairs(db, seeded.id)
 
 
-def test_every_count_is_zero_on_an_empty_session(
-    db: Session, decoy: ReviewSession
-) -> None:
+def test_every_count_is_zero_on_an_empty_session(db: Session, decoy: ReviewSession) -> None:
     """With a populated neighbour in the table, "zero" is a claim about
     the scope rather than about the database being empty."""
     user = User(email="e@example.edu", display_name="E")
     db.add(user)
     db.flush()
-    empty = ReviewSession(
-        name="Empty", code="CNT0", status="draft", created_by_user_id=user.id
-    )
+    empty = ReviewSession(name="Empty", code="CNT0", status="draft", created_by_user_id=user.id)
     db.add(empty)
     db.flush()
 

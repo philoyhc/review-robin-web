@@ -21,11 +21,24 @@ from app.services.instruments import ensure_default_instrument
 from .test_held_upload_setup_cards import _held, _session, _token, _upload
 
 FILES = {
-    "reviewers": (b"ReviewerName,ReviewerEmail\nAnn,ann@example.edu\n", b"ReviewerName,ReviewerEmail\nBea,bea@example.edu\n"),
-    "reviewees": (b"RevieweeName,RevieweeEmail\nAnn,ann@example.edu\n", b"RevieweeName,RevieweeEmail\nBea,bea@example.edu\n"),
-    "observers": (b"ObserverName,ObserverEmail\nAnn,ann@example.edu\n", b"ObserverName,ObserverEmail\nBea,bea@example.edu\n"),
+    "reviewers": (
+        b"ReviewerName,ReviewerEmail\nAnn,ann@example.edu\n",
+        b"ReviewerName,ReviewerEmail\nBea,bea@example.edu\n",
+    ),
+    "reviewees": (
+        b"RevieweeName,RevieweeEmail\nAnn,ann@example.edu\n",
+        b"RevieweeName,RevieweeEmail\nBea,bea@example.edu\n",
+    ),
+    "observers": (
+        b"ObserverName,ObserverEmail\nAnn,ann@example.edu\n",
+        b"ObserverName,ObserverEmail\nBea,bea@example.edu\n",
+    ),
 }
-MODELS = {"reviewers": (Reviewer, Reviewer.email), "reviewees": (Reviewee, Reviewee.email_or_identifier), "observers": (Observer, Observer.email)}
+MODELS = {
+    "reviewers": (Reviewer, Reviewer.email),
+    "reviewees": (Reviewee, Reviewee.email_or_identifier),
+    "observers": (Observer, Observer.email),
+}
 
 
 def _addresses(db: Session, kind: str, session_id: int) -> list[str]:
@@ -35,20 +48,26 @@ def _addresses(db: Session, kind: str, session_id: int) -> list[str]:
 
 
 @pytest.mark.parametrize("kind", sorted(FILES))
-def test_the_append_tick_adds_the_file_and_keeps_the_roster(client: TestClient, db: Session, kind: str) -> None:
+def test_the_append_tick_adds_the_file_and_keeps_the_roster(
+    client: TestClient, db: Session, kind: str
+) -> None:
     s = _session(client, db, code=f"apr-{kind}")
     url = f"/operator/sessions/{s.public_id}/{kind}/import"
     first, second = FILES[kind]
     assert _upload(client, url, first).status_code == 303
     page = client.get(f"/operator/sessions/{s.public_id}/{kind}?unlocked=1").text
-    assert 'name="append" value="true"' in page and 'name="append" value="true" disabled' not in page
+    assert (
+        'name="append" value="true"' in page and 'name="append" value="true" disabled' not in page
+    )
 
     response = _upload(client, url, second, append="true")
     assert response.status_code == 303, response.text[:400]
     assert _addresses(db, kind, s.id) == ["ann@example.edu", "bea@example.edu"]
 
 
-def test_an_append_keeps_the_assignments_a_replace_would_delete(client: TestClient, db: Session) -> None:
+def test_an_append_keeps_the_assignments_a_replace_would_delete(
+    client: TestClient, db: Session
+) -> None:
     s = _session(client, db, code="apr-keep")
     base = f"/operator/sessions/{s.public_id}"
     _upload(client, f"{base}/reviewers/import", FILES["reviewers"][0])
@@ -56,10 +75,19 @@ def test_an_append_keeps_the_assignments_a_replace_would_delete(client: TestClie
     ann_r = db.execute(select(Reviewer).where(Reviewer.session_id == s.id)).scalar_one()
     ann_e = db.execute(select(Reviewee).where(Reviewee.session_id == s.id)).scalar_one()
     instrument = ensure_default_instrument(db, s)
-    db.add(Assignment(session_id=s.id, reviewer_id=ann_r.id, reviewee_id=ann_e.id, instrument_id=instrument.id))
+    db.add(
+        Assignment(
+            session_id=s.id, reviewer_id=ann_r.id, reviewee_id=ann_e.id, instrument_id=instrument.id
+        )
+    )
     db.commit()
 
-    assert _upload(client, f"{base}/reviewers/import", FILES["reviewers"][1], append="true").status_code == 303
+    assert (
+        _upload(
+            client, f"{base}/reviewers/import", FILES["reviewers"][1], append="true"
+        ).status_code
+        == 303
+    )
     db.expire_all()
     assert db.execute(select(Assignment).where(Assignment.session_id == s.id)).scalar_one()
 
@@ -87,7 +115,9 @@ def test_both_ticks_ask_and_hold_the_file(client: TestClient, db: Session, kind:
 
 
 @pytest.mark.parametrize("kind", ["reviewees", "observers"])
-def test_a_row_already_on_the_roster_refuses_the_append(client: TestClient, db: Session, kind: str) -> None:
+def test_a_row_already_on_the_roster_refuses_the_append(
+    client: TestClient, db: Session, kind: str
+) -> None:
     s = _session(client, db, code=f"apr-dup-{kind}")
     url = f"/operator/sessions/{s.public_id}/{kind}/import"
     first, second = FILES[kind]
@@ -147,9 +177,20 @@ def _relationships_session(client: TestClient, db: Session, code: str):
     s.relationships_enabled = True
     db.commit()
     base = f"/operator/sessions/{s.public_id}"
-    _upload(client, f"{base}/reviewers/import", b"ReviewerName,ReviewerEmail\nAl,al@example.edu\nBo,bo@example.edu\n")
+    _upload(
+        client,
+        f"{base}/reviewers/import",
+        b"ReviewerName,ReviewerEmail\nAl,al@example.edu\nBo,bo@example.edu\n",
+    )
     _upload(client, f"{base}/reviewees/import", b"RevieweeName,RevieweeEmail\nCy,cy@example.edu\n")
-    assert _upload(client, f"{base}/relationships/import", b"ReviewerEmail,RevieweeEmail\nal@example.edu,cy@example.edu\n").status_code == 303
+    assert (
+        _upload(
+            client,
+            f"{base}/relationships/import",
+            b"ReviewerEmail,RevieweeEmail\nal@example.edu,cy@example.edu\n",
+        ).status_code
+        == 303
+    )
     return s, f"{base}/relationships/import"
 
 
@@ -157,10 +198,16 @@ def _pairs(db: Session, session_id: int) -> int:
     from app.db.models import Relationship
 
     db.expire_all()
-    return len(db.execute(select(Relationship).where(Relationship.session_id == session_id)).scalars().all())
+    return len(
+        db.execute(select(Relationship).where(Relationship.session_id == session_id))
+        .scalars()
+        .all()
+    )
 
 
-def test_relationships_append_adds_a_pair_and_refuses_a_held_one(client: TestClient, db: Session) -> None:
+def test_relationships_append_adds_a_pair_and_refuses_a_held_one(
+    client: TestClient, db: Session
+) -> None:
     s, url = _relationships_session(client, db, "apr-rel")
     new = b"ReviewerEmail,RevieweeEmail\nbo@example.edu,cy@example.edu\n"
     held = b"ReviewerEmail,RevieweeEmail\nAL@example.edu,cy@example.edu\n"
@@ -203,7 +250,12 @@ def test_a_relationships_append_that_redraws_an_answered_group_asks_first(
     assert _pairs(db, session.id) == 4
 
     answered = _upload(
-        client, url, None, append="true", acknowledge_response_loss=count, held_token=_token(asked.text)
+        client,
+        url,
+        None,
+        append="true",
+        acknowledge_response_loss=count,
+        held_token=_token(asked.text),
     )
     assert answered.status_code == 303, answered.text[:400]
     assert _pairs(db, session.id) == 5
@@ -236,8 +288,15 @@ def test_an_append_onto_an_empty_roster_is_just_the_roster(client: TestClient, d
 
     s = _session(client, db, code="apr-empty")
     url = f"/operator/sessions/{s.public_id}/reviewers/import"
-    assert _upload(client, url, FILES["reviewers"][0], append="true", confirm_replace="true").status_code == 303
-    event = db.execute(select(AuditEvent).where(AuditEvent.event_type == "reviewers.imported")).scalar_one()
+    assert (
+        _upload(
+            client, url, FILES["reviewers"][0], append="true", confirm_replace="true"
+        ).status_code
+        == 303
+    )
+    event = db.execute(
+        select(AuditEvent).where(AuditEvent.event_type == "reviewers.imported")
+    ).scalar_one()
     assert event.detail is not None
     assert "mode" not in (event.detail.get("context") or {})
     assert _addresses(db, "reviewers", s.id) == ["ann@example.edu"]

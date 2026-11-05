@@ -9,6 +9,7 @@ block's position and the import stores each block's rank among the
 file's numbers, and ``[n]`` stays the authority for ordering
 (`spec/csv_contracts.md`).
 """
+
 from __future__ import annotations
 
 from sqlalchemy import select
@@ -21,23 +22,15 @@ from app.services.session_config_io import (
 )
 
 
-def _session_with_instruments(
-    db: Session, code: str, orders: list[int]
-) -> ReviewSession:
+def _session_with_instruments(db: Session, code: str, orders: list[int]) -> ReviewSession:
     op = User(email=f"op-{code}@example.edu", display_name="Op")
     db.add(op)
     db.flush()
-    review_session = ReviewSession(
-        name=code.title(), code=code, created_by_user_id=op.id
-    )
+    review_session = ReviewSession(name=code.title(), code=code, created_by_user_id=op.id)
     db.add(review_session)
     db.flush()
     for i, order in enumerate(orders):
-        db.add(
-            Instrument(
-                session_id=review_session.id, name=f"I{i}", order=order
-            )
-        )
+        db.add(Instrument(session_id=review_session.id, name=f"I{i}", order=order))
     db.flush()
     return review_session
 
@@ -69,14 +62,16 @@ def test_export_import_export_is_byte_stable(db: Session) -> None:
     assert result.errors == []
 
     second = serialize_session_config(db, review_session)
-    assert [(r.field, r.value) for r in second] == [
-        (r.field, r.value) for r in first
-    ]
-    stored = db.execute(
-        select(Instrument.order)
-        .where(Instrument.session_id == review_session.id)
-        .order_by(Instrument.order)
-    ).scalars().all()
+    assert [(r.field, r.value) for r in second] == [(r.field, r.value) for r in first]
+    stored = (
+        db.execute(
+            select(Instrument.order)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.order)
+        )
+        .scalars()
+        .all()
+    )
     assert stored == [0, 1]
 
 
@@ -103,4 +98,3 @@ def test_hand_numbered_blocks_store_their_rank(db: Session) -> None:
         .order_by(Instrument.order)
     ).all()
     assert [tuple(r) for r in stored] == [("I0", 0), ("I1", 1)]
-

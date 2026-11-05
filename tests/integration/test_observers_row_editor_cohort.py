@@ -50,13 +50,14 @@ def _session(client: TestClient, db: Session, code: str) -> tuple[ReviewSession,
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    rs = db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    rs = db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
     rs.observers_enabled = True
     observer = Observer(
-        session_id=rs.id, email="o@example.org", display_name="O",
-        status="active", cohort_rule=RULE,
+        session_id=rs.id,
+        email="o@example.org",
+        display_name="O",
+        status="active",
+        cohort_rule=RULE,
     )
     db.add(observer)
     db.commit()
@@ -70,7 +71,8 @@ def _bar(body: str) -> str:
     m = re.search(
         r'<tr class="session-expander session-expander-bracketed row-editor-bar">'
         r".*?</tr>",
-        body, re.S,
+        body,
+        re.S,
     )
     assert m, "no row editor bar"
     return m.group(0)
@@ -86,13 +88,9 @@ def _form_ids(fragment: str) -> set[str]:
     return set(re.findall(r'\bform="([^"]+)"', fragment))
 
 
-def test_edit_shows_the_builder_loaded_with_the_rule(
-    client: TestClient, db: Session
-) -> None:
+def test_edit_shows_the_builder_loaded_with_the_rule(client: TestClient, db: Session) -> None:
     rs, observer = _session(client, db, "orc-edit")
-    body = client.get(
-        f"/operator/sessions/{rs.public_id}/observers?edit_id={observer.id}"
-    ).text
+    body = client.get(f"/operator/sessions/{rs.public_id}/observers?edit_id={observer.id}").text
     bar = _bar(body)
     assert "This observer is able to see responses where" in bar
     assert "data-observer-cohort-builder" in bar
@@ -113,9 +111,7 @@ def test_edit_mode_loads_the_rule_and_builds_no_selection_panel(
     client: TestClient, db: Session
 ) -> None:
     rs, observer = _session(client, db, "orc-script")
-    body = client.get(
-        f"/operator/sessions/{rs.public_id}/observers?edit_id={observer.id}"
-    ).text
+    body = client.get(f"/operator/sessions/{rs.public_id}/observers?edit_id={observer.id}").text
     assert "window.observerFillRule(" in body
     assert "window.observerAddRule = function" in body
     # The selection panel needs the checkboxes edit mode does not render.
@@ -123,29 +119,40 @@ def test_edit_mode_loads_the_rule_and_builds_no_selection_panel(
     assert 'id="observers-cohort-template"' not in body
 
 
-def test_a_rejected_edit_keeps_the_rule_in_the_builder(
-    client: TestClient, db: Session
-) -> None:
+def test_a_rejected_edit_keeps_the_rule_in_the_builder(client: TestClient, db: Session) -> None:
     """Codex on #2988: a rejected save re-renders with the operator's
     values, and the builder comes back holding the rule as posted."""
     rs, observer = _session(client, db, "orc-reject")
     db.add(Observer(session_id=rs.id, email="taken@example.org", status="active"))
     db.commit()
-    cells = [tuple(r[k] for k in ("field", "op", "operand_tag", "operand_value"))
-             for r in RULE["rules"]]
+    cells = [
+        tuple(r[k] for k in ("field", "op", "operand_tag", "operand_value")) for r in RULE["rules"]
+    ]
     response = _post(
-        client, f"/operator/sessions/{rs.public_id}/observers/{observer.id}/update",
-        cells, email="taken@example.org", combinator="OR",
+        client,
+        f"/operator/sessions/{rs.public_id}/observers/{observer.id}/update",
+        cells,
+        email="taken@example.org",
+        combinator="OR",
     )
     assert response.status_code == 400
     assert _rule_attr(_bar(response.text)) == RULE
 
 
-def _post(client: TestClient, url: str, cells: list[tuple[str, str, str, str]],
-          *, email: str = "o@example.org", combinator: str = "AND",
-          name: str = "O") -> httpx.Response:
+def _post(
+    client: TestClient,
+    url: str,
+    cells: list[tuple[str, str, str, str]],
+    *,
+    email: str = "o@example.org",
+    combinator: str = "AND",
+    name: str = "O",
+) -> httpx.Response:
     data: dict[str, object] = {
-        "email": email, "display_name": name, "tag_1": "", "status": "active",
+        "email": email,
+        "display_name": name,
+        "tag_1": "",
+        "status": "active",
         "cohort_combinator": combinator,
         "cohort_rule_field": [c[0] for c in cells],
         "cohort_rule_op": [c[1] for c in cells],
@@ -174,27 +181,29 @@ VALUE_CELL = ("reviewee.tag1", "IS", "", "Red")
 BLANK_CELL = ("", "IS THE SAME AS", "observer.name", "")
 
 
-def test_add_saves_the_row_and_its_rule_in_one_post(
-    client: TestClient, db: Session
-) -> None:
+def test_add_saves_the_row_and_its_rule_in_one_post(client: TestClient, db: Session) -> None:
     rs, _ = _session(client, db, "orc-add-save")
     before = len(_events(db, rs.id))
     response = _post(
-        client, f"/operator/sessions/{rs.public_id}/observers/create",
-        [TAG_CELL, VALUE_CELL], email="new@example.org", combinator="OR",
+        client,
+        f"/operator/sessions/{rs.public_id}/observers/create",
+        [TAG_CELL, VALUE_CELL],
+        email="new@example.org",
+        combinator="OR",
     )
     assert response.status_code == 303, response.text
-    new = db.execute(
-        select(Observer).where(Observer.email == "new@example.org")
-    ).scalar_one()
+    new = db.execute(select(Observer).where(Observer.email == "new@example.org")).scalar_one()
     assert new.cohort_rule == {
         "combinator": "OR",
-        "rules": [dict(zip(("field", "op", "operand_tag", "operand_value"), c))
-                  for c in (TAG_CELL, VALUE_CELL)],
+        "rules": [
+            dict(zip(("field", "op", "operand_tag", "operand_value"), c))
+            for c in (TAG_CELL, VALUE_CELL)
+        ],
     }
     events = _events(db, rs.id)[before:]
     assert [e for e, _ in events] == [
-        "observer.created", "observer.cohort_rule_assigned",
+        "observer.created",
+        "observer.cohort_rule_assigned",
     ]
     assert len({c for _, c in events}) == 1, "one correlation id"
 
@@ -205,13 +214,13 @@ def test_an_untouched_builder_adds_an_observer_with_no_rule(
     rs, _ = _session(client, db, "orc-add-blank")
     before = len(_events(db, rs.id))
     response = _post(
-        client, f"/operator/sessions/{rs.public_id}/observers/create",
-        [BLANK_CELL], email="blank@example.org",
+        client,
+        f"/operator/sessions/{rs.public_id}/observers/create",
+        [BLANK_CELL],
+        email="blank@example.org",
     )
     assert response.status_code == 303, response.text
-    new = db.execute(
-        select(Observer).where(Observer.email == "blank@example.org")
-    ).scalar_one()
+    new = db.execute(select(Observer).where(Observer.email == "blank@example.org")).scalar_one()
     assert new.cohort_rule is None
     assert [e for e, _ in _events(db, rs.id)[before:]] == ["observer.created"]
 
@@ -224,7 +233,8 @@ def test_edit_changes_the_rule_alone_without_demoting_validated(
     db.commit()
     before = len(_events(db, rs.id))
     response = _post(
-        client, f"/operator/sessions/{rs.public_id}/observers/{observer.id}/update",
+        client,
+        f"/operator/sessions/{rs.public_id}/observers/{observer.id}/update",
         [VALUE_CELL],
     )
     assert response.status_code == 303, response.text
@@ -232,8 +242,7 @@ def test_edit_changes_the_rule_alone_without_demoting_validated(
     db.refresh(rs)
     assert observer.cohort_rule == {
         "combinator": "AND",
-        "rules": [dict(zip(("field", "op", "operand_tag", "operand_value"),
-                           VALUE_CELL))],
+        "rules": [dict(zip(("field", "op", "operand_tag", "operand_value"), VALUE_CELL))],
     }
     assert [e for e, _ in _events(db, rs.id)[before:]] == [
         "observer.cohort_rule_assigned",
@@ -241,12 +250,11 @@ def test_edit_changes_the_rule_alone_without_demoting_validated(
     assert rs.status == "validated"
 
 
-def test_emptying_the_builder_clears_the_rule(
-    client: TestClient, db: Session
-) -> None:
+def test_emptying_the_builder_clears_the_rule(client: TestClient, db: Session) -> None:
     rs, observer = _session(client, db, "orc-clear")
     response = _post(
-        client, f"/operator/sessions/{rs.public_id}/observers/{observer.id}/update",
+        client,
+        f"/operator/sessions/{rs.public_id}/observers/{observer.id}/update",
         [BLANK_CELL],
     )
     assert response.status_code == 303, response.text
@@ -254,16 +262,18 @@ def test_emptying_the_builder_clears_the_rule(
     assert observer.cohort_rule is None
 
 
-def test_an_unchanged_rule_writes_no_rule_event(
-    client: TestClient, db: Session
-) -> None:
+def test_an_unchanged_rule_writes_no_rule_event(client: TestClient, db: Session) -> None:
     rs, observer = _session(client, db, "orc-same")
     before = len(_events(db, rs.id))
-    cells = [tuple(r[k] for k in ("field", "op", "operand_tag", "operand_value"))
-             for r in RULE["rules"]]
+    cells = [
+        tuple(r[k] for k in ("field", "op", "operand_tag", "operand_value")) for r in RULE["rules"]
+    ]
     response = _post(
-        client, f"/operator/sessions/{rs.public_id}/observers/{observer.id}/update",
-        cells, combinator="OR", name="Renamed",
+        client,
+        f"/operator/sessions/{rs.public_id}/observers/{observer.id}/update",
+        cells,
+        combinator="OR",
+        name="Renamed",
     )
     assert response.status_code == 303, response.text
     assert [e for e, _ in _events(db, rs.id)[before:]] == ["observer.updated"]
@@ -272,8 +282,8 @@ def test_an_unchanged_rule_writes_no_rule_event(
 @pytest.mark.parametrize(
     "cell",
     [
-        ("reviewee.tag1", "IS", "", ""),     # a field, a typed operator, no value
-        ("", "IS", "", "Red"),               # a value, no field
+        ("reviewee.tag1", "IS", "", ""),  # a field, a typed operator, no value
+        ("", "IS", "", "Red"),  # a value, no field
     ],
 )
 def test_a_half_filled_cell_is_refused_and_nothing_is_written(
@@ -281,8 +291,10 @@ def test_a_half_filled_cell_is_refused_and_nothing_is_written(
 ) -> None:
     rs, observer = _session(client, db, f"orc-half-{len(cell[0])}")
     response = _post(
-        client, f"/operator/sessions/{rs.public_id}/observers/{observer.id}/update",
-        [TAG_CELL, cell], name="Renamed",
+        client,
+        f"/operator/sessions/{rs.public_id}/observers/{observer.id}/update",
+        [TAG_CELL, cell],
+        name="Renamed",
     )
     assert response.status_code == 400
     assert "Finish or clear each rule cell" in response.text
@@ -299,24 +311,24 @@ def test_an_invalid_rule_is_refused_before_the_row_is_created(
 ) -> None:
     rs, _ = _session(client, db, "orc-invalid")
     response = _post(
-        client, f"/operator/sessions/{rs.public_id}/observers/create",
+        client,
+        f"/operator/sessions/{rs.public_id}/observers/create",
         [("reviewer.nope", "IS THE SAME AS", "observer.email", "")],
         email="bad@example.org",
     )
     assert response.status_code == 400
     assert "Couldn&#39;t save the cohort rule" in response.text
-    assert db.execute(
-        select(Observer).where(Observer.email == "bad@example.org")
-    ).scalar_one_or_none() is None
+    assert (
+        db.execute(select(Observer).where(Observer.email == "bad@example.org")).scalar_one_or_none()
+        is None
+    )
 
 
-def test_only_the_row_editor_offers_a_blank_field(
-    client: TestClient, db: Session
-) -> None:
+def test_only_the_row_editor_offers_a_blank_field(client: TestClient, db: Session) -> None:
     rs, observer = _session(client, db, "orc-blank-opt")
-    bar = _bar(client.get(
-        f"/operator/sessions/{rs.public_id}/observers?edit_id={observer.id}"
-    ).text)
+    bar = _bar(
+        client.get(f"/operator/sessions/{rs.public_id}/observers?edit_id={observer.id}").text
+    )
     assert '<option value="">Choose a field</option>' in bar
     # And nowhere else: selecting rows shows no builder (rung 4).
     body = client.get(f"/operator/sessions/{rs.public_id}/observers").text
@@ -328,8 +340,11 @@ def test_only_the_row_editor_offers_a_blank_field(
 
 def _second(db: Session, rs: ReviewSession, rule: object) -> Observer:
     other = Observer(
-        session_id=rs.id, email="p@example.org", display_name="P",
-        status="active", cohort_rule=rule,
+        session_id=rs.id,
+        email="p@example.org",
+        display_name="P",
+        status="active",
+        cohort_rule=rule,
     )
     db.add(other)
     db.commit()
@@ -337,14 +352,11 @@ def _second(db: Session, rs: ReviewSession, rule: object) -> Observer:
     return other
 
 
-def test_several_rows_open_their_shared_rule_alone(
-    client: TestClient, db: Session
-) -> None:
+def test_several_rows_open_their_shared_rule_alone(client: TestClient, db: Session) -> None:
     rs, first = _session(client, db, "orc-multi")
     second = _second(db, rs, RULE)
     body = client.get(
-        f"/operator/sessions/{rs.public_id}/observers"
-        f"?rule_id={first.id}&rule_id={second.id}"
+        f"/operator/sessions/{rs.public_id}/observers?rule_id={first.id}&rule_id={second.id}"
     ).text
     bar = _bar(body)
     assert "The 2 selected observers are able to see responses where" in bar
@@ -365,28 +377,23 @@ def test_several_rows_open_their_shared_rule_alone(
     assert body.index(f'id="observer-row-{second.id}"') < body.index("row-editor-bar")
 
 
-def test_differing_rules_load_nothing_and_say_so(
-    client: TestClient, db: Session
-) -> None:
+def test_differing_rules_load_nothing_and_say_so(client: TestClient, db: Session) -> None:
     rs, first = _session(client, db, "orc-mixed")
     second = _second(db, rs, None)
-    bar = _bar(client.get(
-        f"/operator/sessions/{rs.public_id}/observers"
-        f"?rule_id={first.id}&rule_id={second.id}"
-    ).text)
+    bar = _bar(
+        client.get(
+            f"/operator/sessions/{rs.public_id}/observers?rule_id={first.id}&rule_id={second.id}"
+        ).text
+    )
     assert _rule_attr(bar) is None
     assert "currently have different cohort rules" in bar
 
 
-def test_one_rule_id_opens_no_rule_editor(
-    client: TestClient, db: Session
-) -> None:
+def test_one_rule_id_opens_no_rule_editor(client: TestClient, db: Session) -> None:
     """One row is the row editor's (`?edit_id=`); a lone `rule_id` is
     ignored rather than opening a second surface for the same job."""
     rs, first = _session(client, db, "orc-one")
-    body = client.get(
-        f"/operator/sessions/{rs.public_id}/observers?rule_id={first.id}"
-    ).text
+    body = client.get(f"/operator/sessions/{rs.public_id}/observers?rule_id={first.id}").text
     assert "row-editor-bar" not in body
 
 
@@ -419,9 +426,7 @@ def test_a_half_filled_rule_for_several_re_renders_their_editor(
     assert first.cohort_rule == RULE and second.cohort_rule is None
 
 
-def test_an_explicit_empty_rule_counts_as_no_rule(
-    client: TestClient, db: Session
-) -> None:
+def test_an_explicit_empty_rule_counts_as_no_rule(client: TestClient, db: Session) -> None:
     """An imported observer can hold `rules: []`; saving its name from an
     untouched builder must not rewrite that as NULL with an event."""
     rs, observer = _session(client, db, "orc-empty-set")
@@ -429,8 +434,10 @@ def test_an_explicit_empty_rule_counts_as_no_rule(
     db.commit()
     before = len(_events(db, rs.id))
     response = _post(
-        client, f"/operator/sessions/{rs.public_id}/observers/{observer.id}/update",
-        [BLANK_CELL], name="Renamed",
+        client,
+        f"/operator/sessions/{rs.public_id}/observers/{observer.id}/update",
+        [BLANK_CELL],
+        name="Renamed",
     )
     assert response.status_code == 303, response.text
     assert [e for e, _ in _events(db, rs.id)[before:]] == ["observer.updated"]
@@ -438,19 +445,18 @@ def test_an_explicit_empty_rule_counts_as_no_rule(
     assert observer.cohort_rule == {"combinator": "AND", "rules": []}
 
 
-def test_null_and_an_empty_set_are_not_different_rules(
-    client: TestClient, db: Session
-) -> None:
+def test_null_and_an_empty_set_are_not_different_rules(client: TestClient, db: Session) -> None:
     """Both mean "no rule"; the several-row editor must not call them
     different (`observers.same_cohort_rule`)."""
     rs, first = _session(client, db, "orc-null-empty")
     first.cohort_rule = None
     db.commit()
     second = _second(db, rs, {"combinator": "AND", "rules": []})
-    bar = _bar(client.get(
-        f"/operator/sessions/{rs.public_id}/observers"
-        f"?rule_id={first.id}&rule_id={second.id}"
-    ).text)
+    bar = _bar(
+        client.get(
+            f"/operator/sessions/{rs.public_id}/observers?rule_id={first.id}&rule_id={second.id}"
+        ).text
+    )
     assert "different cohort rules" not in bar
 
 
@@ -460,8 +466,7 @@ def test_edit_keeps_the_filter_and_page(client: TestClient, db: Session) -> None
     over the selected rows with its filter still applied."""
     rs, first = _session(client, db, "orc-view")
     second = _second(db, rs, RULE)
-    hidden = Observer(session_id=rs.id, email="z@example.org",
-                      display_name="Z", status="inactive")
+    hidden = Observer(session_id=rs.id, email="z@example.org", display_name="Z", status="inactive")
     db.add(hidden)
     db.commit()
     page = client.get(f"/operator/sessions/{rs.public_id}/observers").text
@@ -472,22 +477,17 @@ def test_edit_keeps_the_filter_and_page(client: TestClient, db: Session) -> None
         f"&status=active&q=&offset=0"
     ).text
     assert "The 2 selected observers" in _bar(body)
-    assert f'id="observer-row-{hidden.id}"' not in body, (
-        "the status filter was dropped"
-    )
+    assert f'id="observer-row-{hidden.id}"' not in body, "the status filter was dropped"
 
 
-def test_a_rejected_save_arrives_as_unsaved(
-    client: TestClient, db: Session
-) -> None:
+def test_a_rejected_save_arrives_as_unsaved(client: TestClient, db: Session) -> None:
     """The leave guard and the several-row Save treat a page re-rendered
     by a rejected save as changed from arrival: what it holds was posted,
     not stored."""
     rs, first = _session(client, db, "orc-unsaved")
     second = _second(db, rs, None)
     ok = client.get(
-        f"/operator/sessions/{rs.public_id}/observers"
-        f"?rule_id={first.id}&rule_id={second.id}"
+        f"/operator/sessions/{rs.public_id}/observers?rule_id={first.id}&rule_id={second.id}"
     ).text
     assert "var arrivedUnsaved = false;" in ok
     rejected = client.post(

@@ -32,15 +32,11 @@ from ._full_matrix import (
     pin_full_matrix_on_all_instruments,
 )
 
-RAE = AuthenticatedUser(
-    principal_id="rae-oid", email="rae@example.edu", name="Rae", provider="aad"
-)
+RAE = AuthenticatedUser(principal_id="rae-oid", email="rae@example.edu", name="Rae", provider="aad")
 TYPED = "Line one\nLine two <b>bold</b>"
 
 
-def _ready_session(
-    operator: TestClient, db: Session, *, code: str
-) -> ReviewSession:
+def _ready_session(operator: TestClient, db: Session, *, code: str) -> ReviewSession:
     """An Activated session: reviewers Rae and Sam, one reviewee."""
     operator.post(
         "/operator/sessions",
@@ -55,8 +51,7 @@ def _ready_session(
         files={
             "file": (
                 "r.csv",
-                b"ReviewerName,ReviewerEmail\n"
-                b"Rae,rae@example.edu\nSam,sam@example.edu\n",
+                b"ReviewerName,ReviewerEmail\nRae,rae@example.edu\nSam,sam@example.edu\n",
                 "text/csv",
             )
         },
@@ -99,9 +94,7 @@ def _assignment_of(db: Session, review_session: ReviewSession, email: str) -> As
     ).scalar_one()
 
 
-def _rae_posts(
-    make_client, path: str, data: dict[str, str]
-):
+def _rae_posts(make_client, path: str, data: dict[str, str]):
     resp = make_client(RAE).post(path, data=data, follow_redirects=False)
     return resp, html.unescape(resp.text)
 
@@ -213,9 +206,7 @@ def test_a_reviewer_with_nothing_assigned_is_not_told_no_longer(
     assignment.include = False
     db.commit()
 
-    resp, text = _rae_posts(
-        make_client, f"/me/sessions/{review_session.public_id}/1/save", typed
-    )
+    resp, text = _rae_posts(make_client, f"/me/sessions/{review_session.public_id}/1/save", typed)
 
     assert resp.status_code == 403
     assert (
@@ -227,9 +218,7 @@ def test_a_reviewer_with_nothing_assigned_is_not_told_no_longer(
     assert "Line one\nLine two" in text
 
 
-def test_a_refused_clear_lists_nothing(
-    client: TestClient, db: Session, make_client
-) -> None:
+def test_a_refused_clear_lists_nothing(client: TestClient, db: Session, make_client) -> None:
     review_session = _ready_session(client, db, code="refused-clear")
     client.post(
         f"/operator/sessions/{review_session.public_id}/workflow/close",
@@ -333,9 +322,7 @@ def test_an_excluded_row_comes_back_without_labels(
     assignment.include = False
     db.commit()
 
-    resp, _ = _rae_posts(
-        make_client, f"/me/sessions/{review_session.public_id}/1/save", typed
-    )
+    resp, _ = _rae_posts(make_client, f"/me/sessions/{review_session.public_id}/1/save", typed)
 
     listed = _unsaved_list(resp.text)
     assert "kept text" in listed
@@ -441,9 +428,7 @@ def test_a_hidden_field_comes_back_without_labels(
     assert "Carol" not in listed
 
 
-def test_typed_text_comes_back_as_typed(
-    client: TestClient, db: Session, make_client
-) -> None:
+def test_typed_text_comes_back_as_typed(client: TestClient, db: Session, make_client) -> None:
     """Read from the raw form, not the stripped upserts: indentation
     survives, and a blank value is not listed."""
     review_session = _ready_session(client, db, code="refused-raw")
@@ -476,16 +461,12 @@ def test_a_refused_post_to_an_out_of_range_page_still_renders(
     review_session.deadline = datetime.now(UTC) - timedelta(minutes=1)
     db.commit()
 
-    resp, _ = _rae_posts(
-        make_client, f"/me/sessions/{review_session.public_id}/99/save", {}
-    )
+    resp, _ = _rae_posts(make_client, f"/me/sessions/{review_session.public_id}/99/save", {})
     assert resp.status_code == 403
     assert "data-rs-write-refused" in resp.text
 
 
-def test_an_accepted_save_shows_no_notice(
-    client: TestClient, db: Session, make_client
-) -> None:
+def test_an_accepted_save_shows_no_notice(client: TestClient, db: Session, make_client) -> None:
     review_session = _ready_session(client, db, code="refused-not")
     aid = _assignment_of(db, review_session, "rae@example.edu").id
     rae_client = make_client(RAE)

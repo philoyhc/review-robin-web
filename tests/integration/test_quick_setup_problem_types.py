@@ -34,9 +34,7 @@ def _session(client: TestClient, db: Session, code: str) -> ReviewSession:
         follow_redirects=False,
     )
     assert response.status_code == 303
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _details(response) -> list[str]:
@@ -78,23 +76,17 @@ def test_a_refused_roster_names_each_kind_of_problem_with_a_count(
     assert "not-an-email" not in body and "Row 3" not in body
 
 
-def test_a_file_level_problem_reads_as_itself(
-    client: TestClient, db: Session
-) -> None:
+def test_a_file_level_problem_reads_as_itself(client: TestClient, db: Session) -> None:
     rs = _session(client, db, "qsp-column")
     response = client.post(
         f"/operator/sessions/{rs.public_id}/quick-setup/reviewers",
         files={"file": ("r.csv", b"ReviewerName,Wrong\nAnn,x\n", "text/csv")},
         follow_redirects=False,
     )
-    assert _details(response) == [
-        "Missing required column: ReviewerEmail"
-    ]
+    assert _details(response) == ["Missing required column: ReviewerEmail"]
 
 
-def test_the_submit_all_form_carries_the_problems_too(
-    client: TestClient, db: Session
-) -> None:
+def test_the_submit_all_form_carries_the_problems_too(client: TestClient, db: Session) -> None:
     rs = _session(client, db, "qsp-submit-all")
     response = client.post(
         f"/operator/sessions/{rs.public_id}/quick-setup/submit-all",
@@ -142,12 +134,13 @@ def test_a_name_another_roster_holds_is_named_without_the_email(
     db.commit()
     response = client.post(
         f"/operator/sessions/{rs.public_id}/quick-setup/reviewers",
-        files={"file": ("r.csv", b"ReviewerName,ReviewerEmail\nAnnie,ann@example.org\n", "text/csv")},
+        files={
+            "file": ("r.csv", b"ReviewerName,ReviewerEmail\nAnnie,ann@example.org\n", "text/csv")
+        },
         follow_redirects=False,
     )
     assert _details(response) == [
-        "ReviewerEmail is already used under a different name in another "
-        "roster (1 row)"
+        "ReviewerEmail is already used under a different name in another roster (1 row)"
     ]
 
 
@@ -166,9 +159,7 @@ def test_the_new_session_page_says_the_file_was_refused_without_its_lines(
     assert response.status_code == 303
     location = response.headers["location"]
     # No slot fragment (19X Item 7): Home's banner script lands it.
-    assert location.endswith(
-        "?quick_setup_error=reviewers&quick_setup_reason=refused"
-    )
+    assert location.endswith("?quick_setup_error=reviewers&quick_setup_reason=refused")
     body = client.get(location).text
     assert (
         '<p class="banner-lead">The reviewers file was refused, so none of '
@@ -199,21 +190,16 @@ def test_a_link_with_any_other_code_shows_nothing(
     assert "qsdmark" not in body
 
 
-def test_a_refused_code_for_an_unknown_slot_shows_nothing(
-    client: TestClient, db: Session
-) -> None:
+def test_a_refused_code_for_an_unknown_slot_shows_nothing(client: TestClient, db: Session) -> None:
     rs = _session(client, db, "qsp-unknown-slot")
     body = client.get(
-        f"/operator/sessions/{rs.public_id}"
-        "?quick_setup_error=elsewhere&quick_setup_reason=refused"
+        f"/operator/sessions/{rs.public_id}?quick_setup_error=elsewhere&quick_setup_reason=refused"
     ).text
     assert 'data-quick-setup-reason="' not in body
     assert "was refused" not in body
 
 
-def test_relationships_name_an_unknown_reviewer(
-    client: TestClient, db: Session
-) -> None:
+def test_relationships_name_an_unknown_reviewer(client: TestClient, db: Session) -> None:
     rs = _session(client, db, "qsp-rel")
     db.add(Reviewer(session_id=rs.id, name="Ann", email="ann@example.org"))
     db.add(Reviewee(session_id=rs.id, name="Bo", email_or_identifier="bo@example.org"))
@@ -230,8 +216,7 @@ def test_relationships_name_an_unknown_reviewer(
         follow_redirects=False,
     )
     assert _details(response) == [
-        "ReviewerEmail is not on the Reviewers roster "
-        "(import reviewers first) (1 row)",
+        "ReviewerEmail is not on the Reviewers roster (import reviewers first) (1 row)",
         "A reviewer–reviewee pair appears on more than one row (1 row)",
     ]
 
@@ -280,14 +265,10 @@ _OBSERVERS = (
         (csv_imports.parse_observer_csv, _OBSERVERS),
     ],
 )
-def test_every_row_issue_a_roster_parser_raises_has_a_problem(
-    parse, content: bytes
-) -> None:
+def test_every_row_issue_a_roster_parser_raises_has_a_problem(parse, content: bytes) -> None:
     issues = [i for i in parse(content).issues if i.row_number is not None]
     assert len(issues) >= 5, [i.message for i in issues]
-    assert all(i.problem for i in issues), [
-        i.message for i in issues if not i.problem
-    ]
+    assert all(i.problem for i in issues), [i.message for i in issues if not i.problem]
     _assert_row_and_value_free(issues)
 
 
@@ -295,9 +276,7 @@ def test_every_relationship_row_issue_has_a_problem() -> None:
     from types import SimpleNamespace
 
     reviewers = [cast(Reviewer, SimpleNamespace(id=1, email="a@example.org"))]
-    reviewees = [
-        cast(Reviewee, SimpleNamespace(id=2, email_or_identifier="b@example.org"))
-    ]
+    reviewees = [cast(Reviewee, SimpleNamespace(id=2, email_or_identifier="b@example.org"))]
     content = (
         b"ReviewerEmail,RevieweeEmail,Status\n"
         b",b@example.org,\n"
@@ -332,18 +311,29 @@ def _assert_row_and_value_free(issues: list[ValidationIssue]) -> None:
 def test_problem_details_fall_back_and_cap() -> None:
     def row(problem: str | None, field: str = "X") -> ValidationIssue:
         return ValidationIssue(
-            severity=Severity.error, source="s", row_number=1,
-            field=field, message="m", problem=problem,
+            severity=Severity.error,
+            source="s",
+            row_number=1,
+            field=field,
+            message="m",
+            problem=problem,
         )
 
     warning = ValidationIssue(
-        severity=Severity.warning, source="s", row_number=1, message="w",
+        severity=Severity.warning,
+        source="s",
+        row_number=1,
+        message="w",
         problem="ignored",
     )
     assert roster_problem_details([row(None, "Tag")]) == ["Tag has a problem (1 row)"]
     assert roster_problem_details([warning]) == []
     many = [row(f"p{n}") for n in range(7)]
     assert roster_problem_details(many) == [
-        "p0 (1 row)", "p1 (1 row)", "p2 (1 row)", "p3 (1 row)", "p4 (1 row)",
+        "p0 (1 row)",
+        "p1 (1 row)",
+        "p2 (1 row)",
+        "p3 (1 row)",
+        "p4 (1 row)",
         "…and 2 more.",
     ]

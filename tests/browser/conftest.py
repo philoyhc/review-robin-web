@@ -208,9 +208,7 @@ def _wait_for_health(base_url: str, server: subprocess.Popen, log_path: Path) ->
             # Refused, reset, or (the socket listens before uvicorn starts
             # accepting) a read that timed out in the queue: try again.
             time.sleep(0.1)
-    raise RuntimeError(
-        f"live server did not answer /health; its log:\n{log_path.read_text()}"
-    )
+    raise RuntimeError(f"live server did not answer /health; its log:\n{log_path.read_text()}")
 
 
 @pytest.fixture

@@ -33,9 +33,7 @@ def test_a_refused_save_offers_the_tick_and_the_next_save_sends_it(
             route.fulfill(
                 status=422,
                 content_type="application/json",
-                body=json.dumps(
-                    {"ok": False, "errors": [_LINE], "confirm_group_clear": 3}
-                ),
+                body=json.dumps({"ok": False, "errors": [_LINE], "confirm_group_clear": 3}),
             )
         else:
             route.continue_()

@@ -23,9 +23,7 @@ def _mode_select(html: str) -> str:
     return match.group(0)
 
 
-def test_the_condition_row_reads_then_and_a_mode_select(
-    client: TestClient, db: Session
-) -> None:
+def test_the_condition_row_reads_then_and_a_mode_select(client: TestClient, db: Session) -> None:
     _, _, card, flat = _page(client, db, "13-select")
     condition = _rows_table(card).split("<tr data-new-model-rf-condition>")[1].split("</tr>")[0]
     assert "then show the below" not in flat
@@ -45,13 +43,13 @@ def test_the_condition_row_reads_then_and_a_mode_select(
         "[data-new-model-rf-condition-then] select { margin: 0 0 0 4px; }"
     ) in flat
     # The ⑂ template's condition row carries the same select.
-    template = flat.split("<template data-new-model-rf-condition-template>")[1].split("</template>")[0]
+    template = flat.split("<template data-new-model-rf-condition-template>")[1].split(
+        "</template>"
+    )[0]
     assert _mode_select(template) == select
 
 
-def test_the_mode_select_locks_with_its_condition(
-    client: TestClient, db: Session
-) -> None:
+def test_the_mode_select_locks_with_its_condition(client: TestClient, db: Session) -> None:
     """A locked branch's condition can't change, so neither can its mode;
     the row script disables it with the operator."""
     review_session, instrument, _, flat = _page(client, db, "13-select-lock")
@@ -68,12 +66,12 @@ def test_the_mode_select_locks_with_its_condition(
     comments = next(f for f in instrument.response_fields if f.label == "Comments")
     assignment = Assignment(
         session_id=review_session.id,
-        reviewer_id=db.execute(
-            select(Reviewer.id).where(Reviewer.session_id == review_session.id)
-        ).scalars().first(),
-        reviewee_id=db.execute(
-            select(Reviewee.id).where(Reviewee.session_id == review_session.id)
-        ).scalars().first(),
+        reviewer_id=db.execute(select(Reviewer.id).where(Reviewer.session_id == review_session.id))
+        .scalars()
+        .first(),
+        reviewee_id=db.execute(select(Reviewee.id).where(Reviewee.session_id == review_session.id))
+        .scalars()
+        .first(),
         instrument_id=instrument.id,
     )
     db.add(assignment)
@@ -102,9 +100,7 @@ def _require_page(client: TestClient, db: Session, code: str):
     return review_session, instrument, _card_slice(flat, instrument.id), flat, body
 
 
-def test_a_require_branch_renders_its_mode_and_greys_out_r(
-    client: TestClient, db: Session
-) -> None:
+def test_a_require_branch_renders_its_mode_and_greys_out_r(client: TestClient, db: Session) -> None:
     """The saved mode is selected; a governed row's R is off, titled with
     what decides it, and keeps its own value for a return to Show. The
     parent's R, outside the branch, stays live."""

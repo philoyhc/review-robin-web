@@ -95,9 +95,7 @@ def _make_session(client: TestClient, db: Session, code: str) -> ReviewSession:
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    rs = db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    rs = db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
     rs.relationships_enabled = True
     db.commit()
     db.refresh(rs)
@@ -106,13 +104,10 @@ def _make_session(client: TestClient, db: Session, code: str) -> ReviewSession:
 
 def _seed(db: Session, sid: int, page: str, n: int = 3) -> list[int]:
     reviewers = [
-        Reviewer(session_id=sid, name=f"Rr{i}", email=f"rr{i}@example.org")
-        for i in range(n)
+        Reviewer(session_id=sid, name=f"Rr{i}", email=f"rr{i}@example.org") for i in range(n)
     ]
     reviewees = [
-        Reviewee(
-            session_id=sid, name=f"Re{i}", email_or_identifier=f"re{i}@example.org"
-        )
+        Reviewee(session_id=sid, name=f"Re{i}", email_or_identifier=f"re{i}@example.org")
         for i in range(n)
     ]
     db.add_all(reviewers + reviewees)
@@ -122,9 +117,7 @@ def _seed(db: Session, sid: int, page: str, n: int = 3) -> list[int]:
     if page == "reviewees":
         return [r.id for r in reviewees]
     rows = [
-        Relationship(
-            session_id=sid, reviewer_id=reviewers[i].id, reviewee_id=reviewees[i].id
-        )
+        Relationship(session_id=sid, reviewer_id=reviewers[i].id, reviewee_id=reviewees[i].id)
         for i in range(n)
     ]
     db.add_all(rows)
@@ -137,12 +130,8 @@ def _seed(db: Session, sid: int, page: str, n: int = 3) -> list[int]:
 def _with_a_response(db: Session, rs: ReviewSession) -> None:
     """One saved response, which is what flips `delete_discards_responses`
     on the Reviewees page. Mirrors `test_setup_bulk_delete_routes._with_responses`."""
-    reviewer = db.execute(
-        select(Reviewer).where(Reviewer.session_id == rs.id)
-    ).scalars().first()
-    reviewee = db.execute(
-        select(Reviewee).where(Reviewee.session_id == rs.id)
-    ).scalars().first()
+    reviewer = db.execute(select(Reviewer).where(Reviewer.session_id == rs.id)).scalars().first()
+    reviewee = db.execute(select(Reviewee).where(Reviewee.session_id == rs.id)).scalars().first()
     assert reviewer is not None and reviewee is not None
     instrument = Instrument(session_id=rs.id, name="I", order=0)
     db.add(instrument)
@@ -227,13 +216,15 @@ def test_the_second_action_row_reaches_no_template_at_all() -> None:
     the second row.
     """
     confirm_rows = sorted(
-        p.name for p in TEMPLATES.glob("session_*.html")
+        p.name
+        for p in TEMPLATES.glob("session_*.html")
         if 'class="filter-confirm"' in p.read_text()
     )
     assert confirm_rows == [], confirm_rows
 
     sharing = sorted(
-        p.name for p in TEMPLATES.glob("session_*.html")
+        p.name
+        for p in TEMPLATES.glob("session_*.html")
         if 'class="filter-actions"' in p.read_text()
     )
     assert len(sharing) == 7, sharing
@@ -368,9 +359,7 @@ def test_the_gate_is_paired_to_the_button_and_submits_with_the_selection(
     )
 
 
-def test_the_delete_sentence_names_what_goes_per_page(
-    client: TestClient, db: Session
-) -> None:
+def test_the_delete_sentence_names_what_goes_per_page(client: TestClient, db: Session) -> None:
     """The sentence names what the tick agrees to, and the two pages do
     not agree on what that is: a relationship carries neither flag
     (`_setup_relationships.py` passes `delete_discards_*` as `False`
@@ -400,10 +389,9 @@ def test_the_delete_sentence_names_what_goes_per_page(
     _with_a_response(db, rs)
     rev = _builder(client.get(_base(rs.public_id, "reviewees")).text, "reviewees")
     rel = _builder(client.get(_base(rs.public_id, "relationships")).text, "relationships")
-    assert (
-        '"Yes, delete these and their associated assignments and reviewer responses"'
-        in rev
-    ), rev[:400]
+    assert '"Yes, delete these and their associated assignments and reviewer responses"' in rev, (
+        rev[:400]
+    )
     assert '"Yes, delete these"' in rel, "Relationships' sentence moved with it"
 
 
@@ -418,9 +406,7 @@ def test_the_edit_row_is_bracketed_and_the_bar_follows_it(
     ids = _seed(db, rs.id, page)
     html = _markup(client.get(_base(rs.public_id, page) + f"?edit_id={ids[0]}").text)
 
-    row = re.search(
-        rf'<tr class="{noun}-edit-row[^"]*"[^>]*id="{noun}-row-{ids[0]}"', html
-    )
+    row = re.search(rf'<tr class="{noun}-edit-row[^"]*"[^>]*id="{noun}-row-{ids[0]}"', html)
     assert row, "the edited row is not marked as the editor"
     assert "session-row-selected" in row.group(0), "the row is not bracketed"
 
@@ -530,13 +516,22 @@ def test_the_save_error_moved_into_the_bar(
 
     if page == "reviewees":
         data = {
-            "name": "", "email_or_identifier": "", "profile_link": "",
-            "tag_1": "", "tag_2": "", "tag_3": "", "status_value": "active",
+            "name": "",
+            "email_or_identifier": "",
+            "profile_link": "",
+            "tag_1": "",
+            "tag_2": "",
+            "tag_3": "",
+            "status_value": "active",
         }
     else:
         data = {
-            "reviewer_pick": "nobody at all", "reviewee_pick": "nobody either",
-            "tag_1": "", "tag_2": "", "tag_3": "", "status_value": "active",
+            "reviewer_pick": "nobody at all",
+            "reviewee_pick": "nobody either",
+            "tag_1": "",
+            "tag_2": "",
+            "tag_3": "",
+            "status_value": "active",
         }
     response = client.post(_base(rs.public_id, page) + "/create", data=data)
     assert response.status_code == 400, response.status_code

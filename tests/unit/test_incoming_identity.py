@@ -39,9 +39,7 @@ def _session(db: Session) -> ReviewSession:
     user = User(email="op@example.edu", display_name="Op")
     db.add(user)
     db.flush()
-    review_session = ReviewSession(
-        name="Spring", code="incoming-id", created_by_user_id=user.id
-    )
+    review_session = ReviewSession(name="Spring", code="incoming-id", created_by_user_id=user.id)
     db.add(review_session)
     db.flush()
     return review_session
@@ -167,12 +165,10 @@ def test_two_uploaded_files_that_disagree_are_each_refused(db: Session) -> None:
     )
 
     assert _problems(result["reviewers"]) == [
-        "ReviewerEmail is used under a different name in the uploaded "
-        "Reviewees file"
+        "ReviewerEmail is used under a different name in the uploaded Reviewees file"
     ]
     assert _problems(result["reviewees"]) == [
-        "RevieweeEmail is used under a different name in the uploaded "
-        "Reviewers file"
+        "RevieweeEmail is used under a different name in the uploaded Reviewers file"
     ]
     issue = result["reviewers"][0]
     assert issue.row_number == 1
@@ -225,11 +221,7 @@ def test_status_does_not_matter_on_either_side(db: Session) -> None:
     """An inactive row holds its name like an active one — today's rule
     (Codex on #2998), for existing rows and uploaded ones alike."""
     s = _session(db)
-    db.add(
-        Observer(
-            session_id=s.id, display_name="Bob Smith", email=BOB, status="inactive"
-        )
-    )
+    db.add(Observer(session_id=s.id, display_name="Bob Smith", email=BOB, status="inactive"))
     db.flush()
 
     existing = check_incoming_identity(
@@ -304,9 +296,7 @@ def test_the_cited_upload_is_picked_by_roster_order(db: Session) -> None:
 def test_an_unknown_kind_raises(db: Session) -> None:
     s = _session(db)
     with pytest.raises(ValueError, match="unknown kind"):
-        check_incoming_identity(
-            db, session_id=s.id, incoming={"relationships": []}
-        )
+        check_incoming_identity(db, session_id=s.id, incoming={"relationships": []})
 
 
 # --------------------------------------------------------------------- #
@@ -359,9 +349,7 @@ def test_an_uploaded_reviewers_file_replaces_the_current_roster(
     )
 
     assert len(result.rows) == 1
-    assert _problems(result.issues) == [
-        "ReviewerEmail is not in the uploaded Reviewers file"
-    ]
+    assert _problems(result.issues) == ["ReviewerEmail is not in the uploaded Reviewers file"]
     assert "not in the uploaded Reviewers file" in result.issues[0].message
 
 
@@ -412,9 +400,7 @@ def test_a_duplicate_pair_is_still_caught_against_uploaded_rosters(
         reviewees_uploaded=True,
     )
 
-    assert _problems(result.issues) == [
-        "A reviewer–reviewee pair appears on more than one row"
-    ]
+    assert _problems(result.issues) == ["A reviewer–reviewee pair appears on more than one row"]
 
 
 def test_an_uploaded_reviewees_file_names_itself_when_missing(
@@ -434,6 +420,4 @@ def test_an_uploaded_reviewees_file_names_itself_when_missing(
         reviewees_uploaded=True,
     )
 
-    assert _problems(result.issues) == [
-        "RevieweeEmail is not in the uploaded Reviewees file"
-    ]
+    assert _problems(result.issues) == ["RevieweeEmail is not in the uploaded Reviewees file"]

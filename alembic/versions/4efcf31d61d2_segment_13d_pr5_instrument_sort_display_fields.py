@@ -19,6 +19,7 @@ Revises: 499610263228
 Create Date: 2026-05-09
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -32,9 +33,7 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     with op.batch_alter_table("instruments") as batch:
-        batch.add_column(
-            sa.Column("sort_display_fields", sa.JSON(), nullable=True)
-        )
+        batch.add_column(sa.Column("sort_display_fields", sa.JSON(), nullable=True))
 
 
 def downgrade() -> None:

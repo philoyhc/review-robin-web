@@ -92,7 +92,10 @@ def same_person(a: Any, a_address: str | None, b: Any, b_address: str | None) ->
     """Whether two roster rows name one person: `email_identity.same_identity`
     on their accounts and addresses (segment 21F)."""
     return same_identity(
-        getattr(a, "directory_object_id", None), a_address, getattr(b, "directory_object_id", None), b_address
+        getattr(a, "directory_object_id", None),
+        a_address,
+        getattr(b, "directory_object_id", None),
+        b_address,
     )
 
 
@@ -213,9 +216,7 @@ def disclosable_roles(
     reviewee_rows = db.execute(reviewee_query).all()
     if any(
         is_email_identified(reviewee)
-        and visibility_policies.reviewee_has_current_grant(
-            db, review_session
-        )
+        and visibility_policies.reviewee_has_current_grant(db, review_session)
         for reviewee, review_session in reviewee_rows
     ):
         held.add(REVIEWEE)

@@ -25,16 +25,13 @@ from ._lookups import detail_of
 ACCOUNTS = "/operator/sys-admin/users"
 
 
-
 @pytest.fixture
 def actor(db: Session, client: TestClient, monkeypatch: pytest.MonkeyPatch) -> User:
     """Alice, a super-admin, so every action is open to her; the first
     request creates her row."""
     monkeypatch.setattr(identity_settings, "super_admin_emails", ["alice@example.edu"])
     client.get(ACCOUNTS)
-    return db.execute(
-        select(User).where(User.email == "alice@example.edu")
-    ).scalar_one()
+    return db.execute(select(User).where(User.email == "alice@example.edu")).scalar_one()
 
 
 def _seed(db: Session, email: str, **flags: bool) -> User:
@@ -82,9 +79,11 @@ def test_revoking_two_operators_is_one_request_and_one_correlation(
     assert _query(response) == {"show": ["operators"]}
     db.expire_all()
     assert (bob.is_operator, carl.is_operator) == (False, False)
-    events = db.execute(
-        select(AuditEvent).where(AuditEvent.event_type == "workspace.operator_revoked")
-    ).scalars().all()
+    events = (
+        db.execute(select(AuditEvent).where(AuditEvent.event_type == "workspace.operator_revoked"))
+        .scalars()
+        .all()
+    )
     assert sorted(detail_of(e)["refs"]["target_user_id"] for e in events) == sorted(
         [bob.id, carl.id]
     )
@@ -124,9 +123,7 @@ def test_deleting_unused_accounts_needs_the_confirm(
     assert response.status_code == 303
     assert "selected" not in _query(response)
     db.expire_all()
-    assert db.execute(
-        select(User).where(User.id.in_([dave.id, erin.id]))
-    ).first() is None
+    assert db.execute(select(User).where(User.id.in_([dave.id, erin.id]))).first() is None
 
 
 # --- Refused whole -----------------------------------------------------------
@@ -138,9 +135,13 @@ def test_a_mixed_delete_is_refused_whole_naming_the_row(
     """The refused row is the one with history; the unused one stays too."""
     unused = _seed(db, "unused@example.edu")
     busy = _seed(db, "busy@example.edu")
-    db.add(AuditEvent(event_type="response.submitted", summary="x", actor_user_id=busy.id, detail={}))
+    db.add(
+        AuditEvent(event_type="response.submitted", summary="x", actor_user_id=busy.id, detail={})
+    )
     db.commit()
-    response = _post(client, "delete", unused, busy, confirm="true", view="show=unused&show=no_role")
+    response = _post(
+        client, "delete", unused, busy, confirm="true", view="show=unused&show=no_role"
+    )
     assert response.status_code == 303
     query = _query(response)
     assert query["toggle_error"] == ["has_history"]
@@ -177,9 +178,7 @@ def test_a_delete_with_a_co_owner_is_refused_whole_naming_them(
     assert "Nothing changed: carl@example.edu owns sessions" in banner
 
 
-def test_revoking_an_owner_refuses_the_batch(
-    db: Session, client: TestClient, actor: User
-) -> None:
+def test_revoking_an_owner_refuses_the_batch(db: Session, client: TestClient, actor: User) -> None:
     bob = _seed(db, "bob@example.edu", is_operator=True)
     owner = _seed(db, "owner@example.edu", is_operator=True)
     _session(db, "s1", owner, actor)
@@ -189,9 +188,7 @@ def test_revoking_an_owner_refuses_the_batch(
     assert bob.is_operator and owner.is_operator
 
 
-def test_promote_refuses_a_row_with_no_role(
-    db: Session, client: TestClient, actor: User
-) -> None:
+def test_promote_refuses_a_row_with_no_role(db: Session, client: TestClient, actor: User) -> None:
     bob = _seed(db, "bob@example.edu", is_operator=True)
     dave = _seed(db, "dave@example.edu")
     query = _query(_post(client, "promote", bob, dave))
@@ -245,15 +242,17 @@ def test_two_co_owners_removed_together_are_refused_by_sole_owner(
     _session(db, "ann-and-alice", ann, actor)
     query = _query(_post(client, "remove-from-all-sessions", ann, ben))
     assert (query["toggle_error"], query["refused"]) == (["sole_owner"], [str(ann.id)])
-    owners = db.execute(
-        select(SessionOperator.user_id).where(SessionOperator.session_id == shared.id)
-    ).scalars().all()
+    owners = (
+        db.execute(select(SessionOperator.user_id).where(SessionOperator.session_id == shared.id))
+        .scalars()
+        .all()
+    )
     assert sorted(owners) == sorted([ann.id, ben.id])
     # Ann alone leaves Ben on the shared one and Alice on the other.
     assert _post(client, "remove-from-all-sessions", ann).status_code == 303
-    assert db.execute(
-        select(SessionOperator).where(SessionOperator.user_id == ann.id)
-    ).first() is None
+    assert (
+        db.execute(select(SessionOperator).where(SessionOperator.user_id == ann.id)).first() is None
+    )
 
 
 # --- The route's own refusals -----------------------------------------------
@@ -287,17 +286,15 @@ def test_a_plain_admin_cannot_promote_while_a_super_tier_exists(
 
 def test_the_banner_reason_comes_from_the_view_not_the_url() -> None:
     assert views.account_refusal_message("still_owner", "bob@example.edu") == (
-        "Nothing changed: bob@example.edu still owns sessions; remove them "
-        "from all sessions first."
+        "Nothing changed: bob@example.edu still owns sessions; remove them from all sessions first."
     )
     assert views.account_refusal_message("last_admin", None) == (
         "Nothing changed: that would leave the workspace with no sys-admin."
     )
     # An unknown code, or a row-naming reason with no row, gets a fixed
     # sentence: the code is the URL's, so it never reaches the page.
-    assert views.account_refusal_message(
-        "Your account was suspended, re-verify at evil.example", None
-    ) == "Couldn't apply that change."
-    assert views.account_refusal_message("has_history", None) == (
-        "Couldn't apply that change."
+    assert (
+        views.account_refusal_message("Your account was suspended, re-verify at evil.example", None)
+        == "Couldn't apply that change."
     )
+    assert views.account_refusal_message("has_history", None) == ("Couldn't apply that change.")

@@ -33,17 +33,15 @@ def _create(client: TestClient, db: Session, code: str) -> ReviewSession:
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
 def _owner(db: Session, review_session: ReviewSession) -> User:
-    operator = db.execute(
-        select(SessionOperator).where(
-            SessionOperator.session_id == review_session.id
-        )
-    ).scalars().first()
+    operator = (
+        db.execute(select(SessionOperator).where(SessionOperator.session_id == review_session.id))
+        .scalars()
+        .first()
+    )
     assert operator is not None
     user = db.get(User, operator.user_id)
     assert user is not None
@@ -63,25 +61,17 @@ def _someone_elses_session(db: Session, tags: list[str]) -> None:
     other = User(email="zed@example.edu", is_operator=True)
     db.add(other)
     db.flush()
-    review_session = ReviewSession(
-        name="Theirs", code="THEIRS", created_by_user_id=other.id
-    )
+    review_session = ReviewSession(name="Theirs", code="THEIRS", created_by_user_id=other.id)
     db.add(review_session)
     db.flush()
-    db.add(SessionOperator(session_id=review_session.id, user_id=other.id,
-                           role="owner"))
+    db.add(SessionOperator(session_id=review_session.id, user_id=other.id, role="owner"))
     db.commit()
-    session_tags.set_tags(db, review_session=review_session, user=other,
-                          tags=tags)
+    session_tags.set_tags(db, review_session=review_session, user=other, tags=tags)
 
 
 def _vocabulary(body: str) -> list[str]:
-    assert body.count('<datalist id="tag-vocabulary">') == 1, (
-        "one vocabulary per page"
-    )
-    block = body.split('<datalist id="tag-vocabulary">', 1)[1].split(
-        "</datalist>", 1
-    )[0]
+    assert body.count('<datalist id="tag-vocabulary">') == 1, "one vocabulary per page"
+    block = body.split('<datalist id="tag-vocabulary">', 1)[1].split("</datalist>", 1)[0]
     return re.findall(r'<option value="([^"]*)"></option>', block)
 
 
@@ -128,9 +118,7 @@ def test_a_legacy_capitalized_tag_is_offered_lower_case_once(
     ]
 
 
-def test_create_offers_the_operators_vocabulary(
-    client: TestClient, db: Session
-) -> None:
+def test_create_offers_the_operators_vocabulary(client: TestClient, db: Session) -> None:
     _seed(client, db)
     body = client.get("/operator/sessions/new").text
 
@@ -138,16 +126,12 @@ def test_create_offers_the_operators_vocabulary(
     assert re.search(r'<input type="text" id="tags"[^>]*data-tag-typeahead', body)
 
 
-def test_session_home_offers_the_operators_vocabulary(
-    client: TestClient, db: Session
-) -> None:
+def test_session_home_offers_the_operators_vocabulary(client: TestClient, db: Session) -> None:
     mine = _seed(client, db)
     body = client.get(f"/operator/sessions/{mine.public_id}?editing=1").text
 
     assert _vocabulary(body) == EXPECTED
-    assert re.search(
-        r'<input type="text" id="config-tags"[^>]*data-tag-typeahead', body
-    )
+    assert re.search(r'<input type="text" id="config-tags"[^>]*data-tag-typeahead', body)
 
 
 def test_the_lobby_offers_the_wider_vocabulary_to_its_editors(
@@ -160,12 +144,12 @@ def test_the_lobby_offers_the_wider_vocabulary_to_its_editors(
     body = client.get("/operator/sessions").text
 
     assert _vocabulary(body) == EXPECTED
-    assert re.search(
-        r'data-expander-field="tags"\s+data-tag-typeahead', body
-    ), "the row expander opts in"
-    assert re.search(
-        r'data-expander-field="bulk-tags"\s+data-tag-typeahead', body
-    ), "the bulk expander opts in"
+    assert re.search(r'data-expander-field="tags"\s+data-tag-typeahead', body), (
+        "the row expander opts in"
+    )
+    assert re.search(r'data-expander-field="bulk-tags"\s+data-tag-typeahead', body), (
+        "the bulk expander opts in"
+    )
     filter_list = body.split('<datalist id="lobby-filter-options">', 1)[1]
     filter_list = filter_list.split("</datalist>", 1)[0]
     assert "legacy" not in filter_list, "the filter strip is not widened"
@@ -183,18 +167,14 @@ def test_exactly_four_boxes_opt_in_and_none_carries_a_static_list(
         client.get(f"/operator/sessions/{mine.public_id}?editing=1").text,
     ]
     boxes = [
-        tag
-        for body in pages
-        for tag in re.findall(r"<input[^>]*data-tag-typeahead[^>]*>", body)
+        tag for body in pages for tag in re.findall(r"<input[^>]*data-tag-typeahead[^>]*>", body)
     ]
 
     assert len(boxes) == 4
     assert not any("list=" in box for box in boxes)
 
 
-def test_an_operator_with_no_tags_gets_an_empty_list(
-    client: TestClient, db: Session
-) -> None:
+def test_an_operator_with_no_tags_gets_an_empty_list(client: TestClient, db: Session) -> None:
     body = client.get("/operator/sessions/new").text
 
     assert _vocabulary(body) == []

@@ -11,6 +11,7 @@ never sent it. Reverting to draft is the *correct* workflow for
 editing a started session, so this is on the road an operator is
 supposed to take.
 """
+
 from __future__ import annotations
 
 import datetime as _dt
@@ -45,9 +46,7 @@ def _session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
         follow_redirects=False,
     )
     assert r.status_code == 303, r.text
-    s = db.execute(
-        select(ReviewSession).where(ReviewSession.code == code)
-    ).scalar_one()
+    s = db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
     s.observers_enabled = True
     s.relationships_enabled = True
     db.commit()
@@ -61,9 +60,7 @@ def _roster_with_responses(db: Session, s: ReviewSession, *, n: int) -> None:
     from app.db.models import Observer
 
     reviewer = Reviewer(session_id=s.id, name="Old", email="old@example.edu")
-    reviewee = Reviewee(
-        session_id=s.id, name="Old E", email_or_identifier="olde@example.edu"
-    )
+    reviewee = Reviewee(session_id=s.id, name="Old E", email_or_identifier="olde@example.edu")
     db.add_all([reviewer, reviewee])
     db.add(Observer(session_id=s.id, email="o@example.edu", display_name="O"))
     instrument = Instrument(session_id=s.id, name="I", order=0)
@@ -124,7 +121,6 @@ def _upload_form(body: str, page: str) -> str:
         pos = close
 
 
-
 @pytest.mark.parametrize("page", ("reviewers", "reviewees", "observers"))
 def test_replacing_a_roster_works_on_a_session_that_has_responses(
     db: Session, client: TestClient, page: str
@@ -176,11 +172,7 @@ def test_the_label_names_no_responses_when_there_are_none(
 ) -> None:
     s = _session(client, db, code=f"imp-bare-{page}")
     db.add(Reviewer(session_id=s.id, name="Old", email="old@example.edu"))
-    db.add(
-        Reviewee(
-            session_id=s.id, name="Old E", email_or_identifier="olde@example.edu"
-        )
-    )
+    db.add(Reviewee(session_id=s.id, name="Old E", email_or_identifier="olde@example.edu"))
     db.commit()
 
     form = _upload_form(client.get(f"/operator/sessions/{s.public_id}/{page}").text, page)
@@ -253,14 +245,11 @@ def test_a_replace_without_the_acknowledgment_says_so_on_the_card(
     assert response.status_code == 400
     assert "data-upload-problems" in response.text
     assert (
-        "This session now holds reviewer responses, which replacing this "
-        "roster would discard."
+        "This session now holds reviewer responses, which replacing this roster would discard."
     ) in response.text
     assert "acknowledge response loss" not in response.text
     # The ask holds the file (segment 19W), so Dismiss ends the hold.
-    assert (
-        f'formaction="/operator/sessions/{s.public_id}/{page}/import/dismiss"'
-    ) in response.text
+    assert (f'formaction="/operator/sessions/{s.public_id}/{page}/import/dismiss"') in response.text
     form = _upload_form(response.text, page)
     assert "2 reviewer responses" in form
     assert 'name="acknowledge_response_loss"' in form
@@ -271,7 +260,9 @@ def test_a_replace_without_the_acknowledgment_says_so_on_the_card(
     db.expire_all()
     assert len(db.execute(select(Response)).scalars().all()) == 2
     model = Reviewer if page == "reviewers" else Reviewee
-    assert [r.name for r in db.execute(select(model)).scalars()] == ["Old" if page == "reviewers" else "Old E"]
+    assert [r.name for r in db.execute(select(model)).scalars()] == [
+        "Old" if page == "reviewers" else "Old E"
+    ]
 
     # The second tick, posting exactly what the re-rendered card carries:
     # no file chosen, the held one named by its token.

@@ -33,6 +33,7 @@ Revision ID: d8f4a92c1e6b
 Revises: c3a7e9d8b154
 Create Date: 2026-05-26
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -68,9 +69,7 @@ def upgrade() -> None:
     # broken; SQLite tolerates it. Drop the forward FK first,
     # then the child table, then the parent.
     with op.batch_alter_table("operator_rule_sets") as batch:
-        batch.drop_constraint(
-            "fk_rule_sets_current_revision_id", type_="foreignkey"
-        )
+        batch.drop_constraint("fk_rule_sets_current_revision_id", type_="foreignkey")
     op.drop_table("rule_set_revisions")
     op.drop_table("operator_rule_sets")
 
@@ -85,9 +84,7 @@ def downgrade() -> None:
         sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
         sa.Column("name", sa.String(255), nullable=False),
         sa.Column("description", sa.Text(), nullable=False, server_default=""),
-        sa.Column(
-            "scope", sa.String(16), nullable=False, server_default="personal"
-        ),
+        sa.Column("scope", sa.String(16), nullable=False, server_default="personal"),
         sa.Column(
             "owner_user_id",
             sa.Integer(),
@@ -118,9 +115,7 @@ def downgrade() -> None:
             nullable=False,
             server_default=sa.text("CURRENT_TIMESTAMP"),
         ),
-        sa.UniqueConstraint(
-            "owner_user_id", "name", name="uq_operator_rule_set_owner_name"
-        ),
+        sa.UniqueConstraint("owner_user_id", "name", name="uq_operator_rule_set_owner_name"),
     )
     op.create_index(
         "ix_operator_rule_sets_owner_user_id",
@@ -173,9 +168,7 @@ def downgrade() -> None:
             sa.ForeignKey("users.id"),
             nullable=True,
         ),
-        sa.UniqueConstraint(
-            "rule_set_id", "revision_no", name="uq_rule_set_revision_no"
-        ),
+        sa.UniqueConstraint("rule_set_id", "revision_no", name="uq_rule_set_revision_no"),
     )
     op.create_index(
         "ix_rule_set_revisions_rule_set_id",

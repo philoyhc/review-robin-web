@@ -74,7 +74,9 @@ def test_an_address_edit_onto_a_held_account_is_refused(
     assert _add(client, base, field, name_field, "other@example.edu", "Jane").status_code == 303
     db.expire_all()
     other = db.execute(
-        select(model).where(model.session_id == session.id, getattr(model, field) == "other@example.edu")
+        select(model).where(
+            model.session_id == session.id, getattr(model, field) == "other@example.edu"
+        )
     ).scalar_one()
     refused = client.post(
         f"{base}/{other.id}/update",
@@ -112,11 +114,14 @@ def test_editing_the_holder_itself_and_an_unbound_lookup_are_allowed(
 def test_an_inactive_row_still_holds_its_account(client: TestClient, db: Session) -> None:
     session = _create_session(client, db, code="same-inactive")
     base = f"/operator/sessions/{session.public_id}/reviewers"
-    assert client.post(
-        f"{base}/create",
-        data={**FORM, "email": "jane.tan@example.edu", "name": "Jane", "status": "inactive"},
-        follow_redirects=False,
-    ).status_code == 303
+    assert (
+        client.post(
+            f"{base}/create",
+            data={**FORM, "email": "jane.tan@example.edu", "name": "Jane", "status": "inactive"},
+            follow_redirects=False,
+        ).status_code
+        == 303
+    )
     refused = _add(client, base, "email", "name", "e0123456@example.edu", "Jane")
     assert refused.status_code != 303
     assert _count(db, Reviewer, session.id) == 1
@@ -143,9 +148,12 @@ def test_an_add_and_an_edit_look_the_address_up_once(
     assert len(calls) == 1
     jane = db.execute(select(Reviewer).where(Reviewer.session_id == session.id)).scalar_one()
     calls.clear()
-    assert client.post(
-        f"{base}/{jane.id}/update",
-        data={**FORM, "email": "e0123456@example.edu", "name": "Jane"},
-        follow_redirects=False,
-    ).status_code == 303
+    assert (
+        client.post(
+            f"{base}/{jane.id}/update",
+            data={**FORM, "email": "e0123456@example.edu", "name": "Jane"},
+            follow_redirects=False,
+        ).status_code
+        == 303
+    )
     assert len(calls) == 1
