@@ -147,6 +147,13 @@ Neither half makes the exit *mechanical*, and the distinction matters. The close
     - no queued-work pointer names an archived plan;
     - from Segment 19S on, a `Blast radius` states when it was taken.
 - **The stylesheet.** `tests/unit/test_generated_tools_are_current.py` and `tests/unit/test_contrast_audit.py` both read `base.html`'s inline stylesheet.
+- **The CI workflows.** `tests/unit/test_ci_shards.py` reads `.github/workflows/ci.yml`, `.github/workflows/ci-postgres.yml` and `pyproject.toml`'s `testpaths`. It fails when a test file falls out of every shard or lands in two: the derived-gate idiom applied to CI itself.
+
+**The language-level gates.** Segments 22C–22F and 22H (#3584–#3630, 2026-11-04 to 11-05) added gates that derive from the *language* rather than from something the repository states.
+- **pyright.** Basic mode first, 307 errors to 0 (`guide/archive/segment_22C_pyright.md`, #3584–#3593). Then strict mode over every application package: 2,137 errors at its blast radius; one ruling allowed private uses (`reportPrivateUsage` off, because packages share `_helpers` by convention, 437 of them), and rung 1's config left 1,846, all fixed (`guide/archive/segment_22E_pyright_strict.md`, #3604–#3609). `# type: ignore` is disabled (`enableTypeIgnoreComments = false`, `guide/archive/segment_22F_pyright_followup.md`); the only suppression left is a reasoned `# pyright: ignore[rule]`, of which 26 remain, 2 in application code and 24 in tests (`git grep -c "pyright: ignore" -- '*.py'`, 2026-11-05).
+- **Formatting.** `ruff format`, whose first run rewrote 936 of 1,074 files (#3623) and whose check now covers every Python file (#3625), with ruff pinned exactly so the check agrees with the formatter that wrote the tree, and `E501` on (#3624), with one generated file exempt, `tools/theme_customizer.gen.py` (`guide/archive/segment_22H_format_and_suite_time.md`).
+
+They are the same decision at a different source: a convention, "prefer explicit types", in `CLAUDE.md` from the start, became a failing check. The check reads the code, so it cannot drift from the code the way prose does; what it keeps by hand is its configuration, with the tool versions pinned exactly (22C, 22H). What they found, said plainly: six behavior defects in about 91k lines of application code (`git ls-files` over the four packages, less their tests). Four were in 22C: the observer collation's `<h2>None</h2>` for an unlabeled instrument, and three paths that raised where they should not have, or raised the wrong error. One was in 22E: a 500 in the email check, found by the item read. One was found in 22E and fixed in 22F: a malformed audit `scheduled_at` raised on Session Home (#3612). One structural pattern was in 22F: most of the old ignores hid an `object()` "unset" sentinel that `is not` cannot narrow, now one-member enums. Six defects in 91k lines is a low yield looking back. The gate's value is forward, on the agent output that arrives every day. The trade-off is two-sided. The four test roots keep 36 rule-offs between them and stay relaxed for good (22F). And a type checker can prove a plan wrong: pyright matches a Protocol against a model's declared `Mapped[int]`, not the `int` it yields, so 22C's planned Protocol fix did not work, and its Status records why.
 
 **Why.** The practice audit's decisive finding was not a stale word. `expired → "Closed"` landed on 2026-06-01, and three live specs still said "Expired" three months later. The contradiction had **survived a deliberate whole-folder documentation sweep** that re-read exactly those files. In the audit's words: "Vigilance is not failing here through carelessness. It is failing at the thing vigilance is structurally bad at."
 
@@ -199,6 +206,8 @@ To split turn into the wait for an instruction and the build before the first co
 
 The campaign had a lesson of its own. Git reads trailers only from a message's last block, so 21 of the first 37 stamps, written in a paragraph of their own, were silently discarded. Since 2026-09-22, `tools/pace_audit.py` has read the line anywhere in the message, which recovered them. Nothing catches a slice that omits the line. Stamping is therefore a campaign run when a figure is being re-taken, not a standing rule (`CLAUDE.md` "Where work runs").
 
+Running the gates is part of that floor. The full suite measured 4–5 minutes a run on 4 cores (about 270 s in 22H, 287 s on 2026-11-05 in 22I Item 2), so 22H cut what the gates cost locally by making the targeted loop a stated rule: the test files the change reaches between edits, the full run once before the push (`CLAUDE.md` "Where work runs"). Separately, 22H and 22I cut the CI wait after the push, which is merge-to-merge time rather than *build*. 22H split CI's `test` job, 6 m 42 s (#3620), into three shards of about 2 m 30 s (#3629). 22I split `CI - Postgres` into three shards as well, from 3 m 51 s–6 m 00 s as one job to 2 m 45 s in three shards (22I Item 1, #3634 and #3636). No re-take of `tools/pace_audit.py` has been made under the new loop, so whether *build* moved is not known; the next practice audit should take it.
+
 **Trade-off.** Each round of reading costs about eleven minutes, and the cold read happens only because the agent runs it. A skipped read leaves no trace except that its item's `Status` records no findings, so the per-item record of reads and findings is how the next audit re-measures whether the cadence holds.
 
 ### 6.5 Periodic sweeps and snapshots, not continuous synchronization
@@ -244,7 +253,7 @@ Scope discipline is part of the practice, so the exclusions are worth stating di
 
 - **Not spec-as-source.** Code is edited by hand (by an agent, at the author's direction), and no spec is compiled into anything.
 - **Not spec-first at PR granularity.** The spec co-change rate is 21% overall and 31% recently, and the phase rule (6.1) makes that a design rather than a lapse.
-- **Not executable-spec.** The gates derive from what the repository states, not from acceptance criteria written as tests.
+- **Not executable-spec.** The gates derive from what the repository states, or, for the type and format gates of §6.3, from the language itself, not from acceptance criteria written as tests.
 - **No branch protection.** It measured that the stratified merge policy was followed without it.
 - **Spec adequacy is not gated.** `tests/unit/test_spec_coverage.py` fails when a routing module has no spec at all. It does not judge whether a spec says enough, and there is no per-PR spec-sync gate, which would contradict the phase rule.
 - **No spelling check.** The check was rejected on evidence.
@@ -286,7 +295,7 @@ Read against the four shapes in Section 2, RRW is **spec-anchored with a phase r
 
 The practice audit's verdict was that RRW is "ahead on the thing that is hardest to retrofit and behind on the thing that is cheapest to fix". It was ahead because a spec set, a layered document model and a habit of writing reasoning down were there from the first commit and cannot be bolted on later. It was behind because the specific gates, the reviewer and the merge policy were each a file, and each was written in an afternoon once the evidence pointed at it.
 
-The three weeks since then bear the asymmetry out. The gates multiplied and the reviewer's cadence was re-cut twice, each in a day or two, and each change was measured first. **The expensive part of spec-driven development is the culture of writing things down before and after acting on them, and that part has to be there on day one. The cheap part is the tooling, and it can wait for the evidence.**
+The two months since then bear the asymmetry out. The gates multiplied and the reviewer's cadence was re-cut twice, each in a day or two, and each change was measured first. The language-level gates, the formatter and the CI split arrived within two days of the first build PR (#3584 on 2026-11-04 to #3636 on 11-05), each measured first: 307 errors to 0 (22C), 1,846 strict-mode errors fixed (22E), and a 6 m 42 s CI job to shards of about 2 m 30 s (22H). **The expensive part of spec-driven development is the culture of writing things down before and after acting on them, and that part has to be there on day one. The cheap part is the tooling, and it can wait for the evidence.**
 
 ---
 
@@ -305,19 +314,20 @@ RRW practices a form of spec-driven development in which **plans carry intent in
 | Requirements / design / tasks | One plan per scope, items within it: Opportunity → Decision → Judgment calls → Blast radius (measured) → PR ladder → Definition of done → Doc impact → Status | `guide/segment_plan_template.md`; `.claude/skills/segment-plan/SKILL.md`; `guide/archive/segment_19S_post_assessment.md` Item 10 |
 | Spec catches drift tests cannot | A gate derived from what the repository states, where it states something; elsewhere a separate reader; last, the sweeps | The gates in §6.3; `app/services/audit.py` `EVENT_SCHEMAS`; 6/30 fix commits were doc drift |
 | Maker and checker separate | `spec-writer` (at a close; reports divergence otherwise), `diff-reviewer` (cold, report-only, no model pin, once per item) and Codex, automatic on most PRs. Validated retrospectively: run cold at `9b9cc457`, `diff-reviewer` found Codex's P0.2 (`ab043317`) 25 days early | `.claude/agents/`; `CLAUDE.md` "Where work runs"; `python3 tools/pace_audit.py --cut 2460`; the Codex search in the note below |
-| Machine-checkable definition of done | For code and specs, yes: 4,800 tests (2026-09-23) on two dialects plus the gates. For UI, no: the author, looking | 15/30 fix commits browser-only; `CLAUDE.md` "Where work runs"; `guide/post_azure_todo_checklist.md` |
+| Machine-checkable definition of done | For code and specs, yes: 8,381 tests (2026-11-05) on two dialects plus the gates, with pyright strict and `ruff format` as gates (22C–22H). For UI, no: the author, looking | 15/30 fix commits browser-only; `CLAUDE.md` "Where work runs"; `guide/post_azure_todo_checklist.md`; `pyright`; `ruff format --check .` |
 | Spec coverage enforced | For absence, yes: every routing module registered, every mapped spec a live file, the declared-debt baseline empty. Adequacy, no | `tests/unit/test_spec_coverage.py`; `app/web/spec_registry.py`; `constitution.md` II |
 | Living spec, continuously synced | Periodic instead: 21 + 4 dated assessments in two model lineages by 2026-10-05, drift sweeps on a cadence, registers for what they surface | `guide/archive/codebase_assessment_*.md`; `tools/close_check.py --stale`; `docs/archive/practice-audit-2026-09-04.md` §2 |
 | Code as a generated artifact | No. Hand-edited by agents at the author's direction; specs are prose | — |
 | Autonomous agent loops | No, on stated grounds: the definition of done is not machine-checkable for the defects that occur | `docs/archive/practice-audit-2026-09-04.md` A.5 |
 | The codebase should not take the AI-authored shape | Measured: churn 1.1×, duplication 6.3% at ≥10 lines | `python3 tools/code_metrics.py` (deterministic; a few minutes, most of it the churn walk) |
 
-**Re-taking the numbers.** All the current-state figures above were taken at `3559c7a7`:
+**Re-taking the numbers.** All the current-state figures above were taken at `3559c7a7`, except the test count and the language-level gates, taken at `0ff3a3c4` on 2026-11-05:
 
 - **Spec folder size:** `ls spec/*.md | wc -l; cat spec/*.md | wc -l`.
 - **Archive counts:** `ls guide/archive/segment_*.md | wc -l`.
 - **Co-change rates:** classify each `git log origin/main --first-parent --merges` commit by the paths in `git diff --name-only <sha>^1 <sha>`. A live spec is under `spec/` but not `spec/archive/`; a live plan document is under `guide/` but not `guide/archive/`. The same classifier run at `376c9605` reproduces the 2026-09-04 percentages; its raw counts differ from that day's by at most three.
 - **Test count:** `pytest --collect-only -q`.
+- **Type and format gates:** `pyright; ruff format --check .; ruff check --select E501 .`.
 - **Cadence figures:** `python3 tools/pace_audit.py --cut 2460`.
 - **Churn and duplication:** `python3 tools/code_metrics.py`.
 - **Codex coverage:** a GitHub search, `is:pr commenter:chatgpt-codex-connector[bot] created:>=2026-09-14` against `is:merged created:>=2026-09-14`, in `repo:philoyhc/review-robin-web`. It needs the API, because PR comments are not in git.
