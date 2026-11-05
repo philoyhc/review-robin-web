@@ -1153,6 +1153,16 @@
         margin-bottom: 20px;
       }
       .page-grid .card { margin-bottom: 0; }
+      /* System Status's cards (segment 22G Item 1): a label column and
+         a value column, one row per report. */
+      .status-list {
+        display: grid;
+        grid-template-columns: max-content 1fr;
+        gap: 6px 16px;
+        margin: 0;
+      }
+      .status-list dt { color: var(--text-subtle); }
+      .status-list dd { margin: 0; }
       /* Two independent column stacks — 19E rung 6b tweak. Unlike
          .page-grid / .bottom-grid, which lay cards out in ROWS, each
          child here is a *column* that stacks its own cards. A card
