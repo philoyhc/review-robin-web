@@ -186,3 +186,16 @@ def diagnostics_filter_options(
                 seen.add(value.casefold())
                 bucket.append(value)
     return sorted(handles, key=str.casefold) + sorted(owners, key=str.casefold)
+
+
+def lobby_due_session_ids(review_sessions: Iterable[ReviewSession]) -> frozenset[str]:
+    """The ``public_id`` of each lobby session with an action due, which
+    the lobby marks with a Due pill (14F).
+
+    A scaffold (14F rung 1): it returns no session yet, so the pill's slot
+    is in the markup and nothing shows. Rung 5 computes it from the
+    invite and reminder offsets the operator set, and from a persistent
+    scheduled-activation failure.
+    """
+    del review_sessions
+    return frozenset()

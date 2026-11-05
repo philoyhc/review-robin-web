@@ -209,6 +209,13 @@
                  route does, not by its label. #}
               <td data-sort-value="{{ s.status | sort_status }}">
                 <span class="pill pill-lifecycle-{{ s.status }}">{{ s.status | lifecycle_label }}</span>
+                {# 14F: a Due pill when an action is due (a send, a
+                   reminder, a failed scheduled Start). Rung 1 scaffold:
+                   no session is marked yet; rung 5 names the action. #}
+                {% if s.public_id in due_session_ids %}
+                  <span class="pill pill-warning" data-due-action
+                        title="An action is due on this session: open it to see what">Due</span>
+                {% endif %}
               </td>
               <td>
                 {% set s_tags = tags_by_session.get(s.id, []) %}

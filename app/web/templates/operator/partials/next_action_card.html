@@ -417,7 +417,11 @@
          reminders. Each is a tone-coded icon-prefixed line —
          ⚠ amber-warning, ⓘ amber-grey, ✓ green, ✗ error. No
          background colour or border. #}
-      {% set _has_signals = scheduled_activation_caption or auto_send_invites_caption or auto_send_reminders_caption or super_failure %}
+      {# 14F rung 1 scaffold: where the due-action prompt will sit, shown
+         on a session whose operator set invite or reminder offsets.
+         Rung 5 replaces the example with what is due. #}
+      {% set _due_actions_placeholder = session.invite_offsets or session.reminder_offsets %}
+      {% set _has_signals = scheduled_activation_caption or auto_send_invites_caption or auto_send_reminders_caption or super_failure or _due_actions_placeholder %}
       {% if _has_signals %}
         <div class="next-action-signals">
           {% if super_failure %}
@@ -487,6 +491,15 @@
                id="next-action-auto-send-reminders-caption">
               <span class="next-action-signal-icon" aria-hidden="true">{{ _icon }}</span>
               <span>{{ auto_send_reminders_caption.text }}</span>
+            </p>
+          {% endif %}
+          {% if _due_actions_placeholder %}
+            <p class="next-action-signal next-action-signal--amber-grey"
+               id="next-action-due-actions" data-due-actions-placeholder>
+              <span class="next-action-signal-icon" aria-hidden="true">ⓘ</span>
+              <span>What's due will show here, from the send times you set
+                — for example, "Reminders due: 12 reviewers haven't
+                submitted, 2 days before End." Not live yet.</span>
             </p>
           {% endif %}
         </div>
