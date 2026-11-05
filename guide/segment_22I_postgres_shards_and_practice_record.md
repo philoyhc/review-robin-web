@@ -233,6 +233,32 @@ the Doc impact names no spec, and the `grep` above is the whole check.
 
 ## Item 3 — the practice record
 
+### Status
+
+- 2026-11-05, rung 1: one `diff-reviewer` read for overclaim, as the plan
+  rules. It found twelve corrections and no unsupported section, all
+  taken:
+  - **Dates:** the build ran 2026-11-04 to 11-05 (#3584 to #3636), not
+    from 11-01, and so not "within five days". The plan's own
+    Opportunity carried the wrong start.
+  - **Arithmetic:** 2,137 − 437 is not 1,846. The 1,846 is what was left
+    after rung 1's config.
+  - **Defect count:** six behavior defects, not five; 22F's
+    `scheduled_at` fix (#3612) was missed.
+  - **Defect wording:** the 22C paths raised where they should not have,
+    not "raised none".
+  - **"Cannot go stale"** narrowed: the check's config and pins are kept
+    by hand.
+  - **The CI split** is told apart from *build*.
+  - **Format count:** 936 is the files the first format run rewrote; the
+    check now covers every file.
+  - **Spelling:** "unlabeled", US.
+  - **Sources:** each figure is cited beside its PR or command.
+- **The ignore split** this plan gives in Blast radius and bullet (a),
+  "7 in application code, 19 in tests", is stale. At `0ff3a3c4` it is 2
+  and 24 of 26 (`git grep -c "pyright: ignore" -- '*.py'`), and the
+  record uses that.
+
 ### PR ladder
 
 1. **The edits (prose only, with the read above).** Every backticked path
