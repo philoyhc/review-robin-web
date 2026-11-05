@@ -161,6 +161,14 @@ Taken 2026-11-02 at `fffd4c28`; re-taken 2026-11-05 at `095336bf`
   Workflow card's bulk-off line links to `#share-session-link`. Two
   lines that 3a made stale also changed: the composer's "sending is not
   switched on yet" and the Email settings card's.
+- 2026-11-05, rung 3c: the card's link is
+  `request.url_for("review_surface_default_position")`, absolute through
+  the host's public origin as invitation links are, with a Copy link
+  button (the Clipboard API, else `execCommand`; a status line says
+  which happened). **The author cut the card to its title, help text,
+  link and Copy link** (2026-11-05): the invitation and reminder boxes
+  the Decision named, rendered for everyone, are dropped, and the help
+  text is the author's.
 - 2026-11-05, rung 3a:
   - **Per-row sends.** Send and Send reminder dispatch the row they queue
     through `graph.mailer_for`, with `send_options_for`, and redirect to

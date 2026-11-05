@@ -832,13 +832,10 @@
       .send-test-notice--success { color: var(--status-success-fg); }
       .send-test-notice--error { color: var(--status-error-fg); }
       /* Invitations' Share the session link card (14F): the link and its
-         Copy button on one line; each message's Copy buttons under it. */
-      .share-link-row { display: flex; gap: var(--space-2); align-items: center; margin-bottom: var(--space-4); }
+         Copy button on one line, the button's label on one row. */
+      .share-link-row { display: flex; gap: var(--space-2); align-items: center; }
       .share-link-row input { flex: 1 1 auto; min-width: 0; }
-      .share-link-messages { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
-      .share-link-messages input, .share-link-messages textarea { width: 100%; }
-      @media (max-width: 800px) { .share-link-messages { grid-template-columns: 1fr; } }
-      .share-link-actions { display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-2); }
+      .share-link-row .btn { white-space: nowrap; }
       /* body.ui-v2 selector so it beats ``body.ui-v2 label`` (which sets a
          smaller --fs-small size + 500 weight) — the toggle text should read
          as normal card body text. */

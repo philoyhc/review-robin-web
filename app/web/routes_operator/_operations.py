@@ -553,6 +553,13 @@ def invitations_index(
             # to report the roster accurately cannot take a caller's
             # word for what the roster contains.
             "no_match": _unmatched_email(db, review_session, no_match),
+            # 14F rung 3c: the stable session link, absolute (the host's
+            # public origin, as invitation links are).
+            "share_link_url": str(
+                request.url_for(
+                    "review_surface_default_position", session_id=review_session.public_id
+                )
+            ),
             "total_row_count": len(all_rows),
             # Segment 19I Item 10 — the shared preview-count
             # sentence, moved out of the filter row to sit with

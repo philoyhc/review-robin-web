@@ -93,50 +93,57 @@
     </p>
   </div>
 
-  {# 14F rung 3b (scaffold): Share the session link. Until bulk email
-     is paced (14G), the operator delivers the session's stable link
-     through their own channels. Rung 3c wires the absolute link, the
-     templates rendered for everyone, and the Copy buttons; here they
-     are inert. #}
+  {# 14F rungs 3b–3c: Share the session link. Until bulk email is
+     paced (14G), the operator delivers the session's stable link through
+     their own channels. ``share_link_url`` is absolute, built by the
+     route. The author cut the card to the link alone (2026-11-05): the
+     message boxes the plan named are gone. #}
   <div class="card" id="share-session-link" data-share-link>
     <h2>Share the session link</h2>
     <p class="muted">
-      Every reviewer reaches this session at one link. They sign in with
-      their own account and see only what is assigned to them; anyone
-      not on the roster gets a page that isn't found. Paste the link, or
-      a whole message below, into your own email, learning management
-      system or announcements.
+      Only eligible participants will be able to reach the session using
+      the below link, and when it is open to receive responses or for
+      viewing responses. Sign-in is required to validate access.
     </p>
-    <label for="share-session-link-url">Session link</label>
     <div class="share-link-row">
       <input type="text" id="share-session-link-url" readonly
-             value="" placeholder="The session's link appears here">
+             aria-label="Session link" value="{{ share_link_url }}">
       <button class="btn secondary" type="button" id="share-session-link-copy"
-              disabled title="Available soon">Copy link</button>
+              data-copy-from="share-session-link-url">Copy link</button>
     </div>
-    <div class="share-link-messages">
-      {% for key, title in [("invite", "Invitation message"), ("reminder", "Reminder message")] %}
-        <div data-share-message="{{ key }}">
-          <h3>{{ title }}</h3>
-          <p class="muted">
-            Your {{ title | lower }} template, written for everyone: the
-            session link in place of each reviewer's own, and no name.
-            Edit it here before you copy it; edits aren't saved.
-          </p>
-          <label for="share-{{ key }}-subject">Subject</label>
-          <input type="text" id="share-{{ key }}-subject" readonly value="">
-          <label for="share-{{ key }}-body">Message</label>
-          <textarea id="share-{{ key }}-body" rows="8" readonly></textarea>
-          <div class="share-link-actions">
-            <button class="btn secondary" type="button" id="share-{{ key }}-copy-subject"
-                    disabled title="Available soon">Copy subject</button>
-            <button class="btn secondary" type="button" id="share-{{ key }}-copy-body"
-                    disabled title="Available soon">Copy message</button>
-          </div>
-        </div>
-      {% endfor %}
-    </div>
+    <p class="muted" role="status" aria-live="polite" id="share-copy-status"></p>
   </div>
+  {# Copy: the Clipboard API where the page is a secure context, else the
+     field's own selection and ``execCommand("copy")``. The status line
+     says which happened, so a refused copy is not silent. #}
+  <script>
+    (function () {
+      var button = document.getElementById("share-session-link-copy");
+      var field = document.getElementById("share-session-link-url");
+      var status = document.getElementById("share-copy-status");
+      if (!button || !field || !status) return;
+      function fallback() {
+        field.focus();
+        field.select();
+        try { return document.execCommand("copy"); } catch (e) { return false; }
+      }
+      function done(ok) {
+        status.textContent = ok
+          ? "Copied the link."
+          : "Couldn't copy: select the link and copy it yourself.";
+      }
+      button.addEventListener("click", function () {
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard.writeText(field.value).then(
+            function () { done(true); },
+            function () { done(fallback()); }
+          );
+        } else {
+          done(fallback());
+        }
+      });
+    })();
+  </script>
 
   {# Auto-send invites / reminders captions live on the Workflow
      card's right-column aside (consolidated 2026-05-21). #}
