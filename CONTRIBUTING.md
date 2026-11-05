@@ -31,9 +31,10 @@ more permissive of the two in several ways that have bitten this project
 `DROP TABLE`, index/FK name mismatches between upgrade and downgrade —
 see the migration-portability notes in `AGENTS.md`). That job is the only
 check covering the gap: it round-trips the whole Alembic chain in both
-directions and runs the full suite against a real `postgres:16`, across
-xdist workers with a database each: about four minutes since segment 22B,
-nine serially before it (2026-10-26). It
+directions and runs the suite, less `tests/browser/`, against a real
+`postgres:16`, in two parallel shards with xdist workers and a database
+each. `postgres (unit)` carries the migrations and took 1 m 25 s on
+#3634; `postgres (integration)` took 3 m 44 s (segment 22I). It
 matters because a deployment migrates Postgres from a `main` commit:
 the dev slot's workflow did so on every push without depending on
 either CI workflow, and the institutional release migrates whichever
@@ -50,10 +51,10 @@ changes only Markdown in `spec/`, `docs/`, `guide/`, `cordware/spec/`,
 (`APP_DIRS`: `residentialapps/`, `utilityapps/`, `applydesk/`), or at the root, or a `README.md`
 outside what ships or will (`app/`, `alembic/`, `cordware/`, an app
 folder below its top), runs the `prose` job
-alone, the unit tests plus the tests that read prose, and shows `test` and
-`postgres` as skipped. One that changes only prose and `residentialapps/`
+alone, the unit tests plus the tests that read prose, and shows the `test`
+and `postgres` shards as skipped. One that changes only prose and `residentialapps/`
 runs the `residential` job instead (`ruff check .`, `pyright`, Residential's tests,
-`cordware/tests` and the prose lane's), with `test` and `postgres` skipped
+`cordware/tests` and the prose lane's), with the `test` and `postgres` shards skipped
 too: Residential has no database yet and RRW never imports it. Anything
 else, and every push to `main`, runs both in full.
 

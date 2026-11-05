@@ -13,9 +13,10 @@ sufficient for unit tests and local development.
 **Local Postgres is intentionally deferred** (see `guide/archive/segment_05A.md`
 §3.5). The repo no longer ships a `docker-compose.yml` for Postgres, and
 `docs/local_setup.md` does not require Docker. Postgres-vs-SQLite parity
-is enforced by the CI job at `.github/workflows/ci-postgres.yml` (every
-PR that changes more than prose, and every push to `main` — runs Alembic
-round-trip *and* the full pytest suite against Postgres)
+is enforced by the CI workflow at `.github/workflows/ci-postgres.yml` (every
+PR that changes more than prose, and every push to `main` — runs the Alembic
+round-trip *and* the pytest suite, less `tests/browser/`, against Postgres,
+in two parallel shards)
 and by the release's migrate-before-deploy step (`docs/deployment.md`).
 
 If you do need a local Postgres for a Postgres-only investigation, install
@@ -145,8 +146,10 @@ teardown, so tests do not pollute each other.
   The dormant dev slot's server and deploy workflow (deleted 2026-11-02)
   are recorded with the deployment.
 - **Postgres-against-Docker CI** — `ci-postgres.yml` applies and
-  round-trips migrations *and* runs the full pytest suite against a
-  `postgres:16` service container on every PR that changes more than
+  round-trips migrations *and* runs the pytest suite, less
+  `tests/browser/`, against a `postgres:16` service container, in two
+  shards (`postgres (unit)`, which also runs the migrations, and
+  `postgres (integration)`; segment 22I) on every PR that changes more than
   prose (`tools/ci_lanes.py`). The `engine` fixture
   in `tests/conftest.py` honours `TEST_DATABASE_URL` (the job sets it
   from its `DATABASE_URL`) so the same test bodies cover both dialects.
