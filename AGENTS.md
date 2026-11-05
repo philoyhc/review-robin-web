@@ -205,6 +205,15 @@ reject it.
   `docs/local_setup.md`) and checks every change in a browser at
   `http://127.0.0.1:8000/reviewrobin/`. The agent's sandbox remains the pre-PR
   gate for `pytest`, `ruff` and `pyright`.
+- **While building, run what the change reaches; the full suite gates
+  the push.** Between edits, run the test files named for the route,
+  service or view module you changed (`pytest
+  tests/integration/test_<area>.py tests/unit/test_<area>.py`), plus
+  `pytest tests/unit` when prose or a template changed: the doc-convention
+  and template tests live there. Then run the full `pytest -n auto` once
+  before pushing. A full run after every edit is 4–5 minutes of waiting
+  that finds nothing a targeted run would not; the run before the push
+  finds the rest (segment 22H).
 - The agent's session container is the pre-PR gate: `pytest -n auto`,
   `ruff check .`, `ruff format --check .` and `pyright` must all pass
   there before pushing (pyright
