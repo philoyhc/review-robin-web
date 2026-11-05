@@ -73,6 +73,7 @@ from ._activation import (
     _observe_scheduled_activation,
     parse_and_validate_scheduled_activate_at,
 )
+from ._clock import ClockStatus, clock_status
 from ._duration import _ISO_DURATION_RE as _ISO_DURATION_RE
 from ._duration import (
     parse_iso_duration,
@@ -116,7 +117,9 @@ from ._shared import (
 )
 
 __all__ = [
+    "ClockStatus",
     "ScheduledActivateError",
+    "clock_status",
     "fired_offset_errors",
     "fired_offsets",
     "lock_session",

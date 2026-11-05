@@ -404,3 +404,26 @@ def test_every_admin_tab_links_to_system_status(
         response = client.get(path)
         assert response.status_code == 200
         assert 'href="/operator/sys-admin/system"' in response.text
+
+
+def test_system_status_clock_card_reads_the_clock(
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.services.scheduled_events import _clock
+
+    monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
+    monkeypatch.setattr(settings, "scheduler_interval_seconds", 0)
+    response = client.get("/operator/sys-admin/system")
+    assert 'data-clock-state="off"' in response.text
+    assert "SCHEDULER_INTERVAL_SECONDS is 0" in response.text
+
+    monkeypatch.setattr(settings, "scheduler_interval_seconds", 120)
+    monkeypatch.setattr(
+        _clock, "_status", _clock.ClockStatus(since=_clock.clock_status().since, running=True, interval_seconds=120)
+    )
+    response = client.get("/operator/sys-admin/system")
+    assert 'data-clock-state="on"' in response.text
+    assert "Every 2 min" in response.text
+    assert "None yet" in response.text

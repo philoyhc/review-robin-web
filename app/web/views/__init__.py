@@ -274,6 +274,8 @@ from ._sort import (
 
 # Participant chrome, masked invite address and /me notices (M8, M9,
 # M11).
+# Sys Admin → System Status (segment 22G Item 1).
+from ._system_status import ClockCard, clock_card, duration_label
 from ._top_line import top_line
 
 # A refused roster upload's kinds of problem, shared by Quick Setup and
@@ -308,6 +310,9 @@ from ._workflow_card import (
 )
 
 __all__ = [
+    "ClockCard",
+    "clock_card",
+    "duration_label",
     "top_line",
     "REFUSED_CLOSED",
     "REFUSED_NO_ASSIGNMENTS",

@@ -12,22 +12,22 @@
     {% include "operator/partials/sys_admin_top_nav.html" %}
   {% endwith %}
 
-  {# Segment 22G Item 1, rung 1: the scaffold. Four read-only cards with
-     their real headings and labels; every value is a placeholder until
-     its card is wired (rungs 2-4). The clock's figures are this
-     process's, since it started. #}
+  {# Segment 22G Item 1. Four read-only cards; Due next, Sending and
+     This instance are placeholders until rungs 3-4 wire them. The
+     clock's figures are this process's, since it started. #}
   <div class="page-grid">
-    <div class="card" data-system-clock>
+    <div class="card" data-system-clock data-clock-state="{{ clock.state }}">
       <h2>Clock</h2>
-      <p class="muted">Counts since this process started.</p>
+      <p class="muted">This process's record, since {{ clock.since | format_datetime }}; a restart clears it.</p>
       <dl class="status-list">
-        <dt>Running</dt><dd>—</dd>
-        <dt>Interval</dt><dd>—</dd>
-        <dt>Last pass</dt><dd>—</dd>
-        <dt>Sessions visited</dt><dd>—</dd>
-        <dt>Last failure</dt><dd>—</dd>
-        <dt>Failures</dt><dd>—</dd>
-        <dt>Busy skips</dt><dd>—</dd>
+        <dt>Running</dt><dd data-clock-running>{{ clock.state_label }}</dd>
+        <dt>Interval</dt><dd>{{ clock.interval_label }}</dd>
+        <dt>Last pass</dt>
+        <dd data-clock-last-pass>{% if clock.last_pass_at %}{{ clock.last_pass_at | format_datetime }}: {% endif %}{{ clock.last_pass_label }}</dd>
+        <dt>Last failure</dt>
+        <dd data-clock-last-failure>{% if clock.last_failure_at %}{{ clock.last_failure_at | format_datetime }}: {% endif %}{{ clock.last_failure_label }}</dd>
+        <dt>Failures</dt><dd data-clock-failures>{{ clock.failures }}</dd>
+        <dt>Skipped</dt><dd data-clock-skips>{{ clock.skips_label }}</dd>
       </dl>
     </div>
 
