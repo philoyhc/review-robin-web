@@ -679,6 +679,12 @@ Source: `app/web/templates/operator/operator_settings.html`.
 | 93b | Email settings card | On / Off (Keep a copy in my Sent Items) | `<button type="submit">` | `btn` (on) / `btn secondary` (off) | **Toggle** | Posts `/operator/settings/email-preference` with `key=email_save_to_sent_items` and the next state in `on`; `aria-pressed` carries the state, and `aria-labelledby` names the row's label. One-button form, no script |
 | 93c | Email settings card | On / Off (Send a copy to myself) | `<button type="submit">` | `btn` (on) / `btn secondary` (off) | **Toggle** | As 93b, `key=email_bcc_self` |
 | 93d | Email settings card | On / Off (Replies go to the session's Help contact) | `<button type="submit">` | `btn` (on) / `btn secondary` (off) | **Toggle** | As 93b, `key=email_reply_to_help` |
+| 93e | Email settings card, Report emails | On / Off (Another owner changes a session's state) | `<button type="submit">` | `btn` (on) / `btn secondary` (off) | **Toggle** | As 93b, `key=email_report_lifecycle` |
+| 93f | Email settings card, Report emails | On / Off (Another owner deletes data) | `<button type="submit">` | `btn` (on) / `btn secondary` (off) | **Toggle** | As 93b, `key=email_report_destructive` |
+| 93g | Email settings card, Report emails | On / Off (Another owner changes owners or release) | `<button type="submit">` | `btn` (on) / `btn secondary` (off) | **Toggle** | As 93b, `key=email_report_owners` |
+| 93h | Email settings card, Report emails | Off (Summaries of the sends I start) | `<button type="button" disabled>` | `btn secondary` | **Toggle** | Inactive: no form, always Off, `aria-pressed="false"`; the row says it waits on bulk sending |
+| 93i | Email settings card, Report emails | Off (Scheduled events) | `<button type="button" disabled>` | `btn secondary` | **Toggle** | As 93h; waits on scheduled email |
+| 93j | Email settings card, Report emails | Off (Reviewer and reviewee progress) | `<button type="button" disabled>` | `btn secondary` | **Toggle** | As 93h; waits on scheduled email |
 
 Rows 92–94, the Email send (SMTP) form's Cancel and Save and the Clear
 all settings (SMTP) button, are retired with those cards (segment 14C

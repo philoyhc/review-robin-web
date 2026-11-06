@@ -3,7 +3,7 @@
 **Opened:** 2026-11-05, at the author's request, as a **draft** · **Theme:**
 the mail an operator schedules goes out at its time with nobody signed in ·
 **Related:** `guide/archive/segment_14F_manual_email.md` (built first),
-`guide/segment_14C_email_related_ui.md`, `guide/archive/segment_14E_clock.md`,
+`guide/archive/segment_14C_email_related_ui.md`, `guide/archive/segment_14E_clock.md`,
 `guide/no_scheduling_fallback.md`, `guide/email_and_scheduling.md`,
 `guide/post_azure_todo_checklist.md` items 7 and 9
 
@@ -199,7 +199,7 @@ are in; the ladder below is the shape.
 
 1. **Confirmations** on a reviewer's submit, through Item 2's path, under
    14F's backlog rule.
-2. **Report groups C and D** (`guide/segment_14C_email_related_ui.md`
+2. **Report groups C and D** (`guide/archive/segment_14C_email_related_ui.md`
    Item 2), their toggles live.
 3. **Close.**
 
