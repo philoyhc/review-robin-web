@@ -300,7 +300,8 @@ def test_favorites_drive_log_and_are_marked_on_students(client: TestClient) -> N
     for staff, picks in sample.FAVORITES.items():  # a favorite is a student you reach
         me = sample.viewer(staff)
         assert all(reaches_student(me, sid) for sid in picks), staff
-    assert 'aria-pressed="false" aria-label="Favorite Dev Menon" disabled' in students
+    assert 'aria-pressed="false" aria-label="Favorite Dev Menon" disabled>☆</button>' in students
+    assert "★ Favorite" not in students and "☆ Favorite" not in students  # the star alone
     priya = client.get("/log?as=Priya%20Raman").text
     assert re.findall(r'name="student" value="([^"]+)"', priya) == ["S-08", "S-10"]
     assert 'href="/students/?as=Priya%20Raman">Students</a>' in priya  # the hint keeps the viewer

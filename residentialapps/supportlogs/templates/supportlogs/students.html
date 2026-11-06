@@ -4,8 +4,9 @@
 {% from "supportlogs/_records.html" import records_card with context %}
 {% block title %}Students{% endblock %}
 {# A favorite toggle (author, 2026-11-06): Log's quick picks are the
-   favorites. Inert on sample data, which seeds them. #}
-{% macro favorite(s) %}{% set on = sample.is_favorite(me.name, s.id) %}<button type="button" class="col-chip" data-favorite aria-pressed="{{ 'true' if on else 'false' }}" aria-label="Favorite {{ s.name }}" disabled>{{ '★' if on else '☆' }} Favorite</button>{% endmacro %}
+   favorites. The star alone shows, its name in `aria-label` (author,
+   2026-11-06). Inert on sample data, which seeds them. #}
+{% macro favorite(s) %}{% set on = sample.is_favorite(me.name, s.id) %}<button type="button" class="col-chip" data-favorite aria-pressed="{{ 'true' if on else 'false' }}" aria-label="Favorite {{ s.name }}" disabled>{{ '★' if on else '☆' }}</button>{% endmacro %}
 {% block content %}
   {{ sample_title("Students", me.name) }}
   {{ recorded() }}
