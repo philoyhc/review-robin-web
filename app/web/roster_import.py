@@ -29,7 +29,7 @@ from app.db.models import (
     ReviewSession,
     User,
 )
-from app.schemas.imports import RevieweeImportRow, ReviewerImportRow
+from app.schemas.imports import ObserverImportRow, RevieweeImportRow, ReviewerImportRow
 from app.services import (
     assignments,
     csv_imports,
@@ -190,7 +190,9 @@ async def _handle_import(
     existing_count_fn: Callable[[Session, int], int],
     parse_fn: Callable[
         [bytes],
-        csv_imports.ParseResult[ReviewerImportRow] | csv_imports.ParseResult[RevieweeImportRow],
+        csv_imports.ParseResult[ReviewerImportRow]
+        | csv_imports.ParseResult[RevieweeImportRow]
+        | csv_imports.ParseResult[ObserverImportRow],
     ],
     # Called with the import's keywords plus a merge's ``**extra``, so
     # its parameters are not spelled here.
@@ -198,11 +200,20 @@ async def _handle_import(
     append: str | None = None,
     merge: str | None = None,
     acknowledge_group_clear: str | None = None,
+    render_page: Callable[..., HTMLResponse] | None = None,
 ) -> HTMLResponse | RedirectResponse:
-    """Shared Reviewers / Reviewees CSV-import handler.
+    """Shared Reviewers / Reviewees / Observers CSV-import handler.
 
-    ``kind`` is ``"reviewers"`` or ``"reviewees"``; the *_fn callables
-    are the matching ``csv_imports`` entry points. On a parse / confirm
+    ``kind`` is ``"reviewers"``, ``"reviewees"`` or ``"observers"``; the
+    *_fn callables are the matching ``csv_imports`` entry points.
+
+    Observers differ in four ways (segment 22J rung 3): the roster is
+    gated on ``not is_archived`` rather than ``is_editable``; a replace
+    asks no response-loss tick, since nothing references an observer
+    (segment 19I Item 5); the file carries no labels; and the page
+    renders through the route's ``render_page``, called with the
+    upload card's keys, since the Observers page builds its own
+    context. On a parse / confirm
     / ack failure it re-renders the Setup page with the reason in the
     upload card's banner; on success it saves and 303s back to the
     page.
@@ -227,12 +238,20 @@ async def _handle_import(
     from app.web.routes_operator import _shared
     from app.web.routes_operator._shared import (
         _require_editable,
+        _require_not_archived,
         _templates,
         acknowledged_loss,
         roster_address,
     )
 
-    _require_editable(review_session)
+    observers = kind == "observers"
+    # Observers render their own page; the inline render below serves
+    # the other two. Set together or not at all.
+    assert observers == (render_page is not None), "render_page is Observers' alone"
+    if observers:
+        _require_not_archived(review_session)
+    else:
+        _require_editable(review_session)
     upload = await read_upload(
         db,
         file=file,
@@ -252,14 +271,19 @@ async def _handle_import(
             )
         )
     existing = existing_count_fn(db, review_session.id)
-    assignment_count = csv_imports.existing_assignment_count(db, review_session.id)
+    # Read by the inline render alone: Observers' page counts its own.
+    assignment_count = (
+        0 if observers else csv_imports.existing_assignment_count(db, review_session.id)
+    )
 
+    template = crumb_label = list_key = ""
+    list_items: list[Reviewer] | list[Reviewee] = []
     if kind == "reviewers":
         template = "operator/session_reviewers.html"
         crumb_label = "Reviewers"
         list_key = "reviewers"
         list_items = assignments.list_reviewers(db, review_session.id)
-    else:
+    elif kind == "reviewees":
         template = "operator/session_reviewees.html"
         crumb_label = "Reviewees"
         list_key = "reviewees"
@@ -282,6 +306,26 @@ async def _handle_import(
         group_clear: dict[str, object] | None = None,
         directory_renew: bool = False,
     ) -> HTMLResponse:
+        # Neither tick comes back on the both-ticks ask (19Z).
+        confirm_replace_checked = (
+            held_upload is not None and confirm_replace == "true" and not both_ticks
+        )
+        append_checked = held_upload is not None and appending and not both_ticks
+        merge_checked = held_upload is not None and merging and not both_ticks
+        if render_page is not None:
+            return render_page(
+                issues=result.issues,
+                missing_confirm=missing_confirm,
+                both_ticks=both_ticks,
+                filename=upload.filename,
+                held_upload=held_upload,
+                held_upload_lost=upload.lost,
+                confirm_replace_checked=confirm_replace_checked,
+                append_checked=append_checked,
+                merge_checked=merge_checked,
+                directory_renew=directory_renew,
+                http_status=status_code,
+            )
         context: dict[str, object] = {
             # These two are the ids the page's own controls point at.
             # They were missing here, and Jinja's `Undefined` is falsy
@@ -317,10 +361,11 @@ async def _handle_import(
             # bitten this segment (`.is-locked`, `.filter-actions`).
             #
             # 19P.3 rung 4 — BOTH kinds now, and the literal collapses
-            # rather than gaining a branch. This handler serves exactly
-            # `reviewers` and `reviewees`, and both render the panel
-            # since Reviewees gained one, so there is no page left for
-            # which the flag means nothing.
+            # rather than gaining a branch. This render serves exactly
+            # `reviewers` and `reviewees` (Observers render through
+            # `render_page`), and both render the panel since Reviewees
+            # gained one, so there is no page left for which the flag
+            # means nothing.
             "current_offset": 0,
             "panel_open": True,
             "user": user,
@@ -348,14 +393,10 @@ async def _handle_import(
             # Segment 20G: the check stopped on the sign-in, so nothing
             # was saved and the file is held; the card asks to renew.
             "directory_renew": directory_renew,
-            "confirm_replace_checked": (
-                held_upload is not None and confirm_replace == "true" and not both_ticks
-            ),
-            # Segment 19Z: the append and merge ticks, likewise. None
-            # comes back on the both-ticks ask, which asks the operator
-            # to choose.
-            "append_checked": held_upload is not None and appending and not both_ticks,
-            "merge_checked": held_upload is not None and merging and not both_ticks,
+            "confirm_replace_checked": confirm_replace_checked,
+            # Segment 19Z: the append and merge ticks, likewise.
+            "append_checked": append_checked,
+            "merge_checked": merge_checked,
             # A Reviewees merge refused for clearing group answers: the
             # count and line, offered back with a tick in the card.
             "group_clear": group_clear,
@@ -500,7 +541,8 @@ async def _handle_import(
     # so this is a tab loaded before the session had any, or a direct
     # POST; the re-render names them and carries the field.
     if (
-        existing > 0
+        not observers
+        and existing > 0
         and not appending
         and not merging
         and acknowledge_response_loss != "true"
@@ -561,6 +603,8 @@ async def _handle_import(
             release_hold(db, token=upload.token, user=user, review_session=review_session)
             return render(status_code=status.HTTP_400_BAD_REQUEST)
     extra: dict[str, object] = {}
+    if not observers:
+        extra["field_labels_captured"] = result.field_labels
     if merging:
         extra["merge"] = True
         extra["columns"] = result.columns
@@ -579,7 +623,6 @@ async def _handle_import(
             rows=result.rows,
             filename=upload.filename or "",
             correlation_id=request_correlation_id(),
-            field_labels_captured=result.field_labels,
             directory=directory_check,
             append=appending,
             **extra,
@@ -608,7 +651,7 @@ async def _handle_import(
     #
     # 19P.3 rung 4 — unconditional now. This was
     # `if kind == "reviewers" else ""` while Reviewees had no panel to
-    # keep open; it has one, and this handler serves no other kind.
+    # keep open; it has one, as Observers' page does (22J rung 3).
     return urls.redirect(
         request,
         url=(f"/operator/sessions/{review_session.public_id}/{kind}?unlocked=1#roster-card"),

@@ -12,7 +12,8 @@ slug rather than a kind, since Relationships shares them.
 Outside the routes package on ``roster_import``'s terms: the slices
 import this module, and it reads the package's guards from ``_shared``
 inside its functions, never at its top, so the two never import each
-other at load (``spec/architecture.md``).
+other at load (``spec/architecture.md``); ``tests/unit/test_import_order.py``
+imports it first, alone.
 """
 
 from __future__ import annotations
@@ -35,6 +36,7 @@ from app.services.observers import ObserverOperationError
 from app.services.reviewees import RevieweeOperationError
 from app.services.reviewers import ReviewerOperationError
 from app.web import urls
+from app.web.deps import request_correlation_id
 
 
 @dataclass(frozen=True)
@@ -109,12 +111,6 @@ def _guard(kind: RosterKind, review_session: ReviewSession) -> None:
         _shared._require_not_archived(review_session)
 
 
-def _correlation_id() -> str:
-    from app.web.deps import request_correlation_id
-
-    return request_correlation_id()
-
-
 def _call(
     kind: RosterKind,
     action: Callable[..., object],
@@ -130,7 +126,7 @@ def _call(
             db,
             review_session=review_session,
             user=user,
-            correlation_id=_correlation_id(),
+            correlation_id=request_correlation_id(),
             **{f"{kind.noun}_ids": ids},
         )
     except kind.error as exc:
@@ -262,7 +258,7 @@ def delete_all(
         db,
         review_session=review_session,
         user=user,
-        correlation_id=_correlation_id(),
+        correlation_id=request_correlation_id(),
     )
     return back_to_panel(request, review_session, kind.slug)
 
@@ -290,7 +286,7 @@ async def save_self_fields(
             user=user,
             participant=participant,
             keys=keys,
-            correlation_id=_correlation_id(),
+            correlation_id=request_correlation_id(),
         )
     except participant_info.SelfFieldsError as exc:
         raise HTTPException(
@@ -325,6 +321,6 @@ async def save_field_labels(
         source_type=source_type,
         slots=slots,
         submitted=submitted,
-        correlation_id=_correlation_id(),
+        correlation_id=request_correlation_id(),
     )
     return back_to_panel(request, review_session, slug)
