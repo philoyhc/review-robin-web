@@ -1421,6 +1421,12 @@
            the surrounding ``.bottom-grid``. */
         gap: 20px;
       }
+      /* `.bottom-grid.is-equal-height`: the two halves stretch to the
+         row and each half's card fills it, so cards side by side share
+         one height whatever their content (Invitations' info card and
+         Share the session link; author, 2026-11-06). */
+      .bottom-grid.is-equal-height { align-items: stretch; }
+      .bottom-grid.is-equal-height > .bottom-left > .card { flex: 1; }
       .fill-col {
         display: flex;
         flex-direction: column;
@@ -2388,11 +2394,10 @@
         gap: var(--space-2);
         flex-wrap: wrap;
       }
-      /* Extract data page — two independent columns of cards
-         (not a row-aligned grid). Each column flows with the
-         natural heights of its cards, so the bottoms of
-         neighbouring cards across columns don't have to line
-         up. Each card sizes to its own content; the action
+      /* Extract data page — two columns of cards. The top grid is
+         row-aligned (``is-row-aligned`` below); the token-keys grid
+         further down keeps independent columns, each flowing with its
+         cards' natural heights. Each card sizes to its own content; the action
          button sits on its own row immediately below the body
          text, right-aligned. Collapses to a single column on
          narrow viewports. */
@@ -2422,6 +2427,30 @@
       body.ui-v2 .extract-data-card-actions {
         display: flex;
         justify-content: flex-end;
+      }
+      /* The top grid's four cards in two aligned rows (author,
+         2026-11-06): Reviewer response metadata beside By instrument,
+         Reviewee response metadata beside Extract all data, each pair
+         one height. The column wrappers stand aside (``display:
+         contents``) so the cards are the grid's items, placed by row;
+         each card's Download stays at its foot. The placement holds
+         while the grid has two columns, which a later rule keeps down
+         to 600px; below that, one column in source order. */
+      body.ui-v2 .extract-data-grid.is-row-aligned {
+        align-items: stretch;
+        row-gap: 20px;
+      }
+      body.ui-v2 .extract-data-grid.is-row-aligned > .extract-data-column {
+        display: contents;
+      }
+      body.ui-v2 .extract-data-grid.is-row-aligned .extract-data-card-actions {
+        margin-top: auto;
+      }
+      @media (min-width: 601px) {
+        body.ui-v2 .extract-data-grid.is-row-aligned #extract-data-by-reviewer { grid-area: 1 / 1; }
+        body.ui-v2 .extract-data-grid.is-row-aligned #extract-data-by-instrument { grid-area: 1 / 2; }
+        body.ui-v2 .extract-data-grid.is-row-aligned #extract-data-by-reviewee { grid-area: 2 / 1; }
+        body.ui-v2 .extract-data-grid.is-row-aligned #extract-data-intro { grid-area: 2 / 2; }
       }
       /* Data shaper preview table — flush-left, columns sized
          to their headers (plus the sort icon) rather than the

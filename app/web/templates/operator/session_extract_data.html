@@ -18,11 +18,14 @@
   {# Two independent columns of cards (not a row-aligned grid):
      left column = ``Reviewer response metadata`` + ``Reviewee
      response metadata``; right column = ``By instrument`` +
-     ``Extract all data`` (author's order, D28 2026-10-03). Each
-     column flows with natural card heights so neighbouring
-     cards across columns don't have to align top or bottom.
-     Collapses to a single column on narrow viewports. #}
-  <div class="extract-data-grid">
+     ``Extract all data`` (author's order, D28 2026-10-03). The
+     cards across from each other share a height (``is-row-aligned``,
+     author 2026-11-06). Collapses to a single column on narrow
+     viewports. #}
+  {# ``is-row-aligned`` (author, 2026-11-06): the cards across from each
+     other share a height, Reviewer metadata with By instrument and
+     Reviewee metadata with Extract all data (base.html). #}
+  <div class="extract-data-grid is-row-aligned">
     <div class="extract-data-column">
       {# Reviewer response metadata — left column, top. Per-
          reviewer / per-reviewee response data is trivially
@@ -36,8 +39,8 @@
           <p class="form-help" style="margin-bottom: 0;">
             Per-reviewer metadata about the responses each reviewer
             produced — how many, against which instruments, and with
-            <strong>Timestamps</strong> on, when each last opened, saved
-            and submitted. Optimised for reviewer audit and coaching.
+            <strong>Timestamps</strong> on (time zone follows session set
+            up), when each last opened, saved and submitted. Optimised for reviewer audit and coaching.
           </p>
         </div>
         <p class="col-chip-row" style="margin: 0;">

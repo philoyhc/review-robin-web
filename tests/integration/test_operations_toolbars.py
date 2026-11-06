@@ -190,3 +190,11 @@ def test_the_info_cards_are_headed(
 # (`test_every_table_toolbar_splits_and_the_panes_stay_a_modifier`),
 # which also pins the shared rule staying `display: flex`. Asserting it
 # here as well would mean a future edit has to find both copies.
+
+
+def test_the_invitations_pair_shares_a_height(client: TestClient, db: Session) -> None:
+    """The info card and Share the session link stretch to one row height
+    (`is-equal-height`, author 2026-11-06); measured in Chromium."""
+    rs = _ready_session(client, db, code="ops-ic-eq")
+    body = _page(client, rs, "invitations")
+    assert 'class="bottom-grid is-equal-height" id="invitations-top-row"' in body

@@ -337,7 +337,7 @@
                  wrap_attrs={"data-edit-only": ""}, label="Release responses from") }}
           </div>
           <div>
-            <label for="mock-invite-offsets">Send invites (offset from Start; optional)</label>
+            <label for="mock-invite-offsets"{% if not scheduled_send %} class="muted"{% endif %}>Send invites (offset from Start; optional)</label>
             {# Display mode: each offset as a pill + a small gap + its
                resolved send datetime as a second pill. #}
             <div data-display-only>
@@ -359,7 +359,7 @@
                    {% if not scheduled_send %}disabled aria-describedby="scheduled-send-off"{% endif %}>
           </div>
           <div>
-            <label for="mock-reminder-offsets">Send reminders (offset from End; optional)</label>
+            <label for="mock-reminder-offsets"{% if not scheduled_send %} class="muted"{% endif %}>Send reminders (offset from End; optional)</label>
             {# Display mode: each offset pill + its resolved send datetime. #}
             <div data-display-only>
               {% if reminder_offset_rows %}
@@ -381,7 +381,7 @@
             {# 14E rung 0: auto-send off until mail can go on a clock. The
                values stay stored and shown; nothing fires them. #}
             {% if not scheduled_send %}
-              <p class="muted" id="scheduled-send-off" data-scheduled-send-off>Scheduled email is not available on this deployment.</p>
+              <p class="muted" id="scheduled-send-off" data-scheduled-send-off>Scheduled email under development.</p>
             {% endif %}
           </div>
           <div>

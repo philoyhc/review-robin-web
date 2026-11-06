@@ -371,8 +371,8 @@ plain `<label>` above its value:
   shows as a pill next to its **resolved send datetime**
   (`views.build_offset_display_rows`). **With scheduled email off**
   (`RRW_SCHEDULED_SEND`, the default; `spec/settings_inventory.md`) the
-  two offset boxes render disabled under the line "Scheduled email is
-  not available on this deployment.", the pills show without a send
+  two offset boxes render disabled, their labels muted, under the line
+  "Scheduled email under development.", the pills show without a send
   time, and a Save keeps the stored offsets as they are, unchecked. Resolved fire-moments read
   inline beside their offset; there is no separate
   Schedule-timeline card. Each box is seeded with its stored value in
