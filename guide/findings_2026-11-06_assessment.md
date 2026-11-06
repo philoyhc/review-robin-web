@@ -133,7 +133,7 @@ None.
   `?timestamps=1`, no `LastOpened` / `LastSaved` / `LastSubmitted`, and it
   says every chip is default-selected (Timestamps is off). Spec, at 14F's
   close.
-- **D6 — `spec/visibility_policy.md` disagrees with itself.** §2.2 (:84)
+- ~~**D6 — `spec/visibility_policy.md` disagrees with itself.**~~ **Done 2026-11-06**: §2.2 says ongoing, as §3 and the code do. Was: §2.2 (:84)
   says a reviewer reads back their answers "always while the session is
   `ready`"; §3 (:101, rewritten by 14E) and the code
   (`visibility_policies.reviewer_sees_own_responses`, :432) say
@@ -150,14 +150,14 @@ None.
   78-87). `SmtpEmailTransport._build_message` (`email_send.py:181-199`)
   ignores `reply_to`, unflagged (only `save_to_sent_items` is). Spec, with
   D1.
-- **D9 — Two layout modifiers are undocumented.** `spec/ui_elements.md`
+- ~~**D9 — Two layout modifiers are undocumented.**~~ **Done 2026-11-06**: `spec/ui_elements.md` §10 and `spec/extract_data.md` name both. Was: `spec/ui_elements.md`
   §10 (:930) defines `.bottom-grid` as start-aligned, natural height; the
   Invitations pair uses `.bottom-grid.is-equal-height` and Extract data's
   top grid `.extract-data-grid.is-row-aligned` (`base.html`, #3655,
   #3657). Spec.
-- **D10 — `CONTRIBUTING.md` (15-16, 65) omits `ruff format --check .`**,
+- ~~**D10 — `CONTRIBUTING.md` (15-16, 65) omits `ruff format --check .`**~~ **Done 2026-11-06.** Was:,
   which 22H made a CI gate (`ci.yml:91,167`) and `CLAUDE.md` lists. Spec.
-- **D11 — `spec/rrw_functional_spec.md` keeps pre-14E wording:** "before
+- ~~**D11 — `spec/rrw_functional_spec.md` keeps pre-14E wording:**~~ **Done 2026-11-06**: the review's end, §8.2's End, and the offsets as prompts while scheduled email is off; `README.md`'s Email send section with it. Was: "before
   its deadline" (:246, :708) where 14E means the review's end; §8.2
   (851-853) names an auto-archive offset with no consumer and "the lazy
   deadline-closure observer" (now the clock plus requests). Spec.

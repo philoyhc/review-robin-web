@@ -12,8 +12,9 @@ Thanks for contributing to Review Robin Web.
 
 ## Pull request checklist
 
-- [ ] Tests, lint and the type check pass locally (`pytest -n auto`,
-      `ruff check .`, `pyright` with the venv active).
+- [ ] Tests, lint, formatting and the type check pass locally
+      (`pytest -n auto`, `ruff check .`, `ruff format --check .`,
+      `pyright` with the venv active).
 - [ ] New behavior has tests.
 - [ ] Documentation is updated if needed.
 - [ ] No unrelated refactoring is included.
@@ -62,7 +63,7 @@ else, and every push to `main`, runs both in full.
 
 **Merging ahead of it is fine** for changes that cannot reach the
 database: documentation, and dev-only tooling under `tools/`. The faster
-`CI` job (`ruff check .` and `pyright` plus the SQLite suite, or the `residential`
+`CI` job (`ruff check .`, `ruff format --check .` and `pyright` plus the SQLite suite, or the `residential`
 job for a Residential-only change) still applies to anything containing
 executable code, and it takes about three minutes (2026-10-03).
 

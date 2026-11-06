@@ -243,7 +243,8 @@ form. Reviewers can:
 - **Continue editing** previously-submitted responses while the
   session remains open — submission is a status marker, not a
   lock — and **Recall** a submission back to draft while the
-  review is still open (activated and before its deadline).
+  review is still open (activated and before the review's end: End,
+  or with no End, Release responses from).
 - **Clear all** their responses with explicit confirmation (a
   per-reviewer destructive action).
 - **Download** a CSV of their own response history, and view a
@@ -705,7 +706,7 @@ session** card archive from `draft`, `validated` or `expired`, never
 `ready` ([§16.5](#165-operator-triggered-purge-and-archive)); Unarchive
 returns the session to `draft`. The release-responses window opens only
 while the session is `expired` ([§8.3](#83-schedule-fields)). The
-reviewer surface takes writes only in `ready`, before the deadline
+reviewer surface takes writes only in `ready`, before the review's end
 ([§10.2](#102-pre-open-and-post-close-behaviour)).
 
 `spec/lifecycle.md` §1 and §2 own each transition, its guard and its
@@ -848,9 +849,11 @@ settings.
 
 ### 8.2 Time fields
 
-- **Deadline** — wall-clock datetime in the session's display
-  timezone. Used by validation, by the auto-archive offset, and
-  by the lazy deadline-closure observer.
+- **Deadline** (End) — wall-clock datetime in the session's display
+  timezone, and the review's end: past it the session closes
+  (`ready → expired`), on the in-app clock's next pass or the next
+  request, whichever comes first (`spec/lifecycle.md` §4). It must be
+  after Start. With no End, Release responses from is the review's end.
 - **Display timezone** — IANA timezone identifier. Resolution
   order at every render is: session zone → creating operator's
   default zone → UTC. Captured as a snapshot of the creating
@@ -870,9 +873,12 @@ archive / retention are deferred):
   moment at which a `validated` session auto-promotes to `ready`.
 - **Invite offsets** — a list of ISO 8601 durations (e.g.,
   `-P1D`, `-PT2H`) anchored on the scheduled activation. Each
-  offset triggers one auto-send of invitations.
+  offset triggers one auto-send of invitations while scheduled email
+  is on; off (`RRW_SCHEDULED_SEND`, the shipped default), it times a
+  due prompt on the Workflow card instead (§11.4).
 - **Reminder offsets** — a list of ISO 8601 durations anchored
-  on the deadline. Each triggers one auto-send of reminders.
+  on the deadline, likewise one auto-send of reminders, or a due
+  prompt while scheduled email is off.
 - **Release-responses window** (Release-from / Release-until) — the
   absolute datetime window during which reviewee and observer
   "responses released" visibility grants open.

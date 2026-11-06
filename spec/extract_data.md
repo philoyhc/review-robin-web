@@ -91,8 +91,9 @@ Four regions, top to bottom:
 
 1. **Workflow card** — standard Operations-page chrome.
 2. **Two-column grid of half-width cards**, in the
-   `.extract-data-grid` layout (`align-items: end` so
-   neighbouring cards bottom-align across columns):
+   `.extract-data-grid.is-row-aligned` layout: the four cards sit in two
+   rows, each pair one height, with each card's Download at its foot
+   (author, 2026-11-06). Below 600px it is one column in source order:
    - **Left column (metadata lenses)** — `Reviewer response
      metadata` card on top, `Reviewee response metadata` card
      below.
