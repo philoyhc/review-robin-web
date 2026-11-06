@@ -105,13 +105,13 @@
             {% if row.field == "body" %}
               <textarea id="field-{{ row.field }}" name="{{ row.field }}"
                         rows="8"
-                        placeholder="{{ row.default }}"
+                        placeholder="{{ row.default }}" data-adopt-default
                         {% if locked %}disabled{% endif %}>{{ row.shown }}</textarea>
             {% else %}
               <input type="text" id="field-{{ row.field }}" name="{{ row.field }}"
                      value="{{ row.shown }}"
                      placeholder="{{ row.default }}"
-                     {% if row.field == "subject" %}maxlength="255"{% endif %}
+                     {% if row.field == "subject" %}maxlength="255" data-adopt-default{% endif %}
                      {% if locked %}disabled{% endif %}>
             {% endif %}
           </div>
@@ -235,6 +235,22 @@
             : "Don't send response confirmation";
         });
       }
+      // 14C Item 3 — the default as a draft to adopt. In an empty subject
+      // or body, Right arrow fills the box with its default (the
+      // placeholder) as ordinary text to edit, caret at the start. A
+      // blank box still means "use the default"; nothing changes until
+      // the key is pressed, and the input event marks the form unsaved.
+      form.querySelectorAll("[data-adopt-default]").forEach(function (field) {
+        field.addEventListener("keydown", function (event) {
+          if (event.key !== "ArrowRight" || event.shiftKey || event.altKey ||
+              event.ctrlKey || event.metaKey) return;
+          if (field.value !== "" || !field.placeholder) return;
+          event.preventDefault();
+          field.value = field.placeholder;
+          field.setSelectionRange(0, 0);
+          field.dispatchEvent(new Event("input", { bubbles: true }));
+        });
+      });
     })();
   </script>
 {% endblock %}

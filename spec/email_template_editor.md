@@ -92,7 +92,14 @@ individually to each reviewer)" — and four fields in fixed order:
 Each field renders **empty unless overridden**, with the in-code
 default as its `placeholder` (shown in grey); a field with an override
 renders the override as its value, and its label (`Subject` / `Body` /
-`Cc` / `Bcc`) adds a muted "— overridden". When
+`Cc` / `Bcc`) adds a muted "— overridden". **The default is a draft to
+adopt**: in an empty `subject` or `body`,
+**→** (Right arrow, no modifier) fills the box with its default as
+ordinary text to edit, the caret left at the start, and the form reads
+unsaved; the page shows no hint. Tab does not adopt, `cc` and `bcc` have
+no default to adopt, and a box left blank still means "use the
+default": nothing is stored until the operator saves, and saving the
+adopted text stores it as an override. When
 (and only when) a field has an override, a **Reset *field* to default**
 control renders beside it: a `.btn-reset` link-styled button that
 submits a *separate* one-field form (`…/setup-invite/reset`, hidden
