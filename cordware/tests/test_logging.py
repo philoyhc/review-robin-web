@@ -292,3 +292,23 @@ def test_an_applications_own_error_is_left_to_it(
     client = TestClient(create_app(apps=("boom",), registry=BOOM), raise_server_exceptions=False)
     assert client.get("/boom/boom").status_code == 500
     assert not [e for e in _lines(captured) if e.get("event") == "host.error"]
+
+
+def test_a_host_root_path_does_not_hide_the_mounts(
+    capture: Callable[[], io.StringIO],
+) -> None:
+    """Codex on #3690: under an ASGI `root_path` the request path carries
+    the outer prefix and the mount paths do not, so the comparison is made
+    below the host's own root."""
+    captured = capture()
+    client = TestClient(
+        create_app(apps=("boom",), registry=BOOM), root_path="/edge", raise_server_exceptions=False
+    )
+    assert client.get("/edge/boom/boom").status_code == 500
+    assert client.get("/edge/boom/missing").status_code == 404
+    events = [e.get("event") for e in _lines(captured)]
+    assert "host.error" not in events
+    assert "host.unrouted" not in events
+    assert client.get("/edge/elsewhere").status_code == 404
+    (line,) = [e for e in _lines(captured) if e.get("event") == "host.unrouted"]
+    assert str(line["path"]).endswith("/elsewhere")

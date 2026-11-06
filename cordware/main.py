@@ -268,6 +268,15 @@ def _under(path: str, prefixes: Sequence[str]) -> bool:
     return any(path == prefix or path.startswith(prefix.rstrip("/") + "/") for prefix in prefixes)
 
 
+def _host_path(request: Request) -> str:
+    """The request's path below the host's own root path, the coordinate
+    the mount paths are in. A mount rewrites ``root_path`` in place; the
+    host's original survives as ``app_root_path`` (Codex on #3690)."""
+    base = request.scope.get("app_root_path", request.scope.get("root_path", "")) or ""
+    path = request.url.path
+    return path[len(base) :] or "/" if base and path.startswith(base) else path
+
+
 def add_host_error_logging(host: FastAPI, mount_paths: Sequence[str]) -> None:
     """Log what no mounted application can see (v0.8 §3, "Host
     logging", events 4 and 5).
@@ -287,7 +296,7 @@ def add_host_error_logging(host: FastAPI, mount_paths: Sequence[str]) -> None:
 
     async def unrouted(request: Request, exc: Exception) -> Response:
         assert isinstance(exc, HTTPException)
-        if exc.status_code == 404 and not _under(request.url.path, mount_paths):
+        if exc.status_code == 404 and not _under(_host_path(request), mount_paths):
             log.warning(
                 "no application handled the request",
                 extra={
@@ -299,7 +308,7 @@ def add_host_error_logging(host: FastAPI, mount_paths: Sequence[str]) -> None:
         return await http_exception_handler(request, exc)
 
     async def error(request: Request, exc: Exception) -> Response:
-        if not _under(request.url.path, mount_paths):
+        if not _under(_host_path(request), mount_paths):
             log.error(
                 "error outside any application",
                 exc_info=exc,
