@@ -111,22 +111,22 @@ def test_the_safety_concern_asks_only_for_what_is_not_chosen(client: TestClient)
     assert all(
         f'name="{n}" class="input" required' in empty for n in ("student", "duration", "type")
     )
-    full = client.get("/log/safety?student=S-02&duration=10%20min&type=Check-in").text
-    for name, value in (("student", "S-02"), ("duration", "10 min"), ("type", "Check-in")):
+    full = client.get("/log/safety?student=S-02&duration=15%20min&type=Check-in").text
+    for name, value in (("student", "S-02"), ("duration", "15 min"), ("type", "Check-in")):
         assert f'<input type="hidden" name="{name}" value="{value}">' in full
     assert 'class="input" required' not in full
-    assert 'href="/log?student=S-02&amp;duration=10%20min&amp;type=Check-in">‹ Back</a>' in full
-    assert re.search(r"<dt>Duration</dt><dd>10 min</dd>\s*<dt>Type</dt><dd>Check-in</dd>", full)
-    back = client.get("/log?student=S-02&duration=10%20min&type=Check-in").text
+    assert 'href="/log?student=S-02&amp;duration=15%20min&amp;type=Check-in">‹ Back</a>' in full
+    assert re.search(r"<dt>Duration</dt><dd>15 min</dd>\s*<dt>Type</dt><dd>Check-in</dd>", full)
+    back = client.get("/log?student=S-02&duration=15%20min&type=Check-in").text
     assert (
-        'name="duration" value="10 min" checked' in back
+        'name="duration" value="15 min" checked' in back
         and 'name="type" value="Check-in" checked' in back
     )
 
 
 def test_raising_confirms_or_goes_back_with_what_was_chosen(client: TestClient) -> None:
     raised = client.get(
-        "/log/safety/raised?student=S-02&duration=10%20min&type=Check-in&step=Duty%20senior%20staff%20contacted&at=2026-10-29T13:50"
+        "/log/safety/raised?student=S-02&duration=15%20min&type=Check-in&step=Duty%20senior%20staff%20contacted&at=2026-10-29T13:50"
     ).text
     assert "A safety flag is raised for Bao Nguyen" in raised and "No alert is sent" in raised
     assert (
@@ -219,7 +219,7 @@ def test_mounted_safety_pages_stay_under_the_mount() -> None:
         "/flags/F-01",
         "/?as=Farah%20Aziz",
         "/overview/?as=Sam%20Lee",
-        "/log/safety/raised?student=S-02&duration=10%20min&type=Check-in&step=Duty%20senior%20staff%20contacted",
+        "/log/safety/raised?student=S-02&duration=15%20min&type=Check-in&step=Duty%20senior%20staff%20contacted",
     ):
         page = mounted.get("/supportlogs" + path)
         assert page.status_code == 200, path

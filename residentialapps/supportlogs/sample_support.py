@@ -107,26 +107,17 @@ def what(v: Viewer) -> str:
 TODAY = date(2026, 10, 29)  # a Thursday
 NOW = datetime(2026, 10, 29, 14, 0)
 
-DURATIONS = ("5 min", "10 min", "15 min", "30 min", "45 min", "60 min", "60+ min")
-MINUTES = {
-    "5 min": 5,
-    "10 min": 10,
-    "15 min": 15,
-    "30 min": 30,
-    "45 min": 45,
-    "60 min": 60,
-    "60+ min": 60,
-}
+# Three durations (author, 2026-11-06, `residentialapps/guide/1D_refinements.md`).
+DURATIONS = ("15 min", "30 min", "60+ min")
+MINUTES = {"15 min": 15, "30 min": 30, "60+ min": 60}
+# The two "…-initiated conversation" types went (author, 2026-11-06): Who
+# started it? is asked of every type.
 ENCOUNTER_TYPES = (
     "Check-in",
-    "Student-initiated conversation",
-    "Staff-initiated conversation",
     "Welfare follow-up",
     "Practical support",
     "Other",
 )
-# Types that already say who started the encounter (UI spec §3, screen 3).
-SAYS_WHO = {"Student-initiated conversation", "Staff-initiated conversation"}
 CONCERN_AREAS = (
     ("Academic / career", "academic concerns, career, internships"),
     ("Adjustment", "transition, settling in, homesickness"),
@@ -223,7 +214,7 @@ ENCOUNTERS = (
         "S-01",
         "Daniel Koh",
         datetime(2026, 10, 15, 21, 0),
-        "10 min",
+        "15 min",
         "Check-in",
         ("Adjustment",),
         "Yes",
@@ -269,7 +260,7 @@ ENCOUNTERS = (
         "S-02",
         "Daniel Koh",
         datetime(2026, 10, 24, 20, 0),
-        "10 min",
+        "15 min",
         "Practical support",
         ("Financial / practical",),
         "No",
@@ -282,7 +273,7 @@ ENCOUNTERS = (
         "Daniel Koh",
         datetime(2026, 10, 26, 19, 0),
         "30 min",
-        "Student-initiated conversation",
+        "Check-in",
         ("Relationships",),
         "Yes",
         "In person",
@@ -292,8 +283,8 @@ ENCOUNTERS = (
         "S-06",
         "Daniel Koh",
         datetime(2026, 10, 27, 13, 0),
-        "5 min",
-        "Staff-initiated conversation",
+        "15 min",
+        "Check-in",
         ("Residential / community",),
         "No",
         "In person",
@@ -315,7 +306,7 @@ ENCOUNTERS = (
         "S-09",
         "Priya Raman",
         datetime(2026, 10, 25, 11, 0),
-        "10 min",
+        "15 min",
         "Practical support",
         ("Residential / community",),
         "No",
@@ -328,7 +319,7 @@ ENCOUNTERS = (
         "Priya Raman",
         datetime(2026, 10, 28, 20, 0),
         "30 min",
-        "Student-initiated conversation",
+        "Check-in",
         ("Academic / career",),
         "",
         "In person",
@@ -362,7 +353,7 @@ ENCOUNTERS = (
         "Mei Ling Tan",
         datetime(2026, 10, 28, 21, 0),
         "30 min",
-        "Student-initiated conversation",
+        "Check-in",
         ("Wellbeing",),
         "Yes",
         "In person",
@@ -372,7 +363,7 @@ ENCOUNTERS = (
         "S-08",
         "Arjun Nair",
         datetime(2026, 10, 21, 12, 0),
-        "10 min",
+        "15 min",
         "Practical support",
         ("Residential / community",),
         "No",
@@ -496,6 +487,24 @@ def attention(staff: str) -> list[Plan]:
     order = {"overdue": 0, "today": 1, "week": 2}
     found = [p for p in plans_of(staff) if due(p)[0] in order]
     return sorted(found, key=lambda p: (order[due(p)[0]], next_due(p)))
+
+
+# Each frontline viewer's favorites, in the order favorited (author,
+# 2026-11-06): marked on Students, they are Log's quick picks. Daniel Koh's
+# second is S-08, whose records Priya Raman shared with him.
+FAVORITES = {
+    "Daniel Koh": ("S-03", "S-08"),
+    "Priya Raman": ("S-08", "S-10"),
+}
+
+
+def favorites(staff: str) -> list[Student]:
+    """A staff member's favorite students, in the order favorited."""
+    return [_named(sid) for sid in FAVORITES.get(staff, ())]
+
+
+def is_favorite(staff: str, sid: str) -> bool:
+    return sid in FAVORITES.get(staff, ())
 
 
 def working_set(staff: str) -> list[tuple[Student, list[str], date | None]]:

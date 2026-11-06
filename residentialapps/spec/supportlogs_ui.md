@@ -26,6 +26,12 @@ under `data-app="supportlogs"`.
 - **Overview and the Consultation check are responsive**: their tables
   scroll sideways in `.table-wrap` on a phone. **Sys admin is
   desktop-oriented**.
+- **Log's students are the viewer's favorites** (author, 2026-11-06),
+  marked with a star on Students, in the order favorited, with a hint to
+  mark more there and "Or find a student" for the rest. Home has no Log
+  encounter button: Log in the tabs reaches it. Durations are 15, 30 and
+  60+ min; the types Check-in, Welfare follow-up, Practical support and
+  Other (`residentialapps/guide/1D_refinements.md`).
 - **The routine path is one screen**: student, duration, type, Save,
   about 10–20 seconds (§5.1). The optional details fold on the same page;
   there is no second screen (author, 2026-10-29).
@@ -104,8 +110,8 @@ form's end, and the main action is a full-width Primary on the page
   scope.
 - Every control meets `residentialops_ui.md` §4: 44 px under a finger,
   and `disabled` until wired. A field that does not apply is hidden, not
-  disabled: Log encounter's "Who started it?" when the type already says,
-  and the follow-up fields until they are asked for.
+  disabled: the follow-up fields until they are asked for. "Who started
+  it?" is asked of every type (author, 2026-11-06: no type says who).
 - **The forms that show their confirmation are live on sample data**:
   Log encounter's Save, Safety concern's Save and raise, Share, Flag for
   formal assignment and the Consultation check's Check. Each submits to its

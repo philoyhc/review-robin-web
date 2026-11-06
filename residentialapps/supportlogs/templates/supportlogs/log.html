@@ -26,12 +26,14 @@
           <div class="subtle">{{ chosen.email }}</div>
         </div>
       {% else %}
+        {# Your favorites, marked on Students (author, 2026-11-06). #}
         <div class="choice-row">
-          {% for s, reasons, seen in sample.working_set(me.name)[:6] %}
+          {% for s in sample.favorites(me.name) %}
             {% set sp = sample.plans_of(me.name, s.id) %}
             <label class="choice"><input type="radio" name="student" value="{{ s.id }}"{{ plan_data(sp[0] if sp else none) }}>{{ s.name }}</label>
           {% endfor %}
         </div>
+        <span class="subtle small" data-favorites-hint>Mark favorites on <a href="{{ url('/students/') }}{{ as_query }}">Students</a> to pick them here.</span>
         <div class="field-wide gap-above-sm"><label for="find">Or find a student</label>
           <input id="find" class="input" type="search" placeholder="Name or email" disabled></div>
       {% endif %}
@@ -45,7 +47,7 @@
 
     <fieldset class="choices">
       <legend>Type</legend>
-      <div class="choice-row two">{% for t in sample.ENCOUNTER_TYPES %}<label class="choice"><input type="radio" name="type" value="{{ t }}"{% if t in sample.SAYS_WHO %} data-says-who{% endif %}{% if t == kind %} checked{% endif %}>{{ t }}</label>{% endfor %}</div>
+      <div class="choice-row two">{% for t in sample.ENCOUNTER_TYPES %}<label class="choice"><input type="radio" name="type" value="{{ t }}"{% if t == kind %} checked{% endif %}>{{ t }}</label>{% endfor %}</div>
     </fieldset>
 
     <details class="more gap-above-sm">
@@ -118,12 +120,6 @@
       }
       function sync() {
         save.disabled = !(chosen("student") && chosen("duration") && chosen("type"));
-        var kind = form.querySelector('input[name="type"]:checked');
-        who.hidden = !!(kind && kind.hasAttribute("data-says-who"));
-        if (who.hidden) {
-          // The type says who started it: a choice made before must not travel.
-          Array.prototype.forEach.call(who.querySelectorAll("input"), function (input) { input.checked = false; });
-        }
         document.getElementById("note-count").textContent = note.value.length + " / " + note.maxLength;
       }
       Array.prototype.forEach.call(form.querySelectorAll("[data-clear]"), function (button) {

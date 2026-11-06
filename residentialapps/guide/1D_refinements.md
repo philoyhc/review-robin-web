@@ -90,4 +90,9 @@ and four types.
   The Viewing as chip reads an off-card viewer's line from their grants.
   One read: the empty past checks, F-04, three tests looping over the card
   only, a stale count, this note and the chip, all fixed.
-Next: rung 12.
+- **Rung 12:** as planned. Daniel Koh's favorites are Clara Tan (S-03,
+  his plan) and Hana Rahim (S-08, shared by Priya Raman); Priya Raman's are
+  S-08 and S-10. The star is the column chip's pressed style, disabled
+  until wired. Remapped sample encounters move the frontline's support
+  time and workload minutes (Daniel Koh: 105 → 120 in 14 days, 145 → 165
+  in the term).

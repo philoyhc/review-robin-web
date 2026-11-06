@@ -68,6 +68,12 @@ colleague's name)?*
 *Task: "You just had a 10-minute check-in with Clara Tan in the corridor.
 Log it."*
 
+- [ ] **Home** has no Log encounter button; **Log** in the tabs opens it.
+- [ ] **Log**'s students are your two favorites, Clara Tan and Hana Rahim
+  (shared by Priya Raman), with "Mark favorites on Students to pick them
+  here." On **Students**, their stars are filled; the others' are empty.
+- [ ] **Durations** are 15, 30 and 60+ min; **types** Check-in, Welfare
+  follow-up, Practical support and Other.
 - [ ] **Log** is one screen: student, duration and type as choice pills.
   A chosen pill shows a ✓ and bold text, not only a color. *Ruling R1:
   pills as styled radios and checkboxes.*
@@ -89,8 +95,7 @@ and say you will follow up weekly."*
 - [ ] **Add details** unfolds on the same page: Concern areas (several
   allowed), Follow-up needed, How, Who started it, the note.
 - [ ] Follow-up needed, How and Who started it each have **Clear**. **Who
-  started it?** hides when the type already says who (Student- or
-  Staff-initiated conversation).
+  started it?** shows whatever the type.
 - [ ] For Clara, who is on his plans, the follow-up fields show her
   current cadence.
 - [ ] The note counts down to 300 characters and stops there, with the

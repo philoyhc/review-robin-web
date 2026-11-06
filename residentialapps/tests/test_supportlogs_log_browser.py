@@ -16,6 +16,7 @@ import pytest
 from fastapi.testclient import TestClient
 from playwright.sync_api import Error, Page, Route, sync_playwright
 
+from residentialapps.supportlogs import sample_support as sample
 from residentialapps.supportlogs.main import create_app
 
 ORIGIN = "http://supportlogs.test"
@@ -60,8 +61,8 @@ def test_save_waits_for_student_duration_and_type(page: Page) -> None:
     page.goto(f"{ORIGIN}/log")
     save = page.locator("#save")
     assert save.is_disabled()
-    choose(page, "Student", "Bao Nguyen")
-    choose(page, "Duration", "10 min")
+    choose(page, "Student", "Hana Rahim")  # a favorite, shared by Priya Raman
+    choose(page, "Duration", "15 min")
     assert save.is_disabled()
     choose(page, "Type", "Practical support")
     assert save.is_enabled()
@@ -69,25 +70,26 @@ def test_save_waits_for_student_duration_and_type(page: Page) -> None:
     page.wait_for_url("**/log/saved?**")
     sent = parse_qs(urlparse(page.url).query)
     assert (
-        sent["student"] == ["S-02"]
-        and sent["duration"] == ["10 min"]
+        sent["student"] == ["S-08"]
+        and sent["duration"] == ["15 min"]
         and sent["type"] == ["Practical support"]
     )
     assert "note" not in sent
 
 
-def test_who_started_it_hides_and_drops_its_choice(page: Page) -> None:
+def test_who_started_it_is_asked_of_every_type(page: Page) -> None:
+    """Author, 2026-11-06: no type says who started it any longer, so the
+    question shows whatever the type, and its answer travels."""
     page.goto(f"{ORIGIN}/log?student=S-02")
     page.locator("details.more > summary", has_text="Add details").click()
-    choose(page, "Duration", "5 min")
-    choose(page, "Type", "Check-in")
+    choose(page, "Duration", "15 min")
+    for kind in sample.ENCOUNTER_TYPES:
+        choose(page, "Type", kind)
+        assert page.locator("#who").is_visible(), kind
     choose(page, "Who started it?", "Staff")
-    assert page.locator("#who").is_visible()
-    choose(page, "Type", "Student-initiated conversation")
-    assert page.locator("#who").is_hidden()
     page.locator("#save").click()
     page.wait_for_url("**/log/saved?**")
-    assert "started" not in parse_qs(urlparse(page.url).query)
+    assert parse_qs(urlparse(page.url).query)["started"] == ["Staff"]
 
 
 def test_clear_and_the_note_count(page: Page) -> None:
@@ -113,14 +115,10 @@ def test_the_follow_ups_follow_the_student_chosen(page: Page) -> None:
     page.goto(f"{ORIGIN}/log")
     page.locator("details.more > summary", has_text="Add details").click()
     assert page.locator("#add-follow").is_visible() and page.locator("#on-plan").is_hidden()
-    choose(page, "Student", "Aiden Chen")
-    assert page.locator("#on-plan").text_content() == "On your follow-ups: weekly."
-    assert page.locator("#add-follow").is_hidden()
-    assert page.locator("#cadence").input_value() == "Weekly"
     choose(page, "Student", "Clara Tan")
     assert page.locator("#on-plan").text_content() == "On your plans: weekly, set by Sam Lee."
     assert page.locator("#cadence-field").is_hidden()
-    choose(page, "Student", "Bao Nguyen")
+    choose(page, "Student", "Hana Rahim")  # Priya Raman's student: no plan of Daniel's
     assert page.locator("#on-plan").is_hidden() and page.locator("#add-follow").is_visible()
     assert (
         page.locator("#cadence-field").is_visible()
@@ -130,8 +128,8 @@ def test_the_follow_ups_follow_the_student_chosen(page: Page) -> None:
 
 def test_marking_a_safety_concern_carries_the_choices(page: Page) -> None:
     page.goto(f"{ORIGIN}/log")
-    choose(page, "Student", "Bao Nguyen")
-    choose(page, "Duration", "10 min")
+    choose(page, "Student", "Hana Rahim")
+    choose(page, "Duration", "15 min")
     page.get_by_role("button", name="Mark a safety concern").click()
     page.wait_for_url("**/log/safety?**")
     raise_ = page.locator("#raise")
@@ -142,7 +140,7 @@ def test_marking_a_safety_concern_carries_the_choices(page: Page) -> None:
     assert raise_.is_enabled()
     raise_.click()
     page.wait_for_url("**/log/safety/raised?**")
-    assert "A safety flag is raised for Bao Nguyen" in page.content()
+    assert "A safety flag is raised for Hana Rahim" in page.content()
 
 
 OPEN = "records=open&understood=yes"

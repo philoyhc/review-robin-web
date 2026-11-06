@@ -8,7 +8,7 @@
   {# The personal dashboard (UI spec screen 1; functional spec §10.1), in
      its order. #}
   {{ flags_card(me, closed=sample.holds(me, sample.RECIPIENT)) }}
-  <a class="btn btn-primary btn-wide gap-below" href="{{ url('/log') }}{{ as_query }}">Log encounter</a>
+  {# No Log encounter button: Log in the tabs reaches it (author, 2026-11-06). #}
   {% set urgent = sample.attention(me.name) %}
   {% set mine = sample.plans_of(me.name) %}
   <div class="split gap-above">
