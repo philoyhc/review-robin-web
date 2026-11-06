@@ -54,12 +54,14 @@ jobs:
         shard:
           - name: unit
             pytest_args: "tests cordware/tests residentialapps/tests utilityapps/tests --ignore=tests/integration --ignore=tests/browser"
-          # tests/integration cut on first letter by measured time (22I
-          # Item 1 rung 2); the unquoted $PYTEST_ARGS expands the globs.
+          # tests/integration cut in two by measured time (22I Item 1
+          # rung 2; moved inside the r files, findings N8, when the
+          # second ran 1.8 times the first); the unquoted $PYTEST_ARGS
+          # expands the globs.
           - name: integration-a
-            pytest_args: "tests/integration/test_[a-q]*.py"
+            pytest_args: "tests/integration/test_[a-q]*.py tests/integration/test_ra*.py tests/integration/test_re[a-u]*.py"
           - name: integration-b
-            pytest_args: "tests/integration/test_[r-z]*.py"
+            pytest_args: "tests/integration/test_re[v-z]*.py tests/integration/test_r[f-z]*.py tests/integration/test_[s-z]*.py"
     name: postgres (${{ matrix.shard.name }})
 
     services:
