@@ -247,7 +247,12 @@ Until this item ships, operators share 14F's session link instead.
 
 1. **Measure:** per-send time and the mailbox rate on Azure, through the
    per-row Send.
-2. **The paced loop** behind `RRW_BULK_SEND`, by (a) or (b).
+2. **The paced loop** behind `RRW_BULK_SEND`, by (a) or (b). Since
+   findings L2 (2026-11-06) `email_dispatch.bulk_send_enabled()` returns
+   False whatever the flag, so this rung makes it read the flag again,
+   and restores route-level tests of Send all and Remind incomplete (their
+   redirect and mount-aware invite URLs), which went untested while the
+   routes refused.
 3. **Switch on:** the four buttons live; `docs/deployment.md` says when.
 4. **Close.**
 

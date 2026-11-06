@@ -109,7 +109,7 @@ delegated Microsoft Graph (`/me/sendMail`), with the operator's Email
 settings (a copy in Sent Items, a Bcc to themselves, replies to the
 session's Help contact). Each outbox row is claimed before it is sent and
 stamped `sent` or `failed`. Bulk sends (Send invites, Send reminders) wait
-behind `RRW_BULK_SEND`, off by default, with the **Share the session
+for segment 14G, whatever `RRW_BULK_SEND` says, with the **Share the session
 link** card on Invitations in their place; nothing is sent on a clock
 while `RRW_SCHEDULED_SEND` is off, and the invite and reminder offsets
 time due prompts on the Workflow card instead. `spec/email_infra_options.md`

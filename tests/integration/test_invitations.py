@@ -25,7 +25,7 @@ from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
-from ._invitation_states import _create_session, _populate
+from ._invitation_states import _create_session, _populate, bulk_remind_incomplete, bulk_send_all
 from ._lookups import must_search
 from ._public_id import public_id
 from ._validated import validate_session
@@ -181,14 +181,12 @@ def _validated_session(
 
 
 def test_send_all_works_from_validated_session(client: TestClient, db: Session) -> None:
-    """18F Part 2 — Send invites is live from Validated too, so an
-    operator can notify reviewers ahead of activation."""
+    """18F Part 2 — the bulk Send is live from Validated too, so an
+    operator can notify reviewers ahead of activation. The service, not
+    the route: the route refuses until 14G (findings L2)."""
     session = _validated_session(client, db, "val-send")
-    response = client.post(
-        f"/operator/sessions/{session.public_id}/invitations/send-all",
-        follow_redirects=False,
-    )
-    assert response.status_code == 303, response.text
+    assert session.status == "validated"
+    assert bulk_send_all(db, session) == 1
 
 
 def test_reviewer_pre_open_page_renders_for_validated_session(
@@ -249,11 +247,8 @@ def test_send_records_the_invitation_and_queues_its_outbox_row(
 def test_send_all_writes_one_outbox_per_pending(client: TestClient, db: Session) -> None:
     session = _ready_session(client, db, code="sendall-1")
 
-    response = client.post(
-        f"/operator/sessions/{session.public_id}/invitations/send-all",
-        follow_redirects=False,
-    )
-    assert response.status_code == 303
+    # The service: the bulk route refuses until 14G (findings L2).
+    assert bulk_send_all(db, session) == 1
     outbox_count = len(
         db.execute(select(EmailOutbox).where(EmailOutbox.session_id == session.id)).scalars().all()
     )
@@ -1498,20 +1493,20 @@ def test_per_row_remind_refuses_an_inactive_reviewer(client: TestClient, db: Ses
     assert invitation.last_reminder_at is None
 
 
-def test_invitations_remind_incomplete_bulk_endpoint(client: TestClient, db: Session) -> None:
+def test_remind_incomplete_refuses_and_its_service_reminds(client: TestClient, db: Session) -> None:
     session = _ready_session(client, db, code="bulk-remind")
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
     client.post(f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send")
+    # The bulk route refuses until 14G (findings L2); its service still
+    # reminds the incomplete, for 14G to dispatch.
     response = client.post(
         f"/operator/sessions/{session.public_id}/invitations/remind-incomplete",
         follow_redirects=False,
     )
-    assert response.status_code == 303
-    assert response.headers["location"].endswith(
-        f"/operator/sessions/{session.public_id}/invitations"
-    )
+    assert response.status_code == 409
+    assert bulk_remind_incomplete(db, session).sent_count == 1
     # A reminder outbox row was written.
     reminder_count = len(
         db.execute(
@@ -1529,12 +1524,18 @@ def test_invitations_remind_incomplete_bulk_endpoint(client: TestClient, db: Ses
 def test_invitations_remind_incomplete_409_while_session_draft(
     client: TestClient, db: Session
 ) -> None:
+    """The bulk reminder is ``ready``-only. The route 409s whatever the
+    state until 14G (findings L2), so the state gate is the service's."""
+    from app.services import session_guard
+
     session = _create_session(client, db, "bulk-draft")
     response = client.post(
         f"/operator/sessions/{session.public_id}/invitations/remind-incomplete",
         follow_redirects=False,
     )
     assert response.status_code == 409
+    with pytest.raises(session_guard.SessionStateConflict):
+        bulk_remind_incomplete(db, session)
 
 
 def test_send_invitation_populates_cc_bcc_from_override_json(
@@ -1971,11 +1972,11 @@ def _strand_an_invitation(
     assert stranded.status != "active"
     # `workflow_prepare` answers 303 on a *failed* validation too, so
     # the status code above says nothing about the state we are in.
-    # Without this the send-all tests could be exercising a 409 rather
-    # than a filtered send.
+    # Without this the send-all tests could be exercising a refusal
+    # rather than a filtered send.
     assert session.status in {"validated", "ready"}, (
         f"session is {session.status}; the re-Prepare did not validate, "
-        "so Send all would 409 and these tests would prove nothing"
+        "so Send all would refuse and these tests would prove nothing"
     )
     assert _pending_count(db, session.id) == 2, (
         "the stranded invitation must survive — if lifecycle started "
@@ -2011,11 +2012,8 @@ def test_send_all_skips_a_reviewer_who_is_no_longer_eligible(
     session = _two_reviewer_validated_session(db=db, client=client, code="sa-elig")
     stranded = _strand_an_invitation(client, db, session, "sam@example.edu")
 
-    response = client.post(
-        f"/operator/sessions/{session.public_id}/invitations/send-all",
-        follow_redirects=False,
-    )
-    assert response.status_code == 303, response.text
+    # The service: the bulk route refuses until 14G (findings L2).
+    assert bulk_send_all(db, session) == 1
 
     recipients = {
         row.to_email
@@ -2041,16 +2039,14 @@ def test_send_all_leaves_the_ineligible_invitation_pending(client: TestClient, d
     session = _two_reviewer_validated_session(db=db, client=client, code="sa-keep")
     stranded = _strand_an_invitation(client, db, session, "sam@example.edu")
 
-    response = client.post(
-        f"/operator/sessions/{session.public_id}/invitations/send-all",
-        follow_redirects=False,
-    )
+    # The service: the bulk route refuses until 14G (findings L2).
+    sent = bulk_send_all(db, session)
     # Both assertions below are satisfied by a send that never
-    # happened — a 409 from `_require_validated_or_ready`, a 500, or a
-    # Send all that became a total no-op would all leave the row
-    # `pending` with a null `sent_at`. So prove a send *did* happen
-    # first, and that the eligible reviewer got theirs.
-    assert response.status_code == 303, response.text
+    # happened — a state refusal, an error, or a Send all that became a
+    # total no-op would all leave the row `pending` with a null
+    # `sent_at`. So prove a send *did* happen first, and that the
+    # eligible reviewer got theirs.
+    assert sent == 1
     mailed = {
         row.to_email
         for row in db.execute(
@@ -2124,11 +2120,8 @@ def test_send_all_skips_an_active_reviewer_with_no_included_assignment(
     )
     assert session.status in {"validated", "ready"}
 
-    response = client.post(
-        f"/operator/sessions/{session.public_id}/invitations/send-all",
-        follow_redirects=False,
-    )
-    assert response.status_code == 303, response.text
+    # The service: the bulk route refuses until 14G (findings L2).
+    assert bulk_send_all(db, session) == 1
 
     mailed = {
         row.to_email
@@ -2155,10 +2148,8 @@ def test_pending_counter_counts_what_send_all_can_actually_send(
     session = _two_reviewer_validated_session(db=db, client=client, code="sa-pill")
     _strand_an_invitation(client, db, session, "sam@example.edu")
 
-    client.post(
-        f"/operator/sessions/{session.public_id}/invitations/send-all",
-        follow_redirects=False,
-    )
+    # The service: the bulk route refuses until 14G (findings L2).
+    bulk_send_all(db, session)
 
     rows = invitations_view_rows = inv_service.list_sendable_invitations(db, session.id)
     assert rows == [], "the eligible invitation was sent, so nothing is sendable"

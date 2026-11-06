@@ -384,7 +384,7 @@ The reviewer-surface render lives at the satellite route `/operator/sessions/{id
 
 Operations row tab. **Detailed spec: `spec/operations_pages.md` "Invitations page".** Reviewer-centric working surface — sending invitations, sending reminders, monitoring per-reviewer progress. It is the single reviewer-centric surface; there is no separate Monitoring page.
 
-Pattern: a list-with-bulk-actions table of reviewers, with status filtering, selection, bulk send/remind actions, and per-row drill-in into a reviewer's full engagement history. Gates by action (`spec/lifecycle.md` §3.3–§3.5): per-row and bulk Send and Regenerate require `validated` or `ready`; reminders require `ready`; the bulk actions also answer 409 while `RRW_BULK_SEND` is off, their buttons rendering disabled. Per-row Send and Send reminder send from the operator's own mailbox, in the request that clicked.
+Pattern: a list-with-bulk-actions table of reviewers, with status filtering, selection, bulk send/remind actions, and per-row drill-in into a reviewer's full engagement history. Gates by action (`spec/lifecycle.md` §3.3–§3.5): per-row and bulk Send and Regenerate require `validated` or `ready`; reminders require `ready`; the bulk actions also answer 409 until 14G whatever `RRW_BULK_SEND` says (findings L2), their buttons rendering disabled. Per-row Send and Send reminder send from the operator's own mailbox, in the request that clicked.
 
 ### `/operator/sessions/{id}/responses` — Responses (reviewee-centric)
 

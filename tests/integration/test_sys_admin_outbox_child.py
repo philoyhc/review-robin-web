@@ -120,12 +120,8 @@ def test_outbox_child_page_lists_seeded_rows(
     # docstring says "seed an invitation that populates email_outbox";
     # creating one never did that — `generate_invitations` discards the
     # raw token and writes no email. Only a send writes an
-    # `EmailOutbox` row, which is what this page renders.
-    response = client.post(
-        f"/operator/sessions/{review_session.public_id}/invitations/send-all",
-        follow_redirects=False,
-    )
-    assert response.status_code == 303, response.text
+    # `EmailOutbox` row, which is what this page renders. The per-row
+    # Send: the bulk Send all refuses until 14G (findings L2).
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == review_session.id)
     ).scalar_one_or_none()
@@ -134,6 +130,11 @@ def test_outbox_child_page_lists_seeded_rows(
             "Invitations weren't generated for this fixture combination; "
             "outbox content is exercised by other integration tests."
         )
+    response = client.post(
+        f"/operator/sessions/{review_session.public_id}/invitations/{invitation.id}/send",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
 
     response = client.get(f"/operator/sys-admin/sessions/{review_session.public_id}/outbox")
     assert response.status_code == 200

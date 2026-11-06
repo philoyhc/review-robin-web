@@ -24,7 +24,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession
 
-from ._invitation_states import _create_session, _populate
+from ._invitation_states import _create_session, _populate, bulk_send_all
 
 STATE_4_BODY = "there are no invitations"
 STATE_5_BODY = "Invitations are ready to send"
@@ -108,11 +108,9 @@ def test_without_a_warning_the_same_session_renders_state_5_alone(
 def test_the_overlay_reaches_state_6_too(client: TestClient, db: Session) -> None:
     """`6W`, which the old cascade also said could not exist."""
     session = _prepared_session(client, db, "w-over-6", warning=True)
-    response = client.post(
-        f"/operator/sessions/{session.public_id}/invitations/send-all",
-        follow_redirects=False,
-    )
-    assert response.status_code == 303, response.text
+    # Sent by Send all's service: its route refuses until 14G (findings L2).
+    db.refresh(session)
+    assert bulk_send_all(db, session) == 1
     body = _home(client, session.public_id)
     assert STATE_6_BODY in body
     assert OVERLAY_HELP in body

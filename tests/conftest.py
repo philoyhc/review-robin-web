@@ -23,9 +23,6 @@ os.environ.setdefault("REHYDRATE_ENABLED", "true")
 # machinery stays covered; ``tests/integration/test_scheduled_send_off.py``
 # turns it off and pins the shipped default.
 os.environ.setdefault("RRW_SCHEDULED_SEND", "true")
-# Bulk email (14F rung 3a) is off by default; the suite turns it on so
-# Send all and Remind incomplete stay covered.
-os.environ.setdefault("RRW_BULK_SEND", "true")
 
 # The in-app clock (segment 14E) stays off in tests: a TestClient that
 # runs RRW's lifespan must not start a loop against the test database.

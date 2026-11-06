@@ -32,7 +32,6 @@ from typing import Literal
 from sqlalchemy import update
 from sqlalchemy.orm import Session
 
-from app.config import settings
 from app.db.models import EmailOutbox, ReviewSession, User
 from app.db.session import rowcount
 from app.services import audit, operator_settings
@@ -63,9 +62,11 @@ BULK_OFF_LINE = "Bulk email isn't available yet: share the session link from Inv
 
 
 def bulk_send_enabled() -> bool:
-    """Whether bulk sends (Send all, Remind incomplete) may run:
-    ``RRW_BULK_SEND``, off until 14G paces them (14F rung 3a)."""
-    return settings.bulk_send
+    """Whether bulk sends (Send all, Remind incomplete) may run: never,
+    until 14G wires paced bulk dispatch. ``RRW_BULK_SEND`` has no effect
+    until then (findings L2): on, the bulk services stamped invitations
+    ``sent`` and queued outbox rows that nothing dispatched."""
+    return False
 
 
 def _address(text: str | None) -> str | None:

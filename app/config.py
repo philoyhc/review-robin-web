@@ -123,11 +123,13 @@ class Settings(BaseSettings):
     )
 
     # Segment 14F rung 3a — bulk email off until 14G paces it.
-    # `RRW_BULK_SEND`, default off: the Workflow card's Send invites and
-    # Send reminders render disabled with a line pointing to the session
-    # link, and their routes refuse. Per-row Send and Remind stay live.
-    # The test suite sets it on, as for `RRW_SCHEDULED_SEND`;
-    # `tests/integration/test_bulk_send_off.py` pins the shipped default.
+    # `RRW_BULK_SEND`, default off, has no effect until 14G wires bulk
+    # dispatch (findings L2): whatever it says, the Workflow card's Send
+    # invites and Send reminders render disabled with a line pointing to
+    # the session link, and their routes refuse
+    # (`email_dispatch.bulk_send_enabled`). Kept so deployed config still
+    # parses. Per-row Send and Remind stay live.
+    # `tests/integration/test_bulk_send_off.py` pins both.
     bulk_send: bool = Field(
         default=False,
         validation_alias=AliasChoices("RRW_BULK_SEND", "bulk_send"),

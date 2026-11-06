@@ -1817,32 +1817,25 @@ def _route_invited_session(client, db: Session, code: str, status: str):
     return session, reviewer, invitation
 
 
-@pytest.mark.parametrize("route", ["send-all", "per-row"])
 def test_an_invitation_send_route_refuses_a_state_committed_at_the_lock(
-    client, db: Session, monkeypatch, route: str
+    client, db: Session, monkeypatch
 ) -> None:
-    """The send routes reach the gated services: a Revert committing as
-    the send starts answers 409 and mails nothing (findings Bc5)."""
-    from types import SimpleNamespace
+    """The send route reaches the gated service: a Revert committing as
+    the send starts answers 409 and mails nothing (findings Bc5).
+
+    The per-row Send only. The bulk Send all route refuses before it
+    reaches its service until 14G (findings L2,
+    ``tests/integration/test_bulk_send_off.py``); its service's gate is
+    ``test_an_invitation_action_refuses_a_state_committed_at_its_lock``."""
 
     from app.db.models import EmailOutbox
     from app.services import invitations
 
-    loaded = "validated" if route == "send-all" else "ready"
-    session, reviewer, invitation = _route_invited_session(client, db, f"bc5-route-{route}", loaded)
-    monkeypatch.setattr(
-        invitations,
-        "list_sendable_invitations",
-        lambda *_: [SimpleNamespace(invitation=invitation, reviewer=reviewer)],
-    )
+    session, reviewer, invitation = _route_invited_session(client, db, "bc5-route-per-row", "ready")
     monkeypatch.setattr(invitations, "is_reviewer_eligible_for_invitation", lambda *_a, **_k: True)
     _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "draft"), commit=True)
 
-    url = (
-        f"/operator/sessions/{session.public_id}/invitations/send-all"
-        if route == "send-all"
-        else f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
-    )
+    url = f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
     response = client.post(url, follow_redirects=False)
 
     assert response.status_code == 409

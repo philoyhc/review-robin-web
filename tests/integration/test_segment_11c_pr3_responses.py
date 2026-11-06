@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Reviewee, ReviewSession
+from app.db.models import Invitation, Reviewee, ReviewSession
 
 from ._full_matrix import (
     generate_via_page_button,
@@ -290,11 +290,16 @@ def test_responses_page_bulk_remind_form_targets_invitations_endpoint(
         reviewer_emails=["rae@example.edu"],
         reviewee_emails=["carol@example.edu"],
     )
-    client.post(
-        f"/operator/sessions/{session.public_id}/invitations/send-all",
-        data={"return_to": "responses"},
+    # Sent by the per-row Send: the bulk Send all refuses until 14G
+    # (findings L2).
+    invitation = db.execute(
+        select(Invitation).where(Invitation.session_id == session.id)
+    ).scalar_one()
+    response = client.post(
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send",
         follow_redirects=False,
     )
+    assert response.status_code == 303, response.text
     body = client.get(f"/operator/sessions/{session.public_id}/responses").text
     assert f'action="/operator/sessions/{session.public_id}/invitations/remind-incomplete"' in body
 

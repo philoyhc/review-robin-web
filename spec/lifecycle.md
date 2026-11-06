@@ -424,8 +424,7 @@ creates the invitations, is gated by its own `is_editable` precondition
 rather than this one.) It is deliberately looser than "ready only" so
 an operator can notify reviewers **before** activation (the Prepared /
 pre-open scenario); a reviewer who follows an early link lands on the
-pre-open page. The bulk sends are separately off behind `RRW_BULK_SEND`
-(§3.5).
+pre-open page. The bulk sends are separately off until 14G (§3.5).
 
 Detail message: `"Invitations can only be issued once the
 session has been prepared (validated or ready)."`
@@ -455,11 +454,14 @@ the first. The route answers with `?email=already_sent` on Invitations.
 ### 3.5 `_require_bulk_send()`
 
 The bulk invitation routes (`send-all`, `remind-incomplete`) answer
-**409** while `RRW_BULK_SEND` is off (default off,
-`docs/deployment.md`), whatever the session's state; the buttons render
-disabled, so only a direct POST reaches it. Per-row Send and Send
+**409** until 14G wires paced bulk dispatch, **whatever `RRW_BULK_SEND`
+says** (`email_dispatch.bulk_send_enabled` is false; findings L2:
+on, the routes stamped invitations `sent` and queued outbox rows that
+nothing dispatched) and whatever the session's state; the buttons render
+disabled, so only a direct POST reaches it. The flag stays, default off
+(`docs/deployment.md`), for 14G to use. Per-row Send and Send
 reminder are not bulk and are not held by it. The gate order on a bulk
-route is the flag, then §3.3 or §3.4.
+route is this refusal, then §3.3 or §3.4.
 
 ## 4. Per-instrument lifecycle
 

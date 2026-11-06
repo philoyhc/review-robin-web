@@ -337,8 +337,9 @@ def _require_validated_or_ready(review_session: ReviewSession) -> None:
 
 
 def _require_bulk_send() -> None:
-    """Refuse a bulk send while ``RRW_BULK_SEND`` is off (14F rung 3a);
-    the buttons render disabled, so only a direct POST reaches this."""
+    """Refuse a bulk send until 14G wires paced bulk dispatch, whatever
+    ``RRW_BULK_SEND`` says (14F rung 3a, findings L2); the buttons render
+    disabled, so only a direct POST reaches this."""
     if not email_dispatch.bulk_send_enabled():
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

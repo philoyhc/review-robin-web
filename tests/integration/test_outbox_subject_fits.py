@@ -75,10 +75,11 @@ def test_invitation_and_reminder_subjects_fit_for_a_255_char_name(
     review_session = _ready_session(client, db)
     base = f"/operator/sessions/{review_session.public_id}/invitations"
 
-    assert client.post(f"{base}/send-all", follow_redirects=False).status_code == 303
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == review_session.id)
     ).scalar_one()
+    # The per-row Send: the bulk Send all refuses until 14G (findings L2).
+    assert client.post(f"{base}/{invitation.id}/send", follow_redirects=False).status_code == 303
     assert client.post(f"{base}/{invitation.id}/remind", follow_redirects=False).status_code == 303
 
     rows = (

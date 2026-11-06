@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -16,6 +17,7 @@ from app.db.models import (
     Reviewer,
     ReviewSession,
 )
+from app.services import session_guard
 from app.services.invitations import hash_token
 
 from ._answer_form import answer_form
@@ -23,6 +25,7 @@ from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
+from ._invitation_states import bulk_remind_incomplete
 from ._public_id import public_id
 
 # --------------------------------------------------------------------------- #
@@ -342,18 +345,16 @@ def _latest_outbox(db: Session, invitation_id: int) -> EmailOutbox:
 def test_bulk_reminder_after_one_regenerate_sends_that_one_a_live_link(
     client: TestClient, db: Session
 ) -> None:
-    """The path the UI reaches: one row regenerated (its per-row button
-    turns back to Send), then the bulk Send reminders. The regenerated
+    """The path the UI reached before findings L2 (and 14G will again):
+    one row regenerated (its per-row button turns back to Send), then
+    the bulk Send reminders. The regenerated
     row gets a fresh invitation; the other keeps its link (Gc1)."""
     session, (regen, kept) = _sent_session_with_two(client, db, "rem-bulk-regen")
     kept_url = _extract_url(_latest_outbox(db, kept.id).body)
     client.post(f"/operator/sessions/{session.public_id}/invitations/{regen.id}/regenerate")
 
-    response = client.post(
-        f"/operator/sessions/{session.public_id}/invitations/remind-incomplete",
-        follow_redirects=False,
-    )
-    assert response.status_code == 303
+    # The service: the bulk route refuses until 14G (findings L2).
+    assert bulk_remind_incomplete(db, session).sent_count == 2
 
     fresh = _latest_outbox(db, regen.id)
     db.refresh(regen)
@@ -372,10 +373,8 @@ def test_reminders_after_regenerate_all_send_live_links(client: TestClient, db: 
     )
     assert response.status_code == 303
 
-    client.post(
-        f"/operator/sessions/{session.public_id}/invitations/remind-incomplete",
-        follow_redirects=False,
-    )
+    # The service: the bulk route refuses until 14G (findings L2).
+    assert bulk_remind_incomplete(db, session).sent_count == 2
 
     for inv in rows:
         latest = _latest_outbox(db, inv.id)
@@ -423,12 +422,8 @@ def test_remind_incomplete_targets_only_incomplete(
         follow_redirects=False,
     )
 
-    operator2 = make_client(alice)
-    response = operator2.post(
-        f"/operator/sessions/{session.public_id}/invitations/remind-incomplete",
-        follow_redirects=False,
-    )
-    assert response.status_code == 303
+    # The service: the bulk route refuses until 14G (findings L2).
+    assert bulk_remind_incomplete(db, session).sent_count == 1
 
     # Sam (incomplete) got a reminder. Rae (submitted) did not.
     sam_reminders = (
@@ -465,10 +460,8 @@ def test_remind_incomplete_writes_single_batch_audit_event(client: TestClient, d
     for inv in invitations_rows:
         client.post(f"/operator/sessions/{session.public_id}/invitations/{inv.id}/send")
 
-    client.post(
-        f"/operator/sessions/{session.public_id}/invitations/remind-incomplete",
-        follow_redirects=False,
-    )
+    # The service: the bulk route refuses until 14G (findings L2).
+    assert bulk_remind_incomplete(db, session).sent_count == 2
 
     events = (
         db.execute(
@@ -500,10 +493,8 @@ def test_per_row_and_bulk_reminders_stamp_last_reminder_at(client: TestClient, d
     first = invitation.last_reminder_at
     assert first is not None
 
-    client.post(
-        f"/operator/sessions/{session.public_id}/invitations/remind-incomplete",
-        follow_redirects=False,
-    )
+    # The bulk reminder's service: its route refuses until 14G (findings L2).
+    assert bulk_remind_incomplete(db, session).invitation_ids == [invitation.id]
     db.refresh(invitation)
     assert invitation.last_reminder_at is not None
     assert invitation.last_reminder_at >= first
@@ -529,6 +520,11 @@ def test_reminder_actions_409_while_session_draft(client: TestClient, db: Sessio
         follow_redirects=False,
     )
     assert bulk.status_code == 409
+    # The route 409s whatever the state until 14G (findings L2), so the
+    # draft gate on the bulk reminder is its service's.
+    with pytest.raises(session_guard.SessionStateConflict):
+        bulk_remind_incomplete(db, session)
+    db.rollback()
 
     single = client.post(
         f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/remind",
@@ -564,12 +560,8 @@ def test_submitted_with_warn_override_classified_incomplete(
         follow_redirects=False,
     )
 
-    operator2 = make_client(alice)
-    response = operator2.post(
-        f"/operator/sessions/{session.public_id}/invitations/remind-incomplete",
-        follow_redirects=False,
-    )
-    assert response.status_code == 303
+    # The service: the bulk route refuses until 14G (findings L2).
+    assert bulk_remind_incomplete(db, session).sent_count == 1
     reminders = (
         db.execute(
             select(EmailOutbox).where(
@@ -606,11 +598,8 @@ def test_remind_incomplete_writes_no_audit_when_zero_targets(
         follow_redirects=False,
     )
 
-    operator2 = make_client(alice)
-    operator2.post(
-        f"/operator/sessions/{session.public_id}/invitations/remind-incomplete",
-        follow_redirects=False,
-    )
+    # The service: the bulk route refuses until 14G (findings L2).
+    assert bulk_remind_incomplete(db, session).sent_count == 0
     events = (
         db.execute(
             select(AuditEvent).where(
@@ -660,6 +649,11 @@ def test_a_validated_session_sends_and_regenerates_but_does_not_remind(
     for path in (f"{base}/{invitation.id}/remind", f"{base}/remind-incomplete"):
         response = client.post(path, follow_redirects=False)
         assert response.status_code == 409, (path, response.text)
+    # The bulk route 409s whatever the state until 14G (findings L2);
+    # its service holds the ``ready``-only gate.
+    with pytest.raises(session_guard.SessionStateConflict):
+        bulk_remind_incomplete(db, session)
+    db.rollback()
 
     page = client.get(base).text
     remind = page.split(

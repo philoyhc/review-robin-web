@@ -133,8 +133,9 @@ returns:
 - `auto_send_reminders_caption` — `dict | None` of the same shape,
   built by `build_auto_send_reminders_caption`. Drives the auto-
   send reminders signal line.
-- `bulk_send_enabled` / `bulk_off_line` — `RRW_BULK_SEND` and the line
-  shown when it is off (`email_dispatch.bulk_send_enabled`,
+- `bulk_send_enabled` / `bulk_off_line` — whether bulk email may run,
+  false until 14G whatever `RRW_BULK_SEND` says (findings L2), and the
+  line shown while it is off (`email_dispatch.bulk_send_enabled`,
   `BULK_OFF_LINE`).
 - `due_lines` — `list[dict]`, built by `build_due_lines` from
   `due_actions.due_actions`: one per due prompt, with `kind`,
@@ -643,9 +644,10 @@ States 7's copy names Revert to draft.
 - **Send invites** posts to
   `/operator/sessions/{id}/invitations/send-all` via
   `next-action-send-invites-form`, which calls
-  `invitations.send_all_invitations`. **It renders disabled while
-  `RRW_BULK_SEND` is off** (the default), with `BULK_OFF_LINE` as its
-  hover title, and the route answers 409; see "Bulk email off" below. Under the session lock it lists
+  `invitations.send_all_invitations`. **It renders disabled until
+  14G, whatever `RRW_BULK_SEND` says** (findings L2), with
+  `BULK_OFF_LINE` as its hover title, and the route answers 409 before
+  reaching the service; see "Bulk email off" below. Under the session lock the service lists
   `invitations.list_sendable_invitations` — every `pending`
   invitation whose reviewer is **still** assigned and active — sends
   each via `invitations.send_invitation`, and commits once (findings
@@ -674,8 +676,8 @@ States 7's copy names Revert to draft.
   `/operator/sessions/{id}/invitations/remind-incomplete` via
   `next-action-send-reminders-form`. Calls
   `invitations.send_reminders_to_incomplete` for reviewers whose
-  assignments aren't complete. Disabled behind `RRW_BULK_SEND` as
-  Send invites is.
+  assignments aren't complete. Disabled, and its route refusing, until
+  14G as Send invites is.
 
 Each invitation form is rendered alongside its visible button —
 Send invites only when `send_invites_visible` is True
@@ -687,12 +689,14 @@ the special `"home"` slug to resolve the 303 target. Direct form
 posts elsewhere (e.g. tests hitting the route without the form's
 hidden field) fall back to `/operator/sessions/{id}/invitations`.
 The underlying routes gate whatever the form's visibility: both answer
-409 while `RRW_BULK_SEND` is off (`spec/lifecycle.md` §3.5); `send-all`
+409 until 14G, whatever `RRW_BULK_SEND` says (`spec/lifecycle.md` §3.5); `send-all`
 accepts `validated` or `ready`, and `remind-incomplete` accepts `ready`
 only (409 otherwise), each decided again under the session lock by the
 invitation service (`spec/lifecycle.md` §3.1).
 
-**Bulk email off.** With `RRW_BULK_SEND` off, the two bulk buttons stay
+**Bulk email off.** Until 14G wires paced bulk dispatch, whatever
+`RRW_BULK_SEND` says (findings L2: on, the routes stamped invitations
+`sent` and queued outbox rows that nothing dispatched), the two bulk buttons stay
 visible, disabled, rather than hidden: this departs from the card's
 hide-inactive rule on purpose, because the operator asked for them
 inactive. The visibility rules above are unchanged. While either is
@@ -1032,8 +1036,8 @@ routes:
 | `POST /operator/sessions/{id}/activate` | `lifecycle.activate_session` | `validated` | `ready` | `session.activated` |
 | `POST /operator/sessions/{id}/revert` (when `is_validated`) | `lifecycle.operator_revert` → `invalidate_session` | `validated` | `draft` | `session.invalidated` |
 | `POST /operator/sessions/{id}/revert` (when `is_ready` or `is_expired`) | `lifecycle.operator_revert` → `revert_session_to_draft` | `ready` or `expired` | `draft` | `session.reverted_to_draft` |
-| `POST /operator/sessions/{id}/invitations/send-all` | `invitations.send_all_invitations` (`send_invitation` per row of `list_sendable_invitations` — `pending` **and** still eligible — in one commit) | `validated` or `ready`, and `RRW_BULK_SEND` on (409 otherwise) | unchanged | per-invitation send events |
-| `POST /operator/sessions/{id}/invitations/remind-incomplete` | `invitations.send_reminders_to_incomplete` | `ready`, and `RRW_BULK_SEND` on (409 otherwise) | unchanged | one batch `reminders.sent` |
+| `POST /operator/sessions/{id}/invitations/send-all` | `invitations.send_all_invitations` (`send_invitation` per row of `list_sendable_invitations` — `pending` **and** still eligible — in one commit) | `validated` or `ready` — but the route answers 409 until 14G whatever `RRW_BULK_SEND` says (findings L2) | unchanged | per-invitation send events |
+| `POST /operator/sessions/{id}/invitations/remind-incomplete` | `invitations.send_reminders_to_incomplete` | `ready` — but the route answers 409 until 14G whatever `RRW_BULK_SEND` says (findings L2) | unchanged | one batch `reminders.sent` |
 | `POST /operator/sessions/{id}/workflow/due-done` | `due_actions.mark_done` | any (session operator); only an entry still due is recorded | unchanged | `session.scheduled_invites_handled` / `session.scheduled_reminders_handled` |
 
 **The per-step `/assignments/generate` and `/activate` routes stay
