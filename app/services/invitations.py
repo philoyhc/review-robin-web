@@ -651,8 +651,16 @@ def record_open(
 
     Returns True iff this call was the first open. Subsequent calls are
     no-ops and return False (idempotent).
+
+    Decided under the session lock, which every other writer of an
+    invitation's stamps takes too, so a restore after a refused send
+    (:func:`restore_after_failed_send`) cannot interleave with an open
+    and undo it (Codex on #3664).
     """
+    lock_session(db, invitation.session)
+    db.refresh(invitation)
     if invitation.opened_at is not None:
+        db.commit()
         return False
     invitation.opened_at = datetime.now(UTC)
     invitation.status = "opened"
