@@ -197,7 +197,7 @@ None.
   `observe_deadline` can hold the row lock through a page render on a
   no-op; `mark_opened` stamps a pre-Start arrival; the SMTP transport
   sends a blank From (unreachable today).
-- **N6 — System Status says "behind" for any schema mismatch**, a
+- ~~**N6 — System Status says "behind" for any schema mismatch**~~ **Done 2026-11-06**: the state is `differs`, its label already named both revisions, and `spec/operator_ui_concept.md` says the app cannot tell behind from ahead. Was: a
   database ahead of the code included (`views/_system_status.py:109-115`;
   `spec/operator_ui_concept.md:157` names current, behind, none).
 - **N7 — End's two close events spell `context.deadline` differently**
