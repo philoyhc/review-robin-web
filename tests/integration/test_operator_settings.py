@@ -78,6 +78,32 @@ def test_email_settings_card_starts_all_off(client: TestClient) -> None:
         assert " disabled" not in row, key
 
 
+REPORT_KEYS = (
+    "report-lifecycle",
+    "report-destructive",
+    "report-owners",
+    "report-sends",
+    "report-clock",
+    "report-progress",
+)
+
+
+def test_the_report_emails_section_is_six_inert_toggles(client: TestClient) -> None:
+    """14C Item 4 rung 1, the scaffold: every report Toggle renders, off
+    and inert, each naming why; group B goes live in rung 2 and A, C and D
+    wait on 14G (author, 2026-11-06)."""
+    body = client.get("/operator/settings").text
+    assert body.index('id="email-settings"') < body.index('id="email-reports"')
+    for key in REPORT_KEYS:
+        row = body.split(f'data-email-report="{key}"', 1)[1].split("</button>", 1)[0]
+        assert f'id="email-setting-{key}-label"' in row
+        assert 'aria-pressed="false"' in row
+        assert " disabled" in row
+        assert "data-report-reason" in row
+    assert body.count("Waits on scheduled email.") >= 2
+    assert "Waits on bulk sending." in body
+
+
 @pytest.mark.parametrize(
     ("pref_key", "row_key", "field"),
     [
