@@ -355,6 +355,8 @@ inactive).
 - **Called from the routes**, after the service returns, through one
   service function, `owner_reports.report(...)`. The audit write is
   inside the action's transaction, and mail must follow the commit.
+  *(Superseded at rung 3: the audit write notes, the commit promotes, a
+  request dependency sends. See Status.)*
 - **Recorded in the audit log**: `report.sent` (recipients counted, never
   listed) and `report.send_failed` (the error kind), each registered in
   `EVENT_SCHEMAS`. No outbox row: the outbox is participant mail.
@@ -370,14 +372,15 @@ table, and A, C and D stay one line each until they can send.
 - **Which actions.** Lifecycle: `session.activated`,
   `session.reverted_to_draft`, `session.archived`, `session.unarchived`,
   `session.deleted`. Destructive: `session.responses_purged`,
-  `responses.cleared`, `responses.deleted_all`, `reviewers.deleted_all`,
-  `reviewees.deleted_all`. Owners and release: `session.owner_added`,
+  ~~`responses.cleared`~~ (a reviewer's own Clear all, so group D's;
+  struck at the read), `session.rosters_purged` (added at the read),
+  `responses.deleted_all`, and the four rosters' `*.deleted_all`. Owners and release: `session.owner_added`,
   `session.owner_removed`, `session.responses_released`,
   `session.responses_release_stopped`. The clock's own transitions (End
   closing a session, a scheduled activation) have no click behind them,
   so they belong to group C.
 - **Who.** The session's owners at the moment of the action, less the
-  actor. An owner who was just removed is told, since it concerns them.
+  actor; nothing when the actor is not an owner (added at the read). An owner who was just removed is told, since it concerns them.
   A deleted session's owners are read before the delete.
 - **What.** Plain text: who did what, to which session (name and code),
   when (the session's zone), and a link to Session Home, except after a
@@ -401,6 +404,41 @@ Taken 2026-11-06 at `49aa8daa`.
 |---|---|---|
 | Group B event types, all already in `EVENT_SCHEMAS` | 14 | `grep -oE '"session\.(activated\|reverted_to_draft\|archived\|unarchived\|deleted\|responses_purged\|owner_[a-z]+\|responses_release[a-z_]*)"' app/services/audit.py` plus the four `*.deleted_all` / `responses.cleared` |
 | Email preference keys today | 3 | `email_save_to_sent_items`, `email_bcc_self`, `email_reply_to_help` in `app/services/operator_settings.py` |
+
+### Status
+
+- 2026-11-06. Main before rung 1: `f321b4b4` (#3691's merge; the base
+  for rung 4's cumulative read). Rungs 1 (scaffold) and 2 (store) as
+  planned.
+- **Decision amended at rung 3: the hook is the audit write, the send is
+  after the commit.** "Called from the routes" would have meant a call in
+  each of the dozen routes reaching these actions (the lobby's bulk
+  forms, the Workflow card, Session Home), easy to miss. Instead
+  `audit.write_event` calls `owner_reports.note` for each reported event
+  type, which decides the recipients inside the action's transaction; a
+  SQLAlchemy `after_commit` listener promotes the notes (a rollback drops
+  them), and an app-wide dependency, `app/web/owner_report_sender.py`,
+  mails what committed once the route has answered. The plan's
+  rejection of mailing *from* the audit write stands: nothing is mailed
+  before the commit. `session.deleted` is written after the owner rows
+  are gone, so `delete_session` keeps them first
+  (`owner_reports.before_delete`).
+- Rungs 3 and 4 shipped as one PR, since the read's fixes cut across
+  both. The read (one, cumulative, at rung 4) found two highs: a
+  reviewer's own Clear all (`responses.cleared`) would have mailed the
+  owners from the reviewer's mailbox, so that event is struck and
+  `note` requires the actor to own the session; and a savepoint's
+  release fires `after_commit` (the session lock opens one on Postgres),
+  so a note could be mailed before the real commit, and a savepoint
+  rollback could drop the outer notes; both listeners now ignore nested
+  transactions. Mediums fixed: the sender rolls back before recording,
+  so it never commits a route's half-write; the body says when; Purge
+  rosters is reported; a route that raises after committing still
+  sends. The message names the owner added or removed, so a co-owner
+  added at creation reads which one.
+- Rung 4: the destructive row covers all four rosters'
+  delete-all (`observers.deleted_all` and `relationships.deleted_all`
+  beside the two the Semantics named), since each is "a roster deleted".
 
 ### PR ladder
 

@@ -24,6 +24,7 @@ from app.services import (
     audit,
     date_formatting,
     operator_settings,
+    owner_reports,
     unit_of_work,
 )
 from app.services import session_lifecycle as lifecycle
@@ -512,6 +513,7 @@ def delete_session(
     so the deletion itself stays in the global audit log.
     """
     lifecycle.require_not_ready(db, review_session)
+    owner_reports.before_delete(db, review_session)
     captured: dict[str, int | str] = {
         "id": review_session.id,
         "code": review_session.code,
