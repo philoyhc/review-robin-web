@@ -45,6 +45,13 @@ def _client_session(client: TestClient, db: Session, code: str) -> ReviewSession
     return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
 
 
+def _drawn_form(client: TestClient, rs: ReviewSession, prompt: str) -> dict[str, str]:
+    """The hidden fields Mark as done posts, as Session Home draws them."""
+    body = client.get(f"/operator/sessions/{rs.public_id}").text
+    form = body.split(f'data-due-prompt="{prompt}"', 1)[1].split("</form>", 1)[0]
+    return dict(re.findall(r'<input type="hidden" name="(\w+)" value="([^"]*)">', form))
+
+
 def _invite_due(db: Session, rs: ReviewSession) -> None:
     rs.scheduled_activate_at = datetime.now(UTC) + timedelta(hours=1)
     rs.invite_offsets = ["-P1D", "-PT30M"]
@@ -106,7 +113,7 @@ def test_the_card_shows_the_line_and_mark_as_done_clears_it(
 
     response = client.post(
         f"{home}/workflow/due-done",
-        data={"kind": "invite", "offset_index": "0"},
+        data=_drawn_form(client, rs, "invite-0"),
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
@@ -120,6 +127,24 @@ def test_the_card_shows_the_line_and_mark_as_done_clears_it(
     assert scheduled_events.fired_offsets(db, rs, "invite", rs.scheduled_activate_at) == {0: "-P1D"}
 
 
+def test_a_form_drawn_before_end_moved_marks_nothing(
+    client: TestClient, db: Session, send_off: None
+) -> None:
+    """Codex on #3668: the form names the anchor and offset it was drawn
+    from, so a stale tab cannot consume the entry on a new End."""
+    rs = _ready_session(client, db, code="due-stale-end")
+    invitation = db.execute(select(Invitation).where(Invitation.session_id == rs.id)).scalar_one()
+    client.post(f"/operator/sessions/{rs.public_id}/invitations/{invitation.id}/send")
+    rs.deadline = datetime.now(UTC) + timedelta(hours=1)
+    rs.reminder_offsets = ["-P1D"]
+    db.commit()
+    stale = _drawn_form(client, rs, "reminder-0")
+    rs.deadline = datetime.now(UTC) + timedelta(hours=2)
+    db.commit()
+    client.post(f"/operator/sessions/{rs.public_id}/workflow/due-done", data=stale)
+    assert [a.kind for a in due_actions.due_actions(db, rs)] == ["reminder"]
+
+
 def test_a_reminders_mark_as_done_is_recorded_and_consumed(
     client: TestClient, db: Session, send_off: None
 ) -> None:
@@ -131,7 +156,7 @@ def test_a_reminders_mark_as_done_is_recorded_and_consumed(
     db.commit()
     response = client.post(
         f"/operator/sessions/{rs.public_id}/workflow/due-done",
-        data={"kind": "reminder", "offset_index": "0"},
+        data=_drawn_form(client, rs, "reminder-0"),
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -148,7 +173,7 @@ def test_an_unknown_kind_is_not_due(client: TestClient, db: Session, send_off: N
     _invite_due(db, rs)
     response = client.post(
         f"/operator/sessions/{rs.public_id}/workflow/due-done",
-        data={"kind": "observer", "offset_index": "0"},
+        data={**_drawn_form(client, rs, "invite-0"), "kind": "observer"},
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -162,7 +187,11 @@ def test_mark_as_done_on_an_entry_not_due_changes_nothing(
     _invite_due(db, rs)
     response = client.post(
         f"/operator/sessions/{rs.public_id}/workflow/due-done",
-        data={"kind": "invite", "offset_index": "1"},  # not yet due
+        data={  # position 1 is not yet due
+            **_drawn_form(client, rs, "invite-0"),
+            "offset_index": "1",
+            "offset": "-PT30M",
+        },
         follow_redirects=False,
     )
     assert response.status_code == 303

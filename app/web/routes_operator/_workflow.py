@@ -687,6 +687,8 @@ def workflow_due_done(
     request: Request,
     kind: str = Form(...),
     offset_index: int = Form(...),
+    offset: str = Form(...),
+    anchor_at: str = Form(...),
     return_to: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
@@ -702,6 +704,8 @@ def workflow_due_done(
             review_session,
             kind=kind,
             offset_index=offset_index,
+            offset=offset,
+            anchor_at=anchor_at,
             user=user,
             correlation_id=request_correlation_id(),
         )

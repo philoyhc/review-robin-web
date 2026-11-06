@@ -520,6 +520,8 @@
                       action="{{ url('/operator/sessions/' ~ session.public_id ~ '/workflow/due-done') }}">
                   <input type="hidden" name="kind" value="{{ line.kind }}">
                   <input type="hidden" name="offset_index" value="{{ line.offset_index }}">
+                  <input type="hidden" name="offset" value="{{ line.offset }}">
+                  <input type="hidden" name="anchor_at" value="{{ line.anchor_at }}">
                   {% if _next_action_return_to %}<input type="hidden" name="return_to" value="{{ _next_action_return_to }}">{% endif %}
                   <button class="btn secondary" type="submit">Mark as done</button>
                 </form>

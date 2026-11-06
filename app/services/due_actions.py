@@ -116,6 +116,13 @@ def due_actions(
     return sorted(due, key=lambda action: action.due_at)
 
 
+def _same_instant(anchor: datetime, posted: str) -> bool:
+    try:
+        return _aware(datetime.fromisoformat(posted)) == anchor
+    except ValueError:
+        return False
+
+
 class NotDue(Exception):
     """*Mark as done* on an entry that is not due: already handled, its
     offset or anchor changed since the page was drawn, or sending is on."""
@@ -127,16 +134,30 @@ def mark_done(
     *,
     kind: str,
     offset_index: int,
+    offset: str,
+    anchor_at: str,
     user: User,
     correlation_id: str | None = None,
 ) -> DueAction:
     """Record a due entry as handled, under the session lock, so its
-    prompt clears and 14G never sends it. Raises :class:`NotDue`."""
+    prompt clears and 14G never sends it. Raises :class:`NotDue`.
+
+    The entry is named by everything the prompt was drawn from — its
+    kind, position, offset and anchor (ISO 8601) — so a form from a page
+    drawn before another tab moved End or replaced the offset is refused
+    rather than marking the entry now at that position (Codex on #3668)."""
     if kind not in _KINDS:
         raise NotDue()
     locked = scheduled_events.lock_session(db, review_session)
     action = next(
-        (a for a in due_actions(db, locked) if a.kind == kind and a.offset_index == offset_index),
+        (
+            a
+            for a in due_actions(db, locked)
+            if a.kind == kind
+            and a.offset_index == offset_index
+            and a.offset == offset
+            and _same_instant(a.anchor_at, anchor_at)
+        ),
         None,
     )
     if action is None:

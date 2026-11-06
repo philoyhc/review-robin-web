@@ -248,7 +248,17 @@ def build_due_lines(db: Session, review_session: ReviewSession) -> list[dict[str
                 f"Reminders due ({action.offset} from End, {when}): "
                 f"{n} reviewer{'' if n == 1 else 's'} not finished."
             )
-        lines.append({"kind": action.kind, "offset_index": action.offset_index, "text": text})
+        lines.append(
+            {
+                "kind": action.kind,
+                "offset_index": action.offset_index,
+                # What Mark as done posts back, so a stale page cannot
+                # mark the entry now at that position (Codex on #3668).
+                "offset": action.offset,
+                "anchor_at": action.anchor_at.isoformat(),
+                "text": text,
+            }
+        )
     return lines
 
 
