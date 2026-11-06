@@ -266,8 +266,9 @@ turn / in-PR iteration / push-to-merge, the share of PRs carrying a
 review-response commit, product and prose-only slices separately, the
 cycle by code-size bucket, and code+test lines per hour.
 
-**A squash-merged PR has no branch in git**, so its turn, iteration,
-commit count and review rounds are unknown: they read `None`, the report
+**A squash-merged PR has no branch in git**, so its turn and iteration
+times are gone. Its commit count, review rounds and stamp often survive as
+free text in the squash body but are not parsed. All read `None`, the report
 says how many PRs were squash-merged, and the turn / iteration /
 push-to-merge split is printed over the merge-committed PRs only. Its cycle
 and size are measured like any other's (findings 2026-11-06 N9).

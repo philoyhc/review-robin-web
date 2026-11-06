@@ -10,7 +10,7 @@ RRW runs under the Cordware host, a small package in the same repository that mo
 
 It is not a how-to; `CONTRIBUTING.md`, `CLAUDE.md` and the `segment-plan` skill are that. It is not an audit either; `docs/archive/practice-audit-2026-09-04.md` is that, and this document leans on its findings rather than repeating its evidence. It records the rationale for the practice, in the same register as the design rationale: where a choice could plausibly have gone another way, the point is to record why it went the way it did. `constitution.md` distills Section 6 into six articles that bind every change: five of its seven decisions, plus the rule §6.3's trade-off implies. So change this document first.
 
-The document is drafted with the help of Claude Code, with access to the repository. **The current-state numbers were re-taken on 2026-11-06 at `main` = `c912ae53` (#3657)**, and the appendix lists how to re-take them. A figure that describes a particular day is dated in the sentence that uses it; those are findings about that day, and they stay true when the codebase moves on.
+The document is drafted with the help of Claude Code, with access to the repository. **The current-state numbers were re-taken on 2026-11-06 at `main` = `c912ae53` (#3657)**, the churn figure at `aab086fe` once the tool counted squash-merged PRs, and the appendix lists how to re-take them. A figure that describes a particular day is dated in the sentence that uses it; those are findings about that day, and they stay true when the codebase moves on.
 
 ---
 
@@ -331,7 +331,7 @@ RRW practices a form of spec-driven development in which **plans carry intent in
 | Autonomous agent loops | No, on stated grounds: the definition of done is not machine-checkable for the defects that occur | `docs/archive/practice-audit-2026-09-04.md` A.5 |
 | The codebase should not take the AI-authored shape | Measured: churn 1.2×, duplication 4.5% at ≥10 lines | `python3 tools/code_metrics.py` (deterministic; about six minutes, most of it the churn walk) |
 
-**Re-taking the numbers.** The current-state figures above were taken at `c912ae53` on 2026-11-06, except the cadence figures of §6.4, which are dated where they are used and cannot currently be re-taken (below):
+**Re-taking the numbers.** The current-state figures above were taken at `c912ae53` on 2026-11-06, except churn, taken at `aab086fe` the same day, and the cadence figures of §6.4, which are dated where they are used; their turn and iteration can be re-taken only over merge-committed PRs (below):
 
 - **Spec folder size:** `ls spec/*.md | wc -l; cat spec/*.md | wc -l`.
 - **Archive counts:** `ls guide/archive/segment_*.md | wc -l`.

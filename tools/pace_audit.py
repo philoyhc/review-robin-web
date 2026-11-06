@@ -128,11 +128,13 @@ def load(since: str, ref: str = MAIN_REF) -> list[dict]:
 
     A PR reaches the line as a merge commit (``Merge pull request #N``) or,
     since #3150 (2026-10-19), as a squash commit whose subject ends
-    ``(#N)``. A squash keeps one commit and drops the branch's own, so
-    its first commit, iteration, commit count and review-response rounds
-    are unknown: they are ``None``, never zero, and every summary skips
-    them. Its merge time, size and cycle are measured as for a merge
-    (findings 2026-11-06 N9)."""
+    ``(#N)``. A squash keeps one commit and drops the branch's own, so its
+    first commit and iteration times are gone from git. Its commit count,
+    review-response rounds and ``Instruction-Received`` stamp often
+    survive as free text in the squash body, but are not parsed from it.
+    All of these are ``None``, never zero, and every summary skips them.
+    Its merge time, size and cycle are measured as for a merge (findings
+    2026-11-06 N9)."""
     rows: list[dict] = []
     log = git(
         "log",
@@ -274,8 +276,9 @@ def report(label: str, rows: list[dict]) -> None:
     squashed = sum(1 for r in rows if r["squash"])
     if squashed:
         print(
-            f"  {squashed} of {len(rows)} squash-merged: their turn, iteration, commit count "
-            "and review rounds are not in git, so those figures rest on the rest"
+            f"  {squashed} of {len(rows)} squash-merged: their turn and iteration are not in "
+            "git, nor read are their commit count and review rounds; those figures "
+            "rest on the rest"
         )
     merged = [r for r in within if not r["squash"]]
     print(

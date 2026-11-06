@@ -5,7 +5,7 @@
 of the window's `app/`, `cordware/` and `alembic/` changes with scratch
 tests, and a read of `cordware/`, `residentialapps/` and `utilityapps/`
 with their suites and a route fuzz · **Read at:** `c912ae53` (#3657; the
-reads ran on its pre-merge tree `c5d03d49`, identical) · **Open:** all.
+reads ran on its pre-merge tree `c5d03d49`, identical) · **Open:** all but N9.
 
 The checklist the fixes work through. **Nothing was edited by the
 reads**, and their scratch tests were not kept: a fix PR writes its own
