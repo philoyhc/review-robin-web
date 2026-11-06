@@ -657,3 +657,27 @@ def test_a_pass_that_raises_outright_is_a_failure(
     after = _clock.clock_status()
     assert after.failures == before.failures + 1
     assert after.last_failure_type == "LookupError"
+
+
+def test_an_end_over_already_shut_instruments_still_records_the_deadline(db: Session) -> None:
+    """Findings L4 (author, 2026-11-06): a legacy session whose
+    instruments were already shut (the retired per-instrument Close, or
+    an End that passed before End closed sessions) still writes its one
+    `session.deadline_reached` when End closes it, so every crossing
+    leaves the same record."""
+    rs = _ready_past_deadline(db, "clock-already-shut")
+    for instrument in db.execute(
+        select(Instrument).where(Instrument.session_id == rs.id)
+    ).scalars():
+        instrument.accepting_responses = False
+    db.commit()
+
+    lifecycle.observe_deadline(db, rs, now=NOW)
+
+    reached = _events(db, rs, "session.deadline_reached")
+    assert len(reached) == 1
+    assert set(detail_of(reached[0])["counts"]) == {"submitted", "assigned"}
+    db.refresh(rs)
+    assert lifecycle.is_expired(rs)
+    lifecycle.observe_deadline(db, rs, now=NOW)
+    assert len(_events(db, rs, "session.deadline_reached")) == 1
