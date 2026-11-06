@@ -88,18 +88,22 @@ REPORT_KEYS = (
 )
 
 
-def test_the_report_emails_section_is_six_inert_toggles(client: TestClient) -> None:
-    """14C Item 4 rung 1, the scaffold: every report Toggle renders, off
-    and inert, each naming why; group B goes live in rung 2 and A, C and D
-    wait on 14G (author, 2026-11-06)."""
+def test_the_report_emails_section_is_three_live_and_three_waiting(client: TestClient) -> None:
+    """14C Item 4: group B's three Toggles are live forms, off by default;
+    A, C and D render off and inactive, each naming why (author,
+    2026-11-06)."""
     body = client.get("/operator/settings").text
     assert body.index('id="email-settings"') < body.index('id="email-reports"')
-    for key in REPORT_KEYS:
+    for key in REPORT_KEYS[:3]:
+        row = _email_row(body, key)
+        assert 'aria-pressed="false"' in row, key
+        assert 'name="on" value="true"' in row, key
+        assert " disabled" not in row, key
+    for key in REPORT_KEYS[3:]:
         row = body.split(f'data-email-report="{key}"', 1)[1].split("</button>", 1)[0]
-        assert f'id="email-setting-{key}-label"' in row
-        assert 'aria-pressed="false"' in row
-        assert " disabled" in row
-        assert "data-report-reason" in row
+        assert 'aria-pressed="false"' in row, key
+        assert " disabled" in row, key
+        assert "data-report-reason" in row, key
     assert body.count("Waits on scheduled email.") >= 2
     assert "Waits on bulk sending." in body
 
@@ -110,6 +114,9 @@ def test_the_report_emails_section_is_six_inert_toggles(client: TestClient) -> N
         ("email_save_to_sent_items", "sent-items", "save_to_sent_items"),
         ("email_bcc_self", "bcc-self", "bcc_self"),
         ("email_reply_to_help", "reply-to-help", "reply_to_help"),
+        ("email_report_lifecycle", "report-lifecycle", "report_lifecycle"),
+        ("email_report_destructive", "report-destructive", "report_destructive"),
+        ("email_report_owners", "report-owners", "report_owners"),
     ],
 )
 def test_an_email_toggle_turns_on_and_off_and_is_audited(
