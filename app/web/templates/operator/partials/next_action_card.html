@@ -421,12 +421,8 @@
          reminders. Each is a tone-coded icon-prefixed line —
          ⚠ amber-warning, ⓘ amber-grey, ✓ green, ✗ error. No
          background colour or border. #}
-      {# 14F rung 1 scaffold: where the due-action prompt will sit, shown
-         on a session whose operator set invite or reminder offsets.
-         Rung 5 replaces the example with what is due. #}
-      {% set _due_actions_placeholder = session.invite_offsets or session.reminder_offsets %}
       {% set _bulk_off_shown = not bulk_send_enabled and (send_invites_visible or send_reminders_visible) %}
-      {% set _has_signals = scheduled_activation_caption or auto_send_invites_caption or auto_send_reminders_caption or super_failure or _due_actions_placeholder or _bulk_off_shown %}
+      {% set _has_signals = scheduled_activation_caption or auto_send_invites_caption or auto_send_reminders_caption or super_failure or due_lines or _bulk_off_shown %}
       {% if _has_signals %}
         <div class="next-action-signals">
           {% if super_failure %}
@@ -507,15 +503,31 @@
                 instead.</span>
             </p>
           {% endif %}
-          {% if _due_actions_placeholder %}
-            <p class="next-action-signal next-action-signal--amber-grey"
-               id="next-action-due-actions" data-due-actions-placeholder>
-              <span class="next-action-signal-icon" aria-hidden="true">ⓘ</span>
-              <span>What's due will show here, from the send times you set
-                — for example, "Reminders due: 12 reviewers haven't
-                submitted, 2 days before End." Not live yet.</span>
-            </p>
-          {% endif %}
+          {# 14F rung 5b: what is due by hand while scheduled email is
+             off, from the offsets the operator set. Mark as done
+             records the entry as handled, so the line clears and 14G
+             never sends it. #}
+          {% for line in due_lines %}
+            <div class="next-action-signal next-action-signal--amber-warning"
+                 data-due-prompt="{{ line.kind }}-{{ line.offset_index }}">
+              <span class="next-action-signal-icon" aria-hidden="true">⚠</span>
+              <span>{{ line.text }}
+                Send from
+                <a href="{{ url('/operator/sessions/' ~ session.public_id ~ '/invitations') }}">Invitations</a>
+                or share the
+                <a href="{{ url('/operator/sessions/' ~ session.public_id ~ '/invitations') }}#share-session-link">session link</a>.
+                <form method="post" style="display: inline;"
+                      action="{{ url('/operator/sessions/' ~ session.public_id ~ '/workflow/due-done') }}">
+                  <input type="hidden" name="kind" value="{{ line.kind }}">
+                  <input type="hidden" name="offset_index" value="{{ line.offset_index }}">
+                  <input type="hidden" name="offset" value="{{ line.offset }}">
+                  <input type="hidden" name="anchor_at" value="{{ line.anchor_at }}">
+                  {% if _next_action_return_to %}<input type="hidden" name="return_to" value="{{ _next_action_return_to }}">{% endif %}
+                  <button class="btn secondary" type="submit">Mark as done</button>
+                </form>
+              </span>
+            </div>
+          {% endfor %}
         </div>
       {% endif %}
     </aside>

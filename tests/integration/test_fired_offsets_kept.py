@@ -106,7 +106,7 @@ def test_removing_a_sent_entry_before_another_is_refused(client: TestClient, db:
         session = _session(client, db, f"bc1-remove-{kind}", kind=kind)
         response = _save(client, session, kind=kind, offsets="-P1D")
         assert response.status_code == 422, kind
-        assert "-P3D was already sent (or skipped) at position 1" in (response.text)
+        assert "-P3D was already sent, skipped or marked done at position 1" in (response.text)
         db.expire_all()
         assert getattr(session, f"{kind}_offsets") == ["-P3D", "-P1D"]
 
@@ -183,7 +183,7 @@ def test_a_sent_position_past_the_lists_end_takes_no_new_entry(
     db.commit()
     response = _save(client, session, kind="invite", offsets="-P3D, -PT12H")
     assert response.status_code == 422
-    assert "-P1D was already sent (or skipped) at position 2" in response.text
+    assert "-P1D was already sent, skipped or marked done at position 2" in response.text
 
 
 def test_the_lobby_cannot_move_end_back_onto_sent_reminders(

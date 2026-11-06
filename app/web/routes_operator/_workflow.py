@@ -43,7 +43,7 @@ from starlette import status
 
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
-from app.services import assignments, audit, invitations, validation
+from app.services import assignments, audit, due_actions, invitations, validation
 from app.services import session_lifecycle as lifecycle
 from app.web import urls
 from app.web.deps import (
@@ -678,5 +678,39 @@ def workflow_archive(
     return urls.redirect(
         request,
         url="/operator/sessions/archived",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/sessions/{session_id}/workflow/due-done")
+def workflow_due_done(
+    request: Request,
+    kind: str = Form(...),
+    offset_index: int = Form(...),
+    offset: str = Form(...),
+    anchor_at: str = Form(...),
+    return_to: str | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Mark a due send prompt as done — the Workflow card's *Mark as
+    done* (14F rung 5b), while scheduled email is off. An entry no longer
+    due (handled in another tab, its offset changed) just redirects: the
+    page drawn next shows what is due now."""
+    with contextlib.suppress(due_actions.NotDue):
+        due_actions.mark_done(
+            db,
+            review_session,
+            kind=kind,
+            offset_index=offset_index,
+            offset=offset,
+            anchor_at=anchor_at,
+            user=user,
+            correlation_id=request_correlation_id(),
+        )
+    return urls.redirect(
+        request,
+        url=_redirect_url(review_session.public_id, return_to),
         status_code=status.HTTP_303_SEE_OTHER,
     )

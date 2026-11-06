@@ -447,6 +447,9 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # invitations were dispatched on the entry's fire.
     "session.scheduled_invites_skipped": EventSchema(_IDENTITY | {"reason", "context"}),
     "session.scheduled_invites_fired": EventSchema(_IDENTITY | {"counts", "context"}),
+    # 14F rung 5b: an operator's Mark as done on a due invite prompt,
+    # consumed on its anchor as a fired entry is (`due_actions`).
+    "session.scheduled_invites_handled": EventSchema(_IDENTITY | {"context"}),
     # Segment 18G PR 2B — dedicated edit event when the operator sets /
     # changes / clears the ``invite_offsets`` JSON list via the Create
     # / Edit Session forms. The general ``session.updated`` still
@@ -467,6 +470,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # so a partial-failure re-pass doesn't double-send.
     "session.scheduled_reminders_skipped": EventSchema(_IDENTITY | {"reason", "context"}),
     "session.scheduled_reminders_fired": EventSchema(_IDENTITY | {"counts", "context"}),
+    "session.scheduled_reminders_handled": EventSchema(_IDENTITY | {"context"}),
     # B20 (2026-10-02): a trigger that raised inside
     # ``observe_scheduled_events`` — rolled back and logged so the page
     # still renders. ``context.trigger`` names it (``invites`` /

@@ -220,7 +220,13 @@ def test_one_failed_key_in_a_batch_stops_the_count(
     page: Page, new_session: Callable[[], str], tmp_path: Path
 ) -> None:
     """A batch is failed by any of its keys, not only its first: the
-    seventh key of the first batch errors, and no further batch goes."""
+    seventh key of the first batch answered errors, and no further batch
+    goes.
+
+    The first batch *answered*, not the one starting ``mid0``: two go out
+    together and either may reach the route first. Failing ``mid0``'s
+    let the other's answer send a third before the failure arrived (CI on
+    #3668), which is the count working, not stopping late."""
     session_id = new_session()
     roster = tmp_path / "reviewers.csv"
     many = [f"mid{i}@example.edu" for i in range(40)]
@@ -233,7 +239,7 @@ def test_one_failed_key_in_a_batch_stops_the_count(
         keys = json.loads(route.request.post_data)["keys"]
         batches.append(keys)
         outcomes = {k: {"status": "NOT_FOUND", "error_kind": None} for k in keys}
-        if keys[0] == many[0]:
+        if len(batches) == 1:
             outcomes[keys[6]] = {"status": "ERROR", "error_kind": "throttled"}
         route.fulfill(
             status=200, content_type="application/json", body=json.dumps({"outcomes": outcomes})
