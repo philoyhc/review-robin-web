@@ -310,22 +310,16 @@ def _apply_session_config_form(
     # moved sent entry is named as such rather than as one short of
     # lead time; and a sent entry kept in place, like an aged stored
     # one, skips the lead-time floor.
-    # Auto-send off (14E rung 0): the two offset fields are disabled, so
-    # the form sends neither; the stored values are kept as they are,
-    # unvalidated, since nothing fires them and the operator cannot edit
-    # them.
-    send = scheduled_events.scheduled_send_enabled()
-    fired_errors = (
-        scheduled_events.fired_offset_errors(
-            db,
-            review_session,
-            scheduled_activate_at=parsed_scheduled_activate_at,
-            invite_offsets=scheduled_events.split_offsets(invite_offsets),
-            deadline=parsed_deadline,
-            reminder_offsets=scheduled_events.split_offsets(reminder_offsets),
-        )
-        if send
-        else []
+    # The offsets are validated whether or not scheduled email is on:
+    # off, they time the Workflow card's due prompts (14F rung 5a,
+    # author 2026-11-06), so an entry is held to the same rules.
+    fired_errors = scheduled_events.fired_offset_errors(
+        db,
+        review_session,
+        scheduled_activate_at=parsed_scheduled_activate_at,
+        invite_offsets=scheduled_events.split_offsets(invite_offsets),
+        deadline=parsed_deadline,
+        reminder_offsets=scheduled_events.split_offsets(reminder_offsets),
     )
     if fired_errors:
         raise HTTPException(
@@ -336,22 +330,16 @@ def _apply_session_config_form(
     # 18G Part 2: optional auto-send invite offsets, validated against
     # the (possibly freshly-edited) Start.
     try:
-        parsed_invite_offsets = (
-            list(review_session.invite_offsets or [])
-            if not send
-            else (
-                scheduled_events.parse_and_validate_invite_offsets(
-                    invite_offsets,
-                    scheduled_activate_at=parsed_scheduled_activate_at,
-                    aged_exempt=scheduled_events.offsets_lead_exempt(
-                        db,
-                        review_session,
-                        "invite",
-                        parsed_scheduled_activate_at,
-                        anchor_unedited=start_unedited,
-                    ),
-                )
-            )
+        parsed_invite_offsets = scheduled_events.parse_and_validate_invite_offsets(
+            invite_offsets,
+            scheduled_activate_at=parsed_scheduled_activate_at,
+            aged_exempt=scheduled_events.offsets_lead_exempt(
+                db,
+                review_session,
+                "invite",
+                parsed_scheduled_activate_at,
+                anchor_unedited=start_unedited,
+            ),
         )
     except scheduled_events.ScheduledActivateError as exc:
         raise HTTPException(
@@ -362,22 +350,16 @@ def _apply_session_config_form(
     # 18G Part 3: optional auto-send reminder offsets, validated
     # against the (possibly freshly-edited) deadline.
     try:
-        parsed_reminder_offsets = (
-            list(review_session.reminder_offsets or [])
-            if not send
-            else (
-                scheduled_events.parse_and_validate_reminder_offsets(
-                    reminder_offsets,
-                    deadline=parsed_deadline,
-                    aged_exempt=scheduled_events.offsets_lead_exempt(
-                        db,
-                        review_session,
-                        "reminder",
-                        parsed_deadline,
-                        anchor_unedited="deadline" in unedited,
-                    ),
-                )
-            )
+        parsed_reminder_offsets = scheduled_events.parse_and_validate_reminder_offsets(
+            reminder_offsets,
+            deadline=parsed_deadline,
+            aged_exempt=scheduled_events.offsets_lead_exempt(
+                db,
+                review_session,
+                "reminder",
+                parsed_deadline,
+                anchor_unedited="deadline" in unedited,
+            ),
         )
     except scheduled_events.ScheduledActivateError as exc:
         raise HTTPException(

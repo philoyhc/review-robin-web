@@ -178,11 +178,6 @@ def validate_deadline_change(
         deadline=deadline,
         responses_release_at=review_session.responses_release_at,
     )
-    # Auto-send off (14E rung 0): the reminder offsets are disabled and
-    # fire nothing, so an End change does not check them, as Session
-    # Home's save does not.
-    if not scheduled_send_enabled():
-        return
     # An End moved back to a value whose reminders were sent meets that
     # value's record (findings Bc1); checked first, so a moved sent entry
     # is named as such rather than as one short of lead time.
@@ -269,8 +264,8 @@ def observe_scheduled_events(
 def scheduled_send_enabled() -> bool:
     """Whether scheduled invites and reminders may fire (segment 14E
     rung 0, `RRW_SCHEDULED_SEND`). Off until mail can go on a clock
-    (14G): their fields are disabled, their stored values kept, and no
-    pass fires them. Read at call time, so a test can flip it."""
+    (14G): no pass fires them, and their fields time the Workflow card's
+    due prompts instead (14F rung 5a). Read at call time, so a test can flip it."""
     return settings.scheduled_send
 
 
