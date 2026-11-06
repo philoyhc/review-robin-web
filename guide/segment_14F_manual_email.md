@@ -206,6 +206,25 @@ Taken 2026-11-02 at `fffd4c28`; re-taken 2026-11-05 at `095336bf`
   - **Tests.** The suite's mailer is a `FakeMailer` (an autouse fixture
     in `tests/conftest.py`), since the suite runs without fake auth.
 
+### Follow-ups, collected (author, 2026-11-06: gather several, then build)
+
+1. **Email invitations in a `validated` session.** An invitation can go
+   out before the session opens to responses, and a reviewer who
+   follows it early lands on the pre-open page. So per-row **Send** and
+   **Regenerate** take `send-all`'s `validated`-or-`ready` gate
+   (`_require_validated_or_ready`), revising the 2026-10-02 ruling (B17 /
+   F17) for these two. **Send reminder** stays `ready`-only. Bulk stays
+   off behind `RRW_BULK_SEND`, a separate matter. Since rung 3a,
+   a prepared session has had no in-app way to email an invitation:
+   bulk Send invites, the one path that worked before activation, is
+   off. Found in the author's live test on Azure.
+2. **Say why a row button is disabled.** Any row button still disabled
+   gets a hover title, such as "Available once the session is
+   activated".
+3. **`Reviewer.last_opened_at`'s comment** in
+   `app/db/models/reviewer.py` still says "stamped on every surface GET".
+   The stamp is at most once per `ARRIVAL_GAP` (Codex on #3654).
+
 ## PR ladder
 
 1. **Scaffold:** ~~the disabled auto-send fields and their line, the
