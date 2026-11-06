@@ -210,7 +210,9 @@ route modules rose (`_setup_relationships.py` 27% → 32%,
 them: the formatter's one-parameter-per-line signatures make their shared
 parameter lists count as 10-line blocks. A measurement shift, not new
 copying. **Churn** is **61.8% against a 47.5% baseline, ratio 1.3×**
-(unchanged), over all 3,457 merges.
+(unchanged), over all 3,457 merges. *Annotated 2026-11-06:* the walk reads
+merge commits only, so it stops at #3149 and this window's 89
+squash-merged PRs are not in the figure (N9).
 
 ## 3. Functional-spec compliance
 
@@ -307,7 +309,7 @@ undocumented modifiers (D9), and `CONTRIBUTING.md` missing the format gate
 ## 6. Bugs and regressions
 
 **At the pinned tree: one medium, four low, none high**, plus twelve spec
-drifts (§3) and eight noted gaps. Each is a row of
+drifts (§3) and nine noted gaps. Each is a row of
 `guide/findings_2026-11-06_assessment.md`; CONFIRMED means reproduced by a
 scratch test, by trace means read through without a test.
 
@@ -325,12 +327,14 @@ scratch test, by trace means read through without a test.
 - **L4 (low, by trace).** End's close on already-shut instruments writes
   no `session.deadline_reached`, which the specs read as written.
 
-Notes, not defects (N1–N8): no test that the mailer's failure log omits
+Notes, not defects (N1–N9): no test that the mailer's failure log omits
 the token, nor of a POST redirect; `FakeMailer` logs addresses locally; a
 network failure after Graph accepted reads `failed`; a 429 can hold a
 worker about 70 s; five suspicions the defect read could not confirm;
 System Status's "behind"; two spellings of `context.deadline`; the uneven
-Postgres shards.
+Postgres shards; and, found after the reads, the repository's churn and
+pace measurements reading merge commits only, blind to every PR since the
+switch to squash merges (N9, added 2026-11-06).
 
 **Caught and fixed in the window, worth remembering:** a regenerate
 between a queued send and its claim mailing a dead link (Codex, #3651);
