@@ -854,9 +854,11 @@
       .send-test-notice--error { color: var(--status-error-fg); }
       /* Invitations' Share the session link card (14F): the link and its
          Copy button on one line, the button's label on one row. */
-      .share-link-row { display: flex; gap: var(--space-2); align-items: center; }
-      .share-link-row input { flex: 1 1 auto; min-width: 0; }
-      .share-link-row .btn { white-space: nowrap; }
+      /* The link takes the card's full width; Copy link sits on the row
+         below, flush right (author, 2026-11-06). */
+      .share-link-row { display: flex; flex-direction: column; gap: var(--space-2); }
+      .share-link-row input { width: 100%; min-width: 0; }
+      .share-link-row .btn { align-self: flex-end; white-space: nowrap; }
       /* body.ui-v2 selector so it beats ``body.ui-v2 label`` (which sets a
          smaller --fs-small size + 500 weight) — the toggle text should read
          as normal card body text. */
