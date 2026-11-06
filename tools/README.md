@@ -162,9 +162,11 @@ as the headline.
 
 **Churn** is the share of deleted lines younger than N days *against the ambient
 age of the same files at that moment* — a fast-moving repo makes everything
-young, and the raw figure misleads without that baseline. Churn walks the
-**full** merge history so the number is deterministic and comparable between
-snapshots. `--churn-sample N` is a faster, sample-dependent look for iterating
+young, and the raw figure misleads without that baseline. Churn walks
+**every** PR on `main`'s first-parent line, its merge commit or, since #3150,
+its squash commit (subject ending `(#N)`), so the number is deterministic and
+comparable between snapshots; before 2026-11-06 it read merge commits only and
+missed every squash-merged PR (findings 2026-11-06 N9). `--churn-sample N` is a faster, sample-dependent look for iterating
 on the tool and **must not be quoted**.
 
 ---
@@ -255,13 +257,21 @@ status line reports both counts.
 ## `pace_audit.py`
 
 Read-only. Stdlib + `git`; needs a full history (`git fetch --unshallow
-origin main` on a session clone). Reads every merge to `main` since
-`--since`, splits them at `--cut` (the first PR number under a changed
+origin main` on a session clone). Reads every PR on `main`'s
+first-parent line since `--since` (a merge commit, or a squash commit whose
+subject ends `(#N)`), splits them at `--cut` (the first PR number under a changed
 rule) and prints, for BEFORE, the last BEFORE stretch from `--recent`,
 and AFTER: the within-session merge-to-merge cycle and its split into
 turn / in-PR iteration / push-to-merge, the share of PRs carrying a
 review-response commit, product and prose-only slices separately, the
 cycle by code-size bucket, and code+test lines per hour.
+
+**A squash-merged PR has no branch in git**, so its turn and iteration
+times are gone. Its commit count, review rounds and stamp often survive as
+free text in the squash body but are not parsed. All read `None`, the report
+says how many PRs were squash-merged, and the turn / iteration /
+push-to-merge split is printed over the merge-committed PRs only. Its cycle
+and size are measured like any other's (findings 2026-11-06 N9).
 
 **A gap over three hours is dropped**, so the author's scheduling does
 not enter; what remains is the loop between one merge and the next.

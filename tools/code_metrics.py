@@ -25,7 +25,8 @@ copy-paste. Read the >=10 row as the headline for production code.
 `--churn-days` when they were deleted — i.e. how much of the work is
 rewriting recent work rather than adding to settled code. Computed by
 blaming each deleted line against the parent commit, across **every**
-first-parent merge on `origin/main`.
+PR on `origin/main`'s first-parent line: its merge commit or, since
+#3150, its squash commit (subject ending `(#N)`).
 
 Walking the whole history is the point. An earlier version sampled merges
 evenly and it was the sampling, not the sample size, that was wrong:
@@ -147,18 +148,35 @@ def is_shallow_repository() -> bool:
     return _git("rev-parse", "--is-shallow-repository").strip() == "true"
 
 
+SQUASH_SUBJECT = re.compile(r"\(#\d+\)$")
+
+
+def pr_commits() -> tuple[list[str], int]:
+    """``"<sha> <commit time>"`` for each PR on origin/main's first-parent
+    line, oldest last, and how many of them were squash-merged.
+
+    A PR lands as a merge commit or, since #3150 (2026-10-19), as a
+    squash commit whose subject ends ``(#N)``; diffing either against its
+    first parent gives the PR's change. Reading merge commits alone
+    missed every squash-merged PR (findings 2026-11-06 N9). Direct commits
+    with no PR number are not PRs and stay out."""
+    entries: list[str] = []
+    squashed = 0
+    for row in _git("log", "origin/main", "--first-parent", "--format=%H %ct %P|%s").split("\n"):
+        if not row.strip():
+            continue
+        head, subject = row.split("|", 1)
+        sha, when, *parents = head.split()
+        if len(parents) > 1:
+            entries.append(f"{sha} {when}")
+        elif SQUASH_SUBJECT.search(subject):
+            entries.append(f"{sha} {when}")
+            squashed += 1
+    return entries, squashed
+
+
 def churn(days: int, sample: int) -> None:
-    all_merges = [
-        m
-        for m in _git(
-            "log",
-            "origin/main",
-            "--first-parent",
-            "--merges",
-            "--format=%H %ct",
-        ).split("\n")
-        if m.strip()
-    ]
+    all_merges, squashed = pr_commits()
     # Sampling is opt-in and evenly spread across the whole history, never the
     # most recent N: a run of documentation-only PRs at the head would
     # otherwise dominate and report a figure computed from a handful of lines.
@@ -168,7 +186,7 @@ def churn(days: int, sample: int) -> None:
     else:
         merges = all_merges
     if not merges:
-        print("  no merge commits found on origin/main")
+        print("  no PR commits found on origin/main")
         return
 
     young = old = 0
@@ -228,11 +246,13 @@ def churn(days: int, sample: int) -> None:
         print("  no Python deletions in the sampled merges")
         return
     if len(merges) == len(all_merges):
-        print(f"  all {len(all_merges):,} merges on origin/main")
+        print(
+            f"  all {len(all_merges):,} PRs on origin/main "
+            f"({len(all_merges) - squashed:,} merge commits, {squashed:,} squash-merged)"
+        )
     else:
         print(
-            f"  sampled {len(merges)} merges spread evenly across "
-            f"{len(all_merges):,} on origin/main"
+            f"  sampled {len(merges)} PRs spread evenly across {len(all_merges):,} on origin/main"
         )
         print(
             "  WARNING: sampled. The ratio below is sample-dependent at any "
