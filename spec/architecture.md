@@ -696,13 +696,15 @@ the `email_outbox.body` so the operator can re-copy the link). Sending
 an invitation always rotates the token, so a previously delivered URL
 becomes stale.
 
-State machine: `pending` → `sent` → `opened`. Creating invitations is
+State machine: `pending` → `sent` → `opened`; a per-row send the
+transport refuses goes back to `pending` (`invitation.send_reverted`,
+`spec/operations_pages.md`). Creating invitations is
 idempotent — a Prepare step (`invitations.generate_invitations`), with
 no separate Generate control and no auto-trigger on activation. Bulk Send all and
 Regenerate all require the session to be `validated` or `ready`
 (`_require_validated_or_ready`, 409 otherwise) so the emailed link
-never points at a draft session; per-row Send / Regenerate and every
-reminder require `ready` (`_require_ready`). The invitation services
+never points at a draft session, and so do per-row Send / Regenerate
+(14F follow-up 1); every reminder requires `ready` (`_require_ready`). The invitation services
 decide both again under the session lock (`spec/lifecycle.md` §3.1).
 
 `/me/invite/{token}` requires Easy Auth sign-in (magic links are not
@@ -749,7 +751,7 @@ never sent the original), or that row's link no longer matches
 action falls back to `send_invitation` (mints a fresh token, writes a
 `kind='invitation'` row); the operator's intent always lands as a
 deliverable message in one click. `Invitation.last_reminder_at`
-stamps every successful reminder. There is no throttle. Bulk reminders
+stamps every successful reminder; a refused per-row one is put back. There is no throttle. Bulk reminders
 emit a single `reminders.sent` audit event: a `set_changes` envelope
 whose `updated` list carries one `{invitation_id, reviewer_id}` entry
 per reminder sent, plus `context.fell_back`, the number that fell back

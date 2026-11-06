@@ -353,9 +353,11 @@ row exists:
 - **Regenerate** — always visible when an invitation row exists.
   POSTs to `/operator/sessions/{session_id}/invitations/{id}/regenerate`.
 
-All three are `ready`-only, at the button and at the route
-(`_require_ready`, 409). Bulk **Send invites** on the Workflow card is
-the one way to send before activation.
+Send and Regenerate are available once the session is prepared
+(`validated` or `ready`, `_require_validated_or_ready`, 409), so an
+invitation can go out ahead of opening (14F follow-up 1); Send reminder
+is `ready`-only (`_require_ready`, 409). A disabled button says why in
+its hover title.
 
 **Send also has a server-side eligibility gate**, which the button's
 visibility rule does not express. The route refuses with **409** when the reviewer is not
@@ -364,9 +366,23 @@ least one `include=True` assignment — the same test the two bulk send
 paths apply, so all three agree by construction rather than by three
 queries happening to match. The gate is reachable only by a direct
 POST or a stale tab, because the table renders the button only for
-rows it lists and it lists only eligible reviewers. It checks
-eligibility **and not** `pending`: a direct POST re-sending an
-already-sent invitation still rotates its token.
+rows it lists and it lists only eligible reviewers. Under the session lock the service
+also refuses an invitation no longer `pending` — a double click, a
+stale tab — and the page says *"Not sent again: this invitation was
+already sent, or is being sent."* (`?email=already_sent`): each Send
+mints a new token, so a second one would kill the first link (findings
+L1, 2026-11-06).
+
+**A refused send is put back** (findings M1). The invitation is stamped
+before the Graph call; if Graph refuses it outright (a 401, a 403, a
+second 429, another 4xx: `email_dispatch.REFUSED_KINDS`), the stamps the
+send wrote (`status` / `sent_at`, or `last_reminder_at`) return to what
+they were, so the row offers the same action again. After a `5xx` or a
+network failure the message may have arrived, so the stamps stay and the
+row offers Send reminder, which reuses the link, as the notice's "it may
+or may not have gone" warns. Only stamps still holding
+what the send wrote go back, so an open of the link or a Regenerate in
+the meantime stands; `invitation.send_reverted` records the restore.
 
 **Send reminder carries the same gate**: a reminder
 carries the invite link, and an inactive reviewer must not be sent it,

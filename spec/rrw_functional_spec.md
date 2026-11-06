@@ -1683,7 +1683,8 @@ Coverage:
   `responses.deleted_all`.
 - **Invitation lifecycle** — `invitations.generated`,
   `invitation.sent`, `reminders.sent`, `invitation.opened`,
-  `invitation.regenerated` / `invitations.regenerated`, and
+  `invitation.send_reverted` (a refused per-row send, its stamps put
+  back), `invitation.regenerated` / `invitations.regenerated`, and
   `responses_received.queued` when a submit queues the
   confirmation. There is no per-attempt email event: the outbox
   row is the record of each send ([§11.3](#113-the-outbox)).

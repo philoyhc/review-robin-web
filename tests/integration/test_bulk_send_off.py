@@ -18,7 +18,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.config import Settings, settings
-from app.db.models import EmailOutbox, Invitation, User
+from app.db.models import AuditEvent, EmailOutbox, Invitation, User
 from cordware import graph
 from cordware.graph import FakeMailer, GraphError, MailMessage
 
@@ -183,3 +183,116 @@ def test_a_regenerate_between_queue_and_send_stops_the_dead_link(
     assert row.status == "failed"
     assert row.error_message == invitations_service.SUPERSEDED_MESSAGE
     assert "regenerated first" in client.get(response.headers["location"]).text
+
+
+class _Refusing:
+    def send_mail(self, message: MailMessage) -> None:
+        raise GraphError("forbidden", 403)
+
+
+def test_a_refused_send_leaves_the_row_pending_with_its_send(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Findings M1: the invitation is stamped before the send, so a
+    refused one used to read ``sent`` with no Send on its row."""
+    monkeypatch.setattr(graph, "mailer_for", lambda _request, settings=None: _Refusing())
+    session = _ready_session(client, db, code="row-m1-send")
+    invitation = _invitation(db, session.id)
+    base = f"/operator/sessions/{session.public_id}/invitations"
+    response = client.post(f"{base}/{invitation.id}/send", follow_redirects=False)
+    assert response.headers["location"].endswith("/invitations?email=failed&kind=forbidden")
+    db.refresh(invitation)
+    assert invitation.status == "pending"
+    assert invitation.sent_at is None
+    reverted = db.execute(
+        select(AuditEvent).where(AuditEvent.event_type == "invitation.send_reverted")
+    ).scalar_one()
+    assert reverted.detail is not None
+    changes = reverted.detail["changes"]
+    assert set(changes) == {"status", "sent_at"}
+    assert changes["status"] == ["sent", "pending"]
+    assert changes["sent_at"][1] is None
+    assert f'action="{base}/{invitation.id}/send"' in client.get(base).text
+
+
+def test_a_refused_reminder_leaves_last_reminder_at_as_it_was(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch, fake_mailer: FakeMailer
+) -> None:
+    session = _ready_session(client, db, code="row-m1-remind")
+    invitation = _invitation(db, session.id)
+    base = f"/operator/sessions/{session.public_id}/invitations"
+    client.post(f"{base}/{invitation.id}/send")
+    monkeypatch.setattr(graph, "mailer_for", lambda _request, settings=None: _Refusing())
+    response = client.post(f"{base}/{invitation.id}/remind", follow_redirects=False)
+    assert response.headers["location"].endswith("/invitations?email=failed&kind=forbidden")
+    db.refresh(invitation)
+    assert invitation.status == "sent"
+    assert invitation.last_reminder_at is None
+
+
+def test_a_second_send_is_refused_and_the_first_link_lives(
+    client: TestClient, db: Session, fake_mailer: FakeMailer
+) -> None:
+    """Findings L1: a double click mailed twice, minting a new token each
+    time, so the first message's link was dead on arrival."""
+    from app.services import invitations as invitations_service
+
+    session = _ready_session(client, db, code="row-l1")
+    invitation = _invitation(db, session.id)
+    url = f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
+    client.post(url)
+    token = fake_mailer.sent[0].body.split("/invite/", 1)[1].split()[0].strip("\"'<>.,)")
+    response = client.post(url, follow_redirects=False)
+    assert response.headers["location"].endswith("/invitations?email=already_sent")
+    assert len(fake_mailer.sent) == 1
+    assert invitations_service.lookup_invitation_by_token(db, token) is not None
+    assert "already sent, or is being sent" in client.get(response.headers["location"]).text
+
+
+def test_an_open_during_a_refused_reminder_is_kept(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch, fake_mailer: FakeMailer
+) -> None:
+    """The restore puts back only what the send wrote and only while it
+    still holds (the M1 fix's cold read): a reviewer who follows their
+    link while the Graph call runs stays ``opened``."""
+    session = _ready_session(client, db, code="row-m1-open")
+    invitation = _invitation(db, session.id)
+    base = f"/operator/sessions/{session.public_id}/invitations"
+    client.post(f"{base}/{invitation.id}/send")
+
+    class OpenedThenRefused:
+        def send_mail(self, message: MailMessage) -> None:
+            db.refresh(invitation)
+            invitation.status = "opened"
+            invitation.opened_at = invitation.sent_at
+            db.commit()
+            raise GraphError("forbidden", 403)
+
+    monkeypatch.setattr(graph, "mailer_for", lambda _request, settings=None: OpenedThenRefused())
+    client.post(f"{base}/{invitation.id}/remind")
+    db.refresh(invitation)
+    assert invitation.status == "opened"
+    assert invitation.opened_at is not None
+    assert invitation.last_reminder_at is None
+
+
+def test_an_ambiguous_failure_keeps_the_stamps_and_the_link(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Codex on #3664: after a 5xx or a network failure Graph may have
+    accepted the message, so the row keeps reading sent, offering Send
+    reminder (which reuses the link), not a Send that would kill it."""
+
+    class Outage:
+        def send_mail(self, message: MailMessage) -> None:
+            raise GraphError("server", 503)
+
+    monkeypatch.setattr(graph, "mailer_for", lambda _request, settings=None: Outage())
+    session = _ready_session(client, db, code="row-m1-ambiguous")
+    invitation = _invitation(db, session.id)
+    base = f"/operator/sessions/{session.public_id}/invitations"
+    response = client.post(f"{base}/{invitation.id}/send", follow_redirects=False)
+    assert response.headers["location"].endswith("/invitations?email=failed&kind=server")
+    db.refresh(invitation)
+    assert invitation.status == "sent"
+    assert f'action="{base}/{invitation.id}/remind"' in client.get(base).text

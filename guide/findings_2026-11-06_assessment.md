@@ -5,7 +5,7 @@
 of the window's `app/`, `cordware/` and `alembic/` changes with scratch
 tests, and a read of `cordware/`, `residentialapps/` and `utilityapps/`
 with their suites and a route fuzz · **Read at:** `c912ae53` (#3657; the
-reads ran on its pre-merge tree `c5d03d49`, identical) · **Open:** all but N9.
+reads ran on its pre-merge tree `c5d03d49`, identical) · **Open:** all but M1, L1 and N9.
 
 The checklist the fixes work through. **Nothing was edited by the
 reads**, and their scratch tests were not kept: a fix PR writes its own
@@ -31,8 +31,8 @@ None.
 
 ## 2. Medium
 
-- **M1 — A failed per-row Send or Remind still reads as sent, and the
-  row loses its Send.** `invitations.send_invitation`
+- ~~**M1 — A failed per-row Send or Remind still reads as sent, and the
+  row loses its Send.**~~ **Done 2026-11-06**: `invitations.restore_after_failed_send` puts back, under the session lock, the stamps the refused send wrote and still holding, and writes `invitation.send_reverted` (`tests/integration/test_bulk_send_off.py`). Was: `invitations.send_invitation`
   (`app/services/invitations.py:395-399`) stamps the invitation `sent`
   and `sent_at` and commits before `_send_queued_row`
   (`app/web/routes_operator/_operations.py:362-391`) dispatches; on a
@@ -50,7 +50,7 @@ None.
 
 ## 3. Low
 
-- **L1 — A double-submitted per-row Send mails a dead link first.**
+- ~~**L1 — A double-submitted per-row Send mails a dead link first.**~~ **Done 2026-11-06**: `send_one_invitation` refuses, under the session lock, an invitation no longer `pending` (`?email=already_sent`). Was:
   `invitations_send_one` (`_operations.py:878-934`) deliberately does not
   check `pending`, and `send_invitation` mints a new token on every call
   (`invitations.py:375-376`); each POST now really emails, so a double
