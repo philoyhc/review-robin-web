@@ -45,7 +45,7 @@ def test_workload_weighs_formal_assignments_by_cadence(client: TestClient) -> No
         "2",
         "6",
         "8",
-        "145",
+        "165",
         "6",
     ]  # Daniel Koh: assigned, following, students, encounters, minutes, load
     daniel = next(r for r in sample.workload() if r["staff"] == "Daniel Koh")

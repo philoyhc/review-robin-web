@@ -470,6 +470,9 @@
          buttons and table tick boxes keep theirs (author, 2026-10-29). */
       @media (max-width: 639px), (pointer: coarse) {
         .btn, .input, .theme-toggle button, a.chip, .tokens, label.check { min-height: 44px; }
+        /* A favorite star sits on a phone-first page (1D rung 12), so
+           it takes the finger's height a desktop column chip does not. */
+        .col-chip[data-favorite] { min-height: 44px; min-width: 44px; }
         .token-x { min-width: 44px; min-height: 44px; }
         .token-input { min-height: 36px; }
       }

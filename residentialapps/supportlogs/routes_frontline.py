@@ -57,8 +57,9 @@ def log_saved(request: Request) -> Response:
         return RedirectResponse(url_path(request, "/log") + sample.as_query(me), status_code=303)
     following = bool(sample.plans_of(me.name, chosen.id))
     # The saved encounter makes the student one of the viewer's own (§4.3);
-    # a sample stores nothing, so the view is offered only if already so.
-    in_set = any(s.id == chosen.id for s, _, _ in sample.working_set(me.name))
+    # a sample stores nothing, so the view is offered only where the viewer
+    # already reaches it: their own, or shared with them (§11.1).
+    in_set = reaches_student(me, chosen.id)
     return gated(
         request,
         "supportlogs/log_saved.html",

@@ -14,6 +14,7 @@ from fastapi.testclient import TestClient
 
 from residentialapps.supportlogs import sample_support as sample
 from residentialapps.supportlogs.main import create_app
+from residentialapps.supportlogs.pages import reaches_student
 from residentialapps.tests._host import host_with
 
 PRIYA = "?as=Priya%20Raman"
@@ -23,7 +24,7 @@ FRONTLINE_PAGES = (
     "/students/",
     "/students/S-03",
     "/plans/",
-    "/log/saved?student=S-02&duration=10%20min&type=Check-in",
+    "/log/saved?student=S-02&duration=15%20min&type=Check-in",
 )
 
 
@@ -71,10 +72,12 @@ def test_the_dashboard_follows_recent_and_the_last_14_days(client: TestClient) -
     ]
     days = section(page, "mine-h")
     assert (
-        "<dt>Encounters</dt><dd>6</dd><dt>Support time</dt><dd>105 min</dd>"
+        "<dt>Encounters</dt><dd>6</dd><dt>Support time</dt><dd>120 min</dd>"
         "<dt>Students</dt><dd>6</dd>" in days
     )
-    assert "<dt>Check-in</dt><dd>2</dd>" in days
+    assert (
+        "<dt>Check-in</dt><dd>4</dd>" in days
+    )  # the two "…-initiated" encounters became Check-ins
     assert "The flags you raised" in page  # rung 3 fills the flags
 
 
@@ -92,7 +95,7 @@ def test_log_renders_the_configured_lists_as_choice_chips(client: TestClient) ->
     assert re.findall(r'name="concern" value="([^"]+)"', page) == [
         a for a, _ in sample.CONCERN_AREAS
     ]
-    assert page.count(" data-says-who>") == len(sample.SAYS_WHO)
+    assert "data-says-who" not in page  # Who started it? is asked of every type
     assert f'maxlength="{sample.NOTE_LIMIT}"' in page and sample.NOTE_GUIDANCE in page
     assert '<textarea id="note"' in page and 'name="note"' not in page  # a sample sends no note
     assert page.count('data-clear="') == 3  # the optional single choices clear
@@ -105,8 +108,10 @@ def test_log_renders_the_configured_lists_as_choice_chips(client: TestClient) ->
 
 
 def test_log_offers_the_viewer_s_students_or_the_one_chosen(client: TestClient) -> None:
-    offered = re.findall(r'name="student" value="([^"]+)"', client.get("/log").text)
-    assert offered == [s.id for s, _, _ in sample.working_set("Daniel Koh")][:6]
+    log = client.get("/log").text
+    offered = re.findall(r'name="student" value="([^"]+)"', log)
+    assert offered == list(sample.FAVORITES["Daniel Koh"]) == ["S-03", "S-08"]
+    assert "Mark favorites on <a" in log and 'href="/students/">Students</a>' in log
     chosen = client.get("/log?student=S-03").text
     assert '<input type="hidden" name="student" value="S-03" data-plan=' in chosen
     assert '<span class="strong">Clara Tan</span><a href="/log">Change</a>' in chosen
@@ -125,14 +130,14 @@ def test_log_s_script_parses(client: TestClient, tmp_path: Path) -> None:
 
 
 def test_the_confirmation_says_what_was_saved_and_offers_follow_up(client: TestClient) -> None:
-    bao = client.get("/log/saved?student=S-02&duration=10%20min&type=Practical%20support").text
-    assert "Practical support with Bao Nguyen, 10 min" in bao
+    bao = client.get("/log/saved?student=S-02&duration=15%20min&type=Practical%20support").text
+    assert "Practical support with Bao Nguyen, 15 min" in bao
     assert (
         "Bao Nguyen is not on your follow-ups." in bao and ">Add to my follow-ups</button>" in bao
     )
     clara = client.get("/log/saved?student=S-03&duration=15%20min&type=Check-in").text
     assert "Add to my follow-ups" not in clara  # Clara is on a plan already
-    added = client.get("/log/saved?student=S-02&duration=10%20min&type=Check-in&follow=yes").text
+    added = client.get("/log/saved?student=S-02&duration=15%20min&type=Check-in&follow=yes").text
     assert "Added to your follow-ups." in added
     assert "nothing is stored" in bao
     following = client.get(
@@ -140,7 +145,7 @@ def test_the_confirmation_says_what_was_saved_and_offers_follow_up(client: TestC
     ).text
     assert "Added to your follow-ups." not in following  # on a plan already: nothing was added
     assert ">Open Bao Nguyen</a>" in bao
-    stranger = client.get("/log/saved?student=S-09&duration=10%20min&type=Check-in").text
+    stranger = client.get("/log/saved?student=S-09&duration=15%20min&type=Check-in").text
     assert "Open Ivan Seet" not in stranger  # not one of Daniel's: the view would be not found
 
 
@@ -153,8 +158,11 @@ def test_log_shows_the_plan_a_chosen_student_is_on(client: TestClient) -> None:
     assert "<option selected>Weekly</option>" in aiden
     bao = client.get("/log?student=S-02").text
     assert '<p id="on-plan" class="flush" hidden>' in bao and 'id="add-follow">' in bao
-    chips = client.get("/log").text
-    assert 'value="S-01" data-plan="On your follow-ups: weekly." data-cadence="Weekly">' in chips
+    chips = client.get("/log").text  # the favorites carry their plans too
+    assert (
+        'value="S-03" data-plan="On your plans: weekly, set by Sam Lee." '
+        'data-cadence="Weekly" data-formal>' in chips
+    )
 
 
 def test_pages_naming_students_say_they_are_recorded(client: TestClient) -> None:
@@ -163,7 +171,7 @@ def test_pages_naming_students_say_they_are_recorded(client: TestClient) -> None
         "/log",
         "/students/",
         "/plans/",
-        "/log/saved?student=S-02&duration=10%20min&type=Check-in",
+        "/log/saved?student=S-02&duration=15%20min&type=Check-in",
     ):
         assert "Pages that name students are recorded when opened." in client.get(path).text, path
     assert "Opening this view is recorded." in client.get("/students/S-03").text
@@ -177,8 +185,8 @@ def test_a_custom_cadence_says_so() -> None:
 def test_an_incomplete_save_goes_back_to_the_form(client: TestClient) -> None:
     for query in (
         "",
-        "?student=S-02&duration=10%20min",
-        "?student=S-99&duration=10%20min&type=Check-in",
+        "?student=S-02&duration=15%20min",
+        "?student=S-99&duration=15%20min&type=Check-in",
         "?student=S-02&duration=7%20min&type=Check-in",
     ):
         page = client.get("/log/saved" + query, follow_redirects=False)
@@ -276,3 +284,26 @@ def test_mounted_frontline_pages_stay_under_the_mount() -> None:
             )
     back = mounted.get("/supportlogs/log/saved", follow_redirects=False)
     assert back.headers["location"] == "/supportlogs/log"
+
+
+def test_favorites_drive_log_and_are_marked_on_students(client: TestClient) -> None:
+    """Author, 2026-11-06 (`residentialapps/guide/1D_refinements.md`): a
+    star on Students marks a favorite; Log offers the favorites; three
+    durations; no "…-initiated conversation" type."""
+    assert sample.DURATIONS == ("15 min", "30 min", "60+ min")
+    assert sample.ENCOUNTER_TYPES == ("Check-in", "Welfare follow-up", "Practical support", "Other")
+    students = client.get("/students/").text
+    pressed = re.findall(
+        r'data-favorite aria-pressed="true" aria-label="Favorite ([^"]+)"', students
+    )
+    assert pressed == ["Clara Tan", "Hana Rahim"]  # Hana under Shared with me
+    for staff, picks in sample.FAVORITES.items():  # a favorite is a student you reach
+        me = sample.viewer(staff)
+        assert all(reaches_student(me, sid) for sid in picks), staff
+    assert 'aria-pressed="false" aria-label="Favorite Dev Menon" disabled' in students
+    priya = client.get("/log?as=Priya%20Raman").text
+    assert re.findall(r'name="student" value="([^"]+)"', priya) == ["S-08", "S-10"]
+    assert 'href="/students/?as=Priya%20Raman">Students</a>' in priya  # the hint keeps the viewer
+    # A shared favorite saved for is one the viewer can open (cold read).
+    saved = client.get("/log/saved?student=S-08&duration=15%20min&type=Check-in").text
+    assert 'href="/students/S-08">Open Hana Rahim</a>' in saved

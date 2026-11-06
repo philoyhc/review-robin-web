@@ -3,6 +3,9 @@
 {% from "supportlogs/_frontline.html" import recorded with context %}
 {% from "supportlogs/_records.html" import records_card with context %}
 {% block title %}Students{% endblock %}
+{# A favorite toggle (author, 2026-11-06): Log's quick picks are the
+   favorites. Inert on sample data, which seeds them. #}
+{% macro favorite(s) %}{% set on = sample.is_favorite(me.name, s.id) %}<button type="button" class="col-chip" data-favorite aria-pressed="{{ 'true' if on else 'false' }}" aria-label="Favorite {{ s.name }}" disabled>{{ '★' if on else '☆' }} Favorite</button>{% endmacro %}
 {% block content %}
   {{ sample_title("Students", me.name) }}
   {{ recorded() }}
@@ -21,7 +24,7 @@
     <ul class="items">
       {% for s, reasons, seen in mine %}
         <li>
-          <div class="item-head"><a class="strong" href="{{ url('/students/' ~ s.id) }}{{ as_query }}">{{ s.name }}</a><span class="chips">{% for r in reasons %}<span class="chip {{ 'chip-accent' if r.startswith('Plan') else 'chip-mute' }}">{{ r }}</span>{% endfor %}</span></div>
+          <div class="item-head"><a class="strong" href="{{ url('/students/' ~ s.id) }}{{ as_query }}">{{ s.name }}</a><span class="chips">{% for r in reasons %}<span class="chip {{ 'chip-accent' if r.startswith('Plan') else 'chip-mute' }}">{{ r }}</span>{% endfor %}{{ favorite(s) }}</span></div>
           <div class="subtle">{{ s.email }}{% if seen %} · seen {{ sample.short_date(seen) }}{% endif %}</div>
         </li>
       {% endfor %}
@@ -32,7 +35,7 @@
   <section class="card card-pad gap-above" aria-labelledby="shared-h">
     <h2 id="shared-h">Shared with me <span class="count">· {{ shared | length }}</span></h2>
     <p class="sub">Students a colleague has shared their records for with you (§11.1).</p>
-    <ul class="items">{% for g in shared %}{% set s = sample.student(g.student) %}<li><div class="item-head"><a class="strong" href="{{ url('/students/' ~ s.id) }}{{ as_query }}">{{ s.name }}</a><span class="chip chip-mute">Shared by {{ g.grantor }}</span></div><div class="subtle">{{ s.email }} · since {{ sample.short_date(g.granted_on) }}</div></li>{% endfor %}</ul>
+    <ul class="items">{% for g in shared %}{% set s = sample.student(g.student) %}<li><div class="item-head"><a class="strong" href="{{ url('/students/' ~ s.id) }}{{ as_query }}">{{ s.name }}</a><span class="chips"><span class="chip chip-mute">Shared by {{ g.grantor }}</span>{{ favorite(s) }}</span></div><div class="subtle">{{ s.email }} · since {{ sample.short_date(g.granted_on) }}</div></li>{% endfor %}</ul>
   </section>
   {% endif %}
   {{ records_card("students", "encounters", unlocked) }}

@@ -112,7 +112,7 @@ def test_each_grant_gives_its_tabs(client: TestClient) -> None:
 
 def test_home_is_the_dashboard_or_goes_where_the_viewer_belongs(client: TestClient) -> None:
     dashboard = client.get("/").text
-    assert 'id="due-h">Due and overdue' in dashboard and ">Log encounter</a>" in dashboard
+    assert 'id="due-h">Due and overdue' in dashboard and ">Log encounter</a>" not in dashboard
     assert "The flags you raised" in dashboard
     assert "Every active flag, unacknowledged first" in client.get(at("/", "Priya Raman")).text
     for name, there in [
