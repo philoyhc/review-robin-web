@@ -308,7 +308,8 @@ user (see "Sending mail" below).
     `directory_for` does: `FakeMailer` on a local run with fake auth on,
     else `GraphMailer` with the token Easy Auth passes, and with none
     `GraphError("no_token")`. `FakeMailer` sends nothing: it keeps each
-    message on `sent` and logs the recipient and subject (`graph.fake_send`).
+    message on its own `sent` and logs a recipient count only
+    (`graph.fake_send`), never an address.
   - **`send_mail(message)`** sends `POST /v1.0/me/sendMail` as the signed-in
     user, with `saveToSentItems` as given (Graph's own default is true; the
     message's default is false). Returning is Graph's `202 Accepted`: queued

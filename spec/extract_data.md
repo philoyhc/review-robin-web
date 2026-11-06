@@ -245,7 +245,9 @@ count), both metadata cards (Assigned, Count and the per-field
 blocks) and the Data shaper (assigned counts and the response
 rollup) filters on `Assignment.include IS TRUE`. An answer given
 on a pair later made inactive therefore appears in
-`responses.csv` and is counted in none of the other files.
+`responses.csv` and is counted in none of the other files, except
+the Reviewer file's Timestamps columns, which are session-wide by
+design (below).
 
 **Query contract** (`build_responses_bundle`). Each chip is a flag
 that is `0` when off: `?by_instrument=`, `?reviewer_metadata=`,

@@ -40,32 +40,24 @@ missing log workspace no longer describe the service, and are struck.
 
 ## Functional scope
 
-- **Email not yet wired.** No invitation, reminder or confirmation is
-  delivered: the outbox records what *would* be sent, each row
-  `queued` until a transport sends it. Sending is Segment 14B,
-  and waits on the choice of sender: Microsoft Graph as the operator
-  who clicks, or as a dedicated mailbox (`guide/email_and_scheduling.md`).
-  Meanwhile email is optional —
-  access is roster + sign-in, so the operator's own email pointing
-  at the app URL covers invitations (the in-app Guide at `/guide`,
-  "Give reviewers access"). Reminders can already be targeted — the
-  per-row `Send reminder` on Invitations, and the Workflow card's
-  `Send reminders` to every reviewer who has not submitted — but like invitations they are
-  recorded, not delivered; until 14B, chase non-submitters by hand
-  from the Responses page's coverage view.
-- **Scheduled sends wait for an operator page view.** Scheduled
-  activation, invitations and reminders have no clock of their own:
-  they fire when an operator next opens that session's Session Home,
-  one of its Operations pages (Validate, Assignments, Invitations,
-  Responses), or the Sessions lobby (`spec/lifecycle.md` §8.3). A
-  reminder set for 09:00 goes out when an operator next looks, and
-  nothing fires while nobody opens those pages. A failed invitation or reminder pass is
-  logged and audited (`session.scheduled_event_failed`) and retried on the next
-  visit; scheduled activation retries a fixed number of times, then
-  stops.
-  Until a clock-driven trigger lands
-  (`guide/post_azure_todo_checklist.md` item 7), open the lobby or
-  Session Home at or after each scheduled time.
+- **Email goes out one row at a time.** Per-row Send and Send
+  reminder send from the operator's own mailbox through delegated
+  Microsoft Graph (segment 14F). Bulk sends refuse, and scheduled
+  invites and reminders only prompt, until segment 14G
+  (`guide/segment_14G_scheduled_email.md`).
+  Email stays optional: access is roster + sign-in, so the session
+  link on Invitations (Share the session link), or the operator's own
+  email pointing at the app URL, covers invitations (the in-app Guide
+  at `/guide`, "Give reviewers access"). Chase non-submitters with the
+  per-row `Send reminder` on Invitations, or from the Responses page's
+  coverage view.
+- **Scheduled email only prompts.** RRW's clock (segment 14E) runs
+  scheduled activation, the release window and the review's end with
+  nobody looking (`spec/lifecycle.md` §8.3). With `RRW_SCHEDULED_SEND`
+  off, as deployed, the invite and reminder offsets time a due prompt
+  on the Workflow card and a Due pill in the lobby instead of a send,
+  cleared by sending or by *Mark as done* (`spec/workflow_card.md`).
+  Scheduled activation retries a fixed number of times, then stops.
 - **Reviewer answers are not autosaved.** The reviewer surface
   saves only when the reviewer presses Save or Submit, and it has
   no leave-page (`beforeunload`) guard, so navigating away (the

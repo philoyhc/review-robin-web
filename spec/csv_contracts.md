@@ -590,7 +590,8 @@ passes none.
 
 `parse_observer_csv(content: bytes) -> ParseResult`
 and `save_observers(db, *, session, user, rows, filename,
-correlation_id)`.
+correlation_id, directory=None, append=False, merge=False,
+columns=frozenset())`.
 
 **Required columns:** `ObserverEmail`.
 **Optional columns:** `ObserverName`, `ObserverTag1`, `Status`,
@@ -894,8 +895,9 @@ and every consumer guards itself rather than trusting the chain:
 `is_expired` **whatever the anchors say**, a `responses_release_until`
 before its anchor leaves the window permanently shut rather than
 early-open, scheduled activation fires only from `validated` and
-otherwise takes a one-shot audited skip, and past-deadline reminders
-are skipped with an audit event.
+otherwise takes a one-shot audited skip, and a reminder outside the
+response window (or with the session not ready, or no invitations) is
+skipped with an audit event.
 
 **The import keeps sent auto-send entries in place**: on the values the session would hold, a new
 `invite_offsets` or `reminder_offsets` entry on a position already sent
@@ -1239,8 +1241,8 @@ only addresses the rosters define, and carries pair context on the
 group that has one and not the other, so the column does not read
 as required. No pair is a self-pair: self-review is a per-instrument
 toggle, not something a roster encodes. Every address is
-`example.edu`, so nothing could reach a real person once sending is
-switched on. Addresses are derived from names
+`example.edu`, so no send from a sample session can reach a real
+person. Addresses are derived from names
 (`"Alex Student"` → `alex.student@example.edu`) rather than written
 per row, so a name and its address cannot drift apart across files.
 
