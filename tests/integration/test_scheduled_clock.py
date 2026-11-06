@@ -481,6 +481,9 @@ def test_a_session_whose_end_passed_earlier_still_closes(db: Session) -> None:
     db.refresh(rs)
     assert lifecycle.is_expired(rs)
     assert len(_events(db, rs, "session.expired")) == 1
+    # And it records the crossing, from the clock (findings L4).
+    [reached] = _events(db, rs, "session.deadline_reached")
+    assert detail_of(reached)["context"]["fired_by"] == "clock"
 
 
 def test_an_operator_page_view_past_end_closes_the_session(db: Session) -> None:
@@ -677,7 +680,10 @@ def test_an_end_over_already_shut_instruments_still_records_the_deadline(db: Ses
     reached = _events(db, rs, "session.deadline_reached")
     assert len(reached) == 1
     assert set(detail_of(reached[0])["counts"]) == {"submitted", "assigned"}
+    assert "fired_by" not in detail_of(reached[0])["context"]  # a page view
     db.refresh(rs)
     assert lifecycle.is_expired(rs)
+    [expired] = _events(db, rs, "session.expired")
+    assert detail_of(expired)["counts"]["closed_instruments"] == 0
     lifecycle.observe_deadline(db, rs, now=NOW)
     assert len(_events(db, rs, "session.deadline_reached")) == 1

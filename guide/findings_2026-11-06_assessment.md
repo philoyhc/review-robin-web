@@ -76,8 +76,8 @@ None.
   (`validation/_rosters.py:121-133`) errors when Start ≥ the end.
   *CONFIRMED by trace.* Author: make the ordering strict, or relax the
   rule.
-- ~~**L4 — End's close writes no `session.deadline_reached` when the~~ **Done 2026-11-06, write it (author)**: `_write_deadline_reached` runs on both End branches; the already-shut one is reachable only by legacy sessions, since no per-instrument Close remains and every path closes all instruments together. Was: **L4 — End's close writes no `session.deadline_reached` when the
-  instruments were already shut.** The already-shut branch of
+- ~~**L4 — End's close writes no `session.deadline_reached` when the
+  instruments were already shut.**~~ **Done 2026-11-06, write it (author)**: `_write_deadline_reached` runs on both End branches; the already-shut one is reachable only by legacy sessions, since no per-instrument Close remains and every path closes all instruments together. Was: The already-shut branch of
   `observe_deadline` (`session_lifecycle.py:1210-1219`) calls
   `_expire_at_end(closed=0)` without the event, even with a real End;
   `spec/reviewer-surface.md:1131-1133` and `spec/lifecycle.md` §4
