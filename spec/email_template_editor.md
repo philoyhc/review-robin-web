@@ -6,14 +6,15 @@ and **Responses received** — at `/operator/sessions/{id}/setup-invite`.
 This file is the page's contract: what it renders, what each control
 does, how overrides are stored and resolved, which merge tags exist,
 who consumes the rendered result, and what is *not* yet wired behind
-it.
+it. An outbox row is **recorded** (`queued`), **sent** or **failed**
+(`spec/email_infra_options.md`, "Audit log"); this page uses those
+words in that sense.
 
 Where the rest of the contract lives: `spec/settings_inventory.md` §3
 inventories the stored keys; `spec/rrw_functional_spec.md` §11 states
 the invitation-and-email subsystem in user terms; `spec/operations_pages.md`
-owns the Invitations drill-in previews that render these templates;
-`spec/email_infra_options.md` and `guide/segment_14F_manual_email.md`
-own the dispatch leg. The design record is
+owns the Invitations drill-in previews that render these templates and
+the per-row Send; `spec/email_infra_options.md` owns the dispatch leg. The design record is
 `guide/archive/segment_11E_email_template_editor.md`.
 
 ---
@@ -59,9 +60,10 @@ Its body states three things this page's controls do not: that a
 session has three emails and each tab edits one of them for this
 session only; that a blank field falls back to the default shown as
 the placeholder; and — the one an operator most needs — that
-**sending is not switched on yet**, so a saved
-template is stored rather than delivered and no part of reviewer
-access depends on it. It links to the Guide's "Give reviewers
+**Send** and **Send reminder** on Invitations email one reviewer at a
+time from the operator's mailbox, that sending to everyone at once is
+not available (the Share the session link card is the way), and that
+no part of reviewer access depends on email. It links to the Guide's "Give reviewers
 access" section (`/guide#guide-give_access`) rather than repeating
 what that section says.
 
@@ -77,9 +79,8 @@ it defaults to `invitation`; any value outside the three kinds is a
 **Left card — composer** (`.card.email-composer`, `<h2>` "*Kind*
 email"). One `<form id="setupinvite-form" method="post">` to
 `…/setup-invite`, carrying a hidden `template`, two read-only muted
-rows — **From:** "(the sender is set when email sending is switched
-on)", with no link, since who sends is not settled
-(`guide/email_and_scheduling.md`), and **To:** "(sent
+rows — **From:** "(the operator who sends it, from their own
+mailbox)", and **To:** "(sent
 individually to each reviewer)" — and four fields in fixed order:
 
 | Field | Control | Notes |
@@ -127,13 +128,30 @@ rendered **disabled** until any composer input or change event fires
 (a five-line inline script). A successful save 303s back to the same
 tab; the reload puts the form back in a clean state and Save returns
 to disabled. There is no flash banner: the disabled → enabled →
-disabled cycle is the whole "saved" signal.
+disabled cycle is the whole "saved" signal. Beside Save sits **Send a test to me**
+(`.btn.secondary`, bound to the composer by `form=` but submitting to
+`…/setup-invite/send-test`), live whatever the Save state.
+
+**Send a test to me** renders the tab's email *as edited* — the
+composer's subject and body, saved or not, over the session's saved
+overrides for that one render — and sends it to the signed-in operator
+only (`app/services/email_test_send.py`). Merge tags come from the
+roster's first reviewer, else a "Sample Reviewer" stand-in; the invite
+link is a placeholder, so no token is minted. The subject is prefixed
+`[Test] `; the template's Cc and Bcc and the operator's
+**Send a copy to myself** choice are not applied, while the Sent Items and Reply-To choices are. It
+writes no outbox row and saves nothing. It answers with the composer
+itself, not a redirect, the draft still in its fields (a redirect would
+reload the saved template and lose the edits), and a status line
+beneath the buttons: "Test sent to «address». Check your inbox." or
+"The test was not sent." with the reason. With no Microsoft token the
+line says to reload.
 
 ---
 
 ## 3. Routes
 
-All three routes gate on **`require_session_operator`** and nothing
+All four routes gate on **`require_session_operator`** and nothing
 else (§5).
 
 | Route | Behaviour |
@@ -141,6 +159,7 @@ else (§5).
 | `GET …/setup-invite?template=<kind>` | Render §2 for the kind. 404 on an unknown kind. |
 | `POST …/setup-invite` (`template`, `subject`, `body`, `cc`, `bcc`, `enabled`) | For each of the kind's four fields present in the form body: non-blank → upsert the override; blank / whitespace → **remove** the override (fall through to default). On the `responses_received` kind only, `enabled` **absent** in the payload means *off* (browsers omit unchecked boxes); on any other kind the key is ignored. Emits `email_template.updated` iff something changed. 303 → same tab. |
 | `POST …/setup-invite/reset` (`template`, `field`) | Remove that one override. 404 on an unknown kind *or* field. Emits `email_template.reset` iff the field had an override. 303 → same tab. |
+| `POST …/setup-invite/send-test` (`template`, `subject`, `body`, `cc`, `bcc`, `enabled`) | Send the tab's email as edited to the signed-in operator (§2). 404 on an unknown kind. Saves nothing; emits `email.test_sent` (`reason` on a failure) and answers 200 with the composer, not a redirect. |
 
 ---
 
@@ -258,9 +277,9 @@ the send path copies them onto the outbox row's `cc_emails` /
 
 | Consumer | Uses | State |
 |---|---|---|
-| `invitations.send_invitation` / `send_reminder` | `render_invitation` / `render_reminder` + `cc_bcc_for` → an `EmailOutbox` row (`kind`, to / cc / bcc, merged `subject` + `body`) | **Wired, but nothing is transmitted.** The row is written `queued` and stays so until a transport sends it (`spec/rrw_functional_spec.md` §11.6). No `EmailTransport` is wired. |
+| `invitations.send_invitation` / `send_reminder` | `render_invitation` / `render_reminder` + `cc_bcc_for` → an `EmailOutbox` row (`kind`, to / cc / bcc, merged `subject` + `body`) | **Wired.** The row is written `queued` (recorded). The per-row **Send** and **Send reminder** on Invitations then claim it and send it through the operator's mailbox, stamping `sent` or `failed` (`spec/operations_pages.md`, `spec/rrw_functional_spec.md` §11.6). The bulk Send all and Remind incomplete are off behind `RRW_BULK_SEND`. |
 | Invitations per-reviewer drill-in (`app/web/views/_previews.py`) | all three renderers, with a placeholder invite URL and the named reviewer | Wired. |
-| Reviewer submit (the responses-received confirmation) | `responses_received_enabled` + `render_responses_received` + `cc_bcc_for` → `invitations.queue_responses_received` | **Queued, and work in progress awaiting Azure.** A successful submit (`/me/sessions/{id}/submit`) writes one `responses_received` `EmailOutbox` row when the toggle is on, and nothing when it is off, the submit is blocked or it recorded no response. A reviewer has one queued confirmation: a second submit refreshes it (a read then a write, not a constraint). Queueing runs after the submit commits and never fails it. A recall, a reviewer's clear-all or an operator's Delete Data leaves a queued confirmation in place. The row stays `queued`, as every outbox row does, until a transport exists; what to send of it then is decided with the transport (`guide/post_azure_todo_checklist.md` item 9). |
+| Reviewer submit (the responses-received confirmation) | `responses_received_enabled` + `render_responses_received` + `cc_bcc_for` → `invitations.queue_responses_received` | **Queued, and work in progress awaiting Azure.** A successful submit (`/me/sessions/{id}/submit`) writes one `responses_received` `EmailOutbox` row when the toggle is on, and nothing when it is off, the submit is blocked or it recorded no response. A reviewer has one queued confirmation: a second submit refreshes it (a read then a write, not a constraint). Queueing runs after the submit commits and never fails it. A recall, a reviewer's clear-all or an operator's Delete Data leaves a queued confirmation in place. The row stays `queued`: no control sends a confirmation yet, since that is a bulk send behind `RRW_BULK_SEND` (`guide/post_azure_todo_checklist.md` item 9). |
 | Settings CSV export / import, clone | the JSON wholesale (§8) | Wired. |
 
 ---
@@ -317,9 +336,10 @@ overrides)".
 |---|---|---|
 | `email_template.updated` | a Save that changed at least one key (including the toggle) | `changes` = `{key: [old, new]}`, `context.template` = kind |
 | `email_template.reset` | a Reset that removed an override | `changes`, `context.template`, `context.field` |
+| `email.test_sent` | **Send a test to me**, sent or failed (`reason` on a failure) | actor = the operator; written by `app/services/email_test_send.py` |
 | `responses_received.queued` | a successful submit queued, or refreshed, the confirmation (§7) | `refs` = `reviewer_id`, `outbox_id`; `context.refreshed`; actor = the reviewer |
 
-A Save or Reset that changes nothing writes **no** event. All three
+A Save or Reset that changes nothing writes **no** event. All the
 types are registered in `EVENT_SCHEMAS` (`spec/architecture.md`).
 
 ---
@@ -372,7 +392,6 @@ types are registered in `EVENT_SCHEMAS` (`spec/architecture.md`).
   buttons (#63–#67).
 - `spec/csv_contracts.md`, `spec/roundtrip_coverage.md` §"Coverage matrix — configuration" — the
   Settings-CSV carrier.
-- `spec/email_infra_options.md`, `guide/segment_14F_manual_email.md`
-  — the dispatch leg this editor feeds.
+- `spec/email_infra_options.md` — the dispatch leg this editor feeds.
 - `guide/archive/segment_11E_email_template_editor.md` — design
   record and PR ladder.

@@ -44,26 +44,19 @@ the deployment has *concluded* (verified, the personal web app retired)
 is the author's call.
 
 **Order (author, 2026-11-04): 14E and 22C (both closed 2026-11-04),
-then 14F with 14C Item 2.** 14F's send path is written under 22C's type
-gate.
+then 14F with 14C Item 2.** 14F closed 2026-11-06
+(`guide/archive/segment_14F_manual_email.md`).
 
-1. **14F — Email by hand, as the operator** (not gated: the tenant
-   already grants delegated `Mail.Send`). Sends on the operator's click
-   through `/me/sendMail`; disables the auto-send fields and adds
-   due-action prompts while no mail goes on a clock.
-   **Plan:** `guide/segment_14F_manual_email.md`.
-
-   **With it, 14C Item 2 — Email-related UI** (Item 1, the SMTP cards
-   retired, is done): a half-width Email settings card of toggles,
-   scaffolded beside 14F's scaffold and wired as 14F's send path reads
-   them. **Plan:** `guide/segment_14C_email_related_ui.md`.
+1. **14C Item 2 — Email-related UI** (Items 1 and 3 done): the Email
+   settings card of toggles, built and read by 14F's send path; its close
+   is owed. **Plan:** `guide/segment_14C_email_related_ui.md`.
 
 2. **14G — Scheduled email** (gated on IT: offline sending as the
    operator, else a dedicated mailbox). Sends due invitations, reminders
-   and confirmations from 14E's clock, and switches 14F's auto-send
-   fields back on. **Plan (draft, 2026-11-05):**
-   `guide/segment_14G_scheduled_email.md`; Item 1 can be built now,
-   Items 2–4 wait on 14F and IT. See also
+   and confirmations from 14E's clock, turning the offset fields from
+   prompts (14F rung 5) back into sends. **Plan:**
+   `guide/segment_14G_scheduled_email.md` (a draft, 2026-11-05); Item 1 can be built now,
+   Items 2–4 wait on IT. See also
    `guide/no_scheduling_fallback.md`. A shared mailbox under an app-wide
    permission is a credential every mounted app could reach: plan one
    per app, or rule a shared one accepted (`guide/interoperability.md` §2).
@@ -136,7 +129,7 @@ the PR body unless it says otherwise.
 ### Sequencing notes
 
 - **The email pipeline:** the `email_outbox` schema landed inert in 11C
-  Part 2 (migration `c4f6a8b0d2e5`); 14F is its first sender, and 14G
+  Part 2 (migration `c4f6a8b0d2e5`); 14F (closed) is its first sender, and 14G
   adds mail on 14E's clock. 14E and 14F are independent of each other.
 - **20** is independent of the email pipeline but gated on the
   deployment, so it does not interleave with other work.

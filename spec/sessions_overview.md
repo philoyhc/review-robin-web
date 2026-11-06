@@ -241,9 +241,25 @@ search" below.
 | 4 | **Created** | `session.created_at` | `<span class="pill pill-count">{when}</span>`. `YYYY-MM-DD HH:MM` via `format_datetime`. |
 | 5 | **Deadline** | `session.deadline` | `<span class="pill pill-info">{when}</span>` when set, `<span class="muted">No deadline</span>` otherwise. Rendered `YYYY-MM-DD HH:MM` via `format_datetime`. |
 | 6 | **Timezone** | `resolve_session_timezone(session)` (the `session_timezone` Jinja global) | `<abbr class="tz-gmt">` showing the compact GMT-offset (e.g. `GMT+8`, via `gmt_offset_label`), with the full `GMT+8 Asia/Singapore` in the `title` hover tooltip. The lobby lists many sessions, so its per-row timestamp cells render in the *viewing operator's* zone; this column names each row's own resolved session zone. See `spec/timezone_display.md`. |
-| 7 | **Status** | `session.status` | `<span class="pill pill-lifecycle-{status}">{label}</span>` — same lifecycle-tinted variants the session-home `session_setup_status_row.html` and the Admin Sessions Diagnostics table use (draft / validated / ready / expired, labelled Closed, each carry distinct tints from `base.html`). The label is the human-readable form produced by the `lifecycle_label` Jinja filter. |
+| 7 | **Status** | `session.status` | `<span class="pill pill-lifecycle-{status}">{label}</span>` — same lifecycle-tinted variants the session-home `session_setup_status_row.html` and the Admin Sessions Diagnostics table use (draft / validated / ready / expired, labelled Closed, each carry distinct tints from `base.html`). The label is the human-readable form produced by the `lifecycle_label` Jinja filter. A **Due** pill (`pill-warning`, `data-due-action`, title "An action is due on this session: open it to see what") follows the status pill when an action is due (below). |
 | 8 | **Tags** | `session_tags.tags_for_sessions` | One `pill pill-count` per tag, or a `muted` "No tags". Each row also carries a `data-tags` JSON attribute for the client-side tag filter. |
 | 9 | *select-all checkbox* | `session.id` | Bulk-action select-row checkbox. The column **header** carries a select-all checkbox (see below). |
+
+**The Due pill** marks a session whose operator has something to do by
+hand, so it is not found only by opening the session
+(`views.lobby_due_session_ids`, `due_actions.sessions_with_something_due`).
+It appears when either:
+
+- an invite or reminder offset is due while `RRW_SCHEDULED_SEND` is off,
+  with someone left to act on and the entry not yet sent, skipped or
+  handled (`spec/lifecycle.md` §8.1; the Workflow card's due prompt,
+  `spec/workflow_card.md`); or
+- a scheduled activation gave up and nothing has happened on the session
+  since: the session's most recent audit event is still
+  `session.scheduled_activation_failed_persistent`. With the clock the
+  failure happens with nobody looking, and nothing mails it.
+
+The pill names no count or action; the Workflow card does.
 
 The main lobby table lists only non-archived sessions; archived
 sessions move to `/operator/sessions/archived`.
@@ -298,9 +314,10 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
   (`scheduled_events.validate_deadline_change`) is the three Session
   Home runs on End: ordering against the stored Start and Release-from,
   the reminders already sent on the new End (`spec/lifecycle.md`
-  §8.2.6), and each stored reminder offset re-resolved on the new End;
-  with scheduled email off (`RRW_SCHEDULED_SEND`) the two reminder checks
-  are skipped, as the offsets fire nothing. An unchanged
+  §8.2.6), and each stored reminder offset re-resolved on the new End.
+  The reminder checks run whether or not scheduled email is on
+  (`RRW_SCHEDULED_SEND`): off, the offsets time due prompts and are held
+  to the same rules as on Session Home. An unchanged
   deadline skips it, and a deadline box whose text is still the stored
   deadline as the box renders it, in the session zone (`T` or a space
   between date and time alike), counts as

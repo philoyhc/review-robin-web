@@ -343,20 +343,16 @@ def resolve_email_preview_tab(key: str) -> EmailPreviewTab:
 def email_preview_from_display(user: User) -> str:
     """Format the From-header string the preview shows.
 
-    Reads the kept ``smtp_username`` / ``smtp_from_display_name`` off
-    the User row (no decryption — the header doesn't need the
-    password). No page sets them since segment 14C Item 1, so an
-    operator without them sees a placeholder saying who sends is not
-    settled yet, rather than an empty header or a pointer to a
-    Settings card that no longer exists.
+    A send goes from the signed-in operator's own mailbox (delegated
+    Graph, 14F), so the header is the operator viewing the page: their
+    name and address. The kept ``smtp_*`` fields are not read (findings
+    D2, 2026-11-06).
     """
-    username = (user.smtp_username or "").strip()
-    if not username:
-        return "(the sender is set when email sending is switched on)"
-    display_name = (user.smtp_from_display_name or "").strip()
-    if display_name:
-        return f"{display_name} <{username}>"
-    return username
+    address = (user.email or "").strip()
+    display_name = (user.display_name or "").strip()
+    if display_name and address:
+        return f"{display_name} <{address}>"
+    return address or "(the operator who sends it, from their own mailbox)"
 
 
 def build_email_preview_body(

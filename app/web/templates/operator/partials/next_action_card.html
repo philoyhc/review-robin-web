@@ -133,12 +133,15 @@
     {% elif is_validated %}
       {% if validation_summary and validation_summary.can_activate %}
         {% if invitations_sent %}
-          {# State 6 — Prepared, invites already sent. Reviewers
-             have been notified; Activate opens responses. #}
-          <p>Invitations are marked sent, but no mail leaves the app yet &mdash; nobody has actually been told. Activate the session when you&rsquo;re ready to receive responses.</p>
+          {# State 6 — Prepared, invites already sent. Activate opens
+             responses. #}
+          {# "Sent", not "delivered": an ambiguous Graph failure keeps its
+             stamp, so whether it arrived is each row's delivery state on
+             Invitations (Codex on #3670). #}
+          <p>Invitations are sent; check each one&rsquo;s delivery on Invitations. Activate the session when you&rsquo;re ready to receive responses.</p>
         {% elif invitations_generated %}
           {# State 5 — Prepared, invites drafted but not sent. #}
-          <p>Invitations are ready to send. Send them ahead of Activation to notify reviewers, or Activate now and send afterwards.</p>
+          <p>Invitations are ready to send. Send them from Invitations ahead of Activation, or share the session link, or Activate now and send afterwards.</p>
         {% else %}
           {# State 4 — Prepared, no invites yet. The W overlay's
              help-line is appended below this branch, not instead

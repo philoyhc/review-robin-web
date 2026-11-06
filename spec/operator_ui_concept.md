@@ -153,7 +153,7 @@ Its surfaces:
 - **System Status** (`/operator/sys-admin/system`, `sys_admin_system.html`), the third tab: what the host does in the background, read-only, in four cards (`.page-grid`, two by two), each a label column and a value column (`.status-list`).
   - **Clock**: running (on, off by `SCHEDULER_INTERVAL_SECONDS` 0, or set on but not running), the interval, the last pass (when, how long, sessions visited, or "None yet"), the last failure's time and exception type, the failure count, and the sessions a pass found busy and the passes another process held. The figures are this process's, kept in memory from its start (`scheduled_events.clock_status()`), so a restart clears them and the card says since when.
   - **Due next**, across the workspace, by the clock's own rules (`app/services/system_status.py`): the next scheduled Start, the next close of an open session (End, or with no End, Release from), the next release-window stamp (a window needs its Release from; a draft session stamps nothing), the sessions due now (the clock's next pick; one still listed after a pass is not being moved), and activations that failed for good in the last 7 days. Archived sessions are left out. Each session named links to its audit log.
-  - **Sending**: whether `RRW_SCHEDULED_SEND` lets scheduled invites and reminders fire.
+  - **Sending**: whether `RRW_SCHEDULED_SEND` lets scheduled invites and reminders fire (off, the offsets time due prompts).
   - **This instance**: `APP_VERSION` (the release deploy sets it to the imported commit), the process's start and uptime, the database dialect, and the schema revision against the head this code expects (`app/db/schema_head.py`): current, behind, or none recorded. No host name, address or connection string reaches the page.
 
 System-wide settings + multi-tenant config remain forward-looking.
@@ -384,7 +384,7 @@ The reviewer-surface render lives at the satellite route `/operator/sessions/{id
 
 Operations row tab. **Detailed spec: `spec/operations_pages.md` "Invitations page".** Reviewer-centric working surface — sending invitations, sending reminders, monitoring per-reviewer progress. It is the single reviewer-centric surface; there is no separate Monitoring page.
 
-Pattern: a list-with-bulk-actions table of reviewers, with status filtering, selection, bulk send/remind actions, and per-row drill-in into a reviewer's full engagement history. All POST actions require `ready` (409 otherwise).
+Pattern: a list-with-bulk-actions table of reviewers, with status filtering, selection, bulk send/remind actions, and per-row drill-in into a reviewer's full engagement history. Gates by action (`spec/lifecycle.md` §3.3–§3.5): per-row and bulk Send and Regenerate require `validated` or `ready`; reminders require `ready`; the bulk actions also answer 409 while `RRW_BULK_SEND` is off, their buttons rendering disabled. Per-row Send and Send reminder send from the operator's own mailbox, in the request that clicked.
 
 ### `/operator/sessions/{id}/responses` — Responses (reviewee-centric)
 
@@ -402,7 +402,7 @@ The reminder send-path is **shared** with the Invitations page; only the selecti
 
 Dev-diagnostic page; **not an Operations row tab and not session-scoped chrome**. It sits behind the Sys Admin doorway, reached from the Sessions Diagnostics table's per-row **Outbox** button (§6). Read-only.
 
-- **Page intro** (muted text): "Email outbox. No transport sends email yet, so every row stays `queued` until one does, whatever an operator clicked. An invitation's rendered body includes the raw invitation URL so you can copy it into a real client."
+- **Page intro** (muted text): says that a per-row Send or Send reminder sends its row from the operator's mailbox and marks it `sent` or `failed`, that a row still `queued` was recorded but not sent, and that an invitation's rendered body includes the raw invitation URL.
 - **Per-row card** (newest first): kind (`invitation` / `reminder` / `responses_received`), recipient email, status pill, sent-at timestamp, then the rendered subject + body (`<pre class="code-block">`).
 - **Empty state** — "No outbox rows yet for this session."
 - **Chrome.** `sys_admin_session_outbox.html` extends `base.html` and renders the **Sys Admin** top nav plus a `.back-link` to Sessions Diagnostics — not the per-session two-row chrome.

@@ -62,61 +62,23 @@ def test_all_three_email_preview_tabs_are_shipped() -> None:
 # --- email_preview_from_display ------------------------------------------ #
 
 
-def _user(
-    *,
-    smtp_username: str | None = None,
-    smtp_from_display_name: str | None = None,
-) -> User:
-    """Construct a User with just the SMTP fields the helper reads."""
-    return User(
-        email="op@example.edu",
-        display_name="Op",
-        smtp_username=smtp_username,
-        smtp_from_display_name=smtp_from_display_name,
-    )
+def _user(*, email: str = "op@example.edu", display_name: str | None = "Op") -> User:
+    return User(email=email, display_name=display_name)
 
 
-def test_from_display_unconfigured_user_says_the_sender_is_unset() -> None:
-    out = views.email_preview_from_display(_user())
-
-    assert out == "(the sender is set when email sending is switched on)"
-    assert "Settings" not in out
-
-
-def test_from_display_username_only_returns_bare_username() -> None:
-    out = views.email_preview_from_display(_user(smtp_username="op@x.edu"))
-
-    assert out == "op@x.edu"
+def test_from_display_is_the_operator_sending() -> None:
+    """A send goes from the signed-in operator's mailbox (14F, findings
+    D2), so the preview's From is that operator."""
+    assert views.email_preview_from_display(_user()) == "Op <op@example.edu>"
 
 
-def test_from_display_with_display_name_returns_addr_spec_format() -> None:
-    out = views.email_preview_from_display(
-        _user(
-            smtp_username="op@x.edu",
-            smtp_from_display_name="Spring Reviews",
-        )
-    )
-
-    assert out == "Spring Reviews <op@x.edu>"
+def test_from_display_without_a_name_is_the_bare_address() -> None:
+    assert views.email_preview_from_display(_user(display_name=None)) == "op@example.edu"
 
 
 def test_from_display_strips_whitespace() -> None:
-    out = views.email_preview_from_display(
-        _user(
-            smtp_username="  op@x.edu  ",
-            smtp_from_display_name="  Spring Reviews  ",
-        )
-    )
-
-    assert out == "Spring Reviews <op@x.edu>"
-
-
-def test_from_display_blank_display_name_falls_back_to_username() -> None:
-    out = views.email_preview_from_display(
-        _user(smtp_username="op@x.edu", smtp_from_display_name="   ")
-    )
-
-    assert out == "op@x.edu"
+    out = views.email_preview_from_display(_user(email="  op@x.edu ", display_name="  Op  "))
+    assert out == "Op <op@x.edu>"
 
 
 # --- build_email_preview_body -------------------------------------------- #

@@ -16,10 +16,11 @@ responses*), then a table whose card opens with a two-pane toolbar
 carrying the filter. On Responses the info card is full width; on
 Invitations it takes the left half of a `.bottom-grid` row, beside the
 **Share the session link** card (the session's stable link and Copy
-link; segment 14F). Bulk-actions
+link). Bulk-actions
 (Send invites · Send reminders) live on the
-Workflow card's button row — neither page body carries its own bulk
-action bar. Creating invites has no button of its own: Prepare creates
+Workflow card's button row, disabled while `RRW_BULK_SEND` is off (the
+default; `spec/workflow_card.md`) — neither page body carries its own
+bulk action bar. One reviewer's email goes out from the per-row buttons. Creating invites has no button of its own: Prepare creates
 one invitation per eligible reviewer.
 
 ## Page identity
@@ -57,9 +58,10 @@ surface itself is `spec/reviewer-surface.md`'s.
 
 **Documented in the Guide.** `/guide`'s **Watch progress** section
 (`guide.html`, section key `watch_progress`) covers both pages: the
-reviewer's-eye view and its eight lifecycle counters, the note that
-Send records invitations and reminders but delivers no email until
-sending is switched on, and the reviewee-centric view with its
+reviewer's-eye view and its eight lifecycle counters, what the per-row
+Send and Send reminder do (email one reviewer from the operator's own
+mailbox) and that sending to everyone at once is off in favor of the
+session link, and the reviewee-centric view with its
 `Number of reviewees · With responses · Without responses` counters —
 framed around the question the reviewer view cannot answer, which
 reviewee is under-served.
@@ -135,26 +137,29 @@ already makes lifecycle state explicit, and a second
 lifecycle explanation on the same page is redundant (see
 `spec/operator_ui_concept.md` P4).
 
-**The invitation gate: bulk send from `validated`, everything else
-`ready`.** Route and button agree, in
-`app/web/routes_operator/_operations.py`:
+**The invitation gate: sending and regenerating from `validated`,
+reminders `ready`.** Route and button agree, in
+`app/web/routes_operator/_operations.py` (`spec/lifecycle.md` §3.3–§3.5;
+the invitation services re-decide each gate under the session lock):
 
-- `send-all` and `regenerate-all` call `_require_validated_or_ready`;
-  the invitation services re-decide both gates under the session lock
-  (`spec/lifecycle.md` §3.1).
-  The Workflow card's **Send invites** renders in `validated` or
-  `ready` once invitations exist and none has been sent
-  (`send_invites_visible`, `app/web/views/_workflow_card.py`), so
-  reviewers can be notified before activation. `regenerate-all` has no
-  UI caller at all; it is reachable only by POSTing the route.
-- `{iid}/send`, `{iid}/regenerate`, `{iid}/remind` and
-  `remind-incomplete` call `_require_ready` and answer **409**
-  elsewhere. The Workflow card's **Send reminders** renders only when
-  `is_ready` and an invitation has been sent, and every **per-row**
-  button on this page — Send,
-  Regenerate, Send reminder — carries
-  `{% if not is_ready %}disabled{% endif %}`. Reminders fire after the
-  response window opens.
+- `send-all`, `regenerate-all`, `{iid}/send` and `{iid}/regenerate`
+  call `_require_validated_or_ready`. The Workflow card's **Send
+  invites** renders in `validated` or `ready` once invitations exist and
+  none has been sent (`send_invites_visible`,
+  `app/web/views/_workflow_card.py`), so reviewers can be notified before
+  activation. `regenerate-all` has no UI caller at all; it is reachable
+  only by POSTing the route.
+- `{iid}/remind` and `remind-incomplete` call `_require_ready` and
+  answer **409** elsewhere. The Workflow card's **Send reminders**
+  renders only when `is_ready` and an invitation has been sent. Reminders
+  fire after the response window opens.
+- `send-all` and `remind-incomplete` also answer **409** while
+  `RRW_BULK_SEND` is off (`spec/lifecycle.md` §3.5), their Workflow card
+  buttons rendering disabled. **There is therefore no bulk email**:
+  before activation the in-app ways to tell reviewers are the per-row
+  Send and the session link below.
+- The per-row buttons are disabled outside their gate, each with a hover
+  title (Per-row action buttons).
 
 ---
 
@@ -167,15 +172,16 @@ nudging individual reviewers throughout the session.
 
 Opens with a `.muted` note on its own row, **above** the counters:
 
-> Note: Send records an invitation or reminder here, but no email is
-> delivered until email sending is switched on.
+> Send and Send reminder email one reviewer from your own mailbox.
+> Sending to everyone at once isn't available yet: share the session
+> link instead.
 
-Send works today: it records the invitation (the row's Email status
-turns `sent`) or the reminder, and the sent and reminded counters count
-it. No email leaves until delivery is switched on, and without the note
-the page claims a send nobody received. **Retire the note when
-delivery ships**; `tests/integration/test_page_guidance.py` asserts it,
-so the assertion fails when the claim stops being true.
+Per-row Send and Send reminder deliver through the operator's own
+mailbox (Per-row action buttons): the row's Email status turns `sent`
+or `failed`, and the sent and reminded counters count a send. The note
+states that and where bulk sending stands, and
+`tests/integration/test_page_guidance.py` asserts it, above the
+counters; the page must not claim a bulk send it does not offer.
 
 This is deliberately *not* a `.page-guidance` card. Those are a Setup
 page affordance for explaining a page's whole purpose; one sentence
@@ -207,9 +213,33 @@ pending 0` is a correct reading, not a bug.
 it is a nonzero-is-attention pill, so a count the operator cannot act
 on is worse than no count. `Invitations created` counts every row
 because pruning stale invitations is deliberately deferred
-(`guide/deferred_consolidated.md`) — once delivery is on, a *sent*
-invitation is live in a reviewer's inbox, and nothing yet distinguishes
+(`guide/deferred_consolidated.md`) — a *sent* invitation is live in a
+reviewer's inbox, and nothing yet distinguishes
 one safe to delete.
+
+### Share the session link card
+
+Beside the info card, in the same `.bottom-grid.is-equal-height` row
+(`spec/ui_elements.md` §10; stacked under 800 px), `#share-session-link`
+gives the operator a way to reach every reviewer without bulk email. It
+holds a title, a help line (only eligible, signed-in participants can
+reach the session with the link, and only while it is open to receive or
+view responses), the session's link in a read-only box, and **Copy
+link**.
+
+- **The link** is the session's one stable link for every reviewer,
+  `/me/sessions/{public_id}` (`spec/rrw_functional_spec.md` §7.2),
+  absolute through the host's public origin as invitation links are
+  (`request.url_for("review_surface_default_position")`). It is gated at
+  arrival by sign-in and the roster; a stranger meets a bare 404.
+- **Copy link** uses the Clipboard API in a secure context, else the
+  field's selection and `execCommand("copy")`. A status line beside the
+  button reads "Link copied", or "Couldn't copy: select the link and
+  copy it yourself." so a refused copy is not silent.
+- The card carries no message text: the operator pastes the link into
+  their own channel, such as an LMS.
+- The Workflow card's bulk-off line and its due prompts link to
+  `#share-session-link`.
 
 ### The table toolbar
 
@@ -355,9 +385,31 @@ row exists:
 
 Send and Regenerate are available once the session is prepared
 (`validated` or `ready`, `_require_validated_or_ready`, 409), so an
-invitation can go out ahead of opening (14F follow-up 1); Send reminder
-is `ready`-only (`_require_ready`, 409). A disabled button says why in
-its hover title.
+invitation can go out ahead of opening; a reviewer who follows it early
+reaches the pre-open page. Send reminder is `ready`-only
+(`_require_ready`, 409). Outside its gate a button renders disabled, and
+**says why in its hover title**: Send and Regenerate, "Available once the
+session is prepared"; Send reminder, "Available once the session is
+activated", or "This reviewer has finished" on a complete row.
+
+**Send and Send reminder deliver the email.** Each queues the row, then
+claims and sends it in the same request through the signed-in operator's
+delegated Graph mailbox (`spec/email_infra_options.md`, "Delegated Graph,
+as built"), stamping the outbox row `sent` or `failed` with its reason and
+writing `email.sent` / `email.send_failed`. The mailer is built first, so
+with **no Microsoft token** nothing is queued or rotated and the page says
+to reload. The operator's Email settings (Keep a copy in my Sent Items, Send a copy
+to myself, and Replies go to the session's Help contact when it is an
+address; `spec/settings_inventory.md` §1) apply. The route redirects to Invitations with `?email=` and, on a
+failure, `&kind=` (the Graph failure kind); a notice atop the page reads
+the result (`views.row_send_notice`):
+
+| `email=` | Notice |
+|---|---|
+| `sent` | "Sent from your mailbox." |
+| `failed` | "The email was not sent." plus the kind's copy; a `5xx` or network failure says it may or may not have gone |
+| `superseded` | "The email was not sent: its link was regenerated first. Send it again." A Regenerate fails the invitation's still-queued rows, so a queued send never goes out with the dead link |
+| `already_sent` | "Not sent again: this invitation was already sent, or is being sent." |
 
 **Send also has a server-side eligibility gate**, which the button's
 visibility rule does not express. The route refuses with **409** when the reviewer is not
@@ -417,15 +469,13 @@ for a reviewer who had no invitation at all):
 
 - **Invite** — `created` / `not created`, from the existence of the
   `Invitation` row.
-- **Send recorded** — the send timestamp or an em-dash, from
+- **Sent** — the send timestamp or an em-dash, from
   `Invitation.sent_at`. Beside it, where the latest invitation outbox
   row carries a delivery state other than `sent`, that state renders as
   its own pill. The two are **gated independently**: the date on
   `sent_at`, the state on `Invitation.status` being past `pending`, so
   a rotated token reports nothing about the previous token's delivery
-  and a send with no delivery date still reports its state. It reads
-  *Send recorded*, not *Email sent*, while sending is off, until
-  Segment 14B wires real sending. The value
+  and a send with no delivery date still reports its state. The value
   set is the model's `EMAIL_OUTBOX_STATUSES` and is **rendered, not
   enumerated**, so widening it needs no change here.
 - **Last reminder** — the timestamp or an em-dash, from
@@ -600,8 +650,9 @@ session.`
 
 - **Reminder send-path is shared.** Whether the operator triggers a
   reminder from the Workflow card (Send reminders super-button on
-  any session-scoped page) or from a per-row Send reminder button on
-  the Invitations page, the same underlying email send happens.
+  any session-scoped page, when `RRW_BULK_SEND` is on) or from a per-row
+  Send reminder button on the Invitations page, the same underlying
+  email send happens.
   Implementation does not duplicate the send logic.
 - **Reminder content lives on the Email Template Setup page**, not
   on these Operations pages. These pages trigger sends; the content
@@ -622,9 +673,10 @@ session.`
 - **Modify email content.** Reminder and invitation emails are
   edited on the Email Template Setup page. These pages send
   whatever the templates produce.
-- **Bulk-select rows for batch action.** Bulk send / remind happens
-  via the Workflow card's super-buttons (which act on every eligible
-  row session-wide); per-row buttons handle targeted intervention.
+- **Bulk-select rows for batch action.** Bulk send / remind belongs to
+  the Workflow card's super-buttons (which act on every eligible
+  row session-wide, and are off behind `RRW_BULK_SEND`); per-row buttons
+  handle targeted intervention.
   No multi-select checkbox column on either table.
 - **Live updates.** Pages render snapshot data on each request. A
   navigation re-renders; auto-refresh is out of scope.

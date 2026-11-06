@@ -2,7 +2,7 @@
 
 **Opened:** 2026-11-05, at the author's request, as a **draft** · **Theme:**
 the mail an operator schedules goes out at its time with nobody signed in ·
-**Related:** `guide/segment_14F_manual_email.md` (built first),
+**Related:** `guide/archive/segment_14F_manual_email.md` (built first),
 `guide/segment_14C_email_related_ui.md`, `guide/archive/segment_14E_clock.md`,
 `guide/no_scheduling_fallback.md`, `guide/email_and_scheduling.md`,
 `guide/post_azure_todo_checklist.md` items 7 and 9

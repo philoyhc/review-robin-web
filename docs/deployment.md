@@ -72,7 +72,7 @@ while the app was down fires on the next pass or request (a release-window stamp
 | `REHYDRATE_ENABLED` | `false` | Opens the deferred Rehydrate surface. |
 | `SCHEDULER_INTERVAL_SECONDS` | `120` | Seconds between passes of RRW's in-app clock, which starts with the app and fires scheduled activation, the close at a review's end and the release-window stamps with no page view. `0` turns it off; the page-view trigger then does the same work on the next request. Each pass takes a Postgres advisory lock, so several instances run one pass at a time (`spec/lifecycle.md` §8.3). |
 | `RRW_BULK_SEND` | `false` | Whether the Workflow card's Send invites and Send reminders may email every reviewer at once. Off until sending is paced (segment 14G): the two buttons are disabled and point operators to the session link, and per-row Send and Send reminder still email one reviewer. Leave it off. |
-| `RRW_SCHEDULED_SEND` | `false` | Whether scheduled invitations and reminders may fire. Off until mail can go on the clock: the two auto-send fields are disabled and fire nothing. Leave it off (`spec/lifecycle.md` §8.1). |
+| `RRW_SCHEDULED_SEND` | `false` | Whether scheduled invitations and reminders may fire. Off until mail can go on the clock: nothing is scheduled to send. The two offset fields stay live as prompts ("Prompt to send invites" / "Prompt to send reminders"): saved and validated as when on, each timing a due prompt on the Workflow card, and they fire nothing. Leave it off (`spec/lifecycle.md` §8.1). |
 | `ALLOW_FAKE_AUTH` | `false` | Local only; the host refuses to start with it on outside `APP_ENV=local`. |
 | `APP_VERSION` | `dev` | Labels the build beside About, for operators. |
 

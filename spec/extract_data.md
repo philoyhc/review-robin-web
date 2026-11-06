@@ -374,7 +374,7 @@ type.
 |---|---|---|
 | Heading | `Reviewer response metadata` | `Reviewee response metadata` |
 | Card id | `extract-data-by-reviewer` | `extract-data-by-reviewee` |
-| Body copy | "Per-reviewer metadata about the responses each reviewer produced — how many, when saved / submitted, against which instruments. Optimised for reviewer audit and coaching." | "Per-reviewee metadata about the responses produced about each reviewee — how many, when saved / submitted, against which instruments. Optimised for the feedback packet handed to the reviewed person." |
+| Body copy | "Per-reviewer metadata about the responses each reviewer produced — how many, against which instruments, and with **Timestamps** on (time zone follows session set up), when each last opened, saved and submitted. Optimised for reviewer audit and coaching." | "Per-reviewee metadata about the responses produced about each reviewee — how many, when saved / submitted, against which instruments. Optimised for the feedback packet handed to the reviewed person." |
 | Button id | `extract-data-reviewer-metadata-zip` | `extract-data-reviewee-metadata-zip` |
 | Button target | `/operator/sessions/{id}/export/reviewer_metadata.csv` | `/operator/sessions/{id}/export/reviewee_metadata.csv` |
 | Filename | `{code}_reviewer_metadata{_suffix}.csv` | `{code}_reviewee_metadata{_suffix}.csv` |
@@ -392,8 +392,9 @@ scope toggle:
 |---|---|---|
 | `instrument-{id}` | `#{N}: {short_label}` | Selects which instruments contribute per-(instrument, field) column blocks; also scopes the cross-instrument totals when at least one is selected. |
 | `all-reviewers` / `all-reviewees` | `All reviewers` / `Reviewers with responses` (or `All reviewees` / `Reviewees with responses`) | Two-state cycling pill — when **off**, drops body rows for entities with zero non-empty responses in scope. Both labels ride on `data-label-on` / `data-label-off`; the page JS swaps `textContent` on toggle. |
+| `timestamps` (Reviewer card only) | `Timestamps` | Plain toggle, **off by default**. On, adds the three time columns (§ "Timestamps columns"). The Reviewee card has no such chip. |
 
-All default-selected.
+Every chip is default-selected except `Timestamps`.
 
 **Query-string wiring** (consumed by
 `export_reviewer_metadata_csv` /
@@ -412,6 +413,9 @@ All default-selected.
   script runs.
 - `?all=0` — set when `All reviewers` / `All reviewees`
   is off.
+- `?timestamps=1` (Reviewer route only; the Zip-all bundle carries it as
+  `reviewer_metadata.timestamps`) — adds the Timestamps columns.
+  Omitted or `0` leaves the file as before.
 - `?self_review_handling=` — `include_self` (default) /
   `exclude_self` / `both`. Drives the Self-review handling
   chip's three-state filter, the column-name suffix
@@ -452,6 +456,24 @@ above expand to four (`Assigned_self`, `Count_self`,
 `Assigned_noself`, `Count_noself`), and each per-(instrument,
 field) block emits twice in the same `_self` → `_noself`
 order.
+
+#### Timestamps columns
+
+With `?timestamps=1` the Reviewer file gains three columns directly after
+`ReviewerEmail` and before the aggregates, un-suffixed like the identity
+columns, so a participation report is one file:
+
+| Column | Meaning |
+|---|---|
+| `LastOpened` | `reviewers.last_opened_at`: the reviewer's latest arrival on the review surface or summary, through the shared session link or a personal one. The stamp is refreshed at most once per 30 minutes, so it can be that much older than the latest request. |
+| `LastSaved` | The latest `saved_at` over every response the reviewer made in the session. |
+| `LastSubmitted` | The latest `submitted_at` likewise. |
+
+`LastSaved` and `LastSubmitted` are session-wide maxima, **whatever the
+instrument chips** select. Each value is ISO 8601 in the session's time
+zone with its offset, and empty when the event never happened. The
+export's audit event records `context.timestamps` (`true` / `false`)
+beside `self_review_handling`.
 
 **Per (instrument, field) column block** (one block per
 selected instrument, for every response field on that
@@ -522,12 +544,13 @@ with the same payload shape:
     "instruments": <chip selection size, 0 when none selected>
   },
   "context": {
-    "self_review_handling": "include_self" | "exclude_self" | "both"
+    "self_review_handling": "include_self" | "exclude_self" | "both",
+    "timestamps": true | false
   }
 }
 ```
 
-The `context.self_review_handling` slot records the operator's
+`context.timestamps` is on the Reviewer route only. The `context.self_review_handling` slot records the operator's
 Self-review handling chip state on this download.
 Unknown query-param values fall through to `include_self`
 server-side, so the audit value always reflects what the file

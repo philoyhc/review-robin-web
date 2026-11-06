@@ -35,7 +35,8 @@ Each host page sets `next_action_return_to` to its slug so that
 every POST the card emits — `/workflow/prepare`, `/workflow/activate`,
 `/workflow/close`, `/workflow/release-responses`, `/workflow/stop-release`,
 `/workflow/archive`, `/revert`,
-`/invitations/send-all`, `/invitations/remind-incomplete` —
+`/invitations/send-all`, `/invitations/remind-incomplete`,
+`/workflow/due-done` —
 303s back to the page that rendered the card (except Archive,
 which 303s to `/operator/sessions/archived`). The host pages pass
 `home` (Session Home), `assignments`, `validate`, `invitations`,
@@ -132,6 +133,13 @@ returns:
 - `auto_send_reminders_caption` — `dict | None` of the same shape,
   built by `build_auto_send_reminders_caption`. Drives the auto-
   send reminders signal line.
+- `bulk_send_enabled` / `bulk_off_line` — `RRW_BULK_SEND` and the line
+  shown when it is off (`email_dispatch.bulk_send_enabled`,
+  `BULK_OFF_LINE`).
+- `due_lines` — `list[dict]`, built by `build_due_lines` from
+  `due_actions.due_actions`: one per due prompt, with `kind`,
+  `offset_index`, `offset`, `anchor_at` (what **Mark as done** posts
+  back) and `text`. Empty while `RRW_SCHEDULED_SEND` is on.
 - `manual_activate_cancellation` — `dict | None`. Confirmation-
   modal payload for the Activate button when a manual Activate
   click would cancel pending auto-sends, built by
@@ -216,8 +224,8 @@ missed).
 | ~~**3**~~ | Unused | — |
 | **4** | `is_validated` + `can_activate` + no invitations | "Setup is prepared and the reviewer surface is previewable, but there are no invitations. **Prepare session** creates one per eligible reviewer — run it, and if it still creates none, no reviewer is both active and assigned. Or Activate now to receive responses." |
 | **4Err** | `is_validated`, not `can_activate` (defensive) | "Validation shows that there are error(s). Resolve them and re-run **Prepare session** before activating." |
-| **5** | `is_validated`, invites generated, none sent | "Invitations are ready to send. Send them ahead of Activation to notify reviewers, or Activate now and send afterwards." |
-| **6** | `is_validated`, invites sent | "Invitations are marked sent, but no mail leaves the app yet — nobody has actually been told. Activate the session when you’re ready to receive responses." **The copy says what the send path does**: `send_invitation` (`app/services/invitations.py`) records the send on the invitation and writes an `EmailOutbox` row that stays `queued` (`app/services/email_send.py` is not wired in), so until a transport is wired this state means *recorded*, not *delivered*. |
+| **5** | `is_validated`, invites generated, none sent | "Invitations are ready to send. Send them from Invitations ahead of Activation, or share the session link, or Activate now and send afterwards." |
+| **6** | `is_validated`, invites sent | "Invitations are sent; check each one’s delivery on Invitations. Activate the session when you’re ready to receive responses." **The copy claims no more than the send path knows**: `invitations_sent` means an invitation was recorded as sent, and a per-row send after an ambiguous Graph failure keeps that stamp (`spec/operations_pages.md`), so whether it arrived is each row's delivery state on Invitations. |
 | **7** | `is_ready`, no Invitation rows yet | "Session is open for responses, but no invitations exist — nobody has been told they can start. Only **Prepare session** creates them and an open session cannot run it: **Revert to draft** first, which stops responses, then fix the roster, Prepare, and activate again." |
 | **8** | `is_ready`, invites generated, none sent | "Session is open. Send the prepared invitations so reviewers know they can start." |
 | **9** | `is_ready`, invites sent | "Session is open. Send reminders if reviewers fall behind." |
@@ -635,7 +643,9 @@ States 7's copy names Revert to draft.
 - **Send invites** posts to
   `/operator/sessions/{id}/invitations/send-all` via
   `next-action-send-invites-form`, which calls
-  `invitations.send_all_invitations`. Under the session lock it lists
+  `invitations.send_all_invitations`. **It renders disabled while
+  `RRW_BULK_SEND` is off** (the default), with `BULK_OFF_LINE` as its
+  hover title, and the route answers 409; see "Bulk email off" below. Under the session lock it lists
   `invitations.list_sendable_invitations` — every `pending`
   invitation whose reviewer is **still** assigned and active — sends
   each via `invitations.send_invitation`, and commits once (findings
@@ -664,7 +674,8 @@ States 7's copy names Revert to draft.
   `/operator/sessions/{id}/invitations/remind-incomplete` via
   `next-action-send-reminders-form`. Calls
   `invitations.send_reminders_to_incomplete` for reviewers whose
-  assignments aren't complete.
+  assignments aren't complete. Disabled behind `RRW_BULK_SEND` as
+  Send invites is.
 
 Each invitation form is rendered alongside its visible button —
 Send invites only when `send_invites_visible` is True
@@ -675,10 +686,21 @@ Each form carries a hidden `return_to=<slug>` field; the route's
 the special `"home"` slug to resolve the 303 target. Direct form
 posts elsewhere (e.g. tests hitting the route without the form's
 hidden field) fall back to `/operator/sessions/{id}/invitations`.
-The underlying routes gate whatever the form's visibility: `send-all`
+The underlying routes gate whatever the form's visibility: both answer
+409 while `RRW_BULK_SEND` is off (`spec/lifecycle.md` §3.5); `send-all`
 accepts `validated` or `ready`, and `remind-incomplete` accepts `ready`
 only (409 otherwise), each decided again under the session lock by the
 invitation service (`spec/lifecycle.md` §3.1).
+
+**Bulk email off.** With `RRW_BULK_SEND` off, the two bulk buttons stay
+visible, disabled, rather than hidden: this departs from the card's
+hide-inactive rule on purpose, because the operator asked for them
+inactive. The visibility rules above are unchanged. While either is
+visible, an `amber-grey` signal line (`#next-action-bulk-off`) says
+"Bulk email isn't available yet: share the session link from
+Invitations instead.", linking to `#share-session-link` on Invitations
+(`spec/operations_pages.md`). Sending one reviewer's email stays live
+per row on Invitations.
 
 - **Revert to draft** posts to `/operator/sessions/{id}/revert`, which
   calls `lifecycle.operator_revert`. It locks and re-reads the session and
@@ -764,7 +786,8 @@ stacked top-to-bottom:
    background, no border). Up to four lines render depending on
    the data; they're driven by `super_failure`,
    `scheduled_activation_caption`, `auto_send_invites_caption`,
-   and `auto_send_reminders_caption`. The signals are largely
+   and `auto_send_reminders_caption`, plus the bulk-off line and the due
+   prompts (below). The signals are largely
    state-independent — they appear in any state when their
    source caption is non-None.
 
@@ -825,7 +848,7 @@ border — the icon tone carries the urgency cue:
 
 Lines render in this top-to-bottom order: failure first (most
 urgent), then scheduled-activation, then auto-send invites, then
-auto-send reminders.
+auto-send reminders, then the bulk-off line, then the due prompts.
 
 **With `RRW_SCHEDULED_SEND` off** (the default; `spec/lifecycle.md` §8.1),
 `build_auto_send_invites_caption` and `build_auto_send_reminders_caption`
@@ -833,7 +856,34 @@ return `None` whatever the offsets hold, so no line promises an automatic
 send and the "System will dispatch automatically" rows below do not render;
 the schedule timeline lists no auto-send row, and
 `build_manual_activate_cancellation` returns `None`. The scheduled-activation
-signal is unaffected.
+signal is unaffected. The offsets time **due prompts** instead (next).
+
+#### Due prompts
+
+While `RRW_SCHEDULED_SEND` is off, an invite or reminder offset whose
+moment has passed (`due_actions.due_actions`, rules in
+`spec/lifecycle.md` §8.1) renders one `amber-warning` line, in the
+operator's session zone, with a count and a **Mark as done** button:
+
+- invites: "Invitations due («offset» from Start, «moment»): N not yet
+  sent." N is the invitations still to send; due in `validated` or `ready`.
+- reminders: "Reminders due («offset» from End, «moment»): N reviewers
+  not finished." N is the incomplete reviewers with an invitation; due in
+  `ready` only.
+
+No line renders for an entry that is sent, skipped or handled, or when
+the count is zero. Each line links to Invitations and to the session link
+card (`#share-session-link`).
+
+**Mark as done** posts `kind`, `offset_index`, `offset` and `anchor_at`
+(ISO 8601) to `POST /operator/sessions/{id}/workflow/due-done`
+(`due_actions.mark_done`). The four name the entry the line was drawn
+from, so a form from a page drawn before another tab changed the offset
+or moved Start or End is refused rather than marking whatever entry now
+holds that position; an entry no longer due just redirects. It writes
+`session.scheduled_invites_handled` / `session.scheduled_reminders_handled`,
+which count as fired for dedup (`spec/lifecycle.md` §8.2.6). Any session
+operator may press it, in any state.
 
 #### Workflow-failure signal
 
@@ -982,8 +1032,9 @@ routes:
 | `POST /operator/sessions/{id}/activate` | `lifecycle.activate_session` | `validated` | `ready` | `session.activated` |
 | `POST /operator/sessions/{id}/revert` (when `is_validated`) | `lifecycle.operator_revert` → `invalidate_session` | `validated` | `draft` | `session.invalidated` |
 | `POST /operator/sessions/{id}/revert` (when `is_ready` or `is_expired`) | `lifecycle.operator_revert` → `revert_session_to_draft` | `ready` or `expired` | `draft` | `session.reverted_to_draft` |
-| `POST /operator/sessions/{id}/invitations/send-all` | `invitations.send_all_invitations` (`send_invitation` per row of `list_sendable_invitations` — `pending` **and** still eligible — in one commit) | `validated` or `ready` | unchanged | per-invitation send events |
-| `POST /operator/sessions/{id}/invitations/remind-incomplete` | `invitations.send_reminders_to_incomplete` | `ready` | unchanged | one batch `reminders.sent` |
+| `POST /operator/sessions/{id}/invitations/send-all` | `invitations.send_all_invitations` (`send_invitation` per row of `list_sendable_invitations` — `pending` **and** still eligible — in one commit) | `validated` or `ready`, and `RRW_BULK_SEND` on (409 otherwise) | unchanged | per-invitation send events |
+| `POST /operator/sessions/{id}/invitations/remind-incomplete` | `invitations.send_reminders_to_incomplete` | `ready`, and `RRW_BULK_SEND` on (409 otherwise) | unchanged | one batch `reminders.sent` |
+| `POST /operator/sessions/{id}/workflow/due-done` | `due_actions.mark_done` | any (session operator); only an entry still due is recorded | unchanged | `session.scheduled_invites_handled` / `session.scheduled_reminders_handled` |
 
 **The per-step `/assignments/generate` and `/activate` routes stay
 alive although the Workflow card POSTs to neither directly.**

@@ -70,7 +70,9 @@ mailbox's own sending limits (to be measured on Azure). So:
 
 ## Semantics
 
-- **No token** (fake auth, or an expired one the page renewal missed): the
+- **No token** (~~fake auth, or~~ an expired one the page renewal missed;
+  under fake auth `mailer_for` returns a `FakeMailer` that sends nothing,
+  and the row reads `sent`, findings D12): the
   send refuses, nothing is stamped, and the page says to reload; rows stay
   `queued`.
 - **Partial failure in Send all:** each row stands alone; the page reports
@@ -123,132 +125,67 @@ Taken 2026-11-02 at `fffd4c28`; re-taken 2026-11-05 at `095336bf`
 
 ## Status
 
-- 2026-11-05, rung 1 (scaffold). Main before rung 1: `79f86ee8`, the
-  base of the item's cumulative read at rung 5.
-  - **The due prompt** is a placeholder signal line in the Workflow
-    card's aside, shown once a session has invite or reminder offsets.
-  - **The lobby's Due pill** has its slot in the status cell, fed by
-    `views.lobby_due_session_ids`, which marks none until rung 5.
-  - **Send a test to me** sits inert in the composer's Save row.
-- 2026-11-05, rung 2 split in three: **2a** the host's send primitive
+Closed 2026-11-06. PRs #3644–#3668, plus the follow-ups (#3663) and
+the M1/L1 fix (#3664) the build's own register raised.
+
+**Intended vs done.** The Decision shipped as amended on 2026-11-05: no
+bulk email (a bulk send waits for 14G's pacing), and instead a session
+link to share. What the ladder became:
+
+- **Rung 1** scaffolded the due prompt, the lobby's Due pill slot and an
+  inert Send a test to me (main before rung 1: `79f86ee8`).
+- **Rung 2** split in three. **2a** is the host's send primitive
   (`cordware.graph.mailer_for`, `FakeMailer` under fake auth), the Graph
-  transport and the dispatcher (`app/services/email_dispatch.py`), no UI;
-  **2b** Send a test to me wired; **2c** 14C Item 2's toggles stored and
-  read. 2a sends nothing on its own: no route calls it yet.
-  - **No retry on a `5xx` or a network failure**, since Graph may have
-    accepted the message; a `429` waits once. The outbox row reads
-    `failed` and a person decides.
-- 2026-11-05, rung 2b: **Send a test to me** submits the composer form
-  to `/setup-invite/send-test` (`app/services/email_test_send.py`). It
-  renders the template as edited, unsaved, overlaying the saved overrides
-  with `set_committed_value` so nothing is marked dirty. Merge tags come
-  from the roster's first reviewer, else a "Sample Reviewer" stand-in,
-  and the link is a placeholder. It goes to the operator only, subject
-  marked `[Test]`, with no Cc, Bcc or outbox row, and `email.test_sent`
-  records it. It answers with the composer itself, not a redirect, with
-  the draft still in its fields and Save live, so a test never loses
-  unsaved edits (Codex on #3648). The result line is
-  `views.send_test_notice`.
-- 2026-11-05: the ladder is re-cut by the Decision's amendment (no bulk
-  email; share the link). The original rungs 3 and 4 are struck below,
-  and 3a–3d added.
-- 2026-11-05, rung 3a, Codex on #3651: a Regenerate fails the
-  invitation's still-queued rows, so a per-row send queued before it
-  never goes out with the dead link (`email=superseded`).
-- 2026-11-05, rung 3b: the **Share the session link** card sits on
-  Invitations between the counters and the table, with the link, the
-  invitation and reminder messages and five inert Copy buttons. The
-  Workflow card's bulk-off line links to `#share-session-link`. Two
-  lines that 3a made stale also changed: the composer's "sending is not
-  switched on yet" and the Email settings card's.
-- 2026-11-05, rung 3c: the card's link is
-  `request.url_for("review_surface_default_position")`, absolute through
-  the host's public origin as invitation links are, with a Copy link
-  button (the Clipboard API, else `execCommand`; a status line says
-  which happened). **The author cut the card to its title, help text,
-  link and Copy link** (2026-11-05): the invitation and reminder boxes
-  the Decision named, rendered for everyone, are dropped, and the help
-  text is the author's.
-- 2026-11-05, rung 3d: `reviewers.last_opened_at` (migration
-  `a3d7f1c9e2b4`) is stamped by `reviewers.mark_opened` on an arrival on
-  the review surface page or the summary, at most once per
-  `ARRIVAL_GAP` (30 minutes) measured from the last stamp, so it is at
-  most that much older than the latest request. Each stamp writes
-  `reviewer.opened` (Codex on #3654: every mutating service audits);
-  requests between stamps write nothing. Codex's next round wanted the
-  gap measured from the last request: that would mean writing on every
-  page again, so the wording was fixed instead. It is a
-  Core `UPDATE` that keeps `updated_at`, so a visit is not a roster edit
-  on Setup. The **Timestamps** chip (off by default) adds
-  `LastOpened`, `LastSaved` and `LastSubmitted` after name and email:
-  saved and submitted are the session-wide maxima, whatever the
-  instrument chips, in ISO 8601 in the session zone. Zip all carries it
-  as `reviewer_metadata.timestamps`; the Reviewee card has no such chip.
-- 2026-11-05, after 3d (author): Invitations' info card and Share the
-  session link sit side by side, each half width; both Operations info
-  cards gain a heading (*Reviewers and invitations*, *Reviewees and
-  responses*), and the link card's help text is the author's revision.
-- 2026-11-05, rung 3a:
-  - **Per-row sends.** Send and Send reminder dispatch the row they queue
-    through `graph.mailer_for`, with `send_options_for`, and redirect to
-    Invitations with `?email=sent|failed&kind=…`
-    (`views.row_send_notice`). The mailer is built first, so with no
-    token nothing is queued or rotated.
-  - **Bulk off.** `RRW_BULK_SEND` (default off) disables the card's two
-    bulk buttons, with a signal line, and the routes answer 409. The
-    disabled buttons stay visible, departing from the card's
-    hide-inactive rule, because the author asked for them inactive, not
-    hidden.
-  - **No send-queued-confirmations button exists yet**; 14G builds it.
-  - **Copy.** The three places saying no email is delivered now say
-    what Send does: the Invitations note, the status row's hover title
-    (retired) and the Guide.
-  - **Tests.** The suite's mailer is a `FakeMailer` (an autouse fixture
-    in `tests/conftest.py`), since the suite runs without fake auth.
+  transport and `app/services/email_dispatch.py`; there is no retry on a
+  `5xx` or a network failure, and a `429` waits once. **2b** wires Send a
+  test to me: the template as edited, to the operator only, `[Test]`,
+  recorded by `email.test_sent`. **2c** stores and reads 14C Item 2's
+  three toggles (`send_options_for`).
+- **Rungs 3–4** were re-cut as **3a–3d**: per-row Send and Send reminder
+  dispatch through the operator's mailbox (`?email=…` on Invitations),
+  and bulk is off behind `RRW_BULK_SEND`; the Share the session link card;
+  `reviewers.last_opened_at` with `reviewer.opened`; the Extract data
+  Timestamps chip.
+- **Follow-ups** (#3663): per-row Send and Regenerate in a prepared
+  session, revising B17 / F17; disabled buttons say why.
+- **Rung 5** was re-cut once the offset fields proved disabled while
+  scheduled email is off. **5a**: off, they are live as "Prompt to send …",
+  validated (the lobby's End editor too). **5b** with **5c**:
+  `app/services/due_actions.py`, the Workflow card's due lines with
+  counts, **Mark as done** (`session.scheduled_*_handled`, consumed by
+  `fired_offsets`, so 14G never sends a handled entry), and the lobby's Due
+  pill (a due prompt, or a scheduled activation that gave up).
 
-- 2026-11-06, rung 5 re-cut (author). The offset fields were disabled
-  while scheduled email is off, so no prompt had an input: off, they
-  are live as prompts (5a). Mark as done is recorded as fired, so 14G
-  never sends a handled entry; the card's due line shows counts.
-  5c, the lobby pill, rides with 5b: about 30 lines on 5b's service.
-  `spec/lifecycle.md` §8 also owes "sent, skipped or handled" (§8.2.6), and
-  `spec/settings_inventory.md` the two offset rows and the flag's.
-- 2026-11-06, the item's cumulative read (base `79f86ee8`, at 5b): 3
-  medium, 6 low. Acted on: the lobby's End editor validates offsets while
-  email is off, as Session Home does; Doc impact gains the stale specs;
-  the sent-entry refusal names a handled entry; the reminder count's
-  docstring; tests for a reminder's Mark as done and an unknown kind.
-  Left: the lobby computes a count per row with a past, unhandled entry
-  (bounded by those sessions; no measurement yet), the inline
-  `display: inline` (one precedent), and raw ISO offsets in the copy
-  (as everywhere else; the author's call).
-- 2026-11-06: the author's browser and email tests on Azure passed (3a–3d
-  and the side-by-side cards). Refinements after: the Invitations pair and
-  Extract data's top cards share a height across each row; the Timestamps
-  help says the time zone follows the session; and with scheduled email
-  off, the two offset labels read muted under "Scheduled email under
-  development." (14E's line, reworded by the author).
+**Decisions confirmed at build:**
+- A regenerate fails a still-queued row, so its dead link never goes out
+  (Codex on #3651).
+- Every last-opened stamp is audited, at most once per `ARRIVAL_GAP`
+  (Codex on #3654).
+- A refused per-row send restores the invitation's stamps only on a
+  definite refusal (`email_dispatch.REFUSED_KINDS`), under the session
+  lock, with `invitation.send_reverted`. A second Send on an invitation no
+  longer pending is refused (findings M1, L1; Codex on #3664).
+- Mark as done names the anchor and offset it was drawn from (Codex on
+  #3668).
+- Disabled bulk buttons stay visible, not hidden, at the author's ask.
 
-### Follow-ups, collected (author, 2026-11-06: gather several, then build)
+**Reads.** One `diff-reviewer` read per item at its last build rung, plus
+one for the M1/L1 fix. The cumulative read (base `79f86ee8`) found 3
+medium and 6 low issues: the lobby's End editor skipped the offset check,
+Doc impact lacked the specs the 5a ruling made stale, the refusal copy
+named no handled entry, a docstring overclaimed, and tests were missing.
+All were acted on except three: the lobby's per-row count (unmeasured),
+one inline style, and raw ISO offsets in the due-line copy (the author's
+call).
 
-All three done in one slice, 2026-11-06 (struck below).
+**The Guide.** Rung 6's "Running a session by hand" became edits to the
+sections that already told it: the launch controls, *Give reviewers
+access*, the Start/End paragraph and the offset fields (findings D2), not
+a new section.
 
-1. ~~**Email invitations in a `validated` session.**~~ Done: An invitation can go
-   out before the session opens to responses, and a reviewer who
-   follows it early lands on the pre-open page. So per-row **Send** and
-   **Regenerate** take `send-all`'s `validated`-or-`ready` gate
-   (`_require_validated_or_ready`), revising the 2026-10-02 ruling (B17 /
-   F17) for these two. **Send reminder** stays `ready`-only. Bulk stays
-   off behind `RRW_BULK_SEND`, a separate matter. Since rung 3a,
-   a prepared session has had no in-app way to email an invitation:
-   bulk Send invites, the one path that worked before activation, is
-   off. Found in the author's live test on Azure.
-2. ~~**Say why a row button is disabled.**~~ Done: Send and Regenerate say "Available once the session is prepared"; Send reminder says it is held until activation, or that the reviewer has finished. Any row button still disabled
-   gets a hover title, such as "Available once the session is
-   activated".
-3. ~~**`Reviewer.last_opened_at`'s comment**~~ Done: in
-   `app/db/models/reviewer.py` still says "stamped on every surface GET".
-   The stamp is at most once per `ARRIVAL_GAP` (Codex on #3654).
+**Scope that moved.** The send-queued-confirmations button and the
+responses-received backlog went to 14G (checklist item 9). Checklist item
+10 is settled: a delegated send, which is what the tenant granted.
 
 ## PR ladder
 

@@ -5,7 +5,7 @@
 of the window's `app/`, `cordware/` and `alembic/` changes with scratch
 tests, and a read of `cordware/`, `residentialapps/` and `utilityapps/`
 with their suites and a route fuzz · **Read at:** `c912ae53` (#3657; the
-reads ran on its pre-merge tree `c5d03d49`, identical) · **Open:** all but M1, L1 and N9.
+reads ran on its pre-merge tree `c5d03d49`, identical) · **Open:** all but M1, L1, N9, D1–D5, D7 and D12 (D8 half).
 
 The checklist the fixes work through. **Nothing was edited by the
 reads**, and their scratch tests were not kept: a fix PR writes its own
@@ -21,7 +21,7 @@ changing the contract; *spec* means the spec is wrong. Line numbers are at
 `c912ae53`.
 
 **Related, already filed:** 14F's collected follow-ups
-(`guide/segment_14F_manual_email.md`, "Follow-ups, collected"): per-row
+(`guide/archive/segment_14F_manual_email.md`, "Follow-ups, collected"): per-row
 Send and Regenerate in `validated` (bears on D3), a reason on a disabled
 row button, and `Reviewer.last_opened_at`'s comment.
 
@@ -86,7 +86,7 @@ None.
 
 ## 4. Spec drift
 
-- **D1 — The contract still says no email leaves the app** (high in the
+- ~~**D1 — The contract still says no email leaves the app**~~ **Done at 14F's close (2026-11-06)**, by its `spec-writer` pass across the named specs and `cordware/spec/identity.md`. Was: (high in the
   audit; it is 14F's close, unfinished). False now:
   `spec/rrw_functional_spec.md` §11.6 (1468-1478) and §9.13 (1194-1198,
   the Email settings card "planned"); `spec/architecture.md:716-718`;
@@ -103,7 +103,7 @@ None.
   `FakeMailer`). Spec, at 14F's close; **its Doc impact lacks**
   `rrw_functional_spec.md`, `architecture.md` and
   `operator_ui_concept.md`.
-- **D2 — Pages say things the app no longer does.** `guide.html:894`
+- ~~**D2 — Pages say things the app no longer does.**~~ **Done at 14F's close (2026-11-06)**: the Guide (launch controls, Start/End, *Give reviewers access*, the demo note), the outbox note, the composer's From (the operator sending), the drill-in's "Sent:", and Workflow States 5 and 6. Was: `guide.html:894`
   ("the email function is not implemented yet"), `:782-785` (Send invites
   "stamps … no mail leaves the app yet"), `:847-849` ("the app will
   prepare and activate the session at Start": scheduled activation never
@@ -115,21 +115,21 @@ None.
   `partials/next_action_card.html:140` (State 5 "Send them ahead of
   Activation", impossible with bulk off and per-row Send `ready`-only).
   Code (copy); State 5 rides on 14F follow-up 1.
-- **D3 — Before activation there is no in-app send, and the specs do not
-  say so.** `spec/operations_pages.md:357-358` still names bulk Send
+- ~~**D3 — Before activation there is no in-app send, and the specs do not
+  say so.**~~ **Done**: per-row Send works once prepared (14F follow-up 1), and `spec/operations_pages.md` and `spec/workflow_card.md` state it and the bulk-off state. Was: `spec/operations_pages.md:357-358` still names bulk Send
   invites "the one way to send before activation"; `spec/workflow_card.md`
   (:322, :635-680) has no disabled-behind-`RRW_BULK_SEND` state, title or
   bulk-off line (`next_action_card.html:324,339,428,501-509`). Author: 14F
   follow-up 1 changes the answer; `workflow_card.md` is not in 14F's Doc
   impact.
-- **D4 — `spec/settings_inventory.md` misses the window's stored state.**
+- ~~**D4 — `spec/settings_inventory.md` misses the window's stored state.**~~ **Done at 14F's close.** Was:
   §8 lacks `RRW_BULK_SEND`; §1 `preferences` lacks
   `email_save_to_sent_items`, `email_bcc_self`, `email_reply_to_help` (off
   by default) and `operator.email_preference_set`; §5 Reviewer lacks
   `last_opened_at`; §7 URL state lacks Invitations'
   `?email=sent|superseded|failed&kind=…`. Spec; only `last_opened_at` is
   in 14F's Doc impact.
-- **D5 — `spec/extract_data.md` has no Timestamps chip** (375-420): no
+- ~~**D5 — `spec/extract_data.md` has no Timestamps chip**~~ **Done at 14F's close.** Was: (375-420): no
   `?timestamps=1`, no `LastOpened` / `LastSaved` / `LastSubmitted`, and it
   says every chip is default-selected (Timestamps is off). Spec, at 14F's
   close.
@@ -138,12 +138,12 @@ None.
   `ready`"; §3 (:101, rewritten by 14E) and the code
   (`visibility_policies.reviewer_sees_own_responses`, :432) say
   `is_ongoing`. Spec.
-- **D7 — `spec/lifecycle.md` §8.3 (1121-1124) claims End keeps a floor
+- ~~**D7 — `spec/lifecycle.md` §8.3 (1121-1124) claims End keeps a floor~~ **True as written since 14F rung 5a**: the reminder-offset checks run whatever the flag. Was:
   through reminder offsets**; with `RRW_SCHEDULED_SEND` off (the default)
   the offset checks are skipped (`_session_home.py:317-330`,
   `scheduled_events/__init__.py:184`) and End has none. Spec: qualify the
   sentence.
-- **D8 — Reply-To shipped differently from its spec.**
+- **D8 — Reply-To shipped differently from its spec.** *Spec half done at 14F's close; the code half stays open: `SmtpEmailTransport` ignores `reply_to`, unflagged (SMTP is not the transport in use).*
   `spec/email_infra_options.md:295-296`: operator's address by default,
   per session. Shipped: a per-operator toggle naming the session's Help
   contact when it is an address (`email_dispatch.send_options_for`,
@@ -161,7 +161,7 @@ None.
   its deadline" (:246, :708) where 14E means the review's end; §8.2
   (851-853) names an auto-archive offset with no consumer and "the lazy
   deadline-closure observer" (now the clock plus requests). Spec.
-- **D12 — The 14F plan says a send under fake auth refuses**; under fake
+- ~~**D12 — The 14F plan says a send under fake auth refuses**~~ **Done at 14F's close**: the Semantics line is struck and annotated. Was: under fake
   auth `mailer_for` returns `FakeMailer` (`cordware/graph.py:621-627`) and
   the row reads `sent`. Plan, at 14F's close.
 

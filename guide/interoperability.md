@@ -57,7 +57,7 @@ Each plan carries its line as a judgment call; this is the list.
     when it is created.
   - The `sqlalchemy>=2.1` floor reaches production through the next
     Cordware import of `requirements.txt`; that import PR says so.
-- **14F — email by hand** (`guide/segment_14F_manual_email.md`).
+- **14F — email by hand** (`guide/archive/segment_14F_manual_email.md`).
   - **Recorded, sent, failed** are three states named in one spec
     section, so a status projection can count *invited* without
     guessing.

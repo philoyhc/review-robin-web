@@ -158,54 +158,20 @@ confirmation when a reviewer submits" box is ticked
 queued row (a second submit refreshes it). The row stays `queued`;
 nothing transmits it.
 
-**The same question for invitation and reminder rows** (added
-2026-11-02, with the honest outbox): every one written before the
-transport stays `queued`, including rows whose token a regenerate has
-since rotated (their link is dead) and rows a later send superseded. The
-dispatcher must not send those as they stand: decide whether it sends
-only each invitation's latest row on its current token, or none of the
-backlog. Rows written before 2026-11-02 still read `sent`.
+**Settled by 14F (2026-11-06).** The dispatcher claims a row
+(`queued` → `sending`) before sending (`email_dispatch.dispatch`), and the
+invitation and reminder backlog is never sent: a per-row Send or Send
+reminder dispatches only the row it has just queued, so rows queued
+before the transport, or superseded since, stay `queued`.
 
-**Do, with the transport.** Decide first what happens to the rows
-queued before the transport existed — send them, drop them, or cut off
-by date — since some confirm submissions made long before. A recall,
-a clear-all or Delete Data leaves its queued row in place too, so
-decide whether those are dropped or re-checked before sending. The
-dispatcher should claim a row (flip it to `sending`) before sending,
-since a resubmit rewrites a row that is still `queued`. Then send queued `responses_received` rows like any other,
-and stamp them `sent` or `failed` as the transport reports.
+**Do, in 14G.** Send queued `responses_received` rows from 14E's clock.
+Decide first what happens to rows queued before then — send, drop, or
+cut off by date — since some confirm submissions made long before, and
+whether a recall, a clear-all or Delete Data drops its queued row.
 
 **Done when** a reviewer who submits on a session set to "Send response
 confirmation" receives the confirmation, and one set to "Don't send
 response confirmation" receives nothing.
-
-## 10. Settle which Graph permission the Graph backend uses
-
-**Status:** open, **awaiting Azure** (author's ruling, 2026-10-02, on
-`guide/archive/findings_2026-10-01_corpus.md` F23).
-
-**What is wrong.** The two descriptions of the unbuilt Graph backend
-disagree. The `GraphEmailTransport` stub's docstring in
-`app/services/email_send.py` describes a delegated send
-(`/me/sendMail` with each operator's token), while
-`spec/email_infra_options.md` puts delegated permission out of scope
-and makes the stub Option B: an application permission on a shared
-mailbox (`/users/{mailbox}/sendMail`). The stub sends nothing, so no
-behavior depends on either.
-
-**Why it waits here.** Which permission is possible is the institutional tenant's
-answer, not the repository's (`spec/email_infra_options.md`, Option B).
-**The tenant's answer so far (read 2026-11-01):** the app registration
-holds delegated `Mail.Send` and `User.ReadBasic.All` with tenant-wide
-consent, and **no application permission**. So a delegated send works
-today; a shared-mailbox send waits on the ask in
-`guide/email_and_scheduling.md`, choice 2.
-
-**Do, with that answer.** Implement the stub to the permission the
-tenant grants, and make its docstring and the spec say the same thing.
-
-**Done when** the docstring and `spec/email_infra_options.md` name the
-same permission, and that permission is the one the tenant granted.
 
 ## 12. Remove the dev slot's deploy credentials
 
