@@ -155,7 +155,8 @@ Graph transport is built per request from the request's mailer
   the page says to reload.
 - **No retry.** A `5xx` or a network failure may come after Graph
   accepted the message, so it is never retried. A `429` waits its
-  `Retry-After` once, then fails `throttled`.
+  `Retry-After` once, at most 5 s on a request (`graph.REQUEST_MAX_WAIT`),
+  else fails `throttled` at once.
 - **A definite refusal** is one of `email_dispatch.REFUSED_KINDS`
   (`unauthorized`, `forbidden`, `throttled`, `bad_response`): Graph
   returned before accepting. Only after one is the message known not to

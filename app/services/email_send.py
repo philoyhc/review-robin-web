@@ -194,6 +194,9 @@ def _build_message(msg: EmailMessage, settings: EmailSettings) -> _StdEmailMessa
     if msg.cc:
         payload["Cc"] = ", ".join(msg.cc)
     # Bcc deliberately not added as a header — it's recipient-only.
+    if msg.reply_to:
+        # As the Graph transport sends it (findings D8).
+        payload["Reply-To"] = msg.reply_to
     payload["Subject"] = msg.subject
     payload.set_content(msg.body)
     return payload
@@ -211,6 +214,7 @@ def _has_line_break(msg: EmailMessage, settings: EmailSettings) -> bool:
         msg.subject,
         *msg.cc,
         *msg.bcc,
+        msg.reply_to or "",
     ]
     return any("\r" in value or "\n" in value for value in values)
 

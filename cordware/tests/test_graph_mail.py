@@ -6,6 +6,7 @@ takes its transport as a parameter."""
 from __future__ import annotations
 
 import json
+import logging
 
 import pytest
 from starlette.requests import Request
@@ -136,3 +137,105 @@ def test_no_token_is_an_error() -> None:
     settings = IdentitySettings(app_env="production", allow_fake_auth=False, _env_file=None)  # pyright: ignore[reportCallIssue]  -- a pydantic-settings init option
     with pytest.raises(GraphError, match="no_token"):
         graph.mailer_for(_request(), settings)
+
+
+def test_a_mail_failure_logs_its_kind_never_the_address_or_token(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Findings N1, as the directory's own test does."""
+    caplog.set_level(logging.INFO, logger="cordware.graph")
+    secret = GraphMailer("secret-token-xyz", transport=Script(Response(403, {}, b"")))
+    with pytest.raises(GraphError):
+        secret.send_mail(MailMessage(to="secret.person@example.edu", subject="Hi", body="x"))
+    (record,) = caplog.records
+    assert record.__dict__["kind"] == "forbidden"
+    text = record.getMessage() + repr(record.__dict__)
+    assert "secret.person" not in text and "secret-token-xyz" not in text
+
+
+def test_the_fake_mailer_logs_no_address_or_subject(caplog: pytest.LogCaptureFixture) -> None:
+    """Findings N2."""
+    caplog.set_level(logging.INFO, logger="cordware.graph")
+    FakeMailer().send_mail(
+        MailMessage(to="secret.person@example.edu", subject="Private subject", body="x")
+    )
+    (record,) = caplog.records
+    text = record.getMessage() + repr(record.__dict__)
+    assert "secret.person" not in text and "Private subject" not in text
+    assert record.__dict__["recipients"] == 1
+
+
+def test_the_mailer_post_does_not_follow_a_redirect_with_the_token() -> None:
+    """Findings N1: the shared opener refuses a 3xx for a POST too, so the
+    bearer header never reaches wherever it points."""
+    import threading
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    from cordware.graph import urllib_post
+
+    seen: list[str | None] = []
+
+    class _Handler(BaseHTTPRequestHandler):
+        def do_POST(self) -> None:  # noqa: N802
+            length = int(self.headers.get("Content-Length") or 0)
+            self.rfile.read(length)
+            if self.path == "/start":
+                self.send_response(307)
+                self.send_header("Location", "/elsewhere")
+                self.end_headers()
+            else:
+                seen.append(self.headers.get("Authorization"))
+                self.send_response(202)
+                self.end_headers()
+
+        def log_message(self, *args: object) -> None:
+            pass
+
+    server = HTTPServer(("127.0.0.1", 0), _Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        reply = urllib_post(
+            f"http://127.0.0.1:{server.server_port}/start",
+            {"Authorization": "Bearer secret"},
+            b"{}",
+            5.0,
+        )
+    finally:
+        server.shutdown()
+    assert reply.status == 307
+    assert seen == []  # the redirect target was never asked
+
+
+def test_a_request_mailer_refuses_a_long_throttle_at_once() -> None:
+    """Findings N4 (author, 2026-11-06): a send on a request waits a short
+    Retry-After, but past `REQUEST_MAX_WAIT` refuses as throttled without
+    sleeping, so one click cannot hold the page for a minute."""
+    sleeps: list[float] = []
+    short = GraphMailer(
+        "tok",
+        transport=Script(Response(429, {"Retry-After": "3"}, b""), ACCEPTED),
+        sleep=sleeps.append,
+        max_wait=graph.REQUEST_MAX_WAIT,
+    )
+    short.send_mail(MESSAGE)
+    assert sleeps == [3.0]
+    sleeps.clear()
+    long = GraphMailer(
+        "tok",
+        transport=Script(Response(429, {"Retry-After": "20"}, b"")),
+        sleep=sleeps.append,
+        max_wait=graph.REQUEST_MAX_WAIT,
+    )
+    with pytest.raises(GraphError, match="throttled"):
+        long.send_mail(MESSAGE)
+    assert sleeps == []
+
+
+def test_the_request_mailer_uses_the_short_wait() -> None:
+    mailer_built = graph.mailer_for(
+        _request({graph.TOKEN_HEADER: "tok"}),
+        IdentitySettings(app_env="production", allow_fake_auth=False, _env_file=None),  # pyright: ignore[reportCallIssue]  -- a pydantic-settings init option
+    )
+    assert isinstance(mailer_built, GraphMailer)
+    assert mailer_built._max_wait == graph.REQUEST_MAX_WAIT  # pyright: ignore[reportPrivateUsage]  -- the setting under test
