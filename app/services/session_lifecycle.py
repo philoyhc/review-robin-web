@@ -1215,7 +1215,8 @@ def _write_deadline_reached(
         actor_user_id=None,
         session=review_session,
         payload=audit.counts(submitted=progress.submitted, assigned=progress.assigned),
-        context={"deadline": review_session.deadline.isoformat()},
+        # Spelled as the instruments' close spells it (findings N7).
+        context=_end_context(review_session),
         correlation_id=correlation_id,
     )
 

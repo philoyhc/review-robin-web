@@ -868,3 +868,20 @@ def test_an_end_over_shut_instruments_moved_out_under_the_lock_releases_it(
     assert lifecycle.observe_deadline(db, rs, now=NOW) == 0
     assert calls == ["lock", "commit"]
     assert _events(db, rs, "session.deadline_reached") == []
+
+
+def test_both_close_events_spell_the_deadline_alike(db: Session) -> None:
+    """Findings N7: End's `session.deadline_reached` and its
+    `instrument.closed` carry the same `context.deadline` string, the
+    aware one, though SQLite hands the column back naive."""
+    rs = _ready_past_deadline(db, "clock-deadline-spelling")
+    db.expire(rs)  # reload from the database: naive on SQLite
+
+    lifecycle.observe_deadline(db, rs, now=NOW)
+
+    [reached] = _events(db, rs, "session.deadline_reached")
+    closed = _events(db, rs, "instrument.closed")
+    assert closed
+    spellings = {detail_of(e)["context"]["deadline"] for e in [reached, *closed]}
+    assert len(spellings) == 1
+    assert datetime.fromisoformat(spellings.pop()).tzinfo is not None
