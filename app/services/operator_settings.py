@@ -325,14 +325,19 @@ def set_display_timezone(
 
 # ── Email preferences (14C Item 2; author's ruling 2026-11-05) ─────────
 #
-# Three per-operator choices about mail Review Robin sends as them, each
-# a boolean key in the ``users.preferences`` container, all off by
-# default. Read by ``email_dispatch.send_options_for``.
+# Per-operator choices about mail, each a boolean key in the
+# ``users.preferences`` container, all off by default. The first three
+# shape mail sent as the operator (``email_dispatch.send_options_for``);
+# the ``email_report_*`` three choose which other owners' actions the
+# operator is told of (14C Item 4, author's ruling 2026-11-06).
 
 EMAIL_PREFERENCE_KEYS: tuple[str, ...] = (
     "email_save_to_sent_items",
     "email_bcc_self",
     "email_reply_to_help",
+    "email_report_lifecycle",
+    "email_report_destructive",
+    "email_report_owners",
 )
 
 
@@ -341,16 +346,22 @@ class EmailPreferences:
     save_to_sent_items: bool = False
     bcc_self: bool = False
     reply_to_help: bool = False
+    report_lifecycle: bool = False
+    report_destructive: bool = False
+    report_owners: bool = False
 
 
 def get_email_preferences(user: User) -> EmailPreferences:
-    """The operator's three email choices; anything but a stored ``True``
-    reads as off."""
+    """The operator's email choices; anything but a stored ``True`` reads
+    as off."""
     preferences = user.preferences or {}
     return EmailPreferences(
         save_to_sent_items=preferences.get("email_save_to_sent_items") is True,
         bcc_self=preferences.get("email_bcc_self") is True,
         reply_to_help=preferences.get("email_reply_to_help") is True,
+        report_lifecycle=preferences.get("email_report_lifecycle") is True,
+        report_destructive=preferences.get("email_report_destructive") is True,
+        report_owners=preferences.get("email_report_owners") is True,
     )
 
 

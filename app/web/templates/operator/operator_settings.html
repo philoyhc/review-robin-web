@@ -163,10 +163,11 @@
         </form>
       </div>
     {% endfor %}
-    {# 14C Item 4 — report emails to the other owners. Scaffold (rung 1):
-       every Toggle inert. Group B (an owner's action, mailed to the
-       session's other owners from that owner's mailbox) goes live in
-       rung 2; A, C and D wait on 14G (author, 2026-11-06). #}
+    {# 14C Item 4 — report emails to the other owners (author,
+       2026-11-06). Group B, an owner's action mailed to the session's
+       other owners from that owner's mailbox, is three live Toggles
+       stored like those above (rung 2); A, C and D wait on 14G and say
+       so. #}
     <h3 class="email-reports-heading" id="email-reports">Report emails</h3>
     <p class="muted">
       When another owner of a session you own acts on it, Review Robin can
@@ -174,32 +175,53 @@
       you own.
     </p>
     {% set report_toggles = [
-      ("report-lifecycle", "Another owner changes a session's state",
-       "Activated, reverted to draft, archived, unarchived or deleted.", "Not yet available."),
-      ("report-destructive", "Another owner deletes data",
-       "Responses purged or cleared, or a roster deleted.", "Not yet available."),
-      ("report-owners", "Another owner changes owners or release",
-       "An owner added or removed, or responses released or the release stopped.", "Not yet available."),
-      ("report-sends", "Summaries of the sends I start",
+      ("report-lifecycle", "email_report_lifecycle", "Another owner changes a session's state",
+       "Activated, reverted to draft, archived, unarchived or deleted.",
+       email_preferences.report_lifecycle, None),
+      ("report-destructive", "email_report_destructive", "Another owner deletes data",
+       "Responses purged or cleared, or a roster deleted.",
+       email_preferences.report_destructive, None),
+      ("report-owners", "email_report_owners", "Another owner changes owners or release",
+       "An owner added or removed, or responses released or the release stopped.",
+       email_preferences.report_owners, None),
+      ("report-sends", None, "Summaries of the sends I start",
        "Invitations, reminders and confirmations sent, with any failures.",
-       "Waits on bulk sending."),
-      ("report-clock", "Scheduled events",
+       False, "Waits on bulk sending."),
+      ("report-clock", None, "Scheduled events",
        "Scheduled activation, the deadline, the release window, and a scheduled step that failed.",
-       "Waits on scheduled email."),
-      ("report-progress", "Reviewer and reviewee progress",
+       False, "Waits on scheduled email."),
+      ("report-progress", None, "Reviewer and reviewee progress",
        "Everyone has submitted, completion milestones, a late recall, every result acknowledged.",
-       "Waits on scheduled email."),
+       False, "Waits on scheduled email."),
     ] %}
-    {% for key, label, hint, reason in report_toggles %}
-      <div class="email-setting-row" data-email-report="{{ key }}">
+    {% for key, pref_key, label, hint, on, reason in report_toggles %}
+      <div class="email-setting-row" data-email-report="{{ key }}"
+           {%- if pref_key %} data-email-setting="{{ key }}"{% endif %}>
         <div>
           <div id="email-setting-{{ key }}-label">{{ label }}</div>
           <p class="muted email-setting-hint">{{ hint }}
-            <span class="email-report-reason" data-report-reason>{{ reason }}</span></p>
+            {%- if reason %}
+            <span class="email-report-reason" data-report-reason>{{ reason }}</span>
+            {%- endif %}</p>
         </div>
+        {% if pref_key %}
+        <form method="post" action="{{ url('/operator/settings/email-preference') }}">
+          <input type="hidden" name="key" value="{{ pref_key }}">
+          <input type="hidden" name="on" value="{{ 'false' if on else 'true' }}">
+          {% if return_to_raw %}
+            <input type="hidden" name="return_to" value="{{ return_to_raw }}">
+          {% endif %}
+          <button type="submit" class="btn{% if not on %} secondary{% endif %}"
+                  id="email-setting-{{ key }}-toggle"
+                  aria-labelledby="email-setting-{{ key }}-label email-setting-{{ key }}-toggle"
+                  aria-pressed="{{ 'true' if on else 'false' }}"
+                  title="Click to turn {{ 'off' if on else 'on' }}">{{ 'On' if on else 'Off' }}</button>
+        </form>
+        {% else %}
         <button type="button" class="btn secondary" id="email-setting-{{ key }}-toggle"
                 aria-labelledby="email-setting-{{ key }}-label email-setting-{{ key }}-toggle"
                 aria-pressed="false" disabled title="{{ reason }}">Off</button>
+        {% endif %}
       </div>
     {% endfor %}
   </div>
