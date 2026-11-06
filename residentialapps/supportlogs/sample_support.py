@@ -630,10 +630,10 @@ FLAGS = (
         datetime(2026, 10, 3, 18, 15),
         "Duty senior staff contacted",
         "closed",
-        acknowledged_by="Hui Min Goh",
+        acknowledged_by="Sam Lee",
         acknowledged_at=datetime(2026, 10, 3, 18, 40),
         outcome="No further action",
-        closed_by="Hui Min Goh",
+        closed_by="Sam Lee",
         closed_at=datetime(2026, 10, 4, 10, 0),
     ),
 )
@@ -1073,6 +1073,7 @@ class CheckRun:
 
 
 CHECK_RUNS = (
+    CheckRun(date(2026, 10, 27), "Hui Min Goh", "Hall leadership appointments", 11, 2),
     CheckRun(date(2026, 10, 22), "Marcus Tan", "Overseas field trip, Semester 2", 14, 2),
     CheckRun(date(2026, 9, 30), "Nadia Hassan", "Student exchange nominations", 8, 1),
 )

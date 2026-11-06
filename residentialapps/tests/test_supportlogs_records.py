@@ -285,7 +285,7 @@ def test_records_across_staff_is_senior_only_and_locked(client: TestClient) -> N
         "/overview/records.csv" in unlocked
         and "Every upload, download and deletion here is recorded" in unlocked
     )
-    for v in sample.VIEWERS:
+    for v in (*sample.VIEWERS, *sample.UNLISTED_VIEWERS):
         if sample.holds(v, sample.SENIOR):
             continue
         q = v.name.replace(" ", "%20")

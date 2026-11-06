@@ -106,7 +106,7 @@ def test_each_grant_gives_its_tabs(client: TestClient) -> None:
         "Configuration",
         "Audit log",
     ]
-    for v in sample.VIEWERS:
+    for v in (*sample.VIEWERS, *sample.UNLISTED_VIEWERS):
         assert "Safety flags</a>" not in client.get(at("/", v.name)).text
 
 
@@ -280,7 +280,7 @@ def test_the_sample_staff_are_the_roster_s() -> None:
     staff are copied from the roster's mock; this holds them to it."""
     with ROSTER.open(newline="") as f:
         roster = {row["Name"]: row["Abbrev"] for row in csv.DictReader(f)}
-    for v in sample.VIEWERS:
+    for v in (*sample.VIEWERS, *sample.UNLISTED_VIEWERS):
         if v.appointment:
             assert roster.get(v.name) == v.appointment, v.name
     assert sample.DEFAULT.grants == {sample.FRONTLINE}
