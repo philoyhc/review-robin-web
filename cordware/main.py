@@ -23,8 +23,12 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from fastapi import FastAPI
+from fastapi.exception_handlers import http_exception_handler
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from starlette.exceptions import HTTPException
 from starlette.middleware.gzip import GZipMiddleware
+from starlette.requests import Request
+from starlette.responses import PlainTextResponse, Response
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from cordware.identity import is_local, missing_header_count, super_admin_configured
@@ -244,6 +248,73 @@ def _build(name: str, entry: AppEntry) -> ASGIApp:
         raise
 
 
+#: A path segment that looks like a credential: a long run of URL-safe
+#: token characters (an invite token is 43). Masked before a path is
+#: logged, since a path outside every mount is most likely an
+#: application URL that lost its prefix, and those carry tokens.
+_OPAQUE_SEGMENT = re.compile(r"^[A-Za-z0-9_-]{20,}$")
+
+
+def _loggable_path(path: str) -> str:
+    """``path`` with every opaque segment masked, for a log line."""
+    return "/".join(
+        "<redacted>" if _OPAQUE_SEGMENT.match(segment) else segment for segment in path.split("/")
+    )
+
+
+def _under(path: str, prefixes: Sequence[str]) -> bool:
+    """Whether ``path`` is a mounted application's: its mount path or
+    below it."""
+    return any(path == prefix or path.startswith(prefix.rstrip("/") + "/") for prefix in prefixes)
+
+
+def add_host_error_logging(host: FastAPI, mount_paths: Sequence[str]) -> None:
+    """Log what no mounted application can see (v0.8 §3, "Host
+    logging", events 4 and 5).
+
+    - ``host.unrouted`` (warning): a request no route of the host and no
+      mounted application took, answered 404. A mounted application
+      answers its own 404s, so only a path outside every mount reaches
+      this handler. The path is logged with any token-like segment
+      masked, never the query string.
+    - ``host.error`` (error, with the traceback): an exception outside
+      every mounted application, the host's ``/health`` and landing page
+      included, answered 500. A mounted application's own error reaches
+      the host too, after that application has answered it; it is that
+      application's to log, so the host leaves every path under a mount
+      alone (an error in the host's own middleware on such a path
+      included: uvicorn's traceback is its record)."""
+
+    async def unrouted(request: Request, exc: Exception) -> Response:
+        assert isinstance(exc, HTTPException)
+        if exc.status_code == 404 and not _under(request.url.path, mount_paths):
+            log.warning(
+                "no application handled the request",
+                extra={
+                    "event": "host.unrouted",
+                    "method": request.method,
+                    "path": _loggable_path(request.url.path),
+                },
+            )
+        return await http_exception_handler(request, exc)
+
+    async def error(request: Request, exc: Exception) -> Response:
+        if not _under(request.url.path, mount_paths):
+            log.error(
+                "error outside any application",
+                exc_info=exc,
+                extra={
+                    "event": "host.error",
+                    "method": request.method,
+                    "path": _loggable_path(request.url.path),
+                },
+            )
+        return PlainTextResponse("Internal Server Error", status_code=500)
+
+    host.add_exception_handler(HTTPException, unrouted)
+    host.add_exception_handler(Exception, error)
+
+
 class FakeAuthRefused(RuntimeError):
     """Fake auth is on outside `APP_ENV=local`: the host will not start."""
 
@@ -369,6 +440,7 @@ def create_app(
 
     for entry, sub_app in mounted:
         host.mount(entry.path, sub_app)
+    add_host_error_logging(host, [entry.path for entry, _ in mounted])
     # Compression for every response the host serves: nothing in front of
     # it compresses (`docs/performance.md` Finding 5: the lobby measured
     # 338 kB uncompressed on 2026-11-01, 89 kB after). Starlette skips a
