@@ -239,7 +239,25 @@ def write_event(
     )
     db.add(event)
     db.flush()
+    if event_type in _owner_reports().REPORTED:
+        snapshot = resolved_detail.get("snapshot") if isinstance(resolved_detail, dict) else None
+        _owner_reports().note(
+            db,
+            event_type=event_type,
+            actor_user_id=actor_user_id,
+            review_session=session if isinstance(session, ReviewSession) else None,
+            snapshot=snapshot if isinstance(snapshot, dict) else None,
+            target_user_id=(refs or {}).get("target_user_id"),
+        )
     return event
+
+
+def _owner_reports() -> Any:
+    """``app.services.owner_reports``, imported late: it imports models
+    and is imported by nothing this module needs (14C Item 4)."""
+    from app.services import owner_reports
+
+    return owner_reports
 
 
 # --------------------------------------------------------------------------- #
@@ -719,6 +737,10 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "operator.display_timezone_set": EventSchema(frozenset({"changes"})),
     # 14C Item 2 — the Email settings card's three toggles.
     "operator.email_preference_set": EventSchema(frozenset({"changes"})),
+    # 14C Item 4 — a report email to another owner, sent or refused
+    # (``reason`` is the refusal's kind). ``app/services/owner_reports.py``.
+    "report.sent": EventSchema(_IDENTITY | {"counts", "context"}),
+    "report.send_failed": EventSchema(_IDENTITY | {"counts", "reason", "context"}),
     # Segment 18B PR 3 — per-session display-timezone override.
     # ``app/services/sessions.py`` emits.
     "session.display_timezone_set": EventSchema(_IDENTITY | {"changes"}),

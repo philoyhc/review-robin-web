@@ -20,6 +20,7 @@ from app.web import urls
 from app.web.deps import OperatorAllowlistDenied, get_or_create_user
 from app.web.error_handlers import register_error_handlers
 from app.web.oversized_ids import refuse_oversized_ids
+from app.web.owner_report_sender import send_owner_reports
 from app.web.routes_about import router as about_router
 from app.web.routes_auth import router as auth_router
 from app.web.routes_guide import router as guide_router
@@ -114,7 +115,9 @@ def create_app() -> FastAPI:
     # database with an id SQLite cannot bind (findings O6).
     app = FastAPI(
         title="Review Robin Web",
-        dependencies=[Depends(refuse_oversized_ids)],
+        # Owner reports (14C Item 4) go out after the route answers, so
+        # every action reaches them wherever it is posted from.
+        dependencies=[Depends(refuse_oversized_ids), Depends(send_owner_reports)],
         lifespan=lifespan,
     )
     # The app's first and only static mount. Everything visual has so far
