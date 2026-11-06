@@ -374,9 +374,13 @@ mints a new token, so a second one would kill the first link (findings
 L1, 2026-11-06).
 
 **A refused send is put back** (findings M1). The invitation is stamped
-before the Graph call; if the transport refuses it, the stamps the send
-wrote (`status` / `sent_at`, or `last_reminder_at`) return to what they
-were, so the row offers the same action again. Only stamps still holding
+before the Graph call; if Graph refuses it outright (a 401, a 403, a
+second 429, another 4xx: `email_dispatch.REFUSED_KINDS`), the stamps the
+send wrote (`status` / `sent_at`, or `last_reminder_at`) return to what
+they were, so the row offers the same action again. After a `5xx` or a
+network failure the message may have arrived, so the stamps stay and the
+row offers Send reminder, which reuses the link, as the notice's "it may
+or may not have gone" warns. Only stamps still holding
 what the send wrote go back, so an open of the link or a Regenerate in
 the meantime stands; `invitation.send_reverted` records the restore.
 

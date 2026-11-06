@@ -187,7 +187,7 @@ def test_a_regenerate_between_queue_and_send_stops_the_dead_link(
 
 class _Refusing:
     def send_mail(self, message: MailMessage) -> None:
-        raise GraphError("server", 503)
+        raise GraphError("forbidden", 403)
 
 
 def test_a_refused_send_leaves_the_row_pending_with_its_send(
@@ -200,7 +200,7 @@ def test_a_refused_send_leaves_the_row_pending_with_its_send(
     invitation = _invitation(db, session.id)
     base = f"/operator/sessions/{session.public_id}/invitations"
     response = client.post(f"{base}/{invitation.id}/send", follow_redirects=False)
-    assert response.headers["location"].endswith("/invitations?email=failed&kind=server")
+    assert response.headers["location"].endswith("/invitations?email=failed&kind=forbidden")
     db.refresh(invitation)
     assert invitation.status == "pending"
     assert invitation.sent_at is None
@@ -221,7 +221,7 @@ def test_a_refused_reminder_leaves_last_reminder_at_as_it_was(
     client.post(f"{base}/{invitation.id}/send")
     monkeypatch.setattr(graph, "mailer_for", lambda _request, settings=None: _Refusing())
     response = client.post(f"{base}/{invitation.id}/remind", follow_redirects=False)
-    assert response.headers["location"].endswith("/invitations?email=failed&kind=server")
+    assert response.headers["location"].endswith("/invitations?email=failed&kind=forbidden")
     db.refresh(invitation)
     assert invitation.status == "sent"
     assert invitation.last_reminder_at is None
@@ -263,7 +263,7 @@ def test_an_open_during_a_refused_reminder_is_kept(
             invitation.status = "opened"
             invitation.opened_at = invitation.sent_at
             db.commit()
-            raise GraphError("server", 503)
+            raise GraphError("forbidden", 403)
 
     monkeypatch.setattr(graph, "mailer_for", lambda _request, settings=None: OpenedThenRefused())
     client.post(f"{base}/{invitation.id}/remind")
@@ -271,3 +271,25 @@ def test_an_open_during_a_refused_reminder_is_kept(
     assert invitation.status == "opened"
     assert invitation.opened_at is not None
     assert invitation.last_reminder_at is None
+
+
+def test_an_ambiguous_failure_keeps_the_stamps_and_the_link(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Codex on #3664: after a 5xx or a network failure Graph may have
+    accepted the message, so the row keeps reading sent, offering Send
+    reminder (which reuses the link), not a Send that would kill it."""
+
+    class Outage:
+        def send_mail(self, message: MailMessage) -> None:
+            raise GraphError("server", 503)
+
+    monkeypatch.setattr(graph, "mailer_for", lambda _request, settings=None: Outage())
+    session = _ready_session(client, db, code="row-m1-ambiguous")
+    invitation = _invitation(db, session.id)
+    base = f"/operator/sessions/{session.public_id}/invitations"
+    response = client.post(f"{base}/{invitation.id}/send", follow_redirects=False)
+    assert response.headers["location"].endswith("/invitations?email=failed&kind=server")
+    db.refresh(invitation)
+    assert invitation.status == "sent"
+    assert f'action="{base}/{invitation.id}/remind"' in client.get(base).text

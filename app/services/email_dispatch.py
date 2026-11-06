@@ -51,6 +51,13 @@ class SendOptions:
     reply_to: str | None = None
 
 
+#: The failure kinds Graph returns before accepting a message: a 401,
+#: a 403, a second 429, another 4xx. Only after one of these is a send
+#: known not to have gone out. A ``5xx`` or a network failure may come
+#: after Graph accepted it (``cordware.graph.GraphMailer``), so the
+#: message may be in the recipient's inbox (Codex on #3664).
+REFUSED_KINDS = frozenset({"unauthorized", "forbidden", "throttled", "bad_response"})
+
 BULK_OFF_LINE = "Bulk email isn't available yet: share the session link from Invitations instead."
 
 

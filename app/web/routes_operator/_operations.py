@@ -388,7 +388,11 @@ def _send_queued_row(
     elif result.outcome == "not_claimed":
         query = "email=superseded"
     else:
-        if stamps is not None:
+        # Only a definite refusal puts the stamps back. After a 5xx or a
+        # network failure the message may have arrived, so the row keeps
+        # its stamps, and offers Send reminder, which reuses the link,
+        # rather than a Send that would mint a new one and kill it.
+        if stamps is not None and result.failure_kind in email_dispatch.REFUSED_KINDS:
             invitations.restore_after_failed_send(
                 db,
                 review_session=review_session,
