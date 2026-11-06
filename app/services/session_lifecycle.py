@@ -16,12 +16,14 @@ from sqlalchemy.orm import Session
 
 from app.db.models import (
     Assignment,
+    AuditEvent,
     Instrument,
     Response,
     Reviewer,
     ReviewSession,
     User,
 )
+from app.json_shapes import json_object
 from app.logging_config import get_logger
 from app.schemas.validation import Severity, ValidationIssue
 from app.services import audit, session_guard, unit_of_work
@@ -1154,6 +1156,69 @@ def closed_at_deadline(db: Session, review_session: ReviewSession) -> bool:
     )
 
 
+def _deadline_already_recorded(db: Session, review_session: ReviewSession) -> bool:
+    """Whether ``session.deadline_reached`` already stands for the
+    session's current End, its ``context.deadline`` compared as an
+    instant."""
+    deadline = review_session.deadline
+    if deadline is None:
+        return False
+    target = deadline if deadline.tzinfo else deadline.replace(tzinfo=UTC)
+    rows = db.execute(
+        select(AuditEvent.detail).where(
+            AuditEvent.session_id == review_session.id,
+            AuditEvent.event_type == "session.deadline_reached",
+        )
+    ).scalars()
+    for detail in rows:
+        envelope = json_object(detail)
+        context = json_object(envelope.get("context")) if envelope is not None else None
+        raw = context.get("deadline") if context is not None else None
+        if not isinstance(raw, str):
+            continue
+        try:
+            recorded = datetime.fromisoformat(raw)
+        except ValueError:
+            continue
+        if (recorded if recorded.tzinfo else recorded.replace(tzinfo=UTC)) == target:
+            return True
+    return False
+
+
+def _write_deadline_reached(
+    db: Session, review_session: ReviewSession, *, correlation_id: str | None
+) -> None:
+    """One ``session.deadline_reached`` per crossing (segment 14E), with
+    the submitted count as it stands at the deadline, which a later report
+    quotes (14C Item 2's "Deadline reached"). Written by whichever close
+    the End's crossing runs, including the one whose instruments were
+    already shut (findings L4). A release that ends a review with no End
+    is not a deadline, so nothing is written then."""
+    if review_session.deadline is None:
+        return
+    # Once per crossing, whoever wrote it: before End closed sessions
+    # (segment 14E) the close of the instruments wrote it and left the
+    # session ready, so a legacy session reaching the already-shut branch
+    # may hold it already; its count at the time stands (Codex on #3672).
+    if _deadline_already_recorded(db, review_session):
+        return
+    from app.services import monitoring
+
+    progress = monitoring.summary_counts(db, review_session)
+    audit.write_event(
+        db,
+        event_type="session.deadline_reached",
+        summary=(
+            f"Deadline reached: {progress.submitted} of {progress.assigned} reviewers submitted"
+        ),
+        actor_user_id=None,
+        session=review_session,
+        payload=audit.counts(submitted=progress.submitted, assigned=progress.assigned),
+        context={"deadline": review_session.deadline.isoformat()},
+        correlation_id=correlation_id,
+    )
+
+
 def observe_deadline(
     db: Session,
     review_session: ReviewSession,
@@ -1211,6 +1276,9 @@ def observe_deadline(
         if is_ready(review_session):
             session_guard.lock_session(db, review_session)
             if is_ready(review_session) and deadline_has_passed(review_session, now=current):
+                # The crossing's record all the same (findings L4, author
+                # 2026-11-06): every End that closes the session writes it.
+                _write_deadline_reached(db, review_session, correlation_id=correlation_id)
                 _expire_at_end(db, review_session, closed=0, correlation_id=correlation_id)
                 db.flush()
                 db.commit()
@@ -1255,27 +1323,7 @@ def observe_deadline(
             correlation_id=correlation_id,
         )
         closed += 1
-    # One event per crossing (segment 14E): written by the close that
-    # shut the session's instruments, whichever trigger ran it, with the
-    # submitted count as it stands at the deadline, which a later report
-    # quotes (14C Item 2's "Deadline reached").
-    from app.services import monitoring
-
-    progress = monitoring.summary_counts(db, review_session)
-    # A release that ends a review with no End is not a deadline.
-    if review_session.deadline is not None:
-        audit.write_event(
-            db,
-            event_type="session.deadline_reached",
-            summary=(
-                f"Deadline reached: {progress.submitted} of {progress.assigned} reviewers submitted"
-            ),
-            actor_user_id=None,
-            session=review_session,
-            payload=audit.counts(submitted=progress.submitted, assigned=progress.assigned),
-            context={"deadline": review_session.deadline.isoformat()},
-            correlation_id=correlation_id,
-        )
+    _write_deadline_reached(db, review_session, correlation_id=correlation_id)
     _expire_at_end(db, review_session, closed=closed, correlation_id=correlation_id)
     db.flush()
     db.commit()

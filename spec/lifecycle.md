@@ -518,7 +518,9 @@ What a reviewer reads back after close is the visibility policy's call
   (`counts.submitted` of `counts.assigned` at that moment); a release that
   ends the review is not a deadline and writes none. The session closes
   also when its instruments were already shut (an earlier request
-  closed them before the session closed), once. A release window set
+  closed them before the session closed, or the retired per-instrument
+  Close), once, and with a real End writes `session.deadline_reached`
+  then too (findings L4). A release window set
   beforehand therefore opens unattended (§8.2.3).
 
 ### 4.1 The reviewer write-path predicate

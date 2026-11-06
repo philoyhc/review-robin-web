@@ -481,6 +481,9 @@ def test_a_session_whose_end_passed_earlier_still_closes(db: Session) -> None:
     db.refresh(rs)
     assert lifecycle.is_expired(rs)
     assert len(_events(db, rs, "session.expired")) == 1
+    # And it records the crossing, from the clock (findings L4).
+    [reached] = _events(db, rs, "session.deadline_reached")
+    assert detail_of(reached)["context"]["fired_by"] == "clock"
 
 
 def test_an_operator_page_view_past_end_closes_the_session(db: Session) -> None:
@@ -657,3 +660,62 @@ def test_a_pass_that_raises_outright_is_a_failure(
     after = _clock.clock_status()
     assert after.failures == before.failures + 1
     assert after.last_failure_type == "LookupError"
+
+
+def test_an_end_over_already_shut_instruments_still_records_the_deadline(db: Session) -> None:
+    """Findings L4 (author, 2026-11-06): a legacy session whose
+    instruments were already shut (the retired per-instrument Close, or
+    an End that passed before End closed sessions) still writes its one
+    `session.deadline_reached` when End closes it, so every crossing
+    leaves the same record."""
+    rs = _ready_past_deadline(db, "clock-already-shut")
+    for instrument in db.execute(
+        select(Instrument).where(Instrument.session_id == rs.id)
+    ).scalars():
+        instrument.accepting_responses = False
+    db.commit()
+
+    lifecycle.observe_deadline(db, rs, now=NOW)
+
+    reached = _events(db, rs, "session.deadline_reached")
+    assert len(reached) == 1
+    assert set(detail_of(reached[0])["counts"]) == {"submitted", "assigned"}
+    assert "fired_by" not in detail_of(reached[0])["context"]  # a page view
+    db.refresh(rs)
+    assert lifecycle.is_expired(rs)
+    [expired] = _events(db, rs, "session.expired")
+    assert detail_of(expired)["counts"]["closed_instruments"] == 0
+    lifecycle.observe_deadline(db, rs, now=NOW)
+    assert len(_events(db, rs, "session.deadline_reached")) == 1
+
+
+def test_a_legacy_deadline_record_is_kept_not_written_twice(db: Session) -> None:
+    """Codex on #3672: before End closed sessions, the instruments' close
+    wrote `session.deadline_reached` and left the session ready. Closing
+    such a session now keeps that record, with its count at the time,
+    and writes no second one."""
+    from app.services import audit
+
+    rs = _ready_past_deadline(db, "clock-legacy-record")
+    for instrument in db.execute(
+        select(Instrument).where(Instrument.session_id == rs.id)
+    ).scalars():
+        instrument.accepting_responses = False
+    assert rs.deadline is not None
+    audit.write_event(
+        db,
+        event_type="session.deadline_reached",
+        summary="Deadline reached: 3 of 9 reviewers submitted",
+        actor_user_id=None,
+        session=rs,
+        payload=audit.counts(submitted=3, assigned=9),
+        context={"deadline": rs.deadline.isoformat()},
+    )
+    db.commit()
+
+    lifecycle.observe_deadline(db, rs, now=NOW)
+
+    [reached] = _events(db, rs, "session.deadline_reached")
+    assert detail_of(reached)["counts"] == {"submitted": 3, "assigned": 9}
+    db.refresh(rs)
+    assert lifecycle.is_expired(rs)
