@@ -190,7 +190,7 @@ None.
 - ~~**N4 — A 429 can hold a request worker about 70 s**~~ **Done 2026-11-06, short wait then refuse (author)**: a request's mailer waits at most 5 s (`REQUEST_MAX_WAIT`), else refuses as throttled, a definite refusal. Was: (20 s timeout, up
   to 30 s `Retry-After`, 20 s again; `graph.py:592-596`), now that per-row
   Send calls the mailer on the request thread.
-- **N5 — Suspected, not confirmed** (the defect read): a past End saved on
+- ~~**N5 — Suspected, not confirmed**~~ **Done 2026-11-06**: the two real parts are fixed. `observe_deadline`, `_reopen_while_live` and `observe_release_window` commit on every path after the lock, and the release stamps compare as instants (`tests/integration/test_scheduled_clock.py`). The other three need no change (no ruling sought): a past End on a `ready` session closes it, which is what End means since 14E; a pre-Start `mark_opened` arrival is the arrival as it happened; the SMTP blank From cannot be reached today. Was: (the defect read): a past End saved on
   a `ready` session closes the live review on the next pass (14E; maybe
   intended); `_release._unstamped` compares `context.release_at` as a
   string where `_fired` compares instants; `observe_release_window` /
