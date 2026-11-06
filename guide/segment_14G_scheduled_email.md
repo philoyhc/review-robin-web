@@ -113,7 +113,12 @@ Taken 2026-11-05 at `c0cd4dcc`.
    `build_invite_url`; scheduled invites and reminders gain the cap and
    `failed_persistent`. Tests: the clock queues a due invite and reminder
    with an absolute link; no origin queues none; a repeated failure ends
-   `failed_persistent`. Its own read.
+   `failed_persistent`. Its own read. **And no "sent" before an email**
+   (findings N10, moved here 2026-11-06; L2's principle): today, with
+   `RRW_SCHEDULED_SEND` on, `_invites.py` and `_reminders.py` call
+   `send_invitation` / `send_reminder`, which stamp the row sent and
+   queue it, and nothing dispatches it. Until Item 2 dispatches, a
+   queued scheduled send is recorded as queued, not sent.
 2. **Close.**
 
 ### Definition of done

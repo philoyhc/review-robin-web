@@ -60,8 +60,16 @@ an agent with no part in the window's builds:
   fuzz (§3, §6).
 
 Nothing was edited by them. Every defect, drift and gap they reported is a
-row of `guide/findings_2026-11-06_assessment.md`, the checklist the fixes
+row of `guide/archive/findings_2026-11-06_assessment.md`, the checklist the fixes
 strike off.
+
+**Register worked, 2026-11-06** (#3662 → #3679, the same day): every row
+done, ruled or moved, and the register archived. M1 and L1 fixed
+first (#3664); 14F closed with the D-rows its pass owned (#3670); the
+author ruled L2, L3, L4 and N4; N10 went to 14G Item 1. Nothing was
+imported or deployed with these fixes. The numbers below stay as taken at
+`c912ae53`; N8 re-cut the Postgres shards, so §2's per-job test times
+no longer describe `main`.
 
 **Development context:** a single author, with AI agents building. The
 window ran at about 40 PRs a day, almost all small; every code slice had
@@ -312,7 +320,7 @@ undocumented modifiers (D9), and `CONTRIBUTING.md` missing the format gate
 
 **At the pinned tree: one medium, four low, none high**, plus twelve spec
 drifts (§3) and nine noted gaps. Each is a row of
-`guide/findings_2026-11-06_assessment.md`; CONFIRMED means reproduced by a
+`guide/archive/findings_2026-11-06_assessment.md`; CONFIRMED means reproduced by a
 scratch test, by trace means read through without a test.
 
 - **M1 (medium, CONFIRMED).** A failed per-row Send or Remind still
