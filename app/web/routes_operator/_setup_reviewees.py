@@ -32,7 +32,7 @@ from app.services import responses as responses_service
 from app.services import reviewees as reviewees_service
 from app.services import session_lifecycle as lifecycle
 from app.services.reviewees import RevieweeOperationError
-from app.web import breadcrumbs, urls, views
+from app.web import breadcrumbs, roster_actions, urls, views
 from app.web.deps import (
     get_or_create_user,
     request_correlation_id,
@@ -45,10 +45,8 @@ from app.web.roster_import import (
 )
 from app.web.routes_operator._shared import (
     _redirect_keeping_selection,
-    _require_delete_confirm,
     _require_editable,
     _require_response_loss_ack,
-    _require_selected_response_loss_ack,
     _row_action_anchor,
     _setup_row_window,
     _templates,
@@ -640,24 +638,17 @@ def reviewees_bulk_inactivate(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    _require_editable(review_session)
-    try:
-        reviewees_service.bulk_inactivate(
-            db,
-            review_session=review_session,
-            reviewee_ids=reviewee_ids,
-            user=user,
-            correlation_id=request_correlation_id(),
-        )
-    except RevieweeOperationError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
-    return _redirect_keeping_selection(
+    return roster_actions.bulk_set_active(
+        roster_actions.REVIEWEES,
         request,
-        f"/operator/sessions/{review_session.public_id}/reviewees",
-        reviewee_ids,
-        filter_params=[("status", filter_status), ("q", filter_q)],
-        offset=filter_offset,
-        anchor=_row_action_anchor(reviewee_ids, noun="reviewee"),
+        active=False,
+        ids=reviewee_ids,
+        filter_status=filter_status,
+        filter_q=filter_q,
+        filter_offset=filter_offset,
+        review_session=review_session,
+        user=user,
+        db=db,
     )
 
 
@@ -672,24 +663,17 @@ def reviewees_bulk_reactivate(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    _require_editable(review_session)
-    try:
-        reviewees_service.bulk_reactivate(
-            db,
-            review_session=review_session,
-            reviewee_ids=reviewee_ids,
-            user=user,
-            correlation_id=request_correlation_id(),
-        )
-    except RevieweeOperationError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
-    return _redirect_keeping_selection(
+    return roster_actions.bulk_set_active(
+        roster_actions.REVIEWEES,
         request,
-        f"/operator/sessions/{review_session.public_id}/reviewees",
-        reviewee_ids,
-        filter_params=[("status", filter_status), ("q", filter_q)],
-        offset=filter_offset,
-        anchor=_row_action_anchor(reviewee_ids, noun="reviewee"),
+        active=True,
+        ids=reviewee_ids,
+        filter_status=filter_status,
+        filter_q=filter_q,
+        filter_offset=filter_offset,
+        review_session=review_session,
+        user=user,
+        db=db,
     )
 
 
@@ -802,29 +786,16 @@ def reviewees_bulk_delete(
     **not** the ids: the rows are gone, so re-checking them is not a
     thing the page can do.
     """
-    _require_editable(review_session)
-    _require_delete_confirm(confirm)
-    _require_selected_response_loss_ack(
-        db,
-        model=Reviewee,
-        ids=reviewee_ids,
-        ack=acknowledge_response_loss,
-    )
-    try:
-        reviewees_service.delete_selected(
-            db,
-            review_session=review_session,
-            reviewee_ids=reviewee_ids,
-            user=user,
-            correlation_id=request_correlation_id(),
-        )
-    except RevieweeOperationError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
-    return _redirect_keeping_selection(
+    return roster_actions.bulk_delete(
+        roster_actions.REVIEWEES,
         request,
-        f"/operator/sessions/{review_session.public_id}/reviewees",
-        [],
-        filter_params=[("status", filter_status), ("q", filter_q)],
-        offset=filter_offset,
-        anchor=_row_action_anchor([], noun="reviewee"),
+        ids=reviewee_ids,
+        confirm=confirm,
+        acknowledge_response_loss=acknowledge_response_loss,
+        filter_status=filter_status,
+        filter_q=filter_q,
+        filter_offset=filter_offset,
+        review_session=review_session,
+        user=user,
+        db=db,
     )

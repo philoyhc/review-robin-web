@@ -29,7 +29,7 @@ from app.services import reviewers as reviewers_service
 from app.services import session_lifecycle as lifecycle
 from app.services.responses import GroupAnswersWouldClear
 from app.services.reviewers import ReviewerOperationError
-from app.web import breadcrumbs, urls, views
+from app.web import breadcrumbs, roster_actions, urls, views
 from app.web.deps import (
     get_or_create_user,
     request_correlation_id,
@@ -42,11 +42,9 @@ from app.web.roster_import import (
 )
 from app.web.routes_operator._shared import (
     _redirect_keeping_selection,
-    _require_delete_confirm,
     _require_editable,
     _require_response_loss_ack,
     _require_reviewer_in_session,
-    _require_selected_response_loss_ack,
     _row_action_anchor,
     _setup_row_window,
     _templates,
@@ -591,24 +589,17 @@ def reviewers_bulk_inactivate(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    _require_editable(review_session)
-    try:
-        reviewers_service.bulk_inactivate(
-            db,
-            review_session=review_session,
-            reviewer_ids=reviewer_ids,
-            user=user,
-            correlation_id=request_correlation_id(),
-        )
-    except ReviewerOperationError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
-    return _redirect_keeping_selection(
+    return roster_actions.bulk_set_active(
+        roster_actions.REVIEWERS,
         request,
-        f"/operator/sessions/{review_session.public_id}/reviewers",
-        reviewer_ids,
-        filter_params=[("status", filter_status), ("q", filter_q)],
-        offset=filter_offset,
-        anchor=_row_action_anchor(reviewer_ids, noun="reviewer"),
+        active=False,
+        ids=reviewer_ids,
+        filter_status=filter_status,
+        filter_q=filter_q,
+        filter_offset=filter_offset,
+        review_session=review_session,
+        user=user,
+        db=db,
     )
 
 
@@ -623,24 +614,17 @@ def reviewers_bulk_reactivate(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    _require_editable(review_session)
-    try:
-        reviewers_service.bulk_reactivate(
-            db,
-            review_session=review_session,
-            reviewer_ids=reviewer_ids,
-            user=user,
-            correlation_id=request_correlation_id(),
-        )
-    except ReviewerOperationError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
-    return _redirect_keeping_selection(
+    return roster_actions.bulk_set_active(
+        roster_actions.REVIEWERS,
         request,
-        f"/operator/sessions/{review_session.public_id}/reviewers",
-        reviewer_ids,
-        filter_params=[("status", filter_status), ("q", filter_q)],
-        offset=filter_offset,
-        anchor=_row_action_anchor(reviewer_ids, noun="reviewer"),
+        active=True,
+        ids=reviewer_ids,
+        filter_status=filter_status,
+        filter_q=filter_q,
+        filter_offset=filter_offset,
+        review_session=review_session,
+        user=user,
+        db=db,
     )
 
 
@@ -787,29 +771,16 @@ def reviewers_bulk_delete(
     **not** the ids: the rows are gone, so re-checking them is not a
     thing the page can do.
     """
-    _require_editable(review_session)
-    _require_delete_confirm(confirm)
-    _require_selected_response_loss_ack(
-        db,
-        model=Reviewer,
-        ids=reviewer_ids,
-        ack=acknowledge_response_loss,
-    )
-    try:
-        reviewers_service.delete_selected(
-            db,
-            review_session=review_session,
-            reviewer_ids=reviewer_ids,
-            user=user,
-            correlation_id=request_correlation_id(),
-        )
-    except ReviewerOperationError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
-    return _redirect_keeping_selection(
+    return roster_actions.bulk_delete(
+        roster_actions.REVIEWERS,
         request,
-        f"/operator/sessions/{review_session.public_id}/reviewers",
-        [],
-        filter_params=[("status", filter_status), ("q", filter_q)],
-        offset=filter_offset,
-        anchor=_row_action_anchor([], noun="reviewer"),
+        ids=reviewer_ids,
+        confirm=confirm,
+        acknowledge_response_loss=acknowledge_response_loss,
+        filter_status=filter_status,
+        filter_q=filter_q,
+        filter_offset=filter_offset,
+        review_session=review_session,
+        user=user,
+        db=db,
     )
