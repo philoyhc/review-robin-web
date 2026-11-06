@@ -81,7 +81,7 @@ def test_instance_card_schema_states_and_sending() -> None:
         )
 
     assert (card("h1").schema_state, card("h1").schema_label) == ("current", "Current (h1)")
-    assert card("h0").schema_state == "behind"
+    assert card("h0").schema_state == "differs"
     assert card("h0").schema_label == "At h0; this code expects h1"
     assert card(None).schema_state == "unrecorded"
     assert card(None).scheduled_send_label.startswith("Off (RRW_SCHEDULED_SEND)")

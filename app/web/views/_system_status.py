@@ -95,7 +95,10 @@ def clock_card(
 @dataclasses.dataclass(frozen=True)
 class InstanceCard:
     """The Sending and This instance cards. ``schema_state`` is
-    ``current`` / ``behind`` / ``unrecorded``."""
+    ``current`` / ``differs`` / ``unrecorded``: a database at another
+    revision may be behind this code or ahead of it, and the app cannot
+    tell which: the running app has no migration scripts to read
+    (findings N6)."""
 
     scheduled_send_label: str
     version: str
@@ -108,7 +111,7 @@ def instance_card(instance: Instance, *, scheduled_send: bool) -> InstanceCard:
     if instance.schema_current:
         state, label = "current", f"Current ({instance.schema_head})"
     elif instance.schema_revision:
-        state = "behind"
+        state = "differs"
         label = f"At {instance.schema_revision}; this code expects {instance.schema_head}"
     else:
         state = "unrecorded"
