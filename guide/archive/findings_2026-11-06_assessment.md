@@ -5,7 +5,7 @@
 of the window's `app/`, `cordware/` and `alembic/` changes with scratch
 tests, and a read of `cordware/`, `residentialapps/` and `utilityapps/`
 with their suites and a route fuzz · **Read at:** `c912ae53` (#3657; the
-reads ran on its pre-merge tree `c5d03d49`, identical) · **Open:** all but M1, L1, L2, L3, L4, N9, D1–D5, D7 and D12 (D8 half).
+reads ran on its pre-merge tree `c5d03d49`, identical) · **Open:** none; archived 2026-11-06. **By PR:** N9 #3662; M1, L1 #3664; D1–D5, D7, D12 and D8's spec half at 14F's close, #3670; L3 #3671; L4 #3672; D6, D9–D11 #3673; N1–N4 and D8's code half #3674; L2 #3675; N5–N8 #3676 → #3679; N10 moved to 14G in the PR that archived this file.
 
 The checklist the fixes work through. **Nothing was edited by the
 reads**, and their scratch tests were not kept: a fix PR writes its own
@@ -167,8 +167,8 @@ None.
 
 ## 5. Noted gaps
 
-- **N10 — With `RRW_SCHEDULED_SEND` on, the scheduled pass records invitations
-  and reminders without sending them** (the L2 cold read): `_invites.py`
+- ~~**N10 — With `RRW_SCHEDULED_SEND` on, the scheduled pass records invitations
+  and reminders without sending them**~~ **Moved to 14G 2026-11-06**: Item 1 of `guide/segment_14G_scheduled_email.md` carries it, so a queued scheduled send does not read sent before Item 2 dispatches it. Was (the L2 cold read): `_invites.py`
   `_dispatch_pending_invitations` and `_reminders.py` call `send_invitation`
   / `send_reminder`, which stamp and queue, and nothing dispatches the row.
   The flag ships off (`docs/deployment.md`: leave it off), so it is
@@ -190,20 +190,20 @@ None.
 - ~~**N4 — A 429 can hold a request worker about 70 s**~~ **Done 2026-11-06, short wait then refuse (author)**: a request's mailer waits at most 5 s (`REQUEST_MAX_WAIT`), else refuses as throttled, a definite refusal. Was: (20 s timeout, up
   to 30 s `Retry-After`, 20 s again; `graph.py:592-596`), now that per-row
   Send calls the mailer on the request thread.
-- ~~**N5 — Suspected, not confirmed**~~ **Done 2026-11-06**: the two real parts are fixed. `observe_deadline`, `_reopen_while_live` and `observe_release_window` commit on every path after the lock, and the release stamps compare as instants (`tests/integration/test_scheduled_clock.py`). The other three need no change (no ruling sought): a past End on a `ready` session closes it, which is what End means since 14E; a pre-Start `mark_opened` arrival is the arrival as it happened; the SMTP blank From cannot be reached today. Was: (the defect read): a past End saved on
+- ~~**N5 — Suspected, not confirmed**~~ **Done 2026-11-06 in #3676**: the two real parts are fixed. `observe_deadline`, `_reopen_while_live` and `observe_release_window` commit on every path after the lock, and the release stamps compare as instants (`tests/integration/test_scheduled_clock.py`). The other three need no change (no ruling sought): a past End on a `ready` session closes it, which is what End means since 14E; a pre-Start `mark_opened` arrival is the arrival as it happened; the SMTP blank From cannot be reached today. Was: (the defect read): a past End saved on
   a `ready` session closes the live review on the next pass (14E; maybe
   intended); `_release._unstamped` compares `context.release_at` as a
   string where `_fired` compares instants; `observe_release_window` /
   `observe_deadline` can hold the row lock through a page render on a
   no-op; `mark_opened` stamps a pre-Start arrival; the SMTP transport
   sends a blank From (unreachable today).
-- ~~**N6 — System Status says "behind" for any schema mismatch**~~ **Done 2026-11-06**: the state is `differs`, its label already named both revisions, and `spec/operator_ui_concept.md` says the app cannot tell behind from ahead. Was: a
+- ~~**N6 — System Status says "behind" for any schema mismatch**~~ **Done 2026-11-06 in #3677**: the state is `differs`, its label already named both revisions, and `spec/operator_ui_concept.md` says the app cannot tell behind from ahead. Was: a
   database ahead of the code included (`views/_system_status.py:109-115`;
   `spec/operator_ui_concept.md:157` names current, behind, none).
-- ~~**N7 — End's two close events spell `context.deadline` differently**~~ **Done 2026-11-06**: `session.deadline_reached` takes `_end_context` too, so both carry the aware UTC string (`tests/integration/test_scheduled_clock.py`). Was:
+- ~~**N7 — End's two close events spell `context.deadline` differently**~~ **Done 2026-11-06 in #3678**: `session.deadline_reached` takes `_end_context` too, so both carry the aware UTC string (`tests/integration/test_scheduled_clock.py`). Was:
   (`session_lifecycle.py:1277` raw; `_end_context`, 1128-1135, aware):
   the strings differ on SQLite for the same moment.
-- ~~**N8 — The Postgres shards are uneven:**~~ **Done 2026-11-06**: the cut moved inside the r files, `test_ra*` and `test_re[a-u]*` (about 400 tests) joining integration-a (`.github/workflows/ci-postgres.yml`). Was: on `main` at `c912ae53`,
+- ~~**N8 — The Postgres shards are uneven:**~~ **Done 2026-11-06 in #3679**: the cut moved inside the r files, `test_ra*` and `test_re[a-u]*` (about 400 tests) joining integration-a (`.github/workflows/ci-postgres.yml`). Job wall time, a / b: 3m09 / 3m31, 2m36 / 3m00 and 2m36 / 3m39 on the three PRs before; 3m30 / 3m12 on #3679's own run. Was: on `main` at `c912ae53`,
   `postgres (integration-b)` ran its tests in 2m54 against
   integration-a's 1m38, the slowest job in CI (the assessment's §2,
   "Test runtime"). Re-split `tests/integration` by time, not by letter.
