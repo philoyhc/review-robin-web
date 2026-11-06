@@ -569,13 +569,14 @@ def restore_after_failed_send(
         db.commit()
         return False
     db.refresh(invitation)
-    restored: list[str] = []
+    restored: dict[str, list[str | None]] = {}
     for field in ("status", "sent_at", "opened_at", "last_reminder_at"):
         was, wrote = getattr(before, field), getattr(stamped, field)
-        if _same_stamp(was, wrote) or not _same_stamp(getattr(invitation, field), wrote):
+        current = getattr(invitation, field)
+        if _same_stamp(was, wrote) or not _same_stamp(current, wrote):
             continue
         setattr(invitation, field, was)
-        restored.append(field)
+        restored[field] = [_stamp_text(current), _stamp_text(was)]
     if restored:
         db.flush()
         audit.write_event(
@@ -589,11 +590,18 @@ def restore_after_failed_send(
                 "reviewer_id": invitation.reviewer_id,
                 "outbox_id": outbox_id,
             },
-            context={"restored": ",".join(restored)},
+            payload=audit.changes(dict(restored)),
             correlation_id=correlation_id,
         )
     db.commit()
     return bool(restored)
+
+
+def _stamp_text(value: object) -> str | None:
+    """A stamp as the audit row carries it: ISO 8601 for a datetime."""
+    if value is None:
+        return None
+    return value.isoformat() if isinstance(value, datetime) else str(value)
 
 
 def _same_stamp(a: object, b: object) -> bool:

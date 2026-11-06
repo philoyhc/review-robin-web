@@ -208,7 +208,10 @@ def test_a_refused_send_leaves_the_row_pending_with_its_send(
         select(AuditEvent).where(AuditEvent.event_type == "invitation.send_reverted")
     ).scalar_one()
     assert reverted.detail is not None
-    assert reverted.detail["context"] == {"restored": "status,sent_at"}
+    changes = reverted.detail["changes"]
+    assert set(changes) == {"status", "sent_at"}
+    assert changes["status"] == ["sent", "pending"]
+    assert changes["sent_at"][1] is None
     assert f'action="{base}/{invitation.id}/send"' in client.get(base).text
 
 
