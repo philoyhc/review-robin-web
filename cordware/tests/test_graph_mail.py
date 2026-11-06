@@ -144,7 +144,10 @@ def test_a_mail_failure_logs_its_kind_never_the_address_or_token(
 ) -> None:
     """Findings N1, as the directory's own test does."""
     caplog.set_level(logging.INFO, logger="cordware.graph")
-    secret = GraphMailer("secret-token-xyz", transport=Script(Response(403, {}, b"")))
+    # Graph's error body echoes the address, so the log line must not
+    # copy the reply into itself.
+    echo = b'{"error": {"code": "ErrorAccessDenied", "message": "secret.person@example.edu"}}'
+    secret = GraphMailer("secret-token-xyz", transport=Script(Response(403, {}, echo)))
     with pytest.raises(GraphError):
         secret.send_mail(MailMessage(to="secret.person@example.edu", subject="Hi", body="x"))
     (record,) = caplog.records
@@ -165,9 +168,11 @@ def test_the_fake_mailer_logs_no_address_or_subject(caplog: pytest.LogCaptureFix
     assert record.__dict__["recipients"] == 1
 
 
-def test_the_mailer_post_does_not_follow_a_redirect_with_the_token() -> None:
-    """Findings N1: the shared opener refuses a 3xx for a POST too, so the
-    bearer header never reaches wherever it points."""
+@pytest.mark.parametrize("code", [302, 303, 307])
+def test_the_mailer_post_does_not_follow_a_redirect_with_the_token(code: int) -> None:
+    """Findings N1, and the cold read: Python's stock handler already
+    refuses a 307 for a POST, but follows a 302 or 303 as a GET with the
+    headers, the bearer token included. The shared opener follows none."""
     import threading
     from http.server import BaseHTTPRequestHandler, HTTPServer
 
@@ -180,13 +185,18 @@ def test_the_mailer_post_does_not_follow_a_redirect_with_the_token() -> None:
             length = int(self.headers.get("Content-Length") or 0)
             self.rfile.read(length)
             if self.path == "/start":
-                self.send_response(307)
+                self.send_response(code)
                 self.send_header("Location", "/elsewhere")
                 self.end_headers()
             else:
                 seen.append(self.headers.get("Authorization"))
                 self.send_response(202)
                 self.end_headers()
+
+        def do_GET(self) -> None:  # noqa: N802
+            seen.append(self.headers.get("Authorization"))
+            self.send_response(200)
+            self.end_headers()
 
         def log_message(self, *args: object) -> None:
             pass
@@ -203,7 +213,7 @@ def test_the_mailer_post_does_not_follow_a_redirect_with_the_token() -> None:
         )
     finally:
         server.shutdown()
-    assert reply.status == 307
+    assert reply.status == code
     assert seen == []  # the redirect target was never asked
 
 

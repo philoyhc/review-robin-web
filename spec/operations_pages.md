@@ -427,7 +427,7 @@ L1, 2026-11-06).
 
 **A refused send is put back** (findings M1). The invitation is stamped
 before the Graph call; if Graph refuses it outright (a 401, a 403, a
-second 429, another 4xx: `email_dispatch.REFUSED_KINDS`), the stamps the
+429 not waited out, another 4xx: `email_dispatch.REFUSED_KINDS`), the stamps the
 send wrote (`status` / `sent_at`, or `last_reminder_at`) return to what
 they were, so the row offers the same action again. After a `5xx` or a
 network failure the message may have arrived, so the stamps stay and the

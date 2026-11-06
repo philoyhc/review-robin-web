@@ -171,8 +171,8 @@ Graph transport is built per request from the request's mailer
   **Replies go to the session's Help contact**, which applies only when
   the session's Help contact is an email address. Reply-To is thus per
   operator and per session by that contact, not the operator's address.
-- **The SMTP transport sets no Reply-To**: `_build_message` ignores
-  `EmailMessage.reply_to`. The option is Graph's.
+- **The SMTP transport sets Reply-To** too: `_build_message` writes the
+  header from `EmailMessage.reply_to`, as Graph's `replyTo` (findings D8).
 - **Send a test to me** (the composer, `spec/email_template_editor.md`)
   does not use the outbox.
 
@@ -345,9 +345,8 @@ should:
   for the app; replies route to the operator's regular inbox.
 
 `EmailMessage.reply_to` carries it at the `EmailTransport` interface
-level. The Graph transport sends it as `replyTo`; the SMTP transport
-does not set a Reply-To header (a gap against the interface, not a
-choice).
+level. The Graph transport sends it as `replyTo` and the SMTP transport as a
+Reply-To header (findings D8).
 
 ---
 
