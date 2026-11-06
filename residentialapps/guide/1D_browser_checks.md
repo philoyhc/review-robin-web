@@ -303,14 +303,13 @@ Ask: *Is it right that you can see who holds access but not change it?*
   **Show**; **Delete permanently** is outline red and disabled. With a
   student chosen, each purge shows that student's records of its total.
 
-### B7. The consultation check (as Marcus Tan)
+### B7. The consultation check (as Hui Min Goh)
 
 *Task: "Before nominating students for an exchange, check whether anyone
 should be consulted first."*
 
 - [ ] The "Running a check is recorded" notice, Purpose and emails,
-  **Fill with the sample list**, and Your past checks (his run only; Nadia
-  sees only hers).
+  **Fill with the sample list**, and Your past checks (her own runs only).
 - [ ] The result runs strongest first, each row with its named reasons,
   whom to consult and a disabled Consultation select; *No consultation
   indicated* is stated never to mean well or suitable. *Ruling R4: formal
@@ -324,13 +323,11 @@ should be consulted first."*
 Ask: *Would you trust "No consultation indicated"? Are the reasons ones
 you would act on?*
 
-### B8. Other staff's views
+### B8. The Master's aggregate view
 
-- [ ] **As Siti Rahman** (identifiable view): names without history
-  links, no flagged students, no audit card, every plan read-only.
-- [ ] **As Kenneth Lau** (aggregate view): counts only, no student's name
-  anywhere (Ctrl+F for "Clara"), and the note says "Counts only". *Ruling
-  R3: small counts.*
+- [ ] **As Sam Lee**, who holds Other Staff view: aggregate beside Senior
+  identifiable: Overview names students, as Senior identifiable does; the
+  aggregate grant adds nothing he cannot already see.
 
 ## Part C. The author's checks
 
@@ -338,14 +335,14 @@ you would act on?*
 
 - [ ] **Teal throughout**: top bar, tabs, primary buttons, focus rings;
   the favicon is a log sheet on teal; dark mode is readable.
-- [ ] **Tabs follow the viewer**: Hui Min Home alone; Nadia Home,
-  Overview, Consultation check; Rachel Access, Configuration, Audit log.
+- [ ] **Tabs follow the viewer**: Hui Min Consultation check alone;
+  Rachel Access, Configuration, Audit log.
 - [ ] **The switcher** (top left) lists only *Support Logs* for Daniel,
   only *Sys admin* for Rachel, and *All applications* at the foot.
-- [ ] **Wei Jie Ong** sees "You do not have access to this page." with no
-  tabs. `/supportlogs/not-registered` shows the fixed message with no
+- [ ] **The sample viewer card** lists six viewers: Daniel Koh, Priya
+  Raman, Sam Lee, Hui Min Goh, Rachel Yeo and the platform super-admin.
+- [ ] `/supportlogs/not-registered` shows the fixed message with no
   switcher, tabs or unit name.
-- [ ] **Hui Min's Home** holds only the flags, closed ones included.
 
 ### C2. Tables and widths
 
@@ -388,7 +385,8 @@ the plan's open questions (`residentialapps/guide/segment_1D_support_logs.md`):
   - choice pills are styled radios and checkboxes;
   - status labels are sentence case.
 - **R2. Purge all** (A11): outline red, though a purge hides and keeps?
-- **R3. Small counts on aggregate view** (B8, as Kenneth): suppress a
+- **R3. Small counts on aggregate view** (`?as=Kenneth%20Lau`, off the
+  card since 2026-11-06): suppress a
   colleague with one student?
 - **R4. Consultation check** (B7): an active formal assignment suggests
   rather than requires a consultation.

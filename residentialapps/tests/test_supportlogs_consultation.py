@@ -192,7 +192,7 @@ def test_only_the_consultation_check_grant_reaches_it(client: TestClient) -> Non
         "Siti Rahman",
         "Kenneth Lau",
         "Rachel Yeo",
-        "Hui Min Goh",
+        "Farah Aziz",
         "Platform super-admin",
         "Wei Jie Ong",
     ):

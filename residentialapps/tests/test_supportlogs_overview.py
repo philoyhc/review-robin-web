@@ -16,7 +16,7 @@ from residentialapps.supportlogs.main import create_app
 from residentialapps.tests._host import host_with
 
 # Identifiable and aggregate view, frontline, frontline and recipient, recipient only.
-NOT_SENIOR = ("Siti Rahman", "Kenneth Lau", "Daniel Koh", "Priya Raman", "Hui Min Goh")
+NOT_SENIOR = ("Siti Rahman", "Kenneth Lau", "Daniel Koh", "Priya Raman", "Farah Aziz")
 
 
 @pytest.fixture(scope="module")

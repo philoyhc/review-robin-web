@@ -77,4 +77,11 @@ and four types.
 
 ## Status
 
-Opened; rung 11 next.
+- **Rung 11:** as planned, with one addition. The combinations no role in
+  practice holds stay drawn for `?as=` but off the card
+  (`UNLISTED_VIEWERS`): Wei Jie Ong (no grant), Kenneth Lau (aggregate),
+  Siti Rahman (identifiable), Marcus Tan (Consultation check), Nadia
+  Hassan (Consultation check with identifiable view) and Farah Aziz, an RF
+  on the roster copy, as a recipient with nothing else, Hui Min Goh's old
+  combination. The tests reach the pages those combinations open through
+  them, and Access lists their grants. Next: rung 12.

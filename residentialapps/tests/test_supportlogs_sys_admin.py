@@ -165,7 +165,14 @@ def test_administration_sees_no_support_content(client: TestClient) -> None:
 
 def test_only_administration_reaches_sys_admin(client: TestClient) -> None:
     for path in SYS_ADMIN_PAGES:
-        for name in ("Daniel Koh", "Sam Lee", "Marcus Tan", "Siti Rahman", "Hui Min Goh"):
+        for name in (
+            "Daniel Koh",
+            "Sam Lee",
+            "Marcus Tan",
+            "Siti Rahman",
+            "Farah Aziz",
+            "Hui Min Goh",
+        ):
             assert client.get(f"{path}?as={name.replace(' ', '%20')}").status_code == 403, (
                 path,
                 name,
