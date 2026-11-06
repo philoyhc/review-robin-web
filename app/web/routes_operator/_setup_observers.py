@@ -43,7 +43,7 @@ from app.services import observers as observers_service
 from app.services import session_lifecycle as lifecycle
 from app.services.observers import ObserverOperationError
 from app.services.text import parse_id
-from app.web import breadcrumbs, urls, views
+from app.web import breadcrumbs, roster_actions, urls, views
 from app.web.deps import (
     get_or_create_user,
     request_correlation_id,
@@ -56,9 +56,7 @@ from app.web.roster_import import (
 )
 from app.web.routes_operator._shared import (
     _redirect_keeping_selection,
-    _require_delete_confirm,
     _require_not_archived,
-    _require_selected_response_loss_ack,
     _row_action_anchor,
     _setup_row_window,
     _templates,
@@ -580,24 +578,17 @@ def observers_bulk_inactivate(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    _require_not_archived(review_session)
-    try:
-        observers_service.bulk_inactivate(
-            db,
-            review_session=review_session,
-            observer_ids=observer_ids,
-            user=user,
-            correlation_id=request_correlation_id(),
-        )
-    except ObserverOperationError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
-    return _redirect_keeping_selection(
+    return roster_actions.bulk_set_active(
+        roster_actions.OBSERVERS,
         request,
-        f"/operator/sessions/{review_session.public_id}/observers",
-        observer_ids,
-        filter_params=[("status", filter_status), ("q", filter_q)],
-        offset=filter_offset,
-        anchor=_row_action_anchor(observer_ids, noun="observer"),
+        active=False,
+        ids=observer_ids,
+        filter_status=filter_status,
+        filter_q=filter_q,
+        filter_offset=filter_offset,
+        review_session=review_session,
+        user=user,
+        db=db,
     )
 
 
@@ -612,24 +603,17 @@ def observers_bulk_reactivate(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    _require_not_archived(review_session)
-    try:
-        observers_service.bulk_reactivate(
-            db,
-            review_session=review_session,
-            observer_ids=observer_ids,
-            user=user,
-            correlation_id=request_correlation_id(),
-        )
-    except ObserverOperationError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
-    return _redirect_keeping_selection(
+    return roster_actions.bulk_set_active(
+        roster_actions.OBSERVERS,
         request,
-        f"/operator/sessions/{review_session.public_id}/observers",
-        observer_ids,
-        filter_params=[("status", filter_status), ("q", filter_q)],
-        offset=filter_offset,
-        anchor=_row_action_anchor(observer_ids, noun="observer"),
+        active=True,
+        ids=observer_ids,
+        filter_status=filter_status,
+        filter_q=filter_q,
+        filter_offset=filter_offset,
+        review_session=review_session,
+        user=user,
+        db=db,
     )
 
 
@@ -1120,33 +1104,16 @@ def observers_bulk_delete(
     **not** the ids: the rows are gone, so re-checking them is not a
     thing the page can do.
     """
-    _require_not_archived(review_session)
-    _require_delete_confirm(confirm)
-    _require_selected_response_loss_ack(
-        db,
-        model=Observer,
-        ids=observer_ids,
-        ack=acknowledge_response_loss,
-    )
-    try:
-        observers_service.delete_selected(
-            db,
-            review_session=review_session,
-            observer_ids=observer_ids,
-            user=user,
-            correlation_id=request_correlation_id(),
-        )
-    except ObserverOperationError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
-    return _redirect_keeping_selection(
+    return roster_actions.bulk_delete(
+        roster_actions.OBSERVERS,
         request,
-        f"/operator/sessions/{review_session.public_id}/observers",
-        [],
-        filter_params=[("status", filter_status), ("q", filter_q)],
-        offset=filter_offset,
-        # `[]` by design: the rows this acted on no longer exist, so the
-        # helper answers with the table card. That is also why the page's
-        # fallback script never sees a delete — it guards on a
-        # `#observer-row-` hash, and this is not one.
-        anchor=_row_action_anchor([], noun="observer"),
+        ids=observer_ids,
+        confirm=confirm,
+        acknowledge_response_loss=acknowledge_response_loss,
+        filter_status=filter_status,
+        filter_q=filter_q,
+        filter_offset=filter_offset,
+        review_session=review_session,
+        user=user,
+        db=db,
     )
