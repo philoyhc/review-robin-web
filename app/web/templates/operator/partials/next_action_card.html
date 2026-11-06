@@ -135,7 +135,10 @@
         {% if invitations_sent %}
           {# State 6 — Prepared, invites already sent. Activate opens
              responses. #}
-          <p>Invitations have gone out. Activate the session when you&rsquo;re ready to receive responses.</p>
+          {# "Sent", not "delivered": an ambiguous Graph failure keeps its
+             stamp, so whether it arrived is each row's delivery state on
+             Invitations (Codex on #3670). #}
+          <p>Invitations are sent; check each one&rsquo;s delivery on Invitations. Activate the session when you&rsquo;re ready to receive responses.</p>
         {% elif invitations_generated %}
           {# State 5 — Prepared, invites drafted but not sent. #}
           <p>Invitations are ready to send. Send them from Invitations ahead of Activation, or share the session link, or Activate now and send afterwards.</p>

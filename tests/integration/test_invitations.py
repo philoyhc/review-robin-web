@@ -2308,7 +2308,7 @@ def test_the_copy_that_prompts_prepare_names_what_prepare_does(
     assert inv_service.has_invitations(db, session.id)
 
 
-def test_state_6_copy_says_invitations_have_gone_out(client: TestClient, db: Session) -> None:
+def test_state_6_copy_says_sent_and_where_delivery_shows(client: TestClient, db: Session) -> None:
     """State 6 — invitations sent. It used to say no mail leaves the app
     (19O Item 7), true while no transport was wired. Since 14F a per-row
     Send delivers from the operator's mailbox, and with bulk off
@@ -2325,7 +2325,7 @@ def test_state_6_copy_says_invitations_have_gone_out(client: TestClient, db: Ses
     )
     assert response.headers["location"].endswith("/invitations?email=sent")
     card = _next_action_body(client.get(f"/operator/sessions/{session.public_id}").text)
-    assert "Invitations have gone out." in card
+    assert "Invitations are sent; check each one&rsquo;s delivery on Invitations." in card
     assert "no mail leaves the app" not in card
 
 
