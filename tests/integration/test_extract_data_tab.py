@@ -618,7 +618,8 @@ def test_empty_row_drop_chips_carry_dual_labels(client: TestClient, db: Session)
     body = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
 
     # By instrument card.
-    bi_block = body.split("extract-data-by-instrument")[1].split("extract-data-card-actions")[0]
+    bi_block = body.split('id="extract-data-by-instrument"')[1]
+    bi_block = bi_block.split("extract-data-card-actions")[0]
     assert 'data-by-instrument-chip="all-assignment-rows"' in bi_block
     assert 'data-label-on="All assignment rows"' in bi_block
     assert 'data-label-off="Assignment rows with data"' in bi_block
@@ -638,3 +639,21 @@ def test_empty_row_drop_chips_carry_dual_labels(client: TestClient, db: Session)
     assert 'data-label-on="All reviewees"' in rwe_block
     assert 'data-label-off="Reviewees with responses"' in rwe_block
     assert ">All reviewees<" in rwe_block
+
+
+def test_the_top_cards_sit_in_row_aligned_pairs(client: TestClient, db: Session) -> None:
+    """The top grid's cards share a height across each row (author,
+    2026-11-06): Reviewer metadata with By instrument, Reviewee metadata
+    with Extract all data. `base.html` places each by id; measured in
+    Chromium at 1440 and 700px."""
+    review_session = _make_session(client, db, code="ed-tab-rows")
+    body = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
+    grid = body.split('<div class="extract-data-grid is-row-aligned">', 1)[1]
+    for card in (
+        "extract-data-by-reviewer",
+        "extract-data-by-reviewee",
+        "extract-data-by-instrument",
+        "extract-data-intro",
+    ):
+        assert f'id="{card}"' in grid.split('id="extract-data-shaper"', 1)[0], card
+    assert "time zone follows session set" in body

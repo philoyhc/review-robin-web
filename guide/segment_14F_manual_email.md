@@ -206,6 +206,13 @@ Taken 2026-11-02 at `fffd4c28`; re-taken 2026-11-05 at `095336bf`
   - **Tests.** The suite's mailer is a `FakeMailer` (an autouse fixture
     in `tests/conftest.py`), since the suite runs without fake auth.
 
+- 2026-11-06: the author's browser and email tests on Azure passed (3a–3d
+  and the side-by-side cards). Refinements after: the Invitations pair and
+  Extract data's top cards share a height across each row; the Timestamps
+  help says the time zone follows the session; and with scheduled email
+  off, the two offset labels read muted under "Scheduled email under
+  development." (14E's line, reworded by the author).
+
 ### Follow-ups, collected (author, 2026-11-06: gather several, then build)
 
 1. **Email invitations in a `validated` session.** An invitation can go

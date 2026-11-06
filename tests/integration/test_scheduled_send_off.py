@@ -35,7 +35,7 @@ from .test_scheduled_invites import (
     _stub_build_url,
 )
 
-LINE = "Scheduled email is not available on this deployment."
+LINE = "Scheduled email under development."
 
 
 @pytest.fixture
@@ -94,6 +94,14 @@ def test_the_fields_render_disabled_with_their_line(
         tag = home.split(f'name="{name}"')[1].split(">")[0]
         assert "disabled" in tag, name
     assert 'value="-P1D"' in home  # the stored value is still shown
+    # The labels read muted while the fields wait (author, 2026-11-06).
+    for page_text, ids in (
+        (page, ("invite_offsets", "reminder_offsets")),
+        (home, ("mock-invite-offsets", "mock-reminder-offsets")),
+    ):
+        for label_for in ids:
+            label = page_text.split(f'<label for="{label_for}"', 1)[1].split(">", 1)[0]
+            assert 'class="muted"' in label, label_for
 
 
 def test_session_home_shows_offsets_without_a_send_time(
@@ -125,6 +133,7 @@ def test_on_the_fields_are_live(client: TestClient, db: Session) -> None:
     page = client.get("/operator/sessions/new").text
     assert LINE not in page
     assert "disabled" not in page.split('name="invite_offsets"')[1].split(">")[0]
+    assert 'class="muted"' not in page.split('<label for="invite_offsets"', 1)[1].split(">", 1)[0]
 
 
 def test_a_save_keeps_the_stored_offsets_and_ignores_posted_ones(

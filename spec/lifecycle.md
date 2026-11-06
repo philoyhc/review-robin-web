@@ -845,8 +845,8 @@ in `app/config.py`, default off; read through
 `scheduled_events.scheduled_send_enabled`) stays off until mail can go on
 the clock. While it is off:
 
-- the two offset fields render disabled on New session and Session Home
-  with "Scheduled email is not available on this deployment."; stored
+- the two offset fields render disabled, their labels muted, on New
+  session and Session Home with "Scheduled email under development."; stored
   values are kept and shown without a send time, a Session Home save keeps
   them unvalidated, and a create stores none;
 - the scheduled pass fires no invite or reminder, and activation, with no
