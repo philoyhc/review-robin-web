@@ -81,8 +81,10 @@ The peer-reviewer audience is constrained per window:
 accepting, the review surface, the summary page and its CSV show the
 reviewer's own saved values only as this policy allows
 (`visibility_policies.reviewer_sees_own_responses`): always while the
-session is `ready`, inside the release window only for a Raw "Responses
-released" cell, and never once the session is archived.
+review is ongoing (`ready` and before its end, `session_lifecycle.is_ongoing`,
+§3), inside the release window only for a Raw "Responses released" cell,
+and never once the session is archived. A `ready` session past its end,
+before the close runs, shows nothing.
 `spec/reviewer-surface.md` "Lifecycle gating" carries the table.
 
 ---

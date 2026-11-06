@@ -103,7 +103,17 @@ Every mutating service writes an `audit_events` row with a typed `event_type` + 
 
 ### Email send
 
-Email is **recorded, not sent**. Every outbox row, invitation, reminder or a reviewer's responses-received confirmation, is written `queued` and stays so until a transport sends it; the invitation records the operator's send (`sent`) without claiming a delivery. Six of the audit-log columns the dispatch helper will write to (`error_message`, `from_address`, `backend`, `backend_message_id`, `delivered_at`, `payload_hash`) sit inert on the row; `correlation_id` is already stamped and read back by scheduled reminders. The transport interface (`EmailTransport` Protocol + `SmtpEmailTransport` + typed-stub `GraphEmailTransport`) is shipped but not yet wired up to the dispatch helper.
+Email goes out **from the operator's own mailbox**, one row at a time:
+per-row **Send** and **Send reminder** on Invitations send through
+delegated Microsoft Graph (`/me/sendMail`), with the operator's Email
+settings (a copy in Sent Items, a Bcc to themselves, replies to the
+session's Help contact). Each outbox row is claimed before it is sent and
+stamped `sent` or `failed`. Bulk sends (Send invites, Send reminders) wait
+behind `RRW_BULK_SEND`, off by default, with the **Share the session
+link** card on Invitations in their place; nothing is sent on a clock
+while `RRW_SCHEDULED_SEND` is off, and the invite and reminder offsets
+time due prompts on the Workflow card instead. `spec/email_infra_options.md`
+says how it is built.
 
 For what is still to be built, see [`guide/todo_master.md`](guide/todo_master.md); for what shipped and when, the archived segment plans indexed in [`guide/archive/README.md`](guide/archive/README.md).
 
