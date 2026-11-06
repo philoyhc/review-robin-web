@@ -198,3 +198,117 @@ def test_a_mounted_startup_failure_is_logged_before_it_propagates(
     assert line["app"] == "bad"
     assert line["level"] == "ERROR"
     assert "startup validation failed" in str(line["exc_info"])
+
+
+def boom_app() -> FastAPI:
+    """A mounted application with a route that raises, and one that does not."""
+    app = FastAPI()
+
+    @app.get("/boom")
+    def boom() -> None:
+        raise RuntimeError("inside the application")
+
+    @app.get("/ping")
+    def ping() -> dict[str, str]:
+        return {"ok": "yes"}
+
+    return app
+
+
+BOOM = {"boom": AppEntry(path="/boom", factory=f"{__name__}:boom_app", logger="boom")}
+
+
+def test_a_request_no_application_handled_is_logged(
+    capture: Callable[[], io.StringIO],
+) -> None:
+    """v0.8 §3 event 4: the path, never the query."""
+    captured = capture()
+    client = TestClient(create_app(apps=("boom",), registry=BOOM))
+    assert client.get("/nowhere/at-all?token=secret").status_code == 404
+    (line,) = [e for e in _lines(captured) if e.get("event") == "host.unrouted"]
+    assert line["path"] == "/nowhere/at-all"
+    assert line["method"] == "GET"
+    assert line["level"] == "WARNING"
+    assert line["application"] == "cordware"
+    assert "secret" not in json.dumps(line)
+
+
+def test_a_token_in_an_unrouted_path_is_masked(
+    capture: Callable[[], io.StringIO],
+) -> None:
+    """An application URL that lost its prefix carries its token in the
+    path: the log line keeps the shape, not the credential."""
+    captured = capture()
+    token = "AbCdEfGhIjKlMnOpQrStUvWxYz0123456789_-abcd"
+    client = TestClient(create_app(apps=("boom",), registry=BOOM))
+    assert client.get(f"/reviewer/invite/{token}").status_code == 404
+    (line,) = [e for e in _lines(captured) if e.get("event") == "host.unrouted"]
+    assert line["path"] == "/reviewer/invite/<redacted>"
+    assert token not in json.dumps(line)
+
+
+def test_only_a_path_outside_every_mount_is_unrouted(
+    capture: Callable[[], io.StringIO],
+) -> None:
+    """A mounted application answers its own 404s; `/boomer` is not under
+    `/boom`; a 405, a slash redirect and the landing page are not 404s."""
+    captured = capture()
+    client = TestClient(create_app(apps=("boom",), registry=BOOM))
+    assert client.get("/boom/missing").status_code == 404
+    assert client.get("/boom/ping").status_code == 200
+    assert client.post("/health").status_code == 405
+    assert client.get("/boom", follow_redirects=False).status_code == 307
+    assert client.get("/").status_code == 200
+    assert not [e for e in _lines(captured) if e.get("event") == "host.unrouted"]
+    assert client.get("/boomer").status_code == 404
+    (line,) = [e for e in _lines(captured) if e.get("event") == "host.unrouted"]
+    assert line["path"] == "/boomer"
+
+
+def test_an_error_outside_any_application_is_logged(
+    capture: Callable[[], io.StringIO],
+) -> None:
+    """v0.8 §3 event 5, the host's own routes (`/health`'s kind)."""
+    captured = capture()
+    host = create_app(apps=("boom",), registry=BOOM)
+
+    @host.get("/host-boom")
+    def host_boom() -> None:
+        raise RuntimeError("in the host")
+
+    client = TestClient(host, raise_server_exceptions=False)
+    response = client.get("/host-boom")
+    assert response.status_code == 500
+    (line,) = [e for e in _lines(captured) if e.get("event") == "host.error"]
+    assert line["path"] == "/host-boom"
+    assert line["level"] == "ERROR"
+    assert "in the host" in str(line["exc_info"])
+
+
+def test_an_applications_own_error_is_left_to_it(
+    capture: Callable[[], io.StringIO],
+) -> None:
+    captured = capture()
+    client = TestClient(create_app(apps=("boom",), registry=BOOM), raise_server_exceptions=False)
+    assert client.get("/boom/boom").status_code == 500
+    assert not [e for e in _lines(captured) if e.get("event") == "host.error"]
+
+
+def test_a_host_root_path_does_not_hide_the_mounts(
+    capture: Callable[[], io.StringIO],
+) -> None:
+    """Codex on #3690: under an ASGI `root_path` the request path carries
+    the outer prefix and the mount paths do not, so the comparison is made
+    below the host's own root."""
+    captured = capture()
+    client = TestClient(
+        create_app(apps=("boom",), registry=BOOM), root_path="/edge", raise_server_exceptions=False
+    )
+    assert client.get("/edge/boom/boom").status_code == 500
+    assert client.get("/edge/boom/missing").status_code == 404
+    events = [e.get("event") for e in _lines(captured)]
+    assert "host.error" not in events
+    assert "host.unrouted" not in events
+    assert client.get("/edge/elsewhere").status_code == 404
+    (line,) = [e for e in _lines(captured) if e.get("event") == "host.unrouted"]
+    assert str(line["path"]).endswith("/elsewhere")

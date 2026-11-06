@@ -33,7 +33,7 @@ host is provisioned and serving Review Robin since 2026-10-31; whether
 the deployment has *concluded* (verified, the personal web app retired)
 is the author's call.
 
-**Order (author, 2026-11-06):** host logging (the stub below), then 14C Item 2, then 22J; 14G when IT answers.
+**Order (author, 2026-11-06):** 14C Item 2, then 22J; 14G when IT answers.
 
 1. **14C Item 2 — Email-related UI** (Items 1 and 3 done): the Email
    settings card of toggles, built and read by 14F's send path. Before
@@ -65,20 +65,7 @@ is the author's call.
 ### Stubs
 
 Small items with no plan doc; each fits one PR and its reasoning fits
-the PR body unless it says otherwise.
-
-- **Cordware host logging, events 4 and 5** *(filed 2026-10-22, at
-  segment 21's close)*. v0.8 §3 "Host logging" names two events the host
-  still does not log:
-  - event 4, requests no mounted application handled;
-  - event 5, errors outside any mounted application, and failing
-    `/health` checks.
-
-  21A deferred event 5 to 21D, whose plan never took it up
-  (`guide/archive/segment_21_domain_retrofit.md` § Status).
-  `cordware/spec/host.md` "Logging" says they are not yet built. Overdue: the
-  institutional deployment has been live since 2026-10-31, and the logs
-  are the host's only operational record.
+the PR body unless it says otherwise. None open.
 
 ### Sequencing notes
 

@@ -271,11 +271,14 @@ Host events (`extra["event"]`, logger `cordware`):
 | `identity.fake_auth_refused` | The guard refused (level error). | `app_env` |
 | `identity.fake_auth_enabled` | The guard allowed fake auth at `local` (warning, every start). | none |
 | `super_admin.unconfigured` | A deployed environment has no super-admin (warning). | none |
+| `host.unrouted` | A request no host route and no mounted application took, answered 404 (warning). A mounted application answers its own 404s, so only a path outside every mount is logged. | `method`, `path` (a token-like segment, 20 or more URL-safe characters, masked as `<redacted>`; never the query string) |
+| `host.error` | An exception outside every mounted application, the host's `/health` and landing page included, answered 500 (error, with `exc_info`). Every path under a mount is left to its application, which logs its own errors; an error in host middleware on such a path is recorded only by uvicorn's traceback. | `method`, `path` (masked likewise) |
 
 The identity events from `cordware.identity` (`identity.header_malformed`,
-`identity.headers_missing`) are in `cordware/spec/identity.md` "Logging". The
-rest of v0.8 §3 "Host logging" (unhandled requests, errors outside any
-application, failing `/health` checks) is not yet built.
+`identity.headers_missing`) are in `cordware/spec/identity.md` "Logging".
+With `host.unrouted` and `host.error` (`add_host_error_logging`), every
+event v0.8 §3 "Host logging" names is built; a failing `/health` is a
+`host.error`, since the host's `/health` fails only by raising.
 
 ## Import boundary
 
