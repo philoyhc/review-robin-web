@@ -412,7 +412,7 @@ PLANS = (
         True,
         date(2026, 10, 5),
         "Fortnightly",
-        "Dean's Office",
+        "College",
         "Sam Lee",
         date(2026, 12, 7),
         "Fortnightly check-in on settling in.",
@@ -428,7 +428,7 @@ PLANS = (
         True,
         date(2026, 10, 12),
         "Monthly",
-        "Residential staff referral",
+        "College",
         "Sam Lee",
         date(2026, 12, 14),
         "Monthly check-in on settling in.",
@@ -686,11 +686,10 @@ def when(moment: datetime) -> str:
 
 # --- Plans and sharing (rung 4, §7, §8, §11.1).
 
+# Three sources for the mock-up (author, 2026-11-06).
 ASSIGNMENT_SOURCES = (
     "Counselling",
-    "Dean's Office",
-    "Master / residential leadership",
-    "Residential staff referral",
+    "College",
     "Other",
 )
 ASSIGNMENT_CADENCES = (
@@ -725,14 +724,14 @@ PLAN_HISTORY: dict[str, tuple[tuple[date, str], ...]] = {
         (date(2026, 9, 28), "Daniel Koh began following up, no fixed cadence"),
         (
             date(2026, 10, 5),
-            "Sam Lee converted it to a formal assignment: Dean's Office, fortnightly, review 7 Dec",
+            "Sam Lee converted it to a formal assignment: College, fortnightly, review 7 Dec",
         ),
     ),
     "P-03": ((date(2026, 10, 8), "Daniel Koh began following up, weekly"),),
     "P-04": ((date(2026, 10, 20), "Daniel Koh began following up, no fixed cadence"),),
     "P-05": ((date(2026, 10, 1), "Priya Raman began following up, fortnightly"),),
     "P-06": ((date(2026, 10, 17), "Mei Ling Tan began following up, weekly"),),
-    "P-07": ((date(2026, 10, 12), "Sam Lee assigned it: Residential staff referral, monthly"),),
+    "P-07": ((date(2026, 10, 12), "Sam Lee assigned it: College, monthly"),),
 }
 
 

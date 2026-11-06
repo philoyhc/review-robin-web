@@ -107,3 +107,6 @@ and four types.
 - **After rung 12** (author, 2026-11-06): the star shows alone, without
   the word "Favorite"; screen readers still hear "Favorite" and the
   student's name.
+- **After rung 12** (author, 2026-11-06): a formal assignment's sources
+  are Counselling, College and Other for the mock-up; the sample's Dean's
+  Office and Residential staff referral plans read College.

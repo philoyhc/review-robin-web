@@ -28,7 +28,7 @@ def test_a_formal_assignment_shows_its_facts_and_history(client: TestClient) -> 
     assert "<h1>Formal assignment: Dev Menon</h1>" in page
     facts = section(page, "plan-h")
     for dt, dd in (
-        ("Source", "Dean&#39;s Office"),
+        ("Source", "College"),
         ("Assigned by", "Sam Lee"),
         ("Cadence", "Fortnightly"),
         ("Review", "7 Dec"),
@@ -228,3 +228,9 @@ def test_mounted_plan_pages_stay_under_the_mount() -> None:
         "/supportlogs/students/S-03/share/sent?colleague=Nobody", follow_redirects=False
     )
     assert back.headers["location"] == "/supportlogs/students/S-03/share"
+
+
+def test_a_formal_assignment_comes_from_three_sources() -> None:
+    """Author, 2026-11-06: Counselling, College and Other for the mock-up."""
+    assert sample.ASSIGNMENT_SOURCES == ("Counselling", "College", "Other")
+    assert {p.source for p in sample.PLANS if p.formal} <= set(sample.ASSIGNMENT_SOURCES)
