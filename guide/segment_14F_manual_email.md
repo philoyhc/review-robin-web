@@ -215,7 +215,9 @@ Taken 2026-11-02 at `fffd4c28`; re-taken 2026-11-05 at `095336bf`
 
 ### Follow-ups, collected (author, 2026-11-06: gather several, then build)
 
-1. **Email invitations in a `validated` session.** An invitation can go
+All three done in one slice, 2026-11-06 (struck below).
+
+1. ~~**Email invitations in a `validated` session.**~~ Done: An invitation can go
    out before the session opens to responses, and a reviewer who
    follows it early lands on the pre-open page. So per-row **Send** and
    **Regenerate** take `send-all`'s `validated`-or-`ready` gate
@@ -225,10 +227,10 @@ Taken 2026-11-02 at `fffd4c28`; re-taken 2026-11-05 at `095336bf`
    a prepared session has had no in-app way to email an invitation:
    bulk Send invites, the one path that worked before activation, is
    off. Found in the author's live test on Azure.
-2. **Say why a row button is disabled.** Any row button still disabled
+2. ~~**Say why a row button is disabled.**~~ Done: Send and Regenerate say "Available once the session is prepared"; Send reminder says it is held until activation, or that the reviewer has finished. Any row button still disabled
    gets a hover title, such as "Available once the session is
    activated".
-3. **`Reviewer.last_opened_at`'s comment** in
+3. ~~**`Reviewer.last_opened_at`'s comment**~~ Done: in
    `app/db/models/reviewer.py` still says "stamped on every surface GET".
    The stamp is at most once per `ARRIVAL_GAP` (Codex on #3654).
 
@@ -311,7 +313,8 @@ Taken 2026-11-02 at `fffd4c28`; re-taken 2026-11-05 at `095336bf`
 ## Doc impact
 
 - `spec/email_infra_options.md` — delegated Graph as the transport in use; the backend options as alternatives.
-- `spec/lifecycle.md` — §8: the due-action prompts (auto-send disabled moved to 14E, 2026-11-04).
+- `spec/lifecycle.md` — §8: the due-action prompts (auto-send disabled moved to 14E, 2026-11-04); §3.4 and the gate table: per-row Send and Regenerate take `require_validated_or_ready`, reminders stay `require_ready` (follow-up 1).
+- `spec/operator_ui_concept.md` — the Invitations pattern: "All POST actions require `ready`" becomes the split above (follow-up 1).
 - `spec/workflow_card.md` — the due prompts (the auto-send caption moved to 14E, 2026-11-04).
 - `spec/email_template_editor.md` — what Send does now; the recorded / sent / failed states named once.
 - `cordware/spec/identity.md` — "Graph": the host's send primitive beside the directory lookup.

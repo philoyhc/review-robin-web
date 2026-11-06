@@ -377,8 +377,10 @@
                   <form method="post"
                         action="{{ url('/operator/sessions/' ~ session.public_id ~ '/invitations/' ~ row.invitation.id ~ '/send') }}"
                         style="display: inline;">
+                    {# 14F follow-up 1: Send once prepared; a disabled
+                       button says why. #}
                     <button class="btn secondary" type="submit"
-                            {% if not is_ready %}disabled{% endif %}>
+                            {% if not is_prepared %}disabled title="Available once the session is prepared"{% endif %}>
                       Send
                     </button>
                   </form>
@@ -387,7 +389,8 @@
                         action="{{ url('/operator/sessions/' ~ session.public_id ~ '/invitations/' ~ row.invitation.id ~ '/remind') }}"
                         style="display: inline;">
                     <button class="btn secondary" type="submit"
-                            {% if not is_ready or not row.is_incomplete %}disabled{% endif %}>
+                            {% if not is_ready %}disabled title="Available once the session is activated"
+                            {% elif not row.is_incomplete %}disabled title="This reviewer has finished"{% endif %}>
                       Send reminder
                     </button>
                   </form>
@@ -396,7 +399,7 @@
                       action="{{ url('/operator/sessions/' ~ session.public_id ~ '/invitations/' ~ row.invitation.id ~ '/regenerate') }}"
                       style="display: inline;">
                   <button class="btn secondary" type="submit"
-                          {% if not is_ready %}disabled{% endif %}>
+                          {% if not is_prepared %}disabled title="Available once the session is prepared"{% endif %}>
                     Regenerate
                   </button>
                 </form>

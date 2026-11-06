@@ -635,14 +635,14 @@ def test_remind_incomplete_writes_no_audit_when_zero_targets(
     assert reminders == []
 
 
-def test_per_row_actions_and_reminders_409_while_session_validated(
+def test_a_validated_session_sends_and_regenerates_but_does_not_remind(
     client: TestClient, db: Session
 ) -> None:
-    """Per-row Send, Regenerate and Send reminder, and the bulk reminder,
-    are `ready`-only at the route as their buttons always were (B17 /
-    F17, author's ruling 2026-10-02). Bulk Send all keeps 18F's
-    "validated or ready" gate so the Workflow card can invite before
-    activation."""
+    """14F follow-up 1 (author, 2026-11-06), revising B17 / F17
+    (2026-10-02): an invitation may go out ahead of opening, so per-row
+    Send and Regenerate take Send all's "validated or ready" gate. Send
+    reminder and Remind incomplete, about a review that is open, stay
+    ``ready``-only."""
     session = _create_session(client, db, "validated-rem")
     _populate(client, db, session.id, reviewers=["rae@example.edu"])
     response = client.post(
@@ -657,19 +657,49 @@ def test_per_row_actions_and_reminders_409_while_session_validated(
     ).scalar_one()
 
     base = f"/operator/sessions/{session.public_id}/invitations"
-    for path in (
-        f"{base}/{invitation.id}/send",
-        f"{base}/{invitation.id}/regenerate",
-        f"{base}/{invitation.id}/remind",
-        f"{base}/remind-incomplete",
-    ):
+    for path in (f"{base}/{invitation.id}/remind", f"{base}/remind-incomplete"):
         response = client.post(path, follow_redirects=False)
         assert response.status_code == 409, (path, response.text)
 
-    db.refresh(invitation)
-    assert invitation.sent_at is None
+    page = client.get(base).text
+    remind = page.split(
+        f'action="/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"', 1
+    )[1]
+    assert 'title="Available once the session is prepared"' not in remind.split("</form>", 1)[0]
 
-    response = client.post(f"{base}/send-all", follow_redirects=False)
+    response = client.post(f"{base}/{invitation.id}/send", follow_redirects=False)
     assert response.status_code == 303, response.text
+    assert response.headers["location"].endswith("/invitations?email=sent")
     db.refresh(invitation)
     assert invitation.sent_at is not None
+    # Sent, so the row now offers Send reminder, held until activation.
+    assert 'title="Available once the session is activated"' in client.get(base).text
+
+    response = client.post(f"{base}/{invitation.id}/regenerate", follow_redirects=False)
+    assert response.status_code == 303, response.text
+    db.refresh(invitation)
+    assert invitation.status == "pending"
+
+
+def test_a_draft_session_neither_sends_nor_regenerates(client: TestClient, db: Session) -> None:
+    """Below ``validated`` there is nothing to issue: the per-row Send and
+    Regenerate answer 409, and the page says why on the disabled buttons."""
+    session = _create_session(client, db, "draft-rem")
+    _populate(client, db, session.id, reviewers=["rae@example.edu"])
+    response = client.post(
+        f"/operator/sessions/{session.public_id}/workflow/prepare",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    invitation = db.execute(
+        select(Invitation).where(Invitation.session_id == session.id)
+    ).scalar_one()
+    db.refresh(session)
+    session.status = "draft"
+    db.commit()
+    base = f"/operator/sessions/{session.public_id}/invitations"
+    for path in (f"{base}/{invitation.id}/send", f"{base}/{invitation.id}/regenerate"):
+        response = client.post(path, follow_redirects=False)
+        assert response.status_code == 409, (path, response.text)
+    page = client.get(base).text
+    assert page.count('title="Available once the session is prepared"') == 2

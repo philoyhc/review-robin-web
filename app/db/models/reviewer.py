@@ -32,9 +32,9 @@ class Reviewer(Base, TimestampMixin):
     directory_mail: Mapped[str | None] = mapped_column(String(320))
     directory_upn: Mapped[str | None] = mapped_column(String(320))
     # 14F rung 3d: when the reviewer last opened their review, through
-    # the session link or a personal one; stamped on every surface GET
-    # (``reviewers.mark_opened``). ``Invitation.opened_at`` is the first
-    # follow of one invitation's link only.
+    # the session link or a personal one; stamped at most once per
+    # ``reviewers.ARRIVAL_GAP`` of surface GETs (``reviewers.mark_opened``).
+    # ``Invitation.opened_at`` is the first follow of one invitation's link only.
     last_opened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     session: Mapped[ReviewSession] = relationship(back_populates="reviewers")

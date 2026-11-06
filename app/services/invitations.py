@@ -235,9 +235,10 @@ def regenerate_token(
 ) -> RegenerateResult:
     """Rotate the token, reset the invitation to ``pending``.
 
-    Refuses unless the session is ``ready``, decided under the session
-    lock (findings Bc5)."""
-    lifecycle.require_ready(db, invitation.session)
+    Refuses unless the session is ``validated`` or ``ready`` (14F
+    follow-up 1: it may be re-issued ahead of opening), decided under the
+    session lock (findings Bc5)."""
+    lifecycle.require_validated_or_ready(db, invitation.session)
     raw, token_hash = _new_token()
     invitation.token_hash = token_hash
     invitation.status = "pending"
@@ -464,9 +465,10 @@ def send_one_invitation(
     correlation_id: str | None = None,
 ) -> SendResult:
     """The per-row Send: :func:`send_invitation`, refused unless the
-    session is ``ready``, decided under the session lock (findings
-    Bc5)."""
-    lifecycle.require_ready(db, review_session)
+    session is ``validated`` or ``ready`` (14F follow-up 1: an invitation
+    may go out ahead of opening), decided under the session lock
+    (findings Bc5)."""
+    lifecycle.require_validated_or_ready(db, review_session)
     return send_invitation(
         db,
         invitation=invitation,

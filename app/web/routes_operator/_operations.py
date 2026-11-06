@@ -395,13 +395,14 @@ def _send_queued_row(
 
 
 def _require_ready(review_session: ReviewSession) -> None:
-    """Reject per-row invitation actions and reminders outside ``ready``.
+    """Reject reminders outside ``ready``.
 
-    The author's ruling of 2026-10-02 (B17 / F17): per-row Send,
-    Regenerate and Send reminder, and the bulk reminder, are
-    ``ready``-only, as their buttons always were. Only the bulk
-    ``send-all`` and ``regenerate-all`` keep 18F's "validated or ready"
-    gate, so the Workflow card can invite before activation.
+    The author's ruling of 2026-10-02 (B17 / F17) made per-row Send,
+    Regenerate and Send reminder, and the bulk reminder, ``ready``-only.
+    14F follow-up 1 (author, 2026-11-06) moved per-row Send and Regenerate
+    to the "validated or ready" gate that ``send-all`` and
+    ``regenerate-all`` keep, since an invitation may go out ahead of
+    opening; a reminder, about a review that is open, stays here.
 
     An early refusal on the loaded row; the invitation service decides
     under the session lock (``lifecycle.require_ready``, findings Bc5).
@@ -621,6 +622,9 @@ def invitations_index(
             "reminders_sent_count": reminders_sent_count,
             "pending_reminders_count": pending_reminders_count,
             "completed_count": completed_count,
+            # 14F follow-up 1: Send and Regenerate once prepared.
+            "is_prepared": lifecycle.is_validated(review_session)
+            or lifecycle.is_ready(review_session),
             "breadcrumbs": breadcrumbs.operator_session_child(review_session, "Invitations"),
             "email_notice": views.row_send_notice(email, kind),
             **workflow_ctx,
@@ -853,7 +857,9 @@ def invitations_regenerate(
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     invitation, review_session = bundle
-    _require_ready(review_session)
+    # 14F follow-up 1 (author, 2026-11-06): a prepared session may email
+    # and re-issue invitations ahead of opening, as Send all could.
+    _require_validated_or_ready(review_session)
     invitations.regenerate_token(
         db,
         invitation=invitation,
@@ -875,7 +881,7 @@ def invitations_send_one(
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     invitation, review_session = bundle
-    _require_ready(review_session)
+    _require_validated_or_ready(review_session)  # 14F follow-up 1
     reviewer = db.execute(
         select(Reviewer).where(Reviewer.id == invitation.reviewer_id)
     ).scalar_one()
