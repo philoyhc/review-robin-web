@@ -24,13 +24,17 @@ from app.json_shapes import json_object
 from ._shared import _ensure_aware_utc, _flushed_id, lock_session
 
 _EVENT_TYPES = {
+    # ``_handled`` is the operator's Mark as done on a due prompt (14F
+    # rung 5b): consumed like a sent entry, so 14G never sends it.
     "invite": (
         "session.scheduled_invites_fired",
         "session.scheduled_invites_skipped",
+        "session.scheduled_invites_handled",
     ),
     "reminder": (
         "session.scheduled_reminders_fired",
         "session.scheduled_reminders_skipped",
+        "session.scheduled_reminders_handled",
     ),
 }
 
@@ -165,8 +169,8 @@ def fired_offset_errors(
                 errors.append(
                     (
                         column,
-                        f"{label} {fired[index]} was already sent (or "
-                        f"skipped) at position {index + 1} for this "
+                        f"{label} {fired[index]} was already sent, skipped "
+                        f"or marked done at position {index + 1} for this "
                         f"{anchor_label}, so {entries[index]} there would "
                         f"never be sent. Keep {fired[index]} at position "
                         f"{index + 1} and add new entries after it.",

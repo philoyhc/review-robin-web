@@ -82,9 +82,8 @@ def list_sessions(
             "sessions": review_sessions,
             "lobby_stats": lobby_stats,
             "tags_by_session": session_tags.tags_for_sessions(db, session_ids),
-            # 14F: sessions with an action due get a Due pill. A scaffold
-            # until rung 5; it marks none yet.
-            "due_session_ids": views.lobby_due_session_ids(review_sessions),
+            # 14F rung 5c: sessions with an action due get a Due pill.
+            "due_session_ids": views.lobby_due_session_ids(db, review_sessions),
             "lobby_tags": lobby_tags,
             # 19S Item 7 — the row and bulk expanders' tag typeahead.
             # Wider than ``lobby_tags``, which feeds the filter strip and

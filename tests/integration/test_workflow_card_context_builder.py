@@ -93,6 +93,7 @@ _EXPECTED_KEYS = {
     "manual_activate_cancellation",
     "auto_send_invites_caption",
     "auto_send_reminders_caption",
+    "due_lines",
     "next_action_return_to",
 }
 

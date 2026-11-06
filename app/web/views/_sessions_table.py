@@ -7,11 +7,13 @@ and Diagnostics filters on name, code and owner.
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from datetime import datetime
 
+from sqlalchemy.orm import Session
+
 from app.db.models import ReviewSession, User
-from app.services import date_formatting, sessions
+from app.services import date_formatting, due_actions, sessions
 from app.services.session_lifecycle import SessionStatus
 
 __all__ = [
@@ -188,14 +190,10 @@ def diagnostics_filter_options(
     return sorted(handles, key=str.casefold) + sorted(owners, key=str.casefold)
 
 
-def lobby_due_session_ids(review_sessions: Iterable[ReviewSession]) -> frozenset[str]:
+def lobby_due_session_ids(db: Session, review_sessions: Sequence[ReviewSession]) -> frozenset[str]:
     """The ``public_id`` of each lobby session with an action due, which
-    the lobby marks with a Due pill (14F).
-
-    A scaffold (14F rung 1): it returns no session yet, so the pill's slot
-    is in the markup and nothing shows. Rung 5 computes it from the
-    invite and reminder offsets the operator set, and from a persistent
-    scheduled-activation failure.
-    """
-    del review_sessions
-    return frozenset()
+    the lobby marks with a Due pill (14F rung 5c): a send prompt due by
+    hand while scheduled email is off, or a scheduled activation that
+    gave up (``due_actions.sessions_with_something_due``)."""
+    flagged = due_actions.sessions_with_something_due(db, review_sessions)
+    return frozenset(rs.public_id for rs in review_sessions if rs.id in flagged)

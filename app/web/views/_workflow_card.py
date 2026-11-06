@@ -46,6 +46,7 @@ from app.services import (
     assignments,
     csv_imports,
     date_formatting,
+    due_actions,
     email_dispatch,
     invitations,
     scheduled_events,
@@ -226,8 +227,29 @@ def build_workflow_card_context(
         "manual_activate_cancellation": build_manual_activate_cancellation(review_session),
         "auto_send_invites_caption": build_auto_send_invites_caption(db, review_session),
         "auto_send_reminders_caption": build_auto_send_reminders_caption(db, review_session),
+        "due_lines": build_due_lines(db, review_session),
         "next_action_return_to": return_to,
     }
+
+
+def build_due_lines(db: Session, review_session: ReviewSession) -> list[dict[str, Any]]:
+    """The Workflow card's due prompts (14F rung 5b): one line per due
+    entry, with the count left to act on, while scheduled email is off.
+    Each carries what *Mark as done* posts back."""
+    session_tz = sessions_service.resolve_session_timezone(review_session)
+    lines: list[dict[str, Any]] = []
+    for action in due_actions.due_actions(db, review_session):
+        when = date_formatting.format_datetime(action.due_at, session_tz)
+        n = action.count
+        if action.kind == "invite":
+            text = f"Invitations due ({action.offset} from Start, {when}): {n} not yet sent."
+        else:
+            text = (
+                f"Reminders due ({action.offset} from End, {when}): "
+                f"{n} reviewer{'' if n == 1 else 's'} not finished."
+            )
+        lines.append({"kind": action.kind, "offset_index": action.offset_index, "text": text})
+    return lines
 
 
 def build_scheduled_activation_caption(
