@@ -203,7 +203,7 @@ None.
 - ~~**N7 — End's two close events spell `context.deadline` differently**~~ **Done 2026-11-06**: `session.deadline_reached` takes `_end_context` too, so both carry the aware UTC string (`tests/integration/test_scheduled_clock.py`). Was:
   (`session_lifecycle.py:1277` raw; `_end_context`, 1128-1135, aware):
   the strings differ on SQLite for the same moment.
-- **N8 — The Postgres shards are uneven:** on `main` at `c912ae53`,
+- ~~**N8 — The Postgres shards are uneven:**~~ **Done 2026-11-06**: the cut moved inside the r files, `test_ra*` and `test_re[a-u]*` (about 400 tests) joining integration-a (`.github/workflows/ci-postgres.yml`). Was: on `main` at `c912ae53`,
   `postgres (integration-b)` ran its tests in 2m54 against
   integration-a's 1m38, the slowest job in CI (the assessment's §2,
   "Test runtime"). Re-split `tests/integration` by time, not by letter.
