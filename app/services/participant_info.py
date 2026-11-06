@@ -205,22 +205,3 @@ def normalize_reviewer_self_fields(keys: Iterable[str]) -> list[str]:
 def effective_reviewer_self_fields(review_session: ReviewSession) -> tuple[str, ...]:
     """``effective_self_fields`` for reviewers."""
     return effective_self_fields(review_session, "reviewer")
-
-
-def set_reviewer_self_fields(
-    db: Session,
-    *,
-    review_session: ReviewSession,
-    user: User,
-    keys: Iterable[str],
-    correlation_id: str | None = None,
-) -> None:
-    """``set_self_fields`` for reviewers."""
-    set_self_fields(
-        db,
-        review_session=review_session,
-        user=user,
-        participant="reviewer",
-        keys=keys,
-        correlation_id=correlation_id,
-    )

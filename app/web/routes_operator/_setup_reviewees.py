@@ -20,19 +20,18 @@ from fastapi import (
     UploadFile,
     status,
 )
-from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Reviewee, ReviewSession, User
 from app.db.session import get_db
-from app.services import assignments, csv_imports, participant_info, roster_bulk
+from app.services import assignments, csv_imports, roster_bulk
 from app.services import responses as responses_service
 from app.services import reviewees as reviewees_service
 from app.services import session_lifecycle as lifecycle
 from app.services.reviewees import RevieweeOperationError
-from app.web import breadcrumbs, roster_actions, urls, views
+from app.web import breadcrumbs, roster_actions, views
 from app.web.deps import (
     get_or_create_user,
     request_correlation_id,
@@ -40,13 +39,11 @@ from app.web.deps import (
 )
 from app.web.roster_import import (
     _handle_import,
-    _save_field_labels,
     dismiss_held_upload,
 )
 from app.web.routes_operator._shared import (
     _redirect_keeping_selection,
     _require_editable,
-    _require_response_loss_ack,
     _row_action_anchor,
     _setup_row_window,
     _templates,
@@ -602,28 +599,12 @@ async def reviewees_save_self_fields(
     """Save what reviewees see of their own entry (participant info
     Item 4), as the Reviewers card saves Item 1's: the ticked chips plus
     ``keep``, the selected keys the card offered no chip for."""
-    form = await request.form()
-    keys = [str(v) for v in form.getlist("fields")]
-    keys += [str(v) for v in form.getlist("keep")]
-    try:
-        # The service locks the session row: wait for it off the loop.
-        await run_in_threadpool(
-            participant_info.set_self_fields,
-            db,
-            review_session=review_session,
-            user=user,
-            participant="reviewee",
-            keys=keys,
-            correlation_id=request_correlation_id(),
-        )
-    except participant_info.SelfFieldsError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
-        ) from exc
-    return urls.redirect(
+    return await roster_actions.save_self_fields(
         request,
-        url=(f"/operator/sessions/{review_session.public_id}/reviewees?unlocked=1#roster-card"),
-        status_code=status.HTTP_303_SEE_OTHER,
+        participant="reviewee",
+        review_session=review_session,
+        user=user,
+        db=db,
     )
 
 
@@ -686,28 +667,14 @@ def reviewees_delete_all(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    _require_editable(review_session)
-    if confirm != "true":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="confirm checkbox required",
-        )
-    _require_response_loss_ack(db, review_session, acknowledge_response_loss)
-    csv_imports.delete_all_reviewees(
-        db,
+    return roster_actions.delete_all(
+        roster_actions.REVIEWEES,
+        request,
+        confirm=confirm,
+        acknowledge_response_loss=acknowledge_response_loss,
         review_session=review_session,
         user=user,
-        correlation_id=request_correlation_id(),
-    )
-    # 19P.3 rung 4 — `?unlocked=1#roster-card`. This control lives INSIDE
-    # the Unlock panel now, and a bare redirect closes the panel the
-    # operator was working in: a Save does not close the card, the Lock
-    # control does. The fragment lands on the card rather than the top of
-    # the document.
-    return urls.redirect(
-        request,
-        url=(f"/operator/sessions/{review_session.public_id}/reviewees?unlocked=1#roster-card"),
-        status_code=status.HTTP_303_SEE_OTHER,
+        db=db,
     )
 
 
@@ -739,29 +706,14 @@ async def reviewees_save_field_labels(
     2026-05-31 per upgrade-doc §3.7; form fields for those names
     are silently ignored if submitted.
     """
-    form = await request.form()
-    submitted = {param: str(form.get(param, "")) for param, _ in _REVIEWEE_SLOTS}
-    # The labels service locks the session row (findings Bc4): wait for
-    # it off the event loop.
-    await run_in_threadpool(
-        _save_field_labels,
-        db,
-        review_session=review_session,
-        user=user,
+    return await roster_actions.save_field_labels(
+        request,
+        slug="reviewees",
         source_type="reviewee",
         slots=_REVIEWEE_SLOTS,
-        submitted=submitted,
-        correlation_id=request_correlation_id(),
-    )
-    # 19P.3 rung 4 — `?unlocked=1#roster-card`. This control lives INSIDE
-    # the Unlock panel now, and a bare redirect closes the panel the
-    # operator was working in: a Save does not close the card, the Lock
-    # control does. The fragment lands on the card rather than the top of
-    # the document.
-    return urls.redirect(
-        request,
-        url=(f"/operator/sessions/{review_session.public_id}/reviewees?unlocked=1#roster-card"),
-        status_code=status.HTTP_303_SEE_OTHER,
+        review_session=review_session,
+        user=user,
+        db=db,
     )
 
 

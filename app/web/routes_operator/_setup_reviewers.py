@@ -12,24 +12,22 @@ from fastapi import (
     Depends,
     File,
     Form,
-    HTTPException,
     Query,
     Request,
     UploadFile,
     status,
 )
-from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.db.models import Reviewer, ReviewSession, User
 from app.db.session import get_db
-from app.services import assignments, csv_imports, participant_info, roster_bulk
+from app.services import assignments, csv_imports, roster_bulk
 from app.services import reviewers as reviewers_service
 from app.services import session_lifecycle as lifecycle
 from app.services.responses import GroupAnswersWouldClear
 from app.services.reviewers import ReviewerOperationError
-from app.web import breadcrumbs, roster_actions, urls, views
+from app.web import breadcrumbs, roster_actions, views
 from app.web.deps import (
     get_or_create_user,
     request_correlation_id,
@@ -37,13 +35,11 @@ from app.web.deps import (
 )
 from app.web.roster_import import (
     _handle_import,
-    _save_field_labels,
     dismiss_held_upload,
 )
 from app.web.routes_operator._shared import (
     _redirect_keeping_selection,
     _require_editable,
-    _require_response_loss_ack,
     _require_reviewer_in_session,
     _row_action_anchor,
     _setup_row_window,
@@ -637,34 +633,14 @@ def reviewers_delete_all(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    _require_editable(review_session)
-    if confirm != "true":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="confirm checkbox required",
-        )
-    _require_response_loss_ack(db, review_session, acknowledge_response_loss)
-    csv_imports.delete_all_reviewers(
-        db,
+    return roster_actions.delete_all(
+        roster_actions.REVIEWERS,
+        request,
+        confirm=confirm,
+        acknowledge_response_loss=acknowledge_response_loss,
         review_session=review_session,
         user=user,
-        correlation_id=request_correlation_id(),
-    )
-    # `?unlocked=1`, for the reason the labels save needed it at rung
-    # 3a: this control lives INSIDE the Unlock panel now, and a bare
-    # redirect closes the panel the operator was working in. The Danger
-    # Zone itself is gone from the response — the roster is empty, and
-    # the card is gated on rows — but the panel's other two tenants are
-    # not, and uploading a replacement roster is the likely next move.
-    #
-    # The plan's cut table justified 3b as "redirect-only" because this
-    # route answers 303 like 3a's. It matched the status code; it did
-    # not match the contract, which is what moving a control into the
-    # panel actually costs.
-    return urls.redirect(
-        request,
-        url=(f"/operator/sessions/{review_session.public_id}/reviewers?unlocked=1#roster-card"),
-        status_code=status.HTTP_303_SEE_OTHER,
+        db=db,
     )
 
 
@@ -681,27 +657,12 @@ async def reviewers_save_self_fields(
     """Save what reviewers see of their own entry (participant info
     Item 1): the ticked chips plus ``keep``, the selected keys the card
     offered no chip for, so a field with no data stays selected."""
-    form = await request.form()
-    keys = [str(v) for v in form.getlist("fields")]
-    keys += [str(v) for v in form.getlist("keep")]
-    try:
-        # The service locks the session row: wait for it off the loop.
-        await run_in_threadpool(
-            participant_info.set_reviewer_self_fields,
-            db,
-            review_session=review_session,
-            user=user,
-            keys=keys,
-            correlation_id=request_correlation_id(),
-        )
-    except participant_info.SelfFieldsError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
-        ) from exc
-    return urls.redirect(
+    return await roster_actions.save_self_fields(
         request,
-        url=(f"/operator/sessions/{review_session.public_id}/reviewers?unlocked=1#roster-card"),
-        status_code=status.HTTP_303_SEE_OTHER,
+        participant="reviewer",
+        review_session=review_session,
+        user=user,
+        db=db,
     )
 
 
@@ -726,27 +687,14 @@ async def reviewers_save_field_labels(
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     """Save the three reviewer tag labels for this session."""
-    form = await request.form()
-    submitted = {param: str(form.get(param, "")) for param, _ in _REVIEWER_SLOTS}
-    # The labels service locks the session row (findings Bc4): wait for
-    # it off the event loop.
-    await run_in_threadpool(
-        _save_field_labels,
-        db,
-        review_session=review_session,
-        user=user,
+    return await roster_actions.save_field_labels(
+        request,
+        slug="reviewers",
         source_type="reviewer",
         slots=_REVIEWER_SLOTS,
-        submitted=submitted,
-        correlation_id=request_correlation_id(),
-    )
-    # `?unlocked=1`: saving a label must not close the panel the label
-    # editor lives in — the Lock control is what closes it. The fragment
-    # lands on the card rather than the top of the document.
-    return urls.redirect(
-        request,
-        url=(f"/operator/sessions/{review_session.public_id}/reviewers?unlocked=1#roster-card"),
-        status_code=status.HTTP_303_SEE_OTHER,
+        review_session=review_session,
+        user=user,
+        db=db,
     )
 
 
