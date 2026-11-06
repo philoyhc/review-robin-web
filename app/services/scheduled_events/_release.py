@@ -143,9 +143,11 @@ def validate_schedule_ordering(
     if (
         scheduled_activate_at is not None
         and deadline is not None
-        and _ensure_aware_utc(deadline) < _ensure_aware_utc(scheduled_activate_at)
+        # Strict (findings L3, author 2026-11-06): an End equal to Start
+        # closes the session as it opens, which Validate refuses.
+        and _ensure_aware_utc(deadline) <= _ensure_aware_utc(scheduled_activate_at)
     ):
-        raise ScheduledActivateError("End must be on or after Start.")
+        raise ScheduledActivateError("End must be after Start.")
     if (
         deadline is not None
         and responses_release_at is not None
@@ -163,11 +165,10 @@ def validate_schedule_ordering(
         scheduled_activate_at is not None
         and deadline is None
         and responses_release_at is not None
-        and _ensure_aware_utc(responses_release_at) < _ensure_aware_utc(scheduled_activate_at)
+        and _ensure_aware_utc(responses_release_at) <= _ensure_aware_utc(scheduled_activate_at)
     ):
         raise ScheduledActivateError(
-            "With no End, Release responses from must be on or after "
-            "Start: the release ends the review."
+            "With no End, Release responses from must be after Start: the release ends the review."
         )
     if (
         responses_release_at is not None

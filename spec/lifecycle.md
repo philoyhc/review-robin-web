@@ -1027,11 +1027,15 @@ fire-time guard (§8.2.3), the four operator-set anchor
 datetimes carry an inherent order checked at save time on the
 Edit / Create routes:
 
-> `scheduled_activate_at  ≤  deadline  ≤  responses_release_at  <  responses_release_until`
+> `scheduled_activate_at  <  deadline  ≤  responses_release_at  <  responses_release_until`
+
+Start ↔ End is strict: an End equal to Start would close the session as
+it opened, which Validate's `session.end_passed` refuses (findings L3,
+author 2026-11-06). Release-from may equal End.
 
 Each pair is checked only when both members are non-NULL;
 NULL slots impose no constraint, with one exception: with no End,
-Release-from is the review's end, so it must be on or after Start. The
+Release-from is the review's end, so it must be after Start. The
 Start ↔ End, End ↔ Release-from and no-End Start ↔ Release-from pairs are enforced by
 `scheduled_events.validate_schedule_ordering`, called after
 the per-field parsers succeed; the Release-from ↔ Release-
@@ -1043,9 +1047,9 @@ translate to HTTP 422 with the per-pair error message:
 
 | Pair | Error message |
 |---|---|
-| End < Start | `End must be on or after Start.` |
+| End ≤ Start | `End must be after Start.` |
 | Release-from < End | `Release responses from must be on or after End — reviewees can only view results after the review window closes.` |
-| No End, Release-from < Start | `With no End, Release responses from must be on or after Start: the release ends the review.` |
+| No End, Release-from ≤ Start | `With no End, Release responses from must be after Start: the release ends the review.` |
 | Release-until ≤ Release-from | `Release responses until must be after Release responses from.` |
 | Release-until > Release-from + 365d | `Release responses until must be within 365 days of Release responses from.` |
 

@@ -5,7 +5,7 @@
 of the window's `app/`, `cordware/` and `alembic/` changes with scratch
 tests, and a read of `cordware/`, `residentialapps/` and `utilityapps/`
 with their suites and a route fuzz · **Read at:** `c912ae53` (#3657; the
-reads ran on its pre-merge tree `c5d03d49`, identical) · **Open:** all but M1, L1, N9, D1–D5, D7 and D12 (D8 half).
+reads ran on its pre-merge tree `c5d03d49`, identical) · **Open:** all but M1, L1, L3, N9, D1–D5, D7 and D12 (D8 half).
 
 The checklist the fixes work through. **Nothing was edited by the
 reads**, and their scratch tests were not kept: a fix PR writes its own
@@ -69,7 +69,7 @@ None.
   once". Ships off. *CONFIRMED by trace.* Author: wire dispatch, keep the
   routes refusing until 14G whatever the flag, or say flag-on is
   record-only.
-- **L3 — A schedule the form accepts can never activate.**
+- ~~**L3 — A schedule the form accepts can never activate.**~~ **Done 2026-11-06, strict (author)**: `validate_schedule_ordering` refuses End ≤ Start and, with no End, Release-from ≤ Start; the client check matches; `spec/lifecycle.md` §8.2.7 states it. Was:
   `validate_schedule_ordering` (`scheduled_events/_release.py:143-169`)
   and `spec/lifecycle.md` §8.2.7 allow Start == End (and, with no End,
   Release-from == Start); Validate's `session.end_passed`

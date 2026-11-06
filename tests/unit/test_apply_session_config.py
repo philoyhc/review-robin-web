@@ -1406,7 +1406,7 @@ def _iso(month: int, day: int) -> str:
                 Row("session.scheduled_activate_at", _iso(6, 1), "datetime"),
             ],
             "session.scheduled_activate_at",
-            "End must be on or after Start.",
+            "End must be after Start.",
         ),
         (
             [Row("session.responses_release_at", _iso(5, 10), "datetime")],

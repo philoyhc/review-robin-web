@@ -85,7 +85,10 @@ def test_create_flags_an_out_of_order_box_and_saves_text(page: Page) -> None:
     start.fill("2027-03-02 09:00")
     end.fill("2027-03-01 09:00")
     message = end.evaluate("el => el.validationMessage")
-    assert message == "End must be on or after Start."
+    assert message == "End must be after Start."
+    end.fill("2027-03-02 09:00")  # equal to Start: strict since L3
+    assert end.evaluate("el => el.validationMessage") == "End must be after Start."
+    end.fill("2027-03-01 09:00")
     assert start.evaluate("el => el.validity.valid")
     # The picker behind End offers nothing before Start.
     expect(page.locator("[data-dt-field]", has=end).locator("[data-dt-picker]")).to_have_attribute(

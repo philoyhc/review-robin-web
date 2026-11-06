@@ -590,7 +590,7 @@ def test_lobby_edit_keeps_every_field_it_does_not_show(client: TestClient, db: S
 @pytest.mark.parametrize(
     ("deadline", "message"),
     [
-        ("2030-01-05T09:00", "End must be on or after Start"),
+        ("2030-01-05T09:00", "End must be after Start"),
         ("2030-01-26T09:00", "Release responses from must be on or after End"),
     ],
 )

@@ -28,7 +28,8 @@
     // The message on the later box of each adjacent pair, and whether
     // the pair may be equal.
     var PAIRS = [
-      { message: "End must be on or after Start.", equal: true },
+      // Strict: an End at Start closes the session as it opens (L3).
+      { message: "End must be after Start.", equal: false },
       {
         message: "Release responses from must be on or after End — " +
           "reviewees can only view results after the review window closes.",
