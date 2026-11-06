@@ -213,7 +213,7 @@ Running the gates is part of that floor. The full suite measured 4–5 minutes a
 ### 6.5 Periodic sweeps and snapshots, not continuous synchronization
 
 **Decision.** Keep spec and code in agreement through scheduled sweeps and dated snapshots rather than a per-PR sync requirement.
-- **Snapshots.** By 2026-10-05, twenty-one dated codebase assessments had been written in the Claude Code lineage, and four whole-repository assessments in a separate Codex lineage. Each audits the functional areas against the code — "a route registered, a service function called, a test covering it — not against the spec's own claims". The current one is `guide/codebase_assessment_03nov.md`; the Codex lineage's last, `guide/archive/codex_assessment_30sep.md`, was archived on 2026-11-04 with no successor.
+- **Snapshots.** By 2026-10-05, twenty-one dated codebase assessments had been written in the Claude Code lineage, and four whole-repository assessments in a separate Codex lineage. Each audits the functional areas against the code — "a route registered, a service function called, a test covering it — not against the spec's own claims". The current one is `guide/codebase_assessment_06nov.md`; the Codex lineage's last, `guide/archive/codex_assessment_30sep.md`, was archived on 2026-11-04 with no successor.
 - **Sweeps.** A whole-folder drift sweep is due every eight weeks or 500 merges, whichever comes first. `tools/close_check.py --stale` answers whether one is due.
 - **Registers.** What an assessment surfaces but nobody owns goes into a register, each entry carrying the trigger that would promote it. Segment 19S Item 1 opened eight entries and disposed of all of them within a day.
 
