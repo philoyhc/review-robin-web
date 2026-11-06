@@ -21,7 +21,7 @@ changing the contract; *spec* means the spec is wrong. Line numbers are at
 `c912ae53`.
 
 **Related, already filed:** 14F's collected follow-ups
-(`guide/segment_14F_manual_email.md`, "Follow-ups, collected"): per-row
+(`guide/archive/segment_14F_manual_email.md`, "Follow-ups, collected"): per-row
 Send and Regenerate in `validated` (bears on D3), a reason on a disabled
 row button, and `Reviewer.last_opened_at`'s comment.
 
@@ -103,7 +103,7 @@ None.
   `FakeMailer`). Spec, at 14F's close; **its Doc impact lacks**
   `rrw_functional_spec.md`, `architecture.md` and
   `operator_ui_concept.md`.
-- **D2 — Pages say things the app no longer does.** `guide.html:894`
+- ~~**D2 — Pages say things the app no longer does.**~~ **Done at 14F's close (2026-11-06)**: the Guide (launch controls, Start/End, *Give reviewers access*, the demo note), the outbox note, the composer's From (the operator sending), the drill-in's "Sent:", and Workflow States 5 and 6. Was: `guide.html:894`
   ("the email function is not implemented yet"), `:782-785` (Send invites
   "stamps … no mail leaves the app yet"), `:847-849` ("the app will
   prepare and activate the session at Start": scheduled activation never
@@ -161,7 +161,7 @@ None.
   its deadline" (:246, :708) where 14E means the review's end; §8.2
   (851-853) names an auto-archive offset with no consumer and "the lazy
   deadline-closure observer" (now the clock plus requests). Spec.
-- **D12 — The 14F plan says a send under fake auth refuses**; under fake
+- ~~**D12 — The 14F plan says a send under fake auth refuses**~~ **Done at 14F's close**: the Semantics line is struck and annotated. Was: under fake
   auth `mailer_for` returns `FakeMailer` (`cordware/graph.py:621-627`) and
   the row reads `sent`. Plan, at 14F's close.
 

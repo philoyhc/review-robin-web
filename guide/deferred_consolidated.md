@@ -1341,7 +1341,7 @@ instead on 2026-11-01.)
 `EmailTransport` for Azure Communication Services or a transactional
 provider, each needing per-deployment sender defaults (its Part D). Not
 pursued: the author ruled that mail goes out as the operator over
-delegated Graph (`guide/segment_14F_manual_email.md`), with a dedicated
+delegated Graph (`guide/archive/segment_14F_manual_email.md`), with a dedicated
 mailbox over Graph as the only fallback (14G). **Lift trigger:** a
 deployment outside Microsoft 365, or a tenant that refuses Graph sending.
 

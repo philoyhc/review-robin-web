@@ -3,7 +3,7 @@
 **Opened:** 2026-11-01 · **Theme:** the operator-facing controls that
 email sending needs, now that the send path is Microsoft Graph rather
 than per-operator SMTP · **Related:**
-`guide/segment_14F_manual_email.md` (the send wiring; 14B, archived, before it),
+`guide/archive/segment_14F_manual_email.md` (the send wiring; 14B, archived, before it),
 `guide/email_and_scheduling.md` (where the choice of sender stands),
 `spec/settings_inventory.md`, `spec/operator_ui_concept.md`
 

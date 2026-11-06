@@ -8,8 +8,9 @@
 <div id="outbox" class="card">
   <h2 style="margin-top: 0;">Outbox — {{ outbox_session.name }}</h2>
   <p class="muted">
-    Email outbox. No transport sends email yet, so every row stays
-    <code>queued</code> until one does, whatever an operator clicked. An invitation's
+    Email outbox. A per-row Send or Send reminder sends its row from the
+    operator's mailbox and marks it <code>sent</code> or <code>failed</code>;
+    a row still <code>queued</code> was recorded but not sent. An invitation's
     rendered body includes the raw invitation URL so you can copy it
     into a real client.
   </p>

@@ -18,7 +18,6 @@ from app.db.models import (
     ReviewSession,
 )
 from app.db.models.email_outbox import EMAIL_OUTBOX_STATUSES
-from app.services import email_send
 from app.services import invitations as inv_service
 from app.web import views
 
@@ -901,7 +900,7 @@ def test_detail_page_does_not_claim_an_invitation_that_was_never_created(
     # correction, 2026-09-17 — the em-dashes are right, they mean "no
     # date attached", and hiding the line was the over-correction.
     assert "Invite:" in facts
-    assert "Send recorded:" in facts
+    assert "Sent:" in facts
     assert "Last reminder:" in facts
     assert facts.count(_NO_DATE) == 2
     # And the card no longer reports an outbox-derived email status
@@ -1084,7 +1083,7 @@ def test_detail_page_dates_line_reports_a_sent_reminder(client: TestClient, db: 
     # Both slots filled: neither em-dash survives a sent invitation
     # followed by a sent reminder.
     assert _NO_DATE not in facts
-    assert "Send recorded:" in facts
+    assert "Sent:" in facts
     assert "Last reminder:" in facts
 
 
@@ -1325,7 +1324,7 @@ def test_detail_page_shows_no_delivery_pill_on_an_ordinary_send(
     assert _DELIVERY("sent") not in facts, (
         "an ordinary send shows its timestamp, not a redundant pill"
     )
-    assert "Send recorded:" in facts, "premise: the slot is there"
+    assert "Sent:" in facts, "premise: the slot is there"
 
 
 def test_table_and_card_agree_on_a_failed_delivery(client: TestClient, db: Session) -> None:
@@ -2309,45 +2308,25 @@ def test_the_copy_that_prompts_prepare_names_what_prepare_does(
     assert inv_service.has_invitations(db, session.id)
 
 
-def test_state_6_copy_does_not_claim_reviewers_were_told(
-    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """State 6 — invitations sent — used to read "Reviewers have been
-    notified that the review will open."
-
-    Nothing notifies. `generate_invitations`' send path writes an
-    `EmailOutbox` row and flips it `queued` → `sent` in one transaction;
-    `app/services/email_send.py` says "Nothing in the app calls this
-    yet." The claim reached the Guide by being copied out of this card
-    (19Q Item 3 rung 2's cold read), so the card is where it had to be
-    fixed.
-
-    **Pinned by the fact that makes the copy true, not by the copy.**
-    The transport is asserted unreachable during a real send, so the
-    day someone wires it this test fails and the sentence gets revisited
-    rather than quietly becoming wrong in the other direction.
-    """
-    called: list[object] = []
-    monkeypatch.setattr(
-        email_send,
-        "transport_for",
-        lambda *a, **k: (
-            called.append(a) or (_ for _ in ()).throw(AssertionError("transport_for was called"))
-        ),
-    )
+def test_state_6_copy_says_invitations_have_gone_out(client: TestClient, db: Session) -> None:
+    """State 6 — invitations sent. It used to say no mail leaves the app
+    (19O Item 7), true while no transport was wired. Since 14F a per-row
+    Send delivers from the operator's mailbox, and with bulk off
+    (`RRW_BULK_SEND`, the shipped default) that is how a session reaches
+    State 6 (findings D2, 2026-11-06)."""
     session = _validated_session(client, db, "state6-copy")
+    invitation = (
+        db.execute(select(Invitation).where(Invitation.session_id == session.id)).scalars().first()
+    )
+    assert invitation is not None
     response = client.post(
-        f"/operator/sessions/{session.public_id}/invitations/send-all",
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send",
         follow_redirects=False,
     )
-    assert response.status_code == 303, response.text
-
-    assert not called, "a transport was constructed; the copy below is now wrong"
-    assert inv_service.has_sent_invitations(db, session.id)
-
+    assert response.headers["location"].endswith("/invitations?email=sent")
     card = _next_action_body(client.get(f"/operator/sessions/{session.public_id}").text)
-    assert "no mail leaves the app" in card
-    assert "have been notified" not in card
+    assert "Invitations have gone out." in card
+    assert "no mail leaves the app" not in card
 
 
 def test_an_archived_session_answers_404_on_the_surface(
