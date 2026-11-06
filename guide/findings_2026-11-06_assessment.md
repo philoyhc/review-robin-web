@@ -200,7 +200,7 @@ None.
 - ~~**N6 — System Status says "behind" for any schema mismatch**~~ **Done 2026-11-06**: the state is `differs`, its label already named both revisions, and `spec/operator_ui_concept.md` says the app cannot tell behind from ahead. Was: a
   database ahead of the code included (`views/_system_status.py:109-115`;
   `spec/operator_ui_concept.md:157` names current, behind, none).
-- **N7 — End's two close events spell `context.deadline` differently**
+- ~~**N7 — End's two close events spell `context.deadline` differently**~~ **Done 2026-11-06**: `session.deadline_reached` takes `_end_context` too, so both carry the aware UTC string (`tests/integration/test_scheduled_clock.py`). Was:
   (`session_lifecycle.py:1277` raw; `_end_context`, 1128-1135, aware):
   the strings differ on SQLite for the same moment.
 - **N8 — The Postgres shards are uneven:** on `main` at `c912ae53`,
