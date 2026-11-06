@@ -200,3 +200,18 @@ None.
   `postgres (integration-b)` ran its tests in 2m54 against
   integration-a's 1m38, the slowest job in CI (the assessment's §2,
   "Test runtime"). Re-split `tests/integration` by time, not by letter.
+- **N9 — The repository's own measurements miss every squash-merged PR.**
+  Since #3150 (2026-10-19) PRs reach `main` two ways: by `c912ae53`, 319
+  merge commits and 188 squash commits on the first-parent line, and
+  89 of this window's 91 PRs squash-merged. `tools/pace_audit.py`
+  (`load`, `git log --merges`) and `tools/code_metrics.py`'s churn walk
+  (`churn`, the same flags) read merge commits only, so neither sees the
+  squash-merged ones, and a squash merge has also dropped the branch
+  commits the pace audit times. The churn figure above leaves out almost
+  all of this window, and a re-take of `rrw_sdd_in_practice.md` §6.4's
+  cadence figures would measure only the merge-committed half (Codex on
+  #3659 corrected an earlier "stops at #3149"). Found while re-taking
+  that document's figures, not by the
+  assessment's reads. Author: count squash commits by their `(#N)`
+  subject in both tools, and decide whether the cadence figures are worth
+  the PR timeline from the GitHub API, or merge commits back.
