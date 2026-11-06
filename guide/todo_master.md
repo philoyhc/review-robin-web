@@ -24,16 +24,6 @@ Two sibling registers hold the open work that is not queued here:
 
 ## Upcoming
 
-### After segment 21
-
-- **Segment 21D's live check** under real Easy Auth, on the institutional
-  host (the dev slot stays dormant, author 2026-10-24). Review Robin's
-  first release went out on 2026-10-31, and three of the four
-  requirements are recorded passing there with the deployment: the
-  invite link on the public origin, `/.auth/*` sign-in end to end, and
-  both health probes. Not recorded: `/reviewrobin` redirecting to
-  `/reviewrobin/`. One visit settles it; then delete this entry.
-
 ### Queued segments
 
 20 is **gated on the institutional Azure deployment concluding**
@@ -43,13 +33,14 @@ host is provisioned and serving Review Robin since 2026-10-31; whether
 the deployment has *concluded* (verified, the personal web app retired)
 is the author's call.
 
-**Order (author, 2026-11-04): 14E and 22C (both closed 2026-11-04),
-then 14F with 14C Item 2.** 14F closed 2026-11-06
-(`guide/archive/segment_14F_manual_email.md`).
+**Order (author, 2026-11-06):** the two stubs below (the regenerate
+fix, then host logging), then 14C Item 2, then 22J; 14G when IT answers.
 
 1. **14C Item 2 — Email-related UI** (Items 1 and 3 done): the Email
-   settings card of toggles, built and read by 14F's send path; its close
-   is owed. **Plan:** `guide/segment_14C_email_related_ui.md`.
+   settings card of toggles, built and read by 14F's send path. Before
+   its close, the card gains the candidate report-email toggles: live
+   where the send needs no scheduled email, inactive where it does
+   (author, 2026-11-06). **Plan:** `guide/segment_14C_email_related_ui.md`.
 
 2. **14G — Scheduled email** (gated on IT: offline sending as the
    operator, else a dedicated mailbox). Sends due invitations, reminders
@@ -99,44 +90,9 @@ the PR body unless it says otherwise.
   Invitations **Reminder** column and the reminder scheduler. Reasoning
   at `guide/archive/segment_19P_expander_revamp.md` Item 6 OQ4.
 
-- **The three Operations pages gate their left toolbar pane on having
-  rows** *(filed 2026-09-17)*, where the four roster pages let the
-  partials guard themselves. The filter in the right pane stays
-  reachable on a search that matches nothing, so nothing is lost
-  today; it is a divergence of pattern between the two families.
-
-- **`close_check`'s manifest check is one-directional** *(filed
-  2026-09-13)*. C3 asks whether every path a plan **declared** was
-  edited in the window, never whether every path **edited** was
-  declared — 19N.1 edited three specs with no `Doc impact` bullet and
-  passed. The advisory `touched; not in manifest` notes compute most
-  of it; the open question is promoting them to a check without
-  drowning in the long-window noise 19C and 19J recorded. Likely one
-  slice in `tools/close_check/`.
-
-- **Should a rehydrate audit observer, relationship and assignment
-  counts?** *(filed 2026-09-13)*. `session.rehydrated` carries four
-  count keys (`reviewers`, `reviewees`, `responses`,
-  `responses_dropped`) and `spec/rehydrate.md` §7 names those four. A
-  design question the author ruled future work: deciding it needs a
-  reason someone would read the other three.
-
-- **Theme customizer — a full pass over every element** *(author
-  intent, 2026-09-06)*. 19C Item 8 found three defects only by looking
-  (an inherited 2px border, a stale pick-list facet, an edit box with
-  no visible edge). The intent is to work through every element the
-  same way rather than as defects surface. Unscoped on purpose; each
-  finding is likely its own slice. Open a plan doc when the pass starts.
-
-- **Does *Invitations* still name the page?** *(filed 2026-09-18)*.
-  Since 19P.6 it is reviewer-keyed and its rows render with no
-  invitation at all, so the tab name describes the artefact rather than
-  the job. Naming only. **Author's call**, and cheap to leave alone.
-
 ### Sequencing notes
 
-- **The email pipeline:** the `email_outbox` schema landed inert in 11C
-  Part 2 (migration `c4f6a8b0d2e5`); 14F (closed) is its first sender, and 14G
-  adds mail on 14E's clock. 14E and 14F are independent of each other.
+- **The email pipeline:** 14F (closed) sends by hand; 14G adds mail on
+  14E's clock, and 14C's Email settings card is read by both.
 - **20** is independent of the email pipeline but gated on the
   deployment, so it does not interleave with other work.

@@ -836,6 +836,15 @@ incomplete feature by the author, 2026-10-03); and duplicate rows in
 reporting (findings D4, 2026-10-03 register). **Lift trigger:** an
 operator needs to restore a session from its extract.
 
+#### A rehydrate's audit counts only four things (filed 2026-09-13; moved from `todo_master.md` 2026-11-06)
+
+`session.rehydrated` carries four count keys (`reviewers`, `reviewees`,
+`responses`, `responses_dropped`), and `spec/rehydrate.md` §7 names
+those four; observers, relationships and assignments are not counted.
+The author ruled it future work: deciding it needs a reason someone
+would read the other three. **Lift trigger:** Rehydrate is exposed
+(above), or someone needs those counts from the audit log.
+
 #### Rehydrate does not run the cross-roster identity check (19Q Item 7)
 
 > Found by the cold read at 19Q Item 7 rung 2, 2026-09-19.
@@ -926,6 +935,14 @@ Band partials each consume ~15 outer variables — macro arg
 lists at that size are worse than `with`-context.
 
 ### Operator theming
+
+#### The theme customizer, a full pass over every element (author intent, 2026-09-06; moved from `todo_master.md` 2026-11-06)
+
+19C Item 8 found three defects only by looking (an inherited 2px border,
+a stale pick-list facet, an edit box with no visible edge). The intent
+is to work through every element the same way rather than as defects
+surface. Unscoped on purpose; each finding is likely its own slice.
+**Lift trigger:** the author starts the pass; open a plan doc then.
 
 #### 19C — Token lifecycle: add / delete / rename a colour token
 
@@ -1720,6 +1737,25 @@ unifying it reaches into the monitoring layer and past the rung.
 `spec/workflow_card.md`'s Send-invites bullet names the split rather
 than claiming the surfaces cannot drift. Two copies of a query agree by
 luck; the trigger is the next change to either.
+
+### The Operations pages gate their left toolbar pane on having rows (filed 2026-09-17; moved from `todo_master.md` 2026-11-06)
+
+Invitations and Responses wrap the left toolbar pane in `{% if rows %}`,
+where the four roster pages let the partials guard themselves. The
+filter in the right pane stays reachable on a search that matches
+nothing, so nothing is lost; it is a divergence of pattern between the
+two families. **Lift trigger:** the next change to either page's
+toolbar; ride with it.
+
+### `close_check`'s manifest check is one-directional (filed 2026-09-13; moved from `todo_master.md` 2026-11-06)
+
+C3 asks whether every path a plan **declared** was edited in the
+window, never whether every path **edited** was declared: 19N.1 edited
+three specs with no `Doc impact` bullet and passed. The advisory
+`touched; not in manifest` notes compute most of it; the open question
+is promoting them to a check without drowning in the long-window noise
+19C and 19J recorded. Likely one slice in `tools/close_check/`.
+**Lift trigger:** a close that missed a spec the notes had named.
 
 ### Create's buttons at the foot of the right column (19R Item 9's change 2)
 
