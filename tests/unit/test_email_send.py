@@ -167,6 +167,7 @@ def test_from_header_quotes_a_display_name_with_specials() -> None:
         ("to", "rae@example.edu\r\nRCPT TO:<evil@x.edu>"),
         ("cc", ["cc@x.edu\nBcc: evil@x.edu"]),
         ("bcc", ["bcc@x.edu\r\nRCPT TO:<evil@x.edu>"]),
+        ("reply_to", "help@x.edu\nBcc: evil@x.edu"),
     ],
 )
 def test_smtp_send_refuses_a_line_break_in_a_header_or_recipient(field: str, value: object) -> None:
@@ -281,3 +282,15 @@ def test_graph_transport_turns_a_graph_error_into_a_failed_result(kind: str) -> 
     assert not result.ok
     assert result.error_message
     assert result.transport_response == kind
+
+
+def test_reply_to_reaches_the_smtp_message() -> None:
+    """Findings D8: the SMTP transport sets Reply-To, as the Graph one
+    does; without one there is no header."""
+    from dataclasses import replace
+
+    from app.services.email_send import _build_message
+
+    assert _build_message(_msg(), _settings())["Reply-To"] is None
+    payload = _build_message(replace(_msg(), reply_to="help@example.edu"), _settings())
+    assert payload["Reply-To"] == "help@example.edu"

@@ -52,6 +52,10 @@ _TOP = 5
 SEARCH_TOP = 10
 # The longest `Retry-After` honored before giving up on that lookup.
 _MAX_WAIT = 30.0
+#: The longest a send on a request waits out a `429`: past it the send
+#: refuses at once as throttled, so one click cannot hold the page for a
+#: minute or more (findings N4, author 2026-11-06).
+REQUEST_MAX_WAIT = 5.0
 
 
 @dataclass(frozen=True)
@@ -554,7 +558,9 @@ class GraphMailer:
     Graph accepted the message, so a retry could send it twice; the
     caller's outbox records the failure and a person decides. A `429`
     is the exception: Graph refused before accepting anything, so it
-    waits its `Retry-After` (up to `_MAX_WAIT`) once and tries again.
+    waits its `Retry-After` (up to `max_wait`, `_MAX_WAIT` by default;
+    `REQUEST_MAX_WAIT` for a send on a request) once and tries again, and
+    a longer one refuses at once as throttled.
     """
 
     def __init__(
@@ -564,7 +570,9 @@ class GraphMailer:
         transport: PostTransport = urllib_post,
         sleep: Callable[[float], None] = time.sleep,
         timeout: float = 20.0,
+        max_wait: float = _MAX_WAIT,
     ) -> None:
+        self._max_wait = max_wait
         self._headers = {
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
@@ -591,7 +599,7 @@ class GraphMailer:
                 raise _logged(GraphError("forbidden", 403, _error_code(reply.body)))
             if reply.status == 429:
                 wait = _retry_after(reply.headers)
-                if attempt == 0 and wait <= _MAX_WAIT:
+                if attempt == 0 and wait <= self._max_wait:
                     self._sleep(wait)
                     continue
                 raise _logged(GraphError("throttled", 429))
@@ -603,18 +611,22 @@ class GraphMailer:
 
 class FakeMailer:
     """Fake auth's mailer (a local run only): nothing leaves the machine.
-    Each message is kept on `sent` and logged by recipient and subject."""
+
+    Each message is kept on `sent`, which only a holder of the instance can
+    read: `mailer_for` builds a new one per call. The log line says a fake
+    send happened and to how many, never the address or the subject, as
+    every other line in this module (findings N2)."""
 
     def __init__(self) -> None:
         self.sent: list[MailMessage] = []
 
     def send_mail(self, message: MailMessage) -> None:
         self.sent.append(message)
+        recipients = 1 + len(message.cc) + len(message.bcc)
         log.info(
-            "fake send (nothing sent): to %s, subject %r",
-            message.to,
-            message.subject,
-            extra={"event": "graph.fake_send"},
+            "fake send (nothing sent) to %d recipient(s)",
+            recipients,
+            extra={"event": "graph.fake_send", "recipients": recipients},
         )
 
 
@@ -627,4 +639,5 @@ def mailer_for(request: HTTPConnection, settings: IdentitySettings | None = None
     token = request.headers.get(TOKEN_HEADER, "").strip()
     if not token:
         raise _logged(GraphError("no_token"))
-    return GraphMailer(token)
+    # A request's send: a short throttle wait at most (findings N4).
+    return GraphMailer(token, max_wait=REQUEST_MAX_WAIT)

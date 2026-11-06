@@ -143,7 +143,7 @@ None.
   the offset checks are skipped (`_session_home.py:317-330`,
   `scheduled_events/__init__.py:184`) and End has none. Spec: qualify the
   sentence.
-- **D8 — Reply-To shipped differently from its spec.** *Spec half done at 14F's close; the code half stays open: `SmtpEmailTransport` ignores `reply_to`, unflagged (SMTP is not the transport in use).*
+- ~~**D8 — Reply-To shipped differently from its spec.**~~ **Done**: the spec at 14F's close; `SmtpEmailTransport` sets `Reply-To` (2026-11-06). Was:
   `spec/email_infra_options.md:295-296`: operator's address by default,
   per session. Shipped: a per-operator toggle naming the session's Help
   contact when it is an address (`email_dispatch.send_options_for`,
@@ -167,20 +167,20 @@ None.
 
 ## 5. Noted gaps
 
-- **N1 — No test that a mail failure's log line leaves out the token**
+- ~~**N1 — No test that a mail failure's log line leaves out the token**~~ **Done 2026-11-06**: `cordware/tests/test_graph_mail.py` tests both, the log line and a POST redirect. Was:
   (`cordware/tests/test_graph_mail.py`; the directory side has
   `test_graph.py:146`), and none drives the mailer's POST against a
   redirect. The shared `_NoRedirect` opener covers POST; only GET is
   proven.
-- **N2 — `FakeMailer` logs recipient and subject at INFO**
+- ~~**N2 — `FakeMailer` logs recipient and subject at INFO**~~ **Done 2026-11-06**: it logs a recipient count, and its docstring says `sent` is the instance's. Was:
   (`cordware/graph.py:611-618`), against the module's "never the address"
   stance (local only); and `mailer_for` builds a new one per call, so its
   docstring's "kept on `sent`" is unobservable outside direct
   construction.
-- **N3 — A network failure after Graph accepted a message is recorded
-  `failed`** (`graph.py:584-585`, by design); a re-send can duplicate.
+- ~~**N3 — A network failure after Graph accepted a message is recorded
+  `failed`**~~ **Settled**: the copy says "It may or may not have gone; check before sending again", and since M1 the row keeps its stamps and offers Send reminder. Was: (`graph.py:584-585`, by design); a re-send can duplicate.
   The failure copy could say "may have been sent".
-- **N4 — A 429 can hold a request worker about 70 s** (20 s timeout, up
+- ~~**N4 — A 429 can hold a request worker about 70 s**~~ **Done 2026-11-06, short wait then refuse (author)**: a request's mailer waits at most 5 s (`REQUEST_MAX_WAIT`), else refuses as throttled, a definite refusal. Was: (20 s timeout, up
   to 30 s `Retry-After`, 20 s again; `graph.py:592-596`), now that per-row
   Send calls the mailer on the request thread.
 - **N5 — Suspected, not confirmed** (the defect read): a past End saved on

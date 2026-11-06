@@ -318,7 +318,9 @@ user (see "Sending mail" below).
     may have accepted the message, and a retry could send it twice.
     The caller records the failure and a person decides. A `429` waits its
     `Retry-After` once (up to 30 s, else raised at once), because Graph
-    refused before accepting anything. `401`, `403` and any other non-`2xx`
+    refused before accepting anything; `mailer_for`'s mailer, which sends
+    on a request, waits at most 5 s (`REQUEST_MAX_WAIT`), so one click
+    cannot hold the page for a minute (findings N4). `401`, `403` and any other non-`2xx`
     raise at once. The error kinds are those above.
   - Each send times out at 20 s.
 - **Looking addresses up.** `look_up_all(directory, keys, *, budget,
