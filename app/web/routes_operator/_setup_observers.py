@@ -38,7 +38,7 @@ from app.db.models import Observer, ReviewSession, User
 from app.db.session import get_db
 from app.schemas.observer_cohort_rule import VALUE_OPERATORS
 from app.schemas.validation import ValidationIssue
-from app.services import csv_imports, directory_lookups, participant_info
+from app.services import csv_imports, directory_lookups
 from app.services import observers as observers_service
 from app.services import session_lifecycle as lifecycle
 from app.services.observers import ObserverOperationError
@@ -786,28 +786,12 @@ async def observers_save_self_fields(
     here as every sibling route does, and again under the row lock in
     the service."""
     _require_not_archived(review_session)
-    form = await request.form()
-    keys = [str(v) for v in form.getlist("fields")]
-    keys += [str(v) for v in form.getlist("keep")]
-    try:
-        # The service locks the session row: wait for it off the loop.
-        await run_in_threadpool(
-            participant_info.set_self_fields,
-            db,
-            review_session=review_session,
-            user=user,
-            participant="observer",
-            keys=keys,
-            correlation_id=request_correlation_id(),
-        )
-    except participant_info.SelfFieldsError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
-        ) from exc
-    return urls.redirect(
+    return await roster_actions.save_self_fields(
         request,
-        url=(f"/operator/sessions/{review_session.public_id}/observers?unlocked=1#roster-card"),
-        status_code=status.HTTP_303_SEE_OTHER,
+        participant="observer",
+        review_session=review_session,
+        user=user,
+        db=db,
     )
 
 
@@ -819,39 +803,14 @@ def observers_delete_all(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    _require_not_archived(review_session)
-    if confirm != "true":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="confirm checkbox required",
-        )
-    # No response-loss gate (Segment 19I Item 3). Nothing references an
-    # observer, so deleting the roster destroys no assignment and no
-    # response — measured from the model graph at Item 2. Requiring an
-    # acknowledgement here asked the operator to accept a loss that
-    # cannot occur, and returned 400 when they could not.
-    csv_imports.delete_all_observers(
-        db,
+    return roster_actions.delete_all(
+        roster_actions.OBSERVERS,
+        request,
+        confirm=confirm,
+        acknowledge_response_loss=None,
         review_session=review_session,
         user=user,
-        correlation_id=request_correlation_id(),
-    )
-    # `?unlocked=1#roster-card` — 19P.2 rung 6. This control lives
-    # INSIDE the Unlock panel now, and a bare redirect closes the panel
-    # the operator was working in. The Danger Zone itself is gone from
-    # the response (the roster is empty and the card is gated on rows),
-    # but Upload is not, and uploading a replacement is the likely next
-    # move.
-    #
-    # Called out in the plan's rung-6 entry because 19P.1 rung 3b
-    # shipped exactly this omission on Reviewers and had to fix it
-    # after the fact: a control inside the panel must not close the
-    # panel it was used from. Matching the status code is not matching
-    # the contract.
-    return urls.redirect(
-        request,
-        url=(f"/operator/sessions/{review_session.public_id}/observers?unlocked=1#roster-card"),
-        status_code=status.HTTP_303_SEE_OTHER,
+        db=db,
     )
 
 

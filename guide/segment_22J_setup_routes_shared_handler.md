@@ -157,4 +157,5 @@ One item; `diff-reviewer` reads the cumulative diff once, at rung 4.
 
 - `spec/architecture.md` — the module map and its paragraph on `app/web/roster_import.py` gain `app/web/roster_actions.py` and what it holds.
 - `spec/setup_pages.md` — the pointers that name a Setup module as where an import or gate lives follow the code (§ on Observers and Relationships imports, and the `is_editable` gate's citation).
+- `spec/settings_inventory.md` — `reviewer_self_fields` is saved through `participant_info.set_self_fields`; rung 2 retired the `set_reviewer_self_fields` wrapper.
 - `guide/todo_master.md` — delete the 22J queue entry (at close).

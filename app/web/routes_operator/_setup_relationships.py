@@ -37,13 +37,12 @@ from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
 from app.services.csv_imports import AppendConflict
 from app.services.relationships import RelationshipOperationError
-from app.web import breadcrumbs, urls, views
+from app.web import breadcrumbs, roster_actions, urls, views
 from app.web.deps import (
     get_or_create_user,
     request_correlation_id,
 )
 from app.web.roster_import import (
-    _save_field_labels,
     dismiss_held_upload,
     hold_for_ask,
     read_upload,
@@ -346,16 +345,7 @@ def relationships_delete_all(
             surface="delete_all",
             panel_open=True,
         )
-    # 19P.3 rung 4 — `?unlocked=1#roster-card`. This control lives INSIDE
-    # the Unlock panel now, and a bare redirect closes the panel the
-    # operator was working in: a Save does not close the card, the Lock
-    # control does. The fragment lands on the card rather than the top of
-    # the document.
-    return urls.redirect(
-        request,
-        url=(f"/operator/sessions/{review_session.public_id}/relationships?unlocked=1#roster-card"),
-        status_code=status.HTTP_303_SEE_OTHER,
-    )
+    return roster_actions.back_to_panel(request, review_session, "relationships")
 
 
 def _require_relationship_in_session(
@@ -1120,29 +1110,14 @@ async def relationships_save_field_labels(
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     """Save the three pair-context labels for this session."""
-    form = await request.form()
-    submitted = {param: str(form.get(param, "")) for param, _ in _PAIR_CONTEXT_SLOTS}
-    # The labels service locks the session row (findings Bc4): wait for
-    # it off the event loop.
-    await run_in_threadpool(
-        _save_field_labels,
-        db,
-        review_session=review_session,
-        user=user,
+    return await roster_actions.save_field_labels(
+        request,
+        slug="relationships",
         source_type="pair_context",
         slots=_PAIR_CONTEXT_SLOTS,
-        submitted=submitted,
-        correlation_id=request_correlation_id(),
-    )
-    # 19P.3 rung 4 — `?unlocked=1#roster-card`. This control lives INSIDE
-    # the Unlock panel now, and a bare redirect closes the panel the
-    # operator was working in: a Save does not close the card, the Lock
-    # control does. The fragment lands on the card rather than the top of
-    # the document.
-    return urls.redirect(
-        request,
-        url=(f"/operator/sessions/{review_session.public_id}/relationships?unlocked=1#roster-card"),
-        status_code=status.HTTP_303_SEE_OTHER,
+        review_session=review_session,
+        user=user,
+        db=db,
     )
 
 

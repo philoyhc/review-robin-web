@@ -4,8 +4,10 @@ Each roster's route module declares its own routes, since each roster's
 form fields are its own (``reviewer_ids``, ``observer_ids``…) and are the
 form's contract; what the bodies repeat lives here, driven by a
 :class:`RosterKind`. A roster whose action genuinely differs keeps its
-own body: Relationships' bulk inactivate, reactivate and delete
-acknowledge a response loss and refuse a group clear.
+own body: Relationships' bulk inactivate, reactivate and delete, and its
+delete all, acknowledge a response loss and refuse a group clear. The
+panel saves (self fields, field labels) and :func:`back_to_panel` take a
+slug rather than a kind, since Relationships shares them.
 
 Outside the routes package on ``roster_import``'s terms: the slices
 import this module, and it reads the package's guards from ``_shared``
@@ -20,16 +22,19 @@ from dataclasses import dataclass
 from typing import Any
 
 from fastapi import HTTPException, Request, status
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.db.models import Observer, Reviewee, Reviewer, ReviewSession, User
+from app.services import csv_imports, participant_info
 from app.services import observers as observers_service
 from app.services import reviewees as reviewees_service
 from app.services import reviewers as reviewers_service
 from app.services.observers import ObserverOperationError
 from app.services.reviewees import RevieweeOperationError
 from app.services.reviewers import ReviewerOperationError
+from app.web import urls
 
 
 @dataclass(frozen=True)
@@ -40,7 +45,10 @@ class RosterKind:
     (``reviewer_ids``) and the row anchor; ``slug`` is its page's path
     segment. ``guard`` is the ``_shared`` check every write runs first:
     ``"editable"`` for the Reviewers and Reviewees rosters, which lock
-    once validated, ``"not_archived"`` for Observers, which do not."""
+    once validated, ``"not_archived"`` for Observers, which do not.
+    ``delete_all_acknowledges_loss`` is false for Observers alone:
+    nothing references an observer, so deleting the roster loses no
+    response (segment 19I Item 3)."""
 
     noun: str
     slug: str
@@ -50,6 +58,8 @@ class RosterKind:
     bulk_inactivate: Callable[..., object]
     bulk_reactivate: Callable[..., object]
     delete_selected: Callable[..., object]
+    delete_all: Callable[..., object]
+    delete_all_acknowledges_loss: bool
 
 
 REVIEWERS = RosterKind(
@@ -61,6 +71,8 @@ REVIEWERS = RosterKind(
     bulk_inactivate=reviewers_service.bulk_inactivate,
     bulk_reactivate=reviewers_service.bulk_reactivate,
     delete_selected=reviewers_service.delete_selected,
+    delete_all=csv_imports.delete_all_reviewers,
+    delete_all_acknowledges_loss=True,
 )
 REVIEWEES = RosterKind(
     noun="reviewee",
@@ -71,6 +83,8 @@ REVIEWEES = RosterKind(
     bulk_inactivate=reviewees_service.bulk_inactivate,
     bulk_reactivate=reviewees_service.bulk_reactivate,
     delete_selected=reviewees_service.delete_selected,
+    delete_all=csv_imports.delete_all_reviewees,
+    delete_all_acknowledges_loss=True,
 )
 OBSERVERS = RosterKind(
     noun="observer",
@@ -81,6 +95,8 @@ OBSERVERS = RosterKind(
     bulk_inactivate=observers_service.bulk_inactivate,
     bulk_reactivate=observers_service.bulk_reactivate,
     delete_selected=observers_service.delete_selected,
+    delete_all=csv_imports.delete_all_observers,
+    delete_all_acknowledges_loss=False,
 )
 
 
@@ -93,6 +109,12 @@ def _guard(kind: RosterKind, review_session: ReviewSession) -> None:
         _shared._require_not_archived(review_session)
 
 
+def _correlation_id() -> str:
+    from app.web.deps import request_correlation_id
+
+    return request_correlation_id()
+
+
 def _call(
     kind: RosterKind,
     action: Callable[..., object],
@@ -103,14 +125,12 @@ def _call(
     user: User,
 ) -> None:
     """Run a service action, its refusal answered 400 with its message."""
-    from app.web.deps import request_correlation_id
-
     try:
         action(
             db,
             review_session=review_session,
             user=user,
-            correlation_id=request_correlation_id(),
+            correlation_id=_correlation_id(),
             **{f"{kind.noun}_ids": ids},
         )
     except kind.error as exc:
@@ -204,3 +224,107 @@ def bulk_delete(
         filter_q=filter_q,
         filter_offset=filter_offset,
     )
+
+
+def back_to_panel(request: Request, review_session: ReviewSession, slug: str) -> RedirectResponse:
+    """Back to the page with the Unlock panel open, on the roster card.
+
+    Every control here lives inside the panel, and a bare redirect would
+    close the panel the operator was working in: a save does not close
+    it, the Lock control does (19P.1 rung 3b shipped that omission on
+    Reviewers' delete all and had to fix it)."""
+    return urls.redirect(
+        request,
+        url=f"/operator/sessions/{review_session.public_id}/{slug}?unlocked=1#roster-card",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+def delete_all(
+    kind: RosterKind,
+    request: Request,
+    *,
+    confirm: str | None,
+    acknowledge_response_loss: str | None,
+    review_session: ReviewSession,
+    user: User,
+    db: Session,
+) -> RedirectResponse:
+    """The Danger Zone's Delete all, behind the confirm and, where answers
+    would go, the loss acknowledgement."""
+    from app.web.routes_operator import _shared
+
+    _guard(kind, review_session)
+    _shared._require_delete_confirm(confirm)
+    if kind.delete_all_acknowledges_loss:
+        _shared._require_response_loss_ack(db, review_session, acknowledge_response_loss)
+    kind.delete_all(
+        db,
+        review_session=review_session,
+        user=user,
+        correlation_id=_correlation_id(),
+    )
+    return back_to_panel(request, review_session, kind.slug)
+
+
+async def save_self_fields(
+    request: Request,
+    *,
+    participant: str,
+    review_session: ReviewSession,
+    user: User,
+    db: Session,
+) -> RedirectResponse:
+    """Save what a participant sees of their own entry: the ticked chips
+    plus ``keep``, the selected keys the card offered no chip for, so a
+    field with no data stays selected. 422 on an unknown key."""
+    form = await request.form()
+    keys = [str(v) for v in form.getlist("fields")]
+    keys += [str(v) for v in form.getlist("keep")]
+    try:
+        # The service locks the session row: wait for it off the loop.
+        await run_in_threadpool(
+            participant_info.set_self_fields,
+            db,
+            review_session=review_session,
+            user=user,
+            participant=participant,
+            keys=keys,
+            correlation_id=_correlation_id(),
+        )
+    except participant_info.SelfFieldsError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
+    return back_to_panel(request, review_session, f"{participant}s")
+
+
+async def save_field_labels(
+    request: Request,
+    *,
+    slug: str,
+    source_type: str,
+    slots: tuple[tuple[str, str], ...],
+    review_session: ReviewSession,
+    user: User,
+    db: Session,
+) -> RedirectResponse:
+    """Save a roster's three labels; ``slots`` is its allowlist of
+    ``(form_param, source_field)``."""
+    from app.web.roster_import import _save_field_labels
+
+    form = await request.form()
+    submitted = {param: str(form.get(param, "")) for param, _ in slots}
+    # The labels service locks the session row (findings Bc4): wait for
+    # it off the event loop.
+    await run_in_threadpool(
+        _save_field_labels,
+        db,
+        review_session=review_session,
+        user=user,
+        source_type=source_type,
+        slots=slots,
+        submitted=submitted,
+        correlation_id=_correlation_id(),
+    )
+    return back_to_panel(request, review_session, slug)
