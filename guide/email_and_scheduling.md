@@ -94,7 +94,7 @@ does not.
 mailbox.** SMTP drops out: institutional tenants typically block basic
 SMTP AUTH and app passwords under MFA, so even a dedicated mailbox would
 be reached through Graph. The per-operator SMTP cards on Settings retire
-(`guide/segment_14C_email_related_ui.md` Item 1), their storage kept for
+(`guide/archive/segment_14C_email_related_ui.md` Item 1), their storage kept for
 a deployment outside Microsoft 365, so choice 1's option (c) below means
 a dedicated mailbox over Graph. Per-operator email choices, such as
 keeping a copy in Sent Items, get their own card (14C Item 2).

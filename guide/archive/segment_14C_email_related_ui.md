@@ -402,43 +402,39 @@ Taken 2026-11-06 at `49aa8daa`.
 
 | What | Count | Command |
 |---|---|---|
-| Group B event types, all already in `EVENT_SCHEMAS` | 14 | `grep -oE '"session\.(activated\|reverted_to_draft\|archived\|unarchived\|deleted\|responses_purged\|owner_[a-z]+\|responses_release[a-z_]*)"' app/services/audit.py` plus the four `*.deleted_all` / `responses.cleared` |
+| Group B event types, all already in `EVENT_SCHEMAS` | 14 (16 at the close: see Status) | `grep -oE '"session\.(activated\|reverted_to_draft\|archived\|unarchived\|deleted\|responses_purged\|owner_[a-z]+\|responses_release[a-z_]*)"' app/services/audit.py` plus the four `*.deleted_all` / `responses.cleared` |
 | Email preference keys today | 3 | `email_save_to_sent_items`, `email_bcc_self`, `email_reply_to_help` in `app/services/operator_settings.py` |
 
 ### Status
 
-- 2026-11-06. Main before rung 1: `f321b4b4` (#3691's merge; the base
-  for rung 4's cumulative read). Rungs 1 (scaffold) and 2 (store) as
-  planned.
-- **Decision amended at rung 3: the hook is the audit write, the send is
-  after the commit.** "Called from the routes" would have meant a call in
-  each of the dozen routes reaching these actions (the lobby's bulk
-  forms, the Workflow card, Session Home), easy to miss. Instead
-  `audit.write_event` calls `owner_reports.note` for each reported event
-  type, which decides the recipients inside the action's transaction; a
-  SQLAlchemy `after_commit` listener promotes the notes (a rollback drops
-  them), and an app-wide dependency, `app/web/owner_report_sender.py`,
-  mails what committed once the route has answered. The plan's
-  rejection of mailing *from* the audit write stands: nothing is mailed
-  before the commit. `session.deleted` is written after the owner rows
-  are gone, so `delete_session` keeps them first
-  (`owner_reports.before_delete`).
-- Rungs 3 and 4 shipped as one PR, since the read's fixes cut across
-  both. The read (one, cumulative, at rung 4) found two highs: a
-  reviewer's own Clear all (`responses.cleared`) would have mailed the
-  owners from the reviewer's mailbox, so that event is struck and
-  `note` requires the actor to own the session; and a savepoint's
-  release fires `after_commit` (the session lock opens one on Postgres),
-  so a note could be mailed before the real commit, and a savepoint
-  rollback could drop the outer notes; both listeners now ignore nested
-  transactions. Mediums fixed: the sender rolls back before recording,
-  so it never commits a route's half-write; the body says when; Purge
-  rosters is reported; a route that raises after committing still
-  sends. The message names the owner added or removed, so a co-owner
-  added at creation reads which one.
-- Rung 4: the destructive row covers all four rosters'
-  delete-all (`observers.deleted_all` and `relationships.deleted_all`
-  beside the two the Semantics named), since each is "a roster deleted".
+**Closed 2026-11-06.** Built as planned in shape; one Decision amended.
+
+- **The hook (amended at rung 3).** Not a call from each route: the
+  audit write notes the report inside the action's transaction
+  (`owner_reports.note`, only when the actor owns the session), the
+  outermost commit promotes it (savepoints neither promote nor drop), a
+  rollback drops it, and an app-wide dependency
+  (`app/web/owner_report_sender.py`) mails what committed after the
+  route, from the acting owner's mailbox. `delete_session` keeps a
+  deleted session's owners and zone first (`owner_reports.before_delete`).
+- **The rows, 16 event types**: 5 lifecycle; 7 destructive (responses or
+  rosters purged, all responses deleted, the four rosters' delete-all);
+  4 owners and release. `responses.cleared` was struck: it is a
+  reviewer's own Clear all, group D's.
+- **Ladder.** Rungs 1 and 2 as planned (#3692, #3693); rungs 3 and 4
+  shipped as one PR (#3694), since the read's fixes cut across both.
+- **One read, cumulative, at rung 4.** Two highs fixed: the reviewer's
+  Clear all would have mailed owners from the reviewer's mailbox; and a
+  savepoint's release fires `after_commit` (the session lock opens one
+  on Postgres). Mediums fixed: roll back before recording, a "when"
+  in the body, rosters purged reported, a send after a route that raised
+  after committing. Codex on #3694: a deleted session's report kept its
+  zone; every report labels its zone.
+- **The Settings page reorganized** (author, 2026-11-06): Email settings
+  alone on the left, Unit then Date & time on the right.
+- **At the close**, `spec-writer` aligned the six doc-impact specs
+  (`spec/session_owners.md` §8 is the contract), and the destructive
+  row's card hint dropped "cleared".
 
 ### PR ladder
 
@@ -461,7 +457,7 @@ Taken 2026-11-06 at `49aa8daa`.
 
 - The card shows six report Toggles. Group B's three persist and change
   who is mailed; A, C and D are inactive with their reasons.
-- Each of the 14 actions mails each other owner who opted in, from the
+- Each of the ~~14~~ 16 actions mails each other owner who opted in, from the
   actor's mailbox, after the commit, and records `report.sent` or
   `report.send_failed`; a test per row.
 - `## Doc impact` section present and current

@@ -33,15 +33,9 @@ host is provisioned and serving Review Robin since 2026-10-31; whether
 the deployment has *concluded* (verified, the personal web app retired)
 is the author's call.
 
-**Order (author, 2026-11-06):** 14C Item 4, then 22J; 14G when IT answers.
+**Order (author, 2026-11-06):** 22J; 14G when IT answers.
 
-1. **14C Item 4 — Report emails to the other owners** (Items 1–3
-   closed): the Email settings card's report Toggles, group B live (an
-   owner's action reported to the other owners, from the actor's
-   mailbox), A, C and D inactive until 14G (author, 2026-11-06). The
-   segment closes with it. **Plan:** `guide/segment_14C_email_related_ui.md`.
-
-2. **14G — Scheduled email** (gated on IT: offline sending as the
+1. **14G — Scheduled email** (gated on IT: offline sending as the
    operator, else a dedicated mailbox). Sends due invitations, reminders
    and confirmations from 14E's clock, turning the offset fields from
    prompts (14F rung 5) back into sends. **Plan:**
@@ -55,12 +49,12 @@ is the author's call.
    operators may have reminded by hand: 14G marks those skipped, not
    sent, when it turns the setting on.
 
-3. **22J — The Setup routes' shared handler** (opened 2026-11-06, the
+2. **22J — The Setup routes' shared handler** (opened 2026-11-06, the
    assessments' carried move). One body for what the four Setup roster
    route modules repeat (bulk actions, delete all, dismiss, field labels,
    self fields), and Observers' and Relationships' imports onto
-   `roster_import._handle_import`; no behavior change. Independent of 14C
-   and 14G. **Plan:** `guide/segment_22J_setup_routes_shared_handler.md`.
+   `roster_import._handle_import`; no behavior change. Independent of
+   14G. **Plan:** `guide/segment_22J_setup_routes_shared_handler.md`.
 
 ### Stubs
 
@@ -70,6 +64,6 @@ the PR body unless it says otherwise. None open.
 ### Sequencing notes
 
 - **The email pipeline:** 14F (closed) sends by hand; 14G adds mail on
-  14E's clock, and 14C's Email settings card is read by both.
+  14E's clock and makes 14C's waiting report rows live.
 - **20** is independent of the email pipeline but gated on the
   deployment, so it does not interleave with other work.

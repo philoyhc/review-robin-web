@@ -161,6 +161,11 @@ three-layer separation (mirrors CLAUDE.md "Architecture at a glance"):
    `visibility_policies.py`, `observers.py` / `observer_cohort.py`,
    `participant_tokens.py`, `audit.py`, the `extracts/` package, the
    `scheduled_events/` package, and `session_config_io/`.
+   `owner_reports.py` decides, inside an owner's action, which other
+   owners are to be told (`audit.write_event` calls it for each reported
+   event type); the app-wide dependency `app/web/owner_report_sender.py`
+   mails what committed once the route has answered
+   (`spec/session_owners.md` §8).
    Some services commit their own work and some leave the commit to
    their route. `unit_of_work.py` lets a route that calls several
    committing ones make them all or nothing: inside `single_commit(db)`,
@@ -1176,6 +1181,8 @@ canonical "no payload" marker.
 | `invitation.send_reverted` | `changes` (the restored stamps) + `refs` (`invitation_id`, `reviewer_id`, `outbox_id`) (+ identity); a definite Graph refusal put the invitation's stamps back |
 | `reviewer.opened` | `refs` (`reviewer_id`); the reviewer's arrival, at most once per 30 minutes |
 | `operator.email_preference_set` | `changes` (`{key: [old, new]}`), no session identity; an Email settings toggle |
+| `report.sent` | `counts` (`recipients`) + `context` (`event`, `session_code`) (+ identity); one report email to another owner, recorded after the action committed |
+| `report.send_failed` | `counts` + `reason` (the refusal's kind, never its message) + `context` (+ identity); the report was not sent and the action stands |
 
 **Observer roster events** (registered in `EVENT_SCHEMAS`):
 

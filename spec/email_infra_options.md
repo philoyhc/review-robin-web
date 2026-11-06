@@ -171,6 +171,14 @@ Graph transport is built per request from the request's mailer
   **Replies go to the session's Help contact**, which applies only when
   the session's Help contact is an email address. Reply-To is thus per
   operator and per session by that contact, not the operator's address.
+- **Owner reports are the second kind of mail sent as the operator.**
+  When an owner acts on a session, each *other* owner who opted in
+  (`spec/session_owners.md` §8) is mailed from the acting owner's
+  mailbox, through `mailer_for(request)` after the route has answered.
+  No outbox row: the outbox is participant mail. The outcome is audited
+  (`report.sent`, `report.send_failed`); a refusal or missing token is
+  recorded and never reaches the action. The actor's Sent Items choice
+  applies; Bcc to self and Reply-to do not, being about participant mail.
 - **The SMTP transport sets Reply-To** too: `_build_message` writes the
   header from `EmailMessage.reply_to`, as Graph's `replyTo` (findings D8).
 - **Send a test to me** (the composer, `spec/email_template_editor.md`)

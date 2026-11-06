@@ -239,6 +239,22 @@ directly. Neither per-action route carries a lifecycle check
 
 ---
 
+## 8. What other owners are told
+
+When an owner acts on a session, each *other* owner who turned the matching **Report emails** choice on (Settings, Email settings; keys in `spec/settings_inventory.md` §1) is emailed. All are off by default.
+
+| Choice | Actions |
+|---|---|
+| Lifecycle | activated, reverted to draft, archived, unarchived, deleted |
+| Destructive | responses purged, rosters purged, all responses deleted, and each roster's delete-all (Reviewers, Reviewees, Observers, Relationships) |
+| Owners and release | owner added, owner removed, responses released, release stopped |
+
+- **Who is told.** The session's owners at the moment of the action, less the actor. Nothing is sent when the actor does not own the session (a reviewer's own Clear all is not an owner's action), or for the clock's own transitions. An owner just removed is told; a deleted session's owners are read before the delete.
+- **What.** Plain text, one email per recipient per action: who did what to which session (name and code), when (the session's zone, with its GMT label), and a link to Session Home except after a delete. An owner added or removed is named.
+- **How.** Sent from the acting owner's mailbox after the action commits; a rolled-back action sends nothing. A failed or refused send is audited (`report.send_failed`) and neither delays, undoes nor blocks the action; the page shows no error. Mechanism: `spec/email_infra_options.md` "Delegated Graph, as built"; implementation in `app/services/owner_reports.py` and `app/web/owner_report_sender.py`.
+
+---
+
 ## Cross-references
 
 - `spec/permissions.md` §4.2 / §5 — gates, refusals, status codes, audit

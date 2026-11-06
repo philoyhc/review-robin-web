@@ -415,6 +415,8 @@ A chrome detour from the account menu, with a `.back-link` to wherever the opera
 
 - **Email settings** holds three Toggles (`spec/ui_elements.md` §6), one per row, each a one-button form posting its next state: **Keep a copy in my Sent Items**, **Send a copy to myself** and **Replies go to the session's Help contact**. All are off by default. They apply to each invitation and reminder the operator sends from Invitations; the test send honors Sent Items and Reply-to but not the copy to self, which would send it twice. Reply-to takes effect only when the session's Help contact is an email address. Storage, route and audit event: `spec/settings_inventory.md` §1.
 
+  Below them, a **Report emails** section (`#email-reports`) chooses which of another owner's actions on a session you own are emailed to you, from that owner's mailbox (`spec/session_owners.md` §8). Six Toggles, off by default: three live (**Another owner changes a session's state**, **Another owner deletes data**, **Another owner changes owners or release**) and three inactive, disabled, each with its reason on the row: **Summaries of the sends I start** (waits on bulk sending), **Scheduled events** and **Reviewer and reviewee progress** (both wait on scheduled email).
+
 ### `/about` — About
 
 Reached from the **account menu** (the avatar, top right); the bar's title is not a link. Carries the
