@@ -858,7 +858,9 @@
          below, flush right (author, 2026-11-06). */
       .share-link-row { display: flex; flex-direction: column; gap: var(--space-2); }
       .share-link-row input { width: 100%; min-width: 0; }
-      .share-link-row .btn { align-self: flex-end; white-space: nowrap; }
+      .share-link-actions { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-2); }
+      .share-link-actions p { margin: 0; }
+      .share-link-actions .btn { margin-left: auto; white-space: nowrap; }
       /* body.ui-v2 selector so it beats ``body.ui-v2 label`` (which sets a
          smaller --fs-small size + 500 weight) — the toggle text should read
          as normal card body text. */

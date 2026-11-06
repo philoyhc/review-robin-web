@@ -116,10 +116,14 @@
     <div class="share-link-row">
       <input type="text" id="share-session-link-url" readonly
              aria-label="Session link" value="{{ share_link_url }}">
-      <button class="btn secondary" type="button" id="share-session-link-copy"
-              data-copy-from="share-session-link-url">Copy link</button>
+      {# The copy result sits beside Copy link, on its left, just below
+         the box (author, 2026-11-06). #}
+      <div class="share-link-actions">
+        <p class="muted" role="status" aria-live="polite" id="share-copy-status"></p>
+        <button class="btn secondary" type="button" id="share-session-link-copy"
+                data-copy-from="share-session-link-url">Copy link</button>
+      </div>
     </div>
-    <p class="muted" role="status" aria-live="polite" id="share-copy-status"></p>
   </div>
   {# Copy: the Clipboard API where the page is a secure context, else the
      field's own selection and ``execCommand("copy")``. The status line
@@ -137,7 +141,7 @@
       }
       function done(ok) {
         status.textContent = ok
-          ? "Copied the link."
+          ? "Link copied"
           : "Couldn't copy: select the link and copy it yourself.";
       }
       button.addEventListener("click", function () {
