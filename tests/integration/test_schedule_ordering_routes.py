@@ -2,14 +2,14 @@
 ordering chain on Session Edit Details and Create New Session.
 
 Order:
-    scheduled_activate_at ≤ deadline ≤ responses_release_at <
+    scheduled_activate_at < deadline ≤ responses_release_at <
     responses_release_until
 
 The four per-field parsers handle parse + intra-field rules
 (lead-time floors, magnitude caps, ``until > at``). The shared
 ``scheduled_events.validate_schedule_ordering`` handles the two
 inter-field pairs the parsers don't cover
-(``End ≥ Start``, ``Release-from ≥ End``); the routes call it
+(``End > Start``, ``Release-from ≥ End``); the routes call it
 right after the individual parsers and translate the raised
 :class:`ScheduledActivateError` to HTTP 422. Pairs with either
 side ``None`` skip silently.
@@ -60,7 +60,7 @@ def test_validate_schedule_ordering_skips_pairs_with_null() -> None:
         responses_release_at=_ts(2027, 1, 10),
     )
     # End NULL: Start-End and End-Release-from skip; with no End the
-    # release ends the review, so Release-from on or after Start passes
+    # release ends the review, so Release-from after Start passes
     # (segment 14E) and before it is refused.
     validate_schedule_ordering(
         scheduled_activate_at=_ts(2027, 1, 5),
@@ -83,7 +83,7 @@ def test_validate_schedule_ordering_skips_pairs_with_null() -> None:
 
 
 def test_validate_schedule_ordering_rejects_end_before_start() -> None:
-    with pytest.raises(ScheduledActivateError, match="End must be on or after Start"):
+    with pytest.raises(ScheduledActivateError, match="End must be after Start"):
         validate_schedule_ordering(
             scheduled_activate_at=_ts(2027, 1, 10),
             deadline=_ts(2027, 1, 1),
@@ -106,7 +106,7 @@ def test_validate_schedule_ordering_rejects_release_before_end() -> None:
 def test_validate_schedule_ordering_emits_start_end_first_when_both_violate() -> None:
     """Start vs End is checked first; the operator sees the
     upstream-most error before any downstream one."""
-    with pytest.raises(ScheduledActivateError, match="End must be on or after Start"):
+    with pytest.raises(ScheduledActivateError, match="End must be after Start"):
         validate_schedule_ordering(
             scheduled_activate_at=_ts(2027, 1, 10),
             deadline=_ts(2027, 1, 1),
@@ -166,7 +166,7 @@ def test_create_rejects_end_before_start(client: TestClient, db: Session) -> Non
         follow_redirects=False,
     )
     assert response.status_code == 422
-    assert "End must be on or after Start" in response.text
+    assert "End must be after Start" in response.text
 
 
 def test_create_rejects_release_before_end(client: TestClient, db: Session) -> None:
@@ -195,7 +195,7 @@ def test_edit_rejects_end_before_start(client: TestClient, db: Session) -> None:
         deadline="2027-01-01T09:00",
     )
     assert status_code == 422
-    assert "End must be on or after Start" in body
+    assert "End must be after Start" in body
 
 
 def test_edit_rejects_release_before_end(client: TestClient, db: Session) -> None:
@@ -398,3 +398,45 @@ def test_edit_does_not_check_an_inverted_release_window_neither_box_changed(
     )
     assert status_code == 422
     assert "must be after Release responses from" in body
+
+
+def test_an_end_equal_to_start_is_refused() -> None:
+    """Findings L3 (author, 2026-11-06): the ordering is strict, since a
+    session whose End is its Start closes as it opens, and Validate's
+    `session.end_passed` refuses it."""
+    with pytest.raises(ScheduledActivateError, match="End must be after Start"):
+        validate_schedule_ordering(
+            scheduled_activate_at=_ts(2027, 1, 10),
+            deadline=_ts(2027, 1, 10),
+            responses_release_at=None,
+        )
+    with pytest.raises(ScheduledActivateError, match="With no End"):
+        validate_schedule_ordering(
+            scheduled_activate_at=_ts(2027, 1, 10),
+            deadline=None,
+            responses_release_at=_ts(2027, 1, 10),
+        )
+    # Release from at End stays allowed: results open as the review closes.
+    validate_schedule_ordering(
+        scheduled_activate_at=_ts(2027, 1, 1),
+        deadline=_ts(2027, 1, 10),
+        responses_release_at=_ts(2027, 1, 10),
+    )
+
+
+def test_edit_with_no_end_refuses_release_from_equal_to_start(
+    client: TestClient, db: Session
+) -> None:
+    """Findings L3, the cold read: with no End, Start and Release-from
+    are a pair of their own, checked when either box is edited alone."""
+    review_session = _make_session(client, db, code="ord-noend-rel")
+    status_code, _ = _submit_edit(client, review_session, scheduled_activate_at="2027-02-01T09:00")
+    assert status_code == 303
+    status_code, body = _submit_edit(
+        client,
+        review_session,
+        scheduled_activate_at="2027-02-01T09:00",
+        responses_release_at="2027-02-01T09:00",
+    )
+    assert status_code == 422
+    assert "With no End" in body

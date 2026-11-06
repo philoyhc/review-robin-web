@@ -1,6 +1,6 @@
 {# Checks the ordering chain on the four schedule date-time fields
    as the operator types:
-   ``scheduled_activate_at ≤ deadline ≤ responses_release_at <
+   ``scheduled_activate_at < deadline ≤ responses_release_at <
    responses_release_until``, each pair checked only when both of its
    boxes hold a time, as the server's
    ``scheduled_events.validate_schedule_ordering`` does, with its
@@ -28,7 +28,8 @@
     // The message on the later box of each adjacent pair, and whether
     // the pair may be equal.
     var PAIRS = [
-      { message: "End must be on or after Start.", equal: true },
+      // Strict: an End at Start closes the session as it opens (L3).
+      { message: "End must be after Start.", equal: false },
       {
         message: "Release responses from must be on or after End — " +
           "reviewees can only view results after the review window closes.",

@@ -192,7 +192,7 @@ async def create_session(
             detail=str(exc),
         ) from exc
 
-    # Cross-field datetime ordering: Start ≤ End ≤ Release-from.
+    # Cross-field datetime ordering: Start < End ≤ Release-from.
     # Runs after every individual parse so the operator gets the
     # field-level error before the ordering error.
     try:

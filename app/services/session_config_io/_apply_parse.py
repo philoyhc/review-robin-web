@@ -286,7 +286,8 @@ def session_fallback_length_errors(
 
 
 #: The schedule chain, earliest first, as pairs the import checks:
-#: Start ≤ End ≤ Release-from < Release-until.
+#: Start < End ≤ Release-from < Release-until. With no End, Start <
+#: Release-from too, checked apart (findings L3).
 _SCHEDULE_PAIRS = (
     ("scheduled_activate_at", "deadline"),
     ("deadline", "responses_release_at"),
@@ -312,8 +313,9 @@ def session_schedule_order_errors(
     plan: _ParsedConfig, review_session: ReviewSession
 ) -> list[ApplyError]:
     """Refuse an import that would leave the schedule out of order
-    (findings G22, ruled 2026-10-06): Start ≤ End ≤ Release-from <
-    Release-until, the chain the details card enforces on a save.
+    (findings G22, ruled 2026-10-06): Start < End ≤ Release-from <
+    Release-until, and with no End Start < Release-from (findings L3),
+    the chain the details card enforces on a save.
 
     Checked on the values the session would hold after the apply: the
     anchors are force-applied when the file carries them, End only
@@ -354,6 +356,22 @@ def session_schedule_order_errors(
                 ApplyError(
                     row_number=0,
                     field=f"session.{later if later in supplied else earlier}",
+                    message=str(exc),
+                )
+            )
+    # With no End, Release-from ends the review, so it must come after
+    # Start (findings L3); the adjacent pairs above never hold both.
+    start, release = "scheduled_activate_at", "responses_release_at"
+    if effective["deadline"] is None and (start in supplied or release in supplied):
+        try:
+            validate_schedule_ordering(
+                **{**anchors, start: effective[start], release: effective[release]}
+            )
+        except ScheduledActivateError as exc:
+            errors.append(
+                ApplyError(
+                    row_number=0,
+                    field=f"session.{release if release in supplied else start}",
                     message=str(exc),
                 )
             )
