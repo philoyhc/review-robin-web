@@ -411,10 +411,9 @@ The outbox table is useful for debugging in any environment.
 
 ### `/operator/settings` — Settings
 
-A chrome detour from the account menu, with a `.back-link` to wherever the operator came from (`?return_to=`). Cards: **Date & time** (the `display_timezone` preference) with **Email settings** stacked under it, and **Unit** (read-only) in the grid cell beside them.
+A chrome detour from the account menu, with a `.back-link` to wherever the operator came from (`?return_to=`). Two columns (`.bottom-grid`): **Email settings**, the tallest card, alone on the left; **Unit** (read-only), then **Date & time** (the `display_timezone` preference), on the right, where any later card joins them.
 
 - **Email settings** holds three Toggles (`spec/ui_elements.md` §6), one per row, each a one-button form posting its next state: **Keep a copy in my Sent Items**, **Send a copy to myself** and **Replies go to the session's Help contact**. All are off by default. They apply to each invitation and reminder the operator sends from Invitations; the test send honors Sent Items and Reply-to but not the copy to self, which would send it twice. Reply-to takes effect only when the session's Help contact is an email address. Storage, route and audit event: `spec/settings_inventory.md` §1.
-- The card stacks under Date & time rather than beside it, because Unit occupies that slot.
 
 ### `/about` — About
 
