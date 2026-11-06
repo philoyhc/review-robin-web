@@ -687,24 +687,27 @@ further setup changes; if any `Response` rows already exist,
 response-loss acknowledgment (`acknowledge_response_loss=true`) is
 required on operations that would invalidate them.
 
-### Invitations + dev outbox
+### Invitations + outbox
 
 `Invitation` rows are operator-issued, per-reviewer access tokens. The
 DB stores only `sha256(token)` in `Invitation.token_hash` — the raw
 token is shown to the operator at outbox-write time (and persisted in
 the `email_outbox.body` so the operator can re-copy the link). Sending
 an invitation always rotates the token, so a previously delivered URL
-becomes stale.
+becomes stale. A per-row Send is refused unless the invitation is still
+`pending`, under the session lock.
 
 State machine: `pending` → `sent` → `opened`; a per-row send the
 transport refuses goes back to `pending` (`invitation.send_reverted`,
-`spec/operations_pages.md`). Creating invitations is
+`spec/operations_pages.md`), but only after a definite refusal
+(`email_dispatch.REFUSED_KINDS`); an ambiguous `5xx` or network failure
+keeps the stamps. Creating invitations is
 idempotent — a Prepare step (`invitations.generate_invitations`), with
 no separate Generate control and no auto-trigger on activation. Bulk Send all and
 Regenerate all require the session to be `validated` or `ready`
 (`_require_validated_or_ready`, 409 otherwise) so the emailed link
 never points at a draft session, and so do per-row Send / Regenerate
-(14F follow-up 1); every reminder requires `ready` (`_require_ready`). The invitation services
+too; every reminder requires `ready` (`_require_ready`). The invitation services
 decide both again under the session lock (`spec/lifecycle.md` §3.1).
 
 `/me/invite/{token}` requires Easy Auth sign-in (magic links are not
@@ -715,9 +718,14 @@ user's email doesn't match the invitation's reviewer email, and
 otherwise stamps `opened_at` once and 303s to `/me/sessions/{id}`.
 
 The `email_outbox` table records each email the app means to send.
-A row stays `queued` until a transport sends it and stamps `sent` or
-`failed`; none does yet. The send path is Segment 14B;
-the outbox table itself stays useful for debugging in any environment.
+A row is `queued` when recorded. A per-row Send or Send reminder claims
+it (`queued` → `sending`, a conditional update, so a row is sent once)
+and sends it in the same request through the signed-in operator's
+delegated Graph mailbox (`cordware/graph.py`, `app/services/email_dispatch.py`;
+`spec/email_infra_options.md`), then stamps `sent` or `failed` and writes
+`email.sent` / `email.send_failed`. Bulk sends are off behind
+`RRW_BULK_SEND`, and the responses-received confirmation stays `queued`.
+The sys-admin outbox page reads the table in any environment.
 
 ### Reminders
 
@@ -1154,7 +1162,19 @@ canonical "no payload" marker.
 | `session.scheduled_invites_skipped` | `reason` + `context` | `{"session_id": 17, ..., "reason": "not_prepared" \| "invitations_not_created", "context": {"anchor_at": "...", "offset_index": 0, "offset": "-P1D", "scheduled_at": "..."}}` |
 | `session.scheduled_reminders_fired` | `counts` + `context` | Same shape as `scheduled_invites_fired`, anchored on `deadline`. |
 | `session.scheduled_reminders_skipped` | `reason` + `context` | `reason ∈ {"not_ready", "no_invitations", "outside_response_window"}`; same context keys. |
+| `session.scheduled_invites_handled` / `session.scheduled_reminders_handled` | `context` | The Workflow card's **Mark as done** on a due prompt; same context keys as `_fired` (`anchor_at`, `offset_index`, `offset`, `scheduled_at`). Counted as fired for dedup (`spec/lifecycle.md` §8.2.6). |
 | `session.scheduled_event_failed` | `reason` + `context` | `{"session_id": 17, ..., "reason": "<repr(exc), first 200 characters>", "context": {"trigger": "invites" \| "activation" \| "reminders"}}`. Written by `observe_scheduled_events` when a trigger raises; not repeated while that trigger's latest one records the same reason. |
+
+**Email and send events** (registered in `EVENT_SCHEMAS`):
+
+| Event type | Envelope(s) |
+|---|---|
+| `email.sent` | `refs` (`outbox_id`, `invitation_id`, `reviewer_id`) + `context` (`kind`, `backend`) (+ identity) |
+| `email.send_failed` | `reason` (the transport response) + `refs` + `context`, severity `warning` (+ identity) |
+| `email.test_sent` | `reason` + `context`; the composer's **Send a test to me**, no outbox row (+ identity) |
+| `invitation.send_reverted` | `changes` (the restored stamps) + `refs` (`invitation_id`, `reviewer_id`, `outbox_id`) (+ identity); a definite Graph refusal put the invitation's stamps back |
+| `reviewer.opened` | `refs` (`reviewer_id`); the reviewer's arrival, at most once per 30 minutes |
+| `operator.email_preference_set` | `changes` (`{key: [old, new]}`), no session identity; an Email settings toggle |
 
 **Observer roster events** (registered in `EVENT_SCHEMAS`):
 

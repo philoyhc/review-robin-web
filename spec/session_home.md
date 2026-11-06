@@ -371,9 +371,13 @@ plain `<label>` above its value:
   shows as a pill next to its **resolved send datetime**
   (`views.build_offset_display_rows`). **With scheduled email off**
   (`RRW_SCHEDULED_SEND`, the default; `spec/settings_inventory.md`) the
-  two offset boxes render disabled, their labels muted, under the line
-  "Scheduled email under development.", the pills show without a send
-  time, and a Save keeps the stored offsets as they are, unchecked. Resolved fire-moments read
+  two fields are live as **prompts**, labeled "Prompt to send invites"
+  and "Prompt to send reminders", with the line
+  "Scheduled email under development: the Workflow card prompts you when
+  each is due." A Save checks them exactly as when on, and each pill still
+  shows its resolved moment, now the moment the prompt comes due
+  (`spec/lifecycle.md` §8.1, `spec/workflow_card.md` "Due prompts").
+  Resolved fire-moments read
   inline beside their offset; there is no separate
   Schedule-timeline card. Each box is seeded with its stored value in
   the session's zone. **A timezone change keeps the stored instants**

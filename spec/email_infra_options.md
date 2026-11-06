@@ -3,16 +3,20 @@
 How Review Robin sends email (invitations, reminders, future
 notifications) from its Azure App Service deployment.
 
-The pluggable-sender scaffolding the rest of this document
-describes is in place — `EmailTransport` Protocol +
-`SmtpEmailTransport` concrete implementation + typed-stub
-`GraphEmailTransport` placeholder, over per-operator SMTP settings
-on the `users` table that no page edits since segment 14C Item 1
-(`spec/settings_inventory.md` §1). This document is
-the longer-term architectural target: **what the app needs in
-place so that adding any single email backend is a scoped piece
-of work, not a re-architecture of the invitation / reminder
-paths.**
+**The transport in use is delegated Microsoft Graph, on the
+operator's click.** The operator's own token sends through
+`POST /me/sendMail` inside the request that clicked, from the
+operator's own mailbox (`cordware/spec/identity.md`, "Graph"). It is
+`GraphEmailTransport` over the host's mailer, under the same
+`EmailTransport` Protocol as `SmtpEmailTransport`, which stays for a
+deployment outside Microsoft 365 (its per-operator settings on the
+`users` table are edited by no page, `spec/settings_inventory.md` §1).
+Nothing sends on a clock: a send needs an operator's token.
+
+The rest of this document is the architectural target: **what the app
+needs in place so that adding any single further email backend is a
+scoped piece of work, not a re-architecture of the invitation /
+reminder paths.** Options B–D below are alternatives, not built.
 
 ## Goals
 
@@ -36,6 +40,9 @@ paths.**
 
 In scope:
 
+- **Delegated Graph** (in use): the signed-in operator's token and
+  mailbox, on a click. Described under "The sender abstraction" and
+  "Delegated Graph, as built".
 - **Option A** — SMTP relay (the existing path, generalised for
   production SMTP relay use as well as the dev local server).
 - **Option B** — Microsoft Graph API with application permission
@@ -48,15 +55,9 @@ In scope:
 
 Not in scope:
 
-- Microsoft Graph with delegated permissions. The operator-
-  token-based send doesn't support scheduled reminders without an
-  operator session, which conflicts with the app's reminder
-  workflow. (Distinct from the typed-stub `GraphEmailTransport`
-  in `app/services/email_send.py` — that placeholder will become
-  Option B's application-permission implementation, not the
-  delegated one. The stub's docstring still describes a delegated
-  send; that waits on the tenant's answer,
-  `guide/post_azure_todo_checklist.md` item 10.)
+- Sending on a clock. The delegated send needs an operator's token,
+  so nothing mails without a click; a send that needs no operator
+  session is Option B's, or another backend's.
 - Logic Apps as an indirection layer. Adds operational complexity
   without enough payoff for this app's scope.
 
@@ -81,6 +82,8 @@ class EmailMessage:
     body: str
     cc: list[str] = field(default_factory=list)
     bcc: list[str] = field(default_factory=list)
+    reply_to: str | None = None
+    save_to_sent_items: bool = False  # Graph's saveToSentItems; SMTP has no Sent Items
 
 
 @dataclass(frozen=True)
@@ -88,6 +91,7 @@ class SendResult:
     ok: bool
     error_message: str | None = None
     transport_response: str | None = None  # truncated raw provider response
+    failure_kind: str | None = None  # the Graph transport's GraphError kind
 
 
 class EmailTransport(Protocol):
@@ -95,9 +99,10 @@ class EmailTransport(Protocol):
 ```
 
 The `EmailMessage` shape is transport-agnostic — no DB types in
-the contract, no `ReviewSession` / `Reviewer`. The future send
-dispatcher (Segment 14B Part A) builds a message from outbox +
-session + reviewer rows and hands the transport a flat object.
+the contract, no `ReviewSession` / `Reviewer`. The dispatcher
+(`app/services/email_dispatch.py`) builds a message from an outbox
+row and the operator's `SendOptions` and hands the transport a flat
+object.
 
 A `health_check() -> HealthResult` method is a reasonable future
 addition for an operator-facing diagnostics surface; not on the
@@ -121,8 +126,11 @@ Each backend is a separate implementation of `EmailTransport`:
 
 - `SmtpEmailTransport` — connects to a configured SMTP relay.
   Implemented.
-- `GraphEmailTransport` — uses Microsoft Graph API. A typed stub;
-  the application-permission flavour is Option B below.
+- `GraphEmailTransport` — delegated Graph over the host's `Mailer`
+  (`cordware.graph.mailer_for`): `POST /me/sendMail` with the
+  operator's token, or `FakeMailer` under fake auth, which sends
+  nothing. Implemented; see "Delegated Graph, as built". The
+  application-permission flavour is Option B below.
 - `AcsEmailTransport` — uses Azure Communication Services. Not
   yet implemented.
 - `ThirdPartyApiEmailTransport` — uses a third-party service's
@@ -130,10 +138,42 @@ Each backend is a separate implementation of `EmailTransport`:
   the same Protocol). Not yet implemented.
 
 The factory `transport_for(settings) -> EmailTransport` (in
-`email_send.py`) picks the active implementation based on the
-operator's `EmailSettings.transport` field at send time. Today
-only `"smtp"` is reachable; the `"graph"` / `"acs"` /
-`"thirdparty"` slots are reserved for the future implementations.
+`email_send.py`) picks the SMTP implementation from the operator's
+`EmailSettings.transport` field; only `"smtp"` is reachable. The
+Graph transport is built per request from the request's mailer
+(`graph_transport_for`), not from stored settings. The `"acs"` /
+`"thirdparty"` slots are reserved.
+
+### Delegated Graph, as built
+
+- **Sender.** The operator's own mailbox, as Graph sends it; the app
+  sets no From (`from_addr` is ignored).
+- **Mailer.** `mailer_for(request)` returns `GraphMailer` with the
+  request's delegated token, `FakeMailer` under fake auth, and raises
+  `GraphError("no_token")` with none. A per-row send builds it before
+  queueing anything, so with no token nothing is queued or rotated and
+  the page says to reload.
+- **No retry.** A `5xx` or a network failure may come after Graph
+  accepted the message, so it is never retried. A `429` waits its
+  `Retry-After` once, then fails `throttled`.
+- **A definite refusal** is one of `email_dispatch.REFUSED_KINDS`
+  (`unauthorized`, `forbidden`, `throttled`, `bad_response`): Graph
+  returned before accepting. Only after one is the message known not to
+  have gone out, so only then does a per-row Send restore the
+  invitation's stamps (`invitation.send_reverted`). After a `5xx` or
+  network failure the stamps stay and the row offers Send reminder,
+  which reuses the link.
+- **Operator options**, all off by default and per operator (the Email
+  settings card, `spec/settings_inventory.md` §1), read by
+  `send_options_for`: **Keep a copy in my Sent Items** (`saveToSentItems`),
+  **Send a copy to myself** (the operator's address added to Bcc) and
+  **Replies go to the session's Help contact**, which applies only when
+  the session's Help contact is an email address. Reply-To is thus per
+  operator and per session by that contact, not the operator's address.
+- **The SMTP transport sets no Reply-To**: `_build_message` ignores
+  `EmailMessage.reply_to`. The option is Graph's.
+- **Send a test to me** (the composer, `spec/email_template_editor.md`)
+  does not use the outbox.
 
 ### Configuration
 
@@ -158,11 +198,11 @@ operator settings and tomorrow's per-deployment defaults:
 - **Per-operator overrides.** The existing `users.smtp_*` columns,
   with a form to edit them restored where send-as-me SMTP applies.
 - **Per-session overrides.** CC / BCC live on the email-template
-  editor, keyed by template. There is no reply-to override.
+  editor, keyed by template. Reply-To comes from the session's Help
+  contact through the operator's option (see "Delegated Graph, as
+  built"); there is no separate reply-to override.
 
-The `transport_for` factory and the future send dispatcher
-reconcile these layers when picking the backend + identity for a
-given send.
+The dispatcher reconciles these layers when sending a given row.
 
 ### Audit log
 
@@ -183,9 +223,9 @@ Today's `email_outbox` table is the audit log. Its shape:
 | `cc_emails` / `bcc_emails` | text, comma-separated | Populated from the editor's CC / BCC overrides at queue time. |
 | `subject` | text | The merged subject. |
 | `body` | text | The merged body. |
-| `status` | enum | Canonical set `EMAIL_OUTBOX_STATUSES` — `{queued, sending, sent, failed}`. Only `queued` is persisted today: every path writes `queued`, and a row stays so until a transport sends it. `sending`, `sent` and `failed` are the dispatcher's, which does not yet run. |
+| `status` | enum | Canonical set `EMAIL_OUTBOX_STATUSES` — `{queued, sending, sent, failed}`. **Recorded** is `queued`: an enqueue path wrote the row. The dispatcher claims a `queued` row by a conditional update to `sending`, sends only a row it claimed, then stamps `sent` or `failed`. A row left `sending` by a request that died reads as such and is retried only by hand. **Recorded, sent and failed** are these three states; a recorded email is not a sent one. |
 | `created_at` | timestamp | When the row was written. |
-| `sent_at` | timestamp | When a transport sent the row; null while `queued`. |
+| `sent_at` | timestamp | When a transport sent the row; null until `sent`. |
 
 **A row outlives its reviewer — except when the session goes.** Both FK
 columns carry no `ON DELETE`, so the roster-delete and purge paths clear
@@ -204,11 +244,11 @@ state, and its vocabulary is the closed `EMAIL_OUTBOX_STATUSES` pinned by
 member is a schema change with a test behind it, to say what two existing
 columns already say.
 
-The audit-log columns the production send path will write at send
-time are on `email_outbox` as inert schema scaffolding. Six of them —
-`error_message`, `from_address`, `backend`, `backend_message_id`,
-`delivered_at`, `payload_hash` — are written by nothing yet and are
-populated by **Segment 14B Part A** when the dispatch helper goes live.
+The dispatcher writes `error_message` (on `failed`), `from_address`
+(the operator's address) and `backend` (`graph`) at send time.
+`backend_message_id`, `delivered_at` and `payload_hash` are inert
+schema scaffolding that nothing writes (Graph's `202 Accepted` returns
+no id).
 `correlation_id` is already in use: scheduled reminders stamp it
 (`reminder:{session_id}:{reviewer_id}:{offset_index}`) and read it back
 to skip a reviewer already reminded at that offset
@@ -217,9 +257,8 @@ with the row, in the same commit, through `send_reminder`'s
 `outbox_correlation_id`, so a later rollback cannot lose the stamp
 and re-queue the reminder:
 
-- `error_message` (Text, nullable) — captured on failure so the
-  Outbox / Invitations diagnostic surfaces can render the
-  reason.
+- `error_message` (Text, nullable) — captured on failure; the Outbox
+  and Invitations surfaces render the reason.
 - `from_address` (String 320, nullable) — the address actually
   sent from. Useful when comparing operator-set and deployment-
   default identities.
@@ -235,13 +274,11 @@ and re-queue the reminder:
   body)` for dedup detection.
 - `correlation_id` (String 128, nullable, indexed) — the app's
   deterministic identifier for "this send to this recipient at
-  this intent." Mechanism for idempotent retry; populated by
-  14B's enqueue path.
+  this intent." Mechanism for idempotent retry.
 
 Records are written *before* the send is attempted (status
-`queued`), updated *after* with the outcome. This pattern means
-crashes mid-send leave a `queued` record that can be reconciled
-on next startup or by a periodic sweeper.
+`queued`), claimed (`sending`), and updated *after* with the outcome.
+A crash mid-send leaves a `sending` record for a person to reconcile.
 
 ### Idempotency
 
@@ -286,6 +323,14 @@ ergonomics. Implementation detail beyond this spec, but the
 pattern's existence is a prerequisite the app should have in
 place *before* any bulk-send operator workflow ships.
 
+**Bulk sending is built but off.** Send all, Remind incomplete and
+the Workflow card's Send invites render disabled behind `RRW_BULK_SEND`
+(default off; `docs/deployment.md`), and their routes answer `409`.
+One message per request stays live as per-row Send and Send reminder.
+A paced, batched bulk send is what turns the flag on. The fallback is
+the session link (`spec/operations_pages.md`, "Share the session
+link").
+
 ### Threading and reply handling
 
 If reviewer responses can include replies to invitation /
@@ -293,14 +338,15 @@ reminder emails (questions, accommodation requests), the app
 should:
 
 - Set a meaningful **Reply-To** header on outbound emails (the
-  operator's address by default; configurable per session).
+  session's Help contact, when it is an address and the operator has
+  chosen it).
 - Not attempt to receive or process replies. This is out of scope
   for the app; replies route to the operator's regular inbox.
 
-The reply-to header is set at the `EmailTransport` interface
-level, not per backend. **Not built:** `EmailMessage` (in
-`app/services/email_send.py`) has no Reply-To field and
-`_build_message` sets no Reply-To header.
+`EmailMessage.reply_to` carries it at the `EmailTransport` interface
+level. The Graph transport sends it as `replyTo`; the SMTP transport
+does not set a Reply-To header (a gap against the interface, not a
+choice).
 
 ---
 
@@ -355,9 +401,8 @@ none required today; operator-level credentials are sufficient.
   deployments, Azure Key Vault reference is preferred for the
   Fernet key.
 
-**Implementation work to add.** None for the basic path.
-**Segment 14B Part A** wires the existing transport into the
-Invitations send path against the scaffolded audit-log columns.
+**Implementation work to add.** None for the basic path; no send path
+uses this transport today (delegated Graph is the one in use).
 
 **Considerations.**
 
@@ -382,11 +427,10 @@ Invitations send path against the scaffolded audit-log columns.
 
 ### Option B — Microsoft Graph (application permission)
 
-**Status.** A typed stub — `GraphEmailTransport` in
-`app/services/email_send.py`. The
-class exists so `transport_for` can dispatch on
-`settings.transport == "graph"` once the body of the
-implementation lands.
+**Status.** Not implemented. `GraphEmailTransport` in
+`app/services/email_send.py` is the *delegated* flavour (see "Delegated
+Graph, as built"); this option is the application-permission
+alternative, which sends without an operator session.
 
 **What it is.** The app authenticates to Microsoft Entra
 (Azure AD) as a registered application, gets a token with
@@ -434,13 +478,10 @@ prerequisite).**
 
 **Implementation work to add.**
 
-- Replace the `NotImplementedError` body of
-  `GraphEmailTransport.send()` with the MSAL token acquisition +
-  Graph POST.
-- Mapping from `EmailMessage` to Graph's `Message` JSON schema
-  (CC / BCC live on `ccRecipients` / `bccRecipients`).
-- Error mapping (Graph error codes → `SendResult.error_message`
-  + truncated `transport_response`).
+- An application-token mailer beside `GraphMailer` (MSAL token
+  acquisition, `POST /users/{mailbox}/sendMail`); the message mapping
+  and error mapping in `cordware/graph.py` and `GraphEmailTransport`
+  are reusable.
 
 **Considerations.**
 
@@ -596,9 +637,5 @@ reminder and notification logic call only `EmailTransport.send()`,
 so adding a backend is one class plus its configuration, and
 switching backends is a configuration change.
 
-What is in place and what is pending, and the order the remaining
-work lands in, is plan content: it lives in
-`guide/segment_14F_manual_email.md` (delegated Graph on a click) and
-`guide/archive/segment_14E_clock.md` (the clock, closed 2026-11-04), which replaced 14B
-(`guide/archive/segment_14B_email_infrastructure.md`, retired
-2026-11-02).
+What is pending, and the order it lands in, is plan content: it lives
+in `guide/` (`guide/email_and_scheduling.md`).

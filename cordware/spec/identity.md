@@ -254,7 +254,8 @@ because FastAPI runs a plain-function dependency on a worker thread.
 `cordware/graph.py`: Microsoft Graph as the signed-in user, with the
 delegated token Easy Auth's token store keeps for them. The host owns the
 token, so it owns the one client every application uses. Built for the
-Email Address Checker; directory lookups only.
+Email Address Checker's directory lookups, and it also sends mail as that
+user (see "Sending mail" below).
 
 - **Which directory.** `directory_for(request, settings=None)` returns
   `FakeDirectory` on a local run with fake auth on. Otherwise it returns
@@ -298,6 +299,28 @@ Email Address Checker; directory lookups only.
   `GraphDirectory` takes the transport as a parameter, so the tests never
   touch the network; one test drives the real transport against a
   loopback server, to prove it does not follow a redirect.
+- **Sending mail.** The host's send primitive sits beside the directory
+  lookup, for the same reason. An application builds the message, keeps
+  its own outbox and stamps, and hands the host a flat `MailMessage`
+  (`to`, `subject`, `body`, `cc`, `bcc`, `reply_to`, `save_to_sent_items`;
+  plain text). No token crosses applications.
+  - **Which mailer.** `mailer_for(request, settings=None)` resolves as
+    `directory_for` does: `FakeMailer` on a local run with fake auth on,
+    else `GraphMailer` with the token Easy Auth passes, and with none
+    `GraphError("no_token")`. `FakeMailer` sends nothing: it keeps each
+    message on `sent` and logs the recipient and subject (`graph.fake_send`).
+  - **`send_mail(message)`** sends `POST /v1.0/me/sendMail` as the signed-in
+    user, with `saveToSentItems` as given (Graph's own default is true; the
+    message's default is false). Returning is Graph's `202 Accepted`: queued
+    for delivery, not delivered. The sender is the user's own mailbox; the
+    host sets no From.
+  - **No retry on a `5xx` or a network failure**, unlike a lookup: Graph
+    may have accepted the message, and a retry could send it twice.
+    The caller records the failure and a person decides. A `429` waits its
+    `Retry-After` once (up to 30 s, else raised at once), because Graph
+    refused before accepting anything. `401`, `403` and any other non-`2xx`
+    raise at once. The error kinds are those above.
+  - Each send times out at 20 s.
 - **Looking addresses up.** `look_up_all(directory, keys, *, budget,
   workers=4)` looks each distinct key up once, `workers` at a time, within
   `budget` seconds, and `classify` turns what the directory returned into
@@ -347,7 +370,9 @@ that is only a secondary alias.
 
 `cordware/tests/test_graph.py` covers the Graph helper: the query, each
 failure and its retries, the log line, the fake directory and
-`directory_for`. `cordware/tests/test_graph_renewal.py` holds RRW's and
+`directory_for`. `cordware/tests/test_graph_mail.py` covers the send
+primitive: the payload, each failure and its (non-)retries, `FakeMailer`
+and `mailer_for`. `cordware/tests/test_graph_renewal.py` holds RRW's and
 Utilities' renewal scripts equal; the browser tests
 `tests/browser/test_invite_directory_picker.py` and
 `tests/browser/test_roster_directory_picker.py` cover renew-and-retry in

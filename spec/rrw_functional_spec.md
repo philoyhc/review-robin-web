@@ -890,9 +890,11 @@ Timed steps fire from a clock inside the application, with no page view
 needed; the same work also runs on the next operator or reviewer request
 past the scheduled time, and a step reached by both happens once. Scheduled
 sending of invitations and reminders is switched off per deployment until
-mail can go on a clock: the offset fields are then disabled, stored values
-are kept, and nothing fires. When on, the Session details config card shows
-each offset's resolved fire moment inline.
+mail can go on a clock: the offset fields are then prompts (they are
+validated and stored as usual), and nothing fires; an entry that comes due
+raises a prompt for the operator ([§11.4](#114-scheduling--auto-send)).
+The Session details config card shows each offset's resolved moment inline
+either way.
 
 ### 8.4 Email-template fields
 
@@ -910,8 +912,7 @@ per-field reset-to-default:
   `$submitted_at`.
 
 The responses-received template alone has an enable/disable switch,
-which governs whether the
-auto-send-on-submit email fires; the invitation and reminder
+which governs whether the confirmation is queued on submit; the invitation and reminder
 templates have none.
 
 ### 8.5 Friendly labels
@@ -1191,11 +1192,13 @@ Setup card" the setup card, and [§12](#12-data-export) the files.
 
 ### 9.13 Operator settings
 
-The operator's Settings page (`/operator/settings`) carries one
-half-width card, **Date & time**, for their default display timezone.
-Its SMTP cards retired in segment 14C Item 1, once the choice of
-sender narrowed to Microsoft Graph; an **Email settings** card of
-per-operator toggles is planned beside it (14C Item 2).
+The operator's Settings page (`/operator/settings`) carries a
+**Date & time** card for their default display timezone and an **Email
+settings** card of three per-operator toggles, each off by default:
+keep a copy of what they send in their Sent Items, send a copy to
+themselves, and have replies go to the session's Help contact. Mail the
+operator sends goes from their own mailbox, so no sender credentials are
+configured.
 
 `spec/settings_inventory.md` §1 owns the stored fields, the kept
 `smtp_*` columns among them.
@@ -1385,9 +1388,9 @@ answers 404. `spec/reviewer-surface.md` "Observer collation surface" and
 
 The invitation and email subsystem is a central functional
 contract of RRW, summarized here; each subsection names the spec
-that owns its detail. One leg — handing a
-rendered message to a mail server — is not part of the send path;
-[§11.6](#116-dispatch) states what a send does instead.
+that owns its detail. Email goes out when an operator clicks,
+from the operator's own mailbox, one reviewer at a time;
+[§11.6](#116-dispatch) states what a send does, and what does not send.
 
 ### 11.1 What an invitation is
 
@@ -1434,9 +1437,11 @@ rendering, and §2 the editor.
 
 ### 11.3 The outbox
 
-Every send attempt, manual or scheduled, writes an **email outbox** row
-before any dispatch: the recipients, the kind, the merged subject and
-body exactly as they would go out, and a status. The outbox is the
+Every send attempt writes an **email outbox** row before any dispatch:
+the recipients, the kind, the merged subject and body exactly as they
+would go out, and a status. A row is **recorded** (`queued`) until it is
+sent, then **sent**, or **failed** with the reason; it is claimed before
+it is sent, so one row goes out once. The outbox is the
 system of record for what was sent, and sys admins read it in a
 per-session viewer ([§9.14](#914-sys-admin-surface)).
 `spec/email_infra_options.md` "Audit log" and "Idempotency" own the
@@ -1444,18 +1449,25 @@ table and its retry rules.
 
 ### 11.4 Scheduling — auto-send
 
-Where the deployment has scheduled sending switched on (it is off until
-mail can go on a clock, §8.3), the operator sets **invite offsets** anchored on the
+The operator sets **invite offsets** anchored on the
 scheduled-activation moment and **reminder offsets** anchored on the
-deadline. Each offset fires one auto-send pass over the eligible
+deadline. Where the deployment has scheduled sending switched on, each
+offset fires one auto-send pass over the eligible
 reviewers, a reminder falling back to a fresh invitation where the
 reviewer has no current link ([§11.1](#111-what-an-invitation-is)), and
-each firing or skip is audited. The Session details card shows every
-resolved fire moment, and the Workflow card's right-hand column carries
-them as auto-send captions.
+each firing or skip is audited; the Workflow card's right-hand column
+carries them as auto-send captions.
+
+**Scheduled sending is off until mail can go on a clock** (§8.3). While
+it is off the same offsets are **prompts**: when one comes due and
+someone is left to act on, the Workflow card says so, with a count, and
+the sessions lobby marks the session; the operator sends by hand or
+marks the prompt done, and a prompt marked done is never sent
+later. The Session details card shows every resolved moment either way.
 
 `spec/lifecycle.md` §8 owns the schedule and its fire-time rules, and
-`spec/workflow_card.md` "Signal lines" the captions.
+`spec/workflow_card.md` "Signal lines" and "Due prompts" the captions
+and prompts.
 
 ### 11.5 Backend options
 
@@ -1467,15 +1479,36 @@ Communication Services (C) and a third-party transactional provider
 
 ### 11.6 Dispatch
 
-No send hands a message to a mail server. An invitation or reminder
-send — manual or scheduled — renders the message and writes its
-outbox row, which stays `queued` until a transport sends it; the
-reviewer's invitation records the send (`sent`, `sent_at`) as the
-operator's act, not a delivery. A reviewer's submit queues the
-responses-received confirmation the same way. An SMTP transport (STARTTLS or implicit TLS) and
-a Microsoft Graph stub exist behind the transport seam
-([§11.5](#115-backend-options)), but the send path calls neither, and
-no page configures either ([§9.13](#913-operator-settings)).
+**An operator's click sends, one reviewer at a time, from the operator's
+own mailbox.** The per-row **Send** (an invitation) and **Send reminder**
+on the Invitations page render the message, write its outbox row, and
+send it in the same request through the operator's Microsoft sign-in;
+the outbox row reads `sent`, or `failed` with the reason, and the
+reviewer's invitation records the send. A send the mail service refuses
+outright puts the invitation back as it was, so the same action is
+offered again; a send that failed in a way that may have gone through
+does not, and the page says it may or may not have gone. Per-row Send
+and Regenerate work once the session is prepared, so an invitation can go
+out before the session opens; a reminder waits for it to be open. The
+composer's **Send a test to me** sends the template, as edited, to the
+operator only.
+
+**Nothing sends in bulk, and nothing sends on a clock.** Sending to
+everyone at once (Send invites, Send reminders, a queued confirmation)
+is built but switched off: a session of hundreds of reviewers is
+hundreds of messages, more than one request can send and more than the
+mailbox may allow. The fallback is the session's one stable link, which
+the **Share the session link** card on Invitations gives the operator to
+paste into their own channel; a signed-in reviewer on the roster reaches
+their work through it ([§7.2](#72-reviewer-identity)). A reviewer's
+submit queues the responses-received confirmation, which stays
+`queued` until a bulk send exists. Scheduled sends wait on the
+deployment being able to mail without an operator present
+([§11.4](#114-scheduling--auto-send)).
+
+The transport behind the send is one backend among several the design
+allows ([§11.5](#115-backend-options)); the operator's own Microsoft
+sign-in is the one in use.
 
 ---
 
@@ -1686,8 +1719,10 @@ Coverage:
   `invitation.send_reverted` (a refused per-row send, its stamps put
   back), `invitation.regenerated` / `invitations.regenerated`, and
   `responses_received.queued` when a submit queues the
-  confirmation. There is no per-attempt email event: the outbox
-  row is the record of each send ([§11.3](#113-the-outbox)).
+  confirmation. Each send writes `email.sent` or `email.send_failed`, a
+  test send `email.test_sent`, and a reviewer's arrival `reviewer.opened`
+  (at most once per half hour); the outbox row remains the record of each
+  send ([§11.3](#113-the-outbox)).
 - **Workspace admin** — user invite, operator admit / revoke, admin
   promote / demote, user delete, `session.owner_added` /
   `session.owner_removed`.
@@ -1704,7 +1739,9 @@ Coverage:
   `session.scheduled_activation_skipped` / `_retry` /
   `_failed_persistent`; invites and reminders write
   `session.scheduled_invites_fired` / `_skipped` and
-  `session.scheduled_reminders_fired` / `_skipped`.
+  `session.scheduled_reminders_fired` / `_skipped`; a due prompt marked
+  done writes `session.scheduled_invites_handled` /
+  `session.scheduled_reminders_handled`.
 
 Admins read a session's audit log via the per-session audit-log
 viewer in the admin surface (gated on the admin flag, not on

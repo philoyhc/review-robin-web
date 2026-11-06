@@ -28,7 +28,7 @@ from ._invitation_states import _create_session, _populate
 
 STATE_4_BODY = "there are no invitations"
 STATE_5_BODY = "Invitations are ready to send"
-STATE_6_BODY = "Invitations are marked sent"
+STATE_6_BODY = "Invitations have gone out"
 OVERLAY_HELP = "review on Validate before activating"
 
 

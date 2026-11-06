@@ -325,8 +325,8 @@ KEY UPDATE`, `populate_existing`) and re-reads it:
 | `require_editable` | not `draft`/`validated` | `not_editable` |
 | `require_not_archived` | `archived` (the Observers roster) | `archived` |
 | `require_not_ready` | `ready` (Delete Data, Delete session) | `session_ready` |
-| `require_validated_or_ready` | not `validated`/`ready` (bulk invitation Send and Regenerate, §3.3) | `not_prepared` |
-| `require_ready` | not `ready` (per-row invitation actions and reminders, §3.4) | `not_ready` |
+| `require_validated_or_ready` | not `validated`/`ready` (invitation Send and Regenerate, per row and bulk, §3.3) | `not_prepared` |
+| `require_ready` | not `ready` (reminders, per row and bulk, §3.4) | `not_ready` |
 | `require_accepting_responses` | not `ready`, or past the deadline (the reviewer's Save, Submit, Clear and Recall, §8.3) | `not_accepting_responses` |
 
 A refusal raises `SessionStateConflict`, a `LifecycleError`, which an
@@ -417,22 +417,24 @@ tick, since its card is locked whenever answers exist
 
 Raises **HTTP 409 Conflict** when the session is `draft`
 (invitation actions need at least the assignment pairs to be
-settled). The two **bulk** invitation routes in
-`app/web/routes_operator/_operations.py` call it — `send-all` and
-`regenerate-all`. (Prepare, which creates the invitations, is gated
-by its own `is_editable` precondition rather than this one.) It is
-deliberately looser than "ready
-only" so an operator can notify reviewers **before** activation
-(the Prepared / pre-open scenario).
+settled). The invitation routes that issue or send a link in
+`app/web/routes_operator/_operations.py` call it: per-row `send` and
+`regenerate`, and bulk `send-all` and `regenerate-all`. (Prepare, which
+creates the invitations, is gated by its own `is_editable` precondition
+rather than this one.) It is deliberately looser than "ready only" so
+an operator can notify reviewers **before** activation (the Prepared /
+pre-open scenario); a reviewer who follows an early link lands on the
+pre-open page. The bulk sends are separately off behind `RRW_BULK_SEND`
+(§3.5).
 
 Detail message: `"Invitations can only be issued once the
 session has been prepared (validated or ready)."`
 
 ### 3.4 `_require_ready(session)`
 
-The stricter invitation gate, in the same module: per-row `send` /
-`regenerate` / `remind` and the bulk `remind-incomplete` answer
-**409** outside `ready`.
+The stricter invitation gate, in the same module: per-row `remind`
+and the bulk `remind-incomplete` answer **409** outside `ready`, since
+a reminder is about a review that is open.
 
 Detail message: `"This action is available only once the session is
 Activated."`
@@ -445,6 +447,19 @@ rather than mailed past. The bulk Send and the bulk reminder commit
 once, after every row, so that lock holds through the batch. The
 corresponding GET pages render read-only banners, but the source of
 truth is the service gate.
+
+A per-row Send is also refused unless the invitation is still `pending`
+(checked under the lock): a second click would mint a new link and kill
+the first. The route answers with `?email=already_sent` on Invitations.
+
+### 3.5 `_require_bulk_send()`
+
+The bulk invitation routes (`send-all`, `remind-incomplete`) answer
+**409** while `RRW_BULK_SEND` is off (default off,
+`docs/deployment.md`), whatever the session's state; the buttons render
+disabled, so only a direct POST reaches it. Per-row Send and Send
+reminder are not bulk and are not held by it. The gate order on a bulk
+route is the flag, then §3.3 or §3.4.
 
 ## 4. Per-instrument lifecycle
 
@@ -750,6 +765,7 @@ The events the lifecycle transitions and the scheduled triggers write.
 | `session.scheduled_activation_retry` / `session.scheduled_activation_failed_persistent` | the scheduled activation trigger on a transition error (§8.3) | `reason=<error text>` + `context={"scheduled_at": …, "attempt" \| "attempts": N}` |
 | `session.scheduled_invites_fired` / `session.scheduled_reminders_fired` | the invite / reminder triggers, once per offset fired | `counts={"sent": N}` + `context={"anchor_at", "offset_index", "offset", "scheduled_at", "actual_fired_at"}` |
 | `session.scheduled_invites_skipped` / `session.scheduled_reminders_skipped` | the invite / reminder triggers, once per offset skipped (§8.2.3) | `reason=<skip code>` + `context={"anchor_at", "offset_index", "offset", "scheduled_at"}` |
+| `session.scheduled_invites_handled` / `session.scheduled_reminders_handled` | `due_actions.mark_done` (Workflow-card **Mark as done**, §8.2.6), the operator's actor | `context={"anchor_at", "offset_index", "offset", "scheduled_at"}` |
 | `session.scheduled_event_failed` | `observe_scheduled_events` when a trigger raises (§8.3) | `reason=<error text>` + `context={"trigger": "invites" \| "activation" \| "reminders" \| "deadline" \| "release"}` |
 | `instrument.opened` | `observe_deadline`'s heal (§4) | `refs={"instrument_id": id}` + `reason="session_wide"`. Older rows, from the retired per-instrument Open, carry no reason. |
 | `instrument.closed` | `observe_deadline` | `refs={"instrument_id": id}` + `reason="deadline"` + `context={"deadline": "..."}`; with no End, `reason="release"` + `context={"release_at": "..."}`. Past rows may carry `reason="manual"` from the retired per-instrument close. |
@@ -834,8 +850,8 @@ in-memory archive timestamp) also serve as anchors for offsets:
 
 | Offset | Column | Anchor | Shape | Default | Consumer |
 |---|---|---|---|---|---|
-| Auto-send invites | `invite_offsets` | `scheduled_activate_at` | JSON list of ISO 8601 durations, e.g. `["-P1D", "-PT2H"]` | empty (no auto-send) | live behind `RRW_SCHEDULED_SEND` (`app/services/scheduled_events/_invites.py`) |
-| Auto-send reminders | `reminder_offsets` | `deadline` | JSON list of ISO 8601 durations, e.g. `["-P2D", "-PT4H"]` | empty (no auto-send) | live behind `RRW_SCHEDULED_SEND` (`app/services/scheduled_events/_reminders.py`) |
+| Auto-send invites | `invite_offsets` | `scheduled_activate_at` | JSON list of ISO 8601 durations, e.g. `["-P1D", "-PT2H"]` | empty (no auto-send) | with `RRW_SCHEDULED_SEND` on, the observers send (`app/services/scheduled_events/_invites.py`); off, the entries time due prompts (below) |
+| Auto-send reminders | `reminder_offsets` | `deadline` | JSON list of ISO 8601 durations, e.g. `["-P2D", "-PT4H"]` | empty (no auto-send) | with `RRW_SCHEDULED_SEND` on, the observers send (`app/services/scheduled_events/_reminders.py`); off, the entries time due prompts (below) |
 | Auto-archive | `archive_offset` | `deadline` | single ISO 8601 duration, e.g. `"P30D"` | intended **`P30D`** once auto-archive is wired (gives the operator time to download data post-deadline before the session leaves the active lobby); the column has no default today, so it stays NULL unless a Settings CSV import sets it | deferred — column only (`guide/deferred_consolidated.md`) |
 | Release-until | `responses_release_until` — an absolute datetime, not an offset | n/a — column carries the absolute close time | DateTime(tz) | unset | Live. The form input is a date-time field (`spec/ui_elements.md` §8); the save-time validator enforces ordering (must close after `responses_release_at`) + a 365-day magnitude check. The Workflow card's **Stop releasing** button writes the same column (`= now()`). The reviewee and observer surfaces consume it inside their per-instrument window gates; there is no route-level gate on it. |
 | Auto-delete after archive | `retention_overrides.delete_after_archive` (JSON key inside `retention_overrides`) | archive timestamp | single ISO 8601 duration | unset (use deployment env-var default) | deferred — column only (`guide/deferred_consolidated.md`) |
@@ -845,17 +861,22 @@ in `app/config.py`, default off; read through
 `scheduled_events.scheduled_send_enabled`) stays off until mail can go on
 the clock. While it is off:
 
-- the two offset fields render disabled, their labels muted, on New
-  session and Session Home with "Scheduled email under development."; stored
-  values are kept and shown without a send time, a Session Home save keeps
-  them unvalidated, and a create stores none;
+- the two offset fields stay live as **prompts**, labeled "Prompt to send
+  invites" and "Prompt to send reminders", with the line
+  "Scheduled email under development" beneath; they are stored and validated
+  exactly as when on (Session Home, New session and the lobby's End
+  editor), and each entry shows its **due moment** (Start or End plus the
+  offset);
 - the scheduled pass fires no invite or reminder, and activation, with no
   invites to wait for, runs as usual;
+- an entry whose moment has passed, with someone left to act on, is a
+  **due prompt** on the Workflow card (`spec/workflow_card.md`) and raises
+  the lobby's **Due** pill (`spec/sessions_overview.md`); the operator
+  acts by hand or marks it done (§8.2.6). With the flag on nothing is due
+  here: the observers send;
 - the Workflow card's auto-send captions, the schedule timeline's
   auto-send rows and the manual-activate confirm that warns of cancelling
   scheduled sends are not shown, and the Guide says so;
-- the lobby's End edit skips the stored-reminder checks (§8.2.7's
-  ordering still applies);
 - the Settings CSV still exports both columns' values.
 
 The "End" anchor (`deadline`) is also the anchor for the close at the
@@ -973,15 +994,21 @@ control, not as derived behaviour.
 **8.2.6 Multiple offsets per event.** Events that fire on a
 sequence (invites, reminders) carry a JSON list; events that
 fire once (archive, auto-delete) carry a single ISO 8601 string.
-Per-list-entry dedup is by position on the anchor: the observers'
-`session.scheduled_*_fired` / `_skipped` audit rows record
+Per-list-entry dedup is by position on the anchor. An entry is
+**sent, skipped or handled**: *handled* is the operator's **Mark as done**
+on a due prompt (`due_actions.mark_done`, writing
+`session.scheduled_invites_handled` / `session.scheduled_reminders_handled`),
+consumed by `scheduled_events.fired_offsets` as a sent entry is, so a
+later scheduled send never sends it and a save may not put another entry
+on its position. The observers'
+`session.scheduled_*_fired` / `_skipped` / `_handled` audit rows record
 `context.offset_index` and the entry (`context.offset`), and a recorded
 position never fires again on that anchor, whatever entry sits there.
 So a Session Home save, a lobby End edit or a Settings import that
-would put a different entry on a position already sent or skipped, on
+would put a different entry on a position already sent, skipped or handled, on
 the anchor the session will hold, is refused
 (`scheduled_events.fired_offset_errors`; findings Bc1, ruled
-2026-10-07): a sent entry stays at its position, new entries go after
+2026-10-07): a sent entry (or a handled one) stays at its position, new entries go after
 it, and one kept in place skips the lead-time floor. A list whose
 entries and anchor both stay as stored is not checked, so a save that
 leaves the schedule alone is never refused over it. The record belongs
