@@ -219,6 +219,18 @@ def _context_value(detail: dict[str, Any] | None, key: str) -> object:
     return context.get(key)
 
 
+def _same_instant(recorded: object, moment: datetime) -> bool:
+    """Whether a stamp's recorded moment is ``moment``, compared as
+    instants (findings N5): the same moment rendered with another offset,
+    or naive as SQLite returns it, is still the same crossing."""
+    if not isinstance(recorded, str):
+        return False
+    try:
+        return _ensure_aware_utc(datetime.fromisoformat(recorded)) == moment
+    except ValueError:
+        return False
+
+
 def _unstamped(db: Session, session: ReviewSession, due: list[_DueStamp]) -> list[_UnstampedStamp]:
     """The due moments not yet in the audit log."""
     from sqlalchemy import select
@@ -229,7 +241,7 @@ def _unstamped(db: Session, session: ReviewSession, due: list[_DueStamp]) -> lis
     for event_type, key, moment, word in due:
         iso = moment.isoformat()
         stamped = any(
-            _context_value(detail, key) == iso
+            _same_instant(_context_value(detail, key), moment)
             for detail in db.execute(
                 select(AuditEvent.detail).where(
                     AuditEvent.session_id == session.id,
@@ -257,8 +269,8 @@ def observe_release_window(
     ``now`` and only while the session is ``expired``, the one state in
     which the window opens. A moment already stamped is not stamped
     again, whichever trigger (clock or page view) reaches it first; a
-    moved moment is a new crossing. Returns the number written, and
-    commits only when it writes.
+    moved moment is a new crossing. Returns the number written; once it
+    has locked, it commits, written or not.
 
     Checks without a lock first, as the other triggers do, so a page
     view after the stamps exist takes no lock. Changes nothing about
@@ -285,6 +297,8 @@ def observe_release_window(
             correlation_id=correlation_id,
         )
         written += 1
-    if written:
-        db.commit()
+    # Commit on a no-op too, which ends the transaction and so the lock:
+    # left open, it would hold off every other locker through this
+    # request's page render (findings N5).
+    db.commit()
     return written

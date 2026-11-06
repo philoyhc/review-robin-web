@@ -7,7 +7,7 @@ from __future__ import annotations
 import threading
 from collections.abc import Callable
 from contextlib import nullcontext
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 
 import pytest
 from sqlalchemy import select
@@ -719,3 +719,152 @@ def test_a_legacy_deadline_record_is_kept_not_written_twice(db: Session) -> None
     assert detail_of(reached)["counts"] == {"submitted": 3, "assigned": 9}
     db.refresh(rs)
     assert lifecycle.is_expired(rs)
+
+
+def _record_lock_and_commit(
+    monkeypatch: pytest.MonkeyPatch, db: Session, racer: Callable[[], None]
+) -> list[str]:
+    """Record each lock and commit in order; ``racer`` runs at the lock,
+    standing in for another request that committed first."""
+    from app.services import session_guard
+
+    calls: list[str] = []
+    real_lock, real_commit = session_guard.lock_session, db.commit
+
+    def lock(session_db: Session, review_session: ReviewSession, **kw: bool) -> ReviewSession:
+        calls.append("lock")
+        racer()
+        return real_lock(session_db, review_session, **kw)
+
+    def commit() -> None:
+        calls.append("commit")
+        real_commit()
+
+    monkeypatch.setattr(session_guard, "lock_session", lock)
+    monkeypatch.setattr(db, "commit", commit)
+    return calls
+
+
+def test_an_end_a_racer_closed_first_still_releases_the_lock(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Findings N5: a pass that locks and then finds nothing to do ends
+    its transaction, so the lock is not held through the page render."""
+    rs = _ready_past_deadline(db, "clock-racer-unlock")
+
+    def racer() -> None:
+        for instrument in db.execute(
+            select(Instrument).where(Instrument.session_id == rs.id)
+        ).scalars():
+            instrument.accepting_responses = False
+
+    calls = _record_lock_and_commit(monkeypatch, db, racer)
+
+    assert lifecycle.observe_deadline(db, rs, now=NOW) == 0
+    assert calls == ["lock", "commit"]
+
+
+def test_an_end_moved_out_under_the_lock_still_releases_it(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    rs = _ready_past_deadline(db, "clock-moved-unlock")
+
+    def racer() -> None:
+        rs.deadline = NOW + timedelta(hours=1)
+
+    calls = _record_lock_and_commit(monkeypatch, db, racer)
+
+    assert lifecycle.observe_deadline(db, rs, now=NOW) == 0
+    assert calls == ["lock", "commit"]
+
+
+def test_a_release_stamp_a_racer_wrote_first_still_releases_the_lock(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.services import audit
+    from app.services.scheduled_events._release import observe_release_window
+
+    rs = _make_validated_session(db, "clock-release-unlock")
+    rs.status = lifecycle.SessionStatus.expired.value
+    rs.responses_release_at = NOW - timedelta(hours=2)
+    db.commit()
+
+    def racer() -> None:
+        audit.write_event(
+            db,
+            event_type="session.release_window_opened",
+            summary="Release window opened",
+            actor_user_id=None,
+            session=rs,
+            context={"release_at": (NOW - timedelta(hours=2)).isoformat()},
+        )
+
+    calls = _record_lock_and_commit(monkeypatch, db, racer)
+
+    assert observe_release_window(db, rs, now=NOW) == 0
+    assert calls == ["lock", "commit"]
+
+
+def test_a_release_stamp_in_another_offset_is_the_same_crossing(db: Session) -> None:
+    """Findings N5: the stamps compare as instants, as the offsets'
+    records do, so one rendered in another offset is not written again."""
+    from app.services import audit
+    from app.services.scheduled_events._release import observe_release_window
+
+    rs = _make_validated_session(db, "clock-release-offset")
+    rs.status = lifecycle.SessionStatus.expired.value
+    rs.responses_release_at = NOW - timedelta(hours=2)
+    db.commit()
+    elsewhere = timezone(timedelta(hours=8))
+    audit.write_event(
+        db,
+        event_type="session.release_window_opened",
+        summary="Release window opened",
+        actor_user_id=None,
+        session=rs,
+        context={"release_at": (NOW - timedelta(hours=2)).astimezone(elsewhere).isoformat()},
+    )
+    db.commit()
+
+    assert observe_release_window(db, rs, now=NOW) == 0
+    assert len(_events(db, rs, "session.release_window_opened")) == 1
+
+
+def test_a_reopen_a_close_beat_still_releases_the_lock(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    rs = _ready_past_deadline(db, "clock-reopen-unlock")
+    rs.deadline = NOW + timedelta(hours=1)
+    for instrument in db.execute(
+        select(Instrument).where(Instrument.session_id == rs.id)
+    ).scalars():
+        instrument.accepting_responses = False
+    db.commit()
+
+    def racer() -> None:
+        rs.status = lifecycle.SessionStatus.expired.value
+
+    calls = _record_lock_and_commit(monkeypatch, db, racer)
+
+    assert lifecycle.observe_deadline(db, rs, now=NOW) == 0
+    assert calls == ["lock", "commit"]
+
+
+def test_an_end_over_shut_instruments_moved_out_under_the_lock_releases_it(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    rs = _ready_past_deadline(db, "clock-shut-unlock")
+    for instrument in db.execute(
+        select(Instrument).where(Instrument.session_id == rs.id)
+    ).scalars():
+        instrument.accepting_responses = False
+    db.commit()
+
+    def racer() -> None:
+        rs.deadline = NOW + timedelta(hours=1)
+
+    calls = _record_lock_and_commit(monkeypatch, db, racer)
+
+    assert lifecycle.observe_deadline(db, rs, now=NOW) == 0
+    assert calls == ["lock", "commit"]
+    assert _events(db, rs, "session.deadline_reached") == []

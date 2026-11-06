@@ -1071,6 +1071,7 @@ def _reopen_while_live(
     # request and almost always has nothing to do.
     session_guard.lock_session(db, review_session)
     if not is_ready(review_session):
+        db.commit()  # Release the lock (findings N5).
         return
     closed = _closed(fresh=True)
     # Imported here, not at module level: the instruments package
@@ -1281,7 +1282,10 @@ def observe_deadline(
                 _write_deadline_reached(db, review_session, correlation_id=correlation_id)
                 _expire_at_end(db, review_session, closed=0, correlation_id=correlation_id)
                 db.flush()
-                db.commit()
+            # Written or not, end the transaction and so the lock, which
+            # would otherwise be held through this request's page render
+            # (findings N5).
+            db.commit()
         return 0
     # Lock and decide again before closing, so two requests tripping the
     # same deadline close each instrument (and audit it) once, and an End
@@ -1291,10 +1295,12 @@ def observe_deadline(
     # for a held lock stalls only this request.
     session_guard.lock_session(db, review_session)
     if not deadline_has_passed(review_session, now=current):
+        db.commit()  # Release the lock (findings N5).
         return 0
     instruments = _open(fresh=True)
     if not instruments:
         # A racer closed them first; it also closed the session.
+        db.commit()  # Release the lock (findings N5).
         return 0
 
     closed = 0
