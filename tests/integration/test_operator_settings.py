@@ -66,11 +66,16 @@ def _email_row(body: str, key: str) -> str:
 
 
 def test_email_settings_card_starts_all_off(client: TestClient) -> None:
-    """14C Item 2: the card sits under Date & time, its three toggles
+    """14C Item 2: the card has the left column, its three toggles
     live and off by default (author, 2026-11-05), each a form posting
     its next state."""
     body = client.get("/operator/settings").text
-    assert body.index('id="timezone-settings"') < body.index('id="email-settings"')
+    # Email settings alone on the left; Unit, then Date & time, on the
+    # right (author, 2026-11-06).
+    assert body.index('id="email-settings"') < body.index('id="unit-settings"')
+    assert body.index('id="unit-settings"') < body.index('id="timezone-settings"')
+    left = body.split('<div class="bottom-left">')[1]
+    assert 'id="email-settings"' in left and 'id="unit-settings"' not in left
     for key in ("sent-items", "bcc-self", "reply-to-help"):
         row = _email_row(body, key)
         assert 'aria-pressed="false"' in row, key
