@@ -409,6 +409,13 @@ Dev-diagnostic page; **not an Operations row tab and not session-scoped chrome**
 
 The outbox table is useful for debugging in any environment.
 
+### `/operator/settings` — Settings
+
+A chrome detour from the account menu, with a `.back-link` to wherever the operator came from (`?return_to=`). Cards: **Date & time** (the `display_timezone` preference) with **Email settings** stacked under it, and **Unit** (read-only) in the grid cell beside them.
+
+- **Email settings** holds three Toggles (`spec/ui_elements.md` §6), one per row, each a one-button form posting its next state: **Keep a copy in my Sent Items**, **Send a copy to myself** and **Replies go to the session's Help contact**. All are off by default. They apply to each invitation and reminder the operator sends from Invitations; the test send honors Sent Items and Reply-to but not the copy to self, which would send it twice. Reply-to takes effect only when the session's Help contact is an email address. Storage, route and audit event: `spec/settings_inventory.md` §1.
+- The card stacks under Date & time rather than beside it, because Unit occupies that slot.
+
 ### `/about` — About
 
 Reached from the **account menu** (the avatar, top right); the bar's title is not a link. Carries the
