@@ -327,7 +327,7 @@ def _signed_in_to_the_directory(monkeypatch: pytest.MonkeyPatch) -> None:
     addresses are checked. A test that wants no token, or a failing
     directory, patches the route module's own `directory_or_none` (the
     routes import the name: `_shared`, `_quick_setup`,
-    `_setup_observers`, `_rehydrate`), or makes `_shared.directory_for`
+    `_rehydrate`), or makes `_shared.directory_for`
     raise `GraphError("no_token")` to reach every caller at once."""
     from app.web.routes_operator import _shared
     from cordware.graph import FakeDirectory

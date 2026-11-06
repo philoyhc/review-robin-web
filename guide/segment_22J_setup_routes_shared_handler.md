@@ -101,6 +101,35 @@ Taken 2026-11-06 at `fe84c007`.
 
 The assessment's estimate is −200 to −400 production lines (§7).
 
+## Status
+
+**2026-11-06, at rung 3 (the item's last build rung).**
+
+- **Rung 1** (#3697) kept Relationships' bulk delete on its own body,
+  as its bulk set-active is: it acknowledges a response loss and refuses
+  a group clear. `RosterKind` covers three rosters, not four.
+- **Rung 2** left dismiss as it was: each route was already one call to
+  `roster_import.dismiss_held_upload`. It retired the one-caller
+  `participant_info.set_reviewer_self_fields`; `spec/settings_inventory.md`
+  followed at rung 3.
+- **Rung 3** took Observers' four differences into `_handle_import`:
+  the archive-only guard, no response-loss ask, no captured labels, and a
+  new `render_page` parameter. The handler asserts the last pairs with
+  `kind="observers"`. That is three branches on one flag, which the
+  Decision's "flags on a shared body" warned against; it is accepted here
+  because the alternative is the 200-line copy that drifted (19Q Item 7).
+- **Rung 4 is a recorded no.** Relationships' import shares too little:
+  its parse needs both rosters; it runs no identity or directory check;
+  it has no response-loss ask (the save takes the loss and refuses a
+  group clear through `_refuse_group_clear`); its asks re-render without
+  the ticks' state; and it runs no merge-conflict check. Six more
+  switches would make one body into two.
+- **Reads:** one cumulative `diff-reviewer` pass at rung 3 found no
+  behavior change. It did flag `roster_actions` missing from
+  `test_import_order.py`, the false `settings_inventory` line, four stale
+  comments, the unguarded `kind`/`render_page` pair and an unused
+  assignment count. All were fixed in rung 3.
+
 ## PR ladder
 
 One item; `diff-reviewer` reads the cumulative diff once, at rung 4.

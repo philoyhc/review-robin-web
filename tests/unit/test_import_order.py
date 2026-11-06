@@ -21,6 +21,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 FIRST_IMPORTS = [
     "app.web.roster_import",
+    "app.web.roster_actions",
     "app.services.csv_imports",
     "app.services.responses",
     "app.services.instruments",

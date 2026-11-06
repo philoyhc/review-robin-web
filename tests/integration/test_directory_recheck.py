@@ -18,7 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import AuditEvent, Observer, Reviewee, Reviewer, ReviewSession
-from app.web.routes_operator import _directory, _setup_observers, _shared
+from app.web.routes_operator import _directory, _shared
 from cordware.graph import FakeDirectory, GraphError
 
 from ._invitation_states import _create_session
@@ -45,7 +45,7 @@ class _Failing(FakeDirectory):
 @pytest.fixture
 def switch(monkeypatch: pytest.MonkeyPatch) -> _Switch:
     state = _Switch()
-    for module in (_shared, _setup_observers, _directory):
+    for module in (_shared, _directory):
         monkeypatch.setattr(module, "directory_or_none", lambda request: state.current)
     return state
 

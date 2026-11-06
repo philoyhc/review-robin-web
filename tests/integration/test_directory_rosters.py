@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import AuditEvent, Observer, Reviewee, Reviewer
 from app.services import directory_accounts
-from app.web.routes_operator import _setup_observers, _shared
+from app.web.routes_operator import _shared
 from cordware.graph import FakeDirectory
 
 from ._invitation_states import _create_session
@@ -38,7 +38,6 @@ ROSTER_FORM = {"profile_link": "", "tag_1": "", "tag_2": "", "tag_3": "", "statu
 def directory(monkeypatch: pytest.MonkeyPatch) -> FakeDirectory:
     fake = FakeDirectory()
     monkeypatch.setattr(_shared, "directory_or_none", lambda request: fake)
-    monkeypatch.setattr(_setup_observers, "directory_or_none", lambda request: fake)
     return fake
 
 
@@ -275,7 +274,7 @@ def test_the_setup_page_shows_the_last_imports_directory_check(
 def test_an_unchecked_import_says_so(
     client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(_setup_observers, "directory_or_none", lambda request: _Down())
+    monkeypatch.setattr(_shared, "directory_or_none", lambda request: _Down())
     session = _session(client, db, "dir-page-none")
     client.post(
         f"/operator/sessions/{session.public_id}/observers/import",
@@ -509,8 +508,7 @@ def test_an_expired_token_saves_nothing_holds_the_file_and_asks_to_renew(
     it, every address checked."""
     session = _session(client, db, f"dir-renew-{kind}")
     failing = _ExpiredToken()
-    module = _setup_observers if kind == "observers" else _shared
-    monkeypatch.setattr(module, "directory_or_none", lambda request: failing)
+    monkeypatch.setattr(_shared, "directory_or_none", lambda request: failing)
     header = {
         "reviewers": b"ReviewerName,ReviewerEmail",
         "reviewees": b"RevieweeName,RevieweeEmail",
@@ -533,7 +531,7 @@ def test_an_expired_token_saves_nothing_holds_the_file_and_asks_to_renew(
 
     # The renew button resubmits the form with the held file and a fresh
     # token: here, the directory answering again.
-    monkeypatch.setattr(module, "directory_or_none", lambda request: FakeDirectory())
+    monkeypatch.setattr(_shared, "directory_or_none", lambda request: FakeDirectory())
     response = client.post(url, data={"held_token": token}, follow_redirects=False)
     assert response.status_code == 303
     db.expire_all()

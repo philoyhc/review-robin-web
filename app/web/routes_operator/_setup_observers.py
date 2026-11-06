@@ -38,21 +38,19 @@ from app.db.models import Observer, ReviewSession, User
 from app.db.session import get_db
 from app.schemas.observer_cohort_rule import VALUE_OPERATORS
 from app.schemas.validation import ValidationIssue
-from app.services import csv_imports, directory_lookups
+from app.services import csv_imports
 from app.services import observers as observers_service
 from app.services import session_lifecycle as lifecycle
 from app.services.observers import ObserverOperationError
 from app.services.text import parse_id
-from app.web import breadcrumbs, roster_actions, urls, views
+from app.web import breadcrumbs, roster_actions, views
 from app.web.deps import (
     get_or_create_user,
     request_correlation_id,
 )
 from app.web.roster_import import (
+    _handle_import,
     dismiss_held_upload,
-    hold_for_ask,
-    read_upload,
-    release_hold,
 )
 from app.web.routes_operator._shared import (
     _redirect_keeping_selection,
@@ -61,7 +59,6 @@ from app.web.routes_operator._shared import (
     _setup_row_window,
     _templates,
     account_resolver,
-    directory_or_none,
     require_observers_enabled_session,
 )
 
@@ -834,8 +831,9 @@ async def observers_import_submit(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
-    """Observers CSV import. Mirrors ``_handle_import`` for the
-    reviewer / reviewee path, cross-table identity check included.
+    """Observers CSV import, through ``_handle_import`` as the reviewer /
+    reviewee path is (segment 22J rung 3), cross-table identity check
+    included.
 
     **It skipped that check until 19Q Item 7**, and said why: *a person
     can be both an observer and a reviewer / reviewee by design*. True,
@@ -845,180 +843,37 @@ async def observers_import_submit(
     which it did cover. So the premise was sound and the conclusion did
     not follow from it (author's ruling, 2026-09-19).
     """
-    _require_not_archived(review_session)
-    upload = await read_upload(
-        db,
-        file=file,
-        held_token=held_token,
-        user=user,
-        review_session=review_session,
-        slot="observers",
-    )
-    result = csv_imports.parse_observer_csv(upload.content)
-    if not result.is_blocked:
-        result.issues.extend(
-            csv_imports.check_cross_table_identity(
-                db,
-                session_id=review_session.id,
-                rows=result.rows,
-                kind="observers",
-            )
-        )
-    existing = csv_imports.existing_observer_count(db, review_session.id)
-    # An append onto an empty roster is just the roster (19Z).
-    appending = append == "true" and existing > 0
-    merging = merge == "true" and existing > 0
-    ticked = (confirm_replace == "true") + appending + merging
 
-    def render(
-        status_code: int = status.HTTP_200_OK,
-        *,
-        missing_confirm: bool = False,
-        both_ticks: bool = False,
-        held_upload: dict[str, str] | None = None,
-        directory_renew: bool = False,
-    ) -> HTMLResponse:
+    def render_page(**card: Any) -> HTMLResponse:
         # `panel_open=True`: this path re-renders the page in place and
         # returns 400 WITH it, so `?unlocked=1` cannot reach it. Left
         # False, a failed import would answer with a collapsed panel and
-        # the operator would see no errors at all —
-        # `_upload_problems.html` renders the file's problems inside the
-        # card the panel now holds.
-        #
-        # The suite cannot catch a regression here. With no JS runtime
-        # `hidden` is an inert attribute, so the issues are in the
-        # markup and every assertion on them passes either way; Chromium
-        # is what proves it. Same shape that bit Reviewers at 19P.1
-        # rung 3c.
+        # the operator would see no errors at all.
         return _render_observers_page(
             request=request,
             db=db,
             user=user,
             review_session=review_session,
             panel_open=True,
-            issues=result.issues,
-            missing_confirm=missing_confirm,
-            both_ticks=both_ticks,
-            filename=upload.filename,
-            held_upload=held_upload,
-            held_upload_lost=upload.lost,
-            # Neither tick comes back on the both-ticks ask (19Z).
-            confirm_replace_checked=(
-                held_upload is not None and confirm_replace == "true" and not both_ticks
-            ),
-            append_checked=held_upload is not None and appending and not both_ticks,
-            merge_checked=held_upload is not None and merging and not both_ticks,
-            directory_renew=directory_renew,
-            http_status=status_code,
+            **card,
         )
 
-    def ask() -> dict[str, str] | None:
-        return hold_for_ask(
-            db,
-            upload=upload,
-            user=user,
-            review_session=review_session,
-            slot="observers",
-        )
-
-    if result.is_blocked:
-        release_hold(db, token=upload.token, user=user, review_session=review_session)
-        return render(status_code=status.HTTP_400_BAD_REQUEST)
-
-    if existing > 0 and ticked > 1:
-        return render(status_code=status.HTTP_400_BAD_REQUEST, both_ticks=True, held_upload=ask())
-
-    if existing > 0 and ticked == 0:
-        # An ask: hold the file so the tick is all the answer needs
-        # (segment 19W).
-        return render(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            missing_confirm=True,
-            held_upload=ask(),
-        )
-
-    # No response-loss gate here (Segment 19I Item 5), for the same
-    # reason `delete-all` lost its in Item 3: nothing references an
-    # observer, so replacing the roster destroys no assignment and no
-    # response. The requirement asked the operator to accept a loss
-    # that cannot occur, and 400d when they could not — the `if
-    # existing > 0:` block it guarded went with it.
-
-    # Segment 21F: each address resolved through the directory first.
-    # Segment 20H Item 6: what the card's countdown already fetched is
-    # read, not asked again.
-    addresses = [row.email for row in result.rows]
-    directory_check = await run_in_threadpool(
-        csv_imports.directory_check,
-        directory_or_none(request),
-        addresses,
-        directory_lookups.known_for(
-            db, user=user, session_id=review_session.id, addresses=addresses
-        ),
-    )
-    # Segment 20G: a check the sign-in stopped saves nothing; the file is
-    # held and the card asks to renew and upload again.
-    if directory_check.stopped:
-        return render(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            held_upload=ask(),
-            directory_renew=True,
-        )
-    # Segment 19Z: an append refuses a row already on the roster, or on
-    # a directory account already there; the save checks again under
-    # the session lock.
-    if appending:
-        result.issues.extend(
-            csv_imports.append_conflicts(
-                db,
-                session_id=review_session.id,
-                kind="observers",
-                rows=result.rows,
-                directory=directory_check,
-            )
-        )
-        if result.is_blocked:
-            release_hold(db, token=upload.token, user=user, review_session=review_session)
-            return render(status_code=status.HTTP_400_BAD_REQUEST)
-    # A merge refuses two file rows on one directory account.
-    if merging:
-        result.issues.extend(
-            csv_imports.merge_conflicts(
-                kind="observers", rows=result.rows, directory=directory_check
-            )
-        )
-        if result.is_blocked:
-            release_hold(db, token=upload.token, user=user, review_session=review_session)
-            return render(status_code=status.HTTP_400_BAD_REQUEST)
-    # The service locks the session row (findings Bc4): wait for it off
-    # the event loop.
-    try:
-        await run_in_threadpool(
-            csv_imports.save_observers,
-            db,
-            session=review_session,
-            user=user,
-            rows=result.rows,
-            filename=upload.filename or "",
-            correlation_id=request_correlation_id(),
-            directory=directory_check,
-            append=appending,
-            merge=merging,
-            columns=result.columns,
-        )
-    except csv_imports.AppendConflict as refused:
-        db.rollback()
-        result.issues.extend(refused.issues)
-        release_hold(db, token=upload.token, user=user, review_session=review_session)
-        return render(status_code=status.HTTP_400_BAD_REQUEST)
-    release_hold(db, token=upload.token, user=user, review_session=review_session)
-    # Open, like the failure path above and like `delete-all`: one rule
-    # about the panel rather than three about its controls. A Save does
-    # not close this card; the Lock button does.
-    return urls.redirect(
-        request,
-        url=(f"/operator/sessions/{review_session.public_id}/observers?unlocked=1#roster-card"),
-        status_code=status.HTTP_303_SEE_OTHER,
+    return await _handle_import(
+        request=request,
+        file=file,
+        held_token=held_token,
+        confirm_replace=confirm_replace,
+        acknowledge_response_loss=None,
+        append=append,
+        merge=merge,
+        review_session=review_session,
+        user=user,
+        db=db,
+        kind="observers",
+        existing_count_fn=csv_imports.existing_observer_count,
+        parse_fn=csv_imports.parse_observer_csv,
+        save_fn=csv_imports.save_observers,
+        render_page=render_page,
     )
 
 
