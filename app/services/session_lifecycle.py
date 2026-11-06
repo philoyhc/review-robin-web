@@ -237,8 +237,9 @@ def require_not_ready(db: Session, review_session: ReviewSession) -> ReviewSessi
 
 
 def require_validated_or_ready(db: Session, review_session: ReviewSession) -> ReviewSession:
-    """Lock + re-read, refuse unless ``validated`` or ``ready`` — the bulk
-    invitation Send and Regenerate gate (findings Bc5)."""
+    """Lock + re-read, refuse unless ``validated`` or ``ready`` — the
+    invitation Send and Regenerate gate, bulk and per-row (findings Bc5;
+    per-row since 14F follow-up 1)."""
     return session_guard.require_state(
         db,
         review_session,
@@ -252,8 +253,8 @@ def require_validated_or_ready(db: Session, review_session: ReviewSession) -> Re
 
 
 def require_ready(db: Session, review_session: ReviewSession) -> ReviewSession:
-    """Lock + re-read, refuse unless ``ready`` — the per-row invitation
-    actions' and the reminders' gate (findings Bc5)."""
+    """Lock + re-read, refuse unless ``ready`` — the reminders' gate
+    (findings Bc5)."""
     return session_guard.require_state(
         db,
         review_session,

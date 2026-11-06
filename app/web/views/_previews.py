@@ -492,4 +492,11 @@ def row_send_notice(outcome: str | None, kind: str | None) -> dict[str, str] | N
             "tone": "error",
             "text": "The email was not sent: its link was regenerated first. Send it again.",
         }
+    if outcome == "already_sent":
+        # Findings L1: a second click, or a stale tab, on a row whose
+        # invitation has gone out.
+        return {
+            "tone": "error",
+            "text": "Not sent again: this invitation has already gone out.",
+        }
     return None

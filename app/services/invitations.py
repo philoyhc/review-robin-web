@@ -329,10 +329,39 @@ def regenerate_all_tokens(
 # --------------------------------------------------------------------------- #
 
 
+@dataclass(frozen=True)
+class InvitationStamps:
+    """What a per-row Send or Remind stamps on an invitation, taken just
+    before it does, so a send the transport refuses can be put back
+    (findings M1, 2026-11-06)."""
+
+    status: str
+    sent_at: datetime | None
+    opened_at: datetime | None
+    last_reminder_at: datetime | None
+
+    @classmethod
+    def of(cls, invitation: Invitation) -> InvitationStamps:
+        return cls(
+            status=invitation.status,
+            sent_at=invitation.sent_at,
+            opened_at=invitation.opened_at,
+            last_reminder_at=invitation.last_reminder_at,
+        )
+
+
+class InvitationAlreadySent(Exception):
+    """A per-row Send for an invitation no longer ``pending``: a second
+    click, or a stale tab (findings L1, 2026-11-06)."""
+
+
 @dataclass
 class SendResult:
     outbox_id: int
     raw_token: str
+    #: The invitation's stamps before this send; set by the per-row
+    #: paths, for :func:`restore_after_failed_send`.
+    before: InvitationStamps | None = None
 
 
 def send_invitation(
@@ -467,9 +496,20 @@ def send_one_invitation(
     """The per-row Send: :func:`send_invitation`, refused unless the
     session is ``validated`` or ``ready`` (14F follow-up 1: an invitation
     may go out ahead of opening), decided under the session lock
-    (findings Bc5)."""
+    (findings Bc5).
+
+    Raises :class:`InvitationAlreadySent` unless the invitation, re-read
+    under that lock, is still ``pending`` (findings L1): each Send mints
+    a new token, so a double click used to email twice, the first link
+    already dead. A sent invitation is emailed again by Send reminder,
+    which reuses its link."""
     lifecycle.require_validated_or_ready(db, review_session)
-    return send_invitation(
+    db.refresh(invitation)
+    if invitation.status != "pending":
+        db.rollback()
+        raise InvitationAlreadySent()
+    before = InvitationStamps.of(invitation)
+    result = send_invitation(
         db,
         invitation=invitation,
         review_session=review_session,
@@ -478,6 +518,41 @@ def send_one_invitation(
         build_invite_url=build_invite_url,
         correlation_id=correlation_id,
     )
+    result.before = before
+    return result
+
+
+def restore_after_failed_send(db: Session, *, outbox_id: int, before: InvitationStamps) -> bool:
+    """Put an invitation's stamps back after the transport refused the
+    per-row Send or Remind that set them (findings M1, 2026-11-06).
+
+    The stamps are written, and committed, before the send, so the
+    session lock is not held across a Graph call. A refused send used to
+    leave the row reading ``sent``, its Send gone. This restores them, so
+    the row offers the same action again. The outbox row stays
+    ``failed`` and ``email.send_failed`` stays in the audit log; the
+    ``invitation.sent`` event before it records the attempt.
+
+    Only while the failed row is still the invitation's latest email: a
+    newer one means something has acted on the invitation since, and the
+    restore would undo it. Returns whether it restored."""
+    row = db.get(EmailOutbox, outbox_id)
+    if row is None or row.status != "failed" or row.invitation_id is None:
+        return False
+    newer = db.execute(
+        select(EmailOutbox.id).where(
+            EmailOutbox.invitation_id == row.invitation_id, EmailOutbox.id > row.id
+        )
+    ).first()
+    invitation = db.get(Invitation, row.invitation_id)
+    if newer is not None or invitation is None:
+        return False
+    invitation.status = before.status
+    invitation.sent_at = before.sent_at
+    invitation.opened_at = before.opened_at
+    invitation.last_reminder_at = before.last_reminder_at
+    db.commit()
+    return True
 
 
 # --------------------------------------------------------------------------- #
@@ -762,6 +837,8 @@ def most_recent_invitation_status(db: Session, *, invitation_id: int) -> str | N
 class ReminderResult:
     outbox_id: int
     fell_back_to_invitation: bool
+    #: As :attr:`SendResult.before`; set by :func:`send_one_reminder`.
+    before: InvitationStamps | None = None
 
 
 def send_reminder(
@@ -943,6 +1020,7 @@ def send_one_reminder(
     """
     lifecycle.require_ready(db, review_session)
     db.refresh(invitation)
+    before = InvitationStamps.of(invitation)
     result = send_reminder(
         db,
         invitation=invitation,
@@ -961,6 +1039,7 @@ def send_one_reminder(
         fell_back=1 if result.fell_back_to_invitation else 0,
         correlation_id=correlation_id,
     )
+    result.before = before
     return result
 
 

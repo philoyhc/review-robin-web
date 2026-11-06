@@ -365,11 +365,13 @@ def _send_queued_row(
     *,
     mailer: graph.Mailer,
     outbox_id: int,
+    before: invitations.InvitationStamps | None,
     user: User,
     review_session: ReviewSession,
 ) -> RedirectResponse:
     """Send the row a per-row Send or Remind just queued, as the operator
-    (14F rung 3a), and redirect to Invitations saying how it went."""
+    (14F rung 3a), and redirect to Invitations saying how it went. A
+    refused send puts the invitation's stamps back (findings M1)."""
     row = db.get(EmailOutbox, outbox_id)
     assert row is not None
     result = email_dispatch.dispatch(
@@ -386,6 +388,8 @@ def _send_queued_row(
     elif result.outcome == "not_claimed":
         query = "email=superseded"
     else:
+        if before is not None:
+            invitations.restore_after_failed_send(db, outbox_id=outbox_id, before=before)
         query = f"email=failed&kind={result.failure_kind or ''}"
     return urls.redirect(
         request,
@@ -898,13 +902,9 @@ def invitations_send_one(
     # active reviewer with no included assignment that the other two
     # refuse. Same helper, so all three send paths agree by
     # construction.
-    # Eligibility only — deliberately **not**
-    # `list_sendable_invitations`, which also filters `pending`. The
-    # per-row button renders only for pending rows
-    # (`session_invitations.html:304`), so gating on that here would
-    # match the UI and still be a second, unrelated behavior change
-    # riding a rung about eligibility. A direct POST re-sending a
-    # `sent` invitation keeps rotating its token exactly as before.
+    # Eligibility here; `pending` is the service's, under the session
+    # lock (findings L1, 2026-11-06): a second click once used to mail
+    # again with a new token, killing the first link.
     if not invitations.is_reviewer_eligible_for_invitation(
         db, session_id=review_session.id, reviewer_id=reviewer.id
     ):
@@ -918,20 +918,28 @@ def invitations_send_one(
     mailer = _mailer_or_refusal(request, review_session.public_id)
     if isinstance(mailer, RedirectResponse):
         return mailer
-    sent = invitations.send_one_invitation(
-        db,
-        invitation=invitation,
-        review_session=review_session,
-        reviewer=reviewer,
-        user=user,
-        build_invite_url=lambda token: str(request.url_for("reviewer_invite", token=token)),
-        correlation_id=request_correlation_id(),
-    )
+    try:
+        sent = invitations.send_one_invitation(
+            db,
+            invitation=invitation,
+            review_session=review_session,
+            reviewer=reviewer,
+            user=user,
+            build_invite_url=lambda token: str(request.url_for("reviewer_invite", token=token)),
+            correlation_id=request_correlation_id(),
+        )
+    except invitations.InvitationAlreadySent:
+        return urls.redirect(
+            request,
+            url=f"/operator/sessions/{review_session.public_id}/invitations?email=already_sent",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
     return _send_queued_row(
         request,
         db,
         mailer=mailer,
         outbox_id=sent.outbox_id,
+        before=sent.before,
         user=user,
         review_session=review_session,
     )
@@ -1185,6 +1193,7 @@ def invitations_remind_one(
         db,
         mailer=mailer,
         outbox_id=reminded.outbox_id,
+        before=reminded.before,
         user=user,
         review_session=review_session,
     )

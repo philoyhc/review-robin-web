@@ -183,3 +183,58 @@ def test_a_regenerate_between_queue_and_send_stops_the_dead_link(
     assert row.status == "failed"
     assert row.error_message == invitations_service.SUPERSEDED_MESSAGE
     assert "regenerated first" in client.get(response.headers["location"]).text
+
+
+class _Refusing:
+    def send_mail(self, message: MailMessage) -> None:
+        raise GraphError("server", 503)
+
+
+def test_a_refused_send_leaves_the_row_pending_with_its_send(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Findings M1: the invitation is stamped before the send, so a
+    refused one used to read ``sent`` with no Send on its row."""
+    monkeypatch.setattr(graph, "mailer_for", lambda _request, settings=None: _Refusing())
+    session = _ready_session(client, db, code="row-m1-send")
+    invitation = _invitation(db, session.id)
+    base = f"/operator/sessions/{session.public_id}/invitations"
+    client.post(f"{base}/{invitation.id}/send")
+    db.refresh(invitation)
+    assert invitation.status == "pending"
+    assert invitation.sent_at is None
+    assert f'action="{base}/{invitation.id}/send"' in client.get(base).text
+
+
+def test_a_refused_reminder_leaves_last_reminder_at_as_it_was(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch, fake_mailer: FakeMailer
+) -> None:
+    session = _ready_session(client, db, code="row-m1-remind")
+    invitation = _invitation(db, session.id)
+    base = f"/operator/sessions/{session.public_id}/invitations"
+    client.post(f"{base}/{invitation.id}/send")
+    monkeypatch.setattr(graph, "mailer_for", lambda _request, settings=None: _Refusing())
+    response = client.post(f"{base}/{invitation.id}/remind", follow_redirects=False)
+    assert response.headers["location"].endswith("/invitations?email=failed&kind=server")
+    db.refresh(invitation)
+    assert invitation.status == "sent"
+    assert invitation.last_reminder_at is None
+
+
+def test_a_second_send_is_refused_and_the_first_link_lives(
+    client: TestClient, db: Session, fake_mailer: FakeMailer
+) -> None:
+    """Findings L1: a double click mailed twice, minting a new token each
+    time, so the first message's link was dead on arrival."""
+    from app.services import invitations as invitations_service
+
+    session = _ready_session(client, db, code="row-l1")
+    invitation = _invitation(db, session.id)
+    url = f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
+    client.post(url)
+    token = fake_mailer.sent[0].body.split("/invite/", 1)[1].split()[0].strip("\"'<>.,)")
+    response = client.post(url, follow_redirects=False)
+    assert response.headers["location"].endswith("/invitations?email=already_sent")
+    assert len(fake_mailer.sent) == 1
+    assert invitations_service.lookup_invitation_by_token(db, token) is not None
+    assert "already gone out" in client.get(response.headers["location"]).text
