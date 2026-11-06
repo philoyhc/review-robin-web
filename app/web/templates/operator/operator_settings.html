@@ -163,6 +163,45 @@
         </form>
       </div>
     {% endfor %}
+    {# 14C Item 4 — report emails to the other owners. Scaffold (rung 1):
+       every Toggle inert. Group B (an owner's action, mailed to the
+       session's other owners from that owner's mailbox) goes live in
+       rung 2; A, C and D wait on 14G (author, 2026-11-06). #}
+    <h3 class="email-reports-heading" id="email-reports">Report emails</h3>
+    <p class="muted">
+      When another owner of a session you own acts on it, Review Robin can
+      email you from their mailbox. Each choice is yours, for every session
+      you own.
+    </p>
+    {% set report_toggles = [
+      ("report-lifecycle", "Another owner changes a session's state",
+       "Activated, reverted to draft, archived, unarchived or deleted.", "Not yet available."),
+      ("report-destructive", "Another owner deletes data",
+       "Responses purged or cleared, or a roster deleted.", "Not yet available."),
+      ("report-owners", "Another owner changes owners or release",
+       "An owner added or removed, or responses released or the release stopped.", "Not yet available."),
+      ("report-sends", "Summaries of the sends I start",
+       "Invitations, reminders and confirmations sent, with any failures.",
+       "Waits on bulk sending."),
+      ("report-clock", "Scheduled events",
+       "Scheduled activation, the deadline, the release window, and a scheduled step that failed.",
+       "Waits on scheduled email."),
+      ("report-progress", "Reviewer and reviewee progress",
+       "Everyone has submitted, completion milestones, a late recall, every result acknowledged.",
+       "Waits on scheduled email."),
+    ] %}
+    {% for key, label, hint, reason in report_toggles %}
+      <div class="email-setting-row" data-email-report="{{ key }}">
+        <div>
+          <div id="email-setting-{{ key }}-label">{{ label }}</div>
+          <p class="muted email-setting-hint">{{ hint }}
+            <span class="email-report-reason" data-report-reason>{{ reason }}</span></p>
+        </div>
+        <button type="button" class="btn secondary" id="email-setting-{{ key }}-toggle"
+                aria-labelledby="email-setting-{{ key }}-label email-setting-{{ key }}-toggle"
+                aria-pressed="false" disabled title="{{ reason }}">Off</button>
+      </div>
+    {% endfor %}
   </div>
   </div>
   {# Segment 20D: the operator's Unit, read-only here; only a system
