@@ -206,6 +206,22 @@ Taken 2026-11-02 at `fffd4c28`; re-taken 2026-11-05 at `095336bf`
   - **Tests.** The suite's mailer is a `FakeMailer` (an autouse fixture
     in `tests/conftest.py`), since the suite runs without fake auth.
 
+- 2026-11-06, rung 5 re-cut (author). The offset fields were disabled
+  while scheduled email is off, so no prompt had an input: off, they
+  are live as prompts (5a). Mark as done is recorded as fired, so 14G
+  never sends a handled entry; the card's due line shows counts.
+  5c, the lobby pill, rides with 5b: about 30 lines on 5b's service.
+  `spec/lifecycle.md` §8 also owes "sent, skipped or handled" (§8.2.6), and
+  `spec/settings_inventory.md` the two offset rows and the flag's.
+- 2026-11-06, the item's cumulative read (base `79f86ee8`, at 5b): 3
+  medium, 6 low. Acted on: the lobby's End editor validates offsets while
+  email is off, as Session Home does; Doc impact gains the stale specs;
+  the sent-entry refusal names a handled entry; the reminder count's
+  docstring; tests for a reminder's Mark as done and an unknown kind.
+  Left: the lobby computes a count per row with a past, unhandled entry
+  (bounded by those sessions; no measurement yet), the inline
+  `display: inline` (one precedent), and raw ISO offsets in the copy
+  (as everywhere else; the author's call).
 - 2026-11-06: the author's browser and email tests on Azure passed (3a–3d
   and the side-by-side cards). Refinements after: the Invitations pair and
   Extract data's top cards share a height across each row; the Timestamps
@@ -262,9 +278,18 @@ All three done in one slice, 2026-11-06 (struck below).
     Reviewer response metadata adds LastOpened, LastSaved and
     LastSubmitted per reviewer (author, 2026-11-05). A last-opened stamp
     is set on every arrival, through the shared link or a personal one.
-5. **The prompts, wired**, from the offsets the operator set; a due
-   reminder points to the card's Reminder message. Last build rung: the
-   cumulative read.
+5. ~~**The prompts, wired**, from the offsets the operator set; a due
+   reminder points to the card's Reminder message.~~ Re-cut 2026-11-06
+   (the card's message boxes were cut at 3c; the offset fields were
+   disabled while scheduled email is off):
+   - **5a.** With scheduled email off, the two offset fields are live as
+     prompts, labeled "Prompt to send invites / reminders", saved and
+     validated as when on, each showing its due moment.
+   - **5b.** The due-actions service; the Workflow card's due lines with
+     counts, links to Invitations and the session link, and **Mark as
+     done**, recorded where 14G's observers read it.
+   - **5c.** The lobby's Due pill, including a persistent
+     scheduled-activation failure. Last build rung: the cumulative read.
 6. **Close.** Specs; checklist items 9 and 10 settled; the Guide's
    "Running a session by hand".
 
@@ -321,5 +346,9 @@ All three done in one slice, 2026-11-06 (struck below).
 - `docs/deployment.md` — `RRW_BULK_SEND` in the settings table, default off (2026-11-05; was waived when `RRW_SCHEDULED_SEND` moved to 14E).
 - `spec/operations_pages.md` — the Share the session link card on Invitations; the bulk buttons disabled behind `RRW_BULK_SEND`.
 - `spec/extract_data.md` — the participation report's columns (first opened, last saved, last submitted, eligible instruments).
-- `spec/settings_inventory.md` — `reviewers.last_opened_at` in the Reviewers table, "Not settings: a reading" (rung 3d).
+- `spec/settings_inventory.md` — `reviewers.last_opened_at` in the Reviewers table, "Not settings: a reading" (rung 3d); the `invite_offsets` / `reminder_offsets` and `RRW_SCHEDULED_SEND` rows: off, prompts (rung 5a).
+- `spec/session_home.md` — with scheduled email off, the two offset fields are live as prompts, validated, each with its due moment (rung 5a).
+- `spec/sessions_overview.md` — the lobby's End editor checks reminder offsets whatever the flag; the Due pill and what raises it (rungs 5a, 5c).
+- `spec/architecture.md` — `session.scheduled_invites_handled` / `_reminders_handled` and `invitation.send_reverted` in the audit-event table (rung 5b).
+- `docs/deployment.md` — the `RRW_SCHEDULED_SEND` row: off, the offsets time prompts (rung 5a).
 - `guide/post_azure_todo_checklist.md` — items 9 and 10 settled (at close).

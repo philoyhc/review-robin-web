@@ -2,11 +2,12 @@
 `RRW_SCHEDULED_SEND`). The suite runs with it on (`tests/conftest.py`);
 these tests turn it off.
 
-Off: the two offset fields render disabled with one line, a save keeps
-the stored values unvalidated and ignores any posted, a create stores
-none, no pass fires a scheduled invite or reminder (activation still
-fires), and no caption, timeline row or Activate confirm promises an
-automatic send. The Settings CSV still carries the stored values."""
+Off: the two offset fields are live as prompts (14F rung 5a, author
+2026-11-06) — labeled "Prompt to send …", with one line, saved and
+validated as when on, their due moments shown — while no pass fires a
+scheduled invite or reminder (activation still fires), and no caption,
+timeline row or Activate confirm promises an automatic send. The
+Settings CSV carries the stored values."""
 
 from __future__ import annotations
 
@@ -35,7 +36,7 @@ from .test_scheduled_invites import (
     _stub_build_url,
 )
 
-LINE = "Scheduled email under development."
+LINE = "Scheduled email under development: the Workflow card prompts you when each is due."
 
 
 @pytest.fixture
@@ -75,36 +76,31 @@ def test_the_shipped_default_is_off(monkeypatch: pytest.MonkeyPatch) -> None:
     assert Settings(_env_file=None).scheduled_send is True  # pyright: ignore[reportCallIssue]  -- a pydantic-settings init option
 
 
-def test_the_fields_render_disabled_with_their_line(
+def test_the_fields_are_live_as_prompts_with_their_line(
     client: TestClient, db: Session, send_off: None
 ) -> None:
     page = client.get("/operator/sessions/new").text
     assert LINE in page
-    assert (
-        'name="invite_offsets"' in page
-        and "disabled" in page.split('name="invite_offsets"')[1].split(">")[0]
-    )
-
     rs = _client_session(client, db, "off-render")
     rs.invite_offsets = ["-P1D"]
     db.commit()
     home = client.get(f"/operator/sessions/{rs.public_id}?unlocked=1").text
     assert LINE in home
-    for name in ("invite_offsets", "reminder_offsets"):
-        tag = home.split(f'name="{name}"')[1].split(">")[0]
-        assert "disabled" in tag, name
-    assert 'value="-P1D"' in home  # the stored value is still shown
-    # The labels read muted while the fields wait (author, 2026-11-06).
-    for page_text, ids in (
+    assert 'value="-P1D"' in home
+    for page_text, names in (
         (page, ("invite_offsets", "reminder_offsets")),
-        (home, ("mock-invite-offsets", "mock-reminder-offsets")),
+        (home, ("invite_offsets", "reminder_offsets")),
     ):
-        for label_for in ids:
-            label = page_text.split(f'<label for="{label_for}"', 1)[1].split(">", 1)[0]
-            assert 'class="muted"' in label, label_for
+        for name in names:
+            tag = page_text.split(f'name="{name}"')[1].split(">")[0]
+            assert "disabled" not in tag, name
+            assert 'aria-describedby="scheduled-send-off"' in tag, name
+    for page_text in (page, home):
+        assert "Prompt to send invites (offset from Start; optional)" in page_text
+        assert "Prompt to send reminders (offset from End; optional)" in page_text
 
 
-def test_session_home_shows_offsets_without_a_send_time(
+def test_session_home_shows_each_offsets_due_moment(
     client: TestClient, db: Session, send_off: None
 ) -> None:
     rs = _client_session(client, db, "off-display")
@@ -112,21 +108,26 @@ def test_session_home_shows_offsets_without_a_send_time(
     rs.invite_offsets = ["-P1D"]
     db.commit()
     home = client.get(f"/operator/sessions/{rs.public_id}").text
-    assert 'class="config-value config-value-resolved"' not in home
+    assert 'class="config-value config-value-resolved"' in home
 
 
 def test_the_guide_says_auto_send_is_off(client: TestClient, send_off: None) -> None:
-    assert LINE in client.get("/guide").text
+    guide = client.get("/guide").text
+    assert "Scheduled email under development." in guide
+    assert "the Workflow\n      card prompts you when each is due" in guide
 
 
-def test_an_end_change_from_the_lobby_ignores_stored_reminders(db: Session, send_off: None) -> None:
+def test_an_end_change_from_the_lobby_checks_stored_reminders(db: Session, send_off: None) -> None:
+    """As Session Home's save does since 14F rung 5a: the offsets time
+    the due prompts, so the lobby's End editor holds them to the rules."""
     rs = _seed_session_with_reviewers(db, "off-lobby-end")
     # A stored reminder the new End would put inside the lead time.
     rs.reminder_offsets = ["-PT2H"]
     db.commit()
-    scheduled_events.validate_deadline_change(
-        db, rs, deadline=datetime.now(UTC) + timedelta(minutes=90)
-    )
+    with pytest.raises(scheduled_events.ScheduledActivateError):
+        scheduled_events.validate_deadline_change(
+            db, rs, deadline=datetime.now(UTC) + timedelta(minutes=90)
+        )
 
 
 def test_on_the_fields_are_live(client: TestClient, db: Session) -> None:
@@ -136,34 +137,24 @@ def test_on_the_fields_are_live(client: TestClient, db: Session) -> None:
     assert 'class="muted"' not in page.split('<label for="invite_offsets"', 1)[1].split(">", 1)[0]
 
 
-def test_a_save_keeps_the_stored_offsets_and_ignores_posted_ones(
+def test_a_save_stores_and_validates_the_posted_offsets(
     client: TestClient, db: Session, send_off: None
 ) -> None:
     start = datetime.now(UTC) + timedelta(days=30)
     rs = _client_session(client, db, "off-save")
     rs.scheduled_activate_at = start
-    # An entry that would now fail the lead-time rule: kept, not checked.
-    rs.invite_offsets = ["-PT10M"]
-    rs.reminder_offsets = ["-P1D"]
     db.commit()
-    response = client.post(
-        f"/operator/sessions/{rs.public_id}/config",
-        data={
-            "name": "Moved",
-            "code": rs.code,
-            "scheduled_activate_at": _local(start + timedelta(days=1)),
-            "invite_offsets": "-P5D",
-        },
-        follow_redirects=False,
-    )
+    url = f"/operator/sessions/{rs.public_id}/config"
+    base = {"name": "Moved", "code": rs.code, "scheduled_activate_at": _local(start)}
+    response = client.post(url, data={**base, "invite_offsets": "-P5D"}, follow_redirects=False)
     assert response.status_code == 303, response.text
     db.refresh(rs)
-    assert rs.name == "Moved"
-    assert rs.invite_offsets == ["-PT10M"]
-    assert rs.reminder_offsets == ["-P1D"]
+    assert rs.invite_offsets == ["-P5D"]
+    response = client.post(url, data={**base, "invite_offsets": "-P1W"}, follow_redirects=False)
+    assert response.status_code == 422, response.text
 
 
-def test_a_create_stores_no_offsets(client: TestClient, db: Session, send_off: None) -> None:
+def test_a_create_stores_the_offsets(client: TestClient, db: Session, send_off: None) -> None:
     start = datetime.now(UTC) + timedelta(days=30)
     response = client.post(
         "/operator/sessions",
@@ -178,8 +169,8 @@ def test_a_create_stores_no_offsets(client: TestClient, db: Session, send_off: N
     )
     assert response.status_code == 303, response.text
     rs = db.execute(select(ReviewSession).where(ReviewSession.code == "off-create")).scalar_one()
-    assert not rs.invite_offsets
-    assert not rs.reminder_offsets
+    assert rs.invite_offsets == ["-P1D"]
+    assert rs.reminder_offsets == ["-P1D"]
 
 
 def test_no_pass_fires_invites_or_reminders_but_activation_runs(
