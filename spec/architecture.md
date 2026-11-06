@@ -723,8 +723,8 @@ it (`queued` → `sending`, a conditional update, so a row is sent once)
 and sends it in the same request through the signed-in operator's
 delegated Graph mailbox (`cordware/graph.py`, `app/services/email_dispatch.py`;
 `spec/email_infra_options.md`), then stamps `sent` or `failed` and writes
-`email.sent` / `email.send_failed`. Bulk sends are off behind
-`RRW_BULK_SEND`, and the responses-received confirmation stays `queued`.
+`email.sent` / `email.send_failed`. Bulk sends are off until 14G,
+whatever `RRW_BULK_SEND` says, and the responses-received confirmation stays `queued`.
 The sys-admin outbox page reads the table in any environment.
 
 ### Reminders

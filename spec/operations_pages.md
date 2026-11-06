@@ -18,8 +18,8 @@ Invitations it takes the left half of a `.bottom-grid` row, beside the
 **Share the session link** card (the session's stable link and Copy
 link). Bulk-actions
 (Send invites · Send reminders) live on the
-Workflow card's button row, disabled while `RRW_BULK_SEND` is off (the
-default; `spec/workflow_card.md`) — neither page body carries its own
+Workflow card's button row, disabled until 14G whatever `RRW_BULK_SEND`
+says (findings L2; `spec/workflow_card.md`) — neither page body carries its own
 bulk action bar. One reviewer's email goes out from the per-row buttons. Creating invites has no button of its own: Prepare creates
 one invitation per eligible reviewer.
 
@@ -153,8 +153,8 @@ the invitation services re-decide each gate under the session lock):
   answer **409** elsewhere. The Workflow card's **Send reminders**
   renders only when `is_ready` and an invitation has been sent. Reminders
   fire after the response window opens.
-- `send-all` and `remind-incomplete` also answer **409** while
-  `RRW_BULK_SEND` is off (`spec/lifecycle.md` §3.5), their Workflow card
+- `send-all` and `remind-incomplete` also answer **409** until 14G,
+  whatever `RRW_BULK_SEND` says (findings L2, `spec/lifecycle.md` §3.5), their Workflow card
   buttons rendering disabled. **There is therefore no bulk email**:
   before activation the in-app ways to tell reviewers are the per-row
   Send and the session link below.
@@ -650,7 +650,7 @@ session.`
 
 - **Reminder send-path is shared.** Whether the operator triggers a
   reminder from the Workflow card (Send reminders super-button on
-  any session-scoped page, when `RRW_BULK_SEND` is on) or from a per-row
+  any session-scoped page, once 14G turns bulk on) or from a per-row
   Send reminder button on the Invitations page, the same underlying
   email send happens.
   Implementation does not duplicate the send logic.
@@ -675,7 +675,7 @@ session.`
   whatever the templates produce.
 - **Bulk-select rows for batch action.** Bulk send / remind belongs to
   the Workflow card's super-buttons (which act on every eligible
-  row session-wide, and are off behind `RRW_BULK_SEND`); per-row buttons
+  row session-wide, and are off until 14G); per-row buttons
   handle targeted intervention.
   No multi-select checkbox column on either table.
 - **Live updates.** Pages render snapshot data on each request. A

@@ -8,11 +8,9 @@ from __future__ import annotations
 
 import html
 
-import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.config import settings
 from app.db.models import ReviewSession
 
 from .test_invitations import _ready_session
@@ -53,10 +51,8 @@ def test_the_card_is_the_link_alone(client: TestClient, db: Session) -> None:
     assert 'id="share-copy-status"' in card
 
 
-def test_the_bulk_off_line_links_to_the_card(
-    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setattr(settings, "bulk_send", False)
+def test_the_bulk_off_line_links_to_the_card(client: TestClient, db: Session) -> None:
+    # Bulk is off whatever ``RRW_BULK_SEND`` says until 14G (findings L2).
     session = _ready_session(client, db, code="share-link-to")
     line = _page(client, session).split('id="next-action-bulk-off"', 1)[1].split("</p>", 1)[0]
     assert "/invitations#share-session-link" in line

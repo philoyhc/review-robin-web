@@ -34,6 +34,7 @@ from app.db.models import (
 from app.services import monitoring
 
 from ._answer_form import answer_form
+from ._invitation_states import bulk_remind_incomplete
 from .test_monitoring_rollup_parity import (
     REVIEWEE_IMPLEMENTATIONS,
     REVIEWER_IMPLEMENTATIONS,
@@ -247,11 +248,8 @@ def test_a_closed_branch_isnt_reminded(
     assert rows["rae@example.edu"].is_incomplete is False
     assert rows["sam@example.edu"].is_incomplete is True
 
-    response = make_client(alice).post(
-        f"/operator/sessions/{session.public_id}/invitations/remind-incomplete",
-        follow_redirects=False,
-    )
-    assert response.status_code == 303
+    # The service: the bulk route refuses until 14G (findings L2).
+    bulk_remind_incomplete(db, session)
     reminded = {
         email: db.execute(
             select(EmailOutbox).where(

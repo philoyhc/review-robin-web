@@ -17,7 +17,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import ReviewSession
+from app.db.models import ReviewSession, User
+from app.services import invitations
 
 from ._full_matrix import (
     generate_via_page_button,
@@ -61,3 +62,46 @@ def _populate(client: TestClient, db: Session, session_id: int, *, reviewer_emai
     )
     pin_full_matrix_on_all_instruments(db, session_id)
     generate_via_page_button(client, session_id)
+
+
+# --------------------------------------------------------------------------- #
+# The bulk services, called directly
+# --------------------------------------------------------------------------- #
+#
+# The bulk Send all and Remind incomplete routes refuse until 14G wires
+# paced bulk dispatch, whatever ``RRW_BULK_SEND`` says (findings L2,
+# ``tests/integration/test_bulk_send_off.py``). The services stay, for
+# 14G; a test of what they do, or one that wants the state they leave
+# (every invitation sent, the incomplete reminded), calls them here.
+
+
+def _invite_url(token: str) -> str:
+    return f"http://testserver/me/invite/{token}"
+
+
+def _session_operator(db: Session, session: ReviewSession) -> User:
+    user = db.get(User, session.created_by_user_id)
+    assert user is not None
+    return user
+
+
+def bulk_send_all(db: Session, session: ReviewSession) -> int:
+    """``invitations.send_all_invitations`` as the session's operator,
+    as the bulk route did before findings L2; returns the count sent."""
+    return invitations.send_all_invitations(
+        db,
+        review_session=session,
+        user=_session_operator(db, session),
+        build_invite_url=_invite_url,
+    )
+
+
+def bulk_remind_incomplete(db: Session, session: ReviewSession) -> invitations.ReminderBatchResult:
+    """``invitations.send_reminders_to_incomplete`` as the session's
+    operator, as the bulk route did before findings L2."""
+    return invitations.send_reminders_to_incomplete(
+        db,
+        review_session=session,
+        user=_session_operator(db, session),
+        build_invite_url=_invite_url,
+    )

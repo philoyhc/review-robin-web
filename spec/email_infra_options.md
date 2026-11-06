@@ -325,10 +325,10 @@ pattern's existence is a prerequisite the app should have in
 place *before* any bulk-send operator workflow ships.
 
 **Bulk sending is built but off.** Send all, Remind incomplete and
-the Workflow card's Send invites render disabled behind `RRW_BULK_SEND`
-(default off; `docs/deployment.md`), and their routes answer `409`.
+the Workflow card's Send invites render disabled until 14G, whatever
+`RRW_BULK_SEND` says (findings L2; `docs/deployment.md`), and their routes answer `409`.
 One message per request stays live as per-row Send and Send reminder.
-A paced, batched bulk send is what turns the flag on. The fallback is
+A paced, batched bulk send (14G) is what will make the flag mean something again. The fallback is
 the session link (`spec/operations_pages.md`, "Share the session
 link").
 

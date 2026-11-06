@@ -1,8 +1,11 @@
 """14F rung 3a: per-row Send and Remind send now; bulk sends wait for 14G.
 
-- `RRW_BULK_SEND` ships off. Off, the Workflow card's Send invites and
-  Send reminders render disabled with a line pointing to the session link,
-  and their routes refuse. The suite runs with it on (`tests/conftest.py`).
+- Bulk is off **whatever `RRW_BULK_SEND` says** until 14G wires paced
+  bulk dispatch (findings L2, author, 2026-11-06): on, the bulk routes
+  used to stamp invitations `sent` and queue outbox rows that nothing
+  dispatched. The Workflow card's Send invites and Send reminders render
+  disabled with a line pointing to the session link, and their routes
+  refuse. The setting stays, shipping off, so deployed config parses.
 - Per-row Send and Remind dispatch the row they queue through the
   operator's mailer, with the operator's Email settings, and say how it
   went on Invitations.
@@ -12,6 +15,8 @@
 
 from __future__ import annotations
 
+import html
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import func, select
@@ -19,15 +24,18 @@ from sqlalchemy.orm import Session
 
 from app.config import Settings, settings
 from app.db.models import AuditEvent, EmailOutbox, Invitation, User
+from app.services import email_dispatch
 from cordware import graph
 from cordware.graph import FakeMailer, GraphError, MailMessage
 
 from .test_invitations import _ready_session
 
 
-@pytest.fixture
-def bulk_off(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(settings, "bulk_send", False)
+@pytest.fixture(params=[False, True], ids=["flag-off", "flag-on"])
+def bulk_flag(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> bool:
+    """``RRW_BULK_SEND`` either way: until 14G it changes nothing."""
+    monkeypatch.setattr(settings, "bulk_send", request.param)
+    return request.param
 
 
 def _invitation(db: Session, session_id: int) -> Invitation:
@@ -39,10 +47,15 @@ def test_the_shipped_default_is_off(monkeypatch: pytest.MonkeyPatch) -> None:
     assert Settings(_env_file=None).bulk_send is False  # pyright: ignore[reportCallIssue]  -- a pydantic-settings init option
 
 
-def test_off_the_bulk_buttons_are_disabled_and_say_why(
-    client: TestClient, db: Session, bulk_off: None
+def test_bulk_is_off_whatever_the_flag_says(bulk_flag: bool) -> None:
+    assert settings.bulk_send is bulk_flag
+    assert email_dispatch.bulk_send_enabled() is False
+
+
+def test_the_bulk_buttons_are_disabled_and_say_why(
+    client: TestClient, db: Session, bulk_flag: bool
 ) -> None:
-    session = _ready_session(client, db, code="bulk-off-card")
+    session = _ready_session(client, db, code=f"bulk-off-card-{int(bulk_flag)}")
     body = client.get(f"/operator/sessions/{session.public_id}/invitations").text
     button = body.split('form="next-action-send-invites-form"', 1)[1].split(">", 1)[0]
     assert "disabled" in button
@@ -50,20 +63,53 @@ def test_off_the_bulk_buttons_are_disabled_and_say_why(
     assert "share the session link" in body
 
 
-@pytest.mark.parametrize("action", ["send-all", "remind-incomplete"])
-def test_off_the_bulk_routes_refuse(
-    client: TestClient, db: Session, bulk_off: None, action: str
+def test_the_reminders_button_is_disabled_too(
+    client: TestClient, db: Session, bulk_flag: bool
 ) -> None:
-    session = _ready_session(client, db, code=f"bulk-off-{action[:6]}")
+    session = _ready_session(client, db, code=f"bulk-off-rem-{int(bulk_flag)}")
+    invitation = _invitation(db, session.id)
+    client.post(f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send")
+    body = client.get(f"/operator/sessions/{session.public_id}/invitations").text
+    button = body.split('form="next-action-send-reminders-form"', 1)[1].split(">", 1)[0]
+    assert "disabled" in button
+    assert email_dispatch.BULK_OFF_LINE.split(":", 1)[0] in body
+
+
+@pytest.mark.parametrize("action", ["send-all", "remind-incomplete"])
+def test_the_bulk_routes_refuse(
+    client: TestClient, db: Session, bulk_flag: bool, action: str
+) -> None:
+    session = _ready_session(client, db, code=f"bulk-off-{action[:6]}-{int(bulk_flag)}")
+    if action == "remind-incomplete":
+        # A sent invitation, so a reminder had someone to go to.
+        invitation = _invitation(db, session.id)
+        client.post(f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send")
+    outbox_before = db.execute(select(func.count()).select_from(EmailOutbox)).scalar()
+    stamps_before = db.execute(
+        select(Invitation.status, Invitation.sent_at, Invitation.last_reminder_at).where(
+            Invitation.session_id == session.id
+        )
+    ).all()
     response = client.post(
         f"/operator/sessions/{session.public_id}/invitations/{action}", follow_redirects=False
     )
     assert response.status_code == 409
-    assert db.execute(select(func.count()).select_from(EmailOutbox)).scalar() == 0
+    assert email_dispatch.BULK_OFF_LINE in html.unescape(response.text)
+    db.expire_all()
+    # Nothing stamped, nothing queued (findings L2).
+    assert db.execute(select(func.count()).select_from(EmailOutbox)).scalar() == outbox_before
+    assert (
+        db.execute(
+            select(Invitation.status, Invitation.sent_at, Invitation.last_reminder_at).where(
+                Invitation.session_id == session.id
+            )
+        ).all()
+        == stamps_before
+    )
 
 
 def test_off_a_per_row_send_still_sends(
-    client: TestClient, db: Session, bulk_off: None, fake_mailer: FakeMailer
+    client: TestClient, db: Session, fake_mailer: FakeMailer
 ) -> None:
     session = _ready_session(client, db, code="bulk-off-row")
     invitation = _invitation(db, session.id)

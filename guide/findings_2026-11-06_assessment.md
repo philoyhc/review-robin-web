@@ -5,7 +5,7 @@
 of the window's `app/`, `cordware/` and `alembic/` changes with scratch
 tests, and a read of `cordware/`, `residentialapps/` and `utilityapps/`
 with their suites and a route fuzz · **Read at:** `c912ae53` (#3657; the
-reads ran on its pre-merge tree `c5d03d49`, identical) · **Open:** all but M1, L1, L3, L4, N9, D1–D5, D7 and D12 (D8 half).
+reads ran on its pre-merge tree `c5d03d49`, identical) · **Open:** all but M1, L1, L2, L3, L4, N9, D1–D5, D7 and D12 (D8 half).
 
 The checklist the fixes work through. **Nothing was edited by the
 reads**, and their scratch tests were not kept: a fix PR writes its own
@@ -59,8 +59,8 @@ None.
   *CONFIRMED* (two POSTs, two messages, `lookup_invitation_by_token` on
   the first is `None`). Code: refuse, or treat as Remind, an invitation no
   longer `pending`, decided under the session lock.
-- **L2 — `RRW_BULK_SEND=true` records invitations as sent and emails
-  nobody.** Send all and Remind incomplete pass the flag gate
+- ~~**L2 — `RRW_BULK_SEND=true` records invitations as sent and emails
+  nobody.**~~ **Done 2026-11-06, going forward only (author)**: `email_dispatch.bulk_send_enabled` is false whatever the flag, so both bulk routes answer 409 (`BULK_OFF_LINE`) and the card shows bulk off until 14G wires dispatch; the services stay for 14G, and records already stamped are left as they read (`tests/integration/test_bulk_send_off.py`). 14G's rung 2 must make `bulk_send_enabled()` read the flag again (noted in its plan). Was: Send all and Remind incomplete pass the flag gate
   (`_operations.py:791-819`, `1187-1210`) and call
   `send_all_invitations` / `send_reminders_to_incomplete`
   (`invitations.py:425-453`), which queue and stamp but never dispatch:
@@ -167,6 +167,13 @@ None.
 
 ## 5. Noted gaps
 
+- **N10 — With `RRW_SCHEDULED_SEND` on, the scheduled pass records invitations
+  and reminders without sending them** (the L2 cold read): `_invites.py`
+  `_dispatch_pending_invitations` and `_reminders.py` call `send_invitation`
+  / `send_reminder`, which stamp and queue, and nothing dispatches the row.
+  The flag ships off (`docs/deployment.md`: leave it off), so it is
+  unreachable on Azure; L2's principle (no "sent" without an email) applies
+  when 14G turns it on, and 14G owns that path.
 - ~~**N1 — No test that a mail failure's log line leaves out the token**~~ **Done 2026-11-06**: `cordware/tests/test_graph_mail.py` tests both, the log line and a POST redirect. Was:
   (`cordware/tests/test_graph_mail.py`; the directory side has
   `test_graph.py:146`), and none drives the mailer's POST against a

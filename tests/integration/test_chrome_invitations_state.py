@@ -25,6 +25,7 @@ from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
+from ._invitation_states import bulk_send_all
 from ._lookups import must_get
 
 
@@ -200,11 +201,9 @@ def test_invitations_pill_all_sent_when_every_reviewer_sent(
     session = _create_session(client, db, "chrome-inv-all")
     _seed_two_reviewers(client, db, session.id)
     _validated(client, db, session.id)
-    response = client.post(
-        f"/operator/sessions/{session.public_id}/invitations/send-all",
-        follow_redirects=False,
-    )
-    assert response.status_code == 303, response.text
+    # The service: the bulk route refuses until 14G (findings L2).
+    db.refresh(session)
+    assert bulk_send_all(db, session) == 2
 
     body = client.get(f"/operator/sessions/{session.public_id}").text
     assert '<span class="pill pill-info">All sent</span>' in body, (
@@ -221,12 +220,14 @@ def test_invitations_pill_reads_not_sent_after_regenerate_all(
     session = _create_session(client, db, "chrome-inv-regen")
     _seed_two_reviewers(client, db, session.id)
     _validated(client, db, session.id)
-    for action in ("send-all", "regenerate-all"):
-        response = client.post(
-            f"/operator/sessions/{session.public_id}/invitations/{action}",
-            follow_redirects=False,
-        )
-        assert response.status_code == 303, response.text
+    # Send all's service: its route refuses until 14G (findings L2).
+    db.refresh(session)
+    assert bulk_send_all(db, session) == 2
+    response = client.post(
+        f"/operator/sessions/{session.public_id}/invitations/regenerate-all",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
 
     body = client.get(f"/operator/sessions/{session.public_id}").text
     assert '<span class="pill pill-warning">Not sent</span>' in body, (

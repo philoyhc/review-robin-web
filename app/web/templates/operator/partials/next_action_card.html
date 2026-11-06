@@ -320,8 +320,9 @@
     {% endif %}
 
     {% if send_invites_visible %}
-      {# 14F rung 3a: a bulk send, off behind RRW_BULK_SEND until 14G
-         paces it; disabled, with the reason in the signal column. #}
+      {# 14F rung 3a: a bulk send, off until 14G paces it, whatever
+         RRW_BULK_SEND says (findings L2); disabled, with the reason in
+         the signal column. #}
       <button class="btn" type="submit"
               form="next-action-send-invites-form"
               {% if not bulk_send_enabled %}disabled title="{{ bulk_off_line }}"{% endif %}>Send<br>invites</button>
