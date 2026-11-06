@@ -835,7 +835,7 @@
          Copy button on one line, the button's label on one row. */
       /* The link takes the card's full width; Copy link sits on the row
          below, flush right (author, 2026-11-06). */
-      .share-link-row { display: flex; flex-direction: column; gap: var(--space-2); }
+      .share-link-row { display: flex; flex-direction: column; gap: var(--space-3); }
       .share-link-row input { width: 100%; min-width: 0; }
       .share-link-actions { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-2); }
       .share-link-actions p { margin: 0; }
@@ -1523,6 +1523,10 @@
         display: flex;
         flex-direction: column;
         gap: var(--space-1);
+        /* No bottom margin from the global label rule: the action row
+           below is 12px (`--space-3`) from the boxes, not 16 (author,
+           2026-11-06; `spec/ui_elements.md` §10). */
+        margin-bottom: 0;
       }
       .filter-row > label.filter-status { flex: 1; }
       .filter-row > label.filter-search { flex: 2; }
