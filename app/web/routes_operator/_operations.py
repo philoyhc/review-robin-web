@@ -365,7 +365,7 @@ def _send_queued_row(
     *,
     mailer: graph.Mailer,
     outbox_id: int,
-    before: invitations.InvitationStamps | None,
+    stamps: tuple[invitations.InvitationStamps, invitations.InvitationStamps] | None,
     user: User,
     review_session: ReviewSession,
 ) -> RedirectResponse:
@@ -388,8 +388,16 @@ def _send_queued_row(
     elif result.outcome == "not_claimed":
         query = "email=superseded"
     else:
-        if before is not None:
-            invitations.restore_after_failed_send(db, outbox_id=outbox_id, before=before)
+        if stamps is not None:
+            invitations.restore_after_failed_send(
+                db,
+                review_session=review_session,
+                outbox_id=outbox_id,
+                before=stamps[0],
+                stamped=stamps[1],
+                user=user,
+                correlation_id=request_correlation_id(),
+            )
         query = f"email=failed&kind={result.failure_kind or ''}"
     return urls.redirect(
         request,
@@ -939,7 +947,7 @@ def invitations_send_one(
         db,
         mailer=mailer,
         outbox_id=sent.outbox_id,
-        before=sent.before,
+        stamps=(sent.before, sent.stamped) if sent.before and sent.stamped else None,
         user=user,
         review_session=review_session,
     )
@@ -1193,7 +1201,9 @@ def invitations_remind_one(
         db,
         mailer=mailer,
         outbox_id=reminded.outbox_id,
-        before=reminded.before,
+        stamps=(reminded.before, reminded.stamped)
+        if reminded.before and reminded.stamped
+        else None,
         user=user,
         review_session=review_session,
     )

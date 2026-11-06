@@ -18,7 +18,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.config import Settings, settings
-from app.db.models import EmailOutbox, Invitation, User
+from app.db.models import AuditEvent, EmailOutbox, Invitation, User
 from cordware import graph
 from cordware.graph import FakeMailer, GraphError, MailMessage
 
@@ -199,10 +199,16 @@ def test_a_refused_send_leaves_the_row_pending_with_its_send(
     session = _ready_session(client, db, code="row-m1-send")
     invitation = _invitation(db, session.id)
     base = f"/operator/sessions/{session.public_id}/invitations"
-    client.post(f"{base}/{invitation.id}/send")
+    response = client.post(f"{base}/{invitation.id}/send", follow_redirects=False)
+    assert response.headers["location"].endswith("/invitations?email=failed&kind=server")
     db.refresh(invitation)
     assert invitation.status == "pending"
     assert invitation.sent_at is None
+    reverted = db.execute(
+        select(AuditEvent).where(AuditEvent.event_type == "invitation.send_reverted")
+    ).scalar_one()
+    assert reverted.detail is not None
+    assert reverted.detail["context"] == {"restored": "status,sent_at"}
     assert f'action="{base}/{invitation.id}/send"' in client.get(base).text
 
 
@@ -237,4 +243,31 @@ def test_a_second_send_is_refused_and_the_first_link_lives(
     assert response.headers["location"].endswith("/invitations?email=already_sent")
     assert len(fake_mailer.sent) == 1
     assert invitations_service.lookup_invitation_by_token(db, token) is not None
-    assert "already gone out" in client.get(response.headers["location"]).text
+    assert "already sent, or is being sent" in client.get(response.headers["location"]).text
+
+
+def test_an_open_during_a_refused_reminder_is_kept(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch, fake_mailer: FakeMailer
+) -> None:
+    """The restore puts back only what the send wrote and only while it
+    still holds (the M1 fix's cold read): a reviewer who follows their
+    link while the Graph call runs stays ``opened``."""
+    session = _ready_session(client, db, code="row-m1-open")
+    invitation = _invitation(db, session.id)
+    base = f"/operator/sessions/{session.public_id}/invitations"
+    client.post(f"{base}/{invitation.id}/send")
+
+    class OpenedThenRefused:
+        def send_mail(self, message: MailMessage) -> None:
+            db.refresh(invitation)
+            invitation.status = "opened"
+            invitation.opened_at = invitation.sent_at
+            db.commit()
+            raise GraphError("server", 503)
+
+    monkeypatch.setattr(graph, "mailer_for", lambda _request, settings=None: OpenedThenRefused())
+    client.post(f"{base}/{invitation.id}/remind")
+    db.refresh(invitation)
+    assert invitation.status == "opened"
+    assert invitation.opened_at is not None
+    assert invitation.last_reminder_at is None

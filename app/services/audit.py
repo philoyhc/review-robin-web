@@ -570,6 +570,8 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # exists (work in progress awaiting Azure).
     "responses_received.queued": EventSchema(_IDENTITY | {"refs", "context"}),
     "invitation.opened": EventSchema(_IDENTITY | {"refs"}),
+    # Findings M1: a per-row send the transport refused, its stamps put back.
+    "invitation.send_reverted": EventSchema(_IDENTITY | {"refs", "context"}),
     # 14F rung 3d: a reviewer's arrival on their review, by any link.
     "reviewer.opened": EventSchema(_IDENTITY | {"refs"}),
     "reminders.sent": EventSchema(_IDENTITY | {"set_changes", "context"}),

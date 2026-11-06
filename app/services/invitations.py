@@ -32,6 +32,7 @@ from app.db.models import (
 from app.logging_config import get_logger
 from app.services import audit, directory_accounts, email_templates
 from app.services import session_lifecycle as lifecycle
+from app.services.session_guard import lock_session
 
 log = get_logger(__name__)
 
@@ -359,9 +360,10 @@ class InvitationAlreadySent(Exception):
 class SendResult:
     outbox_id: int
     raw_token: str
-    #: The invitation's stamps before this send; set by the per-row
-    #: paths, for :func:`restore_after_failed_send`.
+    #: The invitation's stamps before and after this send; set by the
+    #: per-row paths, for :func:`restore_after_failed_send`.
     before: InvitationStamps | None = None
+    stamped: InvitationStamps | None = None
 
 
 def send_invitation(
@@ -518,41 +520,89 @@ def send_one_invitation(
         build_invite_url=build_invite_url,
         correlation_id=correlation_id,
     )
-    result.before = before
+    result.before, result.stamped = before, InvitationStamps.of(invitation)
     return result
 
 
-def restore_after_failed_send(db: Session, *, outbox_id: int, before: InvitationStamps) -> bool:
-    """Put an invitation's stamps back after the transport refused the
-    per-row Send or Remind that set them (findings M1, 2026-11-06).
+def restore_after_failed_send(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    outbox_id: int,
+    before: InvitationStamps,
+    stamped: InvitationStamps,
+    user: User,
+    correlation_id: str | None = None,
+) -> bool:
+    """Put back what a per-row Send or Remind stamped on an invitation
+    once the transport has refused it (findings M1, 2026-11-06).
 
     The stamps are written, and committed, before the send, so the
     session lock is not held across a Graph call. A refused send used to
-    leave the row reading ``sent``, its Send gone. This restores them, so
-    the row offers the same action again. The outbox row stays
-    ``failed`` and ``email.send_failed`` stays in the audit log; the
-    ``invitation.sent`` event before it records the attempt.
+    leave the row reading ``sent``, its Send gone; restored, the row
+    offers the same action again. The outbox row stays ``failed`` and
+    ``email.send_failed`` stays in the log; ``invitation.send_reverted``
+    records the restore.
 
-    Only while the failed row is still the invitation's latest email: a
-    newer one means something has acted on the invitation since, and the
-    restore would undo it. Returns whether it restored."""
+    A compare-and-set under the session lock, field by field: a stamp
+    goes back to ``before`` only if the send changed it and it still
+    holds what the send wrote (``stamped``). Whatever acted since keeps
+    what it wrote — an open of the link, a Regenerate, a newer email.
+    Returns whether anything was restored."""
+    lock_session(db, review_session)
     row = db.get(EmailOutbox, outbox_id)
-    if row is None or row.status != "failed" or row.invitation_id is None:
+    invitation = (
+        db.get(Invitation, row.invitation_id)
+        if row is not None and row.status == "failed" and row.invitation_id is not None
+        else None
+    )
+    newer = (
+        db.execute(
+            select(EmailOutbox.id).where(
+                EmailOutbox.invitation_id == invitation.id, EmailOutbox.id > outbox_id
+            )
+        ).first()
+        if invitation is not None
+        else None
+    )
+    if invitation is None or newer is not None:
+        db.commit()
         return False
-    newer = db.execute(
-        select(EmailOutbox.id).where(
-            EmailOutbox.invitation_id == row.invitation_id, EmailOutbox.id > row.id
+    db.refresh(invitation)
+    restored: list[str] = []
+    for field in ("status", "sent_at", "opened_at", "last_reminder_at"):
+        was, wrote = getattr(before, field), getattr(stamped, field)
+        if _same_stamp(was, wrote) or not _same_stamp(getattr(invitation, field), wrote):
+            continue
+        setattr(invitation, field, was)
+        restored.append(field)
+    if restored:
+        db.flush()
+        audit.write_event(
+            db,
+            event_type="invitation.send_reverted",
+            summary=f"Invitation #{invitation.id}: the send was refused, its stamps restored",
+            actor_user_id=user.id,
+            session=review_session,
+            refs={
+                "invitation_id": invitation.id,
+                "reviewer_id": invitation.reviewer_id,
+                "outbox_id": outbox_id,
+            },
+            context={"restored": ",".join(restored)},
+            correlation_id=correlation_id,
         )
-    ).first()
-    invitation = db.get(Invitation, row.invitation_id)
-    if newer is not None or invitation is None:
-        return False
-    invitation.status = before.status
-    invitation.sent_at = before.sent_at
-    invitation.opened_at = before.opened_at
-    invitation.last_reminder_at = before.last_reminder_at
     db.commit()
-    return True
+    return bool(restored)
+
+
+def _same_stamp(a: object, b: object) -> bool:
+    """Two stamps equal as values, a naive datetime read back from SQLite
+    taken as UTC."""
+    if isinstance(a, datetime) and isinstance(b, datetime):
+        a = a if a.tzinfo is not None else a.replace(tzinfo=UTC)
+        b = b if b.tzinfo is not None else b.replace(tzinfo=UTC)
+    return a == b
 
 
 # --------------------------------------------------------------------------- #
@@ -837,8 +887,9 @@ def most_recent_invitation_status(db: Session, *, invitation_id: int) -> str | N
 class ReminderResult:
     outbox_id: int
     fell_back_to_invitation: bool
-    #: As :attr:`SendResult.before`; set by :func:`send_one_reminder`.
+    #: As on :class:`SendResult`; set by :func:`send_one_reminder`.
     before: InvitationStamps | None = None
+    stamped: InvitationStamps | None = None
 
 
 def send_reminder(
@@ -1039,7 +1090,7 @@ def send_one_reminder(
         fell_back=1 if result.fell_back_to_invitation else 0,
         correlation_id=correlation_id,
     )
-    result.before = before
+    result.before, result.stamped = before, InvitationStamps.of(invitation)
     return result
 
 

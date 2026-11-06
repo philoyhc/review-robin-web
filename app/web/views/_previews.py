@@ -497,6 +497,6 @@ def row_send_notice(outcome: str | None, kind: str | None) -> dict[str, str] | N
         # invitation has gone out.
         return {
             "tone": "error",
-            "text": "Not sent again: this invitation has already gone out.",
+            "text": "Not sent again: this invitation was already sent, or is being sent.",
         }
     return None
