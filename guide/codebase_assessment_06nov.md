@@ -212,7 +212,9 @@ parameter lists count as 10-line blocks. A measurement shift, not new
 copying. **Churn** is **61.8% against a 47.5% baseline, ratio 1.3×**
 (unchanged), over all 3,457 merges. *Annotated 2026-11-06:* the walk reads
 merge commits only, so this window's 89 squash-merged PRs (of 91) are
-not in the figure, nor the 188 squash-merged since #3150 (N9).
+not in the figure, nor the 188 squash-merged since #3150 (N9). With
+them counted (#3662), the walk reads **1.2×** at `aab086fe` (50.3%
+against 40.8%, over 3,648 PRs).
 
 ## 3. Functional-spec compliance
 

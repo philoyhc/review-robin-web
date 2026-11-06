@@ -120,31 +120,52 @@ def resolve_ref(ref: str = MAIN_REF) -> str:
     )
 
 
+SQUASH_RE = re.compile(r"\(#(\d+)\)$")
+
+
 def load(since: str, ref: str = MAIN_REF) -> list[dict]:
-    """Every merge on ``ref``'s first-parent line since ``since``, oldest first."""
+    """Every PR on ``ref``'s first-parent line since ``since``, oldest first.
+
+    A PR reaches the line as a merge commit (``Merge pull request #N``) or,
+    since #3150 (2026-10-19), as a squash commit whose subject ends
+    ``(#N)``. A squash keeps one commit and drops the branch's own, so
+    its first commit, iteration, commit count and review-response rounds
+    are unknown: they are ``None``, never zero, and every summary skips
+    them. Its merge time, size and cycle are measured as for a merge
+    (findings 2026-11-06 N9)."""
     rows: list[dict] = []
     log = git(
         "log",
-        "--merges",
         "--first-parent",
         resolve_ref(ref),
         f"--since={since_arg(since)}",
-        "--format=%H|%ct|%s|%b",
+        # The unit separator (0x1f) cannot occur in a subject, as "|" can:
+        # a "|" in a PR title would have cut its "(#N)" off the subject.
+        "--format=%H%x1f%ct%x1f%P%x1f%s%x1f%b%x1e",
     )
-    for line in log.splitlines():
-        parts = line.split("|", 3)
-        if len(parts) < 3:
+    for line in log.split("\x1e"):
+        parts = line.strip("\n").split("\x1f", 4)
+        if len(parts) < 4:
             continue
-        sha, merged_at, subject = parts[0], int(parts[1]), parts[2]
-        number = re.search(r"#(\d+)", subject)
+        sha, merged_at, parents, subject = parts[0], int(parts[1]), parts[2].split(), parts[3]
+        squash = len(parents) == 1
+        if squash:
+            number = SQUASH_RE.search(subject)
+        else:
+            number = re.search(r"#(\d+)", subject)
         if not number:
             continue
-        commits = git("log", "--format=%at|%s", f"{sha}^1..{sha}^2").splitlines()
-        if not commits:
-            continue
-        times = [int(c.split("|", 1)[0]) for c in commits]
-        subjects = [c.split("|", 1)[1] for c in commits]
-        received = instruction_received(sha)
+        if squash:
+            first = last = n = review = received = None
+        else:
+            commits = git("log", "--format=%at|%s", f"{sha}^1..{sha}^2").splitlines()
+            if not commits:
+                continue
+            times = [int(c.split("|", 1)[0]) for c in commits]
+            subjects = [c.split("|", 1)[1] for c in commits]
+            first, last, n = min(times), max(times), len(subjects)
+            review = any(REVIEW_RE.search(s) for s in subjects)
+            received = instruction_received(sha)
         loc: collections.Counter[str] = collections.Counter()
         for stat in git("diff", "--numstat", f"{sha}^1", sha).splitlines():
             added, deleted, path = stat.split("\t", 2)
@@ -154,14 +175,15 @@ def load(since: str, ref: str = MAIN_REF) -> list[dict]:
             {
                 "pr": int(number.group(1)),
                 "merge": merged_at,
-                "first": min(times),
-                "last": max(times),
-                "n": len(subjects),
-                "title": parts[3].strip() if len(parts) > 3 else "",
+                "squash": squash,
+                "first": first,
+                "last": last,
+                "n": n,
+                "title": parts[4].strip() if len(parts) > 4 else "",
                 "code": loc["code"] + loc["tpl"],
                 "tests": loc["tests"],
                 "prose": loc["prose"],
-                "review": any(REVIEW_RE.search(s) for s in subjects),
+                "review": review,
                 "received": received,
             }
         )
@@ -169,11 +191,15 @@ def load(since: str, ref: str = MAIN_REF) -> list[dict]:
     prev = None
     for r in rows:
         r["product"] = bool(r["code"] + r["tests"])
-        r["turn"] = (r["first"] - prev) / 60 if prev else None
         r["cycle"] = (r["merge"] - prev) / 60 if prev else None
+        r["wait"] = r["build"] = None
+        if r["squash"]:
+            r["turn"] = r["iter"] = r["push2merge"] = None
+            prev = r["merge"]
+            continue
+        r["turn"] = (r["first"] - prev) / 60 if prev else None
         r["iter"] = (r["last"] - r["first"]) / 60
         r["push2merge"] = (r["merge"] - r["last"]) / 60
-        r["wait"] = r["build"] = None
         if prev and r["received"] and prev <= r["received"] <= r["first"]:
             r["wait"] = (r["received"] - prev) / 60
             r["build"] = (r["first"] - r["received"]) / 60
@@ -245,24 +271,36 @@ def report(label: str, rows: list[dict]) -> None:
     print(
         f"\n== {label}: {len(rows)} PRs, {len(days)} active days, {hours:.1f} within-session hours"
     )
+    squashed = sum(1 for r in rows if r["squash"])
+    if squashed:
+        print(
+            f"  {squashed} of {len(rows)} squash-merged: their turn, iteration, commit count "
+            "and review rounds are not in git, so those figures rest on the rest"
+        )
+    merged = [r for r in within if not r["squash"]]
     print(
         f"  cycle med {median(r['cycle'] for r in within):5.1f}  "
-        f"mean {mean(r['cycle'] for r in within):5.1f} = "
-        f"turn {mean(r['turn'] for r in within):4.1f} + "
-        f"iter {mean(r['iter'] for r in within):4.1f} + "
-        f"push2merge {mean(r['push2merge'] for r in within):4.1f}"
+        f"mean {mean(r['cycle'] for r in within):5.1f}"
     )
     print(
+        f"  merge-committed (n={len(merged)}): "
+        f"cycle mean {mean(r['cycle'] for r in merged):5.1f} = "
+        f"turn {mean(r['turn'] for r in merged):4.1f} + "
+        f"iter {mean(r['iter'] for r in merged):4.1f} + "
+        f"push2merge {mean(r['push2merge'] for r in merged):4.1f}"
+    )
+    multi = mean(None if r["n"] is None else r["n"] > 1 for r in rows)
+    print(
         f"  PR opened->merged med {median(r.get('open2merge') for r in rows):5.1f}   "
-        f"multi-commit PRs {mean(r['n'] > 1 for r in rows) * 100:3.0f}%   "
+        f"multi-commit PRs {multi * 100:3.0f}%   "
         f"PRs with a review-response commit {mean(r['review'] for r in rows) * 100:3.0f}%"
     )
     for kind, keep in (("product", True), ("docs-only", False)):
         sub = [r for r in within if r["product"] is keep]
         if not sub:
             continue
-        with_review = [r["cycle"] for r in sub if r["review"]]
-        without = [r["cycle"] for r in sub if not r["review"]]
+        with_review = [r["cycle"] for r in sub if r["review"] is True]
+        without = [r["cycle"] for r in sub if r["review"] is False]
         print(
             f"  {kind:9}: n={len(sub):3}  cycle med {median(r['cycle'] for r in sub):5.1f}  "
             f"with review round {median(with_review):5.1f} (n={len(with_review)})  "
@@ -279,10 +317,11 @@ def report(label: str, rows: list[dict]) -> None:
     loc = sum(r["code"] + r["tests"] for r in product)
     rate = loc / product_hours if product_hours else 0
     print(f"  code+test LOC per within-session hour (product PRs): {rate:6.0f}")
-    turns = sorted(r["turn"] for r in within if r["turn"] > 0)
-    if len(product) >= 3 and turns:
-        xs = [r["code"] + r["tests"] for r in product]
-        ys = [r["turn"] for r in product]
+    turns = sorted(r["turn"] for r in within if r["turn"] is not None and r["turn"] > 0)
+    timed = [r for r in product if r["turn"] is not None]
+    if len(timed) >= 3 and turns:
+        xs = [r["code"] + r["tests"] for r in timed]
+        ys = [r["turn"] for r in timed]
         mx, my = sum(xs) / len(xs), sum(ys) / len(ys)
         sxx = sum((x - mx) ** 2 for x in xs)
         slope = sum((x - mx) * (y - my) for x, y in zip(xs, ys)) / sxx if sxx else 0.0

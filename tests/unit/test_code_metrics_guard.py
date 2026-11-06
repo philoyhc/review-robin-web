@@ -138,3 +138,46 @@ def test_duplication_still_runs_on_a_shallow_clone(
 
     assert module.main() == 0
     assert "DUPLICATION" in capsys.readouterr().out
+
+
+def test_pr_commits_counts_merges_and_squash_merges_not_direct_commits(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Findings 2026-11-06 N9: the churn walk read merge commits only and
+    missed every squash-merged PR. A squash commit is a PR when its
+    subject ends ``(#N)``; a direct commit with no number is not one."""
+    root = tmp_path / "repo"
+    root.mkdir()
+    _run("git", "init", "-q", "-b", "main", cwd=root)
+    _run("git", "config", "user.email", "t@example.com", cwd=root)
+    _run("git", "config", "user.name", "T", cwd=root)
+    (root / "a.py").write_text("a = 1\n")
+    _run("git", "add", "-A", cwd=root)
+    _run("git", "commit", "-q", "-m", "Start", cwd=root)
+    _run("git", "checkout", "-q", "-b", "slice", cwd=root)
+    (root / "b.py").write_text("b = 1\n")
+    _run("git", "add", "-A", cwd=root)
+    _run("git", "commit", "-q", "-m", "Slice work", cwd=root)
+    _run("git", "checkout", "-q", "main", cwd=root)
+    _run(
+        "git",
+        "merge",
+        "-q",
+        "--no-ff",
+        "slice",
+        "-m",
+        "Merge pull request #1 from x/slice",
+        cwd=root,
+    )
+    (root / "c.py").write_text("c = 1\n")
+    _run("git", "add", "-A", cwd=root)
+    _run("git", "commit", "-q", "-m", "A squashed slice (#2)", cwd=root)
+    (root / "d.py").write_text("d = 1\n")
+    _run("git", "add", "-A", cwd=root)
+    _run("git", "commit", "-q", "-m", "Fix a typo on main", cwd=root)
+    _run("git", "update-ref", "refs/remotes/origin/main", "main", cwd=root)
+    code_metrics = _load()
+    monkeypatch.setattr(code_metrics, "REPO", root)
+    entries, squashed = code_metrics.pr_commits()
+    assert len(entries) == 2
+    assert squashed == 1

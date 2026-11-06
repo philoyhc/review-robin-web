@@ -200,7 +200,7 @@ None.
   `postgres (integration-b)` ran its tests in 2m54 against
   integration-a's 1m38, the slowest job in CI (the assessment's §2,
   "Test runtime"). Re-split `tests/integration` by time, not by letter.
-- **N9 — The repository's own measurements miss every squash-merged PR.**
+- ~~**N9**~~ — **Done in #3662**: both tools count a squash commit whose subject ends `(#N)` as a PR (`code_metrics.pr_commits`; `pace_audit.load`), the pace audit marks a squash-merged PR's turn, iteration, commit count and review rounds `None`, says how many PRs were squash-merged, and splits the cycle over merge-committed PRs only (`tests/unit/test_pace_audit.py`, `tests/unit/test_code_metrics_guard.py`). Churn with them counted: 1.2× at `aab086fe`. **The repository's own measurements miss every squash-merged PR.**
   Since #3150 (2026-10-19) PRs reach `main` two ways: by `c912ae53`, 319
   merge commits and 188 squash commits on the first-parent line, and
   89 of this window's 91 PRs squash-merged. `tools/pace_audit.py`

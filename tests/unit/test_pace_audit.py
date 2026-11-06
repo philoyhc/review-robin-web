@@ -92,6 +92,17 @@ class Repo:
         )
         return self.git("rev-parse", "HEAD").strip()
 
+    def squash(self, minute: int, code: bool = True, subject: str | None = None) -> str:
+        """Land a PR the way a squash merge does: one commit on main whose
+        subject ends ``(#N)``, with no branch behind it."""
+        self.n += 1
+        path = self.root / ("app" if code else "guide") / f"q{self.n}.txt"
+        path.parent.mkdir(exist_ok=True)
+        path.write_text("y\n" * 10)
+        self.git("add", "-A")
+        self.commit(subject or f"Squashed slice {self.n} (#{self.n})", minute)
+        return self.git("rev-parse", "HEAD").strip()
+
 
 @pytest.fixture
 def repo(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> Repo:
@@ -236,3 +247,44 @@ def test_no_main_line_at_all_is_a_message_not_a_traceback(repo: Repo) -> None:
     repo.git("branch", "-m", "main", "trunk")
     with pytest.raises(SystemExit, match="neither 'origin/main' nor 'main'"):
         pa.load("2026-09-01")
+
+
+# --------------------------------------------------------------------
+# squash-merged PRs (findings 2026-11-06 N9): counted, with unknowns as None
+
+
+def test_a_squash_merged_pr_is_a_row_with_its_unknowns_none(repo: Repo) -> None:
+    repo.slice([("first", 5)], merge_minute=10)
+    repo.squash(minute=25)
+    rows = _rows(repo)
+    assert [r["squash"] for r in rows] == [False, True]
+    squashed = rows[1]
+    assert squashed["pr"] == 2
+    assert squashed["cycle"] == 15.0
+    assert squashed["code"] == 10
+    for key in ("first", "last", "n", "review", "received", "turn", "iter", "push2merge"):
+        assert squashed[key] is None, key
+
+
+def test_a_direct_commit_with_no_pr_number_is_not_a_pr(repo: Repo) -> None:
+    repo.slice([("first", 5)], merge_minute=10)
+    repo.squash(minute=20, subject="Fix a typo on main")
+    assert [r["pr"] for r in _rows(repo)] == [1]
+
+
+def test_report_names_the_squashed_share_and_times_only_merges(
+    repo: Repo, capsys: pytest.CaptureFixture
+) -> None:
+    repo.slice([("first", 5)], merge_minute=10)
+    repo.slice([("second", 15)], merge_minute=20)
+    repo.squash(minute=30)
+    pa.report("t", _rows(repo))
+    out = capsys.readouterr().out
+    assert "1 of 3 squash-merged" in out
+    assert "merge-committed (n=1)" in out
+
+
+def test_a_pipe_in_a_squash_subject_keeps_its_pr_number(repo: Repo) -> None:
+    repo.slice([("first", 5)], merge_minute=10)
+    repo.squash(minute=20, subject="Docs | guide sweep (#2)")
+    assert [r["pr"] for r in _rows(repo)] == [1, 2]
