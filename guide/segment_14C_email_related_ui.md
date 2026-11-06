@@ -270,3 +270,49 @@ participant's action do not, so those wait for 14G.
 - `spec/operator_ui_concept.md` — the Email settings card on the Settings page (Item 2).
 - `spec/operator_button_audit.md` — the card's toggles (Item 2).
 - `spec/ui_elements.md` — §6 Toggle: used on the Email settings card too (Item 2).
+
+## Item 3 — The default text as a draft to adopt
+
+### Opportunity
+
+Each of the composer's three templates (invitation, reminder, responses
+received) shows its default subject and body as the boxes' placeholder
+(`session_setupinvite.html`, `placeholder="{{ row.default }}"`). A
+placeholder vanishes at the first keystroke, so an operator who wants
+the default with one sentence changed has to retype it from memory, or
+copy it from the Previews page (author, 2026-11-06, with a screenshot of
+the Invitation email card).
+
+### Decision
+
+**Proposed:** the default stays a grey placeholder, and the operator can
+adopt it as a draft. In an empty box with the caret at the start,
+**→ (Right arrow) fills the box with the default text**, which is then
+ordinary text to edit. Nothing changes until the operator presses the
+key; a saved override, or any typed character, means there is nothing to
+adopt. Leaving a box blank still means "use the default", as today.
+*Rejected:* pre-filling every box with the default. That stores the
+default as an override on the first Save, so a later change to the
+default would never reach this session, and a blank box could no longer
+mean "use the default".
+
+### Open questions
+
+- **How an operator finds the key.** A placeholder gives no hint that →
+  adopts it. Proposed: a one-line hint under each box ("→ to start from
+  the default"), shown only while the box is empty. Author decides.
+- **Tab as well as →.** Tab is how a keyboard user leaves the box, so
+  proposed: → only. Author decides.
+- **Subject, Cc and Bcc too?** Proposed: subject and body, the two with
+  a default; Cc and Bcc have none.
+
+### PR ladder
+
+1. The behavior in the composer's inline script, with its hint, for the
+   three templates' subject and body, and a browser test (`tests/browser/`)
+   of → in an empty box, in a box with text, and with the caret not at
+   the start.
+
+### Doc impact
+
+- `spec/email_template_editor.md` — the default as a draft to adopt: → in an empty box, the hint, blank still meaning the default (Item 3).
