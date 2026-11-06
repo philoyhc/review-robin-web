@@ -65,7 +65,7 @@ def test_a_frontline_recipient_sees_every_flag_and_the_count(client: TestClient)
 
 
 def test_a_recipient_with_nothing_else_finds_closed_flags_too(client: TestClient) -> None:
-    home = client.get("/?as=Hui%20Min%20Goh").text
+    home = client.get("/?as=Farah%20Aziz").text
     card = section(home, "flags-h")
     assert flags(card.split("<h3")[0]) == [
         ("/flags/F-01", "Unacknowledged"),
@@ -152,7 +152,7 @@ def test_a_recipient_acts_on_a_flag(client: TestClient) -> None:
     acked = client.get("/flags/F-02?as=Priya%20Raman").text
     assert ">Acknowledge</button>" not in acked and ">Close with outcome</button>" in acked
     assert "<dt>Acknowledged</dt><dd>29 Oct, 08:30, by Sam Lee</dd>" in acked
-    closed = client.get("/flags/F-03?as=Hui%20Min%20Goh").text
+    closed = client.get("/flags/F-03?as=Farah%20Aziz").text
     assert "Closed: Assessed by counselling." in closed and "Close with outcome" not in closed
 
 
@@ -167,7 +167,7 @@ def test_a_flag_is_seen_only_by_its_raiser_and_recipients(client: TestClient) ->
     assert client.get("/flags/F-02").status_code == 404  # Priya's, and Daniel receives none
     assert client.get("/flags/F-99?as=Priya%20Raman").status_code == 404
     assert client.get("/flags/F-01?as=Marcus%20Tan").status_code == 403
-    assert client.get("/flags/F-01?as=Hui%20Min%20Goh").status_code == 200
+    assert client.get("/flags/F-01?as=Farah%20Aziz").status_code == 200
     assert (
         "<dd>Counselling duty line contacted, 26 Oct, 19:25</dd>" in client.get("/flags/F-01").text
     )
@@ -217,7 +217,7 @@ def test_mounted_safety_pages_stay_under_the_mount() -> None:
     for path in (
         "/log/safety",
         "/flags/F-01",
-        "/?as=Hui%20Min%20Goh",
+        "/?as=Farah%20Aziz",
         "/overview/?as=Sam%20Lee",
         "/log/safety/raised?student=S-02&duration=10%20min&type=Check-in&step=Duty%20senior%20staff%20contacted",
     ):

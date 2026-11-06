@@ -42,31 +42,41 @@ class Viewer:
     grants: frozenset[str]
 
 
-# One sample viewer per authorization type; a frontline recipient (Priya
-# Raman, whose dashboard lists every active flag); someone reaching two
-# pages off the frontline (Nadia Hassan, whose Home lists them); the
-# super-admin; and a rostered RF with no grant (the 403 page): access is a
+# One sample viewer per role in practice (author, 2026-11-06,
+# `residentialapps/guide/1D_refinements.md`): the frontline, an RF and an
+# RSLM who also receives safety flags (Priya Raman, whose dashboard lists
+# every active flag); office staff who coordinate consultation checks
+# (Hui Min Goh); the Master, with senior identifiable access and the
+# aggregate view; the sys admin; and the super-admin. Access is a
 # deliberate grant, never an appointment (§3.5).
 VIEWERS = (
     Viewer("Daniel Koh", "RF", frozenset({FRONTLINE})),
     Viewer("Priya Raman", "RSLM", frozenset({FRONTLINE, RECIPIENT})),
-    Viewer("Sam Lee", "Master", frozenset({SENIOR, RECIPIENT})),
-    Viewer("Hui Min Goh", "Exec", frozenset({RECIPIENT})),
-    Viewer("Marcus Tan", "RSLM", frozenset({CONSULTATION})),
-    Viewer("Kenneth Lau", "RF", frozenset({VIEW_AGGREGATE})),
-    Viewer("Siti Rahman", "RF", frozenset({VIEW_IDENTIFIABLE})),
-    Viewer("Nadia Hassan", "RSLM", frozenset({CONSULTATION, VIEW_IDENTIFIABLE})),
+    Viewer("Sam Lee", "Master", frozenset({SENIOR, VIEW_AGGREGATE, RECIPIENT})),
+    Viewer("Hui Min Goh", "Exec", frozenset({CONSULTATION})),
     Viewer("Rachel Yeo", "Admin", frozenset({SYS_ADMIN})),
     Viewer("Platform super-admin", "", frozenset({SUPER_ADMIN})),
-    Viewer("Wei Jie Ong", "RF", frozenset()),
 )
 DEFAULT = VIEWERS[0]
+# Grant combinations no role in practice holds, off the switcher but still
+# drawn for `?as=`, so the pages they reach stay tested: no grant at all
+# (the 403 page), the aggregate view alone, identifiable view, the
+# Consultation check with identifiable view (a Home listing two pages), and
+# a recipient with nothing else (the sample viewers until 2026-11-06).
+UNLISTED_VIEWERS = (
+    Viewer("Wei Jie Ong", "RF", frozenset()),
+    Viewer("Kenneth Lau", "RF", frozenset({VIEW_AGGREGATE})),
+    Viewer("Siti Rahman", "RF", frozenset({VIEW_IDENTIFIABLE})),
+    Viewer("Marcus Tan", "RSLM", frozenset({CONSULTATION})),
+    Viewer("Nadia Hassan", "RSLM", frozenset({CONSULTATION, VIEW_IDENTIFIABLE})),
+    Viewer("Farah Aziz", "RF", frozenset({RECIPIENT})),
+)
 
 
 def viewer(name: str | None) -> Viewer:
     """The sample viewer a page is drawn for (`?as=`); the default for an
     unknown or absent name."""
-    return next((v for v in VIEWERS if v.name == name), DEFAULT)
+    return next((v for v in (*VIEWERS, *UNLISTED_VIEWERS) if v.name == name), DEFAULT)
 
 
 def as_query(v: Viewer) -> str:
@@ -620,10 +630,10 @@ FLAGS = (
         datetime(2026, 10, 3, 18, 15),
         "Duty senior staff contacted",
         "closed",
-        acknowledged_by="Hui Min Goh",
+        acknowledged_by="Sam Lee",
         acknowledged_at=datetime(2026, 10, 3, 18, 40),
         outcome="No further action",
-        closed_by="Hui Min Goh",
+        closed_by="Sam Lee",
         closed_at=datetime(2026, 10, 4, 10, 0),
     ),
 )
@@ -1063,6 +1073,7 @@ class CheckRun:
 
 
 CHECK_RUNS = (
+    CheckRun(date(2026, 10, 27), "Hui Min Goh", "Hall leadership appointments", 11, 2),
     CheckRun(date(2026, 10, 22), "Marcus Tan", "Overseas field trip, Semester 2", 14, 2),
     CheckRun(date(2026, 9, 30), "Nadia Hassan", "Student exchange nominations", 8, 1),
 )
@@ -1111,7 +1122,7 @@ _OTHER_GRANTS = {
 
 
 def grants_of(name: str) -> frozenset[str]:
-    v = next((v for v in VIEWERS if v.name == name), None)
+    v = next((v for v in (*VIEWERS, *UNLISTED_VIEWERS) if v.name == name), None)
     return v.grants if v else _OTHER_GRANTS.get(name, frozenset())
 
 

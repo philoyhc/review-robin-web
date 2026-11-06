@@ -19,7 +19,7 @@
 {% macro sample_title(heading, me, extra="") -%}
   <div class="ptitle">
     <h1>{{ heading }}</h1>
-    <span class="chips"><span class="chip chip-warn">Sample data</span>{{ viewing_chip(me, what_of(viewer_choices, me)) }}{{ extra }}</span>
+    <span class="chips"><span class="chip chip-warn">Sample data</span>{{ viewing_chip(me, viewer_line if viewer_line is defined else what_of(viewer_choices, me)) }}{{ extra }}</span>
   </div>
 {%- endmacro %}
 

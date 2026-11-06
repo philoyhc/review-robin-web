@@ -77,4 +77,17 @@ and four types.
 
 ## Status
 
-Opened; rung 11 next.
+- **Rung 11:** as planned, except that the combinations no role in
+  practice holds are not moved into `_OTHER_GRANTS`: they stay drawn for
+  `?as=` but off the card (`UNLISTED_VIEWERS`), so the tests still reach
+  the pages they open and Access still lists their grants. They are Wei
+  Jie Ong (no grant), Kenneth Lau (aggregate), Siti Rahman (identifiable),
+  Marcus Tan (Consultation check), Nadia Hassan (Consultation check with
+  identifiable view) and, new, Farah Aziz, an RF on the roster copy, as a
+  recipient with nothing else (Hui Min Goh's old combination); Access and
+  Who holds access now list her as a recipient. Hui Min Goh gains a past
+  check; flag F-04, which she had acknowledged and closed, is Sam Lee's.
+  The Viewing as chip reads an off-card viewer's line from their grants.
+  One read: the empty past checks, F-04, three tests looping over the card
+  only, a stale count, this note and the chip, all fixed.
+Next: rung 12.

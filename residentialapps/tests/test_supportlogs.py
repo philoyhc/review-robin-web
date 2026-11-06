@@ -78,7 +78,7 @@ def test_a_page_beyond_the_viewer_s_grants_is_403(client: TestClient) -> None:
 def test_no_grant_means_no_support_logs(client: TestClient) -> None:
     """Access is a grant, never an appointment (§3.5): an RF on the roster
     with no grant gets the `403` page, with no tabs or switcher."""
-    none = next(v for v in sample.VIEWERS if not v.grants)
+    none = next(v for v in sample.UNLISTED_VIEWERS if not v.grants)
     assert none.appointment == "RF"
     page = client.get(at("/", none.name))
     assert page.status_code == 403
@@ -106,7 +106,7 @@ def test_each_grant_gives_its_tabs(client: TestClient) -> None:
         "Configuration",
         "Audit log",
     ]
-    for v in sample.VIEWERS:
+    for v in (*sample.VIEWERS, *sample.UNLISTED_VIEWERS):
         assert "Safety flags</a>" not in client.get(at("/", v.name)).text
 
 
@@ -145,7 +145,7 @@ def test_the_403_page_names_an_area_the_viewer_has(client: TestClient) -> None:
 
 
 def test_a_recipient_with_nothing_else_lands_on_the_flags(client: TestClient) -> None:
-    page = client.get(at("/", "Hui Min Goh"))
+    page = client.get(at("/", "Farah Aziz"))
     assert page.status_code == 200
     assert 'id="flags-h">Safety flags <span class="count">' in page.text
     assert tabs(page.text) == ["Home"]
@@ -280,7 +280,7 @@ def test_the_sample_staff_are_the_roster_s() -> None:
     staff are copied from the roster's mock; this holds them to it."""
     with ROSTER.open(newline="") as f:
         roster = {row["Name"]: row["Abbrev"] for row in csv.DictReader(f)}
-    for v in sample.VIEWERS:
+    for v in (*sample.VIEWERS, *sample.UNLISTED_VIEWERS):
         if v.appointment:
             assert roster.get(v.name) == v.appointment, v.name
     assert sample.DEFAULT.grants == {sample.FRONTLINE}
@@ -290,3 +290,25 @@ def test_the_sample_staff_are_the_roster_s() -> None:
         *(g.grantor for g in sample.PEER_GRANTS),
     ):
         assert roster.get(name) in ("RF", "RSLM"), name
+
+
+def test_the_sample_viewers_are_the_roles_in_practice(client: TestClient) -> None:
+    """Author, 2026-11-06 (`residentialapps/guide/1D_refinements.md`): the
+    frontline, office staff with the Consultation check, the Master,
+    administration; other combinations off the card but drawn for `?as=`."""
+    assert [v.name for v in sample.VIEWERS] == [
+        "Daniel Koh",
+        "Priya Raman",
+        "Sam Lee",
+        "Hui Min Goh",
+        "Rachel Yeo",
+        "Platform super-admin",
+    ]
+    assert sample.viewer("Hui Min Goh").grants == {sample.CONSULTATION}
+    assert sample.VIEW_AGGREGATE in sample.viewer("Sam Lee").grants
+    home = client.get(at("/", "Hui Min Goh"), follow_redirects=False)
+    assert home.status_code in (302, 303, 307) and "/consultation/" in home.headers["location"]
+    card = client.get("/").text
+    for v in sample.UNLISTED_VIEWERS:
+        assert sample.viewer(v.name) == v
+        assert quote(v.name) not in card, v.name

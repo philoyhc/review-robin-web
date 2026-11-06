@@ -219,10 +219,13 @@ A **Sample viewer** card on every sample page (not the not-registered
 page) switches the viewer (`?as=`). It comes **last on the page**, after
 everything the page shows, and a **Viewing as** chip by the title names
 the viewer with their line from the card ("Viewing as Daniel Koh, RF:
-Frontline") and links down to it (`#sample-viewer`, author 2026-10-31). The viewers are one per authorization type, a viewer
-reaching two pages, the
-super-admin and a rostered RF with no grant (the `403` page). Every link
-carries the viewer.
+Frontline") and links down to it (`#sample-viewer`, author 2026-10-31). The viewers are the roles in practice (author, 2026-11-06): the
+frontline (an RF, and an RSLM who also receives safety flags), office
+staff with the Consultation check, the Master (Senior identifiable,
+Other Staff view: aggregate and safety flags), the sys admin and the
+super-admin. Other grant combinations, a rostered RF with no grant (the
+`403` page) among them, are drawn for `?as=` but not offered on the card.
+Every link carries the viewer.
 
 ## 8. Open questions
 

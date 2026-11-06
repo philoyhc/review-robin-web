@@ -178,6 +178,8 @@ def render(
             "sample": sample,
             # The viewer switch goes to each person's Home, which sends them
             # where they belong.
+            # The chip's line, for a viewer off the card (`?as=` only) too.
+            "viewer_line": sample.what(me),
             "viewer_choices": [
                 {"name": v.name, "what": sample.what(v), "path": "/" + sample.as_query(v)}
                 for v in sample.VIEWERS
