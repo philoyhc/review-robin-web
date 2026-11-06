@@ -298,9 +298,9 @@ def test_the_checks_see_the_corpus_they_claim_to_cover() -> None:
     distinction between vacuity and coverage.
     """
     pointers = plan_pointers(_todo_text())
-    # 2, not 3, since 19S closed (2026-09-23): the queue holds 14B and
-    # 20. A close floor, as above — it falls with the queue it measures.
-    assert len(pointers) >= 2, f"only {len(pointers)} `**Plan:**` pointers"
+    # 1 since 22J closed (2026-11-06): the queue holds 14G alone. A close
+    # floor, as above — it falls with the queue it measures.
+    assert len(pointers) >= 1, f"only {len(pointers)} `**Plan:**` pointers"
     for path in pointers:
         assert path.startswith("guide/") and path.endswith(".md"), (
             f"`**Plan:**` captured {path!r}, which is not a plan path — "
