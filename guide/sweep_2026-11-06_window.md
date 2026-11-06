@@ -11,7 +11,7 @@ merges).
 
 Four `spec-writer` reads ran in verify mode, split by area; none edited a
 file. **This sweep changed no file in scope.** Every divergence is a row
-of `guide/findings_2026-11-06_sweep.md`. Coverage was a full read for
+of `guide/archive/findings_2026-11-06_sweep.md`. Coverage was a full read for
 read B's five files and a read of each file's changes since `cc364ed0`
 plus targeted checks for reads A, C and D; the prose they did not reach
 is listed in §5.
@@ -34,7 +34,7 @@ was archived with nothing open. Its three carried items stand as there:
 ## 2. Update in place
 
 - `rrw_design_rationale.md`: 1 (U4).
-- `docs/known_limitations.md`: 1 (U5; outside the scope, met in passing).
+- `docs/known_limitations.md`: 2 bullets (U5; outside the scope, met in passing).
 - `docs/deployment.md`: 1 (U7).
 - `spec/rrw_functional_spec.md`: 1 (U6).
 - `spec/csv_contracts.md`: 3 (U1, U8, U9).
@@ -42,6 +42,7 @@ was archived with nothing open. Its three carried items stand as there:
 - `spec/ui_elements.md`: 1 (U2).
 - `spec/visual_style_rrw.md`: 1 (U10).
 - `spec/extract_data.md`: 1 (U11).
+- `cordware/spec/identity.md`: 1 (U12, found while fixing W1).
 
 ## 3. Consolidate
 
@@ -62,7 +63,7 @@ None.
   `audience_and_identity_model.md`, `visual_style_general.md`, `spec/README.md`;
   `README.md`, `CLAUDE.md` / `AGENTS.md`, `CONTRIBUTING.md`, `docs/README.md`,
   `docs/database.md`, `docs/local_setup.md`, `rrw_sdd_in_practice.md`,
-  `cordware/spec/host.md`, `cordware/spec/identity.md`.
+  `cordware/spec/host.md`.
 - **Checked and not findings:** `rrw_sdd_in_practice.md`'s 8,451 tests
   (passed) and 8,463 (collected) agree, the 12 skips between them; its 173
   `EVENT_SCHEMAS` types at `c912ae53` are right (the dict's keys, parsed).

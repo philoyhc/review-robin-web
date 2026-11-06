@@ -1093,7 +1093,7 @@ For events triggered by a known cause: `session.invalidated` (a token
 naming the setup mutation, e.g. `"reviewer_created"` or
 `"instrument_added"`, or `"operator_revert"` when the operator reverts
 a validated session; `session.reverted_to_draft` carries no reason),
-cascade close (`reason: "deadline"`; past rows may carry `"manual"`).
+cascade close (`reason: "deadline"`, or `"release"` when Release-from ends a review with no End; past rows may carry `"manual"`).
 Free-form `str`; emitters pick from a small documented set per event
 family rather than typing freely.
 

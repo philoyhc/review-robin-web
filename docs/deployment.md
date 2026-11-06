@@ -31,7 +31,9 @@ deployment (`CONTRIBUTING.md`).
 - **Sign-in: App Service Easy Auth** (Entra ID), with the token store on.
   It injects the `X-MS-CLIENT-PRINCIPAL*` headers that `cordware/identity.py`
   parses, and holds the delegated Microsoft Graph token the directory
-  features use (`cordware/spec/identity.md`). The application has no
+  features and per-row email sending use (`cordware/spec/identity.md`),
+  so the app registration's consent must cover sending mail as the
+  signed-in operator. The application has no
   login code and no password store (`docs/security_posture.md`). Each
   mount's `/health` is meant to be excluded from sign-in, the host's
   setting. A deep link through sign-in is Easy Auth's redirect, so it is

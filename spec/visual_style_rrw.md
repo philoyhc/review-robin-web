@@ -506,7 +506,7 @@ Shown when a sign-in link is invalid, the session is not in Activated state, or 
 **Body:**
 
 - Brief explanation in plain language. Examples:
-  - "This review is no longer accepting responses. The deadline passed on [date]."
+  - "This review closed at its deadline, [date and zone], so [what was refused]." (the shipped copy; `spec/reviewer-surface.md` owns the write refusals)
   - "This sign-in link is no longer valid. Request a new one from the session organizer."
   - "This review is not currently available. Try again later or contact the session organizer."
 - Avoid technical detail (no "Session is in Draft state" — that's operator vocabulary). The reviewer doesn't need or want the internal model.

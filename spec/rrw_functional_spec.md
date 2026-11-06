@@ -1215,8 +1215,9 @@ The sys-admin surface, reached from the chrome's **Admin** link, carries
 Accounts Management (the allowlist, its bulk actions and invite by
 email), Sessions Diagnostics (every session, with the audited
 **Manage** self-add), and each session's Outbox viewer
-([§11.3](#113-the-outbox)), Audit Log viewer and audit-events CSV. It
-has no per-session owner management ([§7.4](#74-session-ownership)).
+([§11.3](#113-the-outbox)), Audit Log viewer and audit-events CSV, and
+System Status (the clock, what is due next, sending, and this
+instance; read-only). It has no per-session owner management ([§7.4](#74-session-ownership)).
 
 `spec/permissions.md` §3 and §4.1 own its gates and actions, and
 `spec/operator_ui_concept.md` §6 its pages.

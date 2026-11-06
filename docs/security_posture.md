@@ -431,6 +431,17 @@ injects.*
   a fake-auth pill when the local fallback is in use, and a
   `/.auth/logout` sign-out link).
 
+## Outbound mail
+
+Since segment 14F an operator's click sends email: per-row Send and Send
+reminder, and Send a test to me, go out as `POST /me/sendMail` on the
+operator's own delegated Graph token, from their own mailbox. RRW holds no
+mail credential and sets no From. The host's mailer
+(`cordware/spec/identity.md`, "Sending mail") follows no redirect, so the
+token never reaches another host; never retries a `5xx` or a network
+failure, which could send twice; and logs no address. Bulk and scheduled
+sending stay off until segment 14G.
+
 ## CSRF posture (decided 2026-05-03)
 
 Review Robin relies on **Easy Auth + `SameSite=Lax` session cookies**
