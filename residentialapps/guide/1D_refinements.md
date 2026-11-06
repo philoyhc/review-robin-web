@@ -90,9 +90,17 @@ and four types.
   The Viewing as chip reads an off-card viewer's line from their grants.
   One read: the empty past checks, F-04, three tests looping over the card
   only, a stale count, this note and the chip, all fixed.
-- **Rung 12:** as planned. Daniel Koh's favorites are Clara Tan (S-03,
-  his plan) and Hana Rahim (S-08, shared by Priya Raman); Priya Raman's are
-  S-08 and S-10. The star is the column chip's pressed style, disabled
-  until wired. Remapped sample encounters move the frontline's support
+- **Rung 12:** as planned, but for the star's role. Daniel Koh's
+  favorites are Clara Tan (S-03, his plan) and Hana Rahim (S-08, shared by
+  Priya Raman); Priya Raman's are S-08 and S-10. The star is the column
+  chip's pressed style, not a Toggle `.btn` (no Toggle role in
+  `residentialops_ui.md` §4), disabled until wired and 44 px under a
+  finger: the author's call to confirm. After saving for a shared student,
+  the confirmation offers to open them, as for one's own. **Open for
+  wiring:** a frontline viewer with no favorite has no student to pick
+  until "Or find a student" works; the sample seeds every frontline
+  viewer. One read: the Open link for a shared student, the star's touch
+  target, the informal follow-up path's browser test, three weak tests
+  and a dead variable, all fixed. Remapped sample encounters move the frontline's support
   time and workload minutes (Daniel Koh: 105 → 120 in 14 days, 145 → 165
   in the term).

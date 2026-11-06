@@ -14,7 +14,7 @@ from starlette.requests import Request
 from starlette.responses import RedirectResponse, Response
 
 from residentialapps.supportlogs import sample_support as sample
-from residentialapps.supportlogs.pages import flags_tab, gated, query
+from residentialapps.supportlogs.pages import flags_tab, gated, query, reaches_student
 from residentialapps.web.pages import placeholders_previewers_only
 from residentialapps.web.urls import url_path
 
@@ -75,7 +75,7 @@ def safety_raised(request: Request) -> Response:
         return RedirectResponse(
             url_path(request, "/log/safety") + query(me, **kept), status_code=303
         )
-    in_set = any(s.id == context["chosen"].id for s, _, _ in sample.working_set(me.name))
+    in_set = reaches_student(me, context["chosen"].id)
     at = request.query_params.get("at", "")
     at = (
         at.replace("T", " ") if len(at) == 16 and at[10] == "T" else ""

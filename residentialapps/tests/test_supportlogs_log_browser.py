@@ -232,3 +232,13 @@ def test_a_chosen_filter_downloads_for_that_person(page: Page) -> None:
         page.locator("#dl-h").locator("xpath=..").locator("button[type=submit]").click()
     query = parse_qs(urlparse(sent.value.url).query)
     assert query["staff"] == ["Priya Raman"] and query["student"] == ["S-08"]
+
+
+def test_a_student_on_follow_ups_shows_them_in_the_browser(page: Page) -> None:
+    """The informal plan path the favorites no longer reach by a chip
+    (cold read, rung 12): arriving for Aiden Chen shows his follow-ups."""
+    page.goto(f"{ORIGIN}/log?student=S-01")
+    page.locator("details.more > summary", has_text="Add details").click()
+    assert page.locator("#on-plan").text_content() == "On your follow-ups: weekly."
+    assert page.locator("#add-follow").is_hidden()
+    assert page.locator("#cadence").input_value() == "Weekly"

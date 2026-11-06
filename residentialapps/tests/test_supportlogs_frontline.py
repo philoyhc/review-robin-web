@@ -14,6 +14,7 @@ from fastapi.testclient import TestClient
 
 from residentialapps.supportlogs import sample_support as sample
 from residentialapps.supportlogs.main import create_app
+from residentialapps.supportlogs.pages import reaches_student
 from residentialapps.tests._host import host_with
 
 PRIYA = "?as=Priya%20Raman"
@@ -296,7 +297,13 @@ def test_favorites_drive_log_and_are_marked_on_students(client: TestClient) -> N
         r'data-favorite aria-pressed="true" aria-label="Favorite ([^"]+)"', students
     )
     assert pressed == ["Clara Tan", "Hana Rahim"]  # Hana under Shared with me
-    assert students.count("data-favorite") == students.count('aria-label="Favorite ')
+    for staff, picks in sample.FAVORITES.items():  # a favorite is a student you reach
+        me = sample.viewer(staff)
+        assert all(reaches_student(me, sid) for sid in picks), staff
     assert 'aria-pressed="false" aria-label="Favorite Dev Menon" disabled' in students
     priya = client.get("/log?as=Priya%20Raman").text
     assert re.findall(r'name="student" value="([^"]+)"', priya) == ["S-08", "S-10"]
+    assert 'href="/students/?as=Priya%20Raman">Students</a>' in priya  # the hint keeps the viewer
+    # A shared favorite saved for is one the viewer can open (cold read).
+    saved = client.get("/log/saved?student=S-08&duration=15%20min&type=Check-in").text
+    assert 'href="/students/S-08">Open Hana Rahim</a>' in saved
