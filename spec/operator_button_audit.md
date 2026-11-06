@@ -676,6 +676,9 @@ Source: `app/web/templates/operator/operator_settings.html`.
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
 | 93a | Date & time card | Save timezone | `<button type="submit">` | `btn secondary` | Secondary | Posts `/operator/settings/timezone`; persists the `display_timezone` preference |
+| 93b | Email settings card | On / Off (Keep a copy in my Sent Items) | `<button type="submit">` | `btn` (on) / `btn secondary` (off) | **Toggle** | Posts `/operator/settings/email-preference` with `key=email_save_to_sent_items` and the next state in `on`; `aria-pressed` carries the state, and `aria-labelledby` names the row's label. One-button form, no script |
+| 93c | Email settings card | On / Off (Send a copy to myself) | `<button type="submit">` | `btn` (on) / `btn secondary` (off) | **Toggle** | As 93b, `key=email_bcc_self` |
+| 93d | Email settings card | On / Off (Replies go to the session's Help contact) | `<button type="submit">` | `btn` (on) / `btn secondary` (off) | **Toggle** | As 93b, `key=email_reply_to_help` |
 
 Rows 92–94, the Email send (SMTP) form's Cancel and Save and the Clear
 all settings (SMTP) button, are retired with those cards (segment 14C

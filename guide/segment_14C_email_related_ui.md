@@ -132,7 +132,8 @@ Items (Graph `sendMail`'s `saveToSentItems`). Others will follow.
 
 ### Decision
 
-- A half-width **Email settings** card beside Date & time, holding
+- A half-width **Email settings** card beside Date & time (shipped
+  under it: see Status), holding
   **toggles**, one per choice, each a two-state Toggle per
   `spec/ui_elements.md` §6.
 - **Scaffold first** (`CLAUDE.md`, consequential UI): the card with its
@@ -155,30 +156,24 @@ operator's own mailbox, not a session.
 
 ### Status
 
-- 2026-11-05, rung 1 (scaffold): the card stacks **under** Date & time,
-  not beside it, because Unit (20D) took that slot after this plan was
-  written. It shows three inert Toggles at their proposed defaults:
-  Keep a copy in my Sent Items, Send a copy to myself, and Replies go
-  to the session's Help contact. The author kept all three and ruled
-  each off by default (2026-11-05).
-- 2026-11-05, rung 2 (the last build rung). The three choices are boolean
-  keys in `users.preferences` (`email_save_to_sent_items`,
-  `email_bcc_self`, `email_reply_to_help`), so there is no migration, as
-  with `display_timezone`. Each Toggle is a one-button form posting its
-  next state to `/operator/settings/email-preference`, with no script,
-  and `operator.email_preference_set` records it.
-  `email_dispatch.send_options_for` turns the choices into a send's
-  options. **Reply-to applies only when the Help contact is an email
-  address**, since that field is free text. 14F's test send applies Sent
-  Items and Reply-to, but not Bcc.
-- Read once, at rung 2. The read found the Reply-to check let
-  "address or call …" through, since `parseaddr` squeezes spaces out; it
-  now uses `email_identity.looks_like_email`. It also found the card's
-  copy claimed every send: no participant send exists until 14F rung 3a,
-  so the copy says what applies now, and `dispatch` takes `options`
-  without a default. **The Definition of done's "changes what the send
-  path does" is met for Bcc only when 14F rung 3a lands**, so this item
-  closes with 14F rung 3a, not before. Main-base SHA before this item's rung 1: `908959ba`.
+**Closed 2026-11-06.** Two rungs as planned. The card stacks **under**
+Date & time, not beside it, because Unit (20D) took that slot. Three
+Toggles, all off by default (author, 2026-11-05): Keep a copy in my
+Sent Items, Send a copy to myself, Replies go to the session's Help
+contact. Each is a boolean in `users.preferences`, posted to
+`/operator/settings/email-preference` and audited
+`operator.email_preference_set`; `email_dispatch.send_options_for`
+reads them for per-row Send and Send reminder (the test send takes
+Sent Items and Reply-to, not Bcc). Reply-to applies only when the Help
+contact is an email address.
+
+One read, at rung 2. It caught a Reply-to check that `parseaddr` let
+through; it now uses `email_identity.looks_like_email`. It also caught
+copy that claimed every send. The item waited on 14F rung 3a for its
+Bcc reader. At the close, `spec-writer` added the Settings page to
+`spec/operator_ui_concept.md` and the three Toggles to
+`spec/operator_button_audit.md`; the other two specs were already
+right. The report-email candidates went to Item 4.
 
 ### PR ladder
 
@@ -189,8 +184,9 @@ operator's own mailbox, not a session.
 
 ### Definition of done
 
-- The card renders at half width beside Date & time; each toggle
-  persists and changes what the send path does (tests per rung).
+- The card renders ~~at half width beside~~ under Date & time (Unit took
+  the slot beside it); each toggle persists and changes what the send
+  path does (tests per rung).
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 14C.2` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
@@ -328,3 +324,130 @@ mean "use the default".
 ### Doc impact
 
 - `spec/email_template_editor.md` — the default as a draft to adopt: → in an empty box, no hint, blank still meaning the default (Item 3).
+
+## Item 4 — Report emails to the other owners
+
+### Opportunity
+
+Item 2's candidate list (above, "Candidate toggles: report emails")
+names fifteen milestone reports an operator could opt into. Only one
+group can send today. Mail goes as the operator who acts (ruling
+2026-11-02), so a report needs an operator's click with its token behind
+it. Group B, an owner's action reported to the session's *other* owners,
+has exactly that. A's triggers are the bulk sends, which refuse until
+14G Item 5. C and D fire on the clock or on a participant's action, so
+they need scheduled email (author, 2026-11-06: B live; A, C and D
+inactive).
+
+### Decision
+
+- **The card grows a "Report emails" section** under Item 2's three
+  toggles. Each of group B's three rows is a live Toggle: lifecycle
+  changes; destructive data actions; owners and release. Groups A, C and
+  D are one inactive Toggle each, with the reason on the card: A waits
+  on bulk sending (14G), C and D on scheduled email (14G). All are off
+  by default, per operator.
+- **A report goes from the acting owner's mailbox** to each *other*
+  owner whose toggle for that row is on. It is sent after the action
+  commits, through the same request mailer as per-row Send, and it never
+  delays a refusal, undoes the action or blocks it. A failed send is
+  recorded and the action stands.
+- **Called from the routes**, after the service returns, through one
+  service function, `owner_reports.report(...)`. The audit write is
+  inside the action's transaction, and mail must follow the commit.
+- **Recorded in the audit log**: `report.sent` (recipients counted, never
+  listed) and `report.send_failed` (the error kind), each registered in
+  `EVENT_SCHEMAS`. No outbox row: the outbox is participant mail.
+
+Rejected: *send from the audit write* (`audit.write_event`). It would
+mail before the commit, and couple the audit log to the mailer.
+Rejected: *one toggle per report*, fifteen in all. The card reads as a
+settings page, not a matrix. Group B's three rows are the author's own
+table, and A, C and D stay one line each until they can send.
+
+### Semantics
+
+- **Which actions.** Lifecycle: `session.activated`,
+  `session.reverted_to_draft`, `session.archived`, `session.unarchived`,
+  `session.deleted`. Destructive: `session.responses_purged`,
+  `responses.cleared`, `responses.deleted_all`, `reviewers.deleted_all`,
+  `reviewees.deleted_all`. Owners and release: `session.owner_added`,
+  `session.owner_removed`, `session.responses_released`,
+  `session.responses_release_stopped`. The clock's own transitions (End
+  closing a session, a scheduled activation) have no click behind them,
+  so they belong to group C.
+- **Who.** The session's owners at the moment of the action, less the
+  actor. An owner who was just removed is told, since it concerns them.
+  A deleted session's owners are read before the delete.
+- **What.** Plain text: who did what, to which session (name and code),
+  when (the session's zone), and a link to Session Home, except after a
+  delete. The actor's Sent Items choice applies; Bcc and Reply-to do
+  not, since they are about participant mail.
+- **No mailer** (no token, a refused send): `report.send_failed` with its
+  kind; the page shows no error, since the action succeeded.
+
+### Judgment calls — decided
+
+- The recipient's toggle decides, not the actor's: it is the recipient's
+  inbox. (2026-11-06)
+- One email per recipient per action, not a digest: digests need a
+  clock (group C's territory). (2026-11-06)
+
+### Blast radius (measured)
+
+Taken 2026-11-06 at `49aa8daa`.
+
+| What | Count | Command |
+|---|---|---|
+| Group B event types, all already in `EVENT_SCHEMAS` | 14 | `grep -oE '"session\.(activated\|reverted_to_draft\|archived\|unarchived\|deleted\|responses_purged\|owner_[a-z]+\|responses_release[a-z_]*)"' app/services/audit.py` plus the four `*.deleted_all` / `responses.cleared` |
+| Email preference keys today | 3 | `email_save_to_sent_items`, `email_bcc_self`, `email_reply_to_help` in `app/services/operator_settings.py` |
+
+### PR ladder
+
+1. **Scaffold:** the "Report emails" section with its six Toggles,
+   inert, and the reasons on A, C and D. It must not touch a route or
+   service.
+2. **Store** group B's three choices: three preference keys and the
+   existing `/operator/settings/email-preference` route, audited
+   `operator.email_preference_set`. Tests per toggle.
+3. **Send:** `owner_reports.report`, the two audit events, and the
+   lifecycle row's five actions wired. Tests with the fake mailer:
+   who receives, who does not, a failure recorded and the action
+   standing.
+4. **The destructive and the owners-and-release rows**, wired the same
+   way. The last build rung, so it takes the cumulative `diff-reviewer`
+   read.
+5. **Close** (this item, then the segment).
+
+### Definition of done
+
+- The card shows six report Toggles. Group B's three persist and change
+  who is mailed; A, C and D are inactive with their reasons.
+- Each of the 14 actions mails each other owner who opted in, from the
+  actor's mailbox, after the commit, and records `report.sent` or
+  `report.send_failed`; a test per row.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 14C.4` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `guide/todo_master.md` entries deleted; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+None open; the author ruled B live, A, C and D inactive, and the item
+shape (2026-11-06).
+
+### Out of scope
+
+- Groups A, C and D's sends: 14G Item 5 for A, the rest of 14G for C and
+  D. Their toggles become live there.
+- A report to the actor (A is that, and waits).
+
+### Doc impact
+
+- `spec/settings_inventory.md` — the three report preference keys, their defaults and the inactive three (Item 4).
+- `spec/operator_ui_concept.md` — the Report emails section of the Email settings card (Item 4).
+- `spec/operator_button_audit.md` — its six Toggles, three inactive (Item 4).
+- `spec/architecture.md` — `report.sent` / `report.send_failed` in the audit-event table, and `owner_reports` in the module map (Item 4).
+- `spec/email_infra_options.md` — owner reports as the second kind of mail sent as the operator (Item 4).
+- `spec/session_owners.md` — what an owner is told when another owner acts (Item 4).

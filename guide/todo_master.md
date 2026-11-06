@@ -33,13 +33,13 @@ host is provisioned and serving Review Robin since 2026-10-31; whether
 the deployment has *concluded* (verified, the personal web app retired)
 is the author's call.
 
-**Order (author, 2026-11-06):** 14C Item 2, then 22J; 14G when IT answers.
+**Order (author, 2026-11-06):** 14C Item 4, then 22J; 14G when IT answers.
 
-1. **14C Item 2 — Email-related UI** (Items 1 and 3 done): the Email
-   settings card of toggles, built and read by 14F's send path. Before
-   its close, the card gains the candidate report-email toggles: live
-   where the send needs no scheduled email, inactive where it does
-   (author, 2026-11-06). **Plan:** `guide/segment_14C_email_related_ui.md`.
+1. **14C Item 4 — Report emails to the other owners** (Items 1–3
+   closed): the Email settings card's report Toggles, group B live (an
+   owner's action reported to the other owners, from the actor's
+   mailbox), A, C and D inactive until 14G (author, 2026-11-06). The
+   segment closes with it. **Plan:** `guide/segment_14C_email_related_ui.md`.
 
 2. **14G — Scheduled email** (gated on IT: offline sending as the
    operator, else a dedicated mailbox). Sends due invitations, reminders
