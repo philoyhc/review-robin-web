@@ -883,7 +883,7 @@ archive / retention are deferred):
   (schema present; consumer deferred).
 
 Every scheduled anchor obeys a save-time ordering chain
-(Start ≤ deadline ≤ Release-from < Release-until), which the
+(Start < deadline ≤ Release-from < Release-until), which the
 Settings CSV import enforces too, and an
 unset-anchor rule (an offset whose anchor is unset never fires).
 Timed steps fire from a clock inside the application, with no page view

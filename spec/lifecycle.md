@@ -1080,7 +1080,7 @@ cleared or moved in the file (`spec/csv_contracts.md`).
 The create form (`session_new.html`) also checks the same chain
 client-side, in a small partial
 (`operator/partials/_schedule_ordering_js.html`). As the operator types
-it compares each adjacent pair (Start ≤ End, End ≤ Release-from,
+it compares each adjacent pair (Start < End, End ≤ Release-from,
 Release-from < Release-until) only when both boxes hold a time, as the
 server does, and marks the later box invalid with the table's wording
 (`setCustomValidity`), so the browser blocks the submit. It sets no

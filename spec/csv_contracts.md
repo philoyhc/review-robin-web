@@ -690,7 +690,7 @@ the round-trip notes below.
    than the column it lands in (a data-shape name or `field_key` over
    255 characters, a `short_label` over 32), read from each column's
    declared length; a session tag over 64 is refused by the tag rules.
-   A schedule out of order (Start ≤ End ≤ Release-from <
+   A schedule out of order (Start < End ≤ Release-from <
    Release-until) is an error naming the field, on the values the
    session would hold after the apply (`spec/lifecycle.md` §8.2.7).
    So is a `session.invite_offsets` or `session.reminder_offsets` entry
@@ -881,7 +881,7 @@ with capitals are not migrated**: they stay until something rewrites them, and s
 Home's details card is one such thing, since its Tags field writes
 through `set_tags`.
 
-**The import enforces the schedule ordering chain**: Start ≤ End ≤ Release-from < Release-until, on the
+**The import enforces the schedule ordering chain**: Start < End ≤ Release-from < Release-until, and with no End Start < Release-from (findings L3), on the
 values the session would hold after the apply, refused in the parse
 phase with the details card's messages (`spec/lifecycle.md` §8.2.7).
 A pair the file supplies neither side of is not checked. **One

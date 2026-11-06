@@ -1426,7 +1426,7 @@ def _iso(month: int, day: int) -> str:
 def test_an_import_that_breaks_the_schedule_chain_is_refused(
     db: Session, rows: list[Row], field: str, message: str
 ) -> None:
-    """G22 (ruled 2026-10-06): Start ≤ End ≤ Release-from <
+    """G22 (ruled 2026-10-06): Start < End ≤ Release-from <
     Release-until, checked on the values the session would hold — here
     the destination keeps its own End (15 May) — and nothing applied."""
     dst = _bare_session(db, code=f"chain-{field[8:16]}")
@@ -1808,3 +1808,22 @@ def test_an_older_file_s_preview_member_ids_are_dropped_on_import(db: Session) -
     db.expire_all()
     dst_inst = db.execute(select(Instrument).where(Instrument.session_id == dst.id)).scalar_one()
     assert dst_inst.band2_state == {"sample_reviewee_name": "Carol"}
+
+
+def test_with_no_end_an_import_refuses_release_from_at_start(db: Session) -> None:
+    """Findings L3, the cold read: with no End, Release-from ends the
+    review, so the import checks it against Start too (the adjacent
+    pairs never hold both)."""
+    dst = _bare_session(db, code="chain-noend-eq")
+    dst.deadline = None
+    db.commit()
+    result = apply_session_config(
+        db,
+        dst,
+        [
+            Row("session.scheduled_activate_at", _iso(6, 1), "datetime"),
+            Row("session.responses_release_at", _iso(6, 1), "datetime"),
+        ],
+    )
+    assert [e.field for e in result.errors] == ["session.responses_release_at"]
+    assert "With no End" in result.errors[0].message

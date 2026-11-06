@@ -69,7 +69,7 @@ None.
   once". Ships off. *CONFIRMED by trace.* Author: wire dispatch, keep the
   routes refusing until 14G whatever the flag, or say flag-on is
   record-only.
-- ~~**L3 — A schedule the form accepts can never activate.**~~ **Done 2026-11-06, strict (author)**: `validate_schedule_ordering` refuses End ≤ Start and, with no End, Release-from ≤ Start; the client check matches; `spec/lifecycle.md` §8.2.7 states it. Was:
+- ~~**L3 — A schedule the form accepts can never activate.**~~ **Done 2026-11-06, strict (author)**: `validate_schedule_ordering` refuses End ≤ Start and, with no End, Release-from ≤ Start; Session Home's save and the Settings CSV import now check the no-End pair too (the cold read found both skipped it); the client check matches; the specs say Start < End. Was:
   `validate_schedule_ordering` (`scheduled_events/_release.py:143-169`)
   and `spec/lifecycle.md` §8.2.7 allow Start == End (and, with no End,
   Release-from == Start); Validate's `session.end_passed`

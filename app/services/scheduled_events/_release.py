@@ -109,7 +109,7 @@ def parse_and_validate_responses_release_until(
 
 # The four schedule datetimes carry an inherent order:
 #
-#   scheduled_activate_at  ≤  deadline  ≤  responses_release_at  <  responses_release_until
+#   scheduled_activate_at  <  deadline  ≤  responses_release_at  <  responses_release_until
 #
 # Each pair is checked only when both members are set — operators may
 # leave any subset NULL. The per-field parsers handle parse + their

@@ -405,22 +405,26 @@ def _apply_session_config_form(
             detail=str(exc),
         ) from exc
 
-    # Cross-field datetime ordering: Start ≤ End ≤ Release-from.
-    # (Release-until > Release-from is checked inside its own
-    # parser.) Runs after every individual parse so the operator
-    # gets the field-level error before the ordering error. An unedited
-    # pair is skipped (``_pair_edited`` above).
+    # Cross-field datetime ordering: Start < End ≤ Release-from, and
+    # with no End, Start < Release-from (findings L3). (Release-until >
+    # Release-from is checked inside its own parser.) Runs after every
+    # individual parse so the operator gets the field-level error before
+    # the ordering error. An unedited pair is skipped (``_pair_edited``
+    # above); with no End, Start and Release-from are a pair of their own.
+    no_end_pair = parsed_deadline is None and _pair_edited(
+        "scheduled_activate_at", "responses_release_at"
+    )
     try:
         scheduled_events.validate_schedule_ordering(
             scheduled_activate_at=(
                 parsed_scheduled_activate_at
-                if _pair_edited("scheduled_activate_at", "deadline")
+                if _pair_edited("scheduled_activate_at", "deadline") or no_end_pair
                 else None
             ),
             deadline=parsed_deadline,
             responses_release_at=(
                 parsed_responses_release_at
-                if _pair_edited("deadline", "responses_release_at")
+                if _pair_edited("deadline", "responses_release_at") or no_end_pair
                 else None
             ),
         )
