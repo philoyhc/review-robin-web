@@ -1154,19 +1154,11 @@ def test_detail_page_after_regenerate_reports_the_current_token(
 ) -> None:
     """Regenerate resets the invitation; the card follows the invitation.
 
-    `regenerate_token` clears `sent_at` but leaves `last_reminder_at`
-    and every outbox row alone (`invitations.py:221-224`), so the slots
-    disagree by design: no send date for the current token and the old
-    reminder date. The previous URL is still recoverable from the outbox
-    but no longer shown, since its token is dead
-    (`test_detail_page_hides_a_regenerated_link`, findings Cc4).
-
-    Pinned rather than smoothed over. The divergence is older than this
-    card — the chrome strip already reads `NOT SENT` here while the
-    table's Sent column shows a date — and reconciling it is a decision
-    about `regenerate_token`, not about this template. This test exists
-    so the state is known and cannot drift unnoticed while that is open
-    (Item 6 open question 4).
+    `regenerate_token` clears `sent_at` and `last_reminder_at` (author,
+    2026-09-18: a reminder on the old token reminded no one of the new
+    one) but leaves every outbox row alone. The previous URL is still
+    recoverable from the outbox but no longer shown, since its token is
+    dead (`test_detail_page_hides_a_regenerated_link`, findings Cc4).
     """
     session = _ready_session(client, db, code="drill-regen")
     invitation = db.execute(
@@ -1177,18 +1169,16 @@ def test_detail_page_after_regenerate_reports_the_current_token(
     client.post(f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/regenerate")
     db.refresh(invitation)
     assert invitation.sent_at is None, "premise: regenerate cleared the send"
-    assert invitation.last_reminder_at is not None, (
-        "premise: regenerate left the reminder stamp alone"
-    )
+    assert invitation.last_reminder_at is None, "premise: regenerate cleared the reminder"
 
     body = client.get(
         f"/operator/sessions/{session.public_id}/invitations/reviewers/{invitation.reviewer_id}"
     ).text
     facts = _invitation_facts(body)
     assert _CREATED in facts
-    # Exactly one em-dash: Send recorded is empty for the new token, Last
-    # reminder still carries the old stamp.
-    assert facts.count(_NO_DATE) == 1
+    # Two em-dashes: Send recorded and Last reminder are both empty for
+    # the new token.
+    assert facts.count(_NO_DATE) == 2
     # No delivery pill: the old token's outbox row is `queued`, which
     # would render one, so this proves the pending-after-regenerate gate.
     assert _DELIVERY("queued") not in facts
@@ -2406,3 +2396,24 @@ def test_regenerate_all_resets_the_table_and_the_sent_counter(
     [row] = views.build_invitations_rows(db, session)
     assert row.email_status == "not sent"
     assert row.email_sent_at is None
+
+
+def test_regenerate_all_clears_the_last_reminder(client: TestClient, db: Session) -> None:
+    """A reminder sent on the old token reminded no one of the new one, so
+    Regenerate all clears ``last_reminder_at`` with the other stamps
+    (author, 2026-09-18). The per-row path is pinned by
+    ``test_detail_page_after_regenerate_reports_the_current_token``."""
+    session = _ready_session(client, db, code="regen-all-reminder")
+    invitation = db.execute(
+        select(Invitation).where(Invitation.session_id == session.id)
+    ).scalar_one()
+    base = f"/operator/sessions/{session.public_id}/invitations"
+    client.post(f"{base}/{invitation.id}/send")
+    client.post(f"{base}/{invitation.id}/remind")
+    db.refresh(invitation)
+    assert invitation.last_reminder_at is not None, "premise: the reminder was stamped"
+
+    client.post(f"{base}/regenerate-all")
+    db.refresh(invitation)
+    assert invitation.last_reminder_at is None
+    assert invitation.status == "pending"

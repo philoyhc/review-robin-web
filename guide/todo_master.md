@@ -33,8 +33,7 @@ host is provisioned and serving Review Robin since 2026-10-31; whether
 the deployment has *concluded* (verified, the personal web app retired)
 is the author's call.
 
-**Order (author, 2026-11-06):** the two stubs below (the regenerate
-fix, then host logging), then 14C Item 2, then 22J; 14G when IT answers.
+**Order (author, 2026-11-06):** host logging (the stub below), then 14C Item 2, then 22J; 14G when IT answers.
 
 1. **14C Item 2 — Email-related UI** (Items 1 and 3 done): the Email
    settings card of toggles, built and read by 14F's send path. Before
@@ -80,15 +79,6 @@ the PR body unless it says otherwise.
   `cordware/spec/host.md` "Logging" says they are not yet built. Overdue: the
   institutional deployment has been live since 2026-10-31, and the logs
   are the host's only operational record.
-
-- **`regenerate_token` leaves `last_reminder_at` standing** *(filed
-  2026-09-18; the author answered **yes, clear it**, placement open)*.
-  `regenerate_token` (`app/services/invitations.py`) clears
-  `token_hash`, `status`, `sent_at` and `opened_at`, but not
-  `last_reminder_at` or the outbox rows, so a reissued invitation still
-  reports a reminder sent against the dead token. Clearing it moves the
-  Invitations **Reminder** column and the reminder scheduler. Reasoning
-  at `guide/archive/segment_19P_expander_revamp.md` Item 6 OQ4.
 
 ### Sequencing notes
 

@@ -759,7 +759,8 @@ never sent the original), or that row's link no longer matches
 action falls back to `send_invitation` (mints a fresh token, writes a
 `kind='invitation'` row); the operator's intent always lands as a
 deliverable message in one click. `Invitation.last_reminder_at`
-stamps every successful reminder; a refused per-row one is put back. There is no throttle. Bulk reminders
+stamps every successful reminder; a refused per-row one is put back,
+and a Regenerate clears it with `sent_at`. There is no throttle. Bulk reminders
 emit a single `reminders.sent` audit event: a `set_changes` envelope
 whose `updated` list carries one `{invitation_id, reviewer_id}` entry
 per reminder sent, plus `context.fell_back`, the number that fell back
