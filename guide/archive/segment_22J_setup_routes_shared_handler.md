@@ -103,32 +103,54 @@ The assessment's estimate is −200 to −400 production lines (§7).
 
 ## Status
 
-**2026-11-06, at rung 3 (the item's last build rung).**
+**Closed 2026-11-06.** Three build rungs (#3697, #3698, #3699) and this
+close; rung 4 is a recorded no.
 
-- **Rung 1** (#3697) kept Relationships' bulk delete on its own body,
-  as its bulk set-active is: it acknowledges a response loss and refuses
-  a group clear. `RosterKind` covers three rosters, not four.
-- **Rung 2** left dismiss as it was: each route was already one call to
-  `roster_import.dismiss_held_upload`. It retired the one-caller
-  `participant_info.set_reviewer_self_fields`; `spec/settings_inventory.md`
-  followed at rung 3.
-- **Rung 3** took Observers' four differences into `_handle_import`:
-  the archive-only guard, no response-loss ask, no captured labels, and a
-  new `render_page` parameter. The handler asserts the last pairs with
-  `kind="observers"`. That is three branches on one flag, which the
-  Decision's "flags on a shared body" warned against; it is accepted here
-  because the alternative is the 200-line copy that drifted (19Q Item 7).
-- **Rung 4 is a recorded no.** Relationships' import shares too little:
-  its parse needs both rosters; it runs no identity or directory check;
-  it has no response-loss ask (the save takes the loss and refuses a
-  group clear through `_refuse_group_clear`); its asks re-render without
-  the ticks' state; and it runs no merge-conflict check. Six more
-  switches would make one body into two.
+- **Built:** `app/web/roster_actions.py` holds Reviewers', Reviewees'
+  and Observers' bulk inactivate, reactivate and delete, their delete
+  all, and the self-fields save, driven by a `RosterKind` per roster.
+  It also holds the field-labels save for Reviewers, Reviewees and
+  Relationships, and `back_to_panel`. Observers' import calls
+  `_handle_import`.
+- **Kept, with reasons:** `RosterKind` covers three rosters, not four.
+  Relationships' bulk actions and delete all acknowledge a response loss
+  and refuse a group clear. Dismiss was already one call to
+  `dismiss_held_upload`.
+- **Rung 4, no:** Relationships' import shares too little. Its parse
+  needs both rosters; it runs no identity or directory check; it has no
+  response-loss ask (the save takes the loss and refuses a group clear);
+  its asks re-render without the ticks' state; and it runs no
+  merge-conflict check. Six more switches would make one body into two.
+- **Decision bent at rung 3:** `_handle_import` gained a `render_page`
+  parameter and three branches on `kind == "observers"`, which the
+  Decision's "flags on a shared body" warned against. This was accepted
+  over the 200-line copy that had drifted once already (19Q Item 7). The
+  handler asserts the pair.
+- **Retired:** `participant_info.set_reviewer_self_fields` (one caller).
+- **Tests edited:** only the moved `directory_or_none` patch target, in
+  `test_directory_rosters.py` and `test_directory_recheck.py` (plus a
+  conftest note). `test_import_order.py` gained `roster_actions`.
+- **Measured at close** (`a989a7f6`, same commands as Blast radius):
+  - Module lines: 734 / 753 / 933 / 1,188, against 815 / 830 / 1,152 /
+    1,213.
+  - 10+ line duplication:
+    - Reviewers: 126/571 (22%), from 198/635.
+    - Observers: 183/737 (25%), from 239/897.
+    - Relationships: 299/943 (32%), from 310/956.
+    - Reviewees: off the tool's top-five list, from 169/647.
+  - Net production lines: the four modules lost 402. `roster_actions.py`
+    (326) and `roster_import.py` (+43) took most of them back, leaving
+    about −33. That falls short of the assessment's −200 to −400: the
+    bodies moved with their docstrings, and the gain is one copy to fix
+    rather than four.
 - **Reads:** one cumulative `diff-reviewer` pass at rung 3 found no
-  behavior change. It did flag `roster_actions` missing from
-  `test_import_order.py`, the false `settings_inventory` line, four stale
-  comments, the unguarded `kind`/`render_page` pair and an unused
-  assignment count. All were fixed in rung 3.
+  behavior change and six fixes, all made in rung 3: `test_import_order`
+  coverage, a false `settings_inventory` line, four stale comments, the
+  `kind`/`render_page` assert and an unused query. Codex found nothing
+  on any rung. `spec-writer` at the close found the Doc impact specs
+  true as edited and made no change.
+- **The close** lowered `test_index_currency.py`'s `**Plan:**` floor
+  to 1, as its comment directs: the queue holds 14G alone.
 
 ## PR ladder
 
@@ -172,8 +194,8 @@ One item; `diff-reviewer` reads the cumulative diff once, at rung 4.
 
 ## Open questions
 
-- Whether Relationships' import fits `_handle_import` — rung 4 decides,
-  from the code; a no is recorded, not forced.
+- ~~Whether Relationships' import fits `_handle_import`~~ — no, decided
+  from the code at rung 4 (Status).
 
 ## Out of scope
 

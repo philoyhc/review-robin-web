@@ -33,7 +33,7 @@ host is provisioned and serving Review Robin since 2026-10-31; whether
 the deployment has *concluded* (verified, the personal web app retired)
 is the author's call.
 
-**Order (author, 2026-11-06):** 22J; 14G when IT answers.
+**Order (author, 2026-11-06):** 14G when IT answers.
 
 1. **14G — Scheduled email** (gated on IT: offline sending as the
    operator, else a dedicated mailbox). Sends due invitations, reminders
@@ -48,13 +48,6 @@ is the author's call.
    reminder already past due on every open session in one pass, after
    operators may have reminded by hand: 14G marks those skipped, not
    sent, when it turns the setting on.
-
-2. **22J — The Setup routes' shared handler** (opened 2026-11-06, the
-   assessments' carried move). One body for what the four Setup roster
-   route modules repeat (bulk actions, delete all, dismiss, field labels,
-   self fields), and Observers' and Relationships' imports onto
-   `roster_import._handle_import`; no behavior change. Independent of
-   14G. **Plan:** `guide/segment_22J_setup_routes_shared_handler.md`.
 
 ### Stubs
 

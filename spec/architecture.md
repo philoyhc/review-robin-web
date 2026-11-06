@@ -104,7 +104,15 @@ three-layer separation (mirrors CLAUDE.md "Architecture at a glance"):
    slices import it, and it reads the package's guards and templates from
    `_shared.py` inside the functions that need them, never at its top, so
    the two never import each other at load
-   (`tests/unit/test_import_order.py`).
+   (`tests/unit/test_import_order.py`). Reviewers, Reviewees and
+   Observers all post their imports to its `_handle_import`. The bodies
+   the roster slices would otherwise repeat (bulk inactivate, reactivate
+   and delete, delete all, the self-fields and field-label saves, and
+   the redirect back to the Unlock panel) are `app/web/roster_actions.py`,
+   on the same terms and driven by a `RosterKind` per roster. Each slice
+   still declares its own routes, since their form fields are the forms'
+   contract. Relationships keeps its own import, bulk and delete-all
+   bodies, which acknowledge a response loss and refuse a group clear.
    Participant-facing routes live in `app/web/routes_reviewer/`
    under the `/me/` prefix (`_dashboard.py`, `_surface/`,
    `_summary.py`, `_results.py`, `_collation.py`, `_invite.py`).

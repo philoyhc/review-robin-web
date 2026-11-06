@@ -246,10 +246,11 @@ below describe what that panel holds.
    Reviewees and Relationships each render one row of three tag
    cells. Save + Cancel pair in Secondary style,
    both starting `disabled` until the form is dirty (inline JS toggles
-   via an initial-value snapshot). POST handlers in the per-entity
-   setup modules (`app/web/routes_operator/_setup_reviewers.py` /
-   `_setup_reviewees.py` / `_setup_relationships.py`) upsert / clear
-   via `app/services/field_labels.py`. Observers has no label slots and
+   via an initial-value snapshot). The POST routes are declared in the
+   per-entity setup modules (`app/web/routes_operator/_setup_reviewers.py` /
+   `_setup_reviewees.py` / `_setup_relationships.py`) and share one body,
+   `save_field_labels` in `app/web/roster_actions.py`, which upserts /
+   clears via `app/services/field_labels.py`. Observers has no label slots and
    no editor.
 
    Gated by `is_editable`: in every locked state the Unlock panel that
@@ -2125,7 +2126,9 @@ it changes (`refs={"observer_id": id}` + `snapshot={"cohort_rule": …}`).
 
 ### CSV import
 
-Route: `POST /operator/sessions/{id}/observers/import`. Parsed by
+Route: `POST /operator/sessions/{id}/observers/import`, handled by
+`_handle_import` in `app/web/roster_import.py` as Reviewers' and
+Reviewees' imports are (Relationships keeps its own). Parsed by
 `csv_imports.parse_observer_csv` / `csv_imports.save_observers` in
 `app/services/csv_imports/`. CSV schema: `ObserverEmail`
 required; `ObserverName`, `ObserverTag1`, `Status` and `CohortRule`
