@@ -333,7 +333,7 @@ excluded nothing is worth saying.
 | 6 | Sent | — | `email_sent_at` | Timestamp pill from `Invitation.sent_at`, or `—`; the *Invitations sent* counter counts these |
 | 7 | Progress | — | `review_progress` | Pill: `<state> (D/T)`, where state is the reviewer's `not started` / `in progress` / `submitted`, the rule the reviewer's own pills follow (`spec/reviewer-surface.md` "Reviewer-status pill vocabulary"), so a new or changed answer after Submit reads `in progress` here too |
 | 8 | Required<br>Fields | — | `required_fields` | Pill: `(D/T)` |
-| 9 | Reminder | — | `last_reminder_at` | Timestamp pill, or `—` |
+| 9 | Reminder | — | `last_reminder_at` | Timestamp pill, or `—`; a Regenerate clears it with the send, since a reminder on the old token reminded no one of the new one |
 | 10 | (actions) | — | — | Per-row buttons — see below |
 
 The tag columns sit at 2-4, between the identity column and the
@@ -479,7 +479,8 @@ for a reviewer who had no invitation at all):
   set is the model's `EMAIL_OUTBOX_STATUSES` and is **rendered, not
   enumerated**, so widening it needs no change here.
 - **Last reminder** — the timestamp or an em-dash, from
-  `Invitation.last_reminder_at`.
+  `Invitation.last_reminder_at`, which a Regenerate clears with the send
+  date.
 
 Both timestamps read the `Invitation` row rather than the outbox, so
 they survive a reviewer leaving the table. The em-dash means *no date*,

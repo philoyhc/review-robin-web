@@ -234,7 +234,8 @@ def regenerate_token(
     user: User,
     correlation_id: str | None = None,
 ) -> RegenerateResult:
-    """Rotate the token, reset the invitation to ``pending``.
+    """Rotate the token, reset the invitation to ``pending`` and clear
+    its sent, opened and last-reminder stamps.
 
     Refuses unless the session is ``validated`` or ``ready`` (14F
     follow-up 1: it may be re-issued ahead of opening), decided under the
@@ -245,6 +246,9 @@ def regenerate_token(
     invitation.status = "pending"
     invitation.sent_at = None
     invitation.opened_at = None
+    # A reminder sent on the old token reminded no one of this one
+    # (author, 2026-09-18).
+    invitation.last_reminder_at = None
     _supersede_queued(db, [invitation.id])
     db.flush()
     audit.write_event(
@@ -279,7 +283,7 @@ def regenerate_all_tokens(
     """Rotate tokens on every invitation in the session.
 
     Each invitation gets a fresh token; status flips to ``pending``
-    and ``sent_at`` / ``opened_at`` clear. The previous URLs become
+    and ``sent_at`` / ``opened_at`` / ``last_reminder_at`` clear. The previous URLs become
     stale uniformly. Emits a single batch ``invitations.regenerated``
     audit event when at least one invitation was rotated. No-op when
     the session has no invitations yet. Refuses unless the session is
@@ -297,6 +301,7 @@ def regenerate_all_tokens(
         invitation.status = "pending"
         invitation.sent_at = None
         invitation.opened_at = None
+        invitation.last_reminder_at = None
         rotated_ids.append(invitation.id)
         rotated_reviewer_ids.append(invitation.reviewer_id)
     if rotated_ids:
