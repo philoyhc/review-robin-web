@@ -16,12 +16,14 @@ from sqlalchemy.orm import Session
 
 from app.db.models import (
     Assignment,
+    AuditEvent,
     Instrument,
     Response,
     Reviewer,
     ReviewSession,
     User,
 )
+from app.json_shapes import json_object
 from app.logging_config import get_logger
 from app.schemas.validation import Severity, ValidationIssue
 from app.services import audit, session_guard, unit_of_work
@@ -1154,6 +1156,35 @@ def closed_at_deadline(db: Session, review_session: ReviewSession) -> bool:
     )
 
 
+def _deadline_already_recorded(db: Session, review_session: ReviewSession) -> bool:
+    """Whether ``session.deadline_reached`` already stands for the
+    session's current End, its ``context.deadline`` compared as an
+    instant."""
+    deadline = review_session.deadline
+    if deadline is None:
+        return False
+    target = deadline if deadline.tzinfo else deadline.replace(tzinfo=UTC)
+    rows = db.execute(
+        select(AuditEvent.detail).where(
+            AuditEvent.session_id == review_session.id,
+            AuditEvent.event_type == "session.deadline_reached",
+        )
+    ).scalars()
+    for detail in rows:
+        envelope = json_object(detail)
+        context = json_object(envelope.get("context")) if envelope is not None else None
+        raw = context.get("deadline") if context is not None else None
+        if not isinstance(raw, str):
+            continue
+        try:
+            recorded = datetime.fromisoformat(raw)
+        except ValueError:
+            continue
+        if (recorded if recorded.tzinfo else recorded.replace(tzinfo=UTC)) == target:
+            return True
+    return False
+
+
 def _write_deadline_reached(
     db: Session, review_session: ReviewSession, *, correlation_id: str | None
 ) -> None:
@@ -1164,6 +1195,12 @@ def _write_deadline_reached(
     already shut (findings L4). A release that ends a review with no End
     is not a deadline, so nothing is written then."""
     if review_session.deadline is None:
+        return
+    # Once per crossing, whoever wrote it: before End closed sessions
+    # (segment 14E) the close of the instruments wrote it and left the
+    # session ready, so a legacy session reaching the already-shut branch
+    # may hold it already; its count at the time stands (Codex on #3672).
+    if _deadline_already_recorded(db, review_session):
         return
     from app.services import monitoring
 

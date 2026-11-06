@@ -687,3 +687,35 @@ def test_an_end_over_already_shut_instruments_still_records_the_deadline(db: Ses
     assert detail_of(expired)["counts"]["closed_instruments"] == 0
     lifecycle.observe_deadline(db, rs, now=NOW)
     assert len(_events(db, rs, "session.deadline_reached")) == 1
+
+
+def test_a_legacy_deadline_record_is_kept_not_written_twice(db: Session) -> None:
+    """Codex on #3672: before End closed sessions, the instruments' close
+    wrote `session.deadline_reached` and left the session ready. Closing
+    such a session now keeps that record, with its count at the time,
+    and writes no second one."""
+    from app.services import audit
+
+    rs = _ready_past_deadline(db, "clock-legacy-record")
+    for instrument in db.execute(
+        select(Instrument).where(Instrument.session_id == rs.id)
+    ).scalars():
+        instrument.accepting_responses = False
+    assert rs.deadline is not None
+    audit.write_event(
+        db,
+        event_type="session.deadline_reached",
+        summary="Deadline reached: 3 of 9 reviewers submitted",
+        actor_user_id=None,
+        session=rs,
+        payload=audit.counts(submitted=3, assigned=9),
+        context={"deadline": rs.deadline.isoformat()},
+    )
+    db.commit()
+
+    lifecycle.observe_deadline(db, rs, now=NOW)
+
+    [reached] = _events(db, rs, "session.deadline_reached")
+    assert detail_of(reached)["counts"] == {"submitted": 3, "assigned": 9}
+    db.refresh(rs)
+    assert lifecycle.is_expired(rs)
