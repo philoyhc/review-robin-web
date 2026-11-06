@@ -285,34 +285,46 @@ the Invitation email card).
 
 ### Decision
 
-**Proposed:** the default stays a grey placeholder, and the operator can
-adopt it as a draft. In an empty box with the caret at the start,
+**Decided** (author, 2026-11-06): the default stays a grey placeholder, and the operator can
+adopt it as a draft. In an empty box,
 **→ (Right arrow) fills the box with the default text**, which is then
 ordinary text to edit. Nothing changes until the operator presses the
 key; a saved override, or any typed character, means there is nothing to
 adopt. Leaving a box blank still means "use the default", as today.
-*Rejected:* pre-filling every box with the default. That stores the
+Saving the adopted text, edited or not, stores it as an override like
+any typed text: the operator's choice, which Reset undoes. *Rejected:* pre-filling every box with the default. That stores the
 default as an override on the first Save, so a later change to the
 default would never reach this session, and a blank box could no longer
 mean "use the default".
 
 ### Open questions
 
-- **How an operator finds the key.** A placeholder gives no hint that →
-  adopts it. Proposed: a one-line hint under each box ("→ to start from
-  the default"), shown only while the box is empty. Author decides.
-- **Tab as well as →.** Tab is how a keyboard user leaves the box, so
-  proposed: → only. Author decides.
-- **Subject, Cc and Bcc too?** Proposed: subject and body, the two with
-  a default; Cc and Bcc have none.
+- ~~How an operator finds the key~~: no hint; → on an empty box is
+  ordinary keyboard behavior (author, 2026-11-06).
+- ~~Tab as well as →~~: no, → only (author, 2026-11-06).
+- ~~Which fields~~: subject and body only (author, 2026-11-06).
+
+### Status
+
+- 2026-11-06, the one rung: `data-adopt-default` on the composer's
+  subject and body, and a keydown handler in its inline script. → with
+  no modifier, in an empty box, fills the box with its placeholder,
+  leaves the caret at the start and fires
+  `input`, so Save turns on as for any edit. Browser tests in
+  `tests/browser/test_adopt_default_draft.py`, over all three templates.
+- Read once (`diff-reviewer`), with `spec-writer` at the close. Both
+  found the spec claiming nothing is stored until the operator *edits*
+  and saves, when saving the adopted default unchanged stores it as an
+  override (`spec-writer` fixed the line; the Decision now says so). The
+  read also found a caret-at-start check an empty box never fails,
+  removed with its prose, and a test covering one template of three.
 
 ### PR ladder
 
-1. The behavior in the composer's inline script, with its hint, for the
-   three templates' subject and body, and a browser test (`tests/browser/`)
-   of → in an empty box, in a box with text, and with the caret not at
-   the start.
+1. The behavior in the composer's inline script, for the three
+   templates' subject and body, and a browser test (`tests/browser/`) of
+   → in an empty box of each template and in a box with text.
 
 ### Doc impact
 
-- `spec/email_template_editor.md` — the default as a draft to adopt: → in an empty box, the hint, blank still meaning the default (Item 3).
+- `spec/email_template_editor.md` — the default as a draft to adopt: → in an empty box, no hint, blank still meaning the default (Item 3).
