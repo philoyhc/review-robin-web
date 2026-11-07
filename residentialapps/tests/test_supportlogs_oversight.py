@@ -90,3 +90,22 @@ def test_senior_staff_request_a_share_and_no_longer_share_on_behalf(client: Test
     card = section(page, "staff-h")
     assert 'aria-label="Request a share from Priya Raman">Request a share</button>' in card
     assert "Share on their behalf" not in page and 'id="peer-h"' not in page
+
+
+def test_hand_over_and_acknowledge_on_behalf_scaffolds(client: TestClient) -> None:
+    """Sharing screens rung 6 (author, 2026-11-07): Hand over on a student's
+    page and a senior's view of a student; Sys admin acknowledges for
+    someone who cannot be reached, seeing no student."""
+    mine = client.get("/students/S-03").text  # Daniel's own records
+    assert ">Hand over records</button>" in section(mine, "handover-h")
+    assert 'id="handover-h"' not in client.get("/students/S-08").text  # none of his own
+    senior = section(client.get("/overview/students/S-08" + SAM).text, "handover-h")
+    assert '<label for="ho-from">From</label>' in senior and ">Hand over</button>" in senior
+    admin = client.get("/sys-admin/?as=Rachel%20Yeo").text
+    owed = section(admin, "behalf-h")
+    assert owed.count("<li>") == len(sample.on_behalf()) == 2
+    assert "Handover from Mei Ling Tan to Daniel Koh" in owed
+    assert "Sam Lee&#39;s request to Arjun Nair to share" in owed
+    assert 'aria-label="Acknowledge for Mei Ling Tan"' in owed
+    for s in sample.STUDENTS:
+        assert s.name not in owed and s.id not in owed, s.name

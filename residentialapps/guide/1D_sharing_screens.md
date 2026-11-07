@@ -134,3 +134,6 @@ browser check passes on each rung.
   name reads Show name alone. One read: a team student reachable only
   by a share, Add under Teams, stale copy and spec, a non-member offered
   Form a team, and thin tests, all fixed.
+- **Rung 6:** as planned, as cards on a student's page and a senior's
+  view of a student rather than pages; the sample adds a senior's
+  emergency request waiting on Arjun Nair for Sys admin's list.

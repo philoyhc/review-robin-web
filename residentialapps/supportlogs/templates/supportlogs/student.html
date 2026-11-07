@@ -86,6 +86,16 @@
           <button type="button" class="btn btn-secondary" disabled>Form a team</button>
         {% endif %}
       </section>
+      {# Hand over (sharing screens rung 6, author, 2026-11-07): chosen
+         records become a colleague's, once they, you and a senior accept.
+         Inert until wired. #}
+      {% if sample.encounters_by(me.name, chosen.id) %}
+      <section class="card card-pad muted" aria-labelledby="handover-h">
+        <h2 id="handover-h">Hand over</h2>
+        <p class="sub">For good, when {{ chosen.name }} moves to a colleague: the records you choose become theirs and are no longer yours, once they, you and a senior accept.</p>
+        <button type="button" class="btn btn-secondary" disabled>Hand over records</button>
+      </section>
+      {% endif %}
       {% set theirs = sample.shared_plans(me.name, chosen.id) %}
       {% if theirs %}
       <section class="card card-pad muted" aria-labelledby="splan-h">

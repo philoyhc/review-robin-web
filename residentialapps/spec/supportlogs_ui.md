@@ -47,6 +47,12 @@ under `data-app="supportlogs"`.
   Team card (members, Leave the team; or Form a team), and a senior's
   view of a student has Form a team over chosen staff; inert until
   wired. A team names its student on Overview (rule 3), with a Team chip.
+- **Hand over** (sharing screens rung 6, author, 2026-11-07): a card on
+  a student's page, where the viewer has records of their own, and on a
+  senior's view of a student (From, To); Sys admin's Access lists
+  **Acknowledge on behalf**, a handover or a senior's share request
+  waiting on someone who cannot be reached, named by staff only, never
+  the student. All inert until wired.
 - **Plans and follow-ups are a filter on Students** (author, 2026-11-07):
   My students shows All, Plans, Following or Teams, the last choice kept in the
   browser; each plan's chip opens it, beside its due state. Each row has

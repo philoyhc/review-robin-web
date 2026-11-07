@@ -284,7 +284,8 @@ would you ask a staff member to share?*
 - [ ] **Staff with records** lists Priya Raman and Arjun Nair, each with
   **Request a share**, disabled; no encounters, dates or notes anywhere.
   Her plan (P-05) shows its kind and source but no last contact or due
-  state.
+  state. Her Team card names Priya Raman and Daniel Koh; Hand over
+  offers From and To, disabled.
 
 Ask: *When would you ask a staff member to share? Would you tell them
 why?*
@@ -382,6 +383,9 @@ you would act on?*
 
 ### C3. Sys admin (desktop first; 1280 px, then 390 px)
 
+- [ ] **Acknowledge on behalf**, above Lapsed grants: Mei Ling Tan's
+  handover to Daniel Koh and Sam Lee's request to Arjun Nair, each
+  waiting on someone who cannot be reached, with no student named.
 - [ ] **Access, as Rachel** (*ruling R6: checkboxes or Toggle*): Lapsed
   grants (Jason Teo) above the table, with Revoke; one row per
   Staff-roster member; appointments as derived pills ("Residential Fellow

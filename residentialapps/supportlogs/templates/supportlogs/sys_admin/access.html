@@ -11,6 +11,17 @@
   {% if not seniors %}
     <p class="notice" role="alert" id="no-senior">No one holds Senior identifiable. Nobody can review the support-activity audit, manage formal assignments or delete purged records until someone is granted it.</p>
   {% endif %}
+  {# Acknowledge on behalf (sharing screens rung 6, author, 2026-11-07):
+     a handover or a senior's share request whose staff member cannot be
+     reached. No student, no content: administration sees none. #}
+  {% set owed = sample.on_behalf() %}
+  {% if owed %}
+    <section class="card card-pad gap-below" aria-labelledby="behalf-h">
+      <h2 id="behalf-h">Acknowledge on behalf <span class="count">· {{ owed | length }}</span></h2>
+      <p class="sub">A handover or a senior's request to share, waiting on someone who cannot be reached. Acknowledging for them is recorded as done by you on their behalf, and shows you none of the records.</p>
+      <ul class="items">{% for p in owed %}<li><div class="item-head"><span class="strong">{{ "Handover from " ~ p.sender ~ " to " ~ p.to if p.kind == sample.HANDOVER else p.sender ~ "'s request to " ~ p.to ~ " to share" }}</span><span class="nowrap subtle">{{ sample.short_date(p.on) }}</span></div><div class="subtle">Waiting on {{ p.unreachable }}, who cannot be reached.</div><button type="button" class="btn btn-secondary gap-above-sm" disabled aria-label="Acknowledge for {{ p.unreachable }}">Acknowledge for {{ p.unreachable }}</button></li>{% endfor %}</ul>
+    </section>
+  {% endif %}
   {% if sample.LAPSED %}
     <section class="card card-pad gap-below" aria-labelledby="lapsed-h">
       <h2 id="lapsed-h">Lapsed grants <span class="count">· {{ sample.LAPSED | length }}</span></h2>
