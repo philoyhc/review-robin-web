@@ -251,7 +251,9 @@ about?"*
   flag").
 - [ ] Tiles; Team workload (sortable), with a note that load is not a
   measure of performance; Hotspots, with a **Rising** chip on Gwyneth Low
-  and no score anywhere; Coverage (overdue, due this week, review due);
+  and no score anywhere, naming only Elena Park, Jia Wen Lee, Clara Tan,
+  Dev Menon and Ivan Seet until **Show name** opens another row (Every
+  plan withholds the same students); Coverage (overdue, due this week, review due);
   Flagged for formal assignment, with Assign disabled; Every plan.
 
 Ask: *Does Hotspots match who you would have named? Is the load weighting
@@ -261,7 +263,8 @@ fair? What is missing for a weekly meeting?*
 
 *Task: "Look at everything the team has on Hana Rahim."*
 
-- [ ] A hotspot's name opens the history across staff, with "Opening this
+- [ ] Hana Rahim is on no formal plan, so **Show name** on her Hotspots
+  row first; her name then opens the history across staff, with "Opening this
   history is recorded"; the back link returns to Overview, which stays
   marked.
 - [ ] **Sharing** lists Priya Raman → Daniel Koh and offers Whose records

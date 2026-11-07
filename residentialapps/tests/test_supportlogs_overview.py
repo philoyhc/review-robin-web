@@ -33,6 +33,10 @@ def cells(table: str) -> list[list[str]]:
     return [[c.strip() for c in re.findall(r"<td[^>]*>(.*?)</td>", row, re.S)] for row in rows]
 
 
+# A withheld name's disclosure as plain text, ahead of the name it holds.
+HIDDEN = "No formal plan Show nameHide name"
+
+
 def plain(cell: str) -> str:
     return re.sub(r"<[^>]+>", "", cell)
 
@@ -58,7 +62,9 @@ def test_hotspots_name_students_for_identifiable_views_only(client: TestClient) 
     sam = section(client.get("/overview/?as=Sam%20Lee").text, "hot-h")
     assert 'href="/overview/students/S-07?as=Sam%20Lee">Gwyneth Low</a>' in sam
     rows = cells(sam)
-    assert [plain(r[0]) for r in rows] == [r["student"].name for r in sample.hotspots()]
+    assert [plain(r[0]).removeprefix(HIDDEN) for r in rows] == [
+        r["student"].name for r in sample.hotspots()
+    ]
     assert [r[1:5] for r in rows] == [
         [str(r[k]) for k in ("contacts", "before", "minutes", "staff")] for r in sample.hotspots()
     ]
@@ -67,11 +73,37 @@ def test_hotspots_name_students_for_identifiable_views_only(client: TestClient) 
         1,
         1,
     )  # staff counted over the same 14 days as contacts
-    assert [plain(r[0]) for r in rows if "Rising" in r[5]] == ["Gwyneth Low"]
+    assert [plain(r[0]) for r in rows if "Rising" in r[5]] == [HIDDEN + "Gwyneth Low"]
     siti = section(client.get("/overview/?as=Siti%20Rahman").text, "hot-h")
     assert "Gwyneth Low" in siti and "/overview/students/" not in siti  # named, but no history
     kenneth = client.get("/overview/?as=Kenneth%20Lau").text
     assert "<dt>Rising</dt><dd>1</dd>" in section(kenneth, "hot-h")
+
+
+def test_overview_withholds_a_name_off_a_plan_until_shown(client: TestClient) -> None:
+    """Author, 2026-11-07: Overview names by default only students on a
+    formal plan or with an active flag; any other is one click away, in
+    Hotspots and every other card but the flags."""
+    hidden = {s.name for s in sample.STUDENTS if not sample.named_on_overview(s.id)}
+    in_hotspots = {r["student"].name for r in sample.hotspots()} & hidden
+    assert in_hotspots == {"Gwyneth Low", "Aiden Chen", "Bao Nguyen", "Farid Osman", "Hana Rahim"}
+    for name in ("Sam%20Lee", "Siti%20Rahman"):
+        page = client.get(f"/overview/?as={name}").text
+        for r in cells(section(page, "hot-h")):
+            if plain(r[0]).removeprefix(HIDDEN) in hidden:
+                assert r[0].startswith('<details class="reveal"><summary>'), r[0]
+            else:
+                assert "<details" not in r[0], r[0]
+        flags = (
+            page.split('id="flags-h"', 1)[1].split("</section>", 1)[0] if "flags-h" in page else ""
+        )
+        rest = re.sub(
+            r'<details class="reveal">.*?</details>', "", page.replace(flags, ""), flags=re.S
+        )
+        for student in hidden:
+            assert student not in rest, (name, student)  # nowhere else on the page
+    raw = section(client.get("/overview/?as=Sam%20Lee").text, "hot-h")
+    assert raw.count('<td data-sort-value=""><details class="reveal">') == 5  # sort last
 
 
 def test_the_aggregate_view_names_no_student(client: TestClient) -> None:

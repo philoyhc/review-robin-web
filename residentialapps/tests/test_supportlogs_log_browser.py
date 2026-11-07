@@ -4,7 +4,8 @@ it?" hides and drops its choice when the type already says, and the note
 counts its characters; and a staff or student filter's box of people turns
 a match into a pill and blocks an unmatched name (rung 8); and Students'
 filter of plans and follow-ups, kept across a reload (rung 13); and that
-text boxes resize vertically only (2026-11-07). Served as the
+text boxes resize vertically only, and Overview's withheld name opens
+and closes (2026-11-07). Served as the
 sort tests are; without a Chromium
 build the test skips, saying why, and `RRW_REQUIRE_BROWSER=1` fails it."""
 
@@ -294,3 +295,18 @@ def test_text_boxes_resize_vertically_only(page: Page) -> None:
         page.goto(f"{ORIGIN}{path}")
         resize = page.locator(box).evaluate("el => getComputedStyle(el).resize")
         assert resize == "vertical", (path, resize)
+
+
+def test_a_withheld_name_shows_and_hides_again(page: Page) -> None:
+    """Overview's withheld name (author, 2026-11-07): Show name opens it in
+    place, its control stays and reads Hide name, and closes it again."""
+    page.goto(f"{ORIGIN}/overview/?as=Sam%20Lee")
+    row = page.locator("#hot-table details.reveal").first
+    summary = row.locator("summary")
+    name = row.locator("> .strong")
+    assert not name.is_visible() and "Show name" in summary.inner_text()
+    summary.click()
+    assert name.is_visible() and name.inner_text() == "Gwyneth Low"
+    assert summary.is_visible() and "Hide name" in summary.inner_text()
+    summary.click()
+    assert not name.is_visible()

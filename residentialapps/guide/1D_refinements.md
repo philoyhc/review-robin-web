@@ -136,3 +136,10 @@ and four types.
   last contact (in place of "seen") and safety-plan instruction, and the
   disabled **Add a student to follow up** at the list's end, under All
   and Following only (author, 2026-11-07).
+- **After rung 13** (author, 2026-11-07): Overview names by default
+  only students on a formal plan or with an active flag, in Hotspots,
+  Every plan and Flagged for formal assignment; the rest read "No formal
+  plan" with **Show name**, for every identifiable view. Safety flags keep
+  their names. One read: Every plan still named three withheld students,
+  the label was wrong for follow-ups, and the open disclosure hid its own
+  focus; all fixed.
