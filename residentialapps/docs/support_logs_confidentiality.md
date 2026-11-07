@@ -77,7 +77,9 @@ example when an RF changes houses or leaves, the records can be handed
 over.
 
 - **The handover can be started** by the staff member whose records they
-  are, or by a senior, choosing which records to hand over.
+  are, who hands over all of them or only those they choose, or by a
+  senior, whose handover takes all of them: a senior cannot see the
+  records to choose among them.
 - **The chosen records become the new staff member's.** The previous
   staff member no longer has them.
 - **Three people accept it:** the new staff member, the previous one and

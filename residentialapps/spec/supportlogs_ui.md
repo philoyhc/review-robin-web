@@ -38,8 +38,7 @@ under `data-app="supportlogs"`.
   offered, a team invitation, a handover, a senior's share request),
   each with Accept (Primary) and Decline (Secondary), inert until wired.
   A share, an invitation or a handover names no student until accepted
-  (the invitation's and the handover's the author's call to confirm,
-  `residentialapps/guide/1D_sharing_screens.md` Status). A sys admin
+  (author, 2026-11-07). A sys admin
   can acknowledge for a staff member only in an emergency, or on a
   handover when they cannot be reached.
 - **Teams** (sharing screens rung 5, author, 2026-11-07): a team's
@@ -51,7 +50,8 @@ under `data-app="supportlogs"`.
 - **Hand over** (sharing screens rung 6, author, 2026-11-07): a card on
   a student's page, where the viewer has records of their own (all, or
   chosen encounters; To), and on a senior's view of a student (From, To:
-  all of the owner's records, since a senior sees none of them); Sys
+  all of the owner's records, since a senior sees none of them, author,
+  2026-11-07); Sys
   admin's Access lists **Acknowledge on behalf** (§6). All inert until
   wired.
 - **Plans and follow-ups are a filter on Students** (author, 2026-11-07):

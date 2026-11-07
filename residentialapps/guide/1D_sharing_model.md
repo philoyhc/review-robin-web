@@ -65,7 +65,8 @@ a withdrawal, and a team's formation, change or dissolution.
 ### 3. A team
 
 - **Two or more frontline staff share responsibility for one student.**
-  Each member acknowledges at formation. The team forms once at least
+  Each member acknowledges at formation. An invitation, like a share and
+  a handover, names no student until accepted (author, 2026-11-07). The team forms once at least
   two have accepted; anyone who declines stays out.
 - **At formation, each member chooses** whether the team sees their past
   records about the student.
@@ -86,8 +87,10 @@ a withdrawal, and a team's formation, change or dissolution.
 
 ### 4. A handover
 
-- **The owner or a senior starts it**, choosing which of the owner's
-  records for the student to hand over.
+- **The owner or a senior starts it.** The owner hands over all their
+  records for the student or only those they choose; a senior's
+  handover takes all of them, since a senior sees none to choose among
+  (author, 2026-11-07).
 - **The chosen records are tagged to the receiving staff member and
   untagged from the owner**: they become the receiver's records, and the
   owner keeps nothing of them.
