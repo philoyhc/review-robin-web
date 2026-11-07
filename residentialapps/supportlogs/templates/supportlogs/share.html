@@ -14,11 +14,11 @@
   <form class="card card-pad" action="{{ url('/students/' ~ chosen.id ~ '/share/sent') }}" method="get" aria-labelledby="share-h">
     {% if me != sample.DEFAULT %}<input type="hidden" name="as" value="{{ me.name }}">{% endif %}
     <h2 id="share-h">Your records for {{ chosen.name }}</h2>
-    <p class="sub">Your colleague sees the records you choose, labelled with your name, once they accept, and nothing you log afterwards: to work together going forward, form a team. You can withdraw the share at any time. The share, its acceptance and their views are recorded.</p>
+    <p class="sub">Your colleague sees what you choose, labelled with your name, once they accept, and nothing you log afterwards: to work together going forward, form a team. All your records takes in your follow-ups and plans for {{ chosen.name }} too; chosen encounters, only those. You can withdraw the share at any time. The share, its acceptance and their views are recorded.</p>
     <fieldset class="modes">
       <legend>Which records</legend>
-      <label class="check"><input type="radio" name="scope" value="all" checked> All {{ mine | length }} of your records</label>
-      <label class="check"><input type="radio" name="scope" value="some"> Only the ones ticked below</label>
+      <label class="check"><input type="radio" name="scope" value="all" checked> All your records: {{ mine | length }} encounter{{ "s" if mine | length != 1 }}, with your follow-ups and plans</label>
+      <label class="check"><input type="radio" name="scope" value="some"> Only the encounters ticked below (tick at least one)</label>
       {% for e in mine %}<label class="check"><input type="checkbox" name="record" value="{{ e.id }}"> {{ sample.short_date(e.when.date()) }} · {{ e.type }} · {{ e.duration }}</label>{% endfor %}
     </fieldset>
     <div class="field-wide"><label for="colleague">Colleague</label>

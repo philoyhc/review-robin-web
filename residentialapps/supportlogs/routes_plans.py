@@ -107,7 +107,13 @@ def share_sent(request: Request, sid: str) -> Response:
     # this student, else all of them.
     own = {e.id for e in sample.encounters_by(me.name, sid)}
     picked = [r for r in request.query_params.getlist("record") if r in own]
-    some = request.query_params.get("scope") == "some" and picked
+    some = request.query_params.get("scope") == "some"
+    if some and not picked and sample.holds(me, sample.FRONTLINE):
+        # Only the ticked ones, and none of the viewer's own ticked: back to
+        # the form, never widened to all.
+        return RedirectResponse(
+            url_path(request, f"/students/{sid}/share") + query(me), status_code=303
+        )
     return gated(
         request,
         "supportlogs/share_sent.html",
