@@ -58,7 +58,7 @@ Raman (RSLM) is frontline and also receives safety flags.
   request to share your records about Clara Tan, Priya Raman's share of 1
   record about a student, Sam Lee's team invitation and Sam Lee's
   handover of Mei Ling Tan's 3 records, none naming its student but the
-  request; each has Accept and Decline, disabled.
+  request; each has Agree and Decline, disabled.
 - [ ] Clara Tan's row reads "Overdue 2 days". *Ruling R1: sentence-case
   status labels.*
 - [ ] Tabs read Home, Log, Students; there is no bottom bar, and the
@@ -101,7 +101,7 @@ and say you will follow up weekly."*
   allowed), Follow-up needed, How, Who started it, the note.
 - [ ] Among the details, **Share this encounter with** offers No one and
   the other colleagues; saving with Mei Ling Tan chosen says she is asked
-  to accept this encounter.
+  to agree to this encounter.
 - [ ] Follow-up needed, How and Who started it each have **Clear**. **Who
   started it?** shows whatever the type.
 - [ ] For Clara, who is on his plans, the follow-up fields show her
@@ -202,10 +202,10 @@ overdue?*
 records for Clara Tan. Then see what Priya has shared with you."*
 
 - [ ] Clara's page already lists Mei Ling Tan under Shared with,
-  Accepted, with Withdraw; Bao Nguyen's lists Arjun Nair, Pending, 1
+  Agreed, with Withdraw; Bao Nguyen's lists Arjun Nair, Pending, 1
   record. **Share past records** offers all your records or only the
   ticked ones, and the other colleagues (not Mei Ling, who has it
-  already), then a confirmation that the colleague is asked to accept.
+  already), then a confirmation that the colleague is asked to agree.
 - [ ] Hana Rahim, shared by Priya, says so at the top; her encounters
   are labelled "Shared by Priya Raman". *Ruling R5: what a share shows.*
 - [ ] Clara's page has **Hand over**: all your records or only the
@@ -392,7 +392,7 @@ you would act on?*
 
 ### C3. Sys admin (desktop first; 1280 px, then 390 px)
 
-- [ ] **Acknowledge on behalf**, above Lapsed grants: the handover of
+- [ ] **Agree on behalf**, above Lapsed grants: the handover of
   Mei Ling Tan's records to Daniel Koh, started by Sam Lee, and Sam Lee's
   request to Arjun Nair, each waiting on someone who cannot be reached,
   with no student named and no record count.

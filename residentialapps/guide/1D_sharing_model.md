@@ -2,7 +2,7 @@
 
 **Decided 2026-11-07** (author, from notes reviewed in session). Replaces
 the two sharing ideas on today's screens: Share with a colleague (all of
-the owner's records for a student, with no acknowledgement) and Share on
+the owner's records for a student, with no agreement) and Share on
 their behalf (a senior sharing another's records), and the Allocate to a
 colleague scaffold proposed for a student's history, which was not
 merged. Nothing here is built yet; this file is the model the screens and
@@ -10,6 +10,11 @@ the wiring will follow. Confidentiality rule 2 in
 `residentialapps/spec/supportlogs_ui.md` §6 points here, and
 `residentialapps/docs/support_logs_confidentiality.md` explains it for
 staff.
+
+**Two words** (author, 2026-11-07): to **agree** (an agreement) is to
+consent to an action going ahead, as with a share, a team or a
+handover; to **acknowledge** is to show one has seen information sent
+on, as a safety flag's recipient does.
 
 ## The base rule
 
@@ -36,22 +41,22 @@ content:
   **request a share** from the staff member who owns the records; the
   owner decides, and it proceeds as a share of past records (1 below).
 - **In an emergency**, when the owner cannot be reached or a student is
-  at risk (both, author, 2026-11-07), a sys admin may acknowledge the request on the owner's
+  at risk (both, author, 2026-11-07), a sys admin may agree to the request on the owner's
   behalf, recorded as such. As with a handover, giving it shows the sys
   admin no content.
 
 ## Four ways to see someone else's records
 
-Every step below is audited: a share and its acknowledgement or decline,
+Every step below is audited: a share and its agreement or decline,
 a withdrawal, and a team's formation, change or dissolution.
 
 ### 1. Share past records
 
 - **The owner shares** one or more of their past records about a student,
   up to all of them, with one colleague.
-- **The receiver acknowledges first.** Until then they see only that
+- **The receiver agrees first.** Until then they see only that
   "Priya Raman has shared 3 records about a student with you", with no
-  name. Acknowledging opens the records; declining ends the share.
+  name. Agreeing opens the records; declining ends the share.
 - **The owner can withdraw** a share at any time.
 - **Past records only.** Records logged later are not covered; looking
   forward is a team's job.
@@ -60,14 +65,14 @@ a withdrawal, and a team's formation, change or dissolution.
 
 - **On Log**, an optional detail, folded away like the others, shares
   the encounter being saved with a colleague.
-- The receiver acknowledges it as in 1.
+- The receiver agrees to it as in 1.
 
 ### 3. A team
 
 - **Two or more frontline staff share responsibility for one student.**
-  Each member acknowledges at formation. An invitation, like a share and
-  a handover, names no student until accepted (author, 2026-11-07). The team forms once at least
-  two have accepted; anyone who declines stays out.
+  Each member agrees at formation. An invitation, like a share and
+  a handover, names no student until agreed to (author, 2026-11-07). The team forms once at least
+  two have agreed; anyone who declines stays out.
 - **At formation, each member chooses** whether the team sees their past
   records about the student.
 - **Records made while in the team are team records**, tagged to every
@@ -82,7 +87,7 @@ a withdrawal, and a team's formation, change or dissolution.
 - **After a withdrawal or dissolution**, each person sees their own
   records and the team records tagged to them; nothing else.
 - **A senior can trigger a team's formation.** The rest is the same:
-  each member acknowledges. A senior is not a member unless they join
+  each member agrees. A senior is not a member unless they join
   explicitly, as a frontline staff member.
 
 ### 4. A handover
@@ -94,10 +99,10 @@ a withdrawal, and a team's formation, change or dissolution.
 - **The chosen records are tagged to the receiving staff member and
   untagged from the owner**: they become the receiver's records, and the
   owner keeps nothing of them.
-- **The receiver, the owner and a senior acknowledge** before it takes
-  effect; whoever started it has acknowledged by starting it.
+- **The receiver, the owner and a senior agree** before it takes
+  effect; whoever started it has agreed by starting it.
 - **When a staff member cannot be reached** (they have left, say), a sys
-  admin may give that acknowledgement on their behalf, recorded as such.
+  admin may give that agreement on their behalf, recorded as such.
   Giving it shows the sys admin no content: administration still sees no
   student.
 
@@ -136,4 +141,4 @@ a withdrawal, and a team's formation, change or dissolution.
 - Students' filter gains **Teams** (3).
 
 These land as scaffolds first, one slice each, once this model is
-accepted.
+agreed.

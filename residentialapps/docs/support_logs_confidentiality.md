@@ -36,7 +36,7 @@ another person's records by accident or by default.
 You can share some or all of your past records about a student with one
 colleague, for example someone covering for you.
 
-- **They must accept the share before they see anything.** Until then
+- **They must agree to the share before they see anything.** Until then
   they see only that you have shared records about a student, not who
   the student is.
 - **You can withdraw a share** at any time.
@@ -47,15 +47,15 @@ colleague, for example someone covering for you.
 
 When you log an encounter, you can share that one record with a
 colleague as you save it. It's an optional detail, folded away so it
-never slows down a quick log. Your colleague accepts it the same way.
+never slows down a quick log. Your colleague agrees to it the same way.
 
 ### 3. Working as a team
 
 When two or more of you share responsibility for a student, you can form
 a team for that student.
 
-- **Each of you accepts when the team forms.** The team exists once at
-  least two people have accepted; anyone who declines stays out.
+- **Each of you agrees when the team forms.** The team exists once at
+  least two people have agreed; anyone who declines stays out.
 - **You decide whether the team sees your earlier records** about the
   student. That choice is yours alone, made as you join.
 - **Records made while you are in the team belong to the team**: every
@@ -68,7 +68,7 @@ a team for that student.
   you were in it, and nothing else.
 
 Senior staff can start a team, for example when a student needs several
-people at once. Each member still accepts. A senior is not part of the
+people at once. Each member still agrees. A senior is not part of the
 team unless they join it themselves.
 
 ### 4. Handing over
@@ -83,10 +83,10 @@ over.
   records to choose among them.
 - **The chosen records become the new staff member's.** The previous
   staff member no longer has them.
-- **Three people accept it:** the new staff member, the previous one and
-  a senior. Whoever started it has already accepted.
+- **Three people agree to it:** the new staff member, the previous one and
+  a senior. Whoever started it has already agreed.
 - **If someone cannot be reached**, for example because they have left,
-  a system administrator can accept on their behalf. The app records
+  a system administrator can agree on their behalf. The app records
   that it was done this way. Doing so does not let the administrator
   read any records.
 
@@ -131,9 +131,9 @@ flag.
 
 The app keeps an audit log of who did what:
 
-- every share, acceptance, decline and withdrawal;
+- every share, agreement, decline and withdrawal;
 - every team formed, joined, left or ended;
-- every handover and each acceptance of it;
+- every handover and each agreement to it;
 - every time a senior shows a student's name, opens a student's
   history or asks for a share;
 - every download, upload and purge of records.
@@ -152,7 +152,7 @@ Share your past records about the students they will see. If you will be
 working together going forward, form a team instead.
 
 **I shared records by mistake.** Withdraw the share. If your colleague
-has not accepted yet, they never saw the student's name.
+has not agreed yet, they never saw the student's name.
 
 **Can the Master read everything I write?**
 No, not by default. The Master sees which of you have records with which
@@ -166,4 +166,4 @@ content, so it is seen only through a share, like the rest.
 
 **What happens to my records when I leave?**
 They are handed over to whoever takes on your students, with your
-acceptance, or an administrator's if you cannot be reached.
+agreement, or an administrator's if you cannot be reached.

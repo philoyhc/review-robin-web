@@ -774,19 +774,19 @@ class PeerGrant:
     2026-11-07): the grantor's records for one student, all of them
     (`records` empty: encounters, follow-ups and plans) or the chosen
     encounters only, offered to one colleague, who sees nothing until they
-    accept; the grantor can withdraw it."""
+    agree; the grantor can withdraw it."""
 
     student: str
     grantor: str
     viewer: str
     granted_on: date
     records: tuple[str, ...] = ()  # the chosen encounters' ids; empty is all
-    accepted: bool = True
+    agreed: bool = True
 
 
 # Teams (sharing screens rung 5, author, 2026-11-07): two or more
 # frontline staff sharing responsibility for one student, each having
-# accepted. Records made while in the team are the team's; a member may
+# agreed. Records made while in the team are the team's; a member may
 # leave, and a team down to one member ends.
 
 
@@ -812,9 +812,9 @@ def teams_of(staff: str) -> list[Team]:
 
 
 # Waiting for you (sharing screens rung 2, author, 2026-11-07): what a
-# frontline staff member is asked to accept, one of each kind on sample
+# frontline staff member is asked to agree to, one of each kind on sample
 # data. A share offered, a team invitation or a handover names no student
-# until it is accepted; a senior's share request is about the staff
+# until it is agreed to; a senior's share request is about the staff
 # member's own records, so it names their student.
 SHARE_OFFERED = "share"
 TEAM_INVITE = "team"
@@ -824,7 +824,7 @@ SHARE_REQUEST = "request"
 
 @dataclass(frozen=True)
 class Pending:
-    """One acknowledgement waiting on a staff member."""
+    """One agreement waiting on a staff member."""
 
     kind: str
     to: str
@@ -832,7 +832,7 @@ class Pending:
     student: str
     records: int
     on: date
-    # Someone whose acknowledgement is owed but who cannot be reached (they
+    # Someone whose agreement is owed but who cannot be reached (they
     # have left, say): a sys admin may give it on their behalf (rung 6).
     unreachable: str = ""
     # A handover's records' owner, where a senior started it (rung 6).
@@ -844,7 +844,7 @@ PENDING = (
     Pending(SHARE_OFFERED, "Arjun Nair", "Daniel Koh", "S-02", 1, date(2026, 10, 28)),
     Pending(TEAM_INVITE, "Daniel Koh", "Sam Lee", "S-10", 0, date(2026, 10, 28)),
     # A handover Sam Lee started of Mei Ling Tan's records: Sam has
-    # acknowledged by starting it; it waits on Daniel Koh, and on Mei Ling
+    # agreed by starting it; it waits on Daniel Koh, and on Mei Ling
     # Tan, who cannot be reached (rung 6).
     Pending(
         HANDOVER,
@@ -864,7 +864,7 @@ PENDING = (
 
 
 def on_behalf() -> list[Pending]:
-    """What a sys admin may acknowledge on someone's behalf: a handover or
+    """What a sys admin may agree to on someone's behalf: a handover or
     a senior's share request whose staff member cannot be reached (rung 6,
     author, 2026-11-07). Shown without its student: administration sees
     no content."""
@@ -880,14 +880,14 @@ PEER_GRANTS = (
     PeerGrant("S-03", "Daniel Koh", "Mei Ling Tan", date(2026, 10, 1)),
     PeerGrant("S-08", "Priya Raman", "Daniel Koh", date(2026, 10, 20)),
     # Daniel Koh offered one record about Bao Nguyen to Arjun Nair, who
-    # has not accepted yet (rung 3).
+    # has not agreed yet (rung 3).
     PeerGrant(
-        "S-02", "Daniel Koh", "Arjun Nair", date(2026, 10, 28), records=("E-06",), accepted=False
+        "S-02", "Daniel Koh", "Arjun Nair", date(2026, 10, 28), records=("E-06",), agreed=False
     ),
     # Rung 2's offer on Daniel Koh's Home: Priya Raman's one record about
-    # Ivan Seet, not yet accepted.
+    # Ivan Seet, not yet agreed.
     PeerGrant(
-        "S-09", "Priya Raman", "Daniel Koh", date(2026, 10, 28), records=("E-10",), accepted=False
+        "S-09", "Priya Raman", "Daniel Koh", date(2026, 10, 28), records=("E-10",), agreed=False
     ),
 )
 
@@ -912,8 +912,8 @@ def grants_by(staff: str, sid: str) -> list[PeerGrant]:
 
 def shared_with(staff: str) -> list[PeerGrant]:
     """Records colleagues have shared with a staff member that they have
-    accepted; a share not yet accepted shows nothing (sharing model 1)."""
-    return [g for g in PEER_GRANTS if g.viewer == staff and g.accepted]
+    agreed to; a share not yet agreed to shows nothing (sharing model 1)."""
+    return [g for g in PEER_GRANTS if g.viewer == staff and g.agreed]
 
 
 def shared_plans(staff: str, sid: str) -> list[Plan]:

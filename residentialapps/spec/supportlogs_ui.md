@@ -34,12 +34,12 @@ under `data-app="supportlogs"`.
   Other (`residentialapps/guide/1D_refinements.md`).
 - **Waiting for you**, on the frontline's Home (author, 2026-11-07,
   `residentialapps/guide/1D_sharing_screens.md` rung 2): every
-  acknowledgement the sharing model asks of the staff member (a share
+  agreement the sharing model asks of the staff member (a share
   offered, a team invitation, a handover, a senior's share request),
-  each with Accept (Primary) and Decline (Secondary), inert until wired.
-  A share, an invitation or a handover names no student until accepted
+  each with Agree (Primary) and Decline (Secondary), inert until wired.
+  A share, an invitation or a handover names no student until agreed to
   (author, 2026-11-07). A sys admin
-  can acknowledge for a staff member only in an emergency, or on a
+  can agree for a staff member only in an emergency, or on a
   handover when they cannot be reached.
 - **Teams** (sharing screens rung 5, author, 2026-11-07): a team's
   student shows on Students for each member, under a fourth filter
@@ -52,7 +52,7 @@ under `data-app="supportlogs"`.
   chosen encounters; To), and on a senior's view of a student (From, To, To being someone other than From:
   all of the owner's records, since a senior sees none of them, author,
   2026-11-07); Sys
-  admin's Access lists **Acknowledge on behalf** (§6). All inert until
+  admin's Access lists **Agree on behalf** (§6). All inert until
   wired.
 - **Plans and follow-ups are a filter on Students** (author, 2026-11-07):
   My students shows All, Plans, Following or Teams, the last choice kept in the
@@ -65,7 +65,7 @@ under `data-app="supportlogs"`.
   about 10–20 seconds (§5.1). The optional details fold on the same page;
   there is no second screen (author, 2026-10-29). Among them, **Share this
   encounter with** offers one colleague this one encounter, which they
-  accept before seeing it (sharing screens rung 4, author, 2026-11-07).
+  agree to before seeing it (sharing screens rung 4, author, 2026-11-07).
 
 ## 2. Chrome
 
@@ -235,17 +235,22 @@ linked from the account menu (wherever it has other entries; not on
 the not-registered page or a no-grant viewer's `403` page) and from the
 notice on every page that names students.
 
+Copy keeps two words apart (author, 2026-11-07): **agree** for consent
+to an action going ahead (a share, a team, a handover, a sys admin's on
+someone's behalf), **acknowledge** for having seen information sent on
+(a safety flag).
+
 1. **Frontline staff see their own records**, and another staff member's
    only once access is granted.
 2. **Access to a student's records is granted deliberately, and the
-   receiver acknowledges it**: an owner shares past records, or one
+   receiver agrees to it**: an owner shares past records, or one
    encounter as they log it; two or more staff form a team for a
    student, which a senior may start; or a handover tags records to
-   the receiver, acknowledged by them and a senior. The model is
+   the receiver, agreed to by them and a senior. The model is
    `residentialapps/guide/1D_sharing_model.md` (author, 2026-11-07).
    **Share past records**, on a student's page, offers all or ticked
    records to one colleague; Shared with lists each as Pending or
-   Accepted, with Withdraw (Destructive), inert until wired.
+   Agreed, with Withdraw (Destructive), inert until wired.
 3. **Senior identifiable access sees, by default, only which students
    have records with which staff** (author, 2026-11-07): a record's
    metadata, never its content (everything else about a record: when,
@@ -255,7 +260,7 @@ notice on every page that names students.
    have a safety flag or a team; any other
    student's name is withheld until a deliberate action reveals it. To
    read content, a senior requests a share from the owner; in an
-   emergency a sys admin acknowledges it on the owner's behalf. Every
+   emergency a sys admin agrees to it on the owner's behalf. Every
    deliberate view is audited. The screens apply it
    (`residentialapps/guide/1D_sharing_screens.md` rung 1); Request a
    share is inert until wired.
@@ -300,7 +305,7 @@ notice on every page that names students.
   given a state.
 - **Administration sees no content.** Sys admin shows grants, lists,
   administrative events, purged records' counts, senior reads' counts
-  and **Acknowledge on behalf** (a handover or a senior's share request
+  and **Agree on behalf** (a handover or a senior's share request
   waiting on someone who cannot be reached, named by staff only), never
   a student. The
   support-activity audit is senior staff's, on Overview.

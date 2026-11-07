@@ -78,7 +78,7 @@ def _student_for(request: Request, sid: str) -> tuple[sample.Viewer, sample.Stud
 def share(request: Request, sid: str) -> Response:
     """Share past records (§11.1; sharing screens rung 3, author,
     2026-11-07): some or all of the viewer's records for this student,
-    offered to one frontline colleague, who accepts before seeing them."""
+    offered to one frontline colleague, who agrees before seeing them."""
     me, found = _student_for(request, sid)
     if sample.holds(me, sample.FRONTLINE) and not owns_records(me, sid):
         raise HTTPException(status_code=404)  # nothing of the viewer's own to share

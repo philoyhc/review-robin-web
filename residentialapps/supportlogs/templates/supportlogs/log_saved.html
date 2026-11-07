@@ -10,7 +10,7 @@
   <section class="card card-pad gap-below" aria-labelledby="saved-h" role="status">
     <h2 id="saved-h">{{ kind }} with {{ chosen.name }}, {{ duration }}</h2>
     <p class="sub">Logged now. A sample: nothing is stored.</p>
-    {% if shared_with %}<p class="flush">{{ shared_with }} is asked to accept this encounter. Until they do, they see only that you have shared a record about a student, not who; you can withdraw it from {{ chosen.name }}'s page.</p>{% endif %}
+    {% if shared_with %}<p class="flush">{{ shared_with }} is asked to agree to this encounter. Until they do, they see only that you have shared a record about a student, not who; you can withdraw it from {{ chosen.name }}'s page.</p>{% endif %}
     {% if added %}
       <p class="flush">Added to your follow-ups.</p>
     {% elif not following %}

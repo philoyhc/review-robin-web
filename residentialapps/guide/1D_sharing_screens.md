@@ -170,3 +170,9 @@ browser check passes on each rung.
   that failed open, and stale copy on the consultation result, Overview
   and B2, all fixed. Left for wiring: a senior who also holds a share
   sees a plan as senior, not as the share.
+- **Rung 8:** as planned: Accept becomes Agree on Waiting for you,
+  Accepted becomes Agreed under Shared with, and Acknowledge on behalf
+  becomes Agree on behalf; the sample's share field is `agreed`. A
+  safety flag keeps Acknowledge. One read: "agree" without "to" in the
+  button labels and prose, and the README's sharing-model row, all
+  fixed; earlier rungs' entries keep the words of their day.
