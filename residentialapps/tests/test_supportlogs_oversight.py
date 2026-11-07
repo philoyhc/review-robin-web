@@ -94,7 +94,7 @@ def test_senior_staff_request_a_share_and_no_longer_share_on_behalf(client: Test
 
 def test_hand_over_and_acknowledge_on_behalf_scaffolds(client: TestClient) -> None:
     """Sharing screens rung 6 (author, 2026-11-07): Hand over on a student's
-    page and a senior's view of a student; Sys admin acknowledges for
+    page and a senior's view of a student; Sys admin agrees for
     someone who cannot be reached, seeing no student."""
     mine = section(client.get("/students/S-03").text, "handover-h")  # Daniel's own
     assert ">Hand over records</button>" in mine
@@ -120,8 +120,8 @@ def test_hand_over_and_acknowledge_on_behalf_scaffolds(client: TestClient) -> No
     assert owed.count("<li>") == len(sample.on_behalf()) == 2
     assert "Handover of Mei Ling Tan&#39;s records to Daniel Koh, started by Sam Lee" in owed
     assert "Sam Lee&#39;s request to Arjun Nair to share" in owed
-    assert 'aria-label="Acknowledge for Mei Ling Tan"' in owed
-    assert 'aria-label="Acknowledge for Arjun Nair"' in owed
+    assert 'aria-label="Agree for Mei Ling Tan"' in owed
+    assert 'aria-label="Agree for Arjun Nair"' in owed
     assert not re.search(r"\b3 records?\b", owed)  # no record count
     for s in sample.STUDENTS:
         assert s.name not in owed and s.id not in owed, s.name

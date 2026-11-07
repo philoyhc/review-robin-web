@@ -39,8 +39,8 @@
       {% set mine_shared = sample.grants_by(me.name, chosen.id) %}
       <section class="card card-pad" aria-labelledby="shared-h">
         <h2 id="shared-h">Shared with</h2>
-        <p class="sub">Colleagues you have shared your past records for {{ chosen.name }} with (§11.1), pending until they accept. Private unless you share.</p>
-        {% if mine_shared %}<ul class="items">{% for g in mine_shared %}<li><div class="item-head"><span class="strong">{{ g.viewer }}</span><span class="chip {{ 'chip-ok' if g.accepted else 'chip-mute' }}">{{ "Accepted" if g.accepted else "Pending" }}</span></div><div class="subtle">{{ "All your records" if not g.records else g.records | length ~ " encounter" ~ ("s" if g.records | length != 1) }} · {{ "since" if g.accepted else "offered" }} {{ sample.short_date(g.granted_on) }}</div><button type="button" class="btn btn-danger gap-above-sm" disabled aria-label="Withdraw your share with {{ g.viewer }}">Withdraw</button></li>{% endfor %}</ul>{% else %}<p class="sub">No one.</p>{% endif %}
+        <p class="sub">Colleagues you have shared your past records for {{ chosen.name }} with (§11.1), pending until they agree. Private unless you share.</p>
+        {% if mine_shared %}<ul class="items">{% for g in mine_shared %}<li><div class="item-head"><span class="strong">{{ g.viewer }}</span><span class="chip {{ 'chip-ok' if g.agreed else 'chip-mute' }}">{{ "Agreed" if g.agreed else "Pending" }}</span></div><div class="subtle">{{ "All your records" if not g.records else g.records | length ~ " encounter" ~ ("s" if g.records | length != 1) }} · {{ "since" if g.agreed else "offered" }} {{ sample.short_date(g.granted_on) }}</div><button type="button" class="btn btn-danger gap-above-sm" disabled aria-label="Withdraw your share with {{ g.viewer }}">Withdraw</button></li>{% endfor %}</ul>{% else %}<p class="sub">No one.</p>{% endif %}
         {% if sample.working_set(me.name) | selectattr("0.id", "equalto", chosen.id) | list %}<a class="btn btn-secondary gap-above-sm" href="{{ url('/students/' ~ chosen.id ~ '/share') }}{{ as_query }}">Share past records</a>{% else %}<p class="subtle small">You have no records of your own for {{ chosen.name }} to share.</p>{% endif %}
       </section>
     </div>
@@ -82,20 +82,20 @@
           <p class="flush"><span class="chip chip-info">Team</span> {{ team.members | join(", ") }}</p>
           <p class="subtle small">You are not in it.</p>
         {% else %}
-          <p class="sub">Share responsibility for {{ chosen.name }} with colleagues: each accepts, and decides then whether the team sees their earlier records.</p>
+          <p class="sub">Share responsibility for {{ chosen.name }} with colleagues: each agrees, and decides then whether the team sees their earlier records.</p>
           <button type="button" class="btn btn-secondary" disabled>Form a team</button>
         {% endif %}
       </section>
       {# Hand over (sharing screens rung 6, author, 2026-11-07): the
          records the owner chooses become a colleague's, once the receiver
-         and a senior acknowledge; starting it is the owner's own
-         acknowledgement. A record is an encounter or a plan. Inert until
+         and a senior agree; starting it is the owner's own
+         agreement. A record is an encounter or a plan. Inert until
          wired. #}
       {% if chosen.id in sample.students_with_records(me.name) %}
       {% set handing = sample.encounters_by(me.name, chosen.id) %}
       <section class="card card-pad muted" aria-labelledby="handover-h">
         <h2 id="handover-h">Hand over</h2>
-        <p class="sub">For good, when {{ chosen.name }} moves to a colleague: the records you choose become theirs and are no longer yours, once they and a senior acknowledge.</p>
+        <p class="sub">For good, when {{ chosen.name }} moves to a colleague: the records you choose become theirs and are no longer yours, once they and a senior agree.</p>
         <fieldset class="modes"><legend>Which records</legend>
           <label class="check"><input type="radio" name="ho-scope" checked disabled> All your records, with your follow-ups and plans</label>
           <label class="check"><input type="radio" name="ho-scope" disabled> Only the encounters ticked below</label>

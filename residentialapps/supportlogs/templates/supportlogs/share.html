@@ -8,13 +8,13 @@
   {{ recorded() }}
   {# Share past records (§11.1; sharing screens rung 3, author,
      2026-11-07): some or all of the viewer's records for one student,
-     offered to one colleague, who accepts before seeing anything. Past
+     offered to one colleague, who agrees before seeing anything. Past
      records only: a team looks forward. #}
   {% set mine = sample.encounters_by(me.name, chosen.id) %}
   <form class="card card-pad" action="{{ url('/students/' ~ chosen.id ~ '/share/sent') }}" method="get" aria-labelledby="share-h">
     {% if me != sample.DEFAULT %}<input type="hidden" name="as" value="{{ me.name }}">{% endif %}
     <h2 id="share-h">Your records for {{ chosen.name }}</h2>
-    <p class="sub">Your colleague sees what you choose, labelled with your name, once they accept, and nothing you log afterwards: to work together going forward, form a team. All your records takes in your follow-ups and plans for {{ chosen.name }} too; chosen encounters, only those. You can withdraw the share at any time. The share, its acceptance and their views are recorded.</p>
+    <p class="sub">Your colleague sees what you choose, labelled with your name, once they agree, and nothing you log afterwards: to work together going forward, form a team. All your records takes in your follow-ups and plans for {{ chosen.name }} too; chosen encounters, only those. You can withdraw the share at any time. The share, its agreement and their views are recorded.</p>
     <fieldset class="modes">
       <legend>Which records</legend>
       <label class="check"><input type="radio" name="scope" value="all" checked> All your records: {{ mine | length }} encounter{{ "s" if mine | length != 1 }}, with your follow-ups and plans</label>

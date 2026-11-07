@@ -363,25 +363,25 @@ def test_favorites_drive_log_and_are_marked_on_students(client: TestClient) -> N
 
 def test_waiting_for_you_holds_every_acknowledgement(client: TestClient) -> None:
     """Sharing screens rung 2 (author, 2026-11-07): a share offered, a team
-    invitation, a handover and a senior's share request, each with Accept
+    invitation, a handover and a senior's share request, each with Agree
     and Decline, inert and named for its row; none names its student until
-    accepted, but a request about the staff member's own records."""
+    agreed, but a request about the staff member's own records."""
     card = section(client.get("/").text, "waiting-h")
     assert card.count("<li>") == len(sample.pending_for("Daniel Koh")) == 4
     for name in ("Ivan Seet", "Jia Wen Lee", "Gwyneth Low"):
         assert name not in card, name  # offered, invited, handed over: unnamed
     for line in (
         "Sam Lee asks you to share your records about Clara Tan",
-        "only if you accept, or if a sys admin accepts for you in an emergency",
+        "only if you agree, or if a sys admin agrees for you in an emergency",
         "Priya Raman has shared 1 record about a student with you",
         "Sam Lee invites you to a team for a student",
         "Sam Lee is handing Mei Ling Tan's 3 records about a student over to you",
-        "Once you and Mei Ling Tan acknowledge, the records become yours; a sys admin"
-        " may acknowledge for Mei Ling Tan if they cannot be reached.",
-        "only in an emergency can a sys admin accept for you",
+        "Once you and Mei Ling Tan agree, the records become yours; a sys admin"
+        " may agree for Mei Ling Tan if they cannot be reached.",
+        "only in an emergency can a sys admin agree for you",
     ):
         assert line in card.replace("&#39;", "'"), line
-    for verb, role in (("Accept", "primary"), ("Decline", "secondary")):
+    for verb, role in (("Agree", "primary"), ("Decline", "secondary")):
         labels = re.findall(rf'class="btn btn-{role}" disabled aria-label="{verb} ([^"]+)"', card)
         assert sorted(labels) == sorted(
             [
@@ -397,7 +397,7 @@ def test_waiting_for_you_holds_every_acknowledgement(client: TestClient) -> None
 
 def test_an_encounter_can_be_shared_as_it_is_logged(client: TestClient) -> None:
     """Sharing screens rung 4 (author, 2026-11-07): one colleague, this one
-    encounter, accepted before they see it; never oneself."""
+    encounter, agreed before they see it; never oneself."""
     log = client.get("/log").text
     share = log.split('id="share"')[1].split("</select>")[0]
     assert re.findall(r"<option>([^<]+)</option>", share) == [
@@ -406,9 +406,9 @@ def test_an_encounter_can_be_shared_as_it_is_logged(client: TestClient) -> None:
     assert '<option value="">No one</option>' in share
     base = "/log/saved?student=S-02&duration=15%20min&type=Check-in"
     sent = client.get(base + "&share=Mei%20Ling%20Tan").text
-    assert "Mei Ling Tan is asked to accept this encounter. Until they do" in sent
+    assert "Mei Ling Tan is asked to agree to this encounter. Until they do" in sent
     for who in ("", "Daniel%20Koh", "Nobody"):
-        assert "is asked to accept" not in client.get(base + "&share=" + who).text, who
+        assert "is asked to agree" not in client.get(base + "&share=" + who).text, who
 
 
 def test_share_as_you_log_is_folded_away_and_follows_the_viewer(client: TestClient) -> None:
