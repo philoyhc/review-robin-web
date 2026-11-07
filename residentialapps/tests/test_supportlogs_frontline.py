@@ -402,6 +402,21 @@ def test_an_encounter_can_be_shared_as_it_is_logged(client: TestClient) -> None:
     assert '<option value="">No one</option>' in share
     base = "/log/saved?student=S-02&duration=15%20min&type=Check-in"
     sent = client.get(base + "&share=Mei%20Ling%20Tan").text
-    assert "Mei Ling Tan is asked to accept this encounter" in sent
+    assert "Mei Ling Tan is asked to accept this encounter. Until they do" in sent
     for who in ("", "Daniel%20Koh", "Nobody"):
         assert "is asked to accept" not in client.get(base + "&share=" + who).text, who
+
+
+def test_share_as_you_log_is_folded_away_and_follows_the_viewer(client: TestClient) -> None:
+    """The share sits among the optional details, labelled and described;
+    another viewer is offered everyone but themselves."""
+    log = client.get("/log").text
+    start = log.index('<details class="more gap-above-sm">')
+    end = log.index("</details>", log.index('id="note"'))  # the note closes Add details
+    assert start < log.index('id="share"') < end  # folded away with the other details
+    assert '<label for="share">Share this encounter with</label>' in log
+    assert 'aria-describedby="share-what"' in log and 'id="share-what"' in log
+    priya = client.get("/log" + PRIYA).text.split('id="share"')[1].split("</select>")[0]
+    assert re.findall(r"<option>([^<]+)</option>", priya) == [
+        c for c in sample.FRONTLINE_COLLEAGUES if c != "Priya Raman"
+    ]

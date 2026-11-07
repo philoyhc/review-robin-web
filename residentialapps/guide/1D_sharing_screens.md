@@ -119,4 +119,9 @@ browser check passes on each rung.
   partial share read as whole, the receiver's copy and the pending meta,
   all fixed.
 - **Rung 4:** as planned; the share is live on sample data as far as
-  the confirmation, which says the colleague is asked to accept.
+  the confirmation, which says the colleague is asked to accept. Unlike
+  Share past records, only the viewer is left out of the list: the
+  student may be chosen after the page loads. Open for wiring: a share
+  chosen before Mark a safety concern does not carry through, as the
+  other details do not. One read: the list's rule in one helper, the
+  copy matched to Share past records, and thin tests, all fixed.
