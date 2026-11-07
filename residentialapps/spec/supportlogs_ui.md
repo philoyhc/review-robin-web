@@ -34,7 +34,9 @@ under `data-app="supportlogs"`.
   Other (`residentialapps/guide/1D_refinements.md`).
 - **Plans and follow-ups are a filter on Students** (author, 2026-11-07):
   My students shows All, Plans or Following, the last choice kept in the
-  browser; each plan's chip opens it, beside its due state. There is no
+  browser; each plan's chip opens it, beside its due state. Each row has
+  **Log**, a plan row its last contact and any safety-plan instruction,
+  and the list ends with **Add a student to follow up**. There is no
   Plans tab; Home's Due and overdue and Following stay.
 - **The routine path is one screen**: student, duration, type, Save,
   about 10–20 seconds (§5.1). The optional details fold on the same page;

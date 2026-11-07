@@ -22,7 +22,9 @@
   {# My plans folded in (author, 2026-11-07): a filter, All, Plans or
      Following, the viewer's last choice kept in this browser. Each plan's
      chip opens the plan, with its due state. Without script the filter
-     stays hidden and every row shows. #}
+     stays hidden and every row shows. My plans' row affordances follow
+     (author, 2026-11-07): Log, last contact, the safety-plan instruction
+     and Add a student to follow up. #}
   <section class="card card-pad" aria-labelledby="mine-h">
     <h2 id="mine-h">My students <span class="count">· <span data-students-count>{{ mine | length }}</span></span></h2>
     <p class="sub">Your plans and follow-ups, then everyone you have logged an encounter with, the most recently seen first.</p>
@@ -35,11 +37,14 @@
         <li data-kinds="{% if plans | selectattr('formal') | first %}plans {% endif %}{% if plans | rejectattr('formal') | first %}following{% endif %}">
           <div class="item-head"><a class="strong" href="{{ url('/students/' ~ s.id) }}{{ as_query }}">{{ s.name }}</a><span class="chips">{{ favorite(s) }}</span></div>
           {% if plans %}<div class="subtle">{% for p in plans %}{{ kind_chips(p) }} {{ due_chip(p) }} {{ p.cadence }}{% if not loop.last %} · {% endif %}{% endfor %}</div>{% endif %}
-          <div class="subtle">{{ s.email }}{% if seen %} · seen {{ sample.short_date(seen) }}{% endif %}</div>
+          {% for p in plans if p.safety_plan %}<div class="subtle">{{ p.instruction }}</div>{% endfor %}
+          <div class="subtle">{{ s.email }}{% if plans %} · last contact {{ sample.short_date(seen) if seen else "none yet" }}{% elif seen %} · seen {{ sample.short_date(seen) }}{% endif %}</div>
+          <a class="btn btn-secondary gap-above-sm" href="{{ url('/log') }}{{ qs(student=s.id) }}" aria-label="Log an encounter with {{ s.name }}">Log</a>
         </li>
       {% endfor %}
     </ul>
     <p class="sub" data-students-none hidden>None.</p>
+    <button type="button" class="btn btn-secondary gap-above-sm" disabled>Add a student to follow up</button>
   </section>
   <script>
     // Students' filter (author, 2026-11-07): shows all, plans or

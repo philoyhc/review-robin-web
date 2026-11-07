@@ -272,6 +272,20 @@ def test_students_filters_plans_and_follow_ups(client: TestClient) -> None:
     assert client.get("/plans/").status_code == 404  # My plans is gone
 
 
+def test_students_rows_carry_my_plans_affordances(client: TestClient) -> None:
+    """Author, 2026-11-07: each row's Log, a plan row's last contact and
+    safety-plan instruction, and Add a student to follow up."""
+    mine = section(client.get("/students/").text, "mine-h")
+    logs = re.findall(r'href="/log\?student=(S-\d+)" aria-label="Log an encounter with', mine)
+    assert logs == [s.id for s, _, _ in sample.working_set("Daniel Koh")]
+    clara = mine.split("Clara Tan</a>")[1].split("</li>")[0]
+    assert "Weekly check-in; a reminder of the coping plan." in clara
+    assert "· last contact 20 Oct" in clara
+    bao = mine.split("Bao Nguyen</a>")[1].split("</li>")[0]
+    assert "· seen 24 Oct" in bao and "last contact" not in bao
+    assert ">Add a student to follow up</button>" in mine
+
+
 def test_each_plan_on_a_row_carries_its_own_due_state(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:

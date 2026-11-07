@@ -129,8 +129,9 @@ and four types.
   Office and Residential staff referral plans read College.
 - **Rung 13:** as planned; each plan on a row carries its own due chip,
   so a student with a plan and a follow-up shows both. My plans' Overdue
-  and This week filters go (Home's Due and overdue lists the same), as do
-  its per-row **Log** button, last contact, safety-plan instruction line
-  and the disabled **Add a student to follow up**: the author's call to
-  confirm. One read: the one due chip per student, Home's count, stale
-  prose and four test gaps, all fixed.
+  and This week filters go (Home's Due and overdue lists the same). One
+  read: the one due chip per student, Home's count, stale prose and four
+  test gaps, all fixed. **After rung 13** (author, 2026-11-07): My plans'
+  row affordances return on Students: **Log** on every row, a plan row's
+  last contact (in place of "seen") and safety-plan instruction, and the
+  disabled **Add a student to follow up** at the list's end.
