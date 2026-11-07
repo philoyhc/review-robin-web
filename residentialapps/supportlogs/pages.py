@@ -23,6 +23,9 @@ TEMPLATES = templates([Path(__file__).resolve().parent / "templates"])
 APP_NAME = "Support Logs"
 MAIN = "Support Logs"
 SYS_ADMIN_AREA = "Sys admin"
+# The staff explainer's page (author, 2026-11-07), in every account menu.
+EXPLAINER = "Who can see what"
+EXPLAINER_PATH = "/who-can-see-what"
 
 
 def _grant_tabs(v: sample.Viewer) -> list[tuple[str, str]]:
@@ -164,12 +167,7 @@ def render(
             "top_line": top_line(sample.UNIT_NAME),
             "area": area,
             # Sys admin is the account's, in its menu, not a place (§4).
-            **dict(
-                zip(
-                    ("areas", "account_links"),
-                    split_areas(areas_for(me) if areas is None else areas),
-                )
-            ),
+            **_areas_and_account(me, areas),
             "tabs": tabs,
             "viewer": identity,
             "initials": initials(identity.display_label) if identity else "?",
@@ -177,6 +175,7 @@ def render(
             "as_query": sample.as_query(me),
             "qs": qs,
             "sample": sample,
+            "explainer_path": EXPLAINER_PATH,
             # The viewer switch goes to each person's Home, which sends them
             # where they belong.
             # The chip's line, for a viewer off the card (`?as=` only) too.
@@ -189,6 +188,19 @@ def render(
         },
         status_code=status_code,
     )
+
+
+def _areas_and_account(
+    me: sample.Viewer, areas: Sequence[dict[str, str]] | None
+) -> dict[str, tuple[Mapping[str, str], ...]]:
+    """The switcher's places, and the account menu's entries with the
+    explainer last. A page with neither (not registered, a viewer with no
+    grant) stays without, so the bar stays static."""
+    places, account = split_areas(areas_for(me) if areas is None else areas)
+    if not places and not account:
+        return {"areas": places, "account_links": account}
+    explainer = {"label": EXPLAINER, "path": EXPLAINER_PATH + sample.as_query(me)}
+    return {"areas": places, "account_links": (*account, explainer)}
 
 
 def forbidden(request: Request, me: sample.Viewer) -> Response:

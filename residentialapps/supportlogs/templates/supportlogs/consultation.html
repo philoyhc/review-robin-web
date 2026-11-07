@@ -1,5 +1,6 @@
 {% extends "residential/base.html" %}
 {% from "residential/_sample.html" import sample_title, viewer_card with context %}
+{% from "supportlogs/_frontline.html" import explainer_link with context %}
 {% block title %}Consultation check{% endblock %}
 {% block content %}
   {{ sample_title("Consultation check", me.name) }}
@@ -7,7 +8,7 @@
      check is an audited action (§11.3) and decides nothing. A sample: the
      list travels in the query string here; wired, it is posted, so no email
      reaches a URL or a log. #}
-  <p class="notice" role="note">Running a check is recorded: its purpose, the students checked, what was shown and whom to consult.</p>
+  <p class="notice" role="note">Running a check is recorded: its purpose, the students checked, what was shown and whom to consult. {{ explainer_link() }}</p>
   {% if (purpose or emails) and not filled %}<p class="notice" role="alert">{{ "Add a purpose." if not purpose.strip() else "No email address was found in the list." }}</p>{% endif %}
   <form class="card card-pad" action="{{ url('/consultation/check') }}" method="get" aria-labelledby="check-h">
     <h2 id="check-h">Check a list of students</h2>

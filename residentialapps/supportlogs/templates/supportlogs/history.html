@@ -1,5 +1,6 @@
 {% extends "residential/base.html" %}
 {% from "residential/_sample.html" import sample_title, viewer_card with context %}
+{% from "supportlogs/_frontline.html" import explainer_link with context %}
 {% from "supportlogs/_frontline.html" import flag_item with context %}
 {% block title %}{{ chosen.name }}{% endblock %}
 {% block content %}
@@ -8,7 +9,7 @@
   {# A student across staff (§4.5, §11.2): who supports them, not a case
      file; an audited read for senior identifiable access. #}
   <p class="sub">{{ chosen.email }}</p>
-  <p class="notice" role="note">Opening this history is recorded, as a senior-level read across staff.</p>
+  <p class="notice" role="note">Opening this history is recorded, as a senior-level read across staff. {{ explainer_link() }}</p>
   {# The wall (author, 2026-11-07; confidentiality rule 3): which staff
      have records with the student, and their plans' kinds, never a
      record's content. To read it, a senior asks the staff member to share

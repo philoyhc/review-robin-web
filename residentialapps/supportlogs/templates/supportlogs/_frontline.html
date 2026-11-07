@@ -3,8 +3,14 @@
    rest muted (UI spec §5, §6). #}
 {# Every page naming a student says the view is recorded (§11.3; the
    plan's Semantics), as the real page will. #}
+{# The link to Who can see what (sharing screens rung 1a), on every
+   notice of a page that names students. #}
+{% macro explainer_link() -%}
+  <a href="{{ url(explainer_path) }}{{ as_query }}">Who can see what</a>
+{%- endmacro %}
+
 {% macro recorded() -%}
-  <p class="subtle small">Pages that name students are recorded when opened.</p>
+  <p class="subtle small">Pages that name students are recorded when opened. {{ explainer_link() }}</p>
 {%- endmacro %}
 
 {# The plan a student is on, as Log encounter's follow-ups say it, and the

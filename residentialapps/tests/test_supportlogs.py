@@ -200,6 +200,7 @@ def test_every_link_keeps_the_sample_viewer(client: TestClient) -> None:
         ("Priya Raman", "/log"),
         ("Priya Raman", "/students/S-08"),
         ("Priya Raman", "/plans/P-05"),
+        ("Priya Raman", "/who-can-see-what"),
         ("Rachel Yeo", "/sys-admin/configuration"),
     ]
     for name, path in pages:
@@ -260,6 +261,7 @@ def test_mounted_pages_stay_under_the_mount() -> None:
         at("/", "Nadia Hassan"),
         at("/log", "Rachel Yeo"),
         at("/", "Wei Jie Ong"),
+        "/who-can-see-what",
         *(at(path, holder(*grants).name) for path, _, grants in PAGES),
         at("/sys-admin/", "Platform super-admin"),
     ]

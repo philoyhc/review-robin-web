@@ -91,8 +91,9 @@ lacks.
      (sys admins), **Guide** (a viewer who resolves a Guide audience, the
      same fail-open `guide_hidden` flag as today), **About**, with the
      version beside it for operators and sys admins.
-   - Residential: Sys admin, where it is a menu entry today; Guide and
-     About when they exist.
+   - Residential: Sys admin, where it is a menu entry today; in Support
+     Logs, **Who can see what**, its staff explainer (2026-11-07); Guide
+     and About when they exist.
 3. **Under 640 px**: the Light/Dark toggle and the viewer's name.
 4. **Sign out**, last, its own group: `/.auth/logout`.
 
