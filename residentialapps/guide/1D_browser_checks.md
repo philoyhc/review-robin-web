@@ -252,7 +252,8 @@ about?"*
 - [ ] Tiles; Team workload (sortable), with a note that load is not a
   measure of performance; Hotspots, with a **Rising** chip on Gwyneth Low
   and no score anywhere, naming only Elena Park, Jia Wen Lee, Clara Tan,
-  Dev Menon and Ivan Seet until **Show name** opens another row; Coverage (overdue, due this week, review due);
+  Dev Menon and Ivan Seet until **Show name** opens another row (Every
+  plan withholds the same students); Coverage (overdue, due this week, review due);
   Flagged for formal assignment, with Assign disabled; Every plan.
 
 Ask: *Does Hotspots match who you would have named? Is the load weighting

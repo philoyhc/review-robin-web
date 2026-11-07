@@ -892,6 +892,15 @@ class Hotspot(TypedDict):
     rising: bool
 
 
+def named_on_overview(sid: str) -> bool:
+    """Overview names a student by default only when they are on an
+    active formal plan or have an active flag (author, 2026-11-07); any
+    other student is one click away."""
+    return any(p.formal and p.status == "Active" for p in PLANS if p.student == sid) or any(
+        f.student == sid and f.active for f in FLAGS
+    )
+
+
 def hotspots() -> list[Hotspot]:
     """Students by recent support (§10.4): contacts and minutes over the last
     14 days against the 14 before, staff involved, a formal plan, active

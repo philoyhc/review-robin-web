@@ -180,12 +180,6 @@ form's end, and the main action is a full-width Primary on the page
   is not their value. The exception is a table whose order is its
   meaning: the Consultation check result is strongest first, so it takes
   no sort.
-- **Hotspots name only the students on a formal plan or with an active
-  flag** (author, 2026-11-07). Another student's row reads "Not on a
-  plan" with **Show name**, and the name, with its history link for senior
-  staff, shows only once opened; those rows sort last by name. On sample
-  data the name is in the page; wired, showing it is an audited read
-  that fetches the name.
 - **Configured lists are rendered from one place**, never hard-coded in a
   template (draft UI spec §3):
   - durations, types, concern areas, modes and cadences;
@@ -205,6 +199,15 @@ form's end, and the main action is a full-width Primary on the page
   - a history;
   - the support-activity audit;
   - a consultation check.
+- **Overview names by default only students on a formal plan or with an
+  active flag** (author, 2026-11-07), in Hotspots, Every plan and Flagged
+  for formal assignment. Any other student reads "No formal plan" with
+  **Show name**, which shows the name and its link in place and reads
+  **Hide name** once open; a withheld Hotspots row sorts last on the
+  Student column. A safety flag names its student, open or closed: the
+  flag is the reason to. On sample data the name is in the page (and
+  find-in-page can open it); wired, showing it is an audited read that
+  fetches the name.
 - **Aggregate view names no one.** Other Staff with aggregate view see
   counts only, with no student's name, id or link.
 - **A student is known only as a student** (author, 2026-10-30): nothing

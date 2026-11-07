@@ -2,6 +2,10 @@
 {% from "residential/_sample.html" import sample_title, viewer_card with context %}
 {% from "supportlogs/_frontline.html" import recorded, flags_card, due_chip with context %}
 {% block title %}Overview{% endblock %}
+{# A name withheld until asked for (author, 2026-11-07): a student on no
+   formal plan and with no active flag. `name` is the name as it would
+   show, link included. #}
+{% macro withheld(name) %}<details class="reveal"><summary><span class="subtle">No formal plan</span> <span class="reveal-cta" data-when="closed">Show name</span><span class="reveal-cta" data-when="open">Hide name</span></summary><span class="strong">{{ name }}</span></details>{% endmacro %}
 {% block content %}
   {{ sample_title("Overview", me.name) }}
   {# How support is distributed across the team, where the hotspots are,
@@ -34,15 +38,15 @@
       {% set hot = sample.hotspots() %}
       <section class="card card-pad" aria-labelledby="hot-h">
         <h2 id="hot-h">Hotspots</h2>
-        <p class="sub">Contacts, minutes and staff involved in the last 14 days, contacts in the 14 before, formal plans and active flags. Rising is a sharp increase on the student's own pattern, not a high but steady one; there is no score (§10.4, §15).{% if named %} A student on no formal plan and with no active flag is not named until you show them.{% endif %}</p>
+        <p class="sub">Contacts, minutes and staff involved in the last 14 days, contacts in the 14 before, formal plans and active flags. Rising is a sharp increase on the student's own pattern, not a high but steady one; there is no score (§10.4, §15).{% if named %} A student on no formal plan and with no active flag is not named, here or below, until you show them.{% endif %}</p>
         {% if named %}
           <div class="table-wrap">
             <table data-sort-auto id="hot-table">
               <thead><tr><th scope="col">Student</th><th scope="col" class="num">Contacts, 14 days</th><th scope="col" class="num">The 14 before</th><th scope="col" class="num">Minutes, 14 days</th><th scope="col" class="num">Staff, 14 days</th><th scope="col">Signals</th></tr></thead>
               <tbody>{% for r in hot %}<tr>
                 {% set name %}{% if senior %}<a href="{{ url('/overview/students/' ~ r.student.id) }}{{ as_query }}">{{ r.student.name }}</a>{% else %}{{ r.student.name }}{% endif %}{% endset %}
-                {% if r.formal or r.flags %}<td class="strong">{{ name }}</td>
-                {%- else %}<td data-sort-value="" data-redacted><details class="reveal"><summary><span class="subtle">Not on a plan</span> <span class="reveal-cta">Show name</span></summary><span class="strong">{{ name }}</span></details></td>{% endif %}
+                {% if sample.named_on_overview(r.student.id) %}<td class="strong">{{ name }}</td>
+                {%- else %}<td data-sort-value="">{{ withheld(name) }}</td>{% endif %}
                 <td class="num">{{ r.contacts }}</td><td class="num">{{ r.before }}</td><td class="num">{{ r.minutes }}</td><td class="num">{{ r.staff }}</td>
                 <td><span class="chips chip-wrap">{% if r.rising %}<span class="chip chip-warn">Rising</span>{% endif %}{% if r.flags %}<span class="chip chip-safety">Active flag</span>{% endif %}{% if r.formal %}<span class="chip chip-accent">Formal plan</span>{% endif %}</span></td>
               </tr>{% endfor %}</tbody>
@@ -90,14 +94,14 @@
     <section class="card card-pad gap-above" aria-labelledby="refs-h">
       <h2 id="refs-h">Flagged for formal assignment <span class="count">· {{ sample.REFERRALS | length }}</span></h2>
       <p class="sub">Students frontline staff have flagged for review (§3.1); assigning one opens a plan.</p>
-      <ul class="items">{% for r in sample.REFERRALS %}{% set s = sample.student(r.student) %}<li><div class="item-head"><a class="strong" href="{{ url('/overview/students/' ~ s.id) }}{{ as_query }}">{{ s.name }}</a><button type="button" class="btn btn-secondary" disabled aria-label="Assign a plan for {{ s.name }}">Assign</button></div><div class="subtle">Flagged {{ sample.short_date(r.flagged_on) }} by {{ r.flagged_by }}{% if r.cadence %} · suggests {{ r.cadence | lower }}{% endif %}</div></li>{% endfor %}</ul>
+      <ul class="items">{% for r in sample.REFERRALS %}{% set s = sample.student(r.student) %}{% set link %}<a class="strong" href="{{ url('/overview/students/' ~ s.id) }}{{ as_query }}">{{ s.name }}</a>{% endset %}<li><div class="item-head">{{ link if sample.named_on_overview(s.id) else withheld(link) }}<button type="button" class="btn btn-secondary" disabled aria-label="{{ 'Assign a plan for ' ~ s.name if sample.named_on_overview(s.id) else 'Assign a plan' }}">Assign</button></div><div class="subtle">Flagged {{ sample.short_date(r.flagged_on) }} by {{ r.flagged_by }}{% if r.cadence %} · suggests {{ r.cadence | lower }}{% endif %}</div></li>{% endfor %}</ul>
     </section>
   {% endif %}
   {% if named %}
     <section class="card card-pad gap-above" aria-labelledby="plans-h">
       <h2 id="plans-h">Every plan <span class="count">· {{ sample.PLANS | length }}</span></h2>
       <p class="sub">Formal assignments and follow-ups across the team{% if not senior %}, read-only{% endif %}.</p>
-      <ul class="items">{% for p in sample.PLANS | sort(attribute="formal", reverse=true) %}{% set s = sample.student(p.student) %}<li><div class="item-head"><a class="strong" href="{{ url('/plans/' ~ p.id) }}{{ as_query }}">{{ s.name }}</a>{{ due_chip(p) }}</div><div class="subtle">{{ "Plan · " ~ p.source if p.formal else "Following" }} · {{ p.staff }} · {{ p.cadence }}</div></li>{% endfor %}</ul>
+      <ul class="items">{% for p in sample.PLANS | sort(attribute="formal", reverse=true) %}{% set s = sample.student(p.student) %}{% set link %}<a class="strong" href="{{ url('/plans/' ~ p.id) }}{{ as_query }}">{{ s.name }}</a>{% endset %}<li><div class="item-head">{{ link if sample.named_on_overview(s.id) else withheld(link) }}{{ due_chip(p) }}</div><div class="subtle">{{ "Plan · " ~ p.source if p.formal else "Following" }} · {{ p.staff }} · {{ p.cadence }}</div></li>{% endfor %}</ul>
     </section>
   {% endif %}
 {% endblock %}
