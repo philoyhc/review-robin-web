@@ -49,6 +49,9 @@ a withdrawal, and a team's formation, change or dissolution.
 - **Plans and follow-ups can be the team's**: the most likely use, one
   follow-up the members keep up between them.
 - **Any member can withdraw.** A team down to one member dissolves.
+- **A team's students show on Students** for each member, with the team
+  named and its own place in the filter: a team usually forms because a
+  student needs it now.
 - **After a withdrawal or dissolution**, each person sees their own
   records and the team records tagged to them; nothing else.
 - **A senior can trigger a team's formation.** The rest is the same:
@@ -57,9 +60,17 @@ a withdrawal, and a team's formation, change or dissolution.
 
 ### 4. A handover
 
-- **Records are tagged to the receiving staff member**, so they become
-  that person's records too, not merely visible to them.
-- **Both the receiver and a senior acknowledge** before it takes effect.
+- **The owner or a senior starts it**, choosing which of the owner's
+  records for the student to hand over.
+- **The chosen records are tagged to the receiving staff member and
+  untagged from the owner**: they become the receiver's records, and the
+  owner keeps nothing of them.
+- **The receiver, the owner and a senior acknowledge** before it takes
+  effect; whoever started it has acknowledged by starting it.
+- **When a staff member cannot be reached** (they have left, say), a sys
+  admin may give that acknowledgement on their behalf, recorded as such.
+  Giving it shows the sys admin no content: administration still sees no
+  student.
 
 ## What follows for the other rules
 
@@ -71,13 +82,8 @@ a withdrawal, and a team's formation, change or dissolution.
 
 ## Still open
 
-- **Who starts a handover:** the owner, a senior, or either.
-- **Whether a handover tags all of the owner's records** for the student,
-  or chosen ones.
-- **What the outgoing staff member keeps after a handover:** their own
-  copy, or nothing new.
-- **How a team's plan is shown on Students:** a member's All / Plans /
-  Following filter, with the team named.
+- **How Students' filter takes teams:** a fourth choice beside All,
+  Plans and Following, or teams first under All.
 
 ## Effect on today's screens
 
