@@ -33,8 +33,8 @@
       {% for s, _reasons, seen in mine %}
         {% set plans = sample.plans_of(me.name, s.id) %}
         <li data-kinds="{% if plans | selectattr('formal') | first %}plans {% endif %}{% if plans | rejectattr('formal') | first %}following{% endif %}">
-          <div class="item-head"><a class="strong" href="{{ url('/students/' ~ s.id) }}{{ as_query }}">{{ s.name }}</a><span class="chips">{% if plans %}{{ due_chip(plans[0]) }}{% endif %}{{ favorite(s) }}</span></div>
-          {% if plans %}<div class="subtle">{% for p in plans %}{{ kind_chips(p) }} {{ p.cadence }}{% if not loop.last %} · {% endif %}{% endfor %}</div>{% endif %}
+          <div class="item-head"><a class="strong" href="{{ url('/students/' ~ s.id) }}{{ as_query }}">{{ s.name }}</a><span class="chips">{{ favorite(s) }}</span></div>
+          {% if plans %}<div class="subtle">{% for p in plans %}{{ kind_chips(p) }} {{ due_chip(p) }} {{ p.cadence }}{% if not loop.last %} · {% endif %}{% endfor %}</div>{% endif %}
           <div class="subtle">{{ s.email }}{% if seen %} · seen {{ sample.short_date(seen) }}{% endif %}</div>
         </li>
       {% endfor %}

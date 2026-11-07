@@ -265,3 +265,17 @@ def test_students_filter_shows_plans_or_follow_ups_and_is_kept(page: Page) -> No
     )
     page.get_by_role("button", name="All", exact=True).click()
     assert mine.count() == 6
+    page.evaluate("localStorage.setItem('supportlogs-students-show', 'nonsense')")
+    page.reload()
+    assert mine.count() == 6  # an unknown stored choice reads as All
+
+
+def test_students_filter_says_none_when_nothing_matches(page: Page) -> None:
+    """Priya Raman has a follow-up and no formal plan: Plans shows None."""
+    page.goto(f"{ORIGIN}/students/?as=Priya%20Raman")
+    page.get_by_role("button", name="Plans", exact=True).click()
+    assert page.locator("[data-students-list] > li:visible").count() == 0
+    assert page.locator("[data-students-none]").is_visible()
+    assert page.locator("[data-students-count]").inner_text() == "0"
+    page.get_by_role("button", name="Following", exact=True).click()
+    assert not page.locator("[data-students-none]").is_visible()

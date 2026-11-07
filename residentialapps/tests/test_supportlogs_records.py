@@ -71,7 +71,9 @@ def test_one_form_downloads_encounters_or_plans(client: TestClient) -> None:
     assert '<button type="submit" class="btn btn-primary">Download encounters</button>' in form
     assert 'formaction="/plans/records.csv">Download plans</button>' in form
     upload = client.get(f"/students/?{OPEN}").text.split('id="ul-h"')[1].split("</section>")[0]
-    assert ">Encounters template</a>" in upload and ">Follow-ups template</a>" in upload
+    tpl = "records-template.csv?records=open&amp;understood=yes"
+    assert f'href="/students/{tpl}">Encounters template</a>' in upload
+    assert f'href="/plans/{tpl}">Follow-ups template</a>' in upload
 
 
 def test_encounters_download_by_term_or_all(client: TestClient) -> None:

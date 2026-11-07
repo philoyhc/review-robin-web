@@ -80,8 +80,8 @@ plans (`/plans/`) go; the frontline's tabs are Home, Log and Students.
   student's page and Home; its owner's back link and tab are Students.
 - **Your records**, at the end of Students, downloads plans as well as
   encounters, with a template for each.
-- Home's Due and overdue and Following stay; Following's link reads "All
-  N on Students".
+- Home's Due and overdue and Following stay; Following's link reads "On
+  Students".
 
 ## Checks
 
@@ -127,3 +127,10 @@ and four types.
 - **After rung 12** (author, 2026-11-06): a formal assignment's sources
   are Counselling, College and Other for the mock-up; the sample's Dean's
   Office and Residential staff referral plans read College.
+- **Rung 13:** as planned; each plan on a row carries its own due chip,
+  so a student with a plan and a follow-up shows both. My plans' Overdue
+  and This week filters go (Home's Due and overdue lists the same), as do
+  its per-row **Log** button, last contact, safety-plan instruction line
+  and the disabled **Add a student to follow up**: the author's call to
+  confirm. One read: the one due chip per student, Home's count, stale
+  prose and four test gaps, all fixed.

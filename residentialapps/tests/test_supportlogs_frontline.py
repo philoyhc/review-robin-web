@@ -5,6 +5,7 @@ view, Students holding the plans and follow-ups (UI spec screens 1–3,
 
 from __future__ import annotations
 
+import dataclasses
 import re
 import shutil
 import subprocess
@@ -63,7 +64,7 @@ def test_the_dashboard_follows_recent_and_the_last_14_days(client: TestClient) -
         "Dev Menon",
         "Aiden Chen",
     ]
-    assert 'href="/students/">All 4 on Students</a>' in following
+    assert 'href="/students/">On Students</a>' in following
     assert names(section(page, "recent-h")) == [
         "Farid Osman",
         "Elena Park",
@@ -268,6 +269,23 @@ def test_students_filters_plans_and_follow_ups(client: TestClient) -> None:
     clara = mine.split("Clara Tan</a>")[1].split("</li>")[0]
     assert '<span class="chip chip-warn">Overdue' in clara  # her plan's due state
     assert "supportlogs-students-show" in client.get("/students/").text
+    assert client.get("/plans/").status_code == 404  # My plans is gone
+
+
+def test_each_plan_on_a_row_carries_its_own_due_state(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A student on a plan and a follow-up is in both filters, each plan
+    with its chip and due state."""
+    aiden = next(p for p in sample.PLANS if p.id == "P-03")
+    extra = dataclasses.replace(aiden, id="P-98", formal=True, source="College")
+    monkeypatch.setattr(sample, "PLANS", [*sample.PLANS, extra])
+    mine = section(client.get("/students/").text, "mine-h")
+    row = mine.split("Aiden Chen</a>")[0].rsplit("<li ", 1)[1]
+    assert row.startswith('data-kinds="plans following">')
+    after = mine.split("Aiden Chen</a>")[1].split("</li>")[0]
+    assert after.count('class="chip chip-info">Due today') == 2
+    assert ">Plan · College</a>" in after and ">Following</a>" in after
 
 
 def test_the_frontline_pages_are_the_frontline_s(client: TestClient) -> None:
