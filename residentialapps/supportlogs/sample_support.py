@@ -816,11 +816,10 @@ def shared_encounters(staff: str, sid: str) -> list[Encounter]:
 # nothing ties a student to a housing location, so a student's Precinct is
 # deferred (author, 2026-10-30; plan, Out of scope).
 
-# Assignment load weighting (§10.3): an operational indicator, not a
-# measure of complexity or performance.
-WEIGHTS = {"Monthly": 1, "Fortnightly": 2, "Weekly": 4, "Twice weekly": 8, "3+ times weekly": 12}
+# Overview shows metadata only (author, 2026-11-07): who has records
+# with whom, never figures drawn from content. The period is the senior
+# reads' window on Sys admin's audit log.
 PERIOD_DAYS = 30
-REVIEW_SOON_DAYS = 21
 
 
 def in_period(e: Encounter, days: int = PERIOD_DAYS, offset: int = 0) -> bool:
@@ -830,55 +829,77 @@ def in_period(e: Encounter, days: int = PERIOD_DAYS, offset: int = 0) -> bool:
     return end - timedelta(days=days - 1) <= e.when.date() <= end
 
 
-class WorkloadRow(TypedDict):
+class SupportRow(TypedDict):
     staff: str
+    students: int
     formal: int
     informal: int
-    students: int
-    encounters: int
-    minutes: int
-    load: int
 
 
-def workload() -> list[WorkloadRow]:
-    """Team workload (§10.2–10.3) over the last 30 days, every frontline
-    colleague, heaviest load first."""
-    rows: list[WorkloadRow] = []
+def students_with_records(staff: str) -> set[str]:
+    """The students a staff member has any record about: an encounter or a
+    plan. Metadata, which senior staff see (author, 2026-11-07)."""
+    return {e.student for e in ENCOUNTERS if e.staff == staff} | {
+        p.student for p in PLANS if p.staff == staff
+    }
+
+
+def staff_with_records(sid: str) -> set[str]:
+    """The staff members with any record about a student."""
+    return {n for n in FRONTLINE_COLLEAGUES if sid in students_with_records(n)}
+
+
+def who_supports_whom() -> list[SupportRow]:
+    """Who supports whom (author, 2026-11-07): per frontline colleague, how
+    many students they have records with, and their active formal plans
+    and follow-ups. Metadata only: no dates, minutes or counts of
+    encounters, which are content."""
+    rows: list[SupportRow] = []
     for staff in FRONTLINE_COLLEAGUES:
         plans = plans_of(staff)
-        recent = [e for e in encounters_by(staff) if in_period(e)]
         rows.append(
             {
                 "staff": staff,
+                "students": len(students_with_records(staff)),
                 "formal": sum(1 for p in plans if p.formal),
                 "informal": sum(1 for p in plans if not p.formal),
-                "students": len({e.student for e in recent}),
-                "encounters": len(recent),
-                "minutes": sum(MINUTES[e.duration] for e in recent),
-                "load": sum(WEIGHTS.get(p.cadence, 0) for p in plans if p.formal),
             }
         )
-    return sorted(rows, key=lambda r: (-r["load"], -r["encounters"], r["staff"]))
+    return sorted(rows, key=lambda r: (-r["students"], r["staff"]))
 
 
-class Totals(TypedDict):
-    formal: int
-    informal: int
-    students: int
-    encounters: int
-    minutes: int
+class AcrossRow(TypedDict):
+    student: Student
+    staff: list[str]
+    formal: bool
+    flags: int
 
 
-def totals() -> Totals:
-    recent = [e for e in ENCOUNTERS if in_period(e)]
-    active = [p for p in PLANS if p.status == "Active"]
-    return {
-        "formal": sum(1 for p in active if p.formal),
-        "informal": sum(1 for p in active if not p.formal),
-        "students": len({e.student for e in recent}),
-        "encounters": len(recent),
-        "minutes": sum(MINUTES[e.duration] for e in recent),
-    }
+def students_across_staff() -> list[AcrossRow]:
+    """Students across staff (author, 2026-11-07): each student any staff
+    member has a record about, with the staff and the signals (an active
+    formal plan, active flags). Students Overview names come first, the
+    most flags first; withheld ones follow in roster order, so their order
+    gives away nothing of their names."""
+    rows: list[AcrossRow] = []
+    for s in STUDENTS:
+        staff = sorted(staff_with_records(s.id))
+        if not staff:
+            continue
+        rows.append(
+            {
+                "student": s,
+                "staff": staff,
+                "formal": any(
+                    p.formal and p.status == "Active" for p in PLANS if p.student == s.id
+                ),
+                "flags": sum(1 for f in FLAGS if f.student == s.id and f.active),
+            }
+        )
+    named = [r for r in rows if named_on_overview(r["student"].id)]
+    withheld = [r for r in rows if not named_on_overview(r["student"].id)]
+    named.sort(key=lambda r: (-r["flags"], not r["formal"], r["student"].name))
+    return named + withheld
 
 
 class Hotspot(TypedDict):
@@ -931,23 +952,6 @@ def hotspots() -> list[Hotspot]:
     return sorted(
         rows, key=lambda r: (-r["flags"], not r["rising"], -r["contacts"], r["student"].name)
     )
-
-
-class Coverage(TypedDict):
-    overdue: list[Plan]
-    soon: list[Plan]
-    review: list[Plan]
-
-
-def coverage() -> Coverage:
-    """Coverage (§10.6): formal check-ins overdue and due soon, and
-    assignments whose review is within three weeks or already past."""
-    formal = [p for p in PLANS if p.formal and p.status == "Active"]
-    return {
-        "overdue": [p for p in formal if due(p)[0] == "overdue"],
-        "soon": [p for p in formal if due(p)[0] in ("today", "week")],
-        "review": [p for p in formal if p.review and (p.review - TODAY).days <= REVIEW_SOON_DAYS],
-    }
 
 
 @dataclass(frozen=True)
@@ -1452,6 +1456,9 @@ RECORD_KINDS: dict[str, tuple[str, tuple[str, ...]]] = {
 }
 # What a senior upload takes after its Staff column: a plan may be a formal
 # assignment (§7), and a new one is always Active, so no Status.
+# Senior staff's encounters download: metadata, never content.
+SENIOR_ENCOUNTER_COLUMNS = ("Staff", "Student email", "Student")
+
 STAFF_TEMPLATE_COLUMNS: dict[str, tuple[str, ...]] = {
     "encounters": ENCOUNTER_COLUMNS,
     "plans": tuple(c for c in PLAN_COLUMNS if c != "Status"),
@@ -1463,13 +1470,23 @@ def staff_rows(
 ) -> tuple[tuple[str, ...], list[list[str]]]:
     """Every staff member's records of a kind (one staff member's when
     named) in a term or all terms, each row led by its staff member."""
+    if what == "encounters":
+        # Metadata only (author, 2026-11-07): which students each staff
+        # member has encounters with in the term, once per pair; never a
+        # date, a duration or anything recorded.
+        pairs: list[list[str]] = []
+        for name in FRONTLINE_COLLEAGUES:
+            if staff and name != staff:
+                continue
+            seen = {r[2]: r[3] for r in encounter_rows(name, t, sid)}
+            pairs += [[name, email, seen[email]] for email in sorted(seen)]
+        return SENIOR_ENCOUNTER_COLUMNS, pairs
     columns = ("Staff", *RECORD_KINDS[what][1])
-    rows_of = encounter_rows if what == "encounters" else plan_rows
     rows: list[list[str]] = []
     for name in FRONTLINE_COLLEAGUES:
         if staff and name != staff:
             continue
-        rows += [[name, *r] for r in rows_of(name, t, sid)]
+        rows += [[name, *r] for r in plan_rows(name, t, sid)]
     return columns, rows
 
 

@@ -1,22 +1,26 @@
 {% extends "residential/base.html" %}
 {% from "residential/_sample.html" import sample_title, viewer_card with context %}
-{% from "supportlogs/_frontline.html" import due_chip, flag_item with context %}
+{% from "supportlogs/_frontline.html" import flag_item with context %}
 {% block title %}{{ chosen.name }}{% endblock %}
 {% block content %}
   <a class="back" href="{{ url('/overview/') }}{{ as_query }}">‹ Overview</a>
   {{ sample_title(chosen.name, me.name) }}
-  {# A student's history across staff (§4.5, §11.2): a student-centred view,
-     not a case file; an audited read for senior identifiable access. #}
+  {# A student across staff (§4.5, §11.2): who supports them, not a case
+     file; an audited read for senior identifiable access. #}
   <p class="sub">{{ chosen.email }}</p>
   <p class="notice" role="note">Opening this history is recorded, as a senior-level read across staff.</p>
-  {% set seen = sample.ENCOUNTERS | selectattr("student", "equalto", chosen.id) | sort(attribute="when", reverse=true) | list %}
+  {# The wall (author, 2026-11-07; confidentiality rule 3): which staff
+     have records with the student, and their plans' kinds, never a
+     record's content. To read it, a senior asks the staff member to share
+     (inert until wired). #}
+  {% set staff = sample.FRONTLINE_COLLEAGUES | select("in", sample.staff_with_records(chosen.id)) | list %}
   {% set plans = sample.PLANS | selectattr("student", "equalto", chosen.id) | list %}
   <div class="split">
     <div class="main stack">
-      <section class="card card-pad" aria-labelledby="enc-h">
-        <h2 id="enc-h">Encounters <span class="count">· {{ seen | length }}</span></h2>
-        <p class="sub">Every staff member's, the latest first.</p>
-        {% if seen %}<ul class="items">{% for e in seen %}<li><div class="item-head"><span class="strong">{{ e.type }}</span><span class="nowrap subtle">{{ sample.short_date(e.when.date()) }}</span></div><div class="subtle">{{ e.staff }} · {{ e.duration }}{% if e.concerns %} · {{ e.concerns | join(", ") }}{% endif %}</div>{% if e.note %}<div class="subtle">“{{ e.note }}”</div>{% endif %}</li>{% endfor %}</ul>{% else %}<p class="sub">None.</p>{% endif %}
+      <section class="card card-pad" aria-labelledby="staff-h">
+        <h2 id="staff-h">Staff with records <span class="count">· {{ staff | length }}</span></h2>
+        <p class="sub">Who has records about {{ chosen.name }}. You see that they do, never what they recorded: to read a staff member's records, ask them to share. They decide; in an emergency, a sys admin can agree on their behalf.</p>
+        {% if staff %}<ul class="items">{% for name in staff %}<li><div class="item-head"><span class="strong">{{ name }}</span><button type="button" class="btn btn-secondary" disabled aria-label="Request a share from {{ name }}">Request a share</button></div></li>{% endfor %}</ul>{% else %}<p class="sub">No one.</p>{% endif %}
       </section>
       {% if sample.holds(me, sample.RECIPIENT) %}
         {% set theirs = sample.flags_for(me, sid=chosen.id) %}
@@ -29,22 +33,7 @@
     <div class="side">
       <section class="card card-pad muted" aria-labelledby="plans-h">
         <h2 id="plans-h">Plans <span class="count">· {{ plans | length }}</span></h2>
-        {% if plans %}<ul class="items">{% for p in plans %}<li><div class="item-head"><a class="strong" href="{{ url('/plans/' ~ p.id) }}{{ as_query }}">{{ p.staff }}</a>{{ due_chip(p) }}</div><div class="subtle">{{ "Plan · " ~ p.source if p.formal else "Following" }} · {{ p.cadence }}</div></li>{% endfor %}</ul>{% else %}<p class="sub">None.</p>{% endif %}
-      </section>
-      {% set owners = (seen | map(attribute="staff") | list + plans | map(attribute="staff") | list) | unique | list %}
-      {% set grants = sample.PEER_GRANTS | selectattr("student", "equalto", chosen.id) | list %}
-      <section class="card card-pad" aria-labelledby="peer-h">
-        <h2 id="peer-h">Sharing <span class="count">· {{ grants | length }}</span></h2>
-        <p class="sub">Share a staff member's records for {{ chosen.name }} with a colleague, on their behalf (§17 Q11). Recorded with both names; the staff member sees it on their student page and can revoke it.</p>
-        {% if grants %}<ul class="items">{% for g in grants %}<li><div class="item-head"><span class="strong">{{ g.grantor }} → {{ g.viewer }}</span></div><div class="subtle">Since {{ sample.short_date(g.granted_on) }}{% if g.by %} · by {{ g.by }} on {{ g.grantor }}'s behalf{% endif %}</div></li>{% endfor %}</ul>{% endif %}
-        <div class="field-wide"><label for="peer-from">Whose records</label><select id="peer-from" class="input" disabled>{% for name in owners %}<option>{{ name }}</option>{% endfor %}</select></div>
-        <div class="field-wide"><label for="peer-to">With</label><select id="peer-to" class="input" disabled>{% for name in sample.FRONTLINE_COLLEAGUES %}<option>{{ name }}</option>{% endfor %}</select></div>
-        <button type="button" class="btn btn-secondary gap-above-sm" disabled>Share on their behalf</button>
-      </section>
-      <section class="card card-pad muted" aria-labelledby="staff-h">
-        <h2 id="staff-h">Staff involved</h2>
-        <p class="sub">Whom to talk to about {{ chosen.name }} (§4.5).</p>
-        <ul class="plain">{% for name in owners %}<li>{{ name }}</li>{% endfor %}</ul>
+        {% if plans %}<ul class="items">{% for p in plans %}<li><div class="item-head"><a class="strong" href="{{ url('/plans/' ~ p.id) }}{{ as_query }}">{{ p.staff }}</a></div><div class="subtle">{{ "Plan · " ~ p.source if p.formal else "Following" }}</div></li>{% endfor %}</ul>{% else %}<p class="sub">None.</p>{% endif %}
       </section>
     </div>
   </div>

@@ -165,16 +165,21 @@ form's end, and the main action is a full-width Primary on the page
     always has one; `?preview=no-senior` shows the warning).
   - **Configuration's Access card**: a sys admin may grant itself Senior
     identifiable, off by default and recorded.
-  - **Sharing on a student's history**: senior staff share a staff
-    member's records for the student with a colleague on that staff
-    member's behalf (§17 Q11, inert until wired); the grant shows both
-    names, and the staff member sees "shared by … on your behalf".
-  - Senior staff read others' log records and never write into one.
+  - **The wall** (author, 2026-11-07, rule 3 below): Overview shows
+    **Who supports whom** (per staff member, students with records and
+    plans) and **Students across staff** (per student, the staff with
+    records and the signals), metadata only. A student's history lists
+    the staff with records, each with **Request a share** (inert until
+    wired); its encounters and Share on their behalf are gone. A plan
+    seen by senior staff or Other Staff view shows no due state, last
+    contact, next expected or contacts. Records across staff downloads
+    encounters as staff and student pairs only.
+  - Senior staff never write into others' log records.
 
 ## 5. Lists and tables
 
 - **Phone lists** (`ul.items`) carry the frontline's rows.
-- **Tables carry Overview's workload and hotspots, the
+- **Tables carry Overview's Who supports whom and Students across staff, the
   Consultation check's result, Access and both audits**; their other cards
   are lists. Each table is sortable (`data-sort-auto`), with `data-sort-value` on cells whose text
   is not their value. The exception is a table whose order is its
@@ -229,10 +234,10 @@ below applies:
   - the support-activity audit;
   - a consultation check.
 - **Overview names by default only students on a formal plan or with an
-  active flag** (author, 2026-11-07), in Hotspots, Every plan and Flagged
+  active flag** (author, 2026-11-07), in Students across staff, Every plan and Flagged
   for formal assignment. Any other student reads "No formal plan" with
   **Show name**, which shows the name and its link in place and reads
-  **Hide name** once open; a withheld Hotspots row sorts last on the
+  **Hide name** once open; a withheld Students across staff row sorts last on the
   Student column. A safety flag names its student, open or closed: the
   flag is the reason to. On sample data the name is in the page (and
   find-in-page can open it); wired, showing it is an audited read that
@@ -244,10 +249,8 @@ below applies:
   The cluster view (§10.5) is deferred, a cluster being the core's
   Precinct when it comes, and Sys admin keeps no cluster list.
 - **No score anywhere** (§15):
-  - a hotspot's rise is a "Rising" chip on the student's own pattern;
   - a consultation state comes from named reasons;
-  - workload's load weighting says it is not a measure of anyone's
-    performance.
+  - Overview counts students and plans, never a load or a rise.
 - **No consultation indicated never means well or suitable.** The result
   says so, and an entry it could not read is listed as not read, never
   given a state.

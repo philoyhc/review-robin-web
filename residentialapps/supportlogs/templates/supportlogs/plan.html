@@ -9,11 +9,15 @@
   {{ sample_title(("Formal assignment" if p.formal else "Follow-up") ~ ": " ~ s.name, me.name) }}
   {{ recorded() }}
   {# A plan (§7, §8; data model SupportRelationship): operational facts
-     only, never the reason behind it (§7.5). #}
+     only, never the reason behind it (§7.5). Seen by senior staff or
+     Other Staff view (`walled`), it loses what its encounters' content
+     gives: due state, last contact, next expected, contacts (author,
+     2026-11-07, confidentiality rule 3). #}
+  {% set walled = not owner and not shared %}
   <div class="split">
     <div class="main stack">
       <section class="card card-pad" aria-labelledby="plan-h">
-        <h2 id="plan-h">{% if linked %}<a href="{{ url('/students/' ~ s.id) }}{{ as_query }}">{{ s.name }}</a>{% else %}{{ s.name }}{% endif %} {{ due_chip(p) }}{% if p.safety_plan %} <span class="chip chip-marker">Safety-plan support</span>{% endif %}</h2>
+        <h2 id="plan-h">{% if linked %}<a href="{{ url('/students/' ~ s.id) }}{{ as_query }}">{{ s.name }}</a>{% else %}{{ s.name }}{% endif %}{% if not walled %} {{ due_chip(p) }}{% endif %}{% if p.safety_plan %} <span class="chip chip-marker">Safety-plan support</span>{% endif %}</h2>
         <dl class="kv">
           {% if not owner %}<dt>With</dt><dd>{{ p.staff }}</dd>{% endif %}
           <dt>Status</dt><dd>{{ p.status }}</dd>
@@ -21,10 +25,12 @@
           <dt>Since</dt><dd>{{ sample.short_date(p.start) }}</dd>
           <dt>Cadence</dt><dd>{{ p.cadence }}</dd>
           {% if p.review %}<dt>Review</dt><dd>{{ sample.short_date(p.review) }}</dd>{% endif %}
+          {% if not walled %}
           {% set seen = sample.last_contact(p) %}{% set nd = sample.next_due(p) %}
           <dt>Last contact</dt><dd>{{ sample.short_date(seen) if seen else "None yet" }}</dd>
           <dt>Next expected</dt><dd>{{ sample.short_date(nd) if nd else "No fixed cadence" }}</dd>
           <dt>Contacts since it began</dt><dd>{{ sample.contacts_since_start(p) }}</dd>
+          {% endif %}
         </dl>
         {% if p.instruction %}<p class="gap-above-sm"><span class="strong">Instruction:</span> {{ p.instruction }}</p>{% endif %}
       </section>

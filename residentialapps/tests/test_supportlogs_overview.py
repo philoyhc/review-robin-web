@@ -1,6 +1,7 @@
-"""Support Logs' Overview on sample data, segment 1D item 1 rung 5: team
-workload, hotspots and coverage for senior staff and Other Staff view (no
-cluster view: §10.5 is deferred), a student's history across staff and
+"""Support Logs' Overview on sample data, segment 1D item 1 rung 5, as
+the sharing screens' rung 1 left it (author, 2026-11-07): who supports
+whom and students across staff, metadata only, for senior staff and
+Other Staff view (no cluster view: §10.5 is deferred), a student's history across staff and
 the support-activity audit for senior staff (functional spec §4.5, §10,
 §11.2–11.3)."""
 
@@ -41,55 +42,47 @@ def plain(cell: str) -> str:
     return re.sub(r"<[^>]+>", "", cell)
 
 
-def test_workload_weighs_formal_assignments_by_cadence(client: TestClient) -> None:
-    rows = cells(section(client.get("/overview/?as=Sam%20Lee").text, "load-h"))
-    assert [plain(r[0]) for r in rows] == [r["staff"] for r in sample.workload()]
-    assert rows[0][1:] == [
+def test_who_supports_whom_counts_students_not_encounters(client: TestClient) -> None:
+    """Author, 2026-11-07: per staff member, students with records and
+    plans; nothing drawn from content (no encounters, minutes or load)."""
+    page = client.get("/overview/?as=Sam%20Lee").text
+    card = section(page, "support-h")
+    rows = cells(card)
+    assert [plain(r[0]) for r in rows] == [r["staff"] for r in sample.who_supports_whom()]
+    daniel = next(r for r in rows if plain(r[0]) == "Daniel Koh")
+    assert daniel[1:] == [
+        str(len(sample.students_with_records("Daniel Koh"))),
         "2",
         "2",
-        "6",
-        "8",
-        "165",
-        "6",
-    ]  # Daniel Koh: assigned, following, students, encounters, minutes, load
-    daniel = next(r for r in sample.workload() if r["staff"] == "Daniel Koh")
-    assert daniel["load"] == sum(
-        sample.WEIGHTS[p.cadence] for p in sample.plans_of("Daniel Koh") if p.formal
-    )
+    ]  # students, assigned, following
+    for gone in ("load-h", "hot-h", "cov-h", "Minutes", "Encounters,", "Rising", "Overdue"):
+        assert gone not in page, gone
 
 
-def test_hotspots_name_students_for_identifiable_views_only(client: TestClient) -> None:
-    sam = section(client.get("/overview/?as=Sam%20Lee").text, "hot-h")
-    assert 'href="/overview/students/S-07?as=Sam%20Lee">Gwyneth Low</a>' in sam
+def test_students_across_staff_shows_staff_never_content(client: TestClient) -> None:
+    sam = section(client.get("/overview/?as=Sam%20Lee").text, "across-h")
     rows = cells(sam)
-    assert [plain(r[0]).removeprefix(HIDDEN) for r in rows] == [
-        r["student"].name for r in sample.hotspots()
-    ]
-    assert [r[1:5] for r in rows] == [
-        [str(r[k]) for k in ("contacts", "before", "minutes", "staff")] for r in sample.hotspots()
-    ]
-    hana = next(r for r in sample.hotspots() if r["student"].id == "S-08")
-    assert (hana["contacts"], hana["staff"]) == (
-        1,
-        1,
-    )  # staff counted over the same 14 days as contacts
-    assert [plain(r[0]) for r in rows if "Rising" in r[5]] == [HIDDEN + "Gwyneth Low"]
-    siti = section(client.get("/overview/?as=Siti%20Rahman").text, "hot-h")
-    assert "Gwyneth Low" in siti and "/overview/students/" not in siti  # named, but no history
-    kenneth = client.get("/overview/?as=Kenneth%20Lau").text
-    assert "<dt>Rising</dt><dd>1</dd>" in section(kenneth, "hot-h")
+    across = sample.students_across_staff()
+    assert [plain(r[0]).removeprefix(HIDDEN) for r in rows] == [r["student"].name for r in across]
+    assert [r[1] for r in rows] == [", ".join(r["staff"]) for r in across]
+    hana = next(r for r in across if r["student"].id == "S-08")
+    assert hana["staff"] == ["Arjun Nair", "Priya Raman"]
+    siti = section(client.get("/overview/?as=Siti%20Rahman").text, "across-h")
+    assert "Clara Tan" in siti and "/overview/students/" not in siti  # named, but no history
+    kenneth = section(client.get("/overview/?as=Kenneth%20Lau").text, "across-h")
+    assert f"<dt>Students with records</dt><dd>{len(across)}</dd>" in kenneth
 
 
 def test_overview_withholds_a_name_off_a_plan_until_shown(client: TestClient) -> None:
     """Author, 2026-11-07: Overview names by default only students on a
     formal plan or with an active flag; any other is one click away, in
-    Hotspots and every other card but the flags."""
+    every card but the flags."""
     hidden = {s.name for s in sample.STUDENTS if not sample.named_on_overview(s.id)}
-    in_hotspots = {r["student"].name for r in sample.hotspots()} & hidden
-    assert in_hotspots == {"Gwyneth Low", "Aiden Chen", "Bao Nguyen", "Farid Osman", "Hana Rahim"}
+    shown = {r["student"].name for r in sample.students_across_staff()} & hidden
+    assert {"Gwyneth Low", "Aiden Chen", "Bao Nguyen", "Farid Osman", "Hana Rahim"} <= shown
     for name in ("Sam%20Lee", "Siti%20Rahman"):
         page = client.get(f"/overview/?as={name}").text
-        for r in cells(section(page, "hot-h")):
+        for r in cells(section(page, "across-h")):
             if plain(r[0]).removeprefix(HIDDEN) in hidden:
                 assert r[0].startswith('<details class="reveal"><summary>'), r[0]
             else:
@@ -102,32 +95,22 @@ def test_overview_withholds_a_name_off_a_plan_until_shown(client: TestClient) ->
         )
         for student in hidden:
             assert student not in rest, (name, student)  # nowhere else on the page
-    raw = section(client.get("/overview/?as=Sam%20Lee").text, "hot-h")
-    assert raw.count('<td data-sort-value=""><details class="reveal">') == 5  # sort last
+    raw = section(client.get("/overview/?as=Sam%20Lee").text, "across-h")
+    assert raw.count('<td data-sort-value=""><details class="reveal">') == len(shown)
 
 
 def test_the_aggregate_view_names_no_student(client: TestClient) -> None:
     page = client.get("/overview/?as=Kenneth%20Lau").text
     for s in sample.STUDENTS:
         assert s.name not in page and s.id not in page, s.name
-    for heading in ("load-h", "hot-h", "cov-h"):
+    for heading in ("support-h", "across-h"):
         assert f'id="{heading}"' in page, heading
     assert "Counts only" in page and "Opening this" not in page
 
 
-def test_coverage_lists_overdue_due_and_review(client: TestClient) -> None:
-    cov = section(client.get("/overview/?as=Sam%20Lee").text, "cov-h")
-    assert (
-        'Overdue <span class="count">· 1</span>' in cov
-        and 'href="/plans/P-01?as=Sam%20Lee">Clara Tan</a>' in cov
-    )
-    plan = sample.plan("P-01")
-    assert plan is not None
-    review = plan.review
-    assert review is not None
-    assert "Review " + sample.short_date(review) in cov
-    aggregate = section(client.get("/overview/?as=Kenneth%20Lau").text, "cov-h")
-    assert 'Overdue <span class="count">· 1</span>' in aggregate and "<a " not in aggregate
+def test_every_plan_carries_no_due_state(client: TestClient) -> None:
+    plans = section(client.get("/overview/?as=Sam%20Lee").text, "plans-h")
+    assert "Overdue" not in plans and "Due " not in plans and "Weekly" not in plans
 
 
 def test_no_cluster_view_until_students_have_a_location(client: TestClient) -> None:
@@ -147,12 +130,15 @@ def test_history_is_senior_only_and_spans_every_staff_member(client: TestClient)
     page = client.get("/overview/students/S-08?as=Sam%20Lee").text
     assert "<h1>Hana Rahim" in page and "Opening this history is recorded" in page
     staff = section(page, "staff-h")
-    assert re.findall(r"<li>([^<]+)</li>", staff) == [
-        "Arjun Nair",
+    assert re.findall(r'<span class="strong">([^<]+)</span>', staff) == [
         "Priya Raman",
-    ]  # not Daniel: shared with, never seen her
-    encounters = section(page, "enc-h")
-    assert encounters.count("<li>") == sum(1 for e in sample.ENCOUNTERS if e.student == "S-08")
+        "Arjun Nair",
+    ]  # in roster order; not Daniel: shared with, never seen her
+    assert staff.count(">Request a share</button>") == 2 and "disabled" in staff
+    assert 'id="enc-h"' not in page and 'id="peer-h"' not in page  # no content, no sharing
+    for e in sample.ENCOUNTERS:
+        if e.student == "S-08" and e.note:
+            assert e.note not in page
     for name in NOT_SENIOR:
         for sid in ("S-08", "S-99"):  # an unknown id is 403 too: no probing
             assert (

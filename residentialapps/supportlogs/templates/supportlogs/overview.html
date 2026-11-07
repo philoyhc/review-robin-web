@@ -1,6 +1,6 @@
 {% extends "residential/base.html" %}
 {% from "residential/_sample.html" import sample_title, viewer_card with context %}
-{% from "supportlogs/_frontline.html" import recorded, flags_card, due_chip with context %}
+{% from "supportlogs/_frontline.html" import recorded, flags_card with context %}
 {% block title %}Overview{% endblock %}
 {# A name withheld until asked for (author, 2026-11-07): a student on no
    formal plan and with no active flag. `name` is the name as it would
@@ -8,52 +8,54 @@
 {% macro withheld(name) %}<details class="reveal"><summary><span class="subtle">No formal plan</span> <span class="reveal-cta" data-when="closed">Show name</span><span class="reveal-cta" data-when="open">Hide name</span></summary><span class="strong">{{ name }}</span></details>{% endmacro %}
 {% block content %}
   {{ sample_title("Overview", me.name) }}
-  {# How support is distributed across the team, where the hotspots are,
-     and where reallocation may be needed (§10.1, §10.2–10.6). Aggregate
-     view sees counts and staff, never a student's name (roles rule 8). #}
+  {# Who supports whom, and which students span several staff (author,
+     2026-11-07): metadata only, which students have records with which
+     staff. A record's content (when, how long, type, concern areas,
+     follow-up, note) and figures drawn from it are never shown here
+     (confidentiality rule 3). Aggregate view sees counts and staff,
+     never a student's name (roles rule 8). #}
   {% if named %}{{ recorded() }}{% else %}<p class="subtle small">Counts only: no student is named on your view.</p>{% endif %}
+  <p class="notice" role="note">You see who has records with which students, never what they recorded. To read a staff member's records, ask them to share.</p>
   {% if sample.holds(me, sample.RECIPIENT) %}{{ flags_card(me, closed=true) }}{% endif %}
-  {% set t = sample.totals() %}
-  <section class="tiles gap-below" aria-label="The last {{ sample.PERIOD_DAYS }} days">
-    <div class="tile"><span class="tile-n">{{ t.formal }}</span><span class="tile-l">Formal assignments</span></div>
-    <div class="tile"><span class="tile-n">{{ t.informal }}</span><span class="tile-l">Follow-ups</span></div>
-    <div class="tile"><span class="tile-n">{{ t.students }}</span><span class="tile-l">Students contacted, {{ sample.PERIOD_DAYS }} days</span></div>
-    <div class="tile"><span class="tile-n">{{ t.encounters }}</span><span class="tile-l">Encounters, {{ sample.PERIOD_DAYS }} days</span></div>
-    <div class="tile"><span class="tile-n">{{ t.minutes }}</span><span class="tile-l">Support minutes, {{ sample.PERIOD_DAYS }} days</span></div>
-  </section>
-
-  <section class="card card-pad gap-below" aria-labelledby="load-h">
-    <h2 id="load-h">Team workload</h2>
-    <p class="sub">The last {{ sample.PERIOD_DAYS }} days. Load weighs each formal assignment by its cadence (monthly 1, fortnightly 2, weekly 4, twice weekly 8, 3+ weekly 12): an operational indicator, not a measure of anyone's performance (§10.3).</p>
-    <div class="table-wrap">
-      <table data-sort-auto id="load-table">
-        <thead><tr><th scope="col">Staff</th><th scope="col" class="num">Assigned</th><th scope="col" class="num">Following</th><th scope="col" class="num">Students</th><th scope="col" class="num">Encounters</th><th scope="col" class="num">Minutes</th><th scope="col" class="num">Load</th></tr></thead>
-        <tbody>{% for r in sample.workload() %}<tr><td class="strong">{{ r.staff }}</td><td class="num">{{ r.formal }}</td><td class="num">{{ r.informal }}</td><td class="num">{{ r.students }}</td><td class="num">{{ r.encounters }}</td><td class="num">{{ r.minutes }}</td><td class="num">{{ r.load }}</td></tr>{% endfor %}</tbody>
-      </table>
-    </div>
+  {% set across = sample.students_across_staff() %}
+  {% set active = sample.PLANS | selectattr("status", "equalto", "Active") | list %}
+  <section class="tiles gap-below" aria-label="Across the team">
+    <div class="tile"><span class="tile-n">{{ active | selectattr("formal") | list | length }}</span><span class="tile-l">Formal assignments</span></div>
+    <div class="tile"><span class="tile-n">{{ active | rejectattr("formal") | list | length }}</span><span class="tile-l">Follow-ups</span></div>
+    <div class="tile"><span class="tile-n">{{ across | length }}</span><span class="tile-l">Students with records</span></div>
+    <div class="tile"><span class="tile-n">{{ across | map(attribute="staff") | map("length") | select("gt", 1) | list | length }}</span><span class="tile-l">With more than one staff member</span></div>
   </section>
 
   <div class="split">
     <div class="main stack">
-      {% set hot = sample.hotspots() %}
-      <section class="card card-pad" aria-labelledby="hot-h">
-        <h2 id="hot-h">Hotspots</h2>
-        <p class="sub">Contacts, minutes and staff involved in the last 14 days, contacts in the 14 before, formal plans and active flags. Rising is a sharp increase on the student's own pattern, not a high but steady one; there is no score (§10.4, §15).{% if named %} A student on no formal plan and with no active flag is not named, here or below, until you show them.{% endif %}</p>
+      <section class="card card-pad" aria-labelledby="support-h">
+        <h2 id="support-h">Who supports whom</h2>
+        <p class="sub">Per staff member, how many students they have records with, and their formal assignments and follow-ups. No dates, minutes or counts of encounters: those are the records' content.</p>
+        <div class="table-wrap">
+          <table data-sort-auto id="support-table">
+            <thead><tr><th scope="col">Staff</th><th scope="col" class="num">Students</th><th scope="col" class="num">Assigned</th><th scope="col" class="num">Following</th></tr></thead>
+            <tbody>{% for r in sample.who_supports_whom() %}<tr><td class="strong">{{ r.staff }}</td><td class="num">{{ r.students }}</td><td class="num">{{ r.formal }}</td><td class="num">{{ r.informal }}</td></tr>{% endfor %}</tbody>
+          </table>
+        </div>
+      </section>
+      <section class="card card-pad" aria-labelledby="across-h">
+        <h2 id="across-h">Students across staff</h2>
+        <p class="sub">Each student someone has a record about, the staff with records, and whether they are on a formal plan or have an active flag.{% if named %} A student on no formal plan and with no active flag is not named, here or below, until you show them.{% endif %}</p>
         {% if named %}
           <div class="table-wrap">
-            <table data-sort-auto id="hot-table">
-              <thead><tr><th scope="col">Student</th><th scope="col" class="num">Contacts, 14 days</th><th scope="col" class="num">The 14 before</th><th scope="col" class="num">Minutes, 14 days</th><th scope="col" class="num">Staff, 14 days</th><th scope="col">Signals</th></tr></thead>
-              <tbody>{% for r in hot %}<tr>
+            <table data-sort-auto id="across-table">
+              <thead><tr><th scope="col">Student</th><th scope="col">Staff with records</th><th scope="col">Signals</th></tr></thead>
+              <tbody>{% for r in across %}<tr>
                 {% set name %}{% if senior %}<a href="{{ url('/overview/students/' ~ r.student.id) }}{{ as_query }}">{{ r.student.name }}</a>{% else %}{{ r.student.name }}{% endif %}{% endset %}
                 {% if sample.named_on_overview(r.student.id) %}<td class="strong">{{ name }}</td>
                 {%- else %}<td data-sort-value="">{{ withheld(name) }}</td>{% endif %}
-                <td class="num">{{ r.contacts }}</td><td class="num">{{ r.before }}</td><td class="num">{{ r.minutes }}</td><td class="num">{{ r.staff }}</td>
-                <td><span class="chips chip-wrap">{% if r.rising %}<span class="chip chip-warn">Rising</span>{% endif %}{% if r.flags %}<span class="chip chip-safety">Active flag</span>{% endif %}{% if r.formal %}<span class="chip chip-accent">Formal plan</span>{% endif %}</span></td>
+                <td>{{ r.staff | join(", ") }}</td>
+                <td><span class="chips chip-wrap">{% if r.flags %}<span class="chip chip-safety">Active flag</span>{% endif %}{% if r.formal %}<span class="chip chip-accent">Formal plan</span>{% endif %}</span></td>
               </tr>{% endfor %}</tbody>
             </table>
           </div>
         {% else %}
-          <dl class="kv"><dt>Students with recent support</dt><dd>{{ hot | length }}</dd><dt>Rising</dt><dd>{{ hot | selectattr("rising") | list | length }}</dd><dt>With an active flag</dt><dd>{{ hot | selectattr("flags") | list | length }}</dd></dl>
+          <dl class="kv"><dt>Students with records</dt><dd>{{ across | length }}</dd><dt>On a formal plan</dt><dd>{{ across | selectattr("formal") | list | length }}</dd><dt>With an active flag</dt><dd>{{ across | selectattr("flags") | list | length }}</dd></dl>
         {% endif %}
       </section>
       {% if senior %}
@@ -66,15 +68,6 @@
       {% endif %}
     </div>
     <div class="side">
-      {% set cov = sample.coverage() %}
-      <section class="card card-pad" aria-labelledby="cov-h">
-        <h2 id="cov-h">Coverage</h2>
-        <p class="sub">Formal check-ins overdue or due this week, and reviews due within three weeks or past (§10.6).</p>
-        {% for key, label in (("overdue", "Overdue"), ("soon", "Due this week"), ("review", "Review due")) %}
-          <h3 class="gap-above-sm">{{ label }} <span class="count">· {{ cov[key] | length }}</span></h3>
-          {% if named and cov[key] %}<ul class="items">{% for p in cov[key] %}<li><div class="item-head"><a class="strong" href="{{ url('/plans/' ~ p.id) }}{{ as_query }}">{{ sample.student(p.student).name }}</a>{% if key == "review" %}<span class="chip chip-mute">Review {{ sample.short_date(p.review) }}</span>{% else %}{{ due_chip(p) }}{% endif %}</div><div class="subtle">{{ p.staff }} · {{ p.cadence }}</div></li>{% endfor %}</ul>{% endif %}
-        {% endfor %}
-      </section>
       {% if senior %}
         <section class="card card-pad muted" aria-labelledby="aud-h">
           <h2 id="aud-h">Support-activity audit</h2>
@@ -83,7 +76,7 @@
         </section>
         <section class="card card-pad muted" aria-labelledby="rec-h">
           <h2 id="rec-h">Records across staff</h2>
-          <p class="sub">Upload records tagged to a staff member, download them by staff, student and term, and delete purged records. Every action is recorded.</p>
+          <p class="sub">Upload records tagged to a staff member, download who has records with whom and the plans, and delete purged records. Every action is recorded.</p>
           <a class="btn btn-secondary" href="{{ url('/overview/records') }}{{ as_query }}">Open records</a>
         </section>
       {% endif %}
@@ -101,7 +94,7 @@
     <section class="card card-pad gap-above" aria-labelledby="plans-h">
       <h2 id="plans-h">Every plan <span class="count">· {{ sample.PLANS | length }}</span></h2>
       <p class="sub">Formal assignments and follow-ups across the team{% if not senior %}, read-only{% endif %}.</p>
-      <ul class="items">{% for p in sample.PLANS | sort(attribute="formal", reverse=true) %}{% set s = sample.student(p.student) %}{% set link %}<a class="strong" href="{{ url('/plans/' ~ p.id) }}{{ as_query }}">{{ s.name }}</a>{% endset %}<li><div class="item-head">{{ link if sample.named_on_overview(s.id) else withheld(link) }}{{ due_chip(p) }}</div><div class="subtle">{{ "Plan · " ~ p.source if p.formal else "Following" }} · {{ p.staff }} · {{ p.cadence }}</div></li>{% endfor %}</ul>
+      <ul class="items">{% for p in sample.PLANS | sort(attribute="formal", reverse=true) %}{% set s = sample.student(p.student) %}{% set link %}<a class="strong" href="{{ url('/plans/' ~ p.id) }}{{ as_query }}">{{ s.name }}</a>{% endset %}<li><div class="item-head">{{ link if sample.named_on_overview(s.id) else withheld(link) }}</div><div class="subtle">{{ "Plan · " ~ p.source if p.formal else "Following" }} · {{ p.staff }}</div></li>{% endfor %}</ul>
     </section>
   {% endif %}
 {% endblock %}

@@ -83,16 +83,10 @@ def test_the_self_grant_is_a_setting_off_by_default(client: TestClient, monkeypa
     )
 
 
-def test_senior_staff_share_on_a_staff_member_s_behalf(client: TestClient, monkeypatch) -> None:
-    card = section(client.get("/overview/students/S-08" + SAM).text, "peer-h")
-    assert "Priya Raman → Daniel Koh" in card and "Share on their behalf" in card
-    assert (
-        '<label for="peer-from">Whose records</label>' in card
-        and '<label for="peer-to">With</label>' in card
-    )
-    on_behalf = sample.PeerGrant("S-08", "Priya Raman", "Mei Ling Tan", sample.TODAY, by="Sam Lee")
-    monkeypatch.setattr(sample, "PEER_GRANTS", (*sample.PEER_GRANTS, on_behalf))
-    card = section(client.get("/overview/students/S-08" + SAM).text, "peer-h")
-    assert "by Sam Lee on Priya Raman's behalf" in card.replace("&#39;", "'")
-    shared = section(client.get("/students/S-08?as=Priya%20Raman").text, "shared-h")
-    assert "shared by Sam Lee on your behalf" in shared
+def test_senior_staff_request_a_share_and_no_longer_share_on_behalf(client: TestClient) -> None:
+    """The wall (author, 2026-11-07): to read records, a senior asks the
+    staff member to share; Share on their behalf is gone."""
+    page = client.get("/overview/students/S-08" + SAM).text
+    card = section(page, "staff-h")
+    assert 'aria-label="Request a share from Priya Raman">Request a share</button>' in card
+    assert "Share on their behalf" not in page and 'id="peer-h"' not in page

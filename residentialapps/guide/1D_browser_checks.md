@@ -249,29 +249,32 @@ about?"*
 - [ ] Overview alone in the tabs, with a red badge **1** for the
   unacknowledged flag (a screen reader hears "unacknowledged safety
   flag").
-- [ ] Tiles; Team workload (sortable), with a note that load is not a
-  measure of performance; Hotspots, with a **Rising** chip on Gwyneth Low
-  and no score anywhere, naming only Elena Park, Jia Wen Lee, Clara Tan,
-  Dev Menon and Ivan Seet until **Show name** opens another row (Every
-  plan withholds the same students); Coverage (overdue, due this week, review due);
-  Flagged for formal assignment, with Assign disabled; Every plan.
+- [ ] A notice that you see who has records with whom, never what they
+  recorded; tiles counting plans and students; **Who supports whom**
+  (sortable: students, assigned, following per staff member);
+  **Students across staff**, naming only Elena Park, Jia Wen Lee, Clara
+  Tan, Dev Menon and Ivan Seet until **Show name** opens another row, and
+  no dates, minutes or encounter counts anywhere; Flagged for formal
+  assignment, with Assign disabled; Every plan, without due states.
 
-Ask: *Does Hotspots match who you would have named? Is the load weighting
-fair? What is missing for a weekly meeting?*
+Ask: *Is who-has-records-with-whom enough to run a weekly meeting? What
+would you ask a staff member to share?*
 
 ### B2. One student across staff
 
 *Task: "Look at everything the team has on Hana Rahim."*
 
-- [ ] Hana Rahim is on no formal plan, so **Show name** on her Hotspots
-  row first; her name then opens the history across staff, with "Opening this
-  history is recorded"; the back link returns to Overview, which stays
-  marked.
-- [ ] **Sharing** lists Priya Raman → Daniel Koh and offers Whose records
-  / With / **Share on their behalf**, disabled.
+- [ ] Hana Rahim is on no formal plan, so **Show name** on her row in
+  Students across staff first; her name then opens her page, with
+  "Opening this history is recorded"; the back link returns to Overview,
+  which stays marked.
+- [ ] **Staff with records** lists Priya Raman and Arjun Nair, each with
+  **Request a share**, disabled; no encounters, dates or notes anywhere.
+  Her plan (P-05) shows its kind and source but no last contact or due
+  state.
 
-Ask: *When would you open this, and would you tell the staff member? Is
-sharing on someone's behalf something you would do?*
+Ask: *When would you ask a staff member to share? Would you tell them
+why?*
 
 ### B3. Turning a follow-up into a formal plan
 
@@ -294,7 +297,7 @@ is assigned?*
 - [ ] **Open the audit**: "Reviewing this log is recorded", When sorts by
   date, and reads of no one student (the audit itself, a download) show
   no student.
-- [ ] **Who holds access**: a card below Hotspots names who holds Senior
+- [ ] **Who holds access**: a card below Students across staff names who holds Senior
   identifiable and identifiable view; **See every grant** lists every
   grant's holders and the access changes, with no button anywhere.
 
