@@ -22,11 +22,11 @@ A wall stands between senior identifiable access and the records'
 content:
 
 - **Metadata and content** (author, 2026-11-07): a record's metadata is
-  who logged it, when, its duration and type, its concern areas and
-  whether a follow-up is needed; its content is its note.
-- **By default, a senior sees only which students have records with
-  which staff**: not when, how long, the type or the concern areas, and
-  never the note.
+  which student it is about and which staff member logged it; its
+  content is when the meeting was, how long it lasted, its concern areas
+  and its note.
+- **By default, a senior sees only the metadata: which students have
+  records with which staff.**
 - **Names** follow confidentiality rule 3: a student on a formal plan,
   with a safety flag or with a team is named; any other is named only
   after a deliberate **Show name**.
@@ -109,13 +109,12 @@ a withdrawal, and a team's formation, change or dissolution.
 
 ## Still open
 
-- **How a senior sees the rest of the metadata** (when, duration, type,
-  concern areas, follow-up): a deliberate, recorded step on a student's
-  history, as Show name is for names, or a share.
+- **A record's type and whether a follow-up is needed:** metadata or
+  content.
 - **Overview's figures:** Team workload, Hotspots and Coverage count
-  encounters, minutes and due dates per staff member and per student.
-  Whether those counts stay as they are, or show only for students named
-  by rule 3.
+  encounters, minutes and due dates per staff member and per student,
+  all drawn from content. Whether those totals stay as they are, show
+  only for students named by rule 3, or go.
 - **Records across staff:** which metadata columns its download keeps.
 
 ## Effect on today's screens
@@ -127,11 +126,11 @@ a withdrawal, and a team's formation, change or dissolution.
   in place of the unmerged Allocate to a colleague.
 - Log gains the share-at-logging detail (2).
 - A student's history shows, by default, only which staff have records
-  with the student: its encounters' dates, durations, types, concern
-  areas and notes go, and it gains **Request a share** from each staff
-  member involved.
-- Records across staff, Overview's download for senior staff, carries no
-  Note.
+  with the student: its encounters' dates, durations, concern areas and
+  notes go, and it gains **Request a share** from each staff member
+  involved.
+- Records across staff, Overview's download for senior staff, carries
+  no content: no Date, Time, Duration, Concern areas or Note.
 - Students' filter gains **Teams** (3).
 
 These land as scaffolds first, one slice each, once this model is
