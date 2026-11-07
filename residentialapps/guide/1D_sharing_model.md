@@ -71,7 +71,7 @@ a withdrawal, and a team's formation, change or dissolution.
 
 - **Two or more frontline staff share responsibility for one student.**
   Each member agrees at formation. An invitation, like a share and
-  a handover, names no student until agreed (author, 2026-11-07). The team forms once at least
+  a handover, names no student until agreed to (author, 2026-11-07). The team forms once at least
   two have agreed; anyone who declines stays out.
 - **At formation, each member chooses** whether the team sees their past
   records about the student.

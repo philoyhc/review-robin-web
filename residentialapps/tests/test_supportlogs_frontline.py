@@ -361,11 +361,11 @@ def test_favorites_drive_log_and_are_marked_on_students(client: TestClient) -> N
     assert 'href="/students/S-08">Open Hana Rahim</a>' in saved
 
 
-def test_waiting_for_you_holds_every_acknowledgement(client: TestClient) -> None:
+def test_waiting_for_you_holds_every_agreement(client: TestClient) -> None:
     """Sharing screens rung 2 (author, 2026-11-07): a share offered, a team
     invitation, a handover and a senior's share request, each with Agree
     and Decline, inert and named for its row; none names its student until
-    agreed, but a request about the staff member's own records."""
+    agreed to, but a request about the staff member's own records."""
     card = section(client.get("/").text, "waiting-h")
     assert card.count("<li>") == len(sample.pending_for("Daniel Koh")) == 4
     for name in ("Ivan Seet", "Jia Wen Lee", "Gwyneth Low"):
@@ -381,7 +381,7 @@ def test_waiting_for_you_holds_every_acknowledgement(client: TestClient) -> None
         "only in an emergency can a sys admin agree for you",
     ):
         assert line in card.replace("&#39;", "'"), line
-    for verb, role in (("Agree", "primary"), ("Decline", "secondary")):
+    for verb, role in (("Agree to", "primary"), ("Decline", "secondary")):
         labels = re.findall(rf'class="btn btn-{role}" disabled aria-label="{verb} ([^"]+)"', card)
         assert sorted(labels) == sorted(
             [
@@ -397,7 +397,7 @@ def test_waiting_for_you_holds_every_acknowledgement(client: TestClient) -> None
 
 def test_an_encounter_can_be_shared_as_it_is_logged(client: TestClient) -> None:
     """Sharing screens rung 4 (author, 2026-11-07): one colleague, this one
-    encounter, agreed before they see it; never oneself."""
+    encounter, agreed to before they see it; never oneself."""
     log = client.get("/log").text
     share = log.split('id="share"')[1].split("</select>")[0]
     assert re.findall(r"<option>([^<]+)</option>", share) == [

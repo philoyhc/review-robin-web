@@ -318,7 +318,7 @@ def test_a_walled_history_shows_nothing_without_an_assignment(
 
 def test_a_share_not_yet_agreed_shows_nothing_to_its_receiver(client: TestClient) -> None:
     """Sharing model 1: Arjun Nair (no sample viewer) sees nothing of Bao
-    Nguyen until he agrees Daniel Koh's share."""
+    Nguyen until he agrees to Daniel Koh's share."""
     pending = {(g.grantor, g.viewer, g.student) for g in sample.PEER_GRANTS if not g.agreed}
     assert ("Daniel Koh", "Arjun Nair", "S-02") in pending
     assert all(g.student != "S-02" for g in sample.shared_with("Arjun Nair"))

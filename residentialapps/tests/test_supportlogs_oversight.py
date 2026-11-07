@@ -92,7 +92,7 @@ def test_senior_staff_request_a_share_and_no_longer_share_on_behalf(client: Test
     assert "Share on their behalf" not in page and 'id="peer-h"' not in page
 
 
-def test_hand_over_and_acknowledge_on_behalf_scaffolds(client: TestClient) -> None:
+def test_hand_over_and_agree_on_behalf_scaffolds(client: TestClient) -> None:
     """Sharing screens rung 6 (author, 2026-11-07): Hand over on a student's
     page and a senior's view of a student; Sys admin agrees for
     someone who cannot be reached, seeing no student."""

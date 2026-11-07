@@ -28,7 +28,7 @@ Residential Apps: one package, mounted under Cordware as two applications, **Res
 | `guide/1C_browser_checks.md` | Segment 1C item 1's browser walkthrough: RA Leave's RA, staff and admin screens and the appeal-mode previews, step by step; deleted when item 1 closes |
 | `guide/1D_browser_checks.md` | Segment 1D item 1's browser walkthrough: every Support Logs screen, step by step, with the PowerShell fake-auth commands; deleted when item 1 closes |
 | `guide/1D_sharing_screens.md` | Segment 1D: the plan to bring Support Logs' screens in line with the sharing model, rung by rung (opened 2026-11-07) |
-| `guide/1D_sharing_model.md` | Segment 1D: who sees whose records, decided 2026-11-07: shared past records and shares at logging, acknowledged by the receiver; teams for a student, with Students' Teams filter; handovers |
+| `guide/1D_sharing_model.md` | Segment 1D: who sees whose records, decided 2026-11-07: shared past records and shares at logging, agreed to by the receiver; teams for a student, with Students' Teams filter; handovers |
 | `guide/1D_refinements.md` | Segment 1D item 1's rungs 11–12, from the author's browser check of 2026-11-06: the sample viewers cut to the roles in practice, Home's Log encounter button gone, Log's favorites, durations and types |
 | `guide/fake_ids.md` | Every command the browser walkthroughs need: copy-and-paste PowerShell blocks that run Residential Apps locally as each sample viewer, the sample-viewer tables, and the browser settings |
 | `guide/todo_master.md` | Rulings, dependencies, open decisions and pending revisions |

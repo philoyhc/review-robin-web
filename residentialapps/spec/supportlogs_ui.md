@@ -37,7 +37,7 @@ under `data-app="supportlogs"`.
   agreement the sharing model asks of the staff member (a share
   offered, a team invitation, a handover, a senior's share request),
   each with Agree (Primary) and Decline (Secondary), inert until wired.
-  A share, an invitation or a handover names no student until agreed
+  A share, an invitation or a handover names no student until agreed to
   (author, 2026-11-07). A sys admin
   can agree for a staff member only in an emergency, or on a
   handover when they cannot be reached.
@@ -65,7 +65,7 @@ under `data-app="supportlogs"`.
   about 10–20 seconds (§5.1). The optional details fold on the same page;
   there is no second screen (author, 2026-10-29). Among them, **Share this
   encounter with** offers one colleague this one encounter, which they
-  agree before seeing it (sharing screens rung 4, author, 2026-11-07).
+  agree to before seeing it (sharing screens rung 4, author, 2026-11-07).
 
 ## 2. Chrome
 
@@ -246,7 +246,7 @@ someone's behalf), **acknowledge** for having seen information sent on
    receiver agrees to it**: an owner shares past records, or one
    encounter as they log it; two or more staff form a team for a
    student, which a senior may start; or a handover tags records to
-   the receiver, agreed by them and a senior. The model is
+   the receiver, agreed to by them and a senior. The model is
    `residentialapps/guide/1D_sharing_model.md` (author, 2026-11-07).
    **Share past records**, on a student's page, offers all or ticked
    records to one colleague; Shared with lists each as Pending or

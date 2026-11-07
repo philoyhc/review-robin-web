@@ -812,9 +812,9 @@ def teams_of(staff: str) -> list[Team]:
 
 
 # Waiting for you (sharing screens rung 2, author, 2026-11-07): what a
-# frontline staff member is asked to agree, one of each kind on sample
+# frontline staff member is asked to agree to, one of each kind on sample
 # data. A share offered, a team invitation or a handover names no student
-# until it is agreed; a senior's share request is about the staff
+# until it is agreed to; a senior's share request is about the staff
 # member's own records, so it names their student.
 SHARE_OFFERED = "share"
 TEAM_INVITE = "team"
@@ -864,7 +864,7 @@ PENDING = (
 
 
 def on_behalf() -> list[Pending]:
-    """What a sys admin may agree on someone's behalf: a handover or
+    """What a sys admin may agree to on someone's behalf: a handover or
     a senior's share request whose staff member cannot be reached (rung 6,
     author, 2026-11-07). Shown without its student: administration sees
     no content."""
@@ -912,7 +912,7 @@ def grants_by(staff: str, sid: str) -> list[PeerGrant]:
 
 def shared_with(staff: str) -> list[PeerGrant]:
     """Records colleagues have shared with a staff member that they have
-    agreed; a share not yet agreed shows nothing (sharing model 1)."""
+    agreed to; a share not yet agreed to shows nothing (sharing model 1)."""
     return [g for g in PEER_GRANTS if g.viewer == staff and g.agreed]
 
 
