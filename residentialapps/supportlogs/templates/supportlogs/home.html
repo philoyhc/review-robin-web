@@ -10,18 +10,20 @@
   {{ flags_card(me, closed=sample.holds(me, sample.RECIPIENT)) }}
   {# No Log encounter button: Log in the tabs reaches it (author, 2026-11-06). #}
   {# Waiting for you (sharing screens rung 2, author, 2026-11-07): every
-     acknowledgement the sharing model asks of this staff member. A share
-     or an invitation names no student until accepted. Inert until wired. #}
+     acknowledgement the sharing model asks of this staff member. A share,
+     an invitation or a handover names no student until accepted; a
+     senior's request is about the staff member's own records. Inert until
+     wired. #}
   {% set waiting = sample.pending_for(me.name) %}
   {% if waiting %}
   <section class="card card-pad gap-above" aria-labelledby="waiting-h">
     <h2 id="waiting-h">Waiting for you <span class="count">· {{ waiting | length }}</span></h2>
-    <p class="sub">Nothing is shared with you, or by you, until you accept. {{ explainer_link() }}</p>
+    <p class="sub">Nothing is shared with you, or by you, until you accept; only in an emergency can a sys admin accept for you. {{ explainer_link() }}</p>
     <ul class="items">
       {% for w in waiting %}{% set s = sample.student(w.student) %}
         <li>
           <div class="item-head"><span class="strong">{% if w.kind == sample.SHARE_OFFERED %}{{ w.sender }} has shared {{ w.records }} record{{ "s" if w.records != 1 }} about a student with you{% elif w.kind == sample.TEAM_INVITE %}{{ w.sender }} invites you to a team for a student{% elif w.kind == sample.HANDOVER %}{{ w.sender }} is handing {{ w.records }} record{{ "s" if w.records != 1 }} about a student over to you{% else %}{{ w.sender }} asks you to share your records about {{ s.name }}{% endif %}</span><span class="nowrap subtle">{{ sample.short_date(w.on) }}</span></div>
-          <div class="subtle">{% if w.kind == sample.SHARE_OFFERED %}You see the student and the records once you accept.{% elif w.kind == sample.TEAM_INVITE %}The team shares responsibility for the student; you see who once you accept, and choose then whether the team sees your earlier records.{% elif w.kind == sample.HANDOVER %}Once you, they and a senior accept, the records become yours.{% else %}They see your records about {{ s.name }} only if you accept. Choose which on the next step.{% endif %}</div>
+          <div class="subtle">{% if w.kind == sample.SHARE_OFFERED %}You see the student and the records once you accept.{% elif w.kind == sample.TEAM_INVITE %}The team shares responsibility for the student; you see who once you accept, and choose then whether the team sees your earlier records.{% elif w.kind == sample.HANDOVER %}Once you and a senior accept, the records become yours.{% else %}They see your records about {{ s.name }} only if you accept, or if a sys admin accepts for you in an emergency. Choose which on the next step.{% endif %}</div>
           {% set what = {sample.SHARE_OFFERED: w.sender ~ "'s share", sample.TEAM_INVITE: w.sender ~ "'s team invitation", sample.HANDOVER: w.sender ~ "'s handover", sample.SHARE_REQUEST: w.sender ~ "'s request"}[w.kind] %}
           <div class="btnrow gap-above-sm"><button type="button" class="btn btn-primary" disabled aria-label="Accept {{ what }}">Accept</button><button type="button" class="btn btn-secondary" disabled aria-label="Decline {{ what }}">Decline</button></div>
         </li>

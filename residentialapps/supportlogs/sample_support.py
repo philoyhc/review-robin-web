@@ -763,9 +763,9 @@ class PeerGrant:
 
 # Waiting for you (sharing screens rung 2, author, 2026-11-07): what a
 # frontline staff member is asked to accept, one of each kind on sample
-# data. A share offered or a team invitation names no student until it is
-# accepted; a handover or a senior's share request is about the staff
-# member's own student, or names them to the receiver once accepted.
+# data. A share offered, a team invitation or a handover names no student
+# until it is accepted; a senior's share request is about the staff
+# member's own records, so it names their student.
 SHARE_OFFERED = "share"
 TEAM_INVITE = "team"
 HANDOVER = "handover"
@@ -785,9 +785,9 @@ class Pending:
 
 
 PENDING = (
-    Pending(SHARE_OFFERED, "Daniel Koh", "Mei Ling Tan", "S-07", 2, date(2026, 10, 28)),
+    Pending(SHARE_OFFERED, "Daniel Koh", "Priya Raman", "S-09", 1, date(2026, 10, 28)),
     Pending(TEAM_INVITE, "Daniel Koh", "Sam Lee", "S-10", 0, date(2026, 10, 28)),
-    Pending(HANDOVER, "Daniel Koh", "Grace Ho", "S-06", 3, date(2026, 10, 27)),
+    Pending(HANDOVER, "Daniel Koh", "Mei Ling Tan", "S-07", 3, date(2026, 10, 27)),
     Pending(SHARE_REQUEST, "Daniel Koh", "Sam Lee", "S-03", 0, date(2026, 10, 29)),
 )
 
