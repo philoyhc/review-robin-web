@@ -164,4 +164,9 @@ browser check passes on each rung.
 - **Rung 7:** as planned. Rulings recorded with it (author, 2026-11-07):
   a flag for formal assignment, with its suggested cadence, is not
   content; Records across staff names every student behind its lock.
-  The sample's hotspots go with their last use.
+  The sample's hotspots go with their last use. One read, which found
+  the same leaks elsewhere: Every plan's source for Other Staff view, a
+  follow-up's cadence in Convert, the safety-plan chip, a plan history
+  that failed open, and stale copy on the consultation result, Overview
+  and B2, all fixed. Left for wiring: a senior who also holds a share
+  sees a plan as senior, not as the share.

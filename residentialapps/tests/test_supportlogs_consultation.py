@@ -247,3 +247,16 @@ def test_mounted_consultation_pages_stay_under_the_mount() -> None:
         "/supportlogs/consultation/check?as=Marcus%20Tan&purpose=&emails=", follow_redirects=False
     )
     assert back.headers["location"] == "/supportlogs/consultation/?as=Marcus%20Tan"
+
+
+def test_the_result_says_its_reasons_are_metadata() -> None:
+    """The rules card names what the reasons come from, never "current
+    support" alone: past records count (author, 2026-11-07)."""
+    from fastapi.testclient import TestClient
+
+    from residentialapps.supportlogs.main import create_app
+
+    q = "as=Hui%20Min%20Goh&purpose=Trip&emails=farid.osman%40u.example.edu"
+    page = TestClient(create_app()).get(f"/consultation/check?{q}").text
+    assert "nothing older than current support" not in page
+    assert "never what the records say, how many there are or when" in page

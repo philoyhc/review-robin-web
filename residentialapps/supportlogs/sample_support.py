@@ -716,12 +716,11 @@ STAFF_EMAILS = {
 }
 
 
-# Each plan's history (§8): how it began and what changed, so a converted
-# follow-up keeps one record rather than a disconnected duplicate.
 def walled_history(pid: str) -> tuple[tuple[date, str], ...]:
     """A formal plan's history as senior staff see it: from its assignment
     or conversion on. What came before was a frontline follow-up, whose
-    dates and cadence are content (author, 2026-11-07)."""
+    dates and cadence are content (author, 2026-11-07). With no such
+    entry it shows nothing rather than everything."""
     entries = PLAN_HISTORY.get(pid, ())
     start = next(
         (
@@ -729,11 +728,13 @@ def walled_history(pid: str) -> tuple[tuple[date, str], ...]:
             for i, (_, what) in enumerate(entries)
             if " assigned it" in what or " converted it" in what
         ),
-        0,
+        None,
     )
-    return entries[start:]
+    return () if start is None else entries[start:]
 
 
+# Each plan's history (§8): how it began and what changed, so a converted
+# follow-up keeps one record rather than a disconnected duplicate.
 PLAN_HISTORY: dict[str, tuple[tuple[date, str], ...]] = {
     "P-01": (
         (date(2026, 9, 21), "Sam Lee assigned it: Counselling, weekly, with safety-plan support"),
@@ -1008,7 +1009,7 @@ class AcrossRow(TypedDict):
 def students_across_staff() -> list[AcrossRow]:
     """Students across staff (author, 2026-11-07): each student any staff
     member has a record about, with the staff and the signals (an active
-    formal plan, active flags). Students Overview names come first, the
+    formal plan, safety flags open or closed, a team). Students Overview names come first, the
     most flags first; withheld ones follow in a fixed order hashed from
     their ids, so their order gives away nothing of their names (the
     sample's ids follow its names)."""
@@ -1024,7 +1025,7 @@ def students_across_staff() -> list[AcrossRow]:
                 "formal": any(
                     p.formal and p.status == "Active" for p in PLANS if p.student == s.id
                 ),
-                "flags": sum(1 for f in FLAGS if f.student == s.id and f.active),
+                "flags": sum(1 for f in FLAGS if f.student == s.id),
                 "team": team_for(s.id) is not None,
             }
         )

@@ -49,7 +49,7 @@ under `data-app="supportlogs"`.
   wired. A team names its student on Overview (rule 3), with a Team chip.
 - **Hand over** (sharing screens rung 6, author, 2026-11-07): a card on
   a student's page, where the viewer has records of their own (all, or
-  chosen encounters; To), and on a senior's view of a student (From, To:
+  chosen encounters; To), and on a senior's view of a student (From, To, To being someone other than From:
   all of the owner's records, since a senior sees none of them, author,
   2026-11-07); Sys
   admin's Access lists **Acknowledge on behalf** (§6). All inert until
@@ -202,8 +202,10 @@ form's end, and the main action is a full-width Primary on the page
     seen by senior staff or Other Staff view shows no due state, last
     contact, next expected or contacts. A formal plan keeps, for senior
     staff, its source, cadence, review, instruction and history from its
-    assignment or conversion on; Other Staff view sees any plan's who,
-    whom, kind and status only (author, 2026-11-07). Records across staff downloads
+    assignment or conversion on; Other Staff view sees any plan's who
+    (its staff member and who assigned it), whom, kind and status only,
+    on the plan and on Overview's Every plan (author, 2026-11-07). A
+    follow-up's Convert form offers no cadence of its own. Records across staff downloads
     encounters as staff and student pairs only.
   - Senior staff never write into others' log records.
 
@@ -291,7 +293,8 @@ notice on every page that names students.
 - **The Consultation check's reasons are metadata only** (author,
   2026-11-07): a safety escalation, a plan, or records with Support Logs
   staff, whose staff may have a view; never what records say, how many
-  there are or when they were made.
+  there are or when they were made. Its holder sees which staff have
+  records about each student, to know whom to consult.
 - **No consultation indicated never means well or suitable.** The result
   says so, and an entry it could not read is listed as not read, never
   given a state.

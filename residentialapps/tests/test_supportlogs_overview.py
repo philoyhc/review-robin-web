@@ -112,6 +112,15 @@ def test_a_safety_flag_names_its_student_open_or_closed(monkeypatch: pytest.Monk
     assert not sample.named_on_overview("S-08")
 
 
+def test_a_closed_flag_is_a_signal_on_overview(client: TestClient) -> None:
+    """Students across staff's chip and count follow the naming rule: a
+    safety flag, open or closed (author, 2026-11-07)."""
+    hana = next(r for r in sample.students_across_staff() if r["student"].id == "S-08")
+    assert hana["flags"] == 1  # F-04, closed
+    page = section(client.get("/overview/?as=Sam%20Lee").text, "across-h")
+    assert "Safety flag</span>" in page and "Active flag" not in page
+
+
 def test_the_aggregate_view_names_no_student(client: TestClient) -> None:
     page = client.get("/overview/?as=Kenneth%20Lau").text
     for s in sample.STUDENTS:

@@ -280,14 +280,15 @@ would you ask a staff member to share?*
 
 *Task: "Look at everything the team has on Hana Rahim."*
 
-- [ ] Hana Rahim is on no formal plan, so **Show name** on her row in
-  Students across staff first; her name then opens her page, with
+- [ ] Hana Rahim is named, by her team and her closed safety flag (a
+  student with none of a formal plan, a flag or a team shows **Show
+  name** first); her name opens her page, with
   "Opening this history is recorded"; the back link returns to Overview,
   which stays marked.
 - [ ] **Staff with records** lists Priya Raman and Arjun Nair, each with
   **Request a share**, disabled; no encounters, dates or notes anywhere.
-  Her plan (P-05) shows its kind and source but no last contact or due
-  state. Her Team card names Priya Raman and Daniel Koh; Hand over
+  Her follow-up (P-05) shows who, whom and status only, and Convert
+  offers no cadence of its own. Her Team card names Priya Raman and Daniel Koh; Hand over
   offers From (Priya Raman and Arjun Nair only) and To, disabled.
 
 Ask: *When would you ask a staff member to share? Would you tell them
