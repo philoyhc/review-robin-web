@@ -207,6 +207,7 @@ def test_students_lists_the_working_set(client: TestClient) -> None:
         "Elena Park",
         "Farid Osman",
         "Bao Nguyen",
+        "Hana Rahim",  # his team's (rung 5), no record of his own
     ]
     assert ">Plan · Counselling</a>" in mine
     assert "bao.nguyen@u.example.edu · seen 24 Oct" in mine
@@ -252,15 +253,17 @@ def test_students_filters_plans_and_follow_ups(client: TestClient) -> None:
         ("all", "true", "All"),
         ("plans", "false", "Plans"),
         ("following", "false", "Following"),
+        ("teams", "false", "Teams"),
     ]
     kinds = dict(zip(names(mine), re.findall(r'<li data-kinds="([^"]*)">', mine), strict=True))
     assert kinds == {
         "Clara Tan": "plans ",
         "Dev Menon": "plans ",
-        "Aiden Chen": "following",
-        "Elena Park": "following",
+        "Aiden Chen": "following ",
+        "Elena Park": "following ",
         "Farid Osman": "",
         "Bao Nguyen": "",
+        "Hana Rahim": "teams",
     }
     assert (
         'href="/plans/P-01" aria-label="Plan · Counselling: Clara Tan">Plan · Counselling</a>'
@@ -277,7 +280,7 @@ def test_students_rows_carry_my_plans_affordances(client: TestClient) -> None:
     safety-plan instruction, and Add a student to follow up."""
     mine = section(client.get("/students/").text, "mine-h")
     logs = re.findall(r'href="/log\?student=(S-\d+)" aria-label="Log an encounter with', mine)
-    assert logs == [s.id for s, _, _ in sample.working_set("Daniel Koh")]
+    assert logs == [s.id for s, _, _ in sample.working_set("Daniel Koh")] + ["S-08"]  # team
     clara = mine.split("Clara Tan</a>")[1].split("</li>")[0]
     assert "Weekly check-in; a reminder of the coping plan." in clara
     assert "· last contact 20 Oct" in clara
@@ -304,7 +307,7 @@ def test_each_plan_on_a_row_carries_its_own_due_state(
     monkeypatch.setattr(sample, "PLANS", [*sample.PLANS, extra])
     mine = section(client.get("/students/").text, "mine-h")
     row = mine.split("Aiden Chen</a>")[0].rsplit("<li ", 1)[1]
-    assert row.startswith('data-kinds="plans following">')
+    assert row.startswith('data-kinds="plans following ')
     after = mine.split("Aiden Chen</a>")[1].split("</li>")[0]
     assert after.count('class="chip chip-info">Due today') == 2
     assert ">Plan · College</a>" in after and ">Following</a>" in after
@@ -344,7 +347,7 @@ def test_favorites_drive_log_and_are_marked_on_students(client: TestClient) -> N
     pressed = re.findall(
         r'data-favorite aria-pressed="true" aria-label="Favorite ([^"]+)"', students
     )
-    assert pressed == ["Clara Tan", "Hana Rahim"]  # Hana under Shared with me
+    assert pressed == ["Clara Tan", "Hana Rahim", "Hana Rahim"]  # her team's row; Shared with me
     for staff, picks in sample.FAVORITES.items():  # a favorite is a student you reach
         me = sample.viewer(staff)
         assert all(reaches_student(me, sid) for sid in picks), staff
@@ -420,3 +423,22 @@ def test_share_as_you_log_is_folded_away_and_follows_the_viewer(client: TestClie
     assert re.findall(r"<option>([^<]+)</option>", priya) == [
         c for c in sample.FRONTLINE_COLLEAGUES if c != "Priya Raman"
     ]
+
+
+def test_a_team_shows_on_students_and_on_both_pages(client: TestClient) -> None:
+    """Sharing screens rung 5 (author, 2026-11-07): Priya Raman and Daniel
+    Koh's team for Hana Rahim; Teams filters it; Form a team is inert."""
+    for viewer, other in (("", "Priya Raman"), (PRIYA, "Daniel Koh")):
+        mine = section(client.get("/students/" + viewer).text, "mine-h")
+        row = mine.split("Hana Rahim</a>")[0].rsplit("<li ", 1)[1]
+        assert "teams" in row, viewer
+        assert f'<span class="chip chip-info">Team</span> with {other}' in mine
+    team = section(client.get("/students/S-08").text, "team-h")
+    assert "Priya Raman, Daniel Koh" in team and ">Leave the team</button>" in team
+    other = section(client.get("/students/S-03").text, "team-h")
+    assert ">Form a team</button>" in other and "disabled" in other
+    senior = section(client.get("/overview/students/S-03?as=Sam%20Lee").text, "team-h")
+    assert ">Form a team</button>" in senior and "You are not in it" in senior
+    across = section(client.get("/overview/?as=Sam%20Lee").text, "across-h")
+    hana = across.split("Hana Rahim</a>")[1].split("</tr>")[0]
+    assert '<span class="chip chip-info">Team</span>' in hana

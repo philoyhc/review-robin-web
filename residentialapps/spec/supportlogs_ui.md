@@ -41,6 +41,12 @@ under `data-app="supportlogs"`.
   (the invitation's and the handover's the author's call to confirm,
   `residentialapps/guide/1D_sharing_screens.md` Status); only in an
   emergency can a sys admin accept for the staff member.
+- **Teams** (sharing screens rung 5, author, 2026-11-07): a team's
+  student shows on Students for each member, under a fourth filter
+  choice, **Teams**, with the other members named. A student's page has a
+  Team card (members, Leave the team; or Form a team), and a senior's
+  view of a student has Form a team over chosen staff; inert until
+  wired. A team names its student on Overview (rule 3), with a Team chip.
 - **Plans and follow-ups are a filter on Students** (author, 2026-11-07):
   My students shows All, Plans or Following, the last choice kept in the
   browser; each plan's chip opens it, beside its due state. Each row has

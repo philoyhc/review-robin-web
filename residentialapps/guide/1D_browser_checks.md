@@ -178,7 +178,8 @@ information you would want before seeing her again?*
 *Task: "Which students are you meant to check in on this week? Change
 Aiden Chen to fortnightly."*
 
-- [ ] **Students**' My students has All, Plans and Following. Plans
+- [ ] **Students**' My students has All, Plans, Following and Teams.
+  Teams shows Hana Rahim, his team with Priya Raman. Plans
   shows Clara Tan and Dev Menon, Following Aiden Chen and Elena Park,
   each with its due chip; after a reload the choice is kept. Every row
   has **Log**; Clara's shows her last contact and her coping-plan line;

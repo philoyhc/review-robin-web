@@ -79,7 +79,8 @@ def test_overview_withholds_a_name_off_a_plan_until_shown(client: TestClient) ->
     every card but the flags."""
     hidden = {s.name for s in sample.STUDENTS if not sample.named_on_overview(s.id)}
     shown = {r["student"].name for r in sample.students_across_staff()} & hidden
-    assert {"Gwyneth Low", "Aiden Chen", "Bao Nguyen", "Farid Osman", "Hana Rahim"} <= shown
+    assert {"Gwyneth Low", "Aiden Chen", "Bao Nguyen", "Farid Osman"} <= shown
+    assert "Hana Rahim" not in hidden  # her team names her (rung 5)
     for name in ("Sam%20Lee", "Siti%20Rahman"):
         page = client.get(f"/overview/?as={name}").text
         for r in cells(section(page, "across-h")):

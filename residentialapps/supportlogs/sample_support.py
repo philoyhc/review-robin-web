@@ -766,6 +766,33 @@ class PeerGrant:
     accepted: bool = True
 
 
+# Teams (sharing screens rung 5, author, 2026-11-07): two or more
+# frontline staff sharing responsibility for one student, each having
+# accepted. Records made while in the team are the team's; a member may
+# leave, and a team down to one member ends.
+
+
+@dataclass(frozen=True)
+class Team:
+    id: str
+    student: str
+    members: tuple[str, ...]
+    formed: date
+    formed_by: str  # a member, or a senior who started it
+
+
+TEAMS = (Team("T-01", "S-08", ("Priya Raman", "Daniel Koh"), date(2026, 10, 25), "Priya Raman"),)
+
+
+def team_for(sid: str) -> Team | None:
+    return next((t for t in TEAMS if t.student == sid), None)
+
+
+def teams_of(staff: str) -> list[Team]:
+    """The teams a staff member is in."""
+    return [t for t in TEAMS if staff in t.members]
+
+
 # Waiting for you (sharing screens rung 2, author, 2026-11-07): what a
 # frontline staff member is asked to accept, one of each kind on sample
 # data. A share offered, a team invitation or a handover names no student
@@ -937,6 +964,7 @@ class AcrossRow(TypedDict):
     staff: list[str]
     formal: bool
     flags: int
+    team: bool
 
 
 def students_across_staff() -> list[AcrossRow]:
@@ -959,6 +987,7 @@ def students_across_staff() -> list[AcrossRow]:
                     p.formal and p.status == "Active" for p in PLANS if p.student == s.id
                 ),
                 "flags": sum(1 for f in FLAGS if f.student == s.id and f.active),
+                "team": team_for(s.id) is not None,
             }
         )
     named = [r for r in rows if named_on_overview(r["student"].id)]
@@ -981,10 +1010,12 @@ class Hotspot(TypedDict):
 
 def named_on_overview(sid: str) -> bool:
     """Overview names a student by default only when they are on an
-    active formal plan or have an active flag (author, 2026-11-07); any
-    other student is one click away."""
-    return any(p.formal and p.status == "Active" for p in PLANS if p.student == sid) or any(
-        f.student == sid and f.active for f in FLAGS
+    active formal plan, have an active flag or have a team (author,
+    2026-11-07); any other student is one click away."""
+    return (
+        any(p.formal and p.status == "Active" for p in PLANS if p.student == sid)
+        or any(f.student == sid and f.active for f in FLAGS)
+        or team_for(sid) is not None
     )
 
 

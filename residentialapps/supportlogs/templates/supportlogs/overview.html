@@ -47,7 +47,7 @@
                 {% if sample.named_on_overview(r.student.id) %}<td class="strong">{{ name }}</td>
                 {%- else %}<td data-sort-value="">{{ withheld(name) }}</td>{% endif %}
                 <td>{{ r.staff | join(", ") }}</td>
-                <td><span class="chips chip-wrap">{% if r.flags %}<span class="chip chip-safety">Active flag</span>{% endif %}{% if r.formal %}<span class="chip chip-accent">Formal plan</span>{% endif %}</span></td>
+                <td><span class="chips chip-wrap">{% if r.flags %}<span class="chip chip-safety">Active flag</span>{% endif %}{% if r.formal %}<span class="chip chip-accent">Formal plan</span>{% endif %}{% if r.team %}<span class="chip chip-info">Team</span>{% endif %}</span></td>
               </tr>{% endfor %}</tbody>
             </table>
           </div>

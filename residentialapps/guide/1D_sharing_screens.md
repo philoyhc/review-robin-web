@@ -125,3 +125,7 @@ browser check passes on each rung.
   chosen before Mark a safety concern does not carry through, as the
   other details do not. One read: the list's rule in one helper, the
   copy matched to Share past records, and thin tests, all fixed.
+- **Rung 5:** as planned; the sample's team is Priya Raman and Daniel
+  Koh's for Hana Rahim, so Overview now names her. Team students come
+  after My students' own rows, and a team member's records stay theirs
+  on sample data (the team's records wait on wiring).
