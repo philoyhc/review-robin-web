@@ -1,7 +1,7 @@
 """Support Logs' plans and sharing on sample data, segment 1D item 1 rung 4:
 a plan's detail with its history and, for senior staff, conversion of a
 follow-up to a formal assignment (§7, §8); Flag for formal assignment
-(§3.1); and peer-view grants, Share with a colleague (§11.1). Nothing is
+(§3.1); and Share past records (§11.1; sharing screens rung 3). Nothing is
 stored: each form shows its confirmation, and changes wait on item 4."""
 
 from __future__ import annotations
@@ -76,8 +76,9 @@ def _student_for(request: Request, sid: str) -> tuple[sample.Viewer, sample.Stud
 
 @router.get("/students/{sid}/share", name="supportlogs_share")
 def share(request: Request, sid: str) -> Response:
-    """Share with a colleague (§11.1): the viewer's records for this
-    student, with one frontline colleague."""
+    """Share past records (§11.1; sharing screens rung 3, author,
+    2026-11-07): some or all of the viewer's records for this student,
+    offered to one frontline colleague, who accepts before seeing them."""
     me, found = _student_for(request, sid)
     if sample.holds(me, sample.FRONTLINE) and not owns_records(me, sid):
         raise HTTPException(status_code=404)  # nothing of the viewer's own to share
@@ -102,12 +103,25 @@ def share_sent(request: Request, sid: str) -> Response:
         return RedirectResponse(
             url_path(request, f"/students/{sid}/share") + query(me), status_code=303
         )
+    # Some records or all: the chosen ones that are the viewer's own for
+    # this student, else all of them.
+    own = {e.id for e in sample.encounters_by(me.name, sid)}
+    picked = [r for r in request.query_params.getlist("record") if r in own]
+    some = request.query_params.get("scope") == "some"
+    if some and not picked and sample.holds(me, sample.FRONTLINE):
+        # Only the ticked ones, and none of the viewer's own ticked: back to
+        # the form, never widened to all.
+        return RedirectResponse(
+            url_path(request, f"/students/{sid}/share") + query(me), status_code=303
+        )
     return gated(
         request,
         "supportlogs/share_sent.html",
         sample.FRONTLINE,
         chosen=found,
         colleague=colleague,
+        records=len(picked) if some else len(own),
+        whole=not some,
         current_tab="/students/",
     )
 

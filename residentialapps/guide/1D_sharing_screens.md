@@ -112,3 +112,9 @@ browser check passes on each rung.
   handover a senior started. One read: copy that overstated acceptance
   against the emergency path, the handover's who-accepts, a handover with
   no records behind it, and thin tests, all fixed.
+- **Rung 3:** as planned; Revoke becomes Withdraw. A share of all
+  records takes the sharer's follow-ups and plans too; a share of chosen
+  encounters shows only those. The sample's pending shares match Waiting
+  for you's offers. One read: a share of none ticked widened to all, a
+  partial share read as whole, the receiver's copy and the pending meta,
+  all fixed.

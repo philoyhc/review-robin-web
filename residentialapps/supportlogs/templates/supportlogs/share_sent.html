@@ -1,13 +1,13 @@
 {% extends "residential/base.html" %}
 {% from "residential/_sample.html" import sample_title, viewer_card with context %}
 {% from "supportlogs/_frontline.html" import recorded with context %}
-{% block title %}Shared{% endblock %}
+{% block title %}Share offered{% endblock %}
 {% block content %}
-  {{ sample_title("Shared", me.name) }}
+  {{ sample_title("Share offered", me.name) }}
   {{ recorded() }}
   <section class="card card-pad gap-below" aria-labelledby="sent-h" role="status">
-    <h2 id="sent-h">{{ colleague }} can see your records for {{ chosen.name }}</h2>
-    <p class="sub">Until you revoke it, under Shared with on {{ chosen.name }}'s page. A sample: nothing is stored.</p>
+    <h2 id="sent-h">{{ colleague }} is asked to accept {{ "all your records" if whole else records ~ " of your encounters" }} for {{ chosen.name }}</h2>
+    <p class="sub">Until they accept, they see only that you have shared records about a student, not who the student is, and none of the records. It shows as pending under Shared with on {{ chosen.name }}'s page, where you can withdraw it. A sample: nothing is stored.</p>
   </section>
   <a class="btn btn-primary" href="{{ url('/students/' ~ chosen.id) }}{{ as_query }}">Back to {{ chosen.name }}</a>
 {% endblock %}

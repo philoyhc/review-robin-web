@@ -115,7 +115,7 @@ def test_a_shared_student_shows_the_grantor_s_plans_read_only(client: TestClient
 
 def test_the_grantor_sees_who_they_shared_with(client: TestClient) -> None:
     shared = section(client.get("/students/S-08?as=Priya%20Raman").text, "shared-h")
-    assert '<span class="strong">Daniel Koh</span>' in shared and "Revoke" in shared
+    assert '<span class="strong">Daniel Koh</span>' in shared and ">Withdraw</button>" in shared
 
 
 def test_overview_lists_every_plan_and_the_flagged_students(client: TestClient) -> None:
@@ -157,17 +157,36 @@ def test_flag_for_formal_assignment_asks_no_reason(client: TestClient) -> None:
 
 
 def test_sharing_lists_grants_and_offers_colleagues(client: TestClient) -> None:
+    """Share past records (sharing screens rung 3, author, 2026-11-07)."""
     clara = section(client.get("/students/S-03").text, "shared-h")
-    assert '<span class="strong">Mei Ling Tan</span>' in clara and "Since 1 Oct" in clara
-    assert 'aria-label="Revoke Mei Ling Tan\'s view">Revoke</button>' in clara
+    assert '<span class="strong">Mei Ling Tan</span>' in clara and "since 1 Oct" in clara
+    assert '<span class="chip chip-ok">Accepted</span>' in clara
+    assert 'aria-label="Withdraw your share with Mei Ling Tan">Withdraw</button>' in clara
+    bao = section(client.get("/students/S-02").text, "shared-h")
+    assert '<span class="chip chip-mute">Pending</span>' in bao and "1 encounter · offered" in bao
     form = client.get("/students/S-03/share").text
     assert re.findall(r"<option>([^<]+)</option>", form) == [
         "Priya Raman",
         "Arjun Nair",
         "Grace Ho",
     ]  # not himself, not Mei Ling again
+    assert "<h1>Share past records" in form and 'name="record"' in form
+    assert form.count('name="record"') == len(sample.encounters_by("Daniel Koh", "S-03"))
     sent = client.get("/students/S-03/share/sent?colleague=Grace%20Ho").text
-    assert "Grace Ho can see your records for Clara Tan" in sent
+    total = len(sample.encounters_by("Daniel Koh", "S-03"))
+    assert total and "Grace Ho is asked to accept all your records for Clara Tan" in sent
+    assert "not who the student is, and none of the records" in sent
+    first = sample.encounters_by("Daniel Koh", "S-03")[0].id
+    some = client.get(
+        f"/students/S-03/share/sent?colleague=Grace%20Ho&scope=some&record={first}&record=E-99"
+    ).text
+    assert "Grace Ho is asked to accept 1 of your encounters for Clara Tan" in some  # E-99: not his
+    for ticked in ("", "&record=E-99"):  # only some, but none of his own ticked
+        back = client.get(
+            f"/students/S-03/share/sent?colleague=Grace%20Ho&scope=some{ticked}",
+            follow_redirects=False,
+        )
+        assert (back.status_code, back.headers["location"]) == (303, "/students/S-03/share")
     for colleague in (
         "Nobody",
         "Mei%20Ling%20Tan",
@@ -250,3 +269,30 @@ def test_a_plan_seen_by_senior_staff_shows_no_contact_facts(client: TestClient) 
         follow_up = client.get(f"/plans/P-03?as={name}").text  # Daniel's own
         for fact in ("<dt>Since</dt>", "<dt>Cadence</dt>", 'id="hist-h"', "began following up"):
             assert fact not in follow_up, (name, fact)
+
+
+def test_a_share_not_yet_accepted_shows_nothing_to_its_receiver(client: TestClient) -> None:
+    """Sharing model 1: Arjun Nair (no sample viewer) sees nothing of Bao
+    Nguyen until he accepts Daniel Koh's share."""
+    pending = {(g.grantor, g.viewer, g.student) for g in sample.PEER_GRANTS if not g.accepted}
+    assert ("Daniel Koh", "Arjun Nair", "S-02") in pending
+    assert all(g.student != "S-02" for g in sample.shared_with("Arjun Nair"))
+    assert not sample.shared_encounters("Arjun Nair", "S-02")
+    # Each share waiting on its receiver is the one their Waiting for you lists.
+    offered = {
+        (p.sender, p.to, p.student) for p in sample.PENDING if p.kind == sample.SHARE_OFFERED
+    }
+    assert pending == offered
+    assert client.get("/students/S-09").status_code == 404  # Priya's offer: not yet accepted
+
+
+def test_a_share_of_chosen_encounters_shows_only_those(monkeypatch) -> None:
+    """A share of chosen encounters shows the receiver those, and none of
+    the sharer's plans; only a share of all records takes the plans."""
+    chosen = sample.PeerGrant("S-08", "Priya Raman", "Mei Ling Tan", sample.TODAY, ("E-09",))
+    monkeypatch.setattr(sample, "PEER_GRANTS", (chosen,))
+    assert [e.id for e in sample.shared_encounters("Mei Ling Tan", "S-08")] == ["E-09"]
+    assert sample.plans_of("Priya Raman", "S-08")  # she has a plan for Hana Rahim
+    assert not sample.shared_plans("Mei Ling Tan", "S-08")  # which stays hers
+    p05 = sample.plan("P-05")
+    assert p05 is not None and not sample.may_read_plan("Mei Ling Tan", p05)

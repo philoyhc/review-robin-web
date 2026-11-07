@@ -752,13 +752,18 @@ REFERRALS = (Referral("S-05", "Daniel Koh", date(2026, 10, 27), "Weekly"),)
 
 @dataclass(frozen=True)
 class PeerGrant:
-    """A peer-view grant (§11.1): the grantor's records for one student,
-    shared with one colleague; private by default, revocable."""
+    """A share of past records (§11.1; sharing screens rung 3, author,
+    2026-11-07): the grantor's records for one student, all of them
+    (`records` empty: encounters, follow-ups and plans) or the chosen
+    encounters only, offered to one colleague, who sees nothing until they
+    accept; the grantor can withdraw it."""
 
     student: str
     grantor: str
     viewer: str
     granted_on: date
+    records: tuple[str, ...] = ()  # the chosen encounters' ids; empty is all
+    accepted: bool = True
 
 
 # Waiting for you (sharing screens rung 2, author, 2026-11-07): what a
@@ -786,6 +791,7 @@ class Pending:
 
 PENDING = (
     Pending(SHARE_OFFERED, "Daniel Koh", "Priya Raman", "S-09", 1, date(2026, 10, 28)),
+    Pending(SHARE_OFFERED, "Arjun Nair", "Daniel Koh", "S-02", 1, date(2026, 10, 28)),
     Pending(TEAM_INVITE, "Daniel Koh", "Sam Lee", "S-10", 0, date(2026, 10, 28)),
     Pending(HANDOVER, "Daniel Koh", "Mei Ling Tan", "S-07", 3, date(2026, 10, 27)),
     Pending(SHARE_REQUEST, "Daniel Koh", "Sam Lee", "S-03", 0, date(2026, 10, 29)),
@@ -800,6 +806,16 @@ def pending_for(staff: str) -> list[Pending]:
 PEER_GRANTS = (
     PeerGrant("S-03", "Daniel Koh", "Mei Ling Tan", date(2026, 10, 1)),
     PeerGrant("S-08", "Priya Raman", "Daniel Koh", date(2026, 10, 20)),
+    # Daniel Koh offered one record about Bao Nguyen to Arjun Nair, who
+    # has not accepted yet (rung 3).
+    PeerGrant(
+        "S-02", "Daniel Koh", "Arjun Nair", date(2026, 10, 28), records=("E-06",), accepted=False
+    ),
+    # Rung 2's offer on Daniel Koh's Home: Priya Raman's one record about
+    # Ivan Seet, not yet accepted.
+    PeerGrant(
+        "S-09", "Priya Raman", "Daniel Koh", date(2026, 10, 28), records=("E-10",), accepted=False
+    ),
 )
 
 
@@ -822,20 +838,28 @@ def grants_by(staff: str, sid: str) -> list[PeerGrant]:
 
 
 def shared_with(staff: str) -> list[PeerGrant]:
-    """Records colleagues have shared with a staff member."""
-    return [g for g in PEER_GRANTS if g.viewer == staff]
+    """Records colleagues have shared with a staff member that they have
+    accepted; a share not yet accepted shows nothing (sharing model 1)."""
+    return [g for g in PEER_GRANTS if g.viewer == staff and g.accepted]
 
 
 def shared_plans(staff: str, sid: str) -> list[Plan]:
-    """A colleague's active plans for a student shared with the viewer."""
-    return [p for g in shared_with(staff) if g.student == sid for p in plans_of(g.grantor, sid)]
+    """A colleague's active plans for a student shared with the viewer: a
+    share of all their records only, never of chosen encounters."""
+    return [
+        p
+        for g in shared_with(staff)
+        if g.student == sid and not g.records
+        for p in plans_of(g.grantor, sid)
+    ]
 
 
 def may_read_plan(staff: str, p: Plan) -> bool:
     """A plan's owner, or a colleague its owner has shared the student's
     records with (§11.1)."""
     return p.staff == staff or any(
-        g.grantor == p.staff and g.student == p.student for g in shared_with(staff)
+        g.grantor == p.staff and g.student == p.student and not g.records
+        for g in shared_with(staff)
     )
 
 
@@ -843,7 +867,11 @@ def shared_encounters(staff: str, sid: str) -> list[Encounter]:
     """A colleague's encounters with a student shared with the viewer,
     labelled with that colleague when shown (UI spec screen 5)."""
     found = [
-        e for g in shared_with(staff) if g.student == sid for e in encounters_by(g.grantor, sid)
+        e
+        for g in shared_with(staff)
+        if g.student == sid
+        for e in encounters_by(g.grantor, sid)
+        if not g.records or e.id in g.records
     ]
     return sorted(found, key=lambda e: e.when, reverse=True)
 
