@@ -13,10 +13,17 @@ records that step.
 ## Your own records
 
 **Every record you log is yours.** Other RFs and RSLMs cannot see it, and
-nor can senior staff: by default they see only that you have records
-about a student: not when you met, for how long, what kind of meeting,
-the concerns, whether you planned a follow-up, or what you wrote. Only people you
-share it with can read it.
+nor can senior staff. Only people you share it with can read it.
+
+Each record has two parts:
+
+- **Who and which student:** that you, a named staff member, have a
+  record about a named student. Senior staff can see this much.
+- **Everything else is the record's content:** when you met, for how
+  long, what kind of meeting, the concerns, whether a follow-up is
+  needed, and your note. So are any totals worked out from them, such
+  as how many times you met or how many minutes it took. Only you, and
+  people you share with, see the content.
 
 ## Seeing someone else's records
 
@@ -82,14 +89,14 @@ over.
 
 ## What senior staff see
 
-Senior staff, such as the Master, oversee support across the team:
-workload, who may need more help, and where support should move.
+Senior staff, such as the Master, oversee support across the team: who
+is supporting whom, and where support may need to move.
 
-- **By default they see only who has records with which students.**
-  Everything else (when you met, for how long, what kind of meeting, the
-  concerns, follow-ups and your notes, and any totals worked out from
-  them) is the records' content, and a senior reads it only through a
-  share.
+- **By default they see only who has records with which students:** how
+  many students each staff member has records with, and how many staff
+  each student has records with. They do not see when, how often or how
+  long you met, and none of what you recorded. That is the records'
+  content, and a senior reads it only through a share.
 - **They see a student's name only when the student needs attention:**
   the student is on a formal plan, has a safety flag, or has a team.
   Other students are not named until a senior chooses to look, with
@@ -146,9 +153,13 @@ has not accepted yet, they never saw the student's name.
 
 **Can the Master read everything I write?**
 No, not by default. The Master sees which of you have records with which
-students, so they can oversee the team, but reads your notes only if you
-share them, or, in an emergency, if a system administrator agrees on your
-behalf. Either way it is recorded.
+students, so they can oversee the team, but reads what you recorded only
+if you share it, or, in an emergency, if a system administrator agrees on
+your behalf. Either way it is recorded.
+
+**Does the Master see how much time I spend with students?**
+Not by default. How often and how long you meet is part of your records'
+content, so it is seen only through a share, like the rest.
 
 **What happens to my records when I leave?**
 They are handed over to whoever takes on your students, with your
