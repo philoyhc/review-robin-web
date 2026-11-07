@@ -752,13 +752,17 @@ REFERRALS = (Referral("S-05", "Daniel Koh", date(2026, 10, 27), "Weekly"),)
 
 @dataclass(frozen=True)
 class PeerGrant:
-    """A peer-view grant (§11.1): the grantor's records for one student,
-    shared with one colleague; private by default, revocable."""
+    """A share of past records (§11.1; sharing screens rung 3, author,
+    2026-11-07): the grantor's records for one student, all of them
+    (`records` 0) or some, offered to one colleague, who sees nothing
+    until they accept; the grantor can withdraw it."""
 
     student: str
     grantor: str
     viewer: str
     granted_on: date
+    records: int = 0  # how many records; 0 is all of them
+    accepted: bool = True
 
 
 # Waiting for you (sharing screens rung 2, author, 2026-11-07): what a
@@ -800,6 +804,9 @@ def pending_for(staff: str) -> list[Pending]:
 PEER_GRANTS = (
     PeerGrant("S-03", "Daniel Koh", "Mei Ling Tan", date(2026, 10, 1)),
     PeerGrant("S-08", "Priya Raman", "Daniel Koh", date(2026, 10, 20)),
+    # Daniel Koh offered one record about Bao Nguyen to Arjun Nair, who
+    # has not accepted yet (rung 3).
+    PeerGrant("S-02", "Daniel Koh", "Arjun Nair", date(2026, 10, 28), records=1, accepted=False),
 )
 
 
@@ -822,8 +829,9 @@ def grants_by(staff: str, sid: str) -> list[PeerGrant]:
 
 
 def shared_with(staff: str) -> list[PeerGrant]:
-    """Records colleagues have shared with a staff member."""
-    return [g for g in PEER_GRANTS if g.viewer == staff]
+    """Records colleagues have shared with a staff member that they have
+    accepted; a share not yet accepted shows nothing (sharing model 1)."""
+    return [g for g in PEER_GRANTS if g.viewer == staff and g.accepted]
 
 
 def shared_plans(staff: str, sid: str) -> list[Plan]:

@@ -164,7 +164,7 @@ next, outside the app? Are the closure outcomes right?*
   him; Hana Rahim's row reads "Shared by Priya Raman".
 - [ ] Clara's page shows the "Opening this view is recorded" notice,
   three tiles, **Log encounter with Clara Tan**, Encounters, Safety flags
-  (closed ones with their outcome), Shared with (with Revoke), and
+  (closed ones with their outcome), Shared with (with Withdraw), and
   Following up with a Safety-plan marker in violet.
 
 Ask: *Is the "recorded" notice reassuring or off-putting? Is this the
@@ -195,9 +195,11 @@ overdue?*
 *Task: "Arjun Nair is covering for you next week. Let him see your
 records for Clara Tan. Then see what Priya has shared with you."*
 
-- [ ] Clara's page already lists Mei Ling Tan under Shared with, with
-  Revoke. **Share with a colleague** offers the other colleagues (not Mei
-  Ling, who has it already), then a confirmation.
+- [ ] Clara's page already lists Mei Ling Tan under Shared with,
+  Accepted, with Withdraw; Bao Nguyen's lists Arjun Nair, Pending, 1
+  record. **Share past records** offers all your records or only the
+  ticked ones, and the other colleagues (not Mei Ling, who has it
+  already), then a confirmation that the colleague is asked to accept.
 - [ ] Hana Rahim, shared by Priya, says so at the top; her encounters
   are labelled "Shared by Priya Raman". *Ruling R5: what a share shows.*
 

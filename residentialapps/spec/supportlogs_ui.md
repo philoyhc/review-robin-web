@@ -219,9 +219,10 @@ notice on every page that names students.
    encounter as they log it; two or more staff form a team for a
    student, which a senior may start; or a handover tags records to
    the receiver, acknowledged by them and a senior. The model is
-   `residentialapps/guide/1D_sharing_model.md` (author, 2026-11-07); the
-   screens still show the earlier Share with a colleague until it is
-   drawn.
+   `residentialapps/guide/1D_sharing_model.md` (author, 2026-11-07).
+   **Share past records**, on a student's page, offers all or ticked
+   records to one colleague; Shared with lists each as Pending or
+   Accepted, with Withdraw (Destructive), inert until wired.
 3. **Senior identifiable access sees, by default, only which students
    have records with which staff** (author, 2026-11-07): a record's
    metadata, never its content (everything else about a record: when,

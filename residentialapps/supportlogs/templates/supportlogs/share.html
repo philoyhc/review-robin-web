@@ -1,17 +1,26 @@
 {% extends "residential/base.html" %}
 {% from "residential/_sample.html" import sample_title, viewer_card with context %}
 {% from "supportlogs/_frontline.html" import recorded with context %}
-{% block title %}Share with a colleague{% endblock %}
+{% block title %}Share past records{% endblock %}
 {% block content %}
   <a class="back" href="{{ url('/students/' ~ chosen.id) }}{{ as_query }}">‹ {{ chosen.name }}</a>
-  {{ sample_title("Share with a colleague", me.name) }}
+  {{ sample_title("Share past records", me.name) }}
   {{ recorded() }}
-  {# A peer-view grant (§11.1): private by default; the scope proposed is
-     the grantor's records for this one student (§17 Q10). #}
+  {# Share past records (§11.1; sharing screens rung 3, author,
+     2026-11-07): some or all of the viewer's records for one student,
+     offered to one colleague, who accepts before seeing anything. Past
+     records only: a team looks forward. #}
+  {% set mine = sample.encounters_by(me.name, chosen.id) %}
   <form class="card card-pad" action="{{ url('/students/' ~ chosen.id ~ '/share/sent') }}" method="get" aria-labelledby="share-h">
     {% if me != sample.DEFAULT %}<input type="hidden" name="as" value="{{ me.name }}">{% endif %}
     <h2 id="share-h">Your records for {{ chosen.name }}</h2>
-    <p class="sub">The colleague sees your encounters, follow-ups and plans for {{ chosen.name }} only, labelled with your name, until you revoke it. The grant, its revocation and their views are recorded.</p>
+    <p class="sub">Your colleague sees the records you choose, labelled with your name, once they accept, and nothing you log afterwards: to work together going forward, form a team. You can withdraw the share at any time. The share, its acceptance and their views are recorded.</p>
+    <fieldset class="modes">
+      <legend>Which records</legend>
+      <label class="check"><input type="radio" name="scope" value="all" checked> All {{ mine | length }} of your records</label>
+      <label class="check"><input type="radio" name="scope" value="some"> Only the ones ticked below</label>
+      {% for e in mine %}<label class="check"><input type="checkbox" name="record" value="{{ e.id }}"> {{ sample.short_date(e.when.date()) }} · {{ e.type }} · {{ e.duration }}</label>{% endfor %}
+    </fieldset>
     <div class="field-wide"><label for="colleague">Colleague</label>
       <select id="colleague" name="colleague" class="input" required><option value="">Choose a colleague</option>{% for c in colleagues %}<option>{{ c }}</option>{% endfor %}</select>
       <span class="subtle small">RFs and RSLMs with frontline access.</span></div>

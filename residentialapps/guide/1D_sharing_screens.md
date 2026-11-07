@@ -112,3 +112,5 @@ browser check passes on each rung.
   handover a senior started. One read: copy that overstated acceptance
   against the emergency path, the handover's who-accepts, a handover with
   no records behind it, and thin tests, all fixed.
+- **Rung 3:** as planned; Revoke becomes Withdraw, and the sample adds
+  a share not yet accepted (Daniel Koh to Arjun Nair, about Bao Nguyen).
