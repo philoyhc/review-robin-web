@@ -205,8 +205,9 @@ below applies:
    their behalf until it is drawn.
 3. **Senior identifiable access sees, by default, only which students
    have records with which staff** (author, 2026-11-07): a record's
-   metadata, never its content (when, how long, concern areas and the
-   note). It
+   metadata, never its content (everything else about a record: when,
+   how long, type, concern areas, follow-up and note, and figures drawn
+   from them). It
    names a student by default only when they are on a formal plan or
    have a safety flag (or, once teams are drawn, a team); any other
    student's name is withheld until a deliberate action reveals it. To

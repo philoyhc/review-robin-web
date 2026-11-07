@@ -23,8 +23,10 @@ content:
 
 - **Metadata and content** (author, 2026-11-07): a record's metadata is
   which student it is about and which staff member logged it; its
-  content is when the meeting was, how long it lasted, its concern areas
-  and its note.
+  content is everything else: when the meeting was, how long it lasted,
+  its type, its concern areas, whether a follow-up is needed and its
+  note. Figures drawn from content (encounter counts, minutes, due
+  dates) are content too.
 - **By default, a senior sees only the metadata: which students have
   records with which staff.**
 - **Names** follow confidentiality rule 3: a student on a formal plan,
@@ -107,16 +109,6 @@ a withdrawal, and a team's formation, change or dissolution.
   whatever the sharing state.
 - **Other Staff view** (rule 4) is unchanged.
 
-## Still open
-
-- **A record's type and whether a follow-up is needed:** metadata or
-  content.
-- **Overview's figures:** Team workload, Hotspots and Coverage count
-  encounters, minutes and due dates per staff member and per student,
-  all drawn from content. Whether those totals stay as they are, show
-  only for students named by rule 3, or go.
-- **Records across staff:** which metadata columns its download keeps.
-
 ## Effect on today's screens
 
 - Share with a colleague, on a student's page, becomes **Share past
@@ -130,7 +122,10 @@ a withdrawal, and a team's formation, change or dissolution.
   notes go, and it gains **Request a share** from each staff member
   involved.
 - Records across staff, Overview's download for senior staff, carries
-  no content: no Date, Time, Duration, Concern areas or Note.
+  no content: only which students have records with which staff.
+- Overview's Team workload, Hotspots and Coverage, drawn from content,
+  give way to what metadata shows: per staff member, how many students
+  they have records with, and per student, how many staff.
 - Students' filter gains **Teams** (3).
 
 These land as scaffolds first, one slice each, once this model is
