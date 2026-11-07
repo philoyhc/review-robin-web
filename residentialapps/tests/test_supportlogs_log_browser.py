@@ -283,3 +283,12 @@ def test_students_filter_says_none_when_nothing_matches(page: Page) -> None:
     assert page.locator("[data-students-count]").inner_text() == "0"
     page.get_by_role("button", name="Following", exact=True).click()
     assert not page.locator("[data-students-none]").is_visible()
+
+
+def test_text_boxes_resize_vertically_only(page: Page) -> None:
+    """Author, 2026-11-07: every Residential text box is dragged taller,
+    never wider; the rule is the shared stylesheet's, so one page shows it."""
+    for path, box in (("/log", "#note"), ("/consultation/?as=Hui%20Min%20Goh", "#emails")):
+        page.goto(f"{ORIGIN}{path}")
+        resize = page.locator(box).evaluate("el => getComputedStyle(el).resize")
+        assert resize == "vertical", (path, resize)
