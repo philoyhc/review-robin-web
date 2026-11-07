@@ -106,9 +106,8 @@ browser check passes on each rung.
 - **Rung 1a:** as planned.
 - **Rung 2:** as planned; the card shows only when something waits. A
   team invitation and a handover, like a share, name no student until
-  accepted (the model names only the share's): the author's call to
-  confirm, and a team member's choice about their earlier records then
-  comes after accepting. Open for wiring: the owner's own row for a
+  accepted (author, confirmed 2026-11-07), and a team member's choice
+  about their earlier records then comes after accepting. Open for wiring: the owner's own row for a
   handover a senior started. One read: copy that overstated acceptance
   against the emergency path, the handover's who-accepts, a handover with
   no records behind it, and thin tests, all fixed.
@@ -135,8 +134,9 @@ browser check passes on each rung.
   by a share, Add under Teams, stale copy and spec, a non-member offered
   Form a team, and thin tests, all fixed.
 - **Rung 6:** as cards on a student's page and a senior's view of a
-  student rather than pages. A senior's handover moves all the owner's
-  records, since a senior sees none to choose among. The sample's
+  student rather than pages. The owner hands over all records or chosen
+  ones; a senior's handover takes all of them (author, 2026-11-07). The
+  sample's
   handover becomes Sam Lee's, of Mei Ling Tan's records, waiting on her;
   it adds a senior's emergency request waiting on Arjun Nair. One read:
   a handover waiting on the one who started it, no record choice, stale
