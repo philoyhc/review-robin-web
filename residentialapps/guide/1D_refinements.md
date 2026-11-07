@@ -134,4 +134,5 @@ and four types.
   test gaps, all fixed. **After rung 13** (author, 2026-11-07): My plans'
   row affordances return on Students: **Log** on every row, a plan row's
   last contact (in place of "seen") and safety-plan instruction, and the
-  disabled **Add a student to follow up** at the list's end.
+  disabled **Add a student to follow up** at the list's end, under All
+  and Following only (author, 2026-11-07).

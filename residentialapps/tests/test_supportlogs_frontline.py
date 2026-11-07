@@ -288,6 +288,7 @@ def test_students_rows_carry_my_plans_affordances(client: TestClient) -> None:
     bao = mine.split("Bao Nguyen</a>")[1].split("</li>")[0]
     assert "· seen 24 Oct" in bao and "last contact" not in bao
     assert (
+        "<div data-students-add>"
         '<button type="button" class="btn btn-secondary gap-above-sm" disabled>'
         "Add a student to follow up</button>"
     ) in mine

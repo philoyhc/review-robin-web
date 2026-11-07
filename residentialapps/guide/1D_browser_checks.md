@@ -174,7 +174,8 @@ Aiden Chen to fortnightly."*
   shows Clara Tan and Dev Menon, Following Aiden Chen and Elena Park,
   each with its due chip; after a reload the choice is kept. Every row
   has **Log**; Clara's shows her last contact and her coping-plan line;
-  the list ends with a disabled **Add a student to follow up**.
+  under All and Following the list ends with a disabled **Add a student
+  to follow up**, which Plans hides.
 - [ ] Aiden Chen's follow-up (P-03) offers a cadence with **Save cadence**
   and **Stop following up**.
 - [ ] Clara's formal plan (P-01) shows its facts and history and says
