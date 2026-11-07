@@ -389,3 +389,19 @@ def test_waiting_for_you_holds_every_acknowledgement(client: TestClient) -> None
         ), verb  # each names its row
     assert 'href="/students/' not in card
     assert 'id="waiting-h"' not in client.get("/" + PRIYA).text  # nothing waits on her
+
+
+def test_an_encounter_can_be_shared_as_it_is_logged(client: TestClient) -> None:
+    """Sharing screens rung 4 (author, 2026-11-07): one colleague, this one
+    encounter, accepted before they see it; never oneself."""
+    log = client.get("/log").text
+    share = log.split('id="share"')[1].split("</select>")[0]
+    assert re.findall(r"<option>([^<]+)</option>", share) == [
+        c for c in sample.FRONTLINE_COLLEAGUES if c != "Daniel Koh"
+    ]
+    assert '<option value="">No one</option>' in share
+    base = "/log/saved?student=S-02&duration=15%20min&type=Check-in"
+    sent = client.get(base + "&share=Mei%20Ling%20Tan").text
+    assert "Mei Ling Tan is asked to accept this encounter" in sent
+    for who in ("", "Daniel%20Koh", "Nobody"):
+        assert "is asked to accept" not in client.get(base + "&share=" + who).text, who

@@ -118,3 +118,5 @@ browser check passes on each rung.
   for you's offers. One read: a share of none ticked widened to all, a
   partial share read as whole, the receiver's copy and the pending meta,
   all fixed.
+- **Rung 4:** as planned; the share is live on sample data as far as
+  the confirmation, which says the colleague is asked to accept.

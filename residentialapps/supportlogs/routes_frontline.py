@@ -71,6 +71,10 @@ def log_saved(request: Request) -> Response:
         following=following,
         in_set=in_set,
         added=q.get("follow") == "yes" and not following,
+        # Shared as it was logged (rung 4): one colleague, never oneself.
+        shared_with=share
+        if (share := q.get("share")) in sample.FRONTLINE_COLLEAGUES and share != me.name
+        else None,
         current_tab="/log",
     )
 

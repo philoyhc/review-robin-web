@@ -50,7 +50,9 @@ under `data-app="supportlogs"`.
   Plans tab; Home's Due and overdue and Following stay.
 - **The routine path is one screen**: student, duration, type, Save,
   about 10–20 seconds (§5.1). The optional details fold on the same page;
-  there is no second screen (author, 2026-10-29).
+  there is no second screen (author, 2026-10-29). Among them, **Share this
+  encounter with** offers one colleague this one encounter, which they
+  accept before seeing it (sharing screens rung 4, author, 2026-11-07).
 
 ## 2. Chrome
 
