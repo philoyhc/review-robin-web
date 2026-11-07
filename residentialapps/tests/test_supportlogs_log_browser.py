@@ -315,3 +315,18 @@ def test_a_withheld_name_shows_and_hides_again(page: Page) -> None:
     assert summary.is_visible() and "Hide name" in summary.inner_text()
     summary.click()
     assert not name.is_visible()
+
+
+def test_students_teams_filter_shows_the_team_and_hides_add(page: Page) -> None:
+    """Rung 5: Teams shows the team's student alone, with no Add a student
+    to follow up, and is kept across a reload."""
+    page.goto(f"{ORIGIN}/students/")
+    mine = page.locator("[data-students-list] > li:visible a.strong")
+    add = page.locator("[data-students-add]")
+    page.get_by_role("button", name="Teams", exact=True).click()
+    assert mine.all_inner_texts() == ["Hana Rahim"]
+    assert page.locator("[data-students-count]").inner_text() == "1"
+    assert not add.is_visible()
+    page.reload()
+    assert mine.all_inner_texts() == ["Hana Rahim"] and not add.is_visible()
+    page.get_by_role("button", name="All", exact=True).click()

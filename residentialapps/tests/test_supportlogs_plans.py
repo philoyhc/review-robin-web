@@ -202,11 +202,16 @@ def test_sharing_lists_grants_and_offers_colleagues(client: TestClient) -> None:
     assert client.get("/students/S-09/refer").status_code == 404
 
 
-def test_records_shared_with_the_viewer_show_with_their_owner(client: TestClient) -> None:
-    """Hana Rahim is Priya's; Priya has shared her records with Daniel."""
+def test_records_shared_with_the_viewer_show_with_their_owner(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Hana Rahim is Priya's; Priya has shared her records with Daniel.
+    Their team lists her under Teams, so Shared with me waits on no team."""
     page = client.get("/students/S-08").text
     assert "Priya Raman has shared their records for Hana Rahim with you, since 20 Oct." in page
     assert '<span class="chip chip-mute">Shared by Priya Raman</span>' in section(page, "enc-h")
+    assert 'id="shared-h"' not in client.get("/students/").text  # her team's row instead
+    monkeypatch.setattr(sample, "TEAMS", ())
     shared = section(client.get("/students/").text, "shared-h")
     assert "Hana Rahim" in shared and "Shared by Priya Raman" in shared
     assert client.get("/students/S-09").status_code == 404  # Priya's, never shared

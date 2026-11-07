@@ -63,7 +63,7 @@
     <div data-students-add><button type="button" class="btn btn-secondary gap-above-sm" disabled>Add a student to follow up</button></div>
   </section>
   <script>
-    // Students' filter (author, 2026-11-07): shows all, plans or
+    // Students' filter (author, 2026-11-07): shows all, plans, teams or
     // follow-ups; the choice is kept in this browser only.
     (function () {
       var group = document.querySelector("[data-students-filter]");
@@ -87,7 +87,7 @@
         });
         count.textContent = shown;
         none.hidden = shown !== 0;
-        if (add) add.hidden = show === "plans";
+        if (add) add.hidden = show === "plans" || show === "teams";
       }
       var saved = "all";
       try { saved = localStorage.getItem(KEY) || "all"; } catch (e) { /* storage blocked: All */ }
@@ -103,7 +103,8 @@
       });
     })();
   </script>
-  {% set shared = sample.shared_with(me.name) %}
+  {# A team's student lists under My students, Teams, not again here. #}
+  {% set shared = sample.shared_with(me.name) | rejectattr("student", "in", sample.teams_of(me.name) | map(attribute="student") | list) | list %}
   {% if shared %}
   <section class="card card-pad gap-above" aria-labelledby="shared-h">
     <h2 id="shared-h">Shared with me <span class="count">· {{ shared | length }}</span></h2>

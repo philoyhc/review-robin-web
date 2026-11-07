@@ -42,7 +42,7 @@
           <p class="flush"><span class="chip chip-info">Team</span> {{ team.members | join(", ") }}</p>
           <p class="subtle small">Formed {{ sample.short_date(team.formed) }} by {{ team.formed_by }}.</p>
         {% else %}
-          <p class="sub">Start a team for {{ chosen.name }}: the staff you choose are each asked to accept. You are not in it unless you join as frontline staff.</p>
+          <p class="sub">Start a team for {{ chosen.name }}: the staff you choose are each asked to accept, and it forms once two have; anyone who declines stays out. You are not in it unless you join as frontline staff.</p>
           <fieldset class="modes"><legend>Staff</legend>{% for name in sample.FRONTLINE_COLLEAGUES %}<label class="check"><input type="checkbox" disabled> {{ name }}</label>{% endfor %}</fieldset>
           <button type="button" class="btn btn-secondary" disabled>Form a team</button>
         {% endif %}

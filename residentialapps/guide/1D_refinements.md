@@ -141,5 +141,5 @@ and four types.
   Every plan and Flagged for formal assignment; the rest read **Show name**
   (no label beside it, author, 2026-11-07), for every identifiable view. Safety flags keep
   their names. One read: Every plan still named three withheld students,
-  the label was wrong for follow-ups, and the open disclosure hid its own
-  focus; all fixed.
+  a label wrong for follow-ups (since removed), and the open disclosure
+  hid its own focus; all fixed.

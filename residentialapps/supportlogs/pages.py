@@ -126,10 +126,13 @@ def areas_for(v: sample.Viewer) -> tuple[dict[str, str], ...]:
 
 
 def reaches_student(me: sample.Viewer, sid: str) -> bool:
-    """A frontline viewer reaches their own working set (§4.3) and what
-    colleagues have shared with them (§11.1)."""
-    return any(s.id == sid for s, _, _ in sample.working_set(me.name)) or any(
-        g.student == sid for g in sample.shared_with(me.name)
+    """A frontline viewer reaches their own working set (§4.3), what
+    colleagues have shared with them (§11.1) and their teams' students
+    (sharing screens rung 5)."""
+    return (
+        any(s.id == sid for s, _, _ in sample.working_set(me.name))
+        or any(g.student == sid for g in sample.shared_with(me.name))
+        or any(t.student == sid for t in sample.teams_of(me.name))
     )
 
 

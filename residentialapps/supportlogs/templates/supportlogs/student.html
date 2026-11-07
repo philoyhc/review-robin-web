@@ -78,6 +78,9 @@
           <p class="flush"><span class="chip chip-info">Team</span> {{ team.members | join(", ") }}</p>
           <p class="subtle small">Formed {{ sample.short_date(team.formed) }} by {{ team.formed_by }}. Records any of you make while in the team are the team's.</p>
           <button type="button" class="btn btn-secondary gap-above-sm" disabled>Leave the team</button>
+        {% elif team %}
+          <p class="flush"><span class="chip chip-info">Team</span> {{ team.members | join(", ") }}</p>
+          <p class="subtle small">You are not in it.</p>
         {% else %}
           <p class="sub">Share responsibility for {{ chosen.name }} with colleagues: each accepts, and decides then whether the team sees their earlier records.</p>
           <button type="button" class="btn btn-secondary" disabled>Form a team</button>

@@ -75,7 +75,8 @@ def test_students_across_staff_shows_staff_never_content(client: TestClient) -> 
 
 def test_overview_withholds_a_name_off_a_plan_until_shown(client: TestClient) -> None:
     """Author, 2026-11-07: Overview names by default only students on a
-    formal plan or with an active flag; any other is one click away, in
+    formal plan, with an active flag or with a team; any other is one
+    click away, in
     every card but the flags."""
     hidden = {s.name for s in sample.STUDENTS if not sample.named_on_overview(s.id)}
     shown = {r["student"].name for r in sample.students_across_staff()} & hidden

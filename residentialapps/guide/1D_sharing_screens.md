@@ -128,4 +128,9 @@ browser check passes on each rung.
 - **Rung 5:** as planned; the sample's team is Priya Raman and Daniel
   Koh's for Hana Rahim, so Overview now names her. Team students come
   after My students' own rows, and a team member's records stay theirs
-  on sample data (the team's records wait on wiring).
+  on sample data (the team's records wait on wiring). A team reaches its
+  student's page, and a team's student lists under Teams rather than
+  again under Shared with me. Bundled at the author's ask: a withheld
+  name reads Show name alone. One read: a team student reachable only
+  by a share, Add under Teams, stale copy and spec, a non-member offered
+  Form a team, and thin tests, all fixed.

@@ -347,7 +347,7 @@ def test_favorites_drive_log_and_are_marked_on_students(client: TestClient) -> N
     pressed = re.findall(
         r'data-favorite aria-pressed="true" aria-label="Favorite ([^"]+)"', students
     )
-    assert pressed == ["Clara Tan", "Hana Rahim", "Hana Rahim"]  # her team's row; Shared with me
+    assert pressed == ["Clara Tan", "Hana Rahim"]  # Hana: his team's row, not again as shared
     for staff, picks in sample.FAVORITES.items():  # a favorite is a student you reach
         me = sample.viewer(staff)
         assert all(reaches_student(me, sid) for sid in picks), staff
@@ -442,3 +442,23 @@ def test_a_team_shows_on_students_and_on_both_pages(client: TestClient) -> None:
     across = section(client.get("/overview/?as=Sam%20Lee").text, "across-h")
     hana = across.split("Hana Rahim</a>")[1].split("</tr>")[0]
     assert '<span class="chip chip-info">Team</span>' in hana
+
+
+def test_a_team_reaches_its_student_without_a_share(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A team member reaches the team's student whether or not anyone has
+    shared with them; a non-member sees the team, not Form a team."""
+    monkeypatch.setattr(sample, "PEER_GRANTS", ())
+    assert client.get("/students/S-08").status_code == 200  # Daniel: his team only
+    team = section(client.get("/students/S-08").text, "team-h")
+    assert ">Leave the team</button>" in team
+    other = sample.Team("T-02", "S-03", ("Mei Ling Tan", "Grace Ho"), sample.TODAY, "Grace Ho")
+    monkeypatch.setattr(sample, "TEAMS", (*sample.TEAMS, other))
+    clara = section(client.get("/students/S-03").text, "team-h")  # Daniel's own student
+    assert "Mei Ling Tan, Grace Ho" in clara and "You are not in it." in clara
+    assert "Form a team" not in clara
+    across = section(client.get("/overview/?as=Sam%20Lee").text, "across-h")
+    for row in across.split("<tr>")[1:]:
+        named = "Hana Rahim</a>" in row or "Clara Tan</a>" in row
+        assert ('<span class="chip chip-info">Team</span>' in row) == named, row[:80]

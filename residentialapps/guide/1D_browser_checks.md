@@ -179,7 +179,9 @@ information you would want before seeing her again?*
 Aiden Chen to fortnightly."*
 
 - [ ] **Students**' My students has All, Plans, Following and Teams.
-  Teams shows Hana Rahim, his team with Priya Raman. Plans
+  Teams shows Hana Rahim, Daniel's team with Priya Raman, and hides Add
+  a student to follow up; Hana's page has a Team card with Leave the
+  team, and Overview gives her a Team chip. Plans
   shows Clara Tan and Dev Menon, Following Aiden Chen and Elena Park,
   each with its due chip; after a reload the choice is kept. Every row
   has **Log**; Clara's shows her last contact and her coping-plan line;
