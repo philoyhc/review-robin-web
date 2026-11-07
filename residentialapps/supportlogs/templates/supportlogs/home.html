@@ -22,7 +22,7 @@
         <h2 id="following-h">Following <span class="count">· {{ mine | length }}</span></h2>
         <p class="sub">Every active plan and follow-up, due or not.</p>
         {% if mine %}<ul class="items">{% for p in mine[:3] %}{{ plan_item(p) }}{% endfor %}</ul>{% else %}<p class="sub">No one yet.</p>{% endif %}
-        <a class="btn btn-secondary gap-above-sm" href="{{ url('/plans/') }}{{ as_query }}">All {{ mine | length }}</a>
+        <a class="btn btn-secondary gap-above-sm" href="{{ url('/students/') }}{{ as_query }}">All {{ mine | length }} on Students</a>
       </section>
       <section class="card card-pad" aria-labelledby="recent-h">
         {% set recent = sample.encounters_by(me.name) %}

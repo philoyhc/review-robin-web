@@ -26,13 +26,14 @@ SYS_ADMIN_AREA = "Sys admin"
 
 
 def _grant_tabs(v: sample.Viewer) -> list[tuple[str, str]]:
-    """Each grant's own tabs (author, 2026-10-29): the frontline's Log,
-    Students and Plans; Overview for senior staff and Other Staff view;
+    """Each grant's own tabs (author, 2026-10-29): the frontline's Log and
+    Students, Plans folded into Students' filter (author, 2026-11-07);
+    Overview for senior staff and Other Staff view;
     Consultation check. No Safety flags tab: flags list on Home and
     Overview."""
     tabs: list[tuple[str, str]] = []
     if sample.holds(v, sample.FRONTLINE):
-        tabs += [("Log", "/log"), ("Students", "/students/"), ("Plans", "/plans/")]
+        tabs += [("Log", "/log"), ("Students", "/students/")]
     if sample.holds(v, sample.SENIOR, *sample.VIEW):
         tabs.append(("Overview", "/overview/"))
     if sample.holds(v, sample.CONSULTATION):
@@ -222,7 +223,7 @@ def gated(
 
 
 def records_unlocked(request: Request) -> bool:
-    """Your records, at the end of Students and My plans, opens only once
+    """Your records, at the end of Students, opens only once
     its holder has confirmed (author, 2026-10-30): the unlock form sends
     `records=open` with the confirmation ticked. A sample: the state lives
     in the address, so leaving the page locks it again."""

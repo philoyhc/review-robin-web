@@ -58,7 +58,7 @@ def test_the_owner_of_a_follow_up_changes_its_cadence(client: TestClient) -> Non
     page = client.get("/plans/P-03").text
     assert "<h1>Follow-up: Aiden Chen</h1>" in page
     assert ">Save cadence</button>" in page and ">Stop following up</button>" in page
-    assert 'aria-current="true">Plans</a>' in page and "‹ My plans" in page
+    assert 'aria-current="true">Students</a>' in page and "‹ Students" in page
 
 
 def test_senior_staff_convert_a_follow_up(client: TestClient) -> None:
@@ -96,7 +96,7 @@ def test_who_reaches_a_plan(client: TestClient) -> None:
 def test_plan_chips_open_the_plan(client: TestClient) -> None:
     assert (
         'href="/plans/P-01" aria-label="Plan · Counselling: Clara Tan">Plan · Counselling</a>'
-        in client.get("/plans/").text
+        in client.get("/students/").text
     )
     aiden = client.get("/students/S-01").text
     assert 'href="/plans/P-03">Plan details</a>' in aiden and ">Stop following up</button>" in aiden

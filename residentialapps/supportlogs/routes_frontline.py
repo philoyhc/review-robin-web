@@ -1,7 +1,8 @@
 """Support Logs' frontline pages on sample data, segment 1D item 1 rung 2:
 Log encounter with its optional details and the confirmation after
-saving, Students and the student view, and My plans (UI spec screens
-2–3, 5–7; functional spec §4–§7, §9). The dashboard is Home
+saving, Students with its plans and follow-ups, and the student view (UI
+spec screens 2–3, 5–7; functional spec §4–§7, §9). My plans folded into
+Students' filter (author, 2026-11-07). The dashboard is Home
 (`routes_home.py`). Nothing is stored: Save shows the confirmation for
 the choices made, and the student view's actions wait on their rungs."""
 
@@ -97,32 +98,4 @@ def student_view(request: Request, sid: str) -> Response:
         raise HTTPException(status_code=404)
     return gated(
         request, "supportlogs/student.html", FRONTLINE, chosen=found, current_tab="/students/"
-    )
-
-
-SHOW = {"all": "All", "overdue": "Overdue", "week": "This week"}
-
-
-@router.get("/plans/", name="supportlogs_plans")
-def plans(request: Request) -> Response:
-    """My plans (UI spec screen 6): formal assignments, then informal
-    follow-ups, filtered All, Overdue or This week."""
-    show = request.query_params.get("show", "all")
-    show = show if show in SHOW else "all"
-    keeps: dict[str, set[str] | None] = {
-        "all": None,
-        "overdue": {"overdue"},
-        "week": {"overdue", "today", "week"},
-    }
-    keep = keeps[show]
-    me = _me(request)
-    mine = [p for p in sample.plans_of(me.name) if keep is None or sample.due(p)[0] in keep]
-    return gated(
-        request,
-        "supportlogs/plans.html",
-        FRONTLINE,
-        show=show,
-        shows=SHOW,
-        mine=mine,
-        unlocked=records_unlocked(request),
     )

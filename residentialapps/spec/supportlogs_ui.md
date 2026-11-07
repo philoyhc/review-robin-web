@@ -19,7 +19,7 @@ under `data-app="supportlogs"`.
 ## 1. Devices
 
 - **The frontline's pages are mobile-critical**: Home, Log encounter,
-  Safety concern, Students, a student, My plans, a plan and a safety flag
+  Safety concern, Students, a student, a plan and a safety flag
   are designed at 390 px (functional spec §14, §16).
 - **The page map has no device column for Support Logs**, so this
   section gives the classes.
@@ -32,6 +32,10 @@ under `data-app="supportlogs"`.
   encounter button: Log in the tabs reaches it. Durations are 15, 30 and
   60+ min; the types Check-in, Welfare follow-up, Practical support and
   Other (`residentialapps/guide/1D_refinements.md`).
+- **Plans and follow-ups are a filter on Students** (author, 2026-11-07):
+  My students shows All, Plans or Following, the last choice kept in the
+  browser; each plan's chip opens it, beside its due state. There is no
+  Plans tab; Home's Due and overdue and Following stay.
 - **The routine path is one screen**: student, duration, type, Save,
   about 10–20 seconds (§5.1). The optional details fold on the same page;
   there is no second screen (author, 2026-10-29).
@@ -48,7 +52,7 @@ form's end, and the main action is a full-width Primary on the page
   beyond administration, and *Sys admin*, for sys admins and the
   super-admin. Nothing neutral sits between them (ruling 3).
 - **Tabs follow the grants**, never the appointment:
-  - Log, Students and Plans for the frontline;
+  - Log and Students for the frontline;
   - Overview for senior staff and Other Staff view;
   - Consultation check for its grant;
   - Access, Configuration and Audit log in Sys admin.
@@ -123,16 +127,16 @@ form's end, and the main action is a full-width Primary on the page
   that a staff member checked a student is itself sensitive. Wired, the
   emails travel in a POST body and the result renders from that request;
   a redirect after it may carry only a short-lived server-side token,
-  never the emails. Your records' Unlock and Download
-  CSV, and its template link, are live too, as are Records across staff's
+  never the emails. Your records' Unlock and its two
+  downloads, and its template links, are live too, as are Records across staff's
   Unlock, Download CSV, template links and purge filter: the downloads
   are the sample's own records.
 
-- **Your records** (author, 2026-10-30) ends Students and My plans: a
+- **Your records** (author, 2026-10-30) ends Students: a
   section locked until its holder ticks a confirmation and unlocks it.
   Unlocked, it downloads the holder's own encounters or plans as CSV, for a
   term of Rosters and setup's or all terms and one of their students or
-  all, and offers the template. The upload (follow-ups only, for plans)
+  all (one form, a button for each), and offers a template for each. The upload (follow-ups only, for plans)
   and Purge all, of every record or one student's, are disabled until
   wired. Leaving the page locks it again. A purge hides and keeps.
   Purge all is Destructive, outline red (author, 2026-10-30).

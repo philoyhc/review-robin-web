@@ -2,7 +2,8 @@
 for the three required choices, Clear unsets an optional one, "Who started
 it?" hides and drops its choice when the type already says, and the note
 counts its characters; and a staff or student filter's box of people turns
-a match into a pill and blocks an unmatched name (rung 8). Served as the
+a match into a pill and blocks an unmatched name (rung 8); and Students'
+filter of plans and follow-ups, kept across a reload (rung 13). Served as the
 sort tests are; without a Chromium
 build the test skips, saying why, and `RRW_REQUIRE_BROWSER=1` fails it."""
 
@@ -242,3 +243,25 @@ def test_a_student_on_follow_ups_shows_them_in_the_browser(page: Page) -> None:
     assert page.locator("#on-plan").text_content() == "On your follow-ups: weekly."
     assert page.locator("#add-follow").is_hidden()
     assert page.locator("#cadence").input_value() == "Weekly"
+
+
+def test_students_filter_shows_plans_or_follow_ups_and_is_kept(page: Page) -> None:
+    """Students' filter (1D rung 13, author, 2026-11-07): Plans and
+    Following narrow My students and its count; the choice survives a
+    reload, kept in the browser."""
+    page.goto(f"{ORIGIN}/students/")
+    mine = page.locator("[data-students-list] > li:visible a.strong")
+    count = page.locator("[data-students-count]")
+    assert mine.count() == 6 and count.inner_text() == "6"
+    page.get_by_role("button", name="Plans", exact=True).click()
+    assert mine.all_inner_texts() == ["Clara Tan", "Dev Menon"] and count.inner_text() == "2"
+    page.get_by_role("button", name="Following", exact=True).click()
+    assert mine.all_inner_texts() == ["Aiden Chen", "Elena Park"]
+    page.reload()
+    assert mine.all_inner_texts() == ["Aiden Chen", "Elena Park"]
+    assert (
+        page.get_by_role("button", name="Following", exact=True).get_attribute("aria-pressed")
+        == "true"
+    )
+    page.get_by_role("button", name="All", exact=True).click()
+    assert mine.count() == 6

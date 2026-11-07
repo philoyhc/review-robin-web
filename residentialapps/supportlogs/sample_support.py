@@ -1279,7 +1279,7 @@ def senior_reads(days: int = PERIOD_DAYS) -> list[SeniorReads]:
 
 
 # --- Your records (rung 7; author, 2026-10-30): a section at the end of
-# Students and My plans, locked until its holder confirms, to download
+# Students, locked until its holder confirms, to download
 # their own encounters or plans as CSV by term, upload a CSV to populate
 # them, or purge them all. A purge hides records from every page and keeps
 # them; senior identifiable access alone deletes them, a whole purge or
@@ -1472,14 +1472,14 @@ def purges(staff: str | None = None, sid: str | None = None) -> list[Purge]:
 
 
 def record_students(staff: str, page: str = "students") -> list[Student]:
-    """The students a staff member's own records of a page's kind are about
-    (encounters on Students, plans on My plans), for Your records' student
-    filter, by name."""
-    ids = (
-        {e.student for e in encounters_by(staff)}
-        if page == "students"
-        else {p.student for p in PLANS if p.staff == staff}
-    )
+    """The students a staff member's own records of a kind are about
+    (encounters, "students"; plans, "plans"; either, "all": Your records'
+    student filter on Students), by name."""
+    ids: set[str] = set()
+    if page in ("students", "all"):
+        ids |= {e.student for e in encounters_by(staff)}
+    if page in ("plans", "all"):
+        ids |= {p.student for p in PLANS if p.staff == staff}
     return sorted((s for s in STUDENTS if s.id in ids), key=lambda s: s.name)
 
 

@@ -1,6 +1,6 @@
 {% extends "residential/base.html" %}
 {% from "residential/_sample.html" import sample_title, viewer_card with context %}
-{% from "supportlogs/_frontline.html" import recorded with context %}
+{% from "supportlogs/_frontline.html" import due_chip, kind_chips, recorded with context %}
 {% from "supportlogs/_records.html" import records_card with context %}
 {% block title %}Students{% endblock %}
 {# A favorite toggle (author, 2026-11-06): Log's quick picks are the
@@ -19,18 +19,66 @@
       <span id="find-what" class="subtle small">Your own students first, then the directory, searched as you; by email when the directory cannot be read (§4.2). Once wired.</span></div>
   </section>
   {% set mine = sample.working_set(me.name) %}
+  {# My plans folded in (author, 2026-11-07): a filter, All, Plans or
+     Following, the viewer's last choice kept in this browser. Each plan's
+     chip opens the plan, with its due state. Without script the filter
+     stays hidden and every row shows. #}
   <section class="card card-pad" aria-labelledby="mine-h">
-    <h2 id="mine-h">My students <span class="count">· {{ mine | length }}</span></h2>
+    <h2 id="mine-h">My students <span class="count">· <span data-students-count>{{ mine | length }}</span></span></h2>
     <p class="sub">Your plans and follow-ups, then everyone you have logged an encounter with, the most recently seen first.</p>
-    <ul class="items">
-      {% for s, reasons, seen in mine %}
-        <li>
-          <div class="item-head"><a class="strong" href="{{ url('/students/' ~ s.id) }}{{ as_query }}">{{ s.name }}</a><span class="chips">{% for r in reasons %}<span class="chip {{ 'chip-accent' if r.startswith('Plan') else 'chip-mute' }}">{{ r }}</span>{% endfor %}{{ favorite(s) }}</span></div>
+    <div data-students-filter hidden><div class="col-chips" role="group" aria-label="Show">
+      {% for key, label in (("all", "All"), ("plans", "Plans"), ("following", "Following")) %}<button type="button" class="col-chip" data-show="{{ key }}" aria-pressed="{{ 'true' if key == 'all' else 'false' }}">{{ label }}</button>{% endfor %}
+    </div></div>
+    <ul class="items" data-students-list>
+      {% for s, _reasons, seen in mine %}
+        {% set plans = sample.plans_of(me.name, s.id) %}
+        <li data-kinds="{% if plans | selectattr('formal') | first %}plans {% endif %}{% if plans | rejectattr('formal') | first %}following{% endif %}">
+          <div class="item-head"><a class="strong" href="{{ url('/students/' ~ s.id) }}{{ as_query }}">{{ s.name }}</a><span class="chips">{% if plans %}{{ due_chip(plans[0]) }}{% endif %}{{ favorite(s) }}</span></div>
+          {% if plans %}<div class="subtle">{% for p in plans %}{{ kind_chips(p) }} {{ p.cadence }}{% if not loop.last %} · {% endif %}{% endfor %}</div>{% endif %}
           <div class="subtle">{{ s.email }}{% if seen %} · seen {{ sample.short_date(seen) }}{% endif %}</div>
         </li>
       {% endfor %}
     </ul>
+    <p class="sub" data-students-none hidden>None.</p>
   </section>
+  <script>
+    // Students' filter (author, 2026-11-07): shows all, plans or
+    // follow-ups; the choice is kept in this browser only.
+    (function () {
+      var group = document.querySelector("[data-students-filter]");
+      if (!group) return;
+      var KEY = "supportlogs-students-show";
+      var rows = document.querySelectorAll("[data-students-list] > li");
+      var count = document.querySelector("[data-students-count]");
+      var none = document.querySelector("[data-students-none]");
+      function apply(show) {
+        var shown = 0;
+        Array.prototype.forEach.call(rows, function (li) {
+          var kinds = " " + li.getAttribute("data-kinds") + " ";
+          var on = show === "all" || kinds.indexOf(" " + show + " ") !== -1;
+          li.hidden = !on;
+          if (on) shown += 1;
+        });
+        Array.prototype.forEach.call(group.querySelectorAll("[data-show]"), function (b) {
+          b.setAttribute("aria-pressed", b.getAttribute("data-show") === show ? "true" : "false");
+        });
+        count.textContent = shown;
+        none.hidden = shown !== 0;
+      }
+      var saved = "all";
+      try { saved = localStorage.getItem(KEY) || "all"; } catch (e) { /* storage blocked: All */ }
+      if (!group.querySelector('[data-show="' + saved + '"]')) saved = "all";
+      group.hidden = false;
+      apply(saved);
+      group.addEventListener("click", function (e) {
+        var b = e.target.closest ? e.target.closest("[data-show]") : null;
+        if (!b) return;
+        var show = b.getAttribute("data-show");
+        apply(show);
+        try { localStorage.setItem(KEY, show); } catch (err) { /* ignore */ }
+      });
+    })();
+  </script>
   {% set shared = sample.shared_with(me.name) %}
   {% if shared %}
   <section class="card card-pad gap-above" aria-labelledby="shared-h">
@@ -39,6 +87,6 @@
     <ul class="items">{% for g in shared %}{% set s = sample.student(g.student) %}<li><div class="item-head"><a class="strong" href="{{ url('/students/' ~ s.id) }}{{ as_query }}">{{ s.name }}</a><span class="chips"><span class="chip chip-mute">Shared by {{ g.grantor }}</span>{{ favorite(s) }}</span></div><div class="subtle">{{ s.email }} · since {{ sample.short_date(g.granted_on) }}</div></li>{% endfor %}</ul>
   </section>
   {% endif %}
-  {{ records_card("students", "encounters", unlocked) }}
+  {{ records_card(unlocked) }}
 {% endblock %}
 {% block viewer %}{{ viewer_card(viewer_choices, me.name) }}{% endblock %}

@@ -45,7 +45,6 @@ def tabs(page: str) -> list[str]:
 PAGES = (
     ("/log", "Log encounter", (sample.FRONTLINE,)),
     ("/students/", "Students", (sample.FRONTLINE,)),
-    ("/plans/", "My plans", (sample.FRONTLINE,)),
     ("/overview/", "Overview", (sample.SENIOR, *sample.VIEW)),
     ("/consultation/", "Consultation check", (sample.CONSULTATION,)),
     ("/sys-admin/", "Access", sample.ADMINISTRATION),
@@ -88,9 +87,10 @@ def test_no_grant_means_no_support_logs(client: TestClient) -> None:
 
 
 def test_each_grant_gives_its_tabs(client: TestClient) -> None:
-    """Author, 2026-10-29: the frontline's Home, Log, Students and Plans;
+    """Author, 2026-10-29: the frontline's Home, Log and Students (Plans
+    folded into Students, author, 2026-11-07);
     senior staff and Other Staff view an Overview tab; no Safety flags tab."""
-    assert tabs(client.get("/").text) == ["Home", "Log", "Students", "Plans"]
+    assert tabs(client.get("/").text) == ["Home", "Log", "Students"]
     assert tabs(client.get(at("/overview/", "Sam Lee")).text) == [
         "Overview"
     ]  # no Home: it would only come back here
@@ -199,7 +199,7 @@ def test_every_link_keeps_the_sample_viewer(client: TestClient) -> None:
         ("Priya Raman", "/"),
         ("Priya Raman", "/log"),
         ("Priya Raman", "/students/S-08"),
-        ("Priya Raman", "/plans/?show=week"),
+        ("Priya Raman", "/plans/P-05"),
         ("Rachel Yeo", "/sys-admin/configuration"),
     ]
     for name, path in pages:

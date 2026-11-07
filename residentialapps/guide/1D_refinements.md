@@ -1,7 +1,7 @@
 # Segment 1D, item 1: refinements from the browser check
 
 **Opened 2026-11-06** (author), from the browser check of Support Logs'
-screens signed in as Daniel Koh (RF). Rungs 11–12 of item 1's iteration
+screens signed in as Daniel Koh (RF). Rungs 11–13 of item 1's iteration
 ("7+", `residentialapps/guide/segment_1D_support_logs.md`). Placeholder
 screens and sample data only (`residentialapps/supportlogs/`): nothing is
 wired. Read against RRW `3018287a6`.
@@ -65,6 +65,23 @@ included. Only the sample viewers change.
   with them, so the question shows for every type. Sample encounters of
   the two types become Check-in.
 - Configuration's Durations and Types cards follow, reading the same lists.
+
+## Rung 13 — Plans fold into Students
+
+Author, 2026-11-07: Students lists every student the viewer has logged
+with, so a Plans tab would repeat its first rows. The Plans tab and My
+plans (`/plans/`) go; the frontline's tabs are Home, Log and Students.
+
+- **A filter on My students**: All, Plans (formal assignments) or
+  Following (the viewer's own follow-ups), the last choice kept in the
+  browser (author, 2026-11-07). Each plan row shows its plan chip,
+  opening the plan, and its due state.
+- **A plan's page** (`/plans/{id}`) stays, reached from Students, a
+  student's page and Home; its owner's back link and tab are Students.
+- **Your records**, at the end of Students, downloads plans as well as
+  encounters, with a template for each.
+- Home's Due and overdue and Following stay; Following's link reads "All
+  N on Students".
 
 ## Checks
 
