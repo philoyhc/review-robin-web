@@ -51,9 +51,14 @@ Raman (RSLM) is frontline and also receives safety flags.
 
 *Task: "You have a few minutes before dinner. What needs your attention?"*
 
-- [ ] Home shows, in order: his safety flags; a full-width **Log
-  encounter**; Due and overdue, each with **Log**; Following; Recent
-  encounters; My last 14 days.
+- [ ] Home shows, in order: his safety flags; **Waiting for you**; Due
+  and overdue, each with **Log**; Following; Recent encounters; My last
+  14 days.
+- [ ] **Waiting for you** lists four items, the latest first: Sam Lee's
+  request to share your records about Clara Tan, Priya Raman's share of 1
+  record about a student, Sam Lee's team invitation and Mei Ling Tan's
+  handover of 3 records, none naming its student but the request; each
+  has Accept and Decline, disabled.
 - [ ] Clara Tan's row reads "Overdue 2 days". *Ruling R1: sentence-case
   status labels.*
 - [ ] Tabs read Home, Log, Students; there is no bottom bar, and the

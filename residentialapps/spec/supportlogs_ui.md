@@ -32,6 +32,15 @@ under `data-app="supportlogs"`.
   encounter button: Log in the tabs reaches it. Durations are 15, 30 and
   60+ min; the types Check-in, Welfare follow-up, Practical support and
   Other (`residentialapps/guide/1D_refinements.md`).
+- **Waiting for you**, on the frontline's Home (author, 2026-11-07,
+  `residentialapps/guide/1D_sharing_screens.md` rung 2): every
+  acknowledgement the sharing model asks of the staff member (a share
+  offered, a team invitation, a handover, a senior's share request),
+  each with Accept (Primary) and Decline (Secondary), inert until wired.
+  A share, an invitation or a handover names no student until accepted
+  (the invitation's and the handover's the author's call to confirm,
+  `residentialapps/guide/1D_sharing_screens.md` Status); only in an
+  emergency can a sys admin accept for the staff member.
 - **Plans and follow-ups are a filter on Students** (author, 2026-11-07):
   My students shows All, Plans or Following, the last choice kept in the
   browser; each plan's chip opens it, beside its due state. Each row has

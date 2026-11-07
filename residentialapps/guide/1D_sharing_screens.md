@@ -103,3 +103,12 @@ browser check passes on each rung.
   withheld order and dead on-behalf code, all fixed. Left as is: Records
   across staff's purge filter counts encounters per student (senior
   deletion needs it), and the pairs download keeps its term filter.
+- **Rung 1a:** as planned.
+- **Rung 2:** as planned; the card shows only when something waits. A
+  team invitation and a handover, like a share, name no student until
+  accepted (the model names only the share's): the author's call to
+  confirm, and a team member's choice about their earlier records then
+  comes after accepting. Open for wiring: the owner's own row for a
+  handover a senior started. One read: copy that overstated acceptance
+  against the emergency path, the handover's who-accepts, a handover with
+  no records behind it, and thin tests, all fixed.

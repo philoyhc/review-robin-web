@@ -356,3 +356,36 @@ def test_favorites_drive_log_and_are_marked_on_students(client: TestClient) -> N
     # A shared favorite saved for is one the viewer can open (cold read).
     saved = client.get("/log/saved?student=S-08&duration=15%20min&type=Check-in").text
     assert 'href="/students/S-08">Open Hana Rahim</a>' in saved
+
+
+def test_waiting_for_you_holds_every_acknowledgement(client: TestClient) -> None:
+    """Sharing screens rung 2 (author, 2026-11-07): a share offered, a team
+    invitation, a handover and a senior's share request, each with Accept
+    and Decline, inert and named for its row; none names its student until
+    accepted, but a request about the staff member's own records."""
+    card = section(client.get("/").text, "waiting-h")
+    assert card.count("<li>") == len(sample.pending_for("Daniel Koh")) == 4
+    for name in ("Ivan Seet", "Jia Wen Lee", "Gwyneth Low"):
+        assert name not in card, name  # offered, invited, handed over: unnamed
+    for line in (
+        "Sam Lee asks you to share your records about Clara Tan",
+        "only if you accept, or if a sys admin accepts for you in an emergency",
+        "Priya Raman has shared 1 record about a student with you",
+        "Sam Lee invites you to a team for a student",
+        "Mei Ling Tan is handing 3 records about a student over to you",
+        "Once you and a senior accept, the records become yours.",
+        "only in an emergency can a sys admin accept for you",
+    ):
+        assert line in card.replace("&#39;", "'"), line
+    for verb, role in (("Accept", "primary"), ("Decline", "secondary")):
+        labels = re.findall(rf'class="btn btn-{role}" disabled aria-label="{verb} ([^"]+)"', card)
+        assert sorted(labels) == sorted(
+            [
+                "Priya Raman&#39;s share",
+                "Sam Lee&#39;s team invitation",
+                "Mei Ling Tan&#39;s handover",
+                "Sam Lee&#39;s request",
+            ]
+        ), verb  # each names its row
+    assert 'href="/students/' not in card
+    assert 'id="waiting-h"' not in client.get("/" + PRIYA).text  # nothing waits on her
