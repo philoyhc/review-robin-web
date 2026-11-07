@@ -21,9 +21,12 @@ Only they can see its content.
 A wall stands between senior identifiable access and the records'
 content:
 
-- **By default, metadata only**: who logged an encounter and when, its
-  duration and type, whether a follow-up is needed, and plans' and
-  flags' facts. Never a record's content: its note and concern areas.
+- **Metadata and content** (author, 2026-11-07): a record's metadata is
+  who logged it, when, its duration and type, its concern areas and
+  whether a follow-up is needed; its content is its note.
+- **By default, a senior sees only which students have records with
+  which staff**: not when, how long, the type or the concern areas, and
+  never the note.
 - **Names** follow confidentiality rule 3: a student on a formal plan,
   with a safety flag or with a team is named; any other is named only
   after a deliberate **Show name**.
@@ -31,7 +34,7 @@ content:
   **request a share** from the staff member who owns the records; the
   owner decides, and it proceeds as a share of past records (1 below).
 - **In an emergency**, when the owner cannot be reached or a student is
-  at risk, a sys admin may acknowledge the request on the owner's
+  at risk (both, author, 2026-11-07), a sys admin may acknowledge the request on the owner's
   behalf, recorded as such. As with a handover, giving it shows the sys
   admin no content.
 
@@ -95,14 +98,25 @@ a withdrawal, and a team's formation, change or dissolution.
 
 ## What follows for the other rules
 
-- **Rule 3 (senior access):** metadata by default, names as above,
-  content only through a share.
+- **Rule 3 (senior access):** which students have records with which
+  staff by default, names as above, content only through a share.
 
 - **Rule 3 (Overview naming):** a student with a team counts, as a
   formal plan or a safety flag does, and is named by default.
 - **Safety flags** stay outside this model: flag recipients see the flags
   whatever the sharing state.
 - **Other Staff view** (rule 4) is unchanged.
+
+## Still open
+
+- **How a senior sees the rest of the metadata** (when, duration, type,
+  concern areas, follow-up): a deliberate, recorded step on a student's
+  history, as Show name is for names, or a share.
+- **Overview's figures:** Team workload, Hotspots and Coverage count
+  encounters, minutes and due dates per staff member and per student.
+  Whether those counts stay as they are, or show only for students named
+  by rule 3.
+- **Records across staff:** which metadata columns its download keeps.
 
 ## Effect on today's screens
 
@@ -112,10 +126,12 @@ a withdrawal, and a team's formation, change or dissolution.
 - A student's history gains **Form a team** (3) and **Hand over** (4),
   in place of the unmerged Allocate to a colleague.
 - Log gains the share-at-logging detail (2).
-- A student's history shows metadata only: its notes and concern areas
-  go, and it gains **Request a share** from each staff member involved.
-- Records across staff, Overview's download for senior staff, carries
-  metadata only (no Note, no Concern areas).
+- A student's history shows, by default, only which staff have records
+  with the student: its encounters' dates, durations, types, concern
+  areas and notes go, and it gains **Request a share** from each staff
+  member involved.
+- Records across staff, Overview's download for senior staff, carries no
+  Note.
 - Students' filter gains **Teams** (3).
 
 These land as scaffolds first, one slice each, once this model is

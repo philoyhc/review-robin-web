@@ -13,8 +13,9 @@ records that step.
 ## Your own records
 
 **Every record you log is yours.** Other RFs and RSLMs cannot see it, and
-nor can senior staff: they see that you met a student, when and for how
-long, but not what you wrote. Only people you share it with can read it.
+nor can senior staff: by default they see only that you have records
+about a student, not when, what kind or what you wrote. Only people you
+share it with can read it.
 
 ## Seeing someone else's records
 
@@ -83,10 +84,9 @@ over.
 Senior staff, such as the Master, oversee support across the team:
 workload, who may need more help, and where support should move.
 
-- **By default they see the shape of support, not its content:** who
-  met which students, when, for how long and of what type, whether a
-  follow-up is needed, and the plans and flags. They do not see what you
-  wrote: your notes and the concerns you recorded.
+- **By default they see only who has records with which students:** not
+  when you met, for how long, the type or the concern areas, and never
+  your notes.
 - **They see a student's name only when the student needs attention:**
   the student is on a formal plan, has a safety flag, or has a team.
   Other students are not named until a senior chooses to look, with
@@ -142,8 +142,8 @@ working together going forward, form a team instead.
 has not accepted yet, they never saw the student's name.
 
 **Can the Master read everything I write?**
-No, not by default. The Master sees that support happened, when and how
-much, so they can oversee the team, but reads your notes only if you
+No, not by default. The Master sees which of you have records with which
+students, so they can oversee the team, but reads your notes only if you
 share them, or, in an emergency, if a system administrator agrees on your
 behalf. Either way it is recorded.
 
