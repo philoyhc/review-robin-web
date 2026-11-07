@@ -281,9 +281,16 @@ def test_students_rows_carry_my_plans_affordances(client: TestClient) -> None:
     clara = mine.split("Clara Tan</a>")[1].split("</li>")[0]
     assert "Weekly check-in; a reminder of the coping plan." in clara
     assert "· last contact 20 Oct" in clara
+    dev = mine.split("Dev Menon</a>")[1].split("</li>")[0]
+    assert "Fortnightly check-in on settling in." not in dev  # not a safety plan
+    aiden = mine.split("Aiden Chen</a>")[1].split("</li>")[0]
+    assert "· last contact 22 Oct" in aiden  # a follow-up's row too
     bao = mine.split("Bao Nguyen</a>")[1].split("</li>")[0]
     assert "· seen 24 Oct" in bao and "last contact" not in bao
-    assert ">Add a student to follow up</button>" in mine
+    assert (
+        '<button type="button" class="btn btn-secondary gap-above-sm" disabled>'
+        "Add a student to follow up</button>"
+    ) in mine
 
 
 def test_each_plan_on_a_row_carries_its_own_due_state(
