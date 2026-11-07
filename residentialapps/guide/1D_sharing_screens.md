@@ -134,6 +134,11 @@ browser check passes on each rung.
   name reads Show name alone. One read: a team student reachable only
   by a share, Add under Teams, stale copy and spec, a non-member offered
   Form a team, and thin tests, all fixed.
-- **Rung 6:** as planned, as cards on a student's page and a senior's
-  view of a student rather than pages; the sample adds a senior's
-  emergency request waiting on Arjun Nair for Sys admin's list.
+- **Rung 6:** as cards on a student's page and a senior's view of a
+  student rather than pages. A senior's handover moves all the owner's
+  records, since a senior sees none to choose among. The sample's
+  handover becomes Sam Lee's, of Mei Ling Tan's records, waiting on her;
+  it adds a senior's emergency request waiting on Arjun Nair. One read:
+  a handover waiting on the one who started it, no record choice, stale
+  spec, a missing browser step, plan-only owners left out and thin
+  tests, all fixed.

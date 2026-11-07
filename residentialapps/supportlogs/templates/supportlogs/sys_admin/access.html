@@ -19,7 +19,7 @@
     <section class="card card-pad gap-below" aria-labelledby="behalf-h">
       <h2 id="behalf-h">Acknowledge on behalf <span class="count">· {{ owed | length }}</span></h2>
       <p class="sub">A handover or a senior's request to share, waiting on someone who cannot be reached. Acknowledging for them is recorded as done by you on their behalf, and shows you none of the records.</p>
-      <ul class="items">{% for p in owed %}<li><div class="item-head"><span class="strong">{{ "Handover from " ~ p.sender ~ " to " ~ p.to if p.kind == sample.HANDOVER else p.sender ~ "'s request to " ~ p.to ~ " to share" }}</span><span class="nowrap subtle">{{ sample.short_date(p.on) }}</span></div><div class="subtle">Waiting on {{ p.unreachable }}, who cannot be reached.</div><button type="button" class="btn btn-secondary gap-above-sm" disabled aria-label="Acknowledge for {{ p.unreachable }}">Acknowledge for {{ p.unreachable }}</button></li>{% endfor %}</ul>
+      <ul class="items">{% for p in owed %}<li><div class="item-head"><span class="strong">{{ "Handover of " ~ (p.owner or p.sender) ~ "'s records to " ~ p.to ~ ", started by " ~ p.sender if p.kind == sample.HANDOVER else p.sender ~ "'s request to " ~ p.to ~ " to share" }}</span><span class="nowrap subtle">{{ sample.short_date(p.on) }}</span></div><div class="subtle">Waiting on {{ p.unreachable }}, who cannot be reached.</div><button type="button" class="btn btn-secondary gap-above-sm" disabled aria-label="Acknowledge for {{ p.unreachable }}">Acknowledge for {{ p.unreachable }}</button></li>{% endfor %}</ul>
     </section>
   {% endif %}
   {% if sample.LAPSED %}

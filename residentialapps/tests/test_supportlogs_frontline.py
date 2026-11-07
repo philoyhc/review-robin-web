@@ -375,8 +375,9 @@ def test_waiting_for_you_holds_every_acknowledgement(client: TestClient) -> None
         "only if you accept, or if a sys admin accepts for you in an emergency",
         "Priya Raman has shared 1 record about a student with you",
         "Sam Lee invites you to a team for a student",
-        "Mei Ling Tan is handing 3 records about a student over to you",
-        "Once you and a senior accept, the records become yours.",
+        "Sam Lee is handing Mei Ling Tan's 3 records about a student over to you",
+        "Once you and Mei Ling Tan acknowledge, the records become yours; a sys admin"
+        " may acknowledge for Mei Ling Tan if they cannot be reached.",
         "only in an emergency can a sys admin accept for you",
     ):
         assert line in card.replace("&#39;", "'"), line
@@ -386,7 +387,7 @@ def test_waiting_for_you_holds_every_acknowledgement(client: TestClient) -> None
             [
                 "Priya Raman&#39;s share",
                 "Sam Lee&#39;s team invitation",
-                "Mei Ling Tan&#39;s handover",
+                "Sam Lee&#39;s handover",
                 "Sam Lee&#39;s request",
             ]
         ), verb  # each names its row
