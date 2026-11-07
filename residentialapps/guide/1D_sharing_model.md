@@ -14,8 +14,26 @@ staff.
 ## The base rule
 
 An encounter record belongs to the frontline staff member who logged it.
-Only they can see it, plus senior identifiable access, which still names
-the student only under confidentiality rule 3.
+Only they can see its content.
+
+## What senior staff see (author, 2026-11-07)
+
+A wall stands between senior identifiable access and the records'
+content:
+
+- **By default, metadata only**: who logged an encounter and when, its
+  duration and type, whether a follow-up is needed, and plans' and
+  flags' facts. Never a record's content: its note and concern areas.
+- **Names** follow confidentiality rule 3: a student on a formal plan,
+  with a safety flag or with a team is named; any other is named only
+  after a deliberate **Show name**.
+- **Content takes a share.** The normal path is for the senior to
+  **request a share** from the staff member who owns the records; the
+  owner decides, and it proceeds as a share of past records (1 below).
+- **In an emergency**, when the owner cannot be reached or a student is
+  at risk, a sys admin may acknowledge the request on the owner's
+  behalf, recorded as such. As with a handover, giving it shows the sys
+  admin no content.
 
 ## Four ways to see someone else's records
 
@@ -77,6 +95,9 @@ a withdrawal, and a team's formation, change or dissolution.
 
 ## What follows for the other rules
 
+- **Rule 3 (senior access):** metadata by default, names as above,
+  content only through a share.
+
 - **Rule 3 (Overview naming):** a student with a team counts, as a
   formal plan or a safety flag does, and is named by default.
 - **Safety flags** stay outside this model: flag recipients see the flags
@@ -91,6 +112,10 @@ a withdrawal, and a team's formation, change or dissolution.
 - A student's history gains **Form a team** (3) and **Hand over** (4),
   in place of the unmerged Allocate to a colleague.
 - Log gains the share-at-logging detail (2).
+- A student's history shows metadata only: its notes and concern areas
+  go, and it gains **Request a share** from each staff member involved.
+- Records across staff, Overview's download for senior staff, carries
+  metadata only (no Note, no Concern areas).
 - Students' filter gains **Teams** (3).
 
 These land as scaffolds first, one slice each, once this model is

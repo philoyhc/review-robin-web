@@ -12,9 +12,9 @@ records that step.
 
 ## Your own records
 
-**Every record you log is yours.** Other RFs and RSLMs cannot see it.
-Senior staff can, as described below, and so can anyone you choose to
-share it with.
+**Every record you log is yours.** Other RFs and RSLMs cannot see it, and
+nor can senior staff: they see that you met a student, when and for how
+long, but not what you wrote. Only people you share it with can read it.
 
 ## Seeing someone else's records
 
@@ -83,14 +83,20 @@ over.
 Senior staff, such as the Master, oversee support across the team:
 workload, who may need more help, and where support should move.
 
-- **They can see every record when they need to**, for example to make
-  sure a student is not falling through the cracks.
-- **By default they see a student's name only when the student needs
-  attention:** the student is on a formal plan, has a safety flag, or has
-  a team.
-- **Other students are not named until a senior chooses to look.** The
-  overview shows "No formal plan" with **Show name**. Choosing to show a
-  name is recorded.
+- **By default they see the shape of support, not its content:** who
+  met which students, when, for how long and of what type, whether a
+  follow-up is needed, and the plans and flags. They do not see what you
+  wrote: your notes and the concerns you recorded.
+- **They see a student's name only when the student needs attention:**
+  the student is on a formal plan, has a safety flag, or has a team.
+  Other students are not named until a senior chooses to look, with
+  **Show name**, and that choice is recorded.
+- **To read what you wrote, a senior asks you to share it.** You decide,
+  as with any share.
+- **In an emergency**, if you cannot be reached or a student is at risk,
+  a system administrator can agree to the share on your behalf. The app
+  records that it was done this way, and the administrator still sees
+  nothing of the records.
 
 ## What other staff see
 
@@ -115,8 +121,8 @@ The app keeps an audit log of who did what:
 - every share, acceptance, decline and withdrawal;
 - every team formed, joined, left or ended;
 - every handover and each acceptance of it;
-- every time a senior shows a student's name or opens a student's
-  history;
+- every time a senior shows a student's name, opens a student's
+  history or asks for a share;
 - every download, upload and purge of records.
 
 Senior staff review this log. The point is not suspicion: the log means
@@ -136,9 +142,10 @@ working together going forward, form a team instead.
 has not accepted yet, they never saw the student's name.
 
 **Can the Master read everything I write?**
-In principle, yes: oversight is part of the role. In practice, students
-who don't need attention are not named unless the Master chooses to
-look, and that choice is recorded.
+No, not by default. The Master sees that support happened, when and how
+much, so they can oversee the team, but reads your notes only if you
+share them, or, in an emergency, if a system administrator agrees on your
+behalf. Either way it is recorded.
 
 **What happens to my records when I leave?**
 They are handed over to whoever takes on your students, with your
