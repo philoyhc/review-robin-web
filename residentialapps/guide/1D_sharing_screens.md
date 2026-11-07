@@ -93,3 +93,12 @@ browser check passes on each rung.
 ## Status
 
 - Opened 2026-11-07.
+- **Rung 1:** as planned, plus: the support-activity audit stops listing
+  when a record was logged (its time is content) and withholds names as
+  Overview does; a follow-up seen through the wall shows only who, whom
+  and status; the plans download keeps kind, source and status; withheld
+  rows sort in an order hashed from the id. One read: the audit, the
+  plans download, stale spec sentences, a follow-up's facts, the
+  withheld order and dead on-behalf code, all fixed. Left as is: Records
+  across staff's purge filter counts encounters per student (senior
+  deletion needs it), and the pairs download keeps its term filter.

@@ -11,6 +11,7 @@ invented and bland: nothing here may read as a real case."""
 
 from __future__ import annotations
 
+import hashlib
 import re
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -758,7 +759,6 @@ class PeerGrant:
     grantor: str
     viewer: str
     granted_on: date
-    by: str = ""  # senior staff who shared on the grantor's behalf (§17 Q11)
 
 
 PEER_GRANTS = (
@@ -818,7 +818,7 @@ def shared_encounters(staff: str, sid: str) -> list[Encounter]:
 
 # Overview shows metadata only (author, 2026-11-07): who has records
 # with whom, never figures drawn from content. The period is the senior
-# reads' window on Sys admin's audit log.
+# reads' window on Sys admin's audit log and the consultation check's.
 PERIOD_DAYS = 30
 
 
@@ -879,8 +879,9 @@ def students_across_staff() -> list[AcrossRow]:
     """Students across staff (author, 2026-11-07): each student any staff
     member has a record about, with the staff and the signals (an active
     formal plan, active flags). Students Overview names come first, the
-    most flags first; withheld ones follow in roster order, so their order
-    gives away nothing of their names."""
+    most flags first; withheld ones follow in a fixed order hashed from
+    their ids, so their order gives away nothing of their names (the
+    sample's ids follow its names)."""
     rows: list[AcrossRow] = []
     for s in STUDENTS:
         staff = sorted(staff_with_records(s.id))
@@ -899,6 +900,7 @@ def students_across_staff() -> list[AcrossRow]:
     named = [r for r in rows if named_on_overview(r["student"].id)]
     withheld = [r for r in rows if not named_on_overview(r["student"].id)]
     named.sort(key=lambda r: (-r["flags"], not r["formal"], r["student"].name))
+    withheld.sort(key=lambda r: hashlib.sha256(r["student"].id.encode()).hexdigest())
     return named + withheld
 
 
@@ -984,6 +986,17 @@ AUDIT = (
     ),
     AuditEvent(datetime(2026, 10, 20, 8, 55), "Daniel Koh", "Viewed the student", "S-08"),
 )
+
+
+# Logging a record: its time is the record's content, so senior staff's
+# audit does not list it (author, 2026-11-07).
+LOGGED = "Logged an encounter"
+
+
+def senior_audit() -> tuple[AuditEvent, ...]:
+    """The support-activity audit as senior staff see it: who viewed,
+    shared, flagged or downloaded what, never when a record was logged."""
+    return tuple(a for a in AUDIT if a.action != LOGGED)
 
 
 # --- Consultation check (rung 6; §10.7–10.8). Rule-based and transparent:
@@ -1456,8 +1469,11 @@ RECORD_KINDS: dict[str, tuple[str, tuple[str, ...]]] = {
 }
 # What a senior upload takes after its Staff column: a plan may be a formal
 # assignment (§7), and a new one is always Active, so no Status.
-# Senior staff's encounters download: metadata, never content.
+# Senior staff's downloads: metadata, never content (author, 2026-11-07).
+# Encounters as staff and student pairs; plans without their cadence or
+# dates.
 SENIOR_ENCOUNTER_COLUMNS = ("Staff", "Student email", "Student")
+SENIOR_PLAN_COLUMNS = ("Staff", "Student email", "Student", "Kind", "Source", "Status")
 
 STAFF_TEMPLATE_COLUMNS: dict[str, tuple[str, ...]] = {
     "encounters": ENCOUNTER_COLUMNS,
@@ -1481,13 +1497,13 @@ def staff_rows(
             seen = {r[2]: r[3] for r in encounter_rows(name, t, sid)}
             pairs += [[name, email, seen[email]] for email in sorted(seen)]
         return SENIOR_ENCOUNTER_COLUMNS, pairs
-    columns = ("Staff", *RECORD_KINDS[what][1])
+    keep = [PLAN_COLUMNS.index(c) for c in SENIOR_PLAN_COLUMNS[1:]]
     rows: list[list[str]] = []
     for name in FRONTLINE_COLLEAGUES:
         if staff and name != staff:
             continue
-        rows += [[name, *r] for r in plan_rows(name, t, sid)]
-    return columns, rows
+        rows += [[name, *(r[i] for i in keep)] for r in plan_rows(name, t, sid)]
+    return SENIOR_PLAN_COLUMNS, rows
 
 
 def purges(staff: str | None = None, sid: str | None = None) -> list[Purge]:

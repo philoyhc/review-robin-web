@@ -144,16 +144,17 @@ form's end, and the main action is a full-width Primary on the page
   wired. Leaving the page locks it again. A purge hides and keeps.
   Purge all is Destructive, outline red (author, 2026-10-30).
 - **Records across staff** (`/overview/records`, author, 2026-10-30), for
-  senior identifiable access, behind the same lock: download any staff
-  member's records, or all staff's, by student and term or all, each row
-  naming its staff member; upload records tagged to a staff member (inert until
+  senior identifiable access, behind the same lock: download, for any
+  staff member or all, by student and term or all, which students each
+  has encounters with (staff and student pairs) and their plans' kind,
+  source and status, never a record's content; upload records tagged to a staff member (inert until
   wired); and delete purged records, filtered by staff and by student;
   by student, only that student's records go (Delete permanently inert until wired). Only
   senior identifiable access deletes; Sys admin's Audit log lists purged
   records as counts only (author, 2026-10-30).
 - **Administration and senior staff, each in view of the other** (author,
   2026-10-30). Administration decides who sees content but sees none;
-  senior staff see content but grant no access:
+  senior staff see who has records with whom but grant no access:
   - **Who holds access** (`/overview/access`, linked from Overview's card),
     for senior identifiable access: each grant's holders and the access
     changes, read-only.
@@ -206,8 +207,8 @@ below applies:
    student, which a senior may start; or a handover tags records to
    the receiver, acknowledged by them and a senior. The model is
    `residentialapps/guide/1D_sharing_model.md` (author, 2026-11-07); the
-   screens still show the earlier Share with a colleague and Share on
-   their behalf until it is drawn.
+   screens still show the earlier Share with a colleague until it is
+   drawn.
 3. **Senior identifiable access sees, by default, only which students
    have records with which staff** (author, 2026-11-07): a record's
    metadata, never its content (everything else about a record: when,
@@ -218,9 +219,9 @@ below applies:
    student's name is withheld until a deliberate action reveals it. To
    read content, a senior requests a share from the owner; in an
    emergency a sys admin acknowledges it on the owner's behalf. Every
-   deliberate view is audited. The screens still show a history's
-   encounters and full downloads until this is drawn
-   (`residentialapps/guide/1D_sharing_model.md`).
+   deliberate view is audited. The screens apply it
+   (`residentialapps/guide/1D_sharing_screens.md` rung 1); Request a
+   share is inert until wired.
 4. **Other staff see a student only with an explicit grant**: Other
    Staff view, aggregate (no names) or identifiable.
 

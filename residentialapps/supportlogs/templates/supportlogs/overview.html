@@ -2,10 +2,7 @@
 {% from "residential/_sample.html" import sample_title, viewer_card with context %}
 {% from "supportlogs/_frontline.html" import recorded, flags_card with context %}
 {% block title %}Overview{% endblock %}
-{# A name withheld until asked for (author, 2026-11-07): a student on no
-   formal plan and with no active flag. `name` is the name as it would
-   show, link included. #}
-{% macro withheld(name) %}<details class="reveal"><summary><span class="subtle">No formal plan</span> <span class="reveal-cta" data-when="closed">Show name</span><span class="reveal-cta" data-when="open">Hide name</span></summary><span class="strong">{{ name }}</span></details>{% endmacro %}
+{% from "supportlogs/_withheld.html" import withheld %}
 {% block content %}
   {{ sample_title("Overview", me.name) }}
   {# Who supports whom, and which students span several staff (author,

@@ -247,3 +247,6 @@ def test_a_plan_seen_by_senior_staff_shows_no_contact_facts(client: TestClient) 
         for fact in ("Last contact", "Next expected", "Contacts since it began", "Overdue"):
             assert fact not in page, (name, fact)
         assert "<dt>Source</dt><dd>Counselling</dd>" in page
+        follow_up = client.get(f"/plans/P-03?as={name}").text  # Daniel's own
+        for fact in ("<dt>Since</dt>", "<dt>Cadence</dt>", 'id="hist-h"', "began following up"):
+            assert fact not in follow_up, (name, fact)

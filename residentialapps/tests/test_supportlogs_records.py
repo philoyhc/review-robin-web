@@ -317,6 +317,9 @@ def test_downloads_by_staff_and_term(client: TestClient) -> None:
     assert {r[0] for r in got[1:]} == {e.staff for e in sample.ENCOUNTERS}
     for e in sample.ENCOUNTERS:
         assert not e.note or e.note not in everyone.text
+    plans = rows(client.get(f"/overview/records.csv?{SAM}&{OPEN}&what=plans&term=all").text)
+    assert tuple(plans[0]) == sample.SENIOR_PLAN_COLUMNS
+    assert "Cadence" not in plans[0] and all(len(r) == 6 for r in plans)
     arjun = client.get(
         f"/overview/records.csv?{SAM}&{OPEN}&what=plans&staff=Arjun%20Nair&term={sample.CURRENT_TERM.key}"
     )

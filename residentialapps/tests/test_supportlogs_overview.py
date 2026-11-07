@@ -110,7 +110,9 @@ def test_the_aggregate_view_names_no_student(client: TestClient) -> None:
 
 def test_every_plan_carries_no_due_state(client: TestClient) -> None:
     plans = section(client.get("/overview/?as=Sam%20Lee").text, "plans-h")
-    assert "Overdue" not in plans and "Due " not in plans and "Weekly" not in plans
+    assert "Overdue" not in plans and "Due " not in plans
+    for p in sample.PLANS:
+        assert p.cadence not in plans, p.cadence
 
 
 def test_no_cluster_view_until_students_have_a_location(client: TestClient) -> None:
@@ -152,16 +154,20 @@ def test_the_audit_is_senior_only_and_its_review_recorded(client: TestClient) ->
     page = client.get("/overview/audit?as=Sam%20Lee").text
     assert "Reviewing this log is recorded." in page
     rows = cells(section(page, "audit-h"))
-    assert len(rows) == len(sample.AUDIT)
-    for row, event in zip(rows, sample.AUDIT):
+    shown = sample.senior_audit()
+    assert len(rows) == len(shown) < len(sample.AUDIT)
+    assert sample.LOGGED not in page  # a record's time is its content
+    for row, event in zip(rows, shown, strict=True):
         if not event.student:  # a read of no one student: the audit itself, or a download
             assert row[3] == ""
             continue
         named = sample.student(event.student)
         assert named is not None
-        assert (
-            f'<a href="/overview/students/{event.student}?as=Sam%20Lee">{named.name}</a>' == row[3]
-        )
+        link = f'<a href="/overview/students/{event.student}?as=Sam%20Lee">{named.name}</a>'
+        if sample.named_on_overview(event.student):
+            assert row[3] == link
+        else:
+            assert row[3].startswith('<details class="reveal">') and link in row[3]
     assert 'href="/overview/audit?as=Sam%20Lee"' in client.get("/overview/?as=Sam%20Lee").text
     assert "/overview/audit" not in client.get("/overview/?as=Siti%20Rahman").text
     for name in NOT_SENIOR:

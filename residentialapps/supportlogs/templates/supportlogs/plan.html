@@ -14,6 +14,10 @@
      gives: due state, last contact, next expected, contacts (author,
      2026-11-07, confidentiality rule 3). #}
   {% set walled = not owner and not shared %}
+  {# A follow-up is the frontline's own: seen through the wall it shows
+     only who, whom and its status, never its dates, cadence, instruction
+     or history. A formal plan's facts are the senior's own setting. #}
+  {% set thin = walled and not p.formal %}
   <div class="split">
     <div class="main stack">
       <section class="card card-pad" aria-labelledby="plan-h">
@@ -22,8 +26,10 @@
           {% if not owner %}<dt>With</dt><dd>{{ p.staff }}</dd>{% endif %}
           <dt>Status</dt><dd>{{ p.status }}</dd>
           {% if p.formal %}<dt>Source</dt><dd>{{ p.source }}</dd><dt>Assigned by</dt><dd>{{ p.assigned_by }}</dd>{% endif %}
+          {% if not thin %}
           <dt>Since</dt><dd>{{ sample.short_date(p.start) }}</dd>
           <dt>Cadence</dt><dd>{{ p.cadence }}</dd>
+          {% endif %}
           {% if p.review %}<dt>Review</dt><dd>{{ sample.short_date(p.review) }}</dd>{% endif %}
           {% if not walled %}
           {% set seen = sample.last_contact(p) %}{% set nd = sample.next_due(p) %}
@@ -32,13 +38,15 @@
           <dt>Contacts since it began</dt><dd>{{ sample.contacts_since_start(p) }}</dd>
           {% endif %}
         </dl>
-        {% if p.instruction %}<p class="gap-above-sm"><span class="strong">Instruction:</span> {{ p.instruction }}</p>{% endif %}
+        {% if p.instruction and not thin %}<p class="gap-above-sm"><span class="strong">Instruction:</span> {{ p.instruction }}</p>{% endif %}
       </section>
+      {% if not thin %}
       <section class="card card-pad" aria-labelledby="hist-h">
         <h2 id="hist-h">History</h2>
         <p class="sub">How it began and what changed: one record, converted or not (§8).</p>
         <ul class="items">{% for on, what in sample.PLAN_HISTORY.get(p.id, ()) %}<li><span class="subtle">{{ sample.short_date(on) }}</span> · {{ what }}</li>{% endfor %}</ul>
       </section>
+      {% endif %}
     </div>
     <div class="side">
       <section class="card card-pad muted" aria-labelledby="act-h">

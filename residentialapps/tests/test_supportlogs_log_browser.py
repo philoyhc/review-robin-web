@@ -306,7 +306,12 @@ def test_a_withheld_name_shows_and_hides_again(page: Page) -> None:
     name = row.locator("> .strong")
     assert not name.is_visible() and "Show name" in summary.inner_text()
     summary.click()
-    assert name.is_visible() and name.inner_text() == "Aiden Chen"  # roster order
+    first = next(
+        r["student"].name
+        for r in sample.students_across_staff()
+        if not sample.named_on_overview(r["student"].id)
+    )
+    assert name.is_visible() and name.inner_text() == first
     assert summary.is_visible() and "Hide name" in summary.inner_text()
     summary.click()
     assert not name.is_visible()
