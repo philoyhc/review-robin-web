@@ -3,7 +3,8 @@ for the three required choices, Clear unsets an optional one, "Who started
 it?" hides and drops its choice when the type already says, and the note
 counts its characters; and a staff or student filter's box of people turns
 a match into a pill and blocks an unmatched name (rung 8); and Students'
-filter of plans and follow-ups, kept across a reload (rung 13). Served as the
+filter of plans and follow-ups, kept across a reload (rung 13); and that
+text boxes resize vertically only (2026-11-07). Served as the
 sort tests are; without a Chromium
 build the test skips, saying why, and `RRW_REQUIRE_BROWSER=1` fails it."""
 
@@ -283,3 +284,13 @@ def test_students_filter_says_none_when_nothing_matches(page: Page) -> None:
     assert page.locator("[data-students-count]").inner_text() == "0"
     page.get_by_role("button", name="Following", exact=True).click()
     assert not page.locator("[data-students-none]").is_visible()
+
+
+def test_text_boxes_resize_vertically_only(page: Page) -> None:
+    """Author, 2026-11-07: every Residential text box is dragged taller,
+    never wider; the rule is the shared stylesheet's, so Support Logs'
+    two boxes stand for Residential Ops' six too."""
+    for path, box in (("/log", "#note"), ("/consultation/?as=Hui%20Min%20Goh", "#emails")):
+        page.goto(f"{ORIGIN}{path}")
+        resize = page.locator(box).evaluate("el => getComputedStyle(el).resize")
+        assert resize == "vertical", (path, resize)

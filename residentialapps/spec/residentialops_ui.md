@@ -30,6 +30,10 @@ in `residentialapps/web/templates/residential/base.html`.
 - **Desktop-oriented pages stay usable on a phone**: nothing breaks, and a
   wide table scrolls sideways in its box (`.table-wrap`, at least 640 px
   wide). They are not designed for one.
+- **A text box resizes vertically only** (author, 2026-11-07), as RRW's
+  do (`spec/ui_elements.md`): a sideways drag would push it past its
+  column or a phone's edge. One rule in the shared stylesheet covers
+  every Residential app.
 - Routes and permissions are the same at every width
   (`cordware/docs/cordware_mobile_to_desktop.md` §7.5, §9).
 
