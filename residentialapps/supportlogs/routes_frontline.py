@@ -26,6 +26,14 @@ def _me(request: Request) -> sample.Viewer:
     return sample.viewer(request.query_params.get("as"))
 
 
+def log_share_choices(me: sample.Viewer) -> list[str]:
+    """Whom an encounter can be shared with as it is logged (rung 4): any
+    frontline colleague but the viewer. Unlike Share past records, no one
+    else is left out: the student may be chosen after the page loads, and
+    an existing share never covers a newly logged encounter."""
+    return [c for c in sample.FRONTLINE_COLLEAGUES if c != me.name]
+
+
 @router.get("/log", name="supportlogs_log")
 def log(request: Request) -> Response:
     # Opened from a student or a Log button, the student is chosen already.
@@ -41,6 +49,7 @@ def log(request: Request) -> Response:
         chosen=chosen,
         duration=duration,
         kind=kind,
+        share_choices=log_share_choices(_me(request)),
         current_tab="/log",
     )
 
@@ -61,6 +70,9 @@ def log_saved(request: Request) -> Response:
     # a sample stores nothing, so the view is offered only where the viewer
     # already reaches it: their own, or shared with them (§11.1).
     in_set = reaches_student(me, chosen.id)
+    # Shared as it was logged (rung 4): one colleague, never oneself.
+    share = q.get("share")
+    shared_with = share if share in log_share_choices(me) else None
     return gated(
         request,
         "supportlogs/log_saved.html",
@@ -71,6 +83,7 @@ def log_saved(request: Request) -> Response:
         following=following,
         in_set=in_set,
         added=q.get("follow") == "yes" and not following,
+        shared_with=shared_with,
         current_tab="/log",
     )
 

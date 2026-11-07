@@ -389,3 +389,34 @@ def test_waiting_for_you_holds_every_acknowledgement(client: TestClient) -> None
         ), verb  # each names its row
     assert 'href="/students/' not in card
     assert 'id="waiting-h"' not in client.get("/" + PRIYA).text  # nothing waits on her
+
+
+def test_an_encounter_can_be_shared_as_it_is_logged(client: TestClient) -> None:
+    """Sharing screens rung 4 (author, 2026-11-07): one colleague, this one
+    encounter, accepted before they see it; never oneself."""
+    log = client.get("/log").text
+    share = log.split('id="share"')[1].split("</select>")[0]
+    assert re.findall(r"<option>([^<]+)</option>", share) == [
+        c for c in sample.FRONTLINE_COLLEAGUES if c != "Daniel Koh"
+    ]
+    assert '<option value="">No one</option>' in share
+    base = "/log/saved?student=S-02&duration=15%20min&type=Check-in"
+    sent = client.get(base + "&share=Mei%20Ling%20Tan").text
+    assert "Mei Ling Tan is asked to accept this encounter. Until they do" in sent
+    for who in ("", "Daniel%20Koh", "Nobody"):
+        assert "is asked to accept" not in client.get(base + "&share=" + who).text, who
+
+
+def test_share_as_you_log_is_folded_away_and_follows_the_viewer(client: TestClient) -> None:
+    """The share sits among the optional details, labelled and described;
+    another viewer is offered everyone but themselves."""
+    log = client.get("/log").text
+    start = log.index('<details class="more gap-above-sm">')
+    end = log.index("</details>", log.index('id="note"'))  # the note closes Add details
+    assert start < log.index('id="share"') < end  # folded away with the other details
+    assert '<label for="share">Share this encounter with</label>' in log
+    assert 'aria-describedby="share-what"' in log and 'id="share-what"' in log
+    priya = client.get("/log" + PRIYA).text.split('id="share"')[1].split("</select>")[0]
+    assert re.findall(r"<option>([^<]+)</option>", priya) == [
+        c for c in sample.FRONTLINE_COLLEAGUES if c != "Priya Raman"
+    ]

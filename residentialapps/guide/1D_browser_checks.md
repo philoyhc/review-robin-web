@@ -99,6 +99,9 @@ and say you will follow up weekly."*
 
 - [ ] **Add details** unfolds on the same page: Concern areas (several
   allowed), Follow-up needed, How, Who started it, the note.
+- [ ] Among the details, **Share this encounter with** offers No one and
+  the other colleagues; saving with Mei Ling Tan chosen says she is asked
+  to accept this encounter.
 - [ ] Follow-up needed, How and Who started it each have **Clear**. **Who
   started it?** shows whatever the type.
 - [ ] For Clara, who is on his plans, the follow-up fields show her

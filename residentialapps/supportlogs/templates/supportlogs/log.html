@@ -83,6 +83,11 @@
         <legend>Who started it?</legend>
         <div class="choice-row">{% for w in sample.STARTED_BY %}<label class="choice"><input type="radio" name="started" value="{{ w }}">{{ w }}</label>{% endfor %}<button type="button" class="btn btn-secondary" data-clear="started">Clear</button></div>
       </fieldset>
+      {# Share as you log (sharing screens rung 4, author, 2026-11-07): this
+         one encounter, offered to one colleague, who accepts first. #}
+      <div class="field-wide"><label for="share">Share this encounter with</label>
+        <select id="share" name="share" class="input" aria-describedby="share-what"><option value="">No one</option>{% for c in share_choices %}<option>{{ c }}</option>{% endfor %}</select>
+        <span id="share-what" class="subtle small">An RF or RSLM with frontline access. They see only this encounter, and only once they accept; nothing you log later. The share is recorded, and you can withdraw it.</span></div>
       {# The note has no name: a sample sends nothing it would store. #}
       <div class="field-wide"><label for="note">Short note</label>
         <textarea id="note" class="input" rows="3" maxlength="{{ sample.NOTE_LIMIT }}" aria-describedby="note-what"></textarea>
