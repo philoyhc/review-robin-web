@@ -253,10 +253,14 @@ def test_students_filter_shows_plans_or_follow_ups_and_is_kept(page: Page) -> No
     mine = page.locator("[data-students-list] > li:visible a.strong")
     count = page.locator("[data-students-count]")
     assert mine.count() == 6 and count.inner_text() == "6"
+    add = page.locator("[data-students-add]")
+    assert add.is_visible()
     page.get_by_role("button", name="Plans", exact=True).click()
     assert mine.all_inner_texts() == ["Clara Tan", "Dev Menon"] and count.inner_text() == "2"
+    assert not add.is_visible()  # under All and Following only
     page.get_by_role("button", name="Following", exact=True).click()
     assert mine.all_inner_texts() == ["Aiden Chen", "Elena Park"]
+    assert add.is_visible()
     page.reload()
     assert mine.all_inner_texts() == ["Aiden Chen", "Elena Park"]
     assert (
