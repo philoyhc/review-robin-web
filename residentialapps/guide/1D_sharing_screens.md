@@ -29,14 +29,22 @@ becomes metadata only: which students have records with which staff.
   - Aggregate view sees the same as counts only.
   - Every plan keeps student, staff and kind; it loses due states and
     cadences.
+  - The sample's workload, totals and coverage helpers go with them.
   - The safety flags card is unchanged.
 - **A student's history:** the encounters list goes, and so does
   Sharing (Share on their behalf). Staff involved gains **Request a
   share** per staff member, inert. Plans keep staff and kind only.
-- **A plan, seen by senior staff:** status, kind, source and assigned by
-  stay. Last contact, next expected, contacts and cadence go.
+- **A plan, seen by senior staff:** status, kind, source, cadence and
+  assigned by stay (a formal plan's cadence is the senior's own setting).
+  Due state, last contact, next expected and contacts go.
 - **Records across staff:** the download carries Staff, Student and
   Student email only.
+
+### Rung 1a — The explainer, in the app
+
+The staff explainer (`residentialapps/docs/support_logs_confidentiality.md`)
+as a page of its own, **Who can see what**, linked from every Support Logs
+screen (author, 2026-11-07).
 
 ### Rung 2 — Waiting for you
 
