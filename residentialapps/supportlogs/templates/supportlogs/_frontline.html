@@ -4,7 +4,7 @@
 {# Every page naming a student says the view is recorded (§11.3; the
    plan's Semantics), as the real page will. #}
 {% macro recorded() -%}
-  <p class="subtle small">Pages that name students are recorded when opened.</p>
+  <p class="subtle small">Pages that name students are recorded when opened. <a href="{{ url('/who-can-see-what') }}{{ as_query }}">Who can see what</a></p>
 {%- endmacro %}
 
 {# The plan a student is on, as Log encounter's follow-ups say it, and the

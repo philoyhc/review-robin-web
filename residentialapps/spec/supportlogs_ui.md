@@ -197,7 +197,10 @@ form's end, and the main action is a full-width Primary on the page
 ## 6. What the screens say about privacy
 
 **The confidentiality rules** (author, 2026-11-07), which every screen
-below applies:
+below applies. **Who can see what** (`/who-can-see-what`) explains them
+to staff: the text of `residentialapps/docs/support_logs_confidentiality.md`,
+linked from every account menu and from the notice on pages that name
+students.
 
 1. **Frontline staff see their own records**, and another staff member's
    only once access is granted.

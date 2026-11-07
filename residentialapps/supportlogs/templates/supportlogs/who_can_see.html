@@ -1,0 +1,58 @@
+{% extends "residential/base.html" %}
+{% from "residential/_sample.html" import sample_title, viewer_card with context %}
+{% block title %}Who can see what{% endblock %}
+{# The staff explainer (author, 2026-11-07), a page of its own linked from
+   every Support Logs screen (the account menu, and the notice on pages
+   that name students). Its text is
+   residentialapps/docs/support_logs_confidentiality.md's, which is not
+   deployed; `test_supportlogs_explainer.py` keeps the two in step. #}
+{% block content %}
+  {{ sample_title("Who can see what", me.name) }}
+  <p class="subtle">Agreed 2026-11-07. Parts of this are still being built: the app shows them as placeholders until they work.</p>
+  <p>Support Logs keeps short records of the support you give residents: who you saw, when, roughly what about, and any follow-up. Those records are about students at a vulnerable moment, so the app is built around one idea: <strong>you see what you need to do your job, and nothing more by default.</strong> Seeing more always takes a deliberate step, and the app records that step.</p>
+  <section class="card card-pad gap-below prose" aria-labelledby="your-own-records-h"><h2 id="your-own-records-h">Your own records</h2>
+  <p><strong>Every record you log is yours.</strong> Other RFs and RSLMs cannot see it, and nor can senior staff. Only people you share it with can read it.</p>
+  <p>Each record has two parts:</p>
+  <ul><li><strong>Who and which student:</strong> that you, a named staff member, have a record about a named student. Senior staff can see this much.</li><li><strong>Everything else is the record's content:</strong> when you met, for how long, what kind of meeting, the concerns, whether a follow-up is needed, and your note. So are any totals worked out from them, such as how many times you met or how many minutes it took. Only you, and people you share with, see the content.</li></ul>
+  </section>
+  <section class="card card-pad gap-below prose" aria-labelledby="seeing-someone-else-s-records-h"><h2 id="seeing-someone-else-s-records-h">Seeing someone else's records</h2>
+  <p>There are four ways, and each one is deliberate. Nobody gets access to another person's records by accident or by default.</p>
+  <h3>1. Sharing past records</h3>
+  <p>You can share some or all of your past records about a student with one colleague, for example someone covering for you.</p>
+  <ul><li><strong>They must accept the share before they see anything.</strong> Until then they see only that you have shared records about a student, not who the student is.</li><li><strong>You can withdraw a share</strong> at any time.</li><li><strong>A share covers only records that already exist.</strong> Anything you log afterwards stays yours. To work together going forward, form a team.</li></ul>
+  <h3>2. Sharing as you log</h3>
+  <p>When you log an encounter, you can share that one record with a colleague as you save it. It's an optional detail, folded away so it never slows down a quick log. Your colleague accepts it the same way.</p>
+  <h3>3. Working as a team</h3>
+  <p>When two or more of you share responsibility for a student, you can form a team for that student.</p>
+  <ul><li><strong>Each of you accepts when the team forms.</strong> The team exists once at least two people have accepted; anyone who declines stays out.</li><li><strong>You decide whether the team sees your earlier records</strong> about the student. That choice is yours alone, made as you join.</li><li><strong>Records made while you are in the team belong to the team</strong>: every member at that moment can see them, then and later.</li><li><strong>The team can share a plan or follow-up</strong>, so you keep up one follow-up between you.</li><li><strong>The team's students appear on your Students page</strong>, under <strong>Teams</strong>.</li><li><strong>You can leave a team at any time.</strong> A team down to one person ends. After that, you see your own records and the team records made while you were in it, and nothing else.</li></ul>
+  <p>Senior staff can start a team, for example when a student needs several people at once. Each member still accepts. A senior is not part of the team unless they join it themselves.</p>
+  <h3>4. Handing over</h3>
+  <p>When a student moves from one staff member to another for good, for example when an RF changes houses or leaves, the records can be handed over.</p>
+  <ul><li><strong>The handover can be started</strong> by the staff member whose records they are, or by a senior, choosing which records to hand over.</li><li><strong>The chosen records become the new staff member's.</strong> The previous staff member no longer has them.</li><li><strong>Three people accept it:</strong> the new staff member, the previous one and a senior. Whoever started it has already accepted.</li><li><strong>If someone cannot be reached</strong>, for example because they have left, a system administrator can accept on their behalf. The app records that it was done this way. Doing so does not let the administrator read any records.</li></ul>
+  </section>
+  <section class="card card-pad gap-below prose" aria-labelledby="what-senior-staff-see-h"><h2 id="what-senior-staff-see-h">What senior staff see</h2>
+  <p>Senior staff, such as the Master, oversee support across the team: who is supporting whom, and where support may need to move.</p>
+  <ul><li><strong>By default they see only who has records with which students:</strong> how many students each staff member has records with, and how many staff each student has records with. They do not see when, how often or how long you met, and none of what you recorded. That is the records' content, and a senior reads it only through a share.</li><li><strong>They see a student's name only when the student needs attention:</strong> the student is on a formal plan, has a safety flag, or has a team. Other students are not named until a senior chooses to look, with <strong>Show name</strong>, and that choice is recorded.</li><li><strong>To read what you wrote, a senior asks you to share it.</strong> You decide, as with any share.</li><li><strong>In an emergency</strong>, if you cannot be reached or a student is at risk, a system administrator can agree to the share on your behalf. The app records that it was done this way, and the administrator still sees nothing of the records.</li></ul>
+  </section>
+  <section class="card card-pad gap-below prose" aria-labelledby="what-other-staff-see-h"><h2 id="what-other-staff-see-h">What other staff see</h2>
+  <p>Office staff and others see students only if they have been given a specific permission for their role. For example, someone coordinating consultation checks sees what that task needs. Some permissions show only counts and never a name.</p>
+  <p>System administrators set up the app and who may use it. They do not see students or records.</p>
+  </section>
+  <section class="card card-pad gap-below prose" aria-labelledby="safety-flags-h"><h2 id="safety-flags-h">Safety flags</h2>
+  <p>A safety flag goes to the people who need to act on it, whatever else is or isn't shared. Sharing, teams and handovers never change who sees a flag.</p>
+  </section>
+  <section class="card card-pad gap-below prose" aria-labelledby="everything-is-recorded-h"><h2 id="everything-is-recorded-h">Everything is recorded</h2>
+  <p>The app keeps an audit log of who did what:</p>
+  <ul><li>every share, acceptance, decline and withdrawal;</li><li>every team formed, joined, left or ended;</li><li>every handover and each acceptance of it;</li><li>every time a senior shows a student's name, opens a student's history or asks for a share;</li><li>every download, upload and purge of records.</li></ul>
+  <p>Senior staff review this log. The point is not suspicion: the log means anyone can show that a student's information was handled properly.</p>
+  </section>
+  <section class="card card-pad gap-below prose" aria-labelledby="quick-answers-h"><h2 id="quick-answers-h">Quick answers</h2>
+  <p><strong>Can my colleague in the next tower see what I logged?</strong> No, unless you share it with them, or you are both on a team for that student.</p>
+  <p><strong>I'm going on leave. How does my cover see my notes?</strong> Share your past records about the students they will see. If you will be working together going forward, form a team instead.</p>
+  <p><strong>I shared records by mistake.</strong> Withdraw the share. If your colleague has not accepted yet, they never saw the student's name.</p>
+  <p><strong>Can the Master read everything I write?</strong> No, not by default. The Master sees which of you have records with which students, so they can oversee the team, but reads what you recorded only if you share it, or, in an emergency, if a system administrator agrees on your behalf. Either way it is recorded.</p>
+  <p><strong>Does the Master see how much time I spend with students?</strong> Not by default. How often and how long you meet is part of your records' content, so it is seen only through a share, like the rest.</p>
+  <p><strong>What happens to my records when I leave?</strong> They are handed over to whoever takes on your students, with your acceptance, or an administrator's if you cannot be reached.</p>
+  </section>
+{% endblock %}
+{% block viewer %}{{ viewer_card(viewer_choices, me.name) }}{% endblock %}

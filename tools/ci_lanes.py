@@ -67,6 +67,9 @@ OTHER_DIRS = (
 PROSE_TESTS = (
     "tests/unit",
     "tests/integration/test_guide_scaffold.py",
+    # Who can see what holds the staff explainer's text, which an edit to
+    # residentialapps/docs alone changes (2026-11-07).
+    "residentialapps/tests/test_supportlogs_explainer.py",
 )
 
 # What the residential lane runs beside the prose lane's tests: Residential's

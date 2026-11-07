@@ -14,6 +14,8 @@ from starlette.responses import RedirectResponse, Response
 
 from residentialapps.supportlogs import sample_support as sample
 from residentialapps.supportlogs.pages import (
+    EXPLAINER,
+    EXPLAINER_PATH,
     MAIN,
     destinations,
     forbidden,
@@ -26,6 +28,14 @@ from residentialapps.web.pages import placeholders_previewers_only
 from residentialapps.web.urls import url_path
 
 router = APIRouter(dependencies=[Depends(placeholders_previewers_only)])
+
+
+@router.get(EXPLAINER_PATH, name="supportlogs_who_can_see")
+def who_can_see(request: Request) -> Response:
+    """Who can see what (author, 2026-11-07): the staff explainer, for
+    anyone who reaches Support Logs, grant or none."""
+    me = sample.viewer(request.query_params.get("as"))
+    return render(request, "supportlogs/who_can_see.html", me=me, area=EXPLAINER, tabs=tabs_for(me))
 
 
 @router.get("/", name="supportlogs_home")
