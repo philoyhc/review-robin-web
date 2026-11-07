@@ -15,6 +15,7 @@ Residential Apps: one package, mounted under Cordware as two applications, **Res
 | `docs/residentialapps_roles.md` | Roles in both applications, read across from RRW's super-admin, admin and operator (ruled) |
 | `docs/residentialapps_roster_structure.md` | Rosters, appointments and residential geography: Unit, Wing, Tower, RF Zone, RA Neighborhood, coverage and reporting (working design; §10 open) |
 | `docs/sample_data/README.md` | Mock data for browser tests: Example College's 30 Neighborhoods (the author's breakdown), its terms, Staff and RA rosters and Assignments CSVs (clean and error cases), and fake sign-in scenarios, each with its expected outcome |
+| `docs/support_logs_confidentiality.md` | Support Logs' confidentiality model for the staff who use it: own records, sharing, teams, handovers, what senior and other staff see, the audit (agreed 2026-11-07) |
 | `docs/support_logs_ui_spec_v0.1.md` | Support Logs UI spec (draft): RF / RSLM phone screens on RRW's design system |
 | `spec/applications.md` | The two applications as the host sees them: registry entries, factories, health, running alone, logging and lifespan |
 | `spec/architecture.md` | Package layout, import boundaries, packaging, tests and the `residential` CI lane |
@@ -26,7 +27,7 @@ Residential Apps: one package, mounted under Cordware as two applications, **Res
 | `guide/1B_browser_checks.md` | Segment 1B item 1's browser walkthrough: the landing, Rosters and setup, a person's page and Sys admin, step by step; deleted when the screens are approved |
 | `guide/1C_browser_checks.md` | Segment 1C item 1's browser walkthrough: RA Leave's RA, staff and admin screens and the appeal-mode previews, step by step; deleted when item 1 closes |
 | `guide/1D_browser_checks.md` | Segment 1D item 1's browser walkthrough: every Support Logs screen, step by step, with the PowerShell fake-auth commands; deleted when item 1 closes |
-| `guide/1D_sharing_model.md` | Segment 1D: who sees whose records, decided 2026-11-07: shared past records and shares at logging, acknowledged by the receiver; teams for a student; handovers |
+| `guide/1D_sharing_model.md` | Segment 1D: who sees whose records, decided 2026-11-07: shared past records and shares at logging, acknowledged by the receiver; teams for a student, with Students' Teams filter; handovers |
 | `guide/1D_refinements.md` | Segment 1D item 1's rungs 11–12, from the author's browser check of 2026-11-06: the sample viewers cut to the roles in practice, Home's Log encounter button gone, Log's favorites, durations and types |
 | `guide/fake_ids.md` | Every command the browser walkthroughs need: copy-and-paste PowerShell blocks that run Residential Apps locally as each sample viewer, the sample-viewer tables, and the browser settings |
 | `guide/todo_master.md` | Rulings, dependencies, open decisions and pending revisions |

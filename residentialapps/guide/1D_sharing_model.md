@@ -7,7 +7,9 @@ their behalf (a senior sharing another's records), and the Allocate to a
 colleague scaffold proposed for a student's history, which was not
 merged. Nothing here is built yet; this file is the model the screens and
 the wiring will follow. Confidentiality rule 2 in
-`residentialapps/spec/supportlogs_ui.md` §6 points here.
+`residentialapps/spec/supportlogs_ui.md` §6 points here, and
+`residentialapps/docs/support_logs_confidentiality.md` explains it for
+staff.
 
 ## The base rule
 
@@ -50,8 +52,9 @@ a withdrawal, and a team's formation, change or dissolution.
   follow-up the members keep up between them.
 - **Any member can withdraw.** A team down to one member dissolves.
 - **A team's students show on Students** for each member, with the team
-  named and its own place in the filter: a team usually forms because a
-  student needs it now.
+  named, under a fourth filter choice, **Teams**, beside All, Plans and
+  Following (author, 2026-11-07): a team usually forms because a student
+  needs it now.
 - **After a withdrawal or dissolution**, each person sees their own
   records and the team records tagged to them; nothing else.
 - **A senior can trigger a team's formation.** The rest is the same:
@@ -80,11 +83,6 @@ a withdrawal, and a team's formation, change or dissolution.
   whatever the sharing state.
 - **Other Staff view** (rule 4) is unchanged.
 
-## Still open
-
-- **How Students' filter takes teams:** a fourth choice beside All,
-  Plans and Following, or teams first under All.
-
 ## Effect on today's screens
 
 - Share with a colleague, on a student's page, becomes **Share past
@@ -93,6 +91,7 @@ a withdrawal, and a team's formation, change or dissolution.
 - A student's history gains **Form a team** (3) and **Hand over** (4),
   in place of the unmerged Allocate to a colleague.
 - Log gains the share-at-logging detail (2).
+- Students' filter gains **Teams** (3).
 
 These land as scaffolds first, one slice each, once this model is
 accepted.
