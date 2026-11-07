@@ -258,8 +258,8 @@ notice on every page that names students.
   - a consultation check.
 - **Overview names by default only students on a formal plan or with an
   active flag** (author, 2026-11-07), in Students across staff, Every plan and Flagged
-  for formal assignment. Any other student reads "No formal plan" with
-  **Show name**, which shows the name and its link in place and reads
+  for formal assignment. Any other student's name is replaced by
+  **Show name** alone (author, 2026-11-07: no "No formal plan" label), which shows the name and its link in place and reads
   **Hide name** once open; a withheld Students across staff row sorts last on the
   Student column. A safety flag names its student, open or closed: the
   flag is the reason to. On sample data the name is in the page (and

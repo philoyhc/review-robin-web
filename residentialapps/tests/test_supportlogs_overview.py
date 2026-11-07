@@ -35,7 +35,7 @@ def cells(table: str) -> list[list[str]]:
 
 
 # A withheld name's disclosure as plain text, ahead of the name it holds.
-HIDDEN = "No formal plan Show nameHide name"
+HIDDEN = "Show nameHide name"
 
 
 def plain(cell: str) -> str:
