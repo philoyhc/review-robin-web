@@ -56,7 +56,7 @@ Raman (RSLM) is frontline and also receives safety flags.
   encounters; My last 14 days.
 - [ ] Clara Tan's row reads "Overdue 2 days". *Ruling R1: sentence-case
   status labels.*
-- [ ] Tabs read Home, Log, Students, Plans; there is no bottom bar, and the
+- [ ] Tabs read Home, Log, Students; there is no bottom bar, and the
   top bar scrolls away with the page.
 
 Ask: *Is this what you would want to see first? Is anything here you
@@ -170,8 +170,9 @@ information you would want before seeing her again?*
 *Task: "Which students are you meant to check in on this week? Change
 Aiden Chen to fortnightly."*
 
-- [ ] **My plans** has All, Overdue and This week. Assigned (formal
-  plans, with source and cadence) comes before Following.
+- [ ] **Students**' My students has All, Plans and Following. Plans
+  shows Clara Tan and Dev Menon, Following Aiden Chen and Elena Park,
+  each with its due chip; after a reload the choice is kept.
 - [ ] Aiden Chen's follow-up (P-03) offers a cadence with **Save cadence**
   and **Stop following up**.
 - [ ] Clara's formal plan (P-01) shows its facts and history and says
@@ -211,13 +212,14 @@ senior staff why?*
 
 *Task: "Download your encounters for this term."*
 
-- [ ] At the end of Students and of My plans, Your records is locked;
+- [ ] At the end of Students, Your records is locked;
   Unlock is refused until the confirmation is ticked.
 - [ ] Unlocked: the term list opens on the current term, All terms last;
-  a Student box takes one of his own students as a pill; **Download CSV**
-  saves a file named for the term (and the student, when one is picked),
-  one row per own encounter, and no Hana Rahim, who is shared.
-- [ ] **Download the template** saves the columns only. Upload and Purge
+  a Student box takes one of his own students as a pill; **Download
+  encounters** saves a file named for the term (and the student, when one
+  is picked), one row per own encounter, and no Hana Rahim, who is shared;
+  **Download plans** saves his plans and follow-ups the same way.
+- [ ] **Encounters template** and **Follow-ups template** save the columns only. Upload and Purge
   all are disabled; Purge says nothing is deleted. *Ruling R2: Purge all's
   outline red.*
 - [ ] **Lock again**, or leaving the page, locks it.

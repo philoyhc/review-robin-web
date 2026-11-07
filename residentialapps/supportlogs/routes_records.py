@@ -1,6 +1,6 @@
 """Support Logs' record downloads on sample data, segment 1D item 1 (author,
-2026-10-30). Rung 7, Your records: the viewer's own encounters or plans
-as CSV, for one term or all, and an empty template to fill for an upload.
+2026-10-30). Rung 7, Your records, at the end of Students: the viewer's
+own encounters or plans as CSV, for one term or all, and an empty template to fill for an upload.
 Rung 8, Records across staff: senior identifiable access downloads staff
 members' records by staff, student and term, and filters purged records by staff
 and student for deletion: senior
@@ -76,7 +76,7 @@ def _download(request: Request, page: str, template: bool) -> Response:
         return forbidden(request, me)
     sid = _student(request)
     if not records_unlocked(request) or sid == UNKNOWN:
-        return RedirectResponse(url_path(request, f"/{page}/") + query(me), status_code=303)
+        return RedirectResponse(url_path(request, "/students/") + query(me), status_code=303)
     what, columns, rows_of = KINDS[page]
     if template:
         return _csv(f"support-logs-{what}-template.csv", TEMPLATES[page], [])

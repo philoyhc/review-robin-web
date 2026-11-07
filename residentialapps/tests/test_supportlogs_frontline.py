@@ -1,9 +1,11 @@
 """Support Logs' frontline pages on sample data, segment 1D item 1 rung 2:
 the dashboard, Log encounter and its confirmation, Students, the student
-view and My plans (UI spec screens 1–3, 5–7)."""
+view, Students holding the plans and follow-ups (UI spec screens 1–3,
+5–7)."""
 
 from __future__ import annotations
 
+import dataclasses
 import re
 import shutil
 import subprocess
@@ -23,7 +25,6 @@ FRONTLINE_PAGES = (
     "/log",
     "/students/",
     "/students/S-03",
-    "/plans/",
     "/log/saved?student=S-02&duration=15%20min&type=Check-in",
 )
 
@@ -63,7 +64,7 @@ def test_the_dashboard_follows_recent_and_the_last_14_days(client: TestClient) -
         "Dev Menon",
         "Aiden Chen",
     ]
-    assert ">All 4</a>" in following
+    assert 'href="/students/">On Students</a>' in following
     assert names(section(page, "recent-h")) == [
         "Farid Osman",
         "Elena Park",
@@ -170,7 +171,6 @@ def test_pages_naming_students_say_they_are_recorded(client: TestClient) -> None
         "/",
         "/log",
         "/students/",
-        "/plans/",
         "/log/saved?student=S-02&duration=15%20min&type=Check-in",
     ):
         assert "Pages that name students are recorded when opened." in client.get(path).text, path
@@ -208,7 +208,7 @@ def test_students_lists_the_working_set(client: TestClient) -> None:
         "Farid Osman",
         "Bao Nguyen",
     ]
-    assert '<span class="chip chip-accent">Plan · Counselling</span>' in mine
+    assert ">Plan · Counselling</a>" in mine
     assert "bao.nguyen@u.example.edu · seen 24 Oct" in mine
     assert names(section(client.get("/students/" + PRIYA).text, "mine-h")) == [
         "Hana Rahim",
@@ -242,24 +242,50 @@ def test_a_student_outside_the_working_set_is_not_found(client: TestClient) -> N
     assert client.get("/students/S-99").status_code == 404
 
 
-def test_my_plans_lists_assignments_then_follow_ups_and_filters(client: TestClient) -> None:
-    page = client.get("/plans/").text
-    assert names(section(page, "formal-h")) == ["Clara Tan", "Dev Menon"]
-    assert names(section(page, "informal-h")) == ["Aiden Chen", "Elena Park"]
-    assert "Weekly check-in; a reminder of the coping plan." in section(page, "formal-h")
-    overdue = client.get("/plans/?show=overdue").text
-    assert (
-        names(section(overdue, "formal-h")) == ["Clara Tan"]
-        and names(section(overdue, "informal-h")) == []
-    )
-    week = client.get("/plans/?show=week").text
-    assert names(section(week, "formal-h")) + names(section(week, "informal-h")) == [
-        "Clara Tan",
-        "Dev Menon",
-        "Aiden Chen",
+def test_students_filters_plans_and_follow_ups(client: TestClient) -> None:
+    """My plans folded into Students (author, 2026-11-07): All, Plans or
+    Following, kept in the browser; hidden without script, so every row
+    shows. Each plan's chip opens it, beside its due state."""
+    mine = section(client.get("/students/").text, "mine-h")
+    assert "<div data-students-filter hidden>" in mine
+    assert re.findall(r'data-show="(\w+)" aria-pressed="(\w+)">([^<]+)<', mine) == [
+        ("all", "true", "All"),
+        ("plans", "false", "Plans"),
+        ("following", "false", "Following"),
     ]
-    assert 'href="/plans/?show=overdue" aria-current="true">✓ Overdue</a>' in overdue
-    assert 'href="/plans/?as=Priya%20Raman&amp;show=week"' in client.get("/plans/" + PRIYA).text
+    kinds = dict(zip(names(mine), re.findall(r'<li data-kinds="([^"]*)">', mine), strict=True))
+    assert kinds == {
+        "Clara Tan": "plans ",
+        "Dev Menon": "plans ",
+        "Aiden Chen": "following",
+        "Elena Park": "following",
+        "Farid Osman": "",
+        "Bao Nguyen": "",
+    }
+    assert (
+        'href="/plans/P-01" aria-label="Plan · Counselling: Clara Tan">Plan · Counselling</a>'
+        in mine
+    )
+    clara = mine.split("Clara Tan</a>")[1].split("</li>")[0]
+    assert '<span class="chip chip-warn">Overdue' in clara  # her plan's due state
+    assert "supportlogs-students-show" in client.get("/students/").text
+    assert client.get("/plans/").status_code == 404  # My plans is gone
+
+
+def test_each_plan_on_a_row_carries_its_own_due_state(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A student on a plan and a follow-up is in both filters, each plan
+    with its chip and due state."""
+    aiden = next(p for p in sample.PLANS if p.id == "P-03")
+    extra = dataclasses.replace(aiden, id="P-98", formal=True, source="College")
+    monkeypatch.setattr(sample, "PLANS", [*sample.PLANS, extra])
+    mine = section(client.get("/students/").text, "mine-h")
+    row = mine.split("Aiden Chen</a>")[0].rsplit("<li ", 1)[1]
+    assert row.startswith('data-kinds="plans following">')
+    after = mine.split("Aiden Chen</a>")[1].split("</li>")[0]
+    assert after.count('class="chip chip-info">Due today') == 2
+    assert ">Plan · College</a>" in after and ">Following</a>" in after
 
 
 def test_the_frontline_pages_are_the_frontline_s(client: TestClient) -> None:

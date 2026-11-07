@@ -1,7 +1,7 @@
 """Support Logs' Your records on sample data, segment 1D item 1 rung 7
-(author, 2026-10-30): a section at the end of Students and My plans,
-locked until confirmed, to download the viewer's own encounters or plans
-as CSV by term or all, upload a CSV, or purge them all; a purge hides and
+(author, 2026-10-30): a section at the end of Students (My plans folded
+into it, rung 13), locked until confirmed, to download the viewer's own
+encounters or plans as CSV by term or all, upload a CSV, or purge them all; a purge hides and
 keeps, and only senior identifiable access deletes, a whole purge at a time."""
 
 from __future__ import annotations
@@ -44,8 +44,8 @@ def test_the_terms_are_the_rosters(client: TestClient) -> None:
     assert sample.CURRENT_TERM.key == "AY2026-2027.1"
 
 
-@pytest.mark.parametrize("page", ["/students/", "/plans/"])
-def test_the_section_is_locked_until_confirmed(client: TestClient, page: str) -> None:
+def test_the_section_is_locked_until_confirmed(client: TestClient) -> None:
+    page = "/students/"
     locked = client.get(page).text
     card = locked.split('id="records-h"')[1]
     assert ">Locked</span>" in card and 'name="understood" value="yes" required' in card
@@ -63,13 +63,17 @@ def test_the_section_is_locked_until_confirmed(client: TestClient, page: str) ->
     assert [k for k, s in terms if s] == [sample.CURRENT_TERM.key]
 
 
-def test_the_unlock_keeps_the_page_s_own_filter(client: TestClient) -> None:
-    form = client.get("/plans/?show=week").text.split('id="records-h"')[1].split("</form>")[0]
-    assert '<input type="hidden" name="show" value="week">' in form
-    assert (
-        '<input type="hidden" name="show"'
-        not in client.get("/plans/").text.split('id="records-h"')[1]
-    )
+def test_one_form_downloads_encounters_or_plans(client: TestClient) -> None:
+    """Both kinds from Students' one card (author, 2026-11-07): the form's
+    own action downloads encounters, the second button's plans; a template
+    for each."""
+    form = client.get(f"/students/?{OPEN}").text.split('id="dl-h"')[1].split("</form>")[0]
+    assert '<button type="submit" class="btn btn-primary">Download encounters</button>' in form
+    assert 'formaction="/plans/records.csv">Download plans</button>' in form
+    upload = client.get(f"/students/?{OPEN}").text.split('id="ul-h"')[1].split("</section>")[0]
+    tpl = "records-template.csv?records=open&amp;understood=yes"
+    assert f'href="/students/{tpl}">Encounters template</a>' in upload
+    assert f'href="/plans/{tpl}">Follow-ups template</a>' in upload
 
 
 def test_encounters_download_by_term_or_all(client: TestClient) -> None:
@@ -144,7 +148,7 @@ def test_plans_download_and_both_templates(client: TestClient) -> None:
     assert (
         "Kind" not in sample.PLAN_TEMPLATE_COLUMNS
     )  # an upload makes follow-ups, never a formal assignment
-    assert "never makes one" in client.get(f"/plans/?{OPEN}").text
+    assert "never makes one" in client.get(f"/students/?{OPEN}").text
 
 
 def test_the_forms_carry_the_viewer(client: TestClient) -> None:
@@ -169,15 +173,13 @@ def test_a_download_without_the_unlock_goes_back(client: TestClient) -> None:
         "/plans/records.csv?as=Priya%20Raman",
     ):
         back = client.get(path, follow_redirects=False)
-        assert back.status_code == 303 and back.headers["location"].split("?")[0] in (
-            "/students/",
-            "/plans/",
-        ), path
+        assert back.status_code == 303, path
+        assert back.headers["location"].split("?")[0] == "/students/", path
     assert (
         client.get("/plans/records.csv?as=Priya%20Raman", follow_redirects=False).headers[
             "location"
         ]
-        == "/plans/?as=Priya%20Raman"
+        == "/students/?as=Priya%20Raman"
     )
 
 
@@ -210,15 +212,16 @@ def test_purge_hides_and_deletion_is_others(client: TestClient) -> None:
         and "only senior staff with identifiable access can delete them" in card
     )
     assert (
-        'aria-label="Purge all your encounters">Purge all</button>' in card and "disabled" in card
+        'aria-label="Purge all your encounters and plans">Purge all</button>' in card
+        and "disabled" in card
     )
     choices = re.findall(
         r'<option value="([^"@]+)" data-value',
         card.split('id="purge-student-list"')[1].split("</datalist>")[0],
     )
     assert choices == [
-        st.name for st in sample.record_students("Daniel Koh", "students")
-    ]  # a purge can take one student's
+        st.name for st in sample.record_students("Daniel Koh", "all")
+    ]  # a purge can take one student's, of either kind of record
     assert re.search(
         r'<input id="purge-student" class="token-input"[^>]* disabled>', card
     )  # a purge can take one student's
@@ -248,7 +251,7 @@ def test_the_records_pages_answer_only_on_a_local_run(monkeypatch: pytest.Monkey
 def test_mounted_records_stay_under_the_mount() -> None:
     host, _ = host_with(("supportlogs",))
     mounted = TestClient(host)
-    for path in (f"/students/?{OPEN}", f"/plans/?show=week&{OPEN}", "/students/"):
+    for path in (f"/students/?{OPEN}", "/students/"):
         page = mounted.get("/supportlogs" + path)
         assert page.status_code == 200, path
         for link in re.findall(
@@ -428,19 +431,16 @@ def test_downloads_filter_by_student(client: TestClient) -> None:
     assert {r[2] for r in rows(mine.text)[1:]} == {"clara.tan@u.example.edu"}
     assert len(rows(mine.text)) - 1 == len(sample.encounters_by("Daniel Koh", "S-03"))
 
-    def offered(page: str) -> list[str]:
-        listed = (
-            client.get(f"/{page}/?{OPEN}")
-            .text.split('id="dl-student-list"')[1]
-            .split("</datalist>")[0]
-        )
-        return list(dict.fromkeys(re.findall(r'data-value="(S-\d+)"', listed)))
-
-    assert offered("students") == [st.id for st in sample.record_students("Daniel Koh", "students")]
-    assert set(offered("plans")) == {
+    listed = (
+        client.get(f"/students/?{OPEN}")
+        .text.split('id="dl-student-list"')[1]
+        .split("</datalist>")[0]
+    )
+    offered = list(dict.fromkeys(re.findall(r'data-value="(S-\d+)"', listed)))
+    assert offered == [st.id for st in sample.record_students("Daniel Koh", "all")]
+    assert set(offered) == {e.student for e in sample.encounters_by("Daniel Koh")} | {
         p.student for p in sample.PLANS if p.staff == "Daniel Koh"
-    }  # only students with plans
-    assert "S-06" in offered("students") and "S-06" not in offered("plans")
+    }  # either kind of record
     plans = rows(client.get(f"/plans/records.csv?{OPEN}&term=all&student=S-01").text)
     assert [r[1] for r in plans[1:]] == ["Aiden Chen"]
     senior = client.get(f"/overview/records.csv?{SAM}&{OPEN}&what=encounters&term=all&student=S-08")
@@ -462,7 +462,7 @@ def test_purge_is_outline_red(client: TestClient) -> None:
     page = client.get(f"/students/?{OPEN}").text
     assert (
         '<button type="button" class="btn btn-danger" disabled aria-label="Purge all your '
-        'encounters">Purge all</button>' in page
+        'encounters and plans">Purge all</button>' in page
     )
 
 
