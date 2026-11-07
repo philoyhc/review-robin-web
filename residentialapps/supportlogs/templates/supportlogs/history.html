@@ -32,6 +32,21 @@
       {% endif %}
     </div>
     <div class="side">
+      {# Form a team (sharing screens rung 5): a senior may start one; each
+         member accepts, and the senior is not in it unless they join.
+         Inert until wired. #}
+      {% set team = sample.team_for(chosen.id) %}
+      <section class="card card-pad" aria-labelledby="team-h">
+        <h2 id="team-h">Team</h2>
+        {% if team %}
+          <p class="flush"><span class="chip chip-info">Team</span> {{ team.members | join(", ") }}</p>
+          <p class="subtle small">Formed {{ sample.short_date(team.formed) }} by {{ team.formed_by }}.</p>
+        {% else %}
+          <p class="sub">Start a team for {{ chosen.name }}: the staff you choose are each asked to accept, and it forms once two have; anyone who declines stays out. You are not in it unless you join as frontline staff.</p>
+          <fieldset class="modes"><legend>Staff</legend>{% for name in sample.FRONTLINE_COLLEAGUES %}<label class="check"><input type="checkbox" disabled> {{ name }}</label>{% endfor %}</fieldset>
+          <button type="button" class="btn btn-secondary" disabled>Form a team</button>
+        {% endif %}
+      </section>
       <section class="card card-pad muted" aria-labelledby="plans-h">
         <h2 id="plans-h">Plans <span class="count">· {{ plans | length }}</span></h2>
         {% if plans %}<ul class="items">{% for p in plans %}<li><div class="item-head"><a class="strong" href="{{ url('/plans/' ~ p.id) }}{{ as_query }}">{{ p.staff }}</a></div><div class="subtle">{{ "Plan · " ~ p.source if p.formal else "Following" }}</div></li>{% endfor %}</ul>{% else %}<p class="sub">None.</p>{% endif %}

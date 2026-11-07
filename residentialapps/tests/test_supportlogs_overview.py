@@ -35,7 +35,7 @@ def cells(table: str) -> list[list[str]]:
 
 
 # A withheld name's disclosure as plain text, ahead of the name it holds.
-HIDDEN = "No formal plan Show nameHide name"
+HIDDEN = "Show nameHide name"
 
 
 def plain(cell: str) -> str:
@@ -75,11 +75,13 @@ def test_students_across_staff_shows_staff_never_content(client: TestClient) -> 
 
 def test_overview_withholds_a_name_off_a_plan_until_shown(client: TestClient) -> None:
     """Author, 2026-11-07: Overview names by default only students on a
-    formal plan or with an active flag; any other is one click away, in
+    formal plan, with an active flag or with a team; any other is one
+    click away, in
     every card but the flags."""
     hidden = {s.name for s in sample.STUDENTS if not sample.named_on_overview(s.id)}
     shown = {r["student"].name for r in sample.students_across_staff()} & hidden
-    assert {"Gwyneth Low", "Aiden Chen", "Bao Nguyen", "Farid Osman", "Hana Rahim"} <= shown
+    assert {"Gwyneth Low", "Aiden Chen", "Bao Nguyen", "Farid Osman"} <= shown
+    assert "Hana Rahim" not in hidden  # her team names her (rung 5)
     for name in ("Sam%20Lee", "Siti%20Rahman"):
         page = client.get(f"/overview/?as={name}").text
         for r in cells(section(page, "across-h")):

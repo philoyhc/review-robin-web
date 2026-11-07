@@ -138,8 +138,8 @@ and four types.
   and Following only (author, 2026-11-07).
 - **After rung 13** (author, 2026-11-07): Overview names by default
   only students on a formal plan or with an active flag, in Hotspots,
-  Every plan and Flagged for formal assignment; the rest read "No formal
-  plan" with **Show name**, for every identifiable view. Safety flags keep
+  Every plan and Flagged for formal assignment; the rest read **Show name**
+  (no label beside it, author, 2026-11-07), for every identifiable view. Safety flags keep
   their names. One read: Every plan still named three withheld students,
-  the label was wrong for follow-ups, and the open disclosure hid its own
-  focus; all fixed.
+  a label wrong for follow-ups (since removed), and the open disclosure
+  hid its own focus; all fixed.

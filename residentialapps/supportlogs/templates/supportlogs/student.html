@@ -69,6 +69,23 @@
           {% else %}<a class="btn btn-secondary gap-above-sm" href="{{ url('/students/' ~ chosen.id ~ '/refer') }}{{ as_query }}">Flag for formal assignment</a>{% endif %}
         {% endif %}
       </section>
+      {# Teams (sharing screens rung 5, author, 2026-11-07): two or more
+         staff sharing responsibility for the student. Inert until wired. #}
+      {% set team = sample.team_for(chosen.id) %}
+      <section class="card card-pad" aria-labelledby="team-h">
+        <h2 id="team-h">Team</h2>
+        {% if team and me.name in team.members %}
+          <p class="flush"><span class="chip chip-info">Team</span> {{ team.members | join(", ") }}</p>
+          <p class="subtle small">Formed {{ sample.short_date(team.formed) }} by {{ team.formed_by }}. Records any of you make while in the team are the team's.</p>
+          <button type="button" class="btn btn-secondary gap-above-sm" disabled>Leave the team</button>
+        {% elif team %}
+          <p class="flush"><span class="chip chip-info">Team</span> {{ team.members | join(", ") }}</p>
+          <p class="subtle small">You are not in it.</p>
+        {% else %}
+          <p class="sub">Share responsibility for {{ chosen.name }} with colleagues: each accepts, and decides then whether the team sees their earlier records.</p>
+          <button type="button" class="btn btn-secondary" disabled>Form a team</button>
+        {% endif %}
+      </section>
       {% set theirs = sample.shared_plans(me.name, chosen.id) %}
       {% if theirs %}
       <section class="card card-pad muted" aria-labelledby="splan-h">

@@ -7,6 +7,8 @@
    favorites. The star alone shows, its name in `aria-label` (author,
    2026-11-06). Inert on sample data, which seeds them. #}
 {% macro favorite(s) %}{% set on = sample.is_favorite(me.name, s.id) %}<button type="button" class="col-chip" data-favorite aria-pressed="{{ 'true' if on else 'false' }}" aria-label="Favorite {{ s.name }}" disabled>{{ '★' if on else '☆' }}</button>{% endmacro %}
+{# A team's chip: who else is in it (sharing screens rung 5). #}
+{% macro team_chip(t) %}<span class="chip chip-info">Team</span> with {{ t.members | reject("equalto", me.name) | join(", ") }}{% endmacro %}
 {% block content %}
   {{ sample_title("Students", me.name) }}
   {{ recorded() }}
@@ -19,6 +21,10 @@
       <span id="find-what" class="subtle small">Your own students first, then the directory, searched as you; by email when the directory cannot be read (§4.2). Once wired.</span></div>
   </section>
   {% set mine = sample.working_set(me.name) %}
+  {# Teams (sharing screens rung 5): a team's student shows here for each
+     member, under Teams, whether or not they have records of their own. #}
+  {% set mine_ids = mine | map(attribute="0.id") | list %}
+  {% set team_only = sample.teams_of(me.name) | rejectattr("student", "in", mine_ids) | list %}
   {# My plans folded in (author, 2026-11-07): a filter, All, Plans or
      Following, the viewer's last choice kept in this browser. Each plan's
      chip opens the plan, with its due state. Without script the filter
@@ -26,19 +32,29 @@
      (author, 2026-11-07): Log, last contact, the safety-plan instruction
      and Add a student to follow up. #}
   <section class="card card-pad" aria-labelledby="mine-h">
-    <h2 id="mine-h">My students <span class="count">· <span data-students-count>{{ mine | length }}</span></span></h2>
+    <h2 id="mine-h">My students <span class="count">· <span data-students-count>{{ mine | length + team_only | length }}</span></span></h2>
     <p class="sub">Your plans and follow-ups, then everyone you have logged an encounter with, the most recently seen first.</p>
     <div data-students-filter hidden><div class="col-chips" role="group" aria-label="Show">
-      {% for key, label in (("all", "All"), ("plans", "Plans"), ("following", "Following")) %}<button type="button" class="col-chip" data-show="{{ key }}" aria-pressed="{{ 'true' if key == 'all' else 'false' }}">{{ label }}</button>{% endfor %}
+      {% for key, label in (("all", "All"), ("plans", "Plans"), ("following", "Following"), ("teams", "Teams")) %}<button type="button" class="col-chip" data-show="{{ key }}" aria-pressed="{{ 'true' if key == 'all' else 'false' }}">{{ label }}</button>{% endfor %}
     </div></div>
     <ul class="items" data-students-list>
       {% for s, _reasons, seen in mine %}
         {% set plans = sample.plans_of(me.name, s.id) %}
-        <li data-kinds="{% if plans | selectattr('formal') | first %}plans {% endif %}{% if plans | rejectattr('formal') | first %}following{% endif %}">
+        {% set team = sample.team_for(s.id) if s.id in (sample.teams_of(me.name) | map(attribute="student") | list) else none %}
+        <li data-kinds="{% if plans | selectattr('formal') | first %}plans {% endif %}{% if plans | rejectattr('formal') | first %}following {% endif %}{% if team %}teams{% endif %}">
           <div class="item-head"><a class="strong" href="{{ url('/students/' ~ s.id) }}{{ as_query }}">{{ s.name }}</a><span class="chips">{{ favorite(s) }}</span></div>
+          {% if team %}<div class="subtle">{{ team_chip(team) }}</div>{% endif %}
           {% if plans %}<div class="subtle">{% for p in plans %}{{ kind_chips(p) }} {{ due_chip(p) }} {{ p.cadence }}{% if not loop.last %} · {% endif %}{% endfor %}</div>{% endif %}
           {% for p in plans if p.safety_plan %}<div class="subtle">{{ p.instruction }}</div>{% endfor %}
           <div class="subtle">{{ s.email }}{% if plans %} · last contact {{ sample.short_date(seen) if seen else "none yet" }}{% elif seen %} · seen {{ sample.short_date(seen) }}{% endif %}</div>
+          <a class="btn btn-secondary gap-above-sm" href="{{ url('/log') }}{{ qs(student=s.id) }}" aria-label="Log an encounter with {{ s.name }}">Log</a>
+        </li>
+      {% endfor %}
+      {% for t in team_only %}{% set s = sample.student(t.student) %}
+        <li data-kinds="teams">
+          <div class="item-head"><a class="strong" href="{{ url('/students/' ~ s.id) }}{{ as_query }}">{{ s.name }}</a><span class="chips">{{ favorite(s) }}</span></div>
+          <div class="subtle">{{ team_chip(t) }}</div>
+          <div class="subtle">{{ s.email }}</div>
           <a class="btn btn-secondary gap-above-sm" href="{{ url('/log') }}{{ qs(student=s.id) }}" aria-label="Log an encounter with {{ s.name }}">Log</a>
         </li>
       {% endfor %}
@@ -47,7 +63,7 @@
     <div data-students-add><button type="button" class="btn btn-secondary gap-above-sm" disabled>Add a student to follow up</button></div>
   </section>
   <script>
-    // Students' filter (author, 2026-11-07): shows all, plans or
+    // Students' filter (author, 2026-11-07): shows all, plans, teams or
     // follow-ups; the choice is kept in this browser only.
     (function () {
       var group = document.querySelector("[data-students-filter]");
@@ -71,7 +87,7 @@
         });
         count.textContent = shown;
         none.hidden = shown !== 0;
-        if (add) add.hidden = show === "plans";
+        if (add) add.hidden = show === "plans" || show === "teams";
       }
       var saved = "all";
       try { saved = localStorage.getItem(KEY) || "all"; } catch (e) { /* storage blocked: All */ }
@@ -87,7 +103,8 @@
       });
     })();
   </script>
-  {% set shared = sample.shared_with(me.name) %}
+  {# A team's student lists under My students, Teams, not again here. #}
+  {% set shared = sample.shared_with(me.name) | rejectattr("student", "in", sample.teams_of(me.name) | map(attribute="student") | list) | list %}
   {% if shared %}
   <section class="card card-pad gap-above" aria-labelledby="shared-h">
     <h2 id="shared-h">Shared with me <span class="count">· {{ shared | length }}</span></h2>

@@ -254,7 +254,7 @@ def test_students_filter_shows_plans_or_follow_ups_and_is_kept(page: Page) -> No
     page.goto(f"{ORIGIN}/students/")
     mine = page.locator("[data-students-list] > li:visible a.strong")
     count = page.locator("[data-students-count]")
-    assert mine.count() == 6 and count.inner_text() == "6"
+    assert mine.count() == 7 and count.inner_text() == "7"
     add = page.locator("[data-students-add]")
     assert add.is_visible()
     page.get_by_role("button", name="Plans", exact=True).click()
@@ -270,10 +270,10 @@ def test_students_filter_shows_plans_or_follow_ups_and_is_kept(page: Page) -> No
         == "true"
     )
     page.get_by_role("button", name="All", exact=True).click()
-    assert mine.count() == 6
+    assert mine.count() == 7
     page.evaluate("localStorage.setItem('supportlogs-students-show', 'nonsense')")
     page.reload()
-    assert mine.count() == 6  # an unknown stored choice reads as All
+    assert mine.count() == 7  # an unknown stored choice reads as All
 
 
 def test_students_filter_says_none_when_nothing_matches(page: Page) -> None:
@@ -315,3 +315,18 @@ def test_a_withheld_name_shows_and_hides_again(page: Page) -> None:
     assert summary.is_visible() and "Hide name" in summary.inner_text()
     summary.click()
     assert not name.is_visible()
+
+
+def test_students_teams_filter_shows_the_team_and_hides_add(page: Page) -> None:
+    """Rung 5: Teams shows the team's student alone, with no Add a student
+    to follow up, and is kept across a reload."""
+    page.goto(f"{ORIGIN}/students/")
+    mine = page.locator("[data-students-list] > li:visible a.strong")
+    add = page.locator("[data-students-add]")
+    page.get_by_role("button", name="Teams", exact=True).click()
+    assert mine.all_inner_texts() == ["Hana Rahim"]
+    assert page.locator("[data-students-count]").inner_text() == "1"
+    assert not add.is_visible()
+    page.reload()
+    assert mine.all_inner_texts() == ["Hana Rahim"] and not add.is_visible()
+    page.get_by_role("button", name="All", exact=True).click()

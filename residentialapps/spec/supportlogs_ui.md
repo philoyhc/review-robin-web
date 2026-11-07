@@ -41,8 +41,14 @@ under `data-app="supportlogs"`.
   (the invitation's and the handover's the author's call to confirm,
   `residentialapps/guide/1D_sharing_screens.md` Status); only in an
   emergency can a sys admin accept for the staff member.
+- **Teams** (sharing screens rung 5, author, 2026-11-07): a team's
+  student shows on Students for each member, under a fourth filter
+  choice, **Teams**, with the other members named. A student's page has a
+  Team card (members, Leave the team; or Form a team), and a senior's
+  view of a student has Form a team over chosen staff; inert until
+  wired. A team names its student on Overview (rule 3), with a Team chip.
 - **Plans and follow-ups are a filter on Students** (author, 2026-11-07):
-  My students shows All, Plans or Following, the last choice kept in the
+  My students shows All, Plans, Following or Teams, the last choice kept in the
   browser; each plan's chip opens it, beside its due state. Each row has
   **Log**, a plan row its last contact and any safety-plan instruction,
   and under All and Following the list ends with **Add a student to
@@ -231,7 +237,7 @@ notice on every page that names students.
    how long, type, concern areas, follow-up and note, and figures drawn
    from them). It
    names a student by default only when they are on a formal plan or
-   have a safety flag (or, once teams are drawn, a team); any other
+   have a safety flag or a team; any other
    student's name is withheld until a deliberate action reveals it. To
    read content, a senior requests a share from the owner; in an
    emergency a sys admin acknowledges it on the owner's behalf. Every
@@ -250,10 +256,10 @@ notice on every page that names students.
   - a history;
   - the support-activity audit;
   - a consultation check.
-- **Overview names by default only students on a formal plan or with an
-  active flag** (author, 2026-11-07), in Students across staff, Every plan and Flagged
-  for formal assignment. Any other student reads "No formal plan" with
-  **Show name**, which shows the name and its link in place and reads
+- **Overview names by default only students on a formal plan, with an
+  active flag or with a team** (author, 2026-11-07), in Students across staff, Every plan and Flagged
+  for formal assignment. Any other student's name is replaced by
+  **Show name** alone (author, 2026-11-07: no "No formal plan" label), which shows the name and its link in place and reads
   **Hide name** once open; a withheld Students across staff row sorts last on the
   Student column. A safety flag names its student, open or closed: the
   flag is the reason to. On sample data the name is in the page (and
