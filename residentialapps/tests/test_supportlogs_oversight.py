@@ -113,6 +113,7 @@ def test_hand_over_and_acknowledge_on_behalf_scaffolds(client: TestClient) -> No
     assert found
     frm = found.group(1)
     assert re.findall(r"<option>([^<]+)</option>", frm) == ["Priya Raman", "Arjun Nair"]
+    assert "Someone other than From." in senior
     assert "you see none of them" in senior and "checkbox" not in senior
     admin = client.get("/sys-admin/?as=Rachel%20Yeo").text
     owed = section(admin, "behalf-h")

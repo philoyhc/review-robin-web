@@ -5,6 +5,7 @@ assignment, and peer-view grants (functional spec §3.1, §7, §8, §11.1)."""
 from __future__ import annotations
 
 import re
+from datetime import date
 
 import pytest
 from fastapi.testclient import TestClient
@@ -270,10 +271,47 @@ def test_a_plan_seen_by_senior_staff_shows_no_contact_facts(client: TestClient) 
         page = client.get(f"/plans/P-01?as={name}").text
         for fact in ("Last contact", "Next expected", "Contacts since it began", "Overdue"):
             assert fact not in page, (name, fact)
-        assert "<dt>Source</dt><dd>Counselling</dd>" in page
         follow_up = client.get(f"/plans/P-03?as={name}").text  # Daniel's own
         for fact in ("<dt>Since</dt>", "<dt>Cadence</dt>", 'id="hist-h"', "began following up"):
             assert fact not in follow_up, (name, fact)
+        # P-02 began as Daniel's follow-up: its history starts at the
+        # conversion, never the follow-up's start and cadence.
+        converted = client.get(f"/plans/P-02?as={name}").text
+        assert "began following up" not in converted, name
+    # A formal plan's facts are senior staff's own setting: Sam sees them,
+    # with its history from the conversion; Other Staff view sees only
+    # who, whom, kind and status (author, 2026-11-07).
+    sam = client.get("/plans/P-01?as=Sam%20Lee").text
+    assert "<dt>Source</dt><dd>Counselling</dd>" in sam and "<dt>Cadence</dt>" in sam
+    assert "converted it to a formal assignment" in client.get("/plans/P-02?as=Sam%20Lee").text
+    siti = client.get("/plans/P-01?as=Siti%20Rahman").text
+    for fact in ("<dt>Source</dt>", "<dt>Since</dt>", "<dt>Cadence</dt>", "<dt>Review</dt>"):
+        assert fact not in siti, fact
+    assert "Instruction:" not in siti and 'id="hist-h"' not in siti
+    assert "<dt>Status</dt>" in siti and "<dt>Assigned by</dt>" in siti
+    assert "Safety-plan support" not in siti and "Safety-plan support" in sam
+    # Overview's Every plan: the source for senior staff only.
+    every = client.get("/overview/?as=Siti%20Rahman").text.split('id="plans-h"', 1)[1]
+    assert "Plan · Counselling" not in every and "Plan · " in every
+    assert "Plan · Counselling" in client.get("/overview/?as=Sam%20Lee").text
+    # A follow-up's Convert form offers no cadence of its own.
+    for pid in ("P-03", "P-05"):
+        convert = client.get(f"/plans/{pid}?as=Sam%20Lee").text
+        cadences = convert.split('id="cv-cadence"', 1)[1].split("</select>", 1)[0]
+        assert re.findall(r"<option selected>([^<]+)</option>", cadences) == ["Choose a cadence"]
+
+
+def test_a_walled_history_shows_nothing_without_an_assignment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Fails closed: a formal plan whose history names no assignment or
+    conversion shows senior staff nothing of it, never the follow-up."""
+    assert sample.walled_history("P-02")[0][1].startswith("Sam Lee converted it")
+    assert sample.walled_history("P-01") == sample.PLAN_HISTORY["P-01"]
+    monkeypatch.setitem(
+        sample.PLAN_HISTORY, "P-02", ((date(2026, 9, 28), "Daniel Koh began following up"),)
+    )
+    assert sample.walled_history("P-02") == ()
 
 
 def test_a_share_not_yet_accepted_shows_nothing_to_its_receiver(client: TestClient) -> None:

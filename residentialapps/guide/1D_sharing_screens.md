@@ -84,6 +84,25 @@ Log's optional details gain **Share this encounter with**, folded away.
   emergency share requests whose staff member cannot be reached, with
   no content shown.
 
+### Rung 7 — The audit's findings
+
+A read of every screen against the rules (author, 2026-11-07):
+
+- A formal plan's history, seen by senior staff, starts at its
+  assignment or conversion.
+- Other Staff view sees any plan's who, whom, kind and status only.
+- The Consultation check reasons from metadata only.
+- A senior's upload on Records across staff shows no preview.
+- A safety flag names its student, open or closed.
+- Hand over says To is someone other than From.
+
+### Rung 8 — Agree and acknowledge
+
+One vocabulary (author, 2026-11-07): **agree** (agreement) is consent
+for an action to proceed: a share, a team, a handover, a sys admin's on
+someone's behalf. **Acknowledge** is having seen forwarded information,
+as a safety flag is acknowledged. Copy, model, spec and explainer follow.
+
 ## Checks
 
 Each rung keeps `pytest`, `ruff`, `pyright` green and takes one
@@ -142,3 +161,12 @@ browser check passes on each rung.
   a handover waiting on the one who started it, no record choice, stale
   spec, a missing browser step, plan-only owners left out and thin
   tests, all fixed.
+- **Rung 7:** as planned. Rulings recorded with it (author, 2026-11-07):
+  a flag for formal assignment, with its suggested cadence, is not
+  content; Records across staff names every student behind its lock.
+  The sample's hotspots go with their last use. One read, which found
+  the same leaks elsewhere: Every plan's source for Other Staff view, a
+  follow-up's cadence in Convert, the safety-plan chip, a plan history
+  that failed open, and stale copy on the consultation result, Overview
+  and B2, all fixed. Left for wiring: a senior who also holds a share
+  sees a plan as senior, not as the share.

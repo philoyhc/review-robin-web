@@ -62,25 +62,35 @@ def full_rows(page: str) -> list[tuple[str, str, list[str], str, bool]]:
 
 
 def test_each_state_comes_from_named_reasons() -> None:
+    """Reasons are metadata only (author, 2026-11-07): a flag, a plan, or
+    records with staff, who may have a view; never what the records say,
+    how many there are or when they were made."""
+    records = "Records with Support Logs staff"
     clara = sample.consultation("clara.tan@u.example.edu")
     assert (clara.state, clara.reasons, clara.consult) == (
         sample.REQUIRED,
-        ("Active safety-plan support", "Active formal check-in assignment"),
+        ("Active safety-plan support", "Active formal check-in assignment", records),
         ("Daniel Koh",),
     )
     hana = sample.consultation("Hana.Rahim@u.example.edu ")  # case and spaces do not matter
     assert (hana.state, hana.reasons, hana.consult) == (
         sample.SUGGESTED,
-        ("Active informal follow-up", "Several staff recently involved"),
+        ("Active informal follow-up", records),
         ("Priya Raman", "Arjun Nair"),
     )
     assert sample.consultation("jia.wen.lee@u.example.edu").reasons == (
         "Unresolved safety escalation",
+        records,
     )
-    farid = sample.consultation(
-        "farid.osman@u.example.edu"
-    )  # a student with past support, none current
-    assert (farid.state, farid.reasons, farid.consult) == (sample.NONE_INDICATED, (), ())
+    # Past records alone: their staff may still have a view.
+    farid = sample.consultation("farid.osman@u.example.edu")
+    assert (farid.state, farid.reasons, farid.consult) == (
+        sample.SUGGESTED,
+        (records,),
+        ("Daniel Koh",),
+    )
+    reasons = {r for r, _ in sample.CONSULTATION_REASONS}
+    assert not reasons & {"Marked increase in recent support", "Several staff recently involved"}
     unknown = sample.consultation("someone.else@u.example.edu")
     assert (unknown.student, unknown.state) == (None, sample.NONE_INDICATED)
 
@@ -237,3 +247,16 @@ def test_mounted_consultation_pages_stay_under_the_mount() -> None:
         "/supportlogs/consultation/check?as=Marcus%20Tan&purpose=&emails=", follow_redirects=False
     )
     assert back.headers["location"] == "/supportlogs/consultation/?as=Marcus%20Tan"
+
+
+def test_the_result_says_its_reasons_are_metadata() -> None:
+    """The rules card names what the reasons come from, never "current
+    support" alone: past records count (author, 2026-11-07)."""
+    from fastapi.testclient import TestClient
+
+    from residentialapps.supportlogs.main import create_app
+
+    q = "as=Hui%20Min%20Goh&purpose=Trip&emails=farid.osman%40u.example.edu"
+    page = TestClient(create_app()).get(f"/consultation/check?{q}").text
+    assert "nothing older than current support" not in page
+    assert "never what the records say, how many there are or when" in page

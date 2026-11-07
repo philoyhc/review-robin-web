@@ -16,21 +16,23 @@
   {% set walled = not owner and not shared %}
   {# A follow-up is the frontline's own: seen through the wall it shows
      only who, whom and its status, never its dates, cadence, instruction
-     or history. A formal plan's facts are the senior's own setting. #}
-  {% set thin = walled and not p.formal %}
+     or history. A formal plan's facts are senior staff's own setting, so
+     they see them, and its history from the assignment on; Other Staff
+     view sees only who, whom, kind and status (author, 2026-11-07). #}
+  {% set thin = walled and not (p.formal and senior) %}
   <div class="split">
     <div class="main stack">
       <section class="card card-pad" aria-labelledby="plan-h">
-        <h2 id="plan-h">{% if linked %}<a href="{{ url('/students/' ~ s.id) }}{{ as_query }}">{{ s.name }}</a>{% else %}{{ s.name }}{% endif %}{% if not walled %} {{ due_chip(p) }}{% endif %}{% if p.safety_plan %} <span class="chip chip-marker">Safety-plan support</span>{% endif %}</h2>
+        <h2 id="plan-h">{% if linked %}<a href="{{ url('/students/' ~ s.id) }}{{ as_query }}">{{ s.name }}</a>{% else %}{{ s.name }}{% endif %}{% if not walled %} {{ due_chip(p) }}{% endif %}{% if p.safety_plan and not thin %} <span class="chip chip-marker">Safety-plan support</span>{% endif %}</h2>
         <dl class="kv">
           {% if not owner %}<dt>With</dt><dd>{{ p.staff }}</dd>{% endif %}
           <dt>Status</dt><dd>{{ p.status }}</dd>
-          {% if p.formal %}<dt>Source</dt><dd>{{ p.source }}</dd><dt>Assigned by</dt><dd>{{ p.assigned_by }}</dd>{% endif %}
+          {% if p.formal %}{% if not thin %}<dt>Source</dt><dd>{{ p.source }}</dd>{% endif %}<dt>Assigned by</dt><dd>{{ p.assigned_by }}</dd>{% endif %}
           {% if not thin %}
           <dt>Since</dt><dd>{{ sample.short_date(p.start) }}</dd>
           <dt>Cadence</dt><dd>{{ p.cadence }}</dd>
           {% endif %}
-          {% if p.review %}<dt>Review</dt><dd>{{ sample.short_date(p.review) }}</dd>{% endif %}
+          {% if p.review and not thin %}<dt>Review</dt><dd>{{ sample.short_date(p.review) }}</dd>{% endif %}
           {% if not walled %}
           {% set seen = sample.last_contact(p) %}{% set nd = sample.next_due(p) %}
           <dt>Last contact</dt><dd>{{ sample.short_date(seen) if seen else "None yet" }}</dd>
@@ -44,7 +46,7 @@
       <section class="card card-pad" aria-labelledby="hist-h">
         <h2 id="hist-h">History</h2>
         <p class="sub">How it began and what changed: one record, converted or not (§8).</p>
-        <ul class="items">{% for on, what in sample.PLAN_HISTORY.get(p.id, ()) %}<li><span class="subtle">{{ sample.short_date(on) }}</span> · {{ what }}</li>{% endfor %}</ul>
+        <ul class="items">{% for on, what in (sample.walled_history(p.id) if walled else sample.PLAN_HISTORY.get(p.id, ())) %}<li><span class="subtle">{{ sample.short_date(on) }}</span> · {{ what }}</li>{% endfor %}</ul>
       </section>
       {% endif %}
     </div>
@@ -55,7 +57,7 @@
           {% if not p.formal %}
             <p class="sub">Convert to a formal assignment, keeping its history (§8).</p>
             <div class="field-wide"><label for="cv-source">Source</label><select id="cv-source" class="input" disabled>{% for src in sample.ASSIGNMENT_SOURCES %}<option>{{ src }}</option>{% endfor %}</select></div>
-            <div class="field-wide"><label for="cv-cadence">Cadence</label><select id="cv-cadence" class="input" disabled>{% if p.cadence not in sample.ASSIGNMENT_CADENCES %}<option selected>Choose a cadence</option>{% endif %}{% for c in sample.ASSIGNMENT_CADENCES %}<option{% if c == p.cadence %} selected{% endif %}>{{ c }}</option>{% endfor %}</select></div>
+            <div class="field-wide"><label for="cv-cadence">Cadence</label><select id="cv-cadence" class="input" disabled><option selected>Choose a cadence</option>{% for c in sample.ASSIGNMENT_CADENCES %}<option>{{ c }}</option>{% endfor %}</select></div>
             <div class="field-wide"><label for="cv-review">Review on (optional)</label><input id="cv-review" class="input" type="date" disabled></div>
             <div class="field-wide"><label for="cv-instr">Instruction (optional)</label><input id="cv-instr" class="input" maxlength="160" disabled aria-describedby="cv-instr-what">
               <span id="cv-instr-what" class="subtle small">What to do, never why: "weekly check-in, review in four weeks" (§7.5).</span></div>

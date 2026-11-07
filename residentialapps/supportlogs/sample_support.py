@@ -715,6 +715,24 @@ STAFF_EMAILS = {
     "Grace Ho": "grace.ho@example.edu",
 }
 
+
+def walled_history(pid: str) -> tuple[tuple[date, str], ...]:
+    """A formal plan's history as senior staff see it: from its assignment
+    or conversion on. What came before was a frontline follow-up, whose
+    dates and cadence are content (author, 2026-11-07). With no such
+    entry it shows nothing rather than everything."""
+    entries = PLAN_HISTORY.get(pid, ())
+    start = next(
+        (
+            i
+            for i, (_, what) in enumerate(entries)
+            if " assigned it" in what or " converted it" in what
+        ),
+        None,
+    )
+    return () if start is None else entries[start:]
+
+
 # Each plan's history (§8): how it began and what changed, so a converted
 # follow-up keeps one record rather than a disconnected duplicate.
 PLAN_HISTORY: dict[str, tuple[tuple[date, str], ...]] = {
@@ -941,13 +959,6 @@ def shared_encounters(staff: str, sid: str) -> list[Encounter]:
 PERIOD_DAYS = 30
 
 
-def in_period(e: Encounter, days: int = PERIOD_DAYS, offset: int = 0) -> bool:
-    """Whether an encounter falls in the `days` before TODAY, shifted back by
-    `offset` days."""
-    end = TODAY - timedelta(days=offset)
-    return end - timedelta(days=days - 1) <= e.when.date() <= end
-
-
 class SupportRow(TypedDict):
     staff: str
     students: int
@@ -998,7 +1009,7 @@ class AcrossRow(TypedDict):
 def students_across_staff() -> list[AcrossRow]:
     """Students across staff (author, 2026-11-07): each student any staff
     member has a record about, with the staff and the signals (an active
-    formal plan, active flags). Students Overview names come first, the
+    formal plan, safety flags open or closed, a team). Students Overview names come first, the
     most flags first; withheld ones follow in a fixed order hashed from
     their ids, so their order gives away nothing of their names (the
     sample's ids follow its names)."""
@@ -1014,7 +1025,7 @@ def students_across_staff() -> list[AcrossRow]:
                 "formal": any(
                     p.formal and p.status == "Active" for p in PLANS if p.student == s.id
                 ),
-                "flags": sum(1 for f in FLAGS if f.student == s.id and f.active),
+                "flags": sum(1 for f in FLAGS if f.student == s.id),
                 "team": team_for(s.id) is not None,
             }
         )
@@ -1025,57 +1036,14 @@ def students_across_staff() -> list[AcrossRow]:
     return named + withheld
 
 
-class Hotspot(TypedDict):
-    student: Student
-    contacts: int
-    before: int
-    minutes: int
-    staff: int
-    formal: bool
-    flags: int
-    rising: bool
-
-
 def named_on_overview(sid: str) -> bool:
     """Overview names a student by default only when they are on an
-    active formal plan, have an active flag or have a team (author,
-    2026-11-07); any other student is one click away."""
+    active formal plan, have a safety flag, open or closed, or have a team
+    (author, 2026-11-07); any other student is one click away."""
     return (
         any(p.formal and p.status == "Active" for p in PLANS if p.student == sid)
-        or any(f.student == sid and f.active for f in FLAGS)
+        or any(f.student == sid for f in FLAGS)
         or team_for(sid) is not None
-    )
-
-
-def hotspots() -> list[Hotspot]:
-    """Students by recent support (§10.4): contacts and minutes over the last
-    14 days against the 14 before, staff involved, a formal plan, active
-    flags. Rising is a sharp increase on the student's own baseline, not a
-    high but stable one. Never a score (§15)."""
-    rows: list[Hotspot] = []
-    for s in STUDENTS:
-        mine = [e for e in ENCOUNTERS if e.student == s.id]
-        now = [e for e in mine if in_period(e, 14)]
-        before = [e for e in mine if in_period(e, 14, offset=14)]
-        flags_active = sum(1 for f in FLAGS if f.student == s.id and f.active)
-        if not now and not flags_active:
-            continue
-        rows.append(
-            {
-                "student": s,
-                "contacts": len(now),
-                "before": len(before),
-                "minutes": sum(MINUTES[e.duration] for e in now),
-                "staff": len({e.staff for e in now}),
-                "formal": any(
-                    p.formal for p in PLANS if p.student == s.id and p.status == "Active"
-                ),
-                "flags": flags_active,
-                "rising": len(now) >= 2 and len(now) > len(before),
-            }
-        )
-    return sorted(
-        rows, key=lambda r: (-r["flags"], not r["rising"], -r["contacts"], r["student"].name)
     )
 
 
@@ -1138,8 +1106,9 @@ CONSULTATION_REASONS = (
     ("Active safety-plan support", REQUIRED),
     ("Active formal check-in assignment", SUGGESTED),
     ("Active informal follow-up", SUGGESTED),
-    ("Marked increase in recent support", SUGGESTED),
-    ("Several staff recently involved", SUGGESTED),
+    # Metadata only (author, 2026-11-07): records exist, so the staff who
+    # made them may have a view. Never drawn from what the records say.
+    ("Records with Support Logs staff", SUGGESTED),
 )
 NONE_MEANS = (
     "No consultation indicated means only that nothing recorded in Support Logs "
@@ -1174,24 +1143,20 @@ def consultation(email: str) -> Consultation:
     if s is None:
         return Consultation(email, None, NONE_INDICATED, (), ())
     plans = [p for p in PLANS if p.student == s.id and p.status == "Active"]
-    recent = [e for e in ENCOUNTERS if e.student == s.id and in_period(e)]
-    hot = next((r for r in hotspots() if r["student"].id == s.id), None)
+    staff = [n for n in FRONTLINE_COLLEAGUES if n in staff_with_records(s.id)]
     met = {
         "Unresolved safety escalation": any(f.student == s.id and f.active for f in FLAGS),
         "Active safety-plan support": any(p.safety_plan for p in plans),
         "Active formal check-in assignment": any(p.formal for p in plans),
         "Active informal follow-up": any(not p.formal for p in plans),
-        "Marked increase in recent support": bool(hot and hot["rising"]),
-        "Several staff recently involved": len({e.staff for e in recent}) >= 2,
+        "Records with Support Logs staff": bool(staff),
     }
     reasons = tuple(r for r, _ in CONSULTATION_REASONS if met[r])
     brought = {state for r, state in CONSULTATION_REASONS if r in reasons}
     state = next((st for st in CONSULTATION_STATES if st in brought), NONE_INDICATED)
     raisers = [f.raised_by for f in FLAGS if f.student == s.id and f.active]
     consult = (
-        ()
-        if not reasons
-        else tuple(dict.fromkeys([p.staff for p in plans] + raisers + [e.staff for e in recent]))
+        () if not reasons else tuple(dict.fromkeys([p.staff for p in plans] + raisers + staff))
     )
     return Consultation(email, s, state, reasons, consult)
 
@@ -1408,7 +1373,7 @@ class SeniorReads(TypedDict):
 def senior_reads(days: int = PERIOD_DAYS) -> list[SeniorReads]:
     """Each senior's identifiable reads in the period: counts and the
     latest, never which student (author, 2026-10-30)."""
-    since = TODAY - timedelta(days=days - 1)  # as `in_period`
+    since = TODAY - timedelta(days=days - 1)  # the last `days` days, today included
     rows: list[SeniorReads] = []
     for name in holders(SENIOR):
         reads = [

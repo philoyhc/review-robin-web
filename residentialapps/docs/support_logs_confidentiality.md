@@ -18,7 +18,8 @@ nor can senior staff. Only people you share it with can read it.
 Each record has two parts:
 
 - **Who and which student:** that you, a named staff member, have a
-  record about a named student. Senior staff can see this much.
+  record about a named student. Senior staff can see this much, and so
+  can whoever runs a consultation check, to know whom to ask.
 - **Everything else is the record's content:** when you met, for how
   long, what kind of meeting, the concerns, whether a follow-up is
   needed, and your note. So are any totals worked out from them, such

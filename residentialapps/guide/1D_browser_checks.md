@@ -280,14 +280,15 @@ would you ask a staff member to share?*
 
 *Task: "Look at everything the team has on Hana Rahim."*
 
-- [ ] Hana Rahim is on no formal plan, so **Show name** on her row in
-  Students across staff first; her name then opens her page, with
+- [ ] Hana Rahim is named, by her team and her closed safety flag (a
+  student with none of a formal plan, a flag or a team shows **Show
+  name** first); her name opens her page, with
   "Opening this history is recorded"; the back link returns to Overview,
   which stays marked.
 - [ ] **Staff with records** lists Priya Raman and Arjun Nair, each with
   **Request a share**, disabled; no encounters, dates or notes anywhere.
-  Her plan (P-05) shows its kind and source but no last contact or due
-  state. Her Team card names Priya Raman and Daniel Koh; Hand over
+  Her follow-up (P-05) shows who, whom and status only, and Convert
+  offers no cadence of its own. Her Team card names Priya Raman and Daniel Koh; Hand over
   offers From (Priya Raman and Arjun Nair only) and To, disabled.
 
 Ask: *When would you ask a staff member to share? Would you tell them
@@ -300,6 +301,9 @@ plan."*
 
 - [ ] P-03 offers **Convert to formal assignment**, with source, cadence,
   review date, instruction and Safety-plan support.
+- [ ] P-02, converted from Daniel's follow-up, shows its source, cadence
+  and History from the conversion on, never when he began following up.
+  As Siti Rahman it shows only who, whom, kind and status.
 
 Ask: *Are the sources and cadences right? Who should be told when a plan
 is assigned?*
@@ -343,7 +347,9 @@ should be consulted first."*
 
 - [ ] The "Running a check is recorded" notice, Purpose and emails,
   **Fill with the sample list**, and Your past checks (her own runs only).
-- [ ] The result runs strongest first, each row with its named reasons,
+- [ ] The result runs strongest first, each row with its named reasons
+  (a flag, a plan, or records with Support Logs staff: never how much or
+  when),
   whom to consult and a disabled Consultation select; *No consultation
   indicated* is stated never to mean well or suitable. *Ruling R4: formal
   assignments.*
