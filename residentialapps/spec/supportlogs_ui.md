@@ -203,10 +203,19 @@ below applies:
    `residentialapps/guide/1D_sharing_model.md` (author, 2026-11-07); the
    screens still show the earlier Share with a colleague and Share on
    their behalf until it is drawn.
-3. **Senior identifiable access can see every record in principle, but
+3. **Senior identifiable access sees, by default, only which students
+   have records with which staff** (author, 2026-11-07): a record's
+   metadata, never its content (everything else about a record: when,
+   how long, type, concern areas, follow-up and note, and figures drawn
+   from them). It
    names a student by default only when they are on a formal plan or
-   have a safety flag** (or, once teams are drawn, a team). Any other student's name is withheld until a
-   deliberate action reveals it, and every deliberate view is audited.
+   have a safety flag (or, once teams are drawn, a team); any other
+   student's name is withheld until a deliberate action reveals it. To
+   read content, a senior requests a share from the owner; in an
+   emergency a sys admin acknowledges it on the owner's behalf. Every
+   deliberate view is audited. The screens still show a history's
+   encounters and full downloads until this is drawn
+   (`residentialapps/guide/1D_sharing_model.md`).
 4. **Other staff see a student only with an explicit grant**: Other
    Staff view, aggregate (no names) or identifiable.
 
