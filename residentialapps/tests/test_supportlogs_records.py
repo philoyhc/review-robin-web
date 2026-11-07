@@ -288,6 +288,10 @@ def test_records_across_staff_is_senior_only_and_locked(client: TestClient) -> N
         "/overview/records.csv" in unlocked
         and "Every upload, download and deletion here is recorded" in unlocked
     )
+    # A senior's upload shows no preview of its rows (author, 2026-11-07).
+    upload = unlocked.split('id="ul-h"', 1)[1].split("</section>", 1)[0]
+    assert ">Upload</button>" in upload and "preview" not in upload
+    assert "by row number, never what they say" in upload
     for v in (*sample.VIEWERS, *sample.UNLISTED_VIEWERS):
         if sample.holds(v, sample.SENIOR):
             continue

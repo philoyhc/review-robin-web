@@ -62,25 +62,35 @@ def full_rows(page: str) -> list[tuple[str, str, list[str], str, bool]]:
 
 
 def test_each_state_comes_from_named_reasons() -> None:
+    """Reasons are metadata only (author, 2026-11-07): a flag, a plan, or
+    records with staff, who may have a view; never what the records say,
+    how many there are or when they were made."""
+    records = "Records with Support Logs staff"
     clara = sample.consultation("clara.tan@u.example.edu")
     assert (clara.state, clara.reasons, clara.consult) == (
         sample.REQUIRED,
-        ("Active safety-plan support", "Active formal check-in assignment"),
+        ("Active safety-plan support", "Active formal check-in assignment", records),
         ("Daniel Koh",),
     )
     hana = sample.consultation("Hana.Rahim@u.example.edu ")  # case and spaces do not matter
     assert (hana.state, hana.reasons, hana.consult) == (
         sample.SUGGESTED,
-        ("Active informal follow-up", "Several staff recently involved"),
+        ("Active informal follow-up", records),
         ("Priya Raman", "Arjun Nair"),
     )
     assert sample.consultation("jia.wen.lee@u.example.edu").reasons == (
         "Unresolved safety escalation",
+        records,
     )
-    farid = sample.consultation(
-        "farid.osman@u.example.edu"
-    )  # a student with past support, none current
-    assert (farid.state, farid.reasons, farid.consult) == (sample.NONE_INDICATED, (), ())
+    # Past records alone: their staff may still have a view.
+    farid = sample.consultation("farid.osman@u.example.edu")
+    assert (farid.state, farid.reasons, farid.consult) == (
+        sample.SUGGESTED,
+        (records,),
+        ("Daniel Koh",),
+    )
+    reasons = {r for r, _ in sample.CONSULTATION_REASONS}
+    assert not reasons & {"Marked increase in recent support", "Several staff recently involved"}
     unknown = sample.consultation("someone.else@u.example.edu")
     assert (unknown.student, unknown.state) == (None, sample.NONE_INDICATED)
 

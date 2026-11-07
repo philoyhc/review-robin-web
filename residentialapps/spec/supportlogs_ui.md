@@ -172,10 +172,13 @@ form's end, and the main action is a full-width Primary on the page
   staff member or all, by student and term or all, which students each
   has encounters with (staff and student pairs) and their plans' kind,
   source and status, never a record's content; upload records tagged to a staff member (inert until
-  wired); and delete purged records, filtered by staff and by student;
+  wired), which reports how many rows would be added and which fail, by
+  row number, with no preview of what they say (author, 2026-11-07); and delete purged records, filtered by staff and by student;
   by student, only that student's records go (Delete permanently inert until wired). Only
   senior identifiable access deletes; Sys admin's Audit log lists purged
-  records as counts only (author, 2026-10-30).
+  records as counts only (author, 2026-10-30). Its Student filter and
+  downloads name every student, withheld or not: the lock is the
+  deliberate, recorded step (author, 2026-11-07).
 - **Administration and senior staff, each in view of the other** (author,
   2026-10-30). Administration decides who sees content but sees none;
   senior staff see who has records with whom but grant no access:
@@ -197,7 +200,10 @@ form's end, and the main action is a full-width Primary on the page
     the staff with records, each with **Request a share** (inert until
     wired); its encounters and Share on their behalf are gone. A plan
     seen by senior staff or Other Staff view shows no due state, last
-    contact, next expected or contacts. Records across staff downloads
+    contact, next expected or contacts. A formal plan keeps, for senior
+    staff, its source, cadence, review, instruction and history from its
+    assignment or conversion on; Other Staff view sees any plan's who,
+    whom, kind and status only (author, 2026-11-07). Records across staff downloads
     encounters as staff and student pairs only.
   - Senior staff never write into others' log records.
 
@@ -263,9 +269,10 @@ notice on every page that names students.
   - a history;
   - the support-activity audit;
   - a consultation check.
-- **Overview names by default only students on a formal plan, with an
-  active flag or with a team** (author, 2026-11-07), in Students across staff, Every plan and Flagged
-  for formal assignment. Any other student's name is replaced by
+- **Overview names by default only students on a formal plan, with a
+  safety flag (open or closed) or with a team** (author, 2026-11-07), in Students across staff, Every plan and Flagged
+  for formal assignment. A flag for formal assignment, with its
+  suggested cadence, is a message to senior staff, not content. Any other student's name is replaced by
   **Show name** alone (author, 2026-11-07: no "No formal plan" label), which shows the name and its link in place and reads
   **Hide name** once open; a withheld Students across staff row sorts last on the
   Student column. A safety flag names its student, open or closed: the
@@ -281,6 +288,10 @@ notice on every page that names students.
 - **No score anywhere** (§15):
   - a consultation state comes from named reasons;
   - Overview counts students and plans, never a load or a rise.
+- **The Consultation check's reasons are metadata only** (author,
+  2026-11-07): a safety escalation, a plan, or records with Support Logs
+  staff, whose staff may have a view; never what records say, how many
+  there are or when they were made.
 - **No consultation indicated never means well or suitable.** The result
   says so, and an entry it could not read is listed as not read, never
   given a state.

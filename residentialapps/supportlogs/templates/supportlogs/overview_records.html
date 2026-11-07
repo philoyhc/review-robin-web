@@ -44,10 +44,10 @@
         </form>
         <section class="card card-pad" aria-labelledby="ul-h">
           <h2 id="ul-h">Upload</h2>
-          <p class="sub">Add encounters or plans from a CSV, each row tagged to the staff member it belongs to in the template's Staff column. Rows are checked against the Staff roster and the lists Sys admin configures, and you see a preview before anything is added.</p>
+          <p class="sub">Add encounters or plans from a CSV, each row tagged to the staff member it belongs to in the template's Staff column. Rows are checked against the Staff roster and the lists Sys admin configures; you see how many rows would be added and which rows fail, by row number, never what they say (author, 2026-11-07).</p>
           <p class="btnrow">{% for key, (label, _) in sample.RECORD_KINDS.items() %}<a class="btn btn-secondary" href="{{ url('/overview/records-template.csv') }}{{ qs(what=key, records='open', understood='yes') }}">{{ label }} template</a>{% endfor %}</p>
           <div class="field-wide gap-above-sm"><label for="ul-file">CSV file</label><input id="ul-file" class="input" type="file" accept=".csv,text/csv" disabled></div>
-          <button type="button" class="btn btn-primary" disabled>Upload and preview</button>
+          <button type="button" class="btn btn-primary" disabled>Upload</button>
         </section>
       </div>
       <div class="side">

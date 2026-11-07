@@ -300,6 +300,9 @@ plan."*
 
 - [ ] P-03 offers **Convert to formal assignment**, with source, cadence,
   review date, instruction and Safety-plan support.
+- [ ] P-02, converted from Daniel's follow-up, shows its source, cadence
+  and History from the conversion on, never when he began following up.
+  As Siti Rahman it shows only who, whom, kind and status.
 
 Ask: *Are the sources and cadences right? Who should be told when a plan
 is assigned?*
@@ -343,7 +346,9 @@ should be consulted first."*
 
 - [ ] The "Running a check is recorded" notice, Purpose and emails,
   **Fill with the sample list**, and Your past checks (her own runs only).
-- [ ] The result runs strongest first, each row with its named reasons,
+- [ ] The result runs strongest first, each row with its named reasons
+  (a flag, a plan, or records with Support Logs staff: never how much or
+  when),
   whom to consult and a disabled Consultation select; *No consultation
   indicated* is stated never to mean well or suitable. *Ruling R4: formal
   assignments.*

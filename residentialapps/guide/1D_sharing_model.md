@@ -110,7 +110,11 @@ a withdrawal, and a team's formation, change or dissolution.
   formal plan or a safety flag does, and is named by default.
 - **Safety flags** stay outside this model: flag recipients see the flags
   whatever the sharing state.
-- **Other Staff view** (rule 4) is unchanged.
+- **Other Staff view** (rule 4) sees a plan's who, whom, kind and
+  status only (author, 2026-11-07).
+- **The Consultation check** reasons from metadata only: a safety
+  escalation, a plan, or records with staff, who may have a view
+  (author, 2026-11-07).
 
 ## Effect on today's screens
 

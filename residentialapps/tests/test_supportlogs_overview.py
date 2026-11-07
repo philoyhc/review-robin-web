@@ -75,7 +75,7 @@ def test_students_across_staff_shows_staff_never_content(client: TestClient) -> 
 
 def test_overview_withholds_a_name_off_a_plan_until_shown(client: TestClient) -> None:
     """Author, 2026-11-07: Overview names by default only students on a
-    formal plan, with an active flag or with a team; any other is one
+    formal plan, with a safety flag or with a team; any other is one
     click away, in
     every card but the flags."""
     hidden = {s.name for s in sample.STUDENTS if not sample.named_on_overview(s.id)}
@@ -99,6 +99,17 @@ def test_overview_withholds_a_name_off_a_plan_until_shown(client: TestClient) ->
             assert student not in rest, (name, student)  # nowhere else on the page
     raw = section(client.get("/overview/?as=Sam%20Lee").text, "across-h")
     assert raw.count('<td data-sort-value=""><details class="reveal">') == len(shown)
+
+
+def test_a_safety_flag_names_its_student_open_or_closed(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Rule 3 (author, 2026-11-07): a safety flag names its student, closed
+    or not. Hana Rahim's flag (F-04) is closed: with no team she is still
+    named."""
+    assert next(f for f in sample.FLAGS if f.student == "S-08").status == "closed"
+    monkeypatch.setattr(sample, "TEAMS", ())
+    assert sample.named_on_overview("S-08")
+    monkeypatch.setattr(sample, "FLAGS", ())
+    assert not sample.named_on_overview("S-08")
 
 
 def test_the_aggregate_view_names_no_student(client: TestClient) -> None:
