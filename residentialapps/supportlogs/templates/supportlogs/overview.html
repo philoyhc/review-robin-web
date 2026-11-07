@@ -34,13 +34,15 @@
       {% set hot = sample.hotspots() %}
       <section class="card card-pad" aria-labelledby="hot-h">
         <h2 id="hot-h">Hotspots</h2>
-        <p class="sub">Contacts, minutes and staff involved in the last 14 days, contacts in the 14 before, formal plans and active flags. Rising is a sharp increase on the student's own pattern, not a high but steady one; there is no score (§10.4, §15).</p>
+        <p class="sub">Contacts, minutes and staff involved in the last 14 days, contacts in the 14 before, formal plans and active flags. Rising is a sharp increase on the student's own pattern, not a high but steady one; there is no score (§10.4, §15).{% if named %} A student on no formal plan and with no active flag is not named until you show them.{% endif %}</p>
         {% if named %}
           <div class="table-wrap">
             <table data-sort-auto id="hot-table">
               <thead><tr><th scope="col">Student</th><th scope="col" class="num">Contacts, 14 days</th><th scope="col" class="num">The 14 before</th><th scope="col" class="num">Minutes, 14 days</th><th scope="col" class="num">Staff, 14 days</th><th scope="col">Signals</th></tr></thead>
               <tbody>{% for r in hot %}<tr>
-                <td class="strong">{% if senior %}<a href="{{ url('/overview/students/' ~ r.student.id) }}{{ as_query }}">{{ r.student.name }}</a>{% else %}{{ r.student.name }}{% endif %}</td>
+                {% set name %}{% if senior %}<a href="{{ url('/overview/students/' ~ r.student.id) }}{{ as_query }}">{{ r.student.name }}</a>{% else %}{{ r.student.name }}{% endif %}{% endset %}
+                {% if r.formal or r.flags %}<td class="strong">{{ name }}</td>
+                {%- else %}<td data-sort-value="" data-redacted><details class="reveal"><summary><span class="subtle">Not on a plan</span> <span class="reveal-cta">Show name</span></summary><span class="strong">{{ name }}</span></details></td>{% endif %}
                 <td class="num">{{ r.contacts }}</td><td class="num">{{ r.before }}</td><td class="num">{{ r.minutes }}</td><td class="num">{{ r.staff }}</td>
                 <td><span class="chips chip-wrap">{% if r.rising %}<span class="chip chip-warn">Rising</span>{% endif %}{% if r.flags %}<span class="chip chip-safety">Active flag</span>{% endif %}{% if r.formal %}<span class="chip chip-accent">Formal plan</span>{% endif %}</span></td>
               </tr>{% endfor %}</tbody>

@@ -58,7 +58,9 @@ def test_hotspots_name_students_for_identifiable_views_only(client: TestClient) 
     sam = section(client.get("/overview/?as=Sam%20Lee").text, "hot-h")
     assert 'href="/overview/students/S-07?as=Sam%20Lee">Gwyneth Low</a>' in sam
     rows = cells(sam)
-    assert [plain(r[0]) for r in rows] == [r["student"].name for r in sample.hotspots()]
+    assert [plain(r[0]).removeprefix(HIDDEN) for r in rows] == [
+        r["student"].name for r in sample.hotspots()
+    ]
     assert [r[1:5] for r in rows] == [
         [str(r[k]) for k in ("contacts", "before", "minutes", "staff")] for r in sample.hotspots()
     ]
@@ -67,11 +69,29 @@ def test_hotspots_name_students_for_identifiable_views_only(client: TestClient) 
         1,
         1,
     )  # staff counted over the same 14 days as contacts
-    assert [plain(r[0]) for r in rows if "Rising" in r[5]] == ["Gwyneth Low"]
+    assert [plain(r[0]) for r in rows if "Rising" in r[5]] == [HIDDEN + "Gwyneth Low"]
     siti = section(client.get("/overview/?as=Siti%20Rahman").text, "hot-h")
     assert "Gwyneth Low" in siti and "/overview/students/" not in siti  # named, but no history
     kenneth = client.get("/overview/?as=Kenneth%20Lau").text
     assert "<dt>Rising</dt><dd>1</dd>" in section(kenneth, "hot-h")
+
+
+HIDDEN = "Not on a plan Show name"
+
+
+def test_hotspots_hide_a_name_off_a_plan_until_shown(client: TestClient) -> None:
+    """Author, 2026-11-07: a student on no formal plan and with no active
+    flag is not named until the viewer shows them, one click away."""
+    hidden = {r["student"].name for r in sample.hotspots() if not (r["formal"] or r["flags"])}
+    assert hidden == {"Gwyneth Low", "Aiden Chen", "Bao Nguyen", "Farid Osman", "Hana Rahim"}
+    for name in ("Sam%20Lee", "Siti%20Rahman"):
+        for r in cells(section(client.get(f"/overview/?as={name}").text, "hot-h")):
+            if plain(r[0]).removeprefix(HIDDEN) in hidden:
+                assert r[0].startswith('<details class="reveal"><summary>'), r[0]
+            else:
+                assert "<details" not in r[0], r[0]
+    raw = section(client.get("/overview/?as=Sam%20Lee").text, "hot-h")
+    assert raw.count('<td data-sort-value="" data-redacted>') == 5  # sorted last by name
 
 
 def test_the_aggregate_view_names_no_student(client: TestClient) -> None:

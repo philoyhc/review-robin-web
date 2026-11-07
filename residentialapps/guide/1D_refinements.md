@@ -136,3 +136,7 @@ and four types.
   last contact (in place of "seen") and safety-plan instruction, and the
   disabled **Add a student to follow up** at the list's end, under All
   and Following only (author, 2026-11-07).
+- **After rung 13** (author, 2026-11-07): Overview's Hotspots name only
+  students on a formal plan or with an active flag; the rest read "Not on
+  a plan" with **Show name**, one click from the name, for every identifiable
+  view.
