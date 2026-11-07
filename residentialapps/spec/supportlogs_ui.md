@@ -195,14 +195,17 @@ below applies:
 
 1. **Frontline staff see their own records**, and another staff member's
    only once access is granted.
-2. **Access to a student's records is granted deliberately**: by a
-   frontline staff member sharing their records with a colleague
-   (Share with a colleague, §11.1), or by senior identifiable access
-   allocating a student whose records one staff member made to another.
-   The allocation is not drawn yet.
+2. **Access to a student's records is granted deliberately, and the
+   receiver acknowledges it**: an owner shares past records, or one
+   encounter as they log it; two or more staff form a team for a
+   student, which a senior may start; or a handover tags records to
+   the receiver, acknowledged by them and a senior. The model is
+   `residentialapps/guide/1D_sharing_model.md` (author, 2026-11-07); the
+   screens still show the earlier Share with a colleague and Share on
+   their behalf until it is drawn.
 3. **Senior identifiable access can see every record in principle, but
    names a student by default only when they are on a formal plan or
-   have a safety flag.** Any other student's name is withheld until a
+   have a safety flag** (or, once teams are drawn, a team). Any other student's name is withheld until a
    deliberate action reveals it, and every deliberate view is audited.
 4. **Other staff see a student only with an explicit grant**: Other
    Staff view, aggregate (no names) or identifiable.
