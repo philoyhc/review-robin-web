@@ -301,12 +301,17 @@ def test_a_withheld_name_shows_and_hides_again(page: Page) -> None:
     """Overview's withheld name (author, 2026-11-07): Show name opens it in
     place, its control stays and reads Hide name, and closes it again."""
     page.goto(f"{ORIGIN}/overview/?as=Sam%20Lee")
-    row = page.locator("#hot-table details.reveal").first
+    row = page.locator("#across-table details.reveal").first
     summary = row.locator("summary")
     name = row.locator("> .strong")
     assert not name.is_visible() and "Show name" in summary.inner_text()
     summary.click()
-    assert name.is_visible() and name.inner_text() == "Gwyneth Low"
+    first = next(
+        r["student"].name
+        for r in sample.students_across_staff()
+        if not sample.named_on_overview(r["student"].id)
+    )
+    assert name.is_visible() and name.inner_text() == first
     assert summary.is_visible() and "Hide name" in summary.inner_text()
     summary.click()
     assert not name.is_visible()

@@ -144,16 +144,17 @@ form's end, and the main action is a full-width Primary on the page
   wired. Leaving the page locks it again. A purge hides and keeps.
   Purge all is Destructive, outline red (author, 2026-10-30).
 - **Records across staff** (`/overview/records`, author, 2026-10-30), for
-  senior identifiable access, behind the same lock: download any staff
-  member's records, or all staff's, by student and term or all, each row
-  naming its staff member; upload records tagged to a staff member (inert until
+  senior identifiable access, behind the same lock: download, for any
+  staff member or all, by student and term or all, which students each
+  has encounters with (staff and student pairs) and their plans' kind,
+  source and status, never a record's content; upload records tagged to a staff member (inert until
   wired); and delete purged records, filtered by staff and by student;
   by student, only that student's records go (Delete permanently inert until wired). Only
   senior identifiable access deletes; Sys admin's Audit log lists purged
   records as counts only (author, 2026-10-30).
 - **Administration and senior staff, each in view of the other** (author,
   2026-10-30). Administration decides who sees content but sees none;
-  senior staff see content but grant no access:
+  senior staff see who has records with whom but grant no access:
   - **Who holds access** (`/overview/access`, linked from Overview's card),
     for senior identifiable access: each grant's holders and the access
     changes, read-only.
@@ -165,16 +166,21 @@ form's end, and the main action is a full-width Primary on the page
     always has one; `?preview=no-senior` shows the warning).
   - **Configuration's Access card**: a sys admin may grant itself Senior
     identifiable, off by default and recorded.
-  - **Sharing on a student's history**: senior staff share a staff
-    member's records for the student with a colleague on that staff
-    member's behalf (§17 Q11, inert until wired); the grant shows both
-    names, and the staff member sees "shared by … on your behalf".
-  - Senior staff read others' log records and never write into one.
+  - **The wall** (author, 2026-11-07, rule 3 below): Overview shows
+    **Who supports whom** (per staff member, students with records and
+    plans) and **Students across staff** (per student, the staff with
+    records and the signals), metadata only. A student's history lists
+    the staff with records, each with **Request a share** (inert until
+    wired); its encounters and Share on their behalf are gone. A plan
+    seen by senior staff or Other Staff view shows no due state, last
+    contact, next expected or contacts. Records across staff downloads
+    encounters as staff and student pairs only.
+  - Senior staff never write into others' log records.
 
 ## 5. Lists and tables
 
 - **Phone lists** (`ul.items`) carry the frontline's rows.
-- **Tables carry Overview's workload and hotspots, the
+- **Tables carry Overview's Who supports whom and Students across staff, the
   Consultation check's result, Access and both audits**; their other cards
   are lists. Each table is sortable (`data-sort-auto`), with `data-sort-value` on cells whose text
   is not their value. The exception is a table whose order is its
@@ -201,8 +207,8 @@ below applies:
    student, which a senior may start; or a handover tags records to
    the receiver, acknowledged by them and a senior. The model is
    `residentialapps/guide/1D_sharing_model.md` (author, 2026-11-07); the
-   screens still show the earlier Share with a colleague and Share on
-   their behalf until it is drawn.
+   screens still show the earlier Share with a colleague until it is
+   drawn.
 3. **Senior identifiable access sees, by default, only which students
    have records with which staff** (author, 2026-11-07): a record's
    metadata, never its content (everything else about a record: when,
@@ -213,9 +219,9 @@ below applies:
    student's name is withheld until a deliberate action reveals it. To
    read content, a senior requests a share from the owner; in an
    emergency a sys admin acknowledges it on the owner's behalf. Every
-   deliberate view is audited. The screens still show a history's
-   encounters and full downloads until this is drawn
-   (`residentialapps/guide/1D_sharing_model.md`).
+   deliberate view is audited. The screens apply it
+   (`residentialapps/guide/1D_sharing_screens.md` rung 1); Request a
+   share is inert until wired.
 4. **Other staff see a student only with an explicit grant**: Other
    Staff view, aggregate (no names) or identifiable.
 
@@ -229,10 +235,10 @@ below applies:
   - the support-activity audit;
   - a consultation check.
 - **Overview names by default only students on a formal plan or with an
-  active flag** (author, 2026-11-07), in Hotspots, Every plan and Flagged
+  active flag** (author, 2026-11-07), in Students across staff, Every plan and Flagged
   for formal assignment. Any other student reads "No formal plan" with
   **Show name**, which shows the name and its link in place and reads
-  **Hide name** once open; a withheld Hotspots row sorts last on the
+  **Hide name** once open; a withheld Students across staff row sorts last on the
   Student column. A safety flag names its student, open or closed: the
   flag is the reason to. On sample data the name is in the page (and
   find-in-page can open it); wired, showing it is an audited read that
@@ -244,10 +250,8 @@ below applies:
   The cluster view (§10.5) is deferred, a cluster being the core's
   Precinct when it comes, and Sys admin keeps no cluster list.
 - **No score anywhere** (§15):
-  - a hotspot's rise is a "Rising" chip on the student's own pattern;
   - a consultation state comes from named reasons;
-  - workload's load weighting says it is not a measure of anyone's
-    performance.
+  - Overview counts students and plans, never a load or a rise.
 - **No consultation indicated never means well or suitable.** The result
   says so, and an entry it could not read is listed as not read, never
   given a state.

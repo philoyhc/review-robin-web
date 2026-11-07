@@ -310,9 +310,16 @@ def test_downloads_by_staff_and_term(client: TestClient) -> None:
         == 'attachment; filename="support-logs-encounters-all-staff-all-terms.csv"'
     )
     got = rows(everyone.text)
-    assert tuple(got[0]) == ("Staff", *sample.ENCOUNTER_COLUMNS)
-    assert len(got) - 1 == sum(len(sample.encounters_by(n)) for n in sample.FRONTLINE_COLLEAGUES)
+    # Metadata only (author, 2026-11-07): one row per staff member and
+    # student, never a date, a duration or a note.
+    assert tuple(got[0]) == sample.SENIOR_ENCOUNTER_COLUMNS == ("Staff", "Student email", "Student")
+    assert len(got) - 1 == len({(e.staff, e.student) for e in sample.ENCOUNTERS})
     assert {r[0] for r in got[1:]} == {e.staff for e in sample.ENCOUNTERS}
+    for e in sample.ENCOUNTERS:
+        assert not e.note or e.note not in everyone.text
+    plans = rows(client.get(f"/overview/records.csv?{SAM}&{OPEN}&what=plans&term=all").text)
+    assert tuple(plans[0]) == sample.SENIOR_PLAN_COLUMNS
+    assert "Cadence" not in plans[0] and all(len(r) == 6 for r in plans)
     arjun = client.get(
         f"/overview/records.csv?{SAM}&{OPEN}&what=plans&staff=Arjun%20Nair&term={sample.CURRENT_TERM.key}"
     )
@@ -406,9 +413,15 @@ def test_a_term_picks_the_right_rows_for_a_staff_member(client: TestClient) -> N
             f"&term={sample.CURRENT_TERM.key}"
         ).text
     )
-    assert [r[0] for r in got[1:]] == ["Priya Raman"] * len(sample.encounters_by("Priya Raman"))
+    assert {r[0] for r in got[1:]} == {"Priya Raman"}
+    emails = {s.id: s.email for s in sample.STUDENTS}
+    term = sample.CURRENT_TERM
     assert sorted(r[1] for r in got[1:]) == sorted(
-        e.when.date().isoformat() for e in sample.encounters_by("Priya Raman")
+        {
+            emails[e.student]
+            for e in sample.encounters_by("Priya Raman")
+            if term.start <= e.when.date() <= term.end
+        }
     )
 
 

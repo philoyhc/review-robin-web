@@ -6,7 +6,9 @@
   <a class="back" href="{{ url('/overview/') }}{{ as_query }}">‹ Overview</a>
   {{ sample_title("Records across staff", me.name) }}
   {# Senior identifiable access (author, 2026-10-30): upload records tagged
-     to a staff member, download them by staff, student and term, and
+     to a staff member, download who has records with whom and the plans'
+     kind, source and status by staff, student and term (never content,
+     author, 2026-11-07), and
      delete purged records by staff, or only a student's. Each is a support-activity event (§11.3),
      behind the same lock as a staff member's Your records. #}
   <p class="notice" role="note">Every upload, download and deletion here is recorded, with the staff member, student and term it covered.</p>

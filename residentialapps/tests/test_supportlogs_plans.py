@@ -234,3 +234,19 @@ def test_a_formal_assignment_comes_from_three_sources() -> None:
     """Author, 2026-11-06: Counselling, College and Other for the mock-up."""
     assert sample.ASSIGNMENT_SOURCES == ("Counselling", "College", "Other")
     assert {p.source for p in sample.PLANS if p.formal} <= set(sample.ASSIGNMENT_SOURCES)
+
+
+def test_a_plan_seen_by_senior_staff_shows_no_contact_facts(client: TestClient) -> None:
+    """The wall (author, 2026-11-07): a plan's due state, last contact,
+    next expected and contacts come from its encounters' content, so
+    senior staff and Other Staff view do not see them; its owner does."""
+    owner = client.get("/plans/P-01").text
+    assert "<dt>Last contact</dt>" in owner and "Overdue" in owner
+    for name in ("Sam%20Lee", "Siti%20Rahman"):
+        page = client.get(f"/plans/P-01?as={name}").text
+        for fact in ("Last contact", "Next expected", "Contacts since it began", "Overdue"):
+            assert fact not in page, (name, fact)
+        assert "<dt>Source</dt><dd>Counselling</dd>" in page
+        follow_up = client.get(f"/plans/P-03?as={name}").text  # Daniel's own
+        for fact in ("<dt>Since</dt>", "<dt>Cadence</dt>", 'id="hist-h"', "began following up"):
+            assert fact not in follow_up, (name, fact)

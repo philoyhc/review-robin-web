@@ -1,20 +1,24 @@
 {% extends "residential/base.html" %}
 {% from "residential/_sample.html" import sample_title, viewer_card with context %}
+{% from "supportlogs/_withheld.html" import withheld %}
 {% block title %}Support-activity audit{% endblock %}
 {% block content %}
   <a class="back" href="{{ url('/overview/') }}{{ as_query }}">‹ Overview</a>
   {{ sample_title("Support-activity audit", me.name) }}
   {# Support-activity events reveal who was seen and when, so only senior
      staff with identifiable access review them, and the review is itself
-     an audited read (§11.3). Administrative events are Sys admin's. #}
+     an audited read (§11.3). Administrative events are Sys admin's. The
+     wall (author, 2026-11-07): logging a record is not listed, since its
+     time is the record's content; a student off a formal plan and with no
+     active flag is withheld as on Overview. #}
   <p class="notice" role="note">Reviewing this log is recorded.</p>
   <section class="card card-pad" aria-labelledby="audit-h">
-    <h2 id="audit-h">The latest events <span class="count">· {{ sample.AUDIT | length }}</span></h2>
+    <h2 id="audit-h">The latest events <span class="count">· {{ sample.senior_audit() | length }}</span></h2>
     <div class="field-wide"><label for="audit-find">Find by staff, student or date</label><input id="audit-find" class="input" type="search" disabled></div>
     <div class="table-wrap">
       <table data-sort-auto id="audit-table">
         <thead><tr><th scope="col">When</th><th scope="col">Who</th><th scope="col">What</th><th scope="col">Student</th></tr></thead>
-        <tbody>{% for a in sample.AUDIT %}<tr><td class="nowrap" data-sort-value="{{ a.at.isoformat() }}">{{ sample.when(a.at) }}</td><td>{{ a.actor }}</td><td>{{ a.action }}</td><td>{% if a.student %}<a href="{{ url('/overview/students/' ~ a.student) }}{{ as_query }}">{{ sample.student(a.student).name }}</a>{% endif %}</td></tr>{% endfor %}</tbody>
+        <tbody>{% for a in sample.senior_audit() %}<tr><td class="nowrap" data-sort-value="{{ a.at.isoformat() }}">{{ sample.when(a.at) }}</td><td>{{ a.actor }}</td><td>{{ a.action }}</td><td>{% if a.student %}{% set link %}<a href="{{ url('/overview/students/' ~ a.student) }}{{ as_query }}">{{ sample.student(a.student).name }}</a>{% endset %}{{ link if sample.named_on_overview(a.student) else withheld(link) }}{% endif %}</td></tr>{% endfor %}</tbody>
       </table>
     </div>
   </section>
