@@ -39,14 +39,21 @@ under `data-app="supportlogs"`.
   each with Accept (Primary) and Decline (Secondary), inert until wired.
   A share, an invitation or a handover names no student until accepted
   (the invitation's and the handover's the author's call to confirm,
-  `residentialapps/guide/1D_sharing_screens.md` Status); only in an
-  emergency can a sys admin accept for the staff member.
+  `residentialapps/guide/1D_sharing_screens.md` Status). A sys admin
+  can acknowledge for a staff member only in an emergency, or on a
+  handover when they cannot be reached.
 - **Teams** (sharing screens rung 5, author, 2026-11-07): a team's
   student shows on Students for each member, under a fourth filter
   choice, **Teams**, with the other members named. A student's page has a
   Team card (members, Leave the team; or Form a team), and a senior's
   view of a student has Form a team over chosen staff; inert until
   wired. A team names its student on Overview (rule 3), with a Team chip.
+- **Hand over** (sharing screens rung 6, author, 2026-11-07): a card on
+  a student's page, where the viewer has records of their own (all, or
+  chosen encounters; To), and on a senior's view of a student (From, To:
+  all of the owner's records, since a senior sees none of them); Sys
+  admin's Access lists **Acknowledge on behalf** (§6). All inert until
+  wired.
 - **Plans and follow-ups are a filter on Students** (author, 2026-11-07):
   My students shows All, Plans, Following or Teams, the last choice kept in the
   browser; each plan's chip opens it, beside its due state. Each row has
@@ -278,8 +285,10 @@ notice on every page that names students.
   says so, and an entry it could not read is listed as not read, never
   given a state.
 - **Administration sees no content.** Sys admin shows grants, lists,
-  administrative events, purged records' counts and senior reads' counts,
-  never a student. The
+  administrative events, purged records' counts, senior reads' counts
+  and **Acknowledge on behalf** (a handover or a senior's share request
+  waiting on someone who cannot be reached, named by staff only), never
+  a student. The
   support-activity audit is senior staff's, on Overview.
 - **Notes are short and say so**: a live count to the limit, and the
   minimization guidance beside the field.

@@ -814,15 +814,43 @@ class Pending:
     student: str
     records: int
     on: date
+    # Someone whose acknowledgement is owed but who cannot be reached (they
+    # have left, say): a sys admin may give it on their behalf (rung 6).
+    unreachable: str = ""
+    # A handover's records' owner, where a senior started it (rung 6).
+    owner: str = ""
 
 
 PENDING = (
     Pending(SHARE_OFFERED, "Daniel Koh", "Priya Raman", "S-09", 1, date(2026, 10, 28)),
     Pending(SHARE_OFFERED, "Arjun Nair", "Daniel Koh", "S-02", 1, date(2026, 10, 28)),
     Pending(TEAM_INVITE, "Daniel Koh", "Sam Lee", "S-10", 0, date(2026, 10, 28)),
-    Pending(HANDOVER, "Daniel Koh", "Mei Ling Tan", "S-07", 3, date(2026, 10, 27)),
+    # A handover Sam Lee started of Mei Ling Tan's records: Sam has
+    # acknowledged by starting it; it waits on Daniel Koh, and on Mei Ling
+    # Tan, who cannot be reached (rung 6).
+    Pending(
+        HANDOVER,
+        "Daniel Koh",
+        "Sam Lee",
+        "S-07",
+        3,
+        date(2026, 10, 27),
+        unreachable="Mei Ling Tan",
+        owner="Mei Ling Tan",
+    ),
+    # A senior's emergency request to a staff member who cannot be reached:
+    # it waits on Arjun Nair, who has no sample viewer (rung 6).
+    Pending(SHARE_REQUEST, "Arjun Nair", "Sam Lee", "S-08", 0, date(2026, 10, 29), "Arjun Nair"),
     Pending(SHARE_REQUEST, "Daniel Koh", "Sam Lee", "S-03", 0, date(2026, 10, 29)),
 )
+
+
+def on_behalf() -> list[Pending]:
+    """What a sys admin may acknowledge on someone's behalf: a handover or
+    a senior's share request whose staff member cannot be reached (rung 6,
+    author, 2026-11-07). Shown without its student: administration sees
+    no content."""
+    return [p for p in PENDING if p.unreachable and p.kind in (HANDOVER, SHARE_REQUEST)]
 
 
 def pending_for(staff: str) -> list[Pending]:

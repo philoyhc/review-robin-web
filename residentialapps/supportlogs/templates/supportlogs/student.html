@@ -86,6 +86,25 @@
           <button type="button" class="btn btn-secondary" disabled>Form a team</button>
         {% endif %}
       </section>
+      {# Hand over (sharing screens rung 6, author, 2026-11-07): the
+         records the owner chooses become a colleague's, once the receiver
+         and a senior acknowledge; starting it is the owner's own
+         acknowledgement. A record is an encounter or a plan. Inert until
+         wired. #}
+      {% if chosen.id in sample.students_with_records(me.name) %}
+      {% set handing = sample.encounters_by(me.name, chosen.id) %}
+      <section class="card card-pad muted" aria-labelledby="handover-h">
+        <h2 id="handover-h">Hand over</h2>
+        <p class="sub">For good, when {{ chosen.name }} moves to a colleague: the records you choose become theirs and are no longer yours, once they and a senior acknowledge.</p>
+        <fieldset class="modes"><legend>Which records</legend>
+          <label class="check"><input type="radio" name="ho-scope" checked disabled> All your records, with your follow-ups and plans</label>
+          <label class="check"><input type="radio" name="ho-scope" disabled> Only the encounters ticked below</label>
+          {% for e in handing %}<label class="check"><input type="checkbox" disabled> {{ sample.short_date(e.when.date()) }} · {{ e.type }} · {{ e.duration }}</label>{% endfor %}
+        </fieldset>
+        <div class="field-wide"><label for="ho-to">To</label><select id="ho-to" class="input" disabled><option>Choose a colleague</option>{% for name in sample.FRONTLINE_COLLEAGUES if name != me.name %}<option>{{ name }}</option>{% endfor %}</select></div>
+        <button type="button" class="btn btn-secondary gap-above-sm" disabled>Hand over records</button>
+      </section>
+      {% endif %}
       {% set theirs = sample.shared_plans(me.name, chosen.id) %}
       {% if theirs %}
       <section class="card card-pad muted" aria-labelledby="splan-h">

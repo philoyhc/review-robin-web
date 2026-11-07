@@ -47,6 +47,17 @@
           <button type="button" class="btn btn-secondary" disabled>Form a team</button>
         {% endif %}
       </section>
+      {# Hand over (rung 6): a senior may start one between two staff; the
+         records' owner and the receiver acknowledge, and starting it is the
+         senior's. All the owner's records about the student go: a senior
+         sees none of them, so cannot choose among them. Inert. #}
+      <section class="card card-pad muted" aria-labelledby="handover-h">
+        <h2 id="handover-h">Hand over</h2>
+        <p class="sub">Move all of a staff member's records about {{ chosen.name }} to a colleague, for good: you see none of them, so cannot choose among them. Both of them acknowledge; starting it is yours. If either cannot be reached, a sys admin can acknowledge for them.</p>
+        <div class="field-wide"><label for="ho-from">From</label><select id="ho-from" class="input" disabled>{% for name in staff %}<option>{{ name }}</option>{% endfor %}</select></div>
+        <div class="field-wide"><label for="ho-to">To</label><select id="ho-to" class="input" disabled><option>Choose a colleague</option>{% for name in sample.FRONTLINE_COLLEAGUES %}<option>{{ name }}</option>{% endfor %}</select></div>
+        <button type="button" class="btn btn-secondary gap-above-sm" disabled>Hand over</button>
+      </section>
       <section class="card card-pad muted" aria-labelledby="plans-h">
         <h2 id="plans-h">Plans <span class="count">· {{ plans | length }}</span></h2>
         {% if plans %}<ul class="items">{% for p in plans %}<li><div class="item-head"><a class="strong" href="{{ url('/plans/' ~ p.id) }}{{ as_query }}">{{ p.staff }}</a></div><div class="subtle">{{ "Plan · " ~ p.source if p.formal else "Following" }}</div></li>{% endfor %}</ul>{% else %}<p class="sub">None.</p>{% endif %}
