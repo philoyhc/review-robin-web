@@ -190,6 +190,23 @@ form's end, and the main action is a full-width Primary on the page
 
 ## 6. What the screens say about privacy
 
+**The confidentiality rules** (author, 2026-11-07), which every screen
+below applies:
+
+1. **Frontline staff see their own records**, and another staff member's
+   only once access is granted.
+2. **Access to a student's records is granted deliberately**: by a
+   frontline staff member sharing their records with a colleague
+   (Share with a colleague, §11.1), or by senior identifiable access
+   allocating a student whose records one staff member made to another.
+   The allocation is not drawn yet.
+3. **Senior identifiable access can see every record in principle, but
+   names a student by default only when they are on a formal plan or
+   have a safety flag.** Any other student's name is withheld until a
+   deliberate action reveals it, and every deliberate view is audited.
+4. **Other staff see a student only with an explicit grant**: Other
+   Staff view, aggregate (no names) or identifiable.
+
 - **A read is an action** (§11.3). Every page that names a student says
   that opening it is recorded:
   - a student;
