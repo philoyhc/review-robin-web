@@ -64,7 +64,8 @@ with the page.
   who is signed in (their role once identity is wired, 1B item 3), then
   **Sys admin** for sys admins (the account's, not a place, as Review
   Robin's Settings and Admin are; omitted on its own area; author,
-  2026-11-02), then **Sign out** (`/.auth/logout`). One menu open at a time; Escape or a
+  2026-11-02), in Support Logs then **Who can see what** (its staff
+  explainer, 2026-11-07), then **Sign out** (`/.auth/logout`). One menu open at a time; Escape or a
   click outside closes it (`docs/header_chrome.md` §4, §7).
 - **Under the bar, the area's page tabs**, with short labels, scrolling
   sideways on a phone. Rosters and setup's are Home, Assignments, Staff

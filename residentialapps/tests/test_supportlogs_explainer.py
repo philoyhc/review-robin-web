@@ -24,25 +24,25 @@ def client() -> TestClient:
     return TestClient(create_app())
 
 
-def _doc_headings() -> list[str]:
-    return [
-        line.split(" ", 1)[1]
-        for line in DOC.read_text().splitlines()
-        if line.startswith(("## ", "### "))
-    ]
+def _words(text: str) -> list[str]:
+    """Text as its words, markup gone: Markdown's list marks and emphasis,
+    and HTML tags."""
+    text = re.sub(r"(?m)^\s*-\s+", " ", text)
+    text = re.sub(r"<[^>]+>", " ", html.unescape(text))
+    text = re.sub(r"[*_`#]", " ", text)
+    return text.split()
 
 
-def _doc_questions() -> list[str]:
-    return re.findall(r"^\*\*(.+?\?)\*\*", DOC.read_text(), re.M)
-
-
-def test_the_page_follows_the_doc(client: TestClient) -> None:
-    page = html.unescape(client.get("/who-can-see-what").text)
+def test_the_page_follows_the_doc_word_for_word(client: TestClient) -> None:
+    """The page's text from the date line on is the doc's, word for word:
+    a changed answer, sentence or bullet fails here, not only a heading."""
+    page = client.get("/who-can-see-what").text
+    main = page.split("<h1>", 1)[1].split('aria-label="Sample viewer"', 1)[0]
+    got = _words(main)
+    want = _words(DOC.read_text())
+    start = want.index("Agreed")
+    assert got[got.index("Agreed") : got.index("Agreed") + len(want) - start] == want[start:]
     assert "<h1>Who can see what" in page
-    got = re.findall(r"<h[23][^>]*>(.+?)</h[23]>", page.split("<h1>", 1)[1])
-    assert [h for h in got if h in _doc_headings()] == _doc_headings()
-    for question in _doc_questions():
-        assert f"<strong>{question}</strong>" in page, question
 
 
 @pytest.mark.parametrize(

@@ -1,6 +1,6 @@
 {% extends "residential/base.html" %}
 {% from "residential/_sample.html" import sample_title, viewer_card with context %}
-{% from "supportlogs/_frontline.html" import due_chip, kind_chips, encounter_item, flag_item with context %}
+{% from "supportlogs/_frontline.html" import due_chip, kind_chips, encounter_item, flag_item, explainer_link with context %}
 {% block title %}{{ chosen.name }}{% endblock %}
 {% block content %}
   <a class="back" href="{{ url('/students/') }}{{ as_query }}">‹ Students</a>
@@ -10,7 +10,7 @@
      authorizations cover (§11.1). #}
   <p class="sub">{{ chosen.email }}</p>
   {% for g in sample.shared_with(me.name) if g.student == chosen.id %}<p class="notice" role="note">{{ g.grantor }} has shared their records for {{ chosen.name }} with you, since {{ sample.short_date(g.granted_on) }}.</p>{% endfor %}
-  <p class="notice" role="note">Opening this view is recorded. It shows your own records for {{ chosen.name }}, any a colleague has shared with you, and the safety flags you may see. <a href="{{ url('/who-can-see-what') }}{{ as_query }}">Who can see what</a></p>
+  <p class="notice" role="note">Opening this view is recorded. It shows your own records for {{ chosen.name }}, any a colleague has shared with you, and the safety flags you may see. {{ explainer_link() }}</p>
   {% set mine = sample.plans_of(me.name, chosen.id) %}
   {% set plan = mine[0] if mine else none %}
   {% set seen = sample.encounters_by(me.name, chosen.id) %}

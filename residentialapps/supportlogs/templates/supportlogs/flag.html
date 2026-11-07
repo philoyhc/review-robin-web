@@ -1,5 +1,6 @@
 {% extends "residential/base.html" %}
 {% from "residential/_sample.html" import sample_title, viewer_card with context %}
+{% from "supportlogs/_frontline.html" import explainer_link with context %}
 {% from "supportlogs/_frontline.html" import flag_chip with context %}
 {% block title %}Safety flag{% endblock %}
 {% block content %}
@@ -9,7 +10,7 @@
   {{ sample_title("Safety flag", me.name) }}
   {# A flag's detail (UI spec screen 8): every view, acknowledgement and
      closure is audited (§11.3). #}
-  <p class="notice" role="note">Viewing this flag is recorded.</p>
+  <p class="notice" role="note">Viewing this flag is recorded. {{ explainer_link() }}</p>
   <div class="split">
     <div class="main stack">
       <section class="card card-pad safety" aria-labelledby="flag-h">

@@ -175,6 +175,7 @@ def render(
             "as_query": sample.as_query(me),
             "qs": qs,
             "sample": sample,
+            "explainer_path": EXPLAINER_PATH,
             # The viewer switch goes to each person's Home, which sends them
             # where they belong.
             # The chip's line, for a viewer off the card (`?as=` only) too.

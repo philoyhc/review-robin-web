@@ -1,5 +1,6 @@
 {% extends "residential/base.html" %}
 {% from "residential/_sample.html" import sample_title, viewer_card with context %}
+{% from "supportlogs/_frontline.html" import explainer_link with context %}
 {% from "supportlogs/_withheld.html" import withheld %}
 {% block title %}Support-activity audit{% endblock %}
 {% block content %}
@@ -11,7 +12,7 @@
      wall (author, 2026-11-07): logging a record is not listed, since its
      time is the record's content; a student off a formal plan and with no
      active flag is withheld as on Overview. #}
-  <p class="notice" role="note">Reviewing this log is recorded.</p>
+  <p class="notice" role="note">Reviewing this log is recorded. {{ explainer_link() }}</p>
   <section class="card card-pad" aria-labelledby="audit-h">
     <h2 id="audit-h">The latest events <span class="count">· {{ sample.senior_audit() | length }}</span></h2>
     <div class="field-wide"><label for="audit-find">Find by staff, student or date</label><input id="audit-find" class="input" type="search" disabled></div>

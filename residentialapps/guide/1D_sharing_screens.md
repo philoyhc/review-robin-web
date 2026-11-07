@@ -44,7 +44,8 @@ becomes metadata only: which students have records with which staff.
 
 The staff explainer (`residentialapps/docs/support_logs_confidentiality.md`)
 as a page of its own, **Who can see what**, linked from every Support Logs
-screen (author, 2026-11-07).
+account menu that has entries and from every notice on a page that names
+students (author, 2026-11-07).
 
 ### Rung 2 — Waiting for you
 
