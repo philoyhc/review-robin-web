@@ -64,8 +64,20 @@ def test_every_screen_links_to_it_from_the_account_menu(client: TestClient, path
 
 
 def test_pages_naming_students_link_to_it(client: TestClient) -> None:
-    for path in ("/", "/students/S-03", "/overview/?as=Sam%20Lee"):
-        assert "who-can-see-what" in client.get(path).text.split("<main", 1)[1], path
+    """Every page whose notice says opening it is recorded (spec §6); a
+    notice links it once (Home's Waiting for you links it too)."""
+    for path in (
+        "/",
+        "/students/S-03",
+        "/plans/P-01",
+        "/flags/F-01",
+        "/overview/?as=Sam%20Lee",
+        "/overview/students/S-03?as=Sam%20Lee",
+        "/overview/audit?as=Sam%20Lee",
+        "/consultation/?as=Hui%20Min%20Goh",
+    ):
+        main = client.get(path).text.split("<main", 1)[1]
+        assert main.count(">Who can see what</a>") == (2 if path == "/" else 1), path
 
 
 def test_anyone_who_reaches_support_logs_can_read_it(client: TestClient) -> None:

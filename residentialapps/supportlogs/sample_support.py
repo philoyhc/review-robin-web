@@ -761,6 +761,42 @@ class PeerGrant:
     granted_on: date
 
 
+# Waiting for you (sharing screens rung 2, author, 2026-11-07): what a
+# frontline staff member is asked to accept, one of each kind on sample
+# data. A share offered or a team invitation names no student until it is
+# accepted; a handover or a senior's share request is about the staff
+# member's own student, or names them to the receiver once accepted.
+SHARE_OFFERED = "share"
+TEAM_INVITE = "team"
+HANDOVER = "handover"
+SHARE_REQUEST = "request"
+
+
+@dataclass(frozen=True)
+class Pending:
+    """One acknowledgement waiting on a staff member."""
+
+    kind: str
+    to: str
+    sender: str
+    student: str
+    records: int
+    on: date
+
+
+PENDING = (
+    Pending(SHARE_OFFERED, "Daniel Koh", "Mei Ling Tan", "S-07", 2, date(2026, 10, 28)),
+    Pending(TEAM_INVITE, "Daniel Koh", "Sam Lee", "S-10", 0, date(2026, 10, 28)),
+    Pending(HANDOVER, "Daniel Koh", "Grace Ho", "S-06", 3, date(2026, 10, 27)),
+    Pending(SHARE_REQUEST, "Daniel Koh", "Sam Lee", "S-03", 0, date(2026, 10, 29)),
+)
+
+
+def pending_for(staff: str) -> list[Pending]:
+    """What waits on a staff member, the latest first."""
+    return sorted((p for p in PENDING if p.to == staff), key=lambda p: p.on, reverse=True)
+
+
 PEER_GRANTS = (
     PeerGrant("S-03", "Daniel Koh", "Mei Ling Tan", date(2026, 10, 1)),
     PeerGrant("S-08", "Priya Raman", "Daniel Koh", date(2026, 10, 20)),

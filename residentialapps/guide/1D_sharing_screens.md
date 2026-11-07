@@ -103,3 +103,6 @@ browser check passes on each rung.
   withheld order and dead on-behalf code, all fixed. Left as is: Records
   across staff's purge filter counts encounters per student (senior
   deletion needs it), and the pairs download keeps its term filter.
+- **Rung 1a:** as planned.
+- **Rung 2:** as planned; the card shows only when something waits, and
+  a handover, like a share, names no student until accepted.

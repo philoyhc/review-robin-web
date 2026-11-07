@@ -356,3 +356,19 @@ def test_favorites_drive_log_and_are_marked_on_students(client: TestClient) -> N
     # A shared favorite saved for is one the viewer can open (cold read).
     saved = client.get("/log/saved?student=S-08&duration=15%20min&type=Check-in").text
     assert 'href="/students/S-08">Open Hana Rahim</a>' in saved
+
+
+def test_waiting_for_you_holds_every_acknowledgement(client: TestClient) -> None:
+    """Sharing screens rung 2 (author, 2026-11-07): a share offered, a team
+    invitation, a handover and a senior's share request, each with Accept
+    and Decline, inert; none names its student until accepted, but a
+    request about the staff member's own student."""
+    card = section(client.get("/").text, "waiting-h")
+    assert card.count("<li>") == len(sample.pending_for("Daniel Koh")) == 4
+    for name in ("Gwyneth Low", "Jia Wen Lee", "Farid Osman"):
+        assert name not in card, name  # offered, invited, handed over: unnamed
+    assert "Sam Lee asks you to share your records about Clara Tan" in card
+    assert "Mei Ling Tan has shared 2 records about a student with you" in card
+    assert card.count('class="btn btn-primary" disabled aria-label="Accept ') == 4
+    assert card.count('class="btn btn-secondary" disabled aria-label="Decline ') == 4
+    assert 'id="waiting-h"' not in client.get("/" + PRIYA).text  # nothing waits on her
